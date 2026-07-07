@@ -18,8 +18,8 @@ class KitbagChip extends StatelessWidget {
 
   static const double _minTapTarget = 48;
 
-  /// Optional: the spec's chips are text-only (tuner modes, filters);
-  /// modifier rows (trainer) add a leading glyph.
+  /// Optional leading icon; the spec's tuner chips are text-only, modifier
+  /// rows (trainer) add a leading glyph.
   final IconData? icon;
   final String label;
   final bool active;
@@ -76,7 +76,10 @@ class KitbagChip extends StatelessWidget {
             minWidth: _minTapTarget,
             minHeight: _minTapTarget,
           ),
-          child: Center(child: pill),
+          // widthFactor/heightFactor keep the chip hugging the pill: a bare
+          // Center expands to fill loose constraints, which made every chip
+          // claim a whole Wrap run (one chip per line on narrow screens).
+          child: Center(widthFactor: 1, heightFactor: 1, child: pill),
         ),
       ),
     );

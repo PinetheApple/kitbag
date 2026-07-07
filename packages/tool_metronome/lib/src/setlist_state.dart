@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:core_audio_ffi/core_audio_ffi.dart';
 import 'package:core_db/core_db.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:core_plugin_api/core_plugin_api.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -48,8 +49,12 @@ class ActiveSetlist {
   bool get hasPrevious => index > 0;
   bool get hasNext => index < songs.length - 1;
 
-  /// App-bar chip text, e.g. "Wedding set · 3/12".
-  String get label => '${setlist.name} · ${index + 1}/${songs.length}';
+  Song get current => songs[index];
+
+  /// App-bar chip text: the song you are ON plus position, e.g.
+  /// "Everlong · 3/12" (user feedback: the current song name must be
+  /// visible; the setlist name lives on the setlists screen).
+  String get label => '${current.name} · ${index + 1}/${songs.length}';
 }
 
 final activeSetlistProvider =
@@ -61,13 +66,40 @@ final activeSetlistProvider =
 /// reorders and deletions during a gig are reflected live: the chip label
 /// stays truthful and paging always applies the stored preset as it is now.
 class ActiveSetlistNotifier extends Notifier<ActiveSetlist?> {
+  /// Debounce for persisting live tempo tweaks (a drag emits many).
+  static const Duration bpmSaveDelay = Duration(milliseconds: 400);
+
   StreamSubscription<List<Song>>? _songsSubscription;
   StreamSubscription<Setlist?>? _setlistSubscription;
+  Timer? _bpmSaveTimer;
 
   @override
   ActiveSetlist? build() {
     ref.onDispose(_unsubscribe);
+    // User feedback: dialing a new tempo while on a song IS editing that
+    // song — no separate "overwrite" step for the common case.
+    ref.listen(
+      metronomeProvider.select((settings) => settings.bpm),
+      (previous, bpm) => _onBpmChanged(bpm),
+    );
     return null;
+  }
+
+  void _onBpmChanged(double bpm) {
+    final active = state;
+    if (active == null || active.current.bpm == bpm) {
+      return;
+    }
+    final songId = active.current.id;
+    _bpmSaveTimer?.cancel();
+    _bpmSaveTimer = Timer(bpmSaveDelay, () {
+      unawaited(
+        ref
+            .read(kitbagDatabaseProvider)
+            .songsDao
+            .updateSong(songId, SongsCompanion(bpm: Value(bpm))),
+      );
+    });
   }
 
   /// Starts (or re-anchors) a session and applies the song at [index].
@@ -106,6 +138,8 @@ class ActiveSetlistNotifier extends Notifier<ActiveSetlist?> {
     unawaited(_setlistSubscription?.cancel());
     _songsSubscription = null;
     _setlistSubscription = null;
+    _bpmSaveTimer?.cancel();
+    _bpmSaveTimer = null;
   }
 
   /// Reconciles the session with the stored songs: follow the current song
