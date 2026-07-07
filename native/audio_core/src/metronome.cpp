@@ -102,7 +102,7 @@ void Metronome::ApplyPendingCommands() {
     switch (command.type) {
       case CommandType::kStart:
         beat_position_ = 0.0;
-        current_bar_ = 0;
+        current_bar_ = -1;  // the first downbeat advances it to bar 0
         ramp_start_bar_ = 0;
         if (ramp_enabled_) {
           bpm_ = ramp_start_bpm_;
@@ -146,7 +146,8 @@ void Metronome::ApplyPendingCommands() {
           ramp_start_bpm_ = Clamp(command.value, kMinBpm, kMaxBpm);
           ramp_end_bpm_ = Clamp(command.value_b, kMinBpm, kMaxBpm);
           ramp_bars_ = Clamp(command.int_b, 1, kMaxRampBars);
-          ramp_start_bar_ = running_ ? current_bar_ : 0;
+          // current_bar_ is -1 before the first downbeat; never start there.
+          ramp_start_bar_ = running_ && current_bar_ > 0 ? current_bar_ : 0;
           bpm_ = ramp_start_bpm_;
         }
         break;
@@ -274,7 +275,7 @@ void Metronome::Render(float* output, uint32_t frame_count,
           const int64_t beat = sub_index / subdivision_;
           const auto beat_index = static_cast<int>(beat % beats_per_bar_);
           if (beat_index == 0) {
-            current_bar_ = beat / beats_per_bar_;
+            ++current_bar_;  // monotonic: survives time-signature changes
             if (ramp_enabled_) {
               bpm_ = RampBpmForBar(current_bar_);
               beats_per_sample = bpm_ / (60.0 * sample_rate);
@@ -310,9 +311,6 @@ void Metronome::Render(float* output, uint32_t frame_count,
         std::memory_order_relaxed);
   }
   current_bpm_.store(bpm_, std::memory_order_relaxed);
-  ramp_active_flag_.store(
-      ramp_enabled_ && current_bar_ - ramp_start_bar_ < ramp_bars_,
-      std::memory_order_relaxed);
   bar_muted_flag_.store(running_ && BarIsMuted(current_bar_),
                         std::memory_order_relaxed);
 }

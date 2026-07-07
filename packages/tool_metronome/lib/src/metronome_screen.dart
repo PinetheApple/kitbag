@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'metronome_state.dart';
 import 'widgets/bar_sweep.dart';
 import 'widgets/beat_led_row.dart';
+import 'widgets/metronome_poll.dart';
 import 'widgets/trainer_chips.dart';
 
 /// The metronome. The whole screen is the tempo control: a raw pointer
@@ -100,8 +101,7 @@ class _MetronomeScreenState extends ConsumerState<MetronomeScreen> {
                   children: [
                     Expanded(
                       child: _TempoReadout(
-                        bpm: settings.bpm,
-                        running: settings.running,
+                        settings: settings,
                         onNudge: notifier.nudgeBpm,
                         textTheme: theme.textTheme,
                       ),
@@ -127,21 +127,19 @@ class _MetronomeScreenState extends ConsumerState<MetronomeScreen> {
 
 class _TempoReadout extends StatelessWidget {
   const _TempoReadout({
-    required this.bpm,
-    required this.running,
+    required this.settings,
     required this.onNudge,
     required this.textTheme,
   });
 
-  final double bpm;
-  final bool running;
+  final MetronomeSettings settings;
   final ValueChanged<double> onNudge;
   final TextTheme textTheme;
 
   static final bool _isDesktop =
       !kIsWeb && (Platform.isLinux || Platform.isMacOS || Platform.isWindows);
 
-  static String _marking(double bpm) {
+  static String _marking(int bpm) {
     if (bpm < 60) return 'LARGO';
     if (bpm < 76) return 'ADAGIO';
     if (bpm < 108) return 'ANDANTE';
@@ -154,27 +152,40 @@ class _TempoReadout extends StatelessWidget {
   Widget build(BuildContext context) {
     final dim = Theme.of(context).colorScheme.onSurfaceVariant;
     final hint = _isDesktop ? 'DRAG · SCROLL · ARROWS' : 'SWIPE ANYWHERE';
-    return Center(
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              onPressed: () => onNudge(1),
-              icon: Icon(Icons.keyboard_arrow_up, color: dim),
-              tooltip: '+1 BPM',
-            ),
-            Text('${bpm.round()}', style: textTheme.displayLarge),
-            Text('BPM · ${_marking(bpm)} · $hint', style: textTheme.labelSmall),
-            IconButton(
-              onPressed: () => onNudge(-1),
-              icon: Icon(Icons.keyboard_arrow_down, color: dim),
-              tooltip: '−1 BPM',
-            ),
-            const SizedBox(height: 6),
-            BarSweep(running: running),
-          ],
+    // With a ramp armed the readout must show what will actually sound: the
+    // live ramped BPM while running, the ramp's start BPM while stopped.
+    final idleBpm = settings.rampEnabled
+        ? settings.ramp.startBpm
+        : settings.bpm;
+    return MetronomePoll<int>(
+      active: settings.running && settings.rampEnabled,
+      idle: idleBpm.round(),
+      read: (metronome) => metronome.currentBpm.round(),
+      builder: (context, bpm) => Center(
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                onPressed: () => onNudge(1),
+                icon: Icon(Icons.keyboard_arrow_up, color: dim),
+                tooltip: '+1 BPM',
+              ),
+              Text('$bpm', style: textTheme.displayLarge),
+              Text(
+                'BPM · ${_marking(bpm)} · $hint',
+                style: textTheme.labelSmall,
+              ),
+              IconButton(
+                onPressed: () => onNudge(-1),
+                icon: Icon(Icons.keyboard_arrow_down, color: dim),
+                tooltip: '−1 BPM',
+              ),
+              const SizedBox(height: 6),
+              BarSweep(running: settings.running),
+            ],
+          ),
         ),
       ),
     );

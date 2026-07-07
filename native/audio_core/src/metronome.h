@@ -75,10 +75,6 @@ class Metronome {
   double current_bpm() const {
     return current_bpm_.load(std::memory_order_relaxed);
   }
-  // True while a ramp is still progressing toward its end BPM.
-  bool ramp_active() const {
-    return ramp_active_flag_.load(std::memory_order_relaxed);
-  }
   // True while the current bar is silenced by the bar-mute trainer.
   bool bar_muted() const {
     return bar_muted_flag_.load(std::memory_order_relaxed);
@@ -140,7 +136,10 @@ class Metronome {
   int poly_beats_ = 3;
   int sound_ = 0;
   double beat_position_ = 0.0;  // fractional beats since start
-  int64_t current_bar_ = 0;
+  // Monotonic bar counter: incremented at every downbeat (never derived by
+  // division), so a mid-run time-signature change cannot jump ramp progress
+  // or bar-mute phase. -1 until the first downbeat after Start.
+  int64_t current_bar_ = -1;
   bool ramp_enabled_ = false;
   double ramp_start_bpm_ = 0.0;
   double ramp_end_bpm_ = 0.0;
@@ -157,7 +156,6 @@ class Metronome {
   std::atomic<int32_t> current_poly_beat_{-1};
   std::atomic<double> bar_phase_{0.0};
   std::atomic<double> current_bpm_{120.0};
-  std::atomic<bool> ramp_active_flag_{false};
   std::atomic<bool> bar_muted_flag_{false};
 };
 

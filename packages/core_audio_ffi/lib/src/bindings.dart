@@ -112,9 +112,6 @@ class KitbagBindings {
           .lookupFunction<GetDoubleNative, GetDoubleDart>(
             'kb_metronome_current_bpm',
           ),
-      metronomeRampActive = library.lookupFunction<GetIntNative, GetIntDart>(
-        'kb_metronome_ramp_active',
-      ),
       metronomeBarMuted = library.lookupFunction<GetIntNative, GetIntDart>(
         'kb_metronome_bar_muted',
       );
@@ -143,7 +140,6 @@ class KitbagBindings {
   final GetIntDart metronomeCurrentPolyBeat;
   final GetDoubleDart metronomeBarPhase;
   final GetDoubleDart metronomeCurrentBpm;
-  final GetIntDart metronomeRampActive;
   final GetIntDart metronomeBarMuted;
 
   static DynamicLibrary openLibrary() {

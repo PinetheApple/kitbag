@@ -151,11 +151,6 @@ double kb_metronome_current_bpm(const kb_engine* engine) {
   return engine == nullptr ? 0.0 : ToEngine(engine)->metronome().current_bpm();
 }
 
-int32_t kb_metronome_ramp_active(const kb_engine* engine) {
-  return engine != nullptr && ToEngine(engine)->metronome().ramp_active() ? 1
-                                                                          : 0;
-}
-
 int32_t kb_metronome_bar_muted(const kb_engine* engine) {
   return engine != nullptr && ToEngine(engine)->metronome().bar_muted() ? 1
                                                                         : 0;

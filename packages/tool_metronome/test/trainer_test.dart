@@ -1,69 +1,41 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tool_metronome/src/trainer.dart';
 
+// The schedule math itself lives in the native sequencer (verified by
+// tools/metronome_verify.cpp) and in the fake controller contract tests in
+// core_audio_ffi; these cover the UI-facing derived values.
 void main() {
   group('TempoRamp', () {
-    const ramp = TempoRamp(startBpm: 100, endBpm: 200, bars: 4);
-
-    test('starts at the start BPM', () {
-      expect(ramp.bpmForBar(0), 100);
+    test('stepPerBar divides the climb across the bars', () {
+      expect(
+        const TempoRamp(startBpm: 100, endBpm: 200, bars: 4).stepPerBar,
+        25,
+      );
     });
 
-    test('steps evenly once per bar', () {
-      expect(ramp.bpmForBar(1), 125);
-      expect(ramp.bpmForBar(2), 150);
-      expect(ramp.bpmForBar(3), 175);
-      expect(ramp.stepPerBar, 25);
+    test('stepPerBar is negative when ramping down', () {
+      expect(
+        const TempoRamp(startBpm: 160, endBpm: 80, bars: 8).stepPerBar,
+        -10,
+      );
     });
 
-    test('reaches the end BPM after the configured bars and holds', () {
-      expect(ramp.bpmForBar(4), 200);
-      expect(ramp.bpmForBar(40), 200);
-    });
-
-    test('clamps bars before the ramp start', () {
-      expect(ramp.bpmForBar(-2), 100);
-    });
-
-    test('ramps downward too', () {
-      const slowDown = TempoRamp(startBpm: 160, endBpm: 80, bars: 8);
-      expect(slowDown.bpmForBar(4), 120);
-      expect(slowDown.bpmForBar(8), 80);
-      expect(slowDown.stepPerBar, -10);
-    });
-
-    test('labels start and end', () {
-      expect(ramp.label, 'Ramp 100→200');
+    test('rejects a zero-bar ramp', () {
+      expect(
+        () => TempoRamp(startBpm: 100, endBpm: 140, bars: 0),
+        throwsAssertionError,
+      );
     });
   });
 
   group('BarMute', () {
-    test('plays X bars then mutes Y bars, repeating', () {
-      const mute = BarMute(playBars: 3, muteBars: 1);
-      final muted = [for (var bar = 0; bar < 8; bar++) mute.isMuted(bar)];
-      expect(muted, [
-        false, false, false, true, // first cycle
-        false, false, false, true, // second cycle
-      ]);
-    });
-
-    test('alternates for play 1, mute 1', () {
-      const mute = BarMute(playBars: 1, muteBars: 1);
-      expect(mute.isMuted(0), isFalse);
-      expect(mute.isMuted(1), isTrue);
-      expect(mute.isMuted(2), isFalse);
-    });
-
-    test('mutes a longer tail', () {
-      const mute = BarMute(playBars: 2, muteBars: 2);
-      expect(
-        [for (var bar = 0; bar < 4; bar++) mute.isMuted(bar)],
-        [false, false, true, true],
-      );
-    });
-
     test('labels the cycle', () {
       expect(const BarMute(playBars: 3, muteBars: 1).label, 'Mute 3+1');
+    });
+
+    test('rejects an empty side of the cycle', () {
+      expect(() => BarMute(playBars: 0, muteBars: 1), throwsAssertionError);
+      expect(() => BarMute(playBars: 1, muteBars: 0), throwsAssertionError);
     });
   });
 }

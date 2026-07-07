@@ -76,8 +76,6 @@ KB_EXPORT int32_t kb_metronome_current_poly_beat(const kb_engine* engine);
 KB_EXPORT double kb_metronome_bar_phase(const kb_engine* engine);
 /* Effective BPM including ramp progress. Poll for UI. */
 KB_EXPORT double kb_metronome_current_bpm(const kb_engine* engine);
-/* 1 while a ramp is still progressing toward its end BPM. */
-KB_EXPORT int32_t kb_metronome_ramp_active(const kb_engine* engine);
 /* 1 while the current bar is silenced by the bar-mute trainer. */
 KB_EXPORT int32_t kb_metronome_bar_muted(const kb_engine* engine);
 

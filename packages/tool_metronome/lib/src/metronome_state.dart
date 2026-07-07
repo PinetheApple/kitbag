@@ -141,7 +141,12 @@ class MetronomeNotifier extends Notifier<MetronomeSettings> {
     state = state.copyWith(bpm: clamped, rampEnabled: false);
   }
 
-  void nudgeBpm(double delta) => setBpm(state.bpm + delta);
+  /// Nudges relative to the tempo the user is hearing (and the readout is
+  /// showing): during a ramp that is the live ramped BPM, not the dial.
+  void nudgeBpm(double delta) {
+    final base = state.rampEnabled ? _controller.currentBpm : state.bpm;
+    setBpm(base + delta);
+  }
 
   void tapTempo() {
     final bpm = _tapTempo.tap();

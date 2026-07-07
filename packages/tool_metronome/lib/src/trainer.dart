@@ -1,38 +1,31 @@
-/// Trainer mode schedules. Pure Dart mirrors of the native sequencer math
-/// (native/audio_core/src/metronome.cpp), used for chip labels and sheet
-/// previews — and to keep the semantics testable without the engine.
+/// Trainer mode configuration passed to the native sequencer, which owns
+/// the schedule math (native/audio_core/src/metronome.cpp). The UI only
+/// needs the derived bits below for sheet previews and chip labels.
 library;
 
 /// Steps the BPM once per bar from [startBpm] to [endBpm] over [bars] bars,
 /// then holds at [endBpm].
 class TempoRamp {
-  const TempoRamp({this.startBpm = 100, this.endBpm = 140, this.bars = 8});
+  const TempoRamp({this.startBpm = 100, this.endBpm = 140, this.bars = 8})
+    : assert(bars >= 1, 'a ramp needs at least one bar');
 
   final double startBpm;
   final double endBpm;
   final int bars;
 
-  /// Effective BPM for the given bar since the ramp started.
-  double bpmForBar(int bar) {
-    final progressed = bar.clamp(0, bars);
-    return startBpm + (endBpm - startBpm) * progressed / bars;
-  }
-
-  /// Tempo step applied at each bar line.
+  /// Tempo step applied at each bar line. Shown in the config sheet.
   double get stepPerBar => (endBpm - startBpm) / bars;
-
-  String get label => 'Ramp ${startBpm.round()}→${endBpm.round()}';
 }
 
 /// Repeating cycle of [playBars] sounding bars followed by [muteBars]
 /// silent bars, anchored at bar 0.
 class BarMute {
-  const BarMute({this.playBars = 3, this.muteBars = 1});
+  const BarMute({this.playBars = 3, this.muteBars = 1})
+    : assert(playBars >= 1 && muteBars >= 1, 'cycle needs bars on both sides');
 
   final int playBars;
   final int muteBars;
 
-  bool isMuted(int bar) => bar % (playBars + muteBars) >= playBars;
-
+  /// Chip label for the active trainer, e.g. `Mute 3+1`.
   String get label => 'Mute $playBars+$muteBars';
 }

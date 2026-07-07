@@ -98,10 +98,6 @@ class MetronomeController {
   /// Effective BPM, including ramp progress. Cheap enough to poll.
   double get currentBpm => _engine.bindings.metronomeCurrentBpm(_engine.handle);
 
-  /// True while a ramp is still progressing toward its end BPM.
-  bool get rampActive =>
-      _engine.bindings.metronomeRampActive(_engine.handle) != 0;
-
   /// True while the current bar is silenced by the bar-mute trainer.
   bool get barMuted => _engine.bindings.metronomeBarMuted(_engine.handle) != 0;
 }

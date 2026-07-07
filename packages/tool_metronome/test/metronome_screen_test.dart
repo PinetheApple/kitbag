@@ -82,6 +82,9 @@ void main() {
     expect(fake.rampBars, 8);
     // Active chip shows the live (fake: start) BPM and the target.
     expect(find.text('Ramp 105→140'), findsOneWidget);
+    // The big readout must show what will sound, not the old dial value.
+    expect(find.text('105'), findsOneWidget);
+    expect(find.text('120'), findsNothing);
   });
 
   testWidgets('mute chip enables, shows the cycle, and turns off', (
@@ -117,6 +120,10 @@ void main() {
     await tester.tap(find.text('+10'));
     await tester.pump();
     expect(find.text('Ramp'), findsOneWidget);
+    expect(fake.rampEnabled, isFalse);
+    // Nudge is relative to the tempo being heard (ramp default start: 100).
+    expect(fake.tempo, 110);
+    expect(find.text('110'), findsOneWidget);
   });
 
   testWidgets('tapping a beat LED cycles its accent', (tester) async {

@@ -3,8 +3,13 @@ library;
 
 import 'core_audio_ffi.dart';
 
+/// Honors the documented [MetronomeController] contract: setTempo cancels
+/// the ramp, currentBpm steps once per bar, and bar muting cycles from bar
+/// 0. Advance [simulatedBar] in tests to model the sequencer's bar clock.
 class FakeMetronomeController implements MetronomeController {
   double tempo = 120;
+  int simulatedBar = 0;
+  int _rampStartBar = 0;
   int beatsPerBar = 4;
   int subdivision = 1;
   final Map<int, BeatAccent> accents = {};
@@ -21,13 +26,20 @@ class FakeMetronomeController implements MetronomeController {
   int muteBars = 1;
 
   @override
-  void start() => running = true;
+  void start() {
+    running = true;
+    simulatedBar = 0;
+    _rampStartBar = 0;
+  }
 
   @override
   void stop() => running = false;
 
   @override
-  void setTempo(double bpm) => tempo = bpm;
+  void setTempo(double bpm) {
+    tempo = bpm;
+    rampEnabled = false; // a manual tempo change cancels the ramp
+  }
 
   @override
   void setBeatsPerBar(int beats) => beatsPerBar = beats;
@@ -59,6 +71,9 @@ class FakeMetronomeController implements MetronomeController {
     rampStartBpm = startBpm;
     rampEndBpm = endBpm;
     rampBars = bars;
+    if (enabled) {
+      _rampStartBar = running ? simulatedBar : 0;
+    }
   }
 
   @override
@@ -81,11 +96,17 @@ class FakeMetronomeController implements MetronomeController {
   double get barPhase => 0;
 
   @override
-  double get currentBpm => rampEnabled ? rampStartBpm : tempo;
+  double get currentBpm {
+    if (!rampEnabled) {
+      return tempo;
+    }
+    final progressed = (simulatedBar - _rampStartBar).clamp(0, rampBars);
+    return rampStartBpm + (rampEndBpm - rampStartBpm) * progressed / rampBars;
+  }
 
   @override
-  bool get rampActive => rampEnabled && running;
-
-  @override
-  bool get barMuted => false;
+  bool get barMuted =>
+      running &&
+      barMuteEnabled &&
+      simulatedBar % (playBars + muteBars) >= playBars;
 }
