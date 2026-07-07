@@ -1,13 +1,12 @@
 import 'package:core_audio_ffi/core_audio_ffi.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:core_plugin_api/core_plugin_api.dart';
+
+import 'metronome_poll.dart';
 
 /// One LED per beat. Tap cycles accent → normal → muted (the row IS the
-/// pattern editor). The sounding beat lights up, polled on each vsync tick
-/// straight from the native atomics — no provider churn at 60fps.
-class BeatLedRow extends ConsumerStatefulWidget {
+/// pattern editor). The sounding beat lights up, polled per vsync straight
+/// from the native atomics via [MetronomePoll] — no provider churn at 60fps.
+class BeatLedRow extends StatelessWidget {
   const BeatLedRow({
     super.key,
     required this.beatCount,
@@ -26,57 +25,32 @@ class BeatLedRow extends ConsumerStatefulWidget {
   final double size;
 
   @override
-  ConsumerState<BeatLedRow> createState() => _BeatLedRowState();
-}
-
-class _BeatLedRowState extends ConsumerState<BeatLedRow>
-    with SingleTickerProviderStateMixin {
-  late final Ticker _ticker;
-  int _activeBeat = -1;
-
-  @override
-  void initState() {
-    super.initState();
-    _ticker = createTicker(_onTick)..start();
-  }
-
-  @override
-  void dispose() {
-    _ticker.dispose();
-    super.dispose();
-  }
-
-  void _onTick(Duration elapsed) {
-    final metronome = ref.read(metronomeControllerProvider);
-    final beat = widget.poly
-        ? metronome.currentPolyBeat
-        : metronome.currentBeat;
-    if (beat != _activeBeat) {
-      setState(() => _activeBeat = beat);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      alignment: WrapAlignment.center,
-      children: [
-        for (var i = 0; i < widget.beatCount; i++)
-          GestureDetector(
-            onTap: widget.onBeatTap == null ? null : () => widget.onBeatTap!(i),
-            child: _Led(
-              accent: widget.accents?[i] ?? BeatAccent.normal,
-              active: widget.running && i == _activeBeat,
-              size: widget.size,
-              color: scheme.primary,
-              idleColor: scheme.surfaceContainerHighest,
-              outline: scheme.outline,
+    return MetronomePoll<int>(
+      active: running,
+      idle: -1,
+      read: (metronome) =>
+          poly ? metronome.currentPolyBeat : metronome.currentBeat,
+      builder: (context, activeBeat) => Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        alignment: WrapAlignment.center,
+        children: [
+          for (var i = 0; i < beatCount; i++)
+            GestureDetector(
+              onTap: onBeatTap == null ? null : () => onBeatTap!(i),
+              child: _Led(
+                accent: accents?[i] ?? BeatAccent.normal,
+                active: running && i == activeBeat,
+                size: size,
+                color: scheme.primary,
+                idleColor: scheme.surfaceContainerHighest,
+                outline: scheme.outline,
+              ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
