@@ -39,6 +39,14 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
     super.initState();
     _controller = ref.read(tunerControllerProvider);
     WidgetsBinding.instance.addObserver(this);
+    // Re-entering the tuner is a fresh session: stale in-tune marks from a
+    // previous visit must not survive. Microtask: providers can't be
+    // mutated while the first frame is still building.
+    Future<void>.microtask(() {
+      if (mounted) {
+        ref.read(tunerProvider.notifier).resetSession();
+      }
+    });
     _startMic();
   }
 
@@ -252,10 +260,17 @@ class _PitchDialState extends ConsumerState<_PitchDial>
   static const double _inTuneCents = 3;
   static const double _minConfidence = .85;
 
+  /// Fast attack, slow release: a fresh note shows instantly, but when the
+  /// string stops ringing the last reading lingers (frozen needle, gently
+  /// dimmed) before relaxing to idle — the GuitarTuna feel.
+  static const Duration _holdDuration = Duration(milliseconds: 1750);
+
   late final Ticker _ticker;
   int _noteIndex = -1;
   double _cents = 0;
   bool _inTune = false;
+  bool _holding = false;
+  Duration? _lastConfidentAt;
 
   @override
   void initState() {
@@ -271,23 +286,48 @@ class _PitchDialState extends ConsumerState<_PitchDial>
 
   void _onTick(Duration elapsed) {
     final reading = ref.read(tunerControllerProvider).read();
-    final hasPitch = reading.hasPitch && reading.confidence >= _minConfidence;
-    final noteIndex = hasPitch ? reading.noteIndex : -1;
-    // Displayed at 0.1 cent resolution; avoids setState on sub-visible noise.
-    final cents = hasPitch ? (reading.cents * 10).roundToDouble() / 10 : 0.0;
-    final inTune = hasPitch && cents.abs() <= _inTuneCents;
+    final confident = reading.hasPitch && reading.confidence >= _minConfidence;
 
-    if (inTune && !_inTune) {
+    int noteIndex;
+    double cents;
+    bool inTune;
+    bool holding;
+    if (confident) {
+      _lastConfidentAt = elapsed;
+      noteIndex = reading.noteIndex;
+      // Displayed at 0.1 cent resolution; avoids setState on noise.
+      cents = (reading.cents * 10).roundToDouble() / 10;
+      inTune = cents.abs() <= _inTuneCents;
+      holding = false;
+    } else if (_lastConfidentAt != null &&
+        elapsed - _lastConfidentAt! < _holdDuration) {
+      // Hold window: freeze the last reading instead of snapping to idle.
+      noteIndex = _noteIndex;
+      cents = _cents;
+      inTune = _inTune;
+      holding = true;
+    } else {
+      noteIndex = -1;
+      cents = 0;
+      inTune = false;
+      holding = false;
+    }
+
+    if (confident && inTune && !_inTune) {
       widget.onInTune(noteIndex);
     }
     if (noteIndex != _noteIndex) {
       widget.onNoteChanged(noteIndex);
     }
-    if (noteIndex != _noteIndex || cents != _cents || inTune != _inTune) {
+    if (noteIndex != _noteIndex ||
+        cents != _cents ||
+        inTune != _inTune ||
+        holding != _holding) {
       setState(() {
         _noteIndex = noteIndex;
         _cents = cents;
         _inTune = inTune;
+        _holding = holding;
       });
     }
   }
@@ -297,10 +337,17 @@ class _PitchDialState extends ConsumerState<_PitchDial>
     return Column(
       children: [
         Expanded(
-          child: _NoteReadout(
-            noteIndex: _noteIndex,
-            cents: _cents,
-            inTune: _inTune,
+          child: AnimatedOpacity(
+            // Gentle fade while holding; instant full strength on attack.
+            opacity: _holding ? .55 : 1,
+            duration: _holding
+                ? const Duration(milliseconds: 600)
+                : const Duration(milliseconds: 80),
+            child: _NoteReadout(
+              noteIndex: _noteIndex,
+              cents: _cents,
+              inTune: _inTune,
+            ),
           ),
         ),
         KitbagTunerStrip(cents: _noteIndex >= 0 ? _cents : null),
