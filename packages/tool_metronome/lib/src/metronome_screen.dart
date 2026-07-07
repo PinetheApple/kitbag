@@ -1,3 +1,8 @@
+import 'dart:io' show Platform;
+
+import 'package:core_design/core_design.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,9 +11,10 @@ import 'metronome_state.dart';
 import 'widgets/bar_sweep.dart';
 import 'widgets/beat_led_row.dart';
 
-/// The metronome. The whole screen is the tempo control: vertical drag
-/// changes BPM (±1 per [_dragPixelsPerBpm] px). Visible ±5/±10 presets and
-/// TAP are the gesture's always-visible twins.
+/// The metronome. The whole screen is the tempo control: a raw pointer
+/// [Listener] tracks vertical drags (±1 BPM per [_dragPixelsPerBpm] px)
+/// without competing with buttons for gestures, and the scroll wheel works
+/// on desktop. Presets, TAP and the chevrons are the always-visible twins.
 class MetronomeScreen extends ConsumerStatefulWidget {
   const MetronomeScreen({super.key});
 
@@ -18,15 +24,47 @@ class MetronomeScreen extends ConsumerStatefulWidget {
 
 class _MetronomeScreenState extends ConsumerState<MetronomeScreen> {
   static const double _dragPixelsPerBpm = 8;
-  double _dragRemainder = 0;
+  static const double _maxContentWidth = 480;
+  // A tap must not change tempo: the drag arms only past this distance.
+  static const double _armDistance = 14;
 
-  void _onDragUpdate(DragUpdateDetails details) {
-    _dragRemainder -= details.delta.dy;
+  double _dragAccumulated = 0;
+  double _dragRemainder = 0;
+  bool _dragArmed = false;
+
+  void _onPointerDown(PointerDownEvent event) {
+    _dragAccumulated = 0;
+    _dragRemainder = 0;
+    _dragArmed = false;
+  }
+
+  void _onPointerMove(PointerMoveEvent event) {
+    _dragAccumulated -= event.delta.dy;
+    if (!_dragArmed) {
+      if (_dragAccumulated.abs() < _armDistance) {
+        return;
+      }
+      _dragArmed = true;
+      _dragRemainder = _dragAccumulated;
+    } else {
+      _dragRemainder -= event.delta.dy;
+    }
+    _applyDrag();
+  }
+
+  void _applyDrag() {
     final wholeBpm = (_dragRemainder / _dragPixelsPerBpm).truncate();
     if (wholeBpm != 0) {
       _dragRemainder -= wholeBpm * _dragPixelsPerBpm;
       ref.read(metronomeProvider.notifier).nudgeBpm(wholeBpm.toDouble());
       HapticFeedback.selectionClick();
+    }
+  }
+
+  void _onPointerSignal(PointerSignalEvent event) {
+    if (event is PointerScrollEvent) {
+      final direction = event.scrollDelta.dy > 0 ? -1.0 : 1.0;
+      ref.read(metronomeProvider.notifier).nudgeBpm(direction);
     }
   }
 
@@ -39,32 +77,45 @@ class _MetronomeScreenState extends ConsumerState<MetronomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Metronome'),
-        backgroundColor: Colors.transparent,
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 20),
+            child: KitbagBadge(label: 'SETLISTS · SOON', accent: true),
+          ),
+        ],
       ),
-      body: GestureDetector(
+      body: Listener(
         behavior: HitTestBehavior.opaque,
-        onVerticalDragUpdate: _onDragUpdate,
+        onPointerDown: _onPointerDown,
+        onPointerMove: _onPointerMove,
+        onPointerSignal: _onPointerSignal,
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              children: [
-                Expanded(
-                  child: _TempoReadout(
-                    bpm: settings.bpm,
-                    running: settings.running,
-                    textTheme: theme.textTheme,
-                  ),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: _maxContentWidth),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: _TempoReadout(
+                        bpm: settings.bpm,
+                        running: settings.running,
+                        onNudge: notifier.nudgeBpm,
+                        textTheme: theme.textTheme,
+                      ),
+                    ),
+                    _PresetRow(notifier: notifier),
+                    const SizedBox(height: 18),
+                    _PatternCard(settings: settings, notifier: notifier),
+                    const SizedBox(height: 12),
+                    _ModifierChips(settings: settings, notifier: notifier),
+                    const SizedBox(height: 18),
+                    _Transport(running: settings.running, notifier: notifier),
+                    const SizedBox(height: 12),
+                  ],
                 ),
-                _PresetRow(notifier: notifier),
-                const SizedBox(height: 18),
-                _PatternCard(settings: settings, notifier: notifier),
-                const SizedBox(height: 12),
-                _SoundRow(settings: settings, notifier: notifier),
-                const SizedBox(height: 18),
-                _Transport(running: settings.running, notifier: notifier),
-                const SizedBox(height: 12),
-              ],
+              ),
             ),
           ),
         ),
@@ -77,12 +128,17 @@ class _TempoReadout extends StatelessWidget {
   const _TempoReadout({
     required this.bpm,
     required this.running,
+    required this.onNudge,
     required this.textTheme,
   });
 
   final double bpm;
   final bool running;
+  final ValueChanged<double> onNudge;
   final TextTheme textTheme;
+
+  static final bool _isDesktop =
+      !kIsWeb && (Platform.isLinux || Platform.isMacOS || Platform.isWindows);
 
   static String _marking(double bpm) {
     if (bpm < 60) return 'LARGO';
@@ -96,20 +152,26 @@ class _TempoReadout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dim = Theme.of(context).colorScheme.onSurfaceVariant;
+    final hint = _isDesktop ? 'DRAG · SCROLL · ARROWS' : 'SWIPE ANYWHERE';
     return Center(
       child: FittedBox(
         fit: BoxFit.scaleDown,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.keyboard_arrow_up, color: dim),
-            Text('${bpm.round()}', style: textTheme.displayLarge),
-            Text(
-              'BPM · ${_marking(bpm)} · SWIPE ANYWHERE',
-              style: textTheme.labelSmall,
+            IconButton(
+              onPressed: () => onNudge(1),
+              icon: Icon(Icons.keyboard_arrow_up, color: dim),
+              tooltip: '+1 BPM',
             ),
-            Icon(Icons.keyboard_arrow_down, color: dim),
-            const SizedBox(height: 10),
+            Text('${bpm.round()}', style: textTheme.displayLarge),
+            Text('BPM · ${_marking(bpm)} · $hint', style: textTheme.labelSmall),
+            IconButton(
+              onPressed: () => onNudge(-1),
+              icon: Icon(Icons.keyboard_arrow_down, color: dim),
+              tooltip: '−1 BPM',
+            ),
+            const SizedBox(height: 6),
             BarSweep(running: running),
           ],
         ),
@@ -125,10 +187,11 @@ class _PresetRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget preset(String label, double delta) => Expanded(
-      child: OutlinedButton(
+    Widget preset(String label, double delta, {int flex = 1}) => Expanded(
+      flex: flex,
+      child: KitbagTileButton(
+        label: label,
         onPressed: () => notifier.nudgeBpm(delta),
-        child: Text(label),
       ),
     );
     return Row(
@@ -139,9 +202,10 @@ class _PresetRow extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(
           flex: 2,
-          child: FilledButton.tonal(
+          child: KitbagTileButton(
+            label: 'TAP',
+            emphasized: true,
             onPressed: notifier.tapTempo,
-            child: const Text('TAP'),
           ),
         ),
         const SizedBox(width: 8),
@@ -169,7 +233,11 @@ class _PatternCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                _BeatsStepper(settings: settings, notifier: notifier),
+                _CompactStep(
+                  onStep: (delta) =>
+                      notifier.setBeatsPerBar(settings.beatsPerBar + delta),
+                  child: KitbagBadge(label: '${settings.beatsPerBar}/4'),
+                ),
                 const Spacer(),
                 Flexible(
                   child: BeatLedRow(
@@ -181,30 +249,17 @@ class _PatternCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                FilterChip(
-                  label: Text(
-                    settings.polyEnabled
-                        ? '${settings.polyBeats}:${settings.beatsPerBar}'
-                        : 'Poly',
-                  ),
-                  selected: settings.polyEnabled,
-                  onSelected: (_) => notifier.togglePolyrhythm(),
-                ),
-                if (settings.polyEnabled) ...[
-                  IconButton(
-                    onPressed: () =>
-                        notifier.setPolyBeats(settings.polyBeats - 1),
-                    icon: const Icon(Icons.remove),
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  IconButton(
-                    onPressed: () =>
-                        notifier.setPolyBeats(settings.polyBeats + 1),
-                    icon: const Icon(Icons.add),
-                    visualDensity: VisualDensity.compact,
+            if (settings.polyEnabled) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  _CompactStep(
+                    onStep: (delta) =>
+                        notifier.setPolyBeats(settings.polyBeats + delta),
+                    child: KitbagBadge(
+                      label: '${settings.polyBeats}:${settings.beatsPerBar}',
+                      accent: true,
+                    ),
                   ),
                   const Spacer(),
                   BeatLedRow(
@@ -216,20 +271,29 @@ class _PatternCard extends StatelessWidget {
                     size: 16,
                   ),
                 ],
-              ],
-            ),
+              ),
+            ],
             const SizedBox(height: 12),
-            SegmentedButton<int>(
-              segments: const [
-                ButtonSegment(value: 1, label: Text('♩')),
-                ButtonSegment(value: 2, label: Text('♪')),
-                ButtonSegment(value: 3, label: Text('³')),
-                ButtonSegment(value: 4, label: Text('♬')),
+            KitbagSegmented(
+              segments: [
+                for (final (value, label) in const [
+                  (1, '♩'),
+                  (2, '♪'),
+                  (3, '³'),
+                  (4, '♬'),
+                ])
+                  KitbagSegment(
+                    label: label,
+                    selected: settings.subdivision == value,
+                    onTap: () => notifier.setSubdivision(value),
+                  ),
+                KitbagSegment(
+                  label: 'poly',
+                  selected: settings.polyEnabled,
+                  accent: true,
+                  onTap: notifier.togglePolyrhythm,
+                ),
               ],
-              selected: {settings.subdivision},
-              onSelectionChanged: (selection) =>
-                  notifier.setSubdivision(selection.first),
-              showSelectedIcon: false,
             ),
           ],
         ),
@@ -238,36 +302,33 @@ class _PatternCard extends StatelessWidget {
   }
 }
 
-class _BeatsStepper extends StatelessWidget {
-  const _BeatsStepper({required this.settings, required this.notifier});
+/// Wraps a badge with slim −/+ steppers.
+class _CompactStep extends StatelessWidget {
+  const _CompactStep({required this.onStep, required this.child});
 
-  final MetronomeSettings settings;
-  final MetronomeNotifier notifier;
+  final ValueChanged<int> onStep;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
+    final dim = Theme.of(context).colorScheme.onSurfaceVariant;
+    Widget step(IconData icon, int delta) => InkWell(
+      onTap: () => onStep(delta),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.all(6),
+        child: Icon(icon, size: 16, color: dim),
+      ),
+    );
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          onPressed: () => notifier.setBeatsPerBar(settings.beatsPerBar - 1),
-          icon: const Icon(Icons.remove),
-        ),
-        Text(
-          '${settings.beatsPerBar}/4',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        IconButton(
-          onPressed: () => notifier.setBeatsPerBar(settings.beatsPerBar + 1),
-          icon: const Icon(Icons.add),
-        ),
-      ],
+      children: [step(Icons.remove, -1), child, step(Icons.add, 1)],
     );
   }
 }
 
-class _SoundRow extends StatelessWidget {
-  const _SoundRow({required this.settings, required this.notifier});
+class _ModifierChips extends StatelessWidget {
+  const _ModifierChips({required this.settings, required this.notifier});
 
   static const List<String> _soundNames = ['Beep', 'Woodblock', 'Click'];
 
@@ -278,13 +339,23 @@ class _SoundRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Wrap(
       spacing: 8,
+      runSpacing: 8,
       children: [
-        for (var i = 0; i < _soundNames.length; i++)
-          ChoiceChip(
-            label: Text(_soundNames[i]),
-            selected: settings.sound == i,
-            onSelected: (_) => notifier.setSound(i),
-          ),
+        const Chip(
+          avatar: Icon(Icons.trending_up, size: 16),
+          label: Text('Ramp · soon'),
+        ),
+        const Chip(
+          avatar: Icon(Icons.grid_off, size: 16),
+          label: Text('Mute bars · soon'),
+        ),
+        ActionChip(
+          avatar: const Icon(Icons.notifications_none, size: 16),
+          label: Text(_soundNames[settings.sound]),
+          onPressed: () =>
+              notifier.setSound((settings.sound + 1) % _soundNames.length),
+          tooltip: 'Change click sound',
+        ),
       ],
     );
   }
@@ -301,27 +372,22 @@ class _Transport extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        IconButton.outlined(
+        const KitbagCircleButton(
+          icon: Icons.queue_music,
           onPressed: null,
           tooltip: 'Setlists — coming with the song library',
-          icon: const Icon(Icons.queue_music),
         ),
-        SizedBox(
-          width: 72,
-          height: 72,
-          child: FilledButton(
-            onPressed: () {
-              notifier.toggleRunning();
-              HapticFeedback.mediumImpact();
-            },
-            style: FilledButton.styleFrom(shape: const CircleBorder()),
-            child: Icon(running ? Icons.stop : Icons.play_arrow, size: 34),
-          ),
+        KitbagPlayButton(
+          playing: running,
+          onPressed: () {
+            notifier.toggleRunning();
+            HapticFeedback.mediumImpact();
+          },
         ),
-        IconButton.outlined(
+        const KitbagCircleButton(
+          icon: Icons.timer_outlined,
           onPressed: null,
           tooltip: 'Trainer modes — coming next',
-          icon: const Icon(Icons.trending_up),
         ),
       ],
     );
