@@ -37,3 +37,30 @@ jobs:
         run: dart run melos analyze
       - name: Test
         run: dart run melos test
+
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve workspace
+        run: dart pub get
+      - name: Generate code (*.g.dart is gitignored)
+        run: dart run melos gen
+      - name: Build release APK
+        working-directory: packages/app_shell
+        run: flutter build apk --release
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: kitbag-release-apk
+          path: packages/app_shell/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
