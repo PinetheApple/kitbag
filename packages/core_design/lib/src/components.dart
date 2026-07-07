@@ -331,6 +331,60 @@ class KitbagToolTile extends StatelessWidget {
   }
 }
 
+/// Empty state as a starting line (experience rule 06): names the reason
+/// and puts the next action inline — never a bare "No data".
+class KitbagEmptyState extends StatelessWidget {
+  const KitbagEmptyState({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.message,
+    required this.actionLabel,
+    required this.onAction,
+    this.actionIcon = Icons.add,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+  final String actionLabel;
+  final VoidCallback onAction;
+  final IconData actionIcon;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 44, color: scheme.onSurfaceVariant),
+            const SizedBox(height: 14),
+            Text(title, style: theme.textTheme.titleMedium),
+            const SizedBox(height: 6),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 18),
+            FilledButton.icon(
+              onPressed: onAction,
+              icon: Icon(actionIcon),
+              label: Text(actionLabel),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// The primary transport control — accent circle with a soft glow.
 class KitbagPlayButton extends StatelessWidget {
   const KitbagPlayButton({

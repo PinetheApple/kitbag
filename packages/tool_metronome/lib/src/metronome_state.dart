@@ -216,4 +216,35 @@ class MetronomeNotifier extends Notifier<MetronomeSettings> {
     _pushBarMute(false, state.barMute);
     state = state.copyWith(barMuteEnabled: false);
   }
+
+  /// Applies a stored song preset in one shot (setlist paging). Keeps the
+  /// transport state — paging songs mid-performance must not stop the
+  /// click — but, like any manual tempo change, cancels an active ramp.
+  void applyPreset({
+    required double bpm,
+    required int beatsPerBar,
+    required int subdivision,
+    required List<BeatAccent> accents,
+    required bool polyEnabled,
+    required int polyBeats,
+    required int sound,
+  }) {
+    final padded = [
+      ...accents.take(MetronomeController.maxBeats),
+      for (var i = accents.length; i < MetronomeController.maxBeats; i++)
+        BeatAccent.normal,
+    ];
+    final settings = state.copyWith(
+      bpm: bpm.clamp(MetronomeController.minBpm, MetronomeController.maxBpm),
+      beatsPerBar: beatsPerBar.clamp(1, MetronomeController.maxBeats),
+      subdivision: subdivision,
+      accents: padded,
+      polyEnabled: polyEnabled,
+      polyBeats: polyBeats.clamp(2, MetronomeController.maxBeats),
+      sound: sound,
+      rampEnabled: false,
+    );
+    _pushAll(settings);
+    state = settings;
+  }
 }

@@ -29,6 +29,8 @@ jobs:
           cache: true
       - name: Resolve workspace
         run: dart pub get
+      - name: Generate code (*.g.dart is gitignored)
+        run: dart run melos gen
       - name: Format
         run: dart run melos format
       - name: Analyze

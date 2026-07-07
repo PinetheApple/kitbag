@@ -6,11 +6,15 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import 'format.dart';
+import 'metronome_routes.dart';
 import 'metronome_state.dart';
 import 'widgets/bar_sweep.dart';
 import 'widgets/beat_led_row.dart';
 import 'widgets/metronome_poll.dart';
+import 'widgets/setlist_chip.dart';
 import 'widgets/trainer_chips.dart';
 
 /// The metronome. The whole screen is the tempo control: a raw pointer
@@ -79,12 +83,7 @@ class _MetronomeScreenState extends ConsumerState<MetronomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Metronome'),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 20),
-            child: KitbagBadge(label: 'SETLISTS · SOON', accent: true),
-          ),
-        ],
+        actions: const [SetlistChip()],
       ),
       body: Listener(
         behavior: HitTestBehavior.opaque,
@@ -248,7 +247,9 @@ class _PatternCard extends StatelessWidget {
                 _CompactStep(
                   onStep: (delta) =>
                       notifier.setBeatsPerBar(settings.beatsPerBar + delta),
-                  child: KitbagBadge(label: '${settings.beatsPerBar}/4'),
+                  child: KitbagBadge(
+                    label: timeSignatureLabel(settings.beatsPerBar),
+                  ),
                 ),
                 const Spacer(),
                 Flexible(
@@ -342,8 +343,6 @@ class _CompactStep extends StatelessWidget {
 class _ModifierChips extends StatelessWidget {
   const _ModifierChips({required this.settings, required this.notifier});
 
-  static const List<String> _soundNames = ['Beep', 'Woodblock', 'Click'];
-
   final MetronomeSettings settings;
   final MetronomeNotifier notifier;
 
@@ -357,9 +356,9 @@ class _ModifierChips extends StatelessWidget {
         MuteBarsChip(settings: settings),
         KitbagChip(
           icon: Icons.notifications_none,
-          label: _soundNames[settings.sound],
+          label: soundNames[settings.sound],
           onTap: () =>
-              notifier.setSound((settings.sound + 1) % _soundNames.length),
+              notifier.setSound((settings.sound + 1) % soundNames.length),
           tooltip: 'Change click sound',
         ),
       ],
@@ -378,10 +377,10 @@ class _Transport extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        const KitbagCircleButton(
+        KitbagCircleButton(
           icon: Icons.queue_music,
-          onPressed: null,
-          tooltip: 'Setlists — coming with the song library',
+          onPressed: () => context.go(MetronomeRoutes.setlists),
+          tooltip: 'Setlists',
         ),
         KitbagPlayButton(
           playing: running,

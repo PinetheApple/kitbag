@@ -1,4 +1,5 @@
 import 'package:core_audio_ffi/core_audio_ffi.dart';
+import 'package:core_db/core_db.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// The single shared native engine. Created lazily, lives for the app.
@@ -21,3 +22,11 @@ final metronomeControllerProvider = Provider<MetronomeController>(
 final tunerControllerProvider = Provider<TunerController>(
   (ref) => ref.watch(audioEngineProvider).tuner,
 );
+
+/// The single app database. Widget tests override this with an in-memory
+/// executor instead of touching the filesystem.
+final kitbagDatabaseProvider = Provider<KitbagDatabase>((ref) {
+  final db = KitbagDatabase.open();
+  ref.onDispose(db.close);
+  return db;
+});
