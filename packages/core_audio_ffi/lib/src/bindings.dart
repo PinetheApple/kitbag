@@ -22,6 +22,11 @@ typedef SetIntNative = Void Function(Pointer<Void>, Int32);
 typedef SetIntDart = void Function(Pointer<Void>, int);
 typedef SetTwoIntsNative = Void Function(Pointer<Void>, Int32, Int32);
 typedef SetTwoIntsDart = void Function(Pointer<Void>, int, int);
+typedef SetRampNative =
+    Void Function(Pointer<Void>, Int32, Double, Double, Int32);
+typedef SetRampDart = void Function(Pointer<Void>, int, double, double, int);
+typedef SetThreeIntsNative = Void Function(Pointer<Void>, Int32, Int32, Int32);
+typedef SetThreeIntsDart = void Function(Pointer<Void>, int, int, int);
 typedef GetIntNative = Int32 Function(Pointer<Void>);
 typedef GetIntDart = int Function(Pointer<Void>);
 typedef GetDoubleNative = Double Function(Pointer<Void>);
@@ -82,6 +87,13 @@ class KitbagBindings {
       metronomeSetSound = library.lookupFunction<SetIntNative, SetIntDart>(
         'kb_metronome_set_sound',
       ),
+      metronomeSetRamp = library.lookupFunction<SetRampNative, SetRampDart>(
+        'kb_metronome_set_ramp',
+      ),
+      metronomeSetBarMute = library
+          .lookupFunction<SetThreeIntsNative, SetThreeIntsDart>(
+            'kb_metronome_set_bar_mute',
+          ),
       metronomeIsRunning = library.lookupFunction<GetIntNative, GetIntDart>(
         'kb_metronome_is_running',
       ),
@@ -95,7 +107,17 @@ class KitbagBindings {
       metronomeBarPhase = library
           .lookupFunction<GetDoubleNative, GetDoubleDart>(
             'kb_metronome_bar_phase',
-          );
+          ),
+      metronomeCurrentBpm = library
+          .lookupFunction<GetDoubleNative, GetDoubleDart>(
+            'kb_metronome_current_bpm',
+          ),
+      metronomeRampActive = library.lookupFunction<GetIntNative, GetIntDart>(
+        'kb_metronome_ramp_active',
+      ),
+      metronomeBarMuted = library.lookupFunction<GetIntNative, GetIntDart>(
+        'kb_metronome_bar_muted',
+      );
 
   static const String _libraryName = 'kitbag_core';
 
@@ -114,10 +136,15 @@ class KitbagBindings {
   final SetTwoIntsDart metronomeSetAccent;
   final SetTwoIntsDart metronomeSetPoly;
   final SetIntDart metronomeSetSound;
+  final SetRampDart metronomeSetRamp;
+  final SetThreeIntsDart metronomeSetBarMute;
   final GetIntDart metronomeIsRunning;
   final GetIntDart metronomeCurrentBeat;
   final GetIntDart metronomeCurrentPolyBeat;
   final GetDoubleDart metronomeBarPhase;
+  final GetDoubleDart metronomeCurrentBpm;
+  final GetIntDart metronomeRampActive;
+  final GetIntDart metronomeBarMuted;
 
   static DynamicLibrary openLibrary() {
     if (Platform.isAndroid) {

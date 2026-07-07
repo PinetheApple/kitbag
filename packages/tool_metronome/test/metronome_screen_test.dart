@@ -18,6 +18,12 @@ void main() {
     );
   }
 
+  // pumpAndSettle never settles here: the LED/chip tickers run every frame.
+  Future<void> pumpSheet(WidgetTester tester) async {
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+  }
+
   testWidgets('renders default tempo and pushes settings to the engine', (
     tester,
   ) async {
@@ -57,6 +63,60 @@ void main() {
     await tester.tap(find.byIcon(Icons.stop));
     await tester.pump();
     expect(fake.running, isFalse);
+  });
+
+  testWidgets('ramp chip opens the sheet and enables the ramp', (tester) async {
+    await tester.pumpWidget(app());
+    await tester.tap(find.text('Ramp'));
+    await pumpSheet(tester);
+    expect(find.text('Tempo ramp'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Increase Start BPM'));
+    await tester.pump();
+    await tester.tap(find.text('START RAMP'));
+    await pumpSheet(tester);
+
+    expect(fake.rampEnabled, isTrue);
+    expect(fake.rampStartBpm, 105);
+    expect(fake.rampEndBpm, 140);
+    expect(fake.rampBars, 8);
+    // Active chip shows the live (fake: start) BPM and the target.
+    expect(find.text('Ramp 105→140'), findsOneWidget);
+  });
+
+  testWidgets('mute chip enables, shows the cycle, and turns off', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app());
+    await tester.tap(find.text('Mute bars'));
+    await pumpSheet(tester);
+    await tester.tap(find.text('START MUTING'));
+    await pumpSheet(tester);
+
+    expect(fake.barMuteEnabled, isTrue);
+    expect(fake.playBars, 3);
+    expect(fake.muteBars, 1);
+    expect(find.text('Mute 3+1'), findsOneWidget);
+
+    await tester.tap(find.text('Mute 3+1'));
+    await pumpSheet(tester);
+    await tester.tap(find.text('TURN OFF'));
+    await pumpSheet(tester);
+    expect(fake.barMuteEnabled, isFalse);
+    expect(find.text('Mute bars'), findsOneWidget);
+  });
+
+  testWidgets('manual tempo change cancels an active ramp', (tester) async {
+    await tester.pumpWidget(app());
+    await tester.tap(find.text('Ramp'));
+    await pumpSheet(tester);
+    await tester.tap(find.text('START RAMP'));
+    await pumpSheet(tester);
+    expect(fake.rampEnabled, isTrue);
+
+    await tester.tap(find.text('+10'));
+    await tester.pump();
+    expect(find.text('Ramp'), findsOneWidget);
   });
 
   testWidgets('tapping a beat LED cycles its accent', (tester) async {

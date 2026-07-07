@@ -113,6 +113,55 @@ void TestSubdivisionAndMute() {
   ExpectSpacing(onsets, 0, 2, 0.25 * kSampleRate, "eighth spacing");
 }
 
+void TestTempoRamp() {
+  kitbag::Metronome metronome;
+  metronome.SetBeatsPerBar(4);
+  metronome.SetRamp(true, 100.0, 200.0, 4);
+  metronome.Start();
+
+  // Bar BPMs: 100, 125, 150, 175, then 200 held. ~21 s covers it all.
+  const auto onsets = RenderAndDetectOnsets(metronome, kSampleRate * 21);
+  Check(onsets.size() >= 24, "ramp: enough clicks to cover all ramp bars");
+  if (onsets.size() < 2) {
+    return;
+  }
+
+  // Intervals must shrink monotonically (rising tempo) down to the target.
+  const double target = 60.0 / 200.0 * kSampleRate;
+  double previous = static_cast<double>(onsets[1] - onsets[0]);
+  bool reached_target = false;
+  for (size_t i = 2; i < onsets.size(); ++i) {
+    const double spacing = static_cast<double>(onsets[i] - onsets[i - 1]);
+    Check(spacing <= previous + kMaxJitterFrames,
+          "ramp: intervals decrease monotonically");
+    if (std::fabs(spacing - target) <= kMaxJitterFrames) {
+      reached_target = true;
+    } else {
+      Check(!reached_target, "ramp: holds end BPM once reached");
+    }
+    previous = spacing;
+  }
+  Check(reached_target, "ramp: reaches the end BPM");
+  ExpectSpacing(onsets, onsets.size() - 4, onsets.size(), target,
+                "ramp end 200 BPM");
+}
+
+void TestBarMute() {
+  kitbag::Metronome metronome;
+  metronome.SetTempo(120.0);
+  metronome.SetBeatsPerBar(4);
+  metronome.SetBarMute(true, 1, 1);
+  metronome.Start();
+
+  // Bar = 2 s. Play 1, mute 1 → 4 clicks in even bars, silence in odd bars.
+  const auto onsets = RenderAndDetectOnsets(metronome, kSampleRate * 8);
+  Check(onsets.size() == 8, "bar mute: 4 clicks per sounding bar over 8s");
+  const int64_t bar_frames = 2 * kSampleRate;
+  for (const int64_t onset : onsets) {
+    Check(onset / bar_frames % 2 == 0, "bar mute: muted bars stay silent");
+  }
+}
+
 void TestPolyrhythm() {
   kitbag::Metronome metronome;
   metronome.SetTempo(120.0);
@@ -132,6 +181,8 @@ int main() {
   TestTempoChange();
   TestSubdivisionAndMute();
   TestPolyrhythm();
+  TestTempoRamp();
+  TestBarMute();
   if (g_failures == 0) {
     std::printf("metronome_verify: all checks passed\n");
     return 0;

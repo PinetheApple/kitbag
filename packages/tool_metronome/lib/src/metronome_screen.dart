@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'metronome_state.dart';
 import 'widgets/bar_sweep.dart';
 import 'widgets/beat_led_row.dart';
+import 'widgets/trainer_chips.dart';
 
 /// The metronome. The whole screen is the tempo control: a raw pointer
 /// [Listener] tracks vertical drags (±1 BPM per [_dragPixelsPerBpm] px)
@@ -341,18 +342,12 @@ class _ModifierChips extends StatelessWidget {
       spacing: 8,
       runSpacing: 8,
       children: [
-        const Chip(
-          avatar: Icon(Icons.trending_up, size: 16),
-          label: Text('Ramp · soon'),
-        ),
-        const Chip(
-          avatar: Icon(Icons.grid_off, size: 16),
-          label: Text('Mute bars · soon'),
-        ),
-        ActionChip(
-          avatar: const Icon(Icons.notifications_none, size: 16),
-          label: Text(_soundNames[settings.sound]),
-          onPressed: () =>
+        RampChip(settings: settings),
+        MuteBarsChip(settings: settings),
+        KitbagChip(
+          icon: Icons.notifications_none,
+          label: _soundNames[settings.sound],
+          onTap: () =>
               notifier.setSound((settings.sound + 1) % _soundNames.length),
           tooltip: 'Change click sound',
         ),

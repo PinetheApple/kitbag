@@ -78,12 +78,35 @@ void Metronome::SetSound(int sound_index) {
   commands_.Push(command);
 }
 
+void Metronome::SetRamp(bool enabled, double start_bpm, double end_bpm,
+                        int bars) {
+  Command command{CommandType::kSetRamp};
+  command.value = start_bpm;
+  command.value_b = end_bpm;
+  command.int_a = enabled ? 1 : 0;
+  command.int_b = bars;
+  commands_.Push(command);
+}
+
+void Metronome::SetBarMute(bool enabled, int play_bars, int mute_bars) {
+  Command command{CommandType::kSetBarMute};
+  command.int_a = enabled ? 1 : 0;
+  command.int_b = play_bars;
+  command.int_c = mute_bars;
+  commands_.Push(command);
+}
+
 void Metronome::ApplyPendingCommands() {
   Command command;
   while (commands_.Pop(&command)) {
     switch (command.type) {
       case CommandType::kStart:
         beat_position_ = 0.0;
+        current_bar_ = 0;
+        ramp_start_bar_ = 0;
+        if (ramp_enabled_) {
+          bpm_ = ramp_start_bpm_;
+        }
         running_ = true;
         break;
       case CommandType::kStop:
@@ -93,6 +116,7 @@ void Metronome::ApplyPendingCommands() {
         break;
       case CommandType::kSetTempo:
         bpm_ = Clamp(command.value, kMinBpm, kMaxBpm);
+        ramp_enabled_ = false;  // a manual tempo change cancels the ramp
         break;
       case CommandType::kSetBeats:
         beats_per_bar_ = Clamp(command.int_a, 1, kMaxBeats);
@@ -116,9 +140,38 @@ void Metronome::ApplyPendingCommands() {
       case CommandType::kSetSound:
         sound_ = Clamp(command.int_a, 0, kSoundCount - 1);
         break;
+      case CommandType::kSetRamp:
+        ramp_enabled_ = command.int_a != 0;
+        if (ramp_enabled_) {
+          ramp_start_bpm_ = Clamp(command.value, kMinBpm, kMaxBpm);
+          ramp_end_bpm_ = Clamp(command.value_b, kMinBpm, kMaxBpm);
+          ramp_bars_ = Clamp(command.int_b, 1, kMaxRampBars);
+          ramp_start_bar_ = running_ ? current_bar_ : 0;
+          bpm_ = ramp_start_bpm_;
+        }
+        break;
+      case CommandType::kSetBarMute:
+        mute_enabled_ = command.int_a != 0;
+        play_bars_ = Clamp(command.int_b, 1, kMaxMuteBars);
+        mute_bars_ = Clamp(command.int_c, 1, kMaxMuteBars);
+        break;
     }
   }
   running_flag_.store(running_, std::memory_order_relaxed);
+}
+
+double Metronome::RampBpmForBar(int64_t bar) const {
+  const int64_t progressed = Clamp<int64_t>(bar - ramp_start_bar_, 0,
+                                            ramp_bars_);
+  const double step = (ramp_end_bpm_ - ramp_start_bpm_) / ramp_bars_;
+  return ramp_start_bpm_ + step * static_cast<double>(progressed);
+}
+
+bool Metronome::BarIsMuted(int64_t bar) const {
+  if (!mute_enabled_) {
+    return false;
+  }
+  return bar % (play_bars_ + mute_bars_) >= play_bars_;
 }
 
 void Metronome::TriggerClick(double frequency_hz, double amplitude,
@@ -150,7 +203,7 @@ void Metronome::OnBeatBoundary(int beat_index, uint32_t sample_rate) {
   current_beat_.store(beat_index, std::memory_order_relaxed);
   const Accent accent =
       beat_index < kMaxBeats ? accents_[beat_index] : Accent::kNormal;
-  if (accent == Accent::kMuted) {
+  if (accent == Accent::kMuted || BarIsMuted(current_bar_)) {
     return;
   }
   const SoundPreset& sound = kSounds[sound_];
@@ -164,7 +217,7 @@ void Metronome::OnSubdivisionTick(uint32_t sample_rate) {
   const int owning_beat =
       static_cast<int>(std::floor(beat_position_ + kGridEpsilon)) %
       beats_per_bar_;
-  if (accents_[owning_beat] == Accent::kMuted) {
+  if (accents_[owning_beat] == Accent::kMuted || BarIsMuted(current_bar_)) {
     return;
   }
   const SoundPreset& sound = kSounds[sound_];
@@ -174,6 +227,11 @@ void Metronome::OnSubdivisionTick(uint32_t sample_rate) {
 
 void Metronome::OnPolyBoundary(int poly_index, uint32_t sample_rate) {
   current_poly_beat_.store(poly_index, std::memory_order_relaxed);
+  // Muted bars silence the poly voice too: the trainer's point is keeping
+  // time internally, so nothing may sound during a muted bar.
+  if (BarIsMuted(current_bar_)) {
+    return;
+  }
   const SoundPreset& sound = kSounds[sound_];
   TriggerClick(sound.poly_hz, kPolyAmplitude, sound.decay_per_second,
                sample_rate);
@@ -199,7 +257,7 @@ void Metronome::Render(float* output, uint32_t frame_count,
                        uint32_t sample_rate, uint32_t channel_count) {
   ApplyPendingCommands();
 
-  const double beats_per_sample = bpm_ / (60.0 * sample_rate);
+  double beats_per_sample = bpm_ / (60.0 * sample_rate);
   const double poly_scale =
       static_cast<double>(poly_beats_) / static_cast<double>(beats_per_bar_);
 
@@ -213,8 +271,15 @@ void Metronome::Render(float* output, uint32_t frame_count,
       // A grid point fires on the first sample at or past it.
       if (position - beats_per_sample < sub_start - kGridEpsilon) {
         if (sub_index % subdivision_ == 0) {
-          const auto beat_index = static_cast<int>(
-              (sub_index / subdivision_) % beats_per_bar_);
+          const int64_t beat = sub_index / subdivision_;
+          const auto beat_index = static_cast<int>(beat % beats_per_bar_);
+          if (beat_index == 0) {
+            current_bar_ = beat / beats_per_bar_;
+            if (ramp_enabled_) {
+              bpm_ = RampBpmForBar(current_bar_);
+              beats_per_sample = bpm_ / (60.0 * sample_rate);
+            }
+          }
           OnBeatBoundary(beat_index, sample_rate);
         } else if (subdivision_ > 1) {
           OnSubdivisionTick(sample_rate);
@@ -244,6 +309,12 @@ void Metronome::Render(float* output, uint32_t frame_count,
             beats_per_bar_,
         std::memory_order_relaxed);
   }
+  current_bpm_.store(bpm_, std::memory_order_relaxed);
+  ramp_active_flag_.store(
+      ramp_enabled_ && current_bar_ - ramp_start_bar_ < ramp_bars_,
+      std::memory_order_relaxed);
+  bar_muted_flag_.store(running_ && BarIsMuted(current_bar_),
+                        std::memory_order_relaxed);
 }
 
 }  // namespace kitbag

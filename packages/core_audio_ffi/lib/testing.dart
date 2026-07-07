@@ -12,6 +12,13 @@ class FakeMetronomeController implements MetronomeController {
   int polyBeats = 3;
   int sound = 0;
   bool running = false;
+  bool rampEnabled = false;
+  double rampStartBpm = 100;
+  double rampEndBpm = 140;
+  int rampBars = 8;
+  bool barMuteEnabled = false;
+  int playBars = 3;
+  int muteBars = 1;
 
   @override
   void start() => running = true;
@@ -42,6 +49,26 @@ class FakeMetronomeController implements MetronomeController {
   void setSound(int soundIndex) => sound = soundIndex;
 
   @override
+  void setRamp({
+    required bool enabled,
+    double startBpm = 100,
+    double endBpm = 140,
+    int bars = 8,
+  }) {
+    rampEnabled = enabled;
+    rampStartBpm = startBpm;
+    rampEndBpm = endBpm;
+    rampBars = bars;
+  }
+
+  @override
+  void setBarMute({required bool enabled, int playBars = 3, int muteBars = 1}) {
+    barMuteEnabled = enabled;
+    this.playBars = playBars;
+    this.muteBars = muteBars;
+  }
+
+  @override
   bool get isRunning => running;
 
   @override
@@ -52,4 +79,13 @@ class FakeMetronomeController implements MetronomeController {
 
   @override
   double get barPhase => 0;
+
+  @override
+  double get currentBpm => rampEnabled ? rampStartBpm : tempo;
+
+  @override
+  bool get rampActive => rampEnabled && running;
+
+  @override
+  bool get barMuted => false;
 }
