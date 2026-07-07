@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Tuner mic capture (AAudio, unprocessed input preset). -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <application
         android:label="app_shell"
         android:name="${applicationName}"
