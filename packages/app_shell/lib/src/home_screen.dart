@@ -80,8 +80,9 @@ class _EmptyHub extends StatelessWidget {
             'Tools arrive with the next milestones.\n'
             'For now: prove the audio core works.',
             textAlign: TextAlign.center,
-            style: theme.textTheme.bodyMedium
-                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 24),
           FilledButton.icon(

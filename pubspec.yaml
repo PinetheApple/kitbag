@@ -12,3 +12,15 @@ workspace:
 
 dev_dependencies:
   melos: ^7.0.0
+
+melos:
+  scripts:
+    analyze:
+      run: dart run melos exec -- dart analyze --fatal-infos
+      description: Analyze all packages.
+    test:
+      run: dart run melos exec --dir-exists=test -- flutter test
+      description: Test all packages that have tests.
+    format:
+      run: dart run melos exec -- dart format --set-exit-if-changed .
+      description: Verify formatting.

@@ -4,47 +4,54 @@
 import 'dart:ffi';
 import 'dart:io';
 
-typedef _CreateNative = Int32 Function(Pointer<Pointer<Void>>);
-typedef _CreateDart = int Function(Pointer<Pointer<Void>>);
-typedef _EngineOpNative = Int32 Function(Pointer<Void>);
-typedef _EngineOpDart = int Function(Pointer<Void>);
-typedef _EngineVoidOpNative = Void Function(Pointer<Void>);
-typedef _EngineVoidOpDart = void Function(Pointer<Void>);
-typedef _SampleRateNative = Uint32 Function(Pointer<Void>);
-typedef _SampleRateDart = int Function(Pointer<Void>);
-typedef _FramesNative = Uint64 Function(Pointer<Void>);
-typedef _FramesDart = int Function(Pointer<Void>);
-typedef _SetToneNative = Void Function(Pointer<Void>, Int32, Float);
-typedef _SetToneDart = void Function(Pointer<Void>, int, double);
+typedef CreateNative = Int32 Function(Pointer<Pointer<Void>>);
+typedef CreateDart = int Function(Pointer<Pointer<Void>>);
+typedef EngineOpNative = Int32 Function(Pointer<Void>);
+typedef EngineOpDart = int Function(Pointer<Void>);
+typedef EngineVoidOpNative = Void Function(Pointer<Void>);
+typedef EngineVoidOpDart = void Function(Pointer<Void>);
+typedef SampleRateNative = Uint32 Function(Pointer<Void>);
+typedef SampleRateDart = int Function(Pointer<Void>);
+typedef FramesNative = Uint64 Function(Pointer<Void>);
+typedef FramesDart = int Function(Pointer<Void>);
+typedef SetToneNative = Void Function(Pointer<Void>, Int32, Float);
+typedef SetToneDart = void Function(Pointer<Void>, int, double);
 
 class KitbagBindings {
   KitbagBindings(DynamicLibrary library)
-      : engineCreate = library
-            .lookupFunction<_CreateNative, _CreateDart>('kb_engine_create'),
-        engineDestroy = library.lookupFunction<_EngineVoidOpNative,
-            _EngineVoidOpDart>('kb_engine_destroy'),
-        engineStart = library
-            .lookupFunction<_EngineOpNative, _EngineOpDart>('kb_engine_start'),
-        engineStop = library.lookupFunction<_EngineVoidOpNative,
-            _EngineVoidOpDart>('kb_engine_stop'),
-        engineSampleRate =
-            library.lookupFunction<_SampleRateNative, _SampleRateDart>(
-                'kb_engine_sample_rate'),
-        engineFramesRendered = library
-            .lookupFunction<_FramesNative, _FramesDart>(
-                'kb_engine_frames_rendered'),
-        engineSetTestTone = library.lookupFunction<_SetToneNative,
-            _SetToneDart>('kb_engine_set_test_tone');
+    : engineCreate = library.lookupFunction<CreateNative, CreateDart>(
+        'kb_engine_create',
+      ),
+      engineDestroy = library
+          .lookupFunction<EngineVoidOpNative, EngineVoidOpDart>(
+            'kb_engine_destroy',
+          ),
+      engineStart = library.lookupFunction<EngineOpNative, EngineOpDart>(
+        'kb_engine_start',
+      ),
+      engineStop = library.lookupFunction<EngineVoidOpNative, EngineVoidOpDart>(
+        'kb_engine_stop',
+      ),
+      engineSampleRate = library
+          .lookupFunction<SampleRateNative, SampleRateDart>(
+            'kb_engine_sample_rate',
+          ),
+      engineFramesRendered = library.lookupFunction<FramesNative, FramesDart>(
+        'kb_engine_frames_rendered',
+      ),
+      engineSetTestTone = library.lookupFunction<SetToneNative, SetToneDart>(
+        'kb_engine_set_test_tone',
+      );
 
   static const String _libraryName = 'kitbag_core';
 
-  final _CreateDart engineCreate;
-  final _EngineVoidOpDart engineDestroy;
-  final _EngineOpDart engineStart;
-  final _EngineVoidOpDart engineStop;
-  final _SampleRateDart engineSampleRate;
-  final _FramesDart engineFramesRendered;
-  final _SetToneDart engineSetTestTone;
+  final CreateDart engineCreate;
+  final EngineVoidOpDart engineDestroy;
+  final EngineOpDart engineStart;
+  final EngineVoidOpDart engineStop;
+  final SampleRateDart engineSampleRate;
+  final FramesDart engineFramesRendered;
+  final SetToneDart engineSetTestTone;
 
   static DynamicLibrary openLibrary() {
     if (Platform.isAndroid) {
@@ -57,7 +64,8 @@ class KitbagBindings {
       return DynamicLibrary.open('lib$_libraryName.dylib');
     }
     throw UnsupportedError(
-        'kitbag_core has no build for ${Platform.operatingSystem} yet');
+      'kitbag_core has no build for ${Platform.operatingSystem} yet',
+    );
   }
 
   static DynamicLibrary _openLinux() {

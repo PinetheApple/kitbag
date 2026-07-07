@@ -7,28 +7,28 @@ import 'tokens.dart';
 /// Space Grotesk carries display/numeric roles, Inter carries body text.
 abstract final class KitbagTheme {
   static ThemeData dark() => _build(
-        brightness: Brightness.dark,
-        background: KitbagColors.darkBackground,
-        surface: KitbagColors.darkSurface1,
-        surfaceHigh: KitbagColors.darkSurface2,
-        outline: KitbagColors.darkOutline,
-        text: KitbagColors.darkText,
-        textDim: KitbagColors.darkTextDim,
-        accent: KitbagColors.darkAccent,
-        onAccent: KitbagColors.darkOnAccent,
-      );
+    brightness: Brightness.dark,
+    background: KitbagColors.darkBackground,
+    surface: KitbagColors.darkSurface1,
+    surfaceHigh: KitbagColors.darkSurface2,
+    outline: KitbagColors.darkOutline,
+    text: KitbagColors.darkText,
+    textDim: KitbagColors.darkTextDim,
+    accent: KitbagColors.darkAccent,
+    onAccent: KitbagColors.darkOnAccent,
+  );
 
   static ThemeData light() => _build(
-        brightness: Brightness.light,
-        background: KitbagColors.lightBackground,
-        surface: KitbagColors.lightSurface1,
-        surfaceHigh: KitbagColors.lightSurface2,
-        outline: KitbagColors.lightOutline,
-        text: KitbagColors.lightText,
-        textDim: KitbagColors.lightTextDim,
-        accent: KitbagColors.lightAccent,
-        onAccent: KitbagColors.lightOnAccent,
-      );
+    brightness: Brightness.light,
+    background: KitbagColors.lightBackground,
+    surface: KitbagColors.lightSurface1,
+    surfaceHigh: KitbagColors.lightSurface2,
+    outline: KitbagColors.lightOutline,
+    text: KitbagColors.lightText,
+    textDim: KitbagColors.lightTextDim,
+    accent: KitbagColors.lightAccent,
+    onAccent: KitbagColors.lightOnAccent,
+  );
 
   static ThemeData _build({
     required Brightness brightness,
