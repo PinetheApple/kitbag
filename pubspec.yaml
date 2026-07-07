@@ -9,6 +9,7 @@ workspace:
   - packages/core_audio_ffi
   - packages/core_design
   - packages/app_shell
+  - packages/tool_metronome
 
 dev_dependencies:
   melos: ^7.0.0

@@ -9,6 +9,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 add_library(kitbag_core SHARED
   src/api.cpp
   src/engine.cpp
+  src/metronome.cpp
   src/miniaudio_impl.c
 )
 
@@ -31,4 +32,8 @@ option(KITBAG_BUILD_TOOLS "Build native test tools" OFF)
 if(KITBAG_BUILD_TOOLS)
   add_executable(tone_test tools/tone_test.c)
   target_link_libraries(tone_test PRIVATE kitbag_core)
+
+  add_executable(metronome_verify tools/metronome_verify.cpp src/metronome.cpp)
+  target_include_directories(metronome_verify PRIVATE src)
+  target_link_libraries(metronome_verify PRIVATE m)
 endif()

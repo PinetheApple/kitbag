@@ -62,4 +62,73 @@ void kb_engine_set_test_tone(kb_engine* engine, int32_t enabled,
   }
 }
 
+void kb_metronome_start(kb_engine* engine) {
+  if (engine != nullptr) {
+    ToEngine(engine)->metronome().Start();
+  }
+}
+
+void kb_metronome_stop(kb_engine* engine) {
+  if (engine != nullptr) {
+    ToEngine(engine)->metronome().Stop();
+  }
+}
+
+void kb_metronome_set_tempo(kb_engine* engine, double bpm) {
+  if (engine != nullptr) {
+    ToEngine(engine)->metronome().SetTempo(bpm);
+  }
+}
+
+void kb_metronome_set_beats(kb_engine* engine, int32_t beats_per_bar) {
+  if (engine != nullptr) {
+    ToEngine(engine)->metronome().SetBeatsPerBar(beats_per_bar);
+  }
+}
+
+void kb_metronome_set_subdivision(kb_engine* engine, int32_t subdivision) {
+  if (engine != nullptr) {
+    ToEngine(engine)->metronome().SetSubdivision(subdivision);
+  }
+}
+
+void kb_metronome_set_accent(kb_engine* engine, int32_t beat_index,
+                             int32_t accent) {
+  if (engine != nullptr) {
+    ToEngine(engine)->metronome().SetAccent(
+        beat_index, static_cast<kitbag::Accent>(accent));
+  }
+}
+
+void kb_metronome_set_poly(kb_engine* engine, int32_t enabled, int32_t beats) {
+  if (engine != nullptr) {
+    ToEngine(engine)->metronome().SetPolyrhythm(enabled != 0, beats);
+  }
+}
+
+void kb_metronome_set_sound(kb_engine* engine, int32_t sound_index) {
+  if (engine != nullptr) {
+    ToEngine(engine)->metronome().SetSound(sound_index);
+  }
+}
+
+int32_t kb_metronome_is_running(const kb_engine* engine) {
+  return engine != nullptr && ToEngine(engine)->metronome().is_running() ? 1
+                                                                         : 0;
+}
+
+int32_t kb_metronome_current_beat(const kb_engine* engine) {
+  return engine == nullptr ? -1 : ToEngine(engine)->metronome().current_beat();
+}
+
+int32_t kb_metronome_current_poly_beat(const kb_engine* engine) {
+  return engine == nullptr
+             ? -1
+             : ToEngine(engine)->metronome().current_poly_beat();
+}
+
+double kb_metronome_bar_phase(const kb_engine* engine) {
+  return engine == nullptr ? 0.0 : ToEngine(engine)->metronome().bar_phase();
+}
+
 }  // extern "C"

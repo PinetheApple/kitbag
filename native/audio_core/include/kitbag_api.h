@@ -39,6 +39,32 @@ KB_EXPORT void kb_engine_set_test_tone(kb_engine* engine,
                                        int32_t enabled,
                                        float frequency_hz);
 
+/* --- Metronome ---------------------------------------------------------- */
+
+typedef enum kb_accent {
+  KB_ACCENT_MUTED = 0,
+  KB_ACCENT_NORMAL = 1,
+  KB_ACCENT_ACCENTED = 2,
+} kb_accent;
+
+KB_EXPORT void kb_metronome_start(kb_engine* engine);
+KB_EXPORT void kb_metronome_stop(kb_engine* engine);
+KB_EXPORT void kb_metronome_set_tempo(kb_engine* engine, double bpm);
+KB_EXPORT void kb_metronome_set_beats(kb_engine* engine, int32_t beats_per_bar);
+KB_EXPORT void kb_metronome_set_subdivision(kb_engine* engine,
+                                            int32_t subdivision);
+KB_EXPORT void kb_metronome_set_accent(kb_engine* engine, int32_t beat_index,
+                                       int32_t accent);
+KB_EXPORT void kb_metronome_set_poly(kb_engine* engine, int32_t enabled,
+                                     int32_t beats);
+KB_EXPORT void kb_metronome_set_sound(kb_engine* engine, int32_t sound_index);
+KB_EXPORT int32_t kb_metronome_is_running(const kb_engine* engine);
+/* Beat index within the bar, -1 when stopped. Poll for UI. */
+KB_EXPORT int32_t kb_metronome_current_beat(const kb_engine* engine);
+KB_EXPORT int32_t kb_metronome_current_poly_beat(const kb_engine* engine);
+/* Position within the bar, [0, 1). For beat-sweep UI. */
+KB_EXPORT double kb_metronome_bar_phase(const kb_engine* engine);
+
 #ifdef __cplusplus
 }
 #endif

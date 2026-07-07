@@ -77,6 +77,8 @@ void Engine::Render(float* output, uint32_t frame_count) {
     }
   }
 
+  metronome_.Render(output, frame_count, kSampleRate, kChannelCount);
+
   frames_rendered_.fetch_add(frame_count, std::memory_order_relaxed);
 }
 

@@ -4,6 +4,7 @@
 #include <atomic>
 #include <cstdint>
 
+#include "metronome.h"
 #include "miniaudio.h"
 
 namespace kitbag {
@@ -32,6 +33,9 @@ class Engine {
 
   void SetTestTone(bool enabled, float frequency_hz);
 
+  Metronome& metronome() { return metronome_; }
+  const Metronome& metronome() const { return metronome_; }
+
  private:
   static void DataCallback(ma_device* device, void* output, const void* input,
                            ma_uint32 frame_count);
@@ -44,6 +48,8 @@ class Engine {
   std::atomic<bool> tone_enabled_{false};
   std::atomic<float> tone_frequency_hz_{440.0f};
   double tone_phase_ = 0.0;
+
+  Metronome metronome_;
 };
 
 }  // namespace kitbag
