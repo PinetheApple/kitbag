@@ -18,3 +18,5 @@ native/audio_core/build/
 
 # OS
 .DS_Store
+
+.claude/worktrees/
