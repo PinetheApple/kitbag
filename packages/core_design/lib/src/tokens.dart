@@ -26,8 +26,24 @@ abstract final class KitbagColors {
   static const Color lightOnAccent = Color(0xFFFFF7EA);
 
   // Semantic — separate channel from accent, never used for emphasis.
+  // "Almost" is the amber between flat and in-tune on the tuner strip.
   static const Color darkFlat = Color(0xFFFF5C5C);
+  static const Color darkAlmost = Color(0xFFFFC24B);
   static const Color darkInTune = Color(0xFF4ADE80);
   static const Color lightFlat = Color(0xFFCC4444);
+  static const Color lightAlmost = Color(0xFF9A6E06);
   static const Color lightInTune = Color(0xFF1E8A4F);
+}
+
+/// Brightness-aware accessors for the semantic channel, so widgets never
+/// repeat the dark/light ternary.
+extension KitbagSemanticColors on BuildContext {
+  bool get _isDark => Theme.of(this).brightness == Brightness.dark;
+
+  Color get kitbagFlat =>
+      _isDark ? KitbagColors.darkFlat : KitbagColors.lightFlat;
+  Color get kitbagAlmost =>
+      _isDark ? KitbagColors.darkAlmost : KitbagColors.lightAlmost;
+  Color get kitbagInTune =>
+      _isDark ? KitbagColors.darkInTune : KitbagColors.lightInTune;
 }

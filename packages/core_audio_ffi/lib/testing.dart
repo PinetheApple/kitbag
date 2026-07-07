@@ -110,3 +110,45 @@ class FakeMetronomeController implements MetronomeController {
       barMuteEnabled &&
       simulatedBar % (playBars + muteBars) >= playBars;
 }
+
+/// Honors the documented [TunerController] contract: setA4 clamps to the
+/// 415-466 range and start() can be made to fail via [failStart] so the
+/// mic-unavailable UI path is testable.
+class FakeTunerController implements TunerController {
+  double a4 = TunerController.defaultA4;
+  double bandLowHz = TunerController.chromaticLowHz;
+  double bandHighHz = TunerController.chromaticHighHz;
+  bool running = false;
+  int startCalls = 0;
+
+  /// When true, start() throws like a failed device init.
+  bool failStart = false;
+
+  /// Reading reported to pollers; tests set this directly.
+  TunerReading reading = const TunerReading.none();
+
+  @override
+  void start() {
+    startCalls++;
+    if (failStart) {
+      throw AudioEngineException(AudioEngineError.deviceInitFailed);
+    }
+    running = true;
+  }
+
+  @override
+  void stop() => running = false;
+
+  @override
+  void setA4(double a4Hz) =>
+      a4 = a4Hz.clamp(TunerController.minA4, TunerController.maxA4);
+
+  @override
+  void setBand(double lowHz, double highHz) {
+    bandLowHz = lowHz;
+    bandHighHz = highHz;
+  }
+
+  @override
+  TunerReading read() => reading;
+}

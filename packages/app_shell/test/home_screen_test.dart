@@ -15,6 +15,7 @@ void main() {
           metronomeControllerProvider.overrideWithValue(
             FakeMetronomeController(),
           ),
+          tunerControllerProvider.overrideWithValue(FakeTunerController()),
         ],
         child: const MaterialApp(home: HomeScreen()),
       ),
@@ -22,5 +23,6 @@ void main() {
 
     expect(find.text('KITBAG'), findsOneWidget);
     expect(find.text('Metronome'), findsOneWidget);
+    expect(find.text('Tuner'), findsOneWidget);
   });
 }

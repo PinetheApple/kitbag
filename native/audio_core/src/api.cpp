@@ -156,4 +156,36 @@ int32_t kb_metronome_bar_muted(const kb_engine* engine) {
                                                                         : 0;
 }
 
+kb_result kb_tuner_start(kb_engine* engine) {
+  if (engine == nullptr) {
+    return KB_ERROR_INVALID_ARGUMENT;
+  }
+  return ToEngine(engine)->tuner().Start() ? KB_OK
+                                           : KB_ERROR_DEVICE_INIT_FAILED;
+}
+
+void kb_tuner_stop(kb_engine* engine) {
+  if (engine != nullptr) {
+    ToEngine(engine)->tuner().Stop();
+  }
+}
+
+void kb_tuner_set_a4(kb_engine* engine, double a4_hz) {
+  if (engine != nullptr) {
+    ToEngine(engine)->tuner().SetA4(a4_hz);
+  }
+}
+
+void kb_tuner_set_band(kb_engine* engine, double low_hz, double high_hz) {
+  if (engine != nullptr) {
+    ToEngine(engine)->tuner().SetBand(low_hz, high_hz);
+  }
+}
+
+uint64_t kb_tuner_snapshot(const kb_engine* engine) {
+  return engine == nullptr
+             ? kitbag::Tuner::PackSnapshot(kitbag::PitchAnalyzer::Reading{})
+             : ToEngine(engine)->tuner().snapshot();
+}
+
 }  // extern "C"
