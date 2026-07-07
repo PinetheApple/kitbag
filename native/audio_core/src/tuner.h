@@ -35,14 +35,15 @@ class Tuner {
   void SetBand(double low_hz, double high_hz);
 
   bool is_running() const { return running_.load(std::memory_order_relaxed); }
-  double pitch_hz() const { return pitch_hz_.load(std::memory_order_relaxed); }
-  double cents() const { return cents_.load(std::memory_order_relaxed); }
-  double confidence() const {
-    return confidence_.load(std::memory_order_relaxed);
-  }
-  int32_t note_index() const {
-    return note_index_.load(std::memory_order_relaxed);
-  }
+
+  // The whole reading in one atomic — a single load can never pair note A
+  // with note B's cents. Layout mirrored by kb_tuner_snapshot:
+  //   bits 0-15   int16   nearest-note MIDI index (-1 = no pitch)
+  //   bits 16-31  int16   cents offset from that note, x100
+  //   bits 32-47  uint16  confidence [0,1] x10000
+  uint64_t snapshot() const { return snapshot_.load(std::memory_order_relaxed); }
+
+  static uint64_t PackSnapshot(const PitchAnalyzer::Reading& reading);
 
  private:
   // ~340ms of headroom at 48kHz between callback and analysis thread.
@@ -52,7 +53,6 @@ class Tuner {
   static void DataCallback(ma_device* device, void* output, const void* input,
                            ma_uint32 frame_count);
   void AnalysisLoop();
-  void PublishReading(const PitchAnalyzer::Reading& reading);
 
   ma_device device_{};
   bool device_ready_ = false;
@@ -66,10 +66,7 @@ class Tuner {
   std::atomic<double> band_high_hz_{PitchAnalyzer::kChromaticHighHz};
   std::atomic<uint32_t> params_version_{0};
 
-  std::atomic<double> pitch_hz_{0.0};
-  std::atomic<double> cents_{0.0};
-  std::atomic<double> confidence_{0.0};
-  std::atomic<int32_t> note_index_{-1};
+  std::atomic<uint64_t> snapshot_{PackSnapshot(PitchAnalyzer::Reading{})};
 };
 
 }  // namespace kitbag

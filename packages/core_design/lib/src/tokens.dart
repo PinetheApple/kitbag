@@ -34,3 +34,16 @@ abstract final class KitbagColors {
   static const Color lightAlmost = Color(0xFF9A6E06);
   static const Color lightInTune = Color(0xFF1E8A4F);
 }
+
+/// Brightness-aware accessors for the semantic channel, so widgets never
+/// repeat the dark/light ternary.
+extension KitbagSemanticColors on BuildContext {
+  bool get _isDark => Theme.of(this).brightness == Brightness.dark;
+
+  Color get kitbagFlat =>
+      _isDark ? KitbagColors.darkFlat : KitbagColors.lightFlat;
+  Color get kitbagAlmost =>
+      _isDark ? KitbagColors.darkAlmost : KitbagColors.lightAlmost;
+  Color get kitbagInTune =>
+      _isDark ? KitbagColors.darkInTune : KitbagColors.lightInTune;
+}

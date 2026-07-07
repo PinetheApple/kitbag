@@ -87,9 +87,9 @@ class TunerNotifier extends Notifier<TunerSettings> {
     state = settings;
   }
 
-  void setA4(double a4) => _update(
-    state.copyWith(a4: a4.clamp(TunerController.minA4, TunerController.maxA4)),
-  );
+  // No clamp here: TunerController.setA4 is the single clamp point, and
+  // the slider already constrains input to the valid range.
+  void setA4(double a4) => _update(state.copyWith(a4: a4));
 
   void toggleChromatic() => _update(
     state.copyWith(

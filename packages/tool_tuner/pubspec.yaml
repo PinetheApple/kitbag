@@ -13,6 +13,7 @@ dependencies:
     sdk: flutter
   flutter_riverpod: ^2.6.0
   go_router: ^16.0.0
+  permission_handler: ^12.0.0
   core_audio_ffi:
   core_design:
   core_plugin_api:

@@ -85,21 +85,18 @@ KB_EXPORT int32_t kb_metronome_bar_muted(const kb_engine* engine);
  * pitch analysis. */
 KB_EXPORT kb_result kb_tuner_start(kb_engine* engine);
 KB_EXPORT void kb_tuner_stop(kb_engine* engine);
-KB_EXPORT int32_t kb_tuner_is_running(const kb_engine* engine);
 /* Reference pitch, clamped to 415-466 Hz. */
 KB_EXPORT void kb_tuner_set_a4(kb_engine* engine, double a4_hz);
 /* Constrains detection to [low_hz, high_hz] — the preset/per-string band
  * that kills octave errors. */
 KB_EXPORT void kb_tuner_set_band(kb_engine* engine, double low_hz,
                                  double high_hz);
-/* Latest smoothed pitch in Hz, 0 when nothing is sounding. Poll for UI. */
-KB_EXPORT double kb_tuner_pitch_hz(const kb_engine* engine);
-/* Offset from the nearest chromatic note, in cents. */
-KB_EXPORT double kb_tuner_cents(const kb_engine* engine);
-/* Detection confidence [0, 1]. */
-KB_EXPORT double kb_tuner_confidence(const kb_engine* engine);
-/* MIDI note number of the nearest note, -1 when no pitch. */
-KB_EXPORT int32_t kb_tuner_note_index(const kb_engine* engine);
+/* The whole smoothed reading packed into one value — a single atomic read,
+ * so a poll can never mix fields from two updates. Poll for UI.
+ *   bits 0-15   int16   nearest-note MIDI index (-1 = no pitch)
+ *   bits 16-31  int16   cents offset from that note, x100
+ *   bits 32-47  uint16  confidence [0,1] x10000 */
+KB_EXPORT uint64_t kb_tuner_snapshot(const kb_engine* engine);
 
 #ifdef __cplusplus
 }

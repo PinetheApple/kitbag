@@ -1,8 +1,21 @@
 #include "tuner.h"
 
+#include <algorithm>
 #include <chrono>
+#include <cmath>
 
 namespace kitbag {
+
+uint64_t Tuner::PackSnapshot(const PitchAnalyzer::Reading& reading) {
+  const auto note = static_cast<uint16_t>(
+      static_cast<int16_t>(std::clamp(reading.note_index, -1, 32767)));
+  const auto cents = static_cast<uint16_t>(static_cast<int16_t>(
+      std::lround(std::clamp(reading.cents, -320.0, 320.0) * 100.0)));
+  const auto confidence = static_cast<uint16_t>(
+      std::lround(std::clamp(reading.confidence, 0.0, 1.0) * 10000.0));
+  return static_cast<uint64_t>(note) | (static_cast<uint64_t>(cents) << 16) |
+         (static_cast<uint64_t>(confidence) << 32);
+}
 
 Tuner::~Tuner() { Stop(); }
 
@@ -48,7 +61,8 @@ void Tuner::Stop() {
     ma_device_uninit(&device_);
     device_ready_ = false;
   }
-  PublishReading(PitchAnalyzer::Reading{});
+  snapshot_.store(PackSnapshot(PitchAnalyzer::Reading{}),
+                  std::memory_order_relaxed);
 }
 
 void Tuner::SetA4(double a4_hz) {
@@ -75,11 +89,14 @@ void Tuner::DataCallback(ma_device* device, void* output, const void* input,
 }
 
 void Tuner::AnalysisLoop() {
+  // Version is captured BEFORE the params are read: a Set* landing in
+  // between bumps the version and gets re-applied on the first loop pass
+  // instead of being silently dropped.
+  uint32_t applied_version = params_version_.load(std::memory_order_acquire);
   PitchAnalyzer analyzer(kSampleRate,
                          band_low_hz_.load(std::memory_order_relaxed),
                          band_high_hz_.load(std::memory_order_relaxed));
   analyzer.SetA4(a4_hz_.load(std::memory_order_relaxed));
-  uint32_t applied_version = params_version_.load(std::memory_order_acquire);
 
   while (running_.load(std::memory_order_relaxed)) {
     const uint32_t version = params_version_.load(std::memory_order_acquire);
@@ -98,20 +115,14 @@ void Tuner::AnalysisLoop() {
     while (samples_.Pop(&sample)) {
       drained_any = true;
       if (analyzer.Process(sample)) {
-        PublishReading(analyzer.reading());
+        snapshot_.store(PackSnapshot(analyzer.reading()),
+                        std::memory_order_relaxed);
       }
     }
     if (!drained_any) {
       std::this_thread::sleep_for(std::chrono::microseconds(kIdleSleepMicros));
     }
   }
-}
-
-void Tuner::PublishReading(const PitchAnalyzer::Reading& reading) {
-  pitch_hz_.store(reading.pitch_hz, std::memory_order_relaxed);
-  cents_.store(reading.cents, std::memory_order_relaxed);
-  confidence_.store(reading.confidence, std::memory_order_relaxed);
-  note_index_.store(reading.note_index, std::memory_order_relaxed);
 }
 
 }  // namespace kitbag

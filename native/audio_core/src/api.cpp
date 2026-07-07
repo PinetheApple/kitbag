@@ -170,10 +170,6 @@ void kb_tuner_stop(kb_engine* engine) {
   }
 }
 
-int32_t kb_tuner_is_running(const kb_engine* engine) {
-  return engine != nullptr && ToEngine(engine)->tuner().is_running() ? 1 : 0;
-}
-
 void kb_tuner_set_a4(kb_engine* engine, double a4_hz) {
   if (engine != nullptr) {
     ToEngine(engine)->tuner().SetA4(a4_hz);
@@ -186,20 +182,10 @@ void kb_tuner_set_band(kb_engine* engine, double low_hz, double high_hz) {
   }
 }
 
-double kb_tuner_pitch_hz(const kb_engine* engine) {
-  return engine == nullptr ? 0.0 : ToEngine(engine)->tuner().pitch_hz();
-}
-
-double kb_tuner_cents(const kb_engine* engine) {
-  return engine == nullptr ? 0.0 : ToEngine(engine)->tuner().cents();
-}
-
-double kb_tuner_confidence(const kb_engine* engine) {
-  return engine == nullptr ? 0.0 : ToEngine(engine)->tuner().confidence();
-}
-
-int32_t kb_tuner_note_index(const kb_engine* engine) {
-  return engine == nullptr ? -1 : ToEngine(engine)->tuner().note_index();
+uint64_t kb_tuner_snapshot(const kb_engine* engine) {
+  return engine == nullptr
+             ? kitbag::Tuner::PackSnapshot(kitbag::PitchAnalyzer::Reading{})
+             : ToEngine(engine)->tuner().snapshot();
 }
 
 }  // extern "C"

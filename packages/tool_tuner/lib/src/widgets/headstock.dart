@@ -28,14 +28,11 @@ class Headstock extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         for (var i = 0; i < preset.strings.length; i++)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 7),
-            child: _Peg(
-              string: preset.strings[i],
-              active: i == activeString,
-              done: tunedStrings.contains(i),
-              onTap: () => onPegTap(i),
-            ),
+          _Peg(
+            string: preset.strings[i],
+            active: i == activeString,
+            done: tunedStrings.contains(i),
+            onTap: () => onPegTap(i),
           ),
       ],
     );
@@ -51,6 +48,8 @@ class _Peg extends StatelessWidget {
   });
 
   static const double _diameter = 30;
+  // Spec §06: every touch target ≥48dp; the peg stays visually 30dp.
+  static const double _minTapTarget = 48;
 
   final TunerString string;
   final bool active;
@@ -61,9 +60,7 @@ class _Peg extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final inTune = theme.brightness == Brightness.dark
-        ? KitbagColors.darkInTune
-        : KitbagColors.lightInTune;
+    final inTune = context.kitbagInTune;
     final ringColor = active
         ? scheme.primary
         : done
@@ -75,38 +72,52 @@ class _Peg extends StatelessWidget {
         ? inTune
         : scheme.onSurface;
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(_diameter),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 120),
-            width: _diameter,
-            height: _diameter,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: scheme.surfaceContainerHighest,
-              border: Border.all(color: ringColor, width: 2),
-              boxShadow: active
-                  ? [
-                      BoxShadow(
-                        color: scheme.primary.withValues(alpha: .4),
-                        blurRadius: 12,
-                      ),
-                    ]
-                  : const [],
-            ),
-            child: Text(
-              string.label,
-              style: theme.textTheme.bodySmall?.copyWith(color: noteColor),
-            ),
+    return Semantics(
+      button: true,
+      selected: active,
+      label:
+          'String ${string.number}, ${string.label}'
+          '${done ? ', in tune' : ''}',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(_minTapTarget / 2),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minWidth: _minTapTarget,
+            minHeight: _minTapTarget,
           ),
-          const SizedBox(height: 5),
-          Text('${string.number}', style: theme.textTheme.labelSmall),
-        ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 120),
+                width: _diameter,
+                height: _diameter,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: scheme.surfaceContainerHighest,
+                  border: Border.all(color: ringColor, width: 2),
+                  boxShadow: active
+                      ? [
+                          BoxShadow(
+                            color: scheme.primary.withValues(alpha: .4),
+                            blurRadius: 12,
+                          ),
+                        ]
+                      : const [],
+                ),
+                child: Text(
+                  string.label,
+                  style: theme.textTheme.bodySmall?.copyWith(color: noteColor),
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text('${string.number}', style: theme.textTheme.labelSmall),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -29,10 +29,9 @@ class KitbagTunerStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final flat = dark ? KitbagColors.darkFlat : KitbagColors.lightFlat;
-    final almost = dark ? KitbagColors.darkAlmost : KitbagColors.lightAlmost;
-    final inTune = dark ? KitbagColors.darkInTune : KitbagColors.lightInTune;
+    final flat = context.kitbagFlat;
+    final almost = context.kitbagAlmost;
+    final inTune = context.kitbagInTune;
 
     return SizedBox(
       height: _height,
@@ -84,6 +83,7 @@ class _Needle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final shadow = Theme.of(context).colorScheme.shadow.withValues(alpha: .5);
     return Column(
       children: [
         Icon(Icons.arrow_drop_down, size: 18, color: color),
@@ -93,9 +93,7 @@ class _Needle extends StatelessWidget {
             decoration: BoxDecoration(
               color: color,
               borderRadius: BorderRadius.circular(2),
-              boxShadow: const [
-                BoxShadow(color: Colors.black54, blurRadius: 8),
-              ],
+              boxShadow: [BoxShadow(color: shadow, blurRadius: 8)],
             ),
           ),
         ),

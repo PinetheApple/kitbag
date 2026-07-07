@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'instruments.dart';
+import 'mic_permission.dart';
 import 'tuner_state.dart';
 import 'widgets/headstock.dart';
 
@@ -20,10 +21,16 @@ class TunerScreen extends ConsumerStatefulWidget {
   ConsumerState<TunerScreen> createState() => _TunerScreenState();
 }
 
-class _TunerScreenState extends ConsumerState<TunerScreen> {
+enum _MicStatus { starting, ready, denied, deniedForever, failed }
+
+class _TunerScreenState extends ConsumerState<TunerScreen>
+    with WidgetsBindingObserver {
   static const double _maxContentWidth = 480;
 
-  bool _micFailed = false;
+  _MicStatus _mic = _MicStatus.starting;
+  // Mic stopped because the app left the foreground (finding: raw capture
+  // must not keep running in the background).
+  bool _suspended = false;
   // Held directly: ref must not be used in dispose.
   late final TunerController _controller;
 
@@ -31,21 +38,59 @@ class _TunerScreenState extends ConsumerState<TunerScreen> {
   void initState() {
     super.initState();
     _controller = ref.read(tunerControllerProvider);
+    WidgetsBinding.instance.addObserver(this);
     _startMic();
   }
 
-  void _startMic() {
+  Future<void> _startMic() async {
+    final permission = await ref.read(micPermissionRequestProvider)();
+    if (!mounted) {
+      return;
+    }
+    if (permission != MicPermission.granted) {
+      setState(() {
+        _mic = permission == MicPermission.permanentlyDenied
+            ? _MicStatus.deniedForever
+            : _MicStatus.denied;
+      });
+      return;
+    }
     try {
       _controller.start();
-      _micFailed = false;
+      setState(() => _mic = _MicStatus.ready);
     } on Exception {
-      _micFailed = true;
+      setState(() => _mic = _MicStatus.failed);
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.detached:
+        if (_mic == _MicStatus.ready && !_suspended) {
+          _controller.stop();
+          _suspended = true;
+        }
+      case AppLifecycleState.resumed:
+        if (_suspended) {
+          _suspended = false;
+          _startMic();
+        } else if (_mic == _MicStatus.denied ||
+            _mic == _MicStatus.deniedForever ||
+            _mic == _MicStatus.failed) {
+          // The user may have granted access in system settings meanwhile.
+          _startMic();
+        }
     }
   }
 
   @override
   void dispose() {
-    if (!_micFailed) {
+    WidgetsBinding.instance.removeObserver(this);
+    if (_mic == _MicStatus.ready && !_suspended) {
       _controller.stop();
     }
     super.dispose();
@@ -72,43 +117,137 @@ class _TunerScreenState extends ConsumerState<TunerScreen> {
             constraints: const BoxConstraints(maxWidth: _maxContentWidth),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: _micFailed
-                  ? _MicUnavailable(onRetry: () => setState(_startMic))
-                  : Column(
-                      children: [
-                        const SizedBox(height: 8),
-                        Expanded(
-                          child: _LiveTuning(
-                            settings: settings,
-                            notifier: notifier,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        _ModeChips(settings: settings, notifier: notifier),
-                        const SizedBox(height: 12),
-                      ],
-                    ),
+              child: _buildBody(settings, notifier),
             ),
           ),
         ),
       ),
     );
   }
+
+  Widget _buildBody(TunerSettings settings, TunerNotifier notifier) {
+    switch (_mic) {
+      case _MicStatus.starting:
+        return const Center(child: CircularProgressIndicator());
+      case _MicStatus.denied:
+      case _MicStatus.failed:
+        return _MicUnavailable(
+          message: _mic == _MicStatus.denied
+              ? 'Kitbag needs the microphone to hear your instrument.'
+              : 'The microphone could not be opened. Is another app using it?',
+          onRetry: _startMic,
+        );
+      case _MicStatus.deniedForever:
+        return _MicUnavailable(
+          message:
+              'Microphone access is turned off for Kitbag. '
+              'Enable it in system settings to tune.',
+          onRetry: _startMic,
+          onOpenSettings: ref.read(openSystemSettingsProvider),
+        );
+      case _MicStatus.ready:
+        return Column(
+          children: [
+            const SizedBox(height: 8),
+            Expanded(
+              child: _LiveTuning(settings: settings, notifier: notifier),
+            ),
+            const SizedBox(height: 14),
+            _ModeChips(settings: settings, notifier: notifier),
+            const SizedBox(height: 12),
+          ],
+        );
+    }
+  }
 }
 
-/// Everything that moves with the mic: pegs, giant note, strip. One vsync
-/// ticker polls the native atomics directly — no provider churn at 60fps.
-class _LiveTuning extends ConsumerStatefulWidget {
+/// The slow half of the live region: the headstock only depends on the
+/// detected NOTE (not the 60fps cents stream), so it rebuilds on note
+/// changes while [_PitchDial] alone re-renders every frame.
+class _LiveTuning extends StatefulWidget {
   const _LiveTuning({required this.settings, required this.notifier});
 
   final TunerSettings settings;
   final TunerNotifier notifier;
 
   @override
-  ConsumerState<_LiveTuning> createState() => _LiveTuningState();
+  State<_LiveTuning> createState() => _LiveTuningState();
 }
 
-class _LiveTuningState extends ConsumerState<_LiveTuning>
+class _LiveTuningState extends State<_LiveTuning> {
+  int _noteIndex = -1;
+
+  void _onNoteChanged(int noteIndex) {
+    if (noteIndex != _noteIndex) {
+      setState(() => _noteIndex = noteIndex);
+    }
+  }
+
+  /// The in-tune lock moment: one confirmation tick, peg goes green.
+  /// Haptics only make sense against a target string — instrument mode.
+  void _onInTune(int noteIndex) {
+    final settings = widget.settings;
+    if (settings.mode != TunerMode.instrument) {
+      return;
+    }
+    HapticFeedback.lightImpact();
+    final index =
+        settings.lockedString ?? nearestStringIndex(settings.preset, noteIndex);
+    if (settings.preset.strings[index].midiNote == noteIndex) {
+      widget.notifier.markStringTuned(index);
+    }
+  }
+
+  int? get _activeString {
+    final settings = widget.settings;
+    if (settings.mode == TunerMode.chromatic) {
+      return null;
+    }
+    if (settings.lockedString != null) {
+      return settings.lockedString;
+    }
+    return _noteIndex >= 0
+        ? nearestStringIndex(settings.preset, _noteIndex)
+        : null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = widget.settings;
+    return Column(
+      children: [
+        if (settings.mode == TunerMode.instrument)
+          Headstock(
+            preset: settings.preset,
+            activeString: _activeString,
+            tunedStrings: settings.tunedStrings,
+            onPegTap: widget.notifier.toggleStringLock,
+          ),
+        Expanded(
+          child: _PitchDial(onNoteChanged: _onNoteChanged, onInTune: _onInTune),
+        ),
+      ],
+    );
+  }
+}
+
+/// The fast half: giant note + cents hint + strip. One vsync ticker polls
+/// the packed native snapshot (a single FFI call) — no provider churn at
+/// 60fps — and reports note changes / in-tune moments upward.
+class _PitchDial extends ConsumerStatefulWidget {
+  const _PitchDial({required this.onNoteChanged, required this.onInTune});
+
+  /// Fired when the detected nearest note changes; -1 = silence.
+  final ValueChanged<int> onNoteChanged;
+
+  /// Fired once per continuous in-tune episode, with the note that locked.
+  final ValueChanged<int> onInTune;
+
+  @override
+  ConsumerState<_PitchDial> createState() => _PitchDialState();
+}
+
+class _PitchDialState extends ConsumerState<_PitchDial>
     with SingleTickerProviderStateMixin {
   static const double _inTuneCents = 3;
   static const double _minConfidence = .85;
@@ -131,69 +270,32 @@ class _LiveTuningState extends ConsumerState<_LiveTuning>
   }
 
   void _onTick(Duration elapsed) {
-    final tuner = ref.read(tunerControllerProvider);
-    final noteIndex = tuner.noteIndex;
-    final hasPitch = noteIndex >= 0 && tuner.confidence >= _minConfidence;
+    final reading = ref.read(tunerControllerProvider).read();
+    final hasPitch = reading.hasPitch && reading.confidence >= _minConfidence;
+    final noteIndex = hasPitch ? reading.noteIndex : -1;
     // Displayed at 0.1 cent resolution; avoids setState on sub-visible noise.
-    final cents = hasPitch ? (tuner.cents * 10).roundToDouble() / 10 : 0.0;
+    final cents = hasPitch ? (reading.cents * 10).roundToDouble() / 10 : 0.0;
     final inTune = hasPitch && cents.abs() <= _inTuneCents;
 
     if (inTune && !_inTune) {
-      // The in-tune lock moment: one confirmation tick, peg goes green.
-      HapticFeedback.lightImpact();
-      final string = _stringForNote(noteIndex);
-      if (string != null) {
-        widget.notifier.markStringTuned(string);
-      }
+      widget.onInTune(noteIndex);
     }
-    final newNoteIndex = hasPitch ? noteIndex : -1;
-    if (newNoteIndex != _noteIndex || cents != _cents || inTune != _inTune) {
+    if (noteIndex != _noteIndex) {
+      widget.onNoteChanged(noteIndex);
+    }
+    if (noteIndex != _noteIndex || cents != _cents || inTune != _inTune) {
       setState(() {
-        _noteIndex = newNoteIndex;
+        _noteIndex = noteIndex;
         _cents = cents;
         _inTune = inTune;
       });
     }
   }
 
-  /// The string being tuned: the locked one, else the nearest to the played
-  /// note (auto detection) — but only when its target note matches.
-  int? _stringForNote(int noteIndex) {
-    final settings = widget.settings;
-    if (settings.mode == TunerMode.chromatic) {
-      return null;
-    }
-    final index =
-        settings.lockedString ?? nearestStringIndex(settings.preset, noteIndex);
-    return settings.preset.strings[index].midiNote == noteIndex ? index : null;
-  }
-
-  int? get _activeString {
-    final settings = widget.settings;
-    if (settings.mode == TunerMode.chromatic) {
-      return null;
-    }
-    if (settings.lockedString != null) {
-      return settings.lockedString;
-    }
-    return _noteIndex >= 0
-        ? nearestStringIndex(settings.preset, _noteIndex)
-        : null;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final settings = widget.settings;
-    final hasPitch = _noteIndex >= 0;
     return Column(
       children: [
-        if (settings.mode == TunerMode.instrument)
-          Headstock(
-            preset: settings.preset,
-            activeString: _activeString,
-            tunedStrings: settings.tunedStrings,
-            onPegTap: widget.notifier.toggleStringLock,
-          ),
         Expanded(
           child: _NoteReadout(
             noteIndex: _noteIndex,
@@ -201,7 +303,7 @@ class _LiveTuningState extends ConsumerState<_LiveTuning>
             inTune: _inTune,
           ),
         ),
-        KitbagTunerStrip(cents: hasPitch ? _cents : null),
+        KitbagTunerStrip(cents: _noteIndex >= 0 ? _cents : null),
       ],
     );
   }
@@ -234,9 +336,7 @@ class _NoteReadout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final inTuneColor = theme.brightness == Brightness.dark
-        ? KitbagColors.darkInTune
-        : KitbagColors.lightInTune;
+    final inTuneColor = context.kitbagInTune;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -355,11 +455,18 @@ class _ModeChips extends StatelessWidget {
   }
 }
 
-/// No dead ends: if the mic can't open, say so and offer a retry.
+/// No dead ends: if the mic can't be used, say why and offer a way out —
+/// retry always, plus system settings when the grant is permanently denied.
 class _MicUnavailable extends StatelessWidget {
-  const _MicUnavailable({required this.onRetry});
+  const _MicUnavailable({
+    required this.message,
+    required this.onRetry,
+    this.onOpenSettings,
+  });
 
+  final String message;
   final VoidCallback onRetry;
+  final Future<void> Function()? onOpenSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -373,12 +480,23 @@ class _MicUnavailable extends StatelessWidget {
           Text('Microphone unavailable', style: theme.textTheme.headlineMedium),
           const SizedBox(height: 4),
           Text(
-            'Check the microphone permission, then try again.',
+            message,
+            textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 16),
+          if (onOpenSettings != null) ...[
+            KitbagTileButton(
+              label: 'Open settings',
+              emphasized: true,
+              onPressed: () {
+                onOpenSettings!();
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
           KitbagTileButton(label: 'Try again', onPressed: onRetry),
         ],
       ),

@@ -123,9 +123,6 @@ class KitbagBindings {
       tunerStop = library.lookupFunction<EngineVoidOpNative, EngineVoidOpDart>(
         'kb_tuner_stop',
       ),
-      tunerIsRunning = library.lookupFunction<GetIntNative, GetIntDart>(
-        'kb_tuner_is_running',
-      ),
       tunerSetA4 = library.lookupFunction<SetDoubleNative, SetDoubleDart>(
         'kb_tuner_set_a4',
       ),
@@ -133,17 +130,8 @@ class KitbagBindings {
           .lookupFunction<SetTwoDoublesNative, SetTwoDoublesDart>(
             'kb_tuner_set_band',
           ),
-      tunerPitchHz = library.lookupFunction<GetDoubleNative, GetDoubleDart>(
-        'kb_tuner_pitch_hz',
-      ),
-      tunerCents = library.lookupFunction<GetDoubleNative, GetDoubleDart>(
-        'kb_tuner_cents',
-      ),
-      tunerConfidence = library.lookupFunction<GetDoubleNative, GetDoubleDart>(
-        'kb_tuner_confidence',
-      ),
-      tunerNoteIndex = library.lookupFunction<GetIntNative, GetIntDart>(
-        'kb_tuner_note_index',
+      tunerSnapshot = library.lookupFunction<FramesNative, FramesDart>(
+        'kb_tuner_snapshot',
       );
 
   static const String _libraryName = 'kitbag_core';
@@ -173,13 +161,9 @@ class KitbagBindings {
   final GetIntDart metronomeBarMuted;
   final EngineOpDart tunerStart;
   final EngineVoidOpDart tunerStop;
-  final GetIntDart tunerIsRunning;
   final SetDoubleDart tunerSetA4;
   final SetTwoDoublesDart tunerSetBand;
-  final GetDoubleDart tunerPitchHz;
-  final GetDoubleDart tunerCents;
-  final GetDoubleDart tunerConfidence;
-  final GetIntDart tunerNoteIndex;
+  final FramesDart tunerSnapshot;
 
   static DynamicLibrary openLibrary() {
     if (Platform.isAndroid) {
