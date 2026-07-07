@@ -1,0 +1,19 @@
+name: kitbag
+
+packages:
+  - packages/*
+
+command:
+  bootstrap:
+    runPubGetInParallel: true
+
+scripts:
+  analyze:
+    run: melos exec -- dart analyze --fatal-infos
+    description: Analyze all packages.
+  test:
+    run: melos exec --dir-exists=test -- flutter test
+    description: Test all packages that have tests.
+  format:
+    run: melos exec -- dart format --set-exit-if-changed .
+    description: Verify formatting.

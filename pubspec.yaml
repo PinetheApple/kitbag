@@ -1,0 +1,14 @@
+name: kitbag_workspace
+publish_to: none
+
+environment:
+  sdk: ^3.8.0
+
+workspace:
+  - packages/core_plugin_api
+  - packages/core_audio_ffi
+  - packages/core_design
+  - packages/app_shell
+
+dev_dependencies:
+  melos: ^7.0.0

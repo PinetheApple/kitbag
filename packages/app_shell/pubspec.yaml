@@ -1,0 +1,26 @@
+name: app_shell
+description: Kitbag — the open-source everything-app for musicians.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.8.0
+  flutter: ">=3.24.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.6.0
+  go_router: ^16.0.0
+  core_plugin_api:
+  core_audio_ffi:
+  core_design:
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
