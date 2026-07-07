@@ -34,9 +34,17 @@ class _MetronomeScreenState extends ConsumerState<MetronomeScreen> {
   // A tap must not change tempo: the drag arms only past this distance.
   static const double _armDistance = 14;
 
+  // Heights below which the layout tightens, then falls back to scrolling.
+  static const double _compactHeight = 620;
+  static const double _scrollHeight = 420;
+
   double _dragAccumulated = 0;
   double _dragRemainder = 0;
   bool _dragArmed = false;
+  // When the window is too short even for the compact layout, the body
+  // scrolls — and swipe-anywhere yields to scrolling (presets/TAP remain
+  // as the visible twins).
+  bool _scrollFallback = false;
 
   void _onPointerDown(PointerDownEvent event) {
     _dragAccumulated = 0;
@@ -45,6 +53,9 @@ class _MetronomeScreenState extends ConsumerState<MetronomeScreen> {
   }
 
   void _onPointerMove(PointerMoveEvent event) {
+    if (_scrollFallback) {
+      return;
+    }
     _dragAccumulated -= event.delta.dy;
     if (!_dragArmed) {
       if (_dragAccumulated.abs() < _armDistance) {
@@ -96,24 +107,50 @@ class _MetronomeScreenState extends ConsumerState<MetronomeScreen> {
               constraints: const BoxConstraints(maxWidth: _maxContentWidth),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: _TempoReadout(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final compact = constraints.maxHeight < _compactHeight;
+                    _scrollFallback = constraints.maxHeight < _scrollHeight;
+                    final readout = _TempoReadout(
+                      settings: settings,
+                      onNudge: notifier.nudgeBpm,
+                      textTheme: theme.textTheme,
+                    );
+                    final controls = [
+                      _PresetRow(notifier: notifier, compact: compact),
+                      SizedBox(height: compact ? 10 : 18),
+                      _PatternCard(
                         settings: settings,
-                        onNudge: notifier.nudgeBpm,
-                        textTheme: theme.textTheme,
+                        notifier: notifier,
+                        compact: compact,
                       ),
-                    ),
-                    _PresetRow(notifier: notifier),
-                    const SizedBox(height: 18),
-                    _PatternCard(settings: settings, notifier: notifier),
-                    const SizedBox(height: 12),
-                    _ModifierChips(settings: settings, notifier: notifier),
-                    const SizedBox(height: 18),
-                    _Transport(running: settings.running, notifier: notifier),
-                    const SizedBox(height: 12),
-                  ],
+                      SizedBox(height: compact ? 8 : 12),
+                      _ModifierChips(settings: settings, notifier: notifier),
+                      SizedBox(height: compact ? 10 : 18),
+                      _Transport(
+                        running: settings.running,
+                        notifier: notifier,
+                        compact: compact,
+                      ),
+                      SizedBox(height: compact ? 8 : 12),
+                    ];
+                    if (_scrollFallback) {
+                      return SingleChildScrollView(
+                        child: Column(
+                          children: [
+                            SizedBox(height: 170, child: readout),
+                            ...controls,
+                          ],
+                        ),
+                      );
+                    }
+                    return Column(
+                      children: [
+                        Expanded(child: readout),
+                        ...controls,
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
@@ -192,9 +229,10 @@ class _TempoReadout extends StatelessWidget {
 }
 
 class _PresetRow extends StatelessWidget {
-  const _PresetRow({required this.notifier});
+  const _PresetRow({required this.notifier, this.compact = false});
 
   final MetronomeNotifier notifier;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -202,6 +240,7 @@ class _PresetRow extends StatelessWidget {
       flex: flex,
       child: KitbagTileButton(
         label: label,
+        dense: compact,
         onPressed: () => notifier.nudgeBpm(delta),
       ),
     );
@@ -216,6 +255,7 @@ class _PresetRow extends StatelessWidget {
           child: KitbagTileButton(
             label: 'TAP',
             emphasized: true,
+            dense: compact,
             onPressed: notifier.tapTempo,
           ),
         ),
@@ -229,16 +269,23 @@ class _PresetRow extends StatelessWidget {
 }
 
 class _PatternCard extends StatelessWidget {
-  const _PatternCard({required this.settings, required this.notifier});
+  const _PatternCard({
+    required this.settings,
+    required this.notifier,
+    this.compact = false,
+  });
 
   final MetronomeSettings settings;
   final MetronomeNotifier notifier;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    final gap = SizedBox(height: compact ? 8.0 : 12.0);
     return Card(
+      margin: compact ? const EdgeInsets.symmetric(horizontal: 4) : null,
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: EdgeInsets.all(compact ? 10 : 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -263,7 +310,7 @@ class _PatternCard extends StatelessWidget {
               ],
             ),
             if (settings.polyEnabled) ...[
-              const SizedBox(height: 12),
+              gap,
               Row(
                 children: [
                   _CompactStep(
@@ -286,7 +333,7 @@ class _PatternCard extends StatelessWidget {
                 ],
               ),
             ],
-            const SizedBox(height: 12),
+            gap,
             KitbagSegmented(
               segments: [
                 for (final (value, label) in const [
@@ -367,13 +414,19 @@ class _ModifierChips extends StatelessWidget {
 }
 
 class _Transport extends StatelessWidget {
-  const _Transport({required this.running, required this.notifier});
+  const _Transport({
+    required this.running,
+    required this.notifier,
+    this.compact = false,
+  });
 
   final bool running;
   final MetronomeNotifier notifier;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    final circleSize = compact ? 40.0 : 46.0;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
@@ -381,18 +434,21 @@ class _Transport extends StatelessWidget {
           icon: Icons.queue_music,
           onPressed: () => context.go(MetronomeRoutes.setlists),
           tooltip: 'Setlists',
+          size: circleSize,
         ),
         KitbagPlayButton(
           playing: running,
+          size: compact ? 58 : 72,
           onPressed: () {
             notifier.toggleRunning();
             HapticFeedback.mediumImpact();
           },
         ),
-        const KitbagCircleButton(
+        KitbagCircleButton(
           icon: Icons.timer_outlined,
           onPressed: null,
           tooltip: 'Trainer modes — coming next',
+          size: circleSize,
         ),
       ],
     );

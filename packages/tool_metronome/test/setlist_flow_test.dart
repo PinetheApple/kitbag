@@ -179,7 +179,7 @@ void main() {
 
     expect(find.byType(MetronomeScreen), findsOneWidget);
     expect(find.text('96'), findsOneWidget);
-    expect(find.text('Wedding set · 1/2'), findsOneWidget);
+    expect(find.text('Opener · 1/2'), findsOneWidget);
     expect(fake.tempo, 96);
     expect(fake.beatsPerBar, 7);
     expect(fake.subdivision, 2);
@@ -202,12 +202,12 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.chevron_right));
     await settle(tester);
-    expect(find.text('Wedding set · 2/2'), findsOneWidget);
+    expect(find.text('Closer · 2/2'), findsOneWidget);
     expect(fake.tempo, 140);
 
     await tester.tap(find.byIcon(Icons.chevron_left));
     await settle(tester);
-    expect(find.text('Wedding set · 1/2'), findsOneWidget);
+    expect(find.text('Opener · 1/2'), findsOneWidget);
     expect(fake.tempo, 96);
     await unmount(tester);
   });

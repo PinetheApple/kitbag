@@ -7,6 +7,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:tool_metronome/src/metronome_state.dart';
 import 'package:tool_metronome/src/setlist_state.dart';
 
 void main() {
@@ -67,7 +68,7 @@ void main() {
 
     container.read(activeSetlistProvider.notifier).next();
     expect(fake.tempo, 180);
-    expect(active()!.label, 'Wedding set · 2/2');
+    expect(active()!.label, 'Closer · 2/2');
   });
 
   test('deleting the current song clamps the session in place', () async {
@@ -76,7 +77,7 @@ void main() {
     await db.songsDao.deleteSong(closer.id);
     await pumpEventQueue();
 
-    expect(active()!.label, 'Wedding set · 1/1');
+    expect(active()!.label, 'Opener · 1/1');
     // What is sounding is untouched until the user pages.
     expect(fake.tempo, 140);
   });
@@ -86,17 +87,41 @@ void main() {
     await db.songsDao.reorder(setlistId, 0, 1);
     await pumpEventQueue();
 
-    expect(active()!.label, 'Wedding set · 2/2');
+    expect(active()!.label, 'Opener · 2/2');
     container.read(activeSetlistProvider.notifier).previous();
     expect(fake.tempo, 140); // Closer, now first.
   });
 
-  test('renaming the setlist updates the chip label live', () async {
+  test('renaming the setlist updates the session live', () async {
     final setlistId = await startSession();
     await db.setlistsDao.rename(setlistId, 'Reception');
     await pumpEventQueue();
 
-    expect(active()!.label, 'Reception · 1/2');
+    expect(active()!.setlist.name, 'Reception');
+  });
+
+  test('dialing a new tempo persists to the current song', () async {
+    final setlistId = await startSession();
+    container.read(metronomeProvider.notifier).setBpm(104);
+    await Future<void>.delayed(
+      ActiveSetlistNotifier.bpmSaveDelay + const Duration(milliseconds: 150),
+    );
+
+    final songs = await db.songsDao.getBySetlist(setlistId);
+    expect(songs.first.bpm, 104); // Opener updated in place.
+    expect(songs.last.bpm, 140); // Closer untouched.
+  });
+
+  test('paging songs does not rewrite their stored tempos', () async {
+    final setlistId = await startSession();
+    container.read(activeSetlistProvider.notifier).next();
+    container.read(activeSetlistProvider.notifier).previous();
+    await Future<void>.delayed(
+      ActiveSetlistNotifier.bpmSaveDelay + const Duration(milliseconds: 150),
+    );
+
+    final songs = await db.songsDao.getBySetlist(setlistId);
+    expect(songs.map((s) => s.bpm), [96, 140]);
   });
 
   test('deleting another setlist keeps the session alive', () async {
@@ -107,7 +132,7 @@ void main() {
     await pumpEventQueue();
 
     expect(active(), isNotNull);
-    expect(active()!.label, 'Wedding set · 1/2');
+    expect(active()!.label, 'Opener · 1/2');
   });
 
   test('deleting the active setlist ends the session', () async {
