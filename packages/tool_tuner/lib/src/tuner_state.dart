@@ -121,4 +121,10 @@ class TunerNotifier extends Notifier<TunerSettings> {
       state = state.copyWith(tunedStrings: {...state.tunedStrings, index});
     }
   }
+
+  /// Entering the tuner starts a fresh tuning session: green peg marks and
+  /// any string lock are transient (strings drift between sessions), while
+  /// preset and A4 are durable preferences and survive.
+  void resetSession() =>
+      _update(state.copyWith(lockedString: null, tunedStrings: const {}));
 }

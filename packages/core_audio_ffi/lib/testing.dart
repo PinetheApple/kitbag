@@ -137,7 +137,12 @@ class FakeTunerController implements TunerController {
   }
 
   @override
-  void stop() => running = false;
+  void stop() {
+    // Like the native tuner, stopping resets the published reading so a
+    // later poll can never see the previous session's pitch.
+    running = false;
+    reading = const TunerReading.none();
+  }
 
   @override
   void setA4(double a4Hz) =>

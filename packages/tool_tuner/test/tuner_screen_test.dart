@@ -147,6 +147,75 @@ void main() {
     expect(opened, isTrue);
   });
 
+  testWidgets('holds the last note briefly after the signal drops', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app());
+    await tester.pump();
+    report(noteIndex: 55, cents: -4);
+    await tester.pump();
+    expect(find.text('G3'), findsOneWidget);
+
+    // String stops ringing: the reading lingers instead of snapping away.
+    fake.reading = const TunerReading.none();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('G3'), findsOneWidget);
+    expect(find.text('PLAY A NOTE'), findsNothing);
+
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('G3'), findsOneWidget);
+
+    // Past the hold window it relaxes to idle.
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.text('G3'), findsNothing);
+    expect(find.text('PLAY A NOTE'), findsOneWidget);
+
+    // Fast attack: a fresh detection shows immediately.
+    report(noteIndex: 64, cents: 2);
+    await tester.pump();
+    expect(find.text('E4'), findsOneWidget);
+  });
+
+  testWidgets('re-entering the tuner starts a fresh session', (tester) async {
+    fake = FakeTunerController();
+    final container = ProviderContainer(
+      overrides: [
+        tunerControllerProvider.overrideWithValue(fake),
+        micPermissionRequestProvider.overrideWithValue(
+          () async => MicPermission.granted,
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    Widget host(Widget child) => UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp(home: child),
+    );
+
+    // First visit: lock a string and get it in tune.
+    await tester.pumpWidget(host(const TunerScreen()));
+    await tester.pump();
+    await tester.tap(find.text('6')); // lock low E
+    await tester.pump();
+    report(noteIndex: 40, cents: 0); // E2 in tune
+    await tester.pump();
+    await tester.pump();
+    expect(container.read(tunerProvider).tunedStrings, contains(0));
+    expect(container.read(tunerProvider).lockedString, 0);
+
+    // Leave for home, then come back.
+    await tester.pumpWidget(host(const SizedBox()));
+    expect(fake.running, isFalse);
+    await tester.pumpWidget(host(const TunerScreen()));
+    await tester.pump();
+
+    // Transient state is gone; nothing renders until a fresh detection.
+    expect(container.read(tunerProvider).tunedStrings, isEmpty);
+    expect(container.read(tunerProvider).lockedString, isNull);
+    expect(find.text('IN TUNE'), findsNothing);
+    expect(find.text('PLAY A NOTE'), findsOneWidget);
+  });
+
   testWidgets('backgrounding stops the mic, resuming restarts it', (
     tester,
   ) async {
