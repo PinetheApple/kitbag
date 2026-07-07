@@ -32,6 +32,13 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+
+    // Kitbag native audio core (miniaudio engine), loaded via dart:ffi.
+    externalNativeBuild {
+        cmake {
+            path = file("../../../../native/audio_core/CMakeLists.txt")
+        }
+    }
 }
 
 kotlin {
