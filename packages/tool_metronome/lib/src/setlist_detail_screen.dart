@@ -11,7 +11,6 @@ import 'package:go_router/go_router.dart';
 import 'format.dart';
 import 'metronome_routes.dart';
 import 'metronome_state.dart';
-import 'name_dialog.dart';
 import 'setlist_state.dart';
 
 enum _SongAction { rename, recapture, delete }

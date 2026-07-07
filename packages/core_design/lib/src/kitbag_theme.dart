@@ -120,6 +120,12 @@ abstract final class KitbagTheme {
       textTheme: bodyFont.copyWith(
         displayLarge: display.copyWith(fontSize: 88, color: text),
         displayMedium: display.copyWith(fontSize: 56, color: text),
+        // The tuner's giant note (spec .notebig: 64px, -.03em).
+        displaySmall: display.copyWith(
+          fontSize: 64,
+          letterSpacing: -1.9,
+          color: text,
+        ),
         headlineMedium: GoogleFonts.spaceGrotesk(
           fontWeight: FontWeight.w500,
           fontSize: 22,

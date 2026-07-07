@@ -21,6 +21,9 @@ const List<String> _noteNames = [
 /// Scientific pitch name for a MIDI note number, e.g. 69 → `A4`.
 String noteNameForMidi(int midi) => '${_noteNames[midi % 12]}${midi ~/ 12 - 1}';
 
+/// Note name without the octave, for peg labels: 69 → `A`, 61 → `C♯`.
+String noteLetterForMidi(int midi) => _noteNames[midi % 12];
+
 double frequencyForMidi(int midi, double a4Hz) =>
     a4Hz * math.pow(2, (midi - midiA4) / 12);
 

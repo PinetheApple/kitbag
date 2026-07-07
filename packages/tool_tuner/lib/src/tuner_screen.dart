@@ -1,4 +1,5 @@
 import 'package:core_audio_ffi/core_audio_ffi.dart';
+import 'package:core_db/core_db.dart';
 import 'package:core_design/core_design.dart';
 import 'package:core_plugin_api/core_plugin_api.dart';
 import 'package:flutter/material.dart';
@@ -6,9 +7,11 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'custom_tunings.dart';
 import 'instruments.dart';
 import 'mic_permission.dart';
 import 'tuner_state.dart';
+import 'tuning_editor_sheet.dart';
 import 'widgets/headstock.dart';
 
 /// The tuner. Pegs across the top (tap to lock a string), giant note
@@ -154,13 +157,15 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
           onOpenSettings: ref.read(openSystemSettingsProvider),
         );
       case _MicStatus.ready:
+        // Spec §04 order: pegs, flexible space, giant note directly above
+        // the strip (6px), chips 6px below it.
         return Column(
           children: [
             const SizedBox(height: 8),
             Expanded(
               child: _LiveTuning(settings: settings, notifier: notifier),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 6),
             _ModeChips(settings: settings, notifier: notifier),
             const SizedBox(height: 12),
           ],
@@ -334,22 +339,23 @@ class _PitchDialState extends ConsumerState<_PitchDial>
 
   @override
   Widget build(BuildContext context) {
+    // Spec: flexible space above, note sits directly on the strip (6px).
     return Column(
       children: [
-        Expanded(
-          child: AnimatedOpacity(
-            // Gentle fade while holding; instant full strength on attack.
-            opacity: _holding ? .55 : 1,
-            duration: _holding
-                ? const Duration(milliseconds: 600)
-                : const Duration(milliseconds: 80),
-            child: _NoteReadout(
-              noteIndex: _noteIndex,
-              cents: _cents,
-              inTune: _inTune,
-            ),
+        const Spacer(),
+        AnimatedOpacity(
+          // Gentle fade while holding; instant full strength on attack.
+          opacity: _holding ? .55 : 1,
+          duration: _holding
+              ? const Duration(milliseconds: 600)
+              : const Duration(milliseconds: 80),
+          child: _NoteReadout(
+            noteIndex: _noteIndex,
+            cents: _cents,
+            inTune: _inTune,
           ),
         ),
+        const SizedBox(height: 6),
         KitbagTunerStrip(cents: _noteIndex >= 0 ? _cents : null),
       ],
     );
@@ -384,44 +390,99 @@ class _NoteReadout extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final inTuneColor = context.kitbagInTune;
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            noteIndex >= 0 ? noteNameForMidi(noteIndex) : '—',
-            style: theme.textTheme.displayMedium,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          noteIndex >= 0 ? noteNameForMidi(noteIndex) : '—',
+          // The 64px giant-note role from the spec's .notebig.
+          style: theme.textTheme.displaySmall,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          _hint,
+          // Spec .notebig small: 13px, tighter tracking than labelSmall.
+          style: theme.textTheme.labelSmall?.copyWith(
+            fontSize: 13,
+            letterSpacing: 1,
+            color: inTune ? inTuneColor : null,
           ),
-          const SizedBox(height: 6),
-          Text(
-            _hint,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: inTune ? inTuneColor : null,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
-class _PresetMenu extends StatelessWidget {
+/// Instrument/tuning picker behind the app-bar chip: built-in presets,
+/// saved custom tunings (tap to apply, pencil to edit), and the entry point
+/// for saving the current tuning as a new custom one.
+class _PresetMenu extends ConsumerWidget {
   const _PresetMenu({required this.settings, required this.notifier});
 
   final TunerSettings settings;
   final TunerNotifier notifier;
 
   @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<InstrumentPreset>(
-      tooltip: 'Choose instrument',
-      onSelected: notifier.setPreset,
-      itemBuilder: (context) => [
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tunings =
+        ref.watch(savedTuningsProvider).valueOrNull ?? const <Tuning>[];
+    return PopupMenuButton<VoidCallback>(
+      tooltip: 'Choose instrument or tuning',
+      onSelected: (action) => action(),
+      itemBuilder: (menuContext) => [
         for (final preset in InstrumentPreset.all)
-          PopupMenuItem(value: preset, child: Text(preset.label)),
+          PopupMenuItem(
+            value: () => notifier.setPreset(preset),
+            child: Text(preset.label),
+          ),
+        if (tunings.isNotEmpty) const PopupMenuDivider(),
+        for (final tuning in tunings)
+          PopupMenuItem(
+            value: () => notifier.setPreset(presetFromTuning(tuning)),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '${tuning.name} · Custom',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Edit tuning',
+                  icon: const Icon(Icons.edit, size: 18),
+                  onPressed: () {
+                    Navigator.of(menuContext).pop();
+                    showTuningEditor(
+                      context,
+                      seed: settings.preset,
+                      existing: tuning,
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        const PopupMenuDivider(),
+        PopupMenuItem(
+          value: () {
+            // Editor opens seeded with the current preset's strings.
+            showTuningEditor(context, seed: settings.preset);
+          },
+          child: const Row(
+            children: [
+              Icon(Icons.add, size: 18),
+              SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'Save as custom tuning…',
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
       child: KitbagChip(
-        icon: Icons.music_note,
         label: settings.mode == TunerMode.chromatic
             ? 'Chromatic'
             : settings.preset.label,
@@ -440,31 +501,35 @@ class _ModeChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final chromatic = settings.mode == TunerMode.chromatic;
-    // Wrap, not Row: survives 200% text scale without overflowing.
-    return Wrap(
-      alignment: WrapAlignment.center,
-      spacing: 8,
+    // Spec §04: text-only chips, spread across ONE row; only engaged
+    // non-default states light up (A4 reference, chromatic mode).
+    // Flexible: at 200% text scale the chips ellipsize instead of
+    // overflowing or wrapping into a stack.
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        KitbagChip(
-          icon: Icons.autorenew,
-          label: 'Auto',
-          active: !chromatic && settings.lockedString == null,
-          onTap: chromatic ? null : notifier.clearStringLock,
-          tooltip: 'Detect the nearest string automatically',
+        Flexible(
+          child: KitbagChip(
+            label: 'Auto',
+            onTap: chromatic ? null : notifier.clearStringLock,
+            tooltip: 'Detect the nearest string automatically',
+          ),
         ),
-        KitbagChip(
-          icon: Icons.tune,
-          label: 'A4 · ${settings.a4.round()} Hz',
-          active: true,
-          onTap: () => _showA4Sheet(context),
-          tooltip: 'Reference pitch',
+        Flexible(
+          child: KitbagChip(
+            label: 'A4 · ${settings.a4.round()} Hz',
+            active: true,
+            onTap: () => _showA4Sheet(context),
+            tooltip: 'Reference pitch',
+          ),
         ),
-        KitbagChip(
-          icon: Icons.piano,
-          label: 'Chromatic',
-          active: chromatic,
-          onTap: notifier.toggleChromatic,
-          tooltip: 'Nearest-note mode, no string pegs',
+        Flexible(
+          child: KitbagChip(
+            label: 'Chromatic',
+            active: chromatic,
+            onTap: notifier.toggleChromatic,
+            tooltip: 'Nearest-note mode, no string pegs',
+          ),
         ),
       ],
     );

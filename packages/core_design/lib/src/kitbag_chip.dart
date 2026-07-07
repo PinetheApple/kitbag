@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 class KitbagChip extends StatelessWidget {
   const KitbagChip({
     super.key,
-    required this.icon,
+    this.icon,
     required this.label,
     this.active = false,
     this.onTap,
@@ -18,7 +18,9 @@ class KitbagChip extends StatelessWidget {
 
   static const double _minTapTarget = 48;
 
-  final IconData icon;
+  /// Optional: the spec's chips are text-only (tuner modes, filters);
+  /// modifier rows (trainer) add a leading glyph.
+  final IconData? icon;
   final String label;
   final bool active;
   final VoidCallback? onTap;
@@ -45,8 +47,10 @@ class KitbagChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 6),
+          if (icon != null) ...[
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 6),
+          ],
           Flexible(
             child: Text(
               label,

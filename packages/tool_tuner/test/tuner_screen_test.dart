@@ -1,6 +1,8 @@
 import 'package:core_audio_ffi/core_audio_ffi.dart';
 import 'package:core_audio_ffi/testing.dart';
+import 'package:core_db/core_db.dart';
 import 'package:core_plugin_api/core_plugin_api.dart';
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,6 +13,10 @@ import 'package:tool_tuner/src/tuner_state.dart';
 
 void main() {
   late FakeTunerController fake;
+  late KitbagDatabase db;
+
+  setUp(() => db = KitbagDatabase(NativeDatabase.memory()));
+  tearDown(() => db.close());
 
   Widget app({
     MicPermission permission = MicPermission.granted,
@@ -21,12 +27,20 @@ void main() {
     return ProviderScope(
       overrides: [
         tunerControllerProvider.overrideWithValue(fake),
+        kitbagDatabaseProvider.overrideWithValue(db),
         micPermissionRequestProvider.overrideWithValue(() async => permission),
         if (openSettings != null)
           openSystemSettingsProvider.overrideWithValue(openSettings),
       ],
       child: const MaterialApp(home: TunerScreen()),
     );
+  }
+
+  /// Unmounts the app and flushes drift's stream-cleanup timers so the
+  /// binding's end-of-test pending-timer check passes.
+  Future<void> unmount(WidgetTester tester) async {
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 1));
   }
 
   void report({required int noteIndex, required double cents}) {
@@ -46,7 +60,7 @@ void main() {
     expect(fake.bandLowHz, closeTo(band.lowHz, 1e-9));
     expect(fake.bandHighHz, closeTo(band.highHz, 1e-9));
 
-    await tester.pumpWidget(const SizedBox());
+    await unmount(tester);
     expect(fake.running, isFalse);
   });
 
@@ -61,6 +75,7 @@ void main() {
     report(noteIndex: 55, cents: 12);
     await tester.pump();
     expect(find.text('+12 CENTS · TUNE DOWN ↓'), findsOneWidget);
+    await unmount(tester);
   });
 
   testWidgets('marks a string tuned at the in-tune moment', (tester) async {
@@ -75,6 +90,7 @@ void main() {
       tester.element(find.byType(TunerScreen)),
     );
     expect(container.read(tunerProvider).tunedStrings, contains(3));
+    await unmount(tester);
   });
 
   testWidgets('tapping a peg locks its narrow string band', (tester) async {
@@ -92,6 +108,7 @@ void main() {
     await tester.pump();
     final autoBand = presetBand(InstrumentPreset.guitar, fake.a4);
     expect(fake.bandLowHz, closeTo(autoBand.lowHz, 1e-9));
+    await unmount(tester);
   });
 
   testWidgets('chromatic chip strips the pegs and widens the band', (
@@ -106,6 +123,7 @@ void main() {
     expect(find.text('6'), findsNothing);
     expect(fake.bandLowHz, TunerController.chromaticLowHz);
     expect(fake.bandHighHz, TunerController.chromaticHighHz);
+    await unmount(tester);
   });
 
   testWidgets('failed mic start shows retry that recovers', (tester) async {
@@ -119,6 +137,7 @@ void main() {
     await tester.pump();
     expect(fake.running, isTrue);
     expect(find.text('Microphone unavailable'), findsNothing);
+    await unmount(tester);
   });
 
   testWidgets('denied permission explains and never opens the mic', (
@@ -129,6 +148,7 @@ void main() {
     expect(find.text('Microphone unavailable'), findsOneWidget);
     expect(find.text('Try again'), findsOneWidget);
     expect(fake.startCalls, 0);
+    await unmount(tester);
   });
 
   testWidgets('permanently denied permission offers system settings', (
@@ -145,6 +165,7 @@ void main() {
     expect(find.text('Open settings'), findsOneWidget);
     await tester.tap(find.text('Open settings'));
     expect(opened, isTrue);
+    await unmount(tester);
   });
 
   testWidgets('holds the last note briefly after the signal drops', (
@@ -174,6 +195,7 @@ void main() {
     report(noteIndex: 64, cents: 2);
     await tester.pump();
     expect(find.text('E4'), findsOneWidget);
+    await unmount(tester);
   });
 
   testWidgets('re-entering the tuner starts a fresh session', (tester) async {
@@ -181,6 +203,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         tunerControllerProvider.overrideWithValue(fake),
+        kitbagDatabaseProvider.overrideWithValue(db),
         micPermissionRequestProvider.overrideWithValue(
           () async => MicPermission.granted,
         ),
@@ -214,6 +237,7 @@ void main() {
     expect(container.read(tunerProvider).lockedString, isNull);
     expect(find.text('IN TUNE'), findsNothing);
     expect(find.text('PLAY A NOTE'), findsOneWidget);
+    await unmount(tester);
   });
 
   testWidgets('backgrounding stops the mic, resuming restarts it', (
@@ -229,5 +253,6 @@ void main() {
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pump();
     expect(fake.running, isTrue);
+    await unmount(tester);
   });
 }
