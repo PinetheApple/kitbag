@@ -8,19 +8,24 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'format.dart';
+import 'metronome_layout.dart';
 import 'metronome_routes.dart';
 import 'metronome_state.dart';
 import 'widgets/bar_sweep.dart';
-import 'widgets/beat_led_row.dart';
 import 'widgets/metronome_poll.dart';
+import 'widgets/modifier_chips.dart';
+import 'widgets/pattern_card.dart';
 import 'widgets/setlist_chip.dart';
-import 'widgets/trainer_chips.dart';
 
 /// The metronome. The whole screen is the tempo control: a raw pointer
 /// [Listener] tracks vertical drags (±1 BPM per [_dragPixelsPerBpm] px)
 /// without competing with buttons for gestures, and the scroll wheel works
 /// on desktop. Presets, TAP and the chevrons are the always-visible twins.
+///
+/// Responsiveness is planned by [MetronomeLayoutSpec]: whitespace
+/// compresses first, then chrome shrinks, wide-short windows regroup into
+/// two panes, and only as a last resort does the editing stack scroll —
+/// with the transport pinned so play stays reachable mid-practice.
 class MetronomeScreen extends ConsumerStatefulWidget {
   const MetronomeScreen({super.key});
 
@@ -30,20 +35,14 @@ class MetronomeScreen extends ConsumerStatefulWidget {
 
 class _MetronomeScreenState extends ConsumerState<MetronomeScreen> {
   static const double _dragPixelsPerBpm = 8;
-  static const double _maxContentWidth = 480;
   // A tap must not change tempo: the drag arms only past this distance.
   static const double _armDistance = 14;
-
-  // Heights below which the layout tightens, then falls back to scrolling.
-  static const double _compactHeight = 620;
-  static const double _scrollHeight = 420;
 
   double _dragAccumulated = 0;
   double _dragRemainder = 0;
   bool _dragArmed = false;
-  // When the window is too short even for the compact layout, the body
-  // scrolls — and swipe-anywhere yields to scrolling (presets/TAP remain
-  // as the visible twins).
+  // When part of the screen scrolls, swipe-anywhere yields to scrolling
+  // (presets/TAP remain as the visible twins).
   bool _scrollFallback = false;
 
   void _onPointerDown(PointerDownEvent event) {
@@ -90,6 +89,7 @@ class _MetronomeScreenState extends ConsumerState<MetronomeScreen> {
     final settings = ref.watch(metronomeProvider);
     final notifier = ref.read(metronomeProvider.notifier);
     final theme = Theme.of(context);
+    final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
 
     return Scaffold(
       appBar: AppBar(
@@ -102,58 +102,41 @@ class _MetronomeScreenState extends ConsumerState<MetronomeScreen> {
         onPointerMove: _onPointerMove,
         onPointerSignal: _onPointerSignal,
         child: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: _maxContentWidth),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final compact = constraints.maxHeight < _compactHeight;
-                    _scrollFallback = constraints.maxHeight < _scrollHeight;
-                    final readout = _TempoReadout(
-                      settings: settings,
-                      onNudge: notifier.nudgeBpm,
-                      textTheme: theme.textTheme,
-                    );
-                    final controls = [
-                      _PresetRow(notifier: notifier, compact: compact),
-                      SizedBox(height: compact ? 10 : 18),
-                      _PatternCard(
-                        settings: settings,
-                        notifier: notifier,
-                        compact: compact,
-                      ),
-                      SizedBox(height: compact ? 8 : 12),
-                      _ModifierChips(settings: settings, notifier: notifier),
-                      SizedBox(height: compact ? 10 : 18),
-                      _Transport(
-                        running: settings.running,
-                        notifier: notifier,
-                        compact: compact,
-                      ),
-                      SizedBox(height: compact ? 8 : 12),
-                    ];
-                    if (_scrollFallback) {
-                      return SingleChildScrollView(
-                        child: Column(
-                          children: [
-                            SizedBox(height: 170, child: readout),
-                            ...controls,
-                          ],
-                        ),
-                      );
-                    }
-                    return Column(
-                      children: [
-                        Expanded(child: readout),
-                        ...controls,
-                      ],
-                    );
-                  },
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final spec = MetronomeLayoutSpec.resolve(
+                constraints: constraints,
+                textScale: textScale,
+                polyRow: settings.polyEnabled,
+              );
+              _scrollFallback = spec.swipeYieldsToScroll;
+              return MetronomeLayout(
+                spec: spec,
+                readout: _TempoReadout(
+                  settings: settings,
+                  onNudge: notifier.nudgeBpm,
+                  textTheme: theme.textTheme,
+                  showChevrons: spec.showChevrons,
+                  swipeEnabled: !_scrollFallback,
                 ),
-              ),
-            ),
+                presets: _PresetRow(
+                  notifier: notifier,
+                  compact: spec.compactControls,
+                ),
+                pattern: PatternCard(
+                  settings: settings,
+                  notifier: notifier,
+                  density: spec.density,
+                ),
+                chips: ModifierChipRow(settings: settings, notifier: notifier),
+                transport: _Transport(
+                  running: settings.running,
+                  notifier: notifier,
+                  playSize: spec.playSize,
+                  circleSize: spec.circleSize,
+                ),
+              );
+            },
           ),
         ),
       ),
@@ -166,11 +149,21 @@ class _TempoReadout extends StatelessWidget {
     required this.settings,
     required this.onNudge,
     required this.textTheme,
+    required this.showChevrons,
+    required this.swipeEnabled,
   });
 
   final MetronomeSettings settings;
   final ValueChanged<double> onNudge;
   final TextTheme textTheme;
+
+  /// Dense layouts drop the chevrons so the BPM digits keep their size —
+  /// presets and swipe/scroll remain as tempo controls.
+  final bool showChevrons;
+
+  /// False when a scrolling layout owns vertical drags; the hint then
+  /// points at the always-visible controls instead of the gesture.
+  final bool swipeEnabled;
 
   static final bool _isDesktop =
       !kIsWeb && (Platform.isLinux || Platform.isMacOS || Platform.isWindows);
@@ -187,7 +180,11 @@ class _TempoReadout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dim = Theme.of(context).colorScheme.onSurfaceVariant;
-    final hint = _isDesktop ? 'DRAG · SCROLL · ARROWS' : 'SWIPE ANYWHERE';
+    final hint = !swipeEnabled
+        ? 'TAP · PRESETS'
+        : _isDesktop
+        ? 'DRAG · SCROLL · ARROWS'
+        : 'SWIPE ANYWHERE';
     // With a ramp armed the readout must show what will actually sound: the
     // live ramped BPM while running, the ramp's start BPM while stopped.
     final idleBpm = settings.rampEnabled
@@ -203,21 +200,23 @@ class _TempoReadout extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              IconButton(
-                onPressed: () => onNudge(1),
-                icon: Icon(Icons.keyboard_arrow_up, color: dim),
-                tooltip: '+1 BPM',
-              ),
+              if (showChevrons)
+                IconButton(
+                  onPressed: () => onNudge(1),
+                  icon: Icon(Icons.keyboard_arrow_up, color: dim),
+                  tooltip: '+1 BPM',
+                ),
               Text('$bpm', style: textTheme.displayLarge),
               Text(
                 'BPM · ${_marking(bpm)} · $hint',
                 style: textTheme.labelSmall,
               ),
-              IconButton(
-                onPressed: () => onNudge(-1),
-                icon: Icon(Icons.keyboard_arrow_down, color: dim),
-                tooltip: '−1 BPM',
-              ),
+              if (showChevrons)
+                IconButton(
+                  onPressed: () => onNudge(-1),
+                  icon: Icon(Icons.keyboard_arrow_down, color: dim),
+                  tooltip: '−1 BPM',
+                ),
               const SizedBox(height: 6),
               BarSweep(running: settings.running),
             ],
@@ -268,165 +267,21 @@ class _PresetRow extends StatelessWidget {
   }
 }
 
-class _PatternCard extends StatelessWidget {
-  const _PatternCard({
-    required this.settings,
-    required this.notifier,
-    this.compact = false,
-  });
-
-  final MetronomeSettings settings;
-  final MetronomeNotifier notifier;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    final gap = SizedBox(height: compact ? 8.0 : 12.0);
-    return Card(
-      margin: compact ? const EdgeInsets.symmetric(horizontal: 4) : null,
-      child: Padding(
-        padding: EdgeInsets.all(compact ? 10 : 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                _CompactStep(
-                  onStep: (delta) =>
-                      notifier.setBeatsPerBar(settings.beatsPerBar + delta),
-                  child: KitbagBadge(
-                    label: timeSignatureLabel(settings.beatsPerBar),
-                  ),
-                ),
-                const Spacer(),
-                Flexible(
-                  child: BeatLedRow(
-                    beatCount: settings.beatsPerBar,
-                    accents: settings.accents,
-                    running: settings.running,
-                    onBeatTap: notifier.cycleAccent,
-                  ),
-                ),
-              ],
-            ),
-            if (settings.polyEnabled) ...[
-              gap,
-              Row(
-                children: [
-                  _CompactStep(
-                    onStep: (delta) =>
-                        notifier.setPolyBeats(settings.polyBeats + delta),
-                    child: KitbagBadge(
-                      label: '${settings.polyBeats}:${settings.beatsPerBar}',
-                      accent: true,
-                    ),
-                  ),
-                  const Spacer(),
-                  BeatLedRow(
-                    beatCount: settings.polyBeats,
-                    accents: null,
-                    running: settings.running,
-                    onBeatTap: null,
-                    poly: true,
-                    size: 16,
-                  ),
-                ],
-              ),
-            ],
-            gap,
-            KitbagSegmented(
-              segments: [
-                for (final (value, label) in const [
-                  (1, '♩'),
-                  (2, '♪'),
-                  (3, '³'),
-                  (4, '♬'),
-                ])
-                  KitbagSegment(
-                    label: label,
-                    selected: settings.subdivision == value,
-                    onTap: () => notifier.setSubdivision(value),
-                  ),
-                KitbagSegment(
-                  label: 'poly',
-                  selected: settings.polyEnabled,
-                  accent: true,
-                  onTap: notifier.togglePolyrhythm,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Wraps a badge with slim −/+ steppers.
-class _CompactStep extends StatelessWidget {
-  const _CompactStep({required this.onStep, required this.child});
-
-  final ValueChanged<int> onStep;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final dim = Theme.of(context).colorScheme.onSurfaceVariant;
-    Widget step(IconData icon, int delta) => InkWell(
-      onTap: () => onStep(delta),
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.all(6),
-        child: Icon(icon, size: 16, color: dim),
-      ),
-    );
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [step(Icons.remove, -1), child, step(Icons.add, 1)],
-    );
-  }
-}
-
-class _ModifierChips extends StatelessWidget {
-  const _ModifierChips({required this.settings, required this.notifier});
-
-  final MetronomeSettings settings;
-  final MetronomeNotifier notifier;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        RampChip(settings: settings),
-        MuteBarsChip(settings: settings),
-        KitbagChip(
-          icon: Icons.notifications_none,
-          label: soundNames[settings.sound],
-          onTap: () =>
-              notifier.setSound((settings.sound + 1) % soundNames.length),
-          tooltip: 'Change click sound',
-        ),
-      ],
-    );
-  }
-}
-
 class _Transport extends StatelessWidget {
   const _Transport({
     required this.running,
     required this.notifier,
-    this.compact = false,
+    required this.playSize,
+    required this.circleSize,
   });
 
   final bool running;
   final MetronomeNotifier notifier;
-  final bool compact;
+  final double playSize;
+  final double circleSize;
 
   @override
   Widget build(BuildContext context) {
-    final circleSize = compact ? 40.0 : 46.0;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
@@ -438,7 +293,7 @@ class _Transport extends StatelessWidget {
         ),
         KitbagPlayButton(
           playing: running,
-          size: compact ? 58 : 72,
+          size: playSize,
           onPressed: () {
             notifier.toggleRunning();
             HapticFeedback.mediumImpact();

@@ -75,7 +75,10 @@ class KitbagChip extends StatelessWidget {
             minWidth: _minTapTarget,
             minHeight: _minTapTarget,
           ),
-          child: Center(child: pill),
+          // widthFactor/heightFactor keep the chip hugging the pill: a bare
+          // Center expands to fill loose constraints, which made every chip
+          // claim a whole Wrap run (one chip per line on narrow screens).
+          child: Center(widthFactor: 1, heightFactor: 1, child: pill),
         ),
       ),
     );

@@ -73,7 +73,9 @@ class KitbagTileButton extends StatelessWidget {
           fontWeight: emphasized ? FontWeight.w700 : FontWeight.w500,
         ),
       ),
-      child: Text(label),
+      // Scale down rather than clip when large text scales meet narrow
+      // preset tiles (200% text-scale acceptance criterion).
+      child: FittedBox(fit: BoxFit.scaleDown, child: Text(label)),
     );
   }
 }
@@ -127,17 +129,25 @@ class KitbagSegmented extends StatelessWidget {
                   onTap: segment.onTap,
                   borderRadius: BorderRadius.circular(8),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Text(
-                      segment.label,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: segment.accent && segment.selected
-                            ? scheme.primary
-                            : segment.selected
-                            ? scheme.onSurface
-                            : scheme.onSurfaceVariant,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 2,
+                    ),
+                    // Scale down rather than overflow when 200% text scale
+                    // meets a narrow segment.
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        segment.label,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: segment.accent && segment.selected
+                              ? scheme.primary
+                              : segment.selected
+                              ? scheme.onSurface
+                              : scheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
                   ),
