@@ -26,8 +26,11 @@ abstract final class KitbagColors {
   static const Color lightOnAccent = Color(0xFFFFF7EA);
 
   // Semantic — separate channel from accent, never used for emphasis.
+  // "Almost" is the amber between flat and in-tune on the tuner strip.
   static const Color darkFlat = Color(0xFFFF5C5C);
+  static const Color darkAlmost = Color(0xFFFFC24B);
   static const Color darkInTune = Color(0xFF4ADE80);
   static const Color lightFlat = Color(0xFFCC4444);
+  static const Color lightAlmost = Color(0xFF9A6E06);
   static const Color lightInTune = Color(0xFF1E8A4F);
 }
