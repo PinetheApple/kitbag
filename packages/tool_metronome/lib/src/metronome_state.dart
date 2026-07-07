@@ -3,6 +3,7 @@ import 'package:core_plugin_api/core_plugin_api.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'tap_tempo.dart';
+import 'trainer.dart';
 
 class MetronomeSettings {
   const MetronomeSettings({
@@ -14,6 +15,10 @@ class MetronomeSettings {
     this.polyBeats = 3,
     this.sound = 0,
     this.running = false,
+    this.rampEnabled = false,
+    this.ramp = const TempoRamp(),
+    this.barMuteEnabled = false,
+    this.barMute = const BarMute(),
   });
 
   static const List<BeatAccent> _defaultAccents = [
@@ -43,6 +48,10 @@ class MetronomeSettings {
   final int polyBeats;
   final int sound;
   final bool running;
+  final bool rampEnabled;
+  final TempoRamp ramp;
+  final bool barMuteEnabled;
+  final BarMute barMute;
 
   MetronomeSettings copyWith({
     double? bpm,
@@ -53,6 +62,10 @@ class MetronomeSettings {
     int? polyBeats,
     int? sound,
     bool? running,
+    bool? rampEnabled,
+    TempoRamp? ramp,
+    bool? barMuteEnabled,
+    BarMute? barMute,
   }) {
     return MetronomeSettings(
       bpm: bpm ?? this.bpm,
@@ -63,6 +76,10 @@ class MetronomeSettings {
       polyBeats: polyBeats ?? this.polyBeats,
       sound: sound ?? this.sound,
       running: running ?? this.running,
+      rampEnabled: rampEnabled ?? this.rampEnabled,
+      ramp: ramp ?? this.ramp,
+      barMuteEnabled: barMuteEnabled ?? this.barMuteEnabled,
+      barMute: barMute ?? this.barMute,
     );
   }
 }
@@ -97,7 +114,22 @@ class MetronomeNotifier extends Notifier<MetronomeSettings> {
       beats: settings.polyBeats,
     );
     controller.setSound(settings.sound);
+    _pushRamp(settings.rampEnabled, settings.ramp);
+    _pushBarMute(settings.barMuteEnabled, settings.barMute);
   }
+
+  void _pushRamp(bool enabled, TempoRamp ramp) => _controller.setRamp(
+    enabled: enabled,
+    startBpm: ramp.startBpm,
+    endBpm: ramp.endBpm,
+    bars: ramp.bars,
+  );
+
+  void _pushBarMute(bool enabled, BarMute barMute) => _controller.setBarMute(
+    enabled: enabled,
+    playBars: barMute.playBars,
+    muteBars: barMute.muteBars,
+  );
 
   void setBpm(double bpm) {
     final clamped = bpm.clamp(
@@ -105,10 +137,16 @@ class MetronomeNotifier extends Notifier<MetronomeSettings> {
       MetronomeController.maxBpm,
     );
     _controller.setTempo(clamped);
-    state = state.copyWith(bpm: clamped);
+    // A manual tempo change cancels the ramp, mirroring the sequencer.
+    state = state.copyWith(bpm: clamped, rampEnabled: false);
   }
 
-  void nudgeBpm(double delta) => setBpm(state.bpm + delta);
+  /// Nudges relative to the tempo the user is hearing (and the readout is
+  /// showing): during a ramp that is the live ramped BPM, not the dial.
+  void nudgeBpm(double delta) {
+    final base = state.rampEnabled ? _controller.currentBpm : state.bpm;
+    setBpm(base + delta);
+  }
 
   void tapTempo() {
     final bpm = _tapTempo.tap();
@@ -158,8 +196,30 @@ class MetronomeNotifier extends Notifier<MetronomeSettings> {
     state = state.copyWith(sound: sound);
   }
 
+  void enableRamp(TempoRamp ramp) {
+    _pushRamp(true, ramp);
+    state = state.copyWith(rampEnabled: true, ramp: ramp);
+  }
+
+  void disableRamp() {
+    _pushRamp(false, state.ramp);
+    _controller.setTempo(state.bpm); // back to the dialed tempo
+    state = state.copyWith(rampEnabled: false);
+  }
+
+  void enableBarMute(BarMute barMute) {
+    _pushBarMute(true, barMute);
+    state = state.copyWith(barMuteEnabled: true, barMute: barMute);
+  }
+
+  void disableBarMute() {
+    _pushBarMute(false, state.barMute);
+    state = state.copyWith(barMuteEnabled: false);
+  }
+
   /// Applies a stored song preset in one shot (setlist paging). Keeps the
-  /// transport state: paging songs mid-performance must not stop the click.
+  /// transport state — paging songs mid-performance must not stop the
+  /// click — but, like any manual tempo change, cancels an active ramp.
   void applyPreset({
     required double bpm,
     required int beatsPerBar,
@@ -178,6 +238,7 @@ class MetronomeNotifier extends Notifier<MetronomeSettings> {
       subdivision: subdivision,
       accents: padded,
       sound: sound,
+      rampEnabled: false,
     );
     _pushAll(settings);
     state = settings;

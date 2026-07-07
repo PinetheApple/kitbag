@@ -6,6 +6,7 @@
 
 #include "metronome.h"
 #include "miniaudio.h"
+#include "tuner.h"
 
 namespace kitbag {
 
@@ -36,6 +37,9 @@ class Engine {
   Metronome& metronome() { return metronome_; }
   const Metronome& metronome() const { return metronome_; }
 
+  Tuner& tuner() { return tuner_; }
+  const Tuner& tuner() const { return tuner_; }
+
  private:
   static void DataCallback(ma_device* device, void* output, const void* input,
                            ma_uint32 frame_count);
@@ -50,6 +54,7 @@ class Engine {
   double tone_phase_ = 0.0;
 
   Metronome metronome_;
+  Tuner tuner_;
 };
 
 }  // namespace kitbag

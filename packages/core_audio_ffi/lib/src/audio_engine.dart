@@ -4,6 +4,7 @@ import 'package:ffi/ffi.dart';
 
 import 'bindings.dart';
 import 'metronome_controller.dart';
+import 'tuner_controller.dart';
 
 /// Result codes mirrored from `kb_result` in kitbag_api.h.
 enum AudioEngineError {
@@ -35,6 +36,7 @@ class AudioEngine {
   final KitbagBindings _bindings;
   Pointer<Void> _handle;
   late final MetronomeController metronome = MetronomeController(this);
+  late final TunerController tuner = TunerController(this);
 
   /// Internal — used by tool controllers within this package.
   KitbagBindings get bindings => _bindings;

@@ -17,6 +17,12 @@ final metronomeControllerProvider = Provider<MetronomeController>(
   (ref) => ref.watch(audioEngineProvider).metronome,
 );
 
+/// Tuner control surface — same indirection as the metronome so widget
+/// tests can override it with a fake instead of loading the native library.
+final tunerControllerProvider = Provider<TunerController>(
+  (ref) => ref.watch(audioEngineProvider).tuner,
+);
+
 /// The single app database. Widget tests override this with an in-memory
 /// executor instead of touching the filesystem.
 final kitbagDatabaseProvider = Provider<KitbagDatabase>((ref) {

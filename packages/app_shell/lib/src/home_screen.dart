@@ -62,12 +62,6 @@ class HomeScreen extends ConsumerWidget {
                         onOpen: () => context.go(plugin.basePath),
                       ),
                     const KitbagToolTile(
-                      icon: Icons.graphic_eq,
-                      name: 'Tuner',
-                      subtitle: 'Next milestone',
-                      enabled: false,
-                    ),
-                    const KitbagToolTile(
                       icon: Icons.library_music_outlined,
                       name: 'Songs',
                       subtitle: 'Coming soon',

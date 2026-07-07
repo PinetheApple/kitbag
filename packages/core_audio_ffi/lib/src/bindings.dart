@@ -22,10 +22,17 @@ typedef SetIntNative = Void Function(Pointer<Void>, Int32);
 typedef SetIntDart = void Function(Pointer<Void>, int);
 typedef SetTwoIntsNative = Void Function(Pointer<Void>, Int32, Int32);
 typedef SetTwoIntsDart = void Function(Pointer<Void>, int, int);
+typedef SetRampNative =
+    Void Function(Pointer<Void>, Int32, Double, Double, Int32);
+typedef SetRampDart = void Function(Pointer<Void>, int, double, double, int);
+typedef SetThreeIntsNative = Void Function(Pointer<Void>, Int32, Int32, Int32);
+typedef SetThreeIntsDart = void Function(Pointer<Void>, int, int, int);
 typedef GetIntNative = Int32 Function(Pointer<Void>);
 typedef GetIntDart = int Function(Pointer<Void>);
 typedef GetDoubleNative = Double Function(Pointer<Void>);
 typedef GetDoubleDart = double Function(Pointer<Void>);
+typedef SetTwoDoublesNative = Void Function(Pointer<Void>, Double, Double);
+typedef SetTwoDoublesDart = void Function(Pointer<Void>, double, double);
 
 class KitbagBindings {
   KitbagBindings(DynamicLibrary library)
@@ -82,6 +89,13 @@ class KitbagBindings {
       metronomeSetSound = library.lookupFunction<SetIntNative, SetIntDart>(
         'kb_metronome_set_sound',
       ),
+      metronomeSetRamp = library.lookupFunction<SetRampNative, SetRampDart>(
+        'kb_metronome_set_ramp',
+      ),
+      metronomeSetBarMute = library
+          .lookupFunction<SetThreeIntsNative, SetThreeIntsDart>(
+            'kb_metronome_set_bar_mute',
+          ),
       metronomeIsRunning = library.lookupFunction<GetIntNative, GetIntDart>(
         'kb_metronome_is_running',
       ),
@@ -95,7 +109,30 @@ class KitbagBindings {
       metronomeBarPhase = library
           .lookupFunction<GetDoubleNative, GetDoubleDart>(
             'kb_metronome_bar_phase',
-          );
+          ),
+      metronomeCurrentBpm = library
+          .lookupFunction<GetDoubleNative, GetDoubleDart>(
+            'kb_metronome_current_bpm',
+          ),
+      metronomeBarMuted = library.lookupFunction<GetIntNative, GetIntDart>(
+        'kb_metronome_bar_muted',
+      ),
+      tunerStart = library.lookupFunction<EngineOpNative, EngineOpDart>(
+        'kb_tuner_start',
+      ),
+      tunerStop = library.lookupFunction<EngineVoidOpNative, EngineVoidOpDart>(
+        'kb_tuner_stop',
+      ),
+      tunerSetA4 = library.lookupFunction<SetDoubleNative, SetDoubleDart>(
+        'kb_tuner_set_a4',
+      ),
+      tunerSetBand = library
+          .lookupFunction<SetTwoDoublesNative, SetTwoDoublesDart>(
+            'kb_tuner_set_band',
+          ),
+      tunerSnapshot = library.lookupFunction<FramesNative, FramesDart>(
+        'kb_tuner_snapshot',
+      );
 
   static const String _libraryName = 'kitbag_core';
 
@@ -114,10 +151,19 @@ class KitbagBindings {
   final SetTwoIntsDart metronomeSetAccent;
   final SetTwoIntsDart metronomeSetPoly;
   final SetIntDart metronomeSetSound;
+  final SetRampDart metronomeSetRamp;
+  final SetThreeIntsDart metronomeSetBarMute;
   final GetIntDart metronomeIsRunning;
   final GetIntDart metronomeCurrentBeat;
   final GetIntDart metronomeCurrentPolyBeat;
   final GetDoubleDart metronomeBarPhase;
+  final GetDoubleDart metronomeCurrentBpm;
+  final GetIntDart metronomeBarMuted;
+  final EngineOpDart tunerStart;
+  final EngineVoidOpDart tunerStop;
+  final SetDoubleDart tunerSetA4;
+  final SetTwoDoublesDart tunerSetBand;
+  final FramesDart tunerSnapshot;
 
   static DynamicLibrary openLibrary() {
     if (Platform.isAndroid) {
