@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'format.dart';
 import 'metronome_screen.dart';
 import 'metronome_state.dart';
 import 'setlist_detail_screen.dart';
@@ -54,7 +55,7 @@ class MetronomePlugin implements ToolPlugin {
           name: name,
           subtitle:
               '${settings.bpm.round()} BPM · '
-              '${settings.beatsPerBar}/4'
+              '${timeSignatureLabel(settings.beatsPerBar)}'
               '${settings.running ? ' · playing' : ''}',
           onTap: onOpen,
         );

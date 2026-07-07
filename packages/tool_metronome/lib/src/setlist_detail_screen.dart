@@ -8,11 +8,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'format.dart';
 import 'metronome_routes.dart';
 import 'metronome_state.dart';
 import 'name_dialog.dart';
 import 'setlist_state.dart';
-import 'sounds.dart';
 
 enum _SongAction { rename, recapture, delete }
 
@@ -45,6 +45,8 @@ class SetlistDetailScreen extends ConsumerWidget {
       beatsPerBar: settings.beatsPerBar,
       subdivision: settings.subdivision,
       accents: encodeAccents(settings.accents),
+      polyEnabled: settings.polyEnabled,
+      polyBeats: settings.polyBeats,
       sound: settings.sound,
     );
   }
@@ -75,6 +77,8 @@ class SetlistDetailScreen extends ConsumerWidget {
         beatsPerBar: Value(settings.beatsPerBar),
         subdivision: Value(settings.subdivision),
         accents: Value(encodeAccents(settings.accents)),
+        polyEnabled: Value(settings.polyEnabled),
+        polyBeats: Value(settings.polyBeats),
         sound: Value(settings.sound),
       ),
     );
@@ -176,9 +180,7 @@ class _SongRow extends StatelessWidget {
     return KitbagRowCard(
       icon: Icons.music_note,
       title: song.name,
-      subtitle:
-          '${song.bpm.round()} BPM · ${song.beatsPerBar}/4 · '
-          '${soundNames[song.sound]}',
+      subtitle: songSummary(song),
       onTap: onTap,
       trailing: Row(
         mainAxisSize: MainAxisSize.min,

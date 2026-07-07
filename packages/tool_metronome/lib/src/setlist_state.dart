@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:core_audio_ffi/core_audio_ffi.dart';
@@ -56,9 +57,18 @@ final activeSetlistProvider =
       ActiveSetlistNotifier.new,
     );
 
+/// The session stays subscribed to the database, so renames, recaptures,
+/// reorders and deletions during a gig are reflected live: the chip label
+/// stays truthful and paging always applies the stored preset as it is now.
 class ActiveSetlistNotifier extends Notifier<ActiveSetlist?> {
+  StreamSubscription<List<Song>>? _songsSubscription;
+  StreamSubscription<Setlist?>? _setlistSubscription;
+
   @override
-  ActiveSetlist? build() => null;
+  ActiveSetlist? build() {
+    ref.onDispose(_unsubscribe);
+    return null;
+  }
 
   /// Starts (or re-anchors) a session and applies the song at [index].
   void play({
@@ -66,6 +76,7 @@ class ActiveSetlistNotifier extends Notifier<ActiveSetlist?> {
     required List<Song> songs,
     required int index,
   }) {
+    _subscribe(setlist.id);
     state = ActiveSetlist(setlist: setlist, songs: songs, index: index);
     _apply(songs[index]);
   }
@@ -74,7 +85,67 @@ class ActiveSetlistNotifier extends Notifier<ActiveSetlist?> {
 
   void previous() => _moveBy(-1);
 
-  void clear() => state = null;
+  void clear() {
+    _unsubscribe();
+    state = null;
+  }
+
+  void _subscribe(int setlistId) {
+    _unsubscribe();
+    final db = ref.read(kitbagDatabaseProvider);
+    _songsSubscription = db.songsDao
+        .watchBySetlist(setlistId)
+        .listen(_onSongsChanged);
+    _setlistSubscription = db.setlistsDao
+        .watchSetlistOrNull(setlistId)
+        .listen(_onSetlistChanged);
+  }
+
+  void _unsubscribe() {
+    unawaited(_songsSubscription?.cancel());
+    unawaited(_setlistSubscription?.cancel());
+    _songsSubscription = null;
+    _setlistSubscription = null;
+  }
+
+  /// Reconciles the session with the stored songs: follow the current song
+  /// by id (rename/reorder/recapture keep the position), clamp the index if
+  /// it was deleted, end the session when nothing is left. Never re-applies
+  /// mid-song — what is sounding stays untouched until the user pages.
+  void _onSongsChanged(List<Song> songs) {
+    final active = state;
+    if (active == null) {
+      return;
+    }
+    if (songs.isEmpty) {
+      clear();
+      return;
+    }
+    final currentId = active.songs[active.index].id;
+    var index = songs.indexWhere((song) => song.id == currentId);
+    if (index == -1) {
+      index = active.index.clamp(0, songs.length - 1);
+    }
+    state = ActiveSetlist(setlist: active.setlist, songs: songs, index: index);
+  }
+
+  void _onSetlistChanged(Setlist? setlist) {
+    final active = state;
+    if (active == null) {
+      return;
+    }
+    if (setlist == null) {
+      // The active setlist itself was deleted; other deletions don't end
+      // the session.
+      clear();
+      return;
+    }
+    state = ActiveSetlist(
+      setlist: setlist,
+      songs: active.songs,
+      index: active.index,
+    );
+  }
 
   void _moveBy(int delta) {
     final active = state;
@@ -101,6 +172,8 @@ class ActiveSetlistNotifier extends Notifier<ActiveSetlist?> {
           beatsPerBar: song.beatsPerBar,
           subdivision: song.subdivision,
           accents: decodeAccents(song.accents),
+          polyEnabled: song.polyEnabled,
+          polyBeats: song.polyBeats,
           sound: song.sound,
         );
   }

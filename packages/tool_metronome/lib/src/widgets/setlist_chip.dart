@@ -18,10 +18,12 @@ class SetlistChip extends ConsumerWidget {
     final active = ref.watch(activeSetlistProvider);
     if (active == null) {
       return Padding(
-        padding: const EdgeInsets.only(right: 20),
-        child: KitbagBadge(
-          label: 'SETLISTS',
+        padding: const EdgeInsets.only(right: 12),
+        child: KitbagChip(
+          icon: Icons.queue_music,
+          label: 'Setlists',
           onTap: () => context.go(MetronomeRoutes.setlists),
+          tooltip: 'Setlists',
         ),
       );
     }
@@ -43,10 +45,17 @@ class SetlistChip extends ConsumerWidget {
               notifier.previous();
             }
           },
-          child: KitbagBadge(
-            label: active.label,
-            accent: true,
-            onTap: () => context.go(MetronomeRoutes.setlists),
+          // Capped so long setlist names ellipsize instead of overflowing
+          // the app bar on narrow phones.
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 180),
+            child: KitbagChip(
+              icon: Icons.queue_music,
+              label: active.label,
+              active: true,
+              onTap: () => context.go(MetronomeRoutes.setlists),
+              tooltip: 'Open setlists',
+            ),
           ),
         ),
         IconButton(

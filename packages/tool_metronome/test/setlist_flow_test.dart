@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:core_audio_ffi/testing.dart';
 import 'package:core_db/core_db.dart';
+import 'package:core_design/core_design.dart';
 import 'package:core_plugin_api/core_plugin_api.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -46,6 +47,16 @@ void main() {
     );
   }
 
+  /// Pumps the app on a phone-portrait viewport (the default 800x600 test
+  /// surface overflows the metronome column once a poly row is shown).
+  Future<void> pumpApp(WidgetTester tester) async {
+    tester.view.physicalSize = const Size(720, 1480);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(app());
+  }
+
   /// Unmounts the app and flushes drift's stream-cleanup timers so the
   /// binding's end-of-test pending-timer check passes.
   Future<void> unmount(WidgetTester tester) async {
@@ -68,6 +79,8 @@ void main() {
     double bpm, {
     int beatsPerBar = 4,
     int subdivision = 1,
+    bool polyEnabled = false,
+    int polyBeats = 3,
     int sound = 0,
   }) {
     return db.songsDao.append(
@@ -77,6 +90,8 @@ void main() {
       beatsPerBar: beatsPerBar,
       subdivision: subdivision,
       accents: Uint8List.fromList([2, 1, 1, 1]),
+      polyEnabled: polyEnabled,
+      polyBeats: polyBeats,
       sound: sound,
     );
   }
@@ -84,8 +99,15 @@ void main() {
   testWidgets('queue button opens the setlists screen, back returns', (
     tester,
   ) async {
-    await tester.pumpWidget(app());
-    await tester.tap(find.byIcon(Icons.queue_music));
+    await pumpApp(tester);
+    // Two setlist entry points exist (app-bar chip + transport button);
+    // this exercises the transport one.
+    await tester.tap(
+      find.descendant(
+        of: find.byType(KitbagCircleButton),
+        matching: find.byIcon(Icons.queue_music),
+      ),
+    );
     await settle(tester);
     expect(find.byType(SetlistsScreen), findsOneWidget);
     expect(find.text('Create a setlist'), findsOneWidget);
@@ -97,7 +119,7 @@ void main() {
   });
 
   testWidgets('creates a setlist from the empty-state CTA', (tester) async {
-    await tester.pumpWidget(app());
+    await pumpApp(tester);
     router.go(MetronomeRoutes.setlists);
     await settle(tester);
 
@@ -114,7 +136,7 @@ void main() {
 
   testWidgets('saves the current metronome settings as a song', (tester) async {
     final setlistId = await db.setlistsDao.create('Wedding set');
-    await tester.pumpWidget(app());
+    await pumpApp(tester);
     router.go(MetronomeRoutes.setlist(setlistId));
     await settle(tester);
 
@@ -142,11 +164,13 @@ void main() {
       96,
       beatsPerBar: 7,
       subdivision: 2,
+      polyEnabled: true,
+      polyBeats: 5,
       sound: 1,
     );
     await seedSong(setlistId, 'Closer', 140);
 
-    await tester.pumpWidget(app());
+    await pumpApp(tester);
     router.go(MetronomeRoutes.setlist(setlistId));
     await settle(tester);
 
@@ -159,6 +183,8 @@ void main() {
     expect(fake.tempo, 96);
     expect(fake.beatsPerBar, 7);
     expect(fake.subdivision, 2);
+    expect(fake.polyEnabled, isTrue);
+    expect(fake.polyBeats, 5);
     expect(fake.sound, 1);
     await unmount(tester);
   });
@@ -168,7 +194,7 @@ void main() {
     await seedSong(setlistId, 'Opener', 96);
     await seedSong(setlistId, 'Closer', 140);
 
-    await tester.pumpWidget(app());
+    await pumpApp(tester);
     router.go(MetronomeRoutes.setlist(setlistId));
     await settle(tester);
     await tester.tap(find.text('Opener'));
@@ -191,7 +217,7 @@ void main() {
     await seedSong(setlistId, 'Opener', 96);
     await seedSong(setlistId, 'Closer', 140);
 
-    await tester.pumpWidget(app());
+    await pumpApp(tester);
     router.go(MetronomeRoutes.setlist(setlistId));
     await settle(tester);
     expect(find.byType(SetlistDetailScreen), findsOneWidget);

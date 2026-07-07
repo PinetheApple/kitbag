@@ -28,6 +28,8 @@ class Songs extends Table {
   IntColumn get beatsPerBar => integer()();
   IntColumn get subdivision => integer()();
   BlobColumn get accents => blob()();
+  BoolColumn get polyEnabled => boolean()();
+  IntColumn get polyBeats => integer()();
   IntColumn get sound => integer()();
 }
 

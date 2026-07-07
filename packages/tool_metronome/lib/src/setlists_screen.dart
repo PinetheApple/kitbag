@@ -60,11 +60,12 @@ class SetlistsScreen extends ConsumerWidget {
     if (!confirmed) {
       return;
     }
+    // The active session watches the database and ends itself if this was
+    // the active setlist — no clearing needed here.
     await ref
         .read(kitbagDatabaseProvider)
         .setlistsDao
         .deleteSetlist(setlist.id);
-    ref.read(activeSetlistProvider.notifier).clear();
   }
 
   @override

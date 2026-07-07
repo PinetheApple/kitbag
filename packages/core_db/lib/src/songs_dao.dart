@@ -26,6 +26,8 @@ class SongsDao extends DatabaseAccessor<KitbagDatabase> with _$SongsDaoMixin {
     required int beatsPerBar,
     required int subdivision,
     required Uint8List accents,
+    required bool polyEnabled,
+    required int polyBeats,
     required int sound,
   }) {
     return transaction(() async {
@@ -45,6 +47,8 @@ class SongsDao extends DatabaseAccessor<KitbagDatabase> with _$SongsDaoMixin {
           beatsPerBar: beatsPerBar,
           subdivision: subdivision,
           accents: accents,
+          polyEnabled: polyEnabled,
+          polyBeats: polyBeats,
           sound: sound,
         ),
       );

@@ -341,6 +341,7 @@ class KitbagEmptyState extends StatelessWidget {
     required this.message,
     required this.actionLabel,
     required this.onAction,
+    this.actionIcon = Icons.add,
   });
 
   final IconData icon;
@@ -348,6 +349,7 @@ class KitbagEmptyState extends StatelessWidget {
   final String message;
   final String actionLabel;
   final VoidCallback onAction;
+  final IconData actionIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -373,7 +375,7 @@ class KitbagEmptyState extends StatelessWidget {
             const SizedBox(height: 18),
             FilledButton.icon(
               onPressed: onAction,
-              icon: const Icon(Icons.add),
+              icon: Icon(actionIcon),
               label: Text(actionLabel),
             ),
           ],

@@ -225,6 +225,8 @@ class MetronomeNotifier extends Notifier<MetronomeSettings> {
     required int beatsPerBar,
     required int subdivision,
     required List<BeatAccent> accents,
+    required bool polyEnabled,
+    required int polyBeats,
     required int sound,
   }) {
     final padded = [
@@ -237,6 +239,8 @@ class MetronomeNotifier extends Notifier<MetronomeSettings> {
       beatsPerBar: beatsPerBar.clamp(1, MetronomeController.maxBeats),
       subdivision: subdivision,
       accents: padded,
+      polyEnabled: polyEnabled,
+      polyBeats: polyBeats.clamp(2, MetronomeController.maxBeats),
       sound: sound,
       rampEnabled: false,
     );

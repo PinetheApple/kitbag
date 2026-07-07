@@ -22,6 +22,8 @@ void main() {
       beatsPerBar: beatsPerBar,
       subdivision: 1,
       accents: Uint8List.fromList([2, 1, 1, 1]),
+      polyEnabled: false,
+      polyBeats: 3,
       sound: 0,
     );
   }
@@ -44,8 +46,15 @@ void main() {
     test('renames a setlist', () async {
       final id = await db.setlistsDao.create('Wedding set');
       await db.setlistsDao.rename(id, 'Reception set');
-      final setlist = await db.setlistsDao.getById(id);
+      final setlist = await db.setlistsDao.watchSetlist(id).first;
       expect(setlist.name, 'Reception set');
+    });
+
+    test('watchSetlistOrNull emits null after deletion', () async {
+      final id = await db.setlistsDao.create('Wedding set');
+      expect((await db.setlistsDao.watchSetlistOrNull(id).first)?.id, id);
+      await db.setlistsDao.deleteSetlist(id);
+      expect(await db.setlistsDao.watchSetlistOrNull(id).first, isNull);
     });
 
     test('deleting a setlist cascades to its songs', () async {
@@ -73,7 +82,7 @@ void main() {
       expect(songs.map((s) => s.position), [0, 1, 2]);
     });
 
-    test('stores the full preset round-trip', () async {
+    test('stores the full preset round-trip, polyrhythm included', () async {
       final accents = Uint8List.fromList([2, 1, 0, 1, 1, 2, 0]);
       final id = await db.songsDao.append(
         setlistId: setlistId,
@@ -82,6 +91,8 @@ void main() {
         beatsPerBar: 7,
         subdivision: 3,
         accents: accents,
+        polyEnabled: true,
+        polyBeats: 5,
         sound: 2,
       );
 
@@ -92,6 +103,8 @@ void main() {
       expect(song.beatsPerBar, 7);
       expect(song.subdivision, 3);
       expect(song.accents, accents);
+      expect(song.polyEnabled, isTrue);
+      expect(song.polyBeats, 5);
       expect(song.sound, 2);
     });
 

@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'format.dart';
 import 'metronome_routes.dart';
 import 'metronome_state.dart';
 import 'widgets/bar_sweep.dart';
@@ -246,7 +247,9 @@ class _PatternCard extends StatelessWidget {
                 _CompactStep(
                   onStep: (delta) =>
                       notifier.setBeatsPerBar(settings.beatsPerBar + delta),
-                  child: KitbagBadge(label: '${settings.beatsPerBar}/4'),
+                  child: KitbagBadge(
+                    label: timeSignatureLabel(settings.beatsPerBar),
+                  ),
                 ),
                 const Spacer(),
                 Flexible(
@@ -340,8 +343,6 @@ class _CompactStep extends StatelessWidget {
 class _ModifierChips extends StatelessWidget {
   const _ModifierChips({required this.settings, required this.notifier});
 
-  static const List<String> _soundNames = ['Beep', 'Woodblock', 'Click'];
-
   final MetronomeSettings settings;
   final MetronomeNotifier notifier;
 
@@ -355,9 +356,9 @@ class _ModifierChips extends StatelessWidget {
         MuteBarsChip(settings: settings),
         KitbagChip(
           icon: Icons.notifications_none,
-          label: _soundNames[settings.sound],
+          label: soundNames[settings.sound],
           onTap: () =>
-              notifier.setSound((settings.sound + 1) % _soundNames.length),
+              notifier.setSound((settings.sound + 1) % soundNames.length),
           tooltip: 'Change click sound',
         ),
       ],

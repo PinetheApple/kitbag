@@ -45,8 +45,10 @@ class SetlistsDao extends DatabaseAccessor<KitbagDatabase>
   Stream<Setlist> watchSetlist(int id) =>
       (select(setlists)..where((s) => s.id.equals(id))).watchSingle();
 
-  Future<Setlist> getById(int id) =>
-      (select(setlists)..where((s) => s.id.equals(id))).getSingle();
+  /// Like [watchSetlist] but emits null once the setlist is deleted —
+  /// for observers that must outlive it (the active session).
+  Stream<Setlist?> watchSetlistOrNull(int id) =>
+      (select(setlists)..where((s) => s.id.equals(id))).watchSingleOrNull();
 
   Future<int> create(String name) =>
       into(setlists).insert(SetlistsCompanion.insert(name: name));

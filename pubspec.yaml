@@ -28,5 +28,5 @@ melos:
       run: dart run melos exec -- dart format --set-exit-if-changed .
       description: Verify formatting.
     gen:
-      run: dart run melos exec --depends-on=build_runner -- dart run build_runner build
-      description: Run code generation (drift) where needed.
+      run: dart run melos exec --depends-on=build_runner -- dart run build_runner build --delete-conflicting-outputs
+      description: Run code generation (drift) where needed. Generated *.g.dart files are gitignored, so run this after a fresh checkout before analyze/test.
