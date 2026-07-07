@@ -41,9 +41,11 @@ class _MetronomeScreenState extends ConsumerState<MetronomeScreen> {
   double _dragAccumulated = 0;
   double _dragRemainder = 0;
   bool _dragArmed = false;
-  // When part of the screen scrolls, swipe-anywhere yields to scrolling
-  // (presets/TAP remain as the visible twins).
-  bool _scrollFallback = false;
+  // True while the editing viewport is actually scrolling. Then swipe-drag
+  // and the scroll wheel yield to scrolling (presets/TAP/chevrons remain as
+  // the visible twins). Driven by MetronomeLayout's real scroll extent, not
+  // an estimate, so it can never disagree with what's on screen.
+  bool _scrollActive = false;
 
   void _onPointerDown(PointerDownEvent event) {
     _dragAccumulated = 0;
@@ -52,7 +54,7 @@ class _MetronomeScreenState extends ConsumerState<MetronomeScreen> {
   }
 
   void _onPointerMove(PointerMoveEvent event) {
-    if (_scrollFallback) {
+    if (_scrollActive) {
       return;
     }
     _dragAccumulated -= event.delta.dy;
@@ -78,6 +80,11 @@ class _MetronomeScreenState extends ConsumerState<MetronomeScreen> {
   }
 
   void _onPointerSignal(PointerSignalEvent event) {
+    // While the body scrolls, the wheel belongs to the scroll view — don't
+    // also nudge tempo, or one notch would both scroll and change BPM.
+    if (_scrollActive) {
+      return;
+    }
     if (event is PointerScrollEvent) {
       final direction = event.scrollDelta.dy > 0 ? -1.0 : 1.0;
       ref.read(metronomeProvider.notifier).nudgeBpm(direction);
@@ -109,15 +116,19 @@ class _MetronomeScreenState extends ConsumerState<MetronomeScreen> {
                 textScale: textScale,
                 polyRow: settings.polyEnabled,
               );
-              _scrollFallback = spec.swipeYieldsToScroll;
               return MetronomeLayout(
                 spec: spec,
+                onScrollableChanged: (scrolling) {
+                  if (scrolling != _scrollActive) {
+                    setState(() => _scrollActive = scrolling);
+                  }
+                },
                 readout: _TempoReadout(
                   settings: settings,
                   onNudge: notifier.nudgeBpm,
                   textTheme: theme.textTheme,
                   showChevrons: spec.showChevrons,
-                  swipeEnabled: !_scrollFallback,
+                  swipeEnabled: !_scrollActive,
                 ),
                 presets: _PresetRow(
                   notifier: notifier,
@@ -180,11 +191,17 @@ class _TempoReadout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dim = Theme.of(context).colorScheme.onSurfaceVariant;
-    final hint = !swipeEnabled
-        ? 'TAP · PRESETS'
-        : _isDesktop
-        ? 'DRAG · SCROLL · ARROWS'
-        : 'SWIPE ANYWHERE';
+    // The hint must name only controls that are actually present: no ARROWS
+    // when the chevrons are hidden (dense), and no DRAG/SCROLL when the body
+    // is scrolling and owns those gestures.
+    final String hint;
+    if (!swipeEnabled) {
+      hint = showChevrons ? 'ARROWS · PRESETS' : 'TAP · PRESETS';
+    } else if (_isDesktop) {
+      hint = showChevrons ? 'DRAG · SCROLL · ARROWS' : 'DRAG · SCROLL';
+    } else {
+      hint = 'SWIPE ANYWHERE';
+    }
     // With a ramp armed the readout must show what will actually sound: the
     // live ramped BPM while running, the ramp's start BPM while stopped.
     final idleBpm = settings.rampEnabled

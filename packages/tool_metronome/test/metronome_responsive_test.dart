@@ -19,6 +19,7 @@ void main() {
     WidgetTester tester,
     Size logicalSize, {
     double textScale = 1.0,
+    int beatsPerBar = 4,
   }) async {
     tester.view.physicalSize = logicalSize;
     tester.view.devicePixelRatio = 1;
@@ -39,12 +40,14 @@ void main() {
         ),
       ),
     );
-    // Poly row enabled = the tallest configuration (the worst case for the
-    // vertical budget, and it adds no chips, so the row rules still hold).
+    // Poly row enabled = the tallest configuration; a high beat count makes
+    // the accent-LED Wrap reflow, the worst case for the vertical budget.
     final container = ProviderScope.containerOf(
       tester.element(find.byType(MetronomeScreen)),
     );
-    container.read(metronomeProvider.notifier).togglePolyrhythm();
+    final notifier = container.read(metronomeProvider.notifier);
+    notifier.setBeatsPerBar(beatsPerBar);
+    notifier.togglePolyrhythm();
     await tester.pumpAndSettle();
   }
 
@@ -114,4 +117,56 @@ void main() {
       expect(chipRowCount(tester), lessThanOrEqualTo(2));
     });
   }
+
+  // The worst vertical case: max beats (16) with poly on. The accent-LED
+  // Wrap reflows to several rows; the scroll-and-pin net must absorb it
+  // (transport still reachable) instead of throwing a RenderFlex overflow —
+  // and the chip rule must still hold. Covers portrait, split and landscape.
+  for (final entry in const {
+    'portrait 360x640': Size(360, 640),
+    'split 360x420': Size(360, 420),
+    'narrow-split 320x450': Size(320, 450),
+    'landscape 620x400': Size(620, 400),
+  }.entries) {
+    testWidgets('${entry.key} @ 16 beats + poly: no overflow', (tester) async {
+      await pumpAt(tester, entry.value, beatsPerBar: 16);
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: 'scroll-and-pin must absorb the tall pattern card',
+      );
+      expect(find.byType(KitbagPlayButton), findsOneWidget);
+      expect(find.text('TAP'), findsOneWidget);
+      expect(chipRowCount(tester), lessThanOrEqualTo(2));
+    });
+
+    // At 200% text this combination stacks the max-beat LED Wrap AND the
+    // widest chips onto the narrowest panes — the chip row can be forced to
+    // three lines here (each chip alone approaches the pane width), which is
+    // genuinely unavoidable; the invariant that still must hold is that the
+    // scroll-and-pin net absorbs it without overflow and keeps play reachable.
+    testWidgets('${entry.key} @ 16 beats + 2x text: no overflow', (
+      tester,
+    ) async {
+      await pumpAt(tester, entry.value, beatsPerBar: 16, textScale: 2.0);
+      expect(tester.takeException(), isNull);
+      expect(find.byType(KitbagPlayButton), findsOneWidget);
+    });
+  }
+
+  // When the content genuinely overflows a tiny window the editing region
+  // must actually scroll (proving the safety net is engaged, not that the
+  // content silently clipped).
+  testWidgets('tiny window scrolls the editing region', (tester) async {
+    await pumpAt(tester, const Size(320, 380), beatsPerBar: 16);
+    expect(tester.takeException(), isNull);
+    final scrollable = find.byType(Scrollable);
+    expect(scrollable, findsWidgets);
+    final position = tester.state<ScrollableState>(scrollable.first).position;
+    expect(
+      position.maxScrollExtent,
+      greaterThan(0),
+      reason: 'a 320x380 window with 16 beats must scroll',
+    );
+  });
 }

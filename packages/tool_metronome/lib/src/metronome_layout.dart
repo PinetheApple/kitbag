@@ -22,11 +22,13 @@ extension MetronomeDensityMetrics on MetronomeDensity {
 
 /// Resolved responsive plan for the metronome screen.
 ///
-/// Instead of hard-coded height tiers, the plan is chosen by a budget: the
-/// estimated height of the fixed controls stack (presets + pattern card +
-/// chips + transport) at each density, plus a minimum readable readout.
-/// The roomiest density that fits wins. Degradation ladder (spec §06 — the
-/// transport must stay reachable mid-practice, so it scrolls last):
+/// The density is only a *preference*: a height budget estimates the fixed
+/// controls stack at each density and picks the roomiest that fits. It does
+/// NOT guarantee fit — [MetronomeLayout] wraps the editing content in a
+/// scroll-when-needed viewport with the transport pinned below, so an
+/// underestimate degrades to "scrolls a little", never a RenderFlex
+/// overflow. That keeps correctness independent of the (necessarily
+/// approximate) height model. Degradation ladder (spec §06):
 ///
 /// 1. whitespace compresses ([MetronomeDensity.compact]),
 /// 2. chrome shrinks — smaller transport, tighter card — and the readout
@@ -34,15 +36,10 @@ extension MetronomeDensityMetrics on MetronomeDensity {
 ///    ([MetronomeDensity.dense]),
 /// 3. wide-but-short windows (landscape phone, split-screen) regroup into
 ///    two panes: readout + transport beside the editing stack,
-/// 4. last resort: the editing stack scrolls and the transport pins to the
-///    bottom, always visible.
+/// 4. last resort: the editing stack scrolls and the transport stays pinned,
+///    always reachable mid-practice.
 class MetronomeLayoutSpec {
-  const MetronomeLayoutSpec._({
-    required this.density,
-    required this.twoPane,
-    required this.paneScrolls,
-    required this.pinnedScroll,
-  });
+  const MetronomeLayoutSpec._({required this.density, required this.twoPane});
 
   factory MetronomeLayoutSpec.resolve({
     required BoxConstraints constraints,
@@ -53,53 +50,36 @@ class MetronomeLayoutSpec {
     final h = constraints.maxHeight;
     final w = constraints.maxWidth;
 
-    if (w >= _twoPaneMinWidth && h < _twoPaneMaxHeight && w > h) {
-      // The editing pane holds the chip row, so estimate its share (not a
-      // half): a wider editing pane keeps the chips to one/two rows even at
-      // 200% text, while the play pane only needs the readout + transport.
+    final twoPane = w >= _twoPaneMinWidth && h < _twoPaneMaxHeight && w > h;
+
+    // Width the chip row / card actually get, so the estimate accounts for
+    // chip wrapping. In two-pane the editing side owns a flex-weighted slice.
+    final double innerWidth;
+    if (twoPane) {
       final usable =
           w.clamp(0.0, _twoPaneContentWidth) - _horizontalPadding * 2 - paneGap;
-      final paneWidth = usable * editPaneFlex / (editPaneFlex + playPaneFlex);
-      for (final density in MetronomeDensity.values) {
-        if (_stackHeight(density, ts, polyRow, paneWidth) <= h - 8) {
-          return MetronomeLayoutSpec._(
-            density: density,
-            twoPane: true,
-            paneScrolls: false,
-            pinnedScroll: false,
-          );
-        }
-      }
-      return const MetronomeLayoutSpec._(
-        density: MetronomeDensity.dense,
-        twoPane: true,
-        paneScrolls: true,
-        pinnedScroll: false,
-      );
+      innerWidth = usable * editPaneFlex / (editPaneFlex + playPaneFlex);
+    } else {
+      innerWidth = w.clamp(0.0, _contentWidth) - _horizontalPadding * 2;
     }
 
-    final innerWidth = w.clamp(0.0, _contentWidth) - _horizontalPadding * 2;
+    // In two-pane the readout sits in its own pane, so only the editing
+    // stack competes for the height; otherwise readout + transport share it.
+    var chosen = MetronomeDensity.dense;
     for (final density in MetronomeDensity.values) {
-      final controls =
-          _stackHeight(density, ts, polyRow, innerWidth) +
-          _gap(density) +
-          _playSize(density) +
-          8;
-      if (controls + _readoutMin(density) <= h) {
-        return MetronomeLayoutSpec._(
-          density: density,
-          twoPane: false,
-          paneScrolls: false,
-          pinnedScroll: false,
-        );
+      final needed = twoPane
+          ? _stackHeight(density, ts, polyRow, innerWidth)
+          : _stackHeight(density, ts, polyRow, innerWidth) +
+                _gap(density) +
+                _playSize(density) +
+                8 +
+                _readoutMin(density);
+      if (needed <= (twoPane ? h - 8 : h)) {
+        chosen = density;
+        break;
       }
     }
-    return const MetronomeLayoutSpec._(
-      density: MetronomeDensity.dense,
-      twoPane: false,
-      paneScrolls: false,
-      pinnedScroll: true,
-    );
+    return MetronomeLayoutSpec._(density: chosen, twoPane: twoPane);
   }
 
   static const double _contentWidth = 480;
@@ -116,26 +96,14 @@ class MetronomeLayoutSpec {
   static const int editPaneFlex = 5;
   static const double paneGap = 24;
 
-  /// Fixed readout height inside the pinned-scroll fallback (the only mode
-  /// where the readout cannot flex).
-  static const double pinnedReadoutHeight = 120;
-
   final MetronomeDensity density;
 
   /// Landscape/split-screen regrouping: readout + transport on the left,
   /// the editing stack (presets, pattern, chips) on the right.
   final bool twoPane;
 
-  /// Two-pane where even the dense editing stack overflows the pane: the
-  /// right pane scrolls, so swipe-anywhere yields to scrolling.
-  final bool paneScrolls;
-
-  /// Portrait last resort: editing stack scrolls, transport pinned below.
-  final bool pinnedScroll;
-
   bool get compactControls => density != MetronomeDensity.roomy;
   bool get showChevrons => density != MetronomeDensity.dense;
-  bool get swipeYieldsToScroll => pinnedScroll || paneScrolls;
 
   double get sectionGap => _gap(density);
   double get playSize => _playSize(density);
@@ -166,9 +134,9 @@ class MetronomeLayoutSpec {
     MetronomeDensity.dense => 88,
   };
 
-  /// Height estimate for the editing stack (presets + card + chips) plus
-  /// its two internal gaps. Deliberately leans high: overestimating flips
-  /// to a tighter tier early, underestimating would overflow the column.
+  /// Rough height estimate for the editing stack (presets + card + chips)
+  /// plus its two internal gaps. Advisory only — it steers density choice,
+  /// while the scroll-and-pin net guarantees no overflow if it is wrong.
   static double _stackHeight(
     MetronomeDensity d,
     double ts,
@@ -177,14 +145,16 @@ class MetronomeLayoutSpec {
   ) {
     final roomy = d == MetronomeDensity.roomy;
     final presets = (20 * ts + (roomy ? 28 : 16)).clamp(40.0, 96.0);
-    // Chips wrap to two rows on narrow panes; assume the worst below 300dp.
-    final chipRows = innerWidth < 300 ? 2 : 1;
+    // Chips wrap to two rows on narrow panes; assume the worst below 380dp.
+    final chipRows = innerWidth < 380 ? 2 : 1;
     final chipHeight = (16 * ts + 30).clamp(48.0, 96.0);
     final chips = chipRows * chipHeight + (chipRows - 1) * 4;
     final pad = d.cardPadding;
     final rowGap = d.cardRowGap;
-    final badgeRow = (16 * ts + 14).clamp(30.0, 96.0);
-    final segmented = 16 * ts + 24;
+    // The stepper rows use ≥48dp tap targets, so the badge row can't be
+    // shorter than that; the LED row can also wrap at high beat counts.
+    final badgeRow = (16 * ts + 32).clamp(48.0, 120.0);
+    final segmented = (16 * ts + 24).clamp(48.0, 96.0);
     final card =
         pad * 2 +
         badgeRow +
@@ -198,7 +168,13 @@ class MetronomeLayoutSpec {
 
 /// Arranges the metronome's five sections according to a
 /// [MetronomeLayoutSpec]. Pure layout: all content comes in as slots.
-class MetronomeLayout extends StatelessWidget {
+///
+/// The editing content lives in a scroll-when-needed viewport so the
+/// transport is always pinned and reachable; [onScrollableChanged] reports
+/// whether that viewport is *actually* scrolling, letting the screen yield
+/// swipe/scroll-wheel tempo control to scrolling only when there is
+/// something to scroll.
+class MetronomeLayout extends StatefulWidget {
   const MetronomeLayout({
     super.key,
     required this.spec,
@@ -207,6 +183,7 @@ class MetronomeLayout extends StatelessWidget {
     required this.pattern,
     required this.chips,
     required this.transport,
+    required this.onScrollableChanged,
   });
 
   final MetronomeLayoutSpec spec;
@@ -215,74 +192,113 @@ class MetronomeLayout extends StatelessWidget {
   final Widget pattern;
   final Widget chips;
   final Widget transport;
+  final ValueChanged<bool> onScrollableChanged;
+
+  @override
+  State<MetronomeLayout> createState() => _MetronomeLayoutState();
+}
+
+class _MetronomeLayoutState extends State<MetronomeLayout> {
+  final ScrollController _controller = ScrollController();
+  bool _lastScrollable = false;
+
+  /// Swipe only yields to scrolling once there is a *meaningful* amount to
+  /// scroll. A rounding-level overflow (a control a few dp too tall for the
+  /// window) is not worth surrendering the swipe-anywhere tempo gesture — the
+  /// pinned transport already guarantees nothing important is clipped, and
+  /// the scroll view still absorbs the couple of pixels either way.
+  static const double _swipeScrollGrace = 16;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  /// After layout, tell the screen whether the editing viewport is scrolling
+  /// enough to own vertical drags.
+  void _reportScrollable() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final scrollable =
+          _controller.hasClients &&
+          _controller.position.hasContentDimensions &&
+          _controller.position.maxScrollExtent > _swipeScrollGrace;
+      if (scrollable != _lastScrollable) {
+        _lastScrollable = scrollable;
+        widget.onScrollableChanged(scrollable);
+      }
+    });
+  }
 
   List<Widget> get _editingStack => [
-    presets,
-    SizedBox(height: spec.sectionGap),
-    pattern,
-    SizedBox(height: spec.sectionGap),
-    chips,
+    widget.presets,
+    SizedBox(height: widget.spec.sectionGap),
+    widget.pattern,
+    SizedBox(height: widget.spec.sectionGap),
+    widget.chips,
   ];
 
   @override
   Widget build(BuildContext context) {
+    _reportScrollable();
     return Center(
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: spec.maxContentWidth),
+        constraints: BoxConstraints(maxWidth: widget.spec.maxContentWidth),
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: MetronomeLayoutSpec._horizontalPadding,
           ),
-          child: spec.twoPane
-              ? _twoPane()
-              : spec.pinnedScroll
-              ? _pinnedScroll()
-              : _column(),
+          child: widget.spec.twoPane ? _twoPane() : _column(),
         ),
       ),
     );
   }
 
-  Widget _column() {
-    return Column(
-      children: [
-        Expanded(child: readout),
-        ..._editingStack,
-        SizedBox(height: spec.sectionGap),
-        transport,
-        const SizedBox(height: 8),
-      ],
+  /// A viewport that centers [content] when it fits and scrolls it (via
+  /// [_controller], so scrollability is observable) only when it is taller
+  /// than the space available. The readout's own [FittedBox] already scales
+  /// down, so an Expanded here would add nothing but the intrinsic-height
+  /// fragility of a scroll view — hence plain centering.
+  Widget _scrollWhenNeeded(Widget content) {
+    return LayoutBuilder(
+      builder: (context, viewport) => SingleChildScrollView(
+        controller: _controller,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: viewport.maxHeight),
+          child: content,
+        ),
+      ),
     );
   }
 
-  /// Editing stack scrolls; the transport stays pinned and reachable.
-  Widget _pinnedScroll() {
+  /// Portrait: readout above the editing stack, the whole group centered and
+  /// scrolling only when it outgrows the space above the pinned transport.
+  Widget _column() {
     return Column(
       children: [
         Expanded(
-          child: SingleChildScrollView(
-            child: Column(
+          child: _scrollWhenNeeded(
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SizedBox(
-                  height: MetronomeLayoutSpec.pinnedReadoutHeight,
-                  child: readout,
-                ),
+                widget.readout,
+                SizedBox(height: widget.spec.sectionGap),
                 ..._editingStack,
               ],
             ),
           ),
         ),
-        SizedBox(height: spec.sectionGap),
-        transport,
+        SizedBox(height: widget.spec.sectionGap),
+        widget.transport,
         const SizedBox(height: 8),
       ],
     );
   }
 
   /// Landscape/split-screen: the play side (readout + transport) keeps the
-  /// left pane whole-height; the editing stack sits beside it. The scroll
-  /// view around the stack shrink-wraps, so it only actually scrolls when
-  /// the pane is shorter than the stack.
+  /// left pane whole-height; the editing stack sits beside it, centered when
+  /// it fits and scrolling only when the pane is shorter than the stack.
   Widget _twoPane() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -291,9 +307,9 @@ class MetronomeLayout extends StatelessWidget {
           flex: MetronomeLayoutSpec.playPaneFlex,
           child: Column(
             children: [
-              Expanded(child: readout),
-              SizedBox(height: spec.sectionGap),
-              transport,
+              Expanded(child: widget.readout),
+              SizedBox(height: widget.spec.sectionGap),
+              widget.transport,
               const SizedBox(height: 8),
             ],
           ),
@@ -301,12 +317,10 @@ class MetronomeLayout extends StatelessWidget {
         const SizedBox(width: MetronomeLayoutSpec.paneGap),
         Expanded(
           flex: MetronomeLayoutSpec.editPaneFlex,
-          child: Center(
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: _editingStack,
-              ),
+          child: _scrollWhenNeeded(
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: _editingStack,
             ),
           ),
         ),

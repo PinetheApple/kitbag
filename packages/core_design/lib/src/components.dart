@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 
+import 'scale_down_label.dart';
+
+/// Minimum interactive size for a comfortable touch target (spec §06).
+const double _minTapTarget = 48;
+
 /// Small rounded-rect label, e.g. time signatures and poly ratios.
 /// [accent] draws it in the primary color (active state).
 class KitbagBadge extends StatelessWidget {
@@ -75,7 +80,7 @@ class KitbagTileButton extends StatelessWidget {
       ),
       // Scale down rather than clip when large text scales meet narrow
       // preset tiles (200% text-scale acceptance criterion).
-      child: FittedBox(fit: BoxFit.scaleDown, child: Text(label)),
+      child: ScaleDownLabel(label),
     );
   }
 }
@@ -128,26 +133,23 @@ class KitbagSegmented extends StatelessWidget {
                 child: InkWell(
                   onTap: segment.onTap,
                   borderRadius: BorderRadius.circular(8),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 8,
-                      horizontal: 2,
-                    ),
+                  child: Container(
+                    // Floor each tile's tap target at 48dp (spec §06).
+                    constraints: const BoxConstraints(minHeight: _minTapTarget),
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
                     // Scale down rather than overflow when 200% text scale
                     // meets a narrow segment.
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        segment.label,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: segment.accent && segment.selected
-                              ? scheme.primary
-                              : segment.selected
-                              ? scheme.onSurface
-                              : scheme.onSurfaceVariant,
-                        ),
+                    child: ScaleDownLabel(
+                      segment.label,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: segment.accent && segment.selected
+                            ? scheme.primary
+                            : segment.selected
+                            ? scheme.onSurface
+                            : scheme.onSurfaceVariant,
                       ),
                     ),
                   ),
@@ -155,41 +157,6 @@ class KitbagSegmented extends StatelessWidget {
               ),
             ),
         ],
-      ),
-    );
-  }
-}
-
-/// Small circular secondary action (setlist, trainer slots in transports).
-class KitbagCircleButton extends StatelessWidget {
-  const KitbagCircleButton({
-    super.key,
-    required this.icon,
-    required this.onPressed,
-    this.tooltip,
-    this.size = 46,
-  });
-
-  final IconData icon;
-  final VoidCallback? onPressed;
-  final String? tooltip;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return SizedBox(
-      width: size,
-      height: size,
-      child: IconButton(
-        onPressed: onPressed,
-        tooltip: tooltip,
-        icon: Icon(icon, size: size * .42),
-        style: IconButton.styleFrom(
-          backgroundColor: scheme.surfaceContainerHighest.withValues(alpha: .6),
-          foregroundColor: scheme.onSurfaceVariant,
-          side: BorderSide(color: scheme.outline),
-        ),
       ),
     );
   }
@@ -345,6 +312,9 @@ class KitbagToolTile extends StatelessWidget {
   }
 }
 
+// The circular transport controls (KitbagCircleButton, KitbagPlayButton) live
+// in kitbag_transport_buttons.dart.
+
 /// Empty state as a starting line (experience rule 06): names the reason
 /// and puts the next action inline — never a bare "No data".
 class KitbagEmptyState extends StatelessWidget {
@@ -393,52 +363,6 @@ class KitbagEmptyState extends StatelessWidget {
               label: Text(actionLabel),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-/// The primary transport control — accent circle with a soft glow.
-class KitbagPlayButton extends StatelessWidget {
-  const KitbagPlayButton({
-    super.key,
-    required this.playing,
-    required this.onPressed,
-    this.size = 72,
-  });
-
-  final bool playing;
-  final VoidCallback onPressed;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: scheme.primary.withValues(alpha: .35),
-            blurRadius: 24,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      child: SizedBox(
-        width: size,
-        height: size,
-        child: FilledButton(
-          onPressed: onPressed,
-          style: FilledButton.styleFrom(
-            shape: const CircleBorder(),
-            padding: EdgeInsets.zero,
-          ),
-          child: Icon(
-            playing ? Icons.stop : Icons.play_arrow,
-            size: size * .47,
-          ),
         ),
       ),
     );

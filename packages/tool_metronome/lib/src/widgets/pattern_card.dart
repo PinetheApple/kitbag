@@ -33,7 +33,8 @@ class PatternCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                _CompactStep(
+                KitbagStepperRow.inline(
+                  semanticLabel: 'beats per bar',
                   onStep: (delta) =>
                       notifier.setBeatsPerBar(settings.beatsPerBar + delta),
                   child: KitbagBadge(
@@ -55,7 +56,8 @@ class PatternCard extends StatelessWidget {
               gap,
               Row(
                 children: [
-                  _CompactStep(
+                  KitbagStepperRow.inline(
+                    semanticLabel: 'polyrhythm beats',
                     onStep: (delta) =>
                         notifier.setPolyBeats(settings.polyBeats + delta),
                     child: KitbagBadge(
@@ -102,31 +104,6 @@ class PatternCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-/// Wraps a badge with slim −/+ steppers.
-class _CompactStep extends StatelessWidget {
-  const _CompactStep({required this.onStep, required this.child});
-
-  final ValueChanged<int> onStep;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final dim = Theme.of(context).colorScheme.onSurfaceVariant;
-    Widget step(IconData icon, int delta) => InkWell(
-      onTap: () => onStep(delta),
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.all(6),
-        child: Icon(icon, size: 16, color: dim),
-      ),
-    );
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [step(Icons.remove, -1), child, step(Icons.add, 1)],
     );
   }
 }
