@@ -7,6 +7,7 @@ environment:
 workspace:
   - packages/core_plugin_api
   - packages/core_audio_ffi
+  - packages/core_db
   - packages/core_design
   - packages/app_shell
   - packages/tool_metronome
@@ -25,3 +26,6 @@ melos:
     format:
       run: dart run melos exec -- dart format --set-exit-if-changed .
       description: Verify formatting.
+    gen:
+      run: dart run melos exec --depends-on=build_runner -- dart run build_runner build
+      description: Run code generation (drift) where needed.

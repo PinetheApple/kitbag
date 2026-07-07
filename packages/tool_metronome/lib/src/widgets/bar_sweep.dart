@@ -22,7 +22,23 @@ class _BarSweepState extends ConsumerState<BarSweep>
   @override
   void initState() {
     super.initState();
-    _ticker = createTicker(_onTick)..start();
+    _ticker = createTicker(_onTick);
+    if (widget.running) {
+      _ticker.start();
+    }
+  }
+
+  @override
+  void didUpdateWidget(BarSweep oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Tick only while running — an idle ticker would burn frames (and keep
+    // widget tests from ever settling).
+    if (widget.running && !_ticker.isActive) {
+      _ticker.start();
+    } else if (!widget.running && _ticker.isActive) {
+      _ticker.stop();
+      setState(() => _phase = 0);
+    }
   }
 
   @override
@@ -32,10 +48,6 @@ class _BarSweepState extends ConsumerState<BarSweep>
   }
 
   void _onTick(Duration elapsed) {
-    if (!widget.running) {
-      if (_phase != 0) setState(() => _phase = 0);
-      return;
-    }
     final phase = ref.read(metronomeControllerProvider).barPhase;
     setState(() => _phase = phase);
   }

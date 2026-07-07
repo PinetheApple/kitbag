@@ -157,4 +157,29 @@ class MetronomeNotifier extends Notifier<MetronomeSettings> {
     _controller.setSound(sound);
     state = state.copyWith(sound: sound);
   }
+
+  /// Applies a stored song preset in one shot (setlist paging). Keeps the
+  /// transport state: paging songs mid-performance must not stop the click.
+  void applyPreset({
+    required double bpm,
+    required int beatsPerBar,
+    required int subdivision,
+    required List<BeatAccent> accents,
+    required int sound,
+  }) {
+    final padded = [
+      ...accents.take(MetronomeController.maxBeats),
+      for (var i = accents.length; i < MetronomeController.maxBeats; i++)
+        BeatAccent.normal,
+    ];
+    final settings = state.copyWith(
+      bpm: bpm.clamp(MetronomeController.minBpm, MetronomeController.maxBpm),
+      beatsPerBar: beatsPerBar.clamp(1, MetronomeController.maxBeats),
+      subdivision: subdivision,
+      accents: padded,
+      sound: sound,
+    );
+    _pushAll(settings);
+    state = settings;
+  }
 }

@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 
 import 'metronome_screen.dart';
 import 'metronome_state.dart';
+import 'setlist_detail_screen.dart';
+import 'setlists_screen.dart';
 
 class MetronomePlugin implements ToolPlugin {
   const MetronomePlugin();
@@ -25,6 +27,20 @@ class MetronomePlugin implements ToolPlugin {
     GoRoute(
       path: 'metronome',
       builder: (context, state) => const MetronomeScreen(),
+      routes: [
+        GoRoute(
+          path: 'setlists',
+          builder: (context, state) => const SetlistsScreen(),
+          routes: [
+            GoRoute(
+              path: ':setlistId',
+              builder: (context, state) => SetlistDetailScreen(
+                setlistId: int.parse(state.pathParameters['setlistId']!),
+              ),
+            ),
+          ],
+        ),
+      ],
     ),
   ];
 

@@ -6,10 +6,13 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import 'metronome_routes.dart';
 import 'metronome_state.dart';
 import 'widgets/bar_sweep.dart';
 import 'widgets/beat_led_row.dart';
+import 'widgets/setlist_chip.dart';
 
 /// The metronome. The whole screen is the tempo control: a raw pointer
 /// [Listener] tracks vertical drags (±1 BPM per [_dragPixelsPerBpm] px)
@@ -77,12 +80,7 @@ class _MetronomeScreenState extends ConsumerState<MetronomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Metronome'),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 20),
-            child: KitbagBadge(label: 'SETLISTS · SOON', accent: true),
-          ),
-        ],
+        actions: const [SetlistChip()],
       ),
       body: Listener(
         behavior: HitTestBehavior.opaque,
@@ -372,10 +370,10 @@ class _Transport extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        const KitbagCircleButton(
+        KitbagCircleButton(
           icon: Icons.queue_music,
-          onPressed: null,
-          tooltip: 'Setlists — coming with the song library',
+          onPressed: () => context.go(MetronomeRoutes.setlists),
+          tooltip: 'Setlists',
         ),
         KitbagPlayButton(
           playing: running,

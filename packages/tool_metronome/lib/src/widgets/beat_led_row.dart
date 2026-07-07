@@ -37,7 +37,23 @@ class _BeatLedRowState extends ConsumerState<BeatLedRow>
   @override
   void initState() {
     super.initState();
-    _ticker = createTicker(_onTick)..start();
+    _ticker = createTicker(_onTick);
+    if (widget.running) {
+      _ticker.start();
+    }
+  }
+
+  @override
+  void didUpdateWidget(BeatLedRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Tick only while running — an idle ticker would burn frames (and keep
+    // widget tests from ever settling).
+    if (widget.running && !_ticker.isActive) {
+      _ticker.start();
+    } else if (!widget.running && _ticker.isActive) {
+      _ticker.stop();
+      setState(() => _activeBeat = -1);
+    }
   }
 
   @override
