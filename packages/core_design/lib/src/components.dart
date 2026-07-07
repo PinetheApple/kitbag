@@ -50,11 +50,15 @@ class KitbagTileButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.emphasized = false,
+    this.dense = false,
   });
 
   final String label;
   final VoidCallback onPressed;
   final bool emphasized;
+
+  /// Tighter vertical padding for height-constrained layouts.
+  final bool dense;
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +68,7 @@ class KitbagTileButton extends StatelessWidget {
       style: FilledButton.styleFrom(
         backgroundColor: scheme.surfaceContainerHighest,
         foregroundColor: scheme.onSurface,
-        padding: const EdgeInsets.symmetric(vertical: 14),
+        padding: EdgeInsets.symmetric(vertical: dense ? 8 : 14),
         textStyle: TextStyle(
           fontWeight: emphasized ? FontWeight.w700 : FontWeight.w500,
         ),

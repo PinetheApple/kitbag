@@ -36,6 +36,7 @@ class SetlistChip extends ConsumerWidget {
           icon: const Icon(Icons.chevron_left),
           tooltip: 'Previous song',
         ),
+        const SizedBox(width: 6),
         GestureDetector(
           onHorizontalDragEnd: (details) {
             final velocity = details.primaryVelocity ?? 0;
@@ -58,6 +59,7 @@ class SetlistChip extends ConsumerWidget {
             ),
           ),
         ),
+        const SizedBox(width: 6),
         IconButton(
           onPressed: active.hasNext ? notifier.next : null,
           icon: const Icon(Icons.chevron_right),
