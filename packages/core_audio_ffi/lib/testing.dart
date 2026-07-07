@@ -53,3 +53,50 @@ class FakeMetronomeController implements MetronomeController {
   @override
   double get barPhase => 0;
 }
+
+class FakeTunerController implements TunerController {
+  double a4 = TunerController.defaultA4;
+  double bandLowHz = TunerController.chromaticLowHz;
+  double bandHighHz = TunerController.chromaticHighHz;
+  bool running = false;
+  int startCalls = 0;
+
+  /// Reading reported to pollers; tests set these directly.
+  double reportedPitchHz = 0;
+  double reportedCents = 0;
+  double reportedConfidence = 0;
+  int reportedNoteIndex = -1;
+
+  @override
+  void start() {
+    running = true;
+    startCalls++;
+  }
+
+  @override
+  void stop() => running = false;
+
+  @override
+  bool get isRunning => running;
+
+  @override
+  void setA4(double a4Hz) => a4 = a4Hz;
+
+  @override
+  void setBand(double lowHz, double highHz) {
+    bandLowHz = lowHz;
+    bandHighHz = highHz;
+  }
+
+  @override
+  double get pitchHz => reportedPitchHz;
+
+  @override
+  double get cents => reportedCents;
+
+  @override
+  double get confidence => reportedConfidence;
+
+  @override
+  int get noteIndex => reportedNoteIndex;
+}

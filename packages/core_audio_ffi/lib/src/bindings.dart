@@ -26,6 +26,8 @@ typedef GetIntNative = Int32 Function(Pointer<Void>);
 typedef GetIntDart = int Function(Pointer<Void>);
 typedef GetDoubleNative = Double Function(Pointer<Void>);
 typedef GetDoubleDart = double Function(Pointer<Void>);
+typedef SetTwoDoublesNative = Void Function(Pointer<Void>, Double, Double);
+typedef SetTwoDoublesDart = void Function(Pointer<Void>, double, double);
 
 class KitbagBindings {
   KitbagBindings(DynamicLibrary library)
@@ -95,7 +97,35 @@ class KitbagBindings {
       metronomeBarPhase = library
           .lookupFunction<GetDoubleNative, GetDoubleDart>(
             'kb_metronome_bar_phase',
-          );
+          ),
+      tunerStart = library.lookupFunction<EngineOpNative, EngineOpDart>(
+        'kb_tuner_start',
+      ),
+      tunerStop = library.lookupFunction<EngineVoidOpNative, EngineVoidOpDart>(
+        'kb_tuner_stop',
+      ),
+      tunerIsRunning = library.lookupFunction<GetIntNative, GetIntDart>(
+        'kb_tuner_is_running',
+      ),
+      tunerSetA4 = library.lookupFunction<SetDoubleNative, SetDoubleDart>(
+        'kb_tuner_set_a4',
+      ),
+      tunerSetBand = library
+          .lookupFunction<SetTwoDoublesNative, SetTwoDoublesDart>(
+            'kb_tuner_set_band',
+          ),
+      tunerPitchHz = library.lookupFunction<GetDoubleNative, GetDoubleDart>(
+        'kb_tuner_pitch_hz',
+      ),
+      tunerCents = library.lookupFunction<GetDoubleNative, GetDoubleDart>(
+        'kb_tuner_cents',
+      ),
+      tunerConfidence = library.lookupFunction<GetDoubleNative, GetDoubleDart>(
+        'kb_tuner_confidence',
+      ),
+      tunerNoteIndex = library.lookupFunction<GetIntNative, GetIntDart>(
+        'kb_tuner_note_index',
+      );
 
   static const String _libraryName = 'kitbag_core';
 
@@ -118,6 +148,15 @@ class KitbagBindings {
   final GetIntDart metronomeCurrentBeat;
   final GetIntDart metronomeCurrentPolyBeat;
   final GetDoubleDart metronomeBarPhase;
+  final EngineOpDart tunerStart;
+  final EngineVoidOpDart tunerStop;
+  final GetIntDart tunerIsRunning;
+  final SetDoubleDart tunerSetA4;
+  final SetTwoDoublesDart tunerSetBand;
+  final GetDoubleDart tunerPitchHz;
+  final GetDoubleDart tunerCents;
+  final GetDoubleDart tunerConfidence;
+  final GetIntDart tunerNoteIndex;
 
   static DynamicLibrary openLibrary() {
     if (Platform.isAndroid) {
