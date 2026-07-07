@@ -18,7 +18,8 @@ class KitbagChip extends StatelessWidget {
 
   static const double _minTapTarget = 48;
 
-  /// Optional leading icon; the spec's tuner chips are text-only.
+  /// Optional leading icon; the spec's tuner chips are text-only, modifier
+  /// rows (trainer) add a leading glyph.
   final IconData? icon;
   final String label;
   final bool active;

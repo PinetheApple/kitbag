@@ -1,6 +1,7 @@
 library;
 
 export 'src/components.dart';
+export 'src/dialogs.dart';
 export 'src/kitbag_chip.dart';
 export 'src/kitbag_stepper_row.dart';
 export 'src/kitbag_theme.dart';

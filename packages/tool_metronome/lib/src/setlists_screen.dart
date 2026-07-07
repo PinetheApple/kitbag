@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'metronome_routes.dart';
-import 'name_dialog.dart';
 import 'setlist_state.dart';
 
 enum _SetlistAction { rename, delete }
