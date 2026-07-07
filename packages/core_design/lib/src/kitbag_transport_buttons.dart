@@ -37,6 +37,10 @@ class KitbagCircleButton extends StatelessWidget {
         minWidth: _minTapTarget,
         minHeight: _minTapTarget,
       ),
+      // Pin standard density: the default adaptivePlatformDensity is COMPACT
+      // on desktop and would shrink the 48dp floor (its −8,−8 adjustment) to
+      // ~40dp — on the very platforms this tool targets.
+      style: IconButton.styleFrom(visualDensity: VisualDensity.standard),
       icon: Container(
         width: size,
         height: size,

@@ -255,38 +255,57 @@ class _MetronomeLayoutState extends State<MetronomeLayout> {
     );
   }
 
-  /// A viewport that centers [content] when it fits and scrolls it (via
-  /// [_controller], so scrollability is observable) only when it is taller
-  /// than the space available. The readout's own [FittedBox] already scales
-  /// down, so an Expanded here would add nothing but the intrinsic-height
-  /// fragility of a scroll view — hence plain centering.
-  Widget _scrollWhenNeeded(Widget content) {
-    return LayoutBuilder(
-      builder: (context, viewport) => SingleChildScrollView(
-        controller: _controller,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: viewport.maxHeight),
-          child: content,
-        ),
-      ),
-    );
+  /// Reserved for the readout when the editing stack is bottom-anchored, so
+  /// the readout never fully collapses on short windows. On tall windows the
+  /// readout gets far more than this — it takes all the slack above the
+  /// stack, which is what keeps it in the upper region per the §04 mock.
+  static const double _readoutFloor = 96;
+
+  /// A viewport that shows [content] at its natural height and scrolls it
+  /// (via [_controller], so scrollability is observable) only when it is
+  /// taller than [maxHeight]. Used for the two-pane editing side.
+  Widget _scrollWhenNeeded(Widget content, {double? maxHeight}) {
+    final view = SingleChildScrollView(controller: _controller, child: content);
+    return maxHeight == null
+        ? view
+        : ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: maxHeight),
+            child: view,
+          );
   }
 
-  /// Portrait: readout above the editing stack, the whole group centered and
-  /// scrolling only when it outgrows the space above the pinned transport.
+  /// Portrait: the readout takes the top region and flexes to fill the slack
+  /// above the editing stack, which is bottom-anchored just over the pinned
+  /// transport (matching the mock). The stack scrolls only when it outgrows
+  /// the space left after the readout's small floor — the transport never
+  /// scrolls away.
   Widget _column() {
     return Column(
       children: [
         Expanded(
-          child: _scrollWhenNeeded(
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                widget.readout,
-                SizedBox(height: widget.spec.sectionGap),
-                ..._editingStack,
-              ],
-            ),
+          child: LayoutBuilder(
+            builder: (context, region) {
+              final editingMax = (region.maxHeight - _readoutFloor).clamp(
+                0.0,
+                region.maxHeight,
+              );
+              return Column(
+                children: [
+                  Expanded(child: widget.readout),
+                  if (editingMax > 0)
+                    _scrollWhenNeeded(
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(height: widget.spec.sectionGap),
+                          ..._editingStack,
+                        ],
+                      ),
+                      maxHeight: editingMax,
+                    ),
+                ],
+              );
+            },
           ),
         ),
         SizedBox(height: widget.spec.sectionGap),
@@ -317,10 +336,16 @@ class _MetronomeLayoutState extends State<MetronomeLayout> {
         const SizedBox(width: MetronomeLayoutSpec.paneGap),
         Expanded(
           flex: MetronomeLayoutSpec.editPaneFlex,
-          child: _scrollWhenNeeded(
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: _editingStack,
+          child: LayoutBuilder(
+            builder: (context, viewport) => _scrollWhenNeeded(
+              ConstrainedBox(
+                // Center the stack when it fits the pane; scroll when taller.
+                constraints: BoxConstraints(minHeight: viewport.maxHeight),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: _editingStack,
+                ),
+              ),
             ),
           ),
         ),

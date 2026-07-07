@@ -42,6 +42,11 @@ class KitbagStepperRow extends StatelessWidget {
     Widget step(IconData icon, int delta, String tooltip) => IconButton(
       onPressed: () => onStep(delta),
       tooltip: tooltip,
+      // Explicit 48dp constraints + standard density so the tap target holds
+      // even under the desktop adaptivePlatformDensity (COMPACT), which would
+      // otherwise shrink the default target to ~40dp.
+      constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+      style: IconButton.styleFrom(visualDensity: VisualDensity.standard),
       icon: Icon(icon, size: 18, color: theme.colorScheme.onSurfaceVariant),
     );
 
