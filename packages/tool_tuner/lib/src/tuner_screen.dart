@@ -274,10 +274,11 @@ class _PresetMenu extends StatelessWidget {
           PopupMenuItem(value: preset, child: Text(preset.label)),
       ],
       child: KitbagChip(
+        icon: Icons.music_note,
         label: settings.mode == TunerMode.chromatic
             ? 'Chromatic'
             : settings.preset.label,
-        on: true,
+        active: true,
       ),
     );
   }
@@ -292,23 +293,31 @@ class _ModeChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final chromatic = settings.mode == TunerMode.chromatic;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    // Wrap, not Row: survives 200% text scale without overflowing.
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 8,
       children: [
         KitbagChip(
+          icon: Icons.autorenew,
           label: 'Auto',
-          on: !chromatic && settings.lockedString == null,
+          active: !chromatic && settings.lockedString == null,
           onTap: chromatic ? null : notifier.clearStringLock,
+          tooltip: 'Detect the nearest string automatically',
         ),
         KitbagChip(
+          icon: Icons.tune,
           label: 'A4 · ${settings.a4.round()} Hz',
-          on: true,
+          active: true,
           onTap: () => _showA4Sheet(context),
+          tooltip: 'Reference pitch',
         ),
         KitbagChip(
+          icon: Icons.piano,
           label: 'Chromatic',
-          on: chromatic,
+          active: chromatic,
           onTap: notifier.toggleChromatic,
+          tooltip: 'Nearest-note mode, no string pegs',
         ),
       ],
     );

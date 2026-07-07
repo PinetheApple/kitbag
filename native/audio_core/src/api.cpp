@@ -112,6 +112,22 @@ void kb_metronome_set_sound(kb_engine* engine, int32_t sound_index) {
   }
 }
 
+void kb_metronome_set_ramp(kb_engine* engine, int32_t enabled,
+                           double start_bpm, double end_bpm, int32_t bars) {
+  if (engine != nullptr) {
+    ToEngine(engine)->metronome().SetRamp(enabled != 0, start_bpm, end_bpm,
+                                          bars);
+  }
+}
+
+void kb_metronome_set_bar_mute(kb_engine* engine, int32_t enabled,
+                               int32_t play_bars, int32_t mute_bars) {
+  if (engine != nullptr) {
+    ToEngine(engine)->metronome().SetBarMute(enabled != 0, play_bars,
+                                             mute_bars);
+  }
+}
+
 int32_t kb_metronome_is_running(const kb_engine* engine) {
   return engine != nullptr && ToEngine(engine)->metronome().is_running() ? 1
                                                                          : 0;
@@ -129,6 +145,15 @@ int32_t kb_metronome_current_poly_beat(const kb_engine* engine) {
 
 double kb_metronome_bar_phase(const kb_engine* engine) {
   return engine == nullptr ? 0.0 : ToEngine(engine)->metronome().bar_phase();
+}
+
+double kb_metronome_current_bpm(const kb_engine* engine) {
+  return engine == nullptr ? 0.0 : ToEngine(engine)->metronome().current_bpm();
+}
+
+int32_t kb_metronome_bar_muted(const kb_engine* engine) {
+  return engine != nullptr && ToEngine(engine)->metronome().bar_muted() ? 1
+                                                                        : 0;
 }
 
 kb_result kb_tuner_start(kb_engine* engine) {

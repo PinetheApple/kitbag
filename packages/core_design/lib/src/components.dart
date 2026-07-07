@@ -43,52 +43,6 @@ class KitbagBadge extends StatelessWidget {
   }
 }
 
-/// Rounded pill chip from the spec's component library (filters & states).
-/// [on] tints it with the accent — the active filter/current state.
-class KitbagChip extends StatelessWidget {
-  const KitbagChip({
-    super.key,
-    required this.label,
-    this.on = false,
-    this.onTap,
-  });
-
-  final String label;
-  final bool on;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final color = on ? scheme.primary : scheme.onSurfaceVariant;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(99),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(99),
-          border: Border.all(
-            color: on ? scheme.primary.withValues(alpha: .5) : scheme.outline,
-          ),
-          color: on
-              ? Color.alphaBlend(
-                  scheme.primary.withValues(alpha: .18),
-                  scheme.surfaceContainerHighest,
-                )
-              : scheme.surfaceContainerHighest,
-        ),
-        child: Text(
-          label,
-          style: Theme.of(
-            context,
-          ).textTheme.labelSmall?.copyWith(color: color, letterSpacing: .4),
-        ),
-      ),
-    );
-  }
-}
-
 /// Dark tile button used for preset rows (−10 / −5 / TAP / +5 / +10).
 class KitbagTileButton extends StatelessWidget {
   const KitbagTileButton({
