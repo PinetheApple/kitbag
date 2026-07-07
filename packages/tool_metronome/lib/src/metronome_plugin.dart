@@ -20,6 +20,9 @@ class MetronomePlugin implements ToolPlugin {
   String get basePath => '/metronome';
 
   @override
+  IconData get icon => Icons.av_timer;
+
+  @override
   List<RouteBase> get routes => [
     // Relative: nested under the home route so back navigation works.
     GoRoute(
@@ -34,7 +37,7 @@ class MetronomePlugin implements ToolPlugin {
       builder: (context, ref, _) {
         final settings = ref.watch(metronomeProvider);
         return KitbagToolTile(
-          icon: Icons.av_timer,
+          icon: icon,
           name: name,
           subtitle:
               '${settings.bpm.round()} BPM · '

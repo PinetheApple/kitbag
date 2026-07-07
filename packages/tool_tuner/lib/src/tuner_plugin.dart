@@ -20,6 +20,9 @@ class TunerPlugin implements ToolPlugin {
   String get basePath => '/tuner';
 
   @override
+  IconData get icon => Icons.music_note;
+
+  @override
   List<RouteBase> get routes => [
     // Relative: nested under the home route so back navigation works.
     GoRoute(path: 'tuner', builder: (context, state) => const TunerScreen()),
@@ -31,7 +34,7 @@ class TunerPlugin implements ToolPlugin {
       builder: (context, ref, _) {
         final settings = ref.watch(tunerProvider);
         return KitbagToolTile(
-          icon: Icons.music_note,
+          icon: icon,
           name: name,
           subtitle: settings.mode == TunerMode.chromatic
               ? 'Chromatic · ${settings.a4.round()} Hz'

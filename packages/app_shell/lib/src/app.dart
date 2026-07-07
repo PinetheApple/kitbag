@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'home_screen.dart';
+import 'last_used_tool.dart';
 import 'plugin_registry.dart';
 
 class KitbagApp extends ConsumerWidget {
@@ -25,6 +26,13 @@ class KitbagApp extends ConsumerWidget {
 final routerProvider = Provider<GoRouter>((ref) {
   final plugins = ref.watch(toolPluginsProvider);
   return GoRouter(
+    // Redirect never rewrites; it observes navigation so the home hub's
+    // Continue card can resume the last tool the user actually opened.
+    redirect: (context, state) {
+      final location = state.uri.path;
+      Future.microtask(() => recordToolVisit(ref, location));
+      return null;
+    },
     routes: [
       GoRoute(
         path: '/',

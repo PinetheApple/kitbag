@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'last_used_tool.dart';
 import 'plugin_registry.dart';
 
 /// Home hub per the design spec: wordmark, Continue card, 2-wide tool grid
@@ -98,17 +99,23 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-class _ContinueCard extends StatelessWidget {
+class _ContinueCard extends ConsumerWidget {
   const _ContinueCard();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final plugins = ref.watch(toolPluginsProvider);
+    final lastUsedId = ref.watch(lastUsedToolIdProvider);
+    final plugin = plugins.firstWhere(
+      (p) => p.id == lastUsedId,
+      orElse: () => plugins.first,
+    );
     return KitbagRowCard(
-      icon: Icons.av_timer,
-      title: 'Continue · Metronome',
+      icon: plugin.icon,
+      title: 'Continue · ${plugin.name}',
       subtitle: 'Pick up where you left off',
       highlighted: true,
-      onTap: () => context.go('/metronome'),
+      onTap: () => context.go(plugin.basePath),
       trailing: Icon(
         Icons.play_arrow,
         color: Theme.of(context).colorScheme.primary,

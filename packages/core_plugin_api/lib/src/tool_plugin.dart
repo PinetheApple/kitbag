@@ -13,6 +13,9 @@ abstract class ToolPlugin {
   /// Human-readable name shown on the home hub.
   String get name;
 
+  /// Icon representing the tool on the home hub (tile and Continue card).
+  IconData get icon;
+
   /// Route under which the tool's screens live, e.g. `/metronome`.
   String get basePath;
 
