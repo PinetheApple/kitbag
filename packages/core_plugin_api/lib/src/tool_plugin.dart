@@ -16,7 +16,9 @@ abstract class ToolPlugin {
   /// Route under which the tool's screens live, e.g. `/metronome`.
   String get basePath;
 
-  /// Routes contributed to the app router.
+  /// Routes contributed to the app router. Use paths relative to `/`
+  /// (e.g. `metronome`) — the shell nests them under the home route so
+  /// back navigation to the hub works everywhere.
   List<RouteBase> get routes;
 
   /// Compact tile for the home hub. [onOpen] navigates to [basePath].

@@ -1,3 +1,4 @@
+import 'package:core_design/core_design.dart';
 import 'package:core_plugin_api/core_plugin_api.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,8 +21,9 @@ class MetronomePlugin implements ToolPlugin {
 
   @override
   List<RouteBase> get routes => [
+    // Relative: nested under the home route so back navigation works.
     GoRoute(
-      path: basePath,
+      path: 'metronome',
       builder: (context, state) => const MetronomeScreen(),
     ),
   ];
@@ -31,31 +33,14 @@ class MetronomePlugin implements ToolPlugin {
     return Consumer(
       builder: (context, ref, _) {
         final settings = ref.watch(metronomeProvider);
-        final theme = Theme.of(context);
-        return Card(
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onOpen,
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.av_timer, color: theme.colorScheme.primary),
-                  const Spacer(),
-                  Text(name, style: theme.textTheme.titleMedium),
-                  Text(
-                    '${settings.bpm.round()} BPM · '
-                    '${settings.beatsPerBar}/4'
-                    '${settings.running ? ' · playing' : ''}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+        return KitbagToolTile(
+          icon: Icons.av_timer,
+          name: name,
+          subtitle:
+              '${settings.bpm.round()} BPM · '
+              '${settings.beatsPerBar}/4'
+              '${settings.running ? ' · playing' : ''}',
+          onTap: onOpen,
         );
       },
     );

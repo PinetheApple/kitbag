@@ -26,8 +26,13 @@ final routerProvider = Provider<GoRouter>((ref) {
   final plugins = ref.watch(toolPluginsProvider);
   return GoRouter(
     routes: [
-      GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
-      for (final plugin in plugins) ...plugin.routes,
+      GoRoute(
+        path: '/',
+        builder: (context, state) => const HomeScreen(),
+        // Tool routes nest under home so the system back gesture and the
+        // app-bar back button both return to the hub.
+        routes: [for (final plugin in plugins) ...plugin.routes],
+      ),
     ],
   );
 });
