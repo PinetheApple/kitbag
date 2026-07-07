@@ -10,6 +10,7 @@ workspace:
   - packages/core_design
   - packages/app_shell
   - packages/tool_metronome
+  - packages/tool_tuner
 
 dev_dependencies:
   melos: ^7.0.0
