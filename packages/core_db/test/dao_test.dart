@@ -140,4 +140,47 @@ void main() {
       expect(other.single.position, 0);
     });
   });
+
+  group('TuningsDao', () {
+    // Drop D, low string first: D2 A2 D3 G3 B3 E4.
+    final dropD = Uint8List.fromList([38, 45, 50, 55, 59, 64]);
+
+    test('stores a custom note list round-trip', () async {
+      final id = await db.tuningsDao.create('Drop D', dropD);
+
+      final tunings = await db.tuningsDao.watchAll().first;
+      expect(tunings.single.id, id);
+      expect(tunings.single.name, 'Drop D');
+      expect(tunings.single.notes, dropD);
+    });
+
+    test('lists tunings in creation order', () async {
+      await db.tuningsDao.create('Drop D', dropD);
+      await db.tuningsDao.create(
+        'DADGAD',
+        Uint8List.fromList([38, 45, 50, 55, 57, 62]),
+      );
+
+      final tunings = await db.tuningsDao.watchAll().first;
+      expect(tunings.map((t) => t.name), ['Drop D', 'DADGAD']);
+    });
+
+    test('renames and edits the note list', () async {
+      final id = await db.tuningsDao.create('Drop D', dropD);
+      final dropC = Uint8List.fromList([36, 43, 48, 53, 57, 62]);
+
+      await db.tuningsDao.rename(id, 'Drop C');
+      await db.tuningsDao.updateNotes(id, dropC);
+
+      final tuning = (await db.tuningsDao.watchAll().first).single;
+      expect(tuning.name, 'Drop C');
+      expect(tuning.notes, dropC);
+    });
+
+    test('deletes a tuning', () async {
+      final id = await db.tuningsDao.create('Drop D', dropD);
+      await db.tuningsDao.deleteTuning(id);
+      expect(await db.tuningsDao.watchAll().first, isEmpty);
+    });
+  });
 }
