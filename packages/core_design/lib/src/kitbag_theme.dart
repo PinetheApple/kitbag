@@ -136,6 +136,13 @@ abstract final class KitbagTheme {
           letterSpacing: 2.0,
           color: textDim,
         ),
+        // The tuner's giant-note hint line (spec .notebig small): 13px with
+        // tighter tracking than labelSmall, paired with the displaySmall note.
+        labelMedium: GoogleFonts.spaceGrotesk(
+          fontSize: 13,
+          letterSpacing: 1,
+          color: textDim,
+        ),
       ),
     );
   }

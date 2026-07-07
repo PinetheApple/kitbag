@@ -153,6 +153,33 @@ void main() {
     await unmount(tester);
   });
 
+  testWidgets(
+    'deleting a non-selected tuning removes it and keeps the preset',
+    (tester) async {
+      await db.tuningsDao.create(
+        'Drop D',
+        Uint8List.fromList([38, 45, 50, 55, 59, 64]),
+      );
+      await pumpApp(tester);
+
+      // Never apply the custom tuning — the guitar preset stays selected, so
+      // the delete exercises the ref-after-await guard without the fallback.
+      await tester.tap(find.text('Guitar · Standard E'));
+      await settle(tester);
+      await tester.tap(find.byTooltip('Edit tuning'));
+      await settle(tester);
+      await tester.tap(find.text('Delete'));
+      await settle(tester);
+      await tester.tap(find.text('Delete').last); // confirm dialog
+      await settle(tester);
+
+      // Deletes cleanly (no ref-after-dispose crash) and leaves the preset.
+      expect(await db.tuningsDao.getAll(), isEmpty);
+      expect(find.text('Guitar · Standard E'), findsOneWidget);
+      await unmount(tester);
+    },
+  );
+
   testWidgets('deleting the selected tuning falls back to guitar', (
     tester,
   ) async {

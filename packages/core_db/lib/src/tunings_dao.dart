@@ -31,6 +31,13 @@ class TuningsDao extends DatabaseAccessor<KitbagDatabase>
         TuningsCompanion(notes: Value(notes)),
       );
 
+  /// Updates name and notes for one tuning in a single write, so an edit
+  /// never lands as two partial rows.
+  Future<void> updateTuning(int id, String name, Uint8List notes) =>
+      (update(tunings)..where((t) => t.id.equals(id))).write(
+        TuningsCompanion(name: Value(name), notes: Value(notes)),
+      );
+
   Future<void> deleteTuning(int id) =>
       (delete(tunings)..where((t) => t.id.equals(id))).go();
 }

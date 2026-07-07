@@ -48,7 +48,12 @@ class _TuningEditorSheetState extends ConsumerState<_TuningEditorSheet> {
     text: widget.existing?.name ?? '',
   );
   late final List<int> _midis = widget.existing != null
-      ? List.of(widget.existing!.notes)
+      // Clamp on seed: a stored tuning could hold an out-of-range note from an
+      // older schema, and the steppers must start inside the editable band.
+      ? [
+          for (final note in widget.existing!.notes)
+            note.clamp(_minMidi, _maxMidi),
+        ]
       : [for (final string in widget.seed.strings) string.midiNote];
 
   @override
@@ -70,8 +75,8 @@ class _TuningEditorSheetState extends ConsumerState<_TuningEditorSheet> {
       id = await dao.create(name, bytes);
     } else {
       id = widget.existing!.id;
-      await dao.rename(id, name);
-      await dao.updateNotes(id, bytes);
+      // One atomic write: name and notes never land as two partial updates.
+      await dao.updateTuning(id, name, bytes);
     }
     notifier.setPreset(presetFromNotes(id: id, name: name, notes: _midis));
     if (mounted) {
@@ -89,15 +94,21 @@ class _TuningEditorSheetState extends ConsumerState<_TuningEditorSheet> {
     if (!confirmed || !mounted) {
       return;
     }
-    await ref.read(kitbagDatabaseProvider).tuningsDao.deleteTuning(existing.id);
-    // Don't leave the pegs on a tuning that no longer exists.
+    // Capture ref-derived handles BEFORE awaiting: after the async gap the
+    // sheet may be disposed, and touching ref then throws (mirrors _save).
+    final dao = ref.read(kitbagDatabaseProvider).tuningsDao;
     final notifier = ref.read(tunerProvider.notifier);
-    if (ref.read(tunerProvider).preset.id == 'custom-${existing.id}') {
+    final selectedIsThis =
+        ref.read(tunerProvider).preset.id == 'custom-${existing.id}';
+    await dao.deleteTuning(existing.id);
+    if (!mounted) {
+      return;
+    }
+    // Don't leave the pegs on a tuning that no longer exists.
+    if (selectedIsThis) {
       notifier.setPreset(InstrumentPreset.guitar);
     }
-    if (mounted) {
-      Navigator.of(context).pop();
-    }
+    Navigator.of(context).pop();
   }
 
   @override

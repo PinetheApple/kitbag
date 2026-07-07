@@ -1,6 +1,7 @@
 import 'package:core_audio_ffi/core_audio_ffi.dart';
 import 'package:core_audio_ffi/testing.dart';
 import 'package:core_db/core_db.dart';
+import 'package:core_design/core_design.dart';
 import 'package:core_plugin_api/core_plugin_api.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -108,6 +109,34 @@ void main() {
     await tester.pump();
     final autoBand = presetBand(InstrumentPreset.guitar, fake.a4);
     expect(fake.bandLowHz, closeTo(autoBand.lowHz, 1e-9));
+    await unmount(tester);
+  });
+
+  testWidgets('Auto chip lights only while auto-detection is the live mode', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app());
+    await tester.pump();
+    KitbagChip autoChip() =>
+        tester.widget<KitbagChip>(find.widgetWithText(KitbagChip, 'Auto'));
+
+    // Default: instrument mode, no locked string → auto-detect is live.
+    expect(autoChip().active, isTrue);
+
+    // Locking a peg makes a per-string lock the live mode instead.
+    await tester.tap(find.text('6'));
+    await tester.pump();
+    expect(autoChip().active, isFalse);
+
+    // Releasing the lock returns to auto-detect.
+    await tester.tap(find.text('6'));
+    await tester.pump();
+    expect(autoChip().active, isTrue);
+
+    // Chromatic mode is not auto string detection.
+    await tester.tap(find.text('Chromatic'));
+    await tester.pump();
+    expect(autoChip().active, isFalse);
     await unmount(tester);
   });
 
