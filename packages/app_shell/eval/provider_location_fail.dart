@@ -1,3 +1,4 @@
+// ignore_for_file: unused_import
 // eval: provider_location — SHOULD trigger (Provider outside core_services)
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

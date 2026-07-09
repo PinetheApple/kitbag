@@ -161,6 +161,11 @@ class MetronomeNotifier extends Notifier<MetronomeSettings> {
     state = state.copyWith(running: running);
   }
 
+  void stop() {
+    _controller.stop();
+    state = state.copyWith(running: false);
+  }
+
   void setBeatsPerBar(int beats) {
     final clamped = beats.clamp(1, MetronomeController.maxBeats);
     _controller.setBeatsPerBar(clamped);

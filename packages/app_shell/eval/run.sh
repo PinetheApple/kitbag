@@ -8,7 +8,7 @@
 set -uo pipefail
 
 repo_root="$(cd "$(dirname "$0")/../../.." && pwd)"
-eval_dir="$(dirname "$0")"
+eval_dir="$repo_root/packages/app_shell/eval"
 
 echo "=== Kitbag Lint Eval ==="
 echo ""
@@ -26,7 +26,7 @@ echo ""
 
 for file in "$eval_dir"/*.dart; do
   fname="$(basename "$file")"
-  fpath_full=$(realpath "$file")
+  fpath_full=$(readlink -f "$file")
 
   # Skip test files
   case "$fname" in test_*.dart) continue ;; esac
