@@ -29,6 +29,7 @@ class MetronomeController {
   static const int soundCount = 3;
   static const int maxRampBars = 64;
   static const int maxMuteBars = 16;
+  static const int maxSubdivision = 16;
 
   final AudioEngine _engine;
 

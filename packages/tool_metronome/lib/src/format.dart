@@ -11,3 +11,12 @@ String timeSignatureLabel(int beatsPerBar) => '$beatsPerBar/4';
 String songSummary(Song song) =>
     '${song.bpm.round()} BPM · ${timeSignatureLabel(song.beatsPerBar)} · '
     '${soundNames[song.sound]}';
+
+/// Musical note symbol for a subdivision value.
+String subdivisionSymbol(int subdivision) => switch (subdivision) {
+  1 => '♩',
+  2 => '♪',
+  3 => '³',
+  4 => '♬',
+  _ => '×$subdivision',
+};

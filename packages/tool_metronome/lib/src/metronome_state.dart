@@ -190,8 +190,9 @@ class MetronomeNotifier extends Notifier<MetronomeSettings> {
   }
 
   void setSubdivision(int subdivision) {
-    _controller.setSubdivision(subdivision);
-    state = state.copyWith(subdivision: subdivision);
+    final clamped = subdivision.clamp(1, MetronomeController.maxSubdivision);
+    _controller.setSubdivision(clamped);
+    state = state.copyWith(subdivision: clamped);
   }
 
   void cycleAccent(int beatIndex) {
@@ -271,7 +272,7 @@ class MetronomeNotifier extends Notifier<MetronomeSettings> {
     final settings = state.copyWith(
       bpm: bpm.clamp(MetronomeController.minBpm, MetronomeController.maxBpm),
       beatsPerBar: beatsPerBar.clamp(1, MetronomeController.maxBeats),
-      subdivision: subdivision,
+      subdivision: subdivision.clamp(1, MetronomeController.maxSubdivision),
       accents: padded,
       polyEnabled: polyEnabled,
       polyBeats: polyBeats.clamp(2, MetronomeController.maxBeats),

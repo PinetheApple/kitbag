@@ -20,7 +20,7 @@ enum class Accent : uint8_t { kMuted = 0, kNormal = 1, kAccented = 2 };
 class Metronome {
  public:
   static constexpr int kMaxBeats = 16;
-  static constexpr int kMaxSubdivision = 6;
+  static constexpr int kMaxSubdivision = 16;
   static constexpr int kMaxPolyBeats = 16;
   static constexpr int kSoundCount = 3;
   static constexpr double kMinBpm = 20.0;

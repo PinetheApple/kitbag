@@ -80,24 +80,28 @@ class PatternCard extends StatelessWidget {
               ),
             ],
             gap,
-            KitbagSegmented(
-              segments: [
-                for (final (value, label) in const [
-                  (1, '♩'),
-                  (2, '♪'),
-                  (3, '³'),
-                  (4, '♬'),
-                ])
-                  KitbagSegment(
-                    label: label,
-                    selected: settings.subdivision == value,
-                    onTap: () => notifier.setSubdivision(value),
+            Row(
+              children: [
+                KitbagStepperRow.inline(
+                  semanticLabel: 'subdivision',
+                  onStep: (delta) =>
+                      notifier.setSubdivision(settings.subdivision + delta),
+                  child: KitbagBadge(
+                    label: subdivisionSymbol(settings.subdivision),
                   ),
-                KitbagSegment(
-                  label: 'poly',
-                  selected: settings.polyEnabled,
-                  accent: true,
-                  onTap: notifier.togglePolyrhythm,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: KitbagSegmented(
+                    segments: [
+                      KitbagSegment(
+                        label: 'poly',
+                        selected: settings.polyEnabled,
+                        accent: true,
+                        onTap: notifier.togglePolyrhythm,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
