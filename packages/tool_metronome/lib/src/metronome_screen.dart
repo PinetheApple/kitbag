@@ -217,6 +217,11 @@ class _TempoReadout extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (settings.practiceTimerSeconds > 0)
+                Text(
+                  _formatTimer(settings.practiceTimerSeconds),
+                  style: textTheme.labelMedium?.copyWith(color: dim),
+                ),
               if (showChevrons)
                 IconButton(
                   onPressed: () => onNudge(1),
@@ -241,6 +246,12 @@ class _TempoReadout extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  static String _formatTimer(int totalSeconds) {
+    final min = totalSeconds ~/ 60;
+    final sec = totalSeconds % 60;
+    return '${min.toString().padLeft(2, '0')}:${sec.toString().padLeft(2, '0')}';
   }
 }
 
@@ -318,8 +329,8 @@ class _Transport extends StatelessWidget {
         ),
         KitbagCircleButton(
           icon: Icons.timer_outlined,
-          onPressed: null,
-          tooltip: 'Trainer modes — coming next',
+          onPressed: notifier.resetPracticeTimer,
+          tooltip: 'Reset practice timer',
           size: circleSize,
         ),
       ],

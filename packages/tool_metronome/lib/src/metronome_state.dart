@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:core_audio_ffi/core_audio_ffi.dart';
 import 'package:core_plugin_api/core_plugin_api.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,6 +23,7 @@ class MetronomeSettings {
     this.barMute = const BarMute(),
     this.volume = MetronomeController.defaultVolume,
     this.latencyOffsetMs = MetronomeController.defaultLatencyMs,
+    this.practiceTimerSeconds = 0,
   });
 
   static const List<BeatAccent> _defaultAccents = [
@@ -56,6 +59,7 @@ class MetronomeSettings {
   final BarMute barMute;
   final double volume;
   final double latencyOffsetMs;
+  final int practiceTimerSeconds;
 
   MetronomeSettings copyWith({
     double? bpm,
@@ -72,6 +76,7 @@ class MetronomeSettings {
     BarMute? barMute,
     double? volume,
     double? latencyOffsetMs,
+    int? practiceTimerSeconds,
   }) {
     return MetronomeSettings(
       bpm: bpm ?? this.bpm,
@@ -88,6 +93,7 @@ class MetronomeSettings {
       barMute: barMute ?? this.barMute,
       volume: volume ?? this.volume,
       latencyOffsetMs: latencyOffsetMs ?? this.latencyOffsetMs,
+      practiceTimerSeconds: practiceTimerSeconds ?? this.practiceTimerSeconds,
     );
   }
 }
@@ -99,6 +105,7 @@ final metronomeProvider =
 
 class MetronomeNotifier extends Notifier<MetronomeSettings> {
   final TapTempo _tapTempo = TapTempo();
+  Timer? _practiceTimer;
 
   MetronomeController get _controller => ref.read(metronomeControllerProvider);
 
@@ -107,6 +114,24 @@ class MetronomeNotifier extends Notifier<MetronomeSettings> {
     const settings = MetronomeSettings();
     _pushAll(settings);
     return settings;
+  }
+
+  @override
+  void dispose() {
+    _practiceTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startPracticeTimer() {
+    _practiceTimer?.cancel();
+    _practiceTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      state = state.copyWith(practiceTimerSeconds: state.practiceTimerSeconds + 1);
+    });
+  }
+
+  void _stopPracticeTimer() {
+    _practiceTimer?.cancel();
+    _practiceTimer = null;
   }
 
   void _pushAll(MetronomeSettings settings) {
@@ -175,12 +200,23 @@ class MetronomeNotifier extends Notifier<MetronomeSettings> {
   void toggleRunning() {
     final running = !state.running;
     running ? _controller.start() : _controller.stop();
+    if (running) {
+      _startPracticeTimer();
+    } else {
+      _stopPracticeTimer();
+    }
     state = state.copyWith(running: running);
   }
 
   void stop() {
     _controller.stop();
+    _stopPracticeTimer();
     state = state.copyWith(running: false);
+  }
+
+  void resetPracticeTimer() {
+    _stopPracticeTimer();
+    state = state.copyWith(practiceTimerSeconds: 0);
   }
 
   void setBeatsPerBar(int beats) {
