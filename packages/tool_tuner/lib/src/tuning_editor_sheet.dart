@@ -43,6 +43,8 @@ class _TuningEditorSheetState extends ConsumerState<_TuningEditorSheet> {
   // C1..C6 — anything a stringed instrument tunes to, with slack.
   static const int _minMidi = 24;
   static const int _maxMidi = 84;
+  static const int _minStrings = 1;
+  static const int _maxStrings = 12;
 
   late final TextEditingController _name = TextEditingController(
     text: widget.existing?.name ?? '',
@@ -111,6 +113,18 @@ class _TuningEditorSheetState extends ConsumerState<_TuningEditorSheet> {
     Navigator.of(context).pop();
   }
 
+  void _removeString(int index) {
+    if (_midis.length > _minStrings) {
+      setState(() => _midis.removeAt(index));
+    }
+  }
+
+  void _addString() {
+    if (_midis.length < _maxStrings) {
+      setState(() => _midis.insert(0, 40)); // E2 — common low open string
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -135,13 +149,43 @@ class _TuningEditorSheetState extends ConsumerState<_TuningEditorSheet> {
             ),
             const SizedBox(height: 8),
             for (var i = 0; i < _midis.length; i++)
-              KitbagStepperRow(
-                label: 'String ${_midis.length - i}',
-                value: noteNameForMidi(_midis[i]),
-                onStep: (delta) => setState(() {
-                  _midis[i] = (_midis[i] + delta).clamp(_minMidi, _maxMidi);
-                }),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 36,
+                      child: IconButton(
+                        icon: const Icon(Icons.remove_circle_outline, size: 20),
+                        color: Theme.of(context).colorScheme.error,
+                        onPressed: _midis.length > _minStrings
+                            ? () => _removeString(i)
+                            : null,
+                        padding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                    Expanded(
+                      child: KitbagStepperRow(
+                        label: 'String ${_midis.length - i}',
+                        value: noteNameForMidi(_midis[i]),
+                        onStep: (delta) => setState(() {
+                          _midis[i] =
+                              (_midis[i] + delta).clamp(_minMidi, _maxMidi);
+                        }),
+                      ),
+                    ),
+                  ],
+                ),
               ),
+            if (_midis.length < _maxStrings) ...[
+              const SizedBox(height: 4),
+              TextButton.icon(
+                onPressed: _addString,
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Add string'),
+              ),
+            ],
             const SizedBox(height: 8),
             // OverflowBar wraps the actions onto stacked lines rather than
             // overflowing when they don't fit (narrow sheets, 200% text
