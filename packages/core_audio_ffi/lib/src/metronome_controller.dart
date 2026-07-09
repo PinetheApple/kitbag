@@ -26,7 +26,7 @@ class MetronomeController {
   static const double minBpm = 20;
   static const double maxBpm = 400;
   static const int maxBeats = 16;
-  static const int soundCount = 3;
+  static const int soundCount = 6;
   static const int maxRampBars = 64;
   static const int maxMuteBars = 16;
   static const int maxSubdivision = 16;

@@ -22,7 +22,7 @@ class Metronome {
   static constexpr int kMaxBeats = 16;
   static constexpr int kMaxSubdivision = 16;
   static constexpr int kMaxPolyBeats = 16;
-  static constexpr int kSoundCount = 3;
+  static constexpr int kSoundCount = 6;
   static constexpr double kMinBpm = 20.0;
   static constexpr double kMaxBpm = 400.0;
   static constexpr int kMaxRampBars = 64;
