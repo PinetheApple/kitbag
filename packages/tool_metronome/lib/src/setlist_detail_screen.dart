@@ -47,6 +47,8 @@ class SetlistDetailScreen extends ConsumerWidget {
       polyEnabled: settings.polyEnabled,
       polyBeats: settings.polyBeats,
       sound: settings.sound,
+      volume: settings.volume,
+      latencyOffset: settings.latencyOffsetMs,
     );
   }
 
@@ -79,6 +81,8 @@ class SetlistDetailScreen extends ConsumerWidget {
         polyEnabled: Value(settings.polyEnabled),
         polyBeats: Value(settings.polyBeats),
         sound: Value(settings.sound),
+        volume: Value(settings.volume),
+        latencyOffset: Value(settings.latencyOffsetMs),
       ),
     );
   }

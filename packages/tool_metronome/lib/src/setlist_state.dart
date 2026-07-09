@@ -209,6 +209,8 @@ class ActiveSetlistNotifier extends Notifier<ActiveSetlist?> {
           polyEnabled: song.polyEnabled,
           polyBeats: song.polyBeats,
           sound: song.sound,
+          volume: song.volume,
+          latencyOffsetMs: song.latencyOffset,
         );
   }
 }

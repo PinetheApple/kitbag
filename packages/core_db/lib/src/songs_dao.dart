@@ -29,6 +29,8 @@ class SongsDao extends DatabaseAccessor<KitbagDatabase> with _$SongsDaoMixin {
     required bool polyEnabled,
     required int polyBeats,
     required int sound,
+    required double volume,
+    required double latencyOffset,
   }) {
     return transaction(() async {
       final maxPosition = songs.position.max();
@@ -50,6 +52,8 @@ class SongsDao extends DatabaseAccessor<KitbagDatabase> with _$SongsDaoMixin {
           polyEnabled: polyEnabled,
           polyBeats: polyBeats,
           sound: sound,
+          volume: volume,
+          latencyOffset: latencyOffset,
         ),
       );
     });

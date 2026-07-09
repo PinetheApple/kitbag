@@ -253,6 +253,8 @@ class MetronomeNotifier extends Notifier<MetronomeSettings> {
     required bool polyEnabled,
     required int polyBeats,
     required int sound,
+    double? volume,
+    double? latencyOffsetMs,
   }) {
     final padded = [
       ...accents.take(MetronomeController.maxBeats),
@@ -267,6 +269,8 @@ class MetronomeNotifier extends Notifier<MetronomeSettings> {
       polyEnabled: polyEnabled,
       polyBeats: polyBeats.clamp(2, MetronomeController.maxBeats),
       sound: sound,
+      volume: volume,
+      latencyOffsetMs: latencyOffsetMs,
       rampEnabled: false,
     );
     _pushAll(settings);

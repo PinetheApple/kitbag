@@ -31,6 +31,8 @@ class Songs extends Table {
   BoolColumn get polyEnabled => boolean()();
   IntColumn get polyBeats => integer()();
   IntColumn get sound => integer()();
+  RealColumn get volume => real()();
+  RealColumn get latencyOffset => real()();
 }
 
 /// A saved custom instrument tuning (e.g. drop D): one MIDI note byte per
@@ -54,13 +56,19 @@ class KitbagDatabase extends _$KitbagDatabase {
   KitbagDatabase.open() : super(driftDatabase(name: 'kitbag'));
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     beforeOpen: (details) async {
       // Required for ON DELETE CASCADE to fire.
       await customStatement('PRAGMA foreign_keys = ON');
+    },
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.addColumn(songs, songs.volume);
+        await m.addColumn(songs, songs.latencyOffset);
+      }
     },
   );
 }

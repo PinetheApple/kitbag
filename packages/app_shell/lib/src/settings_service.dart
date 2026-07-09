@@ -52,6 +52,8 @@ class SettingsService {
                 'polyEnabled': s.polyEnabled,
                 'polyBeats': s.polyBeats,
                 'sound': s.sound,
+                'volume': s.volume,
+                'latencyOffset': s.latencyOffset,
                 'position': s.position,
               },
             )
@@ -114,6 +116,8 @@ class SettingsService {
           polyEnabled: s['polyEnabled'] as bool,
           polyBeats: s['polyBeats'] as int,
           sound: s['sound'] as int,
+          volume: (s['volume'] as num?)?.toDouble() ?? 1.0,
+          latencyOffset: (s['latencyOffset'] as num?)?.toDouble() ?? 0.0,
         );
         imported++;
       }

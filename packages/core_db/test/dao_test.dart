@@ -25,6 +25,8 @@ void main() {
       polyEnabled: false,
       polyBeats: 3,
       sound: 0,
+      volume: 1.0,
+      latencyOffset: 0.0,
     );
   }
 
@@ -94,6 +96,8 @@ void main() {
         polyEnabled: true,
         polyBeats: 5,
         sound: 2,
+        volume: 0.5,
+        latencyOffset: 10.0,
       );
 
       final song = (await db.songsDao.getBySetlist(
@@ -106,6 +110,8 @@ void main() {
       expect(song.polyEnabled, isTrue);
       expect(song.polyBeats, 5);
       expect(song.sound, 2);
+      expect(song.volume, 0.5);
+      expect(song.latencyOffset, 10.0);
     });
 
     test('updateSong writes only the given fields', () async {
