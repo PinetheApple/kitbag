@@ -19,6 +19,8 @@ class MetronomeSettings {
     this.ramp = const TempoRamp(),
     this.barMuteEnabled = false,
     this.barMute = const BarMute(),
+    this.volume = MetronomeController.defaultVolume,
+    this.latencyOffsetMs = MetronomeController.defaultLatencyMs,
   });
 
   static const List<BeatAccent> _defaultAccents = [
@@ -52,6 +54,8 @@ class MetronomeSettings {
   final TempoRamp ramp;
   final bool barMuteEnabled;
   final BarMute barMute;
+  final double volume;
+  final double latencyOffsetMs;
 
   MetronomeSettings copyWith({
     double? bpm,
@@ -66,6 +70,8 @@ class MetronomeSettings {
     TempoRamp? ramp,
     bool? barMuteEnabled,
     BarMute? barMute,
+    double? volume,
+    double? latencyOffsetMs,
   }) {
     return MetronomeSettings(
       bpm: bpm ?? this.bpm,
@@ -80,6 +86,8 @@ class MetronomeSettings {
       ramp: ramp ?? this.ramp,
       barMuteEnabled: barMuteEnabled ?? this.barMuteEnabled,
       barMute: barMute ?? this.barMute,
+      volume: volume ?? this.volume,
+      latencyOffsetMs: latencyOffsetMs ?? this.latencyOffsetMs,
     );
   }
 }
@@ -114,6 +122,8 @@ class MetronomeNotifier extends Notifier<MetronomeSettings> {
       beats: settings.polyBeats,
     );
     controller.setSound(settings.sound);
+    controller.setVolume(settings.volume);
+    controller.setLatencyOffset(settings.latencyOffsetMs);
     _pushRamp(settings.rampEnabled, settings.ramp);
     _pushBarMute(settings.barMuteEnabled, settings.barMute);
   }
@@ -199,6 +209,16 @@ class MetronomeNotifier extends Notifier<MetronomeSettings> {
   void setSound(int sound) {
     _controller.setSound(sound);
     state = state.copyWith(sound: sound);
+  }
+
+  void setVolume(double volume) {
+    _controller.setVolume(volume);
+    state = state.copyWith(volume: volume);
+  }
+
+  void setLatencyOffset(double latencyMs) {
+    _controller.setLatencyOffset(latencyMs);
+    state = state.copyWith(latencyOffsetMs: latencyMs);
   }
 
   void enableRamp(TempoRamp ramp) {

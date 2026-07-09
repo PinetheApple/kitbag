@@ -48,6 +48,8 @@ class Metronome {
   void SetAccent(int beat_index, Accent accent);
   void SetPolyrhythm(bool enabled, int beats);
   void SetSound(int sound_index);
+  void SetVolume(double volume);
+  void SetLatencyOffset(double latency_ms);
   // Tempo ramp trainer: steps the BPM once per bar from start to end over
   // `bars` bars, then holds at end. Restarts from the current bar; a manual
   // SetTempo cancels it. Each Start replays the ramp from the beginning.
@@ -92,6 +94,8 @@ class Metronome {
     kSetSound,
     kSetRamp,
     kSetBarMute,
+    kSetVolume,
+    kSetLatencyOffset,
   };
 
   struct Command {
@@ -148,6 +152,8 @@ class Metronome {
   bool mute_enabled_ = false;
   int play_bars_ = 3;
   int mute_bars_ = 1;
+  double volume_ = 1.0;
+  double latency_offset_ms_ = 0.0;
   Voice voices_[kMaxVoices];
 
   // UI-visible mirrors.

@@ -89,6 +89,13 @@ class KitbagBindings {
       metronomeSetSound = library.lookupFunction<SetIntNative, SetIntDart>(
         'kb_metronome_set_sound',
       ),
+      metronomeSetVolume = library.lookupFunction<SetDoubleNative, SetDoubleDart>(
+        'kb_metronome_set_volume',
+      ),
+      metronomeSetLatencyOffset = library
+          .lookupFunction<SetDoubleNative, SetDoubleDart>(
+            'kb_metronome_set_latency_offset',
+          ),
       metronomeSetRamp = library.lookupFunction<SetRampNative, SetRampDart>(
         'kb_metronome_set_ramp',
       ),
@@ -151,6 +158,8 @@ class KitbagBindings {
   final SetTwoIntsDart metronomeSetAccent;
   final SetTwoIntsDart metronomeSetPoly;
   final SetIntDart metronomeSetSound;
+  final SetDoubleDart metronomeSetVolume;
+  final SetDoubleDart metronomeSetLatencyOffset;
   final SetRampDart metronomeSetRamp;
   final SetThreeIntsDart metronomeSetBarMute;
   final GetIntDart metronomeIsRunning;

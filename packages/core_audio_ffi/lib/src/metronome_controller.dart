@@ -55,6 +55,25 @@ class MetronomeController {
   void setSound(int soundIndex) =>
       _engine.bindings.metronomeSetSound(_engine.handle, soundIndex);
 
+  static const double minVolume = 0;
+  static const double maxVolume = 2;
+  static const double defaultVolume = 1;
+
+  void setVolume(double volume) => _engine.bindings.metronomeSetVolume(
+    _engine.handle,
+    volume.clamp(minVolume, maxVolume),
+  );
+
+  static const double minLatencyMs = -100;
+  static const double maxLatencyMs = 100;
+  static const double defaultLatencyMs = 0;
+
+  void setLatencyOffset(double latencyMs) =>
+      _engine.bindings.metronomeSetLatencyOffset(
+        _engine.handle,
+        latencyMs.clamp(minLatencyMs, maxLatencyMs),
+      );
+
   /// Tempo ramp trainer: steps the BPM once per bar from [startBpm] to
   /// [endBpm] over [bars] bars, then holds. [setTempo] cancels it.
   void setRamp({

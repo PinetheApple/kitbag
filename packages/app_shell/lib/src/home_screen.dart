@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import 'last_used_tool.dart';
 import 'plugin_registry.dart';
+import 'settings_screen.dart';
 
 /// Home hub per the design spec: wordmark, Continue card, 2-wide tool grid
 /// (upcoming tools visible but muted — the plugin roster is part of the UI),
@@ -16,7 +17,7 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final plugins = ref.watch(toolPluginsProvider);
+    final plugins = ref.watch(filteredToolPluginsProvider);
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -37,8 +38,12 @@ class HomeScreen extends ConsumerWidget {
                     ),
                     const Spacer(),
                     IconButton(
-                      onPressed: null,
-                      tooltip: 'Settings — coming soon',
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const SettingsScreen(),
+                        ),
+                      ),
+                      tooltip: 'Settings',
                       icon: Icon(
                         Icons.settings_outlined,
                         color: theme.colorScheme.onSurfaceVariant,

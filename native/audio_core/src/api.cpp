@@ -112,6 +112,18 @@ void kb_metronome_set_sound(kb_engine* engine, int32_t sound_index) {
   }
 }
 
+void kb_metronome_set_volume(kb_engine* engine, double volume) {
+  if (engine != nullptr) {
+    ToEngine(engine)->metronome().SetVolume(volume);
+  }
+}
+
+void kb_metronome_set_latency_offset(kb_engine* engine, double latency_ms) {
+  if (engine != nullptr) {
+    ToEngine(engine)->metronome().SetLatencyOffset(latency_ms);
+  }
+}
+
 void kb_metronome_set_ramp(kb_engine* engine, int32_t enabled,
                            double start_bpm, double end_bpm, int32_t bars) {
   if (engine != nullptr) {

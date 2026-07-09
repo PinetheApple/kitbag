@@ -60,6 +60,22 @@ class FakeMetronomeController implements MetronomeController {
   @override
   void setSound(int soundIndex) => sound = soundIndex;
 
+  double volume = MetronomeController.defaultVolume;
+
+  @override
+  void setVolume(double v) => volume = v.clamp(
+    MetronomeController.minVolume,
+    MetronomeController.maxVolume,
+  );
+
+  double latencyOffsetMs = MetronomeController.defaultLatencyMs;
+
+  @override
+  void setLatencyOffset(double ms) => latencyOffsetMs = ms.clamp(
+    MetronomeController.minLatencyMs,
+    MetronomeController.maxLatencyMs,
+  );
+
   @override
   void setRamp({
     required bool enabled,

@@ -58,6 +58,11 @@ KB_EXPORT void kb_metronome_set_accent(kb_engine* engine, int32_t beat_index,
 KB_EXPORT void kb_metronome_set_poly(kb_engine* engine, int32_t enabled,
                                      int32_t beats);
 KB_EXPORT void kb_metronome_set_sound(kb_engine* engine, int32_t sound_index);
+/* Volume multiplier [0, 2], default 1. */
+KB_EXPORT void kb_metronome_set_volume(kb_engine* engine, double volume);
+/* Output latency offset in ms [-100, 100]; positive = trigger earlier. */
+KB_EXPORT void kb_metronome_set_latency_offset(kb_engine* engine,
+                                                double latency_ms);
 /* Tempo ramp trainer: step BPM once per bar from start to end over `bars`
  * bars, then hold. A manual kb_metronome_set_tempo cancels it. */
 KB_EXPORT void kb_metronome_set_ramp(kb_engine* engine, int32_t enabled,

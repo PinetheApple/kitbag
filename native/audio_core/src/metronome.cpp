@@ -78,6 +78,18 @@ void Metronome::SetSound(int sound_index) {
   commands_.Push(command);
 }
 
+void Metronome::SetVolume(double volume) {
+  Command command{CommandType::kSetVolume};
+  command.value = volume;
+  commands_.Push(command);
+}
+
+void Metronome::SetLatencyOffset(double latency_ms) {
+  Command command{CommandType::kSetLatencyOffset};
+  command.value = latency_ms;
+  commands_.Push(command);
+}
+
 void Metronome::SetRamp(bool enabled, double start_bpm, double end_bpm,
                         int bars) {
   Command command{CommandType::kSetRamp};
@@ -155,6 +167,12 @@ void Metronome::ApplyPendingCommands() {
         mute_enabled_ = command.int_a != 0;
         play_bars_ = Clamp(command.int_b, 1, kMaxMuteBars);
         mute_bars_ = Clamp(command.int_c, 1, kMaxMuteBars);
+        break;
+      case CommandType::kSetVolume:
+        volume_ = Clamp(command.value, 0.0, 2.0);
+        break;
+      case CommandType::kSetLatencyOffset:
+        latency_offset_ms_ = Clamp(command.value, -100.0, 100.0);
         break;
     }
   }
@@ -262,9 +280,11 @@ void Metronome::Render(float* output, uint32_t frame_count,
   const double poly_scale =
       static_cast<double>(poly_beats_) / static_cast<double>(beats_per_bar_);
 
+  double latency_beats = latency_offset_ms_ * bpm_ / 60000.0;
+
   for (uint32_t frame = 0; frame < frame_count; ++frame) {
     if (running_) {
-      const double position = beat_position_;
+      const double position = beat_position_ + latency_beats;
       const auto sub_index = static_cast<int64_t>(
           std::floor(position * subdivision_ + kGridEpsilon));
       const double sub_start =
@@ -274,13 +294,14 @@ void Metronome::Render(float* output, uint32_t frame_count,
         if (sub_index % subdivision_ == 0) {
           const int64_t beat = sub_index / subdivision_;
           const auto beat_index = static_cast<int>(beat % beats_per_bar_);
-          if (beat_index == 0) {
-            ++current_bar_;  // monotonic: survives time-signature changes
-            if (ramp_enabled_) {
-              bpm_ = RampBpmForBar(current_bar_);
-              beats_per_sample = bpm_ / (60.0 * sample_rate);
+            if (beat_index == 0) {
+              ++current_bar_;  // monotonic: survives time-signature changes
+              if (ramp_enabled_) {
+                bpm_ = RampBpmForBar(current_bar_);
+                beats_per_sample = bpm_ / (60.0 * sample_rate);
+              }
+              latency_beats = latency_offset_ms_ * bpm_ / 60000.0;
             }
-          }
           OnBeatBoundary(beat_index, sample_rate);
         } else if (subdivision_ > 1) {
           OnSubdivisionTick(sample_rate);
@@ -298,7 +319,7 @@ void Metronome::Render(float* output, uint32_t frame_count,
       beat_position_ += beats_per_sample;
     }
 
-    const float sample = RenderVoices();
+    const float sample = RenderVoices() * volume_;
     for (uint32_t channel = 0; channel < channel_count; ++channel) {
       output[frame * channel_count + channel] += sample;
     }
