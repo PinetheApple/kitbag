@@ -11,6 +11,7 @@ workspace:
   - packages/core_design
   - packages/core_services
   - packages/app_shell
+  - packages/custom_lint_kitbag
   - packages/tool_metronome
   - packages/tool_tuner
 
