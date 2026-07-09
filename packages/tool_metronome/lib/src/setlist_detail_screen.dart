@@ -135,16 +135,19 @@ class SetlistDetailScreen extends ConsumerWidget {
                     },
                     itemBuilder: (context, index) {
                       final song = songs[index];
-                      return _SongRow(
-                        key: ValueKey(song.id),
-                        song: song,
-                        index: index,
-                        onTap: setlist == null
-                            ? null
-                            : () => _play(context, ref, setlist, songs, index),
-                        onRename: () => _renameSong(context, ref, song),
-                        onRecapture: () => _recaptureSong(ref, song),
-                        onDelete: () => _songs(ref).deleteSong(song.id),
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: _SongRow(
+                          key: ValueKey(song.id),
+                          song: song,
+                          index: index,
+                          onTap: setlist == null
+                              ? null
+                              : () => _play(context, ref, setlist, songs, index),
+                          onRename: () => _renameSong(context, ref, song),
+                          onRecapture: () => _recaptureSong(ref, song),
+                          onDelete: () => _songs(ref).deleteSong(song.id),
+                        ),
                       );
                     },
                   ),

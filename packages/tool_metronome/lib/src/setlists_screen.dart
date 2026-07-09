@@ -96,19 +96,22 @@ class SetlistsScreen extends ConsumerWidget {
                     actionLabel: 'Create a setlist',
                     onAction: () => _create(context, ref),
                   )
-                : ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-                    children: [
-                      for (final summary in summaries)
-                        _SetlistRow(
-                          summary: summary,
-                          onRename: () =>
-                              _rename(context, ref, summary.setlist),
-                          onDelete: () =>
-                              _delete(context, ref, summary.setlist),
-                        ),
-                    ],
-                  ),
+                    : ListView(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                        children: [
+                          for (final summary in summaries)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: _SetlistRow(
+                                summary: summary,
+                                onRename: () =>
+                                    _rename(context, ref, summary.setlist),
+                                onDelete: () =>
+                                    _delete(context, ref, summary.setlist),
+                              ),
+                            ),
+                        ],
+                      ),
           ),
         ),
       ),
