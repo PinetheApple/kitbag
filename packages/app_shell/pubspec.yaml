@@ -20,6 +20,9 @@ dependencies:
   tool_tuner:
 
 dev_dependencies:
+  custom_lint: ^0.8.1
+  custom_lint_kitbag:
+    path: ../custom_lint_kitbag
   flutter_lints: ^6.0.0
   integration_test:
     sdk: flutter

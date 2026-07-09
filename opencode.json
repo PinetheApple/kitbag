@@ -1,0 +1,21 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": ["AGENTS.md"],
+  "agent": {
+    "ralph": {
+      "description": "Reviewer/critic for the feedback→refine loop. Use when another agent has completed work — a lint rule, a workflow pattern, a refactor — and needs a thorough review from a skeptical peer before presenting to the human.",
+      "mode": "subagent",
+      "permission": {
+        "edit": "deny",
+        "bash": {
+          "dart run custom_lint *": "allow",
+          "dart analyze *": "allow",
+          "bash scripts/lint_check.sh": "allow",
+          "bash *eval/run.sh": "allow",
+          "git *": "allow",
+          "*": "ask"
+        }
+      }
+    }
+  }
+}
