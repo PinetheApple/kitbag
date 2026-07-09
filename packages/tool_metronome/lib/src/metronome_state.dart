@@ -128,12 +128,19 @@ class MetronomeNotifier extends Notifier<MetronomeSettings> {
     _pushBarMute(settings.barMuteEnabled, settings.barMute);
   }
 
-  void _pushRamp(bool enabled, TempoRamp ramp) => _controller.setRamp(
-    enabled: enabled,
-    startBpm: ramp.startBpm,
-    endBpm: ramp.endBpm,
-    bars: ramp.bars,
-  );
+  void _pushRamp(bool enabled, TempoRamp ramp) {
+    final bars = switch (ramp.unit) {
+      RampUnit.bars => ramp.bars,
+      RampUnit.seconds => ramp.effectiveBars(state.beatsPerBar),
+      RampUnit.minutes => ramp.effectiveBars(state.beatsPerBar),
+    };
+    _controller.setRamp(
+      enabled: enabled,
+      startBpm: ramp.startBpm,
+      endBpm: ramp.endBpm,
+      bars: bars,
+    );
+  }
 
   void _pushBarMute(bool enabled, BarMute barMute) => _controller.setBarMute(
     enabled: enabled,

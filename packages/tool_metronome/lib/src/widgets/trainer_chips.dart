@@ -2,6 +2,7 @@ import 'package:core_design/core_design.dart';
 import 'package:flutter/material.dart';
 
 import '../metronome_state.dart';
+import '../trainer.dart';
 import 'metronome_poll.dart';
 import 'trainer_sheets.dart';
 
@@ -24,14 +25,20 @@ class RampChip extends StatelessWidget {
         tooltip: 'Tempo ramp trainer',
       );
     }
-    final end = settings.ramp.endBpm.round();
+    final ramp = settings.ramp;
+    final end = ramp.endBpm.round();
+    final duration = switch (ramp.unit) {
+      RampUnit.bars => '${ramp.bars}b',
+      RampUnit.seconds => '${ramp.bars}s',
+      RampUnit.minutes => '${ramp.bars}m',
+    };
     return MetronomePoll<int>(
       active: settings.running,
-      idle: settings.ramp.startBpm.round(),
+      idle: ramp.startBpm.round(),
       read: (metronome) => metronome.currentBpm.round(),
       builder: (context, liveBpm) => KitbagChip(
         icon: Icons.trending_up,
-        label: short ? '$liveBpm→$end' : 'Ramp $liveBpm→$end',
+        label: short ? '$liveBpm→$end' : 'Ramp $liveBpm→$end ($duration)',
         active: true,
         onTap: () => showRampSheet(context),
         tooltip: 'Tempo ramp trainer',

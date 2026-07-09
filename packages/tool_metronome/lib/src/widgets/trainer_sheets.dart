@@ -38,6 +38,9 @@ class _RampSheetState extends ConsumerState<_RampSheet> {
   late double _startBpm;
   late double _endBpm;
   late int _bars;
+  late RampUnit _unit;
+  static const _maxSeconds = 120;
+  static const _maxMinutes = 10;
 
   @override
   void initState() {
@@ -46,22 +49,36 @@ class _RampSheetState extends ConsumerState<_RampSheet> {
     _startBpm = settings.ramp.startBpm;
     _endBpm = settings.ramp.endBpm;
     _bars = settings.ramp.bars;
+    _unit = settings.ramp.unit;
   }
 
   double _clampBpm(double bpm) =>
       bpm.clamp(MetronomeController.minBpm, MetronomeController.maxBpm);
 
+  int _durationMax() => switch (_unit) {
+    RampUnit.bars => MetronomeController.maxRampBars,
+    RampUnit.seconds => _maxSeconds,
+    RampUnit.minutes => _maxMinutes,
+  };
+
   @override
   Widget build(BuildContext context) {
     final enabled = ref.watch(metronomeProvider).rampEnabled;
     final notifier = ref.read(metronomeProvider.notifier);
-    final ramp = TempoRamp(startBpm: _startBpm, endBpm: _endBpm, bars: _bars);
+    final ramp = TempoRamp(
+      startBpm: _startBpm,
+      endBpm: _endBpm,
+      bars: _bars,
+      unit: _unit,
+    );
+    final durationLabel = switch (_unit) {
+      RampUnit.bars => 'Bars',
+      RampUnit.seconds => 'Seconds',
+      RampUnit.minutes => 'Minutes',
+    };
     return _TrainerSheetBody(
       title: 'Tempo ramp',
-      subtitle:
-          'Steps the tempo once per bar — '
-          '${ramp.stepPerBar >= 0 ? '+' : ''}'
-          '${ramp.stepPerBar.toStringAsFixed(1)} BPM per bar.',
+      subtitle: ramp.stepDescription(),
       rows: [
         KitbagStepperRow(
           label: 'Start BPM',
@@ -76,14 +93,23 @@ class _RampSheetState extends ConsumerState<_RampSheet> {
           onStep: (delta) =>
               setState(() => _endBpm = _clampBpm(_endBpm + delta * _bpmStep)),
         ),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: SegmentedButton<RampUnit>(
+            segments: const [
+              ButtonSegment(value: RampUnit.bars, label: Text('Bars')),
+              ButtonSegment(value: RampUnit.seconds, label: Text('Sec')),
+              ButtonSegment(value: RampUnit.minutes, label: Text('Min')),
+            ],
+            selected: {_unit},
+            onSelectionChanged: (selected) => setState(() => _unit = selected.first),
+          ),
+        ),
         KitbagStepperRow(
-          label: 'Bars',
+          label: durationLabel,
           value: '$_bars',
           onStep: (delta) => setState(
-            () => _bars = (_bars + delta).clamp(
-              1,
-              MetronomeController.maxRampBars,
-            ),
+            () => _bars = (_bars + delta).clamp(1, _durationMax()),
           ),
         ),
       ],
