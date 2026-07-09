@@ -36,8 +36,7 @@ PitchAnalyzer::PitchAnalyzer(double sample_rate, double low_hz, double high_hz)
     : sample_rate_(sample_rate),
       band_low_hz_(low_hz),
       band_high_hz_(high_hz),
-      samples_per_update_(static_cast<int>(sample_rate / kUpdatesPerSecond)),
-      envelope_decay_(std::exp(-kGateReleasePerSecond / sample_rate)) {
+      samples_per_update_(static_cast<int>(sample_rate / kUpdatesPerSecond)) {
   RebuildDetector();
 }
 
@@ -62,12 +61,40 @@ void PitchAnalyzer::RebuildDetector() {
   samples_until_update_ = samples_per_update_;
   median_filled_ = 0;
   ema_seeded_ = false;
+  lock_state_ = LockState::None;
+  lock_counter_ = 0;
+  lock_cents_sum_ = 0.0;
+  re_lock_note_ = -1;
+  re_lock_frames_ = 0;
+  gate_open_ = false;
+  rms_envelope_ = 0.0;
+  noise_floor_ = 0.0;
   PublishSilence();
 }
 
 bool PitchAnalyzer::Process(float sample) {
-  const double magnitude = std::fabs(static_cast<double>(sample));
-  envelope_ = std::max(magnitude, envelope_ * envelope_decay_);
+  // Asymmetric RMS envelope follower
+  const double sample_sq =
+      static_cast<double>(sample) * static_cast<double>(sample);
+  if (sample_sq > rms_envelope_) {
+    rms_envelope_ += kRmsAttack * (sample_sq - rms_envelope_);
+  } else {
+    rms_envelope_ += kRmsRelease * (sample_sq - rms_envelope_);
+  }
+
+  // Noise floor tracker: slow attack (ambient tracking), fast release
+  if (sample_sq > noise_floor_) {
+    noise_floor_ += kNoiseFloorAttack * (sample_sq - noise_floor_);
+  } else {
+    noise_floor_ += kNoiseFloorRelease * (sample_sq - noise_floor_);
+  }
+
+  // Gate: signal must exceed max(hard floor, 12dB above noise floor)
+  const double rms = std::sqrt(rms_envelope_);
+  const double noise_rms = std::sqrt(noise_floor_);
+  const double gate_threshold =
+      std::max(kHardFloor, noise_rms * std::pow(10.0, kGateThresholdDb / 20.0));
+  gate_open_ = rms > gate_threshold;
 
   (*detector_)(sample);
 
@@ -77,17 +104,20 @@ bool PitchAnalyzer::Process(float sample) {
   samples_until_update_ = samples_per_update_;
 
   const double frequency = detector_->get_frequency();
-  if (envelope_ < kGateLevel || frequency <= 0.0) {
-    PublishSilence();
-  } else {
+  if (gate_open_ && frequency > 0.0) {
     PublishFrequency(frequency);
+  } else {
+    HandleNoSignal();
+  }
+
+  if (lock_state_ != LockState::Locked && re_lock_frames_ > 0) {
+    --re_lock_frames_;
   }
   return true;
 }
 
 double PitchAnalyzer::MedianHz(double frequency_hz) {
   if (median_filled_ < kMedianLength) {
-    // Warm-up: fill the whole window so early readings aren't biased to 0.
     std::fill(median_window_, median_window_ + kMedianLength, frequency_hz);
     median_filled_ = kMedianLength;
     return frequency_hz;
@@ -105,24 +135,151 @@ double PitchAnalyzer::MedianHz(double frequency_hz) {
 
 void PitchAnalyzer::PublishFrequency(double frequency_hz) {
   const double median_hz = MedianHz(frequency_hz);
-  const int32_t note = NoteIndexForFrequency(median_hz, a4_hz_);
-  const double cents = CentsOffsetForFrequency(median_hz, a4_hz_);
+  const int32_t raw_note = NoteIndexForFrequency(median_hz, a4_hz_);
+  const double raw_cents = CentsOffsetForFrequency(median_hz, a4_hz_);
 
-  // EMA smooths within a note; a note change re-seeds so the needle jumps
-  // to the new string instead of gliding through no-man's-land.
-  if (!ema_seeded_ || note != reading_.note_index) {
-    ema_cents_ = cents;
-    ema_seeded_ = true;
-  } else {
-    ema_cents_ += kCentsEmaAlpha * (cents - ema_cents_);
+  bool should_publish = false;
+  int32_t publish_note = -1;
+  double publish_cents = 0.0;
+
+  switch (lock_state_) {
+    case LockState::None:
+      if (raw_note >= 0) {
+        if (raw_note == re_lock_note_ && re_lock_frames_ > 0) {
+          lock_state_ = LockState::Locked;
+          lock_counter_ = 0;
+          should_publish = true;
+          publish_note = raw_note;
+          publish_cents = raw_cents;
+          re_lock_note_ = -1;
+          re_lock_frames_ = 0;
+        } else {
+          lock_state_ = LockState::Locking;
+          locked_note_ = raw_note;
+          lock_counter_ = 1;
+          lock_cents_sum_ = raw_cents;
+        }
+      }
+      break;
+
+    case LockState::Locking:
+      if (raw_note == locked_note_ &&
+          std::fabs(raw_cents) <= kLockCentsThreshold) {
+        ++lock_counter_;
+        lock_cents_sum_ += raw_cents;
+        if (lock_counter_ >= kLockAcquireSamples) {
+          lock_state_ = LockState::Locked;
+          lock_counter_ = 0;
+          should_publish = true;
+          publish_note = locked_note_;
+          publish_cents =
+              lock_cents_sum_ / static_cast<double>(kLockAcquireSamples);
+          lock_cents_sum_ = 0.0;
+        }
+      } else {
+        lock_state_ = LockState::None;
+        lock_counter_ = 0;
+        lock_cents_sum_ = 0.0;
+      }
+      break;
+
+    case LockState::Locked:
+      if (raw_note == locked_note_) {
+        lock_counter_ = 0;
+        should_publish = true;
+        publish_note = locked_note_;
+        publish_cents = raw_cents;
+        re_lock_note_ = -1;
+        re_lock_frames_ = 0;
+      } else if (raw_note < 0) {
+        lock_state_ = LockState::Riding;
+        lock_counter_ = 1;
+        re_lock_note_ = locked_note_;
+        re_lock_frames_ = kReLockSamples;
+        last_locked_reading_ = reading_;
+      } else {
+        ++lock_counter_;
+        re_lock_note_ = locked_note_;
+        re_lock_frames_ = kReLockSamples;
+        if (lock_counter_ >= kReLockSamples) {
+          lock_state_ = LockState::None;
+          lock_counter_ = 0;
+        }
+      }
+      break;
+
+    case LockState::Riding:
+      if (raw_note == locked_note_) {
+        lock_state_ = LockState::Locked;
+        lock_counter_ = 0;
+        should_publish = true;
+        publish_note = locked_note_;
+        publish_cents = raw_cents;
+      } else {
+        ++lock_counter_;
+        if (lock_counter_ >= kRideMaxSamples) {
+          lock_state_ = LockState::None;
+          lock_counter_ = 0;
+        } else {
+          reading_ = last_locked_reading_;
+          return;
+        }
+      }
+      break;
   }
 
-  reading_.note_index = note;
+  if (!should_publish) {
+    PublishSilence();
+    return;
+  }
+
+  // EMA smoothing on cents
+  if (!ema_seeded_ || publish_note != reading_.note_index) {
+    ema_cents_ = publish_cents;
+    ema_seeded_ = true;
+  } else {
+    ema_cents_ += kCentsEmaAlpha * (publish_cents - ema_cents_);
+  }
+
+  reading_.note_index = publish_note;
   reading_.cents = ema_cents_;
   reading_.pitch_hz =
-      a4_hz_ * std::exp2((note - kMidiA4 + ema_cents_ / kCentsPerSemitone) /
+      a4_hz_ * std::exp2((publish_note - kMidiA4 + ema_cents_ / kCentsPerSemitone) /
                          kSemitonesPerOctave);
   reading_.confidence = detector_->periodicity();
+}
+
+void PitchAnalyzer::HandleNoSignal() {
+  switch (lock_state_) {
+    case LockState::None:
+    case LockState::Locking:
+      lock_state_ = LockState::None;
+      lock_counter_ = 0;
+      lock_cents_sum_ = 0.0;
+      break;
+
+    case LockState::Locked:
+      lock_state_ = LockState::Riding;
+      lock_counter_ = 1;
+      re_lock_note_ = locked_note_;
+      re_lock_frames_ = kReLockSamples;
+      last_locked_reading_ = reading_;
+      break;
+
+    case LockState::Riding:
+      ++lock_counter_;
+      if (lock_counter_ >= kRideMaxSamples) {
+        lock_state_ = LockState::None;
+        lock_counter_ = 0;
+      }
+      break;
+  }
+
+  if (lock_state_ == LockState::Riding) {
+    reading_ = last_locked_reading_;
+  } else {
+    PublishSilence();
+  }
 }
 
 void PitchAnalyzer::PublishSilence() {
