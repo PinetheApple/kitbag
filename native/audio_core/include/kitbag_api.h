@@ -115,6 +115,25 @@ KB_EXPORT uint32_t kb_decoder_sample_rate(const kb_engine* engine);
 /* Number of channels. */
 KB_EXPORT uint32_t kb_decoder_channels(const kb_engine* engine);
 
+/* --- Beat Analysis ------------------------------------------------------- */
+
+/* Analyze beats in an audio file and fill caller-provided output buffer.
+ * The file is opened and decoded internally — no need to call kb_decoder_open first.
+ *
+ *   bpm_out:          filled with detected BPM (0.0 if detection fails)
+ *   beat_times_buf:   caller-allocated float buffer, receives beat times in seconds
+ *   beat_times_cap:   capacity of beat_times_buf in elements (recommend 1024)
+ *   beat_count_out:   filled with number of beats written
+ *   waveform_dir:     directory to write waveform peaks sidecar ("KWAV" binary),
+ *                     or NULL to skip waveform generation
+ *
+ * Returns KB_OK on success (even if no beats found; check *beat_count_out).
+ */
+KB_EXPORT kb_result kb_analyze_song(const char* path, float* bpm_out,
+                                    float* beat_times_buf, int32_t beat_times_cap,
+                                    int32_t* beat_count_out,
+                                    const char* waveform_dir);
+
 #ifdef __cplusplus
 }
 #endif

@@ -68,6 +68,12 @@ class LibrarySongs extends Table {
   RealColumn get duration => real()();
   TextColumn get format => text()();
   DateTimeColumn get createdAt => dateTime()();
+  /// Beat timestamps as a packed float32 array, one per beat (seconds).
+  BlobColumn get beatGrid => blob().nullable()();
+  /// Detected BPM from beat analysis, or null.
+  RealColumn get bpm => real().nullable()();
+  /// Path to the waveform peaks sidecar (.kwav) file, or null.
+  TextColumn get waveformPath => text().nullable()();
 }
 
 @DriftDatabase(
@@ -82,7 +88,7 @@ class KitbagDatabase extends _$KitbagDatabase {
   KitbagDatabase.open() : super(driftDatabase(name: 'kitbag'));
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -100,6 +106,11 @@ class KitbagDatabase extends _$KitbagDatabase {
       }
       if (from < 4) {
         await m.createTable(librarySongs);
+      }
+      if (from < 5) {
+        await m.addColumn(librarySongs, librarySongs.beatGrid);
+        await m.addColumn(librarySongs, librarySongs.bpm);
+        await m.addColumn(librarySongs, librarySongs.waveformPath);
       }
     },
   );

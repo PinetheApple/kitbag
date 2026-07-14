@@ -35,6 +35,10 @@ typedef SetTwoDoublesNative = Void Function(Pointer<Void>, Double, Double);
 typedef SetTwoDoublesDart = void Function(Pointer<Void>, double, double);
 typedef DecoderOpenNative = Int32 Function(Pointer<Void>, Pointer<Int8>);
 typedef DecoderOpenDart = int Function(Pointer<Void>, Pointer<Int8>);
+typedef AnalyzeSongNative = Int32 Function(Pointer<Int8>, Pointer<Float>,
+    Pointer<Float>, Int32, Pointer<Int32>, Pointer<Int8>);
+typedef AnalyzeSongDart = int Function(Pointer<Int8>, Pointer<Float>,
+    Pointer<Float>, int, Pointer<Int32>, Pointer<Int8>);
 typedef DecoderCloseNative = Void Function(Pointer<Void>);
 typedef DecoderCloseDart = void Function(Pointer<Void>);
 typedef DecoderGetDoubleNative = Double Function(Pointer<Void>);
@@ -166,7 +170,10 @@ class KitbagBindings {
       decoderChannels = library
           .lookupFunction<DecoderGetUint32Native, DecoderGetUint32Dart>(
             'kb_decoder_channels',
-          );
+          ),
+      analyzeSong = library.lookupFunction<AnalyzeSongNative, AnalyzeSongDart>(
+        'kb_analyze_song',
+      );
 
   static const String _libraryName = 'kitbag_core';
 
@@ -205,6 +212,7 @@ class KitbagBindings {
   final DecoderGetDoubleDart decoderDuration;
   final DecoderGetUint32Dart decoderSampleRate;
   final DecoderGetUint32Dart decoderChannels;
+  final AnalyzeSongDart analyzeSong;
 
   static DynamicLibrary openLibrary() {
     if (Platform.isAndroid) {

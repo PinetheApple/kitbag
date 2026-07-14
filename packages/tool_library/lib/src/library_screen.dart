@@ -10,12 +10,42 @@ import 'package:path_provider/path_provider.dart';
 
 import 'library_state.dart';
 
-/// Decodes an audio file in a background isolate and returns duration (s).
-double _decodeDuration(String path) {
+/// Result of analyzing a song in a background isolate.
+class _AnalysisResult {
+  final double duration;
+  final double bpm;
+  final Float32List beatTimes;
+  final String? waveformPath;
+  _AnalysisResult({
+    required this.duration,
+    required this.bpm,
+    required this.beatTimes,
+    this.waveformPath,
+  });
+}
+
+/// Analyzes a song file in a background isolate.
+/// Returns duration, BPM, beat times, and waveform sidecar path.
+_AnalysisResult _analyzeSong(String path) {
   final engine = AudioEngine.create()..start();
   try {
-    final result = engine.decoder.open(path);
-    return result?.$1 ?? 0;
+    // Get duration first
+    final meta = engine.decoder.open(path);
+    final duration = meta?.$1 ?? 0.0;
+
+    // Run beat analysis and waveform generation
+    final musicDir = Directory(path).parent.path;
+    final result = engine.decoder.analyzeSong(path, waveformDir: musicDir);
+
+    if (result != null) {
+      return _AnalysisResult(
+        duration: duration,
+        bpm: result.$1,
+        beatTimes: result.$2,
+        waveformPath: result.$3,
+      );
+    }
+    return _AnalysisResult(duration: duration, bpm: 0, beatTimes: Float32List(0));
   } finally {
     engine.dispose();
   }
@@ -123,21 +153,32 @@ class LibraryScreen extends ConsumerWidget {
       final title = file.name.split('.').first;
       final artist = 'Unknown';
 
-      // Decode audio metadata on a background isolate to avoid jank.
-      double duration = 0;
+      // Analyze song in background isolate for duration + beat grid + waveform.
+      _AnalysisResult analysis;
       try {
-        duration = await compute(_decodeDuration, dest.path);
+        analysis = await compute(_analyzeSong, dest.path);
       } catch (_) {
-        // Non-fatal — song shows with 0:00 until manual fix.
+        analysis = _AnalysisResult(duration: 0, bpm: 0, beatTimes: Float32List(0));
       }
 
-      await db.librarySongsDao.create(
+      final songId = await db.librarySongsDao.create(
         title: title,
         artist: artist,
         filePath: dest.path,
-        duration: duration,
+        duration: analysis.duration,
         format: format,
       );
+
+      // Store beat analysis results if we got any beats
+      if (analysis.bpm > 0 && analysis.beatTimes.isNotEmpty) {
+        final beatBytes = analysis.beatTimes.buffer.asUint8List();
+        await db.librarySongsDao.updateAnalysis(
+          id: songId,
+          bpm: analysis.bpm,
+          beatGrid: beatBytes,
+          waveformPath: analysis.waveformPath,
+        );
+      }
       imported++;
     }
 

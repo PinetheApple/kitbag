@@ -39,4 +39,18 @@ class LibrarySongsDao extends DatabaseAccessor<KitbagDatabase>
       customSelect('SELECT COUNT(*) FROM library_songs')
           .getSingle()
           .then((r) => r.read<int>('COUNT(*)'));
+
+  Future<void> updateAnalysis({
+    required int id,
+    required double bpm,
+    required Uint8List beatGrid,
+    String? waveformPath,
+  }) =>
+      (update(librarySongs)..where((t) => t.id.equals(id))).write(
+        LibrarySongsCompanion(
+          bpm: Value(bpm),
+          beatGrid: Value(beatGrid),
+          waveformPath: Value(waveformPath),
+        ),
+      );
 }
