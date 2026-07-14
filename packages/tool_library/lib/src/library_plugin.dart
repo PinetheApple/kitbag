@@ -1,3 +1,4 @@
+import 'package:core_db/core_db.dart';
 import 'package:core_design/core_design.dart';
 import 'package:core_plugin_api/core_plugin_api.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import 'library_screen.dart';
 import 'library_state.dart';
+import 'player_screen.dart';
 
 class LibraryPlugin implements ToolPlugin {
   const LibraryPlugin();
@@ -27,6 +29,15 @@ class LibraryPlugin implements ToolPlugin {
     GoRoute(
       path: 'library',
       builder: (context, state) => const LibraryScreen(),
+      routes: [
+        GoRoute(
+          path: 'player',
+          builder: (context, state) {
+            final song = state.extra as LibrarySong;
+            return PlayerScreen(song: song);
+          },
+        ),
+      ],
     ),
   ];
 
