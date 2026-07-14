@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import 'library_screen.dart';
 import 'library_state.dart';
+import 'play_along_screen.dart';
 import 'player_screen.dart';
 
 class LibraryPlugin implements ToolPlugin {
@@ -35,6 +36,13 @@ class LibraryPlugin implements ToolPlugin {
           builder: (context, state) {
             final song = state.extra as LibrarySong;
             return PlayerScreen(song: song);
+          },
+        ),
+        GoRoute(
+          path: 'play-along',
+          builder: (context, state) {
+            final song = state.extra as LibrarySong;
+            return PlayAlongScreen(song: song);
           },
         ),
       ],

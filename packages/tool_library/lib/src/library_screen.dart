@@ -118,9 +118,31 @@ class LibraryScreen extends ConsumerWidget {
                 subtitle: Text(
                   '${song.artist} · $min:${sec.toString().padLeft(2, '0')}',
                 ),
-                trailing: Text('.${song.format}',
-                    style: Theme.of(context).textTheme.labelSmall),
-                onTap: () => context.push('/library/library/player', extra: song),
+                trailing: PopupMenuButton<String>(
+                  onSelected: (v) {
+                    if (v == 'play') {
+                      context.push('/library/library/player', extra: song);
+                    } else if (v == 'play-along') {
+                      context.push('/library/library/play-along', extra: song);
+                    }
+                  },
+                  itemBuilder: (_) => [
+                    const PopupMenuItem(
+                      value: 'play',
+                      child: ListTile(
+                        leading: Icon(Icons.play_arrow),
+                        title: Text('Play'),
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'play-along',
+                      child: ListTile(
+                        leading: Icon(Icons.speed),
+                        title: Text('Play along'),
+                      ),
+                    ),
+                  ],
+                ),
               );
             },
           );
