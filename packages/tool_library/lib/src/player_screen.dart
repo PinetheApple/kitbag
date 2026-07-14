@@ -1,9 +1,11 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:core_db/core_db.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'beat_sync_service.dart';
 import 'player_state.dart';
 import 'waveform_painter.dart';
 
@@ -19,11 +21,14 @@ class PlayerScreen extends ConsumerStatefulWidget {
 class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   List<List<PeakPair>> _peaks = [];
   bool _peaksLoaded = false;
+  Float32List? _beatGrid;
+  double _bpm = 0;
 
   @override
   void initState() {
     super.initState();
     _loadWaveform();
+    _loadBeatGrid();
     _initPlayer();
   }
 
@@ -40,12 +45,19 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     _peaksLoaded = true;
   }
 
+  void _loadBeatGrid() {
+    if (widget.song.beatGrid == null) return;
+    _beatGrid = widget.song.beatGrid!.buffer.asFloat32List();
+    _bpm = widget.song.bpm ?? 0;
+  }
+
   @override
   Widget build(BuildContext context) {
     final player = ref.watch(playerProvider);
     final positionAsync = ref.watch(playerPositionProvider);
     final durationAsync = ref.watch(playerDurationProvider);
     final playingAsync = ref.watch(playerPlayingProvider);
+    final sync = ref.watch(beatSyncProvider);
 
     final position = positionAsync.valueOrNull ?? Duration.zero;
     final duration = durationAsync.valueOrNull ?? Duration.zero;
@@ -65,7 +77,6 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
       body: Column(
         children: [
           const Spacer(),
-          // Waveform
           if (_peaksLoaded)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -91,7 +102,6 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
               ),
             ),
           const SizedBox(height: 16),
-          // Time labels + slider
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
@@ -113,6 +123,13 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
             ),
           ),
           const SizedBox(height: 8),
+          // Beat sync indicator
+          if (_bpm > 0)
+            Center(
+              child: Text('${_bpm.toStringAsFixed(1)} BPM • ${_beatGrid?.length ?? 0} beats',
+                  style: Theme.of(context).textTheme.bodySmall),
+            ),
+          const SizedBox(height: 8),
           // Transport controls
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -120,6 +137,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
               IconButton(
                 icon: const Icon(Icons.skip_previous, size: 36),
                 onPressed: () {
+                  sync.onSeek(Duration.zero);
                   player.seek(Duration.zero);
                 },
               ),
@@ -131,8 +149,13 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                 ),
                 onPressed: () {
                   if (isPlaying) {
+                    sync.stop();
                     player.pause();
                   } else {
+                    if (_beatGrid != null && _bpm > 0) {
+                      sync.loadBeatGrid(_beatGrid!, _bpm);
+                      sync.start();
+                    }
                     player.play();
                   }
                 },
@@ -141,6 +164,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
               IconButton(
                 icon: const Icon(Icons.stop, size: 36),
                 onPressed: () {
+                  sync.stop();
                   player.stop();
                 },
               ),
