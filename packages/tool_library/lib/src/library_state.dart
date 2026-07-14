@@ -1,3 +1,5 @@
+import 'package:core_db/core_db.dart';
+import 'package:core_services/core_services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class LibrarySettings {
@@ -19,3 +21,8 @@ class LibraryNotifier extends Notifier<LibrarySettings> {
 
   void setSongCount(int count) => state = state.copyWith(songCount: count);
 }
+
+final librarySongsProvider = StreamProvider<List<LibrarySong>>((ref) {
+  final db = ref.watch(kitbagDatabaseProvider);
+  return db.librarySongsDao.watchAll();
+});

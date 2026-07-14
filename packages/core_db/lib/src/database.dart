@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+import 'library_songs_dao.dart';
 import 'practice_dao.dart';
 import 'setlists_dao.dart';
 import 'songs_dao.dart';
@@ -57,9 +58,21 @@ class PracticeSessions extends Table {
   TextColumn? get songsPlayed => text().nullable()();
 }
 
+/// An imported audio song in the user's library. [filePath] is relative
+/// to the app's base music directory.
+class LibrarySongs extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get title => text()();
+  TextColumn get artist => text()();
+  TextColumn get filePath => text()();
+  RealColumn get duration => real()();
+  TextColumn get format => text()();
+  DateTimeColumn get createdAt => dateTime()();
+}
+
 @DriftDatabase(
-  tables: [Setlists, Songs, Tunings, PracticeSessions],
-  daos: [SetlistsDao, SongsDao, TuningsDao, PracticeDao],
+  tables: [Setlists, Songs, Tunings, PracticeSessions, LibrarySongs],
+  daos: [SetlistsDao, SongsDao, TuningsDao, PracticeDao, LibrarySongsDao],
 )
 class KitbagDatabase extends _$KitbagDatabase {
   /// Tests inject an executor (e.g. `NativeDatabase.memory()`).
@@ -69,7 +82,7 @@ class KitbagDatabase extends _$KitbagDatabase {
   KitbagDatabase.open() : super(driftDatabase(name: 'kitbag'));
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -84,6 +97,9 @@ class KitbagDatabase extends _$KitbagDatabase {
       }
       if (from < 3) {
         await m.createTable(practiceSessions);
+      }
+      if (from < 4) {
+        await m.createTable(librarySongs);
       }
     },
   );

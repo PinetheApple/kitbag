@@ -16,6 +16,9 @@ dependencies:
   core_db:
   core_design:
   core_plugin_api:
+  core_services:
+  file_picker: ^8.0.0
+  path_provider: ^2.0.0
 
 dev_dependencies:
   flutter_lints: ^6.0.0
