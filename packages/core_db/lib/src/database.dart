@@ -124,9 +124,22 @@ class KitbagDatabase extends _$KitbagDatabase {
       await customStatement('PRAGMA foreign_keys = ON');
     },
     onUpgrade: (m, from, to) async {
+      // Each step is wrapped in try-catch to handle partial migrations
+      // and stale databases gracefully.
+      Future<void> safeAddColumn(
+        TableInfo<Table, dynamic> table,
+        GeneratedColumn column,
+      ) async {
+        try {
+          await m.addColumn(table, column);
+        } catch (_) {
+          // Column may already exist — safe to ignore.
+        }
+      }
+
       if (from < 2) {
-        await m.addColumn(songs, songs.volume);
-        await m.addColumn(songs, songs.latencyOffset);
+        await safeAddColumn(songs, songs.volume);
+        await safeAddColumn(songs, songs.latencyOffset);
       }
       if (from < 3) {
         await m.createTable(practiceSessions);
@@ -135,9 +148,9 @@ class KitbagDatabase extends _$KitbagDatabase {
         await m.createTable(librarySongs);
       }
       if (from < 5) {
-        await m.addColumn(librarySongs, librarySongs.beatGrid);
-        await m.addColumn(librarySongs, librarySongs.bpm);
-        await m.addColumn(librarySongs, librarySongs.waveformPath);
+        await safeAddColumn(librarySongs, librarySongs.beatGrid);
+        await safeAddColumn(librarySongs, librarySongs.bpm);
+        await safeAddColumn(librarySongs, librarySongs.waveformPath);
       }
       if (from < 6) {
         await m.createTable(stemSets);
