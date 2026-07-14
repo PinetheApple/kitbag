@@ -9,6 +9,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 add_library(kitbag_core SHARED
   src/api.cpp
+  src/decoder.cpp
   src/engine.cpp
   src/metronome.cpp
   src/miniaudio_impl.c

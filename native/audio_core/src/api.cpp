@@ -200,4 +200,31 @@ uint64_t kb_tuner_snapshot(const kb_engine* engine) {
              : ToEngine(engine)->tuner().snapshot();
 }
 
+kb_result kb_decoder_open(kb_engine* engine, const char* path) {
+  if (engine == nullptr || path == nullptr) {
+    return KB_ERROR_INVALID_ARGUMENT;
+  }
+  return ToEngine(engine)->decoder().Open(path) ? KB_OK
+                                                : KB_ERROR_INVALID_ARGUMENT;
+}
+
+void kb_decoder_close(kb_engine* engine) {
+  if (engine != nullptr) {
+    ToEngine(engine)->decoder().Close();
+  }
+}
+
+double kb_decoder_duration(const kb_engine* engine) {
+  return engine == nullptr ? 0.0
+                           : ToEngine(engine)->decoder().info().duration_seconds;
+}
+
+uint32_t kb_decoder_sample_rate(const kb_engine* engine) {
+  return engine == nullptr ? 0 : ToEngine(engine)->decoder().info().sample_rate;
+}
+
+uint32_t kb_decoder_channels(const kb_engine* engine) {
+  return engine == nullptr ? 0 : ToEngine(engine)->decoder().info().channels;
+}
+
 }  // extern "C"

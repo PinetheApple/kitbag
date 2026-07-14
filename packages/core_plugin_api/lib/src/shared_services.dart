@@ -23,6 +23,12 @@ final tunerControllerProvider = Provider<TunerController>(
   (ref) => ref.watch(audioEngineProvider).tuner,
 );
 
+/// Decoder for reading audio file metadata. Not overridable in tests (no
+/// fake yet) — guards against missing native library at the call site.
+final decoderControllerProvider = Provider<DecoderController>(
+  (ref) => ref.watch(audioEngineProvider).decoder,
+);
+
 /// The single app database. Widget tests override this with an in-memory
 /// executor instead of touching the filesystem.
 final kitbagDatabaseProvider = Provider<KitbagDatabase>((ref) {

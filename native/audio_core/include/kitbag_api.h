@@ -103,6 +103,18 @@ KB_EXPORT void kb_tuner_set_band(kb_engine* engine, double low_hz,
  *   bits 32-47  uint16  confidence [0,1] x10000 */
 KB_EXPORT uint64_t kb_tuner_snapshot(const kb_engine* engine);
 
+/* --- Audio Decoder ------------------------------------------------------- */
+
+/* Opens an audio file and reads metadata. Returns KB_OK on success. */
+KB_EXPORT kb_result kb_decoder_open(kb_engine* engine, const char* path);
+KB_EXPORT void kb_decoder_close(kb_engine* engine);
+/* Duration in seconds. */
+KB_EXPORT double kb_decoder_duration(const kb_engine* engine);
+/* Sample rate in Hz. */
+KB_EXPORT uint32_t kb_decoder_sample_rate(const kb_engine* engine);
+/* Number of channels. */
+KB_EXPORT uint32_t kb_decoder_channels(const kb_engine* engine);
+
 #ifdef __cplusplus
 }
 #endif

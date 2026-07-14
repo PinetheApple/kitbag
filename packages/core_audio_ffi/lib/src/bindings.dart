@@ -33,6 +33,14 @@ typedef GetDoubleNative = Double Function(Pointer<Void>);
 typedef GetDoubleDart = double Function(Pointer<Void>);
 typedef SetTwoDoublesNative = Void Function(Pointer<Void>, Double, Double);
 typedef SetTwoDoublesDart = void Function(Pointer<Void>, double, double);
+typedef DecoderOpenNative = Int32 Function(Pointer<Void>, Pointer<Int8>);
+typedef DecoderOpenDart = int Function(Pointer<Void>, Pointer<Int8>);
+typedef DecoderCloseNative = Void Function(Pointer<Void>);
+typedef DecoderCloseDart = void Function(Pointer<Void>);
+typedef DecoderGetDoubleNative = Double Function(Pointer<Void>);
+typedef DecoderGetDoubleDart = double Function(Pointer<Void>);
+typedef DecoderGetUint32Native = Uint32 Function(Pointer<Void>);
+typedef DecoderGetUint32Dart = int Function(Pointer<Void>);
 
 class KitbagBindings {
   KitbagBindings(DynamicLibrary library)
@@ -139,7 +147,26 @@ class KitbagBindings {
           ),
       tunerSnapshot = library.lookupFunction<FramesNative, FramesDart>(
         'kb_tuner_snapshot',
-      );
+      ),
+      decoderOpen = library.lookupFunction<DecoderOpenNative, DecoderOpenDart>(
+        'kb_decoder_open',
+      ),
+      decoderClose = library
+          .lookupFunction<DecoderCloseNative, DecoderCloseDart>(
+            'kb_decoder_close',
+          ),
+      decoderDuration = library
+          .lookupFunction<DecoderGetDoubleNative, DecoderGetDoubleDart>(
+            'kb_decoder_duration',
+          ),
+      decoderSampleRate = library
+          .lookupFunction<DecoderGetUint32Native, DecoderGetUint32Dart>(
+            'kb_decoder_sample_rate',
+          ),
+      decoderChannels = library
+          .lookupFunction<DecoderGetUint32Native, DecoderGetUint32Dart>(
+            'kb_decoder_channels',
+          );
 
   static const String _libraryName = 'kitbag_core';
 
@@ -173,6 +200,11 @@ class KitbagBindings {
   final SetDoubleDart tunerSetA4;
   final SetTwoDoublesDart tunerSetBand;
   final FramesDart tunerSnapshot;
+  final DecoderOpenDart decoderOpen;
+  final DecoderCloseDart decoderClose;
+  final DecoderGetDoubleDart decoderDuration;
+  final DecoderGetUint32Dart decoderSampleRate;
+  final DecoderGetUint32Dart decoderChannels;
 
   static DynamicLibrary openLibrary() {
     if (Platform.isAndroid) {

@@ -1,12 +1,35 @@
 import 'dart:io';
 
+import 'package:core_audio_ffi/core_audio_ffi.dart';
 import 'package:core_services/core_services.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'library_state.dart';
+
+/// Decodes an audio file in a background isolate and returns duration (s).
+double _decodeDuration(String path) {
+  final engine = AudioEngine.create()..start();
+  try {
+    final result = engine.decoder.open(path);
+    return result?.$1 ?? 0;
+  } finally {
+    engine.dispose();
+  }
+}
+
+/// Thrown when decoding an imported song fails — non-fatal, song still shows
+/// with duration 0.
+class DecodeException implements Exception {
+  DecodeException(this.path, this.message);
+  final String path;
+  final String message;
+  @override
+  String toString() => 'DecodeException($path: $message)';
+}
 
 class LibraryScreen extends ConsumerWidget {
   const LibraryScreen({super.key});
@@ -99,12 +122,20 @@ class LibraryScreen extends ConsumerWidget {
 
       final title = file.name.split('.').first;
       final artist = 'Unknown';
-      // Duration is unknown at import time — will be updated after decode.
+
+      // Decode audio metadata on a background isolate to avoid jank.
+      double duration = 0;
+      try {
+        duration = await compute(_decodeDuration, dest.path);
+      } catch (_) {
+        // Non-fatal — song shows with 0:00 until manual fix.
+      }
+
       await db.librarySongsDao.create(
         title: title,
         artist: artist,
         filePath: dest.path,
-        duration: 0,
+        duration: duration,
         format: format,
       );
       imported++;

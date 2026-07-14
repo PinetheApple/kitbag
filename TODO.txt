@@ -1,0 +1,29 @@
+- [DONE] notification bar with timer and play/pause/stop
+- [DONE] metronome: Android system notification with play/pause/stop
+- fine tune the tuner; test with guitar
+- [DONE] logo for app
+- settings
+- support adding/removing strings when creating custom tuning profile
+- adding gapping to elements in list (setlist/songs list)
+- setlist/song should also save the metronome settings (bars/click sound/poly etc) per song
+
+- stems
+- songs
+- play along
+
+- ramp should support seconds/minutes, not just bars
+- support custom subdivision in metronome (not limited to singles,doubles,etc)
+- improve circle placement in metronome (needs to be more space optimal)
+- [DONE] metronome needs timer (that can be reset)
+- support more click sounds (currently only 3)
+
+- in settings
+	- export/import setlists/songs
+	- set a base directory for songs/stems
+	- volumen boost/reduction option
+	- latency correction
+
+- tuner is really bad on mobile
+	- not picking up sound very well, have to hold the microphone very close to the guitar
+	- need to check the issue
+	- tuner can be done last

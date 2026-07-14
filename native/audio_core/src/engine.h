@@ -4,6 +4,7 @@
 #include <atomic>
 #include <cstdint>
 
+#include "decoder.h"
 #include "metronome.h"
 #include "miniaudio.h"
 #include "tuner.h"
@@ -40,6 +41,9 @@ class Engine {
   Tuner& tuner() { return tuner_; }
   const Tuner& tuner() const { return tuner_; }
 
+  Decoder& decoder() { return decoder_; }
+  const Decoder& decoder() const { return decoder_; }
+
  private:
   static void DataCallback(ma_device* device, void* output, const void* input,
                            ma_uint32 frame_count);
@@ -55,6 +59,7 @@ class Engine {
 
   Metronome metronome_;
   Tuner tuner_;
+  Decoder decoder_;
 };
 
 }  // namespace kitbag
