@@ -103,6 +103,10 @@ class StemsScreen extends ConsumerWidget {
                 title: Text(set.name),
                 subtitle: Text(_formatDate(set.createdAt)),
                 onTap: () => _openStemSet(context, ref, set),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: () => _deleteStemSet(context, ref, set),
+                ),
               );
             },
           );
@@ -180,7 +184,29 @@ class StemsScreen extends ConsumerWidget {
     );
   }
 
+  Future<void> _deleteStemSet(BuildContext context, WidgetRef ref, StemSet set) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete stem set'),
+        content: Text('Remove "${set.name}" and all its stems?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Delete', style: TextStyle(color: Theme.of(ctx).colorScheme.error)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    final db = ref.read(kitbagDatabaseProvider);
+    await db.stemsDao.deleteSet(set.id);
+    ref.invalidate(stemSetsProvider);
+  }
+
   void _openStemSet(BuildContext context, WidgetRef ref, StemSet set) {
-    context.push('/stems/stems/set', extra: set);
+    context.push('/stems/set', extra: set);
   }
 }

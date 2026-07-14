@@ -208,6 +208,10 @@ class _StemsSetScreenState extends ConsumerState<StemsSetScreen>
                               ref.read(stemsDaoProvider).toggleSolo(stem.id);
                             },
                           ),
+                          IconButton(
+                            icon: Icon(Icons.delete_outline, size: 20),
+                            onPressed: () => _deleteStem(stem),
+                          ),
                         ],
                       ),
                     );
@@ -219,6 +223,27 @@ class _StemsSetScreenState extends ConsumerState<StemsSetScreen>
         },
       ),
     );
+  }
+
+  Future<void> _deleteStem(Stem stem) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete stem'),
+        content: Text('Remove "${_roleLabel(stem.role)}" from this set?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Delete', style: TextStyle(color: Theme.of(ctx).colorScheme.error)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    await ref.read(stemsDaoProvider).deleteStem(stem.id);
+    ref.invalidate(stemsForSetProvider(widget.stemSet.id));
   }
 
   IconData _roleIcon(String role) {

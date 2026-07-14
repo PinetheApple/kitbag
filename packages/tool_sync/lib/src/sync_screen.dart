@@ -11,6 +11,10 @@ import 'sync_state.dart';
 
 final _bpmLookupProvider = Provider<BpmLookupService>((ref) => BpmLookupService());
 
+const _clickSoundNames = [
+  'Default', 'Wood block', 'Rim shot', 'Tom', 'Hi-hat', 'Cowbell',
+];
+
 class SyncScreen extends ConsumerStatefulWidget {
   const SyncScreen({super.key});
 
@@ -38,11 +42,9 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
     _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
       final sessions = await MediaSessionService.getActiveSessions();
       if (!mounted) return;
-      final track =
-          sessions.isNotEmpty ? sessions.first : null;
+      final track = sessions.isNotEmpty ? sessions.first : null;
       ref.read(activeTrackProvider.notifier).state = track;
 
-      // Auto-lookup BPM when a new track appears
       if (track != null) {
         final key = '${track.title}|${track.artist}';
         if (key != _lastTrackKey) {
@@ -56,7 +58,6 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
   }
 
   Future<void> _lookupBpm(String title, String artist) async {
-    // 1. Check library first (already analyzed)
     final dao = ref.read(librarySongsDaoProvider);
     final match = await dao.searchByTitleArtist(title, artist);
     if (match != null && match.bpm != null && match.beatGrid != null) {
@@ -64,7 +65,6 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
       return;
     }
 
-    // 2. Online lookup
     final service = ref.read(_bpmLookupProvider);
     final bpm = await service.lookup(title, artist);
     if (bpm != null && mounted) {
@@ -87,6 +87,7 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // Now-playing card
           Card(
             child: Padding(
               padding: const EdgeInsets.all(20),
@@ -125,8 +126,8 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
                         style: Theme.of(context).textTheme.bodyLarge),
                     const SizedBox(height: 8),
                     Text(
-                      'Play a song on Spotify, YouTube, or any music app — '
-                      'then sync the metronome here.',
+                      'Play a song on Spotify, YouTube, or any music app, '
+                      'then enable Notification Listener access in System Settings.',
                       style: Theme.of(context).textTheme.bodySmall,
                       textAlign: TextAlign.center,
                     ),
@@ -137,83 +138,206 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
           ),
           const SizedBox(height: 16),
 
-          // BPM display + lookup/tap
+          // BPM + Lock
           Card(
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  Text('BPM', style: Theme.of(context).textTheme.labelMedium),
-                  const SizedBox(height: 8),
-                  Text(
-                    detectedBpm > 0
-                        ? detectedBpm.toStringAsFixed(1)
-                        : '--',
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineLarge
-                        ?.copyWith(fontWeight: FontWeight.bold),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('BPM', style: Theme.of(context).textTheme.labelMedium),
+                      if (detectedBpm > 0)
+                        Text(
+                          detectedBpm.toStringAsFixed(1),
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineLarge
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        )
+                      else
+                        Text('--',
+                            style: Theme.of(context).textTheme.headlineLarge),
+                    ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Slider(
+                          value: detectedBpm.clamp(20.0, 400.0),
+                          min: 20,
+                          max: 400,
+                          divisions: 380,
+                          label: '${detectedBpm.round()} BPM',
+                          onChanged: (v) {
+                            ref.read(detectedBpmProvider.notifier).state = v;
+                            if (isLocked) metronome.setTempo(v);
+                          },
+                        ),
+                      ),
+                      Text('400', style: Theme.of(context).textTheme.bodySmall),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       OutlinedButton.icon(
                         icon: const Icon(Icons.tap_and_play, size: 18),
-                        label: const Text('Tap tempo'),
+                        label: const Text('Tap'),
                         onPressed: () {
                           final bpm = bpmLookup.tap();
                           if (bpm != null) {
                             ref.read(detectedBpmProvider.notifier).state = bpm;
+                            if (isLocked) metronome.setTempo(bpm);
                           }
                         },
                       ),
-                      const SizedBox(width: 12),
-                      OutlinedButton.icon(
-                        icon: const Icon(Icons.refresh, size: 18),
-                        label: const Text('Reset taps'),
+                      const SizedBox(width: 8),
+                      TextButton(
                         onPressed: () => bpmLookup.resetTap(),
+                        child: const Text('Reset'),
                       ),
+                      const SizedBox(width: 8),
+                      if (activeTrack != null)
+                        TextButton.icon(
+                          icon: const Icon(Icons.cloud_download, size: 16),
+                          label: const Text('Online'),
+                          onPressed: () =>
+                              _lookupBpm(activeTrack.title, activeTrack.artist),
+                        ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  if (activeTrack != null)
-                    TextButton.icon(
-                      icon: const Icon(Icons.cloud_download, size: 16),
-                      label: const Text('Lookup online'),
-                      onPressed: () =>
-                          _lookupBpm(activeTrack.title, activeTrack.artist),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      icon: Icon(
+                        isLocked ? Icons.sync : Icons.sync_disabled,
+                        size: 20,
+                      ),
+                      label: Text(isLocked ? 'Phase locked' : 'Lock phase'),
+                      onPressed: () {
+                        ref.read(isPhaseLockedProvider.notifier).state =
+                            !isLocked;
+                        if (!isLocked) {
+                          metronome.setTempo(
+                              detectedBpm.clamp(20.0, 400.0));
+                          metronome.start();
+                        } else {
+                          metronome.stop();
+                        }
+                      },
                     ),
+                  ),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 16),
 
-          // Lock-phase button
-          if (detectedBpm > 0)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  icon: Icon(
-                    isLocked ? Icons.sync : Icons.sync_disabled,
-                    size: 20,
+          // Time signature & subdivision
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Time signature',
+                      style: Theme.of(context).textTheme.labelMedium),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Text('Beats per bar'),
+                      const Spacer(),
+                      SizedBox(
+                        width: 160,
+                        child: Slider(
+                          value: 4,
+                          min: 1,
+                          max: 16,
+                          divisions: 15,
+                          label: '${4}',
+                          onChanged: (v) => metronome.setBeatsPerBar(v.round()),
+                        ),
+                      ),
+                      Text('16', style: Theme.of(context).textTheme.bodySmall),
+                    ],
                   ),
-                  label: Text(isLocked ? 'Phase locked' : 'Lock phase'),
-                  onPressed: () {
-                    ref.read(isPhaseLockedProvider.notifier).state = !isLocked;
-                    if (!isLocked) {
-                      metronome.setTempo(detectedBpm);
-                      metronome.start();
-                    } else {
-                      metronome.stop();
-                    }
-                  },
-                ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Text('Subdivision'),
+                      const Spacer(),
+                      SizedBox(
+                        width: 160,
+                        child: Slider(
+                          value: 1,
+                          min: 1,
+                          max: 16,
+                          divisions: 15,
+                          label: '${1}',
+                          onChanged: (v) =>
+                              metronome.setSubdivision(v.round()),
+                        ),
+                      ),
+                      Text('16', style: Theme.of(context).textTheme.bodySmall),
+                    ],
+                  ),
+                ],
               ),
             ),
+          ),
+          const SizedBox(height: 16),
+
+          // Volume & Sound
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Sound', style: Theme.of(context).textTheme.labelMedium),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Icon(Icons.volume_up, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Slider(
+                          value: 1.0,
+                          min: 0,
+                          max: 2,
+                          divisions: 40,
+                          label: '${(1.0).toStringAsFixed(2)}x',
+                          onChanged: (v) => metronome.setVolume(v),
+                        ),
+                      ),
+                      Text('2x', style: Theme.of(context).textTheme.bodySmall),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<int>(
+                    initialValue: 0,
+                    decoration: const InputDecoration(
+                      labelText: 'Click sound',
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                    items: List.generate(
+                      _clickSoundNames.length,
+                      (i) => DropdownMenuItem(value: i, child: Text(_clickSoundNames[i])),
+                    ),
+                    onChanged: (v) {
+                      if (v != null) metronome.setSound(v);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
 
           // Phase alignment (nudge)
           Card(
@@ -270,22 +394,25 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
 
           // Permission explainer
           if (activeTrack == null)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    const Icon(Icons.info_outline, size: 20),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Enable Notification Access in System Settings → '
-                        'Apps → Kitbag → Notification Access to detect '
-                        'media from other apps.',
-                        style: Theme.of(context).textTheme.bodySmall,
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'To detect media from other apps, enable Notification '
+                          'Listener access in System Settings → Apps → Special '
+                          'app access → Notification access.',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

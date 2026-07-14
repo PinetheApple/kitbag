@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:core_audio_ffi/core_audio_ffi.dart';
+import 'package:core_db/core_db.dart';
 import 'package:core_services/core_services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -121,9 +122,11 @@ class LibraryScreen extends ConsumerWidget {
                 trailing: PopupMenuButton<String>(
                   onSelected: (v) {
                     if (v == 'play') {
-                      context.push('/library/library/player', extra: song);
+                      context.push('/library/player', extra: song);
                     } else if (v == 'play-along') {
-                      context.push('/library/library/play-along', extra: song);
+                      context.push('/library/play-along', extra: song);
+                    } else if (v == 'delete') {
+                      _deleteSong(context, ref, song);
                     }
                   },
                   itemBuilder: (_) => [
@@ -141,6 +144,14 @@ class LibraryScreen extends ConsumerWidget {
                         title: Text('Play along'),
                       ),
                     ),
+                    const PopupMenuDivider(),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: ListTile(
+                        leading: Icon(Icons.delete_outline),
+                        title: Text('Delete'),
+                      ),
+                    ),
                   ],
                 ),
               );
@@ -149,6 +160,30 @@ class LibraryScreen extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  Future<void> _deleteSong(BuildContext context, WidgetRef ref, LibrarySong song) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete song'),
+        content: Text('Remove "${song.title}" from the library?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Delete', style: TextStyle(color: Theme.of(ctx).colorScheme.error)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    final db = ref.read(kitbagDatabaseProvider);
+    await db.librarySongsDao.deleteSong(song.id);
+    ref.invalidate(librarySongsProvider);
+    final count = await db.librarySongsDao.getCount();
+    ref.read(libraryProvider.notifier).setSongCount(count);
   }
 
   Future<void> _importSongs(BuildContext context, WidgetRef ref) async {
