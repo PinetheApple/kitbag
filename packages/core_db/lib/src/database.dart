@@ -5,6 +5,7 @@ import 'library_songs_dao.dart';
 import 'practice_dao.dart';
 import 'setlists_dao.dart';
 import 'songs_dao.dart';
+import 'stems_dao.dart';
 import 'tunings_dao.dart';
 
 part 'database.g.dart';
@@ -58,6 +59,32 @@ class PracticeSessions extends Table {
   TextColumn? get songsPlayed => text().nullable()();
 }
 
+/// A named group of stem tracks. Each set is imported from a single folder.
+class StemSets extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get name => text()();
+  DateTimeColumn get createdAt => dateTime()();
+}
+
+/// An individual stem track within a stem set. [role] identifies the
+/// instrument (vocals, drums, bass, guitar, keys, other).
+class Stems extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get stemSetId => integer().customConstraint(
+    'NOT NULL REFERENCES stem_sets (id) ON DELETE CASCADE',
+  )();
+  TextColumn get role => text()();
+  TextColumn get filePath => text()();
+  RealColumn get duration => real()();
+  TextColumn get format => text()();
+  IntColumn get channelCount => integer()();
+  IntColumn get sampleRate => integer()();
+  RealColumn get gain => real()();
+  BoolColumn get muted => boolean()();
+  BoolColumn get soloed => boolean()();
+  IntColumn get sortOrder => integer()();
+}
+
 /// An imported audio song in the user's library. [filePath] is relative
 /// to the app's base music directory.
 class LibrarySongs extends Table {
@@ -77,8 +104,8 @@ class LibrarySongs extends Table {
 }
 
 @DriftDatabase(
-  tables: [Setlists, Songs, Tunings, PracticeSessions, LibrarySongs],
-  daos: [SetlistsDao, SongsDao, TuningsDao, PracticeDao, LibrarySongsDao],
+  tables: [Setlists, Songs, Tunings, PracticeSessions, LibrarySongs, StemSets, Stems],
+  daos: [SetlistsDao, SongsDao, TuningsDao, PracticeDao, LibrarySongsDao, StemsDao],
 )
 class KitbagDatabase extends _$KitbagDatabase {
   /// Tests inject an executor (e.g. `NativeDatabase.memory()`).
@@ -88,7 +115,7 @@ class KitbagDatabase extends _$KitbagDatabase {
   KitbagDatabase.open() : super(driftDatabase(name: 'kitbag'));
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -111,6 +138,10 @@ class KitbagDatabase extends _$KitbagDatabase {
         await m.addColumn(librarySongs, librarySongs.beatGrid);
         await m.addColumn(librarySongs, librarySongs.bpm);
         await m.addColumn(librarySongs, librarySongs.waveformPath);
+      }
+      if (from < 6) {
+        await m.createTable(stemSets);
+        await m.createTable(stems);
       }
     },
   );
