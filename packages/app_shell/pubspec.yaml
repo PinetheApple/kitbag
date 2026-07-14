@@ -25,6 +25,7 @@ dependencies:
   tool_metronome:
   tool_library:
   tool_stems:
+  tool_sync:
   tool_tuner:
 
 dev_dependencies:

@@ -16,6 +16,7 @@ workspace:
   - packages/tool_tuner
   - packages/tool_library
   - packages/tool_stems
+  - packages/tool_sync
 
 dev_dependencies:
   melos: ^7.0.0
