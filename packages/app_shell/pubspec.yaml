@@ -23,6 +23,7 @@ dependencies:
   core_design:
   core_services:
   tool_metronome:
+  tool_library:
   tool_tuner:
 
 dev_dependencies:

@@ -14,6 +14,7 @@ workspace:
   - packages/custom_lint_kitbag
   - packages/tool_metronome
   - packages/tool_tuner
+  - packages/tool_library
 
 dev_dependencies:
   melos: ^7.0.0

@@ -1,0 +1,47 @@
+import 'package:core_design/core_design.dart';
+import 'package:core_plugin_api/core_plugin_api.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import 'library_screen.dart';
+import 'library_state.dart';
+
+class LibraryPlugin implements ToolPlugin {
+  const LibraryPlugin();
+
+  @override
+  String get id => 'library';
+
+  @override
+  String get name => 'Library';
+
+  @override
+  IconData get icon => Icons.library_music;
+
+  @override
+  String get basePath => '/library';
+
+  @override
+  List<RouteBase> get routes => [
+    GoRoute(
+      path: 'library',
+      builder: (context, state) => const LibraryScreen(),
+    ),
+  ];
+
+  @override
+  Widget buildTile(BuildContext context, {required VoidCallback onOpen}) {
+    return Consumer(
+      builder: (context, ref, _) {
+        final count = ref.watch(libraryProvider).songCount;
+        return KitbagToolTile(
+          icon: icon,
+          name: name,
+          subtitle: count > 0 ? '$count songs' : 'Import songs',
+          onTap: onOpen,
+        );
+      },
+    );
+  }
+}
