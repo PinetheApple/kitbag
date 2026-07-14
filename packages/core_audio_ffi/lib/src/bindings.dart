@@ -45,6 +45,28 @@ typedef DecoderGetDoubleNative = Double Function(Pointer<Void>);
 typedef DecoderGetDoubleDart = double Function(Pointer<Void>);
 typedef DecoderGetUint32Native = Uint32 Function(Pointer<Void>);
 typedef DecoderGetUint32Dart = int Function(Pointer<Void>);
+typedef MixerTrackDataNative = Void Function(Pointer<Void>, Int32,
+    Pointer<Float>, Int64, Int32, Int32);
+typedef MixerTrackDataDart = void Function(Pointer<Void>, int,
+    Pointer<Float>, int, int, int);
+typedef MixerSetFloatNative = Void Function(Pointer<Void>, Int32, Float);
+typedef MixerSetFloatDart = void Function(Pointer<Void>, int, double);
+typedef MixerGetFloatNative = Float Function(Pointer<Void>, Int32);
+typedef MixerGetFloatDart = double Function(Pointer<Void>, int);
+typedef MixerSetBoolNative = Void Function(Pointer<Void>, Int32, Int32);
+typedef MixerSetBoolDart = void Function(Pointer<Void>, int, int);
+typedef MixerGetBoolNative = Int32 Function(Pointer<Void>, Int32);
+typedef MixerGetBoolDart = int Function(Pointer<Void>, int);
+typedef MixerOpNative = Void Function(Pointer<Void>);
+typedef MixerOpDart = void Function(Pointer<Void>);
+typedef MixerGetIntNative = Int32 Function(Pointer<Void>);
+typedef MixerGetIntDart = int Function(Pointer<Void>);
+typedef MixerSeekNative = Void Function(Pointer<Void>, Int64);
+typedef MixerSeekDart = void Function(Pointer<Void>, int);
+typedef MixerGetInt64Native = Int64 Function(Pointer<Void>);
+typedef MixerGetInt64Dart = int Function(Pointer<Void>);
+typedef MixerGetInt64ForTrackNative = Int64 Function(Pointer<Void>, Int32);
+typedef MixerGetInt64ForTrackDart = int Function(Pointer<Void>, int);
 
 class KitbagBindings {
   KitbagBindings(DynamicLibrary library)
@@ -152,6 +174,60 @@ class KitbagBindings {
       tunerSnapshot = library.lookupFunction<FramesNative, FramesDart>(
         'kb_tuner_snapshot',
       ),
+      mixerSetTrackData = library
+          .lookupFunction<MixerTrackDataNative, MixerTrackDataDart>(
+            'kb_mixer_set_track_data',
+          ),
+      mixerSetGain = library
+          .lookupFunction<MixerSetFloatNative, MixerSetFloatDart>(
+            'kb_mixer_set_gain',
+          ),
+      mixerGain = library
+          .lookupFunction<MixerGetFloatNative, MixerGetFloatDart>(
+            'kb_mixer_gain',
+          ),
+      mixerSetMute = library
+          .lookupFunction<MixerSetBoolNative, MixerSetBoolDart>(
+            'kb_mixer_set_mute',
+          ),
+      mixerMuted = library
+          .lookupFunction<MixerGetBoolNative, MixerGetBoolDart>(
+            'kb_mixer_muted',
+          ),
+      mixerSetSolo = library
+          .lookupFunction<MixerSetBoolNative, MixerSetBoolDart>(
+            'kb_mixer_set_solo',
+          ),
+      mixerSoloed = library
+          .lookupFunction<MixerGetBoolNative, MixerGetBoolDart>(
+            'kb_mixer_soloed',
+          ),
+      mixerPlay = library.lookupFunction<MixerOpNative, MixerOpDart>(
+        'kb_mixer_play',
+      ),
+      mixerStop = library.lookupFunction<MixerOpNative, MixerOpDart>(
+        'kb_mixer_stop',
+      ),
+      mixerIsPlaying = library
+          .lookupFunction<MixerGetIntNative, MixerGetIntDart>(
+            'kb_mixer_is_playing',
+          ),
+      mixerSeek = library.lookupFunction<MixerSeekNative, MixerSeekDart>(
+        'kb_mixer_seek',
+      ),
+      mixerPosition = library
+          .lookupFunction<MixerGetInt64Native, MixerGetInt64Dart>(
+            'kb_mixer_position',
+          ),
+      mixerActiveTrackCount = library
+          .lookupFunction<MixerGetIntNative, MixerGetIntDart>(
+            'kb_mixer_active_track_count',
+          ),
+      mixerTrackFrames = library
+          .lookupFunction<MixerGetInt64ForTrackNative,
+              MixerGetInt64ForTrackDart>(
+            'kb_mixer_track_frames',
+          ),
       decoderOpen = library.lookupFunction<DecoderOpenNative, DecoderOpenDart>(
         'kb_decoder_open',
       ),
@@ -213,6 +289,20 @@ class KitbagBindings {
   final DecoderGetUint32Dart decoderSampleRate;
   final DecoderGetUint32Dart decoderChannels;
   final AnalyzeSongDart analyzeSong;
+  final MixerTrackDataDart mixerSetTrackData;
+  final MixerSetFloatDart mixerSetGain;
+  final MixerGetFloatDart mixerGain;
+  final MixerSetBoolDart mixerSetMute;
+  final MixerGetBoolDart mixerMuted;
+  final MixerSetBoolDart mixerSetSolo;
+  final MixerGetBoolDart mixerSoloed;
+  final MixerOpDart mixerPlay;
+  final MixerOpDart mixerStop;
+  final MixerGetIntDart mixerIsPlaying;
+  final MixerSeekDart mixerSeek;
+  final MixerGetInt64Dart mixerPosition;
+  final MixerGetIntDart mixerActiveTrackCount;
+  final MixerGetInt64ForTrackDart mixerTrackFrames;
 
   static DynamicLibrary openLibrary() {
     if (Platform.isAndroid) {

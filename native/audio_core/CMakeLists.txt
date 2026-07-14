@@ -15,6 +15,7 @@ add_library(kitbag_core SHARED
   src/fft.cpp
   src/metronome.cpp
   src/miniaudio_impl.c
+  src/mixer.cpp
   src/pitch_analyzer.cpp
   src/tuner.cpp
 )

@@ -10,3 +10,7 @@ final audioEngineProvider = Provider<AudioEngine>((ref) {
 final decoderControllerProvider = Provider<DecoderController>(
   (ref) => ref.watch(audioEngineProvider).decoder,
 );
+
+final mixerControllerProvider = Provider<MixerController>(
+  (ref) => ref.watch(audioEngineProvider).mixer,
+);

@@ -1,14 +1,35 @@
 import 'dart:io';
 
+import 'package:core_audio_ffi/core_audio_ffi.dart';
 import 'package:core_db/core_db.dart';
 import 'package:core_services/core_services.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'stems_state.dart';
+
+/// Decodes stem metadata in a background isolate.
+_StemMeta _decodeStemMeta(String path) {
+  final engine = AudioEngine.create()..start();
+  try {
+    final result = engine.decoder.open(path);
+    if (result == null) return _StemMeta(0, 0, 0);
+    return _StemMeta(result.$1, result.$2, result.$3);
+  } finally {
+    engine.dispose();
+  }
+}
+
+class _StemMeta {
+  final double duration;
+  final int sampleRate;
+  final int channels;
+  _StemMeta(this.duration, this.sampleRate, this.channels);
+}
 
 /// Matches a filename to a stem role based on common naming patterns.
 String matchStemRole(String filename) {
@@ -128,18 +149,23 @@ class StemsScreen extends ConsumerWidget {
       await source.copy(destPath);
 
       final role = matchStemRole(file.name);
-      final duration = 0.0; // Will be decoded later
-      final channelCount = 0;
-      final sampleRate = 0;
+
+      // Decode stem metadata in background isolate
+      _StemMeta meta;
+      try {
+        meta = await compute(_decodeStemMeta, destPath);
+      } catch (_) {
+        meta = _StemMeta(0, 0, 0);
+      }
 
       await db.stemsDao.createStem(
         stemSetId: setId,
         role: role,
         filePath: destPath,
-        duration: duration,
+        duration: meta.duration,
         format: format,
-        channelCount: channelCount,
-        sampleRate: sampleRate,
+        channelCount: meta.channels,
+        sampleRate: meta.sampleRate,
         sortOrder: imported,
       );
       imported++;

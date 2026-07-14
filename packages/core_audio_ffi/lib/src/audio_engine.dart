@@ -5,6 +5,7 @@ import 'package:ffi/ffi.dart';
 import 'bindings.dart';
 import 'decoder_controller.dart';
 import 'metronome_controller.dart';
+import 'mixer_controller.dart';
 import 'tuner_controller.dart';
 
 /// Result codes mirrored from `kb_result` in kitbag_api.h.
@@ -39,6 +40,7 @@ class AudioEngine {
   late final MetronomeController metronome = MetronomeController(this);
   late final TunerController tuner = TunerController(this);
   late final DecoderController decoder = DecoderController(this);
+  late final MixerController mixer = MixerController(this);
 
   /// Internal — used by tool controllers within this package.
   KitbagBindings get bindings => _bindings;

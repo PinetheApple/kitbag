@@ -7,6 +7,7 @@
 #include "decoder.h"
 #include "metronome.h"
 #include "miniaudio.h"
+#include "mixer.h"
 #include "tuner.h"
 
 namespace kitbag {
@@ -44,6 +45,9 @@ class Engine {
   Decoder& decoder() { return decoder_; }
   const Decoder& decoder() const { return decoder_; }
 
+  Mixer& mixer() { return mixer_; }
+  const Mixer& mixer() const { return mixer_; }
+
  private:
   static void DataCallback(ma_device* device, void* output, const void* input,
                            ma_uint32 frame_count);
@@ -60,6 +64,7 @@ class Engine {
   Metronome metronome_;
   Tuner tuner_;
   Decoder decoder_;
+  Mixer mixer_;
 };
 
 }  // namespace kitbag

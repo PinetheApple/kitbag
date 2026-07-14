@@ -115,6 +115,29 @@ KB_EXPORT uint32_t kb_decoder_sample_rate(const kb_engine* engine);
 /* Number of channels. */
 KB_EXPORT uint32_t kb_decoder_channels(const kb_engine* engine);
 
+/* --- Mixer (Stem Player) ------------------------------------------------ */
+
+/* Load PCM data into a track. pcm is mono or stereo interleaved float. */
+KB_EXPORT void kb_mixer_set_track_data(kb_engine* engine, int32_t track,
+                                        const float* pcm,
+                                        int64_t num_frames, int32_t channels,
+                                        int32_t sample_rate);
+KB_EXPORT void kb_mixer_set_gain(kb_engine* engine, int32_t track, float gain);
+KB_EXPORT float kb_mixer_gain(const kb_engine* engine, int32_t track);
+KB_EXPORT void kb_mixer_set_mute(kb_engine* engine, int32_t track,
+                                  int32_t muted);
+KB_EXPORT int32_t kb_mixer_muted(const kb_engine* engine, int32_t track);
+KB_EXPORT void kb_mixer_set_solo(kb_engine* engine, int32_t track,
+                                  int32_t soloed);
+KB_EXPORT int32_t kb_mixer_soloed(const kb_engine* engine, int32_t track);
+KB_EXPORT void kb_mixer_play(kb_engine* engine);
+KB_EXPORT void kb_mixer_stop(kb_engine* engine);
+KB_EXPORT int32_t kb_mixer_is_playing(const kb_engine* engine);
+KB_EXPORT void kb_mixer_seek(kb_engine* engine, int64_t frame);
+KB_EXPORT int64_t kb_mixer_position(const kb_engine* engine);
+KB_EXPORT int32_t kb_mixer_active_track_count(const kb_engine* engine);
+KB_EXPORT int64_t kb_mixer_track_frames(const kb_engine* engine, int32_t track);
+
 /* --- Beat Analysis ------------------------------------------------------- */
 
 /* Analyze beats in an audio file and fill caller-provided output buffer.
