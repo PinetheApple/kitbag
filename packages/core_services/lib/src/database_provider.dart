@@ -6,3 +6,8 @@ final kitbagDatabaseProvider = Provider<KitbagDatabase>((ref) {
   ref.onDispose(db.close);
   return db;
 });
+
+final librarySongsDaoProvider = Provider<LibrarySongsDao>((ref) {
+  final db = ref.watch(kitbagDatabaseProvider);
+  return LibrarySongsDao(db);
+});

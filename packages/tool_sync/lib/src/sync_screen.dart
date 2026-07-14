@@ -1,11 +1,15 @@
 import 'dart:async';
 
 import 'package:core_plugin_api/core_plugin_api.dart';
+import 'package:core_services/core_services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'bpm_lookup_service.dart';
 import 'media_session_service.dart';
 import 'sync_state.dart';
+
+final _bpmLookupProvider = Provider<BpmLookupService>((ref) => BpmLookupService());
 
 class SyncScreen extends ConsumerStatefulWidget {
   const SyncScreen({super.key});
@@ -16,6 +20,7 @@ class SyncScreen extends ConsumerStatefulWidget {
 
 class _SyncScreenState extends ConsumerState<SyncScreen> {
   Timer? _pollTimer;
+  String? _lastTrackKey;
 
   @override
   void initState() {
@@ -33,12 +38,38 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
     _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
       final sessions = await MediaSessionService.getActiveSessions();
       if (!mounted) return;
-      if (sessions.isNotEmpty) {
-        ref.read(activeTrackProvider.notifier).state = sessions.first;
+      final track =
+          sessions.isNotEmpty ? sessions.first : null;
+      ref.read(activeTrackProvider.notifier).state = track;
+
+      // Auto-lookup BPM when a new track appears
+      if (track != null) {
+        final key = '${track.title}|${track.artist}';
+        if (key != _lastTrackKey) {
+          _lastTrackKey = key;
+          await _lookupBpm(track.title, track.artist);
+        }
       } else {
-        ref.read(activeTrackProvider.notifier).state = null;
+        _lastTrackKey = null;
       }
     });
+  }
+
+  Future<void> _lookupBpm(String title, String artist) async {
+    // 1. Check library first (already analyzed)
+    final dao = ref.read(librarySongsDaoProvider);
+    final match = await dao.searchByTitleArtist(title, artist);
+    if (match != null && match.bpm != null && match.beatGrid != null) {
+      ref.read(detectedBpmProvider.notifier).state = match.bpm!;
+      return;
+    }
+
+    // 2. Online lookup
+    final service = ref.read(_bpmLookupProvider);
+    final bpm = await service.lookup(title, artist);
+    if (bpm != null && mounted) {
+      ref.read(detectedBpmProvider.notifier).state = bpm;
+    }
   }
 
   @override
@@ -48,6 +79,7 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
     final isLocked = ref.watch(isPhaseLockedProvider);
     final offsetMs = ref.watch(phaseOffsetMsProvider);
     final metronome = ref.watch(metronomeControllerProvider);
+    final bpmLookup = ref.read(_bpmLookupProvider);
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -55,7 +87,6 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Now-playing card
           Card(
             child: Padding(
               padding: const EdgeInsets.all(20),
@@ -106,7 +137,7 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
           ),
           const SizedBox(height: 16),
 
-          // BPM display + tap tempo
+          // BPM display + lookup/tap
           Card(
             child: Padding(
               padding: const EdgeInsets.all(20),
@@ -131,32 +162,58 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
                         icon: const Icon(Icons.tap_and_play, size: 18),
                         label: const Text('Tap tempo'),
                         onPressed: () {
-                          // Placeholder: tap tempo would go here
+                          final bpm = bpmLookup.tap();
+                          if (bpm != null) {
+                            ref.read(detectedBpmProvider.notifier).state = bpm;
+                          }
                         },
                       ),
                       const SizedBox(width: 12),
-                      FilledButton.icon(
-                        icon: Icon(
-                          isLocked ? Icons.sync : Icons.sync_disabled,
-                          size: 18,
-                        ),
-                        label: Text(isLocked ? 'Locked' : 'Lock phase'),
-                        onPressed: () {
-                          if (metronome.currentBpm <= 0 && detectedBpm > 0) {
-                            metronome.setTempo(detectedBpm);
-                          }
-                          metronome.start();
-                          ref.read(isPhaseLockedProvider.notifier).state =
-                              !isLocked;
-                        },
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.refresh, size: 18),
+                        label: const Text('Reset taps'),
+                        onPressed: () => bpmLookup.resetTap(),
                       ),
                     ],
                   ),
+                  const SizedBox(height: 8),
+                  if (activeTrack != null)
+                    TextButton.icon(
+                      icon: const Icon(Icons.cloud_download, size: 16),
+                      label: const Text('Lookup online'),
+                      onPressed: () =>
+                          _lookupBpm(activeTrack.title, activeTrack.artist),
+                    ),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 16),
+
+          // Lock-phase button
+          if (detectedBpm > 0)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  icon: Icon(
+                    isLocked ? Icons.sync : Icons.sync_disabled,
+                    size: 20,
+                  ),
+                  label: Text(isLocked ? 'Phase locked' : 'Lock phase'),
+                  onPressed: () {
+                    ref.read(isPhaseLockedProvider.notifier).state = !isLocked;
+                    if (!isLocked) {
+                      metronome.setTempo(detectedBpm);
+                      metronome.start();
+                    } else {
+                      metronome.stop();
+                    }
+                  },
+                ),
+              ),
+            ),
 
           // Phase alignment (nudge)
           Card(
@@ -182,8 +239,6 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
                           final current = ref.read(phaseOffsetMsProvider);
                           ref.read(phaseOffsetMsProvider.notifier).state =
                               (current - 5).clamp(-100, 100);
-                          metronome.setLatencyOffset(
-                              ref.read(phaseOffsetMsProvider));
                         },
                       ),
                       Expanded(
@@ -195,7 +250,6 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
                           label: '${offsetMs.round()} ms',
                           onChanged: (v) {
                             ref.read(phaseOffsetMsProvider.notifier).state = v;
-                            metronome.setLatencyOffset(v);
                           },
                         ),
                       ),
@@ -205,8 +259,6 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
                           final current = ref.read(phaseOffsetMsProvider);
                           ref.read(phaseOffsetMsProvider.notifier).state =
                               (current + 5).clamp(-100, 100);
-                          metronome.setLatencyOffset(
-                              ref.read(phaseOffsetMsProvider));
                         },
                       ),
                     ],

@@ -40,6 +40,14 @@ class LibrarySongsDao extends DatabaseAccessor<KitbagDatabase>
           .getSingle()
           .then((r) => r.read<int>('COUNT(*)'));
 
+  /// Fuzzy match by title and artist (case-insensitive LIKE).
+  Future<LibrarySong?> searchByTitleArtist(String title, String artist) =>
+      (select(librarySongs)
+            ..where((t) =>
+                t.title.like('%$title%') & t.artist.like('%$artist%'))
+            ..limit(1))
+          .getSingleOrNull();
+
   Future<void> updateAnalysis({
     required int id,
     required double bpm,
