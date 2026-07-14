@@ -32,9 +32,17 @@ class SettingsService {
     final file = File('${dir.path}/kitbag_export.json');
 
     final setlists = await _db.setlistsDao.watchAll().first;
+    final practiceSessions = await _db.practiceDao.watchAll().first;
     final export = <String, dynamic>{
-      'version': 1,
+      'version': 2,
       'setlists': [],
+      'practiceSessions': practiceSessions.map((s) => <String, dynamic>{
+        'startTime': s.startTime.toIso8601String(),
+        'durationSeconds': s.durationSeconds,
+        'avgBpm': s.avgBpm,
+        if (s.setlistId != null) 'setlistId': s.setlistId,
+        if (s.songsPlayed != null) 'songsPlayed': s.songsPlayed,
+      }).toList(),
     };
 
     for (final summary in setlists) {
@@ -88,7 +96,8 @@ class SettingsService {
     final contents = await file.readAsString();
     final data = json.decode(contents) as Map<String, dynamic>;
 
-    if (data['version'] != 1) {
+    final version = data['version'] as int?;
+    if (version == null || version < 1 || version > 2) {
       throw const FormatException('Unsupported export version');
     }
 
@@ -123,7 +132,22 @@ class SettingsService {
       }
     }
 
-    return 'Imported ${setlists.length} setlist(s) with $imported song(s)';
+    var practiceImported = 0;
+    if (data['practiceSessions'] case final sessions? when sessions is List) {
+      for (final s in sessions) {
+        final session = s as Map<String, dynamic>;
+        await _db.practiceDao.create(
+          startTime: DateTime.parse(session['startTime'] as String),
+          durationSeconds: session['durationSeconds'] as int,
+          avgBpm: (session['avgBpm'] as num).toDouble(),
+          setlistId: session['setlistId'] as int?,
+          songsPlayed: session['songsPlayed'] as String?,
+        );
+        practiceImported++;
+      }
+    }
+
+    return 'Imported ${setlists.length} setlist(s) with $imported song(s) and $practiceImported practice session(s)';
   }
 
   Future<void> setBaseDirectory(String path) async {

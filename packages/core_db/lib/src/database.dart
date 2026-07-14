@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+import 'practice_dao.dart';
 import 'setlists_dao.dart';
 import 'songs_dao.dart';
 import 'tunings_dao.dart';
@@ -44,9 +45,21 @@ class Tunings extends Table {
   BlobColumn get notes => blob()();
 }
 
+/// A logged practice session: when it happened, how long it lasted, and
+/// optional context (which setlist and songs were used).
+class PracticeSessions extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  DateTimeColumn get startTime => dateTime()();
+  IntColumn get durationSeconds => integer()();
+  RealColumn get avgBpm => real()();
+  IntColumn? get setlistId =>
+      integer().nullable().customConstraint('REFERENCES setlists (id) ON DELETE SET NULL')();
+  TextColumn? get songsPlayed => text().nullable()();
+}
+
 @DriftDatabase(
-  tables: [Setlists, Songs, Tunings],
-  daos: [SetlistsDao, SongsDao, TuningsDao],
+  tables: [Setlists, Songs, Tunings, PracticeSessions],
+  daos: [SetlistsDao, SongsDao, TuningsDao, PracticeDao],
 )
 class KitbagDatabase extends _$KitbagDatabase {
   /// Tests inject an executor (e.g. `NativeDatabase.memory()`).
@@ -56,7 +69,7 @@ class KitbagDatabase extends _$KitbagDatabase {
   KitbagDatabase.open() : super(driftDatabase(name: 'kitbag'));
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -68,6 +81,9 @@ class KitbagDatabase extends _$KitbagDatabase {
       if (from < 2) {
         await m.addColumn(songs, songs.volume);
         await m.addColumn(songs, songs.latencyOffset);
+      }
+      if (from < 3) {
+        await m.createTable(practiceSessions);
       }
     },
   );

@@ -1,6 +1,8 @@
 import 'package:core_audio_ffi/core_audio_ffi.dart';
+import 'package:core_db/core_db.dart';
 import 'package:core_design/core_design.dart';
-import 'package:core_plugin_api/core_plugin_api.dart';
+import 'package:core_plugin_api/core_plugin_api.dart' hide kitbagDatabaseProvider;
+import 'package:core_services/core_services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -100,6 +102,10 @@ class SettingsScreen extends ConsumerWidget {
           _Section(title: 'Tools', children: [
             for (final plugin in plugins)
               _ToolToggle(plugin: plugin),
+          ]),
+          const SizedBox(height: 24),
+          _Section(title: 'Practice', children: [
+            _PracticeStatsTile(),
           ]),
           const SizedBox(height: 24),
           _Section(title: 'About', children: [
@@ -220,6 +226,99 @@ class _Section extends StatelessWidget {
         ),
         ...children,
       ],
+    );
+  }
+}
+
+class _PracticeStatsTile extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_PracticeStatsTile> createState() => _PracticeStatsTileState();
+}
+
+class _PracticeStatsTileState extends ConsumerState<_PracticeStatsTile> {
+  int? _totalSec;
+  int? _count;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final db = ref.read(kitbagDatabaseProvider);
+    final results = await Future.wait<int>([
+      db.practiceDao.getTotalPracticeSeconds(),
+      db.practiceDao.getSessionCount(),
+    ]);
+    if (mounted) setState(() { _totalSec = results[0]; _count = results[1]; });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final db = ref.watch(kitbagDatabaseProvider);
+    final totalMin = _totalSec != null ? _totalSec! ~/ 60 : null;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: KitbagRowCard(
+        icon: Icons.timer_outlined,
+        title: 'Practice logs',
+        subtitle: _count != null
+            ? '$_count sessions · $totalMin min total'
+            : 'Loading…',
+        onTap: () => _showPracticeLogs(context, db),
+      ),
+    );
+  }
+
+  Future<void> _showPracticeLogs(BuildContext context, KitbagDatabase db) async {
+    final sessions = await db.practiceDao.watchAll().first;
+    if (!context.mounted) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      constraints: const BoxConstraints(maxWidth: 480),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Practice sessions', style: Theme.of(context).textTheme.headlineMedium),
+              const SizedBox(height: 12),
+              if (sessions.isEmpty)
+                const Text('No sessions yet — start the metronome to begin.')
+              else
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: sessions.length,
+                    separatorBuilder: (_, _) => const Divider(height: 1),
+                    itemBuilder: (context, i) {
+                      final s = sessions[i];
+                      final min = s.durationSeconds ~/ 60;
+                      final sec = s.durationSeconds % 60;
+                      return ListTile(
+                        dense: true,
+                        leading: Text(
+                          '${s.avgBpm.round()}',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        title: Text(
+                          '${min.toString().padLeft(2, '0')}:${sec.toString().padLeft(2, '0')}',
+                        ),
+                        subtitle: Text(
+                          '${s.startTime.day}/${s.startTime.month}/${s.startTime.year}',
+                        ),
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

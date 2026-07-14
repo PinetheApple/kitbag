@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:core_audio_ffi/core_audio_ffi.dart';
-import 'package:core_plugin_api/core_plugin_api.dart';
+import 'package:core_db/core_db.dart';
+import 'package:core_plugin_api/core_plugin_api.dart' hide kitbagDatabaseProvider;
+import 'package:core_services/core_services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'tap_tempo.dart';
@@ -113,13 +115,8 @@ class MetronomeNotifier extends Notifier<MetronomeSettings> {
   MetronomeSettings build() {
     const settings = MetronomeSettings();
     _pushAll(settings);
+    ref.onDispose(() => _practiceTimer?.cancel());
     return settings;
-  }
-
-  @override
-  void dispose() {
-    _practiceTimer?.cancel();
-    super.dispose();
   }
 
   void _startPracticeTimer() {
@@ -203,6 +200,7 @@ class MetronomeNotifier extends Notifier<MetronomeSettings> {
     if (running) {
       _startPracticeTimer();
     } else {
+      _savePracticeSession();
       _stopPracticeTimer();
     }
     state = state.copyWith(running: running);
@@ -210,8 +208,20 @@ class MetronomeNotifier extends Notifier<MetronomeSettings> {
 
   void stop() {
     _controller.stop();
+    _savePracticeSession();
     _stopPracticeTimer();
     state = state.copyWith(running: false);
+  }
+
+  Future<void> _savePracticeSession() async {
+    final seconds = state.practiceTimerSeconds;
+    if (seconds == 0) return;
+    final db = ref.read<KitbagDatabase>(kitbagDatabaseProvider);
+    await db.practiceDao.create(
+      startTime: DateTime.now().subtract(Duration(seconds: seconds)),
+      durationSeconds: seconds,
+      avgBpm: state.rampEnabled ? _controller.currentBpm : state.bpm,
+    );
   }
 
   void resetPracticeTimer() {
