@@ -82,6 +82,8 @@ void main() {
     bool polyEnabled = false,
     int polyBeats = 3,
     int sound = 0,
+    double volume = 1.0,
+    double latencyOffset = 0.0,
   }) {
     return db.songsDao.append(
       setlistId: setlistId,
@@ -93,6 +95,8 @@ void main() {
       polyEnabled: polyEnabled,
       polyBeats: polyBeats,
       sound: sound,
+      volume: volume,
+      latencyOffset: latencyOffset,
     );
   }
 

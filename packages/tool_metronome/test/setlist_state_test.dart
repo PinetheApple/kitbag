@@ -39,6 +39,8 @@ void main() {
       polyEnabled: false,
       polyBeats: 3,
       sound: 0,
+      volume: 1.0,
+      latencyOffset: 0.0,
     );
   }
 
