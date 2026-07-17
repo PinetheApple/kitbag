@@ -9,9 +9,13 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 add_library(kitbag_core SHARED
   src/api.cpp
+  src/beat_tracker.cpp
+  src/decoder.cpp
   src/engine.cpp
+  src/fft.cpp
   src/metronome.cpp
   src/miniaudio_impl.c
+  src/mixer.cpp
   src/pitch_analyzer.cpp
   src/tuner.cpp
 )
