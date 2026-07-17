@@ -10,10 +10,15 @@ constexpr double kTau = 6.283185307179586;
 // Guards against a boundary landing infinitesimally below an integer.
 constexpr double kGridEpsilon = 1e-9;
 
+constexpr double kSecondsPerMinute = 60.0;
+constexpr double kMsPerMinute = 60000.0;
+
 constexpr double kAccentAmplitude = 0.9;
 constexpr double kBeatAmplitude = 0.6;
 constexpr double kSubdivisionAmplitude = 0.3;
 constexpr double kPolyAmplitude = 0.5;
+// A decaying voice is retired once it falls below audibility.
+constexpr double kVoiceSilenceAmplitude = 1e-4;
 
 struct SoundPreset {
   double accent_hz;
@@ -24,12 +29,12 @@ struct SoundPreset {
 };
 
 constexpr SoundPreset kSounds[Metronome::kSoundCount] = {
-    {1760.0, 1174.7, 880.0, 1480.0, 30.0},   // beep
-    {2400.0, 1800.0, 1400.0, 2000.0, 60.0},  // woodblock
-    {3600.0, 2800.0, 2200.0, 3200.0, 90.0},  // click
-    {600.0, 450.0, 300.0, 520.0, 60.0},      // tom
-    {5000.0, 4000.0, 3500.0, 4500.0, 120.0}, // hihat
-    {2200.0, 1500.0, 1400.0, 1800.0, 45.0},  // cowbell
+    {1760.0, 1174.7, 880.0, 1480.0, 30.0},    // beep
+    {2400.0, 1800.0, 1400.0, 2000.0, 60.0},   // woodblock
+    {3600.0, 2800.0, 2200.0, 3200.0, 90.0},   // click
+    {600.0, 450.0, 300.0, 520.0, 60.0},       // tom
+    {5000.0, 4000.0, 3500.0, 4500.0, 120.0},  // hihat
+    {2200.0, 1500.0, 1400.0, 1800.0, 45.0},   // cowbell
 };
 
 template <typename T>
@@ -116,12 +121,15 @@ void Metronome::ApplyPendingCommands() {
   while (commands_.Pop(&command)) {
     switch (command.type) {
       case CommandType::kStart:
-        beat_position_ = 0.0;
         current_bar_ = -1;  // the first downbeat advances it to bar 0
         ramp_start_bar_ = 0;
         if (ramp_enabled_) {
           bpm_ = ramp_start_bpm_;
         }
+        // Anchors `position` at zero, not beat_position_: nothing can be
+        // emitted before the first frame, so a positive offset would swallow
+        // every grid point it shifts past.
+        beat_position_ = -LatencyBeats();
         running_ = true;
         break;
       case CommandType::kStop:
@@ -130,7 +138,7 @@ void Metronome::ApplyPendingCommands() {
         current_poly_beat_.store(-1, std::memory_order_relaxed);
         break;
       case CommandType::kSetTempo:
-        bpm_ = Clamp(command.value, kMinBpm, kMaxBpm);
+        SetBpmPreservingPhase(Clamp(command.value, kMinBpm, kMaxBpm));
         ramp_enabled_ = false;  // a manual tempo change cancels the ramp
         break;
       case CommandType::kSetBeats:
@@ -141,8 +149,8 @@ void Metronome::ApplyPendingCommands() {
         break;
       case CommandType::kSetAccent:
         if (command.int_a >= 0 && command.int_a < kMaxBeats) {
-          accents_[command.int_a] = static_cast<Accent>(
-              Clamp(command.int_b, 0, 2));
+          accents_[command.int_a] =
+              static_cast<Accent>(Clamp(command.int_b, 0, 2));
         }
         break;
       case CommandType::kSetPoly:
@@ -163,7 +171,7 @@ void Metronome::ApplyPendingCommands() {
           ramp_bars_ = Clamp(command.int_b, 1, kMaxRampBars);
           // current_bar_ is -1 before the first downbeat; never start there.
           ramp_start_bar_ = running_ && current_bar_ > 0 ? current_bar_ : 0;
-          bpm_ = ramp_start_bpm_;
+          SetBpmPreservingPhase(ramp_start_bpm_);
         }
         break;
       case CommandType::kSetBarMute:
@@ -174,17 +182,38 @@ void Metronome::ApplyPendingCommands() {
       case CommandType::kSetVolume:
         volume_ = Clamp(command.value, 0.0, 2.0);
         break;
-      case CommandType::kSetLatencyOffset:
-        latency_offset_ms_ = Clamp(command.value, -100.0, 100.0);
+      case CommandType::kSetLatencyOffset: {
+        // Phase-preserving like a bpm change (§4.6). The guard: when stopped
+        // there is no phase to hold, and kStart re-anchors from the offset.
+        const double before = LatencyBeats();
+        latency_offset_ms_ =
+            Clamp(command.value, -kMaxLatencyOffsetMs, kMaxLatencyOffsetMs);
+        if (running_) {
+          beat_position_ += before - LatencyBeats();
+        }
         break;
+      }
     }
   }
   running_flag_.store(running_, std::memory_order_relaxed);
 }
 
+double Metronome::LatencyBeats() const {
+  return latency_offset_ms_ * bpm_ / kMsPerMinute;
+}
+
+// The offset is fixed in ms, so its width in beats rescales with the tempo.
+// Assigning bpm_ directly would step `position` sideways: ramping down
+// re-crosses the grid point that just fired, ramping up jumps over the next.
+void Metronome::SetBpmPreservingPhase(double new_bpm) {
+  const double before = LatencyBeats();
+  bpm_ = new_bpm;
+  beat_position_ += before - LatencyBeats();
+}
+
 double Metronome::RampBpmForBar(int64_t bar) const {
-  const int64_t progressed = Clamp<int64_t>(bar - ramp_start_bar_, 0,
-                                            ramp_bars_);
+  const int64_t progressed =
+      Clamp<int64_t>(bar - ramp_start_bar_, 0, ramp_bars_);
   const double step = (ramp_end_bpm_ - ramp_start_bpm_) / ramp_bars_;
   return ramp_start_bpm_ + step * static_cast<double>(progressed);
 }
@@ -268,7 +297,7 @@ float Metronome::RenderVoices() {
     sample += voice.amplitude * std::sin(voice.phase);
     voice.phase += voice.phase_step;
     voice.amplitude *= voice.decay_per_sample;
-    if (voice.amplitude < 1e-4) {
+    if (voice.amplitude < kVoiceSilenceAmplitude) {
       voice.active = false;
     }
   }
@@ -279,32 +308,31 @@ void Metronome::Render(float* output, uint32_t frame_count,
                        uint32_t sample_rate, uint32_t channel_count) {
   ApplyPendingCommands();
 
-  double beats_per_sample = bpm_ / (60.0 * sample_rate);
+  double beats_per_sample = bpm_ / (kSecondsPerMinute * sample_rate);
   const double poly_scale =
       static_cast<double>(poly_beats_) / static_cast<double>(beats_per_bar_);
 
-  double latency_beats = latency_offset_ms_ * bpm_ / 60000.0;
+  double latency_beats = LatencyBeats();
 
   for (uint32_t frame = 0; frame < frame_count; ++frame) {
     if (running_) {
       const double position = beat_position_ + latency_beats;
       const auto sub_index = static_cast<int64_t>(
           std::floor(position * subdivision_ + kGridEpsilon));
-      const double sub_start =
-          static_cast<double>(sub_index) / subdivision_;
+      const double sub_start = static_cast<double>(sub_index) / subdivision_;
       // A grid point fires on the first sample at or past it.
       if (position - beats_per_sample < sub_start - kGridEpsilon) {
         if (sub_index % subdivision_ == 0) {
           const int64_t beat = sub_index / subdivision_;
           const auto beat_index = static_cast<int>(beat % beats_per_bar_);
-            if (beat_index == 0) {
-              ++current_bar_;  // monotonic: survives time-signature changes
-              if (ramp_enabled_) {
-                bpm_ = RampBpmForBar(current_bar_);
-                beats_per_sample = bpm_ / (60.0 * sample_rate);
-              }
-              latency_beats = latency_offset_ms_ * bpm_ / 60000.0;
+          if (beat_index == 0) {
+            ++current_bar_;  // monotonic: survives time-signature changes
+            if (ramp_enabled_) {
+              SetBpmPreservingPhase(RampBpmForBar(current_bar_));
+              beats_per_sample = bpm_ / (kSecondsPerMinute * sample_rate);
+              latency_beats = LatencyBeats();
             }
+          }
           OnBeatBoundary(beat_index, sample_rate);
         } else if (subdivision_ > 1) {
           OnSubdivisionTick(sample_rate);
@@ -329,10 +357,13 @@ void Metronome::Render(float* output, uint32_t frame_count,
   }
 
   if (running_) {
-    bar_phase_.store(
-        std::fmod(beat_position_, static_cast<double>(beats_per_bar_)) /
-            beats_per_bar_,
-        std::memory_order_relaxed);
+    // Track `position`, not beat_position_, so the sweep, the LED
+    // (current_beat_) and the audible click share one time base (§13.3). How
+    // that base relates to real output latency is §4.2's phase-anchor decision.
+    const double position = beat_position_ + LatencyBeats();
+    bar_phase_.store(std::fmod(position, static_cast<double>(beats_per_bar_)) /
+                         beats_per_bar_,
+                     std::memory_order_relaxed);
   }
   current_bpm_.store(bpm_, std::memory_order_relaxed);
   bar_muted_flag_.store(running_ && BarIsMuted(current_bar_),

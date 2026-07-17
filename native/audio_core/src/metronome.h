@@ -27,6 +27,11 @@ class Metronome {
   static constexpr double kMaxBpm = 400.0;
   static constexpr int kMaxRampBars = 64;
   static constexpr int kMaxMuteBars = 16;
+  // Output-latency compensation bound (D5). Widening this to 300 is the whole
+  // of D5's clamp change; the calibration screen and kitbag_api.h's doc comment
+  // move with it. See SPEC.md §4.6.
+  static constexpr double kMaxLatencyOffsetMs = 100.0;
+  static constexpr double kDefaultBpm = 120.0;
 
   Metronome() {
     accents_[0] = Accent::kAccented;
@@ -127,12 +132,15 @@ class Metronome {
   float RenderVoices();
   double RampBpmForBar(int64_t bar) const;
   bool BarIsMuted(int64_t bar) const;
+  double LatencyBeats() const;
+  // The only way bpm_ may change while running. See the definition.
+  void SetBpmPreservingPhase(double new_bpm);
 
   SpscRing<Command, kCommandRingSize> commands_;
 
   // RT-owned sequencer state (touched only inside Render).
   bool running_ = false;
-  double bpm_ = 120.0;
+  double bpm_ = kDefaultBpm;
   int beats_per_bar_ = 4;
   int subdivision_ = 1;
   Accent accents_[kMaxBeats] = {};
@@ -161,7 +169,7 @@ class Metronome {
   std::atomic<int32_t> current_beat_{-1};
   std::atomic<int32_t> current_poly_beat_{-1};
   std::atomic<double> bar_phase_{0.0};
-  std::atomic<double> current_bpm_{120.0};
+  std::atomic<double> current_bpm_{kDefaultBpm};
   std::atomic<bool> bar_muted_flag_{false};
 };
 
