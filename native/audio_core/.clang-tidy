@@ -1,0 +1,60 @@
+# Kitbag C++ static checks. Enforced — the pre-commit hook runs this on staged
+# .cpp/.h under native/, and the checks in WarningsAsErrors gate the commit.
+# Codifies the style the sources already follow; see CONTRIBUTING.md.
+#
+# Deliberately lean (repo preference): every check earns its place. Realtime code
+# in the audio callback forbids heap/RTTI/exceptions by design, so checks that
+# would push toward those patterns are off.
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-narrowing-conversions,
+  performance-*,
+  readability-identifier-naming,
+  readability-magic-numbers,
+  readability-braces-around-statements,
+  readability-redundant-*,
+  readability-simplify-boolean-expr,
+  misc-unused-parameters,
+  modernize-use-nullptr,
+  modernize-use-override
+
+# These two carry the conventions the user has flagged by hand — make them gate.
+WarningsAsErrors: >
+  readability-identifier-naming,
+  readability-magic-numbers
+
+HeaderFilterRegex: 'native/audio_core/(src|include)/.*'
+
+CheckOptions:
+  # Naming — the unambiguous rules only (verified against metronome.*): CamelCase
+  # types, snake_case_ private members, kConstant, snake_case locals/params.
+  # Method case is deliberately NOT gated here: the code follows Google's accessor
+  # exception (PascalCase for actions — Start, SetTempo; snake_case for accessors
+  # that mirror state — is_running, bar_phase), which one clang-tidy rule cannot
+  # express without false-positiving the accessors. CONTRIBUTING.md states it as a
+  # judgment rule and the review agent checks it. The kb_snake_case C ABI in
+  # kitbag_api.h is C convention and out of scope for the same reason.
+  readability-identifier-naming.ClassCase: CamelCase
+  readability-identifier-naming.StructCase: CamelCase
+  readability-identifier-naming.EnumCase: CamelCase
+  readability-identifier-naming.EnumConstantCase: CamelCase
+  readability-identifier-naming.EnumConstantPrefix: k
+  readability-identifier-naming.PrivateMemberCase: lower_case
+  readability-identifier-naming.PrivateMemberSuffix: _
+  readability-identifier-naming.ProtectedMemberSuffix: _
+  readability-identifier-naming.LocalVariableCase: lower_case
+  readability-identifier-naming.ParameterCase: lower_case
+  readability-identifier-naming.GlobalConstantCase: CamelCase
+  readability-identifier-naming.GlobalConstantPrefix: k
+  readability-identifier-naming.StaticConstantCase: CamelCase
+  readability-identifier-naming.StaticConstantPrefix: k
+  readability-identifier-naming.ConstexprVariableCase: CamelCase
+  readability-identifier-naming.ConstexprVariablePrefix: k
+  readability-identifier-naming.NamespaceCase: lower_case
+  # 0/1/2 and small array/loop bounds are not "magic"; a named constant for them
+  # would read worse. Everything with musical or DSP meaning must be named.
+  readability-magic-numbers.IgnoredIntegerValues: '0;1;2;3;4'
+  readability-magic-numbers.IgnoredFloatingPointValues: '0.0;1.0;2.0;0.5'
+  readability-magic-numbers.IgnorePowersOf2IntegerValues: 'true'

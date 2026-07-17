@@ -46,20 +46,31 @@ from 82 Hz to 1 kHz — with no microphone in the path. It is **not** a stale
 harness. CI runs it informationally (`|| true`) and it becomes a gate when the
 tuner research lands. See SPEC.md §10.1; do not "fix" it by loosening the test.
 
-## There is no lint step yet
+## Lint and format
 
-The old `PostToolUse` hook ran `scripts/lint_check.sh`, which ran `dart analyze`
-and `custom_lint`. Both are deleted. **Nothing replaces them until the RN app
-exists**, at which point SPEC.md §13.6 specifies the shape: ESLint flat config +
-`eslint-plugin-kitbag` enforcing the four architecture rules, `--max-warnings 0`,
-and a ported eval harness scoring `*_pass` / `*_fail` scenarios.
+The old `PostToolUse` hook (`scripts/lint_check.sh` = `dart analyze` +
+`custom_lint`) is deleted. A **C++ gate replaces it**:
 
-Until then, verify C++ changes by building and running the verify tools above.
+```sh
+bash scripts/install-hooks.sh   # once per clone — pre-commit runs the gate
+bash scripts/lint.sh            # whole tree; --staged for the commit's files
+bash scripts/format.sh          # fix formatting in place
+```
+
+`lint.sh` runs clang-format + clang-tidy against `native/audio_core/.clang-format`
+and `.clang-tidy`; naming and magic numbers gate, the rest is advisory. The
+clang-tidy step needs the compile DB (`-DCMAKE_EXPORT_COMPILE_COMMANDS=ON`).
+
+The **TS/React gate is written and staged** under `config/` (ESLint flat config,
+`tsconfig`, prettier) and no-ops until `package.json` exists; SPEC.md §13.6's
+`eslint-plugin-kitbag` and eval harness still land with the app. Full rules and
+the judgment layer are in `CONTRIBUTING.md`.
 
 ## Architecture rules (SPEC.md §9.4)
 
-These hold whatever the stack. They currently have **no automated enforcement** —
-the lint layer that enforced them was Dart. Hold them by hand until §13.6 lands:
+These hold whatever the stack. They have **no *running* enforcement yet** — the
+staged `config/eslint.config.mjs` encodes them as `no-restricted-imports` zones,
+but it can't run until the app exists. Hold them by hand until then:
 
 - Native bindings live in exactly one package (`core-native`).
 - The abstract contract package imports neither the shell nor any tool.
@@ -78,13 +89,18 @@ Plus the one that is not a boundary but is load-bearing (SPEC.md §4.5, §13.3):
 After implementing or changing anything non-trivial, before presenting to the
 human:
 
-1. Self-review — build, run the verify tools, check correctness.
-2. Invoke `@ralph` — describe what you built and why.
+1. Self-review — build, run the verify tools, run `bash scripts/lint.sh`, check
+   correctness.
+2. Invoke `@ralph` (correctness + SPEC) and, for a code change, `@code-reviewer`
+   (style, comments, magic values, smells) — describe what you built and why.
 3. Read the feedback, fix the issues.
-4. Iterate until Ralph passes you.
+4. Iterate until both pass you.
 
-Ralph is a peer reviewer (`.claude/agents/ralph.md`), read-only. Thorough but
-fair. If you disagree with a nit, note it and move on — don't over-rotate.
+Both are read-only peer reviewers, thorough but fair, and non-overlapping:
+**ralph** (`.claude/agents/ralph.md`) reviews correctness and SPEC conformance;
+**code-reviewer** (`.claude/agents/code-reviewer.md`) reviews against
+`CONTRIBUTING.md`'s judgment layer. If you disagree with a nit, note it and move
+on — don't over-rotate.
 
 ## Git worktrees
 

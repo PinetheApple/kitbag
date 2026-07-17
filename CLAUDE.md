@@ -45,18 +45,26 @@ no app at all, and it's the cheapest signal in the project.
 informationally (`|| true`); it becomes a gate when the tuner research lands.
 SPEC.md §10.1. Do not "fix" it by loosening the test.
 
-## No PostToolUse lint step
+## Lint and format
 
-The old hook ran `scripts/lint_check.sh` (`dart analyze` + `custom_lint`). Both
-deleted. **Nothing replaces them until the RN app exists** — SPEC.md §13.6
-specifies the shape (ESLint flat config, `eslint-plugin-kitbag`,
-`--max-warnings 0`, ported eval harness). Until then, verify C++ by building and
-running the tools above.
+The old Dart hook (`scripts/lint_check.sh` = `dart analyze` + `custom_lint`) is
+gone. A **C++ gate replaces it now**: `scripts/lint.sh` runs clang-format +
+clang-tidy against `native/audio_core/.clang-format` and `.clang-tidy`, and
+`.githooks/pre-commit` runs it on staged files (enable once with
+`bash scripts/install-hooks.sh`). `bash scripts/format.sh` fixes formatting in
+place. Naming and magic numbers gate; the rest is advisory. See `CONTRIBUTING.md`.
+
+The **TS/React gate is written and staged** under `config/` (ESLint flat config,
+`tsconfig`, prettier — SPEC.md §13.6) and no-ops until the RN app's `package.json`
+exists; `eslint-plugin-kitbag` and the eval harness still land with the app. The
+judgment-level smells no linter catches (verbose comments, unclear code, misnamed
+constants) are the `code-reviewer` agent's job — see the Ralph loop.
 
 ## Architecture rules (SPEC.md §9.4)
 
-Hold whatever the stack. **Currently no automated enforcement** — the lint layer
-was Dart. Hold them by hand until §13.6 lands:
+Hold whatever the stack. **No *running* enforcement yet** — the staged
+`config/eslint.config.mjs` encodes these as `no-restricted-imports` zones but
+can't run until the app exists. Hold them by hand until then:
 
 - Native bindings live in exactly one package (`core-native`).
 - The abstract contract package imports neither the shell nor any tool.
@@ -72,13 +80,18 @@ the architecture holds.
 
 After anything non-trivial, before presenting to the human:
 
-1. Self-review — build, run the verify tools, check correctness.
-2. Invoke `@ralph` — describe what you built and why.
+1. Self-review — build, run the verify tools, run `bash scripts/lint.sh`, check
+   correctness.
+2. Invoke `@ralph` (correctness + SPEC) and, for a code change, `@code-reviewer`
+   (style, comments, magic values, smells) — describe what you built and why.
 3. Fix the findings.
-4. Iterate until Ralph passes you.
+4. Iterate until both pass you.
 
-Ralph (`.claude/agents/ralph.md`) is read-only, thorough but fair. Disagree with a
-nit? Note it and move on.
+Both agents are read-only, thorough but fair. They are non-overlapping: **ralph**
+(`.claude/agents/ralph.md`) reviews correctness and SPEC conformance;
+**code-reviewer** (`.claude/agents/code-reviewer.md`) reviews against
+`CONTRIBUTING.md`'s judgment layer — the readability smells the linters can't
+catch. Disagree with a nit? Note it and move on.
 
 ## Worktrees
 

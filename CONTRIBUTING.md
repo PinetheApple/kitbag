@@ -38,19 +38,50 @@ exist yet (SPEC.md §13).
    ```
 2. `tuner_verify` fails 37/37 today (SPEC.md §10.1) and is informational in CI.
    **Don't make it pass by loosening it.**
-3. PRs against `main`. Conventional commit subjects (`feat:`, `fix:`, `chore:`);
+3. Before committing, run the lint gate (or install the hook so it runs itself):
+   ```sh
+   bash scripts/install-hooks.sh   # once per clone — pre-commit runs the gate
+   bash scripts/lint.sh --staged   # what the hook runs; --staged = touched files
+   bash scripts/format.sh          # fix formatting in place
+   ```
+   The hook lints staged files only, so drift in a file you didn't touch never
+   blocks you — but touching a file means bringing it into conformance. The
+   clang-tidy step needs the compile DB (configure once with
+   `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON`).
+4. PRs against `main`. Conventional commit subjects (`feat:`, `fix:`, `chore:`);
    the body explains *why* when non-obvious.
 
-The RN toolchain (pnpm + Turborepo, ESLint flat config with
-`eslint-plugin-kitbag`, `--max-warnings 0`, ported eval harness) lands with the
-app — SPEC.md §13.1 and §13.6.
+The RN toolchain (pnpm + Turborepo, `eslint-plugin-kitbag`, `--max-warnings 0`,
+ported eval harness) lands with the app — SPEC.md §13.1 and §13.6. The ESLint
+flat config, `tsconfig` and prettier config are already written and staged under
+`config/` (see `config/README.md`); they wire in when the app scaffolds.
 
 ## Code style
 
-- **C++**: C++17, `-Wall -Wextra` clean, Google-ish naming (see existing files).
-- **TypeScript**: strict. Files ≤ ~400 lines.
-- **Comments only where the code can't say it** — constraints, invariants, and
-  *why*. Never restate what the next line does, and **never describe intent as
-  behaviour**: a comment claiming title/artist similarity matching sat above a loop
-  returning the first result, and it outlived the bug long enough to mislead a
-  design file.
+Style is **enforced by config, not honour** — where this section and a config
+could disagree, the config wins, because it is the one that runs.
+
+| Area | Config | Gates |
+|---|---|---|
+| C++ format | `native/audio_core/.clang-format` | Google style, **C++20**, 2-space, 80-col, pointer-left |
+| C++ static | `native/audio_core/.clang-tidy` | Naming (members `_`, `kConstant`, `CamelCase` types), **magic numbers**, lean bugprone/perf. Naming + magic numbers gate; rest advisory |
+| C++ tests | `native/audio_core/tools/.clang-tidy` | Same, minus magic numbers — fixtures use literal scenario values by design |
+| TS/React | `config/` | Staged until the app exists (SPEC §13.6) |
+
+What a linter **can't** check — enforced by the `code-reviewer` agent, which reads
+these as its rubric (distinct from `ralph`, which reviews correctness/spec; run
+both, see the Ralph loop in `CLAUDE.md`):
+
+- **Comment only the constraint the code can't show** — an ordering reason, an
+  epsilon's purpose, why a counter is monotonic. **Never restate the next line,
+  never describe intent as behaviour**: a comment claiming title/artist similarity
+  matching sat above a loop returning the first result, and it outlived the bug
+  long enough to mislead a design file.
+- **Name a number when it carries non-obvious intent** — a latency bound, a BPM
+  range, a DSP threshold. **Leave shared idiom alone**: in a test,
+  `60.0 / 120.0 * kSampleRate` reads better than a named constant, and naming only
+  your line would be its own inconsistency.
+- **C++ method naming is Google's accessor exception** — `PascalCase` for actions
+  (`Start`, `SetTempo`), `snake_case` for accessors mirroring state (`is_running`,
+  `bar_phase`). The linter can't express this without false-positiving accessors.
+- **Files ≤ ~400 lines.** C++20 core, strict TypeScript.

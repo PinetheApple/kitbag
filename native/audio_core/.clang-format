@@ -1,0 +1,9 @@
+# Kitbag C++ formatting. Enforced — run `clang-format -i` or the pre-commit hook.
+# The existing native/audio_core sources already conform; this pins it so agents
+# and contributors stop drifting. See CONTRIBUTING.md.
+BasedOnStyle: Google
+Standard: c++20
+ColumnLimit: 80
+IndentWidth: 2
+DerivePointerAlignment: false
+PointerAlignment: Left
