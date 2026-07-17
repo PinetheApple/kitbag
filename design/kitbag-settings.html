@@ -423,6 +423,7 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
         <div class="editrow"><span class="k">Back up everything</span><span class="v muted2">3 setlists · 24 songs<span class="ico">›</span></span></div>
         <div class="editrow"><span class="k">Restore from backup</span><span class="v"><span class="ico">›</span></span></div>
         <div class="editrow"><span class="k">Practice</span><span class="v">34 sessions <span class="muted2">· 18h 20m · avg 112 BPM</span></span></div>
+        <div class="editrow"><span class="k">Base directory</span><span class="v path muted2">…/Android/data/app.kitbag/files<span class="ico">›</span></span></div>
         <div class="editrow"><span class="k">Storage</span><span class="v muted2">1.2 MB · 24 files<span class="ico">›</span></span></div>
       </div>
 
@@ -472,10 +473,14 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
         (<code>getTotalPracticeSeconds</code>, <code>getSessionCount</code>); average tempo is
         the one addition, and it is the stat a musician actually reads. Everything Kitbag
         records about practice today is visible on this line.</li>
-        <li><b>Base directory is gone.</b> It was write-only — a picker that stored a path no
-        code has ever read. It is replaced by <code>Storage</code>, which reports what is
-        actually on disk and where. Restoring the row honestly would mean wiring the library,
-        stems and export to it; that is real work and nobody asked for it. See §05.</li>
+        <li><b>Base directory is authoritative</b> (decided 2026-07-17, SPEC §17 D11).
+        It was write-only in the build — a picker that stored a path no code has ever read.
+        The answer is to wire it, not to cut it: library, stems, export and the database all
+        resolve against it. <code>Storage</code> is its <em>companion</em>, not its
+        replacement — the picker relocates, Storage reports. The work this pulls in is real
+        and is now scoped: a file migration when the directory changes, scoped-storage
+        handling on Android (SAF and persisted URI permissions), and every stored path
+        relative to the base. See §05.</li>
         <li><b>Theme and haptics are new.</b> <code>app.dart:20</code> hardcodes
         <code>ThemeMode.system</code>, so the light palette this design system defines has never
         been reachable. §06 names both as Settings' proper content; they are the cheapest rows
@@ -696,9 +701,9 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
       <div class="editrow"><span class="k">Database</span><span class="v">1.2 MB</span></div>
       <div class="editrow"><span class="k">Location</span><span class="v path">…/Android/data/app.kitbag/files</span></div>
       <div class="crow"><span class="chip">⌦ Remove missing files (2)</span></div>
-      <span class="hint">Reports, doesn't relocate. This replaces the Base directory picker,
-      which stored a path no code ever read. Making the path movable means wiring library,
-      stems and export to it first — §05.</span>
+      <span class="hint">Reports, doesn't relocate — the Base directory picker does that,
+      and this sheet is its companion rather than its replacement (D11). Location above is
+      whatever the picker currently points at.</span>
     </div>
 
   </div>
@@ -727,8 +732,10 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
     <div class="card chg"><b>~ Tools: badges become switches</b><p>The original drew
     <code>ON</code> as a static badge beside <code>Get</code> buttons. Same defect as the
     metronome's inert badges.</p></div>
-    <div class="card cut"><b>− Base directory</b><p>Write-only. Stored in prefs, read by
-    nothing; library and stems hardcode the docs dir. Replaced by <code>Storage</code>.</p></div>
+    <div class="card chg"><b>~ Base directory becomes authoritative</b><p>Was write-only:
+    stored in prefs, read by nothing, while library and stems hardcoded the docs dir. It gets
+    wired rather than cut — and brings a file migration and SAF with it. <code>Storage</code>
+    is its companion, not its replacement.</p></div>
     <div class="card chg"><b>~ Export v3 → v4, with ids</b><p>Merge is unimplementable on a
     format with no stable identity. Needs an id-backfill migration.</p></div>
     <div class="card add"><b>+ Merge vs replace, selective</b><p>Counted diffs, conflict review,
@@ -773,12 +780,13 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
     would fight the route. Volume per song is obviously musical; latency per song may be a
     column that should go. Raised because the decision covered both together and this
     file's route model is new information.</li>
-    <li><b>Base directory: wire it or cut it?</b> Drawn here as cut, replaced by a reporting
-    <code>Storage</code> sheet. The alternative is real: make it authoritative and point
-    library, stems, export and the database at it. That is a migration (moving existing files)
-    plus scoped-storage handling on Android, and no requirement asks for it. If the intent was
-    “keep my music on the SD card”, it is a feature; if it was scaffolding, it is Phase 0 dead
-    code. <b>SPEC §13 Phase 0 should know which.</b></li>
+    <li><b>Decided 2026-07-17 — base directory is wired, not cut.</b> The intent was “keep
+    my music on the SD card”, so it is a feature: the picker returns and becomes
+    authoritative over library, stems, export and the database. This file drew the opposite
+    and is corrected above. The migration and scoped-storage work it implies are scoped in
+    rather than discovered later. <b>The picker itself, its “moving your files” progress
+    state and its unwritable-target failure path are undesigned</b> — SPEC §12.8.
+    (SPEC §17 D11.)</li>
     <li><b>Subdivision accents need the engine first.</b> The design assumes a per-count accent
     pattern the native core does not have. Confirm the scope — C API, schema, and the
     scheduler — before this sheet is built. It is the only control in §03 that is not a

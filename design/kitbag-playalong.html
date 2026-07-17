@@ -700,14 +700,6 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
     </div>
 
     <div class="st">
-      <div class="hd"><b>An ad is playing</b><span class="badge2">AD</span></div>
-      <div class="shows">Click pauses · “Ad — waiting for the song”</div>
-      <p>A free Spotify account puts a 30 s ad in the middle of your practice with real metadata
-      attached. Locking to it is worse than doing nothing, and this state is unavoidable for a
-      large share of users.</p>
-    </div>
-
-    <div class="st">
       <div class="hd"><b>iOS</b><span class="badge2">SPOTIFY ONLY</span></div>
       <div class="shows">Spotify connect card · other apps named as unsupported</div>
       <p>iOS has no cross-app session API, so App Remote is Spotify-only. Stated plainly on the
@@ -779,6 +771,15 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
         <span class="stepbadge"><i>‹</i><span class="badge2">beat 1</span><i>›</i></span>
         <span class="btn gho" style="padding:7px 12px">Reset</span>
       </div>
+      <div class="crow" style="justify-content:space-between">
+        <span class="small muted">Offset</span>
+        <span class="v" style="font-variant-numeric:tabular-nums"><b>+190 ms total</b>
+        <span class="muted">· 180 route + 10 song</span></span>
+      </div>
+      <span class="hint">The <b>total</b> is the line that was missing. Settings calibrates
+      the output route, this sheet nudges the song, and nothing showed the sum — so the sheet
+      names it and both parts stay legible. At ±300 ms (D5) the total stops being intuitive,
+      which is what makes the line worth its space.</span>
       <span class="hint">Range is <b>±half a beat, not ±100 ms</b> — phase is modular, so a
       whole beat of offset is no offset. Half a beat is ±175 ms here and ±500 ms at 60 BPM;
       the fixed <code>clamp(-100, 100)</code> at <code>sync_screen.dart:365</code> is therefore
@@ -906,15 +907,15 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
     restores around the borrow. The design cannot tell these apart; the acceptance criterion
     can: opening Play along and closing it must leave the standalone metronome exactly as it
     was, including mid-run.</li>
-    <li><b>Ad detection has no clean signal.</b> The ad state is necessary — free Spotify is
-    most users — but Spotify does not flag ads as such. Heuristics available: duration under
-    ~35 s, artist empty, title changing without a skip. All are guesses that will
-    occasionally mute a real short track. Accept the false positives, or drop the state and let
-    the click run over ads?</li>
-    <li><b>Latency: two controls, one delay.</b> Settings now calibrates per output route and
-    Play along nudges per song. Justified above as “your hardware” vs “this stream”, but they
-    add up and nothing shows the total. If a user calibrates +180 ms for Bluetooth and then
-    nudges +10, what does the screen say the offset is?</li>
+    <li><b>Decided 2026-07-17 — the ad state is dropped.</b> Spotify does not flag ads, and
+    every available heuristic (duration under ~35 s, artist empty, title changing without a
+    skip) is a guess that mutes real short tracks. A click that stops on its own during a
+    song you are playing is a worse failure than a click that runs over an ad, so the click
+    runs over ads and the state comes out of this file. (SPEC §17 D10.)</li>
+    <li><b>Decided 2026-07-17 — the phase sheet shows the total.</b> Settings calibrates per
+    output route, Play along nudges per song, and they add up — so the sheet names the sum
+    and its parts: <code>+190 ms total · 180 route + 10 song</code>. Neither control is
+    hidden, and the number the user hears is the number on screen. (SPEC §17 D6.)</li>
     <li><b>±100 ms appears three times and is wrong in three different ways.</b>
     <code>metronome_controller.dart:68</code> clamps the latency offset, which cannot reach
     Bluetooth (Settings §06). <code>sync_screen.dart:365</code> clamps the phase nudge, which

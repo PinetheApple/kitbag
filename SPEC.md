@@ -415,9 +415,63 @@ are a decision, not an engine constraint, and they cost a line each.
 shared value. Update the doc comment to match — a stale comment that reads like a
 constraint is how this became three bugs.
 
-**One check first, and it is the only part that is not a one-liner:** confirm the
-scheduler's lookahead window absorbs a 300 ms offset. That is where a large value
-actually bites. If it does not, the latency bound is a scheduler change (§17.1).
+**Checked 2026-07-17 — there is no window, and the check found two live bugs,
+now fixed.** `Metronome::Render` applies the offset as a per-sample phase bias,
+`position = beat_position_ + latency_beats`, and evaluates the grid from the
+biased position. Nothing is queued, so no queue depth bounds the offset, and the
+±100 ms rejection is the clamp at `metronome.cpp` (`kSetLatencyOffset`) rather
+than any structural limit.
+
+The first measurement — click spacing exact to 0.000 frames at 60/120/240 BPM,
+±300 ms, and 600 ms — was **true at constant tempo and scoped too narrowly to
+support the conclusion it was used for** ("widen the clamp, the scheduler is
+untouched"). It measured spacing between clicks that fired, at a fixed tempo.
+Both bugs lived exactly in that blind spot, and both reproduced *inside* the
+existing ±100 ms clamp. Both are now fixed and pinned by
+`TestLatencyOffsetKeepsBeatZero` and `TestLatencyOffsetSurvivesRamp` in
+`metronome_verify`:
+
+- **Any positive offset swallowed beat 0 and its bar increment** — not just large
+  ones. At frame 0 the biased position started already past the grid point, and
+  nothing can fire before the transport's first sample, so at +0.5 ms the
+  downbeat already vanished. **Fixed** by anchoring `position` (not
+  `beat_position_`) at zero on Start: `beat_position_ = -LatencyBeats()`. This
+  also fixes the semantics — a constant output-latency compensation is
+  unobservable on a free-running metronome (the whole grid shifts, no beat moves
+  relative to another), so the offset now correctly does nothing to a free run
+  and earns its keep only against an external reference, which §4.2's phase anchor
+  sets by writing `beat_position_` explicitly.
+- **A tempo ramp and a latency offset corrupted each other.** `latency_beats`
+  rescales with BPM, so a per-bar tempo step moved `position` sideways: ramping
+  down re-crossed the grid point that just fired (double click, double
+  `current_bar_` increment, corrupting `RampBpmForBar` and `BarIsMuted` with it),
+  ramping up jumped the next. **Fixed** by routing every BPM change through
+  `SetBpmPreservingPhase`, which shifts `beat_position_` by the change in
+  `LatencyBeats()` so `position` stays continuous and only the rate changes.
+- **Changing the offset mid-run had the same defect** — dragging the calibration
+  slider during playback shifted `latency_beats` without moving `beat_position_`,
+  so `position` stepped sideways and dropped or doubled a click (a downbeat also
+  double-incrementing `current_bar_`). Found by the first fix's own reviewer:
+  the machinery to prevent it existed and was not applied here. **Fixed** by the
+  same phase-preservation in `kSetLatencyOffset` while running.
+
+**The rule these three fixes share, and the decision that comes with it:** a
+change to the offset *or* the tempo preserves `position` phase — it never steps
+the grid sideways. A corollary is that **on a free-running metronome the latency
+offset is audibly inert**: with no external reference, shifting the whole grid by
+a constant moves no beat relative to another. The offset earns its keep only
+against a reference, which §4.2's phase anchor supplies by writing
+`beat_position_` explicitly. The sweep, the LED and the click all read the same
+`position`, so they agree with each other; **how that shared time base maps to
+real output latency is §4.2's call**, not settled here.
+
+**What this means for D5.** The offset is a phase bias with no structural bound,
+so the clamp is the only limiter and ±300 ms is a one-line change to it — plus
+moving `kitbag_api.h:63`'s doc comment, which documents `[-100, 100]` as an engine
+constraint when it is D5's decision. **The widening itself is deliberately not
+done here:** it is a decision to land with the calibration screen that motivates
+it (§12.8), and the regressions that now guard the interaction should be green
+before and after it.
 
 ---
 
@@ -1383,7 +1437,10 @@ asks them to.
 
 **Unblocked (D5).** ±100 ms could not express a Bluetooth offset, so the
 calibration screen would have measured offsets it was unable to apply. The range
-is now ±300 ms, pending the one lookahead check in §17.1.
+is now ±300 ms. The lookahead check ran 2026-07-17: there is no window, the
+offset is a phase bias, and the two latency bugs the check exposed are fixed and
+pinned in `metronome_verify` (§4.6). Widening the clamp to ±300 ms is a one-liner
+left to land with the calibration screen that needs it (§12.8).
 
 ### 12.6 Experience rules — acceptance criteria, not aspirations
 
@@ -1432,14 +1489,14 @@ milestone.
 
 ### 12.8 Design work still required
 
-**Design-file edits forced by §17's decisions.** These are corrections to shipped
-design files, not new work, and they should land before the screens they describe
-are built:
+**Design-file edits forced by §17's decisions — landed 2026-07-17.** These were
+corrections to shipped design files, not new work. Recorded here because the
+decisions they carry are the reason the files read as they now do:
 
 | File | Edit | Decision |
 |---|---|---|
 | `kitbag-settings.html` §03 | **Base directory is not cut.** It returns as an authoritative picker; Storage becomes its companion, not its replacement. | D11 |
-| `kitbag-metronome.html` §02 | `7/4` **may go back to `7/8`** — the denominator is being built, so the mock's original claim is buildable. | D1 |
+| `kitbag-metronome.html` §02 | `7/4` **went back to `7/8`** — the denominator is being built, so the mock's original claim is buildable. | D1 |
 | `kitbag-metronome.html` §02 | LEDs are a **row with grouping, min 4 per row, wrapping**. Resolves the file's own "knowingly untrue" flag — and the build's circle is what changes, not the mock. | D9 |
 | `kitbag-playalong.html` §04 | **Delete the ad state.** | D10 |
 | `kitbag-playalong.html` §05 | Phase sheet shows the **total** (`+190 ms total · 180 route + 10 song`). | D6 |
@@ -1626,16 +1683,102 @@ retype them.
 | RN flavour | **Expo with prebuild** (config plugins, `expo-dev-client`), not Expo Go — the native core, the foreground service and the notification listener all require custom native code. |
 | Router | Expo Router (file-based), wrapping React Navigation. Plugin routes register through §9.1's `RouteDescriptor`. |
 | Native build | The existing CMake for `native/audio_core` is consumed by the Android Gradle `externalNativeBuild` and an iOS podspec. **The C++ does not move.** |
-| Styling | Tokens in TS, consumed by a themed StyleSheet layer. **No Tailwind/NativeWind** — §12.2's tokens are the system, and a second one is a second source of truth. |
+| Styling | **NativeWind 5 (preview) + Tailwind v4**, consuming §12.2's tokens. NativeWind 5 has not shipped GA — the reference pin is `nativewind@5.0.0-preview.3` with `tailwindcss@^4`, `@tailwindcss/postcss`, and `lightningcss` held at `1.30.1`. A pre-release dependency is a material fact on the F-Droid path, where the whole argument rests on one precedent's recipe. The tokens stay the single source of truth — §13.8.1. |
 | Waveform rendering | React Native Skia. This is the `CustomPainter` replacement and the only reasonable one. |
 | Animation | Reanimated 3 (§13.3) + Gesture Handler for swipe-anywhere. |
 | DB | Drizzle + op-sqlite (§11.1). |
 
-**F-Droid is a hard constraint on this table.** Reproducible builds forbid Play
-Asset Delivery (§9.3) and are unhappy with anything that phones home at build
-time. Expo prebuild produces a standard Android project, which is the reason it is
-acceptable — **but this needs confirming against F-Droid's actual inclusion
-policy before the toolchain is locked.** See §17.1.
+#### 13.8.1 Styling — NativeWind, on §12.2's terms
+
+NativeWind is permitted **only** as a consumer of §12.2. The reason the earlier
+revision of this table banned it stands unchanged: a Tailwind config with its own
+palette is a second source of truth, and §13.7 is what happens next.
+
+**Be honest about what is enforced.** Only the first rule below holds itself up;
+the rest are conventions until §13.6's lint layer exists. The ban's original
+reason is **deferred onto §13.6, not neutralized** — that is the cost the
+decision to adopt NativeWind accepts, and §13.6 is where the bill comes due.
+
+**Enforced by construction:**
+
+- **The tokens own the palette.** `core-design` exports §12.2's table as TS, and
+  the Tailwind theme is **generated from that export** as a build step, never
+  hand-authored. A hex literal in `tailwind.config` cannot survive a regenerate.
+
+**Owed to §13.6 — add each to its rule list; nothing catches them today:**
+
+- **No arbitrary values for tokenised properties.** Tailwind v4 permits
+  `bg-[#0E0D10]` by default and nothing rejects it at build time. This is the
+  `sync_screen.dart:14` defect with new syntax.
+- **No token may be Tailwind-only.** If a value isn't in §12.2, it doesn't exist.
+  Adding a colour means editing §12.2 first.
+- **§13.3 holds.** `className` is a render-time concern. The beat sweep, the LED
+  row and the tuner needle are animated **only** by Reanimated worklets writing
+  SharedValues (§4.5, §13.3) — never by swapping classes per frame.
+
+**Neither, but true:**
+
+- **Three themes, not two.** §12.5 requires System/Dark/Light. Tailwind's `dark:`
+  variant plus OS preference gives two-and-a-half; the explicit override is
+  driven through NativeWind's `colorScheme` API and CSS variables (`vars()`),
+  with the theme layer — not the variant — as the authority.
+- **Skia ignores all of this.** The waveform renderer (§13.8, above) reads tokens
+  from the TS export directly. Tailwind has no reach into a Skia canvas.
+
+`react-native-css` and lightningcss come along as NativeWind's transitive deps.
+They are build-time only — lightningcss ships a prebuilt native binary, which is
+the part F-Droid cares about. See the F-Droid note below: **very likely fine,
+unconfirmed.**
+
+**F-Droid is a hard constraint on this table**, and it was checked on 2026-07-17
+rather than assumed — `docs/fdroid-expo-research.md` carries the evidence, the
+citations and an honest confidence level. Read it before relying on any sentence
+here. What it establishes:
+
+- **Expo prebuild is not categorically barred.** There is one real precedent in
+  the main repo — WAFRN (`dev.djara.wafrn_rn`), an Expo-prebuild app with a
+  custom native module (Skia), GPLv3, live today. Structurally identical to
+  Kitbag. **One precedent is not a population**, and none of this is a general
+  ruling.
+- **The spec's old reasoning was wrong in a useful direction.** "Reproducible
+  builds are unhappy with anything that phones home at build time" was too broad.
+  F-Droid's build server *does* have network access during `init`/`build` —
+  `yarn install` is the documented, canonical RN recipe. What is forbidden is the
+  *shipped app* phoning home at runtime undisclosed. §9.3's Play Asset Delivery
+  rejection is untouched and still correct; that is a runtime CDN mechanism, not
+  build-time dependency resolution.
+- **Reproducibility was not a gate for WAFRN.** It was merged despite its
+  submitter reporting the build does not reproduce byte-identically (`.dex`
+  differences), and the docs frame reproducibility as a per-app trust signal
+  displayed on the listing. No policy sentence found says either way, so read
+  this as one precedent's outcome, not a general rule.
+- **Prebuilt binaries in the JS tree are handled, not banned.** The standard
+  recipe strips the JS tree with `scandelete: node_modules` before the scanner
+  runs, and WAFRN's accepted recipe installs **lightningcss** during `init` and
+  relies on exactly that. The Inclusion Policy also appears to exempt Hermes *by
+  name* alongside the Android and Flutter SDKs — **that clause is load-bearing
+  here and is the one quote the research could not independently verify**
+  (reproduced by two fetches through a summarizing model, never read as raw HTML,
+  not surfaceable by search; and a maintainer forum post predating it says the
+  opposite). **Re-fetch and diff it against a raw view before betting the
+  toolchain on it.** For lightningcss specifically no maintainer has ruled at
+  all, so its survival is inference from a structural analogy — very likely fine,
+  unconfirmed, not cleared.
+
+**Two things follow for the build, and they are decisions, not findings:**
+
+- **Commit the generated `android/` tree.** Do not run `expo prebuild` inside
+  F-Droid's build steps. WAFRN commits its tree, which is the only proven path;
+  whether the build server tolerates a live prebuild is unknown and untested by
+  anything in the sources.
+- **Strip the Expo modules with proprietary-service entanglements** before build,
+  as WAFRN does (`expo-notifications`, `expo-dev-client`). The 2020 "some Expo
+  modules depend on non-free components" caveat is about *those*, not about
+  prebuild or config plugins.
+
+The cheapest way to convert the remaining inference into a ruling is to submit
+the metadata in draft/RFP form and read what the reviewer flags — before the
+toolchain is built on it, not after.
 
 ### 13.9 The Android native surface
 
@@ -1698,20 +1841,27 @@ Ordered by dependency, not by visibility.
 ### Phase 0 — Verify, and correct the record
 
 The six questions that blocked schema and toolchain work were answered
-2026-07-17 (§17). **The schema (§11.2) is unblocked and buildable.** What remains
-in Phase 0 is two checks and some bookkeeping:
+2026-07-17 (§17). **The schema (§11.2) is unblocked and buildable.**
 
-1. **F-Droid × Expo prebuild** (§17.1) — blocks §13.8. Verify against F-Droid's
-   actual inclusion policy before the toolchain is locked.
-2. **Does the lookahead window absorb 300 ms?** (§17.1) — blocks D5. One check
-   against the scheduler; if it fails, the latency bound is a scheduler change
-   rather than a constant.
-3. **Land the design-file edits** in §12.8. Cheap, and they stop the next person
-   building from a superseded mock.
-4. **Rewrite `CHANGELOG.md`** — it claims five shipped milestones that are not
-   shipped.
-5. **Delete what §2.4 names**, including the AcousticBrainz stub (D8) and the
-   advertised source at `bpm_lookup_service.dart:21`.
+**Phase 0 closed 2026-07-17. Phase 1 is the work.** What it produced:
+
+- **F-Droid × Expo prebuild** — checked against the real inclusion policy rather
+  than assumed. Not barred; one live precedent; §13.8's toolchain stands, with
+  two decisions attached (commit the generated `android/`; strip the
+  proprietary-service Expo modules). Evidence and an honest confidence level in
+  `docs/fdroid-expo-research.md`. The residual risk — nobody has ruled on
+  lightningcss by name — is tracked in §17.1 and gates nothing.
+- **The lookahead question** — answered: there is no window, the offset is a
+  phase bias. The check also exposed two live latency bugs (any positive offset
+  swallowed beat 0; a ramp and an offset corrupted each other), both now **fixed
+  and pinned** in `metronome_verify` (§4.6). Widening the clamp to ±300 ms is a
+  one-liner deferred to the calibration screen that needs it; the regressions
+  guard the interaction across it.
+- **The §12.8 design-file edits** — all six landed, so no screen gets built from
+  a superseded mock.
+- **The record corrected** — `CHANGELOG.md` rewritten to claim nothing, and the
+  Flutter app deleted: everything §2.4 named, including the AcousticBrainz stub
+  (D8) and the advertised source at `bpm_lookup_service.dart:21`.
 
 ### Phase 1 — Core
 
@@ -1943,17 +2093,15 @@ Revisit once the metronome and tuner are real.
 
 ## 17.1 Still open
 
-Genuinely unresolved. Two block work; three are confirmations.
+Genuinely unresolved. None block work; four are confirmations.
 
-- **F-Droid × Expo prebuild** — *blocks the toolchain (§13.8).* Reproducible builds
-  are a stated requirement (§9.3 rejects Play Asset Delivery for exactly this).
-  Expo prebuild emits a standard Android project, which *should* be acceptable, but
-  **this has not been verified against F-Droid's actual inclusion policy**, and the
-  answer decides Expo-flavoured vs bare RN. **Verify in Phase 0, before the
-  toolchain is locked** — not after the first submission is rejected.
-- **Does the lookahead window absorb 300 ms?** — *blocks D5.* One check against the
-  scheduler; if it does not, the latency bound is a scheduler change rather than a
-  constant.
+- **F-Droid × Expo prebuild — checked 2026-07-17, residual risk only.** No longer
+  blocks §13.8: Expo prebuild is not categorically barred and there is one live
+  precedent (§13.8, `docs/fdroid-expo-research.md`). What remains is narrower and
+  does not gate the toolchain — **no maintainer has ruled on lightningcss or
+  NativeWind by name**, and the precedent is one app rather than a pattern. The
+  mitigation is to submit metadata in draft/RFP form early and read the review.
+  Kept here because "very likely fine, unconfirmed" is not the same as decided.
 - **Setlist chip vs NOW badge.** Both mark the active song ("3/12" vs `NOW`).
   Confirm on device that they never disagree after a manual reorder mid-gig.
 - **Wordmark/branding.** "KITBAG" set in Space Grotesk; a logo pass can come before

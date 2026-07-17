@@ -313,7 +313,7 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
       </div>
       <div class="presetrow"><span class="preset">−10</span><span class="preset">−5</span><span class="btn ton" style="font-weight:700;flex:1.3;justify-content:center">TAP</span><span class="preset">+5</span><span class="preset">+10</span></div>
       <div class="pcard">
-        <div class="crow" style="justify-content:space-between"><span class="stepbadge"><i>−</i><span class="badge2">7/4</span><i>+</i></span><span style="display:flex;gap:9px"><span class="led acc"></span><span class="led hit"></span><span class="led"></span><span class="led"></span><span class="led acc"></span><span class="led"></span><span class="led mut"></span></span></div>
+        <div class="crow" style="justify-content:space-between"><span class="stepbadge"><i>−</i><span class="badge2">7/8</span><i>+</i></span><span style="display:flex;gap:18px;flex-wrap:wrap;justify-content:flex-end"><span style="display:flex;gap:9px"><span class="led acc"></span><span class="led hit"></span></span><span style="display:flex;gap:9px"><span class="led acc"></span><span class="led"></span></span><span style="display:flex;gap:9px"><span class="led acc"></span><span class="led"></span><span class="led mut"></span></span></span></div>
         <div class="crow" style="justify-content:space-between;margin-top:8px"><span class="stepbadge"><i>−</i><span class="badge2 acc">3:7</span><i>+</i></span><span style="display:flex;gap:14px;align-items:center;padding-right:4px"><span class="led sm acc"></span><span class="led sm"></span><span class="led sm"></span></span></div>
         <div style="height:10px"></div>
         <div class="crow" style="gap:10px">
@@ -347,7 +347,7 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
         <li><b>Sound is a chip now, not a cycler.</b> The current build cycles through six
         sounds on tap, so reaching the sixth takes five taps and there is no way to see
         what you're choosing between. The chip opens a picker.</li>
-        <li><b>Every badge is a stepper</b> — <code>− 7/4 +</code>, <code>− 3:7 +</code>,
+        <li><b>Every badge is a stepper</b> — <code>− 7/8 +</code>, <code>− 3:7 +</code>,
         <code>− ♪ +</code>. This is not new: the build already wraps all three in
         <code>KitbagStepperRow.inline</code> (a shrink-wrapped <code>− child +</code>
         cluster with ≥48dp targets). The original mock drew them as inert labels, which is
@@ -603,7 +603,7 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
         <div class="nhead"><span>◴</span><span>KITBAG · METRONOME</span></div>
         <div class="nbody">
           <span class="ticon">◴</span>
-          <span class="tl"><b>124 BPM · 7/4</b><span>Wedding set · Blackbird (3/12)</span></span>
+          <span class="tl"><b>124 BPM · 7/8</b><span>Wedding set · Blackbird (3/12)</span></span>
         </div>
         <div class="nacts"><i>⏮ Prev</i><i>⏸ Pause</i><i>⏭ Next</i><i>■ Stop</i></div>
       </div>
@@ -651,11 +651,15 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
     distinct or same sound, per song or always.</p></div>
     <div class="card add"><b>+ Direct tempo entry</b><p>Tap the BPM readout for a numpad.
     The swipe gesture keeps its visible twin.</p></div>
-    <div class="card chg"><b>~ Badges are steppers</b><p>7/4, 3:7 and subdivision each get
+    <div class="card chg"><b>~ Badges are steppers</b><p>7/8, 3:7 and subdivision each get
     −/+, as the build already does. The original mock drew inert labels with no way to
     change them.</p></div>
-    <div class="card chg"><b>~ 7/8 → 7/4</b><p>The mock promised a denominator that no
-    schema, engine or UI has. Drawn honestly pending the §06 decision.</p></div>
+    <div class="card add"><b>+ The denominator gets built</b><p>7/8 is real: a
+    <code>Songs</code> column, a C API parameter, a stepper. The mock promised a
+    denominator nothing had — the answer is to build it, not to redraw it as 7/4.</p></div>
+    <div class="card chg"><b>~ LED row replaces the build's circle</b><p>A row with
+    grouping, min 4 per row, wrapping. 7/8 groups 2+2+3 — a linear idea the circle cannot
+    express, and the grouping is worth more than the saved width.</p></div>
     <div class="card add"><b>+ Reset by tapping the timer</b><p>The practice pill is
     tappable; the transport button stays as its twin.</p></div>
     <div class="card add"><b>+ Practice summary</b><p>Sheet on stop. Sessions are currently
@@ -675,41 +679,30 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
 
 <section>
   <div class="kicker">06 · Open</div>
-  <h2>Open questions</h2>
+  <h2>Open questions, and what closed</h2>
   <div class="rule"></div>
   <ul class="qs">
-    <li><b>Per-song volume and latency.</b> The <code>Songs</code> schema already stores
-    <code>volume</code> and <code>latencyOffset</code> per song, but this spec puts both in
-    Settings as global rig setup. Either the columns are wrong, or Settings holds the
-    default and the preset editor holds an optional per-song override. The editor mock does
-    not show them; if the override is wanted, it belongs in the third group. <b>Needs a
-    decision before the schema work in SPEC §11.</b></li>
-    <li><b>Subdivision accents in Settings.</b> Accenting individual subdivisions is
-    per-song musical content in the same way per-beat accents are — but Settings is global.
-    If a song can have its own subdivision accents, they cannot live in Settings; if they
-    are a global feel preference, they can. The current mock omits them from the editor on
-    the assumption they are global.</li>
-    <li><b>Time signature denominator — does it exist?</b> <code>format.dart:15</code> is
-    <code>'$beatsPerBar/4'</code>: the denominator is hardcoded. There is no column in
-    <code>Songs</code>, no parameter on <code>kb_metronome_set_beats</code>, and no UI. The
-    original mock's <code>7/8</code> was never buildable. Either the app is quarter-note
-    only forever and every mock says <code>n/4</code> — or a denominator is real work in
-    schema, C API, and UI. <b>7/8 and 6/8 are common enough that this needs an answer, not
-    a default.</b> Drawn as <code>7/4</code> here pending it.</li>
-    <li><b>LED row vs. LED circle.</b> The mock draws a horizontal row and claims "7/8
-    groups visually 2+2+3". The build draws a <em>circle</em> (<code>BeatLedRow</code>,
-    evenly spaced at <code>i·2π/beatCount</code>) and has since v0.1, deliberately, to save
-    horizontal space. Grouping is a linear idea a circle cannot express. Three ways out:
-    the design adopts the circle and drops grouping; the build returns to a row and gains
-    grouping; or the circle stays and grouping is expressed by accent, not position. This
-    file keeps drawing the row it inherited — <b>which is the one thing in it that is
-    knowingly untrue.</b></li>
+    <li><b>Decided 2026-07-17 — the denominator is real.</b> <code>7/8</code> gets built:
+    a <code>Songs</code> column, a parameter on the C API, and the stepper. The original
+    mock's promise turned out to be buildable after all, so this file now draws
+    <code>7/8</code> rather than the honest-but-lesser <code>7/4</code> it retreated to.
+    (SPEC §17 D1.)</li>
+    <li><b>Decided 2026-07-17 — LEDs are a row, and the build's circle is what changes.</b>
+    A row with grouping, minimum four per row, wrapping. Grouping is a linear idea, the
+    circle cannot express it, and grouping is the thing worth keeping — so the row this
+    file always drew is correct and <code>BeatLedRow</code>'s circle is the defect. This
+    closes the file's own "knowingly untrue" flag. (SPEC §17 D9.)</li>
+    <li><b>Decided 2026-07-17 — volume and latency are global.</b> No preset-editor
+    override; the <code>Songs</code> columns are the thing that was wrong and they are
+    dropped. The editor mock, which never drew them, was already right. (SPEC §17 D3.)</li>
+    <li><b>Decided 2026-07-17 — subdivision accents are global.</b> They stay in Settings
+    as a feel preference; the editor's omission stands. (SPEC §17 D2.)</li>
     <li><b>Setlist chip vs. NOW badge.</b> Both mark the active song. On the metronome the
     chip says "3/12"; in the detail the badge says NOW. Confirm they never disagree after a
     manual reorder mid-gig.</li>
-    <li><b>Landscape.</b> Inherited from the original spec's open list — the metronome gets a
-    landscape layout for music-stand mounting in v1, or defers. The two-pane regroup already
-    exists in the current build and is not specced here.</li>
+    <li><b>Landscape — deferred past v1.</b> The metronome gets no landscape layout for
+    first release. Nothing in the architecture blocks adding it later, and the current
+    build's unspecced two-pane regroup is not a commitment. (SPEC §17 D13.)</li>
     <li><b>Export scope.</b> Setlist-level export lives in the setlists overflow; whole-library
     backup lives in Settings. Confirm this split rather than one export in two places.</li>
   </ul>
