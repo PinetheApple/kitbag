@@ -989,11 +989,40 @@ DSP, both native.
 ### 10.1 Research required first
 
 Mic pickup is unreliable when tuning a guitar in practice. This is the blocking
-problem and it is not a UI issue. Before reimplementation, investigate:
+problem and it is not a UI issue.
 
+> **Measured 2026-07-17, and it reorders this list.** `tuner_verify` fails
+> **37 of 37 checks**. It bypasses the C API and the mic entirely — it includes
+> `pitch_analyzer.h` and drives `PitchAnalyzer` directly with synthesized tones —
+> and on a clean sine at every frequency from 82.41 Hz to 1 kHz it reports
+> `0.000 Hz`, `confidence 0.00`. Silence and a pure 440 Hz tone are
+> indistinguishable to it.
+>
+> **The harness is not stale**: its constructor call, `Process(float) → bool`
+> loop and `reading()` access all match `pitch_analyzer.h` as it stands, and it
+> compiles and links clean.
+>
+> **This means the capture path is probably not the cause.** The DSP does not
+> detect a pitch that was handed to it directly, with no microphone, no AGC and
+> no noise gate anywhere in the path. A mic problem cannot explain a synthetic
+> sine reading as silence.
+>
+> Nothing ran this: the old CI built the verify tools and never executed them, so
+> it has likely been failing unnoticed for a long time. It is now an
+> informational CI step (`|| true`) and **becomes a gate when this research
+> lands.**
+
+Investigate, in this order:
+
+- **`pitch_analyzer.cpp` and `fft.cpp` first.** Make `tuner_verify` pass on
+  synthetic tones before touching anything device-side. It is a closed loop with
+  no hardware in it, it runs in a second, and it is currently the cheapest signal
+  in the project. **Everything below is unfalsifiable until it is green.**
 - **Capture path.** PLAN §3 specs `UNPROCESSED` (fallback `VOICE_RECOGNITION`)
   with AGC/NS/AEC never attached. Verify what the app actually requests and what
-  the device grants — **this is the most likely cause.**
+  the device grants. **Previously this section's leading hypothesis; demoted by
+  the measurement above** — it may still be *a* problem, but it cannot be *the*
+  problem.
 - **Noise gate.** An adaptive gate squelches before detection; if its floor is
   misjudged it eats quiet strings.
 - **Window size** vs low-frequency response — ~30ms specced, ~90ms needed for

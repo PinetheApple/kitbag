@@ -1,5 +1,24 @@
 # Tuner Research: Open-Source Chromatic Tuners
 
+> **⚠ Read this first — measured 2026-07-17.**
+>
+> This document surveys pitch-detection algorithms and recommends refinements to
+> the current implementation (§3: median-filter length, EMA α, hysteresis). **Its
+> premise is that the detector works and needs tuning. It does not work.**
+>
+> `tuner_verify` fails **37 of 37** checks. It bypasses the mic and the C API,
+> driving `PitchAnalyzer` directly with synthesized tones, and reports
+> `0.000 Hz` / `confidence 0.00` for every frequency from 82.41 Hz to 1 kHz.
+> Silence and a pure 440 Hz sine are indistinguishable to it.
+>
+> **Do not implement §3's improvements yet.** Widening a median filter over a
+> detector that emits nothing changes nothing. Make `tuner_verify` green first —
+> it is a closed loop with no hardware in it and it runs in a second.
+>
+> Everything below stays useful as algorithm background (§2 and §4 especially,
+> for choosing what to replace the current detector *with*). Only §3's
+> "improve what's there" framing is invalidated. See `SPEC.md` §10.1.
+
 ## 1. Commercial Tuner Approaches
 
 ### gStrings

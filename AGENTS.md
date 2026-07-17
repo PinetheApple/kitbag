@@ -1,182 +1,134 @@
 # Kitbag — Agent Workflow Guide
 
-## Monorepo layout
+> **`SPEC.md` is the source of truth.** Not `PLAN.md`, not `CHANGELOG.md`, and not
+> this file. If any of them disagree with SPEC.md, SPEC.md wins and the other is a
+> bug. Read SPEC.md §2 before believing any status claim anywhere in the repo.
 
-Pub workspace at root. Key packages:
+## What is in this repo right now
 
-| Package | Role |
-|---------|------|
-| `app_shell` | Flutter entrypoint, router, registry |
-| `core_plugin_api` | Abstract plugin contract — no infra deps |
-| `core_services` | Concrete Riverpod providers |
-| `core_audio_ffi` | FFI bindings to C++ audio core |
-| `core_design` | Theme, tokens, shared widgets |
-| `tool_*` | Plugin tools (metronome, tuner, etc.) |
-| `custom_lint_kitbag` | Architecture-enforcing custom lint rules |
+The Flutter app was **deleted on 2026-07-17** (SPEC.md §13 — the stack is React
+Native + TypeScript). The React Native app **does not exist yet**. What remains:
 
-## Architecture rules (custom_lint enforces these)
+| Path | What it is |
+|------|-----------|
+| `native/audio_core/` | The C++ realtime core. **The only buildable thing here.** Flat C ABI (`include/kitbag_api.h`), miniaudio backend. Survives the stack change untouched — SPEC.md §4. |
+| `SPEC.md` | Product + technical spec. Source of truth. §17 records 13 locked decisions; §17.1 is what is still open. |
+| `design/` | Four HTML design specs, all binding. Precedence is in SPEC.md §12. |
+| `legacy/` | The only Flutter-era files kept, because SPEC.md cannot reconstruct them: `MediaSessionPlugin.kt` + `AndroidManifest.xml` (ported near line-for-line, §13.9) and `database.dart` + `converters.dart` (the v6 schema and the beat-grid / `.kwav` binary formats, §11). **Reference only — do not build against them.** |
+| `docs/` | ADRs (historical, superseded not edited) and tuner research (read its warning banner first). |
+| `scripts/worktree.sh` | Agent worktree helper. Still current. |
 
-- `dart:ffi` only in `core_audio_ffi`
-- Riverpod providers only in `core_services`
-- `core_plugin_api` must not import `app_shell` or `tool_*`
-- PascalCase for both filenames and class names
+Everything else the old guide referenced — Melos, `pubspec.yaml`, `dart analyze`,
+`custom_lint`, `scripts/lint_check.sh`, `packages/**` — **is gone.** Do not run it,
+do not restore it, do not write instructions that assume it.
 
-## PostToolUse: auto-verify after edits
-
-After every `Write` or `Edit` tool call, run lint checks to catch regressions:
+## Building and verifying
 
 ```bash
-bash scripts/lint_check.sh
+# Configure + build the native core (the only build in the repo):
+cmake -S native/audio_core -B native/audio_core/build -G Ninja -DKITBAG_BUILD_TOOLS=ON
+cmake --build native/audio_core/build
+
+# Headless verification — no UI, no device, runs in ~a second:
+./native/audio_core/build/metronome_verify   # passes
+./native/audio_core/build/tuner_verify       # FAILS 37/37 — see below
 ```
 
-This runs `dart analyze` on `custom_lint_kitbag` and `dart run custom_lint` on `app_shell`.
-If either fails, fix the specific violations before the next tool call.
+`native/audio_core/tools/` renders audio offline and asserts against it. This is
+why SPEC.md §15 Phase 1 is testable with no app at all, and it is the cheapest
+signal in the project. **Use it.**
 
-Note: `dart run custom_lint` has `--fatal-infos` on by default — exit code 1 even for INFO-level violations.
+### Known: `tuner_verify` fails 37/37
+
+`PitchAnalyzer` reports `0.000 Hz` / `confidence 0.00` for clean synthetic tones
+from 82 Hz to 1 kHz — with no microphone in the path. It is **not** a stale
+harness. CI runs it informationally (`|| true`) and it becomes a gate when the
+tuner research lands. See SPEC.md §10.1; do not "fix" it by loosening the test.
+
+## There is no lint step yet
+
+The old `PostToolUse` hook ran `scripts/lint_check.sh`, which ran `dart analyze`
+and `custom_lint`. Both are deleted. **Nothing replaces them until the RN app
+exists**, at which point SPEC.md §13.6 specifies the shape: ESLint flat config +
+`eslint-plugin-kitbag` enforcing the four architecture rules, `--max-warnings 0`,
+and a ported eval harness scoring `*_pass` / `*_fail` scenarios.
+
+Until then, verify C++ changes by building and running the verify tools above.
+
+## Architecture rules (SPEC.md §9.4)
+
+These hold whatever the stack. They currently have **no automated enforcement** —
+the lint layer that enforced them was Dart. Hold them by hand until §13.6 lands:
+
+- Native bindings live in exactly one package (`core-native`).
+- The abstract contract package imports neither the shell nor any tool.
+- Concrete state/DI lives in one package (`core-state`).
+- Nothing enters the core that a plugin can carry.
+
+Plus the one that is not a boundary but is load-bearing (SPEC.md §4.5, §13.3):
+
+- **Never stream 60fps values through the reactive graph.** Under React that means
+  the beat sweep and tuner needle never touch `useState` — they are Reanimated
+  worklets reading the JSI HostObject on the UI thread. This is not an
+  optimisation; it is why the architecture holds.
 
 ## Ralph loop: feedback→refine
 
-After implementing or changing anything non-trivial, run the Ralph loop before
-presenting to the human:
+After implementing or changing anything non-trivial, before presenting to the
+human:
 
-1. Self-review your work first (run lint checks, verify correctness)
-2. Invoke `@ralph` to review — describe what you built and why
-3. Read Ralph's feedback, fix the issues
-4. Iterate until Ralph passes you
+1. Self-review — build, run the verify tools, check correctness.
+2. Invoke `@ralph` — describe what you built and why.
+3. Read the feedback, fix the issues.
+4. Iterate until Ralph passes you.
 
-Ralph is a peer reviewer with `edit: deny` permission — can inspect and critique
-but cannot change files.
-
-## Eval harness: scoring agent changes
-
-Before/after any change to lint rules or agent configuration, run the eval to
-check for regressions:
-
-```bash
-bash packages/app_shell/eval/run.sh
-```
-
-The harness runs `dart run custom_lint` against `eval/*.dart` scenario files
-and scores each:
-- `*_pass.dart` — must produce zero diagnostics
-- `*_fail.dart` — must produce at least one diagnostic
-- `PascalCaseFileFail.dart` — special case (filename-based diagnostic at offset 0)
-
-All 7 scenarios must pass before submitting work.
+Ralph is a peer reviewer (`.claude/agents/ralph.md`), read-only. Thorough but
+fair. If you disagree with a nit, note it and move on — don't over-rotate.
 
 ## Git worktrees
-
-Each agent session gets an isolated git worktree to avoid conflicts:
 
 ```bash
 bash scripts/worktree.sh create <session-id> main
 cd ../kitbag-agent-<session-id>
-# git checkout -b my-feature
-# ... make changes, commit, push ...
+# ... work, commit, push ...
 bash scripts/worktree.sh remove <session-id>
 ```
 
-## Running checks
+The main checkout stays on its feature branch; agent worktrees branch off `main`.
 
-```bash
-# Specific package:
-cd packages/<pkg> && dart analyze lib/
+## What to work on
 
-# Custom lint rules:
-cd packages/app_shell && dart run custom_lint
+**SPEC.md §15 is the sequencing.** It replaces the 37-task "Autonomous Completion
+Plan" that used to live in this file — that plan was Flutter work, and its final
+task ("CHANGELOG entries per milestone") is how this repo came to document five
+releases that never shipped. Do not reinstate it.
 
-# Combined:
-bash scripts/lint_check.sh
+Short version:
 
-# Eval:
-bash packages/app_shell/eval/run.sh
-```
+- **Phase 0** — two verifications that block real work: F-Droid × Expo prebuild
+  policy, and whether the scheduler's lookahead absorbs a 300 ms latency offset.
+  Plus landing the design-file edits in §12.8.
+- **Phase 1** — SPEC.md §4 in full: native playback (4.1), phase anchor (4.2),
+  downbeats (4.3), mixer fixes (4.4). **Highest-leverage work in the project,
+  framework-independent, and testable headlessly.** Nothing above it is real until
+  this lands.
+- **Phase 2** — the RN skeleton, gated on proving the 60fps rule on a device.
+- **Phase 3** — rebuild the tools in dependency order.
 
----
+## Honesty rules
 
-## Autonomous Completion Plan
+The audit that produced SPEC.md §2 found a codebase whose docs, changelog and code
+comments actively misdescribed it. Some of that was written by agents. So:
 
-**37 tasks across 6 phases.** Each task follows the Ralph loop:
-1. Implement the change
-2. Self-verify: `bash scripts/lint_check.sh` + run relevant tests
-3. Invoke `@ralph` for review — describe what you built and why
-4. Fix Ralph's findings
-5. Iterate until Ralph passes
-6. Commit, then proceed to the next task
-
-Before starting a new task, read `todowrite` to find the next `pending` task whose
-dependencies are all `completed`. Mark it `in_progress` before work begins.
-
-### Phase 0: Infrastructure & Bug Fixes
-
-| # | Task | Dependencies | Test hint |
-|---|------|-------------|-----------|
-| 0.1 | **CI verification** — ensure CI pipeline actually passes (melos analyze/test, Android NDK build, drift codegen) | — | `melos run analyze && melos run test` |
-| 0.2 | **Android/Linux runner CMake wiring** — complete `bootstrap.sh` manual steps: wire `native/audio_core` into `app_shell`'s Linux and Android build files | — | `flutter build linux --debug` |
-| 0.3 | **Add `custom_lint_kitbag` to workspace** — ✅ done (already in workspace pubspec.yaml) | — | — |
-| 0.4 | **Fix metronome notification buttons** — `onDidReceiveNotificationResponse` doesn't reliably fire for background transport actions | — | Test play/pause/stop from notification |
-| 0.5 | **Setlist/song list gapping** — add consistent spacing between list items | — | Visual check |
-
-### Phase 1: M2 — Tuner (complete) + Settings polish
-
-| # | Task | Dependencies | Test hint |
-|---|------|-------------|-----------|
-| 1.1 | **Research open-source tuners** — study gStrings, DaTuner, Soundcorset, GuitarTuna approaches for precision and UX; document findings | — | Document in `docs/` |
-| 1.2 | **Tuner: fix mobile mic capture** — verify `VOICE_RECOGNITION` source, no AGC/NS/AEC, gain staging, permission flow on Android | 1.1 | Test on device |
-| 1.3 | **Tuner: fine-tune MPM pitch** — improve settle time, octave-error kill, median filter tuning, test with guitar 82Hz–1kHz | 1.2 | `flutter test` on tuner tests |
-| 1.4 | **Tuning editor: add/remove strings** — support variable-length string lists in custom profiles | — | `flutter test` on instruments/tuning tests |
-| 1.5 | **Settings: volume boost** — implement metronome click amplification slider | — | Visual + audio check |
-| 1.6 | **Settings: latency correction** — implement audio output offset slider | 1.5 | Visual check |
-| 1.7 | **Settings: tool toggle** — per-tool enable/disable toggle; filtered tile display on home screen | — | Visual check |
-
-### Phase 2: M1.5 — Metronome completion + Practice
-
-| # | Task | Dependencies | Test hint |
-|---|------|-------------|-----------|
-| 2.1 | **Per-song preset persistence** — save full metronome state (BPM, click sound, poly, subdivision, accents) per song in setlists | — | `flutter test` on setlist tests |
-| 2.2 | **Ramp in seconds/minutes** — extend `TempoRamp` to accept time-based duration, not just bars | 2.1 | `flutter test` on trainer tests |
-| 2.3 | **Custom subdivisions** — free-form subdivision input (not limited to presets 1/2/3/4) | — | `flutter test` |
-| 2.4 | **More click sounds** — add 3+ additional sample options beyond current 3 | — | Audio check |
-| 2.5 | **Circle layout optimization** — space-efficient LED placement algorithm for beat indicator | — | Visual check |
-| 2.6 | **Timer: auto with play/pause** — practice timer auto-starts on play, pauses on pause, resettable; shown at top of metronome screen | — | `flutter test` |
-| 2.7 | **Practice logs with stats** — per-session records (duration, avg BPM, setlist used, songs played); stored in drift; import/export with other data | 2.6 | `flutter test` |
-
-### Phase 3: M3 — Library & Play-along (v0.3)
-
-| # | Task | Dependencies | Test hint |
-|---|------|-------------|-----------|
-| 3.1 | **Scaffold `tool_library`** — create package skeleton, implement `ToolPlugin`, register routes, add to workspace | — | `dart analyze` |
-| 3.2 | **Song import** — file picker → copy to base directory, index in drift (title, artist, duration, format) | 3.1 | `flutter test` |
-| 3.3 | **Audio decode pipeline** — decode via dr_libs/AMediaCodec in background isolate; support wav/mp3/flac/ogg/aac | 3.2 | Integration test |
-| 3.4 | **Beat analysis** — QM-DSP beat grid, store as Float32 BLOB in drift, waveform peaks sidecar file | 3.3 | Integration test |
-| 3.5 | **Player** — play/pause/seek with waveform display, position tracking | 3.1 | `flutter test` |
-| 3.6 | **Metronome phase-lock** — sample-accurate sync to beat grid, latency-compensated | 3.4, 3.5 | `flutter test` |
-| 3.7 | **Play-along mode** — unified UI: library player + synced metronome display with transport coordination | 3.6 | Integration test |
-
-### Phase 4: M4 — Stem player (v0.4)
-
-| # | Task | Dependencies | Test hint |
-|---|------|-------------|-----------|
-| 4.1 | **Scaffold `tool_stems`** — create package skeleton, implement `ToolPlugin`, register routes, add to workspace | — | `dart analyze` |
-| 4.2 | **Folder import → stem set** — name-based matcher (vocals/drums/bass/guitar/piano/keys/other/other2/...); support wav/mp3/flac/ogg | 4.1 | `flutter test` |
-| 4.3 | **Resample + length-pad** — resample all stems to canonical sample rate, zero-pad to longest stem | 4.2 | Integration test |
-| 4.4 | **N-track lock-free mixer** — per-track gain/mute/solo in C++ core | 4.3 | `cmake --build` + integration test |
-| 4.5 | **Per-stem waveforms + A-B loop** — UI with equal-power crossfade (5-20ms) | 4.4 | Visual+audio check |
-
-### Phase 5: M5 — Media sync (v0.5)
-
-| # | Task | Dependencies | Test hint |
-|---|------|-------------|-----------|
-| 5.1 | **Scaffold `tool_sync`** — create package skeleton, implement `ToolPlugin`, register routes, add to workspace | — | `dart analyze` |
-| 5.2 | **Kotlin MediaSession channel** — platform channel for active media detection (~200 lines) | 5.1 | Integration test |
-| 5.3 | **Now-playing UI** — transport controls, permission explainer flow for notification listener | 5.2 | Visual check |
-| 5.4 | **BPM lookup chain** — Deezer → GetSongBPM → AcousticBrainz → tap-tempo fallback; cache results | 5.3 | `flutter test` |
-| 5.5 | **Tap-to-align + nudge** — manual phase alignment (±ms) with visual feedback | 5.4 | `flutter test` |
-| 5.6 | **Auto phase-lock** — library match (title/artist fuzzy) → stored beat grid → auto sync | 5.5, 3.4 | Integration test |
-
-### Phase 6: Data portability
-
-| # | Task | Dependencies | Test hint |
-|---|------|-------------|-----------|
-| 6.1 | **Unified import/export** — export all user data (setlists, songs, practice logs, settings, tool preferences) as a single archive; user picks location; defaults to base directory | 0.1–2.7 | `flutter test` |
-| 6.2 | **CHANGELOG entries per milestone** — document all completed work per the PLAN.md convention | all | — |
+- **Do not claim a milestone shipped.** Write CHANGELOG entries that are true, or
+  write none. "Fixed: nothing" is a legitimate entry.
+- **Do not write a comment that describes intent as behaviour.**
+  `bpm_lookup_service.dart:68` claimed similarity matching over a loop that
+  returned the first result; that comment survived long enough to reach a design
+  file.
+- **Do not invent a constant that already exists.** `sync_screen.dart:14` declared
+  its own sound names, mislabelling every sound from index 2 up, and the error
+  propagated into `design/kitbag-metronome.html`. One definition, one owner —
+  SPEC.md §13.7.
+- **Measure, don't demo.** Every failure in §2 is something a demo would not have
+  revealed.

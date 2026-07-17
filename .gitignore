@@ -1,15 +1,12 @@
-# Dart / Flutter
-.dart_tool/
-.packages
-pubspec.lock
-build/
-*.g.dart
-*.freezed.dart
-.flutter-plugins*
-.metadata
-
 # Native
+build/
 native/audio_core/build/
+
+# Node / React Native — the app lands per SPEC.md §13
+node_modules/
+.turbo/
+.expo/
+*.tsbuildinfo
 
 # IDE
 .idea/
