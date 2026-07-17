@@ -2,9 +2,11 @@
 
 > The open-source everything-app for musicians. GPLv3, no caps, no paywalls.
 >
-> **Status**: authoritative. Supersedes `PLAN.md` for scope and contracts.
-> `PLAN.md` remains useful as the technology-research record (§3 library
-> choices) but its milestones and status claims are stale.
+> **Status**: authoritative and sole. There is no companion planning document —
+> `PLAN.md` was deleted on 2026-07-17 once its Flutter architecture, its stale
+> milestones and its superseded design notes left nothing this file does not say
+> better. What was still true in it lives here: the dependency table is §4.6, the
+> tuner capture research is §10.1, the BPM ladder is §8.5.
 >
 > **Stack: React Native + TypeScript.** Decided 2026-07-17. This document is
 > the first revision of the spec that fixes the UI framework; the previous
@@ -163,7 +165,8 @@ moot. Two entries survive as instructions rather than deletions:
   reference. **§4.1 fixes this, not React.** Do not reach for
   `react-native-track-player` — it is the same mistake with a different name.
 - **No downbeat detection.** `beat_tracker.cpp` is hand-rolled, not QM-DSP
-  BarBeatTrack as PLAN §3 specifies. It yields beats but not bar-ones.
+  BarBeatTrack, which the original research chose and nobody built. It yields
+  beats but not bar-ones.
   **Unaffected by the migration; §4.3 fixes it.**
 - **Single shared metronome controller.** `PlayAlongScreen` mutates the
   standalone metronome's tempo with no save/restore. §6.4 and §8.9 fix this;
@@ -322,10 +325,10 @@ to the same bound. This is checked, not assumed — see §13.2.
 `beat_tracker.cpp` produces beats but not bar-ones. Bar alignment, count-in, and
 "lock to bar 1" all need downbeats.
 
-Either adopt QM-DSP `BarBeatTrack` (GPL — compatible, and PLAN §3's original
+Either adopt QM-DSP `BarBeatTrack` (GPL — compatible, and the original researched
 choice) or extend the existing tracker with downbeat estimation. Adopting QM-DSP
 is preferred: it is the researched choice, and the hand-rolled substitute was
-never a deliberate decision.
+never a deliberate decision — see §4.6, it was planned and simply never vendored.
 
 ```c
 /* Extends the existing analyse call. */
@@ -368,7 +371,34 @@ degraded but usable) — no destructive migration.
 - Every exported symbol has a consumer. No speculative FFI, and no speculative
   TurboModule methods.
 
-### 4.6 The latency clamp is a doc comment
+### 4.6 Native dependencies
+
+What `native/audio_core` actually vendors and links, verified 2026-07-17. GPLv3
+compatibility is the constraint; both current dependencies are permissive.
+
+| Dependency | Licence | Role |
+|---|---|---|
+| **miniaudio** (`third_party/miniaudio.h`) | MIT-0 / public domain | Device I/O — AAudio on Android, PipeWire on Linux, CoreAudio on iOS. One API. Also supplies the Speex-derived resampler §4.1 needs. |
+| **cycfi/q** (`third_party/cycfi_q/`) | **Boost Software License 1.0** | Pitch detection (`pitch_analyzer.cpp` uses `q::frequency`, `q::dB`). Header-only. |
+
+Everything else is ours: the lookahead scheduler, the mixer, the radix-2 FFT
+(`fft.cpp`), and the beat tracker.
+
+**Planned but never vendored** — the original research chose all of these and none
+were built. Do not assume they are present:
+
+- **SoLoud** (mixer/playback). Not used; the mixer is ours.
+- **QM-DSP `BarBeatTrack`** (beat + downbeat). Not used; `beat_tracker.cpp` is
+  hand-rolled spectral-flux → autocorrelation → DP placement, which is why there
+  are no downbeats (§2.5, §4.3).
+- **dr_libs / stb_vorbis** (decoders). Not used; decoding goes through miniaudio.
+- **BTrack**, **Signalsmith Stretch** — later-ring, out of scope (§3.3).
+
+> The earlier research recorded cycfi/q as GPLv3. It is BSL-1.0 — permissive, so
+> the error was harmless, but it is the kind of thing that should be read off the
+> vendored `LICENSE` rather than a table. Attribution obligations still apply.
+
+### 4.7 The latency clamp is a doc comment
 
 `kitbag_api.h:63` documents `kb_metronome_set_latency_offset` as `[-100, 100]`
 ms. **Nothing enforces it.** `kb_metronome_set_latency_offset` passes straight
@@ -648,7 +678,8 @@ first implementation**, gated on §4.1.
   reverse-engineered from the first file's parent and `/` hardcoded as
   separator. Use a real directory picker.
 - Name matcher (vocals/drums/bass/guitar/piano/keys/other) works — but collapses
-  piano and keys into one role where PLAN specs them separate. Split them.
+  piano and keys into one role. Split them — they are different instruments and the
+  original research specced them separately.
 - **Resample on ingest** to the engine rate (§4.1). Today non-48kHz stems are
   silently skipped and the set plays as silence.
 - Inline rename; generic icon fallback.
@@ -705,8 +736,9 @@ User-facing name: **Play along**. Engineering name: media sync. The package is
 `tool_sync`. The Flutter AppBar says "Media Sync"; the tile and the design spec
 say Play along.
 
-The feature with the largest gap: **3 of 11 PLAN §5 clauses done, 2 partial,
-6 missing, neither proof achievable.** Design locked in
+The feature with the largest gap. Of the eleven things the original milestone
+claimed it would do, **three were done, two partial, six missing — and neither of
+its two acceptance proofs was achievable.** Design locked in
 `design/kitbag-playalong.html`.
 
 **Principle:** tempo is known; phase is the feature. A BPM is a number anyone
@@ -784,7 +816,8 @@ which rungs were climbed is what stops the user retrying the same thing.
   a key, so in practice the ladder is the three rungs above.
 - **The offline dump is dropped** (**D8**). Delete the AcousticBrainz stub that
   returns `null` and the source it advertises at `bpm_lookup_service.dart:21`. The
-  bundled 2022 dump PLAN specs is not shipped and not downloaded.
+  bundled 2022 dump the original research specced is not shipped and not
+  downloaded.
 - **The library beat grid is a real rung, and the best one.** A matched analysed
   song gives per-beat spacing, not a single number — the only rung that handles
   non-constant tempo (§8.6).
@@ -1018,8 +1051,10 @@ Investigate, in this order:
   synthetic tones before touching anything device-side. It is a closed loop with
   no hardware in it, it runs in a second, and it is currently the cheapest signal
   in the project. **Everything below is unfalsifiable until it is green.**
-- **Capture path.** PLAN §3 specs `UNPROCESSED` (fallback `VOICE_RECOGNITION`)
-  with AGC/NS/AEC never attached. Verify what the app actually requests and what
+- **Capture path.** The capture research specifies `UNPROCESSED` (fallback
+  `VOICE_RECOGNITION`) with AGC/NS/AEC never attached, a ~30ms analysis window
+  (~90ms for bass B0) at 50% overlap, and a median filter of 3–5 frames plus EMA
+  on cents settling under 150ms. Verify what the app actually requests and what
   the device grants. **Previously this section's leading hypothesis; demoted by
   the measurement above** — it may still be *a* problem, but it cannot be *the*
   problem.

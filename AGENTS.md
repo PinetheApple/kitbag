@@ -1,8 +1,9 @@
 # Kitbag — Agent Workflow Guide
 
-> **`SPEC.md` is the source of truth.** Not `PLAN.md`, not `CHANGELOG.md`, and not
-> this file. If any of them disagree with SPEC.md, SPEC.md wins and the other is a
-> bug. Read SPEC.md §2 before believing any status claim anywhere in the repo.
+> **`SPEC.md` is the source of truth**, and the only planning document. Not
+> `CHANGELOG.md`, not this file. If either disagrees with SPEC.md, SPEC.md wins and
+> the other is a bug. Read SPEC.md §2 before believing any status claim anywhere in
+> the repo.
 
 ## What is in this repo right now
 
@@ -15,7 +16,7 @@ Native + TypeScript). The React Native app **does not exist yet**. What remains:
 | `SPEC.md` | Product + technical spec. Source of truth. §17 records 13 locked decisions; §17.1 is what is still open. |
 | `design/` | Four HTML design specs, all binding. Precedence is in SPEC.md §12. |
 | `legacy/` | The only Flutter-era files kept, because SPEC.md cannot reconstruct them: `MediaSessionPlugin.kt` + `AndroidManifest.xml` (ported near line-for-line, §13.9) and `database.dart` + `converters.dart` (the v6 schema and the beat-grid / `.kwav` binary formats, §11). **Reference only — do not build against them.** |
-| `docs/` | ADRs (historical, superseded not edited) and tuner research (read its warning banner first). |
+| `docs/` | `tuner-research.md` — an algorithm survey. **Read its warning banner first**: its §3 recommends refining a detector that currently emits nothing. |
 | `scripts/worktree.sh` | Agent worktree helper. Still current. |
 
 Everything else the old guide referenced — Melos, `pubspec.yaml`, `dart analyze`,

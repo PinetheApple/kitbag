@@ -10,9 +10,9 @@ no caps, no paywalls, ever.
 > instant. That app has been removed; the C++ core stays.
 >
 > **[SPEC.md](SPEC.md) is the source of truth** — scope, contracts, decisions and
-> sequencing. `PLAN.md` survives only as the technology-research record; its
-> milestones are stale. `CHANGELOG.md` previously claimed five shipped releases
-> and has been corrected — nothing has shipped.
+> sequencing. It is the only planning document; `PLAN.md` was folded into it and
+> deleted. `CHANGELOG.md` previously claimed five shipped releases and has been
+> corrected — nothing has shipped.
 
 ## Architecture
 
@@ -35,7 +35,7 @@ native/audio_core   # C++ engine (miniaudio), CMake — the only buildable thing
 SPEC.md             # source of truth
 design/             # four binding design specs
 legacy/             # Flutter-era files the spec can't reconstruct (reference only)
-docs/               # ADRs + tuner research
+docs/               # tuner research (read its warning banner)
 ```
 
 ## Building

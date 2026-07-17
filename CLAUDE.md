@@ -3,9 +3,9 @@
 > **Claude Code config.** For opencode, see `AGENTS.md`.
 > Both files stay in sync — **prefer editing AGENTS.md**, then mirror here.
 
-> **`SPEC.md` is the source of truth.** Not `PLAN.md`, not `CHANGELOG.md`, and not
-> this file. If any disagree with SPEC.md, SPEC.md wins. Read SPEC.md §2 before
-> believing any status claim in this repo.
+> **`SPEC.md` is the source of truth**, and the only planning document. Not
+> `CHANGELOG.md`, not this file. If either disagrees with SPEC.md, SPEC.md wins.
+> Read SPEC.md §2 before believing any status claim in this repo.
 
 ## What is in this repo right now
 
@@ -18,7 +18,7 @@ Native + TypeScript). The React Native app **does not exist yet**.
 | `SPEC.md` | Source of truth. §17 = 13 locked decisions; §17.1 = still open. |
 | `design/` | Four binding HTML design specs. Precedence in SPEC.md §12. |
 | `legacy/` | Flutter-era files kept only because SPEC.md can't reconstruct them: the Kotlin media-session plugin + manifest (§13.9), and the v6 schema + binary formats (§11). **Reference only.** |
-| `docs/` | ADRs (historical) + tuner research (read its warning banner). |
+| `docs/` | `tuner-research.md` — algorithm survey. **Read its warning banner first** (its §3 refines a detector that emits nothing). |
 | `scripts/worktree.sh` | Worktree helper. Current. |
 
 Melos, `pubspec.yaml`, `dart analyze`, `custom_lint`, `scripts/lint_check.sh` and
