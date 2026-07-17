@@ -1,0 +1,7 @@
+# Inherits native/audio_core/.clang-tidy; relaxes only what tests legitimately do.
+# Verify tools are fixtures: BPM values (120, 200), durations in seconds (6, 8)
+# and beat maths (60.0 / bpm * rate) are the scenario being tested, self-evident
+# in place, and naming each would make the tests read worse than the code they
+# guard. Magic-number enforcement therefore stops at the src/include boundary.
+InheritParentConfig: true
+Checks: '-readability-magic-numbers'

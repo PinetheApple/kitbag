@@ -20,13 +20,18 @@ enum class Accent : uint8_t { kMuted = 0, kNormal = 1, kAccented = 2 };
 class Metronome {
  public:
   static constexpr int kMaxBeats = 16;
-  static constexpr int kMaxSubdivision = 6;
+  static constexpr int kMaxSubdivision = 16;
   static constexpr int kMaxPolyBeats = 16;
-  static constexpr int kSoundCount = 3;
+  static constexpr int kSoundCount = 6;
   static constexpr double kMinBpm = 20.0;
   static constexpr double kMaxBpm = 400.0;
   static constexpr int kMaxRampBars = 64;
   static constexpr int kMaxMuteBars = 16;
+  // Output-latency compensation bound (D5). Widening this to 300 is the whole
+  // of D5's clamp change; the calibration screen and kitbag_api.h's doc comment
+  // move with it. See SPEC.md §4.6.
+  static constexpr double kMaxLatencyOffsetMs = 100.0;
+  static constexpr double kDefaultBpm = 120.0;
 
   Metronome() {
     accents_[0] = Accent::kAccented;
@@ -48,6 +53,8 @@ class Metronome {
   void SetAccent(int beat_index, Accent accent);
   void SetPolyrhythm(bool enabled, int beats);
   void SetSound(int sound_index);
+  void SetVolume(double volume);
+  void SetLatencyOffset(double latency_ms);
   // Tempo ramp trainer: steps the BPM once per bar from start to end over
   // `bars` bars, then holds at end. Restarts from the current bar; a manual
   // SetTempo cancels it. Each Start replays the ramp from the beginning.
@@ -92,6 +99,8 @@ class Metronome {
     kSetSound,
     kSetRamp,
     kSetBarMute,
+    kSetVolume,
+    kSetLatencyOffset,
   };
 
   struct Command {
@@ -123,12 +132,15 @@ class Metronome {
   float RenderVoices();
   double RampBpmForBar(int64_t bar) const;
   bool BarIsMuted(int64_t bar) const;
+  double LatencyBeats() const;
+  // The only way bpm_ may change while running. See the definition.
+  void SetBpmPreservingPhase(double new_bpm);
 
   SpscRing<Command, kCommandRingSize> commands_;
 
   // RT-owned sequencer state (touched only inside Render).
   bool running_ = false;
-  double bpm_ = 120.0;
+  double bpm_ = kDefaultBpm;
   int beats_per_bar_ = 4;
   int subdivision_ = 1;
   Accent accents_[kMaxBeats] = {};
@@ -148,6 +160,8 @@ class Metronome {
   bool mute_enabled_ = false;
   int play_bars_ = 3;
   int mute_bars_ = 1;
+  double volume_ = 1.0;
+  double latency_offset_ms_ = 0.0;
   Voice voices_[kMaxVoices];
 
   // UI-visible mirrors.
@@ -155,7 +169,7 @@ class Metronome {
   std::atomic<int32_t> current_beat_{-1};
   std::atomic<int32_t> current_poly_beat_{-1};
   std::atomic<double> bar_phase_{0.0};
-  std::atomic<double> current_bpm_{120.0};
+  std::atomic<double> current_bpm_{kDefaultBpm};
   std::atomic<bool> bar_muted_flag_{false};
 };
 

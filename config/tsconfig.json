@@ -1,0 +1,51 @@
+// Staged ahead of the RN app (SPEC §13/§13.6); wired when Phase 2 scaffolds.
+// Cannot run until package.json exists. See config/README.md.
+{
+  // Phase 2 note: change to "expo/tsconfig.base" once `expo` is installed.
+  // Kept as a comment rather than a live extends so this file type-checks
+  // nothing today and makes no false claim that the toolchain resolves.
+  // "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+
+    // Indexing an array/record yields `T | undefined`. The realtime layer
+    // reads packed fields and fixed-size tables (soundNames, kMaxTracks=16,
+    // SPEC §13.7); an unchecked index there is a silent out-of-bounds read.
+    "noUncheckedIndexedAccess": true,
+
+    // `foo?: T` must be `T` or absent, never `undefined`. Command payloads
+    // cross the TurboModule boundary (SPEC §13.2); "present but undefined"
+    // and "absent" must not blur.
+    "exactOptionalPropertyTypes": true,
+
+    // Plugin contract (core-plugin-api, SPEC §13.1) is implemented by tools.
+    // Overrides must be explicit so a renamed contract method fails loudly
+    // instead of silently no longer overriding.
+    "noImplicitOverride": true,
+
+    "noFallthroughCasesInSwitch": true,
+
+    // Type-only imports must say `import type`. Required for correctness under
+    // the New Architecture / Metro: a type accidentally imported as a value
+    // can drag a native-only module (core-native, SPEC §13.2) into a bundle
+    // that must not load it.
+    "verbatimModuleSyntax": true,
+
+    // Path aliases mirror the pnpm workspace packages (SPEC §13.1). Phase 2
+    // owns the real values; these document intent.
+    "paths": {
+      "@core-native/*": ["./packages/core-native/src/*"],
+      "@core-plugin-api/*": ["./packages/core-plugin-api/src/*"],
+      "@core-state/*": ["./packages/core-state/src/*"],
+      "@core-db/*": ["./packages/core-db/src/*"],
+      "@core-design/*": ["./packages/core-design/src/*"]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts",
+    "nativewind-env.d.ts"
+  ]
+}

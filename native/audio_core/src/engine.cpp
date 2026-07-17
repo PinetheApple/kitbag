@@ -77,6 +77,9 @@ void Engine::Render(float* output, uint32_t frame_count) {
     }
   }
 
+  // Stem mixer: overwrites output with mixed stem audio when playing.
+  mixer_.Process(output, frame_count, kSampleRate);
+
   metronome_.Render(output, frame_count, kSampleRate, kChannelCount);
 
   frames_rendered_.fetch_add(frame_count, std::memory_order_relaxed);
