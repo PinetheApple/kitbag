@@ -1,0 +1,8 @@
+# The public C ABI. Every identifier here follows C convention (kb_snake_case
+# types/functions, KB_UPPER enum constants), which the root config's C++ naming
+# rules (CamelCase enums, k-prefixed constants) would flag wholesale. The root
+# .clang-tidy already declares this surface out of scope in prose; this makes it
+# so. Everything else in the root config still applies via InheritParentConfig.
+InheritParentConfig: true
+Checks: >
+  -readability-identifier-naming

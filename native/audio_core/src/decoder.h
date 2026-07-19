@@ -6,7 +6,8 @@
 #include <string>
 #include <vector>
 
-struct ma_decoder;
+// miniaudio's type — third-party, its own naming convention.
+struct ma_decoder;  // NOLINT(readability-identifier-naming)
 
 namespace kitbag {
 
