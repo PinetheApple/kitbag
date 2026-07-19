@@ -31,6 +31,12 @@ class Engine {
   void Stop();
 
   uint32_t sample_rate() const { return kSampleRate; }
+  // True between a successful Start and the next Stop — that is, whenever the
+  // data callback can run. Publishers of realtime payloads read this to decide
+  // whether a retired payload can be freed at once (see RtPublisher::Publish).
+  bool is_running() const {
+    return device_running_.load(std::memory_order_relaxed);
+  }
   uint64_t frames_rendered() const {
     return frames_rendered_.load(std::memory_order_relaxed);
   }
@@ -57,6 +63,7 @@ class Engine {
   ma_device device_{};
   bool device_ready_ = false;
 
+  std::atomic<bool> device_running_{false};
   std::atomic<uint64_t> frames_rendered_{0};
   std::atomic<bool> tone_enabled_{false};
   std::atomic<float> tone_frequency_hz_{kDefaultToneFrequencyHz};

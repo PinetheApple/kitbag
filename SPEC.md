@@ -314,6 +314,23 @@ Requirements:
 - All three compose with the existing latency offset so the click lands on the
   beat *at the speaker*, not at the buffer.
 
+**Past the last grid beat, the click goes silent and stays silent.** Every song
+reaches this. `is_running()` keeps reporting true, and `bar_phase` and
+`current_bpm` freeze at their last in-grid values rather than snapping to zero.
+
+This is the decision, not an oversight. A grid is a statement about a specific
+song; past its end there is no measured tempo left to follow, and the two
+alternatives are both worse — extrapolating the last interval invents a tempo
+the song does not have and drifts audibly, while falling back to `bpm_` makes
+the click jump to an unrelated tempo at a moment the user did not ask for. The
+mirrors hold rather than zero so the UI does not flash a dead sweep and a 0 BPM
+readout at the end of every song.
+
+The consequence the UI owns: silence past the end is indistinguishable from a
+stalled engine by listening alone. Whatever surfaces "the grid has run out" is a
+UI affordance, not an engine behaviour change. `clear_grid` is how a caller
+returns to a constant tempo, and it keeps the click's phase.
+
 **JSI note.** `kb_engine_frames_rendered` and `start_at` take `uint64_t` frame
 counts. At 48kHz a JS double's 53-bit mantissa is exact for ~5,900 years of
 continuous rendering, so frames may cross as `double`. Do not introduce BigInt

@@ -4,9 +4,11 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <memory>
 #include <vector>
 
 #include "../src/metronome.h"
+#include "../src/rt_publisher.h"
 
 namespace {
 
@@ -19,6 +21,9 @@ constexpr double kOnsetThreshold = 0.05;
 // inter-click gap in these tests (12000 frames).
 constexpr int kOnsetHoldFrames = 6000;
 constexpr double kMaxJitterFrames = 1.5;
+// Grid beats are placed from doubles in seconds, so allow a couple of samples
+// of rounding on top of the click's attack.
+constexpr double kGridToleranceFrames = 4.0;
 
 int g_failures = 0;
 
@@ -383,6 +388,400 @@ void TestStartAtKeepsBeatZeroUnderLatencyOffset() {
   }
 }
 
+// Builds a grid whose beats accelerate: spacing shrinks by `shrink` each beat.
+// A constant BPM cannot follow this, which is the point of grid mode.
+std::unique_ptr<kitbag::BeatGrid> MakeDriftingGrid(int count,
+                                                   double first_interval,
+                                                   double shrink,
+                                                   uint64_t anchor_frame) {
+  auto grid = std::make_unique<kitbag::BeatGrid>();
+  double t = 0.0;
+  double interval = first_interval;
+  for (int i = 0; i < count; ++i) {
+    grid->beat_times_sec.push_back(t);
+    t += interval;
+    interval -= shrink;
+  }
+  grid->anchor_frame = anchor_frame;
+  return grid;
+}
+
+// The click follows the grid's per-beat spacing, not a single BPM.
+void TestGridFollowsDriftingTempo() {
+  kitbag::Metronome metronome;
+  metronome.SetTempo(120.0);  // deliberately unrelated to the grid
+  metronome.SetBeatsPerBar(4);
+  auto grid = MakeDriftingGrid(12, 0.5, 0.02, 0);
+  const auto expected = grid->beat_times_sec;
+  metronome.SetGrid(std::move(grid), 0, true);
+  metronome.Start();
+
+  const auto onsets = RenderAndDetectOnsets(metronome, kSampleRate * 5);
+  Check(onsets.size() == expected.size(), "grid: one click per grid beat");
+  for (size_t i = 0; i < onsets.size() && i < expected.size(); ++i) {
+    const double want = expected[i] * kSampleRate;
+    if (std::fabs(static_cast<double>(onsets[i]) - want) >
+        kGridToleranceFrames) {
+      std::fprintf(stderr, "FAIL: grid beat %zu at %lld, expected %.0f\n", i,
+                   static_cast<long long>(onsets[i]), want);
+      ++g_failures;
+      break;
+    }
+  }
+}
+
+// A grid swapped mid-run re-seeds from the current position: the next future
+// beat of the new grid fires, and beats already played are never revisited.
+// Grid mode is driven by the absolute engine frame, so this renders one
+// continuous frame range rather than reusing RenderAndDetectOnsets, which
+// restarts the transport at frame 0 on every call.
+void TestGridReanchorMidRunPicksUpNewGrid() {
+  kitbag::Metronome metronome;
+  metronome.SetBeatsPerBar(4);
+  metronome.SetGrid(MakeDriftingGrid(40, 0.5, 0.0, 0), 0,
+                    true);  // beats on 0.5 s
+  metronome.Start();
+
+  // Same tempo, offset by a quarter second: every future beat moves.
+  auto shifted = std::make_unique<kitbag::BeatGrid>();
+  for (int i = 0; i < 40; ++i) {
+    shifted->beat_times_sec.push_back(0.25 + 0.5 * i);
+  }
+  shifted->anchor_frame = 0;
+
+  std::vector<float> buffer(kBlockFrames * kChannels);
+  std::vector<int64_t> onsets;
+  int64_t rendered = 0, last_onset = -kOnsetHoldFrames;
+  float previous_abs = 0.0f;
+  bool swapped = false;
+  // Between beats, so neither grid's beat is ambiguous at the swap.
+  const int64_t swap_at = static_cast<int64_t>(2.1 * kSampleRate);
+  const int64_t total = kSampleRate * 4;
+
+  while (rendered < total) {
+    if (!swapped && rendered >= swap_at) {
+      metronome.SetGrid(std::move(shifted), static_cast<uint64_t>(rendered),
+                        true);
+      swapped = true;
+    }
+    std::fill(buffer.begin(), buffer.end(), 0.0f);
+    metronome.Render(buffer.data(), kBlockFrames, kSampleRate, kChannels,
+                     static_cast<uint64_t>(rendered));
+    for (uint32_t frame = 0; frame < kBlockFrames; ++frame) {
+      const float amplitude = std::fabs(buffer[frame * kChannels]);
+      const int64_t index = rendered + frame;
+      if (amplitude > kOnsetThreshold && previous_abs <= kOnsetThreshold &&
+          index - last_onset >= kOnsetHoldFrames) {
+        onsets.push_back(index);
+        last_onset = index;
+      }
+      previous_abs = amplitude;
+    }
+    rendered += kBlockFrames;
+  }
+
+  // Old grid through 2.0, then the new grid's first beat at or after the swap.
+  const double expected[] = {0.0, 0.5, 1.0, 1.5, 2.0, 2.25, 2.75, 3.25, 3.75};
+  const size_t expected_count = sizeof(expected) / sizeof(expected[0]);
+  Check(onsets.size() == expected_count,
+        "grid re-anchor: old beats then the new grid's future beats");
+  for (size_t i = 0; i < onsets.size() && i < expected_count; ++i) {
+    const double want = expected[i] * kSampleRate;
+    if (std::fabs(static_cast<double>(onsets[i]) - want) >
+        kGridToleranceFrames) {
+      std::fprintf(stderr, "FAIL: re-anchor beat %zu at %lld, expected %.0f\n",
+                   i, static_cast<long long>(onsets[i]), want);
+      ++g_failures;
+      break;
+    }
+  }
+}
+
+// Renders a continuous frame range, letting the caller act at frame
+// boundaries. Grid mode is driven by the absolute engine frame, so grid tests
+// cannot use RenderAndDetectOnsets, which restarts the transport at 0.
+template <typename OnFrame>
+std::vector<int64_t> RenderContinuous(kitbag::Metronome& metronome,
+                                      int64_t total_frames, OnFrame on_frame) {
+  std::vector<float> buffer(kBlockFrames * kChannels);
+  std::vector<int64_t> onsets;
+  int64_t rendered = 0, last_onset = -kOnsetHoldFrames;
+  float previous_abs = 0.0f;
+
+  while (rendered < total_frames) {
+    on_frame(rendered);
+    std::fill(buffer.begin(), buffer.end(), 0.0f);
+    metronome.Render(buffer.data(), kBlockFrames, kSampleRate, kChannels,
+                     static_cast<uint64_t>(rendered));
+    for (uint32_t frame = 0; frame < kBlockFrames; ++frame) {
+      const float amplitude = std::fabs(buffer[frame * kChannels]);
+      const int64_t index = rendered + frame;
+      if (amplitude > kOnsetThreshold && previous_abs <= kOnsetThreshold &&
+          index - last_onset >= kOnsetHoldFrames) {
+        onsets.push_back(index);
+        last_onset = index;
+      }
+      previous_abs = amplitude;
+    }
+    rendered += kBlockFrames;
+  }
+  return onsets;
+}
+
+// Every onset must coincide with some beat in the grid.
+void ExpectOnGrid(const std::vector<int64_t>& onsets,
+                  const std::vector<double>& times, const char* label) {
+  for (const int64_t onset : onsets) {
+    bool matched = false;
+    for (const double t : times) {
+      if (std::fabs(static_cast<double>(onset) - t * kSampleRate) <=
+          kGridToleranceFrames) {
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) {
+      std::fprintf(stderr, "FAIL: %s — onset %lld is not on any grid beat\n",
+                   label, static_cast<long long>(onset));
+      ++g_failures;
+      return;
+    }
+  }
+}
+
+// Regression: pausing and resuming under a grid must not strand the cursor
+// where the pause began. It used to swallow every beat spanned by the pause
+// into a single click at the resume instant — off the grid entirely — and
+// skip the bar counter past the downbeats it swallowed.
+void TestGridSurvivesStopStart() {
+  kitbag::Metronome metronome;
+  metronome.SetBeatsPerBar(4);
+  auto grid = MakeDriftingGrid(40, 0.5, 0.0, 0);
+  const auto times = grid->beat_times_sec;
+  metronome.SetGrid(std::move(grid), 0, true);
+  metronome.Start();
+
+  const int64_t stop_at = static_cast<int64_t>(1.2 * kSampleRate);
+  const int64_t start_at = static_cast<int64_t>(2.6 * kSampleRate);
+  const auto onsets =
+      RenderContinuous(metronome, kSampleRate * 5, [&](int64_t frame) {
+        if (frame >= stop_at && frame < stop_at + kBlockFrames) {
+          metronome.Stop();
+        } else if (frame >= start_at && frame < start_at + kBlockFrames) {
+          metronome.Start();
+        }
+      });
+
+  ExpectOnGrid(onsets, times, "grid stop/start");
+  // Nothing during the pause, and the grid resumes after it.
+  for (const int64_t onset : onsets) {
+    Check(onset < stop_at + kBlockFrames || onset >= start_at,
+          "grid stop/start: silent while stopped");
+  }
+  Check(onsets.size() > 3, "grid stop/start: the click resumes");
+}
+
+// StartAt under a grid seeds the cursor at the anchor, not at the block the
+// grid arrived in.
+void TestGridWithStartAt() {
+  kitbag::Metronome metronome;
+  metronome.SetBeatsPerBar(4);
+  auto grid = MakeDriftingGrid(40, 0.5, 0.0, 0);
+  const auto times = grid->beat_times_sec;
+  metronome.SetGrid(std::move(grid), 0, true);
+  metronome.StartAt(static_cast<uint64_t>(1.1 * kSampleRate));
+
+  const auto onsets =
+      RenderContinuous(metronome, kSampleRate * 4, [](int64_t) {});
+  ExpectOnGrid(onsets, times, "grid + start_at");
+  Check(!onsets.empty() && onsets[0] >= static_cast<int64_t>(1.1 * kSampleRate),
+        "grid + start_at: nothing sounds before the anchor");
+}
+
+// Subdivisions divide each measured interval rather than being dropped.
+void TestGridSubdivision() {
+  kitbag::Metronome metronome;
+  metronome.SetBeatsPerBar(4);
+  metronome.SetSubdivision(2);
+  metronome.SetGrid(MakeDriftingGrid(20, 0.5, 0.0, 0), 0, true);
+  metronome.Start();
+
+  const auto onsets =
+      RenderContinuous(metronome, kSampleRate * 2, [](int64_t) {});
+  // Beats at 0.0/0.5/1.0/1.5 plus offbeats at 0.25/0.75/1.25/1.75.
+  Check(onsets.size() == 8, "grid subdivision: beats and offbeats both sound");
+  ExpectSpacing(onsets, 0, onsets.size(), 0.25 * kSampleRate,
+                "grid subdivision spacing");
+}
+
+// The publisher itself: generations advance and the payload survives.
+void TestRtPublisher() {
+  kitbag::RtPublisher<int> publisher;
+  Check(publisher.Get() == nullptr, "publisher: empty until published");
+
+  auto first = std::make_unique<int>(7);
+  publisher.Publish(std::move(first), 0, true);
+  const auto* a = publisher.Get();
+  Check(a != nullptr && a->value == 7, "publisher: publishes the payload");
+  Check(a->generation == 1, "publisher: first generation is 1");
+
+  publisher.Publish(std::make_unique<int>(9), 0, true);
+  const auto* b = publisher.Get();
+  Check(b != nullptr && b->value == 9, "publisher: replaces the payload");
+  Check(b->generation == 2, "publisher: generation advances on republish");
+
+  publisher.Publish(nullptr, 0, true);
+  Check(publisher.Get() == nullptr, "publisher: nullptr clears");
+
+  publisher.ReclaimAll();
+  Check(publisher.retired_size() == 0, "publisher: ReclaimAll empties retired");
+}
+
+// The reclamation policy, which is the one mechanism here whose failure mode is
+// a use-after-free in the audio callback. Retired payloads must be held until
+// the frame clock has moved a full grace window past the swap, and must then
+// actually be freed rather than accumulating.
+void TestRtPublisherReclamation() {
+  const uint64_t grace = kitbag::RtPublisher<int>::kReclaimGraceFrames;
+  kitbag::RtPublisher<int> publisher;
+
+  publisher.Publish(std::make_unique<int>(1), 0, true);
+  Check(publisher.retired_size() == 0, "reclaim: nothing retired by the first");
+  publisher.Publish(std::make_unique<int>(2), 0, true);
+  Check(publisher.retired_size() == 1, "reclaim: the replaced payload retires");
+  publisher.Publish(std::make_unique<int>(3), 1000, true);
+  Check(publisher.retired_size() == 2, "reclaim: nothing freed inside grace");
+
+  // Exactly at the grace boundary the payload is still held: the predicate is
+  // strictly greater-than, so a reader one frame short of the window is safe.
+  publisher.Collect(grace);
+  Check(publisher.retired_size() == 2, "reclaim: held at the grace boundary");
+
+  // One frame past the oldest entry's window, and only it goes.
+  publisher.Collect(grace + 1);
+  Check(publisher.retired_size() == 1, "reclaim: freed one frame past grace");
+
+  // Far past every window: the set empties.
+  publisher.Collect(60000 + grace);
+  Check(publisher.retired_size() == 0, "reclaim: all freed once well past");
+
+  // With no reader — the engine never started, which is when a grid is usually
+  // set — reclamation cannot wait on a clock that is not moving.
+  kitbag::RtPublisher<int> stopped;
+  for (int i = 0; i < 8; ++i) {
+    stopped.Publish(std::make_unique<int>(i), 0, false);
+  }
+  Check(stopped.retired_size() == 0,
+        "reclaim: publishing with no reader frees immediately");
+}
+
+// Clearing the grid returns to constant-tempo mode *in phase*. Cleared at a
+// non-beat instant — 2.1 s, deliberately not on a beat — because clearing on a
+// beat hides the defect this pins: beat_position_ used to be frozen at its
+// Start value all through grid mode, so the first sample after the clear read
+// as a downbeat and fired immediately, shifting the bar.
+void TestClearGridReturnsToBpm() {
+  kitbag::Metronome metronome;
+  metronome.SetTempo(120.0);  // 0.5 s beats
+  metronome.SetBeatsPerBar(4);
+  // 0.3 s beats: deliberately incommensurate with the 0.5 s constant tempo, so
+  // continuing from the last grid beat and free-running from the start of the
+  // transport give different answers. A grid whose spacing divides the tempo's
+  // would let a broken anchor pass by coincidence.
+  metronome.SetGrid(MakeDriftingGrid(40, 0.3, 0.0, 0), 0, true);
+  metronome.Start();
+
+  const int64_t clear_at = static_cast<int64_t>(2.05 * kSampleRate);
+  bool cleared = false;
+  const auto onsets =
+      RenderContinuous(metronome, kSampleRate * 4, [&](int64_t frame) {
+        if (!cleared && frame >= clear_at) {
+          metronome.ClearGrid(static_cast<uint64_t>(frame), true);
+          cleared = true;
+        }
+      });
+
+  // The grid's own beats through 1.8, then 120 BPM continuing from that beat —
+  // 2.3, 2.8, 3.3, 3.8 — and nothing at the clear instant itself.
+  const double expected[] = {0.0, 0.3, 0.6, 0.9, 1.2, 1.5,
+                             1.8, 2.3, 2.8, 3.3, 3.8};
+  const size_t expected_count = sizeof(expected) / sizeof(expected[0]);
+  Check(onsets.size() == expected_count,
+        "clear grid: grid beats, then the constant tempo in phase");
+  for (size_t i = 0; i < onsets.size() && i < expected_count; ++i) {
+    const double want = expected[i] * kSampleRate;
+    if (std::fabs(static_cast<double>(onsets[i]) - want) >
+        kGridToleranceFrames) {
+      std::fprintf(stderr,
+                   "FAIL: clear grid onset %zu at %lld, expected %.0f\n", i,
+                   static_cast<long long>(onsets[i]), want);
+      ++g_failures;
+      break;
+    }
+  }
+}
+
+// The bar counter must be a function of the grid's beat numbering, not a count
+// of downbeats observed. A re-anchor that moves the cursor backwards re-crosses
+// a downbeat, and an incrementing counter would over-count — making the
+// bar-mute cycle's phase depend on how many times the user re-anchored.
+void TestGridReanchorKeepsBarPhase() {
+  kitbag::Metronome metronome;
+  metronome.SetBeatsPerBar(4);
+  metronome.SetBarMute(true, 1, 1);  // odd bars silent, even bars sounding
+  metronome.SetGrid(MakeDriftingGrid(40, 0.5, 0.0, 0), 0, true);
+  metronome.Start();
+
+  // Shifted 0.4 s later, so the re-anchor lands the cursor back on beat 4 — a
+  // downbeat that has already been crossed once on the outgoing grid.
+  auto shifted = std::make_unique<kitbag::BeatGrid>();
+  for (int i = 0; i < 40; ++i) {
+    shifted->beat_times_sec.push_back(0.4 + 0.5 * i);
+  }
+  shifted->anchor_frame = 0;
+
+  const int64_t swap_at = static_cast<int64_t>(2.1 * kSampleRate);
+  bool swapped = false;
+  RenderContinuous(metronome, static_cast<int64_t>(2.7 * kSampleRate),
+                   [&](int64_t frame) {
+                     if (!swapped && frame >= swap_at) {
+                       metronome.SetGrid(std::move(shifted),
+                                         static_cast<uint64_t>(frame), true);
+                       swapped = true;
+                     }
+                   });
+
+  // Beat 4 is the new grid's second downbeat: bar 1, which the trainer mutes.
+  // Over-counting the re-crossed downbeat would report bar 2 — sounding.
+  Check(metronome.bar_muted(),
+        "grid re-anchor: bar-mute phase survives the re-anchor");
+}
+
+// A beat tracker emits outlier intervals by nature, and current_bpm_ is what
+// the UI reads out, so grid mode must clamp it the way SetTempo does.
+void TestGridBpmMirrorIsClamped() {
+  {
+    kitbag::Metronome fast;
+    fast.SetBeatsPerBar(4);
+    fast.SetGrid(MakeDriftingGrid(200, 0.05, 0.0, 0), 0, true);  // 1200 BPM raw
+    fast.Start();
+    RenderContinuous(fast, kSampleRate / 2, [](int64_t) {});
+    Check(fast.current_bpm() == kitbag::Metronome::kMaxBpm,
+          "grid bpm mirror: a too-short interval clamps to kMaxBpm");
+  }
+  {
+    kitbag::Metronome slow;
+    slow.SetBeatsPerBar(4);
+    auto grid = std::make_unique<kitbag::BeatGrid>();
+    grid->beat_times_sec = {0.0, 10.0};  // 6 BPM raw
+    slow.SetGrid(std::move(grid), 0, true);
+    slow.Start();
+    RenderContinuous(slow, kSampleRate, [](int64_t) {});
+    Check(slow.current_bpm() == kitbag::Metronome::kMinBpm,
+          "grid bpm mirror: a too-long interval clamps to kMinBpm");
+  }
+}
+
 // Stop cancels a pending StartAt: the click never begins.
 void TestStopCancelsPendingStartAt() {
   kitbag::Metronome metronome;
@@ -403,6 +802,16 @@ int main() {
   TestStartAtIgnoredWhileRunning();
   TestStartCancelsPendingStartAt();
   TestStartAtKeepsBeatZeroUnderLatencyOffset();
+  TestGridFollowsDriftingTempo();
+  TestGridReanchorMidRunPicksUpNewGrid();
+  TestClearGridReturnsToBpm();
+  TestGridSurvivesStopStart();
+  TestGridWithStartAt();
+  TestGridSubdivision();
+  TestGridReanchorKeepsBarPhase();
+  TestGridBpmMirrorIsClamped();
+  TestRtPublisher();
+  TestRtPublisherReclamation();
   TestStopCancelsPendingStartAt();
   TestTempoChange();
   TestSubdivisionAndMute();

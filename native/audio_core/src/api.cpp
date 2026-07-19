@@ -1,11 +1,14 @@
 #include "kitbag_api.h"
 
+#include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <memory>
 
 #include "beat_tracker.h"
 #include "decoder.h"
 #include "engine.h"
+#include "sidecar_path.h"
 
 namespace {
 constexpr const char* kVersion = "0.1.0";
@@ -16,6 +19,39 @@ kitbag::Engine* ToEngine(kb_engine* engine) {
 
 const kitbag::Engine* ToEngine(const kb_engine* engine) {
   return reinterpret_cast<const kitbag::Engine*>(engine);
+}
+
+void WriteWaveformSidecar(const char* path, const char* waveform_dir,
+                          const float* pcm, uint64_t total_frames,
+                          uint32_t channels) {
+  // Peak buckets across the whole file — the scrubber's horizontal resolution.
+  constexpr int kWaveformTargetChunks = 2000;
+  auto peaks = kitbag::BeatTracker::ComputeWaveformPeaks(
+      pcm, static_cast<int>(total_frames), static_cast<int>(channels),
+      kWaveformTargetChunks);
+  if (peaks.data.empty()) {
+    return;
+  }
+
+  const std::string kwav_path = kitbag::SidecarPath(waveform_dir, path);
+
+  FILE* f = std::fopen(kwav_path.c_str(), "wb");
+  if (f == nullptr) {
+    return;
+  }
+  // Format: magic "KWAV" (4), version(uint32), channels(uint32),
+  // total_frames(int64), chunk_count(uint32), data(int16[])
+  const uint32_t version = 1;
+  const auto channels_u32 = static_cast<uint32_t>(peaks.channels);
+  const int64_t total = peaks.total_frames;
+  const auto chunks = static_cast<uint32_t>(peaks.chunk_count);
+  std::fwrite("KWAV", 1, 4, f);
+  std::fwrite(&version, sizeof(version), 1, f);
+  std::fwrite(&channels_u32, sizeof(channels_u32), 1, f);
+  std::fwrite(&total, sizeof(total), 1, f);
+  std::fwrite(&chunks, sizeof(chunks), 1, f);
+  std::fwrite(peaks.data.data(), sizeof(int16_t), peaks.data.size(), f);
+  std::fclose(f);
 }
 }  // namespace
 
@@ -82,6 +118,43 @@ void kb_metronome_start_at(kb_engine* engine, uint64_t start_frame) {
 void kb_metronome_stop(kb_engine* engine) {
   if (engine != nullptr) {
     ToEngine(engine)->metronome().Stop();
+  }
+}
+
+kb_result kb_metronome_set_grid(kb_engine* engine, const double* beat_times_sec,
+                                int32_t count, uint64_t anchor_frame) {
+  if (engine == nullptr || beat_times_sec == nullptr || count <= 0 ||
+      count > KB_MAX_GRID_BEATS) {
+    return KB_ERROR_INVALID_ARGUMENT;
+  }
+  // Reject a malformed grid here rather than letting the callback meet it: the
+  // cursor is a monotonic walk that cannot recover from one. NaN needs its own
+  // check — every comparison against it is false, so it slips through the
+  // ascending test and then violates lower_bound's ordering precondition.
+  for (int32_t i = 0; i < count; ++i) {
+    if (!std::isfinite(beat_times_sec[i])) {
+      return KB_ERROR_INVALID_ARGUMENT;
+    }
+    if (i > 0 && beat_times_sec[i] <= beat_times_sec[i - 1]) {
+      return KB_ERROR_INVALID_ARGUMENT;
+    }
+  }
+
+  auto grid = std::make_unique<kitbag::BeatGrid>();
+  grid->beat_times_sec.assign(beat_times_sec, beat_times_sec + count);
+  grid->anchor_frame = anchor_frame;
+
+  kitbag::Engine* target = ToEngine(engine);
+  target->metronome().SetGrid(std::move(grid), target->frames_rendered(),
+                              target->is_running());
+  return KB_OK;
+}
+
+void kb_metronome_clear_grid(kb_engine* engine) {
+  if (engine != nullptr) {
+    kitbag::Engine* target = ToEngine(engine);
+    target->metronome().ClearGrid(target->frames_rendered(),
+                                  target->is_running());
   }
 }
 
@@ -322,7 +395,6 @@ kb_result kb_analyze_song(const char* path, float* bpm_out,
   *bpm_out = 0.0f;
   *beat_count_out = 0;
 
-  // Open and decode the file using a standalone decoder (no engine needed).
   kitbag::Decoder decoder;
   if (!decoder.Open(path)) {
     return KB_ERROR_INVALID_ARGUMENT;
@@ -330,7 +402,6 @@ kb_result kb_analyze_song(const char* path, float* bpm_out,
 
   const auto info = decoder.info();
 
-  // Read all PCM frames
   uint64_t total_frames = 0;
   auto pcm = decoder.DecodeAll(&total_frames);
   decoder.Close();
@@ -339,7 +410,6 @@ kb_result kb_analyze_song(const char* path, float* bpm_out,
     return KB_OK;
   }
 
-  // Downmix to mono by averaging channels
   std::vector<float> mono(total_frames);
   for (uint64_t f = 0; f < total_frames; ++f) {
     float sum = 0.0f;
@@ -349,7 +419,6 @@ kb_result kb_analyze_song(const char* path, float* bpm_out,
     mono[f] = sum / static_cast<float>(info.channels);
   }
 
-  // Run beat analysis
   kitbag::BeatTracker tracker;
   auto result = tracker.Analyze(mono.data(), static_cast<int>(total_frames),
                                 static_cast<int>(info.sample_rate));
@@ -363,52 +432,9 @@ kb_result kb_analyze_song(const char* path, float* bpm_out,
   }
   *beat_count_out = to_copy;
 
-  // Generate waveform peaks sidecar if requested
   if (waveform_dir != nullptr && info.channels > 0) {
-    // Peak buckets across the whole file — the scrubber's horizontal
-    // resolution.
-    constexpr int kWaveformTargetChunks = 2000;
-    auto peaks = kitbag::BeatTracker::ComputeWaveformPeaks(
-        pcm.data(), static_cast<int>(total_frames),
-        static_cast<int>(info.channels), kWaveformTargetChunks);
-
-    if (!peaks.data.empty()) {
-      // Build sidecar file path: <waveform_dir>/<basename>.kwav
-      std::string kwav_path = waveform_dir;
-      if (!kwav_path.empty() && kwav_path.back() != '/') {
-        kwav_path += '/';
-      }
-      const char* basename = std::strrchr(path, '/');
-      if (basename == nullptr) {
-        basename = path;
-      } else {
-        ++basename;
-      }
-      kwav_path += basename;
-      // Replace extension with .kwav
-      const char* dot = std::strrchr(basename, '.');
-      if (dot != nullptr) {
-        kwav_path.resize(kwav_path.size() - (std::strlen(dot) - 4));
-      }
-      kwav_path += ".kwav";
-
-      FILE* f = std::fopen(kwav_path.c_str(), "wb");
-      if (f != nullptr) {
-        // Format: magic "KWAV" (4), version(uint32), channels(uint32),
-        // total_frames(int64), chunk_count(uint32), data(int16[])
-        const uint32_t version = 1;
-        const uint32_t channels_u32 = static_cast<uint32_t>(peaks.channels);
-        const int64_t total = peaks.total_frames;
-        const uint32_t chunks = static_cast<uint32_t>(peaks.chunk_count);
-        std::fwrite("KWAV", 1, 4, f);
-        std::fwrite(&version, sizeof(version), 1, f);
-        std::fwrite(&channels_u32, sizeof(channels_u32), 1, f);
-        std::fwrite(&total, sizeof(total), 1, f);
-        std::fwrite(&chunks, sizeof(chunks), 1, f);
-        std::fwrite(peaks.data.data(), sizeof(int16_t), peaks.data.size(), f);
-        std::fclose(f);
-      }
-    }
+    WriteWaveformSidecar(path, waveform_dir, pcm.data(), total_frames,
+                         info.channels);
   }
 
   return KB_OK;

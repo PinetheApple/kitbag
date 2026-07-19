@@ -35,13 +35,24 @@ bool Engine::Start() {
   if (!device_ready_) {
     return false;
   }
-  return ma_device_start(&device_) == MA_SUCCESS;
+  const bool started = ma_device_start(&device_) == MA_SUCCESS;
+  // Set only after the device is live, so a publisher that reads this can never
+  // conclude "no reader" while the callback is already running.
+  device_running_.store(started, std::memory_order_relaxed);
+  return started;
 }
 
 void Engine::Stop() {
   if (device_ready_) {
     ma_device_stop(&device_);
   }
+  // ma_device_stop blocks until the callback has returned, so from here on
+  // there is no reader.
+  device_running_.store(false, std::memory_order_relaxed);
+  // The callback is stopped, so grids retired while the clock was not
+  // advancing can be freed now. Nothing else ever reclaims them: Collect only
+  // frees as frames_rendered_ moves, and a stopped engine never moves it.
+  metronome_.ReleaseRetiredGrids();
 }
 
 void Engine::SetTestTone(bool enabled, float frequency_hz) {
@@ -83,7 +94,9 @@ void Engine::Render(float* output, uint32_t frame_count) {
     }
   }
 
-  // Stem mixer: overwrites output with mixed stem audio when playing.
+  // Must precede the metronome: Process() memsets the buffer rather than
+  // accumulating, so anything written above it (including the test tone) is
+  // discarded.
   mixer_.Process(output, frame_count, kSampleRate);
 
   metronome_.Render(output, frame_count, kSampleRate, kChannelCount,

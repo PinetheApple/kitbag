@@ -46,6 +46,17 @@ if(KITBAG_BUILD_TOOLS)
   target_include_directories(metronome_verify PRIVATE src)
   target_link_libraries(metronome_verify PRIVATE m)
 
+  # Links the shared library rather than the sources: the point is to prove the
+  # exported C ABI, not the C++ behind it.
+  add_executable(abi_verify tools/abi_verify.cpp)
+  target_link_libraries(abi_verify PRIVATE kitbag_core)
+
+  # Links the sources: TrackBeats and SidecarPath are internal, not exported.
+  add_executable(beat_tracker_verify tools/beat_tracker_verify.cpp
+    src/beat_tracker.cpp src/fft.cpp)
+  target_include_directories(beat_tracker_verify PRIVATE src include)
+  target_link_libraries(beat_tracker_verify PRIVATE m)
+
   add_executable(tuner_verify tools/tuner_verify.cpp src/pitch_analyzer.cpp)
   target_include_directories(tuner_verify PRIVATE src)
   target_include_directories(tuner_verify SYSTEM PRIVATE third_party/cycfi_q/include)
