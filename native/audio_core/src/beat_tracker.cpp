@@ -1,3 +1,5 @@
+#include "kitbag_api.h"
+
 #include "beat_tracker.h"
 
 #include <algorithm>
@@ -11,16 +13,21 @@ namespace kitbag {
 
 namespace {
 
-// STFT parameters — independent of sample rate
+// Independent of sample rate.
 constexpr int kFftSize = 2048;
 constexpr int kHopSize = 512;
 
-// Tempo range in BPM
 constexpr float kMinBpm = 60.0f;
 constexpr float kMaxBpm = 200.0f;
 
-// DP beat tracking penalty weight
 constexpr float kTransitionPenalty = 0.02f;
+
+constexpr int kSmoothingRadius = 2;  // 5-frame moving average
+
+// Deliberately KB_MAX_GRID_BEATS: a longer grid is one kb_metronome_set_grid
+// would reject outright, so the surplus is unusable. Truncation drops the late
+// beats, never the early ones — beat times must stay anchored to t=0.
+constexpr int kMaxTrackedBeats = KB_MAX_GRID_BEATS;
 
 // Minimum STFT frames before an onset function is worth analysing.
 constexpr int kMinStftFrames = 10;
@@ -31,6 +38,35 @@ constexpr size_t kMinOnsetsForBeats = 10;
 constexpr float kSecondsPerMinute = 60.0f;
 // Full-scale for signed 16-bit PCM, scaling float samples in [-1, 1].
 constexpr float kInt16Max = 32767.0f;
+
+void WindowFrame(const float* pcm, int num_frames, int offset,
+                 const std::vector<float>& window, std::vector<float>& out) {
+  for (int i = 0; i < kFftSize; ++i) {
+    const int idx = offset + i;
+    out[2 * i] = idx < num_frames ? pcm[idx] * window[i] : 0.0f;
+    out[2 * i + 1] = 0.0f;
+  }
+}
+
+void Magnitudes(const std::vector<float>& fft_buf, std::vector<float>& out) {
+  for (size_t i = 0; i < out.size(); ++i) {
+    const float re = fft_buf[2 * i];
+    const float im = fft_buf[2 * i + 1];
+    out[i] = std::sqrt(re * re + im * im);
+  }
+}
+
+float SpectralFlux(const std::vector<float>& mag,
+                   const std::vector<float>& prev_mag) {
+  float flux = 0.0f;
+  for (size_t i = 0; i < mag.size(); ++i) {
+    const float diff = mag[i] - prev_mag[i];
+    if (diff > 0.0f) {
+      flux += diff;
+    }
+  }
+  return flux / static_cast<float>(mag.size());
+}
 
 }  // namespace
 
@@ -62,61 +98,24 @@ std::vector<float> BeatTracker::ComputeOnsetFunction(const float* pcm,
     return {};
   }
 
-  // Hann window
   std::vector<float> window(kFftSize);
   fft_hann(window.data(), kFftSize);
 
-  // FFT work buffer: interleaved complex
   std::vector<float> fft_buf(2 * kFftSize);
 
-  // Magnitude spectrum buffer (unique bins)
   const int num_bins = kFftSize / 2 + 1;
   std::vector<float> mag(num_bins);
-
-  // Onset function (spectral flux)
+  std::vector<float> prev_mag(num_bins, 0.0f);
   std::vector<float> onset(num_stft_frames);
 
-  // Previous magnitude
-  std::vector<float> prev_mag(num_bins, 0.0f);
-
   for (int f = 0; f < num_stft_frames; ++f) {
-    const int offset = f * kHopSize;
-
-    // Window the frame
-    for (int i = 0; i < kFftSize; ++i) {
-      const int idx = offset + i;
-      if (idx < num_frames) {
-        fft_buf[2 * i] = pcm[idx] * window[i];
-      } else {
-        fft_buf[2 * i] = 0.0f;
-      }
-      fft_buf[2 * i + 1] = 0.0f;
-    }
-
-    // Forward FFT
+    WindowFrame(pcm, num_frames, f * kHopSize, window, fft_buf);
     fft(fft_buf.data(), kFftSize, false);
-
-    // Magnitude spectrum
-    for (int i = 0; i < num_bins; ++i) {
-      const float re = fft_buf[2 * i];
-      const float im = fft_buf[2 * i + 1];
-      mag[i] = std::sqrt(re * re + im * im);
-    }
-
-    // Spectral flux: sum of positive differences
-    float flux = 0.0f;
-    for (int i = 0; i < num_bins; ++i) {
-      const float diff = mag[i] - prev_mag[i];
-      if (diff > 0.0f) {
-        flux += diff;
-      }
-    }
-    onset[f] = flux / static_cast<float>(num_bins);
-
+    Magnitudes(fft_buf, mag);
+    onset[f] = SpectralFlux(mag, prev_mag);
     prev_mag = mag;
   }
 
-  // Normalize to [0, 1]
   float max_val = 0.0f;
   for (const float v : onset) {
     if (v > max_val) max_val = v;
@@ -125,12 +124,11 @@ std::vector<float> BeatTracker::ComputeOnsetFunction(const float* pcm,
     for (float& v : onset) v /= max_val;
   }
 
-  // Moving average smoothing (5-frame window)
   std::vector<float> smoothed(onset.size(), 0.0f);
   for (size_t f = 0; f < onset.size(); ++f) {
     float sum = 0.0f;
     int count = 0;
-    for (int d = -2; d <= 2; ++d) {
+    for (int d = -kSmoothingRadius; d <= kSmoothingRadius; ++d) {
       const int idx = static_cast<int>(f) + d;
       if (idx >= 0 && idx < static_cast<int>(onset.size())) {
         sum += onset[idx];
@@ -155,7 +153,6 @@ float BeatTracker::EstimateTempo(const std::vector<float>& onset,
 
   if (min_lag >= max_lag || min_lag < 1) return 0.0f;
 
-  // Autocorrelation of onset function
   std::vector<float> acf(max_lag, 0.0f);
   for (int lag = min_lag; lag < max_lag; ++lag) {
     float sum = 0.0f;
@@ -169,7 +166,6 @@ float BeatTracker::EstimateTempo(const std::vector<float>& onset,
     }
   }
 
-  // Find strongest local peak
   float max_acf = 0.0f;
   int best_lag = 0;
   for (int lag = min_lag; lag < max_lag; ++lag) {
@@ -204,7 +200,6 @@ std::vector<float> BeatTracker::TrackBeats(const std::vector<float>& onset,
   const int period = static_cast<int>(std::round(period_frames));
   if (period < 2) return {};
 
-  // Mean onset for penalty scaling
   float sum_onset = 0.0f;
   for (const float v : onset) sum_onset += v;
   const float mean_onset = sum_onset / n;
@@ -214,7 +209,6 @@ std::vector<float> BeatTracker::TrackBeats(const std::vector<float>& onset,
   std::vector<float> score(n, 0.0f);
   std::vector<int> backlink(n, -1);
 
-  // DP forward pass
   for (size_t i = 0; i < n; ++i) {
     const int search_start = std::max(0, static_cast<int>(i) - 2 * period);
     const int search_end = std::max(0, static_cast<int>(i) - period / 2);
@@ -236,7 +230,6 @@ std::vector<float> BeatTracker::TrackBeats(const std::vector<float>& onset,
     backlink[i] = best_prev;
   }
 
-  // Find last beat in the final period window
   int last_beat = static_cast<int>(n) - 1;
   float max_score = 0.0f;
   const size_t search_start = n > static_cast<size_t>(period) ? n - period : 0;
@@ -247,22 +240,19 @@ std::vector<float> BeatTracker::TrackBeats(const std::vector<float>& onset,
     }
   }
 
-  // Backtrack
-  float beats_buf[2048];
-  int beat_count = 0;
-  int b = last_beat;
-  while (b >= 0 && beat_count < 2048) {
-    beats_buf[beat_count++] = static_cast<float>(b) * hop_time;
-    b = backlink[b];
+  // Offline analysis on the app thread, never the audio callback, so the heap
+  // is available and the backtrack needs no fixed ceiling.
+  std::vector<float> reversed;
+  for (int b = last_beat; b >= 0; b = backlink[b]) {
+    reversed.push_back(static_cast<float>(b) * hop_time);
   }
 
-  if (beat_count < 3) return {};
+  if (reversed.size() < 3) return {};
 
-  std::vector<float> beats(beat_count);
-  for (int i = 0; i < beat_count; ++i) {
-    beats[i] = beats_buf[beat_count - 1 - i];
+  std::vector<float> beats(reversed.rbegin(), reversed.rend());
+  if (beats.size() > static_cast<size_t>(kMaxTrackedBeats)) {
+    beats.resize(kMaxTrackedBeats);
   }
-
   return beats;
 }
 

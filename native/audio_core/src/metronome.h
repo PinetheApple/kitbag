@@ -3,13 +3,26 @@
 
 #include <atomic>
 #include <cstdint>
+#include <memory>
+#include <vector>
 
+#include "rt_publisher.h"
 #include "spsc_ring.h"
 
 namespace kitbag {
 
 // Per-beat accent states, mirrored by kb_accent in the C API.
 enum class Accent : uint8_t { kMuted = 0, kNormal = 1, kAccented = 2 };
+
+// A song's measured beat times, replacing a single BPM. Following per-beat
+// spacing is what makes a non-constant-tempo song work (SPEC.md §4.2); one
+// setTempo cannot express drift.
+struct BeatGrid {
+  std::vector<double> beat_times_sec;  // strictly ascending
+  // Engine frame that beat_times_sec[0]'s zero is measured from: song second t
+  // falls on engine frame anchor_frame + t * sample_rate.
+  uint64_t anchor_frame = 0;
+};
 
 // Sample-accurate metronome sequencer driven from the audio callback.
 //
@@ -72,6 +85,22 @@ class Metronome {
   // by `mute_bars` silent bars, anchored at bar 0. Muted bars silence every
   // voice — main, subdivision and polyrhythm — while the LEDs keep moving.
   void SetBarMute(bool enabled, int play_bars, int mute_bars);
+
+  // Follow a measured beat grid instead of bpm_. `now_frame` is the engine
+  // clock at the time of the call; it only dates the outgoing grid for
+  // reclamation. `engine_running` must be true whenever the audio callback can
+  // run — it is what lets a retired grid be freed at once instead of waiting
+  // for a clock that is not moving. Allocates on the app thread, never on the
+  // callback.
+  void SetGrid(std::unique_ptr<BeatGrid> grid, uint64_t now_frame,
+               bool engine_running);
+  // Return to constant-tempo mode. The click keeps its phase: the last grid
+  // beat crossed anchored beat_position_, so the first bpm_ click falls one
+  // whole beat after it rather than on the next sample.
+  void ClearGrid(uint64_t now_frame, bool engine_running);
+  // Frees grids retired while the clock was not advancing. The caller must
+  // guarantee the audio callback is stopped — Engine::Stop is that caller.
+  void ReleaseRetiredGrids();
 
   bool is_running() const {
     return running_flag_.load(std::memory_order_relaxed);
@@ -149,6 +178,21 @@ class Metronome {
   // Resets sequencer phase and starts the run. Shared by Start (immediate) and
   // StartAt (deferred to the anchor frame).
   void BeginRun();
+  // Grid mode: fires the grid's beat if this sample crosses one.
+  void RenderGridBeat(const BeatGrid& grid, uint64_t frame,
+                      uint32_t sample_rate);
+  // Song position of an engine frame, shifted by the latency offset so the
+  // click lands on the beat at the speaker rather than at the buffer (§4.7).
+  double GridSeconds(const BeatGrid& grid, uint64_t frame,
+                     uint32_t sample_rate) const;
+  // Places grid_cursor_ on the first beat at or after `song_seconds`. Binary
+  // search — bounded and allocation-free, so it is safe from the callback.
+  void SeekGridCursor(const BeatGrid& grid, double song_seconds);
+  // Grid mode: derives current_bar_ from grid_beat_index_. See the definition.
+  void SyncGridBar();
+  // Publishes bar_phase_/current_bpm_ from the grid's local beat spacing.
+  void PublishGridMirrors(const BeatGrid& grid, uint64_t frame,
+                          uint32_t sample_rate);
 
   SpscRing<Command, kCommandRingSize> commands_;
 
@@ -166,9 +210,27 @@ class Metronome {
   // `pending_start_frame_` on the engine clock, then consumed by BeginRun.
   bool has_pending_start_ = false;
   uint64_t pending_start_frame_ = 0;
-  // Monotonic bar counter: incremented at every downbeat (never derived by
-  // division), so a mid-run time-signature change cannot jump ramp progress
-  // or bar-mute phase. -1 until the first downbeat after Start.
+
+  // Grid mode. The publisher is the app→RT seam; everything below it is
+  // RT-owned. `observed_generation_` is the grid the cursor was seeded against;
+  // when the published generation differs the cursor is re-seeded from the
+  // current position, which is what keeps a re-anchor from touching beats that
+  // already fired. Zero means "seeded against nothing", which is also how a
+  // Start or Stop forces the next block to re-seed rather than resume from a
+  // cursor stranded wherever the pause began.
+  RtPublisher<BeatGrid> grid_;
+  uint64_t observed_generation_ = 0;
+  size_t grid_cursor_ = 0;
+  int64_t grid_beat_index_ = -1;
+  // Next subdivision tick to fire inside the current beat interval, 1-based;
+  // subdivision_ means "none left before the next beat".
+  int grid_next_sub_ = 1;
+  // Bar counter. In constant-tempo mode it is incremented at every downbeat and
+  // never derived by division, so a mid-run time-signature change cannot jump
+  // ramp progress or bar-mute phase. Grid mode is the exception: there the bar
+  // is derived from grid_beat_index_ (see SyncGridBar), because the grid's own
+  // numbering — not a count of downbeats seen — is what a re-anchor must land
+  // on. -1 until the first downbeat after Start.
   int64_t current_bar_ = -1;
   bool ramp_enabled_ = false;
   double ramp_start_bpm_ = 0.0;

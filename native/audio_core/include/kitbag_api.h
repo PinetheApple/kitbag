@@ -54,6 +54,27 @@ KB_EXPORT void kb_metronome_start(kb_engine* engine);
  * at 48kHz — so it may be passed as a JS double. No BigInt. */
 KB_EXPORT void kb_metronome_start_at(kb_engine* engine, uint64_t start_frame);
 KB_EXPORT void kb_metronome_stop(kb_engine* engine);
+
+/* Maximum beats a single grid may carry. */
+#define KB_MAX_GRID_BEATS 8192
+
+/* Follow a measured beat grid instead of a single BPM, so a song whose tempo
+ * drifts stays locked. beat_times_sec are seconds from the song's start and
+ * must be strictly ascending and finite; they are copied during the call and
+ * need not outlive it. Song second t falls on engine frame
+ * anchor_frame + t * sample_rate.
+ * Subdivisions divide each measured interval and still sound. The tempo ramp
+ * and polyrhythm are defined against a constant BPM and do not apply while a
+ * grid is set.
+ * Returns KB_ERROR_INVALID_ARGUMENT for a null, empty, non-ascending or
+ * non-finite grid, or a count above KB_MAX_GRID_BEATS. */
+KB_EXPORT kb_result kb_metronome_set_grid(kb_engine* engine,
+                                          const double* beat_times_sec,
+                                          int32_t count, uint64_t anchor_frame);
+/* Return to constant-tempo mode. The click keeps its phase: the first click at
+ * the constant tempo falls one whole beat after the last grid beat that
+ * sounded, not on the next sample. */
+KB_EXPORT void kb_metronome_clear_grid(kb_engine* engine);
 KB_EXPORT void kb_metronome_set_tempo(kb_engine* engine, double bpm);
 KB_EXPORT void kb_metronome_set_beats(kb_engine* engine, int32_t beats_per_bar);
 KB_EXPORT void kb_metronome_set_subdivision(kb_engine* engine,
