@@ -73,6 +73,12 @@ void kb_metronome_start(kb_engine* engine) {
   }
 }
 
+void kb_metronome_start_at(kb_engine* engine, uint64_t start_frame) {
+  if (engine != nullptr) {
+    ToEngine(engine)->metronome().StartAt(start_frame);
+  }
+}
+
 void kb_metronome_stop(kb_engine* engine) {
   if (engine != nullptr) {
     ToEngine(engine)->metronome().Stop();
@@ -129,8 +135,8 @@ void kb_metronome_set_latency_offset(kb_engine* engine, double latency_ms) {
   }
 }
 
-void kb_metronome_set_ramp(kb_engine* engine, int32_t enabled,
-                           double start_bpm, double end_bpm, int32_t bars) {
+void kb_metronome_set_ramp(kb_engine* engine, int32_t enabled, double start_bpm,
+                           double end_bpm, int32_t bars) {
   if (engine != nullptr) {
     ToEngine(engine)->metronome().SetRamp(enabled != 0, start_bpm, end_bpm,
                                           bars);
@@ -155,9 +161,8 @@ int32_t kb_metronome_current_beat(const kb_engine* engine) {
 }
 
 int32_t kb_metronome_current_poly_beat(const kb_engine* engine) {
-  return engine == nullptr
-             ? -1
-             : ToEngine(engine)->metronome().current_poly_beat();
+  return engine == nullptr ? -1
+                           : ToEngine(engine)->metronome().current_poly_beat();
 }
 
 double kb_metronome_bar_phase(const kb_engine* engine) {
@@ -169,8 +174,7 @@ double kb_metronome_current_bpm(const kb_engine* engine) {
 }
 
 int32_t kb_metronome_bar_muted(const kb_engine* engine) {
-  return engine != nullptr && ToEngine(engine)->metronome().bar_muted() ? 1
-                                                                        : 0;
+  return engine != nullptr && ToEngine(engine)->metronome().bar_muted() ? 1 : 0;
 }
 
 kb_result kb_tuner_start(kb_engine* engine) {
@@ -220,8 +224,9 @@ void kb_decoder_close(kb_engine* engine) {
 }
 
 double kb_decoder_duration(const kb_engine* engine) {
-  return engine == nullptr ? 0.0
-                           : ToEngine(engine)->decoder().info().duration_seconds;
+  return engine == nullptr
+             ? 0.0
+             : ToEngine(engine)->decoder().info().duration_seconds;
 }
 
 uint32_t kb_decoder_sample_rate(const kb_engine* engine) {
@@ -232,9 +237,9 @@ uint32_t kb_decoder_channels(const kb_engine* engine) {
   return engine == nullptr ? 0 : ToEngine(engine)->decoder().info().channels;
 }
 
-void kb_mixer_set_track_data(kb_engine* engine, int32_t track,
-                              const float* pcm, int64_t num_frames,
-                              int32_t channels, int32_t sample_rate) {
+void kb_mixer_set_track_data(kb_engine* engine, int32_t track, const float* pcm,
+                             int64_t num_frames, int32_t channels,
+                             int32_t sample_rate) {
   if (engine == nullptr || pcm == nullptr) return;
   ToEngine(engine)->mixer().SetTrackData(
       track, pcm, static_cast<uint64_t>(num_frames),
@@ -256,7 +261,8 @@ void kb_mixer_set_mute(kb_engine* engine, int32_t track, int32_t muted) {
 }
 
 int32_t kb_mixer_muted(const kb_engine* engine, int32_t track) {
-  return engine == nullptr ? 0 : (ToEngine(engine)->mixer().Muted(track) ? 1 : 0);
+  return engine == nullptr ? 0
+                           : (ToEngine(engine)->mixer().Muted(track) ? 1 : 0);
 }
 
 void kb_mixer_set_solo(kb_engine* engine, int32_t track, int32_t soloed) {
@@ -265,7 +271,8 @@ void kb_mixer_set_solo(kb_engine* engine, int32_t track, int32_t soloed) {
 }
 
 int32_t kb_mixer_soloed(const kb_engine* engine, int32_t track) {
-  return engine == nullptr ? 0 : (ToEngine(engine)->mixer().Soloed(track) ? 1 : 0);
+  return engine == nullptr ? 0
+                           : (ToEngine(engine)->mixer().Soloed(track) ? 1 : 0);
 }
 
 void kb_mixer_play(kb_engine* engine) {
@@ -280,7 +287,7 @@ void kb_mixer_stop(kb_engine* engine) {
 
 int32_t kb_mixer_is_playing(const kb_engine* engine) {
   return engine == nullptr ? 0
-                            : (ToEngine(engine)->mixer().is_playing() ? 1 : 0);
+                           : (ToEngine(engine)->mixer().is_playing() ? 1 : 0);
 }
 
 void kb_mixer_seek(kb_engine* engine, int64_t frame) {
@@ -299,9 +306,9 @@ int32_t kb_mixer_active_track_count(const kb_engine* engine) {
 }
 
 int64_t kb_mixer_track_frames(const kb_engine* engine, int32_t track) {
-  return engine == nullptr
-             ? 0
-             : static_cast<int64_t>(ToEngine(engine)->mixer().track_frames(track));
+  return engine == nullptr ? 0
+                           : static_cast<int64_t>(
+                                 ToEngine(engine)->mixer().track_frames(track));
 }
 
 kb_result kb_analyze_song(const char* path, float* bpm_out,
@@ -344,9 +351,8 @@ kb_result kb_analyze_song(const char* path, float* bpm_out,
 
   // Run beat analysis
   kitbag::BeatTracker tracker;
-  auto result =
-      tracker.Analyze(mono.data(), static_cast<int>(total_frames),
-                      static_cast<int>(info.sample_rate));
+  auto result = tracker.Analyze(mono.data(), static_cast<int>(total_frames),
+                                static_cast<int>(info.sample_rate));
 
   *bpm_out = result.bpm;
 
@@ -359,9 +365,12 @@ kb_result kb_analyze_song(const char* path, float* bpm_out,
 
   // Generate waveform peaks sidecar if requested
   if (waveform_dir != nullptr && info.channels > 0) {
+    // Peak buckets across the whole file — the scrubber's horizontal
+    // resolution.
+    constexpr int kWaveformTargetChunks = 2000;
     auto peaks = kitbag::BeatTracker::ComputeWaveformPeaks(
         pcm.data(), static_cast<int>(total_frames),
-        static_cast<int>(info.channels), 2000);
+        static_cast<int>(info.channels), kWaveformTargetChunks);
 
     if (!peaks.data.empty()) {
       // Build sidecar file path: <waveform_dir>/<basename>.kwav
@@ -388,8 +397,7 @@ kb_result kb_analyze_song(const char* path, float* bpm_out,
         // Format: magic "KWAV" (4), version(uint32), channels(uint32),
         // total_frames(int64), chunk_count(uint32), data(int16[])
         const uint32_t version = 1;
-        const uint32_t channels_u32 =
-            static_cast<uint32_t>(peaks.channels);
+        const uint32_t channels_u32 = static_cast<uint32_t>(peaks.channels);
         const int64_t total = peaks.total_frames;
         const uint32_t chunks = static_cast<uint32_t>(peaks.chunk_count);
         std::fwrite("KWAV", 1, 4, f);
@@ -397,8 +405,7 @@ kb_result kb_analyze_song(const char* path, float* bpm_out,
         std::fwrite(&channels_u32, sizeof(channels_u32), 1, f);
         std::fwrite(&total, sizeof(total), 1, f);
         std::fwrite(&chunks, sizeof(chunks), 1, f);
-        std::fwrite(peaks.data.data(), sizeof(int16_t), peaks.data.size(),
-                    f);
+        std::fwrite(peaks.data.data(), sizeof(int16_t), peaks.data.size(), f);
         std::fclose(f);
       }
     }

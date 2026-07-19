@@ -36,6 +36,49 @@ A representative sample of what they asserted:
 supersedes anything this file said. Version numbers restart when something
 genuinely ships.
 
+### Added — 2026-07-19
+
+- **`kb_metronome_start_at(engine, start_frame)`** (`SPEC.md` §4.2) — sample-accurate
+  metronome start on a given engine-clock frame, rather than whenever the call
+  lands. Deferred inside the render loop, so an anchor mid-block starts on that
+  exact sample; ignored while already running. This is the first piece of §4.2's
+  phase anchor; `set_grid` and `anchor_external` are not built yet.
+- **A transport-clock seam** — `Engine::Render` now reads `frames_rendered_` before
+  the block and passes that absolute frame into `Metronome::Render`. Nothing
+  previously handed subsystems the engine frame of the block being rendered, which
+  is what any frame-anchored scheduling needs.
+- **Six `metronome_verify` regressions** covering the above: frame-exactness at a
+  non-block-aligned anchor, anchor at frame 0, beat 0 surviving a latency offset on
+  the deferred path, an armed ramp forcing the per-block tempo/latency locals to be
+  recomputed, `StartAt` ignored while running, and `Start`/`Stop` cancelling a
+  pending `StartAt`.
+
+### Fixed — 2026-07-19
+
+- **A deferred start with an armed ramp and a latency offset swallowed beat 0.**
+  `BeginRun` re-anchors `beat_position_` from the reset BPM while the render loop's
+  `latency_beats` still reflected the pre-reset BPM, so `position` no longer
+  cancelled to zero on the first sample: the downbeat never fired and the block ran
+  at the stale tempo. Both locals are now recomputed after the in-loop `BeginRun`.
+  Pinned by `TestStartAtWithArmedRampRecomputesLocals`, which fails without the fix.
+- **`kb_metronome_is_running` lagged one block after a deferred start** — `BeginRun`
+  now publishes `running_flag_` itself rather than relying on the command drain.
+
+### Changed — 2026-07-19
+
+- **The C++ lint gate passes on its own tree.** `scripts/lint.sh` was failing with
+  ~100 errors on committed code. Formatting applied tree-wide; eight magic numbers
+  named in `beat_tracker.cpp`, `engine.h` and `api.cpp`; `PitchAnalyzer::LockState`
+  enumerators given the house `k` prefix. No behaviour change — `tuner_verify`
+  output is byte-identical to before.
+- **The C ABI header is exempt from C++ naming rules** (`include/.clang-tidy`). The
+  root config's prose already declared `kb_snake_case`/`KB_UPPER` out of scope; its
+  `HeaderFilterRegex` contradicted that and flagged the published enums. Renaming
+  them was never an option — they are the ABI.
+- **`ReflowComments: false`** — the tree-wide format run had reflowed
+  `kb_analyze_song`'s parameter documentation into unreadable prose. The C ABI's
+  doc comments are what binding authors read.
+
 ### Changed — 2026-07-17
 
 - **Stack decided: React Native + TypeScript** (`SPEC.md` §13). The previous spec

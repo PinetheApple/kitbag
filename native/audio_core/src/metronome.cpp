@@ -46,6 +46,12 @@ T Clamp(T value, T low, T high) {
 
 void Metronome::Start() { commands_.Push({CommandType::kStart}); }
 
+void Metronome::StartAt(uint64_t start_frame) {
+  Command command{CommandType::kStartAt};
+  command.frame = start_frame;
+  commands_.Push(command);
+}
+
 void Metronome::Stop() { commands_.Push({CommandType::kStop}); }
 
 void Metronome::SetTempo(double bpm) {
@@ -121,19 +127,21 @@ void Metronome::ApplyPendingCommands() {
   while (commands_.Pop(&command)) {
     switch (command.type) {
       case CommandType::kStart:
-        current_bar_ = -1;  // the first downbeat advances it to bar 0
-        ramp_start_bar_ = 0;
-        if (ramp_enabled_) {
-          bpm_ = ramp_start_bpm_;
+        // An immediate Start cancels any deferred StartAt.
+        has_pending_start_ = false;
+        BeginRun();
+        break;
+      case CommandType::kStartAt:
+        // Defer: the run begins inside the render loop on the exact frame.
+        // Ignored while running — re-anchoring a live click is set_grid's job.
+        if (!running_) {
+          has_pending_start_ = true;
+          pending_start_frame_ = command.frame;
         }
-        // Anchors `position` at zero, not beat_position_: nothing can be
-        // emitted before the first frame, so a positive offset would swallow
-        // every grid point it shifts past.
-        beat_position_ = -LatencyBeats();
-        running_ = true;
         break;
       case CommandType::kStop:
         running_ = false;
+        has_pending_start_ = false;
         current_beat_.store(-1, std::memory_order_relaxed);
         current_poly_beat_.store(-1, std::memory_order_relaxed);
         break;
@@ -183,7 +191,7 @@ void Metronome::ApplyPendingCommands() {
         volume_ = Clamp(command.value, 0.0, 2.0);
         break;
       case CommandType::kSetLatencyOffset: {
-        // Phase-preserving like a bpm change (§4.6). The guard: when stopped
+        // Phase-preserving like a bpm change (§4.7). The guard: when stopped
         // there is no phase to hold, and kStart re-anchors from the offset.
         const double before = LatencyBeats();
         latency_offset_ms_ =
@@ -196,6 +204,24 @@ void Metronome::ApplyPendingCommands() {
     }
   }
   running_flag_.store(running_, std::memory_order_relaxed);
+}
+
+void Metronome::BeginRun() {
+  current_bar_ = -1;  // the first downbeat advances it to bar 0
+  ramp_start_bar_ = 0;
+  if (ramp_enabled_) {
+    bpm_ = ramp_start_bpm_;
+  }
+  // Anchors `position` at zero, not beat_position_: nothing can be emitted
+  // before the first frame, so a positive offset would swallow every grid
+  // point it shifts past (§4.7).
+  beat_position_ = -LatencyBeats();
+  running_ = true;
+  // Publish now, not only at the end of ApplyPendingCommands: a deferred
+  // StartAt calls BeginRun from inside the render loop, after the drain has
+  // already stored running_flag_, so without this is_running() would report
+  // stopped for a block while the click is audibly running.
+  running_flag_.store(true, std::memory_order_relaxed);
 }
 
 double Metronome::LatencyBeats() const {
@@ -305,7 +331,8 @@ float Metronome::RenderVoices() {
 }
 
 void Metronome::Render(float* output, uint32_t frame_count,
-                       uint32_t sample_rate, uint32_t channel_count) {
+                       uint32_t sample_rate, uint32_t channel_count,
+                       uint64_t block_start_frame) {
   ApplyPendingCommands();
 
   double beats_per_sample = bpm_ / (kSecondsPerMinute * sample_rate);
@@ -315,6 +342,17 @@ void Metronome::Render(float* output, uint32_t frame_count,
   double latency_beats = LatencyBeats();
 
   for (uint32_t frame = 0; frame < frame_count; ++frame) {
+    if (has_pending_start_ &&
+        block_start_frame + frame >= pending_start_frame_) {
+      // Reached the anchor frame (or it is already past): begin here, on this
+      // exact sample. BeginRun may change bpm_ (an armed ramp resets it to its
+      // start), so the per-block tempo/latency locals must be refreshed — the
+      // immediate Start path gets this for free by running before they are set.
+      BeginRun();
+      has_pending_start_ = false;
+      beats_per_sample = bpm_ / (kSecondsPerMinute * sample_rate);
+      latency_beats = LatencyBeats();
+    }
     if (running_) {
       const double position = beat_position_ + latency_beats;
       const auto sub_index = static_cast<int64_t>(

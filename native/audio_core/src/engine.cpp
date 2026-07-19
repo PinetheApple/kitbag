@@ -59,6 +59,12 @@ void Engine::DataCallback(ma_device* device, void* output, const void* input,
 }
 
 void Engine::Render(float* output, uint32_t frame_count) {
+  // The engine-clock frame of output[0]: the shared transport, read before the
+  // block and advanced once after it. Metronome anchoring (StartAt, and the
+  // grid/external anchors to come) is expressed against this frame.
+  const uint64_t block_start_frame =
+      frames_rendered_.load(std::memory_order_relaxed);
+
   const bool tone_on = tone_enabled_.load(std::memory_order_relaxed);
   const double phase_step =
       kTau * tone_frequency_hz_.load(std::memory_order_relaxed) / kSampleRate;
@@ -80,7 +86,8 @@ void Engine::Render(float* output, uint32_t frame_count) {
   // Stem mixer: overwrites output with mixed stem audio when playing.
   mixer_.Process(output, frame_count, kSampleRate);
 
-  metronome_.Render(output, frame_count, kSampleRate, kChannelCount);
+  metronome_.Render(output, frame_count, kSampleRate, kChannelCount,
+                    block_start_frame);
 
   frames_rendered_.fetch_add(frame_count, std::memory_order_relaxed);
 }

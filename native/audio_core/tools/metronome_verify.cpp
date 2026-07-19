@@ -39,7 +39,8 @@ std::vector<int64_t> RenderAndDetectOnsets(kitbag::Metronome& metronome,
 
   while (rendered < total_frames) {
     std::fill(buffer.begin(), buffer.end(), 0.0f);
-    metronome.Render(buffer.data(), kBlockFrames, kSampleRate, kChannels);
+    metronome.Render(buffer.data(), kBlockFrames, kSampleRate, kChannels,
+                     static_cast<uint64_t>(rendered));
     for (uint32_t frame = 0; frame < kBlockFrames; ++frame) {
       const float amplitude = std::fabs(buffer[frame * kChannels]);
       const int64_t index = rendered + frame;
@@ -206,7 +207,8 @@ void TestLatencyOffsetChangedMidRun() {
         metronome.SetLatencyOffset(new_offset);
         applied = true;
       }
-      metronome.Render(buffer.data(), kBlockFrames, kSampleRate, kChannels);
+      metronome.Render(buffer.data(), kBlockFrames, kSampleRate, kChannels,
+                       static_cast<uint64_t>(rendered));
       for (uint32_t frame = 0; frame < kBlockFrames; ++frame) {
         const float amplitude = std::fabs(buffer[frame * kChannels]);
         const int64_t index = rendered + frame;
@@ -266,10 +268,142 @@ void TestPolyrhythm() {
   Check(onsets.size() == 24, "3:4 poly: 6 onsets per bar over 4 bars");
 }
 
+// StartAt must fire the first click on its exact engine frame, even when that
+// frame falls mid-block — the whole point of the transport seam.
+void TestStartAt() {
+  kitbag::Metronome metronome;
+  metronome.SetTempo(120.0);
+  metronome.SetBeatsPerBar(4);
+  // 5000 is not a multiple of kBlockFrames (256): proves intra-block accuracy,
+  // not just block-aligned starts.
+  const int64_t anchor = 5000;
+  metronome.StartAt(static_cast<uint64_t>(anchor));
+
+  const auto onsets =
+      RenderAndDetectOnsets(metronome, anchor + kSampleRate * 2);
+  Check(!onsets.empty(), "start_at: the click actually starts");
+  // The click's sine attacks from zero, so the threshold crossing lands one or
+  // two samples after the anchor — never before it.
+  Check(!onsets.empty() && onsets[0] >= anchor && onsets[0] <= anchor + 2,
+        "start_at: first click on the anchor frame, not the call site");
+  ExpectSpacing(onsets, 0, onsets.size(), 60.0 / 120.0 * kSampleRate,
+                "start_at 120 BPM after anchored start");
+}
+
+// An anchor at (or before) the first rendered frame fires on frame 0, never
+// retroactively — the same branch that handles an already-past anchor.
+void TestStartAtAnchorAtZero() {
+  kitbag::Metronome metronome;
+  metronome.SetTempo(120.0);
+  metronome.StartAt(0);
+
+  const auto onsets = RenderAndDetectOnsets(metronome, kSampleRate);
+  Check(!onsets.empty() && onsets[0] < kOnsetHoldFrames,
+        "start_at(0): first click at frame 0");
+}
+
+// Regression: a deferred start must recompute the per-block tempo/latency
+// locals after the in-loop BeginRun. BeginRun sets beat_position_ =
+// -LatencyBeats(reset bpm_); if the loop's latency_beats still reflects the
+// pre-reset bpm_ (left high by a prior ramp run), `position` no longer cancels
+// to zero on the first sample, so beat 0 is swallowed and the block runs at the
+// stale tempo. A latency offset makes the mismatch observable — LatencyBeats
+// scales with bpm_, so the two bpm values must differ for it to bite.
+void TestStartAtWithArmedRampRecomputesLocals() {
+  kitbag::Metronome metronome;
+  metronome.SetBeatsPerBar(4);
+  metronome.SetRamp(true, 60.0, 180.0, 4);
+  metronome.SetLatencyOffset(50.0);
+  metronome.Start();
+  RenderAndDetectOnsets(metronome, kSampleRate * 6);  // let bpm_ climb past 60
+  metronome.Stop();  // leaves the ramp armed and bpm_ high
+
+  const int64_t anchor = 5000;
+  metronome.StartAt(static_cast<uint64_t>(anchor));
+  const auto onsets =
+      RenderAndDetectOnsets(metronome, anchor + kSampleRate * 3);
+  // Beat 0 must still fire on the anchor (not swallowed by a stale offset), and
+  // the first bar replays at ramp_start (60 BPM = 48000 frames/beat).
+  Check(!onsets.empty() && onsets[0] >= anchor && onsets[0] <= anchor + 2,
+        "start_at+ramp: beat 0 fires on the anchor, not swallowed");
+  Check(onsets.size() >= 3, "start_at+ramp: enough clicks to measure spacing");
+  ExpectSpacing(onsets, 0, 3, 60.0 / 60.0 * kSampleRate,
+                "start_at+ramp: first bar at ramp start tempo, not stale bpm");
+}
+
+// StartAt is dropped while already running.
+void TestStartAtIgnoredWhileRunning() {
+  kitbag::Metronome metronome;
+  metronome.SetTempo(120.0);
+  // Queued together: kStart begins immediately, then kStartAt sees running_ and
+  // is dropped — so the run is continuous from frame 0, unshifted by the
+  // anchor.
+  metronome.Start();
+  metronome.StartAt(
+      kSampleRate);  // would move the start a second out, if honoured
+  const auto onsets = RenderAndDetectOnsets(metronome, kSampleRate * 2);
+  Check(onsets.size() == 4,
+        "start_at while running: ignored, run stays continuous");
+  Check(!onsets.empty() && onsets[0] < kOnsetHoldFrames,
+        "start_at while running: first click still at frame 0");
+}
+
+// An immediate Start cancels a StartAt that has not fired yet. Ordering is the
+// whole point: the pending start must already exist when kStart drains, which
+// is the only path that reaches `has_pending_start_ = false` in kStart.
+void TestStartCancelsPendingStartAt() {
+  kitbag::Metronome metronome;
+  metronome.SetTempo(120.0);
+  metronome.StartAt(kSampleRate);  // one second out...
+  metronome.Start();               // ...but this pre-empts it
+  const auto onsets = RenderAndDetectOnsets(metronome, kSampleRate * 2);
+  Check(
+      !onsets.empty() && onsets[0] < kOnsetHoldFrames,
+      "start cancels pending start_at: first click at frame 0, not the anchor");
+  Check(onsets.size() == 4,
+        "start cancels pending start_at: full continuous run, no second start");
+}
+
+// A latency offset must not swallow beat 0 on the deferred path either — the
+// immediate Start path has this pinned by TestLatencyOffsetKeepsBeatZero.
+void TestStartAtKeepsBeatZeroUnderLatencyOffset() {
+  for (const double offset_ms : {0.5, 100.0, -100.0}) {
+    kitbag::Metronome metronome;
+    metronome.SetTempo(120.0);
+    metronome.SetLatencyOffset(offset_ms);
+    const int64_t anchor = 5000;
+    metronome.StartAt(static_cast<uint64_t>(anchor));
+
+    const auto onsets =
+        RenderAndDetectOnsets(metronome, anchor + kSampleRate * 2);
+    Check(!onsets.empty() && onsets[0] >= anchor && onsets[0] <= anchor + 2,
+          "start_at + latency offset: beat 0 fires on the anchor");
+    ExpectSpacing(onsets, 0, onsets.size(), 60.0 / 120.0 * kSampleRate,
+                  "start_at + latency offset spacing");
+  }
+}
+
+// Stop cancels a pending StartAt: the click never begins.
+void TestStopCancelsPendingStartAt() {
+  kitbag::Metronome metronome;
+  metronome.SetTempo(120.0);
+  metronome.StartAt(kSampleRate / 2);
+  metronome.Stop();
+  const auto onsets = RenderAndDetectOnsets(metronome, kSampleRate * 2);
+  Check(onsets.empty(), "stop cancels pending start_at: no clicks");
+}
+
 }  // namespace
 
 int main() {
   TestSteadyTempo();
+  TestStartAt();
+  TestStartAtAnchorAtZero();
+  TestStartAtWithArmedRampRecomputesLocals();
+  TestStartAtIgnoredWhileRunning();
+  TestStartCancelsPendingStartAt();
+  TestStartAtKeepsBeatZeroUnderLatencyOffset();
+  TestStopCancelsPendingStartAt();
   TestTempoChange();
   TestSubdivisionAndMute();
   TestLatencyOffsetKeepsBeatZero();

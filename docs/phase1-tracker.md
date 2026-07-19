@@ -1,0 +1,182 @@
+# Phase 1 — Core: Execution Tracker
+
+> **Not a planning document.** `SPEC.md` §15 is the sequencing authority and §4 is
+> the contract. This file only tracks *execution status* of Phase 1 work already
+> specified there. If this disagrees with SPEC.md, SPEC.md wins. Do not add scope
+> here that isn't in §4 — this is a checklist, not the old Autonomous Completion Plan.
+
+Scope: **§4 in full** — native playback (4.1), phase anchor (4.2), downbeats (4.3),
+mixer fixes (4.4). Framework-independent; every task headlessly testable via
+`native/audio_core/tools/`. No UI.
+
+Status legend: `[ ]` todo · `[~]` in progress · `[x]` done (verify green + both reviews pass) · `[!]` blocked
+
+---
+
+## Overall structure (codebase-design framing)
+
+**The native core is one deep module.** Its interface is the flat C ABI in
+`native/audio_core/include/kitbag_api.h`: scalars + file paths, no structs, no
+buffers. That small interface hides the sequencer, mixer, streaming decoder,
+player, tuner. Depth is the whole point — the same seam is crossed by Dart FFI
+(gone), the JSI HostObject (§13.2, later), *and* the verify tools now. **The
+interface is the test surface**: `tools/*_verify` cross the exact seam the app
+will. If a test needs to reach past the C ABI, the module is the wrong shape.
+
+Phase 1 makes the module **deeper**, three ways:
+- §4.1 **removes** `kb_mixer_set_track_data` and its `float*` buffer → after it,
+  *every* boundary value is a scalar or a path. Smaller interface, more behind it
+  (streaming, resample, RT-safe publish). This is what lets §13.2 use a HostObject
+  and skip an ArrayBuffer bridge — a direct payoff of the deletion.
+- §4.2 collapses "start + separately fix up timing" into three anchor calls that
+  own phase internally. Callers pass a frame or a grid; drift handling is hidden.
+- §4.3 keeps the analyze interface the same shape (caller buffers out) while adding
+  downbeats behind it; old grids stay valid (degraded, not broken).
+
+**Internal seams** (private, for the core's own tests): the streaming reader behind
+the mixer, the resampler behind load, the beat/downbeat tracker behind analyze.
+Two adapters = a real seam — the reader has a real file adapter and will want an
+in-memory fake for `tools/`, so that seam earns its keep. The resampler has one
+adapter (miniaudio/Speex) → hypothetical seam, don't abstract it yet.
+
+### Design audit (2026-07-17) — findings + decisions
+
+Auditing the current core against the §4 work surfaced four structural issues.
+Wave 0 fixes them so Phase 1 builds on the right seams, not around missing ones.
+
+- **F1 — No transport-clock seam.** `engine.cpp:85` bumps `frames_rendered_`
+  *after* Render and never hands the block's absolute frame to `Mixer::Process`
+  or `Metronome::Render`. Three subsystems each carry their own position
+  (`frames_rendered_`, `beat_position_`, `read_frame_`) with no shared transport.
+  §4.2 (`start_at`/`set_grid`/`anchor_external`) and §4.1 (player "on the same
+  clock as the click") all need the absolute engine frame of the block.
+  **Decision:** thread `uint64_t block_start_frame` into every `Render`/`Process`;
+  `frames_rendered_` becomes the one transport, read before the block, not after.
+  → **W0-1**, prerequisite for C and A5.
+- **F2 — Streaming would be written twice.** A1 (mixer tracks) and A5 (player)
+  both need ring-buffered read-ahead. **Decision:** one deep module `AudioSource`
+  — pull interface `Read(dst, frames)` hiding a non-RT read-ahead thread — with a
+  real-file adapter and an in-memory fake for `tools/`. Mixer track and Player
+  both consume it. → **W0-2**, prerequisite for A1/A5.
+- **F3 — Two concurrency disciplines.** Metronome uses a clean SPSC command ring;
+  Mixer uses scattered `relaxed` atomics + a caller-thread `vector.assign` that
+  races `track_count_`/`has_data` (the §4.1 race). A3's pointer-swap must not add
+  a third. **Decision:** scalar controls (gain/mute/solo/play/seek) arrive through
+  a command ring like the metronome; bulk track payload publishes by atomic
+  pointer-swap. One documented concurrency contract per module. → shapes A3/A4/B.
+- **F4 — Interface shrinks as depth grows.** `Mixer::Process(out, n, sr)` + the
+  `sr != output_sr → skip` at `mixer.cpp:108-109` is the §4.1 resample bug. After
+  A2, the `sr` param and skip-branch both vanish. Smaller interface, deeper module
+  — the intended direction, not a regression. → verified in A2/A6.
+
+**RN package seams (§13.1) are later (Phase 2), listed only so Phase 1 doesn't
+violate them:** `core-native` will be the *only* package touching JSI; the C ABI
+staying scalar-only is precisely what keeps that package thin over a deep core.
+Nothing in Phase 1 should widen the ABI in a way that forces a buffer across.
+
+---
+
+## Work → review → verify loop (every task)
+
+1. **Work** — implement in the listed worktree, using the listed skill/agent.
+2. **Self-verify** — build (`cmake --build native/audio_core/build`), run the named
+   verify tool, run `bash scripts/lint.sh`. Green before review.
+3. **Review** — `@ralph` (correctness + §4 conformance) **and** `@code-reviewer`
+   (CONTRIBUTING.md judgment layer). Non-overlapping; run both on realtime C++.
+4. **Fix findings; iterate until both pass.**
+5. **Mark `[x]` only when** verify green + lint clean + both reviewers pass.
+
+Default work skill for all native tasks: **`native-audio`** (the C++ core, the C
+ABI, the verify tools, the RT invariants). No dedicated C++ engineer agent exists —
+run native work on the main thread or a `general-purpose` subagent that loads
+`native-audio`. Reviews are the `ralph` and `code-reviewer` agents.
+
+---
+
+## Parallelization
+
+Conflict map: **W0-1** (transport clock) touches `engine.*` + every `Render`/
+`Process` signature → it is a prerequisite that lands *first, alone*, on the
+feature branch (everything rebases on it). **W0-2** (`AudioSource` module) is a new
+file, no conflict. Track A rewrites `mixer.cpp` track loading; Track B does in-place
+`mixer.cpp` fixes → **A and B share a file, sequence them** (B first, small). C is
+`metronome.cpp` only; D is `beat_tracker.cpp`/analyze only.
+
+| Wave | Runs in parallel | Worktree |
+|---|---|---|
+| **0a** | **W0-1** transport-clock seam (blocks C, A5) — lands first, alone | feature branch |
+| **0b** | **W0-2** `AudioSource` module (blocks A1, A5) · **D1** QM-DSP vendor decision | W0-2 on feature branch; D1 in `wt-downbeats` |
+| **1** | **Track B** (mixer fixes) · **Track C** (phase anchor, needs W0-1) | B on feature branch; C in `wt-phase-anchor` |
+| **2** | **Track A** (native playback — needs W0-2 + B) · **D2–D4** (need D1) | A on feature branch; D continues `wt-downbeats` |
+| **3** | **Integration verify** — all tracks merged, full `metronome_verify` + new player/mixer tool green together | feature branch |
+
+Spawn parallel worktrees: `bash scripts/worktree.sh create phase-anchor main`,
+`... create downbeats main`. Remove when merged.
+
+---
+
+## Track W0 — Structural prep (design audit F1–F3)  ·  Wave 0  ·  skill: `native-audio`
+
+Must land before the tracks that depend on them. Review: `@ralph` (RT invariants,
+clock correctness) + `@code-reviewer`. Verify: `metronome_verify` stays green
+across W0-1 (pure refactor — behaviour unchanged); W0-2 gets a `tools/` check
+driving the in-memory fake.
+
+- [x] **W0-1** Transport-clock seam (F1). Threaded `uint64_t block_start_frame` into `Metronome::Render`; `Engine::Render` reads `frames_rendered_` before the block, advances after. Mixer left unchanged (no Phase 1 consumer). Landed with its first consumer C1 to avoid a dead param. `metronome_verify` green; ralph + code-reviewer passed after fixes.
+- [ ] **W0-2** `AudioSource` module (F2). Pull interface `Read(float* dst, frames)` hiding a non-RT ring-buffered read-ahead thread. Real-file adapter (miniaudio) + in-memory fake. Standalone deep module, own `tools/` test via the fake. **Blocks A1, A5.**
+
+## Track B — §4.4 Mixer fixes in place  ·  Wave 1  ·  skill: `native-audio`
+
+Verify: `metronome_verify` unaffected; add mixer assertions to a `tools/` check.
+Review: `@ralph` + `@code-reviewer`.
+
+- [ ] **B1** `mixer.cpp:140-141` — advance read head by **min** across played tracks (per :139 comment), not `max_read`. Fixes unequal-stem desync.
+- [ ] **B2** Split `Stop()` (position→0) from `Pause()` (holds). Expose both on the ABI.
+- [ ] **B3** Zero-pad tracks shorter than the longest instead of dropping them from the mix.
+- [ ] **B4** Auto-stop on **end of longest track**, never "all tracks silent" — muting all must not end playback.
+
+## Track C — §4.2 Phase anchor  ·  Wave 1 (needs W0-1)  ·  worktree `wt-phase-anchor`  ·  skill: `native-audio`
+
+Builds on the §4.7 latency fixes already pinned. Verify: extend `metronome_verify`.
+Review: `@ralph` (RT invariants, no scheduled-event mutation) + `@code-reviewer`.
+
+- [x] **C1** `kb_metronome_start_at(engine, uint64_t start_frame)` — sample-accurate deferred start. New `kStartAt` command + `BeginRun()` helper; fires on the exact sample inside the render loop. 7 regression tests in `metronome_verify` (frame-exactness off a block boundary, anchor-at-0, beat-0 under a latency offset, armed-ramp+offset locals recompute [validated: fails without the fix], ignored-while-running, Start-cancels-pending, Stop-cancels-pending). Two review rounds: ralph Pass, code-reviewer Pass after fixing a test whose name claimed a cancel path it never exercised.
+- [ ] **C2** `kb_metronome_set_grid(beat_times_sec[], count, anchor_frame)` + `kb_metronome_clear_grid` — follow per-beat spacing, not global BPM. Array copied, not retained.
+- [ ] **C3** `kb_metronome_anchor_external(song_pos_sec, at_frame, bpm)` — anchor to a transport we don't clock; re-callable; glitch-free re-anchor.
+- [ ] **C4** Invariants: anchoring recomputes **future** targets only, never mutates scheduled events; all three compose with latency offset (click at speaker); no double/dropped beat on re-anchor.
+- [ ] **C5** Regressions in `metronome_verify`: grid-follow tracks a ramping grid; re-anchor mid-run glitch-free; `start_at` frame-exact. JSI note: `uint64_t` frames cross as JS `double` — no BigInt.
+
+## Track A — §4.1 Native owns playback  ·  Wave 2 (needs W0-2 + B)  ·  skill: `native-audio`
+
+Largest track. A1→A2→A3 sequential (streaming → resample → RT-safe publish), then
+A4/A5 ABI, A6 verify. Verify: new `tools/` player+mixer check loads a real file,
+asserts non-silence + exact frame count, headless.
+Review: `@ralph` (allocation-free/lock-free callback, pointer-swap release
+semantics) + `@code-reviewer`.
+
+- [ ] **A1** Mixer track = **`AudioSource` (W0-2) per track**; callback drains only; memory O(tracks) not O(duration). Do not re-implement streaming here — consume the W0-2 module.
+- [ ] **A2** Resample-on-load to engine rate (miniaudio/Speex), inside `AudioSource`. Kills `mixer.cpp:108-109` silent-skip of 44.1k; 44.1k must work. After this, `Mixer::Process` loses its `sr` param + skip-branch (F4).
+- [ ] **A3** RT-safe track load — build `AudioSource` off-thread, publish by atomic pointer-swap (release semantics). Scalar controls stay on the command ring (F3). Fixes `SetTrackData` race; load-during-playback safe.
+- [ ] **A4** Mixer ABI: add `kb_mixer_load_track` / `kb_mixer_unload_track` / `kb_mixer_track_ready`. **Remove** `kb_mixer_set_track_data` + its buffer param. Update every caller/consumer (no orphan symbol).
+- [ ] **A5** Player ABI: `kb_player_load/unload/play/pause/seek/position/frames/is_playing`. Player = thin over **`AudioSource` (W0-2) + transport clock (W0-1)** — a 1-source transport, not a parallel streaming stack. `pause` holds position.
+- [ ] **A6** New `tools/` verify: stream real file, assert frame count + non-silence + resample correctness. Wire into CMake + CI.
+
+## Track D — §4.3 Downbeats  ·  D1 Wave 1, D2–D4 Wave 2  ·  worktree `wt-downbeats`  ·  skill: `native-audio`
+
+Verify: new analyze fixture asserts downbeats land on bar-ones for known tempo.
+Review: `@ralph` (non-destructive schema migration) + `@code-reviewer`.
+
+- [ ] **D1** Decision + vendor: adopt QM-DSP `BarBeatTrack` (GPL-compatible, the researched choice — **preferred**, §4.3/§4.6) vs. extend hand-rolled `beat_tracker.cpp`. Vendor the choice; record licence from its `LICENSE`.
+- [ ] **D2** Extend `kb_analyze_song` with `int32_t* downbeat_indices_out` + `int32_t* downbeat_count_out`.
+- [ ] **D3** Beat-grid BLOB schema gains a downbeat index list. **Non-destructive**: absent → treat every `beats_per_bar`-th beat as downbeat (degraded, usable). Old grids stay valid.
+- [ ] **D4** Verify: downbeats land on bar-ones for a known-tempo fixture; degraded fallback path tested.
+
+---
+
+## Cross-cutting gates (apply to every task, per §4.5 / §16)
+
+- Callback allocation-free, lock-free, no syscalls; master clock = sample-frame counter.
+- One engine per process. Every exported symbol has a consumer — delete on removal, no speculative FFI.
+- Cross-boundary constants: one definition, one owner (§13.7). No hand-mirroring.
+- DoD (§16): acceptance **measured** not demoed; tests exist; true `CHANGELOG.md` entry.
+- Honesty: don't claim a task `[x]` on a compile alone — verify at runtime through the C ABI.
