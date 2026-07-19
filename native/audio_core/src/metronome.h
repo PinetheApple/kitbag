@@ -29,7 +29,7 @@ class Metronome {
   static constexpr int kMaxMuteBars = 16;
   // Output-latency compensation bound (D5). Widening this to 300 is the whole
   // of D5's clamp change; the calibration screen and kitbag_api.h's doc comment
-  // move with it. See SPEC.md §4.6.
+  // move with it. See SPEC.md §4.7.
   static constexpr double kMaxLatencyOffsetMs = 100.0;
   static constexpr double kDefaultBpm = 120.0;
 
@@ -41,11 +41,20 @@ class Metronome {
   }
 
   // Renders additively into an interleaved stereo buffer. RT-safe.
+  // `block_start_frame` is the engine-clock frame of output[0] — the shared
+  // transport (Engine::frames_rendered_ read before the block). It is what lets
+  // StartAt land on an exact frame rather than "whenever the call arrives".
   void Render(float* output, uint32_t frame_count, uint32_t sample_rate,
-              uint32_t channel_count);
+              uint32_t channel_count, uint64_t block_start_frame);
 
   // App-thread API. Non-blocking; drops commands if the ring is full.
   void Start();
+  // Sample-accurate start: the click begins on engine frame `start_frame`
+  // (cf. Engine::frames_rendered). A frame already past when it is drained
+  // starts on the next sample (best-effort, never before the transport). Only
+  // takes effect while stopped — re-anchoring a running click is set_grid's /
+  // anchor_external's job (§4.2).
+  void StartAt(uint64_t start_frame);
   void Stop();
   void SetTempo(double bpm);
   void SetBeatsPerBar(int beats);
@@ -90,6 +99,7 @@ class Metronome {
  private:
   enum class CommandType : uint8_t {
     kStart,
+    kStartAt,
     kStop,
     kSetTempo,
     kSetBeats,
@@ -110,6 +120,7 @@ class Metronome {
     int32_t int_a = 0;
     int32_t int_b = 0;
     int32_t int_c = 0;
+    uint64_t frame = 0;  // engine-clock frame for kStartAt (see StartAt / §4.2)
   };
 
   struct Voice {
@@ -135,6 +146,9 @@ class Metronome {
   double LatencyBeats() const;
   // The only way bpm_ may change while running. See the definition.
   void SetBpmPreservingPhase(double new_bpm);
+  // Resets sequencer phase and starts the run. Shared by Start (immediate) and
+  // StartAt (deferred to the anchor frame).
+  void BeginRun();
 
   SpscRing<Command, kCommandRingSize> commands_;
 
@@ -148,6 +162,10 @@ class Metronome {
   int poly_beats_ = 3;
   int sound_ = 0;
   double beat_position_ = 0.0;  // fractional beats since start
+  // Pending sample-accurate start (StartAt). Held until the render loop reaches
+  // `pending_start_frame_` on the engine clock, then consumed by BeginRun.
+  bool has_pending_start_ = false;
+  uint64_t pending_start_frame_ = 0;
   // Monotonic bar counter: incremented at every downbeat (never derived by
   // division), so a mid-run time-signature change cannot jump ramp progress
   // or bar-mute phase. -1 until the first downbeat after Start.

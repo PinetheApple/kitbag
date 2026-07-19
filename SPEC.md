@@ -1439,7 +1439,7 @@ asks them to.
 calibration screen would have measured offsets it was unable to apply. The range
 is now ±300 ms. The lookahead check ran 2026-07-17: there is no window, the
 offset is a phase bias, and the two latency bugs the check exposed are fixed and
-pinned in `metronome_verify` (§4.6). Widening the clamp to ±300 ms is a one-liner
+pinned in `metronome_verify` (§4.7). Widening the clamp to ±300 ms is a one-liner
 left to land with the calibration screen that needs it (§12.8).
 
 ### 12.6 Experience rules — acceptance criteria, not aspirations
@@ -1670,7 +1670,7 @@ currently at risk of being hand-mirrored and must not be:
 - **`kMaxTracks`** (16) — §7.4.
 - **Accent enum** (`KB_ACCENT_MUTED/NORMAL/ACCENTED`).
 - **`kb_result` codes.**
-- **Latency and phase bounds** — §4.6, and note they are three separate decisions
+- **Latency and phase bounds** — §4.7, and note they are three separate decisions
   (§15), not one shared constant.
 
 Generate the TS from the header, or expose them through the TurboModule. Do not
@@ -1829,7 +1829,7 @@ the ones the Flutter build's demos hid:
   thread starved** (§13.3).
 - The media session emitting what §8.3 assumes — **unverifiable until the cast bug
   class is gone.**
-- Bluetooth latency actually being reachable (§4.6).
+- Bluetooth latency actually being reachable (§4.7).
 - Swipe sensitivity (§12.8).
 
 ---
@@ -1854,7 +1854,7 @@ The six questions that blocked schema and toolchain work were answered
 - **The lookahead question** — answered: there is no window, the offset is a
   phase bias. The check also exposed two live latency bugs (any positive offset
   swallowed beat 0; a ramp and an offset corrupted each other), both now **fixed
-  and pinned** in `metronome_verify` (§4.6). Widening the clamp to ±300 ms is a
+  and pinned** in `metronome_verify` (§4.7). Widening the clamp to ±300 ms is a
   one-liner deferred to the calibration screen that needs it; the regressions
   guard the interaction across it.
 - **The §12.8 design-file edits** — all six landed, so no screen gets built from
@@ -1992,7 +1992,7 @@ Three bounds, three separate constants, no shared value:
 | Phase nudge | **±½ beat, tempo-dependent** | Phase is modular; a whole beat of offset is none. ±175 ms at 171 BPM, ±500 ms at 60 — so a constant was the wrong *shape* of limit. |
 | Downbeat shift | beats, not ms | A different quantity entirely (§8.6). |
 
-Cheap, per §4.6: the native side does not clamp, so this is two constants and a
+Cheap, per §4.7: the native side does not clamp, so this is two constants and a
 stale doc comment in `kitbag_api.h:63`.
 
 **One check before it lands:** confirm the scheduler's lookahead window absorbs a
