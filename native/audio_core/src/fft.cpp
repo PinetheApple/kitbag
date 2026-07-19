@@ -23,7 +23,6 @@ int fft_bit_reverse(int x, int log2n) {
 void fft(float* data, int n, bool inverse) {
   const int log2n = fft_log2(n);
 
-  // Bit-reversal permutation
   for (int i = 0; i < n; ++i) {
     const int j = fft_bit_reverse(i, log2n);
     if (j > i) {

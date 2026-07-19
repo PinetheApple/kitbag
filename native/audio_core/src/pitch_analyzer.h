@@ -73,18 +73,15 @@ class PitchAnalyzer {
   int samples_until_update_ = 0;
   int samples_per_update_;
 
-  // Adaptive noise gate state
   double rms_envelope_ = 0.0;
   double noise_floor_ = 0.0;
   bool gate_open_ = false;
 
-  // Smoothing state
   double median_window_[kMedianLength] = {};
   int median_filled_ = 0;
   double ema_cents_ = 0.0;
   bool ema_seeded_ = false;
 
-  // Note-lock state
   LockState lock_state_ = LockState::kNone;
   int32_t locked_note_ = -1;
   int lock_counter_ = 0;
