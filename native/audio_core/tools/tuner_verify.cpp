@@ -42,9 +42,8 @@ double CentsBetween(double measured_hz, double true_hz) {
 
 // Feeds a tone (fundamental + optional harmonics) and returns the time in
 // seconds after which the reading stayed within tolerance of true_hz.
-double FeedToneAndMeasureSettle(kitbag::PitchAnalyzer& analyzer,
-                                double true_hz, double seconds,
-                                double harmonic2 = 0.0,
+double FeedToneAndMeasureSettle(kitbag::PitchAnalyzer& analyzer, double true_hz,
+                                double seconds, double harmonic2 = 0.0,
                                 double harmonic3 = 0.0) {
   const auto total = static_cast<int64_t>(seconds * kSampleRate);
   double settle_seconds = seconds;
@@ -95,8 +94,7 @@ void TestReferenceTones() {
     Check(std::fabs(error_cents) <= kMaxCentsError,
           "reference tone within ±1 cent");
     Check(settle <= kMaxSettleSeconds, "settle under 150ms");
-    Check(reading.note_index ==
-              kitbag::NoteIndexForFrequency(tone_hz, kA4Hz),
+    Check(reading.note_index == kitbag::NoteIndexForFrequency(tone_hz, kA4Hz),
           "nearest note index matches");
   }
 }

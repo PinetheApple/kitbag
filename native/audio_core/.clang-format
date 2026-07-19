@@ -7,3 +7,16 @@ ColumnLimit: 80
 IndentWidth: 2
 DerivePointerAlignment: false
 PointerAlignment: Left
+# Google's default reflows comment text to fill ColumnLimit, which runs
+# hand-aligned parameter blocks together into prose — it did exactly that to
+# kb_analyze_song's doc comment in the published ABI header. The C ABI's
+# documentation is the one thing binding authors read; leave its line breaks
+# alone.
+ReflowComments: false
+# api.cpp's "main" header is kitbag_api.h, not api.h, so Google's default
+# detection misses it and sorts the public header in among the private ones.
+# Including it first is what proves it is self-contained for external consumers.
+IncludeIsMainRegex: '(_test)?$'
+IncludeCategories:
+  - Regex: '^"kitbag_api\.h"$'
+    Priority: -1

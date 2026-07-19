@@ -18,6 +18,7 @@ class Engine {
  public:
   static constexpr uint32_t kSampleRate = 48000;
   static constexpr uint32_t kChannelCount = 2;
+  static constexpr float kDefaultToneFrequencyHz = 440.0f;  // A4 test tone
 
   Engine() = default;
   ~Engine();
@@ -58,7 +59,7 @@ class Engine {
 
   std::atomic<uint64_t> frames_rendered_{0};
   std::atomic<bool> tone_enabled_{false};
-  std::atomic<float> tone_frequency_hz_{440.0f};
+  std::atomic<float> tone_frequency_hz_{kDefaultToneFrequencyHz};
   double tone_phase_ = 0.0;
 
   Metronome metronome_;

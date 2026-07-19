@@ -3,7 +3,6 @@
 
 #include <cstdint>
 #include <optional>
-
 #include <q/pitch/pitch_detector.hpp>
 
 namespace kitbag {
@@ -57,7 +56,7 @@ class PitchAnalyzer {
   static constexpr int kRideMaxSamples = 22;
   static constexpr int kReLockSamples = 90;
 
-  enum class LockState { None, Locking, Locked, Riding };
+  enum class LockState { kNone, kLocking, kLocked, kRiding };
 
   void RebuildDetector();
   void PublishFrequency(double frequency_hz);
@@ -86,7 +85,7 @@ class PitchAnalyzer {
   bool ema_seeded_ = false;
 
   // Note-lock state
-  LockState lock_state_ = LockState::None;
+  LockState lock_state_ = LockState::kNone;
   int32_t locked_note_ = -1;
   int lock_counter_ = 0;
   double lock_cents_sum_ = 0.0;

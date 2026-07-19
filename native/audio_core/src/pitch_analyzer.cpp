@@ -21,7 +21,8 @@ int32_t NoteIndexForFrequency(double frequency_hz, double a4_hz) {
   if (frequency_hz <= 0.0) {
     return -1;
   }
-  return static_cast<int32_t>(std::lround(MidiForFrequency(frequency_hz, a4_hz)));
+  return static_cast<int32_t>(
+      std::lround(MidiForFrequency(frequency_hz, a4_hz)));
 }
 
 double CentsOffsetForFrequency(double frequency_hz, double a4_hz) {
@@ -54,14 +55,13 @@ void PitchAnalyzer::SetBand(double low_hz, double high_hz) {
 }
 
 void PitchAnalyzer::RebuildDetector() {
-  detector_.emplace(cycfi::q::frequency(band_low_hz_),
-                    cycfi::q::frequency(band_high_hz_),
-                    static_cast<float>(sample_rate_),
-                    cycfi::q::dB(kDetectorHysteresisDb));
+  detector_.emplace(
+      cycfi::q::frequency(band_low_hz_), cycfi::q::frequency(band_high_hz_),
+      static_cast<float>(sample_rate_), cycfi::q::dB(kDetectorHysteresisDb));
   samples_until_update_ = samples_per_update_;
   median_filled_ = 0;
   ema_seeded_ = false;
-  lock_state_ = LockState::None;
+  lock_state_ = LockState::kNone;
   lock_counter_ = 0;
   lock_cents_sum_ = 0.0;
   re_lock_note_ = -1;
@@ -110,7 +110,7 @@ bool PitchAnalyzer::Process(float sample) {
     HandleNoSignal();
   }
 
-  if (lock_state_ != LockState::Locked && re_lock_frames_ > 0) {
+  if (lock_state_ != LockState::kLocked && re_lock_frames_ > 0) {
     --re_lock_frames_;
   }
   return true;
@@ -143,10 +143,10 @@ void PitchAnalyzer::PublishFrequency(double frequency_hz) {
   double publish_cents = 0.0;
 
   switch (lock_state_) {
-    case LockState::None:
+    case LockState::kNone:
       if (raw_note >= 0) {
         if (raw_note == re_lock_note_ && re_lock_frames_ > 0) {
-          lock_state_ = LockState::Locked;
+          lock_state_ = LockState::kLocked;
           lock_counter_ = 0;
           should_publish = true;
           publish_note = raw_note;
@@ -154,7 +154,7 @@ void PitchAnalyzer::PublishFrequency(double frequency_hz) {
           re_lock_note_ = -1;
           re_lock_frames_ = 0;
         } else {
-          lock_state_ = LockState::Locking;
+          lock_state_ = LockState::kLocking;
           locked_note_ = raw_note;
           lock_counter_ = 1;
           lock_cents_sum_ = raw_cents;
@@ -162,13 +162,13 @@ void PitchAnalyzer::PublishFrequency(double frequency_hz) {
       }
       break;
 
-    case LockState::Locking:
+    case LockState::kLocking:
       if (raw_note == locked_note_ &&
           std::fabs(raw_cents) <= kLockCentsThreshold) {
         ++lock_counter_;
         lock_cents_sum_ += raw_cents;
         if (lock_counter_ >= kLockAcquireSamples) {
-          lock_state_ = LockState::Locked;
+          lock_state_ = LockState::kLocked;
           lock_counter_ = 0;
           should_publish = true;
           publish_note = locked_note_;
@@ -177,13 +177,13 @@ void PitchAnalyzer::PublishFrequency(double frequency_hz) {
           lock_cents_sum_ = 0.0;
         }
       } else {
-        lock_state_ = LockState::None;
+        lock_state_ = LockState::kNone;
         lock_counter_ = 0;
         lock_cents_sum_ = 0.0;
       }
       break;
 
-    case LockState::Locked:
+    case LockState::kLocked:
       if (raw_note == locked_note_) {
         lock_counter_ = 0;
         should_publish = true;
@@ -192,7 +192,7 @@ void PitchAnalyzer::PublishFrequency(double frequency_hz) {
         re_lock_note_ = -1;
         re_lock_frames_ = 0;
       } else if (raw_note < 0) {
-        lock_state_ = LockState::Riding;
+        lock_state_ = LockState::kRiding;
         lock_counter_ = 1;
         re_lock_note_ = locked_note_;
         re_lock_frames_ = kReLockSamples;
@@ -202,15 +202,15 @@ void PitchAnalyzer::PublishFrequency(double frequency_hz) {
         re_lock_note_ = locked_note_;
         re_lock_frames_ = kReLockSamples;
         if (lock_counter_ >= kReLockSamples) {
-          lock_state_ = LockState::None;
+          lock_state_ = LockState::kNone;
           lock_counter_ = 0;
         }
       }
       break;
 
-    case LockState::Riding:
+    case LockState::kRiding:
       if (raw_note == locked_note_) {
-        lock_state_ = LockState::Locked;
+        lock_state_ = LockState::kLocked;
         lock_counter_ = 0;
         should_publish = true;
         publish_note = locked_note_;
@@ -218,7 +218,7 @@ void PitchAnalyzer::PublishFrequency(double frequency_hz) {
       } else {
         ++lock_counter_;
         if (lock_counter_ >= kRideMaxSamples) {
-          lock_state_ = LockState::None;
+          lock_state_ = LockState::kNone;
           lock_counter_ = 0;
         } else {
           reading_ = last_locked_reading_;
@@ -244,38 +244,39 @@ void PitchAnalyzer::PublishFrequency(double frequency_hz) {
   reading_.note_index = publish_note;
   reading_.cents = ema_cents_;
   reading_.pitch_hz =
-      a4_hz_ * std::exp2((publish_note - kMidiA4 + ema_cents_ / kCentsPerSemitone) /
-                         kSemitonesPerOctave);
+      a4_hz_ *
+      std::exp2((publish_note - kMidiA4 + ema_cents_ / kCentsPerSemitone) /
+                kSemitonesPerOctave);
   reading_.confidence = detector_->periodicity();
 }
 
 void PitchAnalyzer::HandleNoSignal() {
   switch (lock_state_) {
-    case LockState::None:
-    case LockState::Locking:
-      lock_state_ = LockState::None;
+    case LockState::kNone:
+    case LockState::kLocking:
+      lock_state_ = LockState::kNone;
       lock_counter_ = 0;
       lock_cents_sum_ = 0.0;
       break;
 
-    case LockState::Locked:
-      lock_state_ = LockState::Riding;
+    case LockState::kLocked:
+      lock_state_ = LockState::kRiding;
       lock_counter_ = 1;
       re_lock_note_ = locked_note_;
       re_lock_frames_ = kReLockSamples;
       last_locked_reading_ = reading_;
       break;
 
-    case LockState::Riding:
+    case LockState::kRiding:
       ++lock_counter_;
       if (lock_counter_ >= kRideMaxSamples) {
-        lock_state_ = LockState::None;
+        lock_state_ = LockState::kNone;
         lock_counter_ = 0;
       }
       break;
   }
 
-  if (lock_state_ == LockState::Riding) {
+  if (lock_state_ == LockState::kRiding) {
     reading_ = last_locked_reading_;
   } else {
     PublishSilence();

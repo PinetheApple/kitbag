@@ -28,17 +28,16 @@ class BeatTracker {
 
   /// Generate waveform peaks from interleaved PCM data.
   /// target_chunks: desired number of min/max pairs (~2000).
-  static WaveformPeaks ComputeWaveformPeaks(const float* pcm,
-                                            int num_frames, int channels,
-                                            int target_chunks);
+  static WaveformPeaks ComputeWaveformPeaks(const float* pcm, int num_frames,
+                                            int channels, int target_chunks);
 
  private:
   std::vector<float> ComputeOnsetFunction(const float* pcm, int num_frames);
 
   float EstimateTempo(const std::vector<float>& onset, float hop_time);
 
-  std::vector<float> TrackBeats(const std::vector<float>& onset,
-                                float hop_time, float bpm);
+  std::vector<float> TrackBeats(const std::vector<float>& onset, float hop_time,
+                                float bpm);
 };
 
 }  // namespace kitbag

@@ -22,6 +22,16 @@ constexpr float kMaxBpm = 200.0f;
 // DP beat tracking penalty weight
 constexpr float kTransitionPenalty = 0.02f;
 
+// Minimum STFT frames before an onset function is worth analysing.
+constexpr int kMinStftFrames = 10;
+// Autocorrelation needs a few periods before the tempo estimate is signal.
+constexpr size_t kMinOnsetsForTempo = 20;
+// Below this the DP tracker has too few frames to place a beat sequence.
+constexpr size_t kMinOnsetsForBeats = 10;
+constexpr float kSecondsPerMinute = 60.0f;
+// Full-scale for signed 16-bit PCM, scaling float samples in [-1, 1].
+constexpr float kInt16Max = 32767.0f;
+
 }  // namespace
 
 BeatResult BeatTracker::Analyze(const float* pcm, int num_frames,
@@ -44,11 +54,11 @@ BeatResult BeatTracker::Analyze(const float* pcm, int num_frames,
   return result;
 }
 
-std::vector<float> BeatTracker::ComputeOnsetFunction(
-    const float* pcm, int num_frames) {
+std::vector<float> BeatTracker::ComputeOnsetFunction(const float* pcm,
+                                                     int num_frames) {
   const int num_stft_frames =
       std::max(0, (num_frames - kFftSize) / kHopSize) + 1;
-  if (num_stft_frames < 10) {
+  if (num_stft_frames < kMinStftFrames) {
     return {};
   }
 
@@ -136,10 +146,12 @@ std::vector<float> BeatTracker::ComputeOnsetFunction(
 float BeatTracker::EstimateTempo(const std::vector<float>& onset,
                                  float hop_time) {
   const size_t n = onset.size();
-  if (n < 20) return 0.0f;
+  if (n < kMinOnsetsForTempo) return 0.0f;
 
-  const int min_lag = static_cast<int>(60.0f / (kMaxBpm * hop_time));
-  const int max_lag = static_cast<int>(60.0f / (kMinBpm * hop_time)) + 1;
+  const int min_lag =
+      static_cast<int>(kSecondsPerMinute / (kMaxBpm * hop_time));
+  const int max_lag =
+      static_cast<int>(kSecondsPerMinute / (kMinBpm * hop_time)) + 1;
 
   if (min_lag >= max_lag || min_lag < 1) return 0.0f;
 
@@ -180,15 +192,15 @@ float BeatTracker::EstimateTempo(const std::vector<float>& onset,
     }
   }
 
-  return 60.0f / (static_cast<float>(best_lag) * hop_time);
+  return kSecondsPerMinute / (static_cast<float>(best_lag) * hop_time);
 }
 
 std::vector<float> BeatTracker::TrackBeats(const std::vector<float>& onset,
                                            float hop_time, float bpm) {
   const size_t n = onset.size();
-  if (n < 10 || bpm <= 0.0f) return {};
+  if (n < kMinOnsetsForBeats || bpm <= 0.0f) return {};
 
-  const float period_frames = 60.0f / (bpm * hop_time);
+  const float period_frames = kSecondsPerMinute / (bpm * hop_time);
   const int period = static_cast<int>(std::round(period_frames));
   if (period < 2) return {};
 
@@ -204,16 +216,13 @@ std::vector<float> BeatTracker::TrackBeats(const std::vector<float>& onset,
 
   // DP forward pass
   for (size_t i = 0; i < n; ++i) {
-    const int search_start =
-        std::max(0, static_cast<int>(i) - 2 * period);
-    const int search_end =
-        std::max(0, static_cast<int>(i) - period / 2);
+    const int search_start = std::max(0, static_cast<int>(i) - 2 * period);
+    const int search_end = std::max(0, static_cast<int>(i) - period / 2);
 
     float best_score = 0.0f;
     int best_prev = -1;
 
-    for (int j = search_start; j < search_end && j < static_cast<int>(i);
-         ++j) {
+    for (int j = search_start; j < search_end && j < static_cast<int>(i); ++j) {
       const float gap = static_cast<float>(i - j);
       const float deviation = (gap - period_frames) / period_frames;
       const float candidate = score[j] - penalty * deviation * deviation;
@@ -230,8 +239,7 @@ std::vector<float> BeatTracker::TrackBeats(const std::vector<float>& onset,
   // Find last beat in the final period window
   int last_beat = static_cast<int>(n) - 1;
   float max_score = 0.0f;
-  const size_t search_start =
-      n > static_cast<size_t>(period) ? n - period : 0;
+  const size_t search_start = n > static_cast<size_t>(period) ? n - period : 0;
   for (size_t i = search_start; i < n; ++i) {
     if (score[i] > max_score) {
       max_score = score[i];
@@ -259,9 +267,8 @@ std::vector<float> BeatTracker::TrackBeats(const std::vector<float>& onset,
 }
 
 WaveformPeaks BeatTracker::ComputeWaveformPeaks(const float* pcm,
-                                                 int num_frames,
-                                                 int channels,
-                                                 int target_chunks) {
+                                                int num_frames, int channels,
+                                                int target_chunks) {
   WaveformPeaks result;
   if (num_frames <= 0 || channels <= 0 || target_chunks <= 0) {
     return result;
@@ -277,8 +284,8 @@ WaveformPeaks BeatTracker::ComputeWaveformPeaks(const float* pcm,
 
   for (int c = 0; c < actual_chunks; ++c) {
     const int start = c * chunk_size * channels;
-    const int end = std::min(
-        start + chunk_size * channels, num_frames * channels);
+    const int end =
+        std::min(start + chunk_size * channels, num_frames * channels);
 
     for (int ch = 0; ch < channels; ++ch) {
       float min_val = 1.0f, max_val = -1.0f;
@@ -287,10 +294,8 @@ WaveformPeaks BeatTracker::ComputeWaveformPeaks(const float* pcm,
         if (pcm[s] > max_val) max_val = pcm[s];
       }
       const int idx = (c * channels + ch) * 2;
-      result.data[idx] =
-          static_cast<int16_t>(min_val * 32767.0f);
-      result.data[idx + 1] =
-          static_cast<int16_t>(max_val * 32767.0f);
+      result.data[idx] = static_cast<int16_t>(min_val * kInt16Max);
+      result.data[idx + 1] = static_cast<int16_t>(max_val * kInt16Max);
     }
   }
 

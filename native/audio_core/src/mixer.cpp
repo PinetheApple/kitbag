@@ -7,7 +7,7 @@
 namespace kitbag {
 
 void Mixer::SetTrackData(int track, const float* pcm, uint64_t num_frames,
-                          uint32_t channels, uint32_t sample_rate) {
+                         uint32_t channels, uint32_t sample_rate) {
   if (track < 0 || track >= kMaxTracks) return;
 
   Track& t = tracks_[track];
@@ -23,8 +23,8 @@ void Mixer::SetTrackData(int track, const float* pcm, uint64_t num_frames,
 
 void Mixer::SetGain(int track, float gain) {
   if (track < 0 || track >= track_count_) return;
-  tracks_[track].gain.store(
-      std::clamp(gain, kMinGain, kMaxGain), std::memory_order_relaxed);
+  tracks_[track].gain.store(std::clamp(gain, kMinGain, kMaxGain),
+                            std::memory_order_relaxed);
 }
 
 void Mixer::SetMute(int track, bool muted) {
@@ -38,7 +38,8 @@ void Mixer::SetSolo(int track, bool soloed) {
   // Recalculate any_solo_
   bool any = false;
   for (int i = 0; i < track_count_; ++i) {
-    if (tracks_[i].has_data && tracks_[i].solo.load(std::memory_order_relaxed)) {
+    if (tracks_[i].has_data &&
+        tracks_[i].solo.load(std::memory_order_relaxed)) {
       any = true;
       break;
     }
@@ -109,7 +110,8 @@ void Mixer::Process(float* output, uint32_t frame_count, uint32_t sr) {
     if (tr.sample_rate != sr) continue;
 
     const uint64_t frames_avail =
-        std::min(tr.num_frames, start_frame + static_cast<uint64_t>(frame_count)) -
+        std::min(tr.num_frames,
+                 start_frame + static_cast<uint64_t>(frame_count)) -
         std::min(start_frame, tr.num_frames);
 
     if (frames_avail == 0) continue;

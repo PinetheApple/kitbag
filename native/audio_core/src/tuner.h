@@ -41,7 +41,9 @@ class Tuner {
   //   bits 0-15   int16   nearest-note MIDI index (-1 = no pitch)
   //   bits 16-31  int16   cents offset from that note, x100
   //   bits 32-47  uint16  confidence [0,1] x10000
-  uint64_t snapshot() const { return snapshot_.load(std::memory_order_relaxed); }
+  uint64_t snapshot() const {
+    return snapshot_.load(std::memory_order_relaxed);
+  }
 
   static uint64_t PackSnapshot(const PitchAnalyzer::Reading& reading);
 
