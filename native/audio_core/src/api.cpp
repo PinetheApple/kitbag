@@ -21,14 +21,21 @@ const kitbag::Engine* ToEngine(const kb_engine* engine) {
   return reinterpret_cast<const kitbag::Engine*>(engine);
 }
 
-void WriteWaveformSidecar(const char* path, const char* waveform_dir,
-                          const float* pcm, uint64_t total_frames,
-                          uint32_t channels) {
+void WriteWaveformSidecar(
+    const char* path,
+    const char* waveform_dir,
+    const float* pcm,
+    uint64_t total_frames,
+    uint32_t channels
+) {
   // Peak buckets across the whole file — the scrubber's horizontal resolution.
   constexpr int kWaveformTargetChunks = 2000;
   auto peaks = kitbag::BeatTracker::ComputeWaveformPeaks(
-      pcm, static_cast<int>(total_frames), static_cast<int>(channels),
-      kWaveformTargetChunks);
+      pcm,
+      static_cast<int>(total_frames),
+      static_cast<int>(channels),
+      kWaveformTargetChunks
+  );
   if (peaks.data.empty()) {
     return;
   }
@@ -57,7 +64,9 @@ void WriteWaveformSidecar(const char* path, const char* waveform_dir,
 
 extern "C" {
 
-const char* kb_version(void) { return kVersion; }
+const char* kb_version(void) {
+  return kVersion;
+}
 
 kb_result kb_engine_create(kb_engine** out_engine) {
   if (out_engine == nullptr) {
@@ -73,7 +82,9 @@ kb_result kb_engine_create(kb_engine** out_engine) {
   return KB_OK;
 }
 
-void kb_engine_destroy(kb_engine* engine) { delete ToEngine(engine); }
+void kb_engine_destroy(kb_engine* engine) {
+  delete ToEngine(engine);
+}
 
 kb_result kb_engine_start(kb_engine* engine) {
   if (engine == nullptr) {
@@ -96,8 +107,11 @@ uint64_t kb_engine_frames_rendered(const kb_engine* engine) {
   return engine == nullptr ? 0 : ToEngine(engine)->frames_rendered();
 }
 
-void kb_engine_set_test_tone(kb_engine* engine, int32_t enabled,
-                             float frequency_hz) {
+void kb_engine_set_test_tone(
+    kb_engine* engine,
+    int32_t enabled,
+    float frequency_hz
+) {
   if (engine != nullptr) {
     ToEngine(engine)->SetTestTone(enabled != 0, frequency_hz);
   }
@@ -121,8 +135,12 @@ void kb_metronome_stop(kb_engine* engine) {
   }
 }
 
-kb_result kb_metronome_set_grid(kb_engine* engine, const double* beat_times_sec,
-                                int32_t count, uint64_t anchor_frame) {
+kb_result kb_metronome_set_grid(
+    kb_engine* engine,
+    const double* beat_times_sec,
+    int32_t count,
+    uint64_t anchor_frame
+) {
   if (engine == nullptr || beat_times_sec == nullptr || count <= 0 ||
       count > KB_MAX_GRID_BEATS) {
     return KB_ERROR_INVALID_ARGUMENT;
@@ -145,16 +163,21 @@ kb_result kb_metronome_set_grid(kb_engine* engine, const double* beat_times_sec,
   grid->anchor_frame = anchor_frame;
 
   kitbag::Engine* target = ToEngine(engine);
-  target->metronome().SetGrid(std::move(grid), target->frames_rendered(),
-                              target->is_running());
+  target->metronome().SetGrid(
+      std::move(grid),
+      target->frames_rendered(),
+      target->is_running()
+  );
   return KB_OK;
 }
 
 void kb_metronome_clear_grid(kb_engine* engine) {
   if (engine != nullptr) {
     kitbag::Engine* target = ToEngine(engine);
-    target->metronome().ClearGrid(target->frames_rendered(),
-                                  target->is_running());
+    target->metronome().ClearGrid(
+        target->frames_rendered(),
+        target->is_running()
+    );
   }
 }
 
@@ -176,11 +199,16 @@ void kb_metronome_set_subdivision(kb_engine* engine, int32_t subdivision) {
   }
 }
 
-void kb_metronome_set_accent(kb_engine* engine, int32_t beat_index,
-                             int32_t accent) {
+void kb_metronome_set_accent(
+    kb_engine* engine,
+    int32_t beat_index,
+    int32_t accent
+) {
   if (engine != nullptr) {
     ToEngine(engine)->metronome().SetAccent(
-        beat_index, static_cast<kitbag::Accent>(accent));
+        beat_index,
+        static_cast<kitbag::Accent>(accent)
+    );
   }
 }
 
@@ -208,19 +236,35 @@ void kb_metronome_set_latency_offset(kb_engine* engine, double latency_ms) {
   }
 }
 
-void kb_metronome_set_ramp(kb_engine* engine, int32_t enabled, double start_bpm,
-                           double end_bpm, int32_t bars) {
+void kb_metronome_set_ramp(
+    kb_engine* engine,
+    int32_t enabled,
+    double start_bpm,
+    double end_bpm,
+    int32_t bars
+) {
   if (engine != nullptr) {
-    ToEngine(engine)->metronome().SetRamp(enabled != 0, start_bpm, end_bpm,
-                                          bars);
+    ToEngine(engine)->metronome().SetRamp(
+        enabled != 0,
+        start_bpm,
+        end_bpm,
+        bars
+    );
   }
 }
 
-void kb_metronome_set_bar_mute(kb_engine* engine, int32_t enabled,
-                               int32_t play_bars, int32_t mute_bars) {
+void kb_metronome_set_bar_mute(
+    kb_engine* engine,
+    int32_t enabled,
+    int32_t play_bars,
+    int32_t mute_bars
+) {
   if (engine != nullptr) {
-    ToEngine(engine)->metronome().SetBarMute(enabled != 0, play_bars,
-                                             mute_bars);
+    ToEngine(engine)->metronome().SetBarMute(
+        enabled != 0,
+        play_bars,
+        mute_bars
+    );
   }
 }
 
@@ -310,13 +354,22 @@ uint32_t kb_decoder_channels(const kb_engine* engine) {
   return engine == nullptr ? 0 : ToEngine(engine)->decoder().info().channels;
 }
 
-void kb_mixer_set_track_data(kb_engine* engine, int32_t track, const float* pcm,
-                             int64_t num_frames, int32_t channels,
-                             int32_t sample_rate) {
+void kb_mixer_set_track_data(
+    kb_engine* engine,
+    int32_t track,
+    const float* pcm,
+    int64_t num_frames,
+    int32_t channels,
+    int32_t sample_rate
+) {
   if (engine == nullptr || pcm == nullptr) return;
   ToEngine(engine)->mixer().SetTrackData(
-      track, pcm, static_cast<uint64_t>(num_frames),
-      static_cast<uint32_t>(channels), static_cast<uint32_t>(sample_rate));
+      track,
+      pcm,
+      static_cast<uint64_t>(num_frames),
+      static_cast<uint32_t>(channels),
+      static_cast<uint32_t>(sample_rate)
+  );
 }
 
 void kb_mixer_set_gain(kb_engine* engine, int32_t track, float gain) {
@@ -381,12 +434,18 @@ int32_t kb_mixer_active_track_count(const kb_engine* engine) {
 int64_t kb_mixer_track_frames(const kb_engine* engine, int32_t track) {
   return engine == nullptr ? 0
                            : static_cast<int64_t>(
-                                 ToEngine(engine)->mixer().track_frames(track));
+                                 ToEngine(engine)->mixer().track_frames(track)
+                             );
 }
 
-kb_result kb_analyze_song(const char* path, float* bpm_out,
-                          float* beat_times_buf, int32_t beat_times_cap,
-                          int32_t* beat_count_out, const char* waveform_dir) {
+kb_result kb_analyze_song(
+    const char* path,
+    float* bpm_out,
+    float* beat_times_buf,
+    int32_t beat_times_cap,
+    int32_t* beat_count_out,
+    const char* waveform_dir
+) {
   if (path == nullptr || bpm_out == nullptr || beat_times_buf == nullptr ||
       beat_count_out == nullptr) {
     return KB_ERROR_INVALID_ARGUMENT;
@@ -420,8 +479,11 @@ kb_result kb_analyze_song(const char* path, float* bpm_out,
   }
 
   kitbag::BeatTracker tracker;
-  auto result = tracker.Analyze(mono.data(), static_cast<int>(total_frames),
-                                static_cast<int>(info.sample_rate));
+  auto result = tracker.Analyze(
+      mono.data(),
+      static_cast<int>(total_frames),
+      static_cast<int>(info.sample_rate)
+  );
 
   *bpm_out = result.bpm;
 
@@ -433,8 +495,13 @@ kb_result kb_analyze_song(const char* path, float* bpm_out,
   *beat_count_out = to_copy;
 
   if (waveform_dir != nullptr && info.channels > 0) {
-    WriteWaveformSidecar(path, waveform_dir, pcm.data(), total_frames,
-                         info.channels);
+    WriteWaveformSidecar(
+        path,
+        waveform_dir,
+        pcm.data(),
+        total_frames,
+        info.channels
+    );
   }
 
   return KB_OK;

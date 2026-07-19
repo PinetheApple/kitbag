@@ -34,7 +34,9 @@ class Tuner {
   void SetA4(double a4_hz);
   void SetBand(double low_hz, double high_hz);
 
-  bool is_running() const { return running_.load(std::memory_order_relaxed); }
+  bool is_running() const {
+    return running_.load(std::memory_order_relaxed);
+  }
 
   // The whole reading in one atomic — a single load can never pair note A
   // with note B's cents. Layout mirrored by kb_tuner_snapshot:
@@ -52,8 +54,12 @@ class Tuner {
   static constexpr size_t kRingCapacity = 16384;
   static constexpr int kIdleSleepMicros = 2000;
 
-  static void DataCallback(ma_device* device, void* output, const void* input,
-                           ma_uint32 frame_count);
+  static void DataCallback(
+      ma_device* device,
+      void* output,
+      const void* input,
+      ma_uint32 frame_count
+  );
   void AnalysisLoop();
 
   ma_device device_{};

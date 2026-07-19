@@ -62,8 +62,12 @@ void Engine::SetTestTone(bool enabled, float frequency_hz) {
   tone_enabled_.store(enabled, std::memory_order_relaxed);
 }
 
-void Engine::DataCallback(ma_device* device, void* output, const void* input,
-                          ma_uint32 frame_count) {
+void Engine::DataCallback(
+    ma_device* device,
+    void* output,
+    const void* input,
+    ma_uint32 frame_count
+) {
   (void)input;
   auto* engine = static_cast<Engine*>(device->pUserData);
   engine->Render(static_cast<float*>(output), frame_count);
@@ -99,8 +103,13 @@ void Engine::Render(float* output, uint32_t frame_count) {
   // discarded.
   mixer_.Process(output, frame_count, kSampleRate);
 
-  metronome_.Render(output, frame_count, kSampleRate, kChannelCount,
-                    block_start_frame);
+  metronome_.Render(
+      output,
+      frame_count,
+      kSampleRate,
+      kChannelCount,
+      block_start_frame
+  );
 
   frames_rendered_.fetch_add(frame_count, std::memory_order_relaxed);
 }

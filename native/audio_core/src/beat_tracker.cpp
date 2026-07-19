@@ -39,8 +39,13 @@ constexpr float kSecondsPerMinute = 60.0f;
 // Full-scale for signed 16-bit PCM, scaling float samples in [-1, 1].
 constexpr float kInt16Max = 32767.0f;
 
-void WindowFrame(const float* pcm, int num_frames, int offset,
-                 const std::vector<float>& window, std::vector<float>& out) {
+void WindowFrame(
+    const float* pcm,
+    int num_frames,
+    int offset,
+    const std::vector<float>& window,
+    std::vector<float>& out
+) {
   for (int i = 0; i < kFftSize; ++i) {
     const int idx = offset + i;
     out[2 * i] = idx < num_frames ? pcm[idx] * window[i] : 0.0f;
@@ -56,8 +61,10 @@ void Magnitudes(const std::vector<float>& fft_buf, std::vector<float>& out) {
   }
 }
 
-float SpectralFlux(const std::vector<float>& mag,
-                   const std::vector<float>& prev_mag) {
+float SpectralFlux(
+    const std::vector<float>& mag,
+    const std::vector<float>& prev_mag
+) {
   float flux = 0.0f;
   for (size_t i = 0; i < mag.size(); ++i) {
     const float diff = mag[i] - prev_mag[i];
@@ -70,8 +77,8 @@ float SpectralFlux(const std::vector<float>& mag,
 
 }  // namespace
 
-BeatResult BeatTracker::Analyze(const float* pcm, int num_frames,
-                                int sample_rate) {
+BeatResult
+BeatTracker::Analyze(const float* pcm, int num_frames, int sample_rate) {
   BeatResult result;
 
   const float hop_time = static_cast<float>(kHopSize) / sample_rate;
@@ -90,8 +97,8 @@ BeatResult BeatTracker::Analyze(const float* pcm, int num_frames,
   return result;
 }
 
-std::vector<float> BeatTracker::ComputeOnsetFunction(const float* pcm,
-                                                     int num_frames) {
+std::vector<float>
+BeatTracker::ComputeOnsetFunction(const float* pcm, int num_frames) {
   const int num_stft_frames =
       std::max(0, (num_frames - kFftSize) / kHopSize) + 1;
   if (num_stft_frames < kMinStftFrames) {
@@ -141,8 +148,10 @@ std::vector<float> BeatTracker::ComputeOnsetFunction(const float* pcm,
   return smoothed;
 }
 
-float BeatTracker::EstimateTempo(const std::vector<float>& onset,
-                                 float hop_time) {
+float BeatTracker::EstimateTempo(
+    const std::vector<float>& onset,
+    float hop_time
+) {
   const size_t n = onset.size();
   if (n < kMinOnsetsForTempo) return 0.0f;
 
@@ -191,8 +200,11 @@ float BeatTracker::EstimateTempo(const std::vector<float>& onset,
   return kSecondsPerMinute / (static_cast<float>(best_lag) * hop_time);
 }
 
-std::vector<float> BeatTracker::TrackBeats(const std::vector<float>& onset,
-                                           float hop_time, float bpm) {
+std::vector<float> BeatTracker::TrackBeats(
+    const std::vector<float>& onset,
+    float hop_time,
+    float bpm
+) {
   const size_t n = onset.size();
   if (n < kMinOnsetsForBeats || bpm <= 0.0f) return {};
 
@@ -256,9 +268,12 @@ std::vector<float> BeatTracker::TrackBeats(const std::vector<float>& onset,
   return beats;
 }
 
-WaveformPeaks BeatTracker::ComputeWaveformPeaks(const float* pcm,
-                                                int num_frames, int channels,
-                                                int target_chunks) {
+WaveformPeaks BeatTracker::ComputeWaveformPeaks(
+    const float* pcm,
+    int num_frames,
+    int channels,
+    int target_chunks
+) {
   WaveformPeaks result;
   if (num_frames <= 0 || channels <= 0 || target_chunks <= 0) {
     return result;

@@ -70,8 +70,11 @@ class RtPublisher {
   // without bound. Passing true when the callback is in fact stopped only
   // delays a free; passing false while it can run is a use-after-free, so the
   // caller must be certain.
-  void Publish(std::unique_ptr<T> payload, uint64_t now_frame,
-               bool rt_reader_active) {
+  void Publish(
+      std::unique_ptr<T> payload,
+      uint64_t now_frame,
+      bool rt_reader_active
+  ) {
     Collect(now_frame);
     Node* node = nullptr;
     if (payload != nullptr) {
@@ -88,7 +91,9 @@ class RtPublisher {
 
   // Realtime thread. May return nullptr. Compare `generation`, not the address,
   // to decide whether the payload changed.
-  const Node* Get() const { return active_.load(std::memory_order_acquire); }
+  const Node* Get() const {
+    return active_.load(std::memory_order_acquire);
+  }
 
   // App thread. Frees payloads the clock has moved safely past. Publish calls
   // this, so a caller that keeps publishing never needs to.
@@ -98,7 +103,8 @@ class RtPublisher {
     };
     retired_.erase(
         std::remove_if(retired_.begin(), retired_.end(), reclaimable),
-        retired_.end());
+        retired_.end()
+    );
   }
 
   // App thread. Frees every retired payload immediately.
@@ -108,12 +114,16 @@ class RtPublisher {
   // usually set — nothing is reclaimable and retired payloads accumulate. The
   // caller must guarantee the audio callback is not running; Engine::Stop is
   // the place that can.
-  void ReclaimAll() { retired_.clear(); }
+  void ReclaimAll() {
+    retired_.clear();
+  }
 
   // App thread. Payloads retired but not yet freed. Exists so the reclamation
   // policy is testable — its failure mode is silent until it is a leak or a
   // use-after-free.
-  size_t retired_size() const { return retired_.size(); }
+  size_t retired_size() const {
+    return retired_.size();
+  }
 
  private:
   struct Retired {

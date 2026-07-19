@@ -32,9 +32,15 @@ class PitchAnalyzer {
 
   bool Process(float sample);
 
-  const Reading& reading() const { return reading_; }
-  double band_low_hz() const { return band_low_hz_; }
-  double band_high_hz() const { return band_high_hz_; }
+  const Reading& reading() const {
+    return reading_;
+  }
+  double band_low_hz() const {
+    return band_low_hz_;
+  }
+  double band_high_hz() const {
+    return band_high_hz_;
+  }
 
  private:
   static constexpr int kUpdatesPerSecond = 60;
