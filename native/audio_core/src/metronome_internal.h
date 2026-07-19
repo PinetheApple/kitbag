@@ -14,6 +14,8 @@ constexpr double kSecondsPerMinute = 60.0;
 constexpr double kMsPerMinute = 60000.0;
 constexpr double kMsPerSecond = 1000.0;
 
+// Returns by value: std::clamp returns const T&, which dangles when a caller
+// binds the result of a temporary argument.
 template <typename T>
 T Clamp(T value, T low, T high) {
   return value < low ? low : (value > high ? high : value);

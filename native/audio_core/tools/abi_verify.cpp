@@ -12,8 +12,15 @@
 namespace {
 
 int g_failures = 0;
+// Counted so a deleted TestX() call cannot pass silently: the total is a
+// tripwire on the suite's own shape, not a derived expectation.
+int g_checks = 0;
+// Update deliberately when adding or removing a check; a drop means a test
+// stopped running.
+constexpr int kExpectedChecks = 12;
 
 void Check(bool condition, const char* message) {
+  ++g_checks;
   if (!condition) {
     std::fprintf(stderr, "FAIL: %s\n", message);
     ++g_failures;
@@ -26,6 +33,7 @@ void ExpectRejected(
     int32_t count,
     const char* message
 ) {
+  ++g_checks;
   const kb_result result = kb_metronome_set_grid(engine, times, count, 0);
   if (result != KB_ERROR_INVALID_ARGUMENT) {
     std::fprintf(
@@ -91,8 +99,36 @@ void TestSetGridRejectsOversize(kb_engine* engine) {
 }
 
 void TestClearGrid(kb_engine* engine) {
+  const double ascending[] = {0.0, 0.5, 1.0, 1.5};
+  Check(
+      kb_metronome_set_grid(engine, ascending, 4, 0) == KB_OK,
+      "clear_grid: a grid can be set before clearing"
+  );
   kb_metronome_clear_grid(engine);
-  kb_metronome_clear_grid(nullptr);  // must not crash
+  kb_metronome_clear_grid(nullptr);  // a null engine is a no-op, not a crash
+  Check(
+      kb_metronome_set_grid(engine, ascending, 4, 0) == KB_OK,
+      "clear_grid: the engine still accepts a grid after clearing"
+  );
+}
+
+// Returns the process exit code, so main stays a list of what it runs.
+int Report() {
+  if (g_checks != kExpectedChecks) {
+    std::fprintf(
+        stderr,
+        "abi_verify: ran %d checks, expected %d\n",
+        g_checks,
+        kExpectedChecks
+    );
+    return 1;
+  }
+  if (g_failures == 0) {
+    std::printf("abi_verify: all checks passed\n");
+    return 0;
+  }
+  std::fprintf(stderr, "abi_verify: %d failure(s)\n", g_failures);
+  return 1;
 }
 
 }  // namespace
@@ -114,11 +150,5 @@ int main() {
   TestClearGrid(engine);
 
   kb_engine_destroy(engine);
-
-  if (g_failures == 0) {
-    std::printf("abi_verify: all checks passed\n");
-    return 0;
-  }
-  std::fprintf(stderr, "abi_verify: %d failure(s)\n", g_failures);
-  return 1;
+  return Report();
 }

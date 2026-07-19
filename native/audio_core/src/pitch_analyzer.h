@@ -5,6 +5,8 @@
 #include <optional>
 #include <q/pitch/pitch_detector.hpp>
 
+#include "note_lock.h"
+
 namespace kitbag {
 
 int32_t NoteIndexForFrequency(double frequency_hz, double a4_hz);
@@ -56,35 +58,12 @@ class PitchAnalyzer {
   static constexpr double kGateThresholdDb = 12.0;
   static constexpr double kHardFloor = 0.000003;
 
-  // Note-lock state machine (samples at 60Hz update rate)
-  static constexpr int kLockAcquireSamples = 20;
-  static constexpr double kLockCentsThreshold = 18.0;
-  static constexpr int kRideMaxSamples = 22;
-  static constexpr int kReLockSamples = 90;
-
-  enum class LockState { kNone, kLocking, kLocked, kRiding };
-  // kHold freezes the last locked reading; kSilence blanks it.
-  enum class LockOutcome { kPublish, kSilence, kHold };
-
-  struct LockUpdate {
-    int32_t note = -1;
-    double cents = 0.0;
-  };
-
   void RebuildDetector();
   void UpdateNoiseGate(double sample_sq);
-  void EnterRiding();
-  LockOutcome
-  AdvanceFromNone(int32_t raw_note, double raw_cents, LockUpdate* update);
-  LockOutcome
-  AdvanceFromLocking(int32_t raw_note, double raw_cents, LockUpdate* update);
-  LockOutcome
-  AdvanceFromLocked(int32_t raw_note, double raw_cents, LockUpdate* update);
-  LockOutcome
-  AdvanceFromRiding(int32_t raw_note, double raw_cents, LockUpdate* update);
-  LockOutcome
-  AdvanceLock(int32_t raw_note, double raw_cents, LockUpdate* update);
-  void PublishReading(const LockUpdate& update);
+  // Snapshots reading_ when the lock starts riding, so a dropout freezes on
+  // what was last published rather than on whatever the detector emits next.
+  void ApplyOutcome(NoteLock::Outcome outcome, const NoteLock::Update& update);
+  void PublishReading(const NoteLock::Update& update);
   void PublishFrequency(double frequency_hz);
   void HandleNoSignal();
   void PublishSilence();
@@ -108,13 +87,9 @@ class PitchAnalyzer {
   double ema_cents_ = 0.0;
   bool ema_seeded_ = false;
 
-  LockState lock_state_ = LockState::kNone;
-  int32_t locked_note_ = -1;
-  int lock_counter_ = 0;
-  double lock_cents_sum_ = 0.0;
+  NoteLock lock_;
+  NoteLock::State previous_lock_state_ = NoteLock::State::kNone;
   Reading last_locked_reading_;
-  int32_t re_lock_note_ = -1;
-  int re_lock_frames_ = 0;
 
   Reading reading_;
 };

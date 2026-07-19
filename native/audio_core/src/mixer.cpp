@@ -170,7 +170,8 @@ void Mixer::Process(float* output, uint32_t frame_count, uint32_t sr) {
     if (read > max_read) max_read = read;
   }
 
-  // Longest track drives the transport; shorter ones simply run out.
+  // KNOWN DEFECT (SPEC.md §2, fix in §4.4): this advances by the maximum, which
+  // desyncs unequal-length stems. Do not "fix" the comment to match.
   if (max_read > 0) {
     read_frame_.store(start_frame + max_read, std::memory_order_relaxed);
   } else {

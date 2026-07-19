@@ -1,6 +1,8 @@
-// App-thread command API and the RT-side drain that applies it. The render
-// loop lives in metronome_render.cpp, grid mode in metronome_grid.cpp.
+// Command API, the RT-side drain, and the sequencer state helpers both render
+// paths share. Render loop: metronome_render.cpp. Grid mode: metronome_grid.cpp.
 #include "metronome.h"
+
+#include <cassert>
 
 #include "metronome_internal.h"
 
@@ -113,13 +115,39 @@ void Metronome::ReleaseRetiredGrids() {
 
 void Metronome::ApplyPendingCommands() {
   Command command;
-  while (commands_.Pop(&command)) {
-    if (ApplyTransportCommand(command)) continue;
-    if (ApplyTempoCommand(command)) continue;
-    if (ApplyTrainerCommand(command)) continue;
-    ApplyPatternCommand(command);
-  }
+  while (commands_.Pop(&command)) ApplyCommand(command);
   running_flag_.store(running_, std::memory_order_relaxed);
+}
+
+// The one exhaustive switch over CommandType: no `default:`, so a new command
+// is a -Wswitch error here rather than a command silently dropped at runtime.
+void Metronome::ApplyCommand(const Command& command) {
+  bool claimed = false;
+  switch (command.type) {
+    case CommandType::kStart:
+    case CommandType::kStartAt:
+    case CommandType::kStop:
+      claimed = ApplyTransportCommand(command);
+      break;
+    case CommandType::kSetTempo:
+    case CommandType::kSetLatencyOffset:
+      claimed = ApplyTempoCommand(command);
+      break;
+    case CommandType::kSetRamp:
+    case CommandType::kSetBarMute:
+      claimed = ApplyTrainerCommand(command);
+      break;
+    case CommandType::kSetBeats:
+    case CommandType::kSetSubdivision:
+    case CommandType::kSetAccent:
+    case CommandType::kSetPoly:
+    case CommandType::kSetSound:
+    case CommandType::kSetVolume:
+      claimed = ApplyPatternCommand(command);
+      break;
+  }
+  assert(claimed && "command routed to a handler that does not own its type");
+  (void)claimed;
 }
 
 bool Metronome::ApplyTransportCommand(const Command& command) {

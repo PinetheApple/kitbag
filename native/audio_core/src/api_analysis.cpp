@@ -31,7 +31,7 @@ DownmixToMono(const float* pcm, uint64_t total_frames, uint32_t channels) {
 }
 
 // Layout: magic "KWAV" (4 bytes), version(uint32), channels(uint32),
-// total_frames(int64), chunk_count(uint32), data(int16[]). Not evident here.
+// total_frames(int64), chunk_count(uint32), data(int16[]).
 void WritePeaks(std::FILE* f, const kitbag::WaveformPeaks& peaks) {
   const uint32_t version = 1;
   const auto channels_u32 = static_cast<uint32_t>(peaks.channels);
@@ -52,6 +52,9 @@ void WriteWaveformSidecar(
     uint64_t total_frames,
     uint32_t channels
 ) {
+  if (waveform_dir == nullptr || channels == 0) {
+    return;
+  }
   const auto peaks = kitbag::ComputeWaveformPeaks(
       pcm,
       static_cast<int>(total_frames),
@@ -71,23 +74,26 @@ void WriteWaveformSidecar(
   std::fclose(f);
 }
 
-void MaybeWriteSidecar(
-    const char* path,
-    const char* dir,
-    const std::vector<float>& pcm,
-    uint64_t frames,
-    uint32_t channels
-) {
-  if (dir == nullptr || channels == 0) return;
-  WriteWaveformSidecar(path, dir, pcm.data(), frames, channels);
-}
-
 int CopyBeatTimes(const std::vector<float>& beats, float* out, int32_t cap) {
   const int to_copy = std::min(static_cast<int>(beats.size()), cap);
   for (int i = 0; i < to_copy; ++i) {
     out[i] = beats[i];
   }
   return to_copy;
+}
+
+kitbag::BeatResult TrackDecodedBeats(
+    const std::vector<float>& pcm,
+    uint64_t total_frames,
+    const kitbag::DecoderInfo& info
+) {
+  const auto mono = DownmixToMono(pcm.data(), total_frames, info.channels);
+  kitbag::BeatTracker tracker;
+  return tracker.Analyze(
+      mono.data(),
+      static_cast<int>(total_frames),
+      static_cast<int>(info.sample_rate)
+  );
 }
 
 // Decode, downmix, beat-track, and emit the sidecar. Leaves the ABI shim with
@@ -110,15 +116,14 @@ kb_result AnalyzeFile(
     return KB_OK;
   }
 
-  const auto mono = DownmixToMono(pcm.data(), total_frames, info.channels);
-  kitbag::BeatTracker tracker;
-  *out = tracker.Analyze(
-      mono.data(),
-      static_cast<int>(total_frames),
-      static_cast<int>(info.sample_rate)
+  *out = TrackDecodedBeats(pcm, total_frames, info);
+  WriteWaveformSidecar(
+      path,
+      waveform_dir,
+      pcm.data(),
+      total_frames,
+      info.channels
   );
-
-  MaybeWriteSidecar(path, waveform_dir, pcm, total_frames, info.channels);
   return KB_OK;
 }
 

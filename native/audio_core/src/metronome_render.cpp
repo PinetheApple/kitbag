@@ -200,6 +200,20 @@ void Metronome::FireConstantTempoTick(
   OnBeatBoundary(beat_index, sample_rate);
 }
 
+void Metronome::FirePolyTick(
+    double position,
+    uint32_t sample_rate,
+    const BlockTempo& tempo
+) {
+  const auto poly_index = static_cast<int64_t>(
+      std::floor(position * tempo.poly_scale + kGridEpsilon)
+  );
+  const double poly_start = static_cast<double>(poly_index) / tempo.poly_scale;
+  if (position - tempo.beats_per_sample < poly_start - kGridEpsilon) {
+    OnPolyBoundary(static_cast<int>(poly_index % poly_beats_), sample_rate);
+  }
+}
+
 void Metronome::AdvanceConstantTempo(uint32_t sample_rate, BlockTempo* tempo) {
   const double position = beat_position_ + tempo->latency_beats;
   const auto sub_index =
@@ -209,16 +223,7 @@ void Metronome::AdvanceConstantTempo(uint32_t sample_rate, BlockTempo* tempo) {
   if (position - tempo->beats_per_sample < sub_start - kGridEpsilon) {
     FireConstantTempoTick(sub_index, sample_rate, tempo);
   }
-  if (poly_enabled_) {
-    const auto poly_index = static_cast<int64_t>(
-        std::floor(position * tempo->poly_scale + kGridEpsilon)
-    );
-    const double poly_start =
-        static_cast<double>(poly_index) / tempo->poly_scale;
-    if (position - tempo->beats_per_sample < poly_start - kGridEpsilon) {
-      OnPolyBoundary(static_cast<int>(poly_index % poly_beats_), sample_rate);
-    }
-  }
+  if (poly_enabled_) FirePolyTick(position, sample_rate, *tempo);
   beat_position_ += tempo->beats_per_sample;
 }
 
