@@ -99,10 +99,42 @@ void Tuner::DataCallback(
   }
 }
 
+void Tuner::ApplyParamChanges(
+    PitchAnalyzer* analyzer,
+    uint32_t* applied_version
+) {
+  const uint32_t version = params_version_.load(std::memory_order_acquire);
+  if (version == *applied_version) return;
+  *applied_version = version;
+
+  analyzer->SetA4(a4_hz_.load(std::memory_order_relaxed));
+  const double low = band_low_hz_.load(std::memory_order_relaxed);
+  const double high = band_high_hz_.load(std::memory_order_relaxed);
+  // SetBand rebuilds the detector and drops the lock, so only on a real change.
+  if (low != analyzer->band_low_hz() || high != analyzer->band_high_hz()) {
+    analyzer->SetBand(low, high);
+  }
+}
+
+// Returns false when the ring was already empty.
+bool Tuner::DrainAndAnalyze(PitchAnalyzer* analyzer) {
+  float sample = 0.0f;
+  bool drained_any = false;
+  while (samples_.Pop(&sample)) {
+    drained_any = true;
+    if (analyzer->Process(sample)) {
+      snapshot_.store(
+          PackSnapshot(analyzer->reading()),
+          std::memory_order_relaxed
+      );
+    }
+  }
+  return drained_any;
+}
+
 void Tuner::AnalysisLoop() {
-  // Version is captured BEFORE the params are read: a Set* landing in
-  // between bumps the version and gets re-applied on the first loop pass
-  // instead of being silently dropped.
+  // Version captured BEFORE the params are read: a Set* landing in between
+  // bumps it and gets re-applied next pass instead of being silently dropped.
   uint32_t applied_version = params_version_.load(std::memory_order_acquire);
   PitchAnalyzer analyzer(
       kSampleRate,
@@ -112,29 +144,8 @@ void Tuner::AnalysisLoop() {
   analyzer.SetA4(a4_hz_.load(std::memory_order_relaxed));
 
   while (running_.load(std::memory_order_relaxed)) {
-    const uint32_t version = params_version_.load(std::memory_order_acquire);
-    if (version != applied_version) {
-      applied_version = version;
-      analyzer.SetA4(a4_hz_.load(std::memory_order_relaxed));
-      const double low = band_low_hz_.load(std::memory_order_relaxed);
-      const double high = band_high_hz_.load(std::memory_order_relaxed);
-      if (low != analyzer.band_low_hz() || high != analyzer.band_high_hz()) {
-        analyzer.SetBand(low, high);
-      }
-    }
-
-    float sample = 0.0f;
-    bool drained_any = false;
-    while (samples_.Pop(&sample)) {
-      drained_any = true;
-      if (analyzer.Process(sample)) {
-        snapshot_.store(
-            PackSnapshot(analyzer.reading()),
-            std::memory_order_relaxed
-        );
-      }
-    }
-    if (!drained_any) {
+    ApplyParamChanges(&analyzer, &applied_version);
+    if (!DrainAndAnalyze(&analyzer)) {
       std::this_thread::sleep_for(std::chrono::microseconds(kIdleSleepMicros));
     }
   }

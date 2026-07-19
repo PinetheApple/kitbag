@@ -53,10 +53,30 @@ if [[ ${#files[@]} -gt 0 ]]; then
       grep 'error:' <<<"$tidy_out" >&2
       fail=1
     fi
+  elif ! command -v clang-tidy >/dev/null; then
+    echo "lint: clang-tidy not found — install it (see CONTRIBUTING.md)" >&2
+    fail=1
   else
-    echo "lint: clang-tidy skipped (no compile DB — configure with" \
-         "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON)" >&2
+    # Failing open here once let 7 function-size violations through a green run.
+    echo "lint: no compile DB at $db — configure the build first" >&2
+    fail=1
   fi
+fi
+
+# --- File length ------------------------------------------------------------
+# No linter ships this. Tests count too — metronome_verify.cpp reached 830 lines
+# before this gate existed.
+max_file_lines=400
+if [[ ${#files[@]} -gt 0 ]]; then
+  echo "lint: file length (<= $max_file_lines lines)"
+  for f in "${files[@]}"; do
+    [[ -f $f ]] || continue
+    n=$(wc -l <"$f")
+    if (( n > max_file_lines )); then
+      echo "$f:1: error: $n lines exceeds the $max_file_lines-line limit" >&2
+      fail=1
+    fi
+  done
 fi
 
 # --- TS/React: staged until the app exists ----------------------------------

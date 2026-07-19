@@ -33,9 +33,8 @@ class Engine {
   uint32_t sample_rate() const {
     return kSampleRate;
   }
-  // True between a successful Start and the next Stop — that is, whenever the
-  // data callback can run. Publishers of realtime payloads read this to decide
-  // whether a retired payload can be freed at once (see RtPublisher::Publish).
+  // True whenever the data callback can run. RtPublisher::Publish reads this to
+  // decide whether a retired payload can be freed at once.
   bool is_running() const {
     return device_running_.load(std::memory_order_relaxed);
   }
@@ -80,6 +79,7 @@ class Engine {
       const void* input,
       ma_uint32 frame_count
   );
+  void RenderTestTone(float* output, uint32_t frame_count);
   void Render(float* output, uint32_t frame_count);
 
   ma_device device_{};

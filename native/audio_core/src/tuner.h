@@ -11,10 +11,8 @@
 
 namespace kitbag {
 
-// Mic-driven tuner. Owns its own capture device (separate from the playback
-// engine): the capture callback only pushes raw samples into a lock-free
-// ring; a non-RT analysis thread runs the PitchAnalyzer and publishes the
-// latest reading through atomics that the UI polls on its vsync ticker.
+// Mic-driven tuner owning its own capture device: the callback only pushes raw
+// samples to a lock-free ring; a non-RT thread analyzes and publishes atomics.
 class Tuner {
  public:
   static constexpr uint32_t kSampleRate = 48000;
@@ -38,11 +36,8 @@ class Tuner {
     return running_.load(std::memory_order_relaxed);
   }
 
-  // The whole reading in one atomic — a single load can never pair note A
-  // with note B's cents. Layout mirrored by kb_tuner_snapshot:
-  //   bits 0-15   int16   nearest-note MIDI index (-1 = no pitch)
-  //   bits 16-31  int16   cents offset from that note, x100
-  //   bits 32-47  uint16  confidence [0,1] x10000
+  // The whole reading in one atomic — a single load can never pair note A with
+  // note B's cents. Bit layout and scaling: SPEC.md §13.2, kb_tuner_snapshot.
   uint64_t snapshot() const {
     return snapshot_.load(std::memory_order_relaxed);
   }
@@ -60,6 +55,8 @@ class Tuner {
       const void* input,
       ma_uint32 frame_count
   );
+  void ApplyParamChanges(PitchAnalyzer* analyzer, uint32_t* applied_version);
+  bool DrainAndAnalyze(PitchAnalyzer* analyzer);
   void AnalysisLoop();
 
   ma_device device_{};

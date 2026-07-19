@@ -49,9 +49,8 @@ void Engine::Stop() {
   // ma_device_stop blocks until the callback has returned, so from here on
   // there is no reader.
   device_running_.store(false, std::memory_order_relaxed);
-  // The callback is stopped, so grids retired while the clock was not
-  // advancing can be freed now. Nothing else ever reclaims them: Collect only
-  // frees as frames_rendered_ moves, and a stopped engine never moves it.
+  // Nothing else ever reclaims these: Collect only frees as frames_rendered_
+  // moves, and a stopped engine never moves it.
   metronome_.ReleaseRetiredGrids();
 }
 
@@ -73,13 +72,7 @@ void Engine::DataCallback(
   engine->Render(static_cast<float*>(output), frame_count);
 }
 
-void Engine::Render(float* output, uint32_t frame_count) {
-  // The engine-clock frame of output[0]: the shared transport, read before the
-  // block and advanced once after it. Metronome anchoring (StartAt, and the
-  // grid/external anchors to come) is expressed against this frame.
-  const uint64_t block_start_frame =
-      frames_rendered_.load(std::memory_order_relaxed);
-
+void Engine::RenderTestTone(float* output, uint32_t frame_count) {
   const bool tone_on = tone_enabled_.load(std::memory_order_relaxed);
   const double phase_step =
       kTau * tone_frequency_hz_.load(std::memory_order_relaxed) / kSampleRate;
@@ -97,10 +90,18 @@ void Engine::Render(float* output, uint32_t frame_count) {
       output[frame * kChannelCount + channel] = sample;
     }
   }
+}
+
+void Engine::Render(float* output, uint32_t frame_count) {
+  // Engine-clock frame of output[0] — the transport metronome anchoring
+  // (StartAt, grid anchors) is expressed against. Advanced once after the block.
+  const uint64_t block_start_frame =
+      frames_rendered_.load(std::memory_order_relaxed);
+
+  RenderTestTone(output, frame_count);
 
   // Must precede the metronome: Process() memsets the buffer rather than
-  // accumulating, so anything written above it (including the test tone) is
-  // discarded.
+  // accumulating, so anything written above it (the test tone) is discarded.
   mixer_.Process(output, frame_count, kSampleRate);
 
   metronome_.Render(

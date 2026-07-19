@@ -63,8 +63,28 @@ class PitchAnalyzer {
   static constexpr int kReLockSamples = 90;
 
   enum class LockState { kNone, kLocking, kLocked, kRiding };
+  // kHold freezes the last locked reading; kSilence blanks it.
+  enum class LockOutcome { kPublish, kSilence, kHold };
+
+  struct LockUpdate {
+    int32_t note = -1;
+    double cents = 0.0;
+  };
 
   void RebuildDetector();
+  void UpdateNoiseGate(double sample_sq);
+  void EnterRiding();
+  LockOutcome
+  AdvanceFromNone(int32_t raw_note, double raw_cents, LockUpdate* update);
+  LockOutcome
+  AdvanceFromLocking(int32_t raw_note, double raw_cents, LockUpdate* update);
+  LockOutcome
+  AdvanceFromLocked(int32_t raw_note, double raw_cents, LockUpdate* update);
+  LockOutcome
+  AdvanceFromRiding(int32_t raw_note, double raw_cents, LockUpdate* update);
+  LockOutcome
+  AdvanceLock(int32_t raw_note, double raw_cents, LockUpdate* update);
+  void PublishReading(const LockUpdate& update);
   void PublishFrequency(double frequency_hz);
   void HandleNoSignal();
   void PublishSilence();

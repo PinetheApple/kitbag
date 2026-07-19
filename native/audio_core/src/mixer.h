@@ -7,11 +7,8 @@
 
 namespace kitbag {
 
-/// Lock-free N-track audio mixer for stem playback.
-///
-/// Gain, mute and solo are atomic and safe to change while playing.
-/// SetTrackData is NOT — it reallocates under the callback (SPEC.md §4.1).
-/// When any track is soloed, only soloed tracks output.
+/// Lock-free N-track audio mixer for stem playback. Gain, mute and solo are
+/// atomic and safe to change while playing; SetTrackData is not.
 class Mixer {
  public:
   static constexpr int kMaxTracks = 16;
@@ -23,7 +20,8 @@ class Mixer {
   Mixer(const Mixer&) = delete;
   Mixer& operator=(const Mixer&) = delete;
 
-  /// Load PCM data into a track. Must be mono or stereo interleaved float.
+  /// Load PCM into a track; mono or stereo interleaved float. NOT RT-safe — it
+  /// reallocates, so never call it while the callback runs (SPEC.md §4.1).
   void SetTrackData(
       int track,
       const float* pcm,
@@ -34,6 +32,7 @@ class Mixer {
 
   void SetGain(int track, float gain);
   void SetMute(int track, bool muted);
+  /// While any track is soloed, only soloed tracks reach the output.
   void SetSolo(int track, bool soloed);
 
   float Gain(int track) const;
@@ -53,9 +52,8 @@ class Mixer {
     return read_frame_.load();
   }
 
-  /// Mix all active tracks into [output]. Called from the realtime audio
-  /// callback — lock-free as long as tracks aren't modified during process.
-  /// [output] is interleaved stereo float, [frame_count] frames at [sr].
+  /// Mixes active tracks into [output] — interleaved stereo float,
+  /// [frame_count] frames at [sr]. RT-safe unless a track is being modified.
   void Process(float* output, uint32_t frame_count, uint32_t sr);
 
   int active_track_count() const {
@@ -74,6 +72,29 @@ class Mixer {
     std::atomic<bool> solo{false};
     bool has_data = false;
   };
+
+  static void MixMono(
+      const Track& tr,
+      float* output,
+      uint64_t start_frame,
+      uint64_t frames,
+      float gain
+  );
+  static void MixStereo(
+      const Track& tr,
+      float* output,
+      uint64_t start_frame,
+      uint64_t frames,
+      float gain
+  );
+  static uint64_t MixTrack(
+      const Track& tr,
+      float* output,
+      uint32_t frame_count,
+      uint64_t start_frame,
+      bool any_solo,
+      uint32_t sr
+  );
 
   Track tracks_[kMaxTracks];
   int track_count_ = 0;

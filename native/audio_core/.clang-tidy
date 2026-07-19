@@ -14,16 +14,19 @@ Checks: >
   readability-identifier-naming,
   readability-magic-numbers,
   readability-braces-around-statements,
+  readability-function-size,
   readability-redundant-*,
   readability-simplify-boolean-expr,
   misc-unused-parameters,
   modernize-use-nullptr,
   modernize-use-override
 
-# These two carry the conventions the user has flagged by hand — make them gate.
+# These carry the conventions the user has flagged by hand — make them gate.
 WarningsAsErrors: >
   readability-identifier-naming,
-  readability-magic-numbers
+  readability-magic-numbers,
+  readability-braces-around-statements,
+  readability-function-size
 
 HeaderFilterRegex: 'native/audio_core/(src|include)/.*'
 
@@ -58,3 +61,13 @@ CheckOptions:
   readability-magic-numbers.IgnoredIntegerValues: '0;1;2;3;4'
   readability-magic-numbers.IgnoredFloatingPointValues: '0.0;1.0;2.0;0.5'
   readability-magic-numbers.IgnorePowersOf2IntegerValues: 'true'
+  # A body that fits on one line needs no braces; anything longer does.
+  readability-braces-around-statements.ShortStatementLines: 1
+  # Functions cap at 30 lines. Complexity thresholds stay off — line count is
+  # the rule the repo actually holds to, and the others fire on different code.
+  readability-function-size.LineThreshold: 30
+  readability-function-size.StatementThreshold: 4294967295
+  readability-function-size.BranchThreshold: 4294967295
+  readability-function-size.ParameterThreshold: 4294967295
+  readability-function-size.NestingThreshold: 4294967295
+  readability-function-size.VariableThreshold: 4294967295
