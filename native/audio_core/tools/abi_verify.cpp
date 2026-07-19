@@ -38,7 +38,7 @@ void ExpectRejected(
   }
 }
 
-void TestSetGridValidation(kb_engine* engine) {
+void TestSetGridAcceptsAndNullChecks(kb_engine* engine) {
   const double ascending[] = {0.0, 0.5, 1.0, 1.5};
   Check(
       kb_metronome_set_grid(engine, ascending, 4, 0) == KB_OK,
@@ -52,7 +52,9 @@ void TestSetGridValidation(kb_engine* engine) {
           KB_ERROR_INVALID_ARGUMENT,
       "set_grid: null engine"
   );
+}
 
+void TestSetGridRejectsNonAscending(kb_engine* engine) {
   const double descending[] = {0.0, 0.5, 0.25, 1.0};
   ExpectRejected(engine, descending, 4, "set_grid: descending grid");
 
@@ -60,7 +62,9 @@ void TestSetGridValidation(kb_engine* engine) {
   // zero in the mirrors and fire two beats on one frame.
   const double repeated[] = {0.0, 0.5, 0.5, 1.0};
   ExpectRejected(engine, repeated, 4, "set_grid: repeated beat time");
+}
 
+void TestSetGridRejectsNonFinite(kb_engine* engine) {
   // NaN needs its own check: every comparison against it is false, so it slips
   // straight through an ascending test written as `<=`.
   const double nan_grid[] = {0.0, 0.5, std::nan(""), 1.5};
@@ -70,7 +74,9 @@ void TestSetGridValidation(kb_engine* engine) {
 
   const double infinite[] = {0.0, 0.5, HUGE_VAL, 1.5};
   ExpectRejected(engine, infinite, 4, "set_grid: infinite beat time");
+}
 
+void TestSetGridRejectsOversize(kb_engine* engine) {
   // Above KB_MAX_GRID_BEATS the copy is unbounded work on the app thread.
   std::vector<double> too_many(KB_MAX_GRID_BEATS + 1);
   for (size_t i = 0; i < too_many.size(); ++i) {
@@ -82,7 +88,9 @@ void TestSetGridValidation(kb_engine* engine) {
       static_cast<int32_t>(too_many.size()),
       "set_grid: count above KB_MAX_GRID_BEATS"
   );
+}
 
+void TestClearGrid(kb_engine* engine) {
   kb_metronome_clear_grid(engine);
   kb_metronome_clear_grid(nullptr);  // must not crash
 }
@@ -99,7 +107,11 @@ int main() {
     return 1;
   }
 
-  TestSetGridValidation(engine);
+  TestSetGridAcceptsAndNullChecks(engine);
+  TestSetGridRejectsNonAscending(engine);
+  TestSetGridRejectsNonFinite(engine);
+  TestSetGridRejectsOversize(engine);
+  TestClearGrid(engine);
 
   kb_engine_destroy(engine);
 

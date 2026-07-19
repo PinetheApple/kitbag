@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.22)
 project(kitbag_core LANGUAGES C CXX)
 
+# clang-tidy needs this; scripts/lint.sh skips its entire static-analysis half
+# without it, and used to do so while still exiting 0.
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 set(CMAKE_C_STANDARD 11)
 # C++20: the vendored cycfi/q pitch core uses concepts.
 set(CMAKE_CXX_STANDARD 20)
@@ -9,15 +13,20 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 add_library(kitbag_core SHARED
   src/api.cpp
+  src/api_analysis.cpp
+  src/api_media.cpp
   src/beat_tracker.cpp
   src/decoder.cpp
   src/engine.cpp
   src/fft.cpp
   src/metronome.cpp
+  src/metronome_grid.cpp
+  src/metronome_render.cpp
   src/miniaudio_impl.c
   src/mixer.cpp
   src/pitch_analyzer.cpp
   src/tuner.cpp
+  src/waveform_peaks.cpp
 )
 
 target_include_directories(kitbag_core
@@ -42,7 +51,16 @@ if(KITBAG_BUILD_TOOLS)
   add_executable(tone_test tools/tone_test.c)
   target_link_libraries(tone_test PRIVATE kitbag_core)
 
-  add_executable(metronome_verify tools/metronome_verify.cpp src/metronome.cpp)
+  add_executable(metronome_verify
+    tools/metronome_verify.cpp
+    tools/metronome_test_basic.cpp
+    tools/metronome_test_grid.cpp
+    tools/metronome_test_latency.cpp
+    tools/metronome_test_publisher.cpp
+    tools/metronome_test_startat.cpp
+    src/metronome.cpp
+    src/metronome_grid.cpp
+    src/metronome_render.cpp)
   target_include_directories(metronome_verify PRIVATE src)
   target_link_libraries(metronome_verify PRIVATE m)
 

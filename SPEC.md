@@ -337,6 +337,43 @@ continuous rendering, so frames may cross as `double`. Do not introduce BigInt
 for this. `kb_player_position`/`kb_player_frames` (`int64_t` frames) are exact
 to the same bound. This is checked, not assumed — see §13.2.
 
+#### 4.2.1 Grid mode: cursor, generation and bar numbering
+
+Implementation rationale for `Metronome`'s grid state, recorded here because it
+is the reasoning the code cannot restate in two lines.
+
+**The grid crosses the app→RT seam by generation, not by address.** `RtPublisher`
+swaps an atomic pointer to a node that carries its own generation counter, so one
+acquire load in the callback yields both the value and its identity. Comparing
+addresses would be wrong rather than merely fragile: a freed grid's address can be
+recycled by the next allocation, a generation cannot. `observed_generation_` is
+the generation the RT-owned cursor was last seeded against; when the published
+generation differs, the cursor is re-seeded **from the click's current position**,
+so a re-anchor moves only future beats and never revisits a beat that already
+fired.
+
+Generation zero means "seeded against nothing". `Start` and `Stop` both write it,
+which is what forces the next block to re-seed rather than resume from a cursor
+stranded where the pause began. Without that, a resume swallows every beat spanned
+by the pause into a single off-grid click and skips the bar counter past the
+downbeats it swallowed.
+
+**The bar counter has two regimes, and the difference is deliberate.** At constant
+tempo `current_bar_` is incremented at each downbeat and never derived by
+division, so a mid-run time-signature change cannot jump ramp progress or bar-mute
+phase. In grid mode it is instead *derived* from the grid's own beat index
+(`grid_beat_index_ / beats_per_bar_`). Incrementing there would drift: a re-anchor
+that moves the cursor backwards re-crosses downbeats, and an incrementing counter
+would over-count, making the bar-mute cycle's phase depend on how many times the
+user re-anchored. The grid's own numbering — not a count of downbeats observed —
+is what a re-anchor must land on.
+
+**`beat_position_` is kept live through grid mode.** Each grid beat re-anchors it
+onto that beat, and it advances per sample between beats. That is the whole of
+what makes `clear_grid`'s "keeps its phase" true: without it the value stays
+frozen at its `Start` value all through grid mode, and the first sample after the
+clear reads as a downbeat, firing immediately and shifting the bar.
+
 ### 4.3 New: downbeats
 
 `beat_tracker.cpp` produces beats but not bar-ones. Bar alignment, count-in, and
@@ -359,6 +396,20 @@ KB_EXPORT kb_result kb_analyze_song(const char* path,
 The beat grid BLOB schema gains a downbeat index list. Existing grids remain
 valid (downbeats absent → treat every `beats_per_bar`-th beat as a downbeat,
 degraded but usable) — no destructive migration.
+
+#### 4.3.1 Why the tracker caps at `KB_MAX_GRID_BEATS`
+
+`beat_tracker.cpp`'s `kMaxTrackedBeats` is deliberately *equal to*
+`KB_MAX_GRID_BEATS`, not an independent number. A grid longer than that is one
+`kb_metronome_set_grid` rejects outright (§13.7 — one definition, one owner), so
+any surplus beat the tracker returned would be unusable by the only consumer.
+
+Truncation must drop the **late** beats and keep the early ones. The DP
+backtrack walks backward from the last beat, so a cap applied during the walk
+keeps the *tail*: the returned grid's first entry then sits minutes into the
+song and the whole beat map silently shifts off t=0. Beat times are absolute
+seconds anchored to the start of the file; that anchor is the invariant.
+`beat_tracker_verify` pins both halves of this.
 
 ### 4.4 Fix in place
 
@@ -471,6 +522,13 @@ existing ±100 ms clamp. Both are now fixed and pinned by
   double-incrementing `current_bar_`). Found by the first fix's own reviewer:
   the machinery to prevent it existed and was not applied here. **Fixed** by the
   same phase-preservation in `kSetLatencyOffset` while running.
+- **Under a grid the mid-run change has a bounded residue.** Grid mode reads the
+  offset through `GridSeconds` rather than through `beat_position_`, so changing
+  it shifts the song-time mapping without moving `grid_cursor_`. The one beat
+  straddling the change can therefore land early or late by up to the clamp. It
+  is bounded to that single beat: the next crossing re-seeds `grid_cursor_`
+  against the new offset. Accepted, not fixed — the alternative is re-seeking the
+  cursor from the callback on every offset change.
 
 **The rule these three fixes share, and the decision that comes with it:** a
 change to the offset *or* the tempo preserves `position` phase — it never steps
@@ -1600,6 +1658,18 @@ the New Architecture, and it means JSI.
 | `kb_engine_frames_rendered` | `uint64_t` frames | Yes — 2^53 frames at 48kHz is ~5,900 years. |
 | `kb_player_position` / `_frames` | `int64_t` frames | Yes, same bound. |
 | `kb_mixer_position` | `int64_t` frames | Yes, same bound. |
+
+`kb_tuner_snapshot` packs the whole reading into one atomic so a single load can
+never pair note A with note B's cents. Layout, LSB first:
+
+| Bits | Type | Field |
+|---|---|---|
+| 0–15 | `int16` | nearest-note MIDI index (`-1` = no pitch) |
+| 16–31 | `int16` | cents offset from that note, **×100** |
+| 32–47 | `uint16` | confidence in [0,1], **×10000** |
+
+`Tuner::PackSnapshot` is the only producer; unpackers must apply the scale
+factors above.
 
 Everything else is `int32_t`, `double`, `float`, or `const char*`. **After §4.1
 removes `kb_mixer_set_track_data`, no buffer crosses the boundary at all** — which

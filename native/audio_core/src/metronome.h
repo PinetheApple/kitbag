@@ -14,9 +14,8 @@ namespace kitbag {
 // Per-beat accent states, mirrored by kb_accent in the C API.
 enum class Accent : uint8_t { kMuted = 0, kNormal = 1, kAccented = 2 };
 
-// A song's measured beat times, replacing a single BPM. Following per-beat
-// spacing is what makes a non-constant-tempo song work (SPEC.md §4.2); one
-// setTempo cannot express drift.
+// A song's measured beat times, replacing a single BPM: following per-beat
+// spacing is what makes a non-constant-tempo song work (SPEC.md §4.2).
 struct BeatGrid {
   std::vector<double> beat_times_sec;  // strictly ascending
   // Engine frame that beat_times_sec[0]'s zero is measured from: song second t
@@ -24,12 +23,10 @@ struct BeatGrid {
   uint64_t anchor_frame = 0;
 };
 
-// Sample-accurate metronome sequencer driven from the audio callback.
-//
-// Position is tracked as a fractional beat index advanced per sample, so a
-// tempo change only alters the increment — never the phase — which makes
-// tempo ramps glitch-free by construction. App-thread mutations arrive
-// through a lock-free SPSC command ring drained at the top of each block.
+// Sample-accurate metronome sequencer driven from the audio callback. Position
+// is a fractional beat index advanced per sample, so a tempo change alters the
+// increment and never the phase; app-thread mutations arrive through a
+// lock-free SPSC ring drained at the top of each block. SPEC.md §4.2.
 class Metronome {
  public:
   static constexpr int kMaxBeats = 16;
@@ -41,10 +38,10 @@ class Metronome {
   static constexpr int kMaxRampBars = 64;
   static constexpr int kMaxMuteBars = 16;
   // Output-latency compensation bound (D5). Widening this to 300 is the whole
-  // of D5's clamp change; the calibration screen and kitbag_api.h's doc comment
-  // move with it. See SPEC.md §4.7.
+  // of D5's clamp change; see SPEC.md §4.7 for what moves with it.
   static constexpr double kMaxLatencyOffsetMs = 100.0;
   static constexpr double kDefaultBpm = 120.0;
+  static constexpr double kMaxVolume = 2.0;
 
   Metronome() {
     accents_[0] = Accent::kAccented;
@@ -55,8 +52,7 @@ class Metronome {
 
   // Renders additively into an interleaved stereo buffer. RT-safe.
   // `block_start_frame` is the engine-clock frame of output[0] — the shared
-  // transport (Engine::frames_rendered_ read before the block). It is what lets
-  // StartAt land on an exact frame rather than "whenever the call arrives".
+  // transport that lets StartAt land on an exact frame (SPEC.md §4.2).
   void Render(
       float* output,
       uint32_t frame_count,
@@ -67,11 +63,9 @@ class Metronome {
 
   // App-thread API. Non-blocking; drops commands if the ring is full.
   void Start();
-  // Sample-accurate start: the click begins on engine frame `start_frame`
-  // (cf. Engine::frames_rendered). A frame already past when it is drained
-  // starts on the next sample (best-effort, never before the transport). Only
-  // takes effect while stopped — re-anchoring a running click is set_grid's /
-  // anchor_external's job (§4.2).
+  // Sample-accurate start on engine frame `start_frame` (cf.
+  // Engine::frames_rendered). Only takes effect while stopped; an already-past
+  // frame starts on the next sample, never before the transport. SPEC.md §4.2.
   void StartAt(uint64_t start_frame);
   void Stop();
   void SetTempo(double bpm);
@@ -83,28 +77,23 @@ class Metronome {
   void SetVolume(double volume);
   void SetLatencyOffset(double latency_ms);
   // Tempo ramp trainer: steps the BPM once per bar from start to end over
-  // `bars` bars, then holds at end. Restarts from the current bar; a manual
-  // SetTempo cancels it. Each Start replays the ramp from the beginning.
+  // `bars` bars, then holds. SetTempo cancels it; Start replays it.
   void SetRamp(bool enabled, double start_bpm, double end_bpm, int bars);
-  // Bar-mute trainer: repeating cycle of `play_bars` sounding bars followed
-  // by `mute_bars` silent bars, anchored at bar 0. Muted bars silence every
-  // voice — main, subdivision and polyrhythm — while the LEDs keep moving.
+  // Bar-mute trainer: `play_bars` sounding then `mute_bars` silent, repeating
+  // from bar 0. A muted bar silences every voice; the LEDs keep moving.
   void SetBarMute(bool enabled, int play_bars, int mute_bars);
 
-  // Follow a measured beat grid instead of bpm_. `now_frame` is the engine
-  // clock at the time of the call; it only dates the outgoing grid for
-  // reclamation. `engine_running` must be true whenever the audio callback can
-  // run — it is what lets a retired grid be freed at once instead of waiting
-  // for a clock that is not moving. Allocates on the app thread, never on the
-  // callback.
+  // Follow a measured beat grid instead of bpm_. `now_frame` only dates the
+  // outgoing grid for reclamation; `engine_running` must be true whenever the
+  // callback can run, so a retired grid can be freed at once rather than
+  // waiting on a clock that is not moving. Allocates on the app thread only.
   void SetGrid(
       std::unique_ptr<BeatGrid> grid,
       uint64_t now_frame,
       bool engine_running
   );
-  // Return to constant-tempo mode. The click keeps its phase: the last grid
-  // beat crossed anchored beat_position_, so the first bpm_ click falls one
-  // whole beat after it rather than on the next sample.
+  // Return to constant-tempo mode, keeping the click's phase: the first bpm_
+  // click falls one whole beat after the last grid beat (SPEC.md §4.2.1).
   void ClearGrid(uint64_t now_frame, bool engine_running);
   // Frees grids retired while the clock was not advancing. The caller must
   // guarantee the audio callback is stopped — Engine::Stop is that caller.
@@ -168,10 +157,37 @@ class Metronome {
     double decay_per_sample = 0.0;
   };
 
+  // Per-block tempo derivatives, recomputed whenever bpm_ changes mid-block.
+  struct BlockTempo {
+    double beats_per_sample = 0.0;
+    double latency_beats = 0.0;
+    double poly_scale = 1.0;
+  };
+
+  // The block's grid and its identity, from one acquire load (SPEC.md §4.2.1).
+  struct GridView {
+    const BeatGrid* grid = nullptr;
+    uint64_t generation = 0;
+  };
+
   static constexpr int kMaxVoices = 8;
   static constexpr size_t kCommandRingSize = 128;
 
+  // Command drain. Each handler owns a disjoint set of CommandTypes and
+  // reports whether it consumed the command.
   void ApplyPendingCommands();
+  bool ApplyTransportCommand(const Command& command);
+  bool ApplyTempoCommand(const Command& command);
+  bool ApplyTrainerCommand(const Command& command);
+  bool ApplyPatternCommand(const Command& command);
+  void SetAccentSlot(int32_t beat_index, int32_t accent);
+  void SetPolyState(bool enabled, int32_t beats);
+  void ArmRamp(const Command& command);
+  // Phase-preserving like a bpm change; inert while stopped, where there is no
+  // phase to hold and kStart re-anchors from the offset. SPEC.md §4.7.
+  void SetLatencyPreservingPhase(double latency_ms);
+  void StopRun();
+
   void TriggerClick(
       double frequency_hz,
       double amplitude,
@@ -190,9 +206,36 @@ class Metronome {
   // Resets sequencer phase and starts the run. Shared by Start (immediate) and
   // StartAt (deferred to the anchor frame).
   void BeginRun();
+
+  // Render internals. All called per block or per sample from the callback.
+  BlockTempo BlockTempoFor(uint32_t sample_rate) const;
+  GridView AcquireGrid(uint64_t block_start_frame, uint32_t sample_rate);
+  void BeginPendingStart(
+      const GridView& view,
+      uint64_t frame,
+      uint32_t sample_rate,
+      BlockTempo* tempo
+  );
+  void AdvanceConstantTempo(uint32_t sample_rate, BlockTempo* tempo);
+  void FireConstantTempoTick(
+      int64_t sub_index,
+      uint32_t sample_rate,
+      BlockTempo* tempo
+  );
+  void PublishBlockMirrors(
+      const BeatGrid* grid,
+      uint64_t frame,
+      uint32_t sample_rate
+  );
+
   // Grid mode: fires the grid's beat if this sample crosses one.
   void
   RenderGridBeat(const BeatGrid& grid, uint64_t frame, uint32_t sample_rate);
+  void RenderGridSubdivision(
+      const BeatGrid& grid,
+      double song_seconds,
+      uint32_t sample_rate
+  );
   // Song position of an engine frame, shifted by the latency offset so the
   // click lands on the beat at the speaker rather than at the buffer (§4.7).
   double
@@ -227,12 +270,8 @@ class Metronome {
   uint64_t pending_start_frame_ = 0;
 
   // Grid mode. The publisher is the app→RT seam; everything below it is
-  // RT-owned. `observed_generation_` is the grid the cursor was seeded against;
-  // when the published generation differs the cursor is re-seeded from the
-  // current position, which is what keeps a re-anchor from touching beats that
-  // already fired. Zero means "seeded against nothing", which is also how a
-  // Start or Stop forces the next block to re-seed rather than resume from a
-  // cursor stranded wherever the pause began.
+  // RT-owned. Why identity is a generation, why zero forces a re-seed, and why
+  // the bar is derived here but incremented at constant tempo: SPEC.md §4.2.1.
   RtPublisher<BeatGrid> grid_;
   uint64_t observed_generation_ = 0;
   size_t grid_cursor_ = 0;
@@ -240,12 +279,8 @@ class Metronome {
   // Next subdivision tick to fire inside the current beat interval, 1-based;
   // subdivision_ means "none left before the next beat".
   int grid_next_sub_ = 1;
-  // Bar counter. In constant-tempo mode it is incremented at every downbeat and
-  // never derived by division, so a mid-run time-signature change cannot jump
-  // ramp progress or bar-mute phase. Grid mode is the exception: there the bar
-  // is derived from grid_beat_index_ (see SyncGridBar), because the grid's own
-  // numbering — not a count of downbeats seen — is what a re-anchor must land
-  // on. -1 until the first downbeat after Start.
+  // Bar counter, -1 until the first downbeat after Start. Incremented at
+  // constant tempo, derived from the grid in grid mode — SPEC.md §4.2.1.
   int64_t current_bar_ = -1;
   bool ramp_enabled_ = false;
   double ramp_start_bpm_ = 0.0;

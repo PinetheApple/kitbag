@@ -87,59 +87,87 @@ uint64_t Mixer::track_frames(int track) const {
   return track >= 0 && track < track_count_ ? tracks_[track].num_frames : 0;
 }
 
-void Mixer::Process(float* output, uint32_t frame_count, uint32_t sr) {
-  if (!playing_.load(std::memory_order_acquire)) {
-    std::memset(output, 0, frame_count * 2 * sizeof(float));
-    return;
+void Mixer::MixMono(
+    const Track& tr,
+    float* output,
+    uint64_t start_frame,
+    uint64_t frames,
+    float gain
+) {
+  for (uint64_t f = 0; f < frames; ++f) {
+    const uint64_t src_idx = start_frame + f;
+    if (src_idx >= tr.num_frames) break;
+    const float s = tr.pcm[src_idx] * gain;
+    output[2 * f] += s;
+    output[2 * f + 1] += s;
   }
+}
+
+void Mixer::MixStereo(
+    const Track& tr,
+    float* output,
+    uint64_t start_frame,
+    uint64_t frames,
+    float gain
+) {
+  for (uint64_t f = 0; f < frames; ++f) {
+    const uint64_t src_idx = (start_frame + f) * tr.channels;
+    if (src_idx + 1 >= tr.pcm.size()) break;
+    output[2 * f] += tr.pcm[src_idx] * gain;
+    output[2 * f + 1] += tr.pcm[src_idx + 1] * gain;
+  }
+}
+
+// Returns the frames this track contributed, 0 if it was skipped.
+uint64_t Mixer::MixTrack(
+    const Track& tr,
+    float* output,
+    uint32_t frame_count,
+    uint64_t start_frame,
+    bool any_solo,
+    uint32_t sr
+) {
+  if (!tr.has_data) return 0;
+  if (any_solo && !tr.solo.load(std::memory_order_relaxed)) return 0;
+  if (tr.mute.load(std::memory_order_relaxed)) return 0;
+
+  const float gain = tr.gain.load(std::memory_order_relaxed);
+  if (gain <= 0.0f) return 0;
+
+  // No resampler yet — a track at another rate is dropped silently
+  // (SPEC.md §4.1).
+  if (tr.sample_rate != sr) return 0;
+
+  const uint64_t frames_avail =
+      std::min(
+          tr.num_frames,
+          start_frame + static_cast<uint64_t>(frame_count)
+      ) -
+      std::min(start_frame, tr.num_frames);
+  if (frames_avail == 0) return 0;
+
+  if (tr.channels == 1) {
+    MixMono(tr, output, start_frame, frames_avail, gain);
+  } else if (tr.channels >= 2) {
+    MixStereo(tr, output, start_frame, frames_avail, gain);
+  }
+  return frames_avail;
+}
+
+void Mixer::Process(float* output, uint32_t frame_count, uint32_t sr) {
+  // Memset, not accumulate: Engine::Render relies on this clearing whatever it
+  // wrote before the call.
+  std::memset(output, 0, frame_count * 2 * sizeof(float));
+  if (!playing_.load(std::memory_order_acquire)) return;
 
   const bool any_solo = any_solo_.load(std::memory_order_relaxed);
-
-  std::memset(output, 0, frame_count * 2 * sizeof(float));
-
   const uint64_t start_frame = read_frame_.load(std::memory_order_relaxed);
   uint64_t max_read = 0;
 
   for (int t = 0; t < track_count_; ++t) {
-    const Track& tr = tracks_[t];
-    if (!tr.has_data) continue;
-
-    if (any_solo && !tr.solo.load(std::memory_order_relaxed)) continue;
-    if (tr.mute.load(std::memory_order_relaxed)) continue;
-
-    const float gain = tr.gain.load(std::memory_order_relaxed);
-    if (gain <= 0.0f) continue;
-
-    // No resampler yet — a track at another rate is dropped silently
-    // (SPEC.md §4.1).
-    if (tr.sample_rate != sr) continue;
-
-    const uint64_t frames_avail =
-        std::min(
-            tr.num_frames,
-            start_frame + static_cast<uint64_t>(frame_count)
-        ) -
-        std::min(start_frame, tr.num_frames);
-
-    if (frames_avail == 0) continue;
-    if (frames_avail > max_read) max_read = frames_avail;
-
-    if (tr.channels == 1) {
-      for (uint64_t f = 0; f < frames_avail; ++f) {
-        const uint64_t src_idx = start_frame + f;
-        if (src_idx >= tr.num_frames) break;
-        const float s = tr.pcm[src_idx] * gain;
-        output[2 * f] += s;
-        output[2 * f + 1] += s;
-      }
-    } else if (tr.channels >= 2) {
-      for (uint64_t f = 0; f < frames_avail; ++f) {
-        const uint64_t src_idx = (start_frame + f) * tr.channels;
-        if (src_idx + 1 >= tr.pcm.size()) break;
-        output[2 * f] += tr.pcm[src_idx] * gain;
-        output[2 * f + 1] += tr.pcm[src_idx + 1] * gain;
-      }
-    }
+    const uint64_t read =
+        MixTrack(tracks_[t], output, frame_count, start_frame, any_solo, sr);
+    if (read > max_read) max_read = read;
   }
 
   // Longest track drives the transport; shorter ones simply run out.

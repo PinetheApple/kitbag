@@ -1,6 +1,5 @@
-// Offline pitch verification: feeds synthesized reference tones through the
-// PitchAnalyzer and asserts the M2 proof — ≤±1 cent across 82Hz–1kHz — plus
-// settle time, octave-error rejection, and the silence gate.
+// Offline pitch verification: synthesized tones through PitchAnalyzer, asserting
+// the M2 proof (≤±1 cent, 82Hz–1kHz), settle time, octave kill, silence gate.
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -87,48 +86,49 @@ double FeedToneAndMeasureSettle(
   return settle_seconds;
 }
 
+void CheckReferenceTone(double tone_hz) {
+  kitbag::PitchAnalyzer analyzer(
+      kSampleRate,
+      kitbag::PitchAnalyzer::kChromaticLowHz,
+      kitbag::PitchAnalyzer::kChromaticHighHz
+  );
+  const double settle =
+      FeedToneAndMeasureSettle(analyzer, tone_hz, kToneSeconds);
+  const auto& reading = analyzer.reading();
+  const double error_cents =
+      reading.pitch_hz > 0.0 ? CentsBetween(reading.pitch_hz, tone_hz) : 999.0;
+  std::printf(
+      "  %8.2f Hz -> %8.3f Hz  err %+7.3f cents  settle %3.0f ms  conf %.2f\n",
+      tone_hz,
+      reading.pitch_hz,
+      error_cents,
+      settle * 1000.0,
+      reading.confidence
+  );
+  Check(
+      std::fabs(error_cents) <= kMaxCentsError,
+      "reference tone within ±1 cent"
+  );
+  Check(settle <= kMaxSettleSeconds, "settle under 150ms");
+  Check(
+      reading.note_index == kitbag::NoteIndexForFrequency(tone_hz, kA4Hz),
+      "nearest note index matches"
+  );
+}
+
 void TestReferenceTones() {
   std::printf(
       "reference tones (chromatic band, ±%.1f cent):\n",
       kMaxCentsError
   );
   for (const double tone_hz : kReferenceTonesHz) {
-    kitbag::PitchAnalyzer analyzer(
-        kSampleRate,
-        kitbag::PitchAnalyzer::kChromaticLowHz,
-        kitbag::PitchAnalyzer::kChromaticHighHz
-    );
-    const double settle =
-        FeedToneAndMeasureSettle(analyzer, tone_hz, kToneSeconds);
-    const auto& reading = analyzer.reading();
-    const double error_cents = reading.pitch_hz > 0.0
-                                   ? CentsBetween(reading.pitch_hz, tone_hz)
-                                   : 999.0;
-    std::printf(
-        "  %8.2f Hz -> %8.3f Hz  err %+7.3f cents  settle %3.0f ms  "
-        "conf %.2f\n",
-        tone_hz,
-        reading.pitch_hz,
-        error_cents,
-        settle * 1000.0,
-        reading.confidence
-    );
-    Check(
-        std::fabs(error_cents) <= kMaxCentsError,
-        "reference tone within ±1 cent"
-    );
-    Check(settle <= kMaxSettleSeconds, "settle under 150ms");
-    Check(
-        reading.note_index == kitbag::NoteIndexForFrequency(tone_hz, kA4Hz),
-        "nearest note index matches"
-    );
+    CheckReferenceTone(tone_hz);
   }
 }
 
 void TestBassB0Settle() {
-  // 5-string bass low B through its preset string band (how the app reaches
-  // notes below A1). The ~65ms two-period window plus smoothing gives it a
-  // looser "acceptable settle" budget per the M2 proof.
+  // 5-string bass low B via its preset string band — how the app reaches notes
+  // below A1. Its ~65ms two-period window earns a looser settle budget (M2).
   constexpr double kB0Hz = 30.87;
   constexpr double kBandSemitones = 5.0;
   kitbag::PitchAnalyzer analyzer(

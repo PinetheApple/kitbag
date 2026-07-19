@@ -8,10 +8,8 @@ namespace kitbag {
 int fft_log2(int n);
 int fft_bit_reverse(int x, int log2n);
 
-/// In-place radix-2 complex FFT on interleaved data
-/// [real0, imag0, real1, imag1, ...]. Length n must be power of 2.
-/// If inverse = false: forward FFT (unnormalized).
-/// If inverse = true: inverse FFT (scaled by 1/n).
+/// In-place radix-2 complex FFT over interleaved [re0, im0, re1, im1, ...];
+/// n must be a power of 2. Forward is unnormalized, inverse is scaled by 1/n.
 void fft(float* data, int n, bool inverse);
 
 /// Fill arr with values of a Hann window of length n.
