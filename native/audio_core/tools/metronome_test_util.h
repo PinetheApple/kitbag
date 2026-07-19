@@ -28,8 +28,12 @@ constexpr double kMaxJitterFrames = 1.5;
 constexpr double kGridToleranceFrames = 4.0;
 
 inline int g_failures = 0;
+// Counted so a deleted RunXTests()/TestX() call cannot pass silently: the total
+// is a tripwire on the suite's own shape, not a derived expectation.
+inline int g_checks = 0;
 
 inline void Check(bool condition, const char* message) {
+  ++g_checks;
   if (!condition) {
     std::fprintf(stderr, "FAIL: %s\n", message);
     ++g_failures;
@@ -60,11 +64,11 @@ inline void DetectOnsets(
 // Renders a continuous frame range from frame 0, letting the caller act at
 // block boundaries. Grid mode is driven by the absolute engine frame, so grid
 // tests must use this rather than restarting the transport per call.
-template <typename OnFrame>
+template <typename OnBlock>
 std::vector<int64_t> RenderContinuous(
     kitbag::Metronome& metronome,
     int64_t total_frames,
-    OnFrame on_frame
+    OnBlock on_block
 ) {
   std::vector<float> buffer(kBlockFrames * kChannels);
   std::vector<int64_t> onsets;
@@ -73,7 +77,7 @@ std::vector<int64_t> RenderContinuous(
   float previous_abs = 0.0f;
 
   while (rendered < total_frames) {
-    on_frame(rendered);
+    on_block(rendered);
     std::fill(buffer.begin(), buffer.end(), 0.0f);
     metronome.Render(
         buffer.data(),
@@ -100,6 +104,7 @@ inline void ExpectSpacing(
     double expected_frames,
     const char* label
 ) {
+  Check(onsets.size() >= to, label);
   for (size_t i = from + 1; i < to && i < onsets.size(); ++i) {
     const double spacing = static_cast<double>(onsets[i] - onsets[i - 1]);
     if (std::fabs(spacing - expected_frames) > kMaxJitterFrames) {
@@ -117,12 +122,13 @@ inline void ExpectSpacing(
   }
 }
 
-// Every onset must land on its counterpart in `expected_sec`, in order.
+// Every onset must land on its counterpart in `expected_sec`, one for one.
 inline void ExpectOnsetsAtSeconds(
     const std::vector<int64_t>& onsets,
     const std::vector<double>& expected_sec,
     const char* label
 ) {
+  Check(onsets.size() == expected_sec.size(), label);
   for (size_t i = 0; i < onsets.size() && i < expected_sec.size(); ++i) {
     const double want = expected_sec[i] * kSampleRate;
     if (std::fabs(static_cast<double>(onsets[i]) - want) >
@@ -141,12 +147,15 @@ inline void ExpectOnsetsAtSeconds(
   }
 }
 
-// Every onset must coincide with some beat in the grid, in any order.
+// Every onset must coincide with some beat in the grid, in any order. An empty
+// render satisfies that vacuously, so `min_onsets` is not optional.
 inline void ExpectOnGrid(
     const std::vector<int64_t>& onsets,
     const std::vector<double>& times,
+    size_t min_onsets,
     const char* label
 ) {
+  Check(onsets.size() >= min_onsets, label);
   for (const int64_t onset : onsets) {
     bool matched = false;
     for (const double t : times) {
@@ -162,6 +171,58 @@ inline void ExpectOnGrid(
           "FAIL: %s — onset %lld is not on any grid beat\n",
           label,
           static_cast<long long>(onset)
+      );
+      ++g_failures;
+      return;
+    }
+  }
+}
+
+// Peak |sample| per rendered block. Resolves events the onset detector cannot:
+// a click re-fired within kOnsetHoldFrames still lifts its block's peak.
+inline std::vector<double>
+RenderBlockPeaks(kitbag::Metronome& metronome, int64_t total_frames) {
+  std::vector<float> buffer(kBlockFrames * kChannels);
+  std::vector<double> peaks;
+  for (int64_t rendered = 0; rendered < total_frames;
+       rendered += kBlockFrames) {
+    std::fill(buffer.begin(), buffer.end(), 0.0f);
+    metronome.Render(
+        buffer.data(),
+        kBlockFrames,
+        kSampleRate,
+        kChannels,
+        static_cast<uint64_t>(rendered)
+    );
+    double peak = 0.0;
+    for (uint32_t frame = 0; frame < kBlockFrames; ++frame) {
+      const double amplitude =
+          std::fabs(static_cast<double>(buffer[frame * kChannels]));
+      peak = std::max(peak, amplitude);
+    }
+    peaks.push_back(peak);
+  }
+  return peaks;
+}
+
+// A click's envelope only decays, so across blocks where no tick is due a peak
+// that rises is a second voice firing — the one signature of a re-fired tick.
+inline void ExpectDecayingBlocks(
+    const std::vector<double>& peaks,
+    size_t from,
+    size_t to,
+    const char* label
+) {
+  Check(peaks.size() >= to, label);
+  for (size_t i = from + 1; i < to && i < peaks.size(); ++i) {
+    if (peaks[i] >= peaks[i - 1]) {
+      std::fprintf(
+          stderr,
+          "FAIL: %s — block %zu peak %.4f did not decay from %.4f\n",
+          label,
+          i,
+          peaks[i],
+          peaks[i - 1]
       );
       ++g_failures;
       return;

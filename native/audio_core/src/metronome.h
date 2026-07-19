@@ -173,9 +173,11 @@ class Metronome {
   static constexpr int kMaxVoices = 8;
   static constexpr size_t kCommandRingSize = 128;
 
-  // Command drain. Each handler owns a disjoint set of CommandTypes and
-  // reports whether it consumed the command.
+  // Command drain. ApplyCommand holds the only exhaustive switch over
+  // CommandType; the handlers below are partial by design and say so with a
+  // `default:`, and each reports whether it consumed the command.
   void ApplyPendingCommands();
+  void ApplyCommand(const Command& command);
   bool ApplyTransportCommand(const Command& command);
   bool ApplyTempoCommand(const Command& command);
   bool ApplyTrainerCommand(const Command& command);
@@ -222,6 +224,8 @@ class Metronome {
       uint32_t sample_rate,
       BlockTempo* tempo
   );
+  void
+  FirePolyTick(double position, uint32_t sample_rate, const BlockTempo& tempo);
   void PublishBlockMirrors(
       const BeatGrid* grid,
       uint64_t frame,

@@ -65,11 +65,8 @@ void PitchAnalyzer::RebuildDetector() {
   samples_until_update_ = samples_per_update_;
   median_filled_ = 0;
   ema_seeded_ = false;
-  lock_state_ = LockState::kNone;
-  lock_counter_ = 0;
-  lock_cents_sum_ = 0.0;
-  re_lock_note_ = -1;
-  re_lock_frames_ = 0;
+  lock_.Reset();
+  previous_lock_state_ = NoteLock::State::kNone;
   gate_open_ = false;
   rms_envelope_ = 0.0;
   noise_floor_ = 0.0;
@@ -109,9 +106,7 @@ bool PitchAnalyzer::Process(float sample) {
     HandleNoSignal();
   }
 
-  if (lock_state_ != LockState::kLocked && re_lock_frames_ > 0) {
-    --re_lock_frames_;
-  }
+  lock_.TickReLockWindow();
   return true;
 }
 
@@ -132,130 +127,7 @@ double PitchAnalyzer::MedianHz(double frequency_hz) {
   return sorted[kMedianLength / 2];
 }
 
-void PitchAnalyzer::EnterRiding() {
-  lock_state_ = LockState::kRiding;
-  lock_counter_ = 1;
-  re_lock_note_ = locked_note_;
-  re_lock_frames_ = kReLockSamples;
-  last_locked_reading_ = reading_;
-}
-
-PitchAnalyzer::LockOutcome PitchAnalyzer::AdvanceFromNone(
-    int32_t raw_note,
-    double raw_cents,
-    LockUpdate* update
-) {
-  if (raw_note < 0) {
-    return LockOutcome::kSilence;
-  }
-  // A note reappearing inside the re-lock window skips re-acquisition.
-  if (raw_note == re_lock_note_ && re_lock_frames_ > 0) {
-    lock_state_ = LockState::kLocked;
-    lock_counter_ = 0;
-    re_lock_note_ = -1;
-    re_lock_frames_ = 0;
-    *update = {raw_note, raw_cents};
-    return LockOutcome::kPublish;
-  }
-  lock_state_ = LockState::kLocking;
-  locked_note_ = raw_note;
-  lock_counter_ = 1;
-  lock_cents_sum_ = raw_cents;
-  return LockOutcome::kSilence;
-}
-
-PitchAnalyzer::LockOutcome PitchAnalyzer::AdvanceFromLocking(
-    int32_t raw_note,
-    double raw_cents,
-    LockUpdate* update
-) {
-  if (raw_note != locked_note_ || std::fabs(raw_cents) > kLockCentsThreshold) {
-    lock_state_ = LockState::kNone;
-    lock_counter_ = 0;
-    lock_cents_sum_ = 0.0;
-    return LockOutcome::kSilence;
-  }
-  ++lock_counter_;
-  lock_cents_sum_ += raw_cents;
-  if (lock_counter_ < kLockAcquireSamples) {
-    return LockOutcome::kSilence;
-  }
-  lock_state_ = LockState::kLocked;
-  lock_counter_ = 0;
-  // Publish the mean over the acquisition window, not just the last frame.
-  *update = {
-      locked_note_,
-      lock_cents_sum_ / static_cast<double>(kLockAcquireSamples)
-  };
-  lock_cents_sum_ = 0.0;
-  return LockOutcome::kPublish;
-}
-
-PitchAnalyzer::LockOutcome PitchAnalyzer::AdvanceFromLocked(
-    int32_t raw_note,
-    double raw_cents,
-    LockUpdate* update
-) {
-  if (raw_note == locked_note_) {
-    lock_counter_ = 0;
-    re_lock_note_ = -1;
-    re_lock_frames_ = 0;
-    *update = {locked_note_, raw_cents};
-    return LockOutcome::kPublish;
-  }
-  if (raw_note < 0) {
-    EnterRiding();
-    return LockOutcome::kSilence;
-  }
-  ++lock_counter_;
-  re_lock_note_ = locked_note_;
-  re_lock_frames_ = kReLockSamples;
-  if (lock_counter_ >= kReLockSamples) {
-    lock_state_ = LockState::kNone;
-    lock_counter_ = 0;
-  }
-  return LockOutcome::kSilence;
-}
-
-PitchAnalyzer::LockOutcome PitchAnalyzer::AdvanceFromRiding(
-    int32_t raw_note,
-    double raw_cents,
-    LockUpdate* update
-) {
-  if (raw_note == locked_note_) {
-    lock_state_ = LockState::kLocked;
-    lock_counter_ = 0;
-    *update = {locked_note_, raw_cents};
-    return LockOutcome::kPublish;
-  }
-  ++lock_counter_;
-  if (lock_counter_ >= kRideMaxSamples) {
-    lock_state_ = LockState::kNone;
-    lock_counter_ = 0;
-    return LockOutcome::kSilence;
-  }
-  return LockOutcome::kHold;
-}
-
-PitchAnalyzer::LockOutcome PitchAnalyzer::AdvanceLock(
-    int32_t raw_note,
-    double raw_cents,
-    LockUpdate* update
-) {
-  switch (lock_state_) {
-    case LockState::kNone:
-      return AdvanceFromNone(raw_note, raw_cents, update);
-    case LockState::kLocking:
-      return AdvanceFromLocking(raw_note, raw_cents, update);
-    case LockState::kLocked:
-      return AdvanceFromLocked(raw_note, raw_cents, update);
-    case LockState::kRiding:
-      return AdvanceFromRiding(raw_note, raw_cents, update);
-  }
-  return LockOutcome::kSilence;
-}
-
-void PitchAnalyzer::PublishReading(const LockUpdate& update) {
+void PitchAnalyzer::PublishReading(const NoteLock::Update& update) {
   // Reseed rather than smooth across a note change: an EMA spanning two notes
   // would sweep the needle through the interval between them.
   if (!ema_seeded_ || update.note != reading_.note_index) {
@@ -275,53 +147,40 @@ void PitchAnalyzer::PublishReading(const LockUpdate& update) {
   reading_.confidence = detector_->periodicity();
 }
 
-void PitchAnalyzer::PublishFrequency(double frequency_hz) {
-  const double median_hz = MedianHz(frequency_hz);
-  const int32_t raw_note = NoteIndexForFrequency(median_hz, a4_hz_);
-  const double raw_cents = CentsOffsetForFrequency(median_hz, a4_hz_);
+void PitchAnalyzer::ApplyOutcome(
+    NoteLock::Outcome outcome,
+    const NoteLock::Update& update
+) {
+  const bool entered_riding = lock_.state() == NoteLock::State::kRiding &&
+                              previous_lock_state_ != NoteLock::State::kRiding;
+  if (entered_riding) last_locked_reading_ = reading_;
+  previous_lock_state_ = lock_.state();
 
-  LockUpdate update;
-  switch (AdvanceLock(raw_note, raw_cents, &update)) {
-    case LockOutcome::kPublish:
+  switch (outcome) {
+    case NoteLock::Outcome::kPublish:
       PublishReading(update);
       return;
-    case LockOutcome::kHold:
+    case NoteLock::Outcome::kHold:
       // Freeze on a transient miss rather than blanking the display.
       reading_ = last_locked_reading_;
       return;
-    case LockOutcome::kSilence:
+    case NoteLock::Outcome::kSilence:
       PublishSilence();
       return;
   }
 }
 
+void PitchAnalyzer::PublishFrequency(double frequency_hz) {
+  const double median_hz = MedianHz(frequency_hz);
+  const int32_t raw_note = NoteIndexForFrequency(median_hz, a4_hz_);
+  const double raw_cents = CentsOffsetForFrequency(median_hz, a4_hz_);
+
+  NoteLock::Update update;
+  ApplyOutcome(lock_.Advance(raw_note, raw_cents, &update), update);
+}
+
 void PitchAnalyzer::HandleNoSignal() {
-  switch (lock_state_) {
-    case LockState::kNone:
-    case LockState::kLocking:
-      lock_state_ = LockState::kNone;
-      lock_counter_ = 0;
-      lock_cents_sum_ = 0.0;
-      break;
-
-    case LockState::kLocked:
-      EnterRiding();
-      break;
-
-    case LockState::kRiding:
-      ++lock_counter_;
-      if (lock_counter_ >= kRideMaxSamples) {
-        lock_state_ = LockState::kNone;
-        lock_counter_ = 0;
-      }
-      break;
-  }
-
-  if (lock_state_ == LockState::kRiding) {
-    reading_ = last_locked_reading_;
-  } else {
-    PublishSilence();
-  }
+  ApplyOutcome(lock_.HandleNoSignal(), NoteLock::Update{});
 }
 
 void PitchAnalyzer::PublishSilence() {

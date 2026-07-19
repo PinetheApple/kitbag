@@ -4,6 +4,10 @@
 
 #include "metronome_test_util.h"
 
+// Update deliberately when adding or removing a check; a drop means a test
+// stopped running.
+constexpr int kExpectedChecks = 189;
+
 int main() {
   metronome_test::RunBasicTests();
   metronome_test::RunStartAtTests();
@@ -11,6 +15,15 @@ int main() {
   metronome_test::RunGridTests();
   metronome_test::RunPublisherTests();
 
+  if (metronome_test::g_checks != kExpectedChecks) {
+    std::fprintf(
+        stderr,
+        "metronome_verify: ran %d checks, expected %d\n",
+        metronome_test::g_checks,
+        kExpectedChecks
+    );
+    return 1;
+  }
   if (metronome_test::g_failures == 0) {
     std::printf("metronome_verify: all checks passed\n");
     return 0;

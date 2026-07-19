@@ -19,8 +19,12 @@
 namespace {
 
 int g_failures = 0;
+// Counted so a deleted TestX() call cannot pass silently: the total is a
+// tripwire on the suite's own shape, not a derived expectation.
+int g_checks = 0;
 
 void Check(bool condition, const char* message) {
+  ++g_checks;
   if (!condition) {
     std::fprintf(stderr, "FAIL: %s\n", message);
     ++g_failures;
@@ -28,6 +32,7 @@ void Check(bool condition, const char* message) {
 }
 
 void CheckPath(const char* dir, const char* song_path, const char* expected) {
+  ++g_checks;
   const std::string got = kitbag::SidecarPath(dir, song_path);
   if (got != expected) {
     std::fprintf(
@@ -123,11 +128,24 @@ void TestSidecarPath() {
 
 }  // namespace
 
+// Update deliberately when adding or removing a check; a drop means a test
+// stopped running.
+constexpr int kExpectedChecks = 16;
+
 int main() {
   TestGridStaysAnchoredAtOrigin();
   TestTruncationDropsLateBeatsNotEarlyOnes();
   TestSidecarPath();
 
+  if (g_checks != kExpectedChecks) {
+    std::fprintf(
+        stderr,
+        "beat_tracker_verify: ran %d checks, expected %d\n",
+        g_checks,
+        kExpectedChecks
+    );
+    return 1;
+  }
   if (g_failures == 0) {
     std::printf("beat_tracker_verify: all checks passed\n");
     return 0;

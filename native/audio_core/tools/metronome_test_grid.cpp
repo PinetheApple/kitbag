@@ -73,14 +73,14 @@ void TestGridSurvivesStopStart() {
         }
       });
 
-  ExpectOnGrid(onsets, times, "grid stop/start");
+  // Beats at 0.0/0.5/1.0, then from the resume 3.0/3.5/4.0/4.5/5.0.
+  ExpectOnGrid(onsets, times, 8, "grid stop/start");
   for (const int64_t onset : onsets) {
     Check(
         onset < stop_at + kBlockFrames || onset >= start_at,
         "grid stop/start: silent while stopped"
     );
   }
-  Check(onsets.size() > 3, "grid stop/start: the click resumes");
 }
 
 // StartAt under a grid seeds the cursor at the anchor, not at the block the
@@ -94,7 +94,8 @@ void TestGridWithStartAt() {
   metronome.StartAt(static_cast<uint64_t>(1.1 * kSampleRate));
 
   const auto onsets = RenderAndDetectOnsets(metronome, kSampleRate * 4);
-  ExpectOnGrid(onsets, times, "grid + start_at");
+  // The anchor at 1.1 s skips 0.0 through 1.0, leaving at least 1.5 through 3.5.
+  ExpectOnGrid(onsets, times, 5, "grid + start_at");
   Check(
       !onsets.empty() && onsets[0] >= static_cast<int64_t>(1.1 * kSampleRate),
       "grid + start_at: nothing sounds before the anchor"
@@ -114,11 +115,37 @@ void TestGridStartAtKeepsSubdivisionCursor() {
   // From the anchor: offbeat 1.25, then beats and offbeats every 0.25 s.
   const std::vector<double> expected =
       {1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0, 3.25, 3.5, 3.75};
-  Check(
-      onsets.size() == expected.size(),
-      "grid start_at: no subdivision re-fired after the anchor block"
-  );
   ExpectOnsetsAtSeconds(onsets, expected, "grid start_at subdivision");
+}
+
+// The anchor lands in the same block as a subdivision and just before it, so a
+// lost generation re-seeds the next block and re-fires that spent subdivision.
+// The re-fire is ~160 frames later — inside kOnsetHoldFrames, so it is invisible
+// to the onset detector and only the block envelope can see it.
+void TestGridStartAtRestoresGeneration() {
+  constexpr double kSubTickSec = 1.25;
+  constexpr int64_t kJustBeforeFrames = 50;
+  constexpr size_t kDecayBlocks = 25;
+  const auto tick_frame = static_cast<int64_t>(kSubTickSec * kSampleRate);
+
+  kitbag::Metronome metronome;
+  metronome.SetBeatsPerBar(4);
+  metronome.SetSubdivision(2);
+  metronome.SetGrid(MakeDriftingGrid(40, 0.5, 0.0, 0), 0, true);
+  metronome.StartAt(static_cast<uint64_t>(tick_frame - kJustBeforeFrames));
+
+  const auto peaks = RenderBlockPeaks(metronome, kSampleRate * 4);
+  const auto tick_block = static_cast<size_t>(tick_frame / kBlockFrames);
+  Check(
+      peaks[tick_block] > 0.0,
+      "grid start_at generation: the anchor block's subdivision sounds"
+  );
+  ExpectDecayingBlocks(
+      peaks,
+      tick_block,
+      tick_block + kDecayBlocks,
+      "grid start_at generation: no subdivision re-fired after the anchor block"
+  );
 }
 
 // Subdivisions divide each measured interval rather than being dropped.
@@ -242,6 +269,7 @@ void RunGridTests() {
   TestGridSurvivesStopStart();
   TestGridWithStartAt();
   TestGridStartAtKeepsSubdivisionCursor();
+  TestGridStartAtRestoresGeneration();
   TestGridSubdivision();
   TestGridReanchorKeepsBarPhase();
   TestGridBpmMirrorIsClamped();
