@@ -57,8 +57,13 @@ class Metronome {
   // `block_start_frame` is the engine-clock frame of output[0] — the shared
   // transport (Engine::frames_rendered_ read before the block). It is what lets
   // StartAt land on an exact frame rather than "whenever the call arrives".
-  void Render(float* output, uint32_t frame_count, uint32_t sample_rate,
-              uint32_t channel_count, uint64_t block_start_frame);
+  void Render(
+      float* output,
+      uint32_t frame_count,
+      uint32_t sample_rate,
+      uint32_t channel_count,
+      uint64_t block_start_frame
+  );
 
   // App-thread API. Non-blocking; drops commands if the ring is full.
   void Start();
@@ -92,8 +97,11 @@ class Metronome {
   // run — it is what lets a retired grid be freed at once instead of waiting
   // for a clock that is not moving. Allocates on the app thread, never on the
   // callback.
-  void SetGrid(std::unique_ptr<BeatGrid> grid, uint64_t now_frame,
-               bool engine_running);
+  void SetGrid(
+      std::unique_ptr<BeatGrid> grid,
+      uint64_t now_frame,
+      bool engine_running
+  );
   // Return to constant-tempo mode. The click keeps its phase: the last grid
   // beat crossed anchored beat_position_, so the first bpm_ click falls one
   // whole beat after it rather than on the next sample.
@@ -164,8 +172,12 @@ class Metronome {
   static constexpr size_t kCommandRingSize = 128;
 
   void ApplyPendingCommands();
-  void TriggerClick(double frequency_hz, double amplitude,
-                    double decay_per_second, uint32_t sample_rate);
+  void TriggerClick(
+      double frequency_hz,
+      double amplitude,
+      double decay_per_second,
+      uint32_t sample_rate
+  );
   void OnBeatBoundary(int beat_index, uint32_t sample_rate);
   void OnSubdivisionTick(uint32_t sample_rate);
   void OnPolyBoundary(int poly_index, uint32_t sample_rate);
@@ -179,20 +191,23 @@ class Metronome {
   // StartAt (deferred to the anchor frame).
   void BeginRun();
   // Grid mode: fires the grid's beat if this sample crosses one.
-  void RenderGridBeat(const BeatGrid& grid, uint64_t frame,
-                      uint32_t sample_rate);
+  void
+  RenderGridBeat(const BeatGrid& grid, uint64_t frame, uint32_t sample_rate);
   // Song position of an engine frame, shifted by the latency offset so the
   // click lands on the beat at the speaker rather than at the buffer (§4.7).
-  double GridSeconds(const BeatGrid& grid, uint64_t frame,
-                     uint32_t sample_rate) const;
+  double
+  GridSeconds(const BeatGrid& grid, uint64_t frame, uint32_t sample_rate) const;
   // Places grid_cursor_ on the first beat at or after `song_seconds`. Binary
   // search — bounded and allocation-free, so it is safe from the callback.
   void SeekGridCursor(const BeatGrid& grid, double song_seconds);
   // Grid mode: derives current_bar_ from grid_beat_index_. See the definition.
   void SyncGridBar();
   // Publishes bar_phase_/current_bpm_ from the grid's local beat spacing.
-  void PublishGridMirrors(const BeatGrid& grid, uint64_t frame,
-                          uint32_t sample_rate);
+  void PublishGridMirrors(
+      const BeatGrid& grid,
+      uint64_t frame,
+      uint32_t sample_rate
+  );
 
   SpscRing<Command, kCommandRingSize> commands_;
 

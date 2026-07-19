@@ -37,10 +37,14 @@ class Decoder {
   void Close();
 
   /// Returns the info from the last Open() call.
-  DecoderInfo info() const { return info_; }
+  DecoderInfo info() const {
+    return info_;
+  }
 
   /// True when a file is currently open.
-  bool is_open() const { return is_open_.load(); }
+  bool is_open() const {
+    return is_open_.load();
+  }
 
  private:
   std::atomic<bool> is_open_{false};

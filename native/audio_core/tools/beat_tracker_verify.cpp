@@ -30,10 +30,15 @@ void Check(bool condition, const char* message) {
 void CheckPath(const char* dir, const char* song_path, const char* expected) {
   const std::string got = kitbag::SidecarPath(dir, song_path);
   if (got != expected) {
-    std::fprintf(stderr,
-                 "FAIL: SidecarPath(\"%s\", \"%s\") = \"%s\", "
-                 "wanted \"%s\"\n",
-                 dir, song_path, got.c_str(), expected);
+    std::fprintf(
+        stderr,
+        "FAIL: SidecarPath(\"%s\", \"%s\") = \"%s\", "
+        "wanted \"%s\"\n",
+        dir,
+        song_path,
+        got.c_str(),
+        expected
+    );
     ++g_failures;
   }
 }
@@ -48,7 +53,9 @@ std::vector<float> SyntheticOnsets(int beat_count) {
   const float period = 60.0f / (kBpm * kHopTime);
   const int period_frames = static_cast<int>(std::lround(period));
   std::vector<float> onset(
-      static_cast<size_t>(beat_count) * period_frames + period_frames, 0.0f);
+      static_cast<size_t>(beat_count) * period_frames + period_frames,
+      0.0f
+  );
   for (int i = 0; i < beat_count; ++i) {
     onset[static_cast<size_t>(i) * period_frames] = 1.0f;
   }
@@ -66,10 +73,14 @@ void TestGridStaysAnchoredAtOrigin() {
   const std::vector<float> beats =
       tracker.TrackBeats(SyntheticOnsets(kBeats), kHopTime, kBpm);
 
-  Check(beats.size() > 2048,
-        "a 3000-beat track returns more than the old 2048-beat ceiling");
-  Check(!beats.empty() && beats.front() < kOriginTolerance,
-        "the first beat stays anchored near the start of the song");
+  Check(
+      beats.size() > 2048,
+      "a 3000-beat track returns more than the old 2048-beat ceiling"
+  );
+  Check(
+      !beats.empty() && beats.front() < kOriginTolerance,
+      "the first beat stays anchored near the start of the song"
+  );
 }
 
 void TestTruncationDropsLateBeatsNotEarlyOnes() {
@@ -78,10 +89,14 @@ void TestTruncationDropsLateBeatsNotEarlyOnes() {
   const std::vector<float> beats =
       tracker.TrackBeats(SyntheticOnsets(kBeats), kHopTime, kBpm);
 
-  Check(beats.size() == static_cast<size_t>(KB_MAX_GRID_BEATS),
-        "an over-long track is capped at KB_MAX_GRID_BEATS");
-  Check(!beats.empty() && beats.front() < kOriginTolerance,
-        "capping keeps the early beats, so the origin does not move");
+  Check(
+      beats.size() == static_cast<size_t>(KB_MAX_GRID_BEATS),
+      "an over-long track is capped at KB_MAX_GRID_BEATS"
+  );
+  Check(
+      !beats.empty() && beats.front() < kOriginTolerance,
+      "capping keeps the early beats, so the origin does not move"
+  );
 }
 
 void TestSidecarPath() {

@@ -46,7 +46,9 @@ T Clamp(T value, T low, T high) {
 
 }  // namespace
 
-void Metronome::Start() { commands_.Push({CommandType::kStart}); }
+void Metronome::Start() {
+  commands_.Push({CommandType::kStart});
+}
 
 void Metronome::StartAt(uint64_t start_frame) {
   Command command{CommandType::kStartAt};
@@ -54,7 +56,9 @@ void Metronome::StartAt(uint64_t start_frame) {
   commands_.Push(command);
 }
 
-void Metronome::Stop() { commands_.Push({CommandType::kStop}); }
+void Metronome::Stop() {
+  commands_.Push({CommandType::kStop});
+}
 
 void Metronome::SetTempo(double bpm) {
   Command command{CommandType::kSetTempo};
@@ -106,8 +110,12 @@ void Metronome::SetLatencyOffset(double latency_ms) {
   commands_.Push(command);
 }
 
-void Metronome::SetRamp(bool enabled, double start_bpm, double end_bpm,
-                        int bars) {
+void Metronome::SetRamp(
+    bool enabled,
+    double start_bpm,
+    double end_bpm,
+    int bars
+) {
   Command command{CommandType::kSetRamp};
   command.value = start_bpm;
   command.value_b = end_bpm;
@@ -124,8 +132,11 @@ void Metronome::SetBarMute(bool enabled, int play_bars, int mute_bars) {
   commands_.Push(command);
 }
 
-void Metronome::SetGrid(std::unique_ptr<BeatGrid> grid, uint64_t now_frame,
-                        bool engine_running) {
+void Metronome::SetGrid(
+    std::unique_ptr<BeatGrid> grid,
+    uint64_t now_frame,
+    bool engine_running
+) {
   grid_.Publish(std::move(grid), now_frame, engine_running);
 }
 
@@ -133,7 +144,9 @@ void Metronome::ClearGrid(uint64_t now_frame, bool engine_running) {
   grid_.Publish(nullptr, now_frame, engine_running);
 }
 
-void Metronome::ReleaseRetiredGrids() { grid_.ReclaimAll(); }
+void Metronome::ReleaseRetiredGrids() {
+  grid_.ReclaimAll();
+}
 
 void Metronome::ApplyPendingCommands() {
   Command command;
@@ -246,8 +259,11 @@ void Metronome::BeginRun() {
   running_flag_.store(true, std::memory_order_relaxed);
 }
 
-double Metronome::GridSeconds(const BeatGrid& grid, uint64_t frame,
-                              uint32_t sample_rate) const {
+double Metronome::GridSeconds(
+    const BeatGrid& grid,
+    uint64_t frame,
+    uint32_t sample_rate
+) const {
   return (static_cast<double>(frame) - static_cast<double>(grid.anchor_frame)) /
              sample_rate +
          latency_offset_ms_ / kMsPerSecond;
@@ -276,8 +292,11 @@ void Metronome::SyncGridBar() {
   current_bar_ = grid_beat_index_ < 0 ? -1 : grid_beat_index_ / beats_per_bar_;
 }
 
-void Metronome::RenderGridBeat(const BeatGrid& grid, uint64_t frame,
-                               uint32_t sample_rate) {
+void Metronome::RenderGridBeat(
+    const BeatGrid& grid,
+    uint64_t frame,
+    uint32_t sample_rate
+) {
   const auto& times = grid.beat_times_sec;
   const double song_seconds = GridSeconds(grid, frame, sample_rate);
 
@@ -298,8 +317,10 @@ void Metronome::RenderGridBeat(const BeatGrid& grid, uint64_t frame,
     // from wherever Start left it — firing immediately and shifting the bar.
     // Anchoring it here is what makes ClearGrid's "keeps its phase" true.
     beat_position_ = static_cast<double>(grid_beat_index_) - LatencyBeats();
-    OnBeatBoundary(static_cast<int>(grid_beat_index_ % beats_per_bar_),
-                   sample_rate);
+    OnBeatBoundary(
+        static_cast<int>(grid_beat_index_ % beats_per_bar_),
+        sample_rate
+    );
     return;
   }
 
@@ -321,8 +342,11 @@ void Metronome::RenderGridBeat(const BeatGrid& grid, uint64_t frame,
 
 // The sweep and the BPM readout must come from the same grid the click does,
 // or the UI drifts against what is audible (§4.5).
-void Metronome::PublishGridMirrors(const BeatGrid& grid, uint64_t frame,
-                                   uint32_t sample_rate) {
+void Metronome::PublishGridMirrors(
+    const BeatGrid& grid,
+    uint64_t frame,
+    uint32_t sample_rate
+) {
   const auto& times = grid.beat_times_sec;
 
   // grid_cursor_ points at the next beat, so the interval we are inside runs
@@ -342,12 +366,16 @@ void Metronome::PublishGridMirrors(const BeatGrid& grid, uint64_t frame,
       (GridSeconds(grid, frame, sample_rate) - previous) / interval;
   const double beat_in_bar =
       static_cast<double>(grid_beat_index_ % beats_per_bar_);
-  bar_phase_.store((beat_in_bar + beat_fraction) / beats_per_bar_,
-                   std::memory_order_relaxed);
+  bar_phase_.store(
+      (beat_in_bar + beat_fraction) / beats_per_bar_,
+      std::memory_order_relaxed
+  );
   // Clamped to the same range SetTempo enforces: a beat tracker emits outlier
   // intervals by nature, and this atomic is the tempo the UI reads out.
-  current_bpm_.store(Clamp(kSecondsPerMinute / interval, kMinBpm, kMaxBpm),
-                     std::memory_order_relaxed);
+  current_bpm_.store(
+      Clamp(kSecondsPerMinute / interval, kMinBpm, kMaxBpm),
+      std::memory_order_relaxed
+  );
 }
 
 double Metronome::LatencyBeats() const {
@@ -377,8 +405,12 @@ bool Metronome::BarIsMuted(int64_t bar) const {
   return bar % (play_bars_ + mute_bars_) >= play_bars_;
 }
 
-void Metronome::TriggerClick(double frequency_hz, double amplitude,
-                             double decay_per_second, uint32_t sample_rate) {
+void Metronome::TriggerClick(
+    double frequency_hz,
+    double amplitude,
+    double decay_per_second,
+    uint32_t sample_rate
+) {
   Voice* slot = nullptr;
   for (Voice& voice : voices_) {
     if (!voice.active) {
@@ -411,9 +443,12 @@ void Metronome::OnBeatBoundary(int beat_index, uint32_t sample_rate) {
   }
   const SoundPreset& sound = kSounds[sound_];
   const bool accented = accent == Accent::kAccented;
-  TriggerClick(accented ? sound.accent_hz : sound.beat_hz,
-               accented ? kAccentAmplitude : kBeatAmplitude,
-               sound.decay_per_second, sample_rate);
+  TriggerClick(
+      accented ? sound.accent_hz : sound.beat_hz,
+      accented ? kAccentAmplitude : kBeatAmplitude,
+      sound.decay_per_second,
+      sample_rate
+  );
 }
 
 void Metronome::OnSubdivisionTick(uint32_t sample_rate) {
@@ -424,8 +459,12 @@ void Metronome::OnSubdivisionTick(uint32_t sample_rate) {
     return;
   }
   const SoundPreset& sound = kSounds[sound_];
-  TriggerClick(sound.subdivision_hz, kSubdivisionAmplitude,
-               sound.decay_per_second, sample_rate);
+  TriggerClick(
+      sound.subdivision_hz,
+      kSubdivisionAmplitude,
+      sound.decay_per_second,
+      sample_rate
+  );
 }
 
 void Metronome::OnPolyBoundary(int poly_index, uint32_t sample_rate) {
@@ -436,8 +475,12 @@ void Metronome::OnPolyBoundary(int poly_index, uint32_t sample_rate) {
     return;
   }
   const SoundPreset& sound = kSounds[sound_];
-  TriggerClick(sound.poly_hz, kPolyAmplitude, sound.decay_per_second,
-               sample_rate);
+  TriggerClick(
+      sound.poly_hz,
+      kPolyAmplitude,
+      sound.decay_per_second,
+      sample_rate
+  );
 }
 
 float Metronome::RenderVoices() {
@@ -456,9 +499,13 @@ float Metronome::RenderVoices() {
   return static_cast<float>(sample);
 }
 
-void Metronome::Render(float* output, uint32_t frame_count,
-                       uint32_t sample_rate, uint32_t channel_count,
-                       uint64_t block_start_frame) {
+void Metronome::Render(
+    float* output,
+    uint32_t frame_count,
+    uint32_t sample_rate,
+    uint32_t channel_count,
+    uint64_t block_start_frame
+) {
   ApplyPendingCommands();
 
   double beats_per_sample = bpm_ / (kSecondsPerMinute * sample_rate);
@@ -501,7 +548,9 @@ void Metronome::Render(float* output, uint32_t frame_count,
         // is still wherever the block began and the first sample swallows
         // every grid beat up to the anchor into one off-grid click.
         SeekGridCursor(
-            *grid, GridSeconds(*grid, block_start_frame + frame, sample_rate));
+            *grid,
+            GridSeconds(*grid, block_start_frame + frame, sample_rate)
+        );
         observed_generation_ = generation;
       }
     }
@@ -516,7 +565,8 @@ void Metronome::Render(float* output, uint32_t frame_count,
     } else if (running_) {
       const double position = beat_position_ + latency_beats;
       const auto sub_index = static_cast<int64_t>(
-          std::floor(position * subdivision_ + kGridEpsilon));
+          std::floor(position * subdivision_ + kGridEpsilon)
+      );
       const double sub_start = static_cast<double>(sub_index) / subdivision_;
       // A grid point fires on the first sample at or past it.
       if (position - beats_per_sample < sub_start - kGridEpsilon) {
@@ -538,11 +588,14 @@ void Metronome::Render(float* output, uint32_t frame_count,
       }
       if (poly_enabled_) {
         const auto poly_index = static_cast<int64_t>(
-            std::floor(position * poly_scale + kGridEpsilon));
+            std::floor(position * poly_scale + kGridEpsilon)
+        );
         const double poly_start = static_cast<double>(poly_index) / poly_scale;
         if (position - beats_per_sample < poly_start - kGridEpsilon) {
-          OnPolyBoundary(static_cast<int>(poly_index % poly_beats_),
-                         sample_rate);
+          OnPolyBoundary(
+              static_cast<int>(poly_index % poly_beats_),
+              sample_rate
+          );
         }
       }
       beat_position_ += beats_per_sample;
@@ -563,13 +616,17 @@ void Metronome::Render(float* output, uint32_t frame_count,
     // (current_beat_) and the audible click share one time base (§4.5). How
     // that base relates to real output latency is §4.2's phase-anchor decision.
     const double position = beat_position_ + LatencyBeats();
-    bar_phase_.store(std::fmod(position, static_cast<double>(beats_per_bar_)) /
-                         beats_per_bar_,
-                     std::memory_order_relaxed);
+    bar_phase_.store(
+        std::fmod(position, static_cast<double>(beats_per_bar_)) /
+            beats_per_bar_,
+        std::memory_order_relaxed
+    );
     current_bpm_.store(bpm_, std::memory_order_relaxed);
   }
-  bar_muted_flag_.store(running_ && BarIsMuted(current_bar_),
-                        std::memory_order_relaxed);
+  bar_muted_flag_.store(
+      running_ && BarIsMuted(current_bar_),
+      std::memory_order_relaxed
+  );
 }
 
 }  // namespace kitbag

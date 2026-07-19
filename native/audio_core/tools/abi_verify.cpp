@@ -20,27 +20,38 @@ void Check(bool condition, const char* message) {
   }
 }
 
-void ExpectRejected(kb_engine* engine, const double* times, int32_t count,
-                    const char* message) {
+void ExpectRejected(
+    kb_engine* engine,
+    const double* times,
+    int32_t count,
+    const char* message
+) {
   const kb_result result = kb_metronome_set_grid(engine, times, count, 0);
   if (result != KB_ERROR_INVALID_ARGUMENT) {
-    std::fprintf(stderr,
-                 "FAIL: %s (got %d, wanted KB_ERROR_INVALID_ARGUMENT)\n",
-                 message, static_cast<int>(result));
+    std::fprintf(
+        stderr,
+        "FAIL: %s (got %d, wanted KB_ERROR_INVALID_ARGUMENT)\n",
+        message,
+        static_cast<int>(result)
+    );
     ++g_failures;
   }
 }
 
 void TestSetGridValidation(kb_engine* engine) {
   const double ascending[] = {0.0, 0.5, 1.0, 1.5};
-  Check(kb_metronome_set_grid(engine, ascending, 4, 0) == KB_OK,
-        "set_grid: a strictly ascending finite grid is accepted");
+  Check(
+      kb_metronome_set_grid(engine, ascending, 4, 0) == KB_OK,
+      "set_grid: a strictly ascending finite grid is accepted"
+  );
 
   ExpectRejected(engine, nullptr, 4, "set_grid: null beat_times_sec");
   ExpectRejected(engine, ascending, 0, "set_grid: empty grid");
-  Check(kb_metronome_set_grid(nullptr, ascending, 4, 0) ==
-            KB_ERROR_INVALID_ARGUMENT,
-        "set_grid: null engine");
+  Check(
+      kb_metronome_set_grid(nullptr, ascending, 4, 0) ==
+          KB_ERROR_INVALID_ARGUMENT,
+      "set_grid: null engine"
+  );
 
   const double descending[] = {0.0, 0.5, 0.25, 1.0};
   ExpectRejected(engine, descending, 4, "set_grid: descending grid");
@@ -65,8 +76,12 @@ void TestSetGridValidation(kb_engine* engine) {
   for (size_t i = 0; i < too_many.size(); ++i) {
     too_many[i] = 0.5 * static_cast<double>(i);
   }
-  ExpectRejected(engine, too_many.data(), static_cast<int32_t>(too_many.size()),
-                 "set_grid: count above KB_MAX_GRID_BEATS");
+  ExpectRejected(
+      engine,
+      too_many.data(),
+      static_cast<int32_t>(too_many.size()),
+      "set_grid: count above KB_MAX_GRID_BEATS"
+  );
 
   kb_metronome_clear_grid(engine);
   kb_metronome_clear_grid(nullptr);  // must not crash

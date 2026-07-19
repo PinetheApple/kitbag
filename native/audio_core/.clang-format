@@ -7,6 +7,21 @@ ColumnLimit: 80
 IndentWidth: 2
 DerivePointerAlignment: false
 PointerAlignment: Left
+# Parameter lists stay on one line while they fit; once they don't, every
+# parameter gets its own line and the closing paren gets its own line too.
+# Google's default bin-packs instead, which fills lines to the column limit and
+# makes a 5-parameter signature read as prose.
+AlignAfterOpenBracket: BlockIndent
+BinPackParameters: false
+BinPackArguments: false
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowAllArgumentsOnNextLine: false
+# A one-line body may stay unbraced and on one line; anything longer gets
+# braces (enforced by .clang-tidy's readability-braces-around-statements,
+# which clang-format cannot do — it never adds or removes braces).
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortBlocksOnASingleLine: Never
+AllowShortFunctionsOnASingleLine: Empty
 # Google's default reflows comment text to fill ColumnLimit, which runs
 # hand-aligned parameter blocks together into prose — it did exactly that to
 # kb_analyze_song's doc comment in the published ABI header. The C ABI's

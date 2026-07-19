@@ -22,7 +22,8 @@ int32_t NoteIndexForFrequency(double frequency_hz, double a4_hz) {
     return -1;
   }
   return static_cast<int32_t>(
-      std::lround(MidiForFrequency(frequency_hz, a4_hz)));
+      std::lround(MidiForFrequency(frequency_hz, a4_hz))
+  );
 }
 
 double CentsOffsetForFrequency(double frequency_hz, double a4_hz) {
@@ -56,8 +57,11 @@ void PitchAnalyzer::SetBand(double low_hz, double high_hz) {
 
 void PitchAnalyzer::RebuildDetector() {
   detector_.emplace(
-      cycfi::q::frequency(band_low_hz_), cycfi::q::frequency(band_high_hz_),
-      static_cast<float>(sample_rate_), cycfi::q::dB(kDetectorHysteresisDb));
+      cycfi::q::frequency(band_low_hz_),
+      cycfi::q::frequency(band_high_hz_),
+      static_cast<float>(sample_rate_),
+      cycfi::q::dB(kDetectorHysteresisDb)
+  );
   samples_until_update_ = samples_per_update_;
   median_filled_ = 0;
   ema_seeded_ = false;
@@ -242,9 +246,10 @@ void PitchAnalyzer::PublishFrequency(double frequency_hz) {
   reading_.note_index = publish_note;
   reading_.cents = ema_cents_;
   reading_.pitch_hz =
-      a4_hz_ *
-      std::exp2((publish_note - kMidiA4 + ema_cents_ / kCentsPerSemitone) /
-                kSemitonesPerOctave);
+      a4_hz_ * std::exp2(
+                   (publish_note - kMidiA4 + ema_cents_ / kCentsPerSemitone) /
+                   kSemitonesPerOctave
+               );
   reading_.confidence = detector_->periodicity();
 }
 

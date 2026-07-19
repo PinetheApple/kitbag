@@ -24,8 +24,13 @@ class Mixer {
   Mixer& operator=(const Mixer&) = delete;
 
   /// Load PCM data into a track. Must be mono or stereo interleaved float.
-  void SetTrackData(int track, const float* pcm, uint64_t num_frames,
-                    uint32_t channels, uint32_t sample_rate);
+  void SetTrackData(
+      int track,
+      const float* pcm,
+      uint64_t num_frames,
+      uint32_t channels,
+      uint32_t sample_rate
+  );
 
   void SetGain(int track, float gain);
   void SetMute(int track, bool muted);
@@ -38,18 +43,24 @@ class Mixer {
   /// Start/stop playback.
   void Play();
   void Stop();
-  bool is_playing() const { return playing_.load(); }
+  bool is_playing() const {
+    return playing_.load();
+  }
 
   /// Seek to a frame position (measured at the track's sample rate).
   void Seek(uint64_t frame);
-  uint64_t position() const { return read_frame_.load(); }
+  uint64_t position() const {
+    return read_frame_.load();
+  }
 
   /// Mix all active tracks into [output]. Called from the realtime audio
   /// callback — lock-free as long as tracks aren't modified during process.
   /// [output] is interleaved stereo float, [frame_count] frames at [sr].
   void Process(float* output, uint32_t frame_count, uint32_t sr);
 
-  int active_track_count() const { return track_count_; }
+  int active_track_count() const {
+    return track_count_;
+  }
   uint64_t track_frames(int track) const;
 
  private:

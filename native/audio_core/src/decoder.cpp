@@ -9,7 +9,9 @@ namespace kitbag {
 
 Decoder::Decoder() {}
 
-Decoder::~Decoder() { Close(); }
+Decoder::~Decoder() {
+  Close();
+}
 
 bool Decoder::Open(const char* path) {
   Close();
@@ -45,8 +47,12 @@ std::vector<float> Decoder::DecodeAll(uint64_t* out_frames) {
 
   ma_decoder_seek_to_pcm_frame(decoder_, 0);
   ma_uint64 frames_read = 0;
-  ma_decoder_read_pcm_frames(decoder_, buffer.data(), info_.total_frames,
-                             &frames_read);
+  ma_decoder_read_pcm_frames(
+      decoder_,
+      buffer.data(),
+      info_.total_frames,
+      &frames_read
+  );
 
   *out_frames = frames_read;
   if (frames_read < info_.total_frames) {

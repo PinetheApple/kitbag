@@ -34,8 +34,8 @@ void Check(bool condition, const char* message) {
   }
 }
 
-std::vector<int64_t> RenderAndDetectOnsets(kitbag::Metronome& metronome,
-                                           int64_t total_frames) {
+std::vector<int64_t>
+RenderAndDetectOnsets(kitbag::Metronome& metronome, int64_t total_frames) {
   std::vector<int64_t> onsets;
   std::vector<float> buffer(kBlockFrames * kChannels);
   int64_t rendered = 0;
@@ -44,8 +44,13 @@ std::vector<int64_t> RenderAndDetectOnsets(kitbag::Metronome& metronome,
 
   while (rendered < total_frames) {
     std::fill(buffer.begin(), buffer.end(), 0.0f);
-    metronome.Render(buffer.data(), kBlockFrames, kSampleRate, kChannels,
-                     static_cast<uint64_t>(rendered));
+    metronome.Render(
+        buffer.data(),
+        kBlockFrames,
+        kSampleRate,
+        kChannels,
+        static_cast<uint64_t>(rendered)
+    );
     for (uint32_t frame = 0; frame < kBlockFrames; ++frame) {
       const float amplitude = std::fabs(buffer[frame * kChannels]);
       const int64_t index = rendered + frame;
@@ -61,13 +66,24 @@ std::vector<int64_t> RenderAndDetectOnsets(kitbag::Metronome& metronome,
   return onsets;
 }
 
-void ExpectSpacing(const std::vector<int64_t>& onsets, size_t from, size_t to,
-                   double expected_frames, const char* label) {
+void ExpectSpacing(
+    const std::vector<int64_t>& onsets,
+    size_t from,
+    size_t to,
+    double expected_frames,
+    const char* label
+) {
   for (size_t i = from + 1; i < to && i < onsets.size(); ++i) {
     const double spacing = static_cast<double>(onsets[i] - onsets[i - 1]);
     if (std::fabs(spacing - expected_frames) > kMaxJitterFrames) {
-      std::fprintf(stderr, "FAIL: %s interval %zu = %.1f, expected %.1f\n",
-                   label, i, spacing, expected_frames);
+      std::fprintf(
+          stderr,
+          "FAIL: %s interval %zu = %.1f, expected %.1f\n",
+          label,
+          i,
+          spacing,
+          expected_frames
+      );
       ++g_failures;
       return;
     }
@@ -83,10 +99,17 @@ void TestSteadyTempo() {
   const auto onsets = RenderAndDetectOnsets(metronome, kSampleRate * 10);
   // 120 BPM = 2 clicks/s = 20 clicks in 10 s (first at frame 0).
   Check(onsets.size() == 20, "steady: expected 20 clicks in 10s at 120 BPM");
-  Check(!onsets.empty() && onsets[0] < kOnsetHoldFrames,
-        "steady: first click at t=0");
-  ExpectSpacing(onsets, 0, onsets.size(), 60.0 / 120.0 * kSampleRate,
-                "steady 120 BPM");
+  Check(
+      !onsets.empty() && onsets[0] < kOnsetHoldFrames,
+      "steady: first click at t=0"
+  );
+  ExpectSpacing(
+      onsets,
+      0,
+      onsets.size(),
+      60.0 / 120.0 * kSampleRate,
+      "steady 120 BPM"
+  );
 }
 
 void TestTempoChange() {
@@ -95,14 +118,24 @@ void TestTempoChange() {
   metronome.Start();
 
   auto first = RenderAndDetectOnsets(metronome, kSampleRate * 6);
-  ExpectSpacing(first, 0, first.size(), 60.0 / 100.0 * kSampleRate,
-                "pre-change 100 BPM");
+  ExpectSpacing(
+      first,
+      0,
+      first.size(),
+      60.0 / 100.0 * kSampleRate,
+      "pre-change 100 BPM"
+  );
 
   metronome.SetTempo(200.0);
   auto second = RenderAndDetectOnsets(metronome, kSampleRate * 6);
   // Skip the straddling first interval; the rest must be exactly 200 BPM.
-  ExpectSpacing(second, 1, second.size(), 60.0 / 200.0 * kSampleRate,
-                "post-change 200 BPM");
+  ExpectSpacing(
+      second,
+      1,
+      second.size(),
+      60.0 / 200.0 * kSampleRate,
+      "post-change 200 BPM"
+  );
   Check(second.size() >= 18, "tempo change: clicks keep coming");
 }
 
@@ -139,8 +172,10 @@ void TestTempoRamp() {
   bool reached_target = false;
   for (size_t i = 2; i < onsets.size(); ++i) {
     const double spacing = static_cast<double>(onsets[i] - onsets[i - 1]);
-    Check(spacing <= previous + kMaxJitterFrames,
-          "ramp: intervals decrease monotonically");
+    Check(
+        spacing <= previous + kMaxJitterFrames,
+        "ramp: intervals decrease monotonically"
+    );
     if (std::fabs(spacing - target) <= kMaxJitterFrames) {
       reached_target = true;
     } else {
@@ -149,8 +184,13 @@ void TestTempoRamp() {
     previous = spacing;
   }
   Check(reached_target, "ramp: reaches the end BPM");
-  ExpectSpacing(onsets, onsets.size() - 4, onsets.size(), target,
-                "ramp end 200 BPM");
+  ExpectSpacing(
+      onsets,
+      onsets.size() - 4,
+      onsets.size(),
+      target,
+      "ramp end 200 BPM"
+  );
 }
 
 void TestBarMute() {
@@ -178,11 +218,18 @@ void TestLatencyOffsetKeepsBeatZero() {
     metronome.Start();
 
     const auto onsets = RenderAndDetectOnsets(metronome, kSampleRate * 4);
-    Check(!onsets.empty() && onsets[0] < kOnsetHoldFrames,
-          "latency: downbeat still fires under an offset");
+    Check(
+        !onsets.empty() && onsets[0] < kOnsetHoldFrames,
+        "latency: downbeat still fires under an offset"
+    );
     Check(onsets.size() == 8, "latency: no beats swallowed or added at start");
-    ExpectSpacing(onsets, 0, onsets.size(), 60.0 / 120.0 * kSampleRate,
-                  "latency offset spacing");
+    ExpectSpacing(
+        onsets,
+        0,
+        onsets.size(),
+        60.0 / 120.0 * kSampleRate,
+        "latency offset spacing"
+    );
   }
 }
 
@@ -212,8 +259,13 @@ void TestLatencyOffsetChangedMidRun() {
         metronome.SetLatencyOffset(new_offset);
         applied = true;
       }
-      metronome.Render(buffer.data(), kBlockFrames, kSampleRate, kChannels,
-                       static_cast<uint64_t>(rendered));
+      metronome.Render(
+          buffer.data(),
+          kBlockFrames,
+          kSampleRate,
+          kChannels,
+          static_cast<uint64_t>(rendered)
+      );
       for (uint32_t frame = 0; frame < kBlockFrames; ++frame) {
         const float amplitude = std::fabs(buffer[frame * kChannels]);
         const int64_t index = rendered + frame;
@@ -227,8 +279,10 @@ void TestLatencyOffsetChangedMidRun() {
       rendered += kBlockFrames;
     }
     // Play 1 / mute 1 → 4 clicks per sounding bar, 8 over four bars.
-    Check(onsets.size() == 8,
-          "mid-run offset: no click added or dropped, bar-mute phase intact");
+    Check(
+        onsets.size() == 8,
+        "mid-run offset: no click added or dropped, bar-mute phase intact"
+    );
     ExpectSpacing(onsets, 0, 4, beat_frames, "mid-run offset spacing");
   }
 }
@@ -252,12 +306,16 @@ void TestLatencyOffsetSurvivesRamp() {
   offset.Start();
   const auto with = RenderAndDetectOnsets(offset, kSampleRate * 5);
 
-  Check(without.size() == with.size(),
-        "latency+ramp: offset does not add or drop onsets");
+  Check(
+      without.size() == with.size(),
+      "latency+ramp: offset does not add or drop onsets"
+  );
   const size_t count = std::min(without.size(), with.size());
   for (size_t i = 0; i < count; ++i) {
-    Check(std::abs(with[i] - without[i]) <= 1,
-          "latency+ramp: onset grid matches the no-offset ramp");
+    Check(
+        std::abs(with[i] - without[i]) <= 1,
+        "latency+ramp: onset grid matches the no-offset ramp"
+    );
   }
 }
 
@@ -289,10 +347,17 @@ void TestStartAt() {
   Check(!onsets.empty(), "start_at: the click actually starts");
   // The click's sine attacks from zero, so the threshold crossing lands one or
   // two samples after the anchor — never before it.
-  Check(!onsets.empty() && onsets[0] >= anchor && onsets[0] <= anchor + 2,
-        "start_at: first click on the anchor frame, not the call site");
-  ExpectSpacing(onsets, 0, onsets.size(), 60.0 / 120.0 * kSampleRate,
-                "start_at 120 BPM after anchored start");
+  Check(
+      !onsets.empty() && onsets[0] >= anchor && onsets[0] <= anchor + 2,
+      "start_at: first click on the anchor frame, not the call site"
+  );
+  ExpectSpacing(
+      onsets,
+      0,
+      onsets.size(),
+      60.0 / 120.0 * kSampleRate,
+      "start_at 120 BPM after anchored start"
+  );
 }
 
 // An anchor at (or before) the first rendered frame fires on frame 0, never
@@ -303,8 +368,10 @@ void TestStartAtAnchorAtZero() {
   metronome.StartAt(0);
 
   const auto onsets = RenderAndDetectOnsets(metronome, kSampleRate);
-  Check(!onsets.empty() && onsets[0] < kOnsetHoldFrames,
-        "start_at(0): first click at frame 0");
+  Check(
+      !onsets.empty() && onsets[0] < kOnsetHoldFrames,
+      "start_at(0): first click at frame 0"
+  );
 }
 
 // Regression: a deferred start must recompute the per-block tempo/latency
@@ -329,11 +396,18 @@ void TestStartAtWithArmedRampRecomputesLocals() {
       RenderAndDetectOnsets(metronome, anchor + kSampleRate * 3);
   // Beat 0 must still fire on the anchor (not swallowed by a stale offset), and
   // the first bar replays at ramp_start (60 BPM = 48000 frames/beat).
-  Check(!onsets.empty() && onsets[0] >= anchor && onsets[0] <= anchor + 2,
-        "start_at+ramp: beat 0 fires on the anchor, not swallowed");
+  Check(
+      !onsets.empty() && onsets[0] >= anchor && onsets[0] <= anchor + 2,
+      "start_at+ramp: beat 0 fires on the anchor, not swallowed"
+  );
   Check(onsets.size() >= 3, "start_at+ramp: enough clicks to measure spacing");
-  ExpectSpacing(onsets, 0, 3, 60.0 / 60.0 * kSampleRate,
-                "start_at+ramp: first bar at ramp start tempo, not stale bpm");
+  ExpectSpacing(
+      onsets,
+      0,
+      3,
+      60.0 / 60.0 * kSampleRate,
+      "start_at+ramp: first bar at ramp start tempo, not stale bpm"
+  );
 }
 
 // StartAt is dropped while already running.
@@ -345,12 +419,17 @@ void TestStartAtIgnoredWhileRunning() {
   // anchor.
   metronome.Start();
   metronome.StartAt(
-      kSampleRate);  // would move the start a second out, if honoured
+      kSampleRate
+  );  // would move the start a second out, if honoured
   const auto onsets = RenderAndDetectOnsets(metronome, kSampleRate * 2);
-  Check(onsets.size() == 4,
-        "start_at while running: ignored, run stays continuous");
-  Check(!onsets.empty() && onsets[0] < kOnsetHoldFrames,
-        "start_at while running: first click still at frame 0");
+  Check(
+      onsets.size() == 4,
+      "start_at while running: ignored, run stays continuous"
+  );
+  Check(
+      !onsets.empty() && onsets[0] < kOnsetHoldFrames,
+      "start_at while running: first click still at frame 0"
+  );
 }
 
 // An immediate Start cancels a StartAt that has not fired yet. Ordering is the
@@ -364,9 +443,12 @@ void TestStartCancelsPendingStartAt() {
   const auto onsets = RenderAndDetectOnsets(metronome, kSampleRate * 2);
   Check(
       !onsets.empty() && onsets[0] < kOnsetHoldFrames,
-      "start cancels pending start_at: first click at frame 0, not the anchor");
-  Check(onsets.size() == 4,
-        "start cancels pending start_at: full continuous run, no second start");
+      "start cancels pending start_at: first click at frame 0, not the anchor"
+  );
+  Check(
+      onsets.size() == 4,
+      "start cancels pending start_at: full continuous run, no second start"
+  );
 }
 
 // A latency offset must not swallow beat 0 on the deferred path either — the
@@ -381,19 +463,28 @@ void TestStartAtKeepsBeatZeroUnderLatencyOffset() {
 
     const auto onsets =
         RenderAndDetectOnsets(metronome, anchor + kSampleRate * 2);
-    Check(!onsets.empty() && onsets[0] >= anchor && onsets[0] <= anchor + 2,
-          "start_at + latency offset: beat 0 fires on the anchor");
-    ExpectSpacing(onsets, 0, onsets.size(), 60.0 / 120.0 * kSampleRate,
-                  "start_at + latency offset spacing");
+    Check(
+        !onsets.empty() && onsets[0] >= anchor && onsets[0] <= anchor + 2,
+        "start_at + latency offset: beat 0 fires on the anchor"
+    );
+    ExpectSpacing(
+        onsets,
+        0,
+        onsets.size(),
+        60.0 / 120.0 * kSampleRate,
+        "start_at + latency offset spacing"
+    );
   }
 }
 
 // Builds a grid whose beats accelerate: spacing shrinks by `shrink` each beat.
 // A constant BPM cannot follow this, which is the point of grid mode.
-std::unique_ptr<kitbag::BeatGrid> MakeDriftingGrid(int count,
-                                                   double first_interval,
-                                                   double shrink,
-                                                   uint64_t anchor_frame) {
+std::unique_ptr<kitbag::BeatGrid> MakeDriftingGrid(
+    int count,
+    double first_interval,
+    double shrink,
+    uint64_t anchor_frame
+) {
   auto grid = std::make_unique<kitbag::BeatGrid>();
   double t = 0.0;
   double interval = first_interval;
@@ -422,8 +513,13 @@ void TestGridFollowsDriftingTempo() {
     const double want = expected[i] * kSampleRate;
     if (std::fabs(static_cast<double>(onsets[i]) - want) >
         kGridToleranceFrames) {
-      std::fprintf(stderr, "FAIL: grid beat %zu at %lld, expected %.0f\n", i,
-                   static_cast<long long>(onsets[i]), want);
+      std::fprintf(
+          stderr,
+          "FAIL: grid beat %zu at %lld, expected %.0f\n",
+          i,
+          static_cast<long long>(onsets[i]),
+          want
+      );
       ++g_failures;
       break;
     }
@@ -438,8 +534,11 @@ void TestGridFollowsDriftingTempo() {
 void TestGridReanchorMidRunPicksUpNewGrid() {
   kitbag::Metronome metronome;
   metronome.SetBeatsPerBar(4);
-  metronome.SetGrid(MakeDriftingGrid(40, 0.5, 0.0, 0), 0,
-                    true);  // beats on 0.5 s
+  metronome.SetGrid(
+      MakeDriftingGrid(40, 0.5, 0.0, 0),
+      0,
+      true
+  );  // beats on 0.5 s
   metronome.Start();
 
   // Same tempo, offset by a quarter second: every future beat moves.
@@ -460,13 +559,18 @@ void TestGridReanchorMidRunPicksUpNewGrid() {
 
   while (rendered < total) {
     if (!swapped && rendered >= swap_at) {
-      metronome.SetGrid(std::move(shifted), static_cast<uint64_t>(rendered),
-                        true);
+      metronome
+          .SetGrid(std::move(shifted), static_cast<uint64_t>(rendered), true);
       swapped = true;
     }
     std::fill(buffer.begin(), buffer.end(), 0.0f);
-    metronome.Render(buffer.data(), kBlockFrames, kSampleRate, kChannels,
-                     static_cast<uint64_t>(rendered));
+    metronome.Render(
+        buffer.data(),
+        kBlockFrames,
+        kSampleRate,
+        kChannels,
+        static_cast<uint64_t>(rendered)
+    );
     for (uint32_t frame = 0; frame < kBlockFrames; ++frame) {
       const float amplitude = std::fabs(buffer[frame * kChannels]);
       const int64_t index = rendered + frame;
@@ -483,14 +587,21 @@ void TestGridReanchorMidRunPicksUpNewGrid() {
   // Old grid through 2.0, then the new grid's first beat at or after the swap.
   const double expected[] = {0.0, 0.5, 1.0, 1.5, 2.0, 2.25, 2.75, 3.25, 3.75};
   const size_t expected_count = sizeof(expected) / sizeof(expected[0]);
-  Check(onsets.size() == expected_count,
-        "grid re-anchor: old beats then the new grid's future beats");
+  Check(
+      onsets.size() == expected_count,
+      "grid re-anchor: old beats then the new grid's future beats"
+  );
   for (size_t i = 0; i < onsets.size() && i < expected_count; ++i) {
     const double want = expected[i] * kSampleRate;
     if (std::fabs(static_cast<double>(onsets[i]) - want) >
         kGridToleranceFrames) {
-      std::fprintf(stderr, "FAIL: re-anchor beat %zu at %lld, expected %.0f\n",
-                   i, static_cast<long long>(onsets[i]), want);
+      std::fprintf(
+          stderr,
+          "FAIL: re-anchor beat %zu at %lld, expected %.0f\n",
+          i,
+          static_cast<long long>(onsets[i]),
+          want
+      );
       ++g_failures;
       break;
     }
@@ -501,8 +612,11 @@ void TestGridReanchorMidRunPicksUpNewGrid() {
 // boundaries. Grid mode is driven by the absolute engine frame, so grid tests
 // cannot use RenderAndDetectOnsets, which restarts the transport at 0.
 template <typename OnFrame>
-std::vector<int64_t> RenderContinuous(kitbag::Metronome& metronome,
-                                      int64_t total_frames, OnFrame on_frame) {
+std::vector<int64_t> RenderContinuous(
+    kitbag::Metronome& metronome,
+    int64_t total_frames,
+    OnFrame on_frame
+) {
   std::vector<float> buffer(kBlockFrames * kChannels);
   std::vector<int64_t> onsets;
   int64_t rendered = 0, last_onset = -kOnsetHoldFrames;
@@ -511,8 +625,13 @@ std::vector<int64_t> RenderContinuous(kitbag::Metronome& metronome,
   while (rendered < total_frames) {
     on_frame(rendered);
     std::fill(buffer.begin(), buffer.end(), 0.0f);
-    metronome.Render(buffer.data(), kBlockFrames, kSampleRate, kChannels,
-                     static_cast<uint64_t>(rendered));
+    metronome.Render(
+        buffer.data(),
+        kBlockFrames,
+        kSampleRate,
+        kChannels,
+        static_cast<uint64_t>(rendered)
+    );
     for (uint32_t frame = 0; frame < kBlockFrames; ++frame) {
       const float amplitude = std::fabs(buffer[frame * kChannels]);
       const int64_t index = rendered + frame;
@@ -529,8 +648,11 @@ std::vector<int64_t> RenderContinuous(kitbag::Metronome& metronome,
 }
 
 // Every onset must coincide with some beat in the grid.
-void ExpectOnGrid(const std::vector<int64_t>& onsets,
-                  const std::vector<double>& times, const char* label) {
+void ExpectOnGrid(
+    const std::vector<int64_t>& onsets,
+    const std::vector<double>& times,
+    const char* label
+) {
   for (const int64_t onset : onsets) {
     bool matched = false;
     for (const double t : times) {
@@ -541,8 +663,12 @@ void ExpectOnGrid(const std::vector<int64_t>& onsets,
       }
     }
     if (!matched) {
-      std::fprintf(stderr, "FAIL: %s — onset %lld is not on any grid beat\n",
-                   label, static_cast<long long>(onset));
+      std::fprintf(
+          stderr,
+          "FAIL: %s — onset %lld is not on any grid beat\n",
+          label,
+          static_cast<long long>(onset)
+      );
       ++g_failures;
       return;
     }
@@ -575,8 +701,10 @@ void TestGridSurvivesStopStart() {
   ExpectOnGrid(onsets, times, "grid stop/start");
   // Nothing during the pause, and the grid resumes after it.
   for (const int64_t onset : onsets) {
-    Check(onset < stop_at + kBlockFrames || onset >= start_at,
-          "grid stop/start: silent while stopped");
+    Check(
+        onset < stop_at + kBlockFrames || onset >= start_at,
+        "grid stop/start: silent while stopped"
+    );
   }
   Check(onsets.size() > 3, "grid stop/start: the click resumes");
 }
@@ -594,8 +722,10 @@ void TestGridWithStartAt() {
   const auto onsets =
       RenderContinuous(metronome, kSampleRate * 4, [](int64_t) {});
   ExpectOnGrid(onsets, times, "grid + start_at");
-  Check(!onsets.empty() && onsets[0] >= static_cast<int64_t>(1.1 * kSampleRate),
-        "grid + start_at: nothing sounds before the anchor");
+  Check(
+      !onsets.empty() && onsets[0] >= static_cast<int64_t>(1.1 * kSampleRate),
+      "grid + start_at: nothing sounds before the anchor"
+  );
 }
 
 // Subdivisions divide each measured interval rather than being dropped.
@@ -610,8 +740,13 @@ void TestGridSubdivision() {
       RenderContinuous(metronome, kSampleRate * 2, [](int64_t) {});
   // Beats at 0.0/0.5/1.0/1.5 plus offbeats at 0.25/0.75/1.25/1.75.
   Check(onsets.size() == 8, "grid subdivision: beats and offbeats both sound");
-  ExpectSpacing(onsets, 0, onsets.size(), 0.25 * kSampleRate,
-                "grid subdivision spacing");
+  ExpectSpacing(
+      onsets,
+      0,
+      onsets.size(),
+      0.25 * kSampleRate,
+      "grid subdivision spacing"
+  );
 }
 
 // The publisher itself: generations advance and the payload survives.
@@ -671,8 +806,10 @@ void TestRtPublisherReclamation() {
   for (int i = 0; i < 8; ++i) {
     stopped.Publish(std::make_unique<int>(i), 0, false);
   }
-  Check(stopped.retired_size() == 0,
-        "reclaim: publishing with no reader frees immediately");
+  Check(
+      stopped.retired_size() == 0,
+      "reclaim: publishing with no reader frees immediately"
+  );
 }
 
 // Clearing the grid returns to constant-tempo mode *in phase*. Cleared at a
@@ -703,18 +840,24 @@ void TestClearGridReturnsToBpm() {
 
   // The grid's own beats through 1.8, then 120 BPM continuing from that beat —
   // 2.3, 2.8, 3.3, 3.8 — and nothing at the clear instant itself.
-  const double expected[] = {0.0, 0.3, 0.6, 0.9, 1.2, 1.5,
-                             1.8, 2.3, 2.8, 3.3, 3.8};
+  const double expected[] =
+      {0.0, 0.3, 0.6, 0.9, 1.2, 1.5, 1.8, 2.3, 2.8, 3.3, 3.8};
   const size_t expected_count = sizeof(expected) / sizeof(expected[0]);
-  Check(onsets.size() == expected_count,
-        "clear grid: grid beats, then the constant tempo in phase");
+  Check(
+      onsets.size() == expected_count,
+      "clear grid: grid beats, then the constant tempo in phase"
+  );
   for (size_t i = 0; i < onsets.size() && i < expected_count; ++i) {
     const double want = expected[i] * kSampleRate;
     if (std::fabs(static_cast<double>(onsets[i]) - want) >
         kGridToleranceFrames) {
-      std::fprintf(stderr,
-                   "FAIL: clear grid onset %zu at %lld, expected %.0f\n", i,
-                   static_cast<long long>(onsets[i]), want);
+      std::fprintf(
+          stderr,
+          "FAIL: clear grid onset %zu at %lld, expected %.0f\n",
+          i,
+          static_cast<long long>(onsets[i]),
+          want
+      );
       ++g_failures;
       break;
     }
@@ -742,19 +885,24 @@ void TestGridReanchorKeepsBarPhase() {
 
   const int64_t swap_at = static_cast<int64_t>(2.1 * kSampleRate);
   bool swapped = false;
-  RenderContinuous(metronome, static_cast<int64_t>(2.7 * kSampleRate),
-                   [&](int64_t frame) {
-                     if (!swapped && frame >= swap_at) {
-                       metronome.SetGrid(std::move(shifted),
-                                         static_cast<uint64_t>(frame), true);
-                       swapped = true;
-                     }
-                   });
+  RenderContinuous(
+      metronome,
+      static_cast<int64_t>(2.7 * kSampleRate),
+      [&](int64_t frame) {
+        if (!swapped && frame >= swap_at) {
+          metronome
+              .SetGrid(std::move(shifted), static_cast<uint64_t>(frame), true);
+          swapped = true;
+        }
+      }
+  );
 
   // Beat 4 is the new grid's second downbeat: bar 1, which the trainer mutes.
   // Over-counting the re-crossed downbeat would report bar 2 — sounding.
-  Check(metronome.bar_muted(),
-        "grid re-anchor: bar-mute phase survives the re-anchor");
+  Check(
+      metronome.bar_muted(),
+      "grid re-anchor: bar-mute phase survives the re-anchor"
+  );
 }
 
 // A beat tracker emits outlier intervals by nature, and current_bpm_ is what
@@ -766,8 +914,10 @@ void TestGridBpmMirrorIsClamped() {
     fast.SetGrid(MakeDriftingGrid(200, 0.05, 0.0, 0), 0, true);  // 1200 BPM raw
     fast.Start();
     RenderContinuous(fast, kSampleRate / 2, [](int64_t) {});
-    Check(fast.current_bpm() == kitbag::Metronome::kMaxBpm,
-          "grid bpm mirror: a too-short interval clamps to kMaxBpm");
+    Check(
+        fast.current_bpm() == kitbag::Metronome::kMaxBpm,
+        "grid bpm mirror: a too-short interval clamps to kMaxBpm"
+    );
   }
   {
     kitbag::Metronome slow;
@@ -777,8 +927,10 @@ void TestGridBpmMirrorIsClamped() {
     slow.SetGrid(std::move(grid), 0, true);
     slow.Start();
     RenderContinuous(slow, kSampleRate, [](int64_t) {});
-    Check(slow.current_bpm() == kitbag::Metronome::kMinBpm,
-          "grid bpm mirror: a too-long interval clamps to kMinBpm");
+    Check(
+        slow.current_bpm() == kitbag::Metronome::kMinBpm,
+        "grid bpm mirror: a too-long interval clamps to kMinBpm"
+    );
   }
 }
 

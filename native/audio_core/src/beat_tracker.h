@@ -28,14 +28,18 @@ class BeatTracker {
 
   /// Generate waveform peaks from interleaved PCM data.
   /// target_chunks: desired number of min/max pairs (~2000).
-  static WaveformPeaks ComputeWaveformPeaks(const float* pcm, int num_frames,
-                                            int channels, int target_chunks);
+  static WaveformPeaks ComputeWaveformPeaks(
+      const float* pcm,
+      int num_frames,
+      int channels,
+      int target_chunks
+  );
 
   /// Places beats over an onset envelope by dynamic programming.
   /// Public so beat_tracker_verify can drive it with a synthetic envelope —
   /// reaching it through Analyze() would mean synthesising ~17 minutes of PCM.
-  std::vector<float> TrackBeats(const std::vector<float>& onset, float hop_time,
-                                float bpm);
+  std::vector<float>
+  TrackBeats(const std::vector<float>& onset, float hop_time, float bpm);
 
  private:
   std::vector<float> ComputeOnsetFunction(const float* pcm, int num_frames);
