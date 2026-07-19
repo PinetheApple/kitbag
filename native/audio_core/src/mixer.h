@@ -9,9 +9,9 @@ namespace kitbag {
 
 /// Lock-free N-track audio mixer for stem playback.
 ///
-/// Tracks are pre-loaded with PCM data and controlled via atomic operations
-/// so the realtime audio callback never blocks. Supports per-track gain,
-/// mute, and solo. When any track is soloed, only soloed tracks output.
+/// Gain, mute and solo are atomic and safe to change while playing.
+/// SetTrackData is NOT — it reallocates under the callback (SPEC.md §4.1).
+/// When any track is soloed, only soloed tracks output.
 class Mixer {
  public:
   static constexpr int kMaxTracks = 16;

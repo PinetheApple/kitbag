@@ -73,7 +73,6 @@ void PitchAnalyzer::RebuildDetector() {
 }
 
 bool PitchAnalyzer::Process(float sample) {
-  // Asymmetric RMS envelope follower
   const double sample_sq =
       static_cast<double>(sample) * static_cast<double>(sample);
   if (sample_sq > rms_envelope_) {
@@ -89,7 +88,7 @@ bool PitchAnalyzer::Process(float sample) {
     noise_floor_ += kNoiseFloorRelease * (sample_sq - noise_floor_);
   }
 
-  // Gate: signal must exceed max(hard floor, 12dB above noise floor)
+  // Relative to the tracked floor, so a noisy room raises the bar with it.
   const double rms = std::sqrt(rms_envelope_);
   const double noise_rms = std::sqrt(noise_floor_);
   const double gate_threshold =
@@ -233,7 +232,6 @@ void PitchAnalyzer::PublishFrequency(double frequency_hz) {
     return;
   }
 
-  // EMA smoothing on cents
   if (!ema_seeded_ || publish_note != reading_.note_index) {
     ema_cents_ = publish_cents;
     ema_seeded_ = true;

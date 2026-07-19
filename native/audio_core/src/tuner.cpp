@@ -30,7 +30,7 @@ bool Tuner::Start() {
   config.sampleRate = kSampleRate;
   config.dataCallback = DataCallback;
   config.pUserData = this;
-  // Raw mic path: never AGC/NS/AEC on a tuner signal (PLAN §3). AAudio
+  // Raw mic path: never AGC/NS/AEC on a tuner signal (SPEC.md §10.1). AAudio
   // honors this; other backends ignore the field.
   config.aaudio.inputPreset = ma_aaudio_input_preset_unprocessed;
 

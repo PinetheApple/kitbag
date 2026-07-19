@@ -35,7 +35,6 @@ void Mixer::SetMute(int track, bool muted) {
 void Mixer::SetSolo(int track, bool soloed) {
   if (track < 0 || track >= track_count_) return;
   tracks_[track].solo.store(soloed, std::memory_order_relaxed);
-  // Recalculate any_solo_
   bool any = false;
   for (int i = 0; i < track_count_; ++i) {
     if (tracks_[i].has_data &&
@@ -87,7 +86,6 @@ void Mixer::Process(float* output, uint32_t frame_count, uint32_t sr) {
 
   const bool any_solo = any_solo_.load(std::memory_order_relaxed);
 
-  // Clear output buffer (accumulate into it)
   std::memset(output, 0, frame_count * 2 * sizeof(float));
 
   const uint64_t start_frame = read_frame_.load(std::memory_order_relaxed);
@@ -97,16 +95,14 @@ void Mixer::Process(float* output, uint32_t frame_count, uint32_t sr) {
     const Track& tr = tracks_[t];
     if (!tr.has_data) continue;
 
-    // Solo logic: if any track is soloed, only soloed tracks play
     if (any_solo && !tr.solo.load(std::memory_order_relaxed)) continue;
-    // Mute logic
     if (tr.mute.load(std::memory_order_relaxed)) continue;
 
     const float gain = tr.gain.load(std::memory_order_relaxed);
     if (gain <= 0.0f) continue;
 
-    // Resample ratio if track sample rate differs from output
-    // For simplicity, assume 48kHz for now; if different, skip track
+    // No resampler yet — a track at another rate is dropped silently
+    // (SPEC.md §4.1).
     if (tr.sample_rate != sr) continue;
 
     const uint64_t frames_avail =
@@ -117,9 +113,7 @@ void Mixer::Process(float* output, uint32_t frame_count, uint32_t sr) {
     if (frames_avail == 0) continue;
     if (frames_avail > max_read) max_read = frames_avail;
 
-    // Mix into output
     if (tr.channels == 1) {
-      // Mono to stereo: duplicate channel
       for (uint64_t f = 0; f < frames_avail; ++f) {
         const uint64_t src_idx = start_frame + f;
         if (src_idx >= tr.num_frames) break;
@@ -128,7 +122,6 @@ void Mixer::Process(float* output, uint32_t frame_count, uint32_t sr) {
         output[2 * f + 1] += s;
       }
     } else if (tr.channels >= 2) {
-      // Stereo: read first two channels
       for (uint64_t f = 0; f < frames_avail; ++f) {
         const uint64_t src_idx = (start_frame + f) * tr.channels;
         if (src_idx + 1 >= tr.pcm.size()) break;
@@ -138,11 +131,10 @@ void Mixer::Process(float* output, uint32_t frame_count, uint32_t sr) {
     }
   }
 
-  // Advance read position by the minimum across all played tracks
+  // Longest track drives the transport; shorter ones simply run out.
   if (max_read > 0) {
     read_frame_.store(start_frame + max_read, std::memory_order_relaxed);
   } else {
-    // No more data — auto-stop
     playing_.store(false, std::memory_order_release);
   }
 }

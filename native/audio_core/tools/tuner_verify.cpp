@@ -15,7 +15,7 @@ constexpr double kToneAmplitude = 0.5;
 constexpr double kA4Hz = 440.0;
 
 constexpr double kMaxCentsError = 1.0;
-// PLAN §3: settle <150ms. Bass B0 needs a ~90ms window, so it gets a looser
+// SPEC.md §10.1: settle <150ms. Bass B0 needs a ~90ms window, so it gets a looser
 // "acceptable settle" budget per the M2 proof.
 constexpr double kMaxSettleSeconds = 0.150;
 constexpr double kMaxBassSettleSeconds = 0.400;
