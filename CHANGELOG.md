@@ -80,12 +80,35 @@ genuinely ships.
 
 ### Fixed — 2026-07-20
 
-- **`FileAudioReader` decoded every non-float file to denormal noise** — it left
-  miniaudio's output format at `ma_format_unknown`, so a 16-bit file wrote `s16`
-  into the `float*` the module is built around, under-filling the destination by
-  half. Found in review, before the adapter had any consumer. It now requests
-  `ma_format_f32` explicitly. `Decoder` carries the identical bug on the shipped
-  `kb_analyze_song` path and is **not** fixed here — see issue #18.
+- **`Decoder` and `FileAudioReader` decoded every non-float file to garbage** —
+  both left miniaudio's output format at `ma_format_unknown`, so a 16-bit file
+  wrote `s16` into the `float*` buffer the caller supplied, under-filling it by
+  half. `Decoder`'s instance was live on the shipped `kb_analyze_song` path via
+  `api_analysis.cpp`, so beat tracking and waveform peaks read garbage for every
+  16-bit input; `FileAudioReader`'s was found in review before it had a consumer.
+
+  The config now lives once, in `OpenDecoderF32` (`src/media/miniaudio_decoder.h`),
+  which both call sites go through — a third `ma_decoder_init_file` cannot
+  reintroduce it, and reverting the fix now fails two suites rather than one.
+
+  *Correction:* an earlier entry described this corruption as "denormal noise".
+  That was wrong and unmeasured. Instrumented over a 997-frame fixture it is
+  **zero subnormals** — 5 NaN, 627 values above 1e38, and the back half of the
+  buffer never written. The distinction matters: NaN propagates through
+  `DownmixToMono`'s sum and poisons every downstream aggregate, and reaches an
+  undefined float→`int16_t` conversion in `waveform_peaks.cpp`. Tracked as #19.
+- **`decoder_verify` (13 checks)** — `Decoder` had no verify tool at all, which is
+  why the above shipped. The tool that would have caught it must assert *values*:
+  miniaudio reports `total_frames` from the container header regardless of output
+  format, so frame count and buffer size are **identical** between a correct and a
+  corrupt decode. A test asserting only "the frame count is right" passes on a
+  decoder emitting NaN.
+- **CI now gates eight verify tools instead of one.** `ci.yml` ran only
+  `metronome_verify`; `abi_verify`, `beat_tracker_verify`, `mixer_verify`,
+  `note_lock_verify`, `audio_source_verify`, `file_audio_reader_verify` and
+  `decoder_verify` all passed and none of them gated anything. Added with a
+  job-level `timeout-minutes: 15`, since `TestDestroyWhileRunning` hangs rather
+  than fails on a join deadlock. `tuner_verify` stays informational (SPEC.md §10.1).
 - **Muting every track ended playback** (`SPEC.md` §4.4; commit `2f82d85`) —
   `Process()` auto-stopped whenever nothing was audible this block, and
   `MixTrack` contributes nothing for a track that is muted, at zero gain,

@@ -32,6 +32,7 @@ add_library(kitbag_core SHARED
   src/media/audio_source.cpp
   src/media/decoder.cpp
   src/media/file_audio_reader.cpp
+  src/media/miniaudio_decoder.cpp
   src/engine.cpp
   src/dsp/fft.cpp
   src/metronome/metronome.cpp
@@ -129,11 +130,23 @@ if(KITBAG_BUILD_TOOLS)
   add_executable(file_audio_reader_verify
     tools/media/file_audio_reader_verify.cpp
     src/media/file_audio_reader.cpp
+  src/media/miniaudio_decoder.cpp
     src/media/miniaudio_impl.c
   )
   target_include_directories(file_audio_reader_verify
     PRIVATE src tools tools/media third_party)
   target_link_libraries(file_audio_reader_verify PRIVATE Threads::Threads m ${CMAKE_DL_LIBS})
+
+  # The offline decode path behind kb_analyze_song, over the same run-time WAV.
+  add_executable(decoder_verify
+    tools/media/decoder_verify.cpp
+    src/media/decoder.cpp
+    src/media/miniaudio_decoder.cpp
+    src/media/miniaudio_impl.c
+  )
+  target_include_directories(decoder_verify
+    PRIVATE src tools tools/media third_party)
+  target_link_libraries(decoder_verify PRIVATE Threads::Threads m ${CMAKE_DL_LIBS})
 
   add_executable(note_lock_verify tools/tuner/note_lock_verify.cpp
     src/tuner/note_lock.cpp)

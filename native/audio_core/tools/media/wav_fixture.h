@@ -29,6 +29,11 @@ inline int16_t FixtureSample(uint64_t index) {
   return (index % 2 == 0) ? magnitude : static_cast<int16_t>(-magnitude);
 }
 
+// The float a correct decoder must produce for sample n.
+inline float ExpectedFloat(uint64_t index) {
+  return static_cast<float>(FixtureSample(index)) / kS16Scale;
+}
+
 inline void PutU32(std::vector<uint8_t>* out, uint32_t value) {
   for (int i = 0; i < 4; ++i) {
     out->push_back(static_cast<uint8_t>((value >> (i * 8)) & 0xFF));
