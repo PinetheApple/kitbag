@@ -11,6 +11,20 @@ mixer fixes (4.4). Framework-independent; every task headlessly testable via
 
 Status legend: `[ ]` todo · `[~]` in progress · `[x]` done (verify green + both reviews pass) · `[!]` blocked
 
+## Current state — 2026-07-20, `work/post-phase0` @ `2f82d85`
+
+**Done:** W0-1 · W0-3 (hygiene, unplanned) · C1 · C2 · B4 · B1 *withdrawn as wrong*
+**Next:** B2/B3 (mixer), C3–C5 (anchor), then W0-2 which gates all of Track A.
+
+Gates: build 0 · `metronome_verify` `abi_verify` `beat_tracker_verify`
+`note_lock_verify` `mixer_verify` all pass · `lint.sh` 0.
+`tuner_verify` fails 37/37 — pre-existing detector defect (SPEC.md §10.1),
+informational in CI, not a regression.
+
+> Keep this current *as each item lands*, not in batches. It went nine commits
+> stale once, and B1 spent that window telling the next reader to implement a
+> bug that had already been disproved.
+
 ---
 
 ## Overall structure (codebase-design framing)
@@ -125,15 +139,29 @@ driving the in-memory fake.
 - [x] **W0-1** Transport-clock seam (F1). Threaded `uint64_t block_start_frame` into `Metronome::Render`; `Engine::Render` reads `frames_rendered_` before the block, advances after. Mixer left unchanged (no Phase 1 consumer). Landed with its first consumer C1 to avoid a dead param. `metronome_verify` green; ralph + code-reviewer passed after fixes.
 - [ ] **W0-2** `AudioSource` module (F2). Pull interface `Read(float* dst, frames)` hiding a non-RT ring-buffered read-ahead thread. Real-file adapter (miniaudio) + in-memory fake. Standalone deep module, own `tools/` test via the fake. **Blocks A1, A5.**
 
+### W0-3 — Codebase hygiene (unplanned; ran 2026-07-19/20)
+
+Not in the original plan. Grew out of "improve codebase design first" and became a
+prerequisite for everything after it, since the standards are now gated.
+
+- [x] **Comment audit** — ~40 narrating comments deleted tree-wide. Four were false: `mixer.cpp` claimed minimum where the code took maximum (see B1), `mixer.h` promised unconditional RT-safety that `SetTrackData` violates, `tuner.cpp`/`tuner_verify.cpp` cited a `PLAN.md` deleted in `73b0ea9`, and two `§13.3` citations belonged to `§4.5`. Commit `a0510a3`.
+- [x] **Formatting standard** — one-per-line parameter wrap with the closing paren on its own line (`AlignAfterOpenBracket: BlockIndent`); one-line bodies unbraced, longer bodies braced. Costs vertical space: `metronome_verify.cpp` 830→982 before the split. Commit `4efa048`.
+- [x] **Size gates** — functions ≤30 lines, files ≤400 including tests, comments ≤2 lines. 22 functions and 3 files were over; all split on subsystem seams. `readability-function-size` + `readability-braces-around-statements` now gate; `scripts/lint.sh` grew a file-length check (no linter ships one). Commit `dedf7f0`.
+- [x] **`lint.sh` failed open** — it skipped *all* of clang-tidy when the compile DB was absent and still exited 0, hiding 7 function-size violations behind a green run. `CMakeLists` now sets `CMAKE_EXPORT_COMPILE_COMMANDS`; the script fails instead of skipping.
+- [x] **Folder structure** — `src/` was 32 flat files across six subsystems. Grouped `rt/ dsp/ metronome/ tuner/ mixer/ analysis/ media/ api/` following the include graph, `engine.*` at the root as composition root; `tools/` mirrors it. Pure move — 40 renames, diff contains only `#include` paths and guards, `nm -D` identical down to load addresses. Commit `620ad10`.
+- [x] **`audio-core-engineer` agent** — there was no designated C++ agent, so this work was falling to `general-purpose`, which carries no realtime rubric. Encodes the callback invariants, the three sanctioned data-movement patterns, the size limits, and the sabotage discipline. Commit `4e80188`.
+- [x] **Test-quality fixes** — `NoteLock` extracted so the tuner's 4-state lock machine has real coverage (it had none: the detector returns 0.000 Hz so `PublishFrequency` is unreachable). Splitting the command switch had silently disabled `-Wswitch`. Shared test helpers passed vacuously on empty input. Commit `5a6d018`.
+- [x] **Two analysis bugs** found during the comment audit: `BeatTracker` capped beats while backtracking from the *last* beat, so a track over ~17 min returned a grid starting partway into the song; and the `.kwav` sidecar path used arithmetic that only stripped 3-letter extensions (`song.flac` → `song.fla.kwav`). Commit `a633536`.
+
 ## Track B — §4.4 Mixer fixes in place  ·  Wave 1  ·  skill: `native-audio`
 
 Verify: `metronome_verify` unaffected; add mixer assertions to a `tools/` check.
 Review: `@ralph` + `@code-reviewer`.
 
-- [ ] **B1** `mixer.cpp:140-141` — advance read head by **min** across played tracks (per :139 comment), not `max_read`. Fixes unequal-stem desync.
-- [ ] **B2** Split `Stop()` (position→0) from `Pause()` (holds). Expose both on the ABI.
+- [x] ~~**B1** advance read head by **min** across played tracks, not `max_read`.~~ **WITHDRAWN 2026-07-20 — this task was wrong.** A stale `:139` comment claimed "minimum" while the code did maximum; the §2 audit recorded the mismatch and assumed the comment was intent. Measured with ramp fixtures encoding their own frame index: stems share one `read_frame_` and have no per-track cursor, so they cannot desync, and the minimum is what breaks — with 1000/5000-frame stems seeked to 900 it advances 900→1000 having already output through 1412, replaying 412 frames per block. `max_read` was correct. SPEC.md §2 + §4.4 amended. **Do not reinstate.**
+- [ ] **B2** Split `Stop()` (position→0) from `Pause()` (holds). Expose both on the ABI. Current behaviour pinned by `mixer_verify` (`stop: the head rewinds to zero`), so the change is visible when made.
 - [ ] **B3** Zero-pad tracks shorter than the longest instead of dropping them from the mix.
-- [ ] **B4** Auto-stop on **end of longest track**, never "all tracks silent" — muting all must not end playback.
+- [x] **B4** Auto-stop on **end of longest track**, never "all tracks silent". Was live: `MixTrack` returns 0 for muted/zero-gain/un-soloed/rate-mismatched tracks, so "nothing audible" and "out of data" were one condition — muting everything stopped playback. Transport now follows the longest *loaded* track, independent of gating. Advance became `min(frame_count, longest − start)`; equal to `max_read` whenever the longest track is audible, but keeping the old form would freeze the head under mute-all, turning mute into pause. New `tools/mixer/mixer_verify.cpp`, 36 checks, 6 sabotage runs. Commit `2f82d85`.
 
 ## Track C — §4.2 Phase anchor  ·  Wave 1 (needs W0-1)  ·  worktree `wt-phase-anchor`  ·  skill: `native-audio`
 
@@ -141,7 +169,7 @@ Builds on the §4.7 latency fixes already pinned. Verify: extend `metronome_veri
 Review: `@ralph` (RT invariants, no scheduled-event mutation) + `@code-reviewer`.
 
 - [x] **C1** `kb_metronome_start_at(engine, uint64_t start_frame)` — sample-accurate deferred start. New `kStartAt` command + `BeginRun()` helper; fires on the exact sample inside the render loop. 7 regression tests in `metronome_verify` (frame-exactness off a block boundary, anchor-at-0, beat-0 under a latency offset, armed-ramp+offset locals recompute [validated: fails without the fix], ignored-while-running, Start-cancels-pending, Stop-cancels-pending). Two review rounds: ralph Pass, code-reviewer Pass after fixing a test whose name claimed a cancel path it never exercised.
-- [ ] **C2** `kb_metronome_set_grid(beat_times_sec[], count, anchor_frame)` + `kb_metronome_clear_grid` — follow per-beat spacing, not global BPM. Array copied, not retained.
+- [x] **C2** `kb_metronome_set_grid(beat_times_sec[], count, anchor_frame)` + `kb_metronome_clear_grid` — follow per-beat spacing, not global BPM. Array copied, not retained. Introduced `RtPublisher<T>` (F3) as the app→RT bulk-payload seam: atomic pointer swap + deferred retire, generation stored *inside* the node so one acquire load carries value and identity and ABA is impossible by construction. A3 reuses this. Two review rounds; ralph's blocker (grid cursor stranded across Stop/Start → off-grid click, reproduced at 2.602s) and a second instance found via `StartAt` both fixed. `ClearGrid` made genuinely phase-continuous. Subdivisions divide each measured interval. Grid BPM mirror clamped. New `abi_verify` covers the validation guarding `lower_bound`'s ordering precondition. Commits `a633536`, `5a6d018`.
 - [ ] **C3** `kb_metronome_anchor_external(song_pos_sec, at_frame, bpm)` — anchor to a transport we don't clock; re-callable; glitch-free re-anchor.
 - [ ] **C4** Invariants: anchoring recomputes **future** targets only, never mutates scheduled events; all three compose with latency offset (click at speaker); no double/dropped beat on re-anchor.
 - [ ] **C5** Regressions in `metronome_verify`: grid-follow tracks a ramping grid; re-anchor mid-run glitch-free; `start_at` frame-exact. JSI note: `uint64_t` frames cross as JS `double` — no BigInt.
