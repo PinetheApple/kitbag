@@ -41,6 +41,18 @@ genuinely ships.
 - **`kb_mixer_pause(engine)`** (`SPEC.md` §4.4) — ends playback holding the read
   head, beside the existing `kb_mixer_stop` which rewinds it to frame 0. Scalar
   only, so the ABI stays free of buffers.
+- **`kb_metronome_set_grid(beat_times_sec[], count, anchor_frame)` and
+  `kb_metronome_clear_grid`** (`SPEC.md` §4.2; commits `a633536`, `5a6d018`) — the
+  metronome can follow a measured per-beat grid rather than one global BPM. The
+  array is copied, not retained. It reaches the audio thread through a new
+  `RtPublisher<T>` (`src/rt/rt_publisher.h`), the app→RT bulk-payload seam: an
+  atomic pointer swap with deferred retire. Ten grid regressions in
+  `metronome_verify` and five validation groups in `abi_verify` cover it; the
+  latter guard `std::lower_bound`'s ordering precondition at the boundary, so a
+  descending, repeated, NaN, infinite or oversize grid is rejected with
+  `KB_ERROR_INVALID_ARGUMENT` instead of reaching the callback.
+- **`KB_MAX_GRID_BEATS`** — defined once, in `kitbag_api.h`. `beat_tracker.cpp`
+  derives its own cap from it rather than retyping the number (`SPEC.md` §13.7).
 - **25 `mixer_verify` checks and 3 `abi_verify` checks** (36 → 61, 12 → 15).
   They cover the Stop/Pause split, the zero-padding of stems shorter than the
   longest, and the right channel of a stereo stem — which nothing in the suite
@@ -48,6 +60,18 @@ genuinely ships.
 
 ### Fixed — 2026-07-20
 
+- **Muting every track ended playback** (`SPEC.md` §4.4; commit `2f82d85`) —
+  `Process()` auto-stopped whenever nothing was audible this block, and
+  `MixTrack` contributes nothing for a track that is muted, at zero gain,
+  un-soloed while another track is soloed, or at a mismatched sample rate. So
+  "every track ran out of data" and "nothing sounded" were one condition, and
+  muting everything stopped playback outright. The transport now follows the
+  longest *loaded* track, independent of that gating.
+- **Two beat-analysis bugs** (commit `a633536`) — `BeatTracker` applied its beat
+  cap while backtracking from the *last* beat, so a track over roughly 17 minutes
+  returned a grid starting partway into the song; and the `.kwav` sidecar path
+  used arithmetic that only stripped three-letter extensions, turning
+  `song.flac` into `song.fla.kwav`. Now `src/analysis/sidecar_path.h`.
 - **Pause rewound the transport** (`SPEC.md` §2.2, §7.3) — the mixer exposed only
   `Stop()`, which zeroes `read_frame_`, so pausing meant rewinding. `Pause()` now
   holds the position and a following `Play()` resumes from it. This is the native
