@@ -11,12 +11,42 @@ mixer fixes (4.4). Framework-independent; every task headlessly testable via
 
 Status legend: `[ ]` todo · `[~]` in progress · `[x]` done (verify green + both reviews pass) · `[!]` blocked
 
-## Current state — 2026-07-20, `work/post-phase0` @ `afa56ea`
+## Current state — 2026-07-20, `work/post-phase0` @ `00108a4`
 
 **Done:** W0-1 · W0-3 (hygiene, unplanned) · C1 · C2 · B2 `4d6c89a` · B3 `ab0e2a4`
 (already-correct) · B4 `2f82d85` · B1 *withdrawn as wrong*
 **Next:** C3–C5 (anchor), then W0-2 which gates all of Track A. **Track B is not
 complete** — B5 opened below out of B2/B3 review.
+
+### Tickets live on GitHub
+
+Every remaining task has an issue in `PinetheApple/kitbag`, labelled `phase-1`
+plus its track, with `--blocked-by` wired so the dependency spine is machine-
+readable. **The issue is the ticket; this file is the index.** When they
+disagree, believe the issue — it carries the review trail.
+
+| Task | Issue | Task | Issue |
+|---|---|---|---|
+| W0-2 AudioSource | [#2](https://github.com/PinetheApple/kitbag/issues/2) | A4 mixer ABI | [#9](https://github.com/PinetheApple/kitbag/issues/9) |
+| C3 anchor_external | [#3](https://github.com/PinetheApple/kitbag/issues/3) | A5 player ABI | [#10](https://github.com/PinetheApple/kitbag/issues/10) |
+| C4 invariants | [#4](https://github.com/PinetheApple/kitbag/issues/4) | A6 verify tool | [#11](https://github.com/PinetheApple/kitbag/issues/11) |
+| C5 regressions | [#5](https://github.com/PinetheApple/kitbag/issues/5) | D1 vendor decision | [#12](https://github.com/PinetheApple/kitbag/issues/12) |
+| A1 track = AudioSource | [#6](https://github.com/PinetheApple/kitbag/issues/6) | D2 analyze outputs | [#13](https://github.com/PinetheApple/kitbag/issues/13) |
+| A2 resample-on-load | [#7](https://github.com/PinetheApple/kitbag/issues/7) | D3 BLOB schema | [#14](https://github.com/PinetheApple/kitbag/issues/14) |
+| A3 RT-safe load | [#8](https://github.com/PinetheApple/kitbag/issues/8) | D4 downbeat verify | [#15](https://github.com/PinetheApple/kitbag/issues/15) |
+| B5 longest_frames_ | [#16](https://github.com/PinetheApple/kitbag/issues/16) | test tone (blocked) | [#17](https://github.com/PinetheApple/kitbag/issues/17) |
+
+### Sequencing decision — 2026-07-20
+
+**Tuner work comes last**, after all other Phase 1 functionality. User's call, and
+it agrees with SPEC.md §15, which already orders the tuner last in Phase 3 behind
+§10.1's research. So `tuner_verify`'s 37/37 failure stays red on purpose: it is
+not a regression, not a gate, and not to be "fixed" by loosening the test.
+
+Work is driven by the **`phase1-loop`** skill (`.claude/skills/phase1-loop/`),
+which takes one issue at a time through implement → gates → `ralph` +
+`code-reviewer` → fix → commit → close. It never merges, pushes, or edits a SPEC
+decision, and it stops rather than inferring approval.
 
 Gates: build 0 · `metronome_verify` `abi_verify` `beat_tracker_verify`
 `note_lock_verify` `mixer_verify` all pass · `lint.sh` 0.
