@@ -11,7 +11,7 @@ mixer fixes (4.4). Framework-independent; every task headlessly testable via
 
 Status legend: `[ ]` todo · `[~]` in progress · `[x]` done (verify green + both reviews pass) · `[!]` blocked
 
-## Current state — 2026-07-20, `work/post-phase0` @ `ab0e2a4`
+## Current state — 2026-07-20, `work/post-phase0` @ `afa56ea`
 
 **Done:** W0-1 · W0-3 (hygiene, unplanned) · C1 · C2 · B2 `4d6c89a` · B3 `ab0e2a4`
 (already-correct) · B4 `2f82d85` · B1 *withdrawn as wrong*
