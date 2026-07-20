@@ -8,6 +8,7 @@
 namespace rt_test {
 
 void RunPublisherTests();
+void RunBulkRingTests();
 
 }  // namespace rt_test
 

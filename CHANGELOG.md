@@ -38,6 +38,24 @@ genuinely ships.
 
 ### Added — 2026-07-20
 
+- **`AudioSource`** (`src/media/audio_source.h`; `SPEC.md` §4.1, design-audit F2)
+  — the streaming seam A1 (mixer tracks) and A5 (player) both need, written once
+  so neither re-implements it. `Read(float* dst, uint32_t frames)` is the only
+  callback-facing method: a masked memcpy out of a ring, a `std::fill` and one
+  relaxed `fetch_add`, hiding a non-RT read-ahead thread. Lifecycle is
+  `Open`/`Start`/`Stop`/`Seek`/`Close` — `Open` allocates, `Start`/`Stop` only
+  spawn and join the producer, so the ring and position survive a pause and
+  resume is lossless. Short read plus zero-fill while a stream is open, so a
+  caller that ignores the return value mixes silence rather than stale audio.
+- **`SpscBulkRing<T>`** (`src/rt/spsc_bulk_ring.h`) — the bulk half of
+  `spsc_ring.h`'s discipline, not a second one: the same single-producer,
+  single-consumer acquire/release pair on two monotonic indices, for spans whose
+  capacity depends on a stream's channel count. Only `Init` allocates.
+- **`audio_source_verify` (104 checks) and `file_audio_reader_verify` (14)** —
+  the first drives an in-memory fake and links no miniaudio at all, which is what
+  proves the adapter seam is real; the second drives the miniaudio adapter over a
+  16-bit WAV fixture generated at runtime. Both guard their own check count, so a
+  silently dropped test fails the tool.
 - **`kb_mixer_pause(engine)`** (`SPEC.md` §4.4) — ends playback holding the read
   head, beside the existing `kb_mixer_stop` which rewinds it to frame 0. Scalar
   only, so the ABI stays free of buffers.
@@ -62,6 +80,12 @@ genuinely ships.
 
 ### Fixed — 2026-07-20
 
+- **`FileAudioReader` decoded every non-float file to denormal noise** — it left
+  miniaudio's output format at `ma_format_unknown`, so a 16-bit file wrote `s16`
+  into the `float*` the module is built around, under-filling the destination by
+  half. Found in review, before the adapter had any consumer. It now requests
+  `ma_format_f32` explicitly. `Decoder` carries the identical bug on the shipped
+  `kb_analyze_song` path and is **not** fixed here — see issue #18.
 - **Muting every track ended playback** (`SPEC.md` §4.4; commit `2f82d85`) —
   `Process()` auto-stopped whenever nothing was audible this block, and
   `MixTrack` contributes nothing for a track that is muted, at zero gain,
