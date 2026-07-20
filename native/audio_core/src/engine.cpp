@@ -100,8 +100,8 @@ void Engine::Render(float* output, uint32_t frame_count) {
 
   RenderTestTone(output, frame_count);
 
-  // Must precede the metronome: Process() memsets the buffer rather than
-  // accumulating, so anything written above it (the test tone) is discarded.
+  // BROKEN: this memsets unconditionally, erasing the tone above in every state
+  // — kb_engine_set_test_tone is silent. CHANGELOG "Known broken".
   mixer_.Process(output, frame_count, kSampleRate);
 
   metronome_.Render(

@@ -169,6 +169,25 @@ Review: `@ralph` + `@code-reviewer`.
 
 - [ ] **B5** `longest_frames_` is monotonic — `mixer.cpp:26` only ever takes a `max` and is never recomputed downward. **Measured:** load track 0 with 5000 frames, reload the same track with 1000, and `track_frames(0)` correctly reports 1000 while the transport still runs to 5000 — seeked to 1500 it renders a silent block, advances to 2012 and still reports `is_playing()`. Pairs with the rescan-on-unload need already implied by A4 (`kb_mixer_unload_track` has the same shape), so fix both there rather than bolting a rescan onto `SetTrackData`, which A1/A3 delete anyway.
 
+### Known and deliberately unfixed in Track B — `kb_engine_set_test_tone` is silent
+
+`Engine::Render` calls `RenderTestTone` before `mixer_.Process`, and `Process`
+memsets (`mixer/mixer.cpp:165`) *before* its `if (!playing_) return`, so the clear
+is unconditional and the tone is erased in every transport state. **Measured:** a
+buffer pre-filled to 0.2 returns peak 0.000 with the mixer stopped and peak 0.500
+with it playing — the stem alone, not 0.700, so the tone is absent either way.
+`tools/tone_test.c` exists solely to exercise this ABI function and produces
+silence.
+
+**Not fixed, and not a reorder.** `RenderTestTone` *assigns* rather than
+accumulates and writes 0.0f when disabled, so moving it after `Process` would
+zero the mix on every normal block. A real fix needs accumulate semantics plus a
+policy SPEC.md does not state — it contains **zero** mentions of the test tone,
+so "tone while playback is live" has no defined behaviour to implement against.
+`Engine::Render` is private and only driven by a live miniaudio callback, so no
+deterministic headless test can pin a fix today; a test seam would have to come
+first. Belongs with **A5** (player transport) or a dedicated engine-render seam.
+
 ### Known and deliberately unfixed in Track B (F3 — belongs to A3)
 
 `Stop()`, `Pause()` and `Seek()` are raw stores from the app thread, not commands
