@@ -12,19 +12,23 @@ int main() {
   mixer_test::RunTransportTests();
   mixer_test::RunMixTests();
 
-  if (mixer_test::g_checks != kExpectedChecks) {
+  if (kitbag_test::g_checks != kExpectedChecks) {
     std::fprintf(
         stderr,
         "mixer_verify: ran %d checks, expected %d\n",
-        mixer_test::g_checks,
+        kitbag_test::g_checks,
         kExpectedChecks
     );
     return 1;
   }
-  if (mixer_test::g_failures == 0) {
+  if (kitbag_test::g_failures == 0) {
     std::printf("mixer_verify: all checks passed\n");
     return 0;
   }
-  std::fprintf(stderr, "mixer_verify: %d failure(s)\n", mixer_test::g_failures);
+  std::fprintf(
+      stderr,
+      "mixer_verify: %d failure(s)\n",
+      kitbag_test::g_failures
+  );
   return 1;
 }

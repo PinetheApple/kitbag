@@ -1,6 +1,6 @@
 // Output-latency compensation (SPEC.md §4.7). Every check here pins a defect
 // that reproduced inside the existing ±100 ms clamp.
-#include "metronome_test_util.h"
+#include "metronome_test_support.h"
 
 namespace metronome_test {
 namespace {

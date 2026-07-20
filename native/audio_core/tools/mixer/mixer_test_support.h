@@ -6,9 +6,14 @@
 #include <cstdio>
 #include <vector>
 
+#include "check.h"
 #include "mixer/mixer.h"
 
 namespace mixer_test {
+
+using kitbag_test::Check;
+using kitbag_test::g_checks;
+using kitbag_test::g_failures;
 
 constexpr uint32_t kSampleRate = 48000;
 constexpr uint32_t kBlock = 512;
@@ -20,19 +25,6 @@ constexpr uint64_t kLongFrames = 5000;
 // mixed sample names the track it came from as well as its source frame.
 constexpr float kLongOffset = 100000.0f;
 constexpr float kEpsilon = 0.001f;
-
-inline int g_failures = 0;
-// Counted so a deleted TestX() call cannot pass silently: the total is a
-// tripwire on the suite's own shape, not a derived expectation.
-inline int g_checks = 0;
-
-inline void Check(bool condition, const char* message) {
-  ++g_checks;
-  if (!condition) {
-    std::fprintf(stderr, "FAIL: %s\n", message);
-    ++g_failures;
-  }
-}
 
 // pcm[i] = offset + i, so a mixed sample reveals exactly which source frame
 // landed where — the only way to tell advancing from replaying.

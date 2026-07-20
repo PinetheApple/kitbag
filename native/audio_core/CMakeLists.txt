@@ -75,12 +75,12 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_basic.cpp
     tools/metronome/metronome_test_grid.cpp
     tools/metronome/metronome_test_latency.cpp
-    tools/metronome/metronome_test_publisher.cpp
     tools/metronome/metronome_test_startat.cpp
+    tools/rt/rt_publisher_verify.cpp
     src/metronome/metronome.cpp
     src/metronome/metronome_grid.cpp
     src/metronome/metronome_render.cpp)
-  target_include_directories(metronome_verify PRIVATE src)
+  target_include_directories(metronome_verify PRIVATE src tools tools/metronome tools/rt)
   # metronome.cpp is compiled again here, outside kitbag_core's options.
   target_compile_options(metronome_verify PRIVATE -Werror=switch)
   target_link_libraries(metronome_verify PRIVATE m)
@@ -103,7 +103,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/mixer/mixer_test_mix.cpp
     src/mixer/mixer.cpp
   )
-  target_include_directories(mixer_verify PRIVATE src)
+  target_include_directories(mixer_verify PRIVATE src tools tools/mixer)
   target_link_libraries(mixer_verify PRIVATE m)
 
   add_executable(note_lock_verify tools/tuner/note_lock_verify.cpp
