@@ -60,8 +60,10 @@ it; a `~/Work` account leaks in and fails the *writes* only — reads succeed, s
 the first symptom is `does not have the correct permissions` half a pass later.
 Fix with `gh auth switch --user PinetheApple`.
 
-Take the lowest-numbered issue that is **not** labelled `blocked` and whose
-`--blocked-by` dependencies are all closed. Check with:
+A `defect` on a shipped path outranks feature work, whatever its number — it is
+already wrong in code someone can run, while an unbuilt feature is merely absent.
+Otherwise take the lowest-numbered issue that is **not** labelled `blocked` and
+whose `--blocked-by` dependencies are all closed. Check with:
 
 ```bash
 gh issue view <N> --json title,body,labels
@@ -175,6 +177,11 @@ feeding `kb_analyze_song`, which no verify tool covered.
 A sibling outside the issue's scope gets **its own issue**, filed with the
 evidence and the blast radius, not a silent fix bolted onto this commit.
 
+**8. Start the next pass.** Report what landed, then go straight back to picking
+the next task. The loop runs to the end of Phase 1 on its own — the user invoked
+it to work through the phase, not to approve each issue. Report *while* moving,
+not instead of moving.
+
 ## Honesty rules that outrank finishing
 
 - A task is done when it is *measured*, not when it compiles. Verify at runtime
@@ -190,11 +197,16 @@ evidence and the blast radius, not a silent fix bolted onto this commit.
 
 ## Stopping
 
-Stop and hand back to the user when:
-- both reviewers pass and the issue is closed (report, then ask before the next)
+A closed issue is **not** a stopping point — it is the cue to pick the next one.
+Stop and hand back only when:
 - a task needs a decision SPEC.md doesn't state
 - the same finding survives two fix rounds
 - anything would require merging, pushing, or editing a SPEC decision
+- no unblocked issue is left, which is the end of Phase 1
+
+Judgment calls that the picking rule already answers are not decisions — resolve
+them and say what you resolved. Reserve the stop for questions only the user can
+answer.
 
 When you stop, report: which issue, what landed, the gate output, the sabotage
 evidence, and what remains open. Name anything you found but did not fix.
