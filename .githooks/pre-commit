@@ -3,4 +3,20 @@
 # Lints staged files only; rejects the commit on any violation. Bypass in a
 # genuine emergency with `git commit --no-verify` (and fix it in the next commit).
 set -euo pipefail
-exec bash "$(git rev-parse --show-toplevel)/scripts/lint.sh" --staged
+
+root="$(git rev-parse --show-toplevel)"
+
+# Blocking: the lint gate.
+bash "$root/scripts/lint.sh" --staged
+
+# Advisory: core changed but the tracker did not. Never blocks — a reformat or a
+# pure refactor legitimately changes no status. The tracker went nine commits
+# stale once, and a withdrawn task sat there directing work at a disproved fix.
+staged=$(git diff --cached --name-only --diff-filter=ACM)
+tracker=docs/phase1-tracker.md
+if grep -q '^native/audio_core/' <<<"$staged" &&
+   ! grep -qx "$tracker" <<<"$staged"; then
+  echo "note: native/audio_core changed but $tracker did not." >&2
+  echo "      If this lands or withdraws a tracked item, update it now —" >&2
+  echo "      a stale tracker misdirects the next reader. Otherwise ignore." >&2
+fi
