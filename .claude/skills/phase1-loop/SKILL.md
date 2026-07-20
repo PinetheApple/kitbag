@@ -12,6 +12,22 @@ The value here is not speed — it's that every task goes through the same gates
 so nothing lands on a green build that nobody sabotage-tested. This repo's SPEC.md
 §2 exists because a previous generation of work skipped exactly that.
 
+## The main thread dispatches; subagents execute
+
+Every build, test run, file read, mutation and fix happens in a subagent. The main
+thread picks the issue, routes the work, relays verdicts, and commits — nothing
+else. Its context is the one resource a pass cannot recover once spent, and a
+single verify run pasted into it costs more than the entire issue body.
+
+Independence comes from *which* agent runs the code, not from the main thread
+running it. A verifier that did not write the implementation is independent; the
+main thread reading a report is not verification at all. So the gates move to a
+**verifier** — a fresh agent, spawned per gate round, that has never seen the diff
+and therefore has nothing to rationalise.
+
+Ask every subagent for verdicts, not transcripts: exit codes, failing check names,
+and the exact diff of a mutation. Never the passing output.
+
 ## Boundaries — what this loop may never do
 
 These are not stylistic. Each one is here because it went wrong:
@@ -35,8 +51,14 @@ These are not stylistic. Each one is here because it went wrong:
 ## Picking the next task
 
 ```bash
+gh auth status
 gh issue list --state open --label phase-1 --json number,title,labels
 ```
+
+Confirm the active account is **PinetheApple** first. `~/Development` repos use
+it; a `~/Work` account leaks in and fails the *writes* only — reads succeed, so
+the first symptom is `does not have the correct permissions` half a pass later.
+Fix with `gh auth switch --user PinetheApple`.
 
 Take the lowest-numbered issue that is **not** labelled `blocked` and whose
 `--blocked-by` dependencies are all closed. Check with:
@@ -45,9 +67,10 @@ Take the lowest-numbered issue that is **not** labelled `blocked` and whose
 gh issue view <N> --json title,body,labels
 ```
 
-Dependency spine, for orientation: `#2 W0-2` gates `#6 A1` and `#10 A5`; A1→A2→A3
-→A4→A6; `#3 C3`→`#4 C4`→`#5 C5`; `#12 D1`→`#13`→`#14`→`#15`. `#16 B5` is closed by
-`#9 A4`. `#17` (test tone) is blocked on a human ruling — leave it.
+Dependency spine, for orientation only — the issue bodies are authoritative and
+this list rots: `#2 W0-2` gates `#6 A1` and `#10 A5`; A1→A2→A3→A4→A6; `#3 C3`→
+`#4 C4`→`#5 C5`; `#12 D1`→`#13`→`#14`→`#15`. `#16 B5` will be closed by `#9 A4`.
+`#17` (test tone) is blocked on a human ruling — leave it.
 
 Tracks C and D are independent of Track A. If Track A is blocked, C or D is
 still available.
@@ -64,21 +87,33 @@ it carries no realtime rubric and will allocate on the callback or write a test
 that cannot fail. Give the agent: the issue body, the SPEC sections it cites, the
 verify tool that must cover it, and the boundaries above.
 
-**3. Gate before believing anything.** In this order, and stop at the first failure:
+**3. Gate in a fresh verifier.** Spawn a new `audio-core-engineer` — not the
+implementer, not the main thread — whose only job is to run the gates and report
+exit codes.
+
+Give it this, and require it back verbatim:
 
 ```bash
+rm -rf native/audio_core/build
+cmake -S native/audio_core -B native/audio_core/build -G Ninja -DKITBAG_BUILD_TOOLS=ON
 cmake --build native/audio_core/build; echo "BUILD=$?"
 ```
 
 Gate on that exit code. A stale binary will happily print "all checks passed"
-after a failed build — this has burned three separate agents in this repo. Then:
+after a failed build — this has burned three separate agents in this repo, and an
+incremental build reporting `ninja: no work to do` hides it. The clean rebuild
+costs about a second; take it. Then:
 
 ```bash
-for t in metronome_verify abi_verify beat_tracker_verify note_lock_verify mixer_verify; do
-  ./native/audio_core/build/$t >/dev/null 2>&1; echo "$t=$?"
+for t in native/audio_core/build/*_verify; do
+  n=$(basename "$t"); [ "$n" = tuner_verify ] && continue
+  "$t" >/dev/null 2>&1; echo "$n=$?"
 done
 bash scripts/lint.sh; echo "LINT=$?"
 ```
+
+The glob is deliberate — a hardcoded tool list goes stale the moment a task adds
+a verify tool, and silently stops gating the newest work.
 
 `tuner_verify` exits 1 (37/37) — expected, pre-existing, not a regression.
 
@@ -88,6 +123,24 @@ a mutation are not evidence: two claimed sabotage runs in this repo didn't
 reproduce because the mutation sat downstream of a bound that already stopped the
 loop, so the suite stayed green and the agent read that as coverage.
 
+**A mutation that stays green is a finding about the test, and it must be
+reported as one.** Two outcomes, both honest, both worth more than a green suite:
+
+- *The test can be sharpened.* `TestSeek` ran `Start(); Seek(); Stop()` back to
+  back, so the producer often had not been scheduled and the stale-frame path
+  never ran. A read before the seek made the mutation fail. Say what was weak and
+  what fixed it.
+- *The behaviour is genuinely unpinnable.* A window a few instructions wide on
+  the producer thread cannot be hit from a single-threaded consumer. Ship the fix,
+  and **delete the test that would have passed either way** — a vacuous check is
+  worse than no check, because it reads as coverage forever after.
+
+  Then mark the gap **in the code, at the line it protects** — not only in the
+  report, which nobody reads again. A green suite behind a check-count guard reads
+  as thorough coverage; the next reader who "simplifies" the invariant away sees
+  97/97 and concludes it was safe. A report cannot reach that reader. One clause
+  at the store can.
+
 **5. Review — both agents, in parallel, in one message.** `ralph` for correctness
 and SPEC conformance, `code-reviewer` for the CONTRIBUTING.md judgment layer.
 They are deliberately non-overlapping and both are required on realtime C++.
@@ -96,10 +149,15 @@ Tell ralph to **re-run the implementer's sabotage claims** rather than accept
 them. That instruction has caught false evidence that a style review passed as
 accurate — when the two reviewers disagree, the one that ran the code wins.
 
-**6. Fix findings in a subagent, not the main thread.** Relay both reviews back
-to the implementing agent via `SendMessage` so it keeps its context. Verify the
-fixes yourself afterward — independently, by running the code, not by reading the
-report. Iterate until both reviewers pass.
+**6. Fix in the implementer, re-gate in a verifier, re-review in both.** Relay
+both reviews back to the implementing agent via `SendMessage` so it keeps its
+context. Then repeat step 3 in a *new* verifier and step 5 in both reviewers —
+resumed via `SendMessage`, so they judge the delta rather than re-reading the
+tree. Iterate until both pass.
+
+Relay a review by restating its findings in your own words with the evidence
+attached. Never paste a full report into the next agent, and never paste one back
+to the user — say what was found and what it means.
 
 **7. Close out.** In the same commit as the code it describes:
 - tracker line → `[x]` with the commit SHA and a one-line result
@@ -107,9 +165,15 @@ report. Iterate until both reviewers pass.
   was banned was *fabricated releases*, not entries)
 - `gh issue close <N> --comment "<what landed, commit SHA, verify evidence>"`
 
-If a doc claim turns out false, **grep the tree for siblings before committing**.
-The same wrong sentence about the `.kwav` sidecar bug was fixed in four separate
-passes because each fix corrected only the instance it was pointed at.
+**Grep the tree for siblings before committing** — a defect found once is a
+pattern until proven otherwise, and this holds for code as much as prose. The
+same wrong sentence about the `.kwav` sidecar bug was fixed in four separate
+passes because each fix corrected only the instance it was pointed at; the
+`ma_format_f32` bug in `file_audio_reader.cpp` had a live twin in `decoder.cpp`
+feeding `kb_analyze_song`, which no verify tool covered.
+
+A sibling outside the issue's scope gets **its own issue**, filed with the
+evidence and the blast radius, not a silent fix bolted onto this commit.
 
 ## Honesty rules that outrank finishing
 
