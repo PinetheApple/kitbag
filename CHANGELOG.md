@@ -36,6 +36,32 @@ A representative sample of what they asserted:
 supersedes anything this file said. Version numbers restart when something
 genuinely ships.
 
+### Added — 2026-07-20
+
+- **`kb_mixer_pause(engine)`** (`SPEC.md` §4.4) — ends playback holding the read
+  head, beside the existing `kb_mixer_stop` which rewinds it to frame 0. Scalar
+  only, so the ABI stays free of buffers.
+- **25 `mixer_verify` checks and 3 `abi_verify` checks** (36 → 61, 12 → 15).
+  They cover the Stop/Pause split, the zero-padding of stems shorter than the
+  longest, and the right channel of a stereo stem — which nothing in the suite
+  previously read, so a right-channel-only fault passed the whole file.
+
+### Fixed — 2026-07-20
+
+- **Pause rewound the transport** (`SPEC.md` §2.2, §7.3) — the mixer exposed only
+  `Stop()`, which zeroes `read_frame_`, so pausing meant rewinding. `Pause()` now
+  holds the position and a following `Play()` resumes from it. This is the native
+  cause only; there is no UI to have a pause button.
+
+### Changed — 2026-07-20
+
+- **Zero-padding of short stems was already correct** and is now pinned rather
+  than assumed. `MixTrack` clamps to each stem's end and `Process` clears the
+  block first, so a short stem has always contributed silence past its end.
+  Nothing changed in the mixer; the measurement is the deliverable. `MixTrack`'s
+  clamp is in fact the *only* padding mechanism — the bounds checks inside
+  `MixMono`/`MixStereo` are unreachable, and deleting both leaves the suite green.
+
 ### Added — 2026-07-19
 
 - **`kb_metronome_start_at(engine, start_frame)`** (`SPEC.md` §4.2) — sample-accurate
@@ -119,6 +145,9 @@ Nothing. This section exists to be honest about that.
   executing. See `SPEC.md` §10.1: this **demotes the capture-path hypothesis** and
   makes the DSP the prime suspect. Informational in CI until the tuner research
   (§10) lands, then it becomes a gate.
-- Everything `SPEC.md` §2.2 and §2.3 name — including a mixer data race, silently
-  dropped non-48kHz stems, a pause button that rewinds, and a permission flow that
-  reports a grant that never happened.
+- Everything `SPEC.md` §2.2 and §2.3 name **except the pause rewind**, fixed above
+  — including a mixer data race, silently dropped non-48kHz stems, and a
+  permission flow that reports a grant that never happened. The mixer race is
+  untouched and still live: `Stop()` and `Seek()` are two unsynchronised stores
+  from the app thread, so the callback can overwrite a rewind. §4.4's pause split
+  did not address it; the scalar command ring in §4.1 is what does.
