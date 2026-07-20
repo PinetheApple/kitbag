@@ -47,13 +47,15 @@ genuinely ships.
   array is copied, not retained. It reaches the audio thread through a new
   `RtPublisher<T>` (`src/rt/rt_publisher.h`), the app→RT bulk-payload seam: an
   atomic pointer swap with deferred retire. Ten grid regressions in
-  `metronome_verify` and five validation groups in `abi_verify` cover it; the
+  `metronome_verify` and five grid groups in `abi_verify` cover it — four of them
+  validation, the fifth exercising `clear_grid`; the
   latter guard `std::lower_bound`'s ordering precondition at the boundary, so a
   descending, repeated, NaN, infinite or oversize grid is rejected with
   `KB_ERROR_INVALID_ARGUMENT` instead of reaching the callback.
 - **`KB_MAX_GRID_BEATS`** — defined once, in `kitbag_api.h`. `beat_tracker.cpp`
   derives its own cap from it rather than retyping the number (`SPEC.md` §13.7).
-- **25 `mixer_verify` checks and 3 `abi_verify` checks** (36 → 61, 12 → 15).
+- **`mixer_verify` (61 checks) and `abi_verify` (15)** — both are new on this
+  branch; neither tool exists on `main`, so this is 61 and 15 from zero.
   They cover the Stop/Pause split, the zero-padding of stems shorter than the
   longest, and the right channel of a stereo stem — which nothing in the suite
   previously read, so a right-channel-only fault passed the whole file.
@@ -70,8 +72,10 @@ genuinely ships.
 - **Two beat-analysis bugs** (commit `a633536`) — `BeatTracker` applied its beat
   cap while backtracking from the *last* beat, so a track over roughly 17 minutes
   returned a grid starting partway into the song; and the `.kwav` sidecar path
-  used arithmetic that only stripped three-letter extensions, turning
-  `song.flac` into `song.fla.kwav`. Now `src/analysis/sidecar_path.h`.
+  used `-4` arithmetic that stripped *nothing* from a three-letter extension and
+  one character from a four-letter one — `song.wav` became `song.wav.kwav` and
+  `song.flac` became `song.fla.kwav`. The common cases were the unstripped ones.
+  Now `src/analysis/sidecar_path.h`.
 - **Pause rewound the transport** (`SPEC.md` §2.2, §7.3) — the mixer exposed only
   `Stop()`, which zeroes `read_frame_`, so pausing meant rewinding. `Pause()` now
   holds the position and a following `Play()` resumes from it. This is the native
@@ -162,6 +166,22 @@ Nothing. This section exists to be honest about that.
 
 ### Known broken
 
+- **`kb_engine_set_test_tone` renders silence.** The exported function sets its
+  flag and `RenderTestTone` writes a correct sine, but `Engine::Render` calls it
+  *before* `Mixer::Process`, whose `std::memset` (`mixer/mixer.cpp:165`) runs
+  unconditionally — ahead of its own `if (!playing_) return`. So the tone is
+  erased in every transport state. Measured: a buffer pre-filled to 0.2 comes
+  back peak 0.000 with the mixer stopped, and peak 0.500 (the stem alone, not
+  0.700) with it playing. `tools/tone_test.c` exists only to exercise this and
+  produces silence. **Not fixed here, deliberately:** a bare reorder is wrong
+  because `RenderTestTone` *assigns* rather than accumulates and writes 0.0f when
+  disabled, so running it after the mixer would zero the mix on every normal
+  block. A correct fix needs accumulate semantics plus a policy decision `SPEC.md`
+  does not make — it never mentions the test tone at all, so whether the tone
+  should sum with live playback or suppress it is unspecified. `Engine::Render` is
+  also private and only reachable through a live miniaudio callback, so there is
+  no deterministic headless test to pin a fix with today. Recorded rather than
+  guessed at.
 - **`tuner_verify` fails 37 of 37 checks.** `PitchAnalyzer` reports `0.000 Hz` at
   `confidence 0.00` for clean synthetic tones from 82 Hz to 1 kHz — silence and a
   pure 440 Hz sine are indistinguishable to it, with no microphone anywhere in the
@@ -170,8 +190,13 @@ Nothing. This section exists to be honest about that.
   makes the DSP the prime suspect. Informational in CI until the tuner research
   (§10) lands, then it becomes a gate.
 - Everything `SPEC.md` §2.2 and §2.3 name **except the pause rewind**, fixed above
-  — including a mixer data race, silently dropped non-48kHz stems, and a
-  permission flow that reports a grant that never happened. The mixer race is
-  untouched and still live: `Stop()` and `Seek()` are two unsynchronised stores
-  from the app thread, so the callback can overwrite a rewind. §4.4's pause split
-  did not address it; the scalar command ring in §4.1 is what does.
+  — including silently dropped non-48kHz stems and a permission flow that reports
+  a grant that never happened. **Two distinct mixer races are live**, and §4.4's
+  pause split addressed neither:
+  - **`SetTrackData` vs `Process`** (`mixer/mixer.cpp:19`, `SPEC.md` §2.2) —
+    `t.pcm.assign()` reallocates on the app thread while the callback may be
+    reading `tr.pcm`. Use-after-realloc on the audio thread; the more dangerous
+    of the two. The RT-safe pointer-swap load in §4.1 (A3) is what fixes it.
+  - **`Stop()` vs `Seek()` vs the callback** — each is a raw unsynchronised store
+    from the app thread, so the callback can overwrite a rewind with the block's
+    advance. The scalar command ring in §4.1 is what fixes it.
