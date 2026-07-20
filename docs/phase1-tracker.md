@@ -11,11 +11,12 @@ mixer fixes (4.4). Framework-independent; every task headlessly testable via
 
 Status legend: `[ ]` todo · `[~]` in progress · `[x]` done (verify green + both reviews pass) · `[!]` blocked
 
-## Current state — 2026-07-20, `work/post-phase0` @ `4d6c89a`
+## Current state — 2026-07-20, `work/post-phase0` @ `ab0e2a4`
 
-**Done:** W0-1 · W0-3 (hygiene, unplanned) · C1 · C2 · **Track B complete** (B2 `4d6c89a`,
-B3 already-correct, B4 `2f82d85`, B1 *withdrawn as wrong*)
-**Next:** C3–C5 (anchor), then W0-2 which gates all of Track A.
+**Done:** W0-1 · W0-3 (hygiene, unplanned) · C1 · C2 · B2 `4d6c89a` · B3 `ab0e2a4`
+(already-correct) · B4 `2f82d85` · B1 *withdrawn as wrong*
+**Next:** C3–C5 (anchor), then W0-2 which gates all of Track A. **Track B is not
+complete** — B5 opened below out of B2/B3 review.
 
 Gates: build 0 · `metronome_verify` `abi_verify` `beat_tracker_verify`
 `note_lock_verify` `mixer_verify` all pass · `lint.sh` 0.
@@ -163,8 +164,20 @@ Review: `@ralph` + `@code-reviewer`.
 
 - [x] ~~**B1** advance read head by **min** across played tracks, not `max_read`.~~ **WITHDRAWN 2026-07-20 — this task was wrong.** A stale `:139` comment claimed "minimum" while the code did maximum; the §2 audit recorded the mismatch and assumed the comment was intent. Measured with ramp fixtures encoding their own frame index: stems share one `read_frame_` and have no per-track cursor, so they cannot desync, and the minimum is what breaks — with 1000/5000-frame stems seeked to 900 it advances 900→1000 having already output through 1412, replaying 412 frames per block. `max_read` was correct. SPEC.md §2 + §4.4 amended. **Do not reinstate.**
 - [x] **B2** Split `Stop()` (position→0) from `Pause()` (holds). `Mixer::Pause()` is a single release store, no rewind; `kb_mixer_pause` added beside `kb_mixer_stop`, scalar-only so the ABI stays free of buffers. Pinned both directions: `mixer_verify` gains 8 checks (paused block silent, head held, resume audible *from the held frame* — 101746, not 100000) and `abi_verify` 3 at the C boundary. Sabotaged both ways: making Pause rewind fails 4+1 checks; making Stop hold fails the pre-existing `stop: the head rewinds to zero`. Commit `4d6c89a`.
-- [x] **B3** Zero-pad tracks shorter than the longest instead of dropping them from the mix. **Already correct — no production change.** B4 had already decoupled the transport from what is audible, and `MixTrack` never dropped a short stem: `frames_avail` clamps to the stem's end and `Process` memsets first, so the tail of the block stays zero. Measured, not assumed — with a 1000-frame stem under a 5000-frame one, seeked to 900 so one block straddles the boundary: frame 900 = 101800 (both stems *summed*, not 100900 = long alone), 999 = 101998 (last contributing frame), 1000 = 101000 and 1300 = 101300 (long alone, padded exactly). 13 new checks in `mixer_verify`, mono and stereo separately, since `MixStereo` reaches the frame through a channels-strided index. **Sabotage: one verified mutation**, not the three first claimed — dropping stems that don't cover the whole block (`start_frame + frame_count > num_frames → return`) fails 5 checks, the zero-pad sum reading 100900 where both stems summed give 101800. Two further claims were **withdrawn after ralph failed to reproduce them and I re-measured**: wrapping `MixMono`'s index modulo `num_frames` leaves the suite green, and loosening `MixStereo`'s bound leaves it green. Root cause of the bad evidence: `MixTrack`'s `frames_avail` is the *sole* padding mechanism and **both inner bounds checks in `MixMono`/`MixStereo` are unreachable** — deleting both keeps 57/57 green. The first run conflated widening `frames_avail` with the wrap it accompanied. The stereo check still discriminates: no-op'ing `MixStereo`'s body fails `zero-pad stereo: last frame` alone. Commit `(this commit — tests only)`.
+- [x] **B3** Zero-pad tracks shorter than the longest instead of dropping them from the mix. **Already correct — no production change.** B4 had already decoupled the transport from what is audible, and `MixTrack` never dropped a short stem: `frames_avail` clamps to the stem's end and `Process` memsets first, so the tail of the block stays zero. Measured, not assumed — with a 1000-frame stem under a 5000-frame one, seeked to 900 so one block straddles the boundary: frame 900 = 101800 (both stems *summed*, not 100900 = long alone), 999 = 101998 (last contributing frame), 1000 = 101000 and 1300 = 101300 (long alone, padded exactly). 13 new checks in `mixer_verify`, mono and stereo separately, since `MixStereo` reaches the frame through a channels-strided index. **Sabotage: one verified mutation**, not the three first claimed — dropping stems that don't cover the whole block (`start_frame + frame_count > num_frames → return`) fails 5 checks, the zero-pad sum reading 100900 where both stems summed give 101800. Two further claims were **withdrawn after ralph failed to reproduce them and I re-measured**: wrapping `MixMono`'s index modulo `num_frames` leaves the suite green, and loosening `MixStereo`'s bound leaves it green. Root cause of the bad evidence: `MixTrack`'s `frames_avail` is the *sole* padding mechanism and **both inner bounds checks in `MixMono`/`MixStereo` are unreachable** — deleting both keeps 57/57 green. The first run conflated widening `frames_avail` with the wrap it accompanied. The stereo check still discriminates: no-op'ing `MixStereo`'s body fails `zero-pad stereo: last frame` alone. Commit `ab0e2a4`.
 - [x] **B4** Auto-stop on **end of longest track**, never "all tracks silent". Was live: `MixTrack` returns 0 for muted/zero-gain/un-soloed/rate-mismatched tracks, so "nothing audible" and "out of data" were one condition — muting everything stopped playback. Transport now follows the longest *loaded* track, independent of gating. Advance became `min(frame_count, longest − start)`; equal to `max_read` whenever the longest track is audible, but keeping the old form would freeze the head under mute-all, turning mute into pause. New `tools/mixer/mixer_verify.cpp`, 36 checks, 6 sabotage runs. Commit `2f82d85`.
+
+- [ ] **B5** `longest_frames_` is monotonic — `mixer.cpp:26` only ever takes a `max` and is never recomputed downward. **Measured:** load track 0 with 5000 frames, reload the same track with 1000, and `track_frames(0)` correctly reports 1000 while the transport still runs to 5000 — seeked to 1500 it renders a silent block, advances to 2012 and still reports `is_playing()`. Pairs with the rescan-on-unload need already implied by A4 (`kb_mixer_unload_track` has the same shape), so fix both there rather than bolting a rescan onto `SetTrackData`, which A1/A3 delete anyway.
+
+### Known and deliberately unfixed in Track B (F3 — belongs to A3)
+
+`Stop()`, `Pause()` and `Seek()` are raw stores from the app thread, not commands
+on a ring. `Stop()`/`Seek()` are two stores and race the callback outright: the
+rewind can be overwritten by the block's advance. `Pause()` is a single store and
+so cannot be torn, but its contract still isn't literally exact under a live
+device — a callback that already loaded `playing_ == true` will advance the head
+one more block after `Pause()` returns. B2's tests are single-threaded and pin
+none of this; the fix is the mixer's scalar-command ring in **A3**.
 
 ## Track C — §4.2 Phase anchor  ·  Wave 1 (needs W0-1)  ·  worktree `wt-phase-anchor`  ·  skill: `native-audio`
 
