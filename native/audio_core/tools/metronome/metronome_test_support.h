@@ -1,8 +1,8 @@
-#ifndef KITBAG_TOOLS_METRONOME_METRONOME_TEST_UTIL_H
-#define KITBAG_TOOLS_METRONOME_METRONOME_TEST_UTIL_H
+#ifndef KITBAG_TOOLS_METRONOME_METRONOME_TEST_SUPPORT_H
+#define KITBAG_TOOLS_METRONOME_METRONOME_TEST_SUPPORT_H
 
 // Shared rig for the metronome_verify suite: offline rendering, onset
-// detection and the assertion helpers. One executable, several test files.
+// detection and the metronome-specific assertions. One executable, several files.
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -10,9 +10,13 @@
 #include <memory>
 #include <vector>
 
+#include "check.h"
 #include "metronome/metronome.h"
 
 namespace metronome_test {
+
+using kitbag_test::Check;
+using kitbag_test::g_failures;
 
 constexpr uint32_t kSampleRate = 48000;
 constexpr uint32_t kChannels = 2;
@@ -26,19 +30,6 @@ constexpr double kMaxJitterFrames = 1.5;
 // Grid beats are placed from doubles in seconds, so allow a couple of samples
 // of rounding on top of the click's attack.
 constexpr double kGridToleranceFrames = 4.0;
-
-inline int g_failures = 0;
-// Counted so a deleted RunXTests()/TestX() call cannot pass silently: the total
-// is a tripwire on the suite's own shape, not a derived expectation.
-inline int g_checks = 0;
-
-inline void Check(bool condition, const char* message) {
-  ++g_checks;
-  if (!condition) {
-    std::fprintf(stderr, "FAIL: %s\n", message);
-    ++g_failures;
-  }
-}
 
 // Detects onsets in one rendered block, appending to `onsets`. `last_onset`
 // and `previous_abs` carry the detector's state across blocks.
@@ -266,8 +257,7 @@ void RunBasicTests();
 void RunStartAtTests();
 void RunLatencyTests();
 void RunGridTests();
-void RunPublisherTests();
 
 }  // namespace metronome_test
 
-#endif  // KITBAG_TOOLS_METRONOME_METRONOME_TEST_UTIL_H
+#endif  // KITBAG_TOOLS_METRONOME_METRONOME_TEST_SUPPORT_H

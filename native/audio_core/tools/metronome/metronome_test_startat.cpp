@@ -1,6 +1,6 @@
 // The sample-accurate start seam (SPEC.md §4.2): anchoring, cancellation and
 // the interactions that made the deferred path diverge from the immediate one.
-#include "metronome_test_util.h"
+#include "metronome_test_support.h"
 
 namespace metronome_test {
 namespace {

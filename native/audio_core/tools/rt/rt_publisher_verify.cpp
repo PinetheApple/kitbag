@@ -1,9 +1,13 @@
 // RtPublisher, the app→RT bulk-payload seam. Its failure mode is a
 // use-after-free in the audio callback, so reclamation is pinned separately.
-#include "metronome_test_util.h"
-#include "rt/rt_publisher.h"
+#include <memory>
 
-namespace metronome_test {
+#include "rt/rt_publisher.h"
+#include "rt_test_support.h"
+
+namespace rt_test {
+
+using kitbag_test::Check;
 namespace {
 
 // Generations advance and the payload survives.
@@ -74,4 +78,4 @@ void RunPublisherTests() {
   TestRtPublisherReclaimsWithNoReader();
 }
 
-}  // namespace metronome_test
+}  // namespace rt_test

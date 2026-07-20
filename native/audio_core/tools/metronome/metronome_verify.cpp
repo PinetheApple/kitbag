@@ -2,7 +2,8 @@
 // asserts click onsets land where the contract says. Suite entry point only.
 #include <cstdio>
 
-#include "metronome_test_util.h"
+#include "metronome_test_support.h"
+#include "rt_test_support.h"
 
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
@@ -13,25 +14,25 @@ int main() {
   metronome_test::RunStartAtTests();
   metronome_test::RunLatencyTests();
   metronome_test::RunGridTests();
-  metronome_test::RunPublisherTests();
+  rt_test::RunPublisherTests();
 
-  if (metronome_test::g_checks != kExpectedChecks) {
+  if (kitbag_test::g_checks != kExpectedChecks) {
     std::fprintf(
         stderr,
         "metronome_verify: ran %d checks, expected %d\n",
-        metronome_test::g_checks,
+        kitbag_test::g_checks,
         kExpectedChecks
     );
     return 1;
   }
-  if (metronome_test::g_failures == 0) {
+  if (kitbag_test::g_failures == 0) {
     std::printf("metronome_verify: all checks passed\n");
     return 0;
   }
   std::fprintf(
       stderr,
       "metronome_verify: %d failure(s)\n",
-      metronome_test::g_failures
+      kitbag_test::g_failures
   );
   return 1;
 }

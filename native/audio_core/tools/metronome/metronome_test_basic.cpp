@@ -1,6 +1,6 @@
 // Constant-tempo sequencing: spacing, tempo changes, subdivisions, the two
 // trainers and polyrhythm.
-#include "metronome_test_util.h"
+#include "metronome_test_support.h"
 
 namespace metronome_test {
 namespace {

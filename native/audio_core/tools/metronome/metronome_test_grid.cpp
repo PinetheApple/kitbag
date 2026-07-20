@@ -1,6 +1,6 @@
 // Grid mode: following measured beat times, re-anchoring, and returning to a
 // constant tempo. The reasoning these pin is SPEC.md §4.2 / §4.2.1.
-#include "metronome_test_util.h"
+#include "metronome_test_support.h"
 
 namespace metronome_test {
 namespace {
