@@ -4,8 +4,8 @@
 //     when it filled. Because the backtrack walks BACKWARD from the last beat,
 //     a track with more beats than that returned a grid whose first entry sat
 //     minutes into the song — the origin shifted, silently.
-//  2. The .kwav sidecar path stripped extensions with arithmetic that only
-//     worked for a 3-letter one, so song.flac became song.fla.kwav.
+//  2. The .kwav sidecar path used -4 arithmetic that stripped nothing from a
+//     3-letter extension (song.wav → song.wav.kwav) and a char from .flac.
 #include "kitbag_api.h"
 
 #include <cmath>
