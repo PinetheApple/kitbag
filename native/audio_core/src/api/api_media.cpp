@@ -93,6 +93,11 @@ void kb_mixer_stop(kb_engine* engine) {
   ToEngine(engine)->mixer().Stop();
 }
 
+void kb_mixer_pause(kb_engine* engine) {
+  if (engine == nullptr) return;
+  ToEngine(engine)->mixer().Pause();
+}
+
 int32_t kb_mixer_is_playing(const kb_engine* engine) {
   return engine == nullptr ? 0
                            : (ToEngine(engine)->mixer().is_playing() ? 1 : 0);

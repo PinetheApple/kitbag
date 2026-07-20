@@ -11,10 +11,10 @@ mixer fixes (4.4). Framework-independent; every task headlessly testable via
 
 Status legend: `[ ]` todo · `[~]` in progress · `[x]` done (verify green + both reviews pass) · `[!]` blocked
 
-## Current state — 2026-07-20, `work/post-phase0` @ `2f82d85`
+## Current state — 2026-07-20, `work/post-phase0` @ `b6a1078`
 
-**Done:** W0-1 · W0-3 (hygiene, unplanned) · C1 · C2 · B4 · B1 *withdrawn as wrong*
-**Next:** B2/B3 (mixer), C3–C5 (anchor), then W0-2 which gates all of Track A.
+**Done:** W0-1 · W0-3 (hygiene, unplanned) · C1 · C2 · B2 · B4 · B1 *withdrawn as wrong*
+**Next:** B3 (mixer), C3–C5 (anchor), then W0-2 which gates all of Track A.
 
 Gates: build 0 · `metronome_verify` `abi_verify` `beat_tracker_verify`
 `note_lock_verify` `mixer_verify` all pass · `lint.sh` 0.
@@ -161,7 +161,7 @@ Verify: `metronome_verify` unaffected; add mixer assertions to a `tools/` check.
 Review: `@ralph` + `@code-reviewer`.
 
 - [x] ~~**B1** advance read head by **min** across played tracks, not `max_read`.~~ **WITHDRAWN 2026-07-20 — this task was wrong.** A stale `:139` comment claimed "minimum" while the code did maximum; the §2 audit recorded the mismatch and assumed the comment was intent. Measured with ramp fixtures encoding their own frame index: stems share one `read_frame_` and have no per-track cursor, so they cannot desync, and the minimum is what breaks — with 1000/5000-frame stems seeked to 900 it advances 900→1000 having already output through 1412, replaying 412 frames per block. `max_read` was correct. SPEC.md §2 + §4.4 amended. **Do not reinstate.**
-- [ ] **B2** Split `Stop()` (position→0) from `Pause()` (holds). Expose both on the ABI. Current behaviour pinned by `mixer_verify` (`stop: the head rewinds to zero`), so the change is visible when made.
+- [x] **B2** Split `Stop()` (position→0) from `Pause()` (holds). `Mixer::Pause()` is a single release store, no rewind; `kb_mixer_pause` added beside `kb_mixer_stop`, scalar-only so the ABI stays free of buffers. Pinned both directions: `mixer_verify` gains 8 checks (paused block silent, head held, resume audible *from the held frame* — 101746, not 100000) and `abi_verify` 3 at the C boundary. Sabotaged both ways: making Pause rewind fails 4+1 checks; making Stop hold fails the pre-existing `stop: the head rewinds to zero`. Commit `(this commit)`.
 - [ ] **B3** Zero-pad tracks shorter than the longest instead of dropping them from the mix.
 - [x] **B4** Auto-stop on **end of longest track**, never "all tracks silent". Was live: `MixTrack` returns 0 for muted/zero-gain/un-soloed/rate-mismatched tracks, so "nothing audible" and "out of data" were one condition — muting everything stopped playback. Transport now follows the longest *loaded* track, independent of gating. Advance became `min(frame_count, longest − start)`; equal to `max_read` whenever the longest track is audible, but keeping the old form would freeze the head under mute-all, turning mute into pause. New `tools/mixer/mixer_verify.cpp`, 36 checks, 6 sabotage runs. Commit `2f82d85`.
 

@@ -39,9 +39,11 @@ class Mixer {
   bool Muted(int track) const;
   bool Soloed(int track) const;
 
-  /// Start/stop playback.
   void Play();
+  /// Ends playback and rewinds to frame 0. Pause holds the position instead, so
+  /// a following Play resumes where it left off (SPEC.md §4.4).
   void Stop();
+  void Pause();
   bool is_playing() const {
     return playing_.load();
   }

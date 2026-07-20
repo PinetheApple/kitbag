@@ -171,7 +171,10 @@ KB_EXPORT void
 kb_mixer_set_solo(kb_engine* engine, int32_t track, int32_t soloed);
 KB_EXPORT int32_t kb_mixer_soloed(const kb_engine* engine, int32_t track);
 KB_EXPORT void kb_mixer_play(kb_engine* engine);
+/* Ends playback and rewinds the head to frame 0. */
 KB_EXPORT void kb_mixer_stop(kb_engine* engine);
+/* Ends playback holding the head, so kb_mixer_play resumes from there. */
+KB_EXPORT void kb_mixer_pause(kb_engine* engine);
 KB_EXPORT int32_t kb_mixer_is_playing(const kb_engine* engine);
 KB_EXPORT void kb_mixer_seek(kb_engine* engine, int64_t frame);
 KB_EXPORT int64_t kb_mixer_position(const kb_engine* engine);
