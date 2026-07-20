@@ -40,9 +40,10 @@ class Mixer {
   bool Soloed(int track) const;
 
   void Play();
-  /// Ends playback and rewinds to frame 0. Pause holds the position instead, so
-  /// a following Play resumes where it left off (SPEC.md §4.4).
+  /// Ends playback and rewinds the head to frame 0 (SPEC.md §4.4).
   void Stop();
+  /// Ends playback holding the head, so a following Play resumes there. An
+  /// in-flight callback can still advance it one block — F3, see the tracker.
   void Pause();
   bool is_playing() const {
     return playing_.load();
