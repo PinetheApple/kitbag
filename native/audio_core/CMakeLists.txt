@@ -92,6 +92,11 @@ if(KITBAG_BUILD_TOOLS)
   target_include_directories(beat_tracker_verify PRIVATE src include)
   target_link_libraries(beat_tracker_verify PRIVATE m)
 
+  # Links the sources: Mixer is internal, not exported through the C ABI.
+  add_executable(mixer_verify tools/mixer/mixer_verify.cpp src/mixer/mixer.cpp)
+  target_include_directories(mixer_verify PRIVATE src)
+  target_link_libraries(mixer_verify PRIVATE m)
+
   add_executable(note_lock_verify tools/tuner/note_lock_verify.cpp
     src/tuner/note_lock.cpp)
   target_include_directories(note_lock_verify PRIVATE src)

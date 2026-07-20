@@ -24,6 +24,7 @@ void Mixer::SetTrackData(
   if (track >= track_count_) {
     track_count_ = track + 1;
   }
+  longest_frames_ = std::max(longest_frames_, num_frames);
 }
 
 void Mixer::SetGain(int track, float gain) {
@@ -118,8 +119,7 @@ void Mixer::MixStereo(
   }
 }
 
-// Returns the frames this track contributed, 0 if it was skipped.
-uint64_t Mixer::MixTrack(
+void Mixer::MixTrack(
     const Track& tr,
     float* output,
     uint32_t frame_count,
@@ -127,16 +127,16 @@ uint64_t Mixer::MixTrack(
     bool any_solo,
     uint32_t sr
 ) {
-  if (!tr.has_data) return 0;
-  if (any_solo && !tr.solo.load(std::memory_order_relaxed)) return 0;
-  if (tr.mute.load(std::memory_order_relaxed)) return 0;
+  if (!tr.has_data) return;
+  if (any_solo && !tr.solo.load(std::memory_order_relaxed)) return;
+  if (tr.mute.load(std::memory_order_relaxed)) return;
 
   const float gain = tr.gain.load(std::memory_order_relaxed);
-  if (gain <= 0.0f) return 0;
+  if (gain <= 0.0f) return;
 
   // No resampler yet — a track at another rate is dropped silently
   // (SPEC.md §4.1).
-  if (tr.sample_rate != sr) return 0;
+  if (tr.sample_rate != sr) return;
 
   const uint64_t frames_avail =
       std::min(
@@ -144,14 +144,13 @@ uint64_t Mixer::MixTrack(
           start_frame + static_cast<uint64_t>(frame_count)
       ) -
       std::min(start_frame, tr.num_frames);
-  if (frames_avail == 0) return 0;
+  if (frames_avail == 0) return;
 
   if (tr.channels == 1) {
     MixMono(tr, output, start_frame, frames_avail, gain);
   } else if (tr.channels >= 2) {
     MixStereo(tr, output, start_frame, frames_avail, gain);
   }
-  return frames_avail;
 }
 
 void Mixer::Process(float* output, uint32_t frame_count, uint32_t sr) {
@@ -162,21 +161,22 @@ void Mixer::Process(float* output, uint32_t frame_count, uint32_t sr) {
 
   const bool any_solo = any_solo_.load(std::memory_order_relaxed);
   const uint64_t start_frame = read_frame_.load(std::memory_order_relaxed);
-  uint64_t max_read = 0;
 
   for (int t = 0; t < track_count_; ++t) {
-    const uint64_t read =
-        MixTrack(tracks_[t], output, frame_count, start_frame, any_solo, sr);
-    if (read > max_read) max_read = read;
+    MixTrack(tracks_[t], output, frame_count, start_frame, any_solo, sr);
   }
 
-  // KNOWN DEFECT (SPEC.md §2, fix in §4.4): this advances by the maximum, which
-  // desyncs unequal-length stems. Do not "fix" the comment to match.
-  if (max_read > 0) {
-    read_frame_.store(start_frame + max_read, std::memory_order_relaxed);
-  } else {
+  // The transport is the longest loaded track, not what was audible: mute, solo
+  // and zero gain must not end playback (SPEC.md §4.4).
+  if (start_frame >= longest_frames_) {
     playing_.store(false, std::memory_order_release);
+    return;
   }
+  const uint64_t remaining = longest_frames_ - start_frame;
+  read_frame_.store(
+      start_frame + std::min(static_cast<uint64_t>(frame_count), remaining),
+      std::memory_order_relaxed
+  );
 }
 
 }  // namespace kitbag
