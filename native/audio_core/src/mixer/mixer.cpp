@@ -142,6 +142,8 @@ void Mixer::MixTrack(
   // (SPEC.md §4.1).
   if (tr.sample_rate != sr) return;
 
+  // The whole zero-pad mechanism: capping the loop at this stem's end leaves
+  // the rest of the memset block silent. The Mix* bounds checks never fire.
   const uint64_t frames_avail =
       std::min(
           tr.num_frames,

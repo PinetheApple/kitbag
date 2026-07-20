@@ -1,5 +1,7 @@
-// Pins the mixer transport: auto-stop follows the longest loaded track, never
-// "nothing was audible this block" (SPEC.md §4.4).
+// Pins the mixer's transport (auto-stop follows the longest loaded track, never
+// "nothing was audible this block") and its mixing (short stems sum, then pad).
+// Split seam when this file next grows: transport stays, the zero-pad and
+// memset tests move to a sibling — shared helpers would need mixer_test_support.h.
 #include <cstdio>
 #include <vector>
 
@@ -10,6 +12,7 @@ namespace {
 constexpr uint32_t kSampleRate = 48000;
 constexpr uint32_t kBlock = 512;
 constexpr uint32_t kMono = 1;
+constexpr uint32_t kStereo = 2;
 constexpr uint64_t kShortFrames = 1000;
 constexpr uint64_t kLongFrames = 5000;
 // Keeps the two stems' samples apart by more than any frame index in play, so a
@@ -240,32 +243,79 @@ void TestSeekAndPosition() {
   Check(mixer.position() == 0, "stop: the head rewinds to zero");
 }
 
+// A stem shorter than the longest contributes silence past its end, not a
+// dropped voice and not stale samples. The block straddles frame 1000, so one
+// render covers both sides of the boundary (SPEC.md §4.4).
+void TestShortStemIsZeroPaddedNotDropped() {
+  kitbag::Mixer mixer;
+  LoadRamp(&mixer, 0, kShortFrames, 0.0f);
+  LoadRamp(&mixer, 1, kLongFrames, kLongOffset);
+  mixer.Play();
+  mixer.Seek(900);
+
+  const std::vector<float> out = RenderBlock(&mixer);
+  // Sums, so dropping the short stem shows up as 100900 rather than 101800.
+  ExpectSample(out, 0, 101800.0f, "zero-pad: both stems sum before the end");
+  ExpectSample(out, 99, 101998.0f, "zero-pad: the short stem's last frame");
+  ExpectSample(
+      out,
+      100,
+      101000.0f,
+      "zero-pad: the long stem alone one frame on"
+  );
+  ExpectSample(
+      out,
+      400,
+      101300.0f,
+      "zero-pad: still long-only well past the end"
+  );
+  Check(mixer.is_playing(), "zero-pad: the short stem ending does not stop");
+}
+
+// Padding is MixTrack's job for both paths, but MixStereo reaches the frame
+// through a channels-strided index, so its boundary is its own to get wrong.
+void TestShortStereoStemIsZeroPadded() {
+  kitbag::Mixer mixer;
+  const std::vector<float> stereo = MakeRamp(kShortFrames * kStereo, 0.0f);
+  mixer.SetTrackData(0, stereo.data(), kShortFrames, kStereo, kSampleRate);
+  LoadRamp(&mixer, 1, kLongFrames, kLongOffset);
+  mixer.Play();
+  mixer.Seek(900);
+
+  const std::vector<float> out = RenderBlock(&mixer);
+  // Interleaved: the left sample of frame 999 is pcm[1998].
+  ExpectSample(out, 99, 1998.0f + 100999.0f, "zero-pad stereo: last frame");
+  ExpectSample(out, 100, 101000.0f, "zero-pad stereo: padded one frame on");
+}
+
 // Pause holds the head where it stopped; Stop rewinds it. Resuming after a
 // Pause must sound from the held frame, not from the top (SPEC.md §4.4).
 void TestPauseHoldsPositionStopRewinds() {
   kitbag::Mixer mixer;
   LoadRamp(&mixer, 0, kLongFrames, kLongOffset);
-  mixer.Seek(1234);
+  const uint64_t sought = 1234;
+  const uint64_t held = sought + kBlock;
+  mixer.Seek(sought);
   mixer.Play();
   RenderBlock(&mixer);
 
   mixer.Pause();
   Check(!mixer.is_playing(), "pause: playback ends");
-  Check(mixer.position() == 1746, "pause: the head holds its position");
+  Check(mixer.position() == held, "pause: the head holds its position");
   ExpectSilentBlock(RenderBlock(&mixer), "pause: a paused mixer is silent");
-  Check(mixer.position() == 1746, "pause: a paused block does not advance");
+  Check(mixer.position() == held, "pause: a paused block does not advance");
 
   mixer.Play();
   const std::vector<float> resumed = RenderBlock(&mixer);
   ExpectSample(
       resumed,
       0,
-      kLongOffset + 1746.0f,
+      kLongOffset + static_cast<float>(held),
       "pause: resuming sounds from the held frame"
   );
   Check(
-      mixer.position() == 2258,
-      "pause: resuming advances from the held frame"
+      mixer.position() == held + kBlock,
+      "pause: resuming advances exactly one block from the held frame"
   );
 
   mixer.Stop();
@@ -285,7 +335,7 @@ void TestProcessClearsTheBuffer() {
 
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 44;
+constexpr int kExpectedChecks = 57;
 
 int main() {
   TestMuteAllKeepsPlaying();
@@ -293,6 +343,8 @@ int main() {
   TestSoloKeepsPlayingForOthers();
   TestAutoStopAtLongestTrackEnd();
   TestShortStemDoesNotHoldBackTheLongOne();
+  TestShortStemIsZeroPaddedNotDropped();
+  TestShortStereoStemIsZeroPadded();
   TestSeekAndPosition();
   TestPauseHoldsPositionStopRewinds();
   TestProcessClearsTheBuffer();
