@@ -50,7 +50,9 @@ target_include_directories(kitbag_core
 # SYSTEM: keep -Wall -Wextra for our code without patching vendored headers.
 target_include_directories(kitbag_core SYSTEM PRIVATE third_party/cycfi_q/include)
 
-target_compile_options(kitbag_core PRIVATE -Wall -Wextra)
+# -Werror=switch and nothing else: the exhaustive switch over CommandType
+# (metronome.cpp) is load-bearing — a new command must not compile to a silent drop.
+target_compile_options(kitbag_core PRIVATE -Wall -Wextra -Werror=switch)
 set_target_properties(kitbag_core PROPERTIES C_VISIBILITY_PRESET hidden CXX_VISIBILITY_PRESET hidden)
 set_target_properties(kitbag_core PROPERTIES
   INTERPROCEDURAL_OPTIMIZATION_RELEASE ${KITBAG_IPO_SUPPORTED}
@@ -79,6 +81,8 @@ if(KITBAG_BUILD_TOOLS)
     src/metronome/metronome_grid.cpp
     src/metronome/metronome_render.cpp)
   target_include_directories(metronome_verify PRIVATE src)
+  # metronome.cpp is compiled again here, outside kitbag_core's options.
+  target_compile_options(metronome_verify PRIVATE -Werror=switch)
   target_link_libraries(metronome_verify PRIVATE m)
 
   # Links the shared library rather than the sources: the point is to prove the
