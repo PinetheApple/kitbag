@@ -11,12 +11,14 @@ mixer fixes (4.4). Framework-independent; every task headlessly testable via
 
 Status legend: `[ ]` todo · `[~]` in progress · `[x]` done (verify green + both reviews pass) · `[!]` blocked
 
-## Current state — 2026-07-20, `work/post-phase0` @ `00108a4`
+## Current state — 2026-07-20, `work/post-phase0` @ `ac29168`
 
-**Done:** W0-1 · W0-3 (hygiene, unplanned) · C1 · C2 · B2 `4d6c89a` · B3 `ab0e2a4`
-(already-correct) · B4 `2f82d85` · B1 *withdrawn as wrong*
-**Next:** C3–C5 (anchor), then W0-2 which gates all of Track A. **Track B is not
-complete** — B5 opened below out of B2/B3 review.
+**Done:** W0-1 · W0-2 `603a2c2` · W0-3 (hygiene, unplanned) · C1 · C2 · B2 `4d6c89a`
+· B3 `ab0e2a4` (already-correct) · B4 `2f82d85` · B1 *withdrawn as wrong*
+**Next:** C3–C5 (anchor). Track A is now unblocked — W0-2 landed, so A1 and A5
+have their streaming seam. **Track B is not complete** — B5 opened below out of
+B2/B3 review. **New:** #18, `decoder.cpp` carries W0-2's `ma_format_f32` bug on
+the live `kb_analyze_song` path.
 
 ### Tickets live on GitHub
 
