@@ -29,7 +29,9 @@ add_library(kitbag_core SHARED
   src/api/api_media.cpp
   src/api/api_metronome.cpp
   src/analysis/beat_tracker.cpp
+  src/media/audio_source.cpp
   src/media/decoder.cpp
+  src/media/file_audio_reader.cpp
   src/engine.cpp
   src/dsp/fft.cpp
   src/metronome/metronome.cpp
@@ -105,6 +107,33 @@ if(KITBAG_BUILD_TOOLS)
   )
   target_include_directories(mixer_verify PRIVATE src tools tools/mixer)
   target_link_libraries(mixer_verify PRIVATE m)
+
+  # Drives the in-memory adapter. That this target links no miniaudio and still
+  # passes is what proves the seam: the module depends on SourceReader, not on
+  # a decoder. The file adapter gets its own tool below — the seam has two
+  # sides and both are compiled into a test.
+  add_executable(audio_source_verify
+    tools/media/audio_source_verify.cpp
+    tools/media/audio_source_test_stream.cpp
+    tools/media/audio_source_test_edge.cpp
+    tools/rt/spsc_bulk_ring_test.cpp
+    src/media/audio_source.cpp
+  )
+  target_include_directories(audio_source_verify
+    PRIVATE src tools tools/media tools/rt)
+  find_package(Threads REQUIRED)
+  target_link_libraries(audio_source_verify PRIVATE Threads::Threads m)
+
+  # The other side: FileAudioReader over a WAV the tool writes at run time, so
+  # no binary fixture is committed.
+  add_executable(file_audio_reader_verify
+    tools/media/file_audio_reader_verify.cpp
+    src/media/file_audio_reader.cpp
+    src/media/miniaudio_impl.c
+  )
+  target_include_directories(file_audio_reader_verify
+    PRIVATE src tools tools/media third_party)
+  target_link_libraries(file_audio_reader_verify PRIVATE Threads::Threads m ${CMAKE_DL_LIBS})
 
   add_executable(note_lock_verify tools/tuner/note_lock_verify.cpp
     src/tuner/note_lock.cpp)

@@ -171,7 +171,7 @@ across W0-1 (pure refactor — behaviour unchanged); W0-2 gets a `tools/` check
 driving the in-memory fake.
 
 - [x] **W0-1** Transport-clock seam (F1). Threaded `uint64_t block_start_frame` into `Metronome::Render`; `Engine::Render` reads `frames_rendered_` before the block, advances after. Mixer left unchanged (no Phase 1 consumer). Landed with its first consumer C1 to avoid a dead param. `metronome_verify` green; ralph + code-reviewer passed after fixes.
-- [ ] **W0-2** `AudioSource` module (F2). Pull interface `Read(float* dst, frames)` hiding a non-RT ring-buffered read-ahead thread. Real-file adapter (miniaudio) + in-memory fake. Standalone deep module, own `tools/` test via the fake. **Blocks A1, A5.**
+- [x] **W0-2** `AudioSource` module (F2). Pull interface `Read(float* dst, frames)` hiding a non-RT ring-buffered read-ahead thread; lifecycle split `Open`/`Start`/`Stop`/`Seek`/`Close` so pause/resume preserves the ring and the position. Real-file adapter (miniaudio) + in-memory fake; `audio_source_verify` (104) links no miniaudio, `file_audio_reader_verify` (14) drives a runtime WAV fixture. Review caught a critical defect: the file adapter never requested `ma_format_f32`, so every 16-bit file decoded to denormal noise — it had zero coverage because a CMake comment argued that testing it would leak the seam. Its twin in `decoder.cpp` is live on the `kb_analyze_song` path → issue #18. TSan + ASan/UBSan clean; 15 sabotage mutations reproduce. **Known gap:** the EOF/underrun flag ordering is reasoned, not measured — folding the two flags back into one leaves all 104 checks green, and the code says so at the store. **Unblocks A1, A5.**
 
 ### W0-3 — Codebase hygiene (unplanned; ran 2026-07-19/20)
 
