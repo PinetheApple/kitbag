@@ -24,23 +24,23 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 add_library(kitbag_core SHARED
-  src/api.cpp
-  src/api_analysis.cpp
-  src/api_media.cpp
-  src/api_metronome.cpp
-  src/beat_tracker.cpp
-  src/decoder.cpp
+  src/api/api.cpp
+  src/api/api_analysis.cpp
+  src/api/api_media.cpp
+  src/api/api_metronome.cpp
+  src/analysis/beat_tracker.cpp
+  src/media/decoder.cpp
   src/engine.cpp
-  src/fft.cpp
-  src/metronome.cpp
-  src/metronome_grid.cpp
-  src/metronome_render.cpp
-  src/miniaudio_impl.c
-  src/mixer.cpp
-  src/note_lock.cpp
-  src/pitch_analyzer.cpp
-  src/tuner.cpp
-  src/waveform_peaks.cpp
+  src/dsp/fft.cpp
+  src/metronome/metronome.cpp
+  src/metronome/metronome_grid.cpp
+  src/metronome/metronome_render.cpp
+  src/media/miniaudio_impl.c
+  src/mixer/mixer.cpp
+  src/tuner/note_lock.cpp
+  src/tuner/pitch_analyzer.cpp
+  src/tuner/tuner.cpp
+  src/analysis/waveform_peaks.cpp
 )
 
 target_include_directories(kitbag_core
@@ -69,15 +69,15 @@ if(KITBAG_BUILD_TOOLS)
   target_link_libraries(tone_test PRIVATE kitbag_core)
 
   add_executable(metronome_verify
-    tools/metronome_verify.cpp
-    tools/metronome_test_basic.cpp
-    tools/metronome_test_grid.cpp
-    tools/metronome_test_latency.cpp
-    tools/metronome_test_publisher.cpp
-    tools/metronome_test_startat.cpp
-    src/metronome.cpp
-    src/metronome_grid.cpp
-    src/metronome_render.cpp)
+    tools/metronome/metronome_verify.cpp
+    tools/metronome/metronome_test_basic.cpp
+    tools/metronome/metronome_test_grid.cpp
+    tools/metronome/metronome_test_latency.cpp
+    tools/metronome/metronome_test_publisher.cpp
+    tools/metronome/metronome_test_startat.cpp
+    src/metronome/metronome.cpp
+    src/metronome/metronome_grid.cpp
+    src/metronome/metronome_render.cpp)
   target_include_directories(metronome_verify PRIVATE src)
   target_link_libraries(metronome_verify PRIVATE m)
 
@@ -87,16 +87,18 @@ if(KITBAG_BUILD_TOOLS)
   target_link_libraries(abi_verify PRIVATE kitbag_core)
 
   # Links the sources: TrackBeats and SidecarPath are internal, not exported.
-  add_executable(beat_tracker_verify tools/beat_tracker_verify.cpp
-    src/beat_tracker.cpp src/fft.cpp)
+  add_executable(beat_tracker_verify tools/analysis/beat_tracker_verify.cpp
+    src/analysis/beat_tracker.cpp src/dsp/fft.cpp)
   target_include_directories(beat_tracker_verify PRIVATE src include)
   target_link_libraries(beat_tracker_verify PRIVATE m)
 
-  add_executable(note_lock_verify tools/note_lock_verify.cpp src/note_lock.cpp)
+  add_executable(note_lock_verify tools/tuner/note_lock_verify.cpp
+    src/tuner/note_lock.cpp)
   target_include_directories(note_lock_verify PRIVATE src)
   target_link_libraries(note_lock_verify PRIVATE m)
 
-  add_executable(tuner_verify tools/tuner_verify.cpp src/pitch_analyzer.cpp src/note_lock.cpp)
+  add_executable(tuner_verify tools/tuner/tuner_verify.cpp
+    src/tuner/pitch_analyzer.cpp src/tuner/note_lock.cpp)
   target_include_directories(tuner_verify PRIVATE src)
   target_include_directories(tuner_verify SYSTEM PRIVATE third_party/cycfi_q/include)
   target_link_libraries(tuner_verify PRIVATE m)

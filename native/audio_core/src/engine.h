@@ -4,11 +4,11 @@
 #include <atomic>
 #include <cstdint>
 
-#include "decoder.h"
-#include "metronome.h"
+#include "media/decoder.h"
+#include "metronome/metronome.h"
 #include "miniaudio.h"
-#include "mixer.h"
-#include "tuner.h"
+#include "mixer/mixer.h"
+#include "tuner/tuner.h"
 
 namespace kitbag {
 
