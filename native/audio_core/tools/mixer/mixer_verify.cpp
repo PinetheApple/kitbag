@@ -240,6 +240,38 @@ void TestSeekAndPosition() {
   Check(mixer.position() == 0, "stop: the head rewinds to zero");
 }
 
+// Pause holds the head where it stopped; Stop rewinds it. Resuming after a
+// Pause must sound from the held frame, not from the top (SPEC.md §4.4).
+void TestPauseHoldsPositionStopRewinds() {
+  kitbag::Mixer mixer;
+  LoadRamp(&mixer, 0, kLongFrames, kLongOffset);
+  mixer.Seek(1234);
+  mixer.Play();
+  RenderBlock(&mixer);
+
+  mixer.Pause();
+  Check(!mixer.is_playing(), "pause: playback ends");
+  Check(mixer.position() == 1746, "pause: the head holds its position");
+  ExpectSilentBlock(RenderBlock(&mixer), "pause: a paused mixer is silent");
+  Check(mixer.position() == 1746, "pause: a paused block does not advance");
+
+  mixer.Play();
+  const std::vector<float> resumed = RenderBlock(&mixer);
+  ExpectSample(
+      resumed,
+      0,
+      kLongOffset + 1746.0f,
+      "pause: resuming sounds from the held frame"
+  );
+  Check(
+      mixer.position() == 2258,
+      "pause: resuming advances from the held frame"
+  );
+
+  mixer.Stop();
+  Check(mixer.position() == 0, "pause: Stop still rewinds after a Pause");
+}
+
 // Process must clear the buffer before mixing: Engine::Render renders the
 // additive metronome into it afterwards and relies on that.
 void TestProcessClearsTheBuffer() {
@@ -253,7 +285,7 @@ void TestProcessClearsTheBuffer() {
 
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 36;
+constexpr int kExpectedChecks = 44;
 
 int main() {
   TestMuteAllKeepsPlaying();
@@ -262,6 +294,7 @@ int main() {
   TestAutoStopAtLongestTrackEnd();
   TestShortStemDoesNotHoldBackTheLongOne();
   TestSeekAndPosition();
+  TestPauseHoldsPositionStopRewinds();
   TestProcessClearsTheBuffer();
 
   if (g_checks != kExpectedChecks) {

@@ -17,7 +17,7 @@ int g_failures = 0;
 int g_checks = 0;
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 12;
+constexpr int kExpectedChecks = 15;
 
 void Check(bool condition, const char* message) {
   ++g_checks;
@@ -112,6 +112,21 @@ void TestClearGrid(kb_engine* engine) {
   );
 }
 
+// Pause and Stop differ only in what they do to the head, so the pair is only
+// meaningful checked together at the boundary (SPEC.md §4.4).
+void TestMixerPauseHoldsStopRewinds(kb_engine* engine) {
+  kb_mixer_seek(engine, 4321);
+  kb_mixer_play(engine);
+  kb_mixer_pause(engine);
+  Check(kb_mixer_is_playing(engine) == 0, "pause: playback ends");
+  Check(kb_mixer_position(engine) == 4321, "pause: the head holds");
+
+  kb_mixer_play(engine);
+  kb_mixer_stop(engine);
+  Check(kb_mixer_position(engine) == 0, "stop: the head rewinds to zero");
+  kb_mixer_pause(nullptr);  // a null engine is a no-op, not a crash
+}
+
 // Returns the process exit code, so main stays a list of what it runs.
 int Report() {
   if (g_checks != kExpectedChecks) {
@@ -148,6 +163,7 @@ int main() {
   TestSetGridRejectsNonFinite(engine);
   TestSetGridRejectsOversize(engine);
   TestClearGrid(engine);
+  TestMixerPauseHoldsStopRewinds(engine);
 
   kb_engine_destroy(engine);
   return Report();

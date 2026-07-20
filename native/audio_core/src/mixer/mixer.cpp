@@ -80,6 +80,10 @@ void Mixer::Stop() {
   read_frame_.store(0, std::memory_order_relaxed);
 }
 
+void Mixer::Pause() {
+  playing_.store(false, std::memory_order_release);
+}
+
 void Mixer::Seek(uint64_t frame) {
   read_frame_.store(frame, std::memory_order_relaxed);
 }
