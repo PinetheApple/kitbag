@@ -1,5 +1,6 @@
 #include "media/file_audio_reader.h"
 
+#include "media/miniaudio_decoder.h"
 #include "miniaudio.h"
 
 namespace kitbag {
@@ -11,11 +12,7 @@ FileAudioReader::~FileAudioReader() {
 bool FileAudioReader::Open(const char* path) {
   Close();
   auto* decoder = new ma_decoder();
-  // Without this the decoder outputs the file's native format, so a 16-bit WAV
-  // writes s16 into the float* the whole module is built around — denormal
-  // noise, and dst under-filled by half.
-  const ma_decoder_config config = ma_decoder_config_init(ma_format_f32, 0, 0);
-  if (ma_decoder_init_file(path, &config, decoder) != MA_SUCCESS) {
+  if (!OpenDecoderF32(path, decoder)) {
     delete decoder;
     return false;
   }

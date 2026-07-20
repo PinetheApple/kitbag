@@ -1,8 +1,6 @@
 #include "media/decoder.h"
 
-#include <cmath>
-#include <cstring>
-
+#include "media/miniaudio_decoder.h"
 #include "miniaudio.h"
 
 namespace kitbag {
@@ -17,8 +15,7 @@ bool Decoder::Open(const char* path) {
   Close();
 
   auto* dec = new ma_decoder();
-  const ma_result result = ma_decoder_init_file(path, nullptr, dec);
-  if (result != MA_SUCCESS) {
+  if (!OpenDecoderF32(path, dec)) {
     delete dec;
     return false;
   }

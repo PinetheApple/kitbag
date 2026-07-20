@@ -6,7 +6,6 @@
 #include <string>
 #include <vector>
 
-#include "check.h"
 #include "media/audio_source.h"
 #include "media/file_audio_reader.h"
 #include "media_test_support.h"
@@ -19,14 +18,15 @@ constexpr uint64_t kFixtureFrames = 1000;
 
 using kitbag::FileAudioReader;
 
-float Expected(uint64_t index) {
-  return static_cast<float>(media_test::FixtureSample(index)) /
-         media_test::kS16Scale;
-}
-
 void TestMetadata(FileAudioReader* reader) {
-  kitbag_test::Check(reader->channels() == 2, "file: channel count");
-  kitbag_test::Check(reader->sample_rate() == 44100, "file: sample rate");
+  kitbag_test::Check(
+      reader->channels() == media_test::kFixtureChannels,
+      "file: channel count"
+  );
+  kitbag_test::Check(
+      reader->sample_rate() == media_test::kFixtureRate,
+      "file: sample rate"
+  );
   kitbag_test::Check(
       reader->total_frames() == kFixtureFrames,
       "file: frame count"
@@ -45,7 +45,7 @@ void TestDecodesToFloat(FileAudioReader* reader) {
   );
   bool exact = true;
   for (uint64_t i = 0; i < 8; ++i) {
-    if (dst[i] != Expected(i)) exact = false;
+    if (dst[i] != media_test::ExpectedFloat(i)) exact = false;
   }
   kitbag_test::Check(exact, "file: s16 converts to the exact float value");
 }
@@ -60,7 +60,9 @@ void TestSeekAndEnd(FileAudioReader* reader) {
       "file: a short read reports end of stream"
   );
   kitbag_test::Check(
-      dst[0] == Expected((kFixtureFrames - 2) * media_test::kFixtureChannels),
+      dst[0] == media_test::ExpectedFloat(
+                    (kFixtureFrames - 2) * media_test::kFixtureChannels
+                ),
       "file: the seek lands on the right frame"
   );
   kitbag_test::Check(
