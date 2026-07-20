@@ -100,10 +100,12 @@ Nothing in Phase 1 should widen the ABI in a way that forces a buffer across.
 4. **Fix findings; iterate until both pass.**
 5. **Mark `[x]` only when** verify green + lint clean + both reviewers pass.
 
-Default work skill for all native tasks: **`native-audio`** (the C++ core, the C
-ABI, the verify tools, the RT invariants). No dedicated C++ engineer agent exists —
-run native work on the main thread or a `general-purpose` subagent that loads
-`native-audio`. Reviews are the `ralph` and `code-reviewer` agents.
+Native work goes to the **`audio-core-engineer`** agent, whose rubric is the
+callback invariants, the sanctioned data-movement patterns, the size limits and
+the sabotage discipline. It replaces the earlier advice to use `general-purpose`
+with the `native-audio` skill — general-purpose carries no realtime rubric and
+will allocate on the callback or write a test that cannot fail. Reviews stay
+`ralph` (correctness/§4) and `code-reviewer` (CONTRIBUTING.md judgment layer).
 
 ---
 
