@@ -124,8 +124,13 @@ faithfully reproduces them has failed.
   already output through 1412, replaying 412 frames at every block near the
   short stem's end. `max_read` is correct; the :139 comment was the defect.
   The live bug beside it is the auto-stop condition — see §4.4.
-- `mixer.cpp:68-71` — `Stop()` resets position to 0, and the pause button calls
-  it. **There is no pause.**
+- ~~`mixer.cpp:68-71` — `Stop()` resets position to 0, and the pause button calls
+  it. **There is no pause.**~~ **Native half fixed 2026-07-20** (`4d6c89a`).
+  `Mixer::Pause()` is a single release store that holds `read_frame_`, and a
+  following `Play()` resumes from it; `Stop()` still rewinds, which is now its
+  own distinct job. Exposed on the ABI as `kb_mixer_pause` beside
+  `kb_mixer_stop`. **The UI half is still open** — the audit's "the pause button
+  calls it" cannot be fixed yet because there is no UI. See §7.3.
 - `bpm_lookup_service.dart:68` — comment claims title/artist similarity
   matching; the loop returns the first result with nonzero BPM. Wrong-song BPM
   likely.
@@ -835,8 +840,11 @@ first implementation**, gated on §4.1.
 
 ### 7.3 Transport
 
-- **Real pause.** `Stop()` resets position to 0 and the pause button calls it —
-  pause currently rewinds. Split via §4.4.
+- **Real pause.** ~~`Stop()` resets position to 0 and the pause button calls it —
+  pause currently rewinds. Split via §4.4.~~ **Native half done 2026-07-20**
+  (`4d6c89a`): the §4.4 split landed — `Mixer::Pause()` holds the position,
+  `kb_mixer_stop` still rewinds, both are on the ABI. **Still outstanding:** a
+  transport UI that calls `kb_mixer_pause`. None exists.
 - **Seek UI.** `Mixer::Seek` and `MixerController.seek` exist; no screen ever
   calls them. There is no scrubber.
 - Fix the position display — Flutter formats frames as ms against a hardcoded
