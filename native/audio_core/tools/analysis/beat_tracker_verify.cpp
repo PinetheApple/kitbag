@@ -105,8 +105,8 @@ void TestTruncationDropsLateBeatsNotEarlyOnes() {
 }
 
 void TestSidecarPath() {
-  // The extension lengths are the point: -4 arithmetic passes .wav, appends to
-  // .mp3, and eats a character of .flac.
+  // The extension lengths are the point: -4 arithmetic left .wav and .mp3
+  // untouched and ate a character of the longer .flac and .opus.
   CheckPath("/wf", "/music/song.wav", "/wf/song.kwav");
   CheckPath("/wf", "/music/song.mp3", "/wf/song.kwav");
   CheckPath("/wf", "/music/song.flac", "/wf/song.kwav");
