@@ -116,8 +116,14 @@ faithfully reproduces them has failed.
   skipped**. A 44.1kHz stem set plays as silence with no error.
 - `mixer.cpp:14` — `SetTrackData` does `t.pcm.assign()` while the audio thread
   may be reading `tr.pcm` in `Process`. Data race / use-after-realloc.
-- `mixer.cpp:140-141` — read head advances by `max_read`; the comment on :139
-  says minimum. Unequal-length stems desync.
+- ~~`mixer.cpp:140-141` — read head advances by `max_read`; the comment on :139
+  says minimum. Unequal-length stems desync.~~ **Withdrawn 2026-07-20.**
+  Measured: every track is indexed by one shared `read_frame_`, so stems have
+  no per-track cursor and cannot desync. The minimum rule is what breaks —
+  with a 1000-frame and a 5000-frame stem it advances 900→1000 while having
+  already output through 1412, replaying 412 frames at every block near the
+  short stem's end. `max_read` is correct; the :139 comment was the defect.
+  The live bug beside it is the auto-stop condition — see §4.4.
 - `mixer.cpp:68-71` — `Stop()` resets position to 0, and the pause button calls
   it. **There is no pause.**
 - `bpm_lookup_service.dart:68` — comment claims title/artist similarity
@@ -413,9 +419,6 @@ seconds anchored to the start of the file; that anchor is the invariant.
 
 ### 4.4 Fix in place
 
-- `mixer.cpp:140-141` — advance the read head by the **minimum** across played
-  tracks, per the comment on :139. Current `max_read` desyncs unequal-length
-  stems.
 - `mixer.cpp:68-71` — split `Stop()` (position → 0) from `Pause()` (holds).
   Expose both.
 - Zero-pad tracks shorter than the longest rather than dropping them from the

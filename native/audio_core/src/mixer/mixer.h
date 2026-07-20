@@ -87,7 +87,7 @@ class Mixer {
       uint64_t frames,
       float gain
   );
-  static uint64_t MixTrack(
+  static void MixTrack(
       const Track& tr,
       float* output,
       uint32_t frame_count,
@@ -98,6 +98,9 @@ class Mixer {
 
   Track tracks_[kMaxTracks];
   int track_count_ = 0;
+  // Drives auto-stop. Plain, like track_count_: SetTrackData is its only writer
+  // and is already documented as never overlapping the callback.
+  uint64_t longest_frames_ = 0;
   std::atomic<uint64_t> read_frame_{0};
   std::atomic<bool> playing_{false};
   // Recalculated after each solo change; relaxed ordering is fine since
