@@ -14,10 +14,9 @@ namespace kitbag {
 // The command ring (spsc_ring.h) carries scalars; anything variable-length —
 // a beat grid, a decoded track — cannot fit through it without a blocking
 // handshake. This is the other half of that contract: build off-thread, swap
-// in by atomic pointer, never free under a reader. It is the pattern native
-// track loading should adopt (SPEC.md §4.1, §4.5); today the metronome's beat
-// grid is its only user, and kb_mixer_set_track_data still publishes PCM the
-// old, racy way until §4.1 removes it.
+// in by atomic pointer, never free under a reader. Both the metronome's beat
+// grid and every mixer track (one publisher each) cross the app→RT seam this
+// way (SPEC.md §4.1, §4.5).
 //
 // The callback only ever does an acquire load. It allocates nothing, frees
 // nothing and waits on nothing, which is what makes it realtime-safe.

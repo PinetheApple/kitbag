@@ -93,8 +93,10 @@ if(KITBAG_BUILD_TOOLS)
   target_link_libraries(metronome_verify PRIVATE m)
 
   # Links the shared library rather than the sources: the point is to prove the
-  # exported C ABI, not the C++ behind it.
+  # exported C ABI, not the C++ behind it. tools/media supplies the WAV writer
+  # the mixer load test writes its fixture with.
   add_executable(abi_verify tools/abi_verify.cpp)
+  target_include_directories(abi_verify PRIVATE tools/media)
   target_link_libraries(abi_verify PRIVATE kitbag_core)
 
   # Links the sources: TrackBeats and SidecarPath are internal, not exported.
@@ -106,8 +108,9 @@ if(KITBAG_BUILD_TOOLS)
   # Links the sources: Mixer is internal, not exported through the C ABI. Each
   # track streams through an AudioSource, so the mixer tool links it and Threads.
   find_package(Threads REQUIRED)
-  # Resampling on load pulls miniaudio in (ma_data_converter), so this tool now
-  # links it and third_party — the A2 seam is decoder-backed, unlike A1's.
+  # A4 loads tracks from real files (kb_mixer_load_track), so the tool writes a
+  # temp WAV and links the miniaudio-backed file adapter. Resampling on load also
+  # pulls miniaudio in (ma_data_converter).
   add_executable(mixer_verify
     tools/mixer/mixer_verify.cpp
     tools/mixer/mixer_test_transport.cpp
@@ -118,10 +121,12 @@ if(KITBAG_BUILD_TOOLS)
     src/mixer/mixer.cpp
     src/mixer/mixer_render.cpp
     src/media/audio_source.cpp
+    src/media/file_audio_reader.cpp
+    src/media/miniaudio_decoder.cpp
     src/media/resampling_source_reader.cpp
     src/media/miniaudio_impl.c
   )
-  target_include_directories(mixer_verify PRIVATE src tools tools/mixer third_party)
+  target_include_directories(mixer_verify PRIVATE src tools tools/mixer tools/media third_party)
   # mixer_render.cpp's exhaustive CommandType switch is load-bearing here too.
   target_compile_options(mixer_verify PRIVATE -Werror=switch)
   target_link_libraries(mixer_verify PRIVATE Threads::Threads m ${CMAKE_DL_LIBS})

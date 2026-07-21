@@ -7,7 +7,11 @@
 
 #include <cmath>
 #include <cstdio>
+#include <filesystem>
+#include <string>
 #include <vector>
+
+#include "wav_fixture.h"
 
 namespace {
 
@@ -17,7 +21,7 @@ int g_failures = 0;
 int g_checks = 0;
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 15;
+constexpr int kExpectedChecks = 25;
 
 void Check(bool condition, const char* message) {
   ++g_checks;
@@ -138,6 +142,65 @@ void TestMixerTransportIsNullSafe(kb_engine* engine) {
   Check(kb_mixer_position(nullptr) == 0, "mixer: null engine position is 0");
 }
 
+// A null engine/path, an out-of-range track and a file that will not open are
+// all KB_ERROR_INVALID_ARGUMENT — the load reports failure rather than crashing
+// or silently half-loading.
+void TestMixerLoadRejects(kb_engine* engine, const std::string& path) {
+  Check(
+      kb_mixer_load_track(engine, 0, nullptr) == KB_ERROR_INVALID_ARGUMENT,
+      "load: a null path is rejected"
+  );
+  Check(
+      kb_mixer_load_track(engine, 999, path.c_str()) ==
+          KB_ERROR_INVALID_ARGUMENT,
+      "load: an out-of-range track is rejected"
+  );
+  Check(
+      kb_mixer_load_track(engine, 0, "/nonexistent/kitbag.wav") ==
+          KB_ERROR_INVALID_ARGUMENT,
+      "load: a file that will not open is rejected"
+  );
+  Check(
+      kb_mixer_load_track(nullptr, 0, path.c_str()) ==
+          KB_ERROR_INVALID_ARGUMENT,
+      "load: a null engine is rejected"
+  );
+  Check(
+      kb_mixer_track_ready(nullptr, 0) == 0,
+      "ready: a null engine reports not ready"
+  );
+  kb_mixer_unload_track(nullptr, 0);  // a null engine is a no-op, not a crash
+}
+
+// A4 (SPEC.md §4.1): tracks load from a file path — no PCM crosses the ABI.
+// Exercises load/ready/unload end to end through the shared library over a WAV
+// the tool writes (44.1kHz, so the load path also resamples). Runtime, not
+// compile: track_ready must flip false→true on publish and back on unload.
+void TestMixerLoadReadyUnload(kb_engine* engine, const std::string& path) {
+  Check(
+      kb_mixer_track_ready(engine, 0) == 0,
+      "load: a fresh track is not ready"
+  );
+  Check(
+      kb_mixer_load_track(engine, 0, path.c_str()) == KB_OK,
+      "load: a real WAV loads"
+  );
+  Check(
+      kb_mixer_track_ready(engine, 0) == 1,
+      "load: the track is ready once its source is published"
+  );
+  Check(
+      kb_mixer_track_frames(engine, 0) > 0,
+      "load: the loaded track reports a nonzero length"
+  );
+
+  kb_mixer_unload_track(engine, 0);
+  Check(
+      kb_mixer_track_ready(engine, 0) == 0,
+      "unload: the retired track is no longer ready"
+  );
+}
+
 // Returns the process exit code, so main stays a list of what it runs.
 int Report() {
   if (g_checks != kExpectedChecks) {
@@ -175,6 +238,17 @@ int main() {
   TestSetGridRejectsOversize(engine);
   TestClearGrid(engine);
   TestMixerTransportIsNullSafe(engine);
+
+  const std::filesystem::path wav =
+      std::filesystem::temp_directory_path() / "kitbag_abi_mixer.wav";
+  if (!media_test::WriteWav(wav.string(), 1000)) {
+    std::fprintf(stderr, "abi_verify: could not write the mixer fixture\n");
+    kb_engine_destroy(engine);
+    return 1;
+  }
+  TestMixerLoadRejects(engine, wav.string());
+  TestMixerLoadReadyUnload(engine, wav.string());
+  std::filesystem::remove(wav);
 
   kb_engine_destroy(engine);
   return Report();

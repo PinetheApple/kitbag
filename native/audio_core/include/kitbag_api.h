@@ -174,15 +174,21 @@ KB_EXPORT uint32_t kb_decoder_channels(const kb_engine* engine);
 
 /* --- Mixer (Stem Player) ------------------------------------------------ */
 
-/* Load PCM data into a track. pcm is mono or stereo interleaved float. */
-KB_EXPORT void kb_mixer_set_track_data(
-    kb_engine* engine,
-    int32_t track,
-    const float* pcm,
-    int64_t num_frames,
-    int32_t channels,
-    int32_t sample_rate
-);
+/* Load a track from a file path, streamed from disk (SPEC.md §4.1). The core
+ * decodes and resamples to the engine rate off the audio callback, then
+ * publishes the source by an atomic pointer swap, so a load during playback
+ * cannot tear a read. No PCM crosses the boundary — every mixer boundary value
+ * is now a scalar or a path, which is what §13.2 relies on.
+ * Returns KB_ERROR_INVALID_ARGUMENT for a null engine or path, a track outside
+ * the valid range, or a file that will not open; KB_OK once published. */
+KB_EXPORT kb_result
+kb_mixer_load_track(kb_engine* engine, int32_t track, const char* path);
+/* Retire a track's source. RT-safe: the old source is reclaimed off the audio
+ * callback, never freed on it. A no-op for a null engine or an empty track. */
+KB_EXPORT void kb_mixer_unload_track(kb_engine* engine, int32_t track);
+/* Non-blocking readiness poll: 1 once a source is live for the track, else 0.
+ * Poll after a load to know when the track will sound. */
+KB_EXPORT int32_t kb_mixer_track_ready(const kb_engine* engine, int32_t track);
 KB_EXPORT void kb_mixer_set_gain(kb_engine* engine, int32_t track, float gain);
 KB_EXPORT float kb_mixer_gain(const kb_engine* engine, int32_t track);
 KB_EXPORT void

@@ -44,23 +44,30 @@ class Mixer {
   Mixer(const Mixer&) = delete;
   Mixer& operator=(const Mixer&) = delete;
 
-  /// Load PCM into a track; mono or stereo interleaved float. RT-safe: it builds
-  /// the source off-thread and publishes it by atomic swap, so loading during
-  /// playback cannot tear a read (SPEC.md §4.1). [now_frame] is the engine clock
-  /// and [engine_running] true whenever the callback can run; together they date
-  /// the retired source for deferred reclamation — the callback never frees.
-  void SetTrackData(
+  /// Load a track from a file path, streamed from disk. RT-safe: it opens,
+  /// resamples and builds the source off the callback, then publishes it by
+  /// atomic swap, so loading during playback cannot tear a read (SPEC.md §4.1).
+  /// [now_frame] is the engine clock and [engine_running] true whenever the
+  /// callback can run; together they date the retired source for deferred
+  /// reclamation — the callback never frees. Returns false for a null path, a
+  /// track outside [0, kMaxTracks), or a file that will not open.
+  bool LoadTrack(
       int track,
-      const float* pcm,
-      uint64_t num_frames,
-      uint32_t channels,
-      uint32_t sample_rate,
+      const char* path,
       uint64_t now_frame,
       bool engine_running
   );
 
+  /// Retire a track's source: publishes an empty node so the callback drains
+  /// nothing, and the old source is reclaimed off the callback. Recomputes the
+  /// transport length (B5) so a shorter remaining track ends playback in time.
+  void UnloadTrack(int track, uint64_t now_frame, bool engine_running);
+
+  /// Non-blocking: true once a source is live (published) for the track.
+  bool track_ready(int track) const;
+
   /// Stream a track from a caller-owned reader that must outlive the track.
-  /// Same publish discipline as SetTrackData.
+  /// Same publish discipline as LoadTrack.
   bool SetTrackSource(
       int track,
       SourceReader* reader,
@@ -108,8 +115,11 @@ class Mixer {
   /// takes no lock, frees nothing.
   void Process(float* output, uint32_t frame_count);
 
+  /// High-water iteration bound (highest loaded track index + 1), not a live
+  /// count of loaded tracks: unload does not lower it, since the callback loops
+  /// must still cover a published track above an unloaded gap.
   int active_track_count() const {
-    return track_count_;
+    return track_count_.load(std::memory_order_relaxed);
   }
   /// Commands dropped because the ring was full since construction. A diagnostic;
   /// a healthy caller never overflows a 64-deep ring between blocks.
@@ -180,6 +190,10 @@ class Mixer {
       uint64_t now_frame,
       bool engine_running
   );
+  // App thread. Rescans the loaded tracks' lengths and republishes the longest
+  // (B5): raising it on load and lowering it on unload/reload-to-shorter, so the
+  // transport auto-stop always follows the current longest track, not a stale max.
+  void RecomputeLongestFrames();
   // Blocks off the audio thread until the source has read enough ahead for the
   // callback to drain full blocks; bounded by a timeout.
   void Prime(AudioSource& src, uint64_t num_frames);
@@ -217,19 +231,18 @@ class Mixer {
   void AdvanceTransport(uint64_t start_frame, uint32_t frame_count);
 
   Track tracks_[kMaxTracks];
-  // track_count_ and longest_frames_ are plain scalars the load path writes and
-  // the callback reads — RecomputeAnySolo reads track_count_ before the playing_
-  // guard, auto-stop (AdvanceTransport) reads longest_frames_ after it.
-  // Publishing through SetTrackData carries engine_running, so a load DOES
-  // overlap the callback during playback — these two are outside the publish/ring
-  // disciplines. A torn read of an aligned integer during that overlap is benign
-  // (real on armv7/32-bit), and making it safe is deferred to #23 (likely landed
-  // alongside B5/A4), which notes the fix needs publish-vs-count ordering care.
-  // This is not a no-overlap guarantee.
-  int track_count_ = 0;
+  // Written by the load path, read every block by the callback (track_count_ in
+  // RecomputeAnySolo/MixAllTracks, longest_frames_ in AdvanceTransport). A load
+  // overlaps the callback during playback, so these are atomic (relaxed): on
+  // armv7 a plain uint64_t longest_frames_ could tear (#23). Relaxed is enough —
+  // no ordering rides on them: the source itself crosses via the publisher's
+  // release/acquire, and the callback tolerates track_count_ momentarily ahead of
+  // the published set (MixTrack and RecomputeAnySolo null-check the node, so a
+  // not-yet-published track drains nothing).
+  std::atomic<int> track_count_{0};
   // The output/device rate every track is resampled to on load.
   uint32_t engine_rate_;
-  uint64_t longest_frames_ = 0;
+  std::atomic<uint64_t> longest_frames_{0};
   // Drain target, sized once at construction to kMaxBlockFrames * kMaxChannels
   // and never reallocated (see the ctor and kMaxChannels).
   std::vector<float> scratch_;
