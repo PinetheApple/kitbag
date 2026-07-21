@@ -11,14 +11,16 @@ mixer fixes (4.4). Framework-independent; every task headlessly testable via
 
 Status legend: `[ ]` todo · `[~]` in progress · `[x]` done (verify green + both reviews pass) · `[!]` blocked
 
-## Current state — 2026-07-20, `work/post-phase0` @ `ac29168`
+## Current state — 2026-07-21, `work/post-phase0`
 
 **Done:** W0-1 · W0-2 `603a2c2` · W0-3 (hygiene, unplanned) · C1 · C2 · B2 `4d6c89a`
-· B3 `ab0e2a4` (already-correct) · B4 `2f82d85` · B1 *withdrawn as wrong*
-**Next:** C3–C5 (anchor). Track A is now unblocked — W0-2 landed, so A1 and A5
-have their streaming seam. **Track B is not complete** — B5 opened below out of
-B2/B3 review. **New:** #18, `decoder.cpp` carries W0-2's `ma_format_f32` bug on
-the live `kb_analyze_song` path.
+· B3 `ab0e2a4` (already-correct) · B4 `2f82d85` · B1 *withdrawn as wrong* ·
+#18 `a717330` (decoder `ma_format_f32`) · #19 (analyze-path defects + coverage)
+**Next:** C3–C5 (anchor). Track A is unblocked — W0-2 landed, so A1 and A5 have
+their streaming seam. **Track B is not complete** — B5 opened below out of B2/B3
+review. **Latent, not fixed:** `beat_tracker.cpp:243` (`sum_onset / onset.size()`)
+is unguarded but unreachable today (only called after `onset.size() >= 10`);
+becomes a live divide-by-zero if a future caller drops that precondition.
 
 ### Tickets live on GitHub
 

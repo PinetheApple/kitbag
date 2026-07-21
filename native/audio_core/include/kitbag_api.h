@@ -196,6 +196,9 @@ KB_EXPORT int64_t kb_mixer_track_frames(const kb_engine* engine, int32_t track);
  *                    binary), or NULL to skip waveform generation
  *
  * Returns KB_OK on success (even if no beats found; check *beat_count_out).
+ * Returns KB_ERROR_INVALID_ARGUMENT for a null path/output pointer, a file that
+ * will not open, or decoded PCM that is unusable: zero channels, a frame count
+ * above INT_MAX, or any non-finite (NaN/inf) sample.
  */
 KB_EXPORT kb_result kb_analyze_song(
     const char* path,

@@ -36,6 +36,39 @@ A representative sample of what they asserted:
 supersedes anything this file said. Version numbers restart when something
 genuinely ships.
 
+### Added — 2026-07-21
+
+- **`analyze_verify` (25 checks)** — `kb_analyze_song`'s pipeline
+  (`Decoder → downmix → BeatTracker → sidecar`) had no test of any kind, which is
+  how #18's decoder bug reached a shipped path nothing traversed. The tool asserts
+  finite BPM and in-range beat times for a real click track, the three rejection
+  paths below, and a sidecar write/read round-trip (magic, version, channels,
+  frame count, `chunk_count`). Gated in CI.
+- **`song_analysis` module** (`src/analysis/song_analysis.h`) — the pipeline lifted
+  out of `api_analysis.cpp`'s anonymous namespace, where its guards were
+  unreachable by any test, into a named module the tool drives directly.
+  `api_analysis.cpp` is now a thin ABI shim over it; the downmix and beat output
+  are unchanged for valid input.
+
+### Fixed — 2026-07-21
+
+- **`ComputeWaveformPeaks` cast a non-finite sample straight to `int16_t`** —
+  undefined behaviour reachable from a malformed input file, not merely a wrong
+  value. After #18, a 16-bit file could decode to `NaN`/`3e38`; `min_val * 32767`
+  then overflowed the `int16_t` range or was `NaN`, and the C++ float→int
+  conversion of that is UB. A `Quantize` helper now maps non-finite to 0 and
+  clamps to `[-1, 1]` before the cast, and is a byte-exact no-op for in-range audio.
+- **`kb_analyze_song` returned `KB_OK` with a `NaN` BPM for non-finite PCM, and
+  divided by zero for a zero-channel decode.** The downmix summed samples with no
+  finiteness check, and `sum / channels` was unguarded on the beat-track consumer
+  though the sidecar writer already guarded it. Both now reject with
+  `KB_ERROR_INVALID_ARGUMENT`; the ABI doc records the contract.
+- **A frame count above `INT_MAX` silently skipped the sidecar write.** Three
+  `uint64_t → int` narrowings wrapped to a negative that then tripped
+  `ComputeWaveformPeaks`' `num_frames <= 0` guard, so the sidecar was never
+  written and no error was returned. A single `NarrowFrames` rejects above
+  `INT_MAX` at the boundary instead of wrapping.
+
 ### Added — 2026-07-20
 
 - **`AudioSource`** (`src/media/audio_source.h`; `SPEC.md` §4.1, design-audit F2)
