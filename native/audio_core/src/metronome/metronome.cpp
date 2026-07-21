@@ -25,6 +25,18 @@ void Metronome::Stop() {
   commands_.Push({CommandType::kStop});
 }
 
+void Metronome::AnchorExternal(
+    double song_pos_sec,
+    uint64_t at_frame,
+    double bpm
+) {
+  Command command{CommandType::kAnchorExternal};
+  command.value = song_pos_sec;
+  command.value_b = bpm;
+  command.frame = at_frame;
+  commands_.Push(command);
+}
+
 void Metronome::SetTempo(double bpm) {
   Command command{CommandType::kSetTempo};
   command.value = bpm;
@@ -127,6 +139,7 @@ void Metronome::ApplyCommand(const Command& command) {
     case CommandType::kStart:
     case CommandType::kStartAt:
     case CommandType::kStop:
+    case CommandType::kAnchorExternal:
       claimed = ApplyTransportCommand(command);
       break;
     case CommandType::kSetTempo:
@@ -153,16 +166,21 @@ void Metronome::ApplyCommand(const Command& command) {
 bool Metronome::ApplyTransportCommand(const Command& command) {
   switch (command.type) {
     case CommandType::kStart:
-      has_pending_start_ = false;  // an immediate Start cancels a deferred one
+      // The most recent transport call wins: cancel a deferred start or anchor.
+      has_pending_start_ = false;
+      has_pending_anchor_ = false;
       BeginRun();
       return true;
     case CommandType::kStartAt:
-      // Deferred to the exact frame inside the render loop. Ignored while
-      // running: re-anchoring a live click is set_grid's job.
+      // Deferred to the render loop; ignored while running, where re-anchoring
+      // a live click is set_grid's or anchor_external's job.
       if (!running_) {
         has_pending_start_ = true;
         pending_start_frame_ = command.frame;
       }
+      return true;
+    case CommandType::kAnchorExternal:
+      StashPendingAnchor(command);
       return true;
     case CommandType::kStop:
       StopRun();
@@ -170,6 +188,13 @@ bool Metronome::ApplyTransportCommand(const Command& command) {
     default:
       return false;
   }
+}
+
+void Metronome::StashPendingAnchor(const Command& command) {
+  has_pending_anchor_ = true;
+  pending_anchor_song_pos_ = command.value;
+  pending_anchor_bpm_ = command.value_b;
+  pending_anchor_frame_ = command.frame;
 }
 
 bool Metronome::ApplyTempoCommand(const Command& command) {
@@ -264,6 +289,7 @@ void Metronome::SetLatencyPreservingPhase(double latency_ms) {
 void Metronome::StopRun() {
   running_ = false;
   has_pending_start_ = false;
+  has_pending_anchor_ = false;  // a Stop cancels a queued anchor too
   // Force a re-seed next block: a cursor stranded where the pause began
   // swallows every beat the pause spanned into one off-grid click (§4.2.1).
   observed_generation_ = 0;

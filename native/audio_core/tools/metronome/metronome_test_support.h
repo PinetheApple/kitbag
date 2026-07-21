@@ -169,14 +169,20 @@ inline void ExpectOnGrid(
   }
 }
 
-// Peak |sample| per rendered block. Resolves events the onset detector cannot:
-// a click re-fired within kOnsetHoldFrames still lifts its block's peak.
-inline std::vector<double>
-RenderBlockPeaks(kitbag::Metronome& metronome, int64_t total_frames) {
+// Peak |sample| per rendered block, acting at block boundaries. Resolves events
+// the onset detector cannot: a click re-fired within kOnsetHoldFrames still
+// lifts its block's peak, and the callback lets a re-anchor land mid-run.
+template <typename OnBlock>
+std::vector<double> RenderContinuousPeaks(
+    kitbag::Metronome& metronome,
+    int64_t total_frames,
+    OnBlock on_block
+) {
   std::vector<float> buffer(kBlockFrames * kChannels);
   std::vector<double> peaks;
   for (int64_t rendered = 0; rendered < total_frames;
        rendered += kBlockFrames) {
+    on_block(rendered);
     std::fill(buffer.begin(), buffer.end(), 0.0f);
     metronome.Render(
         buffer.data(),
@@ -187,9 +193,10 @@ RenderBlockPeaks(kitbag::Metronome& metronome, int64_t total_frames) {
     );
     double peak = 0.0;
     for (uint32_t frame = 0; frame < kBlockFrames; ++frame) {
-      const double amplitude =
-          std::fabs(static_cast<double>(buffer[frame * kChannels]));
-      peak = std::max(peak, amplitude);
+      peak = std::max(
+          peak,
+          std::fabs(static_cast<double>(buffer[frame * kChannels]))
+      );
     }
     peaks.push_back(peak);
   }
@@ -257,6 +264,7 @@ void RunBasicTests();
 void RunStartAtTests();
 void RunLatencyTests();
 void RunGridTests();
+void RunAnchorTests();
 
 }  // namespace metronome_test
 

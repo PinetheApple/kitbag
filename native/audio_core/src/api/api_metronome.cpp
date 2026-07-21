@@ -72,6 +72,17 @@ void kb_metronome_clear_grid(kb_engine* engine) {
   }
 }
 
+void kb_metronome_anchor_external(
+    kb_engine* engine,
+    double song_pos_sec,
+    uint64_t at_frame,
+    double bpm
+) {
+  if (engine != nullptr) {
+    ToEngine(engine)->metronome().AnchorExternal(song_pos_sec, at_frame, bpm);
+  }
+}
+
 void kb_metronome_set_tempo(kb_engine* engine, double bpm) {
   if (engine != nullptr) {
     ToEngine(engine)->metronome().SetTempo(bpm);

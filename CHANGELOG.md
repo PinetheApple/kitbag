@@ -38,6 +38,39 @@ genuinely ships.
 
 ### Added — 2026-07-21
 
+- **`kb_metronome_anchor_external(engine, song_pos_sec, at_frame, bpm)`**
+  (`SPEC.md` §4.2) — anchors the click to a transport the engine does not clock
+  (a Spotify/YouTube stream): "at engine frame `at_frame` the song was
+  `song_pos_sec` in, running at `bpm`", and the click grid is laid to match.
+  Re-callable; a re-anchor recomputes phase at block start before any click of
+  the block, so it moves only future clicks and never doubles or drops one. The
+  command crosses the existing SPSC ring as three scalars — no new concurrency
+  path, nothing added to the render callback. A measured `set_grid` takes
+  precedence (the anchor is a no-op until `clear_grid`); the tempo ramp does not
+  apply while anchored; the latency offset still lands the click at the speaker.
+  `at_frame` is exact to 2^53 frames so it crosses JSI as a `double`, no BigInt
+  (§13.2). Covered by `metronome_verify` (206 checks) including the glitch-free
+  re-anchor, a fractional and a whole-beat-negative `song_pos`, and latency
+  composition.
+
+### Fixed — 2026-07-21
+
+- **`OnSubdivisionTick` read `accents_[-1]` out of bounds** — pre-existing, and
+  reachable from a plain `kb_metronome_start` at bpm > 300 with a positive
+  latency offset (the subdivision index used `beat_position_`, which the latency
+  seed can pull marginally negative while the `position >= 0` guard, computed
+  with the latency term, does not). ASan never flagged it because `accents_[-1]`
+  aliases another field of the same object, so no red zone is crossed; it was
+  found by direct instrumentation while building C3, whose negative-`song_pos`
+  path reaches the same read. A pre-beat-0 subdivision is now owned by beat 0.
+  `TestSubdivisionOwnedByBeatZero` pins it by a layout-independent property:
+  reverting the fix makes exactly one of its two checks fail on any endianness.
+  This **bounds the index; it does not correct the attribution base** — a
+  per-beat mute still leaks into its subdivisions under positive latency at
+  bpm > 300, tracked as #20 (blocked on a SPEC ruling on mute-cascade semantics).
+
+### Added — 2026-07-21
+
 - **`analyze_verify` (25 checks)** — `kb_analyze_song`'s pipeline
   (`Decoder → downmix → BeatTracker → sidecar`) had no test of any kind, which is
   how #18's decoder bug reached a shipped path nothing traversed. The tool asserts
