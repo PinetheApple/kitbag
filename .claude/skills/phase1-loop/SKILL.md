@@ -58,9 +58,11 @@ gh issue list --state open --label phase-1 --json number,title,labels
 Confirm the active account is **PinetheApple** first. `~/Development` repos use
 it; a `~/Work` account leaks in and fails the *writes* only — reads succeed, so
 the first symptom is `does not have the correct permissions` half a pass later.
-Fix with `gh auth switch --user PinetheApple`. The account **flips back
-mid-session** (observed twice in one run), so re-check before *every* `gh` write
-— label, comment, close — not only at pick time.
+Fix with `gh auth switch --user PinetheApple`. The dir-based `cd` hook that
+normally selects the account **does not fire in the non-interactive Bash tool**,
+so `gh` sits on whatever account was last set — re-check on any write that 404s or
+reports a permissions error, and after work that may have left the wrong account
+active, not only at pick time.
 
 A `defect` on a shipped path outranks feature work, whatever its number — it is
 already wrong in code someone can run, while an unbuilt feature is merely absent.
