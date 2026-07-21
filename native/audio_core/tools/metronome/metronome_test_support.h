@@ -88,6 +88,29 @@ RenderAndDetectOnsets(kitbag::Metronome& metronome, int64_t total_frames) {
   return RenderContinuous(metronome, total_frames, [](int64_t) {});
 }
 
+// The absolute frame of the first sample the scheduler writes non-zero, or -1.
+// Bypasses the onset detector's attack tolerance to reach the exact sample,
+// which is what pins start_at as frame-exact rather than frame-exact-give-or-take.
+inline int64_t
+FirstNonzeroFrame(kitbag::Metronome& metronome, int64_t total_frames) {
+  std::vector<float> buffer(kBlockFrames * kChannels);
+  for (int64_t rendered = 0; rendered < total_frames;
+       rendered += kBlockFrames) {
+    std::fill(buffer.begin(), buffer.end(), 0.0f);
+    metronome.Render(
+        buffer.data(),
+        kBlockFrames,
+        kSampleRate,
+        kChannels,
+        static_cast<uint64_t>(rendered)
+    );
+    for (uint32_t frame = 0; frame < kBlockFrames; ++frame) {
+      if (buffer[frame * kChannels] != 0.0f) return rendered + frame;
+    }
+  }
+  return -1;
+}
+
 // An on-block callback that runs `action(block_start)` once, at the first block
 // on or after `frame`. The swap/recall-once idiom every re-anchor test shares.
 template <typename Action>
