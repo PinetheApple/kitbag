@@ -194,6 +194,18 @@ not instead of moving.
   they do is worse than the race.
 - Report what the gates actually said. "Tests fail" with the output beats a
   confident summary.
+- **Prove a negative before reporting one.** "There is no CI", "nothing else uses
+  this", "that tool doesn't exist" — each is a claim about the whole tree, and a
+  command that found nothing is not the same as a thing that isn't there. This
+  loop reported "there is no `.github/workflows/`" from
+  `grep -rn timeout .github/workflows/ || echo "NO WORKFLOWS DIR"` — grep exits 1
+  on *no match*, so the fallback fired while the directory sat there. The claim
+  reached the user twice, a subagent, and a closed issue's comment before a
+  reviewer read the file. Confirm existence with `ls` or `test -e`, separately
+  from whatever you were searching for.
+- A false claim that has already shipped gets **corrected where it shipped** —
+  the issue comment, the CHANGELOG, the commit that follows — not quietly fixed
+  in place. Say what was wrong, what is true, and how it happened.
 
 ## Stopping
 
