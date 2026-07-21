@@ -94,7 +94,7 @@ class Engine {
   Metronome metronome_;
   Tuner tuner_;
   Decoder decoder_;
-  Mixer mixer_;
+  Mixer mixer_{kSampleRate};
 };
 
 }  // namespace kitbag

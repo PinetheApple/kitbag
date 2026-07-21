@@ -65,7 +65,7 @@ class CountingRampReader : public kitbag::SourceReader {
 void TestStreamsRatherThanBuffersWholeSong() {
   const uint64_t frames = 20000;
   CountingRampReader reader(frames, kMono, 0.0f);
-  kitbag::Mixer mixer;
+  kitbag::Mixer mixer(kSampleRate);
   Check(
       mixer.SetTrackSource(0, &reader),
       "source: SetTrackSource accepts a streaming reader"
@@ -91,7 +91,7 @@ void TestStreamsRatherThanBuffersWholeSong() {
 void TestConsumesSourceInChunksNotOneShot() {
   const uint64_t frames = 4000;
   CountingRampReader reader(frames, kMono, 0.0f);
-  kitbag::Mixer mixer;
+  kitbag::Mixer mixer(kSampleRate);
   mixer.SetTrackSource(0, &reader);
   mixer.Play();
   for (int b = 0; b < 4; ++b) RenderBlock(&mixer);
@@ -116,7 +116,7 @@ bool AnyNonZero(const std::vector<float>& out) {
 // The drain must deliver the source's actual samples, in order and non-silent.
 void TestDrainDeliversSourceSamples() {
   CountingRampReader reader(3000, kMono, kLongOffset);
-  kitbag::Mixer mixer;
+  kitbag::Mixer mixer(kSampleRate);
   mixer.SetTrackSource(0, &reader);
   mixer.Play();
 
@@ -147,7 +147,7 @@ void TestDrainDeliversSourceSamples() {
 // A second block must continue from where the first left off, not replay it.
 void TestDrainContinuesNotReplays() {
   CountingRampReader reader(3000, kMono, kLongOffset);
-  kitbag::Mixer mixer;
+  kitbag::Mixer mixer(kSampleRate);
   mixer.SetTrackSource(0, &reader);
   mixer.Play();
 
@@ -167,7 +167,7 @@ void TestDrainContinuesNotReplays() {
 void TestSourceDrainsToEndThenStops() {
   const uint64_t frames = 1300;
   CountingRampReader reader(frames, kMono, 0.0f);
-  kitbag::Mixer mixer;
+  kitbag::Mixer mixer(kSampleRate);
   mixer.SetTrackSource(0, &reader);
   mixer.Play();
 

@@ -23,7 +23,9 @@ class Mixer {
   /// Process never allocates.
   static constexpr uint32_t kMaxBlockFrames = 4096;
 
-  Mixer() = default;
+  /// [engine_rate] is the device/output sample rate every track is resampled to
+  /// on load, so Process never sees a rate mismatch (SPEC.md §4.1).
+  explicit Mixer(uint32_t engine_rate) : engine_rate_(engine_rate) {}
   ~Mixer() = default;
   Mixer(const Mixer&) = delete;
   Mixer& operator=(const Mixer&) = delete;
@@ -71,9 +73,10 @@ class Mixer {
   }
 
   /// Mixes active tracks into [output] — interleaved stereo float,
-  /// [frame_count] frames at [sr]. RT-safe: it only drains already-prepared
-  /// sources into pre-sized scratch.
-  void Process(float* output, uint32_t frame_count, uint32_t sr);
+  /// [frame_count] frames at the engine rate. RT-safe: it only drains
+  /// already-prepared sources into pre-sized scratch. Tracks are resampled to
+  /// the engine rate on load, so Process carries no sample-rate parameter.
+  void Process(float* output, uint32_t frame_count);
 
   int active_track_count() const {
     return track_count_;
@@ -92,8 +95,10 @@ class Mixer {
     // Set only by SetTrackData; the streaming setup path leaves it null and the
     // caller owns the reader.
     std::unique_ptr<SourceReader> owned_reader;
+    // Non-null only when the loaded reader's rate differs from the engine rate;
+    // it wraps the base reader and must outlive the source.
+    std::unique_ptr<SourceReader> resampler;
     uint32_t channels = 0;
-    uint32_t sample_rate = 0;
     uint64_t num_frames = 0;
     std::atomic<float> gain{1.0f};
     std::atomic<bool> mute{false};
@@ -101,12 +106,7 @@ class Mixer {
     bool has_data = false;
   };
 
-  bool ConfigureTrack(
-      Track& t,
-      SourceReader* reader,
-      int track,
-      uint64_t num_frames
-  );
+  bool ConfigureTrack(Track& t, SourceReader* reader, int track);
   void EnsureScratch(uint32_t channels);
   // Blocks off the audio thread until the track's source has read enough ahead
   // for the callback to drain full blocks; bounded by a timeout.
@@ -121,16 +121,12 @@ class Mixer {
       uint32_t frames,
       float gain
   );
-  void MixTrack(
-      Track& tr,
-      float* output,
-      uint32_t frame_count,
-      bool any_solo,
-      uint32_t sr
-  );
+  void MixTrack(Track& tr, float* output, uint32_t frame_count, bool any_solo);
 
   Track tracks_[kMaxTracks];
   int track_count_ = 0;
+  // The output/device rate every track is resampled to on load.
+  uint32_t engine_rate_;
   // Drives auto-stop. Plain, like track_count_: the setup path is its only
   // writer and never overlaps the callback.
   uint64_t longest_frames_ = 0;
