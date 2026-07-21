@@ -165,6 +165,75 @@ void TestGridReanchorComposesWithLatency() {
   );
 }
 
+// Peak |sample| over an absolute frame window, rendered fresh from frame 0.
+// Isolates one click the onset detector cannot: at bpm 400 subdivisions sit
+// 3600 frames apart, below kOnsetHoldFrames, so the detector merges them.
+double PeakInFrameWindow(kitbag::Metronome& metronome, int64_t lo, int64_t hi) {
+  std::vector<float> buffer(kBlockFrames * kChannels);
+  double peak = 0.0;
+  for (int64_t rendered = 0; rendered < hi + kBlockFrames;
+       rendered += kBlockFrames) {
+    std::fill(buffer.begin(), buffer.end(), 0.0f);
+    metronome.Render(
+        buffer.data(),
+        kBlockFrames,
+        kSampleRate,
+        kChannels,
+        static_cast<uint64_t>(rendered)
+    );
+    for (uint32_t frame = 0; frame < kBlockFrames; ++frame) {
+      const int64_t index = rendered + frame;
+      if (index < lo || index > hi) continue;
+      peak = std::max(
+          peak,
+          std::fabs(static_cast<double>(buffer[frame * kChannels]))
+      );
+    }
+  }
+  return peak;
+}
+
+// bpm 400, +100 ms latency = 0.667 beat: the pos-1.5 subdivision fires past its
+// speaker-time beat, so beat 1's accent decides it. Anchored just before beat 0
+// so beats 0 and 1 both sound cleanly (Start would swallow beat 0 under offset).
+double MuteCascadePeak(kitbag::Accent beat_one, int64_t lo, int64_t hi) {
+  kitbag::Metronome metronome;
+  metronome.SetBeatsPerBar(4);
+  metronome.SetSubdivision(2);
+  metronome.SetLatencyOffset(100.0);
+  metronome.SetAccent(1, beat_one);
+  metronome.AnchorExternal(-0.11, 0, 400.0);
+  return PeakInFrameWindow(metronome, lo, hi);
+}
+
+// A click definitely sounding, not merely brushing the onset floor: ~4x
+// kOnsetThreshold, chosen so a live subdivision clears it but a decay tail cannot.
+constexpr double kSoundingPeak = 0.2;
+
+// #21: a muted beat must cascade to its own subdivisions on the speaker-time
+// base (decisions.md 2026-07-21). The pos-1.5 subdivision fires near frame
+// 11280; muting beat 1 must silence it, while beat 0's subdivision keeps sounding.
+void TestMutedBeatCascadesToSubdivision() {
+  const double leaked = MuteCascadePeak(kitbag::Accent::kMuted, 11000, 12000);
+  Check(
+      leaked < kOnsetThreshold,
+      "mute cascade: muting beat 1 silences its own subdivision under +100 ms"
+  );
+  const double sounding =
+      MuteCascadePeak(kitbag::Accent::kNormal, 11000, 12000);
+  Check(
+      sounding > kSoundingPeak,
+      "mute cascade: the pos-1.5 subdivision sounds when beat 1 is not muted"
+  );
+  // Beat 0's subdivision (pos 0.5) lands near frame ~4200 at bpm 400.
+  const double beat_zero_sub =
+      MuteCascadePeak(kitbag::Accent::kMuted, 3800, 4700);
+  Check(
+      beat_zero_sub > kSoundingPeak,
+      "mute cascade: muting beat 1 leaves beat 0's subdivision sounding"
+  );
+}
+
 }  // namespace
 
 void RunLatencyTests() {
@@ -173,6 +242,7 @@ void RunLatencyTests() {
   TestLatencyOffsetSurvivesRamp();
   TestGridComposesWithLatency();
   TestGridReanchorComposesWithLatency();
+  TestMutedBeatCascadesToSubdivision();
 }
 
 }  // namespace metronome_test

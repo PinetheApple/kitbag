@@ -206,7 +206,7 @@ class Metronome {
       uint32_t sample_rate
   );
   void OnBeatBoundary(int beat_index, uint32_t sample_rate);
-  void OnSubdivisionTick(uint32_t sample_rate);
+  void OnSubdivisionTick(int64_t owning_beat, uint32_t sample_rate);
   void OnPolyBoundary(int poly_index, uint32_t sample_rate);
   float RenderVoices();
   double RampBpmForBar(int64_t bar) const;
