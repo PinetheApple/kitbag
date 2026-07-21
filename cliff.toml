@@ -1,7 +1,10 @@
 # git-cliff configuration — generates CHANGELOG.md from Conventional Commits.
-# Regenerate with:  git cliff -o CHANGELOG.md
-# The header below is load-bearing (SPEC.md §2): it records that nothing has
-# shipped and why the old version history was deleted. Keep it truthful.
+# Regenerate with:  git cliff changelog-base..HEAD -o CHANGELOG.md
+# The changelog-base..HEAD RANGE IS MANDATORY. The `changelog-base` tag marks the
+# Flutter-removal reset (9a63543); generating from the full log resurrects the
+# deleted 0.1-0.5 Flutter/tuner feat commits — the phantom history SPEC.md §2
+# killed. The header below is load-bearing (SPEC.md §2): it records that nothing
+# has shipped and why the old version history was deleted. Keep it truthful.
 
 [changelog]
 header = """
