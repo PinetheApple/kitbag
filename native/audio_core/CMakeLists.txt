@@ -29,6 +29,7 @@ add_library(kitbag_core SHARED
   src/api/api_media.cpp
   src/api/api_metronome.cpp
   src/analysis/beat_tracker.cpp
+  src/analysis/song_analysis.cpp
   src/media/audio_source.cpp
   src/media/decoder.cpp
   src/media/file_audio_reader.cpp
@@ -147,6 +148,24 @@ if(KITBAG_BUILD_TOOLS)
   target_include_directories(decoder_verify
     PRIVATE src tools tools/media third_party)
   target_link_libraries(decoder_verify PRIVATE Threads::Threads m ${CMAKE_DL_LIBS})
+
+  # The composition Decoder -> DownmixToMono -> BeatTracker -> sidecar, plus the
+  # non-finite and narrowing guards. Links sources: AnalyzeDecodedPcm and
+  # NarrowFrames are internal and the NaN path cannot be reached through a WAV.
+  add_executable(analyze_verify
+    tools/analysis/analyze_verify.cpp
+    src/api/api_analysis.cpp
+    src/analysis/song_analysis.cpp
+    src/analysis/waveform_peaks.cpp
+    src/analysis/beat_tracker.cpp
+    src/dsp/fft.cpp
+    src/media/decoder.cpp
+    src/media/miniaudio_decoder.cpp
+    src/media/miniaudio_impl.c
+  )
+  target_include_directories(analyze_verify
+    PRIVATE src include tools tools/media third_party)
+  target_link_libraries(analyze_verify PRIVATE Threads::Threads m ${CMAKE_DL_LIBS})
 
   add_executable(note_lock_verify tools/tuner/note_lock_verify.cpp
     src/tuner/note_lock.cpp)

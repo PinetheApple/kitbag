@@ -38,6 +38,8 @@ jobs:
         run: ./native/audio_core/build/file_audio_reader_verify
       - name: Decoder — the offline kb_analyze_song path decodes s16 to f32
         run: ./native/audio_core/build/decoder_verify
+      - name: Analyze — Decoder→downmix→tracker→sidecar; NaN/channels/narrowing guards
+        run: ./native/audio_core/build/analyze_verify
       # tuner_verify is NOT gated: it currently fails 37/37 — PitchAnalyzer
       # returns 0 Hz / 0.00 confidence on clean synthetic tones. See SPEC §10.1.
       # Re-enable as a gate when the tuner research lands.

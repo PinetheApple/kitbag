@@ -1,78 +1,16 @@
-// Offline song analysis: decode, downmix, beat-track, write the waveform
-// sidecar. App thread only — nothing here runs on the audio callback.
+// ABI shim for offline song analysis: open, decode, hand off to the pipeline,
+// copy results out. App thread only — nothing here runs on the audio callback.
 #include "kitbag_api.h"
 
 #include <algorithm>
 #include <cstdint>
-#include <cstdio>
 #include <vector>
 
 #include "analysis/beat_tracker.h"
-#include "analysis/sidecar_path.h"
-#include "analysis/waveform_peaks.h"
+#include "analysis/song_analysis.h"
 #include "media/decoder.h"
 
 namespace {
-
-// Peak buckets across the whole file — the scrubber's horizontal resolution.
-constexpr int kWaveformTargetChunks = 2000;
-
-std::vector<float>
-DownmixToMono(const float* pcm, uint64_t total_frames, uint32_t channels) {
-  std::vector<float> mono(total_frames);
-  for (uint64_t f = 0; f < total_frames; ++f) {
-    float sum = 0.0f;
-    for (uint32_t ch = 0; ch < channels; ++ch) {
-      sum += pcm[f * channels + ch];
-    }
-    mono[f] = sum / static_cast<float>(channels);
-  }
-  return mono;
-}
-
-// Layout: magic "KWAV" (4 bytes), version(uint32), channels(uint32),
-// total_frames(int64), chunk_count(uint32), data(int16[]).
-void WritePeaks(std::FILE* f, const kitbag::WaveformPeaks& peaks) {
-  const uint32_t version = 1;
-  const auto channels_u32 = static_cast<uint32_t>(peaks.channels);
-  const int64_t total = peaks.total_frames;
-  const auto chunks = static_cast<uint32_t>(peaks.chunk_count);
-  std::fwrite("KWAV", 1, 4, f);
-  std::fwrite(&version, sizeof(version), 1, f);
-  std::fwrite(&channels_u32, sizeof(channels_u32), 1, f);
-  std::fwrite(&total, sizeof(total), 1, f);
-  std::fwrite(&chunks, sizeof(chunks), 1, f);
-  std::fwrite(peaks.data.data(), sizeof(int16_t), peaks.data.size(), f);
-}
-
-void WriteWaveformSidecar(
-    const char* path,
-    const char* waveform_dir,
-    const float* pcm,
-    uint64_t total_frames,
-    uint32_t channels
-) {
-  if (waveform_dir == nullptr || channels == 0) {
-    return;
-  }
-  const auto peaks = kitbag::ComputeWaveformPeaks(
-      pcm,
-      static_cast<int>(total_frames),
-      static_cast<int>(channels),
-      kWaveformTargetChunks
-  );
-  if (peaks.data.empty()) {
-    return;
-  }
-
-  const std::string kwav_path = kitbag::SidecarPath(waveform_dir, path);
-  std::FILE* f = std::fopen(kwav_path.c_str(), "wb");
-  if (f == nullptr) {
-    return;
-  }
-  WritePeaks(f, peaks);
-  std::fclose(f);
-}
 
 int CopyBeatTimes(const std::vector<float>& beats, float* out, int32_t cap) {
   const int to_copy = std::min(static_cast<int>(beats.size()), cap);
@@ -82,22 +20,6 @@ int CopyBeatTimes(const std::vector<float>& beats, float* out, int32_t cap) {
   return to_copy;
 }
 
-kitbag::BeatResult TrackDecodedBeats(
-    const std::vector<float>& pcm,
-    uint64_t total_frames,
-    const kitbag::DecoderInfo& info
-) {
-  const auto mono = DownmixToMono(pcm.data(), total_frames, info.channels);
-  kitbag::BeatTracker tracker;
-  return tracker.Analyze(
-      mono.data(),
-      static_cast<int>(total_frames),
-      static_cast<int>(info.sample_rate)
-  );
-}
-
-// Decode, downmix, beat-track, and emit the sidecar. Leaves the ABI shim with
-// nothing but argument checks and copying results out.
 kb_result AnalyzeFile(
     const char* path,
     const char* waveform_dir,
@@ -115,16 +37,14 @@ kb_result AnalyzeFile(
   if (pcm.empty() || total_frames == 0) {
     return KB_OK;
   }
-
-  *out = TrackDecodedBeats(pcm, total_frames, info);
-  WriteWaveformSidecar(
-      path,
-      waveform_dir,
+  return kitbag::AnalyzeDecodedPcm(
       pcm.data(),
       total_frames,
-      info.channels
+      info,
+      path,
+      waveform_dir,
+      out
   );
-  return KB_OK;
 }
 
 }  // namespace

@@ -1,6 +1,7 @@
 #include "analysis/waveform_peaks.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace kitbag {
 
@@ -8,6 +9,14 @@ namespace {
 
 // Full-scale for signed 16-bit PCM, scaling float samples in [-1, 1].
 constexpr float kInt16Max = 32767.0f;
+
+// A malformed file can decode to NaN, +/-inf or values far outside [-1, 1]
+// (measured up to 3.19e38). float->int16 of any of those is undefined
+// behaviour, so map non-finite to 0 and clamp before the cast — deterministic.
+int16_t Quantize(float value) {
+  if (!std::isfinite(value)) return 0;
+  return static_cast<int16_t>(std::clamp(value, -1.0f, 1.0f) * kInt16Max);
+}
 
 void ChunkPeaks(
     const float* pcm,
@@ -23,8 +32,8 @@ void ChunkPeaks(
       if (pcm[s] < min_val) min_val = pcm[s];
       if (pcm[s] > max_val) max_val = pcm[s];
     }
-    out[ch * 2] = static_cast<int16_t>(min_val * kInt16Max);
-    out[ch * 2 + 1] = static_cast<int16_t>(max_val * kInt16Max);
+    out[ch * 2] = Quantize(min_val);
+    out[ch * 2 + 1] = Quantize(max_val);
   }
 }
 
