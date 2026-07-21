@@ -266,6 +266,39 @@ dependency decision (#22). mixer_verify 84 -> 93 (2 resample tests; both sabotag
 — disabled wrap and passthrough ratio — shown to fail; 1000Hz-vs-1088.4Hz Goertzel
 discrimination). Scope: A2 only; no A3/A4, B5 untouched.
 
+- **loop:** Add stateless project-loop skill driving the whole build
+
+Generalizes phase1-loop into a meta-orchestrator over SPEC §15: phase DAG,
+conflict-map parallelism (file-disjoint tracks run concurrent in worktrees),
+a wave integration gate, a docs/decisions.md log for decide-and-record on
+unambiguous gaps, and four stop-points (SPEC ambiguity, on-device gate,
+design sign-off, task fails twice).
+
+Stateless per iteration: each invocation reconstructs state from disk (SPEC,
+tracker, issues, decisions log, git log), does ONE increment, commits, and
+exits for an external driver to re-invoke with a clean context. Context resets
+every pass by construction, so the loop never exhausts it.
+
+- **mixer:** RT-safe track load — atomic pointer-swap publish + command ring
+
+A3 (#8), SPEC.md §4.1/§2.2, design-audit F3. Track load is now realtime-safe: the
+AudioSource is built off-thread and published to the callback by an atomic release
+swap, and scalar controls cross an SPSC command ring like the metronome's — so the
+callback only drains, never races the app thread.
+
+Publish path (fixes SetTrackData's assign racing Process): each track owns an
+RtPublisher<TrackSource> (reused from C2). BuildTrackSource opens/resamples/sizes
+off-thread; PublishTrack swaps it in with release, the callback does one acquire
+load per track. Old sources are retired and reclaimed off-thread (on a later
+publish or Engine::Stop) — the callback never frees.
+
+Command ring (fixes the Stop/Seek and Pause counter races): SpscRing<Command,64>
+carries gain/mute/solo/play/stop/pause/seek. read_frame_, playing_, any_solo_ and
+the gain/mute/solo mirrors are now written only by the callback, so Stop-then-Seek
+cannot lose the rewind and Pause stops within one block instead of overshooting.
+Ring-full drops (not blocks) — the RT choice — and drops are counted. Heavy source
+work (Start/Stop/Seek/Prime) stays on the app thread over a non-owning live_source.
+
 
 ### Fixed
 
