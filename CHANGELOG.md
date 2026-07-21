@@ -88,7 +88,7 @@ genuinely ships.
   reverting the fix makes exactly one of its two checks fail on any endianness.
   This **bounds the index; it does not correct the attribution base** — a
   per-beat mute still leaks into its subdivisions under positive latency at
-  bpm > 300, tracked as #20 (blocked on a SPEC ruling on mute-cascade semantics).
+  bpm > 300, tracked as #21 (blocked on a SPEC ruling on mute-cascade semantics).
 
 ### Added — 2026-07-21
 
