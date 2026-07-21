@@ -22,6 +22,9 @@ TOOL_TAGS = {
 }
 SUBAGENT_TOOLS = {"Task", "Agent"}
 
+TOOL_INDENT = "  "       # tool calls nest under their NOTE
+RESULT_INDENT = "      "  # results nest under their tool call
+
 
 def sgr(code, text):
     return f"\033[{code}m{text}{RESET}"
@@ -70,15 +73,16 @@ def render(event):
     elif etype == "assistant":
         for block in event["message"]["content"]:
             if block["type"] == "text" and block["text"].strip():
-                yield stamp() + tag("NOTE", "97;45") + " " + clip(block["text"], 200)
+                # NOTE starts a group: blank line above, flush left.
+                yield "\n" + stamp() + tag("NOTE", "97;45") + " " + clip(block["text"], 200)
             elif block["type"] == "tool_use":
-                yield tool_line(block)
+                yield TOOL_INDENT + tool_line(block)
     elif etype == "user":
         for block in event["message"]["content"]:
             if block.get("type") == "tool_result":
                 body = clip(result_body(block.get("content", "")), 130)
                 errored = block.get("is_error")
-                yield sgr("91" if errored else "90", f"     {'✗' if errored else '└'} {body}")
+                yield RESULT_INDENT + sgr("91" if errored else "90", f"{'✗' if errored else '└'} {body}")
     elif etype == "result":
         secs = int(event.get("duration_ms", 0) / 1000)
         cost = round(event.get("total_cost_usd", 0), 2)
