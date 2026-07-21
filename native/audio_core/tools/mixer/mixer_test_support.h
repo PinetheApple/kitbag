@@ -3,11 +3,16 @@
 
 // Shared rig for the mixer_verify suite: ramp fixtures, offline rendering and
 // the assertion helpers. One executable, several test files.
+#include <atomic>
+#include <cstdint>
 #include <cstdio>
+#include <filesystem>
+#include <string>
 #include <vector>
 
 #include "check.h"
 #include "mixer/mixer.h"
+#include "wav_fixture.h"
 
 namespace mixer_test {
 
@@ -36,15 +41,32 @@ inline std::vector<float> MakeRamp(uint64_t frames, float offset) {
   return pcm;
 }
 
-// now_frame 0 / engine_running false: the suite drives Process by hand, so no
-// audio callback is concurrent and a retired source is safe to free at once.
-inline void
-LoadRamp(kitbag::Mixer* mixer, int track, uint64_t frames, float offset) {
-  const std::vector<float> pcm = MakeRamp(frames, offset);
-  mixer->SetTrackData(track, pcm.data(), frames, kMono, kSampleRate, 0, false);
+// Temp WAVs written during the run. A streaming source reads them lazily, so a
+// file must outlive the mixer; they persist until CleanupTempFiles at suite end
+// rather than being deleted per-test.
+inline std::vector<std::string>& TempFiles() {
+  static std::vector<std::string> files;
+  return files;
 }
 
-// Interleaved ramp of [channels] channels, loaded like LoadRamp.
+inline std::string NextTempPath() {
+  static std::atomic<uint64_t> counter{0};
+  const std::filesystem::path path =
+      std::filesystem::temp_directory_path() /
+      ("kitbag_mixer_" + std::to_string(counter.fetch_add(1)) + ".wav");
+  return path.string();
+}
+
+// A fixture that could not be written or loaded fails the suite without
+// inflating the check count — the real assertions downstream count themselves.
+inline void FixtureFail(const char* message) {
+  std::fprintf(stderr, "FIXTURE FAIL: %s\n", message);
+  ++g_failures;
+}
+
+// Writes an interleaved ramp to a temp WAV and loads it through the real file
+// path (kb_mixer_load_track's adapter). now_frame 0 / engine_running false: the
+// suite drives Process by hand, so no callback is concurrent.
 inline void LoadInterleaved(
     kitbag::Mixer* mixer,
     int track,
@@ -53,15 +75,28 @@ inline void LoadInterleaved(
     float offset
 ) {
   const std::vector<float> pcm = MakeRamp(frames * channels, offset);
-  mixer->SetTrackData(
-      track,
-      pcm.data(),
-      frames,
-      channels,
-      kSampleRate,
-      0,
-      false
-  );
+  const std::string path = NextTempPath();
+  if (!media_test::WriteFloatWav(path, pcm, channels, kSampleRate)) {
+    FixtureFail("could not write ramp WAV");
+    return;
+  }
+  TempFiles().push_back(path);
+  if (!mixer->LoadTrack(track, path.c_str(), 0, false)) {
+    FixtureFail("could not load ramp WAV into the track");
+  }
+}
+
+inline void
+LoadRamp(kitbag::Mixer* mixer, int track, uint64_t frames, float offset) {
+  LoadInterleaved(mixer, track, frames, kMono, offset);
+}
+
+inline void CleanupTempFiles() {
+  std::error_code ec;
+  for (const std::string& path : TempFiles()) {
+    std::filesystem::remove(path, ec);
+  }
+  TempFiles().clear();
 }
 
 inline std::vector<float> RenderBlock(kitbag::Mixer* mixer) {

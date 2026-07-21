@@ -6,6 +6,7 @@
 // whose conversion was missing.
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -74,13 +75,51 @@ inline std::vector<uint8_t> BuildWav(uint64_t frames) {
   return out;
 }
 
-inline bool WriteWav(const std::string& path, uint64_t frames) {
-  const std::vector<uint8_t> bytes = BuildWav(frames);
+inline bool
+WriteBytes(const std::string& path, const std::vector<uint8_t>& bytes) {
   std::FILE* file = std::fopen(path.c_str(), "wb");
   if (file == nullptr) return false;
   const size_t written = std::fwrite(bytes.data(), 1, bytes.size(), file);
   std::fclose(file);
   return written == bytes.size();
+}
+
+inline bool WriteWav(const std::string& path, uint64_t frames) {
+  return WriteBytes(path, BuildWav(frames));
+}
+
+// Serializes interleaved float samples as an IEEE-float WAV at [sample_rate].
+// Companion to WriteWav's s16 fixture: a decoder reads these back without a
+// format conversion, so integer sample values below 2^24 survive bit-exact —
+// which is what lets it stand in for an in-memory ramp fixture without loss.
+inline bool WriteFloatWav(
+    const std::string& path,
+    const std::vector<float>& samples,
+    uint32_t channels,
+    uint32_t sample_rate
+) {
+  const auto data_bytes = static_cast<uint32_t>(samples.size() * sizeof(float));
+  const auto block_align = static_cast<uint16_t>(channels * sizeof(float));
+  std::vector<uint8_t> out;
+  PutTag(&out, "RIFF");
+  PutU32(&out, 36 + data_bytes);
+  PutTag(&out, "WAVE");
+  PutTag(&out, "fmt ");
+  PutU32(&out, 16);
+  PutU16(&out, 3);  // WAVE_FORMAT_IEEE_FLOAT
+  PutU16(&out, static_cast<uint16_t>(channels));
+  PutU32(&out, sample_rate);
+  PutU32(&out, sample_rate * block_align);
+  PutU16(&out, block_align);
+  PutU16(&out, 32);  // bits per sample
+  PutTag(&out, "data");
+  PutU32(&out, data_bytes);
+  for (float sample : samples) {
+    uint32_t bits = 0;
+    std::memcpy(&bits, &sample, sizeof(bits));
+    PutU32(&out, bits);
+  }
+  return WriteBytes(path, out);
 }
 
 }  // namespace media_test
