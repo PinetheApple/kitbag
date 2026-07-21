@@ -299,6 +299,25 @@ cannot lose the rewind and Pause stops within one block instead of overshooting.
 Ring-full drops (not blocks) — the RT choice — and drops are counted. Heavy source
 work (Start/Stop/Seek/Prime) stays on the app thread over a non-owning live_source.
 
+- **mixer:** Path-based track ABI; fix longest-frames + field tears
+
+Reshape the mixer ABI so no float* buffer crosses the boundary (SPEC.md
+§4.1): every value is now a scalar or a path, which is what §13.2's JSI
+HostObject relies on.
+
+- Add kb_mixer_load_track / kb_mixer_unload_track / kb_mixer_track_ready.
+  Load streams from disk via FileAudioReader, resamples off the callback,
+  and publishes by atomic pointer swap through the per-track RtPublisher —
+  the RT-safe load path A3 built. Unload retires the source for deferred,
+  off-callback reclamation.
+- Remove kb_mixer_set_track_data and its float*/num_frames/channels/
+  sample_rate params, every caller, and the now-unused PcmSourceReader.
+
+#16 (B5): longest_frames_ was only ever raised via std::max, so a
+reload-to-shorter or unload left the transport running long.
+RecomputeLongestFrames rescans loaded tracks on load and unload so
+auto-stop follows the current longest.
+
 
 ### Fixed
 
@@ -448,5 +467,26 @@ Sibling grep: beat_tracker.cpp:243 (sum_onset/onset.size()) is unguarded but
 unreachable today (only reached after onset.size() >= 10) -- recorded in the
 tracker as a latent trap, not fixed here. All other divides and narrowings
 (audio_source.cpp:92, beat_tracker.cpp:128/145/310) are guarded.
+
+- **metronome:** Cascade per-beat mute to its subdivisions
+
+OnSubdivisionTick derived a subdivision's owning beat from the
+latency-unshifted beat_position_, while the tick fires on the
+latency-shifted position. Above 0.5-beat latency (bpm > 300 under the
+±100 ms clamp) the two disagree, so a muted beat's own subdivision kept
+sounding. Measured at bpm 400, beat 1 muted, +100 ms: the pos-1.5
+subdivision peak was 0.334 -> 0.300 (leaked) instead of 0.334 -> 0.003.
+
+decisions.md 2026-07-21 ruled cascade = yes on the position / speaker-
+time base: mute what is heard, not grid-time. So attribution now uses the
+same sub_index the tick fires on (owning beat = sub_index / subdivision_
+in constant tempo, grid_beat_index_ in grid mode), passed in as a
+parameter. Callers fire only at a non-negative beat, so the old
+accents_[-1] guard and its beat_position_ read are gone; the pre-beat-0
+region is covered because position is what the fire guard already gates.
+
+New metronome_verify check pins the hole issue #21 named: mute beat N
+under +100 ms at bpm 400 and assert its subdivision is silent, with a
+sounding control and a beat-0 subdivision that must stay audible.
 
 
