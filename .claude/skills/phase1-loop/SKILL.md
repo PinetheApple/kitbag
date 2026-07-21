@@ -172,11 +172,23 @@ Relay a review by restating its findings in your own words with the evidence
 attached. Never paste a full report into the next agent, and never paste one back
 to the user — say what was found and what it means.
 
-**7. Close out.** In the same commit as the code it describes:
-- tracker line → `[x]` with the commit SHA and a one-line result
-- a true `CHANGELOG.md` entry (SPEC §16 requires one per feature; the thing that
-  was banned was *fabricated releases*, not entries)
-- `gh issue close <N> --comment "<what landed, commit SHA, verify evidence>"`
+**7. Close out.**
+- Commit the code with a **Conventional Commit** message (`feat`/`fix` for
+  user-facing work, `test`/`docs`/`chore` otherwise) whose **body** is the true
+  account of what landed — this body *is* the CHANGELOG source, so make it
+  accurate. SPEC §16 requires a true changelog entry per feature; git-cliff now
+  produces it from the commit, so a `feat`/`fix` commit **is** the entry.
+- Regenerate the changelog from the log: `git cliff -o CHANGELOG.md` (config in
+  `cliff.toml`; `feat`→Added, `fix`→Fixed; test/docs/chore are dropped from the
+  user-facing file and live only in the tracker + issue). Commit the regenerated
+  `CHANGELOG.md`. **Do not hand-edit `CHANGELOG.md`** — the commit log is the
+  source of truth; editing the generated file just drifts from it.
+- tracker line → `[x]` with a one-line result and the issue number. **Do not
+  embed the commit SHA** — `git log` already maps the work to its SHA, and
+  backfilling a SHA into a committed tracker line forced a second commit every
+  pass. (Historical lines that still carry a SHA are fine; leave them.)
+- `gh issue close <N> --comment "<what landed, commit SHA, verify evidence>"` —
+  the SHA belongs here, in the issue's review trail, not in the tracker body.
 
 **Grep the tree for siblings before committing** — a defect found once is a
 pattern until proven otherwise, and this holds for code as much as prose. The

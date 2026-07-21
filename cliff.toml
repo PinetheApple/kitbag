@@ -1,0 +1,76 @@
+# git-cliff configuration — generates CHANGELOG.md from Conventional Commits.
+# Regenerate with:  git cliff -o CHANGELOG.md
+# The header below is load-bearing (SPEC.md §2): it records that nothing has
+# shipped and why the old version history was deleted. Keep it truthful.
+
+[changelog]
+header = """
+# Changelog
+
+All notable changes to Kitbag are documented here.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+Entries below are generated from Conventional Commits by git-cliff — an entry
+cannot exist without a commit that did the work.
+
+---
+
+## Unreleased
+
+**Nothing has been released.**
+
+This file previously recorded 0.1.0 through 0.5.0 as all shipped on 2026-07-14.
+An audit on 2026-07-17 found that claim substantially false, and those entries
+were deleted rather than amended — they described work that does not exist.
+`SPEC.md` §2 is the audited inventory of what the codebase actually did, and it
+supersedes anything this file says. Version numbers restart when something
+genuinely ships.
+
+"""
+
+# One section per commit group; %{commit_id} links, scope shown when present.
+body = """
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | upper_first }}
+{% for commit in commits %}
+- {% if commit.scope %}**{{ commit.scope }}:** {% endif %}{{ commit.message | upper_first }}\
+{% if commit.body %}
+
+  {{ commit.body | trim | replace(from="\n", to="\n  ") }}\
+{% endif %}
+{% endfor %}
+{% endfor %}
+"""
+
+footer = ""
+trim = true
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+split_commits = false
+protect_breaking_commits = false
+filter_commits = true
+tag_pattern = "v[0-9]*"
+topo_order = false
+sort_commits = "oldest"
+
+# Map Conventional Commit types to Keep-a-Changelog sections. Anything not
+# listed (chore, docs, ci, build, style, refactor, test) is dropped from the
+# user-facing changelog — it is not a feature or a fix the reader cares about.
+# Keeping test/docs out is deliberate: the tracker and issues carry those.
+commit_parsers = [
+  { message = "^feat", group = "Added" },
+  { message = "^fix", group = "Fixed" },
+  { message = "^perf", group = "Performance" },
+  { message = "^revert", group = "Reverted" },
+  { message = "^test", skip = true },
+  { message = "^docs", skip = true },
+  { message = "^chore", skip = true },
+  { message = "^refactor", skip = true },
+  { message = "^style", skip = true },
+  { message = "^ci", skip = true },
+  { message = "^build", skip = true },
+  { message = ".*", skip = true },
+]
