@@ -125,6 +125,13 @@ a mutation are not evidence: two claimed sabotage runs in this repo didn't
 reproduce because the mutation sat downstream of a bound that already stopped the
 loop, so the suite stayed green and the agent read that as coverage.
 
+Revert with a **`cp` backup**, never `git checkout -- <file>`: the work under test
+is uncommitted, so `git checkout` reverts to HEAD — i.e. throws the whole task's
+edits away, not just the mutation. Two reviewers nearly corrupted the tree this
+way in one task. Confirm each revert with `md5sum` against a pre-mutation hash,
+**not** with `diff` — rtk's `diff` proxy has reported "Files are identical" for
+files that differ, which would pass a botched revert silently.
+
 **A mutation that stays green is a finding about the test, and it must be
 reported as one.** Two outcomes, both honest, both worth more than a green suite:
 
