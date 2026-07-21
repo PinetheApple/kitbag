@@ -68,6 +68,12 @@ class Metronome {
   // frame starts on the next sample, never before the transport. SPEC.md §4.2.
   void StartAt(uint64_t start_frame);
   void Stop();
+  // Anchor the click to a transport this engine does not clock: at engine frame
+  // `at_frame` the external song was `song_pos_sec` in, running at `bpm`. The
+  // song's beat 0 sits at song second 0. Re-callable; a re-anchor moves only
+  // future clicks. Starts the click if stopped. A grid set via SetGrid wins:
+  // this is a no-op until ClearGrid. SPEC.md §4.2.
+  void AnchorExternal(double song_pos_sec, uint64_t at_frame, double bpm);
   void SetTempo(double bpm);
   void SetBeatsPerBar(int beats);
   void SetSubdivision(int subdivision);
@@ -127,6 +133,7 @@ class Metronome {
     kStart,
     kStartAt,
     kStop,
+    kAnchorExternal,
     kSetTempo,
     kSetBeats,
     kSetSubdivision,
@@ -179,6 +186,8 @@ class Metronome {
   void ApplyPendingCommands();
   void ApplyCommand(const Command& command);
   bool ApplyTransportCommand(const Command& command);
+  // Copies an anchor_external's scalars into the pending_anchor_ fields.
+  void StashPendingAnchor(const Command& command);
   bool ApplyTempoCommand(const Command& command);
   bool ApplyTrainerCommand(const Command& command);
   bool ApplyPatternCommand(const Command& command);
@@ -211,6 +220,13 @@ class Metronome {
 
   // Render internals. All called per block or per sample from the callback.
   BlockTempo BlockTempoFor(uint32_t sample_rate) const;
+  // Per-block prologue: drains commands, seeds tempo and the grid view, and
+  // consumes a queued anchor. Returns the grid view for the block.
+  GridView BeginBlock(
+      uint64_t block_start_frame,
+      uint32_t sample_rate,
+      BlockTempo* tempo
+  );
   GridView AcquireGrid(uint64_t block_start_frame, uint32_t sample_rate);
   void BeginPendingStart(
       const GridView& view,
@@ -218,6 +234,14 @@ class Metronome {
       uint32_t sample_rate,
       BlockTempo* tempo
   );
+  // Consumes a queued anchor_external at block start: writes bpm_ and
+  // beat_position_ so `now` sits at the song's beat phase, then runs. SPEC.md
+  // §4.2.
+  void
+  BeginAnchorExternal(uint64_t now, uint32_t sample_rate, BlockTempo* tempo);
+  // Derives current_bar_ from the current latency-shifted position, so an anchor
+  // lands the bar counter on the song's bar rather than counting downbeats.
+  void SyncBarFromPosition();
   void AdvanceConstantTempo(uint32_t sample_rate, BlockTempo* tempo);
   void FireConstantTempoTick(
       int64_t sub_index,
@@ -272,6 +296,12 @@ class Metronome {
   // `pending_start_frame_` on the engine clock, then consumed by BeginRun.
   bool has_pending_start_ = false;
   uint64_t pending_start_frame_ = 0;
+  // Pending anchor_external. Held until the render loop knows block_start_frame,
+  // then consumed by BeginAnchorExternal. The last of several drained wins.
+  bool has_pending_anchor_ = false;
+  double pending_anchor_song_pos_ = 0.0;
+  double pending_anchor_bpm_ = kDefaultBpm;
+  uint64_t pending_anchor_frame_ = 0;
 
   // Grid mode. The publisher is the app→RT seam; everything below it is
   // RT-owned. Why identity is a generation, why zero forces a re-seed, and why

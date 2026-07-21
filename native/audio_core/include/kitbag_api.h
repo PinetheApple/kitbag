@@ -78,6 +78,27 @@ KB_EXPORT kb_result kb_metronome_set_grid(
  * the constant tempo falls one whole beat after the last grid beat that
  * sounded, not on the next sample. */
 KB_EXPORT void kb_metronome_clear_grid(kb_engine* engine);
+/* Anchor the click to an external transport this engine does not clock — a
+ * Spotify or YouTube stream. Declares that at engine frame at_frame the song was
+ * song_pos_sec into playback, running at a constant bpm, and lays the click grid
+ * to match: the song's beat 0 is at song second 0, its beats every 60/bpm
+ * seconds. Starts the click if it was stopped.
+ * Re-callable at any time to re-anchor; a re-anchor moves only future clicks and
+ * never double-clicks or drops a beat. A negative or fractional song_pos_sec is
+ * a mid-bar anchor — the click stays silent until the song reaches beat 0, then
+ * follows the beats. bpm is clamped to the metronome's range. The tempo ramp
+ * does not apply while anchored; the latency offset still lands the click at the
+ * speaker, not the buffer.
+ * A measured grid set via kb_metronome_set_grid takes precedence: while a grid
+ * is set this anchor is a no-op, taking effect only after kb_metronome_clear_grid.
+ * at_frame crosses as a uint64_t but is exact to 2^53 frames — ~5,900 years at
+ * 48kHz — so it may be passed as a JS double. No BigInt. */
+KB_EXPORT void kb_metronome_anchor_external(
+    kb_engine* engine,
+    double song_pos_sec,
+    uint64_t at_frame,
+    double bpm
+);
 KB_EXPORT void kb_metronome_set_tempo(kb_engine* engine, double bpm);
 KB_EXPORT void kb_metronome_set_beats(kb_engine* engine, int32_t beats_per_bar);
 KB_EXPORT void

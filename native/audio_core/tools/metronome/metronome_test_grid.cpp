@@ -134,7 +134,8 @@ void TestGridStartAtRestoresGeneration() {
   metronome.SetGrid(MakeDriftingGrid(40, 0.5, 0.0, 0), 0, true);
   metronome.StartAt(static_cast<uint64_t>(tick_frame - kJustBeforeFrames));
 
-  const auto peaks = RenderBlockPeaks(metronome, kSampleRate * 4);
+  const auto peaks =
+      RenderContinuousPeaks(metronome, kSampleRate * 4, [](int64_t) {});
   const auto tick_block = static_cast<size_t>(tick_frame / kBlockFrames);
   Check(
       peaks[tick_block] > 0.0,

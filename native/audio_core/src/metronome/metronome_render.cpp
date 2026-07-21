@@ -9,6 +9,7 @@ namespace kitbag {
 
 namespace {
 
+using metronome_detail::Clamp;
 using metronome_detail::kGridEpsilon;
 using metronome_detail::kSecondsPerMinute;
 
@@ -71,8 +72,9 @@ void Metronome::TriggerClick(
 
 void Metronome::OnBeatBoundary(int beat_index, uint32_t sample_rate) {
   current_beat_.store(beat_index, std::memory_order_relaxed);
-  const Accent accent =
-      beat_index < kMaxBeats ? accents_[beat_index] : Accent::kNormal;
+  const Accent accent = beat_index >= 0 && beat_index < kMaxBeats
+                            ? accents_[beat_index]
+                            : Accent::kNormal;
   if (accent == Accent::kMuted || BarIsMuted(current_bar_)) return;
   const SoundPreset& sound = kSounds[sound_];
   const bool accented = accent == Accent::kAccented;
@@ -85,9 +87,16 @@ void Metronome::OnBeatBoundary(int beat_index, uint32_t sample_rate) {
 }
 
 void Metronome::OnSubdivisionTick(uint32_t sample_rate) {
+  // beat_position_ carries no latency term, so under a positive offset it can be
+  // marginally negative while position (which the fire guard checks) is not — a
+  // subdivision in the pre-beat-0 region. It belongs to beat 0; a raw floor
+  // would index accents_[-1]. See TestSubdivisionOwnedByBeatZero.
+  const auto beat =
+      static_cast<int64_t>(std::floor(beat_position_ + kGridEpsilon));
+  // Bounds the index, but assumes the latency offset is under one beat; D5's
+  // 300ms clamp breaks that and the mute-leak attribution bug (#20) with it.
   const int owning_beat =
-      static_cast<int>(std::floor(beat_position_ + kGridEpsilon)) %
-      beats_per_bar_;
+      beat < 0 ? 0 : static_cast<int>(beat % beats_per_bar_);
   if (accents_[owning_beat] == Accent::kMuted || BarIsMuted(current_bar_)) {
     return;
   }
@@ -179,6 +188,38 @@ void Metronome::BeginPendingStart(
   observed_generation_ = view.generation;
 }
 
+void Metronome::SyncBarFromPosition() {
+  const double position = beat_position_ + LatencyBeats();
+  // The last beat strictly before `position` — the one already sounded. Below
+  // the first downbeat there is none, so the bar counter waits at -1.
+  const auto last_beat =
+      static_cast<int64_t>(std::floor(position - kGridEpsilon));
+  current_bar_ = last_beat < 0 ? -1 : last_beat / beats_per_bar_;
+}
+
+void Metronome::BeginAnchorExternal(
+    uint64_t now,
+    uint32_t sample_rate,
+    BlockTempo* tempo
+) {
+  has_pending_anchor_ = false;
+  has_pending_start_ = false;  // an anchor supersedes a deferred start
+  ramp_enabled_ = false;  // an authoritative bpm cancels the ramp, as SetTempo
+  bpm_ = Clamp(pending_anchor_bpm_, kMinBpm, kMaxBpm);
+  const double song_seconds =
+      pending_anchor_song_pos_ +
+      (static_cast<double>(now) - static_cast<double>(pending_anchor_frame_)) /
+          sample_rate;
+  // position == song beats, so beat_position_ carries no latency term; the
+  // per-sample bias in AdvanceConstantTempo adds it back (§4.7).
+  beat_position_ = song_seconds * bpm_ / kSecondsPerMinute;
+  running_ = true;
+  running_flag_.store(true, std::memory_order_relaxed);
+  observed_generation_ = 0;  // re-seed the grid cursor if a grid is present
+  SyncBarFromPosition();
+  *tempo = BlockTempoFor(sample_rate);
+}
+
 void Metronome::FireConstantTempoTick(
     int64_t sub_index,
     uint32_t sample_rate,
@@ -216,14 +257,19 @@ void Metronome::FirePolyTick(
 
 void Metronome::AdvanceConstantTempo(uint32_t sample_rate, BlockTempo* tempo) {
   const double position = beat_position_ + tempo->latency_beats;
-  const auto sub_index =
-      static_cast<int64_t>(std::floor(position * subdivision_ + kGridEpsilon));
-  const double sub_start = static_cast<double>(sub_index) / subdivision_;
-  // A grid point fires on the first sample at or past it.
-  if (position - tempo->beats_per_sample < sub_start - kGridEpsilon) {
-    FireConstantTempoTick(sub_index, sample_rate, tempo);
+  // Before song beat 0 — a negative external-anchor position — there is no beat
+  // to sound, mirroring grid mode's silence before its first beat (§4.2).
+  if (position >= 0.0) {
+    const auto sub_index = static_cast<int64_t>(
+        std::floor(position * subdivision_ + kGridEpsilon)
+    );
+    const double sub_start = static_cast<double>(sub_index) / subdivision_;
+    // A grid point fires on the first sample at or past it.
+    if (position - tempo->beats_per_sample < sub_start - kGridEpsilon) {
+      FireConstantTempoTick(sub_index, sample_rate, tempo);
+    }
+    if (poly_enabled_) FirePolyTick(position, sample_rate, *tempo);
   }
-  if (poly_enabled_) FirePolyTick(position, sample_rate, *tempo);
   beat_position_ += tempo->beats_per_sample;
 }
 
@@ -254,6 +300,22 @@ void Metronome::PublishBlockMirrors(
   );
 }
 
+Metronome::GridView Metronome::BeginBlock(
+    uint64_t block_start_frame,
+    uint32_t sample_rate,
+    BlockTempo* tempo
+) {
+  ApplyPendingCommands();
+  *tempo = BlockTempoFor(sample_rate);
+  const GridView view = AcquireGrid(block_start_frame, sample_rate);
+  // Applied at block start, before any click this block: a re-anchor moves only
+  // future targets, never one already emitted (§4.2).
+  if (has_pending_anchor_) {
+    BeginAnchorExternal(block_start_frame, sample_rate, tempo);
+  }
+  return view;
+}
+
 void Metronome::Render(
     float* output,
     uint32_t frame_count,
@@ -261,9 +323,8 @@ void Metronome::Render(
     uint32_t channel_count,
     uint64_t block_start_frame
 ) {
-  ApplyPendingCommands();
-  BlockTempo tempo = BlockTempoFor(sample_rate);
-  const GridView view = AcquireGrid(block_start_frame, sample_rate);
+  BlockTempo tempo{};
+  const GridView view = BeginBlock(block_start_frame, sample_rate, &tempo);
 
   for (uint32_t frame = 0; frame < frame_count; ++frame) {
     const uint64_t now = block_start_frame + frame;
