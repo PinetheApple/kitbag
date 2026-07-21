@@ -71,6 +71,12 @@ config wins; you cover only what the config cannot check.
    worse: it is the §2 failure mode and it is a **Revise**. Good comments state a
    constraint the code cannot show (an ordering reason, an epsilon's purpose). Judge
    density against the surrounding file, not an absolute.
+   **Stating a real constraint is not sufficient** — run `CONTRIBUTING.md`'s three
+   checks on it. A comment earns its place only if the why is not already written at
+   the definition, is not patching a signature a rename or a unit-carrying parameter
+   name would fix, and could not be absorbed by a rename. The first is the one that
+   gets missed: grep the symbol the comment explains before passing it, because two
+   copies of a why drift apart and the reviewer is the last line against that.
 2. **Magic values that carry intent.** In `src/` the linter catches these; you catch
    what it can't — a value the linter's ignore-list let through that still means
    something, or a named constant whose name doesn't match its meaning. **Respect the
@@ -79,7 +85,9 @@ config wins; you cover only what the config cannot check.
    never the shared idiom.
 3. **Hard-to-read code.** Control flow that needs a second read, a function doing
    three things, a name that misleads, nesting that a guard clause would flatten.
-   Say concretely what would make it clearer.
+   Say concretely what would make it clearer. **A vague name is a decomposition
+   finding, not a naming one** — when no verb fits, the function is usually two
+   functions. Propose the split, not a better word.
 4. **C++ method naming (Google accessor exception).** `PascalCase` actions,
    `snake_case` accessors that mirror state. The linter can't express this; you can.
 5. **Smells.** Duplication that wants a helper, a file past ~400–500 lines, a
