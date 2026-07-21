@@ -101,15 +101,19 @@ if(KITBAG_BUILD_TOOLS)
   target_include_directories(beat_tracker_verify PRIVATE src include)
   target_link_libraries(beat_tracker_verify PRIVATE m)
 
-  # Links the sources: Mixer is internal, not exported through the C ABI.
+  # Links the sources: Mixer is internal, not exported through the C ABI. Each
+  # track streams through an AudioSource, so the mixer tool links it and Threads.
+  find_package(Threads REQUIRED)
   add_executable(mixer_verify
     tools/mixer/mixer_verify.cpp
     tools/mixer/mixer_test_transport.cpp
     tools/mixer/mixer_test_mix.cpp
+    tools/mixer/mixer_test_source.cpp
     src/mixer/mixer.cpp
+    src/media/audio_source.cpp
   )
   target_include_directories(mixer_verify PRIVATE src tools tools/mixer)
-  target_link_libraries(mixer_verify PRIVATE m)
+  target_link_libraries(mixer_verify PRIVATE Threads::Threads m)
 
   # Drives the in-memory adapter. That this target links no miniaudio and still
   # passes is what proves the seam: the module depends on SourceReader, not on
@@ -124,7 +128,6 @@ if(KITBAG_BUILD_TOOLS)
   )
   target_include_directories(audio_source_verify
     PRIVATE src tools tools/media tools/rt)
-  find_package(Threads REQUIRED)
   target_link_libraries(audio_source_verify PRIVATE Threads::Threads m)
 
   # The other side: FileAudioReader over a WAV the tool writes at run time, so

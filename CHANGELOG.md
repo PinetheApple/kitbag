@@ -38,6 +38,21 @@ genuinely ships.
 
 ### Added — 2026-07-21
 
+- **Mixer tracks stream through `AudioSource`** (A1, `SPEC.md` §4.1) — each mixer
+  track now owns a W0-2 `AudioSource` instead of a full decoded buffer, and the
+  audio callback only drains it: `Process`/`MixTrack` allocate nothing, take no
+  lock, and do no I/O (`scratch_` is pre-sized off-thread; a block wider than
+  `kMaxBlockFrames` is rejected, never resized). Each track is drained *before*
+  gain/mute/solo gating, so a muted track stays in lockstep with the transport and
+  resumes in sync instead of replaying on unmute (§4.4). The non-RT `Play`/`Seek`
+  setup path primes each source's ring before playback so the transport is
+  deterministic against the async read-ahead thread. A `PcmSourceReader` in-memory
+  adapter keeps the legacy `kb_mixer_set_track_data` path working as setup.
+  `mixer_verify` 61 → 84 checks (5 new streaming tests). **§4.1 is only partially
+  delivered here**: resample-on-load (a track whose rate ≠ engine rate is still
+  silently dropped) lands in A2, and true memory-`O(tracks)` needs the
+  disk-streaming reader in A4 — the legacy path still copies the whole song.
+
 - **`kb_metronome_anchor_external(engine, song_pos_sec, at_frame, bpm)`**
   (`SPEC.md` §4.2) — anchors the click to a transport the engine does not clock
   (a Spotify/YouTube stream): "at engine frame `at_frame` the song was

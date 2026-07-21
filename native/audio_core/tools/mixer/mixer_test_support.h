@@ -105,6 +105,7 @@ ExpectSilentBlock(const std::vector<float>& out, const char* label) {
 
 void RunTransportTests();
 void RunMixTests();
+void RunSourceTests();
 
 }  // namespace mixer_test
 
