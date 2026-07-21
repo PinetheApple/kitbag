@@ -25,3 +25,10 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   switch `OnSubdivisionTick` to `floor(position)`; ralph must confirm the fix does not
   regress other latency-offset runs (the reason #21 was parked). Unblocks the #21
   defect fix. **[user ruled cascade; time base = position per rec]**
+
+- **2026-07-21 · Test-tone (§16, #17)** — Fold into **A5** (#10), which builds the
+  engine-render test seam this needs. When A5 lands: if a product surface consumes
+  `kb_engine_set_test_tone`, fix it with accumulate (not assign) semantics; **if
+  nothing consumes it, delete the ABI symbol** — §16 forbids orphan exports. Default
+  lean: delete, it is a dev diagnostic with no product surface. No longer parked on a
+  ruling; scheduled behind A5. **[recorded — user delegated]**
