@@ -178,11 +178,16 @@ to the user — say what was found and what it means.
   account of what landed — this body *is* the CHANGELOG source, so make it
   accurate. SPEC §16 requires a true changelog entry per feature; git-cliff now
   produces it from the commit, so a `feat`/`fix` commit **is** the entry.
-- Regenerate the changelog from the log: `git cliff -o CHANGELOG.md` (config in
-  `cliff.toml`; `feat`→Added, `fix`→Fixed; test/docs/chore are dropped from the
-  user-facing file and live only in the tracker + issue). Commit the regenerated
-  `CHANGELOG.md`. **Do not hand-edit `CHANGELOG.md`** — the commit log is the
-  source of truth; editing the generated file just drifts from it.
+- Regenerate the changelog from the log:
+  `git cliff changelog-base..HEAD -o CHANGELOG.md` (config in `cliff.toml`;
+  `feat`→Added, `fix`→Fixed; test/docs/chore are dropped from the user-facing
+  file and live only in the tracker + issue). **The `changelog-base..HEAD` range
+  is mandatory** — the `changelog-base` tag marks the Flutter-removal reset
+  (`9a63543`); generating from the *full* log resurrects the deleted 0.1–0.5
+  Flutter/tuner `feat` commits, which is exactly the phantom history SPEC.md §2
+  killed. Commit the regenerated `CHANGELOG.md`. **Do not hand-edit
+  `CHANGELOG.md`** — the commit log is the source of truth; editing the generated
+  file just drifts from it.
 - tracker line → `[x]` with a one-line result and the issue number. **Do not
   embed the commit SHA** — `git log` already maps the work to its SHA, and
   backfilling a SHA into a committed tracker line forced a second commit every
