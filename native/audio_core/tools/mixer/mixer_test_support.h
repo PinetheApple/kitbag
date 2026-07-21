@@ -36,10 +36,32 @@ inline std::vector<float> MakeRamp(uint64_t frames, float offset) {
   return pcm;
 }
 
+// now_frame 0 / engine_running false: the suite drives Process by hand, so no
+// audio callback is concurrent and a retired source is safe to free at once.
 inline void
 LoadRamp(kitbag::Mixer* mixer, int track, uint64_t frames, float offset) {
   const std::vector<float> pcm = MakeRamp(frames, offset);
-  mixer->SetTrackData(track, pcm.data(), frames, kMono, kSampleRate);
+  mixer->SetTrackData(track, pcm.data(), frames, kMono, kSampleRate, 0, false);
+}
+
+// Interleaved ramp of [channels] channels, loaded like LoadRamp.
+inline void LoadInterleaved(
+    kitbag::Mixer* mixer,
+    int track,
+    uint64_t frames,
+    uint32_t channels,
+    float offset
+) {
+  const std::vector<float> pcm = MakeRamp(frames * channels, offset);
+  mixer->SetTrackData(
+      track,
+      pcm.data(),
+      frames,
+      channels,
+      kSampleRate,
+      0,
+      false
+  );
 }
 
 inline std::vector<float> RenderBlock(kitbag::Mixer* mixer) {
@@ -103,10 +125,17 @@ ExpectSilentBlock(const std::vector<float>& out, const char* label) {
   }
 }
 
+// Renders and discards a block so the command ring drains — transport and
+// scalar commands are applied by Process, so state converges only across it.
+inline void Drain(kitbag::Mixer* mixer) {
+  RenderBlock(mixer);
+}
+
 void RunTransportTests();
 void RunMixTests();
 void RunSourceTests();
 void RunResampleTests();
+void RunPublishTests();
 
 }  // namespace mixer_test
 

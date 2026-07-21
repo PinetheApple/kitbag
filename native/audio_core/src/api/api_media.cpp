@@ -45,12 +45,15 @@ void kb_mixer_set_track_data(
     int32_t sample_rate
 ) {
   if (engine == nullptr || pcm == nullptr) return;
-  ToEngine(engine)->mixer().SetTrackData(
+  kitbag::Engine* e = ToEngine(engine);
+  e->mixer().SetTrackData(
       track,
       pcm,
       static_cast<uint64_t>(num_frames),
       static_cast<uint32_t>(channels),
-      static_cast<uint32_t>(sample_rate)
+      static_cast<uint32_t>(sample_rate),
+      e->frames_rendered(),
+      e->is_running()
   );
 }
 

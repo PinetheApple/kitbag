@@ -16,11 +16,12 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done (verify green + bot
 
 ## Current state — 2026-07-21, `work/post-phase0`
 
-**Done:** W0-1 · W0-2 · W0-3 (hygiene) · C1–C5 · B2 · B3 · B4 · A1 · A2 · #18 · #19.
+**Done:** W0-1 · W0-2 · W0-3 (hygiene) · C1–C5 · B2 · B3 · B4 · A1 · A2 · A3 · #18 · #19.
 B1 **withdrawn as wrong** (graveyard below).
-**In progress:** A3 (RT-safe load; also fixes the #8 teardown-order UAF).
+**In progress:** none (session handed off after A3).
 **Next:** A4/A5/A6, or Track D (D1 `#12`, independent — parallelizable now).
 **Blocked (user rulings):** `#21` grid mute-cascade · `#22` Speex-grade resample.
+**Follow-ups from A3:** `#23` track_count_/longest_frames_ atomicity (32-bit tear).
 **Track B not complete:** B5 (`#16`) still open, folded into A4.
 
 **Latent, not fixed:** `beat_tracker.cpp:243` (`sum_onset / onset.size()`) is an
@@ -172,7 +173,7 @@ comments (four *false* — see honesty rules); size gates (fns ≤30, files ≤4
 A1→A2→A3 sequential (streaming → resample → RT-safe publish), then A4/A5 ABI, A6 verify.
 - [x] **A1** Mixer track = `AudioSource` per track; callback drains only; memory O(tracks). `#6` · `160dfae`. §4.1 only *partially* delivered here (resampler → A2; disk-streaming reader → A4).
 - [x] **A2** Resample-on-load to engine rate inside `AudioSource`; kills the 44.1k silent-skip; `Mixer::Process` loses `sr` param + skip-branch (F4). miniaudio **linear** — Speex dropped upstream, Speex-grade quality → `#22`. `#7` · `4bc2592`. Flagged: Track member-dtor-order UAF → A3.
-- [~] **A3** RT-safe track load — build `AudioSource` off-thread, publish by atomic pointer-swap. Scalar controls stay on the command ring (F3). Fixes the `SetTrackData` race + the #8 teardown-order UAF. `#8`.
+- [x] **A3** RT-safe track load — build `AudioSource` off-thread, publish by atomic pointer-swap. Scalar controls stay on the command ring (F3). Fixes the `SetTrackData` race + the #8 teardown-order UAF. `#8`. Each track owns `RtPublisher<TrackSource>` (reused from C2); callback does one acquire load/track, old sources retired + reclaimed off-thread (never freed on callback). `SpscRing<Command,64>` for gain/mute/solo/play/stop/pause/seek — counters written only by the callback, so Stop/Seek can't overwrite a rewind and Pause can't overshoot. `scratch_` sized once at construction, tracks >2ch rejected at load (closes a realloc-UAF ralph caught mid-review). `mixer_verify` 93→110; ASan clean; both reviewers pass after 2 fix rounds. **Residual (own issues):** `track_count_`/`longest_frames_` still non-atomic on the callback → `#23`; live-seek source reposition → A4.
 - [ ] **A4** Mixer ABI: `kb_mixer_load_track` / `unload_track` / `track_ready`; **remove** `kb_mixer_set_track_data` + buffer param; update every caller. Also fixes B5. `#9`.
 - [ ] **A5** Player ABI: `load/unload/play/pause/seek/position/frames/is_playing`. Thin over `AudioSource` (W0-2) + transport clock (W0-1). `pause` holds. `#10`.
 - [ ] **A6** New `tools/` verify: stream real file, assert frame count + non-silence + resample correctness; wire into CMake + CI. `#11`.

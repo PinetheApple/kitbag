@@ -139,7 +139,7 @@ void TestMixerResamplesOnLoad() {
   SineReader reader;
   kitbag::Mixer mixer(kSampleRate);
   Check(
-      mixer.SetTrackSource(0, &reader),
+      mixer.SetTrackSource(0, &reader, 0, false),
       "resample: a 44.1kHz stem loads rather than being rejected"
   );
   const uint64_t frames = mixer.track_frames(0);

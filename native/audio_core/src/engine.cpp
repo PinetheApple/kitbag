@@ -52,6 +52,7 @@ void Engine::Stop() {
   // Nothing else ever reclaims these: Collect only frees as frames_rendered_
   // moves, and a stopped engine never moves it.
   metronome_.ReleaseRetiredGrids();
+  mixer_.ReleaseRetiredSources();
 }
 
 void Engine::SetTestTone(bool enabled, float frequency_hz) {

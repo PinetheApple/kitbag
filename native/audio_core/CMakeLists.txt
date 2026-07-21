@@ -42,6 +42,7 @@ add_library(kitbag_core SHARED
   src/metronome/metronome_render.cpp
   src/media/miniaudio_impl.c
   src/mixer/mixer.cpp
+  src/mixer/mixer_render.cpp
   src/tuner/note_lock.cpp
   src/tuner/pitch_analyzer.cpp
   src/tuner/tuner.cpp
@@ -113,12 +114,16 @@ if(KITBAG_BUILD_TOOLS)
     tools/mixer/mixer_test_mix.cpp
     tools/mixer/mixer_test_source.cpp
     tools/mixer/mixer_test_resample.cpp
+    tools/mixer/mixer_test_publish.cpp
     src/mixer/mixer.cpp
+    src/mixer/mixer_render.cpp
     src/media/audio_source.cpp
     src/media/resampling_source_reader.cpp
     src/media/miniaudio_impl.c
   )
   target_include_directories(mixer_verify PRIVATE src tools tools/mixer third_party)
+  # mixer_render.cpp's exhaustive CommandType switch is load-bearing here too.
+  target_compile_options(mixer_verify PRIVATE -Werror=switch)
   target_link_libraries(mixer_verify PRIVATE Threads::Threads m ${CMAKE_DL_LIBS})
 
   # Drives the in-memory adapter. That this target links no miniaudio and still
