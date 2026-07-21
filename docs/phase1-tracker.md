@@ -16,13 +16,12 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done (verify green + bot
 
 ## Current state — 2026-07-21, `work/post-phase0`
 
-**Done:** W0-1 · W0-2 · W0-3 (hygiene) · C1–C5 · B2 · B3 · B4 · A1 · A2 · A3 · #18 · #19.
+**Done:** W0-1 · W0-2 · W0-3 (hygiene) · C1–C5 · B2 · B3 · B4 · B5 (`#16`) · A1 · A2 · A3 · **A4 (`#9`)** · `#18` · `#19` · `#21` · `#23`.
 B1 **withdrawn as wrong** (graveyard below).
-**In progress:** none (session handed off after A3).
-**Next:** A4/A5/A6, or Track D (D1 `#12`, independent — parallelizable now).
-**Blocked (user rulings):** `#21` grid mute-cascade · `#22` Speex-grade resample.
-**Follow-ups from A3:** `#23` track_count_/longest_frames_ atomicity (32-bit tear) — done in A4 (both `atomic<relaxed>`, count-tolerant callback).
-**Track B complete:** B5 (`#16`) landed with A4.
+**In progress:** none.
+**Next:** **A5 (`#10`)** → A6 (`#11`); or **Track D** (D1 `#12`, QM-DSP vendoring ruled 2026-07-21, independent — parallelizable now).
+**Blocked (user rulings):** none open. (`#21` mute-cascade ruled + fixed; `#22` Speex-grade resample closed keep-linear.)
+**Follow-ups:** `#24` grid-mode positive-latency subdivision+mute test (non-blocking, correct-by-construction per ralph). `#17` test-tone folded behind A5.
 
 **Latent, not fixed:** `beat_tracker.cpp:243` (`sum_onset / onset.size()`) is an
 unguarded divide, unreachable today (only called after `onset.size() >= 10`); becomes
@@ -165,7 +164,7 @@ comments (four *false* — see honesty rules); size gates (fns ≤30, files ≤4
 ### Track C — §4.2 phase anchor
 - [x] **C1** `kb_metronome_start_at(start_frame)` — sample-accurate deferred start.
 - [x] **C2** `kb_metronome_set_grid(...)` + `clear_grid` — follow per-beat spacing. Introduced `RtPublisher<T>` (F3 bulk-payload seam; A3 reuses it). `a633536` `5a6d018`.
-- [x] **C3** `kb_metronome_anchor_external(...)` — anchor to a transport we don't clock; glitch-free re-anchor. Fixed a pre-existing `accents_[-1]` OOB → `#21` (blocked on SPEC mute-cascade ruling). `#3`.
+- [x] **C3** `kb_metronome_anchor_external(...)` — anchor to a transport we don't clock; glitch-free re-anchor. Fixed a pre-existing `accents_[-1]` OOB → `#21`, since **fixed** 2026-07-21 (`6a1038a`): per-beat mute now cascades to subdivisions on the speaker-time base. `#3`.
 - [x] **C4** Invariants (anchoring touches future targets only; composes with latency; no double/dropped beat). Verification-only, no production change. `#4`.
 - [x] **C5** Regression coverage (ramping grid, mid-run re-anchor, frame-exact start_at). Verification-only. `#5` · `38b29ac`. *JSI note: `uint64_t` frames cross as JS `double` — no BigInt.*
 
