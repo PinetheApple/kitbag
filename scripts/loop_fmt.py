@@ -70,7 +70,7 @@ def render(event):
     elif etype == "assistant":
         for block in event["message"]["content"]:
             if block["type"] == "text" and block["text"].strip():
-                yield stamp() + sgr("90", "· " + clip(block["text"], 200))
+                yield stamp() + tag("NOTE", "97;45") + " " + clip(block["text"], 200)
             elif block["type"] == "tool_use":
                 yield tool_line(block)
     elif etype == "user":
@@ -100,4 +100,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except (KeyboardInterrupt, BrokenPipeError):
+        sys.exit(130)
