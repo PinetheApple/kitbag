@@ -63,6 +63,17 @@ genuinely ships.
   real coverage gap — `set_grid` had never been tested at a non-zero latency
   offset, so its offset term was unpinned. `metronome_verify` 206 → 213 checks.
 
+- **Phase-anchor regressions closed** (C5, `SPEC.md` §4.2) — three tests pin the
+  behaviour C5 names. Grid-follow tracks a genuinely *drifting* grid on re-anchor:
+  every post-swap click lands on its incoming beat's measured time, not on an
+  averaged tempo extrapolated from the re-seed point — a mutation that seeds the
+  cursor onto an averaged interval fails only this test while plain grid-follow
+  stays green. `start_at` is frame-exact: `FirstNonzeroFrame` bypasses the onset
+  detector's ±2 attack window to assert the first non-zero sample lands on exactly
+  `start_frame + 1` (the trigger sample is `sin(0) == 0`), catching a one-frame
+  scheduling slip the detector tolerance hides. No production change: the behaviour
+  already held; C5 is the proof. `metronome_verify` 213 → 218 checks.
+
 ### Fixed — 2026-07-21
 
 - **`OnSubdivisionTick` read `accents_[-1]` out of bounds** — pre-existing, and

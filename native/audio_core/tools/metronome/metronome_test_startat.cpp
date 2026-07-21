@@ -181,6 +181,23 @@ void TestStartAtRecallWhileRunningIgnored() {
   );
 }
 
+// Frame-exact, tighter than TestStartAt's ±2 detector window: the click is
+// triggered on exactly start_frame, so the first non-zero sample is start_frame+1
+// — the trigger sample itself is sin(0) == 0.
+void TestStartAtFrameExactScheduling() {
+  const int64_t anchors[] = {5000, 7777, 2561};  // none block-aligned
+  for (const int64_t anchor : anchors) {
+    kitbag::Metronome metronome;
+    metronome.SetTempo(120.0);
+    metronome.StartAt(static_cast<uint64_t>(anchor));
+    const int64_t first = FirstNonzeroFrame(metronome, anchor + kSampleRate);
+    Check(
+        first == anchor + 1,
+        "start_at frame-exact: click triggered on exactly start_frame"
+    );
+  }
+}
+
 // Stop cancels a pending StartAt: the click never begins.
 void TestStopCancelsPendingStartAt() {
   kitbag::Metronome metronome;
@@ -201,6 +218,7 @@ void RunStartAtTests() {
   TestStartCancelsPendingStartAt();
   TestStartAtKeepsBeatZeroUnderLatencyOffset();
   TestStartAtRecallWhileRunningIgnored();
+  TestStartAtFrameExactScheduling();
   TestStopCancelsPendingStartAt();
 }
 

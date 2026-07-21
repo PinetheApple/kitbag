@@ -51,6 +51,51 @@ void TestGridReanchorMidRunPicksUpNewGrid() {
   ExpectOnsetsAtSeconds(onsets, expected, "grid re-anchor");
 }
 
+// Even grid beats before the re-seed, then the incoming grid's own beats from it
+// on — derived from the grid, not a rounded literal, so a steep ramp cannot be
+// swallowed by fixture values too round to discriminate. The re-seed runs at the
+// first block boundary at or after swap_at.
+std::vector<double>
+DriftingReanchorExpected(const std::vector<double>& incoming, int64_t swap_at) {
+  const int64_t seed_frame =
+      ((swap_at + kBlockFrames - 1) / kBlockFrames) * kBlockFrames;
+  const double seed_sec = static_cast<double>(seed_frame) / kSampleRate;
+  std::vector<double> expected = {0.0, 0.5, 1.0, 1.5, 2.0};
+  for (const double t : incoming) {
+    if (t >= seed_sec - 1e-9) expected.push_back(t);
+  }
+  return expected;
+}
+
+// Re-anchoring mid-run to a genuinely *drifting* grid: the existing re-anchor
+// tests swap between even grids, so an impl that re-seeded onto an averaged tempo
+// would pass them. Here the incoming grid ramps, so every post-swap beat must land
+// on its own measured time, not on an extrapolation from the re-seed point.
+void TestGridReanchorFollowsNewDriftingGrid() {
+  kitbag::Metronome metronome;
+  metronome.SetBeatsPerBar(4);
+  metronome.SetGrid(MakeShiftedGrid(40, 0.0, 0.5), 0, true);  // even 0.5 s
+  metronome.Start();
+  // Steep ramp: intervals shrink 0.02 s per beat, so an averaged-tempo re-seed misses.
+  auto drifting = MakeDriftingGrid(12, 0.5, 0.02, 0);
+  const auto incoming = drifting->beat_times_sec;
+  const int64_t swap_at = static_cast<int64_t>(2.1 * kSampleRate);
+  const auto onsets = RenderContinuous(
+      metronome,
+      kSampleRate * 5,
+      OnceAtFrame(swap_at, [&](int64_t frame) {
+        metronome
+            .SetGrid(std::move(drifting), static_cast<uint64_t>(frame), true);
+      })
+  );
+  const auto expected = DriftingReanchorExpected(incoming, swap_at);
+  Check(
+      onsets.size() == expected.size(),
+      "grid drifting re-anchor: beat count"
+  );
+  ExpectOnsetsAtSeconds(onsets, expected, "grid drifting re-anchor");
+}
+
 // Regression: pausing and resuming under a grid must not strand the cursor
 // where the pause began (SPEC.md §4.2.1).
 void TestGridSurvivesStopStart() {
@@ -293,6 +338,7 @@ void TestGridBpmMirrorIsClamped() {
 void RunGridTests() {
   TestGridFollowsDriftingTempo();
   TestGridReanchorMidRunPicksUpNewGrid();
+  TestGridReanchorFollowsNewDriftingGrid();
   TestClearGridReturnsToBpm();
   TestGridSurvivesStopStart();
   TestGridWithStartAt();
