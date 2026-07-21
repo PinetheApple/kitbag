@@ -44,7 +44,7 @@ LoadRamp(kitbag::Mixer* mixer, int track, uint64_t frames, float offset) {
 
 inline std::vector<float> RenderBlock(kitbag::Mixer* mixer) {
   std::vector<float> out(kBlock * 2, -1.0f);
-  mixer->Process(out.data(), kBlock, kSampleRate);
+  mixer->Process(out.data(), kBlock);
   return out;
 }
 
@@ -106,6 +106,7 @@ ExpectSilentBlock(const std::vector<float>& out, const char* label) {
 void RunTransportTests();
 void RunMixTests();
 void RunSourceTests();
+void RunResampleTests();
 
 }  // namespace mixer_test
 

@@ -8,7 +8,7 @@ namespace {
 // Muting every track must not end playback, and the transport must keep
 // running underneath the silence so unmuting resumes in sync.
 void TestMuteAllKeepsPlaying() {
-  kitbag::Mixer mixer;
+  kitbag::Mixer mixer(kSampleRate);
   LoadRamp(&mixer, 0, kLongFrames, 0.0f);
   mixer.Play();
   mixer.SetMute(0, true);
@@ -34,7 +34,7 @@ void TestMuteAllKeepsPlaying() {
 
 // Gain 0 is the same class of bug as mute: silent, but not the end of the song.
 void TestZeroGainKeepsPlaying() {
-  kitbag::Mixer mixer;
+  kitbag::Mixer mixer(kSampleRate);
   LoadRamp(&mixer, 0, kLongFrames, 0.0f);
   LoadRamp(&mixer, 1, kLongFrames, kLongOffset);
   mixer.Play();
@@ -50,7 +50,7 @@ void TestZeroGainKeepsPlaying() {
 // The short stem is soloed, so the mix runs dry at frame 1000 while the long
 // stem still has data. Solo gates the mix, never the transport.
 void TestSoloKeepsPlayingForOthers() {
-  kitbag::Mixer mixer;
+  kitbag::Mixer mixer(kSampleRate);
   LoadRamp(&mixer, 0, kShortFrames, 0.0f);
   LoadRamp(&mixer, 1, kLongFrames, kLongOffset);
   mixer.Play();
@@ -79,7 +79,7 @@ void TestSoloKeepsPlayingForOthers() {
 // Auto-stop fires only once the read head passes the longest track's end, and
 // the final partial block still sounds.
 void TestAutoStopAtLongestTrackEnd() {
-  kitbag::Mixer mixer;
+  kitbag::Mixer mixer(kSampleRate);
   LoadRamp(&mixer, 0, kShortFrames, 0.0f);
   LoadRamp(&mixer, 1, kLongFrames, kLongOffset);
   mixer.Play();
@@ -111,7 +111,7 @@ void TestAutoStopAtLongestTrackEnd() {
 // minimum would step 900 -> 1000 -> 1512, replaying 412 frames of the long
 // stem every block. Do not "fix" this back to a minimum (SPEC.md §4.4).
 void TestShortStemDoesNotHoldBackTheLongOne() {
-  kitbag::Mixer mixer;
+  kitbag::Mixer mixer(kSampleRate);
   LoadRamp(&mixer, 0, kShortFrames, 0.0f);
   LoadRamp(&mixer, 1, kLongFrames, kLongOffset);
   mixer.Play();
@@ -131,7 +131,7 @@ void TestShortStemDoesNotHoldBackTheLongOne() {
 
 // Seek, position and Stop are transport state and unchanged by the fix.
 void TestSeekAndPosition() {
-  kitbag::Mixer mixer;
+  kitbag::Mixer mixer(kSampleRate);
   LoadRamp(&mixer, 0, kLongFrames, kLongOffset);
   mixer.Seek(1234);
   Check(mixer.position() == 1234, "seek: position reports the sought frame");
@@ -154,7 +154,7 @@ void TestSeekAndPosition() {
 // Pause holds the head where it stopped; Stop rewinds it. Resuming after a
 // Pause must sound from the held frame, not from the top (SPEC.md §4.4).
 void TestPauseHoldsPositionStopRewinds() {
-  kitbag::Mixer mixer;
+  kitbag::Mixer mixer(kSampleRate);
   LoadRamp(&mixer, 0, kLongFrames, kLongOffset);
   const uint64_t sought = 1234;
   const uint64_t held = sought + kBlock;

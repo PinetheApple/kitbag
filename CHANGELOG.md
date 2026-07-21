@@ -38,6 +38,23 @@ genuinely ships.
 
 ### Added — 2026-07-21
 
+- **Mixer resamples each track to the engine rate on load** (A2, `SPEC.md` §4.1,
+  design-audit F4) — a stem whose sample rate differs from the engine's is now
+  resampled instead of silently dropped; **44.1 kHz plays correctly**. A new
+  `ResamplingSourceReader` decorator wraps the track's `SourceReader` and presents
+  engine-rate frames; it runs only on the `AudioSource` read-ahead thread, so the
+  ring behind the RT callback already holds engine-rate audio and the drain path
+  is unchanged (no resampling on the audio thread). `Mixer::ConfigureTrack` wraps
+  the reader when the rates differ and drives the transport from the resampled
+  frame count. With the resample in place, `Mixer::Process`/`MixTrack` lose their
+  `sr` parameter and the rate-mismatch skip-branch (F4: smaller interface, deeper
+  module); the mixer now carries its engine rate from construction rather than per
+  call. Resampling uses miniaudio's built-in **linear** converter
+  (`ma_data_converter`): correct and aliasing-free for the 44.1→48 k upsampling
+  case. The vendored miniaudio no longer bundles a Speex resampler, so Speex-grade
+  quality (relevant to downsampling) is deferred to a dependency decision (#22).
+  `mixer_verify` 84 → 93 checks. The public C ABI is unchanged.
+
 - **Mixer tracks stream through `AudioSource`** (A1, `SPEC.md` §4.1) — each mixer
   track now owns a W0-2 `AudioSource` instead of a full decoded buffer, and the
   audio callback only drains it: `Process`/`MixTrack` allocate nothing, take no

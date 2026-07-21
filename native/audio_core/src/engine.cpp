@@ -102,7 +102,7 @@ void Engine::Render(float* output, uint32_t frame_count) {
 
   // BROKEN: this memsets unconditionally, erasing the tone above in every state
   // — kb_engine_set_test_tone is silent. CHANGELOG "Known broken".
-  mixer_.Process(output, frame_count, kSampleRate);
+  mixer_.Process(output, frame_count);
 
   metronome_.Render(
       output,

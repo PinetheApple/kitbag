@@ -9,7 +9,7 @@ namespace {
 // dropped voice and not stale samples. The block straddles frame 1000, so one
 // render covers both sides of the boundary.
 void TestShortStemIsZeroPaddedNotDropped() {
-  kitbag::Mixer mixer;
+  kitbag::Mixer mixer(kSampleRate);
   LoadRamp(&mixer, 0, kShortFrames, 0.0f);
   LoadRamp(&mixer, 1, kLongFrames, kLongOffset);
   mixer.Play();
@@ -37,7 +37,7 @@ void TestShortStemIsZeroPaddedNotDropped() {
 // Padding is MixTrack's job for both paths, but MixStereo reaches the frame
 // through a channels-strided index, so its boundary is its own to get wrong.
 void TestShortStereoStemIsZeroPadded() {
-  kitbag::Mixer mixer;
+  kitbag::Mixer mixer(kSampleRate);
   const std::vector<float> stereo = MakeRamp(kShortFrames * kStereo, 0.0f);
   mixer.SetTrackData(0, stereo.data(), kShortFrames, kStereo, kSampleRate);
   LoadRamp(&mixer, 1, kLongFrames, kLongOffset);
@@ -68,9 +68,9 @@ void TestShortStereoStemIsZeroPadded() {
 // Process must clear the buffer before mixing: Engine::Render renders the
 // additive metronome into it afterwards and relies on that.
 void TestProcessClearsTheBuffer() {
-  kitbag::Mixer mixer;
+  kitbag::Mixer mixer(kSampleRate);
   std::vector<float> out(kBlock * 2, 7.0f);
-  mixer.Process(out.data(), kBlock, kSampleRate);
+  mixer.Process(out.data(), kBlock);
   ExpectSilentBlock(out, "memset: a stopped mixer clears the buffer");
 }
 

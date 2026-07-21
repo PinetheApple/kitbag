@@ -34,6 +34,7 @@ add_library(kitbag_core SHARED
   src/media/decoder.cpp
   src/media/file_audio_reader.cpp
   src/media/miniaudio_decoder.cpp
+  src/media/resampling_source_reader.cpp
   src/engine.cpp
   src/dsp/fft.cpp
   src/metronome/metronome.cpp
@@ -104,16 +105,21 @@ if(KITBAG_BUILD_TOOLS)
   # Links the sources: Mixer is internal, not exported through the C ABI. Each
   # track streams through an AudioSource, so the mixer tool links it and Threads.
   find_package(Threads REQUIRED)
+  # Resampling on load pulls miniaudio in (ma_data_converter), so this tool now
+  # links it and third_party — the A2 seam is decoder-backed, unlike A1's.
   add_executable(mixer_verify
     tools/mixer/mixer_verify.cpp
     tools/mixer/mixer_test_transport.cpp
     tools/mixer/mixer_test_mix.cpp
     tools/mixer/mixer_test_source.cpp
+    tools/mixer/mixer_test_resample.cpp
     src/mixer/mixer.cpp
     src/media/audio_source.cpp
+    src/media/resampling_source_reader.cpp
+    src/media/miniaudio_impl.c
   )
-  target_include_directories(mixer_verify PRIVATE src tools tools/mixer)
-  target_link_libraries(mixer_verify PRIVATE Threads::Threads m)
+  target_include_directories(mixer_verify PRIVATE src tools tools/mixer third_party)
+  target_link_libraries(mixer_verify PRIVATE Threads::Threads m ${CMAKE_DL_LIBS})
 
   # Drives the in-memory adapter. That this target links no miniaudio and still
   # passes is what proves the seam: the module depends on SourceReader, not on

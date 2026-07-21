@@ -7,6 +7,7 @@
 #include <thread>
 
 #include "media/pcm_source_reader.h"
+#include "media/resampling_source_reader.h"
 
 namespace kitbag {
 namespace {
@@ -19,20 +20,26 @@ constexpr auto kPrimePoll = std::chrono::milliseconds(1);
 
 }  // namespace
 
-bool Mixer::ConfigureTrack(
-    Track& t,
-    SourceReader* reader,
-    int track,
-    uint64_t num_frames
-) {
+bool Mixer::ConfigureTrack(Track& t, SourceReader* base, int track) {
   t.source.Close();
+  t.resampler.reset();
+  // Resample on load so the ring — and Process — only ever see engine-rate
+  // frames (SPEC.md §4.1). num_frames is the resampled length, which is what
+  // drives the transport.
+  SourceReader* reader = base;
+  const uint32_t rate = base->sample_rate();
+  if (rate != 0 && rate != engine_rate_) {
+    auto rs = std::make_unique<ResamplingSourceReader>(base, engine_rate_);
+    if (!rs->ok()) return false;
+    t.resampler = std::move(rs);
+    reader = t.resampler.get();
+  }
   t.channels = reader->channels();
-  t.sample_rate = reader->sample_rate();
-  t.num_frames = num_frames;
+  t.num_frames = reader->total_frames();
   if (!t.source.Open(reader)) return false;
   t.has_data = true;
   if (track >= track_count_) track_count_ = track + 1;
-  longest_frames_ = std::max(longest_frames_, num_frames);
+  longest_frames_ = std::max(longest_frames_, t.num_frames);
   EnsureScratch(t.channels);
   return true;
 }
@@ -47,15 +54,13 @@ void Mixer::SetTrackData(
   if (track < 0 || track >= kMaxTracks) return;
   auto reader =
       std::make_unique<PcmSourceReader>(pcm, num_frames, channels, sample_rate);
-  if (!ConfigureTrack(tracks_[track], reader.get(), track, num_frames)) return;
+  if (!ConfigureTrack(tracks_[track], reader.get(), track)) return;
   tracks_[track].owned_reader = std::move(reader);
 }
 
 bool Mixer::SetTrackSource(int track, SourceReader* reader) {
   if (track < 0 || track >= kMaxTracks || reader == nullptr) return false;
-  if (!ConfigureTrack(tracks_[track], reader, track, reader->total_frames())) {
-    return false;
-  }
+  if (!ConfigureTrack(tracks_[track], reader, track)) return false;
   tracks_[track].owned_reader.reset();
   return true;
 }
@@ -211,12 +216,9 @@ void Mixer::MixTrack(
     Track& tr,
     float* output,
     uint32_t frame_count,
-    bool any_solo,
-    uint32_t sr
+    bool any_solo
 ) {
   if (!tr.has_data) return;
-  // No resampler yet — a track at another rate is dropped silently (A2).
-  if (tr.sample_rate != sr) return;
 
   // Drain first and unconditionally: a muted or soloed-out track must still
   // advance so unmuting resumes in sync rather than replaying (SPEC.md §4.4).
@@ -233,7 +235,7 @@ void Mixer::MixTrack(
   }
 }
 
-void Mixer::Process(float* output, uint32_t frame_count, uint32_t sr) {
+void Mixer::Process(float* output, uint32_t frame_count) {
   // Memset, not accumulate: Engine::Render relies on this clearing whatever it
   // wrote before the call.
   std::memset(output, 0, frame_count * 2 * sizeof(float));
@@ -246,7 +248,7 @@ void Mixer::Process(float* output, uint32_t frame_count, uint32_t sr) {
   const uint64_t start_frame = read_frame_.load(std::memory_order_relaxed);
 
   for (int t = 0; t < track_count_; ++t) {
-    MixTrack(tracks_[t], output, frame_count, any_solo, sr);
+    MixTrack(tracks_[t], output, frame_count, any_solo);
   }
 
   // The transport is the longest loaded track, not what was audible: mute, solo
