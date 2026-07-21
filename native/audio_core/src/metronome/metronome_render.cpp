@@ -86,18 +86,14 @@ void Metronome::OnBeatBoundary(int beat_index, uint32_t sample_rate) {
   );
 }
 
-void Metronome::OnSubdivisionTick(uint32_t sample_rate) {
-  // beat_position_ carries no latency term, so under a positive offset it can be
-  // marginally negative while position (which the fire guard checks) is not — a
-  // subdivision in the pre-beat-0 region. It belongs to beat 0; a raw floor
-  // would index accents_[-1]. See TestSubdivisionOwnedByBeatZero.
-  const auto beat =
-      static_cast<int64_t>(std::floor(beat_position_ + kGridEpsilon));
-  // Bounds the index, but assumes the latency offset is under one beat; D5's
-  // 300ms clamp breaks that and the mute-leak attribution bug (#20) with it.
-  const int owning_beat =
-      beat < 0 ? 0 : static_cast<int>(beat % beats_per_bar_);
-  if (accents_[owning_beat] == Accent::kMuted || BarIsMuted(current_bar_)) {
+void Metronome::OnSubdivisionTick(int64_t owning_beat, uint32_t sample_rate) {
+  // owning_beat is the caller's speaker-time beat (position, not beat_position_):
+  // a muted beat must silence its own subdivisions at the speaker, so attribution
+  // uses the same latency-shifted base the tick fires on (#21, decisions.md).
+  // Callers only fire at a non-negative beat, so no accents_[-1]; D5's 300ms
+  // clamp lifts latency past one beat but keeps that invariant — revisit anyway.
+  const int beat_in_bar = static_cast<int>(owning_beat % beats_per_bar_);
+  if (accents_[beat_in_bar] == Accent::kMuted || BarIsMuted(current_bar_)) {
     return;
   }
   const SoundPreset& sound = kSounds[sound_];
@@ -225,11 +221,13 @@ void Metronome::FireConstantTempoTick(
     uint32_t sample_rate,
     BlockTempo* tempo
 ) {
+  // Owning beat on the speaker-time base: sub_index came from position, and it
+  // is >= 0 here (AdvanceConstantTempo fires only when position >= 0).
+  const int64_t beat = sub_index / subdivision_;
   if (sub_index % subdivision_ != 0) {
-    if (subdivision_ > 1) OnSubdivisionTick(sample_rate);
+    if (subdivision_ > 1) OnSubdivisionTick(beat, sample_rate);
     return;
   }
-  const int64_t beat = sub_index / subdivision_;
   const auto beat_index = static_cast<int>(beat % beats_per_bar_);
   if (beat_index == 0) {
     ++current_bar_;  // monotonic: survives time-signature changes

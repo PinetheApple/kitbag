@@ -88,7 +88,9 @@ void Metronome::RenderGridSubdivision(
   const double tick = previous + interval * grid_next_sub_ / subdivision_;
   if (song_seconds + kGridEpsilon >= tick) {
     ++grid_next_sub_;
-    OnSubdivisionTick(sample_rate);
+    // The tick sits in [grid_cursor_-1, grid_cursor_], so its owning beat is
+    // grid_beat_index_ (== grid_cursor_-1, and >= 0 given the guard above).
+    OnSubdivisionTick(grid_beat_index_, sample_rate);
   }
 }
 
