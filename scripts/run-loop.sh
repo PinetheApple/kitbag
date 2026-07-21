@@ -29,21 +29,8 @@ PROMPT="/project-loop one increment then stop"
 # acceptEdits auto-accepts Edit/Write. Task dispatches the domain agents + reviewers.
 ALLOWED=(Bash Edit Write Read Grep Glob Task Skill)
 
-# Turn one stream-json event into one readable line. Unknown/quiet events -> nothing.
-FMT='
-  if .type=="assistant" then
-    (.message.content[]? |
-      if .type=="text" then (.text | select(length>0))
-      elif .type=="tool_use" then
-        "  → " + .name + "(" + ((.input.command // .input.description // .input.prompt // (.input|tostring)) | gsub("\n";" ") | .[0:140]) + ")"
-      else empty end)
-  elif .type=="user" then
-    (.message.content[]? | select(.type=="tool_result") |
-      "    ⤷ " + ((.content // "" | if type=="array" then (map(.text // "")|join(" ")) else tostring end) | gsub("\n";" ") | .[0:140]))
-  elif .type=="result" then
-    "\n=== " + (.subtype // "end") + "  ($" + ((.total_cost_usd // 0)|tostring) + ", " + ((.num_turns // 0)|tostring) + " turns) ===\n" + (.result // "")
-  else empty end
-'
+# Colored, tagged live feed — see scripts/loop_fmt.py.
+FMT="$(dirname "$0")/loop_fmt.py"
 
 run_one() {
   local ts raw
@@ -54,8 +41,8 @@ run_one() {
     --allowedTools "${ALLOWED[@]}" \
     --output-format stream-json --verbose \
     | tee "$raw" \
-    | jq -rj --unbuffered "$FMT + \"\n\""
-  return "${PIPESTATUS[0]}"   # claude's exit, not jq's — drives the loop
+    | python3 "$FMT"
+  return "${PIPESTATUS[0]}"   # claude's exit, not python's — drives the loop
 }
 
 if [[ "${1:-}" == "--unattended" ]]; then
