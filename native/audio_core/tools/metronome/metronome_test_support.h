@@ -88,6 +88,18 @@ RenderAndDetectOnsets(kitbag::Metronome& metronome, int64_t total_frames) {
   return RenderContinuous(metronome, total_frames, [](int64_t) {});
 }
 
+// An on-block callback that runs `action(block_start)` once, at the first block
+// on or after `frame`. The swap/recall-once idiom every re-anchor test shares.
+template <typename Action>
+auto OnceAtFrame(int64_t frame, Action action) {
+  return [frame, action, fired = false](int64_t block_start) mutable {
+    if (!fired && block_start >= frame) {
+      action(block_start);
+      fired = true;
+    }
+  };
+}
+
 inline void ExpectSpacing(
     const std::vector<int64_t>& onsets,
     size_t from,

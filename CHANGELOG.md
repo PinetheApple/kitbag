@@ -53,6 +53,16 @@ genuinely ships.
   re-anchor, a fractional and a whole-beat-negative `song_pos`, and latency
   composition.
 
+### Verified — 2026-07-21
+
+- **Anchor invariants pinned across all three anchor calls** (C4, `SPEC.md` §4.2/§4.7)
+  — `start_at`, `set_grid` and `anchor_external` each recompute only future
+  targets on a re-anchor, compose with the latency offset, and never double or
+  drop a click. No production change: the invariants already held; C4 is the
+  proof, one test per cell shown to fail when its invariant is broken. Closed one
+  real coverage gap — `set_grid` had never been tested at a non-zero latency
+  offset, so its offset term was unpinned. `metronome_verify` 206 → 213 checks.
+
 ### Fixed — 2026-07-21
 
 - **`OnSubdivisionTick` read `accents_[-1]` out of bounds** — pre-existing, and

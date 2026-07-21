@@ -140,6 +140,47 @@ void TestStartAtKeepsBeatZeroUnderLatencyOffset() {
   }
 }
 
+constexpr int64_t kRecallAt = 40000;  // mid-run, after several beats emitted
+constexpr uint64_t kRecallFrame = 60000;  // would restart here if honoured
+
+std::vector<int64_t> RunStartAtRecall(bool recall) {
+  kitbag::Metronome metronome;
+  metronome.SetTempo(120.0);
+  metronome.SetBeatsPerBar(4);
+  metronome.StartAt(static_cast<uint64_t>(kMidBlockAnchor));
+  if (!recall) return RenderAndDetectOnsets(metronome, kSampleRate * 2);
+  return RenderContinuous(
+      metronome,
+      kSampleRate * 2,
+      OnceAtFrame(kRecallAt, [&](int64_t) { metronome.StartAt(kRecallFrame); })
+  );
+}
+
+// TestStartAtIgnoredWhileRunning drains the second StartAt in the same block,
+// before any click sounds. This one arrives blocks later, after clicks have
+// emitted: it too is dropped, so no sounded beat moves and none re-fires — the
+// deferred-start call's "future targets only" and "no double beat".
+void TestStartAtRecallWhileRunningIgnored() {
+  const auto base = RunStartAtRecall(false);
+  const auto recalled = RunStartAtRecall(true);
+  Check(
+      !base.empty() && base.size() == recalled.size(),
+      "start_at re-call while running: onset count unchanged"
+  );
+  double max_dev = 0.0;
+  const size_t count = std::min(base.size(), recalled.size());
+  for (size_t i = 0; i < count; ++i) {
+    max_dev = std::max(
+        max_dev,
+        std::fabs(static_cast<double>(base[i] - recalled[i]))
+    );
+  }
+  Check(
+      max_dev <= 2.0,
+      "start_at re-call while running: already-emitted clicks never move"
+  );
+}
+
 // Stop cancels a pending StartAt: the click never begins.
 void TestStopCancelsPendingStartAt() {
   kitbag::Metronome metronome;
@@ -159,6 +200,7 @@ void RunStartAtTests() {
   TestStartAtIgnoredWhileRunning();
   TestStartCancelsPendingStartAt();
   TestStartAtKeepsBeatZeroUnderLatencyOffset();
+  TestStartAtRecallWhileRunningIgnored();
   TestStopCancelsPendingStartAt();
 }
 

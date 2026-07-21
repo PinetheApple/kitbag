@@ -32,15 +32,14 @@ void TestGridReanchorMidRunPicksUpNewGrid() {
   auto shifted = MakeShiftedGrid(40, 0.25, 0.5);
   // Between beats, so neither grid's beat is ambiguous at the swap.
   const int64_t swap_at = static_cast<int64_t>(2.1 * kSampleRate);
-  bool swapped = false;
-  const auto onsets =
-      RenderContinuous(metronome, kSampleRate * 4, [&](int64_t frame) {
-        if (!swapped && frame >= swap_at) {
-          metronome
-              .SetGrid(std::move(shifted), static_cast<uint64_t>(frame), true);
-          swapped = true;
-        }
-      });
+  const auto onsets = RenderContinuous(
+      metronome,
+      kSampleRate * 4,
+      OnceAtFrame(swap_at, [&](int64_t frame) {
+        metronome
+            .SetGrid(std::move(shifted), static_cast<uint64_t>(frame), true);
+      })
+  );
 
   // Old grid through 2.0, then the new grid's first beat at or after the swap.
   const std::vector<double> expected =
@@ -181,14 +180,13 @@ void TestClearGridReturnsToBpm() {
   metronome.Start();
 
   const int64_t clear_at = static_cast<int64_t>(2.05 * kSampleRate);
-  bool cleared = false;
-  const auto onsets =
-      RenderContinuous(metronome, kSampleRate * 4, [&](int64_t frame) {
-        if (!cleared && frame >= clear_at) {
-          metronome.ClearGrid(static_cast<uint64_t>(frame), true);
-          cleared = true;
-        }
-      });
+  const auto onsets = RenderContinuous(
+      metronome,
+      kSampleRate * 4,
+      OnceAtFrame(clear_at, [&](int64_t frame) {
+        metronome.ClearGrid(static_cast<uint64_t>(frame), true);
+      })
+  );
 
   // The grid's own beats through 1.8, then 120 BPM continuing from that beat —
   // and nothing at the clear instant itself.
@@ -214,17 +212,13 @@ void TestGridReanchorKeepsBarPhase() {
   // downbeat already crossed once on the outgoing grid.
   auto shifted = MakeShiftedGrid(40, 0.4, 0.5);
   const int64_t swap_at = static_cast<int64_t>(2.1 * kSampleRate);
-  bool swapped = false;
   RenderContinuous(
       metronome,
       static_cast<int64_t>(2.7 * kSampleRate),
-      [&](int64_t frame) {
-        if (!swapped && frame >= swap_at) {
-          metronome
-              .SetGrid(std::move(shifted), static_cast<uint64_t>(frame), true);
-          swapped = true;
-        }
-      }
+      OnceAtFrame(swap_at, [&](int64_t frame) {
+        metronome
+            .SetGrid(std::move(shifted), static_cast<uint64_t>(frame), true);
+      })
   );
 
   // Beat 4 is the new grid's second downbeat: bar 1, which the trainer mutes.
@@ -232,6 +226,39 @@ void TestGridReanchorKeepsBarPhase() {
   Check(
       metronome.bar_muted(),
       "grid re-anchor: bar-mute phase survives the re-anchor"
+  );
+}
+
+// A grid re-anchor's "no double beat" needs the block envelope, not onset
+// counting: a re-fire inside kOnsetHoldFrames of the swap is invisible to the
+// onset detector (cf. C3's anchor_external case).
+void TestGridReanchorNoRefire() {
+  kitbag::Metronome metronome;
+  metronome.SetBeatsPerBar(4);
+  metronome.SetGrid(MakeDriftingGrid(40, 0.5, 0.0, 0), 0, true);
+  metronome.Start();
+
+  auto shifted =
+      MakeShiftedGrid(40, 0.35, 0.5);  // next beat 2.35, past the swap
+  const int64_t swap_at = static_cast<int64_t>(2.1 * kSampleRate);
+  const auto peaks = RenderContinuousPeaks(
+      metronome,
+      kSampleRate * 4,
+      OnceAtFrame(swap_at, [&](int64_t frame) {
+        metronome
+            .SetGrid(std::move(shifted), static_cast<uint64_t>(frame), true);
+      })
+  );
+
+  // Start before the swap so a rise at the swap block is caught, and end while
+  // the previous click is still decaying — before it retires to a flat zero and
+  // before the new grid's 2.35 s beat legitimately sounds.
+  const size_t swap_block = static_cast<size_t>(swap_at / kBlockFrames) + 1;
+  ExpectDecayingBlocks(
+      peaks,
+      swap_block - 4,
+      swap_block + 20,
+      "grid re-anchor: no click re-fired at the swap"
   );
 }
 
@@ -273,6 +300,7 @@ void RunGridTests() {
   TestGridStartAtRestoresGeneration();
   TestGridSubdivision();
   TestGridReanchorKeepsBarPhase();
+  TestGridReanchorNoRefire();
   TestGridBpmMirrorIsClamped();
 }
 
