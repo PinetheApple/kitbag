@@ -46,7 +46,8 @@ void Mixer::ApplyPendingCommands() {
 
 void Mixer::RecomputeAnySolo() {
   bool any = false;
-  for (int i = 0; i < track_count_; ++i) {
+  const int count = track_count_.load(std::memory_order_relaxed);
+  for (int i = 0; i < count; ++i) {
     if (tracks_[i].published.Get() != nullptr &&
         tracks_[i].solo.load(std::memory_order_relaxed)) {
       any = true;
@@ -107,7 +108,8 @@ void Mixer::MixTrack(
 }
 
 void Mixer::MixAllTracks(float* output, uint32_t frame_count, bool any_solo) {
-  for (int t = 0; t < track_count_; ++t) {
+  const int count = track_count_.load(std::memory_order_relaxed);
+  for (int t = 0; t < count; ++t) {
     // One acquire load per track carries the source and its identity; the old
     // source is never freed here, only off-thread once the clock moves past it.
     const auto* node = tracks_[t].published.Get();
@@ -124,11 +126,12 @@ void Mixer::MixAllTracks(float* output, uint32_t frame_count, bool any_solo) {
 void Mixer::AdvanceTransport(uint64_t start_frame, uint32_t frame_count) {
   // The transport is the longest loaded track, not what was audible: mute, solo
   // and zero gain must not end playback (SPEC.md §4.4).
-  if (start_frame >= longest_frames_) {
+  const uint64_t longest = longest_frames_.load(std::memory_order_relaxed);
+  if (start_frame >= longest) {
     playing_.store(false, std::memory_order_relaxed);
     return;
   }
-  const uint64_t remaining = longest_frames_ - start_frame;
+  const uint64_t remaining = longest - start_frame;
   read_frame_.store(
       start_frame + std::min(static_cast<uint64_t>(frame_count), remaining),
       std::memory_order_relaxed

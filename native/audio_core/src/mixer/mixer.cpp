@@ -7,7 +7,7 @@
 #include <memory>
 #include <thread>
 
-#include "media/pcm_source_reader.h"
+#include "media/file_audio_reader.h"
 #include "media/resampling_source_reader.h"
 
 namespace kitbag {
@@ -53,27 +53,55 @@ void Mixer::PublishTrack(
   // handle stays valid for the off-thread transport work.
   t.live_source = ts->source.get();
   t.live_num_frames = ts->num_frames;
-  if (track >= track_count_) track_count_ = track + 1;
-  longest_frames_ = std::max(longest_frames_, ts->num_frames);
+  if (track >= track_count_.load(std::memory_order_relaxed)) {
+    track_count_.store(track + 1, std::memory_order_relaxed);
+  }
+  RecomputeLongestFrames();
   t.published.Publish(std::move(ts), now_frame, engine_running);
 }
 
-void Mixer::SetTrackData(
+void Mixer::RecomputeLongestFrames() {
+  uint64_t longest = 0;
+  const int count = track_count_.load(std::memory_order_relaxed);
+  for (int i = 0; i < count; ++i) {
+    longest = std::max(longest, tracks_[i].live_num_frames);
+  }
+  longest_frames_.store(longest, std::memory_order_relaxed);
+}
+
+bool Mixer::LoadTrack(
     int track,
-    const float* pcm,
-    uint64_t num_frames,
-    uint32_t channels,
-    uint32_t sample_rate,
+    const char* path,
     uint64_t now_frame,
     bool engine_running
 ) {
-  if (track < 0 || track >= kMaxTracks) return;
+  if (track < 0 || track >= kMaxTracks || path == nullptr) return false;
+  auto reader = std::make_unique<FileAudioReader>();
+  if (!reader->Open(path)) return false;
   auto ts = std::make_unique<TrackSource>();
-  auto reader =
-      std::make_unique<PcmSourceReader>(pcm, num_frames, channels, sample_rate);
-  if (!BuildTrackSource(*ts, reader.get())) return;
+  if (!BuildTrackSource(*ts, reader.get())) return false;
   ts->owned_reader = std::move(reader);
   PublishTrack(track, std::move(ts), now_frame, engine_running);
+  return true;
+}
+
+void Mixer::UnloadTrack(int track, uint64_t now_frame, bool engine_running) {
+  if (track < 0 || track >= track_count_.load(std::memory_order_relaxed)) {
+    return;
+  }
+  Track& t = tracks_[track];
+  // Stop the read-ahead thread now; the node itself is reclaimed off the
+  // callback by the publisher, so nothing is freed on the audio thread.
+  if (t.live_source != nullptr) t.live_source->Stop();
+  t.live_source = nullptr;
+  t.live_num_frames = 0;
+  t.published.Publish(nullptr, now_frame, engine_running);
+  RecomputeLongestFrames();
+}
+
+bool Mixer::track_ready(int track) const {
+  if (track < 0 || track >= kMaxTracks) return false;
+  return tracks_[track].published.Get() != nullptr;
 }
 
 bool Mixer::SetTrackSource(
@@ -95,7 +123,9 @@ void Mixer::Enqueue(const Command& command) {
 }
 
 void Mixer::SetGain(int track, float gain) {
-  if (track < 0 || track >= track_count_) return;
+  if (track < 0 || track >= track_count_.load(std::memory_order_relaxed)) {
+    return;
+  }
   Command command{CommandType::kSetGain};
   command.track = track;
   command.fvalue = std::clamp(gain, kMinGain, kMaxGain);
@@ -103,7 +133,9 @@ void Mixer::SetGain(int track, float gain) {
 }
 
 void Mixer::SetMute(int track, bool muted) {
-  if (track < 0 || track >= track_count_) return;
+  if (track < 0 || track >= track_count_.load(std::memory_order_relaxed)) {
+    return;
+  }
   Command command{CommandType::kSetMute};
   command.track = track;
   command.fvalue = muted ? 1.0f : 0.0f;
@@ -111,7 +143,9 @@ void Mixer::SetMute(int track, bool muted) {
 }
 
 void Mixer::SetSolo(int track, bool soloed) {
-  if (track < 0 || track >= track_count_) return;
+  if (track < 0 || track >= track_count_.load(std::memory_order_relaxed)) {
+    return;
+  }
   Command command{CommandType::kSetSolo};
   command.track = track;
   command.fvalue = soloed ? 1.0f : 0.0f;
@@ -119,19 +153,19 @@ void Mixer::SetSolo(int track, bool soloed) {
 }
 
 float Mixer::gain(int track) const {
-  return track >= 0 && track < track_count_
+  return track >= 0 && track < track_count_.load(std::memory_order_relaxed)
              ? tracks_[track].gain.load(std::memory_order_relaxed)
              : 0.0f;
 }
 
 bool Mixer::muted(int track) const {
-  return track >= 0 && track < track_count_
+  return track >= 0 && track < track_count_.load(std::memory_order_relaxed)
              ? tracks_[track].mute.load(std::memory_order_relaxed)
              : false;
 }
 
 bool Mixer::soloed(int track) const {
-  return track >= 0 && track < track_count_
+  return track >= 0 && track < track_count_.load(std::memory_order_relaxed)
              ? tracks_[track].solo.load(std::memory_order_relaxed)
              : false;
 }
@@ -148,7 +182,8 @@ void Mixer::Prime(AudioSource& src, uint64_t num_frames) {
 }
 
 void Mixer::Play() {
-  for (int i = 0; i < track_count_; ++i) {
+  const int count = track_count_.load(std::memory_order_relaxed);
+  for (int i = 0; i < count; ++i) {
     Track& t = tracks_[i];
     if (t.live_source == nullptr) continue;
     if (!t.live_source->is_running()) t.live_source->Start();
@@ -159,7 +194,8 @@ void Mixer::Play() {
 
 void Mixer::Stop() {
   Enqueue({CommandType::kStop});
-  for (int i = 0; i < track_count_; ++i) {
+  const int count = track_count_.load(std::memory_order_relaxed);
+  for (int i = 0; i < count; ++i) {
     Track& t = tracks_[i];
     if (t.live_source == nullptr) continue;
     t.live_source->Stop();
@@ -169,17 +205,20 @@ void Mixer::Stop() {
 
 void Mixer::Pause() {
   Enqueue({CommandType::kPause});
-  for (int i = 0; i < track_count_; ++i) {
+  const int count = track_count_.load(std::memory_order_relaxed);
+  for (int i = 0; i < count; ++i) {
     if (tracks_[i].live_source != nullptr) tracks_[i].live_source->Stop();
   }
 }
 
 void Mixer::Seek(uint64_t frame) {
   // The source reposition below is only quiescence-safe while the callback is
-  // not draining this source (AudioSource::Seek's contract). Seeking during
-  // live playback needs the rebuild-and-republish path, which is A4; A3 makes
-  // the transport counter race-free, which is what race #2 (SPEC.md §2.2) was.
-  for (int i = 0; i < track_count_; ++i) {
+  // not draining this source (AudioSource::Seek's contract). Seeking during live
+  // playback still repositions in place — the rebuild-and-republish-on-seek path
+  // is not shipped yet (tracked in A5's player transport). The transport counter
+  // is already race-free (A3, race #2, SPEC.md §2.2).
+  const int count = track_count_.load(std::memory_order_relaxed);
+  for (int i = 0; i < count; ++i) {
     Track& t = tracks_[i];
     if (t.live_source == nullptr) continue;
     const bool was_running = t.live_source->is_running();
@@ -197,18 +236,23 @@ void Mixer::Seek(uint64_t frame) {
 }
 
 uint64_t Mixer::track_frames(int track) const {
-  return track >= 0 && track < track_count_ ? tracks_[track].live_num_frames
-                                            : 0;
+  return track >= 0 && track < track_count_.load(std::memory_order_relaxed)
+             ? tracks_[track].live_num_frames
+             : 0;
 }
 
 uint64_t Mixer::track_buffered(int track) const {
-  if (track < 0 || track >= track_count_) return 0;
+  if (track < 0 || track >= track_count_.load(std::memory_order_relaxed)) {
+    return 0;
+  }
   const AudioSource* src = tracks_[track].live_source;
   return src != nullptr ? src->buffered_frames() : 0;
 }
 
 bool Mixer::track_at_end(int track) const {
-  if (track < 0 || track >= track_count_) return true;
+  if (track < 0 || track >= track_count_.load(std::memory_order_relaxed)) {
+    return true;
+  }
   const AudioSource* src = tracks_[track].live_source;
   return src == nullptr || src->is_at_end();
 }

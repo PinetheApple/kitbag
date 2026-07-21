@@ -188,6 +188,77 @@ void TestPauseHoldsPositionStopRewinds() {
   Check(mixer.position() == 0, "pause: Stop still rewinds after a Pause");
 }
 
+// B5 (#16): longest_frames_ was only ever raised via std::max, so reloading a
+// track shorter left the transport running to the OLD length. Reload track 0
+// from 5000 to 1000 frames and seek near the new end: auto-stop must fire at
+// 1000, not carry on to 5000. The offsets discriminate which source is live.
+void TestReloadToShorterShrinksTransport() {
+  kitbag::Mixer mixer(kSampleRate);
+  LoadRamp(&mixer, 0, kLongFrames, 0.0f);          // 5000
+  LoadRamp(&mixer, 0, kShortFrames, kLongOffset);  // reload same track to 1000
+  mixer.Play();
+  mixer.Seek(kShortFrames - 100);  // 900
+
+  const std::vector<float> tail = RenderBlock(&mixer);
+  ExpectSample(
+      tail,
+      99,
+      kLongOffset + static_cast<float>(kShortFrames - 1),
+      "reload-shrink: the reloaded (1000-frame) stem's last frame sounds"
+  );
+  ExpectSample(tail, 100, 0.0f, "reload-shrink: past the new end is silent");
+  Check(
+      mixer.position() == kShortFrames,
+      "reload-shrink: the head clamps to the new 1000 length, not 5000"
+  );
+  Check(mixer.is_playing(), "reload-shrink: the finishing block still plays");
+  RenderBlock(&mixer);
+  Check(
+      !mixer.is_playing(),
+      "reload-shrink: playback ends at 1000, not the reloaded-away 5000"
+  );
+}
+
+// B5 (#16): unloading the longer of two tracks must drop longest_frames_ to the
+// remaining track, so the transport stops there rather than running the 4000
+// frames the unloaded track used to add.
+void TestUnloadShrinksTransport() {
+  kitbag::Mixer mixer(kSampleRate);
+  LoadRamp(&mixer, 0, kShortFrames, 0.0f);        // 1000, kept
+  LoadRamp(&mixer, 1, kLongFrames, kLongOffset);  // 5000, unloaded below
+  mixer.UnloadTrack(1, 0, false);
+  mixer.Play();
+  mixer.Seek(kShortFrames - 100);  // 900
+
+  RenderBlock(&mixer);
+  Check(
+      mixer.position() == kShortFrames,
+      "unload-shrink: the head clamps to the remaining 1000-frame track"
+  );
+  Check(mixer.is_playing(), "unload-shrink: the finishing block still plays");
+  RenderBlock(&mixer);
+  Check(
+      !mixer.is_playing(),
+      "unload-shrink: playback ends at 1000 once the long track is unloaded"
+  );
+  Check(mixer.track_ready(0), "unload-shrink: the kept track is still ready");
+  Check(
+      !mixer.track_ready(1),
+      "unload-shrink: the unloaded track reports not ready"
+  );
+}
+
+// track_ready tracks the published source: false before a load, true after, and
+// false again after an unload retires it.
+void TestTrackReadyReflectsPublish() {
+  kitbag::Mixer mixer(kSampleRate);
+  Check(!mixer.track_ready(0), "ready: a fresh track has no source");
+  LoadRamp(&mixer, 0, kShortFrames, 0.0f);
+  Check(mixer.track_ready(0), "ready: a loaded track is ready");
+  mixer.UnloadTrack(0, 0, false);
+  Check(!mixer.track_ready(0), "ready: an unloaded track is no longer ready");
+}
+
 }  // namespace
 
 void RunTransportTests() {
@@ -198,6 +269,9 @@ void RunTransportTests() {
   TestShortStemDoesNotHoldBackTheLongOne();
   TestSeekAndPosition();
   TestPauseHoldsPositionStopRewinds();
+  TestReloadToShorterShrinksTransport();
+  TestUnloadShrinksTransport();
+  TestTrackReadyReflectsPublish();
 }
 
 }  // namespace mixer_test
