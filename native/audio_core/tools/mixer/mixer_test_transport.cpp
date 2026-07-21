@@ -129,11 +129,13 @@ void TestShortStemDoesNotHoldBackTheLongOne() {
   );
 }
 
-// Seek, position and Stop are transport state and unchanged by the fix.
+// Seek, position and Stop are transport state. The counter is now callback-
+// applied, so a Drain (one Process) is what makes a command take effect.
 void TestSeekAndPosition() {
   kitbag::Mixer mixer(kSampleRate);
   LoadRamp(&mixer, 0, kLongFrames, kLongOffset);
   mixer.Seek(1234);
+  Drain(&mixer);  // applies kSeek; still stopped, so no advance
   Check(mixer.position() == 1234, "seek: position reports the sought frame");
 
   mixer.Play();
@@ -147,6 +149,7 @@ void TestSeekAndPosition() {
   Check(mixer.position() == 1234 + kBlock, "seek: the head advances one block");
 
   mixer.Stop();
+  Drain(&mixer);  // applies kStop: playing false, head rewound
   Check(!mixer.is_playing(), "stop: playback ends");
   Check(mixer.position() == 0, "stop: the head rewinds to zero");
 }
@@ -160,13 +163,12 @@ void TestPauseHoldsPositionStopRewinds() {
   const uint64_t held = sought + kBlock;
   mixer.Seek(sought);
   mixer.Play();
-  RenderBlock(&mixer);
+  RenderBlock(&mixer);  // applies kSeek + kPlay, plays one block to `held`
 
   mixer.Pause();
-  Check(!mixer.is_playing(), "pause: playback ends");
-  Check(mixer.position() == held, "pause: the head holds its position");
   ExpectSilentBlock(RenderBlock(&mixer), "pause: a paused mixer is silent");
-  Check(mixer.position() == held, "pause: a paused block does not advance");
+  Check(!mixer.is_playing(), "pause: playback ends");
+  Check(mixer.position() == held, "pause: the head holds, one block not more");
 
   mixer.Play();
   const std::vector<float> resumed = RenderBlock(&mixer);
@@ -182,6 +184,7 @@ void TestPauseHoldsPositionStopRewinds() {
   );
 
   mixer.Stop();
+  Drain(&mixer);
   Check(mixer.position() == 0, "pause: Stop still rewinds after a Pause");
 }
 

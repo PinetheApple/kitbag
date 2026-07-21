@@ -38,8 +38,7 @@ void TestShortStemIsZeroPaddedNotDropped() {
 // through a channels-strided index, so its boundary is its own to get wrong.
 void TestShortStereoStemIsZeroPadded() {
   kitbag::Mixer mixer(kSampleRate);
-  const std::vector<float> stereo = MakeRamp(kShortFrames * kStereo, 0.0f);
-  mixer.SetTrackData(0, stereo.data(), kShortFrames, kStereo, kSampleRate);
+  LoadInterleaved(&mixer, 0, kShortFrames, kStereo, 0.0f);
   LoadRamp(&mixer, 1, kLongFrames, kLongOffset);
   mixer.Play();
   mixer.Seek(900);

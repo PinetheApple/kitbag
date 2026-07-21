@@ -112,19 +112,30 @@ void TestClearGrid(kb_engine* engine) {
   );
 }
 
-// Pause and Stop differ only in what they do to the head, so the pair is only
-// meaningful checked together at the boundary (SPEC.md §4.4).
-void TestMixerPauseHoldsStopRewinds(kb_engine* engine) {
+// Transport is now callback-applied through the command ring (SPEC.md §2.2): the
+// getters reflect state the audio callback has drained. A headless ABI test has
+// no running device to drain them, so the semantics — seek/stop/pause taking
+// effect at a block — are pinned in mixer_verify, which pumps Process directly
+// (cf. metronome transport, covered by metronome_verify, not here). At this
+// boundary we assert the resting state and that the calls are null-safe.
+void TestMixerTransportIsNullSafe(kb_engine* engine) {
+  Check(
+      kb_mixer_position(engine) == 0,
+      "mixer: a fresh engine rests at frame 0"
+  );
+  Check(
+      kb_mixer_is_playing(engine) == 0,
+      "mixer: a fresh engine is not playing"
+  );
+
   kb_mixer_seek(engine, 4321);
   kb_mixer_play(engine);
   kb_mixer_pause(engine);
-  Check(kb_mixer_is_playing(engine) == 0, "pause: playback ends");
-  Check(kb_mixer_position(engine) == 4321, "pause: the head holds");
+  kb_mixer_stop(engine);  // no track, no device: must not crash
 
-  kb_mixer_play(engine);
-  kb_mixer_stop(engine);
-  Check(kb_mixer_position(engine) == 0, "stop: the head rewinds to zero");
   kb_mixer_pause(nullptr);  // a null engine is a no-op, not a crash
+  kb_mixer_seek(nullptr, 0);
+  Check(kb_mixer_position(nullptr) == 0, "mixer: null engine position is 0");
 }
 
 // Returns the process exit code, so main stays a list of what it runs.
@@ -163,7 +174,7 @@ int main() {
   TestSetGridRejectsNonFinite(engine);
   TestSetGridRejectsOversize(engine);
   TestClearGrid(engine);
-  TestMixerPauseHoldsStopRewinds(engine);
+  TestMixerTransportIsNullSafe(engine);
 
   kb_engine_destroy(engine);
   return Report();
