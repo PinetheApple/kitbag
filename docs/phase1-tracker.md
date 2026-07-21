@@ -16,7 +16,7 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done (verify green + bot
 **Done:** W0-1 · W0-2 `603a2c2` · W0-3 (hygiene, unplanned) · C1 · C2 · B2 `4d6c89a`
 · B3 `ab0e2a4` (already-correct) · B4 `2f82d85` · B1 *withdrawn as wrong* ·
 #18 `a717330` (decoder `ma_format_f32`) · #19 (analyze-path defects + coverage)
-**Next:** Track A (A1 unblocked) or Track D. Track A is unblocked — W0-2 landed, so A1 and A5 have
+**Next:** A2 (resample-on-load, unblocks the rate-drop A1 left) or Track D (#12 D1, independent). A1 landed streaming; A5 also has
 their streaming seam. **Track B is not complete** — B5 opened below out of B2/B3
 review. **Latent, not fixed:** `beat_tracker.cpp:243` (`sum_onset / onset.size()`)
 is unguarded but unreachable today (only called after `onset.size() >= 10`);
@@ -251,7 +251,7 @@ asserts non-silence + exact frame count, headless.
 Review: `@ralph` (allocation-free/lock-free callback, pointer-swap release
 semantics) + `@code-reviewer`.
 
-- [~] **A1** Mixer track = **`AudioSource` (W0-2) per track**; callback drains only; memory O(tracks) not O(duration). Do not re-implement streaming here — consume the W0-2 module.
+- [x] **A1** Mixer track = **`AudioSource` (W0-2) per track**; callback drains only; memory O(tracks) not O(duration). Do not re-implement streaming here — consume the W0-2 module. `<SHA>` — each `Track` owns an `AudioSource`; `Process`/`MixTrack` drain only (alloc/lock/syscall-free, `scratch_` pre-sized off-thread, `frame_count>kMaxBlockFrames` guarded). Drain-before-gating so muted tracks stay in lockstep (fixes replay-on-unmute, §4.4). Non-RT `Play`/`Seek` prime the ring before playback. `PcmSourceReader` in-memory adapter bridges the legacy `SetTrackData` path. `mixer_verify` 61→84 (5 streaming tests, both sabotages bite). **§4.1 only PARTIALLY delivered**: resampler (44.1k rate-drop still silent) → A2; true O(tracks) needs the disk-streaming reader → A4 (legacy path still copies whole song). Both reviewers pass.
 - [ ] **A2** Resample-on-load to engine rate (miniaudio/Speex), inside `AudioSource`. Kills `mixer.cpp:108-109` silent-skip of 44.1k; 44.1k must work. After this, `Mixer::Process` loses its `sr` param + skip-branch (F4).
 - [ ] **A3** RT-safe track load — build `AudioSource` off-thread, publish by atomic pointer-swap (release semantics). Scalar controls stay on the command ring (F3). Fixes `SetTrackData` race; load-during-playback safe.
 - [ ] **A4** Mixer ABI: add `kb_mixer_load_track` / `kb_mixer_unload_track` / `kb_mixer_track_ready`. **Remove** `kb_mixer_set_track_data` + its buffer param. Update every caller/consumer (no orphan symbol).

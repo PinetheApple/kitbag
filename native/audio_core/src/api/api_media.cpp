@@ -60,7 +60,7 @@ void kb_mixer_set_gain(kb_engine* engine, int32_t track, float gain) {
 }
 
 float kb_mixer_gain(const kb_engine* engine, int32_t track) {
-  return engine == nullptr ? 0.0f : ToEngine(engine)->mixer().Gain(track);
+  return engine == nullptr ? 0.0f : ToEngine(engine)->mixer().gain(track);
 }
 
 void kb_mixer_set_mute(kb_engine* engine, int32_t track, int32_t muted) {
@@ -70,7 +70,7 @@ void kb_mixer_set_mute(kb_engine* engine, int32_t track, int32_t muted) {
 
 int32_t kb_mixer_muted(const kb_engine* engine, int32_t track) {
   return engine == nullptr ? 0
-                           : (ToEngine(engine)->mixer().Muted(track) ? 1 : 0);
+                           : (ToEngine(engine)->mixer().muted(track) ? 1 : 0);
 }
 
 void kb_mixer_set_solo(kb_engine* engine, int32_t track, int32_t soloed) {
@@ -80,7 +80,7 @@ void kb_mixer_set_solo(kb_engine* engine, int32_t track, int32_t soloed) {
 
 int32_t kb_mixer_soloed(const kb_engine* engine, int32_t track) {
   return engine == nullptr ? 0
-                           : (ToEngine(engine)->mixer().Soloed(track) ? 1 : 0);
+                           : (ToEngine(engine)->mixer().soloed(track) ? 1 : 0);
 }
 
 void kb_mixer_play(kb_engine* engine) {

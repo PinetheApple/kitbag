@@ -3,17 +3,25 @@
 
 #include <atomic>
 #include <cstdint>
+#include <memory>
 #include <vector>
+
+#include "media/audio_source.h"
 
 namespace kitbag {
 
-/// Lock-free N-track audio mixer for stem playback. Gain, mute and solo are
-/// atomic and safe to change while playing; SetTrackData is not.
+/// Lock-free N-track audio mixer for stem playback. Each track is an
+/// AudioSource the callback drains, so mixer memory is O(tracks), not
+/// O(duration) (SPEC.md §4.1). Gain, mute and solo are atomic and safe to
+/// change while playing; the setup and transport calls are not.
 class Mixer {
  public:
   static constexpr int kMaxTracks = 16;
   static constexpr float kMinGain = 0.0f;
   static constexpr float kMaxGain = 2.0f;
+  /// Largest block the drain services; scratch is sized to it at setup so
+  /// Process never allocates.
+  static constexpr uint32_t kMaxBlockFrames = 4096;
 
   Mixer() = default;
   ~Mixer() = default;
@@ -21,7 +29,8 @@ class Mixer {
   Mixer& operator=(const Mixer&) = delete;
 
   /// Load PCM into a track; mono or stereo interleaved float. NOT RT-safe — it
-  /// reallocates, so never call it while the callback runs (SPEC.md §4.1).
+  /// opens a source and copies, so never call it while the callback runs. The
+  /// copy is legacy: see PcmSourceReader.
   void SetTrackData(
       int track,
       const float* pcm,
@@ -30,43 +39,59 @@ class Mixer {
       uint32_t sample_rate
   );
 
+  /// Stream a track from a caller-owned reader that must outlive the track.
+  /// NOT RT-safe: opens the source. The RT-safe load/publish path is A3/A4.
+  bool SetTrackSource(int track, SourceReader* reader);
+
   void SetGain(int track, float gain);
   void SetMute(int track, bool muted);
   /// While any track is soloed, only soloed tracks reach the output.
   void SetSolo(int track, bool soloed);
 
-  float Gain(int track) const;
-  bool Muted(int track) const;
-  bool Soloed(int track) const;
+  float gain(int track) const;
+  bool muted(int track) const;
+  bool soloed(int track) const;
 
+  /// Starts the read-ahead threads. NOT RT-safe; call off the audio thread.
   void Play();
   /// Ends playback and rewinds the head to frame 0 (SPEC.md §4.4).
   void Stop();
-  /// Ends playback holding the head, so a following Play resumes there. An
-  /// in-flight callback can still advance it one block — F3, see the tracker.
+  /// Ends playback holding the head, so a following Play resumes there.
   void Pause();
   bool is_playing() const {
     return playing_.load();
   }
 
-  /// Seek to a frame position (measured at the track's sample rate).
+  /// Seek to a frame position (measured at the track's sample rate). NOT
+  /// RT-safe: it stops and restarts the sources, so the callback must be
+  /// quiescent across it (A3/A4 formalises the RT-safe path).
   void Seek(uint64_t frame);
   uint64_t position() const {
     return read_frame_.load();
   }
 
   /// Mixes active tracks into [output] — interleaved stereo float,
-  /// [frame_count] frames at [sr]. RT-safe unless a track is being modified.
+  /// [frame_count] frames at [sr]. RT-safe: it only drains already-prepared
+  /// sources into pre-sized scratch.
   void Process(float* output, uint32_t frame_count, uint32_t sr);
 
   int active_track_count() const {
     return track_count_;
   }
   uint64_t track_frames(int track) const;
+  /// Frames buffered ahead in a track's source. A readiness probe for priming;
+  /// never called from the audio callback.
+  uint64_t track_buffered(int track) const;
+  /// True once a track's source has delivered its last frame, or it has no
+  /// source at all.
+  bool track_at_end(int track) const;
 
  private:
   struct Track {
-    std::vector<float> pcm;
+    AudioSource source;
+    // Set only by SetTrackData; the streaming setup path leaves it null and the
+    // caller owns the reader.
+    std::unique_ptr<SourceReader> owned_reader;
     uint32_t channels = 0;
     uint32_t sample_rate = 0;
     uint64_t num_frames = 0;
@@ -76,34 +101,42 @@ class Mixer {
     bool has_data = false;
   };
 
-  static void MixMono(
-      const Track& tr,
-      float* output,
-      uint64_t start_frame,
-      uint64_t frames,
-      float gain
+  bool ConfigureTrack(
+      Track& t,
+      SourceReader* reader,
+      int track,
+      uint64_t num_frames
   );
+  void EnsureScratch(uint32_t channels);
+  // Blocks off the audio thread until the track's source has read enough ahead
+  // for the callback to drain full blocks; bounded by a timeout.
+  void Prime(Track& t);
+
+  static void
+  MixMono(const float* src, float* output, uint32_t frames, float gain);
   static void MixStereo(
-      const Track& tr,
+      const float* src,
+      uint32_t channels,
       float* output,
-      uint64_t start_frame,
-      uint64_t frames,
+      uint32_t frames,
       float gain
   );
-  static void MixTrack(
-      const Track& tr,
+  void MixTrack(
+      Track& tr,
       float* output,
       uint32_t frame_count,
-      uint64_t start_frame,
       bool any_solo,
       uint32_t sr
   );
 
   Track tracks_[kMaxTracks];
   int track_count_ = 0;
-  // Drives auto-stop. Plain, like track_count_: SetTrackData is its only writer
-  // and is already documented as never overlapping the callback.
+  // Drives auto-stop. Plain, like track_count_: the setup path is its only
+  // writer and never overlaps the callback.
   uint64_t longest_frames_ = 0;
+  // Drain target, sized at setup to kMaxBlockFrames * widest channel count.
+  std::vector<float> scratch_;
+  uint32_t scratch_channels_ = 0;
   std::atomic<uint64_t> read_frame_{0};
   std::atomic<bool> playing_{false};
   // Recalculated after each solo change; relaxed ordering is fine since

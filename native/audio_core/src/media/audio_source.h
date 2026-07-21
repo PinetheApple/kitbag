@@ -124,6 +124,13 @@ class AudioSource {
   // Realtime-safe polled mirrors.
   bool is_at_end() const;
 
+  // Frames the ring holds ready for the next Read. A readiness probe for the
+  // setup path priming before playback; realtime-safe but not needed by Read.
+  uint64_t buffered_frames() const {
+    const uint32_t ch = channels_.load(std::memory_order_relaxed);
+    return ch == 0 ? 0 : ring_.read_available() / ch;
+  }
+
   // Absolute frame index the next Read will deliver. Counts what reached the
   // callback rather than what the read-ahead thread has buffered, so it is the
   // playback position, not the decode position.
