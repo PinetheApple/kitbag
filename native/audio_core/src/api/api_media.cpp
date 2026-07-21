@@ -36,25 +36,25 @@ uint32_t kb_decoder_channels(const kb_engine* engine) {
   return engine == nullptr ? 0 : ToEngine(engine)->decoder().info().channels;
 }
 
-void kb_mixer_set_track_data(
-    kb_engine* engine,
-    int32_t track,
-    const float* pcm,
-    int64_t num_frames,
-    int32_t channels,
-    int32_t sample_rate
-) {
-  if (engine == nullptr || pcm == nullptr) return;
+kb_result
+kb_mixer_load_track(kb_engine* engine, int32_t track, const char* path) {
+  if (engine == nullptr || path == nullptr) return KB_ERROR_INVALID_ARGUMENT;
   kitbag::Engine* e = ToEngine(engine);
-  e->mixer().SetTrackData(
-      track,
-      pcm,
-      static_cast<uint64_t>(num_frames),
-      static_cast<uint32_t>(channels),
-      static_cast<uint32_t>(sample_rate),
-      e->frames_rendered(),
-      e->is_running()
-  );
+  const bool ok =
+      e->mixer().LoadTrack(track, path, e->frames_rendered(), e->is_running());
+  return ok ? KB_OK : KB_ERROR_INVALID_ARGUMENT;
+}
+
+void kb_mixer_unload_track(kb_engine* engine, int32_t track) {
+  if (engine == nullptr) return;
+  kitbag::Engine* e = ToEngine(engine);
+  e->mixer().UnloadTrack(track, e->frames_rendered(), e->is_running());
+}
+
+int32_t kb_mixer_track_ready(const kb_engine* engine, int32_t track) {
+  return engine == nullptr
+             ? 0
+             : (ToEngine(engine)->mixer().track_ready(track) ? 1 : 0);
 }
 
 void kb_mixer_set_gain(kb_engine* engine, int32_t track, float gain) {
