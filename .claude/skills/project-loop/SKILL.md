@@ -70,6 +70,24 @@ infer approval, never edit a SPEC decision, never loosen a test, prove a negativ
 before reporting one, "already correct + proof" is a complete outcome. They are
 phase-agnostic. Re-read them; do not restate them here.
 
+## Test discipline — sabotage-gated everywhere, not TDD-by-cadence
+
+**The non-negotiable is the sabotage gate, not the write-order.** A test counts only
+once a mutation is shown to break it (exact diff, one per run — phase1-loop §4). This
+is stronger than TDD's red step: red proves a test fails against *absent* code;
+sabotage proves it fails against *wrong* code — the countermeasure to this repo's §2
+failure, tests that passed vacuously. A green suite behind a check-count guard reads
+as coverage forever; only sabotage kills that.
+
+- **Test-first *ordering* is encouraged** where the interface is the test surface —
+  write the `*_verify` check against the C ABI, watch it fail because the feature is
+  absent, then implement (C1 did this: "fails without the fix"). Ordering is welcome;
+  it does not replace the sabotage gate.
+- **Phase 3 (UI, softer verification):** adopt the `tdd` skill for RN logic/state,
+  where sabotaging a render is harder, paired with `design-reviewer` for the visual
+  layer. Phase 1/2 native work keeps the sabotage discipline — do not downgrade it to
+  plain TDD.
+
 ## Determine the phase and the frontier
 
 1. Read **SPEC.md §15** (phase order) and the **current-state block** at the top of
