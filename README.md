@@ -46,7 +46,7 @@ Requirements: CMake ≥ 3.22, Ninja, clang.
 cmake -S native/audio_core -B native/audio_core/build -G Ninja -DKITBAG_BUILD_TOOLS=ON
 cmake --build native/audio_core/build
 
-./native/audio_core/build/tone_test          # should beep for 2 s
+./native/audio_core/build/player_verify      # single-source transport, offline — passes
 ./native/audio_core/build/metronome_verify   # renders offline, asserts onsets — passes
 ./native/audio_core/build/tuner_verify       # currently fails 37/37 — see SPEC.md §10.1
 ```

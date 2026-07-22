@@ -215,8 +215,8 @@ void Mixer::Seek(uint64_t frame) {
   // The source reposition below is only quiescence-safe while the callback is
   // not draining this source (AudioSource::Seek's contract). Seeking during live
   // playback still repositions in place — the rebuild-and-republish-on-seek path
-  // is not shipped yet (tracked in A5's player transport). The transport counter
-  // is already race-free (A3, race #2, SPEC.md §2.2).
+  // is not shipped yet (tracked in #25). The transport counter is already
+  // race-free (A3, race #2, SPEC.md §2.2).
   const int count = track_count_.load(std::memory_order_relaxed);
   for (int i = 0; i < count; ++i) {
     Track& t = tracks_[i];
