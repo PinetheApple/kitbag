@@ -38,3 +38,24 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   A5 player mirrors it. A5 is a thin transport and correctly did not widen scope;
   the residual pointer (`mixer.cpp` + tracker) now points at #25 instead of dangling
   at a closed task. Fix = rebuild+republish-on-seek by atomic swap. **[recorded]**
+
+- **2026-07-22 · Live-seek in-place quiescence gate (§4.1/§4.4/§4.5, #25)** — In-place
+  `AudioSource::Seek`→ring `Clear` runs **only when the device is stopped AND the
+  read-ahead thread is idle**; any seek while `engine_running` (paused included) and
+  `Stop()` while the device is live route through the rebuild+republish path
+  (`ReseekLive`). ralph's review found gating on `is_running()` alone left a one-block
+  pause→seek window that reintroduced the `filled = 0 - old_tail` underflow. The
+  conjunction is a strict superset of ralph's `!engine_running` recommendation — the
+  literal form broke 17 hand-driven `Process` tests that seek with `engine_running=false`
+  while the source thread runs. A failed rebuild suppresses the `kSeek` enqueue so
+  transport can't advertise a position the audio isn't at. Closes #25. **[recorded — review-driven]**
+
+- **2026-07-22 · D3 beat-grid BLOB scope (§4.3 vs §11) — OPEN, asked in #14.** §4.3
+  says the native beat-grid BLOB gains a downbeat list; §11 places that BLOB in the
+  TS/op-sqlite/Drizzle store and passes grids across the C ABI as raw float buffers
+  (no native serializer exists). Building a native grid-BLOB serializer now would be a
+  §16 orphan (no consumer until the TS layer exists); the conflict map also pins Track D
+  as analyze-only. Proposed native scope = the degraded-fallback helper (absent list →
+  every `beats_per_bar`-th beat, one-owner per §13.7) + D4's verify, leaving the sqlite
+  BLOB to §11/Phase 2. **Awaiting user ruling in #14 before D3/D4 dispatch — this is a
+  stop-point-1 gap (two SPEC sections disagree on ownership).** **[asked]**

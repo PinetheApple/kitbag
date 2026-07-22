@@ -16,12 +16,12 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done (verify green + bot
 
 ## Current state — 2026-07-22, `work/post-phase0`
 
-**Done:** W0-1 · W0-2 · W0-3 (hygiene) · C1–C5 · B2 · B3 · B4 · B5 (`#16`) · A1 · A2 · A3 · **A4 (`#9`)** · **A5 (`#10`)** · **A6 (`#11`)** · **D1 (`#12`)** · **D2 (`#13`)** · `#17` · `#18` · `#19` · `#21` · `#23`. **Track A complete.**
+**Done:** W0-1 · W0-2 · W0-3 (hygiene) · C1–C5 · B2 · B3 · B4 · B5 (`#16`) · A1 · A2 · A3 · **A4 (`#9`)** · **A5 (`#10`)** · **A6 (`#11`)** · **D1 (`#12`)** · **D2 (`#13`)** · `#17` · `#18` · `#19` · `#21` · `#23` · **`#24`** · **`#25`**. **Track A complete; both A/C follow-ups closed.**
 B1 **withdrawn as wrong** (graveyard below).
 **In progress:** none.
-**Next:** **Track D** D3–D4 (`#14`/`#15`, D3 unblocked by D2; D4 follows D3). Serial (D3→D4 share the BLOB schema + downbeat plumbing).
-**Blocked (user rulings):** none open. (`#21` mute-cascade ruled + fixed; `#22` Speex-grade resample closed keep-linear.)
-**Follow-ups:** `#24` grid-mode positive-latency subdivision+mute test (non-blocking, correct-by-construction per ralph). `#25` live-seek source reposition races the callback — pre-existing mixer glitch, mirrored by the A5 player, out of A5 scope (see graveyard/decisions). `#17` test-tone resolved with A5 — symbol deleted.
+**Next:** **Track D** D3–D4 (`#14`/`#15`). **D3 is BLOCKED on a scope ruling** — §4.3 (native BLOB gains downbeat list) and §11 (grid BLOB is a TS/op-sqlite artifact; no native serializer exists) disagree on where D3 lives; a native serializer now would be a §16 orphan. Question posted to `#14`; see decisions log. Do **not** dispatch D3 until #14 is answered. Serial (D3→D4 share the BLOB schema + downbeat plumbing).
+**Blocked (user rulings):** `#14` D3 scope (§4.3 vs §11 ownership) — awaiting ruling. (`#21` mute-cascade ruled + fixed; `#22` Speex-grade resample closed keep-linear.)
+**Follow-ups:** none open. `#24` grid-mode mute-cascade test **closed** (`beddd43`; test-only, sabotage-gated; production byte-untouched, ralph's correct-by-construction judgment held). `#25` live-seek reposition **closed** (`d75b3b5` + fix-round `e5add32`; rebuild+republish, in-place ring-Clear now only when device stopped AND source idle; threaded `seek_race_verify`, ASan/UBSan clean). `#17` test-tone resolved with A5 — symbol deleted.
 
 **Latent, not fixed:** `beat_tracker.cpp:243` (`sum_onset / onset.size()`) is an
 unguarded divide, unreachable today (only called after `onset.size() >= 10`); becomes
@@ -180,7 +180,7 @@ A1→A2→A3 sequential (streaming → resample → RT-safe publish), then A4/A5
 ### Track D — §4.3 downbeats
 - [x] **D1** Vendored QM-DSP (`c4dm/qm-dsp` @ `e34a3cc`, GPL-2.0-or-later) into `third_party/qm-dsp/` — minimal compile closure (14 files: `TempoTrackV2`+`DownBeat`+FFT/Decimator/maths + bundled kissfft). **`BarBeatTrack` does not exist in qm-dsp** (it's a Vamp wrapper in `qm-vamp-plugins`); the equivalent primitives are `TempoTrackV2`+`DownBeat`, which is what SPEC's "preferred" choice actually means here. Own `qm_dsp` STATIC target, **linked nowhere yet** (D2's job); no `-Werror` inheritance; `kiss_fft_scalar=double` load-bearing (`FFT.cpp:121` casts double buffers into `kiss_fft_cpx`). LICENSE + GPL-propagation recorded in `third_party/qm-dsp/README.md`; lint already scopes out `third_party/`. All 10 verifies unchanged. `#12`. **D2 note:** the beat detection function feeding `TempoTrackV2` lives in `qm-vamp-plugins`, not vendored — D2 supplies one from Kitbag's analyze pipeline.
 - [x] **D2** `kb_analyze_song` gains `downbeat_indices_out` + `downbeat_count_out`; caller-allocates-buffers shape kept. New `analysis/downbeat.{h,cpp}` estimates bar-ones behind the analyze pipeline; `analyze_verify` extended (downbeats land on bar-ones for a known tempo, sabotage-gated) via `analyze_test_downbeat`. `#13` · `047658c`. **D3 note:** supplies the per-song downbeat list D3's BLOB schema serializes.
-- [ ] **D3** Beat-grid BLOB schema gains a downbeat list. **Non-destructive**: absent → every `beats_per_bar`-th beat is a downbeat. Old grids stay valid. `#14`.
+- [!] **D3** Beat-grid BLOB schema gains a downbeat list. **Non-destructive**: absent → every `beats_per_bar`-th beat is a downbeat. Old grids stay valid. `#14`. **BLOCKED on scope ruling** (§4.3 vs §11 — is this a native serializer or the TS/sqlite schema? A native BLOB serializer has no consumer yet = §16 orphan). Question in `#14`; decisions log 2026-07-22.
 - [ ] **D4** Verify: downbeats land on bar-ones for a known tempo; degraded fallback tested. `#15`.
 
 ---

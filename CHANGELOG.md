@@ -567,4 +567,65 @@ sabotage-proven: dropping the guard zeroes the buffer and the check fails.
 Collapse the duplicated "never call while running" comment: engine.h's
 RenderOffline now points to the ABI doc instead of restating the rule.
 
+- **loop:** One blocking wave per invocation, never background-and-poll
+
+The driver stranded A6+D2 with fixes committed in worktrees but unmerged:
+the orchestrator was spawning detached 'claude -p' workers and polling for
+their commits across invocations, turning one wave into ~8 full-context
+poll-invocations (512k ctx / 34M cache-read each) that halted when
+re-invocation stopped.
+
+Redefine an increment as one atomic, synchronous WAVE: dispatch all parallel
+tracks in a single blocking multi-Agent message, then review/fix/gate/merge/
+persist in the same invocation; never exit while dispatched work is unfinished;
+never detach a worker or poll. Prompt, skill body, steps, and description
+aligned. Add nohup detach guidance so a closed terminal can't kill an
+unattended run mid-wave.
+
+- **media:** Rebuild+republish source on live seek, never Clear a live ring (#25)
+
+A live Seek (mixer track or player) called AudioSource::Seek -> SpscBulkRing::Clear,
+whose contract requires both producer and consumer stopped. During playback the
+device callback is still the consumer: Clear stored tail=0 while a concurrent Read
+stored tail+n over it, leaving tail past head. read_available() then underflows and
+the callback reads a stale/garbage block until head climbs back past the clobbered
+tail. All atomic, so no crash — a bounded audible glitch. Byte-identical in the
+mixer and the A5 player; pre-existing, not an A5 regression.
+
+- **seek:** Gate in-place ring Clear on true quiescence, not source thread (#25)
+
+Review fix-round on the #25 live-seek wave (ralph + code-reviewer).
+
+Finding 1: the paused-seek in-place AudioSource::Seek->ring Clear was gated on
+live_source->is_running(), which Pause()/Stop() drive false a block before the
+device callback stops draining playing_==true — reintroducing the #25 filled =
+0 - old_tail underflow for one block. Gate the in-place path on true quiescence
+instead: rebuild-and-republish (ReseekLive) whenever the device is running OR
+the source read-ahead thread is running (AudioSource::Seek refuses a running
+thread anyway); Clear in place only when both are idle. Applied to Mixer::Seek,
+Player::Seek and Mixer::Stop() (which shared the window via its in-place
+Seek(0)); Stop() now takes now_frame/engine_running and rewinds by rebuild when
+the device is live. kb_mixer_stop and the mixer tests pass the two new args.
+
+Finding 2: when BuildReseekSource fails, ReseekLive resumes the old source at
+its old position; Seek now suppresses the kSeek enqueue in that case so the
+transport holds the audible position instead of jumping to the target. Both
+engines; ReseekLive returns bool.
+
+Finding 3: de-duplicated the verbatim ReseekLive ordering comment — stated once
+at Mixer::ReseekLive, referenced from Player::ReseekLive.
+
+Finding 4: factored BlockPeak() in metronome_test_support.h, shared by
+RenderContinuousPeaks and WindowedPeak.
+
+Tests (seek_race_verify): the pause->seek window is a us-scale TOCTOU whose
+threaded reproduction is vacuous/flaky headlessly (a test callback Read is us,
+shorter than the pause's Stop()-join, so the vulnerable Read closes before the
+Clear — unlike a real ~10ms device block). Gated deterministically instead:
+after Play; Pause; Seek(engine_running=true) the fix rebuilds+primes (buffered
+> 0) while the sabotage Clears the stopped ring in place and never restarts it
+(buffered == 0) — red 8/8 under the reverted predicate, green under the fix, on
+both engines. Added a Finding 2 case (delete the file mid-play so the rebuild
+fails; a held transport position is the proof). Direct threaded races retained.
+
 
