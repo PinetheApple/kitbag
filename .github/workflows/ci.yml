@@ -30,6 +30,8 @@ jobs:
         run: ./native/audio_core/build/beat_tracker_verify
       - name: Mixer — transport and mix-down
         run: ./native/audio_core/build/mixer_verify
+      - name: Player — single-source transport advances, holds on pause, seeks
+        run: ./native/audio_core/build/player_verify
       - name: Note lock — hysteresis around note boundaries
         run: ./native/audio_core/build/note_lock_verify
       - name: Audio source — the SourceReader seam, no miniaudio linked

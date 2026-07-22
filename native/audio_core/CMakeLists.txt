@@ -43,6 +43,8 @@ add_library(kitbag_core SHARED
   src/media/miniaudio_impl.c
   src/mixer/mixer.cpp
   src/mixer/mixer_render.cpp
+  src/player/player.cpp
+  src/player/player_render.cpp
   src/tuner/note_lock.cpp
   src/tuner/pitch_analyzer.cpp
   src/tuner/tuner.cpp
@@ -73,9 +75,6 @@ endif()
 
 option(KITBAG_BUILD_TOOLS "Build native test tools" OFF)
 if(KITBAG_BUILD_TOOLS)
-  add_executable(tone_test tools/tone_test.c)
-  target_link_libraries(tone_test PRIVATE kitbag_core)
-
   add_executable(metronome_verify
     tools/metronome/metronome_verify.cpp
     tools/metronome/metronome_test_basic.cpp
@@ -130,6 +129,24 @@ if(KITBAG_BUILD_TOOLS)
   # mixer_render.cpp's exhaustive CommandType switch is load-bearing here too.
   target_compile_options(mixer_verify PRIVATE -Werror=switch)
   target_link_libraries(mixer_verify PRIVATE Threads::Threads m ${CMAKE_DL_LIBS})
+
+  # Links the sources: Player is internal, not exported through the C ABI. It
+  # streams a single source through an AudioSource over a real file path, so the
+  # tool writes a temp WAV and links the file adapter and Threads, like the mixer.
+  add_executable(player_verify
+    tools/player/player_verify.cpp
+    src/player/player.cpp
+    src/player/player_render.cpp
+    src/media/audio_source.cpp
+    src/media/file_audio_reader.cpp
+    src/media/miniaudio_decoder.cpp
+    src/media/resampling_source_reader.cpp
+    src/media/miniaudio_impl.c
+  )
+  target_include_directories(player_verify PRIVATE src tools tools/media third_party)
+  # player_render.cpp's exhaustive CommandType switch is load-bearing here too.
+  target_compile_options(player_verify PRIVATE -Werror=switch)
+  target_link_libraries(player_verify PRIVATE Threads::Threads m ${CMAKE_DL_LIBS})
 
   # Drives the in-memory adapter. That this target links no miniaudio and still
   # passes is what proves the seam: the module depends on SourceReader, not on

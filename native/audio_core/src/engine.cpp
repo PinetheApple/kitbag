@@ -1,13 +1,6 @@
 #include "engine.h"
 
-#include <cmath>
-
 namespace kitbag {
-
-namespace {
-constexpr double kTau = 6.283185307179586;
-constexpr float kToneAmplitude = 0.2f;
-}  // namespace
 
 Engine::~Engine() {
   Stop();
@@ -53,13 +46,7 @@ void Engine::Stop() {
   // moves, and a stopped engine never moves it.
   metronome_.ReleaseRetiredGrids();
   mixer_.ReleaseRetiredSources();
-}
-
-void Engine::SetTestTone(bool enabled, float frequency_hz) {
-  if (frequency_hz > 0.0f) {
-    tone_frequency_hz_.store(frequency_hz, std::memory_order_relaxed);
-  }
-  tone_enabled_.store(enabled, std::memory_order_relaxed);
+  player_.ReleaseRetiredSources();
 }
 
 void Engine::DataCallback(
@@ -73,37 +60,16 @@ void Engine::DataCallback(
   engine->Render(static_cast<float*>(output), frame_count);
 }
 
-void Engine::RenderTestTone(float* output, uint32_t frame_count) {
-  const bool tone_on = tone_enabled_.load(std::memory_order_relaxed);
-  const double phase_step =
-      kTau * tone_frequency_hz_.load(std::memory_order_relaxed) / kSampleRate;
-
-  for (uint32_t frame = 0; frame < frame_count; ++frame) {
-    float sample = 0.0f;
-    if (tone_on) {
-      sample = kToneAmplitude * static_cast<float>(std::sin(tone_phase_));
-      tone_phase_ += phase_step;
-      if (tone_phase_ >= kTau) {
-        tone_phase_ -= kTau;
-      }
-    }
-    for (uint32_t channel = 0; channel < kChannelCount; ++channel) {
-      output[frame * kChannelCount + channel] = sample;
-    }
-  }
-}
-
 void Engine::Render(float* output, uint32_t frame_count) {
   // Engine-clock frame of output[0] — the transport metronome anchoring
   // (StartAt, grid anchors) is expressed against. Advanced once after the block.
   const uint64_t block_start_frame =
       frames_rendered_.load(std::memory_order_relaxed);
 
-  RenderTestTone(output, frame_count);
-
-  // BROKEN: this memsets unconditionally, erasing the tone above in every state
-  // — kb_engine_set_test_tone is silent. CHANGELOG "Known broken".
+  // Process clears the buffer (memset) and mixes the stems; the player and the
+  // metronome then accumulate on top, so the three compose additively.
   mixer_.Process(output, frame_count);
+  player_.Render(output, frame_count);
 
   metronome_.Render(
       output,
