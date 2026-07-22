@@ -3,10 +3,16 @@
 #
 # Each `claude -p` invocation is a fresh, zero-context process: it reconstructs
 # state from disk (SPEC.md, docs/phase1-tracker.md, GitHub issues, docs/decisions.md,
-# git log), does ONE increment, commits, and exits. Context never accumulates.
+# git log), runs ONE FULL WAVE to completion, commits, and exits. Context never
+# accumulates. A wave is atomic — dispatch → review → fix → wave-gate → merge →
+# persist — run synchronously via blocking Agent subagents, never backgrounded.
 #
-#   ./scripts/run-loop.sh            # one increment, foreground, watched (default)
-#   ./scripts/run-loop.sh --unattended   # loop until a stop-point exits non-zero
+#   ./scripts/run-loop.sh            # one wave, foreground, watched (default)
+#   ./scripts/run-loop.sh --unattended   # wave after wave until a stop-point exits non-zero
+#
+# For an unattended run, detach it so a closed terminal / ssh drop / sleep can't
+# kill the loop mid-wave:
+#   nohup bash scripts/run-loop.sh --unattended > loop.log 2>&1 &
 #
 # Live visibility: streams every event (tool call + reasoning) as it happens via
 # --output-format stream-json, formatted readably here. Raw NDJSON is tee'd to
@@ -21,7 +27,13 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-PROMPT="/project-loop one increment then stop"
+PROMPT="/project-loop — run ONE full wave to completion, then stop. Dispatch all \
+parallel tracks in a single multi-Agent message (blocking — the Agent tool runs them \
+concurrently); when they return, review (ralph + code-reviewer), fix, run the wave gate \
+on the integrated tree, merge to the feature branch, persist (issues, tracker, \
+changelog), remove spent worktrees. Do NOT exit while any dispatched work is unfinished. \
+NEVER spawn background 'claude -p' workers or poll for their commits across invocations. \
+Exit only when the wave is fully integrated, or at a real stop-point."
 
 # The loop edits files, builds (cmake), runs verify binaries, commits, and drives
 # gh + subagents. Bash cannot be finely scoped here — it runs cmake, git, gh, cp,
