@@ -16,6 +16,9 @@ node_modules/
 # OS
 .DS_Store
 
+# Python
+__pycache__/
+
 .claude/worktrees/
 
 # project-loop runtime artifacts
