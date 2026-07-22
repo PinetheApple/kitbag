@@ -61,6 +61,7 @@ bool Player::Load(const char* path, uint64_t now_frame, bool engine_running) {
   auto ps = std::make_unique<PlayerSource>();
   if (!BuildSource(*ps, reader.get())) return false;
   ps->owned_reader = std::move(reader);
+  load_path_ = path;
   Publish(std::move(ps), now_frame, engine_running);
   return true;
 }
@@ -71,6 +72,7 @@ void Player::Unload(uint64_t now_frame, bool engine_running) {
   if (live_source_ != nullptr) live_source_->Stop();
   live_source_ = nullptr;
   live_num_frames_ = 0;
+  load_path_.clear();
   num_frames_.store(0, std::memory_order_relaxed);
   published_.Publish(nullptr, now_frame, engine_running);
 }
@@ -107,20 +109,48 @@ void Player::Pause() {
   if (live_source_ != nullptr) live_source_->Stop();
 }
 
-void Player::Seek(uint64_t frame) {
-  // The source reposition is only quiescence-safe while the callback is not
-  // draining this source (AudioSource::Seek's contract); a live-playback seek
-  // still repositions in place, matching the mixer (SPEC.md §2.2 keeps the
-  // transport counter itself race-free).
+std::unique_ptr<Player::PlayerSource> Player::BuildReseekSource(
+    uint64_t target
+) {
+  if (load_path_.empty()) return nullptr;
+  auto reader = std::make_unique<FileAudioReader>();
+  if (!reader->Open(load_path_.c_str())) return nullptr;
+  auto ps = std::make_unique<PlayerSource>();
+  if (!BuildSource(*ps, reader.get())) return nullptr;
+  ps->owned_reader = std::move(reader);
+  if (!ps->source->Seek(target) || !ps->source->Start()) return nullptr;
+  Prime(*ps->source, ps->num_frames);
+  return ps;
+}
+
+void Player::ReseekLive(
+    uint64_t frame,
+    uint64_t now_frame,
+    bool engine_running
+) {
+  const uint64_t target = std::min(frame, live_num_frames_);
+  // Stop the old read-ahead thread first so the reader is untouched while the
+  // fresh source is built; the callback keeps draining the old ring meanwhile.
+  live_source_->Stop();
+  auto ps = BuildReseekSource(target);
+  if (ps == nullptr) {
+    live_source_->Start();  // rebuild failed: resume the old source in place
+    return;
+  }
+  live_source_ = ps->source.get();
+  live_num_frames_ = ps->num_frames;
+  num_frames_.store(ps->num_frames, std::memory_order_relaxed);
+  published_.Publish(std::move(ps), now_frame, engine_running);
+}
+
+void Player::Seek(uint64_t frame, uint64_t now_frame, bool engine_running) {
   if (live_source_ != nullptr) {
-    const bool was_running = live_source_->is_running();
-    live_source_->Stop();
-    // Clamp past the end so a seek past the source seeks to end (silent) rather
-    // than refusing and desyncing from the transport.
-    live_source_->Seek(std::min(frame, live_num_frames_));
-    if (was_running) {
-      live_source_->Start();
-      Prime(*live_source_, live_num_frames_);
+    if (live_source_->is_running()) {
+      ReseekLive(frame, now_frame, engine_running);
+    } else {
+      // Paused: Render drains no source, so the in-place reposition is
+      // quiescence-safe. Clamp past the end so a seek past it seeks to end.
+      live_source_->Seek(std::min(frame, live_num_frames_));
     }
   }
   Command command{CommandType::kSeek};

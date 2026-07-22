@@ -4,6 +4,7 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "media/audio_source.h"
@@ -59,8 +60,12 @@ class Player {
   /// player, and a rewind is kb_player_seek(0). One export per behaviour (§16).
   void Pause();
   /// Seek to a frame at the engine rate. The counter update is applied by the
-  /// callback next block; the source reposition is done here.
-  void Seek(uint64_t frame);
+  /// callback next block. A seek while playing rebuilds a fresh source at the
+  /// target off the callback and swaps it in by RtPublisher, so no ring Clear
+  /// races the callback draining the old source (#25); [now_frame]/
+  /// [engine_running] date the retired source as Load does. A paused seek
+  /// repositions in place — Render drains no source while paused.
+  void Seek(uint64_t frame, uint64_t now_frame, bool engine_running);
 
   /// Callback-published mirrors. Converge within one block once the device runs.
   bool is_playing() const {
@@ -71,6 +76,14 @@ class Player {
   }
   uint64_t frames() const {
     return num_frames_.load(std::memory_order_relaxed);
+  }
+  /// Realtime-safe: frames buffered ahead in the published source, read through
+  /// the published node (acquire load) and the source ring's atomics only, never
+  /// the app-thread live_source_. Exists so a concurrent test can observe a ring
+  /// the callback drains (#25).
+  uint64_t rt_buffered() const {
+    const auto* node = published_.Get();
+    return node != nullptr ? node->value.source->buffered_frames() : 0;
   }
 
   /// Reads the published source and accumulates it into [output] — interleaved
@@ -121,6 +134,13 @@ class Player {
       bool engine_running
   );
   void Prime(AudioSource& src, uint64_t num_frames);
+
+  // App thread. Builds a fresh source at `target` by re-opening the loaded file,
+  // started and primed; null if the rebuild fails. No Clear on a ring the
+  // callback reads, so it is safe while the old source is still live (#25).
+  std::unique_ptr<PlayerSource> BuildReseekSource(uint64_t target);
+  // App thread. Stops the old source, then swaps in a BuildReseekSource node.
+  void ReseekLive(uint64_t frame, uint64_t now_frame, bool engine_running);
   void Enqueue(const Command& command);
 
   // Command drain, run at the top of Render. ApplyCommand holds the only
@@ -142,6 +162,8 @@ class Player {
   RtPublisher<PlayerSource> published_;
   AudioSource* live_source_ = nullptr;  // app thread; == the published source
   uint64_t live_num_frames_ = 0;        // app thread
+  // The loaded file path, so a live seek can re-open it into a fresh source.
+  std::string load_path_;  // app thread; set by Load
   // The output/device rate the source is resampled to on load.
   uint32_t engine_rate_;
   // Drain target, sized once at construction and never reallocated.

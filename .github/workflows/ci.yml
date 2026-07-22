@@ -32,6 +32,8 @@ jobs:
         run: ./native/audio_core/build/mixer_verify
       - name: Player — single-source transport advances, holds on pause, seeks
         run: ./native/audio_core/build/player_verify
+      - name: Seek race — a live seek never emits a stale/underflowed block (#25)
+        run: ./native/audio_core/build/seek_race_verify
       - name: Stream — a real WAV streams through the C ABI; frames, non-silence, resample
         run: ./native/audio_core/build/stream_verify
       - name: Note lock — hysteresis around note boundaries

@@ -81,6 +81,8 @@ bool Mixer::LoadTrack(
   auto ts = std::make_unique<TrackSource>();
   if (!BuildTrackSource(*ts, reader.get())) return false;
   ts->owned_reader = std::move(reader);
+  tracks_[track].load_path = path;
+  tracks_[track].ext_reader = nullptr;
   PublishTrack(track, std::move(ts), now_frame, engine_running);
   return true;
 }
@@ -95,6 +97,8 @@ void Mixer::UnloadTrack(int track, uint64_t now_frame, bool engine_running) {
   if (t.live_source != nullptr) t.live_source->Stop();
   t.live_source = nullptr;
   t.live_num_frames = 0;
+  t.load_path.clear();
+  t.ext_reader = nullptr;
   t.published.Publish(nullptr, now_frame, engine_running);
   RecomputeLongestFrames();
 }
@@ -114,6 +118,8 @@ bool Mixer::SetTrackSource(
   auto ts = std::make_unique<TrackSource>();
   if (!BuildTrackSource(*ts, reader)) return false;
   // owned_reader stays null: the caller owns `reader` and must outlive the track.
+  tracks_[track].ext_reader = reader;
+  tracks_[track].load_path.clear();
   PublishTrack(track, std::move(ts), now_frame, engine_running);
   return true;
 }
@@ -211,24 +217,58 @@ void Mixer::Pause() {
   }
 }
 
-void Mixer::Seek(uint64_t frame) {
-  // The source reposition below is only quiescence-safe while the callback is
-  // not draining this source (AudioSource::Seek's contract). Seeking during live
-  // playback still repositions in place — the rebuild-and-republish-on-seek path
-  // is not shipped yet (tracked in #25). The transport counter is already
-  // race-free (A3, race #2, SPEC.md §2.2).
+std::unique_ptr<Mixer::TrackSource>
+Mixer::BuildReseekSource(int track, uint64_t target) {
+  Track& t = tracks_[track];
+  auto ts = std::make_unique<TrackSource>();
+  if (!t.load_path.empty()) {
+    auto reader = std::make_unique<FileAudioReader>();
+    if (!reader->Open(t.load_path.c_str())) return nullptr;
+    if (!BuildTrackSource(*ts, reader.get())) return nullptr;
+    ts->owned_reader = std::move(reader);
+  } else if (t.ext_reader != nullptr) {
+    if (!BuildTrackSource(*ts, t.ext_reader)) return nullptr;
+  } else {
+    return nullptr;
+  }
+  if (!ts->source->Seek(target) || !ts->source->Start()) return nullptr;
+  Prime(*ts->source, ts->num_frames);
+  return ts;
+}
+
+void Mixer::ReseekLive(
+    int track,
+    uint64_t frame,
+    uint64_t now_frame,
+    bool engine_running
+) {
+  Track& t = tracks_[track];
+  const uint64_t target = std::min(frame, t.live_num_frames);
+  // Stop the old read-ahead thread first so the reader is untouched while the
+  // fresh source is built; the callback keeps draining the old ring meanwhile.
+  t.live_source->Stop();
+  auto ts = BuildReseekSource(track, target);
+  if (ts == nullptr) {
+    t.live_source->Start();  // rebuild failed: resume the old source in place
+    return;
+  }
+  t.live_source = ts->source.get();
+  t.live_num_frames = ts->num_frames;
+  t.published.Publish(std::move(ts), now_frame, engine_running);
+}
+
+void Mixer::Seek(uint64_t frame, uint64_t now_frame, bool engine_running) {
   const int count = track_count_.load(std::memory_order_relaxed);
   for (int i = 0; i < count; ++i) {
     Track& t = tracks_[i];
     if (t.live_source == nullptr) continue;
-    const bool was_running = t.live_source->is_running();
-    t.live_source->Stop();
-    // Clamp past a short stem's end so it seeks to end (silent) rather than
-    // refusing and desyncing from the transport.
-    t.live_source->Seek(std::min(frame, t.live_num_frames));
-    if (!was_running) continue;
-    t.live_source->Start();
-    Prime(*t.live_source, t.live_num_frames);
+    if (t.live_source->is_running()) {
+      ReseekLive(i, frame, now_frame, engine_running);
+    } else {
+      // Paused: Process drains no source, so the in-place reposition is
+      // quiescence-safe. Clamp past a short stem's end so it seeks to end.
+      t.live_source->Seek(std::min(frame, t.live_num_frames));
+    }
   }
   Command command{CommandType::kSeek};
   command.frame = frame;
@@ -247,6 +287,12 @@ uint64_t Mixer::track_buffered(int track) const {
   }
   const AudioSource* src = tracks_[track].live_source;
   return src != nullptr ? src->buffered_frames() : 0;
+}
+
+uint64_t Mixer::rt_track_buffered(int track) const {
+  if (track < 0 || track >= kMaxTracks) return 0;
+  const auto* node = tracks_[track].published.Get();
+  return node != nullptr ? node->value.source->buffered_frames() : 0;
 }
 
 bool Mixer::track_at_end(int track) const {
