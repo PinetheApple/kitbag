@@ -31,15 +31,13 @@ class Player {
   explicit Player(uint32_t engine_rate)
       : engine_rate_(engine_rate),
         scratch_(static_cast<size_t>(kMaxBlockFrames) * kMaxChannels, 0.0f) {}
-  /// The publisher dtor deletes the live source; its dtor joins the read-ahead
-  /// thread before the readers it points into die (see PlayerSource field order).
+  /// Live source deleted by the publisher dtor; teardown order enforced by
+  /// PlayerSource field order (below).
   ~Player() = default;
   Player(const Player&) = delete;
   Player& operator=(const Player&) = delete;
 
-  /// Load a file, streamed from disk. RT-safe: opens, resamples and builds the
-  /// source off the callback, then publishes it by atomic swap, so a load during
-  /// playback cannot tear a read. [now_frame] is the engine clock and
+  /// Load a file, streamed from disk. [now_frame] is the engine clock and
   /// [engine_running] true whenever the callback can run; together they date the
   /// retired source for deferred reclamation. Returns false for a null path or a
   /// file that will not open.
