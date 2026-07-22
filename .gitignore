@@ -21,3 +21,4 @@ node_modules/
 # project-loop runtime artifacts
 stream-*.jsonl
 loop.log
+.loop-halt

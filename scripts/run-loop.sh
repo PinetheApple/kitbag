@@ -71,10 +71,23 @@ push_head() {
 # Ctrl-C exits the whole run cleanly — no Python traceback from the formatter.
 trap 'echo "Interrupted." >&2; exit 130' INT
 
+# A wave stops the loop three ways. `claude -p` exits 0 on normal completion, so a
+# stop-point the model *narrated* is not visible in its exit code — without the two
+# guards below the loop re-invokes forever on a blocker (it did: 3 waves, tree
+# untouched). (1) hard failure -> non-zero exit; (2) the model writes .loop-halt at a
+# stop-point / nothing-to-do; (3) a wave that added no commit dispatched nothing.
 if [[ "${1:-}" == "--unattended" ]]; then
   echo "Unattended run. Raw streams -> stream-*.jsonl. Ctrl-C to stop." >&2
   while :; do
+    rm -f .loop-halt
+    before=$(git rev-parse HEAD)
     run_one || { echo "Stop-point or done (exit $?). Handing back." >&2; break; }
+    if [[ -f .loop-halt ]]; then
+      echo "Halt: $(cat .loop-halt). Handing back." >&2; break
+    fi
+    if [[ "$(git rev-parse HEAD)" == "$before" ]]; then
+      echo "Wave added no commit — nothing dispatchable. Handing back." >&2; break
+    fi
     push_head
   done
 else
