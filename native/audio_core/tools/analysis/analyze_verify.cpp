@@ -147,6 +147,81 @@ void TestFiniteOutput() {
   kitbag_test::Check(in_range, "every beat time is finite and within [0, dur]");
 }
 
+// Mirrors downbeat.cpp's 4/4 fallback independently, so a change to that default
+// without updating this expectation trips the spacing check.
+constexpr int kBeatsPerBar = 4;
+
+// Bar-ones must be an in-range, ascending, strict subset of the beats, spaced
+// one bar apart. Split from TestDownbeats to stay within the function-size cap.
+void CheckDownbeatShape(const std::vector<int>& db, int beats) {
+  kitbag_test::Check(!db.empty(), "downbeat: at least one bar-one labelled");
+  kitbag_test::Check(
+      static_cast<int>(db.size()) < beats,
+      "downbeat: bar-ones are a strict subset of beats, not every beat"
+  );
+
+  bool in_range = true;
+  bool ascending = true;
+  bool bar_spaced = true;
+  for (size_t i = 0; i < db.size(); ++i) {
+    if (db[i] < 0 || db[i] >= beats) in_range = false;
+    if (i > 0 && db[i] <= db[i - 1]) ascending = false;
+    if (i > 0 && db[i] - db[i - 1] != kBeatsPerBar) bar_spaced = false;
+  }
+  kitbag_test::Check(in_range, "downbeat: every index falls within the beats");
+  kitbag_test::Check(ascending, "downbeat: indices strictly ascending");
+  kitbag_test::Check(
+      bar_spaced,
+      "downbeat: consecutive bar-ones are one bar (4 beats) apart"
+  );
+}
+
+// The click track has no bar structure, so which beat is the downbeat is
+// arbitrary — but the labelling's shape is not (see CheckDownbeatShape). D4/#15
+// owns the known-phase assertion over a real fixture.
+void TestDownbeats() {
+  const std::vector<float> pcm = MakeClickTrack();
+  const uint64_t frames = pcm.size() / 2;
+  BeatResult result;
+  const kb_result status = AnalyzeDecodedPcm(
+      pcm.data(),
+      frames,
+      StereoInfo(frames, 2),
+      "x",
+      nullptr,
+      &result
+  );
+  kitbag_test::Check(
+      status == KB_OK,
+      "downbeat: click track analyses to KB_OK"
+  );
+  CheckDownbeatShape(
+      result.downbeat_indices,
+      static_cast<int>(result.beat_times.size())
+  );
+}
+
+// Exercises the full C ABI (all caller-out buffers) and discards the values;
+// this test only cares that the sidecar path still runs. Buffers are sized to
+// the recommended cap.
+kb_result AnalyzeThroughAbi(const std::string& wav, const std::string& dir) {
+  float bpm = -1.0f;
+  int32_t beat_count = -1;
+  int32_t downbeat_count = -1;
+  std::vector<float> beats(64);
+  std::vector<int32_t> downbeats(64);
+  return kb_analyze_song(
+      wav.c_str(),
+      &bpm,
+      beats.data(),
+      64,
+      &beat_count,
+      downbeats.data(),
+      &downbeat_count,
+      dir.c_str()
+  );
+}
+
 struct Sidecar {
   char magic[4] = {0, 0, 0, 0};
   uint32_t version = 0;
@@ -209,17 +284,7 @@ void TestSidecarRoundTrip(const std::filesystem::path& dir) {
       "sidecar: fixture wav written"
   );
 
-  float bpm = -1.0f;
-  int32_t count = -1;
-  std::vector<float> beats(64);
-  const kb_result status = kb_analyze_song(
-      wav.c_str(),
-      &bpm,
-      beats.data(),
-      64,
-      &count,
-      dir.string().c_str()
-  );
+  const kb_result status = AnalyzeThroughAbi(wav, dir.string());
   kitbag_test::Check(status == KB_OK, "sidecar: kb_analyze_song returns KB_OK");
 
   Sidecar sc;
@@ -266,7 +331,7 @@ void TestWaveformNonFinite() {
 
 }  // namespace
 
-constexpr int kExpectedChecks = 25;
+constexpr int kExpectedChecks = 31;
 
 int main() {
   const std::filesystem::path dir = std::filesystem::temp_directory_path();
@@ -274,6 +339,7 @@ int main() {
   TestChannelsZero();
   TestNaNPoison();
   TestFiniteOutput();
+  TestDownbeats();
   TestSidecarRoundTrip(dir);
   TestWaveformNonFinite();
 
