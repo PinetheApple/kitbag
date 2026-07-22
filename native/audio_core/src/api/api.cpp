@@ -56,10 +56,16 @@ uint64_t kb_engine_frames_rendered(const kb_engine* engine) {
   return engine == nullptr ? 0 : ToEngine(engine)->frames_rendered();
 }
 
+#ifdef KITBAG_BUILD_TOOLS
 void kb_engine_render(kb_engine* engine, float* out, uint32_t frame_count) {
   if (engine == nullptr || out == nullptr || frame_count == 0) return;
+  // Refuse while the device callback is live: it is the sole renderer, and a
+  // second thread in Render would race the non-atomic mixer/player/metronome
+  // state. Relaxed atomic load — no alloc, lock or syscall.
+  if (ToEngine(engine)->is_running()) return;
   ToEngine(engine)->RenderOffline(out, frame_count);
 }
+#endif  // KITBAG_BUILD_TOOLS
 
 kb_result kb_tuner_start(kb_engine* engine) {
   if (engine == nullptr) {

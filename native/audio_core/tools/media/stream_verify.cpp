@@ -21,7 +21,7 @@ namespace {
 int g_failures = 0;
 // Counted so a deleted TestX() call cannot pass silently; update deliberately.
 int g_checks = 0;
-constexpr int kExpectedChecks = 12;
+constexpr int kExpectedChecks = 14;
 
 void Check(bool condition, const char* message) {
   ++g_checks;
@@ -96,6 +96,19 @@ void TestFreshEngineRendersSilence(kb_engine* engine) {
   bool silent = true;
   for (float s : buf) silent = silent && s == 0.0f;
   Check(silent, "render: a sourceless engine pulls silence");
+}
+
+// The offline pull must refuse while the device callback owns the engine, or two
+// threads enter Render and race the non-atomic mix state. Start the device, pull
+// a block into a sentinel-filled buffer, and assert it comes back untouched.
+void TestRenderNoOpWhileRunning(kb_engine* engine) {
+  Check(kb_engine_start(engine) == KB_OK, "guard: the device starts");
+  std::vector<float> buf(static_cast<size_t>(kBlock) * 2, 0.5f);
+  kb_engine_render(engine, buf.data(), kBlock);
+  bool untouched = true;
+  for (float s : buf) untouched = untouched && s == 0.5f;
+  Check(untouched, "guard: render is a no-op while the device is running");
+  kb_engine_stop(engine);
 }
 
 // Assertion 1 (exact frame count) and 2 (non-silence): stream a 48k file, so no
@@ -193,6 +206,7 @@ int main() {
   }
 
   TestFreshEngineRendersSilence(engine);
+  TestRenderNoOpWhileRunning(engine);
   TestExactFrameCountAndNonSilence(engine, exact);
   TestResampleCorrectness(engine, resample);
 
