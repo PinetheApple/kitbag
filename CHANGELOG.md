@@ -318,6 +318,41 @@ reload-to-shorter or unload left the transport running long.
 RecomputeLongestFrames rescans loaded tracks on load and unload so
 auto-stop follows the current longest.
 
+- **loop:** Add run stats footer — context peak, tokens, elapsed
+
+Track usage across the stream and print context peak (largest single
+prompt window), total in/out tokens, and cache reads under the summary
+rule. Elapsed now human-readable (m s).
+
+- **loop:** Pin stats footer to bottom via rich Live
+
+Boxed panel stays fixed at the terminal bottom while log lines scroll
+above it, showing elapsed (ticks live), context peak, in/out tokens, and
+cache reads. rich resolves through uv's PEP 723 inline deps — no manual
+install. Falls back to plain scrolling output when stdout is not a TTY.
+
+- **player:** Single-source player ABI over AudioSource + transport clock
+
+SPEC.md §4.1 gives the core a single-file player alongside the stem mixer:
+kb_player_load/unload/play/pause/seek/position/frames/is_playing. The new
+Player class (src/player/) is the mixer's one-track sibling and reuses its two
+app→RT disciplines and no third — the loaded source is built off-thread and
+swapped in by RtPublisher<PlayerSource>; play/pause/seek cross an
+SpscRing<Command,64> the callback drains. Render accumulates rather than
+memsets, so it composes on top of the mixer in Engine::Render (Process clears,
+player and metronome add).
+
+pause holds the position; there is no stop-to-zero. §4.1 lists only pause for
+the single-file player and a rewind is seek(0), so adding a stop would be an
+orphan export (§16). Frames cross as int64_t, exact to 2^53 — JSI reads them
+as a JS double, no BigInt.
+
+Folds in #17: kb_engine_set_test_tone rendered silence and had no product
+consumer (grep found only tools/tone_test.c, a dev diagnostic). Per the
+2026-07-21 ruling and §16, the ABI symbol, RenderTestTone/SetTestTone, the
+engine tone fields and tone_test.c are deleted, and the player is wired into
+the render seam the tone left behind.
+
 
 ### Fixed
 
@@ -488,5 +523,11 @@ region is covered because position is what the fire guard already gates.
 New metronome_verify check pins the hole issue #21 named: mute beat N
 under +100 ms at bpm 400 and assert its subdivision is silent, with a
 sounding control and a beat-0 subdivision that must stay audible.
+
+- **loop:** Label agent messages with NOTE tag; exit cleanly on interrupt
+
+Agent narration rendered as an unlabeled dim line — ambiguous and low-contrast.
+Tag it NOTE (white-on-magenta) with readable text. Wrap main in KeyboardInterrupt
+/ BrokenPipeError so Ctrl-C or a closed pipe exits 130 without a traceback.
 
 
