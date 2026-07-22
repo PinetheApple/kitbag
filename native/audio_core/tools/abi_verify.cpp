@@ -21,7 +21,7 @@ int g_failures = 0;
 int g_checks = 0;
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 25;
+constexpr int kExpectedChecks = 37;
 
 void Check(bool condition, const char* message) {
   ++g_checks;
@@ -201,6 +201,68 @@ void TestMixerLoadReadyUnload(kb_engine* engine, const std::string& path) {
   );
 }
 
+// The player C boundary (SPEC.md §4.1): resting state, then single-source
+// load/frames/unload over a real WAV. Transport that advances a counter needs a
+// running callback to drain the command ring, so — like the mixer — that
+// behaviour is pinned in player_verify (which pumps Render directly).
+void TestPlayerLoad(kb_engine* engine, const std::string& path) {
+  Check(kb_player_position(engine) == 0, "player: a fresh engine rests at 0");
+  Check(kb_player_frames(engine) == 0, "player: a fresh engine has no frames");
+  Check(kb_player_is_playing(engine) == 0, "player: a fresh engine is stopped");
+
+  Check(
+      kb_player_load(nullptr, path.c_str()) == KB_ERROR_INVALID_ARGUMENT,
+      "player load: a null engine is rejected"
+  );
+  Check(
+      kb_player_load(engine, nullptr) == KB_ERROR_INVALID_ARGUMENT,
+      "player load: a null path is rejected"
+  );
+  Check(
+      kb_player_load(engine, "/nonexistent/kitbag.wav") ==
+          KB_ERROR_INVALID_ARGUMENT,
+      "player load: a file that will not open is rejected"
+  );
+  Check(
+      kb_player_load(engine, path.c_str()) == KB_OK,
+      "player load: a real WAV loads"
+  );
+  Check(kb_player_frames(engine) > 0, "player load: the source reports frames");
+
+  kb_player_unload(engine);
+  Check(kb_player_frames(engine) == 0, "player unload: frames drop to 0");
+}
+
+// Every player entry point is a no-op on a null engine, not a crash.
+void TestPlayerNullSafe() {
+  kb_player_play(nullptr);
+  kb_player_pause(nullptr);
+  kb_player_seek(nullptr, 0);
+  kb_player_unload(nullptr);
+  Check(kb_player_position(nullptr) == 0, "player: null engine position is 0");
+  Check(kb_player_frames(nullptr) == 0, "player: null engine frames is 0");
+  Check(
+      kb_player_is_playing(nullptr) == 0,
+      "player: null engine is not playing"
+  );
+}
+
+// The tests that need a real WAV on disk: mixer and player load/ready/unload
+// over one fixture. Returns false only if the fixture itself cannot be written.
+bool RunFileFixtureTests(kb_engine* engine) {
+  const std::filesystem::path wav =
+      std::filesystem::temp_directory_path() / "kitbag_abi_mixer.wav";
+  if (!media_test::WriteWav(wav.string(), 1000)) {
+    std::fprintf(stderr, "abi_verify: could not write the fixture\n");
+    return false;
+  }
+  TestMixerLoadRejects(engine, wav.string());
+  TestMixerLoadReadyUnload(engine, wav.string());
+  TestPlayerLoad(engine, wav.string());
+  std::filesystem::remove(wav);
+  return true;
+}
+
 // Returns the process exit code, so main stays a list of what it runs.
 int Report() {
   if (g_checks != kExpectedChecks) {
@@ -238,17 +300,12 @@ int main() {
   TestSetGridRejectsOversize(engine);
   TestClearGrid(engine);
   TestMixerTransportIsNullSafe(engine);
+  TestPlayerNullSafe();
 
-  const std::filesystem::path wav =
-      std::filesystem::temp_directory_path() / "kitbag_abi_mixer.wav";
-  if (!media_test::WriteWav(wav.string(), 1000)) {
-    std::fprintf(stderr, "abi_verify: could not write the mixer fixture\n");
+  if (!RunFileFixtureTests(engine)) {
     kb_engine_destroy(engine);
     return 1;
   }
-  TestMixerLoadRejects(engine, wav.string());
-  TestMixerLoadReadyUnload(engine, wav.string());
-  std::filesystem::remove(wav);
 
   kb_engine_destroy(engine);
   return Report();

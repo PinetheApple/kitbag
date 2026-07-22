@@ -8,6 +8,7 @@
 #include "metronome/metronome.h"
 #include "miniaudio.h"
 #include "mixer/mixer.h"
+#include "player/player.h"
 #include "tuner/tuner.h"
 
 namespace kitbag {
@@ -18,7 +19,6 @@ class Engine {
  public:
   static constexpr uint32_t kSampleRate = 48000;
   static constexpr uint32_t kChannelCount = 2;
-  static constexpr float kDefaultToneFrequencyHz = 440.0f;  // A4 test tone
 
   Engine() = default;
   ~Engine();
@@ -41,8 +41,6 @@ class Engine {
   uint64_t frames_rendered() const {
     return frames_rendered_.load(std::memory_order_relaxed);
   }
-
-  void SetTestTone(bool enabled, float frequency_hz);
 
   Metronome& metronome() {
     return metronome_;
@@ -72,6 +70,13 @@ class Engine {
     return mixer_;
   }
 
+  Player& player() {
+    return player_;
+  }
+  const Player& player() const {
+    return player_;
+  }
+
  private:
   static void DataCallback(
       ma_device* device,
@@ -79,7 +84,6 @@ class Engine {
       const void* input,
       ma_uint32 frame_count
   );
-  void RenderTestTone(float* output, uint32_t frame_count);
   void Render(float* output, uint32_t frame_count);
 
   ma_device device_{};
@@ -87,14 +91,12 @@ class Engine {
 
   std::atomic<bool> device_running_{false};
   std::atomic<uint64_t> frames_rendered_{0};
-  std::atomic<bool> tone_enabled_{false};
-  std::atomic<float> tone_frequency_hz_{kDefaultToneFrequencyHz};
-  double tone_phase_ = 0.0;
 
   Metronome metronome_;
   Tuner tuner_;
   Decoder decoder_;
   Mixer mixer_{kSampleRate};
+  Player player_{kSampleRate};
 };
 
 }  // namespace kitbag

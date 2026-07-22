@@ -1,10 +1,7 @@
-// Engine lifecycle, the test tone and the tuner's C ABI surface. The metronome
-// is in api_metronome.cpp, media in api_media.cpp, offline analysis in
+// Engine lifecycle and the tuner's C ABI surface. The metronome is in
+// api_metronome.cpp, media in api_media.cpp, offline analysis in
 // api_analysis.cpp.
 #include "kitbag_api.h"
-
-#include <cmath>
-#include <memory>
 
 #include "api/api_engine.h"
 
@@ -57,16 +54,6 @@ uint32_t kb_engine_sample_rate(const kb_engine* engine) {
 
 uint64_t kb_engine_frames_rendered(const kb_engine* engine) {
   return engine == nullptr ? 0 : ToEngine(engine)->frames_rendered();
-}
-
-void kb_engine_set_test_tone(
-    kb_engine* engine,
-    int32_t enabled,
-    float frequency_hz
-) {
-  if (engine != nullptr) {
-    ToEngine(engine)->SetTestTone(enabled != 0, frequency_hz);
-  }
 }
 
 kb_result kb_tuner_start(kb_engine* engine) {

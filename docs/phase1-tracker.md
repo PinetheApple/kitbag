@@ -19,9 +19,9 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done (verify green + bot
 **Done:** W0-1 · W0-2 · W0-3 (hygiene) · C1–C5 · B2 · B3 · B4 · B5 (`#16`) · A1 · A2 · A3 · **A4 (`#9`)** · `#18` · `#19` · `#21` · `#23`.
 B1 **withdrawn as wrong** (graveyard below).
 **In progress:** none.
-**Next:** **A5 (`#10`)** → A6 (`#11`); or **Track D** (D1 `#12`, QM-DSP vendoring ruled 2026-07-21, independent — parallelizable now).
+**Next:** **A6 (`#11`)** dedicated player streaming verify; or **Track D** (D1 `#12`, QM-DSP vendoring ruled 2026-07-21, independent — parallelizable now).
 **Blocked (user rulings):** none open. (`#21` mute-cascade ruled + fixed; `#22` Speex-grade resample closed keep-linear.)
-**Follow-ups:** `#24` grid-mode positive-latency subdivision+mute test (non-blocking, correct-by-construction per ralph). `#17` test-tone folded behind A5.
+**Follow-ups:** `#24` grid-mode positive-latency subdivision+mute test (non-blocking, correct-by-construction per ralph). `#17` test-tone resolved with A5 — symbol deleted (see below).
 
 **Latent, not fixed:** `beat_tracker.cpp:243` (`sum_onset / onset.size()`) is an
 unguarded divide, unreachable today (only called after `onset.size() >= 10`); becomes
@@ -174,7 +174,7 @@ A1→A2→A3 sequential (streaming → resample → RT-safe publish), then A4/A5
 - [x] **A2** Resample-on-load to engine rate inside `AudioSource`; kills the 44.1k silent-skip; `Mixer::Process` loses `sr` param + skip-branch (F4). miniaudio **linear** — Speex dropped upstream, Speex-grade quality → `#22`. `#7` · `4bc2592`. Flagged: Track member-dtor-order UAF → A3.
 - [x] **A3** RT-safe track load — build `AudioSource` off-thread, publish by atomic pointer-swap. Scalar controls stay on the command ring (F3). Fixes the `SetTrackData` race + the #8 teardown-order UAF. `#8`. Each track owns `RtPublisher<TrackSource>` (reused from C2); callback does one acquire load/track, old sources retired + reclaimed off-thread (never freed on callback). `SpscRing<Command,64>` for gain/mute/solo/play/stop/pause/seek — counters written only by the callback, so Stop/Seek can't overwrite a rewind and Pause can't overshoot. `scratch_` sized once at construction, tracks >2ch rejected at load (closes a realloc-UAF ralph caught mid-review). `mixer_verify` 93→110; ASan clean; both reviewers pass after 2 fix rounds. **Residual (own issues):** `track_count_`/`longest_frames_` still non-atomic on the callback → `#23`; live-seek source reposition → A4.
 - [x] **A4** Mixer ABI: `kb_mixer_load_track` / `unload_track` / `track_ready` added (stream from disk via `FileAudioReader`, publish by atomic swap); `kb_mixer_set_track_data` + its `float*` buffer **removed**, every caller updated, `PcmSourceReader` deleted (last user gone). `mixer_verify` loads via temp f32 WAVs through the real file path; `abi_verify` exercises load/ready/unload end-to-end. Folds in **B5** and **#23** (`track_count_`/`longest_frames_` now `atomic<relaxed>`; count-tolerant callback). `#9`. `mixer_verify` 110→125; ASan/UBSan clean.
-- [ ] **A5** Player ABI: `load/unload/play/pause/seek/position/frames/is_playing`. Thin over `AudioSource` (W0-2) + transport clock (W0-1). `pause` holds. `#10`.
+- [x] **A5** Player ABI: `kb_player_load/unload/play/pause/seek/position/frames/is_playing` added. New `Player` class (`src/player/`) — the mixer's one-track sibling, same two app→RT disciplines (`RtPublisher<PlayerSource>` swap + `SpscRing<Command,64>` for play/pause/seek), no third. `pause` holds; no stop-to-zero (§4.1 lists only pause; rewind is `seek(0)`; §16 forbids the orphan). `Render` accumulates so it composes on top of the mixer in `Engine::Render`. Folds in **#17**: `kb_engine_set_test_tone`/`RenderTestTone` **deleted** (no product consumer — only `tools/tone_test.c`, also removed), so the engine-render seam is clean. New `player_verify` (45 checks, pumps `Render` directly over real temp WAVs: advance/pause-hold/seek/accumulate/end-stop/resample, all sabotage-proven); `abi_verify` 25→37 at the C boundary. `#10`.
 - [ ] **A6** New `tools/` verify: stream real file, assert frame count + non-silence + resample correctness; wire into CMake + CI. `#11`.
 
 ### Track D — §4.3 downbeats
@@ -197,16 +197,16 @@ have no per-track cursor, so they cannot desync, and the *minimum* is what break
 1412, replaying 412 frames per block. `max_read` was correct. SPEC.md §2 + §4.4 amended.
 **Do not reinstate.**
 
-### `kb_engine_set_test_tone` is silent — deliberately unfixed (`#17`)
-`Engine::Render` calls `RenderTestTone` before `mixer_.Process`, and `Process` memsets
-(`mixer/mixer.cpp:165`) *before* its `if (!playing_) return`, so the tone is erased in
-every transport state. **Measured:** a buffer pre-filled to 0.2 returns peak 0.000
-stopped, 0.500 playing (the stem alone, not 0.700). Not a reorder — `RenderTestTone`
-assigns rather than accumulates and writes 0.0f when disabled, so moving it after
-`Process` zeros the mix on every normal block. A real fix needs accumulate semantics +
-a policy SPEC.md does not state (**zero** mentions of the test tone). `Engine::Render` is
-private and only driven by a live callback → no deterministic headless test today.
-Belongs with **A5** or a dedicated engine-render seam.
+### `kb_engine_set_test_tone` — RESOLVED in A5 (deleted, `#17`)
+Was silent: `Engine::Render` called `RenderTestTone` before `mixer_.Process`, and
+`Process` memsets before its `if (!playing_) return`, erasing the tone in every state.
+The 2026-07-21 ruling scheduled the fix behind A5 with a default lean to delete if
+nothing consumes it. **Grep found no product consumer** — the only caller was
+`tools/tone_test.c`, a dev diagnostic. Per §16 (no orphan exports) the symbol,
+`RenderTestTone`/`SetTestTone`, the tone fields and `tone_test.c` were all removed. A5
+wired the player into the render seam instead: `mixer_.Process` clears, then the player
+and metronome accumulate (`Player::Render` is accumulate-not-assign, pinned by
+`player_verify`'s accumulate check). **Do not reinstate the tone.**
 
 ### Mixer scalar controls race the callback (F3 → belongs to A3)
 `Stop()`/`Pause()`/`Seek()` are raw stores from the app thread, not commands on a ring.

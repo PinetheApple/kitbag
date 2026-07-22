@@ -127,4 +127,48 @@ int64_t kb_mixer_track_frames(const kb_engine* engine, int32_t track) {
                                  ToEngine(engine)->mixer().track_frames(track)
                              );
 }
+
+kb_result kb_player_load(kb_engine* engine, const char* path) {
+  if (engine == nullptr || path == nullptr) return KB_ERROR_INVALID_ARGUMENT;
+  kitbag::Engine* e = ToEngine(engine);
+  const bool ok = e->player().Load(path, e->frames_rendered(), e->is_running());
+  return ok ? KB_OK : KB_ERROR_INVALID_ARGUMENT;
+}
+
+void kb_player_unload(kb_engine* engine) {
+  if (engine == nullptr) return;
+  kitbag::Engine* e = ToEngine(engine);
+  e->player().Unload(e->frames_rendered(), e->is_running());
+}
+
+void kb_player_play(kb_engine* engine) {
+  if (engine != nullptr) ToEngine(engine)->player().Play();
+}
+
+void kb_player_pause(kb_engine* engine) {
+  if (engine != nullptr) ToEngine(engine)->player().Pause();
+}
+
+void kb_player_seek(kb_engine* engine, int64_t frame) {
+  if (engine != nullptr) {
+    ToEngine(engine)->player().Seek(static_cast<uint64_t>(frame));
+  }
+}
+
+int64_t kb_player_position(const kb_engine* engine) {
+  return engine == nullptr
+             ? 0
+             : static_cast<int64_t>(ToEngine(engine)->player().position());
+}
+
+int64_t kb_player_frames(const kb_engine* engine) {
+  return engine == nullptr
+             ? 0
+             : static_cast<int64_t>(ToEngine(engine)->player().frames());
+}
+
+int32_t kb_player_is_playing(const kb_engine* engine) {
+  return engine == nullptr ? 0
+                           : (ToEngine(engine)->player().is_playing() ? 1 : 0);
+}
 }  // extern "C"
