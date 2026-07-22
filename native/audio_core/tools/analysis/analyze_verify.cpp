@@ -237,7 +237,7 @@ void TestWaveformNonFinite() {
 
 }  // namespace
 
-constexpr int kExpectedChecks = 36;
+constexpr int kExpectedChecks = 42;
 
 int main() {
   const std::filesystem::path dir = std::filesystem::temp_directory_path();
