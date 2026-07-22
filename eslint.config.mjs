@@ -1,5 +1,5 @@
-// Staged ahead of the RN app (SPEC §13/§13.6); wired when Phase 2 scaffolds.
-// Cannot run until package.json exists. See config/README.md.
+// Wired into the workspace root at Phase 2 (SPEC §13/§13.6). Was staged under
+// config/ before the RN app existed; see config/README.md for that history.
 //
 // Invocation (SPEC §13.6 — the `custom_lint --fatal-infos` analogue):
 //   pnpm eslint . --max-warnings 0
@@ -24,6 +24,7 @@ const ALLOWED_MAGIC_NUMBERS = [-1, 0, 1, 2];
 
 // Package globs (SPEC §13.1). Phase 2 owns the final layout; if it differs,
 // update these globs — the rules key off them.
+// `files` globs (which package a rule applies to) — path-based.
 const PKG = {
   pluginApi: 'packages/core-plugin-api/**',
   native: 'packages/core-native/**',
@@ -32,6 +33,22 @@ const PKG = {
   design: 'packages/core-design/**',
   tool: 'packages/tool-*/**',
   shell: 'packages/app-shell/**',
+};
+
+// Import specifiers to forbid — workspace package names (SPEC §13.1). Phase 2
+// wires cross-package imports by these `@kitbag/*` names (workspace:*), so the
+// boundary bans key off them, not the path globs above (which only match a
+// literal `packages/...` specifier no one writes). `/*` covers subpath imports
+// such as `@kitbag/core-design/waveform`. Still a stopgap: the real import
+// graph is owed to eslint-plugin-boundaries (§13.6).
+const IMP = {
+  pluginApi: ['@kitbag/core-plugin-api', '@kitbag/core-plugin-api/*'],
+  native: ['@kitbag/core-native', '@kitbag/core-native/*'],
+  state: ['@kitbag/core-state', '@kitbag/core-state/*'],
+  db: ['@kitbag/core-db', '@kitbag/core-db/*'],
+  design: ['@kitbag/core-design', '@kitbag/core-design/*'],
+  tool: ['@kitbag/tool-*'],
+  shell: ['@kitbag/app-shell', '@kitbag/app-shell/*'],
 };
 
 // Import specifiers that reach the native binding. SPEC §13.2: only
@@ -99,12 +116,18 @@ export default tseslint.config(
   // --- ignores --------------------------------------------------------------
   {
     ignores: [
-      'node_modules/**',
+      '**/node_modules/**',
       '**/build/**',
       '**/dist/**',
-      '.expo/**',
-      'android/**',
-      'ios/**',
+      '**/.expo/**',
+      // Generated native trees live under packages/app-shell (SPEC §13.8.1).
+      '**/android/**',
+      '**/ios/**',
+      // Tooling config (metro/babel/postcss/prettier/eslint). Not app source;
+      // type-aware linting has no tsconfig project for these.
+      '**/*.config.{js,cjs,mjs}',
+      '**/babel.config.js',
+      '**/*.d.ts',
       // Generated: Tailwind theme from core-design tokens (SPEC §13.8.1).
       '**/tailwind.config.*',
       '**/*.gen.ts',
@@ -222,10 +245,12 @@ export default tseslint.config(
           PKG.db,
           PKG.design,
           PKG.tool,
-          '@core-native/*',
-          '@core-state/*',
-          '@core-db/*',
-          '@core-design/*',
+          ...IMP.shell,
+          ...IMP.native,
+          ...IMP.state,
+          ...IMP.db,
+          ...IMP.design,
+          ...IMP.tool,
         ],
         'SPEC §9.4/§13.1: core-plugin-api imports nothing — it is the ' +
           'contract, and nothing a plugin carries may enter the core',
@@ -240,7 +265,18 @@ export default tseslint.config(
     files: [PKG.native],
     rules: {
       'no-restricted-imports': restrictImports(
-        [PKG.shell, PKG.state, PKG.db, PKG.design, PKG.tool],
+        [
+          PKG.shell,
+          PKG.state,
+          PKG.db,
+          PKG.design,
+          PKG.tool,
+          ...IMP.shell,
+          ...IMP.state,
+          ...IMP.db,
+          ...IMP.design,
+          ...IMP.tool,
+        ],
         'SPEC §13.1: core-native may import only core-plugin-api',
         { includeNativeBan: false },
       ),
@@ -256,7 +292,7 @@ export default tseslint.config(
     files: [PKG.state],
     rules: {
       'no-restricted-imports': restrictImports(
-        [PKG.shell, PKG.tool],
+        [PKG.shell, PKG.tool, ...IMP.shell, ...IMP.tool],
         'SPEC §13.1: core-state may import core-native, core-db, ' +
           'core-plugin-api',
       ),
@@ -268,7 +304,18 @@ export default tseslint.config(
     files: [PKG.db],
     rules: {
       'no-restricted-imports': restrictImports(
-        [PKG.shell, PKG.native, PKG.state, PKG.design, PKG.tool],
+        [
+          PKG.shell,
+          PKG.native,
+          PKG.state,
+          PKG.design,
+          PKG.tool,
+          ...IMP.shell,
+          ...IMP.native,
+          ...IMP.state,
+          ...IMP.design,
+          ...IMP.tool,
+        ],
         'SPEC §13.1: core-db may import only core-plugin-api',
       ),
     },
@@ -279,7 +326,18 @@ export default tseslint.config(
     files: [PKG.design],
     rules: {
       'no-restricted-imports': restrictImports(
-        [PKG.shell, PKG.native, PKG.state, PKG.db, PKG.tool],
+        [
+          PKG.shell,
+          PKG.native,
+          PKG.state,
+          PKG.db,
+          PKG.tool,
+          ...IMP.shell,
+          ...IMP.native,
+          ...IMP.state,
+          ...IMP.db,
+          ...IMP.tool,
+        ],
         'SPEC §13.1: core-design may import only core-plugin-api',
       ),
     },
@@ -290,7 +348,7 @@ export default tseslint.config(
     files: [PKG.tool],
     rules: {
       'no-restricted-imports': restrictImports(
-        [PKG.shell, PKG.tool],
+        [PKG.shell, PKG.tool, ...IMP.shell, ...IMP.tool],
         'SPEC §9.4/§13.1: a tool may import core-* only — never another ' +
           'tool, never app-shell',
       ),

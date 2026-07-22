@@ -1,0 +1,14 @@
+# Prettier scopes to the RN/TS workspace only. The C++ core, design specs,
+# legacy Flutter files and generated native trees are not ours to reformat.
+node_modules/
+**/node_modules/
+native/
+legacy/
+design/
+docs/
+**/android/
+**/ios/
+**/.expo/
+**/*.gen.ts
+pnpm-lock.yaml
+CHANGELOG.md
