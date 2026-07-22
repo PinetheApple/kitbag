@@ -14,14 +14,14 @@ mixer fixes (4.4). Framework-independent; every task headlessly testable via
 
 Status legend: `[ ]` todo · `[~]` in progress · `[x]` done (verify green + both reviews pass) · `[!]` blocked
 
-## Current state — 2026-07-21, `work/post-phase0`
+## Current state — 2026-07-22, `work/post-phase0`
 
-**Done:** W0-1 · W0-2 · W0-3 (hygiene) · C1–C5 · B2 · B3 · B4 · B5 (`#16`) · A1 · A2 · A3 · **A4 (`#9`)** · `#18` · `#19` · `#21` · `#23`.
+**Done:** W0-1 · W0-2 · W0-3 (hygiene) · C1–C5 · B2 · B3 · B4 · B5 (`#16`) · A1 · A2 · A3 · **A4 (`#9`)** · **A5 (`#10`)** · **D1 (`#12`)** · `#17` · `#18` · `#19` · `#21` · `#23`.
 B1 **withdrawn as wrong** (graveyard below).
 **In progress:** none.
-**Next:** **A6 (`#11`)** dedicated player streaming verify; or **Track D** (D1 `#12`, QM-DSP vendoring ruled 2026-07-21, independent — parallelizable now).
+**Next:** **A6 (`#11`)** dedicated player streaming verify (Track A now completes); **Track D** D2–D4 (`#13`/`#14`/`#15`, unblocked by D1) — file-disjoint from A6, parallelizable.
 **Blocked (user rulings):** none open. (`#21` mute-cascade ruled + fixed; `#22` Speex-grade resample closed keep-linear.)
-**Follow-ups:** `#24` grid-mode positive-latency subdivision+mute test (non-blocking, correct-by-construction per ralph). `#17` test-tone resolved with A5 — symbol deleted (see below).
+**Follow-ups:** `#24` grid-mode positive-latency subdivision+mute test (non-blocking, correct-by-construction per ralph). `#25` live-seek source reposition races the callback — pre-existing mixer glitch, mirrored by the A5 player, out of A5 scope (see graveyard/decisions). `#17` test-tone resolved with A5 — symbol deleted.
 
 **Latent, not fixed:** `beat_tracker.cpp:243` (`sum_onset / onset.size()`) is an
 unguarded divide, unreachable today (only called after `onset.size() >= 10`); becomes
@@ -178,7 +178,7 @@ A1→A2→A3 sequential (streaming → resample → RT-safe publish), then A4/A5
 - [ ] **A6** New `tools/` verify: stream real file, assert frame count + non-silence + resample correctness; wire into CMake + CI. `#11`.
 
 ### Track D — §4.3 downbeats
-- [ ] **D1** Vendor decision: adopt QM-DSP `BarBeatTrack` (**preferred**, §4.3/§4.6) vs. extend `beat_tracker.cpp`. Record licence. Independent — parallelizable now. `#12`.
+- [x] **D1** Vendored QM-DSP (`c4dm/qm-dsp` @ `e34a3cc`, GPL-2.0-or-later) into `third_party/qm-dsp/` — minimal compile closure (14 files: `TempoTrackV2`+`DownBeat`+FFT/Decimator/maths + bundled kissfft). **`BarBeatTrack` does not exist in qm-dsp** (it's a Vamp wrapper in `qm-vamp-plugins`); the equivalent primitives are `TempoTrackV2`+`DownBeat`, which is what SPEC's "preferred" choice actually means here. Own `qm_dsp` STATIC target, **linked nowhere yet** (D2's job); no `-Werror` inheritance; `kiss_fft_scalar=double` load-bearing (`FFT.cpp:121` casts double buffers into `kiss_fft_cpx`). LICENSE + GPL-propagation recorded in `third_party/qm-dsp/README.md`; lint already scopes out `third_party/`. All 10 verifies unchanged. `#12`. **D2 note:** the beat detection function feeding `TempoTrackV2` lives in `qm-vamp-plugins`, not vendored — D2 supplies one from Kitbag's analyze pipeline.
 - [ ] **D2** Extend `kb_analyze_song` with `downbeat_indices_out` + `downbeat_count_out`. `#13`.
 - [ ] **D3** Beat-grid BLOB schema gains a downbeat list. **Non-destructive**: absent → every `beats_per_bar`-th beat is a downbeat. Old grids stay valid. `#14`.
 - [ ] **D4** Verify: downbeats land on bar-ones for a known tempo; degraded fallback tested. `#15`.
