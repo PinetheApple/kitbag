@@ -38,8 +38,9 @@ while :; do claude -p "/project-loop … run one full wave, then stop" || break;
    switch --user PinetheApple` if a write 404s — the dir hook does not fire in the
    non-interactive Bash tool). Assume nothing from a prior context.
 2. **Pick the set.** If advancing the phase hits a stop-point (device, design),
-   exit non-zero. Else take the largest **file-disjoint, single-owner, unblocked**
-   set (see Parallelism). No unblocked task left → project done, report, exit.
+   halt (see Stop-points). Else take the largest **file-disjoint, single-owner,
+   unblocked** set (see Parallelism). No unblocked task left → project done: write
+   `.loop-halt` with the reason, report, exit.
 3. **Run it — one blocking multi-Agent dispatch.** Fire every task's pass in a *single*
    message of concurrent Agent calls (per-phase executor), each in its own worktree
    (`bash scripts/worktree.sh create <track> main`). The call blocks until all return —
@@ -51,8 +52,10 @@ while :; do claude -p "/project-loop … run one full wave, then stop" || break;
 5. **Persist.** Close issues (SHA + evidence in the issue), tracker line → `[x]`,
    regenerate `CHANGELOG.md` (`git cliff changelog-base..HEAD`), remove spent
    worktrees. Every result on disk before exit — or the next invocation can't resume.
-6. **Exit.** Report and exit zero — only now, with the wave fully merged and persisted.
-   One wave only; the driver re-invokes fresh. Exit non-zero only at a stop-point.
+6. **Exit.** Report and exit — only now, with the wave fully merged and persisted.
+   One wave only; the driver re-invokes fresh. A merged wave leaves **no `.loop-halt`**
+   and a new commit, so the driver continues. Any terminal state that dispatched no
+   work — a stop-point or nothing-left-to-do — **must** write `.loop-halt` first.
 
 ## Autonomy by phase
 
@@ -88,7 +91,14 @@ Orchestrator is all-phase; the per-task pass is per-phase.
   its gate commands don't exist until the RN app does. Author it at the Phase-2
   boundary, mirroring `phase1-loop`.
 
-## Stop-points — exit non-zero only here
+## Stop-points — write `.loop-halt`, then exit
+
+At any of these, write the reason to `.loop-halt` in the repo root **before exiting** —
+`printf '%s\n' "stop-point 1: #14 §4.3-vs-§11 ownership" > .loop-halt`. That file is the
+only reliable halt signal: `claude -p` exits 0 on normal completion, so a narrated
+stop-point is invisible to the driver otherwise, and the unattended loop re-invokes on
+the blocker. (The driver also breaks if a wave adds no commit — belt and suspenders —
+but the sentinel is what carries the *reason*.)
 
 1. A decision SPEC.md doesn't state, or two sections contradict → ask in the issue.
    (An *unambiguous* gap is not this — decide-and-record.)
@@ -98,7 +108,7 @@ Orchestrator is all-phase; the per-task pass is per-phase.
 4. A task fails its gates twice, or a finding survives two fix rounds.
 
 A closed issue or passed wave gate is not a stop-point — it's the wave finishing
-(exit zero, driver continues).
+(driver continues on the new commit, no `.loop-halt`).
 
 ## Decisions log
 
