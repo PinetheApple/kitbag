@@ -353,6 +353,22 @@ consumer (grep found only tools/tone_test.c, a dev diagnostic). Per the
 engine tone fields and tone_test.c are deleted, and the player is wired into
 the render seam the tone left behind.
 
+- **native:** Stream a real file through the C ABI (stream_verify) [#11]
+
+- **analyze:** Emit downbeats from kb_analyze_song (#13)
+
+Wire the vendored QM-DSP DownBeat into the offline analyze pipeline to
+label which detected beats are bar-ones. kb_analyze_song gains two
+caller-out buffers (downbeat_indices_out, downbeat_count_out), keeping
+the existing scalar/pointer-out ABI shape — no structs across the seam.
+
+DownBeat's beat grid comes from Kitbag's own tracker (the onset
+detection function lives in the unvendored qm-vamp-plugins); the mono
+signal is fed through DownBeat's anti-aliasing decimator and beats are
+converted to df-increment units. Links qm_dsp into kitbag_core and
+analyze_verify. Adds downbeat shape coverage (in-range, ascending,
+strict-subset, one-bar spacing), sabotage-proven.
+
 
 ### Fixed
 
@@ -529,5 +545,26 @@ sounding control and a beat-0 subdivision that must stay audible.
 Agent narration rendered as an unlabeled dim line — ambiguous and low-contrast.
 Tag it NOTE (white-on-magenta) with readable text. Wrap main in KeyboardInterrupt
 / BrokenPipeError so Ctrl-C or a closed pipe exits 130 without a traceback.
+
+- **native:** Gate kb_engine_render tools-only, refuse while device runs [#11]
+
+Address A6 review. kb_engine_render returns PCM across the C boundary, which
+§4.1 forbids on the shipped ABI (the app passes paths and receives scalars;
+samples never cross). The prior header only asserted production would not call
+it — intent as behaviour. Now the declaration (kitbag_api.h) and definition
+(api.cpp) are both wrapped in KITBAG_BUILD_TOOLS, defined PUBLIC on kitbag_core
+only when the verify tools build, so the symbol is absent from a production
+library by construction (verified: nm shows 0 exports without the define, 1
+with it). "Samples never cross" is now true by the build, not by discipline.
+
+Add an is_running() no-op guard at the top of kb_engine_render: even tools-only,
+pulling a block while the device callback is live puts two threads in Render and
+races the non-atomic mixer/player/metronome state. Relaxed atomic load, no
+alloc/lock/syscall. stream_verify gains a check that render is a no-op while the
+device is running (start -> render into a sentinel buffer -> assert untouched),
+sabotage-proven: dropping the guard zeroes the buffer and the check fails.
+
+Collapse the duplicated "never call while running" comment: engine.h's
+RenderOffline now points to the ABI doc instead of restating the rule.
 
 
