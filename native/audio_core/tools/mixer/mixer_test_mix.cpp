@@ -13,7 +13,7 @@ void TestShortStemIsZeroPaddedNotDropped() {
   LoadRamp(&mixer, 0, kShortFrames, 0.0f);
   LoadRamp(&mixer, 1, kLongFrames, kLongOffset);
   mixer.Play();
-  mixer.Seek(900);
+  mixer.Seek(900, 0, false);
 
   const std::vector<float> out = RenderBlock(&mixer);
   // Sums, so dropping the short stem shows up as 100900 rather than 101800.
@@ -41,7 +41,7 @@ void TestShortStereoStemIsZeroPadded() {
   LoadInterleaved(&mixer, 0, kShortFrames, kStereo, 0.0f);
   LoadRamp(&mixer, 1, kLongFrames, kLongOffset);
   mixer.Play();
-  mixer.Seek(900);
+  mixer.Seek(900, 0, false);
 
   // Interleaved, so frame 999 is pcm[1998] left and pcm[1999] right. The mono
   // stem adds 100999 to both, preserving that gap — a right-only fault shows.

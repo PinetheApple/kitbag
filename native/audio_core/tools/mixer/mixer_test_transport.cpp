@@ -55,7 +55,7 @@ void TestSoloKeepsPlayingForOthers() {
   LoadRamp(&mixer, 1, kLongFrames, kLongOffset);
   mixer.Play();
   mixer.SetSolo(0, true);
-  mixer.Seek(900);
+  mixer.Seek(900, 0, false);
 
   const std::vector<float> soloed = RenderBlock(&mixer);
   ExpectSample(soloed, 3, 903.0f, "solo: only the soloed track is heard");
@@ -83,7 +83,7 @@ void TestAutoStopAtLongestTrackEnd() {
   LoadRamp(&mixer, 0, kShortFrames, 0.0f);
   LoadRamp(&mixer, 1, kLongFrames, kLongOffset);
   mixer.Play();
-  mixer.Seek(kLongFrames - 400);
+  mixer.Seek(kLongFrames - 400, 0, false);
 
   const std::vector<float> tail = RenderBlock(&mixer);
   ExpectSample(
@@ -115,7 +115,7 @@ void TestShortStemDoesNotHoldBackTheLongOne() {
   LoadRamp(&mixer, 0, kShortFrames, 0.0f);
   LoadRamp(&mixer, 1, kLongFrames, kLongOffset);
   mixer.Play();
-  mixer.Seek(900);
+  mixer.Seek(900, 0, false);
 
   RenderBlock(&mixer);
   Check(mixer.position() == 1412, "unequal stems: first block ends at 1412");
@@ -134,7 +134,7 @@ void TestShortStemDoesNotHoldBackTheLongOne() {
 void TestSeekAndPosition() {
   kitbag::Mixer mixer(kSampleRate);
   LoadRamp(&mixer, 0, kLongFrames, kLongOffset);
-  mixer.Seek(1234);
+  mixer.Seek(1234, 0, false);
   Drain(&mixer);  // applies kSeek; still stopped, so no advance
   Check(mixer.position() == 1234, "seek: position reports the sought frame");
 
@@ -161,7 +161,7 @@ void TestPauseHoldsPositionStopRewinds() {
   LoadRamp(&mixer, 0, kLongFrames, kLongOffset);
   const uint64_t sought = 1234;
   const uint64_t held = sought + kBlock;
-  mixer.Seek(sought);
+  mixer.Seek(sought, 0, false);
   mixer.Play();
   RenderBlock(&mixer);  // applies kSeek + kPlay, plays one block to `held`
 
@@ -197,7 +197,7 @@ void TestReloadToShorterShrinksTransport() {
   LoadRamp(&mixer, 0, kLongFrames, 0.0f);          // 5000
   LoadRamp(&mixer, 0, kShortFrames, kLongOffset);  // reload same track to 1000
   mixer.Play();
-  mixer.Seek(kShortFrames - 100);  // 900
+  mixer.Seek(kShortFrames - 100, 0, false);  // 900
 
   const std::vector<float> tail = RenderBlock(&mixer);
   ExpectSample(
@@ -228,7 +228,7 @@ void TestUnloadShrinksTransport() {
   LoadRamp(&mixer, 1, kLongFrames, kLongOffset);  // 5000, unloaded below
   mixer.UnloadTrack(1, 0, false);
   mixer.Play();
-  mixer.Seek(kShortFrames - 100);  // 900
+  mixer.Seek(kShortFrames - 100, 0, false);  // 900
 
   RenderBlock(&mixer);
   Check(

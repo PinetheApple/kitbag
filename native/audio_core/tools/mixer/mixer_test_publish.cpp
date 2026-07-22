@@ -76,7 +76,7 @@ void TestSeekAppliesAtBlockNotBefore() {
   kitbag::Mixer mixer(kSampleRate);
   LoadRamp(&mixer, 0, kLongFrames, kLongOffset);
 
-  mixer.Seek(2000);
+  mixer.Seek(2000, 0, false);
   Check(
       mixer.position() == 0,
       "command: a seek is not applied until the block drains it"
@@ -95,7 +95,7 @@ void TestCommandsAppliedInOrder() {
   kitbag::Mixer mixer(kSampleRate);
   LoadRamp(&mixer, 0, kLongFrames, kLongOffset);
 
-  mixer.Seek(3000);
+  mixer.Seek(3000, 0, false);
   mixer.Stop();
   Drain(&mixer);
   Check(
@@ -104,7 +104,7 @@ void TestCommandsAppliedInOrder() {
   );
 
   mixer.Stop();
-  mixer.Seek(3000);
+  mixer.Seek(3000, 0, false);
   Drain(&mixer);
   Check(
       mixer.position() == 3000,
