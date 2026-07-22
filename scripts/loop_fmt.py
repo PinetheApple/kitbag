@@ -1,14 +1,24 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.9"
+# dependencies = ["rich>=13"]
+# ///
 """Format `claude -p --output-format stream-json` into a colored, tagged live feed.
 
 Reads NDJSON on stdin (one event per line) and prints one scannable line per
-event, so the loop's output reads as blocks instead of a wall of text.
-Used by scripts/run-loop.sh.
+event above a pinned stats footer (context peak, tokens, elapsed). Run via
+`uv run` so rich resolves without a manual install. Used by scripts/run-loop.sh.
+When stdout is not a TTY (e.g. redirected to a file) the footer is skipped.
 """
 
 import json
 import sys
 import time
+
+from rich.console import Console
+from rich.live import Live
+from rich.panel import Panel
+from rich.text import Text
 
 RESET = "\033[0m"
 
@@ -130,16 +140,54 @@ def render(event):
         yield "\n" + body + "\n" + event.get("result", "")
 
 
-def main():
-    for raw in sys.stdin:
+class Footer:
+    """Pinned bottom panel — reads STATS live, so the clock ticks between events."""
+
+    def __init__(self, start):
+        self.start = start
+
+    def __rich__(self):
+        secs = int(time.monotonic() - self.start)
+        line = Text()
+        line.append("⏱ ", style="bold")
+        line.append(human_time(secs), style="bold cyan")
+        line.append("   context ", style="dim")
+        line.append(human_num(STATS["context"]), style="bold")
+        line.append("   in ", style="dim")
+        line.append(human_num(STATS["in"]), style="bold")
+        line.append("   out ", style="dim")
+        line.append(human_num(STATS["out"]), style="bold")
+        line.append("   cache ", style="dim")
+        line.append(human_num(STATS["cache_read"]) + " read", style="bold")
+        return Panel(line, style="green", expand=True)
+
+
+def events(stream):
+    for raw in stream:
         if not raw.strip():
             continue
         try:
-            event = json.loads(raw)
+            yield json.loads(raw)
         except json.JSONDecodeError:
             continue
-        for line in render(event):
-            print(line, flush=True)
+
+
+def main():
+    console = Console()
+    for_lines = lambda event: (Text.from_ansi(line) for line in render(event))
+
+    if not sys.stdout.isatty():
+        for event in events(sys.stdin):
+            for text in for_lines(event):
+                console.print(text)
+        return
+
+    footer = Footer(time.monotonic())
+    with Live(footer, console=console, refresh_per_second=4, transient=True) as live:
+        for event in events(sys.stdin):
+            for text in for_lines(event):
+                console.print(text)  # scrolls above the pinned footer
+            live.refresh()
 
 
 if __name__ == "__main__":
