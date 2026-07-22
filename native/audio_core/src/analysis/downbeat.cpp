@@ -15,9 +15,9 @@ constexpr int kDecimationFactor = 16;
 constexpr int kDfIncrement = 512;
 constexpr int kDefaultBeatsPerBar = 4;
 
-// Feed the mono signal to DownBeat in kDfIncrement blocks, zero-padding the
-// tail, so its anti-aliasing decimator produces the downsampled buffer.
-void PushDecimated(DownBeat& db, const float* mono, int num_frames) {
+// Feed the full-rate mono signal to DownBeat in kDfIncrement blocks,
+// zero-padding the tail; DownBeat's own decimator downsamples internally.
+void FeedDownBeat(DownBeat& db, const float* mono, int num_frames) {
   std::vector<float> block(kDfIncrement);
   for (int off = 0; off < num_frames; off += kDfIncrement) {
     for (int i = 0; i < kDfIncrement; ++i) {
@@ -59,7 +59,7 @@ std::vector<int> FindDownbeats(
   DownBeat db(static_cast<float>(sample_rate), kDecimationFactor, kDfIncrement);
   db.setBeatsPerBar(beats_per_bar > 0 ? beats_per_bar : kDefaultBeatsPerBar);
 
-  PushDecimated(db, mono, num_frames);
+  FeedDownBeat(db, mono, num_frames);
   size_t ds_len = 0;
   const float* ds = db.getBufferedAudio(ds_len);
 

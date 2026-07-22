@@ -219,6 +219,7 @@ if(KITBAG_BUILD_TOOLS)
   # NarrowFrames are internal and the NaN path cannot be reached through a WAV.
   add_executable(analyze_verify
     tools/analysis/analyze_verify.cpp
+    tools/analysis/analyze_test_downbeat.cpp
     src/api/api_analysis.cpp
     src/analysis/song_analysis.cpp
     src/analysis/downbeat.cpp
