@@ -259,6 +259,10 @@ KB_EXPORT int32_t kb_player_is_playing(const kb_engine* engine);
  *                    seconds
  *   beat_times_cap:  capacity of beat_times_buf in elements (recommend 1024)
  *   beat_count_out:  filled with number of beats written
+ *   downbeat_indices_out: caller-allocated int32 buffer sized to beat_times_cap,
+ *                    receives the indices (into the beat list) that are bar-ones;
+ *                    each is < *beat_count_out
+ *   downbeat_count_out: filled with number of downbeat indices written
  *   waveform_dir:    directory to write the waveform peaks sidecar ("KWAV"
  *                    binary), or NULL to skip waveform generation
  *
@@ -273,6 +277,8 @@ KB_EXPORT kb_result kb_analyze_song(
     float* beat_times_buf,
     int32_t beat_times_cap,
     int32_t* beat_count_out,
+    int32_t* downbeat_indices_out,
+    int32_t* downbeat_count_out,
     const char* waveform_dir
 );
 

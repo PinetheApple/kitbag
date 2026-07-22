@@ -29,6 +29,7 @@ add_library(kitbag_core SHARED
   src/api/api_media.cpp
   src/api/api_metronome.cpp
   src/analysis/beat_tracker.cpp
+  src/analysis/downbeat.cpp
   src/analysis/song_analysis.cpp
   src/media/audio_source.cpp
   src/media/decoder.cpp
@@ -75,7 +76,7 @@ endif()
 
 # Vendored QM-DSP downbeat/beat tracker (GPL-2.0-or-later, third_party/qm-dsp).
 # Built as its own static lib so its upstream sources never inherit our
-# -Wall/-Werror; not yet linked into kitbag_core — analyze wiring is D2 (#12).
+# -Wall/-Werror. Linked into kitbag_core below for downbeat labelling (D2 #13).
 add_library(qm_dsp STATIC
   third_party/qm-dsp/dsp/tempotracking/DownBeat.cpp
   third_party/qm-dsp/dsp/tempotracking/TempoTrackV2.cpp
@@ -95,6 +96,10 @@ target_include_directories(qm_dsp SYSTEM PUBLIC
   third_party/qm-dsp/ext/kissfft
   third_party/qm-dsp/ext/kissfft/tools)
 target_compile_definitions(qm_dsp PUBLIC kiss_fft_scalar=double)
+
+# song_analysis.cpp's downbeat labelling calls DownBeat; kissfft's include roots
+# come transitively from qm_dsp's PUBLIC dirs.
+target_link_libraries(kitbag_core PRIVATE qm_dsp)
 
 option(KITBAG_BUILD_TOOLS "Build native test tools" OFF)
 if(KITBAG_BUILD_TOOLS)
@@ -227,8 +232,10 @@ if(KITBAG_BUILD_TOOLS)
   # NarrowFrames are internal and the NaN path cannot be reached through a WAV.
   add_executable(analyze_verify
     tools/analysis/analyze_verify.cpp
+    tools/analysis/analyze_test_downbeat.cpp
     src/api/api_analysis.cpp
     src/analysis/song_analysis.cpp
+    src/analysis/downbeat.cpp
     src/analysis/waveform_peaks.cpp
     src/analysis/beat_tracker.cpp
     src/dsp/fft.cpp
@@ -238,7 +245,7 @@ if(KITBAG_BUILD_TOOLS)
   )
   target_include_directories(analyze_verify
     PRIVATE src include tools tools/media third_party)
-  target_link_libraries(analyze_verify PRIVATE Threads::Threads m ${CMAKE_DL_LIBS})
+  target_link_libraries(analyze_verify PRIVATE qm_dsp Threads::Threads m ${CMAKE_DL_LIBS})
 
   add_executable(note_lock_verify tools/tuner/note_lock_verify.cpp
     src/tuner/note_lock.cpp)
