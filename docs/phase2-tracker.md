@@ -20,9 +20,9 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done (verify green + bot
 
 ## Current state — 2026-07-22, `feat/phase2-skeleton` (off main; Phase 1 merged via PR #26)
 
-**Done:** none — phase just seeded.
+**Done:** `P2-S` (#27) — monorepo skeleton (pnpm + Turborepo + Expo prebuild), merged `6a810f5`. Twelve packages per §13.1 with boundary edges; staged `config/` wired to root (`git mv` to `eslint.config.mjs`/`prettier.config.mjs`/`tsconfig.base.json`); Android tree committed (37 files, prebuild not F-Droid, §13.8.1); `pnpm install`/`typecheck` (12/12)/`lint --max-warnings 0` green. Device boot NOT verified — that is #33.
 **In progress:** none.
-**Next:** Wave 0 — `P2-S` (#27) monorepo skeleton. Blocks everything.
+**Next:** Wave 1 (parallel, all off #27) — `P2-A1` (#28) plugin-api · `P2-B1` (#34) core-db · `P2-B2` (#35) eslint-plugin · `P2-B4` (#37) NativeWind · `P2-B5` (#38, toolchain risk).
 
 ## Two walls this phase cannot self-clear
 
