@@ -35,6 +35,24 @@ KB_EXPORT uint32_t kb_engine_sample_rate(const kb_engine* engine);
 /* Monotonic frames rendered since start; the master clock. */
 KB_EXPORT uint64_t kb_engine_frames_rendered(const kb_engine* engine);
 
+/* --- Offline render (verify only, NOT the shipped ABI) ------------------ */
+
+#ifdef KITBAG_BUILD_TOOLS
+/* Pull one block of mixed engine output into a caller buffer, exactly as the
+ * device callback renders it: drain the command rings, mix the stems, player and
+ * metronome, and advance the engine clock by frame_count. out receives
+ * frame_count * 2 interleaved float samples — stereo at the engine rate.
+ *
+ * Compiled only under KITBAG_BUILD_TOOLS, so PCM never crosses the shipped ABI
+ * (SPEC.md §4.1: the app passes paths and receives scalars; samples never
+ * cross). It exists purely so the verify tools can stream a file end to end
+ * through this boundary rather than reaching into the C++ behind it. A no-op
+ * while the device is running (kb_engine_start) — the callback is then the sole
+ * renderer — and for a null engine or out, or a zero frame_count. */
+KB_EXPORT void
+kb_engine_render(kb_engine* engine, float* out, uint32_t frame_count);
+#endif /* KITBAG_BUILD_TOOLS */
+
 /* --- Metronome ---------------------------------------------------------- */
 
 typedef enum kb_accent {
