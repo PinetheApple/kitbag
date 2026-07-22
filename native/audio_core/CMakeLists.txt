@@ -98,6 +98,12 @@ target_compile_definitions(qm_dsp PUBLIC kiss_fft_scalar=double)
 
 option(KITBAG_BUILD_TOOLS "Build native test tools" OFF)
 if(KITBAG_BUILD_TOOLS)
+  # Compiles kb_engine_render into the library and reveals its header
+  # declaration; PUBLIC so a tool that links kitbag_core (abi/stream_verify)
+  # sees it too. Absent from a production build, so no PCM crosses the shipped
+  # ABI (SPEC.md §4.1) — the render pull is a verify-only symbol by construction.
+  target_compile_definitions(kitbag_core PUBLIC KITBAG_BUILD_TOOLS)
+
   add_executable(metronome_verify
     tools/metronome/metronome_verify.cpp
     tools/metronome/metronome_test_basic.cpp

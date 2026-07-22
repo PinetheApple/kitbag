@@ -42,8 +42,7 @@ class Engine {
     return frames_rendered_.load(std::memory_order_relaxed);
   }
 
-  // Offline pull: render one block as the device callback does, into a caller
-  // buffer with no device. Never call while the device is running (Start).
+  // Offline pull backing kb_engine_render; see its contract in kitbag_api.h.
   void RenderOffline(float* output, uint32_t frame_count) {
     Render(output, frame_count);
   }
