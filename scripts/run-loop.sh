@@ -58,11 +58,25 @@ run_one() {
   return "${PIPESTATUS[0]}"   # claude's exit, not uv's — drives the loop
 }
 
+# Keep the remote current: push after each completed wave. A wave that committed
+# but couldn't push (transient network) must not kill the loop.
+push_head() {
+  if git push -u -q origin HEAD 2>/dev/null; then
+    echo "Pushed $(git rev-parse --abbrev-ref HEAD) -> origin." >&2
+  else
+    echo "Push failed (remote not updated); continuing." >&2
+  fi
+}
+
+# Ctrl-C exits the whole run cleanly — no Python traceback from the formatter.
+trap 'echo "Interrupted." >&2; exit 130' INT
+
 if [[ "${1:-}" == "--unattended" ]]; then
   echo "Unattended run. Raw streams -> stream-*.jsonl. Ctrl-C to stop." >&2
   while :; do
     run_one || { echo "Stop-point or done (exit $?). Handing back." >&2; break; }
+    push_head
   done
 else
-  run_one
+  run_one && push_head
 fi

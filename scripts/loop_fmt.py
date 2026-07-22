@@ -15,10 +15,14 @@ import json
 import sys
 import time
 
-from rich.console import Console
-from rich.live import Live
-from rich.panel import Panel
-from rich.text import Text
+try:
+    from rich.console import Console
+    from rich.live import Live
+    from rich.panel import Panel
+    from rich.text import Text
+except KeyboardInterrupt:
+    # Ctrl-C during uv's cold-start import of rich — exit quietly, no traceback.
+    raise SystemExit(130)
 
 RESET = "\033[0m"
 
