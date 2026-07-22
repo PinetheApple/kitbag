@@ -6,7 +6,7 @@
     "strict": true,
 
     // Indexing an array/record yields `T | undefined`. The realtime layer
-    // reads packed fields and fixed-size tables (soundNames, kMaxTracks=16,
+    // reads packed fields and fixed-size tables (soundNames, kMaxTracks,
     // SPEC §13.7); an unchecked index there is a silent out-of-bounds read.
     "noUncheckedIndexedAccess": true,
 
