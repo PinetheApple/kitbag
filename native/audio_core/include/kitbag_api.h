@@ -35,9 +35,6 @@ KB_EXPORT uint32_t kb_engine_sample_rate(const kb_engine* engine);
 /* Monotonic frames rendered since start; the master clock. */
 KB_EXPORT uint64_t kb_engine_frames_rendered(const kb_engine* engine);
 
-KB_EXPORT void
-kb_engine_set_test_tone(kb_engine* engine, int32_t enabled, float frequency_hz);
-
 /* --- Metronome ---------------------------------------------------------- */
 
 typedef enum kb_accent {
@@ -207,6 +204,31 @@ KB_EXPORT void kb_mixer_seek(kb_engine* engine, int64_t frame);
 KB_EXPORT int64_t kb_mixer_position(const kb_engine* engine);
 KB_EXPORT int32_t kb_mixer_active_track_count(const kb_engine* engine);
 KB_EXPORT int64_t kb_mixer_track_frames(const kb_engine* engine, int32_t track);
+
+/* --- Player (single-source transport) ----------------------------------- */
+
+/* Load a single file for full playback on the engine clock, streamed from disk
+ * (SPEC.md §4.1). Like the mixer, the core decodes and resamples to the engine
+ * rate off the audio callback, then publishes the source by an atomic pointer
+ * swap, so a load during playback cannot tear a read. No PCM crosses the
+ * boundary — every value here is a scalar or a path (§13.2). Loading again
+ * replaces the source. Returns KB_ERROR_INVALID_ARGUMENT for a null engine or
+ * path, or a file that will not open; KB_OK once published. */
+KB_EXPORT kb_result kb_player_load(kb_engine* engine, const char* path);
+/* Retire the source. RT-safe: the old source is reclaimed off the audio
+ * callback, never freed on it. A no-op for a null or empty player. */
+KB_EXPORT void kb_player_unload(kb_engine* engine);
+KB_EXPORT void kb_player_play(kb_engine* engine);
+/* Ends playback holding the position, so kb_player_play resumes from there.
+ * There is no stop-to-zero: rewind with kb_player_seek(engine, 0). */
+KB_EXPORT void kb_player_pause(kb_engine* engine);
+KB_EXPORT void kb_player_seek(kb_engine* engine, int64_t frame);
+/* Playback position and total length in engine-rate frames. Both cross as
+ * int64_t but are exact to 2^53 frames — ~5,900 years at 48kHz — so JSI may read
+ * them as a JS double. No BigInt. */
+KB_EXPORT int64_t kb_player_position(const kb_engine* engine);
+KB_EXPORT int64_t kb_player_frames(const kb_engine* engine);
+KB_EXPORT int32_t kb_player_is_playing(const kb_engine* engine);
 
 /* --- Beat Analysis ------------------------------------------------------- */
 
