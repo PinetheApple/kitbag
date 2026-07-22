@@ -56,6 +56,11 @@ uint64_t kb_engine_frames_rendered(const kb_engine* engine) {
   return engine == nullptr ? 0 : ToEngine(engine)->frames_rendered();
 }
 
+void kb_engine_render(kb_engine* engine, float* out, uint32_t frame_count) {
+  if (engine == nullptr || out == nullptr || frame_count == 0) return;
+  ToEngine(engine)->RenderOffline(out, frame_count);
+}
+
 kb_result kb_tuner_start(kb_engine* engine) {
   if (engine == nullptr) {
     return KB_ERROR_INVALID_ARGUMENT;
