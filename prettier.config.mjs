@@ -1,5 +1,5 @@
-// Staged ahead of the RN app (SPEC §13/§13.6); wired when Phase 2 scaffolds.
-// Cannot run until package.json exists. See config/README.md.
+// Wired into the workspace root at Phase 2 (SPEC §13/§13.6). Was staged under
+// config/ before the RN app existed; see config/README.md for that history.
 
 /**
  * printWidth is 80 to match the C++ realtime core, which is the source of
