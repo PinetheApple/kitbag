@@ -31,11 +31,16 @@ using kitbag::BeatResult;
 constexpr int kBeatsPerBar = 4;
 
 // The per-bar pitch step is placed at beat phase kAccentPhase, marking every
-// bar-one; the pipeline locks bar-one onto it (asserted below) and reverts to
-// the bare grid's phase when it is stripped, so the accent drives detection.
+// bar-one; the pipeline locks bar-one onto it (asserted below) and shifts to a
+// different phase for the step==0 control, so the accent drives detection.
 constexpr int kAccentPhase = 1;
-// Detected phase of the featureless control (same clicks, no step) — the bare
-// grid's own edge-effect artifact, distinct from kAccentPhase by construction.
+// Phase the pipeline detects for the step==0 control (clicks + steady tone);
+// measured, and distinct from the accented fixture's phase so the accent is
+// provably load-bearing. Not the bare click grid's phase: that is 1 (measured),
+// the same as kAccentPhase. The accent only wins near phases 0-1 (accent phase
+// 2 detects 3, phase 3 detects 0), and both this value and the phase-1 result
+// depend on kBeatPeriodFrames and kBarToneBaseHz; re-measure kFeaturelessPhase
+// and kAccentPhase if either constant is retuned.
 constexpr int kFeaturelessPhase = 3;
 static_assert(
     kAccentPhase != kFeaturelessPhase,
