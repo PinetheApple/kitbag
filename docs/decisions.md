@@ -50,12 +50,15 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   while the source thread runs. A failed rebuild suppresses the `kSeek` enqueue so
   transport can't advertise a position the audio isn't at. Closes #25. **[recorded — review-driven]**
 
-- **2026-07-22 · D3 beat-grid BLOB scope (§4.3 vs §11) — OPEN, asked in #14.** §4.3
-  says the native beat-grid BLOB gains a downbeat list; §11 places that BLOB in the
-  TS/op-sqlite/Drizzle store and passes grids across the C ABI as raw float buffers
-  (no native serializer exists). Building a native grid-BLOB serializer now would be a
-  §16 orphan (no consumer until the TS layer exists); the conflict map also pins Track D
-  as analyze-only. Proposed native scope = the degraded-fallback helper (absent list →
-  every `beats_per_bar`-th beat, one-owner per §13.7) + D4's verify, leaving the sqlite
-  BLOB to §11/Phase 2. **Awaiting user ruling in #14 before D3/D4 dispatch — this is a
-  stop-point-1 gap (two SPEC sections disagree on ownership).** **[asked]**
+- **2026-07-22 · D3 beat-grid BLOB scope (§4.3 vs §11) — RESOLVED, user ruling in #14.**
+  The block was a phantom: it conflated §4.3 downbeat *detection* (native, already shipped
+  in D2/#13 — `downbeat.cpp` QM-DSP detector + `kb_analyze_song` int32 emit + the
+  `analyze_test_downbeat` verify that already mirrors the 4/4 degraded fallback) with §11
+  *persistence* (the `+ downbeat indices` BLOB column lives in the Drizzle/op-sqlite store,
+  §11.2 lines 1272/1280–1282 — TS, Phase 2). Ruling: (1) native §4.3 = complete, **#14
+  closed**; (2) **no native BLOB serializer** — §16 orphan, the raw-int32 ABI is the whole
+  native surface; (3) the BLOB column → §11.3/Phase 2, folded with the *real* SPEC §11 D3
+  (drop `volume`/`latencyOffset`) and D4 (identity tuple); (4) #15 stays Phase-1 but narrows
+  to one native test case (absent-list → every `beats_per_bar`-th beat). **D-number collision
+  recorded:** tracker Track-D "D3/D4" (downbeat BLOB/verify) ≠ SPEC §11.3 "D3/D4"
+  (drop-columns/identity-tuple) — different numbering, do not conflate. **[user]**
