@@ -4,6 +4,7 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "media/audio_source.h"
@@ -96,9 +97,13 @@ class Mixer {
   /// Ends playback holding the head, so a following Play resumes there.
   void Pause();
   /// Seek to a frame position (measured at the engine rate). The counter update
-  /// is applied by the callback at the next block; the source reposition is done
-  /// here. See the note on live-playback seek quiescence in mixer.cpp.
-  void Seek(uint64_t frame);
+  /// is applied by the callback at the next block. A seek on a live (playing)
+  /// track rebuilds a fresh source at the target off the callback and swaps it in
+  /// by RtPublisher, so no ring Clear ever races the callback draining the old
+  /// source (#25); [now_frame]/[engine_running] date the retired source exactly
+  /// as LoadTrack does. A paused track repositions in place — Process drains no
+  /// source while paused, so that path is already quiescence-safe.
+  void Seek(uint64_t frame, uint64_t now_frame, bool engine_running);
 
   /// Callback-published mirror. Reflects state the callback has drained, so it
   /// converges within one block once the device is running.
@@ -130,6 +135,11 @@ class Mixer {
   /// Frames buffered ahead in a track's source. A readiness probe for priming;
   /// never called from the audio callback.
   uint64_t track_buffered(int track) const;
+  /// Realtime-safe sibling of track_buffered: reads the buffered count through
+  /// the published node (acquire load) and the source ring's atomics only, never
+  /// the app-thread live_source, so the render thread may poll it. Exists so a
+  /// concurrent test can observe a ring the callback drains (#25).
+  uint64_t rt_track_buffered(int track) const;
   /// True once a track's source has delivered its last frame, or it has no
   /// source at all.
   bool track_at_end(int track) const;
@@ -176,6 +186,10 @@ class Mixer {
     RtPublisher<TrackSource> published;
     AudioSource* live_source = nullptr;  // app thread; == the published source
     uint64_t live_num_frames = 0;        // app thread
+    // The reader identity, so a live seek can rebuild a fresh source. A file
+    // track re-opens `load_path`; a SetTrackSource track re-wraps `ext_reader`.
+    std::string load_path;               // app thread; set by LoadTrack
+    SourceReader* ext_reader = nullptr;  // app thread; set by SetTrackSource
     std::atomic<float> gain{1.0f};
     std::atomic<bool> mute{false};
     std::atomic<bool> solo{false};
@@ -197,6 +211,18 @@ class Mixer {
   // Blocks off the audio thread until the source has read enough ahead for the
   // callback to drain full blocks; bounded by a timeout.
   void Prime(AudioSource& src, uint64_t num_frames);
+
+  // App thread. Builds a fresh source at `target` from the track's reader
+  // identity, started and primed; null if the rebuild fails. No Clear on a ring
+  // the callback reads, so it is safe while the old source is still live (#25).
+  std::unique_ptr<TrackSource> BuildReseekSource(int track, uint64_t target);
+  // App thread. Stops the old source, then swaps in a BuildReseekSource node.
+  void ReseekLive(
+      int track,
+      uint64_t frame,
+      uint64_t now_frame,
+      bool engine_running
+  );
 
   // App thread. Hands a command to the callback, dropping it if the ring is full
   // (> kCommandRingSize unconsumed) rather than blocking — the realtime choice,
