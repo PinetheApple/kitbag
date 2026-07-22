@@ -198,14 +198,20 @@ void Mixer::Play() {
   Enqueue({CommandType::kPlay});
 }
 
-void Mixer::Stop() {
+void Mixer::Stop(uint64_t now_frame, bool engine_running) {
   Enqueue({CommandType::kStop});
   const int count = track_count_.load(std::memory_order_relaxed);
   for (int i = 0; i < count; ++i) {
     Track& t = tracks_[i];
     if (t.live_source == nullptr) continue;
-    t.live_source->Stop();
-    t.live_source->Seek(0);
+    if (engine_running) {
+      // Device live: a callback that loaded playing_==true can be inside Read on
+      // this ring, so rewind by rebuild-and-swap, never an in-place Clear (#25).
+      ReseekLive(i, 0, now_frame, engine_running);
+    } else {
+      t.live_source->Stop();
+      t.live_source->Seek(0);
+    }
   }
 }
 
@@ -236,7 +242,7 @@ Mixer::BuildReseekSource(int track, uint64_t target) {
   return ts;
 }
 
-void Mixer::ReseekLive(
+bool Mixer::ReseekLive(
     int track,
     uint64_t frame,
     uint64_t now_frame,
@@ -250,26 +256,34 @@ void Mixer::ReseekLive(
   auto ts = BuildReseekSource(track, target);
   if (ts == nullptr) {
     t.live_source->Start();  // rebuild failed: resume the old source in place
-    return;
+    return false;
   }
   t.live_source = ts->source.get();
   t.live_num_frames = ts->num_frames;
   t.published.Publish(std::move(ts), now_frame, engine_running);
+  return true;
 }
 
 void Mixer::Seek(uint64_t frame, uint64_t now_frame, bool engine_running) {
   const int count = track_count_.load(std::memory_order_relaxed);
+  bool committed = true;
   for (int i = 0; i < count; ++i) {
     Track& t = tracks_[i];
     if (t.live_source == nullptr) continue;
-    if (t.live_source->is_running()) {
-      ReseekLive(i, frame, now_frame, engine_running);
+    if (engine_running || t.live_source->is_running()) {
+      // Rebuild whenever either side is live: the device may be draining this
+      // ring (Pause/Stop leave is_running() false a block early — #25), or the
+      // read-ahead thread is running and AudioSource::Seek refuses it.
+      if (!ReseekLive(i, frame, now_frame, engine_running)) committed = false;
     } else {
-      // Paused: Process drains no source, so the in-place reposition is
-      // quiescence-safe. Clamp past a short stem's end so it seeks to end.
+      // Device stopped and the source idle — the only truly quiescent state, so
+      // the in-place Clear races nothing. Clamp past a short stem's end.
       t.live_source->Seek(std::min(frame, t.live_num_frames));
     }
   }
+  // A failed rebuild resumed the old source in place; suppress kSeek so the
+  // transport holds at the audible position rather than jumping to the target.
+  if (!committed) return;
   Command command{CommandType::kSeek};
   command.frame = frame;
   Enqueue(command);

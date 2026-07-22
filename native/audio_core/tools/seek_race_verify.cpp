@@ -206,7 +206,7 @@ void RunMixerRace() {
       kMixerDuration,
       [&](uint64_t target, uint64_t now) { mixer.Seek(target, now, true); }
   );
-  mixer.Stop();
+  mixer.Stop(0, false);
   mixer.ReleaseRetiredSources();
   Assert(&stats, "mixer-race");
 }
@@ -250,7 +250,97 @@ void RunPlayerRace() {
   std::filesystem::remove(path, ec);
 }
 
-constexpr int kExpectedChecks = 11;
+// The threaded races above cover a live (playing) seek. The pause→seek window
+// (#25, Finding 1) is a µs-scale TOCTOU — the app's Pause+Seek must land inside
+// one callback Read. A real device block is ~10ms, wide enough to contain it; a
+// headless test's per-block Read is µs, shorter than the pause's Stop()-join, so
+// a threaded reproduction is either vacuous or flaky. So gate the exact code
+// change deterministically: after a paused seek with the device running, the fix
+// rebuilds+primes the source, while the sabotage (gating on the source thread)
+// Clears the stopped source's ring in place and never restarts it. buffered>0 is
+// that fork — >0 for the rebuild, 0 for the abandoned in-place Clear.
+void RunMixerPausedSeek() {
+  RampReader reader;
+  kitbag::Mixer mixer(kSampleRate);
+  Check(
+      mixer.SetTrackSource(0, &reader, 0, true),
+      "mixer-paused-seek: the ramp source loads"
+  );
+  mixer.Play();
+  mixer.Pause();
+  Check(
+      mixer.track_buffered(0) > 0,
+      "mixer-paused-seek: primed before the seek"
+  );
+  mixer.Seek(kTargets[0], kBlock, /*engine_running=*/true);
+  Check(
+      mixer.track_buffered(0) > 0,
+      "mixer-paused-seek: rebuilt and primed, not cleared in place"
+  );
+  mixer.Stop(0, false);
+  mixer.ReleaseRetiredSources();
+}
+
+void RunPlayerPausedSeek() {
+  const std::string path = WriteRampWav();
+  Check(!path.empty(), "player-paused-seek: the ramp WAV writes");
+  if (path.empty()) return;
+
+  kitbag::Player player(kSampleRate);
+  Check(
+      player.Load(path.c_str(), 0, true),
+      "player-paused-seek: the ramp WAV loads"
+  );
+  player.Play();
+  player.Pause();
+  Check(player.rt_buffered() > 0, "player-paused-seek: primed before the seek");
+  player.Seek(kTargets[0], kBlock, /*engine_running=*/true);
+  Check(
+      player.rt_buffered() > 0,
+      "player-paused-seek: rebuilt and primed, not cleared in place"
+  );
+  player.Pause();
+  player.ReleaseRetiredSources();
+
+  std::error_code ec;
+  std::filesystem::remove(path, ec);
+}
+
+// Finding 2: when the rebuild fails, the seek resumes the old source at its old
+// position, so it must also suppress kSeek — else the transport jumps to the
+// target while the audio still plays from the old spot. Deleting the file mid-
+// play makes BuildReseekSource's re-open fail (the old source keeps its open fd,
+// so playback survives). A held position past the seek is the proof.
+constexpr uint64_t kFarTarget = 2000000;
+
+void RunPlayerFailedReseek() {
+  const std::string path = WriteRampWav();
+  Check(!path.empty(), "player-failed-reseek: the ramp WAV writes");
+  if (path.empty()) return;
+
+  kitbag::Player player(kSampleRate);
+  Check(
+      player.Load(path.c_str(), 0, true),
+      "player-failed-reseek: the WAV loads"
+  );
+  player.Play();
+  std::vector<float> out(static_cast<size_t>(kBlock) * 2, 0.0f);
+  player.Render(out.data(), kBlock);  // drains kPlay, advances the transport
+
+  std::error_code ec;
+  std::filesystem::remove(path, ec);  // now a fresh open of the path fails
+  player.Seek(kFarTarget, kBlock, /*engine_running=*/true);
+  player.Render(out.data(), kBlock);
+  Check(
+      player.position() < kFarTarget,
+      "player-failed-reseek: a failed rebuild holds the transport"
+  );
+
+  player.Pause();
+  player.ReleaseRetiredSources();
+}
+
+constexpr int kExpectedChecks = 21;
 
 int Report() {
   if (kitbag_test::g_checks != kExpectedChecks) {
@@ -284,5 +374,8 @@ int main() {
   PinSelfToCpu(cpus >= 3 ? 2 : 1);
   RunMixerRace();
   RunPlayerRace();
+  RunMixerPausedSeek();
+  RunPlayerPausedSeek();
+  RunPlayerFailedReseek();
   return Report();
 }

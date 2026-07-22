@@ -63,8 +63,10 @@ class Player {
   /// callback next block. A seek while playing rebuilds a fresh source at the
   /// target off the callback and swaps it in by RtPublisher, so no ring Clear
   /// races the callback draining the old source (#25); [now_frame]/
-  /// [engine_running] date the retired source as Load does. A paused seek
-  /// repositions in place — Render drains no source while paused.
+  /// [engine_running] date the retired source as Load does. In-place reposition
+  /// runs only when the device is stopped AND the source thread is idle — the
+  /// sole quiescent state; a running device or read-ahead thread rebuilds, since
+  /// neither guarantees the callback has stopped draining this ring.
   void Seek(uint64_t frame, uint64_t now_frame, bool engine_running);
 
   /// Callback-published mirrors. Converge within one block once the device runs.
@@ -140,7 +142,8 @@ class Player {
   // callback reads, so it is safe while the old source is still live (#25).
   std::unique_ptr<PlayerSource> BuildReseekSource(uint64_t target);
   // App thread. Stops the old source, then swaps in a BuildReseekSource node.
-  void ReseekLive(uint64_t frame, uint64_t now_frame, bool engine_running);
+  // Returns false if the rebuild failed and the old source was resumed in place.
+  bool ReseekLive(uint64_t frame, uint64_t now_frame, bool engine_running);
   void Enqueue(const Command& command);
 
   // Command drain, run at the top of Render. ApplyCommand holds the only

@@ -92,8 +92,10 @@ class Mixer {
   /// and the playing flag cross through the command ring so the callback is
   /// their sole writer and a rewind can never be overwritten (SPEC.md §2.2).
   void Play();
-  /// Ends playback and rewinds the head to frame 0 (SPEC.md §4.4).
-  void Stop();
+  /// Ends playback and rewinds the head to frame 0 (SPEC.md §4.4). Takes the same
+  /// [now_frame]/[engine_running] as Seek: with the device live it rewinds each
+  /// source by rebuild-and-swap, never an in-place ring Clear (#25).
+  void Stop(uint64_t now_frame, bool engine_running);
   /// Ends playback holding the head, so a following Play resumes there.
   void Pause();
   /// Seek to a frame position (measured at the engine rate). The counter update
@@ -101,8 +103,10 @@ class Mixer {
   /// track rebuilds a fresh source at the target off the callback and swaps it in
   /// by RtPublisher, so no ring Clear ever races the callback draining the old
   /// source (#25); [now_frame]/[engine_running] date the retired source exactly
-  /// as LoadTrack does. A paused track repositions in place — Process drains no
-  /// source while paused, so that path is already quiescence-safe.
+  /// as LoadTrack does. In-place reposition runs only when the device is stopped
+  /// AND the source thread is idle — the sole quiescent state; a running device
+  /// or read-ahead thread rebuilds, since neither guarantees the callback has
+  /// stopped draining this ring.
   void Seek(uint64_t frame, uint64_t now_frame, bool engine_running);
 
   /// Callback-published mirror. Reflects state the callback has drained, so it
@@ -217,7 +221,8 @@ class Mixer {
   // the callback reads, so it is safe while the old source is still live (#25).
   std::unique_ptr<TrackSource> BuildReseekSource(int track, uint64_t target);
   // App thread. Stops the old source, then swaps in a BuildReseekSource node.
-  void ReseekLive(
+  // Returns false if the rebuild failed and the old source was resumed in place.
+  bool ReseekLive(
       int track,
       uint64_t frame,
       uint64_t now_frame,
