@@ -73,6 +73,28 @@ else()
   target_link_libraries(kitbag_core PRIVATE Threads::Threads ${CMAKE_DL_LIBS} m)
 endif()
 
+# Vendored QM-DSP downbeat/beat tracker (GPL-2.0-or-later, third_party/qm-dsp).
+# Built as its own static lib so its upstream sources never inherit our
+# -Wall/-Werror; not yet linked into kitbag_core — analyze wiring is D2 (#12).
+add_library(qm_dsp STATIC
+  third_party/qm-dsp/dsp/tempotracking/DownBeat.cpp
+  third_party/qm-dsp/dsp/tempotracking/TempoTrackV2.cpp
+  third_party/qm-dsp/dsp/rateconversion/Decimator.cpp
+  third_party/qm-dsp/dsp/transforms/FFT.cpp
+  third_party/qm-dsp/maths/MathUtilities.cpp
+  third_party/qm-dsp/maths/KLDivergence.cpp
+  third_party/qm-dsp/ext/kissfft/kiss_fft.c
+  third_party/qm-dsp/ext/kissfft/tools/kiss_fftr.c
+)
+# Root resolves "dsp/..."/"maths/..."; kissfft dirs resolve its local includes.
+# kiss_fft_scalar=double: FFT.cpp casts double buffers into kiss_fft_cpx, so the
+# default float scalar would miscompile (upstream build/general/Makefile.inc).
+target_include_directories(qm_dsp SYSTEM PUBLIC
+  third_party/qm-dsp
+  third_party/qm-dsp/ext/kissfft
+  third_party/qm-dsp/ext/kissfft/tools)
+target_compile_definitions(qm_dsp PUBLIC kiss_fft_scalar=double)
+
 option(KITBAG_BUILD_TOOLS "Build native test tools" OFF)
 if(KITBAG_BUILD_TOOLS)
   add_executable(metronome_verify
