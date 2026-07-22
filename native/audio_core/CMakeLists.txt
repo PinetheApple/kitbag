@@ -121,6 +121,13 @@ if(KITBAG_BUILD_TOOLS)
   target_include_directories(abi_verify PRIVATE tools/media)
   target_link_libraries(abi_verify PRIVATE kitbag_core)
 
+  # A6 (#11): streams a real WAV end to end through the C ABI (kb_player_load ->
+  # kb_engine_render), so playback crosses the interface the app will, not the
+  # C++ behind it. Links the shared library, like abi_verify; writes its fixtures.
+  add_executable(stream_verify tools/media/stream_verify.cpp)
+  target_include_directories(stream_verify PRIVATE tools/media)
+  target_link_libraries(stream_verify PRIVATE kitbag_core)
+
   # Links the sources: TrackBeats and SidecarPath are internal, not exported.
   add_executable(beat_tracker_verify tools/analysis/beat_tracker_verify.cpp
     src/analysis/beat_tracker.cpp src/dsp/fft.cpp)
