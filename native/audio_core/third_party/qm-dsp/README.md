@@ -33,12 +33,20 @@ Upstream repo paths are preserved so the upstream diff stays clean; files are
 repo; in qm-dsp the equivalent primitives are `TempoTrackV2` (beat tracking) and
 `DownBeat` (downbeat estimation), which is what is vendored here.
 
+The onset **detection function** (complex spectral difference) that feeds
+`TempoTrackV2::calculateBeatPeriod` also lives in qm-vamp-plugins, NOT in qm-dsp
+— so it is correctly absent here. D2 must supply a detection-function signal from
+Kitbag's own analyze pipeline; `TempoTrackV2` produces no output until fed one.
+Do not hunt for a detection-function class inside this vendored tree.
+
 ## Build notes
 
-kissfft is compiled with `-Dkiss_fft_scalar=double` (QM-DSP's `FFT` casts
-`double` buffers straight into `kiss_fft_cpx`; the kissfft default `float`
-scalar would miscompile). Include roots: this directory, plus `ext/kissfft` and
-`ext/kissfft/tools`. See `native/audio_core/CMakeLists.txt` (`qm_dsp` target).
+kissfft is compiled with `-Dkiss_fft_scalar=double` (QM-DSP's `FFT.cpp:121`
+casts `double` buffers straight into `kiss_fft_cpx`). With the kissfft default
+`float` scalar the struct layout mismatches the buffer: a pointer-type mismatch
+that corrupts the FFT data, not mere precision loss. Include roots: this
+directory, plus `ext/kissfft` and `ext/kissfft/tools`. See
+`native/audio_core/CMakeLists.txt` (`qm_dsp` target).
 
 Not yet called from any Kitbag translation unit — analyze wiring is D2. To
 update, re-copy the closure from upstream and bump the commit hash above.
