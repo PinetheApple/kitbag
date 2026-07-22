@@ -8,6 +8,8 @@ namespace kitbag {
 struct BeatResult {
   float bpm = 0.0f;
   std::vector<float> beat_times;  // seconds
+  std::vector<int>
+      downbeat_indices;  // indices into beat_times that are bar-ones
 };
 
 /// Beat tracker using spectral flux onset detection + autocorrelation

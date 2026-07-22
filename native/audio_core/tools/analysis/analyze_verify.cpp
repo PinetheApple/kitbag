@@ -18,46 +18,25 @@
 #include "analysis/sidecar_path.h"
 #include "analysis/song_analysis.h"
 #include "analysis/waveform_peaks.h"
+#include "analyze_test_support.h"
 #include "check.h"
 #include "wav_fixture.h"
 
+// Downbeat coverage lives in analyze_test_downbeat.cpp.
+namespace analyze_test {
+void RunDownbeatTests(const std::filesystem::path& dir);
+}  // namespace analyze_test
+
 namespace {
 
+using analyze_test::AbiAnalysis;
+using analyze_test::AnalyzeThroughAbi;
+using analyze_test::kAbiCap;
+using analyze_test::kSampleRate;
+using analyze_test::MakeClickTrack;
+using analyze_test::StereoInfo;
 using kitbag::AnalyzeDecodedPcm;
 using kitbag::BeatResult;
-using kitbag::DecoderInfo;
-
-constexpr uint32_t kSampleRate = 44100;
-// 132 BPM at 44100 Hz. Not a round frame count, so a wrong period cannot land
-// on the same integer as the right one.
-constexpr int kBeatPeriodFrames = 20045;
-constexpr int kBeatCount = 12;
-constexpr int kClickWidth = 64;
-constexpr float kClickAmp = 0.8f;
-
-// One narrow impulse burst per beat, stereo interleaved. Spectral flux fires on
-// each onset, so autocorrelation has a real period to lock to.
-std::vector<float> MakeClickTrack() {
-  const int total = (kBeatCount + 1) * kBeatPeriodFrames;
-  std::vector<float> pcm(static_cast<size_t>(total) * 2, 0.0f);
-  for (int b = 0; b < kBeatCount; ++b) {
-    const int start = b * kBeatPeriodFrames;
-    for (int s = 0; s < kClickWidth && start + s < total; ++s) {
-      pcm[static_cast<size_t>(start + s) * 2] = kClickAmp;
-      pcm[static_cast<size_t>(start + s) * 2 + 1] = kClickAmp;
-    }
-  }
-  return pcm;
-}
-
-DecoderInfo StereoInfo(uint64_t frames, uint32_t channels) {
-  DecoderInfo info;
-  info.channels = channels;
-  info.sample_rate = kSampleRate;
-  info.total_frames = frames;
-  info.duration_seconds = static_cast<double>(frames) / kSampleRate;
-  return info;
-}
 
 void TestNarrowFrames() {
   int out = -1;
@@ -209,17 +188,9 @@ void TestSidecarRoundTrip(const std::filesystem::path& dir) {
       "sidecar: fixture wav written"
   );
 
-  float bpm = -1.0f;
-  int32_t count = -1;
-  std::vector<float> beats(64);
-  const kb_result status = kb_analyze_song(
-      wav.c_str(),
-      &bpm,
-      beats.data(),
-      64,
-      &count,
-      dir.string().c_str()
-  );
+  AbiAnalysis analysis;
+  const kb_result status =
+      AnalyzeThroughAbi(wav, dir.string().c_str(), kAbiCap, &analysis);
   kitbag_test::Check(status == KB_OK, "sidecar: kb_analyze_song returns KB_OK");
 
   Sidecar sc;
@@ -266,7 +237,7 @@ void TestWaveformNonFinite() {
 
 }  // namespace
 
-constexpr int kExpectedChecks = 25;
+constexpr int kExpectedChecks = 36;
 
 int main() {
   const std::filesystem::path dir = std::filesystem::temp_directory_path();
@@ -274,6 +245,7 @@ int main() {
   TestChannelsZero();
   TestNaNPoison();
   TestFiniteOutput();
+  analyze_test::RunDownbeatTests(dir);
   TestSidecarRoundTrip(dir);
   TestWaveformNonFinite();
 

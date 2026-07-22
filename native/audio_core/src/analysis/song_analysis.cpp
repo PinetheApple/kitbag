@@ -8,6 +8,7 @@
 #include <limits>
 #include <string>
 
+#include "analysis/downbeat.h"
 #include "analysis/sidecar_path.h"
 #include "analysis/waveform_peaks.h"
 
@@ -104,12 +105,11 @@ kb_result AnalyzeDecodedPcm(
   }
 
   const auto mono = DownmixToMono(pcm, total_frames, info.channels);
+  const int rate = static_cast<int>(info.sample_rate);
   BeatTracker tracker;
-  *out = tracker.Analyze(
-      mono.data(),
-      frame_count,
-      static_cast<int>(info.sample_rate)
-  );
+  *out = tracker.Analyze(mono.data(), frame_count, rate);
+  out->downbeat_indices =
+      FindDownbeats(mono.data(), frame_count, rate, out->beat_times, 0);
 
   WriteWaveformSidecar(path, waveform_dir, pcm, frame_count, channels);
   return KB_OK;
