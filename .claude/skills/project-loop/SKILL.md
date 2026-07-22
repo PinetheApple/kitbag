@@ -1,6 +1,6 @@
 ---
 name: project-loop
-description: Drives the whole Kitbag build across all phases (SPEC.md §15) autonomously. Stateless per iteration — each invocation reconstructs state from disk (SPEC, tracker, issues, decisions log), does ONE increment (parallel non-conflicting tracks + wave gate), commits, and exits for an external driver to re-invoke fresh, so context never grows. Stops only at four boundaries it cannot self-clear. Use when the user says "run/drive/build the whole project", "build to completion", or "keep going across phases". For a single Phase-1 issue, use phase1-loop.
+description: Drives the whole Kitbag build across all phases (SPEC.md §15) autonomously. Stateless per iteration — each invocation reconstructs state from disk (SPEC, tracker, issues, decisions log), runs ONE FULL WAVE to completion (parallel tracks dispatched in one blocking multi-Agent message → review → fix → wave gate → merge → persist), then exits for an external driver to re-invoke fresh, so context never grows. Never backgrounds workers or polls across invocations. Stops only at four boundaries it cannot self-clear. Use when the user says "run/drive/build the whole project", "build to completion", or "keep going across phases". For a single Phase-1 issue, use phase1-loop.
 ---
 
 # Project loop
@@ -8,18 +8,30 @@ description: Drives the whole Kitbag build across all phases (SPEC.md §15) auto
 The all-phase orchestrator. `phase1-loop` lands **one** issue; this decides *which*
 issues, in what order, in parallel, across phases — and hands back at the right time.
 
-**Stateless: one increment per fresh invocation.** State lives on disk (SPEC.md,
+**Stateless: one full wave per fresh invocation.** State lives on disk (SPEC.md,
 `docs/phase1-tracker.md`, GitHub issues, `docs/decisions.md`, `git log`) — never in a
-running context. Each invocation reconstructs where things stand from that alone, does
-one increment, commits, exits. An external driver re-invokes with a clean context, so
-the build's context never grows. If a resume needs memory of a prior run, the on-disk
-state was left incomplete — fix the state.
+running context. Each invocation reconstructs where things stand from that alone, runs
+**one complete wave** (dispatch → review → fix → wave-gate → merge → persist), commits,
+exits. An external driver re-invokes with a clean context, so the build's context never
+grows. If a resume needs memory of a prior run, the on-disk state was left incomplete —
+fix the state.
+
+**A wave is atomic and synchronous — never backgrounded.** Dispatch every parallel
+track in a single multi-Agent message: the Agent tool runs them concurrently *and
+blocks* until all return. Then review, fix, gate, merge, persist — all in this one
+invocation. **Never** spawn a detached `claude -p` worker in a worktree and poll for its
+commit across invocations. That anti-pattern turned one wave into 8 full-context
+poll-invocations (512k context, 34M cache-read each) and stranded the work when
+re-invocation stopped — fixes committed in worktrees, never merged. Subagents block by
+design; use them. Do not exit while any dispatched work is unfinished.
 
 ```bash
-while :; do claude -p "/project-loop one increment then stop" || break; done
+while :; do claude -p "/project-loop … run one full wave, then stop" || break; done
+# For unattended runs, detach so a closed terminal can't kill it mid-wave:
+#   nohup bash scripts/run-loop.sh --unattended > loop.log 2>&1 &
 ```
 
-## The increment — do once, then exit
+## The wave — run to completion, then exit
 
 1. **Reconstruct from disk.** Read SPEC.md §15, the tracker current-state block,
    `docs/decisions.md`, open issues. Confirm `gh` is on **PinetheApple** (`gh auth
@@ -28,17 +40,19 @@ while :; do claude -p "/project-loop one increment then stop" || break; done
 2. **Pick the set.** If advancing the phase hits a stop-point (device, design),
    exit non-zero. Else take the largest **file-disjoint, single-owner, unblocked**
    set (see Parallelism). No unblocked task left → project done, report, exit.
-3. **Run it.** Each task's pass concurrently via the per-phase executor, in its own
-   worktree (`bash scripts/worktree.sh create <track> main`). Stay thin on the main
-   thread — verdicts, not transcripts. Log any decide-and-record to `docs/decisions.md`.
+3. **Run it — one blocking multi-Agent dispatch.** Fire every task's pass in a *single*
+   message of concurrent Agent calls (per-phase executor), each in its own worktree
+   (`bash scripts/worktree.sh create <track> main`). The call blocks until all return —
+   do not exit here. Stay thin on the main thread — ask subagents for verdicts, not
+   transcripts. Log any decide-and-record to `docs/decisions.md`.
 4. **Wave gate.** Merge the set to the feature branch; run the full suite on the
    integrated tree (see Wave gate). Red on green slices = an integration finding:
    file, fix, re-gate. Never advance a phase on per-slice green.
 5. **Persist.** Close issues (SHA + evidence in the issue), tracker line → `[x]`,
    regenerate `CHANGELOG.md` (`git cliff changelog-base..HEAD`), remove spent
    worktrees. Every result on disk before exit — or the next invocation can't resume.
-6. **Exit.** Report and exit zero. One increment only — the driver re-invokes fresh.
-   Exit non-zero only at a stop-point.
+6. **Exit.** Report and exit zero — only now, with the wave fully merged and persisted.
+   One wave only; the driver re-invokes fresh. Exit non-zero only at a stop-point.
 
 ## Autonomy by phase
 
@@ -83,7 +97,7 @@ Orchestrator is all-phase; the per-task pass is per-phase.
 3. A Phase 3 design sign-off — present the `design-reviewer` render, stop.
 4. A task fails its gates twice, or a finding survives two fix rounds.
 
-A closed issue or passed wave gate is not a stop-point — it's the increment finishing
+A closed issue or passed wave gate is not a stop-point — it's the wave finishing
 (exit zero, driver continues).
 
 ## Decisions log
