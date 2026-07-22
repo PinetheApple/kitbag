@@ -123,36 +123,44 @@ std::unique_ptr<Player::PlayerSource> Player::BuildReseekSource(
   return ps;
 }
 
-void Player::ReseekLive(
+bool Player::ReseekLive(
     uint64_t frame,
     uint64_t now_frame,
     bool engine_running
 ) {
   const uint64_t target = std::min(frame, live_num_frames_);
-  // Stop the old read-ahead thread first so the reader is untouched while the
-  // fresh source is built; the callback keeps draining the old ring meanwhile.
+  // Stop the old read-ahead thread before building the fresh source; the reason
+  // this ordering is safe is recorded at Mixer::ReseekLive.
   live_source_->Stop();
   auto ps = BuildReseekSource(target);
   if (ps == nullptr) {
     live_source_->Start();  // rebuild failed: resume the old source in place
-    return;
+    return false;
   }
   live_source_ = ps->source.get();
   live_num_frames_ = ps->num_frames;
   num_frames_.store(ps->num_frames, std::memory_order_relaxed);
   published_.Publish(std::move(ps), now_frame, engine_running);
+  return true;
 }
 
 void Player::Seek(uint64_t frame, uint64_t now_frame, bool engine_running) {
+  bool committed = true;
   if (live_source_ != nullptr) {
-    if (live_source_->is_running()) {
-      ReseekLive(frame, now_frame, engine_running);
+    if (engine_running || live_source_->is_running()) {
+      // Rebuild whenever either side is live: the device may be draining this
+      // ring (Pause leaves is_running() false a block early — #25), or the
+      // read-ahead thread is running and AudioSource::Seek refuses it.
+      committed = ReseekLive(frame, now_frame, engine_running);
     } else {
-      // Paused: Render drains no source, so the in-place reposition is
-      // quiescence-safe. Clamp past the end so a seek past it seeks to end.
+      // Device stopped and the source idle — the only truly quiescent state, so
+      // the in-place Clear races nothing. Clamp past the end for a seek past it.
       live_source_->Seek(std::min(frame, live_num_frames_));
     }
   }
+  // A failed rebuild resumed the old source in place; suppress kSeek so the
+  // transport holds at the audible position rather than jumping to the target.
+  if (!committed) return;
   Command command{CommandType::kSeek};
   command.frame = frame;
   Enqueue(command);

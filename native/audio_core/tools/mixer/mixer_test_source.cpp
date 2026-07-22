@@ -83,7 +83,7 @@ void TestStreamsRatherThanBuffersWholeSong() {
       mixer.track_buffered(0) < frames,
       "source: the mixer holds far less than the whole 20000-frame song"
   );
-  mixer.Stop();
+  mixer.Stop(0, false);
 }
 
 // Streaming pulls the reader repeatedly in bounded chunks. A reimplementation
@@ -95,7 +95,7 @@ void TestConsumesSourceInChunksNotOneShot() {
   mixer.SetTrackSource(0, &reader, 0, false);
   mixer.Play();
   for (int b = 0; b < 4; ++b) RenderBlock(&mixer);
-  mixer.Stop();
+  mixer.Stop(0, false);
   Check(
       reader.read_calls.load() > 1,
       "source: the reader is pulled repeatedly, not read once"
@@ -141,7 +141,7 @@ void TestDrainDeliversSourceSamples() {
   );
   Check(AnyNonZero(b0), "drain: the block is not silent");
   Check(mixer.position() == kBlock, "drain: the transport advanced one block");
-  mixer.Stop();
+  mixer.Stop(0, false);
 }
 
 // A second block must continue from where the first left off, not replay it.
@@ -159,7 +159,7 @@ void TestDrainContinuesNotReplays() {
       kLongOffset + static_cast<float>(kBlock),
       "drain: the next block continues rather than replays"
   );
-  mixer.Stop();
+  mixer.Stop(0, false);
 }
 
 // A source shorter than a whole number of blocks drains to its last frame, pads
@@ -181,7 +181,7 @@ void TestSourceDrainsToEndThenStops() {
 
   RenderBlock(&mixer);
   Check(!mixer.is_playing(), "end: playback stops after the last frame");
-  mixer.Stop();
+  mixer.Stop(0, false);
 }
 
 }  // namespace

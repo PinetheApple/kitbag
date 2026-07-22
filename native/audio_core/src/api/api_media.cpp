@@ -93,7 +93,8 @@ void kb_mixer_play(kb_engine* engine) {
 
 void kb_mixer_stop(kb_engine* engine) {
   if (engine == nullptr) return;
-  ToEngine(engine)->mixer().Stop();
+  kitbag::Engine* e = ToEngine(engine);
+  e->mixer().Stop(e->frames_rendered(), e->is_running());
 }
 
 void kb_mixer_pause(kb_engine* engine) {

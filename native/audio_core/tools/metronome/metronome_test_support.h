@@ -204,6 +204,19 @@ inline void ExpectOnGrid(
   }
 }
 
+// Peak |sample| in the left channel over frames [first, last) of one block.
+inline double
+BlockPeak(const std::vector<float>& buffer, uint32_t first, uint32_t last) {
+  double peak = 0.0;
+  for (uint32_t frame = first; frame < last; ++frame) {
+    peak = std::max(
+        peak,
+        std::fabs(static_cast<double>(buffer[frame * kChannels]))
+    );
+  }
+  return peak;
+}
+
 // Peak |sample| per rendered block, acting at block boundaries. Resolves events
 // the onset detector cannot: a click re-fired within kOnsetHoldFrames still
 // lifts its block's peak, and the callback lets a re-anchor land mid-run.
@@ -226,14 +239,7 @@ std::vector<double> RenderContinuousPeaks(
         kChannels,
         static_cast<uint64_t>(rendered)
     );
-    double peak = 0.0;
-    for (uint32_t frame = 0; frame < kBlockFrames; ++frame) {
-      peak = std::max(
-          peak,
-          std::fabs(static_cast<double>(buffer[frame * kChannels]))
-      );
-    }
-    peaks.push_back(peak);
+    peaks.push_back(BlockPeak(buffer, 0, kBlockFrames));
   }
   return peaks;
 }
@@ -255,12 +261,16 @@ WindowedPeak(kitbag::Metronome& metronome, int64_t lo, int64_t hi) {
         kChannels,
         static_cast<uint64_t>(rendered)
     );
-    for (uint32_t frame = 0; frame < kBlockFrames; ++frame) {
-      const int64_t index = rendered + frame;
-      if (index < lo || index > hi) continue;
+    const int64_t block_lo = std::max<int64_t>(0, lo - rendered);
+    const int64_t block_hi = std::min<int64_t>(kBlockFrames - 1, hi - rendered);
+    if (block_lo <= block_hi) {
       peak = std::max(
           peak,
-          std::fabs(static_cast<double>(buffer[frame * kChannels]))
+          BlockPeak(
+              buffer,
+              static_cast<uint32_t>(block_lo),
+              static_cast<uint32_t>(block_hi) + 1
+          )
       );
     }
   }

@@ -148,7 +148,7 @@ void TestSeekAndPosition() {
   );
   Check(mixer.position() == 1234 + kBlock, "seek: the head advances one block");
 
-  mixer.Stop();
+  mixer.Stop(0, false);
   Drain(&mixer);  // applies kStop: playing false, head rewound
   Check(!mixer.is_playing(), "stop: playback ends");
   Check(mixer.position() == 0, "stop: the head rewinds to zero");
@@ -183,7 +183,7 @@ void TestPauseHoldsPositionStopRewinds() {
       "pause: resuming advances exactly one block from the held frame"
   );
 
-  mixer.Stop();
+  mixer.Stop(0, false);
   Drain(&mixer);
   Check(mixer.position() == 0, "pause: Stop still rewinds after a Pause");
 }

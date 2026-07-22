@@ -96,14 +96,14 @@ void TestCommandsAppliedInOrder() {
   LoadRamp(&mixer, 0, kLongFrames, kLongOffset);
 
   mixer.Seek(3000, 0, false);
-  mixer.Stop();
+  mixer.Stop(0, false);
   Drain(&mixer);
   Check(
       mixer.position() == 0,
       "order: seek then stop lands on stop's rewind, not the seek"
   );
 
-  mixer.Stop();
+  mixer.Stop(0, false);
   mixer.Seek(3000, 0, false);
   Drain(&mixer);
   Check(

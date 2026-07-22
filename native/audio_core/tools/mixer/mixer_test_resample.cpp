@@ -158,7 +158,7 @@ void TestMixerResamplesOnLoad() {
       at_tone > at_wrong * 8.0,
       "resample: the mixed stem plays at 1000Hz, not a skipped-resample pitch"
   );
-  mixer.Stop();
+  mixer.Stop(0, false);
 }
 
 }  // namespace
