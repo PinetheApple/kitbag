@@ -42,6 +42,11 @@ class Engine {
     return frames_rendered_.load(std::memory_order_relaxed);
   }
 
+  // Offline pull backing kb_engine_render; see its contract in kitbag_api.h.
+  void RenderOffline(float* output, uint32_t frame_count) {
+    Render(output, frame_count);
+  }
+
   Metronome& metronome() {
     return metronome_;
   }
