@@ -26,9 +26,15 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   regress other latency-offset runs (the reason #21 was parked). Unblocks the #21
   defect fix. **[user ruled cascade; time base = position per rec]**
 
-- **2026-07-21 · Test-tone (§16, #17)** — Fold into **A5** (#10), which builds the
-  engine-render test seam this needs. When A5 lands: if a product surface consumes
-  `kb_engine_set_test_tone`, fix it with accumulate (not assign) semantics; **if
-  nothing consumes it, delete the ABI symbol** — §16 forbids orphan exports. Default
-  lean: delete, it is a dev diagnostic with no product surface. No longer parked on a
-  ruling; scheduled behind A5. **[recorded — user delegated]**
+- **2026-07-21 · Test-tone (§16, #17)** — Folded into **A5** (#10). **RESOLVED
+  2026-07-22 (A5 landed): deleted** `kb_engine_set_test_tone` / `RenderTestTone` /
+  the tone fields and `tone_test.c`. The only consumer was the dev tool itself — no
+  product surface — so §16 (no orphan exports) forces delete over the accumulate-fix
+  path. Closes #17. **[recorded — user delegated]**
+
+- **2026-07-22 · Live-seek source reposition (§4.1/§4.4)** — Re-tracked as **#25**,
+  not folded into A5. A live seek clears a `SpscBulkRing` the callback is still
+  draining → bounded transient glitch (no crash). Pre-existing in the mixer; the
+  A5 player mirrors it. A5 is a thin transport and correctly did not widen scope;
+  the residual pointer (`mixer.cpp` + tracker) now points at #25 instead of dangling
+  at a closed task. Fix = rebuild+republish-on-seek by atomic swap. **[recorded]**
