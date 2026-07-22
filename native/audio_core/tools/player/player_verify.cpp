@@ -171,7 +171,7 @@ void TestSeek() {
   player.Play();
   RenderBlock(&player, 0.0f);
 
-  player.Seek(2000);
+  player.Seek(2000, 0, false);
   const std::vector<float> after = RenderBlock(&player, 0.0f);
   ExpectNear(after, 0, 0, kOffset + 2000, "seek: reads from the sought frame");
   Check(player.position() == 2000 + kBlock, "seek: position tracks the seek");
@@ -206,7 +206,7 @@ void TestEndOfSourceStops() {
       "end: load a short source"
   );
   player.Play();
-  player.Seek(600);
+  player.Seek(600, 0, false);
   RenderBlock(&player, 0.0f);  // 600 -> clamps to 700 (source end)
   RenderBlock(&player, 0.0f);  // start >= length: transport stops
   Check(!player.is_playing(), "end: playback stops at the source end");
@@ -243,7 +243,7 @@ void TestNullAndEmpty() {
 
   // Transport on a sourceless player must not crash and must not wedge playing.
   player.Play();
-  player.Seek(100);
+  player.Seek(100, 0, false);
   player.Pause();
   std::vector<float> out(static_cast<size_t>(kBlock) * 2, 0.0f);
   player.Render(out.data(), kBlock);

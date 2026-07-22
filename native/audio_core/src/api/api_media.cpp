@@ -108,7 +108,12 @@ int32_t kb_mixer_is_playing(const kb_engine* engine) {
 
 void kb_mixer_seek(kb_engine* engine, int64_t frame) {
   if (engine == nullptr) return;
-  ToEngine(engine)->mixer().Seek(static_cast<uint64_t>(frame));
+  kitbag::Engine* e = ToEngine(engine);
+  e->mixer().Seek(
+      static_cast<uint64_t>(frame),
+      e->frames_rendered(),
+      e->is_running()
+  );
 }
 
 int64_t kb_mixer_position(const kb_engine* engine) {
@@ -150,9 +155,13 @@ void kb_player_pause(kb_engine* engine) {
 }
 
 void kb_player_seek(kb_engine* engine, int64_t frame) {
-  if (engine != nullptr) {
-    ToEngine(engine)->player().Seek(static_cast<uint64_t>(frame));
-  }
+  if (engine == nullptr) return;
+  kitbag::Engine* e = ToEngine(engine);
+  e->player().Seek(
+      static_cast<uint64_t>(frame),
+      e->frames_rendered(),
+      e->is_running()
+  );
 }
 
 int64_t kb_player_position(const kb_engine* engine) {

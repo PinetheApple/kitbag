@@ -189,6 +189,25 @@ if(KITBAG_BUILD_TOOLS)
   target_compile_options(player_verify PRIVATE -Werror=switch)
   target_link_libraries(player_verify PRIVATE Threads::Threads m ${CMAKE_DL_LIBS})
 
+  # Threaded seek-race verify (#25): a live Seek during an active render loop must
+  # never emit a stale/underflowed block. Links the mixer and player sources plus
+  # the file adapter (the player streams a real WAV), and Threads for the loop.
+  add_executable(seek_race_verify
+    tools/seek_race_verify.cpp
+    src/mixer/mixer.cpp
+    src/mixer/mixer_render.cpp
+    src/player/player.cpp
+    src/player/player_render.cpp
+    src/media/audio_source.cpp
+    src/media/file_audio_reader.cpp
+    src/media/miniaudio_decoder.cpp
+    src/media/resampling_source_reader.cpp
+    src/media/miniaudio_impl.c
+  )
+  target_include_directories(seek_race_verify PRIVATE src tools tools/media third_party)
+  target_compile_options(seek_race_verify PRIVATE -Werror=switch)
+  target_link_libraries(seek_race_verify PRIVATE Threads::Threads m ${CMAKE_DL_LIBS})
+
   # Drives the in-memory adapter. That this target links no miniaudio and still
   # passes is what proves the seam: the module depends on SourceReader, not on
   # a decoder. The file adapter gets its own tool below — the seam has two
