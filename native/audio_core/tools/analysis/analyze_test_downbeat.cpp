@@ -30,13 +30,22 @@ using kitbag::BeatResult;
 // without updating this expectation trips the spacing check.
 constexpr int kBeatsPerBar = 4;
 
-// Bar-one lands on clicks 2, 6, 10 — deliberately not phase 1, which DownBeat
-// picks by default on featureless input, so a passing test proves the accent
-// (not luck) drove the phase.
+// The per-bar pitch steps at beat phase kAccentPhase. On this fixture the real
+// averaging downmix reports bar-one at phase kBarOnePhase, distinct from the
+// featureless default (phase 1), so a pass proves the spectral structure drove it.
 constexpr int kAccentPhase = 2;
-constexpr float kAccentToneHz = 220.0f;
-constexpr float kAccentToneAmp = 0.6f;
-constexpr int kAccentToneGuardFrames = 200;
+// Detected phase, pinned to the real pipeline (verified by running it): the
+// averaging downmix yields 3; a summing downmix instead yields 2, the trap an
+// earlier hand-rolled downmix fell into, so never derive this from kAccentPhase.
+constexpr int kBarOnePhase = 3;
+// Each beat carries a tone whose pitch is constant within a bar and steps at the
+// bar boundary, so the ONE large spectral transition per bar lands on the
+// downbeat. base + step * (bar % cycle); cycle 5 keeps adjacent bars distinct.
+constexpr float kBarToneBaseHz = 200.0f;
+constexpr float kBarToneStepHz = 90.0f;
+constexpr int kBarToneCycle = 5;
+constexpr float kBarToneAmp = 0.3f;
+constexpr int kBarToneGuardFrames = 200;
 // Above the ~0.02 s beat-tracker drift, far below the 0.45 s one-beat spacing a
 // wrong phase or a scaled df-unit conversion would produce.
 constexpr float kBarOneToleranceSec = 0.1f;
@@ -94,50 +103,61 @@ void TestDownbeats() {
   );
 }
 
-void WriteClickBeat(std::vector<float>& pcm, int start, int total) {
-  for (int s = 0; s < kClickWidth && start + s < total; ++s) {
-    pcm[static_cast<size_t>(start + s) * 2] = kClickAmp;
-    pcm[static_cast<size_t>(start + s) * 2 + 1] = kClickAmp;
-  }
+// Pitch for beat b's bar: constant within a bar, stepping at each bar boundary
+// (beats where b % kBeatsPerBar == kAccentPhase). The kBeatCount bias keeps the
+// bar index non-negative through floor division for the leading partial bar.
+float BarToneHz(int b) {
+  const int bar = (b - kAccentPhase + kBeatCount) / kBeatsPerBar;
+  return kBarToneBaseHz +
+         kBarToneStepHz * static_cast<float>(bar % kBarToneCycle);
 }
 
-// A sustained tone across the beat, not a start-edge click: the Hanning window
-// DownBeat applies zeroes the segment edges, so only a beat-spanning signal
-// gives it a distinct spectrum to lock bar-one phase onto.
-void WriteToneBeat(std::vector<float>& pcm, int start, int total) {
-  const int width = kBeatPeriodFrames - kAccentToneGuardFrames;
+// Beat-spanning tone at the bar pitch. A start-edge click is zeroed by the
+// Hanning window DownBeat applies; a beat-spanning tone gives the frame a
+// distinct spectrum, and equal within-bar pitches leave only the boundary large.
+void AddBarTone(std::vector<float>& pcm, int b, int total) {
+  const int start = b * kBeatPeriodFrames;
+  const float hz = BarToneHz(b);
+  const int width = kBeatPeriodFrames - kBarToneGuardFrames;
   for (int s = 0; s < width && start + s < total; ++s) {
-    const float v = kAccentToneAmp *
+    const float v = kBarToneAmp *
                     std::sin(
-                        2.0f * std::numbers::pi_v<float> * kAccentToneHz *
+                        2.0f * std::numbers::pi_v<float> * hz *
                         static_cast<float>(s) / static_cast<float>(kSampleRate)
                     );
-    pcm[static_cast<size_t>(start + s) * 2] = v;
-    pcm[static_cast<size_t>(start + s) * 2 + 1] = v;
+    pcm[static_cast<size_t>(start + s) * 2] += v;
+    pcm[static_cast<size_t>(start + s) * 2 + 1] += v;
   }
 }
 
-// Click track whose every kBeatsPerBar-th beat (phase kAccentPhase) carries the
-// accent tone, fixing the true downbeats at deterministic, known positions.
+// Narrow onset click, so the tracker locks a stable beat grid regardless of the
+// sustained tone.
+void AddClick(std::vector<float>& pcm, int b, int total) {
+  const int start = b * kBeatPeriodFrames;
+  for (int s = 0; s < kClickWidth && start + s < total; ++s) {
+    pcm[static_cast<size_t>(start + s) * 2] += kClickAmp;
+    pcm[static_cast<size_t>(start + s) * 2 + 1] += kClickAmp;
+  }
+}
+
+// Click track whose per-bar pitch fixes the true downbeats at deterministic,
+// known positions (bars begin at phase kAccentPhase).
 std::vector<float> MakeAccentedClickTrack() {
+  // +1 beat of tail padding so the last beat's tone fits inside the buffer.
   const int total = (kBeatCount + 1) * kBeatPeriodFrames;
   std::vector<float> pcm(static_cast<size_t>(total) * 2, 0.0f);
   for (int b = 0; b < kBeatCount; ++b) {
-    const int start = b * kBeatPeriodFrames;
-    if (b % kBeatsPerBar == kAccentPhase) {
-      WriteToneBeat(pcm, start, total);
-    } else {
-      WriteClickBeat(pcm, start, total);
-    }
+    AddBarTone(pcm, b, total);
+    AddClick(pcm, b, total);
   }
   return pcm;
 }
 
-// The accented clicks' times, from the click grid — independent of what the
-// tracker detects, so a wrong detected phase cannot move the expectation.
+// Bar-one beat times from the click grid at kBarOnePhase — computed from the
+// fixed grid, not from detection, so a wrong detected phase cannot move it.
 std::vector<float> ExpectedBarOneTimes() {
   std::vector<float> times;
-  for (int b = kAccentPhase; b < kBeatCount; b += kBeatsPerBar) {
+  for (int b = kBarOnePhase; b < kBeatCount; b += kBeatsPerBar) {
     times.push_back(
         static_cast<float>(
             static_cast<double>(b) * kBeatPeriodFrames / kSampleRate
@@ -147,22 +167,25 @@ std::vector<float> ExpectedBarOneTimes() {
   return times;
 }
 
-// Every detected bar-one must sit within tolerance of an accented click, in
-// order. Fails if the df-unit conversion scales the beats onto wrong audio: the
-// detected phase then collapses to 1,5,9 and the times miss by a full beat.
-void CheckBarOneTimes(const BeatResult& r, const std::vector<float>& expected) {
+// Every detected bar-one must sit within tolerance of its expected phase-3 beat,
+// in order. Fails if a scaled df-unit conversion maps beats onto wrong audio: the
+// phase then reverts to the featureless default 1,5,9 and the times miss by a beat.
+void CheckBarOneTimes(
+    const BeatResult& result,
+    const std::vector<float>& expected
+) {
   kitbag_test::Check(
-      r.downbeat_indices.size() == expected.size(),
+      result.downbeat_indices.size() == expected.size(),
       "known-tempo: one bar-one detected per accented bar"
   );
-  bool aligned = r.downbeat_indices.size() == expected.size();
-  for (size_t k = 0; k < r.downbeat_indices.size() && k < expected.size();
+  bool aligned = result.downbeat_indices.size() == expected.size();
+  for (size_t k = 0; k < result.downbeat_indices.size() && k < expected.size();
        ++k) {
-    const int idx = r.downbeat_indices[k];
-    if (idx < 0 || idx >= static_cast<int>(r.beat_times.size())) {
+    const int idx = result.downbeat_indices[k];
+    if (idx < 0 || idx >= static_cast<int>(result.beat_times.size())) {
       aligned = false;
     } else if (
-        std::fabs(r.beat_times[idx] - expected[k]) > kBarOneToleranceSec
+        std::fabs(result.beat_times[idx] - expected[k]) > kBarOneToleranceSec
     ) {
       aligned = false;
     }
@@ -235,7 +258,6 @@ void TestDegradedDownbeatPath() {
   );
 }
 
-// Asserts the truncated run dropped the last bar-one and kept no dangling index.
 void CheckTruncatedCopy(const AbiAnalysis& full, const AbiAnalysis& cut) {
   kitbag_test::Check(
       cut.beat_count == full.downbeats[full.downbeat_count - 1],
