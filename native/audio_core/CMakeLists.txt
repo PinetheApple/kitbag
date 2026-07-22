@@ -85,8 +85,9 @@ add_library(qm_dsp STATIC
   third_party/qm-dsp/ext/kissfft/tools/kiss_fftr.c
 )
 # Root resolves "dsp/..."/"maths/..."; kissfft dirs resolve its local includes.
-# kiss_fft_scalar=double: FFT.cpp casts double buffers into kiss_fft_cpx, so the
-# default float scalar would miscompile (upstream build/general/Makefile.inc).
+# kiss_fft_scalar=double: FFT.cpp casts double buffers into kiss_fft_cpx; the
+# default float scalar mismatches the struct layout and corrupts FFT data (not
+# mere precision loss) — matches upstream build/general/Makefile.inc.
 target_include_directories(qm_dsp SYSTEM PUBLIC
   third_party/qm-dsp
   third_party/qm-dsp/ext/kissfft
