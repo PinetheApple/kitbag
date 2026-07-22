@@ -238,6 +238,35 @@ std::vector<double> RenderContinuousPeaks(
   return peaks;
 }
 
+// Peak |sample| over an absolute frame window, rendered fresh from frame 0. At
+// high bpm subdivisions sit closer than kOnsetHoldFrames, so the onset detector
+// merges them; only a windowed peak isolates a single click.
+inline double
+WindowedPeak(kitbag::Metronome& metronome, int64_t lo, int64_t hi) {
+  std::vector<float> buffer(kBlockFrames * kChannels);
+  double peak = 0.0;
+  for (int64_t rendered = 0; rendered < hi + kBlockFrames;
+       rendered += kBlockFrames) {
+    std::fill(buffer.begin(), buffer.end(), 0.0f);
+    metronome.Render(
+        buffer.data(),
+        kBlockFrames,
+        kSampleRate,
+        kChannels,
+        static_cast<uint64_t>(rendered)
+    );
+    for (uint32_t frame = 0; frame < kBlockFrames; ++frame) {
+      const int64_t index = rendered + frame;
+      if (index < lo || index > hi) continue;
+      peak = std::max(
+          peak,
+          std::fabs(static_cast<double>(buffer[frame * kChannels]))
+      );
+    }
+  }
+  return peak;
+}
+
 // A click's envelope only decays, so across blocks where no tick is due a peak
 // that rises is a second voice firing — the one signature of a re-fired tick.
 inline void ExpectDecayingBlocks(
