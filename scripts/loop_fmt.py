@@ -25,9 +25,39 @@ SUBAGENT_TOOLS = {"Task", "Agent"}
 TOOL_INDENT = "  "       # tool calls nest under their NOTE
 RESULT_INDENT = "      "  # results nest under their tool call
 
+# Running totals across the stream, printed in the bottom summary.
+STATS = {"context": 0, "in": 0, "out": 0, "cache_read": 0}
+
 
 def sgr(code, text):
     return f"\033[{code}m{text}{RESET}"
+
+
+def human_num(n):
+    if n >= 1_000_000:
+        return f"{n / 1_000_000:.1f}M"
+    if n >= 1_000:
+        return f"{n / 1_000:.1f}k"
+    return str(n)
+
+
+def human_time(secs):
+    if secs < 60:
+        return f"{secs}s"
+    return f"{secs // 60}m {secs % 60:02d}s"
+
+
+def track_usage(usage):
+    STATS["in"] += usage.get("input_tokens", 0)
+    STATS["out"] += usage.get("output_tokens", 0)
+    STATS["cache_read"] += usage.get("cache_read_input_tokens", 0)
+    # Context = the largest prompt the model held at once, not the running sum.
+    window = (
+        usage.get("input_tokens", 0)
+        + usage.get("cache_read_input_tokens", 0)
+        + usage.get("cache_creation_input_tokens", 0)
+    )
+    STATS["context"] = max(STATS["context"], window)
 
 
 def tag(label, code):
@@ -71,6 +101,7 @@ def render(event):
     if etype == "system" and event.get("subtype") == "init":
         yield stamp() + tag("START", "1;35") + " session"
     elif etype == "assistant":
+        track_usage(event["message"].get("usage", {}))
         for block in event["message"]["content"]:
             if block["type"] == "text" and block["text"].strip():
                 # NOTE starts a group: blank line above, flush left.
@@ -84,11 +115,19 @@ def render(event):
                 errored = block.get("is_error")
                 yield RESULT_INDENT + sgr("91" if errored else "90", f"{'✗' if errored else '└'} {body}")
     elif etype == "result":
+        track_usage(event.get("usage", {}))
         secs = int(event.get("duration_ms", 0) / 1000)
         cost = round(event.get("total_cost_usd", 0), 2)
-        summary = f"✓ {event.get('subtype', 'end')}  ·  ${cost}  ·  {event.get('num_turns', 0)} turns  ·  {secs}s"
-        rule = "═" * len(summary)
-        yield "\n" + sgr("1;32", f"{rule}\n{summary}\n{rule}") + "\n" + event.get("result", "")
+        summary = f"✓ {event.get('subtype', 'end')}  ·  {human_time(secs)}  ·  {event.get('num_turns', 0)} turns  ·  ${cost}"
+        stats = (
+            f"context {human_num(STATS['context'])}"
+            f"  ·  in {human_num(STATS['in'])}"
+            f"  ·  out {human_num(STATS['out'])}"
+            f"  ·  cache {human_num(STATS['cache_read'])} read"
+        )
+        rule = "═" * max(len(summary), len(stats))
+        body = sgr("1;32", rule) + "\n" + sgr("1;32", summary) + "\n" + sgr("32", stats) + "\n" + sgr("1;32", rule)
+        yield "\n" + body + "\n" + event.get("result", "")
 
 
 def main():
