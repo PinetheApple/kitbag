@@ -116,10 +116,21 @@ faithfully reproduces them has failed.
   skipped**. A 44.1kHz stem set plays as silence with no error.
 - `mixer.cpp:14` — `SetTrackData` does `t.pcm.assign()` while the audio thread
   may be reading `tr.pcm` in `Process`. Data race / use-after-realloc.
-- `mixer.cpp:140-141` — read head advances by `max_read`; the comment on :139
-  says minimum. Unequal-length stems desync.
-- `mixer.cpp:68-71` — `Stop()` resets position to 0, and the pause button calls
-  it. **There is no pause.**
+- ~~`mixer.cpp:140-141` — read head advances by `max_read`; the comment on :139
+  says minimum. Unequal-length stems desync.~~ **Withdrawn 2026-07-20.**
+  Measured: every track is indexed by one shared `read_frame_`, so stems have
+  no per-track cursor and cannot desync. The minimum rule is what breaks —
+  with a 1000-frame and a 5000-frame stem it advances 900→1000 while having
+  already output through 1412, replaying 412 frames at every block near the
+  short stem's end. `max_read` is correct; the :139 comment was the defect.
+  The live bug beside it is the auto-stop condition — see §4.4.
+- ~~`mixer.cpp:68-71` — `Stop()` resets position to 0, and the pause button calls
+  it. **There is no pause.**~~ **Native half fixed 2026-07-20** (`4d6c89a`).
+  `Mixer::Pause()` is a single release store that holds `read_frame_`, and a
+  following `Play()` resumes from it; `Stop()` still rewinds, which is now its
+  own distinct job. Exposed on the ABI as `kb_mixer_pause` beside
+  `kb_mixer_stop`. **The UI half is still open** — the audit's "the pause button
+  calls it" cannot be fixed yet because there is no UI. See §7.3.
 - `bpm_lookup_service.dart:68` — comment claims title/artist similarity
   matching; the loop returns the first result with nonzero BPM. Wrong-song BPM
   likely.
@@ -314,11 +325,65 @@ Requirements:
 - All three compose with the existing latency offset so the click lands on the
   beat *at the speaker*, not at the buffer.
 
+**Past the last grid beat, the click goes silent and stays silent.** Every song
+reaches this. `is_running()` keeps reporting true, and `bar_phase` and
+`current_bpm` freeze at their last in-grid values rather than snapping to zero.
+
+This is the decision, not an oversight. A grid is a statement about a specific
+song; past its end there is no measured tempo left to follow, and the two
+alternatives are both worse — extrapolating the last interval invents a tempo
+the song does not have and drifts audibly, while falling back to `bpm_` makes
+the click jump to an unrelated tempo at a moment the user did not ask for. The
+mirrors hold rather than zero so the UI does not flash a dead sweep and a 0 BPM
+readout at the end of every song.
+
+The consequence the UI owns: silence past the end is indistinguishable from a
+stalled engine by listening alone. Whatever surfaces "the grid has run out" is a
+UI affordance, not an engine behaviour change. `clear_grid` is how a caller
+returns to a constant tempo, and it keeps the click's phase.
+
 **JSI note.** `kb_engine_frames_rendered` and `start_at` take `uint64_t` frame
 counts. At 48kHz a JS double's 53-bit mantissa is exact for ~5,900 years of
 continuous rendering, so frames may cross as `double`. Do not introduce BigInt
 for this. `kb_player_position`/`kb_player_frames` (`int64_t` frames) are exact
 to the same bound. This is checked, not assumed — see §13.2.
+
+#### 4.2.1 Grid mode: cursor, generation and bar numbering
+
+Implementation rationale for `Metronome`'s grid state, recorded here because it
+is the reasoning the code cannot restate in two lines.
+
+**The grid crosses the app→RT seam by generation, not by address.** `RtPublisher`
+swaps an atomic pointer to a node that carries its own generation counter, so one
+acquire load in the callback yields both the value and its identity. Comparing
+addresses would be wrong rather than merely fragile: a freed grid's address can be
+recycled by the next allocation, a generation cannot. `observed_generation_` is
+the generation the RT-owned cursor was last seeded against; when the published
+generation differs, the cursor is re-seeded **from the click's current position**,
+so a re-anchor moves only future beats and never revisits a beat that already
+fired.
+
+Generation zero means "seeded against nothing". `Start` and `Stop` both write it,
+which is what forces the next block to re-seed rather than resume from a cursor
+stranded where the pause began. Without that, a resume swallows every beat spanned
+by the pause into a single off-grid click and skips the bar counter past the
+downbeats it swallowed.
+
+**The bar counter has two regimes, and the difference is deliberate.** At constant
+tempo `current_bar_` is incremented at each downbeat and never derived by
+division, so a mid-run time-signature change cannot jump ramp progress or bar-mute
+phase. In grid mode it is instead *derived* from the grid's own beat index
+(`grid_beat_index_ / beats_per_bar_`). Incrementing there would drift: a re-anchor
+that moves the cursor backwards re-crosses downbeats, and an incrementing counter
+would over-count, making the bar-mute cycle's phase depend on how many times the
+user re-anchored. The grid's own numbering — not a count of downbeats observed —
+is what a re-anchor must land on.
+
+**`beat_position_` is kept live through grid mode.** Each grid beat re-anchors it
+onto that beat, and it advances per sample between beats. That is the whole of
+what makes `clear_grid`'s "keeps its phase" true: without it the value stays
+frozen at its `Start` value all through grid mode, and the first sample after the
+clear reads as a downbeat, firing immediately and shifting the bar.
 
 ### 4.3 New: downbeats
 
@@ -343,11 +408,22 @@ The beat grid BLOB schema gains a downbeat index list. Existing grids remain
 valid (downbeats absent → treat every `beats_per_bar`-th beat as a downbeat,
 degraded but usable) — no destructive migration.
 
+#### 4.3.1 Why the tracker caps at `KB_MAX_GRID_BEATS`
+
+`beat_tracker.cpp`'s `kMaxTrackedBeats` is deliberately *equal to*
+`KB_MAX_GRID_BEATS`, not an independent number. A grid longer than that is one
+`kb_metronome_set_grid` rejects outright (§13.7 — one definition, one owner), so
+any surplus beat the tracker returned would be unusable by the only consumer.
+
+Truncation must drop the **late** beats and keep the early ones. The DP
+backtrack walks backward from the last beat, so a cap applied during the walk
+keeps the *tail*: the returned grid's first entry then sits minutes into the
+song and the whole beat map silently shifts off t=0. Beat times are absolute
+seconds anchored to the start of the file; that anchor is the invariant.
+`beat_tracker_verify` pins both halves of this.
+
 ### 4.4 Fix in place
 
-- `mixer.cpp:140-141` — advance the read head by the **minimum** across played
-  tracks, per the comment on :139. Current `max_read` desyncs unequal-length
-  stems.
 - `mixer.cpp:68-71` — split `Stop()` (position → 0) from `Pause()` (holds).
   Expose both.
 - Zero-pad tracks shorter than the longest rather than dropping them from the
@@ -454,6 +530,13 @@ existing ±100 ms clamp. Both are now fixed and pinned by
   double-incrementing `current_bar_`). Found by the first fix's own reviewer:
   the machinery to prevent it existed and was not applied here. **Fixed** by the
   same phase-preservation in `kSetLatencyOffset` while running.
+- **Under a grid the mid-run change has a bounded residue.** Grid mode reads the
+  offset through `GridSeconds` rather than through `beat_position_`, so changing
+  it shifts the song-time mapping without moving `grid_cursor_`. The one beat
+  straddling the change can therefore land early or late by up to the clamp. It
+  is bounded to that single beat: the next crossing re-seeds `grid_cursor_`
+  against the new offset. Accepted, not fixed — the alternative is re-seeking the
+  cursor from the callback on every offset change.
 
 **The rule these three fixes share, and the decision that comes with it:** a
 change to the offset *or* the tempo preserves `position` phase — it never steps
@@ -757,8 +840,11 @@ first implementation**, gated on §4.1.
 
 ### 7.3 Transport
 
-- **Real pause.** `Stop()` resets position to 0 and the pause button calls it —
-  pause currently rewinds. Split via §4.4.
+- **Real pause.** ~~`Stop()` resets position to 0 and the pause button calls it —
+  pause currently rewinds. Split via §4.4.~~ **Native half done 2026-07-20**
+  (`4d6c89a`): the §4.4 split landed — `Mixer::Pause()` holds the position,
+  `kb_mixer_stop` still rewinds, both are on the ABI. **Still outstanding:** a
+  transport UI that calls `kb_mixer_pause`. None exists.
 - **Seek UI.** `Mixer::Seek` and `MixerController.seek` exist; no screen ever
   calls them. There is no scrubber.
 - Fix the position display — Flutter formats frames as ms against a hardcoded
@@ -1439,7 +1525,7 @@ asks them to.
 calibration screen would have measured offsets it was unable to apply. The range
 is now ±300 ms. The lookahead check ran 2026-07-17: there is no window, the
 offset is a phase bias, and the two latency bugs the check exposed are fixed and
-pinned in `metronome_verify` (§4.6). Widening the clamp to ±300 ms is a one-liner
+pinned in `metronome_verify` (§4.7). Widening the clamp to ±300 ms is a one-liner
 left to land with the calibration screen that needs it (§12.8).
 
 ### 12.6 Experience rules — acceptance criteria, not aspirations
@@ -1584,6 +1670,18 @@ the New Architecture, and it means JSI.
 | `kb_player_position` / `_frames` | `int64_t` frames | Yes, same bound. |
 | `kb_mixer_position` | `int64_t` frames | Yes, same bound. |
 
+`kb_tuner_snapshot` packs the whole reading into one atomic so a single load can
+never pair note A with note B's cents. Layout, LSB first:
+
+| Bits | Type | Field |
+|---|---|---|
+| 0–15 | `int16` | nearest-note MIDI index (`-1` = no pitch) |
+| 16–31 | `int16` | cents offset from that note, **×100** |
+| 32–47 | `uint16` | confidence in [0,1], **×10000** |
+
+`Tuner::PackSnapshot` is the only producer; unpackers must apply the scale
+factors above.
+
 Everything else is `int32_t`, `double`, `float`, or `const char*`. **After §4.1
 removes `kb_mixer_set_track_data`, no buffer crosses the boundary at all** — which
 is what makes a HostObject sufficient and an ArrayBuffer bridge unnecessary.
@@ -1670,7 +1768,7 @@ currently at risk of being hand-mirrored and must not be:
 - **`kMaxTracks`** (16) — §7.4.
 - **Accent enum** (`KB_ACCENT_MUTED/NORMAL/ACCENTED`).
 - **`kb_result` codes.**
-- **Latency and phase bounds** — §4.6, and note they are three separate decisions
+- **Latency and phase bounds** — §4.7, and note they are three separate decisions
   (§15), not one shared constant.
 
 Generate the TS from the header, or expose them through the TurboModule. Do not
@@ -1829,7 +1927,7 @@ the ones the Flutter build's demos hid:
   thread starved** (§13.3).
 - The media session emitting what §8.3 assumes — **unverifiable until the cast bug
   class is gone.**
-- Bluetooth latency actually being reachable (§4.6).
+- Bluetooth latency actually being reachable (§4.7).
 - Swipe sensitivity (§12.8).
 
 ---
@@ -1854,7 +1952,7 @@ The six questions that blocked schema and toolchain work were answered
 - **The lookahead question** — answered: there is no window, the offset is a
   phase bias. The check also exposed two live latency bugs (any positive offset
   swallowed beat 0; a ramp and an offset corrupted each other), both now **fixed
-  and pinned** in `metronome_verify` (§4.6). Widening the clamp to ±300 ms is a
+  and pinned** in `metronome_verify` (§4.7). Widening the clamp to ±300 ms is a
   one-liner deferred to the calibration screen that needs it; the regressions
   guard the interaction across it.
 - **The §12.8 design-file edits** — all six landed, so no screen gets built from
@@ -1992,7 +2090,7 @@ Three bounds, three separate constants, no shared value:
 | Phase nudge | **±½ beat, tempo-dependent** | Phase is modular; a whole beat of offset is none. ±175 ms at 171 BPM, ±500 ms at 60 — so a constant was the wrong *shape* of limit. |
 | Downbeat shift | beats, not ms | A different quantity entirely (§8.6). |
 
-Cheap, per §4.6: the native side does not clamp, so this is two constants and a
+Cheap, per §4.7: the native side does not clamp, so this is two constants and a
 stale doc comment in `kitbag_api.h:63`.
 
 **One check before it lands:** confirm the scheduler's lookahead window absorbs a

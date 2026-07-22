@@ -1,0 +1,277 @@
+// Transport: what advances the read head and what stops it. Auto-stop follows
+// the longest loaded track, never "nothing was audible this block" (SPEC §4.4).
+#include "mixer_test_support.h"
+
+namespace mixer_test {
+namespace {
+
+// Muting every track must not end playback, and the transport must keep
+// running underneath the silence so unmuting resumes in sync.
+void TestMuteAllKeepsPlaying() {
+  kitbag::Mixer mixer(kSampleRate);
+  LoadRamp(&mixer, 0, kLongFrames, 0.0f);
+  mixer.Play();
+  mixer.SetMute(0, true);
+
+  const std::vector<float> muted = RenderBlock(&mixer);
+  Check(mixer.is_playing(), "mute-all: playback does not stop");
+  ExpectSilentBlock(muted, "mute-all: the block is silent");
+  Check(
+      mixer.position() == kBlock,
+      "mute-all: the transport advances while muted"
+  );
+
+  mixer.SetMute(0, false);
+  const std::vector<float> heard = RenderBlock(&mixer);
+  ExpectSample(
+      heard,
+      0,
+      static_cast<float>(kBlock),
+      "mute-all: unmute is audible at the resumed frame"
+  );
+  Check(mixer.position() == 2 * kBlock, "mute-all: unmute keeps advancing");
+}
+
+// Gain 0 is the same class of bug as mute: silent, but not the end of the song.
+void TestZeroGainKeepsPlaying() {
+  kitbag::Mixer mixer(kSampleRate);
+  LoadRamp(&mixer, 0, kLongFrames, 0.0f);
+  LoadRamp(&mixer, 1, kLongFrames, kLongOffset);
+  mixer.Play();
+  mixer.SetGain(0, 0.0f);
+  mixer.SetGain(1, 0.0f);
+
+  const std::vector<float> out = RenderBlock(&mixer);
+  Check(mixer.is_playing(), "zero-gain: playback does not stop");
+  ExpectSilentBlock(out, "zero-gain: the block is silent");
+  Check(mixer.position() == kBlock, "zero-gain: the transport advances");
+}
+
+// The short stem is soloed, so the mix runs dry at frame 1000 while the long
+// stem still has data. Solo gates the mix, never the transport.
+void TestSoloKeepsPlayingForOthers() {
+  kitbag::Mixer mixer(kSampleRate);
+  LoadRamp(&mixer, 0, kShortFrames, 0.0f);
+  LoadRamp(&mixer, 1, kLongFrames, kLongOffset);
+  mixer.Play();
+  mixer.SetSolo(0, true);
+  mixer.Seek(900, 0, false);
+
+  const std::vector<float> soloed = RenderBlock(&mixer);
+  ExpectSample(soloed, 3, 903.0f, "solo: only the soloed track is heard");
+  Check(mixer.position() == 1412, "solo: the transport advances");
+
+  const std::vector<float> dry = RenderBlock(&mixer);
+  Check(mixer.is_playing(), "solo: the soloed stem running out does not stop");
+  ExpectSilentBlock(dry, "solo: the mix is dry past the soloed stem's end");
+  Check(mixer.position() == 1924, "solo: the transport runs past the dry mix");
+
+  mixer.SetSolo(0, false);
+  const std::vector<float> both = RenderBlock(&mixer);
+  ExpectSample(
+      both,
+      0,
+      kLongOffset + 1924.0f,
+      "solo: un-soloing restores the long stem at the live frame"
+  );
+}
+
+// Auto-stop fires only once the read head passes the longest track's end, and
+// the final partial block still sounds.
+void TestAutoStopAtLongestTrackEnd() {
+  kitbag::Mixer mixer(kSampleRate);
+  LoadRamp(&mixer, 0, kShortFrames, 0.0f);
+  LoadRamp(&mixer, 1, kLongFrames, kLongOffset);
+  mixer.Play();
+  mixer.Seek(kLongFrames - 400, 0, false);
+
+  const std::vector<float> tail = RenderBlock(&mixer);
+  ExpectSample(
+      tail,
+      399,
+      kLongOffset + static_cast<float>(kLongFrames - 1),
+      "auto-stop: the last frame still sounds"
+  );
+  ExpectSample(tail, 400, 0.0f, "auto-stop: past the end is silent");
+  Check(mixer.is_playing(), "auto-stop: the finishing block still plays");
+  Check(
+      mixer.position() == kLongFrames,
+      "auto-stop: the head clamps to the longest track's end"
+  );
+
+  RenderBlock(&mixer);
+  Check(!mixer.is_playing(), "auto-stop: the next block ends playback");
+  Check(
+      mixer.position() == kLongFrames,
+      "auto-stop: the head stays at the end"
+  );
+}
+
+// The short stem running out must not disturb the long one. Advancing by the
+// minimum would step 900 -> 1000 -> 1512, replaying 412 frames of the long
+// stem every block. Do not "fix" this back to a minimum (SPEC.md §4.4).
+void TestShortStemDoesNotHoldBackTheLongOne() {
+  kitbag::Mixer mixer(kSampleRate);
+  LoadRamp(&mixer, 0, kShortFrames, 0.0f);
+  LoadRamp(&mixer, 1, kLongFrames, kLongOffset);
+  mixer.Play();
+  mixer.Seek(900, 0, false);
+
+  RenderBlock(&mixer);
+  Check(mixer.position() == 1412, "unequal stems: first block ends at 1412");
+  const std::vector<float> second = RenderBlock(&mixer);
+  Check(mixer.position() == 1924, "unequal stems: second block ends at 1924");
+  ExpectSample(
+      second,
+      0,
+      kLongOffset + 1412.0f,
+      "unequal stems: the long stem continues rather than replaying"
+  );
+}
+
+// Seek, position and Stop are transport state. The counter is now callback-
+// applied, so a Drain (one Process) is what makes a command take effect.
+void TestSeekAndPosition() {
+  kitbag::Mixer mixer(kSampleRate);
+  LoadRamp(&mixer, 0, kLongFrames, kLongOffset);
+  mixer.Seek(1234, 0, false);
+  Drain(&mixer);  // applies kSeek; still stopped, so no advance
+  Check(mixer.position() == 1234, "seek: position reports the sought frame");
+
+  mixer.Play();
+  const std::vector<float> out = RenderBlock(&mixer);
+  ExpectSample(
+      out,
+      0,
+      kLongOffset + 1234.0f,
+      "seek: playback resumes at the sought frame"
+  );
+  Check(mixer.position() == 1234 + kBlock, "seek: the head advances one block");
+
+  mixer.Stop(0, false);
+  Drain(&mixer);  // applies kStop: playing false, head rewound
+  Check(!mixer.is_playing(), "stop: playback ends");
+  Check(mixer.position() == 0, "stop: the head rewinds to zero");
+}
+
+// Pause holds the head where it stopped; Stop rewinds it. Resuming after a
+// Pause must sound from the held frame, not from the top (SPEC.md §4.4).
+void TestPauseHoldsPositionStopRewinds() {
+  kitbag::Mixer mixer(kSampleRate);
+  LoadRamp(&mixer, 0, kLongFrames, kLongOffset);
+  const uint64_t sought = 1234;
+  const uint64_t held = sought + kBlock;
+  mixer.Seek(sought, 0, false);
+  mixer.Play();
+  RenderBlock(&mixer);  // applies kSeek + kPlay, plays one block to `held`
+
+  mixer.Pause();
+  ExpectSilentBlock(RenderBlock(&mixer), "pause: a paused mixer is silent");
+  Check(!mixer.is_playing(), "pause: playback ends");
+  Check(mixer.position() == held, "pause: the head holds, one block not more");
+
+  mixer.Play();
+  const std::vector<float> resumed = RenderBlock(&mixer);
+  ExpectSample(
+      resumed,
+      0,
+      kLongOffset + static_cast<float>(held),
+      "pause: resuming sounds from the held frame"
+  );
+  Check(
+      mixer.position() == held + kBlock,
+      "pause: resuming advances exactly one block from the held frame"
+  );
+
+  mixer.Stop(0, false);
+  Drain(&mixer);
+  Check(mixer.position() == 0, "pause: Stop still rewinds after a Pause");
+}
+
+// B5 (#16): longest_frames_ was only ever raised via std::max, so reloading a
+// track shorter left the transport running to the OLD length. Reload track 0
+// from 5000 to 1000 frames and seek near the new end: auto-stop must fire at
+// 1000, not carry on to 5000. The offsets discriminate which source is live.
+void TestReloadToShorterShrinksTransport() {
+  kitbag::Mixer mixer(kSampleRate);
+  LoadRamp(&mixer, 0, kLongFrames, 0.0f);          // 5000
+  LoadRamp(&mixer, 0, kShortFrames, kLongOffset);  // reload same track to 1000
+  mixer.Play();
+  mixer.Seek(kShortFrames - 100, 0, false);  // 900
+
+  const std::vector<float> tail = RenderBlock(&mixer);
+  ExpectSample(
+      tail,
+      99,
+      kLongOffset + static_cast<float>(kShortFrames - 1),
+      "reload-shrink: the reloaded (1000-frame) stem's last frame sounds"
+  );
+  ExpectSample(tail, 100, 0.0f, "reload-shrink: past the new end is silent");
+  Check(
+      mixer.position() == kShortFrames,
+      "reload-shrink: the head clamps to the new 1000 length, not 5000"
+  );
+  Check(mixer.is_playing(), "reload-shrink: the finishing block still plays");
+  RenderBlock(&mixer);
+  Check(
+      !mixer.is_playing(),
+      "reload-shrink: playback ends at 1000, not the reloaded-away 5000"
+  );
+}
+
+// B5 (#16): unloading the longer of two tracks must drop longest_frames_ to the
+// remaining track, so the transport stops there rather than running the 4000
+// frames the unloaded track used to add.
+void TestUnloadShrinksTransport() {
+  kitbag::Mixer mixer(kSampleRate);
+  LoadRamp(&mixer, 0, kShortFrames, 0.0f);        // 1000, kept
+  LoadRamp(&mixer, 1, kLongFrames, kLongOffset);  // 5000, unloaded below
+  mixer.UnloadTrack(1, 0, false);
+  mixer.Play();
+  mixer.Seek(kShortFrames - 100, 0, false);  // 900
+
+  RenderBlock(&mixer);
+  Check(
+      mixer.position() == kShortFrames,
+      "unload-shrink: the head clamps to the remaining 1000-frame track"
+  );
+  Check(mixer.is_playing(), "unload-shrink: the finishing block still plays");
+  RenderBlock(&mixer);
+  Check(
+      !mixer.is_playing(),
+      "unload-shrink: playback ends at 1000 once the long track is unloaded"
+  );
+  Check(mixer.track_ready(0), "unload-shrink: the kept track is still ready");
+  Check(
+      !mixer.track_ready(1),
+      "unload-shrink: the unloaded track reports not ready"
+  );
+}
+
+// track_ready tracks the published source: false before a load, true after, and
+// false again after an unload retires it.
+void TestTrackReadyReflectsPublish() {
+  kitbag::Mixer mixer(kSampleRate);
+  Check(!mixer.track_ready(0), "ready: a fresh track has no source");
+  LoadRamp(&mixer, 0, kShortFrames, 0.0f);
+  Check(mixer.track_ready(0), "ready: a loaded track is ready");
+  mixer.UnloadTrack(0, 0, false);
+  Check(!mixer.track_ready(0), "ready: an unloaded track is no longer ready");
+}
+
+}  // namespace
+
+void RunTransportTests() {
+  TestMuteAllKeepsPlaying();
+  TestZeroGainKeepsPlaying();
+  TestSoloKeepsPlayingForOthers();
+  TestAutoStopAtLongestTrackEnd();
+  TestShortStemDoesNotHoldBackTheLongOne();
+  TestSeekAndPosition();
+  TestPauseHoldsPositionStopRewinds();
+  TestReloadToShorterShrinksTransport();
+  TestUnloadShrinksTransport();
+  TestTrackReadyReflectsPublish();
+}
+
+}  // namespace mixer_test

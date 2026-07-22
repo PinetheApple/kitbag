@@ -77,6 +77,18 @@ both, see the Ralph loop in `CLAUDE.md`):
   never describe intent as behaviour**: a comment claiming title/artist similarity
   matching sat above a loop returning the first result, and it outlived the bug
   long enough to mislead a design file.
+- **Three checks before you write a comment.** (1) *Is this why already written at
+  the definition?* Rationale belongs there, once — `audio_source_drain.h` restated
+  `RampSamples`' own docstring, and two copies of a why are free to drift apart.
+  (2) *Am I patching a signature?* `Drain(source, block, start_sample)` took frames
+  and samples in adjacent parameters, so prose had to carry the units and three call
+  sites did the multiply by hand — put the units in the name instead. (3) *Would a
+  rename absorb it?* Then rename. A name carries **what**; only prose carries
+  **why** — never try to name a rationale, and never comment what a name would say.
+- **An unnameable function is a merged one.** When no verb fits, it is usually two
+  functions: `VerifyBlock` checked ramp order over one span and silence over
+  another, unrelated properties, which is why the name went vague. Split it before
+  reaching for a clarifying comment.
 - **Name a number when it carries non-obvious intent** — a latency bound, a BPM
   range, a DSP threshold. **Leave shared idiom alone**: in a test,
   `60.0 / 120.0 * kSampleRate` reads better than a named constant, and naming only

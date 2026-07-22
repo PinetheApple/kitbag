@@ -67,10 +67,10 @@ The codebase already has the right shape; follow it rather than inventing a
 second pattern.
 
 **Commands in, through a lock-free ring.** App-thread setters push a POD
-`Command` onto `SpscRing` (`src/spsc_ring.h`) and return immediately; the
+`Command` onto `SpscRing` (`src/rt/spsc_ring.h`) and return immediately; the
 callback drains the ring at the top of `Render` via `ApplyPendingCommands()`.
 Validation and clamping happen in the *drain*, not the setter. `Metronome`
-(`src/metronome.h`, `.cpp`) is the reference implementation.
+(`src/metronome/metronome.h`, `.cpp`) is the reference implementation.
 
 **Realtime state is RT-owned and private.** `beat_position_`, `bpm_`,
 `current_bar_` and friends are plain members touched only inside `Render`. They
@@ -95,7 +95,7 @@ into one word (as `kb_tuner_snapshot` does) or use release/acquire.
 Verified against the source. Each of these is a live SPEC.md §4 work item, and
 each is somewhere a plausible-looking change goes wrong.
 
-- **`Mixer::SetTrackData` allocates and races** (`src/mixer.cpp:9`). It does
+- **`Mixer::SetTrackData` allocates and races** (`src/mixer/mixer.cpp:9`). It does
   `t.pcm.assign(...)` on the app thread while the callback may be reading `pcm`.
   §4.1 removes this entirely: the core loads and streams from disk itself, built
   off-thread and published by atomic pointer swap with release semantics. Do not

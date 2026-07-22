@@ -17,3 +17,8 @@ node_modules/
 .DS_Store
 
 .claude/worktrees/
+
+# project-loop runtime artifacts
+stream-*.jsonl
+loop.log
+.loop-halt

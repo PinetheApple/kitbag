@@ -4,11 +4,12 @@
 #include <atomic>
 #include <cstdint>
 
-#include "decoder.h"
-#include "metronome.h"
+#include "media/decoder.h"
+#include "metronome/metronome.h"
 #include "miniaudio.h"
-#include "mixer.h"
-#include "tuner.h"
+#include "mixer/mixer.h"
+#include "player/player.h"
+#include "tuner/tuner.h"
 
 namespace kitbag {
 
@@ -29,42 +30,78 @@ class Engine {
   bool Start();
   void Stop();
 
-  uint32_t sample_rate() const { return kSampleRate; }
+  uint32_t sample_rate() const {
+    return kSampleRate;
+  }
+  // True whenever the data callback can run. RtPublisher::Publish reads this to
+  // decide whether a retired payload can be freed at once.
+  bool is_running() const {
+    return device_running_.load(std::memory_order_relaxed);
+  }
   uint64_t frames_rendered() const {
     return frames_rendered_.load(std::memory_order_relaxed);
   }
 
-  void SetTestTone(bool enabled, float frequency_hz);
+  // Offline pull backing kb_engine_render; see its contract in kitbag_api.h.
+  void RenderOffline(float* output, uint32_t frame_count) {
+    Render(output, frame_count);
+  }
 
-  Metronome& metronome() { return metronome_; }
-  const Metronome& metronome() const { return metronome_; }
+  Metronome& metronome() {
+    return metronome_;
+  }
+  const Metronome& metronome() const {
+    return metronome_;
+  }
 
-  Tuner& tuner() { return tuner_; }
-  const Tuner& tuner() const { return tuner_; }
+  Tuner& tuner() {
+    return tuner_;
+  }
+  const Tuner& tuner() const {
+    return tuner_;
+  }
 
-  Decoder& decoder() { return decoder_; }
-  const Decoder& decoder() const { return decoder_; }
+  Decoder& decoder() {
+    return decoder_;
+  }
+  const Decoder& decoder() const {
+    return decoder_;
+  }
 
-  Mixer& mixer() { return mixer_; }
-  const Mixer& mixer() const { return mixer_; }
+  Mixer& mixer() {
+    return mixer_;
+  }
+  const Mixer& mixer() const {
+    return mixer_;
+  }
+
+  Player& player() {
+    return player_;
+  }
+  const Player& player() const {
+    return player_;
+  }
 
  private:
-  static void DataCallback(ma_device* device, void* output, const void* input,
-                           ma_uint32 frame_count);
+  static void DataCallback(
+      ma_device* device,
+      void* output,
+      const void* input,
+      ma_uint32 frame_count
+  );
   void Render(float* output, uint32_t frame_count);
 
   ma_device device_{};
   bool device_ready_ = false;
 
+  std::atomic<bool> device_running_{false};
   std::atomic<uint64_t> frames_rendered_{0};
-  std::atomic<bool> tone_enabled_{false};
-  std::atomic<float> tone_frequency_hz_{440.0f};
-  double tone_phase_ = 0.0;
 
   Metronome metronome_;
   Tuner tuner_;
   Decoder decoder_;
-  Mixer mixer_;
+  Mixer mixer_{kSampleRate};
+  Player player_{kSampleRate};
 };
 
 }  // namespace kitbag

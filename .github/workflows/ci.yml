@@ -11,6 +11,9 @@ jobs:
   native:
     name: Native core (Linux)
     runs-on: ubuntu-latest
+    # audio_source_verify's TestDestroyWhileRunning hangs rather than fails on a
+    # join deadlock; without this it burns the default runner limit instead.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - name: Install build tools
@@ -21,6 +24,28 @@ jobs:
         run: cmake --build native/audio_core/build
       - name: Metronome — render offline, assert onsets against the beat grid
         run: ./native/audio_core/build/metronome_verify
+      - name: ABI — exercise the exported C surface against the shared library
+        run: ./native/audio_core/build/abi_verify
+      - name: Beat tracker — synthetic onsets, assert tempo and beat times
+        run: ./native/audio_core/build/beat_tracker_verify
+      - name: Mixer — transport and mix-down
+        run: ./native/audio_core/build/mixer_verify
+      - name: Player — single-source transport advances, holds on pause, seeks
+        run: ./native/audio_core/build/player_verify
+      - name: Seek race — a live seek never emits a stale/underflowed block (#25)
+        run: ./native/audio_core/build/seek_race_verify
+      - name: Stream — a real WAV streams through the C ABI; frames, non-silence, resample
+        run: ./native/audio_core/build/stream_verify
+      - name: Note lock — hysteresis around note boundaries
+        run: ./native/audio_core/build/note_lock_verify
+      - name: Audio source — the SourceReader seam, no miniaudio linked
+        run: ./native/audio_core/build/audio_source_verify
+      - name: File reader — the miniaudio side of the seam, over a run-time WAV
+        run: ./native/audio_core/build/file_audio_reader_verify
+      - name: Decoder — the offline kb_analyze_song path decodes s16 to f32
+        run: ./native/audio_core/build/decoder_verify
+      - name: Analyze — Decoder→downmix→tracker→sidecar; NaN/channels/narrowing guards
+        run: ./native/audio_core/build/analyze_verify
       # tuner_verify is NOT gated: it currently fails 37/37 — PitchAnalyzer
       # returns 0 Hz / 0.00 confidence on clean synthetic tones. See SPEC §10.1.
       # Re-enable as a gate when the tuner research lands.
