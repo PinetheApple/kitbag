@@ -29,7 +29,8 @@ PROMPT="/project-loop one increment then stop"
 # acceptEdits auto-accepts Edit/Write. Task dispatches the domain agents + reviewers.
 ALLOWED=(Bash Edit Write Read Grep Glob Task Skill)
 
-# Colored, tagged live feed — see scripts/loop_fmt.py.
+# Colored, tagged live feed with a pinned stats footer — see scripts/loop_fmt.py.
+# `uv run` reads the script's PEP 723 header and resolves rich (cached after first run).
 FMT="$(dirname "$0")/loop_fmt.py"
 
 run_one() {
@@ -41,8 +42,8 @@ run_one() {
     --allowedTools "${ALLOWED[@]}" \
     --output-format stream-json --verbose \
     | tee "$raw" \
-    | python3 "$FMT"
-  return "${PIPESTATUS[0]}"   # claude's exit, not python's — drives the loop
+    | uv run "$FMT"
+  return "${PIPESTATUS[0]}"   # claude's exit, not uv's — drives the loop
 }
 
 if [[ "${1:-}" == "--unattended" ]]; then
