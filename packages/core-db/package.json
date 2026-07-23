@@ -5,9 +5,16 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
-    "@kitbag/core-plugin-api": "workspace:*"
+    "@kitbag/core-plugin-api": "workspace:*",
+    "@op-engineering/op-sqlite": "^17.1.2",
+    "drizzle-orm": "^0.45.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "vitest": "^4.1.10"
   }
 }
