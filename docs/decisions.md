@@ -109,3 +109,23 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
     F-Droid remains the only way to get a binding ruling on lightningcss specifically, per the
     research doc's own §5.2 and the task's scope boundary (no RFP submitted this pass).
   **[recorded — independent re-verification, no material change to prior conclusion]**
+
+- **2026-07-23 · JSI HostObject read shape (§13.2/§13.3, #30)** — Polled realtime
+  reads are number-valued **properties** on the HostObject (`readonly bar_phase:
+  number`), not `() => number` callables. `HostObject::get()` returns a jsi double
+  directly; a callable shape would build a `jsi::Function` via
+  `createFromHostFunction` on every property access, allocating a function per
+  frame on the 60fps Reanimated worklet path — the one thing §13.3 forbids there.
+  Rationale: ralph review of wave 2 — the method-call idiom reads more naturally
+  but loses to the no-per-frame-allocation rule; fixed in the contract now so #31
+  builds the native side against the right shape. **[recorded]**
+
+- **2026-07-23 · TS workspace gate runs in CI (§13.6)** — Added a `test` turbo task
+  + root script and a JS/TS CI job that runs typecheck, the architecture-rule lint,
+  both one-owner generation drift guards (§13.7/§13.8.1), and every vitest suite,
+  including the lint eval harness that proves the custom rules fire. Rationale:
+  ralph flagged that the eval harness was a gate mechanically but not operationally
+  — nothing (CI/turbo/scripts) invoked it, so it ran only when a human typed the
+  command; the repo's §2 history bars claiming an unshipped gate, so the claim was
+  made true rather than softened. Also retroactively wires Wave 1's vitest suites,
+  which had never run in CI. **[recorded]**

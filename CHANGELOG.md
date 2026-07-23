@@ -385,6 +385,18 @@ tested against a fixture v6 database: an upgrading user keeps their setlists
 
 - **core-design:** §12.2 tokens + generated tailwind theme (#37)
 
+- **core-native:** TurboModule command spec (P2-A2)
+
+- **core-native:** JSI HostObject + generated native constants (P2-A3)
+
+JSI HostObject typed contract for polled realtime reads (bar_phase,
+current_beat, current_bpm, frames_rendered, tuner_snapshot,
+player_position) + C++ scaffolding; installs once, sole holder of the
+single kb_engine* (SPEC §13.2, §13.3). Tuner-snapshot decode via
+division (no int32 coercion). Constants generated from engine source
+(kSounds preset comments cross-checked vs kSoundCount, throws if absent)
+— never hand-mirrored (SPEC §13.7). Closes #30.
+
 
 ### Fixed
 
@@ -658,5 +670,33 @@ claude -p exits 0 on normal completion, so a stop-point the model only narrated 
 - eslint-plugin-kitbag: plugin-api-imports-nothing now flags react/react-native/native specifiers per §9.1; test case flipped valid→invalid
 - core-design tokens.ts: stale .mjs→.ts generator reference
 - decisions.md #38: VERIFIED→CORROBORATED to match hedged body
+
+- **wave2:** Wire lint eval harness to run as a gate (#36)
+
+Declare the harness's deps on @kitbag/app-shell (vitest, eslint,
+eslint-plugin-boundaries, typescript-eslint, eslint-plugin-kitbag) and
+add a 'test' script — the harness aborted on import before. Allow
+esbuild's build (vitest dep) via onlyBuiltDependencies so pnpm install
+exits 0; ignore the eval scenario fixtures in the root eslint run (they
+are deliberately rule-violating trees the harness lints itself); narrow
+two restrict-template-expressions gaps and drop a dead type assertion in
+the harness source. Harness now scores 31/31 scenarios green.
+
+- **core-native:** Value-property JSI reads + import-safe barrel (#30, #29)
+
+Review findings from ralph + code-reviewer on wave 2:
+- §13.3: HostObject reads are now number-valued properties, not
+  callables — get() returns a jsi double directly instead of building a
+  jsi::Function per property access, which a 60fps worklet would have
+  allocated every frame. Contract, C++ scaffolding and worklet doc all
+  aligned to the property model.
+- Barrel is now import-safe: the TurboModule is reached through a lazy
+  getKitbagCommands() rather than an eager default that resolved (and
+  threw, pre-#31) at module load, so the generated constants and the
+  snapshot decoder stay importable on their own.
+- snapshot.test.ts gains a PackSnapshot-derived round-trip fixture
+  pinning the decode to the producer's bit math (21 -> 22 tests).
+- Nits: dropped a duplicated ownership sentence, named the tuner-row
+  shape in the constant generator. Generated output byte-unchanged.
 
 
