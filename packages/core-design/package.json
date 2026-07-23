@@ -2,12 +2,21 @@
   "name": "@kitbag/core-design",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "generate": "node scripts/generate-tailwind.ts",
+    "generate:check": "node scripts/generate-tailwind.ts --check"
   },
   "dependencies": {
     "@kitbag/core-plugin-api": "workspace:*"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
+    "lightningcss": "1.30.1",
+    "nativewind": "5.0.0-preview.3",
+    "tailwindcss": "^4.0.0"
   }
 }
