@@ -7,7 +7,8 @@
     "start": "expo start",
     "android": "expo run:android",
     "prebuild": "expo prebuild",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --config eval/vitest.config.mjs"
   },
   "dependencies": {
     "@kitbag/core-design": "workspace:*",
@@ -41,7 +42,12 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",
+    "eslint": "9.39.5",
+    "eslint-plugin-boundaries": "^5.0.1",
+    "eslint-plugin-kitbag": "workspace:*",
     "postcss": "^8.5.0",
-    "tailwindcss": "^4.0.0"
+    "tailwindcss": "^4.0.0",
+    "typescript-eslint": "^8.65.0",
+    "vitest": "^4.1.10"
   }
 }

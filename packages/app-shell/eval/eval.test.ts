@@ -24,7 +24,6 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
-  // eslint-disable-next-line no-console -- the scorecard is the point of the run
   console.log('\nlint eval scorecard:\n' + formatScorecard(all));
 });
 

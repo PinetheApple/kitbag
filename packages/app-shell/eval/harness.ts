@@ -102,7 +102,7 @@ export function discoverScenarios(): ScenarioSpec[] {
 
 // The scenario key a linted file belongs to: `<group>/<name>_(pass|fail)`.
 function scenarioKeyOf(relPath: string): string {
-  const [group, scenario] = relPath.split(path.sep);
+  const [group = '', scenario = ''] = relPath.split(path.sep);
   return `${group}/${scenario}`;
 }
 
@@ -138,7 +138,10 @@ async function collectMessages(): Promise<Map<string, Fired>> {
   return byScenario;
 }
 
-function evaluate(spec: ScenarioSpec, fired: Fired | undefined): ScenarioResult {
+function evaluate(
+  spec: ScenarioSpec,
+  fired: Fired | undefined,
+): ScenarioResult {
   const firedRuleIds = fired?.ruleIds ?? [];
   const messageCount = fired?.count ?? 0;
   const base = {
@@ -189,9 +192,10 @@ export async function runEval(): Promise<ScenarioResult[]> {
 
 export function formatScorecard(results: readonly ScenarioResult[]): string {
   const lines = results.map(
-    (r) => `  ${r.ok ? 'PASS' : 'FAIL'}  ${r.group}/${r.scenario} — ${r.reason}`,
+    (r) =>
+      `  ${r.ok ? 'PASS' : 'FAIL'}  ${r.group}/${r.scenario} — ${r.reason}`,
   );
   const passed = results.filter((r) => r.ok).length;
-  lines.push(`  ${passed}/${results.length} scenarios green`);
+  lines.push(`  ${String(passed)}/${String(results.length)} scenarios green`);
   return lines.join('\n');
 }

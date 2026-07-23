@@ -1,3 +1,9 @@
+# esbuild ships a prebuilt platform binary via its optional @esbuild/* package;
+# its install script is a no-op verify step. Allow it so `pnpm install` exits 0
+# (vitest — core-native, eslint-plugin, core-db, app-shell/eval — pulls esbuild).
+onlyBuiltDependencies:
+  - esbuild
+
 minimumReleaseAgeExclude:
   - '@turbo/darwin-64@2.10.6'
   - '@turbo/darwin-arm64@2.10.6'

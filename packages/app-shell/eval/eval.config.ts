@@ -30,7 +30,7 @@ export const evalConfig: Linter.Config[] = [
   {
     files: ['**/*.{ts,tsx}'],
     languageOptions: {
-      parser: tseslint.parser as Linter.Parser,
+      parser: tseslint.parser,
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
   },

@@ -131,6 +131,10 @@ export default tseslint.config(
       // Generated: Tailwind theme from core-design tokens (SPEC §13.8.1).
       '**/tailwind.config.*',
       '**/*.gen.ts',
+      // Lint-eval fixtures (SPEC §13.6): deliberately rule-violating multi-file
+      // trees the harness lints itself. Not workspace source, not in any
+      // tsconfig — the root run must skip them.
+      '**/eval/scenarios/**',
     ],
   },
 
