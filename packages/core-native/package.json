@@ -9,5 +9,13 @@
   },
   "dependencies": {
     "@kitbag/core-plugin-api": "workspace:*"
+  },
+  "peerDependencies": {
+    "react-native": "*"
+  },
+  "codegenConfig": {
+    "name": "KitbagCommandsSpec",
+    "type": "modules",
+    "jsSrcsDir": "src"
   }
 }
