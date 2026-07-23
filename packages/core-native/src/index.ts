@@ -7,4 +7,7 @@
 // here may be hand-mirrored from the C ABI header (§13.7) — constants are
 // generated from the header or exposed through the TurboModule when that work
 // begins. This placeholder only anchors the package boundary.
-export {};
+
+// --- #29 (P2-A2) TurboModule command path (SPEC §13.2) -----------------------
+export { default as KitbagCommands } from './NativeKitbagCommands';
+export type { Spec as KitbagCommandsSpec } from './NativeKitbagCommands';
