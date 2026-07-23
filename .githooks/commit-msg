@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Kitbag commit-msg gate. Enabled with: bash scripts/install-hooks.sh
+# Runs a personal, untracked local hook if this clone has one (e.g. to strip
+# attribution trailers). No-op for anyone without it — imposes nothing on the repo.
+set -euo pipefail
+local_hook="$(git rev-parse --git-common-dir)/hooks-local/commit-msg"
+[ -x "$local_hook" ] && exec "$local_hook" "$@"
+exit 0
