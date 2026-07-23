@@ -1,0 +1,15 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "noEmit": true
+  },
+  "include": [
+    "harness.ts",
+    "eval.config.ts",
+    "eval.test.ts",
+    "declarations.d.ts"
+  ]
+}
