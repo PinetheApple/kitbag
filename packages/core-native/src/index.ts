@@ -6,7 +6,9 @@
 // see src/generated/nativeConstants.gen.ts.
 
 // --- #29 (P2-A2) TurboModule command path (SPEC §13.2) -----------------------
-export { default as KitbagCommands } from './NativeKitbagCommands';
+// Lazy accessor, not an eager default: resolving the native module throws until
+// #31, so importing this barrel must not resolve it at load time.
+export { getKitbagCommands } from './NativeKitbagCommands';
 export type { Spec as KitbagCommandsSpec } from './NativeKitbagCommands';
 
 // --- #30 (P2-A3) JSI HostObject: polled realtime reads (§13.2, §13.3) --------

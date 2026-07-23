@@ -27,9 +27,11 @@ namespace kitbag {
 // name, checked by eye until the two sides share a generated string (TODO #31).
 inline constexpr const char* kHostObjectKey = "__KitbagHostObject";
 
-// Synchronous polled reads into the C ABI (SPEC §13.2). Each getter returns a
-// jsi::Function that calls straight through with no serialisation. Frame counts
-// (u64/i64) are returned as jsi doubles — exact to 2^53 frames, no BigInt.
+// Synchronous polled reads into the C ABI (SPEC §13.2). Each read is a
+// number-valued property: get() re-invokes the matching kb_* call and returns
+// its value as a jsi double directly, allocating nothing per access — the 60fps
+// requirement (SPEC §13.3). A callable would allocate a jsi::Function per frame,
+// which that rule forbids. Frame counts (u64/i64) are exact to 2^53, no BigInt.
 class KitbagHostObject : public facebook::jsi::HostObject {
  public:
   explicit KitbagHostObject(kb_engine* engine) : engine_(engine) {}

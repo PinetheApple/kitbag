@@ -77,6 +77,23 @@ describe('unpackTunerSnapshot', () => {
     });
   });
 
+  it('round-trips note -1 / -50 cents / full confidence from producer bit math', () => {
+    // Rebuild the exact uint64 Tuner::PackSnapshot emits for this reading
+    // (tuner.cpp): note as int16 two's-complement in bits 0-15, cents×100 as
+    // int16 in bits 16-31, confidence×10000 as uint16 in bits 32-47. Assembled
+    // with multiplication/addition (never bitwise, which would drop bits >2^32),
+    // so a green assert pins the decode to the producer, not to itself.
+    const noteBits = u16(-1); // 0xffff
+    const centsBits = u16(-50 * 100); // -5000 → 60536
+    const confidenceBits = 1.0 * 10000; // 10000, uint16
+    const packed = noteBits + centsBits * WORD + confidenceBits * WORD32;
+    expect(unpackTunerSnapshot(packed)).toEqual({
+      note: -1,
+      cents: -50,
+      confidence: 1.0,
+    });
+  });
+
   it('field accessors agree with the struct decode', () => {
     const packed = pack(45, -1234, 7500);
     const reading = unpackTunerSnapshot(packed);

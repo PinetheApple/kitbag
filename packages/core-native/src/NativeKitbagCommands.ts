@@ -11,8 +11,7 @@
 // SPEC §4.5 / §13.2: the single kb_engine* is owned by the JSI HostObject, which
 // is the only holder of it. This module does NOT create or hold an engine
 // pointer; the native TurboModule implementation (#31) routes each command to
-// the process-wide engine the HostObject installs. There is one engine per
-// process and one holder of it.
+// the process-wide engine the HostObject installs.
 //
 // SPEC §13.7 (one definition per constant): no cross-boundary constant is
 // mirrored here. `kb_result` codes are returned raw as `number`; callers compare
@@ -45,7 +44,7 @@ export interface Spec extends TurboModule {
   // kb_metronome_set_grid(beat_times_sec, count, anchor_frame). `count` is the
   // array length, supplied by the native glue. `anchorFrame` is a uint64 engine
   // frame carried as a JS double — exact to 2^53 frames (~5,900 years at 48kHz),
-  // so No BigInt (kitbag_api.h). Returns a kb_result code; fails on an empty,
+  // so no BigInt (kitbag_api.h). Returns a kb_result code; fails on an empty,
   // non-ascending, non-finite grid or a count above KB_MAX_GRID_BEATS.
   setGrid(beatTimesSec: readonly Double[], anchorFrame: Double): Promise<number>;
 
@@ -78,7 +77,11 @@ export interface Spec extends TurboModule {
   loadTrack(track: Int32, path: string): Promise<number>;
 }
 
-// Standard TurboModule accessor. This resolves the native module lazily at
-// import time; it throws until the native implementation is registered (#31),
-// which is expected at skeleton stage — nothing runtime-imports this yet.
-export default TurboModuleRegistry.getEnforcing<Spec>('KitbagCommands');
+// Lazy TurboModule accessor. Resolving the native module throws until the native
+// implementation is registered (#31), so it must NOT run at module load: the
+// core-native barrel re-exports this file, and an eager top-level resolve would
+// make any import of the barrel (even to read a generated constant) throw at
+// skeleton stage. Call this on first use instead; nothing runtime-invokes it yet.
+export function getKitbagCommands(): Spec {
+  return TurboModuleRegistry.getEnforcing<Spec>('KitbagCommands');
+}

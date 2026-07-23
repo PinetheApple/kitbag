@@ -5,9 +5,11 @@
 //
 // The six reads are exactly the polled realtime set (SPEC §13.2, §13.3):
 // bar_phase, current_beat, current_bpm, frames_rendered, tuner_snapshot,
-// player_position. Each is a synchronous straight-through call — the read path a
-// Reanimated worklet polls on the UI thread. Nothing here is async or allocates
-// per call beyond the jsi::Function wrapper JSI requires.
+// player_position. Each is a number-valued PROPERTY, not a method: get()
+// re-invokes the matching kb_* call and returns its value directly, so a worklet
+// reading global.__KitbagHostObject.bar_phase each frame on the UI thread
+// allocates nothing — no jsi::Function per access, which §13.3 forbids on the
+// 60fps path.
 
 #include "KitbagHostObject.h"
 
@@ -17,56 +19,34 @@
 
 namespace kitbag {
 
-using facebook::jsi::Function;
 using facebook::jsi::PropNameID;
 using facebook::jsi::Runtime;
 using facebook::jsi::Value;
-
-namespace {
-
-// Wrap a zero-arg C ABI read returning a double-representable scalar.
-template <typename Fn>
-Value makeReader(Runtime& rt, const std::string& name, Fn&& read) {
-  return Function::createFromHostFunction(
-      rt,
-      PropNameID::forUtf8(rt, name),
-      0,
-      [read = std::forward<Fn>(read)](
-          Runtime&, const Value&, const Value*, size_t) -> Value {
-        return Value(static_cast<double>(read()));
-      });
-}
-
-}  // namespace
 
 Value KitbagHostObject::get(Runtime& rt, const PropNameID& name) {
   const std::string prop = name.utf8(rt);
   kb_engine* engine = engine_;
 
+  // Each property re-reads the engine and returns the value as a jsi double
+  // directly — no jsi::Function allocated per access (SPEC §13.3).
   if (prop == "bar_phase") {
-    return makeReader(rt, prop, [engine] { return kb_metronome_bar_phase(engine); });
+    return Value(static_cast<double>(kb_metronome_bar_phase(engine)));
   }
   if (prop == "current_beat") {
-    return makeReader(rt, prop, [engine] {
-      return kb_metronome_current_beat(engine);
-    });
+    return Value(static_cast<double>(kb_metronome_current_beat(engine)));
   }
   if (prop == "current_bpm") {
-    return makeReader(rt, prop, [engine] {
-      return kb_metronome_current_bpm(engine);
-    });
+    return Value(static_cast<double>(kb_metronome_current_bpm(engine)));
   }
   if (prop == "frames_rendered") {
-    return makeReader(rt, prop, [engine] {
-      return kb_engine_frames_rendered(engine);
-    });
+    return Value(static_cast<double>(kb_engine_frames_rendered(engine)));
   }
   if (prop == "tuner_snapshot") {
     // uint64, 48 bits used — exact as a double, decoded in src/host/snapshot.ts.
-    return makeReader(rt, prop, [engine] { return kb_tuner_snapshot(engine); });
+    return Value(static_cast<double>(kb_tuner_snapshot(engine)));
   }
   if (prop == "player_position") {
-    return makeReader(rt, prop, [engine] { return kb_player_position(engine); });
+    return Value(static_cast<double>(kb_player_position(engine)));
   }
   return Value::undefined();
 }

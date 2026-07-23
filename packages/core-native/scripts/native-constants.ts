@@ -153,6 +153,15 @@ export function parseSoundNames(
   return names;
 }
 
+// One parsed bit-layout row, before it is normalised into a TunerField (which
+// stores width rather than the header's inclusive hi bit).
+interface TunerRow {
+  offset: number;
+  hi: number;
+  signed: boolean;
+  scale: number;
+}
+
 /**
  * The tuner-snapshot bit layout, parsed from the field table in the
  * kb_tuner_snapshot doc comment. Signedness and the ×N scale come from the same
@@ -163,12 +172,7 @@ export function parseTunerFields(
   apiHeader: string,
 ): NativeConstants['tunerFields'] {
   const rowRe = /bits\s+(\d+)-(\d+)\s+(u?int16)\s+([^\n]*)/g;
-  const rows: {
-    offset: number;
-    hi: number;
-    signed: boolean;
-    scale: number;
-  }[] = [];
+  const rows: TunerRow[] = [];
   let m: RegExpExecArray | null = rowRe.exec(apiHeader);
   while (m !== null) {
     const [, offsetStr, hiStr, typeStr, rest] = m;
@@ -185,12 +189,7 @@ export function parseTunerFields(
   if (note === undefined || cents === undefined || confidence === undefined) {
     fail('the three kb_tuner_snapshot bit-layout rows');
   }
-  const toField = (r: {
-    offset: number;
-    hi: number;
-    signed: boolean;
-    scale: number;
-  }): TunerField => ({
+  const toField = (r: TunerRow): TunerField => ({
     offset: r.offset,
     width: r.hi - r.offset + 1,
     signed: r.signed,
