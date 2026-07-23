@@ -64,7 +64,8 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   (drop-columns/identity-tuple) — different numbering, do not conflate. **[user]**
 
 - **2026-07-23 · F-Droid Inclusion Policy Hermes/prebuilt-binary clause (§13.8.1, #38)
-  — VERIFIED against raw source, wording unchanged, scope narrower than the note implied.**
+  — CORROBORATED against raw source (wording reproduced across fetches, not byte-exact —
+  see caveat below), scope narrower than the note implied.**
   Re-fetched the *raw* source markdown (not the rendered page) directly from F-Droid's
   own docs repo: `https://gitlab.com/fdroid/fdroid-website/-/raw/master/_docs/Inclusion_Policy.md`
   (project id 2151437, file last touched by commit `30d61e8b` "Inclusion_Policy - re-add

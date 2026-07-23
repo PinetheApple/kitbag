@@ -10,5 +10,9 @@ docs/
 **/ios/
 **/.expo/
 **/*.gen.ts
+# Emitted verbatim by core-design/scripts/generate-tailwind.ts from §12.2's
+# tokens; generate:check diffs byte-for-byte, so prettier must not reformat them.
+packages/core-design/theme.css
+packages/core-design/tailwind.config.js
 pnpm-lock.yaml
 CHANGELOG.md

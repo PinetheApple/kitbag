@@ -2,7 +2,7 @@
 //
 // This file is the ONE owner of §12.2's palette, type, radii and shadow
 // (SPEC §13.7). The Tailwind theme is GENERATED from it by
-// `scripts/generate-tailwind.mjs`; Skia reads it directly (§13.8.1). A hex
+// `scripts/generate-tailwind.ts`; Skia reads it directly (§13.8.1). A hex
 // literal must never be hand-authored anywhere downstream — if it is, it is a
 // second source of truth and the §13.7 duplication failure has returned.
 //
