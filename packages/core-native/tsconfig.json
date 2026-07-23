@@ -1,7 +1,12 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "noEmit": true
+    "noEmit": true,
+    // The constant generator (scripts/) imports sibling .ts modules by path so
+    // Node can type-strip and run it as a build step (SPEC §13.7, mirrors
+    // core-design/tsconfig.json). noEmit makes this safe: nothing is compiled,
+    // so no extension is emitted.
+    "allowImportingTsExtensions": true
   },
-  "include": ["src"]
+  "include": ["src", "scripts"]
 }
