@@ -1,7 +1,11 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "noEmit": true
+    "noEmit": true,
+    // The generator (scripts/) imports the token module by its .ts path so
+    // Node can type-strip and run it as a build step (SPEC §13.8.1). noEmit
+    // makes this safe: nothing is compiled, so no extension is emitted.
+    "allowImportingTsExtensions": true
   },
-  "include": ["src"]
+  "include": ["src", "scripts"]
 }
