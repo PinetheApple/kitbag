@@ -70,12 +70,16 @@ export const songPresets = sqliteTable('song_presets', {
   polyBeats: integer('poly_beats').notNull(),
   sound: integer('sound').notNull(),
   // Tempo ramp config (§5.3).
-  rampEnabled: integer('ramp_enabled', { mode: 'boolean' }).notNull().default(false),
+  rampEnabled: integer('ramp_enabled', { mode: 'boolean' })
+    .notNull()
+    .default(false),
   rampStartBpm: real('ramp_start_bpm'),
   rampEndBpm: real('ramp_end_bpm'),
   rampBars: integer('ramp_bars'),
   // Bar-mute config (§5.3): play N bars, mute M bars.
-  barMuteEnabled: integer('bar_mute_enabled', { mode: 'boolean' }).notNull().default(false),
+  barMuteEnabled: integer('bar_mute_enabled', { mode: 'boolean' })
+    .notNull()
+    .default(false),
   barMutePlayBars: integer('bar_mute_play_bars'),
   barMuteMuteBars: integer('bar_mute_mute_bars'),
   // Count-in bars before the preset starts (§5.3).
@@ -176,7 +180,9 @@ export const bpmCache = sqliteTable(
     source: text('source').notNull(),
     fetchedAt: integer('fetched_at', { mode: 'timestamp' }).notNull(),
   },
-  (table) => [uniqueIndex('bpm_cache_title_artist').on(table.title, table.artist)],
+  (table) => [
+    uniqueIndex('bpm_cache_title_artist').on(table.title, table.artist),
+  ],
 );
 
 /// Per-output-route latency calibration (§12.5). The offset is a phase bias in

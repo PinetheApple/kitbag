@@ -17,7 +17,9 @@ export type IconName = string;
  * React (§9.1). Any React component is structurally assignable; the shell binds
  * the concrete component type when it aggregates and mounts the tool.
  */
-export type PluginScreen = (props: Readonly<Record<string, unknown>>) => unknown;
+export type PluginScreen = (
+  props: Readonly<Record<string, unknown>>,
+) => unknown;
 
 /**
  * One route a tool contributes to the file-based router (§9.1, §13.8). The shell

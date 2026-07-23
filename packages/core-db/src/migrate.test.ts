@@ -120,7 +120,8 @@ function driverFor(db: DatabaseSync): MigrationDriver {
     exec: (sql) => {
       db.exec(sql);
     },
-    getUserVersion: () => (firstRow(db, 'PRAGMA user_version') as VersionRow).user_version,
+    getUserVersion: () =>
+      (firstRow(db, 'PRAGMA user_version') as VersionRow).user_version,
     setUserVersion: (version) => {
       db.exec(`PRAGMA user_version = ${String(version)}`);
     },
@@ -152,13 +153,20 @@ function readSetlistNames(db: DatabaseSync): NameRow[] {
  * it bites: every v6 setlist row still exists with its name, and every song's
  * setlist membership survived the split into `setlist_items`.
  */
-function assertSetlistsPreserved(db: DatabaseSync, beforeNames: NameRow[], beforeMembership: Membership[]): void {
+function assertSetlistsPreserved(
+  db: DatabaseSync,
+  beforeNames: NameRow[],
+  beforeMembership: Membership[],
+): void {
   expect(readSetlistNames(db)).toEqual(beforeNames);
   expect(readV7Membership(db)).toEqual(beforeMembership);
 }
 
 /** Run statements the way `migrate()` does, so a sabotaged list is a fair test. */
-function applyInTransaction(db: DatabaseSync, statements: readonly string[]): void {
+function applyInTransaction(
+  db: DatabaseSync,
+  statements: readonly string[],
+): void {
   db.exec('PRAGMA foreign_keys = OFF');
   db.exec('BEGIN');
   for (const stmt of statements) {
@@ -180,8 +188,13 @@ describe('v6 → v7 migration', () => {
     assertSetlistsPreserved(db, beforeNames, beforeMembership);
 
     // Version advanced and FK enforcement restored.
-    expect((firstRow(db, 'PRAGMA user_version') as VersionRow).user_version).toBe(SCHEMA_VERSION);
-    expect((firstRow(db, 'PRAGMA foreign_keys') as { foreign_keys: number }).foreign_keys).toBe(1);
+    expect(
+      (firstRow(db, 'PRAGMA user_version') as VersionRow).user_version,
+    ).toBe(SCHEMA_VERSION);
+    expect(
+      (firstRow(db, 'PRAGMA foreign_keys') as { foreign_keys: number })
+        .foreign_keys,
+    ).toBe(1);
 
     db.close();
   });
@@ -191,7 +204,10 @@ describe('v6 → v7 migration', () => {
     migrate(driverFor(db));
 
     const tableNames = (
-      rows(db, "SELECT name FROM sqlite_master WHERE type = 'table'") as ColumnRow[]
+      rows(
+        db,
+        "SELECT name FROM sqlite_master WHERE type = 'table'",
+      ) as ColumnRow[]
     ).map((row) => row.name);
     for (const expected of [
       'songs',
@@ -216,15 +232,24 @@ describe('v6 → v7 migration', () => {
     expect(presetColumns).not.toContain('latency_offset'); // D3
     expect(presetColumns).not.toContain('setlist_id'); // decoupled
 
-    const songColumns = (rows(db, 'PRAGMA table_info(songs)') as ColumnRow[]).map(
-      (row) => row.name,
-    );
+    const songColumns = (
+      rows(db, 'PRAGMA table_info(songs)') as ColumnRow[]
+    ).map((row) => row.name);
     expect(songColumns).toContain('downbeat_indices'); // §4.3
 
     // Every exportable row got a backfilled UUID (§12.4) — none left null.
-    for (const table of ['setlists', 'songs', 'song_presets', 'tunings', 'stem_sets']) {
+    for (const table of [
+      'setlists',
+      'songs',
+      'song_presets',
+      'tunings',
+      'stem_sets',
+    ]) {
       const nullCount = (
-        firstRow(db, `SELECT count(*) AS n FROM ${table} WHERE uuid IS NULL`) as CountRow
+        firstRow(
+          db,
+          `SELECT count(*) AS n FROM ${table} WHERE uuid IS NULL`,
+        ) as CountRow
       ).n;
       expect(nullCount).toBe(0);
     }

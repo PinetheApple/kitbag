@@ -4,46 +4,46 @@
 
 /* Dark ("Stage") — primary (SPEC §12.2). */
 :root {
-  --color-bg: #0E0D10;
-  --color-surface1: #1A1820;
+  --color-bg: #0e0d10;
+  --color-surface1: #1a1820;
   --color-surface2: #242230;
-  --color-surface3: #2E2C3A;
-  --color-line: #33303F;
-  --color-text: #ECEAF0;
-  --color-text2: #9B97A8;
-  --color-text3: #6C6878;
-  --color-accent: #FFB347;
-  --color-accentDeep: #E89B2E;
-  --color-accentDim: #8A6A35;
+  --color-surface3: #2e2c3a;
+  --color-line: #33303f;
+  --color-text: #eceaf0;
+  --color-text2: #9b97a8;
+  --color-text3: #6c6878;
+  --color-accent: #ffb347;
+  --color-accentDeep: #e89b2e;
+  --color-accentDim: #8a6a35;
   --color-onAccent: #221600;
-  --color-red: #FF5C5C;
-  --color-amber: #FFC24B;
-  --color-green: #4ADE80;
-  --color-wave: #4E4A5E;
-  --color-waveHot: #FFB347;
-  --shadow-sheet: 0 8px 32px rgba(0,0,0,.45);
+  --color-red: #ff5c5c;
+  --color-amber: #ffc24b;
+  --color-green: #4ade80;
+  --color-wave: #4e4a5e;
+  --color-waveHot: #ffb347;
+  --shadow-sheet: 0 8px 32px rgba(0, 0, 0, 0.45);
 }
 
 /* Light ("Daylight") — System resolution via OS preference (SPEC §12.5). */
 @media (prefers-color-scheme: light) {
   :root {
-    --color-bg: #F5F3EE;
-    --color-surface1: #FFFFFF;
-    --color-surface2: #ECE9E1;
-    --color-surface3: #E3DFD4;
-    --color-line: #DCD7CA;
-    --color-text: #221F26;
-    --color-text2: #6E687A;
-    --color-text3: #98929F;
-    --color-accent: #B26F0E;
-    --color-accentDeep: #8F5A0C;
-    --color-accentDim: #D8B27C;
-    --color-onAccent: #FFF7EA;
-    --color-red: #CC4444;
-    --color-amber: #9A6E06;
-    --color-green: #1E8A4F;
-    --color-wave: #C9C3B4;
-    --color-waveHot: #B26F0E;
-    --shadow-sheet: 0 8px 28px rgba(60,50,20,.14);
+    --color-bg: #f5f3ee;
+    --color-surface1: #ffffff;
+    --color-surface2: #ece9e1;
+    --color-surface3: #e3dfd4;
+    --color-line: #dcd7ca;
+    --color-text: #221f26;
+    --color-text2: #6e687a;
+    --color-text3: #98929f;
+    --color-accent: #b26f0e;
+    --color-accentDeep: #8f5a0c;
+    --color-accentDim: #d8b27c;
+    --color-onAccent: #fff7ea;
+    --color-red: #cc4444;
+    --color-amber: #9a6e06;
+    --color-green: #1e8a4f;
+    --color-wave: #c9c3b4;
+    --color-waveHot: #b26f0e;
+    --shadow-sheet: 0 8px 28px rgba(60, 50, 20, 0.14);
   }
 }

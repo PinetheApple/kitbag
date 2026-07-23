@@ -244,7 +244,10 @@ export const MIGRATE_V6_TO_V7: readonly string[] = [
 ];
 
 /** Run a list of statements inside one transaction, rolling back on failure. */
-function runStatements(driver: MigrationDriver, statements: readonly string[]): void {
+function runStatements(
+  driver: MigrationDriver,
+  statements: readonly string[],
+): void {
   driver.exec('BEGIN');
   try {
     for (const statement of statements) {

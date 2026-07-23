@@ -98,12 +98,7 @@ export interface TypeRole {
   readonly tabular?: boolean;
 }
 
-export const TYPE_ROLES = [
-  'display',
-  'headline',
-  'body',
-  'label',
-] as const;
+export const TYPE_ROLES = ['display', 'headline', 'body', 'label'] as const;
 
 export type TypeRoleName = (typeof TYPE_ROLES)[number];
 
@@ -197,7 +192,7 @@ export function renderTailwindConfig(): string {
   const fontWeight = TYPE_ROLES.map(
     (r) => `        ${r}: '${String(typography[r].weight)}',`,
   ).join('\n');
-  const labelTracking = `${String((typography.label.tracking ?? 0))}em`;
+  const labelTracking = `${String(typography.label.tracking ?? 0)}em`;
 
   return `// ${GENERATED_BANNER}
 /** @type {import('tailwindcss').Config} */
