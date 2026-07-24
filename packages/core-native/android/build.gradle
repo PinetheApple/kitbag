@@ -38,7 +38,16 @@ android {
     externalNativeBuild {
       cmake {
         cppFlags "-std=c++20"
-        arguments "-DANDROID_STL=c++_shared"
+        // -z max-page-size=16384 aligns every shared lib CMake links here to
+        // 16 KB ELF LOAD segments. Android 15+ devices with a 16 KB page size
+        // reject 4 KB-aligned .so at install (#33). Applied as a global
+        // CMAKE_SHARED_LINKER_FLAGS so it reaches BOTH shared targets we build
+        // and package — kitbag_jsi and the kitbag_core it links (qm_dsp is
+        // STATIC and folds in). It lives here, not in the shared
+        // native/audio_core CMakeLists, because that tree is also configured for
+        // headless host tools where this Android linker flag is wrong (§13.8).
+        arguments "-DANDROID_STL=c++_shared",
+                  "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,max-page-size=16384"
         // The #33 device gate is arm64; building arm64-v8a alone is the leanest
         // gate config and dodges the 32-bit NDK LTO/ld.gold probe issue on this
         // host (see build report). This MUST match the app's
