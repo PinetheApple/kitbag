@@ -1,6 +1,6 @@
 // The realtime half of the mixer: the command drain and the per-block mix. Runs
 // entirely on the audio callback — allocates nothing, takes no lock, frees
-// nothing. Setup and transport live in mixer.cpp.
+// nothing. Setup and transport live in mixer.cpp and StreamingTrack.
 #include <algorithm>
 #include <cstring>
 
@@ -48,7 +48,7 @@ void Mixer::RecomputeAnySolo() {
   bool any = false;
   const int count = track_count_.load(std::memory_order_relaxed);
   for (int i = 0; i < count; ++i) {
-    if (tracks_[i].published.Get() != nullptr &&
+    if (tracks_[i].stream->ready() &&
         tracks_[i].solo.load(std::memory_order_relaxed)) {
       any = true;
       break;
@@ -57,69 +57,29 @@ void Mixer::RecomputeAnySolo() {
   any_solo_.store(any, std::memory_order_relaxed);
 }
 
-void Mixer::MixMono(
-    const float* src,
-    float* output,
-    uint32_t frames,
-    float gain
-) {
-  for (uint32_t f = 0; f < frames; ++f) {
-    const float s = src[f] * gain;
-    output[2 * f] += s;
-    output[2 * f + 1] += s;
-  }
-}
-
-void Mixer::MixStereo(
-    const float* src,
-    uint32_t channels,
-    float* output,
-    uint32_t frames,
-    float gain
-) {
-  for (uint32_t f = 0; f < frames; ++f) {
-    output[2 * f] += src[f * channels] * gain;
-    output[2 * f + 1] += src[f * channels + 1] * gain;
-  }
-}
-
 void Mixer::MixTrack(
     Track& tr,
-    const TrackSource* src,
     float* output,
     uint32_t frame_count,
     bool any_solo
 ) {
-  if (src == nullptr) return;
-
-  // Drain first and unconditionally: a muted or soloed-out track must still
-  // advance so unmuting resumes in sync rather than replaying (SPEC.md §4.4).
-  const uint32_t got = src->source->Read(scratch_.data(), frame_count);
+  // Drain first unconditionally: a muted or soloed-out track must still advance
+  // so unmuting resumes in sync rather than replaying (SPEC.md §4.4).
+  uint32_t channels = 0;
+  const uint32_t got =
+      tr.stream->DrainBlock(scratch_.data(), frame_count, &channels);
+  if (channels == 0) return;
   if (any_solo && !tr.solo.load(std::memory_order_relaxed)) return;
   if (tr.mute.load(std::memory_order_relaxed)) return;
   const float gain = tr.gain.load(std::memory_order_relaxed);
   if (gain <= 0.0f) return;
-
-  if (src->channels == 1) {
-    MixMono(scratch_.data(), output, got, gain);
-  } else if (src->channels >= 2) {
-    MixStereo(scratch_.data(), src->channels, output, got, gain);
-  }
+  StreamingTrack::AddToOutput(scratch_.data(), channels, got, output, gain);
 }
 
 void Mixer::MixAllTracks(float* output, uint32_t frame_count, bool any_solo) {
   const int count = track_count_.load(std::memory_order_relaxed);
   for (int t = 0; t < count; ++t) {
-    // One acquire load per track carries the source and its identity; the old
-    // source is never freed here, only off-thread once the clock moves past it.
-    const auto* node = tracks_[t].published.Get();
-    MixTrack(
-        tracks_[t],
-        node != nullptr ? &node->value : nullptr,
-        output,
-        frame_count,
-        any_solo
-    );
+    MixTrack(tracks_[t], output, frame_count, any_solo);
   }
 }
 
@@ -147,7 +107,7 @@ void Mixer::Process(float* output, uint32_t frame_count) {
   ApplyPendingCommands();
   // Scratch is sized to kMaxBlockFrames at setup; a wider block cannot be
   // drained without allocating, which the callback must never do.
-  if (frame_count > kMaxBlockFrames) return;
+  if (frame_count > StreamingTrack::kMaxBlockFrames) return;
   if (!playing_.load(std::memory_order_relaxed)) return;
 
   const bool any_solo = any_solo_.load(std::memory_order_relaxed);

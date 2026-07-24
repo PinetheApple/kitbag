@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "Kitbag",
+    "slug": "kitbag",
+    "version": "0.0.0",
+    "orientation": "portrait",
+    "scheme": "kitbag",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "android": {
+      "package": "com.kitbag.app",
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "ios": {
+      "bundleIdentifier": "com.kitbag.app"
+    }
+  }
+}

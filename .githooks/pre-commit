@@ -20,3 +20,9 @@ if grep -q '^native/audio_core/' <<<"$staged" &&
   echo "      If this lands or withdraws a tracked item, update it now —" >&2
   echo "      a stale tracker misdirects the next reader. Otherwise ignore." >&2
 fi
+
+# Optional local override: run a personal, untracked hook if this clone has one
+# (e.g. an author-identity guard). No-op for anyone without it — keeps personal
+# rules out of the shared repo while surviving `install-hooks.sh` (SPEC-neutral).
+local_hook="$(git rev-parse --git-common-dir)/hooks-local/pre-commit"
+[ -x "$local_hook" ] && exec "$local_hook" "$@"

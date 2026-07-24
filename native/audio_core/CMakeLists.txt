@@ -42,6 +42,7 @@ add_library(kitbag_core SHARED
   src/metronome/metronome_grid.cpp
   src/metronome/metronome_render.cpp
   src/media/miniaudio_impl.c
+  src/media/streaming_track.cpp
   src/mixer/mixer.cpp
   src/mixer/mixer_render.cpp
   src/player/player.cpp
@@ -158,6 +159,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/mixer/mixer_test_source.cpp
     tools/mixer/mixer_test_resample.cpp
     tools/mixer/mixer_test_publish.cpp
+    src/media/streaming_track.cpp
     src/mixer/mixer.cpp
     src/mixer/mixer_render.cpp
     src/media/audio_source.cpp
@@ -176,6 +178,7 @@ if(KITBAG_BUILD_TOOLS)
   # tool writes a temp WAV and links the file adapter and Threads, like the mixer.
   add_executable(player_verify
     tools/player/player_verify.cpp
+    src/media/streaming_track.cpp
     src/player/player.cpp
     src/player/player_render.cpp
     src/media/audio_source.cpp
@@ -194,6 +197,7 @@ if(KITBAG_BUILD_TOOLS)
   # the file adapter (the player streams a real WAV), and Threads for the loop.
   add_executable(seek_race_verify
     tools/seek_race_verify.cpp
+    src/media/streaming_track.cpp
     src/mixer/mixer.cpp
     src/mixer/mixer_render.cpp
     src/player/player.cpp

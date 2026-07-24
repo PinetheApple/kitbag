@@ -1,0 +1,32 @@
+{
+  "name": "@kitbag/core-native",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "generate": "node scripts/generate-constants.ts",
+    "generate:check": "node scripts/generate-constants.ts --check"
+  },
+  "dependencies": {
+    "@kitbag/core-plugin-api": "workspace:*"
+  },
+  "peerDependencies": {
+    "react-native": "*"
+  },
+  "codegenConfig": {
+    "name": "KitbagCommandsSpec",
+    "type": "modules",
+    "jsSrcsDir": "src",
+    "android": {
+      "javaPackageName": "com.kitbag.corenative"
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "vitest": "^4.1.10"
+  }
+}

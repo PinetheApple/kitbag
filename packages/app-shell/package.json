@@ -1,0 +1,53 @@
+{
+  "name": "@kitbag/app-shell",
+  "version": "0.0.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "prebuild": "expo prebuild",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --config eval/vitest.config.mjs"
+  },
+  "dependencies": {
+    "@kitbag/core-design": "workspace:*",
+    "@kitbag/core-db": "workspace:*",
+    "@kitbag/core-native": "workspace:*",
+    "@kitbag/core-plugin-api": "workspace:*",
+    "@kitbag/core-state": "workspace:*",
+    "@kitbag/tool-library": "workspace:*",
+    "@kitbag/tool-metronome": "workspace:*",
+    "@kitbag/tool-stems": "workspace:*",
+    "@kitbag/tool-sync": "workspace:*",
+    "@kitbag/tool-tuner": "workspace:*",
+    "@react-navigation/native": "^7.1.33",
+    "expo": "~55.0.23",
+    "expo-constants": "~55.0.16",
+    "expo-dev-client": "~55.0.37",
+    "expo-linking": "~55.0.15",
+    "expo-router": "~55.0.14",
+    "expo-splash-screen": "~55.0.20",
+    "expo-status-bar": "~55.0.6",
+    "expo-system-ui": "~55.0.17",
+    "nativewind": "5.0.0-preview.3",
+    "react": "19.2.0",
+    "react-native": "0.83.6",
+    "react-native-css": "^3.0.7",
+    "react-native-gesture-handler": "~2.30.0",
+    "react-native-reanimated": "4.2.1",
+    "react-native-safe-area-context": "~5.6.2",
+    "react-native-screens": "~4.23.0",
+    "react-native-worklets": "0.7.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
+    "eslint": "9.39.5",
+    "eslint-plugin-boundaries": "^5.0.1",
+    "eslint-plugin-kitbag": "workspace:*",
+    "postcss": "^8.5.0",
+    "tailwindcss": "^4.0.0",
+    "typescript-eslint": "^8.65.0",
+    "vitest": "^4.1.10"
+  }
+}

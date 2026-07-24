@@ -68,6 +68,16 @@ push_head() {
   fi
 }
 
+# Keep the newest stream — it debugs the wave in flight or the one that halted.
+prune_streams() {
+  local latest f
+  latest=$(ls -1t stream-*.jsonl 2>/dev/null | head -1 || true)
+  for f in stream-*.jsonl; do
+    [[ -e $f && $f != "$latest" ]] && rm -f "$f"
+  done
+  return 0
+}
+
 # Ctrl-C exits the whole run cleanly — no Python traceback from the formatter.
 trap 'echo "Interrupted." >&2; exit 130' INT
 
@@ -89,7 +99,9 @@ if [[ "${1:-}" == "--unattended" ]]; then
       echo "Wave added no commit — nothing dispatchable. Handing back." >&2; break
     fi
     push_head
+    prune_streams
   done
 else
   run_one && push_head
+  prune_streams
 fi

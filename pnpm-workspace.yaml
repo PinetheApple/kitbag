@@ -1,0 +1,34 @@
+# esbuild ships a prebuilt platform binary via its optional @esbuild/* package;
+# its install script is a no-op verify step, so skipping it is safe (vitest —
+# core-native, eslint-plugin, core-db, app-shell/eval — pulls esbuild).
+# pnpm 11.3 reads onlyBuiltDependencies but does NOT let it suppress the strict
+# ignored-builds gate, so a clean `pnpm install --frozen-lockfile` (CI) still
+# exits 1 with ERR_PNPM_IGNORED_BUILDS: esbuild. strictDepBuilds: false downgrades
+# that to a warning so CI passes; esbuild's no-op build is simply skipped.
+onlyBuiltDependencies:
+  - esbuild
+strictDepBuilds: false
+
+minimumReleaseAgeExclude:
+  - '@turbo/darwin-64@2.10.6'
+  - '@turbo/darwin-arm64@2.10.6'
+  - '@turbo/linux-64@2.10.6'
+  - '@turbo/linux-arm64@2.10.6'
+  - '@turbo/windows-64@2.10.6'
+  - '@turbo/windows-arm64@2.10.6'
+  - turbo@2.10.6
+
+# pnpm workspace (SPEC §13.1) — replaces Melos.
+# hoisted linker: Expo/Metro resolve from a flat node_modules; the strict
+# default breaks React Native module resolution. This weakens dependency-graph
+# boundary enforcement (undeclared deps can resolve) — real import-graph
+# enforcement is owed to eslint-plugin-kitbag / eslint-plugin-boundaries (§13.6).
+nodeLinker: hoisted
+
+# lightningcss pinned to a prebuilt-binary version F-Droid's recipe installs
+# (SPEC §13.8, §13.8.1). pnpm 11 reads overrides here, not from package.json.
+overrides:
+  lightningcss: 1.30.1
+
+packages:
+  - packages/*

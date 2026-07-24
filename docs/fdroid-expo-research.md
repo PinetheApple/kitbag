@@ -16,6 +16,14 @@
 > Where I could not verify a claim against a primary source, it is marked
 > **inferred**, not confirmed — do not read those lines as policy.
 >
+> **Update 2026-07-23 (#38):** the Hermes/Android-SDK/Flutter-SDK prebuilt-binary
+> clause quoted in §2.1 below was independently re-verified against the *raw*
+> policy source (`gitlab.com/fdroid/fdroid-website` `_docs/Inclusion_Policy.md`,
+> not just the rendered page) — see `docs/decisions.md`'s 2026-07-23 entry for
+> the full re-verification and one new finding: the `scanignore` exemption is
+> named for Hermes/Android SDK/Flutter SDK specifically and does **not** extend
+> to lightningcss. This confirms, and does not change, the verdict below.
+>
 > This was researched by fetching F-Droid's docs, forum, and fdroiddata via
 > automated tools (WebFetch summarizes pages through a small model before
 > handing text back to me), not by a human reading the HTML. I cross-checked

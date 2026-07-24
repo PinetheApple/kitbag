@@ -62,3 +62,70 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   to one native test case (absent-list → every `beats_per_bar`-th beat). **D-number collision
   recorded:** tracker Track-D "D3/D4" (downbeat BLOB/verify) ≠ SPEC §11.3 "D3/D4"
   (drop-columns/identity-tuple) — different numbering, do not conflate. **[user]**
+
+- **2026-07-23 · F-Droid Inclusion Policy Hermes/prebuilt-binary clause (§13.8.1, #38)
+  — CORROBORATED against raw source (wording reproduced across fetches, not byte-exact —
+  see caveat below), scope narrower than the note implied.**
+  Re-fetched the *raw* source markdown (not the rendered page) directly from F-Droid's
+  own docs repo: `https://gitlab.com/fdroid/fdroid-website/-/raw/master/_docs/Inclusion_Policy.md`
+  (project id 2151437, file last touched by commit `30d61e8b` "Inclusion_Policy - re-add
+  binary section", 2026-03-06; most recent commit to the file overall is `5f9e2980`,
+  2026-04-17, an unrelated quality-control-section addition — so the binary clause is
+  stable, not stale). Fetched 2026-07-23. The environment's WebFetch tool caps literal
+  quotes at ~125 chars regardless of source (confirmed across 4 independent fetch calls,
+  including the GitLab raw-file API endpoint, all hit the same cap) — so no tool in this
+  environment can return byte-exact text; treat what follows as **corroborated wording**,
+  reproduced consistently across independent fetches of both the rendered page and the
+  raw source file, not a byte-diffed patch.
+  - **Clause exists, current, and names Hermes explicitly**, same as
+    `docs/fdroid-expo-research.md` §2.1 already recorded: *"The Android SDK, Flutter SDK
+    and Hermes have permission to use official prebuilt binaries until Debian provides
+    alternative solutions."* Confirmed independently via the raw `_docs/Inclusion_Policy.md`
+    source (not just the rendered `f-droid.org` page the prior note relied on) — this is a
+    stronger verification than the 2026-07-17 note, which flagged it as reproduced-but-not-
+    independently-confirmed.
+  - **New detail the prior note did not have**: the raw source additionally states
+    *"Prebuilt SDKs (Android/Flutter) permitted [to] use scanignore until Debian packaging
+    finishes."* — i.e. the Hermes/Android-SDK/Flutter-SDK exemption is implemented via the
+    **`scanignore`** build-metadata field specifically, matching WAFRN's recipe (§2.4 of the
+    research doc), which whitelists `node_modules/react-native/sdks/hermesc/linux64-bin/hermesc`
+    under `scanignore`.
+  - **Material scope finding — this changes the §13.8.1 confidence framing:** the named
+    exemption (`scanignore`) is **specific to Hermes, Android SDK, and Flutter SDK by name**.
+    It does **not** extend to `lightningcss` or any other JS-ecosystem build tool. The general
+    rule stated immediately around it is stricter: *"All binary dependencies including JAR
+    files must originate either [from] source, compilation, [or] Debian repository downloads."*
+    lightningcss's survival in the WAFRN precedent rests on a **different, unnamed mechanism**
+    — `scandelete: node_modules` bulk-stripping the entire JS dependency tree from what the
+    scanner ever sees, not an explicit policy carve-out the way Hermes has. `docs/fdroid-expo-
+    research.md` already draws this distinction correctly in §4 ("survives, on strength of
+    precedent, not confirmed policy") — this ruling **confirms that framing was right and should
+    not be upgraded**. Do not read the Hermes clause as also covering lightningcss; it doesn't
+    name it, and the raw source's general-rule sentence argues the opposite absent the
+    `scandelete` structural workaround.
+  - **Ship-risk verdict for §13.8.1**: no downgrade, no upgrade. Hermes exemption: CONFIRMED
+    from raw source, current as of 2026-07-23. lightningcss exemption: still **inferred from
+    one precedent (WAFRN), not a named policy carve-out** — an actual RFP/draft submission to
+    F-Droid remains the only way to get a binding ruling on lightningcss specifically, per the
+    research doc's own §5.2 and the task's scope boundary (no RFP submitted this pass).
+  **[recorded — independent re-verification, no material change to prior conclusion]**
+
+- **2026-07-23 · JSI HostObject read shape (§13.2/§13.3, #30)** — Polled realtime
+  reads are number-valued **properties** on the HostObject (`readonly bar_phase:
+  number`), not `() => number` callables. `HostObject::get()` returns a jsi double
+  directly; a callable shape would build a `jsi::Function` via
+  `createFromHostFunction` on every property access, allocating a function per
+  frame on the 60fps Reanimated worklet path — the one thing §13.3 forbids there.
+  Rationale: ralph review of wave 2 — the method-call idiom reads more naturally
+  but loses to the no-per-frame-allocation rule; fixed in the contract now so #31
+  builds the native side against the right shape. **[recorded]**
+
+- **2026-07-23 · TS workspace gate runs in CI (§13.6)** — Added a `test` turbo task
+  + root script and a JS/TS CI job that runs typecheck, the architecture-rule lint,
+  both one-owner generation drift guards (§13.7/§13.8.1), and every vitest suite,
+  including the lint eval harness that proves the custom rules fire. Rationale:
+  ralph flagged that the eval harness was a gate mechanically but not operationally
+  — nothing (CI/turbo/scripts) invoked it, so it ran only when a human typed the
+  command; the repo's §2 history bars claiming an unshipped gate, so the claim was
+  made true rather than softened. Also retroactively wires Wave 1's vitest suites,
+  which had never run in CI. **[recorded]**

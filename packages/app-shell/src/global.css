@@ -1,0 +1,12 @@
+/*
+ * NativeWind entry stylesheet (SPEC §13.8).
+ *
+ * SKELETON (#27): imports only. §12.2's tokens are the sole styling authority
+ * (§13.8.1) and the Tailwind @theme is GENERATED from core-design's TS export,
+ * never hand-authored here — inventing a palette in this file would be exactly
+ * the §13.7 duplication failure. The token pipeline is a later Phase 2 wave.
+ */
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/preflight.css' layer(base);
+@import 'tailwindcss/utilities.css';
+@import 'nativewind/theme';

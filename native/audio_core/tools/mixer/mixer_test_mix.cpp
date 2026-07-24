@@ -34,8 +34,9 @@ void TestShortStemIsZeroPaddedNotDropped() {
   Check(mixer.is_playing(), "zero-pad: the short stem ending does not stop");
 }
 
-// Padding is MixTrack's job for both paths, but MixStereo reaches the frame
-// through a channels-strided index, so its boundary is its own to get wrong.
+// Padding falls out of draining fewer frames on both paths, but the stereo path
+// of StreamingTrack::AddToOutput reaches the frame through a channels-strided
+// index, so its boundary is its own to get wrong.
 void TestShortStereoStemIsZeroPadded() {
   kitbag::Mixer mixer(kSampleRate);
   LoadInterleaved(&mixer, 0, kShortFrames, kStereo, 0.0f);

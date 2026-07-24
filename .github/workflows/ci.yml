@@ -51,3 +51,31 @@ jobs:
       # Re-enable as a gate when the tuner research lands.
       - name: Tuner — render offline (informational, known failing)
         run: ./native/audio_core/build/tuner_verify || true
+
+  # The TypeScript workspace (Phase 2, SPEC §13/§13.6). Runs the same gate the
+  # project loop runs locally: typecheck, the architecture-rule lint, the
+  # one-owner generation drift guards (§13.7/§13.8.1), and every vitest suite —
+  # including the lint eval harness that proves the custom rules actually fire.
+  js:
+    name: JS/TS workspace (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck — all packages
+        run: pnpm -w typecheck
+      - name: Lint — architecture rules + generic, --max-warnings 0
+        run: pnpm -w lint
+      - name: Generated native constants are not stale (§13.7)
+        run: pnpm --filter @kitbag/core-native generate:check
+      - name: Generated Tailwind theme is not stale (§13.8.1)
+        run: pnpm --filter @kitbag/core-design generate:check
+      - name: Tests — unit suites + the lint eval harness (§13.6)
+        run: pnpm -w test

@@ -1,0 +1,18 @@
+# Prettier scopes to the RN/TS workspace only. The C++ core, design specs,
+# legacy Flutter files and generated native trees are not ours to reformat.
+node_modules/
+**/node_modules/
+native/
+legacy/
+design/
+docs/
+**/android/
+**/ios/
+**/.expo/
+**/*.gen.ts
+# Emitted verbatim by core-design/scripts/generate-tailwind.ts from §12.2's
+# tokens; generate:check diffs byte-for-byte, so prettier must not reformat them.
+packages/core-design/theme.css
+packages/core-design/tailwind.config.js
+pnpm-lock.yaml
+CHANGELOG.md

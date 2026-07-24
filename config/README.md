@@ -1,9 +1,17 @@
-# Staged TS/React enforcement config (SPEC §13.6)
+# Staged TS/React enforcement config (SPEC §13.6) — WIRED at Phase 2
 
-These files are **staged ahead of the RN app**. The React Native app does not
-exist yet (SPEC §2, §15 Phase 2). There is no `package.json` and no `src/`, so
-**none of these files can run today** — they drop into place when Phase 2
-scaffolds the Expo workspace.
+> **Status (#27, Phase 2 skeleton):** these files have been wired into the
+> workspace root. `eslint.config.mjs` and `prettier.config.mjs` were
+> `git mv`-ed to the repo root; the staged `tsconfig.json` became the root
+> `tsconfig.base.json` (with `extends: "expo/tsconfig.base"` uncommented and its
+> `paths` dropped in favour of `@kitbag/*` workspace package names). This
+> `config/` dir now holds only this note. The history below is why they were
+> staged here first.
+
+These files were **staged ahead of the RN app**. Before Phase 2 the React
+Native app did not exist (SPEC §2, §15) — there was no `package.json` and no
+`src/`, so none of them could run, and staging them at the repo root would have
+read as if the app already existed.
 
 ## Why a `config/` dir rather than repo root
 

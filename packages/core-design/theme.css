@@ -1,0 +1,49 @@
+/* GENERATED — do not edit. Source: @kitbag/core-design src/tokens.ts (SPEC §12.2). Regenerate: pnpm --filter @kitbag/core-design generate */
+@import 'tailwindcss';
+@config './tailwind.config.js';
+
+/* Dark ("Stage") — primary (SPEC §12.2). */
+:root {
+  --color-bg: #0E0D10;
+  --color-surface1: #1A1820;
+  --color-surface2: #242230;
+  --color-surface3: #2E2C3A;
+  --color-line: #33303F;
+  --color-text: #ECEAF0;
+  --color-text2: #9B97A8;
+  --color-text3: #6C6878;
+  --color-accent: #FFB347;
+  --color-accentDeep: #E89B2E;
+  --color-accentDim: #8A6A35;
+  --color-onAccent: #221600;
+  --color-red: #FF5C5C;
+  --color-amber: #FFC24B;
+  --color-green: #4ADE80;
+  --color-wave: #4E4A5E;
+  --color-waveHot: #FFB347;
+  --shadow-sheet: 0 8px 32px rgba(0,0,0,.45);
+}
+
+/* Light ("Daylight") — System resolution via OS preference (SPEC §12.5). */
+@media (prefers-color-scheme: light) {
+  :root {
+    --color-bg: #F5F3EE;
+    --color-surface1: #FFFFFF;
+    --color-surface2: #ECE9E1;
+    --color-surface3: #E3DFD4;
+    --color-line: #DCD7CA;
+    --color-text: #221F26;
+    --color-text2: #6E687A;
+    --color-text3: #98929F;
+    --color-accent: #B26F0E;
+    --color-accentDeep: #8F5A0C;
+    --color-accentDim: #D8B27C;
+    --color-onAccent: #FFF7EA;
+    --color-red: #CC4444;
+    --color-amber: #9A6E06;
+    --color-green: #1E8A4F;
+    --color-wave: #C9C3B4;
+    --color-waveHot: #B26F0E;
+    --shadow-sheet: 0 8px 28px rgba(60,50,20,.14);
+  }
+}

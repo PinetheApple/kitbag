@@ -369,6 +369,34 @@ converted to df-increment units. Links qm_dsp into kitbag_core and
 analyze_verify. Adds downbeat shape coverage (in-range, ascending,
 strict-subset, one-bar spacing), sabotage-proven.
 
+- **core-plugin-api:** Abstract plugin contract types (#28)
+
+- **core-db:** Drizzle schema + v6 migration (#34)
+
+Flesh out core-db with the Drizzle v7 schema (drizzle-orm over op-sqlite,
+SPEC §11.1) migrated from the v6 Drift schema per §11.2 (D1/D3/D4, §11.3):
+SongPresets/Songs name inversion, setlist decoupling via setlist_items,
+dropped volume/latencyOffset, identity tuple + library FK, downbeat indices,
+and the D2/§8.5/§12.5 tables. The v6->v7 migration is data-preserving and
+tested against a fixture v6 database: an upgrading user keeps their setlists
+(§14), proven by a sabotage check that removes the membership step.
+
+- **eslint-plugin-kitbag:** Boundary + naming rules (#35)
+
+- **core-design:** §12.2 tokens + generated tailwind theme (#37)
+
+- **core-native:** TurboModule command spec (P2-A2)
+
+- **core-native:** JSI HostObject + generated native constants (P2-A3)
+
+JSI HostObject typed contract for polled realtime reads (bar_phase,
+current_beat, current_bpm, frames_rendered, tuner_snapshot,
+player_position) + C++ scaffolding; installs once, sole holder of the
+single kb_engine* (SPEC §13.2, §13.3). Tuner-snapshot decode via
+division (no int32 coercion). Constants generated from engine source
+(kSounds preset comments cross-checked vs kSoundCount, throws if absent)
+— never hand-mirrored (SPEC §13.7). Closes #30.
+
 
 ### Fixed
 
@@ -627,5 +655,48 @@ after Play; Pause; Seek(engine_running=true) the fix rebuilds+primes (buffered
 (buffered == 0) — red 8/8 under the reverted predicate, green under the fix, on
 both engines. Added a Finding 2 case (delete the file mid-play so the rebuild
 fails; a held transport position is the proof). Direct threaded races retained.
+
+- **loop:** Clean Ctrl-C + push each wave so remote stays current
+
+Ctrl-C during uv's cold-start import of rich escaped the module-level try and dumped a traceback; guard the rich imports to exit 130 quietly. Add a SIGINT trap in the driver for a clean top-level message, and push HEAD after every completed wave (tolerating a failed push) so the remote no longer lags 50 commits behind local.
+
+- **loop:** Stop unattended re-invoke on a narrated stop-point
+
+claude -p exits 0 on normal completion, so a stop-point the model only narrated was invisible to the driver — the unattended loop re-launched on the same blocker (observed: 3 waves, tree untouched). The driver now breaks on either signal: a .loop-halt sentinel the skill writes at every stop-point / nothing-to-do (carries the reason), or a wave that added no commit (dispatched nothing). Skill updated to write .loop-halt before exiting any non-dispatching terminal state; .loop-halt gitignored.
+
+- **wave1:** Close review findings — ignore generated theme, ban react in plugin-api, doc nits
+
+- .prettierignore: exempt core-design generated theme.css/tailwind.config.js so generate:check and format --check stop conflicting
+- eslint-plugin-kitbag: plugin-api-imports-nothing now flags react/react-native/native specifiers per §9.1; test case flipped valid→invalid
+- core-design tokens.ts: stale .mjs→.ts generator reference
+- decisions.md #38: VERIFIED→CORROBORATED to match hedged body
+
+- **wave2:** Wire lint eval harness to run as a gate (#36)
+
+Declare the harness's deps on @kitbag/app-shell (vitest, eslint,
+eslint-plugin-boundaries, typescript-eslint, eslint-plugin-kitbag) and
+add a 'test' script — the harness aborted on import before. Allow
+esbuild's build (vitest dep) via onlyBuiltDependencies so pnpm install
+exits 0; ignore the eval scenario fixtures in the root eslint run (they
+are deliberately rule-violating trees the harness lints itself); narrow
+two restrict-template-expressions gaps and drop a dead type assertion in
+the harness source. Harness now scores 31/31 scenarios green.
+
+- **core-native:** Value-property JSI reads + import-safe barrel (#30, #29)
+
+Review findings from ralph + code-reviewer on wave 2:
+- §13.3: HostObject reads are now number-valued properties, not
+  callables — get() returns a jsi double directly instead of building a
+  jsi::Function per property access, which a 60fps worklet would have
+  allocated every frame. Contract, C++ scaffolding and worklet doc all
+  aligned to the property model.
+- Barrel is now import-safe: the TurboModule is reached through a lazy
+  getKitbagCommands() rather than an eager default that resolved (and
+  threw, pre-#31) at module load, so the generated constants and the
+  snapshot decoder stay importable on their own.
+- snapshot.test.ts gains a PackSnapshot-derived round-trip fixture
+  pinning the decode to the producer's bit math (21 -> 22 tests).
+- Nits: dropped a duplicated ownership sentence, named the tuner-row
+  shape in the constant generator. Generated output byte-unchanged.
 
 

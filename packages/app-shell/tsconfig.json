@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    // @kitbag/core-native's barrel re-exports with explicit .ts extensions (its
+    // "import-safe barrel", #30). Consuming it here needs this flag; noEmit
+    // makes it safe, same as the core-native/core-design tsconfigs.
+    "allowImportingTsExtensions": true,
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": [
+    "src",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts",
+    "nativewind-env.d.ts"
+  ]
+}
