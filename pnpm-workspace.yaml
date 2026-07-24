@@ -1,8 +1,13 @@
 # esbuild ships a prebuilt platform binary via its optional @esbuild/* package;
-# its install script is a no-op verify step. Allow it so `pnpm install` exits 0
-# (vitest — core-native, eslint-plugin, core-db, app-shell/eval — pulls esbuild).
+# its install script is a no-op verify step, so skipping it is safe (vitest —
+# core-native, eslint-plugin, core-db, app-shell/eval — pulls esbuild).
+# pnpm 11.3 reads onlyBuiltDependencies but does NOT let it suppress the strict
+# ignored-builds gate, so a clean `pnpm install --frozen-lockfile` (CI) still
+# exits 1 with ERR_PNPM_IGNORED_BUILDS: esbuild. strictDepBuilds: false downgrades
+# that to a warning so CI passes; esbuild's no-op build is simply skipped.
 onlyBuiltDependencies:
   - esbuild
+strictDepBuilds: false
 
 minimumReleaseAgeExclude:
   - '@turbo/darwin-64@2.10.6'
