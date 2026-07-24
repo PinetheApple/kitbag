@@ -1,7 +1,11 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "noEmit": true
+    "noEmit": true,
+    // @kitbag/core-native's barrel re-exports with explicit .ts extensions (its
+    // "import-safe barrel", #30). Consuming it here needs this flag; noEmit
+    // makes it safe, same as the app-shell/core-native tsconfigs.
+    "allowImportingTsExtensions": true
   },
   "include": ["src"]
 }

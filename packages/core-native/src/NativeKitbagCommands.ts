@@ -22,10 +22,7 @@
 
 import type { TurboModule } from 'react-native';
 import { TurboModuleRegistry } from 'react-native';
-import type {
-  Double,
-  Int32,
-} from 'react-native/Libraries/Types/CodegenTypes';
+import type { Double, Int32 } from 'react-native/Libraries/Types/CodegenTypes';
 
 export interface Spec extends TurboModule {
   // --- Engine / transport --------------------------------------------------
@@ -44,6 +41,11 @@ export interface Spec extends TurboModule {
   // same convention as setGrid's anchorFrame, so no BigInt. Void in the ABI.
   metronomeStart(anchorFrame: Double): void;
 
+  // kb_metronome_stop: stops the click transport (distinct from stop() above,
+  // which stops the audio device). Void in the ABI. A metronome "pause" is the
+  // same engine call — the ABI has no hold-and-resume for the click.
+  metronomeStop(): void;
+
   // --- Metronome tempo & grid ----------------------------------------------
 
   // kb_metronome_set_tempo(bpm).
@@ -54,7 +56,10 @@ export interface Spec extends TurboModule {
   // frame carried as a JS double — exact to 2^53 frames (~5,900 years at 48kHz),
   // so no BigInt (kitbag_api.h). Returns a kb_result code; fails on an empty,
   // non-ascending, non-finite grid or a count above KB_MAX_GRID_BEATS.
-  setGrid(beatTimesSec: readonly Double[], anchorFrame: Double): Promise<number>;
+  setGrid(
+    beatTimesSec: readonly Double[],
+    anchorFrame: Double,
+  ): Promise<number>;
 
   // --- Metronome setters (all void in the ABI) -----------------------------
 
@@ -76,6 +81,20 @@ export interface Spec extends TurboModule {
   // kb_metronome_set_latency_offset(latency_ms). Engine clamps to [-100, 100];
   // positive triggers earlier.
   setLatencyOffset(latencyMs: Double): void;
+
+  // kb_metronome_set_ramp(enabled, start_bpm, end_bpm, bars). Tempo-ramp
+  // trainer. ABI takes int32 enabled; the native glue maps this boolean to 0/1
+  // (as setPoly does). A manual setTempo cancels a running ramp in the engine.
+  setRamp(
+    enabled: boolean,
+    startBpm: Double,
+    endBpm: Double,
+    bars: Int32,
+  ): void;
+  // kb_metronome_set_bar_mute(enabled, play_bars, mute_bars). Bar-mute trainer:
+  // play_bars sounding bars then mute_bars silent bars, repeating. ABI takes
+  // int32 enabled; the native glue maps this boolean to 0/1.
+  setBarMute(enabled: boolean, playBars: Int32, muteBars: Int32): void;
 
   // --- Mixer track loading -------------------------------------------------
 
