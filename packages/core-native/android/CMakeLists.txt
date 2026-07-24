@@ -25,7 +25,11 @@ add_subdirectory("${KITBAG_CORE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/audio_core")
 add_library(kitbag_jsi SHARED
   "${KITBAG_GLUE_DIR}/KitbagHostObject.cpp"
   "${KITBAG_GLUE_DIR}/KitbagEngine.cpp"
-  "${KITBAG_GLUE_DIR}/KitbagCommands.cpp")
+  "${KITBAG_GLUE_DIR}/KitbagCommands.cpp"
+  # Android-only JNI bridge (staged for #33): exposes kitbagInstall + command*
+  # to the Kotlin TurboModule. The file is wholly #ifdef __ANDROID__, so it is a
+  # no-op TU anywhere else.
+  "${KITBAG_GLUE_DIR}/KitbagJni.cpp")
 
 target_include_directories(kitbag_jsi PRIVATE
   "${KITBAG_GLUE_DIR}"

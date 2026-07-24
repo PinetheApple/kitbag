@@ -20,8 +20,13 @@
 namespace kitbag {
 
 // Transport. start() returns a kb_result code (0 == KB_OK); stop() is infallible.
+// metronomeStart() maps to kb_metronome_start_at: opening the device (start())
+// does not move the transport; the metronome's running_ / bar_phase advance only
+// after this. anchorFrame is a uint64 start frame carried as a double (exact
+// below 2^53, kitbag_api.h), same convention as commandSetGrid's anchorFrame.
 int32_t commandStart();
 void commandStop();
+void commandMetronomeStart(double anchorFrame);
 
 // Tempo & grid. setGrid returns a kb_result code and takes the array count the
 // native glue supplies; anchorFrame crosses as a double and is exact to 2^53

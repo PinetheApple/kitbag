@@ -1,9 +1,10 @@
 import { resolveTheme } from '@kitbag/core-design';
-import { getKitbagCommands } from '@kitbag/core-native';
-import { useCallback, useState } from 'react';
+import { getKitbagCommands, getKitbagHostObject } from '@kitbag/core-native';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BeatSweep } from './BeatSweep';
+import { bootstrapKitbagRuntime } from './bootstrapRuntime';
 import { EngineBpmReadout } from './EngineBpmReadout';
 import { LedRow } from './LedRow';
 import { STARVATION_MS, starveJsThread } from './starvation';
@@ -21,13 +22,31 @@ const BPM_STEP = 5;
 const MS_PER_SECOND = 1000;
 const STARVATION_SECONDS = STARVATION_MS / MS_PER_SECOND;
 
+const SECONDS_PER_MINUTE = 60;
+// A long measured grid so the sweep runs continuously through the gate + the
+// starvation test. Well under the engine's KB_MAX_GRID_BEATS cap (kitbag_api.h);
+// the constant is engine-owned, not restated here (§13.7).
+const GATE_GRID_BEATS = 2000;
+
 export function GateScreen() {
   const { barPhase, currentBeat, currentBpm } = useBeatSweep();
 
-  // Human-speed only: these change on a tap, never per frame (§13.4).
   const [tempo, setTempo] = useState(DEFAULT_BPM);
   const [beatsPerBar] = useState(DEFAULT_BEATS);
   const [running, setRunning] = useState(false);
+
+  // One-time runtime install: publishes the HostObject onto the UI runtime so
+  // useBeatSweep's worklet can read it (see bootstrapRuntime.ts). This is
+  // human-speed setup, NOT a frame driver — the §13.3 ban on effect-driven
+  // animation does not apply to a once-at-mount install. Guarded: with no native
+  // build the sweep just holds at 0 (#33 verifies on device).
+  useEffect(() => {
+    try {
+      bootstrapKitbagRuntime();
+    } catch {
+      // No native module registered yet (#33).
+    }
+  }, []);
 
   // useCallback for stable identity (react/jsx-no-bind forbids inline handlers).
   // useState setters are stable, so their deps lists are empty.
@@ -40,10 +59,14 @@ export function GateScreen() {
   const onToggleRunning = useCallback(() => {
     setRunning((prev) => {
       const next = !prev;
-      tryEngineTransport(next);
+      if (next) {
+        tryDriveEngineOnStart(tempo, beatsPerBar);
+      } else {
+        tryStopEngine();
+      }
       return next;
     });
-  }, []);
+  }, [tempo, beatsPerBar]);
 
   return (
     <View style={styles.container}>
@@ -88,17 +111,48 @@ export function GateScreen() {
   );
 }
 
-// The command TurboModule is not registered until #33; resolving it throws.
-// Guard so the gate still runs without a native build — the transport call is
-// best-effort here and only becomes real on device.
-function tryEngineTransport(start: boolean): void {
+// Drive the engine so bar_phase advances. The command TurboModule is not
+// registered until #33; resolving it throws, so this is guarded — the gate still
+// renders (sweep held at 0) without a native build.
+//
+// Two things are required for the sweep to move, and start() is only the first:
+// kb_engine_start opens the audio device (advances the frame clock) but leaves the
+// metronome's running_ false, and bar_phase is published ONLY while running_
+// (metronome.cpp PublishBlockMirrors). So we also issue metronomeStart
+// (kb_metronome_start_at, added to §13.2's spec — a recorded spec change per
+// runbook §3a, NOT a fudge) to flip running_ true; without it the sweep stays
+// frozen at 0 even on a perfect UI-runtime install.
+//
+// ORDER + SHARED ANCHOR (non-obvious): capture the anchor frame ONCE and reuse it
+// for both setGrid and metronomeStart so they align. setGrid anchors beat 0 at
+// that frame; metronomeStart starts the transport at the SAME frame, so running_
+// flips at beat 0 and the sweep starts at phase 0 rather than mid-bar. setGrid is
+// issued BEFORE metronomeStart because the engine seeds the grid cursor from the
+// live grid when the deferred start fires (metronome_render.cpp BeginPendingStart),
+// so the grid must already be published by then.
+function tryDriveEngineOnStart(bpm: number, beatsPerBar: number): void {
   try {
     const commands = getKitbagCommands();
-    if (start) {
-      void commands.start();
-    } else {
-      commands.stop();
-    }
+    void commands.start();
+    commands.setTempo(bpm);
+    commands.setBeats(beatsPerBar);
+    const secondsPerBeat = SECONDS_PER_MINUTE / bpm;
+    const beatTimesSec = Array.from(
+      { length: GATE_GRID_BEATS },
+      (_, i) => i * secondsPerBeat,
+    );
+    // One anchor for both the grid and the transport start (see above).
+    const anchorFrame = getKitbagHostObject().frames_rendered;
+    void commands.setGrid(beatTimesSec, anchorFrame);
+    commands.metronomeStart(anchorFrame);
+  } catch {
+    // No native build yet (#33): human-speed state still toggles.
+  }
+}
+
+function tryStopEngine(): void {
+  try {
+    getKitbagCommands().stop();
   } catch {
     // No native build yet (#33): human-speed state still toggles.
   }

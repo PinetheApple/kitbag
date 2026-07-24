@@ -36,6 +36,14 @@ export interface Spec extends TurboModule {
   // kb_engine_stop: stops the device. Infallible in the ABI (void).
   stop(): void;
 
+  // kb_metronome_start_at(start_frame): starts the metronome transport at a
+  // future/now engine frame. Distinct from start() above: kb_engine_start only
+  // opens the audio device; the metronome's `running_` (and therefore bar_phase)
+  // moves ONLY once the transport is started (metronome.cpp). `anchorFrame` is a
+  // uint64 engine frame carried as a JS double — exact to 2^53 (kitbag_api.h),
+  // same convention as setGrid's anchorFrame, so no BigInt. Void in the ABI.
+  metronomeStart(anchorFrame: Double): void;
+
   // --- Metronome tempo & grid ----------------------------------------------
 
   // kb_metronome_set_tempo(bpm).

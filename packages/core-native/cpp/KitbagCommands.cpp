@@ -25,6 +25,12 @@ kb_engine* commandEngine() {
 int32_t commandStart() { return kb_engine_start(commandEngine()); }
 void commandStop() { kb_engine_stop(commandEngine()); }
 
+void commandMetronomeStart(double anchorFrame) {
+  // anchorFrame is a uint64 start frame carried as a double; the cast is exact
+  // below 2^53 (kitbag_api.h), same convention as commandSetGrid.
+  kb_metronome_start_at(commandEngine(), static_cast<uint64_t>(anchorFrame));
+}
+
 void commandSetTempo(double bpm) { kb_metronome_set_tempo(commandEngine(), bpm); }
 
 int32_t commandSetGrid(const double* beatTimesSec, int32_t count, double anchorFrame) {

@@ -15,23 +15,46 @@ device plugged in, `pnpm install` done.
 
 ## 1. Native wiring (lands before you plug in)
 
-Three things are compile-shaped from #31 but not live — `KitbagCorePackage.kt`
-returns empty lists on purpose. Drafted for #33; only the device build verifies
-them:
+The wiring is now drafted (staged, going live on device) rather than empty. It is
+**compiles-shaped at most** — none of it has built, because the codegen'd
+TurboModule superclass does not exist off-build and the runtime plumbing cannot be
+exercised off-device. Files: `KitbagCommandsModule.kt`, `KitbagCorePackage.kt`,
+`core-native/cpp/KitbagJni.cpp`, `bootstrapRuntime.ts`, and the drive sequence in
+`GateScreen.tsx`.
 
-- **HostObject install on the correct runtime.** `kitbagInstall(rt)` creates the
-  single `g_engine` and installs the HostObject under `__KitbagHostObject`. It
-  must install on the **Reanimated UI/worklet runtime's `global`** — the worklet
-  in `useBeatSweep.ts` reads there, which is a *separate* runtime from the RN JS
-  runtime. Wrong runtime → `global.__KitbagHostObject` is undefined in the
-  worklet → sweep silently frozen at 0, no crash. This is the trap; it looks
-  identical to "not wired yet".
+- **HostObject install on the correct runtime — the chosen mechanism.**
+  `kitbagInstall(rt)` creates the single `g_engine` and installs the HostObject
+  under `__KitbagHostObject` on whatever runtime `rt` is. The worklet in
+  `useBeatSweep.ts` reads on the **Reanimated UI runtime**, whose `global` is a
+  *separate* object from the RN JS runtime. Installing only on the JS runtime →
+  `global.__KitbagHostObject` undefined in the worklet → sweep silently frozen at
+  0, no crash. This is the trap; it looks identical to "not wired yet".
+
+  The mechanism chosen (over reaching into worklets' internal C++
+  `WorkletsModuleProxy`/`RuntimeManager`, which is version-fragile): install
+  natively on the RN JS runtime (`KitbagCommandsModule`'s constructor →
+  `nativeInstall` → `kitbagInstall`), then **re-publish the SAME C++ HostObject
+  onto the UI runtime from JS** via `runOnUISync` (`bootstrapRuntime.ts`). When a
+  foreign `jsi::HostObject` is captured into a worklet, react-native-worklets
+  wraps it as a `SerializableHostObject` and reconstructs it on the UI runtime
+  sharing the same underlying C++ object (verified by reading worklets v0.7.4
+  `Serializable.cpp`) — so both runtimes reference the one `KitbagHostObject`
+  holding the one `kb_engine*` (§4.5). Uses only worklets' public JS API.
+  **UNVERIFIED on device:** (a) that v0.7.4 actually takes that serialization
+  branch for our HostObject; (b) that `reactContext.javaScriptContextHolder.get()`
+  yields a live JSI runtime pointer under bridgeless New Arch (may need a
+  `RuntimeExecutor` hop); (c) that the reanimated/worklets babel plugin transforms
+  the bootstrap worklet (a prebuild concern, same dependency `useBeatSweep`
+  already has).
 - **`KitbagCommands` TurboModule registration** (codegen runs during the Gradle
   build) so the screen's `start()/stop()`/`setTempo`/`setGrid` resolve instead of
-  throwing.
-- **Driving the engine** so `bar_phase` advances: `start()` → `setTempo` →
-  `setGrid`/`setBeats`. No running metronome → nothing to sweep even with a
-  correct install.
+  throwing. `KitbagCommandsModule.kt` extends the codegen'd
+  `NativeKitbagCommandsSpec`; its exact package + method signatures are emitted by
+  the Gradle codegen task and confirmed only at build.
+- **Driving the engine so `bar_phase` advances — see §3a.** `GateScreen`'s Start
+  button issues `start()` → `setTempo` → `setBeats` → `setGrid` →
+  `metronomeStart`. Both a grid and the transport start are required to move the
+  sweep; read §3a for the ordering + shared-anchor reasoning.
 
 ## 2. Build + install
 
@@ -44,13 +67,41 @@ Dev-client build, installs to the plugged-in phone.
 
 ## 3. Run the gate
 
-Open the app → navigate to `/gate` (Home has the link). Start the metronome.
+Open the app → navigate to `/gate` (Home has the link). Press **Start**.
+
+### 3a. What Start does, and why `metronomeStart` is required
+
+`bar_phase` (the sweep) is "position within the bar", derived from a beat timeline
+against the running master frame clock. This is statically answerable from the
+engine source: `kb_engine_start` only opens the audio device — it does NOT move the
+transport. The metronome's `running_` (and therefore `bar_phase`, published only
+while `running_` — `metronome.cpp` `PublishBlockMirrors`) is flipped true ONLY by
+`kb_metronome_start` / `kb_metronome_start_at`. So a grid + started device is NOT
+sufficient; the transport must also be started.
+
+`metronomeStart` (mapping to `kb_metronome_start_at`) is therefore now part of
+§13.2's command spec — a recorded spec change, not a fudge. Start issues, in
+order: `start()` (opens the device / advances frames) → `setTempo(bpm)` →
+`setBeats(n)` → `setGrid(beatTimes, anchorFrame)` → `metronomeStart(anchorFrame)`.
+The grid and the transport start share ONE anchor (`frames_rendered` captured
+once), so `running_` flips at beat 0 and the sweep starts at phase 0. `setGrid`
+precedes `metronomeStart` because the engine seeds the grid cursor from the live
+grid when the deferred start fires (`metronome_render.cpp` `BeginPendingStart`).
+
+**The genuine on-device unknown** is not this — it is whether the foreign JSI
+HostObject is actually re-published onto the Reanimated UI runtime (the
+`SerializableHostObject` sharing in `bootstrapRuntime.ts`). A correct install with
+a started transport moves the sweep; a wrong-runtime install leaves it frozen at 0
+with nothing thrown. That is exactly why the gate asserts the values must CHANGE on
+device — a "nothing threw" run proves nothing. A frozen-at-baseline run is the
+wrong-runtime install trap (§1), NOT a §13.3 architecture failure.
 
 ## 4. Measure — recorded, NOT by ear/eye (§14.1, §5.8)
 
 1. **Baseline first.** With the metronome running, confirm the sweep + LEDs move
-   *at all*. Frozen at baseline = wrong-runtime install (§1 trap), **not** a §13.3
-   failure. Fix the install target; do not fail the architecture on this.
+   *at all*. Start now issues `metronomeStart` (§3a), so a frozen baseline is the
+   wrong-runtime install trap (§1) — **not** a §13.3 failure. Fix the wiring; do
+   not fail the architecture on this.
 2. **Starve the JS thread.** Hit the JS-starvation button (a 3 s synchronous JS
    block, `STARVATION_MS` in `starvation.ts`). Requirement: sweep + LEDs keep
    moving **smoothly through the spin** — no freeze, no jump-and-catchup.
