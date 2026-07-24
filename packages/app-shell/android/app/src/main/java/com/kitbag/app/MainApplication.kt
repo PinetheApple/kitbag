@@ -21,8 +21,11 @@ class MainApplication : Application(), ReactApplication {
       context = applicationContext,
       packageList =
         PackageList(this).packages.apply {
-          // Packages that cannot be autolinked yet can be added manually here, for example:
-          // add(MyReactNativePackage())
+          // SKELETON (#31): core-native's native surface (JSI HostObject install +
+          // KitbagCommands TurboModule) is not autolinked — its CMake is consumed
+          // via the app's externalNativeBuild, not a separate module. This seam is
+          // fully wired on-device in #33. Empty package today, safe to register.
+          add(KitbagCorePackage())
         }
     )
   }

@@ -1,7 +1,8 @@
 // Implementation of the JSI HostObject (SPEC §13.2).
 //
-// STATUS: UNCOMPILED SCAFFOLDING — see KitbagHostObject.h. No native build wired
-// until #31; this has compiled and run nowhere. It is the contract skeleton.
+// STATUS: SKELETON (#31) — see KitbagHostObject.h. The native build is wired and
+// this compiles/links against kitbag_core, but it has not run inside a live RN
+// runtime; that install and its on-device measurement are #33.
 //
 // The six reads are exactly the polled realtime set (SPEC §13.2, §13.3):
 // bar_phase, current_beat, current_bpm, frames_rendered, tuner_snapshot,
@@ -27,8 +28,6 @@ Value KitbagHostObject::get(Runtime& rt, const PropNameID& name) {
   const std::string prop = name.utf8(rt);
   kb_engine* engine = engine_;
 
-  // Each property re-reads the engine and returns the value as a jsi double
-  // directly — no jsi::Function allocated per access (SPEC §13.3).
   if (prop == "bar_phase") {
     return Value(static_cast<double>(kb_metronome_bar_phase(engine)));
   }

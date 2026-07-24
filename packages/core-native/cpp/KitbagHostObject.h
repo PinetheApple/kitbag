@@ -1,14 +1,16 @@
 // The JSI HostObject that fulfils src/host/KitbagHostObject.ts (SPEC §13.2).
 //
-// STATUS: UNCOMPILED SCAFFOLDING. No native build is wired until #31 — there is
-// no jsi/jsi.h on any include path here and nothing compiles or links this. It
-// is committed as the contract skeleton, not as verified behaviour: do not read
-// it as "working". Every C ABI call below is declared against
-// native/audio_core/include/kitbag_api.h but has run nowhere.
+// STATUS: SKELETON (#31). The native build is now wired — this compiles against
+// jsi.h + kitbag_api.h and links kitbag_core (packages/core-native/android/
+// CMakeLists.txt, KitbagCoreNative.podspec) — but it has NOT run inside a live RN
+// runtime. The install into a real runtime and the on-device measurement are #33.
+// Do not read compilation as verified behaviour. Every C ABI call below is
+// declared against native/audio_core/include/kitbag_api.h (§13.7, no copy).
 //
-// Design invariant it exists to hold (SPEC §4.5, §13.2): this object is THE ONLY
-// holder of the single kb_engine*. The sibling TurboModule (commands, #29) must
-// reach the engine through core-native, never by owning a second pointer.
+// Design invariant it exists to hold (SPEC §4.5, §13.2): the single kb_engine* is
+// owned in exactly one place (KitbagEngine.cpp); this object borrows it to read.
+// The sibling TurboModule (commands, #29) reaches the same engine through
+// kitbagEngine(), never by owning a second pointer.
 
 #ifndef KITBAG_HOST_OBJECT_H
 #define KITBAG_HOST_OBJECT_H
@@ -24,7 +26,7 @@ namespace kitbag {
 
 // Global property name the object is installed under. Must equal
 // KITBAG_HOST_OBJECT_KEY in src/host/KitbagHostObject.ts — one owner of the
-// name, checked by eye until the two sides share a generated string (TODO #31).
+// name, checked by eye until the two sides share a generated string.
 inline constexpr const char* kHostObjectKey = "__KitbagHostObject";
 
 // Synchronous polled reads into the C ABI (SPEC §13.2). Each read is a
@@ -43,14 +45,16 @@ class KitbagHostObject : public facebook::jsi::HostObject {
       facebook::jsi::Runtime& rt) override;
 
  private:
-  // The single engine pointer, owned nowhere else in the codebase (SPEC §4.5).
+  // Borrowed pointer to the single engine, which KitbagEngine.cpp owns (§4.5).
+  // This object never creates or destroys it.
   kb_engine* engine_;
 };
 
-// Installs the HostObject on `rt`'s global under kHostObjectKey, once. The
-// engine is created and owned here; the TurboModule borrows it via core-native,
-// it does not create its own (SPEC §13.2). TODO #31: wire creation + the shared
-// accessor the TurboModule reads.
+// Installs the HostObject on `rt`'s global under kHostObjectKey, once, over an
+// engine the caller already owns. The engine is created and owned by
+// KitbagEngine.cpp's kitbagInstall(), which is the process-wide single owner
+// (SPEC §4.5); the TurboModule command path borrows the same pointer via
+// kitbagEngine(). This function does not create an engine.
 void installKitbagHostObject(facebook::jsi::Runtime& rt, kb_engine* engine);
 
 }  // namespace kitbag
