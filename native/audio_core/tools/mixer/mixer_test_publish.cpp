@@ -15,7 +15,7 @@ namespace mixer_test {
 namespace {
 
 // A reader whose every ReadFrames blocks, and whose rate forces the mixer to
-// own a resampler in the TrackSource. It never runs dry, so the read-ahead
+// own a resampler in its StreamingTrack. It never runs dry, so the read-ahead
 // thread is still churning through the owned resampler at teardown — which is
 // exactly when the dtor-order bug would read a freed reader.
 class BlockingReader : public kitbag::SourceReader {
@@ -24,7 +24,7 @@ class BlockingReader : public kitbag::SourceReader {
     return kMono;
   }
   uint32_t sample_rate() const override {
-    return 44100;  // != engine rate, so BuildTrackSource wraps it in a resampler
+    return 44100;  // != engine rate, so StreamingTrack::BuildSource resamples it
   }
   uint64_t total_frames() const override {
     return 2000000;  // far longer than any prime, so the thread never exhausts
