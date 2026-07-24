@@ -129,3 +129,21 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   command; the repo's §2 history bars claiming an unshipped gate, so the claim was
   made true rather than softened. Also retroactively wires Wave 1's vitest suites,
   which had never run in CI. **[recorded]**
+
+- **2026-07-24 · Phase 3 opened; F1-M1 metronome store built (§5, §13.3, #40)** —
+  Phase gate 2→3 cleared (device reading #33 PASSED). Stood up `docs/phase3-tracker.md`
+  and dispatched the one §5 task that clears headlessly: the core-state metronome
+  config store. Everything else in §5 is design-gated (screens) or device-gated
+  (background §5.6, soak §5.8). Store maps mutations 1:1 to TurboModule commands and
+  holds no realtime value (§13.3). **[recorded]**
+- **2026-07-24 · TurboModule Spec extended with 3 real ABI commands (§13.7, #40)** —
+  Added `metronomeStop`/`setRamp`/`setBarMute` to `NativeKitbagCommands.ts`; the #29
+  Spec had omitted them. They map to existing `kb_metronome_stop`/`set_ramp`/`set_bar_mute`
+  in `kitbag_api.h` (ralph-verified against the header), so this is completing the Spec,
+  not inventing bindings. Unambiguous gap → decided and recorded rather than stopped. **[recorded]**
+- **2026-07-24 · D1 denominator C ABI gap deferred to #41 (§17 D1)** — The store and
+  schema halves of D1 shipped; the C-API half (`kb_metronome_set_beats` numerator-only)
+  was never built. Store holds `denominator` as validated intent and `setBeats` sends
+  the numerator, flagged honestly (no silent no-op). Follow-up #41 owns the native change;
+  the denominator is not real end-to-end until it lands. `perAccentSounds` (§5.3) and
+  `countInBars` are likewise store-only intent (no engine command yet). **[recorded]**

@@ -59,10 +59,16 @@ ramp/bar-mute/count-in columns, `practiceSessions.setlistId`/`songsPlayed`, and
 the D4 identity tuple. So the metronome's **DB layer needs no new task** — M2
 below is marked satisfied.
 
-**In progress:** M1 (#40) — metronome config store, this wave.
-**Done:** none yet in Phase 3.
-**Next:** after M1, the metronome screens (M3→M4→M5) are design-gated — each ends
-at a design sign-off stop-point.
+**Done:** M1 (#40, `8b3c681`) — metronome config store; 14 vitest sabotage-proven,
+both reviews pass, §13.3 held.
+**In progress:** none.
+**Next:** the metronome screens (M3→M4→M5) are design-gated — the next wave builds
+M3 and ends at a **design sign-off stop-point** (present a `design-reviewer` render
+against `design/kitbag-metronome.html`, then stop for user sign-off).
+**Follow-up filed:** #41 (F1-M1a) — D1 denominator has no C ABI parameter yet
+(`kb_metronome_set_beats` is numerator-only); the store holds it as intent until a
+native task lands it. Not a blocker for M1; blocks the M3 denominator stepper being
+functional rather than cosmetic.
 
 ## F1 Metronome (§5) — task decomposition
 
@@ -74,7 +80,8 @@ tasks serialize** (shared files) and each is design-gated anyway.
 
 | Task | Issue | Scope | Gate class |
 |---|---|---|---|
-| **M1** store | [#40](https://github.com/PinetheApple/kitbag/issues/40) | core-state metronome config store; commands 1:1 to TurboModule; §13.3 no realtime shadow | headless (tdd) |
+| **M1** store | [#40](https://github.com/PinetheApple/kitbag/issues/40) ✅ | core-state metronome config store; commands 1:1 to TurboModule; §13.3 no realtime shadow | headless (tdd) |
+| **M1a** denom ABI | [#41](https://github.com/PinetheApple/kitbag/issues/41) | native: `kb_metronome_set_beats` gains the D1 denominator parameter; store's denominator stops being intent-only | headless (native verify) |
 | **M2** schema | — **satisfied by #34** | §5.4/§11.2 rename, denominator, ramp/bar-mute round-trip, decoupled setlists — all shipped in Phase 2 | — |
 | **M3** perf surface | TBD | §5.2 swipe-anywhere tempo, preset steppers, beat-LED row editor (group+wrap ≥4/row, D9), poly row, bar sweep, practice pill, tap-to-type numpad, badge steppers | **design sign-off** |
 | **M4** chips + sheets | TBD | §5.3 Ramp/Mute-bars/Sound/Count-in sheets over the running metronome, live-apply; sound names from engine | **design sign-off** |
