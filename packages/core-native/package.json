@@ -20,7 +20,10 @@
   "codegenConfig": {
     "name": "KitbagCommandsSpec",
     "type": "modules",
-    "jsSrcsDir": "src"
+    "jsSrcsDir": "src",
+    "android": {
+      "javaPackageName": "com.kitbag.corenative"
+    }
   },
   "devDependencies": {
     "@types/node": "^22.15.0",

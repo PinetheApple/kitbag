@@ -1,0 +1,97 @@
+// Android library module for @kitbag/core-native (SPEC §13.1: the JSI/TurboModule
+// surface is owned by this package, nothing else). This is the module RN
+// autolinking discovers and the React Native codegen runs against: applying the
+// `com.facebook.react` plugin makes codegen emit `NativeKitbagCommandsSpec` (from
+// src/NativeKitbagCommands.ts) into this module's generated source set, so the
+// hand-written KitbagCommandsModule can extend it. No app module can generate that
+// spec without also owning the TurboModule surface — which is exactly what §13.1
+// forbids, hence the module lives here.
+//
+// The C++ core does not move (§13.8): externalNativeBuild points at this package's
+// android/CMakeLists.txt, which add_subdirectory()s native/audio_core in place and
+// builds libkitbag_jsi.so ONCE, here. The app no longer runs this CMake (its
+// externalNativeBuild block was removed) so kitbag_core is built a single time.
+
+apply plugin: "com.android.library"
+apply plugin: "org.jetbrains.kotlin.android"
+apply plugin: "com.facebook.react"
+
+android {
+  namespace "com.kitbag.corenative"
+
+  compileSdk rootProject.ext.compileSdkVersion
+  buildToolsVersion rootProject.ext.buildToolsVersion
+  ndkVersion rootProject.ext.ndkVersion
+
+  buildFeatures {
+    // find_package(ReactAndroid|fbjni CONFIG) in CMakeLists.txt resolves the
+    // prefab-published jsi/reactnative/fbjni artifacts; without this there is no
+    // jsi/jsi.h on the include path (same requirement the app module had).
+    prefab true
+    buildConfig true
+  }
+
+  defaultConfig {
+    minSdkVersion rootProject.ext.minSdkVersion
+    targetSdkVersion rootProject.ext.targetSdkVersion
+
+    externalNativeBuild {
+      cmake {
+        cppFlags "-std=c++20"
+        arguments "-DANDROID_STL=c++_shared"
+        // The #33 device gate is arm64; building arm64-v8a alone is the leanest
+        // gate config and dodges the 32-bit NDK LTO/ld.gold probe issue on this
+        // host (see build report). This MUST match the app's
+        // reactNativeArchitectures so no ABI ships with a missing libkitbag_jsi.so.
+        abiFilters "arm64-v8a"
+      }
+    }
+  }
+
+  externalNativeBuild {
+    cmake {
+      path "CMakeLists.txt"
+    }
+  }
+
+  sourceSets {
+    main {
+      java {
+        // Where `com.facebook.react` codegen writes NativeKitbagCommandsSpec.
+        srcDirs += "${project.buildDir}/generated/source/codegen/java"
+      }
+    }
+  }
+
+  packagingOptions {
+    // React Native ships these .so files itself; a library must not re-package
+    // them or the app build fails on duplicates (same list the RN library
+    // template excludes).
+    excludes = [
+      "**/libc++_shared.so",
+      "**/libfbjni.so",
+      "**/libjsi.so",
+      "**/libreactnative.so",
+    ]
+  }
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+
+  kotlinOptions {
+    jvmTarget = "17"
+  }
+
+  lint {
+    abortOnError false
+  }
+}
+
+dependencies {
+  // Provides the prefab jsi/reactnative/fbjni artifacts and the TurboModule /
+  // BaseReactPackage / codegen'd spec base classes on the Kotlin classpath. Its
+  // version is pinned by the React Native Gradle Plugin, same as the app module.
+  implementation "com.facebook.react:react-android"
+}

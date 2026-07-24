@@ -1,14 +1,16 @@
-package com.kitbag.app
+package com.kitbag.corenative
 
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReadableArray
 
 /**
- * SKELETON — staged for #33 (on-device), NOT verified here.
+ * SKELETON — staged for #33 (on-device). Compiles against the codegen'd spec, but
+ * the runtime behaviour (JSI install under bridgeless, engine lifecycle) is NOT
+ * yet verified on a device.
  *
  * The Android implementation of the KitbagCommands TurboModule (SPEC §13.2). It
- * does two jobs, and both are load-bearing for the #33 gate:
+ * does two jobs:
  *
  *  1. Command routing. Each method below forwards to a JNI entrypoint in
  *     libkitbag_jsi.so (KitbagJni.cpp), which calls kitbag::command* against the
@@ -22,22 +24,16 @@ import com.facebook.react.bridge.ReadableArray
  *     and why it is handled this way, are documented in bootstrapRuntime.ts
  *     (+ runbook §1).
  *
- * BUILD-TIME RESOLUTION (§13.2): this class extends the codegen'd abstract spec
- * `NativeKitbagCommandsSpec`, generated from packages/core-native/src/
- * NativeKitbagCommands.ts during the Gradle `codegen` task. That class does not
- * exist in the tree — it is emitted under the react-native codegen output package
- * (conventionally `com.facebook.fbreact.specs`) only when a build runs. The exact
- * generated method signatures (in particular whether Int32 params surface as
- * `Int` or `Double`, and the Promise arg placement) are codegen-owned; if the
- * first device build reports an override mismatch, align the overrides below with
- * the generated `NativeKitbagCommandsSpec` — do NOT change the TS spec to match a
- * guess here. The signatures below follow the New Architecture Kotlin codegen
- * convention for RN 0.83.
+ * This class extends `NativeKitbagCommandsSpec`, generated from
+ * src/NativeKitbagCommands.ts by React Native codegen (the `com.facebook.react`
+ * Gradle plugin, applied in this module's android/build.gradle). Codegen emits
+ * every parameter as a `double` and every Promise as a trailing argument; the
+ * overrides below match that generated Java spec exactly (verified against the
+ * generated NativeKitbagCommandsSpec.java, not the TS types).
  *
- * UNVERIFIED: nothing in this file has compiled — the generated superclass does
- * not exist off-build, and `reactContext.javaScriptContextHolder` returning a
- * live JSI runtime pointer under bridgeless New Arch is exactly what the device
- * build confirms (it may need a RuntimeExecutor hop instead; see runbook §1).
+ * UNVERIFIED: `reactContext.javaScriptContextHolder` returning a live JSI runtime
+ * pointer under bridgeless New Arch is what the device build confirms (it may need
+ * a RuntimeExecutor hop instead; see runbook §1).
  */
 class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   NativeKitbagCommandsSpec(reactContext) {
@@ -53,7 +49,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     }
   }
 
-  override fun getName(): String = NAME
+  // getName() is provided by the generated spec (returns NAME); not overridden.
 
   // --- Transport -----------------------------------------------------------
 
@@ -135,10 +131,6 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private external fun nativeLoadTrack(track: Int, path: String): Int
 
   companion object {
-    // Matches TurboModuleRegistry.getEnforcing<Spec>('KitbagCommands') on the JS
-    // side (NativeKitbagCommands.ts). One owner of the module name string.
-    const val NAME = "KitbagCommands"
-
     init {
       // The CMake target `kitbag_jsi` -> libkitbag_jsi.so, carrying both the JSI
       // glue and the JNI bridge (KitbagJni.cpp).

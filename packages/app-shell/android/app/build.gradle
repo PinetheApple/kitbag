@@ -89,19 +89,16 @@ android {
 
     namespace 'com.kitbag.app'
 
-    // Resolve React Native's prefab-published jsi/reactnative and fbjni so the
-    // core-native JSI glue (P2-A4, #31) can find_package them (SPEC §13.8).
+    // Prefab is still needed for the app's own New-Architecture native aggregation
+    // (the generated react_codegen_* / appmodules build resolves jsi/reactnative
+    // via prefab). What moved OUT is core-native's externalNativeBuild: the C++
+    // core and its JSI glue are built ONCE, by the @kitbag/core-native Android
+    // library module (SPEC §13.1/§13.8), which owns the externalNativeBuild for
+    // core-native/android/CMakeLists.txt. The app depends on that library via
+    // autolinking and packages libkitbag_jsi.so from it; it must not run that CMake
+    // itself, or kitbag_core would be built twice.
     buildFeatures {
         prefab true
-    }
-
-    // The C++ core does not move (§13.8): the app's native build points at
-    // @kitbag/core-native's CMakeLists, which add_subdirectory()s the existing
-    // native/audio_core tree in place. Path is relative to this app module.
-    externalNativeBuild {
-        cmake {
-            path "../../../core-native/android/CMakeLists.txt"
-        }
     }
 
     defaultConfig {
@@ -112,15 +109,6 @@ android {
         versionName "0.0.0"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
-
-        externalNativeBuild {
-            cmake {
-                cppFlags "-std=c++20"
-                // arm64/x86_64 are what the device gate (#33) and emulators need;
-                // the full ABI set is a release-packaging decision deferred there.
-                abiFilters "arm64-v8a", "x86_64"
-            }
-        }
     }
     signingConfigs {
         debug {

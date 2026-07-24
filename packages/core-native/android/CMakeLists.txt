@@ -1,7 +1,8 @@
 # Android JSI glue for @kitbag/core-native (SPEC §13.8: "The C++ does not move").
 #
-# This is consumed by the app module's externalNativeBuild (see
-# packages/app-shell/android/app/build.gradle). It does NOT relocate or copy the
+# This is driven by this package's own externalNativeBuild (core-native's
+# android/build.gradle); the app module no longer runs this CMake. It does NOT
+# relocate or copy the
 # C++ core: it add_subdirectory()s the existing native/audio_core tree in place,
 # building the same kitbag_core target CI already builds headlessly, and links
 # the JSI glue against it plus React Native's prefab-published jsi/reactnative.

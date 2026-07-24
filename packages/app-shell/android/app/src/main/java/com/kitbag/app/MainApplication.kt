@@ -19,14 +19,11 @@ class MainApplication : Application(), ReactApplication {
   override val reactHost: ReactHost by lazy {
     ExpoReactHostFactory.getDefaultReactHost(
       context = applicationContext,
-      packageList =
-        PackageList(this).packages.apply {
-          // SKELETON (#31): core-native's native surface (JSI HostObject install +
-          // KitbagCommands TurboModule) is not autolinked — its CMake is consumed
-          // via the app's externalNativeBuild, not a separate module. This seam is
-          // fully wired on-device in #33. Empty package today, safe to register.
-          add(KitbagCorePackage())
-        }
+      // core-native's native surface (KitbagCommands TurboModule + JSI HostObject
+      // install) is a proper autolinked Android library (SPEC §13.1), so its
+      // KitbagCorePackage is registered through PackageList by RN autolinking — it
+      // must NOT also be added manually here or the TurboModule registers twice.
+      packageList = PackageList(this).packages
     )
   }
 

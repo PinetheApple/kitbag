@@ -3,7 +3,7 @@
 //
 // This is Android-only glue: it wraps the pure-C++ install/command entrypoints
 // (KitbagEngine.cpp / KitbagCommands.cpp) so the Kotlin TurboModule
-// (app-shell KitbagCommandsModule.kt) can reach them by JNI. iOS never compiles
+// (core-native KitbagCommandsModule.kt) can reach them by JNI. iOS never compiles
 // this file — the whole translation unit is #ifdef __ANDROID__, so the podspec's
 // `cpp/*.cpp` glob picks it up but it is empty off Android (iOS install path is a
 // separate #33 concern, needs a Mac).
@@ -15,7 +15,7 @@
 // pointer is held.
 //
 // The JNI symbol names below are the JVM mangling of
-//   com.kitbag.app.KitbagCommandsModule.<external fun>
+//   com.kitbag.corenative.KitbagCommandsModule.<external fun>
 // (package `.` -> `_`), resolved by System.loadLibrary("kitbag_jsi") +
 // dynamic linking. None of this is exercised until a Gradle build + device.
 
@@ -39,7 +39,7 @@ extern "C" {
 // choice matters (the two-runtimes mechanism) is documented once in
 // bootstrapRuntime.ts. This JNI call is only ever handed the RN JS runtime.
 JNIEXPORT void JNICALL
-Java_com_kitbag_app_KitbagCommandsModule_nativeInstall(JNIEnv* /*env*/,
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeInstall(JNIEnv* /*env*/,
                                                        jobject /*self*/,
                                                        jlong runtimePtr) {
   auto* rt = reinterpret_cast<Runtime*>(runtimePtr);
@@ -52,17 +52,17 @@ Java_com_kitbag_app_KitbagCommandsModule_nativeInstall(JNIEnv* /*env*/,
 // --- Transport -------------------------------------------------------------
 
 JNIEXPORT jint JNICALL
-Java_com_kitbag_app_KitbagCommandsModule_nativeStart(JNIEnv*, jobject) {
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeStart(JNIEnv*, jobject) {
   return static_cast<jint>(kitbag::commandStart());
 }
 
 JNIEXPORT void JNICALL
-Java_com_kitbag_app_KitbagCommandsModule_nativeStop(JNIEnv*, jobject) {
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeStop(JNIEnv*, jobject) {
   kitbag::commandStop();
 }
 
 JNIEXPORT void JNICALL
-Java_com_kitbag_app_KitbagCommandsModule_nativeMetronomeStart(JNIEnv*, jobject,
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeMetronomeStart(JNIEnv*, jobject,
                                                               jdouble anchorFrame) {
   kitbag::commandMetronomeStart(static_cast<double>(anchorFrame));
 }
@@ -70,13 +70,13 @@ Java_com_kitbag_app_KitbagCommandsModule_nativeMetronomeStart(JNIEnv*, jobject,
 // --- Tempo & grid ----------------------------------------------------------
 
 JNIEXPORT void JNICALL
-Java_com_kitbag_app_KitbagCommandsModule_nativeSetTempo(JNIEnv*, jobject,
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetTempo(JNIEnv*, jobject,
                                                         jdouble bpm) {
   kitbag::commandSetTempo(static_cast<double>(bpm));
 }
 
 JNIEXPORT jint JNICALL
-Java_com_kitbag_app_KitbagCommandsModule_nativeSetGrid(JNIEnv* env, jobject,
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetGrid(JNIEnv* env, jobject,
                                                        jdoubleArray beatTimesSec,
                                                        jdouble anchorFrame) {
   if (beatTimesSec == nullptr) {
@@ -97,19 +97,19 @@ Java_com_kitbag_app_KitbagCommandsModule_nativeSetGrid(JNIEnv* env, jobject,
 // --- Metronome setters -----------------------------------------------------
 
 JNIEXPORT void JNICALL
-Java_com_kitbag_app_KitbagCommandsModule_nativeSetBeats(JNIEnv*, jobject,
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetBeats(JNIEnv*, jobject,
                                                         jint beatsPerBar) {
   kitbag::commandSetBeats(static_cast<int32_t>(beatsPerBar));
 }
 
 JNIEXPORT void JNICALL
-Java_com_kitbag_app_KitbagCommandsModule_nativeSetSubdivision(JNIEnv*, jobject,
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetSubdivision(JNIEnv*, jobject,
                                                               jint subdivision) {
   kitbag::commandSetSubdivision(static_cast<int32_t>(subdivision));
 }
 
 JNIEXPORT void JNICALL
-Java_com_kitbag_app_KitbagCommandsModule_nativeSetAccent(JNIEnv*, jobject,
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetAccent(JNIEnv*, jobject,
                                                          jint beatIndex,
                                                          jint accent) {
   kitbag::commandSetAccent(static_cast<int32_t>(beatIndex),
@@ -117,26 +117,26 @@ Java_com_kitbag_app_KitbagCommandsModule_nativeSetAccent(JNIEnv*, jobject,
 }
 
 JNIEXPORT void JNICALL
-Java_com_kitbag_app_KitbagCommandsModule_nativeSetPoly(JNIEnv*, jobject,
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetPoly(JNIEnv*, jobject,
                                                        jboolean enabled,
                                                        jint beats) {
   kitbag::commandSetPoly(enabled == JNI_TRUE, static_cast<int32_t>(beats));
 }
 
 JNIEXPORT void JNICALL
-Java_com_kitbag_app_KitbagCommandsModule_nativeSetSound(JNIEnv*, jobject,
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetSound(JNIEnv*, jobject,
                                                         jint soundIndex) {
   kitbag::commandSetSound(static_cast<int32_t>(soundIndex));
 }
 
 JNIEXPORT void JNICALL
-Java_com_kitbag_app_KitbagCommandsModule_nativeSetVolume(JNIEnv*, jobject,
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetVolume(JNIEnv*, jobject,
                                                          jdouble volume) {
   kitbag::commandSetVolume(static_cast<double>(volume));
 }
 
 JNIEXPORT void JNICALL
-Java_com_kitbag_app_KitbagCommandsModule_nativeSetLatencyOffset(JNIEnv*, jobject,
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetLatencyOffset(JNIEnv*, jobject,
                                                                 jdouble latencyMs) {
   kitbag::commandSetLatencyOffset(static_cast<double>(latencyMs));
 }
@@ -144,7 +144,7 @@ Java_com_kitbag_app_KitbagCommandsModule_nativeSetLatencyOffset(JNIEnv*, jobject
 // --- Mixer -----------------------------------------------------------------
 
 JNIEXPORT jint JNICALL
-Java_com_kitbag_app_KitbagCommandsModule_nativeLoadTrack(JNIEnv* env, jobject,
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeLoadTrack(JNIEnv* env, jobject,
                                                          jint track,
                                                          jstring path) {
   const char* utf = env->GetStringUTFChars(path, nullptr);

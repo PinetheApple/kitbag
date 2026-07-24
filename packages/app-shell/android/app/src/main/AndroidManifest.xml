@@ -15,9 +15,6 @@
     <meta-data android:name="expo.modules.updates.ENABLED" android:value="false"/>
     <meta-data android:name="expo.modules.updates.EXPO_UPDATES_CHECK_ON_LAUNCH" android:value="ALWAYS"/>
     <meta-data android:name="expo.modules.updates.EXPO_UPDATES_LAUNCH_WAIT_MS" android:value="0"/>
-    <!-- SKELETON (#31): declares core-native's Android native surface (SPEC §5.6, §13.9).
-         Behaviour is stubbed; full port + the FOREGROUND_SERVICE_MEDIA_PLAYBACK permission,
-         mediaPlayback type, and BIND_NOTIFICATION_LISTENER_SERVICE grant land in Phase 3 (#33). -->
     <service android:name="com.kitbag.app.service.KitbagForegroundService" android:exported="false"/>
     <service android:name="com.kitbag.app.media.MediaNotificationListenerService" android:exported="false"/>
     <activity android:name=".MainActivity" android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|uiMode|smallestScreenSize" android:launchMode="singleTask" android:windowSoftInputMode="adjustResize" android:theme="@style/Theme.App.SplashScreen" android:exported="true" android:screenOrientation="portrait">
