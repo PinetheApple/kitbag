@@ -22,12 +22,6 @@ const BPM_STEP = 5;
 const MS_PER_SECOND = 1000;
 const STARVATION_SECONDS = STARVATION_MS / MS_PER_SECOND;
 
-const SECONDS_PER_MINUTE = 60;
-// A long measured grid so the sweep runs continuously through the gate + the
-// starvation test. Well under the engine's KB_MAX_GRID_BEATS cap (kitbag_api.h);
-// the constant is engine-owned, not restated here (§13.7).
-const GATE_GRID_BEATS = 2000;
-
 export function GateScreen() {
   const { barPhase, currentBeat, currentBpm } = useBeatSweep();
 
@@ -127,35 +121,19 @@ export function GateScreen() {
 // registered until #33; resolving it throws, so this is guarded — the gate still
 // renders (sweep held at 0) without a native build.
 //
-// Two things are required for the sweep to move, and start() is only the first:
-// kb_engine_start opens the audio device (advances the frame clock) but leaves the
-// metronome's running_ false, and bar_phase is published ONLY while running_
-// (metronome.cpp PublishBlockMirrors). So we also issue metronomeStart
-// (kb_metronome_start_at, added to §13.2's spec — a recorded spec change per
-// runbook §3a, NOT a fudge) to flip running_ true; without it the sweep stays
-// frozen at 0 even on a perfect UI-runtime install.
-//
-// ORDER + SHARED ANCHOR (non-obvious): capture the anchor frame ONCE and reuse it
-// for both setGrid and metronomeStart so they align. setGrid anchors beat 0 at
-// that frame; metronomeStart starts the transport at the SAME frame, so running_
-// flips at beat 0 and the sweep starts at phase 0 rather than mid-bar. setGrid is
-// issued BEFORE metronomeStart because the engine seeds the grid cursor from the
-// live grid when the deferred start fires (metronome_render.cpp BeginPendingStart),
-// so the grid must already be published by then.
+// kb_engine_start opens the audio device (advances the frame clock);
+// metronomeStart(anchor) flips the metronome running so bar_phase advances from
+// the tempo — constant-tempo mode, NOT a grid (a grid is song-follow and ignores
+// live setTempo). setTempo/setBeats set the rate and time signature and apply live.
+// The anchor is frames_rendered ("now"): a future frame would freeze the sweep
+// until the clock reached it.
 function tryDriveEngineOnStart(bpm: number, beatsPerBar: number): void {
   try {
     const commands = getKitbagCommands();
     void commands.start();
     commands.setTempo(bpm);
     commands.setBeats(beatsPerBar);
-    const secondsPerBeat = SECONDS_PER_MINUTE / bpm;
-    const beatTimesSec = Array.from(
-      { length: GATE_GRID_BEATS },
-      (_, i) => i * secondsPerBeat,
-    );
-    // One anchor for both the grid and the transport start (see above).
     const anchorFrame = getKitbagHostObject().frames_rendered;
-    void commands.setGrid(beatTimesSec, anchorFrame);
     commands.metronomeStart(anchorFrame);
   } catch {
     // No native build yet (#33): human-speed state still toggles.
