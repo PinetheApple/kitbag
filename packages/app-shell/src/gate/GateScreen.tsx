@@ -49,13 +49,25 @@ export function GateScreen() {
   }, []);
 
   // useCallback for stable identity (react/jsx-no-bind forbids inline handlers).
-  // useState setters are stable, so their deps lists are empty.
+  // tempo + running are in deps so the closures are never stale: we read the
+  // current tempo to compute next and gate the live engine call on running.
+  // While running, a tempo change must reach the engine so it applies live over
+  // the running metronome (SPEC §5.3) — the §5.8 mid-bar-glitch-free test needs
+  // this. When stopped, Start sends the value (tryDriveEngineOnStart).
   const onTempoUp = useCallback(() => {
-    setTempo((prev) => prev + BPM_STEP);
-  }, []);
+    const next = tempo + BPM_STEP;
+    setTempo(next);
+    if (running) {
+      trySetEngineTempo(next);
+    }
+  }, [tempo, running]);
   const onTempoDown = useCallback(() => {
-    setTempo((prev) => prev - BPM_STEP);
-  }, []);
+    const next = tempo - BPM_STEP;
+    setTempo(next);
+    if (running) {
+      trySetEngineTempo(next);
+    }
+  }, [tempo, running]);
   const onToggleRunning = useCallback(() => {
     setRunning((prev) => {
       const next = !prev;
@@ -145,6 +157,18 @@ function tryDriveEngineOnStart(bpm: number, beatsPerBar: number): void {
     const anchorFrame = getKitbagHostObject().frames_rendered;
     void commands.setGrid(beatTimesSec, anchorFrame);
     commands.metronomeStart(anchorFrame);
+  } catch {
+    // No native build yet (#33): human-speed state still toggles.
+  }
+}
+
+// Apply a live tempo change to a running metronome (SPEC §5.3). Same setTempo
+// TurboModule command tryDriveEngineOnStart uses at Start — one command path, not
+// a second (§13.7). Guarded like the other helpers: with no native build the
+// human-speed state still updates.
+function trySetEngineTempo(bpm: number): void {
+  try {
+    getKitbagCommands().setTempo(bpm);
   } catch {
     // No native build yet (#33): human-speed state still toggles.
   }
