@@ -43,13 +43,12 @@ Gates (every TS task): vitest suites green · typecheck 12/12 · `lint
 (build 0 · all `*_verify` bar `tuner_verify` · `lint.sh` 0) still runs unchanged;
 a §5.6 native change must keep it green.
 
-## Current state — 2026-07-24, `feat/phase2-skeleton` (Phase 2 done, unmerged)
+## Current state — 2026-07-25, `feat/phase2-skeleton` (Phase 2 merged)
 
-> **Branch note.** All of Phase 2 landed on `feat/phase2-skeleton` and is **not
-> yet on `main`** (Phase 1 merged via PR #26; Phase 2 has no PR yet). Phase 3
-> continues on this branch because it holds the whole foundation. **Recommend the
-> user PR `feat/phase2-skeleton` → `main`** at a convenient boundary; the loop
-> does not push or open PRs.
+> **Branch note.** Phase 2 is **on `main`** — merged 2026-07-24 via PR #39
+> (Phase 1 via PR #26). Phase 3 continues on `feat/phase2-skeleton`, which now
+> carries only Phase 3 work on top of that foundation. The loop does not push or
+> open PRs; the user PRs at convenient boundaries.
 
 **Foundation already in place (Phase 2):** `core-native` JSI HostObject +
 TurboModule (#29/#30, device-proven #33), `core-db` full v6→v7 Drizzle schema and
@@ -65,10 +64,17 @@ both reviews pass, §13.3 held.
 **Next:** the metronome screens (M3→M4→M5) are design-gated — the next wave builds
 M3 and ends at a **design sign-off stop-point** (present a `design-reviewer` render
 against `design/kitbag-metronome.html`, then stop for user sign-off).
-**Follow-up filed:** #41 (F1-M1a) — D1 denominator has no C ABI parameter yet
-(`kb_metronome_set_beats` is numerator-only); the store holds it as intent until a
-native task lands it. Not a blocker for M1; blocks the M3 denominator stepper being
-functional rather than cosmetic.
+**Done:** M1a (#41) — `kb_metronome_set_beats` gains the D1 denominator; the beat
+interval is now `(60/bpm) × (4/denominator)` with BPM quarter-note referenced, so
+6/8 clicks six times per bar (no separate click-unit control — see
+`docs/decisions.md` and `docs/metronome-bpm-denominator-research.md`).
+`metronome_verify` 224 → 264 checks, ralph + code-reviewer pass.
+**Open follow-up:** the TS/Kotlin half is NOT wired — `NativeKitbagCommands.ts`,
+the Kotlin module and the store still send the numerator alone, `KitbagJni.cpp`
+carries a `kDenominatorUnchanged = 0` stopgap, `kDenominators` is not in the §13.7
+generator while `store.ts` hand-declares the set, and three comments
+(`NativeKitbagCommands.ts:66`, `store.ts:25-27`, `store.ts:189-190`) now assert
+falsehoods about the ABI. Blocks the M3 denominator stepper being functional.
 
 ## F1 Metronome (§5) — task decomposition
 
@@ -81,7 +87,7 @@ tasks serialize** (shared files) and each is design-gated anyway.
 | Task | Issue | Scope | Gate class |
 |---|---|---|---|
 | **M1** store | [#40](https://github.com/PinetheApple/kitbag/issues/40) ✅ | core-state metronome config store; commands 1:1 to TurboModule; §13.3 no realtime shadow | headless (tdd) |
-| **M1a** denom ABI | [#41](https://github.com/PinetheApple/kitbag/issues/41) | native: `kb_metronome_set_beats` gains the D1 denominator parameter; store's denominator stops being intent-only | headless (native verify) |
+| **M1a** denom ABI | [#41](https://github.com/PinetheApple/kitbag/issues/41) ✅ native only | native: `kb_metronome_set_beats` gains the D1 denominator parameter. **TS/Kotlin half still open** — the store's denominator remains intent-only until it lands | headless (native verify) |
 | **M2** schema | — **satisfied by #34** | §5.4/§11.2 rename, denominator, ramp/bar-mute round-trip, decoupled setlists — all shipped in Phase 2 | — |
 | **M3** perf surface | TBD | §5.2 swipe-anywhere tempo, preset steppers, beat-LED row editor (group+wrap ≥4/row, D9), poly row, bar sweep, practice pill, tap-to-type numpad, badge steppers | **design sign-off** |
 | **M4** chips + sheets | TBD | §5.3 Ramp/Mute-bars/Sound/Count-in sheets over the running metronome, live-apply; sound names from engine | **design sign-off** |

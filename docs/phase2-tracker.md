@@ -18,7 +18,10 @@ to the gate first; do not fan out Phase 3 on an unproven foundation.
 
 Status legend: `[ ]` todo · `[~]` in progress · `[x]` done (verify green + both reviews pass) · `[!]` blocked
 
-## Current state — 2026-07-23, `feat/phase2-skeleton` (off main; Phase 1 merged via PR #26)
+## Current state — Phase 2 complete and merged to `main` via PR #39 (2026-07-24)
+
+The per-wave notes below say "not yet pushed" — true when written, superseded by
+PR #39. Phase 1 merged earlier via PR #26.
 
 **Done:** `P2-S` (#27) — monorepo skeleton (pnpm + Turborepo + Expo prebuild), merged `6a810f5`. Twelve packages per §13.1 with boundary edges; staged `config/` wired to root (`git mv` to `eslint.config.mjs`/`prettier.config.mjs`/`tsconfig.base.json`); Android tree committed (37 files, prebuild not F-Droid, §13.8.1); `pnpm install`/`typecheck` (12/12)/`lint --max-warnings 0` green. Device boot NOT verified — that is #33.
 
