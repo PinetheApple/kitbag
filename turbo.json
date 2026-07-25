@@ -5,6 +5,7 @@
       "dependsOn": ["^typecheck"]
     },
     "lint": {},
-    "test": {}
+    "test": {},
+    "generate:check": {}
   }
 }
