@@ -23,6 +23,21 @@ genuinely ships.
 
 ### Added
 
+- **metronome:** The time-signature denominator reaches the engine (#41, §17 D1)
+
+kb_metronome_set_beats was numerator-only, so 7/8 and 7/4 produced an identical
+click. It now takes the denominator, and the beat interval is
+(60 / bpm) * (4 / denominator). BPM stays quarter-note referenced: 7/8 at 120
+clicks twice as fast as 7/4 at 120, and 6/8 clicks six times per bar. No
+separate click-unit control, so a two-click 6/8 feel needs manual BPM
+arithmetic — decided against the survey in
+docs/metronome-bpm-denominator-research.md and recorded in docs/decisions.md.
+
+Phase is exactly preserved across a mid-run change, and metronome_verify went
+224 -> 264 checks. Ships the C-API third of D1 only: the TS/Kotlin bindings
+still send the numerator alone, so the store's denominator remains intent
+rather than sound.
+
 - **metronome:** Sample-accurate start on an engine frame (SPEC.md §4.2)
 
 kb_metronome_start_at(engine, start_frame) starts the click on a given
@@ -501,7 +516,8 @@ kb_metronome_* ABI functions (kitbag_api.h) the Spec had omitted, verified by
 ralph against the header. Not fabricated bindings.
 
 Honest native gaps, stored as intent only (no silent no-op that looks wired):
-- D1 denominator has no ABI parameter yet (§17 D1 unbuilt) — setBeats sends the
+- D1 denominator has no ABI parameter yet (§17 D1 unbuilt; closed later by #41,
+  see Added above) — setBeats sends the
   numerator; denominator is validated intent. A native follow-up owns the C API.
 - perAccentSounds (§5.3 per-accent-level sound) and countInBars have no engine
   command — store-only intent applied by a future start screen.
