@@ -335,6 +335,7 @@ MakeShiftedGrid(int count, double offset_sec, double interval_sec) {
 }
 
 void RunBasicTests();
+void RunSignatureTests();
 void RunStartAtTests();
 void RunLatencyTests();
 void RunGridTests();

@@ -35,6 +35,10 @@ class Metronome {
   static constexpr int kSoundCount = 6;
   static constexpr double kMinBpm = 20.0;
   static constexpr double kMaxBpm = 400.0;
+  // BPM stays quarter-note referenced whatever the time signature, so the beat
+  // interval is (60 / bpm) * (kBpmReferenceDenominator / denominator) seconds.
+  static constexpr int kBpmReferenceDenominator = 4;
+  static constexpr int kDenominators[] = {2, 4, 8, 16};
   static constexpr int kMaxRampBars = 64;
   static constexpr int kMaxMuteBars = 16;
   // Output-latency compensation bound (D5). Widening this to 300 is the whole
@@ -75,7 +79,7 @@ class Metronome {
   // this is a no-op until ClearGrid. SPEC.md §4.2.
   void AnchorExternal(double song_pos_sec, uint64_t at_frame, double bpm);
   void SetTempo(double bpm);
-  void SetBeatsPerBar(int beats);
+  void SetTimeSignature(int numerator, int denominator);
   void SetSubdivision(int subdivision);
   void SetAccent(int beat_index, Accent accent);
   void SetPolyrhythm(bool enabled, int beats);
@@ -192,6 +196,8 @@ class Metronome {
   bool ApplyTrainerCommand(const Command& command);
   bool ApplyPatternCommand(const Command& command);
   void SetAccentSlot(int32_t beat_index, int32_t accent);
+  void SetSignatureState(int32_t numerator, int32_t denominator);
+  static bool IsValidDenominator(int32_t denominator);
   void SetPolyState(bool enabled, int32_t beats);
   void ArmRamp(const Command& command);
   // Phase-preserving like a bpm change; inert while stopped, where there is no
@@ -212,8 +218,12 @@ class Metronome {
   double RampBpmForBar(int64_t bar) const;
   bool BarIsMuted(int64_t bar) const;
   double LatencyBeats() const;
-  // The only way bpm_ may change while running. See the definition.
+  double BeatUnitScale() const;
+  // The only ways bpm_ and denominator_ may change while running. See
+  // SetBeatRate's definition.
   void SetBpmPreservingPhase(double new_bpm);
+  void SetDenominatorPreservingPhase(int32_t denominator);
+  void SetBeatRate(double new_bpm, int new_denominator);
   // Resets sequencer phase and starts the run. Shared by Start (immediate) and
   // StartAt (deferred to the anchor frame).
   void BeginRun();
@@ -286,6 +296,7 @@ class Metronome {
   bool running_ = false;
   double bpm_ = kDefaultBpm;
   int beats_per_bar_ = 4;
+  int denominator_ = kBpmReferenceDenominator;
   int subdivision_ = 1;
   Accent accents_[kMaxBeats] = {};
   bool poly_enabled_ = false;

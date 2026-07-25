@@ -36,6 +36,8 @@ void Metronome::SeekGridCursor(const BeatGrid& grid, double song_seconds) {
 
 // Derived, never incremented: a re-anchor re-crosses downbeats, and counting
 // them would make bar-mute phase depend on re-anchor count (SPEC.md §4.2.1).
+// Grid mode ignores the denominator (D1): bars count tracker beats, so 7/8 bars
+// every 7 grid beats and PublishGridMirrors' rate is not quarter-referenced.
 void Metronome::SyncGridBar() {
   current_bar_ = grid_beat_index_ < 0 ? -1 : grid_beat_index_ / beats_per_bar_;
 }

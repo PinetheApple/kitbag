@@ -11,7 +11,7 @@ constexpr int64_t kMidBlockAnchor = 5000;  // not a multiple of kBlockFrames
 void TestStartAt() {
   kitbag::Metronome metronome;
   metronome.SetTempo(120.0);
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   metronome.StartAt(static_cast<uint64_t>(kMidBlockAnchor));
 
   const auto onsets =
@@ -51,7 +51,7 @@ void TestStartAtAnchorAtZero() {
 // after the in-loop BeginRun, or a stale offset swallows beat 0 (SPEC.md §4.7).
 void TestStartAtWithArmedRampRecomputesLocals() {
   kitbag::Metronome metronome;
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   metronome.SetRamp(true, 60.0, 180.0, 4);
   metronome.SetLatencyOffset(50.0);
   metronome.Start();
@@ -146,7 +146,7 @@ constexpr uint64_t kRecallFrame = 60000;  // would restart here if honoured
 std::vector<int64_t> RunStartAtRecall(bool recall) {
   kitbag::Metronome metronome;
   metronome.SetTempo(120.0);
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   metronome.StartAt(static_cast<uint64_t>(kMidBlockAnchor));
   if (!recall) return RenderAndDetectOnsets(metronome, kSampleRate * 2);
   return RenderContinuous(

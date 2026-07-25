@@ -99,7 +99,11 @@ Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetGrid(JNIEnv* env, jobje
 JNIEXPORT void JNICALL
 Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetBeats(JNIEnv*, jobject,
                                                         jint beatsPerBar) {
-  kitbag::commandSetBeats(static_cast<int32_t>(beatsPerBar));
+  // The Kotlin/TurboModule half of #41 is not wired yet; 0 is outside the valid
+  // set, so the engine keeps the current beat unit rather than forcing 4.
+  constexpr int32_t kDenominatorUnchanged = 0;
+  kitbag::commandSetBeats(static_cast<int32_t>(beatsPerBar),
+                          kDenominatorUnchanged);
 }
 
 JNIEXPORT void JNICALL

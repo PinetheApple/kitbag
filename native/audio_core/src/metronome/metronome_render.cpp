@@ -135,7 +135,8 @@ float Metronome::RenderVoices() {
 
 Metronome::BlockTempo Metronome::BlockTempoFor(uint32_t sample_rate) const {
   BlockTempo tempo;
-  tempo.beats_per_sample = bpm_ / (kSecondsPerMinute * sample_rate);
+  tempo.beats_per_sample =
+      bpm_ * BeatUnitScale() / (kSecondsPerMinute * sample_rate);
   tempo.latency_beats = LatencyBeats();
   tempo.poly_scale =
       static_cast<double>(poly_beats_) / static_cast<double>(beats_per_bar_);
@@ -208,7 +209,9 @@ void Metronome::BeginAnchorExternal(
           sample_rate;
   // position == song beats, so beat_position_ carries no latency term; the
   // per-sample bias in AdvanceConstantTempo adds it back (§4.7).
-  beat_position_ = song_seconds * bpm_ / kSecondsPerMinute;
+  // Song second → this signature's beat unit, so an 8th-note bar anchors on the
+  // song's clock like a quarter-note one.
+  beat_position_ = song_seconds * bpm_ * BeatUnitScale() / kSecondsPerMinute;
   running_ = true;
   running_flag_.store(true, std::memory_order_relaxed);
   observed_generation_ = 0;  // re-seed the grid cursor if a grid is present

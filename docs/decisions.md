@@ -147,3 +147,17 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   the numerator, flagged honestly (no silent no-op). Follow-up #41 owns the native change;
   the denominator is not real end-to-end until it lands. `perAccentSounds` (§5.3) and
   `countInBars` are likewise store-only intent (no engine command yet). **[recorded]**
+- **2026-07-25 · Denominator scales the click rate; no separate click-unit control
+  (§17 D1, #41)** — BPM stays **quarter-note referenced**: beat interval =
+  `(60/bpm) × (4/denominator)`, so 7/8 at 120 clicks twice as fast as 7/4 at 120,
+  and 6/8 clicks **six** times per bar, not two. Rationale: SPEC §17 D1 requires
+  the beat interval to be a function of both numerator and denominator, which only
+  the quarter-referenced reading satisfies. A product survey
+  (`docs/metronome-bpm-denominator-research.md`) found no standalone metronome
+  ships this bare — the well-regarded ones pair it with an explicit beat-unit /
+  click-unit control so compound meters can click the dotted-note pulse (Dorico's
+  Beat Unit, Pro Tools' Click field, Tempo, Soundbrenner). **User decided against
+  that control: six eighth-note clicks in 6/8 is the wanted behaviour.** So bar
+  length stays `numerator × beat unit`, the ABI gains no click-unit parameter, and
+  §17.1 gains no entry. Cost accepted: a user wanting the 6/8 dotted-quarter pulse
+  halves the BPM by hand. **[recorded]**

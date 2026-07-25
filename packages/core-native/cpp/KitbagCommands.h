@@ -36,7 +36,9 @@ int32_t commandSetGrid(const double* beatTimesSec, int32_t count, double anchorF
 
 // Metronome setters (all void in the ABI). accent and soundIndex pass through
 // unchanged — the caller sources them from the generated enum/table (§13.7).
-void commandSetBeats(int32_t beatsPerBar);
+// setBeats carries both halves of the time signature; the engine ignores a
+// denominator outside {2, 4, 8, 16} and keeps the current one (kitbag_api.h).
+void commandSetBeats(int32_t beatsPerBar, int32_t denominator);
 void commandSetSubdivision(int32_t subdivision);
 void commandSetAccent(int32_t beatIndex, int32_t accent);
 void commandSetPoly(bool enabled, int32_t beats);

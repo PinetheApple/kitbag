@@ -8,7 +8,7 @@ namespace {
 void TestSteadyTempo() {
   kitbag::Metronome metronome;
   metronome.SetTempo(120.0);
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   metronome.Start();
 
   const auto onsets = RenderAndDetectOnsets(metronome, kSampleRate * 10);
@@ -57,7 +57,7 @@ void TestTempoChange() {
 void TestSubdivisionAndMute() {
   kitbag::Metronome metronome;
   metronome.SetTempo(120.0);
-  metronome.SetBeatsPerBar(2);
+  metronome.SetTimeSignature(2, 4);
   metronome.SetSubdivision(2);
   metronome.SetAccent(1, kitbag::Accent::kMuted);
   metronome.Start();
@@ -90,7 +90,7 @@ void ExpectRampIntervals(const std::vector<int64_t>& onsets, double target) {
 
 void TestTempoRamp() {
   kitbag::Metronome metronome;
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   metronome.SetRamp(true, 100.0, 200.0, 4);
   metronome.Start();
 
@@ -115,7 +115,7 @@ void TestTempoRamp() {
 // is large, so a deferred step shows up as a short first beat of bar 1.
 void TestRampStepTakesEffectMidBlock() {
   kitbag::Metronome metronome;
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   metronome.SetRamp(true, 240.0, 60.0, 1);
   metronome.Start();
 
@@ -128,7 +128,7 @@ void TestRampStepTakesEffectMidBlock() {
 void TestBarMute() {
   kitbag::Metronome metronome;
   metronome.SetTempo(120.0);
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   metronome.SetBarMute(true, 1, 1);
   metronome.Start();
 
@@ -144,7 +144,7 @@ void TestBarMute() {
 void TestPolyrhythm() {
   kitbag::Metronome metronome;
   metronome.SetTempo(120.0);
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   metronome.SetPolyrhythm(true, 3);
   metronome.Start();
 

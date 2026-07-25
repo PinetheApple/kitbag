@@ -113,6 +113,7 @@ if(KITBAG_BUILD_TOOLS)
   add_executable(metronome_verify
     tools/metronome/metronome_verify.cpp
     tools/metronome/metronome_test_basic.cpp
+    tools/metronome/metronome_test_signature.cpp
     tools/metronome/metronome_test_grid.cpp
     tools/metronome/metronome_test_latency.cpp
     tools/metronome/metronome_test_startat.cpp

@@ -9,7 +9,7 @@ namespace {
 void TestGridFollowsDriftingTempo() {
   kitbag::Metronome metronome;
   metronome.SetTempo(120.0);  // deliberately unrelated to the grid
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   auto grid = MakeDriftingGrid(12, 0.5, 0.02, 0);
   const auto expected = grid->beat_times_sec;
   metronome.SetGrid(std::move(grid), 0, true);
@@ -24,7 +24,7 @@ void TestGridFollowsDriftingTempo() {
 // beat of the new grid fires, and beats already played are never revisited.
 void TestGridReanchorMidRunPicksUpNewGrid() {
   kitbag::Metronome metronome;
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   metronome.SetGrid(MakeDriftingGrid(40, 0.5, 0.0, 0), 0, true);
   metronome.Start();
 
@@ -73,7 +73,7 @@ DriftingReanchorExpected(const std::vector<double>& incoming, int64_t swap_at) {
 // on its own measured time, not on an extrapolation from the re-seed point.
 void TestGridReanchorFollowsNewDriftingGrid() {
   kitbag::Metronome metronome;
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   metronome.SetGrid(MakeShiftedGrid(40, 0.0, 0.5), 0, true);  // even 0.5 s
   metronome.Start();
   // Steep ramp: intervals shrink 0.02 s per beat, so an averaged-tempo re-seed misses.
@@ -100,7 +100,7 @@ void TestGridReanchorFollowsNewDriftingGrid() {
 // where the pause began (SPEC.md §4.2.1).
 void TestGridSurvivesStopStart() {
   kitbag::Metronome metronome;
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   auto grid = MakeDriftingGrid(40, 0.5, 0.0, 0);
   const auto times = grid->beat_times_sec;
   metronome.SetGrid(std::move(grid), 0, true);
@@ -131,7 +131,7 @@ void TestGridSurvivesStopStart() {
 // grid arrived in.
 void TestGridWithStartAt() {
   kitbag::Metronome metronome;
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   auto grid = MakeDriftingGrid(40, 0.5, 0.0, 0);
   const auto times = grid->beat_times_sec;
   metronome.SetGrid(std::move(grid), 0, true);
@@ -150,7 +150,7 @@ void TestGridWithStartAt() {
 // block that re-seeds resets grid_next_sub_ and re-fires a spent subdivision.
 void TestGridStartAtKeepsSubdivisionCursor() {
   kitbag::Metronome metronome;
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   metronome.SetSubdivision(2);
   metronome.SetGrid(MakeDriftingGrid(40, 0.5, 0.0, 0), 0, true);
   metronome.StartAt(static_cast<uint64_t>(1.1 * kSampleRate));
@@ -173,7 +173,7 @@ void TestGridStartAtRestoresGeneration() {
   const auto tick_frame = static_cast<int64_t>(kSubTickSec * kSampleRate);
 
   kitbag::Metronome metronome;
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   metronome.SetSubdivision(2);
   metronome.SetGrid(MakeDriftingGrid(40, 0.5, 0.0, 0), 0, true);
   metronome.StartAt(static_cast<uint64_t>(tick_frame - kJustBeforeFrames));
@@ -196,7 +196,7 @@ void TestGridStartAtRestoresGeneration() {
 // Subdivisions divide each measured interval rather than being dropped.
 void TestGridSubdivision() {
   kitbag::Metronome metronome;
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   metronome.SetSubdivision(2);
   metronome.SetGrid(MakeDriftingGrid(20, 0.5, 0.0, 0), 0, true);
   metronome.Start();
@@ -218,7 +218,7 @@ void TestGridSubdivision() {
 void TestClearGridReturnsToBpm() {
   kitbag::Metronome metronome;
   metronome.SetTempo(120.0);  // 0.5 s beats
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   // 0.3 s beats: incommensurate with the 0.5 s tempo, so continuing from the
   // last grid beat and free-running from the transport disagree.
   metronome.SetGrid(MakeDriftingGrid(40, 0.3, 0.0, 0), 0, true);
@@ -248,7 +248,7 @@ void TestClearGridReturnsToBpm() {
 // a re-anchor re-crosses a downbeat and counting would over-count (§4.2.1).
 void TestGridReanchorKeepsBarPhase() {
   kitbag::Metronome metronome;
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   metronome.SetBarMute(true, 1, 1);  // odd bars silent, even bars sounding
   metronome.SetGrid(MakeDriftingGrid(40, 0.5, 0.0, 0), 0, true);
   metronome.Start();
@@ -279,7 +279,7 @@ void TestGridReanchorKeepsBarPhase() {
 // onset detector (cf. C3's anchor_external case).
 void TestGridReanchorNoRefire() {
   kitbag::Metronome metronome;
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   metronome.SetGrid(MakeDriftingGrid(40, 0.5, 0.0, 0), 0, true);
   metronome.Start();
 
@@ -311,7 +311,7 @@ void TestGridReanchorNoRefire() {
 // the UI reads out, so grid mode must clamp it the way SetTempo does.
 void TestGridBpmMirrorIsClamped() {
   kitbag::Metronome fast;
-  fast.SetBeatsPerBar(4);
+  fast.SetTimeSignature(4, 4);
   fast.SetGrid(MakeDriftingGrid(200, 0.05, 0.0, 0), 0, true);  // 1200 BPM raw
   fast.Start();
   RenderAndDetectOnsets(fast, kSampleRate / 2);
@@ -321,7 +321,7 @@ void TestGridBpmMirrorIsClamped() {
   );
 
   kitbag::Metronome slow;
-  slow.SetBeatsPerBar(4);
+  slow.SetTimeSignature(4, 4);
   auto grid = std::make_unique<kitbag::BeatGrid>();
   grid->beat_times_sec = {0.0, 10.0};  // 6 BPM raw
   slow.SetGrid(std::move(grid), 0, true);
@@ -344,7 +344,7 @@ constexpr double kGridSoundingPeak = 0.2;
 // one would sound a muted beat's own subdivision.
 double GridMuteCascadePeak(kitbag::Accent beat_one, int64_t lo, int64_t hi) {
   kitbag::Metronome metronome;
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   metronome.SetSubdivision(2);
   metronome.SetLatencyOffset(100.0);
   metronome.SetAccent(1, beat_one);

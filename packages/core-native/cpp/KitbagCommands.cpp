@@ -40,8 +40,8 @@ int32_t commandSetGrid(const double* beatTimesSec, int32_t count, double anchorF
                                static_cast<uint64_t>(anchorFrame));
 }
 
-void commandSetBeats(int32_t beatsPerBar) {
-  kb_metronome_set_beats(commandEngine(), beatsPerBar);
+void commandSetBeats(int32_t beatsPerBar, int32_t denominator) {
+  kb_metronome_set_beats(commandEngine(), beatsPerBar, denominator);
 }
 void commandSetSubdivision(int32_t subdivision) {
   kb_metronome_set_subdivision(commandEngine(), subdivision);
