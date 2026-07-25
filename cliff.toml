@@ -15,7 +15,10 @@ All notable changes to Kitbag are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Entries below are generated from Conventional Commits by git-cliff — an entry
-cannot exist without a commit that did the work.
+cannot exist without a commit that did the work. Regenerate with
+`bash scripts/changelog.sh`, never a bare `git-cliff -o`: git-cliff has no
+config key for a start commit, so an unbounded run walks past the audit below
+and re-imports the deleted releases.
 
 ---
 
