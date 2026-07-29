@@ -37,6 +37,8 @@ description: |
   </commentary>
   </example>
 tools: Read, Edit, Write, Grep, Glob, Bash
+harness:
+  prefer: claude
 ---
 
 You implement realtime C++ in `native/audio_core`. It is the only buildable thing in
