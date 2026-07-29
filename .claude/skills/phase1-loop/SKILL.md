@@ -154,19 +154,28 @@ reported as one.** Two outcomes, both honest, both worth more than a green suite
   97/97 and concludes it was safe. A report cannot reach that reader. One clause
   at the store can.
 
-**5. Review — both agents, in parallel, in one message.** `ralph` for correctness
-and SPEC conformance, `code-reviewer` for the CONTRIBUTING.md judgment layer.
-They are deliberately non-overlapping and both are required on realtime C++.
+**5. Review — both agents, dispatched together and awaited as a pair.** `ralph` for
+correctness and SPEC conformance, `code-reviewer` for the CONTRIBUTING.md judgment
+layer. They are deliberately non-overlapping and both are required on realtime C++.
+On Claude Code that is one message with both `Agent` calls; on pi it is two
+`subagent_spawn` calls followed by one `subagent_wait` on both ids. Either way, do
+not read the first verdict before the second has returned.
 
 Tell ralph to **re-run the implementer's sabotage claims** rather than accept
 them. That instruction has caught false evidence that a style review passed as
 accurate — when the two reviewers disagree, the one that ran the code wins.
 
-**6. Fix in the implementer, re-gate in a verifier, re-review in both.** Relay
-both reviews back to the implementing agent via `SendMessage` so it keeps its
-context. Then repeat step 3 in a *new* verifier and step 5 in both reviewers —
-resumed via `SendMessage`, so they judge the delta rather than re-reading the
-tree. Iterate until both pass.
+**6. Fix in the implementer, re-gate in a verifier, re-review in both.** Relay both
+reviews back to the *same* implementing agent so it keeps its context, then repeat
+step 3 in a **new** verifier and step 5 in both reviewers, so they judge the delta
+rather than re-reading the tree. Iterate until both pass.
+
+Resuming a live subagent is where the harnesses genuinely differ. Claude Code has
+`SendMessage`. pi's model-facing tools are spawn/wait/cancel/check/list only —
+there is no steer-an-existing-subagent tool — so on pi, re-dispatch with the review
+findings **and** the pointers the agent needs (issue, branch, worktree path, the
+diff under review) restated in the prompt. Losing that context silently is the
+failure mode; a fatter prompt is the price.
 
 Relay a review by restating its findings in your own words with the evidence
 attached. Never paste a full report into the next agent, and never paste one back
