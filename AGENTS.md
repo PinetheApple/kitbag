@@ -1,5 +1,8 @@
 # Kitbag — Agent Workflow Guide
 
+> **One file, every harness.** `CLAUDE.md` is a symlink to this file, so Claude
+> Code, pi and opencode all read exactly these instructions. Edit this file.
+
 > **`SPEC.md` is the source of truth**, and the only planning document. Not
 > `CHANGELOG.md`, not this file. If either disagrees with SPEC.md, SPEC.md wins and
 > the other is a bug. Read SPEC.md §2 before believing any status claim anywhere in
@@ -60,11 +63,15 @@ bash scripts/format.sh          # fix formatting in place
 `lint.sh` runs clang-format + clang-tidy against `native/audio_core/.clang-format`
 and `.clang-tidy`; naming and magic numbers gate, the rest is advisory. The
 clang-tidy step needs the compile DB (`-DCMAKE_EXPORT_COMPILE_COMMANDS=ON`).
+`install-hooks.sh` points `core.hooksPath` at `.githooks/`, whose `pre-commit`
+runs the gate over the staged files.
 
 The **TS/React gate is written and staged** under `config/` (ESLint flat config,
 `tsconfig`, prettier) and no-ops until `package.json` exists; SPEC.md §13.6's
 `eslint-plugin-kitbag` and eval harness still land with the app. Full rules and
-the judgment layer are in `CONTRIBUTING.md`.
+the judgment layer are in `CONTRIBUTING.md`. The judgment-level smells no linter
+catches — verbose comments, unclear code, misnamed constants — are the
+`code-reviewer` agent's job; see the Ralph loop.
 
 ## Architecture rules (SPEC.md §9.4)
 
