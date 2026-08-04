@@ -982,4 +982,14 @@ clang-format branch.
 Note at both DEFAULT_DENOMINATOR sites that 4/4 only coincides with the engine's
 BPM reference note.
 
+- **tool-metronome:** Match §5.2 screen to design-file tokens (#46)
+
+- **app-shell,tool-metronome:** Generate typed routes before typecheck; format
+
+typedRoutes is on and .expo/types is gitignored, so app-shell's typecheck
+failed on a fresh checkout once the /metronome route landed — turbo's cache
+replayed a stale pass and hid it. Regenerate the route types as part of
+typecheck (expo customize tsconfig.json, idempotent and git-clean).
+StepBadge.tsx re-formatted per prettier.
+
 
