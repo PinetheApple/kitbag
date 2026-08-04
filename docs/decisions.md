@@ -144,8 +144,12 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
 - **2026-07-24 · D1 denominator C ABI gap deferred to #41 (§17 D1)** — The store and
   schema halves of D1 shipped; the C-API half (`kb_metronome_set_beats` numerator-only)
   was never built. Store held `denominator` as validated intent and `setBeats` sent
-  the numerator, flagged honestly (no silent no-op). **Closed 2026-08-04**: #41 landed
-  the C ABI half and the TS/Kotlin chain now carries both halves end-to-end.
+  the numerator, flagged honestly (no silent no-op). **Command chain closed 2026-08-04**:
+  #41 landed the C ABI half and the denominator is now wired through the TS/Kotlin
+  chain (vitest + typecheck; no device run, so no runtime proof). D1 itself is not
+  done — §17.1 still owes the M3 time-signature stepper that edits both halves.
+  Note the engine's grid/song-follow mode ignores the denominator by design
+  (`metronome_grid.cpp:39`): 7/8 applies to the free-running click only.
   `perAccentSounds` (§5.3) and
   `countInBars` are likewise store-only intent (no engine command yet). **[recorded]**
 - **2026-07-25 · Denominator scales the click rate; no separate click-unit control

@@ -64,8 +64,7 @@ export interface Spec extends TurboModule {
   // --- Metronome setters (all void in the ABI) -----------------------------
 
   // kb_metronome_set_beats(beats_per_bar, denominator). bpm stays quarter-note
-  // referenced, so the beat interval is (60/bpm) * (4/denominator). A
-  // denominator outside {2,4,8,16} leaves the engine's current one in place.
+  // referenced, so the beat interval is (60/bpm) * (4/denominator).
   setBeats(beatsPerBar: Int32, denominator: Int32): void;
   // kb_metronome_set_subdivision(subdivision).
   setSubdivision(subdivision: Int32): void;

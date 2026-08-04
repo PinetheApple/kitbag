@@ -26,4 +26,7 @@ if [[ ${#files[@]} -gt 0 ]]; then
   $staged_only && git add "${files[@]}"
 fi
 
-[[ -f package.json ]] && npx prettier --write . || true
+if [[ -f package.json ]]; then
+  echo "format: prettier"
+  pnpm -w format:write
+fi

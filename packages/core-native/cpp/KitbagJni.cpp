@@ -100,8 +100,7 @@ JNIEXPORT void JNICALL
 Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetBeats(JNIEnv*, jobject,
                                                         jint beatsPerBar,
                                                         jint denominator) {
-  // A denominator outside {2,4,8,16} leaves the engine's current beat unit in
-  // place, so no validation is duplicated here (kitbag_api.h).
+  // The engine owns denominator validation (kitbag_api.h); none duplicated here.
   kitbag::commandSetBeats(static_cast<int32_t>(beatsPerBar),
                           static_cast<int32_t>(denominator));
 }

@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   collectConstants,
+  parseConstexprIntArray,
   parseDefineInt,
   parseEnum,
   parseRangeAfter,
@@ -49,6 +50,30 @@ describe('parseDefineInt', () => {
     expect(() =>
       parseDefineInt('/* nothing here */', 'KB_MAX_GRID_BEATS'),
     ).toThrow(/KB_MAX_GRID_BEATS/);
+  });
+});
+
+describe('parseConstexprIntArray', () => {
+  it('reads the members of a constexpr int array', () => {
+    expect(
+      parseConstexprIntArray(
+        'static constexpr int kDenominators[] = {2, 4, 8, 16};',
+        'kDenominators',
+      ),
+    ).toEqual([2, 4, 8, 16]);
+  });
+  it('throws when the array is absent', () => {
+    expect(() =>
+      parseConstexprIntArray('int kDenominators = 4;', 'kDenominators'),
+    ).toThrow(/kDenominators/);
+  });
+  it('throws on a non-integer member rather than emitting NaN', () => {
+    expect(() =>
+      parseConstexprIntArray(
+        'static constexpr int kDenominators[] = {2, kFour};',
+        'kDenominators',
+      ),
+    ).toThrow(/kDenominators/);
   });
 });
 
@@ -140,6 +165,9 @@ describe('collectConstants (real engine source)', () => {
     const c = collectConstants(realSources);
     expect(c.maxGridBeats).toBe(8192);
     expect(c.maxTracks).toBe(16);
+    expect(c.maxBeats).toBe(16);
+    expect(c.denominators).toEqual([2, 4, 8, 16]);
+    expect(c.bpmReferenceDenominator).toBe(4);
     expect(c.soundNames).toEqual([
       'beep',
       'woodblock',

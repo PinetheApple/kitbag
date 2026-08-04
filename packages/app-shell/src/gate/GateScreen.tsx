@@ -1,5 +1,9 @@
 import { resolveTheme } from '@kitbag/core-design';
-import { getKitbagCommands, getKitbagHostObject } from '@kitbag/core-native';
+import {
+  getKitbagCommands,
+  getKitbagHostObject,
+  KB_BPM_REFERENCE_DENOMINATOR,
+} from '@kitbag/core-native';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -18,7 +22,7 @@ const theme = resolveTheme('dark');
 
 const DEFAULT_BPM = 120;
 const DEFAULT_BEATS = 4;
-const DEFAULT_DENOMINATOR = 4;
+const DEFAULT_DENOMINATOR = KB_BPM_REFERENCE_DENOMINATOR;
 const BPM_STEP = 5;
 const MS_PER_SECOND = 1000;
 const STARVATION_SECONDS = STARVATION_MS / MS_PER_SECOND;

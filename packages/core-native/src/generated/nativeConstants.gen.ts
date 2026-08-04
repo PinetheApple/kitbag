@@ -11,6 +11,19 @@ export const KB_MAX_GRID_BEATS = 8192;
 /** Mixer track count (Mixer::kMaxTracks, SPEC §7.4). */
 export const KB_MAX_TRACKS = 16;
 
+/** Beats per bar the engine will hold (Metronome::kMaxBeats); it clamps above this. */
+export const KB_MAX_BEATS = 16;
+
+/**
+ * Time-signature denominators the engine accepts (Metronome::kDenominators,
+ * SPEC §17 D1). Anything else leaves the engine's current denominator in place.
+ */
+export const KB_DENOMINATORS = [2, 4, 8, 16] as const;
+export type KbDenominator = (typeof KB_DENOMINATORS)[number];
+
+/** Denominator BPM is referenced to (Metronome::kBpmReferenceDenominator): quarter note. */
+export const KB_BPM_REFERENCE_DENOMINATOR = 4;
+
 /**
  * Metronome sound ids, indexed by native sound id (SPEC §5.3, §13.7). Lowercase
  * engine tokens; display casing is a §12 concern, not an engine constant.

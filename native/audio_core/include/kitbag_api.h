@@ -118,9 +118,9 @@ KB_EXPORT void kb_metronome_set_tempo(kb_engine* engine, double bpm);
 /* Time signature: beats_per_bar over denominator, e.g. 7 and 8 for 7/8. bpm
  * stays quarter-note referenced whatever the denominator, so the beat interval
  * is (60 / bpm) * (4 / denominator) seconds and 7/8 clicks twice as fast as 7/4
- * at the same bpm. denominator must be 2, 4, 8 or 16; any other value leaves the
- * current denominator in place rather than changing the click to a value the
- * caller did not ask for. A change while running moves only future clicks: the
+ * at the same bpm. denominator must be one of Metronome::kDenominators; any
+ * other value leaves the current denominator in place. A change while running
+ * moves only future clicks: the
  * beat in flight keeps the phase it had and only its remainder rescales, so no
  * whole beat is inserted or dropped. Preserving the phase while the beat unit
  * grows can re-open the beat that just fired for the few samples the step grew

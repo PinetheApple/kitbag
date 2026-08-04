@@ -8,8 +8,12 @@
 
 import {
   KB_ACCENT,
+  KB_BPM_REFERENCE_DENOMINATOR,
+  KB_DENOMINATORS,
   KB_LATENCY_OFFSET_MS_BOUNDS,
+  KB_MAX_BEATS,
   KB_SOUND_NAMES,
+  type KbDenominator,
 } from '@kitbag/core-native';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
@@ -22,22 +26,21 @@ import {
 
 // --- Bounds owned here (spec-level, not yet engine constants) -----------------
 // BPM range is §5.2; the engine also clamps to its own range, but exposes no
-// constant for it. Subdivision range is §5.1. Denominator set is §17 D1 — the C
-// ABI takes a denominator but exposes no constant for the valid set. These are
-// the store's own spec values, not a retype of an engine-owned constant.
+// constant for it. Subdivision range is §5.1. The denominator set and the beat
+// ceiling are engine-owned (§13.7) and arrive generated, never retyped here.
 const BPM_MIN = 20;
 const BPM_MAX = 400;
 const SUBDIVISION_MIN = 1;
+const BEATS_MIN = 1;
 const SUBDIVISION_MAX = 16;
 
 // Object-valued so the members carry meaning and stay off the magic-number rule.
-const DENOMINATORS = { half: 2, quarter: 4, eighth: 8, sixteenth: 16 } as const;
 const COUNT_IN_BARS = { off: 0, one: 1, two: 2, four: 4 } as const;
 
-export type Denominator = (typeof DENOMINATORS)[keyof typeof DENOMINATORS];
+export type Denominator = KbDenominator;
 export type CountInBars = (typeof COUNT_IN_BARS)[keyof typeof COUNT_IN_BARS];
 
-const VALID_DENOMINATORS = new Set<number>(Object.values(DENOMINATORS));
+const VALID_DENOMINATORS = new Set<number>(KB_DENOMINATORS);
 const VALID_COUNT_IN_BARS = new Set<number>(Object.values(COUNT_IN_BARS));
 
 export interface RampConfig {
@@ -106,6 +109,8 @@ export type MetronomeStore = MetronomeConfig & MetronomeActions;
 
 const DEFAULT_BPM = 120;
 const DEFAULT_BEATS = 4;
+// 4/4: the default denominator is the note BPM is referenced to (§17 D1).
+const DEFAULT_DENOMINATOR: Denominator = KB_BPM_REFERENCE_DENOMINATOR;
 const DEFAULT_POLY_BEATS = 3;
 const DEFAULT_VOLUME = 1;
 // Trainer segment length in BARS — distinct from DEFAULT_BEATS (beats per bar)
@@ -151,7 +156,7 @@ export function createMetronomeStore(
   return createStore<MetronomeStore>((set, get) => ({
     bpm: DEFAULT_BPM,
     beatsPerBar: DEFAULT_BEATS,
-    denominator: DENOMINATORS.quarter,
+    denominator: DEFAULT_DENOMINATOR,
     subdivision: SUBDIVISION_MIN,
     accents: initialAccents(DEFAULT_BEATS),
     polyEnabled: false,
@@ -183,19 +188,19 @@ export function createMetronomeStore(
     },
 
     setBeats: (beatsPerBar, denominator) => {
-      if (!Number.isInteger(beatsPerBar) || beatsPerBar < SUBDIVISION_MIN)
-        return;
-      // Invalid denominator keeps the current one (§17 D1 set); the numerator
-      // still applies.
+      if (!Number.isInteger(beatsPerBar) || beatsPerBar < BEATS_MIN) return;
+      // Clamped to the engine's own ceiling: past it the engine plays
+      // KB_MAX_BEATS while the store would still show what was asked for.
+      const beats = Math.min(beatsPerBar, KB_MAX_BEATS);
       const denom: Denominator = VALID_DENOMINATORS.has(denominator)
         ? (denominator as Denominator)
         : get().denominator;
       set((s) => ({
-        beatsPerBar,
+        beatsPerBar: beats,
         denominator: denom,
-        accents: resizeAccents(s.accents, beatsPerBar),
+        accents: resizeAccents(s.accents, beats),
       }));
-      commands.setBeats(beatsPerBar, denom);
+      commands.setBeats(beats, denom);
     },
 
     setSubdivision: (subdivision) => {

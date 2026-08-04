@@ -69,12 +69,11 @@ interval is now `(60/bpm) × (4/denominator)` with BPM quarter-note referenced, 
 6/8 clicks six times per bar (no separate click-unit control — see
 `docs/decisions.md` and `docs/metronome-bpm-denominator-research.md`).
 `metronome_verify` 224 → 264 checks, ralph + code-reviewer pass.
-**Open follow-up:** the TS/Kotlin half is NOT wired — `NativeKitbagCommands.ts`,
-the Kotlin module and the store still send the numerator alone, `KitbagJni.cpp`
-carries a `kDenominatorUnchanged = 0` stopgap, `kDenominators` is not in the §13.7
-generator while `store.ts` hand-declares the set, and three comments
-(`NativeKitbagCommands.ts:66`, `store.ts:25-27`, `store.ts:189-190`) now assert
-falsehoods about the ABI. Blocks the M3 denominator stepper being functional.
+**Done:** M1b (follow-up #41) — the TS/Kotlin half is wired: `NativeKitbagCommands.ts`,
+`KitbagCommandsModule.kt` and `KitbagJni.cpp` (stopgap removed) carry the denominator,
+and `kDenominators`/`kMaxBeats` are now generated (§13.7) rather than hand-declared in
+`store.ts`. Proven by vitest command-mock assertions + typecheck only — no JNI/Kotlin
+runtime measurement, so the device half is still unverified. M3's stepper can now use it.
 
 ## F1 Metronome (§5) — task decomposition
 
@@ -87,7 +86,7 @@ tasks serialize** (shared files) and each is design-gated anyway.
 | Task | Issue | Scope | Gate class |
 |---|---|---|---|
 | **M1** store | [#40](https://github.com/PinetheApple/kitbag/issues/40) ✅ | core-state metronome config store; commands 1:1 to TurboModule; §13.3 no realtime shadow | headless (tdd) |
-| **M1a** denom ABI | [#41](https://github.com/PinetheApple/kitbag/issues/41) ✅ native only | native: `kb_metronome_set_beats` gains the D1 denominator parameter. **TS/Kotlin half still open** — the store's denominator remains intent-only until it lands | headless (native verify) |
+| **M1a** denom ABI | [#41](https://github.com/PinetheApple/kitbag/issues/41) ✅ | native: `kb_metronome_set_beats` gains the D1 denominator parameter; TS/Kotlin chain wired in the M1b follow-up (device runtime still unmeasured) | headless (native verify) |
 | **M2** schema | — **satisfied by #34** | §5.4/§11.2 rename, denominator, ramp/bar-mute round-trip, decoupled setlists — all shipped in Phase 2 | — |
 | **M3** perf surface | TBD | §5.2 swipe-anywhere tempo, preset steppers, beat-LED row editor (group+wrap ≥4/row, D9), poly row, bar sweep, practice pill, tap-to-type numpad, badge steppers | **design sign-off** |
 | **M4** chips + sheets | TBD | §5.3 Ramp/Mute-bars/Sound/Count-in sheets over the running metronome, live-apply; sound names from engine | **design sign-off** |

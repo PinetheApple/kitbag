@@ -3,7 +3,7 @@
 // behaviour is removed — a green run means the store maps intent to the engine
 // commands and keeps realtime truth OUT, not that an assertion is asleep.
 
-import { KB_ACCENT, KB_SOUND_NAMES } from '@kitbag/core-native';
+import { KB_ACCENT, KB_MAX_BEATS, KB_SOUND_NAMES } from '@kitbag/core-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { type MetronomeCommands } from './commands.ts';
@@ -117,13 +117,20 @@ describe('clamps (clamp, not reject)', () => {
     expect(store.getState().subdivision).toBe(1);
   });
 
-  it('accepts only denominators in {2,4,8,16}, keeping the current one otherwise', () => {
+  it('accepts only engine-listed denominators, keeping the current one otherwise', () => {
     store.getState().setBeats(7, 8);
     expect(store.getState().denominator).toBe(8);
 
     store.getState().setBeats(7, 3);
-    expect(store.getState().denominator).toBe(8); // 3 rejected, prior kept
-    expect(store.getState().beatsPerBar).toBe(7); // numerator still applies
+    expect(store.getState().denominator).toBe(8);
+    expect(store.getState().beatsPerBar).toBe(7);
+  });
+
+  it('clamps beatsPerBar to the engine ceiling', () => {
+    store.getState().setBeats(99, 4);
+    expect(store.getState().beatsPerBar).toBe(KB_MAX_BEATS);
+    expect(store.getState().accents).toHaveLength(KB_MAX_BEATS);
+    expect(commands.setBeats).toHaveBeenLastCalledWith(KB_MAX_BEATS, 4);
   });
 });
 
@@ -148,7 +155,7 @@ describe('every mutation maps 1:1 onto an engine command', () => {
 
   it('setBeats sends the retained denominator when given an invalid one', () => {
     store.getState().setBeats(7, 8);
-    store.getState().setBeats(3, 5); // 5 is outside {2,4,8,16}
+    store.getState().setBeats(3, 5);
     expect(commands.setBeats).toHaveBeenLastCalledWith(3, 8);
   });
 
