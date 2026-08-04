@@ -98,12 +98,12 @@ Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetGrid(JNIEnv* env, jobje
 
 JNIEXPORT void JNICALL
 Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetBeats(JNIEnv*, jobject,
-                                                        jint beatsPerBar) {
-  // The Kotlin/TurboModule half of #41 is not wired yet; 0 is outside the valid
-  // set, so the engine keeps the current beat unit rather than forcing 4.
-  constexpr int32_t kDenominatorUnchanged = 0;
+                                                        jint beatsPerBar,
+                                                        jint denominator) {
+  // A denominator outside {2,4,8,16} leaves the engine's current beat unit in
+  // place, so no validation is duplicated here (kitbag_api.h).
   kitbag::commandSetBeats(static_cast<int32_t>(beatsPerBar),
-                          kDenominatorUnchanged);
+                          static_cast<int32_t>(denominator));
 }
 
 JNIEXPORT void JNICALL

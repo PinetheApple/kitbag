@@ -141,9 +141,15 @@ describe('§13.7 sound names come from the engine constants', () => {
 });
 
 describe('every mutation maps 1:1 onto an engine command', () => {
-  it('setBeats sends the numerator (denominator has no C API yet, D1)', () => {
+  it('setBeats sends both halves of the time signature', () => {
     store.getState().setBeats(5, 4);
-    expect(commands.setBeats).toHaveBeenCalledWith(5);
+    expect(commands.setBeats).toHaveBeenCalledWith(5, 4);
+  });
+
+  it('setBeats sends the retained denominator when given an invalid one', () => {
+    store.getState().setBeats(7, 8);
+    store.getState().setBeats(3, 5); // 5 is outside {2,4,8,16}
+    expect(commands.setBeats).toHaveBeenLastCalledWith(3, 8);
   });
 
   it('setPoly / setVolume / setLatency / setRamp / setBarMute dispatch', () => {

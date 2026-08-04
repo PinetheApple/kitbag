@@ -143,9 +143,10 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   not inventing bindings. Unambiguous gap → decided and recorded rather than stopped. **[recorded]**
 - **2026-07-24 · D1 denominator C ABI gap deferred to #41 (§17 D1)** — The store and
   schema halves of D1 shipped; the C-API half (`kb_metronome_set_beats` numerator-only)
-  was never built. Store holds `denominator` as validated intent and `setBeats` sends
-  the numerator, flagged honestly (no silent no-op). Follow-up #41 owns the native change;
-  the denominator is not real end-to-end until it lands. `perAccentSounds` (§5.3) and
+  was never built. Store held `denominator` as validated intent and `setBeats` sent
+  the numerator, flagged honestly (no silent no-op). **Closed 2026-08-04**: #41 landed
+  the C ABI half and the TS/Kotlin chain now carries both halves end-to-end.
+  `perAccentSounds` (§5.3) and
   `countInBars` are likewise store-only intent (no engine command yet). **[recorded]**
 - **2026-07-25 · Denominator scales the click rate; no separate click-unit control
   (§17 D1, #41)** — BPM stays **quarter-note referenced**: beat interval =

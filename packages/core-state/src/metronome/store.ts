@@ -23,8 +23,8 @@ import {
 // --- Bounds owned here (spec-level, not yet engine constants) -----------------
 // BPM range is §5.2; the engine also clamps to its own range, but exposes no
 // constant for it. Subdivision range is §5.1. Denominator set is §17 D1 — the C
-// API has no denominator yet (D1 unbuilt), so no engine constant owns it. These
-// are the store's own spec values, not a retype of an engine-owned constant.
+// ABI takes a denominator but exposes no constant for the valid set. These are
+// the store's own spec values, not a retype of an engine-owned constant.
 const BPM_MIN = 20;
 const BPM_MAX = 400;
 const SUBDIVISION_MIN = 1;
@@ -186,8 +186,7 @@ export function createMetronomeStore(
       if (!Number.isInteger(beatsPerBar) || beatsPerBar < SUBDIVISION_MIN)
         return;
       // Invalid denominator keeps the current one (§17 D1 set); the numerator
-      // still applies. Denominator is intent only — the C API takes no
-      // denominator yet (D1 unbuilt), so only the numerator reaches the engine.
+      // still applies.
       const denom: Denominator = VALID_DENOMINATORS.has(denominator)
         ? (denominator as Denominator)
         : get().denominator;
@@ -196,7 +195,7 @@ export function createMetronomeStore(
         denominator: denom,
         accents: resizeAccents(s.accents, beatsPerBar),
       }));
-      commands.setBeats(beatsPerBar);
+      commands.setBeats(beatsPerBar, denom);
     },
 
     setSubdivision: (subdivision) => {

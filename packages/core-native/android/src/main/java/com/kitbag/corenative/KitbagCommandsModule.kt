@@ -79,8 +79,8 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
 
   // --- Metronome setters ---------------------------------------------------
 
-  override fun setBeats(beatsPerBar: Double) {
-    nativeSetBeats(beatsPerBar.toInt())
+  override fun setBeats(beatsPerBar: Double, denominator: Double) {
+    nativeSetBeats(beatsPerBar.toInt(), denominator.toInt())
   }
 
   override fun setSubdivision(subdivision: Double) {
@@ -121,7 +121,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private external fun nativeMetronomeStart(anchorFrame: Double)
   private external fun nativeSetTempo(bpm: Double)
   private external fun nativeSetGrid(beatTimesSec: DoubleArray, anchorFrame: Double): Int
-  private external fun nativeSetBeats(beatsPerBar: Int)
+  private external fun nativeSetBeats(beatsPerBar: Int, denominator: Int)
   private external fun nativeSetSubdivision(subdivision: Int)
   private external fun nativeSetAccent(beatIndex: Int, accent: Int)
   private external fun nativeSetPoly(enabled: Boolean, beats: Int)

@@ -525,6 +525,31 @@ meters can click the dotted-note pulse; that was considered and declined, so
 6/8 needs manual BPM arithmetic for a two-click feel. Recorded in
 docs/decisions.md.
 
+- **core-native,core-state:** Wire denominator through the TS/Kotlin TurboModule chain
+
+The C half landed in #41 (df2c937): kb_metronome_set_beats takes
+(beats_per_bar, denominator) and commandSetBeats carries both, with the beat
+interval (60/bpm) x (4/denominator). The TS/Kotlin chain still sent only the
+numerator, and the JNI passed a kDenominatorUnchanged = 0 stub, so a 7/8 time
+signature clicked at 7/4 on device.
+
+- NativeKitbagCommands.ts: setBeats gains a denominator: Int32.
+- KitbagCommandsModule.kt: setBeats/nativeSetBeats take the second parameter.
+- KitbagJni.cpp: stub removed, jint denominator forwarded to commandSetBeats.
+  The signature has to grow with the Kotlin external fun or the JNI symbol no
+  longer resolves.
+- core-state store: dispatches the validated denominator, not the raw argument,
+  so an out-of-set value sends the retained one rather than relying on the
+  engine's own fallback.
+- GateScreen: passes its default denominator; required to keep the call typed.
+
+Comments in store.ts, the test title, docs/decisions.md and the #33 runbook all
+claimed the denominator had no C API. That has been false since df2c937.
+
+kDenominators stays a store-owned const: kitbag_api.h documents the valid set in
+prose only, with no KB_DENOMINATOR_* macro for the generator to read, so there
+is no engine constant to own it yet.
+
 
 ### Fixed
 

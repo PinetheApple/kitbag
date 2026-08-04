@@ -18,6 +18,7 @@ const theme = resolveTheme('dark');
 
 const DEFAULT_BPM = 120;
 const DEFAULT_BEATS = 4;
+const DEFAULT_DENOMINATOR = 4;
 const BPM_STEP = 5;
 const MS_PER_SECOND = 1000;
 const STARVATION_SECONDS = STARVATION_MS / MS_PER_SECOND;
@@ -132,7 +133,7 @@ function tryDriveEngineOnStart(bpm: number, beatsPerBar: number): void {
     const commands = getKitbagCommands();
     void commands.start();
     commands.setTempo(bpm);
-    commands.setBeats(beatsPerBar);
+    commands.setBeats(beatsPerBar, DEFAULT_DENOMINATOR);
     const anchorFrame = getKitbagHostObject().frames_rendered;
     commands.metronomeStart(anchorFrame);
   } catch {

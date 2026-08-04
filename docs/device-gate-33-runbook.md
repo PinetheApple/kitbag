@@ -82,7 +82,8 @@ sufficient; the transport must also be started.
 `metronomeStart` (mapping to `kb_metronome_start_at`) is therefore now part of
 §13.2's command spec — a recorded spec change, not a fudge. Start issues, in
 order: `start()` (opens the device / advances frames) → `setTempo(bpm)` →
-`setBeats(n)` → `setGrid(beatTimes, anchorFrame)` → `metronomeStart(anchorFrame)`.
+`setBeats(n, denominator)` → `setGrid(beatTimes, anchorFrame)` →
+`metronomeStart(anchorFrame)`.
 The grid and the transport start share ONE anchor (`frames_rendered` captured
 once), so `running_` flips at beat 0 and the sweep starts at phase 0. `setGrid`
 precedes `metronomeStart` because the engine seeds the grid cursor from the live
