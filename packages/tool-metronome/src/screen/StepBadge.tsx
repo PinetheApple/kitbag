@@ -4,12 +4,7 @@
 // time signature?" had no answer on the page.
 
 import { resolveTheme, typography } from '@kitbag/core-design';
-import {
-  createContext,
-  useCallback,
-  useContext,
-  type ReactNode,
-} from 'react';
+import { createContext, useCallback, useContext, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { hitSlopFor } from '../logic/touchTargets.ts';
