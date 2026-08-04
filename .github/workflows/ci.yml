@@ -73,6 +73,10 @@ jobs:
         run: pnpm -w typecheck
       - name: Lint — architecture rules + generic, --max-warnings 0
         run: pnpm -w lint
+      # Without a gate, prettier drift accumulates until someone runs
+      # scripts/format.sh and sweeps unrelated files into a feature commit.
+      - name: Format — prettier --check, honouring .prettierignore
+        run: pnpm -w format
       - name: Generated native constants are not stale (§13.7)
         run: pnpm --filter @kitbag/core-native generate:check
       - name: Generated Tailwind theme is not stale (§13.8.1)

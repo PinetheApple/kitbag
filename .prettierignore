@@ -16,3 +16,15 @@ packages/core-design/theme.css
 packages/core-design/tailwind.config.js
 pnpm-lock.yaml
 CHANGELOG.md
+# Prose and harness config, same rationale as docs/ and design/: reflowing them
+# buries a feature diff under hundreds of unrelated lines. SPEC.md is the source
+# of truth and is hand-formatted; app.json is Expo's, not ours.
+SPEC.md
+CLAUDE.md
+AGENTS.md
+CONTRIBUTING.md
+CONTEXT.md
+.claude/
+.opencode/
+config/README.md
+packages/app-shell/app.json
