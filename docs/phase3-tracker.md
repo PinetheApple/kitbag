@@ -80,13 +80,17 @@ and `kDenominators`/`kMaxBeats` are now generated (§13.7) rather than hand-decl
 runtime measurement, so the device half is still unverified. M3's stepper can now use it.
 
 **Built, not signed off:** M3 (#46) — the §5.2 performance surface, merged on
-`feat/phase2-skeleton` at `49d3c0b` (built on `feat/agent-m3`). Measured gates: typecheck 12/12, `eslint --max-warnings 0`
+`feat/phase2-skeleton` at `49d3c0b` (built on `feat/agent-m3`), design-fix round
+`ea768c0` (five fidelity findings fixed; play icon stays a glyph until
+react-native-svg is a dependency — noted in-file), route-typegen gate `58f6c1d`. Measured gates: typecheck 12/12, `eslint --max-warnings 0`
 clean, vitest 54 tool-metronome + 17 core-state (167 workspace-wide), prettier
 clean, `generate:check` clean, and 18 sabotage mutations across the logic
 modules, all 18 caught. **Nothing about it is device- or eye-verified**: the bar
 sweep and LED flash are unmeasured on hardware, the gesture is untested inside
-RNGH, and the design-reviewer render against `design/kitbag-metronome.html` has
-not happened — the sign-off stop-point is still open.
+RNGH, and — while the design-reviewer fidelity review against
+`design/kitbag-metronome.html` ran and its five findings were fixed in
+`ea768c0` — nothing has been seen on a real screen. The sign-off stop-point
+is still open (`.loop-halt` carries the two rulings requested).
 
 Five §5.2/§12 deviations it ships with, none yet recorded in SPEC:
 
