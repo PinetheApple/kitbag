@@ -166,3 +166,26 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   length stays `numerator × beat unit`, the ABI gains no click-unit parameter, and
   §17.1 gains no entry. Cost accepted: a user wanting the 6/8 dotted-quarter pulse
   halves the BPM by hand. **[recorded]**
+
+- **2026-08-04 · M3 performance-surface gaps decided (§5.2, #46)** — Ten unambiguous
+  gaps SPEC/design didn't state, decided during the M3 build (deviations recorded in
+  `docs/phase3-tracker.md`): (1) `MAX_LEDS_PER_ROW = 7` — the only simple ceiling
+  satisfying both §5.2 data points (7 on one row; 16 as four rows of four).
+  (2) Irregular-meter LED groupings: 5→3+2, 7→2+2+3, 9→3+3+3; 10, 11 and up chunk
+  by 4. (3) Swipe fling = 140 ms of release velocity, capped ±40 BPM (§5.2 says
+  only "coarse jumps"). (4) Denominator cycles on the badge face; −/+ step the
+  numerator. (5) Tempo markings are the conventional Italian bands — the design
+  mock prints ANDANTE at 124, which no conventional table agrees with; the screen
+  shows ALLEGRO (**user ruling requested at sign-off**). (6) LED touch targets are
+  gap-bounded (`hitSlopFor` caps at half the tightest gap) because §12.6's 48dp is
+  unreachable for 26dp LEDs 8dp apart without overlapping hit regions
+  (**user ruling requested: widen the design's gaps or exempt the criterion**).
+  (7) Practice pill counts play time only and dies with the screen — persistence is
+  §5.7/M8. (8) Poly row is display-only (no accent editing, never flashes): one
+  accent table in the C ABI and no `current_poly_beat` on the HostObject; closing
+  it is a later core-native change, not a screen fix. (9) No §12.6 first-use hint
+  this task — swipe-anywhere and tap-to-type are currently undiscoverable; the
+  preset row is the visible fallback; hint deferred. (10) `useMetronomeFrame`
+  copies the #33 gate's worklet rather than importing it (§9.4 package boundary);
+  deduplicating needs core-native to own the read-path accessor — filed as an M3
+  follow-up, not done now. **[recorded]**

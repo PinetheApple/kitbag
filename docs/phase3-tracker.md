@@ -43,7 +43,7 @@ Gates (every TS task): vitest suites green · typecheck 12/12 · `lint
 (build 0 · all `*_verify` bar `tuner_verify` · `lint.sh` 0) still runs unchanged;
 a §5.6 native change must keep it green.
 
-## Current state — 2026-07-25, `feat/phase2-skeleton` (Phase 2 merged)
+## Current state — 2026-08-04, `feat/phase2-skeleton` (Phase 2 merged)
 
 > **Branch note.** Phase 2 is **on `main`** — merged 2026-07-24 via PR #39
 > (Phase 1 via PR #26). Phase 3 continues on `feat/phase2-skeleton`, which now
@@ -61,9 +61,13 @@ below is marked satisfied.
 **Done:** M1 (#40, `8b3c681`) — metronome config store; 14 vitest sabotage-proven,
 both reviews pass, §13.3 held.
 **In progress:** none.
-**Next:** the metronome screens (M3→M4→M5) are design-gated — the next wave builds
-M3 and ends at a **design sign-off stop-point** (present a `design-reviewer` render
-against `design/kitbag-metronome.html`, then stop for user sign-off).
+**Next:** **design sign-off for M3 (#46)** — merged on `feat/phase2-skeleton`
+(`49d3c0b`), wave gate green on the integrated tree (typecheck 12/12, lint 0,
+vitest 167, prettier + generate:check clean, native build + all `*_verify` bar
+`tuner_verify` 0, `lint.sh` 0). `.loop-halt` carries the stop-point: two rulings
+requested (tempo-marking table vs the design mock's ANDANTE@124; 48dp touch-target
+criterion vs the LED row's gaps) plus the design fidelity review. After sign-off:
+M4 (chips + sheets).
 **Done:** M1a (#41) — `kb_metronome_set_beats` gains the D1 denominator; the beat
 interval is now `(60/bpm) × (4/denominator)` with BPM quarter-note referenced, so
 6/8 clicks six times per bar (no separate click-unit control — see
@@ -75,8 +79,8 @@ and `kDenominators`/`kMaxBeats` are now generated (§13.7) rather than hand-decl
 `store.ts`. Proven by vitest command-mock assertions + typecheck only — no JNI/Kotlin
 runtime measurement, so the device half is still unverified. M3's stepper can now use it.
 
-**Built, not signed off:** M3 (#46) — the §5.2 performance surface, on
-`feat/agent-m3`. Measured gates: typecheck 12/12, `eslint --max-warnings 0`
+**Built, not signed off:** M3 (#46) — the §5.2 performance surface, merged on
+`feat/phase2-skeleton` at `49d3c0b` (built on `feat/agent-m3`). Measured gates: typecheck 12/12, `eslint --max-warnings 0`
 clean, vitest 54 tool-metronome + 17 core-state (167 workspace-wide), prettier
 clean, `generate:check` clean, and 18 sabotage mutations across the logic
 modules, all 18 caught. **Nothing about it is device- or eye-verified**: the bar
