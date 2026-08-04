@@ -23,6 +23,15 @@ const CHEVRON_FONT_SIZE = 13;
 const ZONE_RADIUS = 18;
 const ZONE_PADDING_TOP = 26;
 const ZONE_PADDING_BOTTOM = 18;
+// The design's glow is a radial `color-mix(ac 5%, transparent)`. RN has no
+// radial gradients and no gradient dependency here, so it is a flat 5% tint.
+const ZONE_GLOW_MIX = 0.05;
+const ALPHA_MAX = 255;
+const HEX_RADIX = 16;
+const HEX_PAIR = 2;
+const ZONE_GLOW = `${theme.accent}${Math.round(ALPHA_MAX * ZONE_GLOW_MIX)
+  .toString(HEX_RADIX)
+  .padStart(HEX_PAIR, '0')}`;
 
 interface SwipeTempoZoneProps {
   readonly bpm: number;
@@ -51,6 +60,7 @@ export function SwipeTempoZone({
 const styles = StyleSheet.create({
   zone: {
     borderRadius: ZONE_RADIUS,
+    backgroundColor: ZONE_GLOW,
     paddingTop: ZONE_PADDING_TOP,
     paddingBottom: ZONE_PADDING_BOTTOM,
   },

@@ -13,7 +13,7 @@ const theme = resolveTheme('dark');
 // design §02 `.preset`: 11dp radius, 9dp vertical padding, 13.5px label; the
 // TAP key is wider (flex 1.3) and toned.
 const KEY_RADIUS = 11;
-const KEY_PADDING_V = 12;
+const KEY_PADDING_V = 9;
 const KEY_FONT_SIZE = 13.5;
 const ROW_GAP = 8;
 const KEY_HIT_SLOP = hitSlopForPadded(KEY_FONT_SIZE, KEY_PADDING_V, ROW_GAP);

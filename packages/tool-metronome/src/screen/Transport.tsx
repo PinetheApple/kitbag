@@ -9,11 +9,13 @@ import { hitSlopFor } from '../logic/touchTargets.ts';
 
 const theme = resolveTheme('dark');
 
-// design §02 `.play` 58dp circle, `.tbtn` 42dp.
+// design §02 `.play` 58dp circle, `.tbtn` 42dp with an 11px glyph. The design
+// draws play as an SVG triangle; react-native-svg is not a dependency, so the
+// glyph stands in until one lands.
 const PLAY_SIZE = 58;
 const SECONDARY_SIZE = 42;
 const PLAY_GLYPH_SIZE = 22;
-const SECONDARY_GLYPH_SIZE = 15;
+const SECONDARY_GLYPH_SIZE = 11;
 const ROW_GAP = 22;
 const SECONDARY_HIT_SLOP = hitSlopFor(SECONDARY_SIZE, ROW_GAP);
 const CIRCLE = '50%';
