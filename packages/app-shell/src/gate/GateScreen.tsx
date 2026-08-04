@@ -22,6 +22,7 @@ const theme = resolveTheme('dark');
 
 const DEFAULT_BPM = 120;
 const DEFAULT_BEATS = 4;
+// 4/4 default only coincides with the BPM reference note; revisit if that moves.
 const DEFAULT_DENOMINATOR = KB_BPM_REFERENCE_DENOMINATOR;
 const BPM_STEP = 5;
 const MS_PER_SECOND = 1000;
