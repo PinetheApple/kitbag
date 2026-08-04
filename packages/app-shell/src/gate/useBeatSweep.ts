@@ -16,7 +16,7 @@
 // "not wired yet" (frozen, no crash), #33 must assert the values CHANGE on
 // device, not merely that nothing throws.
 
-import { KITBAG_HOST_OBJECT_KEY } from '@kitbag/core-native';
+import { KB_STOPPED_BEAT, KITBAG_HOST_OBJECT_KEY } from '@kitbag/core-native';
 import type { KitbagHostObject } from '@kitbag/core-native';
 import {
   useFrameCallback,
@@ -31,8 +31,6 @@ type HostGlobal = Record<
   KitbagHostObject | undefined
 >;
 
-const STOPPED_BEAT = -1;
-
 export interface BeatSweepValues {
   /** bar_phase [0,1) — drives the sweep. */
   readonly barPhase: SharedValue<number>;
@@ -44,7 +42,7 @@ export interface BeatSweepValues {
 
 export function useBeatSweep(): BeatSweepValues {
   const barPhase = useSharedValue(0);
-  const currentBeat = useSharedValue(STOPPED_BEAT);
+  const currentBeat = useSharedValue(KB_STOPPED_BEAT);
   const currentBpm = useSharedValue(0);
 
   useFrameCallback(() => {

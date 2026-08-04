@@ -179,6 +179,21 @@ describe('every mutation maps 1:1 onto an engine command', () => {
     expect(commands.setBarMute).toHaveBeenCalledWith(true, 3, 1);
   });
 
+  it('setPoly bounds the poly count instead of dispatching nonsense', () => {
+    // A stepper held on − walks the count down; zero and below must never reach
+    // kb_metronome_set_poly (the metronome screen, #46, is the first caller).
+    store.getState().setPoly(true, 3);
+    commands.setPoly.mockClear();
+
+    store.getState().setPoly(true, 0);
+    expect(store.getState().polyBeats).toBe(3);
+    expect(commands.setPoly).not.toHaveBeenCalled();
+
+    store.getState().setPoly(true, 999);
+    expect(store.getState().polyBeats).toBe(KB_MAX_BEATS);
+    expect(commands.setPoly).toHaveBeenLastCalledWith(true, KB_MAX_BEATS);
+  });
+
   it('setCountIn stays human-speed only (no engine command exists)', () => {
     store.getState().setCountIn(2);
     expect(store.getState().countInBars).toBe(2);

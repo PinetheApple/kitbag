@@ -75,6 +75,35 @@ and `kDenominators`/`kMaxBeats` are now generated (§13.7) rather than hand-decl
 `store.ts`. Proven by vitest command-mock assertions + typecheck only — no JNI/Kotlin
 runtime measurement, so the device half is still unverified. M3's stepper can now use it.
 
+**Built, not signed off:** M3 (#46) — the §5.2 performance surface, on
+`feat/agent-m3`. Measured gates: typecheck 12/12, `eslint --max-warnings 0`
+clean, vitest 54 tool-metronome + 17 core-state (167 workspace-wide), prettier
+clean, `generate:check` clean, and 18 sabotage mutations across the logic
+modules, all 18 caught. **Nothing about it is device- or eye-verified**: the bar
+sweep and LED flash are unmeasured on hardware, the gesture is untested inside
+RNGH, and the design-reviewer render against `design/kitbag-metronome.html` has
+not happened — the sign-off stop-point is still open.
+
+Five §5.2/§12 deviations it ships with, none yet recorded in SPEC:
+
+- **The poly row has no accent editing.** §5.2 gives it "own accent states", but
+  the C ABI has one accent table (`kb_metronome_set_accent`). Editable when the
+  ABI grows a poly accent.
+- **The poly row never flashes.** The engine has
+  `kb_metronome_current_poly_beat`, but the JSI HostObject does not publish it,
+  so no worklet can read it. Closing it is a core-native change.
+- **Touch targets are gap-bounded, not 48dp.** §12.6's ≥48dp cannot be reached
+  by hitSlop for 26dp LEDs 8dp apart without neighbouring regions overlapping,
+  so `hitSlopFor` caps at half the tightest gap. Either the design's gaps grow
+  or the criterion misses here — a sign-off question, not a code one.
+- **No first-use hint.** §5.2 teaches swipe-anywhere and tap-to-type with the
+  §12.6 one-time hint animation. Neither is built, so both gestures are
+  currently undiscoverable; the preset row is the visible fallback.
+- **The tempo marking table is ours.** Neither SPEC nor the design file defines
+  BPM→marking, so `tempoMarking.ts` uses the conventional Italian bands. The
+  design mock prints ANDANTE beside 124, which no conventional table agrees
+  with; the screen shows ALLEGRO there. Sign-off should rule on it.
+
 ## F1 Metronome (§5) — task decomposition
 
 Only the tasks being dispatched carry a live GitHub issue; the rest are the
@@ -88,7 +117,7 @@ tasks serialize** (shared files) and each is design-gated anyway.
 | **M1** store | [#40](https://github.com/PinetheApple/kitbag/issues/40) ✅ | core-state metronome config store; commands 1:1 to TurboModule; §13.3 no realtime shadow | headless (tdd) |
 | **M1a** denom ABI | [#41](https://github.com/PinetheApple/kitbag/issues/41) ✅ | native: `kb_metronome_set_beats` gains the D1 denominator parameter; TS/Kotlin chain wired in M1b ([#45](https://github.com/PinetheApple/kitbag/issues/45), device runtime still unmeasured) | headless (native verify) |
 | **M2** schema | — **satisfied by #34** | §5.4/§11.2 rename, denominator, ramp/bar-mute round-trip, decoupled setlists — all shipped in Phase 2 | — |
-| **M3** perf surface | TBD | §5.2 swipe-anywhere tempo, preset steppers, beat-LED row editor (group+wrap ≥4/row, D9), poly row, bar sweep, practice pill, tap-to-type numpad, badge steppers | **design sign-off** |
+| **M3** perf surface | [#46](https://github.com/PinetheApple/kitbag/issues/46) 🟡 built, unsigned | §5.2 swipe-anywhere tempo, preset steppers, beat-LED row editor (group+wrap ≥4/row, D9), poly row, bar sweep, practice pill, tap-to-type numpad, badge steppers | **design sign-off** |
 | **M4** chips + sheets | TBD | §5.3 Ramp/Mute-bars/Sound/Count-in sheets over the running metronome, live-apply; sound names from engine | **design sign-off** |
 | **M5** preset screens | TBD | §5.4 setlists / setlist detail / preset editor; per-field edit; drag-handle reorder; LED component reused | **design sign-off** |
 | **M6** export/import | TBD | §5.5 v4-UUID version+validate, selective, merge-vs-replace, share sheet (logic headless; UI design-gated) | mixed |

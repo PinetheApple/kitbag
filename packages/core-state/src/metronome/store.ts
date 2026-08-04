@@ -30,6 +30,10 @@ import {
 // ceiling are engine-owned (§13.7) and arrive generated, never retyped here.
 const BPM_MIN = 20;
 const BPM_MAX = 400;
+
+/** The §5.2 BPM range, exported so a screen (numpad range hint, clamp on
+ * confirm) reads the store's bound instead of retyping it (§13.7). */
+export const BPM_BOUNDS = { min: BPM_MIN, max: BPM_MAX } as const;
 const SUBDIVISION_MIN = 1;
 const BEATS_MIN = 1;
 const SUBDIVISION_MAX = 16;
@@ -224,8 +228,13 @@ export function createMetronomeStore(
     },
 
     setPoly: (enabled, beats) => {
-      set({ polyEnabled: enabled, polyBeats: beats });
-      commands.setPoly(enabled, beats);
+      // Same policy as setBeats, which this mirrors as a stepper: a count below
+      // the floor is refused outright (a held − sends nothing rather than
+      // re-sending the floor), and the engine's ceiling clamps.
+      if (!Number.isInteger(beats) || beats < BEATS_MIN) return;
+      const polyBeats = Math.min(beats, KB_MAX_BEATS);
+      set({ polyEnabled: enabled, polyBeats });
+      commands.setPoly(enabled, polyBeats);
     },
 
     setSound: (soundIndex) => {

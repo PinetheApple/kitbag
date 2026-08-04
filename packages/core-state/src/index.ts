@@ -3,7 +3,9 @@
 // that holds stores; realtime values are NOT in the store (§13.3), and the
 // store never keeps a shadow copy of engine truth it believes over a poll.
 
+export { useMetronome } from './metronome/useMetronome.ts';
 export {
+  BPM_BOUNDS,
   createMetronomeStore,
   metronomeStore,
   type MetronomeStore,
