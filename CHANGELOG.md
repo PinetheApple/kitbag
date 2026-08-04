@@ -493,7 +493,7 @@ the TurboModule commands. The store is intent; the engine is truth.
   nowFrame anchor and never stores it. A test fails if any realtime field leaks.
 - §5.3 setTempo cancels a running ramp; pause re-arms nothing (pause != stop);
   §5.2 cycleAccent = accent -> normal -> mute -> accent.
-- Clamps: BPM 20-400, subdivision 1-16, denominator validated against the set.
+- Clamps: BPM 20-400, subdivision 1-16, denominator in {2,4,8,16}.
 - Sound id range-guarded against the generated engine count (§13.7); names/count
   come from the engine, not a local list.
 - 14 vitest, every invariant sabotage-proven (removing a behaviour breaks its
@@ -504,9 +504,8 @@ kb_metronome_* ABI functions (kitbag_api.h) the Spec had omitted, verified by
 ralph against the header. Not fabricated bindings.
 
 Honest native gaps, stored as intent only (no silent no-op that looks wired):
-- D1 denominator had no ABI parameter at the time — setBeats sent the numerator
-  and the denominator was validated intent. Closed by #41 and its TS/Kotlin
-  follow-up, below.
+- D1 denominator has no ABI parameter yet (§17 D1 unbuilt) — setBeats sends the
+  numerator; denominator is validated intent. A native follow-up owns the C API.
 - perAccentSounds (§5.3 per-accent-level sound) and countInBars have no engine
   command — store-only intent applied by a future start screen.
 
@@ -528,17 +527,47 @@ docs/decisions.md.
 
 - **core-native,core-state:** Wire denominator through the TS/Kotlin TurboModule chain
 
-A time-signature denominator set from JS now scales the click rate: the store's
-validated denominator reaches kb_metronome_set_beats through the TurboModule,
-Kotlin module and JNI, so 7/8 clicks twice as fast as 7/4 at the same BPM. The
-C half was #41; the JS half sent the numerator alone and the JNI passed a
-kDenominatorUnchanged = 0 stub, so the setting was inert. Proven by vitest
-command assertions and typecheck — the JNI/Kotlin hop has no device run yet.
+The C half landed in #41 (df2c937): kb_metronome_set_beats takes
+(beats_per_bar, denominator) and commandSetBeats carries both, with the beat
+interval (60/bpm) x (4/denominator). The TS/Kotlin chain still sent only the
+numerator, and the JNI passed a kDenominatorUnchanged = 0 stub, so a 7/8 time
+signature clicked at 7/4 on device.
 
-The valid denominator set and the beats-per-bar ceiling are now generated from
-Metronome::kDenominators / kMaxBeats (§13.7) instead of hand-declared in the
-store, which also gave setBeats the upper bound it lacked: it clamps to the
-engine's ceiling rather than holding 99 beats while the engine plays 16.
+- NativeKitbagCommands.ts: setBeats gains a denominator: Int32.
+- KitbagCommandsModule.kt: setBeats/nativeSetBeats take the second parameter.
+- KitbagJni.cpp: stub removed, jint denominator forwarded to commandSetBeats.
+  The signature has to grow with the Kotlin external fun or the JNI symbol no
+  longer resolves.
+- core-state store: dispatches the validated denominator, not the raw argument,
+  so an out-of-set value sends the retained one rather than relying on the
+  engine's own fallback.
+- GateScreen: passes its default denominator; required to keep the call typed.
+
+Comments in store.ts, the test title, docs/decisions.md and the #33 runbook all
+claimed the denominator had no C API. That has been false since df2c937.
+
+kDenominators stays a store-owned const: kitbag_api.h documents the valid set in
+prose only, with no KB_DENOMINATOR_* macro for the generator to read, so there
+is no engine constant to own it yet.
+
+- **tool-metronome,app-shell:** Metronome performance surface (§5.2, #46)
+
+Build the metronome's main screen: swipe-anywhere tempo, preset steppers,
+the beat-LED row editor, the poly row, the bar sweep, the practice pill, the
+tap-to-type numpad and the badge steppers (SPEC §5.2, design §02).
+
+The two 60fps values — bar_phase and current_beat — are read by a Reanimated
+worklet from the JSI HostObject and never touch React state (§13.3), following
+the pattern #33 proved on device. Everything else on the screen is human-speed
+state from the core-state store, and every mutation goes through the store's
+1:1 engine commands.
+
+Gesture and layout arithmetic lives in tool-metronome/src/logic as pure
+modules so it is testable with no device and no renderer: the ±1 BPM per 8dp
+drag with bound re-anchoring, tap-tempo averaging, D9 LED grouping and wrap,
+the numpad state machine, subdivision glyphs, the tempo marking table, the
+practice clock and the touch-target arithmetic. 54 vitest tests; 18 sabotage
+mutations were run against them and all 18 were caught.
 
 
 ### Fixed
@@ -918,5 +947,39 @@ Removed dead code: GATE_GRID_BEATS, SECONDS_PER_MINUTE, the beatTimesSec build,
 and the grid/shared-anchor comment block (rewritten for constant tempo).
 typecheck + lint --max-warnings 0 green; on-device behavior is the user's to
 observe (#33). Frame path untouched (§13.4).
+
+- **core-native,core-state:** Generate the denominator set from the engine
+
+Review fixes on 2e1b2d6 and 78a0102.
+
+The constant generator now parses Metronome::kDenominators, kMaxBeats and
+kBpmReferenceDenominator (§13.7), so the store derives VALID_DENOMINATORS and
+the Denominator type from the engine instead of hand-retyping {2,4,8,16}.
+setBeats gains the upper bound it lacked: it clamps to KB_MAX_BEATS rather than
+holding 99 beats while the engine plays 16 (sabotage-proven vitest).
+
+Docs corrected: D1's command chain is closed, D1 itself is not (the M3 stepper
+is unbuilt), the chain is proven by vitest and typecheck only with no device
+run, and grid/song-follow mode ignores the denominator by design.
+The CHANGELOG entry replaces a file-by-file narration.
+
+Prettier gate: format.sh calls `pnpm -w format:write` instead of a swallowed
+npx invocation, READMEs join the ignored prose, and app.json is formatted
+rather than exempted.
+
+- **core,scripts:** Restore denominator doc values, scope staged formatting
+
+kb_metronome_set_beats' header doc pointed C consumers at
+Metronome::kDenominators, a C++ internal they cannot read; list {2, 4, 8, 16}
+explicitly and keep the C++ owner as a pointer. Reflow the ragged wrap in the
+same block.
+
+scripts/format.sh ran the whole-tree prettier script in --staged mode and never
+re-staged its writes, so a pre-commit could dirty untouched TS files. Format
+only the staged, prettier-supported files and git add them, matching the
+clang-format branch.
+
+Note at both DEFAULT_DENOMINATOR sites that 4/4 only coincides with the engine's
+BPM reference note.
 
 
