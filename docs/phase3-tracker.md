@@ -82,7 +82,12 @@ runtime measurement, so the device half is still unverified. M3's stepper can no
 **Built, not signed off:** M3 (#46) — the §5.2 performance surface, merged on
 `feat/phase2-skeleton` at `49d3c0b` (built on `feat/agent-m3`), design-fix round
 `ea768c0` (five fidelity findings fixed; play icon stays a glyph until
-react-native-svg is a dependency — noted in-file), route-typegen gate `58f6c1d`. Measured gates: typecheck 12/12, `eslint --max-warnings 0`
+react-native-svg is a dependency — noted in-file), route-typegen gate `58f6c1d`.
+Getting M3 onto a device for sign-off exposed a pre-existing Android build
+failure: the codegen'd command spec declared `metronomeStop`/`setRamp`/
+`setBarMute` since M1 but the Kotlin/JNI/C++ layers never implemented them
+(headless gates never compile Android Kotlin) — fixed at `b35e3a1`; release APK
+now builds and passes the 16KB-alignment check. Measured gates: typecheck 12/12, `eslint --max-warnings 0`
 clean, vitest 54 tool-metronome + 17 core-state (167 workspace-wide), prettier
 clean, `generate:check` clean, and 18 sabotage mutations across the logic
 modules, all 18 caught. **Nothing about it is device- or eye-verified**: the bar
