@@ -67,6 +67,11 @@ Java_com_kitbag_corenative_KitbagCommandsModule_nativeMetronomeStart(JNIEnv*, jo
   kitbag::commandMetronomeStart(static_cast<double>(anchorFrame));
 }
 
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeMetronomeStop(JNIEnv*, jobject) {
+  kitbag::commandMetronomeStop();
+}
+
 // --- Tempo & grid ----------------------------------------------------------
 
 JNIEXPORT void JNICALL
@@ -142,6 +147,25 @@ JNIEXPORT void JNICALL
 Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetLatencyOffset(JNIEnv*, jobject,
                                                                 jdouble latencyMs) {
   kitbag::commandSetLatencyOffset(static_cast<double>(latencyMs));
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetRamp(JNIEnv*, jobject,
+                                                       jboolean enabled,
+                                                       jdouble startBpm,
+                                                       jdouble endBpm,
+                                                       jint bars) {
+  kitbag::commandSetRamp(enabled == JNI_TRUE, static_cast<double>(startBpm),
+                         static_cast<double>(endBpm), static_cast<int32_t>(bars));
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetBarMute(JNIEnv*, jobject,
+                                                          jboolean enabled,
+                                                          jint playBars,
+                                                          jint muteBars) {
+  kitbag::commandSetBarMute(enabled == JNI_TRUE, static_cast<int32_t>(playBars),
+                            static_cast<int32_t>(muteBars));
 }
 
 // --- Mixer -----------------------------------------------------------------
