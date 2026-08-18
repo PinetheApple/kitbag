@@ -39,6 +39,19 @@ Scripts here take `-h|--help`, use named exit codes rather than bare integers, a
 print what failed rather than only that something did. `ls scripts/` is the
 inventory; the open issues carry what is still missing.
 
+Two carry the working loop:
+
+```sh
+bash scripts/preflight.sh            # every gate CI runs, plus auto-fixes
+bash scripts/preflight.sh --no-fix   # check only — what CI does
+bash scripts/install-on-device.sh    # build, install, launch, report signing + runtime state
+```
+
+`preflight.sh` must pass before committing. It collects failures rather than
+stopping at the first, so one run shows every problem instead of revealing one
+per CI round trip, and it reports which files it rewrote — commit those or CI
+still fails. `--skip-android` and `--skip-native` drop the slow legs.
+
 ### Commits and PRs
 
 Conventional commit subjects (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`) —
