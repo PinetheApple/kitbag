@@ -79,7 +79,10 @@ answer (poly row when poly is off; 4/4's four ungrouped LEDs under D9).
 **Repo tooling is now ticketed** (none of it existed as issues before): #48 real
 release signing, #49 APK size (36 MB, R8 off), #50 a single local gate, #51
 scripted device install, #52 the missing app icon, #53 the release path, #54
-Android CI. **#47** covers Home, which is still the #27 skeleton.
+Android CI. **#47** covers Home, which is still the #27 skeleton. #48/#50/#51
+landed in PR #58; #53/#54 landed with `scripts/release.sh` + `scripts/version.sh`
+and the CI Android job — app.json is now the only place the version lives, and a
+broken Kotlin/JNI chain was confirmed to fail the build that CI now runs.
 **Done:** M1a (#41) — `kb_metronome_set_beats` gains the D1 denominator; the beat
 interval is now `(60/bpm) × (4/denominator)` with BPM quarter-note referenced, so
 6/8 clicks six times per bar (no separate click-unit control — see
