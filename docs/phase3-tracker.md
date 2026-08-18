@@ -61,13 +61,25 @@ below is marked satisfied.
 **Done:** M1 (#40, `8b3c681`) — metronome config store; 14 vitest sabotage-proven,
 both reviews pass, §13.3 held.
 **In progress:** none.
-**Next:** **design sign-off for M3 (#46)** — merged on `feat/phase2-skeleton`
-(`49d3c0b`), wave gate green on the integrated tree (typecheck 12/12, lint 0,
-vitest 167, prettier + generate:check clean, native build + all `*_verify` bar
-`tuner_verify` 0, `lint.sh` 0). `.loop-halt` carries the stop-point: two rulings
-requested (tempo-marking table vs the design mock's ANDANTE@124; 48dp touch-target
-criterion vs the LED row's gaps) plus the design fidelity review. After sign-off:
-M4 (chips + sheets).
+**Next:** **M4 (chips + sheets, §5.3)** — it closes most of #56.
+
+**M3 sign-off outcome (2026-08-18): rulings decided, fidelity sign-off did not
+pass.** Everything through M3 is now merged to `main` (PR #55); the
+`feat/phase2-skeleton` branch is deleted. The two rulings the stop-point asked for
+are settled in `docs/decisions.md`: conventional Italian tempo bands (120 →
+ALLEGRO; the mock's ANDANTE@124 is a mock error), and the LED row exempt from
+§12.6's 48dp minimum. On device the screen still does not read as
+`design/kitbag-metronome.html` §02 — a fidelity audit found every implemented
+dimension and token matches the design 1:1, so the gap is **whole missing rows,
+not wrong values**: the app bar (M5), the four-chip control row (M4), the third
+transport key (M5), and the dead vertical region that is the chip row's empty
+slot. Filed as **#56**, which also carries two questions the design file cannot
+answer (poly row when poly is off; 4/4's four ungrouped LEDs under D9).
+
+**Repo tooling is now ticketed** (none of it existed as issues before): #48 real
+release signing, #49 APK size (36 MB, R8 off), #50 a single local gate, #51
+scripted device install, #52 the missing app icon, #53 the release path, #54
+Android CI. **#47** covers Home, which is still the #27 skeleton.
 **Done:** M1a (#41) — `kb_metronome_set_beats` gains the D1 denominator; the beat
 interval is now `(60/bpm) × (4/denominator)` with BPM quarter-note referenced, so
 6/8 clicks six times per bar (no separate click-unit control — see
