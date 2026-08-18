@@ -189,3 +189,16 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   copies the #33 gate's worklet rather than importing it (§9.4 package boundary);
   deduplicating needs core-native to own the read-path accessor — filed as an M3
   follow-up, not done now. **[recorded]**
+
+- **2026-08-18 · M3 sign-off rulings: conventional tempo bands, LED row exempt from
+  48dp (§5.2, §12.6, #46)** — The two rulings the M3 build left open (entries 5 and 6
+  above) are decided: (1) tempo markings follow the **conventional Italian bands**,
+  so 124 BPM reads ALLEGRO and `design/kitbag-metronome.html`'s ANDANTE at 124 is a
+  mock error, not intent — the design file is binding on layout and tokens, not on
+  that string. (2) The **LED row is exempt from §12.6's 48dp minimum**; the design's
+  26dp LEDs at 8dp gaps stay as drawn and `hitSlopFor` keeps bounding the hit region
+  at half the tightest gap. Widening the gaps was the alternative and was rejected:
+  the LED row is a beat *indicator* first, its geometry carries the meter grouping,
+  and overlapping hit regions would mis-assign accent taps — a worse failure than a
+  small target on a control that has the preset row as a fallback. Both rulings match
+  what M3 already shipped, so neither changes code. **[recorded]**
