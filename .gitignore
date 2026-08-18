@@ -39,3 +39,10 @@ __pycache__/
 stream-*.jsonl
 loop.log
 .loop-halt
+
+# Signing material (#48). The release keystore lives outside the repo; if one of
+# these ever lands in a commit the published key is compromised permanently.
+*.p12
+*.jks
+*.key
+.env
