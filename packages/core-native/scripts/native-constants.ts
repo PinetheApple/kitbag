@@ -18,7 +18,7 @@ export interface NativeSources {
   readonly apiHeader: string;
   /** native/audio_core/src/mixer/mixer.h — kMaxTracks lives here, not the ABI. */
   readonly mixerHeader: string;
-  /** native/audio_core/src/metronome/metronome.h — kSoundCount lives here. */
+  /** native/audio_core/src/metronome/metronome.h — kSoundCount, kMaxBeats, kDenominators. */
   readonly metronomeHeader: string;
   /** native/audio_core/src/metronome/metronome_render.cpp — the sound presets. */
   readonly metronomeRender: string;
@@ -46,6 +46,9 @@ export interface TunerField {
 export interface NativeConstants {
   readonly maxGridBeats: number;
   readonly maxTracks: number;
+  readonly maxBeats: number;
+  readonly bpmReferenceDenominator: number;
+  readonly denominators: readonly number[];
   readonly soundNames: readonly string[];
   readonly result: readonly EnumMember[];
   readonly accent: readonly EnumMember[];
@@ -80,6 +83,21 @@ export function parseConstexprInt(source: string, name: string): number {
   ).exec(source);
   if (match === null) fail(`constexpr int ${name}`);
   return Number(match[1]);
+}
+
+/** `static constexpr int NAME[] = {a, b, ...};` from a C++ header. */
+export function parseConstexprIntArray(source: string, name: string): number[] {
+  const match = new RegExp(
+    `static\\s+constexpr\\s+int\\s+${name}\\s*\\[[^\\]]*\\]\\s*=\\s*\\{([^}]*)\\}`,
+  ).exec(source);
+  if (match === null) fail(`constexpr int ${name}[]`);
+  const values = (match[1] ?? '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+  if (values.length === 0 || values.some((v) => !/^-?\d+$/.test(v)))
+    fail(`integer members of ${name}[]`);
+  return values.map(Number);
 }
 
 /** Members of `typedef enum NAME { A = 0, B = 1, ... }`, in declaration order. */
@@ -206,6 +224,15 @@ export function collectConstants(sources: NativeSources): NativeConstants {
   return {
     maxGridBeats: parseDefineInt(sources.apiHeader, 'KB_MAX_GRID_BEATS'),
     maxTracks: parseConstexprInt(sources.mixerHeader, 'kMaxTracks'),
+    maxBeats: parseConstexprInt(sources.metronomeHeader, 'kMaxBeats'),
+    bpmReferenceDenominator: parseConstexprInt(
+      sources.metronomeHeader,
+      'kBpmReferenceDenominator',
+    ),
+    denominators: parseConstexprIntArray(
+      sources.metronomeHeader,
+      'kDenominators',
+    ),
     soundNames: parseSoundNames(
       sources.metronomeRender,
       sources.metronomeHeader,
@@ -256,6 +283,19 @@ export const KB_MAX_GRID_BEATS = ${String(c.maxGridBeats)};
 
 /** Mixer track count (Mixer::kMaxTracks, SPEC §7.4). */
 export const KB_MAX_TRACKS = ${String(c.maxTracks)};
+
+/** Beats per bar the engine will hold (Metronome::kMaxBeats); it clamps above this. */
+export const KB_MAX_BEATS = ${String(c.maxBeats)};
+
+/**
+ * Time-signature denominators the engine accepts (Metronome::kDenominators,
+ * SPEC §17 D1). Anything else leaves the engine's current denominator in place.
+ */
+export const KB_DENOMINATORS = [${c.denominators.map(String).join(', ')}] as const;
+export type KbDenominator = (typeof KB_DENOMINATORS)[number];
+
+/** Denominator BPM is referenced to (Metronome::kBpmReferenceDenominator): quarter note. */
+export const KB_BPM_REFERENCE_DENOMINATOR = ${String(c.bpmReferenceDenominator)};
 
 /**
  * Metronome sound ids, indexed by native sound id (SPEC §5.3, §13.7). Lowercase

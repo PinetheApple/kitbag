@@ -7,6 +7,7 @@
     "typecheck": "turbo run typecheck",
     "lint": "eslint . --max-warnings 0",
     "test": "turbo run test",
+    "generate:check": "turbo run generate:check",
     "format": "prettier --check .",
     "format:write": "prettier --write ."
   },

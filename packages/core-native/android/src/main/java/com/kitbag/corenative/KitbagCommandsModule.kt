@@ -65,6 +65,10 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     nativeMetronomeStart(anchorFrame)
   }
 
+  override fun metronomeStop() {
+    nativeMetronomeStop()
+  }
+
   // --- Tempo & grid --------------------------------------------------------
 
   override fun setTempo(bpm: Double) {
@@ -79,8 +83,8 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
 
   // --- Metronome setters ---------------------------------------------------
 
-  override fun setBeats(beatsPerBar: Double) {
-    nativeSetBeats(beatsPerBar.toInt())
+  override fun setBeats(beatsPerBar: Double, denominator: Double) {
+    nativeSetBeats(beatsPerBar.toInt(), denominator.toInt())
   }
 
   override fun setSubdivision(subdivision: Double) {
@@ -107,6 +111,14 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     nativeSetLatencyOffset(latencyMs)
   }
 
+  override fun setRamp(enabled: Boolean, startBpm: Double, endBpm: Double, bars: Double) {
+    nativeSetRamp(enabled, startBpm, endBpm, bars.toInt())
+  }
+
+  override fun setBarMute(enabled: Boolean, playBars: Double, muteBars: Double) {
+    nativeSetBarMute(enabled, playBars.toInt(), muteBars.toInt())
+  }
+
   // --- Mixer ---------------------------------------------------------------
 
   override fun loadTrack(track: Double, path: String, promise: Promise) {
@@ -119,15 +131,23 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private external fun nativeStart(): Int
   private external fun nativeStop()
   private external fun nativeMetronomeStart(anchorFrame: Double)
+  private external fun nativeMetronomeStop()
   private external fun nativeSetTempo(bpm: Double)
   private external fun nativeSetGrid(beatTimesSec: DoubleArray, anchorFrame: Double): Int
-  private external fun nativeSetBeats(beatsPerBar: Int)
+  private external fun nativeSetBeats(beatsPerBar: Int, denominator: Int)
   private external fun nativeSetSubdivision(subdivision: Int)
   private external fun nativeSetAccent(beatIndex: Int, accent: Int)
   private external fun nativeSetPoly(enabled: Boolean, beats: Int)
   private external fun nativeSetSound(soundIndex: Int)
   private external fun nativeSetVolume(volume: Double)
   private external fun nativeSetLatencyOffset(latencyMs: Double)
+  private external fun nativeSetRamp(
+    enabled: Boolean,
+    startBpm: Double,
+    endBpm: Double,
+    bars: Int,
+  )
+  private external fun nativeSetBarMute(enabled: Boolean, playBars: Int, muteBars: Int)
   private external fun nativeLoadTrack(track: Int, path: String): Int
 
   companion object {

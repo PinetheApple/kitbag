@@ -89,9 +89,13 @@ void kb_metronome_set_tempo(kb_engine* engine, double bpm) {
   }
 }
 
-void kb_metronome_set_beats(kb_engine* engine, int32_t beats_per_bar) {
+void kb_metronome_set_beats(
+    kb_engine* engine,
+    int32_t beats_per_bar,
+    int32_t denominator
+) {
   if (engine != nullptr) {
-    ToEngine(engine)->metronome().SetBeatsPerBar(beats_per_bar);
+    ToEngine(engine)->metronome().SetTimeSignature(beats_per_bar, denominator);
   }
 }
 

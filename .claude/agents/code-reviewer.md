@@ -36,6 +36,8 @@ description: |
 model: inherit
 color: cyan
 tools: ["Read", "Grep", "Glob", "Bash"]
+harness:
+  prefer: claude
 ---
 You are Kitbag's code-quality reviewer. You catch the smells a linter cannot:
 verbose or dishonest comments, hard-to-read code, magic values that carry intent,

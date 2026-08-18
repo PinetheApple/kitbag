@@ -27,6 +27,7 @@ namespace kitbag {
 int32_t commandStart();
 void commandStop();
 void commandMetronomeStart(double anchorFrame);
+void commandMetronomeStop();
 
 // Tempo & grid. setGrid returns a kb_result code and takes the array count the
 // native glue supplies; anchorFrame crosses as a double and is exact to 2^53
@@ -36,13 +37,18 @@ int32_t commandSetGrid(const double* beatTimesSec, int32_t count, double anchorF
 
 // Metronome setters (all void in the ABI). accent and soundIndex pass through
 // unchanged — the caller sources them from the generated enum/table (§13.7).
-void commandSetBeats(int32_t beatsPerBar);
+// setBeats carries both halves of the time signature.
+void commandSetBeats(int32_t beatsPerBar, int32_t denominator);
 void commandSetSubdivision(int32_t subdivision);
 void commandSetAccent(int32_t beatIndex, int32_t accent);
 void commandSetPoly(bool enabled, int32_t beats);
 void commandSetSound(int32_t soundIndex);
 void commandSetVolume(double volume);
 void commandSetLatencyOffset(double latencyMs);
+
+// Trainers (both void in the ABI); the engine clamps bounds (metronome.h).
+void commandSetRamp(bool enabled, double startBpm, double endBpm, int32_t bars);
+void commandSetBarMute(bool enabled, int32_t playBars, int32_t muteBars);
 
 // Mixer. Returns a kb_result code; poll readiness via the HostObject (§13.3).
 int32_t commandLoadTrack(int32_t track, const char* path);

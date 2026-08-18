@@ -26,4 +26,19 @@ if [[ ${#files[@]} -gt 0 ]]; then
   $staged_only && git add "${files[@]}"
 fi
 
-[[ -f package.json ]] && npx prettier --write . || true
+if [[ -f package.json ]]; then
+  if $staged_only; then
+    # Whole-tree prettier in a pre-commit would write files the commit never
+    # touched; stay inside the staged set and re-stage what we rewrite.
+    mapfile -t ts_files < <(git diff --cached --name-only --diff-filter=ACMR \
+      | grep -E '\.(ts|tsx|js|jsx|mjs|cjs|json|md|css)$' || true)
+    if [[ ${#ts_files[@]} -gt 0 ]]; then
+      echo "format: prettier ${#ts_files[@]} file(s)"
+      ./node_modules/.bin/prettier --write --ignore-unknown "${ts_files[@]}"
+      git add "${ts_files[@]}"
+    fi
+  else
+    echo "format: prettier"
+    pnpm -w format:write
+  fi
+fi

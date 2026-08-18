@@ -43,6 +43,13 @@ export interface KitbagHostObject {
 }
 
 /**
+ * The value `current_beat` carries while the metronome is stopped, per the
+ * kb_metronome_current_beat contract. One owner: every LED row that seeds or
+ * compares a beat index reads it from here rather than retyping -1 (§13.7).
+ */
+export const KB_STOPPED_BEAT = -1;
+
+/**
  * The global key the C++ installer publishes the HostObject under. One owner of
  * this string: TS setup validates via it, and the worklet read path reads the
  * same key on the UI thread.

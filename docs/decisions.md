@@ -129,3 +129,76 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   command; the repo's §2 history bars claiming an unshipped gate, so the claim was
   made true rather than softened. Also retroactively wires Wave 1's vitest suites,
   which had never run in CI. **[recorded]**
+
+- **2026-07-24 · Phase 3 opened; F1-M1 metronome store built (§5, §13.3, #40)** —
+  Phase gate 2→3 cleared (device reading #33 PASSED). Stood up `docs/phase3-tracker.md`
+  and dispatched the one §5 task that clears headlessly: the core-state metronome
+  config store. Everything else in §5 is design-gated (screens) or device-gated
+  (background §5.6, soak §5.8). Store maps mutations 1:1 to TurboModule commands and
+  holds no realtime value (§13.3). **[recorded]**
+- **2026-07-24 · TurboModule Spec extended with 3 real ABI commands (§13.7, #40)** —
+  Added `metronomeStop`/`setRamp`/`setBarMute` to `NativeKitbagCommands.ts`; the #29
+  Spec had omitted them. They map to existing `kb_metronome_stop`/`set_ramp`/`set_bar_mute`
+  in `kitbag_api.h` (ralph-verified against the header), so this is completing the Spec,
+  not inventing bindings. Unambiguous gap → decided and recorded rather than stopped. **[recorded]**
+- **2026-07-24 · D1 denominator C ABI gap deferred to #41 (§17 D1)** — The store and
+  schema halves of D1 shipped; the C-API half (`kb_metronome_set_beats` numerator-only)
+  was never built. Store held `denominator` as validated intent and `setBeats` sent
+  the numerator, flagged honestly (no silent no-op). **Command chain closed 2026-08-04**:
+  #41 landed the C ABI half and the denominator is now wired through the TS/Kotlin
+  chain (vitest + typecheck; no device run, so no runtime proof). D1 itself is not
+  done — §17.1 still owes the M3 time-signature stepper that edits both halves.
+  Note the engine's grid/song-follow mode ignores the denominator by design
+  (`metronome_grid.cpp:39`): 7/8 applies to the free-running click only.
+  `perAccentSounds` (§5.3) and
+  `countInBars` are likewise store-only intent (no engine command yet). **[recorded]**
+- **2026-07-25 · Denominator scales the click rate; no separate click-unit control
+  (§17 D1, #41)** — BPM stays **quarter-note referenced**: beat interval =
+  `(60/bpm) × (4/denominator)`, so 7/8 at 120 clicks twice as fast as 7/4 at 120,
+  and 6/8 clicks **six** times per bar, not two. Rationale: SPEC §17 D1 requires
+  the beat interval to be a function of both numerator and denominator, which only
+  the quarter-referenced reading satisfies. A product survey
+  (`docs/metronome-bpm-denominator-research.md`) found no standalone metronome
+  ships this bare — the well-regarded ones pair it with an explicit beat-unit /
+  click-unit control so compound meters can click the dotted-note pulse (Dorico's
+  Beat Unit, Pro Tools' Click field, Tempo, Soundbrenner). **User decided against
+  that control: six eighth-note clicks in 6/8 is the wanted behaviour.** So bar
+  length stays `numerator × beat unit`, the ABI gains no click-unit parameter, and
+  §17.1 gains no entry. Cost accepted: a user wanting the 6/8 dotted-quarter pulse
+  halves the BPM by hand. **[recorded]**
+
+- **2026-08-04 · M3 performance-surface gaps decided (§5.2, #46)** — Ten unambiguous
+  gaps SPEC/design didn't state, decided during the M3 build (deviations recorded in
+  `docs/phase3-tracker.md`): (1) `MAX_LEDS_PER_ROW = 7` — the only simple ceiling
+  satisfying both §5.2 data points (7 on one row; 16 as four rows of four).
+  (2) Irregular-meter LED groupings: 5→3+2, 7→2+2+3, 9→3+3+3; 10, 11 and up chunk
+  by 4. (3) Swipe fling = 140 ms of release velocity, capped ±40 BPM (§5.2 says
+  only "coarse jumps"). (4) Denominator cycles on the badge face; −/+ step the
+  numerator. (5) Tempo markings are the conventional Italian bands — the design
+  mock prints ANDANTE at 124, which no conventional table agrees with; the screen
+  shows ALLEGRO (**user ruling requested at sign-off**). (6) LED touch targets are
+  gap-bounded (`hitSlopFor` caps at half the tightest gap) because §12.6's 48dp is
+  unreachable for 26dp LEDs 8dp apart without overlapping hit regions
+  (**user ruling requested: widen the design's gaps or exempt the criterion**).
+  (7) Practice pill counts play time only and dies with the screen — persistence is
+  §5.7/M8. (8) Poly row is display-only (no accent editing, never flashes): one
+  accent table in the C ABI and no `current_poly_beat` on the HostObject; closing
+  it is a later core-native change, not a screen fix. (9) No §12.6 first-use hint
+  this task — swipe-anywhere and tap-to-type are currently undiscoverable; the
+  preset row is the visible fallback; hint deferred. (10) `useMetronomeFrame`
+  copies the #33 gate's worklet rather than importing it (§9.4 package boundary);
+  deduplicating needs core-native to own the read-path accessor — filed as an M3
+  follow-up, not done now. **[recorded]**
+
+- **2026-08-18 · M3 sign-off rulings: conventional tempo bands, LED row exempt from
+  48dp (§5.2, §12.6, #46)** — The two rulings the M3 build left open (entries 5 and 6
+  above) are decided: (1) tempo markings follow the **conventional Italian bands**,
+  so 124 BPM reads ALLEGRO and `design/kitbag-metronome.html`'s ANDANTE at 124 is a
+  mock error, not intent — the design file is binding on layout and tokens, not on
+  that string. (2) The **LED row is exempt from §12.6's 48dp minimum**; the design's
+  26dp LEDs at 8dp gaps stay as drawn and `hitSlopFor` keeps bounding the hit region
+  at half the tightest gap. Widening the gaps was the alternative and was rejected:
+  the LED row is a beat *indicator* first, its geometry carries the meter grouping,
+  and overlapping hit regions would mis-assign accent taps — a worse failure than a
+  small target on a control that has the preset row as a fallback. Both rulings match
+  what M3 already shipped, so neither changes code. **[recorded]**

@@ -35,7 +35,7 @@ std::vector<double> AnchorBeatSeconds(
 // off the frame-0 grid, so an impl that ignores song_pos/at_frame is caught.
 void TestAnchorSingle() {
   kitbag::Metronome metronome;
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   metronome.AnchorExternal(1.1, 12000, 120.0);
 
   const int64_t total = kSampleRate * 3;
@@ -57,7 +57,7 @@ void TestAnchorSingle() {
 // frames, so an impl missing the silence-before-beat-0 rule sounds early.
 void TestAnchorNegativeSongPos() {
   kitbag::Metronome metronome;
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   metronome.AnchorExternal(-1.1, 48000, 120.0);
 
   const int64_t total = kSampleRate * 7 / 2;
@@ -96,7 +96,7 @@ struct ConsistentReanchor {
 // none — the onsets are exactly those of an unbroken run.
 void TestReanchorConsistentKeepsOnsets() {
   kitbag::Metronome metronome;
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   metronome.AnchorExternal(0.1, 0, 120.0);
   ConsistentReanchor swap{&metronome};
   const auto onsets =
@@ -113,7 +113,7 @@ void TestReanchorConsistentKeepsOnsets() {
 // re-fire at the swap block (305), spikes far above the decaying tail.
 void TestReanchorConsistentNoRefire() {
   kitbag::Metronome metronome;
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   metronome.AnchorExternal(0.1, 0, 120.0);
   ConsistentReanchor swap{&metronome};
   const auto peaks =
@@ -155,7 +155,7 @@ void TestReanchorShiftedTouchesFutureOnly() {
   constexpr double kShiftSec = 0.2;
 
   kitbag::Metronome metronome;
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   metronome.AnchorExternal(0.1, 0, 120.0);
   int64_t swap_frame = -1;
   double new_song_pos = 0.0;
@@ -184,7 +184,7 @@ void TestReanchorShiftedTouchesFutureOnly() {
 // >= 0 firing boundary. Beat 0 must fire, not be swallowed, and nothing before.
 void TestAnchorSongPosZero() {
   kitbag::Metronome metronome;
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   metronome.AnchorExternal(0.0, 24000, 120.0);
 
   // Off the beat grid (beats every 24000): the harness over-renders to the
@@ -207,7 +207,7 @@ void TestAnchorSongPosZero() {
 // still fires. Guards the epsilon handling at an exact negative integer beat.
 void TestAnchorWholeBeatNegative() {
   kitbag::Metronome metronome;
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   metronome.AnchorExternal(-0.5, 0, 120.0);
 
   const int64_t total = 132000;  // off the beat grid; see TestAnchorSongPosZero
@@ -241,7 +241,7 @@ bool OnsetNear(
 // read accents_[-1] instead, beat 0's mute would not reach it.
 std::vector<int64_t> RenderPreBeatSubdivision(kitbag::Accent beat_zero) {
   kitbag::Metronome metronome;
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   metronome.SetSubdivision(2);
   metronome.SetLatencyOffset(
       100.0
@@ -270,7 +270,7 @@ void TestSubdivisionOwnedByBeatZero() {
 void TestAnchorComposesWithLatency() {
   for (const double offset_ms : {100.0, -50.0}) {
     kitbag::Metronome metronome;
-    metronome.SetBeatsPerBar(4);
+    metronome.SetTimeSignature(4, 4);
     metronome.SetLatencyOffset(offset_ms);
     metronome.AnchorExternal(0.1, 0, 120.0);
 

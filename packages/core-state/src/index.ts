@@ -2,7 +2,19 @@
 // May import core-native, core-db, core-plugin-api. This is the ONE package
 // that holds stores; realtime values are NOT in the store (§13.3), and the
 // store never keeps a shadow copy of engine truth it believes over a poll.
-//
-// SKELETON (#27): no store exists yet. Zustand stores land in a later Phase 2
-// wave. Placeholder to anchor the package boundary.
-export {};
+
+export { useMetronome } from './metronome/useMetronome.ts';
+export {
+  BPM_BOUNDS,
+  createMetronomeStore,
+  metronomeStore,
+  type MetronomeStore,
+  type MetronomeConfig,
+  type MetronomeActions,
+  type RampConfig,
+  type BarMuteConfig,
+  type PerAccentSounds,
+  type Denominator,
+  type CountInBars,
+} from './metronome/store.ts';
+export type { MetronomeCommands, NowFrame } from './metronome/commands.ts';

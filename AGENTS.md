@@ -1,38 +1,91 @@
 # Kitbag — Agent Workflow Guide
 
+> **One file, every harness.** `CLAUDE.md` is a symlink to this file, so Claude
+> Code, pi and opencode all read exactly these instructions. Edit this file.
+
 > **`SPEC.md` is the source of truth**, and the only planning document. Not
 > `CHANGELOG.md`, not this file. If either disagrees with SPEC.md, SPEC.md wins and
 > the other is a bug. Read SPEC.md §2 before believing any status claim anywhere in
 > the repo.
 
+## Working on a task
+
+**Every task starts as a GitHub issue.** Before writing code, open one (or find
+the existing one) and write down what "done" means. An issue with no acceptance
+criteria produces work that cannot be reviewed, only argued about. The 2026-07-17
+audit (SPEC.md §2) found a codebase whose own docs and changelog misdescribed it;
+written-down criteria are what keep a status claim checkable.
+
+1. **Issue first.** Title states the observed defect or the desired behaviour, not
+   the diagnosis. Body carries `## Acceptance criteria` as a checklist. If a task
+   is worth doing across more than one sitting, it is worth an issue.
+2. **Read the spec, not the ticket alone.** The issue points at SPEC.md sections
+   and, for anything with a screen, the binding file in `design/` (§12 precedence).
+   The issue is the ticket; SPEC.md is the contract.
+3. **Verify it, and say what you ran.** Gates green is a claim; the output is the
+   evidence. A criterion that needs a device needs a device — the JNI/TurboModule
+   chain was broken from M1 to M3 while every headless gate stayed green.
+4. **Close the issue against its criteria**, ticking only what is actually true.
+
+### Repeatable actions belong in a script
+
+If an action will be performed more than once — building, installing to a device,
+running the gate set, cutting a release — it goes in `scripts/`, not in a
+paragraph of instructions. A remembered command sequence drifts silently: the step
+someone forgets is the gate that stops running, and nobody notices until it
+matters on a device.
+
+Scripts here take `-h|--help`, use named exit codes rather than bare integers, and
+print what failed rather than only that something did. `ls scripts/` is the
+inventory; the open issues carry what is still missing.
+
+### Commits and PRs
+
+Conventional commit subjects (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`) —
+`cliff.toml` parses them into `CHANGELOG.md`, so a mislabelled subject lands in
+the wrong section of a published changelog. The body explains *why* when the
+change is not self-evident.
+
+PRs state what changed, copy the issue's acceptance criteria with only the
+satisfied ones ticked, and record verification plainly: what was run, what it
+printed, and what still needs a device.
+
 ## What is in this repo right now
 
 The Flutter app was **deleted on 2026-07-17** (SPEC.md §13 — the stack is React
-Native + TypeScript). The React Native app **does not exist yet**. What remains:
+Native + TypeScript). Since then Phase 0–2 landed (PRs #26, #39) and Phase 3 is
+rebuilding the tools on top. What is here now:
 
 | Path | What it is |
 |------|-----------|
-| `native/audio_core/` | The C++ realtime core. **The only buildable thing here.** Flat C ABI (`include/kitbag_api.h`), miniaudio backend. Survives the stack change untouched — SPEC.md §4. |
-| `SPEC.md` | Product + technical spec. Source of truth. §17 records 13 locked decisions; §17.1 is what is still open. |
+| `native/audio_core/` | The C++ realtime core. Flat C ABI (`include/kitbag_api.h`), miniaudio backend — SPEC.md §4. Built in Phase 1 (PR #26); still the cheapest verification signal in the project. |
+| `packages/` | The React Native app: pnpm workspaces + Turborepo. `app-shell` (Expo router shell), `core-native` (JSI HostObject + TurboModule — the ONLY native-binding package), `core-state`, `core-db` (Drizzle v7 schema + migration), `core-plugin-api` (the abstract contract), `core-design`, `eslint-plugin-kitbag`, and the tools: `tool-metronome` (built), `tool-library`/`tool-stems`/`tool-sync`/`tool-tuner` (skeletons). |
+| `SPEC.md` | Product + technical spec. Source of truth. §17 records the locked decisions; §17.1 is what is still open. |
 | `design/` | Four HTML design specs, all binding. Precedence is in SPEC.md §12. |
 | `legacy/` | The only Flutter-era files kept, because SPEC.md cannot reconstruct them: `MediaSessionPlugin.kt` + `AndroidManifest.xml` (ported near line-for-line, §13.9) and `database.dart` + `converters.dart` (the v6 schema and the beat-grid / `.kwav` binary formats, §11). **Reference only — do not build against them.** |
-| `docs/` | `tuner-research.md` — an algorithm survey. **Read its warning banner first**: its §3 recommends refining a detector that currently emits nothing. |
-| `scripts/worktree.sh` | Agent worktree helper. Still current. |
+| `docs/` | Phase trackers (`phase1/2/3-tracker.md`), `decisions.md`, research notes. The Phase 3 tracker holds the wave/conflict map; GitHub issues are the tickets. **Read `docs/tuner-research.md`'s warning banner before touching the tuner.** |
+| `scripts/` | `worktree.sh` (agent worktrees), `lint.sh`/`format.sh`/`install-hooks.sh` (native gate), `changelog.sh`, `run-loop.sh`. |
 
-Everything else the old guide referenced — Melos, `pubspec.yaml`, `dart analyze`,
-`custom_lint`, `scripts/lint_check.sh`, `packages/**` — **is gone.** Do not run it,
-do not restore it, do not write instructions that assume it.
+The old Flutter guide's references — Melos, `pubspec.yaml`, `dart analyze`,
+`custom_lint`, `scripts/lint_check.sh` — are gone. Do not restore them.
 
 ## Building and verifying
 
 ```bash
-# Configure + build the native core (the only build in the repo):
+# Native core:
 cmake -S native/audio_core -B native/audio_core/build -G Ninja -DKITBAG_BUILD_TOOLS=ON
 cmake --build native/audio_core/build
 
 # Headless verification — no UI, no device, runs in ~a second:
 ./native/audio_core/build/metronome_verify   # passes
 ./native/audio_core/build/tuner_verify       # FAILS 37/37 — see below
+
+# TS workspace (pnpm + Turborepo) — the gates every TS task must pass:
+pnpm -w typecheck       # turbo run typecheck — 12/12 packages
+pnpm -w lint            # eslint . --max-warnings 0
+pnpm -w test            # vitest via turbo
+pnpm -w format          # prettier --check .
+pnpm -w generate:check  # generation drift guards (SPEC §13.7)
 ```
 
 `native/audio_core/tools/` renders audio offline and asserts against it. This is
@@ -60,17 +113,24 @@ bash scripts/format.sh          # fix formatting in place
 `lint.sh` runs clang-format + clang-tidy against `native/audio_core/.clang-format`
 and `.clang-tidy`; naming and magic numbers gate, the rest is advisory. The
 clang-tidy step needs the compile DB (`-DCMAKE_EXPORT_COMPILE_COMMANDS=ON`).
+`install-hooks.sh` points `core.hooksPath` at `.githooks/`, whose `pre-commit`
+runs the gate over the staged files.
 
-The **TS/React gate is written and staged** under `config/` (ESLint flat config,
-`tsconfig`, prettier) and no-ops until `package.json` exists; SPEC.md §13.6's
-`eslint-plugin-kitbag` and eval harness still land with the app. Full rules and
-the judgment layer are in `CONTRIBUTING.md`.
+The **TS/React gate is live**: root `eslint.config.mjs` runs the generic-rule
+layer plus the §13.1 import zones, and prettier + per-package tsconfigs round
+it out. `eslint-plugin-kitbag` (`packages/eslint-plugin-kitbag`) and its eval
+harness (`packages/app-shell/eval/`) carry the §13.6 rules against scenario
+fixtures; parts of the root config are explicitly documented as stopgaps for
+rules that plugin must eventually own — read its comments before touching
+them. Full rules and the judgment layer are in `CONTRIBUTING.md`. The
+judgment-level smells no linter catches — verbose comments, unclear code,
+misnamed constants — are the `code-reviewer` agent's job; see the Ralph loop.
 
 ## Architecture rules (SPEC.md §9.4)
 
-These hold whatever the stack. They have **no *running* enforcement yet** — the
-staged `config/eslint.config.mjs` encodes them as `no-restricted-imports` zones,
-but it can't run until the app exists. Hold them by hand until then:
+These hold whatever the stack and are now **enforced**: the root
+`eslint.config.mjs` encodes them as `no-restricted-imports` zones and
+`pnpm -w lint` runs them. Still worth keeping in mind:
 
 - Native bindings live in exactly one package (`core-native`).
 - The abstract contract package imports neither the shell nor any tool.
@@ -122,15 +182,16 @@ releases that never shipped. Do not reinstate it.
 
 Short version:
 
-- **Phase 0** — two verifications that block real work: F-Droid × Expo prebuild
-  policy, and whether the scheduler's lookahead absorbs a 300 ms latency offset.
-  Plus landing the design-file edits in §12.8.
-- **Phase 1** — SPEC.md §4 in full: native playback (4.1), phase anchor (4.2),
-  downbeats (4.3), mixer fixes (4.4). **Highest-leverage work in the project,
-  framework-independent, and testable headlessly.** Nothing above it is real until
-  this lands.
-- **Phase 2** — the RN skeleton, gated on proving the 60fps rule on a device.
-- **Phase 3** — rebuild the tools in dependency order.
+- **Phase 0** ✅ — F-Droid × Expo policy, 300 ms latency offset, §12.8 design
+  edits. See `docs/fdroid-expo-research.md`.
+- **Phase 1** ✅ (PR #26) — SPEC.md §4 in full: native playback, phase anchor,
+  downbeats, mixer fixes. Headlessly verified.
+- **Phase 2** ✅ (PR #39, merged 2026-07-24) — the RN skeleton; the 60fps rule
+  is proven on device (#33 device gate PASSED).
+- **Phase 3** — rebuild the tools in dependency order. **In progress on
+  `feat/phase2-skeleton`**: metronome first (M1–M9 in
+  `docs/phase3-tracker.md`; GitHub issues are the tickets). M3 (#46) is built
+  and awaiting design sign-off; see `.loop-halt`.
 
 ## Honesty rules
 

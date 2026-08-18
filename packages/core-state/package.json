@@ -5,11 +5,21 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@kitbag/core-plugin-api": "workspace:*",
     "@kitbag/core-native": "workspace:*",
-    "@kitbag/core-db": "workspace:*"
+    "@kitbag/core-db": "workspace:*",
+    "zustand": "^5.0.14"
+  },
+  "peerDependencies": {
+    "react": ">=19"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "react": "19.2.0",
+    "vitest": "^4.1.10"
   }
 }

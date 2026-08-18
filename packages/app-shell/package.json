@@ -7,7 +7,8 @@
     "start": "expo start",
     "android": "expo run:android",
     "prebuild": "expo prebuild",
-    "typecheck": "tsc --noEmit",
+    "typegen": "expo customize tsconfig.json",
+    "typecheck": "expo customize tsconfig.json && tsc --noEmit",
     "test": "vitest run --config eval/vitest.config.mjs"
   },
   "dependencies": {

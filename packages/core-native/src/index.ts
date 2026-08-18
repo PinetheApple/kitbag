@@ -15,6 +15,7 @@ export type { Spec as KitbagCommandsSpec } from './NativeKitbagCommands';
 export {
   type KitbagHostObject,
   KITBAG_HOST_OBJECT_KEY,
+  KB_STOPPED_BEAT,
   getKitbagHostObject,
 } from './host/KitbagHostObject.ts';
 export {

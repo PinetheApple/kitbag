@@ -19,8 +19,9 @@ The wiring is now drafted (staged, going live on device) rather than empty. It i
 **compiles-shaped at most** — none of it has built, because the codegen'd
 TurboModule superclass does not exist off-build and the runtime plumbing cannot be
 exercised off-device. Files: `KitbagCommandsModule.kt`, `KitbagCorePackage.kt`,
-`core-native/cpp/KitbagJni.cpp`, `bootstrapRuntime.ts`, and the drive sequence in
-`GateScreen.tsx`.
+`core-native/cpp/KitbagJni.cpp`, `app-shell/src/runtime/bootstrapRuntime.ts`
+(the install is now app-wide — `RootLayout` calls `useKitbagRuntime()`, not
+`GateScreen`), and the drive sequence in `GateScreen.tsx`.
 
 - **HostObject install on the correct runtime — the chosen mechanism.**
   `kitbagInstall(rt)` creates the single `g_engine` and installs the HostObject
@@ -82,7 +83,8 @@ sufficient; the transport must also be started.
 `metronomeStart` (mapping to `kb_metronome_start_at`) is therefore now part of
 §13.2's command spec — a recorded spec change, not a fudge. Start issues, in
 order: `start()` (opens the device / advances frames) → `setTempo(bpm)` →
-`setBeats(n)` → `setGrid(beatTimes, anchorFrame)` → `metronomeStart(anchorFrame)`.
+`setBeats(n, denominator)` → `setGrid(beatTimes, anchorFrame)` →
+`metronomeStart(anchorFrame)`.
 The grid and the transport start share ONE anchor (`frames_rendered` captured
 once), so `running_` flips at beat 0 and the sweep starts at phase 0. `setGrid`
 precedes `metronomeStart` because the engine seeds the grid cursor from the live

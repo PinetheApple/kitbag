@@ -77,6 +77,14 @@ export const radii = {
 /** LEDs are round (SPEC §12.2: "LEDs 50%"): radius = half the box. */
 export const ledRadius = '50%';
 
+/**
+ * Smallest touchable control, in dp. SPEC §12.6/§12.9 make this an acceptance
+ * criterion ("anything you touch mid-practice is ≥48dp"), not a per-screen
+ * layout choice, so it has one owner here. A control drawn smaller reaches it
+ * with hitSlop rather than by growing its box.
+ */
+export const minTouchTargetDp = 48;
+
 // --- Type (SPEC §12.2) ------------------------------------------------------
 // Two OFL faces: Space Grotesk (display, numerics, labels — true tabular
 // figures) and Inter (body/UI). Numeric readouts also set fontVariant

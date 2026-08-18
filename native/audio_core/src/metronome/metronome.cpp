@@ -43,9 +43,12 @@ void Metronome::SetTempo(double bpm) {
   commands_.Push(command);
 }
 
-void Metronome::SetBeatsPerBar(int beats) {
+// Both halves ride one command: split across two, a block boundary between the
+// pushes would sound a block of the old signature's beat rate.
+void Metronome::SetTimeSignature(int numerator, int denominator) {
   Command command{CommandType::kSetBeats};
-  command.int_a = beats;
+  command.int_a = numerator;
+  command.int_b = denominator;
   commands_.Push(command);
 }
 
@@ -229,7 +232,7 @@ bool Metronome::ApplyTrainerCommand(const Command& command) {
 bool Metronome::ApplyPatternCommand(const Command& command) {
   switch (command.type) {
     case CommandType::kSetBeats:
-      beats_per_bar_ = Clamp(command.int_a, 1, kMaxBeats);
+      SetSignatureState(command.int_a, command.int_b);
       return true;
     case CommandType::kSetSubdivision:
       subdivision_ = Clamp(command.int_a, 1, kMaxSubdivision);
@@ -256,6 +259,22 @@ void Metronome::SetAccentSlot(int32_t beat_index, int32_t accent) {
   accents_[beat_index] = static_cast<Accent>(
       Clamp(accent, 0, static_cast<int32_t>(Accent::kAccented))
   );
+}
+
+// The valid denominators are a discrete set, so clamping an out-of-set value
+// would invent a beat unit the caller never asked for; ignore it instead.
+void Metronome::SetSignatureState(int32_t numerator, int32_t denominator) {
+  beats_per_bar_ = Clamp(numerator, 1, kMaxBeats);
+  if (IsValidDenominator(denominator)) {
+    SetDenominatorPreservingPhase(denominator);
+  }
+}
+
+bool Metronome::IsValidDenominator(int32_t denominator) {
+  for (const int valid : kDenominators) {
+    if (valid == denominator) return true;
+  }
+  return false;
 }
 
 void Metronome::SetPolyState(bool enabled, int32_t beats) {
@@ -314,16 +333,29 @@ void Metronome::BeginRun() {
   running_flag_.store(true, std::memory_order_relaxed);
 }
 
-double Metronome::LatencyBeats() const {
-  return latency_offset_ms_ * bpm_ / kMsPerMinute;
+double Metronome::BeatUnitScale() const {
+  return static_cast<double>(denominator_) / kBpmReferenceDenominator;
 }
 
-// The offset is fixed in ms, so its width in beats rescales with the tempo.
-// Assigning bpm_ directly would step `position` sideways: ramping down
-// re-crosses the grid point that just fired, ramping up jumps over the next.
+double Metronome::LatencyBeats() const {
+  return latency_offset_ms_ * bpm_ * BeatUnitScale() / kMsPerMinute;
+}
+
 void Metronome::SetBpmPreservingPhase(double new_bpm) {
+  SetBeatRate(new_bpm, denominator_);
+}
+
+void Metronome::SetDenominatorPreservingPhase(int32_t denominator) {
+  SetBeatRate(bpm_, denominator);
+}
+
+// The offset is fixed in ms, so its width in beats rescales with the beat rate.
+// Assigning bpm_ or denominator_ directly would step `position` sideways:
+// slowing re-crosses the grid point that just fired, speeding up jumps the next.
+void Metronome::SetBeatRate(double new_bpm, int new_denominator) {
   const double before = LatencyBeats();
   bpm_ = new_bpm;
+  denominator_ = new_denominator;
   beat_position_ += before - LatencyBeats();
 }
 

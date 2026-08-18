@@ -5,7 +5,10 @@ All notable changes to Kitbag are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Entries below are generated from Conventional Commits by git-cliff — an entry
-cannot exist without a commit that did the work.
+cannot exist without a commit that did the work. Regenerate with
+`bash scripts/changelog.sh`, never a bare `git-cliff -o`: git-cliff has no
+config key for a start commit, so an unbounded run walks past the audit below
+and re-imports the deleted releases.
 
 ---
 
@@ -397,6 +400,175 @@ division (no int32 coercion). Constants generated from engine source
 (kSounds preset comments cross-checked vs kSoundCount, throws if absent)
 — never hand-mirrored (SPEC §13.7). Closes #30.
 
+- **core-native:** Native build integration — Gradle + iOS podspec (#31)
+
+Wire the RN app to build and link the JSI glue against the existing C++
+core without moving it (§13.8): the Android CMake add_subdirectory()s
+native/audio_core in place and app/build.gradle consumes it via
+externalNativeBuild + prefab (jsi/reactnative/fbjni); an iOS podspec
+compiles the same glue against native/audio_core/include. kitbag_api.h is
+included, never retyped (§13.7).
+
+KitbagEngine owns the single process-wide kb_engine* (§4.5); the
+HostObject value-property reads (§13.3) and the TurboModule command path
+(§13.2) both borrow that one engine, never create a second. Foreground
+service (§5.6) and notification listener (§13.9) are compile-shaped Kotlin
+SKELETON (#31) stubs — full port is Phase 3.
+
+Verified off-device: all three glue TUs pass clang -fsyntax-only against
+the real jsi.h + kitbag_api.h; kitbag_core builds under the NDK toolchain;
+typecheck 12/12, lint --max-warnings 0 clean. On-device Gradle/pod link and
+the live JSI install are #32/#33.
+
+- **app-shell:** 60fps gate screen + JS-starvation harness (#32)
+
+The §13.3 proving surface for the device gate (#33): one screen whose
+beat sweep, LED row and engine-BPM readout are driven entirely by a
+Reanimated worklet on the UI thread reading the JSI HostObject each
+frame into SharedValues — never useState, never a JS-thread hop, never
+runOnJS on the per-frame path. React state holds only human-speed values
+(target BPM, beats/bar, running).
+
+- useBeatSweep: useFrameCallback worklet reads global[KITBAG_HOST_OBJECT_KEY]
+  props (bar_phase, current_beat, current_bpm) as allocation-free JSI
+  doubles; defensively holds last value while the host is absent (nothing
+  installs it until #33).
+- BeatSweep / LedRow / EngineBpmReadout: read the SharedValues via
+  useAnimatedStyle / useAnimatedProps on the UI thread.
+- starvation: a synchronous JS-thread spin (STARVATION_MS) so #33 can
+  confirm on-device that the sweep stays smooth while JS is starved
+  (§5.8 / §13.3 corollary). Pass/fail is device-side, measured from
+  recorded output (§14.1) — not claimed proven here.
+- Constants sourced from their owners: host key from core-native, tokens
+  from core-design (§13.7). No retyped literals.
+
+Verified headless: typecheck 12/12, lint --max-warnings 0, eval 36/36.
+Device-gated to #33 (not claimed here): live HostObject install and the
+actual jitter-free 60fps measurement. CAVEAT recorded in useBeatSweep
+header — the installer must publish on the Reanimated UI-runtime global
+(separate from the JS runtime), and #33 must assert the values change,
+not merely that nothing throws, since the defensive hold hides a
+wrong-runtime install.
+
+- **core-native:** #33 device-gate runtime wiring (staged, unverified)
+
+Draft the on-device wiring that turns the #31/#32 skeleton live, so the
+#33 gate screen can show real, changing values. This is compiles-shaped
+only — none of the C++/JNI/Kotlin has built (no Gradle, no device) and no
+runtime behaviour is observed. The device build is its first real test.
+
+Runtime install (the trap): the worklet reads global.__KitbagHostObject on
+the Reanimated UI runtime, a separate runtime from the RN JS runtime.
+kitbagInstall runs natively on the JS runtime (via KitbagCommandsModule),
+then bootstrapRuntime.ts re-publishes the SAME C++ HostObject onto the UI
+runtime from JS via runOnUISync — worklets wraps a captured foreign
+jsi::HostObject as a SerializableHostObject sharing the one C++ object, so
+both runtimes borrow the single kb_engine* (§4.5). Whether v0.7.4 actually
+shares it is the sole genuine on-device unknown; the gate asserts it by
+requiring the values to CHANGE, not merely that nothing throws.
+
+- **app-shell:** Live tempo on the gate screen while running (#33)
+
+The ± steppers only updated React tempo state; setTempo reached the engine
+only at Start. Wire the steppers to issue getKitbagCommands().setTempo(next)
+live when running, via a guarded trySetEngineTempo helper mirroring the other
+command helpers (no second call path, no retyped constants). This matches
+SPEC §5.3 (values apply live over a running metronome) and lets the device
+verify §5.8's glitch-free mid-bar tempo change (§14.1).
+
+Handlers read tempo directly with [tempo, running] deps rather than a
+functional updater with a side effect (which StrictMode double-invokes), so
+the engine always gets the exact next bpm gated on current running state.
+Frame path (useBeatSweep/worklet) untouched — human-speed React state only
+(§13.4). typecheck + lint --max-warnings 0 green; live ramp is device-observed.
+
+- **core-state:** Metronome config store — human-speed intent, 1:1 commands, no realtime shadow (#40)
+
+First Phase 3 (F1 metronome, SPEC §5) task. A Zustand store in core-state
+holding the human-speed metronome config and mapping every mutation 1:1 onto
+the TurboModule commands. The store is intent; the engine is truth.
+
+- §13.3: no realtime value (current_beat/bar_phase/current_bpm/frames_rendered)
+  is held or shadowed. start() reads frames_rendered once via an injected
+  nowFrame anchor and never stores it. A test fails if any realtime field leaks.
+- §5.3 setTempo cancels a running ramp; pause re-arms nothing (pause != stop);
+  §5.2 cycleAccent = accent -> normal -> mute -> accent.
+- Clamps: BPM 20-400, subdivision 1-16, denominator in {2,4,8,16}.
+- Sound id range-guarded against the generated engine count (§13.7); names/count
+  come from the engine, not a local list.
+- 14 vitest, every invariant sabotage-proven (removing a behaviour breaks its
+  test); typecheck 12/12; lint --max-warnings 0.
+
+Extends the #29 TurboModule Spec with metronomeStop/setRamp/setBarMute — real
+kb_metronome_* ABI functions (kitbag_api.h) the Spec had omitted, verified by
+ralph against the header. Not fabricated bindings.
+
+Honest native gaps, stored as intent only (no silent no-op that looks wired):
+- D1 denominator has no ABI parameter yet (§17 D1 unbuilt) — setBeats sends the
+  numerator; denominator is validated intent. A native follow-up owns the C API.
+- perAccentSounds (§5.3 per-accent-level sound) and countInBars have no engine
+  command — store-only intent applied by a future start screen.
+
+- **audio-core:** The time-signature denominator reaches the engine (#41)
+
+kb_metronome_set_beats was numerator-only, so 7/8 and 7/4 produced an
+identical click. It now takes the denominator too (SPEC §17 D1), and the
+scheduler's beat interval is a function of both:
+
+    interval = (60 / bpm) * (4 / denominator)
+
+BPM stays quarter-note referenced, so 7/8 at 120 clicks twice as fast as
+7/4 at 120 and 6/8 clicks six times per bar. A product survey of hardware
+and app metronomes (docs/metronome-bpm-denominator-research.md) found the
+well-regarded ones pair this with a separate click-unit control so compound
+meters can click the dotted-note pulse; that was considered and declined, so
+6/8 needs manual BPM arithmetic for a two-click feel. Recorded in
+docs/decisions.md.
+
+- **core-native,core-state:** Wire denominator through the TS/Kotlin TurboModule chain
+
+The C half landed in #41 (df2c937): kb_metronome_set_beats takes
+(beats_per_bar, denominator) and commandSetBeats carries both, with the beat
+interval (60/bpm) x (4/denominator). The TS/Kotlin chain still sent only the
+numerator, and the JNI passed a kDenominatorUnchanged = 0 stub, so a 7/8 time
+signature clicked at 7/4 on device.
+
+- NativeKitbagCommands.ts: setBeats gains a denominator: Int32.
+- KitbagCommandsModule.kt: setBeats/nativeSetBeats take the second parameter.
+- KitbagJni.cpp: stub removed, jint denominator forwarded to commandSetBeats.
+  The signature has to grow with the Kotlin external fun or the JNI symbol no
+  longer resolves.
+- core-state store: dispatches the validated denominator, not the raw argument,
+  so an out-of-set value sends the retained one rather than relying on the
+  engine's own fallback.
+- GateScreen: passes its default denominator; required to keep the call typed.
+
+Comments in store.ts, the test title, docs/decisions.md and the #33 runbook all
+claimed the denominator had no C API. That has been false since df2c937.
+
+kDenominators stays a store-owned const: kitbag_api.h documents the valid set in
+prose only, with no KB_DENOMINATOR_* macro for the generator to read, so there
+is no engine constant to own it yet.
+
+- **tool-metronome,app-shell:** Metronome performance surface (§5.2, #46)
+
+Build the metronome's main screen: swipe-anywhere tempo, preset steppers,
+the beat-LED row editor, the poly row, the bar sweep, the practice pill, the
+tap-to-type numpad and the badge steppers (SPEC §5.2, design §02).
+
+The two 60fps values — bar_phase and current_beat — are read by a Reanimated
+worklet from the JSI HostObject and never touch React state (§13.3), following
+the pattern #33 proved on device. Everything else on the screen is human-speed
+state from the core-state store, and every mutation goes through the store's
+1:1 engine commands.
+
+Gesture and layout arithmetic lives in tool-metronome/src/logic as pure
+modules so it is testable with no device and no renderer: the ±1 BPM per 8dp
+drag with bound re-anchoring, tap-tempo averaging, D9 LED grouping and wrap,
+the numpad state machine, subdivision glyphs, the tempo marking table, the
+practice clock and the touch-target arithmetic. 54 vitest tests; 18 sabotage
+mutations were run against them and all 18 were caught.
+
 
 ### Fixed
 
@@ -422,7 +594,7 @@ metronome_verify green; tuner_verify unchanged at 37/37. See SPEC.md §4.6.
 
 - **audio_core:** Pin the untested paths; restore the mixer defect note
 
-Applies two review rounds on dedf7f0.
+Applies two review rounds on 7e01a36.
 
 A test claimed coverage it did not have. TestGridStartAtKeepsSubdivisionCursor
 was written to pin BeginPendingStart's observed_generation_ restore, but
@@ -698,5 +870,126 @@ Review findings from ralph + code-reviewer on wave 2:
   pinning the decode to the producer's bit math (21 -> 22 tests).
 - Nits: dropped a duplicated ownership sentence, named the tuner-row
   shape in the constant generator. Generated output byte-unchanged.
+
+- **core-native:** Make it an autolinked Android library so codegen runs (#33)
+
+First real device build of #33 (Expo prebuild, RN 0.83 New Arch, Android)
+failed at :app:compileDebugKotlin — NativeKitbagCommandsSpec unresolved,
+every override in KitbagCommandsModule "overrides nothing". Root cause:
+core-native had a codegenConfig but no Android Gradle module, so RN's
+New-Arch codegen never generated or compiled the TurboModule spec base
+class; the hand-written Kotlin in app-shell had nothing to extend.
+
+Make @kitbag/core-native a proper autolinked RN Android library (the way
+RN 0.83 wires third-party TurboModules — mirrors react-native-worklets),
+which also restores SPEC §13.1: the JSI/TurboModule surface, Kotlin and
+all, is owned by core-native, not app-shell.
+
+- core-native/android/build.gradle (new): com.android.library + the react
+  plugin with codegen enabled, prefab, externalNativeBuild → the module's
+  own CMakeLists (so kitbag_core/kitbag_jsi build exactly once, here, not
+  also via the app), abiFilters arm64-v8a.
+- codegenConfig.android.javaPackageName = com.kitbag.corenative.
+- Moved KitbagCommandsModule.kt / KitbagCorePackage.kt into the library
+  under com.kitbag.corenative; dropped the retyped NAME + getName override
+  (the generated spec owns both — §13.7).
+- app-shell: removed the externalNativeBuild that pointed at core-native's
+  CMake (now the library's job), removed the manual add(KitbagCorePackage())
+  from MainApplication (autolinking registers it — adding it too would
+  register the TurboModule twice), narrowed reactNativeArchitectures to
+  arm64-v8a (matches the gate device; also sidesteps a host ld.gold/LLVMgold
+  LTO probe failure on armeabi-v7a).
+- KitbagJni.cpp: renamed all 14 JNI entrypoints com_kitbag_app ->
+  com_kitbag_corenative to match the class's new package (name-based
+  binding, no RegisterNatives) — without this assembleDebug links and
+  packages fine but UnsatisfiedLinkErrors on the first command at runtime.
+- .gitignore: exclude .cxx/ (CMake intermediates); ignore packages/app-shell/ios
+  (out of scope, Linux dev / Android-only gate, regenerated by prebuild).
+
+No second engine, no second .so, no retyped constants (§4.5, §13.1, §13.7).
+
+Verified with the real toolchain: :kitbag_core-native:compileDebugKotlin and
+:app:compileDebugKotlin both BUILD SUCCESSFUL; nm -D on the built
+libkitbag_jsi.so shows all 14 JNI symbols carry com_kitbag_corenative and
+zero carry com_kitbag_app. NOT verified: full assembleDebug/APK packaging
+and on-device runtime (the JSI install + command dispatch remain the #33
+device gate). Reviews: ralph (caught the codegen gap, the JNI package
+mismatch, and the ABI reconcile — all fixed), one-focused build-graph pass.
+
+- **core-native:** 16 KB-align our native libs for Android 15+ devices (#33)
+
+The device (16 KB page size) rejected the APK at install: our libkitbag_jsi.so
+and libkitbag_core.so were linked by NDK 27.1 with 4 KB (0x1000) ELF LOAD
+segment alignment. Add -Wl,-z,max-page-size=16384 via CMAKE_SHARED_LINKER_FLAGS
+in the core-native Android module's externalNativeBuild args (Android-only seam,
+not the shared native/audio_core CMakeLists which also builds headless host
+tools). A global shared-linker flag reaches every SHARED target in the configure,
+covering both libs in one shot; ANDROID_STL arg preserved.
+
+- **app-shell:** Gate runs the metronome in constant-tempo mode, no grid (#33)
+
+The gate fed the metronome a grid at Start (setGrid), which puts the engine in
+song-follow mode: bar_phase is driven by the fixed grid beat-times, so live
+kb_metronome_set_tempo can't move the sweep — only stop+restart (rebuilding the
+grid) did. Confirmed by tracing metronome_render.cpp: with a grid present +
+running, RenderGridBeat owns the beat clock and AdvanceConstantTempo is skipped
+(dispatch at :332); bar_phase comes from GridSeconds against the frame clock
+(metronome_grid.cpp), where bpm_ never appears.
+
+Drop setGrid. Start is now start() -> setTempo -> setBeats ->
+metronomeStart(frames_rendered). metronomeStart flips running_ and, with no
+grid, PublishBlockMirrors advances bar_phase from the tempo — so live setTempo
+(wired in 1f25d05) now moves the sweep, ramps work, and it starts phase-aligned
+at beat 0. This is also the faithful metronome path: SPEC §5 is tempo-driven;
+grids are the song-playback mode (§4.2, kitbag_api.h grid-precedence contract).
+
+Removed dead code: GATE_GRID_BEATS, SECONDS_PER_MINUTE, the beatTimesSec build,
+and the grid/shared-anchor comment block (rewritten for constant tempo).
+typecheck + lint --max-warnings 0 green; on-device behavior is the user's to
+observe (#33). Frame path untouched (§13.4).
+
+- **core-native,core-state:** Generate the denominator set from the engine
+
+Review fixes on 2e1b2d6 and 78a0102.
+
+The constant generator now parses Metronome::kDenominators, kMaxBeats and
+kBpmReferenceDenominator (§13.7), so the store derives VALID_DENOMINATORS and
+the Denominator type from the engine instead of hand-retyping {2,4,8,16}.
+setBeats gains the upper bound it lacked: it clamps to KB_MAX_BEATS rather than
+holding 99 beats while the engine plays 16 (sabotage-proven vitest).
+
+Docs corrected: D1's command chain is closed, D1 itself is not (the M3 stepper
+is unbuilt), the chain is proven by vitest and typecheck only with no device
+run, and grid/song-follow mode ignores the denominator by design.
+The CHANGELOG entry replaces a file-by-file narration.
+
+Prettier gate: format.sh calls `pnpm -w format:write` instead of a swallowed
+npx invocation, READMEs join the ignored prose, and app.json is formatted
+rather than exempted.
+
+- **core,scripts:** Restore denominator doc values, scope staged formatting
+
+kb_metronome_set_beats' header doc pointed C consumers at
+Metronome::kDenominators, a C++ internal they cannot read; list {2, 4, 8, 16}
+explicitly and keep the C++ owner as a pointer. Reflow the ragged wrap in the
+same block.
+
+scripts/format.sh ran the whole-tree prettier script in --staged mode and never
+re-staged its writes, so a pre-commit could dirty untouched TS files. Format
+only the staged, prettier-supported files and git add them, matching the
+clang-format branch.
+
+Note at both DEFAULT_DENOMINATOR sites that 4/4 only coincides with the engine's
+BPM reference note.
+
+- **tool-metronome:** Match §5.2 screen to design-file tokens (#46)
+
+- **app-shell,tool-metronome:** Generate typed routes before typecheck; format
+
+typedRoutes is on and .expo/types is gitignored, so app-shell's typecheck
+failed on a fresh checkout once the /metronome route landed — turbo's cache
+replayed a stale pass and hid it. Regenerate the route types as part of
+typecheck (expo customize tsconfig.json, idempotent and git-clean).
+StepBadge.tsx re-formatted per prettier.
 
 

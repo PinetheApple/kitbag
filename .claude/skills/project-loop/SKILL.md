@@ -1,6 +1,6 @@
 ---
 name: project-loop
-description: Drives the whole Kitbag build across all phases (SPEC.md §15) autonomously. Stateless per iteration — each invocation reconstructs state from disk (SPEC, tracker, issues, decisions log), runs ONE FULL WAVE to completion (parallel tracks dispatched in one blocking multi-Agent message → review → fix → wave gate → merge → persist), then exits for an external driver to re-invoke fresh, so context never grows. Never backgrounds workers or polls across invocations. Stops only at four boundaries it cannot self-clear. Use when the user says "run/drive/build the whole project", "build to completion", or "keep going across phases". For a single Phase-1 issue, use phase1-loop.
+description: Drives the whole Kitbag build across all phases (SPEC.md §15) autonomously. Stateless per iteration — each invocation reconstructs state from disk (SPEC, tracker, issues, decisions log), runs ONE FULL WAVE to completion (parallel tracks dispatched concurrently and awaited as a set → review → fix → wave gate → merge → persist), then exits for an external driver to re-invoke fresh, so context never grows. Never backgrounds workers or polls across invocations. Stops only at four boundaries it cannot self-clear. Use when the user says "run/drive/build the whole project", "build to completion", or "keep going across phases". For a single Phase-1 issue, use phase1-loop.
 ---
 
 # Project loop
@@ -17,16 +17,32 @@ grows. If a resume needs memory of a prior run, the on-disk state was left incom
 fix the state.
 
 **A wave is atomic and synchronous — never backgrounded.** Dispatch every parallel
-track in a single multi-Agent message: the Agent tool runs them concurrently *and
-blocks* until all return. Then review, fix, gate, merge, persist — all in this one
-invocation. **Never** spawn a detached `claude -p` worker in a worktree and poll for its
-commit across invocations. That anti-pattern turned one wave into 8 full-context
-poll-invocations (512k context, 34M cache-read each) and stranded the work when
-re-invocation stopped — fixes committed in worktrees, never merged. Subagents block by
-design; use them. Do not exit while any dispatched work is unfinished.
+track, then block until *all* of them have returned, before reviewing, fixing, gating,
+merging and persisting — all in this one invocation.
+
+The intent is harness-neutral; only the call shape differs:
+
+| Harness | Dispatch N tracks | Block for all |
+|---------|-------------------|---------------|
+| Claude Code | one message containing N concurrent `Agent` calls | the message blocks until every call returns |
+| pi | N `subagent_spawn` calls (each returns an id immediately) | one `subagent_wait` on all N ids |
+
+On pi the spawns are fire-and-forget, so the blocking step is explicit: **collect the
+ids and `subagent_wait` on the whole set.** pi also enforces a global concurrency cap
+(5); a wider wave simply queues, which is fine — `subagent_wait` still returns only
+once every track has settled.
+
+**Never** spawn a detached worker in a worktree and poll for its commit across
+invocations. That anti-pattern turned one wave into 8 full-context poll-invocations
+(512k context, 34M cache-read each) and stranded the work when re-invocation stopped —
+fixes committed in worktrees, never merged. Both harnesses give you a blocking
+primitive; use it. Do not exit while any dispatched work is unfinished.
+
+The external driver is a plain re-invocation loop, in whichever harness you launched:
 
 ```bash
 while :; do claude -p "/project-loop … run one full wave, then stop" || break; done
+while :; do pi -p "/skill:project-loop … run one full wave, then stop" || break; done
 # For unattended runs, detach so a closed terminal can't kill it mid-wave:
 #   nohup bash scripts/run-loop.sh --unattended > loop.log 2>&1 &
 ```
@@ -41,11 +57,13 @@ while :; do claude -p "/project-loop … run one full wave, then stop" || break;
    halt (see Stop-points). Else take the largest **file-disjoint, single-owner,
    unblocked** set (see Parallelism). No unblocked task left → project done: write
    `.loop-halt` with the reason, report, exit.
-3. **Run it — one blocking multi-Agent dispatch.** Fire every task's pass in a *single*
-   message of concurrent Agent calls (per-phase executor), each in its own worktree
-   (`bash scripts/worktree.sh create <track> main`). The call blocks until all return —
-   do not exit here. Stay thin on the main thread — ask subagents for verdicts, not
-   transcripts. Log any decide-and-record to `docs/decisions.md`.
+3. **Run it — dispatch the whole set, then block on all of it.** Fire every task's pass
+   concurrently (per-phase executor), each in its own worktree
+   (`bash scripts/worktree.sh create <track> main`) — one message of concurrent `Agent`
+   calls on Claude Code, or N `subagent_spawn` calls followed by a single
+   `subagent_wait` on every returned id on pi. Do not exit here; wait for all of them.
+   Stay thin on the main thread — ask subagents for verdicts, not transcripts. Log any
+   decide-and-record to `docs/decisions.md`.
 4. **Wave gate.** Merge the set to the feature branch; run the full suite on the
    integrated tree (see Wave gate). Red on green slices = an integration finding:
    file, fix, re-gate. Never advance a phase on per-slice green.
@@ -95,7 +113,8 @@ Orchestrator is all-phase; the per-task pass is per-phase.
 
 At any of these, write the reason to `.loop-halt` in the repo root **before exiting** —
 `printf '%s\n' "stop-point 1: #14 §4.3-vs-§11 ownership" > .loop-halt`. That file is the
-only reliable halt signal: `claude -p` exits 0 on normal completion, so a narrated
+only reliable halt signal: both `claude -p` and `pi -p` exit 0 on normal completion,
+so a narrated
 stop-point is invisible to the driver otherwise, and the unattended loop re-invokes on
 the blocker. (The driver also breaks if a wave adds no commit — belt and suspenders —
 but the sentinel is what carries the *reason*.)

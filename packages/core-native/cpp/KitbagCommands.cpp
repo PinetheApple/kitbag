@@ -31,6 +31,8 @@ void commandMetronomeStart(double anchorFrame) {
   kb_metronome_start_at(commandEngine(), static_cast<uint64_t>(anchorFrame));
 }
 
+void commandMetronomeStop() { kb_metronome_stop(commandEngine()); }
+
 void commandSetTempo(double bpm) { kb_metronome_set_tempo(commandEngine(), bpm); }
 
 int32_t commandSetGrid(const double* beatTimesSec, int32_t count, double anchorFrame) {
@@ -40,8 +42,8 @@ int32_t commandSetGrid(const double* beatTimesSec, int32_t count, double anchorF
                                static_cast<uint64_t>(anchorFrame));
 }
 
-void commandSetBeats(int32_t beatsPerBar) {
-  kb_metronome_set_beats(commandEngine(), beatsPerBar);
+void commandSetBeats(int32_t beatsPerBar, int32_t denominator) {
+  kb_metronome_set_beats(commandEngine(), beatsPerBar, denominator);
 }
 void commandSetSubdivision(int32_t subdivision) {
   kb_metronome_set_subdivision(commandEngine(), subdivision);
@@ -61,6 +63,13 @@ void commandSetVolume(double volume) {
 }
 void commandSetLatencyOffset(double latencyMs) {
   kb_metronome_set_latency_offset(commandEngine(), latencyMs);
+}
+
+void commandSetRamp(bool enabled, double startBpm, double endBpm, int32_t bars) {
+  kb_metronome_set_ramp(commandEngine(), enabled ? 1 : 0, startBpm, endBpm, bars);
+}
+void commandSetBarMute(bool enabled, int32_t playBars, int32_t muteBars) {
+  kb_metronome_set_bar_mute(commandEngine(), enabled ? 1 : 0, playBars, muteBars);
 }
 
 int32_t commandLoadTrack(int32_t track, const char* path) {

@@ -50,6 +50,8 @@ description: |
 model: inherit
 color: cyan
 tools: ["Read", "Edit", "Write", "Grep", "Glob", "Bash"]
+harness:
+  prefer: claude
 ---
 
 You are a React Native engineer working on Kitbag, a musician's practice toolkit.

@@ -34,7 +34,7 @@ void TestLatencyOffsetKeepsBeatZero() {
 void CheckMidRunOffsetChange(double new_offset) {
   kitbag::Metronome metronome;
   metronome.SetTempo(120.0);
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   metronome.SetBarMute(true, 1, 1);
   metronome.Start();
 
@@ -65,13 +65,13 @@ void TestLatencyOffsetChangedMidRun() {
 // Ramping down is the direction where a regression double-fires.
 void TestLatencyOffsetSurvivesRamp() {
   kitbag::Metronome baseline;
-  baseline.SetBeatsPerBar(4);
+  baseline.SetTimeSignature(4, 4);
   baseline.SetRamp(true, 240.0, 120.0, 1);
   baseline.Start();
   const auto without = RenderAndDetectOnsets(baseline, kSampleRate * 5);
 
   kitbag::Metronome offset;
-  offset.SetBeatsPerBar(4);
+  offset.SetTimeSignature(4, 4);
   offset.SetLatencyOffset(100.0);
   offset.SetRamp(true, 240.0, 120.0, 1);
   offset.Start();
@@ -96,7 +96,7 @@ void TestLatencyOffsetSurvivesRamp() {
 void TestGridComposesWithLatency() {
   for (const double offset_ms : {100.0, -50.0}) {
     kitbag::Metronome metronome;
-    metronome.SetBeatsPerBar(4);
+    metronome.SetTimeSignature(4, 4);
     auto grid = MakeShiftedGrid(8, 0.5, 0.5);
     const auto times = grid->beat_times_sec;
     metronome.SetLatencyOffset(offset_ms);
@@ -122,7 +122,7 @@ void TestGridComposesWithLatency() {
 // re-anchor too, not only before it.
 std::vector<int64_t> RunGridReanchorWithOffset(double offset_ms) {
   kitbag::Metronome metronome;
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   metronome.SetLatencyOffset(offset_ms);
   metronome.SetGrid(MakeShiftedGrid(12, 0.5, 0.5), 0, true);
   metronome.Start();
@@ -198,7 +198,7 @@ double PeakInFrameWindow(kitbag::Metronome& metronome, int64_t lo, int64_t hi) {
 // so beats 0 and 1 both sound cleanly (Start would swallow beat 0 under offset).
 double MuteCascadePeak(kitbag::Accent beat_one, int64_t lo, int64_t hi) {
   kitbag::Metronome metronome;
-  metronome.SetBeatsPerBar(4);
+  metronome.SetTimeSignature(4, 4);
   metronome.SetSubdivision(2);
   metronome.SetLatencyOffset(100.0);
   metronome.SetAccent(1, beat_one);

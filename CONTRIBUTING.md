@@ -27,8 +27,12 @@ claim in this repo, and §15 for what to work on.
 
 ## Workflow
 
-Today the C++ core is the only buildable target — the React Native app doesn't
-exist yet (SPEC.md §13).
+Two buildable targets: the C++ core (CMake) and the React Native app (pnpm +
+Turborepo + Gradle). Both have gates, and they are separate.
+
+**Open an issue before you start**, with `## Acceptance criteria` in the body, and
+put anything you will run twice into `scripts/`. [AGENTS.md](AGENTS.md) holds the
+full working contract and the reasons behind it.
 
 1. Native changes: build and run the verify tools.
    ```sh
@@ -51,10 +55,19 @@ exist yet (SPEC.md §13).
 4. PRs against `main`. Conventional commit subjects (`feat:`, `fix:`, `chore:`);
    the body explains *why* when non-obvious.
 
-The RN toolchain (pnpm + Turborepo, `eslint-plugin-kitbag`, `--max-warnings 0`,
-ported eval harness) lands with the app — SPEC.md §13.1 and §13.6. The ESLint
-flat config, `tsconfig` and prettier config are already written and staged under
-`config/` (see `config/README.md`); they wire in when the app scaffolds.
+TS/React changes run their own gate set, all of which CI also runs:
+
+```sh
+pnpm -w typecheck        # turbo run typecheck — 12/12 packages
+pnpm -w lint             # eslint . --max-warnings 0
+pnpm -w test             # vitest via turbo
+pnpm -w format           # prettier
+pnpm -w generate:check   # generation drift guards (SPEC.md §13.7)
+```
+
+Anything that reaches a screen or the native boundary needs a device before it can
+be called done. A green build does not prove the JNI/TurboModule chain is intact —
+it was broken from M1 to M3 while every headless gate stayed green.
 
 ## Code style
 
