@@ -8,6 +8,48 @@
 > the other is a bug. Read SPEC.md §2 before believing any status claim anywhere in
 > the repo.
 
+## Working on a task
+
+**Every task starts as a GitHub issue.** Before writing code, open one (or find
+the existing one) and write down what "done" means. An issue with no acceptance
+criteria produces work that cannot be reviewed, only argued about. The 2026-07-17
+audit (SPEC.md §2) found a codebase whose own docs and changelog misdescribed it;
+written-down criteria are what keep a status claim checkable.
+
+1. **Issue first.** Title states the observed defect or the desired behaviour, not
+   the diagnosis. Body carries `## Acceptance criteria` as a checklist. If a task
+   is worth doing across more than one sitting, it is worth an issue.
+2. **Read the spec, not the ticket alone.** The issue points at SPEC.md sections
+   and, for anything with a screen, the binding file in `design/` (§12 precedence).
+   The issue is the ticket; SPEC.md is the contract.
+3. **Verify it, and say what you ran.** Gates green is a claim; the output is the
+   evidence. A criterion that needs a device needs a device — the JNI/TurboModule
+   chain was broken from M1 to M3 while every headless gate stayed green.
+4. **Close the issue against its criteria**, ticking only what is actually true.
+
+### Repeatable actions belong in a script
+
+If an action will be performed more than once — building, installing to a device,
+running the gate set, cutting a release — it goes in `scripts/`, not in a
+paragraph of instructions. A remembered command sequence drifts silently: the step
+someone forgets is the gate that stops running, and nobody notices until it
+matters on a device.
+
+Scripts here take `-h|--help`, use named exit codes rather than bare integers, and
+print what failed rather than only that something did. `ls scripts/` is the
+inventory; the open issues carry what is still missing.
+
+### Commits and PRs
+
+Conventional commit subjects (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`) —
+`cliff.toml` parses them into `CHANGELOG.md`, so a mislabelled subject lands in
+the wrong section of a published changelog. The body explains *why* when the
+change is not self-evident.
+
+PRs state what changed, copy the issue's acceptance criteria with only the
+satisfied ones ticked, and record verification plainly: what was run, what it
+printed, and what still needs a device.
+
 ## What is in this repo right now
 
 The Flutter app was **deleted on 2026-07-17** (SPEC.md §13 — the stack is React

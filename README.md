@@ -22,7 +22,9 @@ no caps, no paywalls, ever.
   which it turned out to be.
 - **React Native + TypeScript** UI, reached via JSI — decided 2026-07-17
   ([SPEC.md](SPEC.md) §13). Commands go through a TurboModule; polled realtime
-  reads go through a JSI HostObject. **Not yet written.**
+  reads go through a JSI HostObject. Builds and runs on Android; the 60fps read
+  path is proven on a device (§13.3). The metronome is the first tool rebuilt;
+  the home hub is still a skeleton.
 - **Internal plugin system** — every tool declares itself to a shell that is just
   a registry. First-party only; no public SDK yet.
 
@@ -31,14 +33,18 @@ Android is the primary target. iOS is secondary (play-along is Spotify-only ther
 session, no foreground service.
 
 ```
-native/audio_core   # C++ engine (miniaudio), CMake — the only buildable thing today
+native/audio_core   # C++ engine (miniaudio), CMake
+packages/           # React Native app — pnpm workspaces + Turborepo
 SPEC.md             # source of truth
 design/             # four binding design specs
 legacy/             # Flutter-era files the spec can't reconstruct (reference only)
-docs/               # tuner research (read its warning banner)
+docs/               # trackers, decisions, research (read the tuner warning banner)
+scripts/            # repeatable actions — lint, format, worktrees, changelog
 ```
 
 ## Building
+
+### Native core
 
 Requirements: CMake ≥ 3.22, Ninja, clang.
 
@@ -52,8 +58,21 @@ cmake --build native/audio_core/build
 ```
 
 The verify tools render audio offline and assert against it — no UI, no device.
-This is why the core is testable before the app exists, and it is the cheapest
-signal in the project.
+This is why the core was testable before the app existed, and it is still the
+cheapest signal in the project.
+
+### App
+
+Requirements: Node (see `.nvmrc` if present), pnpm, Android SDK + NDK.
+
+```sh
+pnpm install
+pnpm -w typecheck && pnpm -w lint && pnpm -w test
+```
+
+Android builds run from `packages/app-shell/android` via Gradle. Anything that
+touches a screen or the native boundary needs verifying on a real device — the
+headless gates cannot see a broken JNI chain.
 
 ## License
 
