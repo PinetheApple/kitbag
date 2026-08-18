@@ -1,6 +1,6 @@
 // Transport (design §02): the play/stop key and the ◴ practice-reset twin of
-// the pill. The ≡ key the mock draws opens the setlist, which is M5 — it is not
-// drawn here rather than drawn dead.
+// the pill. The ≡ key the mock draws opens the setlist, which is M5 — its slot
+// is held empty rather than drawn dead.
 
 import { resolveTheme, typography } from '@kitbag/core-design';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -33,11 +33,12 @@ export function Transport({
 }: TransportProps) {
   return (
     <View style={styles.row}>
+      {/* The M5 setlist key's slot, reserved and inert: without it the three-key
+          row of design §02 collapses to two and play sits left of centre. */}
+      <View style={styles.reservedSlot} />
       <Pressable style={styles.play} onPress={onToggle}>
         <Text style={styles.playGlyph}>{running ? '■' : '▶'}</Text>
       </Pressable>
-      {/* ◴ keeps the right-hand slot design §02 gives it; the left slot's ≡
-          opens the setlist, which is M5. */}
       <Pressable
         style={styles.secondary}
         hitSlop={SECONDARY_HIT_SLOP}
@@ -67,6 +68,10 @@ const styles = StyleSheet.create({
   playGlyph: {
     color: theme.onAccent,
     fontSize: PLAY_GLYPH_SIZE,
+  },
+  reservedSlot: {
+    width: SECONDARY_SIZE,
+    height: SECONDARY_SIZE,
   },
   secondary: {
     width: SECONDARY_SIZE,

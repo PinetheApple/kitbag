@@ -18,7 +18,7 @@ import {
   KB_STOPPED_BEAT,
 } from '@kitbag/core-native';
 import { BPM_BOUNDS, useMetronome } from '@kitbag/core-state';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { GestureDetector } from 'react-native-gesture-handler';
 import { StyleSheet, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
@@ -56,7 +56,19 @@ function polyAccents(beats: number): readonly KB_ACCENT[] {
   );
 }
 
-export function MetronomeScreen() {
+/** Window insets in dp. The shell measures them: a tool may not depend on the
+ * shell's safe-area library (§13.1), and portrait-only makes top/bottom the
+ * whole story (app.json `orientation`). */
+export interface ScreenInsets {
+  readonly top: number;
+  readonly bottom: number;
+}
+
+export interface MetronomeScreenProps {
+  readonly insets: ScreenInsets;
+}
+
+export function MetronomeScreen({ insets }: MetronomeScreenProps) {
   const bpm = useMetronome((s) => s.bpm);
   const beatsPerBar = useMetronome((s) => s.beatsPerBar);
   const denominator = useMetronome((s) => s.denominator);
@@ -161,9 +173,19 @@ export function MetronomeScreen() {
     setNumpadOpen(false);
   }, []);
 
+  // Intended to keep the transport clear of the gesture bar under edge-to-edge;
+  // not measured on a device.
+  const insetPadding = useMemo(
+    () => ({
+      paddingTop: SCREEN_PADDING + insets.top,
+      paddingBottom: SCREEN_PADDING + insets.bottom,
+    }),
+    [insets.top, insets.bottom],
+  );
+
   return (
     <GestureDetector gesture={tempoSwipe}>
-      <View style={styles.screen}>
+      <View style={[styles.screen, insetPadding]}>
         <PracticePill elapsedMs={elapsedMs} onReset={resetPractice} />
 
         <SwipeTempoZone
@@ -236,7 +258,7 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: theme.bg,
-    padding: SCREEN_PADDING,
+    paddingHorizontal: SCREEN_PADDING,
     gap: SCREEN_GAP,
   },
   card: {

@@ -1,4 +1,4 @@
-// Runtime install for the §13.3 60fps read path — staged for #33, NOT verified.
+// Runtime install for the §13.3 60fps read path.
 //
 // THE CHOSEN MECHANISM (and why). `kitbagInstall(rt)` must make
 // `global.__KitbagHostObject` resolve on the runtime the worklet reads. The
@@ -24,16 +24,8 @@
 //     second engine. This is the same shape Reanimated uses to share its own
 //     SharedValue host objects onto the UI runtime.
 //
-// UNCERTAINTY, to be settled by the device build (do not read as proven):
-//   1. That worklets v0.7.4 actually takes the SerializableHostObject branch for
-//      our HostObject at capture time (source says yes; runtime says nothing yet).
-//   2. That KitbagCommandsModule's constructor installed on the JS runtime before
-//      this runs (getKitbagCommands() forces construction synchronously on the JS
-//      thread, so getKitbagHostObject() below should find it — unverified).
-//   3. The native runtime-pointer plumbing under bridgeless New Arch (see
-//      KitbagCommandsModule.kt).
-// The #33 assertion is that values CHANGE on device — a "nothing threw" run can
-// still be a wrong-runtime (frozen) install.
+// #33 verified this on a physical Android device on 2026-07-24: the sweep
+// tracks live tempo through a 3 s JS starvation (docs/phase2-tracker.md, Wave 5).
 
 import {
   getKitbagCommands,
@@ -41,6 +33,7 @@ import {
   KITBAG_HOST_OBJECT_KEY,
   type KitbagHostObject,
 } from '@kitbag/core-native';
+import { useEffect } from 'react';
 import { runOnUISync } from 'react-native-worklets';
 
 // Keyed off the single owned host key (§13.7) — never a retyped literal.
@@ -77,4 +70,27 @@ export function bootstrapKitbagRuntime(): void {
   });
 
   installed = true;
+}
+
+/**
+ * Mount-time install for the whole shell, guarded so a JS-only build still
+ * renders (sweep and LEDs hold, per useBeatSweep's caveat). Called from the root
+ * layout so every route reads a published HostObject, not just the gate — a
+ * screen that installs its own would be a second owner of a once-per-process
+ * install (§13.7). Setup, not a frame driver: the §13.3 ban on effect-driven
+ * animation does not cover a once-at-mount install.
+ */
+export function useKitbagRuntime(): void {
+  useEffect(() => {
+    try {
+      bootstrapKitbagRuntime();
+    } catch (error) {
+      // RootLayout never unmounts, so this is the only attempt per process; an
+      // unreported failure is indistinguishable from a frozen-at-0 sweep.
+      console.warn(
+        '[kitbag] runtime install failed (JS-only build?); §13.3 reads hold at 0',
+        error,
+      );
+    }
+  }, []);
 }

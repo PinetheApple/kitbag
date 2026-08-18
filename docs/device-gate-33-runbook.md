@@ -19,8 +19,9 @@ The wiring is now drafted (staged, going live on device) rather than empty. It i
 **compiles-shaped at most** — none of it has built, because the codegen'd
 TurboModule superclass does not exist off-build and the runtime plumbing cannot be
 exercised off-device. Files: `KitbagCommandsModule.kt`, `KitbagCorePackage.kt`,
-`core-native/cpp/KitbagJni.cpp`, `bootstrapRuntime.ts`, and the drive sequence in
-`GateScreen.tsx`.
+`core-native/cpp/KitbagJni.cpp`, `app-shell/src/runtime/bootstrapRuntime.ts`
+(the install is now app-wide — `RootLayout` calls `useKitbagRuntime()`, not
+`GateScreen`), and the drive sequence in `GateScreen.tsx`.
 
 - **HostObject install on the correct runtime — the chosen mechanism.**
   `kitbagInstall(rt)` creates the single `g_engine` and installs the HostObject

@@ -4,11 +4,10 @@ import {
   getKitbagHostObject,
   KB_BPM_REFERENCE_DENOMINATOR,
 } from '@kitbag/core-native';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BeatSweep } from './BeatSweep';
-import { bootstrapKitbagRuntime } from './bootstrapRuntime';
 import { EngineBpmReadout } from './EngineBpmReadout';
 import { LedRow } from './LedRow';
 import { STARVATION_MS, starveJsThread } from './starvation';
@@ -34,19 +33,6 @@ export function GateScreen() {
   const [tempo, setTempo] = useState(DEFAULT_BPM);
   const [beatsPerBar] = useState(DEFAULT_BEATS);
   const [running, setRunning] = useState(false);
-
-  // One-time runtime install: publishes the HostObject onto the UI runtime so
-  // useBeatSweep's worklet can read it (see bootstrapRuntime.ts). This is
-  // human-speed setup, NOT a frame driver — the §13.3 ban on effect-driven
-  // animation does not apply to a once-at-mount install. Guarded: with no native
-  // build the sweep just holds at 0 (#33 verifies on device).
-  useEffect(() => {
-    try {
-      bootstrapKitbagRuntime();
-    } catch {
-      // No native module registered yet (#33).
-    }
-  }, []);
 
   // useCallback for stable identity (react/jsx-no-bind forbids inline handlers).
   // tempo + running are in deps so the closures are never stale: we read the
