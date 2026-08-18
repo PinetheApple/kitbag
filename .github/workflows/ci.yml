@@ -83,3 +83,37 @@ jobs:
         run: pnpm --filter @kitbag/core-design generate:check
       - name: Tests — unit suites + the lint eval harness (§13.6)
         run: pnpm -w test
+      - name: Version — app.json and its package.json mirrors agree (#53)
+        run: ./scripts/version.sh check
+      - name: Release scripts — signature gate and release preconditions
+        run: ./scripts/verify-apk-signature.test.sh && ./scripts/release.test.sh
+
+  # The only gate that compiles Kotlin, the JNI glue and the codegen'd
+  # TurboModule spec together. Every headless gate stayed green from M1 to M3
+  # while that chain was broken, because nothing but a Gradle build touches it.
+  # No secrets: an unset ANDROID_KEYSTORE_* means a debug-signed APK, which is
+  # what CI wants and what scripts/verify-apk-signature.sh refuses to publish.
+  android:
+    name: Android release build (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+      # assembleRelease, not assembleDebug: it bundles the JS and runs the
+      # release-only Gradle paths (signing config selection, versionName from
+      # app.json) that a debug build never exercises.
+      - name: Assemble release — compiles the Kotlin/JNI/codegen chain
+        run: ./gradlew :app:assembleRelease
+        working-directory: packages/app-shell/android

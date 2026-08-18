@@ -13,5 +13,8 @@ cd "$(git rev-parse --show-toplevel)"
 # Everything from here on is the audited era.
 AUDIT_FLOOR=9a63543
 
-git-cliff "${AUDIT_FLOOR}..HEAD" -o CHANGELOG.md
+# Extra arguments go straight to git-cliff. The release path passes
+# `--tag vX.Y.Z` so the pending commits are titled with the tag being cut
+# instead of landing under "unreleased".
+git-cliff "${AUDIT_FLOOR}..HEAD" "$@" -o CHANGELOG.md
 echo "changelog: regenerated from ${AUDIT_FLOOR}..HEAD"

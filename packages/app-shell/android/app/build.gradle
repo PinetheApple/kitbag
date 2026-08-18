@@ -81,6 +81,19 @@ def enableMinifyInReleaseBuilds = (findProperty('android.enableMinifyInReleaseBu
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+// Version (#53). app.json is the one owner; `expo prebuild` never runs here
+// (SPEC §13.8, android/ is committed), so nothing else carries its version into
+// the APK. versionCode is derived, never hand-edited alongside it.
+def kitbagVersionName = new groovy.json.JsonSlurper().parse(file("$projectRoot/app.json")).expo.version
+def kitbagVersionParts = kitbagVersionName.tokenize('.')*.toInteger()
+if (kitbagVersionParts.size() != 3) {
+    throw new GradleException("kitbag: app.json expo.version must be major.minor.patch, got '${kitbagVersionName}'")
+}
+def kitbagVersionCode = kitbagVersionParts[0] * 10000 + kitbagVersionParts[1] * 100 + kitbagVersionParts[2]
+if (kitbagVersionCode < 1) {
+    throw new GradleException("kitbag: version ${kitbagVersionName} derives versionCode ${kitbagVersionCode}; Android requires 1 or more")
+}
+
 // Release signing (#48). The keystore lives outside the repo; these three names
 // are the only channel into the build.
 def kitbagKeystorePath = System.getenv('ANDROID_KEYSTORE_PATH')
@@ -116,8 +129,8 @@ android {
         applicationId 'com.kitbag.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "0.0.0"
+        versionCode kitbagVersionCode
+        versionName kitbagVersionName
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }

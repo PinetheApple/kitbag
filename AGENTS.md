@@ -52,6 +52,22 @@ stopping at the first, so one run shows every problem instead of revealing one
 per CI round trip, and it reports which files it rewrote — commit those or CI
 still fails. `--skip-android` and `--skip-native` drop the slow legs.
 
+### Cutting a release
+
+```sh
+bash scripts/release.sh 0.1.0 --dry-run   # local: bump, changelog, tag, build, verify
+bash scripts/release.sh 0.1.0             # the same, then push and publish
+```
+
+`packages/app-shell/app.json` is the one place the version lives; Gradle derives
+`versionName` and `versionCode` from it at configure time and `version.sh check`
+keeps the `package.json` copies from becoming a second source. The release
+refuses to publish before it has proved the artifact: signature gate first (a
+debug-signed APK can never be upgraded, and that key is public), then the APK's
+own `versionName` against the tag, then a published sha256. Set
+`ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD` and `ANDROID_KEY_ALIAS`
+first — see `.env.example`.
+
 ### Commits and PRs
 
 Conventional commit subjects (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`) —
@@ -77,7 +93,7 @@ rebuilding the tools on top. What is here now:
 | `design/` | Four HTML design specs, all binding. Precedence is in SPEC.md §12. |
 | `legacy/` | The only Flutter-era files kept, because SPEC.md cannot reconstruct them: `MediaSessionPlugin.kt` + `AndroidManifest.xml` (ported near line-for-line, §13.9) and `database.dart` + `converters.dart` (the v6 schema and the beat-grid / `.kwav` binary formats, §11). **Reference only — do not build against them.** |
 | `docs/` | Phase trackers (`phase1/2/3-tracker.md`), `decisions.md`, research notes. The Phase 3 tracker holds the wave/conflict map; GitHub issues are the tickets. **Read `docs/tuner-research.md`'s warning banner before touching the tuner.** |
-| `scripts/` | `worktree.sh` (agent worktrees), `lint.sh`/`format.sh`/`install-hooks.sh` (native gate), `changelog.sh`, `run-loop.sh`. |
+| `scripts/` | `preflight.sh` (every CI gate locally), `release.sh` + `version.sh` + `verify-apk-signature.sh` (the release path), `install-on-device.sh`, `worktree.sh` (agent worktrees), `lint.sh`/`format.sh`/`install-hooks.sh` (native gate), `changelog.sh`, `run-loop.sh`. |
 
 The old Flutter guide's references — Melos, `pubspec.yaml`, `dart analyze`,
 `custom_lint`, `scripts/lint_check.sh` — are gone. Do not restore them.

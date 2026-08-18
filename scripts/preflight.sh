@@ -90,7 +90,8 @@ run_gate "Lint — architecture rules, --max-warnings 0" "pnpm -w lint" "pnpm -w
 run_gate "Format — prettier" "pnpm -w format" "pnpm exec prettier --write ."
 run_gate "Generation drift guards (§13.7, §13.8.1)" "pnpm -w generate:check"
 run_gate "Tests — unit suites + lint eval harness" "pnpm -w test"
-run_gate "Release-script tests" "./scripts/verify-apk-signature.test.sh"
+run_gate "Version — app.json and its package.json mirrors agree" "./scripts/version.sh check"
+run_gate "Release-script tests" "./scripts/verify-apk-signature.test.sh && ./scripts/release.test.sh"
 
 if ((SKIP_NATIVE)); then
   step "Native core — skipped"
