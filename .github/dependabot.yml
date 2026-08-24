@@ -1,0 +1,75 @@
+# Dependency automation (#60). Routine updates arrive as few reviewable PRs:
+# minors and patches grouped, everything cooled down a week so point releases
+# settle before landing.
+#
+# Expo/React Native SDK majors are deliberately NOT taken by bot PRs: they move
+# the whole native matrix (Gradle/NDK/Kotlin/codegen) and only upgrade safely
+# behind `expo install --check`-style verification plus a device pass of every
+# built tool. See the inline ignore entries for what would let one move.
+version: 2
+updates:
+  # The pnpm workspace: one root lockfile covers every packages/*.
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # Migration-task material, not automation. A major may move once a task
+      # exists that runs expo install --check (or the RN upgrade helper),
+      # builds a release APK through CI's android job, and passes on device.
+      - dependency-name: "expo"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "expo-*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-native"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-native-*"
+        update-types: ["version-update:semver-major"]
+
+  # The two Gradle builds (AGP/Kotlin toolchain plus declared dependencies).
+  - package-ecosystem: gradle
+    directory: /packages/app-shell/android
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: gradle
+    directory: /packages/core-native/android
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+
+  # The workflow actions themselves (checkout, setup-node, setup-java, gradle).
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      all-actions:
+        applies-to: version-updates
+        patterns:
+          - "*"
