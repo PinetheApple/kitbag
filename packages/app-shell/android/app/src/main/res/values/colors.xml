@@ -1,4 +1,7 @@
 <resources>
-  <color name="splashscreen_background">#FFFFFF</color>
+  <!-- #52: the splash background is the §12.2 theme background — a light value
+       here is the white flash between launch and the first RN frame. -->
+  <color name="splashscreen_background">#0E0D10</color>
+  <color name="iconBackground">#0E0D10</color>
   <color name="colorPrimary">#023c69</color>
 </resources>

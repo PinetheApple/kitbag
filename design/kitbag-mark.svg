@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Kitbag mark (#52). Single source for every launcher/splash raster;
+       regenerate with: bash scripts/build-icons.sh
+       Colours are the §12.2 tokens from packages/core-design/src/tokens.ts
+       (dark mode values): bg #0E0D10, accent #FFB347, accentDeep #E89B2E. -->
+  <rect id="background" width="512" height="512" fill="#0E0D10"/>
+  <g id="mark">
+    <!-- metronome body: tapered frame with a cut-out face -->
+    <path fill="#FFB347" fill-rule="evenodd" d="M212,92 L300,92 L394,424 L118,424 Z M240,172 L272,172 L352,380 L160,380 Z"/>
+    <!-- pendulum rod swung right, fully inside the cut-out face -->
+    <line x1="256" y1="352" x2="279" y2="232" stroke="#E89B2E" stroke-width="22" stroke-linecap="round"/>
+    <circle cx="256" cy="352" r="12" fill="#E89B2E"/>
+    <!-- weight -->
+    <circle cx="271" cy="275" r="26" fill="#FFB347"/>
+  </g>
+</svg>
