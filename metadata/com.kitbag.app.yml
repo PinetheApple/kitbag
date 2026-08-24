@@ -1,0 +1,56 @@
+# DRAFT F-Droid build recipe for Kitbag (#61).
+#
+# NOT VERIFIED UNTIL SUBMITTED. Per SPEC.md §13.8 the cheapest way to settle
+# the open questions is to submit this in draft/RFP form and read what the
+# reviewer flags — every line below that depends on an unconfirmed answer is
+# marked with a QUESTION comment. Do not treat the unmarked parts as blessed
+# either: nothing here has run on F-Droid's build server.
+#
+# Decisions this recipe honours (SPEC.md §13.8, already recorded):
+#   - The generated `android/` tree is COMMITTED; `expo prebuild` does NOT run
+#     in the build steps (the WAFRN precedent, docs/fdroid-expo-research.md §3).
+#   - lightningcss is held at 1.30.1 in pnpm-workspace.yaml (build-time only;
+#     `scandelete` strips it before the scanner runs — precedent, not policy).
+Categories:
+  - Multimedia
+License: GPL-3.0-only
+AuthorName: PinetheApple
+# QUESTION: what contact address goes here, and should it be a dedicated alias
+# rather than a personal one?
+AuthorEmail: ''
+# QUESTION: is a website required for inclusion, or optional when SourceCode
+# and IssueTracker exist? No project site exists today.
+WebSite: ''
+SourceCode: https://github.com/PinetheApple/kitbag
+IssueTracker: https://github.com/PinetheApple/kitbag/issues
+
+RepoType: git
+Repo: https://github.com/PinetheApple/kitbag.git
+
+Builds:
+  - versionName: 0.0.1
+    versionCode: 1
+    # QUESTION: the tag does not exist yet (nothing has shipped). This recipe
+    # is only submittable once scripts/release.sh has cut v0.0.1 for real.
+    commit: v0.0.1
+    subdir: packages/app-shell/android
+    gradle:
+      - yes
+    init:
+      - corepack enable
+      - pnpm install --frozen-lockfile
+      # Strip the dev client exactly like the WAFRN precedent: it is dev
+      # tooling (launcher, dev menu) with no release purpose, and removing it
+      # also drops expo-dev-menu's bundled debug assets.
+      - pnpm --filter @kitbag/app-shell remove expo-dev-client
+      # QUESTION: does the build server's Node satisfy .nvmrc (22) and
+      # corepack's packageManager pin (pnpm@11.3.0)? Unverified.
+    # Hermes ships as an official prebuilt binary, named and exempted in
+    # F-Droid's Inclusion Policy.
+    scanignore:
+      - node_modules/react-native/sdks/hermesc/linux64-bin/hermesc
+    # The whole JS dependency tree is build-time only once the bundle is
+    # produced; this is also what keeps lightningcss's native binary out of
+    # the scanned/distributed output.
+    scandelete:
+      - node_modules
