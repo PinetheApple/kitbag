@@ -17,4 +17,20 @@ config.resolver.nodeModulesPaths = [
   path.resolve(monorepoRoot, 'node_modules'),
 ];
 
+// #49: expo-router's native-tabs helper (unused — the app has no bottom nav)
+// imports expo-symbols, whose SymbolView loads every weight of
+// @expo-google-fonts/material-symbols through useFonts. Metro then ships all
+// seven ~1 MB ttf files as res/raw entries in the APK. Blocking both at
+// resolution removes 6.5 MB; nothing else in the graph references them.
+const blockedModules = new Set(['expo-symbols', '@expo-google-fonts/material-symbols']);
+const baseResolveRequest = config.resolver.resolveRequest;
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (blockedModules.has(moduleName)) {
+    return { type: 'empty' };
+  }
+  return baseResolveRequest
+    ? baseResolveRequest(context, moduleName, platform)
+    : context.resolveRequest(context, moduleName, platform);
+};
+
 module.exports = withNativewind(config);
