@@ -1,8 +1,30 @@
 #!/usr/bin/env bash
 # Kitbag commit-msg gate. Enabled with: bash scripts/install-hooks.sh
-# Runs a personal, untracked local hook if this clone has one (e.g. to strip
-# attribution trailers). No-op for anyone without it — imposes nothing on the repo.
+#
+# Blocking: the conventional-commit subject check (#59). CHANGELOG.md is
+# generated from these subjects by git-cliff (cliff.toml), so a mislabelled
+# subject silently lands in the wrong changelog section and an unparseable one
+# is skipped entirely — commitlint.config.mjs holds the type list and why it
+# mirrors cliff.toml's parsers.
 set -euo pipefail
+
+root="$(git rev-parse --show-toplevel)"
+commitlint="$root/node_modules/.bin/commitlint"
+if [ ! -x "$commitlint" ]; then
+  echo "commit-msg: commitlint is not installed — run 'pnpm install' at the repo root." >&2
+  echo "  Subjects are not validated without it, and the changelog is generated" >&2
+  echo "  from them. Bypass a genuine emergency with --no-verify and fix forward." >&2
+  exit 1
+fi
+if [ $# -gt 0 ]; then
+  "$commitlint" --edit "$1"
+else
+  # No message-file argument: validate stdin (handy for manual checks).
+  "$commitlint"
+fi
+
+# A personal, untracked local hook still runs after validation (e.g. to strip
+# attribution trailers — subject-level, so validation above still holds).
 local_hook="$(git rev-parse --git-common-dir)/hooks-local/commit-msg"
 [ -x "$local_hook" ] && exec "$local_hook" "$@"
 exit 0

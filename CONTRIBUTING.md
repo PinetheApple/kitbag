@@ -53,7 +53,10 @@ full working contract and the reasons behind it.
    clang-tidy step needs the compile DB (configure once with
    `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON`).
 4. PRs against `main`. Conventional commit subjects (`feat:`, `fix:`, `chore:`);
-   the body explains *why* when non-obvious.
+   the body explains *why* when non-obvious. The `commit-msg` hook enforces
+   this with commitlint — its type list mirrors `cliff.toml`'s parsers, because
+   `CHANGELOG.md` is generated from these subjects and a mislabelled subject
+   lands in the wrong section or nowhere (#59).
 
 TS/React changes run their own gate set, all of which CI also runs:
 
