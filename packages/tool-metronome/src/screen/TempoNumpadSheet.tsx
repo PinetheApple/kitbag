@@ -1,5 +1,3 @@
-// The keypad never rejects a keypress; confirm clamps (logic/numpad).
-
 import {
   createThemedStyles,
   NumpadKeypad,

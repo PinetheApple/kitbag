@@ -1,17 +1,7 @@
-// Practice timer pill under the app bar (SPEC §5.2). Tap to reset; the ◴
-// transport button is its visible twin.
-//
-// It ticks once a second and only while the transport runs — the pill measures
-// time played, not time the screen was open. A 1 Hz clock is human-speed state,
-// not a 60fps value (§13.3, §13.4).
-//
-// The count lives as long as the screen does. Practice time that survives
-// navigation is §5.7 practiceSessions (M8), which this does not pretend to be.
-
 import {
   hitSlopForPadded,
   radii,
-  resolveTheme,
+  createThemedStyles,
   typography,
 } from '@kitbag/core-design';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -19,18 +9,14 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { formatPracticeElapsed } from '../logic/practiceTimer.ts';
 
-const theme = resolveTheme('dark');
-
 const TICK_MS = 1000;
 
-// design §02 `.practicebar`: pill, 5/12dp padding, 12.5px label, 11px reset.
 const PILL_PADDING_V = 5;
 const PILL_PADDING_H = 12;
 const PILL_GAP = 8;
 const LABEL_FONT_SIZE = 12.5;
 const RESET_FONT_SIZE = 11;
 const RESET_PADDING_LEFT = 8;
-// Alone under the app bar; nothing neighbours its slop.
 const PILL_HIT_SLOP = hitSlopForPadded(
   LABEL_FONT_SIZE,
   PILL_PADDING_V,
@@ -42,7 +28,6 @@ export interface PracticeElapsed {
   readonly reset: () => void;
 }
 
-/** Accumulated play time, ticking while `running`. */
 export function usePracticeElapsed(running: boolean): PracticeElapsed {
   const [elapsedMs, setElapsedMs] = useState(0);
   const playedMs = useRef(0);
@@ -97,6 +82,7 @@ interface PracticePillProps {
 }
 
 export function PracticePill({ elapsedMs, onReset }: PracticePillProps) {
+  const styles = useStyles();
   return (
     <View style={styles.centre}>
       <Pressable style={styles.pill} hitSlop={PILL_HIT_SLOP} onPress={onReset}>
@@ -108,7 +94,7 @@ export function PracticePill({ elapsedMs, onReset }: PracticePillProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((theme) => ({
   centre: {
     alignItems: 'center',
   },
@@ -119,25 +105,25 @@ const styles = StyleSheet.create({
     paddingVertical: PILL_PADDING_V,
     paddingHorizontal: PILL_PADDING_H,
     borderRadius: radii.chip,
-    backgroundColor: theme.surface2,
+    backgroundColor: theme.color.surface2,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: theme.line,
+    borderColor: theme.color.line,
   },
   icon: {
-    color: theme.text2,
+    color: theme.color.text2,
     fontSize: LABEL_FONT_SIZE,
   },
   elapsed: {
-    color: theme.text,
+    color: theme.color.text,
     fontFamily: typography.headline.family,
     fontSize: LABEL_FONT_SIZE,
     fontVariant: ['tabular-nums'],
   },
   reset: {
-    color: theme.text3,
+    color: theme.color.text3,
     fontSize: RESET_FONT_SIZE,
     paddingLeft: RESET_PADDING_LEFT,
     borderLeftWidth: StyleSheet.hairlineWidth,
-    borderLeftColor: theme.line,
+    borderLeftColor: theme.color.line,
   },
-});
+}));

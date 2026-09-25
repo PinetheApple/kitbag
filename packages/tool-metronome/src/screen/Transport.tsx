@@ -19,7 +19,6 @@ export function Transport({
 }: TransportProps) {
   return (
     <View style={styles.row}>
-      {/* The setlist key's slot (M5): without it play sits left of centre. */}
       <TransportKeySpacer />
       <PrimaryPlayButton
         glyph={running ? 'stop' : 'play'}

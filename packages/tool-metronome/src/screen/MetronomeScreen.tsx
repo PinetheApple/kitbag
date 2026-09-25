@@ -1,9 +1,6 @@
-// Human-speed values come from the store (§13.4); the bar sweep and LED flash
-// come from useMetronomeFrame's worklet and never pass through React (§13.3).
-
 import {
   Card,
-  resolveTheme,
+  createThemedStyles,
   SegmentedControl,
   space,
   StepControl,
@@ -16,7 +13,7 @@ import {
 import { BPM_BOUNDS, useMetronome } from '@kitbag/core-state';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { GestureDetector } from 'react-native-gesture-handler';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 
 import { subdivisionGlyph } from '../logic/subdivision.ts';
@@ -30,8 +27,6 @@ import { Transport } from './Transport.tsx';
 import { useTempoSwipe } from './useTempoSwipe.ts';
 import { useMetronomeFrame } from './useMetronomeFrame.ts';
 
-const theme = resolveTheme('dark');
-
 const SCREEN_PADDING = 16;
 const SCREEN_GAP = 14;
 const FIRST_BEAT = 0;
@@ -39,8 +34,6 @@ const FIRST_BEAT = 0;
 const POLY = 'poly';
 const POLY_OPTIONS = [{ value: POLY, label: POLY }] as const;
 
-// The C ABI has one accent table (kb_metronome_set_accent), so the poly row
-// stays read-only rather than offer accents the engine cannot play.
 function polyAccents(beats: number): readonly KB_ACCENT[] {
   return Array.from({ length: beats }, (_unused, beat) =>
     beat === FIRST_BEAT
@@ -49,18 +42,17 @@ function polyAccents(beats: number): readonly KB_ACCENT[] {
   );
 }
 
-// Measured by the shell: a tool may not import its safe-area library (§13.1),
-// and portrait-only makes top/bottom the whole story.
-export interface ScreenInsets {
+export interface ShellMeasuredInsets {
   readonly top: number;
   readonly bottom: number;
 }
 
 export interface MetronomeScreenProps {
-  readonly insets: ScreenInsets;
+  readonly insets: ShellMeasuredInsets;
 }
 
 export function MetronomeScreen({ insets }: MetronomeScreenProps) {
+  const styles = useStyles();
   const bpm = useMetronome((s) => s.bpm);
   const beatsPerBar = useMetronome((s) => s.beatsPerBar);
   const denominator = useMetronome((s) => s.denominator);
@@ -97,8 +89,6 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
   // readout, so any empty space is the tempo control too.
   const tempoSwipe = useTempoSwipe(bpm, handleTempo);
 
-  // The HostObject does not publish kb_metronome_current_poly_beat yet, so the
-  // poly row holds at STOPPED_BEAT rather than guess.
   const polyBeatUnpublished = useSharedValue(KB_STOPPED_BEAT);
 
   const handleNudge = useCallback(
@@ -121,7 +111,6 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
     [beatsPerBar, denominator, setBeats],
   );
 
-  // KB_DENOMINATORS is a generated set, not a range, so the value face cycles it.
   const handleDenominatorCycle = useCallback(() => {
     const next =
       KB_DENOMINATORS[
@@ -259,10 +248,10 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((theme) => ({
   screen: {
     flex: 1,
-    backgroundColor: theme.bg,
+    backgroundColor: theme.color.bg,
     paddingHorizontal: SCREEN_PADDING,
     gap: SCREEN_GAP,
   },
@@ -278,4 +267,4 @@ const styles = StyleSheet.create({
   spacer: {
     flex: 1,
   },
-});
+}));

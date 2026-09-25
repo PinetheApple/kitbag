@@ -20,7 +20,6 @@ interface BeatLedsProps {
   readonly accents: readonly KB_ACCENT[];
   readonly currentBeat: SharedValue<number>;
   readonly size?: LedSize;
-  /** Omitted on a row that is not editable (the poly row has no accent ABI). */
   readonly onCycle?: ((beat: number) => void) | undefined;
 }
 
