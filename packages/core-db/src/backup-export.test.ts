@@ -10,7 +10,7 @@ import {
   type BackupDatabase,
 } from './backup.test-helper';
 import { MAX_BEATS, MAX_POLY_BEATS, SOUND_COUNT } from './preset-rules';
-import { practiceSessions } from './schema';
+import { practiceSessions, tunings } from './schema';
 
 const PRESET_COUNT = 12;
 const SPLIT_SECOND_MS = 400;
@@ -61,11 +61,20 @@ async function seedSameSecondSessions({ handle }: BackupDatabase) {
   );
 }
 
+async function seedEmptyTuning({ handle }: BackupDatabase) {
+  await handle.db.insert(tunings).values({
+    name: 'Unstrung',
+    notes: new Uint8Array(0),
+    uuid: crypto.randomUUID(),
+  });
+}
+
 const STATES: [string, (database: BackupDatabase) => Promise<unknown>][] = [
   ['empty', () => Promise.resolve()],
   ['seeded', seed],
   ['odd accent lengths', seedOddPresets],
   ['two sessions in one second', seedSameSecondSessions],
+  ['a tuning with no strings', seedEmptyTuning],
 ];
 
 const SUBSETS: Category[][] = Array.from(
@@ -96,5 +105,15 @@ describe('export is always importable', () => {
     const file = parseBackup(await source.backup.export(['setlists']));
     expect(file.categories).toEqual(['songPresets', 'setlists']);
     expect(file.records.songPresets).toHaveLength(2);
+  });
+  it('round-trips a tuning with no strings unchanged', async () => {
+    const source = openBackupDatabase();
+    await seedEmptyTuning(source);
+    const target = openBackupDatabase();
+    const plan = await target.backup.plan(await source.backup.export());
+    if (!plan.ok) throw new Error(plan.error.kind);
+    expect((await target.backup.apply(plan.value)).ok).toBe(true);
+    const [tuning] = await target.handle.db.select().from(tunings);
+    expect(tuning?.notes).toEqual(new Uint8Array(0));
   });
 });

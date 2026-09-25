@@ -125,14 +125,11 @@ function readSetlist(value: unknown, path: string): SetlistRecord {
 
 function readTuning(value: unknown, path: string): TuningRecord {
   const r = reader(value, path);
-  const record = {
+  return {
     uuid: r.uuid('uuid'),
     name: r.string('name'),
     notes: r.blob('notes'),
   };
-  if (record.notes === '')
-    invalidField(`${path}.notes`, 'expected at least one string');
-  return record;
 }
 
 function readPracticeSession(

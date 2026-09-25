@@ -183,11 +183,4 @@ describe('backup validation', () => {
     });
     expect(failure).toMatchObject({ path: '$.songPresets[0].perAccentSounds' });
   });
-
-  it('refuses a tuning with no strings', async () => {
-    const failure = await rejected((file) => {
-      first(file.tunings ?? []).notes = '';
-    });
-    expect(failure).toMatchObject({ path: '$.tunings[0].notes' });
-  });
 });
