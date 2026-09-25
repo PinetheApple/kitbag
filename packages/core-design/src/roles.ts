@@ -74,7 +74,6 @@ export const mix = {
 
 export const presetActionGrow = 1.3;
 
-// The specimens' play glyph: `M6 4l10 6-10 6z` in a 20-unit viewBox.
 export const playGlyphPath = {
   viewBox: 20,
   left: 6,
@@ -82,9 +81,6 @@ export const playGlyphPath = {
   width: 10,
   height: 12,
 } as const;
-
-// Not drawn by any design file; the specimens only say "dismissible by drag-down".
-export const sheetDismissDragFraction = 0.25;
 
 const display = fontFamily.display;
 const body = fontFamily.body;

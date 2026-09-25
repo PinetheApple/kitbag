@@ -22,7 +22,6 @@ interface PlainCardProps extends CardBaseProps {
   readonly emphasis?: 'none' | 'active';
 }
 
-// A feedback border alone is colour-only meaning, so the tone brings its icon.
 interface FeedbackCardProps extends CardBaseProps {
   readonly emphasis: FeedbackTone;
   readonly statusIcon: IconName;

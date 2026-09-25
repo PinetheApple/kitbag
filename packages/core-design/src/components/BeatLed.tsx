@@ -18,7 +18,6 @@ export type BeatLedLayout = readonly (readonly (readonly number[])[])[];
 
 const TRANSPARENT = 'transparent';
 
-// Rows wrap, so the row gap bounds the slop as much as the gap within a group.
 const LED_NEIGHBOUR_GAP = Math.min(space.ledGap, space.controlGap);
 const HIT_SLOP: Readonly<Record<LedSize, number>> = {
   main: hitSlopFor(size.ledMain, LED_NEIGHBOUR_GAP),
@@ -65,8 +64,8 @@ export function BeatLed({
   const resting = useMemo(() => restingColors(theme, state), [theme, state]);
   const lit = theme.color.accent;
 
-  // Both branches return the same keys: a key an animated style drops keeps
-  // its last native value, which would leave the LED lit after its beat.
+  // Same keys in both branches: a key an animated style drops keeps its last
+  // native value, leaving the LED lit after its beat.
   const flashStyle = useAnimatedStyle(() => {
     const sounding = Math.round(activeBeat.value) === beat;
     return {

@@ -33,7 +33,6 @@ export interface StepControlProps {
   readonly value: string;
   readonly accessibilityValue?: string;
   readonly onStep: (delta: StepDelta) => void;
-  /** For a value that is a set rather than a range, such as a denominator. */
   readonly onValuePress?: () => void;
   readonly variant?: StepControlVariant;
   readonly accented?: boolean;

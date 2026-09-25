@@ -1,11 +1,18 @@
 import { Pressable, Text } from 'react-native';
 
-import type { IconName } from '../icons.ts';
-import { inset, opacity, radius, size, space, textRoles } from '../roles.ts';
+import { icons, type IconName } from '../icons.ts';
+import {
+  iconSizes,
+  inset,
+  opacity,
+  radius,
+  size,
+  space,
+  textRoles,
+} from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { hitSlopForPadded } from '../touchTarget.ts';
-import { Icon } from './Icon.tsx';
 
 export type ButtonVariant = 'primary' | 'tonal' | 'ghost' | 'destructive';
 
@@ -52,19 +59,17 @@ export function Button({
       onPress={onPress}
     >
       {icon === undefined ? null : (
-        <Icon name={icon} size="control" color={ICON_COLOR[variant]} />
+        <Text
+          importantForAccessibility="no-hide-descendants"
+          style={[styles.icon, labelStyle]}
+        >
+          {icons[icon]}
+        </Text>
       )}
       <Text style={[styles.label, labelStyle]}>{label}</Text>
     </Pressable>
   );
 }
-
-const ICON_COLOR = {
-  primary: 'onAccent',
-  tonal: 'text',
-  ghost: 'text2',
-  destructive: 'onAccent',
-} as const;
 
 const useStyles = createThemedStyles((theme) => ({
   base: {
@@ -96,7 +101,10 @@ const useStyles = createThemedStyles((theme) => ({
     borderColor: theme.color.line,
   },
   destructive: {
-    backgroundColor: theme.color.red,
+    backgroundColor: theme.feedback.danger.fg,
+  },
+  icon: {
+    fontSize: iconSizes.control,
   },
   label: {
     ...textStyle(textRoles.button),
@@ -113,6 +121,6 @@ const useStyles = createThemedStyles((theme) => ({
     color: theme.color.text2,
   },
   destructiveLabel: {
-    color: theme.color.onAccent,
+    color: theme.onDanger,
   },
 }));

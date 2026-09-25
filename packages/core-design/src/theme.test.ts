@@ -35,6 +35,42 @@ describe('themes', () => {
   });
 });
 
+const LINEAR_THRESHOLD = 0.03928;
+const LINEAR_DIVISOR = 12.92;
+const GAMMA_OFFSET = 0.055;
+const GAMMA_SCALE = 1.055;
+const GAMMA = 2.4;
+const LUMA = [0.2126, 0.7152, 0.0722];
+const CONTRAST_OFFSET = 0.05;
+const AA_TEXT = 4.5;
+
+function luminance(hex: string): number {
+  return [1, 3, 5].reduce((sum, offset, i) => {
+    const c = Number.parseInt(hex.slice(offset, offset + 2), 16) / 255;
+    const linear =
+      c <= LINEAR_THRESHOLD
+        ? c / LINEAR_DIVISOR
+        : ((c + GAMMA_OFFSET) / GAMMA_SCALE) ** GAMMA;
+    return sum + linear * (LUMA[i] ?? 0);
+  }, 0);
+}
+
+function contrast(a: string, b: string): number {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return ((hi ?? 0) + CONTRAST_OFFSET) / ((lo ?? 0) + CONTRAST_OFFSET);
+}
+
+describe('onDanger', () => {
+  it('reads at AA text contrast on the danger fill in both modes', () => {
+    for (const mode of ['dark', 'light'] as const) {
+      const theme = themes[mode];
+      expect(
+        contrast(theme.onDanger, theme.feedback.danger.fg),
+      ).toBeGreaterThanOrEqual(AA_TEXT);
+    }
+  });
+});
+
 describe('textStyle', () => {
   it('turns em tracking into dp and marks tabular figures', () => {
     const style = textStyle(textRoles.badge);

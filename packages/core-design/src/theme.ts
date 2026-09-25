@@ -17,7 +17,6 @@ function channels(hex: string): readonly number[] {
   );
 }
 
-/** CSS `color-mix(in srgb, fg <weight>, bg)` for opaque `#RRGGBB` tokens. */
 export function mixHex(fg: string, bg: string, fgWeight: number): string {
   const top = channels(fg);
   const bottom = channels(bg);
@@ -43,6 +42,7 @@ export interface Theme {
   readonly color: Readonly<Record<ColorToken, string>>;
   readonly activeControlFill: string;
   readonly activeCardFill: string;
+  readonly onDanger: string;
   readonly feedback: Readonly<Record<FeedbackTone, FeedbackColors>>;
   readonly shadow: string;
 }
@@ -72,6 +72,7 @@ export function buildTheme(mode: ThemeMode): Theme {
     color,
     activeControlFill: mixHex(color.accent, color.surface2, mix.activeControl),
     activeCardFill: mixHex(color.accent, color.surface1, mix.activeCard),
+    onDanger: color.surface1,
     feedback: {
       success: feedbackColors(color, 'success'),
       warning: feedbackColors(color, 'warning'),

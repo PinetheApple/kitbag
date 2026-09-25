@@ -9,7 +9,6 @@ export interface IconProps {
   readonly name: IconName;
   readonly size?: IconSize;
   readonly color?: ColorToken;
-  /** Given only when the icon carries meaning its surroundings do not. */
   readonly accessibilityLabel?: string;
 }
 

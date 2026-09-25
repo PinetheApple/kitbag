@@ -1,5 +1,5 @@
-// VS15 asks for text presentation; without it Android draws these as colour
-// emoji that ignore the token colour.
+// VS15 forces text presentation; without it Android draws colour emoji that
+// ignore the token colour.
 const TEXT_PRESENTATION = '︎';
 
 const text = (glyph: string) => `${glyph}${TEXT_PRESENTATION}`;

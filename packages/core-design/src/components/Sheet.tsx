@@ -1,25 +1,32 @@
-import { useCallback, useMemo, useRef, type ReactNode } from 'react';
+import { useCallback, useMemo, type ReactNode } from 'react';
 import {
   Modal,
-  PanResponder,
   Pressable,
   ScrollView,
   Text,
   View,
   type LayoutChangeEvent,
 } from 'react-native';
+import {
+  Gesture,
+  GestureDetector,
+  GestureHandlerRootView,
+} from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import { icons, type IconName } from '../icons.ts';
-import { sheetDismissDragFraction, size, space, textRoles } from '../roles.ts';
+import { size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { radii } from '../tokens.ts';
+
+export const SHEET_DISMISS_DRAG_FRACTION = 0.25;
 
 export interface SheetProps {
   readonly visible: boolean;
@@ -47,36 +54,38 @@ export function Sheet({
   const styles = useStyles();
   const reduceMotion = useReducedMotion();
   const dragY = useSharedValue(0);
-  const sheetHeight = useRef(0);
+  const sheetHeight = useSharedValue(0);
 
-  const handleLayout = useCallback((event: LayoutChangeEvent) => {
-    sheetHeight.current = event.nativeEvent.layout.height;
-  }, []);
+  const handleLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      sheetHeight.value = event.nativeEvent.layout.height;
+    },
+    [sheetHeight],
+  );
 
   const handleShow = useCallback(() => {
     dragY.value = 0;
     onShow?.();
   }, [dragY, onShow]);
 
-  const dragResponder = useMemo(
+  const dragToDismiss = useMemo(
     () =>
-      PanResponder.create({
-        onMoveShouldSetPanResponder: (_event, gesture) => gesture.dy > 0,
-        onPanResponderMove: (_event, gesture) => {
-          dragY.value = Math.max(0, gesture.dy);
-        },
-        onPanResponderRelease: (_event, gesture) => {
-          if (gesture.dy > sheetHeight.current * sheetDismissDragFraction) {
-            onDismiss();
+      Gesture.Pan()
+        .activeOffsetY(space.controlGap)
+        .onUpdate((event) => {
+          dragY.value = Math.max(0, event.translationY);
+        })
+        .onEnd((event) => {
+          if (
+            event.translationY >
+            sheetHeight.value * SHEET_DISMISS_DRAG_FRACTION
+          ) {
+            scheduleOnRN(onDismiss);
             return;
           }
           dragY.value = reduceMotion ? 0 : withSpring(0);
-        },
-        onPanResponderTerminate: () => {
-          dragY.value = 0;
-        },
-      }),
-    [dragY, onDismiss, reduceMotion],
+        }),
+    [dragY, sheetHeight, onDismiss, reduceMotion],
   );
 
   const insetStyle = useMemo(
@@ -96,7 +105,7 @@ export function Sheet({
       onShow={handleShow}
       onRequestClose={onDismiss}
     >
-      <View style={styles.frame}>
+      <GestureHandlerRootView style={styles.frame}>
         <Pressable
           style={styles.scrim}
           accessibilityRole="button"
@@ -107,12 +116,16 @@ export function Sheet({
           style={[styles.sheet, insetStyle, dragStyle]}
           onLayout={handleLayout}
         >
-          <View style={styles.header} {...dragResponder.panHandlers}>
-            <View style={styles.grab} />
-            <Text accessibilityRole="header" style={styles.title}>
-              {titleIcon === undefined ? title : `${icons[titleIcon]} ${title}`}
-            </Text>
-          </View>
+          <GestureDetector gesture={dragToDismiss}>
+            <View style={styles.header}>
+              <View style={styles.grab} />
+              <Text accessibilityRole="header" style={styles.title}>
+                {titleIcon === undefined
+                  ? title
+                  : `${icons[titleIcon]} ${title}`}
+              </Text>
+            </View>
+          </GestureDetector>
           <ScrollView
             style={styles.scroll}
             contentContainerStyle={styles.content}
@@ -122,7 +135,7 @@ export function Sheet({
             {hint === undefined ? null : <SheetHint>{hint}</SheetHint>}
           </ScrollView>
         </Animated.View>
-      </View>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
