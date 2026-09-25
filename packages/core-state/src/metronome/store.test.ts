@@ -269,6 +269,7 @@ describe('§5.3 tempo shown and nudged is the engine tempo, not a stale intent',
 
   it('adopts the engine tempo when a running ramp is cleared', () => {
     const { engine, s } = makeEngine();
+    s.getState().start();
     s.getState().setRamp({
       enabled: true,
       startBpm: 100,
@@ -294,6 +295,34 @@ describe('§5.3 tempo shown and nudged is the engine tempo, not a stale intent',
     expect(s.getState().bpm).toBe(140);
   });
 
+  it('adopts the engine tempo on pause', () => {
+    const { engine, s } = makeEngine();
+    s.getState().start();
+    s.getState().setRamp({
+      enabled: true,
+      startBpm: 100,
+      endBpm: 140,
+      bars: 8,
+    });
+    engine.bpm = 126;
+    s.getState().pause();
+    expect(s.getState().bpm).toBe(126);
+  });
+
+  it('trusts its own tempo before start, while commands still queue', () => {
+    const engine = { bpm: 120 };
+    const s = createMetronomeStore(
+      makeCommands(),
+      () => NOW_FRAME,
+      () => engine.bpm,
+    );
+    s.getState().setTempo(97);
+    s.getState().nudgeTempo(5);
+    expect(s.getState().bpm).toBe(102);
+    s.getState().syncTempoFromEngine();
+    expect(s.getState().bpm).toBe(102);
+  });
+
   it('keeps its own tempo when no HostObject is installed', () => {
     const cmds = makeCommands();
     const s = createMetronomeStore(
@@ -303,6 +332,7 @@ describe('§5.3 tempo shown and nudged is the engine tempo, not a stale intent',
         throw new Error('not installed');
       },
     );
+    s.getState().start();
     s.getState().setTempo(97);
     s.getState().nudgeTempo(5);
     expect(s.getState().bpm).toBe(102);

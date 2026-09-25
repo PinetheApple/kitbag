@@ -87,6 +87,7 @@ export function SwipeTempoZone({
         accessibilityRole="button"
         accessibilityLabel="Tempo"
         accessibilityHint="Type a tempo"
+        accessibilityValue={{ text: `${String(bpm)} BPM` }}
         onPress={onTypeTempo}
       >
         <AnimatedTextInput

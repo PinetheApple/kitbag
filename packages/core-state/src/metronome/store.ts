@@ -129,7 +129,8 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
-// A JS-only run has no HostObject; the store's own tempo is then the best known.
+// Commands queue until the device opens on start, so a stopped engine's tempo
+// is stale; so is a JS-only run with no HostObject.
 function readEngineTempo(engineBpm: EngineBpm, fallback: number): number {
   let bpm: number;
   try {
@@ -175,8 +176,13 @@ export function createMetronomeStore(
   nowFrame: NowFrame = defaultNowFrame,
   engineBpm: EngineBpm = defaultEngineBpm,
 ): StoreApi<MetronomeStore> {
-  const syncFromEngine = (set: (p: { bpm: number }) => void, bpm: number) => {
-    set({ bpm: readEngineTempo(engineBpm, bpm) });
+  const engineTempo = (state: MetronomeStore): number =>
+    state.running ? readEngineTempo(engineBpm, state.bpm) : state.bpm;
+  const syncFromEngine = (
+    set: (p: { bpm: number }) => void,
+    state: MetronomeStore,
+  ) => {
+    set({ bpm: engineTempo(state) });
   };
   return createStore<MetronomeStore>((set, get) => ({
     bpm: DEFAULT_BPM,
@@ -213,11 +219,11 @@ export function createMetronomeStore(
     },
 
     nudgeTempo: (delta) => {
-      get().setTempo(readEngineTempo(engineBpm, get().bpm) + delta);
+      get().setTempo(engineTempo(get()) + delta);
     },
 
     syncTempoFromEngine: () => {
-      syncFromEngine(set, get().bpm);
+      syncFromEngine(set, get());
     },
 
     setBeats: (beatsPerBar, denominator) => {
@@ -306,7 +312,7 @@ export function createMetronomeStore(
         config.endBpm,
         config.bars,
       );
-      if (!config.enabled) syncFromEngine(set, get().bpm);
+      if (!config.enabled) syncFromEngine(set, get());
     },
 
     setBarMute: (config) => {
@@ -329,17 +335,17 @@ export function createMetronomeStore(
     },
 
     stop: () => {
+      syncFromEngine(set, get());
       commands.metronomeStop();
       set({ running: false, countInArmed: true });
-      syncFromEngine(set, get().bpm);
     },
 
     pause: () => {
       // Same engine call as stop; differs only in that count-in is NOT re-armed,
       // so a resume does not count in (§5.3).
+      syncFromEngine(set, get());
       commands.metronomeStop();
       set({ running: false });
-      syncFromEngine(set, get().bpm);
     },
   }));
 }
