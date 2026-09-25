@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@kitbag/core-plugin-api": "workspace:*",
-    "@op-engineering/op-sqlite": "^17.1.2",
+    "@op-engineering/op-sqlite": "^18.2.4",
     "drizzle-orm": "^0.45.2"
   },
   "devDependencies": {
