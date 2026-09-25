@@ -111,7 +111,7 @@ export interface MetronomeActions {
 
 export type MetronomeStore = MetronomeConfig & MetronomeActions;
 
-const DEFAULT_BPM = 120;
+export const DEFAULT_BPM = 120;
 const DEFAULT_BEATS = 4;
 // 4/4 default only coincides with the BPM reference note; revisit if that moves.
 const DEFAULT_DENOMINATOR: Denominator = KB_BPM_REFERENCE_DENOMINATOR;
