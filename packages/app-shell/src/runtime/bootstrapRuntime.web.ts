@@ -1,3 +1,1 @@
-export function useKitbagRuntime(): void {
-  void 0;
-}
+export const useKitbagRuntime = (): void => undefined;

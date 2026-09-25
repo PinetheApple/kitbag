@@ -1,11 +1,18 @@
 import { getKitbagCommands, getKitbagHostObject } from '@kitbag/core-native';
 
-import { type MetronomeCommands, type NowFrame } from './commands.ts';
+import type { MetronomeCommands, NowFrame } from './commands.ts';
 
 export interface MetronomeRuntime {
   readonly commands: MetronomeCommands;
   readonly nowFrame: NowFrame;
 }
+
+const nativeRuntime: MetronomeRuntime = {
+  get commands() {
+    return getKitbagCommands();
+  },
+  nowFrame: () => getKitbagHostObject().frames_rendered,
+};
 
 let configuredRuntime: MetronomeRuntime | undefined;
 
@@ -22,46 +29,3 @@ export function configureMetronomeRuntime(runtime: MetronomeRuntime): void {
 export function getMetronomeRuntime(): MetronomeRuntime {
   return configuredRuntime ?? nativeRuntime;
 }
-
-const nativeRuntime: MetronomeRuntime = {
-  commands: {
-    start: (...args) => getKitbagCommands().start(...args),
-    metronomeStart: (...args) => {
-      getKitbagCommands().metronomeStart(...args);
-    },
-    metronomeStop: (...args) => {
-      getKitbagCommands().metronomeStop(...args);
-    },
-    setTempo: (...args) => {
-      getKitbagCommands().setTempo(...args);
-    },
-    setBeats: (...args) => {
-      getKitbagCommands().setBeats(...args);
-    },
-    setSubdivision: (...args) => {
-      getKitbagCommands().setSubdivision(...args);
-    },
-    setAccent: (...args) => {
-      getKitbagCommands().setAccent(...args);
-    },
-    setPoly: (...args) => {
-      getKitbagCommands().setPoly(...args);
-    },
-    setSound: (...args) => {
-      getKitbagCommands().setSound(...args);
-    },
-    setVolume: (...args) => {
-      getKitbagCommands().setVolume(...args);
-    },
-    setLatencyOffset: (...args) => {
-      getKitbagCommands().setLatencyOffset(...args);
-    },
-    setRamp: (...args) => {
-      getKitbagCommands().setRamp(...args);
-    },
-    setBarMute: (...args) => {
-      getKitbagCommands().setBarMute(...args);
-    },
-  },
-  nowFrame: () => getKitbagHostObject().frames_rendered,
-};

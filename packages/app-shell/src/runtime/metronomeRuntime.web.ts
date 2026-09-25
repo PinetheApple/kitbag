@@ -1,64 +1,78 @@
 import {
+  KITBAG_HOST_OBJECT_KEY,
+  KB_STOPPED_BEAT,
+  type KitbagHostObject,
+} from '@kitbag/core-native';
+import {
+  BPM_BOUNDS,
   configureMetronomeRuntime,
+  DEFAULT_BPM,
+  metronomeStore,
   type MetronomeCommands,
 } from '@kitbag/core-state';
 
-interface PresentationHost {
-  readonly bar_phase: number;
-  readonly current_beat: number;
-  readonly current_bpm: number;
-  readonly frames_rendered: number;
-  readonly tuner_snapshot: number;
-  readonly player_position: number;
-}
-
-const KITBAG_HOST_OBJECT_KEY = '__KitbagHostObject';
 const PHASE_STEPS = 1000;
-const DEFAULT_PHASE = 0;
-const DEFAULT_BEAT = 0;
-const DEFAULT_BPM = 120;
-const MAX_BEAT = 15;
-const MIN_BPM = 20;
-const MAX_BPM = 400;
+const MAX_PHASE = (PHASE_STEPS - 1) / PHASE_STEPS;
+
 function readBoundedQuery(
   name: string,
   fallback: number,
   min: number,
   max: number,
 ): number {
-  const value = Number(
-    new URLSearchParams(globalThis.location.search).get(name),
-  );
+  const raw = new URLSearchParams(globalThis.location.search).get(name);
+  if (raw === null || raw.trim() === '') return fallback;
+  const value = Number(raw);
   if (!Number.isFinite(value)) return fallback;
   return Math.min(Math.max(value, min), max);
 }
 
-const barPhase = readBoundedQuery('phase', DEFAULT_PHASE, 0, 1);
-const currentBeat = Math.floor(
-  readBoundedQuery('beat', DEFAULT_BEAT, -1, MAX_BEAT),
-);
-const currentBpm = readBoundedQuery('bpm', DEFAULT_BPM, MIN_BPM, MAX_BPM);
-const presentationHost: PresentationHost = Object.freeze({
-  bar_phase: Math.round(barPhase * PHASE_STEPS) / PHASE_STEPS,
-  current_beat: currentBeat,
-  current_bpm: currentBpm,
+const webCommands: MetronomeCommands = {
+  start: () => Promise.resolve(0),
+  metronomeStart: () => undefined,
+  metronomeStop: () => undefined,
+  setTempo: () => undefined,
+  setBeats: () => undefined,
+  setSubdivision: () => undefined,
+  setAccent: () => undefined,
+  setPoly: () => undefined,
+  setSound: () => undefined,
+  setVolume: () => undefined,
+  setLatencyOffset: () => undefined,
+  setRamp: () => undefined,
+  setBarMute: () => undefined,
+};
+
+const presentationHost: KitbagHostObject = Object.freeze({
+  bar_phase: Math.min(
+    Math.round(readBoundedQuery('phase', 0, 0, 1) * PHASE_STEPS) / PHASE_STEPS,
+    MAX_PHASE,
+  ),
+  current_beat: Math.floor(
+    readBoundedQuery(
+      'beat',
+      KB_STOPPED_BEAT,
+      KB_STOPPED_BEAT,
+      metronomeStore.getState().beatsPerBar - 1,
+    ),
+  ),
+  current_bpm: readBoundedQuery(
+    'bpm',
+    DEFAULT_BPM,
+    BPM_BOUNDS.min,
+    BPM_BOUNDS.max,
+  ),
   frames_rendered: 0,
   tuner_snapshot: 0,
   player_position: 0,
 });
 
-Object.defineProperty(globalThis, KITBAG_HOST_OBJECT_KEY, {
-  configurable: false,
-  enumerable: false,
-  value: presentationHost,
-  writable: false,
-});
-
-const webCommands = new Proxy({} as MetronomeCommands, {
-  get: () => () => undefined,
-});
+(globalThis as Record<string, unknown>)[KITBAG_HOST_OBJECT_KEY] =
+  presentationHost;
 
 configureMetronomeRuntime({
   commands: webCommands,
   nowFrame: () => presentationHost.frames_rendered,
 });
+
+metronomeStore.getState().setTempo(presentationHost.current_bpm);
