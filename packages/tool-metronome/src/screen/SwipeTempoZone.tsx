@@ -9,11 +9,22 @@ import {
   textStyle,
   typography,
 } from '@kitbag/core-design';
-import { Text, View } from 'react-native';
-import { type SharedValue } from 'react-native-reanimated';
+import {
+  Pressable,
+  Text,
+  TextInput,
+  View,
+  type TextInputProps,
+} from 'react-native';
+import Animated, {
+  useAnimatedProps,
+  type SharedValue,
+} from 'react-native-reanimated';
 
 import { tempoMarking } from '../logic/tempoMarking.ts';
 import { BarSweep } from './BarSweep.tsx';
+
+const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
 const BPM_FONT_SIZE = 88;
 const ALPHA_MAX = 255;
@@ -25,6 +36,7 @@ const GLOW_ALPHA = Math.round(ALPHA_MAX * mix.tempoZoneGlow)
 
 interface SwipeTempoZoneProps {
   readonly bpm: number;
+  readonly currentBpm: SharedValue<number>;
   readonly barPhase: SharedValue<number>;
   readonly onTypeTempo: () => void;
 }
@@ -47,6 +59,7 @@ const useStyles = createThemedStyles((theme) => ({
     fontVariant: ['tabular-nums'],
     color: theme.color.text,
     textAlign: 'center',
+    padding: 0,
   },
   sub: {
     ...textStyle(textRoles.tempoCaption),
@@ -57,16 +70,34 @@ const useStyles = createThemedStyles((theme) => ({
 
 export function SwipeTempoZone({
   bpm,
+  currentBpm,
   barPhase,
   onTypeTempo,
 }: SwipeTempoZoneProps) {
   const styles = useStyles();
+  // `text` is the channel an animated TextInput redraws from without a render.
+  const readout = useAnimatedProps(() => {
+    const text = Math.round(currentBpm.value).toString();
+    return { text, defaultValue: text } as unknown as Partial<TextInputProps>;
+  });
   return (
     <View style={styles.zone}>
       <Text style={styles.chevron}>{icons.caretUp}</Text>
-      <Text style={styles.bpm} onPress={onTypeTempo}>
-        {bpm}
-      </Text>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Tempo"
+        accessibilityHint="Type a tempo"
+        accessibilityValue={{ text: `${String(bpm)} BPM` }}
+        onPress={onTypeTempo}
+      >
+        <AnimatedTextInput
+          editable={false}
+          pointerEvents="none"
+          underlineColorAndroid="transparent"
+          style={styles.bpm}
+          animatedProps={readout}
+        />
+      </Pressable>
       <Text style={styles.sub}>BPM · {tempoMarking(bpm)} · SWIPE ANYWHERE</Text>
       <Text style={styles.chevron}>{icons.caretDown}</Text>
       <BarSweep barPhase={barPhase} />

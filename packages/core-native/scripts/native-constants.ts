@@ -53,7 +53,8 @@ export interface NativeConstants {
   readonly maxPolyBeats: number;
   readonly countInBars: readonly number[];
   readonly defaultCountInSound: number;
-  readonly rampMaxBars: number;
+  readonly maxRampBars: number;
+  readonly maxMuteBars: number;
   readonly rampSeconds: { readonly min: number; readonly max: number };
   readonly rampUnit: readonly EnumMember[];
   readonly bpmReferenceDenominator: number;
@@ -244,7 +245,8 @@ export function collectConstants(sources: NativeSources): NativeConstants {
       sources.metronomeHeader,
       'kDefaultCountInSound',
     ),
-    rampMaxBars: parseConstexprInt(sources.tempoRampHeader, 'kMaxBars'),
+    maxRampBars: parseConstexprInt(sources.tempoRampHeader, 'kMaxBars'),
+    maxMuteBars: parseConstexprInt(sources.metronomeHeader, 'kMaxMuteBars'),
     rampSeconds: {
       min: parseConstexprInt(sources.tempoRampHeader, 'kMinSeconds'),
       max: parseConstexprInt(sources.tempoRampHeader, 'kMaxSeconds'),
@@ -312,6 +314,12 @@ export const KB_MAX_TRACKS = ${String(c.maxTracks)};
 /** Beats per bar the engine will hold (Metronome::kMaxBeats); it clamps above this. */
 export const KB_MAX_BEATS = ${String(c.maxBeats)};
 
+/** Longest ramp in bars (TempoRamp::kMaxBars); the engine clamps above this. */
+export const KB_MAX_RAMP_BARS = ${String(c.maxRampBars)};
+
+/** Longest play or mute run in bars (Metronome::kMaxMuteBars); clamped above. */
+export const KB_MAX_MUTE_BARS = ${String(c.maxMuteBars)};
+
 /**
  * Time-signature denominators the engine accepts (Metronome::kDenominators,
  * SPEC §17 D1). Anything else leaves the engine's current denominator in place.
@@ -332,8 +340,7 @@ export type KbCountInBars = (typeof KB_COUNT_IN_BARS)[number];
 /** Sound id a distinct count-in uses until set (Metronome::kDefaultCountInSound). */
 export const KB_DEFAULT_COUNT_IN_SOUND = ${String(c.defaultCountInSound)};
 
-/** Tempo-ramp duration bounds the engine clamps to (TempoRamp::kMaxBars, kMinSeconds, kMaxSeconds). */
-export const KB_RAMP_MAX_BARS = ${String(c.rampMaxBars)};
+/** Tempo-ramp time bounds the engine clamps to (TempoRamp::kMinSeconds, kMaxSeconds). */
 export const KB_RAMP_SECONDS_BOUNDS = {
   min: ${String(c.rampSeconds.min)},
   max: ${String(c.rampSeconds.max)},

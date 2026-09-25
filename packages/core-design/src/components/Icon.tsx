@@ -25,7 +25,11 @@ export function Icon({
       accessible={labelled}
       importantForAccessibility={labelled ? 'yes' : 'no-hide-descendants'}
       {...(labelled ? { accessibilityLabel } : {})}
-      style={{ color: theme.color[color], fontSize: iconSizes[size] }}
+      style={{
+        color: theme.color[color],
+        fontSize: iconSizes[size],
+        lineHeight: iconSizes[size],
+      }}
     >
       {icons[name]}
     </Text>

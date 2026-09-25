@@ -23,6 +23,7 @@ import { PracticePill, usePracticeElapsed } from './PracticePill.tsx';
 import { PresetRow } from './PresetRow.tsx';
 import { SwipeTempoZone } from './SwipeTempoZone.tsx';
 import { TempoNumpadSheet } from './TempoNumpadSheet.tsx';
+import { TrainerChips } from './TrainerChips.tsx';
 import { Transport } from './Transport.tsx';
 import { useTempoSwipe } from './useTempoSwipe.ts';
 import { useMetronomeFrame } from './useMetronomeFrame.ts';
@@ -82,6 +83,8 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
   const running = useMetronome((s) => s.running);
 
   const setTempo = useMetronome((s) => s.setTempo);
+  const nudgeTempo = useMetronome((s) => s.nudgeTempo);
+  const syncTempoFromEngine = useMetronome((s) => s.syncTempoFromEngine);
   const setBeats = useMetronome((s) => s.setBeats);
   const setSubdivision = useMetronome((s) => s.setSubdivision);
   const setPoly = useMetronome((s) => s.setPoly);
@@ -89,7 +92,7 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
   const start = useMetronome((s) => s.start);
   const stop = useMetronome((s) => s.stop);
 
-  const { barPhase, currentBeat } = useMetronomeFrame(running);
+  const { barPhase, currentBeat, currentBpm } = useMetronomeFrame(running, bpm);
   const { elapsedMs, reset: resetPractice } = usePracticeElapsed(running);
   const [numpadOpen, setNumpadOpen] = useState(false);
   const tapTimes = useRef<readonly number[]>([]);
@@ -102,15 +105,16 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
     [setTempo],
   );
 
-  const tempoSwipe = useTempoSwipe(bpm, setTempoEndingTapSeries);
+  const tempoSwipe = useTempoSwipe(currentBpm, setTempoEndingTapSeries);
 
   const polyBeatUnpublished = useSharedValue(KB_STOPPED_BEAT);
 
   const handleNudge = useCallback(
     (delta: number) => {
-      setTempoEndingTapSeries(bpm + delta);
+      tapTimes.current = [];
+      nudgeTempo(delta);
     },
-    [bpm, setTempoEndingTapSeries],
+    [nudgeTempo],
   );
 
   const handleTap = useCallback(() => {
@@ -160,8 +164,9 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
   }, [running, start, stop]);
 
   const handleOpenNumpad = useCallback(() => {
+    syncTempoFromEngine();
     setNumpadOpen(true);
-  }, []);
+  }, [syncTempoFromEngine]);
 
   const handleCloseNumpad = useCallback(() => {
     setNumpadOpen(false);
@@ -182,6 +187,7 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
 
         <SwipeTempoZone
           bpm={bpm}
+          currentBpm={currentBpm}
           barPhase={barPhase}
           onTypeTempo={handleOpenNumpad}
         />
@@ -241,6 +247,8 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
             </View>
           </View>
         </Card>
+
+        <TrainerChips bottomInset={insets.bottom} />
 
         <View style={styles.spacer} />
 

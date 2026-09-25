@@ -17,7 +17,9 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import {
   defaultCommands,
+  defaultEngineBpm,
   defaultNowFrame,
+  type EngineBpm,
   type MetronomeCommands,
   type NowFrame,
 } from './commands.ts';
@@ -77,6 +79,8 @@ export interface MetronomeConfig {
 
 export interface MetronomeActions {
   setTempo: (bpm: number) => void;
+  nudgeTempo: (delta: number) => void;
+  syncTempoFromEngine: () => void;
   setBeats: (beatsPerBar: number, denominator: number) => void;
   setSubdivision: (subdivision: number) => void;
   cycleAccent: (beat: number) => void;
@@ -137,6 +141,38 @@ function initialConfig(): MetronomeConfig {
 
 type Set = StoreApi<MetronomeStore>['setState'];
 type Get = StoreApi<MetronomeStore>['getState'];
+
+// Commands queue until the device opens on start, so a stopped engine's tempo
+// is stale; so is a JS-only run with no HostObject.
+function readEngineTempo(engineBpm: EngineBpm, fallback: number): number {
+  let bpm: number;
+  try {
+    bpm = engineBpm();
+  } catch {
+    return fallback;
+  }
+  return Number.isFinite(bpm)
+    ? clamp(Math.round(bpm), BPM_BOUNDS.min, BPM_BOUNDS.max)
+    : fallback;
+}
+
+interface EngineTempo {
+  readonly read: () => number;
+  readonly sync: () => void;
+}
+
+function engineTempoOf(set: Set, get: Get, engineBpm: EngineBpm): EngineTempo {
+  const read = (): number => {
+    const state = get();
+    return state.running ? readEngineTempo(engineBpm, state.bpm) : state.bpm;
+  };
+  return {
+    read,
+    sync: () => {
+      set({ bpm: read() });
+    },
+  };
+}
 
 function patternActions(
   set: Set,
@@ -257,13 +293,14 @@ function soundActions(
   };
 }
 
-function trainerActions(
+function tempoActions(
   set: Set,
+  get: Get,
   commands: MetronomeCommands,
-  nowFrame: NowFrame,
+  tempo: EngineTempo,
 ): Pick<
   MetronomeActions,
-  'setTempo' | 'setRamp' | 'setBarMute' | 'start' | 'stop' | 'pause'
+  'setTempo' | 'nudgeTempo' | 'syncTempoFromEngine' | 'setRamp'
 > {
   return {
     setTempo: (bpm) => {
@@ -272,6 +309,12 @@ function trainerActions(
       set((s) => ({ bpm: next, ramp: { ...s.ramp, enabled: false } }));
       commands.setTempo(next);
     },
+
+    nudgeTempo: (delta) => {
+      get().setTempo(tempo.read() + delta);
+    },
+
+    syncTempoFromEngine: tempo.sync,
 
     setRamp: (config) => {
       const ramp = normalizeRamp(config);
@@ -285,8 +328,18 @@ function trainerActions(
         ramp.unit,
         ramp.loop,
       );
+      if (!ramp.enabled) tempo.sync();
     },
+  };
+}
 
+function transportActions(
+  set: Set,
+  commands: MetronomeCommands,
+  nowFrame: NowFrame,
+  tempo: EngineTempo,
+): Pick<MetronomeActions, 'setBarMute' | 'start' | 'stop' | 'pause'> {
+  return {
     setBarMute: (config) => {
       set({ barMute: config });
       commands.setBarMute(config.enabled, config.playBars, config.muteBars);
@@ -299,11 +352,13 @@ function trainerActions(
     },
 
     stop: () => {
+      tempo.sync();
       commands.metronomeStop();
       set({ running: false });
     },
 
     pause: () => {
+      tempo.sync();
       commands.metronomePause();
       set({ running: false });
     },
@@ -314,13 +369,18 @@ function trainerActions(
 export function createMetronomeStore(
   commands: MetronomeCommands = defaultCommands,
   nowFrame: NowFrame = defaultNowFrame,
+  engineBpm: EngineBpm = defaultEngineBpm,
 ): StoreApi<MetronomeStore> {
-  return createStore<MetronomeStore>((set, get) => ({
-    ...initialConfig(),
-    ...patternActions(set, get, commands),
-    ...soundActions(set, get, commands),
-    ...trainerActions(set, commands, nowFrame),
-  }));
+  return createStore<MetronomeStore>((set, get) => {
+    const tempo = engineTempoOf(set, get, engineBpm);
+    return {
+      ...initialConfig(),
+      ...patternActions(set, get, commands),
+      ...soundActions(set, get, commands),
+      ...tempoActions(set, get, commands, tempo),
+      ...transportActions(set, commands, nowFrame, tempo),
+    };
+  });
 }
 
 export const metronomeStore = createMetronomeStore();

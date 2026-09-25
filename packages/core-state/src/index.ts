@@ -14,7 +14,11 @@ export {
   type Denominator,
   type CountInBars,
 } from './metronome/store.ts';
-export type { MetronomeCommands, NowFrame } from './metronome/commands.ts';
+export type {
+  EngineBpm,
+  MetronomeCommands,
+  NowFrame,
+} from './metronome/commands.ts';
 export {
   configureMetronomeRuntime,
   type MetronomeRuntime,

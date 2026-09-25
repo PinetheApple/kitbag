@@ -1,7 +1,7 @@
 import { BPM_BOUNDS } from '@kitbag/core-state';
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Gesture } from 'react-native-gesture-handler';
-import { useSharedValue } from 'react-native-reanimated';
+import { useSharedValue, type SharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import {
@@ -11,14 +11,12 @@ import {
   flingBpmDelta,
 } from '../logic/swipeTempo.ts';
 
-export function useTempoSwipe(bpm: number, onTempo: (bpm: number) => void) {
-  const liveBpm = useSharedValue(bpm);
-  const gestureStartBpm = useSharedValue(bpm);
-  const sentBpm = useSharedValue(bpm);
-
-  useEffect(() => {
-    liveBpm.value = bpm;
-  }, [bpm, liveBpm]);
+export function useTempoSwipe(
+  currentBpm: SharedValue<number>,
+  onTempo: (bpm: number) => void,
+) {
+  const gestureStartBpm = useSharedValue(0);
+  const sentBpm = useSharedValue(0);
 
   return useMemo(
     () =>
@@ -28,8 +26,9 @@ export function useTempoSwipe(bpm: number, onTempo: (bpm: number) => void) {
         .failOffsetX([-DP_PER_BPM, DP_PER_BPM])
         .onBegin(() => {
           'worklet';
-          gestureStartBpm.value = liveBpm.value;
-          sentBpm.value = liveBpm.value;
+          const engineBpm = clampBpm(Math.round(currentBpm.value), BPM_BOUNDS);
+          gestureStartBpm.value = engineBpm;
+          sentBpm.value = engineBpm;
         })
         .onUpdate((event) => {
           'worklet';
@@ -54,6 +53,6 @@ export function useTempoSwipe(bpm: number, onTempo: (bpm: number) => void) {
           sentBpm.value = thrown;
           scheduleOnRN(onTempo, thrown);
         }),
-    [onTempo, gestureStartBpm, liveBpm, sentBpm],
+    [onTempo, gestureStartBpm, currentBpm, sentBpm],
   );
 }

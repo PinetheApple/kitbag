@@ -29,13 +29,18 @@ export interface MetronomeFrameValues {
   readonly barPhase: SharedValue<number>;
   /** current_beat (int; -1 stopped) — drives the LED flash. */
   readonly currentBeat: SharedValue<number>;
+  readonly currentBpm: SharedValue<number>;
 }
 
 /** `running` gates the poll: a stopped metronome publishes nothing to read, and
  * a screen left mounted should not wake every frame for it. */
-export function useMetronomeFrame(running: boolean): MetronomeFrameValues {
+export function useMetronomeFrame(
+  running: boolean,
+  bpm: number,
+): MetronomeFrameValues {
   const barPhase = useSharedValue(0);
   const currentBeat = useSharedValue(KB_STOPPED_BEAT);
+  const currentBpm = useSharedValue(bpm);
 
   const frame = useFrameCallback(() => {
     'worklet';
@@ -48,11 +53,16 @@ export function useMetronomeFrame(running: boolean): MetronomeFrameValues {
     // Each read is an allocation-free JSI double (§13.3).
     barPhase.value = host.bar_phase;
     currentBeat.value = host.current_beat;
+    currentBpm.value = host.current_bpm;
   }, false);
 
   useEffect(() => {
     frame.setActive(running);
   }, [frame, running]);
 
-  return { barPhase, currentBeat };
+  useEffect(() => {
+    currentBpm.value = bpm;
+  }, [bpm, currentBpm]);
+
+  return { barPhase, currentBeat, currentBpm };
 }

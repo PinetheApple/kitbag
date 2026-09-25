@@ -22,6 +22,7 @@ function fakeRuntime(frame: number): MetronomeRuntime {
       setTempo: vi.fn(),
     } as unknown as MetronomeRuntime['commands'],
     nowFrame: () => frame,
+    engineBpm: () => 120,
   };
 }
 

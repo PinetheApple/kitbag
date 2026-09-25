@@ -167,6 +167,8 @@ describe('collectConstants (real engine source)', () => {
     expect(c.maxGridBeats).toBe(8192);
     expect(c.maxTracks).toBe(16);
     expect(c.maxBeats).toBe(16);
+    expect(c.maxRampBars).toBe(64);
+    expect(c.maxMuteBars).toBe(16);
     expect(c.denominators).toEqual([2, 4, 8, 16]);
     expect(c.bpmReferenceDenominator).toBe(4);
     expect(c.soundNames).toEqual([
@@ -185,7 +187,6 @@ describe('collectConstants (real engine source)', () => {
     expect(c.maxPolyBeats).toBe(16);
     expect(c.countInBars).toEqual([0, 1, 2, 4]);
     expect(c.defaultCountInSound).toBe(1);
-    expect(c.rampMaxBars).toBe(64);
     expect(c.rampSeconds).toEqual({ min: 1, max: 3600 });
     expect(c.rampUnit).toEqual([
       { name: 'KB_RAMP_BARS', value: 0 },

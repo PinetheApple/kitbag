@@ -1,7 +1,7 @@
 import {
   KB_ACCENT,
   KB_COUNT_IN_BARS,
-  KB_RAMP_MAX_BARS,
+  KB_MAX_RAMP_BARS,
   KB_RAMP_SECONDS_BOUNDS,
   KB_RAMP_UNIT,
   KB_SOUND_NAMES,
@@ -74,7 +74,7 @@ export function initialAccents(count: number): KB_ACCENT[] {
 
 function clampDuration(duration: number, unit: KB_RAMP_UNIT): number {
   if (unit === KB_RAMP_UNIT.KB_RAMP_BARS) {
-    return clamp(Math.round(duration), MIN_RAMP_BARS, KB_RAMP_MAX_BARS);
+    return clamp(Math.round(duration), MIN_RAMP_BARS, KB_MAX_RAMP_BARS);
   }
   const scale = unit === KB_RAMP_UNIT.KB_RAMP_MINUTES ? SECONDS_PER_MINUTE : 1;
   return clamp(

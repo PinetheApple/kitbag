@@ -3,7 +3,7 @@ import {
   KB_DEFAULT_COUNT_IN_SOUND,
   KB_MAX_BEATS,
   KB_POLY_BEATS_BOUNDS,
-  KB_RAMP_MAX_BARS,
+  KB_MAX_RAMP_BARS,
   KB_RAMP_SECONDS_BOUNDS,
   KB_RAMP_UNIT,
   KB_SOUND_NAMES,
@@ -229,7 +229,7 @@ describe('tempo ramp matches what the engine holds', () => {
 
   it('clamps durations per unit to the generated bounds', () => {
     store.getState().setRamp({ ...ramp, duration: 999.4 });
-    expect(store.getState().ramp.duration).toBe(KB_RAMP_MAX_BARS);
+    expect(store.getState().ramp.duration).toBe(KB_MAX_RAMP_BARS);
     store
       .getState()
       .setRamp({ ...ramp, duration: 0.2, unit: KB_RAMP_UNIT.KB_RAMP_SECONDS });
@@ -345,5 +345,123 @@ describe('transport start / stop / pause', () => {
 
   it('holds no count-in timing shadow', () => {
     expect(Object.keys(store.getState())).not.toContain('countInArmed');
+  });
+});
+
+describe('§5.3 tempo shown and nudged is the engine tempo, not a stale intent', () => {
+  function makeEngine() {
+    const engine = { bpm: 120, rampEnd: 120 };
+    const cmds = makeCommands();
+    cmds.setTempo.mockImplementation((bpm: number) => {
+      engine.bpm = bpm;
+    });
+    cmds.setRamp.mockImplementation(
+      (enabled: boolean, startBpm: number, endBpm: number) => {
+        if (!enabled) return;
+        engine.bpm = startBpm;
+        engine.rampEnd = endBpm;
+      },
+    );
+    const s = createMetronomeStore(
+      cmds,
+      () => NOW_FRAME,
+      () => engine.bpm,
+    );
+    return { engine, cmds, s };
+  }
+
+  it('nudges from the ramped engine tempo and clears the ramp chip', () => {
+    const { engine, cmds, s } = makeEngine();
+    s.getState().start();
+    s.getState().setRamp({
+      enabled: true,
+      startBpm: 100,
+      endBpm: 140,
+      duration: 8,
+      unit: KB_RAMP_UNIT.KB_RAMP_BARS,
+      loop: false,
+    });
+    engine.bpm = 130.4;
+    s.getState().nudgeTempo(5);
+    expect(cmds.setTempo).toHaveBeenLastCalledWith(135);
+    expect(s.getState().ramp.enabled).toBe(false);
+    expect(s.getState().bpm).toBe(engine.bpm);
+  });
+
+  it('adopts the engine tempo when a running ramp is cleared', () => {
+    const { engine, s } = makeEngine();
+    s.getState().start();
+    s.getState().setRamp({
+      enabled: true,
+      startBpm: 100,
+      endBpm: 140,
+      duration: 8,
+      unit: KB_RAMP_UNIT.KB_RAMP_BARS,
+      loop: false,
+    });
+    engine.bpm = 118;
+    s.getState().setRamp({ ...s.getState().ramp, enabled: false });
+    expect(s.getState().bpm).toBe(118);
+  });
+
+  it('adopts the engine tempo on stop, after a ramp has finished', () => {
+    const { engine, s } = makeEngine();
+    s.getState().start();
+    s.getState().setRamp({
+      enabled: true,
+      startBpm: 100,
+      endBpm: 140,
+      duration: 8,
+      unit: KB_RAMP_UNIT.KB_RAMP_BARS,
+      loop: false,
+    });
+    engine.bpm = engine.rampEnd;
+    s.getState().stop();
+    expect(s.getState().bpm).toBe(140);
+  });
+
+  it('adopts the engine tempo on pause', () => {
+    const { engine, s } = makeEngine();
+    s.getState().start();
+    s.getState().setRamp({
+      enabled: true,
+      startBpm: 100,
+      endBpm: 140,
+      duration: 8,
+      unit: KB_RAMP_UNIT.KB_RAMP_BARS,
+      loop: false,
+    });
+    engine.bpm = 126;
+    s.getState().pause();
+    expect(s.getState().bpm).toBe(126);
+  });
+
+  it('trusts its own tempo before start, while commands still queue', () => {
+    const engine = { bpm: 120 };
+    const s = createMetronomeStore(
+      makeCommands(),
+      () => NOW_FRAME,
+      () => engine.bpm,
+    );
+    s.getState().setTempo(97);
+    s.getState().nudgeTempo(5);
+    expect(s.getState().bpm).toBe(102);
+    s.getState().syncTempoFromEngine();
+    expect(s.getState().bpm).toBe(102);
+  });
+
+  it('keeps its own tempo when no HostObject is installed', () => {
+    const cmds = makeCommands();
+    const s = createMetronomeStore(
+      cmds,
+      () => NOW_FRAME,
+      () => {
+        throw new Error('not installed');
+      },
+    );
+    s.getState().start();
+    s.getState().setTempo(97);
+    s.getState().nudgeTempo(5);
+    expect(s.getState().bpm).toBe(102);
   });
 });

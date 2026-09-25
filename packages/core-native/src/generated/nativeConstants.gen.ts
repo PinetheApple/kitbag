@@ -14,6 +14,12 @@ export const KB_MAX_TRACKS = 16;
 /** Beats per bar the engine will hold (Metronome::kMaxBeats); it clamps above this. */
 export const KB_MAX_BEATS = 16;
 
+/** Longest ramp in bars (TempoRamp::kMaxBars); the engine clamps above this. */
+export const KB_MAX_RAMP_BARS = 64;
+
+/** Longest play or mute run in bars (Metronome::kMaxMuteBars); clamped above. */
+export const KB_MAX_MUTE_BARS = 16;
+
 /**
  * Time-signature denominators the engine accepts (Metronome::kDenominators,
  * SPEC §17 D1). Anything else leaves the engine's current denominator in place.
@@ -34,8 +40,7 @@ export type KbCountInBars = (typeof KB_COUNT_IN_BARS)[number];
 /** Sound id a distinct count-in uses until set (Metronome::kDefaultCountInSound). */
 export const KB_DEFAULT_COUNT_IN_SOUND = 1;
 
-/** Tempo-ramp duration bounds the engine clamps to (TempoRamp::kMaxBars, kMinSeconds, kMaxSeconds). */
-export const KB_RAMP_MAX_BARS = 64;
+/** Tempo-ramp time bounds the engine clamps to (TempoRamp::kMinSeconds, kMaxSeconds). */
 export const KB_RAMP_SECONDS_BOUNDS = {
   min: 1,
   max: 3600,
