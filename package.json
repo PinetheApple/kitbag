@@ -12,6 +12,8 @@
     "format:write": "prettier --write ."
   },
   "devDependencies": {
+    "@commitlint/cli": "^21.2.2",
+    "@commitlint/config-conventional": "^21.2.2",
     "@eslint/js": "9.39.5",
     "@types/react": "~19.2.2",
     "eslint": "9.39.5",
