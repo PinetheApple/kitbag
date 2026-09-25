@@ -1,5 +1,5 @@
 import {
-  blob,
+  customType,
   integer,
   real,
   sqliteTable,
@@ -8,6 +8,21 @@ import {
 } from 'drizzle-orm/sqlite-core';
 
 export const DEFAULT_DENOMINATOR = 4;
+
+function toBytes(value: unknown): Uint8Array {
+  if (value instanceof ArrayBuffer) return new Uint8Array(value.slice(0));
+  if (ArrayBuffer.isView(value))
+    return new Uint8Array(
+      value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength),
+    );
+  throw new TypeError(`Expected blob bytes, got ${typeof value}`);
+}
+
+const bytes = customType<{ data: Uint8Array; driverData: unknown }>({
+  dataType: () => 'blob',
+  fromDriver: toBytes,
+  toDriver: (value) => value,
+});
 
 export const setlists = sqliteTable('setlists', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -27,9 +42,9 @@ export const songs = sqliteTable('songs', {
   format: text('format').notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   // Packed float32 beat timestamps in seconds.
-  beatGrid: blob('beat_grid', { mode: 'buffer' }),
+  beatGrid: bytes('beat_grid'),
   // Indices into beatGrid marking downbeats, packed as bytes.
-  downbeatIndices: blob('downbeat_indices', { mode: 'buffer' }),
+  downbeatIndices: bytes('downbeat_indices'),
   bpm: real('bpm'),
   waveformPath: text('waveform_path'),
   uuid: text('uuid').notNull(),
@@ -44,9 +59,9 @@ export const songPresets = sqliteTable('song_presets', {
   denominator: integer('denominator').notNull().default(DEFAULT_DENOMINATOR),
   // One kb_accent code byte per beat (polyAccents: per poly slot); one sound
   // code byte per beat in perAccentSounds.
-  accents: blob('accents', { mode: 'buffer' }).notNull(),
-  perAccentSounds: blob('per_accent_sounds', { mode: 'buffer' }),
-  polyAccents: blob('poly_accents', { mode: 'buffer' }),
+  accents: bytes('accents').notNull(),
+  perAccentSounds: bytes('per_accent_sounds'),
+  polyAccents: bytes('poly_accents'),
   polyEnabled: integer('poly_enabled', { mode: 'boolean' }).notNull(),
   polyBeats: integer('poly_beats').notNull(),
   sound: integer('sound').notNull(),
@@ -89,7 +104,7 @@ export const tunings = sqliteTable('tunings', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
   // One MIDI note byte per string, low string first.
-  notes: blob('notes', { mode: 'buffer' }).notNull(),
+  notes: bytes('notes').notNull(),
   uuid: text('uuid').notNull(),
 });
 
@@ -132,7 +147,7 @@ export const stems = sqliteTable('stems', {
 export const subdivisionAccents = sqliteTable('subdivision_accents', {
   subdivision: integer('subdivision').primaryKey(),
   // One kb_accent code byte per subdivided pulse.
-  accents: blob('accents', { mode: 'buffer' }).notNull(),
+  accents: bytes('accents').notNull(),
 });
 
 export const bpmCache = sqliteTable(

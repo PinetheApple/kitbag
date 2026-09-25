@@ -1,6 +1,7 @@
 import { afterEach } from 'vitest';
 
 import { createBackupService } from './backup';
+import { decodeBase64 } from './backup-reader';
 import { practiceSessions, songs, tunings } from './schema';
 import { createSetlistRepository } from './setlist-repository';
 import { createSongPresetRepository } from './song-preset-repository';
@@ -11,6 +12,11 @@ const open: ReturnType<typeof openTestDatabase>[] = [];
 afterEach(() => {
   for (const { connection } of open.splice(0)) connection.close();
 });
+
+const hexBytes = (hex: string) =>
+  decodeBase64(
+    btoa(hex.replace(/../g, (pair) => String.fromCharCode(parseInt(pair, 16)))),
+  );
 
 export const SESSION_START = new Date('2026-07-14T20:00:00Z');
 
@@ -34,9 +40,9 @@ export function presetValues(name: string, librarySongId: number | null) {
     beatsPerBar: 4,
     subdivision: 3,
     denominator: 8,
-    accents: Buffer.from('02010001', 'hex'),
-    perAccentSounds: Buffer.from('0103', 'hex'),
-    polyAccents: Buffer.from('020101', 'hex'),
+    accents: new Uint8Array([2, 1, 0, 1]),
+    perAccentSounds: hexBytes('0103'),
+    polyAccents: new Uint8Array([2, 1, 1]),
     polyEnabled: true,
     polyBeats: 3,
     sound: 2,
@@ -68,8 +74,8 @@ async function seedLibrary({ handle }: BackupDatabase) {
       duration: 210.5,
       format: 'flac',
       createdAt: new Date('2026-01-02T03:04:05Z'),
-      beatGrid: Buffer.from('0000003f0000a03f', 'hex'),
-      downbeatIndices: Buffer.from([0]),
+      beatGrid: hexBytes('0000003f0000a03f'),
+      downbeatIndices: new Uint8Array([0]),
       bpm: 128,
       waveformPath: null,
       uuid: crypto.randomUUID(),
@@ -92,7 +98,7 @@ export async function seed(database: BackupDatabase) {
   await sets.selectActive(friday.id);
   await handle.db.insert(tunings).values({
     name: 'Drop D',
-    notes: Buffer.from('262d32373b40', 'hex'),
+    notes: hexBytes('262d32373b40'),
     uuid: crypto.randomUUID(),
   });
   await handle.db.insert(practiceSessions).values({

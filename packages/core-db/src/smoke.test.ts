@@ -24,7 +24,7 @@ const preset = (name: string) =>
     bpm: 120,
     beatsPerBar: 4,
     subdivision: 1,
-    accents: Buffer.from([2, 1, 1, 1]),
+    accents: new Uint8Array([2, 1, 1, 1]),
     polyEnabled: false,
     polyBeats: 0,
     sound: 0,

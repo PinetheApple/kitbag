@@ -24,7 +24,7 @@ function random(seed: number) {
 }
 
 function bytes(next: (below: number) => number, length: number, limit: number) {
-  return Buffer.from(Array.from({ length }, () => next(limit)));
+  return Uint8Array.from(Array.from({ length }, () => next(limit)));
 }
 
 async function seedOddPresets({ presets, sets }: BackupDatabase) {
@@ -40,7 +40,7 @@ async function seedOddPresets({ presets, sets }: BackupDatabase) {
       accents: bytes(next, beatsPerBar, 3),
       polyAccents: next(2) ? bytes(next, polyBeats, 3) : null,
       perAccentSounds:
-        [null, Buffer.alloc(0), bytes(next, 2, SOUND_COUNT)][next(3)] ?? null,
+        [null, new Uint8Array(0), bytes(next, 2, SOUND_COUNT)][next(3)] ?? null,
     });
     await sets.add(setlist.id, preset.id);
     await sets.add(setlist.id, preset.id);
