@@ -7,7 +7,7 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core';
 
-const DEFAULT_DENOMINATOR = 4;
+export const DEFAULT_DENOMINATOR = 4;
 
 export const setlists = sqliteTable('setlists', {
   id: integer('id').primaryKey({ autoIncrement: true }),

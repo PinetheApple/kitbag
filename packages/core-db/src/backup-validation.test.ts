@@ -6,6 +6,7 @@ import { openBackupDatabase, records, seed } from './backup.test-helper';
 type Mutable = Record<string, unknown> & {
   songPresets: Record<string, unknown>[];
   setlists: Record<string, unknown>[];
+  tunings?: Record<string, unknown>[];
   practiceSessions: Record<string, unknown>[];
 };
 
@@ -54,7 +55,7 @@ describe('backup validation', () => {
 
   it('refuses bytes that are not JSON', async () => {
     const target = openBackupDatabase();
-    const plan = await target.backup.plan(new TextEncoder().encode('{nope'));
+    const plan = await target.backup.plan('{nope');
     expect(plan).toEqual({
       ok: false,
       error: { kind: 'malformedFile', reason: 'not valid JSON' },
@@ -157,5 +158,36 @@ describe('backup validation', () => {
       ok: false,
       error: { kind: 'missingDependency', requires: 'songPresets' },
     });
+  });
+  it('reports a foreign file as malformed even when it names a version', async () => {
+    const target = openBackupDatabase();
+    const plan = await target.backup.plan('{"format":"other","version":5}');
+    expect(plan).toMatchObject({ ok: false, error: { kind: 'malformedFile' } });
+  });
+
+  it.each([
+    ['bpm', 401],
+    ['beatsPerBar', 0],
+    ['denominator', 6],
+    ['sound', 6],
+  ])('refuses a preset %s outside engine bounds', async (field, value) => {
+    const failure = await rejected((file) => {
+      first(file.songPresets)[field] = value;
+    });
+    expect(failure).toMatchObject({ path: `$.songPresets[0].${field}` });
+  });
+
+  it('refuses per-accent sounds that are not a normal/accent pair', async () => {
+    const failure = await rejected((file) => {
+      first(file.songPresets).perAccentSounds = 'AQID';
+    });
+    expect(failure).toMatchObject({ path: '$.songPresets[0].perAccentSounds' });
+  });
+
+  it('refuses a tuning with no strings', async () => {
+    const failure = await rejected((file) => {
+      first(file.tunings ?? []).notes = '';
+    });
+    expect(failure).toMatchObject({ path: '$.tunings[0].notes' });
   });
 });

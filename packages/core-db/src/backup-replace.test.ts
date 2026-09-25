@@ -93,6 +93,27 @@ describe('backup replace', () => {
     expect(await records(target)).toEqual(before);
   });
 
+  it('relinks presets it keeps to the library songs it restores', async () => {
+    const source = openBackupDatabase();
+    await seed(source);
+    const target = openBackupDatabase();
+    const initial = await target.backup.plan(await source.backup.export(), {
+      categories: CATEGORIES,
+    });
+    if (!initial.ok) throw new Error(initial.error.kind);
+    await target.backup.apply(initial.value);
+    const before = await records(target);
+    const plan = await target.backup.plan(await source.backup.export(), {
+      mode: 'replace',
+      categories: ['librarySongs'],
+    });
+    if (!plan.ok) throw new Error(plan.error.kind);
+    await target.backup.apply(plan.value, { confirmReplace: true });
+    expect(await records(target)).toEqual(before);
+    const [opener] = await target.presets.list();
+    expect(opener?.librarySongId).not.toBeNull();
+  });
+
   it('requires setlists alongside presets, since replacing presets empties them', async () => {
     const { target, file } = await localAndFile();
     const plan = await target.backup.plan(file, {
@@ -116,9 +137,15 @@ describe('backup replace', () => {
       categories: CATEGORIES,
     });
     if (!plan.ok) throw new Error(plan.error.kind);
-    await expect(
-      target.backup.apply(plan.value, { confirmReplace: true }),
-    ).rejects.toThrow(/tunings/);
+    const result = await target.backup.apply(plan.value, {
+      confirmReplace: true,
+    });
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        kind: 'databaseError',
+      },
+    });
     expect(await records(target)).toEqual(before);
   });
 
@@ -130,7 +157,10 @@ describe('backup replace', () => {
     );
     const plan = await target.backup.plan(file);
     if (!plan.ok) throw new Error(plan.error.kind);
-    await expect(target.backup.apply(plan.value)).rejects.toThrow(/tunings/);
+    expect(await target.backup.apply(plan.value)).toMatchObject({
+      ok: false,
+      error: { kind: 'databaseError' },
+    });
     expect(await records(target)).toEqual(before);
   });
 

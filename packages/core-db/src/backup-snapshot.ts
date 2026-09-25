@@ -9,6 +9,7 @@ import {
   type SetlistRecord,
   type SongPresetRecord,
 } from './backup-format';
+import { encodeBase64 } from './backup-reader';
 import type { Database } from './repository';
 import {
   practiceSessions,
@@ -19,24 +20,11 @@ import {
   tunings,
 } from './schema';
 
-const BYTE_CHUNK = 0x8000;
-
 export type IdMaps = Record<Category, Map<string, number>>;
 
 export interface Snapshot {
   records: CategoryRecords;
   ids: IdMaps;
-}
-
-export function encodeBase64(bytes: Uint8Array): string {
-  let binary = '';
-  for (let start = 0; start < bytes.length; start += BYTE_CHUNK)
-    binary += String.fromCharCode(...bytes.subarray(start, start + BYTE_CHUNK));
-  return btoa(binary);
-}
-
-export function decodeBase64(encoded: string): Buffer {
-  return Uint8Array.from(atob(encoded), (char) => char.charCodeAt(0)) as Buffer;
 }
 
 export const toSeconds = (date: Date) =>

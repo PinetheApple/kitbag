@@ -11,12 +11,8 @@ import {
   type TuningRecord,
 } from './backup-format';
 import type { ImportPlan, Writes } from './backup-plan';
-import {
-  decodeBase64,
-  fromSeconds,
-  type IdMaps,
-  type Snapshot,
-} from './backup-snapshot';
+import { decodeBase64, nullableBytes } from './backup-reader';
+import { fromSeconds, type IdMaps, type Snapshot } from './backup-snapshot';
 import { found, type Database } from './repository';
 import {
   practiceSessions,
@@ -26,9 +22,6 @@ import {
   songs,
   tunings,
 } from './schema';
-
-const nullableBytes = (encoded: string | null) =>
-  encoded === null ? null : decodeBase64(encoded);
 
 const lookup = (map: Map<string, number>, uuid: string | null) =>
   uuid === null ? null : (map.get(uuid) ?? null);

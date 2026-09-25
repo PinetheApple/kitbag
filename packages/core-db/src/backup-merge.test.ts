@@ -119,4 +119,56 @@ describe('backup merge', () => {
     const result = await target.backup.apply(plan.value);
     expect(result).toEqual({ ok: false, error: { kind: 'stalePlan' } });
   });
+  it('settles after one default-category merge', async () => {
+    const source = openBackupDatabase();
+    await seed(source);
+    const file = await source.backup.export();
+    const target = openBackupDatabase();
+    const first = await target.backup.plan(file);
+    if (!first.ok) throw new Error(first.error.kind);
+    expect((await target.backup.apply(first.value)).ok).toBe(true);
+    const second = await target.backup.plan(file);
+    if (!second.ok) throw new Error(second.error.kind);
+    expect(second.value.unresolved).toEqual([]);
+    for (const counts of Object.values(second.value.counts))
+      expect(counts).toMatchObject({
+        new: 0,
+        conflicts: [],
+        incoming: counts.unchanged,
+      });
+  });
+
+  it('matches UUIDs regardless of case', async () => {
+    const source = openBackupDatabase();
+    await seed(source);
+    const file = await source.backup.export();
+    const target = openBackupDatabase();
+    const first = await target.backup.plan(file);
+    if (!first.ok) throw new Error(first.error.kind);
+    await target.backup.apply(first.value);
+    const upper = file.replace(/[0-9a-f]{8}-[0-9a-f-]{27}/g, (uuid) =>
+      uuid.toUpperCase(),
+    );
+    const second = await target.backup.plan(upper);
+    expect(second.ok && second.value.counts.songPresets).toMatchObject({
+      new: 0,
+      unchanged: 2,
+    });
+  });
+
+  it('refuses a plan whose file was edited after planning', async () => {
+    const source = openBackupDatabase();
+    await seed(source);
+    const target = openBackupDatabase();
+    const plan = await target.backup.plan(await source.backup.export());
+    if (!plan.ok) throw new Error(plan.error.kind);
+    const [preset] = plan.value.file.records.songPresets;
+    if (preset) preset.bpm = 9999;
+    const result = await target.backup.apply(plan.value);
+    expect(result).toMatchObject({
+      ok: false,
+      error: { kind: 'invalidField' },
+    });
+    expect(await target.presets.list()).toEqual([]);
+  });
 });

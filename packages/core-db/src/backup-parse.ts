@@ -17,10 +17,13 @@ import {
   asArray,
   asObject,
   base64Length,
+  decodeBase64,
+  nullableBytes,
   invalidField,
   reader,
   type Reader,
 } from './backup-reader';
+import { presetViolation } from './preset-rules';
 
 const FLOAT32_BYTES = 4;
 
@@ -89,15 +92,6 @@ function readPresetIdentity(r: Reader) {
   };
 }
 
-function checkBlobLength(
-  path: string,
-  encoded: string | null,
-  expected: number,
-) {
-  if (encoded !== null && base64Length(encoded) !== expected)
-    invalidField(path, `expected ${String(expected)} bytes`);
-}
-
 function readSongPreset(value: unknown, path: string): SongPresetRecord {
   const r = reader(value, path);
   const record = {
@@ -105,13 +99,13 @@ function readSongPreset(value: unknown, path: string): SongPresetRecord {
     ...readPresetRig(r),
     ...readPresetIdentity(r),
   };
-  checkBlobLength(`${path}.accents`, record.accents, record.beatsPerBar);
-  checkBlobLength(
-    `${path}.perAccentSounds`,
-    record.perAccentSounds,
-    record.beatsPerBar,
-  );
-  checkBlobLength(`${path}.polyAccents`, record.polyAccents, record.polyBeats);
+  const violation = presetViolation({
+    ...record,
+    accents: decodeBase64(record.accents),
+    perAccentSounds: nullableBytes(record.perAccentSounds),
+    polyAccents: nullableBytes(record.polyAccents),
+  });
+  if (violation) invalidField(`${path}.${violation.field}`, violation.reason);
   return record;
 }
 
@@ -131,11 +125,14 @@ function readSetlist(value: unknown, path: string): SetlistRecord {
 
 function readTuning(value: unknown, path: string): TuningRecord {
   const r = reader(value, path);
-  return {
+  const record = {
     uuid: r.uuid('uuid'),
     name: r.string('name'),
     notes: r.blob('notes'),
   };
+  if (record.notes === '')
+    invalidField(`${path}.notes`, 'expected at least one string');
+  return record;
 }
 
 function readPracticeSession(
@@ -191,10 +188,11 @@ function readCategories(value: unknown): Category[] {
 }
 
 function readHeader(root: Record<string, unknown>) {
-  const { version } = root;
-  if (typeof version === 'number' && version !== BACKUP_VERSION)
+  const { version, format } = root;
+  const foreign = format !== undefined && format !== BACKUP_FORMAT;
+  if (!foreign && typeof version === 'number' && version !== BACKUP_VERSION)
     reject({ kind: 'unsupportedVersion', version });
-  if (root.format !== BACKUP_FORMAT || version !== BACKUP_VERSION)
+  if (format !== BACKUP_FORMAT || version !== BACKUP_VERSION)
     reject({ kind: 'malformedFile', reason: 'not a Kitbag backup' });
   return {
     exportedAt: reader(root, '$').string('exportedAt'),
@@ -264,9 +262,7 @@ function checkRelationships(file: BackupFile) {
     );
 }
 
-function parseJson(input: string | Uint8Array): Record<string, unknown> {
-  const text =
-    typeof input === 'string' ? input : new TextDecoder().decode(input);
+function parseJson(text: string): Record<string, unknown> {
   let root: unknown;
   try {
     root = JSON.parse(text);
@@ -276,7 +272,7 @@ function parseJson(input: string | Uint8Array): Record<string, unknown> {
   return asObject(root, '$');
 }
 
-export function parseBackup(input: string | Uint8Array): BackupFile {
+export function parseBackup(input: string): BackupFile {
   const root = parseJson(input);
   const header = readHeader(root);
   const records = Object.fromEntries(

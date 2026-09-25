@@ -17,8 +17,17 @@ const isCount: Check<number> = (value): value is number =>
 const isBoolean: Check<boolean> = (value) => typeof value === 'boolean';
 const isUuid: Check<string> = (value): value is string =>
   isString(value) && UUID_PATTERN.test(value);
+const lowercase = (value: string) => value.toLowerCase();
+const nullableLowercase = (value: string | null) =>
+  value?.toLowerCase() ?? null;
 const isBase64: Check<string> = (value): value is string =>
   isString(value) && BASE64_PATTERN.test(value);
+
+export const encodeBase64 = (bytes: Uint8Array) =>
+  Buffer.from(bytes).toString('base64');
+export const decodeBase64 = (encoded: string) => Buffer.from(encoded, 'base64');
+export const nullableBytes = (encoded: string | null) =>
+  encoded === null ? null : decodeBase64(encoded);
 
 export function invalidField(path: string, reason: string): never {
   return reject({ kind: 'invalidField', path, reason });
@@ -60,7 +69,7 @@ export function reader(value: unknown, path: string) {
     number: (key: string) => get(key, isNumber, 'expected a finite number'),
     count: (key: string) => get(key, isCount, 'expected a whole number ≥ 0'),
     boolean: (key: string) => get(key, isBoolean, 'expected a boolean'),
-    uuid: (key: string) => get(key, isUuid, 'expected a UUID'),
+    uuid: (key: string) => lowercase(get(key, isUuid, 'expected a UUID')),
     blob: (key: string) => get(key, isBase64, 'expected base64 bytes'),
     nullableString: (key: string) =>
       nullable(key, isString, 'expected a string or null'),
@@ -69,7 +78,7 @@ export function reader(value: unknown, path: string) {
     nullableCount: (key: string) =>
       nullable(key, isCount, 'expected a whole number ≥ 0 or null'),
     nullableUuid: (key: string) =>
-      nullable(key, isUuid, 'expected a UUID or null'),
+      nullableLowercase(nullable(key, isUuid, 'expected a UUID or null')),
     nullableBlob: (key: string) =>
       nullable(key, isBase64, 'expected base64 bytes or null'),
   };

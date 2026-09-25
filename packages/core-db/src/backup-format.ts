@@ -114,7 +114,8 @@ export type ImportFailure =
   | { kind: 'missingDependency'; category: Category; requires: Category }
   | { kind: 'unresolvedConflicts'; conflicts: Conflict[] }
   | { kind: 'replaceNotConfirmed' }
-  | { kind: 'stalePlan' };
+  | { kind: 'stalePlan' }
+  | { kind: 'databaseError'; reason: string };
 
 export interface Conflict {
   category: Category;

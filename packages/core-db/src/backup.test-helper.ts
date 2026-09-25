@@ -35,7 +35,7 @@ export function presetValues(name: string, librarySongId: number | null) {
     subdivision: 3,
     denominator: 8,
     accents: Buffer.from('02010001', 'hex'),
-    perAccentSounds: Buffer.from('01020304', 'hex'),
+    perAccentSounds: Buffer.from('0103', 'hex'),
     polyAccents: Buffer.from('020101', 'hex'),
     polyEnabled: true,
     polyBeats: 3,

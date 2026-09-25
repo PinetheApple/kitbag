@@ -3,6 +3,7 @@ import {
   BACKUP_VERSION,
   CATEGORIES,
   ImportRejected,
+  type BackupFile,
   type Category,
   type Result,
 } from './backup-format';
@@ -28,8 +29,30 @@ async function captured<T>(work: () => Promise<T>): Promise<Result<T>> {
   } catch (error) {
     if (error instanceof ImportRejected)
       return { ok: false, error: error.failure };
-    throw error;
+    const reason = error instanceof Error ? error.message : String(error);
+    return { ok: false, error: { kind: 'databaseError', reason } };
   }
+}
+
+export function serializeBackup(file: BackupFile): string {
+  const out: Record<string, unknown> = {
+    format: BACKUP_FORMAT,
+    version: file.version,
+    exportedAt: file.exportedAt,
+    categories: file.categories,
+  };
+  for (const category of file.categories)
+    out[category] = file.records[category];
+  return JSON.stringify(out);
+}
+
+function withDependencies(categories: readonly Category[]): Category[] {
+  const needsPresets = categories.includes('setlists');
+  return CATEGORIES.filter(
+    (category) =>
+      categories.includes(category) ||
+      (needsPresets && category === 'songPresets'),
+  );
 }
 
 async function exportBackup(
@@ -37,15 +60,12 @@ async function exportBackup(
   categories: readonly Category[],
 ): Promise<string> {
   const { records } = await loadSnapshot(db);
-  const listed = CATEGORIES.filter((category) => categories.includes(category));
-  const file: Record<string, unknown> = {
-    format: BACKUP_FORMAT,
+  return serializeBackup({
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
-    categories: listed,
-  };
-  for (const category of listed) file[category] = records[category];
-  return JSON.stringify(file);
+    categories: withDependencies(categories),
+    records,
+  });
 }
 
 async function summary({ db }: DatabaseHandle) {
@@ -67,8 +87,9 @@ async function applyPlan(
       kind: 'unresolvedConflicts',
       conflicts: plan.unresolved,
     });
+  const file = parseBackup(serializeBackup(plan.file));
   const snapshot = await loadSnapshot(db);
-  const fresh = computePlan(plan.file, snapshot, plan);
+  const fresh = computePlan(file, snapshot, plan);
   if (planFingerprint(fresh.plan) !== planFingerprint(plan))
     throw new ImportRejected({ kind: 'stalePlan' });
   await applyWrites(db, fresh.plan, fresh.writes, snapshot);
@@ -81,7 +102,7 @@ export function createBackupService(handle: DatabaseHandle) {
     summary: () => serial(() => summary(handle)),
     export: (categories: readonly Category[] = CATEGORIES) =>
       serial(() => exportBackup(handle, categories)),
-    plan: (input: string | Uint8Array, options: ImportOptions = {}) =>
+    plan: (input: string, options: ImportOptions = {}) =>
       serial(() =>
         captured(
           async () =>
@@ -92,6 +113,8 @@ export function createBackupService(handle: DatabaseHandle) {
             ).plan,
         ),
       ),
+    // Never throws: a refusal, or a failed write that was rolled back, comes
+    // back as a Result the caller can show.
     apply: (plan: ImportPlan, options: ApplyOptions = {}) =>
       captured(() => transaction(() => applyPlan(handle, plan, options))),
   };

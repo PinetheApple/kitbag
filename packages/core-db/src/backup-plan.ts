@@ -156,6 +156,33 @@ function planMerge(
   return state;
 }
 
+function resolvedRef(
+  uuid: string | null,
+  target: Category,
+  categories: readonly Category[],
+  snapshot: Snapshot,
+): string | null {
+  if (uuid === null || categories.includes(target)) return uuid;
+  return snapshot.ids[target].has(uuid) ? uuid : null;
+}
+
+function effective(
+  record: BackupRecord,
+  categories: readonly Category[],
+  snapshot: Snapshot,
+): BackupRecord {
+  const ref = (uuid: string | null, target: Category) =>
+    resolvedRef(uuid, target, categories, snapshot);
+  if ('librarySongUuid' in record)
+    return {
+      ...record,
+      librarySongUuid: ref(record.librarySongUuid, 'librarySongs'),
+    };
+  if ('setlistUuid' in record)
+    return { ...record, setlistUuid: ref(record.setlistUuid, 'setlists') };
+  return record;
+}
+
 export function computePlan(
   file: BackupFile,
   snapshot: Snapshot,
@@ -170,7 +197,9 @@ export function computePlan(
   };
   const writes: Writes = {};
   for (const category of categories) {
-    const incoming = file.records[category];
+    const incoming = file.records[category].map((record) =>
+      effective(record, categories, snapshot),
+    );
     const result =
       mode === 'replace'
         ? planReplace(incoming, snapshot.records[category])
