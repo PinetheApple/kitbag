@@ -111,10 +111,7 @@ void kb_metronome_set_accent(
     int32_t accent
 ) {
   if (engine != nullptr) {
-    ToEngine(engine)->metronome().SetAccent(
-        beat_index,
-        static_cast<kitbag::Accent>(accent)
-    );
+    ToEngine(engine)->metronome().SetAccent(beat_index, accent);
   }
 }
 
@@ -130,10 +127,7 @@ void kb_metronome_set_poly_accent(
     int32_t accent
 ) {
   if (engine != nullptr) {
-    ToEngine(engine)->metronome().SetPolyAccent(
-        beat_index,
-        static_cast<kitbag::Accent>(accent)
-    );
+    ToEngine(engine)->metronome().SetPolyAccent(beat_index, accent);
   }
 }
 

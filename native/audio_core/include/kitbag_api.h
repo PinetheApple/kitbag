@@ -133,14 +133,14 @@ KB_EXPORT void kb_metronome_set_beats(
 );
 KB_EXPORT void
 kb_metronome_set_subdivision(kb_engine* engine, int32_t subdivision);
+/* accent outside kb_accent clamps to MUTED..ACCENTED; an out-of-range
+ * beat_index is ignored. kb_metronome_set_poly_accent shares both rules. */
 KB_EXPORT void
 kb_metronome_set_accent(kb_engine* engine, int32_t beat_index, int32_t accent);
 KB_EXPORT void
 kb_metronome_set_poly(kb_engine* engine, int32_t enabled, int32_t beats);
-/* Poly-row accent: same kb_accent values and clamping as
- * kb_metronome_set_accent, stored in a table independent of the main row. Slot 0
- * starts accented, the rest normal. Growing the poly count resets the newly
- * included slots to normal; slots kept across a count change keep their accent. */
+/* Independent of the main row; slot 0 defaults accented. Growing the poly count
+ * resets new slots to normal; kept slots keep their accent. */
 KB_EXPORT void kb_metronome_set_poly_accent(
     kb_engine* engine,
     int32_t beat_index,

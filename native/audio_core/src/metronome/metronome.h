@@ -4,6 +4,7 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
+#include <span>
 #include <vector>
 
 #include "rt/rt_publisher.h"
@@ -48,8 +49,8 @@ class Metronome {
   static constexpr double kMaxVolume = 2.0;
 
   Metronome() {
-    InitAccentRow(accents_, kMaxBeats);
-    InitAccentRow(poly_accents_, kMaxPolyBeats);
+    InitAccentRow(accents_);
+    InitAccentRow(poly_accents_);
   }
 
   // Renders additively into an interleaved stereo buffer. RT-safe.
@@ -79,9 +80,15 @@ class Metronome {
   void SetTempo(double bpm);
   void SetTimeSignature(int numerator, int denominator);
   void SetSubdivision(int subdivision);
-  void SetAccent(int beat_index, Accent accent);
+  void SetAccent(int beat_index, int32_t accent);
+  void SetAccent(int beat_index, Accent accent) {
+    SetAccent(beat_index, static_cast<int32_t>(accent));
+  }
   void SetPolyrhythm(bool enabled, int beats);
-  void SetPolyAccent(int beat_index, Accent accent);
+  void SetPolyAccent(int beat_index, int32_t accent);
+  void SetPolyAccent(int beat_index, Accent accent) {
+    SetPolyAccent(beat_index, static_cast<int32_t>(accent));
+  }
   void SetSound(int sound_index);
   void SetVolume(double volume);
   void SetLatencyOffset(double latency_ms);
@@ -195,9 +202,9 @@ class Metronome {
   bool ApplyTempoCommand(const Command& command);
   bool ApplyTrainerCommand(const Command& command);
   bool ApplyPatternCommand(const Command& command);
-  static void InitAccentRow(Accent* row, int size);
+  static void InitAccentRow(std::span<Accent> row);
   static void
-  SetAccentSlot(Accent* row, int size, int32_t beat_index, int32_t accent);
+  SetAccentSlot(std::span<Accent> row, int32_t beat_index, int32_t accent);
   void SetSignatureState(int32_t numerator, int32_t denominator);
   static bool IsValidDenominator(int32_t denominator);
   void SetPolyState(bool enabled, int32_t beats);

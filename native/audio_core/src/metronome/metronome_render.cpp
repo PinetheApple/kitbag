@@ -18,7 +18,7 @@ constexpr double kTau = 6.283185307179586;
 constexpr double kAccentAmplitude = 0.9;
 constexpr double kBeatAmplitude = 0.6;
 constexpr double kSubdivisionAmplitude = 0.3;
-constexpr double kPolyAmplitude = 0.5;
+constexpr double kPolyBeatAmplitude = 0.5;
 constexpr double kPolyAccentAmplitude = 0.8;
 // A decaying voice is retired once it falls below audibility.
 constexpr double kVoiceSilenceAmplitude = 1e-4;
@@ -113,7 +113,7 @@ void Metronome::OnPolyBoundary(int poly_index, uint32_t sample_rate) {
   const SoundPreset& sound = kSounds[sound_];
   TriggerClick(
       sound.poly_hz,
-      accent == Accent::kAccented ? kPolyAccentAmplitude : kPolyAmplitude,
+      accent == Accent::kAccented ? kPolyAccentAmplitude : kPolyBeatAmplitude,
       sound.decay_per_second,
       sample_rate
   );

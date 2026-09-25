@@ -1,5 +1,6 @@
 #include "metronome/metronome.h"
 
+#include <algorithm>
 #include <cassert>
 
 #include "metronome/metronome_internal.h"
@@ -56,10 +57,10 @@ void Metronome::SetSubdivision(int subdivision) {
   commands_.Push(command);
 }
 
-void Metronome::SetAccent(int beat_index, Accent accent) {
+void Metronome::SetAccent(int beat_index, int32_t accent) {
   Command command{CommandType::kSetAccent};
   command.int_a = beat_index;
-  command.int_b = static_cast<int32_t>(accent);
+  command.int_b = accent;
   commands_.Push(command);
 }
 
@@ -70,10 +71,10 @@ void Metronome::SetPolyrhythm(bool enabled, int beats) {
   commands_.Push(command);
 }
 
-void Metronome::SetPolyAccent(int beat_index, Accent accent) {
+void Metronome::SetPolyAccent(int beat_index, int32_t accent) {
   Command command{CommandType::kSetPolyAccent};
   command.int_a = beat_index;
-  command.int_b = static_cast<int32_t>(accent);
+  command.int_b = accent;
   commands_.Push(command);
 }
 
@@ -244,10 +245,10 @@ bool Metronome::ApplyPatternCommand(const Command& command) {
       subdivision_ = Clamp(command.int_a, 1, kMaxSubdivision);
       return true;
     case CommandType::kSetAccent:
-      SetAccentSlot(accents_, kMaxBeats, command.int_a, command.int_b);
+      SetAccentSlot(accents_, command.int_a, command.int_b);
       return true;
     case CommandType::kSetPolyAccent:
-      SetAccentSlot(poly_accents_, kMaxPolyBeats, command.int_a, command.int_b);
+      SetAccentSlot(poly_accents_, command.int_a, command.int_b);
       return true;
     case CommandType::kSetPoly:
       SetPolyState(command.int_a != 0, command.int_b);
@@ -263,21 +264,18 @@ bool Metronome::ApplyPatternCommand(const Command& command) {
   }
 }
 
-void Metronome::InitAccentRow(Accent* row, int size) {
-  row[0] = Accent::kAccented;
-  for (int i = 1; i < size; ++i) {
-    row[i] = Accent::kNormal;
-  }
+void Metronome::InitAccentRow(std::span<Accent> row) {
+  std::fill(row.begin(), row.end(), Accent::kNormal);
+  row.front() = Accent::kAccented;
 }
 
 void Metronome::SetAccentSlot(
-    Accent* row,
-    int size,
+    std::span<Accent> row,
     int32_t beat_index,
     int32_t accent
 ) {
-  if (beat_index < 0 || beat_index >= size) return;
-  row[beat_index] = static_cast<Accent>(
+  if (beat_index < 0 || static_cast<size_t>(beat_index) >= row.size()) return;
+  row[static_cast<size_t>(beat_index)] = static_cast<Accent>(
       Clamp(accent, 0, static_cast<int32_t>(Accent::kAccented))
   );
 }

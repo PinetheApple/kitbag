@@ -6,9 +6,10 @@ namespace {
 using kitbag::Accent;
 
 constexpr int64_t kBarFrames = 96000;
-constexpr int64_t kThirdFrames = 32000;
-constexpr int64_t kFifthFrames = 19200;
-constexpr int64_t kQuarterFrames = 24000;
+constexpr int64_t kThirdFrames = kBarFrames / 3;
+constexpr int64_t kFifthFrames = kBarFrames / 5;
+constexpr int64_t kQuarterFrames = kBarFrames / 4;
+constexpr int64_t kSixteenthFrames = kBarFrames / 16;
 constexpr int64_t kPeakWindow = 480;
 constexpr double kPolyAccentPeak = 0.8;
 constexpr double kPolyNormalPeak = 0.5;
@@ -29,7 +30,7 @@ PolyRun RenderPoly(
     OnBlock on_block
 ) {
   PolyRun run;
-  std::vector<float> buffer(kBlockFrames * kChannels);
+  std::vector<float> buffer(static_cast<size_t>(kBlockFrames) * kChannels);
   for (int64_t rendered = 0; rendered < total_frames;
        rendered += kBlockFrames) {
     on_block(rendered);
@@ -42,7 +43,7 @@ PolyRun RenderPoly(
         static_cast<uint64_t>(rendered)
     );
     for (uint32_t frame = 0; frame < kBlockFrames; ++frame) {
-      run.left.push_back(buffer[frame * kChannels]);
+      run.left.push_back(buffer[static_cast<size_t>(frame) * kChannels]);
     }
     run.poly_beat_after_block.push_back(metronome.current_poly_beat());
   }
@@ -287,6 +288,69 @@ void TestMainRowUnchangedByPolyEdits() {
   );
 }
 
+void TestMainAccentValuesClamp() {
+  kitbag::Metronome metronome;
+  metronome.SetAccent(1, 256);
+  metronome.SetAccent(2, -1);
+  metronome.SetAccent(3, static_cast<int32_t>(Accent::kAccented) + 1);
+  metronome.SetTempo(120.0);
+  metronome.SetTimeSignature(4, 4);
+  metronome.Start();
+  const PolyRun run = RenderPoly(metronome, kBarFrames);
+
+  Check(
+      Near(PeakAt(run, kQuarterFrames), kMainAccentPeak),
+      "main clamp: 256 clamps to accented, not wrapped to muted"
+  );
+  Check(
+      PeakAt(run, 2 * kQuarterFrames) < kSilentCeiling,
+      "main clamp: -1 clamps to muted"
+  );
+  Check(
+      Near(PeakAt(run, 3 * kQuarterFrames), kMainAccentPeak),
+      "main clamp: ACCENTED+1 clamps to accented"
+  );
+}
+
+void TestPolyAccentValuesClamp() {
+  kitbag::Metronome metronome;
+  MuteMainRow(metronome);
+  metronome.SetPolyAccent(0, -1);
+  metronome.SetPolyAccent(1, 256);
+  metronome.SetPolyAccent(2, static_cast<int32_t>(Accent::kAccented) + 1);
+  StartFourFour(metronome, 3);
+  const PolyRun run = RenderPoly(metronome, kBarFrames);
+
+  Check(PeakAt(run, 0) < kSilentCeiling, "poly clamp: -1 clamps to muted");
+  Check(
+      Near(PeakAt(run, kThirdFrames), kPolyAccentPeak),
+      "poly clamp: 256 clamps to accented, not wrapped to muted"
+  );
+  Check(
+      Near(PeakAt(run, 2 * kThirdFrames), kPolyAccentPeak),
+      "poly clamp: ACCENTED+1 clamps to accented"
+  );
+}
+
+void TestPolyAccentSlotOutOfRange() {
+  kitbag::Metronome metronome;
+  MuteMainRow(metronome);
+  metronome.SetPolyrhythm(true, kitbag::Metronome::kMaxPolyBeats);
+  metronome.SetPolyAccent(-1, Accent::kMuted);
+  metronome.SetPolyAccent(kitbag::Metronome::kMaxPolyBeats, Accent::kMuted);
+  StartFourFour(metronome, kitbag::Metronome::kMaxPolyBeats);
+  const PolyRun run = RenderPoly(metronome, kBarFrames);
+
+  Check(
+      Near(PeakAt(run, 0), kPolyAccentPeak),
+      "poly slot range: slot -1 leaves slot 0 accented"
+  );
+  Check(
+      Near(PeakAt(run, 15 * kSixteenthFrames), kPolyNormalPeak),
+      "poly slot range: slot kMaxPolyBeats leaves the last slot normal"
+  );
+}
+
 }  // namespace
 
 void RunPolyTests() {
@@ -298,6 +362,9 @@ void RunPolyTests() {
   TestPolyResizeWhileRunning();
   TestPolyGridPublishesSentinel();
   TestMainRowUnchangedByPolyEdits();
+  TestMainAccentValuesClamp();
+  TestPolyAccentValuesClamp();
+  TestPolyAccentSlotOutOfRange();
 }
 
 }  // namespace metronome_test

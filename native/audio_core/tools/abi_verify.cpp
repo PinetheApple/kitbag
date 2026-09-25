@@ -21,7 +21,7 @@ int g_failures = 0;
 int g_checks = 0;
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 39;
+constexpr int kExpectedChecks = 44;
 
 void Check(bool condition, const char* message) {
   ++g_checks;
@@ -126,28 +126,71 @@ double RenderPeak(kb_engine* engine, uint32_t frames) {
   return peak;
 }
 
-void TestPolyAccentReachesPolyRow() {
+bool NearPeak(double actual, double expected) {
+  return std::fabs(actual - expected) <= 0.05;
+}
+
+kb_engine* FourFourEngine(int32_t poly_beats) {
   kb_engine* engine = nullptr;
-  if (kb_engine_create(&engine) != KB_OK) return;
-  const uint32_t third_bar = kb_engine_sample_rate(engine) * 2 / 3;
+  if (kb_engine_create(&engine) != KB_OK) return nullptr;
+  kb_metronome_set_tempo(engine, 120.0);
   kb_metronome_set_beats(engine, 4, 4);
-  kb_metronome_set_poly(engine, 1, 3);
+  kb_metronome_set_poly(engine, poly_beats > 0 ? 1 : 0, poly_beats);
+  return engine;
+}
+
+void TestSetAccentClamps() {
+  kb_engine* engine = FourFourEngine(0);
+  if (engine == nullptr) return;
+  const uint32_t beat_frames = kb_engine_sample_rate(engine) / 2;
+  kb_metronome_set_accent(engine, 1, 256);
+  kb_metronome_set_accent(engine, 2, -1);
+  kb_metronome_set_accent(engine, 3, KB_ACCENT_ACCENTED + 1);
+  kb_metronome_set_accent(nullptr, 3, KB_ACCENT_MUTED);
+  kb_metronome_start(engine);
+  RenderPeak(engine, beat_frames);
+  Check(
+      NearPeak(RenderPeak(engine, beat_frames), 0.9),
+      "set_accent: 256 clamps to accented, not wrapped to muted"
+  );
+  Check(
+      RenderPeak(engine, beat_frames) < 0.1,
+      "set_accent: -1 clamps to muted"
+  );
+  Check(
+      NearPeak(RenderPeak(engine, beat_frames), 0.9),
+      "set_accent: ACCENTED+1 clamps to accented; null engine is a no-op"
+  );
+  kb_engine_destroy(engine);
+}
+
+void TestSetPolyAccentClamps() {
+  kb_engine* engine = FourFourEngine(3);
+  if (engine == nullptr) return;
+  const uint32_t poly_beat_frames = kb_engine_sample_rate(engine) * 2 / 3;
   for (int32_t beat = 0; beat < 4; ++beat) {
     kb_metronome_set_accent(engine, beat, KB_ACCENT_MUTED);
   }
-  kb_metronome_set_poly_accent(engine, 0, KB_ACCENT_MUTED);
-  kb_metronome_set_poly_accent(engine, 2, KB_ACCENT_MUTED);
+  kb_metronome_set_poly_accent(engine, 0, -1);
+  kb_metronome_set_poly_accent(engine, 1, 256);
+  kb_metronome_set_poly_accent(engine, 2, KB_ACCENT_ACCENTED + 1);
   kb_metronome_set_poly_accent(nullptr, 1, KB_ACCENT_MUTED);
   kb_metronome_start(engine);
-  const double first = RenderPeak(engine, third_bar);
-  const double second = RenderPeak(engine, third_bar);
   Check(
-      first < 0.1 && second > 0.4,
-      "set_poly_accent: muted poly slots 0/2 silent, untouched slot 1 sounds"
+      RenderPeak(engine, poly_beat_frames) < 0.1,
+      "set_poly_accent: -1 clamps to muted"
+  );
+  Check(
+      NearPeak(RenderPeak(engine, poly_beat_frames), 0.8),
+      "set_poly_accent: 256 clamps to accented; null engine is a no-op"
   );
   Check(
       kb_metronome_current_poly_beat(engine) == 1,
       "current_poly_beat: reads poly slot 1 through the ABI"
+  );
+  Check(
+      NearPeak(RenderPeak(engine, poly_beat_frames), 0.8),
+      "set_poly_accent: ACCENTED+1 clamps to accented"
   );
   kb_engine_destroy(engine);
 }
@@ -337,7 +380,8 @@ int main() {
   TestClearGrid(engine);
   TestMixerTransportIsNullSafe(engine);
   TestPlayerNullSafe();
-  TestPolyAccentReachesPolyRow();
+  TestSetAccentClamps();
+  TestSetPolyAccentClamps();
 
   if (!RunFileFixtureTests(engine)) {
     kb_engine_destroy(engine);
