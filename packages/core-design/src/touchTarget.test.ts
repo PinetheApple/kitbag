@@ -1,7 +1,7 @@
-import { minTouchTargetDp } from '@kitbag/core-design';
 import { describe, expect, it } from 'vitest';
 
-import { hitSlopFor, hitSlopForPadded } from './touchTargets.ts';
+import { minTouchTargetDp } from './tokens.ts';
+import { hitSlopFor, hitSlopForPadded } from './touchTarget.ts';
 
 const NO_NEIGHBOUR = Number.POSITIVE_INFINITY;
 
@@ -18,8 +18,6 @@ describe('hitSlopFor', () => {
     expect(hitSlopFor(minTouchTargetDp + 10, NO_NEIGHBOUR)).toBe(0);
   });
 
-  // The whole point: two regions that overlap are resolved by view order, so a
-  // tap near a gap would cycle the wrong beat's accent.
   it('never lets two neighbours claim the same point', () => {
     for (const gap of [4, 8, 9, 18, 40]) {
       expect(hitSlopFor(26, gap) * 2).toBeLessThanOrEqual(gap);
@@ -27,7 +25,6 @@ describe('hitSlopFor', () => {
   });
 
   it('falls short of the target rather than overlap a close neighbour', () => {
-    // 26dp LEDs 8dp apart cannot reach 48dp: the design's gap decides.
     expect(effectiveTarget(26, 8)).toBeLessThan(minTouchTargetDp);
   });
 });
