@@ -26,9 +26,9 @@ const EVERY_FIELD = {
   beatsPerBar: 7,
   subdivision: 3,
   denominator: 8,
-  accents: Buffer.from([3, 1, 2, 1, 1, 2, 1]),
-  perAccentSounds: Buffer.from([1, 2, 3, 4, 5, 6, 7]),
-  polyAccents: Buffer.from([3, 1, 1, 1, 1]),
+  accents: new Uint8Array([2, 1, 0, 1, 1, 2, 1]),
+  perAccentSounds: new Uint8Array([1, 5]),
+  polyAccents: new Uint8Array([2, 1, 1, 0, 1]),
   polyEnabled: true,
   polyBeats: 5,
   sound: 2,
@@ -56,9 +56,9 @@ const EDITED = {
   beatsPerBar: 3,
   subdivision: 2,
   denominator: 4,
-  accents: Buffer.from([2, 0, 1]),
+  accents: new Uint8Array([2, 0, 1]),
   perAccentSounds: null,
-  polyAccents: Buffer.from([1, 3]),
+  polyAccents: new Uint8Array([1, 2]),
   polyEnabled: false,
   polyBeats: 2,
   sound: 0,
@@ -142,5 +142,35 @@ describe('song preset repository', () => {
     expect(await names('a_b')).toEqual(['1000 Miles']);
     expect(await names('AXB')).toEqual(['Other']);
     expect(await names('missing')).toEqual([]);
+  });
+  it.each([
+    ['bpm', { bpm: 19 }],
+    ['beatsPerBar', { beatsPerBar: 17, accents: new Uint8Array(17).fill(1) }],
+    ['denominator', { denominator: 3 }],
+    ['sound', { sound: 6 }],
+    ['subdivision', { subdivision: 17 }],
+    ['rampEndBpm', { rampEndBpm: 401 }],
+    ['rampBars', { rampBars: 65 }],
+    ['barMuteMuteBars', { barMuteMuteBars: 0 }],
+    ['accents', { accents: new Uint8Array([1, 1, 1]) }],
+    ['accents', { accents: new Uint8Array([2, 1, 3, 1, 1, 1, 1]) }],
+    ['perAccentSounds', { perAccentSounds: new Uint8Array([1, 2, 3]) }],
+    ['perAccentSounds', { perAccentSounds: new Uint8Array([1, 6]) }],
+    ['polyAccents', { polyAccents: new Uint8Array([1, 1]) }],
+  ])('refuses to create a preset with an invalid %s', async (field, change) => {
+    const { presets } = setup();
+    await expect(presets.create({ ...EVERY_FIELD, ...change })).rejects.toThrow(
+      `Song preset ${field}`,
+    );
+    expect(await presets.list()).toEqual([]);
+  });
+
+  it('refuses an update that breaks the bar and keeps the row', async () => {
+    const { presets } = setup();
+    const created = await presets.create(EVERY_FIELD);
+    await expect(
+      presets.update(created.id, { beatsPerBar: 4 }),
+    ).rejects.toThrow('Song preset accents');
+    expect(await presets.get(created.id)).toEqual(created);
   });
 });

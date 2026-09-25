@@ -8,7 +8,24 @@ import {
   type NewSongPreset,
   type SongPreset,
 } from './repository';
+import { DEFAULT_DENOMINATOR, presetViolation } from './preset-rules';
 import { setlistItems, songPresets } from './schema';
+
+function checkPreset(values: NewSongPreset) {
+  const violation = presetViolation({
+    ...values,
+    denominator: values.denominator ?? DEFAULT_DENOMINATOR,
+    rampStartBpm: values.rampStartBpm ?? null,
+    rampEndBpm: values.rampEndBpm ?? null,
+    rampBars: values.rampBars ?? null,
+    barMutePlayBars: values.barMutePlayBars ?? null,
+    barMuteMuteBars: values.barMuteMuteBars ?? null,
+    perAccentSounds: values.perAccentSounds ?? null,
+    polyAccents: values.polyAccents ?? null,
+  });
+  if (violation)
+    throw new RangeError(`Song preset ${violation.field}: ${violation.reason}`);
+}
 
 function presetById(db: Database, id: number) {
   return db.select().from(songPresets).where(eq(songPresets.id, id));
@@ -32,6 +49,7 @@ async function insertPreset(
   db: Database,
   values: NewSongPreset,
 ): Promise<SongPreset> {
+  checkPreset(values);
   return found(
     await db
       .insert(songPresets)
@@ -57,6 +75,8 @@ async function updatePreset(
   id: number,
   values: Partial<Omit<NewSongPreset, 'id'>>,
 ) {
+  const current = found(await presetById(db, id), `Song preset ${String(id)}`);
+  checkPreset({ ...current, ...values });
   await db.update(songPresets).set(values).where(eq(songPresets.id, id));
 }
 
@@ -74,7 +94,7 @@ export function createSongPresetRepository({ db, transactor }: DatabaseHandle) {
     search: (query: string) => serial(() => searchPresets(db, query)),
     create: (values: NewSongPreset) => serial(() => insertPreset(db, values)),
     update: (id: number, values: Partial<Omit<NewSongPreset, 'id'>>) =>
-      serial(() => updatePreset(db, id, values)),
+      transaction(() => updatePreset(db, id, values)),
     duplicate: (id: number, name: string) =>
       serial(() => duplicatePreset(db, id, name)),
     delete: (id: number) => transaction(() => deletePreset(db, id)),
