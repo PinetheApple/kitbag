@@ -47,6 +47,8 @@ export interface NativeConstants {
   readonly maxGridBeats: number;
   readonly maxTracks: number;
   readonly maxBeats: number;
+  readonly maxRampBars: number;
+  readonly maxMuteBars: number;
   readonly bpmReferenceDenominator: number;
   readonly denominators: readonly number[];
   readonly soundNames: readonly string[];
@@ -225,6 +227,8 @@ export function collectConstants(sources: NativeSources): NativeConstants {
     maxGridBeats: parseDefineInt(sources.apiHeader, 'KB_MAX_GRID_BEATS'),
     maxTracks: parseConstexprInt(sources.mixerHeader, 'kMaxTracks'),
     maxBeats: parseConstexprInt(sources.metronomeHeader, 'kMaxBeats'),
+    maxRampBars: parseConstexprInt(sources.metronomeHeader, 'kMaxRampBars'),
+    maxMuteBars: parseConstexprInt(sources.metronomeHeader, 'kMaxMuteBars'),
     bpmReferenceDenominator: parseConstexprInt(
       sources.metronomeHeader,
       'kBpmReferenceDenominator',
@@ -286,6 +290,12 @@ export const KB_MAX_TRACKS = ${String(c.maxTracks)};
 
 /** Beats per bar the engine will hold (Metronome::kMaxBeats); it clamps above this. */
 export const KB_MAX_BEATS = ${String(c.maxBeats)};
+
+/** Longest ramp in bars (Metronome::kMaxRampBars); the engine clamps above this. */
+export const KB_MAX_RAMP_BARS = ${String(c.maxRampBars)};
+
+/** Longest play or mute run in bars (Metronome::kMaxMuteBars); clamped above. */
+export const KB_MAX_MUTE_BARS = ${String(c.maxMuteBars)};
 
 /**
  * Time-signature denominators the engine accepts (Metronome::kDenominators,

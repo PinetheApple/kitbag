@@ -1,10 +1,11 @@
 import { getKitbagCommands, getKitbagHostObject } from '@kitbag/core-native';
 
-import type { MetronomeCommands, NowFrame } from './commands.ts';
+import type { EngineBpm, MetronomeCommands, NowFrame } from './commands.ts';
 
 export interface MetronomeRuntime {
   readonly commands: MetronomeCommands;
   readonly nowFrame: NowFrame;
+  readonly engineBpm: EngineBpm;
 }
 
 const nativeRuntime: MetronomeRuntime = {
@@ -12,6 +13,7 @@ const nativeRuntime: MetronomeRuntime = {
     return getKitbagCommands();
   },
   nowFrame: () => getKitbagHostObject().frames_rendered,
+  engineBpm: () => getKitbagHostObject().current_bpm,
 };
 
 let configuredRuntime: MetronomeRuntime | undefined;
