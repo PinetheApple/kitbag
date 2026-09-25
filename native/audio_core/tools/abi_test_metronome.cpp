@@ -198,6 +198,28 @@ void TestPreviewSoundAtVolume() {
   kb_engine_destroy(engine);
 }
 
+void TestSetRampInMinutes() {
+  kb_engine* engine = FourFourEngine(0);
+  if (engine == nullptr) return;
+  const uint32_t rate = kb_engine_sample_rate(engine);
+  kb_metronome_set_ramp(engine, 1, 60.0, 120.0, 0.5, KB_RAMP_MINUTES, 0);
+  kb_metronome_set_ramp(engine, 1, 200.0, 200.0, 1.0, KB_RAMP_MINUTES + 1, 0);
+  kb_metronome_set_ramp(nullptr, 1, 200.0, 200.0, 1.0, KB_RAMP_BARS, 0);
+  kb_metronome_start(engine);
+  Render(engine, rate * 9 / 2);
+  const double in_bar_one = kb_metronome_current_bpm(engine);
+  Render(engine, rate * 30);
+  Check(
+      std::fabs(in_bar_one - 68.0) < 1e-9,
+      "set_ramp: 60->120 over 0.5 min is 68 BPM in bar 1, 4 s in"
+  );
+  Check(
+      std::fabs(kb_metronome_current_bpm(engine) - 120.0) < 1e-9,
+      "set_ramp: holds 120 once 30 s have elapsed"
+  );
+  kb_engine_destroy(engine);
+}
+
 }  // namespace
 
 void RunMetronomeAbiTests() {
@@ -206,6 +228,7 @@ void RunMetronomeAbiTests() {
   TestSetSoundsSelectsPerRole();
   TestCountInPauseAndStop();
   TestPreviewSoundAtVolume();
+  TestSetRampInMinutes();
 }
 
 }  // namespace abi_test

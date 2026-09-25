@@ -210,7 +210,7 @@ void Metronome::BeginAnchorExternal(
 ) {
   has_pending_anchor_ = false;
   has_pending_start_ = false;  // an anchor supersedes a deferred start
-  ramp_enabled_ = false;  // an authoritative bpm cancels the ramp, as SetTempo
+  ramp_.Disable();
   bpm_ = Clamp(pending_anchor_bpm_, kMinBpm, kMaxBpm);
   const double song_seconds =
       pending_anchor_song_pos_ +
@@ -245,8 +245,8 @@ void Metronome::FireConstantTempoTick(
   const auto beat_index = static_cast<int>(beat % beats_per_bar_);
   if (beat_index == 0) {
     ++current_bar_;  // monotonic: survives time-signature changes
-    if (ramp_enabled_) {
-      SetBpmPreservingPhase(RampBpmForBar(current_bar_));
+    if (ramp_.enabled()) {
+      SetBpmPreservingPhase(ramp_.BpmAtDownbeat(current_bar_, sample_rate));
       *tempo = BlockTempoFor(sample_rate);
     }
   }
@@ -282,6 +282,7 @@ void Metronome::AdvanceConstantTempo(uint32_t sample_rate, BlockTempo* tempo) {
       FireConstantTempoTick(sub_index, sample_rate, tempo);
     }
     if (poly_enabled_) FirePolyTick(position, sample_rate, *tempo);
+    ramp_.Advance();
   }
   beat_position_ += tempo->beats_per_sample;
 }

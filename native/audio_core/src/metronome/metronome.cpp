@@ -120,13 +120,17 @@ void Metronome::SetRamp(
     bool enabled,
     double start_bpm,
     double end_bpm,
-    int bars
+    double duration,
+    int32_t unit,
+    bool loop
 ) {
   Command command{CommandType::kSetRamp};
   command.value = start_bpm;
   command.value_b = end_bpm;
+  command.value_c = duration;
   command.int_a = enabled ? 1 : 0;
-  command.int_b = bars;
+  command.int_b = unit;
+  command.int_c = loop ? 1 : 0;
   commands_.Push(command);
 }
 
@@ -237,7 +241,7 @@ bool Metronome::ApplyTempoCommand(const Command& command) {
   switch (command.type) {
     case CommandType::kSetTempo:
       SetBpmPreservingPhase(Clamp(command.value, kMinBpm, kMaxBpm));
-      ramp_enabled_ = false;  // a manual tempo change cancels the ramp
+      ramp_.Disable();
       return true;
     case CommandType::kSetLatencyOffset:
       SetLatencyPreservingPhase(command.value);
@@ -297,14 +301,21 @@ bool Metronome::ApplyPatternCommand(const Command& command) {
 }
 
 void Metronome::ArmRamp(const Command& command) {
-  ramp_enabled_ = command.int_a != 0;
-  if (!ramp_enabled_) return;
-  ramp_start_bpm_ = Clamp(command.value, kMinBpm, kMaxBpm);
-  ramp_end_bpm_ = Clamp(command.value_b, kMinBpm, kMaxBpm);
-  ramp_bars_ = Clamp(command.int_b, 1, kMaxRampBars);
+  if (command.int_a == 0) {
+    ramp_.Disable();
+    return;
+  }
+  const bool valid = ramp_.Configure(
+      Clamp(command.value, kMinBpm, kMaxBpm),
+      Clamp(command.value_b, kMinBpm, kMaxBpm),
+      command.value_c,
+      command.int_b,
+      command.int_c != 0
+  );
+  if (!valid) return;
   // current_bar_ is -1 before the first downbeat; never start there.
-  ramp_start_bar_ = running_ && current_bar_ > 0 ? current_bar_ : 0;
-  SetBpmPreservingPhase(ramp_start_bpm_);
+  ramp_.Restart(running_ && current_bar_ > 0 ? current_bar_ : 0);
+  SetBpmPreservingPhase(ramp_.start_bpm());
 }
 
 void Metronome::SetLatencyPreservingPhase(double latency_ms) {
@@ -331,10 +342,8 @@ void Metronome::StopRun() {
 
 void Metronome::BeginRun() {
   current_bar_ = -1;  // the first downbeat advances it to bar 0
-  ramp_start_bar_ = 0;
-  if (ramp_enabled_) {
-    bpm_ = ramp_start_bpm_;
-  }
+  ramp_.Restart(0);
+  if (ramp_.enabled()) bpm_ = ramp_.start_bpm();
   // Anchors `position` at zero, not beat_position_: nothing can be emitted
   // before the first frame, so a positive offset would swallow every grid
   // point it shifts past (§4.7).
@@ -371,13 +380,6 @@ void Metronome::SetBeatRate(double new_bpm, int new_denominator) {
   bpm_ = new_bpm;
   denominator_ = new_denominator;
   beat_position_ += before - LatencyBeats();
-}
-
-double Metronome::RampBpmForBar(int64_t bar) const {
-  const int64_t progressed =
-      Clamp<int64_t>(bar - ramp_start_bar_, 0, ramp_bars_);
-  const double step = (ramp_end_bpm_ - ramp_start_bpm_) / ramp_bars_;
-  return ramp_start_bpm_ + step * static_cast<double>(progressed);
 }
 
 bool Metronome::BarIsMuted(int64_t bar) const {

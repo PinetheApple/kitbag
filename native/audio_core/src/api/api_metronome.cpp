@@ -6,6 +6,10 @@
 
 using kitbag::ToEngine;
 
+static_assert(KB_RAMP_BARS == static_cast<int>(kitbag::RampUnit::kBars));
+static_assert(KB_RAMP_SECONDS == static_cast<int>(kitbag::RampUnit::kSeconds));
+static_assert(KB_RAMP_MINUTES == static_cast<int>(kitbag::RampUnit::kMinutes));
+
 extern "C" {
 
 void kb_metronome_start(kb_engine* engine) {
@@ -185,15 +189,14 @@ void kb_metronome_set_ramp(
     int32_t enabled,
     double start_bpm,
     double end_bpm,
-    int32_t bars
+    double duration,
+    int32_t unit,
+    int32_t loop
 ) {
   if (engine != nullptr) {
-    ToEngine(engine)->metronome().SetRamp(
-        enabled != 0,
-        start_bpm,
-        end_bpm,
-        bars
-    );
+    ToEngine(engine)
+        ->metronome()
+        .SetRamp(enabled != 0, start_bpm, end_bpm, duration, unit, loop != 0);
   }
 }
 

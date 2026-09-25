@@ -61,6 +61,12 @@ typedef enum kb_accent {
   KB_ACCENT_ACCENTED = 2,
 } kb_accent;
 
+typedef enum kb_ramp_unit {
+  KB_RAMP_BARS = 0,
+  KB_RAMP_SECONDS = 1,
+  KB_RAMP_MINUTES = 2,
+} kb_ramp_unit;
+
 KB_EXPORT void kb_metronome_start(kb_engine* engine);
 /* Sample-accurate start: the click begins on engine frame start_frame
  * (cf. kb_engine_frames_rendered), not when this call arrives. A frame already
@@ -173,14 +179,19 @@ KB_EXPORT void kb_metronome_set_volume(kb_engine* engine, double volume);
 /* Output latency offset in ms [-100, 100]; positive = trigger earlier. */
 KB_EXPORT void
 kb_metronome_set_latency_offset(kb_engine* engine, double latency_ms);
-/* Tempo ramp trainer: step BPM once per bar from start to end over `bars`
- * bars, then hold. A manual kb_metronome_set_tempo cancels it. */
+/* Steps BPM at each downbeat from start toward end over `duration` in a
+ * kb_ramp_unit: bars round to 1..64, time clamps to 1 s..60 min of engine
+ * clock. At the end it holds, or with loop != 0 plays one bar at end_bpm and
+ * restarts. An invalid unit or non-finite value keeps the previous ramp;
+ * kb_metronome_set_tempo cancels it. */
 KB_EXPORT void kb_metronome_set_ramp(
     kb_engine* engine,
     int32_t enabled,
     double start_bpm,
     double end_bpm,
-    int32_t bars
+    double duration,
+    int32_t unit,
+    int32_t loop
 );
 /* Bar-mute trainer: repeating cycle of `play_bars` sounding bars followed by
  * `mute_bars` silent bars (all voices), anchored at bar 0. */

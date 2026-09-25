@@ -5,24 +5,13 @@
 #include <cstdint>
 #include <memory>
 #include <span>
-#include <vector>
 
+#include "metronome/metronome_types.h"
+#include "metronome/tempo_ramp.h"
 #include "rt/rt_publisher.h"
 #include "rt/spsc_ring.h"
 
 namespace kitbag {
-
-// Per-beat accent states, mirrored by kb_accent in the C API.
-enum class Accent : uint8_t { kMuted = 0, kNormal = 1, kAccented = 2 };
-
-// A song's measured beat times, replacing a single BPM: following per-beat
-// spacing is what makes a non-constant-tempo song work (SPEC.md §4.2).
-struct BeatGrid {
-  std::vector<double> beat_times_sec;  // strictly ascending
-  // Engine frame that beat_times_sec[0]'s zero is measured from: song second t
-  // falls on engine frame anchor_frame + t * sample_rate.
-  uint64_t anchor_frame = 0;
-};
 
 // Sample-accurate metronome sequencer driven from the audio callback. Position
 // is a fractional beat index advanced per sample, so a tempo change alters the
@@ -42,7 +31,6 @@ class Metronome {
   static constexpr int kDenominators[] = {2, 4, 8, 16};
   static constexpr int kCountInBarChoices[] = {0, 1, 2, 4};
   static constexpr int kDefaultCountInSound = 1;
-  static constexpr int kMaxRampBars = 64;
   static constexpr int kMaxMuteBars = 16;
   // Output-latency compensation bound (D5). Widening this to 300 is the whole
   // of D5's clamp change; see SPEC.md §4.7 for what moves with it.
@@ -97,9 +85,15 @@ class Metronome {
   void PreviewSound(int sound, bool accented);
   void SetVolume(double volume);
   void SetLatencyOffset(double latency_ms);
-  // Tempo ramp trainer: steps the BPM once per bar from start to end over
-  // `bars` bars, then holds. SetTempo cancels it; Start replays it.
-  void SetRamp(bool enabled, double start_bpm, double end_bpm, int bars);
+  // SetTempo cancels the ramp; Start replays it.
+  void SetRamp(
+      bool enabled,
+      double start_bpm,
+      double end_bpm,
+      double duration,
+      int32_t unit,
+      bool loop
+  );
   // Bar-mute trainer: `play_bars` sounding then `mute_bars` silent, repeating
   // from bar 0. A muted bar silences every voice; the LEDs keep moving.
   void SetBarMute(bool enabled, int play_bars, int mute_bars);
@@ -172,6 +166,7 @@ class Metronome {
     CommandType type;
     double value = 0.0;
     double value_b = 0.0;
+    double value_c = 0.0;
     int32_t int_a = 0;
     int32_t int_b = 0;
     int32_t int_c = 0;
@@ -250,7 +245,6 @@ class Metronome {
   void OnSubdivisionTick(int64_t owning_beat, uint32_t sample_rate);
   void OnPolyBoundary(int poly_index, uint32_t sample_rate);
   float RenderVoices();
-  double RampBpmForBar(int64_t bar) const;
   bool BarIsMuted(int64_t bar) const;
   double LatencyBeats() const;
   double BeatUnitScale() const;
@@ -372,11 +366,7 @@ class Metronome {
   // Bar counter, -1 until the first downbeat after Start. Incremented at
   // constant tempo, derived from the grid in grid mode — SPEC.md §4.2.1.
   int64_t current_bar_ = -1;
-  bool ramp_enabled_ = false;
-  double ramp_start_bpm_ = 0.0;
-  double ramp_end_bpm_ = 0.0;
-  int ramp_bars_ = 1;
-  int64_t ramp_start_bar_ = 0;
+  TempoRamp ramp_;
   bool mute_enabled_ = false;
   int play_bars_ = 3;
   int mute_bars_ = 1;

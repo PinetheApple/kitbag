@@ -224,7 +224,7 @@ AnchoredBeatSeconds(int denominator, int64_t total_frames, double early_sec) {
 // An external anchor maps song seconds onto this signature's beat unit: at 120
 // BPM the 8th-note click tracks the song every 0.25 s, not every 0.5 s.
 void TestAnchorFollowsDenominator() {
-  constexpr int64_t kTotalFrames = kSampleRate * 3;
+  constexpr int64_t kTotalFrames = int64_t{kSampleRate} * 3;
   kitbag::Metronome metronome;
   metronome.SetTimeSignature(kNumerator, 8);
   metronome.AnchorExternal(kAnchorSongPos, kAnchorFrame, kSwitchBpm);
@@ -240,7 +240,7 @@ void TestAnchorFollowsDenominator() {
 constexpr double kAnchorLatencyMs = 100.0;
 
 void ExpectAnchorLatencyShift(int denominator, const char* label) {
-  constexpr int64_t kTotalFrames = kSampleRate * 3;
+  constexpr int64_t kTotalFrames = int64_t{kSampleRate} * 3;
   kitbag::Metronome metronome;
   metronome.SetTimeSignature(kNumerator, denominator);
   metronome.SetLatencyOffset(kAnchorLatencyMs);

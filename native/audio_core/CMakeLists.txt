@@ -43,6 +43,7 @@ add_library(kitbag_core SHARED
   src/metronome/metronome_grid.cpp
     src/metronome/metronome_pattern.cpp
   src/metronome/metronome_render.cpp
+  src/metronome/tempo_ramp.cpp
   src/media/miniaudio_impl.c
   src/media/streaming_track.cpp
   src/mixer/mixer.cpp
@@ -123,12 +124,14 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_poly.cpp
     tools/metronome/metronome_test_sound.cpp
     tools/metronome/metronome_test_count_in.cpp
+    tools/metronome/metronome_test_ramp.cpp
     tools/rt/rt_publisher_verify.cpp
     src/metronome/metronome.cpp
     src/metronome/metronome_count_in.cpp
     src/metronome/metronome_grid.cpp
     src/metronome/metronome_pattern.cpp
-    src/metronome/metronome_render.cpp)
+    src/metronome/metronome_render.cpp
+    src/metronome/tempo_ramp.cpp)
   target_include_directories(metronome_verify PRIVATE src tools tools/metronome tools/rt)
   # metronome.cpp is compiled again here, outside kitbag_core's options.
   target_compile_options(metronome_verify PRIVATE -Werror=switch)

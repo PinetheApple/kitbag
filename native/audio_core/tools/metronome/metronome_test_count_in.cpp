@@ -19,7 +19,7 @@ constexpr double kSilentCeiling = 0.01;
 
 constexpr int64_t kWaltzBeatFrames = 28800;
 constexpr int64_t kWaltzBarFrames = 3 * kWaltzBeatFrames;
-constexpr int64_t kFiveEightBarFrames = 5 * 16000;
+constexpr int64_t kFiveEightBarFrames = int64_t{5} * 16000;
 constexpr int64_t kCommonBeatFrames = kSampleRate / 2;
 constexpr int64_t kCommonBarFrames = 4 * kCommonBeatFrames;
 
@@ -35,7 +35,7 @@ std::vector<float> RenderWaltz(int count_in_bars) {
   metronome.Start();
   return RenderLeft(
       metronome,
-      2 * count_in_bars * kWaltzBarFrames + kWaltzBarFrames
+      int64_t{2} * count_in_bars * kWaltzBarFrames + kWaltzBarFrames
   );
 }
 
