@@ -3,10 +3,14 @@ import { describe, expect, it } from 'vitest';
 
 import {
   ACCENT_LEVELS,
+  DEFAULT_DENOMINATOR,
   DENOMINATORS,
   MAX_BEATS,
   MAX_BPM,
+  MAX_MUTE_BARS,
   MAX_POLY_BEATS,
+  MAX_RAMP_BARS,
+  MAX_SUBDIVISION,
   MIN_BPM,
   SOUND_COUNT,
 } from './preset-rules';
@@ -35,6 +39,12 @@ describe('engine limits mirrored in core-db', () => {
     expect(Number(constant('kMaxBeats'))).toBe(MAX_BEATS);
     expect(Number(constant('kMaxPolyBeats'))).toBe(MAX_POLY_BEATS);
     expect(Number(constant('kSoundCount'))).toBe(SOUND_COUNT);
+    expect(Number(constant('kMaxSubdivision'))).toBe(MAX_SUBDIVISION);
+    expect(Number(constant('kMaxRampBars'))).toBe(MAX_RAMP_BARS);
+    expect(Number(constant('kMaxMuteBars'))).toBe(MAX_MUTE_BARS);
+    expect(Number(constant('kBpmReferenceDenominator'))).toBe(
+      DEFAULT_DENOMINATOR,
+    );
     expect(constant('kDenominators')).toBe(`{${DENOMINATORS.join(', ')}}`);
   });
 

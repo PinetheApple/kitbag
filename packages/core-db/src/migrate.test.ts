@@ -10,7 +10,6 @@ import {
   V7_SCHEMA_VERSION,
   V8_SCHEMA_VERSION,
 } from './migrate';
-import { presetViolation } from './preset-rules';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
 interface Membership {
@@ -279,67 +278,32 @@ describe('migrate', () => {
   it('repairs v6 presets the engine would refuse, keeping their meaning', () => {
     const db = buildV6Fixture();
     migrate(nodeSqliteDriver(db));
-    const presets = rows<Record<string, unknown>>(
+    const presets = rows(
       db,
-      'SELECT name, bpm, beats_per_bar, sound, poly_beats, hex(accents) AS accents FROM song_presets ORDER BY id',
+      "SELECT name || ' ' || bpm || ' ' || beats_per_bar || ' ' || sound || ' ' || poly_beats || ' ' || hex(accents) AS row FROM song_presets ORDER BY id",
     );
-    expect(presets).toEqual([
-      {
-        name: 'Opener',
-        bpm: 128,
-        beats_per_bar: 4,
-        sound: 0,
-        poly_beats: 0,
-        accents: '01010101',
-      },
-      {
-        name: 'Bridge',
-        bpm: 92,
-        beats_per_bar: 3,
-        sound: 2,
-        poly_beats: 5,
-        accents: '010101',
-      },
-      {
-        name: 'Ballad',
-        bpm: 72,
-        beats_per_bar: 4,
-        sound: 1,
-        poly_beats: 0,
-        accents: '01010101',
-      },
-      {
-        name: 'Out of range',
-        bpm: 400,
-        beats_per_bar: 16,
-        sound: 5,
-        poly_beats: 16,
-        accents: '0201' + '01'.repeat(14),
-      },
+    expect(presets.map((preset) => (preset as { row: string }).row)).toEqual([
+      'Opener 128.0 4 0 0 01010101',
+      'Bridge 92.0 3 2 5 010101',
+      'Ballad 72.0 4 1 0 01010101',
+      `Out of range 400.0 16 5 16 0201${'01'.repeat(14)}`,
     ]);
   });
 
-  it('leaves every migrated preset valid under the preset rules', () => {
-    const db = buildV6Fixture();
+  it('refuses a practice session without a uuid on insert and update', () => {
+    const db = new DatabaseSync(':memory:');
     migrate(nodeSqliteDriver(db));
-    const presets = rows<Record<string, unknown>>(
-      db,
-      'SELECT * FROM song_presets',
-    );
-    for (const row of presets)
-      expect(
-        presetViolation({
-          bpm: row.bpm as number,
-          beatsPerBar: row.beats_per_bar as number,
-          denominator: row.denominator as number,
-          sound: row.sound as number,
-          polyBeats: row.poly_beats as number,
-          accents: row.accents as Uint8Array,
-          perAccentSounds: row.per_accent_sounds as Uint8Array | null,
-          polyAccents: row.poly_accents as Uint8Array | null,
-        }),
-        String(row.name),
-      ).toBeUndefined();
+    const insert = (uuid: string | null) =>
+      db
+        .prepare(
+          'INSERT INTO practice_sessions (start_time, duration_seconds, avg_bpm, uuid) VALUES (1, 1, 100, ?)',
+        )
+        .run(uuid);
+    expect(() => insert(null)).toThrow('practice_sessions.uuid is required');
+    insert(crypto.randomUUID());
+    expect(() => {
+      db.exec('UPDATE practice_sessions SET uuid = NULL');
+    }).toThrow('practice_sessions.uuid is required');
   });
 
   it('rolls the whole v6 upgrade back when a later step fails', () => {

@@ -7,7 +7,7 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core';
 
-export const DEFAULT_DENOMINATOR = 4;
+import { DEFAULT_DENOMINATOR } from './preset-rules';
 
 function toBytes(value: unknown): Uint8Array {
   if (value instanceof ArrayBuffer) return new Uint8Array(value.slice(0));
