@@ -1,0 +1,9 @@
+Initial development build.
+
+- Metronome performance surface: swipe-anywhere and tap-to-type tempo
+  entry, beat LED row editor (grouping, wrapping, accents), polyrhythm
+  row, bar sweep, preset steppers.
+- Native realtime audio core (C++ / miniaudio) with phase-anchored
+  playback and a BPM quarter-note denominator model (6/8 clicks six
+  times per bar).
+- Local preset store (on-device database; v7 schema).

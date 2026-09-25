@@ -1,0 +1,20 @@
+Kitbag is a practice-first metronome for musicians, built as a local-first
+Android app with a realtime C++ audio core.
+
+What it does today:
+
+- Set tempo by swiping anywhere on the screen or typing it on a numpad.
+- Conventional Italian tempo markings (LARGO through PRESTO).
+- A beat LED row you can edit directly: regroup beats, wrap rows, and set
+  accents per beat.
+- A polyrhythm row for a second beat layer.
+- Presets stored on device, with a schema that carries ramp, bar-mute and
+  count-in settings.
+
+Roadmap (not in the current build): setlists and song playback, a stem
+player, play-along, and a tuner. This description describes the built
+application only; roadmap items ship when they exist.
+
+Kitbag works entirely offline. It contains no ads, no analytics, no
+trackers, and no proprietary services. The audio engine is free software
+(GPL-3.0), and the app never phones home.
