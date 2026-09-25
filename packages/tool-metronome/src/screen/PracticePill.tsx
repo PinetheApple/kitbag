@@ -1,35 +1,24 @@
-// Practice timer pill under the app bar (SPEC §5.2). Tap to reset; the ◴
-// transport button is its visible twin.
-//
-// It ticks once a second and only while the transport runs — the pill measures
-// time played, not time the screen was open. A 1 Hz clock is human-speed state,
-// not a 60fps value (§13.3, §13.4).
-//
-// The count lives as long as the screen does. Practice time that survives
-// navigation is §5.7 practiceSessions (M8), which this does not pretend to be.
-
-import { radii, resolveTheme, typography } from '@kitbag/core-design';
+import {
+  createThemedStyles,
+  hitSlopForPadded,
+  icons,
+  inset,
+  radius,
+  size,
+  space,
+  textRoles,
+  textStyle,
+} from '@kitbag/core-design';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { formatPracticeElapsed } from '../logic/practiceTimer.ts';
-import { hitSlopForPadded } from '../logic/touchTargets.ts';
-
-const theme = resolveTheme('dark');
 
 const TICK_MS = 1000;
 
-// design §02 `.practicebar`: pill, 5/12dp padding, 12.5px label, 11px reset.
-const PILL_PADDING_V = 5;
-const PILL_PADDING_H = 12;
-const PILL_GAP = 8;
-const LABEL_FONT_SIZE = 12.5;
-const RESET_FONT_SIZE = 11;
-const RESET_PADDING_LEFT = 8;
-// Alone under the app bar; nothing neighbours its slop.
 const PILL_HIT_SLOP = hitSlopForPadded(
-  LABEL_FONT_SIZE,
-  PILL_PADDING_V,
+  textRoles.chip.size,
+  inset.chipV,
   Number.POSITIVE_INFINITY,
 );
 
@@ -38,7 +27,38 @@ export interface PracticeElapsed {
   readonly reset: () => void;
 }
 
-/** Accumulated play time, ticking while `running`. */
+const useStyles = createThemedStyles((theme) => ({
+  centre: {
+    alignItems: 'center',
+  },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.controlGap,
+    paddingVertical: inset.chipV,
+    paddingHorizontal: inset.chipH,
+    borderRadius: radius.chip,
+    backgroundColor: theme.color.surface2,
+    borderWidth: size.stroke,
+    borderColor: theme.color.line,
+  },
+  icon: {
+    ...textStyle(textRoles.chip),
+    color: theme.color.text2,
+  },
+  elapsed: {
+    ...textStyle(textRoles.chipValue),
+    color: theme.color.text,
+  },
+  reset: {
+    ...textStyle(textRoles.chipAside),
+    color: theme.color.text3,
+    paddingLeft: space.controlGap,
+    borderLeftWidth: size.stroke,
+    borderLeftColor: theme.color.line,
+  },
+}));
+
 export function usePracticeElapsed(running: boolean): PracticeElapsed {
   const [elapsedMs, setElapsedMs] = useState(0);
   const playedMs = useRef(0);
@@ -46,8 +66,6 @@ export function usePracticeElapsed(running: boolean): PracticeElapsed {
 
   useEffect(() => {
     if (!running) {
-      // Stopping banks the stretch just played, so a resume continues the
-      // session rather than restarting it.
       if (startedAt.current !== null) {
         playedMs.current += Date.now() - startedAt.current;
         startedAt.current = null;
@@ -58,8 +76,6 @@ export function usePracticeElapsed(running: boolean): PracticeElapsed {
 
     const startOfStretch = Date.now();
     startedAt.current = startOfStretch;
-    // The first tick is a second away; without this the pill shows the previous
-    // value for up to a second after ▶.
     setElapsedMs(playedMs.current);
     const tick = setInterval(() => {
       const start = startedAt.current;
@@ -69,8 +85,7 @@ export function usePracticeElapsed(running: boolean): PracticeElapsed {
     }, TICK_MS);
     return () => {
       clearInterval(tick);
-      // Bank the stretch: the cleanup also runs on unmount, where the effect
-      // body's stop branch never gets to.
+      // Also runs on unmount, where the stop branch above never does.
       if (startedAt.current !== null) {
         playedMs.current += Date.now() - startedAt.current;
         startedAt.current = null;
@@ -93,47 +108,20 @@ interface PracticePillProps {
 }
 
 export function PracticePill({ elapsedMs, onReset }: PracticePillProps) {
+  const styles = useStyles();
   return (
     <View style={styles.centre}>
-      <Pressable style={styles.pill} hitSlop={PILL_HIT_SLOP} onPress={onReset}>
-        <Text style={styles.icon}>◴</Text>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityHint="Resets the practice timer"
+        style={styles.pill}
+        hitSlop={PILL_HIT_SLOP}
+        onPress={onReset}
+      >
+        <Text style={styles.icon}>{icons.practice}</Text>
         <Text style={styles.elapsed}>{formatPracticeElapsed(elapsedMs)}</Text>
-        <Text style={styles.reset}>↺ reset</Text>
+        <Text style={styles.reset}>{icons.reset} reset</Text>
       </Pressable>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  centre: {
-    alignItems: 'center',
-  },
-  pill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: PILL_GAP,
-    paddingVertical: PILL_PADDING_V,
-    paddingHorizontal: PILL_PADDING_H,
-    borderRadius: radii.chip,
-    backgroundColor: theme.surface2,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: theme.line,
-  },
-  icon: {
-    color: theme.text2,
-    fontSize: LABEL_FONT_SIZE,
-  },
-  elapsed: {
-    color: theme.text,
-    fontFamily: typography.headline.family,
-    fontSize: LABEL_FONT_SIZE,
-    fontVariant: ['tabular-nums'],
-  },
-  reset: {
-    color: theme.text3,
-    fontSize: RESET_FONT_SIZE,
-    paddingLeft: RESET_PADDING_LEFT,
-    borderLeftWidth: StyleSheet.hairlineWidth,
-    borderLeftColor: theme.line,
-  },
-});

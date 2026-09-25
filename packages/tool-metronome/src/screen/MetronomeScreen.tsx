@@ -1,17 +1,10 @@
-// The metronome performance surface (SPEC §5.2, design §02). Everything here is
-// something you touch while playing: tempo, pattern, transport.
-//
-// Two clocks, deliberately: every value below is human-speed React state read
-// from the core-state store (§13.4), and the two 60fps truths — the bar sweep
-// and the LED flash — come from useMetronomeFrame's worklet, never through
-// React (§13.3). The store is intent; the engine is truth.
-//
-// NOT here yet: the four chips and their sheets (M4), the setlist chip and
-// note strip (M5), and the §12.6 first-use hint that teaches swipe and
-// tap-to-type. Volume, latency offset and subdivision accents are Settings by
-// §5.3 and never appear on this screen.
-
-import { radii, resolveTheme } from '@kitbag/core-design';
+import {
+  Card,
+  createThemedStyles,
+  SegmentedControl,
+  space,
+  StepControl,
+} from '@kitbag/core-design';
 import {
   KB_ACCENT,
   KB_DENOMINATORS,
@@ -20,34 +13,46 @@ import {
 import { BPM_BOUNDS, useMetronome } from '@kitbag/core-state';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { GestureDetector } from 'react-native-gesture-handler';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 
 import { subdivisionGlyph } from '../logic/subdivision.ts';
 import { pushTap, tapTempoBpm } from '../logic/tapTempo.ts';
 import { BeatLeds } from './BeatLeds.tsx';
-import { PolyToggle } from './PolyToggle.tsx';
 import { PracticePill, usePracticeElapsed } from './PracticePill.tsx';
 import { PresetRow } from './PresetRow.tsx';
-import { StepBadge, StepBadgeLabel } from './StepBadge.tsx';
 import { SwipeTempoZone } from './SwipeTempoZone.tsx';
 import { TempoNumpadSheet } from './TempoNumpadSheet.tsx';
 import { Transport } from './Transport.tsx';
 import { useTempoSwipe } from './useTempoSwipe.ts';
 import { useMetronomeFrame } from './useMetronomeFrame.ts';
 
-const theme = resolveTheme('dark');
-
-const SCREEN_PADDING = 16;
-const SCREEN_GAP = 14;
-const CARD_PADDING = 14;
-const CARD_ROW_GAP = 10;
 const FIRST_BEAT = 0;
 
-// SPEC §5.2 gives the poly row "own accent states", but the C ABI has one
-// accent table, for the main pattern (kb_metronome_set_accent). So the poly row
-// shows its downbeat and is not tap-editable — a poly accent the engine cannot
-// play would be a control that lies. Editable when the ABI grows one.
+const POLY = 'poly';
+const POLY_OPTIONS = [{ value: POLY, label: POLY }] as const;
+
+const useStyles = createThemedStyles((theme) => ({
+  screen: {
+    flex: 1,
+    backgroundColor: theme.color.bg,
+    paddingHorizontal: space.screenInset,
+    gap: space.sectionGap,
+  },
+  cardBody: {
+    gap: space.rowGap,
+  },
+  cardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: space.rowGap,
+  },
+  spacer: {
+    flex: 1,
+  },
+}));
+
 function polyAccents(beats: number): readonly KB_ACCENT[] {
   return Array.from({ length: beats }, (_unused, beat) =>
     beat === FIRST_BEAT
@@ -56,19 +61,17 @@ function polyAccents(beats: number): readonly KB_ACCENT[] {
   );
 }
 
-/** Window insets in dp. The shell measures them: a tool may not depend on the
- * shell's safe-area library (§13.1), and portrait-only makes top/bottom the
- * whole story (app.json `orientation`). */
-export interface ScreenInsets {
+export interface ShellMeasuredInsets {
   readonly top: number;
   readonly bottom: number;
 }
 
 export interface MetronomeScreenProps {
-  readonly insets: ScreenInsets;
+  readonly insets: ShellMeasuredInsets;
 }
 
 export function MetronomeScreen({ insets }: MetronomeScreenProps) {
+  const styles = useStyles();
   const bpm = useMetronome((s) => s.bpm);
   const beatsPerBar = useMetronome((s) => s.beatsPerBar);
   const denominator = useMetronome((s) => s.denominator);
@@ -91,9 +94,7 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
   const [numpadOpen, setNumpadOpen] = useState(false);
   const tapTimes = useRef<readonly number[]>([]);
 
-  // Any tempo set another way ends the tap series: a TAP moments after typing
-  // 124 must start counting, not average against taps from before.
-  const handleTempo = useCallback(
+  const setTempoEndingTapSeries = useCallback(
     (next: number) => {
       tapTimes.current = [];
       setTempo(next);
@@ -101,21 +102,15 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
     [setTempo],
   );
 
-  // Swipe ANYWHERE (§5.2): the pan is mounted at the screen root, not on the
-  // readout, so any empty space is the tempo control too.
-  const tempoSwipe = useTempoSwipe(bpm, handleTempo);
+  const tempoSwipe = useTempoSwipe(bpm, setTempoEndingTapSeries);
 
-  // The poly row does not flash: the engine HAS the value
-  // (kb_metronome_current_poly_beat) but the JSI HostObject does not publish it
-  // yet, so there is nothing to read on the UI thread. Held at STOPPED_BEAT —
-  // claiming nothing beats guessing. Closing it is a core-native change.
   const polyBeatUnpublished = useSharedValue(KB_STOPPED_BEAT);
 
   const handleNudge = useCallback(
     (delta: number) => {
-      handleTempo(bpm + delta);
+      setTempoEndingTapSeries(bpm + delta);
     },
-    [bpm, handleTempo],
+    [bpm, setTempoEndingTapSeries],
   );
 
   const handleTap = useCallback(() => {
@@ -131,9 +126,6 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
     [beatsPerBar, denominator, setBeats],
   );
 
-  // The denominator is a set, not a range (KB_DENOMINATORS is generated from
-  // the engine, §13.7), so the badge's own face cycles it rather than adding a
-  // fourth stepper to the row.
   const handleDenominatorCycle = useCallback(() => {
     const next =
       KB_DENOMINATORS[
@@ -160,6 +152,8 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
     setPoly(!polyEnabled, polyBeats);
   }, [polyEnabled, polyBeats, setPoly]);
 
+  const polyLeds = useMemo(() => polyAccents(polyBeats), [polyBeats]);
+
   const handleToggleTransport = useCallback(() => {
     if (running) stop();
     else start();
@@ -173,19 +167,17 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
     setNumpadOpen(false);
   }, []);
 
-  // Intended to keep the transport clear of the gesture bar under edge-to-edge;
-  // not measured on a device.
-  const insetPadding = useMemo(
+  const edgeToEdgePadding = useMemo(
     () => ({
-      paddingTop: SCREEN_PADDING + insets.top,
-      paddingBottom: SCREEN_PADDING + insets.bottom,
+      paddingTop: space.screenInset + insets.top,
+      paddingBottom: space.screenInset + insets.bottom,
     }),
     [insets.top, insets.bottom],
   );
 
   return (
     <GestureDetector gesture={tempoSwipe}>
-      <View style={[styles.screen, insetPadding]}>
+      <View style={[styles.screen, edgeToEdgePadding]}>
         <PracticePill elapsedMs={elapsedMs} onReset={resetPractice} />
 
         <SwipeTempoZone
@@ -196,44 +188,59 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
 
         <PresetRow onNudge={handleNudge} onTap={handleTap} />
 
-        <View style={styles.card}>
-          <View style={styles.cardRow}>
-            <StepBadge onStep={handleBeatsStep}>
-              <StepBadgeLabel onPress={handleDenominatorCycle}>
-                {beatsPerBar}/{denominator}
-              </StepBadgeLabel>
-            </StepBadge>
-            <BeatLeds
-              beatCount={beatsPerBar}
-              accents={accents}
-              currentBeat={currentBeat}
-              onCycle={cycleAccent}
-            />
-          </View>
-
-          {polyEnabled ? (
+        <Card>
+          <View style={styles.cardBody}>
             <View style={styles.cardRow}>
-              <StepBadge accented onStep={handlePolyStep}>
-                <StepBadgeLabel>
-                  {polyBeats}:{beatsPerBar}
-                </StepBadgeLabel>
-              </StepBadge>
+              <StepControl
+                label="Time signature"
+                value={`${String(beatsPerBar)}/${String(denominator)}`}
+                onStep={handleBeatsStep}
+                onValuePress={handleDenominatorCycle}
+              />
               <BeatLeds
-                small
-                beatCount={polyBeats}
-                accents={polyAccents(polyBeats)}
-                currentBeat={polyBeatUnpublished}
+                beatCount={beatsPerBar}
+                accents={accents}
+                currentBeat={currentBeat}
+                onCycle={cycleAccent}
               />
             </View>
-          ) : null}
 
-          <View style={styles.cardRow}>
-            <StepBadge onStep={handleSubdivisionStep}>
-              <StepBadgeLabel>{subdivisionGlyph(subdivision)}</StepBadgeLabel>
-            </StepBadge>
-            <PolyToggle enabled={polyEnabled} onToggle={handlePolyToggle} />
+            {polyEnabled ? (
+              <View style={styles.cardRow}>
+                <StepControl
+                  accented
+                  label="Polyrhythm"
+                  value={`${String(polyBeats)}:${String(beatsPerBar)}`}
+                  onStep={handlePolyStep}
+                />
+                <BeatLeds
+                  size="small"
+                  beatCount={polyBeats}
+                  accents={polyLeds}
+                  currentBeat={polyBeatUnpublished}
+                />
+              </View>
+            ) : null}
+
+            <View style={styles.cardRow}>
+              <StepControl
+                label="Subdivision"
+                value={subdivisionGlyph(subdivision)}
+                accessibilityValue={String(subdivision)}
+                onStep={handleSubdivisionStep}
+              />
+              <SegmentedControl
+                fill
+                accessibilityLabel="Polyrhythm"
+                options={POLY_OPTIONS}
+                selected={polyEnabled ? POLY : undefined}
+                selectedTone="accent"
+                neighbourGapDp={space.rowGap}
+                onSelect={handlePolyToggle}
+              />
+            </View>
           </View>
-        </View>
+        </Card>
 
         <View style={styles.spacer} />
 
@@ -246,36 +253,11 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
         <TempoNumpadSheet
           visible={numpadOpen}
           bpm={bpm}
-          onConfirm={handleTempo}
+          bottomInset={insets.bottom}
+          onConfirm={setTempoEndingTapSeries}
           onDismiss={handleCloseNumpad}
         />
       </View>
     </GestureDetector>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: theme.bg,
-    paddingHorizontal: SCREEN_PADDING,
-    gap: SCREEN_GAP,
-  },
-  card: {
-    backgroundColor: theme.surface1,
-    borderRadius: radii.card,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: theme.line,
-    padding: CARD_PADDING,
-    gap: CARD_ROW_GAP,
-  },
-  cardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: CARD_ROW_GAP,
-  },
-  spacer: {
-    flex: 1,
-  },
-});

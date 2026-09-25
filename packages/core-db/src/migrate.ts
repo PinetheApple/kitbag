@@ -1,51 +1,19 @@
-// Migration runner for the Kitbag database (SPEC §11.1, §14).
-//
-// The guarantee (§11.1, §14): migrations are additive and non-destructive. An
-// upgrading user's v6 Drift database is picked up IN PLACE — the runner starts
-// from whatever `PRAGMA user_version` the Flutter build left (6), not from zero,
-// and must not lose their setlists.
-//
-// The runner is driver-agnostic: it takes a synchronous `MigrationDriver` so
-// the same SQL can be exercised headlessly in a test (SPEC §14) and run on
-// device through op-sqlite (`executeSync`, see ./client.ts). The transform is
-// plain SQLite DDL/DML — no driver-specific behaviour.
-//
-// This is NOT drizzle-kit generated. drizzle-kit diffs the TS schema against a
-// snapshot; it cannot express the v6→v7 DATA transform (rename tables, split
-// the setlist→preset link into a join table, drop columns, backfill UUIDs).
-// That transform is hand-authored below and tested against a fixture v6 DB.
-
-/** Schema version this build migrates to. Bump and add a step when the schema changes. */
-export const SCHEMA_VERSION = 7;
-
-/** The Drift-era schema version an upgrading user arrives with (SPEC §11 intro). */
+export const SCHEMA_VERSION = 8;
 export const V6_SCHEMA_VERSION = 6;
+export const V7_SCHEMA_VERSION = 7;
 
-/**
- * Minimal synchronous SQLite surface the runner needs. Wrap op-sqlite
- * (`executeSync`) on device or `node:sqlite` in tests behind this.
- */
 export interface MigrationDriver {
-  /** Execute one SQL statement with no returned rows. */
   exec(sql: string): void;
-  /** Read `PRAGMA user_version`. */
   getUserVersion(): number;
-  /** Write `PRAGMA user_version`. */
   setUserVersion(version: number): void;
 }
 
-// UUIDv4-shaped string generated in SQL, used to backfill `uuid` on exportable
-// rows during migration (§12.4; D12 accepts a first-merge duplicate). `random()`
-// evaluates per row, so each backfilled row gets a distinct value.
 const UUID4_SQL =
   "lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || " +
   "substr(lower(hex(randomblob(2))), 2) || '-' || " +
   "substr('89ab', abs(random()) % 4 + 1, 1) || substr(lower(hex(randomblob(2))), 2) || " +
   "'-' || lower(hex(randomblob(6)))";
 
-// The v7 `song_presets` table (SPEC §11.2). Shared verbatim between a fresh
-// install and the v6 rebuild so the two paths cannot drift apart. Depends on
-// `songs` existing (the `library_song_id` FK), so create `songs` first.
 const CREATE_SONG_PRESETS = `CREATE TABLE song_presets (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
@@ -105,12 +73,11 @@ const CREATE_ROUTE_LATENCY = `CREATE TABLE route_latency (
   offset_ms REAL NOT NULL
 )`;
 
-// Fresh-install DDL for the v7 schema (SPEC §11.2). Order respects FK targets:
-// setlists and songs before song_presets, song_presets before setlist_items.
 const CREATE_SETLISTS = `CREATE TABLE setlists (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
-  uuid TEXT NOT NULL
+  uuid TEXT NOT NULL,
+  active INTEGER NOT NULL DEFAULT 0
 )`;
 
 const CREATE_SONGS = `CREATE TABLE songs (
@@ -166,8 +133,12 @@ const CREATE_STEMS = `CREATE TABLE stems (
   sort_order INTEGER NOT NULL
 )`;
 
-/** Fresh-install baseline: build the whole v7 schema from an empty database. */
-export const BASELINE_V7: readonly string[] = [
+const ADD_POLY_ACCENTS =
+  'ALTER TABLE song_presets ADD COLUMN poly_accents BLOB';
+const CREATE_ONE_ACTIVE_INDEX =
+  'CREATE UNIQUE INDEX setlists_one_active ON setlists (active) WHERE active = 1';
+
+export const BASELINE_V8: readonly string[] = [
   CREATE_SETLISTS,
   CREATE_SONGS,
   CREATE_SONG_PRESETS,
@@ -180,41 +151,18 @@ export const BASELINE_V7: readonly string[] = [
   CREATE_BPM_CACHE,
   CREATE_BPM_CACHE_INDEX,
   CREATE_ROUTE_LATENCY,
+  ADD_POLY_ACCENTS,
+  CREATE_ONE_ACTIVE_INDEX,
 ];
 
-/**
- * v6 → v7 transform (SPEC §11.2). Preserves all user data, in order:
- *
- *  1. `songs` (v6 presets) is renamed out of the way so the library table can
- *     take the `songs` name (§11.2 inverts the two).
- *  2. `library_songs` → `songs`; gains `downbeat_indices` (§4.3) and a
- *     backfilled `uuid` (§12.4).
- *  3. The new `song_presets` is built and every v6 preset copied in, KEEPING
- *     its id, dropping `volume`/`latency_offset` (D3), defaulting the new
- *     columns, and backfilling `uuid`.
- *  4. `setlist_items` is built and populated from each v6 preset's
- *     `setlist_id`/`position` — THIS is what preserves setlists: the row is
- *     gone from the preset but its setlist membership survives as a join row
- *     keyed on the preserved preset id. Setlists themselves are only renamed-
- *     untouched (a `uuid` column is added), so no setlist row is ever dropped.
- *  5. The old preset table is dropped once copied.
- *  6. `setlists`, `tunings`, `stem_sets` gain backfilled `uuid`s.
- *  7. The new global/cache tables are created (D2, §8.5, §12.5).
- *
- * `uuid` is added nullable-then-backfilled on the renamed tables (SQLite cannot
- * ADD a NOT NULL column without a constant default); the drizzle schema still
- * declares it NOT NULL and app writes always supply it. The rebuilt
- * `song_presets` is genuinely NOT NULL because it is copied, not altered.
- */
+// SQLite cannot ADD a NOT NULL column without a constant default, so migrated
+// uuid columns stay nullable; every app write supplies one.
 export const MIGRATE_V6_TO_V7: readonly string[] = [
-  // 1. move the v6 preset table aside.
   'ALTER TABLE songs RENAME TO song_presets_v6',
-  // 2. library_songs becomes songs; add the new columns and backfill uuid.
   'ALTER TABLE library_songs RENAME TO songs',
   'ALTER TABLE songs ADD COLUMN downbeat_indices BLOB',
   'ALTER TABLE songs ADD COLUMN uuid TEXT',
   `UPDATE songs SET uuid = ${UUID4_SQL} WHERE uuid IS NULL`,
-  // 3. build song_presets and copy every v6 preset in, keeping its id.
   CREATE_SONG_PRESETS,
   `INSERT INTO song_presets (
      id, name, bpm, beats_per_bar, subdivision, accents,
@@ -223,36 +171,36 @@ export const MIGRATE_V6_TO_V7: readonly string[] = [
    SELECT id, name, bpm, beats_per_bar, subdivision, accents,
      poly_enabled, poly_beats, sound, ${UUID4_SQL}
    FROM song_presets_v6`,
-  // 4. preserve setlist membership as join rows keyed on the preserved id.
   CREATE_SETLIST_ITEMS,
   `INSERT INTO setlist_items (setlist_id, song_preset_id, position)
    SELECT setlist_id, id, position FROM song_presets_v6`,
-  // 5. the v6 preset table is fully migrated.
   'DROP TABLE song_presets_v6',
-  // 6. backfill uuid on the remaining exportable tables.
   'ALTER TABLE setlists ADD COLUMN uuid TEXT',
   `UPDATE setlists SET uuid = ${UUID4_SQL} WHERE uuid IS NULL`,
   'ALTER TABLE tunings ADD COLUMN uuid TEXT',
   `UPDATE tunings SET uuid = ${UUID4_SQL} WHERE uuid IS NULL`,
   'ALTER TABLE stem_sets ADD COLUMN uuid TEXT',
   `UPDATE stem_sets SET uuid = ${UUID4_SQL} WHERE uuid IS NULL`,
-  // 7. new global / cache tables.
   CREATE_SUBDIVISION_ACCENTS,
   CREATE_BPM_CACHE,
   CREATE_BPM_CACHE_INDEX,
   CREATE_ROUTE_LATENCY,
 ];
 
-/** Run a list of statements inside one transaction, rolling back on failure. */
+export const MIGRATE_V7_TO_V8: readonly string[] = [
+  'ALTER TABLE setlists ADD COLUMN active INTEGER NOT NULL DEFAULT 0',
+  CREATE_ONE_ACTIVE_INDEX,
+  ADD_POLY_ACCENTS,
+];
+
 function runStatements(
   driver: MigrationDriver,
   statements: readonly string[],
 ): void {
   driver.exec('BEGIN');
   try {
-    for (const statement of statements) {
-      driver.exec(statement);
-    }
+    for (const statement of statements) driver.exec(statement);
+    driver.setUserVersion(SCHEMA_VERSION);
     driver.exec('COMMIT');
   } catch (error) {
     driver.exec('ROLLBACK');
@@ -260,26 +208,25 @@ function runStatements(
   }
 }
 
-/**
- * Bring the database up to {@link SCHEMA_VERSION}, preserving existing data.
- *
- * - user_version 0 → fresh install: build the v7 baseline.
- * - user_version in [1, 7) → upgrade: apply the v6→v7 transform in place. (The
- *   Flutter build always migrated users to v6 before this code could run, so an
- *   arriving nonzero version is v6-shaped; SPEC §11.1.)
- * - user_version ≥ 7 → nothing to do.
- *
- * Foreign-key enforcement is disabled around the transform (SQLite cannot
- * toggle it inside a transaction, and table renames confuse in-flight FK
- * checks); it is restored afterwards.
- */
+function upgradeSteps(from: number): readonly string[] {
+  if (from === 0) return BASELINE_V8;
+  // The Flutter build always migrated users to v6 before this code could run,
+  // so any nonzero version below 7 is v6-shaped.
+  if (from < V7_SCHEMA_VERSION)
+    return [...MIGRATE_V6_TO_V7, ...MIGRATE_V7_TO_V8];
+  return MIGRATE_V7_TO_V8;
+}
+
 export function migrate(driver: MigrationDriver): void {
   const from = driver.getUserVersion();
-  if (from >= SCHEMA_VERSION) {
-    return;
+  try {
+    if (from < SCHEMA_VERSION) {
+      // Renames and drops must not fire FK actions, and the pragma is a no-op
+      // inside a transaction, so it is toggled around BEGIN.
+      driver.exec('PRAGMA foreign_keys = OFF');
+      runStatements(driver, upgradeSteps(from));
+    }
+  } finally {
+    driver.exec('PRAGMA foreign_keys = ON');
   }
-  driver.exec('PRAGMA foreign_keys = OFF');
-  runStatements(driver, from === 0 ? BASELINE_V7 : MIGRATE_V6_TO_V7);
-  driver.setUserVersion(SCHEMA_VERSION);
-  driver.exec('PRAGMA foreign_keys = ON');
 }

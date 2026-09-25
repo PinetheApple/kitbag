@@ -1269,6 +1269,8 @@ rather than starting from zero.
 | `SongPresets`: **drop `volume` and `latencyOffset`** | **D3** — both are global rig setup; the columns are unreadable-vs-default today |
 | `SongPresets`: decouple from `Setlists` | §5.4 — songs must exist standalone; setlists reference |
 | `SongPresets`: + phase nudge, + track identity tuple | §8.8, **D4** — `(title, artist, source, length)`, nullable library-song FK when known |
+| `Setlists`: + `active` flag; a partial unique index (`WHERE active = 1`) allows at most one active row | §5.4 — one active setlist; schema v8 |
+| `SongPresets`: + `polyAccents` BLOB, one `kb_accent` byte per poly slot | §5.2, §5.4 — the poly row has its own accent states and they round-trip; schema v8 |
 | `Songs`(library): + downbeat indices | §4.3 |
 | **All paths relative** to the base directory | §2.3 (iOS) and **D11** (the directory is now user-movable) |
 | `PracticeSessions`: write `setlistId`, `songsPlayed` | §5.7 — columns exist, producer never fills them |

@@ -1,12 +1,22 @@
-// core-design — tokens, theme, shared components: the waveform renderer, LEDs,
-// steppers, sheets, numpad (SPEC §13.1). May import core-plugin-api only.
-//
-// §12.2's tokens are the sole styling authority (SPEC §13.8.1). The public
-// surface is the token module: values (palette, radii, typography, shadow),
-// theme resolvers for Skia/RN (`resolveTheme`), NativeWind's vars() payload
-// (`themeVars`) and the generator's render functions. The Tailwind theme is
-// generated from these — never hand-authored (§13.7).
-//
-// The shared components named above land in later Phase 2 waves.
-
-export * from './tokens';
+export * from './tokens.ts';
+export * from './roles.ts';
+export * from './theme.ts';
+export * from './textStyle.ts';
+export * from './touchTarget.ts';
+export * from './icons.ts';
+export * from './sheetDismiss.ts';
+export * from './ThemeProvider.tsx';
+export * from './components/AppBar.tsx';
+export * from './components/Badge.tsx';
+export * from './components/BeatLed.tsx';
+export * from './components/Button.tsx';
+export * from './components/Card.tsx';
+export * from './components/Chip.tsx';
+export * from './components/Icon.tsx';
+export * from './components/NumpadKeypad.tsx';
+export * from './components/PresetButton.tsx';
+export * from './components/PrimaryPlayButton.tsx';
+export * from './components/SegmentedControl.tsx';
+export * from './components/Sheet.tsx';
+export * from './components/StepControl.tsx';
+export * from './components/TransportKey.tsx';
