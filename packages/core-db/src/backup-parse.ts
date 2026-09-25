@@ -144,6 +144,7 @@ function readPracticeSession(
 ): PracticeSessionRecord {
   const r = reader(value, path);
   return {
+    uuid: r.uuid('uuid'),
     startTime: r.count('startTime'),
     durationSeconds: r.count('durationSeconds'),
     avgBpm: r.number('avgBpm'),

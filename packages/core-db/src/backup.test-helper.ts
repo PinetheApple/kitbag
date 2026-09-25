@@ -101,6 +101,7 @@ export async function seed(database: BackupDatabase) {
     avgBpm: 120,
     setlistId: friday.id,
     songsPlayed: JSON.stringify([opener.uuid, closer.uuid]),
+    uuid: crypto.randomUUID(),
   });
   return { song, opener, closer, friday, acoustic };
 }

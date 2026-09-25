@@ -55,6 +55,7 @@ function songPresetValues(record: SongPresetRecord, ids: IdMaps) {
 
 function practiceValues(record: PracticeSessionRecord, ids: IdMaps) {
   return {
+    uuid: record.uuid,
     startTime: fromSeconds(record.startTime),
     durationSeconds: record.durationSeconds,
     avgBpm: record.avgBpm,

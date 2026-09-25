@@ -3,10 +3,12 @@ import { describe, expect, it } from 'vitest';
 
 import {
   MIGRATE_V6_TO_V7,
+  MIGRATE_V7_TO_V8,
   migrate,
   SCHEMA_VERSION,
   V6_SCHEMA_VERSION,
   V7_SCHEMA_VERSION,
+  V8_SCHEMA_VERSION,
 } from './migrate';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
@@ -90,6 +92,8 @@ const V6_DATA: readonly string[] = [
      (1, 1, 'Bridge', 92.0, 3, 2, X'030101', 1, 5, 2, 0.8, -12.0),
      (2, 0, 'Ballad', 72.0, 4, 1, X'03010101', 0, 0, 1, 1.0, 5.0)`,
   `INSERT INTO tunings (name, notes) VALUES ('Drop D', X'26292E33383D')`,
+  `INSERT INTO practice_sessions (start_time, duration_seconds, avg_bpm, setlist_id)
+   VALUES (1700000000, 600, 120.0, 1), (1700000000, 300, 90.0, NULL)`,
   `INSERT INTO library_songs (title, artist, file_path, duration, format, created_at, bpm)
    VALUES ('Reference', 'Someone', 'music/ref.flac', 210.5, 'flac', 1700000000, 128.0)`,
 ];
@@ -218,6 +222,7 @@ describe('migrate', () => {
       'song_presets',
       'tunings',
       'stem_sets',
+      'practice_sessions',
     ])
       expect(
         rows(db, `SELECT id FROM ${table} WHERE uuid IS NULL`),
@@ -235,7 +240,7 @@ describe('migrate', () => {
     );
   });
 
-  it('upgrades a v7 database with data to v8, keeping every row inactive', () => {
+  it('upgrades a v7 database with data, keeping every setlist inactive', () => {
     const db = buildV7Fixture();
     const beforeNames = readSetlistNames(db);
     const beforeMembership = readMembership(db);
@@ -243,6 +248,29 @@ describe('migrate', () => {
     assertSetlistsPreserved(db, beforeNames, beforeMembership);
     expect(rows(db, 'SELECT id FROM setlists WHERE active != 0')).toEqual([]);
     expect(columnNames(db, 'song_presets')).toContain('poly_accents');
+    expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
+  });
+
+  it('upgrades a v8 database, giving each practice session a distinct uuid', () => {
+    const db = buildV7Fixture();
+    applyInTransaction(db, MIGRATE_V7_TO_V8);
+    db.exec(`PRAGMA user_version = ${String(V8_SCHEMA_VERSION)}`);
+    const before = rows(
+      db,
+      'SELECT id, start_time, avg_bpm FROM practice_sessions ORDER BY id',
+    );
+    migrate(nodeSqliteDriver(db));
+    expect(
+      rows(
+        db,
+        'SELECT id, start_time, avg_bpm FROM practice_sessions ORDER BY id',
+      ),
+    ).toEqual(before);
+    const uuids = rows<{ uuid: string }>(
+      db,
+      'SELECT uuid FROM practice_sessions',
+    ).map((row) => row.uuid);
+    expect(new Set(uuids).size).toBe(before.length);
     expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
   });
 

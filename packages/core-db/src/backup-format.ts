@@ -75,6 +75,7 @@ export interface TuningRecord {
 }
 
 export interface PracticeSessionRecord {
+  uuid: string;
   startTime: number;
   durationSeconds: number;
   avgBpm: number;
@@ -135,7 +136,7 @@ export function reject(failure: ImportFailure): never {
 }
 
 export function recordKey(record: BackupRecord): string {
-  return 'uuid' in record ? record.uuid : String(record.startTime);
+  return record.uuid;
 }
 
 export function recordLabel(record: BackupRecord): string {

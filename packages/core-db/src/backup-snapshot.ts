@@ -109,6 +109,7 @@ function practiceRecord(
   setlistUuid: (id: number | null) => string | null,
 ): PracticeSessionRecord {
   return {
+    uuid: row.uuid,
     startTime: toSeconds(row.startTime),
     durationSeconds: row.durationSeconds,
     avgBpm: row.avgBpm,
@@ -160,11 +161,6 @@ function idMaps(rows: Awaited<ReturnType<typeof loadRows>>): IdMaps {
     songPresets: byUuid(rows.presetRows),
     setlists: byUuid(rows.setlistRows),
     tunings: byUuid(rows.tuningRows),
-    practiceSessions: new Map(
-      rows.practiceRows.map((row) => [
-        String(toSeconds(row.startTime)),
-        row.id,
-      ]),
-    ),
+    practiceSessions: byUuid(rows.practiceRows),
   };
 }

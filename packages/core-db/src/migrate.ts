@@ -1,6 +1,7 @@
-export const SCHEMA_VERSION = 8;
+export const SCHEMA_VERSION = 9;
 export const V6_SCHEMA_VERSION = 6;
 export const V7_SCHEMA_VERSION = 7;
+export const V8_SCHEMA_VERSION = 8;
 
 export interface MigrationDriver {
   exec(sql: string): void;
@@ -138,7 +139,13 @@ const ADD_POLY_ACCENTS =
 const CREATE_ONE_ACTIVE_INDEX =
   'CREATE UNIQUE INDEX setlists_one_active ON setlists (active) WHERE active = 1';
 
-export const BASELINE_V8: readonly string[] = [
+const MIGRATE_V8_TO_V9: readonly string[] = [
+  'ALTER TABLE practice_sessions ADD COLUMN uuid TEXT',
+  `UPDATE practice_sessions SET uuid = ${UUID4_SQL} WHERE uuid IS NULL`,
+  'CREATE UNIQUE INDEX practice_sessions_uuid ON practice_sessions (uuid)',
+];
+
+export const BASELINE_V9: readonly string[] = [
   CREATE_SETLISTS,
   CREATE_SONGS,
   CREATE_SONG_PRESETS,
@@ -153,6 +160,7 @@ export const BASELINE_V8: readonly string[] = [
   CREATE_ROUTE_LATENCY,
   ADD_POLY_ACCENTS,
   CREATE_ONE_ACTIVE_INDEX,
+  ...MIGRATE_V8_TO_V9,
 ];
 
 // SQLite cannot ADD a NOT NULL column without a constant default, so migrated
@@ -209,12 +217,14 @@ function runStatements(
 }
 
 function upgradeSteps(from: number): readonly string[] {
-  if (from === 0) return BASELINE_V8;
+  if (from === 0) return BASELINE_V9;
   // The Flutter build always migrated users to v6 before this code could run,
   // so any nonzero version below 7 is v6-shaped.
   if (from < V7_SCHEMA_VERSION)
-    return [...MIGRATE_V6_TO_V7, ...MIGRATE_V7_TO_V8];
-  return MIGRATE_V7_TO_V8;
+    return [...MIGRATE_V6_TO_V7, ...MIGRATE_V7_TO_V8, ...MIGRATE_V8_TO_V9];
+  if (from < V8_SCHEMA_VERSION)
+    return [...MIGRATE_V7_TO_V8, ...MIGRATE_V8_TO_V9];
+  return MIGRATE_V8_TO_V9;
 }
 
 export function migrate(driver: MigrationDriver): void {

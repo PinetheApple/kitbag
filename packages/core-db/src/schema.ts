@@ -102,6 +102,7 @@ export const practiceSessions = sqliteTable('practice_sessions', {
     onDelete: 'set null',
   }),
   songsPlayed: text('songs_played'),
+  uuid: text('uuid').notNull(),
 });
 
 export const stemSets = sqliteTable('stem_sets', {
