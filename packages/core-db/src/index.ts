@@ -1,6 +1,9 @@
-export { openDatabase } from './client';
-export { createSetlistRepository } from './setlist-repository';
-export { createSongPresetRepository } from './song-preset-repository';
+export {
+  openDatabase,
+  type KitbagDatabase,
+  type SetlistRepository,
+  type SongPresetRepository,
+} from './client';
 export type {
   NewSongPreset,
   Setlist,

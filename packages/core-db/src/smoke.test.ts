@@ -1,12 +1,18 @@
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { createSetlistRepository } from './setlist-repository';
 import { createSongPresetRepository } from './song-preset-repository';
 import { openTestDatabase } from './sqlite.test-helper';
 
-const handle = openTestDatabase();
-const sets = createSetlistRepository(handle);
-const presets = createSongPresetRepository(handle);
+let handle: ReturnType<typeof openTestDatabase>;
+let sets: ReturnType<typeof createSetlistRepository>;
+let presets: ReturnType<typeof createSongPresetRepository>;
+
+beforeEach(() => {
+  handle = openTestDatabase();
+  sets = createSetlistRepository(handle);
+  presets = createSongPresetRepository(handle);
+});
 
 afterEach(() => {
   handle.connection.close();

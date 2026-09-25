@@ -3,22 +3,32 @@ import { drizzle } from 'drizzle-orm/op-sqlite';
 
 import * as schema from './schema';
 import { migrate, type MigrationDriver } from './migrate';
-import type { DatabaseHandle } from './repository';
+import { createSetlistRepository } from './setlist-repository';
+import { createSongPresetRepository } from './song-preset-repository';
 import { createTransactor } from './transaction';
 
 const DATABASE_NAME = 'kitbag';
 
-export function openDatabase(
-  name: string = DATABASE_NAME,
-): DatabaseHandle & { connection: DB } {
+export function openDatabase(name: string = DATABASE_NAME) {
   const connection = open({ name });
   migrate(opSqliteMigrationDriver(connection));
-  const db = drizzle(connection, { schema });
-  const transactor = createTransactor((statement) =>
-    connection.execute(statement),
-  );
-  return { connection, db, transactor };
+  const handle = {
+    db: drizzle(connection, { schema }),
+    transactor: createTransactor((statement) => connection.execute(statement)),
+  };
+  return {
+    setlists: createSetlistRepository(handle),
+    presets: createSongPresetRepository(handle),
+    close: () =>
+      handle.transactor.serial(async () => {
+        await connection.closeAsync();
+      }),
+  };
 }
+
+export type KitbagDatabase = ReturnType<typeof openDatabase>;
+export type SetlistRepository = KitbagDatabase['setlists'];
+export type SongPresetRepository = KitbagDatabase['presets'];
 
 function opSqliteMigrationDriver(connection: DB): MigrationDriver {
   return {
