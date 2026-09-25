@@ -23,7 +23,7 @@
     "eslint-plugin-react-native": "^5.0.0",
     "prettier": "^3.9.6",
     "turbo": "^2.10.6",
-    "typescript": "~5.9.2",
+    "typescript": "~6.0.3",
     "typescript-eslint": "^8.65.0"
   }
 }
