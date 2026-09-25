@@ -15,15 +15,15 @@
     "@commitlint/cli": "^21.2.2",
     "@commitlint/config-conventional": "^21.2.2",
     "@eslint/js": "9.39.5",
-    "@types/react": "~19.2.2",
+    "@types/react": "~19.3.0",
     "eslint": "9.39.5",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-native": "^5.0.0",
-    "prettier": "^3.9.6",
-    "turbo": "^2.10.6",
+    "prettier": "^3.9.8",
+    "turbo": "^2.11.1",
     "typescript": "~5.9.2",
-    "typescript-eslint": "^8.65.0"
+    "typescript-eslint": "^8.70.0"
   }
 }
