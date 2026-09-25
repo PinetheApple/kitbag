@@ -229,6 +229,7 @@ comments actively misdescribed it. Some of that was written by agents. So:
 
 - **Do not claim a milestone shipped.** Write CHANGELOG entries that are true, or
   write none. "Fixed: nothing" is a legitimate entry.
+- **Comments: zero by default.** Write one only when the code cannot show a non-obvious *why* (an invariant, an external gotcha), max 2 lines. No narration, no restating names or signatures, no docstrings that repeat the signature, no SPEC recaps, no change history. Shorten or delete narrating comments in code you touch. Reviewers treat a removable comment as blocking.
 - **Do not write a comment that describes intent as behaviour.**
   `bpm_lookup_service.dart:68` claimed similarity matching over a loop that
   returned the first result; that comment survived long enough to reach a design

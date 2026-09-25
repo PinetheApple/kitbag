@@ -160,6 +160,10 @@ Other locked choices: Expo Router (file-based, plugin routes register through
 §9.1's `RouteDescriptor`), React Native Skia for waveforms, Reanimated 3 + Gesture
 Handler, Drizzle + op-sqlite.
 
+## Comments
+
+**Comments: zero by default.** Write one only when the code cannot show a non-obvious *why* (an invariant, an external gotcha), max 2 lines. No narration, no restating names or signatures, no docstrings that repeat the signature, no SPEC recaps, no change history. Shorten or delete narrating comments in code you touch. A reviewer blocks on any removable comment.
+
 ## Honesty
 
 This repo's audit found docs, changelog and comments that actively misdescribed the
