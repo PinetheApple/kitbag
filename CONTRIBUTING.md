@@ -94,7 +94,7 @@ What a linter **can't** check — enforced by the `code-reviewer` agent, which r
 these as its rubric (distinct from `ralph`, which reviews correctness/spec; run
 both, see the Ralph loop in `CLAUDE.md`):
 
-- **Comments: zero by default.** Write one only when the code cannot show a non-obvious *why* (an invariant, an external gotcha), max 2 lines. No narration, no restating names or signatures, no docstrings that repeat the signature, no SPEC recaps, no change history. Shorten or delete narrating comments in code you touch.
+- **Comments: zero by default, in every file type (source, tests, Gradle, ProGuard, Metro/Babel/ESLint configs, CMake, YAML, shell).** Write one only when the code cannot show a non-obvious *why* (an invariant, an external gotcha), max 2 lines. No narration, no restating names or signatures, no docstrings that repeat the signature, no SPEC recaps, no change history. Shorten or delete narrating comments in code you touch.
 - **Comment only the constraint the code can't show** — an ordering reason, an
   epsilon's purpose, why a counter is monotonic. **Never restate the next line,
   never describe intent as behaviour**: a comment claiming title/artist similarity

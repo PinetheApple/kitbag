@@ -74,7 +74,7 @@ and may allocate freely. Know which side you are on before you reach for a `vect
 `bash scripts/format.sh` fixes formatting. Run both before you report.
 
 - **Functions ≤30 lines. Files ≤400 lines — tests included.**
-- **Comments: zero by default.** Write one only when the code cannot show a non-obvious *why* (an invariant, an external gotcha), max 2 lines. No narration, no restating names or signatures, no docstrings that repeat the signature, no SPEC recaps, no change history. Shorten or delete narrating comments in code you touch. Public ABI header doc comments are the exception.
+- **Comments: zero by default, in every file type (source, tests, Gradle, ProGuard, Metro/Babel/ESLint configs, CMake, YAML, shell).** Write one only when the code cannot show a non-obvious *why* (an invariant, an external gotcha), max 2 lines. No narration, no restating names or signatures, no docstrings that repeat the signature, no SPEC recaps, no change history. Shorten or delete narrating comments in code you touch. Public ABI header doc comments are the exception.
 - **Comments ≤2 lines**, except doc comments on the public ABI header, which are the
   contract external callers read. A comment records a non-obvious *why*; if it restates
   the next line, delete it.
