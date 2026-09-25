@@ -37,20 +37,24 @@ void Metronome::CancelCountIn() {
   count_in_beats_ = 0.0;
 }
 
-void Metronome::AdvanceCountIn(
+double Metronome::AdvanceCountIn(
     double position,
     const BlockTempo& tempo,
     uint32_t sample_rate
 ) {
-  if (position >= -kGridEpsilon) {
+  // Summing beats_per_sample over a long count drifts; bar one snaps to the
+  // nearest sample so it matches a plain start there.
+  if (position + tempo.beats_per_sample / 2.0 >= 0.0) {
     counting_in_ = false;
-    return;
+    beat_position_ = -tempo.latency_beats;
+    return 0.0;
   }
   const auto beat = static_cast<int64_t>(std::floor(position + kGridEpsilon));
   if (position - tempo.beats_per_sample <
       static_cast<double>(beat) - kGridEpsilon) {
     OnCountInBeat(beat, sample_rate);
   }
+  return position;
 }
 
 void Metronome::OnCountInBeat(int64_t beat, uint32_t sample_rate) {

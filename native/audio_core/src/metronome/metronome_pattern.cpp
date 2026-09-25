@@ -24,6 +24,14 @@ void Metronome::SetAccentSlot(
   );
 }
 
+void Metronome::ApplyAccentCommand(const Command& command) {
+  const bool poly = command.type == CommandType::kSetPolyAccent;
+  const std::span<Accent> row =
+      poly ? std::span(poly_accents_).first(static_cast<size_t>(poly_beats_))
+           : std::span(accents_).first(static_cast<size_t>(beats_per_bar_));
+  SetAccentSlot(row, command.int_a, command.int_b);
+}
+
 void Metronome::ResetGrownSlots(
     std::span<Accent> row,
     int32_t old_count,

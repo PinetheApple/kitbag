@@ -235,8 +235,7 @@ void Metronome::FireConstantTempoTick(
     uint32_t sample_rate,
     BlockTempo* tempo
 ) {
-  // Owning beat on the speaker-time base: sub_index came from position, and it
-  // is >= 0 here (AdvanceConstantTempo fires only when position >= 0).
+  // sub_index is on the speaker-time base and never negative here.
   const int64_t beat = sub_index / subdivision_;
   if (sub_index % subdivision_ != 0) {
     if (subdivision_ > 1) OnSubdivisionTick(beat, sample_rate);
@@ -246,7 +245,7 @@ void Metronome::FireConstantTempoTick(
   if (beat_index == 0) {
     ++current_bar_;  // monotonic: survives time-signature changes
     if (ramp_.enabled()) {
-      SetBpmPreservingPhase(ramp_.BpmAtDownbeat(current_bar_, sample_rate));
+      SetBpmPreservingPhase(ramp_.StepAtDownbeat(current_bar_, sample_rate));
       *tempo = BlockTempoFor(sample_rate);
     }
   }
@@ -268,10 +267,8 @@ void Metronome::FirePolyTick(
 }
 
 void Metronome::AdvanceConstantTempo(uint32_t sample_rate, BlockTempo* tempo) {
-  const double position = beat_position_ + tempo->latency_beats;
-  if (counting_in_) AdvanceCountIn(position, *tempo, sample_rate);
-  // Before song beat 0 — a negative external-anchor position — there is no beat
-  // to sound, mirroring grid mode's silence before its first beat (§4.2).
+  double position = beat_position_ + tempo->latency_beats;
+  if (counting_in_) position = AdvanceCountIn(position, *tempo, sample_rate);
   if (position >= -kGridEpsilon) {
     const auto sub_index = static_cast<int64_t>(
         std::floor(position * subdivision_ + kGridEpsilon)

@@ -215,12 +215,14 @@ void TestInvalidRampKeepsPrevious() {
   );
   metronome.SetRamp(true, 60.0, 70.0, std::nan(""), kRampSeconds, true);
   metronome.SetRamp(true, 60.0, 70.0, 2.0, kRampMinutes + 1, true);
+  metronome.SetRamp(true, INFINITY, 70.0, 2.0, kRampSeconds, true);
+  metronome.SetRamp(true, 60.0, -INFINITY, 2.0, kRampSeconds, true);
   metronome.Start();
   const auto bpms = ModelBarBpms(ramp, 6);
   const auto onsets = RenderAndDetectOnsets(metronome, Seconds(13));
   Check(
       CountTempoMismatches(onsets, 0, ramp, bpms) == 0,
-      "ramp: a non-finite duration or unknown unit keeps the previous ramp"
+      "ramp: non-finite BPM/duration or unknown unit keeps the previous ramp"
   );
 }
 

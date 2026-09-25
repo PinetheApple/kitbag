@@ -6,6 +6,11 @@
 
 using kitbag::ToEngine;
 
+static_assert(KB_ACCENT_MUTED == static_cast<int>(kitbag::Accent::kMuted));
+static_assert(KB_ACCENT_NORMAL == static_cast<int>(kitbag::Accent::kNormal));
+static_assert(
+    KB_ACCENT_ACCENTED == static_cast<int>(kitbag::Accent::kAccented)
+);
 static_assert(KB_RAMP_BARS == static_cast<int>(kitbag::RampUnit::kBars));
 static_assert(KB_RAMP_SECONDS == static_cast<int>(kitbag::RampUnit::kSeconds));
 static_assert(KB_RAMP_MINUTES == static_cast<int>(kitbag::RampUnit::kMinutes));

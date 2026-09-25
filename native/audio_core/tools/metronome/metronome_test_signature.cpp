@@ -289,6 +289,23 @@ void TestGrowingBarResetsExposedAccents() {
   );
 }
 
+void TestAccentPastBarIgnoredThenGrown() {
+  kitbag::Metronome metronome;
+  metronome.SetTempo(kSwitchBpm);
+  metronome.SetAccent(3, kitbag::Accent::kMuted);
+  metronome.SetTimeSignature(3, 4);
+  metronome.SetAccent(3, kitbag::Accent::kAccented);
+  metronome.SetTimeSignature(4, 4);
+  metronome.Start();
+  const auto onset = static_cast<int64_t>(3 * BeatFrames(kSwitchBpm, 4));
+  Check(
+      std::fabs(
+          WindowedPeak(metronome, onset, onset + kOnsetHoldFrames) - kNormalPeak
+      ) < kPeakTolerance,
+      "accent past the bar: a muted beat 4 re-edited in 3/4 comes back normal"
+  );
+}
+
 }  // namespace
 
 void RunSignatureTests() {
@@ -302,6 +319,7 @@ void RunSignatureTests() {
   TestAnchorFollowsDenominator();
   TestAnchorLatencyIsDenominatorIndependent();
   TestGrowingBarResetsExposedAccents();
+  TestAccentPastBarIgnoredThenGrown();
 }
 
 }  // namespace metronome_test

@@ -278,10 +278,8 @@ bool Metronome::ApplyPatternCommand(const Command& command) {
       subdivision_ = Clamp(command.int_a, 1, kMaxSubdivision);
       return true;
     case CommandType::kSetAccent:
-      SetAccentSlot(accents_, command.int_a, command.int_b);
-      return true;
     case CommandType::kSetPolyAccent:
-      SetAccentSlot(poly_accents_, command.int_a, command.int_b);
+      ApplyAccentCommand(command);
       return true;
     case CommandType::kSetPoly:
       SetPolyState(command.int_a != 0, command.int_b);
@@ -306,8 +304,8 @@ void Metronome::ArmRamp(const Command& command) {
     return;
   }
   const bool valid = ramp_.Configure(
-      Clamp(command.value, kMinBpm, kMaxBpm),
-      Clamp(command.value_b, kMinBpm, kMaxBpm),
+      command.value,
+      command.value_b,
       command.value_c,
       command.int_b,
       command.int_c != 0

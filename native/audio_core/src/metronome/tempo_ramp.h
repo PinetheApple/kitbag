@@ -7,13 +7,14 @@ namespace kitbag {
 
 enum class RampUnit : uint8_t { kBars = 0, kSeconds = 1, kMinutes = 2 };
 
-// Steps the tempo once per bar, at each downbeat, toward the end BPM. Time
-// units measure progress in rendered frames, so the engine clock drives it.
+// Time units measure progress in rendered frames, so the engine clock drives it.
 class TempoRamp {
  public:
   static constexpr int kMaxBars = 64;
   static constexpr double kMinSeconds = 1.0;
   static constexpr double kMaxSeconds = 3600.0;
+  static constexpr double kMinBpm = 20.0;
+  static constexpr double kMaxBpm = 400.0;
 
   bool Configure(
       double start_bpm,
@@ -35,7 +36,7 @@ class TempoRamp {
   void Advance() {
     ++cycle_frames_;
   }
-  double BpmAtDownbeat(int64_t bar, uint32_t sample_rate);
+  double StepAtDownbeat(int64_t bar, uint32_t sample_rate);
 
  private:
   double Progress(int64_t bar, uint32_t sample_rate) const;

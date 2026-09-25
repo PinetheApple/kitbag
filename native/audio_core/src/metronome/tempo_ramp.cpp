@@ -33,8 +33,8 @@ bool TempoRamp::Configure(
       break;
   }
   in_seconds_ = static_cast<RampUnit>(unit) != RampUnit::kBars;
-  start_bpm_ = start_bpm;
-  end_bpm_ = end_bpm;
+  start_bpm_ = Clamp(start_bpm, kMinBpm, kMaxBpm);
+  end_bpm_ = Clamp(end_bpm, kMinBpm, kMaxBpm);
   loop_ = loop;
   enabled_ = true;
   return true;
@@ -46,7 +46,7 @@ void TempoRamp::Restart(int64_t bar) {
   at_end_ = false;
 }
 
-double TempoRamp::BpmAtDownbeat(int64_t bar, uint32_t sample_rate) {
+double TempoRamp::StepAtDownbeat(int64_t bar, uint32_t sample_rate) {
   if (at_end_ && loop_) Restart(bar);
   const double progress = Progress(bar, sample_rate);
   at_end_ = progress >= 1.0;

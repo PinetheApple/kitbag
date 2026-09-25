@@ -133,7 +133,8 @@ KB_EXPORT void kb_metronome_set_tempo(kb_engine* engine, double bpm);
  * inserted or dropped. Preserving the phase while the beat unit
  * grows can re-open the beat that just fired for the few samples the step grew
  * by, so a click may sound doubled at the boundary; that window is shared with
- * kb_metronome_set_tempo, not specific to the denominator. */
+ * kb_metronome_set_tempo, not specific to the denominator.
+ * Growing beats_per_bar resets the new beats' accents to normal. */
 KB_EXPORT void kb_metronome_set_beats(
     kb_engine* engine,
     int32_t beats_per_bar,
@@ -141,14 +142,14 @@ KB_EXPORT void kb_metronome_set_beats(
 );
 KB_EXPORT void
 kb_metronome_set_subdivision(kb_engine* engine, int32_t subdivision);
-/* accent outside kb_accent clamps to MUTED..ACCENTED; an out-of-range
- * beat_index is ignored. kb_metronome_set_poly_accent shares both rules. */
+/* accent outside kb_accent clamps to MUTED..ACCENTED; a beat_index outside the
+ * current bar is ignored. kb_metronome_set_poly_accent shares both rules. */
 KB_EXPORT void
 kb_metronome_set_accent(kb_engine* engine, int32_t beat_index, int32_t accent);
 KB_EXPORT void
 kb_metronome_set_poly(kb_engine* engine, int32_t enabled, int32_t beats);
-/* Independent of the main row; slot 0 defaults accented. Growing the poly count
- * resets new slots to normal; kept slots keep their accent. */
+/* Independent of the main row; slot 0 defaults accented. Slots past the poly
+ * count are ignored; growing it resets new slots to normal. */
 KB_EXPORT void kb_metronome_set_poly_accent(
     kb_engine* engine,
     int32_t beat_index,
@@ -162,25 +163,26 @@ KB_EXPORT void kb_metronome_set_sounds(
     int32_t normal_sound,
     int32_t accent_sound
 );
-/* Volume multiplier [0, 2], default 1. */
-/* bars 0/1/2/4, else ignored; distinct != 0 counts with `sound`, else the
- * accent/normal pair. Replays after stop, not pause; grid/anchor skip it. */
+/* bars 0/1/2/4, else ignored; distinct != 0 counts with the caller's `sound`,
+ * else the accent/normal pair. Replays after stop, not pause; grid/anchor skip. */
 KB_EXPORT void kb_metronome_set_count_in(
     kb_engine* engine,
     int32_t bars,
     int32_t distinct,
     int32_t sound
 );
-/* One click of `sound` at the current volume on the next audio block, running
- * or not; needs kb_engine_start. Ids outside KB_SOUND_NAMES are ignored. */
+/* One click of `sound` at the current volume on the next audio block; the last
+ * of several in one block wins. Needs kb_engine_start; bad ids are ignored. */
 KB_EXPORT void
 kb_metronome_preview_sound(kb_engine* engine, int32_t sound, int32_t accented);
+/* Volume multiplier [0, 2], default 1. */
 KB_EXPORT void kb_metronome_set_volume(kb_engine* engine, double volume);
 /* Output latency offset in ms [-100, 100]; positive = trigger earlier. */
 KB_EXPORT void
 kb_metronome_set_latency_offset(kb_engine* engine, double latency_ms);
 /* Steps BPM per downbeat; bars 1..64, time 1 s..60 min from bar one. Holds at
- * the end unless loop; invalid input keeps the old ramp; set_tempo cancels. */
+ * the end unless loop; invalid input keeps the old ramp; set_tempo cancels.
+ * A loop plays one bar at end_bpm before restarting, so a bars cycle is N+1. */
 KB_EXPORT void kb_metronome_set_ramp(
     kb_engine* engine,
     int32_t enabled,

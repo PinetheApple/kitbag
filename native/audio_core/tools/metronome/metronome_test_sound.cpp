@@ -205,6 +205,30 @@ void TestPreviewInvalidIdsIgnored() {
   );
 }
 
+void TestPreviewWhileRunning() {
+  kitbag::Metronome plain;
+  plain.SetSounds(kTom, kTom);
+  StartFourFour(plain);
+  const auto plain_left = RenderLeft(plain, kBarFrames);
+  kitbag::Metronome previewed;
+  previewed.SetSounds(kTom, kTom);
+  StartFourFour(previewed);
+  const int64_t at = kHalfBeatFrames / kBlockFrames * kBlockFrames;
+  const auto left = RenderLeft(previewed, kBarFrames, [&](int64_t block) {
+    if (block == at) previewed.PreviewSound(kHihat, true);
+  });
+  Check(
+      PitchIs(left, at, kHihatAccentHz) &&
+          SameSamples(left, 0, plain_left, 0, at),
+      "preview while running: the preview sounds between clicks"
+  );
+  Check(
+      PitchIs(left, kBeatFrames, kTomBeatHz) &&
+          PitchIs(left, 2 * kBeatFrames, kTomBeatHz),
+      "preview while running: the following clicks keep their time and sound"
+  );
+}
+
 }  // namespace
 
 void RunSoundTests() {
@@ -216,6 +240,7 @@ void RunSoundTests() {
   TestPolyFollowsItsAccentSound();
   TestPreviewPlaysOneClickWhileStopped();
   TestPreviewInvalidIdsIgnored();
+  TestPreviewWhileRunning();
 }
 
 }  // namespace metronome_test

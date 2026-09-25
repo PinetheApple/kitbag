@@ -23,8 +23,8 @@ class Metronome {
   static constexpr int kMaxSubdivision = 16;
   static constexpr int kMaxPolyBeats = 16;
   static constexpr int kSoundCount = 6;
-  static constexpr double kMinBpm = 20.0;
-  static constexpr double kMaxBpm = 400.0;
+  static constexpr double kMinBpm = TempoRamp::kMinBpm;
+  static constexpr double kMaxBpm = TempoRamp::kMaxBpm;
   // BPM stays quarter-note referenced whatever the time signature, so the beat
   // interval is (60 / bpm) * (kBpmReferenceDenominator / denominator) seconds.
   static constexpr int kBpmReferenceDenominator = 4;
@@ -216,6 +216,7 @@ class Metronome {
   ResetGrownSlots(std::span<Accent> row, int32_t old_count, int32_t new_count);
   void SetSignatureState(int32_t numerator, int32_t denominator);
   void SetSoundsState(int32_t normal_sound, int32_t accent_sound);
+  void ApplyAccentCommand(const Command& command);
   void QueuePreview(int32_t sound, bool accented);
   void SetCountInState(const Command& command);
   void SetPolyState(bool enabled, int32_t beats);
@@ -227,7 +228,7 @@ class Metronome {
   void PauseRun();
   void ArmCountIn();
   void CancelCountIn();
-  void AdvanceCountIn(
+  double AdvanceCountIn(
       double position,
       const BlockTempo& tempo,
       uint32_t sample_rate
