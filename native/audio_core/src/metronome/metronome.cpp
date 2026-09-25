@@ -24,6 +24,10 @@ void Metronome::Stop() {
   commands_.Push({CommandType::kStop});
 }
 
+void Metronome::Pause() {
+  commands_.Push({CommandType::kPause});
+}
+
 void Metronome::AnchorExternal(
     double song_pos_sec,
     uint64_t at_frame,
@@ -85,6 +89,14 @@ void Metronome::SetSounds(int normal_sound, int accent_sound) {
   commands_.Push(command);
 }
 
+void Metronome::SetCountIn(int bars, bool distinct, int sound) {
+  Command command{CommandType::kSetCountIn};
+  command.int_a = bars;
+  command.int_b = distinct ? 1 : 0;
+  command.int_c = sound;
+  commands_.Push(command);
+}
+
 void Metronome::SetVolume(double volume) {
   Command command{CommandType::kSetVolume};
   command.value = volume;
@@ -141,25 +153,29 @@ void Metronome::ApplyPendingCommands() {
   running_flag_.store(running_, std::memory_order_relaxed);
 }
 
+void Metronome::ApplyCommand(const Command& command) {
+  const bool claimed = RouteCommand(command);
+  assert(claimed && "command routed to a handler that does not own its type");
+  (void)claimed;
+}
+
 // The one exhaustive switch over CommandType: no `default:`, so a new command
 // is a -Wswitch error here rather than a command silently dropped at runtime.
-void Metronome::ApplyCommand(const Command& command) {
-  bool claimed = false;
+bool Metronome::RouteCommand(const Command& command) {
   switch (command.type) {
     case CommandType::kStart:
     case CommandType::kStartAt:
     case CommandType::kStop:
+    case CommandType::kPause:
     case CommandType::kAnchorExternal:
-      claimed = ApplyTransportCommand(command);
-      break;
+      return ApplyTransportCommand(command);
     case CommandType::kSetTempo:
     case CommandType::kSetLatencyOffset:
-      claimed = ApplyTempoCommand(command);
-      break;
+      return ApplyTempoCommand(command);
     case CommandType::kSetRamp:
     case CommandType::kSetBarMute:
-      claimed = ApplyTrainerCommand(command);
-      break;
+    case CommandType::kSetCountIn:
+      return ApplyTrainerCommand(command);
     case CommandType::kSetBeats:
     case CommandType::kSetSubdivision:
     case CommandType::kSetAccent:
@@ -167,11 +183,9 @@ void Metronome::ApplyCommand(const Command& command) {
     case CommandType::kSetPolyAccent:
     case CommandType::kSetSounds:
     case CommandType::kSetVolume:
-      claimed = ApplyPatternCommand(command);
-      break;
+      return ApplyPatternCommand(command);
   }
-  assert(claimed && "command routed to a handler that does not own its type");
-  (void)claimed;
+  return false;
 }
 
 bool Metronome::ApplyTransportCommand(const Command& command) {
@@ -195,6 +209,9 @@ bool Metronome::ApplyTransportCommand(const Command& command) {
       return true;
     case CommandType::kStop:
       StopRun();
+      return true;
+    case CommandType::kPause:
+      PauseRun();
       return true;
     default:
       return false;
@@ -231,6 +248,9 @@ bool Metronome::ApplyTrainerCommand(const Command& command) {
       mute_enabled_ = command.int_a != 0;
       play_bars_ = Clamp(command.int_b, 1, kMaxMuteBars);
       mute_bars_ = Clamp(command.int_c, 1, kMaxMuteBars);
+      return true;
+    case CommandType::kSetCountIn:
+      SetCountInState(command);
       return true;
     default:
       return false;
@@ -292,6 +312,8 @@ void Metronome::StopRun() {
   // Force a re-seed next block: a cursor stranded where the pause began
   // swallows every beat the pause spanned into one off-grid click (§4.2.1).
   observed_generation_ = 0;
+  counting_in_ = false;
+  count_in_armed_ = true;
   current_beat_.store(-1, std::memory_order_relaxed);
   current_poly_beat_.store(-1, std::memory_order_relaxed);
 }
@@ -305,7 +327,8 @@ void Metronome::BeginRun() {
   // Anchors `position` at zero, not beat_position_: nothing can be emitted
   // before the first frame, so a positive offset would swallow every grid
   // point it shifts past (§4.7).
-  beat_position_ = -LatencyBeats();
+  ArmCountIn();
+  beat_position_ = -count_in_beats_ - LatencyBeats();
   running_ = true;
   observed_generation_ = 0;  // re-seed the grid cursor at the resume point
   // Publish now, not only at the end of the drain: a deferred StartAt calls

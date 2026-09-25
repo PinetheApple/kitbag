@@ -1,4 +1,4 @@
-#include "metronome_test_support.h"
+#include "metronome_test_audio.h"
 
 namespace metronome_test {
 namespace {
@@ -14,8 +14,6 @@ constexpr int kCowbell = 5;
 constexpr int64_t kBeatFrames = kSampleRate / 2;
 constexpr int64_t kBarFrames = 4 * kBeatFrames;
 constexpr int64_t kHalfBeatFrames = kBeatFrames / 2;
-constexpr int64_t kPitchWindow = 2400;
-constexpr double kPitchTolerance = 0.05;
 constexpr double kSilentCeiling = 0.01;
 
 constexpr double kBeepAccentHz = 1760.0;
@@ -28,60 +26,6 @@ constexpr double kTomPolyHz = 520.0;
 constexpr double kHihatAccentHz = 5000.0;
 constexpr double kHihatPolyHz = 4500.0;
 constexpr double kCowbellAccentHz = 2200.0;
-
-template <typename OnBlock>
-std::vector<float> RenderLeft(
-    kitbag::Metronome& metronome,
-    int64_t total_frames,
-    OnBlock on_block
-) {
-  std::vector<float> left;
-  std::vector<float> buffer(static_cast<size_t>(kBlockFrames) * kChannels);
-  for (int64_t rendered = 0; rendered < total_frames;
-       rendered += kBlockFrames) {
-    on_block(rendered);
-    std::fill(buffer.begin(), buffer.end(), 0.0f);
-    metronome.Render(
-        buffer.data(),
-        kBlockFrames,
-        kSampleRate,
-        kChannels,
-        static_cast<uint64_t>(rendered)
-    );
-    for (uint32_t frame = 0; frame < kBlockFrames; ++frame) {
-      left.push_back(buffer[static_cast<size_t>(frame) * kChannels]);
-    }
-  }
-  return left;
-}
-
-std::vector<float> RenderLeft(kitbag::Metronome& metronome, int64_t frames) {
-  return RenderLeft(metronome, frames, [](int64_t) {});
-}
-
-double PitchAt(const std::vector<float>& left, int64_t onset) {
-  int crossings = 0;
-  for (int64_t i = onset + 1; i < onset + kPitchWindow; ++i) {
-    const auto at = static_cast<size_t>(i);
-    if ((left[at - 1] < 0.0f) != (left[at] < 0.0f)) ++crossings;
-  }
-  return crossings / 2.0 * kSampleRate / static_cast<double>(kPitchWindow);
-}
-
-bool PitchIs(const std::vector<float>& left, int64_t onset, double hz) {
-  return std::fabs(PitchAt(left, onset) - hz) <= hz * kPitchTolerance;
-}
-
-double PeakIn(const std::vector<float>& left, int64_t onset) {
-  double peak = 0.0;
-  for (int64_t i = onset; i < onset + kPitchWindow; ++i) {
-    peak = std::max(
-        peak,
-        std::fabs(static_cast<double>(left[static_cast<size_t>(i)]))
-    );
-  }
-  return peak;
-}
 
 void StartFourFour(kitbag::Metronome& metronome) {
   metronome.SetTempo(120.0);

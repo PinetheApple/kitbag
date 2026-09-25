@@ -39,6 +39,7 @@ add_library(kitbag_core SHARED
   src/engine.cpp
   src/dsp/fft.cpp
   src/metronome/metronome.cpp
+  src/metronome/metronome_count_in.cpp
   src/metronome/metronome_grid.cpp
     src/metronome/metronome_pattern.cpp
   src/metronome/metronome_render.cpp
@@ -121,8 +122,10 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_anchor.cpp
     tools/metronome/metronome_test_poly.cpp
     tools/metronome/metronome_test_sound.cpp
+    tools/metronome/metronome_test_count_in.cpp
     tools/rt/rt_publisher_verify.cpp
     src/metronome/metronome.cpp
+    src/metronome/metronome_count_in.cpp
     src/metronome/metronome_grid.cpp
     src/metronome/metronome_pattern.cpp
     src/metronome/metronome_render.cpp)

@@ -6,6 +6,7 @@
 namespace kitbag {
 
 using metronome_detail::Clamp;
+using metronome_detail::IsOneOf;
 
 void Metronome::InitAccentRow(std::span<Accent> row) {
   std::fill(row.begin(), row.end(), Accent::kNormal);
@@ -39,7 +40,7 @@ void Metronome::SetSignatureState(int32_t numerator, int32_t denominator) {
   const int32_t count = Clamp(numerator, 1, kMaxBeats);
   ResetGrownSlots(accents_, beats_per_bar_, count);
   beats_per_bar_ = count;
-  if (IsValidDenominator(denominator)) {
+  if (IsOneOf(kDenominators, denominator)) {
     SetDenominatorPreservingPhase(denominator);
   }
 }
@@ -51,13 +52,6 @@ void Metronome::SetSoundsState(int32_t normal_sound, int32_t accent_sound) {
   if (accent_sound >= 0 && accent_sound < kSoundCount) {
     accent_sound_ = accent_sound;
   }
-}
-
-bool Metronome::IsValidDenominator(int32_t denominator) {
-  for (const int valid : kDenominators) {
-    if (valid == denominator) return true;
-  }
-  return false;
 }
 
 void Metronome::SetPolyState(bool enabled, int32_t beats) {

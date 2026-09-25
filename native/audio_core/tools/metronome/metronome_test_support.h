@@ -342,6 +342,7 @@ void RunGridTests();
 void RunAnchorTests();
 void RunPolyTests();
 void RunSoundTests();
+void RunCountInTests();
 
 }  // namespace metronome_test
 

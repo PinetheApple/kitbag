@@ -40,6 +40,8 @@ class Metronome {
   // interval is (60 / bpm) * (kBpmReferenceDenominator / denominator) seconds.
   static constexpr int kBpmReferenceDenominator = 4;
   static constexpr int kDenominators[] = {2, 4, 8, 16};
+  static constexpr int kCountInBarChoices[] = {0, 1, 2, 4};
+  static constexpr int kDefaultCountInSound = 1;
   static constexpr int kMaxRampBars = 64;
   static constexpr int kMaxMuteBars = 16;
   // Output-latency compensation bound (D5). Widening this to 300 is the whole
@@ -71,6 +73,8 @@ class Metronome {
   // frame starts on the next sample, never before the transport. SPEC.md §4.2.
   void StartAt(uint64_t start_frame);
   void Stop();
+  // Stops like Stop but leaves the count-in spent, so the next start has none.
+  void Pause();
   // Anchor the click to a transport this engine does not clock: at engine frame
   // `at_frame` the external song was `song_pos_sec` in, running at `bpm`. The
   // song's beat 0 sits at song second 0. Re-callable; a re-anchor moves only
@@ -90,6 +94,7 @@ class Metronome {
     SetPolyAccent(beat_index, static_cast<int32_t>(accent));
   }
   void SetSounds(int normal_sound, int accent_sound);
+  void SetCountIn(int bars, bool distinct, int sound);
   void SetVolume(double volume);
   void SetLatencyOffset(double latency_ms);
   // Tempo ramp trainer: steps the BPM once per bar from start to end over
@@ -125,6 +130,9 @@ class Metronome {
   int32_t current_poly_beat() const {
     return current_poly_beat_.load(std::memory_order_relaxed);
   }
+  bool counting_in() const {
+    return counting_in_flag_.load(std::memory_order_relaxed);
+  }
   // Position within the bar, [0, 1). Updated once per render block.
   double bar_phase() const {
     return bar_phase_.load(std::memory_order_relaxed);
@@ -143,6 +151,7 @@ class Metronome {
     kStart,
     kStartAt,
     kStop,
+    kPause,
     kAnchorExternal,
     kSetTempo,
     kSetBeats,
@@ -151,6 +160,7 @@ class Metronome {
     kSetPoly,
     kSetPolyAccent,
     kSetSounds,
+    kSetCountIn,
     kSetRamp,
     kSetBarMute,
     kSetVolume,
@@ -196,6 +206,7 @@ class Metronome {
   // `default:`, and each reports whether it consumed the command.
   void ApplyPendingCommands();
   void ApplyCommand(const Command& command);
+  bool RouteCommand(const Command& command);
   bool ApplyTransportCommand(const Command& command);
   // Copies an anchor_external's scalars into the pending_anchor_ fields.
   void StashPendingAnchor(const Command& command);
@@ -208,14 +219,23 @@ class Metronome {
   static void
   ResetGrownSlots(std::span<Accent> row, int32_t old_count, int32_t new_count);
   void SetSignatureState(int32_t numerator, int32_t denominator);
-  static bool IsValidDenominator(int32_t denominator);
   void SetSoundsState(int32_t normal_sound, int32_t accent_sound);
+  void SetCountInState(const Command& command);
   void SetPolyState(bool enabled, int32_t beats);
   void ArmRamp(const Command& command);
   // Phase-preserving like a bpm change; inert while stopped, where there is no
   // phase to hold and kStart re-anchors from the offset. SPEC.md §4.7.
   void SetLatencyPreservingPhase(double latency_ms);
   void StopRun();
+  void PauseRun();
+  void ArmCountIn();
+  void CancelCountIn();
+  void AdvanceCountIn(
+      double position,
+      const BlockTempo& tempo,
+      uint32_t sample_rate
+  );
+  void OnCountInBeat(int64_t beat, uint32_t sample_rate);
 
   void TriggerClick(
       double frequency_hz,
@@ -223,6 +243,7 @@ class Metronome {
       double decay_per_second,
       uint32_t sample_rate
   );
+  void TriggerPreset(int sound, bool accented, uint32_t sample_rate);
   void OnBeatBoundary(int beat_index, uint32_t sample_rate);
   void OnSubdivisionTick(int64_t owning_beat, uint32_t sample_rate);
   void OnPolyBoundary(int poly_index, uint32_t sample_rate);
@@ -316,6 +337,12 @@ class Metronome {
   Accent poly_accents_[kMaxPolyBeats] = {};
   int normal_sound_ = 0;
   int accent_sound_ = 0;
+  int count_in_bars_ = 0;
+  bool count_in_distinct_ = true;
+  int count_in_sound_ = kDefaultCountInSound;
+  bool count_in_armed_ = true;
+  bool counting_in_ = false;
+  double count_in_beats_ = 0.0;
   double beat_position_ = 0.0;  // fractional beats since start
   // Pending sample-accurate start (StartAt). Held until the render loop reaches
   // `pending_start_frame_` on the engine clock, then consumed by BeginRun.
@@ -360,6 +387,7 @@ class Metronome {
   std::atomic<double> bar_phase_{0.0};
   std::atomic<double> current_bpm_{kDefaultBpm};
   std::atomic<bool> bar_muted_flag_{false};
+  std::atomic<bool> counting_in_flag_{false};
 };
 
 }  // namespace kitbag

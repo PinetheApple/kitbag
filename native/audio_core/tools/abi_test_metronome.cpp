@@ -18,6 +18,9 @@ constexpr int32_t kTom = 3;
 constexpr int32_t kHihat = 4;
 constexpr double kHihatAccentHz = 5000.0;
 constexpr double kTomBeatHz = 450.0;
+constexpr int32_t kWoodblock = 1;
+constexpr double kWoodblockAccentHz = 2400.0;
+constexpr double kBeepAccentHz = 1760.0;
 constexpr double kPitchTolerance = 0.05;
 
 std::vector<float> Render(kb_engine* engine, uint32_t frames) {
@@ -133,12 +136,50 @@ void TestSetSoundsSelectsPerRole() {
   kb_engine_destroy(engine);
 }
 
+void CheckPauseThenStop(kb_engine* engine, uint32_t rate) {
+  kb_metronome_pause(engine);
+  Render(engine, rate);
+  kb_metronome_start(engine);
+  Check(
+      PitchIs(Render(engine, rate / 2), rate, kBeepAccentHz) &&
+          kb_metronome_counting_in(engine) == 0,
+      "pause: the next start plays bar one with no count-in"
+  );
+  kb_metronome_stop(engine);
+  Render(engine, rate);
+  kb_metronome_start(engine);
+  Render(engine, rate / 2);
+  Check(
+      kb_metronome_counting_in(engine) == 1 &&
+          kb_metronome_counting_in(nullptr) == 0,
+      "stop: the next start counts in again"
+  );
+}
+
+void TestCountInPauseAndStop() {
+  kb_engine* engine = FourFourEngine(0);
+  if (engine == nullptr) return;
+  const uint32_t rate = kb_engine_sample_rate(engine);
+  kb_metronome_set_count_in(engine, 1, 1, kWoodblock);
+  kb_metronome_set_count_in(nullptr, 0, 0, 0);
+  kb_metronome_pause(nullptr);
+  kb_metronome_start(engine);
+  Check(
+      PitchIs(Render(engine, rate / 2), rate, kWoodblockAccentHz) &&
+          kb_metronome_counting_in(engine) == 1,
+      "set_count_in: a first start counts in with the distinct sound"
+  );
+  CheckPauseThenStop(engine, rate);
+  kb_engine_destroy(engine);
+}
+
 }  // namespace
 
 void RunMetronomeAbiTests() {
   TestSetAccentClamps();
   TestSetPolyAccentClamps();
   TestSetSoundsSelectsPerRole();
+  TestCountInPauseAndStop();
 }
 
 }  // namespace abi_test

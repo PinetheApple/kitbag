@@ -69,6 +69,8 @@ KB_EXPORT void kb_metronome_start(kb_engine* engine);
  * at 48kHz — so it may be passed as a JS double. No BigInt. */
 KB_EXPORT void kb_metronome_start_at(kb_engine* engine, uint64_t start_frame);
 KB_EXPORT void kb_metronome_stop(kb_engine* engine);
+/* Stops like kb_metronome_stop but the next start plays no count-in. */
+KB_EXPORT void kb_metronome_pause(kb_engine* engine);
 
 /* Maximum beats a single grid may carry. */
 #define KB_MAX_GRID_BEATS 8192
@@ -155,6 +157,18 @@ KB_EXPORT void kb_metronome_set_sounds(
     int32_t accent_sound
 );
 /* Volume multiplier [0, 2], default 1. */
+/* Count-in bars before bar one: 0 (off), 1, 2 or 4; other values keep the
+ * previous count. distinct != 0 plays the count with `sound` (a KB_SOUND_NAMES
+ * id; outside the table keeps the previous one), else with the accent and
+ * normal sounds. Plays on the first start of a fresh engine and on every start
+ * after kb_metronome_stop, never after kb_metronome_pause; skipped in grid mode
+ * and by kb_metronome_anchor_external. */
+KB_EXPORT void kb_metronome_set_count_in(
+    kb_engine* engine,
+    int32_t bars,
+    int32_t distinct,
+    int32_t sound
+);
 KB_EXPORT void kb_metronome_set_volume(kb_engine* engine, double volume);
 /* Output latency offset in ms [-100, 100]; positive = trigger earlier. */
 KB_EXPORT void
@@ -188,6 +202,9 @@ KB_EXPORT double kb_metronome_bar_phase(const kb_engine* engine);
 KB_EXPORT double kb_metronome_current_bpm(const kb_engine* engine);
 /* 1 while the current bar is silenced by the bar-mute trainer. */
 KB_EXPORT int32_t kb_metronome_bar_muted(const kb_engine* engine);
+/* 1 while count-in beats play, before bar one. current_beat and bar_phase
+ * follow the count bars meanwhile. */
+KB_EXPORT int32_t kb_metronome_counting_in(const kb_engine* engine);
 
 /* --- Tuner -------------------------------------------------------------- */
 

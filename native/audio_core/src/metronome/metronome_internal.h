@@ -4,6 +4,8 @@
 // Shared by metronome.cpp, metronome_render.cpp and metronome_grid.cpp. Not
 // part of any public surface; kitbag_api.h is the contract external callers read.
 
+#include <cstddef>
+
 namespace kitbag {
 namespace metronome_detail {
 
@@ -16,6 +18,14 @@ constexpr double kMsPerSecond = 1000.0;
 
 // Returns by value: std::clamp returns const T&, which dangles when a caller
 // binds the result of a temporary argument.
+template <std::size_t N>
+bool IsOneOf(const int (&choices)[N], int value) {
+  for (const int choice : choices) {
+    if (choice == value) return true;
+  }
+  return false;
+}
+
 template <typename T>
 T Clamp(T value, T low, T high) {
   return value < low ? low : (value > high ? high : value);

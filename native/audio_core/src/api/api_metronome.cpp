@@ -26,6 +26,12 @@ void kb_metronome_stop(kb_engine* engine) {
   }
 }
 
+void kb_metronome_pause(kb_engine* engine) {
+  if (engine != nullptr) {
+    ToEngine(engine)->metronome().Pause();
+  }
+}
+
 kb_result kb_metronome_set_grid(
     kb_engine* engine,
     const double* beat_times_sec,
@@ -141,6 +147,17 @@ void kb_metronome_set_sounds(
   }
 }
 
+void kb_metronome_set_count_in(
+    kb_engine* engine,
+    int32_t bars,
+    int32_t distinct,
+    int32_t sound
+) {
+  if (engine != nullptr) {
+    ToEngine(engine)->metronome().SetCountIn(bars, distinct != 0, sound);
+  }
+}
+
 void kb_metronome_set_volume(kb_engine* engine, double volume) {
   if (engine != nullptr) {
     ToEngine(engine)->metronome().SetVolume(volume);
@@ -209,6 +226,11 @@ double kb_metronome_current_bpm(const kb_engine* engine) {
 
 int32_t kb_metronome_bar_muted(const kb_engine* engine) {
   return engine != nullptr && ToEngine(engine)->metronome().bar_muted() ? 1 : 0;
+}
+
+int32_t kb_metronome_counting_in(const kb_engine* engine) {
+  return engine != nullptr && ToEngine(engine)->metronome().counting_in() ? 1
+                                                                          : 0;
 }
 
 }  // extern "C"
