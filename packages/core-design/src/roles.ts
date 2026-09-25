@@ -2,6 +2,7 @@ import { fontFamily, ledRadius, radii, type TypeRole } from './tokens.ts';
 
 export const space = {
   inlineKeyGap: 2,
+  barPreviewGap: 3,
   segmentInset: 3,
   chipGap: 6,
   stepKeyGap: 7,
@@ -30,6 +31,7 @@ export const size = {
   grabHeight: 4,
   liveDot: 7,
   sweepTrack: 3,
+  barPreview: 18,
 } as const;
 
 export const radius = {
@@ -38,6 +40,7 @@ export const radius = {
   badge: 6,
   stepKey: 7,
   stepInline: 9,
+  barPreview: 3,
   stepInlineKey: 6,
   segment: 11,
   segmentOption: 8,
@@ -70,6 +73,7 @@ export const inset = {
 
 export const opacity = {
   muted: 0.4,
+  barPreviewSounding: 0.85,
 } as const;
 
 export const mix = {
@@ -118,6 +122,7 @@ export const textRoles = {
   },
   numpadKey: { family: display, weight: 400, size: 19, tabular: true },
   hint: { family: body, weight: 400, size: 11.5 },
+  fieldLabel: { family: body, weight: 400, size: 13.5 },
 } as const satisfies Record<string, TypeRole>;
 
 export type TextRoleName = keyof typeof textRoles;
