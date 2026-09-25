@@ -14,7 +14,7 @@
     "drizzle-orm": "^0.45.2"
   },
   "devDependencies": {
-    "@types/node": "^22.15.0",
+    "@types/node": "^26.6.1",
     "vitest": "^4.1.10"
   }
 }
