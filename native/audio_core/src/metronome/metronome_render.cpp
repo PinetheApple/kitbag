@@ -320,6 +320,14 @@ Metronome::GridView Metronome::BeginBlock(
     BlockTempo* tempo
 ) {
   ApplyPendingCommands();
+  if (pending_preview_sound_ >= 0) {
+    TriggerPreset(
+        pending_preview_sound_,
+        pending_preview_accented_,
+        sample_rate
+    );
+    pending_preview_sound_ = -1;
+  }
   *tempo = BlockTempoFor(sample_rate);
   const GridView view = AcquireGrid(block_start_frame, sample_rate);
   // Applied at block start, before any click this block: a re-anchor moves only

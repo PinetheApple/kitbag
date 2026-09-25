@@ -19,6 +19,7 @@ constexpr int32_t kHihat = 4;
 constexpr double kHihatAccentHz = 5000.0;
 constexpr double kTomBeatHz = 450.0;
 constexpr int32_t kWoodblock = 1;
+constexpr int32_t kOutOfTableSound = 6;
 constexpr double kWoodblockAccentHz = 2400.0;
 constexpr double kBeepAccentHz = 1760.0;
 constexpr double kPitchTolerance = 0.05;
@@ -29,12 +30,16 @@ std::vector<float> Render(kb_engine* engine, uint32_t frames) {
   return out;
 }
 
-double RenderPeak(kb_engine* engine, uint32_t frames) {
+double RenderPeakOf(const std::vector<float>& out) {
   double peak = 0.0;
-  for (const float sample : Render(engine, frames)) {
+  for (const float sample : out) {
     peak = std::fmax(peak, std::fabs(static_cast<double>(sample)));
   }
   return peak;
+}
+
+double RenderPeak(kb_engine* engine, uint32_t frames) {
+  return RenderPeakOf(Render(engine, frames));
 }
 
 bool NearPeak(double actual, double expected) {
@@ -173,6 +178,26 @@ void TestCountInPauseAndStop() {
   kb_engine_destroy(engine);
 }
 
+void TestPreviewSoundAtVolume() {
+  kb_engine* engine = nullptr;
+  if (kb_engine_create(&engine) != KB_OK) return;
+  const uint32_t rate = kb_engine_sample_rate(engine);
+  kb_metronome_set_volume(engine, 0.5);
+  kb_metronome_preview_sound(engine, kOutOfTableSound, 0);
+  kb_metronome_preview_sound(nullptr, kTom, 0);
+  kb_metronome_preview_sound(engine, kTom, 0);
+  const std::vector<float> out = Render(engine, rate / 2);
+  Check(
+      PitchIs(out, rate, kTomBeatHz) && kb_metronome_is_running(engine) == 0,
+      "preview_sound: a stopped engine plays one click of the given sound"
+  );
+  Check(
+      NearPeak(RenderPeakOf(out), 0.3),
+      "preview_sound: the click is scaled by the current volume"
+  );
+  kb_engine_destroy(engine);
+}
+
 }  // namespace
 
 void RunMetronomeAbiTests() {
@@ -180,6 +205,7 @@ void RunMetronomeAbiTests() {
   TestSetPolyAccentClamps();
   TestSetSoundsSelectsPerRole();
   TestCountInPauseAndStop();
+  TestPreviewSoundAtVolume();
 }
 
 }  // namespace abi_test

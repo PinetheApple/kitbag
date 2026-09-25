@@ -157,18 +157,18 @@ KB_EXPORT void kb_metronome_set_sounds(
     int32_t accent_sound
 );
 /* Volume multiplier [0, 2], default 1. */
-/* Count-in bars before bar one: 0 (off), 1, 2 or 4; other values keep the
- * previous count. distinct != 0 plays the count with `sound` (a KB_SOUND_NAMES
- * id; outside the table keeps the previous one), else with the accent and
- * normal sounds. Plays on the first start of a fresh engine and on every start
- * after kb_metronome_stop, never after kb_metronome_pause; skipped in grid mode
- * and by kb_metronome_anchor_external. */
+/* bars 0/1/2/4, else ignored; distinct != 0 counts with `sound`, else the
+ * accent/normal pair. Replays after stop, not pause; grid/anchor skip it. */
 KB_EXPORT void kb_metronome_set_count_in(
     kb_engine* engine,
     int32_t bars,
     int32_t distinct,
     int32_t sound
 );
+/* One click of `sound` at the current volume on the next audio block, running
+ * or not; needs kb_engine_start. Ids outside KB_SOUND_NAMES are ignored. */
+KB_EXPORT void
+kb_metronome_preview_sound(kb_engine* engine, int32_t sound, int32_t accented);
 KB_EXPORT void kb_metronome_set_volume(kb_engine* engine, double volume);
 /* Output latency offset in ms [-100, 100]; positive = trigger earlier. */
 KB_EXPORT void
@@ -202,8 +202,7 @@ KB_EXPORT double kb_metronome_bar_phase(const kb_engine* engine);
 KB_EXPORT double kb_metronome_current_bpm(const kb_engine* engine);
 /* 1 while the current bar is silenced by the bar-mute trainer. */
 KB_EXPORT int32_t kb_metronome_bar_muted(const kb_engine* engine);
-/* 1 while count-in beats play, before bar one. current_beat and bar_phase
- * follow the count bars meanwhile. */
+/* 1 during count-in; current_beat and bar_phase follow the count bars. */
 KB_EXPORT int32_t kb_metronome_counting_in(const kb_engine* engine);
 
 /* --- Tuner -------------------------------------------------------------- */

@@ -158,6 +158,16 @@ void kb_metronome_set_count_in(
   }
 }
 
+void kb_metronome_preview_sound(
+    kb_engine* engine,
+    int32_t sound,
+    int32_t accented
+) {
+  if (engine != nullptr) {
+    ToEngine(engine)->metronome().PreviewSound(sound, accented != 0);
+  }
+}
+
 void kb_metronome_set_volume(kb_engine* engine, double volume) {
   if (engine != nullptr) {
     ToEngine(engine)->metronome().SetVolume(volume);

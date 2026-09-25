@@ -73,7 +73,6 @@ class Metronome {
   // frame starts on the next sample, never before the transport. SPEC.md §4.2.
   void StartAt(uint64_t start_frame);
   void Stop();
-  // Stops like Stop but leaves the count-in spent, so the next start has none.
   void Pause();
   // Anchor the click to a transport this engine does not clock: at engine frame
   // `at_frame` the external song was `song_pos_sec` in, running at `bpm`. The
@@ -95,6 +94,7 @@ class Metronome {
   }
   void SetSounds(int normal_sound, int accent_sound);
   void SetCountIn(int bars, bool distinct, int sound);
+  void PreviewSound(int sound, bool accented);
   void SetVolume(double volume);
   void SetLatencyOffset(double latency_ms);
   // Tempo ramp trainer: steps the BPM once per bar from start to end over
@@ -161,6 +161,7 @@ class Metronome {
     kSetPolyAccent,
     kSetSounds,
     kSetCountIn,
+    kPreviewSound,
     kSetRamp,
     kSetBarMute,
     kSetVolume,
@@ -220,6 +221,7 @@ class Metronome {
   ResetGrownSlots(std::span<Accent> row, int32_t old_count, int32_t new_count);
   void SetSignatureState(int32_t numerator, int32_t denominator);
   void SetSoundsState(int32_t normal_sound, int32_t accent_sound);
+  void QueuePreview(int32_t sound, bool accented);
   void SetCountInState(const Command& command);
   void SetPolyState(bool enabled, int32_t beats);
   void ArmRamp(const Command& command);
@@ -341,6 +343,8 @@ class Metronome {
   bool count_in_distinct_ = true;
   int count_in_sound_ = kDefaultCountInSound;
   bool count_in_armed_ = true;
+  int pending_preview_sound_ = -1;
+  bool pending_preview_accented_ = false;
   bool counting_in_ = false;
   double count_in_beats_ = 0.0;
   double beat_position_ = 0.0;  // fractional beats since start

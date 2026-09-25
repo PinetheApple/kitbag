@@ -97,6 +97,13 @@ void Metronome::SetCountIn(int bars, bool distinct, int sound) {
   commands_.Push(command);
 }
 
+void Metronome::PreviewSound(int sound, bool accented) {
+  Command command{CommandType::kPreviewSound};
+  command.int_a = sound;
+  command.int_b = accented ? 1 : 0;
+  commands_.Push(command);
+}
+
 void Metronome::SetVolume(double volume) {
   Command command{CommandType::kSetVolume};
   command.value = volume;
@@ -182,6 +189,7 @@ bool Metronome::RouteCommand(const Command& command) {
     case CommandType::kSetPoly:
     case CommandType::kSetPolyAccent:
     case CommandType::kSetSounds:
+    case CommandType::kPreviewSound:
     case CommandType::kSetVolume:
       return ApplyPatternCommand(command);
   }
@@ -276,6 +284,9 @@ bool Metronome::ApplyPatternCommand(const Command& command) {
       return true;
     case CommandType::kSetSounds:
       SetSoundsState(command.int_a, command.int_b);
+      return true;
+    case CommandType::kPreviewSound:
+      QueuePreview(command.int_a, command.int_b != 0);
       return true;
     case CommandType::kSetVolume:
       volume_ = Clamp(command.value, 0.0, kMaxVolume);

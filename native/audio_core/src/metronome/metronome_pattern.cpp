@@ -45,6 +45,12 @@ void Metronome::SetSignatureState(int32_t numerator, int32_t denominator) {
   }
 }
 
+void Metronome::QueuePreview(int32_t sound, bool accented) {
+  if (sound < 0 || sound >= kSoundCount) return;
+  pending_preview_sound_ = sound;
+  pending_preview_accented_ = accented;
+}
+
 void Metronome::SetSoundsState(int32_t normal_sound, int32_t accent_sound) {
   if (normal_sound >= 0 && normal_sound < kSoundCount) {
     normal_sound_ = normal_sound;

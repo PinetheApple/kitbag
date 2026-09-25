@@ -159,6 +159,52 @@ void TestPolyFollowsItsAccentSound() {
   );
 }
 
+constexpr double kPreviewVolume = 0.5;
+constexpr double kNormalPeak = 0.6;
+constexpr double kVolumeTolerance = 0.02;
+
+void TestPreviewPlaysOneClickWhileStopped() {
+  kitbag::Metronome metronome;
+  metronome.SetVolume(kPreviewVolume);
+  metronome.PreviewSound(kTom, false);
+  metronome.PreviewSound(kitbag::Metronome::kSoundCount, true);
+  const auto left = RenderLeft(metronome, kBeatFrames, [&](int64_t at) {
+    if (at == kBeatFrames / 2 / kBlockFrames * kBlockFrames) {
+      metronome.PreviewSound(kHihat, true);
+    }
+  });
+  const int64_t second = kBeatFrames / 2 / kBlockFrames * kBlockFrames;
+
+  Check(
+      PitchIs(left, 0, kTomBeatHz) && !metronome.is_running(),
+      "preview: plays the normal voice of the sound while stopped"
+  );
+  Check(
+      std::fabs(PeakIn(left, 0) - kNormalPeak * kPreviewVolume) <
+          kVolumeTolerance,
+      "preview: scaled by the current volume"
+  );
+  Check(
+      PitchIs(left, second, kHihatAccentHz),
+      "preview: the accent voice when accented, on the next block"
+  );
+}
+
+void TestPreviewInvalidIdsIgnored() {
+  kitbag::Metronome plain;
+  StartFourFour(plain);
+  const auto plain_left = RenderLeft(plain, kBarFrames);
+  kitbag::Metronome previewed;
+  previewed.PreviewSound(kitbag::Metronome::kSoundCount, false);
+  previewed.PreviewSound(-1, true);
+  StartFourFour(previewed);
+  const auto left = RenderLeft(previewed, kBarFrames);
+  Check(
+      SameSamples(left, 0, plain_left, 0, kBarFrames),
+      "preview: out-of-table ids add nothing to the output"
+  );
+}
+
 }  // namespace
 
 void RunSoundTests() {
@@ -168,6 +214,8 @@ void RunSoundTests() {
   TestSoundsApplyLiveWhileRunning();
   TestMutedBeatsAndSubdivisionsSilent();
   TestPolyFollowsItsAccentSound();
+  TestPreviewPlaysOneClickWhileStopped();
+  TestPreviewInvalidIdsIgnored();
 }
 
 }  // namespace metronome_test
