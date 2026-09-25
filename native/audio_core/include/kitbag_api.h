@@ -179,11 +179,8 @@ KB_EXPORT void kb_metronome_set_volume(kb_engine* engine, double volume);
 /* Output latency offset in ms [-100, 100]; positive = trigger earlier. */
 KB_EXPORT void
 kb_metronome_set_latency_offset(kb_engine* engine, double latency_ms);
-/* Steps BPM at each downbeat from start toward end over `duration` in a
- * kb_ramp_unit: bars round to 1..64, time clamps to 1 s..60 min of engine
- * clock. At the end it holds, or with loop != 0 plays one bar at end_bpm and
- * restarts. An invalid unit or non-finite value keeps the previous ramp;
- * kb_metronome_set_tempo cancels it. */
+/* Steps BPM per downbeat; bars 1..64, time 1 s..60 min from bar one. Holds at
+ * the end unless loop; invalid input keeps the old ramp; set_tempo cancels. */
 KB_EXPORT void kb_metronome_set_ramp(
     kb_engine* engine,
     int32_t enabled,
