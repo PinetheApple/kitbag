@@ -1,18 +1,37 @@
-import { createThemedStyles } from '@kitbag/core-design';
+import {
+  createThemedStyles,
+  inset,
+  radius,
+  size,
+  space,
+} from '@kitbag/core-design';
 import { View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   type SharedValue,
 } from 'react-native-reanimated';
 
-const TRACK_HEIGHT = 3;
-const TRACK_RADIUS = 2;
-const TRACK_INSET = 18;
-const TRACK_MARGIN_TOP = 12;
-
 interface BarSweepProps {
   readonly barPhase: SharedValue<number>;
 }
+
+const useStyles = createThemedStyles((theme) => ({
+  track: {
+    height: size.sweepTrack,
+    borderRadius: radius.sweepTrack,
+    backgroundColor: theme.color.surface3,
+    marginTop: space.sectionGap,
+    marginHorizontal: inset.sweepH,
+    overflow: 'hidden',
+  },
+  fill: {
+    height: size.sweepTrack,
+    borderRadius: radius.sweepTrack,
+    backgroundColor: theme.color.accent,
+    width: '100%',
+    transformOrigin: 'left',
+  },
+}));
 
 export function BarSweep({ barPhase }: BarSweepProps) {
   const styles = useStyles();
@@ -28,21 +47,3 @@ export function BarSweep({ barPhase }: BarSweepProps) {
     </View>
   );
 }
-
-const useStyles = createThemedStyles((theme) => ({
-  track: {
-    height: TRACK_HEIGHT,
-    borderRadius: TRACK_RADIUS,
-    backgroundColor: theme.color.surface3,
-    marginTop: TRACK_MARGIN_TOP,
-    marginHorizontal: TRACK_INSET,
-    overflow: 'hidden',
-  },
-  fill: {
-    height: TRACK_HEIGHT,
-    borderRadius: TRACK_RADIUS,
-    backgroundColor: theme.color.accent,
-    width: '100%',
-    transformOrigin: 'left',
-  },
-}));

@@ -12,6 +12,13 @@ interface NudgeKeyProps {
   readonly onNudge: (delta: number) => void;
 }
 
+const styles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    gap: space.controlGap,
+  },
+});
+
 function NudgeKey({ delta, onNudge }: NudgeKeyProps) {
   const handlePress = useCallback(() => {
     onNudge(delta);
@@ -52,10 +59,3 @@ export function PresetRow({ onNudge, onTap }: PresetRowProps) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    gap: space.controlGap,
-  },
-});

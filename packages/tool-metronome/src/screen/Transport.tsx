@@ -12,6 +12,15 @@ interface TransportProps {
   readonly onResetPractice: () => void;
 }
 
+const styles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: space.transportGap,
+  },
+});
+
 export function Transport({
   running,
   onToggle,
@@ -33,12 +42,3 @@ export function Transport({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: space.transportGap,
-  },
-});

@@ -27,12 +27,31 @@ import { Transport } from './Transport.tsx';
 import { useTempoSwipe } from './useTempoSwipe.ts';
 import { useMetronomeFrame } from './useMetronomeFrame.ts';
 
-const SCREEN_PADDING = 16;
-const SCREEN_GAP = 14;
 const FIRST_BEAT = 0;
 
 const POLY = 'poly';
 const POLY_OPTIONS = [{ value: POLY, label: POLY }] as const;
+
+const useStyles = createThemedStyles((theme) => ({
+  screen: {
+    flex: 1,
+    backgroundColor: theme.color.bg,
+    paddingHorizontal: space.screenInset,
+    gap: space.sectionGap,
+  },
+  cardBody: {
+    gap: space.rowGap,
+  },
+  cardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: space.rowGap,
+  },
+  spacer: {
+    flex: 1,
+  },
+}));
 
 function polyAccents(beats: number): readonly KB_ACCENT[] {
   return Array.from({ length: beats }, (_unused, beat) =>
@@ -150,8 +169,8 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
 
   const edgeToEdgePadding = useMemo(
     () => ({
-      paddingTop: SCREEN_PADDING + insets.top,
-      paddingBottom: SCREEN_PADDING + insets.bottom,
+      paddingTop: space.screenInset + insets.top,
+      paddingBottom: space.screenInset + insets.bottom,
     }),
     [insets.top, insets.bottom],
   );
@@ -216,6 +235,7 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
                 options={POLY_OPTIONS}
                 selected={polyEnabled ? POLY : undefined}
                 selectedTone="accent"
+                neighbourGapDp={space.rowGap}
                 onSelect={handlePolyToggle}
               />
             </View>
@@ -241,24 +261,3 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
     </GestureDetector>
   );
 }
-
-const useStyles = createThemedStyles((theme) => ({
-  screen: {
-    flex: 1,
-    backgroundColor: theme.color.bg,
-    paddingHorizontal: SCREEN_PADDING,
-    gap: SCREEN_GAP,
-  },
-  cardBody: {
-    gap: space.rowGap,
-  },
-  cardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: space.rowGap,
-  },
-  spacer: {
-    flex: 1,
-  },
-}));

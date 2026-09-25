@@ -25,6 +25,14 @@ interface TempoNumpadSheetProps {
   readonly onDismiss: () => void;
 }
 
+const useStyles = createThemedStyles((theme) => ({
+  entry: {
+    ...textStyle(textRoles.sheetNumeral),
+    color: theme.color.text,
+    textAlign: 'center',
+  },
+}));
+
 export function TempoNumpadSheet({
   visible,
   bpm,
@@ -84,11 +92,3 @@ export function TempoNumpadSheet({
     </Sheet>
   );
 }
-
-const useStyles = createThemedStyles((theme) => ({
-  entry: {
-    ...textStyle(textRoles.sheetNumeral),
-    color: theme.color.text,
-    textAlign: 'center',
-  },
-}));
