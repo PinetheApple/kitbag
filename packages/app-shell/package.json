@@ -22,7 +22,7 @@
     "@kitbag/tool-stems": "workspace:*",
     "@kitbag/tool-sync": "workspace:*",
     "@kitbag/tool-tuner": "workspace:*",
-    "@react-navigation/native": "^7.1.33",
+    "@react-navigation/native": "^7.4.1",
     "expo": "~55.0.23",
     "expo-constants": "~55.0.16",
     "expo-dev-client": "~55.0.37",
@@ -46,9 +46,9 @@
     "eslint": "9.39.5",
     "eslint-plugin-boundaries": "^5.0.1",
     "eslint-plugin-kitbag": "workspace:*",
-    "postcss": "^8.5.0",
+    "postcss": "^8.5.28",
     "tailwindcss": "^4.0.0",
-    "typescript-eslint": "^8.65.0",
+    "typescript-eslint": "^8.70.0",
     "vitest": "^4.1.10"
   }
 }
