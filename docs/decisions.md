@@ -202,3 +202,24 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   and overlapping hit regions would mis-assign accent taps — a worse failure than a
   small target on a control that has the preset row as a fallback. Both rulings match
   what M3 already shipped, so neither changes code. **[recorded]**
+
+- **2026-09-26 · Completion-push rulings (§5.2, §5.4, §8.9, §12, D11, #56)** — Approved by
+  the owner at the start of the Claude + GPT completion push: (1) the poly row **hides**
+  when poly is off; (2) 4/4 shows **four evenly spaced, ungrouped LEDs**; (3) the Player and
+  Play along get their own **metronome slots inside the one native engine** (one device,
+  one clock), not a second engine and not app-side save/restore; (4) the metronome's
+  All Songs screen **reuses Setlist Detail's list grammar**; (5) storage starts in an
+  **app-owned base directory**, and a user-chosen SAF location is adopted by copy → verify
+  → atomic switch → delete; (6) the GetSongBPM personal key is an **optional Settings
+  field**, and no request is made without it; (7) stem/library failures render as
+  **inline status cards** on the affected row; (8) Home ships as a **fixed hub** before
+  edit mode; (9) landscape stays deferred (D13). **[recorded]**
+
+- **2026-09-26 · Wave 0 implementation calls (§12.2, §13.1, #68, #69, #78)** — (1)
+  `onDanger` resolves to `surface1`, not the specimen's `#fff`, which is 3.03:1 on dark
+  danger; surface1 is 5.8:1 dark / 4.69:1 light. (2) Sheets dismiss on a downward drag
+  past 25% of their height; the design only says "dismissible by drag". (3) Schema v8
+  adds `setlists.active` (partial unique index) and nullable `song_presets.poly_accents`.
+  (4) drizzle-orm's op-sqlite `transaction()` does not await its callback, so core-db
+  owns a serialised BEGIN/COMMIT/ROLLBACK transactor and `openDatabase()` exposes
+  repositories only. **[recorded; (1) and (2) await design sign-off]**
