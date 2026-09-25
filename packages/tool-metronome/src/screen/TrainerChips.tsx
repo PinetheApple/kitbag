@@ -8,15 +8,38 @@ import { RampSheet } from './RampSheet.tsx';
 
 type OpenSheet = 'none' | 'ramp' | 'muteBars';
 
-interface TrainerChipsProps {
-  readonly bottomInset: number;
+function RampChip({ onPress }: { readonly onPress: () => void }) {
+  const ramp = useMetronome((s) => s.ramp);
+  const range = `${String(ramp.startBpm)} to ${String(ramp.endBpm)} BPM`;
+  return (
+    <Chip
+      icon="ramp"
+      active={ramp.enabled}
+      label={ramp.enabled ? rampChipValue(ramp.startBpm, ramp.endBpm) : 'Ramp'}
+      accessibilityLabel={
+        ramp.enabled ? `Tempo ramp, ${range}` : 'Tempo ramp, off'
+      }
+      onPress={onPress}
+    />
+  );
 }
 
-export function TrainerChips({ bottomInset }: TrainerChipsProps) {
-  const ramp = useMetronome((s) => s.ramp);
-  const barMute = useMetronome((s) => s.barMute);
-  const [open, setOpen] = useState<OpenSheet>('none');
+function MuteChip({ onPress }: { readonly onPress: () => void }) {
+  const { enabled, playBars, muteBars } = useMetronome((s) => s.barMute);
+  const cycle = `play ${String(playBars)}, mute ${String(muteBars)}`;
+  return (
+    <Chip
+      icon="muteBars"
+      active={enabled}
+      label={enabled ? muteChipValue(playBars, muteBars) : 'Mute bars'}
+      accessibilityLabel={enabled ? `Mute bars, ${cycle}` : 'Mute bars, off'}
+      onPress={onPress}
+    />
+  );
+}
 
+function useOpenSheet() {
+  const [open, setOpen] = useState<OpenSheet>('none');
   const openRamp = useCallback(() => {
     setOpen('ramp');
   }, []);
@@ -26,31 +49,20 @@ export function TrainerChips({ bottomInset }: TrainerChipsProps) {
   const close = useCallback(() => {
     setOpen('none');
   }, []);
+  return { open, openRamp, openMuteBars, close };
+}
 
-  const rampValue = rampChipValue(ramp.startBpm, ramp.endBpm);
-  const muteValue = muteChipValue(barMute.playBars, barMute.muteBars);
-
+export function TrainerChips({
+  bottomInset,
+}: {
+  readonly bottomInset: number;
+}) {
+  const { open, openRamp, openMuteBars, close } = useOpenSheet();
   return (
     <>
       <ChipRow>
-        <Chip
-          icon="ramp"
-          active={ramp.enabled}
-          label={ramp.enabled ? rampValue : 'Ramp'}
-          accessibilityLabel={
-            ramp.enabled ? `Tempo ramp, ${rampValue} BPM` : 'Tempo ramp, off'
-          }
-          onPress={openRamp}
-        />
-        <Chip
-          icon="muteBars"
-          active={barMute.enabled}
-          label={barMute.enabled ? muteValue : 'Mute bars'}
-          accessibilityLabel={
-            barMute.enabled ? `Mute bars, ${muteValue}` : 'Mute bars, off'
-          }
-          onPress={openMuteBars}
-        />
+        <RampChip onPress={openRamp} />
+        <MuteChip onPress={openMuteBars} />
       </ChipRow>
       <RampSheet
         visible={open === 'ramp'}

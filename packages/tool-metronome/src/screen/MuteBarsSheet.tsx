@@ -10,16 +10,10 @@ import {
   StepControl,
   textRoles,
   textStyle,
-  type StepDelta,
 } from '@kitbag/core-design';
-import { KB_MAX_MUTE_BARS } from '@kitbag/core-native';
-import { useMetronome } from '@kitbag/core-state';
-import { useCallback, useMemo } from 'react';
 import { Text, View } from 'react-native';
 
-import { barBounds, mutePreview, stepWithin } from '../logic/trainer.ts';
-
-const MUTE_BARS = barBounds(KB_MAX_MUTE_BARS);
+import { useBarMuteEditor, type BarMuteEditor } from './useBarMuteEditor.ts';
 
 const useStyles = createThemedStyles((theme) => ({
   row: {
@@ -55,6 +49,71 @@ const useStyles = createThemedStyles((theme) => ({
   },
 }));
 
+const bars = (count: number) =>
+  `${String(count)} ${count === 1 ? 'bar' : 'bars'}`;
+
+function MuteSteppers({ editor }: { readonly editor: BarMuteEditor }) {
+  const styles = useStyles();
+  const { playBars, muteBars } = editor.barMute;
+  return (
+    <View style={styles.row}>
+      <Text style={styles.label}>Play</Text>
+      <StepControl
+        variant="inline"
+        label="Bars to play"
+        value={String(playBars)}
+        accessibilityValue={bars(playBars)}
+        onStep={editor.stepPlay}
+      />
+      <Text style={styles.label}>then mute</Text>
+      <StepControl
+        variant="inline"
+        label="Bars to mute"
+        value={String(muteBars)}
+        accessibilityValue={bars(muteBars)}
+        onStep={editor.stepMute}
+      />
+    </View>
+  );
+}
+
+function MutePreview({ preview }: { readonly preview: readonly boolean[] }) {
+  const styles = useStyles();
+  const spoken = preview
+    .map((sounding) => (sounding ? 'play' : 'mute'))
+    .join(', ');
+  return (
+    <View
+      accessible
+      accessibilityLabel={`Eight bars of the cycle: ${spoken}`}
+      style={styles.preview}
+    >
+      {preview.map((sounding, bar) => (
+        <View
+          key={bar}
+          style={[styles.bar, sounding ? styles.sounding : styles.silent]}
+        />
+      ))}
+    </View>
+  );
+}
+
+function MuteActions({ editor }: { readonly editor: BarMuteEditor }) {
+  const styles = useStyles();
+  return (
+    <View style={styles.actions}>
+      <Button
+        fill
+        variant="ghost"
+        label="Off"
+        disabled={!editor.barMute.enabled}
+        onPress={editor.turnOff}
+      />
+      <Button fill variant="primary" label="Apply" onPress={editor.apply} />
+    </View>
+  );
+}
+
 interface MuteBarsSheetProps {
   readonly visible: boolean;
   readonly bottomInset: number;
@@ -66,45 +125,7 @@ export function MuteBarsSheet({
   bottomInset,
   onDismiss,
 }: MuteBarsSheetProps) {
-  const styles = useStyles();
-  const barMute = useMetronome((s) => s.barMute);
-  const setBarMute = useMetronome((s) => s.setBarMute);
-
-  const preview = useMemo(
-    () => mutePreview(barMute.playBars, barMute.muteBars),
-    [barMute.playBars, barMute.muteBars],
-  );
-  const previewLabel = preview
-    .map((sounding) => (sounding ? 'play' : 'mute'))
-    .join(', ');
-
-  const handlePlayStep = useCallback(
-    (delta: StepDelta) => {
-      setBarMute({
-        ...barMute,
-        playBars: stepWithin(barMute.playBars, delta, MUTE_BARS),
-      });
-    },
-    [barMute, setBarMute],
-  );
-  const handleMuteStep = useCallback(
-    (delta: StepDelta) => {
-      setBarMute({
-        ...barMute,
-        muteBars: stepWithin(barMute.muteBars, delta, MUTE_BARS),
-      });
-    },
-    [barMute, setBarMute],
-  );
-  const handleOff = useCallback(() => {
-    setBarMute({ ...barMute, enabled: false });
-    onDismiss();
-  }, [barMute, setBarMute, onDismiss]);
-  const handleApply = useCallback(() => {
-    setBarMute({ ...barMute, enabled: true });
-    onDismiss();
-  }, [barMute, setBarMute, onDismiss]);
-
+  const editor = useBarMuteEditor(onDismiss);
   return (
     <Sheet
       visible={visible}
@@ -114,48 +135,13 @@ export function MuteBarsSheet({
       bottomInset={bottomInset}
       onDismiss={onDismiss}
     >
-      <View style={styles.row}>
-        <Text style={styles.label}>Play</Text>
-        <StepControl
-          variant="inline"
-          label="Bars to play"
-          value={String(barMute.playBars)}
-          onStep={handlePlayStep}
-        />
-        <Text style={styles.label}>then mute</Text>
-        <StepControl
-          variant="inline"
-          label="Bars to mute"
-          value={String(barMute.muteBars)}
-          onStep={handleMuteStep}
-        />
-      </View>
-      <View
-        accessible
-        accessibilityLabel={`Eight bars of the cycle: ${previewLabel}`}
-        style={styles.preview}
-      >
-        {preview.map((sounding, bar) => (
-          <View
-            key={bar}
-            style={[styles.bar, sounding ? styles.sounding : styles.silent]}
-          />
-        ))}
-      </View>
+      <MuteSteppers editor={editor} />
+      <MutePreview preview={editor.preview} />
       <SheetHint>
         Preview shows eight bars of the cycle. Silent bars still light the LEDs
         — you keep the visual, lose the click.
       </SheetHint>
-      <View style={styles.actions}>
-        <Button
-          fill
-          variant="ghost"
-          label="Off"
-          disabled={!barMute.enabled}
-          onPress={handleOff}
-        />
-        <Button fill variant="primary" label="Apply" onPress={handleApply} />
-      </View>
+      <MuteActions editor={editor} />
     </Sheet>
   );
 }
