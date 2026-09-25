@@ -17,4 +17,19 @@ config.resolver.nodeModulesPaths = [
   path.resolve(monorepoRoot, 'node_modules'),
 ];
 
+// Only expo-router's unused native tabs import these; they bundle 6.5 MB of fonts.
+const blockedModules = new Set([
+  'expo-symbols',
+  '@expo-google-fonts/material-symbols',
+]);
+const baseResolveRequest = config.resolver.resolveRequest;
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (blockedModules.has(moduleName)) {
+    return { type: 'empty' };
+  }
+  return baseResolveRequest
+    ? baseResolveRequest(context, moduleName, platform)
+    : context.resolveRequest(context, moduleName, platform);
+};
+
 module.exports = withNativewind(config);

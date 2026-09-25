@@ -1,14 +1,6 @@
-# Dependency automation (#60). Routine updates arrive as few reviewable PRs:
-# minors and patches grouped, everything cooled down a week so point releases
-# settle before landing.
-#
-# Expo/React Native SDK majors are deliberately NOT taken by bot PRs: they move
-# the whole native matrix (Gradle/NDK/Kotlin/codegen) and only upgrade safely
-# behind `expo install --check`-style verification plus a device pass of every
-# built tool. See the inline ignore entries for what would let one move.
+# The Expo SDK pins the RN stack and Android toolchain; they move only via `expo install --check`.
 version: 2
 updates:
-  # The pnpm workspace: one root lockfile covers every packages/*.
   - package-ecosystem: npm
     directory: '/'
     schedule:
@@ -22,19 +14,20 @@ updates:
           - 'minor'
           - 'patch'
     ignore:
-      # Migration-task material, not automation. A major may move once a task
-      # exists that runs expo install --check (or the RN upgrade helper),
-      # builds a release APK through CI's android job, and passes on device.
       - dependency-name: 'expo'
-        update-types: ['version-update:semver-major']
       - dependency-name: 'expo-*'
-        update-types: ['version-update:semver-major']
+      - dependency-name: '@expo/*'
+      - dependency-name: 'react'
+      - dependency-name: 'react-dom'
       - dependency-name: 'react-native'
-        update-types: ['version-update:semver-major']
       - dependency-name: 'react-native-*'
+      - dependency-name: '@react-native/*'
+      - dependency-name: '@types/react'
+      - dependency-name: 'typescript'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@types/node'
         update-types: ['version-update:semver-major']
 
-  # The two Gradle builds (AGP/Kotlin toolchain plus declared dependencies).
   - package-ecosystem: gradle
     directory: /packages/app-shell/android
     schedule:
@@ -47,6 +40,10 @@ updates:
         update-types:
           - 'minor'
           - 'patch'
+    ignore:
+      - dependency-name: 'gradle-wrapper'
+      - dependency-name: 'com.android.tools.build:gradle'
+      - dependency-name: 'org.jetbrains.kotlin:*'
 
   - package-ecosystem: gradle
     directory: /packages/core-native/android
@@ -60,8 +57,11 @@ updates:
         update-types:
           - 'minor'
           - 'patch'
+    ignore:
+      - dependency-name: 'gradle-wrapper'
+      - dependency-name: 'com.android.tools.build:gradle'
+      - dependency-name: 'org.jetbrains.kotlin:*'
 
-  # The workflow actions themselves (checkout, setup-node, setup-java, gradle).
   - package-ecosystem: github-actions
     directory: '/'
     schedule:
