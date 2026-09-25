@@ -23,6 +23,7 @@ import { PracticePill, usePracticeElapsed } from './PracticePill.tsx';
 import { PresetRow } from './PresetRow.tsx';
 import { SwipeTempoZone } from './SwipeTempoZone.tsx';
 import { TempoNumpadSheet } from './TempoNumpadSheet.tsx';
+import { TrainerChips } from './TrainerChips.tsx';
 import { Transport } from './Transport.tsx';
 import { useTempoSwipe } from './useTempoSwipe.ts';
 import { useMetronomeFrame } from './useMetronomeFrame.ts';
@@ -241,6 +242,8 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
             </View>
           </View>
         </Card>
+
+        <TrainerChips bottomInset={insets.bottom} />
 
         <View style={styles.spacer} />
 

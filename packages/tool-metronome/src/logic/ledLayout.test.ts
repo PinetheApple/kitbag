@@ -55,6 +55,7 @@ describe('layoutBeatLeds', () => {
       ],
     ]);
     expect(layoutBeatLeds(8)).toEqual([[[0, 1, 2, 3]], [[4, 5, 6, 7]]]);
+    expect(layoutBeatLeds(4)).toEqual([[[0, 1, 2, 3]]]);
   });
 
   it('holds every row but the last at or above the minimum', () => {
