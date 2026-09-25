@@ -48,10 +48,8 @@ class Metronome {
   static constexpr double kMaxVolume = 2.0;
 
   Metronome() {
-    accents_[0] = Accent::kAccented;
-    for (int i = 1; i < kMaxBeats; ++i) {
-      accents_[i] = Accent::kNormal;
-    }
+    InitAccentRow(accents_, kMaxBeats);
+    InitAccentRow(poly_accents_, kMaxPolyBeats);
   }
 
   // Renders additively into an interleaved stereo buffer. RT-safe.
@@ -83,6 +81,7 @@ class Metronome {
   void SetSubdivision(int subdivision);
   void SetAccent(int beat_index, Accent accent);
   void SetPolyrhythm(bool enabled, int beats);
+  void SetPolyAccent(int beat_index, Accent accent);
   void SetSound(int sound_index);
   void SetVolume(double volume);
   void SetLatencyOffset(double latency_ms);
@@ -143,6 +142,7 @@ class Metronome {
     kSetSubdivision,
     kSetAccent,
     kSetPoly,
+    kSetPolyAccent,
     kSetSound,
     kSetRamp,
     kSetBarMute,
@@ -195,7 +195,9 @@ class Metronome {
   bool ApplyTempoCommand(const Command& command);
   bool ApplyTrainerCommand(const Command& command);
   bool ApplyPatternCommand(const Command& command);
-  void SetAccentSlot(int32_t beat_index, int32_t accent);
+  static void InitAccentRow(Accent* row, int size);
+  static void
+  SetAccentSlot(Accent* row, int size, int32_t beat_index, int32_t accent);
   void SetSignatureState(int32_t numerator, int32_t denominator);
   static bool IsValidDenominator(int32_t denominator);
   void SetPolyState(bool enabled, int32_t beats);
@@ -301,6 +303,7 @@ class Metronome {
   Accent accents_[kMaxBeats] = {};
   bool poly_enabled_ = false;
   int poly_beats_ = 3;
+  Accent poly_accents_[kMaxPolyBeats] = {};
   int sound_ = 0;
   double beat_position_ = 0.0;  // fractional beats since start
   // Pending sample-accurate start (StartAt). Held until the render loop reaches

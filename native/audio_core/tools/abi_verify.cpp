@@ -21,7 +21,7 @@ int g_failures = 0;
 int g_checks = 0;
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 37;
+constexpr int kExpectedChecks = 39;
 
 void Check(bool condition, const char* message) {
   ++g_checks;
@@ -114,6 +114,42 @@ void TestClearGrid(kb_engine* engine) {
       kb_metronome_set_grid(engine, ascending, 4, 0) == KB_OK,
       "clear_grid: the engine still accepts a grid after clearing"
   );
+}
+
+double RenderPeak(kb_engine* engine, uint32_t frames) {
+  std::vector<float> out(static_cast<size_t>(frames) * 2);
+  kb_engine_render(engine, out.data(), frames);
+  double peak = 0.0;
+  for (const float sample : out) {
+    peak = std::fmax(peak, std::fabs(static_cast<double>(sample)));
+  }
+  return peak;
+}
+
+void TestPolyAccentReachesPolyRow() {
+  kb_engine* engine = nullptr;
+  if (kb_engine_create(&engine) != KB_OK) return;
+  const uint32_t third_bar = kb_engine_sample_rate(engine) * 2 / 3;
+  kb_metronome_set_beats(engine, 4, 4);
+  kb_metronome_set_poly(engine, 1, 3);
+  for (int32_t beat = 0; beat < 4; ++beat) {
+    kb_metronome_set_accent(engine, beat, KB_ACCENT_MUTED);
+  }
+  kb_metronome_set_poly_accent(engine, 0, KB_ACCENT_MUTED);
+  kb_metronome_set_poly_accent(engine, 2, KB_ACCENT_MUTED);
+  kb_metronome_set_poly_accent(nullptr, 1, KB_ACCENT_MUTED);
+  kb_metronome_start(engine);
+  const double first = RenderPeak(engine, third_bar);
+  const double second = RenderPeak(engine, third_bar);
+  Check(
+      first < 0.1 && second > 0.4,
+      "set_poly_accent: muted poly slots 0/2 silent, untouched slot 1 sounds"
+  );
+  Check(
+      kb_metronome_current_poly_beat(engine) == 1,
+      "current_poly_beat: reads poly slot 1 through the ABI"
+  );
+  kb_engine_destroy(engine);
 }
 
 // Transport is now callback-applied through the command ring (SPEC.md §2.2): the
@@ -301,6 +337,7 @@ int main() {
   TestClearGrid(engine);
   TestMixerTransportIsNullSafe(engine);
   TestPlayerNullSafe();
+  TestPolyAccentReachesPolyRow();
 
   if (!RunFileFixtureTests(engine)) {
     kb_engine_destroy(engine);

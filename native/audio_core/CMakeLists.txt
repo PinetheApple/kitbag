@@ -118,6 +118,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_latency.cpp
     tools/metronome/metronome_test_startat.cpp
     tools/metronome/metronome_test_anchor.cpp
+    tools/metronome/metronome_test_poly.cpp
     tools/rt/rt_publisher_verify.cpp
     src/metronome/metronome.cpp
     src/metronome/metronome_grid.cpp

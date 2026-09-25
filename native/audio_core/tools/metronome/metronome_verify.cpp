@@ -7,7 +7,7 @@
 
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 264;
+constexpr int kExpectedChecks = 289;
 
 int main() {
   metronome_test::RunBasicTests();
@@ -16,6 +16,7 @@ int main() {
   metronome_test::RunLatencyTests();
   metronome_test::RunGridTests();
   metronome_test::RunAnchorTests();
+  metronome_test::RunPolyTests();
   rt_test::RunPublisherTests();
 
   if (kitbag_test::g_checks != kExpectedChecks) {

@@ -1,5 +1,3 @@
-// Command API, the RT-side drain, and the sequencer state helpers both render
-// paths share. Render loop: metronome_render.cpp. Grid mode: metronome_grid.cpp.
 #include "metronome/metronome.h"
 
 #include <cassert>
@@ -69,6 +67,13 @@ void Metronome::SetPolyrhythm(bool enabled, int beats) {
   Command command{CommandType::kSetPoly};
   command.int_a = enabled ? 1 : 0;
   command.int_b = beats;
+  commands_.Push(command);
+}
+
+void Metronome::SetPolyAccent(int beat_index, Accent accent) {
+  Command command{CommandType::kSetPolyAccent};
+  command.int_a = beat_index;
+  command.int_b = static_cast<int32_t>(accent);
   commands_.Push(command);
 }
 
@@ -157,6 +162,7 @@ void Metronome::ApplyCommand(const Command& command) {
     case CommandType::kSetSubdivision:
     case CommandType::kSetAccent:
     case CommandType::kSetPoly:
+    case CommandType::kSetPolyAccent:
     case CommandType::kSetSound:
     case CommandType::kSetVolume:
       claimed = ApplyPatternCommand(command);
@@ -238,7 +244,10 @@ bool Metronome::ApplyPatternCommand(const Command& command) {
       subdivision_ = Clamp(command.int_a, 1, kMaxSubdivision);
       return true;
     case CommandType::kSetAccent:
-      SetAccentSlot(command.int_a, command.int_b);
+      SetAccentSlot(accents_, kMaxBeats, command.int_a, command.int_b);
+      return true;
+    case CommandType::kSetPolyAccent:
+      SetAccentSlot(poly_accents_, kMaxPolyBeats, command.int_a, command.int_b);
       return true;
     case CommandType::kSetPoly:
       SetPolyState(command.int_a != 0, command.int_b);
@@ -254,9 +263,21 @@ bool Metronome::ApplyPatternCommand(const Command& command) {
   }
 }
 
-void Metronome::SetAccentSlot(int32_t beat_index, int32_t accent) {
-  if (beat_index < 0 || beat_index >= kMaxBeats) return;
-  accents_[beat_index] = static_cast<Accent>(
+void Metronome::InitAccentRow(Accent* row, int size) {
+  row[0] = Accent::kAccented;
+  for (int i = 1; i < size; ++i) {
+    row[i] = Accent::kNormal;
+  }
+}
+
+void Metronome::SetAccentSlot(
+    Accent* row,
+    int size,
+    int32_t beat_index,
+    int32_t accent
+) {
+  if (beat_index < 0 || beat_index >= size) return;
+  row[beat_index] = static_cast<Accent>(
       Clamp(accent, 0, static_cast<int32_t>(Accent::kAccented))
   );
 }
@@ -278,11 +299,15 @@ bool Metronome::IsValidDenominator(int32_t denominator) {
 }
 
 void Metronome::SetPolyState(bool enabled, int32_t beats) {
-  poly_enabled_ = enabled;
-  poly_beats_ = Clamp(beats, 2, kMaxPolyBeats);
-  if (!poly_enabled_) {
+  const int32_t count = Clamp(beats, 2, kMaxPolyBeats);
+  for (int32_t slot = poly_beats_; slot < count; ++slot) {
+    poly_accents_[slot] = Accent::kNormal;
+  }
+  if (!enabled || count != poly_beats_) {
     current_poly_beat_.store(-1, std::memory_order_relaxed);
   }
+  poly_enabled_ = enabled;
+  poly_beats_ = count;
 }
 
 void Metronome::ArmRamp(const Command& command) {

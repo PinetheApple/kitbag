@@ -19,6 +19,7 @@ constexpr double kAccentAmplitude = 0.9;
 constexpr double kBeatAmplitude = 0.6;
 constexpr double kSubdivisionAmplitude = 0.3;
 constexpr double kPolyAmplitude = 0.5;
+constexpr double kPolyAccentAmplitude = 0.8;
 // A decaying voice is retired once it falls below audibility.
 constexpr double kVoiceSilenceAmplitude = 1e-4;
 
@@ -107,13 +108,12 @@ void Metronome::OnSubdivisionTick(int64_t owning_beat, uint32_t sample_rate) {
 
 void Metronome::OnPolyBoundary(int poly_index, uint32_t sample_rate) {
   current_poly_beat_.store(poly_index, std::memory_order_relaxed);
-  // Muted bars silence the poly voice too: the trainer's point is keeping
-  // time internally, so nothing may sound during a muted bar.
-  if (BarIsMuted(current_bar_)) return;
+  const Accent accent = poly_accents_[poly_index];
+  if (accent == Accent::kMuted || BarIsMuted(current_bar_)) return;
   const SoundPreset& sound = kSounds[sound_];
   TriggerClick(
       sound.poly_hz,
-      kPolyAmplitude,
+      accent == Accent::kAccented ? kPolyAccentAmplitude : kPolyAmplitude,
       sound.decay_per_second,
       sample_rate
   );
@@ -283,6 +283,7 @@ void Metronome::PublishBlockMirrors(
     current_bpm_.store(bpm_, std::memory_order_relaxed);
   } else if (grid != nullptr) {
     PublishGridMirrors(*grid, frame, sample_rate);
+    current_poly_beat_.store(-1, std::memory_order_relaxed);
   } else {
     // Track `position`, not beat_position_, so the sweep, the LED and the
     // audible click share one time base (§4.5); the mapping to real latency

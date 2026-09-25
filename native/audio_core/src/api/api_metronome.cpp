@@ -124,6 +124,19 @@ void kb_metronome_set_poly(kb_engine* engine, int32_t enabled, int32_t beats) {
   }
 }
 
+void kb_metronome_set_poly_accent(
+    kb_engine* engine,
+    int32_t beat_index,
+    int32_t accent
+) {
+  if (engine != nullptr) {
+    ToEngine(engine)->metronome().SetPolyAccent(
+        beat_index,
+        static_cast<kitbag::Accent>(accent)
+    );
+  }
+}
+
 void kb_metronome_set_sound(kb_engine* engine, int32_t sound_index) {
   if (engine != nullptr) {
     ToEngine(engine)->metronome().SetSound(sound_index);
