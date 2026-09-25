@@ -133,6 +133,8 @@ android {
         versionName kitbagVersionName
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
+
+        resourceConfigurations += ['en']
     }
     signingConfigs {
         debug {

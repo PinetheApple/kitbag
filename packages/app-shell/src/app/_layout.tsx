@@ -1,3 +1,5 @@
+import '@/runtime/metronomeRuntime';
+
 import '@/global.css';
 
 import { resolveTheme } from '@kitbag/core-design';
