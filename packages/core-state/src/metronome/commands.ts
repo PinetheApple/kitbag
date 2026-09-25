@@ -20,6 +20,7 @@ export type MetronomeCommands = Pick<
 >;
 
 export type NowFrame = () => number;
+export type EngineBpm = () => number;
 
 export const defaultCommands: MetronomeCommands = {
   start: (...args) => getMetronomeRuntime().commands.start(...args),
@@ -62,3 +63,6 @@ export const defaultCommands: MetronomeCommands = {
 };
 
 export const defaultNowFrame: NowFrame = () => getMetronomeRuntime().nowFrame();
+
+export const defaultEngineBpm: EngineBpm = () =>
+  getMetronomeRuntime().engineBpm();

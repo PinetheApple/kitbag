@@ -43,6 +43,13 @@ const webCommands: MetronomeCommands = {
   setBarMute: () => undefined,
 };
 
+const initialBpm = readBoundedQuery(
+  'bpm',
+  DEFAULT_BPM,
+  BPM_BOUNDS.min,
+  BPM_BOUNDS.max,
+);
+
 const presentationHost: KitbagHostObject = Object.freeze({
   bar_phase: Math.min(
     Math.round(readBoundedQuery('phase', 0, 0, 1) * PHASE_STEPS) / PHASE_STEPS,
@@ -56,12 +63,9 @@ const presentationHost: KitbagHostObject = Object.freeze({
       metronomeStore.getState().beatsPerBar - 1,
     ),
   ),
-  current_bpm: readBoundedQuery(
-    'bpm',
-    DEFAULT_BPM,
-    BPM_BOUNDS.min,
-    BPM_BOUNDS.max,
-  ),
+  get current_bpm() {
+    return metronomeStore.getState().bpm;
+  },
   frames_rendered: 0,
   tuner_snapshot: 0,
   player_position: 0,
@@ -73,6 +77,7 @@ const presentationHost: KitbagHostObject = Object.freeze({
 configureMetronomeRuntime({
   commands: webCommands,
   nowFrame: () => presentationHost.frames_rendered,
+  engineBpm: () => presentationHost.current_bpm,
 });
 
-metronomeStore.getState().setTempo(presentationHost.current_bpm);
+metronomeStore.getState().setTempo(initialBpm);

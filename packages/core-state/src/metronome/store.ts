@@ -19,7 +19,9 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import {
   defaultCommands,
+  defaultEngineBpm,
   defaultNowFrame,
+  type EngineBpm,
   type MetronomeCommands,
   type NowFrame,
 } from './commands.ts';
@@ -93,6 +95,8 @@ export interface MetronomeConfig {
 
 export interface MetronomeActions {
   setTempo: (bpm: number) => void;
+  nudgeTempo: (delta: number) => void;
+  syncTempoFromEngine: () => void;
   setBeats: (beatsPerBar: number, denominator: number) => void;
   setSubdivision: (subdivision: number) => void;
   cycleAccent: (beat: number) => void;
@@ -123,6 +127,19 @@ const DEFAULT_TRAINER_BARS = 4;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
+}
+
+// A JS-only run has no HostObject; the store's own tempo is then the best known.
+function readEngineTempo(engineBpm: EngineBpm, fallback: number): number {
+  let bpm: number;
+  try {
+    bpm = engineBpm();
+  } catch {
+    return fallback;
+  }
+  return Number.isFinite(bpm)
+    ? clamp(Math.round(bpm), BPM_MIN, BPM_MAX)
+    : fallback;
 }
 
 // §5.2: tap a beat to cycle accent → normal → mute → accent.
@@ -156,7 +173,11 @@ function initialAccents(count: number): KB_ACCENT[] {
 export function createMetronomeStore(
   commands: MetronomeCommands = defaultCommands,
   nowFrame: NowFrame = defaultNowFrame,
+  engineBpm: EngineBpm = defaultEngineBpm,
 ): StoreApi<MetronomeStore> {
+  const syncFromEngine = (set: (p: { bpm: number }) => void, bpm: number) => {
+    set({ bpm: readEngineTempo(engineBpm, bpm) });
+  };
   return createStore<MetronomeStore>((set, get) => ({
     bpm: DEFAULT_BPM,
     beatsPerBar: DEFAULT_BEATS,
@@ -189,6 +210,14 @@ export function createMetronomeStore(
       // same on set_tempo, so the chip's enabled state must clear with it.
       set((s) => ({ bpm: next, ramp: { ...s.ramp, enabled: false } }));
       commands.setTempo(next);
+    },
+
+    nudgeTempo: (delta) => {
+      get().setTempo(readEngineTempo(engineBpm, get().bpm) + delta);
+    },
+
+    syncTempoFromEngine: () => {
+      syncFromEngine(set, get().bpm);
     },
 
     setBeats: (beatsPerBar, denominator) => {
@@ -277,6 +306,7 @@ export function createMetronomeStore(
         config.endBpm,
         config.bars,
       );
+      if (!config.enabled) syncFromEngine(set, get().bpm);
     },
 
     setBarMute: (config) => {
@@ -301,6 +331,7 @@ export function createMetronomeStore(
     stop: () => {
       commands.metronomeStop();
       set({ running: false, countInArmed: true });
+      syncFromEngine(set, get().bpm);
     },
 
     pause: () => {
@@ -308,6 +339,7 @@ export function createMetronomeStore(
       // so a resume does not count in (§5.3).
       commands.metronomeStop();
       set({ running: false });
+      syncFromEngine(set, get().bpm);
     },
   }));
 }
