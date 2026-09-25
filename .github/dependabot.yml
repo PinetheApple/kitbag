@@ -10,7 +10,7 @@ version: 2
 updates:
   # The pnpm workspace: one root lockfile covers every packages/*.
   - package-ecosystem: npm
-    directory: "/"
+    directory: '/'
     schedule:
       interval: weekly
     cooldown:
@@ -19,20 +19,20 @@ updates:
       minor-and-patch:
         applies-to: version-updates
         update-types:
-          - "minor"
-          - "patch"
+          - 'minor'
+          - 'patch'
     ignore:
       # Migration-task material, not automation. A major may move once a task
       # exists that runs expo install --check (or the RN upgrade helper),
       # builds a release APK through CI's android job, and passes on device.
-      - dependency-name: "expo"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "expo-*"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "react-native"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "react-native-*"
-        update-types: ["version-update:semver-major"]
+      - dependency-name: 'expo'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'expo-*'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'react-native'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'react-native-*'
+        update-types: ['version-update:semver-major']
 
   # The two Gradle builds (AGP/Kotlin toolchain plus declared dependencies).
   - package-ecosystem: gradle
@@ -45,8 +45,8 @@ updates:
       minor-and-patch:
         applies-to: version-updates
         update-types:
-          - "minor"
-          - "patch"
+          - 'minor'
+          - 'patch'
 
   - package-ecosystem: gradle
     directory: /packages/core-native/android
@@ -58,12 +58,12 @@ updates:
       minor-and-patch:
         applies-to: version-updates
         update-types:
-          - "minor"
-          - "patch"
+          - 'minor'
+          - 'patch'
 
   # The workflow actions themselves (checkout, setup-node, setup-java, gradle).
   - package-ecosystem: github-actions
-    directory: "/"
+    directory: '/'
     schedule:
       interval: weekly
     cooldown:
@@ -72,4 +72,4 @@ updates:
       all-actions:
         applies-to: version-updates
         patterns:
-          - "*"
+          - '*'
