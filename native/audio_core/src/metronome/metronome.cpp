@@ -78,9 +78,10 @@ void Metronome::SetPolyAccent(int beat_index, int32_t accent) {
   commands_.Push(command);
 }
 
-void Metronome::SetSound(int sound_index) {
-  Command command{CommandType::kSetSound};
-  command.int_a = sound_index;
+void Metronome::SetSounds(int normal_sound, int accent_sound) {
+  Command command{CommandType::kSetSounds};
+  command.int_a = normal_sound;
+  command.int_b = accent_sound;
   commands_.Push(command);
 }
 
@@ -164,7 +165,7 @@ void Metronome::ApplyCommand(const Command& command) {
     case CommandType::kSetAccent:
     case CommandType::kSetPoly:
     case CommandType::kSetPolyAccent:
-    case CommandType::kSetSound:
+    case CommandType::kSetSounds:
     case CommandType::kSetVolume:
       claimed = ApplyPatternCommand(command);
       break;
@@ -253,8 +254,8 @@ bool Metronome::ApplyPatternCommand(const Command& command) {
     case CommandType::kSetPoly:
       SetPolyState(command.int_a != 0, command.int_b);
       return true;
-    case CommandType::kSetSound:
-      sound_ = Clamp(command.int_a, 0, kSoundCount - 1);
+    case CommandType::kSetSounds:
+      SetSoundsState(command.int_a, command.int_b);
       return true;
     case CommandType::kSetVolume:
       volume_ = Clamp(command.value, 0.0, kMaxVolume);

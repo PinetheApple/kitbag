@@ -77,11 +77,20 @@ void Metronome::OnBeatBoundary(int beat_index, uint32_t sample_rate) {
                             ? accents_[beat_index]
                             : Accent::kNormal;
   if (accent == Accent::kMuted || BarIsMuted(current_bar_)) return;
-  const SoundPreset& sound = kSounds[sound_];
-  const bool accented = accent == Accent::kAccented;
+  if (accent == Accent::kAccented) {
+    const SoundPreset& sound = kSounds[accent_sound_];
+    TriggerClick(
+        sound.accent_hz,
+        kAccentAmplitude,
+        sound.decay_per_second,
+        sample_rate
+    );
+    return;
+  }
+  const SoundPreset& sound = kSounds[normal_sound_];
   TriggerClick(
-      accented ? sound.accent_hz : sound.beat_hz,
-      accented ? kAccentAmplitude : kBeatAmplitude,
+      sound.beat_hz,
+      kBeatAmplitude,
       sound.decay_per_second,
       sample_rate
   );
@@ -97,7 +106,7 @@ void Metronome::OnSubdivisionTick(int64_t owning_beat, uint32_t sample_rate) {
   if (accents_[beat_in_bar] == Accent::kMuted || BarIsMuted(current_bar_)) {
     return;
   }
-  const SoundPreset& sound = kSounds[sound_];
+  const SoundPreset& sound = kSounds[normal_sound_];
   TriggerClick(
       sound.subdivision_hz,
       kSubdivisionAmplitude,
@@ -110,10 +119,11 @@ void Metronome::OnPolyBoundary(int poly_index, uint32_t sample_rate) {
   current_poly_beat_.store(poly_index, std::memory_order_relaxed);
   const Accent accent = poly_accents_[poly_index];
   if (accent == Accent::kMuted || BarIsMuted(current_bar_)) return;
-  const SoundPreset& sound = kSounds[sound_];
+  const bool accented = accent == Accent::kAccented;
+  const SoundPreset& sound = kSounds[accented ? accent_sound_ : normal_sound_];
   TriggerClick(
       sound.poly_hz,
-      accent == Accent::kAccented ? kPolyAccentAmplitude : kPolyBeatAmplitude,
+      accented ? kPolyAccentAmplitude : kPolyBeatAmplitude,
       sound.decay_per_second,
       sample_rate
   );

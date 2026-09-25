@@ -44,6 +44,15 @@ void Metronome::SetSignatureState(int32_t numerator, int32_t denominator) {
   }
 }
 
+void Metronome::SetSoundsState(int32_t normal_sound, int32_t accent_sound) {
+  if (normal_sound >= 0 && normal_sound < kSoundCount) {
+    normal_sound_ = normal_sound;
+  }
+  if (accent_sound >= 0 && accent_sound < kSoundCount) {
+    accent_sound_ = accent_sound;
+  }
+}
+
 bool Metronome::IsValidDenominator(int32_t denominator) {
   for (const int valid : kDenominators) {
     if (valid == denominator) return true;

@@ -146,7 +146,14 @@ KB_EXPORT void kb_metronome_set_poly_accent(
     int32_t beat_index,
     int32_t accent
 );
-KB_EXPORT void kb_metronome_set_sound(kb_engine* engine, int32_t sound_index);
+/* Ids index KB_SOUND_NAMES. accent_sound plays accented beats; normal_sound plays
+ * normal beats and subdivisions; poly beats follow their own accent. An id
+ * outside the table keeps that role's previous sound. */
+KB_EXPORT void kb_metronome_set_sounds(
+    kb_engine* engine,
+    int32_t normal_sound,
+    int32_t accent_sound
+);
 /* Volume multiplier [0, 2], default 1. */
 KB_EXPORT void kb_metronome_set_volume(kb_engine* engine, double volume);
 /* Output latency offset in ms [-100, 100]; positive = trigger earlier. */

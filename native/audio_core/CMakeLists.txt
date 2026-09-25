@@ -120,6 +120,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_startat.cpp
     tools/metronome/metronome_test_anchor.cpp
     tools/metronome/metronome_test_poly.cpp
+    tools/metronome/metronome_test_sound.cpp
     tools/rt/rt_publisher_verify.cpp
     src/metronome/metronome.cpp
     src/metronome/metronome_grid.cpp
@@ -133,8 +134,8 @@ if(KITBAG_BUILD_TOOLS)
   # Links the shared library rather than the sources: the point is to prove the
   # exported C ABI, not the C++ behind it. tools/media supplies the WAV writer
   # the mixer load test writes its fixture with.
-  add_executable(abi_verify tools/abi_verify.cpp)
-  target_include_directories(abi_verify PRIVATE tools/media)
+  add_executable(abi_verify tools/abi_verify.cpp tools/abi_test_metronome.cpp)
+  target_include_directories(abi_verify PRIVATE tools tools/media)
   target_link_libraries(abi_verify PRIVATE kitbag_core)
 
   # A6 (#11): streams a real WAV end to end through the C ABI (kb_player_load ->

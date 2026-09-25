@@ -131,9 +131,13 @@ void kb_metronome_set_poly_accent(
   }
 }
 
-void kb_metronome_set_sound(kb_engine* engine, int32_t sound_index) {
+void kb_metronome_set_sounds(
+    kb_engine* engine,
+    int32_t normal_sound,
+    int32_t accent_sound
+) {
   if (engine != nullptr) {
-    ToEngine(engine)->metronome().SetSound(sound_index);
+    ToEngine(engine)->metronome().SetSounds(normal_sound, accent_sound);
   }
 }
 

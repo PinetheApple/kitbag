@@ -89,7 +89,7 @@ class Metronome {
   void SetPolyAccent(int beat_index, Accent accent) {
     SetPolyAccent(beat_index, static_cast<int32_t>(accent));
   }
-  void SetSound(int sound_index);
+  void SetSounds(int normal_sound, int accent_sound);
   void SetVolume(double volume);
   void SetLatencyOffset(double latency_ms);
   // Tempo ramp trainer: steps the BPM once per bar from start to end over
@@ -150,7 +150,7 @@ class Metronome {
     kSetAccent,
     kSetPoly,
     kSetPolyAccent,
-    kSetSound,
+    kSetSounds,
     kSetRamp,
     kSetBarMute,
     kSetVolume,
@@ -209,6 +209,7 @@ class Metronome {
   ResetGrownSlots(std::span<Accent> row, int32_t old_count, int32_t new_count);
   void SetSignatureState(int32_t numerator, int32_t denominator);
   static bool IsValidDenominator(int32_t denominator);
+  void SetSoundsState(int32_t normal_sound, int32_t accent_sound);
   void SetPolyState(bool enabled, int32_t beats);
   void ArmRamp(const Command& command);
   // Phase-preserving like a bpm change; inert while stopped, where there is no
@@ -313,7 +314,8 @@ class Metronome {
   bool poly_enabled_ = false;
   int poly_beats_ = 3;
   Accent poly_accents_[kMaxPolyBeats] = {};
-  int sound_ = 0;
+  int normal_sound_ = 0;
+  int accent_sound_ = 0;
   double beat_position_ = 0.0;  // fractional beats since start
   // Pending sample-accurate start (StartAt). Held until the render loop reaches
   // `pending_start_frame_` on the engine clock, then consumed by BeginRun.
