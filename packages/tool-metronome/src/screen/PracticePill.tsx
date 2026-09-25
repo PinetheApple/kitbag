@@ -35,8 +35,6 @@ export function usePracticeElapsed(running: boolean): PracticeElapsed {
 
   useEffect(() => {
     if (!running) {
-      // Stopping banks the stretch just played, so a resume continues the
-      // session rather than restarting it.
       if (startedAt.current !== null) {
         playedMs.current += Date.now() - startedAt.current;
         startedAt.current = null;
@@ -47,8 +45,6 @@ export function usePracticeElapsed(running: boolean): PracticeElapsed {
 
     const startOfStretch = Date.now();
     startedAt.current = startOfStretch;
-    // The first tick is a second away; without this the pill shows the previous
-    // value for up to a second after ▶.
     setElapsedMs(playedMs.current);
     const tick = setInterval(() => {
       const start = startedAt.current;
@@ -58,8 +54,7 @@ export function usePracticeElapsed(running: boolean): PracticeElapsed {
     }, TICK_MS);
     return () => {
       clearInterval(tick);
-      // Bank the stretch: the cleanup also runs on unmount, where the effect
-      // body's stop branch never gets to.
+      // Also runs on unmount, where the stop branch above never does.
       if (startedAt.current !== null) {
         playedMs.current += Date.now() - startedAt.current;
         startedAt.current = null;

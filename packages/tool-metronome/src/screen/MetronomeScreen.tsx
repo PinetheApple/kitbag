@@ -75,9 +75,7 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
   const [numpadOpen, setNumpadOpen] = useState(false);
   const tapTimes = useRef<readonly number[]>([]);
 
-  // Any tempo set another way ends the tap series: a TAP moments after typing
-  // 124 must start counting, not average against taps from before.
-  const handleTempo = useCallback(
+  const setTempoEndingTapSeries = useCallback(
     (next: number) => {
       tapTimes.current = [];
       setTempo(next);
@@ -85,17 +83,15 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
     [setTempo],
   );
 
-  // Swipe ANYWHERE (§5.2): the pan is mounted at the screen root, not on the
-  // readout, so any empty space is the tempo control too.
-  const tempoSwipe = useTempoSwipe(bpm, handleTempo);
+  const tempoSwipe = useTempoSwipe(bpm, setTempoEndingTapSeries);
 
   const polyBeatUnpublished = useSharedValue(KB_STOPPED_BEAT);
 
   const handleNudge = useCallback(
     (delta: number) => {
-      handleTempo(bpm + delta);
+      setTempoEndingTapSeries(bpm + delta);
     },
-    [bpm, handleTempo],
+    [bpm, setTempoEndingTapSeries],
   );
 
   const handleTap = useCallback(() => {
@@ -152,9 +148,7 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
     setNumpadOpen(false);
   }, []);
 
-  // Intended to keep the transport clear of the gesture bar under edge-to-edge;
-  // not measured on a device.
-  const insetPadding = useMemo(
+  const edgeToEdgePadding = useMemo(
     () => ({
       paddingTop: SCREEN_PADDING + insets.top,
       paddingBottom: SCREEN_PADDING + insets.bottom,
@@ -164,7 +158,7 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
 
   return (
     <GestureDetector gesture={tempoSwipe}>
-      <View style={[styles.screen, insetPadding]}>
+      <View style={[styles.screen, edgeToEdgePadding]}>
         <PracticePill elapsedMs={elapsedMs} onReset={resetPractice} />
 
         <SwipeTempoZone
@@ -240,7 +234,7 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
           visible={numpadOpen}
           bpm={bpm}
           bottomInset={insets.bottom}
-          onConfirm={handleTempo}
+          onConfirm={setTempoEndingTapSeries}
           onDismiss={handleCloseNumpad}
         />
       </View>
