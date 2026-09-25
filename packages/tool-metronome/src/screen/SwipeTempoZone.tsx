@@ -4,13 +4,12 @@
 // screen — see useTempoSwipe — and the §12.6 one-time hint that teaches both
 // gestures is not built here.
 
-import { resolveTheme, typography } from '@kitbag/core-design';
+import { resolveTheme, textStyle, typography } from '@kitbag/core-design';
 import { StyleSheet, Text, View } from 'react-native';
 import { type SharedValue } from 'react-native-reanimated';
 
 import { tempoMarking } from '../logic/tempoMarking.ts';
 import { BarSweep } from './BarSweep.tsx';
-import { DISPLAY_WEIGHT } from './typeStyles.ts';
 
 const theme = resolveTheme('dark');
 
@@ -72,7 +71,7 @@ const styles = StyleSheet.create({
   bpm: {
     color: theme.text,
     fontFamily: typography.display.family,
-    fontWeight: DISPLAY_WEIGHT,
+    fontWeight: textStyle(typography.display).fontWeight,
     fontSize: BPM_FONT_SIZE,
     fontVariant: ['tabular-nums'],
     textAlign: 'center',

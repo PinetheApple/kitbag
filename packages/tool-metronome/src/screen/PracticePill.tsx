@@ -8,12 +8,16 @@
 // The count lives as long as the screen does. Practice time that survives
 // navigation is §5.7 practiceSessions (M8), which this does not pretend to be.
 
-import { radii, resolveTheme, typography } from '@kitbag/core-design';
+import {
+  hitSlopForPadded,
+  radii,
+  resolveTheme,
+  typography,
+} from '@kitbag/core-design';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { formatPracticeElapsed } from '../logic/practiceTimer.ts';
-import { hitSlopForPadded } from '../logic/touchTargets.ts';
 
 const theme = resolveTheme('dark');
 
