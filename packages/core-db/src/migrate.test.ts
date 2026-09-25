@@ -10,6 +10,7 @@ import {
   V7_SCHEMA_VERSION,
   V8_SCHEMA_VERSION,
 } from './migrate';
+import { presetViolation } from './preset-rules';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
 interface Membership {
@@ -90,7 +91,8 @@ const V6_DATA: readonly string[] = [
    VALUES
      (1, 0, 'Opener', 128.0, 4, 1, X'03010101', 0, 0, 0, 1.0, 0.0),
      (1, 1, 'Bridge', 92.0, 3, 2, X'030101', 1, 5, 2, 0.8, -12.0),
-     (2, 0, 'Ballad', 72.0, 4, 1, X'03010101', 0, 0, 1, 1.0, 5.0)`,
+     (2, 0, 'Ballad', 72.0, 4, 1, X'03010101', 0, 0, 1, 1.0, 5.0),
+     (2, 1, 'Out of range', 500.0, 20, 1, X'0201', 1, 40, 9, 1.0, 0.0)`,
   `INSERT INTO tunings (name, notes) VALUES ('Drop D', X'26292E33383D')`,
   `INSERT INTO practice_sessions (start_time, duration_seconds, avg_bpm, setlist_id)
    VALUES (1700000000, 600, 120.0, 1), (1700000000, 300, 90.0, NULL)`,
@@ -272,6 +274,72 @@ describe('migrate', () => {
     ).map((row) => row.uuid);
     expect(new Set(uuids).size).toBe(before.length);
     expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
+  });
+
+  it('repairs v6 presets the engine would refuse, keeping their meaning', () => {
+    const db = buildV6Fixture();
+    migrate(nodeSqliteDriver(db));
+    const presets = rows<Record<string, unknown>>(
+      db,
+      'SELECT name, bpm, beats_per_bar, sound, poly_beats, hex(accents) AS accents FROM song_presets ORDER BY id',
+    );
+    expect(presets).toEqual([
+      {
+        name: 'Opener',
+        bpm: 128,
+        beats_per_bar: 4,
+        sound: 0,
+        poly_beats: 0,
+        accents: '01010101',
+      },
+      {
+        name: 'Bridge',
+        bpm: 92,
+        beats_per_bar: 3,
+        sound: 2,
+        poly_beats: 5,
+        accents: '010101',
+      },
+      {
+        name: 'Ballad',
+        bpm: 72,
+        beats_per_bar: 4,
+        sound: 1,
+        poly_beats: 0,
+        accents: '01010101',
+      },
+      {
+        name: 'Out of range',
+        bpm: 400,
+        beats_per_bar: 16,
+        sound: 5,
+        poly_beats: 16,
+        accents: '0201' + '01'.repeat(14),
+      },
+    ]);
+  });
+
+  it('leaves every migrated preset valid under the preset rules', () => {
+    const db = buildV6Fixture();
+    migrate(nodeSqliteDriver(db));
+    const presets = rows<Record<string, unknown>>(
+      db,
+      'SELECT * FROM song_presets',
+    );
+    for (const row of presets)
+      expect(
+        presetViolation({
+          bpm: row.bpm as number,
+          beatsPerBar: row.beats_per_bar as number,
+          denominator: row.denominator as number,
+          sound: row.sound as number,
+          polyBeats: row.poly_beats as number,
+          accents: row.accents as Uint8Array,
+          perAccentSounds: row.per_accent_sounds as Uint8Array | null,
+          polyAccents: row.poly_accents as Uint8Array | null,
+        }),
+        String(row.name),
+      ).toBeUndefined();
   });
 
   it('rolls the whole v6 upgrade back when a later step fails', () => {

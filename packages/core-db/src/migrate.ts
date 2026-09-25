@@ -1,3 +1,11 @@
+import {
+  MAX_BEATS,
+  MAX_BPM,
+  MAX_POLY_BEATS,
+  MIN_BPM,
+  SOUND_COUNT,
+} from './preset-rules';
+
 export const SCHEMA_VERSION = 9;
 export const V6_SCHEMA_VERSION = 6;
 export const V7_SCHEMA_VERSION = 7;
@@ -139,7 +147,29 @@ const ADD_POLY_ACCENTS =
 const CREATE_ONE_ACTIVE_INDEX =
   'CREATE UNIQUE INDEX setlists_one_active ON setlists (active) WHERE active = 1';
 
+const clampColumn = (column: string, low: number, high: number) =>
+  `UPDATE song_presets SET ${column} = min(max(${column}, ${String(low)}), ${String(high)})`;
+
+// Flutter read an unknown accent code as normal (legacy converters.dart);
+// the repair keeps that meaning and pads or trims to the bar.
+const REPAIR_ACCENTS = `UPDATE song_presets SET accents = (
+  WITH RECURSIVE beat(n) AS (
+    SELECT 1 UNION ALL SELECT n + 1 FROM beat WHERE n < song_presets.beats_per_bar
+  )
+  SELECT unhex(group_concat(
+    CASE WHEN hex(substr(song_presets.accents, n, 1)) IN ('00', '01', '02')
+      THEN hex(substr(song_presets.accents, n, 1)) ELSE '01' END,
+    '' ORDER BY n))
+  FROM beat)`;
+
 const MIGRATE_V8_TO_V9: readonly string[] = [
+  clampColumn('bpm', MIN_BPM, MAX_BPM),
+  clampColumn('beats_per_bar', 1, MAX_BEATS),
+  clampColumn('sound', 0, SOUND_COUNT - 1),
+  clampColumn('poly_beats', 0, MAX_POLY_BEATS),
+  REPAIR_ACCENTS,
+  'UPDATE song_presets SET poly_accents = NULL WHERE length(poly_accents) != poly_beats',
+  'UPDATE song_presets SET per_accent_sounds = NULL WHERE length(per_accent_sounds) NOT IN (0, 2)',
   'ALTER TABLE practice_sessions ADD COLUMN uuid TEXT',
   `UPDATE practice_sessions SET uuid = ${UUID4_SQL} WHERE uuid IS NULL`,
   'CREATE UNIQUE INDEX practice_sessions_uuid ON practice_sessions (uuid)',
