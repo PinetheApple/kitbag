@@ -16,10 +16,9 @@
 // That transform is hand-authored below and tested against a fixture v6 DB.
 
 /** Schema version this build migrates to. Bump and add a step when the schema changes. */
-export const SCHEMA_VERSION = 7;
-
-/** The Drift-era schema version an upgrading user arrives with (SPEC §11 intro). */
+export const SCHEMA_VERSION = 8;
 export const V6_SCHEMA_VERSION = 6;
+export const V7_SCHEMA_VERSION = 7;
 
 /**
  * Minimal synchronous SQLite surface the runner needs. Wrap op-sqlite
@@ -110,7 +109,8 @@ const CREATE_ROUTE_LATENCY = `CREATE TABLE route_latency (
 const CREATE_SETLISTS = `CREATE TABLE setlists (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
-  uuid TEXT NOT NULL
+  uuid TEXT NOT NULL,
+  active INTEGER NOT NULL DEFAULT 0
 )`;
 
 const CREATE_SONGS = `CREATE TABLE songs (
@@ -165,9 +165,7 @@ const CREATE_STEMS = `CREATE TABLE stems (
   soloed INTEGER NOT NULL,
   sort_order INTEGER NOT NULL
 )`;
-
-/** Fresh-install baseline: build the whole v7 schema from an empty database. */
-export const BASELINE_V7: readonly string[] = [
+export const BASELINE_V8: readonly string[] = [
   CREATE_SETLISTS,
   CREATE_SONGS,
   CREATE_SONG_PRESETS,
@@ -180,7 +178,10 @@ export const BASELINE_V7: readonly string[] = [
   CREATE_BPM_CACHE,
   CREATE_BPM_CACHE_INDEX,
   CREATE_ROUTE_LATENCY,
+  'ALTER TABLE song_presets ADD COLUMN poly_accents BLOB',
+  'CREATE UNIQUE INDEX setlists_one_active ON setlists (active) WHERE active = 1',
 ];
+export const BASELINE_V7 = BASELINE_V8;
 
 /**
  * v6 → v7 transform (SPEC §11.2). Preserves all user data, in order:
@@ -242,6 +243,11 @@ export const MIGRATE_V6_TO_V7: readonly string[] = [
   CREATE_BPM_CACHE_INDEX,
   CREATE_ROUTE_LATENCY,
 ];
+export const MIGRATE_V7_TO_V8: readonly string[] = [
+  'ALTER TABLE setlists ADD COLUMN active INTEGER NOT NULL DEFAULT 0',
+  'CREATE UNIQUE INDEX setlists_one_active ON setlists (active) WHERE active = 1',
+  'ALTER TABLE song_presets ADD COLUMN poly_accents BLOB',
+];
 
 /** Run a list of statements inside one transaction, rolling back on failure. */
 function runStatements(
@@ -260,26 +266,19 @@ function runStatements(
   }
 }
 
-/**
- * Bring the database up to {@link SCHEMA_VERSION}, preserving existing data.
- *
- * - user_version 0 → fresh install: build the v7 baseline.
- * - user_version in [1, 7) → upgrade: apply the v6→v7 transform in place. (The
- *   Flutter build always migrated users to v6 before this code could run, so an
- *   arriving nonzero version is v6-shaped; SPEC §11.1.)
- * - user_version ≥ 7 → nothing to do.
- *
- * Foreign-key enforcement is disabled around the transform (SQLite cannot
- * toggle it inside a transaction, and table renames confuse in-flight FK
- * checks); it is restored afterwards.
- */
+/** Bring the database up to the current schema version. */
 export function migrate(driver: MigrationDriver): void {
   const from = driver.getUserVersion();
-  if (from >= SCHEMA_VERSION) {
-    return;
-  }
+  if (from >= SCHEMA_VERSION) return;
   driver.exec('PRAGMA foreign_keys = OFF');
-  runStatements(driver, from === 0 ? BASELINE_V7 : MIGRATE_V6_TO_V7);
+  if (from === 0) {
+    runStatements(driver, BASELINE_V8);
+  } else if (from < V7_SCHEMA_VERSION) {
+    runStatements(driver, MIGRATE_V6_TO_V7);
+    runStatements(driver, MIGRATE_V7_TO_V8);
+  } else {
+    runStatements(driver, MIGRATE_V7_TO_V8);
+  }
   driver.setUserVersion(SCHEMA_VERSION);
   driver.exec('PRAGMA foreign_keys = ON');
 }

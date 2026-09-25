@@ -295,4 +295,32 @@ describe('v6 → v7 migration', () => {
 
     db.close();
   });
+  it('builds the current schema from empty storage', () => {
+    const db = new DatabaseSync(':memory:');
+    migrate(driverFor(db));
+    expect(
+      (firstRow(db, 'PRAGMA user_version') as VersionRow).user_version,
+    ).toBe(8);
+    expect(
+      (rows(db, 'PRAGMA table_info(setlists)') as ColumnRow[]).map(
+        (row) => row.name,
+      ),
+    ).toContain('active');
+    expect(
+      (rows(db, 'PRAGMA table_info(song_presets)') as ColumnRow[]).map(
+        (row) => row.name,
+      ),
+    ).toContain('poly_accents');
+    expect(
+      rows(
+        db,
+        "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'setlists_one_active'",
+      ),
+    ).toHaveLength(1);
+    db.exec("INSERT INTO setlists (name, uuid, active) VALUES ('A', 'a', 1)");
+    expect(() => {
+      db.exec("INSERT INTO setlists (name, uuid, active) VALUES ('B', 'b', 1)");
+    }).toThrow();
+    db.close();
+  });
 });

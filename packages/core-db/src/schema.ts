@@ -25,6 +25,7 @@ export const setlists = sqliteTable('setlists', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
   uuid: text('uuid').notNull(),
+  active: integer('active', { mode: 'boolean' }).notNull().default(false),
 });
 
 /// An imported audio song in the user's library. This is what v6 called
@@ -66,28 +67,24 @@ export const songPresets = sqliteTable('song_presets', {
   denominator: integer('denominator').notNull().default(DEFAULT_DENOMINATOR),
   accents: blob('accents', { mode: 'buffer' }).notNull(),
   perAccentSounds: blob('per_accent_sounds', { mode: 'buffer' }),
+  polyAccents: blob('poly_accents', { mode: 'buffer' }),
   polyEnabled: integer('poly_enabled', { mode: 'boolean' }).notNull(),
   polyBeats: integer('poly_beats').notNull(),
   sound: integer('sound').notNull(),
-  // Tempo ramp config (§5.3).
   rampEnabled: integer('ramp_enabled', { mode: 'boolean' })
     .notNull()
     .default(false),
   rampStartBpm: real('ramp_start_bpm'),
   rampEndBpm: real('ramp_end_bpm'),
   rampBars: integer('ramp_bars'),
-  // Bar-mute config (§5.3): play N bars, mute M bars.
   barMuteEnabled: integer('bar_mute_enabled', { mode: 'boolean' })
     .notNull()
     .default(false),
   barMutePlayBars: integer('bar_mute_play_bars'),
   barMuteMuteBars: integer('bar_mute_mute_bars'),
-  // Count-in bars before the preset starts (§5.3).
   countInBars: integer('count_in_bars').notNull().default(0),
   notes: text('notes'),
-  // Per-song phase nudge (§8.8).
   phaseNudge: real('phase_nudge').notNull().default(0),
-  // D4 identity tuple (§8.8) — matched against the library until a track joins it.
   title: text('title'),
   artist: text('artist'),
   source: text('source'),

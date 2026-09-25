@@ -1,17 +1,22 @@
-// core-db — Drizzle schema, migrations and the op-sqlite client (SPEC §13.1,
-// §11.1). May import core-plugin-api only.
-//
-// The realtime layer never queries this during playback: the beat grid is
-// handed to `kb_metronome_set_grid` and waveform peaks to the renderer, once,
-// off the UI thread (SPEC §11.2). Nothing here is on a 60fps path.
-
 export * as schema from './schema';
 export {
   migrate,
   SCHEMA_VERSION,
   V6_SCHEMA_VERSION,
+  V7_SCHEMA_VERSION,
   BASELINE_V7,
+  BASELINE_V8,
   MIGRATE_V6_TO_V7,
+  MIGRATE_V7_TO_V8,
   type MigrationDriver,
 } from './migrate';
 export { openDatabase, opSqliteMigrationDriver, DATABASE_NAME } from './client';
+export {
+  createSetlistRepository,
+  createSongPresetRepository,
+  type Database,
+  type NewSongPreset,
+  type Setlist,
+  type SetlistItem,
+  type SongPreset,
+} from './repositories';
