@@ -16,26 +16,6 @@ export interface PrimaryPlayButtonProps {
   readonly onPress: () => void;
 }
 
-export function PrimaryPlayButton({
-  glyph,
-  accessibilityLabel,
-  onPress,
-}: PrimaryPlayButtonProps) {
-  const styles = useStyles();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      style={styles.button}
-      onPress={onPress}
-    >
-      <View style={styles.glyphBox}>
-        <View style={glyph === 'play' ? styles.play : styles.stop} />
-      </View>
-    </Pressable>
-  );
-}
-
 const useStyles = createThemedStyles((theme) => ({
   button: {
     width: size.playButton,
@@ -72,3 +52,23 @@ const useStyles = createThemedStyles((theme) => ({
     backgroundColor: theme.color.onAccent,
   },
 }));
+
+export function PrimaryPlayButton({
+  glyph,
+  accessibilityLabel,
+  onPress,
+}: PrimaryPlayButtonProps) {
+  const styles = useStyles();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      style={styles.button}
+      onPress={onPress}
+    >
+      <View style={styles.glyphBox}>
+        <View style={glyph === 'play' ? styles.play : styles.stop} />
+      </View>
+    </Pressable>
+  );
+}

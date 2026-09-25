@@ -9,6 +9,7 @@ export const space = {
   ledGap: 9,
   rowGap: 10,
   sectionGap: 12,
+  screenInset: 16,
   cardPadding: 14,
   ledGroupGap: 18,
   transportGap: 22,
@@ -28,6 +29,7 @@ export const size = {
   grabWidth: 36,
   grabHeight: 4,
   liveDot: 7,
+  sweepTrack: 3,
 } as const;
 
 export const radius = {
@@ -41,6 +43,8 @@ export const radius = {
   segmentOption: 8,
   preset: 11,
   numpadKey: 11,
+  tempoZone: 18,
+  sweepTrack: 2,
 } as const;
 
 export const inset = {
@@ -59,6 +63,9 @@ export const inset = {
   stepInlineH: 4,
   stepInlineKeyV: 2,
   stepInlineKeyH: 7,
+  tempoZoneTop: 26,
+  tempoZoneBottom: 18,
+  sweepH: 18,
 } as const;
 
 export const opacity = {
@@ -69,6 +76,7 @@ export const mix = {
   activeControl: 0.18,
   activeCard: 0.07,
   badgeBorder: 0.4,
+  tempoZoneGlow: 0.05,
   cardBorder: 0.35,
 } as const;
 
@@ -91,6 +99,9 @@ export const textRoles = {
   presetAction: { family: display, weight: 700, size: 14 },
   preset: { family: display, weight: 500, size: 13.5, tabular: true },
   chip: { family: display, weight: 400, size: 12.5 },
+  chipValue: { family: display, weight: 500, size: 12.5, tabular: true },
+  chipAside: { family: display, weight: 400, size: 11 },
+  tempoCaption: { family: display, weight: 400, size: 11, tracking: 0.22 },
   segment: { family: display, weight: 400, size: 12.5 },
   badge: { family: display, weight: 400, size: 10.5, tracking: 0.06 },
   stepKey: { family: display, weight: 400, size: 14 },
@@ -114,8 +125,8 @@ export type TextRoleName = keyof typeof textRoles;
 export const appBarTitleMinSize = 15;
 
 export const iconSizes = {
-  key: 11,
   chip: 12.5,
+  chevron: 13,
   control: 14,
   action: 16,
   title: 17,

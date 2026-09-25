@@ -47,7 +47,7 @@ export interface Theme {
   readonly shadow: string;
 }
 
-const FEEDBACK_TOKEN: Readonly<Record<FeedbackTone, ColorToken>> = {
+export const FEEDBACK_TOKEN: Readonly<Record<FeedbackTone, ColorToken>> = {
   success: 'green',
   warning: 'amber',
   danger: 'red',

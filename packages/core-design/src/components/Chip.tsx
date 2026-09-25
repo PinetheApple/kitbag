@@ -22,6 +22,49 @@ interface ChipFaceProps {
   readonly liveDot: boolean;
 }
 
+const useStyles = createThemedStyles((theme) => ({
+  row: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: space.controlGap,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    flexShrink: 1,
+    gap: space.chipGap,
+    paddingVertical: inset.chipV,
+    paddingHorizontal: inset.chipH,
+    borderRadius: radius.chip,
+    backgroundColor: theme.color.surface2,
+    borderWidth: size.stroke,
+    borderColor: theme.color.line,
+  },
+  chipActive: {
+    backgroundColor: theme.activeControlFill,
+    borderColor: theme.color.accentDim,
+  },
+  fill: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  label: {
+    ...textStyle(textRoles.chip),
+    color: theme.color.text2,
+    flexShrink: 1,
+  },
+  labelActive: {
+    color: theme.color.accent,
+  },
+  liveDot: {
+    width: size.liveDot,
+    height: size.liveDot,
+    borderRadius: radius.circle,
+    backgroundColor: theme.color.green,
+  },
+}));
+
 function ChipFace({
   label,
   icon,
@@ -121,46 +164,3 @@ export function ChipRow({ children }: ChipRowProps) {
   const styles = useStyles();
   return <View style={styles.row}>{children}</View>;
 }
-
-const useStyles = createThemedStyles((theme) => ({
-  row: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: space.controlGap,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    flexShrink: 1,
-    gap: space.chipGap,
-    paddingVertical: inset.chipV,
-    paddingHorizontal: inset.chipH,
-    borderRadius: radius.chip,
-    backgroundColor: theme.color.surface2,
-    borderWidth: size.stroke,
-    borderColor: theme.color.line,
-  },
-  chipActive: {
-    backgroundColor: theme.activeControlFill,
-    borderColor: theme.color.accentDim,
-  },
-  fill: {
-    flexGrow: 1,
-    justifyContent: 'center',
-  },
-  label: {
-    ...textStyle(textRoles.chip),
-    color: theme.color.text2,
-    flexShrink: 1,
-  },
-  labelActive: {
-    color: theme.color.accent,
-  },
-  liveDot: {
-    width: size.liveDot,
-    height: size.liveDot,
-    borderRadius: radius.circle,
-    backgroundColor: theme.color.green,
-  },
-}));

@@ -24,9 +24,74 @@ import { icons, type IconName } from '../icons.ts';
 import { size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
+import {
+  SHEET_DRAG_ACTIVATION_DP,
+  shouldDismissSheet,
+} from '../sheetDismiss.ts';
 import { radii } from '../tokens.ts';
 
-export const SHEET_DISMISS_DRAG_FRACTION = 0.25;
+const useStyles = createThemedStyles((theme) => ({
+  frame: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  scrim: {
+    flex: 1,
+  },
+  sheet: {
+    flexShrink: 1,
+    backgroundColor: theme.color.surface1,
+    borderTopLeftRadius: radii.sheetTop,
+    borderTopRightRadius: radii.sheetTop,
+    borderBottomLeftRadius: radii.sheetBottom,
+    borderBottomRightRadius: radii.sheetBottom,
+    borderWidth: size.stroke,
+    borderColor: theme.color.line,
+    paddingTop: space.cardPadding,
+    paddingHorizontal: space.cardPadding,
+    gap: space.sectionGap,
+    boxShadow: theme.shadow,
+  },
+  header: {
+    gap: space.sectionGap,
+  },
+  grab: {
+    width: size.grabWidth,
+    height: size.grabHeight,
+    borderRadius: size.grabHeight / 2,
+    backgroundColor: theme.color.surface3,
+    alignSelf: 'center',
+  },
+  title: {
+    ...textStyle(textRoles.sheetTitle),
+    color: theme.color.text,
+  },
+  scroll: {
+    flexGrow: 0,
+  },
+  content: {
+    gap: space.sectionGap,
+  },
+  hint: {
+    ...textStyle(textRoles.hint),
+    color: theme.color.text3,
+  },
+  centered: {
+    textAlign: 'center',
+  },
+}));
+
+export interface SheetHintProps {
+  readonly centered?: boolean;
+  readonly children: ReactNode;
+}
+
+export function SheetHint({ centered = false, children }: SheetHintProps) {
+  const styles = useStyles();
+  return (
+    <Text style={[styles.hint, centered && styles.centered]}>{children}</Text>
+  );
+}
 
 export interface SheetProps {
   readonly visible: boolean;
@@ -71,15 +136,12 @@ export function Sheet({
   const dragToDismiss = useMemo(
     () =>
       Gesture.Pan()
-        .activeOffsetY(space.controlGap)
+        .activeOffsetY(SHEET_DRAG_ACTIVATION_DP)
         .onUpdate((event) => {
           dragY.value = Math.max(0, event.translationY);
         })
         .onEnd((event) => {
-          if (
-            event.translationY >
-            sheetHeight.value * SHEET_DISMISS_DRAG_FRACTION
-          ) {
+          if (shouldDismissSheet(event.translationY, sheetHeight.value)) {
             scheduleOnRN(onDismiss);
             return;
           }
@@ -139,66 +201,3 @@ export function Sheet({
     </Modal>
   );
 }
-
-export interface SheetHintProps {
-  readonly centered?: boolean;
-  readonly children: ReactNode;
-}
-
-export function SheetHint({ centered = false, children }: SheetHintProps) {
-  const styles = useStyles();
-  return (
-    <Text style={[styles.hint, centered && styles.centered]}>{children}</Text>
-  );
-}
-
-const useStyles = createThemedStyles((theme) => ({
-  frame: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  scrim: {
-    flex: 1,
-  },
-  sheet: {
-    flexShrink: 1,
-    backgroundColor: theme.color.surface1,
-    borderTopLeftRadius: radii.sheetTop,
-    borderTopRightRadius: radii.sheetTop,
-    borderBottomLeftRadius: radii.sheetBottom,
-    borderBottomRightRadius: radii.sheetBottom,
-    borderWidth: size.stroke,
-    borderColor: theme.color.line,
-    paddingTop: space.cardPadding,
-    paddingHorizontal: space.cardPadding,
-    gap: space.sectionGap,
-    boxShadow: theme.shadow,
-  },
-  header: {
-    gap: space.sectionGap,
-  },
-  grab: {
-    width: size.grabWidth,
-    height: size.grabHeight,
-    borderRadius: size.grabHeight / 2,
-    backgroundColor: theme.color.surface3,
-    alignSelf: 'center',
-  },
-  title: {
-    ...textStyle(textRoles.sheetTitle),
-    color: theme.color.text,
-  },
-  scroll: {
-    flexGrow: 0,
-  },
-  content: {
-    gap: space.sectionGap,
-  },
-  hint: {
-    ...textStyle(textRoles.hint),
-    color: theme.color.text3,
-  },
-  centered: {
-    textAlign: 'center',
-  },
-}));

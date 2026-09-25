@@ -32,45 +32,6 @@ export interface ButtonProps {
   readonly accessibilityLabel?: string;
 }
 
-export function Button({
-  label,
-  onPress,
-  variant = 'tonal',
-  icon,
-  disabled = false,
-  fill = false,
-  accessibilityLabel,
-}: ButtonProps) {
-  const styles = useStyles();
-  const labelStyle = styles[`${variant}Label`];
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel ?? label}
-      accessibilityState={{ disabled }}
-      disabled={disabled}
-      style={[
-        styles.base,
-        styles[variant],
-        fill && styles.fill,
-        disabled && styles.disabled,
-      ]}
-      hitSlop={HIT_SLOP}
-      onPress={onPress}
-    >
-      {icon === undefined ? null : (
-        <Text
-          importantForAccessibility="no-hide-descendants"
-          style={[styles.icon, labelStyle]}
-        >
-          {icons[icon]}
-        </Text>
-      )}
-      <Text style={[styles.label, labelStyle]}>{label}</Text>
-    </Pressable>
-  );
-}
-
 const useStyles = createThemedStyles((theme) => ({
   base: {
     flexDirection: 'row',
@@ -124,3 +85,42 @@ const useStyles = createThemedStyles((theme) => ({
     color: theme.onDanger,
   },
 }));
+
+export function Button({
+  label,
+  onPress,
+  variant = 'tonal',
+  icon,
+  disabled = false,
+  fill = false,
+  accessibilityLabel,
+}: ButtonProps) {
+  const styles = useStyles();
+  const labelStyle = styles[`${variant}Label`];
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      style={[
+        styles.base,
+        styles[variant],
+        fill && styles.fill,
+        disabled && styles.disabled,
+      ]}
+      hitSlop={HIT_SLOP}
+      onPress={onPress}
+    >
+      {icon === undefined ? null : (
+        <Text
+          importantForAccessibility="no-hide-descendants"
+          style={[styles.icon, labelStyle]}
+        >
+          {icons[icon]}
+        </Text>
+      )}
+      <Text style={[styles.label, labelStyle]}>{label}</Text>
+    </Pressable>
+  );
+}

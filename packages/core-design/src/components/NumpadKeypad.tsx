@@ -30,6 +30,36 @@ interface DigitKeyProps {
   readonly onDigit: (digit: number) => void;
 }
 
+const useStyles = createThemedStyles((theme) => ({
+  pad: {
+    gap: space.controlGap,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: space.controlGap,
+  },
+  key: {
+    flex: 1,
+    paddingVertical: inset.numpadKeyV,
+    borderRadius: radius.numpadKey,
+    backgroundColor: theme.color.surface2,
+    borderWidth: size.stroke,
+    borderColor: theme.color.line,
+    alignItems: 'center',
+  },
+  keyText: {
+    ...textStyle(textRoles.numpadKey),
+    color: theme.color.text,
+  },
+  confirmKey: {
+    backgroundColor: theme.color.accent,
+    borderColor: theme.color.accent,
+  },
+  confirmKeyText: {
+    color: theme.color.onAccent,
+  },
+}));
+
 function DigitKey({ digit, onDigit }: DigitKeyProps) {
   const styles = useStyles();
   const handlePress = useCallback(() => {
@@ -99,33 +129,3 @@ export function NumpadKeypad({
     </View>
   );
 }
-
-const useStyles = createThemedStyles((theme) => ({
-  pad: {
-    gap: space.controlGap,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: space.controlGap,
-  },
-  key: {
-    flex: 1,
-    paddingVertical: inset.numpadKeyV,
-    borderRadius: radius.numpadKey,
-    backgroundColor: theme.color.surface2,
-    borderWidth: size.stroke,
-    borderColor: theme.color.line,
-    alignItems: 'center',
-  },
-  keyText: {
-    ...textStyle(textRoles.numpadKey),
-    color: theme.color.text,
-  },
-  confirmKey: {
-    backgroundColor: theme.color.accent,
-    borderColor: theme.color.accent,
-  },
-  confirmKeyText: {
-    color: theme.color.onAccent,
-  },
-}));

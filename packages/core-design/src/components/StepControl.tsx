@@ -38,6 +38,75 @@ export interface StepControlProps {
   readonly accented?: boolean;
 }
 
+const useStyles = createThemedStyles((theme) => ({
+  badgeCluster: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.stepKeyGap,
+  },
+  badgeKey: {
+    minWidth: size.stepKey,
+    minHeight: size.stepKey,
+    borderRadius: radius.stepKey,
+    backgroundColor: theme.color.surface2,
+    borderWidth: size.stroke,
+    borderColor: theme.color.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeKeyText: {
+    ...textStyle(textRoles.stepKey),
+    color: theme.color.text2,
+  },
+  badgeValueBox: {
+    paddingHorizontal: inset.badgeH,
+    paddingVertical: inset.badgeV,
+    borderRadius: radius.badge,
+    backgroundColor: theme.color.surface2,
+    borderWidth: size.stroke,
+    borderColor: theme.color.line,
+  },
+  badgeValueBoxAccented: {
+    borderColor: theme.color.accentDim,
+  },
+  badgeValue: {
+    ...textStyle(textRoles.badge),
+    fontVariant: ['tabular-nums'],
+    color: theme.color.text2,
+  },
+  badgeValueAccented: {
+    color: theme.color.accent,
+  },
+  inlineCluster: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.inlineKeyGap,
+    paddingVertical: inset.stepInlineV,
+    paddingHorizontal: inset.stepInlineH,
+    borderRadius: radius.stepInline,
+    backgroundColor: theme.color.surface2,
+    borderWidth: size.stroke,
+    borderColor: theme.color.line,
+  },
+  inlineKey: {
+    paddingVertical: inset.stepInlineKeyV,
+    paddingHorizontal: inset.stepInlineKeyH,
+    borderRadius: radius.stepInlineKey,
+  },
+  inlineKeyText: {
+    ...textStyle(textRoles.stepInline),
+    color: theme.color.text2,
+  },
+  inlineValueBox: {
+    minWidth: size.stepValueMinWidth,
+    alignItems: 'center',
+  },
+  inlineValue: {
+    ...textStyle(textRoles.stepInlineValue),
+    color: theme.color.text,
+  },
+}));
+
 export function StepControl({
   label,
   value,
@@ -120,72 +189,3 @@ export function StepControl({
     </View>
   );
 }
-
-const useStyles = createThemedStyles((theme) => ({
-  badgeCluster: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.stepKeyGap,
-  },
-  badgeKey: {
-    minWidth: size.stepKey,
-    minHeight: size.stepKey,
-    borderRadius: radius.stepKey,
-    backgroundColor: theme.color.surface2,
-    borderWidth: size.stroke,
-    borderColor: theme.color.line,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badgeKeyText: {
-    ...textStyle(textRoles.stepKey),
-    color: theme.color.text2,
-  },
-  badgeValueBox: {
-    paddingHorizontal: inset.badgeH,
-    paddingVertical: inset.badgeV,
-    borderRadius: radius.badge,
-    backgroundColor: theme.color.surface2,
-    borderWidth: size.stroke,
-    borderColor: theme.color.line,
-  },
-  badgeValueBoxAccented: {
-    borderColor: theme.color.accentDim,
-  },
-  badgeValue: {
-    ...textStyle(textRoles.badge),
-    fontVariant: ['tabular-nums'],
-    color: theme.color.text2,
-  },
-  badgeValueAccented: {
-    color: theme.color.accent,
-  },
-  inlineCluster: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.inlineKeyGap,
-    paddingVertical: inset.stepInlineV,
-    paddingHorizontal: inset.stepInlineH,
-    borderRadius: radius.stepInline,
-    backgroundColor: theme.color.surface2,
-    borderWidth: size.stroke,
-    borderColor: theme.color.line,
-  },
-  inlineKey: {
-    paddingVertical: inset.stepInlineKeyV,
-    paddingHorizontal: inset.stepInlineKeyH,
-    borderRadius: radius.stepInlineKey,
-  },
-  inlineKeyText: {
-    ...textStyle(textRoles.stepInline),
-    color: theme.color.text2,
-  },
-  inlineValueBox: {
-    minWidth: size.stepValueMinWidth,
-    alignItems: 'center',
-  },
-  inlineValue: {
-    ...textStyle(textRoles.stepInlineValue),
-    color: theme.color.text,
-  },
-}));

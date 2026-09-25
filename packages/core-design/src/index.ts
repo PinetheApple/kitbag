@@ -4,6 +4,7 @@ export * from './theme.ts';
 export * from './textStyle.ts';
 export * from './touchTarget.ts';
 export * from './icons.ts';
+export * from './sheetDismiss.ts';
 export * from './ThemeProvider.tsx';
 export * from './components/AppBar.tsx';
 export * from './components/Badge.tsx';

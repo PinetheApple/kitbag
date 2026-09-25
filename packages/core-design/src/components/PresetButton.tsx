@@ -34,29 +34,6 @@ export interface PresetButtonProps {
   readonly accessibilityLabel?: string;
 }
 
-export function PresetButton({
-  label,
-  onPress,
-  kind = 'preset',
-  accessibilityLabel,
-}: PresetButtonProps) {
-  const styles = useStyles();
-  const action = kind === 'action';
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel ?? label}
-      style={action ? styles.action : styles.preset}
-      hitSlop={HIT_SLOP[kind]}
-      onPress={onPress}
-    >
-      <Text style={action ? styles.actionText : styles.presetText}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
-
 const useStyles = createThemedStyles((theme) => ({
   preset: {
     flex: 1,
@@ -87,3 +64,26 @@ const useStyles = createThemedStyles((theme) => ({
     color: theme.color.text,
   },
 }));
+
+export function PresetButton({
+  label,
+  onPress,
+  kind = 'preset',
+  accessibilityLabel,
+}: PresetButtonProps) {
+  const styles = useStyles();
+  const action = kind === 'action';
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? label}
+      style={action ? styles.action : styles.preset}
+      hitSlop={HIT_SLOP[kind]}
+      onPress={onPress}
+    >
+      <Text style={action ? styles.actionText : styles.presetText}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}

@@ -14,26 +14,6 @@ export interface BadgeProps {
   readonly accessibilityLabel?: string;
 }
 
-export function Badge({
-  label,
-  tone = 'default',
-  icon,
-  accessibilityLabel,
-}: BadgeProps) {
-  const styles = useStyles();
-  const text = icon === undefined ? label : `${icons[icon]} ${label}`;
-  return (
-    <View
-      accessible
-      accessibilityRole="text"
-      accessibilityLabel={accessibilityLabel ?? label}
-      style={[styles.badge, styles[`${tone}Box`]]}
-    >
-      <Text style={[styles.label, styles[`${tone}Label`]]}>{text}</Text>
-    </View>
-  );
-}
-
 const useStyles = createThemedStyles((theme) => ({
   badge: {
     alignSelf: 'flex-start',
@@ -57,3 +37,23 @@ const useStyles = createThemedStyles((theme) => ({
   dangerBox: { borderColor: theme.feedback.danger.badgeBorder },
   dangerLabel: { color: theme.feedback.danger.fg },
 }));
+
+export function Badge({
+  label,
+  tone = 'default',
+  icon,
+  accessibilityLabel,
+}: BadgeProps) {
+  const styles = useStyles();
+  const text = icon === undefined ? label : `${icons[icon]} ${label}`;
+  return (
+    <View
+      accessible
+      accessibilityRole="text"
+      accessibilityLabel={accessibilityLabel ?? label}
+      style={[styles.badge, styles[`${tone}Box`]]}
+    >
+      <Text style={[styles.label, styles[`${tone}Label`]]}>{text}</Text>
+    </View>
+  );
+}

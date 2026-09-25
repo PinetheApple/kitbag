@@ -19,6 +19,37 @@ export type TransportKeyProps = TransportKeyContent & {
   readonly disabled?: boolean;
 };
 
+const useStyles = createThemedStyles((theme) => ({
+  key: {
+    minWidth: size.transportKey,
+    minHeight: size.transportKey,
+    borderRadius: radius.circle,
+    backgroundColor: theme.color.surface2,
+    borderWidth: size.stroke,
+    borderColor: theme.color.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selected: {
+    backgroundColor: theme.activeControlFill,
+    borderColor: theme.color.accentDim,
+  },
+  disabled: {
+    opacity: opacity.muted,
+  },
+  glyph: {
+    ...textStyle(textRoles.transportKey),
+    color: theme.color.text,
+  },
+  glyphSelected: {
+    color: theme.color.accent,
+  },
+  spacer: {
+    width: size.transportKey,
+    height: size.transportKey,
+  },
+}));
+
 export function TransportKey({
   icon,
   text,
@@ -53,34 +84,3 @@ export function TransportKeySpacer() {
   const styles = useStyles();
   return <View style={styles.spacer} />;
 }
-
-const useStyles = createThemedStyles((theme) => ({
-  key: {
-    minWidth: size.transportKey,
-    minHeight: size.transportKey,
-    borderRadius: radius.circle,
-    backgroundColor: theme.color.surface2,
-    borderWidth: size.stroke,
-    borderColor: theme.color.line,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  selected: {
-    backgroundColor: theme.activeControlFill,
-    borderColor: theme.color.accentDim,
-  },
-  disabled: {
-    opacity: opacity.muted,
-  },
-  glyph: {
-    ...textStyle(textRoles.transportKey),
-    color: theme.color.text,
-  },
-  glyphSelected: {
-    color: theme.color.accent,
-  },
-  spacer: {
-    width: size.transportKey,
-    height: size.transportKey,
-  },
-}));

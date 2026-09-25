@@ -25,6 +25,27 @@ export interface AppBarProps {
   readonly trailing?: ReactNode;
 }
 
+const useStyles = createThemedStyles((theme) => ({
+  bar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: space.controlGap,
+    padding: inset.appBar,
+  },
+  lead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.chipGap,
+    flexShrink: 1,
+  },
+  title: {
+    ...textStyle(textRoles.appBarTitle),
+    color: theme.color.text,
+    flexShrink: 1,
+  },
+}));
+
 export function AppBar({
   title,
   onBack,
@@ -83,24 +104,3 @@ export function AppBarAction({
     </Pressable>
   );
 }
-
-const useStyles = createThemedStyles((theme) => ({
-  bar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: space.controlGap,
-    padding: inset.appBar,
-  },
-  lead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.chipGap,
-    flexShrink: 1,
-  },
-  title: {
-    ...textStyle(textRoles.appBarTitle),
-    color: theme.color.text,
-    flexShrink: 1,
-  },
-}));

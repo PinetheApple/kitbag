@@ -29,6 +29,37 @@ interface RestingColors {
   readonly borderColor: string;
 }
 
+const useStyles = createThemedStyles(() => ({
+  rows: {
+    gap: space.controlGap,
+    alignItems: 'flex-end',
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: space.ledGroupGap,
+  },
+  group: {
+    flexDirection: 'row',
+    gap: space.ledGap,
+  },
+  main: {
+    width: size.ledMain,
+    height: size.ledMain,
+    borderRadius: ledRadius,
+    borderWidth: size.ledMainBorder,
+  },
+  small: {
+    width: size.ledSmall,
+    height: size.ledSmall,
+    borderRadius: ledRadius,
+    borderWidth: size.ledSmallBorder,
+  },
+  muted: {
+    opacity: opacity.muted,
+  },
+}));
+
 function restingColors(theme: Theme, state: LedState): RestingColors {
   if (state === 'accented') {
     return { backgroundColor: TRANSPARENT, borderColor: theme.color.accent };
@@ -153,34 +184,3 @@ export function BeatLedRow({
     </View>
   );
 }
-
-const useStyles = createThemedStyles(() => ({
-  rows: {
-    gap: space.controlGap,
-    alignItems: 'flex-end',
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: space.ledGroupGap,
-  },
-  group: {
-    flexDirection: 'row',
-    gap: space.ledGap,
-  },
-  main: {
-    width: size.ledMain,
-    height: size.ledMain,
-    borderRadius: ledRadius,
-    borderWidth: size.ledMainBorder,
-  },
-  small: {
-    width: size.ledSmall,
-    height: size.ledSmall,
-    borderRadius: ledRadius,
-    borderWidth: size.ledSmallBorder,
-  },
-  muted: {
-    opacity: opacity.muted,
-  },
-}));

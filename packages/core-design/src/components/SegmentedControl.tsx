@@ -6,11 +6,6 @@ import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { hitSlopForPadded } from '../touchTarget.ts';
 
-const hitSlopBetween = (gapDp: number) =>
-  hitSlopForPadded(textRoles.segment.size, inset.segmentOptionV, gapDp);
-const OPTION_HIT_SLOP = hitSlopBetween(space.segmentInset);
-const LONE_OPTION_HIT_SLOP = hitSlopBetween(Number.POSITIVE_INFINITY);
-
 export interface SegmentOption<T extends string> {
   readonly value: T;
   readonly label: string;
@@ -25,6 +20,7 @@ export interface SegmentedControlProps<T extends string> {
   readonly compact?: boolean;
   readonly selectedTone?: 'neutral' | 'accent';
   readonly fill?: boolean;
+  readonly neighbourGapDp?: number;
 }
 
 interface SegmentProps<T extends string> {
@@ -33,70 +29,6 @@ interface SegmentProps<T extends string> {
   readonly accent: boolean;
   readonly hitSlop: number;
   readonly onSelect: (value: T) => void;
-}
-
-function Segment<T extends string>({
-  option,
-  selected,
-  accent,
-  hitSlop,
-  onSelect,
-}: SegmentProps<T>) {
-  const styles = useStyles();
-  const handlePress = useCallback(() => {
-    onSelect(option.value);
-  }, [onSelect, option.value]);
-
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={option.accessibilityLabel ?? option.label}
-      accessibilityState={{ selected }}
-      style={[styles.option, selected && styles.optionSelected]}
-      hitSlop={hitSlop}
-      onPress={handlePress}
-    >
-      <Text
-        style={[
-          styles.label,
-          selected && (accent ? styles.labelAccent : styles.labelSelected),
-        ]}
-      >
-        {option.label}
-      </Text>
-    </Pressable>
-  );
-}
-
-export function SegmentedControl<T extends string>({
-  options,
-  selected,
-  onSelect,
-  accessibilityLabel,
-  compact = false,
-  selectedTone = 'neutral',
-  fill = false,
-}: SegmentedControlProps<T>) {
-  const styles = useStyles();
-  return (
-    <View
-      accessibilityLabel={accessibilityLabel}
-      style={[compact ? styles.compact : styles.track, fill && styles.fill]}
-    >
-      {options.map((option) => (
-        <Segment
-          key={option.value}
-          option={option}
-          selected={option.value === selected}
-          accent={selectedTone === 'accent'}
-          hitSlop={
-            options.length === 1 ? LONE_OPTION_HIT_SLOP : OPTION_HIT_SLOP
-          }
-          onSelect={onSelect}
-        />
-      ))}
-    </View>
-  );
 }
 
 const useStyles = createThemedStyles((theme) => ({
@@ -137,3 +69,72 @@ const useStyles = createThemedStyles((theme) => ({
     color: theme.color.accent,
   },
 }));
+
+function Segment<T extends string>({
+  option,
+  selected,
+  accent,
+  hitSlop,
+  onSelect,
+}: SegmentProps<T>) {
+  const styles = useStyles();
+  const handlePress = useCallback(() => {
+    onSelect(option.value);
+  }, [onSelect, option.value]);
+
+  return (
+    <Pressable
+      accessibilityRole="radio"
+      accessibilityLabel={option.accessibilityLabel ?? option.label}
+      accessibilityState={{ checked: selected }}
+      style={[styles.option, selected && styles.optionSelected]}
+      hitSlop={hitSlop}
+      onPress={handlePress}
+    >
+      <Text
+        style={[
+          styles.label,
+          selected && (accent ? styles.labelAccent : styles.labelSelected),
+        ]}
+      >
+        {option.label}
+      </Text>
+    </Pressable>
+  );
+}
+
+export function SegmentedControl<T extends string>({
+  options,
+  selected,
+  onSelect,
+  accessibilityLabel,
+  compact = false,
+  selectedTone = 'neutral',
+  fill = false,
+  neighbourGapDp = space.segmentInset,
+}: SegmentedControlProps<T>) {
+  const styles = useStyles();
+  const hitSlop = hitSlopForPadded(
+    textRoles.segment.size,
+    inset.segmentOptionV,
+    neighbourGapDp,
+  );
+  return (
+    <View
+      accessibilityRole="radiogroup"
+      accessibilityLabel={accessibilityLabel}
+      style={[compact ? styles.compact : styles.track, fill && styles.fill]}
+    >
+      {options.map((option) => (
+        <Segment
+          key={option.value}
+          option={option}
+          selected={option.value === selected}
+          accent={selectedTone === 'accent'}
+          hitSlop={hitSlop}
+          onSelect={onSelect}
+        />
+      ))}
+    </View>
+  );
+}
