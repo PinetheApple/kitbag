@@ -21,6 +21,26 @@ export const KB_MAX_BEATS = 16;
 export const KB_DENOMINATORS = [2, 4, 8, 16] as const;
 export type KbDenominator = (typeof KB_DENOMINATORS)[number];
 
+/** Poly-row beat count the engine holds (Metronome::kMinPolyBeats..kMaxPolyBeats); it clamps outside. */
+export const KB_POLY_BEATS_BOUNDS = {
+  min: 2,
+  max: 16,
+} as const;
+
+/** Count-in bar choices (Metronome::kCountInBarChoices); 0 is off, anything else is ignored. */
+export const KB_COUNT_IN_BARS = [0, 1, 2, 4] as const;
+export type KbCountInBars = (typeof KB_COUNT_IN_BARS)[number];
+
+/** Sound id a distinct count-in uses until set (Metronome::kDefaultCountInSound). */
+export const KB_DEFAULT_COUNT_IN_SOUND = 1;
+
+/** Tempo-ramp duration bounds the engine clamps to (TempoRamp::kMaxBars, kMinSeconds, kMaxSeconds). */
+export const KB_RAMP_MAX_BARS = 64;
+export const KB_RAMP_SECONDS_BOUNDS = {
+  min: 1,
+  max: 3600,
+} as const;
+
 /** Denominator BPM is referenced to (Metronome::kBpmReferenceDenominator): quarter note. */
 export const KB_BPM_REFERENCE_DENOMINATOR = 4;
 
@@ -47,6 +67,14 @@ export const KB_ACCENT = {
   KB_ACCENT_ACCENTED: 2,
 } as const;
 export type KB_ACCENT = (typeof KB_ACCENT)[keyof typeof KB_ACCENT];
+
+/** kb_ramp_unit enum. */
+export const KB_RAMP_UNIT = {
+  KB_RAMP_BARS: 0,
+  KB_RAMP_SECONDS: 1,
+  KB_RAMP_MINUTES: 2,
+} as const;
+export type KB_RAMP_UNIT = (typeof KB_RAMP_UNIT)[keyof typeof KB_RAMP_UNIT];
 
 /** Metronome output-latency offset range, in ms (kb_metronome_set_latency_offset). */
 export const KB_LATENCY_OFFSET_MS_BOUNDS = {

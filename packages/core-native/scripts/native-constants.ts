@@ -22,6 +22,8 @@ export interface NativeSources {
   readonly metronomeHeader: string;
   /** native/audio_core/src/metronome/metronome_render.cpp — the sound presets. */
   readonly metronomeRender: string;
+  /** native/audio_core/src/metronome/tempo_ramp.h — ramp duration bounds. */
+  readonly tempoRampHeader: string;
 }
 
 export interface EnumMember {
@@ -47,6 +49,13 @@ export interface NativeConstants {
   readonly maxGridBeats: number;
   readonly maxTracks: number;
   readonly maxBeats: number;
+  readonly minPolyBeats: number;
+  readonly maxPolyBeats: number;
+  readonly countInBars: readonly number[];
+  readonly defaultCountInSound: number;
+  readonly rampMaxBars: number;
+  readonly rampSeconds: { readonly min: number; readonly max: number };
+  readonly rampUnit: readonly EnumMember[];
   readonly bpmReferenceDenominator: number;
   readonly denominators: readonly number[];
   readonly soundNames: readonly string[];
@@ -225,6 +234,22 @@ export function collectConstants(sources: NativeSources): NativeConstants {
     maxGridBeats: parseDefineInt(sources.apiHeader, 'KB_MAX_GRID_BEATS'),
     maxTracks: parseConstexprInt(sources.mixerHeader, 'kMaxTracks'),
     maxBeats: parseConstexprInt(sources.metronomeHeader, 'kMaxBeats'),
+    minPolyBeats: parseConstexprInt(sources.metronomeHeader, 'kMinPolyBeats'),
+    maxPolyBeats: parseConstexprInt(sources.metronomeHeader, 'kMaxPolyBeats'),
+    countInBars: parseConstexprIntArray(
+      sources.metronomeHeader,
+      'kCountInBarChoices',
+    ),
+    defaultCountInSound: parseConstexprInt(
+      sources.metronomeHeader,
+      'kDefaultCountInSound',
+    ),
+    rampMaxBars: parseConstexprInt(sources.tempoRampHeader, 'kMaxBars'),
+    rampSeconds: {
+      min: parseConstexprInt(sources.tempoRampHeader, 'kMinSeconds'),
+      max: parseConstexprInt(sources.tempoRampHeader, 'kMaxSeconds'),
+    },
+    rampUnit: parseEnum(sources.apiHeader, 'kb_ramp_unit'),
     bpmReferenceDenominator: parseConstexprInt(
       sources.metronomeHeader,
       'kBpmReferenceDenominator',
@@ -294,6 +319,26 @@ export const KB_MAX_BEATS = ${String(c.maxBeats)};
 export const KB_DENOMINATORS = [${c.denominators.map(String).join(', ')}] as const;
 export type KbDenominator = (typeof KB_DENOMINATORS)[number];
 
+/** Poly-row beat count the engine holds (Metronome::kMinPolyBeats..kMaxPolyBeats); it clamps outside. */
+export const KB_POLY_BEATS_BOUNDS = {
+  min: ${String(c.minPolyBeats)},
+  max: ${String(c.maxPolyBeats)},
+} as const;
+
+/** Count-in bar choices (Metronome::kCountInBarChoices); 0 is off, anything else is ignored. */
+export const KB_COUNT_IN_BARS = [${c.countInBars.map(String).join(', ')}] as const;
+export type KbCountInBars = (typeof KB_COUNT_IN_BARS)[number];
+
+/** Sound id a distinct count-in uses until set (Metronome::kDefaultCountInSound). */
+export const KB_DEFAULT_COUNT_IN_SOUND = ${String(c.defaultCountInSound)};
+
+/** Tempo-ramp duration bounds the engine clamps to (TempoRamp::kMaxBars, kMinSeconds, kMaxSeconds). */
+export const KB_RAMP_MAX_BARS = ${String(c.rampMaxBars)};
+export const KB_RAMP_SECONDS_BOUNDS = {
+  min: ${String(c.rampSeconds.min)},
+  max: ${String(c.rampSeconds.max)},
+} as const;
+
 /** Denominator BPM is referenced to (Metronome::kBpmReferenceDenominator): quarter note. */
 export const KB_BPM_REFERENCE_DENOMINATOR = ${String(c.bpmReferenceDenominator)};
 
@@ -308,6 +353,8 @@ export type KbSoundName = (typeof KB_SOUND_NAMES)[number];
 ${renderEnum('KB_RESULT', c.result)}
 /** kb_accent enum. */
 ${renderEnum('KB_ACCENT', c.accent)}
+/** kb_ramp_unit enum. */
+${renderEnum('KB_RAMP_UNIT', c.rampUnit)}
 /** Metronome output-latency offset range, in ms (kb_metronome_set_latency_offset). */
 export const KB_LATENCY_OFFSET_MS_BOUNDS = {
   min: ${String(c.latencyOffsetMsBounds.min)},

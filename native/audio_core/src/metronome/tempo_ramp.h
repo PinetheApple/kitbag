@@ -11,8 +11,8 @@ enum class RampUnit : uint8_t { kBars = 0, kSeconds = 1, kMinutes = 2 };
 class TempoRamp {
  public:
   static constexpr int kMaxBars = 64;
-  static constexpr double kMinSeconds = 1.0;
-  static constexpr double kMaxSeconds = 3600.0;
+  static constexpr int kMinSeconds = 1;
+  static constexpr int kMaxSeconds = 3600;
   static constexpr double kMinBpm = 20.0;
   static constexpr double kMaxBpm = 400.0;
 

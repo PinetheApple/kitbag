@@ -9,6 +9,18 @@ namespace kitbag {
 using metronome_detail::Clamp;
 using metronome_detail::kSecondsPerMinute;
 
+namespace {
+
+double ClampSeconds(double seconds) {
+  return Clamp(
+      seconds,
+      static_cast<double>(TempoRamp::kMinSeconds),
+      static_cast<double>(TempoRamp::kMaxSeconds)
+  );
+}
+
+}  // namespace
+
 bool TempoRamp::Configure(
     double start_bpm,
     double end_bpm,
@@ -26,10 +38,10 @@ bool TempoRamp::Configure(
       length_ = Clamp(std::round(duration), 1.0, static_cast<double>(kMaxBars));
       break;
     case RampUnit::kSeconds:
-      length_ = Clamp(duration, kMinSeconds, kMaxSeconds);
+      length_ = ClampSeconds(duration);
       break;
     case RampUnit::kMinutes:
-      length_ = Clamp(duration * kSecondsPerMinute, kMinSeconds, kMaxSeconds);
+      length_ = ClampSeconds(duration * kSecondsPerMinute);
       break;
   }
   in_seconds_ = static_cast<RampUnit>(unit) != RampUnit::kBars;

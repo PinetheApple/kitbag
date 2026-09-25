@@ -38,6 +38,7 @@ const realSources: NativeSources = {
   mixerHeader: read('src', 'mixer', 'mixer.h'),
   metronomeHeader: read('src', 'metronome', 'metronome.h'),
   metronomeRender: read('src', 'metronome', 'metronome_render.cpp'),
+  tempoRampHeader: read('src', 'metronome', 'tempo_ramp.h'),
 };
 
 describe('parseDefineInt', () => {
@@ -180,6 +181,17 @@ describe('collectConstants (real engine source)', () => {
       'KB_ERROR_DEVICE_START_FAILED',
     );
     expect(c.accent).toHaveLength(3);
+    expect(c.minPolyBeats).toBe(2);
+    expect(c.maxPolyBeats).toBe(16);
+    expect(c.countInBars).toEqual([0, 1, 2, 4]);
+    expect(c.defaultCountInSound).toBe(1);
+    expect(c.rampMaxBars).toBe(64);
+    expect(c.rampSeconds).toEqual({ min: 1, max: 3600 });
+    expect(c.rampUnit).toEqual([
+      { name: 'KB_RAMP_BARS', value: 0 },
+      { name: 'KB_RAMP_SECONDS', value: 1 },
+      { name: 'KB_RAMP_MINUTES', value: 2 },
+    ]);
     // render twice: identical, so generate:check can byte-diff deterministically.
     expect(renderConstants(c)).toBe(renderConstants(c));
   });

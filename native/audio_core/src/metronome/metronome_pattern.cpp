@@ -69,7 +69,7 @@ void Metronome::SetSoundsState(int32_t normal_sound, int32_t accent_sound) {
 }
 
 void Metronome::SetPolyState(bool enabled, int32_t beats) {
-  const int32_t count = Clamp(beats, 2, kMaxPolyBeats);
+  const int32_t count = Clamp(beats, kMinPolyBeats, kMaxPolyBeats);
   ResetGrownSlots(poly_accents_, poly_beats_, count);
   if (!enabled || count != poly_beats_) {
     current_poly_beat_.store(-1, std::memory_order_relaxed);

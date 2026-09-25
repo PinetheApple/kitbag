@@ -21,6 +21,7 @@ class Metronome {
  public:
   static constexpr int kMaxBeats = 16;
   static constexpr int kMaxSubdivision = 16;
+  static constexpr int kMinPolyBeats = 2;
   static constexpr int kMaxPolyBeats = 16;
   static constexpr int kSoundCount = 6;
   static constexpr double kMinBpm = TempoRamp::kMinBpm;
