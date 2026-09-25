@@ -1,6 +1,7 @@
 import { open, type DB } from '@op-engineering/op-sqlite';
 import { drizzle } from 'drizzle-orm/op-sqlite';
 
+import { createBackupService } from './backup';
 import * as schema from './schema';
 import { migrate, type MigrationDriver } from './migrate';
 import { createSetlistRepository } from './setlist-repository';
@@ -19,6 +20,7 @@ export function openDatabase(name: string = DATABASE_NAME) {
   return {
     setlists: createSetlistRepository(handle),
     presets: createSongPresetRepository(handle),
+    backup: createBackupService(handle),
     close: () =>
       handle.transactor.serial(async () => {
         await connection.closeAsync();
