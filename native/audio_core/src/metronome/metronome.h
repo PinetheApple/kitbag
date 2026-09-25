@@ -205,6 +205,8 @@ class Metronome {
   static void InitAccentRow(std::span<Accent> row);
   static void
   SetAccentSlot(std::span<Accent> row, int32_t beat_index, int32_t accent);
+  static void
+  ResetGrownSlots(std::span<Accent> row, int32_t old_count, int32_t new_count);
   void SetSignatureState(int32_t numerator, int32_t denominator);
   static bool IsValidDenominator(int32_t denominator);
   void SetPolyState(bool enabled, int32_t beats);

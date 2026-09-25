@@ -10,6 +10,10 @@ constexpr double kBpm = 90.0;
 constexpr double kSwitchBpm = 120.0;
 constexpr int kNumerator = 7;
 constexpr double kFixtureTolerance = 1e-3;
+constexpr double kAccentedPeak = 0.9;
+constexpr double kNormalPeak = 0.6;
+constexpr double kPeakTolerance = 0.05;
+constexpr double kSilentCeiling = 0.1;
 
 double BeatFrames(double bpm, int denominator) {
   return 60.0 / bpm * (4.0 / denominator) * kSampleRate;
@@ -258,6 +262,33 @@ void TestAnchorLatencyIsDenominatorIndependent() {
   ExpectAnchorLatencyShift(8, "anchored 7/8, +100 ms");
 }
 
+double BeatPeakAfterShrinkAndGrow(int beat) {
+  kitbag::Metronome metronome;
+  metronome.SetTempo(kSwitchBpm);
+  metronome.SetAccent(1, kitbag::Accent::kMuted);
+  metronome.SetAccent(3, kitbag::Accent::kMuted);
+  metronome.SetTimeSignature(3, 4);
+  metronome.SetTimeSignature(4, 4);
+  metronome.Start();
+  const auto onset = static_cast<int64_t>(beat * BeatFrames(kSwitchBpm, 4));
+  return WindowedPeak(metronome, onset, onset + kOnsetHoldFrames);
+}
+
+void TestGrowingBarResetsExposedAccents() {
+  Check(
+      std::fabs(BeatPeakAfterShrinkAndGrow(3) - kNormalPeak) < kPeakTolerance,
+      "meter grow: beat 4 muted in 4/4, via 3/4, sounds normal again"
+  );
+  Check(
+      BeatPeakAfterShrinkAndGrow(1) < kSilentCeiling,
+      "meter grow: beat 2 kept through 3/4 stays muted"
+  );
+  Check(
+      std::fabs(BeatPeakAfterShrinkAndGrow(0) - kAccentedPeak) < kPeakTolerance,
+      "meter grow: downbeat stays accented"
+  );
+}
+
 }  // namespace
 
 void RunSignatureTests() {
@@ -270,6 +301,7 @@ void RunSignatureTests() {
   TestMidRunSwitchDoesNotRefireAClick();
   TestAnchorFollowsDenominator();
   TestAnchorLatencyIsDenominatorIndependent();
+  TestGrowingBarResetsExposedAccents();
 }
 
 }  // namespace metronome_test

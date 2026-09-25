@@ -40,6 +40,7 @@ add_library(kitbag_core SHARED
   src/dsp/fft.cpp
   src/metronome/metronome.cpp
   src/metronome/metronome_grid.cpp
+    src/metronome/metronome_pattern.cpp
   src/metronome/metronome_render.cpp
   src/media/miniaudio_impl.c
   src/media/streaming_track.cpp
@@ -122,6 +123,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/rt/rt_publisher_verify.cpp
     src/metronome/metronome.cpp
     src/metronome/metronome_grid.cpp
+    src/metronome/metronome_pattern.cpp
     src/metronome/metronome_render.cpp)
   target_include_directories(metronome_verify PRIVATE src tools tools/metronome tools/rt)
   # metronome.cpp is compiled again here, outside kitbag_core's options.

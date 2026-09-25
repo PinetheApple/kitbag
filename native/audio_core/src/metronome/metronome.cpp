@@ -264,50 +264,6 @@ bool Metronome::ApplyPatternCommand(const Command& command) {
   }
 }
 
-void Metronome::InitAccentRow(std::span<Accent> row) {
-  std::fill(row.begin(), row.end(), Accent::kNormal);
-  row.front() = Accent::kAccented;
-}
-
-void Metronome::SetAccentSlot(
-    std::span<Accent> row,
-    int32_t beat_index,
-    int32_t accent
-) {
-  if (beat_index < 0 || static_cast<size_t>(beat_index) >= row.size()) return;
-  row[static_cast<size_t>(beat_index)] = static_cast<Accent>(
-      Clamp(accent, 0, static_cast<int32_t>(Accent::kAccented))
-  );
-}
-
-// The valid denominators are a discrete set, so clamping an out-of-set value
-// would invent a beat unit the caller never asked for; ignore it instead.
-void Metronome::SetSignatureState(int32_t numerator, int32_t denominator) {
-  beats_per_bar_ = Clamp(numerator, 1, kMaxBeats);
-  if (IsValidDenominator(denominator)) {
-    SetDenominatorPreservingPhase(denominator);
-  }
-}
-
-bool Metronome::IsValidDenominator(int32_t denominator) {
-  for (const int valid : kDenominators) {
-    if (valid == denominator) return true;
-  }
-  return false;
-}
-
-void Metronome::SetPolyState(bool enabled, int32_t beats) {
-  const int32_t count = Clamp(beats, 2, kMaxPolyBeats);
-  for (int32_t slot = poly_beats_; slot < count; ++slot) {
-    poly_accents_[slot] = Accent::kNormal;
-  }
-  if (!enabled || count != poly_beats_) {
-    current_poly_beat_.store(-1, std::memory_order_relaxed);
-  }
-  poly_enabled_ = enabled;
-  poly_beats_ = count;
-}
-
 void Metronome::ArmRamp(const Command& command) {
   ramp_enabled_ = command.int_a != 0;
   if (!ramp_enabled_) return;
