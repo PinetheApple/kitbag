@@ -11,4 +11,7 @@
 -keep class com.swmansion.reanimated.** { *; }
 -keep class com.facebook.react.turbomodule.** { *; }
 
-# Add any project specific keep options here:
+# JNI and ReactModuleInfo resolve these by name; renaming silently disconnects native.
+-keep class com.kitbag.corenative.KitbagCorePackage { *; }
+-keep class com.kitbag.corenative.KitbagCommandsModule { *; }
+-keep class com.kitbag.corenative.NativeKitbagCommandsSpec { *; }
