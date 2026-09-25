@@ -169,11 +169,11 @@ importers:
         specifier: workspace:*
         version: link:../core-plugin-api
       '@op-engineering/op-sqlite':
-        specifier: ^17.1.2
-        version: 17.1.2(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.0))(react@19.2.0)
+        specifier: ^18.2.4
+        version: 18.2.4(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.0))(react@19.2.0)
       drizzle-orm:
         specifier: ^0.45.2
-        version: 0.45.2(@op-engineering/op-sqlite@17.1.2(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.0))(react@19.2.0))
+        version: 0.45.2(@op-engineering/op-sqlite@18.2.4(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.0))(react@19.2.0))
     devDependencies:
       '@types/node':
         specifier: ^22.15.0
@@ -1423,8 +1423,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@op-engineering/op-sqlite@17.1.2':
-    resolution: {integrity: sha512-R1E0MO9dGuOSr5K+Wrwi2k2HrEDbG6iJGwboYl+2hJXpuo01k556GcAj1l7nu4RDPH0wdpM7NL7pieIL5+k3Mw==}
+  '@op-engineering/op-sqlite@18.2.4':
+    resolution: {integrity: sha512-qolai+hPLw8YVSImzXL8sRTpbdafBtlzNlmONRN06QUr/LESWOPGrqe79ct9uZQTKuuY9ztdCEp2kWsaVc1kWw==}
     peerDependencies:
       '@sqlite.org/sqlite-wasm': '*'
       react: '*'
@@ -6753,7 +6753,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@op-engineering/op-sqlite@17.1.2(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.0))(react@19.2.0)':
+  '@op-engineering/op-sqlite@18.2.4(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.0))(react@19.2.0)':
     dependencies:
       react: 19.2.0
       react-native: 0.83.6(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.0)
@@ -8226,9 +8226,9 @@ snapshots:
     dependencies:
       esutils: 2.0.3
 
-  drizzle-orm@0.45.2(@op-engineering/op-sqlite@17.1.2(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.0))(react@19.2.0)):
+  drizzle-orm@0.45.2(@op-engineering/op-sqlite@18.2.4(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.0))(react@19.2.0)):
     optionalDependencies:
-      '@op-engineering/op-sqlite': 17.1.2(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.0))(react@19.2.0)
+      '@op-engineering/op-sqlite': 18.2.4(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.0))(react@19.2.0)
 
   dunder-proto@1.0.1:
     dependencies:
