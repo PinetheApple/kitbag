@@ -7,14 +7,16 @@ import {
   seed,
   SESSION_START,
   type BackupDatabase,
+  unwrap,
 } from './backup.test-helper';
 import type { SongPreset } from './repository';
 import { practiceSessions } from './schema';
 
 async function restoreAll(target: BackupDatabase, file: string) {
-  const plan = await target.backup.plan(file, { categories: CATEGORIES });
-  if (!plan.ok) throw new Error(plan.error.kind);
-  return target.backup.apply(plan.value);
+  const plan = unwrap(
+    await target.backup.plan(file, { categories: CATEGORIES }),
+  );
+  return target.backup.apply(plan);
 }
 
 describe('backup round trip', () => {

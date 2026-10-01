@@ -2,6 +2,8 @@ import {
   CATEGORIES,
   DEFAULT_IMPORT_CATEGORIES,
   recordKey,
+  referenceOf,
+  REFERENCES,
   recordLabel,
   reject,
   type BackupFile,
@@ -167,20 +169,19 @@ function resolvedRef(
 }
 
 function effective(
+  category: Category,
   record: BackupRecord,
   categories: readonly Category[],
   snapshot: Snapshot,
 ): BackupRecord {
-  const ref = (uuid: string | null, target: Category) =>
-    resolvedRef(uuid, target, categories, snapshot);
-  if ('librarySongUuid' in record)
-    return {
-      ...record,
-      librarySongUuid: ref(record.librarySongUuid, 'librarySongs'),
-    };
-  if ('setlistUuid' in record)
-    return { ...record, setlistUuid: ref(record.setlistUuid, 'setlists') };
-  return record;
+  let resolved = record;
+  for (const reference of REFERENCES) {
+    if (reference.source !== category) continue;
+    const uuid = referenceOf(record, reference);
+    const value = resolvedRef(uuid, reference.target, categories, snapshot);
+    resolved = { ...resolved, [reference.field]: value };
+  }
+  return resolved;
 }
 
 export function computePlan(
@@ -198,7 +199,7 @@ export function computePlan(
   const writes: Writes = {};
   for (const category of categories) {
     const incoming = file.records[category].map((record) =>
-      effective(record, categories, snapshot),
+      effective(category, record, categories, snapshot),
     );
     const result =
       mode === 'replace'

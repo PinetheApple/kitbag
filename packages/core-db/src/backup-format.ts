@@ -123,7 +123,7 @@ export interface Conflict {
   label: string;
 }
 
-export type Result<T> =
+export type ImportResult<T> =
   { ok: true; value: T } | { ok: false; error: ImportFailure };
 
 export class ImportRejected extends Error {
@@ -134,6 +134,36 @@ export class ImportRejected extends Error {
 
 export function reject(failure: ImportFailure): never {
   throw new ImportRejected(failure);
+}
+
+export const REFERENCES = [
+  {
+    source: 'songPresets',
+    field: 'librarySongUuid',
+    localColumn: 'librarySongId',
+    target: 'librarySongs',
+  },
+  {
+    source: 'practiceSessions',
+    field: 'setlistUuid',
+    localColumn: 'setlistId',
+    target: 'setlists',
+  },
+] as const satisfies readonly {
+  source: Category;
+  field: string;
+  localColumn: string;
+  target: Category;
+}[];
+
+export type Reference = (typeof REFERENCES)[number];
+
+export function referenceOf(
+  record: BackupRecord,
+  reference: Reference,
+): string | null {
+  const value = (record as unknown as Record<string, unknown>)[reference.field];
+  return typeof value === 'string' ? value : null;
 }
 
 export function recordKey(record: BackupRecord): string {

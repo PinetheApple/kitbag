@@ -5,7 +5,7 @@ import {
   ImportRejected,
   type BackupFile,
   type Category,
-  type Result,
+  type ImportResult,
 } from './backup-format';
 import { applyWrites } from './backup-apply';
 import { parseBackup } from './backup-parse';
@@ -23,7 +23,7 @@ export interface ApplyOptions {
   confirmReplace?: boolean;
 }
 
-async function captured<T>(work: () => Promise<T>): Promise<Result<T>> {
+async function asResult<T>(work: () => Promise<T>): Promise<ImportResult<T>> {
   try {
     return { ok: true, value: await work() };
   } catch (error) {
@@ -75,6 +75,8 @@ async function summary({ db }: DatabaseHandle) {
   ) as Record<Category, number>;
 }
 
+const revalidated = (file: BackupFile) => parseBackup(serializeBackup(file));
+
 async function applyPlan(
   { db }: DatabaseHandle,
   plan: ImportPlan,
@@ -87,7 +89,7 @@ async function applyPlan(
       kind: 'unresolvedConflicts',
       conflicts: plan.unresolved,
     });
-  const file = parseBackup(serializeBackup(plan.file));
+  const file = revalidated(plan.file);
   const snapshot = await loadSnapshot(db);
   const fresh = computePlan(file, snapshot, plan);
   if (planFingerprint(fresh.plan) !== planFingerprint(plan))
@@ -104,7 +106,7 @@ export function createBackupService(handle: DatabaseHandle) {
       serial(() => exportBackup(handle, categories)),
     plan: (input: string, options: ImportOptions = {}) =>
       serial(() =>
-        captured(
+        asResult(
           async () =>
             computePlan(
               parseBackup(input),
@@ -113,10 +115,8 @@ export function createBackupService(handle: DatabaseHandle) {
             ).plan,
         ),
       ),
-    // Never throws: a refusal, or a failed write that was rolled back, comes
-    // back as a Result the caller can show.
     apply: (plan: ImportPlan, options: ApplyOptions = {}) =>
-      captured(() => transaction(() => applyPlan(handle, plan, options))),
+      asResult(() => transaction(() => applyPlan(handle, plan, options))),
   };
 }
 

@@ -57,8 +57,7 @@ export const songPresets = sqliteTable('song_presets', {
   beatsPerBar: integer('beats_per_bar').notNull(),
   subdivision: integer('subdivision').notNull(),
   denominator: integer('denominator').notNull().default(DEFAULT_DENOMINATOR),
-  // One kb_accent code byte per beat (polyAccents: per poly slot); one sound
-  // code byte per beat in perAccentSounds.
+  // One kb_accent code byte per beat (polyAccents: per poly slot).
   accents: bytes('accents').notNull(),
   perAccentSounds: bytes('per_accent_sounds'),
   polyAccents: bytes('poly_accents'),

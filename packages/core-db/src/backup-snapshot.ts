@@ -9,7 +9,7 @@ import {
   type SetlistRecord,
   type SongPresetRecord,
 } from './backup-format';
-import { encodeBase64 } from './backup-reader';
+import { encodeBase64, nullableBase64, presetBase64 } from './base64';
 import type { Database } from './repository';
 import {
   practiceSessions,
@@ -31,9 +31,6 @@ export const toSeconds = (date: Date) =>
   Math.floor(date.getTime() / MS_PER_SECOND);
 export const fromSeconds = (seconds: number) =>
   new Date(seconds * MS_PER_SECOND);
-
-const nullableBase64 = (bytes: Uint8Array | null) =>
-  bytes === null ? null : encodeBase64(bytes);
 
 function uuidOf(rows: { id: number; uuid: string }[]) {
   const map = new Map(rows.map((row) => [row.id, row.uuid]));
@@ -66,9 +63,7 @@ function songPresetRecord(
   const { librarySongId, ...rest } = withoutId(row);
   return {
     ...rest,
-    accents: encodeBase64(row.accents),
-    perAccentSounds: nullableBase64(row.perAccentSounds),
-    polyAccents: nullableBase64(row.polyAccents),
+    ...presetBase64(row),
     librarySongUuid: songUuid(librarySongId),
   };
 }

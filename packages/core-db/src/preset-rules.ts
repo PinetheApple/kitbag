@@ -7,41 +7,144 @@ export const MAX_POLY_BEATS = 16;
 export const MAX_SUBDIVISION = 16;
 export const MAX_RAMP_BARS = 64;
 export const MAX_MUTE_BARS = 16;
-export const DEFAULT_DENOMINATOR = 4;
-const MIN_DENOMINATOR = 2;
-const MAX_DENOMINATOR = 16;
-export const DENOMINATORS: readonly number[] = Array.from(
-  { length: Math.log2(MAX_DENOMINATOR / MIN_DENOMINATOR) + 1 },
-  (_, step) => MIN_DENOMINATOR * 2 ** step,
-);
+enum Denominator {
+  Half = 2,
+  Quarter = 4,
+  Eighth = 8,
+  Sixteenth = 16,
+}
+export const DENOMINATORS: readonly number[] = [
+  Denominator.Half,
+  Denominator.Quarter,
+  Denominator.Eighth,
+  Denominator.Sixteenth,
+];
+export const DEFAULT_DENOMINATOR = Denominator.Quarter;
 export const SOUND_COUNT = 6;
 export const ACCENT_LEVELS = 3;
+export const NORMAL_ACCENT = 1;
+
 export const PER_ACCENT_SOUND_BYTES = 2;
 
 export interface PresetShape {
   bpm: number;
+  beatsPerBar: number;
   subdivision: number;
+  denominator: number;
+  sound: number;
+  polyBeats: number;
   rampStartBpm: number | null;
   rampEndBpm: number | null;
   rampBars: number | null;
   barMutePlayBars: number | null;
   barMuteMuteBars: number | null;
-  beatsPerBar: number;
-  denominator: number;
-  sound: number;
-  polyBeats: number;
   accents: Uint8Array;
   perAccentSounds: Uint8Array | null;
   polyAccents: Uint8Array | null;
 }
+
+type NumericField = {
+  [K in keyof PresetShape]: PresetShape[K] extends number | null ? K : never;
+}[keyof PresetShape];
+
+export interface PresetBound {
+  field: NumericField;
+  column: string;
+  low: number;
+  high: number;
+  integer: boolean;
+}
+
+export const PRESET_BOUNDS: readonly PresetBound[] = [
+  { field: 'bpm', column: 'bpm', low: MIN_BPM, high: MAX_BPM, integer: false },
+  {
+    field: 'beatsPerBar',
+    column: 'beats_per_bar',
+    low: 1,
+    high: MAX_BEATS,
+    integer: true,
+  },
+  {
+    field: 'subdivision',
+    column: 'subdivision',
+    low: 1,
+    high: MAX_SUBDIVISION,
+    integer: true,
+  },
+  {
+    field: 'sound',
+    column: 'sound',
+    low: 0,
+    high: SOUND_COUNT - 1,
+    integer: true,
+  },
+  {
+    field: 'polyBeats',
+    column: 'poly_beats',
+    low: 0,
+    high: MAX_POLY_BEATS,
+    integer: true,
+  },
+  {
+    field: 'rampStartBpm',
+    column: 'ramp_start_bpm',
+    low: MIN_BPM,
+    high: MAX_BPM,
+    integer: false,
+  },
+  {
+    field: 'rampEndBpm',
+    column: 'ramp_end_bpm',
+    low: MIN_BPM,
+    high: MAX_BPM,
+    integer: false,
+  },
+  {
+    field: 'rampBars',
+    column: 'ramp_bars',
+    low: 1,
+    high: MAX_RAMP_BARS,
+    integer: true,
+  },
+  {
+    field: 'barMutePlayBars',
+    column: 'bar_mute_play_bars',
+    low: 1,
+    high: MAX_MUTE_BARS,
+    integer: true,
+  },
+  {
+    field: 'barMuteMuteBars',
+    column: 'bar_mute_mute_bars',
+    low: 1,
+    high: MAX_MUTE_BARS,
+    integer: true,
+  },
+];
 
 export interface RuleViolation {
   field: keyof PresetShape;
   reason: string;
 }
 
-const within = (value: number, low: number, high: number) =>
-  Number.isInteger(value) && value >= low && value <= high;
+const nullOrWithin = (value: number | null, bound: PresetBound) =>
+  value === null ||
+  (Number.isFinite(value) &&
+    (!bound.integer || Number.isInteger(value)) &&
+    value >= bound.low &&
+    value <= bound.high);
+
+function boundViolation(preset: PresetShape): RuleViolation | undefined {
+  const failed = PRESET_BOUNDS.find(
+    (bound) => !nullOrWithin(preset[bound.field], bound),
+  );
+  return (
+    failed && {
+      field: failed.field,
+      reason: `expected ${String(failed.low)}–${String(failed.high)}`,
+    }
+  );
+}
 
 function bytesProblem(
   bytes: Uint8Array,
@@ -55,64 +158,7 @@ function bytesProblem(
   return undefined;
 }
 
-const optional = (value: number | null, low: number, high: number) =>
-  value === null || (value >= low && value <= high && Number.isFinite(value));
-
-const range = (low: number, high: number) => ({
-  low,
-  high,
-  reason: `expected ${String(low)}–${String(high)}`,
-});
-
-const TRAINER_RANGES = {
-  rampStartBpm: range(MIN_BPM, MAX_BPM),
-  rampEndBpm: range(MIN_BPM, MAX_BPM),
-  rampBars: range(1, MAX_RAMP_BARS),
-  barMutePlayBars: range(1, MAX_MUTE_BARS),
-  barMuteMuteBars: range(1, MAX_MUTE_BARS),
-} as const;
-
-function trainerViolation(preset: PresetShape): RuleViolation | undefined {
-  for (const [field, { low, high, reason }] of Object.entries(TRAINER_RANGES)) {
-    const key = field as keyof typeof TRAINER_RANGES;
-    if (!optional(preset[key], low, high)) return { field: key, reason };
-  }
-  return undefined;
-}
-
-function scalarViolation(preset: PresetShape): RuleViolation | undefined {
-  if (!(preset.bpm >= MIN_BPM && preset.bpm <= MAX_BPM))
-    return {
-      field: 'bpm',
-      reason: `expected ${String(MIN_BPM)}–${String(MAX_BPM)}`,
-    };
-  if (!within(preset.beatsPerBar, 1, MAX_BEATS))
-    return { field: 'beatsPerBar', reason: `expected 1–${String(MAX_BEATS)}` };
-  if (!within(preset.subdivision, 1, MAX_SUBDIVISION))
-    return {
-      field: 'subdivision',
-      reason: `expected 1–${String(MAX_SUBDIVISION)}`,
-    };
-  if (!DENOMINATORS.includes(preset.denominator))
-    return {
-      field: 'denominator',
-      reason: `expected ${DENOMINATORS.join('/')}`,
-    };
-  if (!within(preset.sound, 0, SOUND_COUNT - 1))
-    return { field: 'sound', reason: 'expected an engine sound id' };
-  if (!within(preset.polyBeats, 0, MAX_POLY_BEATS))
-    return {
-      field: 'polyBeats',
-      reason: `expected 0–${String(MAX_POLY_BEATS)}`,
-    };
-  return undefined;
-}
-
-export function presetViolation(
-  preset: PresetShape,
-): RuleViolation | undefined {
-  const scalar = scalarViolation(preset) ?? trainerViolation(preset);
-  if (scalar) return scalar;
+function blobViolation(preset: PresetShape): RuleViolation | undefined {
   const checks: [keyof PresetShape, Uint8Array | null, number[], number][] = [
     ['accents', preset.accents, [preset.beatsPerBar], ACCENT_LEVELS],
     [
@@ -128,4 +174,15 @@ export function presetViolation(
     if (reason) return { field, reason };
   }
   return undefined;
+}
+
+export function presetViolation(
+  preset: PresetShape,
+): RuleViolation | undefined {
+  if (!DENOMINATORS.includes(preset.denominator))
+    return {
+      field: 'denominator',
+      reason: `expected ${DENOMINATORS.join('/')}`,
+    };
+  return boundViolation(preset) ?? blobViolation(preset);
 }

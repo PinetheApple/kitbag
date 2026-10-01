@@ -6,6 +6,7 @@ import {
   presetValues,
   records,
   seed,
+  unwrap,
 } from './backup.test-helper';
 
 async function localAndFile() {
@@ -22,9 +23,8 @@ async function replacePlan(
   target: ReturnType<typeof openBackupDatabase>,
   file: string,
 ) {
-  const plan = await target.backup.plan(file, { mode: 'replace' });
-  if (!plan.ok) throw new Error(plan.error.kind);
-  return plan.value;
+  const plan = unwrap(await target.backup.plan(file, { mode: 'replace' }));
+  return plan;
 }
 
 describe('backup replace', () => {
@@ -55,12 +55,13 @@ describe('backup replace', () => {
 
   it('replaces the selected categories with the file on confirmation', async () => {
     const { source, target, file } = await localAndFile();
-    const plan = await target.backup.plan(file, {
-      mode: 'replace',
-      categories: CATEGORIES,
-    });
-    if (!plan.ok) throw new Error(plan.error.kind);
-    const result = await target.backup.apply(plan.value, {
+    const plan = unwrap(
+      await target.backup.plan(file, {
+        mode: 'replace',
+        categories: CATEGORIES,
+      }),
+    );
+    const result = await target.backup.apply(plan, {
       confirmReplace: true,
     });
     expect(result.ok).toBe(true);
@@ -82,11 +83,12 @@ describe('backup replace', () => {
     const source = openBackupDatabase();
     await seed(source);
     const target = openBackupDatabase();
-    const initial = await target.backup.plan(await source.backup.export(), {
-      categories: CATEGORIES,
-    });
-    if (!initial.ok) throw new Error(initial.error.kind);
-    await target.backup.apply(initial.value);
+    const initial = unwrap(
+      await target.backup.plan(await source.backup.export(), {
+        categories: CATEGORIES,
+      }),
+    );
+    await target.backup.apply(initial);
     const before = await records(target);
     const plan = await replacePlan(target, await source.backup.export());
     await target.backup.apply(plan, { confirmReplace: true });
@@ -97,18 +99,20 @@ describe('backup replace', () => {
     const source = openBackupDatabase();
     await seed(source);
     const target = openBackupDatabase();
-    const initial = await target.backup.plan(await source.backup.export(), {
-      categories: CATEGORIES,
-    });
-    if (!initial.ok) throw new Error(initial.error.kind);
-    await target.backup.apply(initial.value);
+    const initial = unwrap(
+      await target.backup.plan(await source.backup.export(), {
+        categories: CATEGORIES,
+      }),
+    );
+    await target.backup.apply(initial);
     const before = await records(target);
-    const plan = await target.backup.plan(await source.backup.export(), {
-      mode: 'replace',
-      categories: ['librarySongs'],
-    });
-    if (!plan.ok) throw new Error(plan.error.kind);
-    await target.backup.apply(plan.value, { confirmReplace: true });
+    const plan = unwrap(
+      await target.backup.plan(await source.backup.export(), {
+        mode: 'replace',
+        categories: ['librarySongs'],
+      }),
+    );
+    await target.backup.apply(plan, { confirmReplace: true });
     expect(await records(target)).toEqual(before);
     const [opener] = await target.presets.list();
     expect(opener?.librarySongId).not.toBeNull();
@@ -132,12 +136,13 @@ describe('backup replace', () => {
     target.handle.connection.exec(
       "CREATE TRIGGER forced BEFORE INSERT ON tunings BEGIN SELECT RAISE(ABORT, 'forced'); END",
     );
-    const plan = await target.backup.plan(file, {
-      mode: 'replace',
-      categories: CATEGORIES,
-    });
-    if (!plan.ok) throw new Error(plan.error.kind);
-    const result = await target.backup.apply(plan.value, {
+    const plan = unwrap(
+      await target.backup.plan(file, {
+        mode: 'replace',
+        categories: CATEGORIES,
+      }),
+    );
+    const result = await target.backup.apply(plan, {
       confirmReplace: true,
     });
     expect(result).toMatchObject({
@@ -155,9 +160,8 @@ describe('backup replace', () => {
     target.handle.connection.exec(
       "CREATE TRIGGER forced BEFORE INSERT ON tunings BEGIN SELECT RAISE(ABORT, 'forced'); END",
     );
-    const plan = await target.backup.plan(file);
-    if (!plan.ok) throw new Error(plan.error.kind);
-    expect(await target.backup.apply(plan.value)).toMatchObject({
+    const plan = unwrap(await target.backup.plan(file));
+    expect(await target.backup.apply(plan)).toMatchObject({
       ok: false,
       error: { kind: 'databaseError' },
     });

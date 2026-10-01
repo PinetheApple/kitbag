@@ -19,7 +19,7 @@ export {
   type ImportMode,
   type Resolution,
   type Resolutions,
-  type Result,
+  type ImportResult,
 } from './backup-format';
 export type { ApplyOptions, BackupService } from './backup';
 export type { CategoryPlan, ImportOptions, ImportPlan } from './backup-plan';

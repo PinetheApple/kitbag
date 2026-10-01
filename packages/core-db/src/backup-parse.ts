@@ -4,6 +4,8 @@ import {
   CATEGORIES,
   reject,
   recordKey,
+  referenceOf,
+  REFERENCES,
   type BackupFile,
   type Category,
   type CategoryRecords,
@@ -17,12 +19,11 @@ import {
   asArray,
   asObject,
   base64Length,
-  decodeBase64,
-  nullableBytes,
   invalidField,
   reader,
   type Reader,
 } from './backup-reader';
+import { presetBytes } from './base64';
 import { presetViolation } from './preset-rules';
 
 const FLOAT32_BYTES = 4;
@@ -101,9 +102,7 @@ function readSongPreset(value: unknown, path: string): SongPresetRecord {
   };
   const violation = presetViolation({
     ...record,
-    accents: decodeBase64(record.accents),
-    perAccentSounds: nullableBytes(record.perAccentSounds),
-    polyAccents: nullableBytes(record.polyAccents),
+    ...presetBytes(record),
   });
   if (violation) invalidField(`${path}.${violation.field}`, violation.reason);
   return record;
@@ -237,26 +236,16 @@ function checkSetlists(records: CategoryRecords) {
 
 function checkRelationships(file: BackupFile) {
   const { records, categories } = file;
-  const has = (category: Category) => categories.includes(category);
   checkSetlists(records);
-  if (has('librarySongs'))
-    checkReferences(
-      records.songPresets.map(({ librarySongUuid }, i) => ({
-        ref: librarySongUuid,
-        path: `$.songPresets[${String(i)}].librarySongUuid`,
-      })),
-      records.librarySongs,
-      'librarySongs',
-    );
-  if (has('setlists'))
-    checkReferences(
-      records.practiceSessions.map(({ setlistUuid }, i) => ({
-        ref: setlistUuid,
-        path: `$.practiceSessions[${String(i)}].setlistUuid`,
-      })),
-      records.setlists,
-      'setlists',
-    );
+  for (const reference of REFERENCES) {
+    const { source, field, target } = reference;
+    if (!categories.includes(target)) continue;
+    const refs = records[source].map((record, index) => ({
+      ref: referenceOf(record, reference),
+      path: `$.${source}[${String(index)}].${field}`,
+    }));
+    checkReferences(refs, records[target], target);
+  }
 }
 
 function parseJson(text: string): Record<string, unknown> {

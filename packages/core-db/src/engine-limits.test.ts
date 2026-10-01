@@ -12,6 +12,7 @@ import {
   MAX_RAMP_BARS,
   MAX_SUBDIVISION,
   MIN_BPM,
+  NORMAL_ACCENT,
   SOUND_COUNT,
 } from './preset-rules';
 
@@ -51,5 +52,8 @@ describe('engine limits mirrored in core-db', () => {
   it('match the kb_accent enum in kitbag_api.h', () => {
     const body = /typedef enum kb_accent \{([^}]*)\}/.exec(api)?.[1] ?? '';
     expect(body.match(/KB_ACCENT_\w+ = \d+/g)).toHaveLength(ACCENT_LEVELS);
+    expect(/KB_ACCENT_NORMAL = (\d+)/.exec(body)?.[1]).toBe(
+      String(NORMAL_ACCENT),
+    );
   });
 });

@@ -1,7 +1,7 @@
 import { afterEach } from 'vitest';
 
 import { createBackupService } from './backup';
-import { decodeBase64 } from './backup-reader';
+import type { ImportResult } from './backup-format';
 import { practiceSessions, songs, tunings } from './schema';
 import { createSetlistRepository } from './setlist-repository';
 import { createSongPresetRepository } from './song-preset-repository';
@@ -14,9 +14,7 @@ afterEach(() => {
 });
 
 const hexBytes = (hex: string) =>
-  decodeBase64(
-    btoa(hex.replace(/../g, (pair) => String.fromCharCode(parseInt(pair, 16)))),
-  );
+  Uint8Array.from(hex.match(/../g) ?? [], (pair) => parseInt(pair, 16));
 
 export const SESSION_START = new Date('2026-07-14T20:00:00Z');
 
@@ -119,4 +117,9 @@ export async function records(database: BackupDatabase) {
   >;
   delete file.exportedAt;
   return file;
+}
+
+export function unwrap<T>(result: ImportResult<T>): T {
+  if (!result.ok) throw new Error(result.error.kind);
+  return result.value;
 }

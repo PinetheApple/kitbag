@@ -8,6 +8,7 @@ import {
   seed,
   SESSION_START,
   type BackupDatabase,
+  unwrap,
 } from './backup.test-helper';
 import { MAX_BEATS, MAX_POLY_BEATS, SOUND_COUNT } from './preset-rules';
 import { practiceSessions, tunings } from './schema';
@@ -110,9 +111,8 @@ describe('export is always importable', () => {
     const source = openBackupDatabase();
     await seedEmptyTuning(source);
     const target = openBackupDatabase();
-    const plan = await target.backup.plan(await source.backup.export());
-    if (!plan.ok) throw new Error(plan.error.kind);
-    expect((await target.backup.apply(plan.value)).ok).toBe(true);
+    const plan = unwrap(await target.backup.plan(await source.backup.export()));
+    expect((await target.backup.apply(plan)).ok).toBe(true);
     const [tuning] = await target.handle.db.select().from(tunings);
     expect(tuning?.notes).toEqual(new Uint8Array(0));
   });

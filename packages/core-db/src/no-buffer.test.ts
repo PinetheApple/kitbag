@@ -1,7 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { CATEGORIES } from './backup-format';
-import { openBackupDatabase, records, seed } from './backup.test-helper';
+import {
+  openBackupDatabase,
+  records,
+  seed,
+  unwrap,
+} from './backup.test-helper';
 import { songPresets } from './schema';
 
 const nodeBuffer = globalThis.Buffer;
@@ -26,11 +31,12 @@ describe('without a Buffer global, as on Hermes', () => {
     const source = openBackupDatabase();
     await seed(source);
     const target = openBackupDatabase();
-    const plan = await target.backup.plan(await source.backup.export(), {
-      categories: CATEGORIES,
-    });
-    if (!plan.ok) throw new Error(plan.error.kind);
-    expect((await target.backup.apply(plan.value)).ok).toBe(true);
+    const plan = unwrap(
+      await target.backup.plan(await source.backup.export(), {
+        categories: CATEGORIES,
+      }),
+    );
+    expect((await target.backup.apply(plan)).ok).toBe(true);
     expect(await records(target)).toEqual(await records(source));
   });
 

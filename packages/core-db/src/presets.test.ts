@@ -151,6 +151,7 @@ describe('song preset repository', () => {
     ['subdivision', { subdivision: 17 }],
     ['rampEndBpm', { rampEndBpm: 401 }],
     ['rampBars', { rampBars: 65 }],
+    ['barMutePlayBars', { barMutePlayBars: 1.5 }],
     ['barMuteMuteBars', { barMuteMuteBars: 0 }],
     ['accents', { accents: new Uint8Array([1, 1, 1]) }],
     ['accents', { accents: new Uint8Array([2, 1, 3, 1, 1, 1, 1]) }],

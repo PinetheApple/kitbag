@@ -2,6 +2,8 @@ import { eq, isNotNull } from 'drizzle-orm';
 
 import {
   recordKey,
+  referenceOf,
+  REFERENCES,
   type BackupRecord,
   type Category,
   type LibrarySongRecord,
@@ -11,7 +13,7 @@ import {
   type TuningRecord,
 } from './backup-format';
 import type { ImportPlan, Writes } from './backup-plan';
-import { decodeBase64, nullableBytes } from './backup-reader';
+import { decodeBase64, nullableBytes, presetBytes } from './base64';
 import { fromSeconds, type IdMaps, type Snapshot } from './backup-snapshot';
 import { found, type Database } from './repository';
 import {
@@ -39,9 +41,7 @@ function songPresetValues(record: SongPresetRecord, ids: IdMaps) {
   const { librarySongUuid, ...rest } = record;
   return {
     ...rest,
-    accents: decodeBase64(record.accents),
-    perAccentSounds: nullableBytes(record.perAccentSounds),
-    polyAccents: nullableBytes(record.polyAccents),
+    ...presetBytes(record),
     librarySongId: lookup(ids.librarySongs, librarySongUuid),
   };
 }
@@ -173,6 +173,8 @@ async function adoptActiveSetlist(db: Database, plan: ImportPlan, ids: IdMaps) {
   await db.update(setlists).set({ active: true }).where(eq(setlists.id, id));
 }
 
+const REFERENCE_TABLES = { songPresets, practiceSessions } as const;
+
 async function relinkUntouched(
   db: Database,
   plan: ImportPlan,
@@ -180,26 +182,20 @@ async function relinkUntouched(
 ) {
   const { ids, records } = snapshot;
   const replaced = (category: Category) => plan.categories.includes(category);
-  if (replaced('setlists') && !replaced('practiceSessions'))
-    for (const session of records.practiceSessions) {
-      const id = ids.practiceSessions.get(recordKey(session));
-      if (id === undefined || session.setlistUuid === null) continue;
+  for (const reference of REFERENCES) {
+    const { source, target, localColumn } = reference;
+    if (!replaced(target) || replaced(source)) continue;
+    const table = REFERENCE_TABLES[source];
+    for (const record of records[source]) {
+      const id = ids[source].get(recordKey(record));
+      const uuid = referenceOf(record, reference);
+      if (id === undefined || uuid === null) continue;
       await db
-        .update(practiceSessions)
-        .set({ setlistId: lookup(ids.setlists, session.setlistUuid) })
-        .where(eq(practiceSessions.id, id));
+        .update(table)
+        .set({ [localColumn]: lookup(ids[target], uuid) })
+        .where(eq(table.id, id));
     }
-  if (replaced('librarySongs') && !replaced('songPresets'))
-    for (const preset of records.songPresets) {
-      const id = ids.songPresets.get(preset.uuid);
-      if (id === undefined || preset.librarySongUuid === null) continue;
-      await db
-        .update(songPresets)
-        .set({
-          librarySongId: lookup(ids.librarySongs, preset.librarySongUuid),
-        })
-        .where(eq(songPresets.id, id));
-    }
+  }
 }
 
 async function upsertAll(
