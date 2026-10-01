@@ -10,6 +10,7 @@ interface TransportProps {
   readonly running: boolean;
   readonly onToggle: () => void;
   readonly onResetPractice: () => void;
+  readonly onOpenSetlists?: (() => void) | undefined;
 }
 
 const styles = StyleSheet.create({
@@ -25,10 +26,19 @@ export function Transport({
   running,
   onToggle,
   onResetPractice,
+  onOpenSetlists,
 }: TransportProps) {
   return (
     <View style={styles.row}>
-      <TransportKeySpacer />
+      {onOpenSetlists === undefined ? (
+        <TransportKeySpacer />
+      ) : (
+        <TransportKey
+          icon="setlist"
+          accessibilityLabel="Setlists"
+          onPress={onOpenSetlists}
+        />
+      )}
       <PrimaryPlayButton
         glyph={running ? 'stop' : 'play'}
         accessibilityLabel={running ? 'Stop' : 'Play'}
