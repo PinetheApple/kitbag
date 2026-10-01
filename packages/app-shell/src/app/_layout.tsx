@@ -1,4 +1,5 @@
 import '@/runtime/metronomeRuntime';
+import '@/runtime/lastToolRuntime';
 
 import '@/global.css';
 
