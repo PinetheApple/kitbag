@@ -1,4 +1,9 @@
-import { PickerGrid, SegmentedControl, Sheet } from '@kitbag/core-design';
+import {
+  EditRow,
+  PickerGrid,
+  SegmentedControl,
+  Sheet,
+} from '@kitbag/core-design';
 import { useMetronome } from '@kitbag/core-state';
 import { useCallback } from 'react';
 
@@ -58,13 +63,15 @@ export function CountInSheet({
         selected={bars}
         onSelect={pickBars}
       />
-      <SegmentedControl
-        fill
-        accessibilityLabel="Count-in sound"
-        options={COUNT_IN_MODE_OPTIONS}
-        selected={mode}
-        onSelect={pickMode}
-      />
+      <EditRow label="Sound">
+        <SegmentedControl
+          compact
+          accessibilityLabel="Count-in sound"
+          options={COUNT_IN_MODE_OPTIONS}
+          selected={mode}
+          onSelect={pickMode}
+        />
+      </EditRow>
     </Sheet>
   );
 }

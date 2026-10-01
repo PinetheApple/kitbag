@@ -69,6 +69,8 @@ export const inset = {
   tempoZoneTop: 26,
   tempoZoneBottom: 18,
   sweepH: 18,
+  editRowV: 11,
+  editRowH: 2,
 } as const;
 
 export const opacity = {
@@ -123,6 +125,7 @@ export const textRoles = {
   numpadKey: { family: display, weight: 400, size: 19, tabular: true },
   hint: { family: body, weight: 400, size: 11.5 },
   fieldLabel: { family: body, weight: 400, size: 13.5 },
+  editRowKey: { family: body, weight: 400, size: 13 },
 } as const satisfies Record<string, TypeRole>;
 
 export type TextRoleName = keyof typeof textRoles;

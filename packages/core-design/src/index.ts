@@ -12,6 +12,7 @@ export * from './components/BeatLed.tsx';
 export * from './components/Button.tsx';
 export * from './components/Card.tsx';
 export * from './components/Chip.tsx';
+export * from './components/EditRow.tsx';
 export * from './components/Icon.tsx';
 export * from './components/NumpadKeypad.tsx';
 export * from './components/PickerGrid.tsx';

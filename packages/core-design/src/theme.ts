@@ -43,6 +43,7 @@ export interface Theme {
   readonly activeControlFill: string;
   readonly activeCardFill: string;
   readonly onDanger: string;
+  readonly disabledLabel: string;
   readonly feedback: Readonly<Record<FeedbackTone, FeedbackColors>>;
   readonly shadow: string;
 }
@@ -73,6 +74,7 @@ export function buildTheme(mode: ThemeMode): Theme {
     activeControlFill: mixHex(color.accent, color.surface2, mix.activeControl),
     activeCardFill: mixHex(color.accent, color.surface1, mix.activeCard),
     onDanger: color.surface1,
+    disabledLabel: color.text2,
     feedback: {
       success: feedbackColors(color, 'success'),
       warning: feedbackColors(color, 'warning'),
