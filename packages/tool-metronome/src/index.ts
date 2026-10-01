@@ -1,6 +1,5 @@
-// tool-metronome — plugin (SPEC §13.1). May import core-* only, never another
-// tool, never app-shell.
-//
-// M3 (#46): the performance surface, SPEC §5.2. The plugin descriptor (§9.1)
-// lands with the registry wave; the shell mounts the screen directly until then.
 export { MetronomeScreen } from './screen/MetronomeScreen.tsx';
+export { SetlistsScreen } from './library/SetlistsScreen.tsx';
+export { SetlistDetailScreen } from './library/SetlistDetailScreen.tsx';
+export { AllSongsScreen } from './library/AllSongsScreen.tsx';
+export { PresetEditorScreen } from './library/PresetEditorScreen.tsx';

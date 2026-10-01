@@ -30,6 +30,9 @@ export const size = {
   grabWidth: 36,
   grabHeight: 4,
   liveDot: 7,
+  toolIcon: 38,
+  fab: 52,
+  dragIndex: 13,
   sweepTrack: 3,
   barPreview: 18,
 } as const;
@@ -46,6 +49,10 @@ export const radius = {
   segmentOption: 8,
   preset: 11,
   numpadKey: 11,
+  toolIcon: 11,
+  row: 12,
+  fab: 16,
+  pick: 10,
   tempoZone: 18,
   sweepTrack: 2,
 } as const;
@@ -69,11 +76,22 @@ export const inset = {
   tempoZoneTop: 26,
   tempoZoneBottom: 18,
   sweepH: 18,
+  rowV: 9,
+  rowH: 10,
+  searchV: 9,
+  searchH: 12,
+  editRowV: 11,
+  editGroupV: 4,
+  editGroupH: 12,
+  emptyV: 26,
+  pickV: 11,
+  pickH: 4,
 } as const;
 
 export const opacity = {
   muted: 0.4,
   barPreviewSounding: 0.85,
+  emptyIcon: 0.5,
 } as const;
 
 export const mix = {
@@ -122,6 +140,14 @@ export const textRoles = {
   },
   numpadKey: { family: display, weight: 400, size: 19, tabular: true },
   hint: { family: body, weight: 400, size: 11.5 },
+  rowTitle: { family: display, weight: 500, size: 14.5 },
+  rowSubtitle: { family: body, weight: 400, size: 12 },
+  dragIndex: { family: display, weight: 400, size: 11.5, tabular: true },
+  editKey: { family: body, weight: 400, size: 13 },
+  editValue: { family: display, weight: 400, size: 13.5 },
+  search: { family: body, weight: 400, size: 13.5 },
+  emptyTitle: { family: display, weight: 500, size: 14 },
+  emptyReason: { family: body, weight: 400, size: 12 },
   fieldLabel: { family: body, weight: 400, size: 13.5 },
 } as const satisfies Record<string, TypeRole>;
 
@@ -132,6 +158,9 @@ export const appBarTitleMinSize = 15;
 export const iconSizes = {
   chip: 12.5,
   chevron: 13,
+  tile: 17,
+  fab: 24,
+  empty: 26,
   control: 14,
   action: 16,
   title: 17,
