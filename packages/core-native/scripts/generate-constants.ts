@@ -32,6 +32,7 @@ const sources: NativeSources = {
   metronomeHeader: read('src', 'metronome', 'metronome.h'),
   metronomeRender: read('src', 'metronome', 'metronome_render.cpp'),
   tempoRampHeader: read('src', 'metronome', 'tempo_ramp.h'),
+  metronomeTypesHeader: read('src', 'metronome', 'metronome_types.h'),
 };
 
 const rendered = renderConstants(collectConstants(sources));

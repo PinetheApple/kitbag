@@ -14,8 +14,29 @@ export const KB_MAX_TRACKS = 16;
 /** Beats per bar the engine will hold (Metronome::kMaxBeats); it clamps above this. */
 export const KB_MAX_BEATS = 16;
 
+/** Shortest ramp in bars (TempoRamp::kMinBars); the engine clamps below this. */
+export const KB_MIN_RAMP_BARS = 1;
+
 /** Longest ramp in bars (TempoRamp::kMaxBars); the engine clamps above this. */
 export const KB_MAX_RAMP_BARS = 64;
+
+/** Tempo range the engine clamps to (kMinBpm, kMaxBpm in metronome_types.h). */
+export const KB_BPM_BOUNDS = {
+  min: 20,
+  max: 400,
+} as const;
+
+/** Subdivisions per beat (Metronome::kMinSubdivision, kMaxSubdivision); clamped. */
+export const KB_SUBDIVISION_BOUNDS = {
+  min: 1,
+  max: 16,
+} as const;
+
+/** Initial sound ids (Metronome::kDefaultNormalSound, kDefaultAccentSound). */
+export const KB_DEFAULT_SOUNDS = {
+  normal: 0,
+  accent: 0,
+} as const;
 
 /** Click volume multiplier range (Metronome::kMinVolume, kMaxVolume); the engine clamps to it. */
 export const KB_VOLUME_BOUNDS = {
@@ -25,6 +46,12 @@ export const KB_VOLUME_BOUNDS = {
 
 /** Longest play or mute run in bars (Metronome::kMaxMuteBars); clamped above. */
 export const KB_MAX_MUTE_BARS = 16;
+
+/** Play and mute run bounds in bars (Metronome::kMinMuteBars, kMaxMuteBars); clamped. */
+export const KB_MUTE_BARS_BOUNDS = {
+  min: 1,
+  max: 16,
+} as const;
 
 /**
  * Time-signature denominators the engine accepts (Metronome::kDenominators,
@@ -42,6 +69,9 @@ export const KB_POLY_BEATS_BOUNDS = {
 /** Count-in bar choices (Metronome::kCountInBarChoices); 0 is off, anything else is ignored. */
 export const KB_COUNT_IN_BARS = [0, 1, 2, 4] as const;
 export type KbCountInBars = (typeof KB_COUNT_IN_BARS)[number];
+
+/** The count-in choice that means off (Metronome::kCountInOff). */
+export const KB_COUNT_IN_OFF = 0;
 
 /** Sound id a distinct count-in uses until set (Metronome::kDefaultCountInSound). */
 export const KB_DEFAULT_COUNT_IN_SOUND = 1;
