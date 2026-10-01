@@ -4,8 +4,6 @@ import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReadableArray
 
-// Codegen emits every numeric parameter as Double; each override narrows to the
-// JNI type the C ABI takes.
 class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   NativeKitbagCommandsSpec(reactContext) {
 

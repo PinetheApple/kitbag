@@ -17,6 +17,12 @@ export const KB_MAX_BEATS = 16;
 /** Longest ramp in bars (TempoRamp::kMaxBars); the engine clamps above this. */
 export const KB_MAX_RAMP_BARS = 64;
 
+/** Click volume multiplier range (Metronome::kMinVolume, kMaxVolume); the engine clamps to it. */
+export const KB_VOLUME_BOUNDS = {
+  min: 0,
+  max: 2,
+} as const;
+
 /** Longest play or mute run in bars (Metronome::kMaxMuteBars); clamped above. */
 export const KB_MAX_MUTE_BARS = 16;
 

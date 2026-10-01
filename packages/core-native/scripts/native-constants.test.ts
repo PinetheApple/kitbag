@@ -169,6 +169,7 @@ describe('collectConstants (real engine source)', () => {
     expect(c.maxBeats).toBe(16);
     expect(c.maxRampBars).toBe(64);
     expect(c.maxMuteBars).toBe(16);
+    expect(c.volume).toEqual({ min: 0, max: 2 });
     expect(c.denominators).toEqual([2, 4, 8, 16]);
     expect(c.bpmReferenceDenominator).toBe(4);
     expect(c.soundNames).toEqual([

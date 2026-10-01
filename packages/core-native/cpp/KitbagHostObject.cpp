@@ -26,7 +26,6 @@ double Read(kb_engine* engine, const std::string& prop, bool* found) {
   if (prop == "frames_rendered") {
     return static_cast<double>(kb_engine_frames_rendered(engine));
   }
-  // 48 of 64 bits used, so exact as a double; decoded in src/host/snapshot.ts.
   if (prop == "tuner_snapshot") {
     return static_cast<double>(kb_tuner_snapshot(engine));
   }

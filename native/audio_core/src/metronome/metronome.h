@@ -37,6 +37,7 @@ class Metronome {
   // of D5's clamp change; see SPEC.md §4.7 for what moves with it.
   static constexpr double kMaxLatencyOffsetMs = 100.0;
   static constexpr double kDefaultBpm = 120.0;
+  static constexpr double kMinVolume = 0.0;
   static constexpr double kMaxVolume = 2.0;
 
   Metronome() {

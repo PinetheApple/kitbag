@@ -291,7 +291,7 @@ bool Metronome::ApplyPatternCommand(const Command& command) {
       QueuePreview(command.int_a, command.int_b != 0);
       return true;
     case CommandType::kSetVolume:
-      volume_ = Clamp(command.value, 0.0, kMaxVolume);
+      volume_ = Clamp(command.value, kMinVolume, kMaxVolume);
       return true;
     default:
       return false;

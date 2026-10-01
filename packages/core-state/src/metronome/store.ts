@@ -1,6 +1,3 @@
-// Human-speed intent only (SPEC §13.4): every mutation sends its engine
-// command, and 60fps truths are polled from the HostObject, never kept here.
-
 import {
   KB_ACCENT,
   KB_BPM_REFERENCE_DENOMINATOR,
@@ -8,8 +5,10 @@ import {
   KB_DENOMINATORS,
   KB_LATENCY_OFFSET_MS_BOUNDS,
   KB_MAX_BEATS,
+  KB_MAX_MUTE_BARS,
   KB_POLY_BEATS_BOUNDS,
   KB_RAMP_UNIT,
+  KB_VOLUME_BOUNDS,
   type KbCountInBars,
   type KbDenominator,
 } from '@kitbag/core-native';
@@ -102,11 +101,11 @@ export type MetronomeStore = MetronomeConfig & MetronomeActions;
 
 export const DEFAULT_BPM = 120;
 const DEFAULT_BEATS = 4;
-// 4/4 default only coincides with the BPM reference note; revisit if that moves.
 const DEFAULT_DENOMINATOR: Denominator = KB_BPM_REFERENCE_DENOMINATOR;
 const DEFAULT_POLY_BEATS = 3;
 const DEFAULT_VOLUME = 1;
 const DEFAULT_TRAINER_BARS = 4;
+const MIN_TRAINER_BARS = 1;
 
 function initialConfig(): MetronomeConfig {
   return {
@@ -142,8 +141,7 @@ function initialConfig(): MetronomeConfig {
 type Set = StoreApi<MetronomeStore>['setState'];
 type Get = StoreApi<MetronomeStore>['getState'];
 
-// Commands queue until the device opens on start, so a stopped engine's tempo
-// is stale; so is a JS-only run with no HostObject.
+// Commands queue until the device opens, so a stopped engine's tempo is stale.
 function readEngineTempo(engineBpm: EngineBpm, fallback: number): number {
   let bpm: number;
   try {
@@ -266,8 +264,9 @@ function soundActions(
     },
 
     setVolume: (volume) => {
-      set({ volume });
-      commands.setVolume(volume);
+      const next = clamp(volume, KB_VOLUME_BOUNDS.min, KB_VOLUME_BOUNDS.max);
+      set({ volume: next });
+      commands.setVolume(next);
     },
 
     setLatency: (latencyMs) => {
@@ -305,7 +304,6 @@ function tempoActions(
   return {
     setTempo: (bpm) => {
       const next = clamp(bpm, BPM_BOUNDS.min, BPM_BOUNDS.max);
-      // The engine cancels a running ramp on set_tempo; the chip clears with it.
       set((s) => ({ bpm: next, ramp: { ...s.ramp, enabled: false } }));
       commands.setTempo(next);
     },
@@ -341,8 +339,13 @@ function transportActions(
 ): Pick<MetronomeActions, 'setBarMute' | 'start' | 'stop' | 'pause'> {
   return {
     setBarMute: (config) => {
-      set({ barMute: config });
-      commands.setBarMute(config.enabled, config.playBars, config.muteBars);
+      const barMute = {
+        enabled: config.enabled,
+        playBars: clamp(config.playBars, MIN_TRAINER_BARS, KB_MAX_MUTE_BARS),
+        muteBars: clamp(config.muteBars, MIN_TRAINER_BARS, KB_MAX_MUTE_BARS),
+      };
+      set({ barMute });
+      commands.setBarMute(barMute.enabled, barMute.playBars, barMute.muteBars);
     },
 
     start: () => {
@@ -365,7 +368,6 @@ function transportActions(
   };
 }
 
-/** Commands and the clock are injected so tests spy the command mapping. */
 export function createMetronomeStore(
   commands: MetronomeCommands = defaultCommands,
   nowFrame: NowFrame = defaultNowFrame,

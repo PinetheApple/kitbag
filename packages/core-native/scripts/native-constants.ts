@@ -55,6 +55,7 @@ export interface NativeConstants {
   readonly defaultCountInSound: number;
   readonly maxRampBars: number;
   readonly maxMuteBars: number;
+  readonly volume: { readonly min: number; readonly max: number };
   readonly rampSeconds: { readonly min: number; readonly max: number };
   readonly rampUnit: readonly EnumMember[];
   readonly bpmReferenceDenominator: number;
@@ -92,6 +93,15 @@ export function parseConstexprInt(source: string, name: string): number {
     `static\\s+constexpr\\s+int\\s+${name}\\s*=\\s*(-?\\d+)\\s*;`,
   ).exec(source);
   if (match === null) fail(`constexpr int ${name}`);
+  return Number(match[1]);
+}
+
+/** `static constexpr double NAME = <number>;` from a C++ header. */
+export function parseConstexprDouble(source: string, name: string): number {
+  const match = new RegExp(
+    `static\\s+constexpr\\s+double\\s+${name}\\s*=\\s*(-?\\d+(?:\\.\\d+)?)\\s*;`,
+  ).exec(source);
+  if (match === null) fail(`constexpr double ${name}`);
   return Number(match[1]);
 }
 
@@ -247,6 +257,10 @@ export function collectConstants(sources: NativeSources): NativeConstants {
     ),
     maxRampBars: parseConstexprInt(sources.tempoRampHeader, 'kMaxBars'),
     maxMuteBars: parseConstexprInt(sources.metronomeHeader, 'kMaxMuteBars'),
+    volume: {
+      min: parseConstexprDouble(sources.metronomeHeader, 'kMinVolume'),
+      max: parseConstexprDouble(sources.metronomeHeader, 'kMaxVolume'),
+    },
     rampSeconds: {
       min: parseConstexprInt(sources.tempoRampHeader, 'kMinSeconds'),
       max: parseConstexprInt(sources.tempoRampHeader, 'kMaxSeconds'),
@@ -316,6 +330,12 @@ export const KB_MAX_BEATS = ${String(c.maxBeats)};
 
 /** Longest ramp in bars (TempoRamp::kMaxBars); the engine clamps above this. */
 export const KB_MAX_RAMP_BARS = ${String(c.maxRampBars)};
+
+/** Click volume multiplier range (Metronome::kMinVolume, kMaxVolume); the engine clamps to it. */
+export const KB_VOLUME_BOUNDS = {
+  min: ${String(c.volume.min)},
+  max: ${String(c.volume.max)},
+} as const;
 
 /** Longest play or mute run in bars (Metronome::kMaxMuteBars); clamped above. */
 export const KB_MAX_MUTE_BARS = ${String(c.maxMuteBars)};

@@ -58,7 +58,6 @@ Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetGrid(JNIEnv* env, jobje
   const jsize count = env->GetArrayLength(beatTimesSec);
   jdouble* elems = env->GetDoubleArrayElements(beatTimesSec, nullptr);
   const int32_t result = kitbag::commandSetGrid(elems, static_cast<int32_t>(count), anchorFrame);
-  // JNI_ABORT: the engine only reads, so skip the copy-back.
   env->ReleaseDoubleArrayElements(beatTimesSec, elems, JNI_ABORT);
   return static_cast<jint>(result);
 }

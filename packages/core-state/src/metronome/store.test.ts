@@ -2,11 +2,13 @@ import {
   KB_ACCENT,
   KB_DEFAULT_COUNT_IN_SOUND,
   KB_MAX_BEATS,
+  KB_MAX_MUTE_BARS,
   KB_POLY_BEATS_BOUNDS,
   KB_MAX_RAMP_BARS,
   KB_RAMP_SECONDS_BOUNDS,
   KB_RAMP_UNIT,
   KB_SOUND_NAMES,
+  KB_VOLUME_BOUNDS,
 } from '@kitbag/core-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -248,6 +250,31 @@ describe('tempo ramp matches what the engine holds', () => {
     store.getState().setRamp({ ...ramp, unit: 7 as unknown as KB_RAMP_UNIT });
     expect(store.getState().ramp).toEqual(ramp);
     expect(commands.setRamp).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('engine bounds on volume and bar mute', () => {
+  it('clamps volume to the generated range before state and command', () => {
+    store.getState().setVolume(5);
+    expect(store.getState().volume).toBe(KB_VOLUME_BOUNDS.max);
+    expect(commands.setVolume).toHaveBeenLastCalledWith(KB_VOLUME_BOUNDS.max);
+    store.getState().setVolume(-1);
+    expect(store.getState().volume).toBe(KB_VOLUME_BOUNDS.min);
+    expect(commands.setVolume).toHaveBeenLastCalledWith(KB_VOLUME_BOUNDS.min);
+  });
+
+  it('clamps play and mute bars to 1..KB_MAX_MUTE_BARS', () => {
+    store.getState().setBarMute({ enabled: true, playBars: 0, muteBars: 99 });
+    expect(store.getState().barMute).toEqual({
+      enabled: true,
+      playBars: 1,
+      muteBars: KB_MAX_MUTE_BARS,
+    });
+    expect(commands.setBarMute).toHaveBeenLastCalledWith(
+      true,
+      1,
+      KB_MAX_MUTE_BARS,
+    );
   });
 });
 

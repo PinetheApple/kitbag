@@ -13,7 +13,6 @@ const BPM_MAX = 400;
 const SECONDS_PER_MINUTE = 60;
 const MIN_RAMP_BARS = 1;
 
-/** The §5.2 BPM range; a screen reads this bound instead of retyping it. */
 export const BPM_BOUNDS = { min: BPM_MIN, max: BPM_MAX } as const;
 
 export interface RampConfig {
@@ -48,7 +47,6 @@ export function isCountInBars(bars: number): bars is KbCountInBars {
   return (KB_COUNT_IN_BARS as readonly number[]).includes(bars);
 }
 
-// §5.2: tap a beat to cycle accent → normal → mute → accent.
 export function cycleAccentValue(accent: KB_ACCENT): KB_ACCENT {
   if (accent === KB_ACCENT.KB_ACCENT_ACCENTED)
     return KB_ACCENT.KB_ACCENT_NORMAL;
@@ -84,7 +82,6 @@ function clampDuration(duration: number, unit: KB_RAMP_UNIT): number {
   );
 }
 
-/** The ramp as the engine will hold it, or undefined where it keeps the old one. */
 export function normalizeRamp(config: RampConfig): RampConfig | undefined {
   if (!config.enabled) return config;
   const finite = [config.startBpm, config.endBpm, config.duration].every(

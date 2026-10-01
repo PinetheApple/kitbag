@@ -8,8 +8,6 @@
 namespace kitbag {
 
 namespace {
-// The kb_* ABI treats a null engine as a no-op; the assert surfaces a command
-// sent before kitbagInstall() in debug builds.
 kb_engine* commandEngine() {
   kb_engine* engine = kitbagEngine();
   assert(engine != nullptr && "command dispatched before kitbagInstall()");
