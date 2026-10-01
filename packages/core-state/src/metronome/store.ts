@@ -77,7 +77,8 @@ export interface MetronomeConfig {
   readonly denominator: Denominator;
   readonly subdivision: number;
   readonly accents: readonly KB_ACCENT[];
-  readonly perAccentSounds?: PerAccentSounds;
+  readonly perAccentSounds: PerAccentSounds;
+  readonly polyAccents: readonly KB_ACCENT[];
   readonly polyEnabled: boolean;
   readonly polyBeats: number;
   readonly sound: number;
@@ -100,7 +101,9 @@ export interface MetronomeActions {
   setBeats: (beatsPerBar: number, denominator: number) => void;
   setSubdivision: (subdivision: number) => void;
   cycleAccent: (beat: number) => void;
+  setAccents: (accents: readonly KB_ACCENT[]) => void;
   setPoly: (enabled: boolean, beats: number) => void;
+  setPolyAccents: (accents: readonly KB_ACCENT[]) => void;
   setSound: (soundIndex: number) => void;
   setPerAccentSounds: (sounds: PerAccentSounds) => void;
   setVolume: (volume: number) => void;
@@ -192,7 +195,9 @@ export function createMetronomeStore(
     accents: initialAccents(DEFAULT_BEATS),
     polyEnabled: false,
     polyBeats: DEFAULT_POLY_BEATS,
+    polyAccents: initialAccents(DEFAULT_POLY_BEATS),
     sound: 0,
+    perAccentSounds: { normal: 0, accent: 0 },
     volume: DEFAULT_VOLUME,
     latencyOffset: 0,
     ramp: {
@@ -262,14 +267,27 @@ export function createMetronomeStore(
       commands.setAccent(beat, next);
     },
 
+    setAccents: (accents) => {
+      const next = resizeAccents(accents, get().beatsPerBar);
+      set({ accents: next });
+      next.forEach((accent, beat) => {
+        commands.setAccent(beat, accent);
+      });
+    },
+
     setPoly: (enabled, beats) => {
-      // Same policy as setBeats, which this mirrors as a stepper: a count below
-      // the floor is refused outright (a held − sends nothing rather than
-      // re-sending the floor), and the engine's ceiling clamps.
       if (!Number.isInteger(beats) || beats < BEATS_MIN) return;
       const polyBeats = Math.min(beats, KB_MAX_BEATS);
-      set({ polyEnabled: enabled, polyBeats });
+      set((state) => ({
+        polyEnabled: enabled,
+        polyBeats,
+        polyAccents: resizeAccents(state.polyAccents, polyBeats),
+      }));
       commands.setPoly(enabled, polyBeats);
+    },
+
+    setPolyAccents: (accents) => {
+      set({ polyAccents: resizeAccents(accents, get().polyBeats) });
     },
 
     setSound: (soundIndex) => {
