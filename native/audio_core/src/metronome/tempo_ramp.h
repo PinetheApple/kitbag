@@ -10,11 +10,10 @@ enum class RampUnit : uint8_t { kBars = 0, kSeconds = 1, kMinutes = 2 };
 // Time units measure progress in rendered frames, so the engine clock drives it.
 class TempoRamp {
  public:
+  static constexpr int kMinBars = 1;
   static constexpr int kMaxBars = 64;
-  static constexpr int kMinSeconds = 1;
-  static constexpr int kMaxSeconds = 3600;
-  static constexpr double kMinBpm = 20.0;
-  static constexpr double kMaxBpm = 400.0;
+  static constexpr double kMinSeconds = 1.0;
+  static constexpr double kMaxSeconds = 3600.0;
 
   bool Configure(
       double start_bpm,
@@ -33,7 +32,7 @@ class TempoRamp {
     return start_bpm_;
   }
   void Restart(int64_t bar);
-  void Advance() {
+  void AdvanceFrame() {
     ++cycle_frames_;
   }
   double StepAtDownbeat(int64_t bar, uint32_t sample_rate);

@@ -61,11 +61,23 @@ void TestPauseRestartsRamp() {
   Check(same, "ramp pause: start after pause replays the ramp from 60 BPM");
 }
 
+void TestSecondsRampClampsShortDuration() {
+  kitbag::Metronome metronome;
+  metronome.SetRamp(true, 400.0, 100.0, 0.5, kRampSeconds, false);
+  metronome.Start();
+  const auto onsets = RenderAndDetectOnsets(metronome, kSampleRate * 2);
+  Check(
+      onsets.size() >= 6 && Near(onsets[5] - onsets[4], 13091),
+      "ramp seconds: 0.5 s clamps to 1 s, so bar 1 at 0.6 s steps to 220 BPM"
+  );
+}
+
 }  // namespace
 
 void RunRampLiveTests() {
   TestLiveApplyMidBarInSeconds();
   TestPauseRestartsRamp();
+  TestSecondsRampClampsShortDuration();
 }
 
 }  // namespace metronome_test

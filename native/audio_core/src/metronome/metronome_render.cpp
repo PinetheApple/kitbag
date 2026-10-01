@@ -279,7 +279,7 @@ void Metronome::AdvanceConstantTempo(uint32_t sample_rate, BlockTempo* tempo) {
       FireConstantTempoTick(sub_index, sample_rate, tempo);
     }
     if (poly_enabled_) FirePolyTick(position, sample_rate, *tempo);
-    ramp_.Advance();
+    ramp_.AdvanceFrame();
   }
   beat_position_ += tempo->beats_per_sample;
 }

@@ -13,9 +13,7 @@ void Metronome::SetCountInState(const Command& command) {
     count_in_bars_ = command.int_a;
   }
   count_in_distinct_ = command.int_b != 0;
-  if (command.int_c >= 0 && command.int_c < kSoundCount) {
-    count_in_sound_ = command.int_c;
-  }
+  if (IsValidSound(command.int_c)) count_in_sound_ = command.int_c;
 }
 
 void Metronome::PauseRun() {
@@ -25,7 +23,7 @@ void Metronome::PauseRun() {
 }
 
 void Metronome::ArmCountIn() {
-  counting_in_ = count_in_armed_ && count_in_bars_ > 0;
+  counting_in_ = count_in_armed_ && count_in_bars_ != kCountInOff;
   count_in_armed_ = false;
   count_in_beats_ =
       counting_in_ ? static_cast<double>(count_in_bars_ * beats_per_bar_) : 0.0;

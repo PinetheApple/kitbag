@@ -20,18 +20,21 @@ namespace kitbag {
 class Metronome {
  public:
   static constexpr int kMaxBeats = 16;
+  static constexpr int kMinSubdivision = 1;
   static constexpr int kMaxSubdivision = 16;
   static constexpr int kMinPolyBeats = 2;
   static constexpr int kMaxPolyBeats = 16;
   static constexpr int kSoundCount = 6;
-  static constexpr double kMinBpm = TempoRamp::kMinBpm;
-  static constexpr double kMaxBpm = TempoRamp::kMaxBpm;
   // BPM stays quarter-note referenced whatever the time signature, so the beat
   // interval is (60 / bpm) * (kBpmReferenceDenominator / denominator) seconds.
   static constexpr int kBpmReferenceDenominator = 4;
   static constexpr int kDenominators[] = {2, 4, 8, 16};
-  static constexpr int kCountInBarChoices[] = {0, 1, 2, 4};
+  static constexpr int kCountInOff = 0;
+  static constexpr int kCountInBarChoices[] = {kCountInOff, 1, 2, 4};
+  static constexpr int kDefaultNormalSound = 0;
+  static constexpr int kDefaultAccentSound = 0;
   static constexpr int kDefaultCountInSound = 1;
+  static constexpr int kMinMuteBars = 1;
   static constexpr int kMaxMuteBars = 16;
   // Output-latency compensation bound (D5). Widening this to 300 is the whole
   // of D5's clamp change; see SPEC.md §4.7 for what moves with it.
@@ -211,14 +214,17 @@ class Metronome {
   bool ApplyTempoCommand(const Command& command);
   bool ApplyTrainerCommand(const Command& command);
   bool ApplyPatternCommand(const Command& command);
+  bool ApplyOutputCommand(const Command& command);
+  static bool IsValidSound(int32_t sound) {
+    return sound >= 0 && sound < kSoundCount;
+  }
   static void InitAccentRow(std::span<Accent> row);
   static void
-  SetAccentSlot(std::span<Accent> row, int32_t beat_index, int32_t accent);
+  SetAccentSlot(std::span<Accent> row, int32_t length, const Command& command);
   static void
   ResetGrownSlots(std::span<Accent> row, int32_t old_count, int32_t new_count);
   void SetSignatureState(int32_t numerator, int32_t denominator);
   void SetSoundsState(int32_t normal_sound, int32_t accent_sound);
-  void ApplyAccentCommand(const Command& command);
   void QueuePreview(int32_t sound, bool accented);
   void SetCountInState(const Command& command);
   void SetPolyState(bool enabled, int32_t beats);
@@ -329,14 +335,14 @@ class Metronome {
   double bpm_ = kDefaultBpm;
   int beats_per_bar_ = 4;
   int denominator_ = kBpmReferenceDenominator;
-  int subdivision_ = 1;
+  int subdivision_ = kMinSubdivision;
   Accent accents_[kMaxBeats] = {};
   bool poly_enabled_ = false;
   int poly_beats_ = 3;
   Accent poly_accents_[kMaxPolyBeats] = {};
-  int normal_sound_ = 0;
-  int accent_sound_ = 0;
-  int count_in_bars_ = 0;
+  int normal_sound_ = kDefaultNormalSound;
+  int accent_sound_ = kDefaultAccentSound;
+  int count_in_bars_ = kCountInOff;
   bool count_in_distinct_ = true;
   int count_in_sound_ = kDefaultCountInSound;
   bool count_in_armed_ = true;

@@ -351,6 +351,20 @@ void TestPolyAccentSlotOutOfRange() {
   );
 }
 
+void TestPolyAccentBoundIsPolyCount() {
+  kitbag::Metronome metronome;
+  MuteMainRow(metronome);
+  metronome.SetPolyrhythm(true, 5);
+  metronome.SetPolyAccent(4, Accent::kMuted);
+  StartFourFour(metronome, 5);
+  const PolyRun run = RenderPoly(metronome, kBarFrames);
+
+  Check(
+      PeakAt(run, 4 * kFifthFrames) < kSilentCeiling,
+      "poly slot range: slot 4 of a 5-beat poly row under 4/4 is editable"
+  );
+}
+
 }  // namespace
 
 void RunPolyTests() {
@@ -365,6 +379,7 @@ void RunPolyTests() {
   TestMainAccentValuesClamp();
   TestPolyAccentValuesClamp();
   TestPolyAccentSlotOutOfRange();
+  TestPolyAccentBoundIsPolyCount();
 }
 
 }  // namespace metronome_test

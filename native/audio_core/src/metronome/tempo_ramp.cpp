@@ -3,23 +3,12 @@
 #include <cmath>
 
 #include "metronome/metronome_internal.h"
+#include "metronome/metronome_types.h"
 
 namespace kitbag {
 
 using metronome_detail::Clamp;
 using metronome_detail::kSecondsPerMinute;
-
-namespace {
-
-double ClampSeconds(double seconds) {
-  return Clamp(
-      seconds,
-      static_cast<double>(TempoRamp::kMinSeconds),
-      static_cast<double>(TempoRamp::kMaxSeconds)
-  );
-}
-
-}  // namespace
 
 bool TempoRamp::Configure(
     double start_bpm,
@@ -35,13 +24,17 @@ bool TempoRamp::Configure(
   if (unit < 0 || unit > static_cast<int32_t>(RampUnit::kMinutes)) return false;
   switch (static_cast<RampUnit>(unit)) {
     case RampUnit::kBars:
-      length_ = Clamp(std::round(duration), 1.0, static_cast<double>(kMaxBars));
+      length_ = Clamp(
+          std::round(duration),
+          static_cast<double>(kMinBars),
+          static_cast<double>(kMaxBars)
+      );
       break;
     case RampUnit::kSeconds:
-      length_ = ClampSeconds(duration);
+      length_ = Clamp(duration, kMinSeconds, kMaxSeconds);
       break;
     case RampUnit::kMinutes:
-      length_ = ClampSeconds(duration * kSecondsPerMinute);
+      length_ = Clamp(duration * kSecondsPerMinute, kMinSeconds, kMaxSeconds);
       break;
   }
   in_seconds_ = static_cast<RampUnit>(unit) != RampUnit::kBars;

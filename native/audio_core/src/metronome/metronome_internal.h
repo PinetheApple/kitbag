@@ -18,17 +18,17 @@ constexpr double kMsPerSecond = 1000.0;
 
 // Returns by value: std::clamp returns const T&, which dangles when a caller
 // binds the result of a temporary argument.
+template <typename T>
+T Clamp(T value, T low, T high) {
+  return value < low ? low : (value > high ? high : value);
+}
+
 template <std::size_t N>
 bool IsOneOf(const int (&choices)[N], int value) {
   for (const int choice : choices) {
     if (choice == value) return true;
   }
   return false;
-}
-
-template <typename T>
-T Clamp(T value, T low, T high) {
-  return value < low ? low : (value > high ? high : value);
 }
 
 }  // namespace metronome_detail

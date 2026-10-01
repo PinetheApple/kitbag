@@ -15,21 +15,14 @@ void Metronome::InitAccentRow(std::span<Accent> row) {
 
 void Metronome::SetAccentSlot(
     std::span<Accent> row,
-    int32_t beat_index,
-    int32_t accent
+    int32_t length,
+    const Command& command
 ) {
-  if (beat_index < 0 || static_cast<size_t>(beat_index) >= row.size()) return;
+  const int32_t beat_index = command.int_a;
+  if (beat_index < 0 || beat_index >= length) return;
   row[static_cast<size_t>(beat_index)] = static_cast<Accent>(
-      Clamp(accent, 0, static_cast<int32_t>(Accent::kAccented))
+      Clamp(command.int_b, 0, static_cast<int32_t>(Accent::kAccented))
   );
-}
-
-void Metronome::ApplyAccentCommand(const Command& command) {
-  const bool poly = command.type == CommandType::kSetPolyAccent;
-  const std::span<Accent> row =
-      poly ? std::span(poly_accents_).first(static_cast<size_t>(poly_beats_))
-           : std::span(accents_).first(static_cast<size_t>(beats_per_bar_));
-  SetAccentSlot(row, command.int_a, command.int_b);
 }
 
 void Metronome::ResetGrownSlots(
@@ -53,19 +46,31 @@ void Metronome::SetSignatureState(int32_t numerator, int32_t denominator) {
   }
 }
 
+bool Metronome::ApplyOutputCommand(const Command& command) {
+  switch (command.type) {
+    case CommandType::kSetSounds:
+      SetSoundsState(command.int_a, command.int_b);
+      return true;
+    case CommandType::kPreviewSound:
+      QueuePreview(command.int_a, command.int_b != 0);
+      return true;
+    case CommandType::kSetVolume:
+      volume_ = Clamp(command.value, kMinVolume, kMaxVolume);
+      return true;
+    default:
+      return false;
+  }
+}
+
 void Metronome::QueuePreview(int32_t sound, bool accented) {
-  if (sound < 0 || sound >= kSoundCount) return;
+  if (!IsValidSound(sound)) return;
   pending_preview_sound_ = sound;
   pending_preview_accented_ = accented;
 }
 
 void Metronome::SetSoundsState(int32_t normal_sound, int32_t accent_sound) {
-  if (normal_sound >= 0 && normal_sound < kSoundCount) {
-    normal_sound_ = normal_sound;
-  }
-  if (accent_sound >= 0 && accent_sound < kSoundCount) {
-    accent_sound_ = accent_sound;
-  }
+  if (IsValidSound(normal_sound)) normal_sound_ = normal_sound;
+  if (IsValidSound(accent_sound)) accent_sound_ = accent_sound;
 }
 
 void Metronome::SetPolyState(bool enabled, int32_t beats) {

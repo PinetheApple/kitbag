@@ -192,10 +192,11 @@ bool Metronome::RouteCommand(const Command& command) {
     case CommandType::kSetAccent:
     case CommandType::kSetPoly:
     case CommandType::kSetPolyAccent:
+      return ApplyPatternCommand(command);
     case CommandType::kSetSounds:
     case CommandType::kPreviewSound:
     case CommandType::kSetVolume:
-      return ApplyPatternCommand(command);
+      return ApplyOutputCommand(command);
   }
   return false;
 }
@@ -258,8 +259,8 @@ bool Metronome::ApplyTrainerCommand(const Command& command) {
       return true;
     case CommandType::kSetBarMute:
       mute_enabled_ = command.int_a != 0;
-      play_bars_ = Clamp(command.int_b, 1, kMaxMuteBars);
-      mute_bars_ = Clamp(command.int_c, 1, kMaxMuteBars);
+      play_bars_ = Clamp(command.int_b, kMinMuteBars, kMaxMuteBars);
+      mute_bars_ = Clamp(command.int_c, kMinMuteBars, kMaxMuteBars);
       return true;
     case CommandType::kSetCountIn:
       SetCountInState(command);
@@ -275,23 +276,16 @@ bool Metronome::ApplyPatternCommand(const Command& command) {
       SetSignatureState(command.int_a, command.int_b);
       return true;
     case CommandType::kSetSubdivision:
-      subdivision_ = Clamp(command.int_a, 1, kMaxSubdivision);
+      subdivision_ = Clamp(command.int_a, kMinSubdivision, kMaxSubdivision);
       return true;
     case CommandType::kSetAccent:
+      SetAccentSlot(accents_, beats_per_bar_, command);
+      return true;
     case CommandType::kSetPolyAccent:
-      ApplyAccentCommand(command);
+      SetAccentSlot(poly_accents_, poly_beats_, command);
       return true;
     case CommandType::kSetPoly:
       SetPolyState(command.int_a != 0, command.int_b);
-      return true;
-    case CommandType::kSetSounds:
-      SetSoundsState(command.int_a, command.int_b);
-      return true;
-    case CommandType::kPreviewSound:
-      QueuePreview(command.int_a, command.int_b != 0);
-      return true;
-    case CommandType::kSetVolume:
-      volume_ = Clamp(command.value, kMinVolume, kMaxVolume);
       return true;
     default:
       return false;

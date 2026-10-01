@@ -155,24 +155,23 @@ KB_EXPORT void kb_metronome_set_poly_accent(
     int32_t beat_index,
     int32_t accent
 );
-/* Ids index KB_SOUND_NAMES. accent_sound plays accented beats; normal_sound plays
- * normal beats and subdivisions; poly beats follow their own accent. An id
- * outside the table keeps that role's previous sound. */
+/* Ids index KB_SOUND_NAMES; accent_sound voices accented main and poly beats,
+ * normal_sound the rest. An out-of-table id keeps the role's last sound. */
 KB_EXPORT void kb_metronome_set_sounds(
     kb_engine* engine,
     int32_t normal_sound,
     int32_t accent_sound
 );
-/* bars 0/1/2/4, else ignored; distinct != 0 counts with the caller's `sound`,
- * else the accent/normal pair. Replays after stop, not pause; grid/anchor skip. */
+/* Ignored unless bars is in Metronome::kCountInBarChoices; distinct != 0 uses
+ * `sound`. Replays after stop, not pause; skipped under a grid or anchor. */
 KB_EXPORT void kb_metronome_set_count_in(
     kb_engine* engine,
     int32_t bars,
     int32_t distinct,
     int32_t sound
 );
-/* One click of `sound` at the current volume on the next audio block; the last
- * of several in one block wins. Needs kb_engine_start; bad ids are ignored. */
+/* One click of `sound` at the current volume on the next block (last wins). It
+ * waits queued until kb_engine_start runs the callback; bad ids are ignored. */
 KB_EXPORT void
 kb_metronome_preview_sound(kb_engine* engine, int32_t sound, int32_t accented);
 /* Volume multiplier [0, 2], default 1. */
@@ -180,9 +179,8 @@ KB_EXPORT void kb_metronome_set_volume(kb_engine* engine, double volume);
 /* Output latency offset in ms [-100, 100]; positive = trigger earlier. */
 KB_EXPORT void
 kb_metronome_set_latency_offset(kb_engine* engine, double latency_ms);
-/* Steps BPM per downbeat; bars 1..64, time 1 s..60 min from bar one. Holds at
- * the end unless loop; invalid input keeps the old ramp; set_tempo cancels.
- * A loop plays one bar at end_bpm before restarting, so a bars cycle is N+1. */
+/* Steps BPM per downbeat from bar one, then holds end_bpm; loop restarts after
+ * one end bar. Bad input is ignored, set_tempo cancels, duration is clamped. */
 KB_EXPORT void kb_metronome_set_ramp(
     kb_engine* engine,
     int32_t enabled,
