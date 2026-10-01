@@ -29,6 +29,8 @@ export interface MetronomeFrameValues {
   readonly barPhase: SharedValue<number>;
   /** current_beat (int; -1 stopped) — drives the LED flash. */
   readonly currentBeat: SharedValue<number>;
+  /** current_poly_beat (int; -1 stopped or disabled) — drives the poly LED flash. */
+  readonly currentPolyBeat: SharedValue<number>;
   readonly currentBpm: SharedValue<number>;
 }
 
@@ -40,6 +42,7 @@ export function useMetronomeFrame(
 ): MetronomeFrameValues {
   const barPhase = useSharedValue(0);
   const currentBeat = useSharedValue(KB_STOPPED_BEAT);
+  const currentPolyBeat = useSharedValue(KB_STOPPED_BEAT);
   const currentBpm = useSharedValue(bpm);
 
   const frame = useFrameCallback(() => {
@@ -53,6 +56,7 @@ export function useMetronomeFrame(
     // Each read is an allocation-free JSI double (§13.3).
     barPhase.value = host.bar_phase;
     currentBeat.value = host.current_beat;
+    currentPolyBeat.value = host.current_poly_beat;
     currentBpm.value = host.current_bpm;
   }, false);
 
@@ -64,5 +68,5 @@ export function useMetronomeFrame(
     currentBpm.value = bpm;
   }, [bpm, currentBpm]);
 
-  return { barPhase, currentBeat, currentBpm };
+  return { barPhase, currentBeat, currentPolyBeat, currentBpm };
 }

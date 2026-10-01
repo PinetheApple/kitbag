@@ -1,6 +1,8 @@
 import {
   Button,
+  Chip,
   createThemedStyles,
+  SegmentedControl,
   Sheet,
   space,
   StepControl,
@@ -8,8 +10,15 @@ import {
   textStyle,
   type StepDelta,
 } from '@kitbag/core-design';
+import { useCallback } from 'react';
 import { Text, View } from 'react-native';
 
+import {
+  RAMP_UNIT_OPTIONS,
+  rampUnitFromOption,
+  rampUnitLabel,
+  rampUnitOption,
+} from '../logic/rampUnit.ts';
 import { useRampEditor, type RampEditor } from './useRampEditor.ts';
 
 const useStyles = createThemedStyles((theme) => ({
@@ -34,7 +43,6 @@ const useStyles = createThemedStyles((theme) => ({
     gap: space.controlGap,
   },
 }));
-
 interface RampFieldProps {
   readonly label: string;
   readonly spokenLabel: string;
@@ -92,6 +100,34 @@ function TempoFields({ editor }: { readonly editor: RampEditor }) {
     </View>
   );
 }
+function DurationField({ editor }: { readonly editor: RampEditor }) {
+  const styles = useStyles();
+  const { setUnit } = editor;
+  const handleUnitSelect = useCallback(
+    (option: string) => {
+      setUnit(rampUnitFromOption(option));
+    },
+    [setUnit],
+  );
+  return (
+    <View style={styles.row}>
+      <RampField
+        label="Over"
+        spokenLabel="Ramp length"
+        value={editor.draft.duration}
+        unit={rampUnitLabel(editor.draft.unit)}
+        onStep={editor.stepDuration}
+      />
+      <SegmentedControl
+        fill
+        accessibilityLabel="Ramp length unit"
+        options={RAMP_UNIT_OPTIONS}
+        selected={rampUnitOption(editor.draft.unit)}
+        onSelect={handleUnitSelect}
+      />
+    </View>
+  );
+}
 
 function RampActions({ editor }: { readonly editor: RampEditor }) {
   const styles = useStyles();
@@ -112,6 +148,17 @@ function RampActions({ editor }: { readonly editor: RampEditor }) {
         onPress={editor.start}
       />
     </View>
+  );
+}
+function LoopControl({ editor }: { readonly editor: RampEditor }) {
+  return (
+    <Chip
+      icon="reset"
+      active={editor.draft.loop}
+      label="Loop back at end"
+      accessibilityLabel={`Loop back at end, ${editor.draft.loop ? 'on' : 'off'}`}
+      onPress={editor.toggleLoop}
+    />
   );
 }
 
@@ -135,14 +182,8 @@ export function RampSheet({ visible, bottomInset, onDismiss }: RampSheetProps) {
       onDismiss={onDismiss}
     >
       <TempoFields editor={editor} />
-      <RampField
-        label="Over"
-        spokenLabel="Ramp length"
-        value={editor.draft.duration}
-        unit="bars"
-        trailing="bars"
-        onStep={editor.stepBars}
-      />
+      <DurationField editor={editor} />
+      <LoopControl editor={editor} />
       <RampActions editor={editor} />
     </Sheet>
   );

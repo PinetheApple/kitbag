@@ -5,16 +5,11 @@ import {
   space,
   StepControl,
 } from '@kitbag/core-design';
-import {
-  KB_ACCENT,
-  KB_DENOMINATORS,
-  KB_STOPPED_BEAT,
-} from '@kitbag/core-native';
+import { KB_DENOMINATORS } from '@kitbag/core-native';
 import { BPM_BOUNDS, useMetronome } from '@kitbag/core-state';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { GestureDetector } from 'react-native-gesture-handler';
 import { View } from 'react-native';
-import { useSharedValue } from 'react-native-reanimated';
 
 import { subdivisionGlyph } from '../logic/subdivision.ts';
 import { pushTap, tapTempoBpm } from '../logic/tapTempo.ts';
@@ -27,8 +22,6 @@ import { TrainerChips } from './TrainerChips.tsx';
 import { Transport } from './Transport.tsx';
 import { useTempoSwipe } from './useTempoSwipe.ts';
 import { useMetronomeFrame } from './useMetronomeFrame.ts';
-
-const FIRST_BEAT = 0;
 
 const POLY = 'poly';
 const POLY_OPTIONS = [{ value: POLY, label: POLY }] as const;
@@ -54,14 +47,6 @@ const useStyles = createThemedStyles((theme) => ({
   },
 }));
 
-function polyAccents(beats: number): readonly KB_ACCENT[] {
-  return Array.from({ length: beats }, (_unused, beat) =>
-    beat === FIRST_BEAT
-      ? KB_ACCENT.KB_ACCENT_ACCENTED
-      : KB_ACCENT.KB_ACCENT_NORMAL,
-  );
-}
-
 export interface ShellMeasuredInsets {
   readonly top: number;
   readonly bottom: number;
@@ -80,6 +65,7 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
   const accents = useMetronome((s) => s.accents);
   const polyEnabled = useMetronome((s) => s.polyEnabled);
   const polyBeats = useMetronome((s) => s.polyBeats);
+  const polyAccents = useMetronome((s) => s.polyAccents);
   const running = useMetronome((s) => s.running);
 
   const setTempo = useMetronome((s) => s.setTempo);
@@ -89,10 +75,12 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
   const setSubdivision = useMetronome((s) => s.setSubdivision);
   const setPoly = useMetronome((s) => s.setPoly);
   const cycleAccent = useMetronome((s) => s.cycleAccent);
+  const cyclePolyAccent = useMetronome((s) => s.cyclePolyAccent);
   const start = useMetronome((s) => s.start);
   const stop = useMetronome((s) => s.stop);
 
-  const { barPhase, currentBeat, currentBpm } = useMetronomeFrame(running, bpm);
+  const { barPhase, currentBeat, currentPolyBeat, currentBpm } =
+    useMetronomeFrame(running, bpm);
   const { elapsedMs, reset: resetPractice } = usePracticeElapsed(running);
   const [numpadOpen, setNumpadOpen] = useState(false);
   const tapTimes = useRef<readonly number[]>([]);
@@ -106,8 +94,6 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
   );
 
   const tempoSwipe = useTempoSwipe(currentBpm, setTempoEndingTapSeries);
-
-  const polyBeatUnpublished = useSharedValue(KB_STOPPED_BEAT);
 
   const handleNudge = useCallback(
     (delta: number) => {
@@ -155,8 +141,6 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
   const handlePolyToggle = useCallback(() => {
     setPoly(!polyEnabled, polyBeats);
   }, [polyEnabled, polyBeats, setPoly]);
-
-  const polyLeds = useMemo(() => polyAccents(polyBeats), [polyBeats]);
 
   const handleToggleTransport = useCallback(() => {
     if (running) stop();
@@ -222,8 +206,9 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
                 <BeatLeds
                   size="small"
                   beatCount={polyBeats}
-                  accents={polyLeds}
-                  currentBeat={polyBeatUnpublished}
+                  accents={polyAccents}
+                  currentBeat={currentPolyBeat}
+                  onCycle={cyclePolyAccent}
                 />
               </View>
             ) : null}

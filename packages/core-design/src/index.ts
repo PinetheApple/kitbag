@@ -14,6 +14,7 @@ export * from './components/Card.tsx';
 export * from './components/Chip.tsx';
 export * from './components/Icon.tsx';
 export * from './components/NumpadKeypad.tsx';
+export * from './components/PickerGrid.tsx';
 export * from './components/PresetButton.tsx';
 export * from './components/PrimaryPlayButton.tsx';
 export * from './components/SegmentedControl.tsx';
