@@ -61,6 +61,12 @@ typedef enum kb_accent {
   KB_ACCENT_ACCENTED = 2,
 } kb_accent;
 
+typedef enum kb_ramp_unit {
+  KB_RAMP_BARS = 0,
+  KB_RAMP_SECONDS = 1,
+  KB_RAMP_MINUTES = 2,
+} kb_ramp_unit;
+
 KB_EXPORT void kb_metronome_start(kb_engine* engine);
 /* Sample-accurate start: the click begins on engine frame start_frame
  * (cf. kb_engine_frames_rendered), not when this call arrives. A frame already
@@ -69,6 +75,8 @@ KB_EXPORT void kb_metronome_start(kb_engine* engine);
  * at 48kHz — so it may be passed as a JS double. No BigInt. */
 KB_EXPORT void kb_metronome_start_at(kb_engine* engine, uint64_t start_frame);
 KB_EXPORT void kb_metronome_stop(kb_engine* engine);
+/* Stops like kb_metronome_stop but the next start plays no count-in. */
+KB_EXPORT void kb_metronome_pause(kb_engine* engine);
 
 /* Maximum beats a single grid may carry. */
 #define KB_MAX_GRID_BEATS 8192
@@ -125,7 +133,8 @@ KB_EXPORT void kb_metronome_set_tempo(kb_engine* engine, double bpm);
  * inserted or dropped. Preserving the phase while the beat unit
  * grows can re-open the beat that just fired for the few samples the step grew
  * by, so a click may sound doubled at the boundary; that window is shared with
- * kb_metronome_set_tempo, not specific to the denominator. */
+ * kb_metronome_set_tempo, not specific to the denominator.
+ * Growing beats_per_bar resets the new beats' accents to normal. */
 KB_EXPORT void kb_metronome_set_beats(
     kb_engine* engine,
     int32_t beats_per_bar,
@@ -133,24 +142,55 @@ KB_EXPORT void kb_metronome_set_beats(
 );
 KB_EXPORT void
 kb_metronome_set_subdivision(kb_engine* engine, int32_t subdivision);
+/* accent outside kb_accent clamps to MUTED..ACCENTED; a beat_index outside the
+ * current bar is ignored. kb_metronome_set_poly_accent shares both rules. */
 KB_EXPORT void
 kb_metronome_set_accent(kb_engine* engine, int32_t beat_index, int32_t accent);
 KB_EXPORT void
 kb_metronome_set_poly(kb_engine* engine, int32_t enabled, int32_t beats);
-KB_EXPORT void kb_metronome_set_sound(kb_engine* engine, int32_t sound_index);
+/* Independent of the main row; slot 0 defaults accented. Slots past the poly
+ * count are ignored; growing it resets new slots to normal. */
+KB_EXPORT void kb_metronome_set_poly_accent(
+    kb_engine* engine,
+    int32_t beat_index,
+    int32_t accent
+);
+/* Ids index KB_SOUND_NAMES. accent_sound plays accented beats; normal_sound plays
+ * normal beats and subdivisions; poly beats follow their own accent. An id
+ * outside the table keeps that role's previous sound. */
+KB_EXPORT void kb_metronome_set_sounds(
+    kb_engine* engine,
+    int32_t normal_sound,
+    int32_t accent_sound
+);
+/* bars 0/1/2/4, else ignored; distinct != 0 counts with the caller's `sound`,
+ * else the accent/normal pair. Replays after stop, not pause; grid/anchor skip. */
+KB_EXPORT void kb_metronome_set_count_in(
+    kb_engine* engine,
+    int32_t bars,
+    int32_t distinct,
+    int32_t sound
+);
+/* One click of `sound` at the current volume on the next audio block; the last
+ * of several in one block wins. Needs kb_engine_start; bad ids are ignored. */
+KB_EXPORT void
+kb_metronome_preview_sound(kb_engine* engine, int32_t sound, int32_t accented);
 /* Volume multiplier [0, 2], default 1. */
 KB_EXPORT void kb_metronome_set_volume(kb_engine* engine, double volume);
 /* Output latency offset in ms [-100, 100]; positive = trigger earlier. */
 KB_EXPORT void
 kb_metronome_set_latency_offset(kb_engine* engine, double latency_ms);
-/* Tempo ramp trainer: step BPM once per bar from start to end over `bars`
- * bars, then hold. A manual kb_metronome_set_tempo cancels it. */
+/* Steps BPM per downbeat; bars 1..64, time 1 s..60 min from bar one. Holds at
+ * the end unless loop; invalid input keeps the old ramp; set_tempo cancels.
+ * A loop plays one bar at end_bpm before restarting, so a bars cycle is N+1. */
 KB_EXPORT void kb_metronome_set_ramp(
     kb_engine* engine,
     int32_t enabled,
     double start_bpm,
     double end_bpm,
-    int32_t bars
+    double duration,
+    int32_t unit,
+    int32_t loop
 );
 /* Bar-mute trainer: repeating cycle of `play_bars` sounding bars followed by
  * `mute_bars` silent bars (all voices), anchored at bar 0. */
@@ -163,6 +203,8 @@ KB_EXPORT void kb_metronome_set_bar_mute(
 KB_EXPORT int32_t kb_metronome_is_running(const kb_engine* engine);
 /* Beat index within the bar, -1 when stopped. Poll for UI. */
 KB_EXPORT int32_t kb_metronome_current_beat(const kb_engine* engine);
+/* Poly beat index within its cycle; -1 when stopped, poly disabled or a beat
+ * grid is set, and after a poly count change until the next poly beat. */
 KB_EXPORT int32_t kb_metronome_current_poly_beat(const kb_engine* engine);
 /* Position within the bar, [0, 1). For beat-sweep UI. */
 KB_EXPORT double kb_metronome_bar_phase(const kb_engine* engine);
@@ -170,6 +212,8 @@ KB_EXPORT double kb_metronome_bar_phase(const kb_engine* engine);
 KB_EXPORT double kb_metronome_current_bpm(const kb_engine* engine);
 /* 1 while the current bar is silenced by the bar-mute trainer. */
 KB_EXPORT int32_t kb_metronome_bar_muted(const kb_engine* engine);
+/* 1 during count-in; current_beat and bar_phase follow the count bars. */
+KB_EXPORT int32_t kb_metronome_counting_in(const kb_engine* engine);
 
 /* --- Tuner -------------------------------------------------------------- */
 

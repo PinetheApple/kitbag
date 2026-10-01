@@ -66,14 +66,14 @@ void TestLatencyOffsetChangedMidRun() {
 void TestLatencyOffsetSurvivesRamp() {
   kitbag::Metronome baseline;
   baseline.SetTimeSignature(4, 4);
-  baseline.SetRamp(true, 240.0, 120.0, 1);
+  baseline.SetRamp(true, 240.0, 120.0, 1, kRampBars, false);
   baseline.Start();
   const auto without = RenderAndDetectOnsets(baseline, kSampleRate * 5);
 
   kitbag::Metronome offset;
   offset.SetTimeSignature(4, 4);
   offset.SetLatencyOffset(100.0);
-  offset.SetRamp(true, 240.0, 120.0, 1);
+  offset.SetRamp(true, 240.0, 120.0, 1, kRampBars, false);
   offset.Start();
   const auto with = RenderAndDetectOnsets(offset, kSampleRate * 5);
 

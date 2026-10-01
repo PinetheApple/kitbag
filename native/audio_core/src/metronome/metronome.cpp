@@ -1,7 +1,6 @@
-// Command API, the RT-side drain, and the sequencer state helpers both render
-// paths share. Render loop: metronome_render.cpp. Grid mode: metronome_grid.cpp.
 #include "metronome/metronome.h"
 
+#include <algorithm>
 #include <cassert>
 
 #include "metronome/metronome_internal.h"
@@ -23,6 +22,10 @@ void Metronome::StartAt(uint64_t start_frame) {
 
 void Metronome::Stop() {
   commands_.Push({CommandType::kStop});
+}
+
+void Metronome::Pause() {
+  commands_.Push({CommandType::kPause});
 }
 
 void Metronome::AnchorExternal(
@@ -58,10 +61,10 @@ void Metronome::SetSubdivision(int subdivision) {
   commands_.Push(command);
 }
 
-void Metronome::SetAccent(int beat_index, Accent accent) {
+void Metronome::SetAccent(int beat_index, int32_t accent) {
   Command command{CommandType::kSetAccent};
   command.int_a = beat_index;
-  command.int_b = static_cast<int32_t>(accent);
+  command.int_b = accent;
   commands_.Push(command);
 }
 
@@ -72,9 +75,32 @@ void Metronome::SetPolyrhythm(bool enabled, int beats) {
   commands_.Push(command);
 }
 
-void Metronome::SetSound(int sound_index) {
-  Command command{CommandType::kSetSound};
-  command.int_a = sound_index;
+void Metronome::SetPolyAccent(int beat_index, int32_t accent) {
+  Command command{CommandType::kSetPolyAccent};
+  command.int_a = beat_index;
+  command.int_b = accent;
+  commands_.Push(command);
+}
+
+void Metronome::SetSounds(int normal_sound, int accent_sound) {
+  Command command{CommandType::kSetSounds};
+  command.int_a = normal_sound;
+  command.int_b = accent_sound;
+  commands_.Push(command);
+}
+
+void Metronome::SetCountIn(int bars, bool distinct, int sound) {
+  Command command{CommandType::kSetCountIn};
+  command.int_a = bars;
+  command.int_b = distinct ? 1 : 0;
+  command.int_c = sound;
+  commands_.Push(command);
+}
+
+void Metronome::PreviewSound(int sound, bool accented) {
+  Command command{CommandType::kPreviewSound};
+  command.int_a = sound;
+  command.int_b = accented ? 1 : 0;
   commands_.Push(command);
 }
 
@@ -94,13 +120,17 @@ void Metronome::SetRamp(
     bool enabled,
     double start_bpm,
     double end_bpm,
-    int bars
+    double duration,
+    int32_t unit,
+    bool loop
 ) {
   Command command{CommandType::kSetRamp};
   command.value = start_bpm;
   command.value_b = end_bpm;
+  command.value_c = duration;
   command.int_a = enabled ? 1 : 0;
-  command.int_b = bars;
+  command.int_b = unit;
+  command.int_c = loop ? 1 : 0;
   commands_.Push(command);
 }
 
@@ -134,36 +164,40 @@ void Metronome::ApplyPendingCommands() {
   running_flag_.store(running_, std::memory_order_relaxed);
 }
 
+void Metronome::ApplyCommand(const Command& command) {
+  const bool claimed = RouteCommand(command);
+  assert(claimed && "command routed to a handler that does not own its type");
+  (void)claimed;
+}
+
 // The one exhaustive switch over CommandType: no `default:`, so a new command
 // is a -Wswitch error here rather than a command silently dropped at runtime.
-void Metronome::ApplyCommand(const Command& command) {
-  bool claimed = false;
+bool Metronome::RouteCommand(const Command& command) {
   switch (command.type) {
     case CommandType::kStart:
     case CommandType::kStartAt:
     case CommandType::kStop:
+    case CommandType::kPause:
     case CommandType::kAnchorExternal:
-      claimed = ApplyTransportCommand(command);
-      break;
+      return ApplyTransportCommand(command);
     case CommandType::kSetTempo:
     case CommandType::kSetLatencyOffset:
-      claimed = ApplyTempoCommand(command);
-      break;
+      return ApplyTempoCommand(command);
     case CommandType::kSetRamp:
     case CommandType::kSetBarMute:
-      claimed = ApplyTrainerCommand(command);
-      break;
+    case CommandType::kSetCountIn:
+      return ApplyTrainerCommand(command);
     case CommandType::kSetBeats:
     case CommandType::kSetSubdivision:
     case CommandType::kSetAccent:
     case CommandType::kSetPoly:
-    case CommandType::kSetSound:
+    case CommandType::kSetPolyAccent:
+    case CommandType::kSetSounds:
+    case CommandType::kPreviewSound:
     case CommandType::kSetVolume:
-      claimed = ApplyPatternCommand(command);
-      break;
+      return ApplyPatternCommand(command);
   }
-  assert(claimed && "command routed to a handler that does not own its type");
-  (void)claimed;
+  return false;
 }
 
 bool Metronome::ApplyTransportCommand(const Command& command) {
@@ -188,6 +222,9 @@ bool Metronome::ApplyTransportCommand(const Command& command) {
     case CommandType::kStop:
       StopRun();
       return true;
+    case CommandType::kPause:
+      PauseRun();
+      return true;
     default:
       return false;
   }
@@ -204,7 +241,7 @@ bool Metronome::ApplyTempoCommand(const Command& command) {
   switch (command.type) {
     case CommandType::kSetTempo:
       SetBpmPreservingPhase(Clamp(command.value, kMinBpm, kMaxBpm));
-      ramp_enabled_ = false;  // a manual tempo change cancels the ramp
+      ramp_.Disable();
       return true;
     case CommandType::kSetLatencyOffset:
       SetLatencyPreservingPhase(command.value);
@@ -224,6 +261,9 @@ bool Metronome::ApplyTrainerCommand(const Command& command) {
       play_bars_ = Clamp(command.int_b, 1, kMaxMuteBars);
       mute_bars_ = Clamp(command.int_c, 1, kMaxMuteBars);
       return true;
+    case CommandType::kSetCountIn:
+      SetCountInState(command);
+      return true;
     default:
       return false;
   }
@@ -238,62 +278,42 @@ bool Metronome::ApplyPatternCommand(const Command& command) {
       subdivision_ = Clamp(command.int_a, 1, kMaxSubdivision);
       return true;
     case CommandType::kSetAccent:
-      SetAccentSlot(command.int_a, command.int_b);
+    case CommandType::kSetPolyAccent:
+      ApplyAccentCommand(command);
       return true;
     case CommandType::kSetPoly:
       SetPolyState(command.int_a != 0, command.int_b);
       return true;
-    case CommandType::kSetSound:
-      sound_ = Clamp(command.int_a, 0, kSoundCount - 1);
+    case CommandType::kSetSounds:
+      SetSoundsState(command.int_a, command.int_b);
+      return true;
+    case CommandType::kPreviewSound:
+      QueuePreview(command.int_a, command.int_b != 0);
       return true;
     case CommandType::kSetVolume:
-      volume_ = Clamp(command.value, 0.0, kMaxVolume);
+      volume_ = Clamp(command.value, kMinVolume, kMaxVolume);
       return true;
     default:
       return false;
   }
 }
 
-void Metronome::SetAccentSlot(int32_t beat_index, int32_t accent) {
-  if (beat_index < 0 || beat_index >= kMaxBeats) return;
-  accents_[beat_index] = static_cast<Accent>(
-      Clamp(accent, 0, static_cast<int32_t>(Accent::kAccented))
-  );
-}
-
-// The valid denominators are a discrete set, so clamping an out-of-set value
-// would invent a beat unit the caller never asked for; ignore it instead.
-void Metronome::SetSignatureState(int32_t numerator, int32_t denominator) {
-  beats_per_bar_ = Clamp(numerator, 1, kMaxBeats);
-  if (IsValidDenominator(denominator)) {
-    SetDenominatorPreservingPhase(denominator);
-  }
-}
-
-bool Metronome::IsValidDenominator(int32_t denominator) {
-  for (const int valid : kDenominators) {
-    if (valid == denominator) return true;
-  }
-  return false;
-}
-
-void Metronome::SetPolyState(bool enabled, int32_t beats) {
-  poly_enabled_ = enabled;
-  poly_beats_ = Clamp(beats, 2, kMaxPolyBeats);
-  if (!poly_enabled_) {
-    current_poly_beat_.store(-1, std::memory_order_relaxed);
-  }
-}
-
 void Metronome::ArmRamp(const Command& command) {
-  ramp_enabled_ = command.int_a != 0;
-  if (!ramp_enabled_) return;
-  ramp_start_bpm_ = Clamp(command.value, kMinBpm, kMaxBpm);
-  ramp_end_bpm_ = Clamp(command.value_b, kMinBpm, kMaxBpm);
-  ramp_bars_ = Clamp(command.int_b, 1, kMaxRampBars);
+  if (command.int_a == 0) {
+    ramp_.Disable();
+    return;
+  }
+  const bool valid = ramp_.Configure(
+      command.value,
+      command.value_b,
+      command.value_c,
+      command.int_b,
+      command.int_c != 0
+  );
+  if (!valid) return;
   // current_bar_ is -1 before the first downbeat; never start there.
-  ramp_start_bar_ = running_ && current_bar_ > 0 ? current_bar_ : 0;
-  SetBpmPreservingPhase(ramp_start_bpm_);
+  ramp_.Restart(running_ && current_bar_ > 0 ? current_bar_ : 0);
+  SetBpmPreservingPhase(ramp_.start_bpm());
 }
 
 void Metronome::SetLatencyPreservingPhase(double latency_ms) {
@@ -312,20 +332,21 @@ void Metronome::StopRun() {
   // Force a re-seed next block: a cursor stranded where the pause began
   // swallows every beat the pause spanned into one off-grid click (§4.2.1).
   observed_generation_ = 0;
+  counting_in_ = false;
+  count_in_armed_ = true;
   current_beat_.store(-1, std::memory_order_relaxed);
   current_poly_beat_.store(-1, std::memory_order_relaxed);
 }
 
 void Metronome::BeginRun() {
   current_bar_ = -1;  // the first downbeat advances it to bar 0
-  ramp_start_bar_ = 0;
-  if (ramp_enabled_) {
-    bpm_ = ramp_start_bpm_;
-  }
+  ramp_.Restart(0);
+  if (ramp_.enabled()) bpm_ = ramp_.start_bpm();
   // Anchors `position` at zero, not beat_position_: nothing can be emitted
   // before the first frame, so a positive offset would swallow every grid
   // point it shifts past (§4.7).
-  beat_position_ = -LatencyBeats();
+  ArmCountIn();
+  beat_position_ = -count_in_beats_ - LatencyBeats();
   running_ = true;
   observed_generation_ = 0;  // re-seed the grid cursor at the resume point
   // Publish now, not only at the end of the drain: a deferred StartAt calls
@@ -357,13 +378,6 @@ void Metronome::SetBeatRate(double new_bpm, int new_denominator) {
   bpm_ = new_bpm;
   denominator_ = new_denominator;
   beat_position_ += before - LatencyBeats();
-}
-
-double Metronome::RampBpmForBar(int64_t bar) const {
-  const int64_t progressed =
-      Clamp<int64_t>(bar - ramp_start_bar_, 0, ramp_bars_);
-  const double step = (ramp_end_bpm_ - ramp_start_bpm_) / ramp_bars_;
-  return ramp_start_bpm_ + step * static_cast<double>(progressed);
 }
 
 bool Metronome::BarIsMuted(int64_t bar) const {

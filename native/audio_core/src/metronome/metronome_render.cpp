@@ -18,7 +18,8 @@ constexpr double kTau = 6.283185307179586;
 constexpr double kAccentAmplitude = 0.9;
 constexpr double kBeatAmplitude = 0.6;
 constexpr double kSubdivisionAmplitude = 0.3;
-constexpr double kPolyAmplitude = 0.5;
+constexpr double kPolyBeatAmplitude = 0.5;
+constexpr double kPolyAccentAmplitude = 0.8;
 // A decaying voice is retired once it falls below audibility.
 constexpr double kVoiceSilenceAmplitude = 1e-4;
 
@@ -70,18 +71,26 @@ void Metronome::TriggerClick(
       std::exp(-decay_per_second / static_cast<double>(sample_rate));
 }
 
+void Metronome::TriggerPreset(int sound, bool accented, uint32_t sample_rate) {
+  const SoundPreset& preset = kSounds[sound];
+  TriggerClick(
+      accented ? preset.accent_hz : preset.beat_hz,
+      accented ? kAccentAmplitude : kBeatAmplitude,
+      preset.decay_per_second,
+      sample_rate
+  );
+}
+
 void Metronome::OnBeatBoundary(int beat_index, uint32_t sample_rate) {
   current_beat_.store(beat_index, std::memory_order_relaxed);
   const Accent accent = beat_index >= 0 && beat_index < kMaxBeats
                             ? accents_[beat_index]
                             : Accent::kNormal;
   if (accent == Accent::kMuted || BarIsMuted(current_bar_)) return;
-  const SoundPreset& sound = kSounds[sound_];
   const bool accented = accent == Accent::kAccented;
-  TriggerClick(
-      accented ? sound.accent_hz : sound.beat_hz,
-      accented ? kAccentAmplitude : kBeatAmplitude,
-      sound.decay_per_second,
+  TriggerPreset(
+      accented ? accent_sound_ : normal_sound_,
+      accented,
       sample_rate
   );
 }
@@ -96,7 +105,7 @@ void Metronome::OnSubdivisionTick(int64_t owning_beat, uint32_t sample_rate) {
   if (accents_[beat_in_bar] == Accent::kMuted || BarIsMuted(current_bar_)) {
     return;
   }
-  const SoundPreset& sound = kSounds[sound_];
+  const SoundPreset& sound = kSounds[normal_sound_];
   TriggerClick(
       sound.subdivision_hz,
       kSubdivisionAmplitude,
@@ -107,13 +116,13 @@ void Metronome::OnSubdivisionTick(int64_t owning_beat, uint32_t sample_rate) {
 
 void Metronome::OnPolyBoundary(int poly_index, uint32_t sample_rate) {
   current_poly_beat_.store(poly_index, std::memory_order_relaxed);
-  // Muted bars silence the poly voice too: the trainer's point is keeping
-  // time internally, so nothing may sound during a muted bar.
-  if (BarIsMuted(current_bar_)) return;
-  const SoundPreset& sound = kSounds[sound_];
+  const Accent accent = poly_accents_[poly_index];
+  if (accent == Accent::kMuted || BarIsMuted(current_bar_)) return;
+  const bool accented = accent == Accent::kAccented;
+  const SoundPreset& sound = kSounds[accented ? accent_sound_ : normal_sound_];
   TriggerClick(
       sound.poly_hz,
-      kPolyAmplitude,
+      accented ? kPolyAccentAmplitude : kPolyBeatAmplitude,
       sound.decay_per_second,
       sample_rate
   );
@@ -201,7 +210,7 @@ void Metronome::BeginAnchorExternal(
 ) {
   has_pending_anchor_ = false;
   has_pending_start_ = false;  // an anchor supersedes a deferred start
-  ramp_enabled_ = false;  // an authoritative bpm cancels the ramp, as SetTempo
+  ramp_.Disable();
   bpm_ = Clamp(pending_anchor_bpm_, kMinBpm, kMaxBpm);
   const double song_seconds =
       pending_anchor_song_pos_ +
@@ -214,6 +223,8 @@ void Metronome::BeginAnchorExternal(
   beat_position_ = song_seconds * bpm_ * BeatUnitScale() / kSecondsPerMinute;
   running_ = true;
   running_flag_.store(true, std::memory_order_relaxed);
+  counting_in_ = false;
+  count_in_armed_ = false;
   observed_generation_ = 0;  // re-seed the grid cursor if a grid is present
   SyncBarFromPosition();
   *tempo = BlockTempoFor(sample_rate);
@@ -224,8 +235,7 @@ void Metronome::FireConstantTempoTick(
     uint32_t sample_rate,
     BlockTempo* tempo
 ) {
-  // Owning beat on the speaker-time base: sub_index came from position, and it
-  // is >= 0 here (AdvanceConstantTempo fires only when position >= 0).
+  // sub_index is on the speaker-time base and never negative here.
   const int64_t beat = sub_index / subdivision_;
   if (sub_index % subdivision_ != 0) {
     if (subdivision_ > 1) OnSubdivisionTick(beat, sample_rate);
@@ -234,8 +244,8 @@ void Metronome::FireConstantTempoTick(
   const auto beat_index = static_cast<int>(beat % beats_per_bar_);
   if (beat_index == 0) {
     ++current_bar_;  // monotonic: survives time-signature changes
-    if (ramp_enabled_) {
-      SetBpmPreservingPhase(RampBpmForBar(current_bar_));
+    if (ramp_.enabled()) {
+      SetBpmPreservingPhase(ramp_.StepAtDownbeat(current_bar_, sample_rate));
       *tempo = BlockTempoFor(sample_rate);
     }
   }
@@ -257,10 +267,9 @@ void Metronome::FirePolyTick(
 }
 
 void Metronome::AdvanceConstantTempo(uint32_t sample_rate, BlockTempo* tempo) {
-  const double position = beat_position_ + tempo->latency_beats;
-  // Before song beat 0 — a negative external-anchor position — there is no beat
-  // to sound, mirroring grid mode's silence before its first beat (§4.2).
-  if (position >= 0.0) {
+  double position = beat_position_ + tempo->latency_beats;
+  if (counting_in_) position = AdvanceCountIn(position, *tempo, sample_rate);
+  if (position >= -kGridEpsilon) {
     const auto sub_index = static_cast<int64_t>(
         std::floor(position * subdivision_ + kGridEpsilon)
     );
@@ -270,6 +279,7 @@ void Metronome::AdvanceConstantTempo(uint32_t sample_rate, BlockTempo* tempo) {
       FireConstantTempoTick(sub_index, sample_rate, tempo);
     }
     if (poly_enabled_) FirePolyTick(position, sample_rate, *tempo);
+    ramp_.Advance();
   }
   beat_position_ += tempo->beats_per_sample;
 }
@@ -283,22 +293,23 @@ void Metronome::PublishBlockMirrors(
     current_bpm_.store(bpm_, std::memory_order_relaxed);
   } else if (grid != nullptr) {
     PublishGridMirrors(*grid, frame, sample_rate);
+    current_poly_beat_.store(-1, std::memory_order_relaxed);
   } else {
     // Track `position`, not beat_position_, so the sweep, the LED and the
     // audible click share one time base (§4.5); the mapping to real latency
     // is §4.2's phase-anchor decision.
     const double position = beat_position_ + LatencyBeats();
-    bar_phase_.store(
-        std::fmod(position, static_cast<double>(beats_per_bar_)) /
-            beats_per_bar_,
-        std::memory_order_relaxed
-    );
+    const auto bar_beats = static_cast<double>(beats_per_bar_);
+    double in_bar = std::fmod(position, bar_beats);
+    if (in_bar < 0.0) in_bar += bar_beats;
+    bar_phase_.store(in_bar / bar_beats, std::memory_order_relaxed);
     current_bpm_.store(bpm_, std::memory_order_relaxed);
   }
   bar_muted_flag_.store(
       running_ && BarIsMuted(current_bar_),
       std::memory_order_relaxed
   );
+  counting_in_flag_.store(running_ && counting_in_, std::memory_order_relaxed);
 }
 
 Metronome::GridView Metronome::BeginBlock(
@@ -307,6 +318,14 @@ Metronome::GridView Metronome::BeginBlock(
     BlockTempo* tempo
 ) {
   ApplyPendingCommands();
+  if (pending_preview_sound_ >= 0) {
+    TriggerPreset(
+        pending_preview_sound_,
+        pending_preview_accented_,
+        sample_rate
+    );
+    pending_preview_sound_ = -1;
+  }
   *tempo = BlockTempoFor(sample_rate);
   const GridView view = AcquireGrid(block_start_frame, sample_rate);
   // Applied at block start, before any click this block: a re-anchor moves only
@@ -333,6 +352,7 @@ void Metronome::Render(
       BeginPendingStart(view, now, sample_rate, &tempo);
     }
     if (running_ && view.grid != nullptr) {
+      if (counting_in_) CancelCountIn();
       // Grid mode owns the beat clock; the ramp and polyrhythm are defined
       // against a constant BPM and do not apply. beat_position_ keeps running
       // so a clear lands where the song is, not on an instant downbeat.

@@ -1,10 +1,19 @@
+import { fileURLToPath } from 'node:url';
+
 import { defineConfig } from 'vitest/config';
 
-// Logic only: src/logic/* is pure (gesture math, LED grouping, numpad state,
-// glyphs, clock formatting) and imports no React, no react-native and no
-// @kitbag barrel, so it runs in plain node with no transform or stub.
+// src/logic is pure; its only @kitbag runtime import is engine constants, so
+// the core-native barrel (which pulls react-native) resolves to them directly.
 export default defineConfig({
   test: {
     include: ['src/logic/**/*.test.ts'],
+    alias: {
+      '@kitbag/core-native': fileURLToPath(
+        new URL(
+          '../core-native/src/generated/nativeConstants.gen.ts',
+          import.meta.url,
+        ),
+      ),
+    },
   },
 });

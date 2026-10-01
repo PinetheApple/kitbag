@@ -6,6 +6,15 @@
 
 using kitbag::ToEngine;
 
+static_assert(KB_ACCENT_MUTED == static_cast<int>(kitbag::Accent::kMuted));
+static_assert(KB_ACCENT_NORMAL == static_cast<int>(kitbag::Accent::kNormal));
+static_assert(
+    KB_ACCENT_ACCENTED == static_cast<int>(kitbag::Accent::kAccented)
+);
+static_assert(KB_RAMP_BARS == static_cast<int>(kitbag::RampUnit::kBars));
+static_assert(KB_RAMP_SECONDS == static_cast<int>(kitbag::RampUnit::kSeconds));
+static_assert(KB_RAMP_MINUTES == static_cast<int>(kitbag::RampUnit::kMinutes));
+
 extern "C" {
 
 void kb_metronome_start(kb_engine* engine) {
@@ -23,6 +32,12 @@ void kb_metronome_start_at(kb_engine* engine, uint64_t start_frame) {
 void kb_metronome_stop(kb_engine* engine) {
   if (engine != nullptr) {
     ToEngine(engine)->metronome().Stop();
+  }
+}
+
+void kb_metronome_pause(kb_engine* engine) {
+  if (engine != nullptr) {
+    ToEngine(engine)->metronome().Pause();
   }
 }
 
@@ -111,10 +126,7 @@ void kb_metronome_set_accent(
     int32_t accent
 ) {
   if (engine != nullptr) {
-    ToEngine(engine)->metronome().SetAccent(
-        beat_index,
-        static_cast<kitbag::Accent>(accent)
-    );
+    ToEngine(engine)->metronome().SetAccent(beat_index, accent);
   }
 }
 
@@ -124,9 +136,44 @@ void kb_metronome_set_poly(kb_engine* engine, int32_t enabled, int32_t beats) {
   }
 }
 
-void kb_metronome_set_sound(kb_engine* engine, int32_t sound_index) {
+void kb_metronome_set_poly_accent(
+    kb_engine* engine,
+    int32_t beat_index,
+    int32_t accent
+) {
   if (engine != nullptr) {
-    ToEngine(engine)->metronome().SetSound(sound_index);
+    ToEngine(engine)->metronome().SetPolyAccent(beat_index, accent);
+  }
+}
+
+void kb_metronome_set_sounds(
+    kb_engine* engine,
+    int32_t normal_sound,
+    int32_t accent_sound
+) {
+  if (engine != nullptr) {
+    ToEngine(engine)->metronome().SetSounds(normal_sound, accent_sound);
+  }
+}
+
+void kb_metronome_set_count_in(
+    kb_engine* engine,
+    int32_t bars,
+    int32_t distinct,
+    int32_t sound
+) {
+  if (engine != nullptr) {
+    ToEngine(engine)->metronome().SetCountIn(bars, distinct != 0, sound);
+  }
+}
+
+void kb_metronome_preview_sound(
+    kb_engine* engine,
+    int32_t sound,
+    int32_t accented
+) {
+  if (engine != nullptr) {
+    ToEngine(engine)->metronome().PreviewSound(sound, accented != 0);
   }
 }
 
@@ -147,15 +194,14 @@ void kb_metronome_set_ramp(
     int32_t enabled,
     double start_bpm,
     double end_bpm,
-    int32_t bars
+    double duration,
+    int32_t unit,
+    int32_t loop
 ) {
   if (engine != nullptr) {
-    ToEngine(engine)->metronome().SetRamp(
-        enabled != 0,
-        start_bpm,
-        end_bpm,
-        bars
-    );
+    ToEngine(engine)
+        ->metronome()
+        .SetRamp(enabled != 0, start_bpm, end_bpm, duration, unit, loop != 0);
   }
 }
 
@@ -198,6 +244,11 @@ double kb_metronome_current_bpm(const kb_engine* engine) {
 
 int32_t kb_metronome_bar_muted(const kb_engine* engine) {
   return engine != nullptr && ToEngine(engine)->metronome().bar_muted() ? 1 : 0;
+}
+
+int32_t kb_metronome_counting_in(const kb_engine* engine) {
+  return engine != nullptr && ToEngine(engine)->metronome().counting_in() ? 1
+                                                                          : 0;
 }
 
 }  // extern "C"

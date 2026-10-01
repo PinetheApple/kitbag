@@ -22,6 +22,8 @@ export interface NativeSources {
   readonly metronomeHeader: string;
   /** native/audio_core/src/metronome/metronome_render.cpp — the sound presets. */
   readonly metronomeRender: string;
+  /** native/audio_core/src/metronome/tempo_ramp.h — ramp duration bounds. */
+  readonly tempoRampHeader: string;
 }
 
 export interface EnumMember {
@@ -47,8 +49,15 @@ export interface NativeConstants {
   readonly maxGridBeats: number;
   readonly maxTracks: number;
   readonly maxBeats: number;
+  readonly minPolyBeats: number;
+  readonly maxPolyBeats: number;
+  readonly countInBars: readonly number[];
+  readonly defaultCountInSound: number;
   readonly maxRampBars: number;
   readonly maxMuteBars: number;
+  readonly volume: { readonly min: number; readonly max: number };
+  readonly rampSeconds: { readonly min: number; readonly max: number };
+  readonly rampUnit: readonly EnumMember[];
   readonly bpmReferenceDenominator: number;
   readonly denominators: readonly number[];
   readonly soundNames: readonly string[];
@@ -84,6 +93,15 @@ export function parseConstexprInt(source: string, name: string): number {
     `static\\s+constexpr\\s+int\\s+${name}\\s*=\\s*(-?\\d+)\\s*;`,
   ).exec(source);
   if (match === null) fail(`constexpr int ${name}`);
+  return Number(match[1]);
+}
+
+/** `static constexpr double NAME = <number>;` from a C++ header. */
+export function parseConstexprDouble(source: string, name: string): number {
+  const match = new RegExp(
+    `static\\s+constexpr\\s+double\\s+${name}\\s*=\\s*(-?\\d+(?:\\.\\d+)?)\\s*;`,
+  ).exec(source);
+  if (match === null) fail(`constexpr double ${name}`);
   return Number(match[1]);
 }
 
@@ -227,8 +245,27 @@ export function collectConstants(sources: NativeSources): NativeConstants {
     maxGridBeats: parseDefineInt(sources.apiHeader, 'KB_MAX_GRID_BEATS'),
     maxTracks: parseConstexprInt(sources.mixerHeader, 'kMaxTracks'),
     maxBeats: parseConstexprInt(sources.metronomeHeader, 'kMaxBeats'),
-    maxRampBars: parseConstexprInt(sources.metronomeHeader, 'kMaxRampBars'),
+    minPolyBeats: parseConstexprInt(sources.metronomeHeader, 'kMinPolyBeats'),
+    maxPolyBeats: parseConstexprInt(sources.metronomeHeader, 'kMaxPolyBeats'),
+    countInBars: parseConstexprIntArray(
+      sources.metronomeHeader,
+      'kCountInBarChoices',
+    ),
+    defaultCountInSound: parseConstexprInt(
+      sources.metronomeHeader,
+      'kDefaultCountInSound',
+    ),
+    maxRampBars: parseConstexprInt(sources.tempoRampHeader, 'kMaxBars'),
     maxMuteBars: parseConstexprInt(sources.metronomeHeader, 'kMaxMuteBars'),
+    volume: {
+      min: parseConstexprDouble(sources.metronomeHeader, 'kMinVolume'),
+      max: parseConstexprDouble(sources.metronomeHeader, 'kMaxVolume'),
+    },
+    rampSeconds: {
+      min: parseConstexprInt(sources.tempoRampHeader, 'kMinSeconds'),
+      max: parseConstexprInt(sources.tempoRampHeader, 'kMaxSeconds'),
+    },
+    rampUnit: parseEnum(sources.apiHeader, 'kb_ramp_unit'),
     bpmReferenceDenominator: parseConstexprInt(
       sources.metronomeHeader,
       'kBpmReferenceDenominator',
@@ -291,8 +328,14 @@ export const KB_MAX_TRACKS = ${String(c.maxTracks)};
 /** Beats per bar the engine will hold (Metronome::kMaxBeats); it clamps above this. */
 export const KB_MAX_BEATS = ${String(c.maxBeats)};
 
-/** Longest ramp in bars (Metronome::kMaxRampBars); the engine clamps above this. */
+/** Longest ramp in bars (TempoRamp::kMaxBars); the engine clamps above this. */
 export const KB_MAX_RAMP_BARS = ${String(c.maxRampBars)};
+
+/** Click volume multiplier range (Metronome::kMinVolume, kMaxVolume); the engine clamps to it. */
+export const KB_VOLUME_BOUNDS = {
+  min: ${String(c.volume.min)},
+  max: ${String(c.volume.max)},
+} as const;
 
 /** Longest play or mute run in bars (Metronome::kMaxMuteBars); clamped above. */
 export const KB_MAX_MUTE_BARS = ${String(c.maxMuteBars)};
@@ -303,6 +346,25 @@ export const KB_MAX_MUTE_BARS = ${String(c.maxMuteBars)};
  */
 export const KB_DENOMINATORS = [${c.denominators.map(String).join(', ')}] as const;
 export type KbDenominator = (typeof KB_DENOMINATORS)[number];
+
+/** Poly-row beat count the engine holds (Metronome::kMinPolyBeats..kMaxPolyBeats); it clamps outside. */
+export const KB_POLY_BEATS_BOUNDS = {
+  min: ${String(c.minPolyBeats)},
+  max: ${String(c.maxPolyBeats)},
+} as const;
+
+/** Count-in bar choices (Metronome::kCountInBarChoices); 0 is off, anything else is ignored. */
+export const KB_COUNT_IN_BARS = [${c.countInBars.map(String).join(', ')}] as const;
+export type KbCountInBars = (typeof KB_COUNT_IN_BARS)[number];
+
+/** Sound id a distinct count-in uses until set (Metronome::kDefaultCountInSound). */
+export const KB_DEFAULT_COUNT_IN_SOUND = ${String(c.defaultCountInSound)};
+
+/** Tempo-ramp time bounds the engine clamps to (TempoRamp::kMinSeconds, kMaxSeconds). */
+export const KB_RAMP_SECONDS_BOUNDS = {
+  min: ${String(c.rampSeconds.min)},
+  max: ${String(c.rampSeconds.max)},
+} as const;
 
 /** Denominator BPM is referenced to (Metronome::kBpmReferenceDenominator): quarter note. */
 export const KB_BPM_REFERENCE_DENOMINATOR = ${String(c.bpmReferenceDenominator)};
@@ -318,6 +380,8 @@ export type KbSoundName = (typeof KB_SOUND_NAMES)[number];
 ${renderEnum('KB_RESULT', c.result)}
 /** kb_accent enum. */
 ${renderEnum('KB_ACCENT', c.accent)}
+/** kb_ramp_unit enum. */
+${renderEnum('KB_RAMP_UNIT', c.rampUnit)}
 /** Metronome output-latency offset range, in ms (kb_metronome_set_latency_offset). */
 export const KB_LATENCY_OFFSET_MS_BOUNDS = {
   min: ${String(c.latencyOffsetMsBounds.min)},

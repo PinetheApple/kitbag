@@ -10,6 +10,10 @@ constexpr double kBpm = 90.0;
 constexpr double kSwitchBpm = 120.0;
 constexpr int kNumerator = 7;
 constexpr double kFixtureTolerance = 1e-3;
+constexpr double kAccentedPeak = 0.9;
+constexpr double kNormalPeak = 0.6;
+constexpr double kPeakTolerance = 0.05;
+constexpr double kSilentCeiling = 0.1;
 
 double BeatFrames(double bpm, int denominator) {
   return 60.0 / bpm * (4.0 / denominator) * kSampleRate;
@@ -220,7 +224,7 @@ AnchoredBeatSeconds(int denominator, int64_t total_frames, double early_sec) {
 // An external anchor maps song seconds onto this signature's beat unit: at 120
 // BPM the 8th-note click tracks the song every 0.25 s, not every 0.5 s.
 void TestAnchorFollowsDenominator() {
-  constexpr int64_t kTotalFrames = kSampleRate * 3;
+  constexpr int64_t kTotalFrames = int64_t{kSampleRate} * 3;
   kitbag::Metronome metronome;
   metronome.SetTimeSignature(kNumerator, 8);
   metronome.AnchorExternal(kAnchorSongPos, kAnchorFrame, kSwitchBpm);
@@ -236,7 +240,7 @@ void TestAnchorFollowsDenominator() {
 constexpr double kAnchorLatencyMs = 100.0;
 
 void ExpectAnchorLatencyShift(int denominator, const char* label) {
-  constexpr int64_t kTotalFrames = kSampleRate * 3;
+  constexpr int64_t kTotalFrames = int64_t{kSampleRate} * 3;
   kitbag::Metronome metronome;
   metronome.SetTimeSignature(kNumerator, denominator);
   metronome.SetLatencyOffset(kAnchorLatencyMs);
@@ -258,6 +262,50 @@ void TestAnchorLatencyIsDenominatorIndependent() {
   ExpectAnchorLatencyShift(8, "anchored 7/8, +100 ms");
 }
 
+double BeatPeakAfterShrinkAndGrow(int beat) {
+  kitbag::Metronome metronome;
+  metronome.SetTempo(kSwitchBpm);
+  metronome.SetAccent(1, kitbag::Accent::kMuted);
+  metronome.SetAccent(3, kitbag::Accent::kMuted);
+  metronome.SetTimeSignature(3, 4);
+  metronome.SetTimeSignature(4, 4);
+  metronome.Start();
+  const auto onset = static_cast<int64_t>(beat * BeatFrames(kSwitchBpm, 4));
+  return WindowedPeak(metronome, onset, onset + kOnsetHoldFrames);
+}
+
+void TestGrowingBarResetsExposedAccents() {
+  Check(
+      std::fabs(BeatPeakAfterShrinkAndGrow(3) - kNormalPeak) < kPeakTolerance,
+      "meter grow: beat 4 muted in 4/4, via 3/4, sounds normal again"
+  );
+  Check(
+      BeatPeakAfterShrinkAndGrow(1) < kSilentCeiling,
+      "meter grow: beat 2 kept through 3/4 stays muted"
+  );
+  Check(
+      std::fabs(BeatPeakAfterShrinkAndGrow(0) - kAccentedPeak) < kPeakTolerance,
+      "meter grow: downbeat stays accented"
+  );
+}
+
+void TestAccentPastBarIgnoredThenGrown() {
+  kitbag::Metronome metronome;
+  metronome.SetTempo(kSwitchBpm);
+  metronome.SetAccent(3, kitbag::Accent::kMuted);
+  metronome.SetTimeSignature(3, 4);
+  metronome.SetAccent(3, kitbag::Accent::kAccented);
+  metronome.SetTimeSignature(4, 4);
+  metronome.Start();
+  const auto onset = static_cast<int64_t>(3 * BeatFrames(kSwitchBpm, 4));
+  Check(
+      std::fabs(
+          WindowedPeak(metronome, onset, onset + kOnsetHoldFrames) - kNormalPeak
+      ) < kPeakTolerance,
+      "accent past the bar: a muted beat 4 re-edited in 3/4 comes back normal"
+  );
+}
+
 }  // namespace
 
 void RunSignatureTests() {
@@ -270,6 +318,8 @@ void RunSignatureTests() {
   TestMidRunSwitchDoesNotRefireAClick();
   TestAnchorFollowsDenominator();
   TestAnchorLatencyIsDenominatorIndependent();
+  TestGrowingBarResetsExposedAccents();
+  TestAccentPastBarIgnoredThenGrown();
 }
 
 }  // namespace metronome_test

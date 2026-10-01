@@ -91,7 +91,7 @@ void ExpectRampIntervals(const std::vector<int64_t>& onsets, double target) {
 void TestTempoRamp() {
   kitbag::Metronome metronome;
   metronome.SetTimeSignature(4, 4);
-  metronome.SetRamp(true, 100.0, 200.0, 4);
+  metronome.SetRamp(true, 100.0, 200.0, 4, kRampBars, false);
   metronome.Start();
 
   // Bar BPMs: 100, 125, 150, 175, then 200 held. ~21 s covers it all.
@@ -116,7 +116,7 @@ void TestTempoRamp() {
 void TestRampStepTakesEffectMidBlock() {
   kitbag::Metronome metronome;
   metronome.SetTimeSignature(4, 4);
-  metronome.SetRamp(true, 240.0, 60.0, 1);
+  metronome.SetRamp(true, 240.0, 60.0, 1, kRampBars, false);
   metronome.Start();
 
   const auto onsets = RenderAndDetectOnsets(metronome, kSampleRate * 6);

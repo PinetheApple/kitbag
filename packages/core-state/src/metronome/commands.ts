@@ -7,12 +7,16 @@ export type MetronomeCommands = Pick<
   | 'start'
   | 'metronomeStart'
   | 'metronomeStop'
+  | 'metronomePause'
   | 'setTempo'
   | 'setBeats'
   | 'setSubdivision'
   | 'setAccent'
   | 'setPoly'
-  | 'setSound'
+  | 'setPolyAccent'
+  | 'setSounds'
+  | 'previewSound'
+  | 'setCountIn'
   | 'setVolume'
   | 'setLatencyOffset'
   | 'setRamp'
@@ -30,6 +34,9 @@ export const defaultCommands: MetronomeCommands = {
   metronomeStop: (...args) => {
     getMetronomeRuntime().commands.metronomeStop(...args);
   },
+  metronomePause: (...args) => {
+    getMetronomeRuntime().commands.metronomePause(...args);
+  },
   setTempo: (...args) => {
     getMetronomeRuntime().commands.setTempo(...args);
   },
@@ -45,8 +52,17 @@ export const defaultCommands: MetronomeCommands = {
   setPoly: (...args) => {
     getMetronomeRuntime().commands.setPoly(...args);
   },
-  setSound: (...args) => {
-    getMetronomeRuntime().commands.setSound(...args);
+  setPolyAccent: (...args) => {
+    getMetronomeRuntime().commands.setPolyAccent(...args);
+  },
+  setSounds: (...args) => {
+    getMetronomeRuntime().commands.setSounds(...args);
+  },
+  previewSound: (...args) => {
+    getMetronomeRuntime().commands.previewSound(...args);
+  },
+  setCountIn: (...args) => {
+    getMetronomeRuntime().commands.setCountIn(...args);
   },
   setVolume: (...args) => {
     getMetronomeRuntime().commands.setVolume(...args);

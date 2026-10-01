@@ -39,8 +39,11 @@ add_library(kitbag_core SHARED
   src/engine.cpp
   src/dsp/fft.cpp
   src/metronome/metronome.cpp
+  src/metronome/metronome_count_in.cpp
   src/metronome/metronome_grid.cpp
+    src/metronome/metronome_pattern.cpp
   src/metronome/metronome_render.cpp
+  src/metronome/tempo_ramp.cpp
   src/media/miniaudio_impl.c
   src/media/streaming_track.cpp
   src/mixer/mixer.cpp
@@ -118,10 +121,19 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_latency.cpp
     tools/metronome/metronome_test_startat.cpp
     tools/metronome/metronome_test_anchor.cpp
+    tools/metronome/metronome_test_poly.cpp
+    tools/metronome/metronome_test_sound.cpp
+    tools/metronome/metronome_test_count_in.cpp
+    tools/metronome/metronome_test_count_in_long.cpp
+    tools/metronome/metronome_test_ramp.cpp
+    tools/metronome/metronome_test_ramp_live.cpp
     tools/rt/rt_publisher_verify.cpp
     src/metronome/metronome.cpp
+    src/metronome/metronome_count_in.cpp
     src/metronome/metronome_grid.cpp
-    src/metronome/metronome_render.cpp)
+    src/metronome/metronome_pattern.cpp
+    src/metronome/metronome_render.cpp
+    src/metronome/tempo_ramp.cpp)
   target_include_directories(metronome_verify PRIVATE src tools tools/metronome tools/rt)
   # metronome.cpp is compiled again here, outside kitbag_core's options.
   target_compile_options(metronome_verify PRIVATE -Werror=switch)
@@ -130,8 +142,8 @@ if(KITBAG_BUILD_TOOLS)
   # Links the shared library rather than the sources: the point is to prove the
   # exported C ABI, not the C++ behind it. tools/media supplies the WAV writer
   # the mixer load test writes its fixture with.
-  add_executable(abi_verify tools/abi_verify.cpp)
-  target_include_directories(abi_verify PRIVATE tools/media)
+  add_executable(abi_verify tools/abi_verify.cpp tools/abi_test_metronome.cpp)
+  target_include_directories(abi_verify PRIVATE tools tools/media)
   target_link_libraries(abi_verify PRIVATE kitbag_core)
 
   # A6 (#11): streams a real WAV end to end through the C ABI (kb_player_load ->

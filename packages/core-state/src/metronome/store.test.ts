@@ -1,9 +1,15 @@
-// TDD + sabotage acceptance for the metronome config store (SPEC §5.1–§5.3,
-// §13.3, §13.7). Every load-bearing invariant has a test that fails if the
-// behaviour is removed — a green run means the store maps intent to the engine
-// commands and keeps realtime truth OUT, not that an assertion is asleep.
-
-import { KB_ACCENT, KB_MAX_BEATS, KB_SOUND_NAMES } from '@kitbag/core-native';
+import {
+  KB_ACCENT,
+  KB_DEFAULT_COUNT_IN_SOUND,
+  KB_MAX_BEATS,
+  KB_MAX_MUTE_BARS,
+  KB_POLY_BEATS_BOUNDS,
+  KB_MAX_RAMP_BARS,
+  KB_RAMP_SECONDS_BOUNDS,
+  KB_RAMP_UNIT,
+  KB_SOUND_NAMES,
+  KB_VOLUME_BOUNDS,
+} from '@kitbag/core-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { type MetronomeCommands } from './commands.ts';
@@ -14,12 +20,16 @@ function makeCommands() {
     start: vi.fn(() => Promise.resolve(0)),
     metronomeStart: vi.fn(),
     metronomeStop: vi.fn(),
+    metronomePause: vi.fn(),
     setTempo: vi.fn(),
     setBeats: vi.fn(),
     setSubdivision: vi.fn(),
     setAccent: vi.fn(),
     setPoly: vi.fn(),
-    setSound: vi.fn(),
+    setPolyAccent: vi.fn(),
+    setSounds: vi.fn(),
+    previewSound: vi.fn(),
+    setCountIn: vi.fn(),
     setVolume: vi.fn(),
     setLatencyOffset: vi.fn(),
     setRamp: vi.fn(),
@@ -61,9 +71,14 @@ describe('§13.3 no realtime values in the store', () => {
 
 describe('§5.3 manual tempo cancels a running ramp', () => {
   it('clears ramp.enabled on setTempo', () => {
-    store
-      .getState()
-      .setRamp({ enabled: true, startBpm: 100, endBpm: 140, bars: 8 });
+    store.getState().setRamp({
+      enabled: true,
+      startBpm: 100,
+      endBpm: 140,
+      duration: 8,
+      unit: KB_RAMP_UNIT.KB_RAMP_BARS,
+      loop: false,
+    });
     expect(store.getState().ramp.enabled).toBe(true);
 
     store.getState().setTempo(130);
@@ -75,7 +90,6 @@ describe('§5.3 manual tempo cancels a running ramp', () => {
 
 describe('§5.2 cycleAccent cycles accent → normal → mute → accent', () => {
   it('advances the tapped beat through all three states and back', () => {
-    // Beat 0 starts accented (downbeat default).
     expect(store.getState().accents[0]).toBe(KB_ACCENT.KB_ACCENT_ACCENTED);
 
     store.getState().cycleAccent(0);
@@ -134,16 +148,160 @@ describe('clamps (clamp, not reject)', () => {
   });
 });
 
-describe('§13.7 sound names come from the engine constants', () => {
-  it('accepts every generated sound index and rejects out-of-range', () => {
+describe('sounds use engine ids, per role', () => {
+  it('sends both roles and ignores an invalid id per role', () => {
     const last = KB_SOUND_NAMES.length - 1;
-    store.getState().setSound(last);
-    expect(store.getState().sound).toBe(last);
-    expect(commands.setSound).toHaveBeenLastCalledWith(last);
+    store.getState().setSounds(3, last);
+    expect(store.getState().sounds).toEqual({ normal: 3, accent: last });
+    expect(commands.setSounds).toHaveBeenLastCalledWith(3, last);
 
-    store.getState().setSound(KB_SOUND_NAMES.length); // one past the table
-    expect(store.getState().sound).toBe(last); // unchanged
-    expect(commands.setSound).toHaveBeenCalledTimes(1);
+    store.getState().setSounds(KB_SOUND_NAMES.length, 1);
+    expect(store.getState().sounds).toEqual({ normal: 3, accent: 1 });
+    expect(commands.setSounds).toHaveBeenLastCalledWith(3, 1);
+
+    store.getState().setSounds(-1, 1.5);
+    expect(store.getState().sounds).toEqual({ normal: 3, accent: 1 });
+    expect(commands.setSounds).toHaveBeenCalledTimes(2);
+  });
+
+  it('previews only valid ids', () => {
+    store.getState().previewSound(2, true);
+    store.getState().previewSound(KB_SOUND_NAMES.length, false);
+    expect(commands.previewSound).toHaveBeenCalledTimes(1);
+    expect(commands.previewSound).toHaveBeenCalledWith(2, true);
+  });
+});
+
+describe('poly row accents', () => {
+  it('cycles poly accents independently of the main row', () => {
+    store.getState().cyclePolyAccent(1);
+    expect(store.getState().polyAccents[1]).toBe(KB_ACCENT.KB_ACCENT_MUTED);
+    expect(store.getState().accents[1]).toBe(KB_ACCENT.KB_ACCENT_NORMAL);
+    expect(commands.setPolyAccent).toHaveBeenCalledWith(
+      1,
+      KB_ACCENT.KB_ACCENT_MUTED,
+    );
+    expect(commands.setAccent).not.toHaveBeenCalled();
+  });
+
+  it('keeps kept slots and resets regrown ones to normal, like the engine', () => {
+    store.getState().setPoly(true, 5);
+    store.getState().cyclePolyAccent(1);
+    store.getState().cyclePolyAccent(4);
+    store.getState().setPoly(true, 3);
+    store.getState().setPoly(true, 5);
+    expect(store.getState().polyAccents).toEqual([
+      KB_ACCENT.KB_ACCENT_ACCENTED,
+      KB_ACCENT.KB_ACCENT_MUTED,
+      KB_ACCENT.KB_ACCENT_NORMAL,
+      KB_ACCENT.KB_ACCENT_NORMAL,
+      KB_ACCENT.KB_ACCENT_NORMAL,
+    ]);
+  });
+
+  it('ignores accent edits past the bar or the poly count', () => {
+    store.getState().cycleAccent(store.getState().beatsPerBar);
+    store.getState().cyclePolyAccent(store.getState().polyBeats);
+    expect(commands.setAccent).not.toHaveBeenCalled();
+    expect(commands.setPolyAccent).not.toHaveBeenCalled();
+  });
+});
+
+describe('tempo ramp matches what the engine holds', () => {
+  const ramp = {
+    enabled: true,
+    startBpm: 90,
+    endBpm: 120,
+    duration: 4,
+    unit: KB_RAMP_UNIT.KB_RAMP_BARS,
+    loop: true,
+  } as const;
+
+  it('dispatches unit and loop', () => {
+    store.getState().setRamp(ramp);
+    expect(commands.setRamp).toHaveBeenCalledWith(
+      true,
+      90,
+      120,
+      4,
+      KB_RAMP_UNIT.KB_RAMP_BARS,
+      true,
+    );
+  });
+
+  it('clamps durations per unit to the generated bounds', () => {
+    store.getState().setRamp({ ...ramp, duration: 999.4 });
+    expect(store.getState().ramp.duration).toBe(KB_MAX_RAMP_BARS);
+    store
+      .getState()
+      .setRamp({ ...ramp, duration: 0.2, unit: KB_RAMP_UNIT.KB_RAMP_SECONDS });
+    expect(store.getState().ramp.duration).toBe(KB_RAMP_SECONDS_BOUNDS.min);
+    store
+      .getState()
+      .setRamp({ ...ramp, duration: 90, unit: KB_RAMP_UNIT.KB_RAMP_MINUTES });
+    expect(store.getState().ramp.duration).toBe(
+      KB_RAMP_SECONDS_BOUNDS.max / 60,
+    );
+  });
+
+  it('keeps the previous ramp on non-finite input or an unknown unit', () => {
+    store.getState().setRamp(ramp);
+    store.getState().setRamp({ ...ramp, startBpm: Infinity });
+    store.getState().setRamp({ ...ramp, unit: 7 as unknown as KB_RAMP_UNIT });
+    expect(store.getState().ramp).toEqual(ramp);
+    expect(commands.setRamp).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('engine bounds on volume and bar mute', () => {
+  it('clamps volume to the generated range before state and command', () => {
+    store.getState().setVolume(5);
+    expect(store.getState().volume).toBe(KB_VOLUME_BOUNDS.max);
+    expect(commands.setVolume).toHaveBeenLastCalledWith(KB_VOLUME_BOUNDS.max);
+    store.getState().setVolume(-1);
+    expect(store.getState().volume).toBe(KB_VOLUME_BOUNDS.min);
+    expect(commands.setVolume).toHaveBeenLastCalledWith(KB_VOLUME_BOUNDS.min);
+  });
+
+  it('clamps play and mute bars to 1..KB_MAX_MUTE_BARS', () => {
+    store.getState().setBarMute({ enabled: true, playBars: 0, muteBars: 99 });
+    expect(store.getState().barMute).toEqual({
+      enabled: true,
+      playBars: 1,
+      muteBars: KB_MAX_MUTE_BARS,
+    });
+    expect(commands.setBarMute).toHaveBeenLastCalledWith(
+      true,
+      1,
+      KB_MAX_MUTE_BARS,
+    );
+  });
+});
+
+describe('count-in', () => {
+  it('starts off with the engine default distinct sound', () => {
+    expect(store.getState().countIn).toEqual({
+      bars: 0,
+      distinct: true,
+      sound: KB_DEFAULT_COUNT_IN_SOUND,
+    });
+  });
+
+  it('dispatches valid values and keeps the previous bars or sound otherwise', () => {
+    store.getState().setCountIn({ bars: 2, distinct: false, sound: 3 });
+    expect(commands.setCountIn).toHaveBeenLastCalledWith(2, false, 3);
+
+    store.getState().setCountIn({
+      bars: 3 as unknown as 2,
+      distinct: true,
+      sound: KB_SOUND_NAMES.length,
+    });
+    expect(store.getState().countIn).toEqual({
+      bars: 2,
+      distinct: true,
+      sound: 3,
+    });
+    expect(commands.setCountIn).toHaveBeenLastCalledWith(2, true, 3);
   });
 });
 
@@ -159,7 +317,7 @@ describe('every mutation maps 1:1 onto an engine command', () => {
     expect(commands.setBeats).toHaveBeenLastCalledWith(3, 8);
   });
 
-  it('setPoly / setVolume / setLatency / setRamp / setBarMute dispatch', () => {
+  it('setPoly / setVolume / setLatency / setBarMute dispatch', () => {
     store.getState().setPoly(true, 3);
     expect(commands.setPoly).toHaveBeenCalledWith(true, 3);
 
@@ -170,39 +328,24 @@ describe('every mutation maps 1:1 onto an engine command', () => {
     expect(store.getState().latencyOffset).toBe(100);
     expect(commands.setLatencyOffset).toHaveBeenCalledWith(100);
 
-    store
-      .getState()
-      .setRamp({ enabled: true, startBpm: 90, endBpm: 120, bars: 4 });
-    expect(commands.setRamp).toHaveBeenCalledWith(true, 90, 120, 4);
-
     store.getState().setBarMute({ enabled: true, playBars: 3, muteBars: 1 });
     expect(commands.setBarMute).toHaveBeenCalledWith(true, 3, 1);
   });
 
   it('setPoly bounds the poly count instead of dispatching nonsense', () => {
-    // A stepper held on − walks the count down; zero and below must never reach
-    // kb_metronome_set_poly (the metronome screen, #46, is the first caller).
     store.getState().setPoly(true, 3);
     commands.setPoly.mockClear();
 
-    store.getState().setPoly(true, 0);
+    store.getState().setPoly(true, KB_POLY_BEATS_BOUNDS.min - 1);
     expect(store.getState().polyBeats).toBe(3);
     expect(commands.setPoly).not.toHaveBeenCalled();
 
     store.getState().setPoly(true, 999);
-    expect(store.getState().polyBeats).toBe(KB_MAX_BEATS);
-    expect(commands.setPoly).toHaveBeenLastCalledWith(true, KB_MAX_BEATS);
-  });
-
-  it('setCountIn stays human-speed only (no engine command exists)', () => {
-    store.getState().setCountIn(2);
-    expect(store.getState().countInBars).toBe(2);
-  });
-
-  it('setPerAccentSounds is store-only: records intent, issues no command', () => {
-    store.getState().setPerAccentSounds({ normal: 0, accent: 1 });
-    expect(store.getState().perAccentSounds).toEqual({ normal: 0, accent: 1 });
-    expect(commands.setSound).not.toHaveBeenCalled();
+    expect(store.getState().polyBeats).toBe(KB_POLY_BEATS_BOUNDS.max);
+    expect(commands.setPoly).toHaveBeenLastCalledWith(
+      true,
+      KB_POLY_BEATS_BOUNDS.max,
+    );
   });
 });
 
@@ -214,18 +357,21 @@ describe('transport start / stop / pause', () => {
     expect(store.getState().running).toBe(true);
   });
 
-  it('stop re-arms count-in; pause does not (§5.3)', () => {
+  it('stop and pause send distinct engine commands (§5.3)', () => {
     store.getState().start();
     store.getState().stop();
     expect(store.getState().running).toBe(false);
-    expect(store.getState().countInArmed).toBe(true);
     expect(commands.metronomeStop).toHaveBeenCalledTimes(1);
 
     store.getState().start();
     store.getState().pause();
     expect(store.getState().running).toBe(false);
-    expect(store.getState().countInArmed).toBe(false);
-    expect(commands.metronomeStop).toHaveBeenCalledTimes(2);
+    expect(commands.metronomePause).toHaveBeenCalledTimes(1);
+    expect(commands.metronomeStop).toHaveBeenCalledTimes(1);
+  });
+
+  it('holds no count-in timing shadow', () => {
+    expect(Object.keys(store.getState())).not.toContain('countInArmed');
   });
 });
 
@@ -258,7 +404,9 @@ describe('§5.3 tempo shown and nudged is the engine tempo, not a stale intent',
       enabled: true,
       startBpm: 100,
       endBpm: 140,
-      bars: 8,
+      duration: 8,
+      unit: KB_RAMP_UNIT.KB_RAMP_BARS,
+      loop: false,
     });
     engine.bpm = 130.4;
     s.getState().nudgeTempo(5);
@@ -274,7 +422,9 @@ describe('§5.3 tempo shown and nudged is the engine tempo, not a stale intent',
       enabled: true,
       startBpm: 100,
       endBpm: 140,
-      bars: 8,
+      duration: 8,
+      unit: KB_RAMP_UNIT.KB_RAMP_BARS,
+      loop: false,
     });
     engine.bpm = 118;
     s.getState().setRamp({ ...s.getState().ramp, enabled: false });
@@ -288,7 +438,9 @@ describe('§5.3 tempo shown and nudged is the engine tempo, not a stale intent',
       enabled: true,
       startBpm: 100,
       endBpm: 140,
-      bars: 8,
+      duration: 8,
+      unit: KB_RAMP_UNIT.KB_RAMP_BARS,
+      loop: false,
     });
     engine.bpm = engine.rampEnd;
     s.getState().stop();
@@ -302,7 +454,9 @@ describe('§5.3 tempo shown and nudged is the engine tempo, not a stale intent',
       enabled: true,
       startBpm: 100,
       endBpm: 140,
-      bars: 8,
+      duration: 8,
+      unit: KB_RAMP_UNIT.KB_RAMP_BARS,
+      loop: false,
     });
     engine.bpm = 126;
     s.getState().pause();

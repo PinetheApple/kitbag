@@ -52,7 +52,7 @@ void TestStartAtAnchorAtZero() {
 void TestStartAtWithArmedRampRecomputesLocals() {
   kitbag::Metronome metronome;
   metronome.SetTimeSignature(4, 4);
-  metronome.SetRamp(true, 60.0, 180.0, 4);
+  metronome.SetRamp(true, 60.0, 180.0, 4, kRampBars, false);
   metronome.SetLatencyOffset(50.0);
   metronome.Start();
   RenderAndDetectOnsets(metronome, kSampleRate * 6);  // let bpm_ climb past 60
