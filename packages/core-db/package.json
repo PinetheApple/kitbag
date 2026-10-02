@@ -11,10 +11,10 @@
   "dependencies": {
     "@kitbag/core-plugin-api": "workspace:*",
     "@op-engineering/op-sqlite": "^17.1.2",
-    "drizzle-orm": "^0.45.2"
+    "drizzle-orm": "^0.45.3"
   },
   "devDependencies": {
-    "@types/node": "^22.15.0",
+    "@types/node": "^22.20.4",
     "vitest": "^4.1.10"
   }
 }
