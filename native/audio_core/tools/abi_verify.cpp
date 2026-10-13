@@ -11,25 +11,18 @@
 #include <string>
 #include <vector>
 
+#include "abi_verify_tuner.h"
+#include "check.h"
 #include "wav_fixture.h"
 
 namespace {
 
-int g_failures = 0;
-// Counted so a deleted TestX() call cannot pass silently: the total is a
-// tripwire on the suite's own shape, not a derived expectation.
-int g_checks = 0;
+using kitbag_test::Check;
+using kitbag_test::g_checks;
+using kitbag_test::g_failures;
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 37;
-
-void Check(bool condition, const char* message) {
-  ++g_checks;
-  if (!condition) {
-    std::fprintf(stderr, "FAIL: %s\n", message);
-    ++g_failures;
-  }
-}
+constexpr int kExpectedChecks = 66;
 
 void ExpectRejected(
     kb_engine* engine,
@@ -301,6 +294,7 @@ int main() {
   TestClearGrid(engine);
   TestMixerTransportIsNullSafe(engine);
   TestPlayerNullSafe();
+  RunTunerAbiTests(engine);
 
   if (!RunFileFixtureTests(engine)) {
     kb_engine_destroy(engine);
