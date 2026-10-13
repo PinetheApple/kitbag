@@ -28,7 +28,7 @@ description: |
 
   <example>
   Context: A verify tool is failing.
-  user: "tuner_verify fails 37/37, fix it"
+  user: "tuner_verify fails T14, fix it"
   assistant: "I'll use the audio-core-engineer agent."
   <commentary>
   The agent must fix the detector, never loosen the test — CLAUDE.md calls this out
@@ -93,8 +93,8 @@ vacuously three separate times; the recurring cause is fixture values too round 
 discriminate — a 0.25s grid over a 0.5s tempo makes the right answer and a plausible
 wrong answer agree. Choose inputs that discriminate.
 
-Never loosen a failing test to make it pass. `tuner_verify` fails 37/37 today; that is
-a real detector defect (SPEC.md §10.1), pre-existing, and not yours unless asked.
+Never loosen a failing test to make it pass. Every verify tool, `tuner_verify`
+included, is a gate and passes on `main`; a red one is yours to explain.
 
 ## Building
 

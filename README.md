@@ -54,7 +54,7 @@ cmake --build native/audio_core/build
 
 ./native/audio_core/build/player_verify      # single-source transport, offline — passes
 ./native/audio_core/build/metronome_verify   # renders offline, asserts onsets — passes
-./native/audio_core/build/tuner_verify       # currently fails 37/37 — see SPEC.md §10.1
+./native/audio_core/build/tuner_verify       # tuner on synthetic tones — passes
 ```
 
 The verify tools render audio offline and assert against it — no UI, no device.
