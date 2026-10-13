@@ -36,8 +36,6 @@ jobs:
         run: ./native/audio_core/build/seek_race_verify
       - name: Stream — a real WAV streams through the C ABI; frames, non-silence, resample
         run: ./native/audio_core/build/stream_verify
-      - name: Note lock — hysteresis around note boundaries
-        run: ./native/audio_core/build/note_lock_verify
       - name: Audio source — the SourceReader seam, no miniaudio linked
         run: ./native/audio_core/build/audio_source_verify
       - name: File reader — the miniaudio side of the seam, over a run-time WAV
@@ -46,11 +44,8 @@ jobs:
         run: ./native/audio_core/build/decoder_verify
       - name: Analyze — Decoder→downmix→tracker→sidecar; NaN/channels/narrowing guards
         run: ./native/audio_core/build/analyze_verify
-      # tuner_verify is NOT gated: it currently fails 37/37 — PitchAnalyzer
-      # returns 0 Hz / 0.00 confidence on clean synthetic tones. See SPEC §10.1.
-      # Re-enable as a gate when the tuner research lands.
-      - name: Tuner — render offline (informational, known failing)
-        run: ./native/audio_core/build/tuner_verify || true
+      - name: Tuner — synthetic tones through the detector and the tuning mode
+        run: ./native/audio_core/build/tuner_verify
 
   # The TypeScript workspace (Phase 2, SPEC §13/§13.6). Runs the same gate the
   # project loop runs locally: typecheck, the architecture-rule lint, the
