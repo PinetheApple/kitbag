@@ -37,6 +37,7 @@ export const KB_RESULT = {
   KB_ERROR_INVALID_ARGUMENT: 1,
   KB_ERROR_DEVICE_INIT_FAILED: 2,
   KB_ERROR_DEVICE_START_FAILED: 3,
+  KB_ERROR_BUSY: 4,
 } as const;
 export type KB_RESULT = (typeof KB_RESULT)[keyof typeof KB_RESULT];
 
@@ -78,3 +79,44 @@ export const KB_TUNER_SNAPSHOT_FIELDS = {
   cents: { offset: 16, width: 16, signed: true, scale: 100 },
   confidence: { offset: 32, width: 16, signed: false, scale: 10000 },
 } as const;
+
+/** Most strings a tuning may carry (KB_TUNER_MAX_STRINGS). */
+export const KB_TUNER_MAX_STRINGS = 12;
+
+/** kb_tuner_set_target_string argument selecting auto mode (KB_TUNER_AUTO_STRING). */
+export const KB_TUNER_AUTO_STRING = -1;
+
+/** kb_tuner_state string fields when there is none (KB_TUNER_NO_STRING). */
+export const KB_TUNER_NO_STRING = -1;
+
+/** kb_tuner_state.target_midi when no note is held (KB_TUNER_NO_NOTE). */
+export const KB_TUNER_NO_NOTE = -1;
+
+/** in_tune_ratio from which the current string counts as tuned (KB_TUNER_TUNED_RATIO). */
+export const KB_TUNER_TUNED_RATIO = 0.95;
+
+/** kb_tuner_instrument enum: selects the in-tune window table. */
+export const KB_TUNER_INSTRUMENT = {
+  KB_TUNER_INSTRUMENT_GUITAR: 0,
+  KB_TUNER_INSTRUMENT_BASS: 1,
+  KB_TUNER_INSTRUMENT_UKULELE: 2,
+  KB_TUNER_INSTRUMENT_OTHER: 3,
+} as const;
+export type KB_TUNER_INSTRUMENT = (typeof KB_TUNER_INSTRUMENT)[keyof typeof KB_TUNER_INSTRUMENT];
+
+/** kb_tuning_status enum. */
+export const KB_TUNING_STATUS = {
+  KB_TUNING_NOT_MEASURED: 0,
+  KB_TUNING_TOO_LOW: 1,
+  KB_TUNING_IN_TUNE: 2,
+  KB_TUNING_TOO_HIGH: 3,
+} as const;
+export type KB_TUNING_STATUS = (typeof KB_TUNING_STATUS)[keyof typeof KB_TUNING_STATUS];
+
+/** kb_wrong_string enum: side of the target the heard string lies on. */
+export const KB_WRONG_STRING = {
+  KB_WRONG_STRING_NONE: 0,
+  KB_WRONG_STRING_BELOW: 1,
+  KB_WRONG_STRING_ABOVE: 2,
+} as const;
+export type KB_WRONG_STRING = (typeof KB_WRONG_STRING)[keyof typeof KB_WRONG_STRING];

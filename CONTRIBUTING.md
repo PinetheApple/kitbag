@@ -40,8 +40,8 @@ full working contract and the reasons behind it.
    cmake --build native/audio_core/build
    ./native/audio_core/build/metronome_verify   # must stay green
    ```
-2. `tuner_verify` fails 37/37 today (SPEC.md §10.1) and is informational in CI.
-   **Don't make it pass by loosening it.**
+2. `tuner_verify` is a CI gate like the rest (green since #117). **Don't make a
+   failing check pass by loosening it.**
 3. Before committing, run the lint gate (or install the hook so it runs itself):
    ```sh
    bash scripts/install-hooks.sh   # once per clone — pre-commit runs the gate

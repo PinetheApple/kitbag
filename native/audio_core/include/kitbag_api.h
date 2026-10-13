@@ -18,6 +18,7 @@ typedef enum kb_result {
   KB_ERROR_INVALID_ARGUMENT = 1,
   KB_ERROR_DEVICE_INIT_FAILED = 2,
   KB_ERROR_DEVICE_START_FAILED = 3,
+  KB_ERROR_BUSY = 4, /* a queue was full; nothing changed, retry */
 } kb_result;
 
 typedef struct kb_engine kb_engine;
@@ -173,22 +174,25 @@ KB_EXPORT int32_t kb_metronome_bar_muted(const kb_engine* engine);
 
 /* --- Tuner -------------------------------------------------------------- */
 
-/* Opens the mic (raw/unprocessed where the backend allows) and starts
- * pitch analysis. */
+/* Opens the mic (unprocessed where the backend allows), starts analysis. */
 KB_EXPORT kb_result kb_tuner_start(kb_engine* engine);
 KB_EXPORT void kb_tuner_stop(kb_engine* engine);
-/* Reference pitch, clamped to 415-466 Hz. */
-KB_EXPORT void kb_tuner_set_a4(kb_engine* engine, double a4_hz);
-/* Constrains detection to [low_hz, high_hz] — the preset/per-string band
- * that kills octave errors. */
-KB_EXPORT void
+/* Reference pitch, clamped to 415-466 Hz; KB_ERROR_BUSY as in the tuning-mode
+ * section below. */
+KB_EXPORT kb_result kb_tuner_set_a4(kb_engine* engine, double a4_hz);
+/* Chromatic mode's search range, [low_hz, high_hz] (default 30-2100 Hz); a
+ * narrow one kills octave errors. String modes derive theirs from the tuning.
+ * Ignored unless 0 < low_hz < high_hz. */
+KB_EXPORT kb_result
 kb_tuner_set_band(kb_engine* engine, double low_hz, double high_hz);
-/* The whole smoothed reading packed into one value — a single atomic read,
- * so a poll can never mix fields from two updates. Poll for UI.
+/* The tuning-mode reading reduced to its nearest note, packed into one value —
+ * a single atomic read, so a poll can never mix two hops. Poll for UI.
  *   bits 0-15   int16   nearest-note MIDI index (-1 = no pitch)
  *   bits 16-31  int16   cents offset from that note, x100
  *   bits 32-47  uint16  confidence [0,1] x10000 */
 KB_EXPORT uint64_t kb_tuner_snapshot(const kb_engine* engine);
+
+#include "kitbag_tuner_api.h"
 
 /* --- Audio Decoder ------------------------------------------------------- */
 

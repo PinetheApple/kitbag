@@ -52,16 +52,16 @@ a live divide-by-zero if a future caller drops that precondition.
 
 **Tuner work comes last**, after all other Phase 1 functionality. User's call, and it
 agrees with SPEC.md §15 (tuner last, Phase 3, behind §10.1 research). `tuner_verify`'s
-37/37 failure stays red **on purpose**: not a regression, not a gate, not to be
-"fixed" by loosening the test.
+37/37 failure stayed red **on purpose** through Phase 1; #117 fixed the detector
+(2026-10-13) and it is now a gate.
 
 Work is driven by the **`phase1-loop`** skill: one issue at a time through implement →
 gates → `ralph` + `code-reviewer` → fix → commit → close. It never merges, pushes, or
 edits a SPEC decision, and stops rather than inferring approval.
 
 Gates (every task): build 0 · `metronome_verify` `abi_verify` `beat_tracker_verify`
-`note_lock_verify` `mixer_verify` all pass · `lint.sh` 0. `tuner_verify` fails 37/37
-(pre-existing detector defect, SPEC.md §10.1) — informational in CI, not a regression.
+`mixer_verify` `tuner_verify` all pass · `lint.sh` 0. (`note_lock_verify` was
+deleted with NoteLock in #117; `tuner_verify` was informational until then.)
 
 > Keep the status lines current *as each item lands*, not in batches. This file went
 > nine commits stale once, and B1 spent that window telling the next reader to

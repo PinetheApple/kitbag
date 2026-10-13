@@ -1,23 +1,15 @@
 # Tuner Research: Open-Source Chromatic Tuners
 
-> **⚠ Read this first — measured 2026-07-17.**
+> **⚠ Read this first — updated 2026-10-13 (#117).**
 >
-> This document surveys pitch-detection algorithms and recommends refinements to
-> the current implementation (§3: median-filter length, EMA α, hysteresis). **Its
-> premise is that the detector works and needs tuning. It does not work.**
+> §3 describes a cycfi/q implementation that no longer exists. Until #117
+> `tuner_verify` failed 37 of 37: the wrapper reset the detector while its note
+> lock acquired, so it never read a pitch. The tuner is now the McLeod pitch method
+> of §2 on 4096-sample frames, smoothed per `docs/tuner-functional-spec.md` P8/P9
+> rather than §3's median + EMA (`docs/decisions.md`, 2026-10-13), and
+> `tuner_verify` passes as a CI gate.
 >
-> `tuner_verify` fails **37 of 37** checks. It bypasses the mic and the C API,
-> driving `PitchAnalyzer` directly with synthesized tones, and reports
-> `0.000 Hz` / `confidence 0.00` for every frequency from 82.41 Hz to 1 kHz.
-> Silence and a pure 440 Hz sine are indistinguishable to it.
->
-> **Do not implement §3's improvements yet.** Widening a median filter over a
-> detector that emits nothing changes nothing. Make `tuner_verify` green first —
-> it is a closed loop with no hardware in it and it runs in a second.
->
-> Everything below stays useful as algorithm background (§2 and §4 especially,
-> for choosing what to replace the current detector *with*). Only §3's
-> "improve what's there" framing is invalidated. See `SPEC.md` §10.1.
+> §1, §2, §4 and §5 stay useful background; §3's recommendations are superseded.
 
 ## 1. Commercial Tuner Approaches
 
