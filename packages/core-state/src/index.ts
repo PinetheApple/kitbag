@@ -22,3 +22,11 @@ export {
   configureMetronomeRuntime,
   type MetronomeRuntime,
 } from './metronome/runtime.ts';
+export { useLastTool } from './lastTool/useLastTool.ts';
+export {
+  configureLastToolPersistence,
+  createLastToolStore,
+  getLastToolStore,
+  type LastToolPersistence,
+  type LastToolStore,
+} from './lastTool/store.ts';

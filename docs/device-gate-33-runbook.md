@@ -68,7 +68,15 @@ Dev-client build, installs to the plugged-in phone.
 
 ## 3. Run the gate
 
-Open the app → navigate to `/gate` (Home has the link). Press **Start**.
+Home no longer links the gate (#47: it is not a user tool). Open it by deep
+link, then press **Start**:
+
+```
+adb shell am start -a android.intent.action.VIEW -d kitbag://gate com.kitbag.app
+```
+
+The `kitbag` scheme is `app.json`'s; this command has not yet been run on a
+device since the Home link was removed.
 
 ### 3a. What Start does, and why `metronomeStart` is required
 

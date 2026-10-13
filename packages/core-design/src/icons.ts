@@ -28,6 +28,14 @@ export const icons = {
   countIn: text('⏱'),
   decrease: '−',
   increase: '+',
+  forward: '›',
+  play: text('▶'),
+  metronome: '◴',
+  tuner: '♪',
+  songs: '♬',
+  stems: '≣',
+  playAlong: '◉',
+  moreTools: '✦',
 } as const;
 
 export type IconName = keyof typeof icons;
@@ -39,4 +47,5 @@ export const emojiCapableIcons: readonly IconName[] = [
   'warning',
   'ramp',
   'countIn',
+  'play',
 ];

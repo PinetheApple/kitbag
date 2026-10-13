@@ -32,6 +32,7 @@ export const size = {
   liveDot: 7,
   sweepTrack: 3,
   barPreview: 18,
+  toolIcon: 38,
 } as const;
 
 export const radius = {
@@ -48,6 +49,7 @@ export const radius = {
   numpadKey: 11,
   tempoZone: 18,
   sweepTrack: 2,
+  toolIcon: 11,
 } as const;
 
 export const inset = {
@@ -69,11 +71,14 @@ export const inset = {
   tempoZoneTop: 26,
   tempoZoneBottom: 18,
   sweepH: 18,
+  compactButtonV: 8,
+  compactButtonH: 14,
 } as const;
 
 export const opacity = {
   muted: 0.4,
   barPreviewSounding: 0.85,
+  upcoming: 0.65,
 } as const;
 
 export const mix = {
@@ -85,6 +90,9 @@ export const mix = {
 } as const;
 
 export const presetActionGrow = 1.3;
+
+// The design file's body line-height, which its card text inherits.
+export const bodyLineHeight = 1.6;
 
 export const playGlyphPath = {
   viewBox: 20,
@@ -123,6 +131,17 @@ export const textRoles = {
   numpadKey: { family: display, weight: 400, size: 19, tabular: true },
   hint: { family: body, weight: 400, size: 11.5 },
   fieldLabel: { family: body, weight: 400, size: 13.5 },
+  wordmark: {
+    family: display,
+    weight: 700,
+    size: 17,
+    tracking: 0.03,
+    uppercase: true,
+  },
+  rowTitle: { family: display, weight: 500, size: 14.5 },
+  rowSubtitle: { family: body, weight: 400, size: 12 },
+  tileTitle: { family: display, weight: 500, size: 14 },
+  tileSubtext: { family: body, weight: 400, size: 11.5 },
 } as const satisfies Record<string, TypeRole>;
 
 export type TextRoleName = keyof typeof textRoles;
@@ -135,6 +154,8 @@ export const iconSizes = {
   control: 14,
   action: 16,
   title: 17,
+  tile: 17,
+  toolTile: 22,
 } as const;
 
 export type IconSize = keyof typeof iconSizes;
