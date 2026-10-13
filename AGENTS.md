@@ -107,7 +107,7 @@ cmake --build native/audio_core/build
 
 # Headless verification — no UI, no device, runs in ~a second:
 ./native/audio_core/build/metronome_verify   # passes
-./native/audio_core/build/tuner_verify       # FAILS 37/37 — see below
+./native/audio_core/build/tuner_verify       # passes; a CI gate since #117
 
 # TS workspace (pnpm + Turborepo) — the gates every TS task must pass:
 pnpm -w typecheck       # turbo run typecheck — 12/12 packages
@@ -121,12 +121,14 @@ pnpm -w generate:check  # generation drift guards (SPEC §13.7)
 why SPEC.md §15 Phase 1 is testable with no app at all, and it is the cheapest
 signal in the project. **Use it.**
 
-### Known: `tuner_verify` fails 37/37
+### `tuner_verify` is a gate
 
-`PitchAnalyzer` reports `0.000 Hz` / `confidence 0.00` for clean synthetic tones
-from 82 Hz to 1 kHz — with no microphone in the path. It is **not** a stale
-harness. CI runs it informationally (`|| true`) and it becomes a gate when the
-tuner research lands. See SPEC.md §10.1; do not "fix" it by loosening the test.
+It failed 37/37 until #117: the old cycfi/q wrapper reset its detector every
+update while the note lock acquired, so nothing ever locked. The tuner is now a
+McLeod detector under a string-aware tuning mode, checked against
+`docs/tuner-functional-spec.md` §6 on synthetic tones. CI and `preflight.sh` gate
+on it. The headless checks say nothing about a real mic (SPEC.md §10.1 capture
+path, §10.3 pickup); those still need a device. Never loosen a check to pass.
 
 ## Lint and format
 

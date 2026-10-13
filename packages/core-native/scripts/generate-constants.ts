@@ -28,6 +28,7 @@ const read = (...parts: string[]): string =>
 
 const sources: NativeSources = {
   apiHeader: read('include', 'kitbag_api.h'),
+  tunerHeader: read('include', 'kitbag_tuner_api.h'),
   mixerHeader: read('src', 'mixer', 'mixer.h'),
   metronomeHeader: read('src', 'metronome', 'metronome.h'),
   metronomeRender: read('src', 'metronome', 'metronome_render.cpp'),

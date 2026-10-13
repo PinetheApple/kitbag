@@ -1,10 +1,13 @@
 // Offline pitch verification: synthesized tones through PitchAnalyzer, asserting
-// the M2 proof (≤±1 cent, 82Hz–1kHz), settle time, octave kill, silence gate.
+// the M2 proof (≤±1 cent, 82Hz–1kHz), settle time, octave kill, silence gate;
+// then the string-aware tuning mode through the C ABI (tuning_mode_test_*.cpp).
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
 
+#include "check.h"
 #include "tuner/pitch_analyzer.h"
+#include "tuning_mode_test_support.h"
 
 namespace {
 
@@ -36,14 +39,11 @@ constexpr double kReferenceTonesHz[] = {
     1000.0
 };
 
-int g_failures = 0;
+using kitbag_test::Check;
 
-void Check(bool condition, const char* message) {
-  if (!condition) {
-    std::fprintf(stderr, "FAIL: %s\n", message);
-    ++g_failures;
-  }
-}
+// Update deliberately when adding or removing a check; a drop means a test
+// stopped running.
+constexpr int kExpectedChecks = 132;
 
 double CentsBetween(double measured_hz, double true_hz) {
   return 1200.0 * std::log2(measured_hz / true_hz);
@@ -207,6 +207,33 @@ void TestA4Reference() {
   Check(std::fabs(reading.cents) <= kMaxCentsError, "415Hz reads as 0 cents");
 }
 
+// Returns the number of tuning-mode checks run, or -1 without an engine.
+int RunTuningModeTests() {
+  const int checks_before = kitbag_test::g_checks;
+  const int failures_before = kitbag_test::g_failures;
+  if (kb_engine_create(&tuning_test::g_engine) != KB_OK) {
+    std::fprintf(stderr, "tuner_verify: could not create an engine\n");
+    return -1;
+  }
+  tuning_test::RunDetectTests();
+  tuning_test::RunTimingTests();
+  tuning_test::RunWindowTests();
+  tuning_test::RunStabilityTests();
+  tuning_test::RunSilenceTests();
+  tuning_test::RunWrongStringTests();
+  tuning_test::RunModeTests();
+  tuning_test::RunEdgeTests();
+  tuning_test::RunCounterTests();
+  kb_engine_destroy(tuning_test::g_engine);
+  const int checks = kitbag_test::g_checks - checks_before;
+  std::printf(
+      "tuning mode: %d of %d checks failed\n",
+      kitbag_test::g_failures - failures_before,
+      checks
+  );
+  return checks;
+}
+
 }  // namespace
 
 int main() {
@@ -215,10 +242,24 @@ int main() {
   TestOctaveErrorKill();
   TestSilenceGate();
   TestA4Reference();
-  if (g_failures == 0) {
+  if (RunTuningModeTests() < 0) return 1;
+  if (kitbag_test::g_checks != kExpectedChecks) {
+    std::fprintf(
+        stderr,
+        "tuner_verify: ran %d checks, expected %d\n",
+        kitbag_test::g_checks,
+        kExpectedChecks
+    );
+    return 1;
+  }
+  if (kitbag_test::g_failures == 0) {
     std::printf("tuner_verify: all checks passed\n");
     return 0;
   }
-  std::fprintf(stderr, "tuner_verify: %d failure(s)\n", g_failures);
+  std::fprintf(
+      stderr,
+      "tuner_verify: %d failure(s)\n",
+      kitbag_test::g_failures
+  );
   return 1;
 }

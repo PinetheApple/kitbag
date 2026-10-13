@@ -34,8 +34,8 @@ Pod::Spec.new do |s|
   s.source_files = "cpp/*.{h,cpp}"
 
   s.pod_target_xcconfig = {
-    # kitbag_api.h is included, never copied (§13.7). C++20 for the glue and the
-    # vendored cycfi/q concepts kitbag_core uses.
+    # kitbag_api.h is included, never copied (§13.7). C++20 to match
+    # kitbag_core.
     "HEADER_SEARCH_PATHS" => "\"#{core_dir}/include\"",
     "CLANG_CXX_LANGUAGE_STANDARD" => "c++20",
     # kitbag_core's static archive, produced by the script phase into the pod's

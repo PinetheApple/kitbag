@@ -37,8 +37,8 @@ is well-built. The Flutter app was deleted 2026-07-17; the stack is React Native
    cmake --build native/audio_core/build
    ./native/audio_core/build/metronome_verify   # must stay green
    ```
-   Note `tuner_verify` fails 37/37 today (SPEC.md §10.1) — that is known, not a
-   regression, and **a change that makes it pass by loosening it is a Revise.**
+   `tuner_verify` is a gate like the others; **a change that makes any check
+   pass by loosening it is a Revise.**
 3. **Check edge cases** — empty input? A missing tool? Does it hold at 20 BPM and at
    400? Does it survive pause, seek, and re-anchor?
 4. **Check the claim, not the demo.** Every failure the audit found is something a

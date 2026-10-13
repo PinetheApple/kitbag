@@ -30,13 +30,11 @@ anything.
 cmake -S native/audio_core -B native/audio_core/build -G Ninja -DKITBAG_BUILD_TOOLS=ON
 cmake --build native/audio_core/build
 ./native/audio_core/build/metronome_verify   # must stay green
-./native/audio_core/build/tuner_verify       # fails 37/37 today — expected
+./native/audio_core/build/tuner_verify       # must stay green (gate since #117)
 ```
 
-`tuner_verify` failing 37/37 is a real defect in `PitchAnalyzer`, not a stale
-harness (SPEC.md §10.1). It reports `0.000 Hz` / `confidence 0.00` for clean
-synthetic tones with no mic in the path. Do not make it pass by loosening the
-assertions — that converts the project's only tuner evidence into a lie.
+`tuner_verify` failed 37/37 until #117 (a detector reset loop, SPEC.md §10.1);
+it is now a gate. Never make a failing check pass by loosening it.
 
 `metronome_verify` and `tuner_verify` render offline and assert onsets against a
 beat grid. When you add a native capability, the verify tool is how it gets

@@ -45,8 +45,8 @@ These are not stylistic. Each one is here because it went wrong:
 - **Never edit SPEC.md's decisions.** Recording that something landed is fine
   (annotate §2 entries in the established strikethrough style). Changing what the
   spec *requires* is the user's call.
-- **Never loosen a test to make it pass.** `tuner_verify` fails 37/37 by design
-  of the situation, not by neglect — CLAUDE.md calls this out by name.
+- **Never loosen a test to make it pass.** CLAUDE.md calls this out by name;
+  `tuner_verify` was red for months before a real fix (#117).
 
 ## Picking the next task
 
@@ -121,7 +121,7 @@ bash scripts/lint.sh; echo "LINT=$?"
 The glob is deliberate — a hardcoded tool list goes stale the moment a task adds
 a verify tool, and silently stops gating the newest work.
 
-`tuner_verify` exits 1 (37/37) — expected, pre-existing, not a regression.
+`tuner_verify` must exit 0 like the others (a gate since #117).
 
 **4. Demand sabotage evidence.** Every new test must be shown to fail. Require
 the **exact diff** of each mutation, one mutation per run. Prose descriptions of
@@ -262,6 +262,6 @@ evidence, and what remains open. Name anything you found but did not fix.
 
 ## Deferred by the user
 
-Tuner work (§10, `tuner_verify`'s 37/37, `docs/tuner-research.md`) comes **after**
-all other Phase 1 functionality. Do not pick it up, and do not "fix" the failing
-suite in passing.
+Tuner work (§10, `docs/tuner-research.md`) came **after** all other Phase 1
+functionality; #117 has since fixed the detector. Do not pick tuner work up in
+passing.
