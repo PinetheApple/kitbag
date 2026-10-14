@@ -53,6 +53,15 @@ void commandSetBarMute(bool enabled, int32_t playBars, int32_t muteBars);
 // Mixer. Returns a kb_result code; poll readiness via the HostObject (§13.3).
 int32_t commandLoadTrack(int32_t track, const char* path);
 
+// Tuner: async TurboModule methods share one native-modules thread, the ABI's app thread.
+int32_t commandTunerStart();
+void commandTunerStop();
+int32_t commandTunerSetTuning(int32_t instrument, const int32_t* stringMidis, int32_t count);
+int32_t commandTunerSetTargetString(int32_t stringIndex);
+int32_t commandTunerSetChromatic();
+int32_t commandTunerSetA4(double a4Hz);
+int32_t commandTunerResetNotePresence(double pauseMs);
+
 }  // namespace kitbag
 
 #endif  // KITBAG_COMMANDS_H

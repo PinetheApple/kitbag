@@ -24,6 +24,8 @@ export interface NativeSources {
   readonly metronomeHeader: string;
   /** native/audio_core/src/metronome/metronome_render.cpp — the sound presets. */
   readonly metronomeRender: string;
+  /** native/audio_core/src/tuner/tuning_mode.h — the A4 reference bounds. */
+  readonly tuningModeHeader: string;
 }
 
 export interface EnumMember {
@@ -71,6 +73,11 @@ export interface NativeConstants {
   readonly tunerInstrument: readonly EnumMember[];
   readonly tuningStatus: readonly EnumMember[];
   readonly wrongString: readonly EnumMember[];
+  readonly tunerA4Hz: {
+    readonly min: number;
+    readonly max: number;
+    readonly default: number;
+  };
 }
 
 function fail(what: string): never {
@@ -106,6 +113,15 @@ export function parseConstexprInt(source: string, name: string): number {
     `static\\s+constexpr\\s+int\\s+${name}\\s*=\\s*(-?\\d+)\\s*;`,
   ).exec(source);
   if (match === null) fail(`constexpr int ${name}`);
+  return Number(match[1]);
+}
+
+/** `static constexpr double NAME = <number>;` from a C++ header. */
+export function parseConstexprDouble(source: string, name: string): number {
+  const match = new RegExp(
+    `static\\s+constexpr\\s+double\\s+${name}\\s*=\\s*(-?\\d+(?:\\.\\d+)?)\\s*;`,
+  ).exec(source);
+  if (match === null) fail(`constexpr double ${name}`);
   return Number(match[1]);
 }
 
@@ -291,6 +307,11 @@ export function collectConstants(sources: NativeSources): NativeConstants {
     tunerInstrument: parseEnum(sources.tunerHeader, 'kb_tuner_instrument'),
     tuningStatus: parseEnum(sources.tunerHeader, 'kb_tuning_status'),
     wrongString: parseEnum(sources.tunerHeader, 'kb_wrong_string'),
+    tunerA4Hz: {
+      min: parseConstexprDouble(sources.tuningModeHeader, 'kMinA4Hz'),
+      max: parseConstexprDouble(sources.tuningModeHeader, 'kMaxA4Hz'),
+      default: parseConstexprDouble(sources.tuningModeHeader, 'kDefaultA4Hz'),
+    },
   };
 }
 
@@ -402,6 +423,13 @@ export const KB_TUNER_NO_NOTE = ${String(c.tunerNoNote)};
 
 /** in_tune_ratio from which the current string counts as tuned (KB_TUNER_TUNED_RATIO). */
 export const KB_TUNER_TUNED_RATIO = ${String(c.tunerTunedRatio)};
+
+/** A4 reference range and default, in Hz (TuningMode); kb_tuner_set_a4 clamps to it. */
+export const KB_TUNER_A4_HZ = {
+  min: ${String(c.tunerA4Hz.min)},
+  max: ${String(c.tunerA4Hz.max)},
+  default: ${String(c.tunerA4Hz.default)},
+} as const;
 
 /** kb_tuner_instrument enum: selects the in-tune window table. */
 ${renderEnum('KB_TUNER_INSTRUMENT', c.tunerInstrument)}

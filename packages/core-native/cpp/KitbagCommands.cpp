@@ -76,4 +76,18 @@ int32_t commandLoadTrack(int32_t track, const char* path) {
   return kb_mixer_load_track(commandEngine(), track, path);
 }
 
+int32_t commandTunerStart() { return kb_tuner_start(commandEngine()); }
+void commandTunerStop() { kb_tuner_stop(commandEngine()); }
+int32_t commandTunerSetTuning(int32_t instrument, const int32_t* stringMidis, int32_t count) {
+  return kb_tuner_set_tuning(commandEngine(), instrument, stringMidis, count);
+}
+int32_t commandTunerSetTargetString(int32_t stringIndex) {
+  return kb_tuner_set_target_string(commandEngine(), stringIndex);
+}
+int32_t commandTunerSetChromatic() { return kb_tuner_set_chromatic(commandEngine()); }
+int32_t commandTunerSetA4(double a4Hz) { return kb_tuner_set_a4(commandEngine(), a4Hz); }
+int32_t commandTunerResetNotePresence(double pauseMs) {
+  return kb_tuner_reset_note_presence(commandEngine(), pauseMs);
+}
+
 }  // namespace kitbag

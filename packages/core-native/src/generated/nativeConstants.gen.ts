@@ -101,6 +101,13 @@ export const KB_TUNER_NO_NOTE = -1;
 /** in_tune_ratio from which the current string counts as tuned (KB_TUNER_TUNED_RATIO). */
 export const KB_TUNER_TUNED_RATIO = 0.95;
 
+/** A4 reference range and default, in Hz (TuningMode); kb_tuner_set_a4 clamps to it. */
+export const KB_TUNER_A4_HZ = {
+  min: 415,
+  max: 466,
+  default: 440,
+} as const;
+
 /** kb_tuner_instrument enum: selects the in-tune window table. */
 export const KB_TUNER_INSTRUMENT = {
   KB_TUNER_INSTRUMENT_GUITAR: 0,

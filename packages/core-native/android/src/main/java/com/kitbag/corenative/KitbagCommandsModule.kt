@@ -125,6 +125,38 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     promise.resolve(nativeLoadTrack(track.toInt(), path))
   }
 
+  // --- Tuner ---------------------------------------------------------------
+  // Async methods share the one native-modules thread, the tuner ABI's app thread.
+
+  override fun tunerStart(promise: Promise) {
+    promise.resolve(nativeTunerStart())
+  }
+
+  override fun tunerStop() {
+    nativeTunerStop()
+  }
+
+  override fun tunerSetTuning(instrument: Double, stringMidis: ReadableArray, promise: Promise) {
+    val midis = IntArray(stringMidis.size()) { i -> stringMidis.getInt(i) }
+    promise.resolve(nativeTunerSetTuning(instrument.toInt(), midis))
+  }
+
+  override fun tunerSetTargetString(stringIndex: Double, promise: Promise) {
+    promise.resolve(nativeTunerSetTargetString(stringIndex.toInt()))
+  }
+
+  override fun tunerSetChromatic(promise: Promise) {
+    promise.resolve(nativeTunerSetChromatic())
+  }
+
+  override fun tunerSetA4(a4Hz: Double, promise: Promise) {
+    promise.resolve(nativeTunerSetA4(a4Hz))
+  }
+
+  override fun tunerResetNotePresence(pauseMs: Double, promise: Promise) {
+    promise.resolve(nativeTunerResetNotePresence(pauseMs))
+  }
+
   // --- JNI (libkitbag_jsi.so / KitbagJni.cpp) ------------------------------
 
   private external fun nativeInstall(runtimePtr: Long)
@@ -149,6 +181,13 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   )
   private external fun nativeSetBarMute(enabled: Boolean, playBars: Int, muteBars: Int)
   private external fun nativeLoadTrack(track: Int, path: String): Int
+  private external fun nativeTunerStart(): Int
+  private external fun nativeTunerStop()
+  private external fun nativeTunerSetTuning(instrument: Int, stringMidis: IntArray): Int
+  private external fun nativeTunerSetTargetString(stringIndex: Int): Int
+  private external fun nativeTunerSetChromatic(): Int
+  private external fun nativeTunerSetA4(a4Hz: Double): Int
+  private external fun nativeTunerResetNotePresence(pauseMs: Double): Int
 
   companion object {
     init {

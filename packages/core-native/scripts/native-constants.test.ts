@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   collectConstants,
+  parseConstexprDouble,
   parseConstexprIntArray,
   parseDefineInt,
   parseDefineNumber,
@@ -40,6 +41,7 @@ const realSources: NativeSources = {
   mixerHeader: read('src', 'mixer', 'mixer.h'),
   metronomeHeader: read('src', 'metronome', 'metronome.h'),
   metronomeRender: read('src', 'metronome', 'metronome_render.cpp'),
+  tuningModeHeader: read('src', 'tuner', 'tuning_mode.h'),
 };
 
 describe('parseDefineInt', () => {
@@ -67,6 +69,25 @@ describe('parseDefineNumber', () => {
     expect(() => parseDefineNumber('#define KB_X 0.95f', 'KB_X')).toThrow(
       /KB_X/,
     );
+  });
+});
+
+describe('parseConstexprDouble', () => {
+  const src = [
+    'static constexpr double kMinA4Hz = 415.5;',
+    'static constexpr double kMaxA4Hz = -466;',
+  ].join('\n');
+  it('reads a fractional and a negative integral double', () => {
+    expect(parseConstexprDouble(src, 'kMinA4Hz')).toBe(415.5);
+    expect(parseConstexprDouble(src, 'kMaxA4Hz')).toBe(-466);
+  });
+  it('throws on an absent name or a suffixed literal', () => {
+    expect(() => parseConstexprDouble(src, 'kDefaultA4Hz')).toThrow(
+      /kDefaultA4Hz/,
+    );
+    expect(() =>
+      parseConstexprDouble('static constexpr double kX = 4.4e2;', 'kX'),
+    ).toThrow(/kX/);
   });
 });
 
@@ -213,6 +234,10 @@ describe('collectConstants (real engine source)', () => {
     ]);
     expect(c.tunerInstrument).toHaveLength(4);
     expect(c.wrongString).toHaveLength(3);
+    expect(c.tunerA4Hz).toEqual({ min: 415, max: 466, default: 440 });
+    expect(renderConstants(c)).toContain(
+      'KB_TUNER_A4_HZ = {\n  min: 415,\n  max: 466,\n  default: 440,\n}',
+    );
     // render twice: identical, so generate:check can byte-diff deterministically.
     expect(renderConstants(c)).toBe(renderConstants(c));
   });
