@@ -30,6 +30,9 @@ constexpr double kMaxJitterFrames = 1.5;
 // Grid beats are placed from doubles in seconds, so allow a couple of samples
 // of rounding on top of the click's attack.
 constexpr double kGridToleranceFrames = 4.0;
+constexpr auto kRampBars = static_cast<int32_t>(kitbag::RampUnit::kBars);
+constexpr auto kRampSeconds = static_cast<int32_t>(kitbag::RampUnit::kSeconds);
+constexpr auto kRampMinutes = static_cast<int32_t>(kitbag::RampUnit::kMinutes);
 
 // Detects onsets in one rendered block, appending to `onsets`. `last_onset`
 // and `previous_abs` carry the detector's state across blocks.
@@ -340,6 +343,12 @@ void RunStartAtTests();
 void RunLatencyTests();
 void RunGridTests();
 void RunAnchorTests();
+void RunPolyTests();
+void RunSoundTests();
+void RunCountInTests();
+void RunLongCountInTests();
+void RunRampTests();
+void RunRampLiveTests();
 
 }  // namespace metronome_test
 

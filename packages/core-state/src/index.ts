@@ -10,6 +10,7 @@ export {
   type RampConfig,
   type BarMuteConfig,
   type PerAccentSounds,
+  type CountInConfig,
   type Denominator,
   type CountInBars,
 } from './metronome/store.ts';

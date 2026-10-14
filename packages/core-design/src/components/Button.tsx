@@ -1,15 +1,7 @@
 import { Pressable, Text } from 'react-native';
 
 import { icons, type IconName } from '../icons.ts';
-import {
-  iconSizes,
-  inset,
-  opacity,
-  radius,
-  size,
-  space,
-  textRoles,
-} from '../roles.ts';
+import { iconSizes, inset, radius, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { hitSlopForPadded } from '../touchTarget.ts';
@@ -47,8 +39,11 @@ const useStyles = createThemedStyles((theme) => ({
   fill: {
     flex: 1,
   },
+  // No fill and no border so it cannot pass for a ghost button, and no
+  // opacity so the label keeps AA contrast (theme.test.ts).
   disabled: {
-    opacity: opacity.muted,
+    backgroundColor: 'transparent',
+    borderColor: 'transparent',
   },
   primary: {
     backgroundColor: theme.color.accent,
@@ -84,6 +79,9 @@ const useStyles = createThemedStyles((theme) => ({
   destructiveLabel: {
     color: theme.onDanger,
   },
+  disabledLabel: {
+    color: theme.disabledLabel,
+  },
 }));
 
 export function Button({
@@ -96,7 +94,9 @@ export function Button({
   accessibilityLabel,
 }: ButtonProps) {
   const styles = useStyles();
-  const labelStyle = styles[`${variant}Label`];
+  const labelStyle = disabled
+    ? styles.disabledLabel
+    : styles[`${variant}Label`];
   return (
     <Pressable
       accessibilityRole="button"

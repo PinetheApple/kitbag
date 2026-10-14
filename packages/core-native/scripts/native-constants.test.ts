@@ -43,6 +43,8 @@ const realSources: NativeSources = {
   metronomeRender: read('src', 'metronome', 'metronome_render.cpp'),
   tuningModeHeader: read('src', 'tuner', 'tuning_mode.h'),
   tunerImplHeader: read('src', 'tuner', 'tuner.h'),
+  tempoRampHeader: read('src', 'metronome', 'tempo_ramp.h'),
+  metronomeTypesHeader: read('src', 'metronome', 'metronome_types.h'),
 };
 
 describe('parseDefineInt', () => {
@@ -90,6 +92,19 @@ describe('parseConstexprDouble', () => {
       parseConstexprDouble('static constexpr double kX = 4.4e2;', 'kX'),
     ).toThrow(/kX/);
   });
+  it('reads a namespace-scope inline constexpr double', () => {
+    expect(
+      parseConstexprDouble(
+        'inline constexpr double kMaxBpm = 400.0;',
+        'kMaxBpm',
+      ),
+    ).toBe(400);
+  });
+  it('throws when the constant is absent', () => {
+    expect(() => parseConstexprDouble('double kMaxBpm;', 'kMaxBpm')).toThrow(
+      /kMaxBpm/,
+    );
+  });
 });
 
 describe('parseConstexprIntArray', () => {
@@ -100,6 +115,12 @@ describe('parseConstexprIntArray', () => {
         'kDenominators',
       ),
     ).toEqual([2, 4, 8, 16]);
+  });
+  it('resolves a named member to its constexpr int in the same source', () => {
+    const src =
+      'static constexpr int kOff = 7;\n' +
+      'static constexpr int kChoices[] = {kOff, 1, 2};';
+    expect(parseConstexprIntArray(src, 'kChoices')).toEqual([7, 1, 2]);
   });
   it('throws when the array is absent', () => {
     expect(() =>
@@ -206,7 +227,13 @@ describe('collectConstants (real engine source)', () => {
     expect(c.maxTracks).toBe(16);
     expect(c.maxBeats).toBe(16);
     expect(c.maxRampBars).toBe(64);
-    expect(c.maxMuteBars).toBe(16);
+    expect(c.muteBars).toEqual({ min: 1, max: 16 });
+    expect(c.minRampBars).toBe(1);
+    expect(c.bpm).toEqual({ min: 20, max: 400 });
+    expect(c.subdivision).toEqual({ min: 1, max: 16 });
+    expect(c.defaultSounds).toEqual({ normal: 0, accent: 0 });
+    expect(c.countInOff).toBe(0);
+    expect(c.volume).toEqual({ min: 0, max: 2 });
     expect(c.denominators).toEqual([2, 4, 8, 16]);
     expect(c.bpmReferenceDenominator).toBe(4);
     expect(c.soundNames).toEqual([
@@ -240,6 +267,16 @@ describe('collectConstants (real engine source)', () => {
     expect(renderConstants(c)).toContain(
       'KB_TUNER_A4_HZ = {\n  min: 415,\n  max: 466,\n  default: 440,\n}',
     );
+    expect(c.minPolyBeats).toBe(2);
+    expect(c.maxPolyBeats).toBe(16);
+    expect(c.countInBars).toEqual([0, 1, 2, 4]);
+    expect(c.defaultCountInSound).toBe(1);
+    expect(c.rampSeconds).toEqual({ min: 1, max: 3600 });
+    expect(c.rampUnit).toEqual([
+      { name: 'KB_RAMP_BARS', value: 0 },
+      { name: 'KB_RAMP_SECONDS', value: 1 },
+      { name: 'KB_RAMP_MINUTES', value: 2 },
+    ]);
     // render twice: identical, so generate:check can byte-diff deterministically.
     expect(renderConstants(c)).toBe(renderConstants(c));
   });
