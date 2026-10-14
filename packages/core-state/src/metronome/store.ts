@@ -1,13 +1,16 @@
 import {
   KB_ACCENT,
   KB_BPM_REFERENCE_DENOMINATOR,
+  KB_COUNT_IN_OFF,
+  KB_DEFAULT_SOUNDS,
   KB_DEFAULT_COUNT_IN_SOUND,
   KB_DENOMINATORS,
   KB_LATENCY_OFFSET_MS_BOUNDS,
   KB_MAX_BEATS,
-  KB_MAX_MUTE_BARS,
+  KB_MUTE_BARS_BOUNDS,
   KB_POLY_BEATS_BOUNDS,
   KB_RAMP_UNIT,
+  KB_SUBDIVISION_BOUNDS,
   KB_VOLUME_BOUNDS,
   type KbCountInBars,
   type KbDenominator,
@@ -43,8 +46,6 @@ export {
   type RampConfig,
 } from './config.ts';
 
-const SUBDIVISION_MIN = 1;
-const SUBDIVISION_MAX = 16;
 const BEATS_MIN = 1;
 
 export type Denominator = KbDenominator;
@@ -105,19 +106,18 @@ const DEFAULT_DENOMINATOR: Denominator = KB_BPM_REFERENCE_DENOMINATOR;
 const DEFAULT_POLY_BEATS = 3;
 const DEFAULT_VOLUME = 1;
 const DEFAULT_TRAINER_BARS = 4;
-const MIN_TRAINER_BARS = 1;
 
 function initialConfig(): MetronomeConfig {
   return {
     bpm: DEFAULT_BPM,
     beatsPerBar: DEFAULT_BEATS,
     denominator: DEFAULT_DENOMINATOR,
-    subdivision: SUBDIVISION_MIN,
+    subdivision: KB_SUBDIVISION_BOUNDS.min,
     accents: initialAccents(DEFAULT_BEATS),
     polyEnabled: false,
     polyBeats: DEFAULT_POLY_BEATS,
     polyAccents: initialAccents(DEFAULT_POLY_BEATS),
-    sounds: { normal: 0, accent: 0 },
+    sounds: { ...KB_DEFAULT_SOUNDS },
     volume: DEFAULT_VOLUME,
     latencyOffset: 0,
     ramp: {
@@ -133,7 +133,11 @@ function initialConfig(): MetronomeConfig {
       playBars: DEFAULT_TRAINER_BARS,
       muteBars: DEFAULT_TRAINER_BARS,
     },
-    countIn: { bars: 0, distinct: true, sound: KB_DEFAULT_COUNT_IN_SOUND },
+    countIn: {
+      bars: KB_COUNT_IN_OFF,
+      distinct: true,
+      sound: KB_DEFAULT_COUNT_IN_SOUND,
+    },
     running: false,
   };
 }
@@ -198,8 +202,8 @@ function patternActions(
     setSubdivision: (subdivision) => {
       const next = clamp(
         Math.trunc(subdivision),
-        SUBDIVISION_MIN,
-        SUBDIVISION_MAX,
+        KB_SUBDIVISION_BOUNDS.min,
+        KB_SUBDIVISION_BOUNDS.max,
       );
       set({ subdivision: next });
       commands.setSubdivision(next);
@@ -341,8 +345,16 @@ function transportActions(
     setBarMute: (config) => {
       const barMute = {
         enabled: config.enabled,
-        playBars: clamp(config.playBars, MIN_TRAINER_BARS, KB_MAX_MUTE_BARS),
-        muteBars: clamp(config.muteBars, MIN_TRAINER_BARS, KB_MAX_MUTE_BARS),
+        playBars: clamp(
+          config.playBars,
+          KB_MUTE_BARS_BOUNDS.min,
+          KB_MUTE_BARS_BOUNDS.max,
+        ),
+        muteBars: clamp(
+          config.muteBars,
+          KB_MUTE_BARS_BOUNDS.min,
+          KB_MUTE_BARS_BOUNDS.max,
+        ),
       };
       set({ barMute });
       commands.setBarMute(barMute.enabled, barMute.playBars, barMute.muteBars);

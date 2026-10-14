@@ -1,19 +1,18 @@
 import {
   KB_ACCENT,
+  KB_BPM_BOUNDS,
   KB_COUNT_IN_BARS,
   KB_MAX_RAMP_BARS,
+  KB_MIN_RAMP_BARS,
   KB_RAMP_SECONDS_BOUNDS,
   KB_RAMP_UNIT,
   KB_SOUND_NAMES,
   type KbCountInBars,
 } from '@kitbag/core-native';
 
-const BPM_MIN = 20;
-const BPM_MAX = 400;
 const SECONDS_PER_MINUTE = 60;
-const MIN_RAMP_BARS = 1;
 
-export const BPM_BOUNDS = { min: BPM_MIN, max: BPM_MAX } as const;
+export const BPM_BOUNDS = KB_BPM_BOUNDS;
 
 export interface RampConfig {
   readonly enabled: boolean;
@@ -72,7 +71,7 @@ export function initialAccents(count: number): KB_ACCENT[] {
 
 function clampDuration(duration: number, unit: KB_RAMP_UNIT): number {
   if (unit === KB_RAMP_UNIT.KB_RAMP_BARS) {
-    return clamp(Math.round(duration), MIN_RAMP_BARS, KB_MAX_RAMP_BARS);
+    return clamp(Math.round(duration), KB_MIN_RAMP_BARS, KB_MAX_RAMP_BARS);
   }
   const scale = unit === KB_RAMP_UNIT.KB_RAMP_MINUTES ? SECONDS_PER_MINUTE : 1;
   return clamp(
@@ -91,8 +90,8 @@ export function normalizeRamp(config: RampConfig): RampConfig | undefined {
   if (!finite || !units.includes(config.unit)) return undefined;
   return {
     ...config,
-    startBpm: clamp(config.startBpm, BPM_MIN, BPM_MAX),
-    endBpm: clamp(config.endBpm, BPM_MIN, BPM_MAX),
+    startBpm: clamp(config.startBpm, KB_BPM_BOUNDS.min, KB_BPM_BOUNDS.max),
+    endBpm: clamp(config.endBpm, KB_BPM_BOUNDS.min, KB_BPM_BOUNDS.max),
     duration: clampDuration(config.duration, config.unit),
   };
 }
