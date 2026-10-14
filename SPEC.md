@@ -455,7 +455,7 @@ compatibility is the constraint; both current dependencies are permissive.
 | Dependency | Licence | Role |
 |---|---|---|
 | **miniaudio** (`third_party/miniaudio.h`) | MIT-0 / public domain | Device I/O — AAudio on Android, PipeWire on Linux, CoreAudio on iOS. One API. Also supplies the Speex-derived resampler §4.1 needs. |
-| **cycfi/q** (`third_party/cycfi_q/`) | **Boost Software License 1.0** | Pitch detection (`pitch_analyzer.cpp` uses `q::frequency`, `q::dB`). Header-only. |
+| **cycfi/q** (`third_party/cycfi_q/`) | **Boost Software License 1.0** | Vendored but unused since #117: the tuner's McLeod detector (`pitch_detector.cpp`) is ours, and nothing includes cycfi/q. Removing the tree is pending. |
 
 Everything else is ours: the lookahead scheduler, the mixer, the radix-2 FFT
 (`fft.cpp`), and the beat tracker.
@@ -1181,9 +1181,16 @@ problem and it is not a UI issue.
 > sine reading as silence.
 >
 > Nothing ran this: the old CI built the verify tools and never executed them, so
-> it has likely been failing unnoticed for a long time. It is now an
-> informational CI step (`|| true`) and **becomes a gate when this research
-> lands.**
+> it has likely been failing unnoticed for a long time.
+>
+> **Resolved 2026-10-13 (#117).** Cause: `PitchAnalyzer` reset the cycfi/q
+> detector on every update the note lock answered "silence", which it does for
+> every frame while acquiring, so a clean tone's runs of readings (9–10 updates)
+> never reached the 20 the lock needed. The detector is now a McLeod pitch method
+> on 4096-sample frames under a string-aware tuning mode
+> (`docs/tuner-functional-spec.md`). `tuner_verify` passes and is a CI and
+> `preflight.sh` gate. That proves the closed loop only; the capture path and
+> pickup items below are still open and need a device.
 
 Investigate, in this order:
 

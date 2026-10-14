@@ -14,6 +14,7 @@ import {
   collectConstants,
   parseConstexprIntArray,
   parseDefineInt,
+  parseDefineNumber,
   parseEnum,
   parseRangeAfter,
   parseSoundNames,
@@ -35,6 +36,7 @@ const read = (...parts: string[]): string =>
 
 const realSources: NativeSources = {
   apiHeader: read('include', 'kitbag_api.h'),
+  tunerHeader: read('include', 'kitbag_tuner_api.h'),
   mixerHeader: read('src', 'mixer', 'mixer.h'),
   metronomeHeader: read('src', 'metronome', 'metronome.h'),
   metronomeRender: read('src', 'metronome', 'metronome_render.cpp'),
@@ -50,6 +52,21 @@ describe('parseDefineInt', () => {
     expect(() =>
       parseDefineInt('/* nothing here */', 'KB_MAX_GRID_BEATS'),
     ).toThrow(/KB_MAX_GRID_BEATS/);
+  });
+});
+
+describe('parseDefineNumber', () => {
+  it('reads a parenthesised negative and a fraction', () => {
+    expect(parseDefineNumber('#define KB_X (-2) /* c */', 'KB_X')).toBe(-2);
+    expect(parseDefineNumber('#define KB_X 0.95 /* c */', 'KB_X')).toBe(0.95);
+  });
+  it('throws on an expression rather than reading its first token', () => {
+    expect(() => parseDefineNumber('#define KB_X (1 << 2)', 'KB_X')).toThrow(
+      /KB_X/,
+    );
+    expect(() => parseDefineNumber('#define KB_X 0.95f', 'KB_X')).toThrow(
+      /KB_X/,
+    );
   });
 });
 
@@ -182,6 +199,20 @@ describe('collectConstants (real engine source)', () => {
       'KB_ERROR_DEVICE_START_FAILED',
     );
     expect(c.accent).toHaveLength(3);
+    expect(c.tunerMaxStrings).toBe(12);
+    expect(c.tunerAutoString).toBe(-1);
+    expect(c.tunerNoString).toBe(-1);
+    expect(c.tunerNoNote).toBe(-1);
+    expect(c.result.map((m) => m.name)).toContain('KB_ERROR_BUSY');
+    expect(c.tunerTunedRatio).toBe(0.95);
+    expect(c.tuningStatus.map((m) => m.name)).toEqual([
+      'KB_TUNING_NOT_MEASURED',
+      'KB_TUNING_TOO_LOW',
+      'KB_TUNING_IN_TUNE',
+      'KB_TUNING_TOO_HIGH',
+    ]);
+    expect(c.tunerInstrument).toHaveLength(4);
+    expect(c.wrongString).toHaveLength(3);
     // render twice: identical, so generate:check can byte-diff deterministically.
     expect(renderConstants(c)).toBe(renderConstants(c));
   });

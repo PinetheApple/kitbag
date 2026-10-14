@@ -159,5 +159,5 @@ mutation is shown to break it; Phase 3 UI adds the `tdd` skill on top, not inste
 
 ## Deferred
 
-Tuner (§10) comes last (SPEC.md §15). Don't pick it up early; don't "fix"
-`tuner_verify`'s 37/37 in passing.
+Tuner (§10) comes last (SPEC.md §15). Don't pick it up early or in passing;
+`tuner_verify` is a gate and must stay green.

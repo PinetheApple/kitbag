@@ -2,6 +2,8 @@
 // polled RT mirrors. Engine lifecycle and the tuner are in api.cpp.
 #include "kitbag_api.h"
 
+#include <cmath>
+
 #include "api/api_engine.h"
 
 using kitbag::ToEngine;

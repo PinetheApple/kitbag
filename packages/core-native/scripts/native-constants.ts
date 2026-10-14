@@ -16,6 +16,8 @@
 export interface NativeSources {
   /** native/audio_core/include/kitbag_api.h — the shipped C ABI. */
   readonly apiHeader: string;
+  /** native/audio_core/include/kitbag_tuner_api.h — its tuning-mode section. */
+  readonly tunerHeader: string;
   /** native/audio_core/src/mixer/mixer.h — kMaxTracks lives here, not the ABI. */
   readonly mixerHeader: string;
   /** native/audio_core/src/metronome/metronome.h — kSoundCount, kMaxBeats, kDenominators. */
@@ -61,6 +63,14 @@ export interface NativeConstants {
     readonly cents: TunerField;
     readonly confidence: TunerField;
   };
+  readonly tunerMaxStrings: number;
+  readonly tunerAutoString: number;
+  readonly tunerNoString: number;
+  readonly tunerNoNote: number;
+  readonly tunerTunedRatio: number;
+  readonly tunerInstrument: readonly EnumMember[];
+  readonly tuningStatus: readonly EnumMember[];
+  readonly wrongString: readonly EnumMember[];
 }
 
 function fail(what: string): never {
@@ -76,6 +86,18 @@ export function parseDefineInt(header: string, name: string): number {
   const match = new RegExp(`#define\\s+${name}\\s+(-?\\d+)\\b`).exec(header);
   if (match === null) fail(`#define ${name}`);
   return Number(match[1]);
+}
+
+/**
+ * `#define NAME <number>` from a C header, where the value may be negative in
+ * parentheses (`(-1)`) or fractional (`0.95`). Anything else throws.
+ */
+export function parseDefineNumber(header: string, name: string): number {
+  const match = new RegExp(
+    `#define\\s+${name}\\s+(?:\\((-?\\d+(?:\\.\\d+)?)\\)|(-?\\d+(?:\\.\\d+)?))(?![\\w.])`,
+  ).exec(header);
+  if (match === null) fail(`#define ${name}`);
+  return Number(match[1] ?? match[2]);
 }
 
 /** `static constexpr int NAME = <int>;` from a C++ header. */
@@ -252,6 +274,23 @@ export function collectConstants(sources: NativeSources): NativeConstants {
       'Position within the bar,',
     ),
     tunerFields: parseTunerFields(sources.apiHeader),
+    tunerMaxStrings: parseDefineInt(
+      sources.tunerHeader,
+      'KB_TUNER_MAX_STRINGS',
+    ),
+    tunerAutoString: parseDefineNumber(
+      sources.tunerHeader,
+      'KB_TUNER_AUTO_STRING',
+    ),
+    tunerNoString: parseDefineNumber(sources.tunerHeader, 'KB_TUNER_NO_STRING'),
+    tunerNoNote: parseDefineNumber(sources.tunerHeader, 'KB_TUNER_NO_NOTE'),
+    tunerTunedRatio: parseDefineNumber(
+      sources.tunerHeader,
+      'KB_TUNER_TUNED_RATIO',
+    ),
+    tunerInstrument: parseEnum(sources.tunerHeader, 'kb_tuner_instrument'),
+    tuningStatus: parseEnum(sources.tunerHeader, 'kb_tuning_status'),
+    wrongString: parseEnum(sources.tunerHeader, 'kb_wrong_string'),
   };
 }
 
@@ -348,5 +387,26 @@ export const KB_TUNER_SNAPSHOT_FIELDS = {
   cents: ${renderField(c.tunerFields.cents)},
   confidence: ${renderField(c.tunerFields.confidence)},
 } as const;
-`;
+
+/** Most strings a tuning may carry (KB_TUNER_MAX_STRINGS). */
+export const KB_TUNER_MAX_STRINGS = ${String(c.tunerMaxStrings)};
+
+/** kb_tuner_set_target_string argument selecting auto mode (KB_TUNER_AUTO_STRING). */
+export const KB_TUNER_AUTO_STRING = ${String(c.tunerAutoString)};
+
+/** kb_tuner_state string fields when there is none (KB_TUNER_NO_STRING). */
+export const KB_TUNER_NO_STRING = ${String(c.tunerNoString)};
+
+/** kb_tuner_state.target_midi when no note is held (KB_TUNER_NO_NOTE). */
+export const KB_TUNER_NO_NOTE = ${String(c.tunerNoNote)};
+
+/** in_tune_ratio from which the current string counts as tuned (KB_TUNER_TUNED_RATIO). */
+export const KB_TUNER_TUNED_RATIO = ${String(c.tunerTunedRatio)};
+
+/** kb_tuner_instrument enum: selects the in-tune window table. */
+${renderEnum('KB_TUNER_INSTRUMENT', c.tunerInstrument)}
+/** kb_tuning_status enum. */
+${renderEnum('KB_TUNING_STATUS', c.tuningStatus)}
+/** kb_wrong_string enum: side of the target the heard string lies on. */
+${renderEnum('KB_WRONG_STRING', c.wrongString)}`;
 }

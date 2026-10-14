@@ -223,3 +223,15 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   (4) drizzle-orm's op-sqlite `transaction()` does not await its callback, so core-db
   owns a serialised BEGIN/COMMIT/ROLLBACK transactor and `openDatabase()` exposes
   repositories only. **[recorded; (1) and (2) await design sign-off]**
+
+- **2026-10-13 · Tuner smoothing deviates from SPEC §10.2 (§10.1, §10.2, #117)** —
+  SPEC §10.2 asks for a 3–5 frame median plus an EMA on cents, settling under
+  150 ms. The tuning mode instead uses the parameters chosen for the tuner spec
+  (`docs/tuner-functional-spec.md` P8/P9): each 85 ms frame's pitch is blended into
+  the reading at weight 0.25 when within 70 c of it and replaces it otherwise, and a
+  7-frame median is used only to hold the last reading after the note stops.
+  Rationale: the smoothing favours a stable reading over raw settle time. Measured
+  consequence: the first reading lands 85 ms after onset (one frame), but a +50 c
+  step takes 7 hops (~300 ms) to read 45 c, so §10.2's <150 ms settle holds for
+  onset, not for a pitch change within a note. SPEC §10.2's text is unchanged;
+  reconcile it or overrule this. **[recorded]**

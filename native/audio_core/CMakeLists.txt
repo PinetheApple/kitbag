@@ -18,7 +18,7 @@ endif()
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_C_STANDARD 11)
-# C++20: the vendored cycfi/q pitch core uses concepts.
+# C++20: std::numbers in the DSP, designated initialisers in the tools.
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -28,6 +28,7 @@ add_library(kitbag_core SHARED
   src/api/api_analysis.cpp
   src/api/api_media.cpp
   src/api/api_metronome.cpp
+  src/api/api_tuning.cpp
   src/analysis/beat_tracker.cpp
   src/analysis/downbeat.cpp
   src/analysis/song_analysis.cpp
@@ -47,9 +48,14 @@ add_library(kitbag_core SHARED
   src/mixer/mixer_render.cpp
   src/player/player.cpp
   src/player/player_render.cpp
-  src/tuner/note_lock.cpp
-  src/tuner/pitch_analyzer.cpp
+  src/tuner/note_smoother.cpp
+  src/tuner/pitch_detector.cpp
   src/tuner/tuner.cpp
+  src/tuner/tuner_tuning.cpp
+  src/tuner/tuning_mode.cpp
+  src/tuner/tuning_mode_track.cpp
+  src/tuner/tuning_rules.cpp
+  src/tuner/wrong_string_hint.cpp
   src/analysis/waveform_peaks.cpp
 )
 
@@ -57,8 +63,6 @@ target_include_directories(kitbag_core
   PUBLIC include
   PRIVATE src third_party
 )
-# SYSTEM: keep -Wall -Wextra for our code without patching vendored headers.
-target_include_directories(kitbag_core SYSTEM PRIVATE third_party/cycfi_q/include)
 
 # -Werror=switch and nothing else: the exhaustive switch over CommandType
 # (metronome.cpp) is load-bearing — a new command must not compile to a silent drop.
@@ -130,8 +134,8 @@ if(KITBAG_BUILD_TOOLS)
   # Links the shared library rather than the sources: the point is to prove the
   # exported C ABI, not the C++ behind it. tools/media supplies the WAV writer
   # the mixer load test writes its fixture with.
-  add_executable(abi_verify tools/abi_verify.cpp)
-  target_include_directories(abi_verify PRIVATE tools/media)
+  add_executable(abi_verify tools/abi_verify.cpp tools/abi_verify_tuner.cpp)
+  target_include_directories(abi_verify PRIVATE tools tools/media)
   target_link_libraries(abi_verify PRIVATE kitbag_core)
 
   # A6 (#11): streams a real WAV end to end through the C ABI (kb_player_load ->
@@ -271,14 +275,22 @@ if(KITBAG_BUILD_TOOLS)
     PRIVATE src include tools tools/media third_party)
   target_link_libraries(analyze_verify PRIVATE qm_dsp Threads::Threads m ${CMAKE_DL_LIBS})
 
-  add_executable(note_lock_verify tools/tuner/note_lock_verify.cpp
-    src/tuner/note_lock.cpp)
-  target_include_directories(note_lock_verify PRIVATE src)
-  target_link_libraries(note_lock_verify PRIVATE m)
-
+  # PitchAnalyzer is linked as sources (internal); the tuning-mode checks drive
+  # the C ABI through kitbag_core, whose hidden symbols cannot collide.
   add_executable(tuner_verify tools/tuner/tuner_verify.cpp
-    src/tuner/pitch_analyzer.cpp src/tuner/note_lock.cpp)
-  target_include_directories(tuner_verify PRIVATE src)
-  target_include_directories(tuner_verify SYSTEM PRIVATE third_party/cycfi_q/include)
-  target_link_libraries(tuner_verify PRIVATE m)
+    tools/tuner/tuning_mode_test_detect.cpp
+    tools/tuner/tuning_mode_test_timing.cpp
+    tools/tuner/tuning_mode_test_windows.cpp
+    tools/tuner/tuning_mode_test_stability.cpp
+    tools/tuner/tuning_mode_test_silence.cpp
+    tools/tuner/tuning_mode_test_wrong.cpp
+    tools/tuner/tuning_mode_test_modes.cpp
+    tools/tuner/tuning_mode_test_edges.cpp
+    tools/tuner/tuning_mode_test_counters.cpp
+    src/tuner/pitch_analyzer.cpp src/tuner/pitch_detector.cpp
+    src/tuner/tuning_mode.cpp src/tuner/tuning_mode_track.cpp
+    src/tuner/tuning_rules.cpp src/tuner/note_smoother.cpp
+    src/tuner/wrong_string_hint.cpp src/dsp/fft.cpp)
+  target_include_directories(tuner_verify PRIVATE src tools)
+  target_link_libraries(tuner_verify PRIVATE kitbag_core m)
 endif()

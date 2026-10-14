@@ -101,13 +101,11 @@ else
   run_gate "Native core — build" "cmake --build native/audio_core/build >/dev/null"
   run_gate "Native lint — clang-format + clang-tidy" "bash scripts/lint.sh >/dev/null" "bash scripts/format.sh >/dev/null"
 
-  # tuner_verify fails 37/37 by design (SPEC §10.1) and is informational in CI.
-  # It is listed but never gates, so preflight is neither green by hiding it nor
-  # red because of it.
   step "Native verify tools"
   for tool in metronome_verify abi_verify beat_tracker_verify mixer_verify \
-    player_verify seek_race_verify stream_verify note_lock_verify \
-    audio_source_verify decoder_verify analyze_verify file_audio_reader_verify; do
+    player_verify seek_race_verify stream_verify \
+    audio_source_verify decoder_verify analyze_verify file_audio_reader_verify \
+    tuner_verify; do
     binary="native/audio_core/build/$tool"
     [[ -x $binary ]] || continue
     if "$binary" >/dev/null 2>&1; then
@@ -117,10 +115,6 @@ else
       FAILED+=("$tool")
     fi
   done
-  if [[ -x native/audio_core/build/tuner_verify ]]; then
-    native/audio_core/build/tuner_verify >/dev/null 2>&1 ||
-      printf '%s    informational%s tuner_verify fails (SPEC §10.1)\n' "$YELLOW" "$RESET"
-  fi
 fi
 
 if ((SKIP_ANDROID)); then
