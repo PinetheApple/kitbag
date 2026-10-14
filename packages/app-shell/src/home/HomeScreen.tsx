@@ -6,7 +6,8 @@ import {
   ToolRow,
   type ToolGridItem,
 } from '@kitbag/core-design';
-import { useLastTool, useMetronome } from '@kitbag/core-state';
+import { useLastTool, useMetronome, useTuner } from '@kitbag/core-state';
+import { DEFAULT_TUNING, tuningLabel } from '@kitbag/tool-tuner';
 import { useRouter, type Href } from 'expo-router';
 import { useMemo } from 'react';
 import { ScrollView } from 'react-native';
@@ -57,14 +58,17 @@ function useMetronomeSummary(): MetronomeSummary {
 // show as upcoming rather than with a made-up number (SPEC §2).
 function useLiveText(): Readonly<Record<string, LiveText>> {
   const metronome = useMetronomeSummary();
+  // The tuning the next visit opens on: the session's, else the default.
+  const tuning = tuningLabel(useTuner((s) => s.tuning) ?? DEFAULT_TUNING);
   return useMemo(
     () => ({
       [TOOL_ID.metronome]: {
         tile: metronomeTileSubtext(metronome),
         resume: metronomeResumeSubtitle(metronome),
       },
+      [TOOL_ID.tuner]: { tile: tuning, resume: tuning },
     }),
-    [metronome],
+    [metronome, tuning],
   );
 }
 

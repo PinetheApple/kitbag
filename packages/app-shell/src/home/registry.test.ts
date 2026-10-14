@@ -13,8 +13,14 @@ describe('continueTarget', () => {
     );
   });
 
+  it('resumes the tuner', () => {
+    expect(continueTarget(TOOL_ID.tuner, HOME_TOOLS)?.homeTile?.route).toBe(
+      '/tuner',
+    );
+  });
+
   it('never resumes an upcoming tool', () => {
-    expect(continueTarget(TOOL_ID.tuner, HOME_TOOLS)).toBeUndefined();
+    expect(continueTarget(TOOL_ID.library, HOME_TOOLS)).toBeUndefined();
   });
 
   it('ignores an id no longer on the roster', () => {
