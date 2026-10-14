@@ -1,6 +1,10 @@
 import {
   KITBAG_HOST_OBJECT_KEY,
   KB_STOPPED_BEAT,
+  KB_TUNER_NO_NOTE,
+  KB_TUNER_NO_STRING,
+  KB_TUNING_STATUS,
+  KB_WRONG_STRING,
   type KitbagHostObject,
 } from '@kitbag/core-native';
 import {
@@ -69,6 +73,20 @@ const presentationHost: KitbagHostObject = Object.freeze({
   frames_rendered: 0,
   tuner_snapshot: 0,
   player_position: 0,
+  // The engine's tuner rest state (TuningMode::RestState): nothing heard.
+  tuner_measurement_id: 0,
+  tuner_can_hear_note: 0,
+  tuner_current_string: KB_TUNER_NO_STRING,
+  tuner_possible_wrong_string: KB_TUNER_NO_STRING,
+  tuner_wrong_string_direction: KB_WRONG_STRING.KB_WRONG_STRING_NONE,
+  tuner_status: KB_TUNING_STATUS.KB_TUNING_NOT_MEASURED,
+  tuner_target_midi: KB_TUNER_NO_NOTE,
+  tuner_measured_midi: 0,
+  tuner_error_cents: 0,
+  tuner_in_tune_ratio: 0,
+  tuner_in_tune_threshold_cents: 0,
+  tuner_listening_paused: 0,
+  tuner_no_sound_issue: 0,
 });
 
 (globalThis as Record<string, unknown>)[KITBAG_HOST_OBJECT_KEY] =

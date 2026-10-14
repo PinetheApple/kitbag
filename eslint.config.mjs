@@ -375,7 +375,11 @@ export default tseslint.config(
   // Worklet function declarations are not hoisted, so a worklet calling one
   // declared below it throws at module load.
   {
-    files: ['packages/tool-metronome/src/**', 'packages/core-design/src/**'],
+    files: [
+      'packages/tool-metronome/src/**',
+      'packages/tool-tuner/src/**',
+      'packages/core-design/src/**',
+    ],
     rules: {
       '@typescript-eslint/no-use-before-define': [
         'error',

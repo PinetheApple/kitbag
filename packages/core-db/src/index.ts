@@ -6,9 +6,12 @@ export {
 } from './client';
 export type {
   NewSongPreset,
+  NewTuning,
   Setlist,
   SetlistItem,
   SongPreset,
+  Tuning,
+  TuningRepository,
 } from './repository';
 export {
   CATEGORIES,

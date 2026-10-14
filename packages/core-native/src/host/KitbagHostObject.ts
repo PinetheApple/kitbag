@@ -40,6 +40,38 @@ export interface KitbagHostObject {
   readonly tuner_snapshot: number;
   /** kb_player_position — single-source transport position, in frames. */
   readonly player_position: number;
+
+  // Tuner string-aware state. Each property is one field of a fresh
+  // kb_tuner_read_state copy, so two reads may straddle an analysis hop. A
+  // reader wanting one consistent hop reads tuner_measurement_id before and
+  // after its other fields and retries if it moved.
+
+  /** kb_tuner_state.measurement_id — +1 per hop, frozen while paused. */
+  readonly tuner_measurement_id: number;
+  /** kb_tuner_state.can_hear_note — 1 while a note is held, else 0. */
+  readonly tuner_can_hear_note: number;
+  /** kb_tuner_state.current_string — string index, or KB_TUNER_NO_STRING. */
+  readonly tuner_current_string: number;
+  /** kb_tuner_state.possible_wrong_string — string index, or KB_TUNER_NO_STRING. */
+  readonly tuner_possible_wrong_string: number;
+  /** kb_tuner_state.wrong_string_direction — a KB_WRONG_STRING_* value. */
+  readonly tuner_wrong_string_direction: number;
+  /** kb_tuner_state.tuning_status — a KB_TUNING_* value. */
+  readonly tuner_status: number;
+  /** kb_tuner_state.target_midi — the error's reference, or KB_TUNER_NO_NOTE. */
+  readonly tuner_target_midi: number;
+  /** kb_tuner_state.measured_midi — fractional; 0 with no note. */
+  readonly tuner_measured_midi: number;
+  /** kb_tuner_state.tuning_error_cents — 1200*log2(measured / target). */
+  readonly tuner_error_cents: number;
+  /** kb_tuner_state.in_tune_ratio — [0, 1]; leaving the window resets it. */
+  readonly tuner_in_tune_ratio: number;
+  /** kb_tuner_state.in_tune_threshold_cents — in-tune window half-width. */
+  readonly tuner_in_tune_threshold_cents: number;
+  /** kb_tuner_state.listening_paused — 1 during a reset's pause, else 0. */
+  readonly tuner_listening_paused: number;
+  /** kb_tuner_state.no_sound_issue — 1 once nothing is heard for 20 s. */
+  readonly tuner_no_sound_issue: number;
 }
 
 /**
