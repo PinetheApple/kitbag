@@ -23,6 +23,7 @@ export interface AppBarProps {
   readonly onBack?: () => void;
   readonly backLabel?: string;
   readonly trailing?: ReactNode;
+  readonly wordmark?: boolean;
 }
 
 const useStyles = createThemedStyles((theme) => ({
@@ -44,6 +45,7 @@ const useStyles = createThemedStyles((theme) => ({
     color: theme.color.text,
     flexShrink: 1,
   },
+  wordmark: textStyle(textRoles.wordmark),
 }));
 
 export function AppBar({
@@ -51,6 +53,7 @@ export function AppBar({
   onBack,
   backLabel = 'Back',
   trailing,
+  wordmark = false,
 }: AppBarProps) {
   const styles = useStyles();
   return (
@@ -68,7 +71,7 @@ export function AppBar({
         )}
         <Text
           accessibilityRole="header"
-          style={styles.title}
+          style={[styles.title, wordmark && styles.wordmark]}
           numberOfLines={1}
           ellipsizeMode="tail"
           adjustsFontSizeToFit
