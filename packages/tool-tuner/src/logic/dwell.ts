@@ -5,7 +5,7 @@ import { sameDiscrete, type TunerDiscrete } from './hop.ts';
 
 // A judgement, not a measurement: long enough to swallow edge flicker at hop
 // rate, short enough that a real change reads as prompt. Feel is a device check.
-export const DISCRETE_DWELL_MS = 250;
+export const DISCRETE_DWELL_MS = 200;
 
 export interface DiscreteDwell {
   /** What React was last told. */
