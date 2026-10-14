@@ -1,28 +1,18 @@
-// Tuner store (SPEC §10.2, §13.4). Human-speed state only: the mode, the
-// tuning, A4, which strings have been tuned this visit, permission and mic
-// status. The needle, cents, detected string and in-tune ratio are polled from
-// the HostObject by a worklet (§13.3) and never enter this store; the worklet
-// reports a lock through markTuned, once per string.
-//
-// It also owns the mic lifecycle: enter pushes the config with the mic off,
-// resets note presence and starts capture; leave and backgrounding stop it.
+// Human-speed tuner state only (§13.3): needle, cents, detected string and
+// in-tune ratio are polled from the HostObject in a worklet, never stored here.
 
-import type { NewTuning, Tuning, TuningRepository } from '@kitbag/core-db';
-import {
-  KB_RESULT,
-  KB_TUNER_AUTO_STRING,
-  KB_TUNER_INSTRUMENT,
-  KB_TUNER_MAX_STRINGS,
-} from '@kitbag/core-native';
+import type { TuningRepository } from '@kitbag/core-db';
+import { KB_RESULT, KB_TUNER_AUTO_STRING } from '@kitbag/core-native';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import {
+  busyRetryDelay,
   createCommandQueue,
-  nextTick,
   sendWithBusyRetry,
   type TunerCommands,
   type Wait,
 } from './commands.ts';
+import { customTuningActions, isValidTuning } from './customTunings.ts';
 import {
   getTunerRuntime,
   getTunings,
@@ -30,79 +20,14 @@ import {
   type MicPermission,
   type TunerRuntime,
 } from './runtime.ts';
-
-export type TunerMode =
-  | { readonly kind: 'auto' }
-  | { readonly kind: 'manual'; readonly string: number }
-  | { readonly kind: 'chromatic' };
-
-export interface TunerTuning {
-  readonly name: string;
-  /** A KB_TUNER_INSTRUMENT value; selects the engine's in-tune windows. */
-  readonly instrument: number;
-  /** MIDI notes, low string first. */
-  readonly notes: readonly number[];
-  /** Set when the tuning is a saved custom tuning. */
-  readonly customId?: number;
-}
-
-/** `unavailable`: the capture device failed to open or start. */
-export type MicStatus = 'off' | 'starting' | 'listening' | 'unavailable';
-
-export interface TunerCommandError {
-  readonly command: keyof TunerCommands;
-  /** The kb_result, or `rejected` when the native call threw. */
-  readonly result: number | 'rejected';
-}
-
-export interface TunerState {
-  readonly open: boolean;
-  readonly mode: TunerMode;
-  readonly tuning: TunerTuning | null;
-  /** null until the user picks one: the engine's default A4 is in force. */
-  readonly a4Hz: number | null;
-  /** String indices tuned since the screen was entered, ascending. */
-  readonly tunedStrings: readonly number[];
-  readonly permission: MicPermission | 'unknown';
-  readonly mic: MicStatus;
-  readonly customTunings: readonly Tuning[];
-  readonly commandError: TunerCommandError | null;
-}
-
-export interface TunerActions {
-  /** Screen focus. Uses the session's tuning, or `defaultTuning` if none yet. */
-  enter: (defaultTuning: TunerTuning) => void;
-  /** Screen blur. */
-  leave: () => void;
-  /** Ask for the mic again (after a denial or a device failure). */
-  retryMic: () => void;
-  setAuto: () => void;
-  lockString: (stringIndex: number) => void;
-  setChromatic: () => void;
-  /** Install a tuning. Like the engine, this returns to auto mode. */
-  setTuning: (tuning: TunerTuning) => void;
-  setA4: (hz: number) => void;
-  /** Record an in-tune lock. True only the first time for a string. */
-  markTuned: (stringIndex: number) => boolean;
-  loadCustomTunings: () => Promise<void>;
-  createCustomTuning: (values: NewTuning) => Promise<Tuning>;
-  updateCustomTuning: (id: number, values: Partial<NewTuning>) => Promise<void>;
-  deleteCustomTuning: (id: number) => Promise<void>;
-}
-
-export type TunerStore = TunerState & TunerActions;
+import type {
+  TunerMode,
+  TunerState,
+  TunerStore,
+  TunerTuning,
+} from './types.ts';
 
 const AUTO: TunerMode = { kind: 'auto' };
-const VALID_INSTRUMENTS = new Set<number>(Object.values(KB_TUNER_INSTRUMENT));
-
-function isValidTuning(tuning: TunerTuning): boolean {
-  return (
-    tuning.notes.length >= 1 &&
-    tuning.notes.length <= KB_TUNER_MAX_STRINGS &&
-    tuning.notes.every((note) => Number.isInteger(note)) &&
-    VALID_INSTRUMENTS.has(tuning.instrument)
-  );
-}
 
 function hasString(tuning: TunerTuning | null, index: number): boolean {
   return (
@@ -111,15 +36,6 @@ function hasString(tuning: TunerTuning | null, index: number): boolean {
     index >= 0 &&
     index < tuning.notes.length
   );
-}
-
-export function tuningFromCustom(row: Tuning): TunerTuning {
-  return {
-    name: row.name,
-    instrument: row.instrument,
-    notes: row.notes,
-    customId: row.id,
-  };
 }
 
 /** Every string of the current tuning has been tuned this visit. */
@@ -142,7 +58,7 @@ export function createTunerStore(
 ): StoreApi<TunerStore> {
   const runtime = deps.runtime ?? getTunerRuntime;
   const tunings = deps.tunings ?? getTunings;
-  const wait = deps.wait ?? nextTick;
+  const wait = deps.wait ?? busyRetryDelay;
   const queue = createCommandQueue();
 
   // Bumped by every lifecycle transition; async steps from an older epoch stop.
@@ -161,7 +77,6 @@ export function createTunerStore(
       set({ commandError: { command, result } });
     };
 
-    // Enqueue a kb_result-returning setter with BUSY retry.
     const sendSetter = (
       command: keyof TunerCommands,
       send: (commands: TunerCommands) => Promise<number>,
@@ -367,50 +282,7 @@ export function createTunerStore(
         return true;
       },
 
-      loadCustomTunings: async () => {
-        const rows = await tunings().list();
-        set({ customTunings: rows });
-      },
-
-      createCustomTuning: async (values) => {
-        const row = await tunings().create(values);
-        set((s) => ({ customTunings: [...s.customTunings, row] }));
-        return row;
-      },
-
-      updateCustomTuning: async (id, values) => {
-        await tunings().update(id, values);
-        const previous = get().customTunings.find((row) => row.id === id);
-        if (previous === undefined) return;
-        const updated: Tuning = { ...previous, ...values };
-        set((s) => ({
-          customTunings: s.customTunings.map((row) =>
-            row.id === id ? updated : row,
-          ),
-        }));
-        if (get().tuning?.customId === id) {
-          get().setTuning(tuningFromCustom(updated));
-        }
-      },
-
-      deleteCustomTuning: async (id) => {
-        await tunings().delete(id);
-        set((s) => ({
-          customTunings: s.customTunings.filter((row) => row.id !== id),
-        }));
-        // The notes stay selected for this visit; only the link to the
-        // deleted row goes.
-        const current = get().tuning;
-        if (current?.customId === id) {
-          set({
-            tuning: {
-              name: current.name,
-              instrument: current.instrument,
-              notes: current.notes,
-            },
-          });
-        }
-      },
+      ...customTuningActions(set, get, tunings),
     };
   });
 }

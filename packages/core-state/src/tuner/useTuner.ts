@@ -4,7 +4,8 @@
 
 import { useStore } from 'zustand';
 
-import { tunerStore, type TunerStore } from './store.ts';
+import { tunerStore } from './store.ts';
+import type { TunerStore } from './types.ts';
 
 /** Subscribe to one slice of tuner state or one action. */
 export function useTuner<T>(selector: (state: TunerStore) => T): T {

@@ -1,4 +1,8 @@
-import { KB_RESULT, type KitbagCommandsSpec } from '@kitbag/core-native';
+import {
+  KB_RESULT,
+  KB_TUNER_IDLE_SLEEP_MICROS,
+  type KitbagCommandsSpec,
+} from '@kitbag/core-native';
 
 export type TunerCommands = Pick<
   KitbagCommandsSpec,
@@ -11,19 +15,19 @@ export type TunerCommands = Pick<
   | 'tunerResetNotePresence'
 >;
 
-// While the mic runs the engine queues setters for its analysis thread and
-// answers KB_ERROR_BUSY when that queue is full (kitbag_tuner_api.h). The
-// analysis thread drains it every hop, so a few retries a tick apart suffice.
+// A full setter queue answers KB_ERROR_BUSY. The analysis thread drains it once
+// per loop and idles up to KB_TUNER_IDLE_SLEEP_MICROS, so a retry waits that long.
 export const MAX_BUSY_RETRIES = 3;
+
+const MICROS_PER_MS = 1000;
 
 export type Wait = () => Promise<void>;
 
-export const nextTick: Wait = () =>
+export const busyRetryDelay: Wait = () =>
   new Promise<void>((resolve) => {
-    setTimeout(resolve, 0);
+    setTimeout(resolve, Math.ceil(KB_TUNER_IDLE_SLEEP_MICROS / MICROS_PER_MS));
   });
 
-/** Send a setter, retrying a bounded number of times while the engine is busy. */
 export async function sendWithBusyRetry(
   send: () => Promise<number>,
   wait: Wait,
@@ -47,9 +51,9 @@ export interface CommandQueue {
   readonly idle: () => Promise<void>;
 }
 
-// One queue for every tuner command: the engine requires all kb_tuner_* setters
-// to come from one app thread, and a later command must not overtake an earlier
-// one (set_tuning resets the mode, so a reordered pair leaves the wrong mode).
+// One queue for every tuner command: a later command must not overtake an
+// earlier one (set_tuning resets the mode, so a reordered pair leaves the
+// wrong mode).
 export function createCommandQueue(): CommandQueue {
   let tail: Promise<unknown> = Promise.resolve();
   return {

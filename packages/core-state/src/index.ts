@@ -35,16 +35,20 @@ export {
   allStringsTuned,
   createTunerStore,
   tunerStore,
-  tuningFromCustom,
-  type MicStatus,
-  type TunerActions,
-  type TunerCommandError,
-  type TunerMode,
-  type TunerState,
-  type TunerStore,
   type TunerStoreDeps,
-  type TunerTuning,
 } from './tuner/store.ts';
+export { isValidTuning, tuningFromCustom } from './tuner/customTunings.ts';
+export type {
+  CustomTuning,
+  MicStatus,
+  TunerActions,
+  TunerCommandError,
+  TunerMode,
+  TunerState,
+  TunerStore,
+  TunerTuning,
+} from './tuner/types.ts';
+export { MAX_MIDI_NOTE } from '@kitbag/core-db';
 export { MAX_BUSY_RETRIES, type TunerCommands } from './tuner/commands.ts';
 export {
   configureTunerRuntime,

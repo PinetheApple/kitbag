@@ -390,7 +390,11 @@ export default tseslint.config(
 
   // --- config / test relaxations -------------------------------------------
   {
-    files: ['**/*.config.{ts,mjs,js}', '**/*.test.{ts,tsx}'],
+    files: [
+      '**/*.config.{ts,mjs,js}',
+      '**/*.test.{ts,tsx}',
+      '**/*.test-helper.{ts,tsx}',
+    ],
     rules: {
       '@typescript-eslint/no-magic-numbers': 'off',
     },
