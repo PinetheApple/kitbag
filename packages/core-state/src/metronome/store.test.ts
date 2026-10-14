@@ -9,6 +9,7 @@ import {
   KB_RAMP_UNIT,
   KB_SOUND_NAMES,
   KB_VOLUME_BOUNDS,
+  type KitbagHostObject,
 } from '@kitbag/core-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -46,22 +47,25 @@ beforeEach(() => {
   store = createMetronomeStore(commands, () => NOW_FRAME);
 });
 
+// `satisfies` fails typecheck when a HostObject read is added without a key here.
+const HOST_OBJECT_KEYS = Object.keys({
+  bar_phase: true,
+  current_beat: true,
+  current_poly_beat: true,
+  counting_in: true,
+  current_bpm: true,
+  frames_rendered: true,
+  tuner_snapshot: true,
+  player_position: true,
+} satisfies Record<keyof KitbagHostObject, true>);
+
+const camelCase = (name: string) =>
+  name.replace(/_(\w)/g, (_, c: string) => c.toUpperCase());
+
 describe('§13.3 no realtime values in the store', () => {
-  it('holds no field that shadows an engine poll', () => {
-    const forbidden = [
-      'current_beat',
-      'currentBeat',
-      'bar_phase',
-      'barPhase',
-      'current_bpm',
-      'currentBpm',
-      'frames_rendered',
-      'framesRendered',
-      'tuner_snapshot',
-      'tunerSnapshot',
-      'player_position',
-      'playerPosition',
-    ];
+  it('holds no field that shadows a HostObject read', () => {
+    const forbidden = HOST_OBJECT_KEYS.flatMap((k) => [k, camelCase(k)]);
+    expect(forbidden).toContain('countingIn');
     const keys = Object.keys(store.getState());
     for (const name of forbidden) {
       expect(keys).not.toContain(name);
@@ -370,8 +374,18 @@ describe('transport start / stop / pause', () => {
     expect(commands.metronomeStop).toHaveBeenCalledTimes(1);
   });
 
-  it('holds no count-in timing shadow', () => {
-    expect(Object.keys(store.getState())).not.toContain('countInArmed');
+  it('keeps only count-in settings after start, not count-in progress', () => {
+    store.getState().setCountIn({
+      bars: 2,
+      distinct: true,
+      sound: KB_DEFAULT_COUNT_IN_SOUND,
+    });
+    store.getState().start();
+    expect(Object.keys(store.getState().countIn).sort()).toEqual([
+      'bars',
+      'distinct',
+      'sound',
+    ]);
   });
 });
 
