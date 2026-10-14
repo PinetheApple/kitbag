@@ -1,3 +1,9 @@
-// Native has no key-value store yet, so the last-used tool lives for the
-// session only (core-state's in-memory default).
-export {};
+import { configureLastToolPersistence } from '@kitbag/core-state';
+
+import { getDatabase } from './database';
+import { lastToolPreference } from './lastToolPreference';
+
+// Imported by the root layout, so the stored tool is loaded before Home renders.
+configureLastToolPersistence(
+  lastToolPreference(() => getDatabase().preferences),
+);

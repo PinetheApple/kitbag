@@ -14,8 +14,7 @@ export interface LastToolStore {
   readonly markUsed: (toolId: string) => void;
 }
 
-// Session-only until a platform supplies storage: there is no native
-// key-value store in the app yet.
+// Session-only, for a caller that never configures storage.
 const inMemory: LastToolPersistence = {
   load: () => undefined,
   save: () => undefined,
