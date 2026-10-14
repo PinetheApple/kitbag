@@ -5,7 +5,8 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@kitbag/core-design": "workspace:*",
@@ -14,6 +15,7 @@
     "@kitbag/core-state": "workspace:*"
   },
   "peerDependencies": {
+    "expo-haptics": ">=55",
     "react": ">=19",
     "react-native": ">=0.83",
     "react-native-reanimated": ">=4",
@@ -21,6 +23,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "expo-haptics": "~55.0.16",
     "react": "19.2.0",
     "react-native": "0.83.6",
     "react-native-reanimated": "4.2.1",
