@@ -1,9 +1,8 @@
-// The one hint card under the strip: what is stopping a reading, or what the
-// engine thinks is wrong with it. Text plus an icon and an action, never
-// colour alone (SPEC §12.6). One at a time, most blocking first.
+// The one hint card under the strip, most blocking first. Text and an icon,
+// never colour alone (SPEC §12.6); only the mic hints carry an action.
 
 import { KB_TUNER_NO_STRING, KB_WRONG_STRING } from '@kitbag/core-native';
-import type { MicStatus, TunerState } from '@kitbag/core-state';
+import type { MicStatus, TunerMode, TunerState } from '@kitbag/core-state';
 
 import { pitchClassName } from './notes.ts';
 import { stringNumber } from './tunings.ts';
@@ -20,7 +19,7 @@ export interface TunerHint {
 export interface HintInputs {
   readonly permission: TunerState['permission'];
   readonly mic: MicStatus;
-  readonly chromatic: boolean;
+  readonly mode: TunerMode['kind'];
   readonly notes: readonly number[];
   readonly discrete: TunerDiscrete;
 }
@@ -53,7 +52,7 @@ function wrongStringText(
 }
 
 export function tunerHint(inputs: HintInputs): TunerHint | undefined {
-  const { permission, mic, chromatic, notes, discrete } = inputs;
+  const { permission, mic, mode, notes, discrete } = inputs;
   if (permission === 'denied') {
     return {
       kind: 'permission',
@@ -76,7 +75,8 @@ export function tunerHint(inputs: HintInputs): TunerHint | undefined {
     };
   }
   if (mic !== 'listening') return undefined;
-  if (!chromatic && discrete.heard) {
+  // The wrong-string hint is manual mode only (tuner functional spec §3.1).
+  if (mode === 'manual' && discrete.heard) {
     const text = wrongStringText(discrete, notes);
     if (text !== undefined) return { kind: 'wrongString', text };
   }

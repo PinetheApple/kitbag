@@ -8,8 +8,6 @@ import { useCallback } from 'react';
 
 import { stepA4, type A4Range } from '../logic/a4.ts';
 
-// No drawing exists for this sheet (SPEC §12.8); it is built from existing
-// primitives and awaits design sign-off (docs/decisions.md, 2026-10-14).
 export interface A4SheetProps {
   readonly visible: boolean;
   readonly hz: number;

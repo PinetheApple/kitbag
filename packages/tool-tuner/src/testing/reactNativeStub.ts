@@ -8,3 +8,6 @@ export const TurboModuleRegistry = {
     );
   },
 };
+
+// core-native's confirmHaptic reads it; no test plays a haptic.
+export const Platform = { OS: 'test' };

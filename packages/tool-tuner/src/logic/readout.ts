@@ -3,6 +3,7 @@
 // design ("−4 CENTS · TUNE UP"), not the functional spec's step numbers, which
 // are informative only (docs/decisions.md, 2026-10-14).
 
+import type { TuneGlyph } from '@kitbag/core-design';
 import { KB_TUNING_STATUS } from '@kitbag/core-native';
 
 /** Cents at either end of the strip; beyond it the needle pins to the edge. */
@@ -45,10 +46,7 @@ export function tunerCaption(status: number, cents: number): string {
   return '';
 }
 
-/** A key of core-design's TUNE_DIRECTION, which TuneDirectionIcon draws. */
-export type TuneDirectionKey = 'up' | 'down' | 'inTune' | 'none';
-
-export function tuneDirection(status: number): TuneDirectionKey {
+export function tuneDirection(status: number): TuneGlyph {
   'worklet';
   if (status === KB_TUNING_STATUS.KB_TUNING_TOO_LOW) return 'up';
   if (status === KB_TUNING_STATUS.KB_TUNING_TOO_HIGH) return 'down';

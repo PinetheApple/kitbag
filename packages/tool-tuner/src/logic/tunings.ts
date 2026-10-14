@@ -4,14 +4,13 @@
 
 import type { PegItem } from '@kitbag/core-design';
 import { KB_TUNER_INSTRUMENT, KB_TUNER_MAX_STRINGS } from '@kitbag/core-native';
-import type { TunerTuning } from '@kitbag/core-state';
-
 import {
-  MIDI_NOTE_BOUNDS,
-  parseNote,
-  pitchClassName,
-  spokenNoteName,
-} from './notes.ts';
+  isValidTuning,
+  MAX_MIDI_NOTE,
+  type TunerTuning,
+} from '@kitbag/core-state';
+
+import { parseNote, pitchClassName, spokenNoteName } from './notes.ts';
 
 const { KB_TUNER_INSTRUMENT_GUITAR, KB_TUNER_INSTRUMENT_BASS } =
   KB_TUNER_INSTRUMENT;
@@ -47,7 +46,7 @@ export const BUILT_IN_TUNINGS: readonly TunerTuning[] = [
   ),
 ];
 
-export const INSTRUMENT_LABELS: Readonly<Record<number, string>> = {
+const INSTRUMENT_LABELS: Readonly<Record<number, string>> = {
   [KB_TUNER_INSTRUMENT_GUITAR]: 'Guitar',
   [KB_TUNER_INSTRUMENT_BASS]: 'Bass',
   [KB_TUNER_INSTRUMENT.KB_TUNER_INSTRUMENT_UKULELE]: 'Ukulele',
@@ -123,7 +122,7 @@ export function draftFrom(tuning: TunerTuning, name: string): TuningDraft {
 }
 
 function clampNote(midi: number): number {
-  return Math.min(MIDI_NOTE_BOUNDS.max, Math.max(MIDI_NOTE_BOUNDS.min, midi));
+  return Math.min(MAX_MIDI_NOTE, Math.max(0, midi));
 }
 
 export function stepStringNote(
@@ -141,23 +140,11 @@ export function addString(notes: readonly number[]): readonly number[] {
   return top === undefined ? notes : [...notes, top];
 }
 
-/** Removes the top string. */
 export function removeString(notes: readonly number[]): readonly number[] {
   if (notes.length <= STRING_COUNT_BOUNDS.min) return notes;
   return notes.slice(0, -1);
 }
 
 export function isSavableDraft(draft: TuningDraft): boolean {
-  return (
-    draft.name.trim().length > 0 &&
-    draft.notes.length >= STRING_COUNT_BOUNDS.min &&
-    draft.notes.length <= STRING_COUNT_BOUNDS.max &&
-    draft.notes.every(
-      (note) =>
-        Number.isInteger(note) &&
-        note >= MIDI_NOTE_BOUNDS.min &&
-        note <= MIDI_NOTE_BOUNDS.max,
-    ) &&
-    Object.values(KB_TUNER_INSTRUMENT).some((v) => v === draft.instrument)
-  );
+  return draft.name.trim().length > 0 && isValidTuning(draft);
 }

@@ -1,14 +1,7 @@
-// The §13.3 mechanism, applied to the tuner: a Reanimated frame callback on
-// the UI thread reads the JSI HostObject and writes SharedValues for the
-// needle, the note, the caption and the detected peg. Nothing on this path
-// goes through React state. Two things do cross to JS, each only when it
-// changes: the lock event (once per lock) and the discrete slice of a hop
-// (status, string, wrong-string hint, silence), which change at human speed.
-//
-// Same shape as tool-metronome's useMetronomeFrame; see its header for why the
-// HostObject read is repeated here rather than shared.
+// §13.3: the needle, note, caption and detected peg are SharedValues written on
+// the UI thread; only the lock event and the dwelled discrete slice reach JS.
 
-import { opacity, TUNE_DIRECTION } from '@kitbag/core-design';
+import { opacity, type TuneGlyph } from '@kitbag/core-design';
 import {
   KB_TUNER_NO_STRING,
   KITBAG_HOST_OBJECT_KEY,
@@ -24,16 +17,22 @@ import {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
+import { dwellAt, settleDiscrete } from '../logic/dwell.ts';
 import {
   discreteOf,
   isHeard,
   isLocked,
   QUIET_DISCRETE,
   readHop,
-  sameDiscrete,
   type TunerDiscrete,
 } from '../logic/hop.ts';
-import { followNeedle, lockFired, nextLatch } from '../logic/lock.ts';
+import {
+  followNeedle,
+  lockArmed,
+  lockFired,
+  nextArmed,
+  nextLatch,
+} from '../logic/lock.ts';
 import { noteName } from '../logic/notes.ts';
 import {
   IDLE_CAPTION,
@@ -59,6 +58,8 @@ export interface TunerFrameOptions {
   /** A string reached the engine's tuned ratio. Once per lock. */
   readonly onLocked: (stringIndex: number) => void;
   readonly onDiscrete: (discrete: TunerDiscrete) => void;
+  /** The readout was cleared; the discrete slice is back to QUIET_DISCRETE. */
+  readonly onReset: () => void;
 }
 
 export interface TunerFrameValues {
@@ -69,8 +70,7 @@ export interface TunerFrameValues {
   readonly detectedIndex: SharedValue<number>;
   readonly noteText: SharedValue<string>;
   readonly captionText: SharedValue<string>;
-  /** A TUNE_DIRECTION value. */
-  readonly direction: SharedValue<number>;
+  readonly direction: SharedValue<TuneGlyph>;
 }
 
 export function useTunerFrame({
@@ -79,6 +79,7 @@ export function useTunerFrame({
   chromatic,
   onLocked,
   onDiscrete,
+  onReset,
 }: TunerFrameOptions): TunerFrameValues {
   const reduceMotion = useReducedMotion();
 
@@ -88,24 +89,31 @@ export function useTunerFrame({
   const detectedIndex = useSharedValue(KB_TUNER_NO_STRING);
   const noteText = useSharedValue(NO_NOTE_TEXT);
   const captionText = useSharedValue<string>(IDLE_CAPTION.strings);
-  const direction = useSharedValue<number>(TUNE_DIRECTION.none);
+  const direction = useSharedValue<TuneGlyph>('none');
 
   // UI-thread bookkeeping between frames.
   const lastId = useSharedValue(Number.NaN);
   const latched = useSharedValue(KB_TUNER_NO_STRING);
   const locked = useSharedValue(false);
   const holding = useSharedValue(false);
-  const lastDiscrete = useSharedValue<TunerDiscrete>(QUIET_DISCRETE);
+  const latestDiscrete = useSharedValue<TunerDiscrete>(QUIET_DISCRETE);
+  const dwell = useSharedValue(dwellAt(QUIET_DISCRETE));
+  const resetId = useSharedValue(Number.NEGATIVE_INFINITY);
+  const armed = useSharedValue(false);
+  // The JS copy rejects lock events already in flight when a reset lands.
+  const resetIdOnJs = useRef(Number.NEGATIVE_INFINITY);
   const still = useSharedValue(reduceMotion);
 
   // scheduleOnRN needs a JS function; these stay stable so the frame callback
   // is registered once, and forward to the latest props.
-  const handlers = useRef({ onLocked, onDiscrete });
+  const handlers = useRef({ onLocked, onDiscrete, onReset });
   useLayoutEffect(() => {
-    handlers.current = { onLocked, onDiscrete };
-  }, [onLocked, onDiscrete]);
-  const reportLock = useCallback((stringIndex: number) => {
-    handlers.current.onLocked(stringIndex);
+    handlers.current = { onLocked, onDiscrete, onReset };
+  }, [onLocked, onDiscrete, onReset]);
+  const reportLock = useCallback((stringIndex: number, hopId: number) => {
+    if (lockArmed(resetIdOnJs.current, hopId)) {
+      handlers.current.onLocked(stringIndex);
+    }
   }, []);
   const reportDiscrete = useCallback((discrete: TunerDiscrete) => {
     handlers.current.onDiscrete(discrete);
@@ -126,7 +134,7 @@ export function useTunerFrame({
         if (isHeard(hop)) {
           noteText.value = noteName(hop.targetMidi);
           captionText.value = tunerCaption(hop.status, hop.errorCents);
-          direction.value = TUNE_DIRECTION[tuneDirection(hop.status)];
+          direction.value = tuneDirection(hop.status);
           needleTarget.value = needleFraction(hop.errorCents);
           detectedIndex.value = hop.currentString;
           active.value = 1;
@@ -139,15 +147,26 @@ export function useTunerFrame({
         }
 
         locked.value = isLocked(hop);
-        const next = nextLatch(hop);
-        if (lockFired(latched.value, next)) scheduleOnRN(reportLock, next);
-        latched.value = next;
-
-        const discrete = discreteOf(hop);
-        if (!sameDiscrete(discrete, lastDiscrete.value)) {
-          lastDiscrete.value = discrete;
-          scheduleOnRN(reportDiscrete, discrete);
+        armed.value = nextArmed(armed.value, hop, resetId.value);
+        const next = nextLatch(hop, armed.value);
+        if (lockFired(latched.value, next)) {
+          scheduleOnRN(reportLock, next, hop.id);
         }
+        latched.value = next;
+        latestDiscrete.value = discreteOf(hop);
+      }
+
+      const current = dwell.value;
+      const settled = settleDiscrete(
+        current,
+        latestDiscrete.value,
+        info.timestamp,
+      );
+      if (settled !== current) {
+        if (settled.shown !== current.shown) {
+          scheduleOnRN(reportDiscrete, settled.shown);
+        }
+        dwell.value = settled;
       }
 
       if (locked.value) {
@@ -164,19 +183,22 @@ export function useTunerFrame({
     },
     [
       active,
+      armed,
       captionText,
       detectedIndex,
       direction,
+      dwell,
       holding,
-      lastDiscrete,
       lastId,
       latched,
+      latestDiscrete,
       locked,
       needle,
       needleTarget,
       noteText,
       reportDiscrete,
       reportLock,
+      resetId,
       still,
     ],
   );
@@ -189,7 +211,12 @@ export function useTunerFrame({
 
   // Runs before `listening` turns the poll on, because entry starts the mic
   // asynchronously; a new tuning or mode while listening resets in place.
-  useEffect(() => {
+  useLayoutEffect(() => {
+    const host = (globalThis as unknown as HostGlobal)[KITBAG_HOST_OBJECT_KEY];
+    const id = host?.tuner_measurement_id ?? Number.NEGATIVE_INFINITY;
+    resetIdOnJs.current = id;
+    resetId.value = id;
+    armed.value = false;
     needle.value = 0;
     needleTarget.value = 0;
     active.value = 0;
@@ -198,28 +225,32 @@ export function useTunerFrame({
     captionText.value = chromatic
       ? IDLE_CAPTION.chromatic
       : IDLE_CAPTION.strings;
-    direction.value = TUNE_DIRECTION.none;
+    direction.value = 'none';
     lastId.value = Number.NaN;
     latched.value = KB_TUNER_NO_STRING;
     locked.value = false;
     holding.value = false;
-    lastDiscrete.value = QUIET_DISCRETE;
-    handlers.current.onDiscrete(QUIET_DISCRETE);
+    latestDiscrete.value = QUIET_DISCRETE;
+    dwell.value = dwellAt(QUIET_DISCRETE);
+    handlers.current.onReset();
   }, [
     resetKey,
     chromatic,
     active,
+    armed,
     captionText,
     detectedIndex,
     direction,
+    dwell,
     holding,
-    lastDiscrete,
     lastId,
     latched,
+    latestDiscrete,
     locked,
     needle,
     needleTarget,
     noteText,
+    resetId,
   ]);
 
   useEffect(() => {

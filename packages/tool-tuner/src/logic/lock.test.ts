@@ -8,7 +8,9 @@ import { describe, expect, it } from 'vitest';
 import type { TunerHop } from './hop.ts';
 import {
   followNeedle,
+  lockArmed,
   lockFired,
+  nextArmed,
   NEEDLE_FOLLOW_MS,
   nextLatch,
 } from './lock.ts';
@@ -17,9 +19,10 @@ function hop(
   currentString: number,
   inTuneRatio: number,
   canHear = true,
+  id = 1,
 ): TunerHop {
   return {
-    id: 0,
+    id,
     canHear,
     currentString,
     wrongString: KB_TUNER_NO_STRING,
@@ -34,11 +37,17 @@ function hop(
 }
 
 // Run a sequence of hops through the latch and collect the strings reported.
-function locksReported(hops: readonly TunerHop[]): number[] {
+function locksReported(
+  hops: readonly TunerHop[],
+  resetId = Number.NEGATIVE_INFINITY,
+  armedAtStart = true,
+): number[] {
   const reported: number[] = [];
   let latched = KB_TUNER_NO_STRING;
+  let armed = armedAtStart;
   for (const h of hops) {
-    const next = nextLatch(h);
+    armed = nextArmed(armed, h, resetId);
+    const next = nextLatch(h, armed);
     if (lockFired(latched, next)) reported.push(next);
     latched = next;
   }
@@ -73,6 +82,34 @@ describe('lock event', () => {
 
   it('never fires without a string (chromatic)', () => {
     expect(locksReported([hop(KB_TUNER_NO_STRING, 1)])).toEqual([]);
+  });
+
+  it('ignores locked hops after a reset until one is heard unlocked', () => {
+    const afterReset = (hops: TunerHop[]) => locksReported(hops, 10, false);
+    expect(afterReset([hop(3, 1, true, 9), hop(3, 1, true, 10)])).toEqual([]);
+    // Measured after the reset but before the engine applied the change.
+    expect(afterReset([hop(3, 1, true, 11), hop(3, 1, true, 12)])).toEqual([]);
+    expect(
+      afterReset([
+        hop(3, 1, true, 11),
+        hop(2, RISING, true, 12),
+        hop(2, 1, true, 13),
+      ]),
+    ).toEqual([2]);
+  });
+
+  it('does not let a pre-reset unlocked hop arm the lock', () => {
+    expect(
+      locksReported([hop(3, RISING, true, 10), hop(3, 1, true, 11)], 10, false),
+    ).toEqual([]);
+  });
+});
+
+describe('lockArmed', () => {
+  it('admits only hops after the reset, and none before one is recorded', () => {
+    expect(lockArmed(10, 10)).toBe(false);
+    expect(lockArmed(10, 11)).toBe(true);
+    expect(lockArmed(Number.NaN, 11)).toBe(false);
   });
 });
 

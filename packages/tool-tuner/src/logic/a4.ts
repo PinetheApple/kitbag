@@ -7,7 +7,6 @@ export interface A4Range {
   readonly default: number;
 }
 
-/** The store keeps null until the user picks one; the engine default applies. */
 export function effectiveA4(a4Hz: number | null, range: A4Range): number {
   return a4Hz ?? range.default;
 }

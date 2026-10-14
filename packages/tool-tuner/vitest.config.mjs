@@ -13,6 +13,12 @@ export default defineConfig({
       'react-native': fileURLToPath(
         new URL('./src/testing/reactNativeStub.ts', import.meta.url),
       ),
+      'expo-haptics': fileURLToPath(
+        new URL('./src/testing/expoHapticsStub.ts', import.meta.url),
+      ),
+      '@op-engineering/op-sqlite': fileURLToPath(
+        new URL('./src/testing/opSqliteStub.ts', import.meta.url),
+      ),
     },
   },
 });

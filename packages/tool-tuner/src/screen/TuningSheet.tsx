@@ -12,19 +12,20 @@ import {
   hitSlopFor,
   minTouchTargetDp,
 } from '@kitbag/core-design';
-import { tuningFromCustom, type TunerTuning } from '@kitbag/core-state';
+import {
+  tuningFromCustom,
+  type CustomTuning,
+  type TunerTuning,
+} from '@kitbag/core-state';
 import { useCallback, useMemo } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { noteName } from '../logic/notes.ts';
 import {
   BUILT_IN_TUNINGS,
-  INSTRUMENT_LABELS,
+  instrumentLabel,
   sameTuning,
 } from '../logic/tunings.ts';
-
-// No drawing exists for this sheet (SPEC §12.8); it is built from existing
-// primitives and awaits design sign-off (docs/decisions.md, 2026-10-14).
 
 const ROW_HIT_SLOP = hitSlopFor(textRoles.rowTitle.size, space.controlGap);
 
@@ -63,8 +64,6 @@ const useStyles = createThemedStyles((theme) => ({
     color: theme.color.text2,
   },
 }));
-
-type CustomTuning = Parameters<typeof tuningFromCustom>[0];
 
 interface TuningRowProps {
   readonly tuning: TunerTuning;
@@ -174,7 +173,7 @@ export function TuningSheet({
       {groups.map(([instrument, tunings]) => (
         <View key={instrument} style={styles.section}>
           <Text accessibilityRole="header" style={styles.heading}>
-            {(INSTRUMENT_LABELS[instrument] ?? '').toUpperCase()}
+            {instrumentLabel(instrument).toUpperCase()}
           </Text>
           {tunings.map((tuning) => (
             <TuningRow

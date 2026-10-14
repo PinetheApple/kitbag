@@ -21,7 +21,7 @@ import { TextInput, View } from 'react-native';
 import { noteName, spokenNoteName } from '../logic/notes.ts';
 import {
   addString,
-  INSTRUMENT_LABELS,
+  instrumentLabel,
   isSavableDraft,
   removeString,
   STRING_COUNT_BOUNDS,
@@ -30,12 +30,9 @@ import {
   type TuningDraft,
 } from '../logic/tunings.ts';
 
-// No drawing exists for this sheet (SPEC §12.8); it is built from existing
-// primitives and awaits design sign-off (docs/decisions.md, 2026-10-14).
-
 const INSTRUMENT_OPTIONS = Object.values(KB_TUNER_INSTRUMENT).map((value) => ({
   value: String(value),
-  label: INSTRUMENT_LABELS[value] ?? '',
+  label: instrumentLabel(value),
 }));
 
 const useStyles = createThemedStyles((theme) => ({

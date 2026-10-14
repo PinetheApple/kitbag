@@ -20,9 +20,6 @@ const SEMITONES_PER_OCTAVE = 12;
 // MIDI 60 is C4, so octave 0 starts at MIDI 12.
 const OCTAVE_OF_MIDI_ZERO = -1;
 
-/** The MIDI note range a tuning may hold (the MIDI standard's 7-bit range). */
-export const MIDI_NOTE_BOUNDS = { min: 0, max: 127 } as const;
-
 function pitchClassIndex(midi: number): number {
   'worklet';
   const rounded = Math.round(midi);

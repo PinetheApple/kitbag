@@ -8,10 +8,11 @@ import {
   TuneDirectionIcon,
   TunerStrip,
 } from '@kitbag/core-design';
-import { KB_TUNER_NO_NOTE } from '@kitbag/core-native';
+import { confirmHaptic, KB_TUNER_NO_NOTE } from '@kitbag/core-native';
 import {
   tuningFromCustom,
   useTuner,
+  type CustomTuning,
   type TunerTuning,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
@@ -30,7 +31,6 @@ import {
   type TuningDraft,
 } from '../logic/tunings.ts';
 import { A4Sheet } from './A4Sheet.tsx';
-import { confirmLockHaptic } from './haptics.ts';
 import { TunerHintCard } from './TunerHintCard.tsx';
 import { TuningEditorSheet } from './TuningEditorSheet.tsx';
 import { TuningSheet } from './TuningSheet.tsx';
@@ -89,7 +89,7 @@ export interface TunerScreenProps {
   readonly insets: ShellMeasuredInsets;
   /** The engine's A4 range and default: pass core-native's KB_TUNER_A4_HZ. */
   readonly a4Range: A4Range;
-  /** Omit to draw no back control (the metronome draws none either). */
+  /** Omit to draw no back control. */
   readonly onBack?: () => void;
 }
 
@@ -131,8 +131,7 @@ export function TunerScreen({ insets, a4Range, onBack }: TunerScreenProps) {
 
   const handleLocked = useCallback(
     (stringIndex: number) => {
-      // True only the first time a string locks this visit: one haptic each.
-      if (markTuned(stringIndex)) confirmLockHaptic();
+      if (markTuned(stringIndex)) confirmHaptic();
     },
     [markTuned],
   );
@@ -140,13 +139,11 @@ export function TunerScreen({ insets, a4Range, onBack }: TunerScreenProps) {
   const handleDiscrete = useCallback((discrete: TunerDiscrete) => {
     setReading((previous) => ({
       discrete,
-      // QUIET_DISCRETE by identity is the frame hook's reset, sent from JS.
-      heldMidi: discrete.heard
-        ? discrete.targetMidi
-        : discrete === QUIET_DISCRETE
-          ? KB_TUNER_NO_NOTE
-          : previous.heldMidi,
+      heldMidi: discrete.heard ? discrete.targetMidi : previous.heldMidi,
     }));
+  }, []);
+  const handleReset = useCallback(() => {
+    setReading(QUIET_READING);
   }, []);
 
   const resetKey = `${String(open)}|${tuning.name}|${tuning.notes.join(',')}|${String(tuning.instrument)}|${mode.kind}`;
@@ -158,6 +155,7 @@ export function TunerScreen({ insets, a4Range, onBack }: TunerScreenProps) {
       chromatic,
       onLocked: handleLocked,
       onDiscrete: handleDiscrete,
+      onReset: handleReset,
     });
 
   const pegs = useMemo(
@@ -168,7 +166,7 @@ export function TunerScreen({ insets, a4Range, onBack }: TunerScreenProps) {
   const hint = tunerHint({
     permission,
     mic,
-    chromatic,
+    mode: mode.kind,
     notes: tuning.notes,
     discrete: reading.discrete,
   });
@@ -241,16 +239,13 @@ export function TunerScreen({ insets, a4Range, onBack }: TunerScreenProps) {
     setSheet('editor');
   }, [tuning]);
 
-  const handleEditTuning = useCallback(
-    (row: Parameters<typeof tuningFromCustom>[0]) => {
-      setEditing({
-        draft: draftFrom(tuningFromCustom(row), row.name),
-        id: row.id,
-      });
-      setSheet('editor');
-    },
-    [],
-  );
+  const handleEditTuning = useCallback((row: CustomTuning) => {
+    setEditing({
+      draft: draftFrom(tuningFromCustom(row), row.name),
+      id: row.id,
+    });
+    setSheet('editor');
+  }, []);
 
   const handleSave = useCallback(
     async (draft: TuningDraft) => {

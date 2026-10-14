@@ -1,7 +1,5 @@
 // One analysis hop's worth of tuner state, read from the HostObject on the UI
-// thread. Each HostObject property is a fresh kb_tuner_read_state copy, so a
-// set of reads can straddle a hop; the measurement id brackets them (§1b of
-// the #118 plan, KitbagHostObject.ts).
+// thread.
 
 import {
   KB_TUNER_NO_NOTE,
@@ -93,7 +91,7 @@ export interface TunerDiscrete {
   readonly noSound: boolean;
 }
 
-/** Nothing heard yet: the state on entry. */
+/** Nothing heard yet: the state on entry and after a reset. */
 export const QUIET_DISCRETE: TunerDiscrete = {
   heard: false,
   status: KB_TUNING_STATUS.KB_TUNING_NOT_MEASURED,

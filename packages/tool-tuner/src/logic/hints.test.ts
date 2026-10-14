@@ -18,7 +18,7 @@ function inputs(overrides: Partial<HintInputs> = {}): HintInputs {
   return {
     permission: 'granted',
     mic: 'listening',
-    chromatic: false,
+    mode: 'manual',
     notes: [40, 45, 50, 55, 59, 64],
     discrete: QUIET,
     ...overrides,
@@ -84,13 +84,18 @@ describe('tunerHint', () => {
     ).toContain('higher than string 4');
   });
 
-  it('has no wrong string in chromatic mode', () => {
-    expect(
-      tunerHint(
-        inputs({ chromatic: true, discrete: { ...HEARD, wrongString: 1 } }),
-      ),
-    ).toBeUndefined();
-  });
+  it.each(['auto', 'chromatic'] as const)(
+    'has no wrong string in %s mode',
+    (mode) => {
+      const wrong = { ...HEARD, wrongString: 1 };
+      expect(tunerHint(inputs({ mode, discrete: wrong }))).toBeUndefined();
+      const side = {
+        ...HEARD,
+        wrongDirection: KB_WRONG_STRING.KB_WRONG_STRING_BELOW,
+      };
+      expect(tunerHint(inputs({ mode, discrete: side }))).toBeUndefined();
+    },
+  );
 
   it('reports silence after the engine raises it', () => {
     expect(

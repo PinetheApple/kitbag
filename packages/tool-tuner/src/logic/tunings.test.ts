@@ -1,7 +1,7 @@
 import { KB_TUNER_INSTRUMENT, KB_TUNER_MAX_STRINGS } from '@kitbag/core-native';
+import { isValidTuning } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
-import { MIDI_NOTE_BOUNDS } from './notes.ts';
 import {
   addString,
   BUILT_IN_TUNINGS,
@@ -46,15 +46,9 @@ describe('built-in tunings', () => {
     expect(byName[`${String(uke)}:Standard C`]).toEqual([67, 60, 64, 69]);
   });
 
-  it('are all within the engine string limit and the MIDI range', () => {
+  it('are all tunings the engine accepts', () => {
     for (const tuning of BUILT_IN_TUNINGS) {
-      expect(tuning.notes.length).toBeGreaterThanOrEqual(1);
-      expect(tuning.notes.length).toBeLessThanOrEqual(KB_TUNER_MAX_STRINGS);
-      for (const note of tuning.notes) {
-        expect(note).toBeGreaterThanOrEqual(MIDI_NOTE_BOUNDS.min);
-        expect(note).toBeLessThanOrEqual(MIDI_NOTE_BOUNDS.max);
-      }
-      expect(isSavableDraft(tuning)).toBe(true);
+      expect(isValidTuning(tuning)).toBe(true);
     }
   });
 
