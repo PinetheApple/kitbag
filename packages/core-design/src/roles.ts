@@ -14,6 +14,9 @@ export const space = {
   cardPadding: 14,
   ledGroupGap: 18,
   transportGap: 22,
+  pegLabelGap: 5,
+  headstockTop: 8,
+  headstockBottom: 2,
 } as const;
 
 export const size = {
@@ -33,6 +36,18 @@ export const size = {
   sweepTrack: 3,
   barPreview: 18,
   toolIcon: 38,
+  tunerStrip: 56,
+  tunerCentreLine: 2,
+  tunerCentreOverhang: 6,
+  tunerNeedle: 3,
+  tunerNeedleOverhang: 9,
+  tunerNeedleCap: 7,
+  peg: 30,
+  pegBorder: 2,
+  pegBadge: 14,
+  pegBadgeGlyph: 9,
+  pegLockBar: 12,
+  pegGlowBlur: 12,
 } as const;
 
 export const radius = {
@@ -50,6 +65,8 @@ export const radius = {
   tempoZone: 18,
   sweepTrack: 2,
   toolIcon: 11,
+  tunerStrip: 12,
+  tunerNeedle: 2,
 } as const;
 
 export const inset = {
@@ -79,6 +96,7 @@ export const opacity = {
   muted: 0.4,
   barPreviewSounding: 0.85,
   upcoming: 0.65,
+  tunerStrip: 0.92,
 } as const;
 
 export const mix = {
@@ -87,6 +105,7 @@ export const mix = {
   badgeBorder: 0.4,
   tempoZoneGlow: 0.05,
   cardBorder: 0.35,
+  pegGlow: 0.4,
 } as const;
 
 export const presetActionGrow = 1.3;
@@ -142,6 +161,22 @@ export const textRoles = {
   rowSubtitle: { family: body, weight: 400, size: 12 },
   tileTitle: { family: display, weight: 500, size: 14 },
   tileSubtext: { family: body, weight: 400, size: 11.5 },
+  tunerNote: {
+    family: display,
+    weight: 700,
+    size: 64,
+    tracking: -0.03,
+    tabular: true,
+  },
+  tunerCaption: {
+    family: display,
+    weight: 400,
+    size: 13,
+    tracking: 0.08,
+    tabular: true,
+  },
+  pegNote: { family: display, weight: 400, size: 12 },
+  pegString: { family: display, weight: 400, size: 11, tabular: true },
 } as const satisfies Record<string, TypeRole>;
 
 export type TextRoleName = keyof typeof textRoles;

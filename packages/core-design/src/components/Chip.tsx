@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import type { IconName } from '../icons.ts';
+import type { AnyIconName } from '../icons.ts';
 import { inset, radius, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
@@ -16,8 +16,8 @@ const HIT_SLOP = hitSlopForPadded(
 
 interface ChipFaceProps {
   readonly label: string;
-  readonly icon?: IconName | undefined;
-  readonly trailingIcon?: IconName | undefined;
+  readonly icon?: AnyIconName | undefined;
+  readonly trailingIcon?: AnyIconName | undefined;
   readonly active: boolean;
   readonly liveDot: boolean;
 }
@@ -91,8 +91,8 @@ function ChipFace({
 export interface ChipProps {
   readonly label: string;
   readonly onPress: () => void;
-  readonly icon?: IconName;
-  readonly trailingIcon?: IconName;
+  readonly icon?: AnyIconName;
+  readonly trailingIcon?: AnyIconName;
   readonly active?: boolean;
   readonly liveDot?: boolean;
   readonly fill?: boolean;
@@ -132,7 +132,7 @@ export function Chip({
 
 export interface StatusPillProps {
   readonly label: string;
-  readonly icon?: IconName;
+  readonly icon?: AnyIconName;
   readonly active?: boolean;
   readonly liveDot?: boolean;
 }

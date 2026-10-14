@@ -29,6 +29,11 @@ export function mixHex(fg: string, bg: string, fgWeight: number): string {
   return `#${mixed.join('').toUpperCase()}`;
 }
 
+export function withAlpha(hex: string, alpha: number): string {
+  const byte = Math.round(Math.min(1, Math.max(0, alpha)) * CHANNEL_MAX);
+  return `${hex}${byte.toString(HEX_RADIX).padStart(HEX_PAIR, '0').toUpperCase()}`;
+}
+
 export type FeedbackTone = 'success' | 'warning' | 'danger';
 
 export interface FeedbackColors {
