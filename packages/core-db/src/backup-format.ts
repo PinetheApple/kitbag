@@ -72,6 +72,8 @@ export interface TuningRecord {
   uuid: string;
   name: string;
   notes: string;
+  // Always written; v4 files from before schema v10 omit it and read as guitar.
+  instrument: number;
 }
 
 export interface PracticeSessionRecord {

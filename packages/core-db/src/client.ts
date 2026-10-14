@@ -7,6 +7,7 @@ import { migrate, type MigrationDriver } from './migrate';
 import { createSetlistRepository } from './setlist-repository';
 import { createSongPresetRepository } from './song-preset-repository';
 import { createTransactor } from './transaction';
+import { createTuningRepository } from './tuning-repository';
 
 const DATABASE_NAME = 'kitbag';
 
@@ -20,6 +21,7 @@ export function openDatabase(name: string = DATABASE_NAME) {
   return {
     setlists: createSetlistRepository(handle),
     presets: createSongPresetRepository(handle),
+    tunings: createTuningRepository(handle),
     backup: createBackupService(handle),
     close: () =>
       handle.transactor.serial(async () => {

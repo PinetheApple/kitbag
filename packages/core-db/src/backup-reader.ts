@@ -62,6 +62,10 @@ export function reader(value: unknown, path: string) {
     string: (key: string) => get(key, isString, 'expected a string'),
     number: (key: string) => get(key, isNumber, 'expected a finite number'),
     count: (key: string) => get(key, isCount, 'expected a whole number ≥ 0'),
+    optionalCount: (key: string, fallback: number) =>
+      object[key] === undefined
+        ? fallback
+        : get(key, isCount, 'expected a whole number ≥ 0'),
     boolean: (key: string) => get(key, isBoolean, 'expected a boolean'),
     uuid: (key: string) => lowercase(get(key, isUuid, 'expected a UUID')),
     blob: (key: string) => get(key, isBase64, 'expected base64 bytes'),

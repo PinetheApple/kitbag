@@ -15,6 +15,7 @@ import {
   NORMAL_ACCENT,
   SOUND_COUNT,
 } from './preset-rules';
+import { INSTRUMENTS, MAX_MIDI_NOTE, MAX_STRINGS } from './tuning-rules';
 
 const source = (path: string) =>
   readFileSync(
@@ -24,6 +25,8 @@ const source = (path: string) =>
 
 const metronome = source('src/metronome/metronome.h');
 const api = source('include/kitbag_api.h');
+const tunerApi = source('include/kitbag_tuner_api.h');
+const tuningMode = source('src/tuner/tuning_mode.h');
 
 function constant(name: string): string {
   const match = new RegExp(`constexpr \\w+ ${name}(?:\\[\\])? = ([^;]+);`).exec(
@@ -55,5 +58,25 @@ describe('engine limits mirrored in core-db', () => {
     expect(/KB_ACCENT_NORMAL = (\d+)/.exec(body)?.[1]).toBe(
       String(NORMAL_ACCENT),
     );
+  });
+
+  it('match kitbag_tuner_api.h', () => {
+    expect(
+      Number(/#define KB_TUNER_MAX_STRINGS (\d+)/.exec(tunerApi)?.[1]),
+    ).toBe(MAX_STRINGS);
+    expect(
+      Number(/constexpr int32_t kMaxMidi = (\d+);/.exec(tuningMode)?.[1]),
+    ).toBe(MAX_MIDI_NOTE);
+    const body =
+      /typedef enum kb_tuner_instrument \{([^}]*)\}/.exec(tunerApi)?.[1] ?? '';
+    const members = [...body.matchAll(/KB_TUNER_INSTRUMENT_(\w+) = (\d+)/g)];
+    expect(
+      Object.fromEntries(
+        members.map(([, name = '', value]) => [
+          name.toLowerCase(),
+          Number(value),
+        ]),
+      ),
+    ).toEqual(INSTRUMENTS);
   });
 });

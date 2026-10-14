@@ -25,6 +25,7 @@ import {
 } from './backup-reader';
 import { presetBytes } from './base64';
 import { presetViolation } from './preset-rules';
+import { instrumentViolation, INSTRUMENTS } from './tuning-rules';
 
 const FLOAT32_BYTES = 4;
 
@@ -124,11 +125,15 @@ function readSetlist(value: unknown, path: string): SetlistRecord {
 
 function readTuning(value: unknown, path: string): TuningRecord {
   const r = reader(value, path);
-  return {
+  const record = {
     uuid: r.uuid('uuid'),
     name: r.string('name'),
     notes: r.blob('notes'),
+    instrument: r.optionalCount('instrument', INSTRUMENTS.guitar),
   };
+  const violation = instrumentViolation(record.instrument);
+  if (violation) invalidField(`${path}.instrument`, violation.reason);
+  return record;
 }
 
 function readPracticeSession(

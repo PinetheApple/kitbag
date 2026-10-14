@@ -23,6 +23,7 @@ export {
   type Resolution,
   type Resolutions,
   type ImportResult,
+  type TuningRecord,
 } from './backup-format';
 export type { ApplyOptions, BackupService } from './backup';
 export type { CategoryPlan, ImportOptions, ImportPlan } from './backup-plan';

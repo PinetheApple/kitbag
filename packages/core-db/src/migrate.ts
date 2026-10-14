@@ -1,9 +1,10 @@
 import { REPAIR_PRESETS } from './preset-repair';
 
-export const SCHEMA_VERSION = 9;
+export const SCHEMA_VERSION = 10;
 export const V6_SCHEMA_VERSION = 6;
 export const V7_SCHEMA_VERSION = 7;
 export const V8_SCHEMA_VERSION = 8;
+export const V9_SCHEMA_VERSION = 9;
 
 export interface MigrationDriver {
   exec(sql: string): void;
@@ -141,7 +142,7 @@ const ADD_POLY_ACCENTS =
 const CREATE_ONE_ACTIVE_INDEX =
   'CREATE UNIQUE INDEX setlists_one_active ON setlists (active) WHERE active = 1';
 
-const MIGRATE_V8_TO_V9: readonly string[] = [
+export const MIGRATE_V8_TO_V9: readonly string[] = [
   ...REPAIR_PRESETS,
   'ALTER TABLE practice_sessions ADD COLUMN uuid TEXT',
   `UPDATE practice_sessions SET uuid = ${UUID4_SQL} WHERE uuid IS NULL`,
@@ -153,7 +154,12 @@ const MIGRATE_V8_TO_V9: readonly string[] = [
   ),
 ];
 
-export const BASELINE_V9: readonly string[] = [
+// The tuner's in-tune window depends on the instrument; 0 is guitar.
+export const MIGRATE_V9_TO_V10: readonly string[] = [
+  'ALTER TABLE tunings ADD COLUMN instrument INTEGER NOT NULL DEFAULT 0',
+];
+
+export const BASELINE: readonly string[] = [
   CREATE_SETLISTS,
   CREATE_SONGS,
   CREATE_SONG_PRESETS,
@@ -169,6 +175,7 @@ export const BASELINE_V9: readonly string[] = [
   ADD_POLY_ACCENTS,
   CREATE_ONE_ACTIVE_INDEX,
   ...MIGRATE_V8_TO_V9,
+  ...MIGRATE_V9_TO_V10,
 ];
 
 // SQLite cannot ADD a NOT NULL column without a constant default, so migrated
@@ -225,14 +232,21 @@ function runStatements(
 }
 
 function upgradeSteps(from: number): readonly string[] {
-  if (from === 0) return BASELINE_V9;
+  if (from === 0) return BASELINE;
   // The Flutter build always migrated users to v6 before this code could run,
   // so any nonzero version below 7 is v6-shaped.
   if (from < V7_SCHEMA_VERSION)
-    return [...MIGRATE_V6_TO_V7, ...MIGRATE_V7_TO_V8, ...MIGRATE_V8_TO_V9];
+    return [
+      ...MIGRATE_V6_TO_V7,
+      ...MIGRATE_V7_TO_V8,
+      ...MIGRATE_V8_TO_V9,
+      ...MIGRATE_V9_TO_V10,
+    ];
   if (from < V8_SCHEMA_VERSION)
-    return [...MIGRATE_V7_TO_V8, ...MIGRATE_V8_TO_V9];
-  return MIGRATE_V8_TO_V9;
+    return [...MIGRATE_V7_TO_V8, ...MIGRATE_V8_TO_V9, ...MIGRATE_V9_TO_V10];
+  if (from < V9_SCHEMA_VERSION)
+    return [...MIGRATE_V8_TO_V9, ...MIGRATE_V9_TO_V10];
+  return MIGRATE_V9_TO_V10;
 }
 
 export function migrate(driver: MigrationDriver): void {

@@ -124,10 +124,11 @@ export async function loadSnapshot(db: Database): Promise<Snapshot> {
     librarySongs: rows.songRows.map(librarySongRecord),
     songPresets: rows.presetRows.map((row) => songPresetRecord(row, songUuid)),
     setlists: await loadSetlists(db, rows.setlistRows, uuidOf(rows.presetRows)),
-    tunings: rows.tuningRows.map(({ uuid, name, notes }) => ({
+    tunings: rows.tuningRows.map(({ uuid, name, notes, instrument }) => ({
       uuid,
       name,
       notes: encodeBase64(notes),
+      instrument,
     })),
     practiceSessions: rows.practiceRows.map((row) =>
       practiceRecord(row, uuidOf(rows.setlistRows)),

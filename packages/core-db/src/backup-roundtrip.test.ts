@@ -10,7 +10,8 @@ import {
   unwrap,
 } from './backup.test-helper';
 import type { SongPreset } from './repository';
-import { practiceSessions } from './schema';
+import { practiceSessions, tunings } from './schema';
+import { INSTRUMENTS } from './tuning-rules';
 
 async function restoreAll(target: BackupDatabase, file: string) {
   const plan = unwrap(
@@ -107,6 +108,39 @@ describe('backup round trip', () => {
       setlists: 2,
       tunings: 1,
       practiceSessions: 1,
+    });
+  });
+
+  it('restores a tuning with its instrument', async () => {
+    const source = openBackupDatabase();
+    await seed(source);
+    const target = openBackupDatabase();
+    await restoreAll(target, await source.backup.export());
+    const [tuning] = await target.handle.db.select().from(tunings);
+    expect(tuning).toMatchObject({
+      name: 'Drop D',
+      instrument: INSTRUMENTS.bass,
+    });
+  });
+
+  it('reads a v4 tuning written before instruments existed as guitar', async () => {
+    const source = openBackupDatabase();
+    await seed(source);
+    const file = JSON.parse(await source.backup.export(['tunings'])) as {
+      tunings: Record<string, unknown>[];
+    };
+    for (const record of file.tunings) delete record.instrument;
+    const target = openBackupDatabase();
+    const plan = unwrap(
+      await target.backup.plan(JSON.stringify(file), {
+        categories: ['tunings'],
+      }),
+    );
+    expect((await target.backup.apply(plan)).ok).toBe(true);
+    const [tuning] = await target.handle.db.select().from(tunings);
+    expect(tuning).toMatchObject({
+      name: 'Drop D',
+      instrument: INSTRUMENTS.guitar,
     });
   });
 

@@ -102,6 +102,21 @@ describe('backup validation', () => {
     });
   });
 
+  it.each([
+    [4, 'expected 0–3'],
+    [-1, 'expected a whole number ≥ 0'],
+    [null, 'expected a whole number ≥ 0'],
+  ])('refuses tuning instrument %s', async (instrument, reason) => {
+    const failure = await rejected((file) => {
+      first(file.tunings ?? []).instrument = instrument;
+    });
+    expect(failure).toEqual({
+      kind: 'invalidField',
+      path: '$.tunings[0].instrument',
+      reason,
+    });
+  });
+
   it('refuses a setlist that references a preset not in the file', async () => {
     const failure = await rejected((file) => {
       first(file.setlists).presetUuids = [crypto.randomUUID()];

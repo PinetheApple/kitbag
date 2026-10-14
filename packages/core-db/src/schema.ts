@@ -8,6 +8,7 @@ import {
 } from 'drizzle-orm/sqlite-core';
 
 import { DEFAULT_DENOMINATOR } from './preset-rules';
+import { INSTRUMENTS } from './tuning-rules';
 
 function toBytes(value: unknown): Uint8Array {
   if (value instanceof ArrayBuffer) return new Uint8Array(value.slice(0));
@@ -105,6 +106,8 @@ export const tunings = sqliteTable('tunings', {
   // One MIDI note byte per string, low string first.
   notes: bytes('notes').notNull(),
   uuid: text('uuid').notNull(),
+  // A KB_TUNER_INSTRUMENT_* value.
+  instrument: integer('instrument').notNull().default(INSTRUMENTS.guitar),
 });
 
 export const practiceSessions = sqliteTable('practice_sessions', {

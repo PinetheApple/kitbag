@@ -4,11 +4,13 @@ import { describe, expect, it } from 'vitest';
 import {
   MIGRATE_V6_TO_V7,
   MIGRATE_V7_TO_V8,
+  MIGRATE_V8_TO_V9,
   migrate,
   SCHEMA_VERSION,
   V6_SCHEMA_VERSION,
   V7_SCHEMA_VERSION,
   V8_SCHEMA_VERSION,
+  V9_SCHEMA_VERSION,
 } from './migrate';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
@@ -273,6 +275,36 @@ describe('migrate', () => {
     ).map((row) => row.uuid);
     expect(new Set(uuids).size).toBe(before.length);
     expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
+  });
+
+  it('upgrades a v9 database, reading every existing tuning as guitar', () => {
+    const db = buildV7Fixture();
+    applyInTransaction(db, [...MIGRATE_V7_TO_V8, ...MIGRATE_V8_TO_V9]);
+    db.exec(`PRAGMA user_version = ${String(V9_SCHEMA_VERSION)}`);
+    expect(columnNames(db, 'tunings')).not.toContain('instrument');
+    const before = rows(db, 'SELECT id, name, notes, uuid FROM tunings');
+    migrate(nodeSqliteDriver(db));
+    expect(rows(db, 'SELECT id, name, notes, uuid FROM tunings')).toEqual(
+      before,
+    );
+    expect(rows(db, 'SELECT name, instrument FROM tunings')).toEqual([
+      { name: 'Drop D', instrument: 0 },
+    ]);
+    expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
+  });
+
+  it('gives a fresh database a non-null tunings.instrument defaulting to guitar', () => {
+    const db = new DatabaseSync(':memory:');
+    migrate(nodeSqliteDriver(db));
+    db.exec("INSERT INTO tunings (name, notes, uuid) VALUES ('A', X'28', 'a')");
+    expect(rows(db, 'SELECT instrument FROM tunings')).toEqual([
+      { instrument: 0 },
+    ]);
+    expect(() => {
+      db.exec(
+        "INSERT INTO tunings (name, notes, uuid, instrument) VALUES ('B', X'28', 'b', NULL)",
+      );
+    }).toThrow();
   });
 
   it('repairs v6 presets the engine would refuse, keeping their meaning', () => {

@@ -6,6 +6,7 @@ import { practiceSessions, songs, tunings } from './schema';
 import { createSetlistRepository } from './setlist-repository';
 import { createSongPresetRepository } from './song-preset-repository';
 import { openTestDatabase } from './sqlite.test-helper';
+import { INSTRUMENTS } from './tuning-rules';
 
 const open: ReturnType<typeof openTestDatabase>[] = [];
 
@@ -97,6 +98,7 @@ export async function seed(database: BackupDatabase) {
   await handle.db.insert(tunings).values({
     name: 'Drop D',
     notes: hexBytes('262d32373b40'),
+    instrument: INSTRUMENTS.bass,
     uuid: crypto.randomUUID(),
   });
   await handle.db.insert(practiceSessions).values({
