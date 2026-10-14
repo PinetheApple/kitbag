@@ -1280,6 +1280,8 @@ rather than starting from zero.
 | `SongPresets`: + `polyAccents` BLOB, one `kb_accent` byte per poly slot | §5.2, §5.4 — the poly row has its own accent states and they round-trip; schema v8 |
 | `PracticeSessions`: + `uuid`, backfilled, unique index, triggers refuse NULL on insert/update | §12.4 — sessions are exportable rows; `startTime` is not an identity (two sessions can share a second); schema v9 |
 | `SongPresets`: v9 repairs rows the engine would refuse — clamps bpm, beats per bar, subdivision, sound, poly beats, ramp start/end bpm, ramp bars and mute play/mute bars to engine bounds (integers rounded); resets a denominator outside 2/4/8/16 to 4; pads or trims accents to the bar and poly accents to the poly beats, reading unknown codes as normal (Flutter's own reading); clears mis-sized poly accents and per-accent sounds that are not 0 or 2 valid sound ids | §5.4 — every stored preset loads and round-trips through backup; schema v9 |
+| `Tunings`: + `instrument` (`KB_TUNER_INSTRUMENT_*`, default guitar) | §10.2 — selects the in-tune window; schema v10 |
+| `Tunings`: v10 drops rows the tuner can never load — no strings, more than `KB_TUNER_MAX_STRINGS`, or a note above MIDI 127 | §10.2 — every stored tuning loads and round-trips through backup; schema v10 |
 | `Songs`(library): + downbeat indices | §4.3 |
 | **All paths relative** to the base directory | §2.3 (iOS) and **D11** (the directory is now user-movable) |
 | `PracticeSessions`: write `setlistId`, `songsPlayed` | §5.7 — columns exist, producer never fills them |
