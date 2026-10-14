@@ -126,7 +126,6 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   }
 
   // --- Tuner ---------------------------------------------------------------
-  // Async methods share the one native-modules thread, the tuner ABI's app thread.
 
   override fun tunerStart(promise: Promise) {
     promise.resolve(nativeTunerStart())

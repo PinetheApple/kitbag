@@ -26,3 +26,5 @@ export {
   tunerConfidence,
 } from './host/snapshot.ts';
 export * from './generated/nativeConstants.gen.ts';
+
+export { confirmHaptic } from './haptics.ts';

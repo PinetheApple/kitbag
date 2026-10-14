@@ -26,6 +26,8 @@ export interface NativeSources {
   readonly metronomeRender: string;
   /** native/audio_core/src/tuner/tuning_mode.h — the A4 reference bounds. */
   readonly tuningModeHeader: string;
+  /** native/audio_core/src/tuner/tuner.h — the analysis thread's idle sleep. */
+  readonly tunerImplHeader: string;
 }
 
 export interface EnumMember {
@@ -78,6 +80,7 @@ export interface NativeConstants {
     readonly max: number;
     readonly default: number;
   };
+  readonly tunerIdleSleepMicros: number;
 }
 
 function fail(what: string): never {
@@ -312,6 +315,10 @@ export function collectConstants(sources: NativeSources): NativeConstants {
       max: parseConstexprDouble(sources.tuningModeHeader, 'kMaxA4Hz'),
       default: parseConstexprDouble(sources.tuningModeHeader, 'kDefaultA4Hz'),
     },
+    tunerIdleSleepMicros: parseConstexprInt(
+      sources.tunerImplHeader,
+      'kIdleSleepMicros',
+    ),
   };
 }
 
@@ -430,6 +437,12 @@ export const KB_TUNER_A4_HZ = {
   max: ${String(c.tunerA4Hz.max)},
   default: ${String(c.tunerA4Hz.default)},
 } as const;
+
+/**
+ * Longest the tuner's analysis thread sleeps between setter-queue drains, in
+ * microseconds (Tuner::kIdleSleepMicros). A KB_ERROR_BUSY retry waits this long.
+ */
+export const KB_TUNER_IDLE_SLEEP_MICROS = ${String(c.tunerIdleSleepMicros)};
 
 /** kb_tuner_instrument enum: selects the in-tune window table. */
 ${renderEnum('KB_TUNER_INSTRUMENT', c.tunerInstrument)}

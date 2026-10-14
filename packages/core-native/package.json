@@ -15,6 +15,7 @@
     "@kitbag/core-plugin-api": "workspace:*"
   },
   "peerDependencies": {
+    "expo-haptics": ">=55",
     "react-native": "*"
   },
   "codegenConfig": {
@@ -27,6 +28,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.20.4",
+    "expo-haptics": "~55.0.16",
     "vitest": "^4.1.10"
   }
 }

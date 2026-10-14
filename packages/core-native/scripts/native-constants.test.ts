@@ -42,6 +42,7 @@ const realSources: NativeSources = {
   metronomeHeader: read('src', 'metronome', 'metronome.h'),
   metronomeRender: read('src', 'metronome', 'metronome_render.cpp'),
   tuningModeHeader: read('src', 'tuner', 'tuning_mode.h'),
+  tunerImplHeader: read('src', 'tuner', 'tuner.h'),
 };
 
 describe('parseDefineInt', () => {
@@ -235,6 +236,7 @@ describe('collectConstants (real engine source)', () => {
     expect(c.tunerInstrument).toHaveLength(4);
     expect(c.wrongString).toHaveLength(3);
     expect(c.tunerA4Hz).toEqual({ min: 415, max: 466, default: 440 });
+    expect(c.tunerIdleSleepMicros).toBe(2000);
     expect(renderConstants(c)).toContain(
       'KB_TUNER_A4_HZ = {\n  min: 415,\n  max: 466,\n  default: 440,\n}',
     );

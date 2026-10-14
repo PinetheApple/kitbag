@@ -104,33 +104,21 @@ export interface Spec extends TurboModule {
   // via the HostObject (#30) — loading is async.
   loadTrack(track: Int32, path: string): Promise<number>;
 
-  // --- Tuner (kitbag_api.h, kitbag_tuner_api.h) ----------------------------
+  // --- Tuner (kitbag_tuner_api.h) ------------------------------------------
   //
-  // Every tuner command is async (void or Promise). The engine requires all
-  // kb_tuner_* calls except read_state/snapshot to come from one app thread;
-  // async TurboModule methods all run on the single native-modules thread,
-  // whereas a sync method would run on the JS thread and break that rule.
-  // Setters return KB_ERROR_BUSY while the mic runs and the engine's setter
-  // queue is full; the caller retries.
+  // Every tuner command is async: the engine wants all kb_tuner_* setters from
+  // one app thread, and async methods share the single native-modules thread
+  // whereas a sync one would run on the JS thread.
 
-  // kb_tuner_start: opens the capture device. Returns a kb_result code.
   tunerStart(): Promise<number>;
-  // kb_tuner_stop: closes the capture device. Void in the ABI.
   tunerStop(): void;
-  // kb_tuner_set_tuning(instrument, string_midis, count). `instrument` is a
-  // KB_TUNER_INSTRUMENT_* value; `count` is the array length, supplied by the
-  // native glue. Returns a kb_result code.
   tunerSetTuning(
     instrument: Int32,
     stringMidis: readonly Int32[],
   ): Promise<number>;
-  // kb_tuner_set_target_string(string_index); KB_TUNER_AUTO_STRING for auto.
   tunerSetTargetString(stringIndex: Int32): Promise<number>;
-  // kb_tuner_set_chromatic.
   tunerSetChromatic(): Promise<number>;
-  // kb_tuner_set_a4(a4_hz).
   tunerSetA4(a4Hz: Double): Promise<number>;
-  // kb_tuner_reset_note_presence(pause_ms).
   tunerResetNotePresence(pauseMs: Double): Promise<number>;
 }
 

@@ -108,6 +108,12 @@ export const KB_TUNER_A4_HZ = {
   default: 440,
 } as const;
 
+/**
+ * Longest the tuner's analysis thread sleeps between setter-queue drains, in
+ * microseconds (Tuner::kIdleSleepMicros). A KB_ERROR_BUSY retry waits this long.
+ */
+export const KB_TUNER_IDLE_SLEEP_MICROS = 2000;
+
 /** kb_tuner_instrument enum: selects the in-tune window table. */
 export const KB_TUNER_INSTRUMENT = {
   KB_TUNER_INSTRUMENT_GUITAR: 0,

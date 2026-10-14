@@ -31,7 +31,6 @@ struct TunerProp {
   double (*read)(const kb_tuner_state&);
 };
 
-// One kb_tuner_read_state copy per get(): fields from two reads may straddle a hop.
 constexpr TunerProp kTunerProps[] = {
     {"tuner_measurement_id",
      [](const kb_tuner_state& s) { return static_cast<double>(s.measurement_id); }},
