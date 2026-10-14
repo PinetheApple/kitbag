@@ -41,7 +41,7 @@ add_library(kitbag_core SHARED
   src/metronome/metronome.cpp
   src/metronome/metronome_count_in.cpp
   src/metronome/metronome_grid.cpp
-    src/metronome/metronome_pattern.cpp
+  src/metronome/metronome_pattern.cpp
   src/metronome/metronome_render.cpp
   src/metronome/tempo_ramp.cpp
   src/media/miniaudio_impl.c
