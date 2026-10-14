@@ -4,6 +4,7 @@ export {
   type SetlistRepository,
   type SongPresetRepository,
 } from './client';
+export type { Preferences } from './preferences';
 export type {
   NewSongPreset,
   NewTuning,

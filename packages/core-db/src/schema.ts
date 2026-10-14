@@ -171,3 +171,8 @@ export const routeLatency = sqliteTable('route_latency', {
   route: text('route').primaryKey(),
   offsetMs: real('offset_ms').notNull(),
 });
+
+export const preferences = sqliteTable('preferences', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+});

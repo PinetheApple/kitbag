@@ -1,11 +1,12 @@
 import { REPAIR_PRESETS } from './preset-repair';
 import { INSTRUMENTS, MAX_MIDI_NOTE, MAX_STRINGS } from './tuning-rules';
 
-export const SCHEMA_VERSION = 10;
+export const SCHEMA_VERSION = 11;
 export const V6_SCHEMA_VERSION = 6;
 export const V7_SCHEMA_VERSION = 7;
 export const V8_SCHEMA_VERSION = 8;
 export const V9_SCHEMA_VERSION = 9;
+export const V10_SCHEMA_VERSION = 10;
 
 export interface MigrationDriver {
   exec(sql: string): void;
@@ -177,6 +178,13 @@ export const MIGRATE_V9_TO_V10: readonly string[] = [
   DELETE_UNLOADABLE_TUNINGS,
 ];
 
+export const MIGRATE_V10_TO_V11: readonly string[] = [
+  `CREATE TABLE preferences (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+)`,
+];
+
 export const BASELINE: readonly string[] = [
   CREATE_SETLISTS,
   CREATE_SONGS,
@@ -194,6 +202,7 @@ export const BASELINE: readonly string[] = [
   CREATE_ONE_ACTIVE_INDEX,
   ...MIGRATE_V8_TO_V9,
   ...MIGRATE_V9_TO_V10,
+  ...MIGRATE_V10_TO_V11,
 ];
 
 // SQLite cannot ADD a NOT NULL column without a constant default, so migrated
@@ -257,7 +266,8 @@ const UPGRADES: readonly {
   { to: V7_SCHEMA_VERSION, steps: MIGRATE_V6_TO_V7 },
   { to: V8_SCHEMA_VERSION, steps: MIGRATE_V7_TO_V8 },
   { to: V9_SCHEMA_VERSION, steps: MIGRATE_V8_TO_V9 },
-  { to: SCHEMA_VERSION, steps: MIGRATE_V9_TO_V10 },
+  { to: V10_SCHEMA_VERSION, steps: MIGRATE_V9_TO_V10 },
+  { to: SCHEMA_VERSION, steps: MIGRATE_V10_TO_V11 },
 ];
 
 function upgradeSteps(from: number): readonly string[] {

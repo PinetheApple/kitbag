@@ -5,12 +5,14 @@ import {
   MIGRATE_V6_TO_V7,
   MIGRATE_V7_TO_V8,
   MIGRATE_V8_TO_V9,
+  MIGRATE_V9_TO_V10,
   migrate,
   SCHEMA_VERSION,
   V6_SCHEMA_VERSION,
   V7_SCHEMA_VERSION,
   V8_SCHEMA_VERSION,
   V9_SCHEMA_VERSION,
+  V10_SCHEMA_VERSION,
 } from './migrate';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
@@ -144,6 +146,13 @@ function buildV9Fixture(): DatabaseSync {
   return db;
 }
 
+function buildV10Fixture(): DatabaseSync {
+  const db = buildV9Fixture();
+  applyInTransaction(db, MIGRATE_V9_TO_V10);
+  db.exec(`PRAGMA user_version = ${String(V10_SCHEMA_VERSION)}`);
+  return db;
+}
+
 const readV6Membership = (db: DatabaseSync) =>
   rows<Membership>(
     db,
@@ -251,6 +260,7 @@ describe('migrate', () => {
     ['v7', buildV7Fixture],
     ['v8', buildV8Fixture],
     ['v9', buildV9Fixture],
+    ['v10', buildV10Fixture],
   ])(
     'builds the same tables, column types and indexes fresh as from %s',
     (_from, build) => {
@@ -308,6 +318,16 @@ describe('migrate', () => {
     expect(rows(db, 'SELECT name, instrument FROM tunings')).toEqual([
       { name: 'Drop D', instrument: 0 },
     ]);
+    expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
+  });
+
+  it('upgrades a v10 database, keeping its rows and adding empty preferences', () => {
+    const db = buildV10Fixture();
+    expect(tableNames(db)).not.toContain('preferences');
+    const before = rows(db, 'SELECT * FROM tunings ORDER BY id');
+    migrate(nodeSqliteDriver(db));
+    expect(rows(db, 'SELECT * FROM tunings ORDER BY id')).toEqual(before);
+    expect(rows(db, 'SELECT * FROM preferences')).toEqual([]);
     expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
   });
 

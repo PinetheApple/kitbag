@@ -4,6 +4,7 @@ import { drizzle } from 'drizzle-orm/op-sqlite';
 import { createBackupService } from './backup';
 import * as schema from './schema';
 import { migrate, type MigrationDriver } from './migrate';
+import { createPreferences } from './preferences';
 import { createSetlistRepository } from './setlist-repository';
 import { createSongPresetRepository } from './song-preset-repository';
 import { createTransactor } from './transaction';
@@ -23,6 +24,10 @@ export function openDatabase(name: string = DATABASE_NAME) {
     presets: createSongPresetRepository(handle),
     tunings: createTuningRepository(handle),
     backup: createBackupService(handle),
+    preferences: createPreferences(
+      (sql, params) => connection.executeSync(sql, params).rows,
+      handle.transactor,
+    ),
     close: () =>
       handle.transactor.serial(async () => {
         await connection.closeAsync();
