@@ -1,6 +1,3 @@
-// See KitbagCommands.h. SKELETON (#31): routes each command to the single engine
-// (SPEC §4.5); not yet bound to the generated TurboModule (#33).
-
 #include "KitbagCommands.h"
 
 #include <cassert>
@@ -11,33 +8,27 @@
 namespace kitbag {
 
 namespace {
-// A command that arrives before kitbagInstall() ran carries a null engine
-// (§4.5 install-ordering). The kb_* ABI already treats null as a no-op /
-// KB_ERROR_INVALID_ARGUMENT, so forwarding it can never deref null; the assert
-// surfaces the ordering bug in debug builds instead of failing silently.
 kb_engine* commandEngine() {
   kb_engine* engine = kitbagEngine();
   assert(engine != nullptr && "command dispatched before kitbagInstall()");
   return engine;
 }
+
+int32_t flag(bool value) { return value ? 1 : 0; }
 }  // namespace
 
 int32_t commandStart() { return kb_engine_start(commandEngine()); }
 void commandStop() { kb_engine_stop(commandEngine()); }
 
 void commandMetronomeStart(double anchorFrame) {
-  // anchorFrame is a uint64 start frame carried as a double; the cast is exact
-  // below 2^53 (kitbag_api.h), same convention as commandSetGrid.
   kb_metronome_start_at(commandEngine(), static_cast<uint64_t>(anchorFrame));
 }
-
 void commandMetronomeStop() { kb_metronome_stop(commandEngine()); }
+void commandMetronomePause() { kb_metronome_pause(commandEngine()); }
 
 void commandSetTempo(double bpm) { kb_metronome_set_tempo(commandEngine(), bpm); }
 
 int32_t commandSetGrid(const double* beatTimesSec, int32_t count, double anchorFrame) {
-  // anchorFrame is a uint64 frame carried as a double; the cast is exact below
-  // 2^53 (kitbag_api.h), which is why no BigInt is needed on the JS side.
   return kb_metronome_set_grid(commandEngine(), beatTimesSec, count,
                                static_cast<uint64_t>(anchorFrame));
 }
@@ -52,11 +43,19 @@ void commandSetAccent(int32_t beatIndex, int32_t accent) {
   kb_metronome_set_accent(commandEngine(), beatIndex, accent);
 }
 void commandSetPoly(bool enabled, int32_t beats) {
-  // The ABI takes an int32 flag; map the boolean here so JS never encodes 0/1.
-  kb_metronome_set_poly(commandEngine(), enabled ? 1 : 0, beats);
+  kb_metronome_set_poly(commandEngine(), flag(enabled), beats);
 }
-void commandSetSound(int32_t soundIndex) {
-  kb_metronome_set_sound(commandEngine(), soundIndex);
+void commandSetPolyAccent(int32_t beatIndex, int32_t accent) {
+  kb_metronome_set_poly_accent(commandEngine(), beatIndex, accent);
+}
+void commandSetSounds(int32_t normalSound, int32_t accentSound) {
+  kb_metronome_set_sounds(commandEngine(), normalSound, accentSound);
+}
+void commandPreviewSound(int32_t sound, bool accented) {
+  kb_metronome_preview_sound(commandEngine(), sound, flag(accented));
+}
+void commandSetCountIn(int32_t bars, bool distinct, int32_t sound) {
+  kb_metronome_set_count_in(commandEngine(), bars, flag(distinct), sound);
 }
 void commandSetVolume(double volume) {
   kb_metronome_set_volume(commandEngine(), volume);
@@ -65,11 +64,18 @@ void commandSetLatencyOffset(double latencyMs) {
   kb_metronome_set_latency_offset(commandEngine(), latencyMs);
 }
 
-void commandSetRamp(bool enabled, double startBpm, double endBpm, int32_t bars) {
-  kb_metronome_set_ramp(commandEngine(), enabled ? 1 : 0, startBpm, endBpm, bars);
+void commandSetRamp(
+    bool enabled,
+    double startBpm,
+    double endBpm,
+    double duration,
+    int32_t unit,
+    bool loop) {
+  kb_metronome_set_ramp(commandEngine(), flag(enabled), startBpm, endBpm,
+                        duration, unit, flag(loop));
 }
 void commandSetBarMute(bool enabled, int32_t playBars, int32_t muteBars) {
-  kb_metronome_set_bar_mute(commandEngine(), enabled ? 1 : 0, playBars, muteBars);
+  kb_metronome_set_bar_mute(commandEngine(), flag(enabled), playBars, muteBars);
 }
 
 int32_t commandLoadTrack(int32_t track, const char* path) {

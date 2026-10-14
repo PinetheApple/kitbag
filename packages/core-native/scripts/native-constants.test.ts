@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   collectConstants,
+  parseConstexprDouble,
   parseConstexprIntArray,
   parseDefineInt,
   parseEnum,
@@ -38,6 +39,8 @@ const realSources: NativeSources = {
   mixerHeader: read('src', 'mixer', 'mixer.h'),
   metronomeHeader: read('src', 'metronome', 'metronome.h'),
   metronomeRender: read('src', 'metronome', 'metronome_render.cpp'),
+  tempoRampHeader: read('src', 'metronome', 'tempo_ramp.h'),
+  metronomeTypesHeader: read('src', 'metronome', 'metronome_types.h'),
 };
 
 describe('parseDefineInt', () => {
@@ -62,6 +65,12 @@ describe('parseConstexprIntArray', () => {
       ),
     ).toEqual([2, 4, 8, 16]);
   });
+  it('resolves a named member to its constexpr int in the same source', () => {
+    const src =
+      'static constexpr int kOff = 7;\n' +
+      'static constexpr int kChoices[] = {kOff, 1, 2};';
+    expect(parseConstexprIntArray(src, 'kChoices')).toEqual([7, 1, 2]);
+  });
   it('throws when the array is absent', () => {
     expect(() =>
       parseConstexprIntArray('int kDenominators = 4;', 'kDenominators'),
@@ -74,6 +83,22 @@ describe('parseConstexprIntArray', () => {
         'kDenominators',
       ),
     ).toThrow(/kDenominators/);
+  });
+});
+
+describe('parseConstexprDouble', () => {
+  it('reads a namespace-scope inline constexpr double', () => {
+    expect(
+      parseConstexprDouble(
+        'inline constexpr double kMaxBpm = 400.0;',
+        'kMaxBpm',
+      ),
+    ).toBe(400);
+  });
+  it('throws when the constant is absent', () => {
+    expect(() => parseConstexprDouble('double kMaxBpm;', 'kMaxBpm')).toThrow(
+      /kMaxBpm/,
+    );
   });
 });
 
@@ -167,7 +192,13 @@ describe('collectConstants (real engine source)', () => {
     expect(c.maxTracks).toBe(16);
     expect(c.maxBeats).toBe(16);
     expect(c.maxRampBars).toBe(64);
-    expect(c.maxMuteBars).toBe(16);
+    expect(c.muteBars).toEqual({ min: 1, max: 16 });
+    expect(c.minRampBars).toBe(1);
+    expect(c.bpm).toEqual({ min: 20, max: 400 });
+    expect(c.subdivision).toEqual({ min: 1, max: 16 });
+    expect(c.defaultSounds).toEqual({ normal: 0, accent: 0 });
+    expect(c.countInOff).toBe(0);
+    expect(c.volume).toEqual({ min: 0, max: 2 });
     expect(c.denominators).toEqual([2, 4, 8, 16]);
     expect(c.bpmReferenceDenominator).toBe(4);
     expect(c.soundNames).toEqual([
@@ -182,6 +213,16 @@ describe('collectConstants (real engine source)', () => {
       'KB_ERROR_DEVICE_START_FAILED',
     );
     expect(c.accent).toHaveLength(3);
+    expect(c.minPolyBeats).toBe(2);
+    expect(c.maxPolyBeats).toBe(16);
+    expect(c.countInBars).toEqual([0, 1, 2, 4]);
+    expect(c.defaultCountInSound).toBe(1);
+    expect(c.rampSeconds).toEqual({ min: 1, max: 3600 });
+    expect(c.rampUnit).toEqual([
+      { name: 'KB_RAMP_BARS', value: 0 },
+      { name: 'KB_RAMP_SECONDS', value: 1 },
+      { name: 'KB_RAMP_MINUTES', value: 2 },
+    ]);
     // render twice: identical, so generate:check can byte-diff deterministically.
     expect(renderConstants(c)).toBe(renderConstants(c));
   });

@@ -22,26 +22,33 @@ const source = (path: string) =>
     'utf8',
   );
 
-const metronome = source('src/metronome/metronome.h');
+const headers = {
+  'metronome.h': source('src/metronome/metronome.h'),
+  'metronome_types.h': source('src/metronome/metronome_types.h'),
+  'tempo_ramp.h': source('src/metronome/tempo_ramp.h'),
+};
 const api = source('include/kitbag_api.h');
 
-function constant(name: string): string {
+function constant(
+  name: string,
+  header: keyof typeof headers = 'metronome.h',
+): string {
   const match = new RegExp(`constexpr \\w+ ${name}(?:\\[\\])? = ([^;]+);`).exec(
-    metronome,
+    headers[header],
   );
-  if (!match?.[1]) throw new Error(`${name} not found in metronome.h`);
+  if (!match?.[1]) throw new Error(`${name} not found in ${header}`);
   return match[1];
 }
 
 describe('engine limits mirrored in core-db', () => {
-  it('match metronome.h', () => {
-    expect(Number(constant('kMinBpm'))).toBe(MIN_BPM);
-    expect(Number(constant('kMaxBpm'))).toBe(MAX_BPM);
+  it('match the metronome headers', () => {
+    expect(Number(constant('kMinBpm', 'metronome_types.h'))).toBe(MIN_BPM);
+    expect(Number(constant('kMaxBpm', 'metronome_types.h'))).toBe(MAX_BPM);
     expect(Number(constant('kMaxBeats'))).toBe(MAX_BEATS);
     expect(Number(constant('kMaxPolyBeats'))).toBe(MAX_POLY_BEATS);
     expect(Number(constant('kSoundCount'))).toBe(SOUND_COUNT);
     expect(Number(constant('kMaxSubdivision'))).toBe(MAX_SUBDIVISION);
-    expect(Number(constant('kMaxRampBars'))).toBe(MAX_RAMP_BARS);
+    expect(Number(constant('kMaxBars', 'tempo_ramp.h'))).toBe(MAX_RAMP_BARS);
     expect(Number(constant('kMaxMuteBars'))).toBe(MAX_MUTE_BARS);
     expect(Number(constant('kBpmReferenceDenominator'))).toBe(
       DEFAULT_DENOMINATOR,

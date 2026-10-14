@@ -4,6 +4,8 @@
 // Shared by metronome.cpp, metronome_render.cpp and metronome_grid.cpp. Not
 // part of any public surface; kitbag_api.h is the contract external callers read.
 
+#include <cstddef>
+
 namespace kitbag {
 namespace metronome_detail {
 
@@ -19,6 +21,14 @@ constexpr double kMsPerSecond = 1000.0;
 template <typename T>
 T Clamp(T value, T low, T high) {
   return value < low ? low : (value > high ? high : value);
+}
+
+template <std::size_t N>
+bool IsOneOf(const int (&choices)[N], int value) {
+  for (const int choice : choices) {
+    if (choice == value) return true;
+  }
+  return false;
 }
 
 }  // namespace metronome_detail

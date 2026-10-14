@@ -2,11 +2,15 @@ import { Chip, ChipRow } from '@kitbag/core-design';
 import { useMetronome } from '@kitbag/core-state';
 import { useCallback, useState } from 'react';
 
+import { countInActive, countInLabel } from '../logic/countIn.ts';
+import { soundChipLabel, soundLabel } from '../logic/soundChoice.ts';
 import { muteChipValue, rampChipValue } from '../logic/trainer.ts';
+import { CountInSheet } from './CountInSheet.tsx';
 import { MuteBarsSheet } from './MuteBarsSheet.tsx';
 import { RampSheet } from './RampSheet.tsx';
+import { SoundSheet } from './SoundSheet.tsx';
 
-type OpenSheet = 'none' | 'ramp' | 'muteBars';
+type OpenSheet = 'none' | 'ramp' | 'muteBars' | 'sound' | 'countIn';
 
 function RampChip({ onPress }: { readonly onPress: () => void }) {
   const ramp = useMetronome((s) => s.ramp);
@@ -37,19 +41,60 @@ function MuteChip({ onPress }: { readonly onPress: () => void }) {
     />
   );
 }
+function SoundChip({ onPress }: { readonly onPress: () => void }) {
+  const sounds = useMetronome((s) => s.sounds);
+  const label = soundChipLabel(sounds);
+  return (
+    <Chip
+      icon="sound"
+      label={label}
+      accessibilityLabel={`Click sound, normal ${soundLabel(sounds.normal)}, accent ${soundLabel(sounds.accent)}`}
+      onPress={onPress}
+    />
+  );
+}
+
+function CountInChip({ onPress }: { readonly onPress: () => void }) {
+  const bars = useMetronome((s) => s.countIn.bars);
+  const active = countInActive(bars);
+  return (
+    <Chip
+      icon="countIn"
+      active={active}
+      label={active ? countInLabel(bars) : 'Count-in'}
+      accessibilityLabel={`Count-in, ${countInLabel(bars)}`}
+      onPress={onPress}
+    />
+  );
+}
 
 function useOpenSheet() {
   const [open, setOpen] = useState<OpenSheet>('none');
-  const openRamp = useCallback(() => {
-    setOpen('ramp');
-  }, []);
-  const openMuteBars = useCallback(() => {
-    setOpen('muteBars');
-  }, []);
-  const close = useCallback(() => {
-    setOpen('none');
-  }, []);
-  return { open, openRamp, openMuteBars, close };
+  const opener = useCallback(
+    (sheet: OpenSheet) => () => {
+      setOpen(sheet);
+    },
+    [],
+  );
+  return { open, opener };
+}
+
+interface SheetsProps {
+  readonly open: OpenSheet;
+  readonly bottomInset: number;
+  readonly onDismiss: () => void;
+}
+
+function TrainerSheets({ open, bottomInset, onDismiss }: SheetsProps) {
+  const shared = { bottomInset, onDismiss };
+  return (
+    <>
+      <RampSheet visible={open === 'ramp'} {...shared} />
+      <MuteBarsSheet visible={open === 'muteBars'} {...shared} />
+      <SoundSheet visible={open === 'sound'} {...shared} />
+      <CountInSheet visible={open === 'countIn'} {...shared} />
+    </>
+  );
 }
 
 export function TrainerChips({
@@ -57,22 +102,19 @@ export function TrainerChips({
 }: {
   readonly bottomInset: number;
 }) {
-  const { open, openRamp, openMuteBars, close } = useOpenSheet();
+  const { open, opener } = useOpenSheet();
   return (
     <>
       <ChipRow>
-        <RampChip onPress={openRamp} />
-        <MuteChip onPress={openMuteBars} />
+        <RampChip onPress={opener('ramp')} />
+        <MuteChip onPress={opener('muteBars')} />
+        <SoundChip onPress={opener('sound')} />
+        <CountInChip onPress={opener('countIn')} />
       </ChipRow>
-      <RampSheet
-        visible={open === 'ramp'}
+      <TrainerSheets
+        open={open}
         bottomInset={bottomInset}
-        onDismiss={close}
-      />
-      <MuteBarsSheet
-        visible={open === 'muteBars'}
-        bottomInset={bottomInset}
-        onDismiss={close}
+        onDismiss={opener('none')}
       />
     </>
   );

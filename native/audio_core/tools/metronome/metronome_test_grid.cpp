@@ -316,7 +316,7 @@ void TestGridBpmMirrorIsClamped() {
   fast.Start();
   RenderAndDetectOnsets(fast, kSampleRate / 2);
   Check(
-      fast.current_bpm() == kitbag::Metronome::kMaxBpm,
+      fast.current_bpm() == kitbag::kMaxBpm,
       "grid bpm mirror: a too-short interval clamps to kMaxBpm"
   );
 
@@ -328,7 +328,7 @@ void TestGridBpmMirrorIsClamped() {
   slow.Start();
   RenderAndDetectOnsets(slow, kSampleRate);
   Check(
-      slow.current_bpm() == kitbag::Metronome::kMinBpm,
+      slow.current_bpm() == kitbag::kMinBpm,
       "grid bpm mirror: a too-long interval clamps to kMinBpm"
   );
 }

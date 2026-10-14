@@ -71,6 +71,19 @@ describe('onDanger', () => {
   });
 });
 
+describe('disabledLabel', () => {
+  it('reads at AA text contrast on a sheet and on the screen in both modes', () => {
+    for (const mode of ['dark', 'light'] as const) {
+      const theme = themes[mode];
+      for (const ground of [theme.color.surface1, theme.color.bg]) {
+        expect(contrast(theme.disabledLabel, ground)).toBeGreaterThanOrEqual(
+          AA_TEXT,
+        );
+      }
+    }
+  });
+});
+
 describe('textStyle', () => {
   it('turns em tracking into dp and marks tabular figures', () => {
     const style = textStyle(textRoles.badge);

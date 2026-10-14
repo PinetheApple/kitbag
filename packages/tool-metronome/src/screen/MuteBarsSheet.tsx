@@ -85,7 +85,7 @@ function MutePreview({ preview }: { readonly preview: readonly boolean[] }) {
   return (
     <View
       accessible
-      accessibilityLabel={`Eight bars of the cycle: ${spoken}`}
+      accessibilityLabel={`First eight bars from start: ${spoken}`}
       style={styles.preview}
     >
       {preview.map((sounding, bar) => (
@@ -138,8 +138,8 @@ export function MuteBarsSheet({
       <MuteSteppers editor={editor} />
       <MutePreview preview={editor.preview} />
       <SheetHint>
-        Preview shows eight bars of the cycle. Silent bars still light the LEDs
-        — you keep the visual, lose the click.
+        Preview shows the first eight bars from start. Silent bars still light
+        the LEDs — you keep the visual, lose the click.
       </SheetHint>
       <MuteActions editor={editor} />
     </Sheet>
