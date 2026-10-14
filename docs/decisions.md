@@ -235,3 +235,17 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   step takes 7 hops (~300 ms) to read 45 c, so §10.2's <150 ms settle holds for
   onset, not for a pitch change within a note. SPEC §10.2's text is unchanged;
   reconcile it or overrule this. **[recorded]**
+
+- **2026-10-14 · Tuner screen calls (§10.2, §12.8, §13.2, §13.3, #118)** — Decided by the
+  integrator on the owner's delegation: (1) the in-tune lock fires `expo-haptics`'
+  Android confirm haptic, which respects the system haptics toggle; no sound. (2) Schema
+  v10 adds `tunings.instrument` (default guitar), because the instrument selects the
+  native in-tune window. (3) Built-in tunings (Standard, Drop D, DADGAD, half-step
+  down, bass 4/5, ukulele) stay read-only code constants; only custom tunings are rows.
+  (4) The tuning picker, tuning editor and A4 sheets have no drawing, so they are built
+  from existing primitives and await design sign-off. (5) The readout follows the
+  design's true-cents caption ("−4 CENTS · TUNE UP") rather than the functional spec's
+  step numbers; the needle's full scale is ±50 c. (6) The tuner does not wait for #109:
+  app-shell opens the database through core-db's `openDatabase()` behind one runtime
+  module, to be folded into #109's composition root when that lands. **[recorded;
+  (4) awaits design sign-off]**
