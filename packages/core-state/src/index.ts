@@ -30,3 +30,28 @@ export {
   type LastToolPersistence,
   type LastToolStore,
 } from './lastTool/store.ts';
+export { useTuner } from './tuner/useTuner.ts';
+export {
+  allStringsTuned,
+  createTunerStore,
+  tunerStore,
+  tuningFromCustom,
+  type MicStatus,
+  type TunerActions,
+  type TunerCommandError,
+  type TunerMode,
+  type TunerState,
+  type TunerStore,
+  type TunerStoreDeps,
+  type TunerTuning,
+} from './tuner/store.ts';
+export { MAX_BUSY_RETRIES, type TunerCommands } from './tuner/commands.ts';
+export {
+  configureTunerRuntime,
+  configureTunings,
+  type AppActivity,
+  type AppActivitySource,
+  type MicPermission,
+  type MicPermissionSource,
+  type TunerRuntime,
+} from './tuner/runtime.ts';
