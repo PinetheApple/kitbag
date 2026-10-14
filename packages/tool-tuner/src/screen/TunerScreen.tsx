@@ -146,7 +146,8 @@ export function TunerScreen({ insets, a4Range, onBack }: TunerScreenProps) {
     setReading(QUIET_READING);
   }, []);
 
-  const resetKey = `${String(open)}|${tuning.name}|${tuning.notes.join(',')}|${String(tuning.instrument)}|${mode.kind}`;
+  // What the engine measures against; a rename changes none of it.
+  const resetKey = `${String(open)}|${tuning.notes.join(',')}|${String(tuning.instrument)}|${mode.kind}`;
 
   const { needle, active, detectedIndex, noteText, captionText, direction } =
     useTunerFrame({
