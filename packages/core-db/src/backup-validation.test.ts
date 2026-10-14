@@ -117,6 +117,21 @@ describe('backup validation', () => {
     });
   });
 
+  it.each([
+    ['no strings', '', 'expected 1–12 strings'],
+    ['13 strings', btoa('('.repeat(13)), 'expected 1–12 strings'],
+    ['a note above MIDI range', btoa('(\x80'), 'expected notes 0–127'],
+  ])('refuses a tuning with %s', async (_name, notes, reason) => {
+    const failure = await rejected((file) => {
+      first(file.tunings ?? []).notes = notes;
+    });
+    expect(failure).toEqual({
+      kind: 'invalidField',
+      path: '$.tunings[0].notes',
+      reason,
+    });
+  });
+
   it('refuses a setlist that references a preset not in the file', async () => {
     const failure = await rejected((file) => {
       first(file.setlists).presetUuids = [crypto.randomUUID()];

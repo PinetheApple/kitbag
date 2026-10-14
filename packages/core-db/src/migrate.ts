@@ -1,4 +1,5 @@
 import { REPAIR_PRESETS } from './preset-repair';
+import { INSTRUMENTS, MAX_MIDI_NOTE, MAX_STRINGS } from './tuning-rules';
 
 export const SCHEMA_VERSION = 10;
 export const V6_SCHEMA_VERSION = 6;
@@ -154,9 +155,26 @@ export const MIGRATE_V8_TO_V9: readonly string[] = [
   ),
 ];
 
-// The tuner's in-tune window depends on the instrument; 0 is guitar.
+const HEX_RADIX = 16;
+const MAX_NOTE_HEX = MAX_MIDI_NOTE.toString(HEX_RADIX)
+  .toUpperCase()
+  .padStart(2, '0');
+
+// Legacy rows the tuner can never load (no strings, too many, a note byte above
+// MIDI range) are dropped, so every stored tuning passes backup import.
+const DELETE_UNLOADABLE_TUNINGS = `DELETE FROM tunings
+  WHERE length(notes) NOT BETWEEN 1 AND ${String(MAX_STRINGS)}
+  OR id IN (
+    WITH RECURSIVE note (id, notes, at) AS (
+      SELECT id, notes, 1 FROM tunings
+      UNION ALL SELECT id, notes, at + 1 FROM note WHERE at < length(notes)
+    )
+    SELECT id FROM note WHERE hex(substr(notes, at, 1)) > '${MAX_NOTE_HEX}'
+  )`;
+
 export const MIGRATE_V9_TO_V10: readonly string[] = [
-  'ALTER TABLE tunings ADD COLUMN instrument INTEGER NOT NULL DEFAULT 0',
+  `ALTER TABLE tunings ADD COLUMN instrument INTEGER NOT NULL DEFAULT ${String(INSTRUMENTS.guitar)}`,
+  DELETE_UNLOADABLE_TUNINGS,
 ];
 
 export const BASELINE: readonly string[] = [
@@ -231,22 +249,22 @@ function runStatements(
   }
 }
 
+// Each step upgrades from the version before `to`.
+const UPGRADES: readonly {
+  readonly to: number;
+  readonly steps: readonly string[];
+}[] = [
+  { to: V7_SCHEMA_VERSION, steps: MIGRATE_V6_TO_V7 },
+  { to: V8_SCHEMA_VERSION, steps: MIGRATE_V7_TO_V8 },
+  { to: V9_SCHEMA_VERSION, steps: MIGRATE_V8_TO_V9 },
+  { to: SCHEMA_VERSION, steps: MIGRATE_V9_TO_V10 },
+];
+
 function upgradeSteps(from: number): readonly string[] {
   if (from === 0) return BASELINE;
   // The Flutter build always migrated users to v6 before this code could run,
   // so any nonzero version below 7 is v6-shaped.
-  if (from < V7_SCHEMA_VERSION)
-    return [
-      ...MIGRATE_V6_TO_V7,
-      ...MIGRATE_V7_TO_V8,
-      ...MIGRATE_V8_TO_V9,
-      ...MIGRATE_V9_TO_V10,
-    ];
-  if (from < V8_SCHEMA_VERSION)
-    return [...MIGRATE_V7_TO_V8, ...MIGRATE_V8_TO_V9, ...MIGRATE_V9_TO_V10];
-  if (from < V9_SCHEMA_VERSION)
-    return [...MIGRATE_V8_TO_V9, ...MIGRATE_V9_TO_V10];
-  return MIGRATE_V9_TO_V10;
+  return UPGRADES.filter(({ to }) => to > from).flatMap(({ steps }) => steps);
 }
 
 export function migrate(driver: MigrationDriver): void {

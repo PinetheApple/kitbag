@@ -23,9 +23,9 @@ import {
   reader,
   type Reader,
 } from './backup-reader';
-import { presetBytes } from './base64';
+import { decodeBase64, presetBytes } from './base64';
 import { presetViolation } from './preset-rules';
-import { instrumentViolation, INSTRUMENTS } from './tuning-rules';
+import { INSTRUMENTS, tuningViolation } from './tuning-rules';
 
 const FLOAT32_BYTES = 4;
 
@@ -131,8 +131,11 @@ function readTuning(value: unknown, path: string): TuningRecord {
     notes: r.blob('notes'),
     instrument: r.optionalCount('instrument', INSTRUMENTS.guitar),
   };
-  const violation = instrumentViolation(record.instrument);
-  if (violation) invalidField(`${path}.instrument`, violation.reason);
+  const violation = tuningViolation({
+    instrument: record.instrument,
+    notes: Array.from(decodeBase64(record.notes)),
+  });
+  if (violation) invalidField(`${path}.${violation.field}`, violation.reason);
   return record;
 }
 

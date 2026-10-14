@@ -24,9 +24,7 @@ export interface TuningViolation {
 const within = (value: number, high: number) =>
   Number.isInteger(value) && value >= 0 && value <= high;
 
-export function instrumentViolation(
-  instrument: number,
-): TuningViolation | undefined {
+function instrumentViolation(instrument: number): TuningViolation | undefined {
   if (within(instrument, INSTRUMENT_COUNT - 1)) return undefined;
   return {
     field: 'instrument',

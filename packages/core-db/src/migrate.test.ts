@@ -130,6 +130,20 @@ function buildV7Fixture(): DatabaseSync {
   return db;
 }
 
+function buildV8Fixture(): DatabaseSync {
+  const db = buildV7Fixture();
+  applyInTransaction(db, MIGRATE_V7_TO_V8);
+  db.exec(`PRAGMA user_version = ${String(V8_SCHEMA_VERSION)}`);
+  return db;
+}
+
+function buildV9Fixture(): DatabaseSync {
+  const db = buildV8Fixture();
+  applyInTransaction(db, MIGRATE_V8_TO_V9);
+  db.exec(`PRAGMA user_version = ${String(V9_SCHEMA_VERSION)}`);
+  return db;
+}
+
 const readV6Membership = (db: DatabaseSync) =>
   rows<Membership>(
     db,
@@ -232,16 +246,24 @@ describe('migrate', () => {
       ).toHaveLength(0);
   });
 
-  it('builds the same tables, column types and indexes fresh as migrated', () => {
-    const fresh = new DatabaseSync(':memory:');
-    migrate(nodeSqliteDriver(fresh));
-    const migrated = buildV6Fixture();
-    migrate(nodeSqliteDriver(migrated));
-    expect(shape(migrated)).toEqual(shape(fresh));
-    expect(shape(fresh).indexes.map((index) => index.name)).toContain(
-      'setlists_one_active',
-    );
-  });
+  it.each([
+    ['v6', buildV6Fixture],
+    ['v7', buildV7Fixture],
+    ['v8', buildV8Fixture],
+    ['v9', buildV9Fixture],
+  ])(
+    'builds the same tables, column types and indexes fresh as from %s',
+    (_from, build) => {
+      const fresh = new DatabaseSync(':memory:');
+      migrate(nodeSqliteDriver(fresh));
+      const migrated = build();
+      migrate(nodeSqliteDriver(migrated));
+      expect(shape(migrated)).toEqual(shape(fresh));
+      expect(shape(fresh).indexes.map((index) => index.name)).toContain(
+        'setlists_one_active',
+      );
+    },
+  );
 
   it('upgrades a v7 database with data, keeping every setlist inactive', () => {
     const db = buildV7Fixture();
@@ -255,9 +277,7 @@ describe('migrate', () => {
   });
 
   it('upgrades a v8 database, giving each practice session a distinct uuid', () => {
-    const db = buildV7Fixture();
-    applyInTransaction(db, MIGRATE_V7_TO_V8);
-    db.exec(`PRAGMA user_version = ${String(V8_SCHEMA_VERSION)}`);
+    const db = buildV8Fixture();
     const before = rows(
       db,
       'SELECT id, start_time, avg_bpm FROM practice_sessions ORDER BY id',
@@ -278,9 +298,7 @@ describe('migrate', () => {
   });
 
   it('upgrades a v9 database, reading every existing tuning as guitar', () => {
-    const db = buildV7Fixture();
-    applyInTransaction(db, [...MIGRATE_V7_TO_V8, ...MIGRATE_V8_TO_V9]);
-    db.exec(`PRAGMA user_version = ${String(V9_SCHEMA_VERSION)}`);
+    const db = buildV9Fixture();
     expect(columnNames(db, 'tunings')).not.toContain('instrument');
     const before = rows(db, 'SELECT id, name, notes, uuid FROM tunings');
     migrate(nodeSqliteDriver(db));
@@ -291,6 +309,21 @@ describe('migrate', () => {
       { name: 'Drop D', instrument: 0 },
     ]);
     expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
+  });
+
+  it('drops v9 tunings the tuner could never load', () => {
+    const db = buildV9Fixture();
+    db.exec(`INSERT INTO tunings (name, notes, uuid) VALUES
+      ('Unstrung', X'', 'a'),
+      ('Thirteen', X'${'28'.repeat(13)}', 'b'),
+      ('Out of range', X'2880', 'c'),
+      ('Twelve', X'${'7F'.repeat(12)}', 'd')`);
+    migrate(nodeSqliteDriver(db));
+    expect(
+      rows<{ name: string }>(db, 'SELECT name FROM tunings ORDER BY id').map(
+        (row) => row.name,
+      ),
+    ).toEqual(['Drop D', 'Twelve']);
   });
 
   it('gives a fresh database a non-null tunings.instrument defaulting to guitar', () => {
