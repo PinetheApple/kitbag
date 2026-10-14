@@ -7,11 +7,10 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { opacity, radius, size } from '../roles.ts';
+import { HALF, TRANSPARENT } from '../styleConstants.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { stripPosition, tunerStripGradient } from '../tunerVisuals.ts';
 
-const TRANSPARENT = 'transparent';
-const HALF = 0.5;
 const NEEDLE_REACH_ABOVE = size.tunerNeedleOverhang + size.tunerNeedleCap;
 
 const useStyles = createThemedStyles((theme) => ({

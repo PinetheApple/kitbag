@@ -121,7 +121,7 @@ function Peg({ index, peg, locked, detectedIndex, onPress }: PegProps) {
   const theme = useTheme();
 
   const detectedStyle = useAnimatedStyle(() => ({
-    opacity: Math.round(detectedIndex.value) === index ? 1 : 0,
+    opacity: detectedIndex.value === index ? 1 : 0,
   }));
 
   const handlePress = useCallback(() => {

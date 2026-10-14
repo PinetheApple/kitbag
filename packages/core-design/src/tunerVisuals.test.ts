@@ -1,12 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { themes, withAlpha } from './theme.ts';
-import {
-  stripPosition,
-  TUNE_DIRECTION,
-  tuneGlyph,
-  tunerStripGradient,
-} from './tunerVisuals.ts';
+import { stripPosition, tunerStripGradient } from './tunerVisuals.ts';
 
 describe('tunerStripGradient', () => {
   it('reproduces the design stops from the theme tokens', () => {
@@ -44,21 +39,6 @@ describe('stripPosition', () => {
   it('parks a missing reading on the centre line', () => {
     expect(stripPosition(Number.NaN)).toBe(0.5);
     expect(stripPosition(Number.POSITIVE_INFINITY)).toBe(0.5);
-  });
-});
-
-describe('tuneGlyph', () => {
-  it('maps each direction constant to its glyph', () => {
-    expect(tuneGlyph(TUNE_DIRECTION.up)).toBe('up');
-    expect(tuneGlyph(TUNE_DIRECTION.down)).toBe('down');
-    expect(tuneGlyph(TUNE_DIRECTION.inTune)).toBe('inTune');
-    expect(tuneGlyph(TUNE_DIRECTION.none)).toBe('none');
-  });
-
-  it('accepts any signed value, so Math.sign output works directly', () => {
-    expect(tuneGlyph(0.2)).toBe('up');
-    expect(tuneGlyph(-12)).toBe('down');
-    expect(tuneGlyph(-0)).toBe('inTune');
   });
 });
 

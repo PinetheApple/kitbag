@@ -1,3 +1,4 @@
+import { HALF } from './styleConstants.ts';
 import type { ColorToken } from './tokens.ts';
 
 export interface GradientStop {
@@ -25,30 +26,13 @@ export function tunerStripGradient(
   return `linear-gradient(90deg, ${stops.join(', ')})`;
 }
 
-const CENTRE = 0.5;
-
 // Non-finite input parks the needle on the centre line rather than at an edge,
 // so a missing reading never looks like a badly out-of-tune one.
 export function stripPosition(needle: number): number {
   'worklet';
-  if (!Number.isFinite(needle)) return CENTRE;
-  const clamped = Math.min(1, Math.max(-1, needle));
-  return (clamped + 1) * CENTRE;
+  const reading = Number.isFinite(needle) ? needle : 0;
+  return (Math.min(1, Math.max(-1, reading)) + 1) * HALF;
 }
 
-export const TUNE_DIRECTION = {
-  down: -1,
-  inTune: 0,
-  up: 1,
-  none: Number.NaN,
-} as const;
-
+/** Which tuning-direction glyph TuneDirectionIcon shows. */
 export type TuneGlyph = 'up' | 'down' | 'inTune' | 'none';
-
-export function tuneGlyph(direction: number): TuneGlyph {
-  'worklet';
-  if (Number.isNaN(direction)) return 'none';
-  if (direction > 0) return 'up';
-  if (direction < 0) return 'down';
-  return 'inTune';
-}

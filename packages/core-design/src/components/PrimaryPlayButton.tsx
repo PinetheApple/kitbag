@@ -1,6 +1,7 @@
 import { Pressable, View } from 'react-native';
 
 import { playGlyphPath, radius, size } from '../roles.ts';
+import { TRANSPARENT } from '../styleConstants.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 
 export type PlayGlyph = 'play' | 'stop';
@@ -8,7 +9,6 @@ export type PlayGlyph = 'play' | 'stop';
 const UNIT = size.playGlyphBox / playGlyphPath.viewBox;
 const GLYPH_WIDTH = playGlyphPath.width * UNIT;
 const GLYPH_HEIGHT = playGlyphPath.height * UNIT;
-const TRANSPARENT = 'transparent';
 
 export interface PrimaryPlayButtonProps {
   readonly glyph: PlayGlyph;

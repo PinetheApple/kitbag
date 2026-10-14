@@ -8,10 +8,8 @@ import type { ShapeIconName } from '../icons.ts';
 import { iconSizes, type IconSize } from '../roles.ts';
 import { useTheme } from '../ThemeProvider.tsx';
 import type { ColorToken } from '../tokens.ts';
-import { tuneGlyph, type TuneGlyph } from '../tunerVisuals.ts';
-
-const TRANSPARENT = 'transparent';
-const HALF = 0.5;
+import { HALF, TRANSPARENT } from '../styleConstants.ts';
+import type { TuneGlyph } from '../tunerVisuals.ts';
 
 // Proportions of the icon box, so every shape scales with the icon size role.
 const ARROW = {
@@ -174,12 +172,12 @@ function DirectionLayer({
   color,
 }: {
   readonly glyph: Exclude<TuneGlyph, 'none'>;
-  readonly direction: SharedValue<number>;
+  readonly direction: SharedValue<TuneGlyph>;
   readonly px: number;
   readonly color: string;
 }) {
   const style = useAnimatedStyle(() => ({
-    opacity: tuneGlyph(direction.value) === glyph ? 1 : 0,
+    opacity: direction.value === glyph ? 1 : 0,
   }));
   return (
     <Animated.View style={[{ position: 'absolute', top: 0, left: 0 }, style]}>
@@ -189,7 +187,7 @@ function DirectionLayer({
 }
 
 export interface TuneDirectionIconProps {
-  readonly direction: SharedValue<number>;
+  readonly direction: SharedValue<TuneGlyph>;
   readonly size?: IconSize;
   readonly color?: ColorToken;
 }
