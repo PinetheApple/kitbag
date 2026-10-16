@@ -1,0 +1,20 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "test": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/native/audio_core/include/**",
+        "$TURBO_ROOT$/native/audio_core/src/**"
+      ]
+    },
+    "generate:check": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/native/audio_core/include/**",
+        "$TURBO_ROOT$/native/audio_core/src/**"
+      ]
+    }
+  }
+}
