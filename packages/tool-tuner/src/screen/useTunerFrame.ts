@@ -3,7 +3,6 @@
 
 import { opacity, type TuneGlyph } from '@kitbag/core-design';
 import {
-  KB_TUNER_NO_NOTE,
   KB_TUNER_NO_STRING,
   KITBAG_HOST_OBJECT_KEY,
   type KitbagHostObject,
@@ -34,12 +33,9 @@ import {
   nextArmed,
   nextLatch,
 } from '../logic/lock.ts';
-import {
-  decayNeedle,
-  NO_DISPLAYED_CENTS,
-  smoothCents,
-} from '../logic/needle.ts';
+import { decayNeedle } from '../logic/needle.ts';
 import { noteName } from '../logic/notes.ts';
+import { nextReading, NO_READING } from '../logic/reading.ts';
 import {
   IDLE_CAPTION,
   needleFraction,
@@ -104,8 +100,7 @@ export function useTunerFrame({
   const locked = useSharedValue(false);
   const hearing = useSharedValue(false);
   const heardOnce = useSharedValue(false);
-  const displayedCents = useSharedValue(NO_DISPLAYED_CENTS);
-  const displayedMidi = useSharedValue(KB_TUNER_NO_NOTE);
+  const displayed = useSharedValue(NO_READING);
   const latestDiscrete = useSharedValue<TunerDiscrete>(QUIET_DISCRETE);
   const dwell = useSharedValue(dwellAt(QUIET_DISCRETE));
   const resetId = useSharedValue(Number.NEGATIVE_INFINITY);
@@ -141,29 +136,19 @@ export function useTunerFrame({
         const hop = readHop(host);
         lastId.value = hop.id;
 
+        const reading = nextReading(displayed.value, hop);
+        displayed.value = reading;
         if (isHeard(hop)) {
-          // A new target note starts the average over rather than mixing two
-          // notes' errors.
-          const cents = smoothCents(
-            hop.targetMidi === displayedMidi.value
-              ? displayedCents.value
-              : NO_DISPLAYED_CENTS,
-            hop.errorCents,
-          );
-          displayedCents.value = cents;
-          displayedMidi.value = hop.targetMidi;
           noteText.value = noteName(hop.targetMidi);
-          captionText.value = tunerCaption(hop.status, cents);
-          direction.value = tuneDirection(hop.status);
-          needleTarget.value = needleFraction(cents);
+          captionText.value = tunerCaption(reading.status, reading.cents);
+          direction.value = tuneDirection(reading.status);
+          needleTarget.value = needleFraction(reading.cents);
           detectedIndex.value = hop.currentString;
           active.value = 1;
           hearing.value = true;
           heardOnce.value = true;
         } else {
           // Silence clears the reading; the needle decays to centre below.
-          displayedCents.value = NO_DISPLAYED_CENTS;
-          displayedMidi.value = KB_TUNER_NO_NOTE;
           noteText.value = NO_NOTE_TEXT;
           captionText.value = idleCaption.value;
           direction.value = 'none';
@@ -180,7 +165,7 @@ export function useTunerFrame({
           scheduleOnRN(reportLock, next, hop.id);
         }
         latched.value = next;
-        latestDiscrete.value = discreteOf(hop);
+        latestDiscrete.value = discreteOf(hop, reading.status);
       }
 
       const current = dwell.value;
@@ -217,8 +202,7 @@ export function useTunerFrame({
       captionText,
       detectedIndex,
       direction,
-      displayedCents,
-      displayedMidi,
+      displayed,
       dwell,
       hearing,
       heardOnce,
@@ -266,8 +250,7 @@ export function useTunerFrame({
     locked.value = false;
     hearing.value = false;
     heardOnce.value = false;
-    displayedCents.value = NO_DISPLAYED_CENTS;
-    displayedMidi.value = KB_TUNER_NO_NOTE;
+    displayed.value = NO_READING;
     latestDiscrete.value = QUIET_DISCRETE;
     dwell.value = dwellAt(QUIET_DISCRETE);
     handlers.current.onReset();
@@ -279,8 +262,7 @@ export function useTunerFrame({
     captionText,
     detectedIndex,
     direction,
-    displayedCents,
-    displayedMidi,
+    displayed,
     dwell,
     hearing,
     heardOnce,
