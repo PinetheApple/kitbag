@@ -126,7 +126,9 @@ describe('library store', () => {
     const later = await s.createSetlist('Later');
     const gig = await s.createSetlist('Gig');
     const song = await s.newSongFromCurrent('Blackbird', gig);
+    const savedAccents = metronome.getState().accents;
     metronome.getState().setTempo(140);
+    metronome.getState().cycleAccent(1);
     metronome.getState().setBeats(4, 4);
     metronome.getState().cyclePolyAccent(1);
     metronome.getState().setSounds(0, 0);
@@ -140,6 +142,7 @@ describe('library store', () => {
       true,
       104,
     ]);
+    expect(m.accents).toEqual(savedAccents);
     expect(m.polyAccents).toEqual([
       KB_ACCENT.KB_ACCENT_ACCENTED,
       KB_ACCENT.KB_ACCENT_MUTED,
