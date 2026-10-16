@@ -1,8 +1,9 @@
 import { icons } from '@kitbag/core-design';
-import { KB_ACCENT } from '@kitbag/core-native';
+import { KB_ACCENT, KB_RAMP_UNIT } from '@kitbag/core-native';
 import type { SongPreset } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
+import { withRampUnit } from './rampUnit.ts';
 import {
   draftFrom,
   editFrom,
@@ -82,6 +83,26 @@ describe('preset draft', () => {
     expect(polyFour.polyAccents).toEqual([A, N, M, N]);
     expect(withCycledPolyAccent(polyFour, 2).polyAccents).toEqual([A, N, A, N]);
     expect(withNextDenominator(four).denominator).toBe(8);
+  });
+
+  it('keeps a ramp unit change through save and reload', () => {
+    const draft = draftFrom(PRESET);
+    const edited = {
+      ...draft,
+      ramp: withRampUnit(
+        { ...draft.ramp, duration: 3 },
+        KB_RAMP_UNIT.KB_RAMP_MINUTES,
+      ),
+    };
+    const reloaded = draftFrom({
+      ...PRESET,
+      ...editFrom(edited),
+    } as SongPreset);
+    expect(reloaded.ramp).toEqual({
+      ...draft.ramp,
+      duration: 3,
+      unit: KB_RAMP_UNIT.KB_RAMP_MINUTES,
+    });
   });
 
   it('never saves an empty name or blank notes', () => {
