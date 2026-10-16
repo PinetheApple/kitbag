@@ -6,14 +6,23 @@
 import type { TuneGlyph } from '@kitbag/core-design';
 import { KB_TUNING_STATUS } from '@kitbag/core-native';
 
-/** Cents at either end of the strip; beyond it the needle pins to the edge. */
-export const NEEDLE_FULL_SCALE_CENTS = 50;
+/** D1: the needle pins here, at NEEDLE_FULL_SCALE_TRAVEL of the half-width. */
+export const NEEDLE_FULL_SCALE_CENTS = 220;
+export const NEEDLE_FULL_SCALE_TRAVEL = 0.8;
 
-/** Cents error → needle position in [-1, 1]; 0 for a non-finite error. */
+/**
+ * D1: cents error → needle position, linear with no dead zone, within
+ * ±NEEDLE_FULL_SCALE_TRAVEL (inside TunerStrip's [-1, 1]); 0 for a non-finite
+ * error.
+ */
 export function needleFraction(cents: number): number {
   'worklet';
   if (!Number.isFinite(cents)) return 0;
-  return Math.min(1, Math.max(-1, cents / NEEDLE_FULL_SCALE_CENTS));
+  const pinned = Math.min(
+    NEEDLE_FULL_SCALE_CENTS,
+    Math.max(-NEEDLE_FULL_SCALE_CENTS, cents),
+  );
+  return (pinned / NEEDLE_FULL_SCALE_CENTS) * NEEDLE_FULL_SCALE_TRAVEL;
 }
 
 const MINUS = '−';

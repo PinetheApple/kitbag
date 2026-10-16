@@ -3,6 +3,7 @@
 
 import { opacity, type TuneGlyph } from '@kitbag/core-design';
 import {
+  KB_TUNER_NO_NOTE,
   KB_TUNER_NO_STRING,
   KITBAG_HOST_OBJECT_KEY,
   type KitbagHostObject,
@@ -33,6 +34,11 @@ import {
   nextArmed,
   nextLatch,
 } from '../logic/lock.ts';
+import {
+  decayNeedle,
+  NO_DISPLAYED_CENTS,
+  smoothCents,
+} from '../logic/needle.ts';
 import { noteName } from '../logic/notes.ts';
 import {
   IDLE_CAPTION,
@@ -65,7 +71,7 @@ export interface TunerFrameOptions {
 export interface TunerFrameValues {
   /** Needle position in [-1, 1]. */
   readonly needle: SharedValue<number>;
-  /** Needle opacity: 1 hearing, muted while holding the last note, 0 before any. */
+  /** Needle opacity: 1 hearing, muted once a note has gone, 0 before any. */
   readonly active: SharedValue<number>;
   readonly detectedIndex: SharedValue<number>;
   readonly noteText: SharedValue<string>;
@@ -88,6 +94,7 @@ export function useTunerFrame({
   const active = useSharedValue(0);
   const detectedIndex = useSharedValue(KB_TUNER_NO_STRING);
   const noteText = useSharedValue(NO_NOTE_TEXT);
+  const idleCaption = useSharedValue<string>(IDLE_CAPTION.strings);
   const captionText = useSharedValue<string>(IDLE_CAPTION.strings);
   const direction = useSharedValue<TuneGlyph>('none');
 
@@ -95,7 +102,10 @@ export function useTunerFrame({
   const lastId = useSharedValue(Number.NaN);
   const latched = useSharedValue(KB_TUNER_NO_STRING);
   const locked = useSharedValue(false);
-  const holding = useSharedValue(false);
+  const hearing = useSharedValue(false);
+  const heardOnce = useSharedValue(false);
+  const displayedCents = useSharedValue(NO_DISPLAYED_CENTS);
+  const displayedMidi = useSharedValue(KB_TUNER_NO_NOTE);
   const latestDiscrete = useSharedValue<TunerDiscrete>(QUIET_DISCRETE);
   const dwell = useSharedValue(dwellAt(QUIET_DISCRETE));
   const resetId = useSharedValue(Number.NEGATIVE_INFINITY);
@@ -132,18 +142,35 @@ export function useTunerFrame({
         lastId.value = hop.id;
 
         if (isHeard(hop)) {
+          // A new target note starts the average over rather than mixing two
+          // notes' errors.
+          const cents = smoothCents(
+            hop.targetMidi === displayedMidi.value
+              ? displayedCents.value
+              : NO_DISPLAYED_CENTS,
+            hop.errorCents,
+          );
+          displayedCents.value = cents;
+          displayedMidi.value = hop.targetMidi;
           noteText.value = noteName(hop.targetMidi);
-          captionText.value = tunerCaption(hop.status, hop.errorCents);
+          captionText.value = tunerCaption(hop.status, cents);
           direction.value = tuneDirection(hop.status);
-          needleTarget.value = needleFraction(hop.errorCents);
+          needleTarget.value = needleFraction(cents);
           detectedIndex.value = hop.currentString;
           active.value = 1;
-          holding.value = true;
+          hearing.value = true;
+          heardOnce.value = true;
         } else {
-          // Hold after decay: the last note, caption and needle stay, dimmed,
-          // until a new note or a reset.
+          // Silence clears the reading; the needle decays to centre below.
+          displayedCents.value = NO_DISPLAYED_CENTS;
+          displayedMidi.value = KB_TUNER_NO_NOTE;
+          noteText.value = NO_NOTE_TEXT;
+          captionText.value = idleCaption.value;
+          direction.value = 'none';
+          needleTarget.value = 0;
           detectedIndex.value = KB_TUNER_NO_STRING;
-          active.value = holding.value ? opacity.muted : 0;
+          active.value = heardOnce.value ? opacity.muted : 0;
+          hearing.value = false;
         }
 
         locked.value = isLocked(hop);
@@ -169,16 +196,19 @@ export function useTunerFrame({
         dwell.value = settled;
       }
 
+      const elapsedMs = info.timeSincePreviousFrame ?? 0;
       if (locked.value) {
         needleTarget.value = 0;
         needle.value = 0;
-      } else {
+      } else if (hearing.value) {
         needle.value = followNeedle(
           needle.value,
           needleTarget.value,
-          info.timeSincePreviousFrame ?? 0,
+          elapsedMs,
           still.value,
         );
+      } else {
+        needle.value = decayNeedle(needle.value, elapsedMs, still.value);
       }
     },
     [
@@ -187,8 +217,12 @@ export function useTunerFrame({
       captionText,
       detectedIndex,
       direction,
+      displayedCents,
+      displayedMidi,
       dwell,
-      holding,
+      hearing,
+      heardOnce,
+      idleCaption,
       lastId,
       latched,
       latestDiscrete,
@@ -222,14 +256,18 @@ export function useTunerFrame({
     active.value = 0;
     detectedIndex.value = KB_TUNER_NO_STRING;
     noteText.value = NO_NOTE_TEXT;
-    captionText.value = chromatic
+    idleCaption.value = chromatic
       ? IDLE_CAPTION.chromatic
       : IDLE_CAPTION.strings;
+    captionText.value = idleCaption.value;
     direction.value = 'none';
     lastId.value = Number.NaN;
     latched.value = KB_TUNER_NO_STRING;
     locked.value = false;
-    holding.value = false;
+    hearing.value = false;
+    heardOnce.value = false;
+    displayedCents.value = NO_DISPLAYED_CENTS;
+    displayedMidi.value = KB_TUNER_NO_NOTE;
     latestDiscrete.value = QUIET_DISCRETE;
     dwell.value = dwellAt(QUIET_DISCRETE);
     handlers.current.onReset();
@@ -241,8 +279,12 @@ export function useTunerFrame({
     captionText,
     detectedIndex,
     direction,
+    displayedCents,
+    displayedMidi,
     dwell,
-    holding,
+    hearing,
+    heardOnce,
+    idleCaption,
     lastId,
     latched,
     latestDiscrete,

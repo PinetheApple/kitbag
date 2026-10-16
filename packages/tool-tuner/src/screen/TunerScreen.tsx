@@ -8,7 +8,7 @@ import {
   TuneDirectionIcon,
   TunerStrip,
 } from '@kitbag/core-design';
-import { confirmHaptic, KB_TUNER_NO_NOTE } from '@kitbag/core-native';
+import { confirmHaptic } from '@kitbag/core-native';
 import {
   tuningFromCustom,
   useTuner,
@@ -68,18 +68,6 @@ interface Editing {
   readonly id?: number;
 }
 
-/** What React knows about the reading: human-speed only (§13.3). */
-interface Reading {
-  readonly discrete: TunerDiscrete;
-  /** The last note heard, kept over silence for the screen reader too. */
-  readonly heldMidi: number;
-}
-
-const QUIET_READING: Reading = {
-  discrete: QUIET_DISCRETE,
-  heldMidi: KB_TUNER_NO_NOTE,
-};
-
 export interface ShellMeasuredInsets {
   readonly top: number;
   readonly bottom: number;
@@ -122,7 +110,8 @@ export function TunerScreen({ insets, a4Range, onBack }: TunerScreenProps) {
   const chromatic = mode.kind === 'chromatic';
   const lockedIndex = mode.kind === 'manual' ? mode.string : null;
 
-  const [reading, setReading] = useState<Reading>(QUIET_READING);
+  // What React knows about the reading: human-speed only (§13.3).
+  const [discrete, setDiscrete] = useState<TunerDiscrete>(QUIET_DISCRETE);
   const [sheet, setSheet] = useState<Sheet>('none');
   const [editing, setEditing] = useState<Editing>(() => ({
     draft: draftFrom(DEFAULT_TUNING, ''),
@@ -136,14 +125,8 @@ export function TunerScreen({ insets, a4Range, onBack }: TunerScreenProps) {
     [markTuned],
   );
 
-  const handleDiscrete = useCallback((discrete: TunerDiscrete) => {
-    setReading((previous) => ({
-      discrete,
-      heldMidi: discrete.heard ? discrete.targetMidi : previous.heldMidi,
-    }));
-  }, []);
   const handleReset = useCallback(() => {
-    setReading(QUIET_READING);
+    setDiscrete(QUIET_DISCRETE);
   }, []);
 
   // What the engine measures against; a rename changes none of it.
@@ -155,7 +138,7 @@ export function TunerScreen({ insets, a4Range, onBack }: TunerScreenProps) {
       resetKey,
       chromatic,
       onLocked: handleLocked,
-      onDiscrete: handleDiscrete,
+      onDiscrete: setDiscrete,
       onReset: handleReset,
     });
 
@@ -169,16 +152,13 @@ export function TunerScreen({ insets, a4Range, onBack }: TunerScreenProps) {
     mic,
     mode: mode.kind,
     notes: tuning.notes,
-    discrete: reading.discrete,
+    discrete,
   });
 
-  const heard = reading.discrete.heard;
-  const readoutLabel =
-    reading.heldMidi === KB_TUNER_NO_NOTE
-      ? 'No note'
-      : heard
-        ? `${spokenNoteName(reading.heldMidi)}. ${statusSpeech(reading.discrete.status)}`
-        : `Last note ${spokenNoteName(reading.heldMidi)}`;
+  const heard = discrete.heard;
+  const readoutLabel = heard
+    ? `${spokenNoteName(discrete.targetMidi)}. ${statusSpeech(discrete.status)}`
+    : 'No note';
 
   const a4 = effectiveA4(a4Hz, a4Range);
 

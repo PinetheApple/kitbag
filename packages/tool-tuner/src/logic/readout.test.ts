@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   NEEDLE_FULL_SCALE_CENTS,
+  NEEDLE_FULL_SCALE_TRAVEL,
   needleFraction,
   statusSpeech,
   tuneDirection,
@@ -17,18 +18,24 @@ const {
 } = KB_TUNING_STATUS;
 
 describe('needleFraction', () => {
-  it('maps ±50 cents to the strip ends', () => {
-    expect(NEEDLE_FULL_SCALE_CENTS).toBe(50);
+  it('is linear in cents with ±220 c at 80 % of the half-width', () => {
+    expect(NEEDLE_FULL_SCALE_CENTS).toBe(220);
+    expect(NEEDLE_FULL_SCALE_TRAVEL).toBe(0.8);
     expect(needleFraction(0)).toBe(0);
-    expect(needleFraction(-50)).toBe(-1);
-    expect(needleFraction(25)).toBe(0.5);
-    expect(needleFraction(-4)).toBeCloseTo(-0.08);
+    expect(needleFraction(220)).toBeCloseTo(0.8, 12);
+    expect(needleFraction(-220)).toBeCloseTo(-0.8, 12);
+    expect(needleFraction(-50)).toBeCloseTo(-0.18, 2);
   });
 
-  it('pins past full scale instead of leaving the strip', () => {
-    expect(needleFraction(51)).toBe(1);
-    expect(needleFraction(400)).toBe(1);
-    expect(needleFraction(-1200)).toBe(-1);
+  it('moves visibly for a slightly-out string: no dead zone', () => {
+    expect(needleFraction(7)).toBeCloseTo(0.025, 3);
+    expect(needleFraction(1)).toBeGreaterThan(0);
+    expect(needleFraction(-1)).toBeLessThan(0);
+  });
+
+  it('pins at 80 % past full scale, inside the strip contract', () => {
+    expect(needleFraction(500)).toBeCloseTo(0.8, 12);
+    expect(needleFraction(-1200)).toBeCloseTo(-0.8, 12);
   });
 
   it('parks on the centre line for a missing reading', () => {
