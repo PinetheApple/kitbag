@@ -1,25 +1,20 @@
-// SPEC §14 acceptance for core-db: an upgrading user keeps their setlists.
-//
-// Runs the real v6→v7 migration (./migrate.ts) against a fixture database built
-// to the shape Drift persisted at schema v6 (see legacy/db/database.dart), then
-// asserts the setlist→song membership survives. The final test is a sabotage
-// check: it removes the membership-preserving step from the migration and
-// proves the SAME guarantee assertion then fails — so a green run means the
-// data survived, not that the assertion is asleep.
-//
-// Headless: uses node:sqlite as a stand-in driver. The migration is plain
-// SQLite, so what runs here is byte-for-byte what op-sqlite runs on device.
-
 import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
 
 import {
   MIGRATE_V6_TO_V7,
+  MIGRATE_V7_TO_V8,
+  MIGRATE_V8_TO_V9,
+  MIGRATE_V9_TO_V10,
   migrate,
   SCHEMA_VERSION,
   V6_SCHEMA_VERSION,
-  type MigrationDriver,
+  V7_SCHEMA_VERSION,
+  V8_SCHEMA_VERSION,
+  V9_SCHEMA_VERSION,
+  V10_SCHEMA_VERSION,
 } from './migrate';
+import { nodeSqliteDriver } from './sqlite.test-helper';
 
 interface Membership {
   setlist_id: number;
@@ -34,19 +29,9 @@ interface NameRow {
 
 interface ColumnRow {
   name: string;
+  type: string;
 }
 
-interface CountRow {
-  n: number;
-}
-
-interface VersionRow {
-  user_version: number;
-}
-
-// The v6 on-disk schema (Drift-emitted, snake_case). Only the tables the
-// migration touches are needed; the fixture data below exercises setlists,
-// their presets, the library table (renamed to `songs`), and a tuning.
 const V6_DDL: readonly string[] = [
   `CREATE TABLE setlists (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)`,
   `CREATE TABLE songs (
@@ -78,10 +63,30 @@ const V6_DDL: readonly string[] = [
      waveform_path TEXT
    )`,
   `CREATE TABLE stem_sets (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, created_at INTEGER NOT NULL)`,
+  `CREATE TABLE stems (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     stem_set_id INTEGER NOT NULL REFERENCES stem_sets (id) ON DELETE CASCADE,
+     role TEXT NOT NULL,
+     file_path TEXT NOT NULL,
+     duration REAL NOT NULL,
+     format TEXT NOT NULL,
+     channel_count INTEGER NOT NULL,
+     sample_rate INTEGER NOT NULL,
+     gain REAL NOT NULL,
+     muted INTEGER NOT NULL,
+     soloed INTEGER NOT NULL,
+     sort_order INTEGER NOT NULL
+   )`,
+  `CREATE TABLE practice_sessions (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     start_time INTEGER NOT NULL,
+     duration_seconds INTEGER NOT NULL,
+     avg_bpm REAL NOT NULL,
+     setlist_id INTEGER REFERENCES setlists (id) ON DELETE SET NULL,
+     songs_played TEXT
+   )`,
 ];
 
-// Two setlists; the second shares presets with the first's ordering scheme.
-// Numbers live inside SQL strings deliberately — fixture data, not logic.
 const V6_DATA: readonly string[] = [
   `INSERT INTO setlists (id, name) VALUES (1, 'Friday Set'), (2, 'Acoustic Set')`,
   `INSERT INTO songs
@@ -89,210 +94,349 @@ const V6_DATA: readonly string[] = [
    VALUES
      (1, 0, 'Opener', 128.0, 4, 1, X'03010101', 0, 0, 0, 1.0, 0.0),
      (1, 1, 'Bridge', 92.0, 3, 2, X'030101', 1, 5, 2, 0.8, -12.0),
-     (2, 0, 'Ballad', 72.0, 4, 1, X'03010101', 0, 0, 1, 1.0, 5.0)`,
+     (2, 0, 'Ballad', 72.0, 4, 1, X'03010101', 0, 0, 1, 1.0, 5.0),
+     (2, 1, 'Out of range', 500.0, 20, 1, X'0201', 1, 40, 9, 1.0, 0.0)`,
   `INSERT INTO tunings (name, notes) VALUES ('Drop D', X'26292E33383D')`,
+  `INSERT INTO practice_sessions (start_time, duration_seconds, avg_bpm, setlist_id)
+   VALUES (1700000000, 600, 120.0, 1), (1700000000, 300, 90.0, NULL)`,
   `INSERT INTO library_songs (title, artist, file_path, duration, format, created_at, bpm)
    VALUES ('Reference', 'Someone', 'music/ref.flac', 210.5, 'flac', 1700000000, 128.0)`,
 ];
 
-// node:sqlite types rows as `Record<string, SQLOutputValue>`; these return
-// `unknown` so each call site casts to the shape its query produces (the driver
-// cannot know the column types).
-function rows(db: DatabaseSync, sql: string): unknown[] {
-  return db.prepare(sql).all();
+function rows<T>(db: DatabaseSync, sql: string): T[] {
+  return db.prepare(sql).all() as T[];
 }
 
-function firstRow(db: DatabaseSync, sql: string): unknown {
-  return db.prepare(sql).get();
+function pragma(db: DatabaseSync, name: string): unknown {
+  return db.prepare(`PRAGMA ${name}`).get()?.[name];
 }
 
 function buildV6Fixture(): DatabaseSync {
   const db = new DatabaseSync(':memory:');
-  for (const stmt of [...V6_DDL, ...V6_DATA]) {
-    db.exec(stmt);
-  }
+  for (const statement of [...V6_DDL, ...V6_DATA]) db.exec(statement);
   db.exec(`PRAGMA user_version = ${String(V6_SCHEMA_VERSION)}`);
   return db;
 }
 
-function driverFor(db: DatabaseSync): MigrationDriver {
+function applyInTransaction(db: DatabaseSync, statements: readonly string[]) {
+  db.exec('PRAGMA foreign_keys = OFF');
+  db.exec('BEGIN');
+  for (const statement of statements) db.exec(statement);
+  db.exec('COMMIT');
+}
+
+function buildV7Fixture(): DatabaseSync {
+  const db = buildV6Fixture();
+  applyInTransaction(db, MIGRATE_V6_TO_V7);
+  db.exec(`PRAGMA user_version = ${String(V7_SCHEMA_VERSION)}`);
+  return db;
+}
+
+function buildV8Fixture(): DatabaseSync {
+  const db = buildV7Fixture();
+  applyInTransaction(db, MIGRATE_V7_TO_V8);
+  db.exec(`PRAGMA user_version = ${String(V8_SCHEMA_VERSION)}`);
+  return db;
+}
+
+function buildV9Fixture(): DatabaseSync {
+  const db = buildV8Fixture();
+  applyInTransaction(db, MIGRATE_V8_TO_V9);
+  db.exec(`PRAGMA user_version = ${String(V9_SCHEMA_VERSION)}`);
+  return db;
+}
+
+function buildV10Fixture(): DatabaseSync {
+  const db = buildV9Fixture();
+  applyInTransaction(db, MIGRATE_V9_TO_V10);
+  db.exec(`PRAGMA user_version = ${String(V10_SCHEMA_VERSION)}`);
+  return db;
+}
+
+const readV6Membership = (db: DatabaseSync) =>
+  rows<Membership>(
+    db,
+    'SELECT setlist_id, id AS song_preset_id, position FROM songs ORDER BY setlist_id, position',
+  );
+
+const readMembership = (db: DatabaseSync) =>
+  rows<Membership>(
+    db,
+    'SELECT setlist_id, song_preset_id, position FROM setlist_items ORDER BY setlist_id, position',
+  );
+
+const readSetlistNames = (db: DatabaseSync) =>
+  rows<NameRow>(db, 'SELECT id, name FROM setlists ORDER BY id');
+
+const tableNames = (db: DatabaseSync) =>
+  rows<{ name: string }>(
+    db,
+    "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
+  ).map((row) => row.name);
+
+const columnNames = (db: DatabaseSync, table: string) =>
+  rows<ColumnRow>(db, `PRAGMA table_info(${table})`).map((row) => row.name);
+
+function shape(db: DatabaseSync) {
   return {
-    exec: (sql) => {
-      db.exec(sql);
-    },
-    getUserVersion: () =>
-      (firstRow(db, 'PRAGMA user_version') as VersionRow).user_version,
-    setUserVersion: (version) => {
-      db.exec(`PRAGMA user_version = ${String(version)}`);
-    },
+    tables: Object.fromEntries(
+      tableNames(db).map((table) => [
+        table,
+        rows<ColumnRow>(db, `PRAGMA table_info(${table})`)
+          .map(({ name, type }) => `${name} ${type}`)
+          .sort(),
+      ]),
+    ),
+    indexes: rows<{ name: string; sql: string }>(
+      db,
+      "SELECT name, sql FROM sqlite_master WHERE type = 'index' AND sql IS NOT NULL ORDER BY name",
+    ),
   };
 }
 
-/** Setlist membership as recorded in v6's `songs` table (before migration). */
-function readV6Membership(db: DatabaseSync): Membership[] {
-  return rows(
-    db,
-    'SELECT setlist_id, id AS song_preset_id, position FROM songs ORDER BY setlist_id, position',
-  ) as Membership[];
-}
-
-/** Setlist membership as recorded in v7's `setlist_items` table (after migration). */
-function readV7Membership(db: DatabaseSync): Membership[] {
-  return rows(
-    db,
-    'SELECT setlist_id, song_preset_id, position FROM setlist_items ORDER BY setlist_id, position',
-  ) as Membership[];
-}
-
-function readSetlistNames(db: DatabaseSync): NameRow[] {
-  return rows(db, 'SELECT id, name FROM setlists ORDER BY id') as NameRow[];
-}
-
-/**
- * The SPEC §14 guarantee, as a single assertion so the sabotage test can prove
- * it bites: every v6 setlist row still exists with its name, and every song's
- * setlist membership survived the split into `setlist_items`.
- */
 function assertSetlistsPreserved(
   db: DatabaseSync,
   beforeNames: NameRow[],
   beforeMembership: Membership[],
 ): void {
   expect(readSetlistNames(db)).toEqual(beforeNames);
-  expect(readV7Membership(db)).toEqual(beforeMembership);
+  expect(readMembership(db)).toEqual(beforeMembership);
 }
 
-/** Run statements the way `migrate()` does, so a sabotaged list is a fair test. */
-function applyInTransaction(
-  db: DatabaseSync,
-  statements: readonly string[],
-): void {
-  db.exec('PRAGMA foreign_keys = OFF');
-  db.exec('BEGIN');
-  for (const stmt of statements) {
-    db.exec(stmt);
-  }
-  db.exec('COMMIT');
-  db.exec('PRAGMA foreign_keys = ON');
-}
-
-describe('v6 → v7 migration', () => {
-  it('preserves setlists and their song membership', () => {
+describe('migrate', () => {
+  it('preserves v6 setlists and their song membership', () => {
     const db = buildV6Fixture();
     const beforeNames = readSetlistNames(db);
     const beforeMembership = readV6Membership(db);
-
-    migrate(driverFor(db));
-
-    // The core guarantee (SPEC §11.1, §14).
+    migrate(nodeSqliteDriver(db));
     assertSetlistsPreserved(db, beforeNames, beforeMembership);
-
-    // Version advanced and FK enforcement restored.
-    expect(
-      (firstRow(db, 'PRAGMA user_version') as VersionRow).user_version,
-    ).toBe(SCHEMA_VERSION);
-    expect(
-      (firstRow(db, 'PRAGMA foreign_keys') as { foreign_keys: number })
-        .foreign_keys,
-    ).toBe(1);
-
-    db.close();
+    expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
+    expect(pragma(db, 'foreign_keys')).toBe(1);
   });
 
-  it('applies the §11.2 shape changes (rename, D3 drop, new tables)', () => {
+  it('applies the v6 shape changes', () => {
     const db = buildV6Fixture();
-    migrate(driverFor(db));
+    migrate(nodeSqliteDriver(db));
+    const tables = tableNames(db);
+    expect(tables).toEqual(
+      expect.arrayContaining([
+        'songs',
+        'song_presets',
+        'setlist_items',
+        'subdivision_accents',
+        'bpm_cache',
+        'route_latency',
+      ]),
+    );
+    expect(tables).not.toContain('library_songs');
+    expect(tables).not.toContain('song_presets_v6');
+    const presetColumns = columnNames(db, 'song_presets');
+    expect(presetColumns).toEqual(
+      expect.arrayContaining(['denominator', 'library_song_id']),
+    );
+    for (const dropped of ['volume', 'latency_offset', 'setlist_id'])
+      expect(presetColumns).not.toContain(dropped);
+    expect(columnNames(db, 'songs')).toContain('downbeat_indices');
+  });
 
-    const tableNames = (
-      rows(
-        db,
-        "SELECT name FROM sqlite_master WHERE type = 'table'",
-      ) as ColumnRow[]
-    ).map((row) => row.name);
-    for (const expected of [
-      'songs',
-      'song_presets',
-      'setlist_items',
-      'subdivision_accents',
-      'bpm_cache',
-      'route_latency',
-    ]) {
-      expect(tableNames).toContain(expected);
-    }
-    // v6 names are gone: library became `songs`, presets rebuilt, temp dropped.
-    expect(tableNames).not.toContain('library_songs');
-    expect(tableNames).not.toContain('song_presets_v6');
-
-    const presetColumns = (
-      rows(db, 'PRAGMA table_info(song_presets)') as ColumnRow[]
-    ).map((row) => row.name);
-    expect(presetColumns).toContain('denominator'); // D1
-    expect(presetColumns).toContain('library_song_id'); // D4
-    expect(presetColumns).not.toContain('volume'); // D3
-    expect(presetColumns).not.toContain('latency_offset'); // D3
-    expect(presetColumns).not.toContain('setlist_id'); // decoupled
-
-    const songColumns = (
-      rows(db, 'PRAGMA table_info(songs)') as ColumnRow[]
-    ).map((row) => row.name);
-    expect(songColumns).toContain('downbeat_indices'); // §4.3
-
-    // Every exportable row got a backfilled UUID (§12.4) — none left null.
+  it('backfills a uuid on every exportable v6 row', () => {
+    const db = buildV6Fixture();
+    migrate(nodeSqliteDriver(db));
     for (const table of [
       'setlists',
       'songs',
       'song_presets',
       'tunings',
       'stem_sets',
-    ]) {
-      const nullCount = (
-        firstRow(
-          db,
-          `SELECT count(*) AS n FROM ${table} WHERE uuid IS NULL`,
-        ) as CountRow
-      ).n;
-      expect(nullCount).toBe(0);
-    }
-
-    db.close();
+      'practice_sessions',
+    ])
+      expect(
+        rows(db, `SELECT id FROM ${table} WHERE uuid IS NULL`),
+      ).toHaveLength(0);
   });
 
-  it('is a no-op on an already-current database', () => {
+  it.each([
+    ['v6', buildV6Fixture],
+    ['v7', buildV7Fixture],
+    ['v8', buildV8Fixture],
+    ['v9', buildV9Fixture],
+    ['v10', buildV10Fixture],
+  ])(
+    'builds the same tables, column types and indexes fresh as from %s',
+    (_from, build) => {
+      const fresh = new DatabaseSync(':memory:');
+      migrate(nodeSqliteDriver(fresh));
+      const migrated = build();
+      migrate(nodeSqliteDriver(migrated));
+      expect(shape(migrated)).toEqual(shape(fresh));
+      expect(shape(fresh).indexes.map((index) => index.name)).toContain(
+        'setlists_one_active',
+      );
+    },
+  );
+
+  it('upgrades a v7 database with data, keeping every setlist inactive', () => {
+    const db = buildV7Fixture();
+    const beforeNames = readSetlistNames(db);
+    const beforeMembership = readMembership(db);
+    migrate(nodeSqliteDriver(db));
+    assertSetlistsPreserved(db, beforeNames, beforeMembership);
+    expect(rows(db, 'SELECT id FROM setlists WHERE active != 0')).toEqual([]);
+    expect(columnNames(db, 'song_presets')).toContain('poly_accents');
+    expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
+  });
+
+  it('upgrades a v8 database, giving each practice session a distinct uuid', () => {
+    const db = buildV8Fixture();
+    const before = rows(
+      db,
+      'SELECT id, start_time, avg_bpm FROM practice_sessions ORDER BY id',
+    );
+    migrate(nodeSqliteDriver(db));
+    expect(
+      rows(
+        db,
+        'SELECT id, start_time, avg_bpm FROM practice_sessions ORDER BY id',
+      ),
+    ).toEqual(before);
+    const uuids = rows<{ uuid: string }>(
+      db,
+      'SELECT uuid FROM practice_sessions',
+    ).map((row) => row.uuid);
+    expect(new Set(uuids).size).toBe(before.length);
+    expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
+  });
+
+  it('upgrades a v9 database, reading every existing tuning as guitar', () => {
+    const db = buildV9Fixture();
+    expect(columnNames(db, 'tunings')).not.toContain('instrument');
+    const before = rows(db, 'SELECT id, name, notes, uuid FROM tunings');
+    migrate(nodeSqliteDriver(db));
+    expect(rows(db, 'SELECT id, name, notes, uuid FROM tunings')).toEqual(
+      before,
+    );
+    expect(rows(db, 'SELECT name, instrument FROM tunings')).toEqual([
+      { name: 'Drop D', instrument: 0 },
+    ]);
+    expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
+  });
+
+  it('upgrades a v10 database, keeping its rows and adding empty preferences', () => {
+    const db = buildV10Fixture();
+    expect(tableNames(db)).not.toContain('preferences');
+    const before = rows(db, 'SELECT * FROM tunings ORDER BY id');
+    migrate(nodeSqliteDriver(db));
+    expect(rows(db, 'SELECT * FROM tunings ORDER BY id')).toEqual(before);
+    expect(rows(db, 'SELECT * FROM preferences')).toEqual([]);
+    expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
+  });
+
+  it('drops v9 tunings the tuner could never load', () => {
+    const db = buildV9Fixture();
+    db.exec(`INSERT INTO tunings (name, notes, uuid) VALUES
+      ('Unstrung', X'', 'a'),
+      ('Thirteen', X'${'28'.repeat(13)}', 'b'),
+      ('Out of range', X'2880', 'c'),
+      ('Twelve', X'${'7F'.repeat(12)}', 'd')`);
+    migrate(nodeSqliteDriver(db));
+    expect(
+      rows<{ name: string }>(db, 'SELECT name FROM tunings ORDER BY id').map(
+        (row) => row.name,
+      ),
+    ).toEqual(['Drop D', 'Twelve']);
+  });
+
+  it('gives a fresh database a non-null tunings.instrument defaulting to guitar', () => {
+    const db = new DatabaseSync(':memory:');
+    migrate(nodeSqliteDriver(db));
+    db.exec("INSERT INTO tunings (name, notes, uuid) VALUES ('A', X'28', 'a')");
+    expect(rows(db, 'SELECT instrument FROM tunings')).toEqual([
+      { instrument: 0 },
+    ]);
+    expect(() => {
+      db.exec(
+        "INSERT INTO tunings (name, notes, uuid, instrument) VALUES ('B', X'28', 'b', NULL)",
+      );
+    }).toThrow();
+  });
+
+  it('repairs v6 presets the engine would refuse, keeping their meaning', () => {
     const db = buildV6Fixture();
-    migrate(driverFor(db));
-    const membership = readV7Membership(db);
-
-    // Second run: version is already current, nothing changes.
-    migrate(driverFor(db));
-    expect(readV7Membership(db)).toEqual(membership);
-
-    db.close();
+    migrate(nodeSqliteDriver(db));
+    const presets = rows(
+      db,
+      "SELECT name || ' ' || bpm || ' ' || beats_per_bar || ' ' || sound || ' ' || poly_beats || ' ' || hex(accents) AS row FROM song_presets ORDER BY id",
+    );
+    expect(presets.map((preset) => (preset as { row: string }).row)).toEqual([
+      'Opener 128.0 4 0 0 01010101',
+      'Bridge 92.0 3 2 5 010101',
+      'Ballad 72.0 4 1 0 01010101',
+      `Out of range 400.0 16 5 16 0201${'01'.repeat(14)}`,
+    ]);
   });
 
-  // SABOTAGE: strip the step that carries setlist membership into `setlist_items`
-  // and prove the guarantee assertion FAILS. If this test's `toThrow` did not
-  // fire, the passing test above would be worthless.
+  it('refuses a practice session without a uuid on insert and update', () => {
+    const db = new DatabaseSync(':memory:');
+    migrate(nodeSqliteDriver(db));
+    const insert = (uuid: string | null) =>
+      db
+        .prepare(
+          'INSERT INTO practice_sessions (start_time, duration_seconds, avg_bpm, uuid) VALUES (1, 1, 100, ?)',
+        )
+        .run(uuid);
+    expect(() => insert(null)).toThrow('practice_sessions.uuid is required');
+    insert(crypto.randomUUID());
+    expect(() => {
+      db.exec('UPDATE practice_sessions SET uuid = NULL');
+    }).toThrow('practice_sessions.uuid is required');
+  });
+
+  it('rolls the whole v6 upgrade back when a later step fails', () => {
+    const db = buildV6Fixture();
+    db.exec('CREATE TABLE setlists_one_active_blocker (id INTEGER)');
+    db.exec(
+      'CREATE INDEX setlists_one_active ON setlists_one_active_blocker (id)',
+    );
+    expect(() => {
+      migrate(nodeSqliteDriver(db));
+    }).toThrow();
+    expect(tableNames(db)).toContain('library_songs');
+    expect(tableNames(db)).not.toContain('setlist_items');
+    expect(pragma(db, 'user_version')).toBe(V6_SCHEMA_VERSION);
+  });
+
+  it('is a no-op on a current database but still enables foreign keys', () => {
+    const db = buildV6Fixture();
+    migrate(nodeSqliteDriver(db));
+    const membership = readMembership(db);
+    db.exec('PRAGMA foreign_keys = OFF');
+    migrate(nodeSqliteDriver(db));
+    expect(readMembership(db)).toEqual(membership);
+    expect(pragma(db, 'foreign_keys')).toBe(1);
+  });
+
   it('sabotage: dropping the membership step makes the guarantee fail', () => {
     const db = buildV6Fixture();
     const beforeNames = readSetlistNames(db);
     const beforeMembership = readV6Membership(db);
-
     const sabotaged = MIGRATE_V6_TO_V7.filter(
-      (stmt) => !stmt.startsWith('INSERT INTO setlist_items'),
+      (statement) => !statement.startsWith('INSERT INTO setlist_items'),
     );
-    // Sanity: the sabotage actually removed exactly the membership step.
-    expect(sabotaged.length).toBe(MIGRATE_V6_TO_V7.length - 1);
-
+    expect(sabotaged).toHaveLength(MIGRATE_V6_TO_V7.length - 1);
     applyInTransaction(db, sabotaged);
-
-    // Setlists themselves still exist...
     expect(readSetlistNames(db)).toEqual(beforeNames);
-    // ...but their membership was lost, so the guarantee assertion must throw.
     expect(() => {
       assertSetlistsPreserved(db, beforeNames, beforeMembership);
     }).toThrow();
-    expect(readV7Membership(db)).toEqual([]);
+  });
 
-    db.close();
+  it('allows at most one active setlist on a fresh database', () => {
+    const db = new DatabaseSync(':memory:');
+    migrate(nodeSqliteDriver(db));
+    expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
+    db.exec("INSERT INTO setlists (name, uuid, active) VALUES ('A', 'a', 1)");
+    expect(() => {
+      db.exec("INSERT INTO setlists (name, uuid, active) VALUES ('B', 'b', 1)");
+    }).toThrow();
   });
 });

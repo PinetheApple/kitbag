@@ -32,6 +32,10 @@ const sources: NativeSources = {
   mixerHeader: read('src', 'mixer', 'mixer.h'),
   metronomeHeader: read('src', 'metronome', 'metronome.h'),
   metronomeRender: read('src', 'metronome', 'metronome_render.cpp'),
+  tuningModeHeader: read('src', 'tuner', 'tuning_mode.h'),
+  tunerImplHeader: read('src', 'tuner', 'tuner.h'),
+  tempoRampHeader: read('src', 'metronome', 'tempo_ramp.h'),
+  metronomeTypesHeader: read('src', 'metronome', 'metronome_types.h'),
 };
 
 const rendered = renderConstants(collectConstants(sources));

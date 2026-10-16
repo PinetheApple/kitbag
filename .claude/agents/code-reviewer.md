@@ -72,7 +72,8 @@ config wins; you cover only what the config cannot check.
    that describes *intent as behaviour* (claims the code does X when it does Y) is
    worse: it is the §2 failure mode and it is a **Revise**. Good comments state a
    constraint the code cannot show (an ordering reason, an epsilon's purpose). Judge
-   density against the surrounding file, not an absolute.
+   in absolute terms, not against the surrounding file: the default is zero
+   comments, and any removable comment is **blocking**, not a nit.
    **Stating a real constraint is not sufficient** — run `CONTRIBUTING.md`'s three
    checks on it. A comment earns its place only if the why is not already written at
    the definition, is not patching a signature a rename or a unit-carrying parameter

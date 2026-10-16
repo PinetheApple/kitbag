@@ -372,9 +372,29 @@ export default tseslint.config(
     },
   },
 
+  // Worklet function declarations are not hoisted, so a worklet calling one
+  // declared below it throws at module load.
+  {
+    files: [
+      'packages/tool-metronome/src/**',
+      'packages/tool-tuner/src/**',
+      'packages/core-design/src/**',
+    ],
+    rules: {
+      '@typescript-eslint/no-use-before-define': [
+        'error',
+        { functions: true, variables: true, classes: true },
+      ],
+    },
+  },
+
   // --- config / test relaxations -------------------------------------------
   {
-    files: ['**/*.config.{ts,mjs,js}', '**/*.test.{ts,tsx}'],
+    files: [
+      '**/*.config.{ts,mjs,js}',
+      '**/*.test.{ts,tsx}',
+      '**/*.test-helper.{ts,tsx}',
+    ],
     rules: {
       '@typescript-eslint/no-magic-numbers': 'off',
     },

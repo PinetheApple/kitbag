@@ -1,0 +1,61 @@
+// VS15 forces text presentation; without it Android draws colour emoji that
+// ignore the token colour.
+const TEXT_PRESENTATION = '︎';
+
+const text = (glyph: string) => `${glyph}${TEXT_PRESENTATION}`;
+
+export const icons = {
+  back: '‹',
+  more: '⋮',
+  settings: text('⚙'),
+  sort: '⇅',
+  caretDown: '⌄',
+  caretUp: '⌃',
+  practice: '◴',
+  reset: '↺',
+  repeat: '↻',
+  setlist: '≡',
+  previous: text('⏮'),
+  next: text('⏭'),
+  backspace: '⌫',
+  confirm: '✓',
+  success: '✓',
+  failure: '✗',
+  warning: text('⚠'),
+  ramp: text('⛰'),
+  muteBars: '▨',
+  sound: '♩',
+  countIn: text('⏱'),
+  decrease: '−',
+  increase: '+',
+  forward: '›',
+  play: text('▶'),
+  metronome: '◴',
+  tuner: '♪',
+  songs: '♬',
+  stems: '≣',
+  playAlong: '◉',
+  moreTools: '✦',
+} as const;
+
+export type IconName = keyof typeof icons;
+
+export const emojiCapableIcons: readonly IconName[] = [
+  'settings',
+  'previous',
+  'next',
+  'warning',
+  'ramp',
+  'countIn',
+  'play',
+];
+
+export const shapeIcons = ['arrowUp', 'arrowDown', 'check', 'mic'] as const;
+
+export type ShapeIconName = (typeof shapeIcons)[number];
+
+export type AnyIconName = IconName | ShapeIconName;
+
+export function isShapeIcon(name: AnyIconName): name is ShapeIconName {
+  return (shapeIcons as readonly string[]).includes(name);
+}

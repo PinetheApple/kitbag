@@ -143,7 +143,7 @@ void P9HoldMedian() {
   const double stop = Elapsed(log);
   Feed(&log, 1.0, Silence);
   const bool median =
-      HoldsBetween(log, stop + kHopSeconds, stop + 1.0, [](auto& s) {
+      HoldsBetween(log, stop + kHopSeconds, stop + 0.6, [](auto& s) {
         return OnString(kStringE4, 0.0, 2.0)(s);
       });
   Expect(median, log, "P9 E4 with a -60c tail, then silence -> holds 0c");

@@ -1,0 +1,205 @@
+import { fontFamily, ledRadius, radii, type TypeRole } from './tokens.ts';
+
+export const space = {
+  inlineKeyGap: 2,
+  barPreviewGap: 3,
+  segmentInset: 3,
+  chipGap: 6,
+  stepKeyGap: 7,
+  controlGap: 8,
+  ledGap: 9,
+  rowGap: 10,
+  sectionGap: 12,
+  screenInset: 16,
+  cardPadding: 14,
+  ledGroupGap: 18,
+  transportGap: 22,
+  pegLabelGap: 5,
+  headstockTop: 8,
+  headstockBottom: 2,
+} as const;
+
+export const size = {
+  stroke: 1,
+  ledMain: 26,
+  ledMainBorder: 2,
+  ledSmall: 16,
+  ledSmallBorder: 1.5,
+  stepKey: 24,
+  stepValueMinWidth: 40,
+  transportKey: 42,
+  playButton: 58,
+  playGlyphBox: 22,
+  grabWidth: 36,
+  grabHeight: 4,
+  liveDot: 7,
+  sweepTrack: 3,
+  barPreview: 18,
+  toolIcon: 38,
+  tunerStrip: 56,
+  tunerCentreLine: 2,
+  tunerCentreOverhang: 6,
+  tunerNeedle: 3,
+  tunerNeedleOverhang: 9,
+  tunerNeedleCap: 7,
+  peg: 30,
+  pegBorder: 2,
+  pegBadge: 14,
+  pegBadgeGlyph: 9,
+  pegLockBar: 12,
+  pegGlowBlur: 12,
+} as const;
+
+export const radius = {
+  ...radii,
+  circle: ledRadius,
+  badge: 6,
+  stepKey: 7,
+  stepInline: 9,
+  barPreview: 3,
+  stepInlineKey: 6,
+  segment: 11,
+  segmentOption: 8,
+  preset: 11,
+  numpadKey: 11,
+  tempoZone: 18,
+  sweepTrack: 2,
+  toolIcon: 11,
+  tunerStrip: 12,
+  tunerNeedle: 2,
+} as const;
+
+export const inset = {
+  appBar: 2,
+  buttonV: 10,
+  buttonH: 18,
+  chipV: 5,
+  chipH: 12,
+  badgeV: 2,
+  badgeH: 7,
+  presetV: 9,
+  numpadKeyV: 13,
+  segmentOptionV: 6,
+  segmentOptionH: 4,
+  stepInlineV: 3,
+  stepInlineH: 4,
+  stepInlineKeyV: 2,
+  stepInlineKeyH: 7,
+  tempoZoneTop: 26,
+  tempoZoneBottom: 18,
+  sweepH: 18,
+  editRowV: 11,
+  editRowH: 2,
+  compactButtonV: 8,
+  compactButtonH: 14,
+} as const;
+
+export const opacity = {
+  muted: 0.4,
+  barPreviewSounding: 0.85,
+  upcoming: 0.65,
+  tunerStrip: 0.92,
+} as const;
+
+export const mix = {
+  activeControl: 0.18,
+  activeCard: 0.07,
+  badgeBorder: 0.4,
+  tempoZoneGlow: 0.05,
+  cardBorder: 0.35,
+  pegGlow: 0.4,
+} as const;
+
+export const presetActionGrow = 1.3;
+
+// The design file's body line-height, which its card text inherits.
+export const bodyLineHeight = 1.6;
+
+export const playGlyphPath = {
+  viewBox: 20,
+  left: 6,
+  top: 4,
+  width: 10,
+  height: 12,
+} as const;
+
+// Glyph sizes for icon-only content. The design file's transport (11px) and
+// step-key (14px) glyphs were too small to read on device (#125): the
+// transport glyph now matches the play glyph beside it, and the step key's
+// fills its 24dp key with 3dp to spare each side.
+export const iconSizes = {
+  chip: 12.5,
+  chevron: 13,
+  control: 14,
+  action: 16,
+  title: 17,
+  tile: 17,
+  toolTile: 22,
+  transport: size.playGlyphBox,
+  stepKey: 18,
+} as const;
+
+export type IconSize = keyof typeof iconSizes;
+
+const display = fontFamily.display;
+const body = fontFamily.body;
+
+export const textRoles = {
+  appBarTitle: { family: display, weight: 500, size: 17 },
+  button: { family: display, weight: 500, size: 14 },
+  presetAction: { family: display, weight: 700, size: 14 },
+  preset: { family: display, weight: 500, size: 13.5, tabular: true },
+  chip: { family: display, weight: 400, size: 12.5 },
+  chipValue: { family: display, weight: 500, size: 12.5, tabular: true },
+  chipAside: { family: display, weight: 400, size: 11 },
+  tempoCaption: { family: display, weight: 400, size: 11, tracking: 0.22 },
+  segment: { family: display, weight: 400, size: 12.5 },
+  badge: { family: display, weight: 400, size: 10.5, tracking: 0.06 },
+  stepKey: { family: display, weight: 400, size: iconSizes.stepKey },
+  stepInline: { family: display, weight: 400, size: 12.5 },
+  stepInlineValue: { family: display, weight: 500, size: 12.5, tabular: true },
+  transportKey: { family: display, weight: 400, size: iconSizes.transport },
+  sheetTitle: { family: display, weight: 500, size: 14 },
+  sheetNumeral: {
+    family: display,
+    weight: 700,
+    size: 52,
+    tracking: -0.03,
+    tabular: true,
+  },
+  numpadKey: { family: display, weight: 400, size: 19, tabular: true },
+  hint: { family: body, weight: 400, size: 11.5 },
+  fieldLabel: { family: body, weight: 400, size: 13.5 },
+  editRowKey: { family: body, weight: 400, size: 13 },
+  wordmark: {
+    family: display,
+    weight: 700,
+    size: 17,
+    tracking: 0.03,
+    uppercase: true,
+  },
+  rowTitle: { family: display, weight: 500, size: 14.5 },
+  rowSubtitle: { family: body, weight: 400, size: 12 },
+  tileTitle: { family: display, weight: 500, size: 14 },
+  tileSubtext: { family: body, weight: 400, size: 11.5 },
+  tunerNote: {
+    family: display,
+    weight: 700,
+    size: 64,
+    tracking: -0.03,
+    tabular: true,
+  },
+  tunerCaption: {
+    family: display,
+    weight: 400,
+    size: 13,
+    tracking: 0.08,
+    tabular: true,
+  },
+  pegNote: { family: display, weight: 400, size: 12 },
+  pegString: { family: display, weight: 400, size: 11, tabular: true },
+} as const satisfies Record<string, TypeRole>;
+
+export type TextRoleName = keyof typeof textRoles;
+
+export const appBarTitleMinSize = 15;

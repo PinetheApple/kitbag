@@ -36,25 +36,84 @@ void T7() {
   Expect(ok, log, "T7 E4 tuned in [0.74, 1.1] s (got %.3f s)", tuned);
 }
 
-void T8() {
-  BeginGuitar();
+struct Release {
+  bool heard = false;  // a reading at the moment the tone stopped
+  bool held = false;   // the stopped tone's pitch reported until it cleared
+  double hold = -1.0;  // seconds from the stop to can_hear_note = 0
+  long hold_hops = -1;
+  long tone_hops = 0;  // hops of tone fed
   Log log;
+};
+
+// Rounding to the nearest hop is a half-hop tolerance on summed float times.
+long ToHops(double seconds) {
+  return std::lround(seconds / kHopSeconds);
+}
+
+// `begin` picks the mode; Begin's SetTuning returns the next scenario to auto.
+Release ReleaseAfter(double tone_seconds, void (*begin)()) {
+  begin();
+  Release r;
   ToneOsc osc;
   const double e4_hz = GuitarHz(kStringE4);
-  FeedTone(&log, &osc, 2.0, e4_hz);
-  const double stop = Elapsed(log);
-  const bool was_tuned = IsTuned(log.back().s);
-  Feed(&log, 3.0, Silence);
-  const bool held = HoldsBetween(log, stop, stop + 1.0, [&](auto& s) {
-    return s.can_hear_note == 1 && NearHz(s.measured_hz, e4_hz, 0.001);
-  });
-  const bool cleared = HoldsBetween(log, stop + 1.4, Elapsed(log), [](auto& s) {
-    return s.can_hear_note == 0;
-  });
+  FeedTone(&r.log, &osc, tone_seconds, e4_hz);
+  const double stop = Elapsed(r.log);
+  Feed(&r.log, 2.0, Silence);
+  const int at_stop = IndexAt(r.log, stop);
+  const double clear =
+      FirstTime(r.log, at_stop, [](auto& s) { return s.can_hear_note == 0; });
+  r.tone_hops = ToHops(stop);
+  r.heard = r.log[static_cast<size_t>(at_stop)].s.can_hear_note == 1;
+  r.hold = clear < 0.0 ? -1.0 : clear - stop;
+  r.hold_hops = clear < 0.0 ? -1 : ToHops(r.hold);
+  r.held = clear > stop &&
+           HoldsBetween(r.log, stop, clear - kHopSeconds, [&](auto& s) {
+             return s.can_hear_note == 1 && NearHz(s.measured_hz, e4_hz, 0.001);
+           });
+  return r;
+}
+
+void BeginAuto() {
+  BeginGuitar();
+}
+void BeginManualE4() {
+  BeginManual(kStringE4);
+}
+void BeginChromatic() {
+  BeginGuitar();
+  kb_tuner_set_chromatic(g_engine);
+}
+
+// P10 keeps the counter in every mode, so the full hold is not auto-only.
+long ExpectFullHold(const char* mode, void (*begin)()) {
+  const Release full = ReleaseAfter(2.0, begin);
   Expect(
-      was_tuned && held && cleared,
-      log,
-      "T8 tuned E4 then silence -> held 1.0 s, cleared by 1.4 s"
+      full.heard && full.held && full.hold >= 0.6 && full.hold <= 0.85,
+      full.log,
+      "T8 %s E4 then silence -> held, cleared in [0.6, 0.85] s (got %.3f s)",
+      mode,
+      full.hold
+  );
+  return full.hold_hops;
+}
+
+// Measured holds: 0.3 s tone 0.38 s, full tone 0.77 s (the 2-hop frame still
+// hears the tone one hop on). P10 never exceeds hops heard: the tone + 2 cap.
+void T8() {
+  const long full_hops = ExpectFullHold("auto", BeginAuto);
+  ExpectFullHold("manual", BeginManualE4);
+  ExpectFullHold("chromatic", BeginChromatic);
+  constexpr double kShortTone = 0.3;
+  const Release brief = ReleaseAfter(kShortTone, BeginAuto);
+  const bool shorter = brief.hold_hops > 0 && brief.hold_hops + 1 < full_hops &&
+                       brief.hold_hops <= brief.tone_hops + 2;
+  Expect(
+      brief.heard && brief.held && shorter,
+      brief.log,
+      "T8 0.3 s E4 -> hold shorter than full, <= tone + 2 hops "
+      "(got %ld vs %ld hops)",
+      brief.hold_hops,
+      full_hops
   );
 }
 

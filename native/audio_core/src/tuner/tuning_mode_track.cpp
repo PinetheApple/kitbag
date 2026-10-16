@@ -64,10 +64,8 @@ void TuningMode::OnAutoPitch(double midi) {
   const bool names_string = offset_cents <= tuning_rules::kAutoStringCents;
   if (current_string_ == KB_TUNER_NO_STRING) {
     if (!names_string) return;
-    confidence_ = 1;
     Track(midi, nearest);
   } else if (names_string && SameNote(nearest, current_string_)) {
-    confidence_ = std::min(confidence_ + 1, tuning_rules::kMaxConfidence);
     auto_hint_ = KB_TUNER_NO_STRING;
     Track(midi, current_string_);
   } else {
@@ -84,7 +82,7 @@ void TuningMode::LoseConfidence(int32_t named_string) {
   if (confidence_ <= 0) {
     ClearNote();
   } else {
-    NoteMissed();
+    ++missed_hops_;
   }
 }
 
@@ -96,6 +94,7 @@ void TuningMode::Track(double midi, int32_t string) {
           : string_midis_[static_cast<size_t>(string)];
   if (target != target_midi_) in_window_hops_ = 0;
   note_present_ = true;
+  confidence_ = std::min(confidence_ + 1, tuning_rules::kMaxConfidence);
   current_string_ = string;
   target_midi_ = target;
   missed_hops_ = 0;
@@ -107,9 +106,13 @@ void TuningMode::Track(double midi, int32_t string) {
   in_window_hops_ = inside ? std::min(in_window_hops_ + 1, ratio_hops_) : 0;
 }
 
-// P27: a note outlives its last pitch by the release hold.
+// P27: a hop without the note drains the counter, so a short pluck is held
+// for fewer hops than a sustained one.
 void TuningMode::NoteMissed() {
-  if (note_present_ && ++missed_hops_ >= hold_hops_) ClearNote();
+  if (!note_present_) return;
+  ++missed_hops_;
+  confidence_ -= tuning_rules::kReleaseDrain;
+  if (confidence_ <= 0) ClearNote();
 }
 
 void TuningMode::ClearNote() {
