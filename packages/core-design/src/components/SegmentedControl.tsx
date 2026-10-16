@@ -8,11 +8,12 @@ import {
   hitBoxStyle,
   hitExtension,
   neighbourGaps,
+  unshared,
   type NeighbourGaps,
 } from '../touchTarget.ts';
 
-// In a track, an option's edge sits inside the inset and border; that strip is
-// the option's alone, so it counts twice toward the gap it may claim half of.
+// In a track, an option's edge sits inside the inset and border, a strip that
+// is the option's alone.
 const TRACK_EDGE = space.segmentInset + size.stroke;
 const OPTION_HEIGHT = textRoles.segment.size + inset.segmentOptionV * 2;
 
@@ -22,8 +23,8 @@ const OPTION_HEIGHT = textRoles.segment.size + inset.segmentOptionV * 2;
 function optionHitBox(gaps: NeighbourGaps, compact: boolean) {
   const edge = compact ? 0 : TRACK_EDGE;
   const vertical = hitExtension(OPTION_HEIGHT, OPTION_HEIGHT, {
-    top: edge * 2 + (gaps.top ?? Number.POSITIVE_INFINITY),
-    bottom: edge * 2 + (gaps.bottom ?? Number.POSITIVE_INFINITY),
+    top: unshared(edge) + (gaps.top ?? Number.POSITIVE_INFINITY),
+    bottom: unshared(edge) + (gaps.bottom ?? Number.POSITIVE_INFINITY),
   });
   const side = space.segmentInset / 2;
   return hitBoxStyle({

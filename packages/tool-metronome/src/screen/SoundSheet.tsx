@@ -1,4 +1,11 @@
-import { PickerGrid, SegmentedControl, Sheet } from '@kitbag/core-design';
+import {
+  PickerGrid,
+  SegmentedControl,
+  Sheet,
+  SHEET_TOUCH_ROOM,
+  space,
+  unshared,
+} from '@kitbag/core-design';
 import { useMetronome, type PerAccentSounds } from '@kitbag/core-state';
 import { useCallback, useState } from 'react';
 
@@ -9,6 +16,12 @@ import {
   soundsWith,
   type SoundRole,
 } from '../logic/soundChoice.ts';
+
+// Heads the sheet; the picker grid below does not reach into the gap.
+const ROLE_GAPS = {
+  top: unshared(SHEET_TOUCH_ROOM),
+  bottom: unshared(space.sectionGap),
+};
 
 interface SoundSheetProps {
   readonly visible: boolean;
@@ -52,6 +65,7 @@ export function SoundPickerSheet({
         accessibilityLabel="Beat level"
         options={SOUND_ROLE_OPTIONS}
         selected={role}
+        neighbourGapDp={ROLE_GAPS}
         onSelect={setRole}
       />
       <PickerGrid

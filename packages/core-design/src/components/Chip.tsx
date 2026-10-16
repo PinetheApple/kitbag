@@ -1,18 +1,50 @@
-import type { ReactNode } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
+import { Pressable, Text, View, type LayoutChangeEvent } from 'react-native';
 
 import type { AnyIconName } from '../icons.ts';
 import { inset, radius, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
-import { hitSlopForPadded } from '../touchTarget.ts';
+import { minTouchTargetDp } from '../tokens.ts';
+import {
+  hitBoxStyle,
+  hitExtension,
+  neighbourGaps,
+  wrappedLineGaps,
+  type NeighbourGaps,
+} from '../touchTarget.ts';
 import { Icon } from './Icon.tsx';
 
-const HIT_SLOP = hitSlopForPadded(
-  textRoles.chip.size,
-  inset.chipV,
-  space.controlGap,
-);
+const CHIP_HEIGHT = textRoles.chip.size + (inset.chipV + size.stroke) * 2;
+
+// A chip's width follows its label and is nearly always past 48dp, so only the
+// vertical axis is grown.
+function chipHitBox(gaps: NeighbourGaps) {
+  return hitBoxStyle(
+    hitExtension(minTouchTargetDp, CHIP_HEIGHT, {
+      top: gaps.top,
+      bottom: gaps.bottom,
+    }),
+  );
+}
+
+interface ChipLines {
+  readonly gapsFor: (id: string) => NeighbourGaps;
+  readonly report: (id: string, lineTop: number | undefined) => void;
+}
+
+// Which wrapped line a chip lands on is known only after layout, and only the
+// first and last lines border the row's outer gaps.
+const ChipLinesContext = createContext<ChipLines | null>(null);
 
 interface ChipFaceProps {
   readonly label: string;
@@ -27,6 +59,10 @@ const useStyles = createThemedStyles((theme) => ({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: space.controlGap,
+  },
+  chipHit: {
+    alignSelf: 'flex-start',
+    flexShrink: 1,
   },
   chip: {
     flexDirection: 'row',
@@ -48,6 +84,9 @@ const useStyles = createThemedStyles((theme) => ({
   fill: {
     flexGrow: 1,
     justifyContent: 'center',
+  },
+  fillFace: {
+    alignSelf: 'stretch',
   },
   label: {
     ...textStyle(textRoles.chip),
@@ -97,6 +136,9 @@ export interface ChipProps {
   readonly liveDot?: boolean;
   readonly fill?: boolean;
   readonly accessibilityLabel?: string;
+  /** Gaps to the controls above and below, for the 48dp hit box; a number
+   * applies to both, an omitted side has no neighbour. */
+  readonly neighbourGapDp?: number | NeighbourGaps;
 }
 
 export function Chip({
@@ -108,24 +150,53 @@ export function Chip({
   liveDot = false,
   fill = false,
   accessibilityLabel,
+  neighbourGapDp,
 }: ChipProps) {
   const styles = useStyles();
+  const id = useId();
+  const lines = useContext(ChipLinesContext);
+  const hitBox = chipHitBox(
+    neighbourGapDp === undefined
+      ? (lines?.gapsFor(id) ?? neighbourGaps(space.controlGap))
+      : neighbourGaps(neighbourGapDp),
+  );
+  const report = lines?.report;
+  const handleLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      report?.(id, Math.round(event.nativeEvent.layout.y + hitBox.paddingTop));
+    },
+    [report, id, hitBox.paddingTop],
+  );
+  useEffect(
+    () => () => {
+      report?.(id, undefined);
+    },
+    [report, id],
+  );
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ selected: active }}
-      style={[styles.chip, active && styles.chipActive, fill && styles.fill]}
-      hitSlop={HIT_SLOP}
+      style={[styles.chipHit, hitBox, fill && styles.fill]}
+      {...(report === undefined ? {} : { onLayout: handleLayout })}
       onPress={onPress}
     >
-      <ChipFace
-        label={label}
-        icon={icon}
-        trailingIcon={trailingIcon}
-        active={active}
-        liveDot={liveDot}
-      />
+      <View
+        style={[
+          styles.chip,
+          active && styles.chipActive,
+          fill && [styles.fill, styles.fillFace],
+        ]}
+      >
+        <ChipFace
+          label={label}
+          icon={icon}
+          trailingIcon={trailingIcon}
+          active={active}
+          liveDot={liveDot}
+        />
+      </View>
     </Pressable>
   );
 }
@@ -158,9 +229,36 @@ export function StatusPill({
 
 export interface ChipRowProps {
   readonly children: ReactNode;
+  /** Gaps from the row to the controls above and below it; wrapped lines
+   * between them share the row's own gap. */
+  readonly neighbourGapDp?: number | NeighbourGaps;
 }
 
-export function ChipRow({ children }: ChipRowProps) {
+export function ChipRow({
+  children,
+  neighbourGapDp = space.controlGap,
+}: ChipRowProps) {
   const styles = useStyles();
-  return <View style={styles.row}>{children}</View>;
+  const [lineTops, setLineTops] = useState<
+    Readonly<Record<string, number | undefined>>
+  >({});
+  const report = useCallback((id: string, lineTop: number | undefined) => {
+    setLineTops((prev) =>
+      prev[id] === lineTop ? prev : { ...prev, [id]: lineTop },
+    );
+  }, []);
+  const lines = useMemo<ChipLines>(() => {
+    const outer = neighbourGaps(neighbourGapDp);
+    const tops = Object.values(lineTops).filter((t) => t !== undefined);
+    return {
+      gapsFor: (id) =>
+        wrappedLineGaps(lineTops[id], tops, outer, space.controlGap),
+      report,
+    };
+  }, [lineTops, neighbourGapDp, report]);
+  return (
+    <ChipLinesContext.Provider value={lines}>
+      <View style={styles.row}>{children}</View>
+    </ChipLinesContext.Provider>
+  );
 }

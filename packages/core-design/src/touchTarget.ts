@@ -25,6 +25,12 @@ export type HitExtension = Readonly<Record<Side, number>>;
 
 const NONE = Number.POSITIVE_INFINITY;
 
+// A gap is split with the control across it. Room no other control reaches
+// into (padding, a scroll edge, a non-control sibling) may be taken whole.
+export function unshared(roomDp: number): number {
+  return roomDp * 2;
+}
+
 export function neighbourGaps(
   gaps: number | NeighbourGaps = {},
 ): NeighbourGaps {
@@ -43,6 +49,20 @@ function extendAxis(sizeDp: number, gapA: number, gapB: number) {
   const b = Math.min(need - Math.min(need / 2, capA), capB);
   const a = Math.min(need - b, capA);
   return [a, b] as const;
+}
+
+// Unmeasured lines take the conservative line gap on both sides.
+export function wrappedLineGaps(
+  lineTop: number | undefined,
+  lineTops: readonly number[],
+  outer: NeighbourGaps,
+  lineGapDp: number,
+): NeighbourGaps {
+  if (lineTop === undefined) return { top: lineGapDp, bottom: lineGapDp };
+  return {
+    top: lineTop === Math.min(...lineTops) ? outer.top : lineGapDp,
+    bottom: lineTop === Math.max(...lineTops) ? outer.bottom : lineGapDp,
+  };
 }
 
 export function hitExtension(
@@ -64,9 +84,8 @@ export function hitExtension(
 }
 
 // Grows a box by `ext` and hands it back as negative margin, so nothing moves.
-// Use this rather than hitSlop when the target must reach past its parent:
-// Fabric drops touches outside a parent's frame plus its children's layout
-// overflow, and hitSlop counts toward neither.
+// A scrolling or clipping ancestor still cuts it off, as does any later sibling
+// that forms a native view over it.
 export function hitBoxStyle(ext: HitExtension) {
   return {
     paddingTop: ext.top,

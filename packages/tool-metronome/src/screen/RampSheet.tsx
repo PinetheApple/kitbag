@@ -4,14 +4,17 @@ import {
   createThemedStyles,
   SegmentedControl,
   Sheet,
+  SHEET_TOUCH_ROOM,
   space,
   StepControl,
   textRoles,
   textStyle,
+  unshared,
+  type NeighbourGaps,
   type StepDelta,
 } from '@kitbag/core-design';
-import { useCallback } from 'react';
-import { Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { Text, View, type LayoutChangeEvent } from 'react-native';
 
 import {
   RAMP_UNIT_OPTIONS,
@@ -20,6 +23,27 @@ import {
   rampUnitOption,
 } from '../logic/rampUnit.ts';
 import { useRampEditor, type RampEditor } from './useRampEditor.ts';
+
+// Rows stack a section gap apart; a field's label takes no touches, so a
+// stepper may reach over the gap to the label after it. At a large font scale
+// To wraps under From, and the two share the row's gap instead.
+const TEMPO_FIELD_GAPS = {
+  top: unshared(SHEET_TOUCH_ROOM),
+  bottom: space.sectionGap,
+  right: unshared(space.controlGap),
+};
+const WRAPPED_FROM_GAPS = { ...TEMPO_FIELD_GAPS, bottom: space.controlGap };
+const WRAPPED_TO_GAPS = { ...TEMPO_FIELD_GAPS, top: space.controlGap };
+const DURATION_FIELD_GAPS = {
+  top: space.sectionGap,
+  bottom: space.sectionGap,
+  right: space.controlGap,
+};
+const BETWEEN_ROWS = { top: space.sectionGap, bottom: space.sectionGap };
+const ACTION_GAPS = {
+  top: space.sectionGap,
+  bottom: unshared(space.sectionGap),
+};
 
 const useStyles = createThemedStyles((theme) => ({
   row: {
@@ -49,7 +73,9 @@ interface RampFieldProps {
   readonly value: number;
   readonly unit: string;
   readonly onStep: (delta: StepDelta) => void;
+  readonly gaps: NeighbourGaps;
   readonly trailing?: string;
+  readonly onLayout?: (event: LayoutChangeEvent) => void;
 }
 
 function RampField({
@@ -58,17 +84,23 @@ function RampField({
   value,
   unit,
   onStep,
+  gaps,
   trailing,
+  onLayout,
 }: RampFieldProps) {
   const styles = useStyles();
   return (
-    <View style={styles.field}>
+    <View
+      style={styles.field}
+      {...(onLayout === undefined ? {} : { onLayout })}
+    >
       <Text style={styles.label}>{label}</Text>
       <StepControl
         variant="inline"
         label={spokenLabel}
         value={String(value)}
         accessibilityValue={`${String(value)} ${unit}`}
+        neighbourGapDp={gaps}
         onStep={onStep}
       />
       {trailing === undefined ? null : (
@@ -81,6 +113,11 @@ function RampField({
 function TempoFields({ editor }: { readonly editor: RampEditor }) {
   const styles = useStyles();
   const { draft } = editor;
+  const [wrapped, setWrapped] = useState(false);
+  const handleToLayout = useCallback((event: LayoutChangeEvent) => {
+    const { y, height } = event.nativeEvent.layout;
+    setWrapped(y >= height);
+  }, []);
   return (
     <View style={styles.row}>
       <RampField
@@ -88,6 +125,7 @@ function TempoFields({ editor }: { readonly editor: RampEditor }) {
         spokenLabel="Ramp from"
         value={draft.startBpm}
         unit="BPM"
+        gaps={wrapped ? WRAPPED_FROM_GAPS : TEMPO_FIELD_GAPS}
         onStep={editor.stepFrom}
       />
       <RampField
@@ -95,6 +133,8 @@ function TempoFields({ editor }: { readonly editor: RampEditor }) {
         spokenLabel="Ramp to"
         value={draft.endBpm}
         unit="BPM"
+        gaps={wrapped ? WRAPPED_TO_GAPS : TEMPO_FIELD_GAPS}
+        onLayout={handleToLayout}
         onStep={editor.stepTo}
       />
     </View>
@@ -116,6 +156,7 @@ function DurationField({ editor }: { readonly editor: RampEditor }) {
         spokenLabel="Ramp length"
         value={editor.draft.duration}
         unit={rampUnitLabel(editor.draft.unit)}
+        gaps={DURATION_FIELD_GAPS}
         onStep={editor.stepDuration}
       />
       <SegmentedControl
@@ -123,6 +164,7 @@ function DurationField({ editor }: { readonly editor: RampEditor }) {
         accessibilityLabel="Ramp length unit"
         options={RAMP_UNIT_OPTIONS}
         selected={rampUnitOption(editor.draft.unit)}
+        neighbourGapDp={BETWEEN_ROWS}
         onSelect={handleUnitSelect}
       />
     </View>
@@ -138,6 +180,7 @@ function RampActions({ editor }: { readonly editor: RampEditor }) {
         variant="ghost"
         label="Clear"
         disabled={!editor.running}
+        neighbourGapDp={ACTION_GAPS}
         onPress={editor.clear}
       />
       <Button
@@ -145,6 +188,7 @@ function RampActions({ editor }: { readonly editor: RampEditor }) {
         variant="primary"
         label={editor.running ? 'Restart ramp' : 'Start ramp'}
         disabled={editor.draft.startBpm === editor.draft.endBpm}
+        neighbourGapDp={ACTION_GAPS}
         onPress={editor.start}
       />
     </View>
@@ -157,6 +201,7 @@ function LoopControl({ editor }: { readonly editor: RampEditor }) {
       active={editor.draft.loop}
       label="Loop back at end"
       accessibilityLabel={`Loop back at end, ${editor.draft.loop ? 'on' : 'off'}`}
+      neighbourGapDp={BETWEEN_ROWS}
       onPress={editor.toggleLoop}
     />
   );

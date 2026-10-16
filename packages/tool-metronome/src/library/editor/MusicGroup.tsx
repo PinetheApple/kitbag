@@ -2,6 +2,7 @@ import {
   EditGroup,
   EditRow,
   EditTextInput,
+  space,
   StepControl,
   type StepDelta,
 } from '@kitbag/core-design';
@@ -18,6 +19,12 @@ import {
 } from '../../logic/presetDraft.ts';
 import { subdivisionGlyph } from '../../logic/subdivision.ts';
 import { BeatLeds } from '../../screen/BeatLeds.tsx';
+
+const EDITOR_LED_GAPS = {
+  top: space.rowGap,
+  bottom: space.rowGap,
+  left: space.rowGap,
+};
 import { OnOff, StepField } from './fields.tsx';
 import type { PresetEditor } from './usePresetEditor.ts';
 
@@ -105,6 +112,7 @@ function AccentsRow({ editor }: { readonly editor: PresetEditor }) {
         accents={draft.accents}
         currentBeat={idle}
         onCycle={cycle}
+        neighbourGapDp={EDITOR_LED_GAPS}
       />
     </EditRow>
   );

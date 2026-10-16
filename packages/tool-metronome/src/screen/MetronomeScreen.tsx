@@ -6,6 +6,7 @@ import {
   StepControl,
   textRoles,
   textStyle,
+  unshared,
 } from '@kitbag/core-design';
 import { KB_DENOMINATORS } from '@kitbag/core-native';
 import { BPM_BOUNDS, useLibrary, useMetronome } from '@kitbag/core-state';
@@ -29,7 +30,8 @@ import { useMetronomeFrame } from './useMetronomeFrame.ts';
 // Gaps from the card's rows to the controls around them, for 48dp hit boxes
 // that stop at each gap's midpoint (core-design hitExtension). Past the card's
 // padding the nearest controls are the preset row above and the trainer chips
-// below, a section gap away. Nothing tappable sits left of the steppers.
+// below, a section gap away. Nothing tappable sits left of the steppers or
+// right of the LEDs.
 const ACROSS_CARD_EDGE = space.cardPadding + space.sectionGap;
 const FIRST_ROW_GAPS = {
   top: ACROSS_CARD_EDGE,
@@ -50,6 +52,22 @@ const POLY_TOGGLE_GAPS = {
   top: space.rowGap,
   bottom: ACROSS_CARD_EDGE,
   left: space.rowGap,
+};
+const FIRST_ROW_LED_GAPS = {
+  top: ACROSS_CARD_EDGE,
+  bottom: space.rowGap,
+  left: space.rowGap,
+};
+const MIDDLE_ROW_LED_GAPS = {
+  top: space.rowGap,
+  bottom: space.rowGap,
+  left: space.rowGap,
+};
+// The card's last row stops inside its padding, and nothing below the chips
+// reaches up past the spacer.
+const TRAINER_CHIP_GAPS = {
+  top: unshared(space.sectionGap),
+  bottom: unshared(space.sectionGap),
 };
 
 const POLY = 'poly';
@@ -247,6 +265,7 @@ export function MetronomeScreen({
                 accents={accents}
                 currentBeat={currentBeat}
                 onCycle={cycleAccent}
+                neighbourGapDp={FIRST_ROW_LED_GAPS}
               />
             </View>
 
@@ -265,6 +284,7 @@ export function MetronomeScreen({
                   accents={polyAccents}
                   currentBeat={currentPolyBeat}
                   onCycle={cyclePolyAccent}
+                  neighbourGapDp={MIDDLE_ROW_LED_GAPS}
                 />
               </View>
             ) : null}
@@ -290,7 +310,10 @@ export function MetronomeScreen({
           </View>
         </Card>
 
-        <TrainerChips bottomInset={insets.bottom} />
+        <TrainerChips
+          bottomInset={insets.bottom}
+          neighbourGapDp={TRAINER_CHIP_GAPS}
+        />
 
         <View style={styles.spacer} />
 

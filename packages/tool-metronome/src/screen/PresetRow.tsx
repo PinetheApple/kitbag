@@ -1,4 +1,4 @@
-import { PresetButton, space } from '@kitbag/core-design';
+import { PresetButton, space, unshared } from '@kitbag/core-design';
 import { useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -6,6 +6,13 @@ const FINE_NUDGE = 5;
 const COARSE_NUDGE = 10;
 const NUDGES = [-COARSE_NUDGE, -FINE_NUDGE, FINE_NUDGE, COARSE_NUDGE] as const;
 const TAP_INSERT_INDEX = NUDGES.length / 2;
+
+// The tempo zone's arrows stop at its edge and the card below takes touches
+// only inside its frame, so the section gap on either side is the row's alone.
+const ROW_GAPS = {
+  top: unshared(space.sectionGap),
+  bottom: unshared(space.sectionGap),
+};
 
 interface NudgeKeyProps {
   readonly delta: number;
@@ -31,6 +38,7 @@ function NudgeKey({ delta, onNudge }: NudgeKeyProps) {
     <PresetButton
       label={label}
       accessibilityLabel={spoken}
+      neighbourGapDp={ROW_GAPS}
       onPress={handlePress}
     />
   );
@@ -51,6 +59,7 @@ export function PresetRow({ onNudge, onTap }: PresetRowProps) {
         kind="action"
         label="TAP"
         accessibilityLabel="Tap tempo"
+        neighbourGapDp={ROW_GAPS}
         onPress={onTap}
       />
       {NUDGES.slice(TAP_INSERT_INDEX).map((delta) => (
