@@ -1,4 +1,4 @@
-import { Chip, ChipRow } from '@kitbag/core-design';
+import { Chip, ChipRow, type NeighbourGaps } from '@kitbag/core-design';
 import { useMetronome } from '@kitbag/core-state';
 import { useCallback, useState } from 'react';
 
@@ -99,13 +99,15 @@ function TrainerSheets({ open, bottomInset, onDismiss }: SheetsProps) {
 
 export function TrainerChips({
   bottomInset,
+  neighbourGapDp,
 }: {
   readonly bottomInset: number;
+  readonly neighbourGapDp: NeighbourGaps;
 }) {
   const { open, opener } = useOpenSheet();
   return (
     <>
-      <ChipRow>
+      <ChipRow neighbourGapDp={neighbourGapDp}>
         <RampChip onPress={opener('ramp')} />
         <MuteChip onPress={opener('muteBars')} />
         <SoundChip onPress={opener('sound')} />

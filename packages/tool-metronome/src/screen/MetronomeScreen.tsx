@@ -4,6 +4,7 @@ import {
   SegmentedControl,
   space,
   StepControl,
+  unshared,
 } from '@kitbag/core-design';
 import { KB_DENOMINATORS } from '@kitbag/core-native';
 import { BPM_BOUNDS, useMetronome } from '@kitbag/core-state';
@@ -59,6 +60,12 @@ const MIDDLE_ROW_LED_GAPS = {
   top: space.rowGap,
   bottom: space.rowGap,
   left: space.rowGap,
+};
+// The card's last row stops inside its padding, and nothing below the chips
+// reaches up past the spacer.
+const TRAINER_CHIP_GAPS = {
+  top: unshared(space.sectionGap),
+  bottom: unshared(space.sectionGap),
 };
 
 const POLY = 'poly';
@@ -277,7 +284,10 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
           </View>
         </Card>
 
-        <TrainerChips bottomInset={insets.bottom} />
+        <TrainerChips
+          bottomInset={insets.bottom}
+          neighbourGapDp={TRAINER_CHIP_GAPS}
+        />
 
         <View style={styles.spacer} />
 

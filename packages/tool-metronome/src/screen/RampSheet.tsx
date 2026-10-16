@@ -13,8 +13,8 @@ import {
   type NeighbourGaps,
   type StepDelta,
 } from '@kitbag/core-design';
-import { useCallback } from 'react';
-import { Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { Text, View, type LayoutChangeEvent } from 'react-native';
 
 import {
   RAMP_UNIT_OPTIONS,
@@ -25,12 +25,15 @@ import {
 import { useRampEditor, type RampEditor } from './useRampEditor.ts';
 
 // Rows stack a section gap apart; a field's label takes no touches, so a
-// stepper may reach over the gap to the label after it.
+// stepper may reach over the gap to the label after it. At a large font scale
+// To wraps under From, and the two share the row's gap instead.
 const TEMPO_FIELD_GAPS = {
   top: unshared(SHEET_TOUCH_ROOM),
   bottom: space.sectionGap,
   right: unshared(space.controlGap),
 };
+const WRAPPED_FROM_GAPS = { ...TEMPO_FIELD_GAPS, bottom: space.controlGap };
+const WRAPPED_TO_GAPS = { ...TEMPO_FIELD_GAPS, top: space.controlGap };
 const DURATION_FIELD_GAPS = {
   top: space.sectionGap,
   bottom: space.sectionGap,
@@ -72,6 +75,7 @@ interface RampFieldProps {
   readonly onStep: (delta: StepDelta) => void;
   readonly gaps: NeighbourGaps;
   readonly trailing?: string;
+  readonly onLayout?: (event: LayoutChangeEvent) => void;
 }
 
 function RampField({
@@ -82,10 +86,14 @@ function RampField({
   onStep,
   gaps,
   trailing,
+  onLayout,
 }: RampFieldProps) {
   const styles = useStyles();
   return (
-    <View style={styles.field}>
+    <View
+      style={styles.field}
+      {...(onLayout === undefined ? {} : { onLayout })}
+    >
       <Text style={styles.label}>{label}</Text>
       <StepControl
         variant="inline"
@@ -105,6 +113,11 @@ function RampField({
 function TempoFields({ editor }: { readonly editor: RampEditor }) {
   const styles = useStyles();
   const { draft } = editor;
+  const [wrapped, setWrapped] = useState(false);
+  const handleToLayout = useCallback((event: LayoutChangeEvent) => {
+    const { y, height } = event.nativeEvent.layout;
+    setWrapped(y >= height);
+  }, []);
   return (
     <View style={styles.row}>
       <RampField
@@ -112,7 +125,7 @@ function TempoFields({ editor }: { readonly editor: RampEditor }) {
         spokenLabel="Ramp from"
         value={draft.startBpm}
         unit="BPM"
-        gaps={TEMPO_FIELD_GAPS}
+        gaps={wrapped ? WRAPPED_FROM_GAPS : TEMPO_FIELD_GAPS}
         onStep={editor.stepFrom}
       />
       <RampField
@@ -120,7 +133,8 @@ function TempoFields({ editor }: { readonly editor: RampEditor }) {
         spokenLabel="Ramp to"
         value={draft.endBpm}
         unit="BPM"
-        gaps={TEMPO_FIELD_GAPS}
+        gaps={wrapped ? WRAPPED_TO_GAPS : TEMPO_FIELD_GAPS}
+        onLayout={handleToLayout}
         onStep={editor.stepTo}
       />
     </View>

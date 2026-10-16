@@ -13,18 +13,22 @@ import {
   textStyle,
   unshared,
 } from '@kitbag/core-design';
-import { Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { Text, View, type LayoutChangeEvent } from 'react-native';
 
 import { useBarMuteEditor, type BarMuteEditor } from './useBarMuteEditor.ts';
 
 // The steppers' row heads the sheet, the preview below takes no touches, and
-// neither do the labels beside each stepper.
+// neither do the labels beside each stepper. At a large font scale the mute
+// stepper wraps under the play stepper, and the two share the row's gap.
 const STEPPER_ROW = {
   top: unshared(SHEET_TOUCH_ROOM),
   bottom: unshared(space.sectionGap),
 };
 const PLAY_GAPS = { ...STEPPER_ROW, right: unshared(space.controlGap) };
-const MUTE_GAPS = { ...STEPPER_ROW, right: unshared(SHEET_TOUCH_ROOM) };
+const MUTE_GAPS = { ...STEPPER_ROW, right: 0 };
+const WRAPPED_PLAY_GAPS = { ...PLAY_GAPS, bottom: space.controlGap };
+const WRAPPED_MUTE_GAPS = { ...MUTE_GAPS, top: space.controlGap };
 const ACTION_GAPS = {
   top: unshared(space.sectionGap),
   bottom: unshared(SHEET_TOUCH_ROOM),
@@ -70,6 +74,11 @@ const bars = (count: number) =>
 function MuteSteppers({ editor }: { readonly editor: BarMuteEditor }) {
   const styles = useStyles();
   const { playBars, muteBars } = editor.barMute;
+  const [wrapped, setWrapped] = useState(false);
+  const handleMuteLayout = useCallback((event: LayoutChangeEvent) => {
+    const { y, height } = event.nativeEvent.layout;
+    setWrapped(y >= height);
+  }, []);
   return (
     <View style={styles.row}>
       <Text style={styles.label}>Play</Text>
@@ -78,18 +87,20 @@ function MuteSteppers({ editor }: { readonly editor: BarMuteEditor }) {
         label="Bars to play"
         value={String(playBars)}
         accessibilityValue={bars(playBars)}
-        neighbourGapDp={PLAY_GAPS}
+        neighbourGapDp={wrapped ? WRAPPED_PLAY_GAPS : PLAY_GAPS}
         onStep={editor.stepPlay}
       />
       <Text style={styles.label}>then mute</Text>
-      <StepControl
-        variant="inline"
-        label="Bars to mute"
-        value={String(muteBars)}
-        accessibilityValue={bars(muteBars)}
-        neighbourGapDp={MUTE_GAPS}
-        onStep={editor.stepMute}
-      />
+      <View onLayout={handleMuteLayout}>
+        <StepControl
+          variant="inline"
+          label="Bars to mute"
+          value={String(muteBars)}
+          accessibilityValue={bars(muteBars)}
+          neighbourGapDp={wrapped ? WRAPPED_MUTE_GAPS : MUTE_GAPS}
+          onStep={editor.stepMute}
+        />
+      </View>
     </View>
   );
 }
