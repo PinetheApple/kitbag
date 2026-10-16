@@ -12,7 +12,10 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { formatPracticeElapsed } from '../logic/practiceTimer.ts';
+import {
+  formatPracticeElapsed,
+  hasPracticeToReset,
+} from '../logic/practiceTimer.ts';
 
 const TICK_MS = 1000;
 
@@ -109,18 +112,25 @@ interface PracticePillProps {
 
 export function PracticePill({ elapsedMs, onReset }: PracticePillProps) {
   const styles = useStyles();
+  const resettable = hasPracticeToReset(elapsedMs);
   return (
     <View style={styles.centre}>
       <Pressable
         accessibilityRole="button"
-        accessibilityHint="Resets the practice timer"
+        {...(resettable
+          ? { accessibilityHint: 'Resets the practice timer' }
+          : {})}
+        accessibilityState={{ disabled: !resettable }}
+        disabled={!resettable}
         style={styles.pill}
         hitSlop={PILL_HIT_SLOP}
         onPress={onReset}
       >
         <Text style={styles.icon}>{icons.practice}</Text>
         <Text style={styles.elapsed}>{formatPracticeElapsed(elapsedMs)}</Text>
-        <Text style={styles.reset}>{icons.reset} reset</Text>
+        {resettable ? (
+          <Text style={styles.reset}>{icons.reset} reset</Text>
+        ) : null}
       </Pressable>
     </View>
   );
