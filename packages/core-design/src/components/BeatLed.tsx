@@ -55,6 +55,12 @@ function ledHitBox(
   );
 }
 
+const INTERIOR: LedPosition = { first: false, last: false };
+const DEFAULT_HIT_BOX: Readonly<Record<LedSize, HitBox>> = {
+  main: ledHitBox('main', {}, INTERIOR, INTERIOR, INTERIOR),
+  small: ledHitBox('small', {}, INTERIOR, INTERIOR, INTERIOR),
+};
+
 const edges = (index: number, count: number): LedPosition => ({
   first: index === 0,
   last: index === count - 1,
@@ -169,7 +175,7 @@ export function BeatLed({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      style={hitBox}
+      style={hitBox ?? DEFAULT_HIT_BOX[ledSize]}
       onPress={handlePress}
     >
       {led}

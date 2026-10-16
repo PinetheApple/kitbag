@@ -77,8 +77,8 @@ export const radii = {
 /** LEDs are round (SPEC §12.2: "LEDs 50%"): radius = half the box. */
 export const ledRadius = '50%';
 
-// SPEC §12.6 acceptance criterion. A control drawn smaller reaches it through
-// an invisible hit box (touchTarget.ts), not by growing what is drawn.
+// SPEC §12.6 acceptance criterion. A control drawn smaller grows toward it with
+// an invisible hit box (touchTarget.ts) that stops at half the gap to a neighbour.
 export const minTouchTargetDp = 48;
 
 // --- Type (SPEC §12.2) ------------------------------------------------------

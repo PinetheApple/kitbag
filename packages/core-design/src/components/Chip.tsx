@@ -1,5 +1,14 @@
-import type { ReactNode } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
+import { Pressable, Text, View, type LayoutChangeEvent } from 'react-native';
 
 import type { AnyIconName } from '../icons.ts';
 import { inset, radius, size, space, textRoles } from '../roles.ts';
@@ -10,6 +19,7 @@ import {
   hitBoxStyle,
   hitExtension,
   neighbourGaps,
+  wrappedLineGaps,
   type NeighbourGaps,
 } from '../touchTarget.ts';
 import { Icon } from './Icon.tsx';
@@ -26,6 +36,15 @@ function chipHitBox(gaps: NeighbourGaps) {
     }),
   );
 }
+
+interface ChipLines {
+  readonly gapsFor: (id: string) => NeighbourGaps;
+  readonly report: (id: string, lineTop: number | undefined) => void;
+}
+
+// Which wrapped line a chip lands on is known only after layout, and only the
+// first and last lines border the row's outer gaps.
+const ChipLinesContext = createContext<ChipLines | null>(null);
 
 interface ChipFaceProps {
   readonly label: string;
@@ -131,19 +150,36 @@ export function Chip({
   liveDot = false,
   fill = false,
   accessibilityLabel,
-  neighbourGapDp = space.controlGap,
+  neighbourGapDp,
 }: ChipProps) {
   const styles = useStyles();
+  const id = useId();
+  const lines = useContext(ChipLinesContext);
+  const hitBox = chipHitBox(
+    neighbourGapDp === undefined
+      ? (lines?.gapsFor(id) ?? neighbourGaps(space.controlGap))
+      : neighbourGaps(neighbourGapDp),
+  );
+  const report = lines?.report;
+  const handleLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      report?.(id, Math.round(event.nativeEvent.layout.y + hitBox.paddingTop));
+    },
+    [report, id, hitBox.paddingTop],
+  );
+  useEffect(
+    () => () => {
+      report?.(id, undefined);
+    },
+    [report, id],
+  );
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ selected: active }}
-      style={[
-        styles.chipHit,
-        chipHitBox(neighbourGaps(neighbourGapDp)),
-        fill && styles.fill,
-      ]}
+      style={[styles.chipHit, hitBox, fill && styles.fill]}
+      {...(report === undefined ? {} : { onLayout: handleLayout })}
       onPress={onPress}
     >
       <View
@@ -193,9 +229,36 @@ export function StatusPill({
 
 export interface ChipRowProps {
   readonly children: ReactNode;
+  /** Gaps from the row to the controls above and below it; wrapped lines
+   * between them share the row's own gap. */
+  readonly neighbourGapDp?: number | NeighbourGaps;
 }
 
-export function ChipRow({ children }: ChipRowProps) {
+export function ChipRow({
+  children,
+  neighbourGapDp = space.controlGap,
+}: ChipRowProps) {
   const styles = useStyles();
-  return <View style={styles.row}>{children}</View>;
+  const [lineTops, setLineTops] = useState<
+    Readonly<Record<string, number | undefined>>
+  >({});
+  const report = useCallback((id: string, lineTop: number | undefined) => {
+    setLineTops((prev) =>
+      prev[id] === lineTop ? prev : { ...prev, [id]: lineTop },
+    );
+  }, []);
+  const lines = useMemo<ChipLines>(() => {
+    const outer = neighbourGaps(neighbourGapDp);
+    const tops = Object.values(lineTops).filter((t) => t !== undefined);
+    return {
+      gapsFor: (id) =>
+        wrappedLineGaps(lineTops[id], tops, outer, space.controlGap),
+      report,
+    };
+  }, [lineTops, neighbourGapDp, report]);
+  return (
+    <ChipLinesContext.Provider value={lines}>
+      <View style={styles.row}>{children}</View>
+    </ChipLinesContext.Provider>
+  );
 }

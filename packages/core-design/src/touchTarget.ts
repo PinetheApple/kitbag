@@ -51,6 +51,20 @@ function extendAxis(sizeDp: number, gapA: number, gapB: number) {
   return [a, b] as const;
 }
 
+// Unmeasured lines take the conservative line gap on both sides.
+export function wrappedLineGaps(
+  lineTop: number | undefined,
+  lineTops: readonly number[],
+  outer: NeighbourGaps,
+  lineGapDp: number,
+): NeighbourGaps {
+  if (lineTop === undefined) return { top: lineGapDp, bottom: lineGapDp };
+  return {
+    top: lineTop === Math.min(...lineTops) ? outer.top : lineGapDp,
+    bottom: lineTop === Math.max(...lineTops) ? outer.bottom : lineGapDp,
+  };
+}
+
 export function hitExtension(
   widthDp: number,
   heightDp: number,
