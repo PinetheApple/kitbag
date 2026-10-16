@@ -43,7 +43,7 @@ using kitbag_test::Check;
 
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 133;
+constexpr int kExpectedChecks = 135;
 
 double CentsBetween(double measured_hz, double true_hz) {
   return 1200.0 * std::log2(measured_hz / true_hz);
