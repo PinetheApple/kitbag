@@ -5,7 +5,7 @@ import {
   StepControl,
   type StepDelta,
 } from '@kitbag/core-design';
-import { KB_STOPPED_BEAT } from '@kitbag/core-native';
+import { KB_STOPPED_BEAT, KB_SUBDIVISION_BOUNDS } from '@kitbag/core-native';
 import { BPM_BOUNDS } from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { useSharedValue } from 'react-native-reanimated';
@@ -20,8 +20,6 @@ import { subdivisionGlyph } from '../../logic/subdivision.ts';
 import { BeatLeds } from '../../screen/BeatLeds.tsx';
 import { OnOff, StepField } from './fields.tsx';
 import type { PresetEditor } from './usePresetEditor.ts';
-
-const SUBDIVISION_MAX = 16;
 
 function useIdentitySetters(editor: PresetEditor) {
   const { update } = editor;
@@ -127,20 +125,18 @@ function PolyRow({ editor }: { readonly editor: PresetEditor }) {
     [update],
   );
   return (
-    <>
-      <EditRow label="Polyrhythm">
-        {draft.polyEnabled ? (
-          <StepControl
-            variant="inline"
-            label="Polyrhythm beats"
-            value={`${String(draft.polyBeats)}:${String(draft.beatsPerBar)}`}
-            accessibilityValue={`${String(draft.polyBeats)} beats`}
-            onStep={step}
-          />
-        ) : null}
-        <OnOff on={draft.polyEnabled} label="Polyrhythm" onChange={toggle} />
-      </EditRow>
-    </>
+    <EditRow label="Polyrhythm">
+      {draft.polyEnabled ? (
+        <StepControl
+          variant="inline"
+          label="Polyrhythm beats"
+          value={`${String(draft.polyBeats)}:${String(draft.beatsPerBar)}`}
+          accessibilityValue={`${String(draft.polyBeats)} beats`}
+          onStep={step}
+        />
+      ) : null}
+      <OnOff on={draft.polyEnabled} label="Polyrhythm" onChange={toggle} />
+    </EditRow>
   );
 }
 
@@ -171,8 +167,8 @@ function SubdivisionRow({ editor }: { readonly editor: PresetEditor }) {
         display={subdivisionGlyph(value)}
         label="Subdivision"
         unit="per beat"
-        min={1}
-        max={SUBDIVISION_MAX}
+        min={KB_SUBDIVISION_BOUNDS.min}
+        max={KB_SUBDIVISION_BOUNDS.max}
       />
     </EditRow>
   );

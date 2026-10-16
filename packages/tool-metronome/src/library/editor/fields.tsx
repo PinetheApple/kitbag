@@ -44,39 +44,34 @@ export function StepField(props: StepFieldProps) {
   );
 }
 
-type TrainerKey = 'ramp' | 'barMute';
-type TrainerPart = 'a' | 'b' | 'bars';
+type Trainers = Pick<PresetDraft, 'ramp' | 'barMute'>;
 
-export interface TrainerStepProps {
+export interface TrainerStepProps<K extends keyof Trainers> {
   readonly update: DraftUpdate;
-  readonly trainer: TrainerKey;
-  readonly part: TrainerPart;
-  readonly draft: PresetDraft;
+  readonly trainer: K;
+  readonly value: number;
   readonly label: string;
   readonly unit: string;
-  readonly max: number;
-  readonly min: number;
+  readonly step: (trainer: Trainers[K], delta: StepDelta) => Trainers[K];
 }
 
-export function TrainerStep(props: TrainerStepProps) {
-  const { update, trainer, part, min, max } = props;
-  const value = props.draft[trainer][part];
-  const step = useCallback(
+export function TrainerStep<K extends keyof Trainers>(
+  props: TrainerStepProps<K>,
+) {
+  const { update, trainer, step } = props;
+  const onStep = useCallback(
     (delta: StepDelta) => {
-      update((d) => {
-        const next = Math.min(Math.max(d[trainer][part] + delta, min), max);
-        return { ...d, [trainer]: { ...d[trainer], [part]: next } };
-      });
+      update((d) => ({ ...d, [trainer]: step(d[trainer], delta) }));
     },
-    [update, trainer, part, min, max],
+    [update, trainer, step],
   );
   return (
     <StepControl
       variant="inline"
       label={props.label}
-      value={String(value)}
-      accessibilityValue={`${String(value)} ${props.unit}`}
-      onStep={step}
+      value={String(props.value)}
+      accessibilityValue={`${String(props.value)} ${props.unit}`}
+      onStep={onStep}
     />
   );
 }

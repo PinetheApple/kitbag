@@ -32,7 +32,10 @@ export function accentsOf(value: unknown): KB_ACCENT[] {
   );
 }
 
-function perAccentSoundsOf(value: unknown, fallback: number): PerAccentSounds {
+export function perAccentSoundsOf(
+  value: unknown,
+  fallback: number,
+): PerAccentSounds {
   const saved = byteList(value);
   return {
     normal: saved[0] ?? fallback,
@@ -67,7 +70,7 @@ export function presetFromMetronome(config: MetronomeConfig): PresetFields {
 
 const RAMP_UNITS = new Set<number>(Object.values(KB_RAMP_UNIT));
 
-function rampUnitOf(value: number): KB_RAMP_UNIT {
+export function rampUnitOf(value: number): KB_RAMP_UNIT {
   return RAMP_UNITS.has(value)
     ? (value as KB_RAMP_UNIT)
     : KB_RAMP_UNIT.KB_RAMP_BARS;

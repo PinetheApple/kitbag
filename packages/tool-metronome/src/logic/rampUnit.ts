@@ -1,11 +1,12 @@
 import {
   KB_MAX_RAMP_BARS,
+  KB_MIN_RAMP_BARS,
   KB_RAMP_SECONDS_BOUNDS,
   KB_RAMP_UNIT,
 } from '@kitbag/core-native';
 import type { RampConfig } from '@kitbag/core-state';
 
-import { barBounds, stepWithin, type BarBounds } from './trainer.ts';
+import { stepWithin, type BarBounds } from './trainer.ts';
 
 const SECONDS_PER_MINUTE = 60;
 const MIN_WHOLE_MINUTES = 1;
@@ -38,7 +39,9 @@ export function rampUnitLabel(unit: KB_RAMP_UNIT): string {
 }
 
 export function rampDurationBounds(unit: KB_RAMP_UNIT): BarBounds {
-  if (unit === KB_RAMP_UNIT.KB_RAMP_BARS) return barBounds(KB_MAX_RAMP_BARS);
+  if (unit === KB_RAMP_UNIT.KB_RAMP_BARS) {
+    return { min: KB_MIN_RAMP_BARS, max: KB_MAX_RAMP_BARS };
+  }
   if (unit === KB_RAMP_UNIT.KB_RAMP_SECONDS) return KB_RAMP_SECONDS_BOUNDS;
   return {
     min: MIN_WHOLE_MINUTES,

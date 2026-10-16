@@ -1,3 +1,4 @@
+import { icons } from '@kitbag/core-design';
 import { KB_ACCENT } from '@kitbag/core-native';
 import type { SongPreset } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
@@ -36,7 +37,9 @@ const PRESET = {
   rampEnabled: true,
   rampStartBpm: 96,
   rampEndBpm: 104,
-  rampBars: 8,
+  rampBars: 90,
+  rampUnit: 1,
+  rampLoop: true,
   barMuteEnabled: false,
   barMutePlayBars: null,
   barMuteMuteBars: null,
@@ -60,7 +63,9 @@ describe('preset draft', () => {
       beatsPerBar: 3,
       rampEnabled: true,
       rampEndBpm: 104,
-      rampBars: 8,
+      rampBars: 90,
+      rampUnit: 1,
+      rampLoop: true,
       countInBars: 1,
       sound: 1,
     });
@@ -88,12 +93,12 @@ describe('preset draft', () => {
 
 describe('row subtitles', () => {
   it('reads the preset at a glance as the design does', () => {
-    expect(songSubtitle(PRESET)).toBe('96 · 3/4 · ⛰ 96→104');
+    expect(songSubtitle(PRESET)).toBe(`96 · 3/4 · ${icons.ramp} 96→104`);
     expect(songSubtitle({ ...PRESET, rampEnabled: false })).toBe(
-      '96 · 3/4 · ✎ notes',
+      `96 · 3/4 · ${icons.notes} notes`,
     );
     expect(songSubtitle({ ...PRESET, rampEnabled: false, notes: null })).toBe(
-      '96 · 3/4 · ⏱ 1 bar',
+      `96 · 3/4 · ${icons.countIn} 1 bar`,
     );
     expect(
       songSubtitle({

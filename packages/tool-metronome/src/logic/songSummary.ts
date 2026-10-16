@@ -1,23 +1,20 @@
-import { KB_SOUND_NAMES } from '@kitbag/core-native';
+import { icons } from '@kitbag/core-design';
+import { KB_COUNT_IN_OFF } from '@kitbag/core-native';
 import type { SongPreset } from '@kitbag/core-state';
 
+import { countInLabel, countInBarsFromOption } from './countIn.ts';
+import { soundLabel } from './soundChoice.ts';
 import { rampChipValue } from './trainer.ts';
-
-export function soundLabel(sound: number): string {
-  const name = KB_SOUND_NAMES[sound] ?? '';
-  return name.charAt(0).toUpperCase() + name.slice(1);
-}
-
-function bars(count: number): string {
-  return `${String(count)} ${count === 1 ? 'bar' : 'bars'}`;
-}
 
 function modifier(preset: SongPreset): string {
   if (preset.rampEnabled) {
-    return `⛰ ${rampChipValue(preset.rampStartBpm ?? preset.bpm, preset.rampEndBpm ?? preset.bpm)}`;
+    return `${icons.ramp} ${rampChipValue(preset.rampStartBpm ?? preset.bpm, preset.rampEndBpm ?? preset.bpm)}`;
   }
-  if ((preset.notes ?? '') !== '') return '✎ notes';
-  if (preset.countInBars > 0) return `⏱ ${bars(preset.countInBars)}`;
+  if ((preset.notes ?? '') !== '') return `${icons.notes} notes`;
+  const countIn = countInBarsFromOption(String(preset.countInBars));
+  if (countIn !== KB_COUNT_IN_OFF) {
+    return `${icons.countIn} ${countInLabel(countIn)}`;
+  }
   return soundLabel(preset.sound);
 }
 

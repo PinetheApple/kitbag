@@ -105,9 +105,9 @@ export type MetronomeStore = MetronomeConfig & MetronomeActions;
 export const DEFAULT_BPM = 120;
 const DEFAULT_BEATS = 4;
 const DEFAULT_DENOMINATOR: Denominator = KB_BPM_REFERENCE_DENOMINATOR;
-const DEFAULT_POLY_BEATS = 3;
+export const DEFAULT_POLY_BEATS = 3;
 const DEFAULT_VOLUME = 1;
-const DEFAULT_TRAINER_BARS = 4;
+export const DEFAULT_TRAINER_BARS = 4;
 
 function initialConfig(): MetronomeConfig {
   return {

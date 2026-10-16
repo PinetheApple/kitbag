@@ -1,17 +1,28 @@
-import { KB_ACCENT, KB_DENOMINATORS, KB_MAX_BEATS } from '@kitbag/core-native';
+import {
+  KB_DENOMINATORS,
+  KB_MAX_BEATS,
+  KB_POLY_BEATS_BOUNDS,
+  type KB_ACCENT,
+} from '@kitbag/core-native';
 import {
   accentsOf,
+  cycleAccentValue,
+  DEFAULT_POLY_BEATS,
+  DEFAULT_TRAINER_BARS,
+  initialAccents,
+  perAccentSoundsOf,
+  rampUnitOf,
+  resizeAccents,
   toBlob,
+  type BarMuteConfig,
+  type PerAccentSounds,
   type PresetEdit,
+  type RampConfig,
   type SongPreset,
 } from '@kitbag/core-state';
 
-export interface TrainerDraft {
-  readonly enabled: boolean;
-  readonly a: number;
-  readonly b: number;
-  readonly bars: number;
-}
+export type RampDraft = RampConfig;
+export type BarMuteDraft = BarMuteConfig;
 
 export interface PresetDraft {
   readonly name: string;
@@ -25,24 +36,40 @@ export interface PresetDraft {
   readonly polyEnabled: boolean;
   readonly polyBeats: number;
   readonly sound: number;
-  readonly perAccentSounds: {
-    readonly normal: number;
-    readonly accent: number;
-  };
+  readonly perAccentSounds: PerAccentSounds;
   readonly countInBars: number;
-  readonly ramp: TrainerDraft;
-  readonly barMute: TrainerDraft;
+  readonly ramp: RampDraft;
+  readonly barMute: BarMuteDraft;
 }
 
-const DEFAULT_TRAINER_BARS = 4;
-const DEFAULT_POLY_BEATS = 3;
 const MIN_BEATS = 1;
+
+function clampTo(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
+function polyAccentsOf(preset: SongPreset, polyBeats: number): KB_ACCENT[] {
+  const saved = accentsOf(preset.polyAccents);
+  const defaults = initialAccents(polyBeats);
+  return defaults.map((fallback, index) => saved[index] ?? fallback);
+}
+
+function rampDraftOf(preset: SongPreset): RampDraft {
+  return {
+    enabled: preset.rampEnabled,
+    startBpm: preset.rampStartBpm ?? preset.bpm,
+    endBpm: preset.rampEndBpm ?? preset.bpm,
+    duration: preset.rampBars ?? DEFAULT_TRAINER_BARS,
+    unit: rampUnitOf(preset.rampUnit),
+    loop: preset.rampLoop,
+  };
+}
 
 export function draftFrom(preset: SongPreset): PresetDraft {
   const polyBeats =
-    preset.polyBeats > MIN_BEATS ? preset.polyBeats : DEFAULT_POLY_BEATS;
-  const savedPolyAccents = accentsOf(preset.polyAccents);
-  const savedSounds = Array.from(preset.perAccentSounds ?? []);
+    preset.polyBeats >= KB_POLY_BEATS_BOUNDS.min
+      ? preset.polyBeats
+      : DEFAULT_POLY_BEATS;
   return {
     name: preset.name,
     notes: preset.notes ?? '',
@@ -51,46 +78,32 @@ export function draftFrom(preset: SongPreset): PresetDraft {
     denominator: preset.denominator,
     subdivision: preset.subdivision,
     accents: accentsOf(preset.accents),
-    polyAccents: Array.from(
-      { length: polyBeats },
-      (_unused, index) =>
-        savedPolyAccents[index] ??
-        (index === 0
-          ? KB_ACCENT.KB_ACCENT_ACCENTED
-          : KB_ACCENT.KB_ACCENT_NORMAL),
-    ),
+    polyAccents: polyAccentsOf(preset, polyBeats),
     polyEnabled: preset.polyEnabled,
     polyBeats,
     sound: preset.sound,
-    perAccentSounds: {
-      normal: savedSounds[0] ?? preset.sound,
-      accent: savedSounds[1] ?? preset.sound,
-    },
+    perAccentSounds: perAccentSoundsOf(preset.perAccentSounds, preset.sound),
     countInBars: preset.countInBars,
-    ramp: {
-      enabled: preset.rampEnabled,
-      a: preset.rampStartBpm ?? preset.bpm,
-      b: preset.rampEndBpm ?? preset.bpm,
-      bars: preset.rampBars ?? DEFAULT_TRAINER_BARS,
-    },
+    ramp: rampDraftOf(preset),
     barMute: {
       enabled: preset.barMuteEnabled,
-      a: preset.barMutePlayBars ?? DEFAULT_TRAINER_BARS,
-      b: preset.barMuteMuteBars ?? DEFAULT_TRAINER_BARS,
-      bars: 0,
+      playBars: preset.barMutePlayBars ?? DEFAULT_TRAINER_BARS,
+      muteBars: preset.barMuteMuteBars ?? DEFAULT_TRAINER_BARS,
     },
   };
 }
 
-function trainerEdit(draft: PresetDraft): PresetEdit {
+function trainerEdit({ ramp, barMute }: PresetDraft): PresetEdit {
   return {
-    rampEnabled: draft.ramp.enabled,
-    rampStartBpm: draft.ramp.a,
-    rampEndBpm: draft.ramp.b,
-    rampBars: draft.ramp.bars,
-    barMuteEnabled: draft.barMute.enabled,
-    barMutePlayBars: draft.barMute.a,
-    barMuteMuteBars: draft.barMute.b,
+    rampEnabled: ramp.enabled,
+    rampStartBpm: ramp.startBpm,
+    rampEndBpm: ramp.endBpm,
+    rampBars: ramp.duration,
+    rampUnit: ramp.unit,
+    rampLoop: ramp.loop,
+    barMuteEnabled: barMute.enabled,
+    barMutePlayBars: barMute.playBars,
+    barMuteMuteBars: barMute.muteBars,
   };
 }
 
@@ -117,26 +130,18 @@ export function editFrom(draft: PresetDraft): PresetEdit {
 }
 
 export function withBeats(draft: PresetDraft, delta: number): PresetDraft {
-  const beats = Math.min(
-    Math.max(draft.beatsPerBar + delta, MIN_BEATS),
-    KB_MAX_BEATS,
-  );
-  const accents = Array.from(
-    { length: beats },
-    (_u, i) => draft.accents[i] ?? KB_ACCENT.KB_ACCENT_NORMAL,
-  );
+  const beats = clampTo(draft.beatsPerBar + delta, MIN_BEATS, KB_MAX_BEATS);
+  const accents = resizeAccents(draft.accents, beats);
   return { ...draft, beatsPerBar: beats, accents };
 }
 
 export function withPolyBeats(draft: PresetDraft, delta: number): PresetDraft {
-  const polyBeats = Math.min(
-    Math.max(draft.polyBeats + delta, MIN_BEATS + 1),
-    KB_MAX_BEATS,
+  const polyBeats = clampTo(
+    draft.polyBeats + delta,
+    KB_POLY_BEATS_BOUNDS.min,
+    KB_POLY_BEATS_BOUNDS.max,
   );
-  const polyAccents = Array.from(
-    { length: polyBeats },
-    (_unused, index) => draft.polyAccents[index] ?? KB_ACCENT.KB_ACCENT_NORMAL,
-  );
+  const polyAccents = resizeAccents(draft.polyAccents, polyBeats);
   return { ...draft, polyBeats, polyAccents };
 }
 
@@ -148,17 +153,13 @@ export function withNextDenominator(draft: PresetDraft): PresetDraft {
   return next === undefined ? draft : { ...draft, denominator: next };
 }
 
-const CYCLE: Readonly<Record<KB_ACCENT, KB_ACCENT>> = {
-  [KB_ACCENT.KB_ACCENT_ACCENTED]: KB_ACCENT.KB_ACCENT_NORMAL,
-  [KB_ACCENT.KB_ACCENT_NORMAL]: KB_ACCENT.KB_ACCENT_MUTED,
-  [KB_ACCENT.KB_ACCENT_MUTED]: KB_ACCENT.KB_ACCENT_ACCENTED,
-};
-
 export function withCycledAccent(
   draft: PresetDraft,
   beat: number,
 ): PresetDraft {
-  const accents = draft.accents.map((a, i) => (i === beat ? CYCLE[a] : a));
+  const accents = draft.accents.map((accent, index) =>
+    index === beat ? cycleAccentValue(accent) : accent,
+  );
   return { ...draft, accents };
 }
 
@@ -167,7 +168,7 @@ export function withCycledPolyAccent(
   beat: number,
 ): PresetDraft {
   const polyAccents = draft.polyAccents.map((accent, index) =>
-    index === beat ? CYCLE[accent] : accent,
+    index === beat ? cycleAccentValue(accent) : accent,
   );
   return { ...draft, polyAccents };
 }

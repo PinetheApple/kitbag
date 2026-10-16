@@ -2,6 +2,8 @@ export { useMetronome } from './metronome/useMetronome.ts';
 export {
   BPM_BOUNDS,
   DEFAULT_BPM,
+  DEFAULT_POLY_BEATS,
+  DEFAULT_TRAINER_BARS,
   createMetronomeStore,
   metronomeStore,
   type MetronomeStore,
@@ -14,6 +16,11 @@ export {
   type Denominator,
   type CountInBars,
 } from './metronome/store.ts';
+export {
+  cycleAccentValue,
+  initialAccents,
+  resizeAccents,
+} from './metronome/config.ts';
 export type {
   EngineBpm,
   MetronomeCommands,
@@ -74,5 +81,11 @@ export {
   type LibraryRepositories,
 } from './library/runtime.ts';
 export type { SetlistEntry, SetlistSummary } from './library/snapshot.ts';
-export { accentsOf, byteList, toBlob } from './library/presetMapping.ts';
+export {
+  accentsOf,
+  byteList,
+  perAccentSoundsOf,
+  rampUnitOf,
+  toBlob,
+} from './library/presetMapping.ts';
 export type { Setlist, SetlistItem, SongPreset } from '@kitbag/core-db';
