@@ -19,6 +19,7 @@ export interface SearchResults {
 
 export interface LibraryState extends LibrarySnapshot {
   readonly ready: boolean;
+  readonly failed: boolean;
   readonly loaded: LoadedSong | null;
   readonly played: readonly number[];
   readonly results: SearchResults | null;
@@ -66,6 +67,7 @@ const defaultDeps: LibraryDeps = {
 
 const EMPTY: LibraryState = {
   ready: false,
+  failed: false,
   setlists: [],
   entries: {},
   presets: [],
@@ -209,9 +211,17 @@ async function activate(
 function readActions(deps: LibraryDeps, set: SetState, get: Get) {
   return {
     refresh: async () => {
-      set({ ...(await takeSnapshot(deps.repos())), ready: true });
-      const query = get().results?.query;
-      if (query !== undefined) await get().search(query);
+      try {
+        set({
+          ...(await takeSnapshot(deps.repos())),
+          ready: true,
+          failed: false,
+        });
+        const query = get().results?.query;
+        if (query !== undefined) await get().search(query);
+      } catch {
+        set({ ready: true, failed: true });
+      }
     },
     search: async (query: string) => {
       if (query.trim() === '') {
