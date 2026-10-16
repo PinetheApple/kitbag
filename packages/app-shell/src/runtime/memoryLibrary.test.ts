@@ -117,9 +117,16 @@ describe('memory library repositories', () => {
     for (const preset of tables.presets) {
       delete preset.rampUnit;
       delete preset.rampLoop;
+      delete preset.rampLength;
+      preset.rampBars = 8;
     }
     storage.setItem(key, JSON.stringify(tables));
     const [preset] = await createMemoryLibrary(storage).presets.list();
-    expect(preset).toMatchObject({ rampUnit: 0, rampLoop: false });
+    expect(preset).toMatchObject({
+      rampLength: 8,
+      rampUnit: 0,
+      rampLoop: false,
+    });
+    expect(preset).not.toHaveProperty('rampBars');
   });
 });

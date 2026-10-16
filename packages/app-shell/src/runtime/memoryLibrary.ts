@@ -57,8 +57,15 @@ function blobsToArrays(preset: SongPreset): unknown {
   return out;
 }
 
-function arraysToBlobs(raw: Record<string, unknown>): SongPreset {
-  const out: Record<string, unknown> = { ...PRESET_DEFAULTS, ...raw };
+function arraysToBlobs({
+  rampBars,
+  ...raw
+}: Record<string, unknown>): SongPreset {
+  const out: Record<string, unknown> = {
+    ...PRESET_DEFAULTS,
+    rampLength: rampBars ?? null,
+    ...raw,
+  };
   for (const field of BLOB_FIELDS) {
     const value = raw[field];
     out[field] = Array.isArray(value)
