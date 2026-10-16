@@ -1,17 +1,30 @@
 import { open, type DB } from '@op-engineering/op-sqlite';
 import { drizzle } from 'drizzle-orm/op-sqlite';
 
+import { createBackupService } from './backup';
 import * as schema from './schema';
 import { migrate, type MigrationDriver } from './migrate';
+import { createPreferences } from './preferences';
 import { createSetlistRepository } from './setlist-repository';
 import { createSongPresetRepository } from './song-preset-repository';
 import { createTransactor } from './transaction';
+import { createTuningRepository } from './tuning-repository';
 
 const DATABASE_NAME = 'kitbag';
 
 export function openDatabase(name: string = DATABASE_NAME) {
   const connection = open({ name });
-  migrate(opSqliteMigrationDriver(connection));
+  try {
+    migrate(opSqliteMigrationDriver(connection));
+  } catch (error) {
+    // The caller retries, so a failed open must not leave a connection behind.
+    try {
+      connection.close();
+    } catch {
+      // The migration error is the one worth reporting.
+    }
+    throw error;
+  }
   const handle = {
     db: drizzle(connection, { schema }),
     transactor: createTransactor((statement) => connection.execute(statement)),
@@ -19,6 +32,12 @@ export function openDatabase(name: string = DATABASE_NAME) {
   return {
     setlists: createSetlistRepository(handle),
     presets: createSongPresetRepository(handle),
+    tunings: createTuningRepository(handle),
+    backup: createBackupService(handle),
+    preferences: createPreferences(
+      (sql, params) => connection.executeSync(sql, params).rows,
+      handle.transactor,
+    ),
     close: () =>
       handle.transactor.serial(async () => {
         await connection.closeAsync();

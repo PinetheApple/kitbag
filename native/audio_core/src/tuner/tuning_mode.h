@@ -96,7 +96,6 @@ class TuningMode {
   int filled_ = 0;
   int until_hop_ = 0;
   double hop_seconds_ = 0.0;
-  int hold_hops_ = 0;
   int ratio_hops_ = 0;
   int no_sound_hops_ = 0;
   std::vector<double> levels_;
@@ -106,7 +105,7 @@ class TuningMode {
   bool note_present_ = false;
   int32_t current_string_ = KB_TUNER_NO_STRING;
   int32_t target_midi_ = KB_TUNER_NO_NOTE;
-  int confidence_ = 0;
+  int confidence_ = 0;  // P10, every mode; P27 drains it after the tone
   int missed_hops_ = 0;
   int in_window_hops_ = 0;
   double clarity_ = 0.0;

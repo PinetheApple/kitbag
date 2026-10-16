@@ -23,7 +23,7 @@ constexpr double kWrongStringMinRms = 0.0004;     // P20
 constexpr double kWrongStringStableSemis = 2.0;   // P21
 constexpr double kWrongStringMinSemis = 3.5;      // P22
 constexpr double kWrongStringDwellSeconds = 1.0;  // P23
-constexpr double kReleaseHoldSeconds = 1.2;       // P27
+constexpr int kReleaseDrain = 1;  // P27: per hop without the note
 // P7: the range a string tuning searches, around its lowest and highest notes.
 constexpr int32_t kRangeBelowLowest = 14;
 constexpr int32_t kRangeAboveHighest = 7;

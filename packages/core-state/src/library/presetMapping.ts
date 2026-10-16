@@ -1,7 +1,12 @@
 import type { NewSongPreset, SongPreset } from '@kitbag/core-db';
-import { KB_ACCENT } from '@kitbag/core-native';
+import { KB_ACCENT, KB_RAMP_UNIT } from '@kitbag/core-native';
 
-import type { MetronomeConfig, MetronomeStore } from '../metronome/store.ts';
+import { isCountInBars } from '../metronome/config.ts';
+import type {
+  MetronomeConfig,
+  MetronomeStore,
+  PerAccentSounds,
+} from '../metronome/store.ts';
 
 const ACCENTS = new Set<number>(Object.values(KB_ACCENT));
 
@@ -25,10 +30,8 @@ export function accentsOf(value: unknown): KB_ACCENT[] {
     ACCENTS.has(code) ? (code as KB_ACCENT) : KB_ACCENT.KB_ACCENT_NORMAL,
   );
 }
-function perAccentSoundsOf(
-  value: unknown,
-  fallback: number,
-): { readonly normal: number; readonly accent: number } {
+
+function perAccentSoundsOf(value: unknown, fallback: number): PerAccentSounds {
   const saved = byteList(value);
   return {
     normal: saved[0] ?? fallback,
@@ -37,28 +40,27 @@ function perAccentSoundsOf(
 }
 
 export function presetFromMetronome(config: MetronomeConfig): PresetFields {
+  // The schema stores ramps in bars only; a time-based ramp cannot round-trip.
+  const barRamp = config.ramp.unit === KB_RAMP_UNIT.KB_RAMP_BARS;
   return {
     bpm: config.bpm,
     beatsPerBar: config.beatsPerBar,
     denominator: config.denominator,
     subdivision: config.subdivision,
     accents: toBlob(config.accents),
-    perAccentSounds: toBlob([
-      config.perAccentSounds.normal,
-      config.perAccentSounds.accent,
-    ]),
+    perAccentSounds: toBlob([config.sounds.normal, config.sounds.accent]),
     polyEnabled: config.polyEnabled,
     polyBeats: config.polyBeats,
     polyAccents: toBlob(config.polyAccents),
-    sound: config.sound,
-    rampEnabled: config.ramp.enabled,
+    sound: config.sounds.normal,
+    rampEnabled: barRamp && config.ramp.enabled,
     rampStartBpm: config.ramp.startBpm,
     rampEndBpm: config.ramp.endBpm,
-    rampBars: config.ramp.bars,
+    rampBars: barRamp ? config.ramp.duration : null,
     barMuteEnabled: config.barMute.enabled,
     barMutePlayBars: config.barMute.playBars,
     barMuteMuteBars: config.barMute.muteBars,
-    countInBars: config.countInBars,
+    countInBars: config.countIn.bars,
   };
 }
 
@@ -68,7 +70,9 @@ function applyTrainers(preset: SongPreset, metronome: MetronomeStore): void {
     enabled: preset.rampEnabled,
     startBpm: preset.rampStartBpm ?? preset.bpm,
     endBpm: preset.rampEndBpm ?? preset.bpm,
-    bars: preset.rampBars ?? ramp.bars,
+    duration: preset.rampBars ?? ramp.duration,
+    unit: KB_RAMP_UNIT.KB_RAMP_BARS,
+    loop: false,
   });
   metronome.setBarMute({
     enabled: preset.barMuteEnabled,
@@ -87,11 +91,11 @@ export function applyPreset(
   store.setSubdivision(preset.subdivision);
   store.setPoly(preset.polyEnabled, preset.polyBeats);
   store.setPolyAccents(accentsOf(preset.polyAccents));
-  store.setSound(preset.sound);
-  store.setPerAccentSounds(
-    perAccentSoundsOf(preset.perAccentSounds, preset.sound),
-  );
-  store.setCountIn(preset.countInBars);
+  const sounds = perAccentSoundsOf(preset.perAccentSounds, preset.sound);
+  store.setSounds(sounds.normal, sounds.accent);
+  if (isCountInBars(preset.countInBars)) {
+    store.setCountIn({ ...store.countIn, bars: preset.countInBars });
+  }
   store.setTempo(preset.bpm);
   applyTrainers(preset, store);
 }

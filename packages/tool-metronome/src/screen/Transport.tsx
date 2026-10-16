@@ -9,6 +9,7 @@ import { StyleSheet, View } from 'react-native';
 interface TransportProps {
   readonly running: boolean;
   readonly onToggle: () => void;
+  readonly canResetPractice: boolean;
   readonly onResetPractice: () => void;
   readonly onOpenSetlists?: (() => void) | undefined;
 }
@@ -25,6 +26,7 @@ const styles = StyleSheet.create({
 export function Transport({
   running,
   onToggle,
+  canResetPractice,
   onResetPractice,
   onOpenSetlists,
 }: TransportProps) {
@@ -44,11 +46,16 @@ export function Transport({
         accessibilityLabel={running ? 'Stop' : 'Play'}
         onPress={onToggle}
       />
-      <TransportKey
-        icon="practice"
-        accessibilityLabel="Reset practice timer"
-        onPress={onResetPractice}
-      />
+      {/* The pill's twin follows the pill: absent, not disabled, at 0:00. */}
+      {canResetPractice ? (
+        <TransportKey
+          icon="practice"
+          accessibilityLabel="Reset practice timer"
+          onPress={onResetPractice}
+        />
+      ) : (
+        <TransportKeySpacer />
+      )}
     </View>
   );
 }

@@ -22,3 +22,9 @@ export function formatPracticeElapsed(elapsedMs: number): string {
   if (hours > 0) return `${String(hours)}:${pad(minutes)}:${pad(seconds)}`;
   return `${String(minutes)}:${pad(seconds)}`;
 }
+
+/** The pill offers reset only once it reads past 0:00 — the same flooring as
+ * the clock, so "reset" never sits beside a timer showing nothing to reset. */
+export function hasPracticeToReset(elapsedMs: number): boolean {
+  return Math.floor(elapsedMs / MS_PER_SECOND) > 0;
+}

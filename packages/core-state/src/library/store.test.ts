@@ -1,7 +1,7 @@
 import { createSetlistRepository } from '@kitbag/core-db/src/setlist-repository';
 import { createSongPresetRepository } from '@kitbag/core-db/src/song-preset-repository';
 import { openTestDatabase } from '@kitbag/core-db/src/sqlite.test-helper';
-import { KB_ACCENT } from '@kitbag/core-native';
+import { KB_ACCENT, KB_RAMP_UNIT } from '@kitbag/core-native';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createMetronomeStore } from '../metronome/store.ts';
@@ -24,12 +24,16 @@ function setup() {
     start: vi.fn(() => Promise.resolve(0)),
     metronomeStart: vi.fn(),
     metronomeStop: vi.fn(),
+    metronomePause: vi.fn(),
     setTempo: vi.fn(),
     setBeats: vi.fn(),
     setSubdivision: vi.fn(),
     setAccent: vi.fn(),
     setPoly: vi.fn(),
-    setSound: vi.fn(),
+    setPolyAccent: vi.fn(),
+    setSounds: vi.fn(),
+    previewSound: vi.fn(),
+    setCountIn: vi.fn(),
     setVolume: vi.fn(),
     setLatencyOffset: vi.fn(),
     setRamp: vi.fn(),
@@ -112,14 +116,24 @@ describe('library store', () => {
     const s = library.getState();
     metronome.getState().setBeats(3, 4);
     metronome.getState().setTempo(96);
-    metronome
-      .getState()
-      .setRamp({ enabled: true, startBpm: 96, endBpm: 104, bars: 8 });
+    metronome.getState().setRamp({
+      enabled: true,
+      startBpm: 96,
+      endBpm: 104,
+      duration: 8,
+      unit: KB_RAMP_UNIT.KB_RAMP_BARS,
+      loop: false,
+    });
+    metronome.getState().setPoly(true, 3);
+    metronome.getState().cyclePolyAccent(1);
+    metronome.getState().setSounds(2, 5);
     const later = await s.createSetlist('Later');
     const gig = await s.createSetlist('Gig');
     const song = await s.newSongFromCurrent('Blackbird', gig);
     metronome.getState().setTempo(140);
     metronome.getState().setBeats(4, 4);
+    metronome.getState().cyclePolyAccent(1);
+    metronome.getState().setSounds(0, 0);
     const [entry] = library.getState().entries[gig] ?? [];
     if (entry === undefined) throw new Error('missing entry');
     await s.loadSong(song, entry.item.id, gig);
@@ -130,6 +144,12 @@ describe('library store', () => {
       true,
       104,
     ]);
+    expect(m.polyAccents).toEqual([
+      KB_ACCENT.KB_ACCENT_ACCENTED,
+      KB_ACCENT.KB_ACCENT_MUTED,
+      KB_ACCENT.KB_ACCENT_NORMAL,
+    ]);
+    expect(m.sounds).toEqual({ normal: 2, accent: 5 });
     expect(library.getState().setlists.map((x) => x.setlist.id)).toEqual([
       gig,
       later,
@@ -160,5 +180,20 @@ describe('library store', () => {
     expect(Array.from(preset?.accents ?? [])[0]).toBe(
       KB_ACCENT.KB_ACCENT_NORMAL,
     );
+  });
+
+  it('saves a time-based ramp as off, since presets store ramps in bars', async () => {
+    const { library, metronome } = setup();
+    metronome.getState().setRamp({
+      enabled: true,
+      startBpm: 90,
+      endBpm: 120,
+      duration: 30,
+      unit: KB_RAMP_UNIT.KB_RAMP_SECONDS,
+      loop: false,
+    });
+    const id = await library.getState().newSongFromCurrent('Timed');
+    const preset = library.getState().presets.find((p) => p.id === id);
+    expect([preset?.rampEnabled, preset?.rampBars]).toEqual([false, null]);
   });
 });

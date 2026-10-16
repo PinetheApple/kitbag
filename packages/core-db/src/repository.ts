@@ -28,3 +28,23 @@ export function escapedLike(column: Parameters<typeof like>[0], query: string) {
   const escaped = query.replace(/[\\%_]/g, (character) => `\\${character}`);
   return sql`${column} LIKE ${`%${escaped}%`} ESCAPE '\\'`;
 }
+
+// Custom tunings only; built-ins are code constants. `notes` are MIDI note
+// numbers, low string first. `instrument` is a KB_TUNER_INSTRUMENT_* value,
+// range-checked against the mirror in tuning-rules.ts.
+export interface Tuning {
+  id: number;
+  uuid: string;
+  name: string;
+  instrument: number;
+  notes: number[];
+}
+
+export type NewTuning = Omit<Tuning, 'id' | 'uuid'>;
+
+export interface TuningRepository {
+  list(): Promise<Tuning[]>;
+  create(values: NewTuning): Promise<Tuning>;
+  update(id: number, values: Partial<NewTuning>): Promise<void>;
+  delete(id: number): Promise<void>;
+}

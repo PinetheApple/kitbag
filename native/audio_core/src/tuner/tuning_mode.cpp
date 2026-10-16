@@ -114,7 +114,6 @@ void TuningMode::Init(uint32_t sample_rate) {
 }
 
 void TuningMode::DeriveHopCounts() {
-  hold_hops_ = HopsCovering(tuning_rules::kReleaseHoldSeconds, hop_seconds_);
   ratio_hops_ = static_cast<int>(
       std::lround(tuning_rules::kTimeToFullyInTune / hop_seconds_)
   );

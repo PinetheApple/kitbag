@@ -1,18 +1,48 @@
 import { useCallback } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import { pickerRows } from '../pickerRows.ts';
 import { inset, radius, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
-import type { SegmentOption } from './SegmentedControl.tsx';
+
+export interface PickerOption<T extends string> {
+  readonly value: T;
+  readonly label: string;
+  readonly accessibilityLabel?: string;
+}
+
+export interface PickerGridProps<T extends string> {
+  readonly options: readonly PickerOption<T>[];
+  readonly selected: T | undefined;
+  readonly onSelect: (value: T) => void;
+  readonly accessibilityLabel: string;
+  readonly columns?: PickerColumns;
+}
+
+const PICKER_COLUMNS = { three: 3, four: 4 } as const;
+type PickerColumns = (typeof PICKER_COLUMNS)[keyof typeof PICKER_COLUMNS];
+
+interface PickerItemProps<T extends string> {
+  readonly option: PickerOption<T>;
+  readonly selected: boolean;
+  readonly onSelect: (value: T) => void;
+}
 
 const useStyles = createThemedStyles((theme) => ({
-  grid: { gap: space.controlGap },
-  row: { flexDirection: 'row', gap: space.controlGap },
-  filler: { flex: 1 },
-  option: {
+  grid: {
+    gap: space.controlGap,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: space.controlGap,
+  },
+  cell: {
     flex: 1,
+    minWidth: 0,
+  },
+  item: {
     minHeight: minTouchTargetDp,
     alignItems: 'center',
     justifyContent: 'center',
@@ -27,74 +57,69 @@ const useStyles = createThemedStyles((theme) => ({
     borderColor: theme.color.accentDim,
     backgroundColor: theme.activeControlFill,
   },
-  label: { ...textStyle(textRoles.chip), color: theme.color.text2 },
-  labelSelected: { color: theme.color.accent },
+  label: {
+    ...textStyle(textRoles.segment),
+    color: theme.color.text2,
+    textAlign: 'center',
+  },
+  selectedLabel: {
+    color: theme.color.accent,
+  },
 }));
 
-interface PickProps<T extends string> {
-  readonly option: SegmentOption<T>;
-  readonly selected: boolean;
-  readonly onSelect: (value: T) => void;
-}
-
-function Pick<T extends string>({ option, selected, onSelect }: PickProps<T>) {
+function PickerItem<T extends string>({
+  option,
+  selected,
+  onSelect,
+}: PickerItemProps<T>) {
   const styles = useStyles();
   const handlePress = useCallback(() => {
     onSelect(option.value);
   }, [onSelect, option.value]);
+
   return (
     <Pressable
       accessibilityRole="radio"
       accessibilityLabel={option.accessibilityLabel ?? option.label}
       accessibilityState={{ checked: selected }}
-      style={[styles.option, selected && styles.selected]}
+      style={[styles.cell, styles.item, selected && styles.selected]}
       onPress={handlePress}
     >
-      <Text style={[styles.label, selected && styles.labelSelected]}>
+      <Text style={[styles.label, selected && styles.selectedLabel]}>
         {option.label}
       </Text>
     </Pressable>
   );
 }
 
-function rowsOf<T>(items: readonly T[], columns: number): T[][] {
-  const rows: T[][] = [];
-  for (let start = 0; start < items.length; start += columns) {
-    rows.push(items.slice(start, start + columns));
-  }
-  return rows;
-}
-
-export interface PickerGridProps<T extends string> {
-  readonly options: readonly SegmentOption<T>[];
-  readonly selected: T | undefined;
-  readonly onSelect: (value: T) => void;
-  readonly accessibilityLabel: string;
-  readonly columns?: number;
-}
-
-export function PickerGrid<T extends string>(props: PickerGridProps<T>) {
+export function PickerGrid<T extends string>({
+  options,
+  selected,
+  onSelect,
+  accessibilityLabel,
+  columns = PICKER_COLUMNS.three,
+}: PickerGridProps<T>) {
   const styles = useStyles();
-  const columns = props.columns ?? props.options.length;
   return (
     <View
       accessibilityRole="radiogroup"
-      accessibilityLabel={props.accessibilityLabel}
+      accessibilityLabel={accessibilityLabel}
       style={styles.grid}
     >
-      {rowsOf(props.options, columns).map((row) => (
-        <View key={row[0]?.value} style={styles.row}>
-          {row.map((option) => (
-            <Pick
-              key={option.value}
-              option={option}
-              selected={option.value === props.selected}
-              onSelect={props.onSelect}
-            />
-          ))}
-          {Array.from({ length: columns - row.length }, (_u, i) => (
-            <View key={i} style={styles.filler} />
-          ))}
+      {pickerRows(options, columns).map((row, r) => (
+        <View key={r} style={styles.row}>
+          {row.map((option, c) =>
+            option === undefined ? (
+              <View key={`empty-${String(c)}`} style={styles.cell} />
+            ) : (
+              <PickerItem
+                key={option.value}
+                option={option}
+                selected={option.value === selected}
+                onSelect={onSelect}
+              />
+            ),
+          )}
         </View>
       ))}
     </View>

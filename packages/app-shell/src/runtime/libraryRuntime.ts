@@ -1,4 +1,5 @@
-import { openDatabase } from '@kitbag/core-db';
 import { configureLibrary } from '@kitbag/core-state';
 
-configureLibrary(openDatabase());
+import { getDatabase } from './database.ts';
+
+configureLibrary(getDatabase());

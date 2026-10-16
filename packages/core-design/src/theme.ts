@@ -29,6 +29,11 @@ export function mixHex(fg: string, bg: string, fgWeight: number): string {
   return `#${mixed.join('').toUpperCase()}`;
 }
 
+export function withAlpha(hex: string, alpha: number): string {
+  const byte = Math.round(Math.min(1, Math.max(0, alpha)) * CHANNEL_MAX);
+  return `${hex}${byte.toString(HEX_RADIX).padStart(HEX_PAIR, '0').toUpperCase()}`;
+}
+
 export type FeedbackTone = 'success' | 'warning' | 'danger';
 
 export interface FeedbackColors {
@@ -43,6 +48,7 @@ export interface Theme {
   readonly activeControlFill: string;
   readonly activeCardFill: string;
   readonly onDanger: string;
+  readonly disabledLabel: string;
   readonly feedback: Readonly<Record<FeedbackTone, FeedbackColors>>;
   readonly shadow: string;
 }
@@ -73,6 +79,7 @@ export function buildTheme(mode: ThemeMode): Theme {
     activeControlFill: mixHex(color.accent, color.surface2, mix.activeControl),
     activeCardFill: mixHex(color.accent, color.surface1, mix.activeCard),
     onDanger: color.surface1,
+    disabledLabel: color.text2,
     feedback: {
       success: feedbackColors(color, 'success'),
       warning: feedbackColors(color, 'warning'),

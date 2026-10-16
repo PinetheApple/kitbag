@@ -1,6 +1,12 @@
-export const SCHEMA_VERSION = 8;
+import { REPAIR_PRESETS } from './preset-repair';
+import { INSTRUMENTS, MAX_MIDI_NOTE, MAX_STRINGS } from './tuning-rules';
+
+export const SCHEMA_VERSION = 11;
 export const V6_SCHEMA_VERSION = 6;
 export const V7_SCHEMA_VERSION = 7;
+export const V8_SCHEMA_VERSION = 8;
+export const V9_SCHEMA_VERSION = 9;
+export const V10_SCHEMA_VERSION = 10;
 
 export interface MigrationDriver {
   exec(sql: string): void;
@@ -138,7 +144,48 @@ const ADD_POLY_ACCENTS =
 const CREATE_ONE_ACTIVE_INDEX =
   'CREATE UNIQUE INDEX setlists_one_active ON setlists (active) WHERE active = 1';
 
-export const BASELINE_V8: readonly string[] = [
+export const MIGRATE_V8_TO_V9: readonly string[] = [
+  ...REPAIR_PRESETS,
+  'ALTER TABLE practice_sessions ADD COLUMN uuid TEXT',
+  `UPDATE practice_sessions SET uuid = ${UUID4_SQL} WHERE uuid IS NULL`,
+  'CREATE UNIQUE INDEX practice_sessions_uuid ON practice_sessions (uuid)',
+  ...['INSERT', 'UPDATE'].map(
+    (event) => `CREATE TRIGGER practice_sessions_uuid_${event.toLowerCase()}
+      BEFORE ${event} ON practice_sessions WHEN NEW.uuid IS NULL
+      BEGIN SELECT RAISE(ABORT, 'practice_sessions.uuid is required'); END`,
+  ),
+];
+
+const HEX_RADIX = 16;
+const MAX_NOTE_HEX = MAX_MIDI_NOTE.toString(HEX_RADIX)
+  .toUpperCase()
+  .padStart(2, '0');
+
+// Legacy rows the tuner can never load (no strings, too many, a note byte above
+// MIDI range) are dropped, so every stored tuning passes backup import.
+const DELETE_UNLOADABLE_TUNINGS = `DELETE FROM tunings
+  WHERE length(notes) NOT BETWEEN 1 AND ${String(MAX_STRINGS)}
+  OR id IN (
+    WITH RECURSIVE note (id, notes, at) AS (
+      SELECT id, notes, 1 FROM tunings
+      UNION ALL SELECT id, notes, at + 1 FROM note WHERE at < length(notes)
+    )
+    SELECT id FROM note WHERE hex(substr(notes, at, 1)) > '${MAX_NOTE_HEX}'
+  )`;
+
+export const MIGRATE_V9_TO_V10: readonly string[] = [
+  `ALTER TABLE tunings ADD COLUMN instrument INTEGER NOT NULL DEFAULT ${String(INSTRUMENTS.guitar)}`,
+  DELETE_UNLOADABLE_TUNINGS,
+];
+
+export const MIGRATE_V10_TO_V11: readonly string[] = [
+  `CREATE TABLE preferences (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+)`,
+];
+
+export const BASELINE: readonly string[] = [
   CREATE_SETLISTS,
   CREATE_SONGS,
   CREATE_SONG_PRESETS,
@@ -153,6 +200,9 @@ export const BASELINE_V8: readonly string[] = [
   CREATE_ROUTE_LATENCY,
   ADD_POLY_ACCENTS,
   CREATE_ONE_ACTIVE_INDEX,
+  ...MIGRATE_V8_TO_V9,
+  ...MIGRATE_V9_TO_V10,
+  ...MIGRATE_V10_TO_V11,
 ];
 
 // SQLite cannot ADD a NOT NULL column without a constant default, so migrated
@@ -208,13 +258,23 @@ function runStatements(
   }
 }
 
+// Each step upgrades from the version before `to`.
+const UPGRADES: readonly {
+  readonly to: number;
+  readonly steps: readonly string[];
+}[] = [
+  { to: V7_SCHEMA_VERSION, steps: MIGRATE_V6_TO_V7 },
+  { to: V8_SCHEMA_VERSION, steps: MIGRATE_V7_TO_V8 },
+  { to: V9_SCHEMA_VERSION, steps: MIGRATE_V8_TO_V9 },
+  { to: V10_SCHEMA_VERSION, steps: MIGRATE_V9_TO_V10 },
+  { to: SCHEMA_VERSION, steps: MIGRATE_V10_TO_V11 },
+];
+
 function upgradeSteps(from: number): readonly string[] {
-  if (from === 0) return BASELINE_V8;
+  if (from === 0) return BASELINE;
   // The Flutter build always migrated users to v6 before this code could run,
   // so any nonzero version below 7 is v6-shaped.
-  if (from < V7_SCHEMA_VERSION)
-    return [...MIGRATE_V6_TO_V7, ...MIGRATE_V7_TO_V8];
-  return MIGRATE_V7_TO_V8;
+  return UPGRADES.filter(({ to }) => to > from).flatMap(({ steps }) => steps);
 }
 
 export function migrate(driver: MigrationDriver): void {

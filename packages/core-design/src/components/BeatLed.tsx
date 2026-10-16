@@ -7,6 +7,7 @@ import Animated, {
 
 import { opacity, size, space } from '../roles.ts';
 import type { Theme } from '../theme.ts';
+import { TRANSPARENT } from '../styleConstants.ts';
 import { createThemedStyles, useTheme } from '../ThemeProvider.tsx';
 import { ledRadius } from '../tokens.ts';
 import { hitSlopFor } from '../touchTarget.ts';
@@ -15,8 +16,6 @@ export type LedState = 'accented' | 'normal' | 'muted';
 export type LedSize = 'main' | 'small';
 
 export type BeatLedLayout = readonly (readonly (readonly number[])[])[];
-
-const TRANSPARENT = 'transparent';
 
 const LED_NEIGHBOUR_GAP = Math.min(space.ledGap, space.controlGap);
 const HIT_SLOP: Readonly<Record<LedSize, number>> = {

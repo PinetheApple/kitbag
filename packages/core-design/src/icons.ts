@@ -37,6 +37,11 @@ export const icons = {
   notes: '✎',
   song: '♪',
   songs: '♬',
+  metronome: '◴',
+  tuner: '♪',
+  stems: '≣',
+  playAlong: '◉',
+  moreTools: '✦',
 } as const;
 
 export type IconName = keyof typeof icons;
@@ -50,3 +55,13 @@ export const emojiCapableIcons: readonly IconName[] = [
   'countIn',
   'play',
 ];
+
+export const shapeIcons = ['arrowUp', 'arrowDown', 'check', 'mic'] as const;
+
+export type ShapeIconName = (typeof shapeIcons)[number];
+
+export type AnyIconName = IconName | ShapeIconName;
+
+export function isShapeIcon(name: AnyIconName): name is ShapeIconName {
+  return (shapeIcons as readonly string[]).includes(name);
+}

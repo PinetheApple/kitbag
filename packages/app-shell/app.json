@@ -21,14 +21,21 @@
         "backgroundImage": "./assets/adaptive-icon/background.png",
         "monochromeImage": "./assets/adaptive-icon/monochrome.png",
         "backgroundColor": "#0E0D10"
-      }
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.VIBRATE"
+      ]
     },
     "plugins": ["expo-router"],
     "experiments": {
       "typedRoutes": true
     },
     "ios": {
-      "bundleIdentifier": "com.kitbag.app"
+      "bundleIdentifier": "com.kitbag.app",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Kitbag uses the microphone to hear your instrument while the tuner screen is open. It stops listening when you leave the tuner or switch apps."
+      }
     }
   }
 }

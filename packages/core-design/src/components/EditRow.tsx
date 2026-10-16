@@ -23,9 +23,13 @@ const useStyles = createThemedStyles((theme) => ({
     justifyContent: 'space-between',
     gap: space.rowGap,
     paddingVertical: inset.editRowV,
-    paddingHorizontal: space.inlineKeyGap,
+    paddingHorizontal: inset.editRowH,
   },
-  key: { ...textStyle(textRoles.editKey), color: theme.color.text2 },
+  label: {
+    ...textStyle(textRoles.editRowKey),
+    color: theme.color.text2,
+    flexShrink: 0,
+  },
   value: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -33,6 +37,7 @@ const useStyles = createThemedStyles((theme) => ({
     justifyContent: 'flex-end',
     gap: space.controlGap,
     flexShrink: 1,
+    minWidth: 0,
   },
   input: {
     ...textStyle(textRoles.editValue),
@@ -69,7 +74,7 @@ export function EditRow({ label, children }: EditRowProps) {
   const styles = useStyles();
   return (
     <View style={styles.row}>
-      <Text style={styles.key}>{label}</Text>
+      <Text style={styles.label}>{label}</Text>
       <View style={styles.value}>{children}</View>
     </View>
   );
