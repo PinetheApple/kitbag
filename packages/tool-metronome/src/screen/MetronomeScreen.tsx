@@ -11,6 +11,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { GestureDetector } from 'react-native-gesture-handler';
 import { View } from 'react-native';
 
+import { hasPracticeToReset } from '../logic/practiceTimer.ts';
 import { subdivisionGlyph } from '../logic/subdivision.ts';
 import { pushTap, tapTempoBpm } from '../logic/tapTempo.ts';
 import { BeatLeds } from './BeatLeds.tsx';
@@ -174,6 +175,7 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
           currentBpm={currentBpm}
           barPhase={barPhase}
           onTypeTempo={handleOpenNumpad}
+          onNudge={handleNudge}
         />
 
         <PresetRow onNudge={handleNudge} onTap={handleTap} />
@@ -240,6 +242,7 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
         <Transport
           running={running}
           onToggle={handleToggleTransport}
+          canResetPractice={hasPracticeToReset(elapsedMs)}
           onResetPractice={resetPractice}
         />
 

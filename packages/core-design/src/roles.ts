@@ -104,6 +104,21 @@ export const playGlyphPath = {
   height: 12,
 } as const;
 
+// Glyph sizes for icon-only content. The transport key's glyph matches the play
+// glyph beside it: the design file's 11px drew it too small to read (#125).
+export const iconSizes = {
+  chip: 12.5,
+  chevron: 13,
+  control: 14,
+  action: 16,
+  title: 17,
+  tile: 17,
+  toolTile: 22,
+  transport: size.playGlyphBox,
+} as const;
+
+export type IconSize = keyof typeof iconSizes;
+
 const display = fontFamily.display;
 const body = fontFamily.body;
 
@@ -121,7 +136,7 @@ export const textRoles = {
   stepKey: { family: display, weight: 400, size: 14 },
   stepInline: { family: display, weight: 400, size: 12.5 },
   stepInlineValue: { family: display, weight: 500, size: 12.5, tabular: true },
-  transportKey: { family: display, weight: 400, size: 11 },
+  transportKey: { family: display, weight: 400, size: iconSizes.transport },
   sheetTitle: { family: display, weight: 500, size: 14 },
   sheetNumeral: {
     family: display,
@@ -150,15 +165,3 @@ export const textRoles = {
 export type TextRoleName = keyof typeof textRoles;
 
 export const appBarTitleMinSize = 15;
-
-export const iconSizes = {
-  chip: 12.5,
-  chevron: 13,
-  control: 14,
-  action: 16,
-  title: 17,
-  tile: 17,
-  toolTile: 22,
-} as const;
-
-export type IconSize = keyof typeof iconSizes;
