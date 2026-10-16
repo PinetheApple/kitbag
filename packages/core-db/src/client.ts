@@ -12,8 +12,32 @@ import { createTuningRepository } from './tuning-repository';
 
 const DATABASE_NAME = 'kitbag';
 
+export type Connection = Pick<
+  DB,
+  'close' | 'closeAsync' | 'execute' | 'executeSync' | 'executeRaw'
+>;
+
+type Params = Parameters<Connection['execute']>[1];
+
+// drizzle-orm 0.45's op-sqlite session expects executeRawAsync to resolve to
+// bare rows and execute() to answer synchronously with rows._array.
+export function drizzleClient(connection: Connection) {
+  return {
+    executeAsync: (sql: string, params?: Params) =>
+      connection.execute(sql, params),
+    executeRawAsync: async (sql: string, params?: Params) =>
+      (await connection.executeRaw(sql, params)).rawRows,
+    execute: (sql: string, params?: Params) => ({
+      rows: { _array: connection.executeSync(sql, params).rows },
+    }),
+  };
+}
+
 export function openDatabase(name: string = DATABASE_NAME) {
-  const connection = open({ name });
+  return connectDatabase(open({ name }));
+}
+
+export function connectDatabase(connection: Connection) {
   try {
     migrate(opSqliteMigrationDriver(connection));
   } catch (error) {
@@ -26,7 +50,7 @@ export function openDatabase(name: string = DATABASE_NAME) {
     throw error;
   }
   const handle = {
-    db: drizzle(connection, { schema }),
+    db: drizzle(drizzleClient(connection), { schema }),
     transactor: createTransactor((statement) => connection.execute(statement)),
   };
   return {
@@ -49,7 +73,7 @@ export type KitbagDatabase = ReturnType<typeof openDatabase>;
 export type SetlistRepository = KitbagDatabase['setlists'];
 export type SongPresetRepository = KitbagDatabase['presets'];
 
-function opSqliteMigrationDriver(connection: DB): MigrationDriver {
+function opSqliteMigrationDriver(connection: Connection): MigrationDriver {
   return {
     exec: (sql) => {
       connection.executeSync(sql);
