@@ -36,25 +36,59 @@ void T7() {
   Expect(ok, log, "T7 E4 tuned in [0.74, 1.1] s (got %.3f s)", tuned);
 }
 
-void T8() {
+struct Release {
+  bool heard = false;  // a reading at the moment the tone stopped
+  bool held = false;   // the stopped tone's pitch reported until it cleared
+  double hold = -1.0;  // seconds from the stop to can_hear_note = 0
+  double tone = 0.0;   // seconds of tone fed, whole hops
+};
+
+Release ReleaseAfter(double tone_seconds) {
   BeginGuitar();
   Log log;
   ToneOsc osc;
   const double e4_hz = GuitarHz(kStringE4);
-  FeedTone(&log, &osc, 2.0, e4_hz);
+  FeedTone(&log, &osc, tone_seconds, e4_hz);
   const double stop = Elapsed(log);
-  const bool was_tuned = IsTuned(log.back().s);
-  Feed(&log, 3.0, Silence);
-  const bool held = HoldsBetween(log, stop, stop + 1.0, [&](auto& s) {
-    return s.can_hear_note == 1 && NearHz(s.measured_hz, e4_hz, 0.001);
-  });
-  const bool cleared = HoldsBetween(log, stop + 1.4, Elapsed(log), [](auto& s) {
+  Feed(&log, 2.0, Silence);
+  const double clear = FirstTime(log, IndexAt(log, stop), [](auto& s) {
     return s.can_hear_note == 0;
   });
+  Release r;
+  r.tone = stop;
+  r.heard = log[static_cast<size_t>(IndexAt(log, stop))].s.can_hear_note == 1;
+  r.hold = clear < 0.0 ? -1.0 : clear - stop;
+  r.held = clear > stop &&
+           HoldsBetween(log, stop, clear - kHopSeconds, [&](auto& s) {
+             return s.can_hear_note == 1 && NearHz(s.measured_hz, e4_hz, 0.001);
+           });
+  return r;
+}
+
+// Measured holds: 0.3 s tone 0.38 s, full tone 0.77 s (the 2-hop frame still
+// hears the tone one hop on). P10 never exceeds hops heard: the tone + 2 cap.
+void T8() {
+  const Release full = ReleaseAfter(2.0);
+  Log none;
   Expect(
-      was_tuned && held && cleared,
-      log,
-      "T8 tuned E4 then silence -> held 1.0 s, cleared by 1.4 s"
+      full.heard && full.held && full.hold >= 0.6 && full.hold <= 0.85,
+      none,
+      "T8 full-confidence E4 then silence -> held, cleared in [0.6, 0.85] s "
+      "(got %.3f s)",
+      full.hold
+  );
+  constexpr double kShortTone = 0.3;
+  const Release brief = ReleaseAfter(kShortTone);
+  const bool shorter = brief.hold > 0.0 &&
+                       brief.hold + kHopSeconds < full.hold &&
+                       brief.hold <= brief.tone + 2 * kHopSeconds;
+  Expect(
+      brief.heard && brief.held && shorter,
+      none,
+      "T8 0.3 s E4 -> hold shorter than full, <= tone + 2 hops "
+      "(got %.3f s vs %.3f s)",
+      brief.hold,
+      full.hold
   );
 }
 
