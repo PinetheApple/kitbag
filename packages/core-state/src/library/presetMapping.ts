@@ -6,6 +6,7 @@ import type {
   MetronomeConfig,
   MetronomeStore,
   PerAccentSounds,
+  RampConfig,
 } from '../metronome/store.ts';
 
 const ACCENTS = new Set<number>(Object.values(KB_ACCENT));
@@ -64,21 +65,28 @@ export function presetFromMetronome(config: MetronomeConfig): PresetFields {
   };
 }
 
-function applyTrainers(preset: SongPreset, metronome: MetronomeStore): void {
-  const { ramp, barMute } = metronome;
-  metronome.setRamp({
+function rampOf(preset: SongPreset, current: RampConfig): RampConfig {
+  return {
     enabled: preset.rampEnabled,
     startBpm: preset.rampStartBpm ?? preset.bpm,
     endBpm: preset.rampEndBpm ?? preset.bpm,
-    duration: preset.rampBars ?? ramp.duration,
+    duration: preset.rampBars ?? current.duration,
     unit: KB_RAMP_UNIT.KB_RAMP_BARS,
     loop: false,
-  });
-  metronome.setBarMute({
-    enabled: preset.barMuteEnabled,
-    playBars: preset.barMutePlayBars ?? barMute.playBars,
-    muteBars: preset.barMuteMuteBars ?? barMute.muteBars,
-  });
+  };
+}
+
+// setTempo switches a ramp off, and switching one off re-reads the engine's
+// tempo, which is stale until the engine catches up; so order by ramp state.
+function applyTempo(preset: SongPreset, store: MetronomeStore): void {
+  const ramp = rampOf(preset, store.ramp);
+  if (ramp.enabled) {
+    store.setTempo(preset.bpm);
+    store.setRamp(ramp);
+    return;
+  }
+  store.setRamp(ramp);
+  store.setTempo(preset.bpm);
 }
 
 export function applyPreset(
@@ -96,6 +104,10 @@ export function applyPreset(
   if (isCountInBars(preset.countInBars)) {
     store.setCountIn({ ...store.countIn, bars: preset.countInBars });
   }
-  store.setTempo(preset.bpm);
-  applyTrainers(preset, store);
+  store.setBarMute({
+    enabled: preset.barMuteEnabled,
+    playBars: preset.barMutePlayBars ?? store.barMute.playBars,
+    muteBars: preset.barMuteMuteBars ?? store.barMute.muteBars,
+  });
+  applyTempo(preset, store);
 }

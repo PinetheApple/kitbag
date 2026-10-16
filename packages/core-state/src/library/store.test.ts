@@ -13,7 +13,7 @@ afterEach(() => {
   for (const { connection } of handles.splice(0)) connection.close();
 });
 
-function setup() {
+function setup(engineBpm = () => 120) {
   const handle = openTestDatabase();
   handles.push(handle);
   const repos = {
@@ -39,11 +39,7 @@ function setup() {
     setRamp: vi.fn(),
     setBarMute: vi.fn(),
   };
-  const metronome = createMetronomeStore(
-    commands,
-    () => 0,
-    () => 120,
-  );
+  const metronome = createMetronomeStore(commands, () => 0, engineBpm);
   const library = createLibraryStore({
     repos: () => repos,
     metronome: () => metronome.getState(),
@@ -195,5 +191,15 @@ describe('library store', () => {
     const id = await library.getState().newSongFromCurrent('Timed');
     const preset = library.getState().presets.find((p) => p.id === id);
     expect([preset?.rampEnabled, preset?.rampBars]).toEqual([false, null]);
+  });
+
+  it('loads a song tempo while running, not the stale engine tempo', async () => {
+    const { library, metronome } = setup(() => 120);
+    metronome.getState().setTempo(96);
+    const id = await library.getState().newSongFromCurrent('Slow');
+    metronome.getState().setTempo(120);
+    metronome.getState().start();
+    await library.getState().loadSong(id);
+    expect(metronome.getState().bpm).toBe(96);
   });
 });
