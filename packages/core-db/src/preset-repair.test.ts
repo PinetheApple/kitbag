@@ -1,10 +1,9 @@
 import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
 
-import { migrate } from './migrate';
+import { V11_BASELINE } from './migrate';
 import { REPAIR_PRESETS } from './preset-repair';
 import { presetViolation } from './preset-rules';
-import { nodeSqliteDriver } from './sqlite.test-helper';
 
 type Row = Record<string, unknown>;
 
@@ -60,7 +59,8 @@ function shape(row: Row) {
     polyBeats: row.poly_beats as number,
     rampStartBpm: nullable('ramp_start_bpm'),
     rampEndBpm: nullable('ramp_end_bpm'),
-    rampBars: nullable('ramp_bars'),
+    rampLength: nullable('ramp_bars'),
+    rampUnit: 0,
     barMutePlayBars: nullable('bar_mute_play_bars'),
     barMuteMuteBars: nullable('bar_mute_mute_bars'),
     accents: row.accents as Uint8Array,
@@ -71,7 +71,7 @@ function shape(row: Row) {
 
 function repaired(): Row[] {
   const db = new DatabaseSync(':memory:');
-  migrate(nodeSqliteDriver(db));
+  for (const statement of V11_BASELINE) db.exec(statement);
   for (const change of BROKEN) insert(db, { ...VALID, ...change });
   for (const statement of REPAIR_PRESETS) db.exec(statement);
   return db.prepare('SELECT * FROM song_presets ORDER BY id').all();

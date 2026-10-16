@@ -4,13 +4,15 @@ import {
   SegmentedControl,
   space,
   StepControl,
+  textRoles,
+  textStyle,
   unshared,
 } from '@kitbag/core-design';
 import { KB_DENOMINATORS } from '@kitbag/core-native';
-import { BPM_BOUNDS, useMetronome } from '@kitbag/core-state';
+import { BPM_BOUNDS, useLibrary, useMetronome } from '@kitbag/core-state';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { GestureDetector } from 'react-native-gesture-handler';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { hasPracticeToReset } from '../logic/practiceTimer.ts';
 import { subdivisionGlyph } from '../logic/subdivision.ts';
@@ -90,6 +92,11 @@ const useStyles = createThemedStyles((theme) => ({
   spacer: {
     flex: 1,
   },
+  notes: {
+    ...textStyle(textRoles.fieldLabel),
+    color: theme.color.text2,
+    textAlign: 'center',
+  },
 }));
 
 export interface ShellMeasuredInsets {
@@ -99,9 +106,13 @@ export interface ShellMeasuredInsets {
 
 export interface MetronomeScreenProps {
   readonly insets: ShellMeasuredInsets;
+  readonly onOpenSetlists?: () => void;
 }
 
-export function MetronomeScreen({ insets }: MetronomeScreenProps) {
+export function MetronomeScreen({
+  insets,
+  onOpenSetlists,
+}: MetronomeScreenProps) {
   const styles = useStyles();
   const bpm = useMetronome((s) => s.bpm);
   const beatsPerBar = useMetronome((s) => s.beatsPerBar);
@@ -111,6 +122,13 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
   const polyEnabled = useMetronome((s) => s.polyEnabled);
   const polyBeats = useMetronome((s) => s.polyBeats);
   const polyAccents = useMetronome((s) => s.polyAccents);
+  const notes = useLibrary((state) => {
+    const loadedId = state.loaded?.presetId;
+    if (loadedId === undefined) return null;
+    return (
+      state.presets.find((preset) => preset.id === loadedId)?.notes ?? null
+    );
+  });
   const running = useMetronome((s) => s.running);
 
   const setTempo = useMetronome((s) => s.setTempo);
@@ -213,6 +231,14 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
     <GestureDetector gesture={tempoSwipe}>
       <View style={[styles.screen, edgeToEdgePadding]}>
         <PracticePill elapsedMs={elapsedMs} onReset={resetPractice} />
+        {notes === null || notes.trim() === '' ? null : (
+          <Text
+            accessibilityLabel={`Song notes: ${notes}`}
+            style={styles.notes}
+          >
+            {notes}
+          </Text>
+        )}
 
         <SwipeTempoZone
           bpm={bpm}
@@ -296,6 +322,7 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
           onToggle={handleToggleTransport}
           canResetPractice={hasPracticeToReset(elapsedMs)}
           onResetPractice={resetPractice}
+          onOpenSetlists={onOpenSetlists}
         />
 
         <TempoNumpadSheet

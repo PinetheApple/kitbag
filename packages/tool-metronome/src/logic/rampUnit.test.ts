@@ -57,4 +57,27 @@ describe('ramp duration per unit', () => {
       KB_MAX_RAMP_BARS,
     );
   });
+
+  it('keeps any length the store accepts, so the sheet and the store agree', () => {
+    const half = {
+      ...draft,
+      duration: 0.5,
+      unit: KB_RAMP_UNIT.KB_RAMP_MINUTES,
+    };
+    expect(withRampUnit(half, KB_RAMP_UNIT.KB_RAMP_MINUTES).duration).toBe(0.5);
+    expect(
+      withRampUnit({ ...half, duration: 0 }, KB_RAMP_UNIT.KB_RAMP_MINUTES)
+        .duration,
+    ).toBe(KB_RAMP_SECONDS_BOUNDS.min / 60);
+  });
+
+  it('steps in whole units and never steps below one', () => {
+    const minute = {
+      ...draft,
+      duration: 1,
+      unit: KB_RAMP_UNIT.KB_RAMP_MINUTES,
+    };
+    expect(stepRampDuration(minute, -1).duration).toBe(1);
+    expect(stepRampDuration(minute, 1).duration).toBe(2);
+  });
 });

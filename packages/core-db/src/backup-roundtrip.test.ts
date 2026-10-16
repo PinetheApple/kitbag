@@ -144,6 +144,33 @@ describe('backup round trip', () => {
     });
   });
 
+  it('reads a v4 preset written before ramp units, its rampBars as a bar ramp without loop', async () => {
+    const source = openBackupDatabase();
+    await seed(source);
+    const file = JSON.parse(await source.backup.export()) as {
+      songPresets: Record<string, unknown>[];
+    };
+    for (const record of file.songPresets) {
+      delete record.rampUnit;
+      delete record.rampLoop;
+      delete record.rampLength;
+      record.rampBars = 8;
+    }
+    const target = openBackupDatabase();
+    const plan = unwrap(
+      await target.backup.plan(JSON.stringify(file), {
+        categories: CATEGORIES,
+      }),
+    );
+    expect((await target.backup.apply(plan)).ok).toBe(true);
+    const [preset] = await target.presets.list();
+    expect(preset).toMatchObject({
+      rampLength: 8,
+      rampUnit: 0,
+      rampLoop: false,
+    });
+  });
+
   it('exports only the requested categories', async () => {
     const database = openBackupDatabase();
     await seed(database);

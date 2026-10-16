@@ -17,7 +17,14 @@ const hexByte = (code: number) =>
 const hexCodes = (count: number) =>
   Array.from({ length: count }, (_, code) => hexByte(code)).join(', ');
 
-function clamp({ column, low, high, integer }: PresetBound): string {
+// The repair is schema v9, whose ramp length column was ramp_bars until v12.
+const V9_COLUMNS: Partial<Record<string, string>> = {
+  ramp_length: 'ramp_bars',
+};
+
+function clamp(bound: PresetBound): string {
+  const { low, high, integer } = bound;
+  const column = V9_COLUMNS[bound.column] ?? bound.column;
   const value = integer ? `round(${column})` : column;
   return `UPDATE song_presets SET ${column} = min(max(${value}, ${String(low)}), ${String(high)})`;
 }

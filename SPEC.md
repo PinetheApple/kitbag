@@ -1283,6 +1283,7 @@ rather than starting from zero.
 | `Tunings`: + `instrument` (`KB_TUNER_INSTRUMENT_*`, default guitar) | §10.2 — selects the in-tune window; schema v10 |
 | `Tunings`: v10 drops rows the tuner can never load — no strings, more than `KB_TUNER_MAX_STRINGS`, or a note above MIDI 127 | §10.2 — every stored tuning loads and round-trips through backup; schema v10 |
 | `preferences`: key-value table (`key` TEXT primary key, `value` TEXT NOT NULL); first key `last_tool` | §12.4 — Continue tracks the last-used tool across restarts; schema v11 |
+| `SongPresets`: `ramp_bars` INTEGER becomes `ramp_length` REAL (a table rebuild), + `ramp_unit` (`kb_ramp_unit`, default bars) and `ramp_loop` (default off) | §5.4, §5.8 — a seconds or minutes ramp and its loop round-trip like any other field; existing rows and older v4 backups (`rampBars`, no unit) read as a bar ramp without loop; schema v12 |
 | `Songs`(library): + downbeat indices | §4.3 |
 | **All paths relative** to the base directory | §2.3 (iOS) and **D11** (the directory is now user-movable) |
 | `PracticeSessions`: write `setlistId`, `songsPlayed` | §5.7 — columns exist, producer never fills them |

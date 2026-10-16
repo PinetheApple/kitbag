@@ -7,7 +7,7 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core';
 
-import { DEFAULT_DENOMINATOR } from './preset-rules';
+import { DEFAULT_DENOMINATOR, RAMP_UNITS } from './preset-rules';
 import { INSTRUMENTS } from './tuning-rules';
 
 function toBytes(value: unknown): Uint8Array {
@@ -70,7 +70,9 @@ export const songPresets = sqliteTable('song_presets', {
     .default(false),
   rampStartBpm: real('ramp_start_bpm'),
   rampEndBpm: real('ramp_end_bpm'),
-  rampBars: integer('ramp_bars'),
+  rampLength: real('ramp_length'),
+  rampUnit: integer('ramp_unit').notNull().default(RAMP_UNITS.bars),
+  rampLoop: integer('ramp_loop', { mode: 'boolean' }).notNull().default(false),
   barMuteEnabled: integer('bar_mute_enabled', { mode: 'boolean' })
     .notNull()
     .default(false),

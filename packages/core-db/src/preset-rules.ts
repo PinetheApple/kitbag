@@ -7,6 +7,10 @@ export const MAX_POLY_BEATS = 16;
 export const MAX_SUBDIVISION = 16;
 export const MAX_RAMP_BARS = 64;
 export const MAX_MUTE_BARS = 16;
+export const MIN_RAMP_SECONDS = 1;
+export const MAX_RAMP_SECONDS = 3600;
+const SECONDS_PER_MINUTE = 60;
+export const RAMP_UNITS = { bars: 0, seconds: 1, minutes: 2 } as const;
 enum Denominator {
   Half = 2,
   Quarter = 4,
@@ -35,7 +39,8 @@ export interface PresetShape {
   polyBeats: number;
   rampStartBpm: number | null;
   rampEndBpm: number | null;
-  rampBars: number | null;
+  rampLength: number | null;
+  rampUnit: number;
   barMutePlayBars: number | null;
   barMuteMuteBars: number | null;
   accents: Uint8Array;
@@ -100,8 +105,8 @@ export const PRESET_BOUNDS: readonly PresetBound[] = [
     integer: false,
   },
   {
-    field: 'rampBars',
-    column: 'ramp_bars',
+    field: 'rampLength',
+    column: 'ramp_length',
     low: 1,
     high: MAX_RAMP_BARS,
     integer: true,
@@ -134,8 +139,24 @@ const nullOrWithin = (value: number | null, bound: PresetBound) =>
     value >= bound.low &&
     value <= bound.high);
 
+function rampLengthBound(unit: number): PresetBound | undefined {
+  if (unit === RAMP_UNITS.bars) return undefined;
+  const scale = unit === RAMP_UNITS.minutes ? SECONDS_PER_MINUTE : 1;
+  return {
+    field: 'rampLength',
+    column: 'ramp_length',
+    low: MIN_RAMP_SECONDS / scale,
+    high: MAX_RAMP_SECONDS / scale,
+    integer: false,
+  };
+}
+
 function boundViolation(preset: PresetShape): RuleViolation | undefined {
-  const failed = PRESET_BOUNDS.find(
+  const timed = rampLengthBound(preset.rampUnit);
+  const bounds = PRESET_BOUNDS.map((bound) =>
+    bound.field === timed?.field ? timed : bound,
+  );
+  const failed = bounds.find(
     (bound) => !nullOrWithin(preset[bound.field], bound),
   );
   return (
@@ -184,5 +205,8 @@ export function presetViolation(
       field: 'denominator',
       reason: `expected ${DENOMINATORS.join('/')}`,
     };
+  const units: readonly number[] = Object.values(RAMP_UNITS);
+  if (!units.includes(preset.rampUnit))
+    return { field: 'rampUnit', reason: `expected ${units.join('/')}` };
   return boundViolation(preset) ?? blobViolation(preset);
 }

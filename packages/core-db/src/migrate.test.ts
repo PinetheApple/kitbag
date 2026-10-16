@@ -6,6 +6,7 @@ import {
   MIGRATE_V7_TO_V8,
   MIGRATE_V8_TO_V9,
   MIGRATE_V9_TO_V10,
+  MIGRATE_V10_TO_V11,
   migrate,
   SCHEMA_VERSION,
   V6_SCHEMA_VERSION,
@@ -13,6 +14,7 @@ import {
   V8_SCHEMA_VERSION,
   V9_SCHEMA_VERSION,
   V10_SCHEMA_VERSION,
+  V11_SCHEMA_VERSION,
 } from './migrate';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
@@ -153,6 +155,13 @@ function buildV10Fixture(): DatabaseSync {
   return db;
 }
 
+function buildV11Fixture(): DatabaseSync {
+  const db = buildV10Fixture();
+  applyInTransaction(db, MIGRATE_V10_TO_V11);
+  db.exec(`PRAGMA user_version = ${String(V11_SCHEMA_VERSION)}`);
+  return db;
+}
+
 const readV6Membership = (db: DatabaseSync) =>
   rows<Membership>(
     db,
@@ -261,6 +270,7 @@ describe('migrate', () => {
     ['v8', buildV8Fixture],
     ['v9', buildV9Fixture],
     ['v10', buildV10Fixture],
+    ['v11', buildV11Fixture],
   ])(
     'builds the same tables, column types and indexes fresh as from %s',
     (_from, build) => {
@@ -329,6 +339,49 @@ describe('migrate', () => {
     expect(rows(db, 'SELECT * FROM tunings ORDER BY id')).toEqual(before);
     expect(rows(db, 'SELECT * FROM preferences')).toEqual([]);
     expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
+  });
+
+  it('upgrades a v11 database, moving ramp_bars to ramp_length as a bar ramp without loop', () => {
+    const db = buildV11Fixture();
+    db.exec('UPDATE song_presets SET ramp_bars = 8 WHERE id = 1');
+    const membership = readMembership(db);
+    const presets = () =>
+      rows<Record<string, unknown>>(
+        db,
+        'SELECT * FROM song_presets ORDER BY id',
+      );
+    const before = presets();
+    expect(before.length).toBeGreaterThan(0);
+    migrate(nodeSqliteDriver(db));
+    expect(presets()).toEqual(
+      before.map(({ ramp_bars, ...row }) => ({
+        ...row,
+        ramp_length: ramp_bars,
+        ramp_unit: 0,
+        ramp_loop: 0,
+      })),
+    );
+    expect(presets()[0]?.ramp_length).toBe(8);
+    expect(readMembership(db)).toEqual(membership);
+    expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
+  });
+
+  it('never reuses a deleted preset id across the v12 rebuild', () => {
+    const db = buildV11Fixture();
+    const [last] = rows<{ id: number }>(
+      db,
+      'SELECT max(id) AS id FROM song_presets',
+    );
+    db.exec(`DELETE FROM song_presets WHERE id = ${String(last?.id)}`);
+    migrate(nodeSqliteDriver(db));
+    db.exec(
+      "INSERT INTO song_presets (name, bpm, beats_per_bar, subdivision, accents, poly_enabled, poly_beats, sound, uuid) VALUES ('New', 120, 1, 1, X'01', 0, 0, 0, 'n')",
+    );
+    const [created] = rows<{ id: number }>(
+      db,
+      "SELECT id FROM song_presets WHERE name = 'New'",
+    );
+    expect(created?.id).toBeGreaterThan(last?.id ?? 0);
   });
 
   it('drops v9 tunings the tuner could never load', () => {

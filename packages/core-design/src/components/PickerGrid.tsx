@@ -5,6 +5,7 @@ import { pickerRows } from '../pickerRows.ts';
 import { inset, radius, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
+import { minTouchTargetDp } from '../tokens.ts';
 
 export interface PickerOption<T extends string> {
   readonly value: T;
@@ -14,7 +15,7 @@ export interface PickerOption<T extends string> {
 
 export interface PickerGridProps<T extends string> {
   readonly options: readonly PickerOption<T>[];
-  readonly selected: T;
+  readonly selected: T | undefined;
   readonly onSelect: (value: T) => void;
   readonly accessibilityLabel: string;
   readonly columns?: PickerColumns;
@@ -42,12 +43,12 @@ const useStyles = createThemedStyles((theme) => ({
     minWidth: 0,
   },
   item: {
-    minHeight: textRoles.segment.size + inset.buttonV * 2,
+    minHeight: minTouchTargetDp,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: inset.buttonV,
-    paddingHorizontal: inset.segmentOptionH,
-    borderRadius: radius.segmentOption,
+    paddingVertical: inset.pickV,
+    paddingHorizontal: inset.pickH,
+    borderRadius: radius.pick,
     borderWidth: size.stroke,
     borderColor: theme.color.line,
     backgroundColor: theme.color.surface2,

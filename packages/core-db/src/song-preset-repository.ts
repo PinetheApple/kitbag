@@ -8,7 +8,11 @@ import {
   type NewSongPreset,
   type SongPreset,
 } from './repository';
-import { DEFAULT_DENOMINATOR, presetViolation } from './preset-rules';
+import {
+  DEFAULT_DENOMINATOR,
+  presetViolation,
+  RAMP_UNITS,
+} from './preset-rules';
 import { setlistItems, songPresets } from './schema';
 
 function checkPreset(values: NewSongPreset) {
@@ -17,7 +21,8 @@ function checkPreset(values: NewSongPreset) {
     denominator: values.denominator ?? DEFAULT_DENOMINATOR,
     rampStartBpm: values.rampStartBpm ?? null,
     rampEndBpm: values.rampEndBpm ?? null,
-    rampBars: values.rampBars ?? null,
+    rampLength: values.rampLength ?? null,
+    rampUnit: values.rampUnit ?? RAMP_UNITS.bars,
     barMutePlayBars: values.barMutePlayBars ?? null,
     barMuteMuteBars: values.barMuteMuteBars ?? null,
     perAccentSounds: values.perAccentSounds ?? null,

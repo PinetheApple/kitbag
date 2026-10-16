@@ -24,7 +24,7 @@ import {
   type Reader,
 } from './backup-reader';
 import { decodeBase64, presetBytes } from './base64';
-import { presetViolation } from './preset-rules';
+import { presetViolation, RAMP_UNITS } from './preset-rules';
 import { INSTRUMENTS, tuningViolation } from './tuning-rules';
 
 const FLOAT32_BYTES = 4;
@@ -74,7 +74,9 @@ function readPresetRig(r: Reader) {
     rampEnabled: r.boolean('rampEnabled'),
     rampStartBpm: r.nullableNumber('rampStartBpm'),
     rampEndBpm: r.nullableNumber('rampEndBpm'),
-    rampBars: r.nullableCount('rampBars'),
+    rampLength: r.nullableNumberOr('rampLength', 'rampBars'),
+    rampUnit: r.optionalCount('rampUnit', RAMP_UNITS.bars),
+    rampLoop: r.optionalBoolean('rampLoop', false),
     barMuteEnabled: r.boolean('barMuteEnabled'),
     barMutePlayBars: r.nullableCount('barMutePlayBars'),
     barMuteMuteBars: r.nullableCount('barMuteMuteBars'),

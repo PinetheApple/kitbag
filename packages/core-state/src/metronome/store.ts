@@ -4,11 +4,8 @@ import {
   KB_COUNT_IN_OFF,
   KB_DEFAULT_SOUNDS,
   KB_DEFAULT_COUNT_IN_SOUND,
-  KB_DENOMINATORS,
   KB_LATENCY_OFFSET_MS_BOUNDS,
-  KB_MAX_BEATS,
   KB_MUTE_BARS_BOUNDS,
-  KB_POLY_BEATS_BOUNDS,
   KB_RAMP_UNIT,
   KB_SUBDIVISION_BOUNDS,
   KB_VOLUME_BOUNDS,
@@ -28,16 +25,15 @@ import {
 import {
   BPM_BOUNDS,
   clamp,
-  cycleAccentValue,
   initialAccents,
   isCountInBars,
   isSoundId,
   normalizeRamp,
-  resizeAccents,
   type CountInConfig,
   type PerAccentSounds,
   type RampConfig,
 } from './config.ts';
+import { patternActions } from './patternActions.ts';
 
 export {
   BPM_BOUNDS,
@@ -46,12 +42,8 @@ export {
   type RampConfig,
 } from './config.ts';
 
-const BEATS_MIN = 1;
-
 export type Denominator = KbDenominator;
 export type CountInBars = KbCountInBars;
-
-const VALID_DENOMINATORS = new Set<number>(KB_DENOMINATORS);
 
 export interface BarMuteConfig {
   readonly enabled: boolean;
@@ -84,8 +76,10 @@ export interface MetronomeActions {
   setBeats: (beatsPerBar: number, denominator: number) => void;
   setSubdivision: (subdivision: number) => void;
   cycleAccent: (beat: number) => void;
+  setAccents: (accents: readonly KB_ACCENT[]) => void;
   setPoly: (enabled: boolean, beats: number) => void;
   cyclePolyAccent: (beat: number) => void;
+  setPolyAccents: (accents: readonly KB_ACCENT[]) => void;
   setSounds: (normal: number, accent: number) => void;
   previewSound: (sound: number, accented: boolean) => void;
   setVolume: (volume: number) => void;
@@ -103,9 +97,9 @@ export type MetronomeStore = MetronomeConfig & MetronomeActions;
 export const DEFAULT_BPM = 120;
 const DEFAULT_BEATS = 4;
 const DEFAULT_DENOMINATOR: Denominator = KB_BPM_REFERENCE_DENOMINATOR;
-const DEFAULT_POLY_BEATS = 3;
+export const DEFAULT_POLY_BEATS = 3;
 const DEFAULT_VOLUME = 1;
-const DEFAULT_TRAINER_BARS = 4;
+export const DEFAULT_TRAINER_BARS = 4;
 
 function initialConfig(): MetronomeConfig {
   return {
@@ -172,72 +166,6 @@ function engineTempoOf(set: Set, get: Get, engineBpm: EngineBpm): EngineTempo {
     read,
     sync: () => {
       set({ bpm: read() });
-    },
-  };
-}
-
-function patternActions(
-  set: Set,
-  get: Get,
-  commands: MetronomeCommands,
-): Pick<
-  MetronomeActions,
-  'setBeats' | 'setSubdivision' | 'cycleAccent' | 'setPoly' | 'cyclePolyAccent'
-> {
-  return {
-    setBeats: (beatsPerBar, denominator) => {
-      if (!Number.isInteger(beatsPerBar) || beatsPerBar < BEATS_MIN) return;
-      const beats = Math.min(beatsPerBar, KB_MAX_BEATS);
-      const denom: Denominator = VALID_DENOMINATORS.has(denominator)
-        ? (denominator as Denominator)
-        : get().denominator;
-      set((s) => ({
-        beatsPerBar: beats,
-        denominator: denom,
-        accents: resizeAccents(s.accents, beats),
-      }));
-      commands.setBeats(beats, denom);
-    },
-
-    setSubdivision: (subdivision) => {
-      const next = clamp(
-        Math.trunc(subdivision),
-        KB_SUBDIVISION_BOUNDS.min,
-        KB_SUBDIVISION_BOUNDS.max,
-      );
-      set({ subdivision: next });
-      commands.setSubdivision(next);
-    },
-
-    cycleAccent: (beat) => {
-      const current = get().accents[beat];
-      if (current === undefined) return;
-      const next = cycleAccentValue(current);
-      set((s) => ({
-        accents: s.accents.map((a, i) => (i === beat ? next : a)),
-      }));
-      commands.setAccent(beat, next);
-    },
-
-    setPoly: (enabled, beats) => {
-      if (!Number.isInteger(beats) || beats < KB_POLY_BEATS_BOUNDS.min) return;
-      const polyBeats = Math.min(beats, KB_POLY_BEATS_BOUNDS.max);
-      set((s) => ({
-        polyEnabled: enabled,
-        polyBeats,
-        polyAccents: resizeAccents(s.polyAccents, polyBeats),
-      }));
-      commands.setPoly(enabled, polyBeats);
-    },
-
-    cyclePolyAccent: (beat) => {
-      const current = get().polyAccents[beat];
-      if (current === undefined) return;
-      const next = cycleAccentValue(current);
-      set((s) => ({
-        polyAccents: s.polyAccents.map((a, i) => (i === beat ? next : a)),
-      }));
-      commands.setPolyAccent(beat, next);
     },
   };
 }
@@ -321,7 +249,8 @@ function tempoActions(
     setRamp: (config) => {
       const ramp = normalizeRamp(config);
       if (ramp === undefined) return;
-      set({ ramp });
+      // The engine jumps to the start tempo when it arms a ramp (ArmRamp).
+      set(ramp.enabled ? { ramp, bpm: ramp.startBpm } : { ramp });
       commands.setRamp(
         ramp.enabled,
         ramp.startBpm,

@@ -1,4 +1,5 @@
 import {
+  EditDivider,
   EditRow,
   inset,
   PickerGrid,
@@ -79,6 +80,7 @@ export function CountInSheet({
           onSelect={pickMode}
         />
       </EditRow>
+      <EditDivider />
     </Sheet>
   );
 }

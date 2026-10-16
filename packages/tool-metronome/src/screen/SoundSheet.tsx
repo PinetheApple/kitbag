@@ -6,7 +6,7 @@ import {
   space,
   unshared,
 } from '@kitbag/core-design';
-import { useMetronome } from '@kitbag/core-state';
+import { useMetronome, type PerAccentSounds } from '@kitbag/core-state';
 import { useCallback, useState } from 'react';
 
 import {
@@ -29,28 +29,27 @@ interface SoundSheetProps {
   readonly onDismiss: () => void;
 }
 
-function useSoundPick(role: SoundRole) {
-  const sounds = useMetronome((state) => state.sounds);
-  const setSounds = useMetronome((state) => state.setSounds);
-  const previewSound = useMetronome((state) => state.previewSound);
-  const pick = useCallback(
-    (value: string) => {
-      const next = soundsWith(sounds, role, Number(value));
-      setSounds(next.normal, next.accent);
-      previewSound(Number(value), role === SOUND_ROLE.accent);
-    },
-    [previewSound, role, setSounds, sounds],
-  );
-  return { selected: String(sounds[role]), pick };
+export interface SoundPickerSheetProps extends SoundSheetProps {
+  readonly sounds: PerAccentSounds;
+  readonly onChange: (sounds: PerAccentSounds) => void;
 }
 
-export function SoundSheet({
+export function SoundPickerSheet({
   visible,
   bottomInset,
   onDismiss,
-}: SoundSheetProps) {
+  sounds,
+  onChange,
+}: SoundPickerSheetProps) {
   const [role, setRole] = useState<SoundRole>(SOUND_ROLE.normal);
-  const { selected, pick } = useSoundPick(role);
+  const previewSound = useMetronome((state) => state.previewSound);
+  const pick = useCallback(
+    (value: string) => {
+      onChange(soundsWith(sounds, role, Number(value)));
+      previewSound(Number(value), role === SOUND_ROLE.accent);
+    },
+    [onChange, previewSound, role, sounds],
+  );
   return (
     <Sheet
       visible={visible}
@@ -72,9 +71,21 @@ export function SoundSheet({
       <PickerGrid
         accessibilityLabel={`${role} beat sound`}
         options={SOUND_OPTIONS}
-        selected={selected}
+        selected={String(sounds[role])}
         onSelect={pick}
       />
     </Sheet>
   );
+}
+
+export function SoundSheet(props: SoundSheetProps) {
+  const sounds = useMetronome((state) => state.sounds);
+  const setSounds = useMetronome((state) => state.setSounds);
+  const change = useCallback(
+    (next: PerAccentSounds) => {
+      setSounds(next.normal, next.accent);
+    },
+    [setSounds],
+  );
+  return <SoundPickerSheet {...props} sounds={sounds} onChange={change} />;
 }

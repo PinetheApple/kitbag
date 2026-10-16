@@ -1,12 +1,14 @@
 import { REPAIR_PRESETS } from './preset-repair';
+import { RAMP_UNITS } from './preset-rules';
 import { INSTRUMENTS, MAX_MIDI_NOTE, MAX_STRINGS } from './tuning-rules';
 
-export const SCHEMA_VERSION = 11;
+export const SCHEMA_VERSION = 12;
 export const V6_SCHEMA_VERSION = 6;
 export const V7_SCHEMA_VERSION = 7;
 export const V8_SCHEMA_VERSION = 8;
 export const V9_SCHEMA_VERSION = 9;
 export const V10_SCHEMA_VERSION = 10;
+export const V11_SCHEMA_VERSION = 11;
 
 export interface MigrationDriver {
   exec(sql: string): void;
@@ -20,7 +22,7 @@ const UUID4_SQL =
   "substr('89ab', abs(random()) % 4 + 1, 1) || substr(lower(hex(randomblob(2))), 2) || " +
   "'-' || lower(hex(randomblob(6)))";
 
-const CREATE_SONG_PRESETS = `CREATE TABLE song_presets (
+const CREATE_SONG_PRESETS_V7 = `CREATE TABLE song_presets (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
   bpm REAL NOT NULL,
@@ -185,10 +187,55 @@ export const MIGRATE_V10_TO_V11: readonly string[] = [
 )`,
 ];
 
-export const BASELINE: readonly string[] = [
+const CREATE_SONG_PRESETS_V12 = `CREATE TABLE song_presets_v12 (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  bpm REAL NOT NULL,
+  beats_per_bar INTEGER NOT NULL,
+  subdivision INTEGER NOT NULL,
+  denominator INTEGER NOT NULL DEFAULT 4,
+  accents BLOB NOT NULL,
+  per_accent_sounds BLOB,
+  poly_enabled INTEGER NOT NULL,
+  poly_beats INTEGER NOT NULL,
+  sound INTEGER NOT NULL,
+  ramp_enabled INTEGER NOT NULL DEFAULT 0,
+  ramp_start_bpm REAL,
+  ramp_end_bpm REAL,
+  ramp_length REAL,
+  ramp_unit INTEGER NOT NULL DEFAULT ${String(RAMP_UNITS.bars)},
+  ramp_loop INTEGER NOT NULL DEFAULT 0,
+  bar_mute_enabled INTEGER NOT NULL DEFAULT 0,
+  bar_mute_play_bars INTEGER,
+  bar_mute_mute_bars INTEGER,
+  count_in_bars INTEGER NOT NULL DEFAULT 0,
+  notes TEXT,
+  phase_nudge REAL NOT NULL DEFAULT 0,
+  title TEXT,
+  artist TEXT,
+  source TEXT,
+  length_seconds REAL,
+  library_song_id INTEGER REFERENCES songs (id) ON DELETE SET NULL,
+  uuid TEXT NOT NULL,
+  poly_accents BLOB
+)`;
+
+// INTEGER ramp_bars becomes REAL ramp_length, a type change SQLite can only make by rebuilding.
+export const MIGRATE_V11_TO_V12: readonly string[] = [
+  CREATE_SONG_PRESETS_V12,
+  `INSERT INTO song_presets_v12 (id, name, bpm, beats_per_bar, subdivision, denominator, accents, per_accent_sounds, poly_enabled, poly_beats, sound, ramp_enabled, ramp_start_bpm, ramp_end_bpm, ramp_length, bar_mute_enabled, bar_mute_play_bars, bar_mute_mute_bars, count_in_bars, notes, phase_nudge, title, artist, source, length_seconds, library_song_id, uuid, poly_accents)
+   SELECT id, name, bpm, beats_per_bar, subdivision, denominator, accents, per_accent_sounds, poly_enabled, poly_beats, sound, ramp_enabled, ramp_start_bpm, ramp_end_bpm, ramp_bars, bar_mute_enabled, bar_mute_play_bars, bar_mute_mute_bars, count_in_bars, notes, phase_nudge, title, artist, source, length_seconds, library_song_id, uuid, poly_accents FROM song_presets`,
+  `UPDATE sqlite_sequence SET seq =
+   (SELECT seq FROM sqlite_sequence WHERE name = 'song_presets')
+   WHERE name = 'song_presets_v12'`,
+  'DROP TABLE song_presets',
+  'ALTER TABLE song_presets_v12 RENAME TO song_presets',
+];
+
+export const V11_BASELINE: readonly string[] = [
   CREATE_SETLISTS,
   CREATE_SONGS,
-  CREATE_SONG_PRESETS,
+  CREATE_SONG_PRESETS_V7,
   CREATE_SETLIST_ITEMS,
   CREATE_TUNINGS,
   CREATE_PRACTICE_SESSIONS,
@@ -205,6 +252,11 @@ export const BASELINE: readonly string[] = [
   ...MIGRATE_V10_TO_V11,
 ];
 
+export const BASELINE: readonly string[] = [
+  ...V11_BASELINE,
+  ...MIGRATE_V11_TO_V12,
+];
+
 // SQLite cannot ADD a NOT NULL column without a constant default, so migrated
 // uuid columns stay nullable; every app write supplies one.
 export const MIGRATE_V6_TO_V7: readonly string[] = [
@@ -213,7 +265,7 @@ export const MIGRATE_V6_TO_V7: readonly string[] = [
   'ALTER TABLE songs ADD COLUMN downbeat_indices BLOB',
   'ALTER TABLE songs ADD COLUMN uuid TEXT',
   `UPDATE songs SET uuid = ${UUID4_SQL} WHERE uuid IS NULL`,
-  CREATE_SONG_PRESETS,
+  CREATE_SONG_PRESETS_V7,
   `INSERT INTO song_presets (
      id, name, bpm, beats_per_bar, subdivision, accents,
      poly_enabled, poly_beats, sound, uuid
@@ -267,7 +319,8 @@ const UPGRADES: readonly {
   { to: V8_SCHEMA_VERSION, steps: MIGRATE_V7_TO_V8 },
   { to: V9_SCHEMA_VERSION, steps: MIGRATE_V8_TO_V9 },
   { to: V10_SCHEMA_VERSION, steps: MIGRATE_V9_TO_V10 },
-  { to: SCHEMA_VERSION, steps: MIGRATE_V10_TO_V11 },
+  { to: V11_SCHEMA_VERSION, steps: MIGRATE_V10_TO_V11 },
+  { to: SCHEMA_VERSION, steps: MIGRATE_V11_TO_V12 },
 ];
 
 function upgradeSteps(from: number): readonly string[] {
