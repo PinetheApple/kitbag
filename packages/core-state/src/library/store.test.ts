@@ -241,4 +241,29 @@ describe('library store', () => {
       itemId: entry.item.id,
     });
   });
+
+  it('keeps the library usable when only the search after a refresh fails', async () => {
+    const { library, repos } = setup();
+    await library.getState().createSetlist('Gig');
+    await library.getState().search('Gig');
+    vi.spyOn(repos.setlists, 'search').mockRejectedValue(new Error('busy'));
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    await library.getState().refresh();
+    expect(library.getState()).toMatchObject({ ready: true, failed: false });
+    expect(library.getState().setlists.map((s) => s.setlist.name)).toEqual([
+      'Gig',
+    ]);
+  });
+
+  it('reports a failed snapshot as failed and says why', async () => {
+    const { library, repos } = setup();
+    vi.spyOn(repos.setlists, 'list').mockRejectedValue(new Error('no disk'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    await library.getState().refresh();
+    expect(library.getState()).toMatchObject({ ready: true, failed: true });
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('library'),
+      expect.objectContaining({ message: 'no disk' }),
+    );
+  });
 });

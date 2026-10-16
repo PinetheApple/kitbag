@@ -215,16 +215,21 @@ async function switchActiveSetlist(
 function readActions(deps: LibraryDeps, set: SetState, get: Get) {
   return {
     refresh: async () => {
+      let snapshot: LibrarySnapshot;
       try {
-        set({
-          ...(await takeSnapshot(deps.repos())),
-          ready: true,
-          failed: false,
-        });
-        const query = get().results?.query;
-        if (query !== undefined) await get().search(query);
-      } catch {
+        snapshot = await takeSnapshot(deps.repos());
+      } catch (error) {
+        console.warn('[kitbag] library load failed', error);
         set({ ready: true, failed: true });
+        return;
+      }
+      set({ ...snapshot, ready: true, failed: false });
+      const query = get().results?.query;
+      if (query === undefined) return;
+      try {
+        await get().search(query);
+      } catch (error) {
+        console.warn('[kitbag] library search failed', error);
       }
     },
     search: async (query: string) => {
