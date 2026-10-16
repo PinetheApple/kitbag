@@ -14,7 +14,17 @@ const DATABASE_NAME = 'kitbag';
 
 export function openDatabase(name: string = DATABASE_NAME) {
   const connection = open({ name });
-  migrate(opSqliteMigrationDriver(connection));
+  try {
+    migrate(opSqliteMigrationDriver(connection));
+  } catch (error) {
+    // The caller retries, so a failed open must not leave a connection behind.
+    try {
+      connection.close();
+    } catch {
+      // The migration error is the one worth reporting.
+    }
+    throw error;
+  }
   const handle = {
     db: drizzle(connection, { schema }),
     transactor: createTransactor((statement) => connection.execute(statement)),

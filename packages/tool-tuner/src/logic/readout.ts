@@ -40,7 +40,10 @@ export function signedCents(cents: number): string {
   return `${rounded < 0 ? MINUS : PLUS}${String(Math.abs(rounded))}`;
 }
 
-/** Caption under the note. Direction comes from the engine's status, not the sign. */
+/**
+ * Caption under the note. Direction comes from `status` (displayedStatus in
+ * reading.ts), not the sign.
+ */
 export function tunerCaption(status: number, cents: number): string {
   'worklet';
   if (status === KB_TUNING_STATUS.KB_TUNING_IN_TUNE) return 'IN TUNE';

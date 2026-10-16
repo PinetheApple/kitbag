@@ -21,6 +21,7 @@ export type TunerHostReads = Pick<
   | 'tuner_target_midi'
   | 'tuner_error_cents'
   | 'tuner_in_tune_ratio'
+  | 'tuner_in_tune_threshold_cents'
   | 'tuner_listening_paused'
   | 'tuner_no_sound_issue'
 >;
@@ -35,6 +36,7 @@ export interface TunerHop {
   readonly targetMidi: number;
   readonly errorCents: number;
   readonly inTuneRatio: number;
+  readonly inTuneThresholdCents: number;
   readonly paused: boolean;
   readonly noSound: boolean;
 }
@@ -51,6 +53,7 @@ function readFields(host: TunerHostReads): TunerHop {
     targetMidi: host.tuner_target_midi,
     errorCents: host.tuner_error_cents,
     inTuneRatio: host.tuner_in_tune_ratio,
+    inTuneThresholdCents: host.tuner_in_tune_threshold_cents,
     paused: host.tuner_listening_paused !== 0,
     noSound: host.tuner_no_sound_issue !== 0,
   };
@@ -102,12 +105,13 @@ export const QUIET_DISCRETE: TunerDiscrete = {
   noSound: false,
 };
 
-export function discreteOf(hop: TunerHop): TunerDiscrete {
+/** `status` is the displayed one, so speech agrees with the caption. */
+export function discreteOf(hop: TunerHop, status: number): TunerDiscrete {
   'worklet';
   const heard = isHeard(hop);
   return {
     heard,
-    status: hop.status,
+    status,
     targetMidi: hop.targetMidi,
     currentString: hop.currentString,
     wrongString: hop.wrongString,

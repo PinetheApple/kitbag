@@ -30,6 +30,7 @@ function fields(overrides: Partial<Fields> = {}): Fields {
     tuner_target_midi: 55,
     tuner_error_cents: -4,
     tuner_in_tune_ratio: 0,
+    tuner_in_tune_threshold_cents: 7,
     tuner_listening_paused: 0,
     tuner_no_sound_issue: 0,
     ...overrides,
@@ -68,6 +69,7 @@ describe('readHop', () => {
       targetMidi: 55,
       errorCents: -4,
       inTuneRatio: 0,
+      inTuneThresholdCents: 7,
       paused: false,
       noSound: false,
     });
@@ -94,8 +96,8 @@ describe('readHop', () => {
       },
     });
     readHop(counting);
-    // Eleven fields plus the closing id check.
-    expect(reads).toBe(12);
+    // Twelve fields plus the closing id check.
+    expect(reads).toBe(13);
   });
 });
 
@@ -126,20 +128,34 @@ describe('isHeard and isLocked', () => {
 });
 
 describe('discreteOf', () => {
+  const { KB_TUNING_TOO_LOW, KB_TUNING_IN_TUNE } = KB_TUNING_STATUS;
+
   it('ignores the per-hop numbers', () => {
     const a = discreteOf(
       hop({ tuner_error_cents: -4, tuner_in_tune_ratio: 0.2 }),
+      KB_TUNING_TOO_LOW,
     );
     const b = discreteOf(
       hop({ tuner_error_cents: -3, tuner_in_tune_ratio: 0.3 }),
+      KB_TUNING_TOO_LOW,
     );
     expect(sameDiscrete(a, b)).toBe(true);
   });
 
+  it('carries the status it is given, not the engine hop status', () => {
+    const shown = discreteOf(
+      hop({ tuner_status: KB_TUNING_TOO_LOW }),
+      KB_TUNING_IN_TUNE,
+    );
+    expect(shown.status).toBe(KB_TUNING_IN_TUNE);
+  });
+
   it('changes with status, string, wrong-string hint and silence', () => {
-    const base = discreteOf(hop());
+    const base = discreteOf(hop(), KB_TUNING_TOO_LOW);
+    expect(sameDiscrete(base, discreteOf(hop(), KB_TUNING_IN_TUNE))).toBe(
+      false,
+    );
     for (const changed of [
-      hop({ tuner_status: KB_TUNING_STATUS.KB_TUNING_IN_TUNE }),
       hop({ tuner_current_string: 2 }),
       hop({ tuner_possible_wrong_string: 4 }),
       hop({
@@ -149,7 +165,9 @@ describe('discreteOf', () => {
       hop({ tuner_can_hear_note: 0 }),
       hop({ tuner_target_midi: 50 }),
     ]) {
-      expect(sameDiscrete(base, discreteOf(changed))).toBe(false);
+      expect(sameDiscrete(base, discreteOf(changed, KB_TUNING_TOO_LOW))).toBe(
+        false,
+      );
     }
   });
 });

@@ -31,6 +31,7 @@ function hop(
     targetMidi: 55,
     errorCents: 0,
     inTuneRatio,
+    inTuneThresholdCents: 7,
     paused: false,
     noSound: false,
   };
