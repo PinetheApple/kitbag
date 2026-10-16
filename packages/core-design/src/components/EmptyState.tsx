@@ -1,11 +1,12 @@
 import { Text, View } from 'react-native';
 
-import { icons, type IconName } from '../icons.ts';
-import { iconSizes, inset, opacity, size, space, textRoles } from '../roles.ts';
+import type { IconName } from '../icons.ts';
+import { inset, opacity, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { radii } from '../tokens.ts';
 import { Button } from './Button.tsx';
+import { Icon } from './Icon.tsx';
 
 const useStyles = createThemedStyles((theme) => ({
   box: {
@@ -18,11 +19,7 @@ const useStyles = createThemedStyles((theme) => ({
     borderStyle: 'dashed',
     borderColor: theme.color.line,
   },
-  glyph: {
-    color: theme.color.text,
-    fontSize: iconSizes.empty,
-    opacity: opacity.emptyIcon,
-  },
+  glyph: { opacity: opacity.emptyIcon },
   title: { ...textStyle(textRoles.emptyTitle), color: theme.color.text },
   reason: {
     ...textStyle(textRoles.emptyReason),
@@ -43,7 +40,9 @@ export function EmptyState(props: EmptyStateProps) {
   const styles = useStyles();
   return (
     <View style={styles.box}>
-      <Text style={styles.glyph}>{icons[props.icon]}</Text>
+      <View style={styles.glyph}>
+        <Icon name={props.icon} size="empty" color="text" />
+      </View>
       <Text accessibilityRole="header" style={styles.title}>
         {props.title}
       </Text>

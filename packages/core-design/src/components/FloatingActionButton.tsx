@@ -1,8 +1,9 @@
-import { Pressable, Text } from 'react-native';
+import { Pressable } from 'react-native';
 
-import { icons, type IconName } from '../icons.ts';
-import { iconSizes, radius, size } from '../roles.ts';
+import type { IconName } from '../icons.ts';
+import { radius, size } from '../roles.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
+import { Icon } from './Icon.tsx';
 
 const useStyles = createThemedStyles((theme) => ({
   fab: {
@@ -15,7 +16,6 @@ const useStyles = createThemedStyles((theme) => ({
     justifyContent: 'center',
     boxShadow: theme.shadow,
   },
-  glyph: { color: theme.color.onAccent, fontSize: iconSizes.fab },
 }));
 
 export interface FloatingActionButtonProps {
@@ -33,7 +33,7 @@ export function FloatingActionButton(props: FloatingActionButtonProps) {
       style={styles.fab}
       onPress={props.onPress}
     >
-      <Text style={styles.glyph}>{icons[props.icon]}</Text>
+      <Icon name={props.icon} size="fab" color="onAccent" />
     </Pressable>
   );
 }

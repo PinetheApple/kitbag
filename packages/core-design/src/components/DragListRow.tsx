@@ -1,7 +1,5 @@
-import type { ReactNode } from 'react';
 import { useCallback } from 'react';
 import {
-  Pressable,
   Text,
   View,
   type AccessibilityActionEvent,
@@ -14,50 +12,32 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { icons } from '../icons.ts';
-import { iconSizes, inset, radius, size, space, textRoles } from '../roles.ts';
+import { inset, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
 import { reorderTarget } from '../dragReorder.ts';
-import { RowText } from './ListRow.tsx';
+import { Icon } from './Icon.tsx';
+import {
+  RowPress,
+  usePlainRowStyles,
+  type PlainListRowProps,
+} from './PlainListRow.tsx';
 
 const HANDLE_HIT_SLOP = { top: inset.rowV, bottom: inset.rowV };
 const DRAGGING_Z = 1;
 
 const useStyles = createThemedStyles((theme) => ({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.rowGap,
-    paddingVertical: inset.rowV,
-    paddingHorizontal: inset.rowH,
-    borderRadius: radius.row,
-    borderWidth: size.stroke,
-    borderColor: theme.color.line,
-    backgroundColor: theme.color.surface1,
-  },
-  active: {
-    borderColor: theme.color.accentDim,
-    backgroundColor: theme.activeCardFill,
-  },
   handle: {
     width: minTouchTargetDp,
     alignSelf: 'stretch',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  handleGlyph: { color: theme.color.text3, fontSize: iconSizes.control },
   index: {
     ...textStyle(textRoles.dragIndex),
     color: theme.color.text3,
     width: size.dragIndex,
-  },
-  press: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.rowGap,
   },
 }));
 
@@ -118,63 +98,29 @@ function Handle({ reorder }: { readonly reorder: DragReorder }) {
       onAccessibilityAction={onAction}
       style={styles.handle}
     >
-      <Text style={styles.handleGlyph}>{icons.dragHandle}</Text>
+      <Icon name="dragHandle" size="control" color="text3" />
     </View>
   );
 }
 
-export interface DragListRowProps {
-  readonly title: string;
-  readonly subtitle?: string;
-  readonly trailing?: ReactNode;
-  readonly active?: boolean;
+export interface DragListRowProps extends PlainListRowProps {
   readonly reorder: DragReorder;
-  readonly onPress: () => void;
-  readonly onLongPress?: () => void;
-  readonly accessibilityLabel: string;
-}
-
-function SongRowPress(props: Omit<DragListRowProps, 'reorder'>) {
-  const styles = useStyles();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={props.accessibilityLabel}
-      accessibilityState={{ selected: props.active === true }}
-      style={styles.press}
-      onPress={props.onPress}
-      onLongPress={props.onLongPress}
-    >
-      <RowText title={props.title} subtitle={props.subtitle} />
-      {props.trailing}
-    </Pressable>
-  );
 }
 
 export function DragListRow(props: DragListRowProps) {
   const styles = useStyles();
+  const row = usePlainRowStyles();
   const drag = useHandleDrag(props.reorder);
   return (
     <Animated.View
       onLayout={drag.onLayout}
-      style={[styles.row, props.active === true && styles.active, drag.style]}
+      style={[row.row, props.active === true && row.active, drag.style]}
     >
       <GestureDetector gesture={drag.pan}>
         <Handle reorder={props.reorder} />
       </GestureDetector>
       <Text style={styles.index}>{props.reorder.index + 1}</Text>
-      <SongRowPress {...props} />
+      <RowPress {...props} />
     </Animated.View>
-  );
-}
-
-export type SongRowProps = Omit<DragListRowProps, 'reorder'>;
-
-export function SongRow(props: SongRowProps) {
-  const styles = useStyles();
-  return (
-    <View style={[styles.row, props.active === true && styles.active]}>
-      <SongRowPress {...props} />
-    </View>
   );
 }

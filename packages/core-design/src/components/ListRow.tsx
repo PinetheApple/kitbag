@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { icons, type IconName } from '../icons.ts';
-import { iconSizes, radius, size, space, textRoles } from '../roles.ts';
+import type { IconName } from '../icons.ts';
+import { radius, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { radii } from '../tokens.ts';
+import { Icon } from './Icon.tsx';
 
 const useStyles = createThemedStyles((theme) => ({
   row: {
@@ -32,11 +33,9 @@ const useStyles = createThemedStyles((theme) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  tileGlyph: { color: theme.color.text, fontSize: iconSizes.tile },
   body: { flex: 1, minWidth: 0 },
   title: { ...textStyle(textRoles.rowTitle), color: theme.color.text },
   subtitle: { ...textStyle(textRoles.rowSubtitle), color: theme.color.text2 },
-  chevron: { color: theme.color.text2, fontSize: iconSizes.action },
 }));
 
 export interface RowTextProps {
@@ -78,10 +77,10 @@ export function ListRow(props: ListRowProps) {
       onLongPress={props.onLongPress}
     >
       <View style={styles.tile}>
-        <Text style={styles.tileGlyph}>{icons[icon]}</Text>
+        <Icon name={icon} size="tile" color="text" />
       </View>
       <RowText title={title} subtitle={subtitle} />
-      {trailing ?? <Text style={styles.chevron}>{icons.forward}</Text>}
+      {trailing ?? <Icon name="forward" size="action" />}
     </Pressable>
   );
 }

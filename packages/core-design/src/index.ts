@@ -25,6 +25,7 @@ export * from './components/LiveText.tsx';
 export * from './components/NumpadKeypad.tsx';
 export * from './components/PegSelector.tsx';
 export * from './components/PickerGrid.tsx';
+export * from './components/PlainListRow.tsx';
 export * from './components/PresetButton.tsx';
 export * from './components/PrimaryPlayButton.tsx';
 export * from './components/SegmentedControl.tsx';

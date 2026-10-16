@@ -1,9 +1,11 @@
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, TextInput, View } from 'react-native';
 
-import { icons, type IconName } from '../icons.ts';
+import type { IconName } from '../icons.ts';
 import { inset, radius, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles, useTheme } from '../ThemeProvider.tsx';
+import { minTouchTargetDp } from '../tokens.ts';
+import { Icon } from './Icon.tsx';
 
 const useStyles = createThemedStyles((theme) => ({
   field: {
@@ -17,7 +19,6 @@ const useStyles = createThemedStyles((theme) => ({
     borderColor: theme.color.line,
     backgroundColor: theme.color.surface1,
   },
-  glyph: { ...textStyle(textRoles.search), color: theme.color.text3 },
   input: {
     ...textStyle(textRoles.search),
     flex: 1,
@@ -27,10 +28,9 @@ const useStyles = createThemedStyles((theme) => ({
   clear: {
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: size.transportKey,
-    minHeight: size.transportKey,
+    minWidth: minTouchTargetDp,
+    minHeight: minTouchTargetDp,
   },
-  clearGlyph: { ...textStyle(textRoles.button), color: theme.color.text2 },
 }));
 
 export interface TextFieldProps {
@@ -50,7 +50,7 @@ export function TextField(props: TextFieldProps) {
   return (
     <View style={styles.field}>
       {props.icon === undefined ? null : (
-        <Text style={styles.glyph}>{icons[props.icon]}</Text>
+        <Icon name={props.icon} size="field" color="text3" />
       )}
       <TextInput
         style={styles.input}
@@ -69,7 +69,7 @@ export function TextField(props: TextFieldProps) {
           style={styles.clear}
           onPress={props.onClear}
         >
-          <Text style={styles.clearGlyph}>{icons.failure}</Text>
+          <Icon name="failure" size="control" />
         </Pressable>
       )}
     </View>

@@ -4,7 +4,7 @@ import {
   Chip,
   ChipRow,
   EmptyState,
-  SongRow,
+  PlainListRow,
 } from '@kitbag/core-design';
 import { useLibrary, type SongPreset } from '@kitbag/core-state';
 import { useCallback } from 'react';
@@ -48,7 +48,7 @@ function StandaloneRow(props: RowProps) {
   const { load, actions } = useStandaloneRow(props);
   const subtitle = songSubtitle(preset);
   return (
-    <SongRow
+    <PlainListRow
       title={preset.name}
       subtitle={subtitle}
       active={now}

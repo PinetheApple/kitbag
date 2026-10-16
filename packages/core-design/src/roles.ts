@@ -146,6 +146,7 @@ export const iconSizes = {
   chip: 12.5,
   chevron: 13,
   control: 14,
+  field: 13.5,
   action: 16,
   title: 17,
   tile: 17,

@@ -1,4 +1,4 @@
-import { EmptyState, ListRow, SongRow } from '@kitbag/core-design';
+import { EmptyState, ListRow, PlainListRow } from '@kitbag/core-design';
 import { useLibrary, type Setlist, type SongPreset } from '@kitbag/core-state';
 import { useCallback } from 'react';
 
@@ -37,7 +37,7 @@ function SongResult({
   }, [loadSong, preset.id, onLoaded]);
   const subtitle = songSubtitle(preset);
   return (
-    <SongRow
+    <PlainListRow
       title={preset.name}
       subtitle={subtitle}
       accessibilityLabel={`${preset.name}, ${subtitle}. Load`}
