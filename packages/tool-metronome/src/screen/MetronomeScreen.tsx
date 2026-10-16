@@ -27,7 +27,8 @@ import { useMetronomeFrame } from './useMetronomeFrame.ts';
 // Gaps from the card's rows to the controls around them, for 48dp hit boxes
 // that stop at each gap's midpoint (core-design hitExtension). Past the card's
 // padding the nearest controls are the preset row above and the trainer chips
-// below, a section gap away. Nothing tappable sits left of the steppers.
+// below, a section gap away. Nothing tappable sits left of the steppers or
+// right of the LEDs.
 const ACROSS_CARD_EDGE = space.cardPadding + space.sectionGap;
 const FIRST_ROW_GAPS = {
   top: ACROSS_CARD_EDGE,
@@ -47,6 +48,16 @@ const LAST_ROW_STEPPER_GAPS = {
 const POLY_TOGGLE_GAPS = {
   top: space.rowGap,
   bottom: ACROSS_CARD_EDGE,
+  left: space.rowGap,
+};
+const FIRST_ROW_LED_GAPS = {
+  top: ACROSS_CARD_EDGE,
+  bottom: space.rowGap,
+  left: space.rowGap,
+};
+const MIDDLE_ROW_LED_GAPS = {
+  top: space.rowGap,
+  bottom: space.rowGap,
   left: space.rowGap,
 };
 
@@ -221,6 +232,7 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
                 accents={accents}
                 currentBeat={currentBeat}
                 onCycle={cycleAccent}
+                neighbourGapDp={FIRST_ROW_LED_GAPS}
               />
             </View>
 
@@ -239,6 +251,7 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
                   accents={polyAccents}
                   currentBeat={currentPolyBeat}
                   onCycle={cyclePolyAccent}
+                  neighbourGapDp={MIDDLE_ROW_LED_GAPS}
                 />
               </View>
             ) : null}

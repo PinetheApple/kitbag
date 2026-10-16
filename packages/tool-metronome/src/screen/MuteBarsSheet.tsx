@@ -5,15 +5,30 @@ import {
   radius,
   Sheet,
   SheetHint,
+  SHEET_TOUCH_ROOM,
   size,
   space,
   StepControl,
   textRoles,
   textStyle,
+  unshared,
 } from '@kitbag/core-design';
 import { Text, View } from 'react-native';
 
 import { useBarMuteEditor, type BarMuteEditor } from './useBarMuteEditor.ts';
+
+// The steppers' row heads the sheet, the preview below takes no touches, and
+// neither do the labels beside each stepper.
+const STEPPER_ROW = {
+  top: unshared(SHEET_TOUCH_ROOM),
+  bottom: unshared(space.sectionGap),
+};
+const PLAY_GAPS = { ...STEPPER_ROW, right: unshared(space.controlGap) };
+const MUTE_GAPS = { ...STEPPER_ROW, right: unshared(SHEET_TOUCH_ROOM) };
+const ACTION_GAPS = {
+  top: unshared(space.sectionGap),
+  bottom: unshared(SHEET_TOUCH_ROOM),
+};
 
 const useStyles = createThemedStyles((theme) => ({
   row: {
@@ -63,6 +78,7 @@ function MuteSteppers({ editor }: { readonly editor: BarMuteEditor }) {
         label="Bars to play"
         value={String(playBars)}
         accessibilityValue={bars(playBars)}
+        neighbourGapDp={PLAY_GAPS}
         onStep={editor.stepPlay}
       />
       <Text style={styles.label}>then mute</Text>
@@ -71,6 +87,7 @@ function MuteSteppers({ editor }: { readonly editor: BarMuteEditor }) {
         label="Bars to mute"
         value={String(muteBars)}
         accessibilityValue={bars(muteBars)}
+        neighbourGapDp={MUTE_GAPS}
         onStep={editor.stepMute}
       />
     </View>
@@ -107,9 +124,16 @@ function MuteActions({ editor }: { readonly editor: BarMuteEditor }) {
         variant="ghost"
         label="Off"
         disabled={!editor.barMute.enabled}
+        neighbourGapDp={ACTION_GAPS}
         onPress={editor.turnOff}
       />
-      <Button fill variant="primary" label="Apply" onPress={editor.apply} />
+      <Button
+        fill
+        variant="primary"
+        label="Apply"
+        neighbourGapDp={ACTION_GAPS}
+        onPress={editor.apply}
+      />
     </View>
   );
 }

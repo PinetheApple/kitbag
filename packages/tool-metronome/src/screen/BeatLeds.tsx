@@ -1,4 +1,9 @@
-import { BeatLedRow, type LedSize, type LedState } from '@kitbag/core-design';
+import {
+  BeatLedRow,
+  type LedSize,
+  type LedState,
+  type NeighbourGaps,
+} from '@kitbag/core-design';
 import { KB_ACCENT } from '@kitbag/core-native';
 import { useMemo } from 'react';
 import type { SharedValue } from 'react-native-reanimated';
@@ -21,6 +26,7 @@ interface BeatLedsProps {
   readonly currentBeat: SharedValue<number>;
   readonly size?: LedSize;
   readonly onCycle?: ((beat: number) => void) | undefined;
+  readonly neighbourGapDp: NeighbourGaps;
 }
 
 export function BeatLeds({
@@ -29,6 +35,7 @@ export function BeatLeds({
   currentBeat,
   size = 'main',
   onCycle,
+  neighbourGapDp,
 }: BeatLedsProps) {
   const layout = useMemo(() => layoutBeatLeds(beatCount), [beatCount]);
   const states = useMemo(
@@ -47,6 +54,7 @@ export function BeatLeds({
       size={size}
       ledLabel={beatLabel}
       onPressBeat={onCycle}
+      neighbourGapDp={neighbourGapDp}
     />
   );
 }
