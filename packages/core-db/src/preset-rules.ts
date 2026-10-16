@@ -39,7 +39,7 @@ export interface PresetShape {
   polyBeats: number;
   rampStartBpm: number | null;
   rampEndBpm: number | null;
-  rampBars: number | null;
+  rampLength: number | null;
   rampUnit: number;
   barMutePlayBars: number | null;
   barMuteMuteBars: number | null;
@@ -105,8 +105,8 @@ export const PRESET_BOUNDS: readonly PresetBound[] = [
     integer: false,
   },
   {
-    field: 'rampBars',
-    column: 'ramp_bars',
+    field: 'rampLength',
+    column: 'ramp_length',
     low: 1,
     high: MAX_RAMP_BARS,
     integer: true,
@@ -143,8 +143,8 @@ function rampLengthBound(unit: number): PresetBound | undefined {
   if (unit === RAMP_UNITS.bars) return undefined;
   const scale = unit === RAMP_UNITS.minutes ? SECONDS_PER_MINUTE : 1;
   return {
-    field: 'rampBars',
-    column: 'ramp_bars',
+    field: 'rampLength',
+    column: 'ramp_length',
     low: MIN_RAMP_SECONDS / scale,
     high: MAX_RAMP_SECONDS / scale,
     integer: false,

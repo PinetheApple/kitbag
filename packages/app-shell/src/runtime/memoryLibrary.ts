@@ -28,7 +28,7 @@ const PRESET_DEFAULTS = {
   rampEnabled: false,
   rampStartBpm: null,
   rampEndBpm: null,
-  rampBars: null,
+  rampLength: null,
   rampUnit: KB_RAMP_UNIT.KB_RAMP_BARS,
   rampLoop: false,
   barMuteEnabled: false,

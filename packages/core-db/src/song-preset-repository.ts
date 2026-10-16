@@ -21,7 +21,7 @@ function checkPreset(values: NewSongPreset) {
     denominator: values.denominator ?? DEFAULT_DENOMINATOR,
     rampStartBpm: values.rampStartBpm ?? null,
     rampEndBpm: values.rampEndBpm ?? null,
-    rampBars: values.rampBars ?? null,
+    rampLength: values.rampLength ?? null,
     rampUnit: values.rampUnit ?? RAMP_UNITS.bars,
     barMutePlayBars: values.barMutePlayBars ?? null,
     barMuteMuteBars: values.barMuteMuteBars ?? null,

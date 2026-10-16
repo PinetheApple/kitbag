@@ -48,7 +48,7 @@ export function presetValues(name: string, librarySongId: number | null) {
     rampEnabled: true,
     rampStartBpm: 100,
     rampEndBpm: 140,
-    rampBars: 2.5,
+    rampLength: 2.5,
     rampUnit: 2,
     rampLoop: true,
     barMuteEnabled: true,

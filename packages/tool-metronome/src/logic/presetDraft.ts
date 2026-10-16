@@ -59,7 +59,7 @@ function rampDraftOf(preset: SongPreset): RampDraft {
     enabled: preset.rampEnabled,
     startBpm: preset.rampStartBpm ?? preset.bpm,
     endBpm: preset.rampEndBpm ?? preset.bpm,
-    duration: preset.rampBars ?? DEFAULT_TRAINER_BARS,
+    duration: preset.rampLength ?? DEFAULT_TRAINER_BARS,
     unit: rampUnitOf(preset.rampUnit),
     loop: preset.rampLoop,
   };
@@ -98,7 +98,7 @@ function trainerEdit({ ramp, barMute }: PresetDraft): PresetEdit {
     rampEnabled: ramp.enabled,
     rampStartBpm: ramp.startBpm,
     rampEndBpm: ramp.endBpm,
-    rampBars: ramp.duration,
+    rampLength: ramp.duration,
     rampUnit: ramp.unit,
     rampLoop: ramp.loop,
     barMuteEnabled: barMute.enabled,

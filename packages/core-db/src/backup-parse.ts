@@ -74,7 +74,7 @@ function readPresetRig(r: Reader) {
     rampEnabled: r.boolean('rampEnabled'),
     rampStartBpm: r.nullableNumber('rampStartBpm'),
     rampEndBpm: r.nullableNumber('rampEndBpm'),
-    rampBars: r.nullableNumber('rampBars'),
+    rampLength: r.nullableNumberOr('rampLength', 'rampBars'),
     rampUnit: r.optionalCount('rampUnit', RAMP_UNITS.bars),
     rampLoop: r.optionalBoolean('rampLoop', false),
     barMuteEnabled: r.boolean('barMuteEnabled'),

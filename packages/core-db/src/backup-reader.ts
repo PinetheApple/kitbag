@@ -77,6 +77,10 @@ export function reader(value: unknown, path: string) {
       nullable(key, isString, 'expected a string or null'),
     nullableNumber: (key: string) =>
       nullable(key, isNumber, 'expected a finite number or null'),
+    nullableNumberOr: (key: string, legacyKey: string) =>
+      object[key] === undefined && object[legacyKey] !== undefined
+        ? nullable(legacyKey, isNumber, 'expected a finite number or null')
+        : nullable(key, isNumber, 'expected a finite number or null'),
     nullableCount: (key: string) =>
       nullable(key, isCount, 'expected a whole number ≥ 0 or null'),
     nullableUuid: (key: string) =>

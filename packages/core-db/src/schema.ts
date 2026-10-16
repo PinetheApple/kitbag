@@ -70,8 +70,7 @@ export const songPresets = sqliteTable('song_presets', {
     .default(false),
   rampStartBpm: real('ramp_start_bpm'),
   rampEndBpm: real('ramp_end_bpm'),
-  // Ramp length in rampUnit; every row before schema v12 is in bars.
-  rampBars: integer('ramp_bars'),
+  rampLength: real('ramp_length'),
   rampUnit: integer('ramp_unit').notNull().default(RAMP_UNITS.bars),
   rampLoop: integer('ramp_loop', { mode: 'boolean' }).notNull().default(false),
   barMuteEnabled: integer('bar_mute_enabled', { mode: 'boolean' })

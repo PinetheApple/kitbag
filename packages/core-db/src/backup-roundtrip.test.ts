@@ -144,7 +144,7 @@ describe('backup round trip', () => {
     });
   });
 
-  it('reads a v4 preset written before ramp units existed as a bar ramp without loop', async () => {
+  it('reads a v4 preset written before ramp units, its rampBars as a bar ramp without loop', async () => {
     const source = openBackupDatabase();
     await seed(source);
     const file = JSON.parse(await source.backup.export()) as {
@@ -153,6 +153,7 @@ describe('backup round trip', () => {
     for (const record of file.songPresets) {
       delete record.rampUnit;
       delete record.rampLoop;
+      delete record.rampLength;
       record.rampBars = 8;
     }
     const target = openBackupDatabase();
@@ -163,7 +164,11 @@ describe('backup round trip', () => {
     );
     expect((await target.backup.apply(plan)).ok).toBe(true);
     const [preset] = await target.presets.list();
-    expect(preset).toMatchObject({ rampBars: 8, rampUnit: 0, rampLoop: false });
+    expect(preset).toMatchObject({
+      rampLength: 8,
+      rampUnit: 0,
+      rampLoop: false,
+    });
   });
 
   it('exports only the requested categories', async () => {

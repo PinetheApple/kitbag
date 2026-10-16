@@ -341,16 +341,47 @@ describe('migrate', () => {
     expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
   });
 
-  it('upgrades a v11 database, reading every saved ramp as bars without loop', () => {
+  it('upgrades a v11 database, moving ramp_bars to ramp_length as a bar ramp without loop', () => {
     const db = buildV11Fixture();
-    const presets = () => rows(db, 'SELECT * FROM song_presets ORDER BY id');
+    db.exec('UPDATE song_presets SET ramp_bars = 8 WHERE id = 1');
+    const membership = readMembership(db);
+    const presets = () =>
+      rows<Record<string, unknown>>(
+        db,
+        'SELECT * FROM song_presets ORDER BY id',
+      );
     const before = presets();
     expect(before.length).toBeGreaterThan(0);
     migrate(nodeSqliteDriver(db));
     expect(presets()).toEqual(
-      before.map((row) => ({ ...(row as object), ramp_unit: 0, ramp_loop: 0 })),
+      before.map(({ ramp_bars, ...row }) => ({
+        ...row,
+        ramp_length: ramp_bars,
+        ramp_unit: 0,
+        ramp_loop: 0,
+      })),
     );
+    expect(presets()[0]?.ramp_length).toBe(8);
+    expect(readMembership(db)).toEqual(membership);
     expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
+  });
+
+  it('never reuses a deleted preset id across the v12 rebuild', () => {
+    const db = buildV11Fixture();
+    const [last] = rows<{ id: number }>(
+      db,
+      'SELECT max(id) AS id FROM song_presets',
+    );
+    db.exec(`DELETE FROM song_presets WHERE id = ${String(last?.id)}`);
+    migrate(nodeSqliteDriver(db));
+    db.exec(
+      "INSERT INTO song_presets (name, bpm, beats_per_bar, subdivision, accents, poly_enabled, poly_beats, sound, uuid) VALUES ('New', 120, 1, 1, X'01', 0, 0, 0, 'n')",
+    );
+    const [created] = rows<{ id: number }>(
+      db,
+      "SELECT id FROM song_presets WHERE name = 'New'",
+    );
+    expect(created?.id).toBeGreaterThan(last?.id ?? 0);
   });
 
   it('drops v9 tunings the tuner could never load', () => {
