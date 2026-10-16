@@ -30,6 +30,11 @@ import {
 } from '../sheetDismiss.ts';
 import { radii } from '../tokens.ts';
 
+// A scroll view drops every touch outside its frame, so the frame reaches this
+// far into the sheet's padding. The right side stays put: the indicator is there.
+export const SHEET_TOUCH_ROOM = space.sectionGap;
+const INDICATOR_INSETS = { top: SHEET_TOUCH_ROOM, bottom: SHEET_TOUCH_ROOM };
+
 const useStyles = createThemedStyles((theme) => ({
   frame: {
     flex: 1,
@@ -68,9 +73,13 @@ const useStyles = createThemedStyles((theme) => ({
   },
   scroll: {
     flexGrow: 0,
+    marginVertical: -SHEET_TOUCH_ROOM,
+    marginLeft: -SHEET_TOUCH_ROOM,
   },
   content: {
     gap: space.sectionGap,
+    paddingVertical: SHEET_TOUCH_ROOM,
+    paddingLeft: SHEET_TOUCH_ROOM,
   },
   hint: {
     ...textStyle(textRoles.hint),
@@ -192,6 +201,7 @@ export function Sheet({
             style={styles.scroll}
             contentContainerStyle={styles.content}
             bounces={false}
+            scrollIndicatorInsets={INDICATOR_INSETS}
           >
             {children}
             {hint === undefined ? null : <SheetHint>{hint}</SheetHint>}

@@ -1,18 +1,30 @@
-import { Pressable, Text } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { icons, type IconName } from '../icons.ts';
 import { iconSizes, inset, radius, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
-import { hitSlopForPadded } from '../touchTarget.ts';
+import { minTouchTargetDp } from '../tokens.ts';
+import {
+  hitBoxStyle,
+  hitExtension,
+  neighbourGaps,
+  type NeighbourGaps,
+} from '../touchTarget.ts';
 
 export type ButtonVariant = 'primary' | 'tonal' | 'ghost' | 'destructive';
 
-const HIT_SLOP = hitSlopForPadded(
-  textRoles.button.size,
-  inset.buttonV,
-  space.controlGap,
-);
+const BUTTON_HEIGHT = textRoles.button.size + (inset.buttonV + size.stroke) * 2;
+
+// A labelled button is wider than 48dp, so only the vertical axis is grown.
+function buttonHitBox(gaps: NeighbourGaps) {
+  return hitBoxStyle(
+    hitExtension(minTouchTargetDp, BUTTON_HEIGHT, {
+      top: gaps.top,
+      bottom: gaps.bottom,
+    }),
+  );
+}
 
 export interface ButtonProps {
   readonly label: string;
@@ -22,6 +34,9 @@ export interface ButtonProps {
   readonly disabled?: boolean;
   readonly fill?: boolean;
   readonly accessibilityLabel?: string;
+  /** Gaps to the controls above and below, for the 48dp hit box; a number
+   * applies to both, an omitted side has no neighbour. */
+  readonly neighbourGapDp?: number | NeighbourGaps;
 }
 
 const useStyles = createThemedStyles((theme) => ({
@@ -38,6 +53,9 @@ const useStyles = createThemedStyles((theme) => ({
   },
   fill: {
     flex: 1,
+  },
+  fillFace: {
+    flexGrow: 1,
   },
   // No fill and no border so it cannot pass for a ghost button, and no
   // opacity so the label keeps AA contrast (theme.test.ts).
@@ -92,6 +110,7 @@ export function Button({
   disabled = false,
   fill = false,
   accessibilityLabel,
+  neighbourGapDp = space.controlGap,
 }: ButtonProps) {
   const styles = useStyles();
   const labelStyle = disabled
@@ -103,24 +122,27 @@ export function Button({
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled }}
       disabled={disabled}
-      style={[
-        styles.base,
-        styles[variant],
-        fill && styles.fill,
-        disabled && styles.disabled,
-      ]}
-      hitSlop={HIT_SLOP}
+      style={[buttonHitBox(neighbourGaps(neighbourGapDp)), fill && styles.fill]}
       onPress={onPress}
     >
-      {icon === undefined ? null : (
-        <Text
-          importantForAccessibility="no-hide-descendants"
-          style={[styles.icon, labelStyle]}
-        >
-          {icons[icon]}
-        </Text>
-      )}
-      <Text style={[styles.label, labelStyle]}>{label}</Text>
+      <View
+        style={[
+          styles.base,
+          styles[variant],
+          fill && styles.fillFace,
+          disabled && styles.disabled,
+        ]}
+      >
+        {icon === undefined ? null : (
+          <Text
+            importantForAccessibility="no-hide-descendants"
+            style={[styles.icon, labelStyle]}
+          >
+            {icons[icon]}
+          </Text>
+        )}
+        <Text style={[styles.label, labelStyle]}>{label}</Text>
+      </View>
     </Pressable>
   );
 }

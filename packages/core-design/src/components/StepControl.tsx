@@ -13,8 +13,8 @@ import { createThemedStyles } from '../ThemeProvider.tsx';
 import {
   hitBoxStyle,
   hitExtension,
-  hitSlopForPadded,
   neighbourGaps,
+  unshared,
   type NeighbourGaps,
 } from '../touchTarget.ts';
 
@@ -28,11 +28,14 @@ const STEP_UP: StepDelta = 1;
 // padding and border apart as well as two gaps; with a tappable one, only the
 // gap separates key from badge.
 const INERT_BADGE_GAP = 2 * (space.stepKeyGap + inset.badgeH + size.stroke);
-const INLINE_KEY_HIT_SLOP = hitSlopForPadded(
-  textRoles.stepInline.size,
-  inset.stepInlineKeyV,
-  space.inlineKeyGap,
-);
+
+// The inline key's width leaves out its glyph, so the box is a lower bound. An
+// inert value lets the two keys meet at its midpoint.
+const INLINE_KEY_WIDTH = inset.stepInlineKeyH * 2;
+const INLINE_KEY_HEIGHT = textRoles.stepInline.size + inset.stepInlineKeyV * 2;
+const INLINE_INNER_GAP = space.inlineKeyGap * 2 + size.stepValueMinWidth;
+const INLINE_EDGE_H = inset.stepInlineH + size.stroke;
+const INLINE_EDGE_V = inset.stepInlineV + size.stroke;
 
 const A11Y_ACTIONS = [{ name: 'increment' }, { name: 'decrement' }] as const;
 const A11Y_ACTIONS_WITH_ACTIVATE = [...A11Y_ACTIONS, { name: 'activate' }];
@@ -45,33 +48,67 @@ export interface StepControlProps {
   readonly onValuePress?: () => void;
   readonly variant?: StepControlVariant;
   readonly accented?: boolean;
-  /** Gaps to the controls around the cluster, for the badge keys' 48dp hit
-   * boxes; a number applies to every side, an omitted side has no neighbour.
-   * Defaults to the key gap on every side, the old conservative bound. */
+  /** Gaps to the controls around the cluster, for the keys' 48dp hit boxes;
+   * a number applies to every side, an omitted side has no neighbour. */
   readonly neighbourGapDp?: number | NeighbourGaps;
 }
 
 type HitBox = ReturnType<typeof hitBoxStyle>;
 
-function badgeKeyHitBoxes(gaps: NeighbourGaps, valueTappable: boolean) {
-  const inner = valueTappable ? space.stepKeyGap : INERT_BADGE_GAP;
+interface KeyGeometry {
+  readonly width: number;
+  readonly height: number;
+  readonly inner: number;
+  readonly gaps: NeighbourGaps;
+}
+
+function keyHitBoxes({ width, height, inner, gaps }: KeyGeometry) {
   const vertical = { top: gaps.top, bottom: gaps.bottom };
   return {
     decrement: hitBoxStyle(
-      hitExtension(size.stepKey, size.stepKey, {
+      hitExtension(width, height, {
         ...vertical,
         left: gaps.left,
         right: inner,
       }),
     ),
     increment: hitBoxStyle(
-      hitExtension(size.stepKey, size.stepKey, {
+      hitExtension(width, height, {
         ...vertical,
         left: inner,
         right: gaps.right,
       }),
     ),
   };
+}
+
+const plus = (edge: number, gap: number | undefined) =>
+  unshared(edge) + (gap ?? Number.POSITIVE_INFINITY);
+
+function stepKeyHitBoxes(
+  gaps: NeighbourGaps,
+  inline: boolean,
+  valueTappable: boolean,
+) {
+  if (!inline) {
+    return keyHitBoxes({
+      width: size.stepKey,
+      height: size.stepKey,
+      inner: valueTappable ? space.stepKeyGap : INERT_BADGE_GAP,
+      gaps,
+    });
+  }
+  return keyHitBoxes({
+    width: INLINE_KEY_WIDTH,
+    height: INLINE_KEY_HEIGHT,
+    inner: valueTappable ? space.inlineKeyGap : INLINE_INNER_GAP,
+    gaps: {
+      top: plus(INLINE_EDGE_V, gaps.top),
+      bottom: plus(INLINE_EDGE_V, gaps.bottom),
+      left: plus(INLINE_EDGE_H, gaps.left),
+      right: plus(INLINE_EDGE_H, gaps.right),
+    },
+  });
 }
 
 const useStyles = createThemedStyles((theme) => ({
@@ -158,8 +195,10 @@ export function StepControl({
 }: StepControlProps) {
   const styles = useStyles();
   const valueTappable = onValuePress !== undefined;
-  const hitBoxes = badgeKeyHitBoxes(
+  const inline = variant === 'inline';
+  const hitBoxes = stepKeyHitBoxes(
     neighbourGaps(neighbourGapDp),
+    inline,
     valueTappable,
   );
 
@@ -180,16 +219,12 @@ export function StepControl({
     [onStep, onValuePress],
   );
 
-  const inline = variant === 'inline';
-
   const key = (glyph: string, hitBox: HitBox, onPress: () => void) =>
     inline ? (
-      <Pressable
-        style={styles.inlineKey}
-        hitSlop={INLINE_KEY_HIT_SLOP}
-        onPress={onPress}
-      >
-        <Text style={styles.inlineKeyText}>{glyph}</Text>
+      <Pressable style={hitBox} onPress={onPress}>
+        <View style={styles.inlineKey}>
+          <Text style={styles.inlineKeyText}>{glyph}</Text>
+        </View>
       </Pressable>
     ) : (
       <Pressable style={hitBox} onPress={onPress}>
@@ -215,7 +250,7 @@ export function StepControl({
       <View
         style={
           inline
-            ? styles.inlineValueBox
+            ? [styles.inlineValueBox, !valueTappable && styles.inertValue]
             : [
                 styles.badgeValueBox,
                 accented && styles.badgeValueBoxAccented,

@@ -77,12 +77,8 @@ export const radii = {
 /** LEDs are round (SPEC §12.2: "LEDs 50%"): radius = half the box. */
 export const ledRadius = '50%';
 
-/**
- * Smallest touchable control, in dp. SPEC §12.6/§12.9 make this an acceptance
- * criterion ("anything you touch mid-practice is ≥48dp"), not a per-screen
- * layout choice, so it has one owner here. A control drawn smaller reaches it
- * with hitSlop rather than by growing its box.
- */
+// SPEC §12.6 acceptance criterion. A control drawn smaller grows toward it with
+// an invisible hit box (touchTarget.ts) that stops at half the gap to a neighbour.
 export const minTouchTargetDp = 48;
 
 // --- Type (SPEC §12.2) ------------------------------------------------------

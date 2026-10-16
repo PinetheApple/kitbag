@@ -1,8 +1,11 @@
 import {
   EditRow,
+  inset,
   PickerGrid,
   SegmentedControl,
   Sheet,
+  space,
+  unshared,
 } from '@kitbag/core-design';
 import { useMetronome } from '@kitbag/core-state';
 import { useCallback } from 'react';
@@ -14,6 +17,9 @@ import {
   countInBarsFromOption,
   type CountInMode,
 } from '../logic/countIn.ts';
+
+// Neither the picker grid above nor the hint below reaches into the row.
+const MODE_GAPS = unshared(inset.editRowV + space.sectionGap);
 
 interface CountInSheetProps {
   readonly visible: boolean;
@@ -69,6 +75,7 @@ export function CountInSheet({
           accessibilityLabel="Count-in sound"
           options={COUNT_IN_MODE_OPTIONS}
           selected={mode}
+          neighbourGapDp={MODE_GAPS}
           onSelect={pickMode}
         />
       </EditRow>

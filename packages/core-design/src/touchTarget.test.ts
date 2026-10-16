@@ -6,6 +6,8 @@ import {
   hitExtension,
   hitSlopFor,
   hitSlopForPadded,
+  unshared,
+  wrappedLineGaps,
 } from './touchTarget.ts';
 
 const NO_NEIGHBOUR = Number.POSITIVE_INFINITY;
@@ -81,6 +83,23 @@ describe('hitExtension', () => {
   });
 });
 
+describe('unshared', () => {
+  it('lets a control take all of a gap no other control reaches into', () => {
+    const ext = hitExtension(24, 24, {
+      top: unshared(10),
+      bottom: unshared(10),
+    });
+    expect(ext.top).toBe(10);
+    expect(ext.bottom).toBe(10);
+  });
+
+  it('still stops at the edge of that room', () => {
+    const ext = hitExtension(24, 24, { top: unshared(3) });
+    expect(ext.top).toBe(3);
+    expect(ext.top + ext.bottom).toBe(minTouchTargetDp - 24);
+  });
+});
+
 describe('hitBoxStyle', () => {
   it('gives back every dp of growth as margin, so layout does not move', () => {
     const style = hitBoxStyle({ top: 1, right: 2, bottom: 3, left: 4 });
@@ -88,5 +107,27 @@ describe('hitBoxStyle', () => {
     expect(style.paddingRight + style.marginRight).toBe(0);
     expect(style.paddingBottom + style.marginBottom).toBe(0);
     expect(style.paddingLeft + style.marginLeft).toBe(0);
+  });
+});
+
+describe('wrappedLineGaps', () => {
+  const outer = { top: 24, bottom: 20 };
+
+  it('gives a single line both outer gaps', () => {
+    expect(wrappedLineGaps(0, [0, 0], outer, 8)).toEqual(outer);
+  });
+
+  it('shares the line gap between wrapped lines', () => {
+    const tops = [0, 40, 80];
+    expect(wrappedLineGaps(0, tops, outer, 8)).toEqual({ top: 24, bottom: 8 });
+    expect(wrappedLineGaps(40, tops, outer, 8)).toEqual({ top: 8, bottom: 8 });
+    expect(wrappedLineGaps(80, tops, outer, 8)).toEqual({ top: 8, bottom: 20 });
+  });
+
+  it('stays conservative before layout has measured the line', () => {
+    expect(wrappedLineGaps(undefined, [], outer, 8)).toEqual({
+      top: 8,
+      bottom: 8,
+    });
   });
 });

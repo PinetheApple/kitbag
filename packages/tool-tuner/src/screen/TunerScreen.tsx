@@ -2,11 +2,13 @@ import {
   AppBar,
   Chip,
   createThemedStyles,
+  inset,
   LiveText,
   PegSelector,
   space,
   TuneDirectionIcon,
   TunerStrip,
+  unshared,
 } from '@kitbag/core-design';
 import { confirmHaptic } from '@kitbag/core-native';
 import {
@@ -35,6 +37,17 @@ import { TunerHintCard } from './TunerHintCard.tsx';
 import { TuningEditorSheet } from './TuningEditorSheet.tsx';
 import { TuningSheet } from './TuningSheet.tsx';
 import { useTunerFrame } from './useTunerFrame.ts';
+
+// The tuning chip tops the app bar; the mode chips sit between the needle
+// strip, which takes no touches, and the screen's bottom inset.
+const TUNING_CHIP_GAPS = {
+  top: unshared(inset.appBar + space.screenInset),
+  bottom: unshared(inset.appBar) + space.sectionGap,
+};
+const MODE_CHIP_GAPS = {
+  top: unshared(space.sectionGap),
+  bottom: unshared(space.screenInset),
+};
 
 const useStyles = createThemedStyles((theme) => ({
   screen: {
@@ -267,6 +280,7 @@ export function TunerScreen({ insets, a4Range, onBack }: TunerScreenProps) {
             active
             label={tuningLabel(tuning)}
             accessibilityLabel={`Tuning: ${tuningLabel(tuning)}. Change tuning`}
+            neighbourGapDp={TUNING_CHIP_GAPS}
             onPress={openTunings}
           />
         }
@@ -315,13 +329,24 @@ export function TunerScreen({ insets, a4Range, onBack }: TunerScreenProps) {
       <TunerStrip needle={needle} active={active} />
 
       <View style={styles.chips}>
-        <Chip label="Auto" active={mode.kind === 'auto'} onPress={setAuto} />
+        <Chip
+          label="Auto"
+          active={mode.kind === 'auto'}
+          neighbourGapDp={MODE_CHIP_GAPS}
+          onPress={setAuto}
+        />
         <Chip
           label={a4Label(a4)}
           accessibilityLabel={`A4 reference, ${String(a4)} hertz`}
+          neighbourGapDp={MODE_CHIP_GAPS}
           onPress={openA4}
         />
-        <Chip label="Chromatic" active={chromatic} onPress={handleChromatic} />
+        <Chip
+          label="Chromatic"
+          active={chromatic}
+          neighbourGapDp={MODE_CHIP_GAPS}
+          onPress={handleChromatic}
+        />
       </View>
 
       <TuningSheet
