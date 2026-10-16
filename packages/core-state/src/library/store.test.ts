@@ -266,4 +266,31 @@ describe('library store', () => {
       expect.objectContaining({ message: 'no disk' }),
     );
   });
+
+  it('loads a ramped song while running at the ramp start, as the engine does', async () => {
+    const { library, metronome, commands } = setup(() => 120);
+    metronome.getState().setTempo(96);
+    metronome.getState().setRamp({
+      enabled: true,
+      startBpm: 100,
+      endBpm: 140,
+      duration: 8,
+      unit: KB_RAMP_UNIT.KB_RAMP_BARS,
+      loop: false,
+    });
+    const id = await library.getState().newSongFromCurrent('Climb');
+    metronome.getState().setTempo(120);
+    metronome.getState().start();
+    commands.setRamp.mockClear();
+    await library.getState().loadSong(id);
+    expect(commands.setRamp).toHaveBeenLastCalledWith(
+      true,
+      100,
+      140,
+      8,
+      KB_RAMP_UNIT.KB_RAMP_BARS,
+      false,
+    );
+    expect(metronome.getState().bpm).toBe(100);
+  });
 });

@@ -249,7 +249,8 @@ function tempoActions(
     setRamp: (config) => {
       const ramp = normalizeRamp(config);
       if (ramp === undefined) return;
-      set({ ramp });
+      // The engine jumps to the start tempo when it arms a ramp (ArmRamp).
+      set(ramp.enabled ? { ramp, bpm: ramp.startBpm } : { ramp });
       commands.setRamp(
         ramp.enabled,
         ramp.startBpm,
