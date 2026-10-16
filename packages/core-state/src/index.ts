@@ -17,7 +17,9 @@ export {
   type CountInBars,
 } from './metronome/store.ts';
 export {
+  clampRampDuration,
   cycleAccentValue,
+  rampDurationBounds,
   initialAccents,
   resizeAccents,
 } from './metronome/config.ts';

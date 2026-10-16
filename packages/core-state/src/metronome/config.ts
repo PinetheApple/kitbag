@@ -69,16 +69,29 @@ export function initialAccents(count: number): KB_ACCENT[] {
   );
 }
 
-function clampDuration(duration: number, unit: KB_RAMP_UNIT): number {
+export interface RampDurationBounds {
+  readonly min: number;
+  readonly max: number;
+}
+
+export function rampDurationBounds(unit: KB_RAMP_UNIT): RampDurationBounds {
   if (unit === KB_RAMP_UNIT.KB_RAMP_BARS) {
-    return clamp(Math.round(duration), KB_MIN_RAMP_BARS, KB_MAX_RAMP_BARS);
+    return { min: KB_MIN_RAMP_BARS, max: KB_MAX_RAMP_BARS };
   }
   const scale = unit === KB_RAMP_UNIT.KB_RAMP_MINUTES ? SECONDS_PER_MINUTE : 1;
-  return clamp(
-    duration,
-    KB_RAMP_SECONDS_BOUNDS.min / scale,
-    KB_RAMP_SECONDS_BOUNDS.max / scale,
-  );
+  return {
+    min: KB_RAMP_SECONDS_BOUNDS.min / scale,
+    max: KB_RAMP_SECONDS_BOUNDS.max / scale,
+  };
+}
+
+export function clampRampDuration(
+  duration: number,
+  unit: KB_RAMP_UNIT,
+): number {
+  const { min, max } = rampDurationBounds(unit);
+  const whole = unit === KB_RAMP_UNIT.KB_RAMP_BARS;
+  return clamp(whole ? Math.round(duration) : duration, min, max);
 }
 
 export function normalizeRamp(config: RampConfig): RampConfig | undefined {
@@ -92,6 +105,6 @@ export function normalizeRamp(config: RampConfig): RampConfig | undefined {
     ...config,
     startBpm: clamp(config.startBpm, KB_BPM_BOUNDS.min, KB_BPM_BOUNDS.max),
     endBpm: clamp(config.endBpm, KB_BPM_BOUNDS.min, KB_BPM_BOUNDS.max),
-    duration: clampDuration(config.duration, config.unit),
+    duration: clampRampDuration(config.duration, config.unit),
   };
 }
