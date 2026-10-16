@@ -17,6 +17,21 @@ const useStyles = createThemedStyles(() => ({
 
 export type Handler = () => unknown;
 
+export type ErrorSetter = (error: string | null) => void;
+
+export async function guarded(
+  setError: ErrorSetter,
+  failure: string,
+  work: () => Promise<unknown>,
+): Promise<void> {
+  setError(null);
+  try {
+    await work();
+  } catch {
+    setError(failure);
+  }
+}
+
 export function useFire(handler: Handler): () => void {
   return useCallback(() => {
     void Promise.resolve(handler());
@@ -154,5 +169,27 @@ export function NameSheet(props: NameSheetProps) {
         onPress={draft.submit}
       />
     </Sheet>
+  );
+}
+
+export interface DiscardChangesSheetProps {
+  readonly visible: boolean;
+  readonly bottomInset: number;
+  readonly onKeep: () => void;
+  readonly onDiscard: () => void;
+}
+
+export function DiscardChangesSheet(props: DiscardChangesSheetProps) {
+  return (
+    <ConfirmSheet
+      visible={props.visible}
+      title="Discard changes?"
+      body="Your edits to this song are not saved."
+      confirmLabel="Discard"
+      destructive
+      bottomInset={props.bottomInset}
+      onDismiss={props.onKeep}
+      onConfirm={props.onDiscard}
+    />
   );
 }

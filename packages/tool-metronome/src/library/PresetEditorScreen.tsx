@@ -17,7 +17,7 @@ import { IdentityGroup, MusicGroup } from './editor/MusicGroup.tsx';
 import { RigGroup } from './editor/RigGroup.tsx';
 import { usePresetEditor } from './editor/usePresetEditor.ts';
 import { ScreenFrame } from './ScreenFrame.tsx';
-import { ConfirmSheet, useFire } from './sheets.tsx';
+import { ConfirmSheet, guarded, useFire } from './sheets.tsx';
 import { useLibraryRefresh } from './useLibraryRefresh.ts';
 
 const useStyles = createThemedStyles(() => ({
@@ -48,29 +48,29 @@ function useEditorCommands(props: PresetEditorScreenProps) {
     setConfirm('delete');
     setError(null);
   }, []);
-  const back = onBack;
-  const duplicate = useCallback(async () => {
-    setError(null);
-    try {
-      onOpenPreset(await duplicatePreset(presetId));
-    } catch {
-      setError('Could not duplicate this song. Try again.');
-    }
-  }, [duplicatePreset, presetId, onOpenPreset]);
-  const destroy = useCallback(async () => {
-    setError(null);
-    try {
-      await deletePreset(presetId);
-      setConfirm('none');
-      onBack();
-    } catch {
-      setError('Could not delete this song. Try again.');
-    }
-  }, [deletePreset, presetId, onBack]);
+  const duplicate = useCallback(
+    () =>
+      guarded(
+        setError,
+        'Could not duplicate this song. Try again.',
+        async () => {
+          onOpenPreset(await duplicatePreset(presetId));
+        },
+      ),
+    [duplicatePreset, presetId, onOpenPreset],
+  );
+  const destroy = useCallback(
+    () =>
+      guarded(setError, 'Could not delete this song. Try again.', async () => {
+        await deletePreset(presetId);
+        setConfirm('none');
+        onBack();
+      }),
+    [deletePreset, presetId, onBack],
+  );
   return {
     confirm,
     error,
-    back,
     close,
     askDelete,
     duplicate,
@@ -93,14 +93,15 @@ function EditorBody(
       onDirtyChange?.(false);
     };
   }, [editor.dirty, onDirtyChange]);
-  const save = useCallback(async () => {
-    cmd.setError(null);
-    try {
-      await editor.save();
-    } catch {
-      cmd.setError('Could not save your changes. Try again.');
-    }
-  }, [cmd, editor]);
+  const save = useCallback(
+    () =>
+      guarded(
+        cmd.setError,
+        'Could not save your changes. Try again.',
+        editor.save,
+      ),
+    [cmd, editor],
+  );
   const fireSave = useFire(save);
   const fireDuplicate = useFire(cmd.duplicate);
 
@@ -116,7 +117,7 @@ function EditorBody(
       header={
         <AppBar
           title={editor.draft.name}
-          onBack={cmd.back}
+          onBack={props.onBack}
           trailing={trailing}
         />
       }

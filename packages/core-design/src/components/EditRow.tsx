@@ -50,6 +50,11 @@ const useStyles = createThemedStyles((theme) => ({
   muted: { color: theme.color.text3 },
 }));
 
+export function EditDivider() {
+  const styles = useStyles();
+  return <View style={styles.divider} />;
+}
+
 export function EditGroup({ children }: { readonly children: ReactNode }) {
   const styles = useStyles();
   const rows = Children.toArray(children);
@@ -57,7 +62,7 @@ export function EditGroup({ children }: { readonly children: ReactNode }) {
     <View style={styles.group}>
       {rows.map((row, index) => (
         <Fragment key={index}>
-          {index === 0 ? null : <View style={styles.divider} />}
+          {index === 0 ? null : <EditDivider />}
           {row}
         </Fragment>
       ))}

@@ -1,7 +1,12 @@
 import { useLibrary, type SetlistEntry } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
 
-import { ActionsSheet, ConfirmSheet, type SheetAction } from './sheets.tsx';
+import {
+  ActionsSheet,
+  ConfirmSheet,
+  guarded,
+  type SheetAction,
+} from './sheets.tsx';
 
 type Kind = 'none' | 'add' | 'save';
 
@@ -51,29 +56,29 @@ function useAddActions({
   const create: SheetAction = {
     label: 'New song from the metronome',
     variant: 'primary',
-    onPress: async () => {
-      menu.setError(null);
-      try {
-        onEdit(await newSong(NEW_SONG_NAME, setlistId));
-        menu.close();
-      } catch {
-        menu.setError('Could not create the song. Try again.');
-      }
-    },
+    onPress: () =>
+      guarded(
+        menu.setError,
+        'Could not create the song. Try again.',
+        async () => {
+          onEdit(await newSong(NEW_SONG_NAME, setlistId));
+          menu.close();
+        },
+      ),
   };
   const existing = presets
     .filter((p) => !inSet.has(p.id))
     .map((p) => ({
       label: p.name,
-      onPress: async () => {
-        menu.setError(null);
-        try {
-          await addToSetlist(setlistId, p.id);
-          menu.close();
-        } catch {
-          menu.setError('Could not add the song. Try again.');
-        }
-      },
+      onPress: () =>
+        guarded(
+          menu.setError,
+          'Could not add the song. Try again.',
+          async () => {
+            await addToSetlist(setlistId, p.id);
+            menu.close();
+          },
+        ),
     }));
   return [create, ...existing];
 }
@@ -86,13 +91,14 @@ export function DetailSheets(props: DetailSheetsProps) {
   const { menu } = props;
   const save = useCallback(async () => {
     if (song === undefined) return;
-    menu.setError(null);
-    try {
-      await saveCurrentInto(song.id);
-      menu.close();
-    } catch {
-      menu.setError('Could not overwrite the song. Try again.');
-    }
+    await guarded(
+      menu.setError,
+      'Could not overwrite the song. Try again.',
+      async () => {
+        await saveCurrentInto(song.id);
+        menu.close();
+      },
+    );
   }, [menu, song, saveCurrentInto]);
   const common = {
     bottomInset: props.bottomInset,
@@ -111,7 +117,7 @@ export function DetailSheets(props: DetailSheetsProps) {
         {...common}
         visible={menu.kind === 'save'}
         title="Save current?"
-        body={`The metronome's tempo, signature, accents and trainers overwrite “${song?.name ?? ''}”.`}
+        body={`Everything the metronome is set to — tempo, signature, subdivision, accents, poly, sound, count-in, ramp and mute bars — overwrites “${song?.name ?? ''}”. Its name and notes stay.`}
         confirmLabel="Overwrite"
         onConfirm={save}
       />

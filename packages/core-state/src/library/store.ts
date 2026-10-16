@@ -177,27 +177,31 @@ function presetEditActions(deps: LibraryDeps, get: Get) {
 }
 
 function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
+  const pin = async (setlistId: number, itemId: number) => {
+    const earlier = (await switchActiveSetlist(deps, get, setlistId))
+      ? []
+      : get().played;
+    const played = earlier.includes(itemId) ? earlier : [...earlier, itemId];
+    set({ played });
+    await get().refresh();
+  };
   return {
     loadSong: async (presetId: number, itemId?: number, setlistId?: number) => {
       const preset = get().presets.find((p) => p.id === presetId);
       if (preset === undefined) return;
       applyPreset(preset, deps.metronome);
-      const loaded = { presetId, itemId: itemId ?? null };
-      if (setlistId === undefined || itemId === undefined) {
-        set({ loaded });
-        return;
+      set({ loaded: { presetId, itemId: itemId ?? null } });
+      if (setlistId === undefined || itemId === undefined) return;
+      try {
+        await pin(setlistId, itemId);
+      } catch {
+        // The song is already playing; a failed pin only loses the on-stage marker.
       }
-      const earlier = (await activate(deps, get, setlistId))
-        ? []
-        : get().played;
-      const played = earlier.includes(itemId) ? earlier : [...earlier, itemId];
-      set({ loaded, played });
-      await get().refresh();
     },
   };
 }
 
-async function activate(
+async function switchActiveSetlist(
   deps: LibraryDeps,
   get: Get,
   setlistId: number,

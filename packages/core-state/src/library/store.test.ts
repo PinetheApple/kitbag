@@ -44,7 +44,7 @@ function setup(engineBpm = () => 120) {
     repos: () => repos,
     metronome: () => metronome.getState(),
   });
-  return { library, metronome, commands };
+  return { library, metronome, commands, repos };
 }
 
 async function songsIn(
@@ -219,5 +219,26 @@ describe('library store', () => {
     metronome.getState().start();
     await library.getState().loadSong(id);
     expect(metronome.getState().bpm).toBe(96);
+  });
+
+  it('still loads a song when pinning its setlist fails', async () => {
+    const { library, metronome, repos } = setup();
+    const gig = await library.getState().createSetlist('Gig');
+    metronome.getState().setTempo(88);
+    const id = await library.getState().newSongFromCurrent('Song', gig);
+    const [entry] = library.getState().entries[gig] ?? [];
+    if (entry === undefined) throw new Error('missing entry');
+    metronome.getState().setTempo(120);
+    vi.spyOn(repos.setlists, 'selectActive').mockRejectedValue(
+      new Error('disk full'),
+    );
+    await expect(
+      library.getState().loadSong(id, entry.item.id, gig),
+    ).resolves.toBeUndefined();
+    expect(metronome.getState().bpm).toBe(88);
+    expect(library.getState().loaded).toEqual({
+      presetId: id,
+      itemId: entry.item.id,
+    });
   });
 });

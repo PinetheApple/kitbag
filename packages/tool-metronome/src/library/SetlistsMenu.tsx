@@ -1,7 +1,7 @@
 import { useLibrary } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
 
-import { ActionsSheet, ConfirmSheet, NameSheet } from './sheets.tsx';
+import { ActionsSheet, ConfirmSheet, guarded, NameSheet } from './sheets.tsx';
 
 type Open =
   | { readonly kind: 'none' }
@@ -52,35 +52,35 @@ export function useSetlistsMenu(onCreated: (setlistId: number) => void) {
 export type SetlistsMenu = ReturnType<typeof useSetlistsMenu>;
 
 function useSetlistCommands(menu: SetlistsMenu) {
-  const library = useLibrary((s) => s);
-  const target = 'setlistId' in menu.open ? menu.open.setlistId : -1;
-  const found = library.setlists.find((s) => s.setlist.id === target);
+  const createSetlist = useLibrary((s) => s.createSetlist);
+  const renameSetlist = useLibrary((s) => s.renameSetlist);
+  const duplicateSetlist = useLibrary((s) => s.duplicateSetlist);
+  const deleteSetlist = useLibrary((s) => s.deleteSetlist);
+  const target = 'setlistId' in menu.open ? menu.open.setlistId : undefined;
+  const name = useLibrary(
+    (s) => s.setlists.find((x) => x.setlist.id === target)?.setlist.name ?? '',
+  );
   const { close, onCreated } = menu;
-  const run = async (work: () => Promise<unknown>) => {
-    menu.setError(null);
-    try {
-      await work();
-      close();
-    } catch {
-      menu.setError('Could not save this change. Try again.');
-    }
-  };
+  const run = (work: () => Promise<unknown>) =>
+    guarded(
+      menu.setError,
+      'Could not save this change. Try again.',
+      async () => {
+        await work();
+        close();
+      },
+    );
+  const onTarget = (work: (setlistId: number) => Promise<unknown>) =>
+    target === undefined ? Promise.resolve() : run(() => work(target));
   return {
-    name: found?.setlist.name ?? '',
-    create: async (v: string) => {
-      await run(async () => {
-        onCreated(await library.createSetlist(v));
-      });
-    },
-    rename: async (v: string) => {
-      await run(() => library.renameSetlist(target, v));
-    },
-    duplicate: async () => {
-      await run(() => library.duplicateSetlist(target));
-    },
-    remove: async () => {
-      await run(() => library.deleteSetlist(target));
-    },
+    name,
+    create: (v: string) =>
+      run(async () => {
+        onCreated(await createSetlist(v));
+      }),
+    rename: (v: string) => onTarget((id) => renameSetlist(id, v)),
+    duplicate: () => onTarget(duplicateSetlist),
+    remove: () => onTarget(deleteSetlist),
   };
 }
 

@@ -1,7 +1,12 @@
 import { useLibrary, type SongPreset } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
 
-import { ActionsSheet, ConfirmSheet, type SheetAction } from './sheets.tsx';
+import {
+  ActionsSheet,
+  ConfirmSheet,
+  guarded,
+  type SheetAction,
+} from './sheets.tsx';
 
 export interface SongTarget {
   readonly preset: SongPreset;
@@ -46,36 +51,46 @@ export interface SongMenuProps {
   readonly onEdit: (presetId: number) => void;
 }
 
+function useSongActions() {
+  return {
+    duplicatePreset: useLibrary((s) => s.duplicatePreset),
+    removeFromSet: useLibrary((s) => s.removeFromSet),
+    deletePreset: useLibrary((s) => s.deletePreset),
+    addToSetlist: useLibrary((s) => s.addToSetlist),
+    moveToSetlist: useLibrary((s) => s.moveToSetlist),
+  };
+}
+
 function useSongCommands({ menu, setlistId, onEdit }: SongMenuProps) {
-  const library = useLibrary((s) => s);
+  const library = useSongActions();
   const { target, close } = menu;
-  const presetId = target?.preset.id ?? -1;
-  const itemId = target?.itemId ?? null;
-  const run = (work: () => Promise<unknown>) => async () => {
-    menu.setError(null);
-    try {
-      await work();
-      close();
-    } catch {
-      menu.setError('Could not save this change. Try again.');
-    }
+  const run = (work: (song: SongTarget) => Promise<unknown>) => async () => {
+    if (target === null) return;
+    await guarded(
+      menu.setError,
+      'Could not save this change. Try again.',
+      async () => {
+        await work(target);
+        close();
+      },
+    );
   };
   return {
     edit: () => {
       close();
-      onEdit(presetId);
+      if (target !== null) onEdit(target.preset.id);
     },
-    duplicate: run(() =>
-      library.duplicatePreset(presetId, setlistId ?? undefined),
+    duplicate: run(({ preset }) =>
+      library.duplicatePreset(preset.id, setlistId ?? undefined),
     ),
-    remove: run(() =>
+    remove: run(({ itemId }) =>
       itemId === null ? Promise.resolve() : library.removeFromSet(itemId),
     ),
-    destroy: run(() => library.deletePreset(presetId)),
+    destroy: run(({ preset }) => library.deletePreset(preset.id)),
     moveTo: (destination: number) =>
-      run(() =>
+      run(({ preset, itemId }) =>
         itemId === null
-          ? library.addToSetlist(destination, presetId)
+          ? library.addToSetlist(destination, preset.id)
           : library.moveToSetlist(itemId, destination),
       ),
   };
