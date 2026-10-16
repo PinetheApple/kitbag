@@ -9,8 +9,9 @@ import {
   space,
   textRoles,
   textStyle,
-  hitSlopFor,
   minTouchTargetDp,
+  SHEET_TOUCH_ROOM,
+  unshared,
 } from '@kitbag/core-design';
 import {
   tuningFromCustom,
@@ -27,7 +28,12 @@ import {
   sameTuning,
 } from '../logic/tunings.ts';
 
-const ROW_HIT_SLOP = hitSlopFor(textRoles.rowTitle.size, space.controlGap);
+// Tuning rows are already 48dp tall and claim none of the gaps around them.
+const EDIT_GAPS = { top: unshared(space.controlGap), bottom: space.controlGap };
+const NEW_GAPS = {
+  top: space.controlGap,
+  bottom: unshared(SHEET_TOUCH_ROOM),
+};
 
 const useStyles = createThemedStyles((theme) => ({
   section: {
@@ -82,7 +88,6 @@ function TuningRow({ tuning, selected, onSelect }: TuningRowProps) {
       accessibilityRole="radio"
       accessibilityState={{ selected }}
       accessibilityLabel={`${tuning.name}, ${notes}`}
-      hitSlop={ROW_HIT_SLOP}
       style={[styles.row, selected && styles.rowSelected]}
       onPress={handlePress}
     >
@@ -115,6 +120,7 @@ function CustomRow({ row, selected, onSelect, onEdit }: CustomRowProps) {
         label="Edit"
         variant="ghost"
         accessibilityLabel={`Edit ${row.name}`}
+        neighbourGapDp={EDIT_GAPS}
         onPress={handleEdit}
       />
     </View>
@@ -201,7 +207,12 @@ export function TuningSheet({
         {loadFailed ? (
           <SheetHint>Couldn&apos;t load your saved tunings.</SheetHint>
         ) : null}
-        <Button label="New tuning" variant="tonal" onPress={onNew} />
+        <Button
+          label="New tuning"
+          variant="tonal"
+          neighbourGapDp={NEW_GAPS}
+          onPress={onNew}
+        />
       </View>
     </Sheet>
   );

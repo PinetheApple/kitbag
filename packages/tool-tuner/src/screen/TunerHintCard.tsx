@@ -5,6 +5,7 @@ import {
   space,
   textRoles,
   textStyle,
+  unshared,
 } from '@kitbag/core-design';
 import { useCallback } from 'react';
 import { Text, View } from 'react-native';
@@ -21,6 +22,12 @@ const useStyles = createThemedStyles((theme) => ({
     color: theme.color.text,
   },
 }));
+
+// Only the card's own text sits above the action and only its padding below.
+const ACTION_GAPS = {
+  top: unshared(space.controlGap),
+  bottom: unshared(space.cardPadding),
+};
 
 const STATUS_LABEL: Readonly<Record<TunerHint['kind'], string>> = {
   permission: 'Microphone needed',
@@ -50,7 +57,12 @@ export function TunerHintCard({ hint, onAction }: TunerHintCardProps) {
       <View style={styles.body}>
         <Text style={styles.text}>{hint.text}</Text>
         {action === undefined ? null : (
-          <Button label={action.label} variant="tonal" onPress={handlePress} />
+          <Button
+            label={action.label}
+            variant="tonal"
+            neighbourGapDp={ACTION_GAPS}
+            onPress={handlePress}
+          />
         )}
       </View>
     </Card>

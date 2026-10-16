@@ -6,11 +6,13 @@ import {
   SegmentedControl,
   Sheet,
   SheetHint,
+  SHEET_TOUCH_ROOM,
   size,
   space,
   StepControl,
   textRoles,
   textStyle,
+  unshared,
   useTheme,
   type StepDelta,
 } from '@kitbag/core-design';
@@ -34,6 +36,12 @@ const INSTRUMENT_OPTIONS = Object.values(KB_TUNER_INSTRUMENT).map((value) => ({
   value: String(value),
   label: instrumentLabel(value),
 }));
+
+const STRING_GAPS = {
+  top: space.controlGap,
+  bottom: space.controlGap,
+  left: unshared(SHEET_TOUCH_ROOM),
+};
 
 const useStyles = createThemedStyles((theme) => ({
   name: {
@@ -75,6 +83,7 @@ function StringStepper({ index, notes, onStep }: StringStepperProps) {
       label={`String ${String(stringNumber(index, notes.length))}`}
       value={noteName(note)}
       accessibilityValue={spokenNoteName(note)}
+      neighbourGapDp={STRING_GAPS}
       onStep={handleStep}
     />
   );
@@ -163,6 +172,7 @@ export function TuningEditorSheet({
         accessibilityLabel="Instrument"
         options={INSTRUMENT_OPTIONS}
         selected={String(draft.instrument)}
+        neighbourGapDp={space.sectionGap}
         onSelect={handleInstrument}
       />
       <View style={styles.strings}>
@@ -180,12 +190,14 @@ export function TuningEditorSheet({
           label="Add string"
           variant="tonal"
           disabled={draft.notes.length >= STRING_COUNT_BOUNDS.max}
+          neighbourGapDp={space.sectionGap}
           onPress={handleAdd}
         />
         <Button
           label="Remove string"
           variant="tonal"
           disabled={draft.notes.length <= STRING_COUNT_BOUNDS.min}
+          neighbourGapDp={space.sectionGap}
           onPress={handleRemove}
         />
       </View>
@@ -193,10 +205,16 @@ export function TuningEditorSheet({
       <Button
         label="Save"
         disabled={!isSavableDraft(draft)}
+        neighbourGapDp={space.sectionGap}
         onPress={handleSave}
       />
       {isNew ? null : (
-        <Button label="Delete" variant="destructive" onPress={handleDelete} />
+        <Button
+          label="Delete"
+          variant="destructive"
+          neighbourGapDp={space.sectionGap}
+          onPress={handleDelete}
+        />
       )}
     </Sheet>
   );
