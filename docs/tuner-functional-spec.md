@@ -81,7 +81,7 @@ Silent ──note onset──▶ Detecting ──string confidence > 0──▶ 
   │                                                             ▼
   │                                                     InTune → string s marked tuned (sticky)
   │                                                             │ note ends
-  └──────── Release (hold while string confidence drains, ≤ 0.75 s) ◀─────────────────┘
+  └──────── Release (hold while string confidence drains, ≈ 0.77 s max) ◀─────────────────┘
 ```
 
 * Leaving the in-tune window does not un-mark a tuned string; only starting over clears it.
@@ -98,7 +98,7 @@ Silent ──note onset──▶ Detecting ──string confidence > 0──▶ 
 | P7 | Analysis note range (string modes) | 14 semitones below the lowest open string up to 7 semitones above the highest (guitar standard ≈ MIDI 26 … 71 / B4) | M |
 | P8 | Pitch smoothing | a new estimate within 70 cents of the smoothed value is blended in (new weight 0.25, old 0.75); a larger jump replaces it | H |
 | P9 | Hold value on release | median of the last 7 estimates | H |
-| P10 | String-confidence counter | integer 0…17; +1 per hop the same string is heard, −2 per hop another string is, −1 per hop for any other pitch; the string is cleared at 0 | M |
+| P10 | String-confidence counter | integer 0…17, kept in every mode; +1 per hop the same string is heard (in manual and chromatic: per pitched hop), −2 per hop another string is, −1 per hop for any other pitch or no pitch; the string or note is cleared at 0 | M |
 | P11 | Auto string distance | a pitch more than 350 cents from its nearest string is "not one of the strings" | M |
 | P12 | In-tune window, guitar | ±7 cents for MIDI > 42; ±12 cents for MIDI ≤ 42 (E2, F2, F♯2) | H |
 | P13 | In-tune window, ukulele | ±14 cents for MIDI < 63, else ±10 | H |
@@ -115,7 +115,7 @@ Silent ──note onset──▶ Detecting ──string confidence > 0──▶ 
 | P24 | Paired/duplicate strings | strings at the same pitch (12-string / mandolin courses) are one note, so a pair is never flagged wrong | M |
 | P25 | Onset → first reading | target ≤ 0.5 s (one frame at the earliest) | M |
 | P26 | Onset → string marked tuned (in-tune tone) | target 0.74–1.1 s | M |
-| P27 | Release hold | after the tone stops, the string-confidence counter (P10) drains by 1 per hop; the reading stays until it reaches 0, so at most 17 hops (≈ 0.73 s at P2) and less after a short pluck, then clears | H |
+| P27 | Release hold | after the tone stops, the string-confidence counter (P10) drains by 1 per hop and the reading stays until it reaches 0: at most 17 hops counted from the last pitched hop, which measures ≈ 0.77 s (18 hops) from the tone stop because the first hop after it still holds half a frame of tone; shorter after a short pluck | H |
 | P28 | In-window check, mid strings | ±4 c → in tune; ±8 c → not | H |
 
 Confidence: **H** — a fixed design value; **M** — a judgement that may move after device

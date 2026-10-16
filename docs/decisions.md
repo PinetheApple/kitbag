@@ -245,14 +245,18 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   (4) The tuning picker, tuning editor and A4 sheets have no drawing, so they are built
   from existing primitives and await design sign-off. (5) The readout follows the
   design's true-cents caption ("−4 CENTS · TUNE UP") rather than the functional spec's
-  step numbers; the needle's full scale was ±50 c, superseded the same week by docs/tuner-functional-spec.md §5 D1 (±220 c). (6) The tuner does not wait for #109:
+  step numbers; the needle's full scale is ±50 c. (6) The tuner does not wait for #109:
   app-shell opens the database through core-db's `openDatabase()` behind one runtime
   module, to be folded into #109's composition root when that lands. **[recorded;
   (4) awaits design sign-off]**
 
-- **2026-10-16 · Tuner needle follow-up (§10.2, #118)** — §5 of the tuner spec now binds
-  the needle (D1–D5): ±220 c at 80 % of the travel, cents averaged per hop, and a return
-  to centre on silence. Implementation calls the spec leaves open: (1) the cents average
+- **2026-10-16 · Tuner needle and hold follow-up (§10.2, #118)** — Decided by the owner
+  after testing the tuner on device: small errors read as large, and the needle never
+  returned to centre. The tuner spec's P27 and §5 D1–D5 now set the values: ±220 c at
+  80 % of the travel (supersedes the ±50 c in the 2026-10-14 entry), cents averaged per
+  hop, a release hold that drains with string confidence (≈ 0.77 s, was 1.2 s), a return
+  to centre on silence, and a 200 ms status dwell. SPEC §10.2's hold line is reworded to
+  match. Implementation calls the spec leaves open: (1) the cents average
   also resets when the target note changes, so one note's error never bleeds into the
   next; (2) after silence the needle stays visible, dimmed, while it decays to centre;
   it is hidden before the first note; (3) the screen reader says "No note" once the
