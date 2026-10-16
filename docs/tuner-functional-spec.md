@@ -81,7 +81,7 @@ Silent ──note onset──▶ Detecting ──string confidence > 0──▶ 
   │                                                             ▼
   │                                                     InTune → string s marked tuned (sticky)
   │                                                             │ note ends
-  └──────── Release (hold last value ~1.2 s) ◀─────────────────┘
+  └──────── Release (hold while string confidence drains, ≤ 0.75 s) ◀─────────────────┘
 ```
 
 * Leaving the in-tune window does not un-mark a tuned string; only starting over clears it.
@@ -115,7 +115,7 @@ Silent ──note onset──▶ Detecting ──string confidence > 0──▶ 
 | P24 | Paired/duplicate strings | strings at the same pitch (12-string / mandolin courses) are one note, so a pair is never flagged wrong | M |
 | P25 | Onset → first reading | target ≤ 0.5 s (one frame at the earliest) | M |
 | P26 | Onset → string marked tuned (in-tune tone) | target 0.74–1.1 s | M |
-| P27 | Release hold | the reading stays ≈ 1.2 s after the tone stops, then clears | M |
+| P27 | Release hold | after the tone stops, the string-confidence counter (P10) drains by 1 per hop; the reading stays until it reaches 0, so at most 17 hops (≈ 0.73 s at P2) and less after a short pluck, then clears | H |
 | P28 | In-window check, mid strings | ±4 c → in tune; ±8 c → not | H |
 
 Confidence: **H** — a fixed design value; **M** — a judgement that may move after device
@@ -142,16 +142,20 @@ fold; a pitch above their range is rejected.
 * **Manual:** the hint ("are you tuning the correct string?") fires when P20–P23 hold, and
   reports whether the heard note lies below or above the target.
 
-## 5. Display behaviour (UI layer, informative only)
+## 5. Display behaviour (UI layer)
 
-Kitbag's UI follows `design/` (SPEC.md §12); these are guidance for that work.
+Kitbag's UI follows `design/` (SPEC.md §12). The readout is true cents (docs/decisions.md,
+2026-10-14). These parameters bind the needle and readout:
 
-* Within ±7 cents of target: check mark, no number.
-* Outside: signed step ≈ sign·(⌊|cents|·0.1⌋ + 1) with a "Tune up" / "Tune down" label:
-  +30 c → "+4", +40 → "+5", +50 → "+6", −30 → "−4", ±12 → "±2", ±20 → "±3".
-* With the true-cents option on, true cents are shown.
-* Colour: green near target, amber mid, red far (≈ > 10 displayed steps); colour always
-  reinforces position and text, never replaces them (SPEC.md §12.6).
+| # | Parameter | Value |
+|---|-----------|-------|
+| D1 | Needle mapping | linear in cents, no dead zone and no snap band: position = clamp(cents, ±220) / 220 × 0.8 of the half-width, so ±220 c sits at 80 % of the travel and 7 c moves it ≈ 2.5 % |
+| D2 | Displayed cents | the engine's error, averaged 0.5/0.5 with the previous displayed value on each new hop |
+| D3 | In-tune lock | the needle sits on the centre line while `in_tune_ratio` ≥ P17 |
+| D4 | Return to centre | once `can_hear_note` = 0, the needle decays toward centre by × 0.8 per 1/60 s (time-based, so frame-rate independent: ≈ 225 ms to 95 %); note text clears with it |
+| D5 | Status dwell | a status change reaches React state and the screen reader only after it is stable for 200 ms |
+
+Colour reinforces position and text and never replaces them (SPEC.md §12.6).
 
 ## 6. Testable requirements
 
@@ -170,7 +174,7 @@ time measured from the tone's first sample. Guitar 6 standard, A4 = 440 unless s
 **Timing**
 - **T6** First non-empty state (`can_hear_note` = 1, string set) appears no earlier than one frame (85 ms) and no later than 500 ms after onset.
 - **T7** Steady tone(329.63, 0): string marked tuned (`in_tune_ratio` ≥ 0.95) between 0.74 s and 1.1 s after onset.
-- **T8** After a tuned tone stops (digital silence), the held pitch stays reported for 1.0–1.4 s, then `can_hear_note` = 0.
+- **T8** After a tuned tone that has reached full string confidence stops (digital silence), the held pitch stays reported for 0.6–0.85 s, then `can_hear_note` = 0. After a short tone (confidence below full), the hold is shorter than after a full-confidence tone.
 - **T9** tone(329.63, +4) switching to tone(329.63, +12) mid-way resets `in_tune_ratio` to 0 within one hop.
 
 **Thresholds**
