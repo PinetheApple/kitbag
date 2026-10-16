@@ -4,6 +4,7 @@ import type {
   SetlistItem,
   SongPreset,
 } from '@kitbag/core-db';
+import { KB_RAMP_UNIT } from '@kitbag/core-native';
 import type { LibraryRepositories } from '@kitbag/core-state';
 
 const BLOB_FIELDS = ['accents', 'perAccentSounds', 'polyAccents'] as const;
@@ -28,6 +29,8 @@ const PRESET_DEFAULTS = {
   rampStartBpm: null,
   rampEndBpm: null,
   rampBars: null,
+  rampUnit: KB_RAMP_UNIT.KB_RAMP_BARS,
+  rampLoop: false,
   barMuteEnabled: false,
   barMutePlayBars: null,
   barMuteMuteBars: null,
@@ -55,7 +58,7 @@ function blobsToArrays(preset: SongPreset): unknown {
 }
 
 function arraysToBlobs(raw: Record<string, unknown>): SongPreset {
-  const out: Record<string, unknown> = { ...raw };
+  const out: Record<string, unknown> = { ...PRESET_DEFAULTS, ...raw };
   for (const field of BLOB_FIELDS) {
     const value = raw[field];
     out[field] = Array.isArray(value)

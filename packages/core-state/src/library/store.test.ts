@@ -178,20 +178,35 @@ describe('library store', () => {
     );
   });
 
-  it('saves a time-based ramp as off, since presets store ramps in bars', async () => {
-    const { library, metronome } = setup();
-    metronome.getState().setRamp({
-      enabled: true,
-      startBpm: 90,
-      endBpm: 120,
-      duration: 30,
-      unit: KB_RAMP_UNIT.KB_RAMP_SECONDS,
-      loop: false,
-    });
-    const id = await library.getState().newSongFromCurrent('Timed');
-    const preset = library.getState().presets.find((p) => p.id === id);
-    expect([preset?.rampEnabled, preset?.rampBars]).toEqual([false, null]);
-  });
+  it.each([
+    [KB_RAMP_UNIT.KB_RAMP_SECONDS, 30, true],
+    [KB_RAMP_UNIT.KB_RAMP_MINUTES, 2.5, false],
+    [KB_RAMP_UNIT.KB_RAMP_BARS, 12, true],
+  ])(
+    'round-trips a ramp in unit %s, its length and loop',
+    async (unit, duration, loop) => {
+      const { library, metronome } = setup();
+      const ramp = {
+        enabled: true,
+        startBpm: 90,
+        endBpm: 120,
+        duration,
+        unit,
+        loop,
+      };
+      metronome.getState().setRamp(ramp);
+      const id = await library.getState().newSongFromCurrent('Timed');
+      metronome.getState().setRamp({
+        ...ramp,
+        enabled: false,
+        unit: KB_RAMP_UNIT.KB_RAMP_BARS,
+        duration: 4,
+        loop: !loop,
+      });
+      await library.getState().loadSong(id);
+      expect(metronome.getState().ramp).toEqual(ramp);
+    },
+  );
 
   it('loads a song tempo while running, not the stale engine tempo', async () => {
     const { library, metronome } = setup(() => 120);

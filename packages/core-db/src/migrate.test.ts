@@ -6,6 +6,7 @@ import {
   MIGRATE_V7_TO_V8,
   MIGRATE_V8_TO_V9,
   MIGRATE_V9_TO_V10,
+  MIGRATE_V10_TO_V11,
   migrate,
   SCHEMA_VERSION,
   V6_SCHEMA_VERSION,
@@ -13,6 +14,7 @@ import {
   V8_SCHEMA_VERSION,
   V9_SCHEMA_VERSION,
   V10_SCHEMA_VERSION,
+  V11_SCHEMA_VERSION,
 } from './migrate';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
@@ -153,6 +155,13 @@ function buildV10Fixture(): DatabaseSync {
   return db;
 }
 
+function buildV11Fixture(): DatabaseSync {
+  const db = buildV10Fixture();
+  applyInTransaction(db, MIGRATE_V10_TO_V11);
+  db.exec(`PRAGMA user_version = ${String(V11_SCHEMA_VERSION)}`);
+  return db;
+}
+
 const readV6Membership = (db: DatabaseSync) =>
   rows<Membership>(
     db,
@@ -261,6 +270,7 @@ describe('migrate', () => {
     ['v8', buildV8Fixture],
     ['v9', buildV9Fixture],
     ['v10', buildV10Fixture],
+    ['v11', buildV11Fixture],
   ])(
     'builds the same tables, column types and indexes fresh as from %s',
     (_from, build) => {
@@ -328,6 +338,18 @@ describe('migrate', () => {
     migrate(nodeSqliteDriver(db));
     expect(rows(db, 'SELECT * FROM tunings ORDER BY id')).toEqual(before);
     expect(rows(db, 'SELECT * FROM preferences')).toEqual([]);
+    expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
+  });
+
+  it('upgrades a v11 database, reading every saved ramp as bars without loop', () => {
+    const db = buildV11Fixture();
+    const presets = () => rows(db, 'SELECT * FROM song_presets ORDER BY id');
+    const before = presets();
+    expect(before.length).toBeGreaterThan(0);
+    migrate(nodeSqliteDriver(db));
+    expect(presets()).toEqual(
+      before.map((row) => ({ ...(row as object), ramp_unit: 0, ramp_loop: 0 })),
+    );
     expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
   });
 

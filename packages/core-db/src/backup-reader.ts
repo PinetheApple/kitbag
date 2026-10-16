@@ -67,6 +67,10 @@ export function reader(value: unknown, path: string) {
         ? fallback
         : get(key, isCount, 'expected a whole number ≥ 0'),
     boolean: (key: string) => get(key, isBoolean, 'expected a boolean'),
+    optionalBoolean: (key: string, fallback: boolean) =>
+      object[key] === undefined
+        ? fallback
+        : get(key, isBoolean, 'expected a boolean'),
     uuid: (key: string) => lowercase(get(key, isUuid, 'expected a UUID')),
     blob: (key: string) => get(key, isBase64, 'expected base64 bytes'),
     nullableString: (key: string) =>

@@ -1,6 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createMemoryLibrary, type TextStorage } from './memoryLibrary.ts';
+
+vi.mock('react-native', () => ({}));
+vi.mock('expo-haptics', () => ({}));
 
 function memoryStorage(): TextStorage & { data: Map<string, string> } {
   const data = new Map<string, string>();
@@ -102,5 +105,21 @@ describe('memory library repositories', () => {
     expect(Array.from(preset?.accents ?? [])).toEqual([3, 1, 1, 1]);
     const next = await reloaded.setlists.create('After reload');
     expect(next.id).toBeGreaterThan(set.id);
+  });
+
+  it('reads a preset saved before ramp units as a bar ramp without loop', async () => {
+    const storage = memoryStorage();
+    await fixture(storage);
+    const [key, saved] = [...storage.data][0] ?? ['', '{}'];
+    const tables = JSON.parse(saved) as {
+      presets: Record<string, unknown>[];
+    };
+    for (const preset of tables.presets) {
+      delete preset.rampUnit;
+      delete preset.rampLoop;
+    }
+    storage.setItem(key, JSON.stringify(tables));
+    const [preset] = await createMemoryLibrary(storage).presets.list();
+    expect(preset).toMatchObject({ rampUnit: 0, rampLoop: false });
   });
 });

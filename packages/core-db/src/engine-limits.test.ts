@@ -10,6 +10,9 @@ import {
   MAX_MUTE_BARS,
   MAX_POLY_BEATS,
   MAX_RAMP_BARS,
+  MAX_RAMP_SECONDS,
+  MIN_RAMP_SECONDS,
+  RAMP_UNITS,
   MAX_SUBDIVISION,
   MIN_BPM,
   NORMAL_ACCENT,
@@ -52,6 +55,12 @@ describe('engine limits mirrored in core-db', () => {
     expect(Number(constant('kSoundCount'))).toBe(SOUND_COUNT);
     expect(Number(constant('kMaxSubdivision'))).toBe(MAX_SUBDIVISION);
     expect(Number(constant('kMaxBars', 'tempo_ramp.h'))).toBe(MAX_RAMP_BARS);
+    expect(Number(constant('kMinSeconds', 'tempo_ramp.h'))).toBe(
+      MIN_RAMP_SECONDS,
+    );
+    expect(Number(constant('kMaxSeconds', 'tempo_ramp.h'))).toBe(
+      MAX_RAMP_SECONDS,
+    );
     expect(Number(constant('kMaxMuteBars'))).toBe(MAX_MUTE_BARS);
     expect(Number(constant('kBpmReferenceDenominator'))).toBe(
       DEFAULT_DENOMINATOR,
@@ -65,6 +74,19 @@ describe('engine limits mirrored in core-db', () => {
     expect(/KB_ACCENT_NORMAL = (\d+)/.exec(body)?.[1]).toBe(
       String(NORMAL_ACCENT),
     );
+  });
+
+  it('match the kb_ramp_unit enum in kitbag_api.h', () => {
+    const body = /typedef enum kb_ramp_unit \{([^}]*)\}/.exec(api)?.[1] ?? '';
+    const members = [...body.matchAll(/KB_RAMP_(\w+) = (\d+)/g)];
+    expect(
+      Object.fromEntries(
+        members.map(([, name = '', value]) => [
+          name.toLowerCase(),
+          Number(value),
+        ]),
+      ),
+    ).toEqual(RAMP_UNITS);
   });
 
   it('match kitbag_tuner_api.h', () => {

@@ -1,12 +1,14 @@
 import { REPAIR_PRESETS } from './preset-repair';
+import { RAMP_UNITS } from './preset-rules';
 import { INSTRUMENTS, MAX_MIDI_NOTE, MAX_STRINGS } from './tuning-rules';
 
-export const SCHEMA_VERSION = 11;
+export const SCHEMA_VERSION = 12;
 export const V6_SCHEMA_VERSION = 6;
 export const V7_SCHEMA_VERSION = 7;
 export const V8_SCHEMA_VERSION = 8;
 export const V9_SCHEMA_VERSION = 9;
 export const V10_SCHEMA_VERSION = 10;
+export const V11_SCHEMA_VERSION = 11;
 
 export interface MigrationDriver {
   exec(sql: string): void;
@@ -185,6 +187,11 @@ export const MIGRATE_V10_TO_V11: readonly string[] = [
 )`,
 ];
 
+export const MIGRATE_V11_TO_V12: readonly string[] = [
+  `ALTER TABLE song_presets ADD COLUMN ramp_unit INTEGER NOT NULL DEFAULT ${String(RAMP_UNITS.bars)}`,
+  'ALTER TABLE song_presets ADD COLUMN ramp_loop INTEGER NOT NULL DEFAULT 0',
+];
+
 export const BASELINE: readonly string[] = [
   CREATE_SETLISTS,
   CREATE_SONGS,
@@ -203,6 +210,7 @@ export const BASELINE: readonly string[] = [
   ...MIGRATE_V8_TO_V9,
   ...MIGRATE_V9_TO_V10,
   ...MIGRATE_V10_TO_V11,
+  ...MIGRATE_V11_TO_V12,
 ];
 
 // SQLite cannot ADD a NOT NULL column without a constant default, so migrated
@@ -267,7 +275,8 @@ const UPGRADES: readonly {
   { to: V8_SCHEMA_VERSION, steps: MIGRATE_V7_TO_V8 },
   { to: V9_SCHEMA_VERSION, steps: MIGRATE_V8_TO_V9 },
   { to: V10_SCHEMA_VERSION, steps: MIGRATE_V9_TO_V10 },
-  { to: SCHEMA_VERSION, steps: MIGRATE_V10_TO_V11 },
+  { to: V11_SCHEMA_VERSION, steps: MIGRATE_V10_TO_V11 },
+  { to: SCHEMA_VERSION, steps: MIGRATE_V11_TO_V12 },
 ];
 
 function upgradeSteps(from: number): readonly string[] {

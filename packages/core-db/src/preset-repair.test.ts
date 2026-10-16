@@ -61,6 +61,7 @@ function shape(row: Row) {
     rampStartBpm: nullable('ramp_start_bpm'),
     rampEndBpm: nullable('ramp_end_bpm'),
     rampBars: nullable('ramp_bars'),
+    rampUnit: row.ramp_unit as number,
     barMutePlayBars: nullable('bar_mute_play_bars'),
     barMuteMuteBars: nullable('bar_mute_mute_bars'),
     accents: row.accents as Uint8Array,

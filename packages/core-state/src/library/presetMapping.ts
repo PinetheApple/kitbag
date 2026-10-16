@@ -41,8 +41,6 @@ function perAccentSoundsOf(value: unknown, fallback: number): PerAccentSounds {
 }
 
 export function presetFromMetronome(config: MetronomeConfig): PresetFields {
-  // The schema stores ramps in bars only; a time-based ramp cannot round-trip.
-  const barRamp = config.ramp.unit === KB_RAMP_UNIT.KB_RAMP_BARS;
   return {
     bpm: config.bpm,
     beatsPerBar: config.beatsPerBar,
@@ -54,15 +52,25 @@ export function presetFromMetronome(config: MetronomeConfig): PresetFields {
     polyBeats: config.polyBeats,
     polyAccents: toBlob(config.polyAccents),
     sound: config.sounds.normal,
-    rampEnabled: barRamp && config.ramp.enabled,
+    rampEnabled: config.ramp.enabled,
     rampStartBpm: config.ramp.startBpm,
     rampEndBpm: config.ramp.endBpm,
-    rampBars: barRamp ? config.ramp.duration : null,
+    rampBars: config.ramp.duration,
+    rampUnit: config.ramp.unit,
+    rampLoop: config.ramp.loop,
     barMuteEnabled: config.barMute.enabled,
     barMutePlayBars: config.barMute.playBars,
     barMuteMuteBars: config.barMute.muteBars,
     countInBars: config.countIn.bars,
   };
+}
+
+const RAMP_UNITS = new Set<number>(Object.values(KB_RAMP_UNIT));
+
+function rampUnitOf(value: number): KB_RAMP_UNIT {
+  return RAMP_UNITS.has(value)
+    ? (value as KB_RAMP_UNIT)
+    : KB_RAMP_UNIT.KB_RAMP_BARS;
 }
 
 function rampOf(preset: SongPreset, current: RampConfig): RampConfig {
@@ -71,8 +79,8 @@ function rampOf(preset: SongPreset, current: RampConfig): RampConfig {
     startBpm: preset.rampStartBpm ?? preset.bpm,
     endBpm: preset.rampEndBpm ?? preset.bpm,
     duration: preset.rampBars ?? current.duration,
-    unit: KB_RAMP_UNIT.KB_RAMP_BARS,
-    loop: false,
+    unit: rampUnitOf(preset.rampUnit),
+    loop: preset.rampLoop,
   };
 }
 
