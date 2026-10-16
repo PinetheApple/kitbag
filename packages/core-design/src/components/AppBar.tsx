@@ -11,12 +11,30 @@ import {
 } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
-import { hitSlopFor } from '../touchTarget.ts';
+import { hitBoxStyle, hitExtension, unshared } from '../touchTarget.ts';
 import { Icon } from './Icon.tsx';
 
 const TITLE_MIN_SCALE = appBarTitleMinSize / textRoles.appBarTitle.size;
-const BACK_HIT_SLOP = hitSlopFor(textRoles.appBarTitle.size, space.controlGap);
-const ACTION_HIT_SLOP = hitSlopFor(iconSizes.action, space.controlGap);
+
+// The bar sits in the screen's inset at its top and sides, with a section gap
+// below. The back key is raised over the title, which takes no touches.
+const SCREEN_EDGE = unshared(inset.appBar + space.screenInset);
+const BELOW = unshared(inset.appBar) + space.sectionGap;
+const BACK_HIT_BOX = hitBoxStyle(
+  hitExtension(iconSizes.title, iconSizes.title, {
+    top: SCREEN_EDGE,
+    left: SCREEN_EDGE,
+    bottom: BELOW,
+  }),
+);
+const ACTION_HIT_BOX = hitBoxStyle(
+  hitExtension(iconSizes.action, iconSizes.action, {
+    top: SCREEN_EDGE,
+    right: SCREEN_EDGE,
+    bottom: BELOW,
+    left: space.controlGap,
+  }),
+);
 
 export interface AppBarProps {
   readonly title: string;
@@ -46,6 +64,10 @@ const useStyles = createThemedStyles((theme) => ({
     flexShrink: 1,
   },
   wordmark: textStyle(textRoles.wordmark),
+  back: {
+    ...BACK_HIT_BOX,
+    zIndex: 1,
+  },
 }));
 
 export function AppBar({
@@ -63,7 +85,7 @@ export function AppBar({
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={backLabel}
-            hitSlop={BACK_HIT_SLOP}
+            style={styles.back}
             onPress={onBack}
           >
             <Icon name="back" size="title" color="text" />
@@ -100,7 +122,7 @@ export function AppBarAction({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      hitSlop={ACTION_HIT_SLOP}
+      style={ACTION_HIT_BOX}
       onPress={onPress}
     >
       <Icon name={icon} size="action" color="text2" />

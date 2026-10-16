@@ -5,14 +5,27 @@ import type { AnyIconName } from '../icons.ts';
 import { inset, radius, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
-import { hitSlopForPadded } from '../touchTarget.ts';
+import { minTouchTargetDp } from '../tokens.ts';
+import {
+  hitBoxStyle,
+  hitExtension,
+  neighbourGaps,
+  type NeighbourGaps,
+} from '../touchTarget.ts';
 import { Icon } from './Icon.tsx';
 
-const HIT_SLOP = hitSlopForPadded(
-  textRoles.chip.size,
-  inset.chipV,
-  space.controlGap,
-);
+const CHIP_HEIGHT = textRoles.chip.size + (inset.chipV + size.stroke) * 2;
+
+// A chip's width follows its label and is nearly always past 48dp, so only the
+// vertical axis is grown.
+function chipHitBox(gaps: NeighbourGaps) {
+  return hitBoxStyle(
+    hitExtension(minTouchTargetDp, CHIP_HEIGHT, {
+      top: gaps.top,
+      bottom: gaps.bottom,
+    }),
+  );
+}
 
 interface ChipFaceProps {
   readonly label: string;
@@ -27,6 +40,10 @@ const useStyles = createThemedStyles((theme) => ({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: space.controlGap,
+  },
+  chipHit: {
+    alignSelf: 'flex-start',
+    flexShrink: 1,
   },
   chip: {
     flexDirection: 'row',
@@ -48,6 +65,9 @@ const useStyles = createThemedStyles((theme) => ({
   fill: {
     flexGrow: 1,
     justifyContent: 'center',
+  },
+  fillFace: {
+    alignSelf: 'stretch',
   },
   label: {
     ...textStyle(textRoles.chip),
@@ -97,6 +117,9 @@ export interface ChipProps {
   readonly liveDot?: boolean;
   readonly fill?: boolean;
   readonly accessibilityLabel?: string;
+  /** Gaps to the controls above and below, for the 48dp hit box; a number
+   * applies to both, an omitted side has no neighbour. */
+  readonly neighbourGapDp?: number | NeighbourGaps;
 }
 
 export function Chip({
@@ -108,6 +131,7 @@ export function Chip({
   liveDot = false,
   fill = false,
   accessibilityLabel,
+  neighbourGapDp = space.controlGap,
 }: ChipProps) {
   const styles = useStyles();
   return (
@@ -115,17 +139,28 @@ export function Chip({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ selected: active }}
-      style={[styles.chip, active && styles.chipActive, fill && styles.fill]}
-      hitSlop={HIT_SLOP}
+      style={[
+        styles.chipHit,
+        chipHitBox(neighbourGaps(neighbourGapDp)),
+        fill && styles.fill,
+      ]}
       onPress={onPress}
     >
-      <ChipFace
-        label={label}
-        icon={icon}
-        trailingIcon={trailingIcon}
-        active={active}
-        liveDot={liveDot}
-      />
+      <View
+        style={[
+          styles.chip,
+          active && styles.chipActive,
+          fill && [styles.fill, styles.fillFace],
+        ]}
+      >
+        <ChipFace
+          label={label}
+          icon={icon}
+          trailingIcon={trailingIcon}
+          active={active}
+          liveDot={liveDot}
+        />
+      </View>
     </Pressable>
   );
 }

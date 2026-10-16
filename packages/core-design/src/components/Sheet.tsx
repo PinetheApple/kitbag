@@ -30,6 +30,10 @@ import {
 } from '../sheetDismiss.ts';
 import { radii } from '../tokens.ts';
 
+// A scroll view drops every touch outside its frame, so the frame reaches this
+// far into the sheet's gap and padding to keep edge controls' hit boxes whole.
+export const SHEET_TOUCH_ROOM = space.sectionGap;
+
 const useStyles = createThemedStyles((theme) => ({
   frame: {
     flex: 1,
@@ -68,9 +72,11 @@ const useStyles = createThemedStyles((theme) => ({
   },
   scroll: {
     flexGrow: 0,
+    margin: -SHEET_TOUCH_ROOM,
   },
   content: {
     gap: space.sectionGap,
+    padding: SHEET_TOUCH_ROOM,
   },
   hint: {
     ...textStyle(textRoles.hint),

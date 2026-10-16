@@ -1,4 +1,4 @@
-import { Pressable, Text } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import {
   inset,
@@ -10,33 +10,50 @@ import {
 } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
-import { hitSlopForPadded } from '../touchTarget.ts';
+import { minTouchTargetDp } from '../tokens.ts';
+import {
+  hitBoxStyle,
+  hitExtension,
+  neighbourGaps,
+  type NeighbourGaps,
+} from '../touchTarget.ts';
 
 export type PresetButtonKind = 'preset' | 'action';
 
-const HIT_SLOP: Readonly<Record<PresetButtonKind, number>> = {
-  preset: hitSlopForPadded(
-    textRoles.preset.size,
-    inset.presetV,
-    space.controlGap,
-  ),
-  action: hitSlopForPadded(
-    textRoles.presetAction.size,
-    inset.buttonV,
-    space.controlGap,
-  ),
+const HEIGHT: Readonly<Record<PresetButtonKind, number>> = {
+  preset: textRoles.preset.size + (inset.presetV + size.stroke) * 2,
+  action: textRoles.presetAction.size + (inset.buttonV + size.stroke) * 2,
 };
+
+// Widths are flex and well past 48dp, so only the vertical axis is grown.
+function presetHitBox(kind: PresetButtonKind, gaps: NeighbourGaps) {
+  return hitBoxStyle(
+    hitExtension(minTouchTargetDp, HEIGHT[kind], {
+      top: gaps.top,
+      bottom: gaps.bottom,
+    }),
+  );
+}
 
 export interface PresetButtonProps {
   readonly label: string;
   readonly onPress: () => void;
   readonly kind?: PresetButtonKind;
   readonly accessibilityLabel?: string;
+  /** Gaps to the controls above and below, for the 48dp hit box; a number
+   * applies to both, an omitted side has no neighbour. */
+  readonly neighbourGapDp?: number | NeighbourGaps;
 }
 
 const useStyles = createThemedStyles((theme) => ({
-  preset: {
+  presetHit: {
     flex: 1,
+  },
+  actionHit: {
+    flex: presetActionGrow,
+  },
+  preset: {
+    flexGrow: 1,
     paddingVertical: inset.presetV,
     borderRadius: radius.preset,
     backgroundColor: theme.color.surface2,
@@ -50,7 +67,7 @@ const useStyles = createThemedStyles((theme) => ({
     color: theme.color.text,
   },
   action: {
-    flex: presetActionGrow,
+    flexGrow: 1,
     paddingVertical: inset.buttonV,
     borderRadius: radius.button,
     backgroundColor: theme.color.surface2,
@@ -70,6 +87,7 @@ export function PresetButton({
   onPress,
   kind = 'preset',
   accessibilityLabel,
+  neighbourGapDp = space.controlGap,
 }: PresetButtonProps) {
   const styles = useStyles();
   const action = kind === 'action';
@@ -77,13 +95,17 @@ export function PresetButton({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
-      style={action ? styles.action : styles.preset}
-      hitSlop={HIT_SLOP[kind]}
+      style={[
+        action ? styles.actionHit : styles.presetHit,
+        presetHitBox(kind, neighbourGaps(neighbourGapDp)),
+      ]}
       onPress={onPress}
     >
-      <Text style={action ? styles.actionText : styles.presetText}>
-        {label}
-      </Text>
+      <View style={action ? styles.action : styles.preset}>
+        <Text style={action ? styles.actionText : styles.presetText}>
+          {label}
+        </Text>
+      </View>
     </Pressable>
   );
 }

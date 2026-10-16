@@ -6,6 +6,7 @@ import {
   hitExtension,
   hitSlopFor,
   hitSlopForPadded,
+  unshared,
 } from './touchTarget.ts';
 
 const NO_NEIGHBOUR = Number.POSITIVE_INFINITY;
@@ -78,6 +79,23 @@ describe('hitExtension', () => {
       bottom: 0,
       left: 0,
     });
+  });
+});
+
+describe('unshared', () => {
+  it('lets a control take all of a gap no other control reaches into', () => {
+    const ext = hitExtension(24, 24, {
+      top: unshared(10),
+      bottom: unshared(10),
+    });
+    expect(ext.top).toBe(10);
+    expect(ext.bottom).toBe(10);
+  });
+
+  it('still stops at the edge of that room', () => {
+    const ext = hitExtension(24, 24, { top: unshared(3) });
+    expect(ext.top).toBe(3);
+    expect(ext.top + ext.bottom).toBe(minTouchTargetDp - 24);
   });
 });
 
