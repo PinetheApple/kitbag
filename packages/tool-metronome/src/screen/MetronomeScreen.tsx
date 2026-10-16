@@ -24,6 +24,32 @@ import { Transport } from './Transport.tsx';
 import { useTempoSwipe } from './useTempoSwipe.ts';
 import { useMetronomeFrame } from './useMetronomeFrame.ts';
 
+// Gaps from the card's rows to the controls around them, for 48dp hit boxes
+// that stop at each gap's midpoint (core-design hitExtension). Past the card's
+// padding the nearest controls are the preset row above and the trainer chips
+// below, a section gap away. Nothing tappable sits left of the steppers.
+const ACROSS_CARD_EDGE = space.cardPadding + space.sectionGap;
+const FIRST_ROW_GAPS = {
+  top: ACROSS_CARD_EDGE,
+  bottom: space.rowGap,
+  right: space.rowGap,
+};
+const MIDDLE_ROW_GAPS = {
+  top: space.rowGap,
+  bottom: space.rowGap,
+  right: space.rowGap,
+};
+const LAST_ROW_STEPPER_GAPS = {
+  top: space.rowGap,
+  bottom: ACROSS_CARD_EDGE,
+  right: space.rowGap,
+};
+const POLY_TOGGLE_GAPS = {
+  top: space.rowGap,
+  bottom: ACROSS_CARD_EDGE,
+  left: space.rowGap,
+};
+
 const POLY = 'poly';
 const POLY_OPTIONS = [{ value: POLY, label: POLY }] as const;
 
@@ -188,6 +214,7 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
                 value={`${String(beatsPerBar)}/${String(denominator)}`}
                 onStep={handleBeatsStep}
                 onValuePress={handleDenominatorCycle}
+                neighbourGapDp={FIRST_ROW_GAPS}
               />
               <BeatLeds
                 beatCount={beatsPerBar}
@@ -204,6 +231,7 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
                   label="Polyrhythm"
                   value={`${String(polyBeats)}:${String(beatsPerBar)}`}
                   onStep={handlePolyStep}
+                  neighbourGapDp={MIDDLE_ROW_GAPS}
                 />
                 <BeatLeds
                   size="small"
@@ -221,6 +249,7 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
                 value={subdivisionGlyph(subdivision)}
                 accessibilityValue={String(subdivision)}
                 onStep={handleSubdivisionStep}
+                neighbourGapDp={LAST_ROW_STEPPER_GAPS}
               />
               <SegmentedControl
                 fill
@@ -228,7 +257,7 @@ export function MetronomeScreen({ insets }: MetronomeScreenProps) {
                 options={POLY_OPTIONS}
                 selected={polyEnabled ? POLY : undefined}
                 selectedTone="accent"
-                neighbourGapDp={space.rowGap}
+                neighbourGapDp={POLY_TOGGLE_GAPS}
                 onSelect={handlePolyToggle}
               />
             </View>

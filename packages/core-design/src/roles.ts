@@ -104,8 +104,10 @@ export const playGlyphPath = {
   height: 12,
 } as const;
 
-// Glyph sizes for icon-only content. The transport key's glyph matches the play
-// glyph beside it: the design file's 11px drew it too small to read (#125).
+// Glyph sizes for icon-only content. The design file's transport (11px) and
+// step-key (14px) glyphs were too small to read on device (#125): the
+// transport glyph now matches the play glyph beside it, and the step key's
+// fills its 24dp key with 3dp to spare each side.
 export const iconSizes = {
   chip: 12.5,
   chevron: 13,
@@ -115,6 +117,7 @@ export const iconSizes = {
   tile: 17,
   toolTile: 22,
   transport: size.playGlyphBox,
+  stepKey: 18,
 } as const;
 
 export type IconSize = keyof typeof iconSizes;
@@ -133,7 +136,7 @@ export const textRoles = {
   tempoCaption: { family: display, weight: 400, size: 11, tracking: 0.22 },
   segment: { family: display, weight: 400, size: 12.5 },
   badge: { family: display, weight: 400, size: 10.5, tracking: 0.06 },
-  stepKey: { family: display, weight: 400, size: 14 },
+  stepKey: { family: display, weight: 400, size: iconSizes.stepKey },
   stepInline: { family: display, weight: 400, size: 12.5 },
   stepInlineValue: { family: display, weight: 500, size: 12.5, tabular: true },
   transportKey: { family: display, weight: 400, size: iconSizes.transport },
