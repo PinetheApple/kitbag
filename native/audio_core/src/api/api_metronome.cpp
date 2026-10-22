@@ -195,15 +195,22 @@ void kb_metronome_set_ramp(
     kb_engine* engine,
     int32_t enabled,
     double start_bpm,
-    double end_bpm,
-    double duration,
+    double target_bpm,
+    double step_bpm,
+    double interval,
     int32_t unit,
     int32_t loop
 ) {
   if (engine != nullptr) {
-    ToEngine(engine)
-        ->metronome()
-        .SetRamp(enabled != 0, start_bpm, end_bpm, duration, unit, loop != 0);
+    ToEngine(engine)->metronome().SetRamp(
+        enabled != 0,
+        start_bpm,
+        target_bpm,
+        step_bpm,
+        interval,
+        unit,
+        loop != 0
+    );
   }
 }
 

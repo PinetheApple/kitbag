@@ -11,15 +11,18 @@ import {
   rampUnitFromOption,
   rampUnitLabel,
   rampUnitOption,
-  stepRampDuration,
+  rampSteps,
+  rampTotalLabel,
+  stepRampInterval,
   withRampUnit,
 } from './rampUnit.ts';
 
 const draft: RampConfig = {
   enabled: false,
   startBpm: 96,
-  endBpm: 104,
-  duration: 8,
+  targetBpm: 104,
+  stepBpm: 5,
+  interval: 8,
   unit: KB_RAMP_UNIT.KB_RAMP_BARS,
   loop: false,
 };
@@ -38,22 +41,22 @@ describe('ramp unit segment', () => {
   });
 });
 
-describe('ramp duration per unit', () => {
+describe('ramp interval per unit', () => {
   it('clamps a bars ramp to the engine bar ceiling', () => {
-    const stepped = stepRampDuration(
-      { ...draft, duration: KB_MAX_RAMP_BARS },
+    const stepped = stepRampInterval(
+      { ...draft, interval: KB_MAX_RAMP_BARS },
       5,
     );
-    expect(stepped.duration).toBe(KB_MAX_RAMP_BARS);
+    expect(stepped.interval).toBe(KB_MAX_RAMP_BARS);
   });
 
-  it('re-clamps the duration when the unit changes', () => {
-    const long = { ...draft, duration: 90 };
-    expect(withRampUnit(long, KB_RAMP_UNIT.KB_RAMP_SECONDS).duration).toBe(90);
-    expect(withRampUnit(long, KB_RAMP_UNIT.KB_RAMP_MINUTES).duration).toBe(
+  it('re-clamps the interval when the unit changes', () => {
+    const long = { ...draft, interval: 90 };
+    expect(withRampUnit(long, KB_RAMP_UNIT.KB_RAMP_SECONDS).interval).toBe(90);
+    expect(withRampUnit(long, KB_RAMP_UNIT.KB_RAMP_MINUTES).interval).toBe(
       KB_RAMP_SECONDS_BOUNDS.max / 60,
     );
-    expect(withRampUnit(long, KB_RAMP_UNIT.KB_RAMP_BARS).duration).toBe(
+    expect(withRampUnit(long, KB_RAMP_UNIT.KB_RAMP_BARS).interval).toBe(
       KB_MAX_RAMP_BARS,
     );
   });
@@ -61,23 +64,52 @@ describe('ramp duration per unit', () => {
   it('keeps any length the store accepts, so the sheet and the store agree', () => {
     const half = {
       ...draft,
-      duration: 0.5,
+      interval: 0.5,
       unit: KB_RAMP_UNIT.KB_RAMP_MINUTES,
     };
-    expect(withRampUnit(half, KB_RAMP_UNIT.KB_RAMP_MINUTES).duration).toBe(0.5);
+    expect(withRampUnit(half, KB_RAMP_UNIT.KB_RAMP_MINUTES).interval).toBe(0.5);
     expect(
-      withRampUnit({ ...half, duration: 0 }, KB_RAMP_UNIT.KB_RAMP_MINUTES)
-        .duration,
+      withRampUnit({ ...half, interval: 0 }, KB_RAMP_UNIT.KB_RAMP_MINUTES)
+        .interval,
     ).toBe(KB_RAMP_SECONDS_BOUNDS.min / 60);
   });
 
   it('steps in whole units and never steps below one', () => {
     const minute = {
       ...draft,
-      duration: 1,
+      interval: 1,
       unit: KB_RAMP_UNIT.KB_RAMP_MINUTES,
     };
-    expect(stepRampDuration(minute, -1).duration).toBe(1);
-    expect(stepRampDuration(minute, 1).duration).toBe(2);
+    expect(stepRampInterval(minute, -1).interval).toBe(1);
+    expect(stepRampInterval(minute, 1).interval).toBe(2);
+  });
+});
+
+describe('stepped ramp totals', () => {
+  const ramp = {
+    enabled: true,
+    startBpm: 100,
+    targetBpm: 140,
+    stepBpm: 5,
+    interval: 4,
+    unit: KB_RAMP_UNIT.KB_RAMP_BARS,
+    loop: false,
+  };
+
+  it('counts the intervals to the target, the last step stopping on it', () => {
+    expect(rampSteps(ramp)).toBe(8);
+    expect(rampSteps({ ...ramp, stepBpm: 15 })).toBe(3);
+    expect(rampSteps({ ...ramp, startBpm: 160, targetBpm: 120 })).toBe(8);
+  });
+
+  it('names the total time in the ramp unit', () => {
+    expect(rampTotalLabel(ramp)).toBe('Reaches 140 BPM after 32 bars');
+    expect(
+      rampTotalLabel({
+        ...ramp,
+        interval: 20,
+        unit: KB_RAMP_UNIT.KB_RAMP_SECONDS,
+      }),
+    ).toBe('Reaches 140 BPM after 160 seconds');
   });
 });

@@ -119,15 +119,17 @@ void Metronome::SetLatencyOffset(double latency_ms) {
 void Metronome::SetRamp(
     bool enabled,
     double start_bpm,
-    double end_bpm,
-    double duration,
+    double target_bpm,
+    double step_bpm,
+    double interval,
     int32_t unit,
     bool loop
 ) {
   Command command{CommandType::kSetRamp};
   command.value = start_bpm;
-  command.value_b = end_bpm;
-  command.value_c = duration;
+  command.value_b = target_bpm;
+  command.value_c = step_bpm;
+  command.value_d = interval;
   command.int_a = enabled ? 1 : 0;
   command.int_b = unit;
   command.int_c = loop ? 1 : 0;
@@ -301,6 +303,7 @@ void Metronome::ArmRamp(const Command& command) {
       command.value,
       command.value_b,
       command.value_c,
+      command.value_d,
       command.int_b,
       command.int_c != 0
   );

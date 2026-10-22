@@ -4,6 +4,7 @@ import {
   createThemedStyles,
   SegmentedControl,
   Sheet,
+  SheetHint,
   SHEET_TOUCH_ROOM,
   space,
   StepControl,
@@ -18,6 +19,7 @@ import { Text, View, type LayoutChangeEvent } from 'react-native';
 
 import {
   RAMP_UNIT_OPTIONS,
+  rampTotalLabel,
   rampUnitFromOption,
   rampUnitLabel,
   rampUnitOption,
@@ -34,7 +36,7 @@ const TEMPO_FIELD_GAPS = {
 };
 const WRAPPED_FROM_GAPS = { ...TEMPO_FIELD_GAPS, bottom: space.controlGap };
 const WRAPPED_TO_GAPS = { ...TEMPO_FIELD_GAPS, top: space.controlGap };
-const DURATION_FIELD_GAPS = {
+const INTERVAL_FIELD_GAPS = {
   top: space.sectionGap,
   bottom: space.sectionGap,
   right: space.controlGap,
@@ -131,7 +133,7 @@ function TempoFields({ editor }: { readonly editor: RampEditor }) {
       <RampField
         label="To"
         spokenLabel="Ramp to"
-        value={draft.endBpm}
+        value={draft.targetBpm}
         unit="BPM"
         gaps={wrapped ? WRAPPED_TO_GAPS : TEMPO_FIELD_GAPS}
         onLayout={handleToLayout}
@@ -140,7 +142,23 @@ function TempoFields({ editor }: { readonly editor: RampEditor }) {
     </View>
   );
 }
-function DurationField({ editor }: { readonly editor: RampEditor }) {
+function StepField({ editor }: { readonly editor: RampEditor }) {
+  const styles = useStyles();
+  return (
+    <View style={styles.row}>
+      <RampField
+        label="Step"
+        spokenLabel="Ramp step"
+        value={editor.draft.stepBpm}
+        unit="BPM"
+        gaps={INTERVAL_FIELD_GAPS}
+        onStep={editor.stepStep}
+      />
+    </View>
+  );
+}
+
+function IntervalField({ editor }: { readonly editor: RampEditor }) {
   const styles = useStyles();
   const { setUnit } = editor;
   const handleUnitSelect = useCallback(
@@ -152,16 +170,16 @@ function DurationField({ editor }: { readonly editor: RampEditor }) {
   return (
     <View style={styles.row}>
       <RampField
-        label="Over"
-        spokenLabel="Ramp length"
-        value={editor.draft.duration}
+        label="Every"
+        spokenLabel="Ramp interval"
+        value={editor.draft.interval}
         unit={rampUnitLabel(editor.draft.unit)}
-        gaps={DURATION_FIELD_GAPS}
-        onStep={editor.stepDuration}
+        gaps={INTERVAL_FIELD_GAPS}
+        onStep={editor.stepInterval}
       />
       <SegmentedControl
         fill
-        accessibilityLabel="Ramp length unit"
+        accessibilityLabel="Ramp interval unit"
         options={RAMP_UNIT_OPTIONS}
         selected={rampUnitOption(editor.draft.unit)}
         neighbourGapDp={BETWEEN_ROWS}
@@ -187,7 +205,7 @@ function RampActions({ editor }: { readonly editor: RampEditor }) {
         fill
         variant="primary"
         label={editor.running ? 'Restart ramp' : 'Start ramp'}
-        disabled={editor.draft.startBpm === editor.draft.endBpm}
+        disabled={editor.draft.startBpm === editor.draft.targetBpm}
         neighbourGapDp={ACTION_GAPS}
         onPress={editor.start}
       />
@@ -227,7 +245,9 @@ export function RampSheet({ visible, bottomInset, onDismiss }: RampSheetProps) {
       onDismiss={onDismiss}
     >
       <TempoFields editor={editor} />
-      <DurationField editor={editor} />
+      <StepField editor={editor} />
+      <IntervalField editor={editor} />
+      <SheetHint>{rampTotalLabel(editor.draft)}</SheetHint>
       <LoopControl editor={editor} />
       <RampActions editor={editor} />
     </Sheet>

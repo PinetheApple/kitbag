@@ -180,14 +180,17 @@ KB_EXPORT void kb_metronome_set_volume(kb_engine* engine, double volume);
 /* Output latency offset in ms [-100, 100]; positive = trigger earlier. */
 KB_EXPORT void
 kb_metronome_set_latency_offset(kb_engine* engine, double latency_ms);
-/* Steps BPM per downbeat from bar one, then holds end_bpm; loop restarts after
- * one end bar. Bad input is ignored, set_tempo cancels, duration is clamped. */
+/* Stepped ramp (SPEC §5.3): holds start_bpm for one interval, then moves by
+ * step_bpm toward target_bpm each interval, and stops on it. Bar intervals step
+ * on the downbeat, time intervals on the next beat. loop restarts after one
+ * interval at the target. Bad input is ignored, set_tempo cancels. */
 KB_EXPORT void kb_metronome_set_ramp(
     kb_engine* engine,
     int32_t enabled,
     double start_bpm,
-    double end_bpm,
-    double duration,
+    double target_bpm,
+    double step_bpm,
+    double interval,
     int32_t unit,
     int32_t loop
 );

@@ -94,8 +94,9 @@ class Metronome {
   void SetRamp(
       bool enabled,
       double start_bpm,
-      double end_bpm,
-      double duration,
+      double target_bpm,
+      double step_bpm,
+      double interval,
       int32_t unit,
       bool loop
   );
@@ -172,6 +173,7 @@ class Metronome {
     double value = 0.0;
     double value_b = 0.0;
     double value_c = 0.0;
+    double value_d = 0.0;
     int32_t int_a = 0;
     int32_t int_b = 0;
     int32_t int_c = 0;

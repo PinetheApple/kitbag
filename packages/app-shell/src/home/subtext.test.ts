@@ -11,7 +11,7 @@ const base: MetronomeSummary = {
   beatsPerBar: 7,
   denominator: 8,
   running: false,
-  ramp: { enabled: false, startBpm: 80, endBpm: 120 },
+  ramp: { enabled: false, startBpm: 80, targetBpm: 120 },
 };
 
 describe('metronome subtext', () => {

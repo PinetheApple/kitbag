@@ -1,7 +1,7 @@
 import { KB_RAMP_UNIT } from '@kitbag/core-native';
 import {
-  clampRampDuration,
-  rampDurationBounds,
+  clampRampInterval,
+  rampIntervalBounds,
   type RampConfig,
 } from '@kitbag/core-state';
 
@@ -32,18 +32,29 @@ export function rampUnitLabel(unit: KB_RAMP_UNIT): string {
   return UNIT_NAMES[unit].long;
 }
 
-export function stepRampDuration(draft: RampConfig, delta: number): RampConfig {
-  const { min, max } = rampDurationBounds(draft.unit);
-  const duration = Math.min(
-    Math.max(draft.duration + delta, Math.ceil(min)),
+export function stepRampInterval(draft: RampConfig, delta: number): RampConfig {
+  const { min, max } = rampIntervalBounds(draft.unit);
+  const interval = Math.min(
+    Math.max(draft.interval + delta, Math.ceil(min)),
     max,
   );
-  return { ...draft, duration };
+  return { ...draft, interval };
 }
 
 export function withRampUnit(
   draft: RampConfig,
   unit: KB_RAMP_UNIT,
 ): RampConfig {
-  return { ...draft, unit, duration: clampRampDuration(draft.duration, unit) };
+  return { ...draft, unit, interval: clampRampInterval(draft.interval, unit) };
+}
+
+/** Intervals until the ramp reaches its target: the last step stops on it. */
+export function rampSteps(ramp: RampConfig): number {
+  return Math.ceil(Math.abs(ramp.targetBpm - ramp.startBpm) / ramp.stepBpm);
+}
+
+/** "Reaches 140 BPM after 8 bars", for the sheet's hint. */
+export function rampTotalLabel(ramp: RampConfig): string {
+  const total = rampSteps(ramp) * ramp.interval;
+  return `Reaches ${String(ramp.targetBpm)} BPM after ${String(total)} ${rampUnitLabel(ramp.unit)}`;
 }

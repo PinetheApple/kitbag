@@ -29,8 +29,9 @@ void commandSetLatencyOffset(double latencyMs);
 void commandSetRamp(
     bool enabled,
     double startBpm,
-    double endBpm,
-    double duration,
+    double targetBpm,
+    double stepBpm,
+    double interval,
     int32_t unit,
     bool loop);
 void commandSetBarMute(bool enabled, int32_t playBars, int32_t muteBars);

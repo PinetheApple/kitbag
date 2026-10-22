@@ -71,6 +71,7 @@ export const songPresets = sqliteTable('song_presets', {
   rampStartBpm: real('ramp_start_bpm'),
   rampEndBpm: real('ramp_end_bpm'),
   rampLength: real('ramp_length'),
+  rampStep: real('ramp_step').notNull().default(1),
   rampUnit: integer('ramp_unit').notNull().default(RAMP_UNITS.bars),
   rampLoop: integer('ramp_loop', { mode: 'boolean' }).notNull().default(false),
   barMuteEnabled: integer('bar_mute_enabled', { mode: 'boolean' })

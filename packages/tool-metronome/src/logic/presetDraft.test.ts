@@ -90,7 +90,7 @@ describe('preset draft', () => {
     const edited = {
       ...draft,
       ramp: withRampUnit(
-        { ...draft.ramp, duration: 3 },
+        { ...draft.ramp, interval: 3 },
         KB_RAMP_UNIT.KB_RAMP_MINUTES,
       ),
     };
@@ -100,7 +100,7 @@ describe('preset draft', () => {
     } as SongPreset);
     expect(reloaded.ramp).toEqual({
       ...draft.ramp,
-      duration: 3,
+      interval: 3,
       unit: KB_RAMP_UNIT.KB_RAMP_MINUTES,
     });
   });

@@ -5,7 +5,7 @@ import {
   SegmentedControl,
   type StepDelta,
 } from '@kitbag/core-design';
-import { KB_MUTE_BARS_BOUNDS } from '@kitbag/core-native';
+import { KB_MIN_RAMP_STEP_BPM, KB_MUTE_BARS_BOUNDS } from '@kitbag/core-native';
 import { BPM_BOUNDS, type PerAccentSounds } from '@kitbag/core-state';
 import { useCallback, useState } from 'react';
 import { Pressable } from 'react-native';
@@ -20,7 +20,7 @@ import {
   rampUnitFromOption,
   rampUnitLabel,
   rampUnitOption,
-  stepRampDuration,
+  stepRampInterval,
   withRampUnit,
 } from '../../logic/rampUnit.ts';
 import { soundChipLabel, soundLabel } from '../../logic/soundChoice.ts';
@@ -35,8 +35,17 @@ const stepFrom = (ramp: RampDraft, delta: StepDelta): RampDraft => ({
 });
 const stepTo = (ramp: RampDraft, delta: StepDelta): RampDraft => ({
   ...ramp,
-  endBpm: stepWithin(ramp.endBpm, delta, BPM_BOUNDS),
+  targetBpm: stepWithin(ramp.targetBpm, delta, BPM_BOUNDS),
 });
+const STEP_BOUNDS = {
+  min: KB_MIN_RAMP_STEP_BPM,
+  max: BPM_BOUNDS.max - BPM_BOUNDS.min,
+};
+const stepStep = (ramp: RampDraft, delta: StepDelta): RampDraft => ({
+  ...ramp,
+  stepBpm: stepWithin(ramp.stepBpm, delta, STEP_BOUNDS),
+});
+
 const stepPlay = (mute: BarMuteDraft, delta: StepDelta): BarMuteDraft => ({
   ...mute,
   playBars: stepWithin(mute.playBars, delta, KB_MUTE_BARS_BOUNDS),
@@ -99,8 +108,24 @@ function RampTempo({ editor }: { readonly editor: PresetEditor }) {
       <TrainerStep
         {...common}
         label="Ramp to"
-        value={draft.ramp.endBpm}
+        value={draft.ramp.targetBpm}
         step={stepTo}
+      />
+    </EditRow>
+  );
+}
+
+function RampStep({ editor }: { readonly editor: PresetEditor }) {
+  const { draft, update } = editor;
+  return (
+    <EditRow label="Step">
+      <TrainerStep
+        update={update}
+        trainer="ramp"
+        label="Ramp step"
+        unit="BPM"
+        value={draft.ramp.stepBpm}
+        step={stepStep}
       />
     </EditRow>
   );
@@ -118,18 +143,18 @@ function RampLength({ editor }: { readonly editor: PresetEditor }) {
     [update],
   );
   return (
-    <EditRow label="Over">
+    <EditRow label="Every">
       <TrainerStep
         update={update}
         trainer="ramp"
-        label="Ramp length"
+        label="Ramp interval"
         unit={rampUnitLabel(draft.ramp.unit)}
-        value={draft.ramp.duration}
-        step={stepRampDuration}
+        value={draft.ramp.interval}
+        step={stepRampInterval}
       />
       <SegmentedControl
         compact
-        accessibilityLabel="Ramp length unit"
+        accessibilityLabel="Ramp interval unit"
         options={RAMP_UNIT_OPTIONS}
         selected={rampUnitOption(draft.ramp.unit)}
         onSelect={setUnit}
@@ -169,6 +194,7 @@ function RampRows({ editor }: { readonly editor: PresetEditor }) {
       {draft.ramp.enabled ? (
         <>
           <RampTempo editor={editor} />
+          <RampStep editor={editor} />
           <RampLength editor={editor} />
           <RampLoop editor={editor} />
         </>

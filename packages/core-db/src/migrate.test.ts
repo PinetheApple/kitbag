@@ -359,6 +359,7 @@ describe('migrate', () => {
         ramp_length: ramp_bars,
         ramp_unit: 0,
         ramp_loop: 0,
+        ramp_step: 1,
       })),
     );
     expect(presets()[0]?.ramp_length).toBe(8);
