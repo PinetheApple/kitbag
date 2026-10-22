@@ -114,12 +114,10 @@ is still open (`.loop-halt` carries the two rulings requested).
 
 Five §5.2/§12 deviations it ships with, none yet recorded in SPEC:
 
-- **The poly row has no accent editing.** §5.2 gives it "own accent states", but
-  the C ABI has one accent table (`kb_metronome_set_accent`). Editable when the
-  ABI grows a poly accent.
-- **The poly row never flashes.** The engine has
-  `kb_metronome_current_poly_beat`, but the JSI HostObject does not publish it,
-  so no worklet can read it. Closing it is a core-native change.
+- ~~**The poly row has no accent editing.**~~ Resolved by #74 (PR #110):
+  `kb_metronome_set_poly_accent` keeps its own table, edited from the poly row.
+- ~~**The poly row never flashes.**~~ Resolved by #74 (PR #110): the HostObject
+  publishes `current_poly_beat` and a worklet drives the poly row from it.
 - **Touch targets are gap-bounded, not 48dp.** §12.6's ≥48dp cannot be reached
   by hitSlop for 26dp LEDs 8dp apart without neighbouring regions overlapping,
   so `hitSlopFor` caps at half the tightest gap. Either the design's gaps grow
