@@ -1,3 +1,4 @@
+import '@/runtime/cryptoRuntime';
 import '@/runtime/metronomeRuntime';
 import '@/runtime/libraryRuntime';
 import '@/runtime/tunerRuntime';
