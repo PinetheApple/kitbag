@@ -114,7 +114,7 @@ export async function seed(database: BackupDatabase) {
   return { song, opener, closer, friday, acoustic };
 }
 
-export async function records(database: BackupDatabase) {
+export async function records(database: Pick<BackupDatabase, 'backup'>) {
   const file = JSON.parse(await database.backup.export()) as Record<
     string,
     unknown

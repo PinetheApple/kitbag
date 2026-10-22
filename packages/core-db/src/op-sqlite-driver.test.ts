@@ -5,7 +5,13 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('@op-engineering/op-sqlite', () => ({}));
 
 import { connectDatabase, drizzleClient } from './client';
-import { presetValues } from './backup.test-helper';
+import {
+  openBackupDatabase,
+  presetValues,
+  records,
+  seed,
+  unwrap,
+} from './backup.test-helper';
 import { fakeOpSqlite } from './op-sqlite-fake.test-helper';
 import { INSTRUMENTS } from './tuning-rules';
 
@@ -34,6 +40,36 @@ describe('drizzle over the op-sqlite 17 connection', () => {
 
     await database.close();
   });
+
+  it.each([
+    ['replace', { mode: 'replace' }, { confirmReplace: true }],
+    ['merge', {}, {}],
+  ] as const)(
+    'rolls back a %s import when a write fails midway',
+    async (_, planOptions, applyOptions) => {
+      const source = openBackupDatabase();
+      await seed(source);
+      const file = await source.backup.export();
+
+      const { connection } = fakeOpSqlite();
+      const database = connectDatabase(connection);
+      await database.presets.create(presetValues('Mine', null));
+      const mine = await database.setlists.create('Mine');
+      await database.setlists.selectActive(mine.id);
+      const before = await records(database);
+      connection.executeSync(
+        "CREATE TRIGGER forced BEFORE INSERT ON tunings BEGIN SELECT RAISE(ABORT, 'forced'); END",
+      );
+
+      const plan = unwrap(await database.backup.plan(file, planOptions));
+      expect(await database.backup.apply(plan, applyOptions)).toMatchObject({
+        ok: false,
+        error: { kind: 'databaseError' },
+      });
+      expect(await records(database)).toEqual(before);
+      await database.close();
+    },
+  );
 
   it('serves run, all, get and values for raw SQL', async () => {
     const { connection } = fakeOpSqlite();
