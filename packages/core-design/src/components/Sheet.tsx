@@ -1,18 +1,20 @@
-import { useCallback, useMemo, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useMemo, type ReactNode } from 'react';
 import {
-  Modal,
+  BackHandler,
   Pressable,
   ScrollView,
+  StyleSheet,
   Text,
   View,
   type LayoutChangeEvent,
 } from 'react-native';
-import {
-  Gesture,
-  GestureDetector,
-  GestureHandlerRootView,
-} from 'react-native-gesture-handler';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import Animated, {
+  FadeIn,
+  FadeOut,
+  SlideInDown,
+  SlideOutDown,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
@@ -29,6 +31,7 @@ import {
   shouldDismissSheet,
 } from '../sheetDismiss.ts';
 import { radii } from '../tokens.ts';
+import { useSheetPortal } from './SheetHost.tsx';
 
 // A scroll view drops every touch outside its frame, so the frame reaches this
 // far into the sheet's padding. The right side stays put: the indicator is there.
@@ -39,9 +42,6 @@ const useStyles = createThemedStyles((theme) => ({
   frame: {
     flex: 1,
     justifyContent: 'flex-end',
-  },
-  scrim: {
-    flex: 1,
   },
   sheet: {
     flexShrink: 1,
@@ -137,11 +137,6 @@ export function Sheet({
     [sheetHeight],
   );
 
-  const handleShow = useCallback(() => {
-    dragY.value = 0;
-    onShow?.();
-  }, [dragY, onShow]);
-
   const dragToDismiss = useMemo(
     () =>
       Gesture.Pan()
@@ -159,55 +154,85 @@ export function Sheet({
     [dragY, sheetHeight, onDismiss, reduceMotion],
   );
 
-  const insetStyle = useMemo(
-    () => ({ paddingBottom: space.cardPadding + bottomInset }),
-    [bottomInset],
-  );
-
-  const dragStyle = useAnimatedStyle(() => ({
+  // Edge to edge, nothing resizes for the keyboard and RN's keyboard events
+  // only fire on a layout pass (#142). Height is negative while it is open.
+  const keyboard = useReanimatedKeyboardAnimation();
+  const sheetStyle = useAnimatedStyle(() => ({
+    paddingBottom:
+      space.cardPadding + Math.max(bottomInset, -keyboard.height.value),
     transform: [{ translateY: dragY.value }],
   }));
 
-  return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType={reduceMotion ? 'none' : 'slide'}
-      onShow={handleShow}
-      onRequestClose={onDismiss}
-    >
-      <GestureHandlerRootView style={styles.frame}>
+  const { show, hide } = useSheetPortal();
+  const id = useId();
+
+  useEffect(() => {
+    if (!visible) return undefined;
+    dragY.value = 0;
+    onShow?.();
+    const back = BackHandler.addEventListener('hardwareBackPress', () => {
+      onDismiss();
+      return true;
+    });
+    return () => {
+      back.remove();
+    };
+    // onShow and onDismiss run per opening, not per new callback identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
+  const content = visible ? (
+    <View style={styles.frame}>
+      <Animated.View
+        entering={FadeIn}
+        exiting={FadeOut}
+        style={StyleSheet.absoluteFill}
+      >
         <Pressable
-          style={styles.scrim}
+          style={StyleSheet.absoluteFill}
           accessibilityRole="button"
           accessibilityLabel={dismissLabel}
           onPress={onDismiss}
         />
-        <Animated.View
-          style={[styles.sheet, insetStyle, dragStyle]}
-          onLayout={handleLayout}
+      </Animated.View>
+      <Animated.View
+        entering={SlideInDown}
+        exiting={SlideOutDown}
+        style={[styles.sheet, sheetStyle]}
+        onLayout={handleLayout}
+      >
+        <GestureDetector gesture={dragToDismiss}>
+          <View style={styles.header}>
+            <View style={styles.grab} />
+            <Text accessibilityRole="header" style={styles.title}>
+              {titleIcon === undefined ? title : `${icons[titleIcon]} ${title}`}
+            </Text>
+          </View>
+        </GestureDetector>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.content}
+          bounces={false}
+          keyboardShouldPersistTaps="handled"
+          scrollIndicatorInsets={INDICATOR_INSETS}
         >
-          <GestureDetector gesture={dragToDismiss}>
-            <View style={styles.header}>
-              <View style={styles.grab} />
-              <Text accessibilityRole="header" style={styles.title}>
-                {titleIcon === undefined
-                  ? title
-                  : `${icons[titleIcon]} ${title}`}
-              </Text>
-            </View>
-          </GestureDetector>
-          <ScrollView
-            style={styles.scroll}
-            contentContainerStyle={styles.content}
-            bounces={false}
-            scrollIndicatorInsets={INDICATOR_INSETS}
-          >
-            {children}
-            {hint === undefined ? null : <SheetHint>{hint}</SheetHint>}
-          </ScrollView>
-        </Animated.View>
-      </GestureHandlerRootView>
-    </Modal>
+          {children}
+          {hint === undefined ? null : <SheetHint>{hint}</SheetHint>}
+        </ScrollView>
+      </Animated.View>
+    </View>
+  ) : null;
+
+  useEffect(() => {
+    if (content === null) hide(id);
+    else show(id, content);
+  });
+  useEffect(
+    () => () => {
+      hide(id);
+    },
+    [hide, id],
   );
+
+  return null;
 }

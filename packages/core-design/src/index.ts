@@ -31,6 +31,7 @@ export * from './components/PrimaryPlayButton.tsx';
 export * from './components/SegmentedControl.tsx';
 export * from './components/ShapeIcon.tsx';
 export * from './components/Sheet.tsx';
+export * from './components/SheetHost.tsx';
 export * from './components/StepControl.tsx';
 export * from './components/TextField.tsx';
 export * from './components/ToolTile.tsx';
