@@ -132,6 +132,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_ramp.cpp
     tools/metronome/metronome_test_ramp_live.cpp
     tools/rt/rt_publisher_verify.cpp
+    tools/rt/stall_detector_test.cpp
     src/metronome/metronome.cpp
     src/metronome/metronome_count_in.cpp
     src/metronome/metronome_grid.cpp
