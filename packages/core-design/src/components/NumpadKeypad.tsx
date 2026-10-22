@@ -1,11 +1,11 @@
 import { useCallback } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { icons } from '../icons.ts';
 import { inset, radius, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { hitSlopForPadded } from '../touchTarget.ts';
+import { InlineIcon } from './IconGlyph.tsx';
 
 const COLUMNS = 3;
 const ROWS_ABOVE_ZERO = 3;
@@ -111,7 +111,7 @@ export function NumpadKeypad({
           hitSlop={KEY_HIT_SLOP}
           onPress={onBackspace}
         >
-          <Text style={styles.keyText}>{icons.backspace}</Text>
+          <InlineIcon name="backspace" style={styles.keyText} />
         </Pressable>
         <DigitKey digit={ZERO} onDigit={onDigit} />
         <Pressable
@@ -121,9 +121,10 @@ export function NumpadKeypad({
           hitSlop={KEY_HIT_SLOP}
           onPress={onConfirm}
         >
-          <Text style={[styles.keyText, styles.confirmKeyText]}>
-            {icons.confirm}
-          </Text>
+          <InlineIcon
+            name="confirm"
+            style={[styles.keyText, styles.confirmKeyText]}
+          />
         </Pressable>
       </View>
     </View>

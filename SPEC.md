@@ -607,8 +607,10 @@ New:
   build already wraps all three in `KitbagStepperRow.inline`; the original mock
   drew them as inert labels, which is why "how do I change the time signature?"
   had no answer on the page.
-- **Subdivision reaches 1–16** through that same stepper, showing the engine's
-  own glyph (`♩ ♪ ³ ♬`, then `×5`…`×16`). Poly stays a toggle segment beside it;
+- **Subdivision reaches 1–16** through that same stepper, showing clicks per
+  beat as `×1`…`×16`. (The note glyphs `♩ ♪ ³ ♬` were dropped in #112: they fell
+  back to small or emoji renderings and were hard to read.) Poly stays a toggle
+  segment beside it;
   its ratio is edited on the poly row's own stepper.
 
 ### 5.3 Four chips, four sheets

@@ -15,6 +15,7 @@
     "@kitbag/core-plugin-api": "workspace:*"
   },
   "devDependencies": {
+    "@expo/vector-icons": "^15.1.1",
     "@tailwindcss/postcss": "^4.0.0",
     "@types/react": "~19.2.2",
     "lightningcss": "1.33.0",
@@ -28,6 +29,7 @@
     "vitest": "^4.1.10"
   },
   "peerDependencies": {
+    "@expo/vector-icons": ">=15",
     "react": ">=19",
     "react-native": ">=0.83",
     "react-native-gesture-handler": ">=2.30",
