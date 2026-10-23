@@ -4,6 +4,7 @@ import {
   KB_COUNT_IN_BARS,
   KB_MAX_RAMP_BARS,
   KB_MIN_RAMP_BARS,
+  KB_MIN_RAMP_STEP_BPM,
   KB_RAMP_SECONDS_BOUNDS,
   KB_RAMP_UNIT,
   KB_SOUND_NAMES,
@@ -17,8 +18,9 @@ export const BPM_BOUNDS = KB_BPM_BOUNDS;
 export interface RampConfig {
   readonly enabled: boolean;
   readonly startBpm: number;
-  readonly endBpm: number;
-  readonly duration: number;
+  readonly targetBpm: number;
+  readonly stepBpm: number;
+  readonly interval: number;
   readonly unit: KB_RAMP_UNIT;
   readonly loop: boolean;
 }
@@ -69,12 +71,12 @@ export function initialAccents(count: number): KB_ACCENT[] {
   );
 }
 
-export interface RampDurationBounds {
+export interface RampIntervalBounds {
   readonly min: number;
   readonly max: number;
 }
 
-export function rampDurationBounds(unit: KB_RAMP_UNIT): RampDurationBounds {
+export function rampIntervalBounds(unit: KB_RAMP_UNIT): RampIntervalBounds {
   if (unit === KB_RAMP_UNIT.KB_RAMP_BARS) {
     return { min: KB_MIN_RAMP_BARS, max: KB_MAX_RAMP_BARS };
   }
@@ -85,26 +87,35 @@ export function rampDurationBounds(unit: KB_RAMP_UNIT): RampDurationBounds {
   };
 }
 
-export function clampRampDuration(
-  duration: number,
+export function clampRampInterval(
+  interval: number,
   unit: KB_RAMP_UNIT,
 ): number {
-  const { min, max } = rampDurationBounds(unit);
+  const { min, max } = rampIntervalBounds(unit);
   const whole = unit === KB_RAMP_UNIT.KB_RAMP_BARS;
-  return clamp(whole ? Math.round(duration) : duration, min, max);
+  return clamp(whole ? Math.round(interval) : interval, min, max);
 }
 
 export function normalizeRamp(config: RampConfig): RampConfig | undefined {
   if (!config.enabled) return config;
-  const finite = [config.startBpm, config.endBpm, config.duration].every(
-    Number.isFinite,
-  );
+  const finite = [
+    config.startBpm,
+    config.targetBpm,
+    config.stepBpm,
+    config.interval,
+  ].every(Number.isFinite);
   const units: readonly number[] = Object.values(KB_RAMP_UNIT);
-  if (!finite || !units.includes(config.unit)) return undefined;
+  if (!finite || config.stepBpm === 0 || !units.includes(config.unit))
+    return undefined;
   return {
     ...config,
     startBpm: clamp(config.startBpm, KB_BPM_BOUNDS.min, KB_BPM_BOUNDS.max),
-    endBpm: clamp(config.endBpm, KB_BPM_BOUNDS.min, KB_BPM_BOUNDS.max),
-    duration: clampRampDuration(config.duration, config.unit),
+    targetBpm: clamp(config.targetBpm, KB_BPM_BOUNDS.min, KB_BPM_BOUNDS.max),
+    stepBpm: clamp(
+      Math.abs(config.stepBpm),
+      KB_MIN_RAMP_STEP_BPM,
+      KB_BPM_BOUNDS.max - KB_BPM_BOUNDS.min,
+    ),
+    interval: clampRampInterval(config.interval, config.unit),
   };
 }

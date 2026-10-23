@@ -100,6 +100,7 @@ const DEFAULT_DENOMINATOR: Denominator = KB_BPM_REFERENCE_DENOMINATOR;
 export const DEFAULT_POLY_BEATS = 3;
 const DEFAULT_VOLUME = 1;
 export const DEFAULT_TRAINER_BARS = 4;
+export const DEFAULT_RAMP_STEP_BPM = 5;
 
 function initialConfig(): MetronomeConfig {
   return {
@@ -117,8 +118,9 @@ function initialConfig(): MetronomeConfig {
     ramp: {
       enabled: false,
       startBpm: DEFAULT_BPM,
-      endBpm: DEFAULT_BPM,
-      duration: DEFAULT_TRAINER_BARS,
+      targetBpm: DEFAULT_BPM,
+      stepBpm: DEFAULT_RAMP_STEP_BPM,
+      interval: DEFAULT_TRAINER_BARS,
       unit: KB_RAMP_UNIT.KB_RAMP_BARS,
       loop: false,
     },
@@ -254,8 +256,9 @@ function tempoActions(
       commands.setRamp(
         ramp.enabled,
         ramp.startBpm,
-        ramp.endBpm,
-        ramp.duration,
+        ramp.targetBpm,
+        ramp.stepBpm,
+        ramp.interval,
         ramp.unit,
         ramp.loop,
       );

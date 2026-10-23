@@ -33,8 +33,9 @@ export interface Spec extends TurboModule {
   setRamp(
     enabled: boolean,
     startBpm: Double,
-    endBpm: Double,
-    duration: Double,
+    targetBpm: Double,
+    stepBpm: Double,
+    interval: Double,
     unit: Int32,
     loop: boolean,
   ): void;

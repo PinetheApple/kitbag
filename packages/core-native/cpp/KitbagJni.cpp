@@ -113,8 +113,8 @@ Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetLatencyOffset(JNIEnv*, 
 }
 
 JNIEXPORT void JNICALL
-Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetRamp(JNIEnv*, jobject, jboolean enabled, jdouble startBpm, jdouble endBpm, jdouble duration, jint unit, jboolean loop) {
-  kitbag::commandSetRamp(enabled == JNI_TRUE, startBpm, endBpm, duration, unit, loop == JNI_TRUE);
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetRamp(JNIEnv*, jobject, jboolean enabled, jdouble startBpm, jdouble targetBpm, jdouble stepBpm, jdouble interval, jint unit, jboolean loop) {
+  kitbag::commandSetRamp(enabled == JNI_TRUE, startBpm, targetBpm, stepBpm, interval, unit, loop == JNI_TRUE);
 }
 
 JNIEXPORT void JNICALL

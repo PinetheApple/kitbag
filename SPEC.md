@@ -641,7 +641,7 @@ value applies live, which is the entire reason they are sheets and not screens.
 
 | Chip | Sheet |
 |---|---|
-| **⛰ Ramp** | From/To/Over steppers, bars·sec·min segment, loop-back-at-end. Changing tempo by hand cancels a running ramp and the chip clears with it. |
+| **⛰ Ramp** | Start, step (±BPM), every N with a bars·sec·min segment, target, loop-back-at-end; the sheet shows the total time it adds up to. Stepped, not smooth (**D15**): the tempo holds for one interval, then moves by exactly the step — on the downbeat for bars, on the next beat for seconds and minutes — and lands exactly on the target. Changing tempo by hand cancels a running ramp and the chip clears with it. |
 | **▨ Mute bars** | Play N / mute N steppers, an eight-bar preview. Silent bars still light the LEDs — you keep the visual, lose the click. |
 | **♩ Sound** | Normal/Accent segment, then a 6-way picker. **Not a cycler** — the Flutter chip cycles, so reaching sound 6 takes 5 taps and you cannot see what you are choosing between. Per-accent-level sound assignment is in scope: a tom on one, a block on the rest. |
 | **⏱ Count-in** | Off / 1 / 2 / 4 bars, distinct-or-same sound, per-song or always. Counts in on start only, never after a pause mid-bar. |
@@ -1365,6 +1365,7 @@ rather than starting from zero.
 | `Tunings`: v10 drops rows the tuner can never load — no strings, more than `KB_TUNER_MAX_STRINGS`, or a note above MIDI 127 | §10.2 — every stored tuning loads and round-trips through backup; schema v10 |
 | `preferences`: key-value table (`key` TEXT primary key, `value` TEXT NOT NULL); first key `last_tool` | §12.4 — Continue tracks the last-used tool across restarts; schema v11 |
 | `SongPresets`: `ramp_bars` INTEGER becomes `ramp_length` REAL (a table rebuild), + `ramp_unit` (`kb_ramp_unit`, default bars) and `ramp_loop` (default off) | §5.4, §5.8 — a seconds or minutes ramp and its loop round-trip like any other field; existing rows and older v4 backups (`rampBars`, no unit) read as a bar ramp without loop; schema v12 |
+| `SongPresets`: + `ramp_step` REAL (BPM per interval, signed, default 1); `ramp_length` now means the interval, not the whole ramp | §5.3, **D15** — stepped ramps; a v4 backup without `rampStep` reads as a step of 1; schema v13 |
 | `Songs`(library): + downbeat indices | §4.3 |
 | `StemSets`: + `source` (`folder` \| `stemdeck`), + `stemdeck_job_id` (unique when set), + key, scale, BPM, loudness, tempo stability | §7.8 — a re-import of the same StemDeck song replaces it instead of duplicating |
 | `StemSets`: + beat grid (Float32 BLOB, as `Songs`) + bar marks (`beat`, `beats_per_bar`) | §7.8, §4.2 — the grid StemDeck's click used, edits applied |
@@ -2297,6 +2298,14 @@ with StemDeck bundles as a stem source (§7.8).
 Signalsmith Stretch (MIT, header-only, §4.6): the library StemDeck already
 runs in the browser, so the phone sounds the way the desktop does. Stem
 separation stays out of scope; the phone plays what the desktop separated.
+
+### D15 — Ramps are **stepped**. The smooth ramp goes.
+
+Practice routines are written as steps — "add 5 every 4 bars", "+1 every 20
+seconds up to 200" — and the From/To/Over ramp could not say either: it moved
+the tempo a little every bar, so neither the size of a jump nor how often it
+came was settable. Decided 2026-10-23 (#144). No "smooth" option is kept and
+saved ramps are not converted; none exist on a shipped build.
 
 ---
 

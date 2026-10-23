@@ -20,6 +20,9 @@ export const KB_MIN_RAMP_BARS = 1;
 /** Longest ramp in bars (TempoRamp::kMaxBars); the engine clamps above this. */
 export const KB_MAX_RAMP_BARS = 64;
 
+/** Smallest ramp step in BPM (TempoRamp::kMinStepBpm); the engine clamps below this. */
+export const KB_MIN_RAMP_STEP_BPM = 1;
+
 /** Tempo range the engine clamps to (kMinBpm, kMaxBpm in metronome_types.h). */
 export const KB_BPM_BOUNDS = {
   min: 20,

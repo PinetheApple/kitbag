@@ -9,6 +9,8 @@ export const MAX_RAMP_BARS = 64;
 export const MAX_MUTE_BARS = 16;
 export const MIN_RAMP_SECONDS = 1;
 export const MAX_RAMP_SECONDS = 3600;
+export const MIN_RAMP_STEP = 1;
+const MAX_STEP = MAX_BPM - MIN_BPM;
 const SECONDS_PER_MINUTE = 60;
 export const RAMP_UNITS = { bars: 0, seconds: 1, minutes: 2 } as const;
 enum Denominator {
@@ -41,6 +43,7 @@ export interface PresetShape {
   rampEndBpm: number | null;
   rampLength: number | null;
   rampUnit: number;
+  rampStep?: number | undefined;
   barMutePlayBars: number | null;
   barMuteMuteBars: number | null;
   accents: Uint8Array;
@@ -49,7 +52,7 @@ export interface PresetShape {
 }
 
 type NumericField = {
-  [K in keyof PresetShape]: PresetShape[K] extends number | null ? K : never;
+  [K in keyof PresetShape]-?: PresetShape[K] extends number | null ? K : never;
 }[keyof PresetShape];
 
 export interface PresetBound {
@@ -208,5 +211,13 @@ export function presetViolation(
   const units: readonly number[] = Object.values(RAMP_UNITS);
   if (!units.includes(preset.rampUnit))
     return { field: 'rampUnit', reason: `expected ${units.join('/')}` };
+  // Not in PRESET_BOUNDS: the v9 repair builds SQL from those, before v13
+  // added the column.
+  const step = preset.rampStep ?? MIN_RAMP_STEP;
+  if (!(step >= MIN_RAMP_STEP && step <= MAX_STEP))
+    return {
+      field: 'rampStep',
+      reason: `expected ${String(MIN_RAMP_STEP)}–${String(MAX_STEP)}`,
+    };
   return boundViolation(preset) ?? blobViolation(preset);
 }

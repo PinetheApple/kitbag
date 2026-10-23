@@ -18,8 +18,8 @@ export function stepWithin(
   return Math.min(Math.max(value + delta, bounds.min), bounds.max);
 }
 
-export function rampChipValue(startBpm: number, endBpm: number): string {
-  return `${String(startBpm)}→${String(endBpm)}`;
+export function rampChipValue(startBpm: number, targetBpm: number): string {
+  return `${String(startBpm)}→${String(targetBpm)}`;
 }
 
 export function muteChipValue(playBars: number, muteBars: number): string {

@@ -7,18 +7,22 @@ namespace kitbag {
 
 enum class RampUnit : uint8_t { kBars = 0, kSeconds = 1, kMinutes = 2 };
 
-// Time units measure progress in rendered frames, so the engine clock drives it.
+// A stepped ramp (SPEC §5.3, D15): the tempo holds for one interval, then
+// moves by exactly one step toward the target, and stops on it. Time units
+// measure in rendered frames, so the engine clock drives them.
 class TempoRamp {
  public:
   static constexpr int kMinBars = 1;
   static constexpr int kMaxBars = 64;
   static constexpr double kMinSeconds = 1.0;
   static constexpr double kMaxSeconds = 3600.0;
+  static constexpr double kMinStepBpm = 1.0;
 
   bool Configure(
       double start_bpm,
-      double end_bpm,
-      double duration,
+      double target_bpm,
+      double step_bpm,
+      double interval,
       int32_t unit,
       bool loop
   );
@@ -35,20 +39,23 @@ class TempoRamp {
   void AdvanceFrame() {
     ++cycle_frames_;
   }
-  double StepAtDownbeat(int64_t bar, uint32_t sample_rate);
+  // Tempo for the beat starting now. A bar ramp moves only on a downbeat; a
+  // time ramp moves on the first beat after its interval ends.
+  double TempoAtBeat(bool downbeat, int64_t bar, uint32_t sample_rate);
 
  private:
-  double Progress(int64_t bar, uint32_t sample_rate) const;
+  int64_t IntervalsElapsed(int64_t bar, uint32_t sample_rate) const;
 
   bool enabled_ = false;
   bool loop_ = false;
   bool in_seconds_ = false;
   double start_bpm_ = 0.0;
-  double end_bpm_ = 0.0;
-  double length_ = 1.0;
+  double target_bpm_ = 0.0;
+  double step_bpm_ = kMinStepBpm;
+  double interval_ = 1.0;
+  double current_bpm_ = 0.0;
   int64_t cycle_bar_ = 0;
   int64_t cycle_frames_ = 0;
-  bool at_end_ = false;
 };
 
 }  // namespace kitbag
