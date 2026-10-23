@@ -10,7 +10,7 @@ import {
 } from 'react';
 import { Pressable, Text, View, type LayoutChangeEvent } from 'react-native';
 
-import type { AnyIconName } from '../icons.ts';
+import type { IconName } from '../icons.ts';
 import { inset, radius, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
@@ -48,8 +48,8 @@ const ChipLinesContext = createContext<ChipLines | null>(null);
 
 interface ChipFaceProps {
   readonly label: string;
-  readonly icon?: AnyIconName | undefined;
-  readonly trailingIcon?: AnyIconName | undefined;
+  readonly icon?: IconName | undefined;
+  readonly trailingIcon?: IconName | undefined;
   readonly active: boolean;
   readonly liveDot: boolean;
 }
@@ -130,8 +130,8 @@ function ChipFace({
 export interface ChipProps {
   readonly label: string;
   readonly onPress: () => void;
-  readonly icon?: AnyIconName;
-  readonly trailingIcon?: AnyIconName;
+  readonly icon?: IconName;
+  readonly trailingIcon?: IconName;
   readonly active?: boolean;
   readonly liveDot?: boolean;
   readonly fill?: boolean;
@@ -203,7 +203,7 @@ export function Chip({
 
 export interface StatusPillProps {
   readonly label: string;
-  readonly icon?: AnyIconName;
+  readonly icon?: IconName;
   readonly active?: boolean;
   readonly liveDot?: boolean;
 }

@@ -1,7 +1,7 @@
 import {
   createThemedStyles,
   hitSlopForPadded,
-  icons,
+  InlineIcon,
   inset,
   radius,
   size,
@@ -53,12 +53,17 @@ const useStyles = createThemedStyles((theme) => ({
     ...textStyle(textRoles.chipValue),
     color: theme.color.text,
   },
-  reset: {
-    ...textStyle(textRoles.chipAside),
-    color: theme.color.text3,
+  resetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.inlineKeyGap,
     paddingLeft: space.controlGap,
     borderLeftWidth: size.stroke,
     borderLeftColor: theme.color.line,
+  },
+  reset: {
+    ...textStyle(textRoles.chipAside),
+    color: theme.color.text3,
   },
 }));
 
@@ -126,10 +131,13 @@ export function PracticePill({ elapsedMs, onReset }: PracticePillProps) {
         hitSlop={PILL_HIT_SLOP}
         onPress={onReset}
       >
-        <Text style={styles.icon}>{icons.practice}</Text>
+        <InlineIcon name="practice" style={styles.icon} />
         <Text style={styles.elapsed}>{formatPracticeElapsed(elapsedMs)}</Text>
         {resettable ? (
-          <Text style={styles.reset}>{icons.reset} reset</Text>
+          <View style={styles.resetRow}>
+            <InlineIcon name="reset" style={styles.reset} />
+            <Text style={styles.reset}>reset</Text>
+          </View>
         ) : null}
       </Pressable>
     </View>

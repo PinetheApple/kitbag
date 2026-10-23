@@ -6,7 +6,6 @@ import {
   ChipRow,
   DragListRow,
   EmptyState,
-  icons,
   SheetHint,
 } from '@kitbag/core-design';
 import {
@@ -164,7 +163,7 @@ function EntryList(props: SectionProps & { readonly songMenu: SongMenu }) {
 function ReorderHint() {
   return (
     <Card>
-      <SheetHint>{`Tap a song to load it · drag ${icons.dragHandle} to reorder`}</SheetHint>
+      <SheetHint>Tap a song to load it · drag the handle to reorder</SheetHint>
     </Card>
   );
 }

@@ -15,7 +15,7 @@ import { GestureDetector } from 'react-native-gesture-handler';
 import { Text, View } from 'react-native';
 
 import { hasPracticeToReset } from '../logic/practiceTimer.ts';
-import { subdivisionGlyph } from '../logic/subdivision.ts';
+import { subdivisionLabel } from '../logic/subdivision.ts';
 import { pushTap, tapTempoBpm } from '../logic/tapTempo.ts';
 import { BeatLeds } from './BeatLeds.tsx';
 import { PracticePill, usePracticeElapsed } from './PracticePill.tsx';
@@ -292,7 +292,7 @@ export function MetronomeScreen({
             <View style={styles.cardRow}>
               <StepControl
                 label="Subdivision"
-                value={subdivisionGlyph(subdivision)}
+                value={subdivisionLabel(subdivision)}
                 accessibilityValue={String(subdivision)}
                 onStep={handleSubdivisionStep}
                 neighbourGapDp={LAST_ROW_STEPPER_GAPS}

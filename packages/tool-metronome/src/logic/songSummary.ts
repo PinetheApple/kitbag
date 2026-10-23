@@ -1,4 +1,3 @@
-import { icons } from '@kitbag/core-design';
 import { KB_COUNT_IN_OFF } from '@kitbag/core-native';
 import type { SongPreset } from '@kitbag/core-state';
 
@@ -8,12 +7,12 @@ import { rampChipValue } from './trainer.ts';
 
 function modifier(preset: SongPreset): string {
   if (preset.rampEnabled) {
-    return `${icons.ramp} ${rampChipValue(preset.rampStartBpm ?? preset.bpm, preset.rampEndBpm ?? preset.bpm)}`;
+    return `ramp ${rampChipValue(preset.rampStartBpm ?? preset.bpm, preset.rampEndBpm ?? preset.bpm)}`;
   }
-  if ((preset.notes ?? '') !== '') return `${icons.notes} notes`;
+  if ((preset.notes ?? '') !== '') return 'notes';
   const countIn = countInBarsFromOption(String(preset.countInBars));
   if (countIn !== KB_COUNT_IN_OFF) {
-    return `${icons.countIn} ${countInLabel(countIn)}`;
+    return `count-in ${countInLabel(countIn)}`;
   }
   return soundLabel(preset.sound);
 }

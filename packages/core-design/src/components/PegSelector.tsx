@@ -11,7 +11,7 @@ import { withAlpha } from '../theme.ts';
 import { createThemedStyles, useTheme } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
 import { hitSlopFor } from '../touchTarget.ts';
-import { ShapeGlyph } from './ShapeIcon.tsx';
+import { IconGlyph } from './IconGlyph.tsx';
 
 // The design's 14dp peg gap cannot give a 48dp target without neighbours'
 // slop overlapping, so the gap is the smallest that lets hitSlopFor reach 48.
@@ -170,7 +170,7 @@ function Peg({ index, peg, locked, detectedIndex, onPress }: PegProps) {
         </Animated.View>
         {peg.tuned ? (
           <View style={styles.badge}>
-            <ShapeGlyph
+            <IconGlyph
               name="check"
               px={size.pegBadgeGlyph}
               color={theme.color.bg}
