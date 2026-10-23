@@ -196,7 +196,8 @@ moot. Two entries survive as instructions rather than deletions:
    operation with notification transport controls.
 2. **Song playback** — import, analyse, play, with the click locked to the beat
    grid.
-3. **Stem player** — StemDeck-class per-track control.
+3. **Stem player** — StemDeck-class per-track control, including speed and
+   key, and opening songs StemDeck separated (§7.6–7.8, **D14**).
 4. **Play along** (engineering name: media sync) — lock the click to what
    Spotify et al. is playing.
 5. **Plugin extensibility** — the tools above are plugins; the shell is a
@@ -211,7 +212,7 @@ moot. Two entries survive as instructions rather than deletions:
 
 ### 3.3 Out of scope
 
-Stem separation · Ableton Link · MIDI clock · time-stretch · mic beat tracking
+Stem separation · Ableton Link · MIDI clock · mic beat tracking
 · practice analytics beyond session logging. Architecture must not preclude
 them; nothing here blocks them.
 
@@ -385,6 +386,23 @@ what makes `clear_grid`'s "keeps its phase" true: without it the value stays
 frozen at its `Start` value all through grid mode, and the first sample after the
 clear reads as a downbeat, firing immediately and shifting the bar.
 
+#### 4.2.2 Playback rate
+
+With the stretch stage (§7.6) the song no longer advances one second per
+second. **Song time stays the unit of every grid, anchor, loop point and
+position that crosses the ABI;** engine frames stay the unit of the clock.
+
+- The anchor's *P* is song seconds. Between anchor and now, song time advances
+  `rate × elapsed engine frames`, so a beat at song time *t* lands on engine
+  frame `F + (t − P) × sr / rate`.
+- A rate change takes effect at one engine frame and re-anchors there: *P* is
+  the song time reached at that frame. The click never jumps a beat or doubles
+  one across the change.
+- `kb_mixer_position` and `kb_mixer_seek` stay in source frames (song time ×
+  source rate). The UI never converts by rate itself.
+- The stretch stage adds latency. It is reported alongside output latency and
+  compensated the same way (§12.5.1), so click and stems still land together.
+
 ### 4.3 New: downbeats
 
 `beat_tracker.cpp` produces beats but not bar-ones. Bar alignment, count-in, and
@@ -455,6 +473,7 @@ compatibility is the constraint; both current dependencies are permissive.
 | Dependency | Licence | Role |
 |---|---|---|
 | **miniaudio** (`third_party/miniaudio.h`) | MIT-0 / public domain | Device I/O — AAudio on Android, PipeWire on Linux, CoreAudio on iOS. One API. Also supplies the Speex-derived resampler §4.1 needs. |
+| **Signalsmith Stretch** + **signalsmith-linear** (`third_party/signalsmith/`), *planned* | MIT | Time-stretch and pitch shift for §7.6. Header-only; the linear library supplies its STFT. The same code StemDeck runs in the browser as WASM. |
 | **cycfi/q** (`third_party/cycfi_q/`) | **Boost Software License 1.0** | Vendored but unused since #117: the tuner's McLeod detector (`pitch_detector.cpp`) is ours, and nothing includes cycfi/q. Removing the tree is pending. |
 
 Everything else is ours: the lookahead scheduler, the mixer, the radix-2 FFT
@@ -468,7 +487,7 @@ were built. Do not assume they are present:
   hand-rolled spectral-flux → autocorrelation → DP placement, which is why there
   are no downbeats (§2.5, §4.3).
 - **dr_libs / stb_vorbis** (decoders). Not used; decoding goes through miniaudio.
-- **BTrack**, **Signalsmith Stretch** — later-ring, out of scope (§3.3).
+- **BTrack** — later-ring, out of scope (§3.3).
 
 > The earlier research recorded cycfi/q as GPLv3. It is BSL-1.0 — permissive, so
 > the error was harmless, but it is the kind of thing that should be read off the
@@ -781,8 +800,8 @@ working. Changes:
   `waveform_painter.dart:53`.
 - Optional beat-snapped scrub.
 - **A-B loop**, beat-snapped, equal-power crossfade 5–20ms.
-- Speed control positioned in the transport but inert until the time-stretch
-  plugin. Position it now, wire it later.
+- Speed control in the transport, driven by the same stretch stage as the stem
+  player (§7.6). Single-file playback gets it when the stem player has it.
 - **Mini-player** — collapses to a docked bar (title, play/pause) above the home
   hub when leaving the screen, so the click keeps running while you open the
   tuner or edit a setlist.
@@ -855,6 +874,7 @@ first implementation**, gated on §4.1.
 - **Per-stem waveforms.** Absent. The waveform renderer is shared UI (§13.1) —
   it does not live in the library tool.
 - Metronome joins the stem mix on the same grid.
+- Speed and key controls; see §7.6.
 
 ### 7.4 Track count
 
@@ -869,6 +889,65 @@ when exceeded rather than silently truncating.
 - Unequal-length stems stay aligned to the end of the longest.
 - Loading a track during playback does not glitch or crash (the current race is
   invisible only because no audio reaches it).
+
+### 7.6 Speed and key
+
+StemDeck's two core practice controls; without them a stem player is a mixer.
+**D14.**
+
+- **Speed** 0.5×–1.0× in the transport, pitch held. Applied once, after the
+  mix, so the stems stay sample-locked to each other at any speed.
+- **Key** in semitones, −6 to +6 (StemDeck's range): one control for the whole
+  song, plus a per-stem override. A per-stem value is absolute, not an offset
+  from the song control — the number on a row is what that row plays.
+- Native: one stretch instance per track for key, one after the mix for
+  speed. All allocated at load; nothing allocates on the audio thread.
+- Positions, loop points, the grid and the click stay in song time (§4.2.2).
+- Mixdown export (§7.7) renders speed and key as heard.
+
+Acceptance:
+
+- A headless `stretch_verify` tool asserts: duration scales by 1/rate; pitch
+  holds within a few cents at rate ≠ 1; a ±n semitone shift lands within a
+  few cents.
+- Click-vs-grid offset at 0.5×, 0.75× and 1.0× is no worse than at 1.0×
+  across a full song, measured as in §6.5.
+- Six stems with per-stem key play on a mid-range Android device without an
+  underrun.
+
+### 7.7 Song details
+
+- **Sections** on the waveform: tap to jump, long-press to loop the section.
+- **Synced lyrics** follow playback, shifted by the stored offset. Tap-along
+  retiming is saved per song in Kitbag.
+- **Song facts:** key, BPM, loudness, tempo stability.
+- **Mixdown export:** offline render of the current mix, speed and key, out
+  through the share sheet (§5.5) — never a hardcoded path.
+
+Sections and lyrics line up with playback at every speed.
+
+### 7.8 StemDeck songs
+
+StemDeck separates on the desktop; Kitbag plays the result. A song arrives as a
+**StemDeck song bundle**, [format version 1](https://github.com/PinetheApple/stemdeck/blob/feat/song-bundle/docs/song-bundle.md): a
+`.stemdeck.zip`, or the same files extracted to a folder, already on the
+phone. That page defines the format; this spec does not copy it.
+
+- **One way.** Nothing Kitbag changes goes back into a bundle or to StemDeck.
+- **Version gate.** Refuse anything whose manifest is not
+  `stemdeck-song-bundle` version 1, with a message that says so. Optional
+  members may be missing; that is not an error.
+- **Stems** are FLAC at the song's own rate: resampled on ingest (§7.1),
+  loaded with `kb_mixer_load_track`. More than 16 is surfaced, not truncated
+  (§7.4).
+- **Peaks** convert to the `.kwav` sidecar on import (§11.2). The beat grid,
+  bar marks, sections, lyrics, key and the StemDeck mix (gain, mute, solo,
+  per-stem key) are stored with the stem set; the mix is applied on first
+  open.
+- **Re-import** of the same StemDeck job replaces the stem set after a
+  confirm.
+- Out of scope: separation, lead/backing vocal split, lyric transcription,
+  search and download — StemDeck's job, on hardware built for it.
 
 ---
 
@@ -1287,6 +1366,10 @@ rather than starting from zero.
 | `preferences`: key-value table (`key` TEXT primary key, `value` TEXT NOT NULL); first key `last_tool` | §12.4 — Continue tracks the last-used tool across restarts; schema v11 |
 | `SongPresets`: `ramp_bars` INTEGER becomes `ramp_length` REAL (a table rebuild), + `ramp_unit` (`kb_ramp_unit`, default bars) and `ramp_loop` (default off) | §5.4, §5.8 — a seconds or minutes ramp and its loop round-trip like any other field; existing rows and older v4 backups (`rampBars`, no unit) read as a bar ramp without loop; schema v12 |
 | `Songs`(library): + downbeat indices | §4.3 |
+| `StemSets`: + `source` (`folder` \| `stemdeck`), + `stemdeck_job_id` (unique when set), + key, scale, BPM, loudness, tempo stability | §7.8 — a re-import of the same StemDeck song replaces it instead of duplicating |
+| `StemSets`: + beat grid (Float32 BLOB, as `Songs`) + bar marks (`beat`, `beats_per_bar`) | §7.8, §4.2 — the grid StemDeck's click used, edits applied |
+| `StemSets`: + sections, + lyrics (synced LRC, plain, offset, user retiming) | §7.7 |
+| `StemSets`: + speed; `Stems`: + pitch (semitones) | §7.6 — mix state is per song, like gain/mute/solo |
 | **All paths relative** to the base directory | §2.3 (iOS) and **D11** (the directory is now user-movable) |
 | `PracticeSessions`: write `setlistId`, `songsPlayed` | §5.7 — columns exist, producer never fills them |
 | BPM cache table | §8.5 |
@@ -2203,6 +2286,17 @@ once, and the alternative is machinery that fails in subtler ways.
 Portrait only for first release. Nothing in the architecture blocks adding it
 later, and the Flutter build's unspecced two-pane regroup is not a commitment.
 Revisit once the metronome and tuner are real.
+
+### D14 — Time-stretch and pitch shift: **in scope**, for the stem player.
+
+§3.3 listed time-stretch as out of scope. That ruled out slowing a song down
+and changing its key — the two controls StemDeck users practise with — so the
+"StemDeck-class" stem player of §3.1 could not exist. Decided 2026-10-22
+with StemDeck bundles as a stem source (§7.8).
+
+Signalsmith Stretch (MIT, header-only, §4.6): the library StemDeck already
+runs in the browser, so the phone sounds the way the desktop does. Stem
+separation stays out of scope; the phone plays what the desktop separated.
 
 ---
 
