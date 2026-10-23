@@ -20,7 +20,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { icons, type IconName } from '../icons.ts';
+import type { IconName } from '../icons.ts';
 import { size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
@@ -29,6 +29,7 @@ import {
   shouldDismissSheet,
 } from '../sheetDismiss.ts';
 import { radii } from '../tokens.ts';
+import { InlineIcon } from './IconGlyph.tsx';
 
 // A scroll view drops every touch outside its frame, so the frame reaches this
 // far into the sheet's padding. The right side stays put: the indicator is there.
@@ -66,6 +67,11 @@ const useStyles = createThemedStyles((theme) => ({
     borderRadius: size.grabHeight / 2,
     backgroundColor: theme.color.surface3,
     alignSelf: 'center',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.chipGap,
   },
   title: {
     ...textStyle(textRoles.sheetTitle),
@@ -190,11 +196,14 @@ export function Sheet({
           <GestureDetector gesture={dragToDismiss}>
             <View style={styles.header}>
               <View style={styles.grab} />
-              <Text accessibilityRole="header" style={styles.title}>
-                {titleIcon === undefined
-                  ? title
-                  : `${icons[titleIcon]} ${title}`}
-              </Text>
+              <View style={styles.titleRow}>
+                {titleIcon === undefined ? null : (
+                  <InlineIcon name={titleIcon} style={styles.title} />
+                )}
+                <Text accessibilityRole="header" style={styles.title}>
+                  {title}
+                </Text>
+              </View>
             </View>
           </GestureDetector>
           <ScrollView

@@ -1,67 +1,52 @@
-// VS15 forces text presentation; without it Android draws colour emoji that
-// ignore the token colour.
-const TEXT_PRESENTATION = '︎';
+import type MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import type { ComponentProps } from 'react';
 
-const text = (glyph: string) => `${glyph}${TEXT_PRESENTATION}`;
+export type VectorGlyph = ComponentProps<typeof MaterialCommunityIcons>['name'];
 
-export const icons = {
-  back: '‹',
-  more: '⋮',
-  settings: text('⚙'),
-  sort: '⇅',
-  caretDown: '⌄',
-  caretUp: '⌃',
-  practice: '◴',
-  reset: '↺',
-  repeat: '↻',
-  setlist: '≡',
-  previous: text('⏮'),
-  next: text('⏭'),
-  backspace: '⌫',
-  confirm: '✓',
-  success: '✓',
-  failure: '✗',
-  warning: text('⚠'),
-  ramp: text('⛰'),
-  muteBars: '▨',
-  sound: '♩',
-  countIn: text('⏱'),
-  decrease: '−',
-  increase: '+',
-  search: '⌕',
-  forward: '›',
-  add: '+',
-  play: text('▶'),
-  saveInto: '⇩',
-  dragHandle: '≡',
-  notes: '✎',
-  song: '♪',
-  songs: '♬',
-  metronome: '◴',
-  tuner: '♪',
-  stems: '≣',
-  playAlong: '◉',
-  moreTools: '✦',
-} as const;
+// One vector glyph per name. Every icon in the app is drawn from this map, so
+// size and colour always come from tokens and never from a platform font.
+export const iconGlyphs = {
+  back: 'chevron-left',
+  more: 'dots-vertical',
+  settings: 'cog-outline',
+  sort: 'sort',
+  caretDown: 'chevron-down',
+  caretUp: 'chevron-up',
+  practice: 'timer-outline',
+  reset: 'restore',
+  repeat: 'repeat',
+  setlist: 'format-list-bulleted',
+  previous: 'skip-previous',
+  next: 'skip-next',
+  backspace: 'backspace-outline',
+  confirm: 'check',
+  success: 'check-circle',
+  failure: 'close-circle',
+  warning: 'alert',
+  ramp: 'trending-up',
+  muteBars: 'volume-off',
+  sound: 'volume-high',
+  countIn: 'timer-sand',
+  decrease: 'minus',
+  increase: 'plus',
+  search: 'magnify',
+  forward: 'chevron-right',
+  add: 'plus',
+  play: 'play',
+  saveInto: 'tray-arrow-down',
+  dragHandle: 'drag-horizontal-variant',
+  notes: 'pencil-outline',
+  song: 'music-note',
+  songs: 'playlist-music',
+  metronome: 'metronome',
+  tuner: 'guitar-acoustic',
+  stems: 'tune-vertical',
+  playAlong: 'play-circle-outline',
+  moreTools: 'dots-grid',
+  arrowUp: 'arrow-up',
+  arrowDown: 'arrow-down',
+  check: 'check',
+  mic: 'microphone',
+} as const satisfies Record<string, VectorGlyph>;
 
-export type IconName = keyof typeof icons;
-
-export const emojiCapableIcons: readonly IconName[] = [
-  'settings',
-  'previous',
-  'next',
-  'warning',
-  'ramp',
-  'countIn',
-  'play',
-];
-
-export const shapeIcons = ['arrowUp', 'arrowDown', 'check', 'mic'] as const;
-
-export type ShapeIconName = (typeof shapeIcons)[number];
-
-export type AnyIconName = IconName | ShapeIconName;
-
-export function isShapeIcon(name: AnyIconName): name is ShapeIconName {
-  return (shapeIcons as readonly string[]).includes(name);
-}
+export type IconName = keyof typeof iconGlyphs;

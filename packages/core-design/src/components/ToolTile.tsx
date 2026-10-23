@@ -6,7 +6,7 @@ import {
   type TextStyle,
 } from 'react-native';
 
-import { icons, type IconName } from '../icons.ts';
+import type { IconName } from '../icons.ts';
 import {
   bodyLineHeight,
   iconSizes,
@@ -21,6 +21,7 @@ import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { packTileRows, type ToolTileSize } from '../toolGrid.ts';
 import { radii } from '../tokens.ts';
+import { InlineIcon } from './IconGlyph.tsx';
 
 // An upcoming tool is shown but cannot open: there is nothing behind it yet.
 export type ToolStatus = 'ready' | 'upcoming';
@@ -127,11 +128,7 @@ interface GlyphProps {
 }
 
 function Glyph({ name, style }: GlyphProps) {
-  return (
-    <Text importantForAccessibility="no-hide-descendants" style={style}>
-      {icons[name]}
-    </Text>
-  );
+  return <InlineIcon name={name} style={style} />;
 }
 
 export interface ToolTileProps {
