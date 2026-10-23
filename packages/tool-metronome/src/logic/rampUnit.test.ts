@@ -111,5 +111,8 @@ describe('stepped ramp totals', () => {
         unit: KB_RAMP_UNIT.KB_RAMP_SECONDS,
       }),
     ).toBe('Reaches 140 BPM after 160 seconds');
+    expect(
+      rampTotalLabel({ ...ramp, targetBpm: ramp.startBpm + 1, interval: 1 }),
+    ).toMatch(/after 1 bar$/);
   });
 });

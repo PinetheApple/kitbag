@@ -5,10 +5,24 @@ import {
   type RampConfig,
 } from '@kitbag/core-state';
 
-const UNIT_NAMES: Record<KB_RAMP_UNIT, { short: string; long: string }> = {
-  [KB_RAMP_UNIT.KB_RAMP_BARS]: { short: 'bars', long: 'bars' },
-  [KB_RAMP_UNIT.KB_RAMP_SECONDS]: { short: 'sec', long: 'seconds' },
-  [KB_RAMP_UNIT.KB_RAMP_MINUTES]: { short: 'min', long: 'minutes' },
+interface UnitName {
+  short: string;
+  long: string;
+  one: string;
+}
+
+const UNIT_NAMES: Record<KB_RAMP_UNIT, UnitName> = {
+  [KB_RAMP_UNIT.KB_RAMP_BARS]: { short: 'bars', long: 'bars', one: 'bar' },
+  [KB_RAMP_UNIT.KB_RAMP_SECONDS]: {
+    short: 'sec',
+    long: 'seconds',
+    one: 'second',
+  },
+  [KB_RAMP_UNIT.KB_RAMP_MINUTES]: {
+    short: 'min',
+    long: 'minutes',
+    one: 'minute',
+  },
 };
 
 const UNITS = Object.values(KB_RAMP_UNIT);
@@ -56,5 +70,7 @@ export function rampSteps(ramp: RampConfig): number {
 /** "Reaches 140 BPM after 8 bars", for the sheet's hint. */
 export function rampTotalLabel(ramp: RampConfig): string {
   const total = rampSteps(ramp) * ramp.interval;
-  return `Reaches ${String(ramp.targetBpm)} BPM after ${String(total)} ${rampUnitLabel(ramp.unit)}`;
+  const names = UNIT_NAMES[ramp.unit];
+  const unit = total === 1 ? names.one : names.long;
+  return `Reaches ${String(ramp.targetBpm)} BPM after ${String(total)} ${unit}`;
 }
