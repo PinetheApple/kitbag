@@ -1,34 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import glyphMap from '@expo/vector-icons/build/vendor/react-native-vector-icons/glyphmaps/MaterialCommunityIcons.json';
 
-import { emojiCapableIcons, icons, isShapeIcon, shapeIcons } from './icons.ts';
-
-const VS15 = '︎';
-const VS16 = '️';
+import { iconGlyphs } from './icons.ts';
 
 describe('icons', () => {
-  it('forces text presentation on every glyph Unicode lets render as emoji', () => {
-    for (const name of emojiCapableIcons) {
-      expect(icons[name].endsWith(VS15)).toBe(true);
+  it('maps every name to a glyph the icon font actually has', () => {
+    for (const glyph of Object.values(iconGlyphs)) {
+      expect(Object.keys(glyphMap)).toContain(glyph);
     }
-  });
-
-  it('never asks for emoji presentation', () => {
-    for (const glyph of Object.values(icons)) {
-      expect(glyph.includes(VS16)).toBe(false);
-    }
-  });
-
-  it('maps each name to one visible glyph', () => {
-    for (const glyph of Object.values(icons)) {
-      expect(Array.from(glyph.replace(VS15, ''))).toHaveLength(1);
-    }
-  });
-
-  it('keeps shape names out of the glyph map so a name has one renderer', () => {
-    for (const name of shapeIcons) {
-      expect(Object.keys(icons)).not.toContain(name);
-      expect(isShapeIcon(name)).toBe(true);
-    }
-    expect(isShapeIcon('confirm')).toBe(false);
   });
 });

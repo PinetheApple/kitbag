@@ -17,7 +17,7 @@ import {
   withNextDenominator,
   withPolyBeats,
 } from '../../logic/presetDraft.ts';
-import { subdivisionGlyph } from '../../logic/subdivision.ts';
+import { subdivisionLabel } from '../../logic/subdivision.ts';
 import { BeatLeds } from '../../screen/BeatLeds.tsx';
 
 const EDITOR_LED_GAPS = {
@@ -172,7 +172,7 @@ function SubdivisionRow({ editor }: { readonly editor: PresetEditor }) {
         update={editor.update}
         field="subdivision"
         value={value}
-        display={subdivisionGlyph(value)}
+        display={subdivisionLabel(value)}
         label="Subdivision"
         unit="per beat"
         min={KB_SUBDIVISION_BOUNDS.min}

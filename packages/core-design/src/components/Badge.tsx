@@ -1,9 +1,10 @@
 import { Text, View } from 'react-native';
 
-import { icons, type IconName } from '../icons.ts';
-import { inset, radius, size, textRoles } from '../roles.ts';
+import type { IconName } from '../icons.ts';
+import { inset, radius, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
+import { InlineIcon } from './IconGlyph.tsx';
 
 export type BadgeTone = 'default' | 'accent' | 'success' | 'warning' | 'danger';
 
@@ -22,6 +23,9 @@ const useStyles = createThemedStyles((theme) => ({
     borderRadius: radius.badge,
     backgroundColor: theme.color.surface2,
     borderWidth: size.stroke,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.inlineKeyGap,
   },
   label: {
     ...textStyle(textRoles.badge),
@@ -45,7 +49,6 @@ export function Badge({
   accessibilityLabel,
 }: BadgeProps) {
   const styles = useStyles();
-  const text = icon === undefined ? label : `${icons[icon]} ${label}`;
   return (
     <View
       accessible
@@ -53,7 +56,13 @@ export function Badge({
       accessibilityLabel={accessibilityLabel ?? label}
       style={[styles.badge, styles[`${tone}Box`]]}
     >
-      <Text style={[styles.label, styles[`${tone}Label`]]}>{text}</Text>
+      {icon === undefined ? null : (
+        <InlineIcon
+          name={icon}
+          style={[styles.label, styles[`${tone}Label`]]}
+        />
+      )}
+      <Text style={[styles.label, styles[`${tone}Label`]]}>{label}</Text>
     </View>
   );
 }
