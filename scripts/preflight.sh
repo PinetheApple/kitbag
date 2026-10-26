@@ -122,7 +122,7 @@ if ((SKIP_ANDROID)); then
   step "Android build — skipped"
 else
   run_gate "Android — assembleRelease (compiles the Kotlin/JNI chain)" \
-    "(cd packages/app-shell/android && ./gradlew :app:assembleRelease -q)"
+    "(cd packages/app-shell/android && ./gradlew :app:assembleRelease :app:testReleaseUnitTest -q)"
 fi
 
 echo
