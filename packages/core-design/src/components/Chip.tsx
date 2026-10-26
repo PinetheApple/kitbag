@@ -38,6 +38,7 @@ function chipHitBox(gaps: NeighbourGaps) {
 }
 
 interface ChipLines {
+  readonly fill: boolean;
   readonly gapsFor: (id: string) => NeighbourGaps;
   readonly report: (id: string, lineTop: number | undefined) => void;
 }
@@ -83,10 +84,14 @@ const useStyles = createThemedStyles((theme) => ({
   },
   fill: {
     flexGrow: 1,
-    justifyContent: 'center',
+  },
+  fillHit: {
+    alignSelf: 'stretch',
   },
   fillFace: {
     alignSelf: 'stretch',
+    justifyContent: 'center',
+    paddingHorizontal: inset.chipFillH,
   },
   label: {
     ...textStyle(textRoles.chip),
@@ -119,7 +124,12 @@ function ChipFace({
       {icon === undefined ? null : (
         <Icon name={icon} size="chip" color={glyphColor} />
       )}
-      <Text style={[styles.label, active && styles.labelActive]}>{label}</Text>
+      <Text
+        numberOfLines={1}
+        style={[styles.label, active && styles.labelActive]}
+      >
+        {label}
+      </Text>
       {trailingIcon === undefined ? null : (
         <Icon name={trailingIcon} size="chip" color={glyphColor} />
       )}
@@ -148,24 +158,26 @@ export function Chip({
   trailingIcon,
   active = false,
   liveDot = false,
-  fill = false,
+  fill: fillProp = false,
   accessibilityLabel,
   neighbourGapDp,
 }: ChipProps) {
   const styles = useStyles();
   const id = useId();
   const lines = useContext(ChipLinesContext);
+  const fill = fillProp || (lines?.fill ?? false);
   const hitBox = chipHitBox(
     neighbourGapDp === undefined
       ? (lines?.gapsFor(id) ?? neighbourGaps(space.controlGap))
       : neighbourGaps(neighbourGapDp),
   );
   const report = lines?.report;
+  const lineTopOffset = fill ? 0 : hitBox.paddingTop;
   const handleLayout = useCallback(
     (event: LayoutChangeEvent) => {
-      report?.(id, Math.round(event.nativeEvent.layout.y + hitBox.paddingTop));
+      report?.(id, Math.round(event.nativeEvent.layout.y + lineTopOffset));
     },
-    [report, id, hitBox.paddingTop],
+    [report, id, lineTopOffset],
   );
   useEffect(
     () => () => {
@@ -173,20 +185,21 @@ export function Chip({
     },
     [report, id],
   );
-  return (
+  const layoutProps = report === undefined ? {} : { onLayout: handleLayout };
+  const pressable = (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ selected: active }}
-      style={[styles.chipHit, hitBox, fill && styles.fill]}
-      {...(report === undefined ? {} : { onLayout: handleLayout })}
+      style={[styles.chipHit, hitBox, fill && styles.fillHit]}
+      {...(fill ? {} : layoutProps)}
       onPress={onPress}
     >
       <View
         style={[
           styles.chip,
           active && styles.chipActive,
-          fill && [styles.fill, styles.fillFace],
+          fill && styles.fillFace,
         ]}
       >
         <ChipFace
@@ -198,6 +211,14 @@ export function Chip({
         />
       </View>
     </Pressable>
+  );
+  if (!fill) return pressable;
+  // Yoga drops a grown item's negative margin inside a wrapping row, so the
+  // wrapper grows and the hit box's margins stay inside a plain column.
+  return (
+    <View style={styles.fill} {...layoutProps}>
+      {pressable}
+    </View>
   );
 }
 
@@ -232,11 +253,14 @@ export interface ChipRowProps {
   /** Gaps from the row to the controls above and below it; wrapped lines
    * between them share the row's own gap. */
   readonly neighbourGapDp?: number | NeighbourGaps;
+  /** Each line runs edge to edge; a chip that does not fit moves to the next line whole. */
+  readonly fill?: boolean;
 }
 
 export function ChipRow({
   children,
   neighbourGapDp = space.controlGap,
+  fill = false,
 }: ChipRowProps) {
   const styles = useStyles();
   const [lineTops, setLineTops] = useState<
@@ -251,11 +275,12 @@ export function ChipRow({
     const outer = neighbourGaps(neighbourGapDp);
     const tops = Object.values(lineTops).filter((t) => t !== undefined);
     return {
+      fill,
       gapsFor: (id) =>
         wrappedLineGaps(lineTops[id], tops, outer, space.controlGap),
       report,
     };
-  }, [lineTops, neighbourGapDp, report]);
+  }, [fill, lineTops, neighbourGapDp, report]);
   return (
     <ChipLinesContext.Provider value={lines}>
       <View style={styles.row}>{children}</View>
