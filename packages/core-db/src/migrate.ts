@@ -2,13 +2,14 @@ import { REPAIR_PRESETS } from './preset-repair';
 import { RAMP_UNITS } from './preset-rules';
 import { INSTRUMENTS, MAX_MIDI_NOTE, MAX_STRINGS } from './tuning-rules';
 
-export const SCHEMA_VERSION = 12;
+export const SCHEMA_VERSION = 13;
 export const V6_SCHEMA_VERSION = 6;
 export const V7_SCHEMA_VERSION = 7;
 export const V8_SCHEMA_VERSION = 8;
 export const V9_SCHEMA_VERSION = 9;
 export const V10_SCHEMA_VERSION = 10;
 export const V11_SCHEMA_VERSION = 11;
+export const V12_SCHEMA_VERSION = 12;
 
 export interface MigrationDriver {
   exec(sql: string): void;
@@ -252,9 +253,16 @@ export const V11_BASELINE: readonly string[] = [
   ...MIGRATE_V10_TO_V11,
 ];
 
+// A ramp moves by a step every interval (SPEC §5.3, D15); ramp_length is now
+// that interval.
+export const MIGRATE_V12_TO_V13: readonly string[] = [
+  'ALTER TABLE song_presets ADD COLUMN ramp_step REAL NOT NULL DEFAULT 1',
+];
+
 export const BASELINE: readonly string[] = [
   ...V11_BASELINE,
   ...MIGRATE_V11_TO_V12,
+  ...MIGRATE_V12_TO_V13,
 ];
 
 // SQLite cannot ADD a NOT NULL column without a constant default, so migrated
@@ -320,7 +328,8 @@ const UPGRADES: readonly {
   { to: V9_SCHEMA_VERSION, steps: MIGRATE_V8_TO_V9 },
   { to: V10_SCHEMA_VERSION, steps: MIGRATE_V9_TO_V10 },
   { to: V11_SCHEMA_VERSION, steps: MIGRATE_V10_TO_V11 },
-  { to: SCHEMA_VERSION, steps: MIGRATE_V11_TO_V12 },
+  { to: V12_SCHEMA_VERSION, steps: MIGRATE_V11_TO_V12 },
+  { to: SCHEMA_VERSION, steps: MIGRATE_V12_TO_V13 },
 ];
 
 function upgradeSteps(from: number): readonly string[] {

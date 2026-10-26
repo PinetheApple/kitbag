@@ -1,5 +1,8 @@
 import type { StepDelta } from '@kitbag/core-design';
-import { type KB_RAMP_UNIT as RampUnit } from '@kitbag/core-native';
+import {
+  KB_MIN_RAMP_STEP_BPM,
+  type KB_RAMP_UNIT as RampUnit,
+} from '@kitbag/core-native';
 import { BPM_BOUNDS, useMetronome, type RampConfig } from '@kitbag/core-state';
 import {
   useCallback,
@@ -8,7 +11,7 @@ import {
   type SetStateAction,
 } from 'react';
 
-import { stepRampDuration, withRampUnit } from '../logic/rampUnit.ts';
+import { stepRampInterval, withRampUnit } from '../logic/rampUnit.ts';
 import { stepWithin } from '../logic/trainer.ts';
 
 type Stepper = (delta: StepDelta) => void;
@@ -20,7 +23,8 @@ export interface RampEditor {
   readonly reset: () => void;
   readonly stepFrom: Stepper;
   readonly stepTo: Stepper;
-  readonly stepDuration: Stepper;
+  readonly stepStep: Stepper;
+  readonly stepInterval: Stepper;
   readonly setUnit: (unit: RampUnit) => void;
   readonly toggleLoop: () => void;
   readonly start: () => void;
@@ -29,7 +33,7 @@ export interface RampEditor {
 
 function useBpmStepper(
   setDraft: SetDraft,
-  key: 'startBpm' | 'endBpm',
+  key: 'startBpm' | 'targetBpm',
 ): Stepper {
   return useCallback(
     (delta: StepDelta) => {
@@ -39,10 +43,27 @@ function useBpmStepper(
   );
 }
 
-function useDurationEdits(setDraft: SetDraft) {
-  const stepDuration = useCallback(
+const STEP_BOUNDS = {
+  min: KB_MIN_RAMP_STEP_BPM,
+  max: BPM_BOUNDS.max - BPM_BOUNDS.min,
+};
+
+function useStepStepper(setDraft: SetDraft): Stepper {
+  return useCallback(
     (delta: StepDelta) => {
-      setDraft((d) => stepRampDuration(d, delta));
+      setDraft((d) => ({
+        ...d,
+        stepBpm: stepWithin(d.stepBpm, delta, STEP_BOUNDS),
+      }));
+    },
+    [setDraft],
+  );
+}
+
+function useIntervalEdits(setDraft: SetDraft) {
+  const stepInterval = useCallback(
+    (delta: StepDelta) => {
+      setDraft((d) => stepRampInterval(d, delta));
     },
     [setDraft],
   );
@@ -55,7 +76,7 @@ function useDurationEdits(setDraft: SetDraft) {
   const toggleLoop = useCallback(() => {
     setDraft((d) => ({ ...d, loop: !d.loop }));
   }, [setDraft]);
-  return { stepDuration, setUnit, toggleLoop };
+  return { stepInterval, setUnit, toggleLoop };
 }
 
 function useRampCommit(draft: RampConfig, onDone: () => void) {
@@ -77,15 +98,16 @@ export function useRampEditor(onDone: () => void): RampEditor {
   const bpm = useMetronome((s) => s.bpm);
   const [draft, setDraft] = useState(ramp);
   const reset = useCallback(() => {
-    setDraft(ramp.enabled ? ramp : { ...ramp, startBpm: bpm, endBpm: bpm });
+    setDraft(ramp.enabled ? ramp : { ...ramp, startBpm: bpm, targetBpm: bpm });
   }, [ramp, bpm]);
   return {
     draft,
     running: ramp.enabled,
     reset,
     stepFrom: useBpmStepper(setDraft, 'startBpm'),
-    stepTo: useBpmStepper(setDraft, 'endBpm'),
-    ...useDurationEdits(setDraft),
+    stepTo: useBpmStepper(setDraft, 'targetBpm'),
+    stepStep: useStepStepper(setDraft),
+    ...useIntervalEdits(setDraft),
     ...useRampCommit(draft, onDone),
   };
 }

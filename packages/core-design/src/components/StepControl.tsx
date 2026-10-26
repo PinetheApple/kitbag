@@ -6,7 +6,7 @@ import {
   type AccessibilityActionEvent,
 } from 'react-native';
 
-import { icons } from '../icons.ts';
+import type { IconName } from '../icons.ts';
 import { inset, radius, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
@@ -17,6 +17,7 @@ import {
   unshared,
   type NeighbourGaps,
 } from '../touchTarget.ts';
+import { InlineIcon } from './IconGlyph.tsx';
 
 export type StepDelta = -1 | 1;
 export type StepControlVariant = 'badge' | 'inline';
@@ -219,17 +220,17 @@ export function StepControl({
     [onStep, onValuePress],
   );
 
-  const key = (glyph: string, hitBox: HitBox, onPress: () => void) =>
+  const key = (glyph: IconName, hitBox: HitBox, onPress: () => void) =>
     inline ? (
       <Pressable style={hitBox} onPress={onPress}>
         <View style={styles.inlineKey}>
-          <Text style={styles.inlineKeyText}>{glyph}</Text>
+          <InlineIcon name={glyph} style={styles.inlineKeyText} />
         </View>
       </Pressable>
     ) : (
       <Pressable style={hitBox} onPress={onPress}>
         <View style={styles.badgeKey}>
-          <Text style={styles.badgeKeyText}>{glyph}</Text>
+          <InlineIcon name={glyph} style={styles.badgeKeyText} />
         </View>
       </Pressable>
     );
@@ -246,7 +247,7 @@ export function StepControl({
       onAccessibilityAction={handleAccessibilityAction}
       style={inline ? styles.inlineCluster : styles.badgeCluster}
     >
-      {key(icons.decrease, hitBoxes.decrement, handleDecrement)}
+      {key('decrease', hitBoxes.decrement, handleDecrement)}
       <View
         style={
           inline
@@ -270,7 +271,7 @@ export function StepControl({
           {value}
         </Text>
       </View>
-      {key(icons.increase, hitBoxes.increment, handleIncrement)}
+      {key('increase', hitBoxes.increment, handleIncrement)}
     </View>
   );
 }

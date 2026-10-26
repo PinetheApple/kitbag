@@ -1,10 +1,11 @@
 import { Pressable, Text, View } from 'react-native';
 
-import { icons, type IconName } from '../icons.ts';
+import type { IconName } from '../icons.ts';
 import { opacity, radius, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { hitSlopFor } from '../touchTarget.ts';
+import { InlineIcon } from './IconGlyph.tsx';
 
 const HIT_SLOP = hitSlopFor(size.transportKey, space.transportGap);
 
@@ -73,9 +74,16 @@ export function TransportKey({
       hitSlop={HIT_SLOP}
       onPress={onPress}
     >
-      <Text style={[styles.glyph, selected && styles.glyphSelected]}>
-        {icon === undefined ? text : icons[icon]}
-      </Text>
+      {icon === undefined ? (
+        <Text style={[styles.glyph, selected && styles.glyphSelected]}>
+          {text}
+        </Text>
+      ) : (
+        <InlineIcon
+          name={icon}
+          style={[styles.glyph, selected && styles.glyphSelected]}
+        />
+      )}
     </Pressable>
   );
 }

@@ -70,6 +70,7 @@ export interface NativeConstants {
   readonly defaultSounds: { readonly normal: number; readonly accent: number };
   readonly minRampBars: number;
   readonly maxRampBars: number;
+  readonly minRampStepBpm: number;
   readonly muteBars: Bounds;
   readonly subdivision: Bounds;
   readonly bpm: Bounds;
@@ -312,6 +313,10 @@ export function collectConstants(sources: NativeSources): NativeConstants {
     },
     minRampBars: parseConstexprInt(sources.tempoRampHeader, 'kMinBars'),
     maxRampBars: parseConstexprInt(sources.tempoRampHeader, 'kMaxBars'),
+    minRampStepBpm: parseConstexprDouble(
+      sources.tempoRampHeader,
+      'kMinStepBpm',
+    ),
     muteBars: {
       min: parseConstexprInt(sources.metronomeHeader, 'kMinMuteBars'),
       max: parseConstexprInt(sources.metronomeHeader, 'kMaxMuteBars'),
@@ -433,6 +438,9 @@ export const KB_MIN_RAMP_BARS = ${String(c.minRampBars)};
 
 /** Longest ramp in bars (TempoRamp::kMaxBars); the engine clamps above this. */
 export const KB_MAX_RAMP_BARS = ${String(c.maxRampBars)};
+
+/** Smallest ramp step in BPM (TempoRamp::kMinStepBpm); the engine clamps below this. */
+export const KB_MIN_RAMP_STEP_BPM = ${String(c.minRampStepBpm)};
 
 /** Tempo range the engine clamps to (kMinBpm, kMaxBpm in metronome_types.h). */
 ${renderBounds('KB_BPM_BOUNDS', c.bpm)}

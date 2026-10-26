@@ -67,12 +67,13 @@ void commandSetLatencyOffset(double latencyMs) {
 void commandSetRamp(
     bool enabled,
     double startBpm,
-    double endBpm,
-    double duration,
+    double targetBpm,
+    double stepBpm,
+    double interval,
     int32_t unit,
     bool loop) {
-  kb_metronome_set_ramp(commandEngine(), flag(enabled), startBpm, endBpm,
-                        duration, unit, flag(loop));
+  kb_metronome_set_ramp(commandEngine(), flag(enabled), startBpm, targetBpm,
+                        stepBpm, interval, unit, flag(loop));
 }
 void commandSetBarMute(bool enabled, int32_t playBars, int32_t muteBars) {
   kb_metronome_set_bar_mute(commandEngine(), flag(enabled), playBars, muteBars);

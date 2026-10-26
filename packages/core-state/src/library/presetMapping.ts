@@ -57,8 +57,9 @@ export function presetFromMetronome(config: MetronomeConfig): PresetFields {
     sound: config.sounds.normal,
     rampEnabled: config.ramp.enabled,
     rampStartBpm: config.ramp.startBpm,
-    rampEndBpm: config.ramp.endBpm,
-    rampLength: config.ramp.duration,
+    rampEndBpm: config.ramp.targetBpm,
+    rampStep: config.ramp.stepBpm,
+    rampLength: config.ramp.interval,
     rampUnit: config.ramp.unit,
     rampLoop: config.ramp.loop,
     barMuteEnabled: config.barMute.enabled,
@@ -80,8 +81,9 @@ function rampOf(preset: SongPreset, current: RampConfig): RampConfig {
   return {
     enabled: preset.rampEnabled,
     startBpm: preset.rampStartBpm ?? preset.bpm,
-    endBpm: preset.rampEndBpm ?? preset.bpm,
-    duration: preset.rampLength ?? current.duration,
+    targetBpm: preset.rampEndBpm ?? preset.bpm,
+    stepBpm: preset.rampStep,
+    interval: preset.rampLength ?? current.interval,
     unit: rampUnitOf(preset.rampUnit),
     loop: preset.rampLoop,
   };

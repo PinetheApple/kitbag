@@ -115,8 +115,9 @@ describe('library store', () => {
     metronome.getState().setRamp({
       enabled: true,
       startBpm: 96,
-      endBpm: 104,
-      duration: 8,
+      targetBpm: 104,
+      stepBpm: 5,
+      interval: 8,
       unit: KB_RAMP_UNIT.KB_RAMP_BARS,
       loop: false,
     });
@@ -136,7 +137,7 @@ describe('library store', () => {
     if (entry === undefined) throw new Error('missing entry');
     await s.loadSong(song, entry.item.id, gig);
     const m = metronome.getState();
-    expect([m.bpm, m.beatsPerBar, m.ramp.enabled, m.ramp.endBpm]).toEqual([
+    expect([m.bpm, m.beatsPerBar, m.ramp.enabled, m.ramp.targetBpm]).toEqual([
       96,
       3,
       true,
@@ -192,8 +193,9 @@ describe('library store', () => {
       const ramp = {
         enabled: true,
         startBpm: 90,
-        endBpm: 120,
-        duration,
+        targetBpm: 120,
+        stepBpm: 5,
+        interval: duration,
         unit,
         loop,
       };
@@ -203,7 +205,7 @@ describe('library store', () => {
         ...ramp,
         enabled: false,
         unit: KB_RAMP_UNIT.KB_RAMP_BARS,
-        duration: 4,
+        interval: 4,
         loop: !loop,
       });
       await library.getState().loadSong(id);
@@ -273,8 +275,9 @@ describe('library store', () => {
     metronome.getState().setRamp({
       enabled: true,
       startBpm: 100,
-      endBpm: 140,
-      duration: 8,
+      targetBpm: 140,
+      stepBpm: 5,
+      interval: 8,
       unit: KB_RAMP_UNIT.KB_RAMP_BARS,
       loop: false,
     });
@@ -287,6 +290,7 @@ describe('library store', () => {
       true,
       100,
       140,
+      5,
       8,
       KB_RAMP_UNIT.KB_RAMP_BARS,
       false,

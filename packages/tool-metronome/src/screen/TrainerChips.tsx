@@ -14,12 +14,14 @@ type OpenSheet = 'none' | 'ramp' | 'muteBars' | 'sound' | 'countIn';
 
 function RampChip({ onPress }: { readonly onPress: () => void }) {
   const ramp = useMetronome((s) => s.ramp);
-  const range = `${String(ramp.startBpm)} to ${String(ramp.endBpm)} BPM`;
+  const range = `${String(ramp.startBpm)} to ${String(ramp.targetBpm)} BPM`;
   return (
     <Chip
       icon="ramp"
       active={ramp.enabled}
-      label={ramp.enabled ? rampChipValue(ramp.startBpm, ramp.endBpm) : 'Ramp'}
+      label={
+        ramp.enabled ? rampChipValue(ramp.startBpm, ramp.targetBpm) : 'Ramp'
+      }
       accessibilityLabel={
         ramp.enabled ? `Tempo ramp, ${range}` : 'Tempo ramp, off'
       }

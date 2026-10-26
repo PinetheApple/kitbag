@@ -1,3 +1,4 @@
+import '@/runtime/cryptoRuntime';
 import '@/runtime/metronomeRuntime';
 import '@/runtime/libraryRuntime';
 import '@/runtime/tunerRuntime';
@@ -5,10 +6,11 @@ import '@/runtime/lastToolRuntime';
 
 import '@/global.css';
 
-import { ThemeProvider, useTheme } from '@kitbag/core-design';
+import { SheetHost, ThemeProvider, useTheme } from '@kitbag/core-design';
 import { Stack } from 'expo-router';
 import { useMemo } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import {
   initialWindowMetrics,
   SafeAreaProvider,
@@ -45,7 +47,11 @@ function ThemedRoot() {
   return (
     <GestureHandlerRootView style={rootStyle}>
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-        <Stack screenOptions={screenOptions} />
+        <KeyboardProvider navigationBarTranslucent statusBarTranslucent>
+          <SheetHost>
+            <Stack screenOptions={screenOptions} />
+          </SheetHost>
+        </KeyboardProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

@@ -8,7 +8,7 @@ export interface MetronomeSummary {
   readonly ramp: {
     readonly enabled: boolean;
     readonly startBpm: number;
-    readonly endBpm: number;
+    readonly targetBpm: number;
   };
 }
 
@@ -16,7 +16,7 @@ export interface MetronomeSummary {
 // is sounding, so the ramp's range is shown instead of one number.
 function tempo({ bpm, ramp }: MetronomeSummary): string {
   if (ramp.enabled) {
-    return `Ramp ${String(ramp.startBpm)}→${String(ramp.endBpm)} BPM`;
+    return `Ramp ${String(ramp.startBpm)}→${String(ramp.targetBpm)} BPM`;
   }
   return `${String(bpm)} BPM`;
 }

@@ -1,6 +1,6 @@
 import { Pressable, Text, View } from 'react-native';
 
-import { icons, type IconName } from '../icons.ts';
+import type { IconName } from '../icons.ts';
 import { iconSizes, inset, radius, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
@@ -11,6 +11,7 @@ import {
   neighbourGaps,
   type NeighbourGaps,
 } from '../touchTarget.ts';
+import { InlineIcon } from './IconGlyph.tsx';
 
 export type ButtonVariant = 'primary' | 'tonal' | 'ghost' | 'destructive';
 
@@ -134,12 +135,7 @@ export function Button({
         ]}
       >
         {icon === undefined ? null : (
-          <Text
-            importantForAccessibility="no-hide-descendants"
-            style={[styles.icon, labelStyle]}
-          >
-            {icons[icon]}
-          </Text>
+          <InlineIcon name={icon} style={[styles.icon, labelStyle]} />
         )}
         <Text style={[styles.label, labelStyle]}>{label}</Text>
       </View>

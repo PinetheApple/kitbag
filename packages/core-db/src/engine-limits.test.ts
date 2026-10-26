@@ -12,6 +12,7 @@ import {
   MAX_RAMP_BARS,
   MAX_RAMP_SECONDS,
   MIN_RAMP_SECONDS,
+  MIN_RAMP_STEP,
   RAMP_UNITS,
   MAX_SUBDIVISION,
   MIN_BPM,
@@ -61,6 +62,7 @@ describe('engine limits mirrored in core-db', () => {
     expect(Number(constant('kMaxSeconds', 'tempo_ramp.h'))).toBe(
       MAX_RAMP_SECONDS,
     );
+    expect(Number(constant('kMinStepBpm', 'tempo_ramp.h'))).toBe(MIN_RAMP_STEP);
     expect(Number(constant('kMaxMuteBars'))).toBe(MAX_MUTE_BARS);
     expect(Number(constant('kBpmReferenceDenominator'))).toBe(
       DEFAULT_DENOMINATOR,

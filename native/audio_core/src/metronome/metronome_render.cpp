@@ -244,8 +244,12 @@ void Metronome::FireConstantTempoTick(
   const auto beat_index = static_cast<int>(beat % beats_per_bar_);
   if (beat_index == 0) {
     ++current_bar_;  // monotonic: survives time-signature changes
-    if (ramp_.enabled()) {
-      SetBpmPreservingPhase(ramp_.StepAtDownbeat(current_bar_, sample_rate));
+  }
+  if (ramp_.enabled()) {
+    const double next =
+        ramp_.TempoAtBeat(beat_index == 0, current_bar_, sample_rate);
+    if (next != bpm_) {
+      SetBpmPreservingPhase(next);
       *tempo = BlockTempoFor(sample_rate);
     }
   }

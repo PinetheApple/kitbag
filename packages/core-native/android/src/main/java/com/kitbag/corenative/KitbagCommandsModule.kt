@@ -87,12 +87,13 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   override fun setRamp(
     enabled: Boolean,
     startBpm: Double,
-    endBpm: Double,
-    duration: Double,
+    targetBpm: Double,
+    stepBpm: Double,
+    interval: Double,
     unit: Double,
     loop: Boolean,
   ) {
-    nativeSetRamp(enabled, startBpm, endBpm, duration, unit.toInt(), loop)
+    nativeSetRamp(enabled, startBpm, targetBpm, stepBpm, interval, unit.toInt(), loop)
   }
 
   override fun setBarMute(enabled: Boolean, playBars: Double, muteBars: Double) {
@@ -153,8 +154,9 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private external fun nativeSetRamp(
     enabled: Boolean,
     startBpm: Double,
-    endBpm: Double,
-    duration: Double,
+    targetBpm: Double,
+    stepBpm: Double,
+    interval: Double,
     unit: Int,
     loop: Boolean,
   )

@@ -22,6 +22,29 @@ import prettier from 'eslint-config-prettier';
 // are structural; 2 covers halving/doubling and index+1 pair work.
 const ALLOWED_MAGIC_NUMBERS = [-1, 0, 1, 2];
 
+// --- #112 pictographs ---------------------------------------------------------
+// Icons are vector glyphs from core-design's Icon. A pictograph in a string
+// renders in whatever the platform font has — colour emoji on some phones — at
+// its own size and baseline, ignoring the theme colour. Emoji, plus the symbol
+// blocks the old glyph icons came from: technical symbols, geometric shapes,
+// miscellaneous symbols, dingbats, musical symbols, and the emoji/text
+// presentation selectors. Accidentals (♭ ♮ ♯) are note names, not icons, and
+// arrows stay as range punctuation (120→140). Tests are exempt: they assert on
+// the characters this keeps out. Stopgap until eslint-plugin-kitbag (§13.6).
+const PICTOGRAPH_RE =
+  '/[\\p{Extended_Pictographic}\\u2300-\\u23FF\\u25A0-\\u25FF\\u2600-\\u266C\\u2670-\\u27BF\\u{1D100}-\\u{1D1FF}\\uFE0E\\uFE0F]/u';
+const PICTOGRAPH_MESSAGE =
+  "Pictographs are not icons. Draw them with core-design's Icon or InlineIcon " +
+  'so they take token size and theme colour (#112).';
+const PICTOGRAPH_SYNTAX = [
+  { selector: `Literal[value=${PICTOGRAPH_RE}]`, message: PICTOGRAPH_MESSAGE },
+  {
+    selector: `TemplateElement[value.cooked=${PICTOGRAPH_RE}]`,
+    message: PICTOGRAPH_MESSAGE,
+  },
+  { selector: `JSXText[value=${PICTOGRAPH_RE}]`, message: PICTOGRAPH_MESSAGE },
+];
+
 // Package globs (SPEC §13.1). Phase 2 owns the final layout; if it differs,
 // update these globs — the rules key off them.
 // `files` globs (which package a rule applies to) — path-based.
@@ -111,6 +134,19 @@ function restrictImports(forbidden, clause, { includeNativeBan = true } = {}) {
     },
   ];
 }
+
+const REALTIME_SYNTAX = [
+  {
+    // const [beat, setBeat] = useState(...) — flag the state variable.
+    selector: `VariableDeclarator[init.callee.name='useState'] > ArrayPattern > Identifier:first-child[name=${REALTIME_NAME_RE}]`,
+    message: REALTIME_STATE_MESSAGE,
+  },
+  {
+    // const beatRef = useRef(...) — flag the ref binding.
+    selector: `VariableDeclarator[init.callee.name='useRef'][id.name=${REALTIME_NAME_RE}]`,
+    message: REALTIME_STATE_MESSAGE,
+  },
+];
 
 export default tseslint.config(
   // --- ignores --------------------------------------------------------------
@@ -216,16 +252,8 @@ export default tseslint.config(
       // do not treat a pass as proof the rule (§13.3) is honoured.
       'no-restricted-syntax': [
         'error',
-        {
-          // const [beat, setBeat] = useState(...) — flag the state variable.
-          selector: `VariableDeclarator[init.callee.name='useState'] > ArrayPattern > Identifier:first-child[name=${REALTIME_NAME_RE}]`,
-          message: REALTIME_STATE_MESSAGE,
-        },
-        {
-          // const beatRef = useRef(...) — flag the ref binding.
-          selector: `VariableDeclarator[init.callee.name='useRef'][id.name=${REALTIME_NAME_RE}]`,
-          message: REALTIME_STATE_MESSAGE,
-        },
+        ...REALTIME_SYNTAX,
+        ...PICTOGRAPH_SYNTAX,
       ],
     },
   },
@@ -397,6 +425,12 @@ export default tseslint.config(
     ],
     rules: {
       '@typescript-eslint/no-magic-numbers': 'off',
+    },
+  },
+  {
+    files: ['**/*.test.{ts,tsx}', '**/*.test-helper.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': ['error', ...REALTIME_SYNTAX],
     },
   },
 

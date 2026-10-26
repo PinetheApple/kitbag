@@ -91,8 +91,9 @@ describe('§5.3 manual tempo cancels a running ramp', () => {
     store.getState().setRamp({
       enabled: true,
       startBpm: 100,
-      endBpm: 140,
-      duration: 8,
+      targetBpm: 140,
+      stepBpm: 5,
+      interval: 8,
       unit: KB_RAMP_UNIT.KB_RAMP_BARS,
       loop: false,
     });
@@ -228,8 +229,9 @@ describe('tempo ramp matches what the engine holds', () => {
   const ramp = {
     enabled: true,
     startBpm: 90,
-    endBpm: 120,
-    duration: 4,
+    targetBpm: 120,
+    stepBpm: 5,
+    interval: 4,
     unit: KB_RAMP_UNIT.KB_RAMP_BARS,
     loop: true,
   } as const;
@@ -240,6 +242,7 @@ describe('tempo ramp matches what the engine holds', () => {
       true,
       90,
       120,
+      5,
       4,
       KB_RAMP_UNIT.KB_RAMP_BARS,
       true,
@@ -247,16 +250,16 @@ describe('tempo ramp matches what the engine holds', () => {
   });
 
   it('clamps durations per unit to the generated bounds', () => {
-    store.getState().setRamp({ ...ramp, duration: 999.4 });
-    expect(store.getState().ramp.duration).toBe(KB_MAX_RAMP_BARS);
+    store.getState().setRamp({ ...ramp, interval: 999.4 });
+    expect(store.getState().ramp.interval).toBe(KB_MAX_RAMP_BARS);
     store
       .getState()
-      .setRamp({ ...ramp, duration: 0.2, unit: KB_RAMP_UNIT.KB_RAMP_SECONDS });
-    expect(store.getState().ramp.duration).toBe(KB_RAMP_SECONDS_BOUNDS.min);
+      .setRamp({ ...ramp, interval: 0.2, unit: KB_RAMP_UNIT.KB_RAMP_SECONDS });
+    expect(store.getState().ramp.interval).toBe(KB_RAMP_SECONDS_BOUNDS.min);
     store
       .getState()
-      .setRamp({ ...ramp, duration: 90, unit: KB_RAMP_UNIT.KB_RAMP_MINUTES });
-    expect(store.getState().ramp.duration).toBe(
+      .setRamp({ ...ramp, interval: 90, unit: KB_RAMP_UNIT.KB_RAMP_MINUTES });
+    expect(store.getState().ramp.interval).toBe(
       KB_RAMP_SECONDS_BOUNDS.max / 60,
     );
   });
@@ -410,10 +413,10 @@ describe('§5.3 tempo shown and nudged is the engine tempo, not a stale intent',
       engine.bpm = bpm;
     });
     cmds.setRamp.mockImplementation(
-      (enabled: boolean, startBpm: number, endBpm: number) => {
+      (enabled: boolean, startBpm: number, targetBpm: number) => {
         if (!enabled) return;
         engine.bpm = startBpm;
-        engine.rampEnd = endBpm;
+        engine.rampEnd = targetBpm;
       },
     );
     const s = createMetronomeStore(
@@ -430,8 +433,9 @@ describe('§5.3 tempo shown and nudged is the engine tempo, not a stale intent',
     s.getState().setRamp({
       enabled: true,
       startBpm: 100,
-      endBpm: 140,
-      duration: 8,
+      targetBpm: 140,
+      stepBpm: 5,
+      interval: 8,
       unit: KB_RAMP_UNIT.KB_RAMP_BARS,
       loop: false,
     });
@@ -448,8 +452,9 @@ describe('§5.3 tempo shown and nudged is the engine tempo, not a stale intent',
     s.getState().setRamp({
       enabled: true,
       startBpm: 100,
-      endBpm: 140,
-      duration: 8,
+      targetBpm: 140,
+      stepBpm: 5,
+      interval: 8,
       unit: KB_RAMP_UNIT.KB_RAMP_BARS,
       loop: false,
     });
@@ -464,8 +469,9 @@ describe('§5.3 tempo shown and nudged is the engine tempo, not a stale intent',
     s.getState().setRamp({
       enabled: true,
       startBpm: 100,
-      endBpm: 140,
-      duration: 8,
+      targetBpm: 140,
+      stepBpm: 5,
+      interval: 8,
       unit: KB_RAMP_UNIT.KB_RAMP_BARS,
       loop: false,
     });
@@ -480,8 +486,9 @@ describe('§5.3 tempo shown and nudged is the engine tempo, not a stale intent',
     s.getState().setRamp({
       enabled: true,
       startBpm: 100,
-      endBpm: 140,
-      duration: 8,
+      targetBpm: 140,
+      stepBpm: 5,
+      interval: 8,
       unit: KB_RAMP_UNIT.KB_RAMP_BARS,
       loop: false,
     });

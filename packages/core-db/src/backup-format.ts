@@ -48,6 +48,8 @@ export interface SongPresetRecord {
   rampStartBpm: number | null;
   rampEndBpm: number | null;
   rampLength: number | null;
+  // v4 files from before schema v13 omit it and read as a step of 1.
+  rampStep: number;
   // Always written; v4 files from before schema v12 omit both and read as bars, no loop.
   rampUnit: number;
   rampLoop: boolean;

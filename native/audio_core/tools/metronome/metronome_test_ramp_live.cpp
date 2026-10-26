@@ -9,7 +9,7 @@ constexpr int64_t kResumeFrame = int64_t{1600} * kBlockFrames;
 constexpr int64_t kOnsetSlack = 2;
 
 void ArmTimeRamp(kitbag::Metronome& metronome) {
-  metronome.SetRamp(true, 60.0, 120.0, 10.0, kRampSeconds, false);
+  metronome.SetRamp(true, 60.0, 120.0, 10.0, 4.5, kRampSeconds, false);
 }
 
 bool Near(int64_t actual, int64_t expected) {
@@ -21,16 +21,28 @@ void TestLiveApplyMidBarInSeconds() {
   metronome.SetTempo(100.0);
   metronome.Start();
   const auto onsets =
-      RenderContinuous(metronome, int64_t{kSampleRate} * 5, [&](int64_t at) {
+      RenderContinuous(metronome, int64_t{kSampleRate} * 10, [&](int64_t at) {
         if (at == kApplyFrame) ArmTimeRamp(metronome);
       });
   Check(
       onsets.size() >= 6 && Near(onsets[2], 70400),
       "ramp live: arming mid-beat jumps to 60 BPM keeping the beat's phase"
   );
+  constexpr int64_t kSixtyBpmBeat = kSampleRate;
+  constexpr int64_t kSeventyBpmBeat = 41143;
+  constexpr int64_t kStepAfter = kApplyFrame + kSampleRate * 9 / 2;
+  size_t first_step = 0;
+  for (size_t i = 3; i + 1 < onsets.size(); ++i) {
+    if (!Near(onsets[i + 1] - onsets[i], kSixtyBpmBeat)) {
+      first_step = i;
+      break;
+    }
+  }
   Check(
-      onsets.size() >= 6 && Near(onsets[5] - onsets[4], 37895),
-      "ramp live: time counts from the apply frame, so bar 1 steps to 76 BPM"
+      first_step > 0 && onsets[first_step] >= kStepAfter &&
+          onsets[first_step - 1] < kStepAfter &&
+          Near(onsets[first_step + 1] - onsets[first_step], kSeventyBpmBeat),
+      "ramp live: time counts from arming; the first beat after 4.5 s is 70"
   );
 }
 
@@ -63,12 +75,13 @@ void TestPauseRestartsRamp() {
 
 void TestSecondsRampClampsShortDuration() {
   kitbag::Metronome metronome;
-  metronome.SetRamp(true, 400.0, 100.0, 0.5, kRampSeconds, false);
+  metronome.SetRamp(true, 400.0, 100.0, 100.0, 0.5, kRampSeconds, false);
   metronome.Start();
   const auto onsets = RenderAndDetectOnsets(metronome, kSampleRate * 2);
   Check(
-      onsets.size() >= 6 && Near(onsets[5] - onsets[4], 13091),
-      "ramp seconds: 0.5 s clamps to 1 s, so bar 1 at 0.6 s steps to 220 BPM"
+      onsets.size() >= 9 && Near(onsets[7] - onsets[6], 7200) &&
+          Near(onsets[8] - onsets[7], 9600),
+      "ramp live: 0.5 s clamps to 1 s, so the beat after 1 s is 300 BPM"
   );
 }
 
