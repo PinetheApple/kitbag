@@ -1,9 +1,10 @@
-import { open, type DB } from '@op-engineering/op-sqlite';
+import type { DB } from '@op-engineering/op-sqlite';
 import { drizzle } from 'drizzle-orm/op-sqlite';
 
 import { createBackupService } from './backup';
 import * as schema from './schema';
 import { migrate, type MigrationDriver } from './migrate';
+import { openConnection } from './openConnection';
 import { createPreferences } from './preferences';
 import { createSetlistRepository } from './setlist-repository';
 import { createSongPresetRepository } from './song-preset-repository';
@@ -34,7 +35,7 @@ export function drizzleClient(connection: Connection) {
 }
 
 export function openDatabase(name: string = DATABASE_NAME) {
-  return connectDatabase(open({ name }));
+  return connectDatabase(openConnection(name));
 }
 
 export function connectDatabase(connection: Connection) {
