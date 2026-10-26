@@ -78,6 +78,8 @@ jobs:
         run: pnpm --filter @kitbag/core-design generate:check
       - name: Tests — unit suites + the lint eval harness (§13.6)
         run: pnpm -w test
+      - name: Web bundle — exports, no native-only modules (#70)
+        run: ./scripts/web-check.sh
       - name: Version — app.json and its package.json mirrors agree (#53)
         run: ./scripts/version.sh check
       - name: Release scripts — signature gate and release preconditions
