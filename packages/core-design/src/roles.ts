@@ -80,6 +80,7 @@ export const inset = {
   buttonH: 18,
   chipV: 5,
   chipH: 12,
+  chipFillH: 8,
   badgeV: 2,
   badgeH: 7,
   presetV: 9,
