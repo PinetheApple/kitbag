@@ -7,8 +7,10 @@ import '@/runtime/lastToolRuntime';
 import '@/global.css';
 
 import { SheetHost, ThemeProvider, useTheme } from '@kitbag/core-design';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
-import { useMemo } from 'react';
+import * as SplashScreen from 'expo-splash-screen';
+import { useEffect, useMemo } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import {
@@ -18,10 +20,21 @@ import {
 import { StyleSheet, useColorScheme } from 'react-native';
 
 import { useKitbagRuntime } from '@/runtime/bootstrapRuntime';
+import { designFonts } from '@/runtime/designFonts';
+
+void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   useKitbagRuntime();
+  const [fontsLoaded, fontError] = useFonts(designFonts);
+  const fontsSettled = fontsLoaded || fontError !== null;
   const mode = useColorScheme() === 'light' ? 'light' : 'dark';
+
+  useEffect(() => {
+    if (fontsSettled) void SplashScreen.hideAsync();
+  }, [fontsSettled]);
+
+  if (!fontsSettled) return null;
 
   return (
     <ThemeProvider mode={mode}>

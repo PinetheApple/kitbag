@@ -109,7 +109,7 @@ export function TrainerChips({
   const { open, opener } = useOpenSheet();
   return (
     <>
-      <ChipRow neighbourGapDp={neighbourGapDp}>
+      <ChipRow fill neighbourGapDp={neighbourGapDp}>
         <RampChip onPress={opener('ramp')} />
         <MuteChip onPress={opener('muteBars')} />
         <SoundChip onPress={opener('sound')} />
