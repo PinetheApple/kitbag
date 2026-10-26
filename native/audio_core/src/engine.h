@@ -2,7 +2,10 @@
 #define KITBAG_ENGINE_H
 
 #include <atomic>
+#include <condition_variable>
 #include <cstdint>
+#include <mutex>
+#include <thread>
 
 #include "media/decoder.h"
 #include "metronome/metronome.h"
@@ -89,13 +92,27 @@ class Engine {
       const void* input,
       ma_uint32 frame_count
   );
+  static void OnNotification(const ma_device_notification* notification);
   void Render(float* output, uint32_t frame_count);
+  void StartWatchdog();
+  void StopWatchdog();
+  void WatchOutput();
+  void RestartDevice();
 
   ma_device device_{};
   bool device_ready_ = false;
 
   std::atomic<bool> device_running_{false};
   std::atomic<uint64_t> frames_rendered_{0};
+
+  // Restarts the device when its stream dies while the engine should be
+  // playing: miniaudio gives up rerouting after a few attempts and never says.
+  std::atomic<bool> restarting_{false};
+  std::atomic<bool> stopped_unexpectedly_{false};
+  std::thread watchdog_;
+  std::mutex watchdog_mutex_;
+  std::condition_variable watchdog_wake_;
+  bool watchdog_exit_ = false;
 
   Metronome metronome_;
   Tuner tuner_;
