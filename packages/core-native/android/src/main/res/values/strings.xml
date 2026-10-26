@@ -1,0 +1,10 @@
+<resources>
+  <string name="kitbag_metronome_channel">Metronome</string>
+  <string name="kitbag_action_play">Play</string>
+  <string name="kitbag_action_pause">Pause</string>
+  <string name="kitbag_action_stop">Stop</string>
+  <string name="kitbag_action_tempo_down">Tempo down</string>
+  <string name="kitbag_action_tempo_up">Tempo up</string>
+  <string name="kitbag_action_previous">Previous song</string>
+  <string name="kitbag_action_next">Next song</string>
+</resources>

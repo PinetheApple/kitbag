@@ -1,6 +1,7 @@
 #include "KitbagCommands.h"
 
 #include <cassert>
+#include <mutex>
 
 #include "KitbagEngine.h"
 #include "kitbag_api.h"
@@ -8,10 +9,19 @@
 namespace kitbag {
 
 namespace {
-kb_engine* commandEngine() {
+std::mutex commandMutex;
+
+// The engine's command ring takes one producer, but commands come from both the
+// JS module thread and the foreground service; the lock lives until the call returns.
+struct LockedEngine {
+  std::lock_guard<std::mutex> lock{commandMutex};
   kb_engine* engine = kitbagEngine();
-  assert(engine != nullptr && "command dispatched before kitbagInstall()");
-  return engine;
+  operator kb_engine*() const { return engine; }  // NOLINT(google-explicit-constructor)
+};
+
+LockedEngine commandEngine() {
+  assert(kitbagEngine() != nullptr && "command dispatched before kitbagInstall()");
+  return {};
 }
 
 int32_t flag(bool value) { return value ? 1 : 0; }
@@ -23,6 +33,7 @@ void commandStop() { kb_engine_stop(commandEngine()); }
 void commandMetronomeStart(double anchorFrame) {
   kb_metronome_start_at(commandEngine(), static_cast<uint64_t>(anchorFrame));
 }
+void commandMetronomeStartNow() { kb_metronome_start(commandEngine()); }
 void commandMetronomeStop() { kb_metronome_stop(commandEngine()); }
 void commandMetronomePause() { kb_metronome_pause(commandEngine()); }
 

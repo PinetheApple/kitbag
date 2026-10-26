@@ -1,12 +1,12 @@
-package com.kitbag.app.transport
+package com.kitbag.corenative.transport
 
-import com.kitbag.app.transport.TransportAction.NEXT
-import com.kitbag.app.transport.TransportAction.PAUSE
-import com.kitbag.app.transport.TransportAction.PLAY
-import com.kitbag.app.transport.TransportAction.PREVIOUS
-import com.kitbag.app.transport.TransportAction.STOP
-import com.kitbag.app.transport.TransportAction.TEMPO_DOWN
-import com.kitbag.app.transport.TransportAction.TEMPO_UP
+import com.kitbag.corenative.transport.TransportAction.NEXT
+import com.kitbag.corenative.transport.TransportAction.PAUSE
+import com.kitbag.corenative.transport.TransportAction.PLAY
+import com.kitbag.corenative.transport.TransportAction.PREVIOUS
+import com.kitbag.corenative.transport.TransportAction.STOP
+import com.kitbag.corenative.transport.TransportAction.TEMPO_DOWN
+import com.kitbag.corenative.transport.TransportAction.TEMPO_UP
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -55,6 +55,13 @@ class TransportModelTest {
   }
 
   @Test
+  fun `system media controls drop both tempo keys only when both neighbours show`() {
+    assertEquals(listOf(PREVIOUS, PAUSE, NEXT, STOP), model.view(state(setlist = song(5))).sessionActions)
+    assertEquals(listOf(TEMPO_DOWN, PAUSE, TEMPO_UP, NEXT, STOP), model.view(state(setlist = song(0))).sessionActions)
+    assertEquals(listOf(TEMPO_DOWN, PAUSE, TEMPO_UP, STOP), model.view(state()).sessionActions)
+  }
+
+  @Test
   fun `stopped shows play and no stop`() {
     assertEquals(listOf(TEMPO_DOWN, PLAY, TEMPO_UP), model.view(state(Playback.STOPPED)).actions)
   }
@@ -97,6 +104,14 @@ class TransportModelTest {
     assertEquals(none, model.commandsFor(state(setlist = song(0)), PREVIOUS))
     assertEquals(none, model.commandsFor(state(setlist = song(11)), NEXT))
     assertEquals(none, model.commandsFor(state(), NEXT))
+  }
+
+  @Test
+  fun `detail line shows played time, after the set and song when there is one`() {
+    assertEquals("0:07", model.detail(null, 7_900))
+    assertEquals("12:05", model.detail(null, 725_000))
+    assertEquals("1:02:03", model.detail(null, 3_723_000))
+    assertEquals("Wedding set · Blackbird (3/12) · 0:42", model.detail("Wedding set · Blackbird (3/12)", 42_000))
   }
 
   @Test(expected = IllegalArgumentException::class)

@@ -1,8 +1,12 @@
 package com.kitbag.corenative
 
+import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReadableArray
+import com.facebook.react.bridge.ReadableMap
+import com.kitbag.corenative.transport.Playback
+import com.kitbag.corenative.transport.TransportState
 
 class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   NativeKitbagCommandsSpec(reactContext) {
@@ -12,6 +16,44 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     if (runtimePtr != 0L) {
       nativeInstall(runtimePtr)
     }
+    MetronomeService.listener = ::emitTransport
+  }
+
+  override fun invalidate() {
+    MetronomeService.listener = null
+    super.invalidate()
+  }
+
+  override fun transportShow(state: ReadableMap) {
+    MetronomeService.show(
+      reactApplicationContext,
+      TransportState(
+        playback = Playback.PLAYING,
+        bpm = state.getDouble("bpm"),
+        rampRunning = state.getBoolean("rampRunning"),
+        beatsPerBar = state.getInt("beatsPerBar"),
+        beatUnit = state.getInt("beatUnit"),
+        setlist = null,
+      ),
+      state.getDouble("minBpm"),
+      state.getDouble("maxBpm"),
+      state.getDouble("practicePlayedMs").toLong(),
+      state.getDouble("practiceStartedAt").toLong(),
+    )
+  }
+
+  override fun transportHide() {
+    MetronomeService.hide(reactApplicationContext)
+  }
+
+  private fun emitTransport(state: TransportState) {
+    emitOnTransport(
+      Arguments.createMap().apply {
+        putString("playback", state.playback.name.lowercase())
+        putDouble("bpm", state.bpm)
+        putBoolean("rampRunning", state.rampRunning)
+      },
+    )
   }
 
   override fun start(promise: Promise) {

@@ -14,6 +14,7 @@ import {
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { type MetronomeCommands } from './commands.ts';
+import { practiceElapsedMs } from './practice.ts';
 import { createMetronomeStore } from './store.ts';
 
 function makeCommands() {
@@ -524,5 +525,24 @@ describe('§5.3 tempo shown and nudged is the engine tempo, not a stale intent',
     s.getState().setTempo(97);
     s.getState().nudgeTempo(5);
     expect(s.getState().bpm).toBe(102);
+  });
+});
+
+describe('practice clock in the store', () => {
+  it('counts while running, whichever path flips running, and resets', () => {
+    let t = 0;
+    const store = createMetronomeStore(
+      makeCommands(),
+      () => 0,
+      () => 120,
+      () => t,
+    );
+    t = 1_000;
+    store.getState().start();
+    t = 4_000;
+    store.setState({ running: false });
+    expect(practiceElapsedMs(store.getState().practice, 9_000)).toBe(3_000);
+    store.getState().resetPractice();
+    expect(practiceElapsedMs(store.getState().practice, 9_000)).toBe(0);
   });
 });

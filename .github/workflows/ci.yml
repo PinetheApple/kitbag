@@ -112,5 +112,5 @@ jobs:
       # release-only Gradle paths (signing config selection, versionName from
       # app.json) that a debug build never exercises.
       - name: Assemble release — compiles the Kotlin/JNI/codegen chain
-        run: ./gradlew :app:assembleRelease :app:testReleaseUnitTest
+        run: ./gradlew :app:assembleRelease :kitbag_core-native:testReleaseUnitTest
         working-directory: packages/app-shell/android

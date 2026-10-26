@@ -1,4 +1,4 @@
-package com.kitbag.app.transport
+package com.kitbag.corenative.transport
 
 import kotlin.math.roundToInt
 
@@ -31,6 +31,7 @@ data class TransportView(
   val subtitle: String?,
   val actions: List<TransportAction>,
   val compactActions: List<TransportAction>,
+  val sessionActions: List<TransportAction>,
 )
 
 sealed interface TransportCommand {
@@ -51,6 +52,18 @@ sealed interface TransportCommand {
 
 class TransportModel(private val minBpm: Double, private val maxBpm: Double) {
 
+  fun detail(subtitle: String?, playedMillis: Long): String =
+    listOfNotNull(subtitle, elapsedLabel(playedMillis)).joinToString(" · ")
+
+  private fun elapsedLabel(playedMillis: Long): String {
+    val totalSeconds = playedMillis / MILLIS_PER_SECOND
+    val hours = totalSeconds / SECONDS_PER_HOUR
+    val minutes = totalSeconds / SECONDS_PER_MINUTE % MINUTES_PER_HOUR
+    val seconds = totalSeconds % SECONDS_PER_MINUTE
+    return if (hours > 0) "%d:%02d:%02d".format(hours, minutes, seconds)
+    else "%d:%02d".format(minutes, seconds)
+  }
+
   fun view(state: TransportState): TransportView {
     val playPause =
       if (state.playback == Playback.PLAYING) TransportAction.PAUSE else TransportAction.PLAY
@@ -61,8 +74,16 @@ class TransportModel(private val minBpm: Double, private val maxBpm: Double) {
       if (hasNext(state)) add(TransportAction.NEXT)
       if (state.playback != Playback.STOPPED) add(TransportAction.STOP)
     }
-    return TransportView(title(state), subtitle(state), actions, compact)
+    return TransportView(title(state), subtitle(state), actions, compact, sessionActions(actions))
   }
+
+  // System media controls lack room for six; with both neighbours the tempo keys give way.
+  private fun sessionActions(actions: List<TransportAction>): List<TransportAction> =
+    if (TransportAction.PREVIOUS in actions && TransportAction.NEXT in actions) {
+      actions - setOf(TransportAction.TEMPO_DOWN, TransportAction.TEMPO_UP)
+    } else {
+      actions
+    }
 
   fun commandsFor(state: TransportState, action: TransportAction): List<TransportCommand> =
     when (action) {
@@ -106,5 +127,9 @@ class TransportModel(private val minBpm: Double, private val maxBpm: Double) {
 
   private companion object {
     const val TEMPO_STEP_BPM = 1.0
+    const val MILLIS_PER_SECOND = 1000L
+    const val SECONDS_PER_MINUTE = 60L
+    const val MINUTES_PER_HOUR = 60L
+    const val SECONDS_PER_HOUR = 3600L
   }
 }

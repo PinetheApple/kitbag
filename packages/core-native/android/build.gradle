@@ -103,4 +103,6 @@ dependencies {
   // BaseReactPackage / codegen'd spec base classes on the Kotlin classpath. Its
   // version is pinned by the React Native Gradle Plugin, same as the app module.
   implementation "com.facebook.react:react-android"
+  implementation "androidx.media:media:1.7.0"
+  testImplementation "junit:junit:4.13.2"
 }
