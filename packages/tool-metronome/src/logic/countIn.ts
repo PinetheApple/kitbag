@@ -1,3 +1,4 @@
+import { countLabel } from '@kitbag/core-design';
 import {
   KB_COUNT_IN_BARS,
   KB_COUNT_IN_OFF,
@@ -14,7 +15,7 @@ export const COUNT_IN_MODE_OPTIONS = [
 
 export function countInLabel(bars: KbCountInBars): string {
   if (bars === KB_COUNT_IN_OFF) return 'Off';
-  return `${String(bars)} ${bars === 1 ? 'bar' : 'bars'}`;
+  return countLabel(bars, 'bar', 'bars');
 }
 
 export const COUNT_IN_BAR_OPTIONS = KB_COUNT_IN_BARS.map((bars) => ({

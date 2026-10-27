@@ -1,3 +1,4 @@
+import { countLabel } from '@kitbag/core-design';
 import { KB_COUNT_IN_OFF } from '@kitbag/core-native';
 import type { SongPreset } from '@kitbag/core-state';
 
@@ -27,7 +28,7 @@ export function setlistSubtitle(
   rampCount: number,
   played: number | undefined,
 ): string {
-  const songs = `${String(songCount)} ${songCount === 1 ? 'song' : 'songs'}`;
+  const songs = countLabel(songCount, 'song', 'songs');
   if (played !== undefined)
     return `${songs} · ${String(played)} played tonight`;
   if (rampCount > 0) return `${songs} · ramp on ${String(rampCount)}`;

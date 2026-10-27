@@ -29,10 +29,10 @@ class KitbagCorePackage : BaseReactPackage() {
     name: String,
     reactContext: ReactApplicationContext,
   ): NativeModule? =
-    if (name == NativeKitbagCommandsSpec.NAME) {
-      KitbagCommandsModule(reactContext)
-    } else {
-      null
+    when (name) {
+      NativeKitbagCommandsSpec.NAME -> KitbagCommandsModule(reactContext)
+      NativeKitbagLibrarySpec.NAME -> KitbagLibraryModule(reactContext)
+      else -> null
     }
 
   override fun getReactModuleInfoProvider(): ReactModuleInfoProvider =
@@ -42,6 +42,15 @@ class KitbagCorePackage : BaseReactPackage() {
           ReactModuleInfo(
             NativeKitbagCommandsSpec.NAME, // name
             KitbagCommandsModule::class.java.name, // className
+            false, // canOverrideExistingModule
+            false, // needsEagerInit
+            false, // isCxxModule
+            true, // isTurboModule
+          ),
+        NativeKitbagLibrarySpec.NAME to
+          ReactModuleInfo(
+            NativeKitbagLibrarySpec.NAME, // name
+            KitbagLibraryModule::class.java.name, // className
             false, // canOverrideExistingModule
             false, // needsEagerInit
             false, // isCxxModule

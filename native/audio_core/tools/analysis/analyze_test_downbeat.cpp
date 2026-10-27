@@ -15,6 +15,7 @@
 #include "analysis/beat_tracker.h"
 #include "analysis/downbeat.h"
 #include "analysis/song_analysis.h"
+#include "analyze_buffer_driver.h"
 #include "analyze_test_support.h"
 #include "check.h"
 #include "wav_fixture.h"
@@ -23,7 +24,7 @@ namespace analyze_test {
 
 namespace {
 
-using kitbag::AnalyzeDecodedPcm;
+using analyze_test::AnalyzeDecodedPcm;
 using kitbag::BeatResult;
 
 // Mirrors downbeat.cpp's 4/4 fallback independently, so a change to that default
@@ -270,7 +271,7 @@ void TestDegradedDownbeatPath() {
   CheckSilentPipelineEmpty();
   const std::vector<float> mono(kBeatPeriodFrames, kClickAmp);
   const std::vector<float> one_beat = {0.0f};
-  const std::vector<int> db = kitbag::FindDownbeats(
+  const std::vector<int> db = analyze_test::FindDownbeats(
       mono.data(),
       kBeatPeriodFrames,
       static_cast<int>(kSampleRate),
@@ -332,6 +333,10 @@ void TestDownbeatTruncation(const std::filesystem::path& dir) {
 }
 
 }  // namespace
+
+std::vector<float> MakeBarToneTrack(bool accented) {
+  return MakeTonedClickTrack(accented ? kBarToneStepHz : 0.0f);
+}
 
 void RunDownbeatTests(const std::filesystem::path& dir) {
   TestDownbeats();

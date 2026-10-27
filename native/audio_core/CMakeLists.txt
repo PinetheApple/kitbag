@@ -31,6 +31,7 @@ add_library(kitbag_core SHARED
   src/api/api_tuning.cpp
   src/analysis/beat_tracker.cpp
   src/analysis/downbeat.cpp
+  src/analysis/onset_envelope.cpp
   src/analysis/song_analysis.cpp
   src/media/audio_source.cpp
   src/media/decoder.cpp
@@ -272,25 +273,45 @@ if(KITBAG_BUILD_TOOLS)
     PRIVATE src tools tools/media third_party)
   target_link_libraries(decoder_verify PRIVATE Threads::Threads m ${CMAKE_DL_LIBS})
 
-  # The composition Decoder -> DownmixToMono -> BeatTracker -> sidecar, plus the
-  # non-finite and narrowing guards. Links sources: AnalyzeDecodedPcm and
-  # NarrowFrames are internal and the NaN path cannot be reached through a WAV.
+  # The streamed composition reader -> onset/beats -> downbeats + sidecar, plus
+  # the non-finite and frame-cap guards. Links sources: AnalyzeSong and
+  # WithinFrameCap are internal and the NaN path cannot be reached through a WAV.
   add_executable(analyze_verify
     tools/analysis/analyze_verify.cpp
     tools/analysis/analyze_test_downbeat.cpp
+    tools/analysis/analyze_test_equivalence.cpp
     src/api/api_analysis.cpp
     src/analysis/song_analysis.cpp
     src/analysis/downbeat.cpp
     src/analysis/waveform_peaks.cpp
     src/analysis/beat_tracker.cpp
+    src/analysis/onset_envelope.cpp
     src/dsp/fft.cpp
-    src/media/decoder.cpp
+    src/media/file_audio_reader.cpp
     src/media/miniaudio_decoder.cpp
     src/media/miniaudio_impl.c
   )
   target_include_directories(analyze_verify
     PRIVATE src include tools tools/media third_party)
   target_link_libraries(analyze_verify PRIVATE qm_dsp Threads::Threads m ${CMAKE_DL_LIBS})
+
+  # Replaces global operator new to track the heap's high-water mark, so it is
+  # its own binary; links sources because AnalyzeSong is internal.
+  add_executable(analyze_memory_verify
+    tools/analysis/analyze_memory_verify.cpp
+    src/analysis/song_analysis.cpp
+    src/analysis/downbeat.cpp
+    src/analysis/waveform_peaks.cpp
+    src/analysis/beat_tracker.cpp
+    src/analysis/onset_envelope.cpp
+    src/dsp/fft.cpp
+  )
+  target_include_directories(analyze_memory_verify PRIVATE src include tools)
+  target_link_libraries(analyze_memory_verify PRIVATE qm_dsp m)
+
+  # Runs kb_analyze_song on a real file and reports the peak RSS of doing so.
+  add_executable(analyze_song tools/analysis/analyze_song_main.cpp)
+  target_link_libraries(analyze_song PRIVATE kitbag_core)
 
   # PitchAnalyzer is linked as sources (internal); the tuning-mode checks drive
   # the C ABI through kitbag_core, whose hidden symbols cannot collide.

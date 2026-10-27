@@ -283,3 +283,16 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   (one 256-frame block at 48 kHz is 5.3 ms). Open: an unlocked recorder's clock drift
   counts against the offset window over a long song, so §6.5 captures should record the
   phone's own output or stay short. **[recorded; owner may override any limit]**
+
+- **2026-10-27 · Library and ambient analysis (§6.2, §12, §13.5, #160)** — Decided by the
+  owner: (1) the Library is built before StemDeck import, and single-file import plus
+  analysis come with it. (2) Analysis runs as a `WorkManager` task per §13.5 and survives
+  the app being closed. Results are stored natively until the app acknowledges them, and
+  a song whose analysis is interrupted twice is marked failed rather than retried forever.
+  (3) Analysis must be memory-efficient: `kb_analyze_song` streams the file in two passes,
+  and memory is bounded as `kitbag_api.h` states. Integrator calls: a song that analyzes
+  to no beats is finished, not failed (`NO GRID` badge), and counts as analyzed. A song
+  restored without a grid shows `NOT ANALYZED` until it is queued. A failed re-analysis
+  keeps the previous grid and still counts as analyzed. The Home Songs count excludes stem
+  songs, which have their own tile. Failure copy distinguishes missing file, unsupported
+  format, interrupted and failed; native text never reaches the screen. **[recorded]**

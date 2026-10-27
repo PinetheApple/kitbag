@@ -6,7 +6,13 @@ import {
   ToolRow,
   type ToolGridItem,
 } from '@kitbag/core-design';
-import { useLastTool, useMetronome, useTuner } from '@kitbag/core-state';
+import {
+  summarize,
+  useLastTool,
+  useMetronome,
+  useSongLibrary,
+  useTuner,
+} from '@kitbag/core-state';
 import { DEFAULT_TUNING, tuningLabel } from '@kitbag/tool-tuner';
 import { useRouter, type Href } from 'expo-router';
 import { useMemo } from 'react';
@@ -22,6 +28,9 @@ import {
 import {
   metronomeResumeSubtitle,
   metronomeTileSubtext,
+  songsTileSubtext,
+  stemsTileSubtext,
+  LIBRARY_UNAVAILABLE_SUBTEXT,
   UPCOMING_SUBTEXT,
   type MetronomeSummary,
 } from './subtext.ts';
@@ -60,16 +69,26 @@ function useLiveText(): Readonly<Record<string, LiveText>> {
   const metronome = useMetronomeSummary();
   // The tuning the next visit opens on: the session's, else the default.
   const tuning = tuningLabel(useTuner((s) => s.tuning) ?? DEFAULT_TUNING);
-  return useMemo(
-    () => ({
+  const libraryRows = useSongLibrary((s) => s.rows);
+  const libraryFailed = useSongLibrary((s) => s.failed);
+  return useMemo(() => {
+    const library = summarize(libraryRows);
+    const songs = libraryFailed
+      ? LIBRARY_UNAVAILABLE_SUBTEXT
+      : songsTileSubtext(library);
+    const stems = libraryFailed
+      ? LIBRARY_UNAVAILABLE_SUBTEXT
+      : stemsTileSubtext(library);
+    return {
       [TOOL_ID.metronome]: {
         tile: metronomeTileSubtext(metronome),
         resume: metronomeResumeSubtitle(metronome),
       },
       [TOOL_ID.tuner]: { tile: tuning, resume: tuning },
-    }),
-    [metronome, tuning],
-  );
+      [TOOL_ID.library]: { tile: songs, resume: songs },
+      [TOOL_ID.stems]: { tile: stems, resume: stems },
+    };
+  }, [metronome, tuning, libraryRows, libraryFailed]);
 }
 
 export function HomeScreen() {

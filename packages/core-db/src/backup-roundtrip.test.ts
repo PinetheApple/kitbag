@@ -10,7 +10,7 @@ import {
   unwrap,
 } from './backup.test-helper';
 import type { SongPreset } from './repository';
-import { practiceSessions, tunings } from './schema';
+import { practiceSessions, songs, tunings } from './schema';
 import { INSTRUMENTS } from './tuning-rules';
 
 async function restoreAll(target: BackupDatabase, file: string) {
@@ -29,6 +29,29 @@ describe('backup round trip', () => {
       true,
     );
     expect(await records(target)).toEqual(await records(source));
+  });
+
+  it('owes a restored song an analysis only when it arrives without a grid', async () => {
+    const source = openBackupDatabase();
+    await seed(source);
+    await source.handle.db.insert(songs).values({
+      title: 'Ungridded',
+      artist: '',
+      filePath: 'songs/u/u.mp3',
+      duration: 1,
+      format: 'mp3',
+      createdAt: SESSION_START,
+      uuid: crypto.randomUUID(),
+    });
+    const target = openBackupDatabase();
+    await restoreAll(target, await source.backup.export());
+    const restored = await target.handle.db
+      .select({ title: songs.title, status: songs.analysisStatus })
+      .from(songs);
+    expect(restored).toEqual([
+      { title: 'Reference', status: 'done' },
+      { title: 'Ungridded', status: 'pending' },
+    ]);
   });
 
   it('keeps preset fields, order, active, and practice links intact', async () => {
@@ -99,7 +122,7 @@ describe('backup round trip', () => {
     expect(await records(source)).toEqual(before);
   });
 
-  it('summarises local counts per category for the back up sheet', async () => {
+  it('summarizes local counts per category for the back up sheet', async () => {
     const database = openBackupDatabase();
     await seed(database);
     expect(await database.backup.summary()).toEqual({

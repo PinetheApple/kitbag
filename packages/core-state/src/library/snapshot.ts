@@ -32,7 +32,7 @@ async function entriesOf(
   });
 }
 
-function summarise(
+function summarize(
   setlist: Setlist,
   entries: readonly SetlistEntry[],
 ): SetlistSummary {
@@ -61,7 +61,7 @@ export async function takeSnapshot(
   );
   return {
     setlists: setlists
-      .map((setlist) => summarise(setlist, entries[setlist.id] ?? []))
+      .map((setlist) => summarize(setlist, entries[setlist.id] ?? []))
       .sort(activeFirst),
     entries,
     presets,

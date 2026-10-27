@@ -6,16 +6,13 @@
 #include <cmath>
 #include <cstring>
 #include <limits>
+#include <utility>
 
-#include "dsp/fft.h"
+#include "analysis/onset_envelope.h"
 
 namespace kitbag {
 
 namespace {
-
-// Independent of sample rate.
-constexpr int kFftSize = 2048;
-constexpr int kHopSize = 512;
 
 constexpr float kMinBpm = 60.0f;
 constexpr float kMaxBpm = 200.0f;
@@ -29,7 +26,7 @@ constexpr int kSmoothingRadius = 2;  // 5-frame moving average
 constexpr int kMaxTrackedBeats = KB_MAX_GRID_BEATS;
 
 // Minimum STFT frames before an onset function is worth analysing.
-constexpr int kMinStftFrames = 10;
+constexpr size_t kMinStftFrames = 10;
 // Autocorrelation needs a few periods before the tempo estimate is signal.
 constexpr size_t kMinOnsetsForTempo = 20;
 // Below this the DP tracker has too few frames to place a beat sequence.
@@ -44,64 +41,6 @@ constexpr float kHalfTimeRatio = 0.5f;
 // Stands in for the mean onset strength when the envelope is all zeros, so the
 // DP transition penalty stays positive instead of collapsing to no penalty.
 constexpr float kFallbackMeanOnset = 0.01f;
-
-void WindowFrame(
-    const float* pcm,
-    int num_frames,
-    int offset,
-    const std::vector<float>& window,
-    std::vector<float>& out
-) {
-  for (int i = 0; i < kFftSize; ++i) {
-    const int idx = offset + i;
-    out[2 * i] = idx < num_frames ? pcm[idx] * window[i] : 0.0f;
-    out[2 * i + 1] = 0.0f;
-  }
-}
-
-void Magnitudes(const std::vector<float>& fft_buf, std::vector<float>& out) {
-  for (size_t i = 0; i < out.size(); ++i) {
-    const float re = fft_buf[2 * i];
-    const float im = fft_buf[2 * i + 1];
-    out[i] = std::sqrt(re * re + im * im);
-  }
-}
-
-float SpectralFlux(
-    const std::vector<float>& mag,
-    const std::vector<float>& prev_mag
-) {
-  float flux = 0.0f;
-  for (size_t i = 0; i < mag.size(); ++i) {
-    const float diff = mag[i] - prev_mag[i];
-    if (diff > 0.0f) {
-      flux += diff;
-    }
-  }
-  return flux / static_cast<float>(mag.size());
-}
-
-// Phase 1: half-wave-rectified spectral flux, one value per STFT hop.
-std::vector<float>
-FluxEnvelope(const float* pcm, int num_frames, int num_stft_frames) {
-  std::vector<float> window(kFftSize);
-  fft_hann(window.data(), kFftSize);
-
-  std::vector<float> fft_buf(2 * kFftSize);
-  const int num_bins = kFftSize / 2 + 1;
-  std::vector<float> mag(num_bins);
-  std::vector<float> prev_mag(num_bins, 0.0f);
-  std::vector<float> onset(num_stft_frames);
-
-  for (int f = 0; f < num_stft_frames; ++f) {
-    WindowFrame(pcm, num_frames, f * kHopSize, window, fft_buf);
-    fft(fft_buf.data(), kFftSize, false);
-    Magnitudes(fft_buf, mag);
-    onset[f] = SpectralFlux(mag, prev_mag);
-    prev_mag = mag;
-  }
-  return onset;
-}
 
 void NormalizeByPeak(std::vector<float>& onset) {
   float max_val = 0.0f;
@@ -247,13 +186,12 @@ float TransitionPenalty(const std::vector<float>& onset) {
 
 }  // namespace
 
-BeatResult
-BeatTracker::Analyze(const float* pcm, int num_frames, int sample_rate) {
+BeatResult BeatTracker::AnalyzeFlux(std::vector<float> flux, int sample_rate) {
   BeatResult result;
 
-  const float hop_time = static_cast<float>(kHopSize) / sample_rate;
+  const float hop_time = static_cast<float>(kOnsetHopSize) / sample_rate;
 
-  const auto onset = ComputeOnsetFunction(pcm, num_frames);
+  const auto onset = SmoothOnset(std::move(flux));
   if (onset.empty()) {
     return result;
   }
@@ -267,17 +205,12 @@ BeatTracker::Analyze(const float* pcm, int num_frames, int sample_rate) {
   return result;
 }
 
-std::vector<float>
-BeatTracker::ComputeOnsetFunction(const float* pcm, int num_frames) {
-  const int num_stft_frames =
-      std::max(0, (num_frames - kFftSize) / kHopSize) + 1;
-  if (num_stft_frames < kMinStftFrames) {
+std::vector<float> BeatTracker::SmoothOnset(std::vector<float> flux) {
+  if (flux.size() < kMinStftFrames) {
     return {};
   }
-
-  auto onset = FluxEnvelope(pcm, num_frames, num_stft_frames);
-  NormalizeByPeak(onset);
-  return MovingAverage(onset);
+  NormalizeByPeak(flux);
+  return MovingAverage(flux);
 }
 
 float BeatTracker::EstimateTempo(

@@ -102,6 +102,7 @@ export const KB_RESULT = {
   KB_ERROR_DEVICE_INIT_FAILED: 2,
   KB_ERROR_DEVICE_START_FAILED: 3,
   KB_ERROR_BUSY: 4,
+  KB_ERROR_INTERNAL: 5,
 } as const;
 export type KB_RESULT = (typeof KB_RESULT)[keyof typeof KB_RESULT];
 

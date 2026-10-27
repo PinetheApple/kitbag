@@ -19,8 +19,20 @@ describe('continueTarget', () => {
     );
   });
 
+  it('resumes the library', () => {
+    expect(continueTarget(TOOL_ID.library, HOME_TOOLS)?.homeTile?.route).toBe(
+      '/library?chip=all',
+    );
+  });
+
   it('never resumes an upcoming tool', () => {
-    expect(continueTarget(TOOL_ID.library, HOME_TOOLS)).toBeUndefined();
+    expect(continueTarget(TOOL_ID.sync, HOME_TOOLS)).toBeUndefined();
+  });
+
+  it('opens the Stems tile on the stems chip', () => {
+    expect(
+      HOME_TOOLS.find((t) => t.id === TOOL_ID.stems)?.homeTile?.route,
+    ).toBe('/library?chip=stems');
   });
 
   it('ignores an id no longer on the roster', () => {

@@ -7,6 +7,7 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core';
 
+import { ANALYSIS_STATUS, ANALYSIS_STATUSES } from './analysis-status';
 import { DEFAULT_DENOMINATOR, RAMP_UNITS } from './preset-rules';
 import { INSTRUMENTS } from './tuning-rules';
 
@@ -44,11 +45,19 @@ export const songs = sqliteTable('songs', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   // Packed float32 beat timestamps in seconds.
   beatGrid: bytes('beat_grid'),
-  // Indices into beatGrid marking downbeats, packed as bytes.
+  // Indices into beatGrid marking downbeats, packed little-endian int32.
   downbeatIndices: bytes('downbeat_indices'),
   bpm: real('bpm'),
   waveformPath: text('waveform_path'),
   uuid: text('uuid').notNull(),
+  // A finished analysis can find no beats, so a missing grid does not mean
+  // "not analyzed yet".
+  analysisStatus: text('analysis_status', {
+    enum: ANALYSIS_STATUSES,
+  })
+    .notNull()
+    .default(ANALYSIS_STATUS.pending),
+  analysisError: text('analysis_error'),
 });
 
 export const songPresets = sqliteTable('song_presets', {

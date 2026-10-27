@@ -8,6 +8,7 @@ export * from './icons.ts';
 export * from './dragReorder.ts';
 export * from './sheetDismiss.ts';
 export * from './toolGrid.ts';
+export * from './countLabel.ts';
 export * from './tunerVisuals.ts';
 export * from './ThemeProvider.tsx';
 export * from './components/AppBar.tsx';

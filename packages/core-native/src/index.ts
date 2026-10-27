@@ -10,6 +10,14 @@
 // #31, so importing this barrel must not resolve it at load time.
 export { getKitbagCommands } from './NativeKitbagCommands';
 export type { Spec as KitbagCommandsSpec } from './NativeKitbagCommands';
+export { getKitbagLibrary } from './NativeKitbagLibrary';
+export type {
+  AnalysisResult,
+  ImportedAudio,
+  LibraryConstants,
+  PickedDocument,
+  PickedFolder,
+} from './NativeKitbagLibrary';
 
 // --- #30 (P2-A3) JSI HostObject: polled realtime reads (§13.2, §13.3) --------
 export {

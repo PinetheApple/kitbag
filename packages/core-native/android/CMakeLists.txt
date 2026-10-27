@@ -36,7 +36,9 @@ target_include_directories(kitbag_jsi PRIVATE
   "${KITBAG_GLUE_DIR}"
   # kitbag_api.h is the ONE definition of the C ABI (§13.7): included here, never
   # copied. This is the same header native/audio_core exports as PUBLIC.
-  "${KITBAG_CORE_DIR}/include")
+  "${KITBAG_CORE_DIR}/include"
+  # Header-only kitbag::SidecarPath, so the .kwav name has one owner.
+  "${KITBAG_CORE_DIR}/src")
 
 # RN 0.83 publishes jsi and the merged `reactnative` artifact via prefab, and
 # fbjni via its own prefab package. The app module must set
