@@ -46,6 +46,8 @@ jobs:
         run: ./native/audio_core/build/analyze_verify
       - name: Tuner — synthetic tones through the detector and the tuning mode
         run: ./native/audio_core/build/tuner_verify
+      - name: Click soak — dropped/doubled/jittered/offset fixtures and the engine's render
+        run: ./native/audio_core/build/click_soak_verify
 
   # The TypeScript workspace (Phase 2, SPEC §13/§13.6). Runs the same gate the
   # project loop runs locally: typecheck, the architecture-rule lint, the

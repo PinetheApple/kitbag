@@ -271,3 +271,15 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   full to 50 %, then 67 %, and keeps filling. `design/kitbag-metronome.html` draws no
   seek bar; this entry supersedes it for the system card. When both previous and next
   songs show, the tempo keys drop from the system controls. **[recorded]**
+
+- **2026-10-27 · What "dropped or jittered" means for the soak (§5.8, §6.5, #88)** — SPEC
+  sets no numbers, so the harness's limits were set by the integrator and live once in
+  `native/audio_core/tools/soak/click_soak_types.h`. A click is jittered, and an interval
+  is off, beyond 1 ms (the engine is sample-accurate; 1 ms is what onset detection on a
+  recording can honestly claim). A click is dropped when its beat slot (±½ beat) is empty
+  and doubled when a slot holds two. The mean tempo may differ from the grid by at most
+  300 ppm (recorder and phone clocks are each within ~±100 ppm; 0.1 BPM at 120 is
+  833 ppm). Against a song grid, every 8-click window's mean |offset| must be under 5 ms
+  (one 256-frame block at 48 kHz is 5.3 ms). Open: an unlocked recorder's clock drift
+  counts against the offset window over a long song, so §6.5 captures should record the
+  phone's own output or stay short. **[recorded; owner may override any limit]**

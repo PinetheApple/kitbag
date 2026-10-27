@@ -149,7 +149,7 @@ tasks serialize** (shared files) and each is design-gated anyway.
 | **M6** export/import | TBD | §5.5 v4-UUID version+validate, selective, merge-vs-replace, share sheet (logic headless; UI design-gated) | mixed |
 | **M7** background | TBD | §5.6 + §13.9 foreground service, notification transport, media session, lock-screen | **device gate** |
 | **M8** practice | TBD | §5.7 write setlistId/songsPlayed; practice-end summary (peak-end) | mixed |
-| **M9** soak harness | TBD | §5.8/§14.1 4h soak + click-vs-grid offset from **recorded output** | **device gate** |
+| **M9** soak harness | [#88](https://github.com/PinetheApple/kitbag/issues/88) 🟡 harness built, device run pending | §5.8/§14.1 4h soak + click-vs-grid offset from **recorded output**. `scripts/soak-analyze.sh` / `click_soak` analyse a recording; `click_soak_verify` gates it headlessly. The 4h device recording and speaker-path offset have not been measured. | **device gate** |
 
 ## Wave map
 

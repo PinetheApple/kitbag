@@ -10,13 +10,13 @@ namespace kitbag {
 namespace {
 
 using metronome_detail::Clamp;
+using metronome_detail::kAccentAmplitude;
+using metronome_detail::kBeatAmplitude;
 using metronome_detail::kGridEpsilon;
 using metronome_detail::kSecondsPerMinute;
 
 constexpr double kTau = 6.283185307179586;
 
-constexpr double kAccentAmplitude = 0.9;
-constexpr double kBeatAmplitude = 0.6;
 constexpr double kSubdivisionAmplitude = 0.3;
 constexpr double kPolyBeatAmplitude = 0.5;
 constexpr double kPolyAccentAmplitude = 0.8;

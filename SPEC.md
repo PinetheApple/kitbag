@@ -739,8 +739,8 @@ the single most RN-specific piece of §5** — see §13.9.
 ### 5.8 Acceptance
 
 - 4h soak: zero dropped or jittered clicks. Measured by recording output and
-  computing inter-click intervals — **no such harness exists today and one is
-  required.**
+  computing inter-click intervals with `scripts/soak-analyze.sh` (#88). The
+  harness exists; **the 4h device recording has not been run.**
 - Tempo change mid-bar is glitch-free.
 - Metronome runs ≥30 min backgrounded with the screen off, click unbroken,
   notification controls functional. **Verify with the JS thread deliberately
@@ -2010,7 +2010,7 @@ prove it kept anything.
 | Layer | Tool | What it proves |
 |---|---|---|
 | **Native, headless** | `native/audio_core/tools/` — already exists (`metronome_verify.cpp`, `tuner_verify.cpp` render offline and assert onsets against the beat grid) | §4 in full, with **no UI at all**. This is why Phase 1 is testable before any React exists. |
-| **Native, new** | Mixer test; **metronome soak/jitter harness** (§5.8) | The 4h soak and the click-vs-grid offset. Neither exists. |
+| **Native, new** | Mixer test (`mixer_verify`); **metronome soak/jitter harness** (§5.8) — `click_soak` + `click_soak_verify`, run via `scripts/soak-analyze.sh` (#88) | The 4h soak and the click-vs-grid offset, measured from a recording. The harness exists and is gated on synthetic and engine-rendered fixtures; the 4h device recording and the speaker-path offset have not been run. |
 | **DB** | Drizzle migrations against a fixture v6 database | An upgrading user keeps their setlists (§11.1). |
 | **Logic** | Jest | Tap-tempo interval averaging (§8.5), BPM match scoring, the phase-modular arithmetic (§8.6), preset round-trip (§5.8). |
 | **Component** | React Native Testing Library | Steppers, LED tap-cycle, sheet behaviour. |
