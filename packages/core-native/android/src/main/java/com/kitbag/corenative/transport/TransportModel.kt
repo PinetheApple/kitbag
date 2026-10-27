@@ -52,7 +52,7 @@ sealed interface TransportCommand {
 
 class TransportModel(private val minBpm: Double, private val maxBpm: Double) {
 
-  // The media card's seek bar is the practice clock: it fills over 10-minute blocks.
+  // The media card's seek bar is the practice clock.
   fun practiceSpanMillis(playedMillis: Long): Long =
     (playedMillis / PRACTICE_BLOCK_MILLIS + 1) * PRACTICE_BLOCK_MILLIS
 

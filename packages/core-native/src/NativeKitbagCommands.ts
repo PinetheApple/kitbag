@@ -14,9 +14,12 @@ export type TransportEvent = Readonly<{
   playback: string;
   bpm: Double;
   rampRunning: boolean;
+  practicePlayedMs: Double;
+  practiceStretchStartedAt: Double;
 }>;
 
 export type TransportShowState = Readonly<{
+  playing: boolean;
   bpm: Double;
   rampRunning: boolean;
   beatsPerBar: Int32;
@@ -24,7 +27,7 @@ export type TransportShowState = Readonly<{
   minBpm: Double;
   maxBpm: Double;
   practicePlayedMs: Double;
-  practiceStartedAt: Double;
+  practiceStretchStartedAt: Double;
 }>;
 
 export interface Spec extends TurboModule {

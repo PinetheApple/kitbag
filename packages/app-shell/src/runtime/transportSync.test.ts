@@ -29,38 +29,42 @@ const state = (over: Partial<TransportSource> = {}): TransportSource => ({
   ...over,
 });
 const shown: TransportShown = {
+  playing: true,
   bpm: 120,
   rampRunning: false,
   beatsPerBar: 4,
   beatUnit: 4,
   practicePlayedMs: 5_000,
-  practiceStartedAt: 1_000,
+  practiceStretchStartedAt: 1_000,
 };
 const event = (over: Partial<TransportEvent> = {}): TransportEvent => ({
   playback: 'playing',
   bpm: 107,
   rampRunning: false,
+  practicePlayedMs: 30_000,
+  practiceStretchStartedAt: 7_000,
   ...over,
 });
+const pausedShown: TransportShown = {
+  ...shown,
+  playing: false,
+  practicePlayedMs: 30_000,
+};
 
 describe('notificationStepAfterAppChange', () => {
   it('shows the notification when playback starts in the app', () => {
-    expect(
-      notificationStepAfterAppChange(state(), undefined, false, 9_000),
-    ).toEqual({
+    expect(notificationStepAfterAppChange(state(), undefined, 9_000)).toEqual({
       kind: 'show',
       shown,
     });
   });
 
   it('re-shows only when what the notification displays changed', () => {
-    expect(
-      notificationStepAfterAppChange(state(), shown, false, 9_000),
-    ).toEqual({
+    expect(notificationStepAfterAppChange(state(), shown, 9_000)).toEqual({
       kind: 'none',
     });
     expect(
-      notificationStepAfterAppChange(state({ bpm: 121 }), shown, false, 9_000),
+      notificationStepAfterAppChange(state({ bpm: 121 }), shown, 9_000),
     ).toMatchObject({
       kind: 'show',
     });
@@ -68,22 +72,15 @@ describe('notificationStepAfterAppChange', () => {
 
   it('re-shows after a practice reset so the notification clock follows', () => {
     const reset = state({ practice: { playedMs: 0, stretchStartedAt: 8_000 } });
-    expect(
-      notificationStepAfterAppChange(reset, shown, false, 9_000),
-    ).toMatchObject({
+    expect(notificationStepAfterAppChange(reset, shown, 9_000)).toMatchObject({
       kind: 'show',
-      shown: { practicePlayedMs: 0, practiceStartedAt: 8_000 },
+      shown: { practicePlayedMs: 0, practiceStretchStartedAt: 8_000 },
     });
   });
 
   it('hides when the app stops playback', () => {
     expect(
-      notificationStepAfterAppChange(
-        state({ running: false }),
-        shown,
-        false,
-        9_000,
-      ),
+      notificationStepAfterAppChange(state({ running: false }), shown, 9_000),
     ).toEqual({
       kind: 'hide',
     });
@@ -92,18 +89,32 @@ describe('notificationStepAfterAppChange', () => {
   it('keeps a notification paused from the pocket, and play in the app takes it over', () => {
     expect(
       notificationStepAfterAppChange(
-        state({ running: false }),
-        shown,
-        true,
+        state({
+          running: false,
+          practice: { playedMs: 30_000, stretchStartedAt: null },
+        }),
+        pausedShown,
+        9_000,
+      ),
+    ).toEqual({ kind: 'none' });
+    expect(
+      notificationStepAfterAppChange(state(), pausedShown, 9_000),
+    ).toMatchObject({ kind: 'show', shown: { playing: true } });
+  });
+
+  it('a reset while paused from the pocket reaches the notification without resuming it', () => {
+    expect(
+      notificationStepAfterAppChange(
+        state({
+          running: false,
+          practice: { playedMs: 0, stretchStartedAt: null },
+        }),
+        pausedShown,
         9_000,
       ),
     ).toEqual({
-      kind: 'none',
-    });
-    expect(
-      notificationStepAfterAppChange(state(), shown, true, 9_000),
-    ).toMatchObject({
       kind: 'show',
+      shown: { ...pausedShown, practicePlayedMs: 0 },
     });
   });
 });
@@ -111,10 +122,13 @@ describe('notificationStepAfterAppChange', () => {
 describe('shownAfterNativeChange', () => {
   it('follows a tempo change from the notification, so the app does not re-send it', () => {
     const next = shownAfterNativeChange(shown, event({ bpm: 121 }));
-    expect(next).toEqual({ ...shown, bpm: 121 });
-    expect(
-      notificationStepAfterAppChange(state({ bpm: 121 }), next, false, 9_000),
-    ).toEqual({ kind: 'none' });
+    const app = state({
+      bpm: 121,
+      practice: { playedMs: 30_000, stretchStartedAt: 7_000 },
+    });
+    expect(notificationStepAfterAppChange(app, next, 9_000)).toEqual({
+      kind: 'none',
+    });
   });
 
   it('forgets the notification once it was stopped natively', () => {
@@ -128,11 +142,21 @@ describe('storePatchFor', () => {
   const current = { bpm: 100, ramp: { ...ramp, enabled: true } };
 
   it('a tempo change from the notification sets the tempo and clears the ramp chip', () => {
-    expect(storePatchFor(event(), current)).toEqual({
+    expect(storePatchFor(event(), current)).toMatchObject({
       running: true,
       bpm: 107,
       ramp: { ...ramp, enabled: false },
     });
+  });
+
+  it('the practice clock follows the service, which timed the pause and resume itself', () => {
+    expect(storePatchFor(event(), current).practice).toEqual({
+      playedMs: 30_000,
+      stretchStartedAt: 7_000,
+    });
+    expect(
+      storePatchFor(event({ playback: 'paused' }), current).practice,
+    ).toEqual({ playedMs: 30_000, stretchStartedAt: null });
   });
 
   it('a pause during a ramp leaves the ramp and its base tempo alone', () => {
@@ -141,7 +165,7 @@ describe('storePatchFor', () => {
         event({ playback: 'paused', bpm: 112, rampRunning: true }),
         current,
       ),
-    ).toEqual({
+    ).toMatchObject({
       running: false,
       bpm: 100,
       ramp: { ...ramp, enabled: true },

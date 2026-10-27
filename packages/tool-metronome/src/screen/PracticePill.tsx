@@ -68,21 +68,21 @@ const useStyles = createThemedStyles((theme) => ({
   },
 }));
 
-export function usePracticeElapsed(running: boolean): PracticeElapsed {
+export function usePracticeElapsed(): PracticeElapsed {
   const practice = useMetronome((s) => s.practice);
   const resetPractice = useMetronome((s) => s.resetPractice);
   const [now, setNow] = useState(Date.now);
 
   useEffect(() => {
     setNow(Date.now());
-    if (!running) return;
+    if (practice.stretchStartedAt === null) return;
     const tick = setInterval(() => {
       setNow(Date.now());
     }, TICK_MS);
     return () => {
       clearInterval(tick);
     };
-  }, [running, practice]);
+  }, [practice]);
 
   return { elapsedMs: practiceElapsedMs(practice, now), reset: resetPractice };
 }

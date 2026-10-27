@@ -144,7 +144,7 @@ export function MetronomeScreen({
 
   const { barPhase, currentBeat, currentPolyBeat, currentBpm } =
     useMetronomeFrame(running, bpm);
-  const { elapsedMs, reset: resetPractice } = usePracticeElapsed(running);
+  const { elapsedMs, reset: resetPractice } = usePracticeElapsed();
   const [numpadOpen, setNumpadOpen] = useState(false);
   const tapTimes = useRef<readonly number[]>([]);
 

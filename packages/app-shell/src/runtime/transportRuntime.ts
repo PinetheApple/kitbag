@@ -12,7 +12,6 @@ import {
 const POST_NOTIFICATIONS_RUNTIME_SDK = 33;
 
 let shown: TransportShown | undefined;
-let pausedNatively = false;
 let applyingNative = false;
 let askedForNotifications = false;
 
@@ -31,12 +30,10 @@ metronomeStore.subscribe(() => {
   const step = notificationStepAfterAppChange(
     metronomeStore.getState(),
     shown,
-    pausedNatively,
     Date.now(),
   );
   if (step.kind === 'show') {
     askForNotificationsOnce();
-    pausedNatively = false;
     shown = step.shown;
     getKitbagCommands().transportShow({
       ...shown,
@@ -50,7 +47,6 @@ metronomeStore.subscribe(() => {
 });
 
 getKitbagCommands().onTransport((event) => {
-  pausedNatively = event.playback === 'paused';
   shown = shownAfterNativeChange(shown, event);
   applyingNative = true;
   try {

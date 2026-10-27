@@ -6,6 +6,7 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
 import com.kitbag.corenative.transport.Playback
+import com.kitbag.corenative.transport.PracticeClock
 import com.kitbag.corenative.transport.TransportState
 
 class KitbagCommandsModule(reactContext: ReactApplicationContext) :
@@ -28,7 +29,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     MetronomeService.show(
       reactApplicationContext,
       TransportState(
-        playback = Playback.PLAYING,
+        playback = if (state.getBoolean("playing")) Playback.PLAYING else Playback.PAUSED,
         bpm = state.getDouble("bpm"),
         rampRunning = state.getBoolean("rampRunning"),
         beatsPerBar = state.getInt("beatsPerBar"),
@@ -38,7 +39,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
       state.getDouble("minBpm"),
       state.getDouble("maxBpm"),
       state.getDouble("practicePlayedMs").toLong(),
-      state.getDouble("practiceStartedAt").toLong(),
+      state.getDouble("practiceStretchStartedAt").toLong(),
     )
   }
 
@@ -46,12 +47,14 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     MetronomeService.hide(reactApplicationContext)
   }
 
-  private fun emitTransport(state: TransportState) {
+  private fun emitTransport(state: TransportState, practice: PracticeClock) {
     emitOnTransport(
       Arguments.createMap().apply {
         putString("playback", state.playback.name.lowercase())
         putDouble("bpm", state.bpm)
         putBoolean("rampRunning", state.rampRunning)
+        putDouble("practicePlayedMs", practice.playedMillis.toDouble())
+        putDouble("practiceStretchStartedAt", (practice.stretchStartedAt ?: 0L).toDouble())
       },
     )
   }

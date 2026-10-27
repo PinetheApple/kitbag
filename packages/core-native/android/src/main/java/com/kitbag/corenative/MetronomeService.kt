@@ -20,6 +20,7 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import androidx.media.app.NotificationCompat.MediaStyle
 import com.kitbag.corenative.transport.Playback
+import com.kitbag.corenative.transport.PracticeClock
 import com.kitbag.corenative.transport.TransportAction
 import com.kitbag.corenative.transport.TransportCommand
 import com.kitbag.corenative.transport.TransportModel
@@ -31,8 +32,8 @@ class MetronomeService : Service() {
   private var model: TransportModel? = null
   private var lastStartId = 0
   private lateinit var session: MediaSessionCompat
-  private var playedMillis = 0L
-  private var playingSince: Long? = null
+  private var practice = PracticeClock.IDLE
+  private var publishedMetadata: Triple<String, String?, Long>? = null
   private val clock = Handler(Looper.getMainLooper())
   private val tick = Runnable { onTick() }
 
@@ -72,10 +73,13 @@ class MetronomeService : Service() {
       intent.getDoubleExtra(EXTRA_MIN_BPM, 0.0),
       intent.getDoubleExtra(EXTRA_MAX_BPM, 0.0),
     )
-    playedMillis = intent.getLongExtra(EXTRA_PRACTICE_PLAYED_MS, 0L)
-    playingSince = intent.getLongExtra(EXTRA_PRACTICE_STARTED_AT, System.currentTimeMillis())
+    val playing = intent.getBooleanExtra(EXTRA_PLAYING, true)
+    practice = PracticeClock(
+      intent.getLongExtra(EXTRA_PRACTICE_PLAYED_MS, 0L),
+      if (playing) intent.getLongExtra(EXTRA_PRACTICE_STRETCH_STARTED_AT, System.currentTimeMillis()) else null,
+    )
     state = TransportState(
-      playback = Playback.PLAYING,
+      playback = if (playing) Playback.PLAYING else Playback.PAUSED,
       bpm = intent.getDoubleExtra(EXTRA_BPM, 0.0),
       rampRunning = intent.getBooleanExtra(EXTRA_RAMP_RUNNING, false),
       beatsPerBar = intent.getIntExtra(EXTRA_BEATS_PER_BAR, 0),
@@ -93,9 +97,9 @@ class MetronomeService : Service() {
       execute(command)
       next = applied(next, command)
     }
-    trackPlayedTime(current.playback, next.playback)
+    practice = practice.afterPlaying(next.playback == Playback.PLAYING, System.currentTimeMillis())
     state = next
-    listener?.invoke(next)
+    listener?.invoke(next, practice)
     if (next.playback == Playback.STOPPED) finish() else render()
   }
 
@@ -122,18 +126,7 @@ class MetronomeService : Service() {
       TransportCommand.PreviousSong, TransportCommand.NextSong -> s
     }
 
-  private fun trackPlayedTime(from: Playback, to: Playback) {
-    val now = System.currentTimeMillis()
-    if (from == Playback.PLAYING && to != Playback.PLAYING) {
-      playedMillis += now - (playingSince ?: now)
-      playingSince = null
-    } else if (from != Playback.PLAYING && to == Playback.PLAYING) {
-      playingSince = now
-    }
-  }
-
-  private fun currentPlayedMillis(): Long =
-    playedMillis + (playingSince?.let { System.currentTimeMillis() - it } ?: 0L)
+  private fun currentPlayedMillis(): Long = practice.elapsedMillis(System.currentTimeMillis())
 
   private fun onTick() {
     val transportModel = model ?: return
@@ -181,13 +174,17 @@ class MetronomeService : Service() {
     val transportModel = model ?: return
     val playing = s.playback == Playback.PLAYING
     val playedMs = currentPlayedMillis()
-    session.setMetadata(
-      MediaMetadataCompat.Builder()
-        .putString(MediaMetadataCompat.METADATA_KEY_TITLE, view.title)
-        .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, view.subtitle)
-        .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, transportModel.practiceSpanMillis(playedMs))
-        .build(),
-    )
+    val metadata = Triple(view.title, view.subtitle, transportModel.practiceSpanMillis(playedMs))
+    if (metadata != publishedMetadata) {
+      publishedMetadata = metadata
+      session.setMetadata(
+        MediaMetadataCompat.Builder()
+          .putString(MediaMetadataCompat.METADATA_KEY_TITLE, metadata.first)
+          .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, metadata.second)
+          .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, metadata.third)
+          .build(),
+      )
+    }
     val builder = PlaybackStateCompat.Builder()
       .setState(
         if (playing) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
@@ -277,8 +274,9 @@ class MetronomeService : Service() {
     private const val EXTRA_BEAT_UNIT = "beatUnit"
     private const val EXTRA_MIN_BPM = "minBpm"
     private const val EXTRA_MAX_BPM = "maxBpm"
+    private const val EXTRA_PLAYING = "playing"
     private const val EXTRA_PRACTICE_PLAYED_MS = "practicePlayedMs"
-    private const val EXTRA_PRACTICE_STARTED_AT = "practiceStartedAt"
+    private const val EXTRA_PRACTICE_STRETCH_STARTED_AT = "practiceStretchStartedAt"
 
     // System media cards draw only play/pause, skip and custom actions, so stop is custom too.
     private val CUSTOM_ACTIONS =
@@ -286,7 +284,7 @@ class MetronomeService : Service() {
 
     @Volatile private var running = false
 
-    @Volatile var listener: ((TransportState) -> Unit)? = null
+    @Volatile var listener: ((TransportState, PracticeClock) -> Unit)? = null
 
     fun show(
       context: Context,
@@ -294,10 +292,13 @@ class MetronomeService : Service() {
       minBpm: Double,
       maxBpm: Double,
       practicePlayedMs: Long,
-      practiceStartedAt: Long,
+      practiceStretchStartedAt: Long,
     ) {
+      val playing = state.playback == Playback.PLAYING
+      if (!running && !playing) return
       val intent = Intent(context, MetronomeService::class.java)
         .setAction(ACTION_SHOW)
+        .putExtra(EXTRA_PLAYING, playing)
         .putExtra(EXTRA_BPM, state.bpm)
         .putExtra(EXTRA_RAMP_RUNNING, state.rampRunning)
         .putExtra(EXTRA_BEATS_PER_BAR, state.beatsPerBar)
@@ -305,7 +306,7 @@ class MetronomeService : Service() {
         .putExtra(EXTRA_MIN_BPM, minBpm)
         .putExtra(EXTRA_MAX_BPM, maxBpm)
         .putExtra(EXTRA_PRACTICE_PLAYED_MS, practicePlayedMs)
-        .putExtra(EXTRA_PRACTICE_STARTED_AT, practiceStartedAt)
+        .putExtra(EXTRA_PRACTICE_STRETCH_STARTED_AT, practiceStretchStartedAt)
       // An update to a live service needs no new foreground start, which Android 12+
       // refuses from the background.
       if (running) context.startService(intent)

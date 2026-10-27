@@ -22,7 +22,9 @@ export function practiceAfterRunning(
 export function practiceElapsedMs(clock: PracticeClock, now: number): number {
   return (
     clock.playedMs +
-    (clock.stretchStartedAt === null ? 0 : now - clock.stretchStartedAt)
+    (clock.stretchStartedAt === null
+      ? 0
+      : Math.max(0, now - clock.stretchStartedAt))
   );
 }
 

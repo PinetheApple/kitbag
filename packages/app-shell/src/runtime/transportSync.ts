@@ -7,12 +7,13 @@ export type TransportSource = Pick<
 >;
 
 export interface TransportShown {
+  readonly playing: boolean;
   readonly bpm: number;
   readonly rampRunning: boolean;
   readonly beatsPerBar: number;
   readonly beatUnit: number;
   readonly practicePlayedMs: number;
-  readonly practiceStartedAt: number;
+  readonly practiceStretchStartedAt: number;
 }
 
 export type TransportStep =
@@ -23,26 +24,37 @@ export type TransportStep =
 export function notificationStepAfterAppChange(
   state: TransportSource,
   shown: TransportShown | undefined,
-  pausedNatively: boolean,
   now: number,
 ): TransportStep {
+  const next = shownFor(state, shown, now);
+  if (next === undefined) {
+    return shown === undefined ? { kind: 'none' } : { kind: 'hide' };
+  }
+  return shown !== undefined && sameShown(shown, next)
+    ? { kind: 'none' }
+    : { kind: 'show', shown: next };
+}
+
+// A pause from the notification keeps it up so the click can be resumed from the pocket.
+function shownFor(
+  state: TransportSource,
+  shown: TransportShown | undefined,
+  now: number,
+): TransportShown | undefined {
   if (state.running) {
-    const next: TransportShown = {
+    return {
+      playing: true,
       bpm: state.bpm,
       rampRunning: state.ramp.enabled,
       beatsPerBar: state.beatsPerBar,
       beatUnit: state.denominator,
       practicePlayedMs: state.practice.playedMs,
-      practiceStartedAt: state.practice.stretchStartedAt ?? now,
+      practiceStretchStartedAt: state.practice.stretchStartedAt ?? now,
     };
-    return shown !== undefined && sameShown(shown, next) && !pausedNatively
-      ? { kind: 'none' }
-      : { kind: 'show', shown: next };
   }
-  // A pause from the notification keeps it up so the click can be resumed from the pocket.
-  return shown === undefined || pausedNatively
-    ? { kind: 'none' }
-    : { kind: 'hide' };
+  return shown?.playing === false
+    ? { ...shown, practicePlayedMs: state.practice.playedMs }
+    : undefined;
 }
 
 export function shownAfterNativeChange(
@@ -50,31 +62,37 @@ export function shownAfterNativeChange(
   event: TransportEvent,
 ): TransportShown | undefined {
   if (shown === undefined || event.playback === 'stopped') return undefined;
+  const followed = {
+    ...shown,
+    playing: event.playback === 'playing',
+    practicePlayedMs: event.practicePlayedMs,
+    practiceStretchStartedAt: event.practiceStretchStartedAt,
+  };
   return event.rampRunning
-    ? shown
-    : { ...shown, bpm: event.bpm, rampRunning: false };
+    ? followed
+    : { ...followed, bpm: event.bpm, rampRunning: false };
 }
 
 export function storePatchFor(
   event: TransportEvent,
   current: Pick<MetronomeConfig, 'bpm' | 'ramp'>,
-): Pick<MetronomeConfig, 'running' | 'bpm' | 'ramp'> {
+): Pick<MetronomeConfig, 'running' | 'bpm' | 'ramp' | 'practice'> {
+  const running = event.playback === 'playing';
   return {
-    running: event.playback === 'playing',
+    running,
     bpm: event.rampRunning ? current.bpm : event.bpm,
     ramp: event.rampRunning
       ? current.ramp
       : { ...current.ramp, enabled: false },
+    practice: {
+      playedMs: event.practicePlayedMs,
+      stretchStartedAt: running ? event.practiceStretchStartedAt : null,
+    },
   };
 }
 
 function sameShown(a: TransportShown, b: TransportShown): boolean {
-  return (
-    a.bpm === b.bpm &&
-    a.rampRunning === b.rampRunning &&
-    a.beatsPerBar === b.beatsPerBar &&
-    a.beatUnit === b.beatUnit &&
-    a.practicePlayedMs === b.practicePlayedMs &&
-    a.practiceStartedAt === b.practiceStartedAt
+  return (Object.keys(a) as (keyof TransportShown)[]).every(
+    (key) => a[key] === b[key],
   );
 }
