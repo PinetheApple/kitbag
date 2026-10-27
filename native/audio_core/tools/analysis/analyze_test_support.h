@@ -5,6 +5,7 @@
 #include "kitbag_api.h"
 
 #include <cstdint>
+#include <cstdio>
 #include <string>
 #include <vector>
 
@@ -39,6 +40,9 @@ inline std::vector<float> MakeClickTrack() {
   return pcm;
 }
 
+// The downbeat suite's per-bar tone fixture; accented=false is its control.
+std::vector<float> MakeBarToneTrack(bool accented);
+
 inline kitbag::DecoderInfo StereoInfo(uint64_t frames, uint32_t channels) {
   kitbag::DecoderInfo info;
   info.channels = channels;
@@ -46,6 +50,34 @@ inline kitbag::DecoderInfo StereoInfo(uint64_t frames, uint32_t channels) {
   info.total_frames = frames;
   info.duration_seconds = static_cast<double>(frames) / kSampleRate;
   return info;
+}
+
+// `data` holds the int16 peaks actually present after the header, so a short
+// file reads back short rather than padded.
+struct Sidecar {
+  char magic[4] = {0, 0, 0, 0};
+  uint32_t version = 0;
+  uint32_t channels = 0;
+  int64_t total_frames = 0;
+  uint32_t chunk_count = 0;
+  std::vector<int16_t> data;
+};
+
+inline bool ReadSidecar(const std::string& path, Sidecar* out) {
+  std::FILE* f = std::fopen(path.c_str(), "rb");
+  if (f == nullptr) return false;
+  bool ok = std::fread(out->magic, 1, 4, f) == 4;
+  ok = ok && std::fread(&out->version, sizeof(out->version), 1, f) == 1;
+  ok = ok && std::fread(&out->channels, sizeof(out->channels), 1, f) == 1;
+  ok = ok &&
+       std::fread(&out->total_frames, sizeof(out->total_frames), 1, f) == 1;
+  ok = ok && std::fread(&out->chunk_count, sizeof(out->chunk_count), 1, f) == 1;
+  out->data.resize(static_cast<size_t>(out->chunk_count) * out->channels * 2);
+  out->data.resize(
+      std::fread(out->data.data(), sizeof(int16_t), out->data.size(), f)
+  );
+  std::fclose(f);
+  return ok;
 }
 
 struct AbiAnalysis {

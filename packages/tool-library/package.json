@@ -5,9 +5,22 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
-    "@kitbag/core-plugin-api": "workspace:*"
+    "@kitbag/core-design": "workspace:*",
+    "@kitbag/core-plugin-api": "workspace:*",
+    "@kitbag/core-state": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": ">=19",
+    "react-native": ">=0.83"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "react": "19.2.0",
+    "react-native": "0.83.6",
+    "vitest": "^4.1.10"
   }
 }

@@ -46,13 +46,21 @@ function withoutId<T extends { id: number }>(row: T): Omit<T, 'id'> {
   return copy as Omit<T, 'id'>;
 }
 
+function portableSong(row: SongRow) {
+  const copy: Partial<SongRow> = withoutId(row);
+  delete copy.analysisStatus;
+  delete copy.analysisError;
+  return copy as Omit<SongRow, 'id' | 'analysisStatus' | 'analysisError'>;
+}
+
+// The analysis state describes this device's copy of the file, so it stays out of
+// the backup; a restored song without a grid is analyzed again.
 function librarySongRecord(row: SongRow): LibrarySongRecord {
-  const { createdAt, beatGrid, downbeatIndices } = row;
   return {
-    ...withoutId(row),
-    createdAt: toSeconds(createdAt),
-    beatGrid: nullableBase64(beatGrid),
-    downbeatIndices: nullableBase64(downbeatIndices),
+    ...portableSong(row),
+    createdAt: toSeconds(row.createdAt),
+    beatGrid: nullableBase64(row.beatGrid),
+    downbeatIndices: nullableBase64(row.downbeatIndices),
   };
 }
 

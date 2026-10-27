@@ -18,7 +18,9 @@ typedef enum kb_result {
   KB_ERROR_INVALID_ARGUMENT = 1,
   KB_ERROR_DEVICE_INIT_FAILED = 2,
   KB_ERROR_DEVICE_START_FAILED = 3,
-  KB_ERROR_BUSY = 4, /* a queue was full; nothing changed, retry */
+  KB_ERROR_BUSY = 4,     /* a queue was full; nothing changed, retry */
+  KB_ERROR_INTERNAL = 5, /* the core failed, not the caller: out of memory, or
+                            a file that changed while being read */
 } kb_result;
 
 typedef struct kb_engine kb_engine;
@@ -316,7 +318,9 @@ KB_EXPORT int32_t kb_player_is_playing(const kb_engine* engine);
 
 /* Analyze beats in an audio file and fill caller-provided output buffers.
  * The file is opened and decoded internally — no need to call kb_decoder_open
- * first.
+ * first. It is streamed twice in fixed-size chunks rather than decoded whole:
+ * analysis heap is under 1 MB fixed plus ~1 KB per second of audio (the onset
+ * envelope and beat-tracking arrays), about 4 MB for an hour.
  *
  *   bpm_out:         filled with detected BPM (0.0 if detection fails)
  *   beat_times_buf:  caller-allocated float buffer, receives beat times in
@@ -334,6 +338,9 @@ KB_EXPORT int32_t kb_player_is_playing(const kb_engine* engine);
  * Returns KB_ERROR_INVALID_ARGUMENT for a null path/output pointer, a file that
  * will not open, or decoded PCM that is unusable: zero channels, a frame count
  * above INT_MAX, or any non-finite (NaN/inf) sample.
+ * Returns KB_ERROR_INTERNAL if analysis runs out of memory, or the file cannot
+ * be rewound or decodes to a different length on the second pass.
+ * On any error the outputs read 0 and no sidecar is written.
  */
 KB_EXPORT kb_result kb_analyze_song(
     const char* path,

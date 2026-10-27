@@ -18,54 +18,52 @@ int16_t Quantize(float value) {
   return static_cast<int16_t>(std::clamp(value, -1.0f, 1.0f) * kInt16Max);
 }
 
-void ChunkPeaks(
-    const float* pcm,
-    int start,
-    int end,
-    int channels,
-    int16_t* out
-) {
-  for (int ch = 0; ch < channels; ++ch) {
-    float min_val = 1.0f;
-    float max_val = -1.0f;
-    for (int s = start + ch; s < end; s += channels) {
-      if (pcm[s] < min_val) min_val = pcm[s];
-      if (pcm[s] > max_val) max_val = pcm[s];
-    }
-    out[ch * 2] = Quantize(min_val);
-    out[ch * 2 + 1] = Quantize(max_val);
-  }
-}
-
 }  // namespace
 
-WaveformPeaks ComputeWaveformPeaks(
-    const float* pcm,
-    int num_frames,
+WaveformPeakAccumulator::WaveformPeakAccumulator(
+    int64_t total_frames,
     int channels,
     int target_chunks
 ) {
-  WaveformPeaks result;
-  if (num_frames <= 0 || channels <= 0 || target_chunks <= 0) {
-    return result;
+  if (total_frames <= 0 || channels <= 0 || target_chunks <= 0) return;
+  chunk_size_ = std::max<int64_t>(1, total_frames / target_chunks);
+  peaks_.channels = channels;
+  peaks_.chunk_count = static_cast<int>(total_frames / chunk_size_);
+  peaks_.total_frames = total_frames;
+  peaks_.data.resize(static_cast<size_t>(peaks_.chunk_count) * channels * 2);
+  min_.resize(channels);
+  max_.resize(channels);
+  ResetSpan();
+}
+
+// NaN compares false both ways, so it never displaces a min or max.
+void WaveformPeakAccumulator::Push(const float* interleaved, size_t frames) {
+  const auto channels = static_cast<size_t>(peaks_.channels);
+  for (size_t f = 0; f < frames && chunk_ < peaks_.chunk_count; ++f) {
+    for (size_t ch = 0; ch < channels; ++ch) {
+      const float v = interleaved[f * channels + ch];
+      if (v < min_[ch]) min_[ch] = v;
+      if (v > max_[ch]) max_[ch] = v;
+    }
+    if (++span_filled_ == chunk_size_) CloseSpan();
   }
+}
 
-  const int chunk_size = std::max(1, num_frames / target_chunks);
-  const int actual_chunks = num_frames / chunk_size;
+void WaveformPeakAccumulator::ResetSpan() {
+  std::fill(min_.begin(), min_.end(), 1.0f);
+  std::fill(max_.begin(), max_.end(), -1.0f);
+  span_filled_ = 0;
+}
 
-  result.data.resize(static_cast<size_t>(actual_chunks) * channels * 2);
-  result.channels = channels;
-  result.chunk_count = actual_chunks;
-  result.total_frames = num_frames;
-
-  for (int c = 0; c < actual_chunks; ++c) {
-    const int start = c * chunk_size * channels;
-    const int end =
-        std::min(start + chunk_size * channels, num_frames * channels);
-    ChunkPeaks(pcm, start, end, channels, &result.data[c * channels * 2]);
+void WaveformPeakAccumulator::CloseSpan() {
+  int16_t* out =
+      &peaks_.data[static_cast<size_t>(chunk_) * peaks_.channels * 2];
+  for (int ch = 0; ch < peaks_.channels; ++ch) {
+    out[ch * 2] = Quantize(min_[ch]);
+    out[ch * 2 + 1] = Quantize(max_[ch]);
   }
-
-  return result;
+  ++chunk_;
+  ResetSpan();
 }
 
 }  // namespace kitbag

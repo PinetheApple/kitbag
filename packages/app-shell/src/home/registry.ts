@@ -35,8 +35,20 @@ export const HOME_TOOLS: readonly HomeToolEntry[] = [
     homeTile: { label: 'Tuner', route: '/tuner' },
     layout: '1x1',
   },
-  { id: TOOL_ID.library, name: 'Songs', icon: 'songs', layout: '1x1' },
-  { id: TOOL_ID.stems, name: 'Stems', icon: 'stems', layout: '1x1' },
+  {
+    id: TOOL_ID.library,
+    name: 'Songs',
+    icon: 'songs',
+    homeTile: { label: 'Songs', route: '/library?chip=all' },
+    layout: '1x1',
+  },
+  {
+    id: TOOL_ID.stems,
+    name: 'Stems',
+    icon: 'stems',
+    homeTile: { label: 'Stems', route: '/library?chip=stems' },
+    layout: '1x1',
+  },
   { id: TOOL_ID.sync, name: 'Play along', icon: 'playAlong', layout: 'row' },
 ];
 

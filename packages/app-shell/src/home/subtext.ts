@@ -1,4 +1,8 @@
+import { countLabel } from '@kitbag/core-design';
+import type { LibrarySummary } from '@kitbag/core-state';
+
 export const UPCOMING_SUBTEXT = 'Coming soon';
+export const LIBRARY_UNAVAILABLE_SUBTEXT = 'Library unavailable';
 
 export interface MetronomeSummary {
   readonly bpm: number;
@@ -32,4 +36,12 @@ export function metronomeResumeSubtitle(summary: MetronomeSummary): string {
   ];
   if (summary.running) parts.push('playing');
   return parts.join(' · ');
+}
+
+export function songsTileSubtext(summary: LibrarySummary): string {
+  return `${countLabel(summary.songCount, 'song', 'songs')} · ${String(summary.analyzedCount)} analyzed`;
+}
+
+export function stemsTileSubtext(summary: LibrarySummary): string {
+  return countLabel(summary.stemSongCount, 'stem song', 'stem songs');
 }

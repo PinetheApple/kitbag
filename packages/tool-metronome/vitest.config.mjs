@@ -12,7 +12,7 @@ export default defineConfig({
       '@kitbag/core-native': stub(
         '../core-native/src/generated/nativeConstants.gen.ts',
       ),
-      '@kitbag/core-design': stub('../core-design/src/icons.ts'),
+      '@kitbag/core-design': stub('../core-design/src/pure.ts'),
       'react-native': stub('../core-state/src/testing/reactNativeStub.ts'),
       'expo-haptics': stub('../core-state/src/testing/expoHapticsStub.ts'),
       '@op-engineering/op-sqlite': stub(

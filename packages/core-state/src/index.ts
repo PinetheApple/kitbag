@@ -92,3 +92,33 @@ export {
   toBlob,
 } from './library/presetMapping.ts';
 export type { Setlist, SetlistItem, SongPreset } from '@kitbag/core-db';
+export { useSongLibrary } from './songLibrary/useSongLibrary.ts';
+export {
+  createSongLibraryStore,
+  songLibraryStore,
+  type LibraryNotice,
+  type SongLibraryStore,
+} from './songLibrary/store.ts';
+export {
+  configureSongLibrary,
+  type LibraryFiles,
+  type SongLibraryRecords,
+} from './songLibrary/runtime.ts';
+export {
+  analysisFailure,
+  filterRows,
+  isLibraryChip,
+  LIBRARY_CHIPS,
+  songBadge,
+  summarize,
+  type AnalysisFailure,
+  type FailureKind,
+  type LibraryChip,
+  type LibrarySummary,
+  type SongBadge,
+} from './songLibrary/logic.ts';
+export type {
+  LibraryRow,
+  LibrarySongRow,
+  LibraryStemSetRow,
+} from '@kitbag/core-db';

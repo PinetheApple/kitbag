@@ -1,5 +1,6 @@
 import { eq, isNotNull } from 'drizzle-orm';
 
+import { ANALYSIS_STATUS } from './analysis-status';
 import {
   recordKey,
   referenceOf,
@@ -31,6 +32,8 @@ const lookup = (map: Map<string, number>, uuid: string | null) =>
 function librarySongValues(record: LibrarySongRecord) {
   return {
     ...record,
+    analysisStatus:
+      record.beatGrid === null ? ANALYSIS_STATUS.pending : ANALYSIS_STATUS.done,
     createdAt: fromSeconds(record.createdAt),
     beatGrid: nullableBytes(record.beatGrid),
     downbeatIndices: nullableBytes(record.downbeatIndices),

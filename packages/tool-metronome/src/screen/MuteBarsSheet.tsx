@@ -1,5 +1,6 @@
 import {
   Button,
+  countLabel,
   createThemedStyles,
   opacity,
   radius,
@@ -68,8 +69,7 @@ const useStyles = createThemedStyles((theme) => ({
   },
 }));
 
-const bars = (count: number) =>
-  `${String(count)} ${count === 1 ? 'bar' : 'bars'}`;
+const bars = (count: number) => countLabel(count, 'bar', 'bars');
 
 function MuteSteppers({ editor }: { readonly editor: BarMuteEditor }) {
   const styles = useStyles();

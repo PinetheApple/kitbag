@@ -1,6 +1,7 @@
 import '@/runtime/cryptoRuntime';
 import '@/runtime/metronomeRuntime';
 import '@/runtime/libraryRuntime';
+import '@/runtime/songLibraryRuntime';
 import '@/runtime/tunerRuntime';
 import '@/runtime/lastToolRuntime';
 import '@/runtime/transportRuntime';
@@ -22,11 +23,13 @@ import { StyleSheet, useColorScheme } from 'react-native';
 
 import { useKitbagRuntime } from '@/runtime/bootstrapRuntime';
 import { designFonts } from '@/runtime/designFonts';
+import { useSongLibraryAnalysis } from '@/runtime/songLibraryRuntime';
 
 void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   useKitbagRuntime();
+  useSongLibraryAnalysis();
   const [fontsLoaded, fontError] = useFonts(designFonts);
   const fontsSettled = fontsLoaded || fontError !== null;
   const mode = useColorScheme() === 'light' ? 'light' : 'dark';

@@ -5,6 +5,18 @@ export {
   type SongPresetRepository,
 } from './client';
 export type { Preferences } from './preferences';
+export { ANALYSIS_STATUS, type AnalysisStatus } from './analysis-status';
+export type {
+  AnalysisResultRecord,
+  LibraryRow,
+  LibrarySongRow,
+  LibraryStemSetRow,
+  NewLibrarySong,
+  SongLibraryRepository,
+  StoredAnalysis,
+  AnalysisOutcome,
+  SongFiles,
+} from './song-library-repository';
 export type {
   NewSongPreset,
   NewTuning,

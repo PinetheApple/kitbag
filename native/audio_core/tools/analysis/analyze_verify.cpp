@@ -18,43 +18,43 @@
 #include "analysis/sidecar_path.h"
 #include "analysis/song_analysis.h"
 #include "analysis/waveform_peaks.h"
+#include "analyze_buffer_driver.h"
 #include "analyze_test_support.h"
 #include "check.h"
 #include "wav_fixture.h"
 
-// Downbeat coverage lives in analyze_test_downbeat.cpp.
+// Downbeat and streaming-equivalence coverage live in their own files.
 namespace analyze_test {
 void RunDownbeatTests(const std::filesystem::path& dir);
+void RunEquivalenceTests(const std::filesystem::path& dir);
 }  // namespace analyze_test
 
 namespace {
 
 using analyze_test::AbiAnalysis;
+using analyze_test::AnalyzeDecodedPcm;
 using analyze_test::AnalyzeThroughAbi;
 using analyze_test::kAbiCap;
 using analyze_test::kSampleRate;
 using analyze_test::MakeClickTrack;
+using analyze_test::ReadSidecar;
+using analyze_test::Sidecar;
 using analyze_test::StereoInfo;
-using kitbag::AnalyzeDecodedPcm;
 using kitbag::BeatResult;
 
-void TestNarrowFrames() {
-  int out = -1;
+void TestFrameCap() {
+  kitbag_test::Check(kitbag::WithinFrameCap(0), "frame cap: zero passes");
   kitbag_test::Check(
-      kitbag::NarrowFrames(0, &out) && out == 0,
-      "NarrowFrames: zero"
+      kitbag::WithinFrameCap(INT_MAX),
+      "frame cap: INT_MAX passes exactly"
   );
   kitbag_test::Check(
-      kitbag::NarrowFrames(INT_MAX, &out) && out == INT_MAX,
-      "NarrowFrames: INT_MAX passes exactly"
+      !kitbag::WithinFrameCap(static_cast<uint64_t>(INT_MAX) + 1),
+      "frame cap: INT_MAX+1 rejected"
   );
   kitbag_test::Check(
-      !kitbag::NarrowFrames(static_cast<uint64_t>(INT_MAX) + 1, &out),
-      "NarrowFrames: INT_MAX+1 rejected, not wrapped negative"
-  );
-  kitbag_test::Check(
-      !kitbag::NarrowFrames(std::numeric_limits<uint64_t>::max(), &out),
-      "NarrowFrames: UINT64_MAX rejected"
+      !kitbag::WithinFrameCap(std::numeric_limits<uint64_t>::max()),
+      "frame cap: UINT64_MAX rejected"
   );
 }
 
@@ -126,30 +126,6 @@ void TestFiniteOutput() {
   kitbag_test::Check(in_range, "every beat time is finite and within [0, dur]");
 }
 
-struct Sidecar {
-  char magic[4] = {0, 0, 0, 0};
-  uint32_t version = 0;
-  uint32_t channels = 0;
-  int64_t total_frames = 0;
-  uint32_t chunk_count = 0;
-  size_t data_count = 0;
-};
-
-bool ReadSidecar(const std::string& path, Sidecar* out) {
-  std::FILE* f = std::fopen(path.c_str(), "rb");
-  if (f == nullptr) return false;
-  bool ok = std::fread(out->magic, 1, 4, f) == 4;
-  ok = ok && std::fread(&out->version, sizeof(out->version), 1, f) == 1;
-  ok = ok && std::fread(&out->channels, sizeof(out->channels), 1, f) == 1;
-  ok = ok &&
-       std::fread(&out->total_frames, sizeof(out->total_frames), 1, f) == 1;
-  ok = ok && std::fread(&out->chunk_count, sizeof(out->chunk_count), 1, f) == 1;
-  std::vector<int16_t> data(out->chunk_count * out->channels * 2);
-  out->data_count = std::fread(data.data(), sizeof(int16_t), data.size(), f);
-  std::fclose(f);
-  return ok;
-}
-
 void CheckSidecarFields(
     const Sidecar& sc,
     uint64_t frames,
@@ -170,7 +146,7 @@ void CheckSidecarFields(
       "sidecar: chunk_count matches the independent computation"
   );
   kitbag_test::Check(
-      sc.data_count == sc.chunk_count * sc.channels * 2,
+      sc.data.size() == sc.chunk_count * sc.channels * 2,
       "sidecar: data size is chunk_count * channels * 2"
   );
 }
@@ -209,7 +185,7 @@ void TestWaveformNonFinite() {
   const float inf = std::numeric_limits<float>::infinity();
   const float nan = std::numeric_limits<float>::quiet_NaN();
   const std::vector<float> huge = {0.5f, 3.19e38f, -0.5f};
-  const auto a = kitbag::ComputeWaveformPeaks(huge.data(), 3, 1, 1);
+  const auto a = analyze_test::ComputeWaveformPeaks(huge.data(), 3, 1, 1);
   kitbag_test::Check(
       !a.data.empty() && a.data[1] == 32767,
       "waveform: huge finite max clamps to +full-scale, not UB"
@@ -220,32 +196,57 @@ void TestWaveformNonFinite() {
   );
 
   const std::vector<float> infs = {inf, -inf, 0.1f};
-  const auto b = kitbag::ComputeWaveformPeaks(infs.data(), 3, 1, 1);
+  const auto b = analyze_test::ComputeWaveformPeaks(infs.data(), 3, 1, 1);
   kitbag_test::Check(
       b.data.size() == 2 && b.data[0] == 0 && b.data[1] == 0,
       "waveform: infinities map to 0, not UB"
   );
 
   const std::vector<float> nans = {nan, 0.25f, nan};
-  const auto c1 = kitbag::ComputeWaveformPeaks(nans.data(), 3, 1, 1);
-  const auto c2 = kitbag::ComputeWaveformPeaks(nans.data(), 3, 1, 1);
+  const auto c1 = analyze_test::ComputeWaveformPeaks(nans.data(), 3, 1, 1);
+  const auto c2 = analyze_test::ComputeWaveformPeaks(nans.data(), 3, 1, 1);
   kitbag_test::Check(
       c1.data == c2.data && !c1.data.empty() && c1.data[1] == 8191,
       "waveform: NaN skipped and result is deterministic"
   );
 }
 
-}  // namespace
+class NoRewindReader : public analyze_test::BufferReader {
+ public:
+  using BufferReader::BufferReader;
+  bool SeekToFrame(uint64_t /*frame*/) override {
+    return false;
+  }
+};
 
-constexpr int kExpectedChecks = 46;
+void TestRewindFailure() {
+  const std::vector<float> pcm = MakeClickTrack();
+  const uint64_t frames = pcm.size() / 2;
+  NoRewindReader reader(pcm.data(), frames, StereoInfo(frames, 2));
+  BeatResult result;
+  kitbag_test::Check(
+      kitbag::AnalyzeSong(reader, "x", nullptr, &result) == KB_ERROR_INTERNAL,
+      "a reader that cannot rewind for the second pass is KB_ERROR_INTERNAL"
+  );
+}
 
-int main() {
-  const std::filesystem::path dir = std::filesystem::temp_directory_path();
-  TestNarrowFrames();
+void RunGuardTests() {
+  TestFrameCap();
   TestChannelsZero();
   TestNaNPoison();
   TestFiniteOutput();
+  TestRewindFailure();
+}
+
+}  // namespace
+
+constexpr int kExpectedChecks = 72;
+
+int main() {
+  const std::filesystem::path dir = std::filesystem::temp_directory_path();
+  RunGuardTests();
   analyze_test::RunDownbeatTests(dir);
+  analyze_test::RunEquivalenceTests(dir);
   TestSidecarRoundTrip(dir);
   TestWaveformNonFinite();
 

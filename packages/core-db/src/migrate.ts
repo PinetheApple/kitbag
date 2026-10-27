@@ -2,7 +2,7 @@ import { REPAIR_PRESETS } from './preset-repair';
 import { RAMP_UNITS } from './preset-rules';
 import { INSTRUMENTS, MAX_MIDI_NOTE, MAX_STRINGS } from './tuning-rules';
 
-export const SCHEMA_VERSION = 13;
+export const SCHEMA_VERSION = 14;
 export const V6_SCHEMA_VERSION = 6;
 export const V7_SCHEMA_VERSION = 7;
 export const V8_SCHEMA_VERSION = 8;
@@ -10,6 +10,7 @@ export const V9_SCHEMA_VERSION = 9;
 export const V10_SCHEMA_VERSION = 10;
 export const V11_SCHEMA_VERSION = 11;
 export const V12_SCHEMA_VERSION = 12;
+export const V13_SCHEMA_VERSION = 13;
 
 export interface MigrationDriver {
   exec(sql: string): void;
@@ -259,10 +260,18 @@ export const MIGRATE_V12_TO_V13: readonly string[] = [
   'ALTER TABLE song_presets ADD COLUMN ramp_step REAL NOT NULL DEFAULT 1',
 ];
 
+export const MIGRATE_V13_TO_V14: readonly string[] = [
+  `ALTER TABLE songs ADD COLUMN analysis_status TEXT NOT NULL DEFAULT 'pending'
+   CHECK (analysis_status IN ('pending', 'analyzing', 'done', 'failed'))`,
+  "UPDATE songs SET analysis_status = 'done' WHERE beat_grid IS NOT NULL",
+  'ALTER TABLE songs ADD COLUMN analysis_error TEXT',
+];
+
 export const BASELINE: readonly string[] = [
   ...V11_BASELINE,
   ...MIGRATE_V11_TO_V12,
   ...MIGRATE_V12_TO_V13,
+  ...MIGRATE_V13_TO_V14,
 ];
 
 // SQLite cannot ADD a NOT NULL column without a constant default, so migrated
@@ -329,7 +338,8 @@ const UPGRADES: readonly {
   { to: V10_SCHEMA_VERSION, steps: MIGRATE_V9_TO_V10 },
   { to: V11_SCHEMA_VERSION, steps: MIGRATE_V10_TO_V11 },
   { to: V12_SCHEMA_VERSION, steps: MIGRATE_V11_TO_V12 },
-  { to: SCHEMA_VERSION, steps: MIGRATE_V12_TO_V13 },
+  { to: V13_SCHEMA_VERSION, steps: MIGRATE_V12_TO_V13 },
+  { to: SCHEMA_VERSION, steps: MIGRATE_V13_TO_V14 },
 ];
 
 function upgradeSteps(from: number): readonly string[] {

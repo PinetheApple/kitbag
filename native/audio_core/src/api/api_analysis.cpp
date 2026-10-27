@@ -1,4 +1,4 @@
-// ABI shim for offline song analysis: open, decode, hand off to the pipeline,
+// ABI shim for offline song analysis: open, hand off to the pipeline,
 // copy results out. App thread only — nothing here runs on the audio callback.
 #include "kitbag_api.h"
 
@@ -8,7 +8,7 @@
 
 #include "analysis/beat_tracker.h"
 #include "analysis/song_analysis.h"
-#include "media/decoder.h"
+#include "media/file_audio_reader.h"
 
 namespace {
 
@@ -41,26 +41,40 @@ kb_result AnalyzeFile(
     const char* waveform_dir,
     kitbag::BeatResult* out
 ) {
-  kitbag::Decoder decoder;
-  if (!decoder.Open(path)) {
+  kitbag::FileAudioReader reader;
+  if (!reader.Open(path)) {
     return KB_ERROR_INVALID_ARGUMENT;
   }
-  const auto info = decoder.info();
+  return kitbag::AnalyzeSong(reader, path, waveform_dir, out);
+}
 
-  uint64_t total_frames = 0;
-  const auto pcm = decoder.DecodeAll(&total_frames);
-  decoder.Close();
-  if (pcm.empty() || total_frames == 0) {
-    return KB_OK;
+kb_result AnalyzeInto(
+    const char* path,
+    float* bpm_out,
+    float* beat_times_buf,
+    int32_t beat_times_cap,
+    int32_t* beat_count_out,
+    int32_t* downbeat_indices_out,
+    int32_t* downbeat_count_out,
+    const char* waveform_dir
+) {
+  kitbag::BeatResult result;
+  const kb_result status = AnalyzeFile(path, waveform_dir, &result);
+  if (status != KB_OK) {
+    return status;
   }
-  return kitbag::AnalyzeDecodedPcm(
-      pcm.data(),
-      total_frames,
-      info,
-      path,
-      waveform_dir,
-      out
+
+  *bpm_out = result.bpm;
+  const int beat_count =
+      CopyBeatTimes(result.beat_times, beat_times_buf, beat_times_cap);
+  *beat_count_out = beat_count;
+  *downbeat_count_out = CopyDownbeats(
+      result.downbeat_indices,
+      beat_count,
+      downbeat_indices_out,
+      beat_times_cap
   );
+  return KB_OK;
 }
 
 }  // namespace
@@ -87,23 +101,25 @@ kb_result kb_analyze_song(
   *beat_count_out = 0;
   *downbeat_count_out = 0;
 
-  kitbag::BeatResult result;
-  const kb_result status = AnalyzeFile(path, waveform_dir, &result);
-  if (status != KB_OK) {
-    return status;
+  // An exception must not cross the C ABI: an allocation failure has to fail
+  // the call, not terminate the app.
+  try {
+    return AnalyzeInto(
+        path,
+        bpm_out,
+        beat_times_buf,
+        beat_times_cap,
+        beat_count_out,
+        downbeat_indices_out,
+        downbeat_count_out,
+        waveform_dir
+    );
+  } catch (...) {
+    *bpm_out = 0.0f;
+    *beat_count_out = 0;
+    *downbeat_count_out = 0;
+    return KB_ERROR_INTERNAL;
   }
-
-  *bpm_out = result.bpm;
-  const int beat_count =
-      CopyBeatTimes(result.beat_times, beat_times_buf, beat_times_cap);
-  *beat_count_out = beat_count;
-  *downbeat_count_out = CopyDownbeats(
-      result.downbeat_indices,
-      beat_count,
-      downbeat_indices_out,
-      beat_times_cap
-  );
-  return KB_OK;
 }
 
 }  // extern "C"

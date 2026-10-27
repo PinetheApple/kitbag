@@ -7,6 +7,7 @@ import { migrate, type MigrationDriver } from './migrate';
 import { openConnection } from './openConnection';
 import { createPreferences } from './preferences';
 import { createSetlistRepository } from './setlist-repository';
+import { createSongLibraryRepository } from './song-library-repository';
 import { createSongPresetRepository } from './song-preset-repository';
 import { createTransactor } from './transaction';
 import { createTuningRepository } from './tuning-repository';
@@ -58,6 +59,7 @@ export function connectDatabase(connection: Connection) {
     setlists: createSetlistRepository(handle),
     presets: createSongPresetRepository(handle),
     tunings: createTuningRepository(handle),
+    songLibrary: createSongLibraryRepository(handle),
     backup: createBackupService(handle),
     preferences: createPreferences(
       (sql, params) => connection.executeSync(sql, params).rows,
