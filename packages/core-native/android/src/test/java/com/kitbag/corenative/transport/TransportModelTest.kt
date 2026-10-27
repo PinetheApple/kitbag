@@ -107,11 +107,11 @@ class TransportModelTest {
   }
 
   @Test
-  fun `detail line shows played time, after the set and song when there is one`() {
-    assertEquals("0:07", model.detail(null, 7_900))
-    assertEquals("12:05", model.detail(null, 725_000))
-    assertEquals("1:02:03", model.detail(null, 3_723_000))
-    assertEquals("Wedding set · Blackbird (3/12) · 0:42", model.detail("Wedding set · Blackbird (3/12)", 42_000))
+  fun `practice span is the 10-minute block the played time is in`() {
+    assertEquals(600_000L, model.practiceSpanMillis(0))
+    assertEquals(600_000L, model.practiceSpanMillis(599_999))
+    assertEquals(1_200_000L, model.practiceSpanMillis(600_000))
+    assertEquals(4_200_000L, model.practiceSpanMillis(3_723_000))
   }
 
   @Test(expected = IllegalArgumentException::class)

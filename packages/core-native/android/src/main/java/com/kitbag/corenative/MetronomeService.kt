@@ -180,19 +180,18 @@ class MetronomeService : Service() {
   private fun updateSession(s: TransportState, view: TransportView) {
     val transportModel = model ?: return
     val playing = s.playback == Playback.PLAYING
+    val playedMs = currentPlayedMillis()
     session.setMetadata(
       MediaMetadataCompat.Builder()
         .putString(MediaMetadataCompat.METADATA_KEY_TITLE, view.title)
-        .putString(
-          MediaMetadataCompat.METADATA_KEY_ARTIST,
-          transportModel.detail(view.subtitle, currentPlayedMillis()),
-        )
+        .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, view.subtitle)
+        .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, transportModel.practiceSpanMillis(playedMs))
         .build(),
     )
     val builder = PlaybackStateCompat.Builder()
       .setState(
         if (playing) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
-        PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
+        playedMs,
         if (playing) 1f else 0f,
       )
       .setActions(view.sessionActions.fold(0L) { mask, a -> mask or platformAction(a) })

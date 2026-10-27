@@ -52,17 +52,9 @@ sealed interface TransportCommand {
 
 class TransportModel(private val minBpm: Double, private val maxBpm: Double) {
 
-  fun detail(subtitle: String?, playedMillis: Long): String =
-    listOfNotNull(subtitle, elapsedLabel(playedMillis)).joinToString(" · ")
-
-  private fun elapsedLabel(playedMillis: Long): String {
-    val totalSeconds = playedMillis / MILLIS_PER_SECOND
-    val hours = totalSeconds / SECONDS_PER_HOUR
-    val minutes = totalSeconds / SECONDS_PER_MINUTE % MINUTES_PER_HOUR
-    val seconds = totalSeconds % SECONDS_PER_MINUTE
-    return if (hours > 0) "%d:%02d:%02d".format(hours, minutes, seconds)
-    else "%d:%02d".format(minutes, seconds)
-  }
+  // The media card's seek bar is the practice clock: it fills over 10-minute blocks.
+  fun practiceSpanMillis(playedMillis: Long): Long =
+    (playedMillis / PRACTICE_BLOCK_MILLIS + 1) * PRACTICE_BLOCK_MILLIS
 
   fun view(state: TransportState): TransportView {
     val playPause =
@@ -127,9 +119,6 @@ class TransportModel(private val minBpm: Double, private val maxBpm: Double) {
 
   private companion object {
     const val TEMPO_STEP_BPM = 1.0
-    const val MILLIS_PER_SECOND = 1000L
-    const val SECONDS_PER_MINUTE = 60L
-    const val MINUTES_PER_HOUR = 60L
-    const val SECONDS_PER_HOUR = 3600L
+    const val PRACTICE_BLOCK_MILLIS = 10 * 60 * 1000L
   }
 }
