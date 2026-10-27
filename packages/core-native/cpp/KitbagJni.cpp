@@ -7,6 +7,7 @@
 
 #include "KitbagCommands.h"
 #include "KitbagEngine.h"
+#include "kitbag_api.h"
 
 using facebook::jsi::Runtime;
 
@@ -182,6 +183,33 @@ Java_com_kitbag_corenative_KitbagCommandsModule_nativeTunerResetNotePresence(JNI
                                                                       jdouble pauseMs) {
   return static_cast<jint>(
       kitbag::commandTunerResetNotePresence(static_cast<double>(pauseMs)));
+}
+
+// Must not need the JS thread (SPEC §5.8): the service calls these directly.
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_EngineTransport_nativeStart(JNIEnv*, jobject) {
+  kitbag::commandStart();
+  kitbag::commandMetronomeStartNow();
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_EngineTransport_nativePause(JNIEnv*, jobject) {
+  kitbag::commandMetronomePause();
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_EngineTransport_nativeStop(JNIEnv*, jobject) {
+  kitbag::commandMetronomeStop();
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_EngineTransport_nativeSetTempo(JNIEnv*, jobject, jdouble bpm) {
+  kitbag::commandSetTempo(bpm);
+}
+
+JNIEXPORT jdouble JNICALL
+Java_com_kitbag_corenative_EngineTransport_nativeCurrentBpm(JNIEnv*, jobject) {
+  return kb_metronome_current_bpm(kitbag::kitbagEngine());
 }
 
 }  // extern "C"

@@ -1,4 +1,5 @@
 export { useMetronome } from './metronome/useMetronome.ts';
+export { practiceElapsedMs, type PracticeClock } from './metronome/practice.ts';
 export {
   BPM_BOUNDS,
   DEFAULT_BPM,

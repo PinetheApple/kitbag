@@ -9,7 +9,8 @@ import {
   textRoles,
   textStyle,
 } from '@kitbag/core-design';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { practiceElapsedMs, useMetronome } from '@kitbag/core-state';
+import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import {
@@ -67,47 +68,23 @@ const useStyles = createThemedStyles((theme) => ({
   },
 }));
 
-export function usePracticeElapsed(running: boolean): PracticeElapsed {
-  const [elapsedMs, setElapsedMs] = useState(0);
-  const playedMs = useRef(0);
-  const startedAt = useRef<number | null>(null);
+export function usePracticeElapsed(): PracticeElapsed {
+  const practice = useMetronome((s) => s.practice);
+  const resetPractice = useMetronome((s) => s.resetPractice);
+  const [now, setNow] = useState(Date.now);
 
   useEffect(() => {
-    if (!running) {
-      if (startedAt.current !== null) {
-        playedMs.current += Date.now() - startedAt.current;
-        startedAt.current = null;
-        setElapsedMs(playedMs.current);
-      }
-      return;
-    }
-
-    const startOfStretch = Date.now();
-    startedAt.current = startOfStretch;
-    setElapsedMs(playedMs.current);
+    setNow(Date.now());
+    if (practice.stretchStartedAt === null) return;
     const tick = setInterval(() => {
-      const start = startedAt.current;
-      setElapsedMs(
-        playedMs.current + (start === null ? 0 : Date.now() - start),
-      );
+      setNow(Date.now());
     }, TICK_MS);
     return () => {
       clearInterval(tick);
-      // Also runs on unmount, where the stop branch above never does.
-      if (startedAt.current !== null) {
-        playedMs.current += Date.now() - startedAt.current;
-        startedAt.current = null;
-      }
     };
-  }, [running]);
+  }, [practice]);
 
-  const reset = useCallback(() => {
-    playedMs.current = 0;
-    startedAt.current = running ? Date.now() : null;
-    setElapsedMs(0);
-  }, [running]);
-
-  return { elapsedMs, reset };
+  return { elapsedMs: practiceElapsedMs(practice, now), reset: resetPractice };
 }
 
 interface PracticePillProps {

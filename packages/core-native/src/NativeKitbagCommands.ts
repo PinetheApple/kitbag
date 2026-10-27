@@ -3,7 +3,32 @@
 
 import type { TurboModule } from 'react-native';
 import { TurboModuleRegistry } from 'react-native';
-import type { Double, Int32 } from 'react-native/Libraries/Types/CodegenTypes';
+import type {
+  Double,
+  EventEmitter,
+  Int32,
+} from 'react-native/Libraries/Types/CodegenTypes';
+
+/** A notification, lock-screen or headset action the engine already applied. */
+export type TransportEvent = Readonly<{
+  playback: string;
+  bpm: Double;
+  rampRunning: boolean;
+  practicePlayedMs: Double;
+  practiceStretchStartedAt: Double;
+}>;
+
+export type TransportShowState = Readonly<{
+  playing: boolean;
+  bpm: Double;
+  rampRunning: boolean;
+  beatsPerBar: Int32;
+  beatUnit: Int32;
+  minBpm: Double;
+  maxBpm: Double;
+  practicePlayedMs: Double;
+  practiceStretchStartedAt: Double;
+}>;
 
 export interface Spec extends TurboModule {
   start(): Promise<number>;
@@ -59,6 +84,10 @@ export interface Spec extends TurboModule {
   tunerSetChromatic(): Promise<number>;
   tunerSetA4(a4Hz: Double): Promise<number>;
   tunerResetNotePresence(pauseMs: Double): Promise<number>;
+
+  transportShow(state: TransportShowState): void;
+  transportHide(): void;
+  readonly onTransport: EventEmitter<TransportEvent>;
 }
 
 // Lazy: resolving throws until the native module is registered, and the barrel

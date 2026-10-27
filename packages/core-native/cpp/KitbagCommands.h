@@ -9,6 +9,7 @@ namespace kitbag {
 int32_t commandStart();
 void commandStop();
 void commandMetronomeStart(double anchorFrame);
+void commandMetronomeStartNow();
 void commandMetronomeStop();
 void commandMetronomePause();
 

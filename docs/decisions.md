@@ -261,3 +261,13 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   next; (2) after silence the needle stays visible, dimmed, while it decays to centre;
   it is hidden before the first note; (3) the screen reader says "No note" once the
   reading clears. **[recorded]**
+
+- **2026-10-27 · Metronome notification shows the practice clock (§5.6, #87)** — Decided by
+  the owner after testing on device. The notification's elapsed time is the same clock
+  as the app's practice pill, which now lives in the metronome store rather than the
+  screen. Samsung's media card ignores text-only updates, so the time is carried by the
+  card's seek bar, which it animates itself. Position is practice time; the bar's length
+  is the next 10-minute block (10:00, then 20:00, …), so at each boundary it drops from
+  full to 50 %, then 67 %, and keeps filling. `design/kitbag-metronome.html` draws no
+  seek bar; this entry supersedes it for the system card. When both previous and next
+  songs show, the tempo keys drop from the system controls. **[recorded]**

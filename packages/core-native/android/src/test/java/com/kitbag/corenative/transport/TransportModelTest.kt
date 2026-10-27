@@ -1,12 +1,12 @@
-package com.kitbag.app.transport
+package com.kitbag.corenative.transport
 
-import com.kitbag.app.transport.TransportAction.NEXT
-import com.kitbag.app.transport.TransportAction.PAUSE
-import com.kitbag.app.transport.TransportAction.PLAY
-import com.kitbag.app.transport.TransportAction.PREVIOUS
-import com.kitbag.app.transport.TransportAction.STOP
-import com.kitbag.app.transport.TransportAction.TEMPO_DOWN
-import com.kitbag.app.transport.TransportAction.TEMPO_UP
+import com.kitbag.corenative.transport.TransportAction.NEXT
+import com.kitbag.corenative.transport.TransportAction.PAUSE
+import com.kitbag.corenative.transport.TransportAction.PLAY
+import com.kitbag.corenative.transport.TransportAction.PREVIOUS
+import com.kitbag.corenative.transport.TransportAction.STOP
+import com.kitbag.corenative.transport.TransportAction.TEMPO_DOWN
+import com.kitbag.corenative.transport.TransportAction.TEMPO_UP
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -55,6 +55,13 @@ class TransportModelTest {
   }
 
   @Test
+  fun `system media controls drop both tempo keys only when both neighbours show`() {
+    assertEquals(listOf(PREVIOUS, PAUSE, NEXT, STOP), model.view(state(setlist = song(5))).sessionActions)
+    assertEquals(listOf(TEMPO_DOWN, PAUSE, TEMPO_UP, NEXT, STOP), model.view(state(setlist = song(0))).sessionActions)
+    assertEquals(listOf(TEMPO_DOWN, PAUSE, TEMPO_UP, STOP), model.view(state()).sessionActions)
+  }
+
+  @Test
   fun `stopped shows play and no stop`() {
     assertEquals(listOf(TEMPO_DOWN, PLAY, TEMPO_UP), model.view(state(Playback.STOPPED)).actions)
   }
@@ -97,6 +104,14 @@ class TransportModelTest {
     assertEquals(none, model.commandsFor(state(setlist = song(0)), PREVIOUS))
     assertEquals(none, model.commandsFor(state(setlist = song(11)), NEXT))
     assertEquals(none, model.commandsFor(state(), NEXT))
+  }
+
+  @Test
+  fun `practice span is the 10-minute block the played time is in`() {
+    assertEquals(600_000L, model.practiceSpanMillis(0))
+    assertEquals(600_000L, model.practiceSpanMillis(599_999))
+    assertEquals(1_200_000L, model.practiceSpanMillis(600_000))
+    assertEquals(4_200_000L, model.practiceSpanMillis(3_723_000))
   }
 
   @Test(expected = IllegalArgumentException::class)

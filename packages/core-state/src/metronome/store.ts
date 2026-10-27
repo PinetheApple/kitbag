@@ -34,6 +34,12 @@ import {
   type RampConfig,
 } from './config.ts';
 import { patternActions } from './patternActions.ts';
+import {
+  IDLE_PRACTICE,
+  practiceAfterRunning,
+  resetPracticeClock,
+  type PracticeClock,
+} from './practice.ts';
 
 export {
   BPM_BOUNDS,
@@ -67,11 +73,13 @@ export interface MetronomeConfig {
   readonly barMute: BarMuteConfig;
   readonly countIn: CountInConfig;
   readonly running: boolean;
+  readonly practice: PracticeClock;
 }
 
 export interface MetronomeActions {
   setTempo: (bpm: number) => void;
   nudgeTempo: (delta: number) => void;
+  resetPractice: () => void;
   syncTempoFromEngine: () => void;
   setBeats: (beatsPerBar: number, denominator: number) => void;
   setSubdivision: (subdivision: number) => void;
@@ -135,6 +143,7 @@ function initialConfig(): MetronomeConfig {
       sound: KB_DEFAULT_COUNT_IN_SOUND,
     },
     running: false,
+    practice: IDLE_PRACTICE,
   };
 }
 
@@ -316,8 +325,9 @@ export function createMetronomeStore(
   commands: MetronomeCommands = defaultCommands,
   nowFrame: NowFrame = defaultNowFrame,
   engineBpm: EngineBpm = defaultEngineBpm,
+  now: () => number = Date.now,
 ): StoreApi<MetronomeStore> {
-  return createStore<MetronomeStore>((set, get) => {
+  const store = createStore<MetronomeStore>((set, get) => {
     const tempo = engineTempoOf(set, get, engineBpm);
     return {
       ...initialConfig(),
@@ -325,8 +335,19 @@ export function createMetronomeStore(
       ...soundActions(set, get, commands),
       ...tempoActions(set, get, commands, tempo),
       ...transportActions(set, commands, nowFrame, tempo),
+      resetPractice: () => {
+        set((s) => ({ practice: resetPracticeClock(s.practice, now()) }));
+      },
     };
   });
+  // Every way playback starts or stops, including the notification, goes through running.
+  store.subscribe((state, previous) => {
+    if (state.running === previous.running) return;
+    store.setState({
+      practice: practiceAfterRunning(state.practice, state.running, now()),
+    });
+  });
+  return store;
 }
 
 export const metronomeStore = createMetronomeStore();
