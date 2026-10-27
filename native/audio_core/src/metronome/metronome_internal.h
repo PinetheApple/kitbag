@@ -12,6 +12,9 @@ namespace metronome_detail {
 // Guards against a boundary landing infinitesimally below an integer.
 constexpr double kGridEpsilon = 1e-9;
 
+constexpr double kAccentAmplitude = 0.9;
+constexpr double kBeatAmplitude = 0.6;
+
 constexpr double kSecondsPerMinute = 60.0;
 constexpr double kMsPerMinute = 60000.0;
 constexpr double kMsPerSecond = 1000.0;

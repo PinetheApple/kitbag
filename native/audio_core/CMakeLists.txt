@@ -117,6 +117,14 @@ if(KITBAG_BUILD_TOOLS)
   # ABI (SPEC.md §4.1) — the render pull is a verify-only symbol by construction.
   target_compile_definitions(kitbag_core PUBLIC KITBAG_BUILD_TOOLS)
 
+  set(KITBAG_METRONOME_SOURCES
+    src/metronome/metronome.cpp
+    src/metronome/metronome_count_in.cpp
+    src/metronome/metronome_grid.cpp
+    src/metronome/metronome_pattern.cpp
+    src/metronome/metronome_render.cpp
+    src/metronome/tempo_ramp.cpp)
+
   add_executable(metronome_verify
     tools/metronome/metronome_verify.cpp
     tools/metronome/metronome_test_basic.cpp
@@ -133,12 +141,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_ramp_live.cpp
     tools/rt/rt_publisher_verify.cpp
     tools/rt/stall_detector_test.cpp
-    src/metronome/metronome.cpp
-    src/metronome/metronome_count_in.cpp
-    src/metronome/metronome_grid.cpp
-    src/metronome/metronome_pattern.cpp
-    src/metronome/metronome_render.cpp
-    src/metronome/tempo_ramp.cpp)
+    ${KITBAG_METRONOME_SOURCES})
   target_include_directories(metronome_verify PRIVATE src tools tools/metronome tools/rt)
   # metronome.cpp is compiled again here, outside kitbag_core's options.
   target_compile_options(metronome_verify PRIVATE -Werror=switch)
@@ -307,4 +310,38 @@ if(KITBAG_BUILD_TOOLS)
     src/tuner/wrong_string_hint.cpp src/dsp/fft.cpp)
   target_include_directories(tuner_verify PRIVATE src tools)
   target_link_libraries(tuner_verify PRIVATE kitbag_core m)
+
+  add_library(click_soak_lib STATIC
+    tools/soak/onset_detector.cpp
+    tools/soak/click_classifier.cpp
+    tools/soak/soak_args.cpp
+    tools/soak/soak_audio.cpp
+    tools/soak/soak_run.cpp
+    tools/soak/soak_print.cpp
+    src/media/file_audio_reader.cpp
+    src/media/miniaudio_decoder.cpp
+    src/media/miniaudio_impl.c
+  )
+  target_include_directories(click_soak_lib PUBLIC src tools tools/soak third_party)
+  target_link_libraries(click_soak_lib PUBLIC Threads::Threads m ${CMAKE_DL_LIBS})
+
+  add_executable(click_soak tools/soak/click_soak_main.cpp)
+  target_link_libraries(click_soak PRIVATE click_soak_lib)
+
+  add_executable(metronome_render tools/soak/metronome_render_main.cpp
+    ${KITBAG_METRONOME_SOURCES})
+  target_include_directories(metronome_render PRIVATE src tools/soak tools/media)
+  target_link_libraries(metronome_render PRIVATE m)
+
+  add_executable(click_soak_verify
+    tools/soak/click_soak_verify.cpp
+    tools/soak/click_soak_test_classify.cpp
+    tools/soak/click_soak_test_robust.cpp
+    tools/soak/click_soak_test_timing.cpp
+    tools/soak/click_soak_test_recording_end.cpp
+    tools/soak/click_soak_test_cli.cpp
+    tools/soak/click_soak_test_metronome.cpp
+    ${KITBAG_METRONOME_SOURCES})
+  target_include_directories(click_soak_verify PRIVATE tools/media)
+  target_link_libraries(click_soak_verify PRIVATE click_soak_lib)
 endif()
