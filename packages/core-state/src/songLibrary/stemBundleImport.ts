@@ -14,6 +14,7 @@ import {
   stemSetRemovals,
   type BundleRefusalReason,
 } from './stemBundleLogic.ts';
+import type { ImportTracker } from './stemFolderSweep.ts';
 import type { SongLibraryDeps } from './store.ts';
 import {
   deleteLeftovers,
@@ -78,7 +79,7 @@ async function copyBundle(
   }
 }
 
-async function store(
+async function persistBundle(
   deps: SongLibraryDeps,
   imported: ImportedStemBundle,
   replace: boolean,
@@ -96,8 +97,17 @@ export function stemBundleActions(
   deps: SongLibraryDeps,
   set: SetState,
   get: Get,
+  imports: ImportTracker,
 ) {
   let pending: Pending | null = null;
+
+  const codesFor = (source: BundleSource) => {
+    const codes = loadCodes(deps, get);
+    set({ codes });
+    if (codes === null)
+      set({ notice: { kind: 'copyFailed', name: source.name } });
+    return codes;
+  };
 
   const refuse = (
     source: BundleSource,
@@ -128,7 +138,7 @@ export function stemBundleActions(
     const files = deps.files();
     let replaced: StemSetFiles | null;
     try {
-      replaced = await store(deps, copied.imported, replace);
+      replaced = await persistBundle(deps, copied.imported, replace);
     } catch (error) {
       warn(`adding ${source.name} failed`, error);
       const name = stemFolderName(copied.imported.relativeDir, codes.stemsDir);
@@ -150,31 +160,23 @@ export function stemBundleActions(
   };
 
   const run = async (job: Pending, replace: boolean) => {
-    const codes = loadCodes(deps, get);
-    set({ codes });
-    if (codes === null) {
-      set({ notice: { kind: 'copyFailed', name: job.source.name } });
-      return;
-    }
+    const codes = codesFor(job.source);
+    if (codes === null) return;
     await whileImporting(set, get, job.source.name, () =>
-      copyAndStore(job, codes, replace),
+      imports.track(() => copyAndStore(job, codes, replace)),
     );
     await get().refresh();
   };
 
   const examine = async (source: BundleSource) => {
-    const codes = loadCodes(deps, get);
-    set({ codes });
-    if (codes === null) {
-      set({ notice: { kind: 'copyFailed', name: source.name } });
-      return null;
-    }
+    const codes = codesFor(source);
+    if (codes === null) return null;
     const check = await checkBundle(deps, source);
     if (check === null) {
       refuse(source, 'unreadable', null);
       return null;
     }
-    if (check.refusal !== '') {
+    if (check.refusal !== null) {
       refuse(
         source,
         refusalReason(check.refusal, codes) ?? 'unreadable',

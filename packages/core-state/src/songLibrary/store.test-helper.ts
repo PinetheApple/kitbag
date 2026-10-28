@@ -61,9 +61,10 @@ export function bundleCheck(
   fields: Partial<StemBundleCheck> = {},
 ): StemBundleCheck {
   return {
-    refusal: '',
+    refusal: null,
     format: 'stemdeck-song-bundle',
     version: 1,
+    supportedVersion: 1,
     jobId: JOB_ID,
     title: 'Redbone',
     stemCount: 2,
@@ -84,7 +85,7 @@ export function importedBundle(relativeDir: string): ImportedStemBundle {
       name,
       relativePath: `${relativeDir}/${name}.flac`,
       waveformRelativePath:
-        name === 'drums' ? '' : `${relativeDir}/${name}.kwav`,
+        name === 'drums' ? null : `${relativeDir}/${name}.kwav`,
       frames: 88200,
       volume: 1,
       muted: name === 'drums',
@@ -137,6 +138,9 @@ export function fakeFiles(
     ),
     deleteStemFolder: vi.fn<Native['deleteStemFolder']>(() =>
       Promise.resolve(),
+    ),
+    listStemFolders: vi.fn<Native['listStemFolders']>(() =>
+      Promise.resolve([]),
     ),
   };
   const files = {

@@ -353,12 +353,8 @@ KB_EXPORT kb_result kb_analyze_song(
     const char* waveform_dir
 );
 
-/* Writes precomputed peaks as the same "KWAV" sidecar kb_analyze_song writes,
- * quantising each value as it does. `peaks` holds chunk_count * channels
- * interleaved [min, max] float pairs in -1..1.
- * Returns KB_ERROR_INVALID_ARGUMENT for a null path or peaks, a non-positive
- * count, or more chunks than frames; KB_ERROR_INTERNAL if the file cannot be
- * written, in which case no file is left behind. */
+/* `peaks` is chunk_count * channels interleaved [min, max] pairs; chunk_count
+ * may not exceed total_frames. A failed write leaves no file. */
 KB_EXPORT kb_result kb_waveform_write_peaks(
     const char* path,
     int32_t channels,

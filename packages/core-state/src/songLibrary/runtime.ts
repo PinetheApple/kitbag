@@ -38,6 +38,7 @@ export interface LibraryFiles {
     uri: string,
     isFolder: boolean,
   ) => Promise<ImportedStemBundle>;
+  readonly listStemFolders: () => Promise<readonly string[]>;
   readonly deleteStemFolder: (folderName: string) => Promise<void>;
 }
 
@@ -53,6 +54,7 @@ export type SongLibraryRecords = Pick<
   | 'findStemSetByJobId'
   | 'insertStemBundle'
   | 'replaceStemBundle'
+  | 'listStemSetFolders'
 >;
 
 export interface SongLibraryRuntime {

@@ -5,7 +5,6 @@ import org.json.JSONException
 import org.json.JSONObject
 
 object StemBundleRefusal {
-  const val NONE = ""
   const val NOT_A_BUNDLE = "not-a-bundle"
   const val UNSUPPORTED_VERSION = "unsupported-version"
   const val TOO_MANY_STEMS = "too-many-stems"
@@ -29,14 +28,17 @@ class BundleManifest(
 )
 
 class ManifestCheck(
-  val refusal: String,
+  val refusal: String?,
   val format: String = "",
   val version: Int = 0,
   val jobId: String = "",
   val title: String = "",
   val stemCount: Int = 0,
   val manifest: BundleManifest? = null,
-)
+) {
+  fun copyWith(refusal: String?, manifest: BundleManifest? = this.manifest) =
+    ManifestCheck(refusal, format, version, jobId, title, stemCount, manifest)
+}
 
 object StemBundleManifest {
   const val FILE_NAME = "manifest.json"
@@ -44,7 +46,7 @@ object StemBundleManifest {
   const val SUPPORTED_VERSION = 1
   const val STEMS_PREFIX = "stems/"
   private const val STEM_EXTENSION = ".flac"
-  private val POSITIVE_INT = 1L..Int.MAX_VALUE
+  internal val POSITIVE_INT = 1L..Int.MAX_VALUE
 
   fun check(text: String?, maxStems: Int): ManifestCheck {
     if (text == null) return ManifestCheck(StemBundleRefusal.NOT_A_BUNDLE)
@@ -67,7 +69,7 @@ object StemBundleManifest {
     if (stems == null || stems.length() == 0 || jobId.isEmpty()) return identity
     if (stems.length() > maxStems) return identity.copyWith(StemBundleRefusal.TOO_MANY_STEMS)
     val manifest = parseBody(json, jobId, title, stems) ?: return identity
-    return identity.copyWith(StemBundleRefusal.NONE, manifest)
+    return identity.copyWith(null, manifest)
   }
 
   private fun parseBody(json: JSONObject, jobId: String, title: String, stems: JSONArray): BundleManifest? {
@@ -95,9 +97,6 @@ object StemBundleManifest {
     val name = file.substring(STEMS_PREFIX.length)
     return name.endsWith(STEM_EXTENSION) && LibraryPaths.safeFileName(name, null) == name
   }
-
-  private fun ManifestCheck.copyWith(refusal: String, manifest: BundleManifest? = null) =
-    ManifestCheck(refusal, format, version, jobId, title, stemCount, manifest)
 }
 
 internal fun JSONObject.stringOrNull(key: String): String? = opt(key) as? String

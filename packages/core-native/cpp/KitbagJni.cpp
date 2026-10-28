@@ -9,6 +9,7 @@
 #include "KitbagCommands.h"
 #include "KitbagEngine.h"
 #include "analysis/sidecar_path.h"
+#include "analysis/waveform_peaks.h"
 #include "kitbag_api.h"
 #include "mixer/mixer.h"
 
@@ -306,7 +307,8 @@ Java_com_kitbag_corenative_library_NativeStemBundle_nativeWritePeaks(JNIEnv* env
                                                                     jint chunkCount) {
   const JniUtf pathUtf(env, path);
   if (pathUtf.get() == nullptr || peaks == nullptr) return JNI_FALSE;
-  const auto needed = static_cast<int64_t>(chunkCount) * channels * 2;
+  const auto needed =
+      static_cast<int64_t>(chunkCount) * channels * kitbag::kPeakValuesPerChannel;
   if (needed <= 0 || env->GetArrayLength(peaks) < needed) return JNI_FALSE;
   jfloat* elems = env->GetFloatArrayElements(peaks, nullptr);
   if (elems == nullptr) return JNI_FALSE;

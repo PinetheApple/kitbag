@@ -30,7 +30,7 @@ object BundleFixtures {
 
   fun stemBytes(name: String): ByteArray = "flac:$name".toByteArray()
 
-  // Entries in the given order; a pair whose value is null is written as a directory.
+  // A null value is written as a directory entry.
   fun zip(vararg entries: Pair<String, ByteArray?>): ByteArray {
     val bytes = ByteArrayOutputStream()
     ZipOutputStream(bytes).use { zip ->

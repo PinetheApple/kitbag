@@ -15,6 +15,7 @@ configureSongLibrary({
     findStemSetByJobId: () => Promise.resolve(undefined),
     insertStemBundle: unavailable,
     replaceStemBundle: unavailable,
+    listStemSetFolders: () => Promise.resolve([]),
   },
   files: {
     constants: () => {
@@ -32,6 +33,7 @@ configureSongLibrary({
     deleteSongFolder: unavailable,
     checkStemBundle: unavailable,
     importStemBundle: unavailable,
+    listStemFolders: () => Promise.resolve([]),
     deleteStemFolder: unavailable,
   },
 });

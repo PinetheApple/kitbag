@@ -13,12 +13,18 @@ describe('noticeText', () => {
     noticeText({
       kind: 'bundleRefused',
       name: 'Redbone.stemdeck.zip',
-      refusal: { reason, version: 2, stemCount: 18, maxStems: 16 },
+      refusal: {
+        reason,
+        version: 0,
+        supportedVersion: 1,
+        stemCount: 18,
+        maxStems: 16,
+      },
     });
 
   it.each([
     ['notABundle', 'not a StemDeck song bundle'],
-    ['version', 'a newer StemDeck (bundle version 2)'],
+    ['version', 'bundle version 0; this Kitbag reads version 1'],
     ['tooManyStems', 'has 18 stems; Kitbag plays up to 16'],
     ['noSpace', 'not enough free space'],
     ['unreadable', 'could not be read'],

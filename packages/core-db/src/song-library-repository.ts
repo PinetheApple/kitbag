@@ -8,6 +8,7 @@ import {
   deleteStemSet,
   findStemSetByJobId,
   insertStemBundle,
+  listStemSetFolders,
   readStemSet,
   replaceStemBundle,
   type NewStemBundle,
@@ -275,6 +276,7 @@ export function createSongLibraryRepository({
     replaceStemBundle: (bundle: NewStemBundle) =>
       transaction(() => replaceStemBundle(db, bundle)),
     readStemSet: (id: number) => serial(() => readStemSet(db, id)),
+    listStemSetFolders: () => serial(() => listStemSetFolders(db)),
   };
 }
 

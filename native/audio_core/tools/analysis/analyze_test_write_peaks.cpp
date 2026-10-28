@@ -1,5 +1,3 @@
-// kb_waveform_write_peaks writes StemDeck's precomputed peaks as a sidecar; it
-// must be byte-compatible with the one kb_analyze_song writes.
 #include "kitbag_api.h"
 
 #include <cstddef>

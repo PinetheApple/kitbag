@@ -306,4 +306,7 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   "no lyrics" and "instrumental" stay apart. The beat grid is stored whole, even past
   `KB_MAX_GRID_BEATS`; capping it is the load path's call, open in #161. A refused bundle
   copies nothing. A re-import asks first and replaces in one transaction, then deletes
-  the old folder; a failed add deletes the new one. **[recorded]**
+  the old folder; a failed add deletes the new one. Stems are stored at the bundle's own
+  sample rate; `kb_mixer_load_track` resamples them to the engine rate as it streams the
+  decode (§4.1). That is how §7.1/§7.8's "resample on ingest" is met: there is no second
+  resampler at import. **[recorded]**

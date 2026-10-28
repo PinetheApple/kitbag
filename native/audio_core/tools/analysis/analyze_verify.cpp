@@ -23,7 +23,6 @@
 #include "check.h"
 #include "wav_fixture.h"
 
-// Downbeat, streaming-equivalence and write-peaks coverage live in their own files.
 namespace analyze_test {
 void RunDownbeatTests(const std::filesystem::path& dir);
 void RunEquivalenceTests(const std::filesystem::path& dir);

@@ -13,6 +13,7 @@ export type BundleRefusalReason =
 export interface BundleRefusal {
   readonly reason: BundleRefusalReason;
   readonly version: number;
+  readonly supportedVersion: number;
   readonly stemCount: number;
   readonly maxStems: number;
 }
@@ -44,6 +45,7 @@ export function refusal(
   return {
     reason,
     version: check?.version ?? 0,
+    supportedVersion: check?.supportedVersion ?? 0,
     stemCount: check?.stemCount ?? 0,
     maxStems: check?.maxStems ?? 0,
   };
@@ -54,8 +56,6 @@ export function errorCode(error: unknown): string | null {
     return null;
   return typeof error.code === 'string' ? error.code : null;
 }
-
-const nullIfEmpty = (path: string) => (path === '' ? null : path);
 
 export function newStemBundle(
   imported: ImportedStemBundle,
@@ -71,7 +71,7 @@ export function newStemBundle(
     stems: imported.stems.map((stem) => ({
       name: stem.name,
       filePath: stem.relativePath,
-      waveformPath: nullIfEmpty(stem.waveformRelativePath),
+      waveformPath: stem.waveformRelativePath,
       frames: stem.frames,
       volume: stem.volume,
       muted: stem.muted,

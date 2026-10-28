@@ -38,9 +38,10 @@ export type AnalysisResult = Readonly<{
 }>;
 
 export type StemBundleCheck = Readonly<{
-  refusal: string;
+  refusal: string | null;
   format: string;
   version: Int32;
+  supportedVersion: Int32;
   jobId: string;
   title: string;
   stemCount: Int32;
@@ -50,7 +51,7 @@ export type StemBundleCheck = Readonly<{
 export type ImportedStem = Readonly<{
   name: string;
   relativePath: string;
-  waveformRelativePath: string;
+  waveformRelativePath: string | null;
   frames: Double;
   volume: Double;
   muted: boolean;
@@ -129,9 +130,9 @@ export interface Spec extends TurboModule {
   readonly onAnalysis: EventEmitter<AnalysisResult>;
   deleteLibraryFile(relativePath: string): Promise<void>;
   deleteSongFolder(folderName: string): Promise<void>;
-  // refusal is '' when the bundle can be imported; nothing is copied either way.
   checkStemBundle(uri: string, isFolder: boolean): Promise<StemBundleCheck>;
   importStemBundle(uri: string, isFolder: boolean): Promise<ImportedStemBundle>;
+  listStemFolders(): Promise<readonly string[]>;
   deleteStemFolder(folderName: string): Promise<void>;
 }
 

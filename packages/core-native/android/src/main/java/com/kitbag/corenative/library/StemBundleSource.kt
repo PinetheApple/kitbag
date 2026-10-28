@@ -4,10 +4,9 @@ import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.util.zip.ZipInputStream
 
-// A bundle as a zip or an extracted folder. Members are named as in the zip
-// ("manifest.json", "stems/vocals.flac") and streamed, never loaded whole.
+// Members are named as in the zip ("manifest.json", "stems/vocals.flac") and
+// streamed, never loaded whole.
 interface BundleSource {
-  // Bytes the bundle occupies, or UNKNOWN_SIZE when the provider will not say.
   fun sizeBytes(): Long
 
   fun <T> withManifest(read: (InputStream?) -> T): T
@@ -48,7 +47,7 @@ class ZipBundleSource(private val size: Long, private val open: () -> InputStrea
   }
 }
 
-// Null when the stream holds more than `cap` bytes; at most cap + one buffer is read.
+// At most cap + one buffer is read.
 internal fun readCapped(input: InputStream, cap: Int): String? {
   val out = ByteArrayOutputStream()
   val buffer = ByteArray(DEFAULT_BUFFER_SIZE)

@@ -1,7 +1,6 @@
 package com.kitbag.corenative.library
 
 import java.io.File
-import java.io.IOException
 import java.nio.file.Files
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
@@ -57,7 +56,7 @@ class StemBundleImporterTest {
     assertArrayEquals(BundleFixtures.stemBytes("drums"), File(folder, "drums.flac").readBytes())
     assertEquals(listOf("stems/job123/vocals.flac", "stems/job123/drums.flac"), imported.stems.map { it.relativePath })
     assertEquals("stems/job123/vocals.kwav", imported.stems[0].waveformRelativePath)
-    assertEquals("", imported.stems[1].waveformRelativePath)
+    assertNull(imported.stems[1].waveformRelativePath)
     assertEquals(BundleFixtures.FRAMES, written.getValue("vocals.flac").first)
     assertArrayEquals(floatArrayOf(-0.5f, 0.5f), written.getValue("vocals.flac").second, 0f)
     assertEquals(0.8, imported.stems[1].mix.volume, 0.0)
@@ -92,7 +91,7 @@ class StemBundleImporterTest {
     val imported = importer().import(BundleFixtures.source(bundle))
     assertNull(imported.metadata.bpm)
     assertEquals(0, imported.grid.beats.size)
-    assertEquals("", imported.stems[0].waveformRelativePath)
+    assertNull(imported.stems[0].waveformRelativePath)
   }
 
   @Test
@@ -121,20 +120,21 @@ class StemBundleImporterTest {
       "stems/vocals.flac" to BundleFixtures.stemBytes("vocals"),
       StemBundleManifest.FILE_NAME to BundleFixtures.manifest(listOf("vocals")).toByteArray(),
     )
-    assertEquals(StemBundleRefusal.NONE, importer().check(BundleFixtures.source(bundle)).refusal)
+    assertNull(importer().check(BundleFixtures.source(bundle)).refusal)
     assertEquals(1, importer().import(BundleFixtures.source(bundle)).stems.size)
   }
 
   @Test
-  fun `a stem the manifest lists but the bundle lacks fails and leaves nothing`() {
+  fun `a stem the manifest lists but the bundle lacks is refused as unreadable and leaves nothing`() {
     val bundle = BundleFixtures.zip(
       StemBundleManifest.FILE_NAME to BundleFixtures.manifest(stems).toByteArray(),
       "stems/vocals.flac" to BundleFixtures.stemBytes("vocals"),
     )
     try {
       importer().import(BundleFixtures.source(bundle))
-      fail("a missing stem must fail the import")
-    } catch (e: IOException) {
+      fail("a missing stem must refuse the import")
+    } catch (e: StemBundleRefusedException) {
+      assertEquals(StemBundleRefusal.UNREADABLE, e.refusal)
       assertEquals(emptyList<String>(), BundleFixtures.listTree(root))
     }
   }
@@ -167,10 +167,10 @@ class StemBundleImporterTest {
     free = bundle.size.toLong() - 1
     assertEquals(StemBundleRefusal.NO_SPACE, importer().check(BundleFixtures.source(bundle)).refusal)
     free = bundle.size.toLong()
-    assertEquals(StemBundleRefusal.NONE, importer().check(BundleFixtures.source(bundle)).refusal)
+    assertNull(importer().check(BundleFixtures.source(bundle)).refusal)
     free = 0
     val unknownSize = BundleFixtures.source(bundle, BundleSource.UNKNOWN_SIZE)
-    assertEquals(StemBundleRefusal.NONE, importer().check(unknownSize).refusal)
+    assertNull(importer().check(unknownSize).refusal)
   }
 
   @Test
@@ -193,7 +193,7 @@ class StemBundleImporterTest {
   fun `a sidecar that cannot be written leaves the stem without a waveform`() {
     val bundle = BundleFixtures.bundle(stems, "peaks.json" to """{"vocals":[[0,1]]}""".toByteArray())
     val imported = importer { _, _, _ -> null }.import(BundleFixtures.source(bundle))
-    assertEquals("", imported.stems[0].waveformRelativePath)
+    assertNull(imported.stems[0].waveformRelativePath)
   }
 
   @Test
@@ -202,7 +202,7 @@ class StemBundleImporterTest {
     val huge = "{\"vocals\":[" + chunk.repeat(5 * 1024 * 1024 / chunk.length) + "[0,0]]}"
     val bundle = BundleFixtures.bundle(stems, "peaks.json" to huge.toByteArray())
     val imported = importer().import(BundleFixtures.source(bundle))
-    assertEquals("", imported.stems[0].waveformRelativePath)
+    assertNull(imported.stems[0].waveformRelativePath)
     assertTrue(written.isEmpty())
   }
 

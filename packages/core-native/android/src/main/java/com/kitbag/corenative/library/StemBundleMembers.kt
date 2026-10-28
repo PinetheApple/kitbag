@@ -83,7 +83,7 @@ class StemBundleMembers(private val warn: BundleWarning) {
     for (i in 0 until array.length()) {
       val mark = array.opt(i) as? JSONObject ?: return null
       val beat = mark.wholeOrNull("beat")?.takeIf { it >= 0 && it < beatCount } ?: return null
-      val perBar = mark.wholeOrNull("beats_per_bar")?.takeIf { it in 1L..Int.MAX_VALUE } ?: return null
+      val perBar = mark.wholeOrNull("beats_per_bar")?.takeIf { it in StemBundleManifest.POSITIVE_INT } ?: return null
       if (bars.isNotEmpty() && beat <= bars.last().beat) return null
       bars += BundleBar(beat.toInt(), perBar.toInt())
     }
@@ -113,8 +113,7 @@ class StemBundleMembers(private val warn: BundleWarning) {
     }
   }
 
-  // Interleaved [min, max] per chunk for each named stem; a stem whose overview
-  // is missing, empty or not number pairs gets none. Other keys are ignored.
+  // Each stem's overview as interleaved [min, max] per chunk.
   fun peaks(text: String?, stemNames: Collection<String>): Map<String, FloatArray> {
     val json = parse(text, PEAKS) ?: return emptyMap()
     return stemNames.mapNotNull { name -> stemPeaks(json.opt(name))?.let { name to it } }.toMap()
@@ -123,12 +122,13 @@ class StemBundleMembers(private val warn: BundleWarning) {
   private fun stemPeaks(value: Any?): FloatArray? {
     val chunks = value as? JSONArray ?: return null
     if (chunks.length() == 0) return null
-    val out = FloatArray(chunks.length() * 2)
+    val out = FloatArray(chunks.length() * PEAK_VALUES_PER_CHUNK)
     for (i in 0 until chunks.length()) {
       val pair = chunks.opt(i) as? JSONArray ?: return null
-      if (pair.length() != 2) return null
-      out[i * 2] = (pair.opt(0) as? Number)?.toFloat() ?: return null
-      out[i * 2 + 1] = (pair.opt(1) as? Number)?.toFloat() ?: return null
+      if (pair.length() != PEAK_VALUES_PER_CHUNK) return null
+      for (j in 0 until PEAK_VALUES_PER_CHUNK) {
+        out[i * PEAK_VALUES_PER_CHUNK + j] = (pair.opt(j) as? Number)?.toFloat() ?: return null
+      }
     }
     return out
   }
@@ -155,5 +155,6 @@ class StemBundleMembers(private val warn: BundleWarning) {
     const val MIX = "mix.json"
     const val PEAKS = "peaks.json"
     val ALL = setOf(METADATA, BEATS, LYRICS, MIX, PEAKS)
+    const val PEAK_VALUES_PER_CHUNK = 2
   }
 }

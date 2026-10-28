@@ -139,7 +139,10 @@ kb_result kb_waveform_write_peaks(
     out.channels = channels;
     out.chunk_count = chunk_count;
     out.total_frames = total_frames;
-    out.data.resize(static_cast<size_t>(chunk_count) * channels * 2);
+    out.data.resize(
+        static_cast<size_t>(chunk_count) * channels *
+        kitbag::kPeakValuesPerChannel
+    );
     for (size_t i = 0; i < out.data.size(); ++i) {
       out.data[i] = kitbag::QuantizePeak(peaks[i]);
     }

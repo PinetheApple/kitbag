@@ -1,4 +1,4 @@
-import { asc, eq } from 'drizzle-orm';
+import { asc, eq, isNotNull } from 'drizzle-orm';
 
 import { found, type Database } from './repository';
 import { stems, stemSets } from './schema';
@@ -198,6 +198,14 @@ export async function findStemSetByJobId(
     .from(stemSets)
     .where(eq(stemSets.stemdeckJobId, jobId));
   return row;
+}
+
+export async function listStemSetFolders(db: Database): Promise<string[]> {
+  const rows = await db
+    .select({ folder: stemSets.folder })
+    .from(stemSets)
+    .where(isNotNull(stemSets.folder));
+  return rows.flatMap(({ folder }) => (folder === null ? [] : [folder]));
 }
 
 export async function deleteStemSet(

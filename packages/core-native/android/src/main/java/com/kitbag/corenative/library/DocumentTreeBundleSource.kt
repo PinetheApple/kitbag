@@ -7,8 +7,7 @@ import android.provider.DocumentsContract.Document
 import java.io.IOException
 import java.io.InputStream
 
-// An extracted bundle under a tree URI from ACTION_OPEN_DOCUMENT_TREE. Only the
-// top level and stems/ are listed: the format has nothing deeper.
+// Only the top level and stems/ are listed: the format has nothing deeper.
 class DocumentTreeBundleSource(
   private val resolver: ContentResolver,
   private val treeUri: Uri,

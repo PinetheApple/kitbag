@@ -21,8 +21,8 @@ function refusalText(name: string, refusal: BundleRefusal): NoticeText {
       };
     case 'version':
       return {
-        status: 'Newer StemDeck song',
-        text: `${song} was made by a newer StemDeck (bundle version ${String(refusal.version)}) than this Kitbag can read, so nothing was added.`,
+        status: 'Unsupported bundle version',
+        text: `${song} is StemDeck bundle version ${String(refusal.version)}; this Kitbag reads version ${String(refusal.supportedVersion)}, so nothing was added.`,
       };
     case 'tooManyStems':
       return {

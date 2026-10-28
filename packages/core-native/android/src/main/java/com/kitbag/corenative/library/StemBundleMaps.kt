@@ -9,6 +9,7 @@ object StemBundleMaps {
       putString("refusal", check.refusal)
       putString("format", check.format)
       putInt("version", check.version)
+      putInt("supportedVersion", StemBundleManifest.SUPPORTED_VERSION)
       putString("jobId", check.jobId)
       putString("title", check.title)
       putInt("stemCount", check.stemCount)

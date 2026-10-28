@@ -15,7 +15,7 @@ class StemBundleManifestTest {
   @Test
   fun `a StemDeck manifest is accepted with its identity and stems`() {
     val check = StemBundleManifest.check(BundleFixtures.manifest(listOf("vocals", "drums")), maxStems)
-    assertEquals(StemBundleRefusal.NONE, check.refusal)
+    assertNull(check.refusal)
     assertEquals("job123", check.jobId)
     assertEquals("Echo", check.title)
     assertEquals(2, check.stemCount)
@@ -54,7 +54,7 @@ class StemBundleManifestTest {
     assertEquals(StemBundleRefusal.TOO_MANY_STEMS, check.refusal)
     assertEquals(maxStems + 1, check.stemCount)
     val atLimit = StemBundleManifest.check(BundleFixtures.manifest(names.take(maxStems)), maxStems)
-    assertEquals(StemBundleRefusal.NONE, atLimit.refusal)
+    assertNull(atLimit.refusal)
   }
 
   @Test
@@ -108,7 +108,7 @@ class StemBundleManifestTest {
   @Test
   fun `unknown fields and stem names are kept rather than refused`() {
     val manifest = BundleFixtures.manifestJson(listOf("theremin")).put("future_field", JSONObject()).toString()
-    assertEquals(StemBundleRefusal.NONE, StemBundleManifest.check(manifest, maxStems).refusal)
+    assertNull(StemBundleManifest.check(manifest, maxStems).refusal)
   }
 
   private fun withStem(stem: JSONObject) =

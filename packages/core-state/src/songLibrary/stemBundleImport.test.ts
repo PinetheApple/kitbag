@@ -102,7 +102,13 @@ describe('StemDeck bundle import', () => {
     expect(store.getState().notice).toEqual({
       kind: 'bundleRefused',
       name: ZIP.name,
-      refusal: { reason, version: 2, stemCount: 18, maxStems: 16 },
+      refusal: {
+        reason,
+        version: 2,
+        supportedVersion: 1,
+        stemCount: 18,
+        maxStems: 16,
+      },
     });
     expect(files.importStemBundle).not.toHaveBeenCalled();
     expect(await stemRows(store)).toEqual([]);

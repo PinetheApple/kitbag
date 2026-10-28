@@ -284,6 +284,16 @@ describe('StemDeck bundles in the song library', () => {
     });
     expect(await handle.db.select().from(stems)).toEqual([]);
   });
+
+  it('lists the folder of every stored set', async () => {
+    const { library } = setup();
+    await library.insertStemBundle(FULL);
+    await library.insertStemBundle(BARE);
+    expect((await library.listStemSetFolders()).sort()).toEqual([
+      'stems/0297074f4836',
+      'stems/bare-job',
+    ]);
+  });
 });
 
 describe('StemDeck bundles over the op-sqlite 17 connection', () => {

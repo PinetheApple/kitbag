@@ -29,6 +29,11 @@ import {
 import { stemBundleActions } from './stemBundleImport.ts';
 import { stemSetRemovals, type BundleRefusal } from './stemBundleLogic.ts';
 import {
+  importTracker,
+  sweepOrphanedStemFolders,
+  type ImportTracker,
+} from './stemFolderSweep.ts';
+import {
   deleteLeftovers,
   loadCodes,
   warn,
@@ -185,8 +190,13 @@ async function importAudio(
   return { ok: true, song };
 }
 
-function importActions(deps: SongLibraryDeps, set: SetState, get: Get) {
-  const bundles = stemBundleActions(deps, set, get);
+function importActions(
+  deps: SongLibraryDeps,
+  set: SetState,
+  get: Get,
+  imports: ImportTracker,
+) {
+  const bundles = stemBundleActions(deps, set, get, imports);
   let picking = false;
   const pick = async <T>(open: () => Promise<T | null>) => {
     if (picking) return null;
@@ -250,7 +260,11 @@ async function deleteRecord(
   return songRemovals(song, codes?.songsDir ?? null);
 }
 
-function analysisActions(deps: SongLibraryDeps, get: Get) {
+function analysisActions(
+  deps: SongLibraryDeps,
+  get: Get,
+  imports: ImportTracker,
+) {
   // A result can arrive both as an event and from pendingAnalyses, so applying
   // it must be idempotent; it is acknowledged only once it is stored.
   const receiveAnalysis = async (result: AnalysisResult) => {
@@ -285,6 +299,7 @@ function analysisActions(deps: SongLibraryDeps, get: Get) {
       for (const result of await files.pendingAnalyses())
         await receiveAnalysis(result);
       await analyzeUnfinished();
+      await sweepOrphanedStemFolders(deps, get, imports);
       return unsubscribe;
     },
     reanalyze: async (songId: number) => {
@@ -315,13 +330,16 @@ function rowActions(deps: SongLibraryDeps, set: SetState, get: Get) {
 export function createSongLibraryStore(
   deps: SongLibraryDeps = defaultDeps,
 ): StoreApi<SongLibraryStore> {
-  return createStore<SongLibraryStore>((set, get) => ({
-    ...INITIAL,
-    ...readActions(deps, set, get),
-    ...importActions(deps, set, get),
-    ...analysisActions(deps, get),
-    ...rowActions(deps, set, get),
-  }));
+  return createStore<SongLibraryStore>((set, get) => {
+    const imports = importTracker();
+    return {
+      ...INITIAL,
+      ...readActions(deps, set, get),
+      ...importActions(deps, set, get, imports),
+      ...analysisActions(deps, get, imports),
+      ...rowActions(deps, set, get),
+    };
+  });
 }
 
 export const songLibraryStore = createSongLibraryStore();

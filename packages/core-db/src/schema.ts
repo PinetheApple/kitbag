@@ -156,7 +156,6 @@ export const stemSets = sqliteTable(
     beatGrid: bytes('beat_grid'),
     // Little-endian int32 pairs: beat index into beatGrid, beats per bar.
     barMarks: bytes('bar_marks'),
-    // JSON array of StoredSection.
     sections: text('sections'),
     lyricsSynced: text('lyrics_synced'),
     lyricsPlain: text('lyrics_plain'),

@@ -14,7 +14,8 @@ constexpr uint32_t kKwavVersion = 1;
 
 }  // namespace
 
-// A malformed file can decode to values up to 3.19e38 (measured), not just NaN.
+// A malformed file can decode to NaN or up to 3.19e38 (measured), and
+// float->int16 out of range is undefined behaviour.
 int16_t QuantizePeak(float value) {
   if (!std::isfinite(value)) return 0;
   return static_cast<int16_t>(std::clamp(value, -1.0f, 1.0f) * kInt16Max);
@@ -51,7 +52,9 @@ WaveformPeakAccumulator::WaveformPeakAccumulator(
   peaks_.channels = channels;
   peaks_.chunk_count = static_cast<int>(total_frames / chunk_size_);
   peaks_.total_frames = total_frames;
-  peaks_.data.resize(static_cast<size_t>(peaks_.chunk_count) * channels * 2);
+  peaks_.data.resize(
+      static_cast<size_t>(peaks_.chunk_count) * channels * kPeakValuesPerChannel
+  );
   min_.resize(channels);
   max_.resize(channels);
   ResetSpan();
@@ -77,11 +80,12 @@ void WaveformPeakAccumulator::ResetSpan() {
 }
 
 void WaveformPeakAccumulator::CloseSpan() {
-  int16_t* out =
-      &peaks_.data[static_cast<size_t>(chunk_) * peaks_.channels * 2];
+  const size_t start =
+      static_cast<size_t>(chunk_) * peaks_.channels * kPeakValuesPerChannel;
+  int16_t* out = &peaks_.data[start];
   for (int ch = 0; ch < peaks_.channels; ++ch) {
-    out[ch * 2] = QuantizePeak(min_[ch]);
-    out[ch * 2 + 1] = QuantizePeak(max_[ch]);
+    out[ch * kPeakValuesPerChannel] = QuantizePeak(min_[ch]);
+    out[ch * kPeakValuesPerChannel + 1] = QuantizePeak(max_[ch]);
   }
   ++chunk_;
   ResetSpan();

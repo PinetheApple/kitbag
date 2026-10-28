@@ -5,7 +5,6 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.media.MediaMetadataRetriever
 import android.net.Uri
-import android.os.StatFs
 import android.util.Log
 import android.provider.DocumentsContract
 import android.provider.OpenableColumns
@@ -23,13 +22,9 @@ import com.kitbag.corenative.library.AnalysisEvents
 import com.kitbag.corenative.library.AnalysisFailure
 import com.kitbag.corenative.library.AnalysisResult
 import com.kitbag.corenative.library.AnalysisStore
-import com.kitbag.corenative.library.BundleSources
 import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.LibraryStorage
-import com.kitbag.corenative.library.NativeStemBundle
-import com.kitbag.corenative.library.StemBundleImporter
-import com.kitbag.corenative.library.StemBundleMaps
-import com.kitbag.corenative.library.StemBundleRefusal
+import com.kitbag.corenative.library.StemBundleBridge
 import com.kitbag.corenative.library.StemBundleRefusedException
 import java.io.File
 import java.io.IOException
@@ -44,15 +39,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   private val results = LibraryStorage.analysisStore(reactContext)
   private val io: ExecutorService = Executors.newFixedThreadPool(IO_THREADS, named("kitbag-library-io"))
   private val nameLock = Any()
-  private val bundles by lazy {
-    StemBundleImporter(
-      base = base,
-      maxStems = NativeStemBundle.maxStems,
-      availableBytes = { StatFs(it.path).availableBytes },
-      sidecars = NativeStemBundle,
-      warn = { message, cause -> Log.w(TAG, message, cause) },
-    )
-  }
+  private val bundles = StemBundleBridge(reactContext.contentResolver, base)
 
   private var pendingPick: Promise? = null
   private var pendingRequest = 0
@@ -62,6 +49,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   init {
     reactContext.addActivityEventListener(this)
     AnalysisEvents.listener.set(listener)
+    io.execute { bundles.clearStaging() }
   }
 
   override fun invalidate() {
@@ -148,7 +136,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       putString("mimeType", reactApplicationContext.contentResolver.getType(uri).orEmpty())
     }
 
-  // The grant is session-only: a bundle folder is imported right after the pick.
+  // The grant is not persisted; it lasts while the process does, replace sheet included.
   private fun describeFolder(treeUri: Uri): WritableMap {
     val documentUri = DocumentsContract.buildDocumentUriUsingTree(
       treeUri,
@@ -334,7 +322,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   override fun checkStemBundle(uri: String, isFolder: Boolean, promise: Promise) {
     io.execute {
       try {
-        promise.resolve(StemBundleMaps.check(bundles.check(bundleSource(uri, isFolder)), NativeStemBundle.maxStems))
+        promise.resolve(bundles.check(uri, isFolder))
       } catch (e: Exception) {
         rejectLogged(promise, E_IMPORT_FAILED, "Could not read the bundle", e)
       }
@@ -344,7 +332,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   override fun importStemBundle(uri: String, isFolder: Boolean, promise: Promise) {
     io.execute {
       try {
-        promise.resolve(StemBundleMaps.imported(bundles.import(bundleSource(uri, isFolder))))
+        promise.resolve(bundles.import(uri, isFolder))
       } catch (e: StemBundleRefusedException) {
         rejectLogged(promise, e.refusal, "The bundle was refused", e)
       } catch (e: Exception) {
@@ -353,8 +341,15 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     }
   }
 
-  private fun bundleSource(uri: String, isFolder: Boolean) =
-    BundleSources.open(reactApplicationContext.contentResolver, Uri.parse(uri), isFolder)
+  override fun listStemFolders(promise: Promise) {
+    io.execute {
+      try {
+        promise.resolve(bundles.stemFolderNames())
+      } catch (e: Exception) {
+        rejectLogged(promise, E_LIST_FAILED, "Could not list stem folders", e)
+      }
+    }
+  }
 
   override fun deleteStemFolder(folderName: String, promise: Promise) {
     deleteFolder(promise) { LibraryPaths.stemFolder(base, folderName) }
@@ -370,16 +365,11 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     mapOf(
       "songsDir" to LibraryPaths.SONGS_DIR_NAME,
       "stemsDir" to LibraryPaths.STEMS_DIR_NAME,
-      "bundleRefusalNotABundle" to StemBundleRefusal.NOT_A_BUNDLE,
-      "bundleRefusalVersion" to StemBundleRefusal.UNSUPPORTED_VERSION,
-      "bundleRefusalTooManyStems" to StemBundleRefusal.TOO_MANY_STEMS,
-      "bundleRefusalUnreadable" to StemBundleRefusal.UNREADABLE,
-      "bundleRefusalNoSpace" to StemBundleRefusal.NO_SPACE,
       "failureMissingFile" to AnalysisFailure.MISSING_FILE,
       "failureUnsupported" to AnalysisFailure.UNSUPPORTED,
       "failureInterrupted" to AnalysisFailure.INTERRUPTED,
       "failureInternal" to AnalysisFailure.INTERNAL,
-    )
+    ) + StemBundleBridge.CONSTANTS
 
   companion object {
     private const val TAG = "KitbagLibrary"
@@ -400,6 +390,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     private const val E_IMPORT_FAILED = "E_IMPORT_FAILED"
     private const val E_RESULTS_FAILED = "E_RESULTS_FAILED"
     private const val E_DELETE_FAILED = "E_DELETE_FAILED"
+    private const val E_LIST_FAILED = "E_LIST_FAILED"
 
     private fun named(name: String) = ThreadFactory { Thread(it, name) }
   }

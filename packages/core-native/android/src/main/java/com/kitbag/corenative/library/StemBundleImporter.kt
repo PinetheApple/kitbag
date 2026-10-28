@@ -5,14 +5,13 @@ import java.io.IOException
 import java.util.zip.ZipException
 
 fun interface WaveformSidecarWriter {
-  // The sidecar written next to `stem`, or null when it could not be.
   fun write(stem: File, totalFrames: Long, peaks: FloatArray): File?
 }
 
 class ImportedBundleStem(
   val name: String,
   val relativePath: String,
-  val waveformRelativePath: String,
+  val waveformRelativePath: String?,
   val frames: Long,
   val mix: StemMix,
 )
@@ -46,19 +45,17 @@ class StemBundleImporter(
       warn("The bundle is not a readable zip", e)
       return ManifestCheck(StemBundleRefusal.UNREADABLE)
     }
-    if (check.refusal != StemBundleRefusal.NONE) return check
+    if (check.refusal != null) return check
     val existing = generateSequence(stemsRoot) { it.parentFile }.first { it.exists() }
-    return if (source.sizeBytes() > availableBytes(existing)) check.refused(StemBundleRefusal.NO_SPACE) else check
+    return if (source.sizeBytes() > availableBytes(existing)) check.copyWith(StemBundleRefusal.NO_SPACE) else check
   }
 
   @Synchronized
   fun import(source: BundleSource): ImportedBundle {
     staging.deleteRecursively()
     val check = check(source)
-    val manifest = check.manifest
-    if (check.refusal != StemBundleRefusal.NONE || manifest == null) {
-      throw StemBundleRefusedException(check.refusal)
-    }
+    check.refusal?.let { throw StemBundleRefusedException(it) }
+    val manifest = checkNotNull(check.manifest)
     try {
       if (!staging.mkdirs()) throw IOException("Could not create the import staging directory")
       val texts = copyMembers(source, manifest)
@@ -76,7 +73,7 @@ class StemBundleImporter(
           ImportedBundleStem(
             name = stem.name,
             relativePath = LibraryPaths.relativize(base, File(folder, stem.fileName)),
-            waveformRelativePath = waveforms[stem.name]?.let { LibraryPaths.relativize(base, File(folder, it)) }.orEmpty(),
+            waveformRelativePath = waveforms[stem.name]?.let { LibraryPaths.relativize(base, File(folder, it)) },
             frames = stem.frames,
             mix = mix.getValue(stem.name),
           )
@@ -110,7 +107,10 @@ class StemBundleImporter(
       }
     }
     val missing = manifest.stems.map { it.file }.filterNot { it in received }
-    if (missing.isNotEmpty()) throw IOException("The bundle is missing $missing")
+    if (missing.isNotEmpty()) {
+      warn("The bundle is missing $missing", null)
+      throw StemBundleRefusedException(StemBundleRefusal.UNREADABLE)
+    }
     return texts
   }
 
@@ -129,8 +129,10 @@ class StemBundleImporter(
     return folder
   }
 
-  private fun ManifestCheck.refused(refusal: String) =
-    ManifestCheck(refusal, format, version, jobId, title, stemCount, manifest)
+  @Synchronized
+  fun clearStaging() {
+    staging.deleteRecursively()
+  }
 
   companion object {
     // Hidden, so stemFolder() can never name it and it never reads as a stem set.
