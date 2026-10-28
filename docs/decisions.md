@@ -272,6 +272,12 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   seek bar; this entry supersedes it for the system card. When both previous and next
   songs show, the tempo keys drop from the system controls. **[recorded]**
 
+- **2026-10-28 · Metronome notification drops the seek bar (§5.6, #163)** — Decided by
+  the owner, superseding the 2026-10-27 entry's 10-minute seek bar. Android 13+ draws a
+  bar on every media-style card, even with no duration, so the notification is a plain
+  one with its own button row; the media session stays for headset keys, and the
+  lock screen shows the notification itself. The practice clock still runs in the app. **[recorded]**
+
 - **2026-10-28 · Floating-point contraction off for the native core (#165)** — CI's
   ubuntu-26.04 GCC targets an FMA-capable CPU by default, so it fused `a*b+c` in our
   downbeat code and in QM's at different places, and the bit-identical equivalence

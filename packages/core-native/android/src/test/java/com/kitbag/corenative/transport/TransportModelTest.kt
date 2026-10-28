@@ -49,12 +49,6 @@ class TransportModelTest {
   }
 
   @Test
-  fun `compact view is tempo down, play or pause, tempo up`() {
-    assertEquals(listOf(TEMPO_DOWN, PAUSE, TEMPO_UP), model.view(state()).compactActions)
-    assertEquals(listOf(TEMPO_DOWN, PLAY, TEMPO_UP), model.view(state(Playback.PAUSED)).compactActions)
-  }
-
-  @Test
   fun `system media controls drop both tempo keys only when both neighbours show`() {
     assertEquals(listOf(PREVIOUS, PAUSE, NEXT, STOP), model.view(state(setlist = song(5))).sessionActions)
     assertEquals(listOf(TEMPO_DOWN, PAUSE, TEMPO_UP, NEXT, STOP), model.view(state(setlist = song(0))).sessionActions)
@@ -104,14 +98,6 @@ class TransportModelTest {
     assertEquals(none, model.commandsFor(state(setlist = song(0)), PREVIOUS))
     assertEquals(none, model.commandsFor(state(setlist = song(11)), NEXT))
     assertEquals(none, model.commandsFor(state(), NEXT))
-  }
-
-  @Test
-  fun `practice span is the 10-minute block the played time is in`() {
-    assertEquals(600_000L, model.practiceSpanMillis(0))
-    assertEquals(600_000L, model.practiceSpanMillis(599_999))
-    assertEquals(1_200_000L, model.practiceSpanMillis(600_000))
-    assertEquals(4_200_000L, model.practiceSpanMillis(3_723_000))
   }
 
   @Test(expected = IllegalArgumentException::class)
