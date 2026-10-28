@@ -42,6 +42,8 @@ jobs:
         run: ./native/audio_core/build/file_audio_reader_verify
       - name: Decoder — the offline kb_analyze_song path decodes s16 to f32
         run: ./native/audio_core/build/decoder_verify
+      - name: Runner CPU (diagnostic, #165)
+        run: lscpu | grep -E 'Model name|Flags' | cut -c1-600
       - name: Analyze — streamed analysis matches the whole-buffer reference; NaN/channels guards
         run: ./native/audio_core/build/analyze_verify
       - name: Analyze memory — heap growth per second of audio stays bounded
