@@ -30,7 +30,6 @@ data class TransportView(
   val title: String,
   val subtitle: String?,
   val actions: List<TransportAction>,
-  val compactActions: List<TransportAction>,
   val sessionActions: List<TransportAction>,
 )
 
@@ -62,7 +61,7 @@ class TransportModel(private val minBpm: Double, private val maxBpm: Double) {
       if (hasNext(state)) add(TransportAction.NEXT)
       if (state.playback != Playback.STOPPED) add(TransportAction.STOP)
     }
-    return TransportView(title(state), subtitle(state), actions, compact, sessionActions(actions))
+    return TransportView(title(state), subtitle(state), actions, sessionActions(actions))
   }
 
   // System media controls lack room for six; with both neighbours the tempo keys give way.

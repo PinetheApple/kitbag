@@ -273,8 +273,10 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   songs show, the tempo keys drop from the system controls. **[recorded]**
 
 - **2026-10-28 · Metronome notification drops the seek bar (§5.6, #163)** — Decided by
-  the owner: the media card shows no position or duration, superseding the 2026-10-27
-  entry's 10-minute seek bar. The practice clock still runs in the app. **[recorded]**
+  the owner, superseding the 2026-10-27 entry's 10-minute seek bar. Android 13+ draws a
+  bar on every media-style card, even with no duration, so the notification is a plain
+  one with its own button row; the media session stays for headset and lock-screen
+  keys. The practice clock still runs in the app. **[recorded]**
 
 - **2026-10-27 · What "dropped or jittered" means for the soak (§5.8, §6.5, #88)** — SPEC
   sets no numbers, so the harness's limits were set by the integrator and live once in

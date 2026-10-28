@@ -12,13 +12,14 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.view.View
+import android.widget.RemoteViews
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
-import androidx.media.app.NotificationCompat.MediaStyle
 import com.kitbag.corenative.transport.Playback
 import com.kitbag.corenative.transport.PracticeClock
 import com.kitbag.corenative.transport.TransportAction
@@ -158,15 +159,26 @@ class MetronomeService : Service() {
       .setOnlyAlertOnce(true)
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
       .setCategory(NotificationCompat.CATEGORY_TRANSPORT)
-      .apply { view.actions.forEach { addAction(icon(it), label(it), actionIntent(it)) } }
-      .setStyle(
-        MediaStyle()
-          .setMediaSession(session.sessionToken)
-          .setShowActionsInCompactView(
-            *view.compactActions.map { view.actions.indexOf(it) }.toIntArray(),
-          ),
-      )
+      .setCustomContentView(transportViews(view))
+      .setStyle(NotificationCompat.DecoratedCustomViewStyle())
       .build()
+
+  // A media-style card always draws a seek bar, which the owner ruled out.
+  private fun transportViews(view: TransportView): RemoteViews =
+    RemoteViews(packageName, R.layout.kitbag_transport).apply {
+      setTextViewText(R.id.kitbag_title, view.title)
+      setTextViewText(R.id.kitbag_subtitle, view.subtitle)
+      setViewVisibility(R.id.kitbag_subtitle, if (view.subtitle == null) View.GONE else View.VISIBLE)
+      ACTION_SLOTS.forEachIndexed { slot, id ->
+        val action = view.actions.getOrNull(slot)
+        setViewVisibility(id, if (action == null) View.GONE else View.VISIBLE)
+        if (action != null) {
+          setImageViewResource(id, icon(action))
+          setContentDescription(id, label(action))
+          setOnClickPendingIntent(id, actionIntent(action))
+        }
+      }
+    }
 
   private fun updateSession(s: TransportState, view: TransportView) {
     val playing = s.playback == Playback.PLAYING
@@ -274,6 +286,14 @@ class MetronomeService : Service() {
     private const val EXTRA_PRACTICE_STRETCH_STARTED_AT = "practiceStretchStartedAt"
 
     // System media cards draw only play/pause, skip and custom actions, so stop is custom too.
+    private val ACTION_SLOTS = listOf(
+      R.id.kitbag_action_0,
+      R.id.kitbag_action_1,
+      R.id.kitbag_action_2,
+      R.id.kitbag_action_3,
+      R.id.kitbag_action_4,
+      R.id.kitbag_action_5,
+    )
     private val CUSTOM_ACTIONS =
       setOf(TransportAction.TEMPO_DOWN, TransportAction.TEMPO_UP, TransportAction.STOP)
 
