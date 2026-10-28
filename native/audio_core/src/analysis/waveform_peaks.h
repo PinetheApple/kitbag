@@ -14,6 +14,13 @@ struct WaveformPeaks {
   int64_t total_frames = 0;
 };
 
+/// Non-finite reads as 0 and the rest clamps to [-1, 1] before the cast,
+/// because float->int16 out of range is undefined behaviour.
+int16_t QuantizePeak(float value);
+
+/// Writes `peaks` as a ".kwav" sidecar at `path`; a partial file is removed.
+bool WriteKwav(const char* path, const WaveformPeaks& peaks);
+
 /// Per-channel min/max over `target_chunks` equal spans of `total_frames`,
 /// pushed in pieces of any size; frames past the last whole span are ignored.
 class WaveformPeakAccumulator {

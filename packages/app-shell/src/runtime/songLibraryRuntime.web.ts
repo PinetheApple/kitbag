@@ -11,7 +11,10 @@ configureSongLibrary({
     claimUnfinishedAnalyses: () => Promise.resolve([]),
     applyAnalysis: unavailable,
     deleteSong: () => Promise.resolve(undefined),
-    deleteStemSet: () => Promise.resolve([]),
+    deleteStemSet: () => Promise.resolve({ folder: null, files: [] }),
+    findStemSetByJobId: () => Promise.resolve(undefined),
+    insertStemBundle: unavailable,
+    replaceStemBundle: unavailable,
   },
   files: {
     constants: () => {
@@ -27,6 +30,9 @@ configureSongLibrary({
     onAnalysis: () => () => undefined,
     deleteLibraryFile: unavailable,
     deleteSongFolder: unavailable,
+    checkStemBundle: unavailable,
+    importStemBundle: unavailable,
+    deleteStemFolder: unavailable,
   },
 });
 

@@ -5,6 +5,7 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.os.StatFs
 import android.util.Log
 import android.provider.DocumentsContract
 import android.provider.OpenableColumns
@@ -22,8 +23,14 @@ import com.kitbag.corenative.library.AnalysisEvents
 import com.kitbag.corenative.library.AnalysisFailure
 import com.kitbag.corenative.library.AnalysisResult
 import com.kitbag.corenative.library.AnalysisStore
+import com.kitbag.corenative.library.BundleSources
 import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.LibraryStorage
+import com.kitbag.corenative.library.NativeStemBundle
+import com.kitbag.corenative.library.StemBundleImporter
+import com.kitbag.corenative.library.StemBundleMaps
+import com.kitbag.corenative.library.StemBundleRefusal
+import com.kitbag.corenative.library.StemBundleRefusedException
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.ExecutorService
@@ -37,6 +44,15 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   private val results = LibraryStorage.analysisStore(reactContext)
   private val io: ExecutorService = Executors.newFixedThreadPool(IO_THREADS, named("kitbag-library-io"))
   private val nameLock = Any()
+  private val bundles by lazy {
+    StemBundleImporter(
+      base = base,
+      maxStems = NativeStemBundle.maxStems,
+      availableBytes = { StatFs(it.path).availableBytes },
+      sidecars = NativeStemBundle,
+      warn = { message, cause -> Log.w(TAG, message, cause) },
+    )
+  }
 
   private var pendingPick: Promise? = null
   private var pendingRequest = 0
@@ -132,8 +148,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       putString("mimeType", reactApplicationContext.contentResolver.getType(uri).orEmpty())
     }
 
-  // The grant is session-only; #136 takes a persistable one here once stem
-  // import reads the folder later, so unused grants do not pile up before then.
+  // The grant is session-only: a bundle folder is imported right after the pick.
   private fun describeFolder(treeUri: Uri): WritableMap {
     val documentUri = DocumentsContract.buildDocumentUriUsingTree(
       treeUri,
@@ -301,15 +316,48 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   }
 
   override fun deleteSongFolder(folderName: String, promise: Promise) {
+    deleteFolder(promise) { LibraryPaths.songFolder(base, folderName) }
+  }
+
+  private fun deleteFolder(promise: Promise, resolveFolder: () -> File) {
     io.execute {
       try {
-        val folder = LibraryPaths.songFolder(base, folderName)
+        val folder = resolveFolder()
         if (folder.exists() && !folder.deleteRecursively()) throw IOException("Could not delete $folder")
         promise.resolve(null)
       } catch (e: Exception) {
         rejectLogged(promise, E_DELETE_FAILED, "Delete failed", e)
       }
     }
+  }
+
+  override fun checkStemBundle(uri: String, isFolder: Boolean, promise: Promise) {
+    io.execute {
+      try {
+        promise.resolve(StemBundleMaps.check(bundles.check(bundleSource(uri, isFolder)), NativeStemBundle.maxStems))
+      } catch (e: Exception) {
+        rejectLogged(promise, E_IMPORT_FAILED, "Could not read the bundle", e)
+      }
+    }
+  }
+
+  override fun importStemBundle(uri: String, isFolder: Boolean, promise: Promise) {
+    io.execute {
+      try {
+        promise.resolve(StemBundleMaps.imported(bundles.import(bundleSource(uri, isFolder))))
+      } catch (e: StemBundleRefusedException) {
+        rejectLogged(promise, e.refusal, "The bundle was refused", e)
+      } catch (e: Exception) {
+        rejectLogged(promise, E_IMPORT_FAILED, "Import failed", e)
+      }
+    }
+  }
+
+  private fun bundleSource(uri: String, isFolder: Boolean) =
+    BundleSources.open(reactApplicationContext.contentResolver, Uri.parse(uri), isFolder)
+
+  override fun deleteStemFolder(folderName: String, promise: Promise) {
+    deleteFolder(promise) { LibraryPaths.stemFolder(base, folderName) }
   }
 
   // Raw causes carry paths; JS gets the code and shows its own text.
@@ -321,6 +369,12 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   override fun getTypedExportedConstants(): Map<String, Any> =
     mapOf(
       "songsDir" to LibraryPaths.SONGS_DIR_NAME,
+      "stemsDir" to LibraryPaths.STEMS_DIR_NAME,
+      "bundleRefusalNotABundle" to StemBundleRefusal.NOT_A_BUNDLE,
+      "bundleRefusalVersion" to StemBundleRefusal.UNSUPPORTED_VERSION,
+      "bundleRefusalTooManyStems" to StemBundleRefusal.TOO_MANY_STEMS,
+      "bundleRefusalUnreadable" to StemBundleRefusal.UNREADABLE,
+      "bundleRefusalNoSpace" to StemBundleRefusal.NO_SPACE,
       "failureMissingFile" to AnalysisFailure.MISSING_FILE,
       "failureUnsupported" to AnalysisFailure.UNSUPPORTED,
       "failureInterrupted" to AnalysisFailure.INTERRUPTED,

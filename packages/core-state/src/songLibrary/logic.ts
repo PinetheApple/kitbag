@@ -141,6 +141,7 @@ export function songFolder(songsDir: string, songUuid: string): string {
 
 export type Removal =
   | { readonly kind: 'folder'; readonly name: string }
+  | { readonly kind: 'stemFolder'; readonly name: string }
   | { readonly kind: 'file'; readonly path: string };
 
 export function fileRemovals(paths: readonly (string | null)[]): Removal[] {

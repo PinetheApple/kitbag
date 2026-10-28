@@ -8,6 +8,7 @@
 
 #include "analysis/beat_tracker.h"
 #include "analysis/song_analysis.h"
+#include "analysis/waveform_peaks.h"
 #include "media/file_audio_reader.h"
 
 namespace {
@@ -118,6 +119,32 @@ kb_result kb_analyze_song(
     *bpm_out = 0.0f;
     *beat_count_out = 0;
     *downbeat_count_out = 0;
+    return KB_ERROR_INTERNAL;
+  }
+}
+
+kb_result kb_waveform_write_peaks(
+    const char* path,
+    int32_t channels,
+    int64_t total_frames,
+    const float* peaks,
+    int32_t chunk_count
+) {
+  if (path == nullptr || peaks == nullptr || channels <= 0 ||
+      chunk_count <= 0 || total_frames < chunk_count) {
+    return KB_ERROR_INVALID_ARGUMENT;
+  }
+  try {
+    kitbag::WaveformPeaks out;
+    out.channels = channels;
+    out.chunk_count = chunk_count;
+    out.total_frames = total_frames;
+    out.data.resize(static_cast<size_t>(chunk_count) * channels * 2);
+    for (size_t i = 0; i < out.data.size(); ++i) {
+      out.data[i] = kitbag::QuantizePeak(peaks[i]);
+    }
+    return kitbag::WriteKwav(path, out) ? KB_OK : KB_ERROR_INTERNAL;
+  } catch (...) {
     return KB_ERROR_INTERNAL;
   }
 }

@@ -26,9 +26,23 @@ import {
   type LibraryFiles,
   type SongLibraryRecords,
 } from './runtime.ts';
+import { stemBundleActions } from './stemBundleImport.ts';
+import { stemSetRemovals, type BundleRefusal } from './stemBundleLogic.ts';
+import {
+  deleteLeftovers,
+  loadCodes,
+  warn,
+  whileImporting,
+  type Get,
+  type SetState,
+} from './storeSupport.ts';
 
 export type LibraryNotice =
-  | { readonly kind: 'stemImport'; readonly name: string }
+  | {
+      readonly kind: 'bundleRefused';
+      readonly name: string;
+      readonly refusal: BundleRefusal;
+    }
   | { readonly kind: 'copyFailed'; readonly name: string }
   | { readonly kind: 'addFailed'; readonly name: string }
   | { readonly kind: 'pickerFailed' }
@@ -42,7 +56,13 @@ export interface SongLibraryState {
   readonly chip: LibraryChip;
   readonly importing: readonly string[];
   readonly notice: LibraryNotice | null;
+  readonly replacePrompt: ReplacePrompt | null;
   readonly codes: LibraryConstants | null;
+}
+
+export interface ReplacePrompt {
+  readonly name: string;
+  readonly title: string;
 }
 
 export interface SongLibraryActions {
@@ -57,6 +77,8 @@ export interface SongLibraryActions {
   reanalyze: (songId: number) => Promise<void>;
   deleteRow: (row: LibraryRow) => Promise<void>;
   dismissNotice: () => void;
+  confirmReplace: () => Promise<void>;
+  cancelReplace: () => void;
 }
 
 export type SongLibraryStore = SongLibraryState & SongLibraryActions;
@@ -64,16 +86,13 @@ export type SongLibraryStore = SongLibraryState & SongLibraryActions;
 export interface SongLibraryDeps {
   readonly records: () => SongLibraryRecords;
   readonly files: () => LibraryFiles;
-  readonly newSongUuid: () => string;
+  readonly newUuid: () => string;
 }
-
-type SetState = StoreApi<SongLibraryStore>['setState'];
-type Get = StoreApi<SongLibraryStore>['getState'];
 
 const defaultDeps: SongLibraryDeps = {
   records: () => getSongLibrary().records,
   files: () => getSongLibrary().files,
-  newSongUuid: () => crypto.randomUUID(),
+  newUuid: () => crypto.randomUUID(),
 };
 
 const INITIAL: SongLibraryState = {
@@ -84,12 +103,9 @@ const INITIAL: SongLibraryState = {
   chip: 'all',
   importing: [],
   notice: null,
+  replacePrompt: null,
   codes: null,
 };
-
-function warn(what: string, error: unknown) {
-  console.warn(`[kitbag] ${what}`, error);
-}
 
 function resultRecord(result: AnalysisResult): AnalysisResultRecord {
   const filePath = result.relativePath;
@@ -105,38 +121,8 @@ function resultRecord(result: AnalysisResult): AnalysisResultRecord {
   };
 }
 
-// Leftovers belong to a row that is already gone or a waveform already
-// replaced; failing to remove them only costs space, never the row's state.
-async function deleteLeftovers(
-  files: LibraryFiles,
-  removals: readonly Removal[],
-  label: string,
-): Promise<void> {
-  try {
-    for (const removal of removals) {
-      if (removal.kind === 'folder') await files.deleteSongFolder(removal.name);
-      else await files.deleteLibraryFile(removal.path);
-    }
-  } catch (error) {
-    warn(`files of ${label} were not all deleted`, error);
-  }
-}
-
 function enqueue(files: LibraryFiles, song: SongFiles, replace: boolean) {
   files.enqueueAnalysis(song.filePath, parentDir(song.filePath), replace);
-}
-
-// Read once, and only when first needed: without the native module (web) there
-// are none, and rows then show their failures without a specific cause.
-function loadCodes(deps: SongLibraryDeps, get: Get): LibraryConstants | null {
-  const known = get().codes;
-  if (known !== null) return known;
-  try {
-    return deps.files().constants();
-  } catch (error) {
-    warn('library constants unavailable', error);
-    return null;
-  }
 }
 
 function readActions(deps: SongLibraryDeps, set: SetState, get: Get) {
@@ -173,7 +159,7 @@ async function importAudio(
   songsDir: string,
 ): Promise<ImportOutcome> {
   const files = deps.files();
-  const uuid = deps.newSongUuid();
+  const uuid = deps.newUuid();
   let imported: ImportedAudio;
   try {
     imported = await files.importAudio(doc.uri, songFolder(songsDir, uuid));
@@ -199,12 +185,8 @@ async function importAudio(
   return { ok: true, song };
 }
 
-function withoutOne(names: readonly string[], name: string): string[] {
-  const at = names.indexOf(name);
-  return at < 0 ? [...names] : [...names.slice(0, at), ...names.slice(at + 1)];
-}
-
 function importActions(deps: SongLibraryDeps, set: SetState, get: Get) {
+  const bundles = stemBundleActions(deps, set, get);
   let picking = false;
   const pick = async <T>(open: () => Promise<T | null>) => {
     if (picking) return null;
@@ -221,8 +203,7 @@ function importActions(deps: SongLibraryDeps, set: SetState, get: Get) {
     }
   };
   const importDocument = async (doc: PickedDocument) => {
-    set({ importing: [...get().importing, doc.name] });
-    try {
+    await whileImporting(set, get, doc.name, async () => {
       const codes = loadCodes(deps, get);
       const outcome: ImportOutcome =
         codes === null
@@ -231,41 +212,42 @@ function importActions(deps: SongLibraryDeps, set: SetState, get: Get) {
       if (outcome.ok) enqueue(deps.files(), outcome.song, false);
       else set({ notice: { kind: outcome.kind, name: doc.name } });
       set({ codes });
-    } finally {
-      set({ importing: withoutOne(get().importing, doc.name) });
-    }
+    });
     await get().refresh();
   };
   return {
     importSong: async () => {
       const doc = await pick(() => deps.files().pickDocument());
       if (doc === null) return;
-      if (isStemArchive(doc)) {
-        set({ notice: { kind: 'stemImport', name: doc.name } });
-        return;
-      }
-      await importDocument(doc);
+      if (isStemArchive(doc))
+        await bundles.importBundle({ ...doc, isFolder: false });
+      else await importDocument(doc);
     },
     importStemFolder: async () => {
       const folder = await pick(() => deps.files().pickFolder());
       if (folder !== null)
-        set({ notice: { kind: 'stemImport', name: folder.name } });
+        await bundles.importBundle({ ...folder, isFolder: true });
     },
+    confirmReplace: bundles.confirmReplace,
+    cancelReplace: bundles.cancelReplace,
   };
 }
 
 async function deleteRecord(
   deps: SongLibraryDeps,
   row: LibraryRow,
-  songsDir: string | null,
+  codes: LibraryConstants | null,
 ): Promise<Removal[]> {
   const records = deps.records();
   if (row.kind === 'stems')
-    return fileRemovals(await records.deleteStemSet(row.id));
+    return stemSetRemovals(
+      await records.deleteStemSet(row.id),
+      codes?.stemsDir ?? null,
+    );
   const song = await records.deleteSong(row.id);
   if (song === undefined) return [];
   deps.files().cancelAnalysis(song.filePath);
-  return songRemovals(song, songsDir);
+  return songRemovals(song, codes?.songsDir ?? null);
 }
 
 function analysisActions(deps: SongLibraryDeps, get: Get) {
@@ -318,11 +300,7 @@ function rowActions(deps: SongLibraryDeps, set: SetState, get: Get) {
     deleteRow: async (row: LibraryRow) => {
       let removals: Removal[];
       try {
-        removals = await deleteRecord(
-          deps,
-          row,
-          loadCodes(deps, get)?.songsDir ?? null,
-        );
+        removals = await deleteRecord(deps, row, loadCodes(deps, get));
       } catch (error) {
         warn(`delete of ${row.title} failed`, error);
         set({ notice: { kind: 'deleteFailed', name: row.title } });

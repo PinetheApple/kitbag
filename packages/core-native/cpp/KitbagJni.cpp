@@ -10,6 +10,7 @@
 #include "KitbagEngine.h"
 #include "analysis/sidecar_path.h"
 #include "kitbag_api.h"
+#include "mixer/mixer.h"
 
 using facebook::jsi::Runtime;
 
@@ -294,6 +295,30 @@ Java_com_kitbag_corenative_library_SongAnalyzer_nativeWaveformPath(JNIEnv* env, 
   const JniUtf songUtf(env, songPath);
   if (dirUtf.get() == nullptr || songUtf.get() == nullptr) return nullptr;
   return env->NewStringUTF(kitbag::SidecarPath(dirUtf.get(), songUtf.get()).c_str());
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_kitbag_corenative_library_NativeStemBundle_nativeWritePeaks(JNIEnv* env, jobject,
+                                                                    jstring path,
+                                                                    jint channels,
+                                                                    jlong totalFrames,
+                                                                    jfloatArray peaks,
+                                                                    jint chunkCount) {
+  const JniUtf pathUtf(env, path);
+  if (pathUtf.get() == nullptr || peaks == nullptr) return JNI_FALSE;
+  const auto needed = static_cast<int64_t>(chunkCount) * channels * 2;
+  if (needed <= 0 || env->GetArrayLength(peaks) < needed) return JNI_FALSE;
+  jfloat* elems = env->GetFloatArrayElements(peaks, nullptr);
+  if (elems == nullptr) return JNI_FALSE;
+  const kb_result result =
+      kb_waveform_write_peaks(pathUtf.get(), channels, totalFrames, elems, chunkCount);
+  env->ReleaseFloatArrayElements(peaks, elems, JNI_ABORT);
+  return result == KB_OK ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jint JNICALL
+Java_com_kitbag_corenative_library_NativeStemBundle_nativeMaxTracks(JNIEnv*, jobject) {
+  return kitbag::Mixer::kMaxTracks;
 }
 
 }  // extern "C"

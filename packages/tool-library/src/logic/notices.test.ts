@@ -1,15 +1,53 @@
+import type { BundleRefusalReason } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
-import { copyingText, failureText, noticeText } from './notices.ts';
+import {
+  copyingText,
+  failureText,
+  noticeText,
+  replaceText,
+} from './notices.ts';
 
 describe('noticeText', () => {
-  it('names the stem file and says nothing was added', () => {
-    const { text } = noticeText({
-      kind: 'stemImport',
+  const refused = (reason: BundleRefusalReason) =>
+    noticeText({
+      kind: 'bundleRefused',
       name: 'Redbone.stemdeck.zip',
+      refusal: { reason, version: 2, stemCount: 18, maxStems: 16 },
     });
+
+  it.each([
+    ['notABundle', 'not a StemDeck song bundle'],
+    ['version', 'a newer StemDeck (bundle version 2)'],
+    ['tooManyStems', 'has 18 stems; Kitbag plays up to 16'],
+    ['noSpace', 'not enough free space'],
+    ['unreadable', 'could not be read'],
+  ] as const)('says why a %s bundle was refused', (reason, why) => {
+    const { text } = refused(reason);
+    expect(text).toContain(why);
     expect(text).toContain('“Redbone.stemdeck.zip”');
-    expect(text).toContain('nothing was added');
+    expect(text).toContain('othing was added');
+  });
+
+  it('gives each refusal its own status', () => {
+    const reasons = [
+      'notABundle',
+      'version',
+      'tooManyStems',
+      'noSpace',
+      'unreadable',
+    ] as const;
+    const statuses = new Set(reasons.map((r) => refused(r).status));
+    expect(statuses.size).toBe(reasons.length);
+  });
+});
+
+describe('replaceText', () => {
+  it('names the picked file and the song it replaces', () => {
+    const text = replaceText('Redbone.stemdeck.zip', 'Redbone');
+    expect(text).toContain('“Redbone.stemdeck.zip”');
+    expect(text).toContain('“Redbone” in your library');
+    expect(text).toContain('cannot be undone');
   });
 });
 

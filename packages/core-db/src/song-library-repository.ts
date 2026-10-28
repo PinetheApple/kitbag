@@ -1,10 +1,17 @@
 import { count, eq, inArray, max, sql } from 'drizzle-orm';
 
 import { ANALYSIS_STATUS, type AnalysisStatus } from './analysis-status';
+import { packFloat32, packInt32 } from './packing';
 import { found, type Database, type DatabaseHandle } from './repository';
 import { setlistItems, songPresets, songs, stems, stemSets } from './schema';
-
-const BYTES_PER_VALUE = 4;
+import {
+  deleteStemSet,
+  findStemSetByJobId,
+  insertStemBundle,
+  readStemSet,
+  replaceStemBundle,
+  type NewStemBundle,
+} from './stem-bundle-repository';
 
 export interface LibrarySongRow {
   readonly kind: 'song';
@@ -64,24 +71,6 @@ export interface StoredAnalysis {
 export interface AnalysisOutcome {
   readonly found: boolean;
   readonly unusedWaveform: string | null;
-}
-
-export function packFloat32(values: readonly number[]): Uint8Array {
-  const bytes = new Uint8Array(values.length * BYTES_PER_VALUE);
-  const view = new DataView(bytes.buffer);
-  values.forEach((value, i) => {
-    view.setFloat32(i * BYTES_PER_VALUE, value, true);
-  });
-  return bytes;
-}
-
-export function packInt32(values: readonly number[]): Uint8Array {
-  const bytes = new Uint8Array(values.length * BYTES_PER_VALUE);
-  const view = new DataView(bytes.buffer);
-  values.forEach((value, i) => {
-    view.setInt32(i * BYTES_PER_VALUE, value, true);
-  });
-  return bytes;
 }
 
 async function songsInSetlists(db: Database): Promise<Set<number>> {
@@ -265,16 +254,6 @@ async function deleteSong(
   return row;
 }
 
-async function deleteStemSet(db: Database, id: number): Promise<string[]> {
-  const files = await db
-    .select({ filePath: stems.filePath })
-    .from(stems)
-    .where(eq(stems.stemSetId, id));
-  await db.delete(stems).where(eq(stems.stemSetId, id));
-  await db.delete(stemSets).where(eq(stemSets.id, id));
-  return files.map((file) => file.filePath);
-}
-
 export function createSongLibraryRepository({
   db,
   transactor,
@@ -289,6 +268,13 @@ export function createSongLibraryRepository({
       transaction(() => applyAnalysis(db, result)),
     deleteSong: (id: number) => transaction(() => deleteSong(db, id)),
     deleteStemSet: (id: number) => transaction(() => deleteStemSet(db, id)),
+    findStemSetByJobId: (jobId: string) =>
+      serial(() => findStemSetByJobId(db, jobId)),
+    insertStemBundle: (bundle: NewStemBundle) =>
+      transaction(() => insertStemBundle(db, bundle)),
+    replaceStemBundle: (bundle: NewStemBundle) =>
+      transaction(() => replaceStemBundle(db, bundle)),
+    readStemSet: (id: number) => serial(() => readStemSet(db, id)),
   };
 }
 

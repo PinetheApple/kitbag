@@ -106,4 +106,12 @@ class LibraryPathsTest {
       assertThrows(name, UnsafeLibraryPathException::class.java) { LibraryPaths.songFolder(base, name) }
     }
   }
+
+  @Test
+  fun `a stem folder is one plain child of stems, never the import staging dir`() {
+    assertEquals(File(base.canonicalFile, "stems/job123"), LibraryPaths.stemFolder(base, "job123"))
+    for (name in listOf("", "a/b", "..", ".import-staging", "../songs")) {
+      assertThrows(name, UnsafeLibraryPathException::class.java) { LibraryPaths.stemFolder(base, name) }
+    }
+  }
 }

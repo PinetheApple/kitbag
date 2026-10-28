@@ -8,6 +8,7 @@ class UnsafeLibraryPathException(path: String) :
 object LibraryPaths {
   private const val FALLBACK_STEM = "audio"
   const val SONGS_DIR_NAME = "songs"
+  const val STEMS_DIR_NAME = "stems"
 
   // ext4 caps a name at 255 bytes and a letter can take 4 in UTF-8; this
   // leaves room for the collision suffix and a ".part" or ".kwav" sibling.
@@ -69,11 +70,15 @@ object LibraryPaths {
     return "$stem-$n$suffix"
   }
 
-  fun songFolder(base: File, folderName: String): File {
+  fun songFolder(base: File, folderName: String): File = childFolder(base, SONGS_DIR_NAME, folderName)
+
+  fun stemFolder(base: File, folderName: String): File = childFolder(base, STEMS_DIR_NAME, folderName)
+
+  private fun childFolder(base: File, parent: String, folderName: String): File {
     if (folderName.isEmpty() || '/' in folderName || folderName.startsWith('.')) {
       throw UnsafeLibraryPathException(folderName)
     }
-    return resolve(base, "$SONGS_DIR_NAME/$folderName")
+    return resolve(base, "$parent/$folderName")
   }
 
   private fun stemOf(name: String): String {

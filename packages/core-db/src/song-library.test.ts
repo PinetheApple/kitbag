@@ -7,11 +7,8 @@ import { connectDatabase } from './client';
 import { fakeOpSqlite } from './op-sqlite-fake.test-helper';
 import { songPresets, songs, stems, stemSets } from './schema';
 import { createSetlistRepository } from './setlist-repository';
-import {
-  createSongLibraryRepository,
-  packFloat32,
-  packInt32,
-} from './song-library-repository';
+import { packFloat32, packInt32 } from './packing';
+import { createSongLibraryRepository } from './song-library-repository';
 import { createSongPresetRepository } from './song-preset-repository';
 import { openTestDatabase } from './sqlite.test-helper';
 
@@ -329,10 +326,10 @@ describe('song library repository', () => {
   it('deletes a stem song with its stems and returns their files', async () => {
     const { handle, library } = setup();
     const id = await addStemSet(handle, 'Redbone', [1, 2]);
-    expect(await library.deleteStemSet(id)).toEqual([
-      'stems/Redbone/0.flac',
-      'stems/Redbone/1.flac',
-    ]);
+    expect(await library.deleteStemSet(id)).toEqual({
+      folder: null,
+      files: ['stems/Redbone/0.flac', 'stems/Redbone/1.flac'],
+    });
     expect(await handle.db.select().from(stems)).toEqual([]);
     expect(await library.list()).toEqual([]);
   });

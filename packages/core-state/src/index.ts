@@ -97,6 +97,7 @@ export {
   createSongLibraryStore,
   songLibraryStore,
   type LibraryNotice,
+  type ReplacePrompt,
   type SongLibraryStore,
 } from './songLibrary/store.ts';
 export {
@@ -117,6 +118,10 @@ export {
   type LibrarySummary,
   type SongBadge,
 } from './songLibrary/logic.ts';
+export type {
+  BundleRefusal,
+  BundleRefusalReason,
+} from './songLibrary/stemBundleLogic.ts';
 export type {
   LibraryRow,
   LibrarySongRow,

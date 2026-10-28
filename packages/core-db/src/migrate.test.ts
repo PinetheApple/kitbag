@@ -17,6 +17,7 @@ import {
   buildV11Fixture,
   buildV12Fixture,
   buildV13Fixture,
+  buildV14Fixture,
   pragma,
   rows,
 } from './migrate-fixtures.test-helper';
@@ -149,6 +150,7 @@ describe('migrate', () => {
     ['v11', buildV11Fixture],
     ['v12', buildV12Fixture],
     ['v13', buildV13Fixture],
+    ['v14', buildV14Fixture],
   ])(
     'builds the same tables, column types and indexes fresh as from %s',
     (_from, build) => {
