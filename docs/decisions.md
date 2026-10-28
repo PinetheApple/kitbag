@@ -278,6 +278,13 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   one with its own button row; the media session stays for headset keys, and the
   lock screen shows the notification itself. The practice clock still runs in the app. **[recorded]**
 
+- **2026-10-28 · Floating-point contraction off for the native core (#165)** — CI's
+  ubuntu-26.04 GCC targets an FMA-capable CPU by default, so it fused `a*b+c` in our
+  downbeat code and in QM's at different places, and the bit-identical equivalence
+  checks failed in the last digit. `-ffp-contract=off` for every native target makes
+  the rounding the source's, on any compiler default, including the phone's clang. The
+  runner image is not pinned: the check is toolchain-independent instead. **[recorded]**
+
 - **2026-10-27 · What "dropped or jittered" means for the soak (§5.8, §6.5, #88)** — SPEC
   sets no numbers, so the harness's limits were set by the integrator and live once in
   `native/audio_core/tools/soak/click_soak_types.h`. A click is jittered, and an interval
