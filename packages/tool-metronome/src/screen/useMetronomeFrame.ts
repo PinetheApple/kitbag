@@ -43,7 +43,12 @@ export function useMetronomeFrame(
 
   useEffect(() => {
     frame.setActive(running);
-  }, [frame, running]);
+    if (!running) {
+      barPhase.value = 0;
+      currentBeat.value = KB_STOPPED_BEAT;
+      currentPolyBeat.value = KB_STOPPED_BEAT;
+    }
+  }, [frame, running, barPhase, currentBeat, currentPolyBeat]);
 
   useEffect(() => {
     currentBpm.value = bpm;

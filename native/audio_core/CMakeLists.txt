@@ -13,6 +13,10 @@ if(NOT KITBAG_IPO_SUPPORTED)
   message(STATUS "kitbag: LTO unavailable, render helpers stay out of line: ${KITBAG_IPO_ERROR}")
 endif()
 
+# A toolchain that targets FMA would otherwise fuse a*b+c wherever it likes, so
+# the same source rounds differently per compiler default (#165).
+add_compile_options(-ffp-contract=off)
+
 # clang-tidy needs this; scripts/lint.sh skips its entire static-analysis half
 # without it, and used to do so while still exiting 0.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

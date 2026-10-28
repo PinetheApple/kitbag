@@ -30,7 +30,6 @@ data class TransportView(
   val title: String,
   val subtitle: String?,
   val actions: List<TransportAction>,
-  val compactActions: List<TransportAction>,
   val sessionActions: List<TransportAction>,
 )
 
@@ -52,10 +51,6 @@ sealed interface TransportCommand {
 
 class TransportModel(private val minBpm: Double, private val maxBpm: Double) {
 
-  // The media card's seek bar is the practice clock.
-  fun practiceSpanMillis(playedMillis: Long): Long =
-    (playedMillis / PRACTICE_BLOCK_MILLIS + 1) * PRACTICE_BLOCK_MILLIS
-
   fun view(state: TransportState): TransportView {
     val playPause =
       if (state.playback == Playback.PLAYING) TransportAction.PAUSE else TransportAction.PLAY
@@ -66,7 +61,7 @@ class TransportModel(private val minBpm: Double, private val maxBpm: Double) {
       if (hasNext(state)) add(TransportAction.NEXT)
       if (state.playback != Playback.STOPPED) add(TransportAction.STOP)
     }
-    return TransportView(title(state), subtitle(state), actions, compact, sessionActions(actions))
+    return TransportView(title(state), subtitle(state), actions, sessionActions(actions))
   }
 
   // System media controls lack room for six; with both neighbours the tempo keys give way.
@@ -119,6 +114,5 @@ class TransportModel(private val minBpm: Double, private val maxBpm: Double) {
 
   private companion object {
     const val TEMPO_STEP_BPM = 1.0
-    const val PRACTICE_BLOCK_MILLIS = 10 * 60 * 1000L
   }
 }
