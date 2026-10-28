@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -212,6 +213,27 @@ void CheckPipeline(
   std::filesystem::remove(kwav);
 }
 
+void ReportSdDifference(
+    const std::vector<double>& got,
+    const std::vector<double>& want
+) {
+  if (got.size() != want.size()) {
+    std::fprintf(
+        stderr,
+        "  sd sizes differ: %zu vs %zu\n",
+        got.size(),
+        want.size()
+    );
+    return;
+  }
+  for (size_t i = 0; i < got.size(); ++i) {
+    if (got[i] != want[i]) {
+      std::fprintf(stderr, "  sd[%zu]: %.17g vs %.17g\n", i, got[i], want[i]);
+      return;
+    }
+  }
+}
+
 void CheckFixture(const Fixture& fx, const std::filesystem::path& dir) {
   const std::vector<float> mono = RefDownmix(fx.pcm, fx.channels);
   const int rate = static_cast<int>(fx.rate);
@@ -235,6 +257,7 @@ void CheckFixture(const Fixture& fx, const std::filesystem::path& dir) {
       sd == ref_db.sd && streamed_db == ref_db.indices,
       "equivalence: beat spectral differences identical to QM"
   );
+  ReportSdDifference(sd, ref_db.sd);
 }
 
 // 48 kHz, a length off every block size, and 1.3 s of leading silence so the
@@ -276,6 +299,7 @@ void CheckIrregularGrid() {
       !ref.sd.empty() && sd == ref.sd && streamed_db == ref.indices,
       "equivalence: long, empty and past-end beats match QM DownBeat"
   );
+  ReportSdDifference(sd, ref.sd);
 }
 
 }  // namespace
