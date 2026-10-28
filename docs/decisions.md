@@ -272,6 +272,10 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   seek bar; this entry supersedes it for the system card. When both previous and next
   songs show, the tempo keys drop from the system controls. **[recorded]**
 
+- **2026-10-28 · Metronome notification drops the seek bar (§5.6, #163)** — Decided by
+  the owner: the media card shows no position or duration, superseding the 2026-10-27
+  entry's 10-minute seek bar. The practice clock still runs in the app. **[recorded]**
+
 - **2026-10-27 · What "dropped or jittered" means for the soak (§5.8, §6.5, #88)** — SPEC
   sets no numbers, so the harness's limits were set by the integrator and live once in
   `native/audio_core/tools/soak/click_soak_types.h`. A click is jittered, and an interval

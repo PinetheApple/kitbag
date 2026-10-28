@@ -106,14 +106,6 @@ class TransportModelTest {
     assertEquals(none, model.commandsFor(state(), NEXT))
   }
 
-  @Test
-  fun `practice span is the 10-minute block the played time is in`() {
-    assertEquals(600_000L, model.practiceSpanMillis(0))
-    assertEquals(600_000L, model.practiceSpanMillis(599_999))
-    assertEquals(1_200_000L, model.practiceSpanMillis(600_000))
-    assertEquals(4_200_000L, model.practiceSpanMillis(3_723_000))
-  }
-
   @Test(expected = IllegalArgumentException::class)
   fun `a position outside its setlist is rejected`() {
     song(12)

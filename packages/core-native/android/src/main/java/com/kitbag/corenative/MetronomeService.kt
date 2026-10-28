@@ -33,7 +33,7 @@ class MetronomeService : Service() {
   private var lastStartId = 0
   private lateinit var session: MediaSessionCompat
   private var practice = PracticeClock.IDLE
-  private var publishedMetadata: Triple<String, String?, Long>? = null
+  private var publishedMetadata: Pair<String, String?>? = null
   private val clock = Handler(Looper.getMainLooper())
   private val tick = Runnable { onTick() }
 
@@ -126,8 +126,6 @@ class MetronomeService : Service() {
       TransportCommand.PreviousSong, TransportCommand.NextSong -> s
     }
 
-  private fun currentPlayedMillis(): Long = practice.elapsedMillis(System.currentTimeMillis())
-
   private fun onTick() {
     val transportModel = model ?: return
     val previous = state ?: return
@@ -171,25 +169,22 @@ class MetronomeService : Service() {
       .build()
 
   private fun updateSession(s: TransportState, view: TransportView) {
-    val transportModel = model ?: return
     val playing = s.playback == Playback.PLAYING
-    val playedMs = currentPlayedMillis()
-    val metadata = Triple(view.title, view.subtitle, transportModel.practiceSpanMillis(playedMs))
+    val metadata = view.title to view.subtitle
     if (metadata != publishedMetadata) {
       publishedMetadata = metadata
       session.setMetadata(
         MediaMetadataCompat.Builder()
           .putString(MediaMetadataCompat.METADATA_KEY_TITLE, metadata.first)
           .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, metadata.second)
-          .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, metadata.third)
           .build(),
       )
     }
     val builder = PlaybackStateCompat.Builder()
       .setState(
         if (playing) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
-        playedMs,
-        if (playing) 1f else 0f,
+        PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
+        0f,
       )
       .setActions(view.sessionActions.fold(0L) { mask, a -> mask or platformAction(a) })
     view.sessionActions.filter { it in CUSTOM_ACTIONS }.forEach {

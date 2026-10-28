@@ -52,10 +52,6 @@ sealed interface TransportCommand {
 
 class TransportModel(private val minBpm: Double, private val maxBpm: Double) {
 
-  // The media card's seek bar is the practice clock.
-  fun practiceSpanMillis(playedMillis: Long): Long =
-    (playedMillis / PRACTICE_BLOCK_MILLIS + 1) * PRACTICE_BLOCK_MILLIS
-
   fun view(state: TransportState): TransportView {
     val playPause =
       if (state.playback == Playback.PLAYING) TransportAction.PAUSE else TransportAction.PLAY
@@ -119,6 +115,5 @@ class TransportModel(private val minBpm: Double, private val maxBpm: Double) {
 
   private companion object {
     const val TEMPO_STEP_BPM = 1.0
-    const val PRACTICE_BLOCK_MILLIS = 10 * 60 * 1000L
   }
 }
