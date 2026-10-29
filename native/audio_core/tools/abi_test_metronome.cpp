@@ -230,6 +230,49 @@ void TestSetRampInMinutes() {
   kb_engine_destroy(engine);
 }
 
+void TestTrainerReadsThroughAbi() {
+  kb_engine* engine = FourFourEngine(0);
+  if (engine == nullptr) return;
+  const uint32_t rate = kb_engine_sample_rate(engine);
+  kb_metronome_set_bar_mute(engine, 1, 1, 2);
+  kb_metronome_set_count_in(engine, 1, 1, kWoodblock);
+  kb_metronome_set_ramp(engine, 1, 60.0, 120.0, 5.0, 0.04, KB_RAMP_MINUTES, 0);
+  kb_metronome_start(engine);
+  Render(engine, rate);
+  Check(
+      kb_metronome_count_in_bar(engine) == 0 &&
+          kb_metronome_bar_mute_position(engine) == -1,
+      "count_in_bar / bar_mute_position: count-in bar 0, trainer hidden"
+  );
+  Render(engine, rate * 36 / 10);
+  Check(
+      kb_metronome_ramp_state(engine) == KB_RAMP_STATE_STEPPING &&
+          kb_metronome_ramp_next_bpm(engine) == 65.0 &&
+          std::fabs(kb_metronome_ramp_remaining(engine) - 0.03) < 1e-6 &&
+          std::fabs(kb_metronome_ramp_step_progress(engine) - 0.25) < 1e-4,
+      "ramp reads: 0.6 s into a 0.04 min step, 0.03 min remain before 65"
+  );
+  Render(engine, rate * 44 / 10);
+  Check(
+      kb_metronome_bar_mute_position(engine) == 1 &&
+          kb_metronome_count_in_bar(engine) == -1,
+      "bar_mute_position: Play 1 / Mute 2 reads 1 in the second bar"
+  );
+  kb_engine_destroy(engine);
+}
+
+void TestTrainerReadsOnNullEngine() {
+  Check(
+      kb_metronome_bar_mute_position(nullptr) == -1 &&
+          kb_metronome_count_in_bar(nullptr) == -1 &&
+          kb_metronome_ramp_state(nullptr) == KB_RAMP_STATE_OFF &&
+          kb_metronome_ramp_next_bpm(nullptr) == 0.0 &&
+          kb_metronome_ramp_remaining(nullptr) == 0.0 &&
+          kb_metronome_ramp_step_progress(nullptr) == 0.0,
+      "trainer reads: a null engine reads as off"
+  );
+}
+
 }  // namespace
 
 void RunMetronomeAbiTests() {
@@ -239,6 +282,8 @@ void RunMetronomeAbiTests() {
   TestCountInPauseAndStop();
   TestPreviewSoundAtVolume();
   TestSetRampInMinutes();
+  TestTrainerReadsThroughAbi();
+  TestTrainerReadsOnNullEngine();
 }
 
 }  // namespace abi_test

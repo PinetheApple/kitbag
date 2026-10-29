@@ -8,6 +8,7 @@
 
 #include "metronome/metronome_types.h"
 #include "metronome/tempo_ramp.h"
+#include "metronome/trainer_mirrors.h"
 #include "rt/rt_publisher.h"
 #include "rt/spsc_ring.h"
 
@@ -123,7 +124,6 @@ class Metronome {
   bool is_running() const {
     return running_flag_.load(std::memory_order_relaxed);
   }
-  // Beat index within the bar, or -1 when stopped. UI polls this.
   int32_t current_beat() const {
     return current_beat_.load(std::memory_order_relaxed);
   }
@@ -133,17 +133,17 @@ class Metronome {
   bool counting_in() const {
     return counting_in_flag_.load(std::memory_order_relaxed);
   }
-  // Position within the bar, [0, 1). Updated once per render block.
   double bar_phase() const {
     return bar_phase_.load(std::memory_order_relaxed);
   }
-  // Effective BPM, including ramp progress. UI polls this.
   double current_bpm() const {
     return current_bpm_.load(std::memory_order_relaxed);
   }
-  // True while the current bar is silenced by the bar-mute trainer.
   bool bar_muted() const {
     return bar_muted_flag_.load(std::memory_order_relaxed);
+  }
+  const TrainerMirrors& trainer_mirrors() const {
+    return trainer_mirrors_;
   }
 
  private:
@@ -211,7 +211,6 @@ class Metronome {
   void ApplyCommand(const Command& command);
   bool RouteCommand(const Command& command);
   bool ApplyTransportCommand(const Command& command);
-  // Copies an anchor_external's scalars into the pending_anchor_ fields.
   void StashPendingAnchor(const Command& command);
   bool ApplyTempoCommand(const Command& command);
   bool ApplyTrainerCommand(const Command& command);
@@ -305,6 +304,7 @@ class Metronome {
       uint64_t frame,
       uint32_t sample_rate
   );
+  void PublishTrainerMirrors(bool gridded, uint32_t sample_rate);
 
   // Grid mode: fires the grid's beat if this sample crosses one.
   void
@@ -321,7 +321,6 @@ class Metronome {
   // Places grid_cursor_ on the first beat at or after `song_seconds`. Binary
   // search — bounded and allocation-free, so it is safe from the callback.
   void SeekGridCursor(const BeatGrid& grid, double song_seconds);
-  // Grid mode: derives current_bar_ from grid_beat_index_. See the definition.
   void SyncGridBar();
   // Publishes bar_phase_/current_bpm_ from the grid's local beat spacing.
   void PublishGridMirrors(
@@ -393,6 +392,7 @@ class Metronome {
   std::atomic<double> current_bpm_{kDefaultBpm};
   std::atomic<bool> bar_muted_flag_{false};
   std::atomic<bool> counting_in_flag_{false};
+  TrainerMirrors trainer_mirrors_;
 };
 
 }  // namespace kitbag

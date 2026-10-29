@@ -16,6 +16,13 @@ static_assert(
 static_assert(KB_RAMP_BARS == static_cast<int>(kitbag::RampUnit::kBars));
 static_assert(KB_RAMP_SECONDS == static_cast<int>(kitbag::RampUnit::kSeconds));
 static_assert(KB_RAMP_MINUTES == static_cast<int>(kitbag::RampUnit::kMinutes));
+static_assert(KB_RAMP_STATE_OFF == static_cast<int>(kitbag::RampState::kOff));
+static_assert(
+    KB_RAMP_STATE_STEPPING == static_cast<int>(kitbag::RampState::kStepping)
+);
+static_assert(
+    KB_RAMP_STATE_AT_TARGET == static_cast<int>(kitbag::RampState::kAtTarget)
+);
 
 extern "C" {
 
@@ -258,6 +265,38 @@ int32_t kb_metronome_bar_muted(const kb_engine* engine) {
 int32_t kb_metronome_counting_in(const kb_engine* engine) {
   return engine != nullptr && ToEngine(engine)->metronome().counting_in() ? 1
                                                                           : 0;
+}
+
+int32_t kb_metronome_bar_mute_position(const kb_engine* engine) {
+  if (engine == nullptr) return -1;
+  return ToEngine(engine)->metronome().trainer_mirrors().bar_mute_position();
+}
+
+int32_t kb_metronome_count_in_bar(const kb_engine* engine) {
+  if (engine == nullptr) return -1;
+  return ToEngine(engine)->metronome().trainer_mirrors().count_in_bar();
+}
+
+int32_t kb_metronome_ramp_state(const kb_engine* engine) {
+  if (engine == nullptr) return KB_RAMP_STATE_OFF;
+  return static_cast<int32_t>(
+      ToEngine(engine)->metronome().trainer_mirrors().ramp_state()
+  );
+}
+
+double kb_metronome_ramp_next_bpm(const kb_engine* engine) {
+  if (engine == nullptr) return 0.0;
+  return ToEngine(engine)->metronome().trainer_mirrors().ramp_next_bpm();
+}
+
+double kb_metronome_ramp_remaining(const kb_engine* engine) {
+  if (engine == nullptr) return 0.0;
+  return ToEngine(engine)->metronome().trainer_mirrors().ramp_remaining();
+}
+
+double kb_metronome_ramp_step_progress(const kb_engine* engine) {
+  if (engine == nullptr) return 0.0;
+  return ToEngine(engine)->metronome().trainer_mirrors().ramp_step_progress();
 }
 
 }  // extern "C"

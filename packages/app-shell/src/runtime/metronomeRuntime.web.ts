@@ -1,5 +1,6 @@
 import {
   KITBAG_HOST_OBJECT_KEY,
+  KB_RAMP_STATE,
   KB_STOPPED_BEAT,
   KB_TUNER_NO_NOTE,
   KB_TUNER_NO_STRING,
@@ -73,6 +74,13 @@ const presentationHost: KitbagHostObject = Object.freeze({
   ),
   current_poly_beat: KB_STOPPED_BEAT,
   counting_in: 0,
+  bar_muted: 0,
+  bar_mute_position: -1,
+  count_in_bar: -1,
+  ramp_state: KB_RAMP_STATE.KB_RAMP_STATE_OFF,
+  ramp_next_bpm: 0,
+  ramp_remaining: 0,
+  ramp_step_progress: 0,
   get current_bpm() {
     return metronomeStore.getState().bpm;
   },

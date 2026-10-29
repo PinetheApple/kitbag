@@ -24,7 +24,7 @@ using kitbag_test::g_failures;
 
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 82;
+constexpr int kExpectedChecks = 86;
 
 void ExpectRejected(
     kb_engine* engine,

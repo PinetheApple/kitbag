@@ -12,6 +12,20 @@ export interface KitbagHostObject {
   readonly counting_in: number;
   /** kb_metronome_current_bpm — effective BPM including ramp progress. */
   readonly current_bpm: number;
+  /** kb_metronome_bar_muted — 1 while the bar-mute trainer silences the bar. */
+  readonly bar_muted: number;
+  /** kb_metronome_bar_mute_position — bar within the play+mute cycle, -1 when off, stopped or counting in. */
+  readonly bar_mute_position: number;
+  /** kb_metronome_count_in_bar — 0-based count-in bar, -1 when not counting in. */
+  readonly count_in_bar: number;
+  /** kb_metronome_ramp_state — a KB_RAMP_STATE value. */
+  readonly ramp_state: number;
+  /** kb_metronome_ramp_next_bpm — tempo of the next step, 0 unless stepping. */
+  readonly ramp_next_bpm: number;
+  /** kb_metronome_ramp_remaining — time to the next step in the ramp's unit (bars, seconds or minutes). */
+  readonly ramp_remaining: number;
+  /** kb_metronome_ramp_step_progress — elapsed fraction of the current interval, [0, 1]. */
+  readonly ramp_step_progress: number;
   /** kb_engine_frames_rendered — monotonic master clock, in frames. */
   readonly frames_rendered: number;
   /** kb_tuner_snapshot — packed reading; decode with src/host/snapshot.ts. */

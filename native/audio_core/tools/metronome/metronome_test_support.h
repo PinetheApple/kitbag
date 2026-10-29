@@ -349,6 +349,8 @@ void RunCountInTests();
 void RunLongCountInTests();
 void RunRampTests();
 void RunRampLiveTests();
+void RunTrainerStatusTests();
+void RunRampStatusTests();
 
 }  // namespace metronome_test
 
