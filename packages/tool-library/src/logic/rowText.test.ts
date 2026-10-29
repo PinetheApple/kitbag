@@ -1,13 +1,17 @@
-import type { LibrarySongRow, LibraryStemSetRow } from '@kitbag/core-state';
+import type {
+  LibraryRow,
+  LibrarySongRow,
+  LibraryStemSetRow,
+  SongBadge,
+} from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
 import {
   formatLength,
+  rowBadges,
   rowSubtitle,
-  songBadges,
   spokenLength,
   spokenRow,
-  stemBadges,
 } from './rowText.ts';
 
 const SONG: LibrarySongRow = {
@@ -57,66 +61,92 @@ describe('length', () => {
   });
 });
 
-describe('row text', () => {
-  it('shows artist and length, dropping what is unknown', () => {
-    expect(rowSubtitle(SONG)).toBe('Foo Fighters · 4:10');
-    expect(rowSubtitle({ ...SONG, artist: '', durationSec: 0 })).toBe(
-      undefined,
-    );
-    expect(rowSubtitle(STEMS)).toBe('5:26');
+const labels = (row: LibraryRow, status: SongBadge) =>
+  rowBadges(row, status).map((badge) => [badge.label, badge.icon, badge.tone]);
+
+describe('row facts line', () => {
+  it('reads length · BPM for a song and length · BPM · key for a stem song', () => {
+    expect(rowSubtitle(SONG, 'grid', null)).toBe('4:10 · 158 BPM');
+    expect(rowSubtitle(STEMS, 'grid', null)).toBe('5:26 · 81 BPM · F maj');
   });
 
-  it('badges BPM and grid status, and speaks them', () => {
-    const badges = songBadges(SONG, 'grid');
-    expect(badges.map((b) => [b.label, b.icon])).toEqual([
-      ['158 BPM', undefined],
-      ['GRID', 'check'],
+  it('leaves out the artist, which stays in search and speech', () => {
+    expect(rowSubtitle(SONG, 'grid', null)).not.toContain('Foo Fighters');
+    expect(spokenRow(SONG, 'grid', null)).toContain('Foo Fighters');
+  });
+
+  it('says analyzing or no beat grid instead of facts there are none of yet', () => {
+    expect(rowSubtitle(SONG, 'analyzing', null)).toBe('4:10 · analyzing…');
+    expect(rowSubtitle({ ...SONG, bpm: null }, 'failed', null)).toBe(
+      '4:10 · no beat grid',
+    );
+  });
+
+  it('keeps the BPM and grid of a song whose re-analysis failed, and says so', () => {
+    const kept: LibrarySongRow = { ...SONG, analysisStatus: 'failed' };
+    const failure = { kind: 'other', keptGrid: true } as const;
+    expect(rowSubtitle(kept, 'grid', failure)).toBe(
+      '4:10 · 158 BPM · re-analysis failed',
+    );
+    expect(labels(kept, 'grid')).toEqual([['GRID', 'check', 'success']]);
+    expect(rowSubtitle(SONG, 'grid', null)).not.toContain('failed');
+  });
+
+  it('drops what is unknown', () => {
+    expect(
+      rowSubtitle({ ...SONG, durationSec: 0, bpm: null }, 'pending', null),
+    ).toBe('');
+    expect(rowSubtitle(BARE_STEMS, 'noGrid', null)).toBe('5:26');
+  });
+
+  it('names a StemDeck key once', () => {
+    expect(
+      rowSubtitle({ ...STEMS, key: 'F maj', scale: 'Major' }, 'grid', null),
+    ).toBe('5:26 · 81 BPM · F maj');
+  });
+});
+
+describe('row badges', () => {
+  it.each([
+    ['grid', [['GRID', 'check', 'success']]],
+    ['analyzing', [['ANALYZING', 'analyzing', 'warning']]],
+    ['failed', [['FAILED', 'error', 'danger']]],
+    ['pending', [['NOT ANALYZED', undefined, 'default']]],
+    ['noGrid', [['NO GRID', undefined, 'default']]],
+  ] as const)('a %s song shows only its status', (status, expected) => {
+    expect(labels(SONG, status)).toEqual(expected);
+  });
+
+  it('puts the stem count above the grid on a stem song', () => {
+    expect(labels(STEMS, 'grid')).toEqual([
+      ['STEMS ×6', undefined, 'accent'],
+      ['GRID', 'check', 'success'],
     ]);
-    expect(spokenRow(SONG, badges, null)).toBe(
+    expect(labels(BARE_STEMS, 'noGrid')).toEqual([
+      ['STEMS ×6', undefined, 'accent'],
+    ]);
+  });
+});
+
+describe('spoken row', () => {
+  it('speaks the facts and badges of a song', () => {
+    expect(spokenRow(SONG, 'grid', null)).toBe(
       'Everlong, Foo Fighters, 4 minutes 10 seconds, 158 beats per minute, Beat grid ready',
     );
   });
 
-  it('shows no BPM while analyzing and no status badge on failure', () => {
-    const pending = { ...SONG, bpm: null };
-    expect(songBadges(pending, 'analyzing').map((b) => b.label)).toEqual([
-      'ANALYZING…',
-    ]);
-    expect(songBadges(pending, 'failed')).toEqual([]);
-    expect(spokenRow(pending, [], 'Missing file')).toMatch(/, Missing file$/);
-  });
-
-  it('badges a stem song like a song, plus its key and stem count', () => {
-    const badges = stemBadges(STEMS);
-    expect(badges.map((b) => [b.label, b.icon])).toEqual([
-      ['81 BPM', undefined],
-      ['F maj', undefined],
-      ['GRID', 'check'],
-      ['STEMS ×6', undefined],
-    ]);
-    expect(spokenRow(STEMS, badges, null)).toBe(
-      'Redbone, stem song, 5 minutes 26 seconds, 81 beats per minute, key F major, Beat grid ready, 6 stems',
+  it('speaks a stem song with its key and stem count', () => {
+    expect(spokenRow(STEMS, 'grid', null)).toBe(
+      'Redbone, 5 minutes 26 seconds, 81 beats per minute, key F major, 6 stems, Beat grid ready',
     );
   });
 
-  it('names a StemDeck key once', () => {
-    const badge = stemBadges({ ...STEMS, key: 'F maj', scale: 'Major' }).find(
-      (b) => b.key === 'key',
+  it('speaks why analysis failed, and no BPM while analyzing', () => {
+    expect(spokenRow({ ...SONG, bpm: null }, 'failed', 'Missing file')).toBe(
+      'Everlong, Foo Fighters, 4 minutes 10 seconds, Analysis failed, Missing file',
     );
-    expect([badge?.label, badge?.spoken]).toEqual(['F maj', 'key F major']);
-  });
-
-  it('leaves out the badges a stem song has no field for', () => {
-    expect(stemBadges(BARE_STEMS).map((b) => [b.label, b.spoken])).toEqual([
-      ['STEMS ×6', '6 stems'],
-    ]);
-    expect(
-      stemBadges({ ...BARE_STEMS, key: 'C#', stemCount: 1 }).map(
-        (b) => b.label,
-      ),
-    ).toEqual(['C#', 'STEMS ×1']);
-    expect(stemBadges({ ...BARE_STEMS, stemCount: 1 })[0]?.spoken).toBe(
-      '1 stem',
+    expect(spokenRow(SONG, 'analyzing', null)).not.toContain(
+      'beats per minute',
     );
   });
 });

@@ -43,7 +43,7 @@ export const iconGlyphs = {
   songs: 'playlist-music',
   metronome: 'metronome',
   tuner: 'guitar-acoustic',
-  stems: 'tune-vertical',
+  stems: 'tune',
   playAlong: 'play-circle-outline',
   moreTools: 'dots-grid',
   arrowUp: 'arrow-up',
@@ -54,6 +54,9 @@ export const iconGlyphs = {
   countingIn: 'timer-sand-empty',
   swipeTempo: 'arrow-up-down',
   polyrhythm: 'waveform',
+  analyzing: 'refresh',
+  error: 'alert-circle',
+  folder: 'folder',
 } as const satisfies Record<string, VectorGlyph>;
 
 export type IconName = keyof typeof iconGlyphs;

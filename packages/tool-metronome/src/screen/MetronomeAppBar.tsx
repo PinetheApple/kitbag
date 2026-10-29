@@ -13,8 +13,6 @@ import {
   textRoles,
   textStyle,
   useTheme,
-  type ColorToken,
-  type ThemeMode,
 } from '@kitbag/core-design';
 import { useLibrary } from '@kitbag/core-state';
 import { useMemo } from 'react';
@@ -25,9 +23,6 @@ import {
   setlistChipA11yLabel,
   setlistChipLabel,
 } from '../logic/setlistChip.ts';
-
-const activeInk = (mode: ThemeMode): ColorToken =>
-  mode === 'dark' ? 'accent' : 'accentDeep';
 
 const CHIP_TO_BODY = (size.appBar - size.setChip) / 2 + space.belowAppBar;
 const CHIP_HIT_BOX = hitBoxStyle(
@@ -73,7 +68,7 @@ const useStyles = createThemedStyles((theme) => ({
     flexShrink: 1,
   },
   labelActive: {
-    color: theme.color[activeInk(theme.mode)],
+    color: theme.color[theme.accentInk],
   },
 }));
 
@@ -87,7 +82,7 @@ function SetlistChip({ onPress }: { readonly onPress: () => void }) {
     [setlists, entries, loadedItemId],
   );
   const on = active !== undefined;
-  const ink = activeInk(useTheme().mode);
+  const ink = useTheme().accentInk;
   return (
     <Pressable
       accessibilityRole="button"

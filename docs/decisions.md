@@ -384,6 +384,17 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   a single-song screen exists. The skip icons are fixed at 10 to match the in-app transport,
   so changing `SKIP_SECONDS` means redrawing them. **[recorded]**
 
+- **2026-10-30 · Home and Library layout (§6.2, §12.4, #178)** — The owner chose variant B
+  ("Two tiles, two screens") in `docs/research/mockups/library-layouts.html`; for the Home
+  tiles and the Library it supersedes `design/kitbag-ui.html` §04. Songs and Stem songs are
+  separate titled screens (`/library`, `/stems`) without filter chips; Setlists open from
+  the Songs app bar. Rows sort by title and show title, length · BPM · key, and status
+  badges; the analyzing badge reads `ANALYZING`. **[user]** A failed song's reason moves to
+  its actions sheet. The Songs + opens the file picker directly, and a picked
+  `.stemdeck.zip` still imports as a stem song with a notice. The empty state drops "or
+  Moises export": only StemDeck bundles import. Not built: the mockup's filter icon, whose
+  action it does not define, and the row menu's Add to setlist. **[recorded]**
+
 - **2026-10-30 · Metronome layout B supersedes the design file (§5.2, §5.3, §12, #175)** —
   The owner chose layout B from `docs/research/ui-survey-metronome-stems.md` and approved
   its reworked mockup, `docs/research/mockups/metronome-layouts.html` ("Chosen"), as the

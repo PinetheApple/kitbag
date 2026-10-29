@@ -3,7 +3,7 @@ import { createSongPresetRepository } from '@kitbag/core-db/src/song-preset-repo
 import type { ImportedAudio } from '@kitbag/core-native';
 import { describe, expect, it, vi } from 'vitest';
 
-import { analysisFailure, filterRows, summarize } from './logic.ts';
+import { analysisFailure, summarize } from './logic.ts';
 import {
   badges,
   fakeFiles,
@@ -91,7 +91,6 @@ describe('song library store', () => {
       keptGrid: true,
     });
     expect(summarize(store.getState().rows).analyzedCount).toBe(1);
-    expect(filterRows(store.getState().rows, '', 'analyzed')).toHaveLength(1);
   });
 
   it('on start stores results that finished while away, then re-enqueues the rest', async () => {

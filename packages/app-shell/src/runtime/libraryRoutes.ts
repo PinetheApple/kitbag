@@ -11,6 +11,9 @@ export function useLibraryRoutes() {
       openSetlist: (id: number) => {
         router.push(`/setlists/${String(id)}`);
       },
+      openSetlists: () => {
+        router.push('/setlists');
+      },
       openAllSongs: () => {
         router.push('/songs');
       },

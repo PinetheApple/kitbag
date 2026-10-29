@@ -6,25 +6,27 @@ import {
   space,
   TextField,
 } from '@kitbag/core-design';
-import { cleanName, useSongLibrary, type LibraryRow } from '@kitbag/core-state';
+import {
+  analysisFailure,
+  cleanName,
+  useSongLibrary,
+  type LibraryRow,
+} from '@kitbag/core-state';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { View, type TextInput } from 'react-native';
 
-import { replaceText } from '../logic/notices.ts';
+import { failureText, replaceText } from '../logic/notices.ts';
 
 const useStyles = createThemedStyles(() => ({
   stack: { gap: space.controlGap },
   row: { flexDirection: 'row', gap: space.controlGap },
 }));
 
-type Kind = 'none' | 'import' | 'actions' | 'rename' | 'delete';
+type Kind = 'none' | 'actions' | 'rename' | 'delete';
 
 export function useLibraryMenu() {
   const [kind, setKind] = useState<Kind>('none');
   const [target, setTarget] = useState<LibraryRow | null>(null);
-  const openImport = useCallback(() => {
-    setKind('import');
-  }, []);
   const openActions = useCallback((row: LibraryRow) => {
     setTarget(row);
     setKind('actions');
@@ -42,13 +44,12 @@ export function useLibraryMenu() {
     () => ({
       kind,
       target,
-      openImport,
       openActions,
       openRename,
       openDelete,
       close,
     }),
-    [kind, target, openImport, openActions, openRename, openDelete, close],
+    [kind, target, openActions, openRename, openDelete, close],
   );
 }
 
@@ -59,53 +60,13 @@ interface SheetProps {
   readonly bottomInset: number;
 }
 
-function ImportSheet({ menu, bottomInset }: SheetProps) {
-  const styles = useStyles();
-  const importSong = useSongLibrary((s) => s.importSong);
-  const importStemFolder = useSongLibrary((s) => s.importStemFolder);
-  const { close } = menu;
-  const pickFile = useCallback(() => {
-    close();
-    void importSong();
-  }, [close, importSong]);
-  const pickFolder = useCallback(() => {
-    close();
-    void importStemFolder();
-  }, [close, importStemFolder]);
-  return (
-    <Sheet
-      visible={menu.kind === 'import'}
-      title="Import"
-      dismissLabel="Close Import"
-      bottomInset={bottomInset}
-      onDismiss={close}
-    >
-      <View style={styles.stack}>
-        <Button
-          icon="song"
-          label="Song file"
-          variant="primary"
-          onPress={pickFile}
-        />
-        <Button
-          icon="stems"
-          label="Stem song folder"
-          variant="tonal"
-          onPress={pickFolder}
-        />
-      </View>
-      <SheetHint>
-        An audio file becomes a song. A StemDeck song bundle, as a .zip or its
-        extracted folder, becomes a stem song.
-      </SheetHint>
-    </Sheet>
-  );
-}
-
 function ActionsSheet({ menu, bottomInset }: SheetProps) {
   const styles = useStyles();
   const reanalyze = useSongLibrary((s) => s.reanalyze);
+  const codes = useSongLibrary((s) => s.codes);
   const { target, close, openRename, openDelete } = menu;
+  const failure =
+    target?.kind === 'song' ? analysisFailure(target, codes) : null;
   const retry = useCallback(() => {
     close();
     if (target?.kind === 'song') void reanalyze(target.id);
@@ -119,6 +80,9 @@ function ActionsSheet({ menu, bottomInset }: SheetProps) {
       bottomInset={bottomInset}
       onDismiss={close}
     >
+      {failure === null ? null : (
+        <SheetHint>{failureText(failure).text}</SheetHint>
+      )}
       <View style={styles.stack}>
         <Button label="Rename" variant="tonal" onPress={openRename} />
         {target?.kind === 'song' ? (
@@ -252,7 +216,6 @@ function ReplaceSheet({ bottomInset }: Pick<SheetProps, 'bottomInset'>) {
 export function LibrarySheets(props: SheetProps) {
   return (
     <>
-      <ImportSheet {...props} />
       <ActionsSheet {...props} />
       <RenameSheet {...props} />
       <DeleteSheet {...props} />
