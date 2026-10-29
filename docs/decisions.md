@@ -402,3 +402,14 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   the `set_grid` copy. The audio callback seeks the published grid by binary search, and
   nothing on it is sized to the cap. A longer grid still keeps its earliest beats, and
   `kb_analyze_song` reports that case only as `beat_count == beat_times_cap`. **[recorded]**
+
+- **2026-10-30 · Screen stays awake while practising (§12.7, §13.9, #187)** — The screen
+  stays on while the metronome runs, a stem song's mixer plays, or the tuner is listening,
+  and may sleep on stop, pause, or leaving the tool. A metronome still running after you
+  leave its screen keeps the screen on. The rule is one function, `screenStaysOn` in
+  `app-shell/src/runtime/keepAwake.ts`, where #170's Settings toggle will gate it; until
+  then it is always on. The window's `FLAG_KEEP_SCREEN_ON` is set through a
+  `setKeepScreenOn` TurboModule command, not `expo-keep-awake`: that module is only linked
+  through `expo`, and importing it from the `core-native` barrel would need a stub in every
+  package's tests. The mixer's playing state is engine truth with no store copy, so it is
+  polled once a second while a stem song is open. **[recorded]**
