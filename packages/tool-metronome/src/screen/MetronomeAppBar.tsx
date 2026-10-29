@@ -1,7 +1,8 @@
 import {
   AppBar,
   createThemedStyles,
-  hitSlopFor,
+  hitBoxStyle,
+  hitExtension,
   Icon,
   inset,
   mix,
@@ -25,17 +26,25 @@ import {
   setlistChipLabel,
 } from '../logic/setlistChip.ts';
 
-// The mockup draws the active chip in accentDeep on Daylight, accent on Stage.
 const activeInk = (mode: ThemeMode): ColorToken =>
   mode === 'dark' ? 'accent' : 'accentDeep';
 
 const CHIP_TO_BODY = (size.appBar - size.setChip) / 2 + space.belowAppBar;
-const CHIP_HIT_SLOP = hitSlopFor(size.setChip, CHIP_TO_BODY);
+const CHIP_HIT_BOX = hitBoxStyle(
+  hitExtension(size.setChip, size.setChip, {
+    top: CHIP_TO_BODY,
+    bottom: CHIP_TO_BODY,
+  }),
+);
 
 const useStyles = createThemedStyles((theme) => ({
   bar: {
     minHeight: size.appBar,
     justifyContent: 'center',
+  },
+  chipHit: {
+    ...CHIP_HIT_BOX,
+    flexShrink: 1,
   },
   chip: {
     flexDirection: 'row',
@@ -84,14 +93,18 @@ function SetlistChip({ onPress }: { readonly onPress: () => void }) {
       accessibilityRole="button"
       accessibilityLabel={setlistChipA11yLabel(active)}
       accessibilityHint="Opens setlists"
-      hitSlop={CHIP_HIT_SLOP}
-      style={[styles.chip, on && styles.chipActive]}
+      style={styles.chipHit}
       onPress={onPress}
     >
-      <Text style={[styles.label, on && styles.labelActive]} numberOfLines={1}>
-        {setlistChipLabel(active)}
-      </Text>
-      <Icon name="caretDown" size="caret" color={on ? ink : 'text3'} />
+      <View style={[styles.chip, on && styles.chipActive]}>
+        <Text
+          style={[styles.label, on && styles.labelActive]}
+          numberOfLines={1}
+        >
+          {setlistChipLabel(active)}
+        </Text>
+        <Icon name="caretDown" size="caret" color={on ? ink : 'text3'} />
+      </View>
     </Pressable>
   );
 }

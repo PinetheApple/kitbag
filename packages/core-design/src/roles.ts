@@ -209,6 +209,7 @@ export const opacity = {
   upcoming: 0.65,
   tunerStrip: 0.92,
   coachScrim: 0.55,
+  sheetScrim: 0.45,
 } as const;
 
 export const mix = {

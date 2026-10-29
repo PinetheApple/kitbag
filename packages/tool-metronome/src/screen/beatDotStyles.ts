@@ -8,11 +8,10 @@ import {
   space,
   textRoles,
   textStyle,
+  TRANSPARENT,
 } from '@kitbag/core-design';
 
 import type { DotPalette, DotWidths } from '../logic/beatDot.ts';
-
-export const CLEAR = 'transparent';
 
 const RING_REACH = size.dotRingGap + size.dotRing;
 
@@ -31,12 +30,15 @@ export const DOT_METRICS = {
 export const LINE_PITCH_GAP =
   space.beatMarkerGap + beatMarkerLineHeight + space.beatDotLineGap;
 
+function dotBorderColor(color: {
+  readonly text3: string;
+  readonly surface3: string;
+}): string {
+  return mixHex(color.text3, color.surface3, mix.dotBorder);
+}
+
 export const useBeatDotStyles = createThemedStyles((theme) => {
-  const dotBorder = mixHex(
-    theme.color.text3,
-    theme.color.surface3,
-    mix.dotBorder,
-  );
+  const dotBorder = dotBorderColor(theme.color);
   return {
     lines: {
       alignItems: 'center',
@@ -140,9 +142,9 @@ export function dotPalette(color: {
   return {
     accent: color.accent,
     fill: color.surface3,
-    border: mixHex(color.text3, color.surface3, mix.dotBorder),
+    border: dotBorderColor(color),
     hollow: color.text3,
     silentNow: color.text,
-    clear: CLEAR,
+    clear: TRANSPARENT,
   };
 }

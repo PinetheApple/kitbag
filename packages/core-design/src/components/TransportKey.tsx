@@ -164,8 +164,10 @@ export function TransportKeySpacer({
   readonly size?: TransportKeySize;
 }) {
   const styles = useStyles();
-  if (keySize === 'small') return <View style={styles.spacerSmall} />;
-  return (
-    <View style={keySize === 'large' ? styles.spacerLarge : styles.spacer} />
-  );
+  const spacer = {
+    default: styles.spacer,
+    large: styles.spacerLarge,
+    small: styles.spacerSmall,
+  } satisfies Record<TransportKeySize, unknown>;
+  return <View style={spacer[keySize]} />;
 }

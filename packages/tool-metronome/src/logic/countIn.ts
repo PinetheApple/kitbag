@@ -5,6 +5,8 @@ import {
   type KbCountInBars,
 } from '@kitbag/core-native';
 
+const OFF_LABEL = 'Off';
+
 export const COUNT_IN_MODE = { distinct: 'distinct', same: 'same' } as const;
 export type CountInMode = (typeof COUNT_IN_MODE)[keyof typeof COUNT_IN_MODE];
 
@@ -18,7 +20,7 @@ export function countInMode(distinct: boolean): CountInMode {
 }
 
 export function countInLabel(bars: KbCountInBars): string {
-  if (bars === KB_COUNT_IN_OFF) return 'Off';
+  if (bars === KB_COUNT_IN_OFF) return OFF_LABEL;
   return countLabel(bars, 'bar', 'bars');
 }
 
@@ -29,7 +31,7 @@ export const COUNT_IN_BAR_OPTIONS = KB_COUNT_IN_BARS.map((bars) => ({
 
 export const COUNT_IN_SEGMENT_OPTIONS = KB_COUNT_IN_BARS.map((bars) => ({
   value: String(bars),
-  label: bars === KB_COUNT_IN_OFF ? 'Off' : String(bars),
+  label: bars === KB_COUNT_IN_OFF ? OFF_LABEL : String(bars),
   accessibilityLabel: countInLabel(bars),
 }));
 

@@ -1,6 +1,12 @@
-import { size, textRoles, useTheme } from '@kitbag/core-design';
-import { useMemo } from 'react';
-import { Text, View } from 'react-native';
+import {
+  size,
+  textRoles,
+  TRANSPARENT,
+  UNSCALED_TEXT,
+  useTheme,
+} from '@kitbag/core-design';
+import { useCallback, useMemo } from 'react';
+import { Text } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   type SharedValue,
@@ -8,7 +14,8 @@ import Animated, {
 
 import type { LedRowLayout } from '../logic/ledLayout.ts';
 import { countSquare } from '../logic/statusLine.ts';
-import { CLEAR, useBeatDotStyles } from './beatDotStyles.ts';
+import { useBeatDotStyles } from './beatDotStyles.ts';
+import { BeatGrid } from './BeatGrid.tsx';
 
 interface SquareProps {
   readonly beat: number;
@@ -40,7 +47,7 @@ function CountSquare({ beat, side, currentBeat }: SquareProps) {
     if (state === 'done') {
       return { backgroundColor: color.surface3, borderColor: color.surface3 };
     }
-    return { backgroundColor: CLEAR, borderColor: color.text3 };
+    return { backgroundColor: TRANSPARENT, borderColor: color.text3 };
   });
   const ink = useAnimatedStyle(() => {
     const state = countSquare(beat, currentBeat.value);
@@ -50,7 +57,7 @@ function CountSquare({ beat, side, currentBeat }: SquareProps) {
   return (
     <Animated.View style={[styles.square, box, face]}>
       <Animated.Text
-        maxFontSizeMultiplier={1}
+        maxFontSizeMultiplier={UNSCALED_TEXT}
         style={[styles.squareNumber, number, ink]}
       >
         {String(beat + 1)}
@@ -76,30 +83,22 @@ export function CountInSquares({
   const shown = useAnimatedStyle(() => ({
     opacity: countingIn.value === 0 ? 0 : 1,
   }));
+  const renderSquare = useCallback(
+    (beat: number) => (
+      <>
+        <CountSquare beat={beat} side={dotSize} currentBeat={currentBeat} />
+        <Text style={styles.marker} />
+      </>
+    ),
+    [dotSize, currentBeat, styles],
+  );
   return (
     <Animated.View
       pointerEvents="none"
       importantForAccessibility="no-hide-descendants"
       style={[styles.overlay, styles.lines, shown]}
     >
-      {lines.map((line, lineIndex) => (
-        <View key={lineIndex} style={styles.line}>
-          {line.map((group, groupIndex) => (
-            <View key={groupIndex} style={styles.group}>
-              {group.map((beat) => (
-                <View key={beat} style={styles.beat}>
-                  <CountSquare
-                    beat={beat}
-                    side={dotSize}
-                    currentBeat={currentBeat}
-                  />
-                  <Text style={styles.marker} />
-                </View>
-              ))}
-            </View>
-          ))}
-        </View>
-      ))}
+      <BeatGrid lines={lines} renderBeat={renderSquare} />
     </Animated.View>
   );
 }

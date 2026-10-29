@@ -5,10 +5,9 @@ import {
   hitExtension,
   inset,
   minTouchTargetDp,
-  mix,
-  mixHex,
   radius,
   Sheet,
+  SheetHint,
   size,
   space,
   textRoles,
@@ -67,14 +66,6 @@ const useStyles = createThemedStyles((theme) => ({
     borderColor: theme.color.line,
     backgroundColor: theme.color.surface2,
   },
-  pickSelected: {
-    borderColor: theme.color.accent,
-    backgroundColor: mixHex(
-      theme.color.accent,
-      theme.color.surface2,
-      mix.selectedTile,
-    ),
-  },
   pickLabel: {
     ...textStyle(textRoles.meterPick),
     color: theme.color.text,
@@ -93,6 +84,7 @@ interface CommonPickProps {
 
 function CommonPick({ meter, selected, onPick }: CommonPickProps) {
   const styles = useStyles();
+  const sheetStyles = useSheetStyles();
   const handlePress = useCallback(() => {
     onPick(meter);
   }, [onPick, meter]);
@@ -104,7 +96,7 @@ function CommonPick({ meter, selected, onPick }: CommonPickProps) {
       style={PICK_HIT_BOX}
       onPress={handlePress}
     >
-      <View style={[styles.pick, selected && styles.pickSelected]}>
+      <View style={[styles.pick, selected && sheetStyles.selectedTile]}>
         <Text style={styles.pickLabel}>{meterLabel(meter)}</Text>
       </View>
     </Pressable>
@@ -142,7 +134,6 @@ export function MeterSheet({
   onDismiss,
 }: MeterSheetProps) {
   const styles = useStyles();
-  const sheetStyles = useSheetStyles();
   const applyMeter = useMetronome((s) => s.setBeats);
   const { draft, reset, setDraft, setBeats, setDenominator } = useMeterDraft();
   const handleSet = useCallback(() => {
@@ -155,6 +146,7 @@ export function MeterSheet({
       title="Time signature"
       dismissLabel="Close time signature"
       bottomInset={bottomInset}
+      dim
       onShow={reset}
       onDismiss={onDismiss}
     >
@@ -175,7 +167,9 @@ export function MeterSheet({
           onSelect={setDenominator}
         />
       </View>
-      <Text style={[sheetStyles.hint, sheetStyles.centered]}>Common</Text>
+      <SheetHint centered size="large">
+        Common
+      </SheetHint>
       <View
         accessibilityRole="radiogroup"
         accessibilityLabel="Common time signatures"

@@ -31,6 +31,7 @@ import {
   LINE_PITCH_GAP,
   useBeatDotStyles,
 } from './beatDotStyles.ts';
+import { BeatGrid, type BeatPosition } from './BeatGrid.tsx';
 import { CountInSquares } from './CountInSquares.tsx';
 
 interface BeatDotProps {
@@ -95,16 +96,7 @@ function BeatDot({
   );
 }
 
-const edge = (index: number, count: number) => ({
-  first: index === 0,
-  last: index === count - 1,
-});
-
-function dotGaps(
-  line: { first: boolean; last: boolean },
-  group: { first: boolean; last: boolean },
-  dot: { first: boolean; last: boolean },
-): NeighbourGaps {
+function dotGaps({ line, group, dot }: BeatPosition): NeighbourGaps {
   const across = (dotEdge: boolean, groupEdge: boolean) => {
     if (!dotEdge) return DOT_METRICS.dotGap;
     return groupEdge ? undefined : DOT_METRICS.groupGap;
@@ -146,49 +138,39 @@ export function BeatDots({
     [beatCount],
   );
   const dotSize = beatDotSize(lines, width, DOT_METRICS);
-  const { countingIn } = frame;
+  const { countingIn, currentBeat, barMuted } = frame;
   const dotsShown = useAnimatedStyle(() => {
     const shown = countingIn.value === 0;
     return { opacity: shown ? 1 : 0, pointerEvents: shown ? 'auto' : 'none' };
   });
+  const renderDot = useCallback(
+    (beat: number, position: BeatPosition) => (
+      <>
+        <BeatDot
+          beat={beat}
+          state={ledStateFor(accents[beat] ?? KB_ACCENT.KB_ACCENT_NORMAL)}
+          dotSize={dotSize}
+          palette={palette}
+          currentBeat={currentBeat}
+          barMuted={barMuted}
+          gaps={dotGaps(position)}
+          onPress={onCycle}
+        />
+        <Text style={styles.marker}>{beat === 0 ? '1' : ''}</Text>
+      </>
+    ),
+    [accents, dotSize, palette, currentBeat, barMuted, onCycle, styles],
+  );
 
   return (
     <View>
       <Animated.View style={[styles.lines, dotsShown]}>
-        {lines.map((line, lineIndex) => (
-          <View key={lineIndex} style={styles.line}>
-            {line.map((group, groupIndex) => (
-              <View key={groupIndex} style={styles.group}>
-                {group.map((beat, dotIndex) => (
-                  <View key={beat} style={styles.beat}>
-                    <BeatDot
-                      beat={beat}
-                      state={ledStateFor(
-                        accents[beat] ?? KB_ACCENT.KB_ACCENT_NORMAL,
-                      )}
-                      dotSize={dotSize}
-                      palette={palette}
-                      currentBeat={frame.currentBeat}
-                      barMuted={frame.barMuted}
-                      gaps={dotGaps(
-                        edge(lineIndex, lines.length),
-                        edge(groupIndex, line.length),
-                        edge(dotIndex, group.length),
-                      )}
-                      onPress={onCycle}
-                    />
-                    <Text style={styles.marker}>{beat === 0 ? '1' : ''}</Text>
-                  </View>
-                ))}
-              </View>
-            ))}
-          </View>
-        ))}
+        <BeatGrid lines={lines} renderBeat={renderDot} />
       </Animated.View>
       <CountInSquares
         lines={lines}
         dotSize={dotSize}
-        currentBeat={frame.currentBeat}
+        currentBeat={currentBeat}
         countingIn={countingIn}
       />
     </View>

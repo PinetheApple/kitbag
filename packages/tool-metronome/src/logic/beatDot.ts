@@ -40,18 +40,19 @@ export function dotLook(
   widths: DotWidths,
 ): DotLook {
   'worklet';
-  if (silentBar) {
-    return sounding
-      ? {
-          backgroundColor: palette.clear,
-          borderColor: palette.silentNow,
-          borderWidth: widths.silentNow,
-        }
-      : {
-          backgroundColor: palette.clear,
-          borderColor: palette.hollow,
-          borderWidth: widths.normal,
-        };
+  if (silentBar && sounding) {
+    return {
+      backgroundColor: palette.clear,
+      borderColor: palette.silentNow,
+      borderWidth: widths.silentNow,
+    };
+  }
+  if (silentBar || state === 'muted') {
+    return {
+      backgroundColor: palette.clear,
+      borderColor: sounding ? palette.silentNow : palette.hollow,
+      borderWidth: widths.normal,
+    };
   }
   const ring = state === 'accented' ? widths.accent : widths.normal;
   if (sounding) {
@@ -66,13 +67,6 @@ export function dotLook(
       backgroundColor: palette.clear,
       borderColor: palette.accent,
       borderWidth: ring,
-    };
-  }
-  if (state === 'muted') {
-    return {
-      backgroundColor: palette.clear,
-      borderColor: palette.hollow,
-      borderWidth: widths.normal,
     };
   }
   return {

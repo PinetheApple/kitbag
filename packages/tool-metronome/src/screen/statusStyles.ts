@@ -10,6 +10,10 @@ import {
   textStyle,
 } from '@kitbag/core-design';
 
+export function countInInk(bg: string, text: string): string {
+  return mixHex(bg, text, mix.countInMeta);
+}
+
 export const useStatusStyles = createThemedStyles((theme) => ({
   line: {
     height: size.statusLine,
@@ -73,7 +77,7 @@ export const useStatusStyles = createThemedStyles((theme) => ({
     marginLeft: space.statusMetaGap,
   },
   countInMeta: {
-    color: mixHex(theme.color.bg, theme.color.text, mix.countInMeta),
+    color: countInInk(theme.color.bg, theme.color.text),
   },
   ghost: {
     opacity: 0,
@@ -94,7 +98,3 @@ export const useStatusStyles = createThemedStyles((theme) => ({
     transformOrigin: 'left',
   },
 }));
-
-export function countInIconColor(bg: string, text: string): string {
-  return mixHex(bg, text, mix.countInMeta);
-}

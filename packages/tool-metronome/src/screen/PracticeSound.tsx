@@ -141,6 +141,7 @@ export function SoundListSheet({
       title={`${soundRoleName(shownRole)} sound`}
       dismissLabel={`Close ${soundRoleName(shownRole).toLowerCase()} sound`}
       bottomInset={bottomInset}
+      dim
       onDismiss={onDismiss}
     >
       <PickerGrid

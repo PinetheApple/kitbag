@@ -24,8 +24,7 @@ export interface LiveTextProps {
   readonly style?: StyleProp<TextStyle>;
 }
 
-// Hidden from screen readers: a value changing at measurement rate would flood
-// them. The owning screen announces state changes through its own live region.
+// Hidden from screen readers: a measurement-rate value would flood them.
 export function LiveText({
   text,
   role,

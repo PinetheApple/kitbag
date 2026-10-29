@@ -55,16 +55,22 @@ export function practiceBadgeCount(settings: PracticeSettings): number {
 
 export type StatusMode = 'rest' | 'countIn' | 'mute' | 'ramp' | 'reached';
 
-export function statusMode(
-  countingIn: number,
-  barMutePosition: number,
-  rampState: number,
-): StatusMode {
+export interface StatusReads {
+  readonly countingIn: number;
+  readonly barMuted: number;
+  readonly barMutePosition: number;
+  readonly rampState: number;
+}
+
+export function statusMode(reads: StatusReads): StatusMode {
   'worklet';
-  if (countingIn !== 0) return 'countIn';
-  if (barMutePosition >= 0) return 'mute';
-  if (rampState === KB_RAMP_STATE.KB_RAMP_STATE_STEPPING) return 'ramp';
-  if (rampState === KB_RAMP_STATE.KB_RAMP_STATE_AT_TARGET) return 'reached';
+  if (reads.countingIn !== 0) return 'countIn';
+  if (reads.barMuted !== 0) return 'mute';
+  if (reads.rampState === KB_RAMP_STATE.KB_RAMP_STATE_STEPPING) return 'ramp';
+  if (reads.rampState === KB_RAMP_STATE.KB_RAMP_STATE_AT_TARGET) {
+    return 'reached';
+  }
+  if (reads.barMutePosition >= 0) return 'mute';
   return 'rest';
 }
 
@@ -97,6 +103,7 @@ export function ofText(index: number, total: number): string {
 
 export function countInBarText(bar: number, bars: number): string {
   'worklet';
+  if (bars <= 0 || bar < 0 || bar >= bars) return '';
   return `bar ${ofText(bar, bars)}`;
 }
 

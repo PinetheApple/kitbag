@@ -1,4 +1,4 @@
-const MIN_BEATS = 1;
+export const MIN_BEATS = 1;
 
 export interface Meter {
   readonly beats: number;

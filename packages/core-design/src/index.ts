@@ -3,6 +3,7 @@ export * from './roles.ts';
 export * from './theme.ts';
 export * from './fontFaces.ts';
 export * from './textStyle.ts';
+export { TRANSPARENT, UNSCALED_TEXT } from './styleConstants.ts';
 export * from './touchTarget.ts';
 export * from './icons.ts';
 export * from './dragReorder.ts';

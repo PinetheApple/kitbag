@@ -12,6 +12,7 @@ import {
 } from '@kitbag/core-design';
 import { Pressable, Text, View } from 'react-native';
 
+import { meterLabel, spokenMeter } from '../logic/meter.ts';
 import { subdivisionName } from '../logic/subdivision.ts';
 
 const useStyles = createThemedStyles((theme) => ({
@@ -64,18 +65,18 @@ export function PickerChips({
   onOpenSubdivision,
 }: PickerChipsProps) {
   const styles = useStyles();
-  const meter = `${String(beatsPerBar)}/${String(denominator)}`;
+  const meter = { beats: beatsPerBar, denominator };
   const name = subdivisionName(subdivision);
   return (
     <View style={styles.row}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Time signature, ${String(beatsPerBar)} over ${String(denominator)}`}
+        accessibilityLabel={`Time signature, ${spokenMeter(meter)}`}
         accessibilityHint="Changes the time signature"
         style={[styles.chip, styles.meter]}
         onPress={onOpenMeter}
       >
-        <Text style={styles.label}>{meter}</Text>
+        <Text style={styles.label}>{meterLabel(meter)}</Text>
         <Icon name="caretDown" size="caret" color="text3" />
       </Pressable>
       <Pressable

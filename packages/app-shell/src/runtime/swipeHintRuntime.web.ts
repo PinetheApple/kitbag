@@ -1,23 +1,13 @@
 import { configureSwipeHintPersistence } from '@kitbag/core-state';
 
-const KEY = 'kitbag.swipeHintSeen';
-const SEEN = '1';
+import { storedWebPreference } from './storedWebPreference';
 
-// localStorage throws when storage is disabled; the hint then shows again next
-// launch rather than failing the screen.
+const SEEN = '1';
+const stored = storedWebPreference('kitbag.swipeHintSeen');
+
 configureSwipeHintPersistence({
-  load: () => {
-    try {
-      return globalThis.localStorage.getItem(KEY) === SEEN;
-    } catch {
-      return false;
-    }
-  },
+  load: () => stored.read() === SEEN,
   save: () => {
-    try {
-      globalThis.localStorage.setItem(KEY, SEEN);
-    } catch {
-      // Unpersisted is still correct for this session.
-    }
+    stored.write(SEEN);
   },
 });

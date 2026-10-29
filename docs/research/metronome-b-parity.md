@@ -83,8 +83,8 @@ stay. The glow (`mix.tempoZoneGlow`) is removed.
 | Sheet | `surface1`, top border `line`, radius 24 top, padding 10 16 26, gap 6, shadow | `Sheet` (see Not matched) |
 | Grab | 36 × 4, radius 2, `surface3`, 8 below | `size.grabWidth`, `size.grabHeight` |
 | Title | Space Grotesk 500 16 | `textRoles.sheetTitle` (see Not matched) |
-| Scrim | `rgba(10,8,14,.45)` | `Sheet` scrim |
-| Hint | Inter 12 `text3` | `textRoles.sheetHint` (`sheetStyles.ts`) |
+| Scrim | `rgba(10,8,14,.45)` | `Sheet dim`: `opacity.sheetScrim` over `palette.bg.dark` (see Not matched) |
+| Hint | Inter 12 `text3` | `SheetHint size="large"`: `textRoles.sheetHint` |
 | Subdivision tiles | 4 columns, gap 8; tile height 64, radius 12, `surface2`, 1 `line`, gap 4, Space Grotesk 500 11.5 `text2`; glyph 26 tall; selected `mix(accent 16%, surface2)`, border `accent`, `text` | `size.notationTile`, `size.notationTileGlyph`, `radius.button`, `space.notationTileGap`, `textRoles.notationTile`, `mix.selectedTile` |
 | Meter wheels | gap 14, padding 6 0; wheel width 84, radius 14, `surface2`, 1 `line`, padding 4 0; item 36 tall Space Grotesk 500 18 `text3`; selected 44 tall 700 30 `text` with `line` rules; slash 300 44 `text3` | `WheelPicker`: `space.wheelGap`, `inset.wheelRowV`, `size.wheelWidth`, `radius.wheel`, `inset.wheelV`, `size.wheelItem`, `size.wheelSelected`, `textRoles.wheelItem`, `textRoles.wheelSelected`, `textRoles.meterSlash` |
 | Common meters | wrap, gap 8; height 40, min-width 60, padding 0 10, radius 10, Space Grotesk 500 14; selected border `accent`, `mix(accent 16%, surface2)` | `size.meterPick`, `size.meterPickMin`, `inset.meterPickH`, `radius.pick`, `textRoles.meterPick`, `mix.selectedTile` |
@@ -129,12 +129,22 @@ Each entry says why.
 - **Mute cycle strip.** At most 8 cells; a longer cycle pages by eight so the current
   bar stays on the strip. Cells shrink below 18 wide when the line runs out of room
   (long cycles, 200% text) rather than clipping the outline.
+- **Status line priority.** The mockup shows each live state alone. When several are
+  live: count-in, then a muted bar of the mute cycle, then the ramp (stepping or target
+  reached), then "Playing" with the cycle position on a sounding bar, then the armed
+  summary (#175 questions 3–5). The count-in's "bar N of M" takes M from the engine's
+  running count-in, not the store.
 - **Status line for screen readers.** It is labelled with the armed summary. The live
   values are not announced, so nothing re-renders per bar.
 - **Dot wrapping against SPEC D9.** D9 caps a row at 7 ("16 beats are four rows of
   four"). The dots follow the mockup instead and hold up to 8 per line, so 16 beats
   are two lines of eight 29 dp dots. At 7 per row with 56 dp dots, 13 to 16 beats
-  pushed the transport off a 360 × 800 screen. This needs a D9 ruling.
+  pushed the transport off a 360 × 800 screen.
+- **Current muted beat.** The mockup's CSS fills it like a sounding beat. It stays
+  hollow and dashed and its outline turns `text`, since a fill reads as a click that did
+  not sound (SPEC §5.2; #175 question 7).
+- **Subdivided pulses while playing (#173, first criterion).** Not built: the mockup draws
+  no per-pulse indicator, only the static notation chip (#175 question 6).
 - **12 beats group 3 + 3 + 3 + 3** whatever the denominator. The mockup only draws 12/8,
   and 6 and 9 already grouped in threes for any denominator.
 - **Count-in squares** take the dot size, so they are 56 only when the dots are, and
@@ -146,20 +156,18 @@ Each entry says why.
 - **First-use hint position and scrim.** The ring is centred on the measured swipe zone
   instead of 150 from the top. The scrim is Stage `bg` (#0E0D10) at 55%:
   rgba(10, 8, 14) is not a §12.2 token.
+- **Sheet scrim.** Stage `bg` at 45% for the same reason. The ramp numpad and the sound
+  list open over the Practice sheet, so their scrims stack; the mockup does not draw that.
 - **Notation numeral baseline.** React Native cannot set a text baseline, so the
   numeral is placed by an approximate ascent ratio.
 - **Play glyph.** The large button draws the Material play triangle (11 × 14 in 24)
   at 36. The stop square is not drawn in the mockup; it is the Material 12-in-24
   square.
-- **Glow token.** Nothing draws `mix.tempoZoneGlow` any more, but the key stays in
-  `roles.ts` because shared role edits were append-only while another session was
-  editing core-design. Delete it at merge.
 - **Sheet frame and title.** `Sheet` keeps its tokens (#175, owner default): radius 20
   top and 14 bottom with a full 1 `line` border, padding 14 on three sides plus the
   bottom inset, content gap 12, title Space Grotesk 500 14.
 - **Selected segment shadow.** Not drawn. §12.2 limits shadow to sheets and the play
   button ("elevation = lighter surface, not shadow"); adding it needs a §12.2 ruling.
-- **Numpad bounds hint.** The shared `SheetHint` (Inter 11.5), not Inter 12.
 - **Meter slash.** Space Grotesk 400: weight 300 is not bundled.
 - **Wheel geometry.** Every row is 40 apart, the mean of 36 and 44, so a native scroll
   view can snap to it. The rows next to the selection sit where the mockup draws them;

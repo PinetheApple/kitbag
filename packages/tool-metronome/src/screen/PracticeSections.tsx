@@ -52,7 +52,7 @@ function MutePreview({ preview }: { readonly preview: readonly boolean[] }) {
   return (
     <View
       accessible
-      accessibilityLabel={`First eight bars from start: ${spoken}`}
+      accessibilityLabel={`First ${bars(preview.length)} from start: ${spoken}`}
       style={styles.preview}
     >
       {preview.map((playing, bar) => (

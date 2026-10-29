@@ -1,10 +1,9 @@
 import {
   createThemedStyles,
-  mix,
-  mixHex,
   NotationGlyph,
   radius,
   Sheet,
+  SheetHint,
   size,
   space,
   textRoles,
@@ -45,14 +44,6 @@ const useStyles = createThemedStyles((theme) => ({
     borderColor: theme.color.line,
     backgroundColor: theme.color.surface2,
   },
-  selected: {
-    borderColor: theme.color.accent,
-    backgroundColor: mixHex(
-      theme.color.accent,
-      theme.color.surface2,
-      mix.selectedTile,
-    ),
-  },
   label: {
     ...textStyle(textRoles.notationTile),
     color: theme.color.text2,
@@ -71,6 +62,7 @@ interface TileProps {
 
 function NotationTile({ subdivision, selected, onPick }: TileProps) {
   const styles = useStyles();
+  const sheetStyles = useSheetStyles();
   const handlePress = useCallback(() => {
     onPick(subdivision);
   }, [onPick, subdivision]);
@@ -79,7 +71,7 @@ function NotationTile({ subdivision, selected, onPick }: TileProps) {
       accessibilityRole="radio"
       accessibilityLabel={spokenSubdivision(subdivision)}
       accessibilityState={{ checked: selected }}
-      style={[styles.tile, selected && styles.selected]}
+      style={[styles.tile, selected && sheetStyles.selectedTile]}
       onPress={handlePress}
     >
       <NotationGlyph
@@ -106,7 +98,6 @@ export function SubdivisionSheet({
   onDismiss,
 }: SubdivisionSheetProps) {
   const styles = useStyles();
-  const sheetStyles = useSheetStyles();
   const { fontScale } = useWindowDimensions();
   const subdivision = useMetronome((s) => s.subdivision);
   const setSubdivision = useMetronome((s) => s.setSubdivision);
@@ -123,6 +114,7 @@ export function SubdivisionSheet({
       title="Subdivision"
       dismissLabel="Close subdivision"
       bottomInset={bottomInset}
+      dim
       onDismiss={onDismiss}
     >
       <View
@@ -143,9 +135,9 @@ export function SubdivisionSheet({
           </View>
         ))}
       </View>
-      <Text style={[sheetStyles.hint, sheetStyles.centered]}>
+      <SheetHint centered size="large">
         {`Per written beat, ${String(KB_SUBDIVISION_BOUNDS.min)}–${String(KB_SUBDIVISION_BOUNDS.max)}. One tap sets it and closes the sheet; applies live.`}
-      </Text>
+      </SheetHint>
     </Sheet>
   );
 }

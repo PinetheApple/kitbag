@@ -43,6 +43,14 @@ describe('dotLook', () => {
     );
   });
 
+  it('keeps a muted beat hollow when current, outlining it in text', () => {
+    expect(dotLook('muted', true, false, PALETTE, WIDTHS)).toEqual({
+      backgroundColor: 'transparent',
+      borderColor: 'text',
+      borderWidth: 2,
+    });
+  });
+
   it('hollows every dot in a muted bar, the sounding one thickest', () => {
     for (const state of ['accented', 'normal', 'muted'] as const) {
       expect(dotLook(state, false, true, PALETTE, WIDTHS)).toEqual({

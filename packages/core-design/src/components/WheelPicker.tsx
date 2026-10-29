@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 
 import { inset, radius, size, textRoles } from '../roles.ts';
+import { UNSCALED_TEXT } from '../styleConstants.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { steppedIndex, wheelIndex } from '../wheel.ts';
@@ -19,7 +20,6 @@ const PITCH = (size.wheelItem + size.wheelSelected) / 2;
 const WINDOW = size.wheelSelected + ITEMS_EACH_SIDE * 2 * size.wheelItem;
 const EDGE_ROOM = (WINDOW - PITCH) / 2;
 const BAND_TOP = (WINDOW - size.wheelSelected) / 2;
-const UNSCALED_TEXT = 1;
 const STEP = 1;
 
 const A11Y_ACTIONS = [{ name: 'increment' }, { name: 'decrement' }] as const;

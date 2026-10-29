@@ -5,6 +5,7 @@ import {
   LiveText,
   useTheme,
 } from '@kitbag/core-design';
+import { KB_COUNT_IN_BARS } from '@kitbag/core-native';
 import { BPM_BOUNDS, type RampConfig } from '@kitbag/core-state';
 import { Text, View } from 'react-native';
 import Animated, {
@@ -24,7 +25,7 @@ import {
 } from '../logic/statusLine.ts';
 import { LiveSlot } from './LiveSlot.tsx';
 import { MuteStatus } from './MuteStatus.tsx';
-import { countInIconColor, useStatusStyles } from './statusStyles.ts';
+import { countInInk, useStatusStyles } from './statusStyles.ts';
 import { StatusVariant } from './StatusVariant.tsx';
 import type { MetronomeFrameValues } from './useMetronomeFrame.ts';
 
@@ -32,6 +33,7 @@ export type StatusFrame = Pick<
   MetronomeFrameValues,
   | 'countingIn'
   | 'countInBar'
+  | 'countInBarsTotal'
   | 'barMuted'
   | 'barMutePosition'
   | 'rampState'
@@ -41,6 +43,8 @@ export type StatusFrame = Pick<
 >;
 
 const RAMP_NEXT_WIDEST = rampNextText(BPM_BOUNDS.max);
+const LONGEST_COUNT_IN = Math.max(...KB_COUNT_IN_BARS);
+const COUNT_IN_WIDEST = countInBarText(LONGEST_COUNT_IN - 1, LONGEST_COUNT_IN);
 
 interface RampStatusProps {
   readonly mode: SharedValue<StatusMode>;
@@ -107,15 +111,17 @@ function ReachedStatus({
 function CountInStatus({
   mode,
   countInBar,
-  bars,
+  countInBarsTotal,
 }: {
   readonly mode: SharedValue<StatusMode>;
   readonly countInBar: SharedValue<number>;
-  readonly bars: number;
+  readonly countInBarsTotal: SharedValue<number>;
 }) {
   const styles = useStatusStyles();
   const theme = useTheme();
-  const meta = useDerivedValue(() => countInBarText(countInBar.value, bars));
+  const meta = useDerivedValue(() =>
+    countInBarText(countInBar.value, countInBarsTotal.value),
+  );
   return (
     <StatusVariant
       mode={mode}
@@ -125,13 +131,13 @@ function CountInStatus({
       <IconGlyph
         name="countingIn"
         px={iconSizes.statusLive}
-        color={countInIconColor(theme.color.bg, theme.color.text)}
+        color={countInInk(theme.color.bg, theme.color.text)}
       />
       <Text style={[styles.lead, styles.countInLead]}>Count-in</Text>
       <LiveSlot
         text={meta}
         role="statusMeta"
-        widest={countInBarText(bars - 1, bars)}
+        widest={COUNT_IN_WIDEST}
         textStyle={[styles.meta, styles.countInMeta]}
         style={styles.pushRight}
       />
@@ -146,9 +152,14 @@ interface StatusLineProps {
 
 export function StatusLine({ frame, settings }: StatusLineProps) {
   const styles = useStatusStyles();
-  const { countingIn, barMutePosition, rampState } = frame;
+  const { countingIn, barMuted, barMutePosition, rampState } = frame;
   const mode = useDerivedValue(() =>
-    statusMode(countingIn.value, barMutePosition.value, rampState.value),
+    statusMode({
+      countingIn: countingIn.value,
+      barMuted: barMuted.value,
+      barMutePosition: barMutePosition.value,
+      rampState: rampState.value,
+    }),
   );
   const summary = armedSummary(settings);
   return (
@@ -176,7 +187,7 @@ export function StatusLine({ frame, settings }: StatusLineProps) {
       <CountInStatus
         mode={mode}
         countInBar={frame.countInBar}
-        bars={settings.countIn.bars}
+        countInBarsTotal={frame.countInBarsTotal}
       />
     </View>
   );

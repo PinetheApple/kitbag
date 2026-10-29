@@ -1,11 +1,12 @@
-import { createThemedStyles, textRoles, textStyle } from '@kitbag/core-design';
+import { createThemedStyles, mix, mixHex } from '@kitbag/core-design';
 
 export const useSheetStyles = createThemedStyles((theme) => ({
-  hint: {
-    ...textStyle(textRoles.sheetHint),
-    color: theme.color.text3,
-  },
-  centered: {
-    textAlign: 'center',
+  selectedTile: {
+    borderColor: theme.color.accent,
+    backgroundColor: mixHex(
+      theme.color.accent,
+      theme.color.surface2,
+      mix.selectedTile,
+    ),
   },
 }));

@@ -1,4 +1,4 @@
-import { Pressable, View } from 'react-native';
+import { Pressable, View, type ViewStyle } from 'react-native';
 
 import { playGlyphPath, playGlyphPathLarge, radius, size } from '../roles.ts';
 import { TRANSPARENT } from '../styleConstants.ts';
@@ -8,14 +8,51 @@ export type PlayGlyph = 'play' | 'stop';
 export type PlayButtonSize = 'default' | 'large';
 
 const UNIT = size.playGlyphBox / playGlyphPath.viewBox;
-const GLYPH_WIDTH = playGlyphPath.width * UNIT;
 const GLYPH_HEIGHT = playGlyphPath.height * UNIT;
 
 const LARGE_UNIT = size.playGlyphBoxLarge / playGlyphPathLarge.viewBox;
-const LARGE_GLYPH_WIDTH = playGlyphPathLarge.width * LARGE_UNIT;
-const LARGE_GLYPH_HEIGHT = playGlyphPathLarge.height * LARGE_UNIT;
-const LARGE_STOP_SIDE =
-  size.playGlyphBoxLarge - 2 * playGlyphPathLarge.stopInset * LARGE_UNIT;
+const LARGE_STOP_INSET = playGlyphPathLarge.stopInset * LARGE_UNIT;
+const LARGE_STOP_SIDE = size.playGlyphBoxLarge - 2 * LARGE_STOP_INSET;
+
+interface GlyphPath {
+  readonly left: number;
+  readonly top: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+function playTriangle(path: GlyphPath, unit: number, ink: string): ViewStyle {
+  const height = path.height * unit;
+  return {
+    position: 'absolute',
+    left: path.left * unit,
+    top: path.top * unit,
+    width: 0,
+    height: 0,
+    borderLeftWidth: path.width * unit,
+    borderTopWidth: height / 2,
+    borderBottomWidth: height / 2,
+    borderLeftColor: ink,
+    borderTopColor: TRANSPARENT,
+    borderBottomColor: TRANSPARENT,
+  };
+}
+
+function stopSquare(
+  left: number,
+  top: number,
+  side: number,
+  ink: string,
+): ViewStyle {
+  return {
+    position: 'absolute',
+    left,
+    top,
+    width: side,
+    height: side,
+    backgroundColor: ink,
+  };
+}
 
 export interface PrimaryPlayButtonProps {
   readonly glyph: PlayGlyph;
@@ -38,27 +75,13 @@ const useStyles = createThemedStyles((theme) => ({
     width: size.playGlyphBox,
     height: size.playGlyphBox,
   },
-  play: {
-    position: 'absolute',
-    left: playGlyphPath.left * UNIT,
-    top: playGlyphPath.top * UNIT,
-    width: 0,
-    height: 0,
-    borderLeftWidth: GLYPH_WIDTH,
-    borderTopWidth: GLYPH_HEIGHT / 2,
-    borderBottomWidth: GLYPH_HEIGHT / 2,
-    borderLeftColor: theme.color.onAccent,
-    borderTopColor: TRANSPARENT,
-    borderBottomColor: TRANSPARENT,
-  },
-  stop: {
-    position: 'absolute',
-    left: (size.playGlyphBox - GLYPH_HEIGHT) / 2,
-    top: playGlyphPath.top * UNIT,
-    width: GLYPH_HEIGHT,
-    height: GLYPH_HEIGHT,
-    backgroundColor: theme.color.onAccent,
-  },
+  play: playTriangle(playGlyphPath, UNIT, theme.color.onAccent),
+  stop: stopSquare(
+    (size.playGlyphBox - GLYPH_HEIGHT) / 2,
+    playGlyphPath.top * UNIT,
+    GLYPH_HEIGHT,
+    theme.color.onAccent,
+  ),
   buttonLarge: {
     width: size.playButtonLarge,
     height: size.playButtonLarge,
@@ -67,27 +90,13 @@ const useStyles = createThemedStyles((theme) => ({
     width: size.playGlyphBoxLarge,
     height: size.playGlyphBoxLarge,
   },
-  playLarge: {
-    position: 'absolute',
-    left: playGlyphPathLarge.left * LARGE_UNIT,
-    top: playGlyphPathLarge.top * LARGE_UNIT,
-    width: 0,
-    height: 0,
-    borderLeftWidth: LARGE_GLYPH_WIDTH,
-    borderTopWidth: LARGE_GLYPH_HEIGHT / 2,
-    borderBottomWidth: LARGE_GLYPH_HEIGHT / 2,
-    borderLeftColor: theme.color.onAccent,
-    borderTopColor: TRANSPARENT,
-    borderBottomColor: TRANSPARENT,
-  },
-  stopLarge: {
-    position: 'absolute',
-    left: playGlyphPathLarge.stopInset * LARGE_UNIT,
-    top: playGlyphPathLarge.stopInset * LARGE_UNIT,
-    width: LARGE_STOP_SIDE,
-    height: LARGE_STOP_SIDE,
-    backgroundColor: theme.color.onAccent,
-  },
+  playLarge: playTriangle(playGlyphPathLarge, LARGE_UNIT, theme.color.onAccent),
+  stopLarge: stopSquare(
+    LARGE_STOP_INSET,
+    LARGE_STOP_INSET,
+    LARGE_STOP_SIDE,
+    theme.color.onAccent,
+  ),
 }));
 
 export function PrimaryPlayButton({

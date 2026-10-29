@@ -71,6 +71,7 @@ export function BpmNumpadSheet({
       title={title}
       dismissLabel={`Close ${title.toLowerCase()} entry`}
       bottomInset={bottomInset}
+      dim
       onShow={handleShow}
       onDismiss={onDismiss}
     >
@@ -82,7 +83,7 @@ export function BpmNumpadSheet({
         >
           {entry.digits}
         </Text>
-        <SheetHint centered>
+        <SheetHint centered size="large">
           {BPM_BOUNDS.min} – {BPM_BOUNDS.max} BPM
         </SheetHint>
       </View>

@@ -47,10 +47,6 @@ export const usePracticeStyles = createThemedStyles((theme) => ({
     flex: 1,
     marginLeft: space.controlGap,
   },
-  hint: {
-    ...textStyle(textRoles.sheetHint),
-    color: theme.color.text3,
-  },
 }));
 
 interface PracticeSectionProps {

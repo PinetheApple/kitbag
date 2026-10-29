@@ -1,6 +1,7 @@
 import {
   Chip,
   SegmentedControl,
+  SheetHint,
   space,
   StepControl,
   Switch,
@@ -81,10 +82,10 @@ function CadenceRows({ editor }: { readonly editor: RampEditor }) {
           value={`+${String(stepBpm)}`}
           accessibilityValue={`${bpm(stepBpm)} per step`}
           neighbourGapDp={space.controlGap}
-          onStep={editor.stepStep}
+          onStep={editor.stepStepSize}
         />
         <View style={styles.grow} />
-        <Text style={styles.hint}>BPM per step</Text>
+        <SheetHint size="large">BPM per step</SheetHint>
       </View>
       <View style={styles.row}>
         <Text style={styles.label}>Every</Text>
@@ -146,7 +147,7 @@ export function PracticeRamp({ onTypeBpm }: PracticeRampProps) {
           onPress={editor.toggleLoop}
         />
         <View style={styles.grow} />
-        <Text style={styles.hint}>tap a number to type it</Text>
+        <SheetHint size="large">tap a number to type it</SheetHint>
       </View>
     </PracticeSection>
   );

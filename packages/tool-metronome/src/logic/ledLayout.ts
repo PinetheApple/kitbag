@@ -10,7 +10,6 @@ export const MIN_LEDS_PER_ROW = 4;
 // ceiling that yields both — 8 would make 16 two rows of eight.
 export const MAX_LEDS_PER_ROW = 7;
 
-// Layout B's beat dots wrap only past eight, at a group boundary (#175 mockup).
 export const MAX_DOTS_PER_LINE = 8;
 
 const DEFAULT_GROUP = 4;

@@ -24,7 +24,7 @@ export interface RampEditor {
   readonly stepFrom: Stepper;
   readonly stepTo: Stepper;
   readonly typeBpm: (field: RampBpmField, bpm: number) => void;
-  readonly stepStep: Stepper;
+  readonly stepStepSize: Stepper;
   readonly stepInterval: Stepper;
   readonly setUnit: (unit: RampUnit) => void;
   readonly toggleLoop: () => void;
@@ -42,7 +42,7 @@ function useBpmStepper(edit: Edit, field: RampBpmField): Stepper {
 }
 
 function useCadenceEdits(edit: Edit) {
-  const stepStep = useCallback(
+  const stepStepSize = useCallback(
     (delta: StepDelta) => {
       edit((r) => ({
         ...r,
@@ -66,7 +66,7 @@ function useCadenceEdits(edit: Edit) {
   const toggleLoop = useCallback(() => {
     edit((r) => ({ ...r, loop: !r.loop }));
   }, [edit]);
-  return { stepStep, stepInterval, setUnit, toggleLoop };
+  return { stepStepSize, stepInterval, setUnit, toggleLoop };
 }
 
 export function useRampEditor(): RampEditor {

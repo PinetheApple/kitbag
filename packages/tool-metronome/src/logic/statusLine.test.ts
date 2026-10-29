@@ -83,12 +83,52 @@ describe('practice badge', () => {
 });
 
 describe('statusMode', () => {
-  it('ranks count-in over the mute cycle over the ramp over rest', () => {
-    expect(statusMode(1, 2, KB_RAMP_STATE_STEPPING)).toBe('countIn');
-    expect(statusMode(0, 0, KB_RAMP_STATE_STEPPING)).toBe('mute');
-    expect(statusMode(0, -1, KB_RAMP_STATE_STEPPING)).toBe('ramp');
-    expect(statusMode(0, -1, KB_RAMP_STATE_AT_TARGET)).toBe('reached');
-    expect(statusMode(0, -1, KB_RAMP_STATE_OFF)).toBe('rest');
+  const IDLE = {
+    countingIn: 0,
+    barMuted: 0,
+    barMutePosition: -1,
+    rampState: KB_RAMP_STATE_OFF,
+  };
+  const SOUNDING_BAR = { ...IDLE, barMutePosition: 0 };
+  const MUTED_BAR = { ...IDLE, barMuted: 1, barMutePosition: 2 };
+
+  it('puts the count-in above everything', () => {
+    expect(
+      statusMode({
+        ...MUTED_BAR,
+        countingIn: 1,
+        rampState: KB_RAMP_STATE_STEPPING,
+      }),
+    ).toBe('countIn');
+  });
+
+  it('shows a muted bar over a running ramp', () => {
+    expect(
+      statusMode({ ...MUTED_BAR, rampState: KB_RAMP_STATE_STEPPING }),
+    ).toBe('mute');
+  });
+
+  it('shows the ramp on a sounding bar of the mute cycle', () => {
+    expect(
+      statusMode({ ...SOUNDING_BAR, rampState: KB_RAMP_STATE_STEPPING }),
+    ).toBe('ramp');
+    expect(
+      statusMode({ ...SOUNDING_BAR, rampState: KB_RAMP_STATE_AT_TARGET }),
+    ).toBe('reached');
+  });
+
+  it('keeps the cycle position up on sounding bars with no ramp running', () => {
+    expect(statusMode(SOUNDING_BAR)).toBe('mute');
+  });
+
+  it('shows the ramp alone, then rests', () => {
+    expect(statusMode({ ...IDLE, rampState: KB_RAMP_STATE_STEPPING })).toBe(
+      'ramp',
+    );
+    expect(statusMode({ ...IDLE, rampState: KB_RAMP_STATE_AT_TARGET })).toBe(
+      'reached',
+    );
+    expect(statusMode(IDLE)).toBe('rest');
   });
 });
 
@@ -110,6 +150,12 @@ describe('live status text', () => {
   it('numbers bars from one', () => {
     expect(ofText(2, 4)).toBe('3 of 4');
     expect(countInBarText(0, 2)).toBe('bar 1 of 2');
+  });
+
+  it('shows no count-in bar outside a running count-in', () => {
+    expect(countInBarText(-1, 0)).toBe('');
+    expect(countInBarText(0, 0)).toBe('');
+    expect(countInBarText(-1, 2)).toBe('');
   });
 });
 

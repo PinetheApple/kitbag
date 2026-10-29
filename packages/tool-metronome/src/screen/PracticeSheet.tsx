@@ -72,6 +72,7 @@ export function PracticeSheet({
         title="Practice"
         dismissLabel="Close practice tools"
         bottomInset={bottomInset}
+        dim
         onDismiss={onDismiss}
       >
         <View>
