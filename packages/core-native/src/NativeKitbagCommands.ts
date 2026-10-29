@@ -30,6 +30,15 @@ export type TransportShowState = Readonly<{
   practiceStretchStartedAt: Double;
 }>;
 
+export type SongTransportShowState = Readonly<{
+  playing: boolean;
+  title: string;
+  artist: string | null;
+  durationFrames: Double;
+  restartFromFrame: Double;
+  skipSeconds: Double;
+}>;
+
 export interface Spec extends TurboModule {
   start(): Promise<number>;
   stop(): void;
@@ -101,6 +110,8 @@ export interface Spec extends TurboModule {
 
   transportShow(state: TransportShowState): void;
   transportHide(): void;
+  songTransportShow(state: SongTransportShowState): void;
+  songTransportHide(): void;
   readonly onTransport: EventEmitter<TransportEvent>;
 }
 

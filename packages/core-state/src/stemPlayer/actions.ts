@@ -3,6 +3,7 @@ import { clamp } from '../metronome/config.ts';
 import { soloAfter, UNITY_GAIN } from './mix.ts';
 import type { MixSaver } from './mixSaver.ts';
 import type { StemPlayerRuntime } from './runtime.ts';
+import { restartFromFrame, songTransportShown } from './songTransport.ts';
 import type { Get, SetState, StemPlayerActions, StemRow } from './store.ts';
 import { secondsToFrames } from './time.ts';
 
@@ -85,10 +86,6 @@ export function mixActions(
   };
 }
 
-// Within this of the end, play starts the song over: the mixer stops on the
-// last frame, so a press there would otherwise play nothing.
-const END_SLACK_SECONDS = 0.25;
-
 export function transportActions(
   get: Get,
   runtimeOf: RuntimeOf,
@@ -110,9 +107,11 @@ export function transportActions(
         return;
       }
       const { durationFrames, engineRate } = get();
-      const slack = secondsToFrames(END_SLACK_SECONDS, engineRate);
-      if (engine.position() >= durationFrames - slack) seek(0);
+      if (engine.position() >= restartFromFrame(durationFrames, engineRate)) {
+        seek(0);
+      }
       commands.mixerPlay();
+      commands.songTransportShow(songTransportShown(get()));
     },
     scrub: (frame) => {
       scrubSeek(frame);

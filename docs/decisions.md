@@ -376,3 +376,10 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   new bundle's title. Stem names carry over by role, not position. Renaming a stem song
   writes both `title` and `song_title` and keeps `artist`. `RowText` titles and subtitles
   are single-line app-wide. **[recorded]**
+
+- **2026-10-30 · Song notification (§5.6, §13.9, #177)** — One service (`PlaybackService`),
+  one media session and one notification id serve the metronome and songs; a song card
+  replaces the metronome's. Actions are −10 s, play/pause, +10 s and stop, with a seekable
+  bar; stop rewinds, and dismissing a paused card is stop. `kb_player_*` gets no card until
+  a single-song screen exists. The skip icons are fixed at 10 to match the in-app transport,
+  so changing `SKIP_SECONDS` means redrawing them. **[recorded]**

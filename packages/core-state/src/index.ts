@@ -152,6 +152,7 @@ export {
   framesToSeconds,
   secondsToFrames,
 } from './stemPlayer/time.ts';
+export { SKIP_SECONDS } from './stemPlayer/songTransport.ts';
 export {
   bpmFact,
   keyFact,

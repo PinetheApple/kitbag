@@ -1,5 +1,6 @@
 package com.kitbag.corenative
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -12,29 +13,27 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
-import android.view.View
-import android.widget.RemoteViews
-import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
-import android.support.v4.media.session.PlaybackStateCompat
-import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.kitbag.corenative.transport.Playback
 import com.kitbag.corenative.transport.PracticeClock
+import com.kitbag.corenative.transport.Song
+import com.kitbag.corenative.transport.SongAction
 import com.kitbag.corenative.transport.TransportAction
 import com.kitbag.corenative.transport.TransportCommand
 import com.kitbag.corenative.transport.TransportModel
 import com.kitbag.corenative.transport.TransportState
 import com.kitbag.corenative.transport.TransportView
 
-class MetronomeService : Service() {
+class PlaybackService : Service() {
   private var state: TransportState? = null
   private var model: TransportModel? = null
   private var lastStartId = 0
   private lateinit var session: MediaSessionCompat
   private var practice = PracticeClock.IDLE
-  private var publishedMetadata: Pair<String, String?>? = null
+  private lateinit var card: MetronomeCard
+  private var song: SongCard? = null
   private val clock = Handler(Looper.getMainLooper())
   private val tick = Runnable { onTick() }
 
@@ -43,16 +42,20 @@ class MetronomeService : Service() {
   override fun onCreate() {
     super.onCreate()
     running = true
-    createChannel()
+    createChannel(CHANNEL_ID, R.string.kitbag_metronome_channel)
+    createChannel(SONG_CHANNEL_ID, R.string.kitbag_songs_channel)
     session = MediaSessionCompat(this, SESSION_TAG).apply {
       setCallback(SessionCallback())
       isActive = true
     }
+    card = MetronomeCard(this, session, CHANNEL_ID, launchIntent(), ::actionIntent)
   }
 
   override fun onDestroy() {
     running = false
+    startRequested = false
     clock.removeCallbacks(tick)
+    song?.release()
     session.release()
     super.onDestroy()
   }
@@ -60,13 +63,63 @@ class MetronomeService : Service() {
   // Not sticky: a restarted process has no engine, so there is nothing to resume.
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     lastStartId = startId
+    val songShowing = song != null
     when (intent?.action) {
-      ACTION_SHOW -> show(intent)
-      ACTION_TRANSPORT ->
-        intent.getStringExtra(EXTRA_ACTION)?.let { handle(TransportAction.valueOf(it)) }
+      ACTION_SHOW -> if (!songShowing) show(intent)
+      ACTION_TRANSPORT -> if (!songShowing) {
+        intent.getStringExtra(EXTRA_ACTION)?.let(TransportAction::named)?.let(::handle)
+      }
+      ACTION_HIDE -> if (!songShowing) finish()
+      ACTION_SONG_SHOW -> showSong(intent)
+      ACTION_SONG -> songTapped(intent)
+      ACTION_SONG_HIDE -> if (songShowing) endSong()
       else -> finish()
     }
     return START_NOT_STICKY
+  }
+
+  private fun songTapped(intent: Intent) {
+    val songCard = song ?: return finish()
+    intent.getStringExtra(EXTRA_ACTION)?.let(SongAction::named)?.let(songCard::handle)
+  }
+
+  private fun showSong(intent: Intent) {
+    clock.removeCallbacks(tick)
+    state = null
+    model = null
+    card.forgetMetadata()
+    val next = Song(
+      title = intent.getStringExtra(EXTRA_TITLE).orEmpty(),
+      artist = intent.getStringExtra(EXTRA_ARTIST),
+      durationFrames = intent.getLongExtra(EXTRA_DURATION_FRAMES, 0L),
+      restartFromFrame = intent.getLongExtra(EXTRA_RESTART_FROM_FRAME, 0L),
+      skipSeconds = intent.getDoubleExtra(EXTRA_SKIP_SECONDS, 0.0),
+    )
+    val songCard = song ?: SongCard(
+      this,
+      session,
+      SONG_CHANNEL_ID,
+      launchIntent(),
+      ::songIntent,
+      ::postForeground,
+      ::endSong,
+    ).also { song = it }
+    songCard.show(next, intent.getBooleanExtra(EXTRA_PLAYING, true))
+  }
+
+  private fun endSong() {
+    song?.release()
+    song = null
+    finish()
+  }
+
+  private fun postForeground(notification: Notification) {
+    ServiceCompat.startForeground(
+      this,
+      NOTIFICATION_ID,
+      notification,
+      ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
+    )
   }
 
   private fun show(intent: Intent) {
@@ -140,69 +193,13 @@ class MetronomeService : Service() {
     val s = state ?: return
     val view = model?.view(s) ?: return
     updateSession(s, view)
-    ServiceCompat.startForeground(
-      this,
-      NOTIFICATION_ID,
-      notification(view, s.playback == Playback.PLAYING),
-      ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
-    )
+    postForeground(card.notification(view, s.playback == Playback.PLAYING))
   }
 
-  private fun notification(view: TransportView, playing: Boolean) =
-    NotificationCompat.Builder(this, CHANNEL_ID)
-      .setSmallIcon(R.drawable.kitbag_notification)
-      .setContentTitle(view.title)
-      .setContentText(view.subtitle)
-      .setContentIntent(launchIntent())
-      .setOngoing(playing)
-      .setDeleteIntent(actionIntent(TransportAction.STOP))
-      .setOnlyAlertOnce(true)
-      .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-      .setCategory(NotificationCompat.CATEGORY_TRANSPORT)
-      .setCustomContentView(transportViews(view))
-      .setStyle(NotificationCompat.DecoratedCustomViewStyle())
-      .build()
-
-  // A media-style card always draws a seek bar, which the owner ruled out.
-  private fun transportViews(view: TransportView): RemoteViews =
-    RemoteViews(packageName, R.layout.kitbag_transport).apply {
-      setTextViewText(R.id.kitbag_title, view.title)
-      setTextViewText(R.id.kitbag_subtitle, view.subtitle)
-      setViewVisibility(R.id.kitbag_subtitle, if (view.subtitle == null) View.GONE else View.VISIBLE)
-      ACTION_SLOTS.forEachIndexed { slot, id ->
-        val action = view.actions.getOrNull(slot)
-        setViewVisibility(id, if (action == null) View.GONE else View.VISIBLE)
-        if (action != null) {
-          setImageViewResource(id, icon(action))
-          setContentDescription(id, label(action))
-          setOnClickPendingIntent(id, actionIntent(action))
-        }
-      }
-    }
 
   private fun updateSession(s: TransportState, view: TransportView) {
     val playing = s.playback == Playback.PLAYING
-    val metadata = view.title to view.subtitle
-    if (metadata != publishedMetadata) {
-      publishedMetadata = metadata
-      session.setMetadata(
-        MediaMetadataCompat.Builder()
-          .putString(MediaMetadataCompat.METADATA_KEY_TITLE, metadata.first)
-          .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, metadata.second)
-          .build(),
-      )
-    }
-    val builder = PlaybackStateCompat.Builder()
-      .setState(
-        if (playing) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
-        PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
-        0f,
-      )
-      .setActions(view.sessionActions.fold(0L) { mask, a -> mask or platformAction(a) })
-    view.sessionActions.filter { it in CUSTOM_ACTIONS }.forEach {
-      builder.addCustomAction(it.name, label(it), icon(it))
-    }
-    session.setPlaybackState(builder.build())
+    card.publish(view, playing)
     clock.removeCallbacks(tick)
     if (playing) clock.postDelayed(tick, TICK_MILLIS)
   }
@@ -213,13 +210,9 @@ class MetronomeService : Service() {
     stopSelf(lastStartId)
   }
 
-  private fun createChannel() {
+  private fun createChannel(id: String, name: Int) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-    val channel = NotificationChannel(
-      CHANNEL_ID,
-      getString(R.string.kitbag_metronome_channel),
-      NotificationManager.IMPORTANCE_LOW,
-    )
+    val channel = NotificationChannel(id, getString(name), NotificationManager.IMPORTANCE_LOW)
     getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
   }
 
@@ -232,38 +225,62 @@ class MetronomeService : Service() {
     PendingIntent.getService(
       this,
       action.ordinal,
-      Intent(this, MetronomeService::class.java)
+      Intent(this, PlaybackService::class.java)
         .setAction(ACTION_TRANSPORT)
         .putExtra(EXTRA_ACTION, action.name),
       PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 
-  private fun label(action: TransportAction): String =
-    getString(
-      when (action) {
-        TransportAction.PLAY -> R.string.kitbag_action_play
-        TransportAction.PAUSE -> R.string.kitbag_action_pause
-        TransportAction.STOP -> R.string.kitbag_action_stop
-        TransportAction.TEMPO_DOWN -> R.string.kitbag_action_tempo_down
-        TransportAction.TEMPO_UP -> R.string.kitbag_action_tempo_up
-        TransportAction.PREVIOUS -> R.string.kitbag_action_previous
-        TransportAction.NEXT -> R.string.kitbag_action_next
-      },
+  private fun songIntent(action: SongAction): PendingIntent =
+    PendingIntent.getService(
+      this,
+      action.ordinal,
+      Intent(this, PlaybackService::class.java)
+        .setAction(ACTION_SONG)
+        .putExtra(EXTRA_ACTION, action.name),
+      PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 
   private inner class SessionCallback : MediaSessionCompat.Callback() {
-    override fun onPlay() = handle(TransportAction.PLAY)
+    override fun onPlay() = route(SongAction.PLAY, TransportAction.PLAY)
 
-    override fun onPause() = handle(TransportAction.PAUSE)
+    override fun onPause() = route(SongAction.PAUSE, TransportAction.PAUSE)
 
-    override fun onStop() = handle(TransportAction.STOP)
+    override fun onStop() = route(SongAction.STOP, TransportAction.STOP)
 
     override fun onSkipToPrevious() = handle(TransportAction.PREVIOUS)
 
     override fun onSkipToNext() = handle(TransportAction.NEXT)
 
-    override fun onCustomAction(action: String, extras: Bundle?) =
-      handle(TransportAction.valueOf(action))
+    override fun onRewind() {
+      song?.handle(SongAction.REWIND)
+    }
+
+    override fun onFastForward() {
+      song?.handle(SongAction.FORWARD)
+    }
+
+    override fun onSeekTo(pos: Long) {
+      song?.seekTo(pos)
+    }
+
+    override fun onCustomAction(action: String, extras: Bundle?) {
+      val songCard = song
+      if (songCard == null) {
+        TransportAction.named(action)?.let(::handle)
+      } else {
+        SongAction.named(action)?.let(songCard::handle)
+      }
+    }
+
+    private fun route(songAction: SongAction, transportAction: TransportAction) {
+      val songCard = song
+      if (songCard == null) {
+        handle(transportAction)
+      } else {
+        songCard.handle(songAction)
+      }
+    }
   }
 
   companion object {
@@ -274,6 +291,15 @@ class MetronomeService : Service() {
     private const val ACTION_SHOW = "com.kitbag.corenative.SHOW"
     private const val ACTION_HIDE = "com.kitbag.corenative.HIDE"
     private const val ACTION_TRANSPORT = "com.kitbag.corenative.TRANSPORT"
+    private const val ACTION_SONG_SHOW = "com.kitbag.corenative.SONG_SHOW"
+    private const val ACTION_SONG_HIDE = "com.kitbag.corenative.SONG_HIDE"
+    private const val ACTION_SONG = "com.kitbag.corenative.SONG"
+    private const val SONG_CHANNEL_ID = "kitbag_songs"
+    private const val EXTRA_TITLE = "title"
+    private const val EXTRA_ARTIST = "artist"
+    private const val EXTRA_DURATION_FRAMES = "durationFrames"
+    private const val EXTRA_RESTART_FROM_FRAME = "restartFromFrame"
+    private const val EXTRA_SKIP_SECONDS = "skipSeconds"
     private const val EXTRA_ACTION = "action"
     private const val EXTRA_BPM = "bpm"
     private const val EXTRA_RAMP_RUNNING = "rampRunning"
@@ -285,19 +311,9 @@ class MetronomeService : Service() {
     private const val EXTRA_PRACTICE_PLAYED_MS = "practicePlayedMs"
     private const val EXTRA_PRACTICE_STRETCH_STARTED_AT = "practiceStretchStartedAt"
 
-    // System media cards draw only play/pause, skip and custom actions, so stop is custom too.
-    private val ACTION_SLOTS = listOf(
-      R.id.kitbag_action_0,
-      R.id.kitbag_action_1,
-      R.id.kitbag_action_2,
-      R.id.kitbag_action_3,
-      R.id.kitbag_action_4,
-      R.id.kitbag_action_5,
-    )
-    private val CUSTOM_ACTIONS =
-      setOf(TransportAction.TEMPO_DOWN, TransportAction.TEMPO_UP, TransportAction.STOP)
-
     @Volatile private var running = false
+
+    @Volatile private var startRequested = false
 
     @Volatile var listener: ((TransportState, PracticeClock) -> Unit)? = null
 
@@ -311,7 +327,7 @@ class MetronomeService : Service() {
     ) {
       val playing = state.playback == Playback.PLAYING
       if (!running && !playing) return
-      val intent = Intent(context, MetronomeService::class.java)
+      val intent = Intent(context, PlaybackService::class.java)
         .setAction(ACTION_SHOW)
         .putExtra(EXTRA_PLAYING, playing)
         .putExtra(EXTRA_BPM, state.bpm)
@@ -322,37 +338,41 @@ class MetronomeService : Service() {
         .putExtra(EXTRA_MAX_BPM, maxBpm)
         .putExtra(EXTRA_PRACTICE_PLAYED_MS, practicePlayedMs)
         .putExtra(EXTRA_PRACTICE_STRETCH_STARTED_AT, practiceStretchStartedAt)
-      // An update to a live service needs no new foreground start, which Android 12+
-      // refuses from the background.
-      if (running) context.startService(intent)
-      else ContextCompat.startForegroundService(context, intent)
+      start(context, intent)
     }
 
-    // Queued behind any pending show, so the service is never stopped before it is foreground.
+    // Sent while a show's start is still pending too: it queues behind that show, so no card is left stuck.
     fun hide(context: Context) {
-      if (!running) return
-      context.startService(Intent(context, MetronomeService::class.java).setAction(ACTION_HIDE))
+      if (!running && !startRequested) return
+      context.startService(Intent(context, PlaybackService::class.java).setAction(ACTION_HIDE))
     }
 
-    private fun platformAction(action: TransportAction): Long =
-      when (action) {
-        TransportAction.PLAY -> PlaybackStateCompat.ACTION_PLAY
-        TransportAction.PAUSE -> PlaybackStateCompat.ACTION_PAUSE
-        TransportAction.STOP -> PlaybackStateCompat.ACTION_STOP
-        TransportAction.PREVIOUS -> PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
-        TransportAction.NEXT -> PlaybackStateCompat.ACTION_SKIP_TO_NEXT
-        TransportAction.TEMPO_DOWN, TransportAction.TEMPO_UP -> 0L
-      }
+    fun showSong(context: Context, song: Song, playing: Boolean) {
+      val intent = Intent(context, PlaybackService::class.java)
+        .setAction(ACTION_SONG_SHOW)
+        .putExtra(EXTRA_PLAYING, playing)
+        .putExtra(EXTRA_TITLE, song.title)
+        .putExtra(EXTRA_ARTIST, song.artist)
+        .putExtra(EXTRA_DURATION_FRAMES, song.durationFrames)
+        .putExtra(EXTRA_RESTART_FROM_FRAME, song.restartFromFrame)
+        .putExtra(EXTRA_SKIP_SECONDS, song.skipSeconds)
+      start(context, intent)
+    }
 
-    private fun icon(action: TransportAction): Int =
-      when (action) {
-        TransportAction.PLAY -> R.drawable.kitbag_play
-        TransportAction.PAUSE -> R.drawable.kitbag_pause
-        TransportAction.STOP -> R.drawable.kitbag_stop
-        TransportAction.TEMPO_DOWN -> R.drawable.kitbag_minus
-        TransportAction.TEMPO_UP -> R.drawable.kitbag_plus
-        TransportAction.PREVIOUS -> R.drawable.kitbag_previous
-        TransportAction.NEXT -> R.drawable.kitbag_next
+    fun hideSong(context: Context) {
+      if (!running && !startRequested) return
+      context.startService(Intent(context, PlaybackService::class.java).setAction(ACTION_SONG_HIDE))
+    }
+
+    // An update to a live service needs no new foreground start, which Android 12+
+    // refuses from the background.
+    private fun start(context: Context, intent: Intent) {
+      if (running) {
+        context.startService(intent)
+      } else {
+        ContextCompat.startForegroundService(context, intent)
+        startRequested = true
       }
+    }
   }
 }

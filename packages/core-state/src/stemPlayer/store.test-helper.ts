@@ -86,6 +86,8 @@ export function fakeRuntime(set: StemSetRecord) {
     metronomeFollowMixer: vi.fn(),
     metronomeStart: vi.fn(),
     metronomeStop: vi.fn(),
+    songTransportShow: vi.fn(),
+    songTransportHide: vi.fn(),
   };
   const records = {
     readStemSet: vi.fn(() => Promise.resolve<StemSetRecord | undefined>(set)),

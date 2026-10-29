@@ -179,6 +179,7 @@ export function createStemPlayerStore(
     saver.flush();
     scrubSeek.cancel();
     if (click) stopClick(runtime);
+    commands.songTransportHide();
     commands.mixerStop();
     if (loop.kind === 'on') void commands.mixerClearLoop().catch(() => null);
     for (let track = 0; track < requestedTracks; track++) {

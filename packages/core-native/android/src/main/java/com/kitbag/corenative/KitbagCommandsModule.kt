@@ -10,6 +10,7 @@ import com.kitbag.corenative.library.LibraryStorage
 import com.kitbag.corenative.library.UnsafeLibraryPathException
 import com.kitbag.corenative.transport.Playback
 import com.kitbag.corenative.transport.PracticeClock
+import com.kitbag.corenative.transport.Song
 import com.kitbag.corenative.transport.TransportState
 
 class KitbagCommandsModule(reactContext: ReactApplicationContext) :
@@ -22,16 +23,16 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     if (runtimePtr != 0L) {
       nativeInstall(runtimePtr)
     }
-    MetronomeService.listener = ::emitTransport
+    PlaybackService.listener = ::emitTransport
   }
 
   override fun invalidate() {
-    MetronomeService.listener = null
+    PlaybackService.listener = null
     super.invalidate()
   }
 
   override fun transportShow(state: ReadableMap) {
-    MetronomeService.show(
+    PlaybackService.show(
       reactApplicationContext,
       TransportState(
         playback = if (state.getBoolean("playing")) Playback.PLAYING else Playback.PAUSED,
@@ -49,7 +50,25 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   }
 
   override fun transportHide() {
-    MetronomeService.hide(reactApplicationContext)
+    PlaybackService.hide(reactApplicationContext)
+  }
+
+  override fun songTransportShow(state: ReadableMap) {
+    PlaybackService.showSong(
+      reactApplicationContext,
+      Song(
+        title = state.getString("title").orEmpty(),
+        artist = state.getString("artist"),
+        durationFrames = state.getDouble("durationFrames").toLong(),
+        restartFromFrame = state.getDouble("restartFromFrame").toLong(),
+        skipSeconds = state.getDouble("skipSeconds"),
+      ),
+      state.getBoolean("playing"),
+    )
+  }
+
+  override fun songTransportHide() {
+    PlaybackService.hideSong(reactApplicationContext)
   }
 
   private fun emitTransport(state: TransportState, practice: PracticeClock) {
