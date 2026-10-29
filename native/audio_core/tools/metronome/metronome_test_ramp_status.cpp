@@ -1,5 +1,3 @@
-#include <utility>
-
 #include "metronome_test_status_rig.h"
 #include "metronome_test_support.h"
 
@@ -7,7 +5,12 @@ namespace metronome_test {
 namespace {
 
 using kitbag::RampState;
-using Step = std::pair<double, double>;
+
+struct Step {
+  double next_bpm;
+  double remaining;
+  bool operator==(const Step&) const = default;
+};
 
 constexpr double kTolerance = 1e-6;
 constexpr double kOneFrameProgress = 1e-4;
@@ -53,12 +56,13 @@ void RecordBlock(const StatusRig& rig, RampTrace* trace, double* progress) {
   const Step step{mirrors.ramp_next_bpm(), mirrors.ramp_remaining()};
   const double now = mirrors.ramp_step_progress();
   const bool new_interval =
-      trace->steps.empty() || step.first != trace->steps.back().first;
+      trace->steps.empty() || step.next_bpm != trace->steps.back().next_bpm;
   if (!new_interval && now < *progress) trace->progress_rose = false;
   *progress = now;
   if (!trace->steps.empty() && new_interval) {
-    trace->bpm_followed = trace->bpm_followed && rig.metronome.current_bpm() ==
-                                                     trace->steps.back().first;
+    trace->bpm_followed =
+        trace->bpm_followed &&
+        rig.metronome.current_bpm() == trace->steps.back().next_bpm;
   }
   if (trace->steps.empty() || step != trace->steps.back()) {
     trace->steps.push_back(step);
@@ -99,7 +103,7 @@ void CheckStoppedThenMidBar(StatusRig& rig) {
       "ramp state: OFF while stopped"
   );
   rig.metronome.Start();
-  rig.RenderTo(kBlockFrames + 172800);
+  rig.RenderTo(kBlockFrames + At(kBar100Bpm44, 1.5));
   Check(
       std::fabs(mirrors.ramp_step_progress() - 0.375) < kOneFrameProgress &&
           Near(mirrors.ramp_remaining(), 3.0),
@@ -166,9 +170,9 @@ void TestSecondsRampRemaining() {
   StatusRig rig;
   rig.metronome.SetRamp(true, 60.0, 120.0, 10.0, 4.5, kRampSeconds, false);
   rig.metronome.Start();
-  const TimeSample early = SampleAt(rig, 96000);
-  const TimeSample waiting = SampleAt(rig, 228096);
-  const TimeSample stepped = SampleAt(rig, 288000);
+  const TimeSample early = SampleAt(rig, Seconds(2.0));
+  const TimeSample waiting = SampleAt(rig, Seconds(4.75));
+  const TimeSample stepped = SampleAt(rig, Seconds(6.0));
   Check(
       early.next == 70.0 && Near(early.remaining, 2.5) &&
           Near(early.progress, 2.0 / 4.5),

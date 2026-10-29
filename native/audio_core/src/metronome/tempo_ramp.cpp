@@ -26,7 +26,6 @@ bool TempoRamp::Configure(
   if (unit < 0 || unit > static_cast<int32_t>(RampUnit::kMinutes)) return false;
   unit_ = static_cast<RampUnit>(unit);
   interval_ = ClampInterval(interval, unit_);
-  in_seconds_ = unit_ != RampUnit::kBars;
   start_bpm_ = Clamp(start_bpm, kMinBpm, kMaxBpm);
   target_bpm_ = Clamp(target_bpm, kMinBpm, kMaxBpm);
   // The direction comes from start and target; the step is only a size.
@@ -62,7 +61,7 @@ void TempoRamp::Restart(int64_t bar) {
 
 double
 TempoRamp::TempoAtBeat(bool downbeat, int64_t bar, uint32_t sample_rate) {
-  if (!in_seconds_ && !downbeat) return current_bpm_;
+  if (!in_seconds() && !downbeat) return current_bpm_;
   int64_t elapsed = IntervalsElapsed(bar, sample_rate);
   // Looping holds the target for one interval, then starts over.
   if (loop_ && elapsed > StepsToTarget()) {
@@ -99,7 +98,7 @@ void TempoRamp::FillTiming(
   const double step_at =
       static_cast<double>(applied_intervals_ + 1) * interval_;
   double elapsed = 0.0;
-  if (in_seconds_) {
+  if (in_seconds()) {
     elapsed = static_cast<double>(cycle_frames_) / sample_rate;
     status->remaining = std::max(step_at - elapsed, 0.0);
     if (unit_ == RampUnit::kMinutes) status->remaining /= kSecondsPerMinute;
@@ -127,7 +126,7 @@ double TempoRamp::TempoAfter(int64_t intervals) const {
 }
 
 int64_t TempoRamp::IntervalsElapsed(int64_t bar, uint32_t sample_rate) const {
-  if (in_seconds_) {
+  if (in_seconds()) {
     return static_cast<int64_t>(
         static_cast<double>(cycle_frames_) / (interval_ * sample_rate)
     );

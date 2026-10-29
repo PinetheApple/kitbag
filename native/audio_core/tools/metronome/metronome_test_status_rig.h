@@ -10,6 +10,16 @@
 
 namespace metronome_test {
 
+constexpr int64_t kBar100Bpm44 = 115200;
+
+inline int64_t At(int64_t bar_frames, double bars) {
+  return static_cast<int64_t>(static_cast<double>(bar_frames) * bars);
+}
+
+inline int64_t Seconds(double seconds) {
+  return static_cast<int64_t>(seconds * kSampleRate);
+}
+
 struct StatusRig {
   kitbag::Metronome metronome;
   int64_t rendered = 0;

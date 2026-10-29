@@ -43,6 +43,9 @@ class TempoRamp {
   double start_bpm() const {
     return start_bpm_;
   }
+  bool in_seconds() const {
+    return unit_ != RampUnit::kBars;
+  }
   void Restart(int64_t bar);
   void AdvanceFrame() {
     ++cycle_frames_;
@@ -67,7 +70,6 @@ class TempoRamp {
 
   bool enabled_ = false;
   bool loop_ = false;
-  bool in_seconds_ = false;
   RampUnit unit_ = RampUnit::kBars;
   double start_bpm_ = 0.0;
   double target_bpm_ = 0.0;

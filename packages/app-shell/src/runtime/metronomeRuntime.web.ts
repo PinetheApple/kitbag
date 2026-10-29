@@ -77,6 +77,7 @@ const presentationHost: KitbagHostObject = Object.freeze({
   bar_muted: 0,
   bar_mute_position: -1,
   count_in_bar: -1,
+  count_in_bars_total: 0,
   ramp_state: KB_RAMP_STATE.KB_RAMP_STATE_OFF,
   ramp_next_bpm: 0,
   ramp_remaining: 0,

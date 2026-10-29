@@ -4,12 +4,9 @@
 namespace metronome_test {
 namespace {
 
-constexpr int64_t kBar100Bpm44 = 115200;
-constexpr int64_t kBar100Bpm34 = 86400;
+using kitbag::CountInStatus;
 
-int64_t At(int64_t bar_frames, double bars) {
-  return static_cast<int64_t>(static_cast<double>(bar_frames) * bars);
-}
+constexpr int64_t kBar100Bpm34 = 86400;
 
 int32_t MutePosition(const StatusRig& rig) {
   return rig.metronome.trainer_mirrors().bar_mute_position();
@@ -70,11 +67,47 @@ void TestCountInBar() {
   );
 }
 
+CountInStatus ReadCountIn(const StatusRig& rig) {
+  const auto& mirrors = rig.metronome.trainer_mirrors();
+  return {mirrors.count_in_bar(), mirrors.count_in_bars_total()};
+}
+
+bool CountingIn(const StatusRig& rig, int32_t bar, int32_t total) {
+  const CountInStatus read = ReadCountIn(rig);
+  return rig.metronome.counting_in() && read.bar == bar &&
+         read.bars_total == total;
+}
+
+void TestCountInSettingChangedMidCount() {
+  StatusRig rig;
+  rig.metronome.SetTempo(100.0);
+  rig.metronome.SetCountIn(2, true, 1);
+  rig.metronome.Start();
+  rig.RenderTo(At(kBar100Bpm44, 0.5));
+  const bool armed = CountingIn(rig, 0, 2);
+  rig.metronome.SetCountIn(kitbag::Metronome::kCountInOff, true, 1);
+  rig.RenderTo(At(kBar100Bpm44, 0.7));
+  const bool after_off = CountingIn(rig, 0, 2);
+  rig.metronome.SetCountIn(4, true, 1);
+  rig.RenderTo(At(kBar100Bpm44, 1.5));
+  const bool after_four = CountingIn(rig, 1, 2);
+  rig.RenderTo(At(kBar100Bpm44, 2.5));
+  const CountInStatus done = ReadCountIn(rig);
+  Check(armed, "count-in total: a 2-bar count-in reads bar 0 of 2");
+  Check(after_off, "count-in bar: Off mid-count still reads bar 0 of 2");
+  Check(after_four, "count-in total: 4 mid-count still reads bar 1 of 2");
+  Check(
+      !rig.metronome.counting_in() && done.bar == -1 && done.bars_total == 0,
+      "count-in total: the 2-bar count ends on time and reads -1 of 0"
+  );
+}
+
 }  // namespace
 
 void RunTrainerStatusTests() {
   TestMutePositionCycles();
   TestCountInBar();
+  TestCountInSettingChangedMidCount();
 }
 
 }  // namespace metronome_test

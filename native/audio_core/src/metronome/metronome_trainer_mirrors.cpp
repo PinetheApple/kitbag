@@ -9,19 +9,30 @@ using metronome_detail::BarFraction;
 using metronome_detail::Clamp;
 using metronome_detail::kGridEpsilon;
 
+namespace {
+
+CountInStatus CountInAt(double counted_beats, int beats_per_bar, int total) {
+  const auto bar = static_cast<int32_t>(
+      std::floor(counted_beats / beats_per_bar + kGridEpsilon)
+  );
+  return {Clamp(bar, 0, total - 1), total};
+}
+
+}  // namespace
+
 void Metronome::PublishTrainerMirrors(bool gridded, uint32_t sample_rate) {
   int32_t mute_position = -1;
   if (running_ && mute_enabled_ && current_bar_ >= 0) {
     mute_position =
         static_cast<int32_t>(current_bar_ % (play_bars_ + mute_bars_));
   }
-  int32_t count_in_bar = -1;
+  CountInStatus count_in;
   if (running_ && counting_in_) {
-    const double counted = beat_position_ + LatencyBeats() + count_in_beats_;
-    const auto bar = static_cast<int32_t>(
-        std::floor(counted / beats_per_bar_ + kGridEpsilon)
+    count_in = CountInAt(
+        beat_position_ + LatencyBeats() + count_in_beats_,
+        beats_per_bar_,
+        count_in_total_bars_
     );
-    count_in_bar = Clamp(bar, 0, count_in_bars_ - 1);
   }
   RampStatus ramp;
   if (running_ && !gridded) {
@@ -34,7 +45,7 @@ void Metronome::PublishTrainerMirrors(bool gridded, uint32_t sample_rate) {
         sample_rate
     );
   }
-  trainer_mirrors_.Publish(mute_position, count_in_bar, ramp);
+  trainer_mirrors_.Publish(mute_position, count_in, ramp);
 }
 
 }  // namespace kitbag

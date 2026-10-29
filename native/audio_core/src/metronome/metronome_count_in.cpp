@@ -25,14 +25,15 @@ void Metronome::PauseRun() {
 void Metronome::ArmCountIn() {
   counting_in_ = count_in_armed_ && count_in_bars_ != kCountInOff;
   count_in_armed_ = false;
-  count_in_beats_ =
-      counting_in_ ? static_cast<double>(count_in_bars_ * beats_per_bar_) : 0.0;
+  count_in_total_bars_ = counting_in_ ? count_in_bars_ : 0;
+  count_in_beats_ = static_cast<double>(count_in_total_bars_ * beats_per_bar_);
 }
 
 void Metronome::CancelCountIn() {
   beat_position_ += count_in_beats_;
   counting_in_ = false;
   count_in_beats_ = 0.0;
+  count_in_total_bars_ = 0;
 }
 
 double Metronome::AdvanceCountIn(

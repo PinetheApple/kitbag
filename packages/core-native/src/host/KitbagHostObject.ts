@@ -18,6 +18,8 @@ export interface KitbagHostObject {
   readonly bar_mute_position: number;
   /** kb_metronome_count_in_bar — 0-based count-in bar, -1 when not counting in. */
   readonly count_in_bar: number;
+  /** kb_metronome_count_in_bars_total — bars in the running count-in, fixed at its start; 0 when not counting in. */
+  readonly count_in_bars_total: number;
   /** kb_metronome_ramp_state — a KB_RAMP_STATE value. */
   readonly ramp_state: number;
   /** kb_metronome_ramp_next_bpm — tempo of the next step, 0 unless stepping. */

@@ -61,6 +61,7 @@ const HOST_OBJECT_KEYS = Object.keys({
   bar_muted: true,
   bar_mute_position: true,
   count_in_bar: true,
+  count_in_bars_total: true,
   ramp_state: true,
   ramp_next_bpm: true,
   ramp_remaining: true,

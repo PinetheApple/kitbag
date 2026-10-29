@@ -1,5 +1,6 @@
 #include "KitbagHostObject.h"
 
+#include <cstddef>
 #include <string>
 
 #include "kitbag_api.h"
@@ -46,8 +47,9 @@ constexpr TunerProp kTunerProps[] = {
      [](const kb_tuner_state& s) { return static_cast<double>(s.no_sound_issue); }},
 };
 
-const TunerProp* findTunerProp(const std::string& prop) {
-  for (const TunerProp& entry : kTunerProps) {
+template <typename T, size_t N>
+const T* FindProp(const T (&table)[N], const std::string& prop) {
+  for (const T& entry : table) {
     if (prop == entry.name) return &entry;
   }
   return nullptr;
@@ -65,6 +67,8 @@ constexpr TrainerProp kTrainerProps[] = {
      [](const kb_engine* e) { return static_cast<double>(kb_metronome_bar_mute_position(e)); }},
     {"count_in_bar",
      [](const kb_engine* e) { return static_cast<double>(kb_metronome_count_in_bar(e)); }},
+    {"count_in_bars_total",
+     [](const kb_engine* e) { return static_cast<double>(kb_metronome_count_in_bars_total(e)); }},
     {"ramp_state",
      [](const kb_engine* e) { return static_cast<double>(kb_metronome_ramp_state(e)); }},
     {"ramp_next_bpm",
@@ -74,13 +78,6 @@ constexpr TrainerProp kTrainerProps[] = {
     {"ramp_step_progress",
      [](const kb_engine* e) { return kb_metronome_ramp_step_progress(e); }},
 };
-
-const TrainerProp* findTrainerProp(const std::string& prop) {
-  for (const TrainerProp& entry : kTrainerProps) {
-    if (prop == entry.name) return &entry;
-  }
-  return nullptr;
-}
 
 constexpr const char* kPropertyNames[] = {
     "bar_phase",       "current_beat",   "current_poly_beat", "counting_in",
@@ -102,10 +99,10 @@ double Read(kb_engine* engine, const std::string& prop, bool* found) {
   if (prop == "player_position") {
     return static_cast<double>(kb_player_position(engine));
   }
-  if (const TrainerProp* trainer = findTrainerProp(prop)) {
+  if (const TrainerProp* trainer = FindProp(kTrainerProps, prop)) {
     return trainer->read(engine);
   }
-  if (const TunerProp* tuner = findTunerProp(prop)) {
+  if (const TunerProp* tuner = FindProp(kTunerProps, prop)) {
     kb_tuner_state state{};
     kb_tuner_read_state(engine, &state);
     return tuner->read(state);

@@ -351,9 +351,9 @@ class Metronome {
   bool pending_preview_accented_ = false;
   bool counting_in_ = false;
   double count_in_beats_ = 0.0;
+  int count_in_total_bars_ = 0;
   double beat_position_ = 0.0;  // fractional beats since start
-  // Pending sample-accurate start (StartAt). Held until the render loop reaches
-  // `pending_start_frame_` on the engine clock, then consumed by BeginRun.
+  // Pending StartAt, consumed by BeginRun once the engine clock reaches it.
   bool has_pending_start_ = false;
   uint64_t pending_start_frame_ = 0;
   // Pending anchor_external. Held until the render loop knows block_start_frame,

@@ -277,6 +277,11 @@ int32_t kb_metronome_count_in_bar(const kb_engine* engine) {
   return ToEngine(engine)->metronome().trainer_mirrors().count_in_bar();
 }
 
+int32_t kb_metronome_count_in_bars_total(const kb_engine* engine) {
+  if (engine == nullptr) return 0;
+  return ToEngine(engine)->metronome().trainer_mirrors().count_in_bars_total();
+}
+
 int32_t kb_metronome_ramp_state(const kb_engine* engine) {
   if (engine == nullptr) return KB_RAMP_STATE_OFF;
   return static_cast<int32_t>(

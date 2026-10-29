@@ -230,6 +230,11 @@ void TestSetRampInMinutes() {
   kb_engine_destroy(engine);
 }
 
+bool CountInReads(const kb_engine* engine, int32_t bar, int32_t total) {
+  return kb_metronome_count_in_bar(engine) == bar &&
+         kb_metronome_count_in_bars_total(engine) == total;
+}
+
 void TestTrainerReadsThroughAbi() {
   kb_engine* engine = FourFourEngine(0);
   if (engine == nullptr) return;
@@ -240,9 +245,9 @@ void TestTrainerReadsThroughAbi() {
   kb_metronome_start(engine);
   Render(engine, rate);
   Check(
-      kb_metronome_count_in_bar(engine) == 0 &&
+      CountInReads(engine, 0, 1) &&
           kb_metronome_bar_mute_position(engine) == -1,
-      "count_in_bar / bar_mute_position: count-in bar 0, trainer hidden"
+      "count_in_bar / bars_total / bar_mute_position: bar 0 of 1, no trainer"
   );
   Render(engine, rate * 36 / 10);
   Check(
@@ -255,7 +260,7 @@ void TestTrainerReadsThroughAbi() {
   Render(engine, rate * 44 / 10);
   Check(
       kb_metronome_bar_mute_position(engine) == 1 &&
-          kb_metronome_count_in_bar(engine) == -1,
+          CountInReads(engine, -1, 0),
       "bar_mute_position: Play 1 / Mute 2 reads 1 in the second bar"
   );
   kb_engine_destroy(engine);
@@ -265,6 +270,7 @@ void TestTrainerReadsOnNullEngine() {
   Check(
       kb_metronome_bar_mute_position(nullptr) == -1 &&
           kb_metronome_count_in_bar(nullptr) == -1 &&
+          kb_metronome_count_in_bars_total(nullptr) == 0 &&
           kb_metronome_ramp_state(nullptr) == KB_RAMP_STATE_OFF &&
           kb_metronome_ramp_next_bpm(nullptr) == 0.0 &&
           kb_metronome_ramp_remaining(nullptr) == 0.0 &&
