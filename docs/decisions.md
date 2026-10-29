@@ -317,7 +317,7 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   names and colours, nothing queries inside them, and a reader skips an entry it does not
   recognise. `lyrics_instrumental` is NULL only when the bundle had no `lyrics.json`, so
   "no lyrics" and "instrumental" stay apart. The beat grid is stored whole, even past
-  `KB_MAX_GRID_BEATS`; capping it is the load path's call, open in #161. A refused bundle
+  `KB_MAX_GRID_BEATS`; the load path trims it to the cap (#161). A refused bundle
   copies nothing. A re-import asks first and replaces in one transaction, then deletes
   the old folder; a failed add deletes the new one. Stems are stored at the bundle's own
   sample rate; `kb_mixer_load_track` resamples them to the engine rate as it streams the
@@ -394,6 +394,14 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   `.stemdeck.zip` still imports as a stem song with a notice. The empty state drops "or
   Moises export": only StemDeck bundles import. Not built: the mockup's filter icon, whose
   action it does not define, and the row menu's Add to setlist. **[recorded]**
+
+- **2026-10-30 · Grid cap sized for whole songs (§4.2, §4.3.1, #161)** — `KB_MAX_GRID_BEATS`
+  goes from 8192 to 65536: 5.4 hours at the analyser's 200 BPM ceiling, 9 hours at 120.
+  The 8192 cap cut a 49-minute song at 184 BPM to 41 minutes of grid. The cap now buys
+  only app-thread work and transient memory: 512 KB for the JNI analysis buffers and for
+  the `set_grid` copy. The audio callback seeks the published grid by binary search, and
+  nothing on it is sized to the cap. A longer grid still keeps its earliest beats, and
+  `kb_analyze_song` reports that case only as `beat_count == beat_times_cap`. **[recorded]**
 
 - **2026-10-30 · Metronome layout B supersedes the design file (§5.2, §5.3, §12, #175)** —
   The owner chose layout B from `docs/research/ui-survey-metronome-stems.md` and approved

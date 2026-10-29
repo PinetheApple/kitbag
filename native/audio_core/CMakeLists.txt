@@ -162,7 +162,7 @@ if(KITBAG_BUILD_TOOLS)
   # exported C ABI, not the C++ behind it. tools/media supplies the WAV writer
   # the mixer load test writes its fixture with.
   add_executable(abi_verify tools/abi_verify.cpp tools/abi_test_metronome.cpp
-                            tools/abi_verify_tuner.cpp)
+                            tools/abi_test_grid_long.cpp tools/abi_verify_tuner.cpp)
   target_include_directories(abi_verify PRIVATE tools tools/media)
   target_link_libraries(abi_verify PRIVATE kitbag_core)
 
@@ -301,6 +301,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/analysis/analyze_test_downbeat.cpp
     tools/analysis/analyze_test_equivalence.cpp
     tools/analysis/analyze_test_write_peaks.cpp
+    tools/analysis/analyze_test_long_grid.cpp
     src/api/api_analysis.cpp
     src/analysis/song_analysis.cpp
     src/analysis/downbeat.cpp
