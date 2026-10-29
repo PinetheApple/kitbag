@@ -105,7 +105,7 @@ jobs:
       CMAKE_CXX_COMPILER_LAUNCHER: ccache
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       CCACHE_MAXSIZE: 1G
-      CCACHE_COMPILERCHECK: "%compiler% --version"
+      CCACHE_COMPILERCHECK: '%compiler% --version'
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -118,13 +118,13 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v6
-      - name: Install ccache
-        run: sudo apt-get update && sudo apt-get install -y ccache
       - uses: actions/cache/restore@v6
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ccache-${{ runner.os }}-${{ github.sha }}
           restore-keys: ccache-${{ runner.os }}-
+      - name: Install ccache
+        run: sudo apt-get update && sudo apt-get install -y ccache && ccache --zero-stats
       - name: Install (frozen lockfile)
         run: pnpm install --frozen-lockfile
       # assembleRelease, not assembleDebug: it bundles the JS and runs the
@@ -136,6 +136,7 @@ jobs:
       - name: ccache statistics
         run: ccache --show-stats
       - uses: actions/cache/save@v6
+        if: github.ref == 'refs/heads/main'
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ccache-${{ runner.os }}-${{ github.sha }}
