@@ -42,18 +42,18 @@ KB_EXPORT uint64_t kb_engine_frames_rendered(const kb_engine* engine);
 
 #ifdef KITBAG_BUILD_TOOLS
 /* Pull one block of mixed engine output into a caller buffer, exactly as the
- * device callback renders it: drain the command rings, mix the stems, player and
- * metronome, and advance the engine clock by frame_count. out receives
- * frame_count * 2 interleaved float samples — stereo at the engine rate.
- *
- * Compiled only under KITBAG_BUILD_TOOLS, so PCM never crosses the shipped ABI
- * (SPEC.md §4.1: the app passes paths and receives scalars; samples never
- * cross). It exists purely so the verify tools can stream a file end to end
- * through this boundary rather than reaching into the C++ behind it. A no-op
- * while the device is running (kb_engine_start) — the callback is then the sole
- * renderer — and for a null engine or out, or a zero frame_count. */
+ * device callback renders it, advancing the engine clock by frame_count. out
+ * receives frame_count * 2 interleaved floats, stereo at the engine rate.
+ * Tools-only so PCM never crosses the shipped ABI (SPEC.md §4.1). A no-op while
+ * the device is running (kb_engine_start), for a null engine or out, or a zero
+ * frame_count. */
 KB_EXPORT void
 kb_engine_render(kb_engine* engine, float* out, uint32_t frame_count);
+
+/* Sizes the read-ahead of tracks loaded afterwards for kb_engine_render blocks
+ * up to frames wide, as kb_engine_create does for the device callback. */
+KB_EXPORT void
+kb_engine_reserve_render_frames(kb_engine* engine, uint32_t frames);
 #endif /* KITBAG_BUILD_TOOLS */
 
 /* --- Metronome ---------------------------------------------------------- */
@@ -381,6 +381,14 @@ KB_EXPORT kb_result kb_waveform_write_peaks(
     int64_t total_frames,
     const float* peaks,
     int32_t chunk_count
+);
+
+/* `buckets` loudest peaks in [0, 1] over equal spans of a .kwav's chunks.
+ * KB_ERROR_INVALID_ARGUMENT unless the file is a whole version-1 KWAV. */
+KB_EXPORT kb_result kb_waveform_read_envelope(
+    const char* path,
+    float* envelope_out,
+    int32_t buckets
 );
 
 #ifdef __cplusplus

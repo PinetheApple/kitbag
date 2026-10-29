@@ -44,6 +44,10 @@ class Player {
     stream_.Unload(now_frame, engine_running);
   }
 
+  void ReserveCallbackFrames(uint32_t frames) {
+    stream_.ReserveCallbackFrames(frames);
+  }
+
   /// Non-blocking: true once a source is live (published).
   bool ready() const {
     return stream_.ready();

@@ -23,6 +23,10 @@ Mixer::Mixer(uint32_t engine_rate)
   }
 }
 
+void Mixer::ReserveCallbackFrames(uint32_t frames) {
+  for (auto& track : tracks_) track.stream->ReserveCallbackFrames(frames);
+}
+
 void Mixer::NoteTrackLoaded(int track) {
   if (track >= track_count_.load(std::memory_order_relaxed)) {
     track_count_.store(track + 1, std::memory_order_relaxed);

@@ -50,6 +50,9 @@ class Mixer {
   /// transport length (B5) so a shorter remaining track ends playback in time.
   void UnloadTrack(int track, uint64_t now_frame, bool engine_running);
 
+  /// See StreamingTrack::ReserveCallbackFrames; applies to every track.
+  void ReserveCallbackFrames(uint32_t frames);
+
   /// Non-blocking: true once a source is live (published) for a track.
   bool track_ready(int track) const;
 

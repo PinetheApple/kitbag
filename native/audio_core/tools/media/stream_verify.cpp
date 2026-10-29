@@ -3,17 +3,20 @@
 // host will, and asserts three things end to end: the exact frame count streams,
 // the streamed output is not silence, and a file at a non-engine rate resamples
 // to the right engine-rate length and still sounds (A6, issue #11, SPEC.md §4.1).
-// No C++ internals are touched: the interface is the test surface. Fixtures are
+// Only C++ constants are borrowed: the interface is the test surface. Fixtures are
 // temp WAVs written through the real file path, like the mixer/player tools.
 #include "kitbag_api.h"
 
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <filesystem>
 #include <string>
+#include <thread>
 #include <vector>
 
+#include "media/streaming_track.h"
 #include "wav_fixture.h"
 
 namespace {
@@ -21,7 +24,7 @@ namespace {
 int g_failures = 0;
 // Counted so a deleted TestX() call cannot pass silently; update deliberately.
 int g_checks = 0;
-constexpr int kExpectedChecks = 14;
+constexpr int kExpectedChecks = 18;
 
 void Check(bool condition, const char* message) {
   ++g_checks;
@@ -165,6 +168,92 @@ void TestResampleCorrectness(kb_engine* engine, const std::string& path) {
   kb_player_unload(engine);
 }
 
+using kitbag::StreamingTrack;
+constexpr uint32_t kSlice = StreamingTrack::kMaxBlockFrames;
+// Wider than the default read-ahead; one a whole number of slices, one not.
+constexpr uint32_t kWideBlocks[] = {3 * kSlice, 2 * kSlice + kSlice / 4};
+static_assert(
+    2 * kSlice + kSlice / 4 > kitbag::AudioSource::kDefaultRingFrames
+);
+constexpr int kWideCallbacks = 5;
+constexpr uint64_t kRampFrames = 96000;
+// The refill thread runs between callbacks, as it would over a device period.
+constexpr auto kWidePace = std::chrono::milliseconds(50);
+
+using StartFn = void (*)(kb_engine*, const char*);
+
+void StartStem(kb_engine* engine, const char* path) {
+  kb_mixer_load_track(engine, 0, path);
+  kb_mixer_play(engine);
+}
+
+void StartPlayer(kb_engine* engine, const char* path) {
+  kb_player_load(engine, path);
+  kb_player_play(engine);
+}
+
+// The ramp's left channel is its frame index, so any gap or repeat breaks it.
+int64_t FirstBreak(kb_engine* engine, uint32_t width) {
+  std::vector<float> out(static_cast<size_t>(width) * 2);
+  int64_t frame = 0;
+  for (int callback = 0; callback < kWideCallbacks; ++callback) {
+    std::this_thread::sleep_for(kWidePace);
+    kb_engine_render(engine, out.data(), width);
+    for (size_t f = 0; f < width; ++f, ++frame) {
+      if (out[f * 2] != static_cast<float>(frame)) return frame;
+    }
+  }
+  return -1;
+}
+
+void TestWideCallbacks(
+    const std::string& ramp,
+    StartFn start,
+    const char* what
+) {
+  for (const uint32_t width : kWideBlocks) {
+    kb_engine* engine = nullptr;
+    const bool created = kb_engine_create(&engine) == KB_OK;
+    int64_t at = 0;
+    if (created) {
+      kb_engine_reserve_render_frames(engine, width);
+      start(engine, ramp.c_str());
+      at = FirstBreak(engine, width);
+      kb_engine_destroy(engine);
+    }
+    if (at >= 0) {
+      std::fprintf(
+          stderr,
+          "  %u-frame callbacks: breaks at frame %lld\n",
+          width,
+          (long long)at
+      );
+    }
+    Check(created && at < 0, what);
+  }
+}
+
+void TestWideCallbacksPlayEveryFrame() {
+  const std::string ramp = media_test::WriteRampWav(
+      "kitbag_stream_ramp",
+      kRampFrames,
+      2,
+      kEngineRate
+  );
+  TestWideCallbacks(
+      ramp,
+      StartStem,
+      "wide callback: the stem plays every frame"
+  );
+  TestWideCallbacks(
+      ramp,
+      StartPlayer,
+      "wide callback: the player plays every frame"
+  );
+  std::error_code ec;
+  std::filesystem::remove(ramp, ec);
+}
+
 int Report() {
   if (g_checks != kExpectedChecks) {
     std::fprintf(
@@ -209,7 +298,7 @@ int main() {
   TestRenderNoOpWhileRunning(engine);
   TestExactFrameCountAndNonSilence(engine, exact);
   TestResampleCorrectness(engine, resample);
-
+  TestWideCallbacksPlayEveryFrame();
   std::error_code ec;
   std::filesystem::remove(exact, ec);
   std::filesystem::remove(resample, ec);

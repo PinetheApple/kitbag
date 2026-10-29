@@ -33,6 +33,9 @@ class StreamingTrack {
   /// owner of both bounds — the mixer and player size their scratch to them.
   static constexpr uint32_t kMaxBlockFrames = 4096;
   static constexpr uint32_t kMaxChannels = 2;
+  /// Read-ahead ceiling: 16 stereo stems plus the player stay under ~5 MB, and
+  /// callbacks up to half of it play continuously.
+  static constexpr uint32_t kMaxReadAheadFrames = 32768;
 
   /// [engine_rate] is the device rate the source is resampled to on load, so a
   /// drain never sees a rate mismatch (SPEC.md §4.1).
@@ -44,6 +47,10 @@ class StreamingTrack {
   StreamingTrack& operator=(const StreamingTrack&) = delete;
 
   // ---- App thread: setup ----
+
+  /// Sizes the read-ahead of sources built after this call for device callbacks
+  /// up to [frames] wide. Grow-only; capped at kMaxReadAheadFrames.
+  void ReserveCallbackFrames(uint32_t frames);
 
   /// Load a file, streamed from disk from stream frame [frame]. [now_frame] and
   /// [engine_running] date the retired source for deferred reclamation.
@@ -192,6 +199,7 @@ class StreamingTrack {
   // publisher only reclaims on a later Publish or ReclaimAll.
   AudioSource* previous_ = nullptr;  // app thread
   uint32_t engine_rate_;
+  uint32_t read_ahead_frames_ = AudioSource::kDefaultRingFrames;  // app thread
   // Resampled length, atomic because the callback reads it to end a transport
   // while a load can overlap (#23). Relaxed — no ordering rides on it; the
   // source itself crosses via the publisher's release/acquire.

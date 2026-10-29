@@ -166,7 +166,7 @@ if(KITBAG_BUILD_TOOLS)
   # kb_engine_render), so playback crosses the interface the app will, not the
   # C++ behind it. Links the shared library, like abi_verify; writes its fixtures.
   add_executable(stream_verify tools/media/stream_verify.cpp)
-  target_include_directories(stream_verify PRIVATE tools/media)
+  target_include_directories(stream_verify PRIVATE src tools/media)
   target_link_libraries(stream_verify PRIVATE kitbag_core)
 
   add_executable(stem_sync_verify tools/stem_sync_verify.cpp)

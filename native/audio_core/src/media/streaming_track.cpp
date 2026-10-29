@@ -16,9 +16,6 @@
 namespace kitbag {
 namespace {
 
-// How far ahead the setup path buffers before playback: one max block, inside
-// the source ring so it is always reachable.
-constexpr uint64_t kPrimeAheadFrames = StreamingTrack::kMaxBlockFrames;
 constexpr auto kPrimeTimeout = std::chrono::seconds(2);
 constexpr auto kPrimePoll = std::chrono::milliseconds(1);
 
@@ -50,7 +47,19 @@ bool StreamingTrack::BuildSource(
   if (s.channels == 0 || s.channels > kMaxChannels) return false;
   s.num_frames = reader->total_frames();
   s.source = std::make_unique<AudioSource>();
-  return s.source->Open(reader);
+  return s.source->Open(reader, read_ahead_frames_);
+}
+
+// The refill thread cannot run inside a callback, so the ring holds a whole
+// callback while it tops up the next one.
+void StreamingTrack::ReserveCallbackFrames(uint32_t frames) {
+  const uint64_t wanted = std::clamp<uint64_t>(
+      2ULL * frames,
+      AudioSource::kDefaultRingFrames,
+      kMaxReadAheadFrames
+  );
+  read_ahead_frames_ =
+      std::max(read_ahead_frames_, static_cast<uint32_t>(wanted));
 }
 
 bool StreamingTrack::SeekBuilt(Source& s, uint64_t frame) {
@@ -128,7 +137,7 @@ void StreamingTrack::Prime(const Source& s) {
       s.looper != nullptr ? std::numeric_limits<uint64_t>::max() : s.num_frames;
   const uint64_t pos = src.position();
   const uint64_t remaining = num_frames > pos ? num_frames - pos : 0;
-  const uint64_t target = std::min(remaining, kPrimeAheadFrames);
+  const uint64_t target = std::min<uint64_t>(remaining, read_ahead_frames_ / 2);
   const auto deadline = std::chrono::steady_clock::now() + kPrimeTimeout;
   while (src.buffered_frames() < target && !src.is_at_end()) {
     if (std::chrono::steady_clock::now() > deadline) break;

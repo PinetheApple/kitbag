@@ -152,4 +152,22 @@ kb_result kb_waveform_write_peaks(
   }
 }
 
+kb_result kb_waveform_read_envelope(
+    const char* path,
+    float* envelope_out,
+    int32_t buckets
+) {
+  if (path == nullptr || envelope_out == nullptr || buckets <= 0) {
+    return KB_ERROR_INVALID_ARGUMENT;
+  }
+  try {
+    kitbag::WaveformPeaks peaks;
+    if (!kitbag::ReadKwav(path, &peaks)) return KB_ERROR_INVALID_ARGUMENT;
+    kitbag::PeakEnvelope(peaks, envelope_out, buckets);
+    return KB_OK;
+  } catch (...) {
+    return KB_ERROR_INTERNAL;
+  }
+}
+
 }  // extern "C"

@@ -3,6 +3,9 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <memory>
 
 namespace kitbag {
 
@@ -11,6 +14,22 @@ namespace {
 // Full-scale for signed 16-bit PCM, scaling float samples in [-1, 1].
 constexpr float kInt16Max = 32767.0f;
 constexpr uint32_t kKwavVersion = 1;
+constexpr size_t kMagicBytes = 4;
+constexpr char kMagic[] = "KWAV";
+
+struct FileCloser {
+  void operator()(std::FILE* f) const {
+    std::fclose(f);
+  }
+};
+
+long RemainingBytes(std::FILE* f) {
+  const long here = std::ftell(f);
+  if (here < 0 || std::fseek(f, 0, SEEK_END) != 0) return -1;
+  const long end = std::ftell(f);
+  if (end < 0 || std::fseek(f, here, SEEK_SET) != 0) return -1;
+  return end - here;
+}
 
 }  // namespace
 
@@ -29,7 +48,7 @@ bool WriteKwav(const char* path, const WaveformPeaks& peaks) {
   const auto channels = static_cast<uint32_t>(peaks.channels);
   const int64_t total = peaks.total_frames;
   const auto chunks = static_cast<uint32_t>(peaks.chunk_count);
-  bool ok = std::fwrite("KWAV", 1, 4, f) == 4;
+  bool ok = std::fwrite(kMagic, 1, kMagicBytes, f) == kMagicBytes;
   ok = ok && std::fwrite(&kKwavVersion, sizeof(kKwavVersion), 1, f) == 1;
   ok = ok && std::fwrite(&channels, sizeof(channels), 1, f) == 1;
   ok = ok && std::fwrite(&total, sizeof(total), 1, f) == 1;
@@ -40,6 +59,74 @@ bool WriteKwav(const char* path, const WaveformPeaks& peaks) {
   ok = std::fclose(f) == 0 && ok;
   if (!ok) std::remove(path);
   return ok;
+}
+
+namespace {
+
+struct KwavHeader {
+  uint32_t channels = 0;
+  int64_t total_frames = 0;
+  uint32_t chunks = 0;
+};
+
+bool ReadKwavHeader(std::FILE* f, KwavHeader* header) {
+  char magic[kMagicBytes];
+  uint32_t version = 0;
+  bool ok = std::fread(magic, 1, kMagicBytes, f) == kMagicBytes &&
+            std::memcmp(magic, kMagic, kMagicBytes) == 0;
+  ok = ok && std::fread(&version, sizeof(version), 1, f) == 1 &&
+       version == kKwavVersion;
+  ok = ok && std::fread(&header->channels, sizeof(header->channels), 1, f) == 1;
+  ok = ok &&
+       std::fread(&header->total_frames, sizeof(header->total_frames), 1, f) ==
+           1;
+  ok = ok && std::fread(&header->chunks, sizeof(header->chunks), 1, f) == 1;
+  return ok && header->channels > 0 && header->chunks > 0;
+}
+
+int LoudestPeak(const WaveformPeaks& peaks, int64_t first, int64_t last) {
+  const size_t stride =
+      static_cast<size_t>(peaks.channels) * kPeakValuesPerChannel;
+  const auto begin = static_cast<size_t>(first) * stride;
+  const auto end = static_cast<size_t>(last) * stride;
+  int loudest = 0;
+  for (size_t i = begin; i < end && i < peaks.data.size(); ++i) {
+    loudest = std::max(loudest, std::abs(static_cast<int>(peaks.data[i])));
+  }
+  return loudest;
+}
+
+}  // namespace
+
+bool ReadKwav(const char* path, WaveformPeaks* out) {
+  const std::unique_ptr<std::FILE, FileCloser> f(std::fopen(path, "rb"));
+  KwavHeader header;
+  if (!f || !ReadKwavHeader(f.get(), &header)) return false;
+  const size_t values = static_cast<size_t>(header.chunks) * header.channels *
+                        kPeakValuesPerChannel;
+  // Checked before allocating, so a corrupt header cannot request a huge buffer.
+  if (RemainingBytes(f.get()) != static_cast<long>(values * sizeof(int16_t))) {
+    return false;
+  }
+  out->data.resize(values);
+  if (std::fread(out->data.data(), sizeof(int16_t), values, f.get()) !=
+      values) {
+    return false;
+  }
+  out->channels = static_cast<int>(header.channels);
+  out->chunk_count = static_cast<int>(header.chunks);
+  out->total_frames = header.total_frames;
+  return true;
+}
+
+void PeakEnvelope(const WaveformPeaks& peaks, float* out, int buckets) {
+  const int64_t chunks = peaks.chunk_count;
+  for (int b = 0; b < buckets; ++b) {
+    const int64_t first = b * chunks / buckets;
+    const int64_t last = std::max(first + 1, (b + 1) * chunks / buckets);
+    const int loudest = LoudestPeak(peaks, first, last);
+    out[b] = std::min(1.0f, static_cast<float>(loudest) / kInt16Max);
+  }
 }
 
 WaveformPeakAccumulator::WaveformPeakAccumulator(
