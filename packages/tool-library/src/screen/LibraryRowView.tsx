@@ -46,6 +46,16 @@ const useStyles = createThemedStyles((theme) => ({
     alignItems: 'center',
     gap: space.rowGap,
   },
+  stacked: {
+    flex: 1,
+    gap: space.chipGap,
+  },
+  textLine: { flexDirection: 'row' },
+  badgeLine: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: space.chipGap,
+  },
   more: {
     width: minTouchTargetDp,
     alignSelf: 'stretch',
@@ -63,10 +73,15 @@ const useStyles = createThemedStyles((theme) => ({
   },
 }));
 
-function Badges({ badges }: { readonly badges: readonly BadgeSpec[] }) {
+interface BadgesProps {
+  readonly badges: readonly BadgeSpec[];
+  readonly line?: boolean;
+}
+
+function Badges({ badges, line = false }: BadgesProps) {
   const styles = useStyles();
   return (
-    <View style={styles.badges}>
+    <View style={line ? styles.badgeLine : styles.badges}>
       {badges.map((badge) => (
         <Badge
           key={badge.key}
@@ -105,16 +120,21 @@ function AnalysisFailedCard({ failure, onRetry }: FailedCardProps) {
 }
 
 function rowBadges(row: LibraryRow) {
-  if (row.kind === 'stems') return stemBadges(row.stemCount);
+  if (row.kind === 'stems') return stemBadges(row);
   return songBadges(row, songBadge(row));
 }
 
 export interface LibraryRowViewProps {
   readonly row: LibraryRow;
   readonly onActions: (row: LibraryRow) => void;
+  readonly onOpenStemSet: (id: number) => void;
 }
 
-export function LibraryRowView({ row, onActions }: LibraryRowViewProps) {
+export function LibraryRowView({
+  row,
+  onActions,
+  onOpenStemSet,
+}: LibraryRowViewProps) {
   const styles = useStyles();
   const rowStyles = usePlainRowStyles();
   const reanalyze = useSongLibrary((s) => s.reanalyze);
@@ -127,6 +147,9 @@ export function LibraryRowView({ row, onActions }: LibraryRowViewProps) {
   const retry = useCallback(() => {
     void reanalyze(row.id);
   }, [reanalyze, row.id]);
+  const open = useCallback(() => {
+    onOpenStemSet(row.id);
+  }, [onOpenStemSet, row.id]);
   return (
     <View style={styles.group}>
       <View style={rowStyles.row}>
@@ -139,9 +162,23 @@ export function LibraryRowView({ row, onActions }: LibraryRowViewProps) {
           )}
           style={styles.body}
           onLongPress={openActions}
+          {...(row.kind === 'stems'
+            ? { accessibilityRole: 'button' as const, onPress: open }
+            : {})}
         >
-          <RowText title={row.title} subtitle={rowSubtitle(row)} />
-          <Badges badges={badges} />
+          {row.kind === 'stems' ? (
+            <View style={styles.stacked}>
+              <View style={styles.textLine}>
+                <RowText title={row.title} subtitle={rowSubtitle(row)} />
+              </View>
+              <Badges badges={badges} line />
+            </View>
+          ) : (
+            <>
+              <RowText title={row.title} subtitle={rowSubtitle(row)} />
+              <Badges badges={badges} />
+            </>
+          )}
         </Pressable>
         <Pressable
           accessibilityRole="button"

@@ -7,6 +7,7 @@ export type VectorGlyph = ComponentProps<typeof MaterialCommunityIcons>['name'];
 // size and colour always come from tokens and never from a platform font.
 export const iconGlyphs = {
   back: 'chevron-left',
+  arrowBack: 'arrow-left',
   more: 'dots-vertical',
   settings: 'cog-outline',
   sort: 'sort',
@@ -15,6 +16,8 @@ export const iconGlyphs = {
   practice: 'timer-outline',
   reset: 'restore',
   repeat: 'repeat',
+  skipBack: 'rewind-10',
+  skipForward: 'fast-forward-10',
   setlist: 'format-list-bulleted',
   previous: 'skip-previous',
   next: 'skip-next',

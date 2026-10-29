@@ -15,6 +15,8 @@ void commandMetronomePause();
 
 void commandSetTempo(double bpm);
 int32_t commandSetGrid(const double* beatTimesSec, int32_t count, double anchorFrame);
+void commandClearGrid();
+void commandFollowMixer(bool enabled);
 
 void commandSetBeats(int32_t beatsPerBar, int32_t denominator);
 void commandSetSubdivision(int32_t subdivision);
@@ -38,6 +40,18 @@ void commandSetRamp(
 void commandSetBarMute(bool enabled, int32_t playBars, int32_t muteBars);
 
 int32_t commandLoadTrack(int32_t track, const char* path);
+void commandUnloadTrack(int32_t track);
+void commandMixerSetGain(int32_t track, double gain);
+void commandMixerSetMute(int32_t track, bool muted);
+void commandMixerSetSolo(int32_t track, bool soloed);
+void commandMixerSetMasterGain(double gain);
+double commandMixerMasterGain();
+void commandMixerPlay();
+void commandMixerPause();
+void commandMixerStop();
+void commandMixerSeek(double frame);
+int32_t commandMixerSetLoop(double startFrame, double endFrame);
+int32_t commandMixerClearLoop();
 
 // Tuner.
 int32_t commandTunerStart();

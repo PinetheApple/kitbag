@@ -398,8 +398,9 @@ position that crosses the ABI;** engine frames stay the unit of the clock.
 - A rate change takes effect at one engine frame and re-anchors there: *P* is
   the song time reached at that frame. The click never jumps a beat or doubles
   one across the change.
-- `kb_mixer_position` and `kb_mixer_seek` stay in source frames (song time ×
-  source rate). The UI never converts by rate itself.
+- `kb_mixer_position`, `kb_mixer_seek` and the loop points are engine-rate song
+  frames (song time × engine rate), whatever the stems' own rate. The UI never
+  converts by rate itself.
 - The stretch stage adds latency. It is reported alongside output latency and
   compensated the same way (§12.5.1), so click and stems still land together.
 
@@ -850,13 +851,17 @@ first implementation**, gated on §4.1.
 - Per-track volume, mute, solo — wired to native and *audible*.
 - **Exclusive solo by default**, long-press for additive. Flutter's `toggleSolo`
   is per-row with no exclusivity.
-- **Master gain.** The mixer has none.
+- **Master gain.** ~~The mixer has none.~~ **Native half done 2026-10-29**
+  (#137): `kb_mixer_set_master_gain` scales the summed stems; the metronome and
+  the player are outside it. **Still outstanding:** a master control in the UI.
 - Gain range: reconsider linear 0.0–2.0 (`mixer.h:18-19`). dB with a taper is
   the mixer convention.
 - **Debounce DB writes.** Flutter's `updateGain` fires per pointer event — a
   database write per slider frame.
-- **Fix the gain slider default.** It renders 0.0 because `getGain` returns 0.0
-  for unloaded tracks; loaded tracks must report 1.0.
+- **Fix the gain slider default.** ~~It renders 0.0 because `getGain` returns 0.0
+  for unloaded tracks; loaded tracks must report 1.0.~~ **Native half done
+  2026-10-29** (#137): `kb_mixer_gain` reports 1.0 for any in-range track until
+  set, loaded or not. **Still outstanding:** the slider that reads it.
 - Rows stay ≥48dp; nothing modal mid-song; no hidden swipe-mixer.
 
 ### 7.3 Transport
@@ -2306,6 +2311,12 @@ seconds up to 200" — and the From/To/Over ramp could not say either: it moved
 the tempo a little every bar, so neither the size of a jump nor how often it
 came was settable. Decided 2026-10-23 (#144). No "smooth" option is kept and
 saved ramps are not converted; none exist on a shipped build.
+
+### D16 — The follow-mixer click **ignores the latency offset**.
+
+Stems and click leave through the same output buffer, so the offset could only
+push the click off the stems. It exists to align with sources outside the phone
+(§4.7, §12.5.1). Decided 2026-10-29 (#137).
 
 ---
 

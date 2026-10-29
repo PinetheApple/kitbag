@@ -185,6 +185,12 @@ void kb_metronome_set_volume(kb_engine* engine, double volume) {
   }
 }
 
+void kb_metronome_follow_mixer(kb_engine* engine, int32_t enabled) {
+  if (engine != nullptr) {
+    ToEngine(engine)->metronome().SetFollowMixer(enabled != 0);
+  }
+}
+
 void kb_metronome_set_latency_offset(kb_engine* engine, double latency_ms) {
   if (engine != nullptr) {
     ToEngine(engine)->metronome().SetLatencyOffset(latency_ms);

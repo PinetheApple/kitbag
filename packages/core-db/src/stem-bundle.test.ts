@@ -29,6 +29,8 @@ const FULL: NewStemBundle = {
   uuid: 'set-uuid-1',
   jobId: '0297074f4836',
   title: 'Song title',
+  songTitle: 'Song',
+  artist: 'Someone',
   folder: 'stems/0297074f4836',
   sampleRate: RATE,
   channels: 2,
@@ -121,6 +123,8 @@ describe('StemDeck bundles in the song library', () => {
       id,
       uuid: 'set-uuid-1',
       title: 'Song title',
+      songTitle: 'Song',
+      artist: 'Someone',
       source: 'stemdeck',
       jobId: '0297074f4836',
       folder: 'stems/0297074f4836',
@@ -162,8 +166,25 @@ describe('StemDeck bundles in the song library', () => {
         title: 'Song title',
         stemCount: 6,
         durationSec: FRAMES / RATE,
+        bpm: 92.5,
+        key: 'A',
+        scale: 'minor',
+        hasGrid: true,
         createdAt: expect.any(Date) as Date,
       },
+    ]);
+  });
+
+  it('lists a bare bundle with no facts and no grid', async () => {
+    const { library } = setup();
+    await library.insertStemBundle(BARE);
+    expect(await library.list()).toEqual([
+      expect.objectContaining({
+        bpm: null,
+        key: null,
+        scale: null,
+        hasGrid: false,
+      }),
     ]);
   });
 
@@ -292,6 +313,28 @@ describe('StemDeck bundles in the song library', () => {
     expect((await library.listStemSetFolders()).sort()).toEqual([
       'stems/0297074f4836',
       'stems/bare-job',
+    ]);
+  });
+
+  it('round-trips a saved mix and leaves the other stems alone', async () => {
+    const { library } = setup();
+    const id = await library.insertStemBundle(FULL);
+    const before = (await library.readStemSet(id))?.stems ?? [];
+    const [vocals, drums] = before;
+    if (vocals === undefined || drums === undefined) throw new Error('setup');
+    await library.saveStemMix([
+      { id: vocals.id, volume: 0.25, muted: true, soloed: false },
+      { id: drums.id, volume: 1.75, muted: false, soloed: true },
+    ]);
+    const after = (await library.readStemSet(id))?.stems ?? [];
+    expect(
+      after.map(({ volume, muted, soloed }) => [volume, muted, soloed]),
+    ).toEqual([
+      [0.25, true, false],
+      [1.75, false, true],
+      ...before
+        .slice(2)
+        .map(({ volume, muted, soloed }) => [volume, muted, soloed]),
     ]);
   });
 });

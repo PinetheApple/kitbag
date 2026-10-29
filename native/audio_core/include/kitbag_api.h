@@ -42,18 +42,18 @@ KB_EXPORT uint64_t kb_engine_frames_rendered(const kb_engine* engine);
 
 #ifdef KITBAG_BUILD_TOOLS
 /* Pull one block of mixed engine output into a caller buffer, exactly as the
- * device callback renders it: drain the command rings, mix the stems, player and
- * metronome, and advance the engine clock by frame_count. out receives
- * frame_count * 2 interleaved float samples — stereo at the engine rate.
- *
- * Compiled only under KITBAG_BUILD_TOOLS, so PCM never crosses the shipped ABI
- * (SPEC.md §4.1: the app passes paths and receives scalars; samples never
- * cross). It exists purely so the verify tools can stream a file end to end
- * through this boundary rather than reaching into the C++ behind it. A no-op
- * while the device is running (kb_engine_start) — the callback is then the sole
- * renderer — and for a null engine or out, or a zero frame_count. */
+ * device callback renders it, advancing the engine clock by frame_count. out
+ * receives frame_count * 2 interleaved floats, stereo at the engine rate.
+ * Tools-only so PCM never crosses the shipped ABI (SPEC.md §4.1). A no-op while
+ * the device is running (kb_engine_start), for a null engine or out, or a zero
+ * frame_count. */
 KB_EXPORT void
 kb_engine_render(kb_engine* engine, float* out, uint32_t frame_count);
+
+/* Sizes the read-ahead of tracks loaded afterwards for kb_engine_render blocks
+ * up to frames wide, as kb_engine_create does for the device callback. */
+KB_EXPORT void
+kb_engine_reserve_render_frames(kb_engine* engine, uint32_t frames);
 #endif /* KITBAG_BUILD_TOOLS */
 
 /* --- Metronome ---------------------------------------------------------- */
@@ -179,6 +179,9 @@ KB_EXPORT void
 kb_metronome_preview_sound(kb_engine* engine, int32_t sound, int32_t accented);
 /* Volume multiplier [0, 2], default 1. */
 KB_EXPORT void kb_metronome_set_volume(kb_engine* engine, double volume);
+/* enabled != 0 (default 0): grid second t clicks as the mixer plays song frame
+ * t * engine rate. set_grid's anchor and the latency offset are ignored. */
+KB_EXPORT void kb_metronome_follow_mixer(kb_engine* engine, int32_t enabled);
 /* Output latency offset in ms [-100, 100]; positive = trigger earlier. */
 KB_EXPORT void
 kb_metronome_set_latency_offset(kb_engine* engine, double latency_ms);
@@ -270,8 +273,15 @@ KB_EXPORT void kb_mixer_unload_track(kb_engine* engine, int32_t track);
 /* Non-blocking readiness poll: 1 once a source is live for the track, else 0.
  * Poll after a load to know when the track will sound. */
 KB_EXPORT int32_t kb_mixer_track_ready(const kb_engine* engine, int32_t track);
+/* Linear gain [0, 2]; out-of-range values clamp. Applied on the next block. */
 KB_EXPORT void kb_mixer_set_gain(kb_engine* engine, int32_t track, float gain);
+/* 1.0 until set, whether or not the track is loaded; 0.0 for a track outside
+ * the valid range or a null engine. */
 KB_EXPORT float kb_mixer_gain(const kb_engine* engine, int32_t track);
+/* Gain over the summed stems, same range and timing as kb_mixer_set_gain. The
+ * metronome and the player are outside it. Default 1.0. */
+KB_EXPORT void kb_mixer_set_master_gain(kb_engine* engine, float gain);
+KB_EXPORT float kb_mixer_master_gain(const kb_engine* engine);
 KB_EXPORT void
 kb_mixer_set_mute(kb_engine* engine, int32_t track, int32_t muted);
 KB_EXPORT int32_t kb_mixer_muted(const kb_engine* engine, int32_t track);
@@ -284,8 +294,18 @@ KB_EXPORT void kb_mixer_stop(kb_engine* engine);
 /* Ends playback holding the head, so kb_mixer_play resumes from there. */
 KB_EXPORT void kb_mixer_pause(kb_engine* engine);
 KB_EXPORT int32_t kb_mixer_is_playing(const kb_engine* engine);
+/* Engine-rate song frame; inside a loop, at or past its end lands on its start.
+ * Blocks while all tracks rebuild (~7 ms for 6 stems on desktop): debounce. */
 KB_EXPORT void kb_mixer_seek(kb_engine* engine, int64_t frame);
+/* Engine-rate song frame now playing; inside a loop it wraps with the audio. */
 KB_EXPORT int64_t kb_mixer_position(const kb_engine* engine);
+/* Loops engine-rate frames [start, end); a head at or past end jumps to start.
+ * Blocks like seek. A failed call (bad bounds or reopen) changes nothing. */
+KB_EXPORT kb_result
+kb_mixer_set_loop(kb_engine* engine, int64_t start_frame, int64_t end_frame);
+/* Plays on linearly from the current frame; KB_OK if no loop was set. A failed
+ * reopen returns KB_ERROR_INTERNAL with the loop still set. */
+KB_EXPORT kb_result kb_mixer_clear_loop(kb_engine* engine);
 KB_EXPORT int32_t kb_mixer_active_track_count(const kb_engine* engine);
 KB_EXPORT int64_t kb_mixer_track_frames(const kb_engine* engine, int32_t track);
 
@@ -361,6 +381,14 @@ KB_EXPORT kb_result kb_waveform_write_peaks(
     int64_t total_frames,
     const float* peaks,
     int32_t chunk_count
+);
+
+/* `buckets` loudest peaks in [0, 1] over equal spans of a .kwav's chunks.
+ * KB_ERROR_INVALID_ARGUMENT unless the file is a whole version-1 KWAV. */
+KB_EXPORT kb_result kb_waveform_read_envelope(
+    const char* path,
+    float* envelope_out,
+    int32_t buckets
 );
 
 #ifdef __cplusplus

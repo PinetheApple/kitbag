@@ -45,6 +45,12 @@ class Engine {
     return frames_rendered_.load(std::memory_order_relaxed);
   }
 
+  // App thread, before any load: read-ahead for callbacks up to [frames] wide.
+  void ReserveCallbackFrames(uint32_t frames) {
+    mixer_.ReserveCallbackFrames(frames);
+    player_.ReserveCallbackFrames(frames);
+  }
+
   // Offline pull backing kb_engine_render; see its contract in kitbag_api.h.
   void RenderOffline(float* output, uint32_t frame_count) {
     Render(output, frame_count);
@@ -94,6 +100,7 @@ class Engine {
   );
   static void OnNotification(const ma_device_notification* notification);
   void Render(float* output, uint32_t frame_count);
+  void RenderSlice(float* output, uint32_t frame_count);
   void StartWatchdog();
   void StopWatchdog();
   void WatchOutput();

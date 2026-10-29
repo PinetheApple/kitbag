@@ -1,4 +1,4 @@
-import type { LibrarySongRow } from '@kitbag/core-state';
+import type { LibrarySongRow, LibraryStemSetRow } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -24,6 +24,27 @@ const SONG: LibrarySongRow = {
   createdAt: new Date(0),
 };
 
+const STEMS: LibraryStemSetRow = {
+  kind: 'stems',
+  id: 1,
+  title: 'Redbone',
+  stemCount: 6,
+  durationSec: 326,
+  bpm: 81.4,
+  key: 'F',
+  scale: 'major',
+  hasGrid: true,
+  createdAt: new Date(0),
+};
+
+const BARE_STEMS: LibraryStemSetRow = {
+  ...STEMS,
+  bpm: null,
+  key: null,
+  scale: null,
+  hasGrid: false,
+};
+
 describe('length', () => {
   it.each([
     [0, '0:00', '0 seconds'],
@@ -42,16 +63,7 @@ describe('row text', () => {
     expect(rowSubtitle({ ...SONG, artist: '', durationSec: 0 })).toBe(
       undefined,
     );
-    expect(
-      rowSubtitle({
-        kind: 'stems',
-        id: 1,
-        title: 'Redbone',
-        stemCount: 6,
-        durationSec: 326,
-        createdAt: new Date(0),
-      }),
-    ).toBe('5:26');
+    expect(rowSubtitle(STEMS)).toBe('5:26');
   });
 
   it('badges BPM and grid status, and speaks them', () => {
@@ -74,10 +86,37 @@ describe('row text', () => {
     expect(spokenRow(pending, [], 'Missing file')).toMatch(/, Missing file$/);
   });
 
-  it('counts stems', () => {
-    expect(stemBadges(6).map((b) => [b.label, b.spoken])).toEqual([
+  it('badges a stem song like a song, plus its key and stem count', () => {
+    const badges = stemBadges(STEMS);
+    expect(badges.map((b) => [b.label, b.icon])).toEqual([
+      ['81 BPM', undefined],
+      ['F maj', undefined],
+      ['GRID', 'check'],
+      ['STEMS ×6', undefined],
+    ]);
+    expect(spokenRow(STEMS, badges, null)).toBe(
+      'Redbone, stem song, 5 minutes 26 seconds, 81 beats per minute, key F major, Beat grid ready, 6 stems',
+    );
+  });
+
+  it('names a StemDeck key once', () => {
+    const badge = stemBadges({ ...STEMS, key: 'F maj', scale: 'Major' }).find(
+      (b) => b.key === 'key',
+    );
+    expect([badge?.label, badge?.spoken]).toEqual(['F maj', 'key F major']);
+  });
+
+  it('leaves out the badges a stem song has no field for', () => {
+    expect(stemBadges(BARE_STEMS).map((b) => [b.label, b.spoken])).toEqual([
       ['STEMS ×6', '6 stems'],
     ]);
-    expect(stemBadges(1)[0]?.spoken).toBe('1 stem');
+    expect(
+      stemBadges({ ...BARE_STEMS, key: 'C#', stemCount: 1 }).map(
+        (b) => b.label,
+      ),
+    ).toEqual(['C#', 'STEMS ×1']);
+    expect(stemBadges({ ...BARE_STEMS, stemCount: 1 })[0]?.spoken).toBe(
+      '1 stem',
+    );
   });
 });

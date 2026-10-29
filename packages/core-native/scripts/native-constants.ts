@@ -75,6 +75,7 @@ export interface NativeConstants {
   readonly subdivision: Bounds;
   readonly bpm: Bounds;
   readonly volume: Bounds;
+  readonly mixerGain: Bounds;
   readonly rampSeconds: Bounds;
   readonly rampUnit: readonly EnumMember[];
   readonly bpmReferenceDenominator: number;
@@ -147,6 +148,15 @@ export function parseConstexprDouble(source: string, name: string): number {
     `(?:static|inline)\\s+constexpr\\s+double\\s+${name}\\s*=\\s*(-?\\d+(?:\\.\\d+)?)\\s*;`,
   ).exec(source);
   if (match === null) fail(`constexpr double ${name}`);
+  return Number(match[1]);
+}
+
+/** `static constexpr float NAME = <number>f;` from a C++ header. */
+export function parseConstexprFloat(source: string, name: string): number {
+  const match = new RegExp(
+    `static\\s+constexpr\\s+float\\s+${name}\\s*=\\s*(-?\\d+(?:\\.\\d+)?)f\\s*;`,
+  ).exec(source);
+  if (match === null) fail(`constexpr float ${name}`);
   return Number(match[1]);
 }
 
@@ -333,6 +343,10 @@ export function collectConstants(sources: NativeSources): NativeConstants {
       min: parseConstexprDouble(sources.metronomeHeader, 'kMinVolume'),
       max: parseConstexprDouble(sources.metronomeHeader, 'kMaxVolume'),
     },
+    mixerGain: {
+      min: parseConstexprFloat(sources.mixerHeader, 'kMinGain'),
+      max: parseConstexprFloat(sources.mixerHeader, 'kMaxGain'),
+    },
     rampSeconds: {
       min: parseConstexprDouble(sources.tempoRampHeader, 'kMinSeconds'),
       max: parseConstexprDouble(sources.tempoRampHeader, 'kMaxSeconds'),
@@ -454,6 +468,8 @@ export const KB_DEFAULT_SOUNDS = {
 
 /** Click volume multiplier range (Metronome::kMinVolume, kMaxVolume); the engine clamps to it. */
 ${renderBounds('KB_VOLUME_BOUNDS', c.volume)}
+/** Linear stem and master gain range (Mixer::kMinGain, kMaxGain); the engine clamps to it. */
+${renderBounds('KB_MIXER_GAIN_BOUNDS', c.mixerGain)}
 /** Longest play or mute run in bars (Metronome::kMaxMuteBars); clamped above. */
 export const KB_MAX_MUTE_BARS = ${String(c.muteBars.max)};
 

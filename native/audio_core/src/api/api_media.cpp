@@ -71,6 +71,15 @@ void kb_mixer_set_mute(kb_engine* engine, int32_t track, int32_t muted) {
   ToEngine(engine)->mixer().SetMute(track, muted != 0);
 }
 
+void kb_mixer_set_master_gain(kb_engine* engine, float gain) {
+  if (engine == nullptr) return;
+  ToEngine(engine)->mixer().SetMasterGain(gain);
+}
+
+float kb_mixer_master_gain(const kb_engine* engine) {
+  return engine == nullptr ? 0.0f : ToEngine(engine)->mixer().master_gain();
+}
+
 int32_t kb_mixer_muted(const kb_engine* engine, int32_t track) {
   return engine == nullptr ? 0
                            : (ToEngine(engine)->mixer().muted(track) ? 1 : 0);
@@ -115,6 +124,34 @@ void kb_mixer_seek(kb_engine* engine, int64_t frame) {
       e->frames_rendered(),
       e->is_running()
   );
+}
+
+kb_result
+kb_mixer_set_loop(kb_engine* engine, int64_t start_frame, int64_t end_frame) {
+  if (engine == nullptr) return KB_ERROR_INVALID_ARGUMENT;
+  kitbag::Engine* e = ToEngine(engine);
+  using Result = kitbag::Mixer::LoopResult;
+  switch (e->mixer().SetLoop(
+      start_frame,
+      end_frame,
+      e->frames_rendered(),
+      e->is_running()
+  )) {
+    case Result::kOk:
+      return KB_OK;
+    case Result::kInvalid:
+      return KB_ERROR_INVALID_ARGUMENT;
+    case Result::kRebuildFailed:
+      return KB_ERROR_INTERNAL;
+  }
+  return KB_ERROR_INTERNAL;
+}
+
+kb_result kb_mixer_clear_loop(kb_engine* engine) {
+  if (engine == nullptr) return KB_ERROR_INVALID_ARGUMENT;
+  kitbag::Engine* e = ToEngine(engine);
+  const bool ok = e->mixer().ClearLoop(e->frames_rendered(), e->is_running());
+  return ok ? KB_OK : KB_ERROR_INTERNAL;
 }
 
 int64_t kb_mixer_position(const kb_engine* engine) {

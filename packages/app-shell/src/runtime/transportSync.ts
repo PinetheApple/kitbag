@@ -57,6 +57,14 @@ function shownFor(
     : undefined;
 }
 
+// A paused notification still owns the engine metronome: its Play restarts it.
+export function transportActive(
+  running: boolean,
+  shown: TransportShown | undefined,
+): boolean {
+  return running || shown !== undefined;
+}
+
 export function shownAfterNativeChange(
   shown: TransportShown | undefined,
   event: TransportEvent,

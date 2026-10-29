@@ -5,6 +5,7 @@
 
 import type { TuneGlyph } from '@kitbag/core-design';
 import { KB_TUNING_STATUS } from '@kitbag/core-native';
+import { MINUS } from '@kitbag/core-state';
 
 /** D1: the needle pins here, at NEEDLE_FULL_SCALE_TRAVEL of the half-width. */
 export const NEEDLE_FULL_SCALE_CENTS = 220;
@@ -25,7 +26,6 @@ export function needleFraction(cents: number): number {
   return (pinned / NEEDLE_FULL_SCALE_CENTS) * NEEDLE_FULL_SCALE_TRAVEL;
 }
 
-const MINUS = '−';
 const PLUS = '+';
 
 export const IDLE_CAPTION = {

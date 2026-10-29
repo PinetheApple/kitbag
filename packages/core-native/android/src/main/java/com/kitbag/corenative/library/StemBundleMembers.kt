@@ -6,7 +6,10 @@ import org.json.JSONObject
 
 class BundleSection(val name: String, val kind: String, val color: String, val startSec: Double, val endSec: Double)
 
+class SongHeading(val title: String, val artist: String)
+
 class BundleMetadata(
+  val heading: SongHeading? = null,
   val bpm: Double? = null,
   val key: String? = null,
   val scale: String? = null,
@@ -32,6 +35,7 @@ class StemBundleMembers(private val warn: BundleWarning) {
   fun metadata(text: String?): BundleMetadata {
     val json = parse(text, METADATA) ?: return BundleMetadata()
     return BundleMetadata(
+      heading = heading(json),
       bpm = json.finiteOrNull("bpm"),
       key = json.stringOrNull("key"),
       scale = json.stringOrNull("scale"),
@@ -41,6 +45,14 @@ class StemBundleMembers(private val warn: BundleWarning) {
       sections = objects(json.opt("sections")).mapNotNull(::section),
     )
   }
+
+  private fun heading(json: JSONObject): SongHeading? =
+    HEADING_SOURCES.firstNotNullOfOrNull { source ->
+      val names = json.opt(source) as? JSONObject ?: return@firstNotNullOfOrNull null
+      val title = names.stringOrNull("title")?.trim().orEmpty()
+      val artist = names.stringOrNull("artist")?.trim().orEmpty()
+      if (title.isEmpty() || artist.isEmpty()) null else SongHeading(title, artist)
+    }
 
   private fun section(json: JSONObject): BundleSection? {
     val start = json.finiteOrNull("start") ?: return null
@@ -152,6 +164,7 @@ class StemBundleMembers(private val warn: BundleWarning) {
     const val METADATA = "metadata.json"
     const val BEATS = "beats.json"
     const val LYRICS = "lyrics.json"
+    private val HEADING_SOURCES = listOf("audio_tags", "identity")
     const val MIX = "mix.json"
     const val PEAKS = "peaks.json"
     val ALL = setOf(METADATA, BEATS, LYRICS, MIX, PEAKS)
