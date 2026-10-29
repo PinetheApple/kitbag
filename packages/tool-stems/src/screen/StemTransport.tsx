@@ -1,10 +1,12 @@
 import { PlayPauseButton, stemPlayer, TransportKey } from '@kitbag/core-design';
-import { useStemPlayer, type LoopState } from '@kitbag/core-state';
+import {
+  SKIP_SECONDS,
+  useStemPlayer,
+  type LoopState,
+} from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
-
-const SKIP_SECONDS = 10;
 
 const styles = StyleSheet.create({
   row: {

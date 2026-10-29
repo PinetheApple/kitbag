@@ -1,7 +1,7 @@
 import { getKitbagCommands } from '@kitbag/core-native';
 import { BPM_BOUNDS, metronomeStore } from '@kitbag/core-state';
-import { PermissionsAndroid, Platform } from 'react-native';
 
+import { askForNotificationsOnce } from './notificationPermission';
 import {
   notificationStepAfterAppChange,
   shownAfterNativeChange,
@@ -10,20 +10,8 @@ import {
   type TransportShown,
 } from './transportSync';
 
-const POST_NOTIFICATIONS_RUNTIME_SDK = 33;
-
 let shown: TransportShown | undefined;
 let applyingNative = false;
-let askedForNotifications = false;
-
-function askForNotificationsOnce() {
-  if (askedForNotifications || Platform.OS !== 'android') return;
-  askedForNotifications = true;
-  if (Platform.Version < POST_NOTIFICATIONS_RUNTIME_SDK) return;
-  void PermissionsAndroid.request(
-    PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
-  );
-}
 
 // Reads the latest state: a nested setState can hand later listeners an older snapshot.
 metronomeStore.subscribe(() => {

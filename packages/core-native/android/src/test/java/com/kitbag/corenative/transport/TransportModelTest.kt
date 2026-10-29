@@ -104,4 +104,10 @@ class TransportModelTest {
   fun `a position outside its setlist is rejected`() {
     song(12)
   }
+
+  @Test
+  fun `named finds an action and ignores an unknown name`() {
+    assertEquals(TEMPO_UP, TransportAction.named("TEMPO_UP"))
+    assertNull(TransportAction.named("REWIND"))
+  }
 }

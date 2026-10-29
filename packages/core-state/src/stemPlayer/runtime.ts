@@ -22,6 +22,8 @@ export type StemPlayerCommands = Pick<
   | 'metronomeFollowMixer'
   | 'metronomeStart'
   | 'metronomeStop'
+  | 'songTransportShow'
+  | 'songTransportHide'
 >;
 
 // Synchronous HostObject reads, taken at human speed on the JS thread.

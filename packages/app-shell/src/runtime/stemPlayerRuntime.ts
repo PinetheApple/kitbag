@@ -9,6 +9,7 @@ import {
 } from '@kitbag/core-state';
 
 import { getDatabase } from './database.ts';
+import { askForNotificationsOnce } from './notificationPermission.ts';
 import { metronomeTransport } from './transportRuntime.ts';
 
 // Resolved per call: the TurboModule throws in a build without it, and this
@@ -59,6 +60,13 @@ const commands: StemPlayerCommands = {
   },
   metronomeStop: () => {
     getKitbagCommands().metronomeStop();
+  },
+  songTransportShow: (state) => {
+    askForNotificationsOnce();
+    getKitbagCommands().songTransportShow(state);
+  },
+  songTransportHide: () => {
+    getKitbagCommands().songTransportHide();
   },
 };
 

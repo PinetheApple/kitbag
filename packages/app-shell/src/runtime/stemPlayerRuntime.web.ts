@@ -25,6 +25,8 @@ configureStemPlayer({
     metronomeFollowMixer: ignore,
     metronomeStart: ignore,
     metronomeStop: ignore,
+    songTransportShow: ignore,
+    songTransportHide: ignore,
   },
   sharedMetronome: { active: () => false, release: ignore },
   engine: {

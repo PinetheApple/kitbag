@@ -43,6 +43,7 @@ export * from './generated/nativeConstants.gen.ts';
 
 export { confirmHaptic } from './haptics.ts';
 export type {
+  SongTransportShowState,
   TransportEvent,
   TransportShowState,
 } from './NativeKitbagCommands';

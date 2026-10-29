@@ -298,6 +298,41 @@ Java_com_kitbag_corenative_EngineTransport_nativeCurrentBpm(JNIEnv*, jobject) {
   return kb_metronome_current_bpm(kitbag::kitbagEngine());
 }
 
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_EngineTransport_nativeMixerPlay(JNIEnv*, jobject) {
+  kitbag::commandMixerPlay();
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_EngineTransport_nativeMixerPause(JNIEnv*, jobject) {
+  kitbag::commandMixerPause();
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_EngineTransport_nativeMixerStop(JNIEnv*, jobject) {
+  kitbag::commandMixerStop();
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_EngineTransport_nativeMixerSeek(JNIEnv*, jobject, jdouble frame) {
+  kitbag::commandMixerSeek(frame);
+}
+
+JNIEXPORT jdouble JNICALL
+Java_com_kitbag_corenative_EngineTransport_nativeMixerPosition(JNIEnv*, jobject) {
+  return static_cast<jdouble>(kb_mixer_position(kitbag::kitbagEngine()));
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_kitbag_corenative_EngineTransport_nativeMixerPlaying(JNIEnv*, jobject) {
+  return kb_mixer_is_playing(kitbag::kitbagEngine()) != 0 ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jdouble JNICALL
+Java_com_kitbag_corenative_EngineTransport_nativeSampleRate(JNIEnv*, jobject) {
+  return static_cast<jdouble>(kb_engine_sample_rate(kitbag::kitbagEngine()));
+}
+
 JNIEXPORT jobject JNICALL
 Java_com_kitbag_corenative_library_SongAnalyzer_nativeAnalyzeSong(JNIEnv* env, jobject,
                                                                  jstring path,

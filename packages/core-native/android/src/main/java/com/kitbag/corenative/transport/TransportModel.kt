@@ -24,7 +24,19 @@ data class TransportState(
   val setlist: SetlistPosition?,
 )
 
-enum class TransportAction { PREVIOUS, TEMPO_DOWN, PLAY, PAUSE, TEMPO_UP, NEXT, STOP }
+enum class TransportAction {
+  PREVIOUS,
+  TEMPO_DOWN,
+  PLAY,
+  PAUSE,
+  TEMPO_UP,
+  NEXT,
+  STOP;
+
+  companion object {
+    fun named(name: String): TransportAction? = entries.find { it.name == name }
+  }
+}
 
 data class TransportView(
   val title: String,
