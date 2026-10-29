@@ -4,6 +4,7 @@ import { found, type Database } from './repository';
 import { stems, stemSets } from './schema';
 import { packFloat32, packInt32, unpackFloat32, unpackInt32 } from './packing';
 import { STEM_SET_SOURCE, type StemSetSource } from './stem-set-source';
+import { applyUserNames, readUserNames } from './stem-rename';
 
 const STEM_FORMAT = 'flac';
 const BAR_MARK_FIELDS = 2;
@@ -63,6 +64,7 @@ export interface NewStemBundle {
 
 export interface StoredStem extends BundleStem {
   readonly id: number;
+  readonly role: string;
   readonly durationSec: number;
   readonly format: string;
   readonly channels: number;
@@ -246,9 +248,13 @@ export async function replaceStemBundle(
   bundle: NewStemBundle,
 ): Promise<StemBundleReplacement> {
   const existing = await findStemSetByJobId(db, bundle.jobId);
-  const replaced =
-    existing === undefined ? null : await deleteStemSet(db, existing.id);
-  return { id: await insertStemBundle(db, bundle), replaced };
+  if (existing === undefined)
+    return { id: await insertStemBundle(db, bundle), replaced: null };
+  const names = await readUserNames(db, existing.id);
+  const replaced = await deleteStemSet(db, existing.id);
+  const id = await insertStemBundle(db, bundle);
+  await applyUserNames(db, id, names);
+  return { id, replaced };
 }
 
 async function readStems(db: Database, id: number): Promise<StoredStem[]> {
@@ -259,7 +265,8 @@ async function readStems(db: Database, id: number): Promise<StoredStem[]> {
     .orderBy(asc(stems.sortOrder));
   return rows.map((row) => ({
     id: row.id,
-    name: row.role,
+    name: row.name ?? row.role,
+    role: row.role,
     filePath: row.filePath,
     waveformPath: row.waveformPath,
     frames: row.frames ?? 0,

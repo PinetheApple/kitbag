@@ -369,3 +369,10 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   to 0 dB with nothing muted or soloed, and saves the stems. On one stem, mute and solo
   exclude each other: soloing a muted stem unmutes it, muting a soloed stem un-solos it.
   **[user]**
+
+- **2026-10-30 · Renaming songs, stem songs and stems (§7.1, §7.8, #176)** — Schema v17
+  adds `stem_sets.renamed` and a nullable `stems.name`; a re-import replacing the same job
+  keeps the user's song name only when `renamed` is set, so a never-renamed song takes the
+  new bundle's title. Stem names carry over by role, not position. Renaming a stem song
+  writes both `title` and `song_title` and keeps `artist`. `RowText` titles and subtitles
+  are single-line app-wide. **[recorded]**

@@ -2,7 +2,11 @@ import type { StemSetRecord, StoredStem } from '@kitbag/core-db';
 import { KB_RESULT } from '@kitbag/core-native';
 import { vi } from 'vitest';
 
-import type { StemPlayerCommands, StemPlayerRuntime } from './runtime.ts';
+import type {
+  StemPlayerCommands,
+  StemPlayerRecords,
+  StemPlayerRuntime,
+} from './runtime.ts';
 import { createStemPlayerStore } from './store.ts';
 
 export const RATE = 44100;
@@ -14,6 +18,7 @@ export function stem(id: number, change: Partial<StoredStem> = {}): StoredStem {
   return {
     id,
     name: `stem-${String(id)}`,
+    role: `stem-${String(id)}`,
     filePath: `stems/job/stem-${String(id)}.flac`,
     waveformPath: `stems/job/stem-${String(id)}.kwav`,
     frames: RATE * 10,
@@ -85,6 +90,7 @@ export function fakeRuntime(set: StemSetRecord) {
   const records = {
     readStemSet: vi.fn(() => Promise.resolve<StemSetRecord | undefined>(set)),
     saveStemMix: vi.fn(() => Promise.resolve()),
+    renameStem: vi.fn<StemPlayerRecords['renameStem']>(() => Promise.resolve()),
   };
   const sharedMetronome = { active: vi.fn(() => false), release: vi.fn() };
   const runtime: StemPlayerRuntime = {

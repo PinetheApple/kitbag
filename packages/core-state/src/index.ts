@@ -122,6 +122,7 @@ export type {
   BundleRefusal,
   BundleRefusalReason,
 } from './songLibrary/stemBundleLogic.ts';
+export { cleanName } from './names.ts';
 export type {
   LibraryRow,
   LibrarySongRow,

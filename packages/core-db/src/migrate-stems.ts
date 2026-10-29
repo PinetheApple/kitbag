@@ -32,3 +32,8 @@ export const MIGRATE_V15_TO_V16: readonly string[] = [
   'ALTER TABLE stem_sets ADD COLUMN song_title TEXT',
   'ALTER TABLE stem_sets ADD COLUMN artist TEXT',
 ];
+
+export const MIGRATE_V16_TO_V17: readonly string[] = [
+  'ALTER TABLE stem_sets ADD COLUMN renamed INTEGER NOT NULL DEFAULT 0',
+  'ALTER TABLE stems ADD COLUMN name TEXT',
+];

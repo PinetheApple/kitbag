@@ -15,6 +15,7 @@ import {
   type NewStemBundle,
   type StemMix,
 } from './stem-bundle-repository';
+import { renameStem, renameStemSet } from './stem-rename';
 
 export interface LibrarySongRow {
   readonly kind: 'song';
@@ -266,6 +267,10 @@ async function deleteSong(
   return row;
 }
 
+async function renameSong(db: Database, id: number, title: string) {
+  await db.update(songs).set({ title }).where(eq(songs.id, id));
+}
+
 export function createSongLibraryRepository({
   db,
   transactor,
@@ -290,6 +295,12 @@ export function createSongLibraryRepository({
     saveStemMix: (mixes: readonly StemMix[]) =>
       transaction(() => saveStemMix(db, mixes)),
     listStemSetFolders: () => serial(() => listStemSetFolders(db)),
+    renameSong: (id: number, title: string) =>
+      serial(() => renameSong(db, id, title)),
+    renameStemSet: (id: number, title: string) =>
+      serial(() => renameStemSet(db, id, title)),
+    renameStem: (id: number, name: string) =>
+      serial(() => renameStem(db, id, name)),
   };
 }
 

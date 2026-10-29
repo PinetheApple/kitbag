@@ -16,6 +16,8 @@ configureSongLibrary({
     insertStemBundle: unavailable,
     replaceStemBundle: unavailable,
     listStemSetFolders: () => Promise.resolve([]),
+    renameSong: unavailable,
+    renameStemSet: unavailable,
   },
   files: {
     constants: () => {

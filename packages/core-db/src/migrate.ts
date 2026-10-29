@@ -1,9 +1,13 @@
 import { REPAIR_PRESETS } from './preset-repair';
 import { RAMP_UNITS } from './preset-rules';
 import { INSTRUMENTS, MAX_MIDI_NOTE, MAX_STRINGS } from './tuning-rules';
-import { MIGRATE_V14_TO_V15, MIGRATE_V15_TO_V16 } from './migrate-stems';
+import {
+  MIGRATE_V14_TO_V15,
+  MIGRATE_V15_TO_V16,
+  MIGRATE_V16_TO_V17,
+} from './migrate-stems';
 
-export const SCHEMA_VERSION = 16;
+export const SCHEMA_VERSION = 17;
 export const V6_SCHEMA_VERSION = 6;
 export const V7_SCHEMA_VERSION = 7;
 export const V8_SCHEMA_VERSION = 8;
@@ -14,6 +18,7 @@ export const V12_SCHEMA_VERSION = 12;
 export const V13_SCHEMA_VERSION = 13;
 export const V14_SCHEMA_VERSION = 14;
 export const V15_SCHEMA_VERSION = 15;
+export const V16_SCHEMA_VERSION = 16;
 
 export interface MigrationDriver {
   exec(sql: string): void;
@@ -270,7 +275,7 @@ export const MIGRATE_V13_TO_V14: readonly string[] = [
   'ALTER TABLE songs ADD COLUMN analysis_error TEXT',
 ];
 
-export { MIGRATE_V14_TO_V15, MIGRATE_V15_TO_V16 };
+export { MIGRATE_V14_TO_V15, MIGRATE_V15_TO_V16, MIGRATE_V16_TO_V17 };
 
 export const BASELINE: readonly string[] = [
   ...V11_BASELINE,
@@ -279,6 +284,7 @@ export const BASELINE: readonly string[] = [
   ...MIGRATE_V13_TO_V14,
   ...MIGRATE_V14_TO_V15,
   ...MIGRATE_V15_TO_V16,
+  ...MIGRATE_V16_TO_V17,
 ];
 
 // SQLite cannot ADD a NOT NULL column without a constant default, so migrated
@@ -348,7 +354,8 @@ const UPGRADES: readonly {
   { to: V13_SCHEMA_VERSION, steps: MIGRATE_V12_TO_V13 },
   { to: V14_SCHEMA_VERSION, steps: MIGRATE_V13_TO_V14 },
   { to: V15_SCHEMA_VERSION, steps: MIGRATE_V14_TO_V15 },
-  { to: SCHEMA_VERSION, steps: MIGRATE_V15_TO_V16 },
+  { to: V16_SCHEMA_VERSION, steps: MIGRATE_V15_TO_V16 },
+  { to: SCHEMA_VERSION, steps: MIGRATE_V16_TO_V17 },
 ];
 
 function upgradeSteps(from: number): readonly string[] {

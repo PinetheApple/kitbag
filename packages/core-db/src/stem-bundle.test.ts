@@ -145,6 +145,7 @@ describe('StemDeck bundles in the song library', () => {
       stems: FULL.stems.map((stem) => ({
         ...stem,
         id: expect.any(Number) as number,
+        role: stem.name,
         durationSec: stem.frames / RATE,
         format: 'flac',
         channels: 2,

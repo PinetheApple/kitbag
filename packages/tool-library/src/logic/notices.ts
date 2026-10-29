@@ -66,6 +66,11 @@ export function noticeText(notice: LibraryNotice): NoticeText {
         status: 'Delete failed',
         text: `“${notice.name}” could not be deleted. Try again.`,
       };
+    case 'renameFailed':
+      return {
+        status: 'Rename failed',
+        text: `“${notice.name}” could not be renamed. Try again.`,
+      };
   }
 }
 
@@ -114,5 +119,5 @@ export function copyingText(names: readonly string[]): string {
 }
 
 export function replaceText(name: string, title: string): string {
-  return `“${name}” is the same StemDeck song as “${title}” in your library. Replacing it removes that song’s stems, analysis and mix, and adds this copy. This cannot be undone.`;
+  return `“${name}” is the same StemDeck song as “${title}” in your library. Replacing it removes that song’s stems, analysis and mix, and adds this copy; your names for the song and its stems are kept. This cannot be undone.`;
 }

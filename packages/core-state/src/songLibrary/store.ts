@@ -21,6 +21,7 @@ import {
   type LibraryChip,
   type Removal,
 } from './logic.ts';
+import { cleanName } from '../names.ts';
 import {
   getSongLibrary,
   type LibraryFiles,
@@ -51,7 +52,8 @@ export type LibraryNotice =
   | { readonly kind: 'copyFailed'; readonly name: string }
   | { readonly kind: 'addFailed'; readonly name: string }
   | { readonly kind: 'pickerFailed' }
-  | { readonly kind: 'deleteFailed'; readonly name: string };
+  | { readonly kind: 'deleteFailed'; readonly name: string }
+  | { readonly kind: 'renameFailed'; readonly name: string };
 
 export interface SongLibraryState {
   readonly ready: boolean;
@@ -81,6 +83,7 @@ export interface SongLibraryActions {
   importStemFolder: () => Promise<void>;
   reanalyze: (songId: number) => Promise<void>;
   deleteRow: (row: LibraryRow) => Promise<void>;
+  renameRow: (row: LibraryRow, name: string) => Promise<void>;
   dismissNotice: () => void;
   confirmReplace: () => Promise<void>;
   cancelReplace: () => void;
@@ -323,6 +326,20 @@ function rowActions(deps: SongLibraryDeps, set: SetState, get: Get) {
       }
       await get().refresh();
       await deleteLeftovers(deps.files(), removals, row.title);
+    },
+    renameRow: async (row: LibraryRow, name: string) => {
+      const title = cleanName(name);
+      if (title === null || title === row.title) return;
+      const records = deps.records();
+      try {
+        if (row.kind === 'stems') await records.renameStemSet(row.id, title);
+        else await records.renameSong(row.id, title);
+      } catch (error) {
+        warn(`rename of ${row.title} failed`, error);
+        set({ notice: { kind: 'renameFailed', name: row.title } });
+        return;
+      }
+      await get().refresh();
     },
   };
 }

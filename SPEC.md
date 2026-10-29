@@ -1376,6 +1376,7 @@ rather than starting from zero.
 | `StemSets`: + beat grid (Float32 BLOB, as `Songs`) + bar marks (`beat`, `beats_per_bar`) | §7.8, §4.2 — the grid StemDeck's click used, edits applied |
 | `StemSets`: + sections, + lyrics (synced LRC, plain, offset, user retiming) | §7.7 |
 | `StemSets`: + speed; `Stems`: + pitch (semitones) | §7.6 — mix state is per song, like gain/mute/solo |
+| `StemSets`: + `renamed` (default 0); `Stems`: + `name` (display name, NULL shows the role) | §7.1, §7.8 — a rename is display-only and survives a re-import of the same StemDeck song; schema v17 |
 | **All paths relative** to the base directory | §2.3 (iOS) and **D11** (the directory is now user-movable) |
 | `PracticeSessions`: write `setlistId`, `songsPlayed` | §5.7 — columns exist, producer never fills them |
 | BPM cache table | §8.5 |

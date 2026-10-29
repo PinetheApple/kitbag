@@ -17,6 +17,7 @@ describe('migrate v15 to v16', () => {
         ...(row as object),
         song_title: null,
         artist: null,
+        renamed: 0,
       })),
     );
     expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
