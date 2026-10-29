@@ -147,9 +147,10 @@ export function BeatDots({
   );
   const dotSize = beatDotSize(lines, width, DOT_METRICS);
   const { countingIn } = frame;
-  const dotsShown = useAnimatedStyle(() => ({
-    opacity: countingIn.value === 0 ? 1 : 0,
-  }));
+  const dotsShown = useAnimatedStyle(() => {
+    const shown = countingIn.value === 0;
+    return { opacity: shown ? 1 : 0, pointerEvents: shown ? 'auto' : 'none' };
+  });
 
   return (
     <View>

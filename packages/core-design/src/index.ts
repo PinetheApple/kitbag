@@ -42,3 +42,6 @@ export * from './components/TuneDirectionIcon.tsx';
 export * from './components/TunerStrip.tsx';
 export * from './notation.ts';
 export * from './components/NotationGlyph.tsx';
+export * from './wheel.ts';
+export * from './components/Switch.tsx';
+export * from './components/WheelPicker.tsx';

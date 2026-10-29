@@ -21,7 +21,6 @@ const NOT_IN_CYCLE = -1;
 export interface MetronomeFrameValues {
   readonly barPhase: SharedValue<number>;
   readonly currentBeat: SharedValue<number>;
-  readonly currentPolyBeat: SharedValue<number>;
   readonly currentBpm: SharedValue<number>;
   readonly countingIn: SharedValue<number>;
   readonly countInBar: SharedValue<number>;
@@ -45,7 +44,6 @@ export function useMetronomeFrame(
 ): MetronomeFrameValues {
   const barPhase = useSharedValue(0);
   const currentBeat = useSharedValue(KB_STOPPED_BEAT);
-  const currentPolyBeat = useSharedValue(KB_STOPPED_BEAT);
   const currentBpm = useSharedValue(bpm);
   const countingIn = useSharedValue(0);
   const countInBar = useSharedValue(NOT_IN_CYCLE);
@@ -65,7 +63,6 @@ export function useMetronomeFrame(
     }
     barPhase.value = host.bar_phase;
     assign(currentBeat, host.current_beat);
-    assign(currentPolyBeat, host.current_poly_beat);
     assign(currentBpm, host.current_bpm);
     assign(countingIn, host.counting_in);
     assign(countInBar, host.count_in_bar);
@@ -82,7 +79,6 @@ export function useMetronomeFrame(
     if (!running) {
       barPhase.value = 0;
       currentBeat.value = KB_STOPPED_BEAT;
-      currentPolyBeat.value = KB_STOPPED_BEAT;
       countingIn.value = 0;
       countInBar.value = NOT_IN_CYCLE;
       barMuted.value = 0;
@@ -97,7 +93,6 @@ export function useMetronomeFrame(
     running,
     barPhase,
     currentBeat,
-    currentPolyBeat,
     countingIn,
     countInBar,
     barMuted,
@@ -115,7 +110,6 @@ export function useMetronomeFrame(
   return {
     barPhase,
     currentBeat,
-    currentPolyBeat,
     currentBpm,
     countingIn,
     countInBar,

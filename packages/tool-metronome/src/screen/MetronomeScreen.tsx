@@ -23,26 +23,21 @@ import { useLibraryRefresh } from '../library/useLibraryRefresh.ts';
 import { practiceBadgeCount } from '../logic/statusLine.ts';
 import { pushTap, tapTempoBpm } from '../logic/tapTempo.ts';
 import { BeatDots, BeatLegend } from './BeatDots.tsx';
-import { BeatLeds } from './BeatLeds.tsx';
-import {
-  MeterStepSheet,
-  PracticeToolsSheet,
-  SubdivisionStepSheet,
-} from './InterimSheets.tsx';
+import { BpmNumpadSheet } from './BpmNumpadSheet.tsx';
+import { MeterSheet } from './MeterSheet.tsx';
 import { MetronomeAppBar } from './MetronomeAppBar.tsx';
 import { PickerChips } from './PickerChips.tsx';
 import { PracticePill, usePracticeElapsed } from './PracticePill.tsx';
+import { PracticeSheet } from './PracticeSheet.tsx';
 import { PresetRow } from './PresetRow.tsx';
 import { StatusLine } from './StatusLine.tsx';
+import { SubdivisionSheet } from './SubdivisionSheet.tsx';
 import { SwipeHint } from './SwipeHint.tsx';
 import { SwipeTempoZone } from './SwipeTempoZone.tsx';
-import { TempoNumpadSheet } from './TempoNumpadSheet.tsx';
 import { Transport } from './Transport.tsx';
 import { useTempoSwipe } from './useTempoSwipe.ts';
 import { useMetronomeFrame } from './useMetronomeFrame.ts';
 import { usePracticeSettings } from './usePracticeSettings.ts';
-
-const POLY_LED_GAPS = { top: space.sectionGap, bottom: space.sectionGap };
 
 type OpenSheet = 'none' | 'numpad' | 'meter' | 'subdivision' | 'practice';
 
@@ -61,9 +56,6 @@ const useStyles = createThemedStyles((theme) => ({
     flex: 1,
     paddingTop: space.belowAppBar,
     gap: space.sectionGap,
-  },
-  centre: {
-    alignItems: 'center',
   },
   notes: {
     ...textStyle(textRoles.fieldLabel),
@@ -106,14 +98,11 @@ export function MetronomeScreen({
   const denominator = useMetronome((s) => s.denominator);
   const subdivision = useMetronome((s) => s.subdivision);
   const accents = useMetronome((s) => s.accents);
-  const polyBeats = useMetronome((s) => s.polyBeats);
-  const polyAccents = useMetronome((s) => s.polyAccents);
   const running = useMetronome((s) => s.running);
   const setTempo = useMetronome((s) => s.setTempo);
   const nudgeTempo = useMetronome((s) => s.nudgeTempo);
   const syncTempoFromEngine = useMetronome((s) => s.syncTempoFromEngine);
   const cycleAccent = useMetronome((s) => s.cycleAccent);
-  const cyclePolyAccent = useMetronome((s) => s.cyclePolyAccent);
   const start = useMetronome((s) => s.start);
   const stop = useMetronome((s) => s.stop);
   const hintSeen = useSwipeHint((s) => s.seen);
@@ -241,18 +230,6 @@ export function MetronomeScreen({
             frame={frame}
             onCycle={cycleAccent}
           />
-          {settings.polyEnabled ? (
-            <View style={styles.centre}>
-              <BeatLeds
-                size="small"
-                beatCount={polyBeats}
-                accents={polyAccents}
-                currentBeat={frame.currentPolyBeat}
-                onCycle={cyclePolyAccent}
-                neighbourGapDp={POLY_LED_GAPS}
-              />
-            </View>
-          ) : null}
           <BeatLegend />
           <Transport
             running={running}
@@ -271,24 +248,26 @@ export function MetronomeScreen({
           />
         )}
 
-        <TempoNumpadSheet
+        <BpmNumpadSheet
           visible={openSheet === 'numpad'}
+          title="Tempo"
+          confirmLabel="Set tempo"
           bpm={bpm}
           bottomInset={insets.bottom}
           onConfirm={handleSwipeOrTypedTempo}
           onDismiss={handleCloseSheet}
         />
-        <MeterStepSheet
+        <MeterSheet
           visible={openSheet === 'meter'}
           bottomInset={insets.bottom}
           onDismiss={handleCloseSheet}
         />
-        <SubdivisionStepSheet
+        <SubdivisionSheet
           visible={openSheet === 'subdivision'}
           bottomInset={insets.bottom}
           onDismiss={handleCloseSheet}
         />
-        <PracticeToolsSheet
+        <PracticeSheet
           visible={openSheet === 'practice'}
           bottomInset={insets.bottom}
           onDismiss={handleCloseSheet}

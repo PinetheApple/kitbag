@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   COUNT_IN_BAR_OPTIONS,
-  countInActive,
+  COUNT_IN_MODE_OPTIONS,
+  COUNT_IN_SEGMENT_OPTIONS,
+  countInMode,
   countInBarsFromOption,
   countInLabel,
 } from './countIn.ts';
@@ -21,10 +23,30 @@ describe('count-in choices', () => {
     }
   });
 
-  it('treats only Off as inactive and never maps an unknown option on', () => {
-    expect(countInActive(0)).toBe(false);
-    expect(countInActive(2)).toBe(true);
+  it('never maps an unknown option on', () => {
     expect(countInBarsFromOption('3')).toBe(0);
     expect(countInLabel(4)).toBe('4 bars');
+  });
+
+  it('labels the segments with the bare count and speaks the bars', () => {
+    expect(COUNT_IN_SEGMENT_OPTIONS.map((o) => o.label)).toEqual([
+      'Off',
+      '1',
+      '2',
+      '4',
+    ]);
+    expect(COUNT_IN_SEGMENT_OPTIONS[1]?.accessibilityLabel).toBe('1 bar');
+    expect(COUNT_IN_SEGMENT_OPTIONS.map((o) => o.value)).toEqual(
+      KB_COUNT_IN_BARS.map(String),
+    );
+  });
+
+  it('orders the count sound Same then Distinct', () => {
+    expect(COUNT_IN_MODE_OPTIONS.map((o) => o.label)).toEqual([
+      'Same',
+      'Distinct',
+    ]);
+    expect(countInMode(true)).toBe('distinct');
+    expect(countInMode(false)).toBe('same');
   });
 });

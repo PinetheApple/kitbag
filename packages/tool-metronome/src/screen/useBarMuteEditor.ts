@@ -14,8 +14,7 @@ export interface BarMuteEditor {
   readonly preview: readonly boolean[];
   readonly stepPlay: Stepper;
   readonly stepMute: Stepper;
-  readonly apply: () => void;
-  readonly turnOff: () => void;
+  readonly toggle: (enabled: boolean) => void;
 }
 
 function useMuteStepper(key: 'playBars' | 'muteBars'): Stepper {
@@ -32,22 +31,20 @@ function useMuteStepper(key: 'playBars' | 'muteBars'): Stepper {
   );
 }
 
-export function useBarMuteEditor(onDone: () => void): BarMuteEditor {
+export function useBarMuteEditor(): BarMuteEditor {
   const barMute = useMetronome((s) => s.barMute);
   const setBarMute = useMetronome((s) => s.setBarMute);
   const preview = useMemo(
     () => mutePreview(barMute.playBars, barMute.muteBars),
     [barMute.playBars, barMute.muteBars],
   );
-  const apply = useCallback(() => {
-    setBarMute({ ...barMute, enabled: true });
-    onDone();
-  }, [barMute, setBarMute, onDone]);
-  const turnOff = useCallback(() => {
-    setBarMute({ ...barMute, enabled: false });
-    onDone();
-  }, [barMute, setBarMute, onDone]);
+  const toggle = useCallback(
+    (enabled: boolean) => {
+      setBarMute({ ...barMute, enabled });
+    },
+    [barMute, setBarMute],
+  );
   const stepPlay = useMuteStepper('playBars');
   const stepMute = useMuteStepper('muteBars');
-  return { barMute, preview, stepPlay, stepMute, apply, turnOff };
+  return { barMute, preview, stepPlay, stepMute, toggle };
 }

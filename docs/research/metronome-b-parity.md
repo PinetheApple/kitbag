@@ -4,8 +4,7 @@ Source: the "Chosen" variant in `docs/research/mockups/metronome-layouts.html`
 (owner-approved on #175, 2026-10-30). Values are the mockup's CSS at its 360 × 800
 phone frame, where 1 CSS px = 1 dp. Colours name the §12.2 palette tokens; `mix(a N%, b)`
 is CSS `color-mix(in srgb, a N%, b)`. The last column is where the value lives in
-`@kitbag/core-design` (roles in `roles.ts` unless named otherwise). The Sheets rows are
-still proposals; they are built in part 2.
+`@kitbag/core-design` (roles in `roles.ts` unless named otherwise).
 
 ## Unchanged by owner ruling
 
@@ -81,24 +80,24 @@ stay. The glow (`mix.tempoZoneGlow`) is removed.
 
 | Element | Mockup value | core-design |
 |---|---|---|
-| Sheet | `surface1`, top border `line`, radius 24 top, padding 10 16 26, gap 6, shadow | `Sheet` (see deviations) |
-| Grab | 36 × 4, radius 2, `surface3`, 8 below | `size.grab*` |
-| Title | Space Grotesk 500 16 | see deviations |
+| Sheet | `surface1`, top border `line`, radius 24 top, padding 10 16 26, gap 6, shadow | `Sheet` (see Not matched) |
+| Grab | 36 × 4, radius 2, `surface3`, 8 below | `size.grabWidth`, `size.grabHeight` |
+| Title | Space Grotesk 500 16 | `textRoles.sheetTitle` (see Not matched) |
 | Scrim | `rgba(10,8,14,.45)` | `Sheet` scrim |
-| Hint | Inter 12 `text3` | new `textRoles.sheetHint` |
-| Subdivision tiles | 4 columns, gap 8; tile height 64, radius 12, `surface2`, 1 `line`, gap 4, Space Grotesk 500 11.5 `text2`; selected `mix(accent 16%, surface2)`, border `accent`, `text` | new `mix.selectedTile` |
-| Meter wheels | gap 14, padding 6 0; wheel width 84, radius 14, `surface2`, 1 `line`, padding 4 0; item 36 tall Space Grotesk 500 18 `text3`; selected 44 tall 700 30 `text` with `line` rules; slash 300 44 `text3` | new `size.wheel*` |
-| Common meters | wrap, gap 8; height 40, min-width 60, padding 0 10, radius 10, Space Grotesk 500 14; selected border `accent`, `mix(accent 16%, surface2)` | `radius.pick` |
-| Sheet buttons | gap 8, 6 above; height 44, radius 12, Space Grotesk 500 14; primary `accent` / `onAccent` | `Button` |
-| Practice sections | gap 8, padding 10 0, `line` between; heading Space Grotesk 500 15 with icon 24 `text2`, gap 10 | new `textRoles.practiceHeading` |
-| Practice rows | gap 8, Inter 13 `text2` | new `textRoles.practiceRow` |
-| Stepper | height 36, radius 10, `surface2`, 1 `line`, gap 2, padding 0 2; value Space Grotesk 500 14 min-width 40; keys 28 wide, 18 `text2` | `StepControl` inline |
-| Segments | radius 12, padding 3, gap 3; option 34 tall, Space Grotesk 13, radius 9, `text2`; selected `surface1`, `text`, shadow 0 1 3 `rgba(0,0,0,.12)` | `SegmentedControl` |
-| Switch | 40 × 24, radius 12, `surface3`, knob 18 `text2` inset 3; on `accent`, knob `onAccent` | new `Switch` |
-| Loop toggle | chip 34 tall, Space Grotesk 13, icon 16 | `Chip` |
-| Mute preview | 8 cells, gap 3, height 14, radius 3; playing `text2`, muted 1.5 dashed `text3` | `size.barPreview` |
-| Sound picker | height 36, padding 0 6 0 12, radius 10, Space Grotesk 500 13.5, caret; preview key 40 circle | `radius.pick` |
-| Numpad | display Space Grotesk 700 52; 3 columns gap 8; key 52 tall, radius 12, Space Grotesk 500 20; OK `accent` | `NumpadKeypad` |
+| Hint | Inter 12 `text3` | `textRoles.sheetHint` (`sheetStyles.ts`) |
+| Subdivision tiles | 4 columns, gap 8; tile height 64, radius 12, `surface2`, 1 `line`, gap 4, Space Grotesk 500 11.5 `text2`; glyph 26 tall; selected `mix(accent 16%, surface2)`, border `accent`, `text` | `size.notationTile`, `size.notationTileGlyph`, `radius.button`, `space.notationTileGap`, `textRoles.notationTile`, `mix.selectedTile` |
+| Meter wheels | gap 14, padding 6 0; wheel width 84, radius 14, `surface2`, 1 `line`, padding 4 0; item 36 tall Space Grotesk 500 18 `text3`; selected 44 tall 700 30 `text` with `line` rules; slash 300 44 `text3` | `WheelPicker`: `space.wheelGap`, `inset.wheelRowV`, `size.wheelWidth`, `radius.wheel`, `inset.wheelV`, `size.wheelItem`, `size.wheelSelected`, `textRoles.wheelItem`, `textRoles.wheelSelected`, `textRoles.meterSlash` |
+| Common meters | wrap, gap 8; height 40, min-width 60, padding 0 10, radius 10, Space Grotesk 500 14; selected border `accent`, `mix(accent 16%, surface2)` | `size.meterPick`, `size.meterPickMin`, `inset.meterPickH`, `radius.pick`, `textRoles.meterPick`, `mix.selectedTile` |
+| Sheet buttons | gap 8, 6 above; height 44, radius 12, Space Grotesk 500 14; primary `accent` / `onAccent` | `Button` (see Not matched) |
+| Practice sections | gap 8, padding 10 0, `line` between; heading Space Grotesk 500 15 with icon 24 `text2`, gap 10 | `inset.practiceSectionV`, `textRoles.practiceHeading`, `iconSizes.practiceHeading`, `space.rowGap` |
+| Practice rows | gap 8, Inter 13 `text2` | `textRoles.practiceRow` |
+| Stepper | height 36, radius 10, `surface2`, 1 `line`, gap 2, padding 0 2; value Space Grotesk 500 14 min-width 40; keys 28 wide, 18 `text2` | `StepControl variant="inline"` (see Not matched) |
+| Segments | radius 12, padding 3, gap 3; option 34 tall, Space Grotesk 13, radius 9, `text2`; selected `surface1`, `text`, shadow 0 1 3 `rgba(0,0,0,.12)` | `SegmentedControl` (see Not matched) |
+| Switch | 40 × 24, radius 12, `surface3`, knob 18 `text2` inset 3; on `accent`, knob `onAccent` | `Switch`: `size.switchWidth`, `size.switchHeight`, `size.switchKnob`, `size.switchKnobInset`, `radius.switch` |
+| Loop toggle | chip 34 tall, Space Grotesk 13, icon 16 | `Chip` (see Not matched) |
+| Mute preview | 8 cells, gap 3, height 14, radius 3; playing `text2`, muted 1.5 dashed `text3` | `size.mutePreview`, `size.mutePreviewDashed`, `radius.barPreview`, `space.barPreviewGap` |
+| Sound picker | height 36, padding 0 6 0 12, radius 10, Space Grotesk 500 13.5, caret; preview key 40 circle | `size.soundPick`, `inset.soundPickLeft`, `inset.soundPickRight`, `radius.pick`, `textRoles.soundPick`, `iconSizes.caret`; preview `TransportKey` (see Not matched) |
+| Numpad | display Space Grotesk 700 52; 3 columns gap 8; key 52 tall, radius 12, Space Grotesk 500 20; OK `accent` | `textRoles.sheetNumeral`, `NumpadKeypad` (see Not matched) |
 
 ## First-use hint
 
@@ -112,7 +111,7 @@ stay. The glow (`mix.tempoZoneGlow`) is removed.
 
 ## Not matched
 
-Each entry says why. Part 1 covers everything above the Sheets table.
+Each entry says why.
 
 - **Back key.** The shared `AppBar` keeps its chevron at `iconSizes.title` (17) inside
   its own hit box, not a 48 circle with a 24 arrow (#175 question 2, default kept).
@@ -135,16 +134,15 @@ Each entry says why. Part 1 covers everything above the Sheets table.
 - **Dot wrapping against SPEC D9.** D9 caps a row at 7 ("16 beats are four rows of
   four"). The dots follow the mockup instead and hold up to 8 per line, so 16 beats
   are two lines of eight 29 dp dots. At 7 per row with 56 dp dots, 13 to 16 beats
-  pushed the transport off a 360 × 800 screen. The poly LED row keeps D9's 7. This
-  needs a D9 ruling.
+  pushed the transport off a 360 × 800 screen. This needs a D9 ruling.
 - **12 beats group 3 + 3 + 3 + 3** whatever the denominator. The mockup only draws 12/8,
   and 6 and 9 already grouped in threes for any denominator.
 - **Count-in squares** take the dot size, so they are 56 only when the dots are, and
   the numeral scales with the square, not with system text size. They overlay the dots,
-  which are hidden by opacity during the count-in but still take taps.
-- **Poly on.** The mockup never draws it. The existing small poly LED row shows under
-  the dots.
-- **"Got it" height.** The shared `Button` is 36 tall, not 40.
+  which are hidden during the count-in and stop taking taps through an animated
+  `pointerEvents`; that has not been checked on a device.
+- **Poly on.** The mockup never draws it, and the screen has no poly row (decisions.md,
+  2026-10-30). Poly is armed in the Practice sheet and listed in the status line.
 - **First-use hint position and scrim.** The ring is centred on the measured swipe zone
   instead of 150 from the top. The scrim is Stage `bg` (#0E0D10) at 55%:
   rgba(10, 8, 14) is not a §12.2 token.
@@ -156,7 +154,34 @@ Each entry says why. Part 1 covers everything above the Sheets table.
 - **Glow token.** Nothing draws `mix.tempoZoneGlow` any more, but the key stays in
   `roles.ts` because shared role edits were append-only while another session was
   editing core-design. Delete it at merge.
-- **Interim controls until part 2.** The meter and subdivision chips open stepper
-  sheets, and the Practice key opens a sheet with the old Ramp / Mute bars / Sound /
-  Count-in chips plus the poly stepper. Part 2 replaces all three with the mockup's
-  sheets.
+- **Sheet frame and title.** `Sheet` keeps its tokens (#175, owner default): radius 20
+  top and 14 bottom with a full 1 `line` border, padding 14 on three sides plus the
+  bottom inset, content gap 12, title Space Grotesk 500 14.
+- **Sheet buttons and "Got it".** The shared `Button` is 36 tall, not 44 (40 for "Got
+  it"). Cancel is the ghost variant: transparent, 1 `line`, `text2`, as drawn.
+- **Steppers.** The Practice steppers are the shared inline `StepControl`: Space
+  Grotesk 12.5 value and keys, radius 9, about 28 tall, not 36 / 14 / 18 / radius 10.
+  The 48 dp hit boxes come from the component.
+- **Segments.** `SegmentedControl` options are Space Grotesk 12.5, about 25 tall, radius
+  8, track radius 11; the selected option is `surface3` with no shadow, not `surface1`
+  with a shadow.
+- **Loop toggle.** The shared `Chip`: 12.5 text and icon, about 25 tall, not 34 / 13 / 16.
+- **Sound preview key.** The shared `TransportKey` is 42, not 40, with a 22 glyph.
+- **Numpad keys.** `NumpadKeypad` keys are Space Grotesk 400 19, radius 11, padding 13
+  (about 48 tall), not 500 20, radius 12, 52 tall. Its bounds hint is the shared
+  `SheetHint` (Inter 11.5).
+- **Meter slash.** Space Grotesk 400: weight 300 is not bundled.
+- **Wheel geometry.** Every row is 40 apart, the mean of 36 and 44, so a native scroll
+  view can snap to it. The rows next to the selection sit where the mockup draws them;
+  the outer rows sit 4 further out. The large selected style lands when the scroll
+  settles, not while it moves. Wheel numerals do not scale with system text, and a row
+  is 40 tall: the wheel is a scroll target, and screen readers adjust it as one control.
+- **Subdivision tiles at large text** drop to two columns from a 1.5 font scale, so the
+  names fit. The mockup draws only four.
+- **Sound list.** Tapping a sound picker opens a "Normal sound" or "Accent sound" sheet
+  over the Practice sheet; one tap sets the sound, plays it and closes. The mockup does
+  not draw this step.
+- **Practice heading icons** are the nearest Material Community glyphs: `trending-up`,
+  `volume-off`, `timer-sand`, `metronome`, `waveform`.
+- **Live ramp edits.** Any ramp edit is sent at once. While the ramp is on, the store's
+  `setRamp` re-arms it, so the tempo jumps back to From after each change.

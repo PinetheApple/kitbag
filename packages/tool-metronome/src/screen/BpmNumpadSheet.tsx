@@ -17,8 +17,10 @@ import {
   pressDigit,
 } from '../logic/numpad.ts';
 
-interface TempoNumpadSheetProps {
+interface BpmNumpadSheetProps {
   readonly visible: boolean;
+  readonly title: string;
+  readonly confirmLabel: string;
   readonly bpm: number;
   readonly bottomInset: number;
   readonly onConfirm: (bpm: number) => void;
@@ -33,13 +35,15 @@ const useStyles = createThemedStyles((theme) => ({
   },
 }));
 
-export function TempoNumpadSheet({
+export function BpmNumpadSheet({
   visible,
+  title,
+  confirmLabel,
   bpm,
   bottomInset,
   onConfirm,
   onDismiss,
-}: TempoNumpadSheetProps) {
+}: BpmNumpadSheetProps) {
   const styles = useStyles();
   const [entry, setEntry] = useState(() => openEntry(bpm));
 
@@ -64,8 +68,8 @@ export function TempoNumpadSheet({
   return (
     <Sheet
       visible={visible}
-      title="Tempo"
-      dismissLabel="Close tempo entry"
+      title={title}
+      dismissLabel={`Close ${title.toLowerCase()} entry`}
       bottomInset={bottomInset}
       onShow={handleShow}
       onDismiss={onDismiss}
@@ -74,7 +78,7 @@ export function TempoNumpadSheet({
         <Text
           style={styles.entry}
           accessibilityLiveRegion="polite"
-          accessibilityLabel={`${entry.digits} BPM`}
+          accessibilityLabel={`${title}, ${entry.digits} BPM`}
         >
           {entry.digits}
         </Text>
@@ -87,7 +91,7 @@ export function TempoNumpadSheet({
         onBackspace={handleBackspace}
         onConfirm={handleConfirm}
         backspaceLabel="Delete digit"
-        confirmLabel="Set tempo"
+        confirmLabel={confirmLabel}
       />
     </Sheet>
   );

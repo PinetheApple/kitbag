@@ -28,6 +28,8 @@ export const space = {
   belowTransport: 8,
   belowAppBar: 4,
   coachBubbleGap: 16,
+  wheelGap: 14,
+  notationTileGap: 4,
 } as const;
 
 export const size = {
@@ -93,6 +95,20 @@ export const size = {
   coachRingHeight: 200,
   coachRingBorder: 2,
   coachBubbleWidth: 300,
+  switchWidth: 40,
+  switchHeight: 24,
+  switchKnob: 18,
+  switchKnobInset: 3,
+  wheelWidth: 84,
+  wheelItem: 36,
+  wheelSelected: 44,
+  notationTile: 64,
+  notationTileGlyph: 26,
+  meterPick: 40,
+  meterPickMin: 60,
+  mutePreview: 14,
+  mutePreviewDashed: 1.5,
+  soundPick: 36,
 } as const;
 
 export const radius = {
@@ -119,6 +135,8 @@ export const radius = {
   countSquare: 14,
   keyBadge: 9,
   coachRing: 24,
+  switch: 12,
+  wheel: 14,
 } as const;
 
 export const inset = {
@@ -163,6 +181,12 @@ export const inset = {
   keyBadgeH: 4,
   coachBubbleV: 14,
   coachBubbleH: 16,
+  wheelV: 4,
+  wheelRowV: 6,
+  meterPickH: 10,
+  practiceSectionV: 10,
+  soundPickLeft: 12,
+  soundPickRight: 6,
 } as const;
 
 export const opacity = {
@@ -183,6 +207,7 @@ export const mix = {
   setChip: 0.14,
   dotBorder: 0.55,
   countInMeta: 0.75,
+  selectedTile: 0.16,
 } as const;
 
 export const presetActionGrow = 1.3;
@@ -220,6 +245,7 @@ export const iconSizes = {
   statusLive: 20,
   transportLarge: 24,
   coachRing: 48,
+  practiceHeading: 24,
 } as const;
 
 export type IconSize = keyof typeof iconSizes;
@@ -298,6 +324,15 @@ export const textRoles = {
   coachTitle: { family: display, weight: 600, size: 15 },
   coachBody: { family: body, weight: 400, size: 13.5 },
   notationNumeral: { family: display, weight: 700, size: 7.5 },
+  sheetHint: { family: body, weight: 400, size: 12 },
+  notationTile: { family: display, weight: 500, size: 11.5 },
+  wheelItem: { family: display, weight: 500, size: 18, tabular: true },
+  wheelSelected: { family: display, weight: 700, size: 30, tabular: true },
+  meterSlash: { family: display, weight: 400, size: 44 },
+  meterPick: { family: display, weight: 500, size: 14, tabular: true },
+  practiceHeading: { family: display, weight: 500, size: 15 },
+  practiceRow: { family: body, weight: 400, size: 13 },
+  soundPick: { family: display, weight: 500, size: 13.5 },
 } as const satisfies Record<string, TypeRole>;
 
 export type TextRoleName = keyof typeof textRoles;
