@@ -98,12 +98,12 @@ jobs:
     name: Android release build (Linux)
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    # CMake reads these launchers from the environment, so every NDK build uses ccache
-    # without touching a build.gradle. The NDK is reinstalled per run: hash by version, not mtime.
+    # CMake reads the launchers from the environment, so no build.gradle changes.
     env:
       CMAKE_C_COMPILER_LAUNCHER: ccache
       CMAKE_CXX_COMPILER_LAUNCHER: ccache
       CCACHE_MAXSIZE: 1G
+      # Gradle reinstalls the NDK every run, so its mtime never matches.
       CCACHE_COMPILERCHECK: '%compiler% --version'
     steps:
       - uses: actions/checkout@v7
@@ -118,12 +118,15 @@ jobs:
           java-version: 17
       - uses: gradle/actions/setup-gradle@v6
       - uses: actions/cache/restore@v6
+        id: ccache-restore
         with:
           path: ~/.cache/ccache
           key: ccache-${{ runner.os }}-${{ github.sha }}
           restore-keys: ccache-${{ runner.os }}-
       - name: Install ccache
-        run: sudo apt-get update && sudo apt-get install -y ccache && ccache --zero-stats
+        run: sudo apt-get update && sudo apt-get install -y ccache
+      - name: ccache — zero the restored stats so the report covers this build only
+        run: ccache --zero-stats
       - name: Install (frozen lockfile)
         run: pnpm install --frozen-lockfile
       # assembleRelease, not assembleDebug: it bundles the JS and runs the
@@ -132,10 +135,10 @@ jobs:
       - name: Assemble release — compiles the Kotlin/JNI/codegen chain
         run: ./gradlew :app:assembleRelease :kitbag_core-native:testReleaseUnitTest
         working-directory: packages/app-shell/android
-      - name: ccache statistics
+      - name: ccache — hit rate for this build
         run: ccache --show-stats
       - uses: actions/cache/save@v6
-        if: github.ref == 'refs/heads/main' || github.head_ref == 'PinetheApple/ci-150-gradle-cache'
+        if: github.ref == 'refs/heads/main'
         with:
           path: ~/.cache/ccache
-          key: ccache-${{ runner.os }}-${{ github.sha }}
+          key: ${{ steps.ccache-restore.outputs.cache-primary-key }}
