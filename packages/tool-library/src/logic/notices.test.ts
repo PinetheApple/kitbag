@@ -53,6 +53,7 @@ describe('replaceText', () => {
     const text = replaceText('Redbone.stemdeck.zip', 'Redbone');
     expect(text).toContain('“Redbone.stemdeck.zip”');
     expect(text).toContain('“Redbone” in your library');
+    expect(text).toContain('your names for the song and its stems are kept');
     expect(text).toContain('cannot be undone');
   });
 });

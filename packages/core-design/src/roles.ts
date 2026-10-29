@@ -30,6 +30,7 @@ export const space = {
   coachBubbleGap: 16,
   wheelGap: 14,
   notationTileGap: 4,
+  waveBarGap: 1.5,
 } as const;
 
 export const size = {
@@ -149,6 +150,7 @@ export const radius = {
   segmentLarge: 12,
   segmentLargeOption: 9,
   numpadKeyLarge: 12,
+  waveBar: 1,
 } as const;
 
 export const inset = {
@@ -237,6 +239,16 @@ export const playGlyphPath = {
   height: 12,
 } as const;
 
+export const pauseGlyphPath = {
+  left: 5,
+  top: 4,
+  barWidth: 3,
+  barGap: 4,
+  height: 12,
+} as const;
+
+export const waveMinBarFraction = 0.08;
+
 // Glyph sizes for icon-only content. The design file's transport (11px) and
 // step-key (14px) glyphs were too small to read on device (#125): the
 // transport glyph now matches the play glyph beside it, and the step key's
@@ -264,6 +276,9 @@ export const iconSizes = {
   chipLarge: 16,
   transportSmall: 20,
   numpadKeyLarge: 24,
+  dockKey: 24,
+  bar: 24,
+  dockPlay: 32,
 } as const;
 
 export type IconSize = keyof typeof iconSizes;
@@ -286,6 +301,7 @@ export const textRoles = {
   stepInline: { family: display, weight: 400, size: 12.5 },
   stepInlineValue: { family: display, weight: 500, size: 12.5, tabular: true },
   transportKey: { family: display, weight: 400, size: iconSizes.transport },
+  dockKey: { family: display, weight: 400, size: iconSizes.dockKey },
   sheetTitle: { family: display, weight: 500, size: 14 },
   sheetNumeral: {
     family: display,
@@ -360,6 +376,20 @@ export const textRoles = {
   segmentLarge: { family: display, weight: 400, size: 13 },
   chipLarge: { family: display, weight: 400, size: 13 },
   numpadKeyLarge: { family: display, weight: 500, size: 20, tabular: true },
+  songTitle: { family: display, weight: 500, size: 17 },
+  songArtist: { family: body, weight: 400, size: 12.5 },
+  stemName: { family: display, weight: 500, size: 14.5 },
+  stemToggle: { family: display, weight: 700, size: 12 },
+  stemLevel: { family: display, weight: 500, size: 12, tabular: true },
+  factChip: { family: display, weight: 700, size: 16, tabular: true },
+  factUnit: { family: display, weight: 500, size: 11, tracking: 0.08 },
+  factQuiet: { family: display, weight: 400, size: 12.5 },
+  faderEnd: { family: display, weight: 400, size: 12 },
+  scrubTime: { family: display, weight: 500, size: 14.5, tabular: true },
+  loopNote: { family: display, weight: 400, size: 12 },
+  loopFlag: { family: display, weight: 700, size: 11 },
+  menuRow: { family: body, weight: 400, size: 14.5 },
+  menuValue: { family: display, weight: 400, size: 14 },
 } as const satisfies Record<string, TypeRole>;
 
 export type TextRoleName = keyof typeof textRoles;

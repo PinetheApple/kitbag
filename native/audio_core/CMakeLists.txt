@@ -53,6 +53,7 @@ add_library(kitbag_core SHARED
   src/metronome/tempo_ramp.cpp
   src/media/miniaudio_impl.c
   src/media/streaming_track.cpp
+  src/media/looping_source_reader.cpp
   src/mixer/mixer.cpp
   src/mixer/mixer_render.cpp
   src/player/player.cpp
@@ -148,6 +149,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_ramp_live.cpp
     tools/metronome/metronome_test_trainer_status.cpp
     tools/metronome/metronome_test_ramp_status.cpp
+    tools/metronome/metronome_test_follow.cpp
     tools/rt/rt_publisher_verify.cpp
     tools/rt/stall_detector_test.cpp
     ${KITBAG_METRONOME_SOURCES})
@@ -168,8 +170,12 @@ if(KITBAG_BUILD_TOOLS)
   # kb_engine_render), so playback crosses the interface the app will, not the
   # C++ behind it. Links the shared library, like abi_verify; writes its fixtures.
   add_executable(stream_verify tools/media/stream_verify.cpp)
-  target_include_directories(stream_verify PRIVATE tools/media)
+  target_include_directories(stream_verify PRIVATE src tools/media)
   target_link_libraries(stream_verify PRIVATE kitbag_core)
+
+  add_executable(stem_sync_verify tools/stem_sync_verify.cpp)
+  target_include_directories(stem_sync_verify PRIVATE tools tools/media)
+  target_link_libraries(stem_sync_verify PRIVATE kitbag_core)
 
   # Links the sources: TrackBeats and SidecarPath are internal, not exported.
   add_executable(beat_tracker_verify tools/analysis/beat_tracker_verify.cpp
@@ -190,7 +196,10 @@ if(KITBAG_BUILD_TOOLS)
     tools/mixer/mixer_test_source.cpp
     tools/mixer/mixer_test_resample.cpp
     tools/mixer/mixer_test_publish.cpp
+    tools/mixer/mixer_test_loop.cpp
+    tools/mixer/mixer_test_relayout.cpp
     src/media/streaming_track.cpp
+    src/media/looping_source_reader.cpp
     src/mixer/mixer.cpp
     src/mixer/mixer_render.cpp
     src/media/audio_source.cpp
@@ -210,6 +219,7 @@ if(KITBAG_BUILD_TOOLS)
   add_executable(player_verify
     tools/player/player_verify.cpp
     src/media/streaming_track.cpp
+    src/media/looping_source_reader.cpp
     src/player/player.cpp
     src/player/player_render.cpp
     src/media/audio_source.cpp
@@ -228,7 +238,9 @@ if(KITBAG_BUILD_TOOLS)
   # the file adapter (the player streams a real WAV), and Threads for the loop.
   add_executable(seek_race_verify
     tools/seek_race_verify.cpp
+    tools/seek_race_loop.cpp
     src/media/streaming_track.cpp
+    src/media/looping_source_reader.cpp
     src/mixer/mixer.cpp
     src/mixer/mixer_render.cpp
     src/player/player.cpp

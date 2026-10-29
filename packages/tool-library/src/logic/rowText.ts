@@ -1,36 +1,23 @@
 import { countLabel, type IconName } from '@kitbag/core-design';
-import type {
-  LibraryChip,
-  LibraryRow,
-  LibrarySongRow,
-  SongBadge,
+import {
+  bpmFact,
+  clockParts,
+  formatClockSeconds,
+  keyFact,
+  type LibraryChip,
+  type LibraryRow,
+  type LibrarySongRow,
+  type LibraryStemSetRow,
+  type SongBadge,
+  type SongFact,
 } from '@kitbag/core-state';
 
-const SECONDS_PER_MINUTE = 60;
-const MINUTES_PER_HOUR = 60;
-const TWO_DIGITS = 2;
-
-const pad = (value: number) => String(value).padStart(TWO_DIGITS, '0');
-
-function clock(totalSeconds: number) {
-  const whole = Math.max(0, Math.round(totalSeconds));
-  const seconds = whole % SECONDS_PER_MINUTE;
-  const minutes = Math.floor(whole / SECONDS_PER_MINUTE);
-  return {
-    hours: Math.floor(minutes / MINUTES_PER_HOUR),
-    minutes: minutes % MINUTES_PER_HOUR,
-    seconds,
-  };
-}
-
 export function formatLength(totalSeconds: number): string {
-  const { hours, minutes, seconds } = clock(totalSeconds);
-  if (hours > 0) return `${String(hours)}:${pad(minutes)}:${pad(seconds)}`;
-  return `${String(minutes)}:${pad(seconds)}`;
+  return formatClockSeconds(Math.round(totalSeconds));
 }
 
 export function spokenLength(totalSeconds: number): string {
-  const { hours, minutes, seconds } = clock(totalSeconds);
+  const { hours, minutes, seconds } = clockParts(Math.round(totalSeconds));
   const parts = [
     hours > 0 ? countLabel(hours, 'hour', 'hours') : '',
     hours > 0 || minutes > 0 ? countLabel(minutes, 'minute', 'minutes') : '',
@@ -56,6 +43,14 @@ export interface BadgeSpec {
   readonly icon?: IconName;
 }
 
+const GRID_BADGE: BadgeSpec = {
+  key: 'status',
+  label: 'GRID',
+  icon: 'check',
+  spoken: 'Beat grid ready',
+  tone: 'success',
+};
+
 const STATUS_BADGES: Readonly<Record<SongBadge, BadgeSpec | null>> = {
   pending: {
     key: 'status',
@@ -69,13 +64,7 @@ const STATUS_BADGES: Readonly<Record<SongBadge, BadgeSpec | null>> = {
     spoken: 'Analyzing',
     tone: 'warning',
   },
-  grid: {
-    key: 'status',
-    label: 'GRID',
-    icon: 'check',
-    spoken: 'Beat grid ready',
-    tone: 'success',
-  },
+  grid: GRID_BADGE,
   noGrid: {
     key: 'status',
     label: 'NO GRID',
@@ -85,31 +74,31 @@ const STATUS_BADGES: Readonly<Record<SongBadge, BadgeSpec | null>> = {
   failed: null,
 };
 
+function factBadge(key: string, fact: SongFact | null): BadgeSpec[] {
+  if (fact === null) return [];
+  return [{ key, label: fact.text, spoken: fact.spoken, tone: 'default' }];
+}
+
 export function songBadges(song: LibrarySongRow, status: SongBadge) {
-  const badges: BadgeSpec[] = [];
-  if (song.bpm !== null) {
-    const bpm = String(Math.round(song.bpm));
-    badges.push({
-      key: 'bpm',
-      label: `${bpm} BPM`,
-      spoken: `${bpm} beats per minute`,
-      tone: 'default',
-    });
-  }
+  const badges = factBadge('bpm', bpmFact(song.bpm));
   const statusBadge = STATUS_BADGES[status];
   if (statusBadge !== null) badges.push(statusBadge);
   return badges;
 }
 
-export function stemBadges(stemCount: number): BadgeSpec[] {
-  return [
-    {
-      key: 'stems',
-      label: `STEMS ×${String(stemCount)}`,
-      spoken: countLabel(stemCount, 'stem', 'stems'),
-      tone: 'accent',
-    },
+export function stemBadges(row: LibraryStemSetRow): BadgeSpec[] {
+  const badges = [
+    ...factBadge('bpm', bpmFact(row.bpm)),
+    ...factBadge('key', keyFact(row.key, row.scale, null)),
   ];
+  if (row.hasGrid) badges.push(GRID_BADGE);
+  badges.push({
+    key: 'stems',
+    label: `STEMS ×${String(row.stemCount)}`,
+    spoken: countLabel(row.stemCount, 'stem', 'stems'),
+    tone: 'accent',
+  });
+  return badges;
 }
 
 export function spokenRow(

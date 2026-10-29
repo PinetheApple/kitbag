@@ -25,6 +25,9 @@ const NEW_SET_COLUMNS = {
   speed: 1,
   sample_rate: null,
   folder: null,
+  song_title: null,
+  artist: null,
+  renamed: 0,
 };
 
 function withFolderSet() {
@@ -52,6 +55,7 @@ describe('migrate v14 to v15', () => {
         pitch: 0,
         waveform_path: null,
         frames: null,
+        name: null,
       })),
     );
     expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);

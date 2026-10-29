@@ -5,7 +5,7 @@
 
   <application>
     <service
-        android:name="com.kitbag.corenative.MetronomeService"
+        android:name="com.kitbag.corenative.PlaybackService"
         android:exported="false"
         android:foregroundServiceType="mediaPlayback" />
   </application>

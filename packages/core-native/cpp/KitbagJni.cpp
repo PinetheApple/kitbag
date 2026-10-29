@@ -8,31 +8,14 @@
 
 #include "KitbagCommands.h"
 #include "KitbagEngine.h"
+#include "KitbagJniUtf.h"
 #include "analysis/sidecar_path.h"
-#include "analysis/waveform_peaks.h"
 #include "kitbag_api.h"
-#include "mixer/mixer.h"
 
 using facebook::jsi::Runtime;
+using kitbag::JniUtf;
 
 namespace {
-
-class JniUtf {
- public:
-  JniUtf(JNIEnv* env, jstring str)
-      : env_(env), str_(str), utf_(str == nullptr ? nullptr : env->GetStringUTFChars(str, nullptr)) {}
-  ~JniUtf() {
-    if (utf_ != nullptr) env_->ReleaseStringUTFChars(str_, utf_);
-  }
-  JniUtf(const JniUtf&) = delete;
-  JniUtf& operator=(const JniUtf&) = delete;
-  [[nodiscard]] const char* get() const { return utf_; }
-
- private:
-  JNIEnv* env_;
-  jstring str_;
-  const char* utf_;
-};
 
 void ThrowNoArgs(JNIEnv* env, const char* className) {
   jclass cls = env->FindClass(className);
@@ -164,6 +147,76 @@ Java_com_kitbag_corenative_KitbagCommandsModule_nativeLoadTrack(JNIEnv* env, job
   return static_cast<jint>(kitbag::commandLoadTrack(track, utf.get()));
 }
 
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeUnloadTrack(JNIEnv*, jobject, jint track) {
+  kitbag::commandUnloadTrack(track);
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeMixerSetGain(JNIEnv*, jobject, jint track, jdouble gain) {
+  kitbag::commandMixerSetGain(track, gain);
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeMixerSetMute(JNIEnv*, jobject, jint track, jboolean muted) {
+  kitbag::commandMixerSetMute(track, muted == JNI_TRUE);
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeMixerSetSolo(JNIEnv*, jobject, jint track, jboolean soloed) {
+  kitbag::commandMixerSetSolo(track, soloed == JNI_TRUE);
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeMixerSetMasterGain(JNIEnv*, jobject, jdouble gain) {
+  kitbag::commandMixerSetMasterGain(gain);
+}
+
+JNIEXPORT jdouble JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeMixerMasterGain(JNIEnv*, jobject) {
+  return kitbag::commandMixerMasterGain();
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeMixerPlay(JNIEnv*, jobject) {
+  kitbag::commandMixerPlay();
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeMixerPause(JNIEnv*, jobject) {
+  kitbag::commandMixerPause();
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeMixerStop(JNIEnv*, jobject) {
+  kitbag::commandMixerStop();
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeMixerSeek(JNIEnv*, jobject, jdouble frame) {
+  kitbag::commandMixerSeek(frame);
+}
+
+JNIEXPORT jint JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeMixerSetLoop(JNIEnv*, jobject, jdouble startFrame, jdouble endFrame) {
+  return static_cast<jint>(kitbag::commandMixerSetLoop(startFrame, endFrame));
+}
+
+JNIEXPORT jint JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeMixerClearLoop(JNIEnv*, jobject) {
+  return static_cast<jint>(kitbag::commandMixerClearLoop());
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeClearGrid(JNIEnv*, jobject) {
+  kitbag::commandClearGrid();
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeFollowMixer(JNIEnv*, jobject, jboolean enabled) {
+  kitbag::commandFollowMixer(enabled == JNI_TRUE);
+}
+
 // --- Tuner -----------------------------------------------------------------
 
 JNIEXPORT jint JNICALL
@@ -245,6 +298,41 @@ Java_com_kitbag_corenative_EngineTransport_nativeCurrentBpm(JNIEnv*, jobject) {
   return kb_metronome_current_bpm(kitbag::kitbagEngine());
 }
 
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_EngineTransport_nativeMixerPlay(JNIEnv*, jobject) {
+  kitbag::commandMixerPlay();
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_EngineTransport_nativeMixerPause(JNIEnv*, jobject) {
+  kitbag::commandMixerPause();
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_EngineTransport_nativeMixerStop(JNIEnv*, jobject) {
+  kitbag::commandMixerStop();
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_EngineTransport_nativeMixerSeek(JNIEnv*, jobject, jdouble frame) {
+  kitbag::commandMixerSeek(frame);
+}
+
+JNIEXPORT jdouble JNICALL
+Java_com_kitbag_corenative_EngineTransport_nativeMixerPosition(JNIEnv*, jobject) {
+  return static_cast<jdouble>(kb_mixer_position(kitbag::kitbagEngine()));
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_kitbag_corenative_EngineTransport_nativeMixerPlaying(JNIEnv*, jobject) {
+  return kb_mixer_is_playing(kitbag::kitbagEngine()) != 0 ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jdouble JNICALL
+Java_com_kitbag_corenative_EngineTransport_nativeSampleRate(JNIEnv*, jobject) {
+  return static_cast<jdouble>(kb_engine_sample_rate(kitbag::kitbagEngine()));
+}
+
 JNIEXPORT jobject JNICALL
 Java_com_kitbag_corenative_library_SongAnalyzer_nativeAnalyzeSong(JNIEnv* env, jobject,
                                                                  jstring path,
@@ -296,31 +384,6 @@ Java_com_kitbag_corenative_library_SongAnalyzer_nativeWaveformPath(JNIEnv* env, 
   const JniUtf songUtf(env, songPath);
   if (dirUtf.get() == nullptr || songUtf.get() == nullptr) return nullptr;
   return env->NewStringUTF(kitbag::SidecarPath(dirUtf.get(), songUtf.get()).c_str());
-}
-
-JNIEXPORT jboolean JNICALL
-Java_com_kitbag_corenative_library_NativeStemBundle_nativeWritePeaks(JNIEnv* env, jobject,
-                                                                    jstring path,
-                                                                    jint channels,
-                                                                    jlong totalFrames,
-                                                                    jfloatArray peaks,
-                                                                    jint chunkCount) {
-  const JniUtf pathUtf(env, path);
-  if (pathUtf.get() == nullptr || peaks == nullptr) return JNI_FALSE;
-  const auto needed =
-      static_cast<int64_t>(chunkCount) * channels * kitbag::kPeakValuesPerChannel;
-  if (needed <= 0 || env->GetArrayLength(peaks) < needed) return JNI_FALSE;
-  jfloat* elems = env->GetFloatArrayElements(peaks, nullptr);
-  if (elems == nullptr) return JNI_FALSE;
-  const kb_result result =
-      kb_waveform_write_peaks(pathUtf.get(), channels, totalFrames, elems, chunkCount);
-  env->ReleaseFloatArrayElements(peaks, elems, JNI_ABORT);
-  return result == KB_OK ? JNI_TRUE : JNI_FALSE;
-}
-
-JNIEXPORT jint JNICALL
-Java_com_kitbag_corenative_library_NativeStemBundle_nativeMaxTracks(JNIEnv*, jobject) {
-  return kitbag::Mixer::kMaxTracks;
 }
 
 }  // extern "C"

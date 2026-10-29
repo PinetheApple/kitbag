@@ -4,10 +4,11 @@ import {
   Sheet,
   SheetHint,
   space,
+  TextField,
 } from '@kitbag/core-design';
-import { useSongLibrary, type LibraryRow } from '@kitbag/core-state';
-import { useCallback, useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { cleanName, useSongLibrary, type LibraryRow } from '@kitbag/core-state';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { View, type TextInput } from 'react-native';
 
 import { replaceText } from '../logic/notices.ts';
 
@@ -16,7 +17,7 @@ const useStyles = createThemedStyles(() => ({
   row: { flexDirection: 'row', gap: space.controlGap },
 }));
 
-type Kind = 'none' | 'import' | 'actions' | 'delete';
+type Kind = 'none' | 'import' | 'actions' | 'rename' | 'delete';
 
 export function useLibraryMenu() {
   const [kind, setKind] = useState<Kind>('none');
@@ -28,6 +29,9 @@ export function useLibraryMenu() {
     setTarget(row);
     setKind('actions');
   }, []);
+  const openRename = useCallback(() => {
+    setKind('rename');
+  }, []);
   const openDelete = useCallback(() => {
     setKind('delete');
   }, []);
@@ -35,8 +39,16 @@ export function useLibraryMenu() {
     setKind('none');
   }, []);
   return useMemo(
-    () => ({ kind, target, openImport, openActions, openDelete, close }),
-    [kind, target, openImport, openActions, openDelete, close],
+    () => ({
+      kind,
+      target,
+      openImport,
+      openActions,
+      openRename,
+      openDelete,
+      close,
+    }),
+    [kind, target, openImport, openActions, openRename, openDelete, close],
   );
 }
 
@@ -93,7 +105,7 @@ function ImportSheet({ menu, bottomInset }: SheetProps) {
 function ActionsSheet({ menu, bottomInset }: SheetProps) {
   const styles = useStyles();
   const reanalyze = useSongLibrary((s) => s.reanalyze);
-  const { target, close, openDelete } = menu;
+  const { target, close, openRename, openDelete } = menu;
   const retry = useCallback(() => {
     close();
     if (target?.kind === 'song') void reanalyze(target.id);
@@ -108,6 +120,7 @@ function ActionsSheet({ menu, bottomInset }: SheetProps) {
       onDismiss={close}
     >
       <View style={styles.stack}>
+        <Button label="Rename" variant="tonal" onPress={openRename} />
         {target?.kind === 'song' ? (
           <Button label="Re-analyze" variant="tonal" onPress={retry} />
         ) : null}
@@ -115,6 +128,60 @@ function ActionsSheet({ menu, bottomInset }: SheetProps) {
           label={target?.kind === 'stems' ? 'Delete stem song' : 'Delete song'}
           variant="destructive"
           onPress={openDelete}
+        />
+      </View>
+    </Sheet>
+  );
+}
+
+function RenameSheet({ menu, bottomInset }: SheetProps) {
+  const styles = useStyles();
+  const renameRow = useSongLibrary((s) => s.renameRow);
+  const { target, close } = menu;
+  const title = target?.title ?? '';
+  const [draft, setDraft] = useState(title);
+  const field = useRef<TextInput>(null);
+  const blank = cleanName(draft) === null;
+  const prefill = useCallback(() => {
+    setDraft(title);
+  }, [title]);
+  const clear = useCallback(() => {
+    setDraft('');
+    field.current?.focus();
+  }, []);
+  const save = useCallback(() => {
+    if (target === null || blank) return;
+    close();
+    void renameRow(target, draft);
+  }, [target, blank, close, renameRow, draft]);
+  return (
+    <Sheet
+      visible={menu.kind === 'rename'}
+      title={target?.kind === 'stems' ? 'Rename stem song' : 'Rename song'}
+      dismissLabel="Cancel rename"
+      bottomInset={bottomInset}
+      onShow={prefill}
+      onDismiss={close}
+    >
+      <TextField
+        ref={field}
+        value={draft}
+        onChangeText={setDraft}
+        placeholder="Song name"
+        accessibilityLabel={`New name for ${title}`}
+        autoFocus
+        onSubmitEditing={save}
+        onClear={clear}
+      />
+      <View style={styles.row}>
+        <Button fill variant="ghost" label="Cancel" onPress={close} />
+        <Button
+          fill
+          variant="primary"
+          label="Save"
+          disabled={blank}
+          accessibilityLabel={`Save the new name for ${title}`}
+          onPress={save}
         />
       </View>
     </Sheet>
@@ -187,6 +254,7 @@ export function LibrarySheets(props: SheetProps) {
     <>
       <ImportSheet {...props} />
       <ActionsSheet {...props} />
+      <RenameSheet {...props} />
       <DeleteSheet {...props} />
       <ReplaceSheet bottomInset={props.bottomInset} />
     </>

@@ -80,8 +80,9 @@ constexpr TrainerProp kTrainerProps[] = {
 };
 
 constexpr const char* kPropertyNames[] = {
-    "bar_phase",       "current_beat",   "current_poly_beat", "counting_in",
-    "current_bpm",     "frames_rendered", "tuner_snapshot",   "player_position"};
+    "bar_phase",       "current_beat",    "current_poly_beat", "counting_in",
+    "current_bpm",     "frames_rendered", "tuner_snapshot",    "player_position",
+    "mixer_position",  "mixer_playing",   "engine_sample_rate"};
 
 double Read(kb_engine* engine, const std::string& prop, bool* found) {
   *found = true;
@@ -99,6 +100,11 @@ double Read(kb_engine* engine, const std::string& prop, bool* found) {
   if (prop == "player_position") {
     return static_cast<double>(kb_player_position(engine));
   }
+  if (prop == "mixer_position") {
+    return static_cast<double>(kb_mixer_position(engine));
+  }
+  if (prop == "mixer_playing") return kb_mixer_is_playing(engine);
+  if (prop == "engine_sample_rate") return kb_engine_sample_rate(engine);
   if (const TrainerProp* trainer = FindProp(kTrainerProps, prop)) {
     return trainer->read(engine);
   }

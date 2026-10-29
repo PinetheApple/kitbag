@@ -240,7 +240,7 @@ void RunGuardTests() {
 
 }  // namespace
 
-constexpr int kExpectedChecks = 80;
+constexpr int kExpectedChecks = 85;
 
 int main() {
   const std::filesystem::path dir = std::filesystem::temp_directory_path();

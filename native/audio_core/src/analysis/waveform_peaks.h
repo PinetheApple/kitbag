@@ -21,6 +21,10 @@ int16_t QuantizePeak(float value);
 /// A partial file is removed.
 bool WriteKwav(const char* path, const WaveformPeaks& peaks);
 
+bool ReadKwav(const char* path, WaveformPeaks* out);
+
+void PeakEnvelope(const WaveformPeaks& peaks, float* out, int buckets);
+
 /// Per-channel min/max over `target_chunks` equal spans of `total_frames`,
 /// pushed in pieces of any size; frames past the last whole span are ignored.
 class WaveformPeakAccumulator {

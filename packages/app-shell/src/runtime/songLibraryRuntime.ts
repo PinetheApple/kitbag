@@ -23,6 +23,8 @@ const records: SongLibraryRecords = {
   insertStemBundle: (bundle) => library().insertStemBundle(bundle),
   replaceStemBundle: (bundle) => library().replaceStemBundle(bundle),
   listStemSetFolders: () => library().listStemSetFolders(),
+  renameSong: (id, title) => library().renameSong(id, title),
+  renameStemSet: (id, title) => library().renameStemSet(id, title),
 };
 
 // Resolved per call: getKitbagLibrary throws in a build without the module.

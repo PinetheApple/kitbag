@@ -65,6 +65,8 @@ export function newStemBundle(
     uuid,
     jobId: imported.jobId,
     title: imported.title === '' ? imported.jobId : imported.title,
+    songTitle: imported.songTitle,
+    artist: imported.artist,
     folder: imported.relativeDir,
     sampleRate: imported.sampleRate,
     channels: imported.channels,

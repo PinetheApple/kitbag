@@ -192,6 +192,12 @@ void kb_metronome_set_volume(kb_engine* engine, double volume) {
   }
 }
 
+void kb_metronome_follow_mixer(kb_engine* engine, int32_t enabled) {
+  if (engine != nullptr) {
+    ToEngine(engine)->metronome().SetFollowMixer(enabled != 0);
+  }
+}
+
 void kb_metronome_set_latency_offset(kb_engine* engine, double latency_ms) {
   if (engine != nullptr) {
     ToEngine(engine)->metronome().SetLatencyOffset(latency_ms);
@@ -259,12 +265,13 @@ double kb_metronome_current_bpm(const kb_engine* engine) {
 }
 
 int32_t kb_metronome_bar_muted(const kb_engine* engine) {
-  return engine != nullptr && ToEngine(engine)->metronome().bar_muted() ? 1 : 0;
+  if (engine == nullptr) return 0;
+  return ToEngine(engine)->metronome().trainer_mirrors().bar_muted() ? 1 : 0;
 }
 
 int32_t kb_metronome_counting_in(const kb_engine* engine) {
-  return engine != nullptr && ToEngine(engine)->metronome().counting_in() ? 1
-                                                                          : 0;
+  if (engine == nullptr) return 0;
+  return ToEngine(engine)->metronome().trainer_mirrors().counting_in() ? 1 : 0;
 }
 
 int32_t kb_metronome_bar_mute_position(const kb_engine* engine) {

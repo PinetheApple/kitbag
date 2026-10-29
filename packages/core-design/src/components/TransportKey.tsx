@@ -12,13 +12,15 @@ import {
 } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
+import { stemPlayer } from '../stemPlayerRoles.ts';
 import { hitSlopFor } from '../touchTarget.ts';
 import { InlineIcon } from './IconGlyph.tsx';
 
-export type TransportKeySize = 'default' | 'large' | 'small';
+export type TransportKeySize = 'standard' | 'dock' | 'large' | 'small';
 
 const HIT_SLOP: Readonly<Record<TransportKeySize, number>> = {
-  default: hitSlopFor(size.transportKey, space.transportGap),
+  standard: hitSlopFor(size.transportKey, space.transportGap),
+  dock: 0,
   large: hitSlopFor(size.transportKeyLarge, space.transportGapWide),
   small: hitSlopFor(size.transportKeySmall, space.controlGap),
 };
@@ -47,6 +49,11 @@ const useStyles = createThemedStyles((theme) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  dockKey: {
+    minWidth: stemPlayer.transportKey,
+    minHeight: stemPlayer.transportKey,
+  },
+  dockGlyph: textStyle(textRoles.dockKey),
   selected: {
     backgroundColor: theme.activeControlFill,
     borderColor: theme.color.accentDim,
@@ -71,6 +78,10 @@ const useStyles = createThemedStyles((theme) => ({
   },
   glyphLarge: {
     fontSize: iconSizes.transportLarge,
+  },
+  spacerDock: {
+    width: stemPlayer.transportKey,
+    height: stemPlayer.transportKey,
   },
   spacerLarge: {
     width: size.transportKeyLarge,
@@ -113,14 +124,16 @@ export function TransportKey({
   onPress,
   selected = false,
   disabled = false,
-  size: keySize = 'default',
+  size: keySize = 'standard',
   badge,
 }: TransportKeyProps) {
   const styles = useStyles();
+  const dock = keySize === 'dock';
   const large = keySize === 'large';
   const small = keySize === 'small';
   const glyphStyle = [
     styles.glyph,
+    dock && styles.dockGlyph,
     large && styles.glyphLarge,
     small && styles.glyphSmall,
     selected && styles.glyphSelected,
@@ -133,6 +146,7 @@ export function TransportKey({
       disabled={disabled}
       style={[
         styles.key,
+        dock && styles.dockKey,
         large && styles.large,
         small && styles.small,
         selected && styles.selected,
@@ -159,13 +173,14 @@ export function TransportKey({
 }
 
 export function TransportKeySpacer({
-  size: keySize = 'default',
+  size: keySize = 'standard',
 }: {
   readonly size?: TransportKeySize;
 }) {
   const styles = useStyles();
   const spacer = {
-    default: styles.spacer,
+    standard: styles.spacer,
+    dock: styles.spacerDock,
     large: styles.spacerLarge,
     small: styles.spacerSmall,
   } satisfies Record<TransportKeySize, unknown>;

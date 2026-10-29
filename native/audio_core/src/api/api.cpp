@@ -65,6 +65,10 @@ void kb_engine_render(kb_engine* engine, float* out, uint32_t frame_count) {
   if (ToEngine(engine)->is_running()) return;
   ToEngine(engine)->RenderOffline(out, frame_count);
 }
+
+void kb_engine_reserve_render_frames(kb_engine* engine, uint32_t frames) {
+  if (engine != nullptr) ToEngine(engine)->ReserveCallbackFrames(frames);
+}
 #endif  // KITBAG_BUILD_TOOLS
 
 kb_result kb_tuner_start(kb_engine* engine) {

@@ -88,6 +88,9 @@ const presentationHost: KitbagHostObject = Object.freeze({
   frames_rendered: 0,
   tuner_snapshot: 0,
   player_position: 0,
+  mixer_position: 0,
+  mixer_playing: 0,
+  engine_sample_rate: 0,
   // The engine's tuner rest state (TuningMode::RestState): nothing heard.
   tuner_measurement_id: 0,
   tuner_can_hear_note: 0,

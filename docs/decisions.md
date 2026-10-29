@@ -324,6 +324,66 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   decode (§4.1). That is how §7.1/§7.8's "resample on ingest" is met: there is no second
   resampler at import. **[recorded]**
 
+- **2026-10-29 · The follow-mixer click ignores the latency offset (§4.7, §12.5.1, D16,
+  #137)** — Decided by the owner: with `kb_metronome_follow_mixer` on, the metronome
+  reads the mixer's song frame as is. Stems and click leave through the same output
+  buffer, so the offset could only push the click off the stems; it exists to align
+  with sources outside the phone. Follow mode now reads whole song frames only, so a
+  grid beat a fraction of a frame before a loop end can no longer fire ahead of the
+  wrap and stack on the loop start's click. **[user]**
+
+- **2026-10-29 · Mixer frames are engine-rate song frames (§4.2.2, #137)** — The
+  mixer resamples on load, so `kb_mixer_seek`, `kb_mixer_position` and the
+  `kb_mixer_set_loop` points count frames at the engine rate (song time × engine rate),
+  not at a stem's own rate. §4.2.2 said source frames; the code never did, and a
+  44.1 kHz stem on a 48 kHz engine showed the difference. SPEC and the header now say
+  engine-rate frames. **[recorded]**
+
+- **2026-10-29 · The stem player takes the shared metronome (§7.3, D16, #137)** — There
+  is one engine metronome. Opening a stem song, and turning its Click on, stop the
+  metronome tool, running or paused behind its notification, through the metronome
+  store and dismiss that notification, so its Play cannot restart the click on the
+  stem grid. The follow-mode click itself stays the stem player's: the
+  metronome store is not told it is running, and leaving the stem player stops it and
+  clears the grid. **[recorded]**
+
+- **2026-10-29 · Stem player facts, badges and level chip (§7.2, §7.5, #137)** — The key
+  reads as uncertain below a key confidence of 50; the tempo reads steady at a
+  stability of 80 or more, else variable **[recorded]**. Library stem rows carry BPM,
+  key, GRID ✓ and STEMS ×N on a wrapping line under the title. Each stem row shows its
+  level as a dB chip; tapping it or the row opens that row's fader, one row at a time,
+  and the fader moves only on a drag **[user]**.
+
+- **2026-10-29 · The engine renders in slices of at most `kMaxBlockFrames` and sizes
+  read-ahead from the device callback (§4.4, #137)** — Each read-ahead ring holds twice
+  the callback width read at device init, capped at `kMaxReadAheadFrames`. The refill
+  thread cannot run between slices of one callback, so the ring must hold all of it.
+  Rings are sized once, so a reroute to a backend period wider than the ring (for
+  example a move to Bluetooth) can still underrun until the song is reloaded.
+  **[recorded]**
+
+- **2026-10-30 · Stem player layout (§7.2, §7.3, §12, #137)** — The owner chose variant C
+  ("Bottom dock") in `docs/research/mockups/stems-layouts.html`; for the stem player it
+  supersedes `design/kitbag-ui.html` §04. Deliberately out: the BPM and key chips' speed
+  and pitch actions (#138), count-in, and LUFS. Reset mix sets every stem and the master
+  to 0 dB with nothing muted or soloed, and saves the stems. On one stem, mute and solo
+  exclude each other: soloing a muted stem unmutes it, muting a soloed stem un-solos it.
+  **[user]**
+
+- **2026-10-30 · Renaming songs, stem songs and stems (§7.1, §7.8, #176)** — Schema v17
+  adds `stem_sets.renamed` and a nullable `stems.name`; a re-import replacing the same job
+  keeps the user's song name only when `renamed` is set, so a never-renamed song takes the
+  new bundle's title. Stem names carry over by role, not position. Renaming a stem song
+  writes both `title` and `song_title` and keeps `artist`. `RowText` titles and subtitles
+  are single-line app-wide. **[recorded]**
+
+- **2026-10-30 · Song notification (§5.6, §13.9, #177)** — One service (`PlaybackService`),
+  one media session and one notification id serve the metronome and songs; a song card
+  replaces the metronome's. Actions are −10 s, play/pause, +10 s and stop, with a seekable
+  bar; stop rewinds, and dismissing a paused card is stop. `kb_player_*` gets no card until
+  a single-song screen exists. The skip icons are fixed at 10 to match the in-app transport,
+  so changing `SKIP_SECONDS` means redrawing them. **[recorded]**
+
 - **2026-10-30 · Metronome layout B supersedes the design file (§5.2, §5.3, §12, #175)** —
   The owner chose layout B from `docs/research/ui-survey-metronome-stems.md` and approved
   its reworked mockup, `docs/research/mockups/metronome-layouts.html` ("Chosen"), as the

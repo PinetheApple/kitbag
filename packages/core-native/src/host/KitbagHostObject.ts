@@ -34,6 +34,12 @@ export interface KitbagHostObject {
   readonly tuner_snapshot: number;
   /** kb_player_position — single-source transport position, in frames. */
   readonly player_position: number;
+  /** kb_mixer_position — engine-rate song frame the stems are playing. */
+  readonly mixer_position: number;
+  /** kb_mixer_is_playing — 1 while the stems play, else 0. */
+  readonly mixer_playing: number;
+  /** kb_engine_sample_rate — the rate every engine frame count is in. */
+  readonly engine_sample_rate: number;
 
   // Tuner string-aware state. Each property is one field of a fresh
   // kb_tuner_read_state copy, so two reads may straddle an analysis hop. A

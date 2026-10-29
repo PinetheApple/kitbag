@@ -11,6 +11,7 @@ export type {
   ExistingStemSet,
   NewStemBundle,
   StemBundleReplacement,
+  StemMix,
   StemSetFiles,
   StemSetRecord,
   StoredLyrics,

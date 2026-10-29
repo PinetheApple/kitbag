@@ -4,9 +4,12 @@
 // Writes a 16-bit PCM WAV at run time rather than committing a binary. 16-bit
 // is the point: it is the format the decoder must convert from, and the format
 // whose conversion was missing.
+#include <unistd.h>
+
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -120,6 +123,30 @@ inline bool WriteFloatWav(
     PutU32(&out, bits);
   }
   return WriteBytes(path, out);
+}
+
+// Per process, so two runs of one tool at once never share a fixture.
+inline std::string UniqueTempPath(const std::string& name) {
+  const std::string file = name + "_" + std::to_string(getpid()) + ".wav";
+  return (std::filesystem::temp_directory_path() / file).string();
+}
+
+// Channel 0 is offset + step * frame; any other channel is silent. Empty on
+// a failed write.
+inline std::string WriteRampWav(
+    const std::string& name,
+    uint64_t frames,
+    uint32_t channels,
+    uint32_t sample_rate,
+    float offset = 0.0F,
+    float step = 1.0F
+) {
+  std::vector<float> pcm(frames * channels, 0.0F);
+  for (uint64_t i = 0; i < frames; ++i) {
+    pcm[i * channels] = offset + step * static_cast<float>(i);
+  }
+  const std::string path = UniqueTempPath(name);
+  return WriteFloatWav(path, pcm, channels, sample_rate) ? path : "";
 }
 
 }  // namespace media_test

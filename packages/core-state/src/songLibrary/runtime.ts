@@ -55,6 +55,8 @@ export type SongLibraryRecords = Pick<
   | 'insertStemBundle'
   | 'replaceStemBundle'
   | 'listStemSetFolders'
+  | 'renameSong'
+  | 'renameStemSet'
 >;
 
 export interface SongLibraryRuntime {

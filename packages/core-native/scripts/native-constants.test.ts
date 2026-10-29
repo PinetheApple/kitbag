@@ -234,6 +234,7 @@ describe('collectConstants (real engine source)', () => {
     expect(c.defaultSounds).toEqual({ normal: 0, accent: 0 });
     expect(c.countInOff).toBe(0);
     expect(c.volume).toEqual({ min: 0, max: 2 });
+    expect(c.mixerGain).toEqual({ min: 0, max: 2 });
     expect(c.denominators).toEqual([2, 4, 8, 16]);
     expect(c.bpmReferenceDenominator).toBe(4);
     expect(c.soundNames).toEqual([

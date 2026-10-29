@@ -15,15 +15,16 @@ CountInStatus CountInAt(double counted_beats, int beats_per_bar, int total) {
   const auto bar = static_cast<int32_t>(
       std::floor(counted_beats / beats_per_bar + kGridEpsilon)
   );
-  return {Clamp(bar, 0, total - 1), total};
+  return {Clamp(bar, 0, total - 1), total, true};
 }
 
 }  // namespace
 
 void Metronome::PublishTrainerMirrors(bool gridded, uint32_t sample_rate) {
-  int32_t mute_position = -1;
+  BarMuteStatus bar_mute;
+  bar_mute.muted = running_ && BarIsMuted(current_bar_);
   if (running_ && mute_enabled_ && current_bar_ >= 0) {
-    mute_position =
+    bar_mute.position =
         static_cast<int32_t>(current_bar_ % (play_bars_ + mute_bars_));
   }
   CountInStatus count_in;
@@ -45,7 +46,7 @@ void Metronome::PublishTrainerMirrors(bool gridded, uint32_t sample_rate) {
         sample_rate
     );
   }
-  trainer_mirrors_.Publish(mute_position, count_in, ramp);
+  trainer_mirrors_.Publish(bar_mute, count_in, ramp);
 }
 
 }  // namespace kitbag

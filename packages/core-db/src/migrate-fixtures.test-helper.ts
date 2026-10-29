@@ -9,6 +9,8 @@ import {
   MIGRATE_V11_TO_V12,
   MIGRATE_V12_TO_V13,
   MIGRATE_V13_TO_V14,
+  MIGRATE_V14_TO_V15,
+  MIGRATE_V15_TO_V16,
   V6_SCHEMA_VERSION,
   V7_SCHEMA_VERSION,
   V8_SCHEMA_VERSION,
@@ -18,6 +20,8 @@ import {
   V12_SCHEMA_VERSION,
   V13_SCHEMA_VERSION,
   V14_SCHEMA_VERSION,
+  V15_SCHEMA_VERSION,
+  V16_SCHEMA_VERSION,
 } from './migrate';
 
 const V6_DDL: readonly string[] = [
@@ -169,5 +173,19 @@ export function buildV14Fixture(): DatabaseSync {
   const db = buildV13Fixture();
   applyInTransaction(db, MIGRATE_V13_TO_V14);
   db.exec(`PRAGMA user_version = ${String(V14_SCHEMA_VERSION)}`);
+  return db;
+}
+
+export function buildV15Fixture(): DatabaseSync {
+  const db = buildV14Fixture();
+  applyInTransaction(db, MIGRATE_V14_TO_V15);
+  db.exec(`PRAGMA user_version = ${String(V15_SCHEMA_VERSION)}`);
+  return db;
+}
+
+export function buildV16Fixture(): DatabaseSync {
+  const db = buildV15Fixture();
+  applyInTransaction(db, MIGRATE_V15_TO_V16);
+  db.exec(`PRAGMA user_version = ${String(V16_SCHEMA_VERSION)}`);
   return db;
 }

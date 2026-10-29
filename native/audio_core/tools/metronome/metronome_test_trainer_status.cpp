@@ -22,7 +22,7 @@ void TestMutePositionCycles() {
   bool cycles = true;
   for (int bar = 0; bar < 6; ++bar) {
     rig.RenderTo(At(kBar100Bpm44, bar + 0.5));
-    const bool muted = rig.metronome.bar_muted();
+    const bool muted = rig.metronome.trainer_mirrors().bar_muted();
     cycles = cycles && MutePosition(rig) == bar % 4 && muted == (bar % 4 >= 2);
   }
   Check(stopped, "mute position: -1 while stopped");
@@ -74,7 +74,7 @@ CountInStatus ReadCountIn(const StatusRig& rig) {
 
 bool CountingIn(const StatusRig& rig, int32_t bar, int32_t total) {
   const CountInStatus read = ReadCountIn(rig);
-  return rig.metronome.counting_in() && read.bar == bar &&
+  return rig.metronome.trainer_mirrors().counting_in() && read.bar == bar &&
          read.bars_total == total;
 }
 
@@ -97,7 +97,8 @@ void TestCountInSettingChangedMidCount() {
   Check(after_off, "count-in bar: Off mid-count still reads bar 0 of 2");
   Check(after_four, "count-in total: 4 mid-count still reads bar 1 of 2");
   Check(
-      !rig.metronome.counting_in() && done.bar == -1 && done.bars_total == 0,
+      !rig.metronome.trainer_mirrors().counting_in() && done.bar == -1 &&
+          done.bars_total == 0,
       "count-in total: the 2-bar count ends on time and reads -1 of 0"
   );
 }
