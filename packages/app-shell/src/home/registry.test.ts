@@ -21,7 +21,13 @@ describe('continueTarget', () => {
 
   it('resumes the library', () => {
     expect(continueTarget(TOOL_ID.library, HOME_TOOLS)?.homeTile?.route).toBe(
-      '/library?chip=all',
+      '/library',
+    );
+  });
+
+  it('resumes the stem songs screen', () => {
+    expect(continueTarget(TOOL_ID.stems, HOME_TOOLS)?.homeTile?.route).toBe(
+      '/stems',
     );
   });
 
@@ -29,10 +35,11 @@ describe('continueTarget', () => {
     expect(continueTarget(TOOL_ID.sync, HOME_TOOLS)).toBeUndefined();
   });
 
-  it('opens the Stems tile on the stems chip', () => {
-    expect(
-      HOME_TOOLS.find((t) => t.id === TOOL_ID.stems)?.homeTile?.route,
-    ).toBe('/library?chip=stems');
+  it('opens Songs and Stem songs on their own screens, with no filter', () => {
+    const routes = [TOOL_ID.library, TOOL_ID.stems].map(
+      (id) => HOME_TOOLS.find((t) => t.id === id)?.homeTile?.route,
+    );
+    expect(routes).toEqual(['/library', '/stems']);
   });
 
   it('ignores an id no longer on the roster', () => {

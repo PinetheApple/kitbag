@@ -18,7 +18,6 @@ import {
   parentDir,
   songFolder,
   songRemovals,
-  type LibraryChip,
   type Removal,
 } from './logic.ts';
 import { cleanName } from '../names.ts';
@@ -53,14 +52,14 @@ export type LibraryNotice =
   | { readonly kind: 'addFailed'; readonly name: string }
   | { readonly kind: 'pickerFailed' }
   | { readonly kind: 'deleteFailed'; readonly name: string }
-  | { readonly kind: 'renameFailed'; readonly name: string };
+  | { readonly kind: 'renameFailed'; readonly name: string }
+  | { readonly kind: 'stemSongAdded'; readonly name: string };
 
 export interface SongLibraryState {
   readonly ready: boolean;
   readonly failed: boolean;
   readonly rows: readonly LibraryRow[];
   readonly query: string;
-  readonly chip: LibraryChip;
   readonly importing: readonly string[];
   readonly notice: LibraryNotice | null;
   readonly replacePrompt: ReplacePrompt | null;
@@ -78,7 +77,6 @@ export interface SongLibraryActions {
   analyzeUnfinished: () => Promise<void>;
   receiveAnalysis: (result: AnalysisResult) => Promise<void>;
   setQuery: (query: string) => void;
-  setChip: (chip: LibraryChip) => void;
   importSong: () => Promise<void>;
   importStemFolder: () => Promise<void>;
   reanalyze: (songId: number) => Promise<void>;
@@ -108,7 +106,6 @@ const INITIAL: SongLibraryState = {
   failed: false,
   rows: [],
   query: '',
-  chip: 'all',
   importing: [],
   notice: null,
   replacePrompt: null,
@@ -147,9 +144,6 @@ function readActions(deps: SongLibraryDeps, set: SetState, get: Get) {
     },
     setQuery: (query: string) => {
       set({ query });
-    },
-    setChip: (chip: LibraryChip) => {
-      set({ chip });
     },
     dismissNotice: () => {
       set({ notice: null });
@@ -233,7 +227,10 @@ function importActions(
       const doc = await pick(() => deps.files().pickDocument());
       if (doc === null) return;
       if (isStemArchive(doc))
-        await bundles.importBundle({ ...doc, isFolder: false });
+        await bundles.importBundle(
+          { ...doc, isFolder: false },
+          { announce: true },
+        );
       else await importDocument(doc);
     },
     importStemFolder: async () => {

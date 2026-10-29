@@ -1,8 +1,4 @@
 export const stemPlayer = {
-  appBarHeight: 56,
-  appBarH: 4,
-  appBarGap: 2,
-  iconButton: 48,
   bodyTop: 4,
   bodyGap: 10,
   factGap: 8,

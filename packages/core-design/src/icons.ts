@@ -43,13 +43,16 @@ export const iconGlyphs = {
   songs: 'playlist-music',
   metronome: 'metronome',
   tuner: 'guitar-acoustic',
-  stems: 'tune-vertical',
+  stems: 'tune',
   playAlong: 'play-circle-outline',
   moreTools: 'dots-grid',
   arrowUp: 'arrow-up',
   arrowDown: 'arrow-down',
   check: 'check',
   mic: 'microphone',
+  analyzing: 'refresh',
+  error: 'alert-circle',
+  folder: 'folder',
 } as const satisfies Record<string, VectorGlyph>;
 
 export type IconName = keyof typeof iconGlyphs;

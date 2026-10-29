@@ -108,14 +108,13 @@ export {
 export {
   analysisFailure,
   filterRows,
-  isLibraryChip,
-  LIBRARY_CHIPS,
+  inView,
   songBadge,
   summarize,
   type AnalysisFailure,
   type FailureKind,
-  type LibraryChip,
   type LibrarySummary,
+  type LibraryView,
   type SongBadge,
 } from './songLibrary/logic.ts';
 export type {

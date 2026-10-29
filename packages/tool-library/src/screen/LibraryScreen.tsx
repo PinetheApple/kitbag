@@ -1,28 +1,29 @@
 import {
-  AppBar,
   Button,
   Card,
-  Chip,
-  ChipRow,
   createThemedStyles,
   EmptyState,
   FloatingActionButton,
+  libraryList,
+  lineRatio,
+  ScreenAppBar,
   SearchField,
   space,
   textRoles,
   textStyle,
+  type ScreenBarAction,
 } from '@kitbag/core-design';
 import {
   filterRows,
-  LIBRARY_CHIPS,
+  inView,
   useSongLibrary,
-  type LibraryChip,
+  type LibraryView,
 } from '@kitbag/core-state';
 import { useCallback, useEffect, useMemo } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
-import { copyingText, noticeText } from '../logic/notices.ts';
-import { CHIP_LABELS } from '../logic/rowText.ts';
+import { copyingText, noticeLook, noticeText } from '../logic/notices.ts';
+import { VIEW_TEXT, type ViewText } from '../logic/viewText.ts';
 import { LibraryRowView } from './LibraryRowView.tsx';
 import {
   LibrarySheets,
@@ -36,58 +37,33 @@ export interface LibraryScreenInsets {
 }
 
 export interface LibraryScreenProps {
+  readonly view: LibraryView;
   readonly insets: LibraryScreenInsets;
-  readonly initialChip?: LibraryChip;
   readonly onBack: () => void;
   readonly onOpenStemSet: (id: number) => void;
+  readonly onOpenSetlists?: () => void;
 }
 
+const FAB_ROOM = libraryList.fab + libraryList.fabBottom;
+
 const useStyles = createThemedStyles((theme) => ({
-  screen: {
-    flex: 1,
-    backgroundColor: theme.color.bg,
-    paddingHorizontal: space.screenInset,
-    gap: space.sectionGap,
+  screen: { flex: 1, backgroundColor: theme.color.bg },
+  title: {
+    ...textStyle(textRoles.appBarTitle),
+    lineHeight: textRoles.appBarTitle.size * lineRatio.appBarTitle,
+    color: theme.color.text,
   },
-  content: { gap: space.sectionGap, flexGrow: 1 },
+  body: {
+    flex: 1,
+    paddingTop: libraryList.bodyTop,
+    gap: libraryList.bodyGap,
+  },
+  inset: { paddingHorizontal: space.screenInset, gap: libraryList.bodyGap },
+  list: { flex: 1 },
+  content: { flexGrow: 1, gap: libraryList.bodyGap },
   cardBody: { gap: space.controlGap, alignItems: 'flex-start' },
   cardText: { ...textStyle(textRoles.fieldLabel), color: theme.color.text },
 }));
-
-function FilterChip({ chip }: { readonly chip: LibraryChip }) {
-  const active = useSongLibrary((s) => s.chip === chip);
-  const setChip = useSongLibrary((s) => s.setChip);
-  const select = useCallback(() => {
-    setChip(chip);
-  }, [setChip, chip]);
-  return (
-    <Chip
-      label={CHIP_LABELS[chip]}
-      active={active}
-      accessibilityLabel={`Show ${CHIP_LABELS[chip]}`}
-      onPress={select}
-    />
-  );
-}
-
-function SearchBar({ covered }: { readonly covered: boolean }) {
-  const query = useSongLibrary((s) => s.query);
-  const replacing = useSongLibrary((s) => s.replacePrompt !== null);
-  const setQuery = useSongLibrary((s) => s.setQuery);
-  const clear = useCallback(() => {
-    setQuery('');
-  }, [setQuery]);
-  return (
-    <SearchField
-      value={query}
-      onChangeText={setQuery}
-      placeholder="Search songs, artists…"
-      accessibilityLabel="Search songs and artists"
-      editable={!covered && !replacing}
-      onClear={clear}
-    />
-  );
-}
 
 function ImportingCard() {
   const styles = useStyles();
@@ -108,9 +84,9 @@ function NoticeCard() {
   const dismiss = useSongLibrary((s) => s.dismissNotice);
   if (notice === null) return null;
   const { status, text } = noticeText(notice);
-  const tone = notice.kind === 'bundleRefused' ? 'warning' : 'danger';
+  const { tone, icon } = noticeLook(notice);
   return (
-    <Card emphasis={tone} statusIcon="warning" statusLabel={status}>
+    <Card emphasis={tone} statusIcon={icon} statusLabel={status}>
       <View style={styles.cardBody}>
         <Text accessibilityLiveRegion="polite" style={styles.cardText}>
           {text}
@@ -121,6 +97,48 @@ function NoticeCard() {
   );
 }
 
+function StatusCards() {
+  const styles = useStyles();
+  const shown = useSongLibrary(
+    (s) => s.notice !== null || s.importing.length > 0,
+  );
+  if (!shown) return null;
+  return (
+    <View style={styles.inset}>
+      <NoticeCard />
+      <ImportingCard />
+    </View>
+  );
+}
+
+interface SearchBarProps {
+  readonly text: ViewText;
+  readonly covered: boolean;
+}
+
+function SearchBar({ text, covered }: SearchBarProps) {
+  const styles = useStyles();
+  const query = useSongLibrary((s) => s.query);
+  const replacing = useSongLibrary((s) => s.replacePrompt !== null);
+  const setQuery = useSongLibrary((s) => s.setQuery);
+  const clear = useCallback(() => {
+    setQuery('');
+  }, [setQuery]);
+  return (
+    <View style={styles.inset}>
+      <SearchField
+        variant="list"
+        value={query}
+        onChangeText={setQuery}
+        placeholder={text.search}
+        accessibilityLabel={text.searchLabel}
+        editable={!covered && !replacing}
+        onClear={clear}
+      />
+    </View>
+  );
+}
+
 function LibraryUnavailable() {
   const refresh = useSongLibrary((s) => s.refresh);
   const retry = useCallback(() => {
@@ -128,130 +146,173 @@ function LibraryUnavailable() {
   }, [refresh]);
   return (
     <EmptyState
+      variant="list"
       icon="warning"
       title="Your songs could not be opened"
       reason="The song library failed to load. The metronome and tuner still work."
+      actionIcon="reset"
       actionLabel="Try again"
+      option={null}
       onAction={retry}
     />
   );
 }
 
-function NothingMatches() {
-  const styles = useStyles();
-  return (
-    <Card>
-      <Text style={styles.cardText}>
-        No songs match this search and filter.
-      </Text>
-    </Card>
-  );
-}
-
-function SongList({
-  onActions,
-  onOpenStemSet,
-}: {
-  readonly onActions: LibraryMenu['openActions'];
-  readonly onOpenStemSet: (id: number) => void;
-}) {
-  const rows = useSongLibrary((s) => s.rows);
-  const query = useSongLibrary((s) => s.query);
-  const chip = useSongLibrary((s) => s.chip);
-  const shown = useMemo(
-    () => filterRows(rows, query, chip),
-    [rows, query, chip],
-  );
-  if (shown.length === 0) return <NothingMatches />;
-  return shown.map((row) => (
-    <LibraryRowView
-      key={`${row.kind}-${String(row.id)}`}
-      row={row}
-      onActions={onActions}
-      onOpenStemSet={onOpenStemSet}
-    />
-  ));
-}
-
-function LibraryBody({
-  menu,
-  onOpenStemSet,
-}: {
+interface ListProps {
+  readonly view: LibraryView;
   readonly menu: LibraryMenu;
   readonly onOpenStemSet: (id: number) => void;
-}) {
-  const ready = useSongLibrary((s) => s.ready);
-  const failed = useSongLibrary((s) => s.failed);
-  const empty = useSongLibrary((s) => s.rows.length === 0);
-  const importing = useSongLibrary((s) => s.importing.length > 0);
-  if (failed) return <LibraryUnavailable />;
-  if (!ready) return null;
-  if (empty && !importing)
+}
+
+function SongList({ view, menu, onOpenStemSet }: ListProps) {
+  const styles = useStyles();
+  const rows = useSongLibrary((s) => s.rows);
+  const query = useSongLibrary((s) => s.query);
+  const shown = useMemo(
+    () => filterRows(rows, query, view),
+    [rows, query, view],
+  );
+  if (shown.length === 0 && query.trim() === '') return null;
+  if (shown.length === 0)
     return (
-      <EmptyState
-        icon="songs"
-        title="Add your first song"
-        reason="Import an audio file. Its beats are found in the background, so the metronome can lock to it."
-        actionLabel="Import"
-        onAction={menu.openImport}
-      />
+      <View style={styles.inset}>
+        <Card>
+          <Text style={styles.cardText}>{VIEW_TEXT[view].noMatch}</Text>
+        </Card>
+      </View>
     );
+  const open = menu.kind === 'none' ? null : menu.target;
   return (
-    <>
-      <SearchBar covered={menu.kind !== 'none'} />
-      <ChipRow>
-        {LIBRARY_CHIPS.map((chip) => (
-          <FilterChip key={chip} chip={chip} />
-        ))}
-      </ChipRow>
-      <SongList onActions={menu.openActions} onOpenStemSet={onOpenStemSet} />
-    </>
+    <View>
+      {shown.map((row) => (
+        <LibraryRowView
+          key={`${row.kind}-${String(row.id)}`}
+          row={row}
+          selected={open?.kind === row.kind && open.id === row.id}
+          onActions={menu.openActions}
+          onOpenStemSet={onOpenStemSet}
+        />
+      ))}
+    </View>
   );
 }
 
-function useEntry(initialChip: LibraryChip | undefined) {
+type ViewState = 'failed' | 'loading' | 'empty' | 'list';
+
+function useViewState(view: LibraryView): ViewState {
+  return useSongLibrary((s) => {
+    if (s.failed) return 'failed';
+    if (!s.ready) return 'loading';
+    const has = s.rows.some((row) => inView(row, view));
+    return has || s.importing.length > 0 ? 'list' : 'empty';
+  });
+}
+
+function useViewImport(view: LibraryView) {
+  const importSong = useSongLibrary((s) => s.importSong);
+  const importStemFolder = useSongLibrary((s) => s.importStemFolder);
+  return useCallback(() => {
+    void (view === 'stems' ? importStemFolder() : importSong());
+  }, [view, importSong, importStemFolder]);
+}
+
+interface BodyProps extends ListProps {
+  readonly state: ViewState;
+}
+
+function LibraryBody({ view, state, menu, onOpenStemSet }: BodyProps) {
+  const startImport = useViewImport(view);
+  const text = VIEW_TEXT[view];
+  if (state === 'failed') return <LibraryUnavailable />;
+  if (state === 'loading') return null;
+  if (state === 'empty')
+    return (
+      <EmptyState
+        variant="list"
+        icon="songs"
+        title={text.emptyTitle}
+        reason={text.emptyReason}
+        actionIcon="add"
+        actionLabel={text.emptyAction}
+        option={text.emptyOption}
+        onAction={startImport}
+      />
+    );
+  return <SongList view={view} menu={menu} onOpenStemSet={onOpenStemSet} />;
+}
+
+function useEntry() {
   const refresh = useSongLibrary((s) => s.refresh);
-  const setChip = useSongLibrary((s) => s.setChip);
+  const setQuery = useSongLibrary((s) => s.setQuery);
   useEffect(() => {
-    if (initialChip !== undefined) setChip(initialChip);
-  }, [initialChip, setChip]);
-  useEffect(() => {
+    setQuery('');
     void refresh();
-  }, [refresh]);
+  }, [refresh, setQuery]);
 }
 
 export function LibraryScreen({
+  view,
   insets,
-  initialChip,
   onBack,
   onOpenStemSet,
+  onOpenSetlists,
 }: LibraryScreenProps) {
   const styles = useStyles();
-  useEntry(initialChip);
+  useEntry();
   const menu = useLibraryMenu();
-  const padding = useMemo(
-    () => ({
-      paddingTop: space.screenInset + insets.top,
-      paddingBottom: space.screenInset + insets.bottom,
-    }),
-    [insets.top, insets.bottom],
+  const startImport = useViewImport(view);
+  const text = VIEW_TEXT[view];
+  const state = useViewState(view);
+  const listed = state === 'list';
+  const actions: readonly ScreenBarAction[] = useMemo(
+    () =>
+      onOpenSetlists === undefined
+        ? []
+        : [{ icon: 'setlist', label: 'Setlists', onPress: onOpenSetlists }],
+    [onOpenSetlists],
+  );
+  const frame = useMemo(
+    () => [styles.screen, { paddingTop: insets.top }],
+    [styles.screen, insets.top],
+  );
+  const content = useMemo(
+    () => [styles.content, { paddingBottom: FAB_ROOM + insets.bottom }],
+    [styles.content, insets.bottom],
   );
   return (
-    <View style={[styles.screen, padding]}>
-      <AppBar title="Songs" onBack={onBack} />
-      <ScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-      >
-        <NoticeCard />
-        <ImportingCard />
-        <LibraryBody menu={menu} onOpenStemSet={onOpenStemSet} />
-      </ScrollView>
-      <FloatingActionButton
-        icon="add"
-        accessibilityLabel="Import a song"
-        onPress={menu.openImport}
-      />
+    <View style={frame}>
+      <ScreenAppBar onBack={onBack} actions={actions}>
+        <Text style={styles.title} numberOfLines={1}>
+          {text.title}
+        </Text>
+      </ScreenAppBar>
+      <View style={styles.body}>
+        {listed ? (
+          <SearchBar text={text} covered={menu.kind !== 'none'} />
+        ) : null}
+        <ScrollView
+          style={styles.list}
+          contentContainerStyle={content}
+          keyboardShouldPersistTaps="handled"
+        >
+          <StatusCards />
+          <LibraryBody
+            view={view}
+            state={state}
+            menu={menu}
+            onOpenStemSet={onOpenStemSet}
+          />
+        </ScrollView>
+      </View>
+      {listed ? (
+        <FloatingActionButton
+          variant="list"
+          icon={text.fabIcon}
+          accessibilityLabel={text.fabLabel}
+          bottomInset={insets.bottom}
+          onPress={startImport}
+        />
+      ) : null}
       <LibrarySheets menu={menu} bottomInset={insets.bottom} />
     </View>
   );

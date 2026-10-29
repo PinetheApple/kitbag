@@ -9,8 +9,10 @@ import {
 import type { IconName } from '../icons.ts';
 import {
   bodyLineHeight,
+  homeTile,
   iconSizes,
   inset,
+  lineRatio,
   opacity,
   radius,
   size,
@@ -39,7 +41,8 @@ const useStyles = createThemedStyles((theme) => ({
   },
   tile: {
     flex: 1,
-    gap: space.controlGap,
+    minHeight: homeTile.minHeight,
+    gap: homeTile.gap,
     padding: space.cardPadding,
     borderRadius: radii.tile,
     borderWidth: size.stroke,
@@ -49,16 +52,15 @@ const useStyles = createThemedStyles((theme) => ({
   tileGlyph: {
     color: theme.color.text,
     fontSize: iconSizes.toolTile,
-    lineHeight: iconSizes.toolTile * bodyLineHeight,
   },
   tileTitle: {
     ...textStyle(textRoles.tileTitle),
-    lineHeight: textRoles.tileTitle.size * bodyLineHeight,
+    marginTop: 'auto',
     color: theme.color.text,
   },
   tileSubtext: {
     ...textStyle(textRoles.tileSubtext),
-    lineHeight: textRoles.tileSubtext.size * bodyLineHeight,
+    lineHeight: textRoles.tileSubtext.size * lineRatio.compactBody,
     color: theme.color.text2,
   },
   upcoming: {
@@ -158,7 +160,14 @@ export function ToolTile({
       style={[styles.tile, upcoming && styles.upcoming]}
     >
       <Glyph name={icon} style={styles.tileGlyph} />
-      <Text style={styles.tileTitle}>{title}</Text>
+      <Text
+        style={styles.tileTitle}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={homeTile.titleMinScale}
+      >
+        {title}
+      </Text>
       <Text style={styles.tileSubtext}>{subtext}</Text>
     </Pressable>
   );

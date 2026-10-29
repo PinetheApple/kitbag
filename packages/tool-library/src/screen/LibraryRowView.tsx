@@ -1,197 +1,190 @@
 import {
   Badge,
-  Button,
-  Card,
   createThemedStyles,
+  hitBoxStyle,
+  hitExtension,
   Icon,
-  inset,
+  libraryList,
+  libraryMix,
+  lineRatio,
   minTouchTargetDp,
-  RowText,
+  mixHex,
+  size,
   space,
   textRoles,
   textStyle,
-  usePlainRowStyles,
+  unshared,
+  useTheme,
+  withAlpha,
 } from '@kitbag/core-design';
 import {
   analysisFailure,
   songBadge,
   useSongLibrary,
-  type AnalysisFailure,
   type LibraryRow,
+  type SongBadge,
 } from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { failureText } from '../logic/notices.ts';
-import {
-  rowSubtitle,
-  songBadges,
-  spokenRow,
-  stemBadges,
-  type BadgeSpec,
-} from '../logic/rowText.ts';
+import { rowBadges, rowSubtitle, spokenRow } from '../logic/rowText.ts';
+
+const MORE_HIT_BOX = hitBoxStyle(
+  hitExtension(libraryList.moreWidth, minTouchTargetDp, {
+    left: libraryList.rowGap,
+    right: unshared(libraryList.rowEnd),
+  }),
+);
 
 const useStyles = createThemedStyles((theme) => ({
-  group: { gap: space.controlGap },
-  badges: {
-    flexShrink: 1,
+  row: {
+    minHeight: libraryList.rowHeight,
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-end',
-    gap: space.chipGap,
+    alignItems: 'center',
+    gap: libraryList.rowGap,
+    paddingLeft: space.screenInset,
+    paddingRight: libraryList.rowEnd,
+    borderBottomWidth: size.stroke,
+    borderBottomColor: theme.color.line,
+  },
+  selected: {
+    backgroundColor: withAlpha(theme.color.text, libraryMix.selectedRow),
   },
   body: {
     flex: 1,
+    alignSelf: 'stretch',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space.rowGap,
+    gap: libraryList.rowGap,
   },
-  stacked: {
-    flex: 1,
-    gap: space.chipGap,
-  },
-  textLine: { flexDirection: 'row' },
-  badgeLine: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: space.chipGap,
-  },
-  more: {
-    width: minTouchTargetDp,
-    alignSelf: 'stretch',
+  tile: {
+    width: libraryList.tile,
+    height: libraryList.tile,
+    borderRadius: libraryList.tileRadius,
+    backgroundColor: theme.color.surface2,
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: -inset.rowV,
   },
-  failure: {
-    gap: space.controlGap,
-    alignItems: 'flex-start',
+  stemTile: {
+    backgroundColor: mixHex(
+      theme.color.accent,
+      theme.color.surface2,
+      libraryMix.stemTile,
+    ),
   },
-  failureText: {
-    ...textStyle(textRoles.fieldLabel),
+  text: { flex: 1, minWidth: 0 },
+  title: {
+    ...textStyle(textRoles.listTitle),
+    lineHeight: textRoles.listTitle.size * lineRatio.title,
     color: theme.color.text,
+  },
+  facts: {
+    ...textStyle(textRoles.listFacts),
+    lineHeight: textRoles.listFacts.size * lineRatio.compactBody,
+    color: theme.color.text2,
+  },
+  badges: {
+    alignItems: 'flex-end',
+    gap: libraryList.badgeGap,
+    flexShrink: 0,
+  },
+  more: {
+    ...MORE_HIT_BOX,
+    width: libraryList.moreWidth,
+    height: minTouchTargetDp,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 }));
 
-interface BadgesProps {
-  readonly badges: readonly BadgeSpec[];
-  readonly line?: boolean;
+function rowStatus(row: LibraryRow): SongBadge {
+  if (row.kind === 'song') return songBadge(row);
+  return row.hasGrid ? 'grid' : 'noGrid';
 }
 
-function Badges({ badges, line = false }: BadgesProps) {
+function RowTile({ stems }: { readonly stems: boolean }) {
   const styles = useStyles();
+  const theme = useTheme();
   return (
-    <View style={line ? styles.badgeLine : styles.badges}>
-      {badges.map((badge) => (
-        <Badge
-          key={badge.key}
-          label={badge.label}
-          tone={badge.tone}
-          {...(badge.icon === undefined ? {} : { icon: badge.icon })}
-          accessibilityLabel={badge.spoken}
-        />
-      ))}
+    <View style={[styles.tile, stems && styles.stemTile]}>
+      <Icon
+        name={stems ? 'stems' : 'song'}
+        size="listTile"
+        color={stems ? theme.accentInk : 'text2'}
+      />
     </View>
   );
 }
 
-interface FailedCardProps {
-  readonly failure: AnalysisFailure;
-  readonly onRetry: () => void;
-}
-
-function AnalysisFailedCard({ failure, onRetry }: FailedCardProps) {
-  const styles = useStyles();
-  const { status, text, canRetry } = failureText(failure);
-  return (
-    <Card
-      emphasis={failure.keptGrid ? 'warning' : 'danger'}
-      statusIcon={failure.keptGrid ? 'warning' : 'failure'}
-      statusLabel={status}
-    >
-      <View style={styles.failure}>
-        <Text style={styles.failureText}>{text}</Text>
-        {canRetry ? (
-          <Button label="Re-analyze" variant="tonal" onPress={onRetry} />
-        ) : null}
-      </View>
-    </Card>
-  );
-}
-
-function rowBadges(row: LibraryRow) {
-  if (row.kind === 'stems') return stemBadges(row);
-  return songBadges(row, songBadge(row));
-}
-
 export interface LibraryRowViewProps {
   readonly row: LibraryRow;
+  readonly selected: boolean;
   readonly onActions: (row: LibraryRow) => void;
   readonly onOpenStemSet: (id: number) => void;
 }
 
 export function LibraryRowView({
   row,
+  selected,
   onActions,
   onOpenStemSet,
 }: LibraryRowViewProps) {
   const styles = useStyles();
-  const rowStyles = usePlainRowStyles();
-  const reanalyze = useSongLibrary((s) => s.reanalyze);
-  const badges = rowBadges(row);
   const codes = useSongLibrary((s) => s.codes);
+  const status = rowStatus(row);
   const failure = row.kind === 'song' ? analysisFailure(row, codes) : null;
   const openActions = useCallback(() => {
     onActions(row);
   }, [onActions, row]);
-  const retry = useCallback(() => {
-    void reanalyze(row.id);
-  }, [reanalyze, row.id]);
   const open = useCallback(() => {
     onOpenStemSet(row.id);
   }, [onOpenStemSet, row.id]);
   return (
-    <View style={styles.group}>
-      <View style={rowStyles.row}>
-        <Pressable
-          accessible
-          accessibilityLabel={spokenRow(
-            row,
-            badges,
-            failure === null ? null : failureText(failure).status,
-          )}
-          style={styles.body}
-          onLongPress={openActions}
-          {...(row.kind === 'stems'
-            ? { accessibilityRole: 'button' as const, onPress: open }
-            : {})}
-        >
-          {row.kind === 'stems' ? (
-            <View style={styles.stacked}>
-              <View style={styles.textLine}>
-                <RowText title={row.title} subtitle={rowSubtitle(row)} />
-              </View>
-              <Badges badges={badges} line />
-            </View>
-          ) : (
-            <>
-              <RowText title={row.title} subtitle={rowSubtitle(row)} />
-              <Badges badges={badges} />
-            </>
-          )}
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Actions for ${row.title}`}
-          style={styles.more}
-          onPress={openActions}
-        >
-          <Icon name="more" size="action" color="text2" />
-        </Pressable>
-      </View>
-      {failure === null ? null : (
-        <AnalysisFailedCard failure={failure} onRetry={retry} />
-      )}
+    <View style={[styles.row, selected && styles.selected]}>
+      <Pressable
+        accessible
+        accessibilityLabel={spokenRow(
+          row,
+          status,
+          failure === null ? null : failureText(failure).status,
+        )}
+        style={styles.body}
+        onLongPress={openActions}
+        {...(row.kind === 'stems'
+          ? { accessibilityRole: 'button' as const, onPress: open }
+          : {})}
+      >
+        <RowTile stems={row.kind === 'stems'} />
+        <View style={styles.text}>
+          <Text style={styles.title} numberOfLines={1}>
+            {row.title}
+          </Text>
+          <Text style={styles.facts} numberOfLines={1}>
+            {rowSubtitle(row, status, failure)}
+          </Text>
+        </View>
+        <View style={styles.badges}>
+          {rowBadges(row, status).map((badge) => (
+            <Badge
+              key={badge.key}
+              variant="list"
+              label={badge.label}
+              tone={badge.tone}
+              {...(badge.icon === undefined ? {} : { icon: badge.icon })}
+              accessibilityLabel={badge.spoken}
+            />
+          ))}
+        </View>
+      </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Actions for ${row.title}`}
+        style={styles.more}
+        onPress={openActions}
+      >
+        <Icon name="more" size="bar" color="text2" />
+      </Pressable>
     </View>
   );
 }

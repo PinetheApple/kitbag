@@ -34,6 +34,7 @@ export interface BundleSource {
 interface Pending {
   readonly source: BundleSource;
   readonly check: StemBundleCheck;
+  readonly announce: boolean;
 }
 
 type Copied =
@@ -127,13 +128,13 @@ export function stemBundleActions(
     { source, check }: Pending,
     codes: LibraryConstants,
     replace: boolean,
-  ) => {
+  ): Promise<boolean> => {
     const copied = await copyBundle(deps, source, codes);
     if (!copied.ok) {
       if (copied.reason === null)
         set({ notice: { kind: 'copyFailed', name: source.name } });
       else refuse(source, copied.reason, check);
-      return;
+      return false;
     }
     const files = deps.files();
     let replaced: StemSetFiles | null;
@@ -149,7 +150,7 @@ export function stemBundleActions(
           source.name,
         );
       set({ notice: { kind: 'addFailed', name: source.name } });
-      return;
+      return false;
     }
     if (replaced !== null)
       await deleteLeftovers(
@@ -157,14 +158,17 @@ export function stemBundleActions(
         stemSetRemovals(replaced, codes.stemsDir),
         source.name,
       );
+    return true;
   };
 
   const run = async (job: Pending, replace: boolean) => {
     const codes = codesFor(job.source);
     if (codes === null) return;
-    await whileImporting(set, get, job.source.name, () =>
+    const added = await whileImporting(set, get, job.source.name, () =>
       imports.track(() => copyAndStore(job, codes, replace)),
     );
+    if (added && job.announce)
+      set({ notice: { kind: 'stemSongAdded', name: job.source.name } });
     await get().refresh();
   };
 
@@ -188,12 +192,15 @@ export function stemBundleActions(
   };
 
   return {
-    importBundle: async (source: BundleSource) => {
+    importBundle: async (
+      source: BundleSource,
+      { announce = false }: { readonly announce?: boolean } = {},
+    ) => {
       const examined = await whileImporting(set, get, source.name, () =>
         examine(source),
       );
       if (examined === null) return;
-      const job = { source, check: examined.check };
+      const job = { source, check: examined.check, announce };
       if (examined.existing === undefined) {
         await run(job, false);
         return;

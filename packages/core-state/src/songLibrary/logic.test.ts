@@ -5,7 +5,6 @@ import {
   analysisFailure,
   audioFormat,
   filterRows,
-  isLibraryChip,
   isStemArchive,
   songBadge,
   songRemovals,
@@ -65,34 +64,48 @@ const titles = (rows: readonly LibraryRow[]) => rows.map((row) => row.title);
 
 describe('filterRows', () => {
   it.each([
-    ['all', ['Everlong', 'Take Five', 'Drone', 'Broken', 'Kept', 'Redbone']],
-    ['analyzed', ['Everlong', 'Drone', 'Kept']],
+    ['songs', ['Broken', 'Drone', 'Everlong', 'Kept', 'Take Five']],
     ['stems', ['Redbone']],
-    ['setlists', ['Everlong']],
-  ] as const)('the %s chip admits %j', (chip, expected) => {
-    expect(titles(filterRows(ROWS, '', chip))).toEqual(expected);
+  ] as const)(
+    'the %s view lists only its kind, in title order',
+    (view, expected) => {
+      expect(titles(filterRows(ROWS, '', view))).toEqual(expected);
+    },
+  );
+
+  it('keeps analyzing and failed songs in title order', () => {
+    const rows = [
+      song(1, 'way maker', { analysisStatus: 'failed' }),
+      song(2, 'Take Five', { analysisStatus: 'analyzing' }),
+      song(3, 'Everlong', { analysisStatus: 'done', hasGrid: true }),
+    ];
+    expect(titles(filterRows(rows, '', 'songs'))).toEqual([
+      'Everlong',
+      'Take Five',
+      'way maker',
+    ]);
+  });
+
+  it('orders equal titles by id', () => {
+    const rows = [song(9, 'Intro'), song(2, 'intro')];
+    expect(filterRows(rows, '', 'songs').map((row) => row.id)).toEqual([2, 9]);
   });
 
   it('searches title and artist, ignoring case and outer spaces', () => {
-    expect(titles(filterRows(ROWS, '  brubeck ', 'all'))).toEqual([
+    expect(titles(filterRows(ROWS, '  brubeck ', 'songs'))).toEqual([
       'Take Five',
     ]);
-    expect(titles(filterRows(ROWS, 'RED', 'all'))).toEqual(['Redbone']);
-    expect(titles(filterRows(ROWS, 'foo', 'all'))).toEqual([
-      'Everlong',
-      'Drone',
+    expect(titles(filterRows(ROWS, 'RED', 'stems'))).toEqual(['Redbone']);
+    expect(titles(filterRows(ROWS, 'foo', 'songs'))).toEqual([
       'Broken',
+      'Drone',
+      'Everlong',
       'Kept',
     ]);
   });
 
-  it('applies search and chip together', () => {
-    expect(titles(filterRows(ROWS, 'foo', 'analyzed'))).toEqual([
-      'Everlong',
-      'Drone',
-      'Kept',
-    ]);
-    expect(titles(filterRows(ROWS, 'brubeck', 'stems'))).toEqual([]);
+  it('never shows a stem song on the songs view, even when it matches', () => {
+    expect(titles(filterRows(ROWS, 'red', 'songs'))).toEqual([]);
   });
 });
 
@@ -139,12 +152,6 @@ describe('import helpers', () => {
     expect(audioFormat('songs/abc/Everlong.MP3')).toBe('mp3');
     expect(audioFormat('songs/abc/.hidden')).toBe('');
     expect(audioFormat('songs/a.b/noext')).toBe('');
-  });
-
-  it('accepts only the four chips', () => {
-    expect(isLibraryChip('stems')).toBe(true);
-    expect(isLibraryChip('Stems')).toBe(false);
-    expect(isLibraryChip(undefined)).toBe(false);
   });
 });
 

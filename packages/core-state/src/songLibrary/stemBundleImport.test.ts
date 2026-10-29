@@ -53,16 +53,20 @@ describe('StemDeck bundle import', () => {
         expect.objectContaining({ waveformPath: null, muted: true }),
       ],
     });
-    expect(store.getState().notice).toBeNull();
+    expect(store.getState().notice).toEqual({
+      kind: 'stemSongAdded',
+      name: ZIP.name,
+    });
     expect(store.getState().importing).toEqual([]);
   });
 
-  it('imports an extracted folder as a folder', async () => {
+  it('imports an extracted folder as a folder, with no notice', async () => {
     const { store, files } = setup();
     await store.getState().importStemFolder();
     expect(files.checkStemBundle).toHaveBeenCalledWith('content://tree', true);
     expect(files.importStemBundle).toHaveBeenCalledWith('content://tree', true);
     expect(await stemRows(store)).toHaveLength(1);
+    expect(store.getState().notice).toBeNull();
   });
 
   it('shows the bundle as importing while it is copied', async () => {
@@ -192,8 +196,10 @@ describe('StemDeck bundle import', () => {
     await store.getState().importSong();
     const [old] = await stemRows(store);
     await store.getState().importSong();
+    expect(store.getState().notice).toBeNull();
     await store.getState().confirmReplace();
     expect(store.getState().replacePrompt).toBeNull();
+    expect(store.getState().notice).toMatchObject({ kind: 'stemSongAdded' });
     const rows = await stemRows(store);
     expect(rows).toHaveLength(1);
     expect(rows[0]?.id).not.toBe(old?.id);

@@ -786,7 +786,7 @@ working. Changes:
 - **Downbeats** into the grid (§4.3).
 - **Re-analyse** action for a song.
 - Analysis stays ambient — background, badge-driven, no "analyze" button. The
-  row appears instantly with `ANALYZING…` and lands on `GRID ✓` in ~10–30s. The
+  row appears instantly with `ANALYZING` and lands on `GRID ✓` in ~10–30s. The
   user never waits on a spinner screen.
 - The Dart isolate becomes a native background task, **not** a JS worker —
   see §13.5.
@@ -1671,7 +1671,7 @@ milestone.
 ### 12.7 Key flows
 
 - **Import → analysed.** FAB → system picker (file or folder) → copy into library
-  → row appears instantly with `ANALYZING…` → `GRID ✓` lands in background
+  → row appears instantly with `ANALYZING` → `GRID ✓` lands in background
   (~10–30s). **User never waits on a spinner screen.**
 - **Spotify → locked click.** Open Play-along → (first time: permission
   explainer) → now-playing appears → BPM auto-fills → one tap on a downbeat →

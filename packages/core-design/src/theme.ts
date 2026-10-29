@@ -39,12 +39,14 @@ export type FeedbackTone = 'success' | 'warning' | 'danger';
 export interface FeedbackColors {
   readonly fg: string;
   readonly badgeBorder: string;
+  readonly listBadgeBorder: string;
   readonly cardBorder: string;
 }
 
 export interface Theme {
   readonly mode: ThemeMode;
   readonly color: Readonly<Record<ColorToken, string>>;
+  readonly accentInk: ColorToken;
   readonly activeControlFill: string;
   readonly activeCardFill: string;
   readonly onDanger: string;
@@ -67,6 +69,7 @@ function feedbackColors(
   return {
     fg,
     badgeBorder: mixHex(fg, color.line, mix.badgeBorder),
+    listBadgeBorder: mixHex(fg, color.line, mix.listBadgeBorder),
     cardBorder: mixHex(fg, color.line, mix.cardBorder),
   };
 }
@@ -76,6 +79,7 @@ export function buildTheme(mode: ThemeMode): Theme {
   return {
     mode,
     color,
+    accentInk: mode === 'light' ? 'accentDeep' : 'accent',
     activeControlFill: mixHex(color.accent, color.surface2, mix.activeControl),
     activeCardFill: mixHex(color.accent, color.surface1, mix.activeCard),
     onDanger: color.surface1,
