@@ -98,6 +98,14 @@ jobs:
     name: Android release build (Linux)
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    # CMake reads these launchers from the environment, so every NDK build uses ccache
+    # without touching a build.gradle. The NDK is reinstalled per run: hash by version, not mtime.
+    env:
+      CMAKE_C_COMPILER_LAUNCHER: ccache
+      CMAKE_CXX_COMPILER_LAUNCHER: ccache
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_MAXSIZE: 1G
+      CCACHE_COMPILERCHECK: "%compiler% --version"
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -110,6 +118,13 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v6
+      - name: Install ccache
+        run: sudo apt-get update && sudo apt-get install -y ccache
+      - uses: actions/cache/restore@v6
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-${{ runner.os }}-${{ github.sha }}
+          restore-keys: ccache-${{ runner.os }}-
       - name: Install (frozen lockfile)
         run: pnpm install --frozen-lockfile
       # assembleRelease, not assembleDebug: it bundles the JS and runs the
@@ -118,3 +133,9 @@ jobs:
       - name: Assemble release — compiles the Kotlin/JNI/codegen chain
         run: ./gradlew :app:assembleRelease :kitbag_core-native:testReleaseUnitTest
         working-directory: packages/app-shell/android
+      - name: ccache statistics
+        run: ccache --show-stats
+      - uses: actions/cache/save@v6
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-${{ runner.os }}-${{ github.sha }}
