@@ -1,13 +1,11 @@
-import { countLabel, type IconName } from '@kitbag/core-design';
+import { countLabel, type BadgeTone, type IconName } from '@kitbag/core-design';
 import {
   bpmFact,
   clockParts,
   formatClockSeconds,
   keyFact,
-  type LibraryChip,
+  type AnalysisFailure,
   type LibraryRow,
-  type LibrarySongRow,
-  type LibraryStemSetRow,
   type SongBadge,
   type SongFact,
 } from '@kitbag/core-state';
@@ -26,15 +24,6 @@ export function spokenLength(totalSeconds: number): string {
   return parts.filter((part) => part !== '').join(' ');
 }
 
-export function rowSubtitle(row: LibraryRow): string | undefined {
-  const parts: string[] = [];
-  if (row.kind === 'song' && row.artist !== '') parts.push(row.artist);
-  if (row.durationSec > 0) parts.push(formatLength(row.durationSec));
-  return parts.length === 0 ? undefined : parts.join(' · ');
-}
-
-export type BadgeTone = 'default' | 'accent' | 'success' | 'warning';
-
 export interface BadgeSpec {
   readonly key: string;
   readonly label: string;
@@ -51,7 +40,7 @@ const GRID_BADGE: BadgeSpec = {
   tone: 'success',
 };
 
-const STATUS_BADGES: Readonly<Record<SongBadge, BadgeSpec | null>> = {
+const STATUS_BADGES: Readonly<Record<SongBadge, BadgeSpec>> = {
   pending: {
     key: 'status',
     label: 'NOT ANALYZED',
@@ -60,7 +49,8 @@ const STATUS_BADGES: Readonly<Record<SongBadge, BadgeSpec | null>> = {
   },
   analyzing: {
     key: 'status',
-    label: 'ANALYZING…',
+    label: 'ANALYZING',
+    icon: 'analyzing',
     spoken: 'Analyzing',
     tone: 'warning',
   },
@@ -71,53 +61,68 @@ const STATUS_BADGES: Readonly<Record<SongBadge, BadgeSpec | null>> = {
     spoken: 'No beat grid found',
     tone: 'default',
   },
-  failed: null,
+  failed: {
+    key: 'status',
+    label: 'FAILED',
+    icon: 'error',
+    spoken: 'Analysis failed',
+    tone: 'danger',
+  },
 };
 
-function factBadge(key: string, fact: SongFact | null): BadgeSpec[] {
-  if (fact === null) return [];
-  return [{ key, label: fact.text, spoken: fact.spoken, tone: 'default' }];
-}
+const STATUS_NOTES: Readonly<Partial<Record<SongBadge, string>>> = {
+  analyzing: 'analyzing…',
+  failed: 'no beat grid',
+};
 
-export function songBadges(song: LibrarySongRow, status: SongBadge) {
-  const badges = factBadge('bpm', bpmFact(song.bpm));
-  const statusBadge = STATUS_BADGES[status];
-  if (statusBadge !== null) badges.push(statusBadge);
-  return badges;
-}
+const KEPT_GRID_NOTE = 're-analysis failed';
 
-export function stemBadges(row: LibraryStemSetRow): BadgeSpec[] {
-  const badges = [
-    ...factBadge('bpm', bpmFact(row.bpm)),
-    ...factBadge('key', keyFact(row.key, row.scale, null)),
-  ];
-  if (row.hasGrid) badges.push(GRID_BADGE);
-  badges.push({
+export function rowBadges(row: LibraryRow, status: SongBadge): BadgeSpec[] {
+  if (row.kind === 'song') return [STATUS_BADGES[status]];
+  const stems: BadgeSpec = {
     key: 'stems',
     label: `STEMS ×${String(row.stemCount)}`,
     spoken: countLabel(row.stemCount, 'stem', 'stems'),
     tone: 'accent',
-  });
-  return badges;
+  };
+  return row.hasGrid ? [stems, GRID_BADGE] : [stems];
+}
+
+function rowFacts(row: LibraryRow): SongFact[] {
+  const facts = [
+    bpmFact(row.bpm),
+    row.kind === 'stems' ? keyFact(row.key, row.scale, null) : null,
+  ];
+  return facts.filter((fact) => fact !== null);
+}
+
+export function rowSubtitle(
+  row: LibraryRow,
+  status: SongBadge,
+  failure: AnalysisFailure | null,
+): string {
+  const note = row.kind === 'song' ? STATUS_NOTES[status] : undefined;
+  const facts =
+    note === undefined ? rowFacts(row).map((fact) => fact.text) : [note];
+  const parts = [
+    ...(row.durationSec > 0 ? [formatLength(row.durationSec)] : []),
+    ...facts,
+    ...(failure?.keptGrid === true ? [KEPT_GRID_NOTE] : []),
+  ];
+  return parts.join(' · ');
 }
 
 export function spokenRow(
   row: LibraryRow,
-  badges: readonly BadgeSpec[],
+  status: SongBadge,
   failureStatus: string | null,
 ): string {
   const parts: string[] = [row.title];
   if (row.kind === 'song' && row.artist !== '') parts.push(row.artist);
-  else if (row.kind === 'stems') parts.push('stem song');
   if (row.durationSec > 0) parts.push(spokenLength(row.durationSec));
-  parts.push(...badges.map((badge) => badge.spoken));
+  if (row.kind === 'stems' || STATUS_NOTES[status] === undefined)
+    parts.push(...rowFacts(row).map((fact) => fact.spoken));
+  parts.push(...rowBadges(row, status).map((badge) => badge.spoken));
   if (failureStatus !== null) parts.push(failureStatus);
   return parts.join(', ');
 }
-
-export const CHIP_LABELS: Readonly<Record<LibraryChip, string>> = {
-  all: 'All',
-  analyzed: 'Analyzed',
-  stems: 'Stems',
-  setlists: 'Setlists',
-};

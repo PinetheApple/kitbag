@@ -1,0 +1,32 @@
+export const libraryList = {
+  bodyTop: 4,
+  bodyGap: 12,
+  searchHeight: 44,
+  searchH: 14,
+  searchGap: 10,
+  rowHeight: 64,
+  rowEnd: 4,
+  rowGap: 12,
+  tile: 40,
+  tileRadius: 10,
+  badgeGap: 4,
+  badgeV: 4,
+  badgeIconGap: 4,
+  moreWidth: 40,
+  fab: 56,
+  fabEnd: 20,
+  fabBottom: 18,
+  emptyGap: 12,
+  emptyH: 24,
+  emptyMark: 72,
+  emptyMarkRadius: 20,
+  emptyButtonHeight: 48,
+  emptyButtonH: 20,
+  emptyButtonGap: 8,
+  emptyOptionGap: 8,
+} as const;
+
+export const libraryMix = {
+  stemTile: 0.14,
+  selectedRow: 0.06,
+} as const;

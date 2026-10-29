@@ -6,9 +6,7 @@ import {
 } from '@kitbag/core-db';
 import type { LibraryConstants } from '@kitbag/core-native';
 
-export const LIBRARY_CHIPS = ['all', 'analyzed', 'stems', 'setlists'] as const;
-
-export type LibraryChip = (typeof LIBRARY_CHIPS)[number];
+export type LibraryView = 'songs' | 'stems';
 
 export type SongBadge = 'pending' | 'analyzing' | 'grid' | 'noGrid' | 'failed';
 
@@ -16,10 +14,6 @@ export interface LibrarySummary {
   readonly songCount: number;
   readonly analyzedCount: number;
   readonly stemSongCount: number;
-}
-
-export function isLibraryChip(value: unknown): value is LibraryChip {
-  return LIBRARY_CHIPS.some((chip) => chip === value);
 }
 
 export type FailureKind =
@@ -72,17 +66,8 @@ function isAnalyzed(row: LibraryRow): boolean {
   return badge === 'grid' || badge === 'noGrid';
 }
 
-function chipAdmits(row: LibraryRow, chip: LibraryChip): boolean {
-  switch (chip) {
-    case 'all':
-      return true;
-    case 'analyzed':
-      return isAnalyzed(row);
-    case 'stems':
-      return row.kind === 'stems';
-    case 'setlists':
-      return row.kind === 'song' && row.inSetlist;
-  }
+export function inView(row: LibraryRow, view: LibraryView): boolean {
+  return view === 'stems' ? row.kind === 'stems' : row.kind === 'song';
 }
 
 function searchAdmits(row: LibraryRow, needle: string): boolean {
@@ -93,15 +78,17 @@ function searchAdmits(row: LibraryRow, needle: string): boolean {
   );
 }
 
+const byTitle = new Intl.Collator(undefined, { sensitivity: 'base' });
+
 export function filterRows(
   rows: readonly LibraryRow[],
   query: string,
-  chip: LibraryChip,
+  view: LibraryView,
 ): LibraryRow[] {
   const needle = query.trim().toLocaleLowerCase();
-  return rows.filter(
-    (row) => chipAdmits(row, chip) && searchAdmits(row, needle),
-  );
+  return rows
+    .filter((row) => inView(row, view) && searchAdmits(row, needle))
+    .sort((a, b) => byTitle.compare(a.title, b.title) || a.id - b.id);
 }
 
 export function summarize(rows: readonly LibraryRow[]): LibrarySummary {

@@ -1,4 +1,8 @@
-import { countLabel } from '@kitbag/core-design';
+import {
+  countLabel,
+  type FeedbackTone,
+  type IconName,
+} from '@kitbag/core-design';
 import type {
   AnalysisFailure,
   BundleRefusal,
@@ -71,7 +75,25 @@ export function noticeText(notice: LibraryNotice): NoticeText {
         status: 'Rename failed',
         text: `“${notice.name}” could not be renamed. Try again.`,
       };
+    case 'stemSongAdded':
+      return {
+        status: 'Added to Stem songs',
+        text: `“${notice.name}” is a StemDeck song bundle, so it was added to Stem songs.`,
+      };
   }
+}
+
+export interface NoticeLook {
+  readonly tone: FeedbackTone;
+  readonly icon: IconName;
+}
+
+export function noticeLook(notice: LibraryNotice): NoticeLook {
+  if (notice.kind === 'stemSongAdded')
+    return { tone: 'success', icon: 'check' };
+  if (notice.kind === 'bundleRefused')
+    return { tone: 'warning', icon: 'warning' };
+  return { tone: 'danger', icon: 'warning' };
 }
 
 export interface FailureText {

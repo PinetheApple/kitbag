@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   copyingText,
   failureText,
+  noticeLook,
   noticeText,
   replaceText,
 } from './notices.ts';
@@ -45,6 +46,22 @@ describe('noticeText', () => {
     ] as const;
     const statuses = new Set(reasons.map((r) => refused(r).status));
     expect(statuses.size).toBe(reasons.length);
+  });
+});
+
+describe('stem song added elsewhere', () => {
+  const added = {
+    kind: 'stemSongAdded',
+    name: 'Redbone.stemdeck.zip',
+  } as const;
+
+  it('says where a bundle picked from Songs went, as a success', () => {
+    expect(noticeText(added)).toEqual({
+      status: 'Added to Stem songs',
+      text: '“Redbone.stemdeck.zip” is a StemDeck song bundle, so it was added to Stem songs.',
+    });
+    expect(noticeLook(added)).toEqual({ tone: 'success', icon: 'check' });
+    expect(noticeLook({ kind: 'pickerFailed' }).tone).toBe('danger');
   });
 });
 

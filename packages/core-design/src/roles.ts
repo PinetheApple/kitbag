@@ -123,6 +123,7 @@ export const mix = {
   activeControl: 0.18,
   activeCard: 0.07,
   badgeBorder: 0.4,
+  listBadgeBorder: 0.45,
   tempoZoneGlow: 0.05,
   cardBorder: 0.35,
   pegGlow: 0.4,
@@ -132,6 +133,20 @@ export const presetActionGrow = 1.3;
 
 // The design file's body line-height, which its card text inherits.
 export const bodyLineHeight = 1.6;
+
+export const lineRatio = {
+  appBarTitle: 1.25,
+  title: 1.3,
+  compactBody: 1.5,
+  badge: 1,
+} as const;
+
+export const homeTile = {
+  minHeight: 118,
+  gap: 6,
+  // At 200% font scale the title shrinks back to its 100% size rather than wrap.
+  titleMinScale: 0.5,
+} as const;
 
 export const playGlyphPath = {
   viewBox: 20,
@@ -165,12 +180,19 @@ export const iconSizes = {
   tile: 17,
   fab: 24,
   empty: 26,
-  toolTile: 22,
+  toolTile: 26,
   transport: size.playGlyphBox,
   stepKey: 18,
   dockKey: 24,
   bar: 24,
   dockPlay: 32,
+  listBadge: 12,
+  listSearch: 20,
+  emptyOption: 16,
+  emptyButton: 20,
+  listTile: 22,
+  listFab: 28,
+  emptyMark: 36,
 } as const;
 
 export type IconSize = keyof typeof iconSizes;
@@ -220,8 +242,8 @@ export const textRoles = {
     tracking: 0.03,
     uppercase: true,
   },
-  tileTitle: { family: display, weight: 500, size: 14 },
-  tileSubtext: { family: body, weight: 400, size: 11.5 },
+  tileTitle: { family: display, weight: 500, size: 16 },
+  tileSubtext: { family: body, weight: 400, size: 13 },
   tunerNote: {
     family: display,
     weight: 700,
@@ -252,8 +274,22 @@ export const textRoles = {
   loopFlag: { family: display, weight: 700, size: 11 },
   menuRow: { family: body, weight: 400, size: 14.5 },
   menuValue: { family: display, weight: 400, size: 14 },
+  listTitle: { family: display, weight: 500, size: 15 },
+  listFacts: { family: body, weight: 400, size: 12.5, tabular: true },
+  listBadge: { family: display, weight: 600, size: 10.5, tracking: 0.06 },
+  listSearch: { family: body, weight: 400, size: 14 },
+  listEmptyTitle: { family: display, weight: 600, size: 18 },
+  listEmptyReason: { family: body, weight: 400, size: 14 },
+  listEmptyOption: { family: body, weight: 400, size: 13 },
 } as const satisfies Record<string, TypeRole>;
 
 export type TextRoleName = keyof typeof textRoles;
 
 export const appBarTitleMinSize = 15;
+
+export const screenBar = {
+  height: 56,
+  h: 4,
+  gap: 2,
+  iconButton: 48,
+} as const;
