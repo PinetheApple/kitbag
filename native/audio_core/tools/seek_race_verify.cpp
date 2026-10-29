@@ -212,19 +212,18 @@ void RunMixerRace() {
   Assert(&stats, "mixer-race");
 }
 
-std::string WriteRampWav() {
-  std::vector<float> pcm(kTotalFrames);
-  for (uint64_t i = 0; i < kTotalFrames; ++i) {
-    pcm[i] = kOffset + static_cast<float>(i);
-  }
-  const std::filesystem::path path =
-      std::filesystem::temp_directory_path() / "kitbag_seek_race.wav";
-  if (!media_test::WriteFloatWav(path.string(), pcm, 1, kSampleRate)) return "";
-  return path.string();
+std::string WriteRaceRamp() {
+  return media_test::WriteRampWav(
+      "kitbag_seek_race",
+      kTotalFrames,
+      1,
+      kSampleRate,
+      kOffset
+  );
 }
 
 void RunPlayerRace() {
-  const std::string path = WriteRampWav();
+  const std::string path = WriteRaceRamp();
   Check(!path.empty(), "player-race: the ramp WAV writes");
   if (path.empty()) return;
 
@@ -283,7 +282,7 @@ void RunMixerPausedSeek() {
 }
 
 void RunPlayerPausedSeek() {
-  const std::string path = WriteRampWav();
+  const std::string path = WriteRaceRamp();
   Check(!path.empty(), "player-paused-seek: the ramp WAV writes");
   if (path.empty()) return;
 
@@ -315,7 +314,7 @@ void RunPlayerPausedSeek() {
 constexpr uint64_t kFarTarget = 2000000;
 
 void RunPlayerFailedReseek() {
-  const std::string path = WriteRampWav();
+  const std::string path = WriteRaceRamp();
   Check(!path.empty(), "player-failed-reseek: the ramp WAV writes");
   if (path.empty()) return;
 

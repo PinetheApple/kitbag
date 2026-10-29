@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <span>
 
@@ -49,10 +50,8 @@ class Metronome {
     InitAccentRow(poly_accents_);
   }
 
-  // Renders additively into an interleaved stereo buffer. RT-safe.
-  // `block_start_frame` is the engine-clock frame of output[0] — the shared
-  // transport that lets StartAt land on an exact frame (SPEC.md §4.2). `song`
-  // is the stem transport this block, read only while following it.
+  // RT-safe; adds into interleaved stereo. `block_start_frame` is the engine
+  // frame of output[0] (SPEC.md §4.2); `song` is read only when following.
   void Render(
       float* output,
       uint32_t frame_count,
@@ -106,9 +105,7 @@ class Metronome {
   // Bar-mute trainer: `play_bars` sounding then `mute_bars` silent, repeating
   // from bar 0. A muted bar silences every voice; the LEDs keep moving.
   void SetBarMute(bool enabled, int play_bars, int mute_bars);
-  // While on, a set grid reads song time from the stem transport instead of
-  // its anchor frame, and clicks only while that transport plays.
-  void SetFollowSong(bool enabled);
+  void SetFollowMixer(bool enabled);
 
   // Follow a measured beat grid instead of bpm_. `now_frame` only dates the
   // outgoing grid for reclamation; `engine_running` must be true whenever the
@@ -168,7 +165,7 @@ class Metronome {
     kSetBarMute,
     kSetVolume,
     kSetLatencyOffset,
-    kSetFollowSong,
+    kSetFollowMixer,
   };
 
   struct Command {
@@ -205,6 +202,7 @@ class Metronome {
   };
 
   static constexpr int kMaxVoices = 8;
+  static constexpr int64_t kReseedFollow = -1;
   static constexpr size_t kCommandRingSize = 128;
 
   // Command drain. ApplyCommand holds the only exhaustive switch over
@@ -214,6 +212,8 @@ class Metronome {
   void ApplyCommand(const Command& command);
   bool RouteCommand(const Command& command);
   bool ApplyTransportCommand(const Command& command);
+  bool ApplyFollowCommand(const Command& command);
+  void ReacquireGrid();
   void StashPendingAnchor(const Command& command);
   bool ApplyTempoCommand(const Command& command);
   bool ApplyTrainerCommand(const Command& command);
@@ -351,7 +351,6 @@ class Metronome {
   bool counting_in_ = false;
   double count_in_beats_ = 0.0;
   double beat_position_ = 0.0;  // fractional beats since start
-  // Held until the render loop reaches the frame, then consumed by BeginRun.
   bool has_pending_start_ = false;
   uint64_t pending_start_frame_ = 0;
   // Held until the render loop knows block_start_frame. The last drained wins.
@@ -380,11 +379,12 @@ class Metronome {
   double volume_ = 1.0;
   double latency_offset_ms_ = 0.0;
   Voice voices_[kMaxVoices];
-  // Reseeds the cursor on a song clock jump or a new loop pass; -1 forces it.
-  bool follow_song_ = false;
-  int64_t follow_next_stream_ = -1;
-  int64_t follow_pass_ = 0;
+  bool follow_mixer_ = false;
+  // Any other song frame, a seek or a loop wrap, reseeds the cursor.
+  int64_t follow_next_frame_ = kReseedFollow;
   double follow_seconds_ = 0.0;
+  // Grid beats after this song second wait: the loop's wrap owns that moment.
+  double grid_fire_limit_ = std::numeric_limits<double>::infinity();
 
   std::atomic<bool> running_flag_{false};
   std::atomic<int32_t> current_beat_{-1};

@@ -53,6 +53,12 @@ bool StreamingTrack::BuildSource(
   return s.source->Open(reader);
 }
 
+bool StreamingTrack::SeekBuilt(Source& s, uint64_t frame) {
+  if (frame == 0) return true;
+  const bool looping = s.stamp.layout.looping;
+  return s.source->Seek(looping ? frame : std::min(frame, s.num_frames));
+}
+
 void StreamingTrack::Publish(
     std::unique_ptr<Source> s,
     uint64_t now_frame,
@@ -70,13 +76,16 @@ bool StreamingTrack::Load(
     const char* path,
     uint64_t now_frame,
     bool engine_running,
-    const SourceStamp& stamp
+    const SourceStamp& stamp,
+    uint64_t frame
 ) {
   if (path == nullptr) return false;
   auto reader = std::make_unique<FileAudioReader>();
   if (!reader->Open(path)) return false;
   auto s = std::make_unique<Source>();
-  if (!BuildSource(*s, reader.get(), stamp)) return false;
+  if (!BuildSource(*s, reader.get(), stamp) || !SeekBuilt(*s, frame)) {
+    return false;
+  }
   s->owned_reader = std::move(reader);
   load_path_ = path;
   ext_reader_ = nullptr;
@@ -88,11 +97,12 @@ bool StreamingTrack::LoadReader(
     SourceReader* reader,
     uint64_t now_frame,
     bool engine_running,
-    const SourceStamp& stamp
+    const SourceStamp& stamp,
+    uint64_t frame
 ) {
   if (reader == nullptr) return false;
   auto s = std::make_unique<Source>();
-  if (!BuildSource(*s, reader, stamp)) return false;
+  if (!BuildSource(*s, reader, stamp) || !SeekBuilt(*s, frame)) return false;
   // owned_reader stays null: the caller owns `reader` and must outlive the track.
   ext_reader_ = reader;
   load_path_.clear();
@@ -140,7 +150,7 @@ void StreamingTrack::StopSource() {
 std::unique_ptr<StreamingTrack::Source> StreamingTrack::BuildReseekSource(
     uint64_t target,
     const SourceStamp& stamp,
-    bool start
+    bool start_read_ahead
 ) {
   auto s = std::make_unique<Source>();
   if (!load_path_.empty()) {
@@ -153,8 +163,8 @@ std::unique_ptr<StreamingTrack::Source> StreamingTrack::BuildReseekSource(
   } else {
     return nullptr;
   }
-  if (!s->source->Seek(target)) return nullptr;
-  if (!start) return s;
+  if (!SeekBuilt(*s, target)) return nullptr;
+  if (!start_read_ahead) return s;
   if (!s->source->Start()) return nullptr;
   Prime(*s);
   return s;
@@ -163,17 +173,15 @@ std::unique_ptr<StreamingTrack::Source> StreamingTrack::BuildReseekSource(
 bool StreamingTrack::Stage(
     uint64_t frame,
     const SourceStamp& stamp,
-    bool start
+    bool start_read_ahead
 ) {
   if (live_source_ == nullptr) return true;
-  const uint64_t target =
-      stamp.layout.looping ? frame : std::min(frame, live_num_frames_);
   const bool running = live_source_->is_running();
   // A caller-owned reader is one instance shared by old and new source, so the
   // old read-ahead must stop first; a file reopens, so its old ring keeps filling.
   resume_on_drop_ = ext_reader_ != nullptr && running;
   if (resume_on_drop_) live_source_->Stop();
-  staged_ = BuildReseekSource(target, stamp, start || running);
+  staged_ = BuildReseekSource(frame, stamp, start_read_ahead || running);
   if (staged_ == nullptr) {
     DropStaged();
     return false;

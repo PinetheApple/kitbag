@@ -27,6 +27,12 @@ void Mixer::NoteTrackLoaded(int track) {
   if (track >= track_count_.load(std::memory_order_relaxed)) {
     track_count_.store(track + 1, std::memory_order_relaxed);
   }
+  RecomputeLongestFrames();
+  if (app_playing_) tracks_[track].stream->StartAndPrime();
+}
+
+SourceStamp Mixer::JoinStamp() const {
+  return {.epoch = app_epoch_, .layout = app_layout_, .align = true};
 }
 
 void Mixer::RecomputeLongestFrames() {
@@ -45,12 +51,12 @@ bool Mixer::LoadTrack(
     bool engine_running
 ) {
   if (track < 0 || track >= kMaxTracks) return false;
-  const SourceStamp stamp{app_epoch_, app_layout_};
-  if (!tracks_[track].stream->Load(path, now_frame, engine_running, stamp)) {
+  const auto frame = static_cast<uint64_t>(PlannedHead().stream);
+  StreamingTrack& stream = *tracks_[track].stream;
+  if (!stream.Load(path, now_frame, engine_running, JoinStamp(), frame)) {
     return false;
   }
   NoteTrackLoaded(track);
-  RecomputeLongestFrames();
   return true;
 }
 
@@ -74,13 +80,13 @@ bool Mixer::SetTrackSource(
     bool engine_running
 ) {
   if (track < 0 || track >= kMaxTracks) return false;
-  const SourceStamp stamp{app_epoch_, app_layout_};
+  const auto frame = static_cast<uint64_t>(PlannedHead().stream);
+  const SourceStamp stamp = JoinStamp();
   StreamingTrack& stream = *tracks_[track].stream;
-  if (!stream.LoadReader(reader, now_frame, engine_running, stamp)) {
+  if (!stream.LoadReader(reader, now_frame, engine_running, stamp, frame)) {
     return false;
   }
   NoteTrackLoaded(track);
-  RecomputeLongestFrames();
   return true;
 }
 
@@ -143,17 +149,20 @@ bool Mixer::soloed(int track) const {
 }
 
 void Mixer::Play() {
+  app_playing_ = true;
   const int count = track_count_.load(std::memory_order_relaxed);
   for (int i = 0; i < count; ++i) tracks_[i].stream->StartAndPrime();
   Enqueue({CommandType::kPlay});
 }
 
 void Mixer::Stop(uint64_t now_frame, bool engine_running) {
+  app_playing_ = false;
   Enqueue({CommandType::kStop});
-  Relayout(PlanKind::kJump, 0, app_layout_, now_frame, engine_running);
+  Relayout({.layout = app_layout_}, now_frame, engine_running);
 }
 
 void Mixer::Pause() {
+  app_playing_ = false;
   Enqueue({CommandType::kPause});
   const int count = track_count_.load(std::memory_order_relaxed);
   for (int i = 0; i < count; ++i) tracks_[i].stream->StopSource();
@@ -163,7 +172,7 @@ void Mixer::Seek(uint64_t frame, uint64_t now_frame, bool engine_running) {
   const uint64_t longest = longest_frames_.load(std::memory_order_relaxed);
   const int64_t target =
       SeekTarget(static_cast<int64_t>(std::min(frame, longest)));
-  Relayout(PlanKind::kJump, target, app_layout_, now_frame, engine_running);
+  Relayout({.frame = target, .layout = app_layout_}, now_frame, engine_running);
 }
 
 int64_t Mixer::SeekTarget(int64_t frame) const {
@@ -183,60 +192,83 @@ Mixer::LoopResult Mixer::SetLoop(
       end - start < kMinLoopCrossfades * crossfade_frames_) {
     return LoopResult::kInvalid;
   }
-  const LoopLayout layout{true, start, end, crossfade_frames_};
   const Head head = PlannedHead();
-  const bool keep = head.frame < end;
-  const bool ok = Relayout(
-      keep && !head.jump_pending ? PlanKind::kKeep : PlanKind::kJump,
-      keep ? head.frame : start,
-      layout,
-      now_frame,
-      engine_running
-  );
-  return ok ? LoopResult::kOk : LoopResult::kRebuildFailed;
+  const int64_t song = app_layout_.SongFrameAt(head.stream);
+  const bool keep = song < end;
+  const TransportPlan plan{
+      .kind = keep && !head.jump_pending ? PlanKind::kKeep : PlanKind::kJump,
+      .frame = keep ? song : start,
+      .base = head.transport,
+      .layout = {
+          .looping = true,
+          .start = start,
+          .end = end,
+          .crossfade = crossfade_frames_
+      }
+  };
+  return Relayout(plan, now_frame, engine_running) ? LoopResult::kOk
+                                                   : LoopResult::kRebuildFailed;
 }
 
 bool Mixer::ClearLoop(uint64_t now_frame, bool engine_running) {
   if (!app_layout_.looping) return true;
   const Head head = PlannedHead();
-  const PlanKind kind = head.jump_pending ? PlanKind::kJump : PlanKind::kKeep;
-  return Relayout(kind, head.frame, {}, now_frame, engine_running);
+  const TransportPlan plan{
+      .kind = head.jump_pending ? PlanKind::kJump : PlanKind::kKeep,
+      .frame = app_layout_.SongFrameAt(head.stream),
+      .base = head.transport,
+      .layout = {}
+  };
+  return Relayout(plan, now_frame, engine_running);
 }
 
 Mixer::Head Mixer::PlannedHead() const {
   const auto* node = plans_.Get();
-  const bool jump_pending =
-      node != nullptr &&
-      node->generation != plan_generation_.load(std::memory_order_relaxed) &&
-      node->value.kind == PlanKind::kJump;
-  if (!jump_pending) return {static_cast<int64_t>(position()), false};
-  return {node->value.frame, true};
+  const uint64_t adopted = plan_generation_.load(std::memory_order_acquire);
+  const int64_t now = transport_frame_.load(std::memory_order_relaxed);
+  if (node == nullptr) {
+    return {.stream = now, .transport = now, .jump_pending = false};
+  }
+  const TransportPlan& plan = node->value;
+  int64_t base = plan.base;
+  if (plan.kind == PlanKind::kJump) {
+    if (node->generation != adopted) {
+      return {.stream = plan.frame, .transport = now, .jump_pending = true};
+    }
+    base = jump_base_.load(std::memory_order_relaxed);
+  }
+  const int64_t elapsed = std::max<int64_t>(now - base, 0);
+  return {
+      .stream = plan.frame + elapsed,
+      .transport = now,
+      .jump_pending = false
+  };
 }
 
 bool Mixer::Relayout(
-    PlanKind kind,
-    int64_t frame,
-    const LoopLayout& layout,
+    TransportPlan plan,
     uint64_t now_frame,
     bool engine_running
 ) {
+  plan.epoch = app_epoch_ + 1;
   const SourceStamp stamp{
-      app_epoch_ + 1,
-      layout,
-      true,
-      kind == PlanKind::kKeep
+      .epoch = plan.epoch,
+      .layout = plan.layout,
+      .align = true,
+      .plays_early = plan.kind == PlanKind::kKeep
   };
-  if (!StageAll(frame, stamp, engine_running)) return false;
-  app_epoch_ = stamp.epoch;
-  app_layout_ = layout;
+  if (!StageAll(plan.frame, stamp, engine_running)) return false;
+  app_epoch_ = plan.epoch;
+  app_layout_ = plan.layout;
   const int count = track_count_.load(std::memory_order_relaxed);
   for (int i = 0; i < count; ++i) {
     tracks_[i].stream->CommitStaged(now_frame, engine_running);
   }
-  auto plan = std::make_unique<TransportPlan>(
-      TransportPlan{kind, frame, app_epoch_, layout}
+  plans_.Publish(
+      std::make_unique<TransportPlan>(plan),
+      now_frame,
+      engine_running
   );
-  plans_.Publish(std::move(plan), now_frame, engine_running);
   for (int i = 0; i < count; ++i) tracks_[i].stream->StopPrevious();
   return true;
 }

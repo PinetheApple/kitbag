@@ -1,5 +1,3 @@
-// A-B loop and master gain (SPEC.md §7.2, §7.3). Loop points sit off block
-// boundaries so a wrap applied per block, not per frame, lands visibly wrong.
 #include <cmath>
 #include <filesystem>
 #include <numbers>
@@ -10,47 +8,18 @@
 namespace mixer_test {
 namespace {
 
+// Off block boundaries, so a wrap applied per block, not per frame, lands
+// visibly wrong.
 constexpr int64_t kLoopStart = 1234;
 constexpr int64_t kLoopEnd = 4321;
 constexpr int64_t kLoopLength = kLoopEnd - kLoopStart;
-constexpr uint64_t kLoopTrackFrames = 20000;
-constexpr float kLoopTolerance = 0.01f;
 
-std::vector<float> RenderLeft(kitbag::Mixer* mixer, int blocks) {
-  std::vector<float> left;
-  for (int b = 0; b < blocks; ++b) {
-    const std::vector<float> out = RenderBlock(mixer);
-    for (uint32_t f = 0; f < kBlock; ++f) left.push_back(out[2 * f]);
-  }
-  return left;
-}
-
-void ExpectAt(
-    const std::vector<float>& left,
-    int64_t index,
-    float expected,
-    const char* label
-) {
-  const bool inside = index >= 0 && index < static_cast<int64_t>(left.size());
-  const float got = inside ? left[index] : NAN;
-  Check(std::fabs(got - expected) <= kLoopTolerance, label);
-  if (!inside || std::fabs(got - expected) > kLoopTolerance) {
-    std::fprintf(
-        stderr,
-        "  [%lld] = %.3f, expected %.3f\n",
-        (long long)index,
-        got,
-        expected
-    );
-  }
-}
-
-float EqualPowerBlend(int64_t pass, int64_t crossfade) {
-  const double angle = (static_cast<double>(pass) + 0.5) *
+float EqualPowerBlend(int64_t into, int64_t crossfade) {
+  const double angle = (static_cast<double>(into) + 0.5) *
                        (std::numbers::pi / 2.0) /
                        static_cast<double>(crossfade);
-  const double tail = static_cast<double>(kLoopEnd + pass);
-  const double head = static_cast<double>(kLoopStart + pass);
+  const double tail = static_cast<double>(kLoopEnd + into);
+  const double head = static_cast<double>(kLoopStart + into);
   return static_cast<float>(tail * std::cos(angle) + head * std::sin(angle));
 }
 
@@ -250,7 +219,8 @@ void TestSetLoopRejectsBadBounds() {
   using Result = kitbag::Mixer::LoopResult;
   kitbag::Mixer mixer(kSampleRate);
   LoadRamp(&mixer, 0, kLoopTrackFrames, 0.0f);
-  const int64_t shortest = 2 * mixer.crossfade_frames();
+  const int64_t shortest =
+      kitbag::Mixer::kMinLoopCrossfades * mixer.crossfade_frames();
   const auto longest = static_cast<int64_t>(kLoopTrackFrames);
   Check(mixer.SetLoop(-1, 2000, 0, false) == Result::kInvalid, "bounds: A < 0");
   Check(

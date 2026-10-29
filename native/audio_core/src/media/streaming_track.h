@@ -12,12 +12,11 @@
 
 namespace kitbag {
 
-// `plays_early`: the source may sound, aligned to the song frame, before the
-// callback adopts its epoch.
 struct SourceStamp {
   uint64_t epoch = 0;
   LoopLayout layout;
   bool align = false;
+  // May sound, aligned to the song frame, before the callback adopts its epoch.
   bool plays_early = false;
 };
 
@@ -46,13 +45,14 @@ class StreamingTrack {
 
   // ---- App thread: setup ----
 
-  /// Load a file, streamed from disk. [now_frame]/[engine_running] date the
-  /// retired source for deferred reclamation. False on null path or open failure.
+  /// Load a file, streamed from disk from stream frame [frame]. [now_frame] and
+  /// [engine_running] date the retired source for deferred reclamation.
   bool Load(
       const char* path,
       uint64_t now_frame,
       bool engine_running,
-      const SourceStamp& stamp = {}
+      const SourceStamp& stamp = {},
+      uint64_t frame = 0
   );
   /// Stream from a caller-owned reader that must outlive the track. Same publish
   /// discipline as Load; false on null reader or a source wider than stereo.
@@ -60,7 +60,8 @@ class StreamingTrack {
       SourceReader* reader,
       uint64_t now_frame,
       bool engine_running,
-      const SourceStamp& stamp = {}
+      const SourceStamp& stamp = {},
+      uint64_t frame = 0
   );
   /// Retire the source: publishes an empty node so the drain reads nothing, and
   /// the old source is reclaimed off the callback, never freed on it.
@@ -79,9 +80,9 @@ class StreamingTrack {
   /// failed and the old source was resumed in place, so the owner can suppress
   /// the transport jump; true otherwise, including when nothing is loaded.
   bool Seek(uint64_t frame, uint64_t now_frame, bool engine_running);
-  /// Builds, unpublished, a source at stream frame [frame]; started and primed
-  /// when [start] or the live one runs. False only if the build failed.
-  bool Stage(uint64_t frame, const SourceStamp& stamp, bool start);
+  /// Builds, unpublished, a source at stream frame [frame], started and primed
+  /// if [start_read_ahead] or the live one runs. False if the build failed.
+  bool Stage(uint64_t frame, const SourceStamp& stamp, bool start_read_ahead);
   /// Publishes what Stage built. Joining the replaced source's read-ahead is
   /// left to StopPrevious, so commits across tracks land microseconds apart.
   void CommitStaged(uint64_t now_frame, bool engine_running);
@@ -163,16 +164,16 @@ class StreamingTrack {
   };
 
   bool BuildSource(Source& s, SourceReader* base, const SourceStamp& stamp);
+  bool SeekBuilt(Source& s, uint64_t frame);
   void
   Publish(std::unique_ptr<Source> s, uint64_t now_frame, bool engine_running);
   void Prime(const Source& s);
-  // App thread. Builds a fresh source at `target` from the reader identity,
-  // started and primed; null if the rebuild fails. No Clear on a ring the
-  // callback reads, so it is safe while the old source is still live (#25).
+  // App thread. A fresh source at `target`, never a Clear on a ring the
+  // callback may read (#25), so it is safe while the old source is live.
   std::unique_ptr<Source> BuildReseekSource(
       uint64_t target,
       const SourceStamp& stamp = {},
-      bool start = true
+      bool start_read_ahead = true
   );
   // App thread. Stops the old source, then swaps in a BuildReseekSource node.
   // Returns false if the rebuild failed and the old source was resumed in place.

@@ -13,12 +13,8 @@
 
 namespace kitbag {
 
-/// Lock-free N-track audio mixer for stem playback (SPEC.md §4.1). Each track is
-/// a StreamingTrack the callback drains, so mixer memory is O(tracks), not
-/// O(duration). Two concurrency disciplines cross the app→RT seam, only two
-/// (design-audit F3): playable state — each track's source, and the transport
-/// plan that places them all — is built off-thread and swapped in by
-/// RtPublisher; scalar control crosses the command ring and the callback applies it.
+/// Lock-free stem mixer (SPEC.md §4.1). Sources and transport plans are built
+/// off-thread and swapped in by RtPublisher; scalars cross the command ring.
 class Mixer {
  public:
   static constexpr int kMaxTracks = 16;
@@ -73,12 +69,10 @@ class Mixer {
   /// While any track is soloed, only soloed tracks reach the output.
   void SetSolo(int track, bool soloed);
 
-  /// 1.0 until set, loaded or not; 0.0 only outside [0, kMaxTracks).
   float gain(int track) const;
   bool muted(int track) const;
   bool soloed(int track) const;
 
-  /// Scales the summed stems; same range and ring as SetGain.
   void SetMasterGain(float gain);
   float master_gain() const {
     return master_gain_.load(std::memory_order_relaxed);
@@ -91,18 +85,13 @@ class Mixer {
   void Stop(uint64_t now_frame, bool engine_running);
   /// Ends playback holding the head, so a following Play resumes there.
   void Pause();
-  /// Seek, Stop's rewind and the loop calls rebuild every source and swap it in
-  /// (Relayout), never Clear a ring the callback may be reading (#25). A frame
-  /// past the longest track clamps to its end.
+  /// Like Stop's rewind and the loop calls, rebuilds every source rather than
+  /// Clear a ring the callback may read (#25). Clamps to the longest track.
   void Seek(uint64_t frame, uint64_t now_frame, bool engine_running);
 
   enum class LoopResult : uint8_t { kOk, kInvalid, kRebuildFailed };
-  /// A head before `end` plays on into the loop; one at or past it jumps to
-  /// `start`. While looping, a seek at or past `end` lands on `start`.
   LoopResult
   SetLoop(int64_t start, int64_t end, uint64_t now_frame, bool engine_running);
-  /// Playback continues linearly from the current frame. False only when a
-  /// track could not be rebuilt; the loop then stays set.
   bool ClearLoop(uint64_t now_frame, bool engine_running);
   int64_t crossfade_frames() const {
     return crossfade_frames_;
@@ -188,15 +177,17 @@ class Mixer {
   struct TransportPlan {
     PlanKind kind = PlanKind::kJump;
     int64_t frame = 0;
-    uint64_t epoch = 0;
+    // A keep's transport frame when its head stood at `frame`.
+    int64_t base = 0;
     LoopLayout layout;
+    uint64_t epoch = 0;
   };
 
   static constexpr size_t kCommandRingSize = 64;
 
-  // App thread. Raises the high-water iteration bound to cover a freshly loaded
-  // track; unload never lowers it (see active_track_count).
+  // App thread. Unload never lowers the iteration bound (see active_track_count).
   void NoteTrackLoaded(int track);
+  SourceStamp JoinStamp() const;
   // App thread. Rescans the loaded tracks' lengths and republishes the longest
   // (B5): raising it on load and lowering it on unload/reload-to-shorter, so the
   // transport auto-stop always follows the current longest track, not a stale max.
@@ -206,23 +197,18 @@ class Mixer {
   // rather than blocking — the realtime choice, matching the metronome. Drops are
   // counted for diagnostics, never fatal.
   void Enqueue(const Command& command);
-  // App thread. Rebuilds every track at [frame] under [layout], all or nothing,
-  // then publishes the plan the callback adopts them by.
-  bool Relayout(
-      PlanKind kind,
-      int64_t frame,
-      const LoopLayout& layout,
-      uint64_t now_frame,
-      bool engine_running
-  );
+  // App thread. Rebuilds every track at the plan's frame, all or nothing, then
+  // publishes the plan the callback adopts them by.
+  bool Relayout(TransportPlan plan, uint64_t now_frame, bool engine_running);
   bool StageAll(int64_t frame, const SourceStamp& stamp, bool engine_running);
   int64_t SeekTarget(int64_t frame) const;
-  // App thread. The head a new plan builds from: a jump the callback has not
-  // adopted yet outranks the position mirror, which still predates it.
   struct Head {
-    int64_t frame;
+    int64_t stream;
+    int64_t transport;
     bool jump_pending;
   };
+  // App thread. The head in the latest plan's stream frames, from the transport
+  // clock alone so no two mirrors written in different blocks get paired.
   Head PlannedHead() const;
 
   // Command drain, run at the top of Process. ApplyCommand holds the only
@@ -264,11 +250,15 @@ class Mixer {
   LoopLayout layout_;
   uint64_t epoch_ = 0;
   std::atomic<uint64_t> plan_generation_{0};
+  // Frames played since construction; unlike stream_frame_ it never jumps.
+  std::atomic<int64_t> transport_frame_{0};
+  std::atomic<int64_t> jump_base_{0};
   SongClock song_clock_;
   RtPublisher<TransportPlan> plans_;
   // App thread: the stamp the next build carries.
   uint64_t app_epoch_ = 0;
   LoopLayout app_layout_;
+  bool app_playing_ = false;
   int64_t crossfade_frames_;
   SpscRing<Command, kCommandRingSize> commands_;
   // App thread only. Counts commands dropped because the ring was full; a

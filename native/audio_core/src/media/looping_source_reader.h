@@ -26,7 +26,7 @@ class LoopingSourceReader : public SourceReader {
   }
   // Never ends: past the base's end, or past a short stem's, it reads silence.
   ReadResult ReadFrames(float* dst, uint64_t frames) override;
-  // [frame] is a stream frame and must lie before the loop end.
+  // [frame] is a stream frame, so it may lie passes beyond the loop end.
   bool SeekToFrame(uint64_t frame) override;
 
  private:

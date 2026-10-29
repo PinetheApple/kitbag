@@ -41,17 +41,6 @@ struct Stats {
   uint64_t relayouts = 0;
 };
 
-std::string WriteRamp() {
-  std::vector<float> pcm(kFrames);
-  for (uint64_t i = 0; i < kFrames; ++i) {
-    pcm[i] = kOffset + static_cast<float>(i);
-  }
-  const auto path =
-      std::filesystem::temp_directory_path() / "kitbag_loop_race.wav";
-  if (!media_test::WriteFloatWav(path.string(), pcm, 1, kRate)) return "";
-  return path.string();
-}
-
 void RenderLoop(kitbag::Mixer* mixer, Stats* s) {
   std::vector<float> out(static_cast<size_t>(kBlock) * 2, 0.0f);
   float previous = 0.0f;
@@ -82,7 +71,8 @@ void Relayouts(kitbag::Mixer* mixer, Stats* s) {
 }  // namespace
 
 void RunMixerLoopRace() {
-  const std::string path = WriteRamp();
+  const std::string path =
+      media_test::WriteRampWav("kitbag_loop_race", kFrames, 1, kRate, kOffset);
   Check(!path.empty(), "loop-race: the ramp WAV writes");
   if (path.empty()) return;
   Stats stats;

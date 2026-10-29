@@ -32,28 +32,37 @@ ReadResult LoopingSourceReader::ReadFrames(float* dst, uint64_t frames) {
 }
 
 bool LoopingSourceReader::SeekToFrame(uint64_t frame) {
-  const auto target = static_cast<int64_t>(frame);
-  if (target >= layout_.end) return false;
-  stream_frame_ = target;
-  SeekBase(target);
+  stream_frame_ = static_cast<int64_t>(frame);
+  if (stream_frame_ < layout_.end) {
+    SeekBase(stream_frame_);
+    return true;
+  }
+  const int64_t into = layout_.SongFrameAt(stream_frame_) - layout_.start;
+  if (into >= layout_.crossfade) {
+    SeekBase(layout_.start + into);
+  } else if (into > 0) {
+    PrepareCrossfade();
+  }
   return true;
 }
 
 uint64_t LoopingSourceReader::ReadSegment(float* dst, uint64_t frames) {
   if (stream_frame_ < layout_.end) {
-    const auto n = std::min(frames, uint64_t(layout_.end - stream_frame_));
+    const auto n =
+        std::min(frames, static_cast<uint64_t>(layout_.end - stream_frame_));
     ReadBase(dst, n);
     return n;
   }
-  const int64_t length = layout_.end - layout_.start;
-  const int64_t pass = (stream_frame_ - layout_.end) % length;
-  if (pass == 0) PrepareCrossfade();
-  if (pass < layout_.crossfade) {
-    const auto n = std::min(frames, uint64_t(layout_.crossfade - pass));
-    std::copy_n(blend_.data() + pass * channels_, n * channels_, dst);
+  const int64_t into = layout_.SongFrameAt(stream_frame_) - layout_.start;
+  if (into == 0) PrepareCrossfade();
+  if (into < layout_.crossfade) {
+    const auto n =
+        std::min(frames, static_cast<uint64_t>(layout_.crossfade - into));
+    std::copy_n(blend_.data() + into * channels_, n * channels_, dst);
     return n;
   }
-  const auto n = std::min(frames, uint64_t(length - pass));
+  const auto n =
+      std::min(frames, static_cast<uint64_t>(layout_.Length() - into));
   ReadBase(dst, n);
   return n;
 }

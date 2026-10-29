@@ -144,8 +144,8 @@ void Metronome::SetBarMute(bool enabled, int play_bars, int mute_bars) {
   commands_.Push(command);
 }
 
-void Metronome::SetFollowSong(bool enabled) {
-  Command command{CommandType::kSetFollowSong};
+void Metronome::SetFollowMixer(bool enabled) {
+  Command command{CommandType::kSetFollowMixer};
   command.int_a = enabled ? 1 : 0;
   commands_.Push(command);
 }
@@ -188,9 +188,10 @@ bool Metronome::RouteCommand(const Command& command) {
     case CommandType::kPause:
     case CommandType::kAnchorExternal:
       return ApplyTransportCommand(command);
+    case CommandType::kSetFollowMixer:
+      return ApplyFollowCommand(command);
     case CommandType::kSetTempo:
     case CommandType::kSetLatencyOffset:
-    case CommandType::kSetFollowSong:
       return ApplyTempoCommand(command);
     case CommandType::kSetRamp:
     case CommandType::kSetBarMute:
@@ -240,6 +241,13 @@ bool Metronome::ApplyTransportCommand(const Command& command) {
   }
 }
 
+bool Metronome::ApplyFollowCommand(const Command& command) {
+  if (command.type != CommandType::kSetFollowMixer) return false;
+  follow_mixer_ = command.int_a != 0;
+  ReacquireGrid();
+  return true;
+}
+
 void Metronome::StashPendingAnchor(const Command& command) {
   has_pending_anchor_ = true;
   pending_anchor_song_pos_ = command.value;
@@ -255,10 +263,6 @@ bool Metronome::ApplyTempoCommand(const Command& command) {
       return true;
     case CommandType::kSetLatencyOffset:
       SetLatencyPreservingPhase(command.value);
-      return true;
-    case CommandType::kSetFollowSong:
-      follow_song_ = command.int_a != 0;
-      observed_generation_ = 0;
       return true;
     default:
       return false;
@@ -339,7 +343,7 @@ void Metronome::StopRun() {
   has_pending_anchor_ = false;  // a Stop cancels a queued anchor too
   // Force a re-seed next block: a cursor stranded where the pause began
   // swallows every beat the pause spanned into one off-grid click (§4.2.1).
-  observed_generation_ = 0;
+  ReacquireGrid();
   counting_in_ = false;
   count_in_armed_ = true;
   current_beat_.store(-1, std::memory_order_relaxed);
@@ -356,7 +360,7 @@ void Metronome::BeginRun() {
   ArmCountIn();
   beat_position_ = -count_in_beats_ - LatencyBeats();
   running_ = true;
-  observed_generation_ = 0;  // re-seed the grid cursor at the resume point
+  ReacquireGrid();
   // Publish now, not only at the end of the drain: a deferred StartAt calls
   // BeginRun from the render loop, after the drain already stored the flag.
   running_flag_.store(true, std::memory_order_relaxed);

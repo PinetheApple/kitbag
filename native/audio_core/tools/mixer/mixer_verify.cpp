@@ -6,7 +6,7 @@
 
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 166;
+constexpr int kExpectedChecks = 171;
 
 int main() {
   mixer_test::RunTransportTests();
@@ -15,6 +15,7 @@ int main() {
   mixer_test::RunResampleTests();
   mixer_test::RunPublishTests();
   mixer_test::RunLoopTests();
+  mixer_test::RunRelayoutTests();
   mixer_test::CleanupTempFiles();
 
   if (kitbag_test::g_checks != kExpectedChecks) {

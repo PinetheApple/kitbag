@@ -166,8 +166,8 @@ Metronome::AcquireGrid(uint64_t block_start_frame, uint32_t sample_rate) {
     // Changed, cleared, or the run just started or stopped: re-seed from where
     // the click is now, so beats that already fired are never revisited.
     observed_generation_ = view.generation;
-    follow_next_stream_ = -1;
-    if (view.grid != nullptr && !follow_song_) {
+    follow_next_frame_ = kReseedFollow;
+    if (view.grid != nullptr && !follow_mixer_) {
       SeekGridCursor(
           *view.grid,
           GridSeconds(*view.grid, block_start_frame, sample_rate)
@@ -188,8 +188,8 @@ void Metronome::BeginPendingStart(
   BeginRun();
   has_pending_start_ = false;
   *tempo = BlockTempoFor(sample_rate);
-  follow_next_stream_ = -1;
-  if (view.grid == nullptr || follow_song_) return;
+  follow_next_frame_ = kReseedFollow;
+  if (view.grid == nullptr || follow_mixer_) return;
   // Seed at the anchor: the top-of-block re-seed already ran, and a cursor left
   // at the block start swallows every beat up to the anchor into one click.
   SeekGridCursor(*view.grid, GridSeconds(*view.grid, frame, sample_rate));
@@ -227,7 +227,7 @@ void Metronome::BeginAnchorExternal(
   running_flag_.store(true, std::memory_order_relaxed);
   counting_in_ = false;
   count_in_armed_ = false;
-  observed_generation_ = 0;  // re-seed the grid cursor if a grid is present
+  ReacquireGrid();
   SyncBarFromPosition();
   *tempo = BlockTempoFor(sample_rate);
 }
@@ -300,7 +300,7 @@ void Metronome::PublishBlockMirrors(
   } else if (grid != nullptr) {
     PublishGridMirrors(
         *grid,
-        follow_song_ ? follow_seconds_ : GridSeconds(*grid, frame, sample_rate)
+        follow_mixer_ ? follow_seconds_ : GridSeconds(*grid, frame, sample_rate)
     );
     current_poly_beat_.store(-1, std::memory_order_relaxed);
   } else {

@@ -4,6 +4,7 @@
 // Shared rig for the mixer_verify suite: ramp fixtures, offline rendering and
 // the assertion helpers. One executable, several test files.
 #include <atomic>
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <filesystem>
@@ -30,6 +31,8 @@ constexpr uint64_t kLongFrames = 5000;
 // mixed sample names the track it came from as well as its source frame.
 constexpr float kLongOffset = 100000.0f;
 constexpr float kEpsilon = 0.001f;
+constexpr uint64_t kLoopTrackFrames = 20000;
+constexpr float kLoopTolerance = 0.01f;
 
 // pcm[i] = offset + i, so a mixed sample reveals exactly which source frame
 // landed where — the only way to tell advancing from replaying.
@@ -160,6 +163,36 @@ ExpectSilentBlock(const std::vector<float>& out, const char* label) {
   }
 }
 
+inline std::vector<float> RenderLeft(kitbag::Mixer* mixer, int blocks) {
+  std::vector<float> left;
+  for (int b = 0; b < blocks; ++b) {
+    const std::vector<float> out = RenderBlock(mixer);
+    for (uint32_t f = 0; f < kBlock; ++f) left.push_back(out[2 * f]);
+  }
+  return left;
+}
+
+inline void ExpectAt(
+    const std::vector<float>& left,
+    int64_t index,
+    float expected,
+    const char* label
+) {
+  const bool inside = index >= 0 && index < static_cast<int64_t>(left.size());
+  const float got = inside ? left[index] : NAN;
+  const bool ok = std::fabs(got - expected) <= kLoopTolerance;
+  Check(ok, label);
+  if (!ok) {
+    std::fprintf(
+        stderr,
+        "  [%lld] = %.3f, expected %.3f\n",
+        (long long)index,
+        got,
+        expected
+    );
+  }
+}
+
 // Renders and discards a block so the command ring drains — transport and
 // scalar commands are applied by Process, so state converges only across it.
 inline void Drain(kitbag::Mixer* mixer) {
@@ -172,6 +205,7 @@ void RunSourceTests();
 void RunResampleTests();
 void RunPublishTests();
 void RunLoopTests();
+void RunRelayoutTests();
 
 }  // namespace mixer_test
 

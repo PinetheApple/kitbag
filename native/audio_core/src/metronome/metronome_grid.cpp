@@ -1,6 +1,8 @@
 // Grid mode: following a song's measured beat times instead of a single BPM.
 // Called from the audio callback; the concurrency argument is SPEC.md §4.2.1.
 #include <algorithm>
+#include <limits>
+#include <vector>
 
 #include "metronome/metronome.h"
 #include "metronome/metronome_internal.h"
@@ -12,6 +14,21 @@ using metronome_detail::kGridEpsilon;
 using metronome_detail::kMsPerSecond;
 using metronome_detail::kSecondsPerMinute;
 
+namespace {
+
+bool BeatDue(
+    const std::vector<double>& times,
+    size_t cursor,
+    double song_seconds,
+    double fire_limit
+) {
+  return cursor < times.size() &&
+         song_seconds + kGridEpsilon >= times[cursor] &&
+         times[cursor] <= fire_limit;
+}
+
+}  // namespace
+
 double Metronome::GridSeconds(
     const BeatGrid& grid,
     uint64_t frame,
@@ -20,6 +37,11 @@ double Metronome::GridSeconds(
   return (static_cast<double>(frame) - static_cast<double>(grid.anchor_frame)) /
              sample_rate +
          latency_offset_ms_ / kMsPerSecond;
+}
+
+// Zero is never a live generation, so the next block re-seeds the cursor.
+void Metronome::ReacquireGrid() {
+  observed_generation_ = 0;
 }
 
 void Metronome::SeekGridCursor(const BeatGrid& grid, double song_seconds) {
@@ -48,16 +70,14 @@ void Metronome::RenderGridBeat(
     uint32_t sample_rate
 ) {
   const auto& times = grid.beat_times_sec;
-  if (grid_cursor_ >= times.size() ||
-      song_seconds + kGridEpsilon < times[grid_cursor_]) {
+  if (!BeatDue(times, grid_cursor_, song_seconds, grid_fire_limit_)) {
     RenderGridSubdivision(grid, song_seconds, sample_rate);
     return;
   }
 
   // Advance past beats the grid packs closer than one sample so a dense grid
   // cannot fire twice for one frame — but count every one, or the bar drifts.
-  while (grid_cursor_ < times.size() &&
-         song_seconds + kGridEpsilon >= times[grid_cursor_]) {
+  while (BeatDue(times, grid_cursor_, song_seconds, grid_fire_limit_)) {
     ++grid_cursor_;
     ++grid_beat_index_;
   }
@@ -87,7 +107,7 @@ void Metronome::RenderGridSubdivision(
   const double previous = times[grid_cursor_ - 1];
   const double interval = times[grid_cursor_] - previous;
   const double tick = previous + interval * grid_next_sub_ / subdivision_;
-  if (song_seconds + kGridEpsilon >= tick) {
+  if (song_seconds + kGridEpsilon >= tick && tick <= grid_fire_limit_) {
     ++grid_next_sub_;
     // The tick sits in [grid_cursor_-1, grid_cursor_], so its owning beat is
     // grid_beat_index_ (== grid_cursor_-1, and >= 0 given the guard above).
@@ -128,24 +148,21 @@ void Metronome::RenderGridSample(
     uint32_t frame,
     uint32_t sample_rate
 ) {
-  if (!follow_song_) {
+  if (!follow_mixer_) {
+    grid_fire_limit_ = std::numeric_limits<double>::infinity();
     RenderGridBeat(grid, GridSeconds(grid, now, sample_rate), sample_rate);
     return;
   }
   if (song == nullptr || !song->playing || frame >= song->frames) return;
-  const int64_t stream = song->first + frame;
-  const double ahead = static_cast<double>(stream) +
-                       latency_offset_ms_ * sample_rate / kMsPerSecond;
-  const int64_t pass = song->layout.PassAt(ahead);
-  follow_seconds_ = song->layout.SongFrameAt(ahead) / sample_rate;
-  // A wrap crossed [start, now] in one sample, so beats from start still fire.
-  if (stream != follow_next_stream_) {
-    SeekGridCursor(grid, follow_seconds_);
-  } else if (pass != follow_pass_) {
-    SeekGridCursor(grid, static_cast<double>(song->layout.start) / sample_rate);
-  }
-  follow_next_stream_ = stream + 1;
-  follow_pass_ = pass;
+  const LoopLayout& layout = song->layout;
+  const int64_t song_frame = layout.SongFrameAt(song->first + frame);
+  follow_seconds_ = static_cast<double>(song_frame) / sample_rate;
+  grid_fire_limit_ = layout.looping
+                         ? static_cast<double>(layout.end - 1) / sample_rate
+                         : std::numeric_limits<double>::infinity();
+  // A new pass reseeks to the loop start, so a beat right on it still fires.
+  if (song_frame != follow_next_frame_) SeekGridCursor(grid, follow_seconds_);
+  follow_next_frame_ = song_frame + 1;
   RenderGridBeat(grid, follow_seconds_, sample_rate);
 }
 

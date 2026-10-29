@@ -323,3 +323,18 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   sample rate; `kb_mixer_load_track` resamples them to the engine rate as it streams the
   decode (§4.1). That is how §7.1/§7.8's "resample on ingest" is met: there is no second
   resampler at import. **[recorded]**
+
+- **2026-10-29 · The follow-mixer click ignores the latency offset (§4.7, §12.5.1, D16,
+  #137)** — Decided by the owner: with `kb_metronome_follow_mixer` on, the metronome
+  reads the mixer's song frame as is. Stems and click leave through the same output
+  buffer, so the offset could only push the click off the stems; it exists to align
+  with sources outside the phone. Follow mode now reads whole song frames only, so a
+  grid beat a fraction of a frame before a loop end can no longer fire ahead of the
+  wrap and stack on the loop start's click. **[user]**
+
+- **2026-10-29 · Mixer frames are engine-rate song frames (§4.2.2, #137)** — The
+  mixer resamples on load, so `kb_mixer_seek`, `kb_mixer_position` and the
+  `kb_mixer_set_loop` points count frames at the engine rate (song time × engine rate),
+  not at a stem's own rate. §4.2.2 said source frames; the code never did, and a
+  44.1 kHz stem on a 48 kHz engine showed the difference. SPEC and the header now say
+  engine-rate frames. **[recorded]**

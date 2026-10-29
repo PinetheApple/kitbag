@@ -146,13 +146,12 @@ void TestPublishSwapsToNewSourceWhole() {
   );
 
   LoadRamp(&mixer, 0, kLongFrames, kLongOffset);
-  mixer.Play();  // start + prime the freshly published source
   const std::vector<float> after = RenderBlock(&mixer);
   ExpectSample(
       after,
       0,
-      kLongOffset,
-      "publish: the swap delivers the new source whole, not the old one"
+      kLongOffset + kBlock,
+      "publish: the swap delivers the new source whole, joined at the head"
   );
 }
 
@@ -187,28 +186,22 @@ void TestWiderTrackLoadsDuringPlayback() {
   mixer.Play();
   RenderBlock(&mixer);  // mono advances to kBlock
 
-  LoadInterleaved(
-      &mixer,
-      1,
-      kLongFrames,
-      kStereo,
-      kLongOffset
-  );             // widen mid-play
-  mixer.Play();  // start + prime the new stereo source
+  LoadInterleaved(&mixer, 1, kLongFrames, kStereo, kLongOffset);
   const std::vector<float> out = RenderBlock(&mixer);
-  // Left = mono@kBlock + stereo L frame 0; right = mono@kBlock + stereo R frame 0.
+  // The stereo track joins at the head, so its frame kBlock sits beside mono's.
+  const float stereo_left = kLongOffset + 2.0f * kBlock;
   ExpectChannel(
       out,
       0,
       0,
-      static_cast<float>(kBlock) + kLongOffset,
+      static_cast<float>(kBlock) + stereo_left,
       "widen: stereo left mixes with the continuing mono track"
   );
   ExpectChannel(
       out,
       0,
       1,
-      static_cast<float>(kBlock) + kLongOffset + 1.0f,
+      static_cast<float>(kBlock) + stereo_left + 1.0f,
       "widen: stereo right is the distinct interleaved sample"
   );
 }

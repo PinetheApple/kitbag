@@ -20,17 +20,18 @@ using kitbag_test::Check;
 using kitbag_test::g_checks;
 using kitbag_test::g_failures;
 
-constexpr int kExpectedChecks = 19;
+constexpr int kExpectedChecks = 21;
 constexpr uint32_t kRate = 48000;
+constexpr uint32_t kStereo = 2;
 constexpr uint32_t kBlock = 512;
 constexpr int64_t kStemFrames = 240000;
 // Uneven spacing, so a click on a constant tempo cannot pass for the grid.
-constexpr int64_t kBeats[] = {
+constexpr double kBeats[] = {
     3001,
     21877,
     41209,
     60013,
-    79501,
+    78999.7,
     98777,
     118211,
     137503,
@@ -39,21 +40,23 @@ constexpr int64_t kBeats[] = {
     195601,
     215009
 };
+// The end sits 0.3 frames after a beat, off the grid: that beat belongs to the
+// wrap, so firing it before the wrap would stack a second click on the start's.
 constexpr int64_t kLoopStart = 41209;
-constexpr int64_t kLoopEnd = 79501;
+constexpr int64_t kLoopEnd = 79000;
 constexpr int kExpectedClicks = 15;
 // The last block before the pause holds beat 118211, so a click clock that
 // kept running while paused would sound it again.
 constexpr int64_t kPauseSeek = 87700;
 // Long enough for the last click before the pause to ring down below kSilence.
 constexpr int kPauseBlocks = 20;
+// 974.4 frames at 48 kHz, so an offset that were applied would move each click.
 constexpr double kLatencyMs = 20.3;
-// 20.3 ms at 48 kHz is 974.4 frames; beats sit on whole frames, so each click
-// moves exactly 974 frames earlier.
-constexpr int64_t kLatencyShift = 974;
 constexpr float kSilence = 1e-2f;
 constexpr int64_t kGapFrames = 480;
 constexpr double kHalfFrame = 0.5;
+// Every click is one voice at most an accent; two at once sum to nearly double.
+constexpr float kPeakTolerance = 1.05f;
 // Offline pulls outrun the read-ahead thread, and an underrun is silence in the
 // stem the clicks are measured against; 1 ms is still ~10x realtime.
 constexpr auto kPacePerBlock = std::chrono::milliseconds(1);
@@ -72,13 +75,13 @@ struct Take {
 };
 
 void Render(kb_engine* engine, Model* model, Take* take, int blocks) {
-  std::vector<float> out(static_cast<size_t>(kBlock) * 2);
+  std::vector<float> out(static_cast<size_t>(kBlock) * kStereo);
   for (int b = 0; b < blocks; ++b) {
     kb_engine_render(engine, out.data(), kBlock);
     std::this_thread::sleep_for(kPacePerBlock);
     for (uint32_t f = 0; f < kBlock; ++f) {
-      take->left.push_back(out[2 * f]);
-      take->right.push_back(out[2 * f + 1]);
+      take->left.push_back(out[kStereo * f]);
+      take->right.push_back(out[kStereo * f + 1]);
       if (model->looping && model->song == kLoopEnd) model->song = kLoopStart;
       take->song.push_back(model->playing ? model->song : -1);
       if (model->playing) ++model->song;
@@ -86,24 +89,11 @@ void Render(kb_engine* engine, Model* model, Take* take, int blocks) {
   }
 }
 
-std::string WriteStem() {
-  std::vector<float> pcm(static_cast<size_t>(kStemFrames) * 2, 0.0f);
-  for (int64_t i = 0; i < kStemFrames; ++i) {
-    pcm[2 * i] = static_cast<float>(i);
-  }
-  const auto path =
-      std::filesystem::temp_directory_path() / "kitbag_stem_sync.wav";
-  if (!media_test::WriteFloatWav(path.string(), pcm, 2, kRate)) return "";
-  return path.string();
-}
-
 kb_engine* OpenEngine(const std::string& stem, double latency_ms) {
   kb_engine* engine = nullptr;
   if (kb_engine_create(&engine) != KB_OK) return nullptr;
   std::vector<double> times;
-  for (int64_t beat : kBeats) {
-    times.push_back(static_cast<double>(beat) / kRate);
-  }
+  for (double beat : kBeats) times.push_back(beat / kRate);
   kb_mixer_load_track(engine, 0, stem.c_str());
   kb_metronome_set_grid(
       engine,
@@ -122,7 +112,6 @@ void Seek(kb_engine* engine, Model* model, int64_t frame) {
   model->song = frame;
 }
 
-// Play, seek, pause and resume, then three loop wraps, then a clear mid-pass.
 Take RunScript(kb_engine* engine) {
   Model model;
   Take take;
@@ -148,9 +137,10 @@ Take RunScript(kb_engine* engine) {
   return take;
 }
 
-bool IsBeat(int64_t song) {
-  for (int64_t beat : kBeats) {
-    if (beat == song) return true;
+// A beat sounds on the first whole song frame at or after it.
+bool IsBeatFrame(int64_t song) {
+  for (double beat : kBeats) {
+    if (static_cast<int64_t>(std::ceil(beat)) == song) return true;
   }
   return false;
 }
@@ -158,7 +148,7 @@ bool IsBeat(int64_t song) {
 std::vector<int64_t> ExpectedClicks(const Take& take) {
   std::vector<int64_t> clicks;
   for (size_t k = 0; k < take.song.size(); ++k) {
-    if (take.song[k] >= 0 && IsBeat(take.song[k])) clicks.push_back(k);
+    if (take.song[k] >= 0 && IsBeatFrame(take.song[k])) clicks.push_back(k);
   }
   return clicks;
 }
@@ -181,18 +171,17 @@ std::vector<int64_t> DetectClicks(const std::vector<float>& right) {
 
 bool SameClicks(
     const std::vector<int64_t>& got,
-    const std::vector<int64_t>& want,
-    int64_t shift
+    const std::vector<int64_t>& want
 ) {
   bool same = got.size() == want.size();
   for (size_t i = 0; i < got.size() && i < want.size(); ++i) {
-    if (got[i] == want[i] - shift) continue;
+    if (got[i] == want[i]) continue;
     std::fprintf(
         stderr,
         "  click %zu at %lld, expected %lld\n",
         i,
         (long long)got[i],
-        (long long)(want[i] - shift)
+        (long long)want[i]
     );
     same = false;
   }
@@ -233,30 +222,64 @@ bool QuietAtPauseEnd(const Take& take) {
   return loudest <= kSilence;
 }
 
-void TestClickFollowsTheStems(const std::string& stem) {
+float Peak(const std::vector<float>& right, size_t from, size_t to) {
+  float peak = 0.0f;
+  for (size_t k = from; k < to && k < right.size(); ++k) {
+    peak = std::max(peak, std::fabs(right[k]));
+  }
+  return peak;
+}
+
+// The first click is a downbeat, the loudest single voice the script plays.
+bool NoStackedClicks(const Take& take, const std::vector<int64_t>& clicks) {
+  if (clicks.empty()) return false;
+  const auto first = static_cast<size_t>(clicks.front());
+  const float single = Peak(take.right, first, first + kGapFrames);
+  const float loudest = Peak(take.right, 0, take.right.size());
+  if (loudest > kPeakTolerance * single) {
+    std::fprintf(
+        stderr,
+        "  peak %.3f against one click's %.3f\n",
+        loudest,
+        single
+    );
+  }
+  return single > kSilence && loudest <= kPeakTolerance * single;
+}
+
+std::vector<int64_t> TestClickFollowsTheStems(const std::string& stem) {
   kb_engine* engine = OpenEngine(stem, 0.0);
   Check(engine != nullptr, "sync: engine opens");
-  if (engine == nullptr) return;
+  if (engine == nullptr) return {};
   const Take take = RunScript(engine);
   kb_engine_destroy(engine);
   const std::vector<int64_t> want = ExpectedClicks(take);
   const std::vector<int64_t> got = DetectClicks(take.right);
-  Check(want.size() == kExpectedClicks, "sync: the script crosses 15 beats");
-  Check(SameClicks(got, want, 0), "sync: every click lands on its grid frame");
+  Check(want.size() == kExpectedClicks, "sync: the script crosses its beats");
+  Check(SameClicks(got, want), "sync: every click lands on its grid frame");
   Check(
       ClicksSitOnTheStem(take, got),
       "sync: the stem plays that beat's frame"
   );
   Check(QuietAtPauseEnd(take), "sync: no click re-sounds while paused");
+  Check(NoStackedClicks(take, got), "sync: no two clicks sound at once");
+  return want;
+}
 
-  engine = OpenEngine(stem, kLatencyMs);
+void TestLatencyOffsetIsIgnored(
+    const std::string& stem,
+    const std::vector<int64_t>& want
+) {
+  kb_engine* engine = OpenEngine(stem, kLatencyMs);
   if (engine == nullptr) return;
-  const Take early = RunScript(engine);
+  const Take take = RunScript(engine);
   kb_engine_destroy(engine);
+  const std::vector<int64_t> got = DetectClicks(take.right);
   Check(
-      SameClicks(DetectClicks(early.right), want, kLatencyShift),
-      "sync: the latency offset moves every click 974 frames earlier"
+      SameClicks(got, want),
+      "latency: the offset leaves every follow-mode click where it was"
   );
+  Check(NoStackedClicks(take, got), "latency: no two clicks sound at once");
 }
 
 void TestFollowOffKeepsTheAnchor(const std::string& stem) {
@@ -269,26 +292,10 @@ void TestFollowOffKeepsTheAnchor(const std::string& stem) {
   kb_engine_destroy(engine);
   const std::vector<int64_t> got = DetectClicks(take.right);
   Check(
-      got.size() == 2 && got[0] == kBeats[0] && got[1] == kBeats[1],
+      got.size() == 2 && got[0] == static_cast<int64_t>(kBeats[0]) &&
+          got[1] == static_cast<int64_t>(kBeats[1]),
       "anchor: with follow off the grid runs from anchor frame 0, stems idle"
   );
-}
-
-void TestLoopAbi(kb_engine* engine);
-
-void TestMixerAbi(const std::string& stem) {
-  kb_engine* engine = nullptr;
-  Check(kb_engine_create(&engine) == KB_OK, "abi: engine opens");
-  if (engine == nullptr) return;
-  Check(kb_mixer_gain(engine, 5) == 1.0f, "abi: an unloaded track's gain is 1");
-  Check(kb_mixer_master_gain(engine) == 1.0f, "abi: master gain defaults to 1");
-  kb_mixer_set_master_gain(engine, 0.4f);
-  std::vector<float> out(static_cast<size_t>(kBlock) * 2);
-  kb_engine_render(engine, out.data(), kBlock);
-  Check(kb_mixer_master_gain(engine) == 0.4f, "abi: master gain applies");
-  kb_mixer_load_track(engine, 0, stem.c_str());
-  TestLoopAbi(engine);
-  kb_engine_destroy(engine);
 }
 
 void TestLoopAbi(kb_engine* engine) {
@@ -320,13 +327,29 @@ void TestLoopAbi(kb_engine* engine) {
   Check(kb_mixer_master_gain(nullptr) == 0.0f, "abi: null master gain is 0");
 }
 
+void TestMixerAbi(const std::string& stem) {
+  kb_engine* engine = nullptr;
+  Check(kb_engine_create(&engine) == KB_OK, "abi: engine opens");
+  if (engine == nullptr) return;
+  Check(kb_mixer_gain(engine, 5) == 1.0f, "abi: an unloaded track's gain is 1");
+  Check(kb_mixer_master_gain(engine) == 1.0f, "abi: master gain defaults to 1");
+  kb_mixer_set_master_gain(engine, 0.4f);
+  std::vector<float> out(static_cast<size_t>(kBlock) * kStereo);
+  kb_engine_render(engine, out.data(), kBlock);
+  Check(kb_mixer_master_gain(engine) == 0.4f, "abi: master gain applies");
+  kb_mixer_load_track(engine, 0, stem.c_str());
+  TestLoopAbi(engine);
+  kb_engine_destroy(engine);
+}
+
 }  // namespace
 
 int main() {
-  const std::string stem = WriteStem();
+  const std::string stem =
+      media_test::WriteRampWav("kitbag_stem_sync", kStemFrames, kStereo, kRate);
   Check(!stem.empty(), "fixture: the stem WAV writes");
   if (!stem.empty()) {
-    TestClickFollowsTheStems(stem);
+    TestLatencyOffsetIsIgnored(stem, TestClickFollowsTheStems(stem));
     TestFollowOffKeepsTheAnchor(stem);
     TestMixerAbi(stem);
     std::filesystem::remove(stem);

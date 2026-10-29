@@ -42,19 +42,23 @@ void Mixer::AdoptPlan() {
       node->generation == plan_generation_.load(std::memory_order_relaxed)) {
     return;
   }
-  plan_generation_.store(node->generation, std::memory_order_relaxed);
   const TransportPlan& plan = node->value;
-  const int64_t playing = layout_.SongFrameAt(stream_frame_);
-  // A keep built its sources at plan.frame and AlignTo discards what the head
-  // has played since. If the old loop wrapped meanwhile, resume at plan.frame.
-  const bool kept = plan.kind == PlanKind::kKeep && playing >= plan.frame;
-  stream_frame_ = kept ? playing : plan.frame;
+  const int64_t now = transport_frame_.load(std::memory_order_relaxed);
+  // A keep counts on from where its head stood when the plan was built, so an
+  // old loop that wrapped meanwhile is never replayed; AlignTo skips the gap.
+  if (plan.kind == PlanKind::kKeep) {
+    stream_frame_ = plan.frame + std::max<int64_t>(now - plan.base, 0);
+  } else {
+    stream_frame_ = plan.frame;
+    jump_base_.store(now, std::memory_order_relaxed);
+  }
   layout_ = plan.layout;
   epoch_ = plan.epoch;
   read_frame_.store(
       static_cast<uint64_t>(layout_.SongFrameAt(stream_frame_)),
       std::memory_order_relaxed
   );
+  plan_generation_.store(node->generation, std::memory_order_release);
 }
 
 bool Mixer::TransportFrameFor(
@@ -154,8 +158,17 @@ void Mixer::AdvanceTransport(uint32_t frame_count) {
     playing_.store(false, std::memory_order_relaxed);
     return;
   }
-  song_clock_ = {true, stream_frame_, static_cast<uint32_t>(advance), layout_};
+  song_clock_ = {
+      .playing = true,
+      .first = stream_frame_,
+      .frames = static_cast<uint32_t>(advance),
+      .layout = layout_
+  };
   stream_frame_ += advance;
+  transport_frame_.store(
+      transport_frame_.load(std::memory_order_relaxed) + advance,
+      std::memory_order_relaxed
+  );
   read_frame_.store(
       static_cast<uint64_t>(layout_.SongFrameAt(stream_frame_)),
       std::memory_order_relaxed
