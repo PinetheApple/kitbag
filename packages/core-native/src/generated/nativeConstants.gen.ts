@@ -6,7 +6,7 @@
 // Hand-edits are reverted by the next regenerate and fail generate:check.
 
 /** Max beats a single measured grid may carry (KB_MAX_GRID_BEATS). */
-export const KB_MAX_GRID_BEATS = 8192;
+export const KB_MAX_GRID_BEATS = 65536;
 
 /** Mixer track count (Mixer::kMaxTracks, SPEC §7.4). */
 export const KB_MAX_TRACKS = 16;
