@@ -23,10 +23,10 @@
 #include "check.h"
 #include "wav_fixture.h"
 
-// Downbeat and streaming-equivalence coverage live in their own files.
 namespace analyze_test {
 void RunDownbeatTests(const std::filesystem::path& dir);
 void RunEquivalenceTests(const std::filesystem::path& dir);
+void RunWritePeaksTests(const std::filesystem::path& dir);
 }  // namespace analyze_test
 
 namespace {
@@ -240,7 +240,7 @@ void RunGuardTests() {
 
 }  // namespace
 
-constexpr int kExpectedChecks = 72;
+constexpr int kExpectedChecks = 80;
 
 int main() {
   const std::filesystem::path dir = std::filesystem::temp_directory_path();
@@ -249,6 +249,7 @@ int main() {
   analyze_test::RunEquivalenceTests(dir);
   TestSidecarRoundTrip(dir);
   TestWaveformNonFinite();
+  analyze_test::RunWritePeaksTests(dir);
 
   if (kitbag_test::g_checks != kExpectedChecks) {
     std::fprintf(

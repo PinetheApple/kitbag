@@ -2,7 +2,7 @@ import { REPAIR_PRESETS } from './preset-repair';
 import { RAMP_UNITS } from './preset-rules';
 import { INSTRUMENTS, MAX_MIDI_NOTE, MAX_STRINGS } from './tuning-rules';
 
-export const SCHEMA_VERSION = 14;
+export const SCHEMA_VERSION = 15;
 export const V6_SCHEMA_VERSION = 6;
 export const V7_SCHEMA_VERSION = 7;
 export const V8_SCHEMA_VERSION = 8;
@@ -11,6 +11,7 @@ export const V10_SCHEMA_VERSION = 10;
 export const V11_SCHEMA_VERSION = 11;
 export const V12_SCHEMA_VERSION = 12;
 export const V13_SCHEMA_VERSION = 13;
+export const V14_SCHEMA_VERSION = 14;
 
 export interface MigrationDriver {
   exec(sql: string): void;
@@ -267,11 +268,40 @@ export const MIGRATE_V13_TO_V14: readonly string[] = [
   'ALTER TABLE songs ADD COLUMN analysis_error TEXT',
 ];
 
+export const MIGRATE_V14_TO_V15: readonly string[] = [
+  `ALTER TABLE stem_sets ADD COLUMN source TEXT NOT NULL DEFAULT 'folder'
+   CHECK (source IN ('folder', 'stemdeck'))`,
+  'ALTER TABLE stem_sets ADD COLUMN stemdeck_job_id TEXT',
+  'ALTER TABLE stem_sets ADD COLUMN key TEXT',
+  'ALTER TABLE stem_sets ADD COLUMN scale TEXT',
+  'ALTER TABLE stem_sets ADD COLUMN key_confidence REAL',
+  'ALTER TABLE stem_sets ADD COLUMN bpm REAL',
+  'ALTER TABLE stem_sets ADD COLUMN loudness_lufs REAL',
+  'ALTER TABLE stem_sets ADD COLUMN tempo_stability REAL',
+  'ALTER TABLE stem_sets ADD COLUMN beat_grid BLOB',
+  'ALTER TABLE stem_sets ADD COLUMN bar_marks BLOB',
+  'ALTER TABLE stem_sets ADD COLUMN sections TEXT',
+  'ALTER TABLE stem_sets ADD COLUMN lyrics_synced TEXT',
+  'ALTER TABLE stem_sets ADD COLUMN lyrics_plain TEXT',
+  'ALTER TABLE stem_sets ADD COLUMN lyrics_offset REAL',
+  'ALTER TABLE stem_sets ADD COLUMN lyrics_instrumental INTEGER',
+  'ALTER TABLE stem_sets ADD COLUMN lyrics_retimed TEXT',
+  'ALTER TABLE stem_sets ADD COLUMN speed REAL NOT NULL DEFAULT 1',
+  'ALTER TABLE stem_sets ADD COLUMN sample_rate INTEGER',
+  'ALTER TABLE stem_sets ADD COLUMN folder TEXT',
+  `CREATE UNIQUE INDEX stem_sets_stemdeck_job_id ON stem_sets (stemdeck_job_id)
+   WHERE stemdeck_job_id IS NOT NULL`,
+  'ALTER TABLE stems ADD COLUMN pitch REAL NOT NULL DEFAULT 0',
+  'ALTER TABLE stems ADD COLUMN waveform_path TEXT',
+  'ALTER TABLE stems ADD COLUMN frames INTEGER',
+];
+
 export const BASELINE: readonly string[] = [
   ...V11_BASELINE,
   ...MIGRATE_V11_TO_V12,
   ...MIGRATE_V12_TO_V13,
   ...MIGRATE_V13_TO_V14,
+  ...MIGRATE_V14_TO_V15,
 ];
 
 // SQLite cannot ADD a NOT NULL column without a constant default, so migrated
@@ -339,7 +369,8 @@ const UPGRADES: readonly {
   { to: V11_SCHEMA_VERSION, steps: MIGRATE_V10_TO_V11 },
   { to: V12_SCHEMA_VERSION, steps: MIGRATE_V11_TO_V12 },
   { to: V13_SCHEMA_VERSION, steps: MIGRATE_V12_TO_V13 },
-  { to: SCHEMA_VERSION, steps: MIGRATE_V13_TO_V14 },
+  { to: V14_SCHEMA_VERSION, steps: MIGRATE_V13_TO_V14 },
+  { to: SCHEMA_VERSION, steps: MIGRATE_V14_TO_V15 },
 ];
 
 function upgradeSteps(from: number): readonly string[] {

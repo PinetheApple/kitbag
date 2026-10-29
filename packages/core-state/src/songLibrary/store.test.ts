@@ -1,129 +1,19 @@
 import { createSetlistRepository } from '@kitbag/core-db/src/setlist-repository';
-import { createSongLibraryRepository } from '@kitbag/core-db/src/song-library-repository';
 import { createSongPresetRepository } from '@kitbag/core-db/src/song-preset-repository';
-import { openTestDatabase } from '@kitbag/core-db/src/sqlite.test-helper';
-import type {
-  AnalysisResult,
-  ImportedAudio,
-  PickedDocument,
-} from '@kitbag/core-native';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { ImportedAudio } from '@kitbag/core-native';
+import { describe, expect, it, vi } from 'vitest';
 
-import { analysisFailure, filterRows, songBadge, summarize } from './logic.ts';
-import type { LibraryFiles } from './runtime.ts';
-import { createSongLibraryStore } from './store.ts';
-
-const handles: ReturnType<typeof openTestDatabase>[] = [];
-
-afterEach(() => {
-  for (const { connection } of handles.splice(0)) connection.close();
-});
-
-const MP3: PickedDocument = {
-  uri: 'content://everlong',
-  name: 'Everlong.mp3',
-  mimeType: 'audio/mpeg',
-};
-
-const CODES = {
-  songsDir: 'songs',
-  failureMissingFile: 'missing-file',
-  failureUnsupported: 'unsupported',
-  failureInterrupted: 'interrupted',
-  failureInternal: 'internal',
-};
-
-const SONG_PATH = 'songs/f1/Everlong.mp3';
-
-function result(fields: Partial<AnalysisResult> = {}): AnalysisResult {
-  return {
-    relativePath: SONG_PATH,
-    ok: true,
-    error: '',
-    bpm: 158,
-    beats: [0.5, 1],
-    downbeats: [0],
-    waveformRelativePath: 'songs/f1/Everlong.kwav',
-    ...fields,
-  };
-}
-
-type Native = Omit<LibraryFiles, 'importAudio' | 'pickDocument'>;
-
-function fakeFiles(
-  overrides: Partial<Pick<LibraryFiles, 'importAudio' | 'pickDocument'>> = {},
-) {
-  const listeners = new Set<(r: AnalysisResult) => void>();
-  const stored: AnalysisResult[] = [];
-  const native = {
-    constants: vi.fn(() => CODES),
-    enqueueAnalysis: vi.fn<Native['enqueueAnalysis']>(),
-    cancelAnalysis: vi.fn<Native['cancelAnalysis']>(),
-    acknowledgeAnalysis: vi.fn<Native['acknowledgeAnalysis']>(),
-    pendingAnalyses: vi.fn(() => Promise.resolve([...stored])),
-    onAnalysis: vi.fn((listener: (r: AnalysisResult) => void) => {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    }),
-    pickFolder: vi.fn(() =>
-      Promise.resolve({ uri: 'content://tree', name: 'Redbone' }),
-    ),
-    deleteLibraryFile: vi.fn<Native['deleteLibraryFile']>(() =>
-      Promise.resolve(),
-    ),
-    deleteSongFolder: vi.fn<Native['deleteSongFolder']>(() =>
-      Promise.resolve(),
-    ),
-  };
-  const files = {
-    ...native,
-    pickDocument: vi.fn(() => Promise.resolve<PickedDocument | null>(MP3)),
-    importAudio: vi.fn((_uri: string, dir: string): Promise<ImportedAudio> =>
-      Promise.resolve({
-        relativePath: `${dir}/Everlong.mp3`,
-        title: 'Everlong',
-        artist: 'Foo Fighters',
-        durationSec: 250,
-      }),
-    ),
-    ...overrides,
-  };
-  const emit = (r: AnalysisResult) => {
-    for (const listener of listeners) listener(r);
-  };
-  return { files, emit, stored, listeners };
-}
-
-function setup(fake = fakeFiles()) {
-  const handle = openTestDatabase();
-  handles.push(handle);
-  const records = createSongLibraryRepository(handle);
-  let songs = 0;
-  const store = createSongLibraryStore({
-    records: () => records,
-    files: () => fake.files,
-    newSongUuid: () => `f${String((songs += 1))}`,
-  });
-  return { store, records, handle, ...fake };
-}
-
-type Store = ReturnType<typeof setup>['store'];
-
-const badges = (store: Store) =>
-  store
-    .getState()
-    .rows.map((row) =>
-      row.kind === 'song' ? [row.title, songBadge(row)] : [row.title],
-    );
-
-const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
-
-async function importOne(store: Store) {
-  await store.getState().importSong();
-  const [row] = store.getState().rows;
-  if (row === undefined) throw new Error('no row');
-  return row;
-}
+import { analysisFailure, filterRows, summarize } from './logic.ts';
+import {
+  badges,
+  fakeFiles,
+  importOne,
+  MP3,
+  result,
+  settle,
+  setup,
+  SONG_PATH,
+} from './store.test-helper.ts';
 
 describe('song library store', () => {
   it('shows an import analyzing at once, then its grid when native reports', async () => {
@@ -251,32 +141,6 @@ describe('song library store', () => {
     vi.spyOn(records, 'applyAnalysis').mockRejectedValue(new Error('db'));
     await store.getState().receiveAnalysis(result());
     expect(files.acknowledgeAnalysis).not.toHaveBeenCalled();
-  });
-
-  it('hands a zip or a folder to stem import without touching the library', async () => {
-    const { store, files } = setup(
-      fakeFiles({
-        pickDocument: vi.fn(() =>
-          Promise.resolve({
-            uri: 'content://zip',
-            name: 'Redbone.stemdeck.zip',
-            mimeType: 'application/zip',
-          }),
-        ),
-      }),
-    );
-    await store.getState().importSong();
-    expect(store.getState().notice).toEqual({
-      kind: 'stemImport',
-      name: 'Redbone.stemdeck.zip',
-    });
-    await store.getState().importStemFolder();
-    expect(store.getState().notice).toEqual({
-      kind: 'stemImport',
-      name: 'Redbone',
-    });
-    expect(files.importAudio).not.toHaveBeenCalled();
-    expect(store.getState().rows).toEqual([]);
   });
 
   it('does nothing when the picker is cancelled', async () => {

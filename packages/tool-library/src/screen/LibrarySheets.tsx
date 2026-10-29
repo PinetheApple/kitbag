@@ -9,6 +9,8 @@ import { useSongLibrary, type LibraryRow } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
+import { replaceText } from '../logic/notices.ts';
+
 const useStyles = createThemedStyles(() => ({
   stack: { gap: space.controlGap },
   row: { flexDirection: 'row', gap: space.controlGap },
@@ -81,8 +83,8 @@ function ImportSheet({ menu, bottomInset }: SheetProps) {
         />
       </View>
       <SheetHint>
-        An audio file becomes a song. Stem songs, from a folder or a .zip,
-        arrive with stem import; for now they are named and not added.
+        An audio file becomes a song. A StemDeck song bundle, as a .zip or its
+        extracted folder, becomes a stem song.
       </SheetHint>
     </Sheet>
   );
@@ -148,12 +150,45 @@ function DeleteSheet({ menu, bottomInset }: SheetProps) {
   );
 }
 
+function ReplaceSheet({ bottomInset }: Pick<SheetProps, 'bottomInset'>) {
+  const styles = useStyles();
+  const prompt = useSongLibrary((s) => s.replacePrompt);
+  const confirmReplace = useSongLibrary((s) => s.confirmReplace);
+  const cancel = useSongLibrary((s) => s.cancelReplace);
+  const confirm = useCallback(() => {
+    void confirmReplace();
+  }, [confirmReplace]);
+  const title = prompt?.title ?? '';
+  return (
+    <Sheet
+      visible={prompt !== null}
+      title={`Replace “${title}”?`}
+      dismissLabel="Keep the current song"
+      bottomInset={bottomInset}
+      onDismiss={cancel}
+    >
+      <SheetHint>{replaceText(prompt?.name ?? '', title)}</SheetHint>
+      <View style={styles.row}>
+        <Button fill variant="ghost" label="Keep current" onPress={cancel} />
+        <Button
+          fill
+          variant="destructive"
+          label="Replace"
+          accessibilityLabel={`Replace ${title}`}
+          onPress={confirm}
+        />
+      </View>
+    </Sheet>
+  );
+}
+
 export function LibrarySheets(props: SheetProps) {
   return (
     <>
       <ImportSheet {...props} />
       <ActionsSheet {...props} />
       <DeleteSheet {...props} />
+      <ReplaceSheet bottomInset={props.bottomInset} />
     </>
   );
 }

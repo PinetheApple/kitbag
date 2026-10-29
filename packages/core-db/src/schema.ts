@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import {
   customType,
   integer,
@@ -9,6 +10,7 @@ import {
 
 import { ANALYSIS_STATUS, ANALYSIS_STATUSES } from './analysis-status';
 import { DEFAULT_DENOMINATOR, RAMP_UNITS } from './preset-rules';
+import { STEM_SET_SOURCE, STEM_SET_SOURCES } from './stem-set-source';
 import { INSTRUMENTS } from './tuning-rules';
 
 function toBytes(value: unknown): Uint8Array {
@@ -134,12 +136,43 @@ export const practiceSessions = sqliteTable('practice_sessions', {
   uuid: text('uuid').notNull(),
 });
 
-export const stemSets = sqliteTable('stem_sets', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  name: text('name').notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  uuid: text('uuid').notNull(),
-});
+export const stemSets = sqliteTable(
+  'stem_sets',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    name: text('name').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+    uuid: text('uuid').notNull(),
+    source: text('source', { enum: STEM_SET_SOURCES })
+      .notNull()
+      .default(STEM_SET_SOURCE.folder),
+    stemdeckJobId: text('stemdeck_job_id'),
+    key: text('key'),
+    scale: text('scale'),
+    keyConfidence: real('key_confidence'),
+    bpm: real('bpm'),
+    loudnessLufs: real('loudness_lufs'),
+    tempoStability: real('tempo_stability'),
+    beatGrid: bytes('beat_grid'),
+    // Little-endian int32 pairs: beat index into beatGrid, beats per bar.
+    barMarks: bytes('bar_marks'),
+    sections: text('sections'),
+    lyricsSynced: text('lyrics_synced'),
+    lyricsPlain: text('lyrics_plain'),
+    lyricsOffset: real('lyrics_offset'),
+    // Null when the bundle had no lyrics at all, not just none to show.
+    lyricsInstrumental: integer('lyrics_instrumental', { mode: 'boolean' }),
+    lyricsRetimed: text('lyrics_retimed'),
+    speed: real('speed').notNull().default(1),
+    sampleRate: integer('sample_rate'),
+    folder: text('folder'),
+  },
+  (table) => [
+    uniqueIndex('stem_sets_stemdeck_job_id')
+      .on(table.stemdeckJobId)
+      .where(sql`stemdeck_job_id IS NOT NULL`),
+  ],
+);
 
 export const stems = sqliteTable('stems', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -156,6 +189,9 @@ export const stems = sqliteTable('stems', {
   muted: integer('muted', { mode: 'boolean' }).notNull(),
   soloed: integer('soloed', { mode: 'boolean' }).notNull(),
   sortOrder: integer('sort_order').notNull(),
+  pitch: real('pitch').notNull().default(0),
+  waveformPath: text('waveform_path'),
+  frames: integer('frames'),
 });
 
 export const subdivisionAccents = sqliteTable('subdivision_accents', {

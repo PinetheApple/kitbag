@@ -1,6 +1,7 @@
 import { countLabel } from '@kitbag/core-design';
 import type {
   AnalysisFailure,
+  BundleRefusal,
   FailureKind,
   LibraryNotice,
 } from '@kitbag/core-state';
@@ -10,13 +11,41 @@ export interface NoticeText {
   readonly text: string;
 }
 
+function refusalText(name: string, refusal: BundleRefusal): NoticeText {
+  const song = `“${name}”`;
+  switch (refusal.reason) {
+    case 'notABundle':
+      return {
+        status: 'Not a StemDeck song',
+        text: `${song} is not a StemDeck song bundle, so nothing was added. Export the song from StemDeck and import that .zip or its folder.`,
+      };
+    case 'version':
+      return {
+        status: 'Unsupported bundle version',
+        text: `${song} is StemDeck bundle version ${String(refusal.version)}; this Kitbag reads version ${String(refusal.supportedVersion)}, so nothing was added.`,
+      };
+    case 'tooManyStems':
+      return {
+        status: 'Too many stems',
+        text: `${song} has ${String(refusal.stemCount)} stems; Kitbag plays up to ${String(refusal.maxStems)}. Nothing was added. Export it from StemDeck with fewer stems.`,
+      };
+    case 'noSpace':
+      return {
+        status: 'Not enough space',
+        text: `There is not enough free space on this phone for ${song}, so nothing was added. Free some space, then try again.`,
+      };
+    case 'unreadable':
+      return {
+        status: 'Song bundle unreadable',
+        text: `${song} could not be read; it may be damaged or incomplete. Nothing was added. Export it from StemDeck again.`,
+      };
+  }
+}
+
 export function noticeText(notice: LibraryNotice): NoticeText {
   switch (notice.kind) {
-    case 'stemImport':
-      return {
-        status: 'Stem songs not yet supported',
-        text: `“${notice.name}” looks like a stem song: a folder or a .zip is read as one. Stem song import arrives with the stem player; nothing was added.`,
-      };
+    case 'bundleRefused':
+      return refusalText(notice.name, notice.refusal);
     case 'copyFailed':
       return {
         status: 'Import failed',
@@ -82,4 +111,8 @@ export function copyingText(names: readonly string[]): string {
   if (names.length === 1 && only !== undefined)
     return `Copying “${only}” into your library…`;
   return `Copying ${countLabel(names.length, 'file', 'files')} into your library…`;
+}
+
+export function replaceText(name: string, title: string): string {
+  return `“${name}” is the same StemDeck song as “${title}” in your library. Replacing it removes that song’s stems, analysis and mix, and adds this copy. This cannot be undone.`;
 }

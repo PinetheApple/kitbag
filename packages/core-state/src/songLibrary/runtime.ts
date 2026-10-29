@@ -2,9 +2,11 @@ import type { SongLibraryRepository } from '@kitbag/core-db';
 import type {
   AnalysisResult,
   ImportedAudio,
+  ImportedStemBundle,
   LibraryConstants,
   PickedDocument,
   PickedFolder,
+  StemBundleCheck,
 } from '@kitbag/core-native';
 
 export interface LibraryFiles {
@@ -28,6 +30,16 @@ export interface LibraryFiles {
   ) => () => void;
   readonly deleteLibraryFile: (relativePath: string) => Promise<void>;
   readonly deleteSongFolder: (folderName: string) => Promise<void>;
+  readonly checkStemBundle: (
+    uri: string,
+    isFolder: boolean,
+  ) => Promise<StemBundleCheck>;
+  readonly importStemBundle: (
+    uri: string,
+    isFolder: boolean,
+  ) => Promise<ImportedStemBundle>;
+  readonly listStemFolders: () => Promise<readonly string[]>;
+  readonly deleteStemFolder: (folderName: string) => Promise<void>;
 }
 
 export type SongLibraryRecords = Pick<
@@ -39,6 +51,10 @@ export type SongLibraryRecords = Pick<
   | 'applyAnalysis'
   | 'deleteSong'
   | 'deleteStemSet'
+  | 'findStemSetByJobId'
+  | 'insertStemBundle'
+  | 'replaceStemBundle'
+  | 'listStemSetFolders'
 >;
 
 export interface SongLibraryRuntime {

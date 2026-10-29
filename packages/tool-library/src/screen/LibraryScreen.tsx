@@ -105,7 +105,7 @@ function NoticeCard() {
   const dismiss = useSongLibrary((s) => s.dismissNotice);
   if (notice === null) return null;
   const { status, text } = noticeText(notice);
-  const tone = notice.kind === 'stemImport' ? 'warning' : 'danger';
+  const tone = notice.kind === 'bundleRefused' ? 'warning' : 'danger';
   return (
     <Card emphasis={tone} statusIcon="warning" statusLabel={status}>
       <View style={styles.cardBody}>

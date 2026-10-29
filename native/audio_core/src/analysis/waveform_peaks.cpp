@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 
 namespace kitbag {
 
@@ -9,16 +10,37 @@ namespace {
 
 // Full-scale for signed 16-bit PCM, scaling float samples in [-1, 1].
 constexpr float kInt16Max = 32767.0f;
+constexpr uint32_t kKwavVersion = 1;
 
-// A malformed file can decode to NaN, +/-inf or values far outside [-1, 1]
-// (measured up to 3.19e38). float->int16 of any of those is undefined
-// behaviour, so map non-finite to 0 and clamp before the cast — deterministic.
-int16_t Quantize(float value) {
+}  // namespace
+
+// A malformed file can decode to NaN or up to 3.19e38 (measured), and
+// float->int16 out of range is undefined behaviour.
+int16_t QuantizePeak(float value) {
   if (!std::isfinite(value)) return 0;
   return static_cast<int16_t>(std::clamp(value, -1.0f, 1.0f) * kInt16Max);
 }
 
-}  // namespace
+// Layout: magic "KWAV" (4 bytes), version(uint32), channels(uint32),
+// total_frames(int64), chunk_count(uint32), data(int16[]).
+bool WriteKwav(const char* path, const WaveformPeaks& peaks) {
+  std::FILE* f = std::fopen(path, "wb");
+  if (f == nullptr) return false;
+  const auto channels = static_cast<uint32_t>(peaks.channels);
+  const int64_t total = peaks.total_frames;
+  const auto chunks = static_cast<uint32_t>(peaks.chunk_count);
+  bool ok = std::fwrite("KWAV", 1, 4, f) == 4;
+  ok = ok && std::fwrite(&kKwavVersion, sizeof(kKwavVersion), 1, f) == 1;
+  ok = ok && std::fwrite(&channels, sizeof(channels), 1, f) == 1;
+  ok = ok && std::fwrite(&total, sizeof(total), 1, f) == 1;
+  ok = ok && std::fwrite(&chunks, sizeof(chunks), 1, f) == 1;
+  ok = ok &&
+       std::fwrite(peaks.data.data(), sizeof(int16_t), peaks.data.size(), f) ==
+           peaks.data.size();
+  ok = std::fclose(f) == 0 && ok;
+  if (!ok) std::remove(path);
+  return ok;
+}
 
 WaveformPeakAccumulator::WaveformPeakAccumulator(
     int64_t total_frames,
@@ -30,7 +52,9 @@ WaveformPeakAccumulator::WaveformPeakAccumulator(
   peaks_.channels = channels;
   peaks_.chunk_count = static_cast<int>(total_frames / chunk_size_);
   peaks_.total_frames = total_frames;
-  peaks_.data.resize(static_cast<size_t>(peaks_.chunk_count) * channels * 2);
+  peaks_.data.resize(
+      static_cast<size_t>(peaks_.chunk_count) * channels * kPeakValuesPerChannel
+  );
   min_.resize(channels);
   max_.resize(channels);
   ResetSpan();
@@ -56,11 +80,12 @@ void WaveformPeakAccumulator::ResetSpan() {
 }
 
 void WaveformPeakAccumulator::CloseSpan() {
-  int16_t* out =
-      &peaks_.data[static_cast<size_t>(chunk_) * peaks_.channels * 2];
+  const size_t start =
+      static_cast<size_t>(chunk_) * peaks_.channels * kPeakValuesPerChannel;
+  int16_t* out = &peaks_.data[start];
   for (int ch = 0; ch < peaks_.channels; ++ch) {
-    out[ch * 2] = Quantize(min_[ch]);
-    out[ch * 2 + 1] = Quantize(max_[ch]);
+    out[ch * kPeakValuesPerChannel] = QuantizePeak(min_[ch]);
+    out[ch * kPeakValuesPerChannel + 1] = QuantizePeak(max_[ch]);
   }
   ++chunk_;
   ResetSpan();

@@ -19,6 +19,10 @@ const records: SongLibraryRecords = {
   applyAnalysis: (result) => library().applyAnalysis(result),
   deleteSong: (id) => library().deleteSong(id),
   deleteStemSet: (id) => library().deleteStemSet(id),
+  findStemSetByJobId: (jobId) => library().findStemSetByJobId(jobId),
+  insertStemBundle: (bundle) => library().insertStemBundle(bundle),
+  replaceStemBundle: (bundle) => library().replaceStemBundle(bundle),
+  listStemSetFolders: () => library().listStemSetFolders(),
 };
 
 // Resolved per call: getKitbagLibrary throws in a build without the module.
@@ -52,6 +56,13 @@ const files: LibraryFiles = {
     getKitbagLibrary().deleteLibraryFile(relativePath),
   deleteSongFolder: (folderName) =>
     getKitbagLibrary().deleteSongFolder(folderName),
+  checkStemBundle: (uri, isFolder) =>
+    getKitbagLibrary().checkStemBundle(uri, isFolder),
+  importStemBundle: (uri, isFolder) =>
+    getKitbagLibrary().importStemBundle(uri, isFolder),
+  listStemFolders: () => getKitbagLibrary().listStemFolders(),
+  deleteStemFolder: (folderName) =>
+    getKitbagLibrary().deleteStemFolder(folderName),
 };
 
 configureSongLibrary({ records, files });

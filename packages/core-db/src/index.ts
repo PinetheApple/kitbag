@@ -5,6 +5,19 @@ export {
   type SongPresetRepository,
 } from './client';
 export type { Preferences } from './preferences';
+export type {
+  BarMark,
+  BundleStem,
+  ExistingStemSet,
+  NewStemBundle,
+  StemBundleReplacement,
+  StemSetFiles,
+  StemSetRecord,
+  StoredLyrics,
+  StoredSection,
+  StoredStem,
+} from './stem-bundle-repository';
+export { STEM_SET_SOURCE, type StemSetSource } from './stem-set-source';
 export { ANALYSIS_STATUS, type AnalysisStatus } from './analysis-status';
 export type {
   AnalysisResultRecord,

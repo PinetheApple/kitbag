@@ -11,6 +11,7 @@ import {
   songRemovals,
   summarize,
 } from './logic.ts';
+import { CODES as SHARED_CODES } from './store.test-helper.ts';
 
 const created = new Date(0);
 
@@ -143,13 +144,7 @@ describe('import helpers', () => {
   });
 });
 
-const CODES = {
-  songsDir: 'tracks',
-  failureMissingFile: 'missing-file',
-  failureUnsupported: 'unsupported',
-  failureInterrupted: 'interrupted',
-  failureInternal: 'internal',
-};
+const CODES = { ...SHARED_CODES, songsDir: 'tracks' };
 
 describe('songRemovals', () => {
   const uuid = '0b8e2c6a-1f3d-4c5e-9a7b-2d4f6e8a0c1b';

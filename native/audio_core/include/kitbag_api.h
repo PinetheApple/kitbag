@@ -353,6 +353,16 @@ KB_EXPORT kb_result kb_analyze_song(
     const char* waveform_dir
 );
 
+/* `peaks` is chunk_count * channels interleaved [min, max] pairs; chunk_count
+ * may not exceed total_frames. A failed write leaves no file. */
+KB_EXPORT kb_result kb_waveform_write_peaks(
+    const char* path,
+    int32_t channels,
+    int64_t total_frames,
+    const float* peaks,
+    int32_t chunk_count
+);
+
 #ifdef __cplusplus
 }
 #endif

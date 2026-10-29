@@ -30,6 +30,8 @@ object SongAnalyzer {
 
   private external fun nativeAnalyzeSong(path: String, waveformDir: String): NativeSongAnalysis
 
+  fun waveformPath(waveformDir: File, song: File): String = nativeWaveformPath(waveformDir.path, song.path)
+
   private external fun nativeWaveformPath(waveformDir: String, songPath: String): String
 
   init {

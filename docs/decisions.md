@@ -309,3 +309,17 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   keeps the previous grid and still counts as analyzed. The Home Songs count excludes stem
   songs, which have their own tile. Failure copy distinguishes missing file, unsupported
   format, interrupted and failed; native text never reaches the screen. **[recorded]**
+
+- **2026-10-28 · How a StemDeck song is stored (§7.8, §11.2, #136)** — Integrator calls,
+  schema v15. Bar marks are a BLOB of little-endian int32 pairs (beat index into the
+  grid, beats per bar), packed like `downbeat_indices`, because they index the Float32
+  grid and go to native with it. Sections are a JSON array in a TEXT column: they carry
+  names and colours, nothing queries inside them, and a reader skips an entry it does not
+  recognise. `lyrics_instrumental` is NULL only when the bundle had no `lyrics.json`, so
+  "no lyrics" and "instrumental" stay apart. The beat grid is stored whole, even past
+  `KB_MAX_GRID_BEATS`; capping it is the load path's call, open in #161. A refused bundle
+  copies nothing. A re-import asks first and replaces in one transaction, then deletes
+  the old folder; a failed add deletes the new one. Stems are stored at the bundle's own
+  sample rate; `kb_mixer_load_track` resamples them to the engine rate as it streams the
+  decode (§4.1). That is how §7.1/§7.8's "resample on ingest" is met: there is no second
+  resampler at import. **[recorded]**

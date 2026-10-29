@@ -4,7 +4,6 @@
 
 #include <cmath>
 #include <cstdint>
-#include <cstdio>
 #include <limits>
 #include <memory>
 #include <string>
@@ -132,21 +131,6 @@ kb_result ReadSecondPass(
   return frames == expected_frames ? KB_OK : KB_ERROR_INTERNAL;
 }
 
-// Layout: magic "KWAV" (4 bytes), version(uint32), channels(uint32),
-// total_frames(int64), chunk_count(uint32), data(int16[]).
-void WritePeaks(std::FILE* f, const WaveformPeaks& peaks) {
-  const uint32_t version = 1;
-  const auto channels_u32 = static_cast<uint32_t>(peaks.channels);
-  const int64_t total = peaks.total_frames;
-  const auto chunks = static_cast<uint32_t>(peaks.chunk_count);
-  std::fwrite("KWAV", 1, 4, f);
-  std::fwrite(&version, sizeof(version), 1, f);
-  std::fwrite(&channels_u32, sizeof(channels_u32), 1, f);
-  std::fwrite(&total, sizeof(total), 1, f);
-  std::fwrite(&chunks, sizeof(chunks), 1, f);
-  std::fwrite(peaks.data.data(), sizeof(int16_t), peaks.data.size(), f);
-}
-
 void WriteWaveformSidecar(
     const char* path,
     const char* waveform_dir,
@@ -154,10 +138,7 @@ void WriteWaveformSidecar(
 ) {
   if (peaks.data.empty()) return;
   const std::string kwav_path = SidecarPath(waveform_dir, path);
-  std::FILE* f = std::fopen(kwav_path.c_str(), "wb");
-  if (f == nullptr) return;
-  WritePeaks(f, peaks);
-  std::fclose(f);
+  WriteKwav(kwav_path.c_str(), peaks);
 }
 
 }  // namespace

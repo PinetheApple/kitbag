@@ -14,9 +14,15 @@ export { getKitbagLibrary } from './NativeKitbagLibrary';
 export type {
   AnalysisResult,
   ImportedAudio,
+  ImportedStem,
+  ImportedStemBundle,
   LibraryConstants,
   PickedDocument,
   PickedFolder,
+  StemBundleBar,
+  StemBundleCheck,
+  StemBundleLyrics,
+  StemBundleSection,
 } from './NativeKitbagLibrary';
 
 // --- #30 (P2-A3) JSI HostObject: polled realtime reads (§13.2, §13.3) --------
