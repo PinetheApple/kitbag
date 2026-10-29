@@ -323,3 +323,16 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   sample rate; `kb_mixer_load_track` resamples them to the engine rate as it streams the
   decode (§4.1). That is how §7.1/§7.8's "resample on ingest" is met: there is no second
   resampler at import. **[recorded]**
+
+- **2026-10-30 · Metronome layout B supersedes the design file (§5.2, §5.3, §12, #175)** —
+  The owner chose layout B from `docs/research/ui-survey-metronome-stems.md` and approved
+  its reworked mockup, `docs/research/mockups/metronome-layouts.html` ("Chosen"), as the
+  design for #175, #56, #81, #82, #171, #172 and #173. Where it differs from
+  `design/kitbag-metronome.html` §02 the mockup wins: an app bar with Back; meter and
+  notation subdivision chips instead of the steppers card; beat dots on their own row with
+  a "1" marker; one status line for count-in, the mute cycle and the ramp; ramp, mute bars,
+  count-in, sound and poly in one Practice sheet instead of the four-chip row; a transport
+  of setlist, Play and Practice with no stopwatch key; a first-use swipe hint; no glow
+  behind the BPM numeral. This also settles #56's poly-off ruling: poly has no row on the
+  screen at all, it is armed in the Practice sheet and listed in the status line. The
+  value-by-value table is `docs/research/metronome-b-parity.md`. **[user]**
