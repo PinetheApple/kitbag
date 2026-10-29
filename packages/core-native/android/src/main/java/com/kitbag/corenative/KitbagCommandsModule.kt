@@ -5,12 +5,17 @@ import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
+import com.kitbag.corenative.library.LibraryPaths
+import com.kitbag.corenative.library.LibraryStorage
+import com.kitbag.corenative.library.UnsafeLibraryPathException
 import com.kitbag.corenative.transport.Playback
 import com.kitbag.corenative.transport.PracticeClock
 import com.kitbag.corenative.transport.TransportState
 
 class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   NativeKitbagCommandsSpec(reactContext) {
+
+  private val libraryBase = LibraryStorage.base(reactContext)
 
   init {
     val runtimePtr = reactContext.javaScriptContextHolder?.get() ?: 0L
@@ -89,6 +94,14 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     promise.resolve(nativeSetGrid(times, anchorFrame))
   }
 
+  override fun clearGrid() {
+    nativeClearGrid()
+  }
+
+  override fun metronomeFollowMixer(enabled: Boolean) {
+    nativeFollowMixer(enabled)
+  }
+
   override fun setBeats(beatsPerBar: Double, denominator: Double) {
     nativeSetBeats(beatsPerBar.toInt(), denominator.toInt())
   }
@@ -145,8 +158,62 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     nativeSetBarMute(enabled, playBars.toInt(), muteBars.toInt())
   }
 
-  override fun loadTrack(track: Double, path: String, promise: Promise) {
-    promise.resolve(nativeLoadTrack(track.toInt(), path))
+  override fun loadTrack(track: Double, relativePath: String, promise: Promise) {
+    val file = try {
+      LibraryPaths.resolve(libraryBase, relativePath)
+    } catch (e: UnsafeLibraryPathException) {
+      promise.reject(E_UNSAFE_PATH, "Track path escapes the library", e)
+      return
+    }
+    promise.resolve(nativeLoadTrack(track.toInt(), file.path))
+  }
+
+  override fun mixerUnloadTrack(track: Double) {
+    nativeUnloadTrack(track.toInt())
+  }
+
+  override fun mixerSetGain(track: Double, gain: Double) {
+    nativeMixerSetGain(track.toInt(), gain)
+  }
+
+  override fun mixerSetMute(track: Double, muted: Boolean) {
+    nativeMixerSetMute(track.toInt(), muted)
+  }
+
+  override fun mixerSetSolo(track: Double, soloed: Boolean) {
+    nativeMixerSetSolo(track.toInt(), soloed)
+  }
+
+  override fun mixerSetMasterGain(gain: Double) {
+    nativeMixerSetMasterGain(gain)
+  }
+
+  override fun mixerMasterGain(promise: Promise) {
+    promise.resolve(nativeMixerMasterGain())
+  }
+
+  override fun mixerPlay() {
+    nativeMixerPlay()
+  }
+
+  override fun mixerPause() {
+    nativeMixerPause()
+  }
+
+  override fun mixerStop() {
+    nativeMixerStop()
+  }
+
+  override fun mixerSeek(frame: Double) {
+    nativeMixerSeek(frame)
+  }
+
+  override fun mixerSetLoop(startFrame: Double, endFrame: Double, promise: Promise) {
+    promise.resolve(nativeMixerSetLoop(startFrame, endFrame))
+  }
+
+  override fun mixerClearLoop(promise: Promise) {
+    promise.resolve(nativeMixerClearLoop())
   }
 
   override fun tunerStart(promise: Promise) {
@@ -207,6 +274,20 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   )
   private external fun nativeSetBarMute(enabled: Boolean, playBars: Int, muteBars: Int)
   private external fun nativeLoadTrack(track: Int, path: String): Int
+  private external fun nativeUnloadTrack(track: Int)
+  private external fun nativeMixerSetGain(track: Int, gain: Double)
+  private external fun nativeMixerSetMute(track: Int, muted: Boolean)
+  private external fun nativeMixerSetSolo(track: Int, soloed: Boolean)
+  private external fun nativeMixerSetMasterGain(gain: Double)
+  private external fun nativeMixerMasterGain(): Double
+  private external fun nativeMixerPlay()
+  private external fun nativeMixerPause()
+  private external fun nativeMixerStop()
+  private external fun nativeMixerSeek(frame: Double)
+  private external fun nativeMixerSetLoop(startFrame: Double, endFrame: Double): Int
+  private external fun nativeMixerClearLoop(): Int
+  private external fun nativeClearGrid()
+  private external fun nativeFollowMixer(enabled: Boolean)
   private external fun nativeTunerStart(): Int
   private external fun nativeTunerStop()
   private external fun nativeTunerSetTuning(instrument: Int, stringMidis: IntArray): Int
@@ -216,6 +297,8 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private external fun nativeTunerResetNotePresence(pauseMs: Double): Int
 
   companion object {
+    private const val E_UNSAFE_PATH = "E_UNSAFE_PATH"
+
     init {
       System.loadLibrary("kitbag_jsi")
     }

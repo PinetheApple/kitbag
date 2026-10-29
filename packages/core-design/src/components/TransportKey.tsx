@@ -4,6 +4,7 @@ import type { IconName } from '../icons.ts';
 import { opacity, radius, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
+import { stemPlayer } from '../stemPlayerRoles.ts';
 import { hitSlopFor } from '../touchTarget.ts';
 import { InlineIcon } from './IconGlyph.tsx';
 
@@ -18,7 +19,10 @@ export type TransportKeyProps = TransportKeyContent & {
   readonly onPress: () => void;
   readonly selected?: boolean;
   readonly disabled?: boolean;
+  readonly size?: TransportKeySize;
 };
+
+export type TransportKeySize = 'standard' | 'dock';
 
 const useStyles = createThemedStyles((theme) => ({
   key: {
@@ -31,6 +35,11 @@ const useStyles = createThemedStyles((theme) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  dockKey: {
+    minWidth: stemPlayer.transportKey,
+    minHeight: stemPlayer.transportKey,
+  },
+  dockGlyph: textStyle(textRoles.dockKey),
   selected: {
     backgroundColor: theme.activeControlFill,
     borderColor: theme.color.accentDim,
@@ -58,8 +67,15 @@ export function TransportKey({
   onPress,
   selected = false,
   disabled = false,
+  size: keySize = 'standard',
 }: TransportKeyProps) {
   const styles = useStyles();
+  const dock = keySize === 'dock';
+  const glyphStyle = [
+    styles.glyph,
+    dock && styles.dockGlyph,
+    selected && styles.glyphSelected,
+  ];
   return (
     <Pressable
       accessibilityRole="button"
@@ -68,21 +84,17 @@ export function TransportKey({
       disabled={disabled}
       style={[
         styles.key,
+        dock && styles.dockKey,
         selected && styles.selected,
         disabled && styles.disabled,
       ]}
-      hitSlop={HIT_SLOP}
+      hitSlop={dock ? 0 : HIT_SLOP}
       onPress={onPress}
     >
       {icon === undefined ? (
-        <Text style={[styles.glyph, selected && styles.glyphSelected]}>
-          {text}
-        </Text>
+        <Text style={glyphStyle}>{text}</Text>
       ) : (
-        <InlineIcon
-          name={icon}
-          style={[styles.glyph, selected && styles.glyphSelected]}
-        />
+        <InlineIcon name={icon} style={glyphStyle} />
       )}
     </Pressable>
   );

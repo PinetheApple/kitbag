@@ -6,6 +6,7 @@ import {
   notificationStepAfterAppChange,
   shownAfterNativeChange,
   storePatchFor,
+  transportActive,
   type TransportShown,
   type TransportSource,
 } from './transportSync';
@@ -170,5 +171,13 @@ describe('storePatchFor', () => {
       bpm: 100,
       ramp: { ...ramp, enabled: true },
     });
+  });
+});
+
+describe('transportActive', () => {
+  it('counts a metronome paused behind its notification as active', () => {
+    expect(transportActive(false, pausedShown)).toBe(true);
+    expect(transportActive(true, undefined)).toBe(true);
+    expect(transportActive(false, undefined)).toBe(false);
   });
 });

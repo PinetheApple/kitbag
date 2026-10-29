@@ -43,6 +43,8 @@ export interface Spec extends TurboModule {
     beatTimesSec: readonly Double[],
     anchorFrame: Double,
   ): Promise<number>;
+  clearGrid(): void;
+  metronomeFollowMixer(enabled: boolean): void;
 
   setBeats(beatsPerBar: Int32, denominator: Int32): void;
   setSubdivision(subdivision: Int32): void;
@@ -66,7 +68,19 @@ export interface Spec extends TurboModule {
   ): void;
   setBarMute(enabled: boolean, playBars: Int32, muteBars: Int32): void;
 
-  loadTrack(track: Int32, path: string): Promise<number>;
+  loadTrack(track: Int32, relativePath: string): Promise<number>;
+  mixerUnloadTrack(track: Int32): void;
+  mixerSetGain(track: Int32, gain: Double): void;
+  mixerSetMute(track: Int32, muted: boolean): void;
+  mixerSetSolo(track: Int32, soloed: boolean): void;
+  mixerSetMasterGain(gain: Double): void;
+  mixerMasterGain(): Promise<number>;
+  mixerPlay(): void;
+  mixerPause(): void;
+  mixerStop(): void;
+  mixerSeek(frame: Double): void;
+  mixerSetLoop(startFrame: Double, endFrame: Double): Promise<number>;
+  mixerClearLoop(): Promise<number>;
 
   // --- Tuner (kitbag_tuner_api.h) ------------------------------------------
   //

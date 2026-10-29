@@ -43,6 +43,8 @@ export interface NewStemBundle {
   readonly uuid: string;
   readonly jobId: string;
   readonly title: string;
+  readonly songTitle: string | null;
+  readonly artist: string | null;
   readonly folder: string;
   readonly sampleRate: number;
   readonly channels: number;
@@ -92,6 +94,13 @@ export interface ExistingStemSet {
   readonly title: string;
 }
 
+export interface StemMix {
+  readonly id: number;
+  readonly volume: number;
+  readonly muted: boolean;
+  readonly soloed: boolean;
+}
+
 export interface StemBundleReplacement {
   readonly id: number;
   readonly replaced: StemSetFiles | null;
@@ -131,6 +140,8 @@ function setValues(bundle: NewStemBundle) {
   const { lyrics } = bundle;
   return {
     name: bundle.title,
+    songTitle: bundle.songTitle,
+    artist: bundle.artist,
     createdAt: new Date(),
     uuid: bundle.uuid,
     source: STEM_SET_SOURCE.stemdeck,
@@ -274,6 +285,8 @@ export async function readStemSet(
     id: row.id,
     uuid: row.uuid,
     title: row.name,
+    songTitle: row.songTitle,
+    artist: row.artist,
     source: row.source,
     jobId: row.stemdeckJobId,
     folder: row.folder,
@@ -301,4 +314,15 @@ export async function readStemSet(
     lyricsRetimed: row.lyricsRetimed,
     stems: await readStems(db, id),
   };
+}
+
+export async function saveStemMix(
+  db: Database,
+  mixes: readonly StemMix[],
+): Promise<void> {
+  for (const mix of mixes)
+    await db
+      .update(stems)
+      .set({ gain: mix.volume, muted: mix.muted, soloed: mix.soloed })
+      .where(eq(stems.id, mix.id));
 }

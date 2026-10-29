@@ -82,6 +82,8 @@ export type StemBundleLyrics = Readonly<{
 export type ImportedStemBundle = Readonly<{
   jobId: string;
   title: string;
+  songTitle: string | null;
+  artist: string | null;
   relativeDir: string;
   durationSec: Double;
   sampleRate: Int32;
@@ -134,6 +136,10 @@ export interface Spec extends TurboModule {
   importStemBundle(uri: string, isFolder: boolean): Promise<ImportedStemBundle>;
   listStemFolders(): Promise<readonly string[]>;
   deleteStemFolder(folderName: string): Promise<void>;
+  readWaveform(
+    relativePath: string,
+    buckets: Int32,
+  ): Promise<readonly Double[]>;
 }
 
 export function getKitbagLibrary(): Spec {

@@ -11,7 +11,9 @@ import {
   listStemSetFolders,
   readStemSet,
   replaceStemBundle,
+  saveStemMix,
   type NewStemBundle,
+  type StemMix,
 } from './stem-bundle-repository';
 
 export interface LibrarySongRow {
@@ -34,6 +36,10 @@ export interface LibraryStemSetRow {
   readonly title: string;
   readonly stemCount: number;
   readonly durationSec: number;
+  readonly bpm: number | null;
+  readonly key: string | null;
+  readonly scale: string | null;
+  readonly hasGrid: boolean;
   readonly createdAt: Date;
 }
 
@@ -114,6 +120,10 @@ async function stemSetRows(db: Database): Promise<LibraryStemSetRow[]> {
       title: stemSets.name,
       stemCount: count(stems.id),
       durationSec: max(stems.duration),
+      bpm: stemSets.bpm,
+      key: stemSets.key,
+      scale: stemSets.scale,
+      hasGrid: sql<number>`${stemSets.beatGrid} IS NOT NULL`,
       createdAt: stemSets.createdAt,
     })
     .from(stemSets)
@@ -123,6 +133,7 @@ async function stemSetRows(db: Database): Promise<LibraryStemSetRow[]> {
     ...row,
     kind: 'stems',
     durationSec: row.durationSec ?? 0,
+    hasGrid: row.hasGrid !== 0,
   }));
 }
 
@@ -276,6 +287,8 @@ export function createSongLibraryRepository({
     replaceStemBundle: (bundle: NewStemBundle) =>
       transaction(() => replaceStemBundle(db, bundle)),
     readStemSet: (id: number) => serial(() => readStemSet(db, id)),
+    saveStemMix: (mixes: readonly StemMix[]) =>
+      transaction(() => saveStemMix(db, mixes)),
     listStemSetFolders: () => serial(() => listStemSetFolders(db)),
   };
 }

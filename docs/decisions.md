@@ -338,3 +338,34 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   not at a stem's own rate. §4.2.2 said source frames; the code never did, and a
   44.1 kHz stem on a 48 kHz engine showed the difference. SPEC and the header now say
   engine-rate frames. **[recorded]**
+
+- **2026-10-29 · The stem player takes the shared metronome (§7.3, D16, #137)** — There
+  is one engine metronome. Opening a stem song, and turning its Click on, stop the
+  metronome tool, running or paused behind its notification, through the metronome
+  store and dismiss that notification, so its Play cannot restart the click on the
+  stem grid. The follow-mode click itself stays the stem player's: the
+  metronome store is not told it is running, and leaving the stem player stops it and
+  clears the grid. **[recorded]**
+
+- **2026-10-29 · Stem player facts, badges and level chip (§7.2, §7.5, #137)** — The key
+  reads as uncertain below a key confidence of 50; the tempo reads steady at a
+  stability of 80 or more, else variable **[recorded]**. Library stem rows carry BPM,
+  key, GRID ✓ and STEMS ×N on a wrapping line under the title. Each stem row shows its
+  level as a dB chip; tapping it or the row opens that row's fader, one row at a time,
+  and the fader moves only on a drag **[user]**.
+
+- **2026-10-29 · The engine renders in slices of at most `kMaxBlockFrames` and sizes
+  read-ahead from the device callback (§4.4, #137)** — Each read-ahead ring holds twice
+  the callback width read at device init, capped at `kMaxReadAheadFrames`. The refill
+  thread cannot run between slices of one callback, so the ring must hold all of it.
+  Rings are sized once, so a reroute to a backend period wider than the ring (for
+  example a move to Bluetooth) can still underrun until the song is reloaded.
+  **[recorded]**
+
+- **2026-10-30 · Stem player layout (§7.2, §7.3, §12, #137)** — The owner chose variant C
+  ("Bottom dock") in `docs/research/mockups/stems-layouts.html`; for the stem player it
+  supersedes `design/kitbag-ui.html` §04. Deliberately out: the BPM and key chips' speed
+  and pitch actions (#138), count-in, and LUFS. Reset mix sets every stem and the master
+  to 0 dB with nothing muted or soloed, and saves the stems. On one stem, mute and solo
+  exclude each other: soloing a muted stem unmutes it, muting a soloed stem un-solos it.
+  **[user]**

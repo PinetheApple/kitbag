@@ -406,7 +406,9 @@ export default tseslint.config(
     files: [
       'packages/tool-metronome/src/**',
       'packages/tool-tuner/src/**',
+      'packages/tool-stems/src/**',
       'packages/core-design/src/**',
+      'packages/core-state/src/stemPlayer/**',
     ],
     rules: {
       '@typescript-eslint/no-use-before-define': [
