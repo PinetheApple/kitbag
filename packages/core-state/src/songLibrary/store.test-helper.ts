@@ -92,6 +92,8 @@ export function importedBundle(relativeDir: string): ImportedStemBundle {
       soloed: false,
       pitch: 0,
     })),
+    songTitle: null,
+    artist: null,
     bpm: 120,
     key: 'D',
     scale: 'major',

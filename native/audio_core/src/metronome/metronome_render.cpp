@@ -166,7 +166,8 @@ Metronome::AcquireGrid(uint64_t block_start_frame, uint32_t sample_rate) {
     // Changed, cleared, or the run just started or stopped: re-seed from where
     // the click is now, so beats that already fired are never revisited.
     observed_generation_ = view.generation;
-    if (view.grid != nullptr) {
+    follow_next_frame_ = kReseedFollow;
+    if (view.grid != nullptr && !follow_mixer_) {
       SeekGridCursor(
           *view.grid,
           GridSeconds(*view.grid, block_start_frame, sample_rate)
@@ -187,7 +188,8 @@ void Metronome::BeginPendingStart(
   BeginRun();
   has_pending_start_ = false;
   *tempo = BlockTempoFor(sample_rate);
-  if (view.grid == nullptr) return;
+  follow_next_frame_ = kReseedFollow;
+  if (view.grid == nullptr || follow_mixer_) return;
   // Seed at the anchor: the top-of-block re-seed already ran, and a cursor left
   // at the block start swallows every beat up to the anchor into one click.
   SeekGridCursor(*view.grid, GridSeconds(*view.grid, frame, sample_rate));
@@ -225,7 +227,7 @@ void Metronome::BeginAnchorExternal(
   running_flag_.store(true, std::memory_order_relaxed);
   counting_in_ = false;
   count_in_armed_ = false;
-  observed_generation_ = 0;  // re-seed the grid cursor if a grid is present
+  ReacquireGrid();
   SyncBarFromPosition();
   *tempo = BlockTempoFor(sample_rate);
 }
@@ -296,7 +298,10 @@ void Metronome::PublishBlockMirrors(
   if (!running_) {
     current_bpm_.store(bpm_, std::memory_order_relaxed);
   } else if (grid != nullptr) {
-    PublishGridMirrors(*grid, frame, sample_rate);
+    PublishGridMirrors(
+        *grid,
+        follow_mixer_ ? follow_seconds_ : GridSeconds(*grid, frame, sample_rate)
+    );
     current_poly_beat_.store(-1, std::memory_order_relaxed);
   } else {
     // Track `position`, not beat_position_, so the sweep, the LED and the
@@ -345,7 +350,8 @@ void Metronome::Render(
     uint32_t frame_count,
     uint32_t sample_rate,
     uint32_t channel_count,
-    uint64_t block_start_frame
+    uint64_t block_start_frame,
+    const SongClock* song
 ) {
   BlockTempo tempo{};
   const GridView view = BeginBlock(block_start_frame, sample_rate, &tempo);
@@ -360,7 +366,7 @@ void Metronome::Render(
       // Grid mode owns the beat clock; the ramp and polyrhythm are defined
       // against a constant BPM and do not apply. beat_position_ keeps running
       // so a clear lands where the song is, not on an instant downbeat.
-      RenderGridBeat(*view.grid, now, sample_rate);
+      RenderGridSample(*view.grid, song, now, frame, sample_rate);
       beat_position_ += tempo.beats_per_sample;
     } else if (running_) {
       AdvanceConstantTempo(sample_rate, &tempo);

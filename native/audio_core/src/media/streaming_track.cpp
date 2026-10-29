@@ -5,24 +5,27 @@
 
 #include <algorithm>
 #include <chrono>
+#include <limits>
 #include <memory>
 #include <thread>
 
 #include "media/file_audio_reader.h"
+#include "media/looping_source_reader.h"
 #include "media/resampling_source_reader.h"
 
 namespace kitbag {
 namespace {
 
-// How far ahead the setup path buffers before playback: one max block, inside
-// the source ring so it is always reachable.
-constexpr uint64_t kPrimeAheadFrames = StreamingTrack::kMaxBlockFrames;
 constexpr auto kPrimeTimeout = std::chrono::seconds(2);
 constexpr auto kPrimePoll = std::chrono::milliseconds(1);
 
 }  // namespace
 
-bool StreamingTrack::BuildSource(Source& s, SourceReader* base) {
+bool StreamingTrack::BuildSource(
+    Source& s,
+    SourceReader* base,
+    const SourceStamp& stamp
+) {
   // Resample on load so the ring — and the drain — only ever see engine-rate
   // frames (SPEC.md §4.1). num_frames is the resampled length.
   SourceReader* reader = base;
@@ -33,13 +36,36 @@ bool StreamingTrack::BuildSource(Source& s, SourceReader* base) {
     s.resampler = std::move(rs);
     reader = s.resampler.get();
   }
+  if (stamp.layout.looping) {
+    s.looper = std::make_unique<LoopingSourceReader>(reader, stamp.layout);
+    reader = s.looper.get();
+  }
+  s.stamp = stamp;
   s.channels = reader->channels();
   // Callers size scratch to kMaxChannels once and never grow it, so a wider
   // source would overrun it under a concurrent drain. Reject at load.
   if (s.channels == 0 || s.channels > kMaxChannels) return false;
   s.num_frames = reader->total_frames();
   s.source = std::make_unique<AudioSource>();
-  return s.source->Open(reader);
+  return s.source->Open(reader, read_ahead_frames_);
+}
+
+// The refill thread cannot run inside a callback, so the ring holds a whole
+// callback while it tops up the next one.
+void StreamingTrack::ReserveCallbackFrames(uint32_t frames) {
+  const uint64_t wanted = std::clamp<uint64_t>(
+      2ULL * frames,
+      AudioSource::kDefaultRingFrames,
+      kMaxReadAheadFrames
+  );
+  read_ahead_frames_ =
+      std::max(read_ahead_frames_, static_cast<uint32_t>(wanted));
+}
+
+bool StreamingTrack::SeekBuilt(Source& s, uint64_t frame) {
+  if (frame == 0) return true;
+  const bool looping = s.stamp.layout.looping;
+  return s.source->Seek(looping ? frame : std::min(frame, s.num_frames));
 }
 
 void StreamingTrack::Publish(
@@ -58,13 +84,17 @@ void StreamingTrack::Publish(
 bool StreamingTrack::Load(
     const char* path,
     uint64_t now_frame,
-    bool engine_running
+    bool engine_running,
+    const SourceStamp& stamp,
+    uint64_t frame
 ) {
   if (path == nullptr) return false;
   auto reader = std::make_unique<FileAudioReader>();
   if (!reader->Open(path)) return false;
   auto s = std::make_unique<Source>();
-  if (!BuildSource(*s, reader.get())) return false;
+  if (!BuildSource(*s, reader.get(), stamp) || !SeekBuilt(*s, frame)) {
+    return false;
+  }
   s->owned_reader = std::move(reader);
   load_path_ = path;
   ext_reader_ = nullptr;
@@ -75,11 +105,13 @@ bool StreamingTrack::Load(
 bool StreamingTrack::LoadReader(
     SourceReader* reader,
     uint64_t now_frame,
-    bool engine_running
+    bool engine_running,
+    const SourceStamp& stamp,
+    uint64_t frame
 ) {
   if (reader == nullptr) return false;
   auto s = std::make_unique<Source>();
-  if (!BuildSource(*s, reader)) return false;
+  if (!BuildSource(*s, reader, stamp) || !SeekBuilt(*s, frame)) return false;
   // owned_reader stays null: the caller owns `reader` and must outlive the track.
   ext_reader_ = reader;
   load_path_.clear();
@@ -99,10 +131,13 @@ void StreamingTrack::Unload(uint64_t now_frame, bool engine_running) {
   published_.Publish(nullptr, now_frame, engine_running);
 }
 
-void StreamingTrack::Prime(AudioSource& src, uint64_t num_frames) {
+void StreamingTrack::Prime(const Source& s) {
+  AudioSource& src = *s.source;
+  const uint64_t num_frames =
+      s.looper != nullptr ? std::numeric_limits<uint64_t>::max() : s.num_frames;
   const uint64_t pos = src.position();
   const uint64_t remaining = num_frames > pos ? num_frames - pos : 0;
-  const uint64_t target = std::min(remaining, kPrimeAheadFrames);
+  const uint64_t target = std::min<uint64_t>(remaining, read_ahead_frames_ / 2);
   const auto deadline = std::chrono::steady_clock::now() + kPrimeTimeout;
   while (src.buffered_frames() < target && !src.is_at_end()) {
     if (std::chrono::steady_clock::now() > deadline) break;
@@ -111,9 +146,10 @@ void StreamingTrack::Prime(AudioSource& src, uint64_t num_frames) {
 }
 
 void StreamingTrack::StartAndPrime() {
-  if (live_source_ == nullptr) return;
+  const auto* node = published_.Get();
+  if (live_source_ == nullptr || node == nullptr) return;
   if (!live_source_->is_running()) live_source_->Start();
-  Prime(*live_source_, live_num_frames_);
+  Prime(node->value);
 }
 
 void StreamingTrack::StopSource() {
@@ -121,22 +157,63 @@ void StreamingTrack::StopSource() {
 }
 
 std::unique_ptr<StreamingTrack::Source> StreamingTrack::BuildReseekSource(
-    uint64_t target
+    uint64_t target,
+    const SourceStamp& stamp,
+    bool start_read_ahead
 ) {
   auto s = std::make_unique<Source>();
   if (!load_path_.empty()) {
     auto reader = std::make_unique<FileAudioReader>();
     if (!reader->Open(load_path_.c_str())) return nullptr;
-    if (!BuildSource(*s, reader.get())) return nullptr;
+    if (!BuildSource(*s, reader.get(), stamp)) return nullptr;
     s->owned_reader = std::move(reader);
   } else if (ext_reader_ != nullptr) {
-    if (!BuildSource(*s, ext_reader_)) return nullptr;
+    if (!BuildSource(*s, ext_reader_, stamp)) return nullptr;
   } else {
     return nullptr;
   }
-  if (!s->source->Seek(target) || !s->source->Start()) return nullptr;
-  Prime(*s->source, s->num_frames);
+  if (!SeekBuilt(*s, target)) return nullptr;
+  if (!start_read_ahead) return s;
+  if (!s->source->Start()) return nullptr;
+  Prime(*s);
   return s;
+}
+
+bool StreamingTrack::Stage(
+    uint64_t frame,
+    const SourceStamp& stamp,
+    bool start_read_ahead
+) {
+  if (live_source_ == nullptr) return true;
+  const bool running = live_source_->is_running();
+  // A caller-owned reader is one instance shared by old and new source, so the
+  // old read-ahead must stop first; a file reopens, so its old ring keeps filling.
+  resume_on_drop_ = ext_reader_ != nullptr && running;
+  if (resume_on_drop_) live_source_->Stop();
+  staged_ = BuildReseekSource(frame, stamp, start_read_ahead || running);
+  if (staged_ == nullptr) {
+    DropStaged();
+    return false;
+  }
+  return true;
+}
+
+void StreamingTrack::CommitStaged(uint64_t now_frame, bool engine_running) {
+  resume_on_drop_ = false;
+  if (staged_ == nullptr) return;
+  previous_ = engine_running ? live_source_ : nullptr;
+  Publish(std::move(staged_), now_frame, engine_running);
+}
+
+void StreamingTrack::StopPrevious() {
+  if (previous_ != nullptr) previous_->Stop();
+  previous_ = nullptr;
+}
+
+void StreamingTrack::DropStaged() {
+  staged_.reset();
+  if (resume_on_drop_) live_source_->Start();
+  resume_on_drop_ = false;
 }
 
 bool StreamingTrack::ReseekLive(
@@ -155,18 +232,6 @@ bool StreamingTrack::ReseekLive(
   }
   Publish(std::move(s), now_frame, engine_running);
   return true;
-}
-
-void StreamingTrack::RewindForStop(uint64_t now_frame, bool engine_running) {
-  if (live_source_ == nullptr) return;
-  if (engine_running) {
-    // Device live: a callback that loaded playing_==true can be inside Read on
-    // this ring, so rewind by rebuild-and-swap, never an in-place Clear (#25).
-    ReseekLive(0, now_frame, engine_running);
-  } else {
-    live_source_->Stop();
-    live_source_->Seek(0);
-  }
 }
 
 bool StreamingTrack::Seek(

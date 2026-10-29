@@ -53,6 +53,10 @@ const ROWS: readonly LibraryRow[] = [
     title: 'Redbone',
     stemCount: 6,
     durationSec: 326,
+    bpm: null,
+    key: null,
+    scale: null,
+    hasGrid: false,
     createdAt: created,
   },
 ];

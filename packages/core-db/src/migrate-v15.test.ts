@@ -25,6 +25,8 @@ const NEW_SET_COLUMNS = {
   speed: 1,
   sample_rate: null,
   folder: null,
+  song_title: null,
+  artist: null,
 };
 
 function withFolderSet() {

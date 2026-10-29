@@ -36,6 +36,8 @@ jobs:
         run: ./native/audio_core/build/seek_race_verify
       - name: Stream — a real WAV streams through the C ABI; frames, non-silence, resample
         run: ./native/audio_core/build/stream_verify
+      - name: Stem sync — the click follows the stems through seek, pause and loop wraps
+        run: ./native/audio_core/build/stem_sync_verify
       - name: Audio source — the SourceReader seam, no miniaudio linked
         run: ./native/audio_core/build/audio_source_verify
       - name: File reader — the miniaudio side of the seam, over a run-time WAV

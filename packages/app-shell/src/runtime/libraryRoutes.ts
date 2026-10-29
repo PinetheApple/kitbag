@@ -14,6 +14,9 @@ export function useLibraryRoutes() {
       openAllSongs: () => {
         router.push('/songs');
       },
+      openStemSet: (id: number) => {
+        router.push(`/stems/${String(id)}`);
+      },
       openPreset: (id: number) => {
         router.push(`/presets/${String(id)}`);
       },

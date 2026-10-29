@@ -24,6 +24,7 @@ import com.kitbag.corenative.library.AnalysisResult
 import com.kitbag.corenative.library.AnalysisStore
 import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.LibraryStorage
+import com.kitbag.corenative.library.NativeWaveform
 import com.kitbag.corenative.library.StemBundleBridge
 import com.kitbag.corenative.library.StemBundleRefusedException
 import java.io.File
@@ -355,6 +356,18 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     deleteFolder(promise) { LibraryPaths.stemFolder(base, folderName) }
   }
 
+  override fun readWaveform(relativePath: String, buckets: Double, promise: Promise) {
+    io.execute {
+      try {
+        val envelope = NativeWaveform.envelope(LibraryPaths.resolve(base, relativePath), buckets.toInt())
+          ?: throw IOException("Unreadable waveform sidecar")
+        promise.resolve(Arguments.createArray().apply { envelope.forEach { pushDouble(it.toDouble()) } })
+      } catch (e: Exception) {
+        rejectLogged(promise, E_WAVEFORM_FAILED, "Could not read the waveform", e)
+      }
+    }
+  }
+
   // Raw causes carry paths; JS gets the code and shows its own text.
   private fun rejectLogged(promise: Promise, code: String, message: String, cause: Exception) {
     Log.w(TAG, "$code: $message", cause)
@@ -391,6 +404,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     private const val E_RESULTS_FAILED = "E_RESULTS_FAILED"
     private const val E_DELETE_FAILED = "E_DELETE_FAILED"
     private const val E_LIST_FAILED = "E_LIST_FAILED"
+    private const val E_WAVEFORM_FAILED = "E_WAVEFORM_FAILED"
 
     private fun named(name: String) = ThreadFactory { Thread(it, name) }
   }

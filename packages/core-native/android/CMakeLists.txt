@@ -30,7 +30,8 @@ add_library(kitbag_jsi SHARED
   # Android-only JNI bridge (staged for #33): exposes kitbagInstall + command*
   # to the Kotlin TurboModule. The file is wholly #ifdef __ANDROID__, so it is a
   # no-op TU anywhere else.
-  "${KITBAG_GLUE_DIR}/KitbagJni.cpp")
+  "${KITBAG_GLUE_DIR}/KitbagJni.cpp"
+  "${KITBAG_GLUE_DIR}/KitbagJniLibrary.cpp")
 
 target_include_directories(kitbag_jsi PRIVATE
   "${KITBAG_GLUE_DIR}"

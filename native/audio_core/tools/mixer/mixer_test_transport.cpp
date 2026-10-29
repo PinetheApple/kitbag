@@ -135,7 +135,7 @@ void TestSeekAndPosition() {
   kitbag::Mixer mixer(kSampleRate);
   LoadRamp(&mixer, 0, kLongFrames, kLongOffset);
   mixer.Seek(1234, 0, false);
-  Drain(&mixer);  // applies kSeek; still stopped, so no advance
+  Drain(&mixer);  // adopts the seek; still stopped, so no advance
   Check(mixer.position() == 1234, "seek: position reports the sought frame");
 
   mixer.Play();
@@ -163,7 +163,7 @@ void TestPauseHoldsPositionStopRewinds() {
   const uint64_t held = sought + kBlock;
   mixer.Seek(sought, 0, false);
   mixer.Play();
-  RenderBlock(&mixer);  // applies kSeek + kPlay, plays one block to `held`
+  RenderBlock(&mixer);  // adopts the seek + kPlay, plays one block to `held`
 
   mixer.Pause();
   ExpectSilentBlock(RenderBlock(&mixer), "pause: a paused mixer is silent");

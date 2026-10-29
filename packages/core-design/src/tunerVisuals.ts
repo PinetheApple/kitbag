@@ -1,5 +1,6 @@
 import { HALF } from './styleConstants.ts';
 import type { ColorToken } from './tokens.ts';
+import { asPercent } from './percent.ts';
 
 export interface GradientStop {
   readonly token: ColorToken;
@@ -15,13 +16,11 @@ export const TUNER_STRIP_STOPS: readonly GradientStop[] = [
   { token: 'red', at: 1 },
 ];
 
-const PERCENT = 100;
-
 export function tunerStripGradient(
   color: Readonly<Record<ColorToken, string>>,
 ): string {
   const stops = TUNER_STRIP_STOPS.map(
-    ({ token, at }) => `${color[token]} ${String(at * PERCENT)}%`,
+    ({ token, at }) => `${color[token]} ${asPercent(at)}`,
   );
   return `linear-gradient(90deg, ${stops.join(', ')})`;
 }

@@ -1,5 +1,6 @@
 #include "engine.h"
 
+#include <algorithm>
 #include <chrono>
 
 #include "rt/stall_detector.h"
@@ -44,6 +45,9 @@ bool Engine::Init() {
     return false;
   }
   device_ready_ = true;
+  // Fixed-size callbacks (the miniaudio default) are exactly this wide; a later
+  // reroute keeps this width but may widen the backend period (decisions.md).
+  ReserveCallbackFrames(device_.playback.intermediaryBufferCap);
   return true;
 }
 
@@ -153,9 +157,21 @@ void Engine::DataCallback(
   engine->Render(static_cast<float*>(output), frame_count);
 }
 
+// Scratch covers kMaxBlockFrames; the read-ahead behind it is sized for the
+// whole callback (ReserveCallbackFrames), so slicing never outruns a ring.
 void Engine::Render(float* output, uint32_t frame_count) {
+  while (frame_count > 0) {
+    const uint32_t slice =
+        std::min(frame_count, StreamingTrack::kMaxBlockFrames);
+    RenderSlice(output, slice);
+    output += static_cast<size_t>(slice) * kChannelCount;
+    frame_count -= slice;
+  }
+}
+
+void Engine::RenderSlice(float* output, uint32_t frame_count) {
   // Engine-clock frame of output[0] — the transport metronome anchoring
-  // (StartAt, grid anchors) is expressed against. Advanced once after the block.
+  // (StartAt, grid anchors) is expressed against. Advanced once after the slice.
   const uint64_t block_start_frame =
       frames_rendered_.load(std::memory_order_relaxed);
 
@@ -169,7 +185,8 @@ void Engine::Render(float* output, uint32_t frame_count) {
       frame_count,
       kSampleRate,
       kChannelCount,
-      block_start_frame
+      block_start_frame,
+      &mixer_.song_clock()
   );
 
   frames_rendered_.fetch_add(frame_count, std::memory_order_relaxed);

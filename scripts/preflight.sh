@@ -104,7 +104,7 @@ else
 
   step "Native verify tools"
   for tool in metronome_verify abi_verify beat_tracker_verify mixer_verify \
-    player_verify seek_race_verify stream_verify \
+    player_verify seek_race_verify stream_verify stem_sync_verify \
     audio_source_verify decoder_verify analyze_verify file_audio_reader_verify \
     tuner_verify click_soak_verify analyze_memory_verify; do
     binary="native/audio_core/build/$tool"

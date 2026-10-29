@@ -141,6 +141,8 @@ export const stemSets = sqliteTable(
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
     name: text('name').notNull(),
+    songTitle: text('song_title'),
+    artist: text('artist'),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
     uuid: text('uuid').notNull(),
     source: text('source', { enum: STEM_SET_SOURCES })

@@ -44,6 +44,11 @@ int32_t commandSetGrid(const double* beatTimesSec, int32_t count, double anchorF
                                static_cast<uint64_t>(anchorFrame));
 }
 
+void commandClearGrid() { kb_metronome_clear_grid(commandEngine()); }
+void commandFollowMixer(bool enabled) {
+  kb_metronome_follow_mixer(commandEngine(), flag(enabled));
+}
+
 void commandSetBeats(int32_t beatsPerBar, int32_t denominator) {
   kb_metronome_set_beats(commandEngine(), beatsPerBar, denominator);
 }
@@ -93,6 +98,31 @@ void commandSetBarMute(bool enabled, int32_t playBars, int32_t muteBars) {
 int32_t commandLoadTrack(int32_t track, const char* path) {
   return kb_mixer_load_track(commandEngine(), track, path);
 }
+void commandUnloadTrack(int32_t track) { kb_mixer_unload_track(commandEngine(), track); }
+void commandMixerSetGain(int32_t track, double gain) {
+  kb_mixer_set_gain(commandEngine(), track, static_cast<float>(gain));
+}
+void commandMixerSetMute(int32_t track, bool muted) {
+  kb_mixer_set_mute(commandEngine(), track, flag(muted));
+}
+void commandMixerSetSolo(int32_t track, bool soloed) {
+  kb_mixer_set_solo(commandEngine(), track, flag(soloed));
+}
+void commandMixerSetMasterGain(double gain) {
+  kb_mixer_set_master_gain(commandEngine(), static_cast<float>(gain));
+}
+double commandMixerMasterGain() { return kb_mixer_master_gain(commandEngine()); }
+void commandMixerPlay() { kb_mixer_play(commandEngine()); }
+void commandMixerPause() { kb_mixer_pause(commandEngine()); }
+void commandMixerStop() { kb_mixer_stop(commandEngine()); }
+void commandMixerSeek(double frame) {
+  kb_mixer_seek(commandEngine(), static_cast<int64_t>(frame));
+}
+int32_t commandMixerSetLoop(double startFrame, double endFrame) {
+  return kb_mixer_set_loop(commandEngine(), static_cast<int64_t>(startFrame),
+                           static_cast<int64_t>(endFrame));
+}
+int32_t commandMixerClearLoop() { return kb_mixer_clear_loop(commandEngine()); }
 
 int32_t commandTunerStart() { return kb_tuner_start(commandEngine()); }
 void commandTunerStop() { kb_tuner_stop(commandEngine()); }

@@ -39,6 +39,7 @@ export interface LibraryScreenProps {
   readonly insets: LibraryScreenInsets;
   readonly initialChip?: LibraryChip;
   readonly onBack: () => void;
+  readonly onOpenStemSet: (id: number) => void;
 }
 
 const useStyles = createThemedStyles((theme) => ({
@@ -147,8 +148,10 @@ function NothingMatches() {
 
 function SongList({
   onActions,
+  onOpenStemSet,
 }: {
   readonly onActions: LibraryMenu['openActions'];
+  readonly onOpenStemSet: (id: number) => void;
 }) {
   const rows = useSongLibrary((s) => s.rows);
   const query = useSongLibrary((s) => s.query);
@@ -163,11 +166,18 @@ function SongList({
       key={`${row.kind}-${String(row.id)}`}
       row={row}
       onActions={onActions}
+      onOpenStemSet={onOpenStemSet}
     />
   ));
 }
 
-function LibraryBody({ menu }: { readonly menu: LibraryMenu }) {
+function LibraryBody({
+  menu,
+  onOpenStemSet,
+}: {
+  readonly menu: LibraryMenu;
+  readonly onOpenStemSet: (id: number) => void;
+}) {
   const ready = useSongLibrary((s) => s.ready);
   const failed = useSongLibrary((s) => s.failed);
   const empty = useSongLibrary((s) => s.rows.length === 0);
@@ -192,7 +202,7 @@ function LibraryBody({ menu }: { readonly menu: LibraryMenu }) {
           <FilterChip key={chip} chip={chip} />
         ))}
       </ChipRow>
-      <SongList onActions={menu.openActions} />
+      <SongList onActions={menu.openActions} onOpenStemSet={onOpenStemSet} />
     </>
   );
 }
@@ -212,6 +222,7 @@ export function LibraryScreen({
   insets,
   initialChip,
   onBack,
+  onOpenStemSet,
 }: LibraryScreenProps) {
   const styles = useStyles();
   useEntry(initialChip);
@@ -232,7 +243,7 @@ export function LibraryScreen({
       >
         <NoticeCard />
         <ImportingCard />
-        <LibraryBody menu={menu} />
+        <LibraryBody menu={menu} onOpenStemSet={onOpenStemSet} />
       </ScrollView>
       <FloatingActionButton
         icon="add"

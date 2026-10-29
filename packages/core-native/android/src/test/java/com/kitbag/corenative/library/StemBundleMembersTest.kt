@@ -12,6 +12,23 @@ class StemBundleMembersTest {
   private val members = StemBundleMembers { message, _ -> warnings += message }
 
   @Test
+  fun `metadata takes the song heading from the tags, then the identified recording`() {
+    val tagged = members.metadata(
+      """{"title":"Charity Gayle - Echo (In Jesus Name) [LIVE]",
+         "audio_tags":{"artist":"Charity Gayle","title":"Echo (In Jesus Name) [LIVE]"},
+         "identity":{"artist":"Charity Gayle","title":"Echo"}}""",
+    )
+    assertEquals("Echo (In Jesus Name) [LIVE]", tagged.heading?.title)
+    assertEquals("Charity Gayle", tagged.heading?.artist)
+    val identified = members.metadata(
+      """{"audio_tags":{"title":"Echo"},"identity":{"artist":"Charity Gayle","title":"Echo"}}""",
+    )
+    assertEquals("Echo", identified.heading?.title)
+    assertEquals("Charity Gayle", identified.heading?.artist)
+    assertNull(members.metadata("""{"title":"Charity Gayle - Echo"}""").heading)
+  }
+
+  @Test
   fun `metadata reads the fields a player uses and ignores the rest`() {
     val metadata = members.metadata(
       """{"title":"Echo","bpm":123,"key":"F maj","scale":"Major","key_confidence":100,

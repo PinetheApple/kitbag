@@ -144,6 +144,12 @@ void Metronome::SetBarMute(bool enabled, int play_bars, int mute_bars) {
   commands_.Push(command);
 }
 
+void Metronome::SetFollowMixer(bool enabled) {
+  Command command{CommandType::kSetFollowMixer};
+  command.int_a = enabled ? 1 : 0;
+  commands_.Push(command);
+}
+
 void Metronome::SetGrid(
     std::unique_ptr<BeatGrid> grid,
     uint64_t now_frame,
@@ -182,6 +188,8 @@ bool Metronome::RouteCommand(const Command& command) {
     case CommandType::kPause:
     case CommandType::kAnchorExternal:
       return ApplyTransportCommand(command);
+    case CommandType::kSetFollowMixer:
+      return ApplyFollowCommand(command);
     case CommandType::kSetTempo:
     case CommandType::kSetLatencyOffset:
       return ApplyTempoCommand(command);
@@ -231,6 +239,13 @@ bool Metronome::ApplyTransportCommand(const Command& command) {
     default:
       return false;
   }
+}
+
+bool Metronome::ApplyFollowCommand(const Command& command) {
+  if (command.type != CommandType::kSetFollowMixer) return false;
+  follow_mixer_ = command.int_a != 0;
+  ReacquireGrid();
+  return true;
 }
 
 void Metronome::StashPendingAnchor(const Command& command) {
@@ -328,7 +343,7 @@ void Metronome::StopRun() {
   has_pending_anchor_ = false;  // a Stop cancels a queued anchor too
   // Force a re-seed next block: a cursor stranded where the pause began
   // swallows every beat the pause spanned into one off-grid click (§4.2.1).
-  observed_generation_ = 0;
+  ReacquireGrid();
   counting_in_ = false;
   count_in_armed_ = true;
   current_beat_.store(-1, std::memory_order_relaxed);
@@ -345,7 +360,7 @@ void Metronome::BeginRun() {
   ArmCountIn();
   beat_position_ = -count_in_beats_ - LatencyBeats();
   running_ = true;
-  observed_generation_ = 0;  // re-seed the grid cursor at the resume point
+  ReacquireGrid();
   // Publish now, not only at the end of the drain: a deferred StartAt calls
   // BeginRun from the render loop, after the drain already stored the flag.
   running_flag_.store(true, std::memory_order_relaxed);

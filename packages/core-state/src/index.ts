@@ -127,3 +127,42 @@ export type {
   LibrarySongRow,
   LibraryStemSetRow,
 } from '@kitbag/core-db';
+export { useStemPlayer } from './stemPlayer/useStemPlayer.ts';
+export { UNITY_GAIN } from './stemPlayer/mix.ts';
+export {
+  createStemPlayerStore,
+  stemPlayerStore,
+  type LoopFailure,
+  type LoopState,
+  type StemPlayerStatus,
+  type StemPlayerStore,
+  type StemRow,
+} from './stemPlayer/store.ts';
+export {
+  configureStemPlayer,
+  type SharedMetronome,
+  type StemPlayerCommands,
+  type StemPlayerEngine,
+  type StemPlayerRecords,
+  type StemPlayerRuntime,
+} from './stemPlayer/runtime.ts';
+export {
+  formatClock,
+  framesToSeconds,
+  secondsToFrames,
+} from './stemPlayer/time.ts';
+export {
+  bpmFact,
+  keyFact,
+  shortKeyName,
+  songFacts,
+  type BpmFact,
+  type SongFact,
+  type SongFacts,
+} from './stemPlayer/facts.ts';
+export {
+  clockParts,
+  formatClockSeconds,
+  MINUS,
+  type ClockParts,
+} from './text.ts';

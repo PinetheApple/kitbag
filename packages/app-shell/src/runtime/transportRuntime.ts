@@ -6,6 +6,7 @@ import {
   notificationStepAfterAppChange,
   shownAfterNativeChange,
   storePatchFor,
+  transportActive,
   type TransportShown,
 } from './transportSync';
 
@@ -55,3 +56,13 @@ getKitbagCommands().onTransport((event) => {
     applyingNative = false;
   }
 });
+
+export const metronomeTransport = {
+  active: () => transportActive(metronomeStore.getState().running, shown),
+  release: () => {
+    metronomeStore.getState().stop();
+    if (shown === undefined) return;
+    shown = undefined;
+    getKitbagCommands().transportHide();
+  },
+};

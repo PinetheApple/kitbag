@@ -47,6 +47,12 @@ export const KB_VOLUME_BOUNDS = {
   max: 2,
 } as const;
 
+/** Linear stem and master gain range (Mixer::kMinGain, kMaxGain); the engine clamps to it. */
+export const KB_MIXER_GAIN_BOUNDS = {
+  min: 0,
+  max: 2,
+} as const;
+
 /** Longest play or mute run in bars (Metronome::kMaxMuteBars); clamped above. */
 export const KB_MAX_MUTE_BARS = 16;
 
