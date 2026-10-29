@@ -6,6 +6,7 @@ import '@/runtime/stemPlayerRuntime';
 import '@/runtime/tunerRuntime';
 import '@/runtime/lastToolRuntime';
 import '@/runtime/transportRuntime';
+import '@/runtime/keepAwakeRuntime';
 
 import '@/global.css';
 

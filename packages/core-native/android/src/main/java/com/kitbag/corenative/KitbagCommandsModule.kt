@@ -1,5 +1,6 @@
 package com.kitbag.corenative
 
+import android.view.WindowManager
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
@@ -69,6 +70,14 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
 
   override fun songTransportHide() {
     PlaybackService.hideSong(reactApplicationContext)
+  }
+
+  override fun setKeepScreenOn(on: Boolean) {
+    val activity = reactApplicationContext.currentActivity ?: return
+    activity.runOnUiThread {
+      val flag = WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+      if (on) activity.window.addFlags(flag) else activity.window.clearFlags(flag)
+    }
   }
 
   private fun emitTransport(state: TransportState, practice: PracticeClock) {
