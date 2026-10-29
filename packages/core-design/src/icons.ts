@@ -47,6 +47,9 @@ export const iconGlyphs = {
   arrowDown: 'arrow-down',
   check: 'check',
   mic: 'microphone',
+  practiceTools: 'tune',
+  countingIn: 'timer-sand-empty',
+  swipeTempo: 'arrow-up-down',
 } as const satisfies Record<string, VectorGlyph>;
 
 export type IconName = keyof typeof iconGlyphs;

@@ -10,6 +10,9 @@ export const MIN_LEDS_PER_ROW = 4;
 // ceiling that yields both — 8 would make 16 two rows of eight.
 export const MAX_LEDS_PER_ROW = 7;
 
+// Layout B's beat dots wrap only past eight, at a group boundary (#175 mockup).
+export const MAX_DOTS_PER_LINE = 8;
+
 const DEFAULT_GROUP = 4;
 
 // The two cell sizes an asymmetric meter is felt in.
@@ -26,6 +29,7 @@ const IRREGULAR_GROUPINGS: readonly (readonly number[])[] = [
   [LONG_CELL, LONG_CELL, LONG_CELL],
   [LONG_CELL, LONG_CELL, SHORT_CELL, SHORT_CELL],
   [LONG_CELL, LONG_CELL, LONG_CELL, SHORT_CELL],
+  [LONG_CELL, LONG_CELL, LONG_CELL, LONG_CELL],
 ];
 
 const beatsIn = (cells: readonly number[]) =>
@@ -61,14 +65,17 @@ export type LedRowLayout = readonly (readonly number[])[];
  * which takes whatever is left: across 1–16 beats only 9 (6+3) ends short, and
  * that is pinned by a test rather than asserted here.
  */
-export function layoutBeatLeds(beatCount: number): readonly LedRowLayout[] {
+export function layoutBeatLeds(
+  beatCount: number,
+  maxPerRow: number = MAX_LEDS_PER_ROW,
+): readonly LedRowLayout[] {
   const rows: (readonly number[])[][] = [];
   let row: (readonly number[])[] = [];
   let rowLeds = 0;
   let beat = 0;
 
   for (const size of beatGroupSizes(beatCount)) {
-    if (rowLeds + size > MAX_LEDS_PER_ROW) {
+    if (rowLeds + size > maxPerRow) {
       rows.push(row);
       row = [];
       rowLeds = 0;
@@ -80,4 +87,33 @@ export function layoutBeatLeds(beatCount: number): readonly LedRowLayout[] {
 
   if (row.length > 0) rows.push(row);
   return rows;
+}
+
+export interface DotMetrics {
+  readonly maxDot: number;
+  readonly dotGap: number;
+  readonly groupGap: number;
+}
+
+function lineGaps(line: LedRowLayout, metrics: DotMetrics): number {
+  const inGroups = line.reduce(
+    (total, group) => total + Math.max(0, group.length - 1) * metrics.dotGap,
+    0,
+  );
+  return inGroups + Math.max(0, line.length - 1) * metrics.groupGap;
+}
+
+/** One dot size for the whole bar: the largest that fits its fullest line. */
+export function beatDotSize(
+  lines: readonly LedRowLayout[],
+  width: number,
+  metrics: DotMetrics,
+): number {
+  let dot = metrics.maxDot;
+  for (const line of lines) {
+    const dots = line.reduce((total, group) => total + group.length, 0);
+    if (dots === 0) continue;
+    dot = Math.min(dot, Math.floor((width - lineGaps(line, metrics)) / dots));
+  }
+  return Math.max(0, dot);
 }

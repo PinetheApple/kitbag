@@ -1,4 +1,9 @@
-import { TextInput, type TextInputProps } from 'react-native';
+import {
+  TextInput,
+  type StyleProp,
+  type TextInputProps,
+  type TextStyle,
+} from 'react-native';
 import Animated, {
   useAnimatedProps,
   type SharedValue,
@@ -16,6 +21,7 @@ export interface LiveTextProps {
   readonly role: TextRoleName;
   readonly color?: ColorToken;
   readonly align?: 'left' | 'center' | 'right';
+  readonly style?: StyleProp<TextStyle>;
 }
 
 // Hidden from screen readers: a value changing at measurement rate would flood
@@ -25,6 +31,7 @@ export function LiveText({
   role,
   color = 'text',
   align = 'center',
+  style,
 }: LiveTextProps) {
   const theme = useTheme();
   const animatedProps = useAnimatedProps(() => {
@@ -55,6 +62,7 @@ export function LiveText({
           padding: 0,
           pointerEvents: 'none',
         },
+        style,
       ]}
       animatedProps={animatedProps}
     />

@@ -4,6 +4,7 @@ import '@/runtime/libraryRuntime';
 import '@/runtime/songLibraryRuntime';
 import '@/runtime/tunerRuntime';
 import '@/runtime/lastToolRuntime';
+import '@/runtime/swipeHintRuntime';
 import '@/runtime/transportRuntime';
 
 import '@/global.css';

@@ -1,0 +1,83 @@
+import type { LedState } from '@kitbag/core-design';
+import { KB_ACCENT } from '@kitbag/core-native';
+
+export function ledStateFor(accent: KB_ACCENT): LedState {
+  if (accent === KB_ACCENT.KB_ACCENT_ACCENTED) return 'accented';
+  if (accent === KB_ACCENT.KB_ACCENT_MUTED) return 'muted';
+  return 'normal';
+}
+
+export function beatLabel(beat: number, state: LedState): string {
+  return `Beat ${String(beat + 1)}, ${state}`;
+}
+
+export interface DotPalette {
+  readonly accent: string;
+  readonly fill: string;
+  readonly border: string;
+  readonly hollow: string;
+  readonly silentNow: string;
+  readonly clear: string;
+}
+
+export interface DotWidths {
+  readonly normal: number;
+  readonly accent: number;
+  readonly silentNow: number;
+}
+
+export interface DotLook {
+  readonly backgroundColor: string;
+  readonly borderColor: string;
+  readonly borderWidth: number;
+}
+
+export function dotLook(
+  state: LedState,
+  sounding: boolean,
+  silentBar: boolean,
+  palette: DotPalette,
+  widths: DotWidths,
+): DotLook {
+  'worklet';
+  if (silentBar) {
+    return sounding
+      ? {
+          backgroundColor: palette.clear,
+          borderColor: palette.silentNow,
+          borderWidth: widths.silentNow,
+        }
+      : {
+          backgroundColor: palette.clear,
+          borderColor: palette.hollow,
+          borderWidth: widths.normal,
+        };
+  }
+  const ring = state === 'accented' ? widths.accent : widths.normal;
+  if (sounding) {
+    return {
+      backgroundColor: palette.accent,
+      borderColor: palette.accent,
+      borderWidth: ring,
+    };
+  }
+  if (state === 'accented') {
+    return {
+      backgroundColor: palette.clear,
+      borderColor: palette.accent,
+      borderWidth: ring,
+    };
+  }
+  if (state === 'muted') {
+    return {
+      backgroundColor: palette.clear,
+      borderColor: palette.hollow,
+      borderWidth: widths.normal,
+    };
+  }
+  return {
+    backgroundColor: palette.fill,
+    borderColor: palette.border,
+    borderWidth: widths.normal,
+  };
+}

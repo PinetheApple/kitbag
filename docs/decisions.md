@@ -335,4 +335,7 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   of setlist, Play and Practice with no stopwatch key; a first-use swipe hint; no glow
   behind the BPM numeral. This also settles #56's poly-off ruling: poly has no row on the
   screen at all, it is armed in the Practice sheet and listed in the status line. The
-  value-by-value table is `docs/research/metronome-b-parity.md`. **[user]**
+  value-by-value table is `docs/research/metronome-b-parity.md`. The mockup also
+  changes D9's row rule on this screen: a line holds up to eight dots and longer bars
+  wrap at a group boundary (12/8 → two lines of 3+3), because D9's seven-per-row cap
+  pushes the transport off a 360 × 800 screen at the mockup's 56 dp dots. **[user]**

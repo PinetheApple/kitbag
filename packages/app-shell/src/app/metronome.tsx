@@ -20,5 +20,17 @@ export default function MetronomeRoute() {
     router.push('/setlists');
   }, [router]);
 
-  return <MetronomeScreen insets={insets} onOpenSetlists={openSetlists} />;
+  // Opened as the first route, there is no history to go back to.
+  const goBack = useCallback(() => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/');
+  }, [router]);
+
+  return (
+    <MetronomeScreen
+      insets={insets}
+      onBack={goBack}
+      onOpenSetlists={openSetlists}
+    />
+  );
 }

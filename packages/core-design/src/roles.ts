@@ -17,6 +17,17 @@ export const space = {
   pegLabelGap: 5,
   headstockTop: 8,
   headstockBottom: 2,
+  beatDotGap: 12,
+  beatDotGroupGap: 22,
+  beatDotLineGap: 10,
+  beatMarkerGap: 3,
+  legendGap: 16,
+  statusMetaGap: 6,
+  cycleCellGap: 3,
+  transportGapWide: 28,
+  belowTransport: 8,
+  belowAppBar: 4,
+  coachBubbleGap: 16,
 } as const;
 
 export const size = {
@@ -50,6 +61,38 @@ export const size = {
   pegBadgeGlyph: 9,
   pegLockBar: 12,
   pegGlowBlur: 12,
+  appBar: 56,
+  setChip: 36,
+  meterChipMin: 104,
+  subdivisionChipMin: 160,
+  notationChip: 24,
+  statusLine: 40,
+  statusProgress: 3,
+  cycleCellWidth: 18,
+  cycleCellHeight: 14,
+  cycleCellBorder: 1.5,
+  cycleNowOutline: 2,
+  cycleNowOffset: 1.5,
+  beatDotMax: 56,
+  dotBorder: 2,
+  dotAccentBorder: 5,
+  dotSilentNowBorder: 4,
+  dotRing: 3,
+  dotRingGap: 3,
+  legendSwatch: 14,
+  legendSwatchBorder: 1.5,
+  legendAccentBorder: 3,
+  countSquare: 56,
+  countSquareBorder: 2,
+  transportKeyLarge: 56,
+  playButtonLarge: 76,
+  playGlyphBoxLarge: 36,
+  keyBadge: 18,
+  keyBadgeOffset: 2,
+  coachRingWidth: 300,
+  coachRingHeight: 200,
+  coachRingBorder: 2,
+  coachBubbleWidth: 300,
 } as const;
 
 export const radius = {
@@ -72,6 +115,10 @@ export const radius = {
   toolIcon: 11,
   tunerStrip: 12,
   tunerNeedle: 2,
+  cycleCell: 3,
+  countSquare: 14,
+  keyBadge: 9,
+  coachRing: 24,
 } as const;
 
 export const inset = {
@@ -107,6 +154,15 @@ export const inset = {
   pickH: 4,
   compactButtonV: 8,
   compactButtonH: 14,
+  setChipLeft: 14,
+  setChipRight: 8,
+  pickerChipRight: 10,
+  meterChipLeft: 16,
+  subdivisionChipLeft: 12,
+  statusH: 12,
+  keyBadgeH: 4,
+  coachBubbleV: 14,
+  coachBubbleH: 16,
 } as const;
 
 export const opacity = {
@@ -115,15 +171,18 @@ export const opacity = {
   emptyIcon: 0.5,
   upcoming: 0.65,
   tunerStrip: 0.92,
+  coachScrim: 0.55,
 } as const;
 
 export const mix = {
   activeControl: 0.18,
   activeCard: 0.07,
   badgeBorder: 0.4,
-  tempoZoneGlow: 0.05,
   cardBorder: 0.35,
   pegGlow: 0.4,
+  setChip: 0.14,
+  dotBorder: 0.55,
+  countInMeta: 0.75,
 } as const;
 
 export const presetActionGrow = 1.3;
@@ -156,6 +215,11 @@ export const iconSizes = {
   toolTile: 22,
   transport: size.playGlyphBox,
   stepKey: 18,
+  caret: 18,
+  statusRest: 18,
+  statusLive: 20,
+  transportLarge: 24,
+  coachRing: 48,
 } as const;
 
 export type IconSize = keyof typeof iconSizes;
@@ -222,8 +286,31 @@ export const textRoles = {
   },
   pegNote: { family: display, weight: 400, size: 12 },
   pegString: { family: display, weight: 400, size: 11, tabular: true },
+  setChip: { family: display, weight: 500, size: 13 },
+  pickerChip: { family: display, weight: 500, size: 15 },
+  status: { family: body, weight: 400, size: 14 },
+  statusLead: { family: display, weight: 600, size: 14.5, tabular: true },
+  statusMeta: { family: display, weight: 500, size: 13, tabular: true },
+  beatMarker: { family: display, weight: 600, size: 12 },
+  legend: { family: body, weight: 400, size: 12.5 },
+  countSquare: { family: display, weight: 700, size: 26, tabular: true },
+  keyBadge: { family: display, weight: 700, size: 10.5, tabular: true },
+  coachTitle: { family: display, weight: 600, size: 15 },
+  coachBody: { family: body, weight: 400, size: 13.5 },
+  notationNumeral: { family: display, weight: 700, size: 7.5 },
 } as const satisfies Record<string, TypeRole>;
 
 export type TextRoleName = keyof typeof textRoles;
 
 export const appBarTitleMinSize = 15;
+
+export const playGlyphPathLarge = {
+  viewBox: 24,
+  left: 8,
+  top: 5,
+  width: 11,
+  height: 14,
+  stopInset: 6,
+} as const;
+
+export const beatMarkerLineHeight = 14;

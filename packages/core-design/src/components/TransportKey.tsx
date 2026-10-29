@@ -1,13 +1,26 @@
 import { Pressable, Text, View } from 'react-native';
 
 import type { IconName } from '../icons.ts';
-import { opacity, radius, size, space, textRoles } from '../roles.ts';
+import {
+  iconSizes,
+  inset,
+  opacity,
+  radius,
+  size,
+  space,
+  textRoles,
+} from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { hitSlopFor } from '../touchTarget.ts';
 import { InlineIcon } from './IconGlyph.tsx';
 
-const HIT_SLOP = hitSlopFor(size.transportKey, space.transportGap);
+export type TransportKeySize = 'default' | 'large';
+
+const HIT_SLOP: Readonly<Record<TransportKeySize, number>> = {
+  default: hitSlopFor(size.transportKey, space.transportGap),
+  large: hitSlopFor(size.transportKeyLarge, space.transportGapWide),
+};
 
 export type TransportKeyContent =
   | { readonly icon: IconName; readonly text?: never }
@@ -18,6 +31,8 @@ export type TransportKeyProps = TransportKeyContent & {
   readonly onPress: () => void;
   readonly selected?: boolean;
   readonly disabled?: boolean;
+  readonly size?: TransportKeySize;
+  readonly badge?: string | undefined;
 };
 
 const useStyles = createThemedStyles((theme) => ({
@@ -49,6 +64,34 @@ const useStyles = createThemedStyles((theme) => ({
     width: size.transportKey,
     height: size.transportKey,
   },
+  large: {
+    minWidth: size.transportKeyLarge,
+    minHeight: size.transportKeyLarge,
+  },
+  glyphLarge: {
+    fontSize: iconSizes.transportLarge,
+  },
+  spacerLarge: {
+    width: size.transportKeyLarge,
+    height: size.transportKeyLarge,
+  },
+  badge: {
+    position: 'absolute',
+    top: -size.keyBadgeOffset,
+    right: -size.keyBadgeOffset,
+    minWidth: size.keyBadge,
+    minHeight: size.keyBadge,
+    paddingHorizontal: inset.keyBadgeH,
+    borderRadius: radius.keyBadge,
+    backgroundColor: theme.color.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeLabel: {
+    ...textStyle(textRoles.keyBadge),
+    color: theme.color.onAccent,
+    includeFontPadding: false,
+  },
 }));
 
 export function TransportKey({
@@ -58,8 +101,16 @@ export function TransportKey({
   onPress,
   selected = false,
   disabled = false,
+  size: keySize = 'default',
+  badge,
 }: TransportKeyProps) {
   const styles = useStyles();
+  const large = keySize === 'large';
+  const glyphStyle = [
+    styles.glyph,
+    large && styles.glyphLarge,
+    selected && styles.glyphSelected,
+  ];
   return (
     <Pressable
       accessibilityRole="button"
@@ -68,27 +119,37 @@ export function TransportKey({
       disabled={disabled}
       style={[
         styles.key,
+        large && styles.large,
         selected && styles.selected,
         disabled && styles.disabled,
       ]}
-      hitSlop={HIT_SLOP}
+      hitSlop={HIT_SLOP[keySize]}
       onPress={onPress}
     >
       {icon === undefined ? (
-        <Text style={[styles.glyph, selected && styles.glyphSelected]}>
-          {text}
-        </Text>
+        <Text style={glyphStyle}>{text}</Text>
       ) : (
-        <InlineIcon
-          name={icon}
-          style={[styles.glyph, selected && styles.glyphSelected]}
-        />
+        <InlineIcon name={icon} style={glyphStyle} />
+      )}
+      {badge === undefined ? null : (
+        <View
+          style={styles.badge}
+          importantForAccessibility="no-hide-descendants"
+        >
+          <Text style={styles.badgeLabel}>{badge}</Text>
+        </View>
       )}
     </Pressable>
   );
 }
 
-export function TransportKeySpacer() {
+export function TransportKeySpacer({
+  size: keySize = 'default',
+}: {
+  readonly size?: TransportKeySize;
+}) {
   const styles = useStyles();
-  return <View style={styles.spacer} />;
+  return (
+    <View style={keySize === 'large' ? styles.spacerLarge : styles.spacer} />
+  );
 }

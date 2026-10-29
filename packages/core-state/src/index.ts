@@ -127,3 +127,11 @@ export type {
   LibrarySongRow,
   LibraryStemSetRow,
 } from '@kitbag/core-db';
+export { useSwipeHint } from './firstUse/useSwipeHint.ts';
+export {
+  configureSwipeHintPersistence,
+  createSwipeHintStore,
+  getSwipeHintStore,
+  type SwipeHintPersistence,
+  type SwipeHintStore,
+} from './firstUse/store.ts';

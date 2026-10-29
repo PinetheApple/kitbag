@@ -1,0 +1,105 @@
+import { size, textRoles, useTheme } from '@kitbag/core-design';
+import { useMemo } from 'react';
+import { Text, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  type SharedValue,
+} from 'react-native-reanimated';
+
+import type { LedRowLayout } from '../logic/ledLayout.ts';
+import { countSquare } from '../logic/statusLine.ts';
+import { CLEAR, useBeatDotStyles } from './beatDotStyles.ts';
+
+interface SquareProps {
+  readonly beat: number;
+  readonly side: number;
+  readonly currentBeat: SharedValue<number>;
+}
+
+function CountSquare({ beat, side, currentBeat }: SquareProps) {
+  const styles = useBeatDotStyles();
+  const { color } = useTheme();
+  const box = useMemo(
+    () => ({
+      width: side,
+      height: side,
+    }),
+    [side],
+  );
+  const number = useMemo(
+    () => ({
+      fontSize: (textRoles.countSquare.size * side) / size.countSquare,
+    }),
+    [side],
+  );
+  const face = useAnimatedStyle(() => {
+    const state = countSquare(beat, currentBeat.value);
+    if (state === 'now') {
+      return { backgroundColor: color.text, borderColor: color.text };
+    }
+    if (state === 'done') {
+      return { backgroundColor: color.surface3, borderColor: color.surface3 };
+    }
+    return { backgroundColor: CLEAR, borderColor: color.text3 };
+  });
+  const ink = useAnimatedStyle(() => {
+    const state = countSquare(beat, currentBeat.value);
+    if (state === 'now') return { color: color.bg };
+    return { color: state === 'done' ? color.text3 : color.text2 };
+  });
+  return (
+    <Animated.View style={[styles.square, box, face]}>
+      <Animated.Text
+        maxFontSizeMultiplier={1}
+        style={[styles.squareNumber, number, ink]}
+      >
+        {String(beat + 1)}
+      </Animated.Text>
+    </Animated.View>
+  );
+}
+
+interface CountInSquaresProps {
+  readonly lines: readonly LedRowLayout[];
+  readonly dotSize: number;
+  readonly currentBeat: SharedValue<number>;
+  readonly countingIn: SharedValue<number>;
+}
+
+export function CountInSquares({
+  lines,
+  dotSize,
+  currentBeat,
+  countingIn,
+}: CountInSquaresProps) {
+  const styles = useBeatDotStyles();
+  const shown = useAnimatedStyle(() => ({
+    opacity: countingIn.value === 0 ? 0 : 1,
+  }));
+  return (
+    <Animated.View
+      pointerEvents="none"
+      importantForAccessibility="no-hide-descendants"
+      style={[styles.overlay, styles.lines, shown]}
+    >
+      {lines.map((line, lineIndex) => (
+        <View key={lineIndex} style={styles.line}>
+          {line.map((group, groupIndex) => (
+            <View key={groupIndex} style={styles.group}>
+              {group.map((beat) => (
+                <View key={beat} style={styles.beat}>
+                  <CountSquare
+                    beat={beat}
+                    side={dotSize}
+                    currentBeat={currentBeat}
+                  />
+                  <Text style={styles.marker} />
+                </View>
+              ))}
+            </View>
+          ))}
+        </View>
+      ))}
+    </Animated.View>
+  );
+}

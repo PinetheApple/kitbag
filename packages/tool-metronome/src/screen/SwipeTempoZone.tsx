@@ -4,7 +4,6 @@ import {
   iconSizes,
   inset,
   minTouchTargetDp,
-  mix,
   radius,
   size,
   space,
@@ -33,12 +32,6 @@ import { BarSweep } from './BarSweep.tsx';
 const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
 const BPM_FONT_SIZE = 88;
-const ALPHA_MAX = 255;
-const HEX_RADIX = 16;
-const HEX_PAIR = 2;
-const GLOW_ALPHA = Math.round(ALPHA_MAX * mix.tempoZoneGlow)
-  .toString(HEX_RADIX)
-  .padStart(HEX_PAIR, '0');
 
 // The chevrons draw at the design's 13dp, so each arrow's 48dp target is made
 // of the free space around it: the zone's top padding above ▲, and the bar
@@ -82,7 +75,6 @@ interface TempoArrowKeyProps {
 const useStyles = createThemedStyles((theme) => ({
   zone: {
     borderRadius: radius.tempoZone,
-    experimental_backgroundImage: `radial-gradient(120% 90% at 50% 50%, ${theme.color.accent}${GLOW_ALPHA}, transparent 70%)`,
     paddingTop: inset.tempoZoneTop,
     paddingBottom: inset.tempoZoneBottom,
   },
