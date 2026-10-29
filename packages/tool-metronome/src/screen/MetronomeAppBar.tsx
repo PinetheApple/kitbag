@@ -4,8 +4,8 @@ import {
   hitBoxStyle,
   hitExtension,
   Icon,
-  inset,
-  mix,
+  metronome,
+  metronomeMix,
   mixHex,
   radius,
   size,
@@ -24,9 +24,10 @@ import {
   setlistChipLabel,
 } from '../logic/setlistChip.ts';
 
-const CHIP_TO_BODY = (size.appBar - size.setChip) / 2 + space.belowAppBar;
+const CHIP_TO_BODY =
+  (metronome.appBar - metronome.setChip) / 2 + metronome.belowAppBar;
 const CHIP_HIT_BOX = hitBoxStyle(
-  hitExtension(size.setChip, size.setChip, {
+  hitExtension(metronome.setChip, metronome.setChip, {
     top: CHIP_TO_BODY,
     bottom: CHIP_TO_BODY,
   }),
@@ -34,7 +35,7 @@ const CHIP_HIT_BOX = hitBoxStyle(
 
 const useStyles = createThemedStyles((theme) => ({
   bar: {
-    minHeight: size.appBar,
+    minHeight: metronome.appBar,
     justifyContent: 'center',
   },
   chipHit: {
@@ -46,9 +47,9 @@ const useStyles = createThemedStyles((theme) => ({
     alignItems: 'center',
     flexShrink: 1,
     gap: space.inlineKeyGap,
-    minHeight: size.setChip,
-    paddingLeft: inset.setChipLeft,
-    paddingRight: inset.setChipRight,
+    minHeight: metronome.setChip,
+    paddingLeft: metronome.setChipLeft,
+    paddingRight: metronome.setChipRight,
     borderRadius: radius.chip,
     borderWidth: size.stroke,
     borderColor: theme.color.line,
@@ -59,7 +60,7 @@ const useStyles = createThemedStyles((theme) => ({
     backgroundColor: mixHex(
       theme.color.accent,
       theme.color.surface2,
-      mix.setChip,
+      metronomeMix.setChip,
     ),
   },
   label: {

@@ -1,13 +1,13 @@
 import {
   countLabel,
   createThemedStyles,
+  metronomeSheet,
   radius,
   SegmentedControl,
-  size,
   space,
   StepControl,
-  Switch,
   type StepDelta,
+  Switch,
 } from '@kitbag/core-design';
 import { useMetronome } from '@kitbag/core-state';
 import { useCallback } from 'react';
@@ -33,14 +33,14 @@ const usePreviewStyles = createThemedStyles((theme) => ({
   },
   cell: {
     flex: 1,
-    height: size.mutePreview,
+    height: metronomeSheet.mutePreview,
     borderRadius: radius.barPreview,
   },
   playing: {
     backgroundColor: theme.color.text2,
   },
   muted: {
-    borderWidth: size.mutePreviewDashed,
+    borderWidth: metronomeSheet.mutePreviewDashed,
     borderStyle: 'dashed',
     borderColor: theme.color.text3,
   },

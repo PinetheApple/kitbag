@@ -1,4 +1,5 @@
 import {
+  metronome,
   PrimaryPlayButton,
   space,
   TransportKey,
@@ -21,7 +22,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: space.transportGapWide,
     marginTop: 'auto',
-    marginBottom: space.belowTransport,
+    marginBottom: metronome.belowTransport,
   },
 });
 

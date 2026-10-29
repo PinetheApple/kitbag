@@ -1,10 +1,9 @@
 import {
-  beatMarkerLineHeight,
   createThemedStyles,
-  mix,
+  metronome,
+  metronomeMix,
   mixHex,
   radius,
-  size,
   space,
   textRoles,
   textStyle,
@@ -13,28 +12,30 @@ import {
 
 import type { DotPalette, DotWidths } from '../logic/beatDot.ts';
 
-const RING_REACH = size.dotRingGap + size.dotRing;
+const RING_REACH = metronome.dotRingGap + metronome.dotRing;
 
 export const DOT_WIDTHS: DotWidths = {
-  normal: size.dotBorder,
-  accent: size.dotAccentBorder,
-  silentNow: size.dotSilentNowBorder,
+  normal: metronome.dotBorder,
+  accent: metronome.dotAccentBorder,
+  silentNow: metronome.dotSilentNowBorder,
 };
 
 export const DOT_METRICS = {
-  maxDot: size.beatDotMax,
-  dotGap: space.beatDotGap,
-  groupGap: space.beatDotGroupGap,
+  maxDot: metronome.beatDotMax,
+  dotGap: metronome.beatDotGap,
+  groupGap: metronome.beatDotGroupGap,
 };
 
 export const LINE_PITCH_GAP =
-  space.beatMarkerGap + beatMarkerLineHeight + space.beatDotLineGap;
+  metronome.beatMarkerGap +
+  metronome.beatMarkerLineHeight +
+  metronome.beatDotLineGap;
 
 function dotBorderColor(color: {
   readonly text3: string;
   readonly surface3: string;
 }): string {
-  return mixHex(color.text3, color.surface3, mix.dotBorder);
+  return mixHex(color.text3, color.surface3, metronomeMix.dotBorder);
 }
 
 export const useBeatDotStyles = createThemedStyles((theme) => {
@@ -42,20 +43,20 @@ export const useBeatDotStyles = createThemedStyles((theme) => {
   return {
     lines: {
       alignItems: 'center',
-      gap: space.beatDotLineGap,
+      gap: metronome.beatDotLineGap,
     },
     line: {
       flexDirection: 'row',
       justifyContent: 'center',
-      gap: space.beatDotGroupGap,
+      gap: metronome.beatDotGroupGap,
     },
     group: {
       flexDirection: 'row',
-      gap: space.beatDotGap,
+      gap: metronome.beatDotGap,
     },
     beat: {
       alignItems: 'center',
-      gap: space.beatMarkerGap,
+      gap: metronome.beatMarkerGap,
     },
     dot: {
       borderRadius: radius.circle,
@@ -70,13 +71,13 @@ export const useBeatDotStyles = createThemedStyles((theme) => {
       bottom: -RING_REACH,
       left: -RING_REACH,
       borderRadius: radius.circle,
-      borderWidth: size.dotRing,
+      borderWidth: metronome.dotRing,
       borderColor: theme.color.accent,
     },
     marker: {
       ...textStyle(textRoles.beatMarker),
-      lineHeight: beatMarkerLineHeight,
-      minHeight: beatMarkerLineHeight,
+      lineHeight: metronome.beatMarkerLineHeight,
+      minHeight: metronome.beatMarkerLineHeight,
       color: theme.color.text2,
     },
     overlay: {
@@ -87,8 +88,8 @@ export const useBeatDotStyles = createThemedStyles((theme) => {
       left: 0,
     },
     square: {
-      borderRadius: radius.countSquare,
-      borderWidth: size.countSquareBorder,
+      borderRadius: metronome.countSquareRadius,
+      borderWidth: metronome.countSquareBorder,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -100,7 +101,7 @@ export const useBeatDotStyles = createThemedStyles((theme) => {
       flexDirection: 'row',
       justifyContent: 'center',
       flexWrap: 'wrap',
-      gap: space.legendGap,
+      gap: metronome.legendGap,
     },
     legendItem: {
       flexDirection: 'row',
@@ -112,21 +113,21 @@ export const useBeatDotStyles = createThemedStyles((theme) => {
       color: theme.color.text2,
     },
     swatch: {
-      width: size.legendSwatch,
-      height: size.legendSwatch,
+      width: metronome.legendSwatch,
+      height: metronome.legendSwatch,
       borderRadius: radius.circle,
     },
     swatchAccent: {
-      borderWidth: size.legendAccentBorder,
+      borderWidth: metronome.legendAccentBorder,
       borderColor: theme.color.accent,
     },
     swatchNormal: {
       backgroundColor: theme.color.surface3,
-      borderWidth: size.legendSwatchBorder,
+      borderWidth: metronome.legendSwatchBorder,
       borderColor: dotBorder,
     },
     swatchMuted: {
-      borderWidth: size.legendSwatchBorder,
+      borderWidth: metronome.legendSwatchBorder,
       borderColor: theme.color.text3,
       borderStyle: 'dashed',
     },

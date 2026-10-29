@@ -2,11 +2,9 @@ import {
   Button,
   createThemedStyles,
   Icon,
-  inset,
-  opacity,
+  metronome,
   palette,
   radius,
-  size,
   space,
   textRoles,
   textStyle,
@@ -17,7 +15,7 @@ import { Text, View } from 'react-native';
 import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 
 // The scrim stays dark on Daylight too, so it takes Stage's background.
-const SCRIM = withAlpha(palette.bg.dark, opacity.coachScrim);
+const SCRIM = withAlpha(palette.bg.dark, metronome.coachScrim);
 
 const useStyles = createThemedStyles((theme) => ({
   scrim: {
@@ -31,22 +29,22 @@ const useStyles = createThemedStyles((theme) => ({
     backgroundColor: SCRIM,
   },
   ring: {
-    width: size.coachRingWidth,
+    width: metronome.coachRingWidth,
     maxWidth: '100%',
-    height: size.coachRingHeight,
-    borderRadius: radius.coachRing,
-    borderWidth: size.coachRingBorder,
+    height: metronome.coachRingHeight,
+    borderRadius: metronome.coachRingRadius,
+    borderWidth: metronome.coachRingBorder,
     borderStyle: 'dashed',
     borderColor: theme.color.onAccent,
     alignItems: 'center',
     justifyContent: 'center',
   },
   bubble: {
-    width: size.coachBubbleWidth,
+    width: metronome.coachBubbleWidth,
     maxWidth: '100%',
-    marginTop: space.coachBubbleGap,
-    paddingVertical: inset.coachBubbleV,
-    paddingHorizontal: inset.coachBubbleH,
+    marginTop: metronome.coachBubbleGap,
+    paddingVertical: metronome.coachBubbleV,
+    paddingHorizontal: metronome.coachBubbleH,
     gap: space.rowGap,
     borderRadius: radius.card,
     backgroundColor: theme.color.surface1,
@@ -78,7 +76,7 @@ export function SwipeHint({ zoneTop, zoneHeight, onDismiss }: SwipeHintProps) {
     () => ({
       paddingTop: Math.max(
         0,
-        zoneTop + (zoneHeight - size.coachRingHeight) / 2,
+        zoneTop + (zoneHeight - metronome.coachRingHeight) / 2,
       ),
     }),
     [zoneTop, zoneHeight],

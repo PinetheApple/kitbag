@@ -1,10 +1,4 @@
-import {
-  createThemedStyles,
-  Icon,
-  radius,
-  size,
-  space,
-} from '@kitbag/core-design';
+import { createThemedStyles, Icon, metronome } from '@kitbag/core-design';
 import type { BarMuteConfig } from '@kitbag/core-state';
 import { View } from 'react-native';
 import Animated, {
@@ -23,18 +17,18 @@ import { LiveSlot } from './LiveSlot.tsx';
 import { useStatusStyles } from './statusStyles.ts';
 import { StatusVariant } from './StatusVariant.tsx';
 
-const OUTLINE_REACH = size.cycleNowOffset + size.cycleNowOutline;
+const OUTLINE_REACH = metronome.cycleNowOffset + metronome.cycleNowOutline;
 
 const useCycleStyles = createThemedStyles((theme) => ({
   strip: {
     flexDirection: 'row',
-    gap: space.cycleCellGap,
+    gap: metronome.cycleCellGap,
     marginLeft: 'auto',
     flexShrink: 1,
   },
   cell: {
-    width: size.cycleCellWidth,
-    height: size.cycleCellHeight,
+    width: metronome.cycleCellWidth,
+    height: metronome.cycleCellHeight,
     flexShrink: 1,
   },
   face: {
@@ -43,8 +37,8 @@ const useCycleStyles = createThemedStyles((theme) => ({
     right: 0,
     bottom: 0,
     left: 0,
-    borderRadius: radius.cycleCell,
-    borderWidth: size.cycleCellBorder,
+    borderRadius: metronome.cycleCellRadius,
+    borderWidth: metronome.cycleCellBorder,
   },
   play: {
     backgroundColor: theme.color.text2,
@@ -60,8 +54,8 @@ const useCycleStyles = createThemedStyles((theme) => ({
     right: -OUTLINE_REACH,
     bottom: -OUTLINE_REACH,
     left: -OUTLINE_REACH,
-    borderRadius: radius.cycleCell + OUTLINE_REACH,
-    borderWidth: size.cycleNowOutline,
+    borderRadius: metronome.cycleCellRadius + OUTLINE_REACH,
+    borderWidth: metronome.cycleNowOutline,
     borderColor: theme.color.text,
   },
   stack: {

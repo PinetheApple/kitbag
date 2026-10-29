@@ -16,6 +16,7 @@ export * from './clampUnit.ts';
 export * from './percent.ts';
 export * from './stemPlayerRoles.ts';
 export * from './libraryRoles.ts';
+export * from './metronomeRoles.ts';
 export * from './ThemeProvider.tsx';
 export * from './components/AppBar.tsx';
 export * from './components/Badge.tsx';

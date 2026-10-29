@@ -1,12 +1,12 @@
 import {
   createThemedStyles,
   Icon,
-  inset,
+  type IconName,
+  metronomeSheet,
   size,
   space,
   textRoles,
   textStyle,
-  type IconName,
 } from '@kitbag/core-design';
 import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
@@ -14,7 +14,7 @@ import { Text, View } from 'react-native';
 export const usePracticeStyles = createThemedStyles((theme) => ({
   section: {
     gap: space.controlGap,
-    paddingVertical: inset.practiceSectionV,
+    paddingVertical: metronomeSheet.practiceSectionV,
     borderBottomWidth: size.stroke,
     borderBottomColor: theme.color.line,
   },

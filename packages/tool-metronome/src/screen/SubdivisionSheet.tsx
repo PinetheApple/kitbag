@@ -1,5 +1,6 @@
 import {
   createThemedStyles,
+  metronomeSheet,
   NotationGlyph,
   radius,
   Sheet,
@@ -35,10 +36,10 @@ const useStyles = createThemedStyles((theme) => ({
   },
   tile: {
     flex: 1,
-    minHeight: size.notationTile,
+    minHeight: metronomeSheet.notationTile,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: space.notationTileGap,
+    gap: metronomeSheet.notationTileGap,
     borderRadius: radius.button,
     borderWidth: size.stroke,
     borderColor: theme.color.line,
@@ -76,7 +77,7 @@ function NotationTile({ subdivision, selected, onPick }: TileProps) {
     >
       <NotationGlyph
         subdivision={subdivision}
-        height={size.notationTileGlyph}
+        height={metronomeSheet.notationTileGlyph}
         color={selected ? 'text' : 'text2'}
       />
       <Text style={[styles.label, selected && styles.selectedLabel]}>

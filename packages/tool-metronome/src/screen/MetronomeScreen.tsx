@@ -1,5 +1,6 @@
 import {
   createThemedStyles,
+  metronome,
   space,
   textRoles,
   textStyle,
@@ -54,7 +55,7 @@ const useStyles = createThemedStyles((theme) => ({
   },
   body: {
     flex: 1,
-    paddingTop: space.belowAppBar,
+    paddingTop: metronome.belowAppBar,
     gap: space.sectionGap,
   },
   notes: {

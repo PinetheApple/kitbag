@@ -1,7 +1,7 @@
 import {
   createThemedStyles,
   Icon,
-  inset,
+  metronome,
   minTouchTargetDp,
   NotationGlyph,
   radius,
@@ -27,19 +27,19 @@ const useStyles = createThemedStyles((theme) => ({
     alignItems: 'center',
     gap: space.chipGap,
     minHeight: minTouchTargetDp,
-    paddingRight: inset.pickerChipRight,
+    paddingRight: metronome.pickerChipRight,
     borderRadius: radius.button,
     borderWidth: size.stroke,
     borderColor: theme.color.line,
     backgroundColor: theme.color.surface2,
   },
   meter: {
-    minWidth: size.meterChipMin,
-    paddingLeft: inset.meterChipLeft,
+    minWidth: metronome.meterChipMin,
+    paddingLeft: metronome.meterChipLeft,
   },
   subdivision: {
-    minWidth: size.subdivisionChipMin,
-    paddingLeft: inset.subdivisionChipLeft,
+    minWidth: metronome.subdivisionChipMin,
+    paddingLeft: metronome.subdivisionChipLeft,
   },
   label: {
     ...textStyle(textRoles.pickerChip),
@@ -86,7 +86,10 @@ export function PickerChips({
         style={[styles.chip, styles.subdivision]}
         onPress={onOpenSubdivision}
       >
-        <NotationGlyph subdivision={subdivision} height={size.notationChip} />
+        <NotationGlyph
+          subdivision={subdivision}
+          height={metronome.notationChip}
+        />
         <Text style={styles.label}>{name}</Text>
         <Icon name="caretDown" size="caret" color="text3" />
       </Pressable>

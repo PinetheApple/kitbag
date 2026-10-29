@@ -3,7 +3,7 @@ import {
   hitBoxStyle,
   hitExtension,
   Icon,
-  inset,
+  metronomeSheet,
   minTouchTargetDp,
   PickerGrid,
   radius,
@@ -29,7 +29,7 @@ import {
 import { PracticeSection, usePracticeStyles } from './PracticeSection.tsx';
 
 const PICK_HIT_BOX = hitBoxStyle(
-  hitExtension(minTouchTargetDp, size.soundPick, {
+  hitExtension(minTouchTargetDp, metronomeSheet.soundPick, {
     top: space.controlGap,
     bottom: space.controlGap,
   }),
@@ -40,9 +40,9 @@ const useStyles = createThemedStyles((theme) => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.chipGap,
-    minHeight: size.soundPick,
-    paddingLeft: inset.soundPickLeft,
-    paddingRight: inset.soundPickRight,
+    minHeight: metronomeSheet.soundPick,
+    paddingLeft: metronomeSheet.soundPickLeft,
+    paddingRight: metronomeSheet.soundPickRight,
     borderRadius: radius.pick,
     borderWidth: size.stroke,
     borderColor: theme.color.line,

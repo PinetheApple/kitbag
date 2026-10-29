@@ -9,26 +9,27 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 
-import { inset, radius, size, textRoles } from '../roles.ts';
+import { size, textRoles } from '../roles.ts';
+import { wheelPicker } from '../metronomeRoles.ts';
 import { UNSCALED_TEXT } from '../styleConstants.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { steppedIndex, wheelIndex } from '../wheel.ts';
 
 const ITEMS_EACH_SIDE = 2;
-const PITCH = (size.wheelItem + size.wheelSelected) / 2;
-const WINDOW = size.wheelSelected + ITEMS_EACH_SIDE * 2 * size.wheelItem;
+const PITCH = (wheelPicker.item + wheelPicker.selected) / 2;
+const WINDOW = wheelPicker.selected + ITEMS_EACH_SIDE * 2 * wheelPicker.item;
 const EDGE_ROOM = (WINDOW - PITCH) / 2;
-const BAND_TOP = (WINDOW - size.wheelSelected) / 2;
+const BAND_TOP = (WINDOW - wheelPicker.selected) / 2;
 const STEP = 1;
 
 const A11Y_ACTIONS = [{ name: 'increment' }, { name: 'decrement' }] as const;
 
 const useStyles = createThemedStyles((theme) => ({
   wheel: {
-    width: size.wheelWidth,
-    paddingVertical: inset.wheelV,
-    borderRadius: radius.wheel,
+    width: wheelPicker.width,
+    paddingVertical: wheelPicker.insetV,
+    borderRadius: wheelPicker.radius,
     borderWidth: size.stroke,
     borderColor: theme.color.line,
     backgroundColor: theme.color.surface2,
@@ -58,7 +59,7 @@ const useStyles = createThemedStyles((theme) => ({
     top: BAND_TOP,
     left: 0,
     right: 0,
-    height: size.wheelSelected,
+    height: wheelPicker.selected,
     borderTopWidth: size.stroke,
     borderBottomWidth: size.stroke,
     borderColor: theme.color.line,

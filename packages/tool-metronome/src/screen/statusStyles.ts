@@ -1,7 +1,7 @@
 import {
   createThemedStyles,
-  inset,
-  mix,
+  metronome,
+  metronomeMix,
   mixHex,
   radius,
   size,
@@ -11,12 +11,12 @@ import {
 } from '@kitbag/core-design';
 
 export function countInInk(bg: string, text: string): string {
-  return mixHex(bg, text, mix.countInMeta);
+  return mixHex(bg, text, metronomeMix.countInMeta);
 }
 
 export const useStatusStyles = createThemedStyles((theme) => ({
   line: {
-    height: size.statusLine,
+    height: metronome.statusLine,
   },
   variant: {
     position: 'absolute',
@@ -40,7 +40,7 @@ export const useStatusStyles = createThemedStyles((theme) => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.controlGap,
-    paddingHorizontal: inset.statusH,
+    paddingHorizontal: metronome.statusH,
     borderRadius: radius.button,
     borderWidth: size.stroke,
     borderColor: theme.color.line,
@@ -74,7 +74,7 @@ export const useStatusStyles = createThemedStyles((theme) => ({
     marginLeft: 'auto',
   },
   metaGap: {
-    marginLeft: space.statusMetaGap,
+    marginLeft: metronome.statusMetaGap,
   },
   countInMeta: {
     color: countInInk(theme.color.bg, theme.color.text),
@@ -90,10 +90,10 @@ export const useStatusStyles = createThemedStyles((theme) => ({
     left: 0,
     right: 0,
     bottom: 0,
-    height: size.statusProgress,
+    height: metronome.statusProgress,
   },
   progress: {
-    height: size.statusProgress,
+    height: metronome.statusProgress,
     backgroundColor: theme.color.accent,
     transformOrigin: 'left',
   },

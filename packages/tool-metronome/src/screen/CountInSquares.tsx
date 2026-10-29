@@ -1,5 +1,5 @@
 import {
-  size,
+  metronome,
   textRoles,
   TRANSPARENT,
   UNSCALED_TEXT,
@@ -35,7 +35,7 @@ function CountSquare({ beat, side, currentBeat }: SquareProps) {
   );
   const number = useMemo(
     () => ({
-      fontSize: (textRoles.countSquare.size * side) / size.countSquare,
+      fontSize: (textRoles.countSquare.size * side) / metronome.countSquare,
     }),
     [side],
   );

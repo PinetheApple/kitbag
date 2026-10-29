@@ -1,4 +1,4 @@
-import { createThemedStyles, mix, mixHex } from '@kitbag/core-design';
+import { createThemedStyles, metronomeMix, mixHex } from '@kitbag/core-design';
 
 export const useSheetStyles = createThemedStyles((theme) => ({
   selectedTile: {
@@ -6,7 +6,7 @@ export const useSheetStyles = createThemedStyles((theme) => ({
     backgroundColor: mixHex(
       theme.color.accent,
       theme.color.surface2,
-      mix.selectedTile,
+      metronomeMix.selectedTile,
     ),
   },
 }));

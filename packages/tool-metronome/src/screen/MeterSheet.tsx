@@ -3,7 +3,7 @@ import {
   createThemedStyles,
   hitBoxStyle,
   hitExtension,
-  inset,
+  metronomeSheet,
   minTouchTargetDp,
   radius,
   Sheet,
@@ -32,7 +32,7 @@ import { useSheetStyles } from './sheetStyles.ts';
 const NUMERATORS = numeratorChoices(KB_MAX_BEATS);
 const COMMON = commonMeters(KB_MAX_BEATS, KB_DENOMINATORS);
 const PICK_HIT_BOX = hitBoxStyle(
-  hitExtension(minTouchTargetDp, size.meterPick, {
+  hitExtension(minTouchTargetDp, metronomeSheet.meterPick, {
     top: space.controlGap,
     bottom: space.controlGap,
   }),
@@ -43,8 +43,8 @@ const useStyles = createThemedStyles((theme) => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: space.wheelGap,
-    paddingVertical: inset.wheelRowV,
+    gap: metronomeSheet.wheelGap,
+    paddingVertical: metronomeSheet.wheelRowV,
   },
   slash: {
     ...textStyle(textRoles.meterSlash),
@@ -56,9 +56,9 @@ const useStyles = createThemedStyles((theme) => ({
     gap: space.controlGap,
   },
   pick: {
-    minHeight: size.meterPick,
-    minWidth: size.meterPickMin,
-    paddingHorizontal: inset.meterPickH,
+    minHeight: metronomeSheet.meterPick,
+    minWidth: metronomeSheet.meterPickMin,
+    paddingHorizontal: metronomeSheet.meterPickH,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.pick,
