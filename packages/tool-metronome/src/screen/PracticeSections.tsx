@@ -87,7 +87,7 @@ export function PracticeMute() {
       <View style={styles.row}>
         <Text style={styles.label}>Play</Text>
         <StepControl
-          variant="inline"
+          variant="inlineLarge"
           label="Bars to play"
           value={String(playBars)}
           accessibilityValue={bars(playBars)}
@@ -97,7 +97,7 @@ export function PracticeMute() {
         <View style={styles.grow} />
         <Text style={styles.label}>Mute</Text>
         <StepControl
-          variant="inline"
+          variant="inlineLarge"
           label="Bars to mute"
           value={String(muteBars)}
           accessibilityValue={bars(muteBars)}
@@ -133,6 +133,7 @@ export function PracticeCountIn() {
       heading={
         <View style={styles.headingFill}>
           <SegmentedControl
+            size="large"
             accessibilityLabel="Count-in length"
             options={COUNT_IN_SEGMENT_OPTIONS}
             selected={String(countIn.bars)}
@@ -145,6 +146,7 @@ export function PracticeCountIn() {
       <View style={styles.row}>
         <Text style={styles.label}>Count sound</Text>
         <SegmentedControl
+          size="large"
           fill
           accessibilityLabel="Count-in sound"
           options={COUNT_IN_MODE_OPTIONS}
@@ -184,7 +186,7 @@ export function PracticePoly() {
         <>
           <View style={styles.grow} />
           <StepControl
-            variant="inline"
+            variant="inlineLarge"
             label="Polyrhythm"
             value={`${String(polyBeats)} : ${String(beatsPerBar)}`}
             accessibilityValue={`${String(polyBeats)} against ${String(beatsPerBar)}`}

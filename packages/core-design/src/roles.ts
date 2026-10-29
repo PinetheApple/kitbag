@@ -109,6 +109,14 @@ export const size = {
   mutePreview: 14,
   mutePreviewDashed: 1.5,
   soundPick: 36,
+  buttonSheet: 44,
+  buttonPrompt: 40,
+  stepInlineLarge: 36,
+  stepInlineLargeKey: 28,
+  segmentLargeOption: 34,
+  chipLarge: 34,
+  transportKeySmall: 40,
+  numpadKeyLarge: 52,
 } as const;
 
 export const radius = {
@@ -137,6 +145,10 @@ export const radius = {
   coachRing: 24,
   switch: 12,
   wheel: 14,
+  stepInlineLarge: 10,
+  segmentLarge: 12,
+  segmentLargeOption: 9,
+  numpadKeyLarge: 12,
 } as const;
 
 export const inset = {
@@ -187,6 +199,7 @@ export const inset = {
   practiceSectionV: 10,
   soundPickLeft: 12,
   soundPickRight: 6,
+  stepInlineLargeH: 2,
 } as const;
 
 export const opacity = {
@@ -246,6 +259,10 @@ export const iconSizes = {
   transportLarge: 24,
   coachRing: 48,
   practiceHeading: 24,
+  stepInlineLargeKey: 18,
+  chipLarge: 16,
+  transportSmall: 20,
+  numpadKeyLarge: 24,
 } as const;
 
 export type IconSize = keyof typeof iconSizes;
@@ -333,6 +350,15 @@ export const textRoles = {
   practiceHeading: { family: display, weight: 500, size: 15 },
   practiceRow: { family: body, weight: 400, size: 13 },
   soundPick: { family: display, weight: 500, size: 13.5 },
+  stepInlineLargeValue: {
+    family: display,
+    weight: 500,
+    size: 14,
+    tabular: true,
+  },
+  segmentLarge: { family: display, weight: 400, size: 13 },
+  chipLarge: { family: display, weight: 400, size: 13 },
+  numpadKeyLarge: { family: display, weight: 500, size: 20, tabular: true },
 } as const satisfies Record<string, TypeRole>;
 
 export type TextRoleName = keyof typeof textRoles;

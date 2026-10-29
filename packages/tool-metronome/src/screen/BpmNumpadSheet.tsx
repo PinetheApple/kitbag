@@ -87,6 +87,7 @@ export function BpmNumpadSheet({
         </SheetHint>
       </View>
       <NumpadKeypad
+        size="large"
         onDigit={handleDigit}
         onBackspace={handleBackspace}
         onConfirm={handleConfirm}

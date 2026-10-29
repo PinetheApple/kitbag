@@ -15,11 +15,12 @@ import { createThemedStyles } from '../ThemeProvider.tsx';
 import { hitSlopFor } from '../touchTarget.ts';
 import { InlineIcon } from './IconGlyph.tsx';
 
-export type TransportKeySize = 'default' | 'large';
+export type TransportKeySize = 'default' | 'large' | 'small';
 
 const HIT_SLOP: Readonly<Record<TransportKeySize, number>> = {
   default: hitSlopFor(size.transportKey, space.transportGap),
   large: hitSlopFor(size.transportKeyLarge, space.transportGapWide),
+  small: hitSlopFor(size.transportKeySmall, space.controlGap),
 };
 
 export type TransportKeyContent =
@@ -75,6 +76,17 @@ const useStyles = createThemedStyles((theme) => ({
     width: size.transportKeyLarge,
     height: size.transportKeyLarge,
   },
+  small: {
+    minWidth: size.transportKeySmall,
+    minHeight: size.transportKeySmall,
+  },
+  glyphSmall: {
+    fontSize: iconSizes.transportSmall,
+  },
+  spacerSmall: {
+    width: size.transportKeySmall,
+    height: size.transportKeySmall,
+  },
   badge: {
     position: 'absolute',
     top: -size.keyBadgeOffset,
@@ -106,9 +118,11 @@ export function TransportKey({
 }: TransportKeyProps) {
   const styles = useStyles();
   const large = keySize === 'large';
+  const small = keySize === 'small';
   const glyphStyle = [
     styles.glyph,
     large && styles.glyphLarge,
+    small && styles.glyphSmall,
     selected && styles.glyphSelected,
   ];
   return (
@@ -120,6 +134,7 @@ export function TransportKey({
       style={[
         styles.key,
         large && styles.large,
+        small && styles.small,
         selected && styles.selected,
         disabled && styles.disabled,
       ]}
@@ -149,6 +164,7 @@ export function TransportKeySpacer({
   readonly size?: TransportKeySize;
 }) {
   const styles = useStyles();
+  if (keySize === 'small') return <View style={styles.spacerSmall} />;
   return (
     <View style={keySize === 'large' ? styles.spacerLarge : styles.spacer} />
   );

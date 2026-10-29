@@ -101,7 +101,12 @@ export function SwipeHint({ zoneTop, zoneHeight, onDismiss }: SwipeHintProps) {
           number to type a tempo.
         </Text>
         <View style={styles.action}>
-          <Button label="Got it" variant="primary" onPress={onDismiss} />
+          <Button
+            size="prompt"
+            label="Got it"
+            variant="primary"
+            onPress={onDismiss}
+          />
         </View>
       </View>
     </Animated.View>

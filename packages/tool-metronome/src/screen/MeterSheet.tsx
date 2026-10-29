@@ -191,9 +191,16 @@ export function MeterSheet({
         ))}
       </View>
       <View style={styles.actions}>
-        <Button fill variant="ghost" label="Cancel" onPress={onDismiss} />
         <Button
           fill
+          size="sheet"
+          variant="ghost"
+          label="Cancel"
+          onPress={onDismiss}
+        />
+        <Button
+          fill
+          size="sheet"
           variant="primary"
           label={`Set ${meterLabel(draft)}`}
           accessibilityLabel={`Set ${spokenMeter(draft)}`}

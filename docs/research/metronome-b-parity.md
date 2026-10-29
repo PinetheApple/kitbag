@@ -88,16 +88,16 @@ stay. The glow (`mix.tempoZoneGlow`) is removed.
 | Subdivision tiles | 4 columns, gap 8; tile height 64, radius 12, `surface2`, 1 `line`, gap 4, Space Grotesk 500 11.5 `text2`; glyph 26 tall; selected `mix(accent 16%, surface2)`, border `accent`, `text` | `size.notationTile`, `size.notationTileGlyph`, `radius.button`, `space.notationTileGap`, `textRoles.notationTile`, `mix.selectedTile` |
 | Meter wheels | gap 14, padding 6 0; wheel width 84, radius 14, `surface2`, 1 `line`, padding 4 0; item 36 tall Space Grotesk 500 18 `text3`; selected 44 tall 700 30 `text` with `line` rules; slash 300 44 `text3` | `WheelPicker`: `space.wheelGap`, `inset.wheelRowV`, `size.wheelWidth`, `radius.wheel`, `inset.wheelV`, `size.wheelItem`, `size.wheelSelected`, `textRoles.wheelItem`, `textRoles.wheelSelected`, `textRoles.meterSlash` |
 | Common meters | wrap, gap 8; height 40, min-width 60, padding 0 10, radius 10, Space Grotesk 500 14; selected border `accent`, `mix(accent 16%, surface2)` | `size.meterPick`, `size.meterPickMin`, `inset.meterPickH`, `radius.pick`, `textRoles.meterPick`, `mix.selectedTile` |
-| Sheet buttons | gap 8, 6 above; height 44, radius 12, Space Grotesk 500 14; primary `accent` / `onAccent` | `Button` (see Not matched) |
+| Sheet buttons | gap 8, 6 above; height 44, radius 12, Space Grotesk 500 14; primary `accent` / `onAccent`; Cancel transparent, 1 `line`, `text2` | `Button size="sheet"`: `size.buttonSheet`, `radius.button`, `textRoles.button`; Cancel is `variant="ghost"` |
 | Practice sections | gap 8, padding 10 0, `line` between; heading Space Grotesk 500 15 with icon 24 `text2`, gap 10 | `inset.practiceSectionV`, `textRoles.practiceHeading`, `iconSizes.practiceHeading`, `space.rowGap` |
 | Practice rows | gap 8, Inter 13 `text2` | `textRoles.practiceRow` |
-| Stepper | height 36, radius 10, `surface2`, 1 `line`, gap 2, padding 0 2; value Space Grotesk 500 14 min-width 40; keys 28 wide, 18 `text2` | `StepControl variant="inline"` (see Not matched) |
-| Segments | radius 12, padding 3, gap 3; option 34 tall, Space Grotesk 13, radius 9, `text2`; selected `surface1`, `text`, shadow 0 1 3 `rgba(0,0,0,.12)` | `SegmentedControl` (see Not matched) |
+| Stepper | height 36, radius 10, `surface2`, 1 `line`, gap 2, padding 0 2; value Space Grotesk 500 14 min-width 40; keys 28 wide, 18 `text2` | `StepControl variant="inlineLarge"`: `size.stepInlineLarge`, `radius.stepInlineLarge`, `space.inlineKeyGap`, `inset.stepInlineLargeH`, `textRoles.stepInlineLargeValue`, `size.stepValueMinWidth`, `size.stepInlineLargeKey`, `iconSizes.stepInlineLargeKey` |
+| Segments | radius 12, padding 3, gap 3; option 34 tall, Space Grotesk 13, radius 9, `text2`; selected `surface1`, `text`, shadow 0 1 3 `rgba(0,0,0,.12)` | `SegmentedControl size="large"`: `radius.segmentLarge`, `space.segmentInset`, `size.segmentLargeOption`, `textRoles.segmentLarge`, `radius.segmentLargeOption` (shadow: see Not matched) |
 | Switch | 40 × 24, radius 12, `surface3`, knob 18 `text2` inset 3; on `accent`, knob `onAccent` | `Switch`: `size.switchWidth`, `size.switchHeight`, `size.switchKnob`, `size.switchKnobInset`, `radius.switch` |
-| Loop toggle | chip 34 tall, Space Grotesk 13, icon 16 | `Chip` (see Not matched) |
+| Loop toggle | chip 34 tall, padding 0 12, gap 6, Space Grotesk 13, icon 16 | `Chip size="large"`: `size.chipLarge`, `inset.chipH`, `space.chipGap`, `textRoles.chipLarge`, `iconSizes.chipLarge` |
 | Mute preview | 8 cells, gap 3, height 14, radius 3; playing `text2`, muted 1.5 dashed `text3` | `size.mutePreview`, `size.mutePreviewDashed`, `radius.barPreview`, `space.barPreviewGap` |
-| Sound picker | height 36, padding 0 6 0 12, radius 10, Space Grotesk 500 13.5, caret; preview key 40 circle | `size.soundPick`, `inset.soundPickLeft`, `inset.soundPickRight`, `radius.pick`, `textRoles.soundPick`, `iconSizes.caret`; preview `TransportKey` (see Not matched) |
-| Numpad | display Space Grotesk 700 52; 3 columns gap 8; key 52 tall, radius 12, Space Grotesk 500 20; OK `accent` | `textRoles.sheetNumeral`, `NumpadKeypad` (see Not matched) |
+| Sound picker | height 36, padding 0 6 0 12, radius 10, Space Grotesk 500 13.5, caret; preview key 40 circle, icon 20 | `size.soundPick`, `inset.soundPickLeft`, `inset.soundPickRight`, `radius.pick`, `textRoles.soundPick`, `iconSizes.caret`; preview `TransportKey size="small"`: `size.transportKeySmall`, `iconSizes.transportSmall` |
+| Numpad | display Space Grotesk 700 52; 3 columns gap 8; key 52 tall, radius 12, Space Grotesk 500 20, glyphs 24; OK `accent` | `textRoles.sheetNumeral`, `NumpadKeypad size="large"` (main tempo and ramp From/To): `size.numpadKeyLarge`, `radius.numpadKeyLarge`, `textRoles.numpadKeyLarge`, `iconSizes.numpadKeyLarge` |
 
 ## First-use hint
 
@@ -107,7 +107,7 @@ stay. The glow (`mix.tempoZoneGlow`) is removed.
 | Target ring | 300 × 200, radius 24, 2 dashed `onAccent`, up-down arrow icon 48 | `size.coachRingWidth`, `size.coachRingHeight`, `size.coachRingBorder`, `radius.coachRing`, `iconGlyphs.swipeTempo`, `iconSizes.coachRing` |
 | Bubble | width 300, 16 below, `surface1`, radius 16, padding 14 16, gap 10, shadow | `size.coachBubbleWidth`, `space.coachBubbleGap`, `inset.coachBubbleV`, `inset.coachBubbleH`, `space.rowGap`, `radius.card` |
 | Bubble title / body | Space Grotesk 600 15 / Inter 13.5 `text2` | `textRoles.coachTitle`, `textRoles.coachBody` |
-| "Got it" | primary button, height 40, padding 0 18, right-aligned | `Button` |
+| "Got it" | primary button, height 40, padding 0 18, right-aligned | `Button size="prompt"`: `size.buttonPrompt`, `inset.buttonH` |
 
 ## Not matched
 
@@ -157,19 +157,9 @@ Each entry says why.
 - **Sheet frame and title.** `Sheet` keeps its tokens (#175, owner default): radius 20
   top and 14 bottom with a full 1 `line` border, padding 14 on three sides plus the
   bottom inset, content gap 12, title Space Grotesk 500 14.
-- **Sheet buttons and "Got it".** The shared `Button` is 36 tall, not 44 (40 for "Got
-  it"). Cancel is the ghost variant: transparent, 1 `line`, `text2`, as drawn.
-- **Steppers.** The Practice steppers are the shared inline `StepControl`: Space
-  Grotesk 12.5 value and keys, radius 9, about 28 tall, not 36 / 14 / 18 / radius 10.
-  The 48 dp hit boxes come from the component.
-- **Segments.** `SegmentedControl` options are Space Grotesk 12.5, about 25 tall, radius
-  8, track radius 11; the selected option is `surface3` with no shadow, not `surface1`
-  with a shadow.
-- **Loop toggle.** The shared `Chip`: 12.5 text and icon, about 25 tall, not 34 / 13 / 16.
-- **Sound preview key.** The shared `TransportKey` is 42, not 40, with a 22 glyph.
-- **Numpad keys.** `NumpadKeypad` keys are Space Grotesk 400 19, radius 11, padding 13
-  (about 48 tall), not 500 20, radius 12, 52 tall. Its bounds hint is the shared
-  `SheetHint` (Inter 11.5).
+- **Selected segment shadow.** Not drawn. §12.2 limits shadow to sheets and the play
+  button ("elevation = lighter surface, not shadow"); adding it needs a §12.2 ruling.
+- **Numpad bounds hint.** The shared `SheetHint` (Inter 11.5), not Inter 12.
 - **Meter slash.** Space Grotesk 400: weight 300 is not bundled.
 - **Wheel geometry.** Every row is 40 apart, the mean of 36 and 44, so a native scroll
   view can snap to it. The rows next to the selection sit where the mockup draws them;

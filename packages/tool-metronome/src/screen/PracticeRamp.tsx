@@ -38,7 +38,7 @@ function TempoRow({ editor, onTypeBpm }: TempoRowProps) {
     <View style={styles.row}>
       <Text style={styles.label}>From</Text>
       <StepControl
-        variant="inline"
+        variant="inlineLarge"
         label="Ramp from"
         value={String(startBpm)}
         accessibilityValue={bpm(startBpm)}
@@ -49,7 +49,7 @@ function TempoRow({ editor, onTypeBpm }: TempoRowProps) {
       <View style={styles.grow} />
       <Text style={styles.label}>To</Text>
       <StepControl
-        variant="inline"
+        variant="inlineLarge"
         label="Ramp to"
         value={String(targetBpm)}
         accessibilityValue={bpm(targetBpm)}
@@ -76,7 +76,7 @@ function CadenceRows({ editor }: { readonly editor: RampEditor }) {
       <View style={styles.row}>
         <Text style={styles.label}>Step</Text>
         <StepControl
-          variant="inline"
+          variant="inlineLarge"
           label="Ramp step"
           value={`+${String(stepBpm)}`}
           accessibilityValue={`${bpm(stepBpm)} per step`}
@@ -89,7 +89,7 @@ function CadenceRows({ editor }: { readonly editor: RampEditor }) {
       <View style={styles.row}>
         <Text style={styles.label}>Every</Text>
         <StepControl
-          variant="inline"
+          variant="inlineLarge"
           label="Ramp interval"
           value={String(interval)}
           accessibilityValue={`${String(interval)} ${rampUnitLabel(unit)}`}
@@ -98,6 +98,7 @@ function CadenceRows({ editor }: { readonly editor: RampEditor }) {
         />
         <SegmentedControl
           fill
+          size="large"
           accessibilityLabel="Ramp interval unit"
           options={RAMP_UNIT_OPTIONS}
           selected={rampUnitOption(unit)}
@@ -136,6 +137,7 @@ export function PracticeRamp({ onTypeBpm }: PracticeRampProps) {
       <CadenceRows editor={editor} />
       <View style={styles.row}>
         <Chip
+          size="large"
           icon="repeat"
           active={loop}
           label="Loop back at end"

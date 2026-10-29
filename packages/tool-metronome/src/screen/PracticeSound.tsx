@@ -88,6 +88,7 @@ function SoundRow({ role, onOpen }: SoundRowProps) {
         </View>
       </Pressable>
       <TransportKey
+        size="small"
         icon="play"
         accessibilityLabel={`Preview ${soundRoleName(role).toLowerCase()} sound`}
         onPress={handlePreview}
