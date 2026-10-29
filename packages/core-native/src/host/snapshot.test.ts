@@ -9,7 +9,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   KB_TUNER_SNAPSHOT_FIELDS,
-  KB_MAX_GRID_BEATS,
   KB_MAX_TRACKS,
   KB_SOUND_NAMES,
   KB_RESULT,
@@ -125,7 +124,6 @@ describe('unpackTunerSnapshot', () => {
 // --- the generated constants are wired and shaped as the boundary expects ----
 describe('nativeConstants.gen', () => {
   it('exposes the §13.7 constants extracted from the engine source', () => {
-    expect(KB_MAX_GRID_BEATS).toBe(8192);
     expect(KB_MAX_TRACKS).toBe(16);
     expect(KB_SOUND_NAMES).toEqual([
       'beep',

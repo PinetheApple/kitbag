@@ -223,7 +223,7 @@ describe('parseTunerFields', () => {
 describe('collectConstants (real engine source)', () => {
   it('extracts the current constants and re-renders deterministically', () => {
     const c = collectConstants(realSources);
-    expect(c.maxGridBeats).toBe(8192);
+    expect(c.maxGridBeats).toBe(65536);
     expect(c.maxTracks).toBe(16);
     expect(c.maxBeats).toBe(16);
     expect(c.maxRampBars).toBe(64);

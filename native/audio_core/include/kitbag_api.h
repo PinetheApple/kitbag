@@ -81,8 +81,9 @@ KB_EXPORT void kb_metronome_stop(kb_engine* engine);
 /* Stops like kb_metronome_stop but the next start plays no count-in. */
 KB_EXPORT void kb_metronome_pause(kb_engine* engine);
 
-/* Maximum beats a single grid may carry. */
-#define KB_MAX_GRID_BEATS 8192
+/* Maximum beats a single grid may carry: 5.4 hours at the analyser's 200 BPM
+ * ceiling, 9 hours at 120, so a long song's grid is not cut short. */
+#define KB_MAX_GRID_BEATS 65536
 
 /* Follow a measured beat grid instead of a single BPM, so a song whose tempo
  * drifts stays locked. beat_times_sec are seconds from the song's start and
@@ -345,7 +346,8 @@ KB_EXPORT int32_t kb_player_is_playing(const kb_engine* engine);
  *   bpm_out:         filled with detected BPM (0.0 if detection fails)
  *   beat_times_buf:  caller-allocated float buffer, receives beat times in
  *                    seconds
- *   beat_times_cap:  capacity of beat_times_buf in elements (recommend 1024)
+ *   beat_times_cap:  capacity of beat_times_buf; pass KB_MAX_GRID_BEATS. A
+ *                    full buffer means the grid may stop before the song
  *   beat_count_out:  filled with number of beats written
  *   downbeat_indices_out: caller-allocated int32 buffer sized to beat_times_cap,
  *                    receives the indices (into the beat list) that are bar-ones;
