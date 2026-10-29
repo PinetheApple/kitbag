@@ -103,7 +103,6 @@ jobs:
     env:
       CMAKE_C_COMPILER_LAUNCHER: ccache
       CMAKE_CXX_COMPILER_LAUNCHER: ccache
-      CCACHE_DIR: ${{ github.workspace }}/.ccache
       CCACHE_MAXSIZE: 1G
       CCACHE_COMPILERCHECK: '%compiler% --version'
     steps:
@@ -120,7 +119,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
       - uses: actions/cache/restore@v6
         with:
-          path: ${{ env.CCACHE_DIR }}
+          path: ~/.cache/ccache
           key: ccache-${{ runner.os }}-${{ github.sha }}
           restore-keys: ccache-${{ runner.os }}-
       - name: Install ccache
@@ -136,7 +135,7 @@ jobs:
       - name: ccache statistics
         run: ccache --show-stats
       - uses: actions/cache/save@v6
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' || github.head_ref == 'PinetheApple/ci-150-gradle-cache'
         with:
-          path: ${{ env.CCACHE_DIR }}
+          path: ~/.cache/ccache
           key: ccache-${{ runner.os }}-${{ github.sha }}
