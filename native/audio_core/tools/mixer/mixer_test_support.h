@@ -171,6 +171,7 @@ void RunMixTests();
 void RunSourceTests();
 void RunResampleTests();
 void RunPublishTests();
+void RunLoopTests();
 
 }  // namespace mixer_test
 

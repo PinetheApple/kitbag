@@ -30,6 +30,7 @@
 #include "media/audio_source.h"
 #include "mixer/mixer.h"
 #include "player/player.h"
+#include "seek_race_loop.h"
 #include "wav_fixture.h"
 
 namespace {
@@ -340,7 +341,7 @@ void RunPlayerFailedReseek() {
   player.ReleaseRetiredSources();
 }
 
-constexpr int kExpectedChecks = 21;
+constexpr int kExpectedChecks = 27;
 
 int Report() {
   if (kitbag_test::g_checks != kExpectedChecks) {
@@ -377,5 +378,6 @@ int main() {
   RunMixerPausedSeek();
   RunPlayerPausedSeek();
   RunPlayerFailedReseek();
+  seek_race::RunMixerLoopRace();
   return Report();
 }

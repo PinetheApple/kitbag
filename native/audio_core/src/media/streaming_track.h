@@ -7,9 +7,19 @@
 #include <string>
 
 #include "media/audio_source.h"
+#include "media/loop_layout.h"
 #include "rt/rt_publisher.h"
 
 namespace kitbag {
+
+// `plays_early`: the source may sound, aligned to the song frame, before the
+// callback adopts its epoch.
+struct SourceStamp {
+  uint64_t epoch = 0;
+  LoopLayout layout;
+  bool align = false;
+  bool plays_early = false;
+};
 
 /// One streaming transport: a file (or caller-owned reader) resampled to the
 /// engine rate, read ahead off-thread and swapped in by RtPublisher. The mixer
@@ -38,11 +48,20 @@ class StreamingTrack {
 
   /// Load a file, streamed from disk. [now_frame]/[engine_running] date the
   /// retired source for deferred reclamation. False on null path or open failure.
-  bool Load(const char* path, uint64_t now_frame, bool engine_running);
+  bool Load(
+      const char* path,
+      uint64_t now_frame,
+      bool engine_running,
+      const SourceStamp& stamp = {}
+  );
   /// Stream from a caller-owned reader that must outlive the track. Same publish
   /// discipline as Load; false on null reader or a source wider than stereo.
-  bool
-  LoadReader(SourceReader* reader, uint64_t now_frame, bool engine_running);
+  bool LoadReader(
+      SourceReader* reader,
+      uint64_t now_frame,
+      bool engine_running,
+      const SourceStamp& stamp = {}
+  );
   /// Retire the source: publishes an empty node so the drain reads nothing, and
   /// the old source is reclaimed off the callback, never freed on it.
   void Unload(uint64_t now_frame, bool engine_running);
@@ -56,13 +75,19 @@ class StreamingTrack {
   void StartAndPrime();
   /// Stop the read-ahead thread (pause); keeps position so a later Start resumes.
   void StopSource();
-  /// Rewind to frame 0 for a full stop: rebuild-and-swap while the device is
-  /// live (#25), in place only when quiescent.
-  void RewindForStop(uint64_t now_frame, bool engine_running);
   /// Seek to [frame] at the engine rate. Returns false only when a live rebuild
   /// failed and the old source was resumed in place, so the owner can suppress
   /// the transport jump; true otherwise, including when nothing is loaded.
   bool Seek(uint64_t frame, uint64_t now_frame, bool engine_running);
+  /// Builds, unpublished, a source at stream frame [frame]; started and primed
+  /// when [start] or the live one runs. False only if the build failed.
+  bool Stage(uint64_t frame, const SourceStamp& stamp, bool start);
+  /// Publishes what Stage built. Joining the replaced source's read-ahead is
+  /// left to StopPrevious, so commits across tracks land microseconds apart.
+  void CommitStaged(uint64_t now_frame, bool engine_running);
+  void StopPrevious();
+  /// Discards what Stage built and resumes the live source's read-ahead.
+  void DropStaged();
 
   // ---- App thread: getters ----
 
@@ -86,6 +111,20 @@ class StreamingTrack {
   }
 
   // ---- Realtime ----
+
+  /// The published source and its stamp, from one acquire load. `source` is
+  /// null when nothing is published.
+  struct RtView {
+    AudioSource* source = nullptr;
+    uint32_t channels = 0;
+    SourceStamp stamp;
+  };
+  RtView rt_view() const {
+    const auto* node = published_.Get();
+    if (node == nullptr) return {};
+    const Source& s = node->value;
+    return {s.source.get(), s.channels, s.stamp};
+  }
 
   /// Drains one block of the published source into [scratch] (>= kMaxBlockFrames
   /// * kMaxChannels wide). Returns frames read and sets *channels; *channels is
@@ -116,19 +155,25 @@ class StreamingTrack {
   struct Source {
     uint32_t channels = 0;
     uint64_t num_frames = 0;
+    SourceStamp stamp;
     std::unique_ptr<SourceReader> owned_reader;
     std::unique_ptr<SourceReader> resampler;
+    std::unique_ptr<SourceReader> looper;
     std::unique_ptr<AudioSource> source;
   };
 
-  bool BuildSource(Source& s, SourceReader* base);
+  bool BuildSource(Source& s, SourceReader* base, const SourceStamp& stamp);
   void
   Publish(std::unique_ptr<Source> s, uint64_t now_frame, bool engine_running);
-  void Prime(AudioSource& src, uint64_t num_frames);
+  void Prime(const Source& s);
   // App thread. Builds a fresh source at `target` from the reader identity,
   // started and primed; null if the rebuild fails. No Clear on a ring the
   // callback reads, so it is safe while the old source is still live (#25).
-  std::unique_ptr<Source> BuildReseekSource(uint64_t target);
+  std::unique_ptr<Source> BuildReseekSource(
+      uint64_t target,
+      const SourceStamp& stamp = {},
+      bool start = true
+  );
   // App thread. Stops the old source, then swaps in a BuildReseekSource node.
   // Returns false if the rebuild failed and the old source was resumed in place.
   bool ReseekLive(uint64_t frame, uint64_t now_frame, bool engine_running);
@@ -140,6 +185,11 @@ class StreamingTrack {
   // caller-owned track re-wraps `ext_reader_`.
   std::string load_path_;               // app thread; set by Load
   SourceReader* ext_reader_ = nullptr;  // app thread; set by LoadReader
+  std::unique_ptr<Source> staged_;      // app thread; between Stage and commit
+  bool resume_on_drop_ = false;         // app thread
+  // Retired by CommitStaged with the device live, so not yet freed: the
+  // publisher only reclaims on a later Publish or ReclaimAll.
+  AudioSource* previous_ = nullptr;  // app thread
   uint32_t engine_rate_;
   // Resampled length, atomic because the callback reads it to end a transport
   // while a load can overlap (#23). Relaxed — no ordering rides on it; the

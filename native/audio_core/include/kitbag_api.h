@@ -179,6 +179,13 @@ KB_EXPORT void
 kb_metronome_preview_sound(kb_engine* engine, int32_t sound, int32_t accented);
 /* Volume multiplier [0, 2], default 1. */
 KB_EXPORT void kb_metronome_set_volume(kb_engine* engine, double volume);
+/* enabled != 0 makes a grid set via kb_metronome_set_grid follow the stem
+ * mixer: song second t is the mixer's song frame t * sample_rate, so the click
+ * tracks kb_mixer_play, pause, seek and loop wraps with no anchor to compute.
+ * set_grid's anchor_frame is ignored meanwhile. The click still needs
+ * kb_metronome_start, sounds only while the mixer plays, and keeps the latency
+ * offset. Without a grid this changes nothing. Default off. */
+KB_EXPORT void kb_metronome_follow_mixer(kb_engine* engine, int32_t enabled);
 /* Output latency offset in ms [-100, 100]; positive = trigger earlier. */
 KB_EXPORT void
 kb_metronome_set_latency_offset(kb_engine* engine, double latency_ms);
@@ -270,8 +277,15 @@ KB_EXPORT void kb_mixer_unload_track(kb_engine* engine, int32_t track);
 /* Non-blocking readiness poll: 1 once a source is live for the track, else 0.
  * Poll after a load to know when the track will sound. */
 KB_EXPORT int32_t kb_mixer_track_ready(const kb_engine* engine, int32_t track);
+/* Linear gain [0, 2]; out-of-range values clamp. Applied on the next block. */
 KB_EXPORT void kb_mixer_set_gain(kb_engine* engine, int32_t track, float gain);
+/* 1.0 until set, whether or not the track is loaded; 0.0 for a track outside
+ * the valid range or a null engine. */
 KB_EXPORT float kb_mixer_gain(const kb_engine* engine, int32_t track);
+/* Gain over the summed stems, same range and timing as kb_mixer_set_gain. The
+ * metronome and the player are outside it. Default 1.0. */
+KB_EXPORT void kb_mixer_set_master_gain(kb_engine* engine, float gain);
+KB_EXPORT float kb_mixer_master_gain(const kb_engine* engine);
 KB_EXPORT void
 kb_mixer_set_mute(kb_engine* engine, int32_t track, int32_t muted);
 KB_EXPORT int32_t kb_mixer_muted(const kb_engine* engine, int32_t track);
@@ -284,8 +298,23 @@ KB_EXPORT void kb_mixer_stop(kb_engine* engine);
 /* Ends playback holding the head, so kb_mixer_play resumes from there. */
 KB_EXPORT void kb_mixer_pause(kb_engine* engine);
 KB_EXPORT int32_t kb_mixer_is_playing(const kb_engine* engine);
+/* While a loop is set, a frame at or past its end lands on its start. */
 KB_EXPORT void kb_mixer_seek(kb_engine* engine, int64_t frame);
+/* Song frame now playing; inside a loop it wraps with the audio. */
 KB_EXPORT int64_t kb_mixer_position(const kb_engine* engine);
+/* A-B loop over frames [start_frame, end_frame), the unit of kb_mixer_seek.
+ * Each wrap lands sample-accurately with an equal-power crossfade of a few ms
+ * read from past end_frame. A head before end_frame plays on into the loop; one
+ * at or past it jumps to start_frame. Replaces any loop already set.
+ * Returns KB_ERROR_INVALID_ARGUMENT unless 0 <= start_frame, end_frame <= the
+ * longest track, and the loop is at least two crossfades long;
+ * KB_ERROR_INTERNAL if a track could not be reopened, leaving the old state. */
+KB_EXPORT kb_result
+kb_mixer_set_loop(kb_engine* engine, int64_t start_frame, int64_t end_frame);
+/* Playback continues linearly from the current frame. KB_ERROR_INTERNAL as for
+ * kb_mixer_set_loop, with the loop still set; KB_OK otherwise, including when
+ * no loop was set. */
+KB_EXPORT kb_result kb_mixer_clear_loop(kb_engine* engine);
 KB_EXPORT int32_t kb_mixer_active_track_count(const kb_engine* engine);
 KB_EXPORT int64_t kb_mixer_track_frames(const kb_engine* engine, int32_t track);
 

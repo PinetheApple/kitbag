@@ -6,6 +6,7 @@
 #include <memory>
 #include <span>
 
+#include "media/loop_layout.h"
 #include "metronome/metronome_types.h"
 #include "metronome/tempo_ramp.h"
 #include "rt/rt_publisher.h"
@@ -50,13 +51,15 @@ class Metronome {
 
   // Renders additively into an interleaved stereo buffer. RT-safe.
   // `block_start_frame` is the engine-clock frame of output[0] — the shared
-  // transport that lets StartAt land on an exact frame (SPEC.md §4.2).
+  // transport that lets StartAt land on an exact frame (SPEC.md §4.2). `song`
+  // is the stem transport this block, read only while following it.
   void Render(
       float* output,
       uint32_t frame_count,
       uint32_t sample_rate,
       uint32_t channel_count,
-      uint64_t block_start_frame
+      uint64_t block_start_frame,
+      const SongClock* song = nullptr
   );
 
   // App-thread API. Non-blocking; drops commands if the ring is full.
@@ -103,6 +106,9 @@ class Metronome {
   // Bar-mute trainer: `play_bars` sounding then `mute_bars` silent, repeating
   // from bar 0. A muted bar silences every voice; the LEDs keep moving.
   void SetBarMute(bool enabled, int play_bars, int mute_bars);
+  // While on, a set grid reads song time from the stem transport instead of
+  // its anchor frame, and clicks only while that transport plays.
+  void SetFollowSong(bool enabled);
 
   // Follow a measured beat grid instead of bpm_. `now_frame` only dates the
   // outgoing grid for reclamation; `engine_running` must be true whenever the
@@ -123,7 +129,6 @@ class Metronome {
   bool is_running() const {
     return running_flag_.load(std::memory_order_relaxed);
   }
-  // Beat index within the bar, or -1 when stopped. UI polls this.
   int32_t current_beat() const {
     return current_beat_.load(std::memory_order_relaxed);
   }
@@ -133,15 +138,12 @@ class Metronome {
   bool counting_in() const {
     return counting_in_flag_.load(std::memory_order_relaxed);
   }
-  // Position within the bar, [0, 1). Updated once per render block.
   double bar_phase() const {
     return bar_phase_.load(std::memory_order_relaxed);
   }
-  // Effective BPM, including ramp progress. UI polls this.
   double current_bpm() const {
     return current_bpm_.load(std::memory_order_relaxed);
   }
-  // True while the current bar is silenced by the bar-mute trainer.
   bool bar_muted() const {
     return bar_muted_flag_.load(std::memory_order_relaxed);
   }
@@ -166,6 +168,7 @@ class Metronome {
     kSetBarMute,
     kSetVolume,
     kSetLatencyOffset,
+    kSetFollowSong,
   };
 
   struct Command {
@@ -211,7 +214,6 @@ class Metronome {
   void ApplyCommand(const Command& command);
   bool RouteCommand(const Command& command);
   bool ApplyTransportCommand(const Command& command);
-  // Copies an anchor_external's scalars into the pending_anchor_ fields.
   void StashPendingAnchor(const Command& command);
   bool ApplyTempoCommand(const Command& command);
   bool ApplyTrainerCommand(const Command& command);
@@ -264,14 +266,9 @@ class Metronome {
   void SetBpmPreservingPhase(double new_bpm);
   void SetDenominatorPreservingPhase(int32_t denominator);
   void SetBeatRate(double new_bpm, int new_denominator);
-  // Resets sequencer phase and starts the run. Shared by Start (immediate) and
-  // StartAt (deferred to the anchor frame).
   void BeginRun();
 
-  // Render internals. All called per block or per sample from the callback.
   BlockTempo BlockTempoFor(uint32_t sample_rate) const;
-  // Per-block prologue: drains commands, seeds tempo and the grid view, and
-  // consumes a queued anchor. Returns the grid view for the block.
   GridView BeginBlock(
       uint64_t block_start_frame,
       uint32_t sample_rate,
@@ -284,9 +281,7 @@ class Metronome {
       uint32_t sample_rate,
       BlockTempo* tempo
   );
-  // Consumes a queued anchor_external at block start: writes bpm_ and
-  // beat_position_ so `now` sits at the song's beat phase, then runs. SPEC.md
-  // §4.2.
+  // Writes bpm_ and beat_position_ so `now` sits at the song's beat phase.
   void
   BeginAnchorExternal(uint64_t now, uint32_t sample_rate, BlockTempo* tempo);
   // Derives current_bar_ from the current latency-shifted position, so an anchor
@@ -306,9 +301,18 @@ class Metronome {
       uint32_t sample_rate
   );
 
-  // Grid mode: fires the grid's beat if this sample crosses one.
-  void
-  RenderGridBeat(const BeatGrid& grid, uint64_t frame, uint32_t sample_rate);
+  void RenderGridBeat(
+      const BeatGrid& grid,
+      double song_seconds,
+      uint32_t sample_rate
+  );
+  void RenderGridSample(
+      const BeatGrid& grid,
+      const SongClock* song,
+      uint64_t now,
+      uint32_t frame,
+      uint32_t sample_rate
+  );
   void RenderGridSubdivision(
       const BeatGrid& grid,
       double song_seconds,
@@ -321,18 +325,12 @@ class Metronome {
   // Places grid_cursor_ on the first beat at or after `song_seconds`. Binary
   // search — bounded and allocation-free, so it is safe from the callback.
   void SeekGridCursor(const BeatGrid& grid, double song_seconds);
-  // Grid mode: derives current_bar_ from grid_beat_index_. See the definition.
   void SyncGridBar();
-  // Publishes bar_phase_/current_bpm_ from the grid's local beat spacing.
-  void PublishGridMirrors(
-      const BeatGrid& grid,
-      uint64_t frame,
-      uint32_t sample_rate
-  );
+  void PublishGridMirrors(const BeatGrid& grid, double song_seconds);
 
   SpscRing<Command, kCommandRingSize> commands_;
 
-  // RT-owned sequencer state (touched only inside Render).
+  // RT-owned: touched only inside Render.
   bool running_ = false;
   double bpm_ = kDefaultBpm;
   int beats_per_bar_ = 4;
@@ -353,12 +351,10 @@ class Metronome {
   bool counting_in_ = false;
   double count_in_beats_ = 0.0;
   double beat_position_ = 0.0;  // fractional beats since start
-  // Pending sample-accurate start (StartAt). Held until the render loop reaches
-  // `pending_start_frame_` on the engine clock, then consumed by BeginRun.
+  // Held until the render loop reaches the frame, then consumed by BeginRun.
   bool has_pending_start_ = false;
   uint64_t pending_start_frame_ = 0;
-  // Pending anchor_external. Held until the render loop knows block_start_frame,
-  // then consumed by BeginAnchorExternal. The last of several drained wins.
+  // Held until the render loop knows block_start_frame. The last drained wins.
   bool has_pending_anchor_ = false;
   double pending_anchor_song_pos_ = 0.0;
   double pending_anchor_bpm_ = kDefaultBpm;
@@ -384,8 +380,12 @@ class Metronome {
   double volume_ = 1.0;
   double latency_offset_ms_ = 0.0;
   Voice voices_[kMaxVoices];
+  // Reseeds the cursor on a song clock jump or a new loop pass; -1 forces it.
+  bool follow_song_ = false;
+  int64_t follow_next_stream_ = -1;
+  int64_t follow_pass_ = 0;
+  double follow_seconds_ = 0.0;
 
-  // UI-visible mirrors.
   std::atomic<bool> running_flag_{false};
   std::atomic<int32_t> current_beat_{-1};
   std::atomic<int32_t> current_poly_beat_{-1};

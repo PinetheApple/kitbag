@@ -44,11 +44,10 @@ void Metronome::SyncGridBar() {
 
 void Metronome::RenderGridBeat(
     const BeatGrid& grid,
-    uint64_t frame,
+    double song_seconds,
     uint32_t sample_rate
 ) {
   const auto& times = grid.beat_times_sec;
-  const double song_seconds = GridSeconds(grid, frame, sample_rate);
   if (grid_cursor_ >= times.size() ||
       song_seconds + kGridEpsilon < times[grid_cursor_]) {
     RenderGridSubdivision(grid, song_seconds, sample_rate);
@@ -98,11 +97,7 @@ void Metronome::RenderGridSubdivision(
 
 // The sweep and the BPM readout must come from the same grid the click does,
 // or the UI drifts against what is audible (§4.5).
-void Metronome::PublishGridMirrors(
-    const BeatGrid& grid,
-    uint64_t frame,
-    uint32_t sample_rate
-) {
+void Metronome::PublishGridMirrors(const BeatGrid& grid, double song_seconds) {
   const auto& times = grid.beat_times_sec;
   // Outside any interval — before the first beat, or past the last, which every
   // song reaches — hold the last sweep and tempo rather than snapping to zero.
@@ -111,8 +106,7 @@ void Metronome::PublishGridMirrors(
   const double interval = times[grid_cursor_] - previous;
   if (interval <= 0.0) return;
 
-  const double beat_fraction =
-      (GridSeconds(grid, frame, sample_rate) - previous) / interval;
+  const double beat_fraction = (song_seconds - previous) / interval;
   const double beat_in_bar =
       static_cast<double>(grid_beat_index_ % beats_per_bar_);
   bar_phase_.store(
@@ -125,6 +119,34 @@ void Metronome::PublishGridMirrors(
       Clamp(kSecondsPerMinute / interval, kMinBpm, kMaxBpm),
       std::memory_order_relaxed
   );
+}
+
+void Metronome::RenderGridSample(
+    const BeatGrid& grid,
+    const SongClock* song,
+    uint64_t now,
+    uint32_t frame,
+    uint32_t sample_rate
+) {
+  if (!follow_song_) {
+    RenderGridBeat(grid, GridSeconds(grid, now, sample_rate), sample_rate);
+    return;
+  }
+  if (song == nullptr || !song->playing || frame >= song->frames) return;
+  const int64_t stream = song->first + frame;
+  const double ahead = static_cast<double>(stream) +
+                       latency_offset_ms_ * sample_rate / kMsPerSecond;
+  const int64_t pass = song->layout.PassAt(ahead);
+  follow_seconds_ = song->layout.SongFrameAt(ahead) / sample_rate;
+  // A wrap crossed [start, now] in one sample, so beats from start still fire.
+  if (stream != follow_next_stream_) {
+    SeekGridCursor(grid, follow_seconds_);
+  } else if (pass != follow_pass_) {
+    SeekGridCursor(grid, static_cast<double>(song->layout.start) / sample_rate);
+  }
+  follow_next_stream_ = stream + 1;
+  follow_pass_ = pass;
+  RenderGridBeat(grid, follow_seconds_, sample_rate);
 }
 
 }  // namespace kitbag

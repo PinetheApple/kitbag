@@ -144,6 +144,12 @@ void Metronome::SetBarMute(bool enabled, int play_bars, int mute_bars) {
   commands_.Push(command);
 }
 
+void Metronome::SetFollowSong(bool enabled) {
+  Command command{CommandType::kSetFollowSong};
+  command.int_a = enabled ? 1 : 0;
+  commands_.Push(command);
+}
+
 void Metronome::SetGrid(
     std::unique_ptr<BeatGrid> grid,
     uint64_t now_frame,
@@ -184,6 +190,7 @@ bool Metronome::RouteCommand(const Command& command) {
       return ApplyTransportCommand(command);
     case CommandType::kSetTempo:
     case CommandType::kSetLatencyOffset:
+    case CommandType::kSetFollowSong:
       return ApplyTempoCommand(command);
     case CommandType::kSetRamp:
     case CommandType::kSetBarMute:
@@ -248,6 +255,10 @@ bool Metronome::ApplyTempoCommand(const Command& command) {
       return true;
     case CommandType::kSetLatencyOffset:
       SetLatencyPreservingPhase(command.value);
+      return true;
+    case CommandType::kSetFollowSong:
+      follow_song_ = command.int_a != 0;
+      observed_generation_ = 0;
       return true;
     default:
       return false;

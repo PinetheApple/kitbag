@@ -169,7 +169,8 @@ void Engine::Render(float* output, uint32_t frame_count) {
       frame_count,
       kSampleRate,
       kChannelCount,
-      block_start_frame
+      block_start_frame,
+      &mixer_.song_clock()
   );
 
   frames_rendered_.fetch_add(frame_count, std::memory_order_relaxed);
