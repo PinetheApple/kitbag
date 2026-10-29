@@ -34,7 +34,7 @@ export interface StemPlayerEngine {
 
 export type StemPlayerRecords = Pick<
   SongLibraryRepository,
-  'readStemSet' | 'saveStemMix'
+  'readStemSet' | 'saveStemMix' | 'renameStem'
 >;
 
 // The metronome tool's transport, running or paused behind its notification,

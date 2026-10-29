@@ -84,7 +84,11 @@ export function StemList({
   );
   return (
     <View style={styles.card}>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
         {indexes.map((index) => (
           <StemRowView
             key={index}

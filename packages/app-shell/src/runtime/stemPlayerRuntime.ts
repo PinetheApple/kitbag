@@ -77,6 +77,7 @@ configureStemPlayer({
   records: {
     readStemSet: (id) => getDatabase().songLibrary.readStemSet(id),
     saveStemMix: (mixes) => getDatabase().songLibrary.saveStemMix(mixes),
+    renameStem: (id, name) => getDatabase().songLibrary.renameStem(id, name),
   },
   readWaveform: (path, buckets) =>
     getKitbagLibrary().readWaveform(path, buckets),

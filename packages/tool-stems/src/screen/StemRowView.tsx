@@ -6,12 +6,13 @@ import {
   Waveform,
 } from '@kitbag/core-design';
 import { useStemPlayer } from '@kitbag/core-state';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 
 import { GainFader } from './GainFader.tsx';
 import { LevelChip } from './LevelChip.tsx';
+import { StemNameEditor } from './StemNameEditor.tsx';
 import { StemToggle } from './StemToggle.tsx';
 import { useStemStyles } from './stemStyles.ts';
 
@@ -25,6 +26,7 @@ const useStyles = createThemedStyles(() => ({
     gap: stemPlayer.rowGap,
     alignSelf: 'stretch',
   },
+  nameHit: { alignSelf: 'stretch', justifyContent: 'center' },
   wave: { flex: 1, opacity: stemPlayerMix.wave },
   waveQuiet: { opacity: stemPlayerMix.mutedWave },
   missing: { opacity: opacity.muted },
@@ -49,6 +51,18 @@ export function StemRowView({
   const setGain = useStemPlayer((s) => s.setGain);
   const toggleMute = useStemPlayer((s) => s.toggleMute);
   const solo = useStemPlayer((s) => s.solo);
+  const renameStem = useStemPlayer((s) => s.renameStem);
+  const [editing, setEditing] = useState(false);
+  const startRename = useCallback(() => {
+    setEditing(true);
+  }, []);
+  const finishRename = useCallback(
+    (name: string) => {
+      setEditing(false);
+      void renameStem(index, name);
+    },
+    [renameStem, index],
+  );
   const expand = useCallback(() => {
     onExpand(index);
   }, [onExpand, index]);
@@ -82,33 +96,44 @@ export function StemRowView({
           expanded ? stemStyles.rowExpanded : stemStyles.rowCollapsed,
         ]}
       >
-        <Pressable
-          accessible={false}
-          importantForAccessibility="no-hide-descendants"
-          style={styles.open}
-          onPress={expand}
-        >
-          <Text
-            style={[stemStyles.name, row.muted && stemStyles.nameQuiet]}
-            numberOfLines={1}
+        {editing ? (
+          <StemNameEditor name={row.name} onDone={finishRename} />
+        ) : (
+          <Pressable
+            accessible={false}
+            importantForAccessibility="no-hide-descendants"
+            style={styles.open}
+            onPress={expand}
           >
-            {row.name}
-          </Text>
-          <View style={[styles.wave, row.muted && styles.waveQuiet]}>
-            <Waveform
-              envelope={row.envelope}
-              bars={WAVEFORM_BARS}
-              height={stemPlayer.waveHeight}
-              progress={progress}
-              extent={row.extent}
-            />
-          </View>
-        </Pressable>
+            <Pressable
+              style={styles.nameHit}
+              onPress={expand}
+              onLongPress={startRename}
+            >
+              <Text
+                style={[stemStyles.name, row.muted && stemStyles.nameQuiet]}
+                numberOfLines={1}
+              >
+                {row.name}
+              </Text>
+            </Pressable>
+            <View style={[styles.wave, row.muted && styles.waveQuiet]}>
+              <Waveform
+                envelope={row.envelope}
+                bars={WAVEFORM_BARS}
+                height={stemPlayer.waveHeight}
+                progress={progress}
+                extent={row.extent}
+              />
+            </View>
+          </Pressable>
+        )}
         <LevelChip
           label={row.name}
           gain={row.volume}
           open={expanded}
           onPress={expand}
+          onRename={startRename}
         />
         <StemToggle
           kind="mute"

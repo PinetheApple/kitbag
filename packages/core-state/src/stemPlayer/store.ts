@@ -9,6 +9,7 @@ import { NO_SONG_FACTS, songFacts, type SongFacts } from './facts.ts';
 import { loopActions } from './loopActions.ts';
 import { UNITY_GAIN } from './mix.ts';
 import { mixSaver } from './mixSaver.ts';
+import { renameActions } from './renameActions.ts';
 import { getStemPlayer, type StemPlayerRuntime } from './runtime.ts';
 import { secondsToFrames } from './time.ts';
 
@@ -72,6 +73,7 @@ export interface StemPlayerActions {
   readonly skip: (seconds: number) => void;
   readonly markLoop: () => Promise<void>;
   readonly toggleClick: () => Promise<void>;
+  readonly renameStem: (index: number, name: string) => Promise<void>;
 }
 
 export type StemPlayerStore = StemPlayerState & StemPlayerActions;
@@ -282,6 +284,7 @@ export function createStemPlayerStore(
       ...transportActions(get, runtimeOf, scrubSeek),
       ...loopActions(context),
       ...clickActions(context),
+      ...renameActions(context),
     };
   });
 }

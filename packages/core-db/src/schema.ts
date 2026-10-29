@@ -168,6 +168,7 @@ export const stemSets = sqliteTable(
     speed: real('speed').notNull().default(1),
     sampleRate: integer('sample_rate'),
     folder: text('folder'),
+    renamed: integer('renamed', { mode: 'boolean' }).notNull().default(false),
   },
   (table) => [
     uniqueIndex('stem_sets_stemdeck_job_id')
@@ -194,6 +195,7 @@ export const stems = sqliteTable('stems', {
   pitch: real('pitch').notNull().default(0),
   waveformPath: text('waveform_path'),
   frames: integer('frames'),
+  name: text('name'),
 });
 
 export const subdivisionAccents = sqliteTable('subdivision_accents', {

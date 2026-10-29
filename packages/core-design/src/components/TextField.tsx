@@ -1,3 +1,4 @@
+import type { Ref } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 
 import type { IconName } from '../icons.ts';
@@ -40,6 +41,8 @@ export interface TextFieldProps {
   readonly accessibilityLabel: string;
   readonly icon?: IconName;
   readonly autoFocus?: boolean;
+  readonly editable?: boolean;
+  readonly ref?: Ref<TextInput>;
   readonly onSubmitEditing?: () => void;
   readonly onClear?: () => void;
 }
@@ -53,6 +56,7 @@ export function TextField(props: TextFieldProps) {
         <Icon name={props.icon} size="field" color="text3" />
       )}
       <TextInput
+        ref={props.ref}
         style={styles.input}
         value={props.value}
         onChangeText={props.onChangeText}
@@ -60,6 +64,7 @@ export function TextField(props: TextFieldProps) {
         placeholderTextColor={theme.color.text3}
         accessibilityLabel={props.accessibilityLabel}
         autoFocus={props.autoFocus ?? false}
+        editable={props.editable ?? true}
         onSubmitEditing={props.onSubmitEditing}
       />
       {props.onClear === undefined || props.value === '' ? null : (

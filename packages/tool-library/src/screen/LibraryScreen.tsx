@@ -70,8 +70,9 @@ function FilterChip({ chip }: { readonly chip: LibraryChip }) {
   );
 }
 
-function SearchBar() {
+function SearchBar({ covered }: { readonly covered: boolean }) {
   const query = useSongLibrary((s) => s.query);
+  const replacing = useSongLibrary((s) => s.replacePrompt !== null);
   const setQuery = useSongLibrary((s) => s.setQuery);
   const clear = useCallback(() => {
     setQuery('');
@@ -82,6 +83,7 @@ function SearchBar() {
       onChangeText={setQuery}
       placeholder="Search songs, artists…"
       accessibilityLabel="Search songs and artists"
+      editable={!covered && !replacing}
       onClear={clear}
     />
   );
@@ -196,7 +198,7 @@ function LibraryBody({
     );
   return (
     <>
-      <SearchBar />
+      <SearchBar covered={menu.kind !== 'none'} />
       <ChipRow>
         {LIBRARY_CHIPS.map((chip) => (
           <FilterChip key={chip} chip={chip} />
