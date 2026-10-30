@@ -1301,8 +1301,8 @@ Investigate, in this order:
   bass B0.
 - **Detection band.** Constraining to the preset's per-string band is the
   octave-error fix; confirm it is applied. (`kb_tuner_set_band` exists.)
-- **Benchmark against GuitarTuna** on the same device and instrument. It is the
-  UX bar.
+- **Benchmark against an established tuner app** on the same device and
+  instrument. It is the UX bar.
 
 Treat the current implementation as a prototype that identified the problem, not
 as a base to build on.
@@ -1310,7 +1310,7 @@ as a base to build on.
 ### 10.2 Behaviour (when built)
 
 - Chromatic + instrument presets; auto string detection; A4 415–466Hz.
-- **Hold detected notes longer** — calibrate to GuitarTuna's feel.
+- **Hold detected notes longer** — calibrate to established tuner apps' feel.
 - **Reset on re-entry.** The in-tune green state currently persists after leaving
   and returning.
 - **Custom tunings** — user-defined note lists (Drop D, DADGAD), saved.
@@ -1320,9 +1320,9 @@ as a base to build on.
   ring = in tune, amber glow = detected), giant note readout, graduated red→green
   strip with a fixed centre line, Auto/A4/Chromatic chips. The built tuner does
   not.
-- **Needle position carries the signal; colour reinforces.** GuitarTuna users
-  revolted when a redesign removed the graduated strip with a centre line; we keep
-  it. Position + "TUNE UP ↑" text + colour = three redundant channels,
+- **Needle position carries the signal; colour reinforces.** Users of an established
+  tuner app revolted when a redesign removed the graduated strip with a centre
+  line; we keep it. Position + "TUNE UP ↑" text + colour = three redundant channels,
   colourblind-safe (§12.6).
 - In-tune lock: needle snaps to centre, peg ring turns green, one confirmation
   haptic tick. **No sound** — you are listening to the string.
