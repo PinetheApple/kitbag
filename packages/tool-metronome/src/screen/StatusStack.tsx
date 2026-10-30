@@ -14,6 +14,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
+import { rampProgressFill } from '../logic/rampProgress.ts';
 import {
   afterCountInSummary,
   armedSummary,
@@ -30,6 +31,7 @@ import { MuteStatus } from './MuteStatus.tsx';
 import { countInInk, useStatusStyles } from './statusStyles.ts';
 import { StatusVariant } from './StatusVariant.tsx';
 import type { MetronomeFrameValues } from './useMetronomeFrame.ts';
+import { useStillMotion } from './useStillMotion.ts';
 
 export type StatusFrame = Pick<
   MetronomeFrameValues,
@@ -57,13 +59,23 @@ interface RampStatusProps {
 function RampStatus({ rows, frame, ramp }: RampStatusProps) {
   const styles = useStatusStyles();
   const { rampNextBpm, rampRemaining, rampStepProgress } = frame;
-  const unit = ramp.unit;
+  const { unit, interval } = ramp;
+  const still = useStillMotion();
   const next = useDerivedValue(() => rampNextText(rampNextBpm.value));
   const remaining = useDerivedValue(() =>
     rampRemainingText(rampRemaining.value, unit),
   );
   const progress = useAnimatedStyle(() => ({
-    transform: [{ scaleX: Math.min(1, Math.max(0, rampStepProgress.value)) }],
+    transform: [
+      {
+        scaleX: rampProgressFill(
+          rampStepProgress.value,
+          interval,
+          unit,
+          still.value,
+        ),
+      },
+    ],
   }));
   return (
     <StatusVariant rows={rows} shown="ramp" style={styles.live}>

@@ -113,7 +113,7 @@ export function rampNextText(nextBpm: number): string {
   return `→ ${String(Math.round(nextBpm))}`;
 }
 
-const TENTHS = 10;
+export const TENTHS = 10;
 
 export function rampRemainingText(remaining: number, unit: number): string {
   'worklet';
