@@ -1,7 +1,11 @@
 import { useMemo } from 'react';
 import { Text, View } from 'react-native';
 
-import { notationGeometry as g, notationLayout } from '../notation.ts';
+import {
+  drawsNotation,
+  notationGeometry as g,
+  notationLayout,
+} from '../notation.ts';
 import { textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { useTheme } from '../ThemeProvider.tsx';
@@ -14,21 +18,27 @@ const NUMERAL_BOX_EMS = 3;
 
 export interface NotationGlyphProps {
   readonly subdivision: number;
+  readonly denominator?: number;
   readonly height: number;
   readonly color?: ColorToken;
 }
 
 export function NotationGlyph({
   subdivision,
+  denominator = g.tileDenominator,
   height,
   color = 'text',
 }: NotationGlyphProps) {
   const theme = useTheme();
   const ink = theme.color[color];
   const scale = height / g.height;
-  const layout = useMemo(() => notationLayout(subdivision), [subdivision]);
+  const layout = useMemo(
+    () => notationLayout(subdivision, denominator),
+    [subdivision, denominator],
+  );
   const numeralSize = textRoles.notationNumeral.size * scale;
   const numeralBox = numeralSize * NUMERAL_BOX_EMS;
+  if (!drawsNotation(subdivision, denominator)) return null;
 
   return (
     <View

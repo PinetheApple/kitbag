@@ -1,7 +1,8 @@
 import { KB_ACCENT } from '@kitbag/core-native';
 import { describe, expect, it } from 'vitest';
 
-import { beatLabel, dotLook, ledStateFor } from './beatDot.ts';
+import { beatLabel, beatMarker, dotLook, ledStateFor } from './beatDot.ts';
+import { TEXT_PLACEHOLDER } from './textPlaceholder.ts';
 
 const PALETTE = {
   accent: 'accent',
@@ -75,5 +76,16 @@ describe('beat labels', () => {
     expect(beatLabel(3, ledStateFor(KB_ACCENT.KB_ACCENT_MUTED))).toBe(
       'Beat 4, muted',
     );
+  });
+});
+
+describe('beatMarker', () => {
+  it('labels only the downbeat', () => {
+    expect(beatMarker(0)).toBe('1');
+    expect(beatMarker(1)).toBe(TEXT_PLACEHOLDER);
+  });
+
+  it('gives every beat text to measure, so no marker keeps an old text scale', () => {
+    expect(TEXT_PLACEHOLDER).toBe('\u00A0');
   });
 });

@@ -1,6 +1,8 @@
 import type { LedState } from '@kitbag/core-design';
 import { KB_ACCENT } from '@kitbag/core-native';
 
+import { TEXT_PLACEHOLDER } from './textPlaceholder.ts';
+
 export function ledStateFor(accent: KB_ACCENT): LedState {
   if (accent === KB_ACCENT.KB_ACCENT_ACCENTED) return 'accented';
   if (accent === KB_ACCENT.KB_ACCENT_MUTED) return 'muted';
@@ -9,6 +11,10 @@ export function ledStateFor(accent: KB_ACCENT): LedState {
 
 export function beatLabel(beat: number, state: LedState): string {
   return `Beat ${String(beat + 1)}, ${state}`;
+}
+
+export function beatMarker(beat: number): string {
+  return beat === 0 ? '1' : TEXT_PLACEHOLDER;
 }
 
 export interface DotPalette {

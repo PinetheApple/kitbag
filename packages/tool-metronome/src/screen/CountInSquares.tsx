@@ -14,6 +14,7 @@ import Animated, {
 
 import type { LedRowLayout } from '../logic/ledLayout.ts';
 import { countSquare } from '../logic/statusRows.ts';
+import { TEXT_PLACEHOLDER } from '../logic/textPlaceholder.ts';
 import { useBeatDotStyles } from './beatDotStyles.ts';
 import { BeatGrid } from './BeatGrid.tsx';
 
@@ -69,6 +70,7 @@ function CountSquare({ beat, side, currentBeat }: SquareProps) {
 interface CountInSquaresProps {
   readonly lines: readonly LedRowLayout[];
   readonly dotSize: number;
+  readonly lineGap: number;
   readonly currentBeat: SharedValue<number>;
   readonly countingIn: SharedValue<number>;
 }
@@ -76,10 +78,12 @@ interface CountInSquaresProps {
 export function CountInSquares({
   lines,
   dotSize,
+  lineGap,
   currentBeat,
   countingIn,
 }: CountInSquaresProps) {
   const styles = useBeatDotStyles();
+  const lineSpacing = useMemo(() => ({ gap: lineGap }), [lineGap]);
   const shown = useAnimatedStyle(() => ({
     opacity: countingIn.value === 0 ? 0 : 1,
   }));
@@ -88,7 +92,7 @@ export function CountInSquares({
       <>
         <CountSquare beat={beat} side={dotSize} currentBeat={currentBeat} />
         <View style={styles.pulseRow} />
-        <Text style={styles.marker} />
+        <Text style={styles.marker}>{TEXT_PLACEHOLDER}</Text>
       </>
     ),
     [dotSize, currentBeat, styles],
@@ -97,7 +101,7 @@ export function CountInSquares({
     <Animated.View
       pointerEvents="none"
       importantForAccessibility="no-hide-descendants"
-      style={[styles.overlay, styles.lines, shown]}
+      style={[styles.overlay, styles.lines, lineSpacing, shown]}
     >
       <BeatGrid lines={lines} renderBeat={renderSquare} />
     </Animated.View>
