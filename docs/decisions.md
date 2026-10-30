@@ -483,3 +483,8 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   and the Android `colors.xml` pair, and `splash.test.ts` asserts each equals the §12.2
   `bg` of its theme. Still open with the owner: Q7 (one switch look or two) and Q13
   (licence and attribution destinations, npm licences, BPM data credits). **[recorded]**
+
+- **2026-10-31 · Settings section labels (§12.2, §12.6, #170, #189)** — Settings section
+  labels use `theme.accentInk` (light: `accentDeep`), a contrast exception to the design's
+  accent: the design value is about 3.7:1 on the light background at 10.5 px, under
+  4.5:1. **[recorded]**
