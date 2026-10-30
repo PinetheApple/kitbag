@@ -1,10 +1,5 @@
-# git-cliff configuration — generates CHANGELOG.md from Conventional Commits.
-# Regenerate with:  git cliff changelog-base..HEAD -o CHANGELOG.md
-# The changelog-base..HEAD RANGE IS MANDATORY. The `changelog-base` tag marks the
-# Flutter-removal reset (9a63543); generating from the full log resurrects the
-# deleted 0.1-0.5 Flutter/tuner feat commits — the phantom history SPEC.md §2
-# killed. The header below is load-bearing (SPEC.md §2): it records that nothing
-# has shipped and why the old version history was deleted. Keep it truthful.
+# Generate only through scripts/changelog.sh: an unbounded git-cliff run re-imports
+# the pre-audit releases SPEC.md §2 deleted. Keep the header truthful.
 
 [changelog]
 header = """
@@ -22,21 +17,21 @@ and re-imports the deleted releases.
 
 ---
 
-## Unreleased
-
-**Nothing has been released.**
-
-This file previously recorded 0.1.0 through 0.5.0 as all shipped on 2026-07-14.
-An audit on 2026-07-17 found that claim substantially false, and those entries
-were deleted rather than amended — they described work that does not exist.
-`SPEC.md` §2 is the audited inventory of what the codebase actually did, and it
-supersedes anything this file says. Version numbers restart when something
-genuinely ships.
+Releases are the `vX.Y.Z` git tags, each published as a GitHub release with a
+signed APK. This file once recorded 0.1.0 through 0.5.0 as shipped on
+2026-07-14; an audit on 2026-07-17 found that substantially false, and those
+entries were deleted rather than amended. `SPEC.md` §2 is the audited inventory
+of what the codebase actually did. Version numbers here are the release tags and
+have nothing to do with the deleted entries.
 
 """
 
-# One section per commit group; %{commit_id} links, scope shown when present.
 body = """
+{% if version %}\
+## {{ version | trim_start_matches(pat="v") }} — {{ timestamp | date(format="%Y-%m-%d") }}
+{% else %}\
+## Unreleased
+{% endif %}\
 {% for group, commits in commits | group_by(attribute="group") %}
 ### {{ group | upper_first }}
 {% for commit in commits %}
