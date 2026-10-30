@@ -70,6 +70,18 @@ function drawnLabelLine(fontScale: number): number {
   return metronome.beatMarkerLineHeight * Math.max(1, fontScale);
 }
 
+export function beatLinePitch(
+  density: ScreenDensity,
+  dotSize: number,
+  fontScale: number,
+): number {
+  const beatLabel =
+    BEAT_LABEL_HEIGHT -
+    metronome.beatMarkerLineHeight +
+    drawnLabelLine(fontScale);
+  return dotSize + beatLabel + beatDotLineGap(density);
+}
+
 function polyBlockHeight(poly: PolyRow, room: BelowTempoRoom): number {
   if (poly === 'off') return 0;
   const row = beatDotLineGap(room.density) + metronome.polyDot;
@@ -87,13 +99,9 @@ export function beatDotsHeight(
     room.width,
     beatDotMetrics(room.density, lines),
   );
-  const beatLabel =
-    BEAT_LABEL_HEIGHT -
-    metronome.beatMarkerLineHeight +
-    drawnLabelLine(room.fontScale);
   const beatLines =
-    lines.length * (dot + beatLabel) +
-    (lines.length - 1) * beatDotLineGap(room.density);
+    lines.length * beatLinePitch(room.density, dot, room.fontScale) -
+    beatDotLineGap(room.density);
   return beatLines + polyBlockHeight(shape.poly, room);
 }
 

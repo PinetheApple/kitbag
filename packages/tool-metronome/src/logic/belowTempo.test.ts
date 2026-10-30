@@ -3,6 +3,8 @@ import { KB_MAX_BEATS } from '@kitbag/core-native';
 import { describe, expect, it } from 'vitest';
 
 import {
+  beatDotsHeight,
+  beatLinePitch,
   belowTempoReserve,
   DOT_METRICS,
   tallestBelowTempo,
@@ -112,5 +114,32 @@ describe('the body at fontScale 1.0', () => {
     expect(tallestBelowTempo('labelBeside', SMALL_COMPACT)).toBeLessThanOrEqual(
       budget,
     );
+  });
+});
+
+describe('beatLinePitch', () => {
+  const TWELVE_EIGHT = { beatCount: 12, poly: 'off' } as const;
+  const dot = metronome.beatDotMaxCompactMultiLine;
+  const cell =
+    metronome.beatMarkerGap + metronome.pulseMark + metronome.beatMarkerGap;
+
+  it('spaces 12/8 at 360 x 800 one dot, label and compact gap apart', () => {
+    for (const fontScale of [1, 2]) {
+      expect(beatLinePitch('compact', dot, fontScale)).toBe(
+        dot +
+          cell +
+          metronome.beatMarkerLineHeight * fontScale +
+          metronome.beatDotLineGapCompact,
+      );
+    }
+  });
+
+  it('is the pitch the reserve stacks dot lines at', () => {
+    for (const fontScale of [1, 2]) {
+      const pitch = beatLinePitch('compact', dot, fontScale);
+      expect(
+        beatDotsHeight(TWELVE_EIGHT, { ...SMALL_COMPACT, fontScale }),
+      ).toBeCloseTo(2 * pitch - metronome.beatDotLineGapCompact);
+    }
   });
 });

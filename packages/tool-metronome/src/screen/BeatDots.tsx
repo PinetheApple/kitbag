@@ -241,6 +241,7 @@ export function BeatDots({
       <CountInSquares
         lines={lines}
         dotSize={dotSize}
+        lineGap={lineGap}
         currentBeat={currentBeat}
         countingIn={countingIn}
       />

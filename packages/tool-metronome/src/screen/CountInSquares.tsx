@@ -70,6 +70,7 @@ function CountSquare({ beat, side, currentBeat }: SquareProps) {
 interface CountInSquaresProps {
   readonly lines: readonly LedRowLayout[];
   readonly dotSize: number;
+  readonly lineGap: number;
   readonly currentBeat: SharedValue<number>;
   readonly countingIn: SharedValue<number>;
 }
@@ -77,10 +78,12 @@ interface CountInSquaresProps {
 export function CountInSquares({
   lines,
   dotSize,
+  lineGap,
   currentBeat,
   countingIn,
 }: CountInSquaresProps) {
   const styles = useBeatDotStyles();
+  const lineSpacing = useMemo(() => ({ gap: lineGap }), [lineGap]);
   const shown = useAnimatedStyle(() => ({
     opacity: countingIn.value === 0 ? 0 : 1,
   }));
@@ -98,7 +101,7 @@ export function CountInSquares({
     <Animated.View
       pointerEvents="none"
       importantForAccessibility="no-hide-descendants"
-      style={[styles.overlay, styles.lines, shown]}
+      style={[styles.overlay, styles.lines, lineSpacing, shown]}
     >
       <BeatGrid lines={lines} renderBeat={renderSquare} />
     </Animated.View>
