@@ -40,7 +40,6 @@ export const metronome = {
   pulseMarkGap: 3,
   beatMarkerLineHeight: 14,
   polyDot: 22,
-  polyLabelWidth: 28,
   polyLabelGap: 8,
   legendGap: 16,
   legendSwatch: 14,

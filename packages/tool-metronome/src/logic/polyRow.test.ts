@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { polyDotCentres, polyLabelReach, polyRatioLabel } from './polyRow.ts';
+import { polyDotCentres, polyLabelBeside, polyRatioLabel } from './polyRow.ts';
 
 describe('poly dot placement', () => {
   const FOUR_BEATS = 4 * 56 + 3 * 12;
@@ -20,12 +20,16 @@ describe('poly dot placement', () => {
 });
 
 describe('poly label', () => {
-  it('sits its full reach left of the row when there is room', () => {
-    expect(polyLabelReach(36, 34, 16)).toBe(36);
+  it('sits beside the row when the margin holds it', () => {
+    expect(polyLabelBeside(20, 8, 34, 16)).toBe(true);
   });
 
-  it('stops at the screen edge on a full-width bar', () => {
-    expect(polyLabelReach(36, 0, 16)).toBe(16);
+  it('moves above the row when the bar fills the width', () => {
+    expect(polyLabelBeside(27, 8, 0, 16)).toBe(false);
+  });
+
+  it('moves above the row when large text widens it', () => {
+    expect(polyLabelBeside(52, 8, 34, 16)).toBe(false);
   });
 
   it('reads poly beats against the bar', () => {

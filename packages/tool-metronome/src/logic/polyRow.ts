@@ -11,12 +11,13 @@ export function polyDotCentres(
   );
 }
 
-export function polyLabelReach(
-  wanted: number,
+export function polyLabelBeside(
+  labelWidth: number,
+  labelGap: number,
   sideRoom: number,
   screenInset: number,
-): number {
-  return Math.min(wanted, Math.max(0, sideRoom) + screenInset);
+): boolean {
+  return labelWidth + labelGap <= Math.max(0, sideRoom) + screenInset;
 }
 
 export function polyRatioLabel(polyBeats: number, beatsPerBar: number): string {

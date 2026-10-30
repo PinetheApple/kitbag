@@ -7,8 +7,8 @@ import {
   textStyle,
   useTheme,
 } from '@kitbag/core-design';
-import { useMemo } from 'react';
-import { Text, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { Text, View, type LayoutChangeEvent } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   type SharedValue,
@@ -16,30 +16,39 @@ import Animated, {
 
 import {
   polyDotCentres,
-  polyLabelReach,
+  polyLabelBeside,
   polyRatioLabel,
 } from '../logic/polyRow.ts';
 import { DOT_METRICS, dotPalette } from './beatDotStyles.ts';
 
-const LABEL_REACH = metronome.polyLabelWidth + metronome.polyLabelGap;
 const HALF_POLY_DOT = metronome.polyDot / 2;
 
 const usePolyStyles = createThemedStyles((theme) => ({
-  row: {
+  block: {
     alignSelf: 'center',
+    gap: metronome.beatMarkerGap,
+  },
+  row: {
     height: metronome.polyDot,
   },
-  label: {
+  besideLabel: {
     position: 'absolute',
     top: 0,
-    width: metronome.polyLabelWidth,
     height: metronome.polyDot,
     justifyContent: 'center',
+  },
+  aboveLabel: {
+    alignSelf: 'flex-start',
+  },
+  ghost: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    opacity: 0,
   },
   labelText: {
     ...textStyle(textRoles.polyRatio),
     color: theme.color.text2,
-    textAlign: 'right',
   },
   dot: {
     position: 'absolute',
@@ -90,6 +99,7 @@ export function PolyDots({
   currentPolyBeat,
 }: PolyDotsProps) {
   const styles = usePolyStyles();
+  const [labelWidth, setLabelWidth] = useState(0);
   const ratio = polyRatioLabel(polyBeats, beatsPerBar);
   const centres = polyDotCentres(
     polyBeats,
@@ -97,32 +107,53 @@ export function PolyDots({
     dotSize,
     DOT_METRICS.dotGap,
   );
+  const beside = polyLabelBeside(
+    labelWidth,
+    metronome.polyLabelGap,
+    (areaWidth - lineWidth) / 2,
+    space.screenInset,
+  );
   const width = useMemo(() => ({ width: lineWidth }), [lineWidth]);
-  const labelPlace = useMemo(() => {
-    const sideRoom = (areaWidth - lineWidth) / 2;
-    return { left: -polyLabelReach(LABEL_REACH, sideRoom, space.screenInset) };
-  }, [areaWidth, lineWidth]);
+  const besidePlace = useMemo(
+    () => ({
+      left: -(labelWidth + metronome.polyLabelGap),
+      width: labelWidth,
+    }),
+    [labelWidth],
+  );
+  const handleLabelLayout = useCallback((event: LayoutChangeEvent) => {
+    setLabelWidth(event.nativeEvent.layout.width);
+  }, []);
+  const label = <Text style={styles.labelText}>{ratio}</Text>;
   return (
     <View
-      style={[styles.row, width]}
+      style={[styles.block, width]}
       accessible
       accessibilityRole="text"
       accessibilityLabel={`Polyrhythm ${ratio}`}
       pointerEvents="none"
     >
-      <View style={[styles.label, labelPlace]}>
-        <Text style={styles.labelText} numberOfLines={1}>
-          {ratio}
-        </Text>
+      <Text
+        style={[styles.labelText, styles.ghost]}
+        importantForAccessibility="no"
+        onLayout={handleLabelLayout}
+      >
+        {ratio}
+      </Text>
+      {beside ? null : <View style={styles.aboveLabel}>{label}</View>}
+      <View style={styles.row}>
+        {beside ? (
+          <View style={[styles.besideLabel, besidePlace]}>{label}</View>
+        ) : null}
+        {centres.map((centre, index) => (
+          <PolyDot
+            key={index}
+            index={index}
+            left={centre - HALF_POLY_DOT}
+            currentPolyBeat={currentPolyBeat}
+          />
+        ))}
       </View>
-      {centres.map((centre, index) => (
-        <PolyDot
-          key={index}
-          index={index}
-          left={centre - HALF_POLY_DOT}
-          currentPolyBeat={currentPolyBeat}
-        />
-      ))}
     </View>
   );
 }
