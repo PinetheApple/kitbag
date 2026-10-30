@@ -1,12 +1,12 @@
 # Metronome layout B — mockup parity table
 
-Source: the "Chosen" variant in `docs/research/mockups/metronome-layouts.html`
+Source: the "Chosen" variant in `design/kitbag-metronome-b.html`
 (owner-approved on #175, 2026-10-30). Values are the mockup's CSS at its 360 × 800
 phone frame, where 1 CSS px = 1 dp. Colours name the §12.2 palette tokens; `mix(a N%, b)`
 is CSS `color-mix(in srgb, a N%, b)`. The last column is where the value lives in
 `@kitbag/core-design` (roles in `roles.ts`; `metronome`, `metronomeSheet`, `wheelPicker` and `metronomeMix` in
 `metronomeRoles.ts`; otherwise named). The status rows, pulse marks and poly row follow
-variant A, the Q6 draft and "Poly · second dot row" of `docs/research/mockups/metronome-status.html` (owner-approved on
+variant A, the Q6 draft and "Poly · second dot row" of `design/kitbag-metronome-status.html` (owner-approved on
 #175, 2026-10-30).
 
 ## Unchanged by owner ruling

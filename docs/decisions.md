@@ -405,7 +405,7 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
 
 - **2026-10-30 · Metronome layout B supersedes the design file (§5.2, §5.3, §12, #175)** —
   The owner chose layout B from `docs/research/ui-survey-metronome-stems.md` and approved
-  its reworked mockup, `docs/research/mockups/metronome-layouts.html` ("Chosen"), as the
+  its reworked mockup, `design/kitbag-metronome-b.html` ("Chosen"), as the
   design for #175, #56, #81, #82, #171, #172 and #173. Where it differs from
   `design/kitbag-metronome.html` §02 the mockup wins: an app bar with Back; meter and
   notation subdivision chips instead of the steppers card; beat dots on their own row with
@@ -414,13 +414,13 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   of setlist, Play and Practice with no stopwatch key; a first-use swipe hint; no glow
   behind the BPM numeral. This also settles #56's poly-off ruling: poly is armed in the Practice
   sheet, and while it is on a second row of smaller dots sits under the beat dots (owner,
-  2026-10-30, "Poly · second dot row" in `metronome-status.html`). The
+  2026-10-30, "Poly · second dot row" in `design/kitbag-metronome-status.html`). The
   value-by-value table is `docs/research/metronome-b-parity.md`. The mockup also
   changes D9's row rule: a line holds up to eight dots and longer bars wrap at a group
   boundary (12/8 → two lines of 3+3). D9 asked for at least four per row; the new rule
   drops that minimum, so 9/8 wraps 6+3. The build's own seven-per-row cap
   (`MAX_LEDS_PER_ROW`) pushed the transport off a 360 × 800 screen at 56 dp dots. **[user]**
-  The status rows and pulse marks come from `docs/research/mockups/metronome-status.html`
+  The status rows and pulse marks come from `design/kitbag-metronome-status.html`
   (variant A and the Q6 draft, approved the same day): the mute cycle row, then the ramp
   row, two rows of height always reserved; count-in on its own row with what follows it
   below; the beat legend only while stopped; one mark per subdivision pulse under each

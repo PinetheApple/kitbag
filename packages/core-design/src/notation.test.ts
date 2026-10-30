@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { notationLayout } from './notation.ts';
 
-// Expected values are the mockup's subdivision SVGs (metronome-layouts.html).
+// Expected values are the mockup's subdivision SVGs (design/kitbag-metronome-b.html).
 const near = (actual: number, expected: number) => {
   expect(Math.abs(actual - expected)).toBeLessThan(0.06);
 };

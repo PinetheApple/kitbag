@@ -1409,8 +1409,7 @@ Two migration notes that are not obvious from the table:
 
 ## 12. Design
 
-`design/` holds four files. All are binding, and their precedence is explicit; the last
-row is an owner-approved mockup kept outside `design/`:
+`design/` holds the binding design files, and their precedence is explicit:
 
 | File | Scope |
 |---|---|
@@ -1418,7 +1417,7 @@ row is an owner-approved mockup kept outside `design/`:
 | `kitbag-metronome.html` | Supersedes the metronome section of `kitbag-ui.html`. Adds setlists, setlist detail, preset editor, four sheets, the numpad, practice summary, notification/lock screen. |
 | `kitbag-playalong.html` | Supersedes the Play-along section. Adds the locked state, seven more states, five sheets, and a code audit. |
 | `kitbag-settings.html` | Designs Settings, latency calibration, restore. **Supersedes exactly one §06 card** — "Settings stay contextual" — and nothing else. |
-| `docs/research/mockups/metronome-layouts.html` ("Chosen") and `metronome-status.html` (variant A, Q6 pulse marks) | Owner-approved for #175. **Supersede `kitbag-metronome.html` §02 where they differ** (`docs/decisions.md`, 2026-10-30); `docs/research/metronome-b-parity.md` is the value table. |
+| `kitbag-metronome-b.html` ("Chosen") and `kitbag-metronome-status.html` (variant A, Q6 pulse marks, poly row) | Owner-approved layout B (#175). **Supersede the metronome screen in `kitbag-metronome.html` §02, and §03's sheets and numpad, where they differ.** §02's setlists, setlist detail and preset editor, and §04 onward, stay binding. Recorded in `docs/decisions.md`, 2026-10-30; `docs/research/metronome-b-parity.md` is the value table. |
 
 ### 12.1 Principles (kitbag-ui §01)
 
