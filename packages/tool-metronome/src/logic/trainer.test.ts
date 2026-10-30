@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   barBounds,
-  muteChipValue,
   mutePreview,
   rampChipValue,
   stepWithin,
@@ -20,10 +19,6 @@ describe('stepWithin', () => {
 describe('chip values', () => {
   it('draws the ramp as the design does', () => {
     expect(rampChipValue(100, 140)).toBe('100→140');
-  });
-
-  it('names both halves of the mute cycle', () => {
-    expect(muteChipValue(2, 2)).toBe('2 play · 2 mute');
   });
 });
 

@@ -26,11 +26,18 @@ import { Icon } from './Icon.tsx';
 
 const CHIP_HEIGHT = textRoles.chip.size + (inset.chipV + size.stroke) * 2;
 
+export type ChipSize = 'default' | 'large';
+
+const CHIP_HEIGHTS: Readonly<Record<ChipSize, number>> = {
+  default: CHIP_HEIGHT,
+  large: size.chipLarge,
+};
+
 // A chip's width follows its label and is nearly always past 48dp, so only the
 // vertical axis is grown.
-function chipHitBox(gaps: NeighbourGaps) {
+function chipHitBox(gaps: NeighbourGaps, height: number) {
   return hitBoxStyle(
-    hitExtension(minTouchTargetDp, CHIP_HEIGHT, {
+    hitExtension(minTouchTargetDp, height, {
       top: gaps.top,
       bottom: gaps.bottom,
     }),
@@ -53,6 +60,7 @@ interface ChipFaceProps {
   readonly trailingIcon?: IconName | undefined;
   readonly active: boolean;
   readonly liveDot: boolean;
+  readonly large?: boolean;
 }
 
 const useStyles = createThemedStyles((theme) => ({
@@ -101,6 +109,11 @@ const useStyles = createThemedStyles((theme) => ({
   labelActive: {
     color: theme.color.accent,
   },
+  largeChip: {
+    minHeight: size.chipLarge,
+    paddingVertical: 0,
+  },
+  largeLabel: textStyle(textRoles.chipLarge),
   liveDot: {
     width: size.liveDot,
     height: size.liveDot,
@@ -115,23 +128,29 @@ function ChipFace({
   trailingIcon,
   active,
   liveDot,
+  large = false,
 }: ChipFaceProps) {
   const styles = useStyles();
   const glyphColor = active ? 'accent' : 'text2';
+  const glyphSize = large ? 'chipLarge' : 'chip';
   return (
     <>
       {liveDot ? <View style={styles.liveDot} /> : null}
       {icon === undefined ? null : (
-        <Icon name={icon} size="chip" color={glyphColor} />
+        <Icon name={icon} size={glyphSize} color={glyphColor} />
       )}
       <Text
         numberOfLines={1}
-        style={[styles.label, active && styles.labelActive]}
+        style={[
+          styles.label,
+          large && styles.largeLabel,
+          active && styles.labelActive,
+        ]}
       >
         {label}
       </Text>
       {trailingIcon === undefined ? null : (
-        <Icon name={trailingIcon} size="chip" color={glyphColor} />
+        <Icon name={trailingIcon} size={glyphSize} color={glyphColor} />
       )}
     </>
   );
@@ -149,6 +168,7 @@ export interface ChipProps {
   /** Gaps to the controls above and below, for the 48dp hit box; a number
    * applies to both, an omitted side has no neighbour. */
   readonly neighbourGapDp?: number | NeighbourGaps;
+  readonly size?: ChipSize;
 }
 
 export function Chip({
@@ -161,6 +181,7 @@ export function Chip({
   fill: fillProp = false,
   accessibilityLabel,
   neighbourGapDp,
+  size: chipSize = 'default',
 }: ChipProps) {
   const styles = useStyles();
   const id = useId();
@@ -170,6 +191,7 @@ export function Chip({
     neighbourGapDp === undefined
       ? (lines?.gapsFor(id) ?? neighbourGaps(space.controlGap))
       : neighbourGaps(neighbourGapDp),
+    CHIP_HEIGHTS[chipSize],
   );
   const report = lines?.report;
   const lineTopOffset = fill ? 0 : hitBox.paddingTop;
@@ -198,6 +220,7 @@ export function Chip({
       <View
         style={[
           styles.chip,
+          chipSize === 'large' && styles.largeChip,
           active && styles.chipActive,
           fill && styles.fillFace,
         ]}
@@ -208,6 +231,7 @@ export function Chip({
           trailingIcon={trailingIcon}
           active={active}
           liveDot={liveDot}
+          large={chipSize === 'large'}
         />
       </View>
     </Pressable>

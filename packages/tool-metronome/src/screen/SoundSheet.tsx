@@ -77,15 +77,3 @@ export function SoundPickerSheet({
     </Sheet>
   );
 }
-
-export function SoundSheet(props: SoundSheetProps) {
-  const sounds = useMetronome((state) => state.sounds);
-  const setSounds = useMetronome((state) => state.setSounds);
-  const change = useCallback(
-    (next: PerAccentSounds) => {
-      setSounds(next.normal, next.accent);
-    },
-    [setSounds],
-  );
-  return <SoundPickerSheet {...props} sounds={sounds} onChange={change} />;
-}

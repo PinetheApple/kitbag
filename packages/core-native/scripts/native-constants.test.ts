@@ -278,6 +278,11 @@ describe('collectConstants (real engine source)', () => {
       { name: 'KB_RAMP_SECONDS', value: 1 },
       { name: 'KB_RAMP_MINUTES', value: 2 },
     ]);
+    expect(c.rampState).toEqual([
+      { name: 'KB_RAMP_STATE_OFF', value: 0 },
+      { name: 'KB_RAMP_STATE_STEPPING', value: 1 },
+      { name: 'KB_RAMP_STATE_AT_TARGET', value: 2 },
+    ]);
     // render twice: identical, so generate:check can byte-diff deterministically.
     expect(renderConstants(c)).toBe(renderConstants(c));
   });

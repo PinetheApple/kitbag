@@ -21,6 +21,8 @@ import {
   type SongPreset,
 } from '@kitbag/core-state';
 
+import { MIN_BEATS } from './meter.ts';
+
 export type RampDraft = RampConfig;
 export type BarMuteDraft = BarMuteConfig;
 
@@ -41,8 +43,6 @@ export interface PresetDraft {
   readonly ramp: RampDraft;
   readonly barMute: BarMuteDraft;
 }
-
-const MIN_BEATS = 1;
 
 function clampTo(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);

@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 
 import type { IconName } from '../icons.ts';
-import { inset, radius, size, space, textRoles } from '../roles.ts';
+import { iconSizes, inset, radius, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import {
@@ -20,7 +20,7 @@ import {
 import { InlineIcon } from './IconGlyph.tsx';
 
 export type StepDelta = -1 | 1;
-export type StepControlVariant = 'badge' | 'inline';
+export type StepControlVariant = 'badge' | 'inline' | 'inlineLarge';
 
 const STEP_DOWN: StepDelta = -1;
 const STEP_UP: StepDelta = 1;
@@ -37,6 +37,9 @@ const INLINE_KEY_HEIGHT = textRoles.stepInline.size + inset.stepInlineKeyV * 2;
 const INLINE_INNER_GAP = space.inlineKeyGap * 2 + size.stepValueMinWidth;
 const INLINE_EDGE_H = inset.stepInlineH + size.stroke;
 const INLINE_EDGE_V = inset.stepInlineV + size.stroke;
+
+const LARGE_KEY_HEIGHT = size.stepInlineLarge - size.stroke * 2;
+const LARGE_EDGE_H = inset.stepInlineLargeH + size.stroke;
 
 const A11Y_ACTIONS = [{ name: 'increment' }, { name: 'decrement' }] as const;
 const A11Y_ACTIONS_WITH_ACTIVATE = [...A11Y_ACTIONS, { name: 'activate' }];
@@ -85,6 +88,36 @@ function keyHitBoxes({ width, height, inner, gaps }: KeyGeometry) {
 
 const plus = (edge: number, gap: number | undefined) =>
   unshared(edge) + (gap ?? Number.POSITIVE_INFINITY);
+
+function largeInlineKeyHitBoxes(gaps: NeighbourGaps, valueTappable: boolean) {
+  return keyHitBoxes({
+    width: size.stepInlineLargeKey,
+    height: LARGE_KEY_HEIGHT,
+    inner: valueTappable ? space.inlineKeyGap : INLINE_INNER_GAP,
+    gaps: {
+      top: plus(size.stroke, gaps.top),
+      bottom: plus(size.stroke, gaps.bottom),
+      left: plus(LARGE_EDGE_H, gaps.left),
+      right: plus(LARGE_EDGE_H, gaps.right),
+    },
+  });
+}
+
+// Padding counts toward minWidth, so the box grows by what it reaches sideways.
+function inlineValueHitBox(gaps: NeighbourGaps, large: boolean) {
+  const height = large ? LARGE_KEY_HEIGHT : INLINE_KEY_HEIGHT;
+  const edgeV = large ? size.stroke : INLINE_EDGE_V;
+  const reach = hitExtension(size.stepValueMinWidth, height, {
+    top: plus(edgeV, gaps.top),
+    bottom: plus(edgeV, gaps.bottom),
+    left: space.inlineKeyGap,
+    right: space.inlineKeyGap,
+  });
+  return {
+    ...hitBoxStyle(reach),
+    minWidth: size.stepValueMinWidth + reach.left + reach.right,
+  };
+}
 
 function stepKeyHitBoxes(
   gaps: NeighbourGaps,
@@ -178,10 +211,32 @@ const useStyles = createThemedStyles((theme) => ({
     minWidth: size.stepValueMinWidth,
     alignItems: 'center',
   },
+  tappableValue: {
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+  },
   inlineValue: {
     ...textStyle(textRoles.stepInlineValue),
     color: theme.color.text,
   },
+  largeCluster: {
+    minHeight: size.stepInlineLarge,
+    paddingVertical: 0,
+    paddingHorizontal: inset.stepInlineLargeH,
+    borderRadius: radius.stepInlineLarge,
+  },
+  largeKey: {
+    width: size.stepInlineLargeKey,
+    minHeight: LARGE_KEY_HEIGHT,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  largeKeyText: {
+    fontSize: iconSizes.stepInlineLargeKey,
+  },
+  largeValue: textStyle(textRoles.stepInlineLargeValue),
 }));
 
 export function StepControl({
@@ -196,12 +251,12 @@ export function StepControl({
 }: StepControlProps) {
   const styles = useStyles();
   const valueTappable = onValuePress !== undefined;
-  const inline = variant === 'inline';
-  const hitBoxes = stepKeyHitBoxes(
-    neighbourGaps(neighbourGapDp),
-    inline,
-    valueTappable,
-  );
+  const large = variant === 'inlineLarge';
+  const inline = variant === 'inline' || large;
+  const gaps = neighbourGaps(neighbourGapDp);
+  const hitBoxes = large
+    ? largeInlineKeyHitBoxes(gaps, valueTappable)
+    : stepKeyHitBoxes(gaps, inline, valueTappable);
 
   const handleDecrement = useCallback(() => {
     onStep(STEP_DOWN);
@@ -223,8 +278,11 @@ export function StepControl({
   const key = (glyph: IconName, hitBox: HitBox, onPress: () => void) =>
     inline ? (
       <Pressable style={hitBox} onPress={onPress}>
-        <View style={styles.inlineKey}>
-          <InlineIcon name={glyph} style={styles.inlineKeyText} />
+        <View style={[styles.inlineKey, large && styles.largeKey]}>
+          <InlineIcon
+            name={glyph}
+            style={[styles.inlineKeyText, large && styles.largeKeyText]}
+          />
         </View>
       </Pressable>
     ) : (
@@ -234,6 +292,21 @@ export function StepControl({
         </View>
       </Pressable>
     );
+
+  const valueBoxStyle = inline
+    ? styles.inlineValueBox
+    : [styles.badgeValueBox, accented && styles.badgeValueBoxAccented];
+  const valueText = (
+    <Text
+      style={
+        inline
+          ? [styles.inlineValue, large && styles.largeValue]
+          : [styles.badgeValue, accented && styles.badgeValueAccented]
+      }
+    >
+      {value}
+    </Text>
+  );
 
   return (
     <View
@@ -245,32 +318,26 @@ export function StepControl({
         valueTappable ? A11Y_ACTIONS_WITH_ACTIVATE : A11Y_ACTIONS
       }
       onAccessibilityAction={handleAccessibilityAction}
-      style={inline ? styles.inlineCluster : styles.badgeCluster}
+      style={
+        inline
+          ? [styles.inlineCluster, large && styles.largeCluster]
+          : styles.badgeCluster
+      }
     >
       {key('decrease', hitBoxes.decrement, handleDecrement)}
-      <View
-        style={
-          inline
-            ? [styles.inlineValueBox, !valueTappable && styles.inertValue]
-            : [
-                styles.badgeValueBox,
-                accented && styles.badgeValueBoxAccented,
-                // An inert badge must not swallow the keys' hit boxes.
-                !valueTappable && styles.inertValue,
-              ]
-        }
-      >
-        <Text
-          style={
-            inline
-              ? styles.inlineValue
-              : [styles.badgeValue, accented && styles.badgeValueAccented]
-          }
+      {valueTappable ? (
+        <Pressable
+          style={[
+            valueBoxStyle,
+            inline && [styles.tappableValue, inlineValueHitBox(gaps, large)],
+          ]}
           onPress={onValuePress}
         >
-          {value}
-        </Text>
-      </View>
+          {valueText}
+        </Pressable>
+      ) : (
+        <View style={[valueBoxStyle, styles.inertValue]}>{valueText}</View>
+      )}
       {key('increase', hitBoxes.increment, handleIncrement)}
     </View>
   );

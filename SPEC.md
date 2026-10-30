@@ -609,14 +609,16 @@ Ported from the Flutter build, which got this right:
   a circle (evenly spaced at `i·2π/beatCount`) and has since v0.1, to save
   horizontal space — but grouping is a linear idea a circle cannot express, so 7/8
   grouping visually as 2+2+3 was never possible. The row wins.
-  **Minimum 4 LEDs per row; rows wrap rather than shrinking below that**, so a
-  16-beat bar is four rows of four rather than sixteen unreadable dots. That rule
-  is what makes the row survive the space problem the circle was solving.
-- **Polyrhythm as a second LED row**, smaller LEDs, own accent states.
+  **Up to eight LEDs per line; a longer bar wraps at a group boundary**, so 12/8 is
+  two lines of 3+3 and a 16-beat bar two lines of eight. That rule is what makes
+  the row survive the space problem the circle was solving.
+- **Polyrhythm as a second dot row** under the beat dots, shown only while poly
+  is on. Smaller dots, each placed at its time in the bar, so a poly pulse that
+  lands on a beat sits under that beat; a `3:4` ratio label to the left. The
+  sounding poly dot fills; the row has no accent or mute states.
 - **Bar sweep** under the BPM: a thin progress ring per bar (anticipation), and
   the active LED flashes on the click (confirmation). Both — see §12.3.
-- **Practice timer pill** under the app bar. Tap to reset; the `◴` transport
-  button is its visible twin.
+- **Practice timer pill** under the app bar, with a visible reset.
 
 New:
 
@@ -629,9 +631,8 @@ New:
   had no answer on the page.
 - **Subdivision reaches 1–16** through that same stepper, showing clicks per
   beat as `×1`…`×16`. (The note glyphs `♩ ♪ ³ ♬` were dropped in #112: they fell
-  back to small or emoji renderings and were hard to read.) Poly stays a toggle
-  segment beside it;
-  its ratio is edited on the poly row's own stepper.
+  back to small or emoji renderings and were hard to read.) Poly is switched on
+  and its ratio set in the Practice sheet.
 
 ### 5.3 Four chips, four sheets
 
@@ -1408,7 +1409,7 @@ Two migration notes that are not obvious from the table:
 
 ## 12. Design
 
-`design/` holds four files. All are binding, and their precedence is explicit:
+`design/` holds the binding design files, and their precedence is explicit:
 
 | File | Scope |
 |---|---|
@@ -1416,6 +1417,7 @@ Two migration notes that are not obvious from the table:
 | `kitbag-metronome.html` | Supersedes the metronome section of `kitbag-ui.html`. Adds setlists, setlist detail, preset editor, four sheets, the numpad, practice summary, notification/lock screen. |
 | `kitbag-playalong.html` | Supersedes the Play-along section. Adds the locked state, seven more states, five sheets, and a code audit. |
 | `kitbag-settings.html` | Designs Settings, latency calibration, restore. **Supersedes exactly one §06 card** — "Settings stay contextual" — and nothing else. |
+| `kitbag-metronome-b.html` ("Chosen") and `kitbag-metronome-status.html` (variant A, Q6 pulse marks, poly row) | Owner-approved layout B (#175). **Supersede the metronome screen in `kitbag-metronome.html` §02, and §03's sheets and numpad, where they differ.** §02's setlists, setlist detail and preset editor, and §04 onward, stay binding. Recorded in `docs/decisions.md`, 2026-10-30; `docs/research/metronome-b-parity.md` is the value table. |
 
 ### 12.1 Principles (kitbag-ui §01)
 
@@ -1690,7 +1692,7 @@ decisions they carry are the reason the files read as they now do:
 |---|---|---|
 | `kitbag-settings.html` §03 | **Base directory is not cut.** It returns as an authoritative picker; Storage becomes its companion, not its replacement. | D11 |
 | `kitbag-metronome.html` §02 | `7/4` **went back to `7/8`** — the denominator is being built, so the mock's original claim is buildable. | D1 |
-| `kitbag-metronome.html` §02 | LEDs are a **row with grouping, min 4 per row, wrapping**. Resolves the file's own "knowingly untrue" flag — and the build's circle is what changes, not the mock. | D9 |
+| `kitbag-metronome.html` §02 | LEDs are a **row with grouping, up to 8 per line, wrapping at a group boundary**. Resolves the file's own "knowingly untrue" flag — and the build's circle is what changes, not the mock. | D9 |
 | `kitbag-playalong.html` §04 | **Delete the ad state.** | D10 |
 | `kitbag-playalong.html` §05 | Phase sheet shows the **total** (`+190 ms total · 180 route + 10 song`). | D6 |
 | `kitbag-metronome.html` §05 | Close both open questions: volume/latency are global (**no** preset-editor override, so the editor is already right); subdivision accents are global. | D2, D3 |
@@ -2241,9 +2243,12 @@ express — which is why `kitbag-metronome.html` flagged the row as the one thin
 it that was knowingly untrue. It is now true.
 
 - **Grouping renders as the design draws it** — 7/8 groups visually 2+2+3.
-- **Minimum 4 LEDs per row.** Rows wrap rather than shrinking below that, so a
-  16-beat bar is four rows of four, not sixteen unreadable dots. This is the rule
-  that makes the row survive the horizontal-space problem the circle was solving.
+- **Up to eight LEDs per line.** A longer bar wraps at a group boundary, so 12/8 is
+  two lines of 3+3 and a 16-beat bar two lines of eight. There is no minimum per
+  line: 9/8 wraps 6+3. Seven
+  per line pushed the transport off a 360 × 800 screen at 56 dp dots (#175). This is
+  the rule that makes the row survive the horizontal-space problem the circle was
+  solving.
 
 The React rebuild is the cheapest this will ever be, which is why it is being done
 now rather than carried.

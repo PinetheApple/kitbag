@@ -4,6 +4,7 @@
 // Shared by metronome.cpp, metronome_render.cpp and metronome_grid.cpp. Not
 // part of any public surface; kitbag_api.h is the contract external callers read.
 
+#include <cmath>
 #include <cstddef>
 
 namespace kitbag {
@@ -24,6 +25,13 @@ constexpr double kMsPerSecond = 1000.0;
 template <typename T>
 T Clamp(T value, T low, T high) {
   return value < low ? low : (value > high ? high : value);
+}
+
+inline double BarFraction(double position, int beats_per_bar) {
+  const auto bar_beats = static_cast<double>(beats_per_bar);
+  double in_bar = std::fmod(position, bar_beats);
+  if (in_bar < 0.0) in_bar += bar_beats;
+  return in_bar / bar_beats;
 }
 
 template <std::size_t N>

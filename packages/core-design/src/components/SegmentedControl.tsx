@@ -17,12 +17,19 @@ import {
 const TRACK_EDGE = space.segmentInset + size.stroke;
 const OPTION_HEIGHT = textRoles.segment.size + inset.segmentOptionV * 2;
 
+export type SegmentedControlSize = 'default' | 'large';
+
+const OPTION_HEIGHTS: Readonly<Record<SegmentedControlSize, number>> = {
+  default: OPTION_HEIGHT,
+  large: size.segmentLargeOption,
+};
+
 // Option widths are flex, so only the vertical axis is grown to 48dp; sideways
 // every option takes the same half of the gap between options, which keeps
 // their visible widths equal.
-function optionHitBox(gaps: NeighbourGaps, compact: boolean) {
+function optionHitBox(gaps: NeighbourGaps, compact: boolean, height: number) {
   const edge = compact ? 0 : TRACK_EDGE;
-  const vertical = hitExtension(OPTION_HEIGHT, OPTION_HEIGHT, {
+  const vertical = hitExtension(height, height, {
     top: unshared(edge) + (gaps.top ?? Number.POSITIVE_INFINITY),
     bottom: unshared(edge) + (gaps.bottom ?? Number.POSITIVE_INFINITY),
   });
@@ -52,12 +59,14 @@ export interface SegmentedControlProps<T extends string> {
   /** Gaps to the controls around the track; a number applies to every side,
    * an omitted side has no neighbour. */
   readonly neighbourGapDp?: number | NeighbourGaps;
+  readonly size?: SegmentedControlSize;
 }
 
 interface SegmentProps<T extends string> {
   readonly option: SegmentOption<T>;
   readonly selected: boolean;
   readonly accent: boolean;
+  readonly large: boolean;
   readonly hitBox: ReturnType<typeof optionHitBox>;
   readonly onSelect: (value: T) => void;
 }
@@ -101,12 +110,26 @@ const useStyles = createThemedStyles((theme) => ({
   labelAccent: {
     color: theme.color.accent,
   },
+  largeTrack: {
+    borderRadius: radius.segmentLarge,
+  },
+  largeOption: {
+    minHeight: size.segmentLargeOption,
+    paddingVertical: 0,
+    justifyContent: 'center',
+    borderRadius: radius.segmentLargeOption,
+  },
+  largeOptionSelected: {
+    backgroundColor: theme.color.surface1,
+  },
+  largeLabel: textStyle(textRoles.segmentLarge),
 }));
 
 function Segment<T extends string>({
   option,
   selected,
   accent,
+  large,
   hitBox,
   onSelect,
 }: SegmentProps<T>) {
@@ -123,10 +146,18 @@ function Segment<T extends string>({
       style={[styles.optionHit, hitBox]}
       onPress={handlePress}
     >
-      <View style={[styles.option, selected && styles.optionSelected]}>
+      <View
+        style={[
+          styles.option,
+          large && styles.largeOption,
+          selected && styles.optionSelected,
+          selected && large && styles.largeOptionSelected,
+        ]}
+      >
         <Text
           style={[
             styles.label,
+            large && styles.largeLabel,
             selected && (accent ? styles.labelAccent : styles.labelSelected),
           ]}
         >
@@ -146,14 +177,24 @@ export function SegmentedControl<T extends string>({
   selectedTone = 'neutral',
   fill = false,
   neighbourGapDp = space.segmentInset,
+  size: controlSize = 'default',
 }: SegmentedControlProps<T>) {
   const styles = useStyles();
-  const hitBox = optionHitBox(neighbourGaps(neighbourGapDp), compact);
+  const large = controlSize === 'large';
+  const hitBox = optionHitBox(
+    neighbourGaps(neighbourGapDp),
+    compact,
+    OPTION_HEIGHTS[controlSize],
+  );
   return (
     <View
       accessibilityRole="radiogroup"
       accessibilityLabel={accessibilityLabel}
-      style={[compact ? styles.compact : styles.track, fill && styles.fill]}
+      style={[
+        compact ? styles.compact : styles.track,
+        large && !compact && styles.largeTrack,
+        fill && styles.fill,
+      ]}
     >
       {options.map((option) => (
         <Segment
@@ -161,6 +202,7 @@ export function SegmentedControl<T extends string>({
           option={option}
           selected={option.value === selected}
           accent={selectedTone === 'accent'}
+          large={large}
           hitBox={hitBox}
           onSelect={onSelect}
         />

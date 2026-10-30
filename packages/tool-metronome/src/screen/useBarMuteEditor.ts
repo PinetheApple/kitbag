@@ -1,11 +1,9 @@
 import type { StepDelta } from '@kitbag/core-design';
-import { KB_MAX_MUTE_BARS } from '@kitbag/core-native';
+import { KB_MUTE_BARS_BOUNDS } from '@kitbag/core-native';
 import { useMetronome, type BarMuteConfig } from '@kitbag/core-state';
 import { useCallback, useMemo } from 'react';
 
-import { barBounds, mutePreview, stepWithin } from '../logic/trainer.ts';
-
-const MUTE_BARS = barBounds(KB_MAX_MUTE_BARS);
+import { mutePreview, stepWithin } from '../logic/trainer.ts';
 
 type Stepper = (delta: StepDelta) => void;
 
@@ -14,8 +12,7 @@ export interface BarMuteEditor {
   readonly preview: readonly boolean[];
   readonly stepPlay: Stepper;
   readonly stepMute: Stepper;
-  readonly apply: () => void;
-  readonly turnOff: () => void;
+  readonly toggle: (enabled: boolean) => void;
 }
 
 function useMuteStepper(key: 'playBars' | 'muteBars'): Stepper {
@@ -25,29 +22,27 @@ function useMuteStepper(key: 'playBars' | 'muteBars'): Stepper {
     (delta: StepDelta) => {
       setBarMute({
         ...barMute,
-        [key]: stepWithin(barMute[key], delta, MUTE_BARS),
+        [key]: stepWithin(barMute[key], delta, KB_MUTE_BARS_BOUNDS),
       });
     },
     [barMute, setBarMute, key],
   );
 }
 
-export function useBarMuteEditor(onDone: () => void): BarMuteEditor {
+export function useBarMuteEditor(): BarMuteEditor {
   const barMute = useMetronome((s) => s.barMute);
   const setBarMute = useMetronome((s) => s.setBarMute);
   const preview = useMemo(
     () => mutePreview(barMute.playBars, barMute.muteBars),
     [barMute.playBars, barMute.muteBars],
   );
-  const apply = useCallback(() => {
-    setBarMute({ ...barMute, enabled: true });
-    onDone();
-  }, [barMute, setBarMute, onDone]);
-  const turnOff = useCallback(() => {
-    setBarMute({ ...barMute, enabled: false });
-    onDone();
-  }, [barMute, setBarMute, onDone]);
+  const toggle = useCallback(
+    (enabled: boolean) => {
+      setBarMute({ ...barMute, enabled });
+    },
+    [barMute, setBarMute],
+  );
   const stepPlay = useMuteStepper('playBars');
   const stepMute = useMuteStepper('muteBars');
-  return { barMute, preview, stepPlay, stepMute, apply, turnOff };
+  return { barMute, preview, stepPlay, stepMute, toggle };
 }

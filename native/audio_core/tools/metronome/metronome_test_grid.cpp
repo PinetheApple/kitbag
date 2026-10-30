@@ -269,7 +269,7 @@ void TestGridReanchorKeepsBarPhase() {
   // Beat 4 is the new grid's second downbeat: bar 1, which the trainer mutes.
   // Over-counting the re-crossed downbeat would report bar 2 — sounding.
   Check(
-      metronome.bar_muted(),
+      metronome.trainer_mirrors().bar_muted(),
       "grid re-anchor: bar-mute phase survives the re-anchor"
   );
 }

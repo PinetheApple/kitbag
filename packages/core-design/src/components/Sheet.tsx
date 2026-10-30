@@ -23,14 +23,15 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 
 import type { IconName } from '../icons.ts';
-import { size, space, textRoles } from '../roles.ts';
+import { opacity, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
+import { withAlpha } from '../theme.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import {
   SHEET_DRAG_ACTIVATION_DP,
   shouldDismissSheet,
 } from '../sheetDismiss.ts';
-import { radii } from '../tokens.ts';
+import { palette, radii } from '../tokens.ts';
 import { InlineIcon } from './IconGlyph.tsx';
 import { useSheetPortal } from './SheetHost.tsx';
 
@@ -38,6 +39,7 @@ import { useSheetPortal } from './SheetHost.tsx';
 // far into the sheet's padding. The right side stays put: the indicator is there.
 export const SHEET_TOUCH_ROOM = space.sectionGap;
 const INDICATOR_INSETS = { top: SHEET_TOUCH_ROOM, bottom: SHEET_TOUCH_ROOM };
+const SCRIM = withAlpha(palette.bg.dark, opacity.sheetScrim);
 
 const useStyles = createThemedStyles((theme) => ({
   frame: {
@@ -94,17 +96,36 @@ const useStyles = createThemedStyles((theme) => ({
   centered: {
     textAlign: 'center',
   },
+  hintLarge: textStyle(textRoles.sheetHint),
+  scrim: {
+    backgroundColor: SCRIM,
+  },
 }));
+
+export type SheetHintSize = 'default' | 'large';
 
 export interface SheetHintProps {
   readonly centered?: boolean;
+  readonly size?: SheetHintSize;
   readonly children: ReactNode;
 }
 
-export function SheetHint({ centered = false, children }: SheetHintProps) {
+export function SheetHint({
+  centered = false,
+  size: hintSize = 'default',
+  children,
+}: SheetHintProps) {
   const styles = useStyles();
   return (
-    <Text style={[styles.hint, centered && styles.centered]}>{children}</Text>
+    <Text
+      style={[
+        styles.hint,
+        hintSize === 'large' && styles.hintLarge,
+        centered && styles.centered,
+      ]}
+    >
+      {children}
+    </Text>
   );
 }
 
@@ -117,6 +138,7 @@ export interface SheetProps {
   readonly bottomInset?: number;
   readonly onDismiss: () => void;
   readonly onShow?: () => void;
+  readonly dim?: boolean;
   readonly children: ReactNode;
 }
 
@@ -129,6 +151,7 @@ export function Sheet({
   bottomInset = 0,
   onDismiss,
   onShow,
+  dim = false,
   children,
 }: SheetProps) {
   const styles = useStyles();
@@ -192,7 +215,7 @@ export function Sheet({
       <Animated.View
         entering={FadeIn}
         exiting={FadeOut}
-        style={StyleSheet.absoluteFill}
+        style={[StyleSheet.absoluteFill, dim && styles.scrim]}
       >
         <Pressable
           style={StyleSheet.absoluteFill}

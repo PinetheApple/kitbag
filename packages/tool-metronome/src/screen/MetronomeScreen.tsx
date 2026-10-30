@@ -1,96 +1,68 @@
 import {
-  Card,
   createThemedStyles,
-  SegmentedControl,
+  metronome,
   space,
-  StepControl,
   textRoles,
   textStyle,
-  unshared,
 } from '@kitbag/core-design';
-import { KB_DENOMINATORS } from '@kitbag/core-native';
-import { BPM_BOUNDS, useLibrary, useMetronome } from '@kitbag/core-state';
+import {
+  BPM_BOUNDS,
+  useLibrary,
+  useMetronome,
+  useSwipeHint,
+} from '@kitbag/core-state';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { GestureDetector } from 'react-native-gesture-handler';
-import { Text, View } from 'react-native';
+import { GestureDetector, ScrollView } from 'react-native-gesture-handler';
+import {
+  Text,
+  useWindowDimensions,
+  View,
+  type LayoutChangeEvent,
+} from 'react-native';
 
-import { hasPracticeToReset } from '../logic/practiceTimer.ts';
-import { subdivisionLabel } from '../logic/subdivision.ts';
+import { useLibraryRefresh } from '../library/useLibraryRefresh.ts';
+import { practiceBadgeCount } from '../logic/statusRows.ts';
 import { pushTap, tapTempoBpm } from '../logic/tapTempo.ts';
-import { BeatLeds } from './BeatLeds.tsx';
+import { BeatDots } from './BeatDots.tsx';
+import { NumberEntrySheet } from './NumberEntrySheet.tsx';
+import { MeterSheet } from './MeterSheet.tsx';
+import { MetronomeAppBar } from './MetronomeAppBar.tsx';
+import { PickerChips } from './PickerChips.tsx';
 import { PracticePill, usePracticeElapsed } from './PracticePill.tsx';
+import { PracticeSheet } from './PracticeSheet.tsx';
 import { PresetRow } from './PresetRow.tsx';
+import { StatusStack } from './StatusStack.tsx';
+import { SubdivisionSheet } from './SubdivisionSheet.tsx';
+import { SwipeHint } from './SwipeHint.tsx';
 import { SwipeTempoZone } from './SwipeTempoZone.tsx';
-import { TempoNumpadSheet } from './TempoNumpadSheet.tsx';
-import { TrainerChips } from './TrainerChips.tsx';
 import { Transport } from './Transport.tsx';
 import { useTempoSwipe } from './useTempoSwipe.ts';
 import { useMetronomeFrame } from './useMetronomeFrame.ts';
+import { useScreenDensity } from './useScreenDensity.ts';
+import { usePracticeSettings } from './usePracticeSettings.ts';
 
-// Gaps from the card's rows to the controls around them, for 48dp hit boxes
-// that stop at each gap's midpoint (core-design hitExtension). Past the card's
-// padding the nearest controls are the preset row above and the trainer chips
-// below, a section gap away. Nothing tappable sits left of the steppers or
-// right of the LEDs.
-const ACROSS_CARD_EDGE = space.cardPadding + space.sectionGap;
-const FIRST_ROW_GAPS = {
-  top: ACROSS_CARD_EDGE,
-  bottom: space.rowGap,
-  right: space.rowGap,
-};
-const MIDDLE_ROW_GAPS = {
-  top: space.rowGap,
-  bottom: space.rowGap,
-  right: space.rowGap,
-};
-const LAST_ROW_STEPPER_GAPS = {
-  top: space.rowGap,
-  bottom: ACROSS_CARD_EDGE,
-  right: space.rowGap,
-};
-const POLY_TOGGLE_GAPS = {
-  top: space.rowGap,
-  bottom: ACROSS_CARD_EDGE,
-  left: space.rowGap,
-};
-const FIRST_ROW_LED_GAPS = {
-  top: ACROSS_CARD_EDGE,
-  bottom: space.rowGap,
-  left: space.rowGap,
-};
-const MIDDLE_ROW_LED_GAPS = {
-  top: space.rowGap,
-  bottom: space.rowGap,
-  left: space.rowGap,
-};
-// The card's last row stops inside its padding, and nothing below the chips
-// reaches up past the spacer.
-const TRAINER_CHIP_GAPS = {
-  top: unshared(space.sectionGap),
-  bottom: unshared(space.sectionGap),
-};
+type OpenSheet = 'none' | 'numpad' | 'meter' | 'subdivision' | 'practice';
 
-const POLY = 'poly';
-const POLY_OPTIONS = [{ value: POLY, label: POLY }] as const;
+interface ZoneFrame {
+  readonly top: number;
+  readonly height: number;
+}
 
 const useStyles = createThemedStyles((theme) => ({
   screen: {
     flex: 1,
     backgroundColor: theme.color.bg,
     paddingHorizontal: space.screenInset,
-    gap: space.sectionGap,
   },
-  cardBody: {
-    gap: space.rowGap,
-  },
-  cardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: space.rowGap,
-  },
-  spacer: {
+  body: {
     flex: 1,
+  },
+  bodyContent: {
+    flexGrow: 1,
+    paddingTop: metronome.belowAppBar,
+  },
+  zone: {
+    flexGrow: 1,
   },
   notes: {
     ...textStyle(textRoles.fieldLabel),
@@ -106,14 +78,28 @@ export interface ShellMeasuredInsets {
 
 export interface MetronomeScreenProps {
   readonly insets: ShellMeasuredInsets;
+  readonly onBack?: () => void;
   readonly onOpenSetlists?: () => void;
+}
+
+function useLoadedNotes(): string | null {
+  return useLibrary((state) => {
+    const loadedId = state.loaded?.presetId;
+    if (loadedId === undefined) return null;
+    return (
+      state.presets.find((preset) => preset.id === loadedId)?.notes ?? null
+    );
+  });
 }
 
 export function MetronomeScreen({
   insets,
+  onBack,
   onOpenSetlists,
 }: MetronomeScreenProps) {
+  useLibraryRefresh();
   const styles = useStyles();
+  const window = useWindowDimensions();
   const bpm = useMetronome((s) => s.bpm);
   const beatsPerBar = useMetronome((s) => s.beatsPerBar);
   const denominator = useMetronome((s) => s.denominator);
@@ -121,31 +107,25 @@ export function MetronomeScreen({
   const accents = useMetronome((s) => s.accents);
   const polyEnabled = useMetronome((s) => s.polyEnabled);
   const polyBeats = useMetronome((s) => s.polyBeats);
-  const polyAccents = useMetronome((s) => s.polyAccents);
-  const notes = useLibrary((state) => {
-    const loadedId = state.loaded?.presetId;
-    if (loadedId === undefined) return null;
-    return (
-      state.presets.find((preset) => preset.id === loadedId)?.notes ?? null
-    );
-  });
   const running = useMetronome((s) => s.running);
-
   const setTempo = useMetronome((s) => s.setTempo);
   const nudgeTempo = useMetronome((s) => s.nudgeTempo);
   const syncTempoFromEngine = useMetronome((s) => s.syncTempoFromEngine);
-  const setBeats = useMetronome((s) => s.setBeats);
-  const setSubdivision = useMetronome((s) => s.setSubdivision);
-  const setPoly = useMetronome((s) => s.setPoly);
   const cycleAccent = useMetronome((s) => s.cycleAccent);
-  const cyclePolyAccent = useMetronome((s) => s.cyclePolyAccent);
   const start = useMetronome((s) => s.start);
   const stop = useMetronome((s) => s.stop);
+  const hintSeen = useSwipeHint((s) => s.seen);
+  const dismissHint = useSwipeHint((s) => s.dismiss);
+  const notes = useLoadedNotes();
+  const settings = usePracticeSettings();
 
-  const { barPhase, currentBeat, currentPolyBeat, currentBpm } =
-    useMetronomeFrame(running, bpm);
+  const frame = useMetronomeFrame(running, bpm);
   const { elapsedMs, reset: resetPractice } = usePracticeElapsed();
-  const [numpadOpen, setNumpadOpen] = useState(false);
+  const [openSheet, setOpenSheet] = useState<OpenSheet>('none');
+  const [bodyTop, setBodyTop] = useState(0);
+  const [zone, setZone] = useState<ZoneFrame>({ top: 0, height: 0 });
+  const [bodyHeight, setBodyHeight] = useState(0);
+  const [contentHeight, setContentHeight] = useState(0);
   const tapTimes = useRef<readonly number[]>([]);
 
   const setTempoEndingTapSeries = useCallback(
@@ -156,7 +136,23 @@ export function MetronomeScreen({
     [setTempo],
   );
 
-  const tempoSwipe = useTempoSwipe(currentBpm, setTempoEndingTapSeries);
+  const handleSwipeOrTypedTempo = useCallback(
+    (next: number) => {
+      dismissHint();
+      setTempoEndingTapSeries(next);
+    },
+    [dismissHint, setTempoEndingTapSeries],
+  );
+
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollable = Math.round(contentHeight) > Math.round(bodyHeight);
+  const screenSwipe = useTempoSwipe(frame.currentBpm, handleSwipeOrTypedTempo, {
+    enabled: !scrollable,
+  });
+  const zoneSwipe = useTempoSwipe(frame.currentBpm, handleSwipeOrTypedTempo, {
+    enabled: true,
+    blocks: scrollRef,
+  });
 
   const handleNudge = useCallback(
     (delta: number) => {
@@ -172,39 +168,6 @@ export function MetronomeScreen({
     if (tapped !== undefined) setTempo(tapped);
   }, [setTempo]);
 
-  const handleBeatsStep = useCallback(
-    (delta: number) => {
-      setBeats(beatsPerBar + delta, denominator);
-    },
-    [beatsPerBar, denominator, setBeats],
-  );
-
-  const handleDenominatorCycle = useCallback(() => {
-    const next =
-      KB_DENOMINATORS[
-        (KB_DENOMINATORS.indexOf(denominator) + 1) % KB_DENOMINATORS.length
-      ];
-    if (next !== undefined) setBeats(beatsPerBar, next);
-  }, [beatsPerBar, denominator, setBeats]);
-
-  const handleSubdivisionStep = useCallback(
-    (delta: number) => {
-      setSubdivision(subdivision + delta);
-    },
-    [subdivision, setSubdivision],
-  );
-
-  const handlePolyStep = useCallback(
-    (delta: number) => {
-      setPoly(polyEnabled, polyBeats + delta);
-    },
-    [polyEnabled, polyBeats, setPoly],
-  );
-
-  const handlePolyToggle = useCallback(() => {
-    setPoly(!polyEnabled, polyBeats);
-  }, [polyEnabled, polyBeats, setPoly]);
-
   const handleToggleTransport = useCallback(() => {
     if (running) stop();
     else start();
@@ -212,125 +175,156 @@ export function MetronomeScreen({
 
   const handleOpenNumpad = useCallback(() => {
     syncTempoFromEngine();
-    setNumpadOpen(true);
+    setOpenSheet('numpad');
   }, [syncTempoFromEngine]);
 
-  const handleCloseNumpad = useCallback(() => {
-    setNumpadOpen(false);
+  const handleOpenMeter = useCallback(() => {
+    setOpenSheet('meter');
+  }, []);
+
+  const handleOpenSubdivision = useCallback(() => {
+    setOpenSheet('subdivision');
+  }, []);
+
+  const handleOpenPractice = useCallback(() => {
+    setOpenSheet('practice');
+  }, []);
+
+  const handleCloseSheet = useCallback(() => {
+    setOpenSheet('none');
+  }, []);
+
+  const handleBodyLayout = useCallback((event: LayoutChangeEvent) => {
+    setBodyTop(event.nativeEvent.layout.y);
+    setBodyHeight(event.nativeEvent.layout.height);
+  }, []);
+
+  const handleContentSize = useCallback((_width: number, height: number) => {
+    setContentHeight(height);
+  }, []);
+
+  const handleZoneLayout = useCallback((event: LayoutChangeEvent) => {
+    const { y, height } = event.nativeEvent.layout;
+    setZone({ top: y, height });
   }, []);
 
   const edgeToEdgePadding = useMemo(
-    () => ({
-      paddingTop: space.screenInset + insets.top,
-      paddingBottom: space.screenInset + insets.bottom,
-    }),
+    () => ({ paddingTop: insets.top, paddingBottom: insets.bottom }),
     [insets.top, insets.bottom],
   );
 
+  const dotsWidth = window.width - space.screenInset * 2;
+  const layoutKey = [
+    window.width,
+    window.height,
+    window.fontScale,
+    beatsPerBar,
+    polyEnabled,
+    notes,
+  ].join('|');
+  const density = useScreenDensity(window.height, layoutKey, scrollable);
+  const gap = useMemo(
+    () => ({
+      gap: density === 'compact' ? metronome.bodyGapCompact : space.sectionGap,
+    }),
+    [density],
+  );
+
   return (
-    <GestureDetector gesture={tempoSwipe}>
+    <GestureDetector gesture={screenSwipe}>
       <View style={[styles.screen, edgeToEdgePadding]}>
-        <PracticePill elapsedMs={elapsedMs} onReset={resetPractice} />
-        {notes === null || notes.trim() === '' ? null : (
-          <Text
-            accessibilityLabel={`Song notes: ${notes}`}
-            style={styles.notes}
-          >
-            {notes}
-          </Text>
-        )}
-
-        <SwipeTempoZone
-          bpm={bpm}
-          currentBpm={currentBpm}
-          barPhase={barPhase}
-          onTypeTempo={handleOpenNumpad}
-          onNudge={handleNudge}
-        />
-
-        <PresetRow onNudge={handleNudge} onTap={handleTap} />
-
-        <Card>
-          <View style={styles.cardBody}>
-            <View style={styles.cardRow}>
-              <StepControl
-                label="Time signature"
-                value={`${String(beatsPerBar)}/${String(denominator)}`}
-                onStep={handleBeatsStep}
-                onValuePress={handleDenominatorCycle}
-                neighbourGapDp={FIRST_ROW_GAPS}
-              />
-              <BeatLeds
-                beatCount={beatsPerBar}
-                accents={accents}
-                currentBeat={currentBeat}
-                onCycle={cycleAccent}
-                neighbourGapDp={FIRST_ROW_LED_GAPS}
+        <MetronomeAppBar onBack={onBack} onOpenSetlists={onOpenSetlists} />
+        <ScrollView
+          style={styles.body}
+          contentContainerStyle={[styles.bodyContent, gap]}
+          ref={scrollRef}
+          scrollEnabled={scrollable}
+          showsVerticalScrollIndicator={false}
+          onLayout={handleBodyLayout}
+          onContentSizeChange={handleContentSize}
+        >
+          <PracticePill elapsedMs={elapsedMs} onReset={resetPractice} />
+          {notes === null || notes.trim() === '' ? null : (
+            <Text
+              accessibilityLabel={`Song notes: ${notes}`}
+              style={styles.notes}
+            >
+              {notes}
+            </Text>
+          )}
+          <GestureDetector gesture={zoneSwipe}>
+            <View style={styles.zone} onLayout={handleZoneLayout}>
+              <SwipeTempoZone
+                bpm={bpm}
+                density={density}
+                currentBpm={frame.currentBpm}
+                barPhase={frame.barPhase}
+                onTypeTempo={handleOpenNumpad}
+                onNudge={handleNudge}
               />
             </View>
-
-            {polyEnabled ? (
-              <View style={styles.cardRow}>
-                <StepControl
-                  accented
-                  label="Polyrhythm"
-                  value={`${String(polyBeats)}:${String(beatsPerBar)}`}
-                  onStep={handlePolyStep}
-                  neighbourGapDp={MIDDLE_ROW_GAPS}
-                />
-                <BeatLeds
-                  size="small"
-                  beatCount={polyBeats}
-                  accents={polyAccents}
-                  currentBeat={currentPolyBeat}
-                  onCycle={cyclePolyAccent}
-                  neighbourGapDp={MIDDLE_ROW_LED_GAPS}
-                />
-              </View>
-            ) : null}
-
-            <View style={styles.cardRow}>
-              <StepControl
-                label="Subdivision"
-                value={subdivisionLabel(subdivision)}
-                accessibilityValue={String(subdivision)}
-                onStep={handleSubdivisionStep}
-                neighbourGapDp={LAST_ROW_STEPPER_GAPS}
-              />
-              <SegmentedControl
-                fill
-                accessibilityLabel="Polyrhythm"
-                options={POLY_OPTIONS}
-                selected={polyEnabled ? POLY : undefined}
-                selectedTone="accent"
-                neighbourGapDp={POLY_TOGGLE_GAPS}
-                onSelect={handlePolyToggle}
-              />
-            </View>
-          </View>
-        </Card>
-
-        <TrainerChips
-          bottomInset={insets.bottom}
-          neighbourGapDp={TRAINER_CHIP_GAPS}
-        />
-
-        <View style={styles.spacer} />
-
+          </GestureDetector>
+          <PresetRow onNudge={handleNudge} onTap={handleTap} />
+          <PickerChips
+            beatsPerBar={beatsPerBar}
+            denominator={denominator}
+            subdivision={subdivision}
+            onOpenMeter={handleOpenMeter}
+            onOpenSubdivision={handleOpenSubdivision}
+          />
+          <BeatDots
+            beatCount={beatsPerBar}
+            subdivision={subdivision}
+            polyBeats={polyEnabled ? polyBeats : null}
+            accents={accents}
+            width={dotsWidth}
+            frame={frame}
+            onCycle={cycleAccent}
+          />
+          <StatusStack frame={frame} settings={settings} running={running} />
+        </ScrollView>
         <Transport
           running={running}
+          armedCount={practiceBadgeCount(settings)}
+          gap={gap.gap}
           onToggle={handleToggleTransport}
-          canResetPractice={hasPracticeToReset(elapsedMs)}
-          onResetPractice={resetPractice}
+          onOpenPractice={handleOpenPractice}
           onOpenSetlists={onOpenSetlists}
         />
 
-        <TempoNumpadSheet
-          visible={numpadOpen}
-          bpm={bpm}
+        {hintSeen || zone.height === 0 ? null : (
+          <SwipeHint
+            zoneTop={bodyTop + zone.top}
+            zoneHeight={zone.height}
+            onDismiss={dismissHint}
+          />
+        )}
+
+        <NumberEntrySheet
+          visible={openSheet === 'numpad'}
+          title="Tempo"
+          confirmLabel="Set tempo"
+          value={bpm}
+          bounds={BPM_BOUNDS}
+          unit="BPM"
           bottomInset={insets.bottom}
-          onConfirm={setTempoEndingTapSeries}
-          onDismiss={handleCloseNumpad}
+          onConfirm={handleSwipeOrTypedTempo}
+          onDismiss={handleCloseSheet}
+        />
+        <MeterSheet
+          visible={openSheet === 'meter'}
+          bottomInset={insets.bottom}
+          onDismiss={handleCloseSheet}
+        />
+        <SubdivisionSheet
+          visible={openSheet === 'subdivision'}
+          bottomInset={insets.bottom}
+          onDismiss={handleCloseSheet}
+        />
+        <PracticeSheet
+          visible={openSheet === 'practice'}
+          bottomInset={insets.bottom}
+          onDismiss={handleCloseSheet}
         />
       </View>
     </GestureDetector>

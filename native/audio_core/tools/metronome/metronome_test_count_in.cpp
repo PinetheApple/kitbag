@@ -159,11 +159,11 @@ void RecordMirrors(
   const double phase = metronome.bar_phase();
   log->phase_in_range = log->phase_in_range && phase >= 0.0 && phase < 1.0;
   if (at <= kCommonBarFrames) {
-    log->counting_before_bar_one =
-        log->counting_before_bar_one && metronome.counting_in();
+    log->counting_before_bar_one = log->counting_before_bar_one &&
+                                   metronome.trainer_mirrors().counting_in();
   } else {
-    log->counting_after_bar_one =
-        log->counting_after_bar_one || metronome.counting_in();
+    log->counting_after_bar_one = log->counting_after_bar_one ||
+                                  metronome.trainer_mirrors().counting_in();
   }
   if (at == Block(kCommonBeatFrames / kBlockFrames + 1)) {
     log->beat_after_second_count_beat = metronome.current_beat();
@@ -199,7 +199,7 @@ void TestGridSkipsCountIn() {
   gridded.Start();
   bool counting = false;
   const auto left = RenderLeft(gridded, kCommonBarFrames, [&](int64_t at) {
-    counting = counting || gridded.counting_in();
+    counting = counting || gridded.trainer_mirrors().counting_in();
     if (at == Block(100)) gridded.ClearGrid(static_cast<uint64_t>(at), true);
   });
   Check(!counting, "count-in: grid mode never reports a count");

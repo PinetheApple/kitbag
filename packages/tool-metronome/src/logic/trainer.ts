@@ -22,10 +22,6 @@ export function rampChipValue(startBpm: number, targetBpm: number): string {
   return `${String(startBpm)}→${String(targetBpm)}`;
 }
 
-export function muteChipValue(playBars: number, muteBars: number): string {
-  return `${String(playBars)} play · ${String(muteBars)} mute`;
-}
-
 export function mutePreview(
   playBars: number,
   muteBars: number,

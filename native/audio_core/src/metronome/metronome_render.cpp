@@ -9,6 +9,7 @@ namespace kitbag {
 
 namespace {
 
+using metronome_detail::BarFraction;
 using metronome_detail::Clamp;
 using metronome_detail::kAccentAmplitude;
 using metronome_detail::kBeatAmplitude;
@@ -308,17 +309,13 @@ void Metronome::PublishBlockMirrors(
     // audible click share one time base (§4.5); the mapping to real latency
     // is §4.2's phase-anchor decision.
     const double position = beat_position_ + LatencyBeats();
-    const auto bar_beats = static_cast<double>(beats_per_bar_);
-    double in_bar = std::fmod(position, bar_beats);
-    if (in_bar < 0.0) in_bar += bar_beats;
-    bar_phase_.store(in_bar / bar_beats, std::memory_order_relaxed);
+    bar_phase_.store(
+        BarFraction(position, beats_per_bar_),
+        std::memory_order_relaxed
+    );
     current_bpm_.store(bpm_, std::memory_order_relaxed);
   }
-  bar_muted_flag_.store(
-      running_ && BarIsMuted(current_bar_),
-      std::memory_order_relaxed
-  );
-  counting_in_flag_.store(running_ && counting_in_, std::memory_order_relaxed);
+  PublishTrainerMirrors(grid != nullptr, sample_rate);
 }
 
 Metronome::GridView Metronome::BeginBlock(

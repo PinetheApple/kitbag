@@ -128,6 +128,14 @@ export const KB_RAMP_UNIT = {
 } as const;
 export type KB_RAMP_UNIT = (typeof KB_RAMP_UNIT)[keyof typeof KB_RAMP_UNIT];
 
+/** kb_ramp_state enum (kb_metronome_ramp_state). */
+export const KB_RAMP_STATE = {
+  KB_RAMP_STATE_OFF: 0,
+  KB_RAMP_STATE_STEPPING: 1,
+  KB_RAMP_STATE_AT_TARGET: 2,
+} as const;
+export type KB_RAMP_STATE = (typeof KB_RAMP_STATE)[keyof typeof KB_RAMP_STATE];
+
 /** Metronome output-latency offset range, in ms (kb_metronome_set_latency_offset). */
 export const KB_LATENCY_OFFSET_MS_BOUNDS = {
   min: -100,

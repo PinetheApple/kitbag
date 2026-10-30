@@ -14,13 +14,19 @@ import {
 import { InlineIcon } from './IconGlyph.tsx';
 
 export type ButtonVariant = 'primary' | 'tonal' | 'ghost' | 'destructive';
+export type ButtonSize = 'default' | 'sheet' | 'prompt';
 
 const BUTTON_HEIGHT = textRoles.button.size + (inset.buttonV + size.stroke) * 2;
+const BUTTON_HEIGHTS: Readonly<Record<ButtonSize, number>> = {
+  default: BUTTON_HEIGHT,
+  sheet: size.buttonSheet,
+  prompt: size.buttonPrompt,
+};
 
 // A labelled button is wider than 48dp, so only the vertical axis is grown.
-function buttonHitBox(gaps: NeighbourGaps) {
+function buttonHitBox(gaps: NeighbourGaps, height: number) {
   return hitBoxStyle(
-    hitExtension(minTouchTargetDp, BUTTON_HEIGHT, {
+    hitExtension(minTouchTargetDp, height, {
       top: gaps.top,
       bottom: gaps.bottom,
     }),
@@ -38,6 +44,7 @@ export interface ButtonProps {
   /** Gaps to the controls above and below, for the 48dp hit box; a number
    * applies to both, an omitted side has no neighbour. */
   readonly neighbourGapDp?: number | NeighbourGaps;
+  readonly size?: ButtonSize;
 }
 
 const useStyles = createThemedStyles((theme) => ({
@@ -101,6 +108,14 @@ const useStyles = createThemedStyles((theme) => ({
   disabledLabel: {
     color: theme.disabledLabel,
   },
+  sheet: {
+    minHeight: size.buttonSheet,
+    paddingVertical: 0,
+  },
+  prompt: {
+    minHeight: size.buttonPrompt,
+    paddingVertical: 0,
+  },
 }));
 
 export function Button({
@@ -112,6 +127,7 @@ export function Button({
   fill = false,
   accessibilityLabel,
   neighbourGapDp = space.controlGap,
+  size: buttonSize = 'default',
 }: ButtonProps) {
   const styles = useStyles();
   const labelStyle = disabled
@@ -123,13 +139,17 @@ export function Button({
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled }}
       disabled={disabled}
-      style={[buttonHitBox(neighbourGaps(neighbourGapDp)), fill && styles.fill]}
+      style={[
+        buttonHitBox(neighbourGaps(neighbourGapDp), BUTTON_HEIGHTS[buttonSize]),
+        fill && styles.fill,
+      ]}
       onPress={onPress}
     >
       <View
         style={[
           styles.base,
           styles[variant],
+          buttonSize !== 'default' && styles[buttonSize],
           fill && styles.fillFace,
           disabled && styles.disabled,
         ]}

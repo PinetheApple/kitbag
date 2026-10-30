@@ -1,5 +1,6 @@
 #include "KitbagHostObject.h"
 
+#include <cstddef>
 #include <string>
 
 #include "kitbag_api.h"
@@ -46,12 +47,37 @@ constexpr TunerProp kTunerProps[] = {
      [](const kb_tuner_state& s) { return static_cast<double>(s.no_sound_issue); }},
 };
 
-const TunerProp* findTunerProp(const std::string& prop) {
-  for (const TunerProp& entry : kTunerProps) {
+template <typename T, size_t N>
+const T* FindProp(const T (&table)[N], const std::string& prop) {
+  for (const T& entry : table) {
     if (prop == entry.name) return &entry;
   }
   return nullptr;
 }
+
+struct TrainerProp {
+  const char* name;
+  double (*read)(const kb_engine*);
+};
+
+constexpr TrainerProp kTrainerProps[] = {
+    {"bar_muted",
+     [](const kb_engine* e) { return static_cast<double>(kb_metronome_bar_muted(e)); }},
+    {"bar_mute_position",
+     [](const kb_engine* e) { return static_cast<double>(kb_metronome_bar_mute_position(e)); }},
+    {"count_in_bar",
+     [](const kb_engine* e) { return static_cast<double>(kb_metronome_count_in_bar(e)); }},
+    {"count_in_bars_total",
+     [](const kb_engine* e) { return static_cast<double>(kb_metronome_count_in_bars_total(e)); }},
+    {"ramp_state",
+     [](const kb_engine* e) { return static_cast<double>(kb_metronome_ramp_state(e)); }},
+    {"ramp_next_bpm",
+     [](const kb_engine* e) { return kb_metronome_ramp_next_bpm(e); }},
+    {"ramp_remaining",
+     [](const kb_engine* e) { return kb_metronome_ramp_remaining(e); }},
+    {"ramp_step_progress",
+     [](const kb_engine* e) { return kb_metronome_ramp_step_progress(e); }},
+};
 
 constexpr const char* kPropertyNames[] = {
     "bar_phase",       "current_beat",    "current_poly_beat", "counting_in",
@@ -79,7 +105,10 @@ double Read(kb_engine* engine, const std::string& prop, bool* found) {
   }
   if (prop == "mixer_playing") return kb_mixer_is_playing(engine);
   if (prop == "engine_sample_rate") return kb_engine_sample_rate(engine);
-  if (const TunerProp* tuner = findTunerProp(prop)) {
+  if (const TrainerProp* trainer = FindProp(kTrainerProps, prop)) {
+    return trainer->read(engine);
+  }
+  if (const TunerProp* tuner = FindProp(kTunerProps, prop)) {
     kb_tuner_state state{};
     kb_tuner_read_state(engine, &state);
     return tuner->read(state);
@@ -100,6 +129,9 @@ std::vector<PropNameID> KitbagHostObject::getPropertyNames(Runtime& rt) {
   std::vector<PropNameID> names;
   for (const char* prop : kPropertyNames) {
     names.push_back(PropNameID::forUtf8(rt, prop));
+  }
+  for (const TrainerProp& entry : kTrainerProps) {
+    names.push_back(PropNameID::forUtf8(rt, entry.name));
   }
   for (const TunerProp& entry : kTunerProps) {
     names.push_back(PropNameID::forUtf8(rt, entry.name));

@@ -8,21 +8,12 @@ import {
 interface UnitName {
   short: string;
   long: string;
-  one: string;
 }
 
 const UNIT_NAMES: Record<KB_RAMP_UNIT, UnitName> = {
-  [KB_RAMP_UNIT.KB_RAMP_BARS]: { short: 'bars', long: 'bars', one: 'bar' },
-  [KB_RAMP_UNIT.KB_RAMP_SECONDS]: {
-    short: 'sec',
-    long: 'seconds',
-    one: 'second',
-  },
-  [KB_RAMP_UNIT.KB_RAMP_MINUTES]: {
-    short: 'min',
-    long: 'minutes',
-    one: 'minute',
-  },
+  [KB_RAMP_UNIT.KB_RAMP_BARS]: { short: 'bars', long: 'bars' },
+  [KB_RAMP_UNIT.KB_RAMP_SECONDS]: { short: 'sec', long: 'seconds' },
+  [KB_RAMP_UNIT.KB_RAMP_MINUTES]: { short: 'min', long: 'minutes' },
 };
 
 const UNITS = Object.values(KB_RAMP_UNIT);
@@ -60,17 +51,4 @@ export function withRampUnit(
   unit: KB_RAMP_UNIT,
 ): RampConfig {
   return { ...draft, unit, interval: clampRampInterval(draft.interval, unit) };
-}
-
-/** Intervals until the ramp reaches its target: the last step stops on it. */
-export function rampSteps(ramp: RampConfig): number {
-  return Math.ceil(Math.abs(ramp.targetBpm - ramp.startBpm) / ramp.stepBpm);
-}
-
-/** "Reaches 140 BPM after 8 bars", for the sheet's hint. */
-export function rampTotalLabel(ramp: RampConfig): string {
-  const total = rampSteps(ramp) * ramp.interval;
-  const names = UNIT_NAMES[ramp.unit];
-  const unit = total === 1 ? names.one : names.long;
-  return `Reaches ${String(ramp.targetBpm)} BPM after ${String(total)} ${unit}`;
 }

@@ -11,8 +11,6 @@ import {
   rampUnitFromOption,
   rampUnitLabel,
   rampUnitOption,
-  rampSteps,
-  rampTotalLabel,
   stepRampInterval,
   withRampUnit,
 } from './rampUnit.ts';
@@ -82,37 +80,5 @@ describe('ramp interval per unit', () => {
     };
     expect(stepRampInterval(minute, -1).interval).toBe(1);
     expect(stepRampInterval(minute, 1).interval).toBe(2);
-  });
-});
-
-describe('stepped ramp totals', () => {
-  const ramp = {
-    enabled: true,
-    startBpm: 100,
-    targetBpm: 140,
-    stepBpm: 5,
-    interval: 4,
-    unit: KB_RAMP_UNIT.KB_RAMP_BARS,
-    loop: false,
-  };
-
-  it('counts the intervals to the target, the last step stopping on it', () => {
-    expect(rampSteps(ramp)).toBe(8);
-    expect(rampSteps({ ...ramp, stepBpm: 15 })).toBe(3);
-    expect(rampSteps({ ...ramp, startBpm: 160, targetBpm: 120 })).toBe(8);
-  });
-
-  it('names the total time in the ramp unit', () => {
-    expect(rampTotalLabel(ramp)).toBe('Reaches 140 BPM after 32 bars');
-    expect(
-      rampTotalLabel({
-        ...ramp,
-        interval: 20,
-        unit: KB_RAMP_UNIT.KB_RAMP_SECONDS,
-      }),
-    ).toBe('Reaches 140 BPM after 160 seconds');
-    expect(
-      rampTotalLabel({ ...ramp, targetBpm: ramp.startBpm + 1, interval: 1 }),
-    ).toMatch(/after 1 bar$/);
   });
 });

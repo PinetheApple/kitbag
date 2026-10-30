@@ -10,6 +10,7 @@
 #include "media/loop_layout.h"
 #include "metronome/metronome_types.h"
 #include "metronome/tempo_ramp.h"
+#include "metronome/trainer_mirrors.h"
 #include "rt/rt_publisher.h"
 #include "rt/spsc_ring.h"
 
@@ -132,17 +133,14 @@ class Metronome {
   int32_t current_poly_beat() const {
     return current_poly_beat_.load(std::memory_order_relaxed);
   }
-  bool counting_in() const {
-    return counting_in_flag_.load(std::memory_order_relaxed);
-  }
   double bar_phase() const {
     return bar_phase_.load(std::memory_order_relaxed);
   }
   double current_bpm() const {
     return current_bpm_.load(std::memory_order_relaxed);
   }
-  bool bar_muted() const {
-    return bar_muted_flag_.load(std::memory_order_relaxed);
+  const TrainerMirrors& trainer_mirrors() const {
+    return trainer_mirrors_;
   }
 
  private:
@@ -300,6 +298,7 @@ class Metronome {
       uint64_t frame,
       uint32_t sample_rate
   );
+  void PublishTrainerMirrors(bool gridded, uint32_t sample_rate);
 
   void RenderGridBeat(
       const BeatGrid& grid,
@@ -350,6 +349,7 @@ class Metronome {
   bool pending_preview_accented_ = false;
   bool counting_in_ = false;
   double count_in_beats_ = 0.0;
+  int count_in_total_bars_ = 0;
   double beat_position_ = 0.0;  // fractional beats since start
   bool has_pending_start_ = false;
   uint64_t pending_start_frame_ = 0;
@@ -391,8 +391,7 @@ class Metronome {
   std::atomic<int32_t> current_poly_beat_{-1};
   std::atomic<double> bar_phase_{0.0};
   std::atomic<double> current_bpm_{kDefaultBpm};
-  std::atomic<bool> bar_muted_flag_{false};
-  std::atomic<bool> counting_in_flag_{false};
+  TrainerMirrors trainer_mirrors_;
 };
 
 }  // namespace kitbag

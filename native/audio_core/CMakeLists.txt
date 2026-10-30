@@ -49,6 +49,7 @@ add_library(kitbag_core SHARED
   src/metronome/metronome_grid.cpp
   src/metronome/metronome_pattern.cpp
   src/metronome/metronome_render.cpp
+  src/metronome/metronome_trainer_mirrors.cpp
   src/metronome/tempo_ramp.cpp
   src/media/miniaudio_impl.c
   src/media/streaming_track.cpp
@@ -129,6 +130,7 @@ if(KITBAG_BUILD_TOOLS)
     src/metronome/metronome_grid.cpp
     src/metronome/metronome_pattern.cpp
     src/metronome/metronome_render.cpp
+    src/metronome/metronome_trainer_mirrors.cpp
     src/metronome/tempo_ramp.cpp)
 
   add_executable(metronome_verify
@@ -145,6 +147,8 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_count_in_long.cpp
     tools/metronome/metronome_test_ramp.cpp
     tools/metronome/metronome_test_ramp_live.cpp
+    tools/metronome/metronome_test_trainer_status.cpp
+    tools/metronome/metronome_test_ramp_status.cpp
     tools/metronome/metronome_test_follow.cpp
     tools/rt/rt_publisher_verify.cpp
     tools/rt/stall_detector_test.cpp

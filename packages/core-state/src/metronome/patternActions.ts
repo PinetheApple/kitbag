@@ -8,6 +8,7 @@ import type { StoreApi } from 'zustand/vanilla';
 
 import type { MetronomeCommands } from './commands.ts';
 import { clamp, cycleAccentValue, resizeAccents } from './config.ts';
+import { groupStartAccents } from './meterGroups.ts';
 import type { Denominator, MetronomeActions, MetronomeStore } from './store.ts';
 
 const BEATS_MIN = 1;
@@ -37,12 +38,14 @@ export function patternActions(
       const denom: Denominator = VALID_DENOMINATORS.has(denominator)
         ? (denominator as Denominator)
         : get().denominator;
-      set((s) => ({
-        beatsPerBar: beats,
-        denominator: denom,
-        accents: resizeAccents(s.accents, beats),
-      }));
+      const meterChanged = beats !== get().beatsPerBar;
+      const accents = meterChanged ? groupStartAccents(beats) : get().accents;
+      set({ beatsPerBar: beats, denominator: denom, accents });
       commands.setBeats(beats, denom);
+      if (!meterChanged) return;
+      accents.forEach((accent, beat) => {
+        commands.setAccent(beat, accent);
+      });
     },
 
     setSubdivision: (subdivision) => {

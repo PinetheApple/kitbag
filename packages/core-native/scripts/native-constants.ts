@@ -78,6 +78,7 @@ export interface NativeConstants {
   readonly mixerGain: Bounds;
   readonly rampSeconds: Bounds;
   readonly rampUnit: readonly EnumMember[];
+  readonly rampState: readonly EnumMember[];
   readonly bpmReferenceDenominator: number;
   readonly denominators: readonly number[];
   readonly soundNames: readonly string[];
@@ -352,6 +353,7 @@ export function collectConstants(sources: NativeSources): NativeConstants {
       max: parseConstexprDouble(sources.tempoRampHeader, 'kMaxSeconds'),
     },
     rampUnit: parseEnum(sources.apiHeader, 'kb_ramp_unit'),
+    rampState: parseEnum(sources.apiHeader, 'kb_ramp_state'),
     bpmReferenceDenominator: parseConstexprInt(
       sources.metronomeHeader,
       'kBpmReferenceDenominator',
@@ -516,6 +518,8 @@ ${renderEnum('KB_RESULT', c.result)}
 ${renderEnum('KB_ACCENT', c.accent)}
 /** kb_ramp_unit enum. */
 ${renderEnum('KB_RAMP_UNIT', c.rampUnit)}
+/** kb_ramp_state enum (kb_metronome_ramp_state). */
+${renderEnum('KB_RAMP_STATE', c.rampState)}
 /** Metronome output-latency offset range, in ms (kb_metronome_set_latency_offset). */
 export const KB_LATENCY_OFFSET_MS_BOUNDS = {
   min: ${String(c.latencyOffsetMsBounds.min)},

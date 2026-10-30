@@ -6,10 +6,10 @@ import {
   textRoles,
   textStyle,
 } from '@kitbag/core-design';
-import { BPM_BOUNDS } from '@kitbag/core-state';
 import { useCallback, useState } from 'react';
 import { Text, View } from 'react-native';
 
+import type { BpmBounds } from '../logic/bpmBounds.ts';
 import {
   confirmEntry,
   openEntry,
@@ -17,11 +17,15 @@ import {
   pressDigit,
 } from '../logic/numpad.ts';
 
-interface TempoNumpadSheetProps {
+interface NumberEntrySheetProps {
   readonly visible: boolean;
-  readonly bpm: number;
+  readonly title: string;
+  readonly confirmLabel: string;
+  readonly value: number;
+  readonly bounds: BpmBounds;
+  readonly unit: string;
   readonly bottomInset: number;
-  readonly onConfirm: (bpm: number) => void;
+  readonly onConfirm: (value: number) => void;
   readonly onDismiss: () => void;
 }
 
@@ -33,40 +37,48 @@ const useStyles = createThemedStyles((theme) => ({
   },
 }));
 
-export function TempoNumpadSheet({
+export function NumberEntrySheet({
   visible,
-  bpm,
+  title,
+  confirmLabel,
+  value,
+  bounds,
+  unit,
   bottomInset,
   onConfirm,
   onDismiss,
-}: TempoNumpadSheetProps) {
+}: NumberEntrySheetProps) {
   const styles = useStyles();
-  const [entry, setEntry] = useState(() => openEntry(bpm));
+  const [entry, setEntry] = useState(() => openEntry(value));
 
-  const handleDigit = useCallback((digit: number) => {
-    setEntry((current) => pressDigit(current, digit, BPM_BOUNDS));
-  }, []);
+  const handleDigit = useCallback(
+    (digit: number) => {
+      setEntry((current) => pressDigit(current, digit, bounds));
+    },
+    [bounds],
+  );
 
   const handleBackspace = useCallback(() => {
     setEntry(pressBackspace);
   }, []);
 
   const handleConfirm = useCallback(() => {
-    const typed = confirmEntry(entry, BPM_BOUNDS);
+    const typed = confirmEntry(entry, bounds);
     if (typed !== undefined) onConfirm(typed);
     onDismiss();
-  }, [entry, onConfirm, onDismiss]);
+  }, [entry, bounds, onConfirm, onDismiss]);
 
   const handleShow = useCallback(() => {
-    setEntry(openEntry(bpm));
-  }, [bpm]);
+    setEntry(openEntry(value));
+  }, [value]);
 
   return (
     <Sheet
       visible={visible}
-      title="Tempo"
-      dismissLabel="Close tempo entry"
+      title={title}
+      dismissLabel={`Close ${title.toLowerCase()} entry`}
       bottomInset={bottomInset}
+      dim
       onShow={handleShow}
       onDismiss={onDismiss}
     >
@@ -74,20 +86,21 @@ export function TempoNumpadSheet({
         <Text
           style={styles.entry}
           accessibilityLiveRegion="polite"
-          accessibilityLabel={`${entry.digits} BPM`}
+          accessibilityLabel={`${title}, ${entry.digits} ${unit}`}
         >
           {entry.digits}
         </Text>
-        <SheetHint centered>
-          {BPM_BOUNDS.min} – {BPM_BOUNDS.max} BPM
+        <SheetHint centered size="large">
+          {bounds.min} – {bounds.max} {unit}
         </SheetHint>
       </View>
       <NumpadKeypad
+        size="large"
         onDigit={handleDigit}
         onBackspace={handleBackspace}
         onConfirm={handleConfirm}
         backspaceLabel="Delete digit"
-        confirmLabel="Set tempo"
+        confirmLabel={confirmLabel}
       />
     </Sheet>
   );

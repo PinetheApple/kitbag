@@ -4,9 +4,13 @@ import type { PerAccentSounds } from '@kitbag/core-state';
 export const SOUND_ROLE = { normal: 'normal', accent: 'accent' } as const;
 export type SoundRole = (typeof SOUND_ROLE)[keyof typeof SOUND_ROLE];
 
+export function soundRoleName(role: SoundRole): string {
+  return role === SOUND_ROLE.accent ? 'Accent' : 'Normal';
+}
+
 export const SOUND_ROLE_OPTIONS = [
-  { value: SOUND_ROLE.normal, label: 'Normal' },
-  { value: SOUND_ROLE.accent, label: 'Accent' },
+  { value: SOUND_ROLE.normal, label: soundRoleName(SOUND_ROLE.normal) },
+  { value: SOUND_ROLE.accent, label: soundRoleName(SOUND_ROLE.accent) },
 ] as const;
 
 const DISPLAY_NAMES: Partial<Record<string, string>> = { hihat: 'Hi-hat' };

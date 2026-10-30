@@ -17,6 +17,7 @@ export const space = {
   pegLabelGap: 5,
   headstockTop: 8,
   headstockBottom: 2,
+  transportGapWide: 28,
   waveBarGap: 1.5,
 } as const;
 
@@ -51,6 +52,23 @@ export const size = {
   pegBadgeGlyph: 9,
   pegLockBar: 12,
   pegGlowBlur: 12,
+  transportKeyLarge: 56,
+  playButtonLarge: 76,
+  playGlyphBoxLarge: 36,
+  keyBadge: 18,
+  keyBadgeOffset: 2,
+  switchWidth: 40,
+  switchHeight: 24,
+  switchKnob: 18,
+  switchKnobInset: 3,
+  buttonSheet: 44,
+  buttonPrompt: 40,
+  stepInlineLarge: 36,
+  stepInlineLargeKey: 28,
+  segmentLargeOption: 34,
+  chipLarge: 34,
+  transportKeySmall: 40,
+  numpadKeyLarge: 52,
 } as const;
 
 export const radius = {
@@ -73,6 +91,12 @@ export const radius = {
   toolIcon: 11,
   tunerStrip: 12,
   tunerNeedle: 2,
+  keyBadge: 9,
+  switch: 12,
+  stepInlineLarge: 10,
+  segmentLarge: 12,
+  segmentLargeOption: 9,
+  numpadKeyLarge: 12,
   waveBar: 1,
 } as const;
 
@@ -95,6 +119,8 @@ export const inset = {
   stepInlineKeyH: 7,
   tempoZoneTop: 26,
   tempoZoneBottom: 18,
+  tempoZoneTopCompact: 6,
+  tempoZoneBottomCompact: 6,
   sweepH: 18,
   rowV: 9,
   rowH: 10,
@@ -109,6 +135,8 @@ export const inset = {
   pickH: 4,
   compactButtonV: 8,
   compactButtonH: 14,
+  keyBadgeH: 4,
+  stepInlineLargeH: 2,
 } as const;
 
 export const opacity = {
@@ -117,6 +145,7 @@ export const opacity = {
   emptyIcon: 0.5,
   upcoming: 0.65,
   tunerStrip: 0.92,
+  sheetScrim: 0.45,
 } as const;
 
 export const mix = {
@@ -124,7 +153,6 @@ export const mix = {
   activeCard: 0.07,
   badgeBorder: 0.4,
   listBadgeBorder: 0.45,
-  tempoZoneGlow: 0.05,
   cardBorder: 0.35,
   pegGlow: 0.4,
 } as const;
@@ -183,6 +211,16 @@ export const iconSizes = {
   toolTile: 26,
   transport: size.playGlyphBox,
   stepKey: 18,
+  caret: 18,
+  statusRest: 18,
+  statusLive: 20,
+  transportLarge: 24,
+  coachRing: 48,
+  practiceHeading: 24,
+  stepInlineLargeKey: 18,
+  chipLarge: 16,
+  transportSmall: 20,
+  numpadKeyLarge: 24,
   dockKey: 24,
   bar: 24,
   dockPlay: 32,
@@ -260,6 +298,37 @@ export const textRoles = {
   },
   pegNote: { family: display, weight: 400, size: 12 },
   pegString: { family: display, weight: 400, size: 11, tabular: true },
+  setChip: { family: display, weight: 500, size: 13 },
+  pickerChip: { family: display, weight: 500, size: 15 },
+  status: { family: body, weight: 400, size: 14 },
+  statusLead: { family: display, weight: 600, size: 14.5, tabular: true },
+  statusMeta: { family: display, weight: 500, size: 13, tabular: true },
+  beatMarker: { family: display, weight: 600, size: 12 },
+  polyRatio: { family: display, weight: 600, size: 11, tracking: 0.08 },
+  legend: { family: body, weight: 400, size: 12.5 },
+  countSquare: { family: display, weight: 700, size: 26, tabular: true },
+  keyBadge: { family: display, weight: 700, size: 10.5, tabular: true },
+  coachTitle: { family: display, weight: 600, size: 15 },
+  coachBody: { family: body, weight: 400, size: 13.5 },
+  notationNumeral: { family: display, weight: 700, size: 7.5 },
+  sheetHint: { family: body, weight: 400, size: 12 },
+  notationTile: { family: display, weight: 500, size: 11.5 },
+  wheelItem: { family: display, weight: 500, size: 18, tabular: true },
+  wheelSelected: { family: display, weight: 700, size: 30, tabular: true },
+  meterSlash: { family: display, weight: 400, size: 44 },
+  meterPick: { family: display, weight: 500, size: 14, tabular: true },
+  practiceHeading: { family: display, weight: 500, size: 15 },
+  practiceRow: { family: body, weight: 400, size: 13 },
+  soundPick: { family: display, weight: 500, size: 13.5 },
+  stepInlineLargeValue: {
+    family: display,
+    weight: 500,
+    size: 14,
+    tabular: true,
+  },
+  segmentLarge: { family: display, weight: 400, size: 13 },
+  chipLarge: { family: display, weight: 400, size: 13 },
+  numpadKeyLarge: { family: display, weight: 500, size: 20, tabular: true },
   songTitle: { family: display, weight: 500, size: 17 },
   songArtist: { family: body, weight: 400, size: 12.5 },
   stemName: { family: display, weight: 500, size: 14.5 },
@@ -286,6 +355,15 @@ export const textRoles = {
 export type TextRoleName = keyof typeof textRoles;
 
 export const appBarTitleMinSize = 15;
+
+export const playGlyphPathLarge = {
+  viewBox: 24,
+  left: 8,
+  top: 5,
+  width: 11,
+  height: 14,
+  stopInset: 6,
+} as const;
 
 export const screenBar = {
   height: 56,

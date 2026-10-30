@@ -24,6 +24,7 @@ export {
   initialAccents,
   resizeAccents,
 } from './metronome/config.ts';
+export { beatGroupSizes, groupStartAccents } from './metronome/meterGroups.ts';
 export type {
   EngineBpm,
   MetronomeCommands,
@@ -127,6 +128,14 @@ export type {
   LibrarySongRow,
   LibraryStemSetRow,
 } from '@kitbag/core-db';
+export { useSwipeHint } from './firstUse/useSwipeHint.ts';
+export {
+  configureSwipeHintPersistence,
+  createSwipeHintStore,
+  getSwipeHintStore,
+  type SwipeHintPersistence,
+  type SwipeHintStore,
+} from './firstUse/store.ts';
 export { useStemPlayer } from './stemPlayer/useStemPlayer.ts';
 export { UNITY_GAIN } from './stemPlayer/mix.ts';
 export {

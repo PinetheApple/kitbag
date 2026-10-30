@@ -70,6 +70,12 @@ typedef enum kb_ramp_unit {
   KB_RAMP_MINUTES = 2,
 } kb_ramp_unit;
 
+typedef enum kb_ramp_state {
+  KB_RAMP_STATE_OFF = 0,
+  KB_RAMP_STATE_STEPPING = 1,
+  KB_RAMP_STATE_AT_TARGET = 2,
+} kb_ramp_state;
+
 KB_EXPORT void kb_metronome_start(kb_engine* engine);
 /* Sample-accurate start: the click begins on engine frame start_frame
  * (cf. kb_engine_frames_rendered), not when this call arrives. A frame already
@@ -200,14 +206,6 @@ KB_EXPORT void kb_metronome_set_ramp(
     int32_t unit,
     int32_t loop
 );
-/* Bar-mute trainer: repeating cycle of `play_bars` sounding bars followed by
- * `mute_bars` silent bars (all voices), anchored at bar 0. */
-KB_EXPORT void kb_metronome_set_bar_mute(
-    kb_engine* engine,
-    int32_t enabled,
-    int32_t play_bars,
-    int32_t mute_bars
-);
 KB_EXPORT int32_t kb_metronome_is_running(const kb_engine* engine);
 /* Beat index within the bar, -1 when stopped. Poll for UI. */
 KB_EXPORT int32_t kb_metronome_current_beat(const kb_engine* engine);
@@ -218,10 +216,10 @@ KB_EXPORT int32_t kb_metronome_current_poly_beat(const kb_engine* engine);
 KB_EXPORT double kb_metronome_bar_phase(const kb_engine* engine);
 /* Effective BPM including ramp progress. Poll for UI. */
 KB_EXPORT double kb_metronome_current_bpm(const kb_engine* engine);
-/* 1 while the current bar is silenced by the bar-mute trainer. */
-KB_EXPORT int32_t kb_metronome_bar_muted(const kb_engine* engine);
 /* 1 during count-in; current_beat and bar_phase follow the count bars. */
 KB_EXPORT int32_t kb_metronome_counting_in(const kb_engine* engine);
+
+#include "kitbag_metronome_trainer_api.h"
 
 /* --- Tuner -------------------------------------------------------------- */
 

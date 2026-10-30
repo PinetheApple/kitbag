@@ -1,24 +1,14 @@
 import {
   BeatLedRow,
   type LedSize,
-  type LedState,
   type NeighbourGaps,
 } from '@kitbag/core-design';
 import { KB_ACCENT } from '@kitbag/core-native';
 import { useMemo } from 'react';
 import type { SharedValue } from 'react-native-reanimated';
 
+import { beatLabel, ledStateFor } from '../logic/beatDot.ts';
 import { layoutBeatLeds } from '../logic/ledLayout.ts';
-
-function ledStateFor(accent: KB_ACCENT): LedState {
-  if (accent === KB_ACCENT.KB_ACCENT_ACCENTED) return 'accented';
-  if (accent === KB_ACCENT.KB_ACCENT_MUTED) return 'muted';
-  return 'normal';
-}
-
-function beatLabel(beat: number, state: LedState): string {
-  return `Beat ${String(beat + 1)}, ${state}`;
-}
 
 interface BeatLedsProps {
   readonly beatCount: number;
