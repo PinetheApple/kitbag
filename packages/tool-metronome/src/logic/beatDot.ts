@@ -11,6 +11,14 @@ export function beatLabel(beat: number, state: LedState): string {
   return `Beat ${String(beat + 1)}, ${state}`;
 }
 
+// An empty Text carries no fragment, so RN's text measure cache key loses the
+// font scale and replays the old height after a text-size change (#202).
+export const MARKER_PLACEHOLDER = '\u00A0';
+
+export function beatMarker(beat: number): string {
+  return beat === 0 ? '1' : MARKER_PLACEHOLDER;
+}
+
 export interface DotPalette {
   readonly accent: string;
   readonly fill: string;

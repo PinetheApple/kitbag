@@ -17,6 +17,7 @@ import Animated, {
 
 import {
   beatLabel,
+  beatMarker,
   dotLook,
   ledStateFor,
   type DotPalette,
@@ -197,7 +198,7 @@ export function BeatDots({
             barPulse={barPulse}
             barMuted={barMuted}
           />
-          <Text style={styles.marker}>{beat === 0 ? '1' : ''}</Text>
+          <Text style={styles.marker}>{beatMarker(beat)}</Text>
         </>
       );
     },
