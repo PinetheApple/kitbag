@@ -50,17 +50,20 @@ function beamCount(clicks: number, denominator: number): number {
   );
 }
 
-// A lone note would need a flag and an unbeamed group a bracket; the tiles draw neither.
+// The tiles draw only a lone quarter or a beamed group.
 export function drawsNotation(
   subdivision: number,
   denominator: number,
 ): boolean {
   const clicks = clicksOf(subdivision);
   const beams = beamCount(clicks, denominator);
-  if (!Number.isInteger(beams) || beams > notationGeometry.maxBeams) {
-    return false;
-  }
-  return clicks === 1 ? beams === 0 : beams > 0;
+  const loneQuarter = clicks === 1 && beams === 0;
+  const beamedGroup =
+    clicks > 1 &&
+    Number.isInteger(beams) &&
+    beams > 0 &&
+    beams <= notationGeometry.maxBeams;
+  return loneQuarter || beamedGroup;
 }
 
 export function notationLayout(

@@ -330,10 +330,14 @@ describe('library store', () => {
     metronome.getState().setBeats(12, 8);
     metronome.getState().setSubdivision(4);
     await library.getState().saveCurrentInto(id);
+    metronome.getState().setBeats(4, 4);
     metronome.getState().setSubdivision(2);
     await library.getState().loadSong(id);
-    const { subdivision, denominator } = metronome.getState();
-    expect([subdivision, denominator]).toEqual([4, 8]);
+    expect(metronome.getState()).toMatchObject({
+      beatsPerBar: 12,
+      denominator: 8,
+      subdivision: 4,
+    });
   });
 
   it.each([
