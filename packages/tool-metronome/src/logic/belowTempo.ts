@@ -21,10 +21,6 @@ const COMPACT_MULTI_LINE_METRICS: DotMetrics = {
   maxDot: metronome.beatDotMaxCompactMultiLine,
 };
 
-// Measured on the emulator: a beat label with a 14 dp lineHeight draws
-// 17.7–18.2 dp on Android, so the reserve counts the drawn height.
-const DRAWN_LABEL_LINE = 18.2;
-
 const LINE_GAP: Readonly<Record<ScreenDensity, number>> = {
   roomy: metronome.beatDotLineGap,
   compact: metronome.beatDotLineGapCompact,
@@ -71,7 +67,7 @@ export interface BelowTempoRoom {
 }
 
 function drawnLabelLine(fontScale: number): number {
-  return DRAWN_LABEL_LINE * Math.max(1, fontScale);
+  return metronome.beatMarkerLineHeight * Math.max(1, fontScale);
 }
 
 function polyBlockHeight(poly: PolyRow, room: BelowTempoRoom): number {

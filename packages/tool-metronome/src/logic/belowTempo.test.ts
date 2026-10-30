@@ -16,11 +16,10 @@ const FONT_SCALES = [1, 1.3] as const;
 const BEAT_COUNTS = Array.from({ length: KB_MAX_BEATS }, (_u, i) => i + 1);
 
 // Emulator at fontScale 1.0, build 8663a62: where the dots start and where the
-// body ends above the transport, and the drawn height of a 14 dp label line.
+// body ends above the transport.
 const MEASURED = {
   small: { dotsTop: 424.3, bodyBottom: 686.1 },
   large: { dotsTop: 436.4, bodyBottom: 813.8 },
-  labelLine: 18.2,
 } as const;
 
 const COMPACT_SWEEP_SAVING = space.sectionGap - metronome.bodyGapCompact;
@@ -50,7 +49,7 @@ interface Rendered {
 function renderedRoomy(shape: Rendered): number {
   const lines = layoutBeatLeds(shape.beatCount, MAX_DOTS_PER_LINE);
   const dot = beatDotSize(lines, LARGE_PHONE_DOTS_WIDTH, DOT_METRICS);
-  const label = MEASURED.labelLine * shape.fontScale;
+  const label = metronome.beatMarkerLineHeight * shape.fontScale;
   const beat =
     dot +
     metronome.beatMarkerGap +
@@ -80,6 +79,19 @@ describe('belowTempoReserve', () => {
           }
         }
       }
+    }
+  });
+
+  it('reserves no more than the tallest song draws', () => {
+    for (const fontScale of FONT_SCALES) {
+      const tallest = Math.max(
+        ...BEAT_COUNTS.map((beatCount) =>
+          renderedRoomy({ beatCount, poly: true, labelAbove: true, fontScale }),
+        ),
+      );
+      expect(belowTempoReserve({ ...LARGE_ROOMY, fontScale })).toBeCloseTo(
+        tallest,
+      );
     }
   });
 
