@@ -31,7 +31,7 @@ import { MuteStatus } from './MuteStatus.tsx';
 import { countInInk, useStatusStyles } from './statusStyles.ts';
 import { StatusVariant } from './StatusVariant.tsx';
 import type { MetronomeFrameValues } from './useMetronomeFrame.ts';
-import { useStillMotion } from './useStillMotion.ts';
+import { trackOpacity, useStillMotion } from './useStillMotion.ts';
 
 export type StatusFrame = Pick<
   MetronomeFrameValues,
@@ -46,8 +46,6 @@ export type StatusFrame = Pick<
   | 'rampStepProgress'
 >;
 
-const HIDDEN = 0;
-const SHOWN = 1;
 const RAMP_NEXT_WIDEST = rampNextText(BPM_BOUNDS.max);
 const LONGEST_COUNT_IN = Math.max(...KB_COUNT_IN_BARS);
 const COUNT_IN_WIDEST = countInBarText(LONGEST_COUNT_IN - 1, LONGEST_COUNT_IN);
@@ -81,7 +79,7 @@ function RampStatus({ rows, frame, ramp }: RampStatusProps) {
     ],
   }));
   const track = useAnimatedStyle(() => ({
-    opacity: rampTrackShown(interval, unit, still.value) ? SHOWN : HIDDEN,
+    opacity: trackOpacity(rampTrackShown(interval, unit, still.value)),
   }));
   return (
     <StatusVariant rows={rows} shown="ramp" style={styles.live}>

@@ -6,10 +6,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { sweepFill } from '../logic/barSweep.ts';
-import { useStillMotion } from './useStillMotion.ts';
-
-const HIDDEN = 0;
-const SHOWN = 1;
+import { trackOpacity, useStillMotion } from './useStillMotion.ts';
 
 interface BarSweepProps {
   readonly barPhase: SharedValue<number>;
@@ -38,7 +35,7 @@ export function BarSweep({ barPhase, gap }: BarSweepProps) {
   const spacing = useMemo(() => ({ marginTop: gap }), [gap]);
   const still = useStillMotion();
   const trackStyle = useAnimatedStyle(() => ({
-    opacity: still.value ? HIDDEN : SHOWN,
+    opacity: trackOpacity(!still.value),
   }));
   const fillStyle = useAnimatedStyle(() => ({
     transform: [{ scaleX: sweepFill(barPhase.value, still.value) }],
