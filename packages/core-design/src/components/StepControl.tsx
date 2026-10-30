@@ -9,7 +9,6 @@ import {
 import type { IconName } from '../icons.ts';
 import { iconSizes, inset, radius, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
-import { minTouchTargetDp } from '../tokens.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import {
   hitBoxStyle,
@@ -41,27 +40,6 @@ const INLINE_EDGE_V = inset.stepInlineV + size.stroke;
 
 const LARGE_KEY_HEIGHT = size.stepInlineLarge - size.stroke * 2;
 const LARGE_EDGE_H = inset.stepInlineLargeH + size.stroke;
-
-const halfShortfall = (extent: number) =>
-  Math.max(0, (minTouchTargetDp - extent) / 2);
-
-const VALUE_ROW_HEIGHT: Readonly<Record<StepControlVariant, number>> = {
-  badge: size.stepKey,
-  inline: INLINE_KEY_HEIGHT + INLINE_EDGE_V * 2,
-  inlineLarge: size.stepInlineLarge,
-};
-
-function valueHitSlop(variant: StepControlVariant) {
-  const vertical = halfShortfall(VALUE_ROW_HEIGHT[variant]);
-  const horizontal =
-    variant === 'badge' ? 0 : halfShortfall(size.stepValueMinWidth);
-  return {
-    top: vertical,
-    bottom: vertical,
-    left: horizontal,
-    right: horizontal,
-  };
-}
 
 const A11Y_ACTIONS = [{ name: 'increment' }, { name: 'decrement' }] as const;
 const A11Y_ACTIONS_WITH_ACTIVATE = [...A11Y_ACTIONS, { name: 'activate' }];
@@ -123,6 +101,22 @@ function largeInlineKeyHitBoxes(gaps: NeighbourGaps, valueTappable: boolean) {
       right: plus(LARGE_EDGE_H, gaps.right),
     },
   });
+}
+
+// Padding counts toward minWidth, so the box grows by what it reaches sideways.
+function inlineValueHitBox(gaps: NeighbourGaps, large: boolean) {
+  const height = large ? LARGE_KEY_HEIGHT : INLINE_KEY_HEIGHT;
+  const edgeV = large ? size.stroke : INLINE_EDGE_V;
+  const reach = hitExtension(size.stepValueMinWidth, height, {
+    top: plus(edgeV, gaps.top),
+    bottom: plus(edgeV, gaps.bottom),
+    left: space.inlineKeyGap,
+    right: space.inlineKeyGap,
+  });
+  return {
+    ...hitBoxStyle(reach),
+    minWidth: size.stepValueMinWidth + reach.left + reach.right,
+  };
 }
 
 function stepKeyHitBoxes(
@@ -221,9 +215,6 @@ const useStyles = createThemedStyles((theme) => ({
     alignSelf: 'stretch',
     justifyContent: 'center',
   },
-  keyOnTop: {
-    zIndex: 1,
-  },
   inlineValue: {
     ...textStyle(textRoles.stepInlineValue),
     color: theme.color.text,
@@ -262,9 +253,10 @@ export function StepControl({
   const valueTappable = onValuePress !== undefined;
   const large = variant === 'inlineLarge';
   const inline = variant === 'inline' || large;
+  const gaps = neighbourGaps(neighbourGapDp);
   const hitBoxes = large
-    ? largeInlineKeyHitBoxes(neighbourGaps(neighbourGapDp), valueTappable)
-    : stepKeyHitBoxes(neighbourGaps(neighbourGapDp), inline, valueTappable);
+    ? largeInlineKeyHitBoxes(gaps, valueTappable)
+    : stepKeyHitBoxes(gaps, inline, valueTappable);
 
   const handleDecrement = useCallback(() => {
     onStep(STEP_DOWN);
@@ -285,7 +277,7 @@ export function StepControl({
 
   const key = (glyph: IconName, hitBox: HitBox, onPress: () => void) =>
     inline ? (
-      <Pressable style={[hitBox, styles.keyOnTop]} onPress={onPress}>
+      <Pressable style={hitBox} onPress={onPress}>
         <View style={[styles.inlineKey, large && styles.largeKey]}>
           <InlineIcon
             name={glyph}
@@ -294,7 +286,7 @@ export function StepControl({
         </View>
       </Pressable>
     ) : (
-      <Pressable style={[hitBox, styles.keyOnTop]} onPress={onPress}>
+      <Pressable style={hitBox} onPress={onPress}>
         <View style={styles.badgeKey}>
           <InlineIcon name={glyph} style={styles.badgeKeyText} />
         </View>
@@ -335,8 +327,10 @@ export function StepControl({
       {key('decrease', hitBoxes.decrement, handleDecrement)}
       {valueTappable ? (
         <Pressable
-          style={[valueBoxStyle, styles.tappableValue]}
-          hitSlop={valueHitSlop(variant)}
+          style={[
+            valueBoxStyle,
+            inline && [styles.tappableValue, inlineValueHitBox(gaps, large)],
+          ]}
           onPress={onValuePress}
         >
           {valueText}
