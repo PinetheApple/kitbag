@@ -22,6 +22,7 @@ import {
 
 import { useLibraryRefresh } from '../library/useLibraryRefresh.ts';
 import { belowTempoReserve } from '../logic/belowTempo.ts';
+import { noteStrip, type NoteStrip } from '../logic/noteStrip.ts';
 import { practiceBadgeCount } from '../logic/statusRows.ts';
 import { pushTap, tapTempoBpm } from '../logic/tapTempo.ts';
 import { BeatDots } from './BeatDots.tsx';
@@ -80,14 +81,16 @@ export interface MetronomeScreenProps {
   readonly onOpenSetlists?: () => void;
 }
 
-function useLoadedNotes(): string | null {
-  return useLibrary((state) => {
+function useNoteStrip(): NoteStrip | null {
+  const songLoaded = useLibrary((state) => state.loaded !== null);
+  const notes = useLibrary((state) => {
     const loadedId = state.loaded?.presetId;
     if (loadedId === undefined) return null;
     return (
       state.presets.find((preset) => preset.id === loadedId)?.notes ?? null
     );
   });
+  return useMemo(() => noteStrip(songLoaded, notes), [songLoaded, notes]);
 }
 
 export function MetronomeScreen({
@@ -114,7 +117,7 @@ export function MetronomeScreen({
   const stop = useMetronome((s) => s.stop);
   const hintSeen = useSwipeHint((s) => s.seen);
   const dismissHint = useSwipeHint((s) => s.dismiss);
-  const notes = useLoadedNotes();
+  const strip = useNoteStrip();
   const settings = usePracticeSettings();
 
   const frame = useMetronomeFrame(running, bpm);
@@ -212,9 +215,12 @@ export function MetronomeScreen({
   );
 
   const dotsWidth = window.width - space.screenInset * 2;
-  const layoutKey = [window.width, window.height, window.fontScale, notes].join(
-    '|',
-  );
+  const layoutKey = [
+    window.width,
+    window.height,
+    window.fontScale,
+    strip === null,
+  ].join('|');
   const density = useScreenDensity(window.height, layoutKey, scrollable);
   const gap = useMemo(
     () => ({
@@ -245,12 +251,14 @@ export function MetronomeScreen({
           onContentSizeChange={handleContentSize}
         >
           <PracticePill elapsedMs={elapsedMs} onReset={resetPractice} />
-          {notes === null || notes.trim() === '' ? null : (
+          {strip === null ? null : (
             <Text
-              accessibilityLabel={`Song notes: ${notes}`}
+              accessible={strip.spoken !== null}
+              accessibilityLabel={strip.spoken ?? undefined}
+              numberOfLines={1}
               style={styles.notes}
             >
-              {notes}
+              {strip.text}
             </Text>
           )}
           <GestureDetector gesture={zoneSwipe}>
