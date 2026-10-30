@@ -1,4 +1,4 @@
-import { KB_SUBDIVISION_BOUNDS } from '@kitbag/core-native';
+import { KB_DENOMINATORS, KB_SUBDIVISION_BOUNDS } from '@kitbag/core-native';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -18,13 +18,18 @@ describe('subdivisionLabel', () => {
   });
 });
 
+const PER_BEAT_RANGE = [9, 10, 11, 12, 13, 14, 15].map(
+  (n) => `${String(n)} per beat`,
+);
+
+const namesIn = (denominator: number) =>
+  subdivisionChoices(KB_SUBDIVISION_BOUNDS).map((n) =>
+    subdivisionName(n, denominator),
+  );
+
 describe('subdivisionName', () => {
-  it('names every subdivision the engine accepts as the mockup does', () => {
-    const names = Array.from(
-      { length: KB_SUBDIVISION_BOUNDS.max - KB_SUBDIVISION_BOUNDS.min + 1 },
-      (_u, i) => subdivisionName(KB_SUBDIVISION_BOUNDS.min + i),
-    );
-    expect(names).toEqual([
+  it('names every subdivision in 4/4 as the mockup does', () => {
+    expect(namesIn(4)).toEqual([
       'Quarters',
       'Eighths',
       'Triplets',
@@ -33,15 +38,62 @@ describe('subdivisionName', () => {
       'Sextuplets',
       'Septuplets',
       '32nds',
-      '9 per beat',
-      '10 per beat',
-      '11 per beat',
-      '12 per beat',
-      '13 per beat',
-      '14 per beat',
-      '15 per beat',
+      ...PER_BEAT_RANGE,
       '64ths',
     ]);
+  });
+
+  it.each([
+    { beats: 6, denominator: 8 },
+    { beats: 12, denominator: 8 },
+  ])(
+    'names the note value that plays in $beats/$denominator',
+    ({ denominator }) => {
+      expect(namesIn(denominator)).toEqual([
+        'Eighths',
+        'Sixteenths',
+        'Triplets',
+        '32nds',
+        'Quintuplets',
+        'Sextuplets',
+        'Septuplets',
+        '64ths',
+        ...PER_BEAT_RANGE,
+        '128ths',
+      ]);
+    },
+  );
+
+  it('shifts the power-of-two names with the half and sixteenth beat', () => {
+    const powers = [1, 2, 4, 8, 16];
+    expect(powers.map((n) => subdivisionName(n, 2))).toEqual([
+      'Halves',
+      'Quarters',
+      'Eighths',
+      'Sixteenths',
+      '32nds',
+    ]);
+    expect(powers.map((n) => subdivisionName(n, 16))).toEqual([
+      'Sixteenths',
+      '32nds',
+      '64ths',
+      '128ths',
+      '256ths',
+    ]);
+  });
+
+  it('keeps tuplets per beat whatever the denominator', () => {
+    expect(KB_DENOMINATORS.map((d) => subdivisionName(3, d))).toEqual(
+      KB_DENOMINATORS.map(() => 'Triplets'),
+    );
+  });
+
+  it('gives every engine denominator and subdivision a distinct name', () => {
+    for (const denominator of KB_DENOMINATORS) {
+      const names = namesIn(denominator);
+      expect(new Set(names).size).toBe(names.length);
+      expect(names.join()).not.toMatch(/undefined|NaN/);
+    }
   });
 });
 
@@ -69,7 +121,8 @@ describe('subdivision tile grid', () => {
 
 describe('spokenSubdivision', () => {
   it('adds the count to a named subdivision only', () => {
-    expect(spokenSubdivision(3)).toBe('Triplets, 3 per beat');
-    expect(spokenSubdivision(9)).toBe('9 per beat');
+    expect(spokenSubdivision(3, 4)).toBe('Triplets, 3 per beat');
+    expect(spokenSubdivision(2, 8)).toBe('Sixteenths, 2 per beat');
+    expect(spokenSubdivision(9, 8)).toBe('9 per beat');
   });
 });

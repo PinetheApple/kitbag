@@ -1,23 +1,39 @@
-// Subdivision badge label: clicks per beat, ×1 to ×16 (SPEC §5.2, §5.1).
 export function subdivisionLabel(subdivision: number): string {
   return `×${String(subdivision)}`;
 }
 
-const NOTE_NAMES = [
-  'Quarters',
-  'Eighths',
-  'Triplets',
-  'Sixteenths',
-  'Quintuplets',
-  'Sextuplets',
-  'Septuplets',
-  '32nds',
-] as const;
-const SIXTY_FOURTHS = 16;
+const NOTE_VALUE_NAMES: Readonly<Record<number, string>> = {
+  2: 'Halves',
+  4: 'Quarters',
+  8: 'Eighths',
+  16: 'Sixteenths',
+  32: '32nds',
+  64: '64ths',
+  128: '128ths',
+  256: '256ths',
+};
 
-export function subdivisionName(subdivision: number): string {
-  if (subdivision === SIXTY_FOURTHS) return '64ths';
-  return NOTE_NAMES[subdivision - 1] ?? `${String(subdivision)} per beat`;
+const TUPLET_NAMES: Readonly<Record<number, string>> = {
+  3: 'Triplets',
+  5: 'Quintuplets',
+  6: 'Sextuplets',
+  7: 'Septuplets',
+};
+
+function perBeat(subdivision: number): string {
+  return `${String(subdivision)} per beat`;
+}
+
+// A power-of-two subdivision names the note that plays; a tuplet counts per beat.
+export function subdivisionName(
+  subdivision: number,
+  denominator: number,
+): string {
+  return (
+    NOTE_VALUE_NAMES[subdivision * denominator] ??
+    TUPLET_NAMES[subdivision] ??
+    perBeat(subdivision)
+  );
 }
 
 export function subdivisionChoices(bounds: {
@@ -47,8 +63,11 @@ export function inRows<T>(
   );
 }
 
-export function spokenSubdivision(subdivision: number): string {
-  const perBeat = `${String(subdivision)} per beat`;
-  const name = subdivisionName(subdivision);
-  return name === perBeat ? name : `${name}, ${perBeat}`;
+export function spokenSubdivision(
+  subdivision: number,
+  denominator: number,
+): string {
+  const count = perBeat(subdivision);
+  const name = subdivisionName(subdivision, denominator);
+  return name === count ? name : `${name}, ${count}`;
 }

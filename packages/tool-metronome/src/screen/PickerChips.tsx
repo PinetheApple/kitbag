@@ -66,7 +66,7 @@ export function PickerChips({
 }: PickerChipsProps) {
   const styles = useStyles();
   const meter = { beats: beatsPerBar, denominator };
-  const name = subdivisionName(subdivision);
+  const name = subdivisionName(subdivision, denominator);
   return (
     <View style={styles.row}>
       <Pressable

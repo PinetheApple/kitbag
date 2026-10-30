@@ -57,11 +57,17 @@ const useStyles = createThemedStyles((theme) => ({
 
 interface TileProps {
   readonly subdivision: number;
+  readonly denominator: number;
   readonly selected: boolean;
   readonly onPick: (subdivision: number) => void;
 }
 
-function NotationTile({ subdivision, selected, onPick }: TileProps) {
+function NotationTile({
+  subdivision,
+  denominator,
+  selected,
+  onPick,
+}: TileProps) {
   const styles = useStyles();
   const sheetStyles = useSheetStyles();
   const handlePress = useCallback(() => {
@@ -70,7 +76,7 @@ function NotationTile({ subdivision, selected, onPick }: TileProps) {
   return (
     <Pressable
       accessibilityRole="radio"
-      accessibilityLabel={spokenSubdivision(subdivision)}
+      accessibilityLabel={spokenSubdivision(subdivision, denominator)}
       accessibilityState={{ checked: selected }}
       style={[styles.tile, selected && sheetStyles.selectedTile]}
       onPress={handlePress}
@@ -81,7 +87,7 @@ function NotationTile({ subdivision, selected, onPick }: TileProps) {
         color={selected ? 'text' : 'text2'}
       />
       <Text style={[styles.label, selected && styles.selectedLabel]}>
-        {subdivisionName(subdivision)}
+        {subdivisionName(subdivision, denominator)}
       </Text>
     </Pressable>
   );
@@ -101,6 +107,7 @@ export function SubdivisionSheet({
   const styles = useStyles();
   const { fontScale } = useWindowDimensions();
   const subdivision = useMetronome((s) => s.subdivision);
+  const denominator = useMetronome((s) => s.denominator);
   const setSubdivision = useMetronome((s) => s.setSubdivision);
   const handlePick = useCallback(
     (next: number) => {
@@ -129,6 +136,7 @@ export function SubdivisionSheet({
               <NotationTile
                 key={choice}
                 subdivision={choice}
+                denominator={denominator}
                 selected={choice === subdivision}
                 onPick={handlePick}
               />
