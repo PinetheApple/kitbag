@@ -47,7 +47,7 @@ framework migration.
 | The Kotlin platform code | `MediaSessionPlugin.kt`, `NotificationListenerService`. Ports from a Flutter plugin to a TurboModule; the Android logic is the same. |
 | The database schema (§11) | SQLite either way. |
 | The design system (§12) | Tokens, components and §12.6 experience rules are framework-agnostic by construction. |
-| The design specs in `design/` | Four HTML files, all still binding. |
+| The design specs in `design/` | All still binding (§12). |
 | The plugin model (§9) | It was always an interface, not a Flutter idiom. |
 
 | Does not survive | Replacement |
@@ -1420,6 +1420,8 @@ Two migration notes that are not obvious from the table:
 | `kitbag-playalong.html` | Supersedes the Play-along section. Adds the locked state, seven more states, five sheets, and a code audit. |
 | `kitbag-settings.html` | Designs Settings, latency calibration, restore. **Supersedes exactly one §06 card** — "Settings stay contextual" — and nothing else. |
 | `kitbag-metronome-b.html` ("Chosen") and `kitbag-metronome-status.html` (variant A, Q6 pulse marks, poly row) | Owner-approved layout B (#175). **Supersede the metronome screen in `kitbag-metronome.html` §02, and §03's sheets and numpad, where they differ.** §02's setlists, setlist detail and preset editor, and §04 onward, stay binding. Recorded in `docs/decisions.md`, 2026-10-30; `docs/research/metronome-b-parity.md` is the value table. |
+| `kitbag-library.html` | **Variant B only** ("Two tiles, two screens"; #178). Supersedes `kitbag-ui.html` §04's Home tiles and Library: Songs and Stem songs are separate screens. Variants A and C are rejected alternatives; `docs/decisions.md` (2026-10-30, #178) lists what is deliberately not built. |
+| `kitbag-stems.html` | **Variant C only** ("Bottom dock"; #137). Supersedes `kitbag-ui.html` §04's Stem player. Variants A and B are rejected alternatives; `docs/decisions.md` (2026-10-30, #137) lists what is deliberately not built. |
 
 ### 12.1 Principles (kitbag-ui §01)
 

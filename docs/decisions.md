@@ -363,7 +363,7 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   **[recorded]**
 
 - **2026-10-30 · Stem player layout (§7.2, §7.3, §12, #137)** — The owner chose variant C
-  ("Bottom dock") in `docs/research/mockups/stems-layouts.html`; for the stem player it
+  ("Bottom dock") in `design/kitbag-stems.html`; for the stem player it
   supersedes `design/kitbag-ui.html` §04. Deliberately out: the BPM and key chips' speed
   and pitch actions (#138), count-in, and LUFS. Reset mix sets every stem and the master
   to 0 dB with nothing muted or soloed, and saves the stems. On one stem, mute and solo
@@ -385,7 +385,7 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   so changing `SKIP_SECONDS` means redrawing them. **[recorded]**
 
 - **2026-10-30 · Home and Library layout (§6.2, §12.4, #178)** — The owner chose variant B
-  ("Two tiles, two screens") in `docs/research/mockups/library-layouts.html`; for the Home
+  ("Two tiles, two screens") in `design/kitbag-library.html`; for the Home
   tiles and the Library it supersedes `design/kitbag-ui.html` §04. Songs and Stem songs are
   separate titled screens (`/library`, `/stems`) without filter chips; Setlists open from
   the Songs app bar. Rows sort by title and show title, length · BPM · key, and status

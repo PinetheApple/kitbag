@@ -36,7 +36,7 @@ session, no foreground service.
 native/audio_core   # C++ engine (miniaudio), CMake
 packages/           # React Native app — pnpm workspaces + Turborepo
 SPEC.md             # source of truth
-design/             # four binding design specs
+design/             # binding design specs (precedence: SPEC.md §12)
 legacy/             # Flutter-era media-session code play-along still has to port
 docs/               # trackers, decisions, research (read the tuner warning banner)
 scripts/            # repeatable actions — lint, format, worktrees, changelog
