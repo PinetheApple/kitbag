@@ -42,6 +42,19 @@ export {
   type LastToolPersistence,
   type LastToolStore,
 } from './lastTool/store.ts';
+export { useAppearance } from './appearance/useAppearance.ts';
+export {
+  configureAppearancePersistence,
+  createAppearanceStore,
+  DEFAULT_APPEARANCE,
+  getAppearanceStore,
+  THEME_CHOICES,
+  type AppearanceKey,
+  type AppearancePersistence,
+  type AppearanceSettings,
+  type AppearanceStore,
+  type ThemeChoice,
+} from './appearance/store.ts';
 export { useTuner } from './tuner/useTuner.ts';
 export {
   allStringsTuned,

@@ -1,5 +1,6 @@
 import {
   AppBar,
+  AppBarAction,
   createThemedStyles,
   space,
   ToolGrid,
@@ -19,6 +20,7 @@ import { useMemo } from 'react';
 import { ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useSettingsRoutes } from '../settings/settingsRoutes.ts';
 import {
   continueTarget,
   HOME_TOOLS,
@@ -97,6 +99,7 @@ export function HomeScreen() {
   const router = useRouter();
   const liveText = useLiveText();
   const lastToolId = useLastTool((s) => s.toolId);
+  const { openSettings } = useSettingsRoutes();
 
   const contentInsets = useMemo(
     () => ({
@@ -141,7 +144,17 @@ export function HomeScreen() {
       style={styles.screen}
       contentContainerStyle={[styles.content, contentInsets]}
     >
-      <AppBar wordmark title="Kitbag" />
+      <AppBar
+        wordmark
+        title="Kitbag"
+        trailing={
+          <AppBarAction
+            icon="settings"
+            accessibilityLabel="Settings"
+            onPress={openSettings}
+          />
+        }
+      />
 
       {resume === undefined || resumeText === undefined ? null : (
         <ToolRow
