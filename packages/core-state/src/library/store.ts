@@ -14,6 +14,7 @@ import { takeSnapshot, type LibrarySnapshot } from './snapshot.ts';
 export interface LoadedSong {
   readonly presetId: number;
   readonly itemId: number | null;
+  readonly setlistId: number | null;
 }
 
 export interface SearchResults {
@@ -183,32 +184,56 @@ function presetEditActions(deps: LibraryDeps, get: Get) {
   };
 }
 
-function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
-  const pin = async (setlistId: number, itemId: number) => {
-    const earlier = (await switchActiveSetlist(deps, get, setlistId))
-      ? []
-      : get().played;
-    const played = earlier.includes(itemId) ? earlier : [...earlier, itemId];
-    set({ played });
-    await get().refresh();
+function serialised() {
+  let tail: Promise<unknown> = Promise.resolve();
+  return <T>(task: () => Promise<T>): Promise<T> => {
+    const run = tail.then(task, task);
+    tail = run.catch(() => undefined);
+    return run;
   };
-  const leave = async () => {
-    await deps.repos().setlists.selectActive(null);
-    set({ played: [] });
-    await get().refresh();
+}
+
+function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
+  const inOrder = serialised();
+  const pin = (setlistId: number, itemId: number) =>
+    inOrder(async () => {
+      const earlier = (await switchActiveSetlist(deps, get, setlistId))
+        ? []
+        : get().played;
+      const played = earlier.includes(itemId) ? earlier : [...earlier, itemId];
+      set({ played });
+      await get().refresh();
+    });
+  const leave = () =>
+    inOrder(async () => {
+      if (activeSetlistOf(get().setlists) === undefined) return;
+      await deps.repos().setlists.selectActive(null);
+      set({ played: [] });
+      await get().refresh();
+    });
+  const leaveOrWarn = async () => {
+    try {
+      await leave();
+    } catch (error) {
+      console.warn('[kitbag] leaving the setlist failed', error);
+    }
   };
   return {
     loadSong: async (presetId: number, itemId?: number, setlistId?: number) => {
       const preset = get().presets.find((p) => p.id === presetId);
       if (preset === undefined) return;
       applyPreset(preset, deps.metronome);
-      set({ loaded: { presetId, itemId: itemId ?? null } });
-      const outside = setlistId === undefined || itemId === undefined;
-      if (outside && activeSetlistOf(get().setlists) === undefined) return;
+      if (setlistId === undefined || itemId === undefined) {
+        set({ loaded: { presetId, itemId: null, setlistId: null } });
+        // The stage bar keys off loaded.setlistId, so it hides even if this fails.
+        await leaveOrWarn();
+        return;
+      }
+      set({ loaded: { presetId, itemId, setlistId } });
       try {
-        await (outside ? leave() : pin(setlistId, itemId));
+        await pin(setlistId, itemId);
       } catch {
-        // The song is already playing; a failed write only loses the on-stage marker.
+        // The song is already playing; a failed pin only loses the on-stage marker.
       }
     },
     stepSong: async (step: SongStep) => {
@@ -223,7 +248,7 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
       if (entry === undefined) return;
       await get().loadSong(entry.preset.id, entry.item.id, setlistId);
     },
-    leaveSetlist: leave,
+    leaveSetlist: leaveOrWarn,
   };
 }
 
