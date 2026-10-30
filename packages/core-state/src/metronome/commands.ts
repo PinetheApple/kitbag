@@ -1,6 +1,5 @@
 import {
-  engineUsers,
-  type EngineUsers,
+  type EngineHoldCommands,
   type KitbagCommandsSpec,
 } from '@kitbag/core-native';
 
@@ -26,11 +25,6 @@ export type MetronomeCommands = Pick<
   | 'setRamp'
   | 'setBarMute'
 >;
-
-export interface EngineLease {
-  readonly users: EngineUsers;
-  readonly stop: () => void;
-}
 
 export type NowFrame = () => number;
 export type EngineBpm = () => number;
@@ -92,9 +86,9 @@ export const defaultNowFrame: NowFrame = () => getMetronomeRuntime().nowFrame();
 export const defaultEngineBpm: EngineBpm = () =>
   getMetronomeRuntime().engineBpm();
 
-export const defaultEngineLease: EngineLease = {
-  users: engineUsers,
-  stop: () => {
-    getMetronomeRuntime().stopEngine();
+export const defaultEngineHold: EngineHoldCommands = {
+  engineHold: () => getMetronomeRuntime().commands.engineHold(),
+  engineRelease: () => {
+    getMetronomeRuntime().commands.engineRelease();
   },
 };

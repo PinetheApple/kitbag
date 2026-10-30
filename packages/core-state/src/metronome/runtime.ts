@@ -1,12 +1,15 @@
-import { getKitbagCommands, getKitbagHostObject } from '@kitbag/core-native';
+import {
+  getKitbagCommands,
+  getKitbagHostObject,
+  type EngineHoldCommands,
+} from '@kitbag/core-native';
 
 import type { EngineBpm, MetronomeCommands, NowFrame } from './commands.ts';
 
 export interface MetronomeRuntime {
-  readonly commands: MetronomeCommands;
+  readonly commands: MetronomeCommands & EngineHoldCommands;
   readonly nowFrame: NowFrame;
   readonly engineBpm: EngineBpm;
-  readonly stopEngine: () => void;
 }
 
 const nativeRuntime: MetronomeRuntime = {
@@ -15,9 +18,6 @@ const nativeRuntime: MetronomeRuntime = {
   },
   nowFrame: () => getKitbagHostObject().frames_rendered,
   engineBpm: () => getKitbagHostObject().current_bpm,
-  stopEngine: () => {
-    getKitbagCommands().stop();
-  },
 };
 
 let configuredRuntime: MetronomeRuntime | undefined;

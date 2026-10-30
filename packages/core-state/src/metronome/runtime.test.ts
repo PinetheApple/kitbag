@@ -4,6 +4,12 @@ import type { MetronomeRuntime } from './runtime.ts';
 
 const nativeCommands = {
   start: vi.fn(() => Promise.resolve(7)),
+  stop: vi.fn(),
+  engineHold: vi.fn<() => Promise<number>>(),
+  engineRelease: vi.fn(),
+  metronomeStart: vi.fn(),
+  metronomeStop: vi.fn(),
+  metronomePause: vi.fn(),
   setTempo: vi.fn(),
 };
 const getKitbagCommands = vi.fn(() => nativeCommands);
@@ -23,7 +29,6 @@ function fakeRuntime(frame: number): MetronomeRuntime {
     } as unknown as MetronomeRuntime['commands'],
     nowFrame: () => frame,
     engineBpm: () => 120,
-    stopEngine: vi.fn(),
   };
 }
 
@@ -89,5 +94,21 @@ describe('metronome runtime', () => {
 
     expect((await import('./store.ts')).metronomeStore).toBe(before);
     expect(web.commands.setTempo).toHaveBeenCalledWith(150);
+  });
+
+  it('leaves the device to the engine through hold, transport and release', async () => {
+    const { metronomeStore } = await load();
+    const { KB_RESULT } = await import('@kitbag/core-native');
+    nativeCommands.engineHold.mockResolvedValueOnce(KB_RESULT.KB_OK);
+    const release = metronomeStore.getState().holdEngine();
+    metronomeStore.getState().start();
+    metronomeStore.getState().pause();
+    metronomeStore.setState({ running: true });
+    metronomeStore.getState().stop();
+    expect(nativeCommands.engineRelease).not.toHaveBeenCalled();
+    release();
+    expect(nativeCommands.engineHold).toHaveBeenCalledOnce();
+    expect(nativeCommands.engineRelease).toHaveBeenCalledOnce();
+    expect(nativeCommands.stop).not.toHaveBeenCalled();
   });
 });

@@ -42,12 +42,7 @@ export {
 export * from './generated/nativeConstants.gen.ts';
 
 export { confirmHaptic, tickHaptic } from './haptics.ts';
-export {
-  createEngineUsers,
-  engineUsers,
-  type EngineUser,
-  type EngineUsers,
-} from './engineUsers.ts';
+export { holdEngine, type EngineHoldCommands } from './engineHold.ts';
 export type {
   SongTransportShowState,
   TransportEvent,

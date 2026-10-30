@@ -67,6 +67,8 @@ export function fakeRuntime(set: StemSetRecord) {
   const commands = {
     start: vi.fn(() => Promise.resolve(0)),
     stop: vi.fn(),
+    engineHold: vi.fn(() => Promise.resolve<number>(KB_RESULT.KB_OK)),
+    engineRelease: vi.fn(),
     loadTrack: vi.fn<StemPlayerCommands['loadTrack']>(() =>
       Promise.resolve(KB_RESULT.KB_OK),
     ),

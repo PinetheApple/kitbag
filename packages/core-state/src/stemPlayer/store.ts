@@ -1,10 +1,5 @@
 import type { StemSetRecord } from '@kitbag/core-db';
-import {
-  engineUsers,
-  KB_MAX_TRACKS,
-  KB_RESULT,
-  type EngineUsers,
-} from '@kitbag/core-native';
+import { holdEngine, KB_MAX_TRACKS, KB_RESULT } from '@kitbag/core-native';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { mixActions, transportActions } from './actions.ts';
@@ -166,10 +161,10 @@ async function loadTracks(
 export function createStemPlayerStore(
   runtimeOf: () => StemPlayerRuntime = getStemPlayer,
   timing: StemPlayerTiming = DEFAULT_TIMING,
-  users: EngineUsers = engineUsers,
 ): StoreApi<StemPlayerStore> {
   let session = 0;
   let requestedTracks = 0;
+  let releaseEngine: (() => void) | null = null;
   const saver = mixSaver(
     (mixes) => runtimeOf().records.saveStemMix(mixes),
     timing.mixSaveDelayMs,
@@ -238,7 +233,6 @@ export function createStemPlayerStore(
         set({ status: 'missing' });
         return;
       }
-      users.claim('stems');
       if (runtime.sharedMetronome.active()) runtime.sharedMetronome.release();
       const started = await commands.start();
       const engineRate = runtime.engine.sampleRate();
@@ -274,6 +268,7 @@ export function createStemPlayerStore(
       ...closedState,
       open: async (setId, waveformBars) => {
         if (get().setId !== null) teardown(get);
+        releaseEngine ??= holdEngine(runtimeOf().commands);
         const opened = ++session;
         set({ ...closedState, status: 'loading', setId });
         try {
@@ -287,7 +282,8 @@ export function createStemPlayerStore(
         session++;
         teardown(get);
         set(closedState);
-        if (users.release('stems')) runtimeOf().commands.stop();
+        releaseEngine?.();
+        releaseEngine = null;
       },
       ...mixActions(set, get, runtimeOf, saver),
       ...transportActions(get, runtimeOf, scrubSeek),

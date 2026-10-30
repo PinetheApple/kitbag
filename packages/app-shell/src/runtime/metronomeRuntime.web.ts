@@ -1,6 +1,7 @@
 import {
   KITBAG_HOST_OBJECT_KEY,
   KB_RAMP_STATE,
+  KB_RESULT,
   KB_STOPPED_BEAT,
   KB_TUNER_NO_NOTE,
   KB_TUNER_NO_STRING,
@@ -13,7 +14,7 @@ import {
   configureMetronomeRuntime,
   DEFAULT_BPM,
   metronomeStore,
-  type MetronomeCommands,
+  type MetronomeRuntime,
 } from '@kitbag/core-state';
 
 const PHASE_STEPS = 1000;
@@ -32,8 +33,10 @@ function readBoundedQuery(
   return Math.min(Math.max(value, min), max);
 }
 
-const webCommands: MetronomeCommands = {
+const webCommands: MetronomeRuntime['commands'] = {
   start: () => Promise.resolve(0),
+  engineHold: () => Promise.resolve(KB_RESULT.KB_OK),
+  engineRelease: () => undefined,
   metronomeStart: () => undefined,
   metronomeStop: () => undefined,
   metronomePause: () => undefined,
@@ -114,7 +117,6 @@ configureMetronomeRuntime({
   commands: webCommands,
   nowFrame: () => presentationHost.frames_rendered,
   engineBpm: () => presentationHost.current_bpm,
-  stopEngine: () => undefined,
 });
 
 metronomeStore.getState().setTempo(initialBpm);
