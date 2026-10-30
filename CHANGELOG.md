@@ -2424,6 +2424,63 @@ Filled NOW badge, 16 sheet title and 18 Leave setlist icon through additive
 Badge, Sheet and Button options. The chip shows the setlist name when no song
 from the set is loaded, and only while the loaded song came from that set.
 
+- **metronome:** Pin the tempo zone so the BPM numeral stays put between songs (#208)
+
+The tempo zone grew into whatever the dots and status rows left over, and
+centred the numeral in it, so a song with 12/8 and poly drew the numeral
+about 49 dp higher than a 4/4 one at 360 x 800. The zone now takes its
+natural height at the top of the body, and the dots and status rows sit in
+a region that reserves the tallest meter's height, so the body measures the
+same whatever is loaded. The density key drops meter and poly too, so a
+song change can no longer flip the screen between roomy and compact.
+
+- **metronome:** Scale tempo swipe by drag speed and drop the release fling (#209)
+
+Lifting the finger after a quick swipe added up to 40 BPM, and the fixed
+8 dp per BPM was too fast for single steps and too slow for long moves.
+A slow drag now moves 1 BPM per 14 dp and the rate rises with drag speed
+to 8 times that; release changes nothing. A reversal drops the unspent
+travel so the tempo answers the new direction within one step, the
+diagonal cancel widens to 20 dp, and each BPM change plays a segment tick
+through core-native. SPEC 5.2 carries the new rule.
+
+- **metronome:** Keep a one-line notes slot so notes never move the numeral (#208)
+
+Song notes sat above the tempo zone only when a song had them, so stepping
+from a song with notes to one without moved the numeral by the notes'
+height. While a song is loaded the strip now always takes one line, folding
+multi-line notes and ending in an ellipsis; with no song loaded it is gone.
+The density key follows the slot rather than the note text.
+
+- **metronome:** Reserve the poly label above its dots and scale with text size (#208)
+
+PolyDots moves the ratio label above the poly row when it is too tall or
+too wide to sit beside it, which the reserve left out, and the beat and
+label lines grow with the system font. Either let a poly song outgrow the
+reserve and flip the density, moving the numeral. The reserve now takes the
+label above at the current font scale, and the label gets an explicit line
+height so that height is known. The tests compare the reserve with an
+independent stack of what BeatDots, PolyDots and StatusStack draw.
+
+- **metronome:** Ride out tremor in the tempo swipe and guard against a fling (#209)
+
+Any backward movement dropped the travel already made toward the next BPM,
+so a shaky finger lost steps. Unspent travel now survives until the finger
+moves back more than 3 dp. A test fails if the swipe hook regains a release
+handler, and another pins the 14 dp fine rate SPEC 5.2 states. The two
+haptics share one Android helper, speedGain uses clampUnit, and SPEC says
+the tick fires per tempo change rather than per BPM.
+
+- **metronome:** Fit the busiest song at 360 x 800 without scrolling (#210)
+
+The worst-case reserve, counted with a poly label above the dots, outgrew
+an 800 dp body, so every song scrolled and swipe-anywhere went off. Even
+without the reserve, 12/8 with poly, mute and ramp ran 17 dp past the
+transport. Compact screens, picked by window height, now reserve nothing,
+since only a roomy screen's density can flip, and compact draws two-line
+meters at 38 dp dots with 6 dp line gaps and a 6 dp gap above the sweep.
+The roomy reserve counts the 18 dp a 14 dp label line draws on Android.
+
 - Rerun tests when the sources they read change (#204)
 
 app-shell's touchTargets audit reads every package's src, and every
