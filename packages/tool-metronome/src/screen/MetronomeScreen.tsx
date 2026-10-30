@@ -24,7 +24,7 @@ import { useLibraryRefresh } from '../library/useLibraryRefresh.ts';
 import { practiceBadgeCount } from '../logic/statusRows.ts';
 import { pushTap, tapTempoBpm } from '../logic/tapTempo.ts';
 import { BeatDots } from './BeatDots.tsx';
-import { BpmNumpadSheet } from './BpmNumpadSheet.tsx';
+import { NumberEntrySheet } from './NumberEntrySheet.tsx';
 import { MeterSheet } from './MeterSheet.tsx';
 import { MetronomeAppBar } from './MetronomeAppBar.tsx';
 import { PickerChips } from './PickerChips.tsx';
@@ -300,11 +300,13 @@ export function MetronomeScreen({
           />
         )}
 
-        <BpmNumpadSheet
+        <NumberEntrySheet
           visible={openSheet === 'numpad'}
           title="Tempo"
           confirmLabel="Set tempo"
-          bpm={bpm}
+          value={bpm}
+          bounds={BPM_BOUNDS}
+          unit="BPM"
           bottomInset={insets.bottom}
           onConfirm={handleSwipeOrTypedTempo}
           onDismiss={handleCloseSheet}

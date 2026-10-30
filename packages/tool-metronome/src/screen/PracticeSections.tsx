@@ -21,6 +21,7 @@ import {
   COUNT_IN_MODE_OPTIONS,
   type CountInMode,
 } from '../logic/countIn.ts';
+import type { PracticeField } from '../logic/practiceEntry.ts';
 import { PracticeSection, usePracticeStyles } from './PracticeSection.tsx';
 import { useBarMuteEditor } from './useBarMuteEditor.ts';
 
@@ -65,10 +66,20 @@ function MutePreview({ preview }: { readonly preview: readonly boolean[] }) {
   );
 }
 
-export function PracticeMute() {
+interface TypeProps {
+  readonly onType: (field: PracticeField) => void;
+}
+
+export function PracticeMute({ onType }: TypeProps) {
   const styles = usePracticeStyles();
   const editor = useBarMuteEditor();
   const { enabled, playBars, muteBars } = editor.barMute;
+  const handleTypePlay = useCallback(() => {
+    onType('playBars');
+  }, [onType]);
+  const handleTypeMute = useCallback(() => {
+    onType('muteBars');
+  }, [onType]);
   return (
     <PracticeSection
       icon="muteBars"
@@ -88,21 +99,23 @@ export function PracticeMute() {
         <Text style={styles.label}>Play</Text>
         <StepControl
           variant="inlineLarge"
-          label="Bars to play"
+          label="Play bars"
           value={String(playBars)}
           accessibilityValue={bars(playBars)}
           neighbourGapDp={space.controlGap}
           onStep={editor.stepPlay}
+          onValuePress={handleTypePlay}
         />
         <View style={styles.grow} />
         <Text style={styles.label}>Mute</Text>
         <StepControl
           variant="inlineLarge"
-          label="Bars to mute"
+          label="Mute bars"
           value={String(muteBars)}
           accessibilityValue={bars(muteBars)}
           neighbourGapDp={space.controlGap}
           onStep={editor.stepMute}
+          onValuePress={handleTypeMute}
         />
       </View>
       <MutePreview preview={editor.preview} />
@@ -159,7 +172,7 @@ export function PracticeCountIn() {
   );
 }
 
-export function PracticePoly() {
+export function PracticePoly({ onType }: TypeProps) {
   const styles = usePracticeStyles();
   const beatsPerBar = useMetronome((s) => s.beatsPerBar);
   const polyEnabled = useMetronome((s) => s.polyEnabled);
@@ -177,6 +190,9 @@ export function PracticePoly() {
     },
     [polyBeats, setPoly],
   );
+  const handleTypeCount = useCallback(() => {
+    onType('polyBeats');
+  }, [onType]);
   return (
     <PracticeSection
       last
@@ -187,11 +203,12 @@ export function PracticePoly() {
           <View style={styles.grow} />
           <StepControl
             variant="inlineLarge"
-            label="Polyrhythm"
+            label="Poly count"
             value={`${String(polyBeats)} : ${String(beatsPerBar)}`}
             accessibilityValue={`${String(polyBeats)} against ${String(beatsPerBar)}`}
             neighbourGapDp={space.controlGap}
             onStep={handleStep}
+            onValuePress={handleTypeCount}
           />
           <Switch
             accessibilityLabel="Polyrhythm"

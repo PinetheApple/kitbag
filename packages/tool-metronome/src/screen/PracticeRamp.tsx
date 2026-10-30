@@ -9,7 +9,7 @@ import {
 import { useCallback } from 'react';
 import { Text, View } from 'react-native';
 
-import type { RampBpmField } from '../logic/rampEntry.ts';
+import type { PracticeField } from '../logic/practiceEntry.ts';
 import {
   RAMP_UNIT_OPTIONS,
   rampUnitFromOption,
@@ -21,20 +21,20 @@ import { useRampEditor, type RampEditor } from './useRampEditor.ts';
 
 const bpm = (value: number) => `${String(value)} BPM`;
 
-interface TempoRowProps {
+interface RowsProps {
   readonly editor: RampEditor;
-  readonly onTypeBpm: (field: RampBpmField) => void;
+  readonly onType: (field: PracticeField) => void;
 }
 
-function TempoRow({ editor, onTypeBpm }: TempoRowProps) {
+function TempoRow({ editor, onType }: RowsProps) {
   const styles = usePracticeStyles();
   const { startBpm, targetBpm } = editor.ramp;
   const handleTypeFrom = useCallback(() => {
-    onTypeBpm('startBpm');
-  }, [onTypeBpm]);
+    onType('startBpm');
+  }, [onType]);
   const handleTypeTo = useCallback(() => {
-    onTypeBpm('targetBpm');
-  }, [onTypeBpm]);
+    onType('targetBpm');
+  }, [onType]);
   return (
     <View style={styles.row}>
       <Text style={styles.label}>From</Text>
@@ -62,10 +62,16 @@ function TempoRow({ editor, onTypeBpm }: TempoRowProps) {
   );
 }
 
-function CadenceRows({ editor }: { readonly editor: RampEditor }) {
+function CadenceRows({ editor, onType }: RowsProps) {
   const styles = usePracticeStyles();
   const { stepBpm, interval, unit } = editor.ramp;
   const { setUnit } = editor;
+  const handleTypeStep = useCallback(() => {
+    onType('stepBpm');
+  }, [onType]);
+  const handleTypeInterval = useCallback(() => {
+    onType('interval');
+  }, [onType]);
   const handleUnit = useCallback(
     (option: string) => {
       setUnit(rampUnitFromOption(option));
@@ -83,6 +89,7 @@ function CadenceRows({ editor }: { readonly editor: RampEditor }) {
           accessibilityValue={`${bpm(stepBpm)} per step`}
           neighbourGapDp={space.controlGap}
           onStep={editor.stepStepSize}
+          onValuePress={handleTypeStep}
         />
         <View style={styles.grow} />
         <SheetHint size="large">BPM per step</SheetHint>
@@ -91,11 +98,12 @@ function CadenceRows({ editor }: { readonly editor: RampEditor }) {
         <Text style={styles.label}>Every</Text>
         <StepControl
           variant="inlineLarge"
-          label="Ramp interval"
+          label="Ramp every"
           value={String(interval)}
           accessibilityValue={`${String(interval)} ${rampUnitLabel(unit)}`}
           neighbourGapDp={space.controlGap}
           onStep={editor.stepInterval}
+          onValuePress={handleTypeInterval}
         />
         <SegmentedControl
           fill
@@ -112,10 +120,10 @@ function CadenceRows({ editor }: { readonly editor: RampEditor }) {
 }
 
 interface PracticeRampProps {
-  readonly onTypeBpm: (field: RampBpmField) => void;
+  readonly onType: (field: PracticeField) => void;
 }
 
-export function PracticeRamp({ onTypeBpm }: PracticeRampProps) {
+export function PracticeRamp({ onType }: PracticeRampProps) {
   const styles = usePracticeStyles();
   const editor = useRampEditor();
   const { loop, enabled } = editor.ramp;
@@ -134,8 +142,8 @@ export function PracticeRamp({ onTypeBpm }: PracticeRampProps) {
         </>
       }
     >
-      <TempoRow editor={editor} onTypeBpm={onTypeBpm} />
-      <CadenceRows editor={editor} />
+      <TempoRow editor={editor} onType={onType} />
+      <CadenceRows editor={editor} onType={onType} />
       <View style={styles.row}>
         <Chip
           size="large"

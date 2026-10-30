@@ -6,10 +6,10 @@ import {
   textRoles,
   textStyle,
 } from '@kitbag/core-design';
-import { BPM_BOUNDS } from '@kitbag/core-state';
 import { useCallback, useState } from 'react';
 import { Text, View } from 'react-native';
 
+import type { BpmBounds } from '../logic/bpmBounds.ts';
 import {
   confirmEntry,
   openEntry,
@@ -17,13 +17,15 @@ import {
   pressDigit,
 } from '../logic/numpad.ts';
 
-interface BpmNumpadSheetProps {
+interface NumberEntrySheetProps {
   readonly visible: boolean;
   readonly title: string;
   readonly confirmLabel: string;
-  readonly bpm: number;
+  readonly value: number;
+  readonly bounds: BpmBounds;
+  readonly unit: string;
   readonly bottomInset: number;
-  readonly onConfirm: (bpm: number) => void;
+  readonly onConfirm: (value: number) => void;
   readonly onDismiss: () => void;
 }
 
@@ -35,35 +37,40 @@ const useStyles = createThemedStyles((theme) => ({
   },
 }));
 
-export function BpmNumpadSheet({
+export function NumberEntrySheet({
   visible,
   title,
   confirmLabel,
-  bpm,
+  value,
+  bounds,
+  unit,
   bottomInset,
   onConfirm,
   onDismiss,
-}: BpmNumpadSheetProps) {
+}: NumberEntrySheetProps) {
   const styles = useStyles();
-  const [entry, setEntry] = useState(() => openEntry(bpm));
+  const [entry, setEntry] = useState(() => openEntry(value));
 
-  const handleDigit = useCallback((digit: number) => {
-    setEntry((current) => pressDigit(current, digit, BPM_BOUNDS));
-  }, []);
+  const handleDigit = useCallback(
+    (digit: number) => {
+      setEntry((current) => pressDigit(current, digit, bounds));
+    },
+    [bounds],
+  );
 
   const handleBackspace = useCallback(() => {
     setEntry(pressBackspace);
   }, []);
 
   const handleConfirm = useCallback(() => {
-    const typed = confirmEntry(entry, BPM_BOUNDS);
+    const typed = confirmEntry(entry, bounds);
     if (typed !== undefined) onConfirm(typed);
     onDismiss();
-  }, [entry, onConfirm, onDismiss]);
+  }, [entry, bounds, onConfirm, onDismiss]);
 
   const handleShow = useCallback(() => {
-    setEntry(openEntry(bpm));
-  }, [bpm]);
+    setEntry(openEntry(value));
+  }, [value]);
 
   return (
     <Sheet
@@ -79,12 +86,12 @@ export function BpmNumpadSheet({
         <Text
           style={styles.entry}
           accessibilityLiveRegion="polite"
-          accessibilityLabel={`${title}, ${entry.digits} BPM`}
+          accessibilityLabel={`${title}, ${entry.digits} ${unit}`}
         >
           {entry.digits}
         </Text>
         <SheetHint centered size="large">
-          {BPM_BOUNDS.min} – {BPM_BOUNDS.max} BPM
+          {bounds.min} – {bounds.max} {unit}
         </SheetHint>
       </View>
       <NumpadKeypad

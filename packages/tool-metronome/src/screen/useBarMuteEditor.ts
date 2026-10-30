@@ -1,11 +1,9 @@
 import type { StepDelta } from '@kitbag/core-design';
-import { KB_MAX_MUTE_BARS } from '@kitbag/core-native';
+import { KB_MUTE_BARS_BOUNDS } from '@kitbag/core-native';
 import { useMetronome, type BarMuteConfig } from '@kitbag/core-state';
 import { useCallback, useMemo } from 'react';
 
-import { barBounds, mutePreview, stepWithin } from '../logic/trainer.ts';
-
-const MUTE_BARS = barBounds(KB_MAX_MUTE_BARS);
+import { mutePreview, stepWithin } from '../logic/trainer.ts';
 
 type Stepper = (delta: StepDelta) => void;
 
@@ -24,7 +22,7 @@ function useMuteStepper(key: 'playBars' | 'muteBars'): Stepper {
     (delta: StepDelta) => {
       setBarMute({
         ...barMute,
-        [key]: stepWithin(barMute[key], delta, MUTE_BARS),
+        [key]: stepWithin(barMute[key], delta, KB_MUTE_BARS_BOUNDS),
       });
     },
     [barMute, setBarMute, key],

@@ -1,22 +1,15 @@
 import type { StepDelta } from '@kitbag/core-design';
-import {
-  KB_MIN_RAMP_STEP_BPM,
-  type KB_RAMP_UNIT as RampUnit,
-} from '@kitbag/core-native';
+import type { KB_RAMP_UNIT as RampUnit } from '@kitbag/core-native';
 import { BPM_BOUNDS, useMetronome, type RampConfig } from '@kitbag/core-state';
 import { useCallback } from 'react';
 
+import { RAMP_STEP_BOUNDS } from '../logic/practiceEntry.ts';
 import { withRampBpm, type RampBpmField } from '../logic/rampEntry.ts';
 import { stepRampInterval, withRampUnit } from '../logic/rampUnit.ts';
 import { stepWithin } from '../logic/trainer.ts';
 
 type Stepper = (delta: StepDelta) => void;
 type Edit = (change: (ramp: RampConfig) => RampConfig) => void;
-
-const STEP_BOUNDS = {
-  min: KB_MIN_RAMP_STEP_BPM,
-  max: BPM_BOUNDS.max - BPM_BOUNDS.min,
-};
 
 export interface RampEditor {
   readonly ramp: RampConfig;
@@ -46,7 +39,7 @@ function useCadenceEdits(edit: Edit) {
     (delta: StepDelta) => {
       edit((r) => ({
         ...r,
-        stepBpm: stepWithin(r.stepBpm, delta, STEP_BOUNDS),
+        stepBpm: stepWithin(r.stepBpm, delta, RAMP_STEP_BOUNDS),
       }));
     },
     [edit],
