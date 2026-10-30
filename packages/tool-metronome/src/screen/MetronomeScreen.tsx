@@ -99,6 +99,8 @@ export function MetronomeScreen({
   const denominator = useMetronome((s) => s.denominator);
   const subdivision = useMetronome((s) => s.subdivision);
   const accents = useMetronome((s) => s.accents);
+  const polyEnabled = useMetronome((s) => s.polyEnabled);
+  const polyBeats = useMetronome((s) => s.polyBeats);
   const running = useMetronome((s) => s.running);
   const setTempo = useMetronome((s) => s.setTempo);
   const nudgeTempo = useMetronome((s) => s.nudgeTempo);
@@ -226,6 +228,7 @@ export function MetronomeScreen({
           <BeatDots
             beatCount={beatsPerBar}
             subdivision={subdivision}
+            polyBeats={polyEnabled ? polyBeats : null}
             accents={accents}
             width={dotsWidth}
             frame={frame}

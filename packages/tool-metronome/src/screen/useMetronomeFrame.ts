@@ -21,6 +21,7 @@ const NOT_ACTIVE = -1;
 const IDLE_FRAME = {
   barPhase: 0,
   currentBeat: KB_STOPPED_BEAT,
+  currentPolyBeat: KB_STOPPED_BEAT,
   countingIn: 0,
   countInBar: NOT_ACTIVE,
   countInBarsTotal: 0,
@@ -35,6 +36,7 @@ const IDLE_FRAME = {
 export interface MetronomeFrameValues {
   readonly barPhase: SharedValue<number>;
   readonly currentBeat: SharedValue<number>;
+  readonly currentPolyBeat: SharedValue<number>;
   readonly currentBpm: SharedValue<number>;
   readonly countingIn: SharedValue<number>;
   readonly countInBar: SharedValue<number>;
@@ -59,6 +61,7 @@ export function useMetronomeFrame(
 ): MetronomeFrameValues {
   const barPhase = useSharedValue<number>(IDLE_FRAME.barPhase);
   const currentBeat = useSharedValue<number>(IDLE_FRAME.currentBeat);
+  const currentPolyBeat = useSharedValue<number>(IDLE_FRAME.currentPolyBeat);
   const currentBpm = useSharedValue(bpm);
   const countingIn = useSharedValue<number>(IDLE_FRAME.countingIn);
   const countInBar = useSharedValue<number>(IDLE_FRAME.countInBar);
@@ -79,6 +82,7 @@ export function useMetronomeFrame(
     }
     barPhase.value = host.bar_phase;
     assign(currentBeat, host.current_beat);
+    assign(currentPolyBeat, host.current_poly_beat);
     assign(currentBpm, host.current_bpm);
     assign(countingIn, host.counting_in);
     assign(countInBar, host.count_in_bar);
@@ -96,6 +100,7 @@ export function useMetronomeFrame(
     if (!running) {
       barPhase.value = IDLE_FRAME.barPhase;
       currentBeat.value = IDLE_FRAME.currentBeat;
+      currentPolyBeat.value = IDLE_FRAME.currentPolyBeat;
       countingIn.value = IDLE_FRAME.countingIn;
       countInBar.value = IDLE_FRAME.countInBar;
       countInBarsTotal.value = IDLE_FRAME.countInBarsTotal;
@@ -111,6 +116,7 @@ export function useMetronomeFrame(
     running,
     barPhase,
     currentBeat,
+    currentPolyBeat,
     countingIn,
     countInBar,
     countInBarsTotal,
@@ -129,6 +135,7 @@ export function useMetronomeFrame(
   return {
     barPhase,
     currentBeat,
+    currentPolyBeat,
     currentBpm,
     countingIn,
     countInBar,

@@ -102,6 +102,17 @@ function lineGaps(line: LedRowLayout, metrics: DotMetrics): number {
   return inGroups + Math.max(0, line.length - 1) * metrics.groupGap;
 }
 
+export function widestLineWidth(
+  lines: readonly LedRowLayout[],
+  dotSize: number,
+  metrics: DotMetrics,
+): number {
+  return lines.reduce((widest, line) => {
+    const dots = line.reduce((total, group) => total + group.length, 0);
+    return Math.max(widest, dots * dotSize + lineGaps(line, metrics));
+  }, 0);
+}
+
 /** One dot size for the whole bar: the largest that fits its fullest line. */
 export function beatDotSize(
   lines: readonly LedRowLayout[],

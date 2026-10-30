@@ -25,6 +25,7 @@ import {
   beatDotSize,
   layoutBeatLeds,
   MAX_DOTS_PER_LINE,
+  widestLineWidth,
 } from '../logic/ledLayout.ts';
 import { NO_PULSE, soundingPulse } from '../logic/pulseMarks.ts';
 import {
@@ -36,6 +37,7 @@ import {
 } from './beatDotStyles.ts';
 import { BeatGrid, type BeatPosition } from './BeatGrid.tsx';
 import { CountInSquares } from './CountInSquares.tsx';
+import { PolyDots } from './PolyDots.tsx';
 import { PulseMarks } from './PulseMarks.tsx';
 
 interface BeatDotProps {
@@ -116,6 +118,7 @@ function dotGaps({ line, group, dot }: BeatPosition): NeighbourGaps {
 export interface BeatDotsFrame {
   readonly barPhase: SharedValue<number>;
   readonly currentBeat: SharedValue<number>;
+  readonly currentPolyBeat: SharedValue<number>;
   readonly barMuted: SharedValue<number>;
   readonly countingIn: SharedValue<number>;
 }
@@ -123,6 +126,7 @@ export interface BeatDotsFrame {
 interface BeatDotsProps {
   readonly beatCount: number;
   readonly subdivision: number;
+  readonly polyBeats: number | null;
   readonly accents: readonly KB_ACCENT[];
   readonly width: number;
   readonly frame: BeatDotsFrame;
@@ -132,6 +136,7 @@ interface BeatDotsProps {
 export function BeatDots({
   beatCount,
   subdivision,
+  polyBeats,
   accents,
   width,
   frame,
@@ -203,6 +208,16 @@ export function BeatDots({
     <View>
       <Animated.View style={[styles.lines, dotsShown]}>
         <BeatGrid lines={lines} renderBeat={renderDot} />
+        {polyBeats === null ? null : (
+          <PolyDots
+            polyBeats={polyBeats}
+            beatsPerBar={beatCount}
+            lineWidth={widestLineWidth(lines, dotSize, DOT_METRICS)}
+            areaWidth={width}
+            dotSize={dotSize}
+            currentPolyBeat={frame.currentPolyBeat}
+          />
+        )}
       </Animated.View>
       <CountInSquares
         lines={lines}

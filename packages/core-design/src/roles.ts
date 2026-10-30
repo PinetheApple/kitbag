@@ -302,6 +302,7 @@ export const textRoles = {
   statusLead: { family: display, weight: 600, size: 14.5, tabular: true },
   statusMeta: { family: display, weight: 500, size: 13, tabular: true },
   beatMarker: { family: display, weight: 600, size: 12 },
+  polyRatio: { family: display, weight: 600, size: 11, tracking: 0.08 },
   legend: { family: body, weight: 400, size: 12.5 },
   countSquare: { family: display, weight: 700, size: 26, tabular: true },
   keyBadge: { family: display, weight: 700, size: 10.5, tabular: true },
