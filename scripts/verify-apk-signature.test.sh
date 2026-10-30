@@ -46,6 +46,17 @@ case "$FAKE_CASE" in
     echo "Signer #2 certificate SHA-256 digest: ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff" ;;
   uppercase)
     echo "Signer #1 certificate SHA-256 digest: ${FAKE_DIGEST^^}" ;;
+  prefixed)
+    echo "WARNING: Signer #1 certificate SHA-256 digest: $FAKE_DIGEST" ;;
+  no_colon)
+    echo "Signer #1 certificate SHA-256 digest $FAKE_DIGEST" ;;
+  colon_separated)
+    echo "Signer #1 certificate SHA-256 digest: $(sed -E 's/(..)/\1:/g; s/:$//' <<<"${FAKE_DIGEST^^}")" ;;
+  crlf)
+    printf 'Signer #1 certificate SHA-256 digest: %s \r\n' "$FAKE_DIGEST" ;;
+  garbled_digest)
+    echo "Signer #1 certificate SHA-256 digest: $FAKE_DIGEST"
+    echo "Signer #2 certificate SHA-256 digest: not-a-digest" ;;
   no_digest)
     echo "Signer #1 certificate DN: CN=Whoever"
     echo "Signer #1 certificate SHA-1 digest: 5e8f16062ea3cd2c4a0d547876baa6f38cabf625" ;;
@@ -93,6 +104,18 @@ expect "uppercase digest normalised"    uppercase       "$REAL_DEBUG_FLAT" 1 "DE
 expect "missing digest cannot check"    no_digest       "$REAL_FLAT"       2 "could not read"
 expect "expected key accepted"          numbered        "$REAL_FLAT"       0 "the expected certificate" \
   --expect-sha256 "${REAL_FLAT^^}"
+expect "prefixed label, expected key"   prefixed        "$REAL_FLAT"       0 "the expected certificate" \
+  --expect-sha256 "$REAL_FLAT"
+expect "no-colon label, expected key"   no_colon        "$REAL_FLAT"       0 "the expected certificate" \
+  --expect-sha256 "$REAL_FLAT"
+expect "colon-separated, expected key"  colon_separated "$REAL_FLAT"       0 "the expected certificate" \
+  --expect-sha256 "$REAL_FLAT"
+expect "scheme-labelled, expected key"  scheme_labelled "$REAL_FLAT"       0 "the expected certificate" \
+  --expect-sha256 "$REAL_FLAT"
+expect "trailing CR, expected key"      crlf            "$REAL_FLAT"       0 "the expected certificate" \
+  --expect-sha256 "$REAL_FLAT"
+expect "colon-separated debug rejected" colon_separated "$REAL_DEBUG_FLAT" 1 "DEBUG key"
+expect "unreadable digest line cannot check" garbled_digest "$REAL_FLAT"   2 "could not read"
 expect "unexpected non-debug key rejected" numbered     "$OTHER_FLAT"      1 "expected release certificate" \
   --expect-sha256 "$REAL_FLAT"
 

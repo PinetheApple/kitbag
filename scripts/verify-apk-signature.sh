@@ -8,8 +8,17 @@ readonly EXIT_REJECTED=1
 readonly EXIT_CANNOT_CHECK=2
 readonly EXIT_USAGE=3
 
+readonly HEX_BYTE='[0-9A-Fa-f]{2}'
+readonly SHA256_BYTES_AFTER_FIRST=31
+readonly SHA256_PATTERN="${HEX_BYTE}(:?${HEX_BYTE}){${SHA256_BYTES_AFTER_FIRST}}"
+
 normalise_digest() {
   tr 'A-F' 'a-f' | tr -d ': '
+}
+
+# Labels vary across build-tools and may hold colons, so take the trailing digest, never a cut.
+extract_digest() {
+  sed -nE "s/^(.*[^0-9A-Fa-f:])?(${SHA256_PATTERN})[[:space:]]*\$/\2/p" | normalise_digest
 }
 
 usage() {
@@ -92,14 +101,18 @@ if ((VERIFY_STATUS != 0)); then
   exit "$EXIT_REJECTED"
 fi
 
-# Signer labels differ across build-tools versions; the digest line is stable.
-mapfile -t DIGESTS < <(
-  echo "$CERTS" |
-    grep -iE 'certificate SHA-?256 digest' |
-    sed -E 's/^[^:]*: *//' |
-    normalise_digest |
-    sort -u
-)
+mapfile -t DIGEST_LINES < <(echo "$CERTS" | grep -iE 'certificate SHA-?256 digest')
+
+DIGESTS=()
+for line in "${DIGEST_LINES[@]}"; do
+  digest=$(extract_digest <<<"$line")
+  if [[ -z $digest ]]; then
+    DIGESTS=()
+    break
+  fi
+  DIGESTS+=("$digest")
+done
+mapfile -t DIGESTS < <(printf '%s\n' "${DIGESTS[@]}" | grep . | sort -u)
 
 if ((${#DIGESTS[@]} == 0)); then
   echo "verify-apk-signature: could not read any SHA-256 digest from apksigner output:" >&2
@@ -124,8 +137,7 @@ DEBUG_DIGEST=$(
   keytool -list -v -keystore "$DEBUG_KEYSTORE" -storepass android 2>/dev/null |
     grep -iE 'SHA-?256:' |
     head -1 |
-    sed -E 's/^[^:]*: *//' |
-    normalise_digest
+    extract_digest
 )
 
 if [[ -z $DEBUG_DIGEST ]]; then
