@@ -17,6 +17,7 @@ import Animated, {
 
 import {
   beatLabel,
+  beatMarker,
   dotLook,
   ledStateFor,
   type DotPalette,
@@ -197,7 +198,14 @@ export function BeatDots({
             barPulse={barPulse}
             barMuted={barMuted}
           />
-          <Text style={styles.marker}>{beat === 0 ? '1' : ''}</Text>
+          <Text
+            style={styles.marker}
+            accessible={false}
+            importantForAccessibility="no"
+            accessibilityElementsHidden
+          >
+            {beatMarker(beat)}
+          </Text>
         </>
       );
     },
@@ -233,6 +241,7 @@ export function BeatDots({
       <CountInSquares
         lines={lines}
         dotSize={dotSize}
+        lineGap={lineGap}
         currentBeat={currentBeat}
         countingIn={countingIn}
       />
