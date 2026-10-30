@@ -16,6 +16,8 @@ export const notationGeometry = {
   narrowSpacing: 5.5,
   wideMaxNotes: 4,
   maxNotes: 8,
+  maxBeams: 4,
+  tileDenominator: 4,
   rightPad: 6,
 } as const;
 
@@ -37,9 +39,36 @@ function isPowerOfTwo(n: number): boolean {
   return Number.isInteger(Math.log2(n));
 }
 
-export function notationLayout(subdivision: number): NotationLayout {
+function clicksOf(subdivision: number): number {
+  return Math.max(1, Math.round(subdivision));
+}
+
+function beamCount(clicks: number, denominator: number): number {
+  return (
+    Math.floor(Math.log2(clicks)) +
+    Math.log2(denominator / notationGeometry.tileDenominator)
+  );
+}
+
+// A lone note would need a flag and an unbeamed group a bracket; the tiles draw neither.
+export function drawsNotation(
+  subdivision: number,
+  denominator: number,
+): boolean {
+  const clicks = clicksOf(subdivision);
+  const beams = beamCount(clicks, denominator);
+  if (!Number.isInteger(beams) || beams > notationGeometry.maxBeams) {
+    return false;
+  }
+  return clicks === 1 ? beams === 0 : beams > 0;
+}
+
+export function notationLayout(
+  subdivision: number,
+  denominator: number = notationGeometry.tileDenominator,
+): NotationLayout {
   const g = notationGeometry;
-  const clicks = Math.max(1, Math.round(subdivision));
+  const clicks = clicksOf(subdivision);
   const notes = Math.min(clicks, g.maxNotes);
   const spacing = notes <= g.wideMaxNotes ? g.wideSpacing : g.narrowSpacing;
   const headXs = Array.from(
@@ -50,7 +79,7 @@ export function notationLayout(subdivision: number): NotationLayout {
   const beamX = stemXs[0] ?? 0;
   const beamWidth = (stemXs.at(-1) ?? 0) + g.stemWidth - beamX;
   const beams = Array.from(
-    { length: Math.floor(Math.log2(clicks)) },
+    { length: Math.max(0, beamCount(clicks, denominator)) },
     (_unused, i) => ({ y: g.stemTop + i * g.beamPitch }),
   );
   const numeral = isPowerOfTwo(clicks)

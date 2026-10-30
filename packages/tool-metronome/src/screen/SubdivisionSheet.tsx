@@ -83,6 +83,7 @@ function NotationTile({
     >
       <NotationGlyph
         subdivision={subdivision}
+        denominator={denominator}
         height={metronomeSheet.notationTileGlyph}
         color={selected ? 'text' : 'text2'}
       />

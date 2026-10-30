@@ -88,6 +88,7 @@ export function PickerChips({
       >
         <NotationGlyph
           subdivision={subdivision}
+          denominator={denominator}
           height={metronome.notationChip}
         />
         <Text style={styles.label}>{name}</Text>
