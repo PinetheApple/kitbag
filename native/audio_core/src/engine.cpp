@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstdint>
 
 #include "rt/stall_detector.h"
 
@@ -13,6 +14,7 @@ namespace {
 // and outlasts miniaudio's own reroute so the two do not race.
 constexpr std::chrono::milliseconds kStallAfter{1500};
 constexpr std::chrono::milliseconds kWatchEvery{250};
+constexpr uint64_t kNotIdle = UINT64_MAX;
 
 uint64_t NowMs() {
   return static_cast<uint64_t>(
@@ -52,9 +54,21 @@ bool Engine::Init() {
 }
 
 bool Engine::Start() {
+  const std::lock_guard<std::mutex> lock(lifecycle_mutex_);
+  return StartLocked();
+}
+
+bool Engine::StartLocked() {
   if (!device_ready_) {
     return false;
   }
+  if (device_running_.load(std::memory_order_relaxed)) {
+    return true;
+  }
+  StopWatchdog();
+  ReleaseRetired();
+  metronome_.DropPendingPreviews();
+  stopped_unexpectedly_.store(false, std::memory_order_relaxed);
   const bool started = ma_device_start(&device_) == MA_SUCCESS;
   // Set only after the device is live, so a publisher that reads this can never
   // conclude "no reader" while the callback is already running.
@@ -66,7 +80,31 @@ bool Engine::Start() {
 }
 
 void Engine::Stop() {
+  const std::lock_guard<std::mutex> lock(lifecycle_mutex_);
+  StopDevice();
   StopWatchdog();
+  ReleaseRetired();
+}
+
+bool Engine::Hold() {
+  const std::lock_guard<std::mutex> lock(lifecycle_mutex_);
+  ++holders_;
+  return StartLocked();
+}
+
+void Engine::Release() {
+  const std::lock_guard<std::mutex> lock(lifecycle_mutex_);
+  if (holders_ > 0) {
+    --holders_;
+  }
+}
+
+int32_t Engine::holders() const {
+  const std::lock_guard<std::mutex> lock(lifecycle_mutex_);
+  return holders_;
+}
+
+void Engine::StopDevice() {
   if (device_ready_) {
     restarting_.store(true, std::memory_order_relaxed);
     ma_device_stop(&device_);
@@ -75,11 +113,20 @@ void Engine::Stop() {
   // there is no reader.
   device_running_.store(false, std::memory_order_relaxed);
   restarting_.store(false, std::memory_order_relaxed);
-  // Nothing else ever reclaims these: Collect only frees as frames_rendered_
-  // moves, and a stopped engine never moves it.
+}
+
+// Control thread only, device stopped: the retire lists belong to the
+// publishing thread, so the watchdog leaves them for the next Start or Stop.
+void Engine::ReleaseRetired() {
   metronome_.ReleaseRetiredGrids();
   mixer_.ReleaseRetiredSources();
   player_.ReleaseRetiredSources();
+}
+
+// The mirrors cover a stop still queued in the ring, the intents a start.
+bool Engine::IsIdle() const {
+  return holders_ == 0 && !metronome_intent_.load() && !mixer_intent_.load() &&
+         !metronome_.is_running() && !mixer_.is_playing();
 }
 
 void Engine::OnNotification(const ma_device_notification* notification) {
@@ -119,21 +166,51 @@ void Engine::StopWatchdog() {
 void Engine::WatchOutput() {
   StallDetector stall(static_cast<uint64_t>(kStallAfter.count()));
   stall.Reset(frames_rendered(), NowMs());
+  uint64_t idle_since_ms = kNotIdle;
   std::unique_lock<std::mutex> lock(watchdog_mutex_);
   while (!watchdog_exit_) {
     watchdog_wake_.wait_for(lock, kWatchEvery);
     if (watchdog_exit_) {
       break;
     }
-    const bool stopped =
-        stopped_unexpectedly_.exchange(false, std::memory_order_relaxed);
-    if (stopped || stall.Observe(frames_rendered(), NowMs())) {
-      lock.unlock();
-      RestartDevice();
-      stall.Reset(frames_rendered(), NowMs());
-      lock.lock();
+    lock.unlock();
+    const bool stopped_idle = WatchTick(stall, &idle_since_ms);
+    lock.lock();
+    if (stopped_idle) {
+      break;
     }
   }
+}
+
+bool Engine::WatchTick(StallDetector& stall, uint64_t* idle_since_ms) {
+  const std::unique_lock<std::mutex> lifecycle(
+      lifecycle_mutex_,
+      std::try_to_lock
+  );
+  if (!lifecycle.owns_lock()) {
+    return false;
+  }
+  const uint64_t now = NowMs();
+  const bool stopped =
+      stopped_unexpectedly_.exchange(false, std::memory_order_relaxed);
+  if (stopped || stall.Observe(frames_rendered(), now)) {
+    RestartDevice();
+    stall.Reset(frames_rendered(), NowMs());
+    *idle_since_ms = kNotIdle;
+    return false;
+  }
+  if (!IsIdle()) {
+    *idle_since_ms = kNotIdle;
+    return false;
+  }
+  if (*idle_since_ms == kNotIdle) {
+    *idle_since_ms = now;
+  }
+  if (now - *idle_since_ms < idle_grace_ms_.load(std::memory_order_relaxed)) {
+    return false;
+  }
+  StopDevice();
+  return true;
 }
 
 // Same clock: frames_rendered_ carries on, so the metronome's schedule and

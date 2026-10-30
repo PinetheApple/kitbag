@@ -16,12 +16,15 @@
 
 namespace kitbag {
 
+class StallDetector;
+
 // Realtime audio engine. Owns the output device; the data callback is the
 // realtime thread — everything it touches must stay lock- and allocation-free.
 class Engine {
  public:
   static constexpr uint32_t kSampleRate = 48000;
   static constexpr uint32_t kChannelCount = 2;
+  static constexpr uint64_t kDefaultIdleGraceMs = 2000;
 
   Engine() = default;
   ~Engine();
@@ -32,6 +35,20 @@ class Engine {
   bool Init();
   bool Start();
   void Stop();
+  // A holder keeps the device started. With none left and nothing playing or
+  // queued to play, the watchdog stops it once the idle grace has passed.
+  bool Hold();
+  void Release();
+  int32_t holders() const;
+  void SetMetronomeIntent(bool playing) {
+    metronome_intent_.store(playing);
+  }
+  void SetMixerIntent(bool playing) {
+    mixer_intent_.store(playing);
+  }
+  void set_idle_grace_ms(uint64_t grace_ms) {
+    idle_grace_ms_.store(grace_ms, std::memory_order_relaxed);
+  }
 
   uint32_t sample_rate() const {
     return kSampleRate;
@@ -101,9 +118,14 @@ class Engine {
   static void OnNotification(const ma_device_notification* notification);
   void Render(float* output, uint32_t frame_count);
   void RenderSlice(float* output, uint32_t frame_count);
+  bool StartLocked();
+  void StopDevice();
+  void ReleaseRetired();
+  bool IsIdle() const;
   void StartWatchdog();
   void StopWatchdog();
   void WatchOutput();
+  bool WatchTick(StallDetector& stall, uint64_t* idle_since_ms);
   void RestartDevice();
 
   ma_device device_{};
@@ -120,6 +142,14 @@ class Engine {
   std::mutex watchdog_mutex_;
   std::condition_variable watchdog_wake_;
   bool watchdog_exit_ = false;
+
+  // Serializes device start/stop across control threads; the callback never
+  // takes it. The watchdog only try-locks, so Stop can join it while holding.
+  mutable std::mutex lifecycle_mutex_;
+  int32_t holders_ = 0;
+  std::atomic<bool> metronome_intent_{false};
+  std::atomic<bool> mixer_intent_{false};
+  std::atomic<uint64_t> idle_grace_ms_{kDefaultIdleGraceMs};
 
   Metronome metronome_;
   Tuner tuner_;

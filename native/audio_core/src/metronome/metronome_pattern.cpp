@@ -52,7 +52,7 @@ bool Metronome::ApplyOutputCommand(const Command& command) {
       SetSoundsState(command.int_a, command.int_b);
       return true;
     case CommandType::kPreviewSound:
-      QueuePreview(command.int_a, command.int_b != 0);
+      QueuePreview(command);
       return true;
     case CommandType::kSetVolume:
       volume_ = Clamp(command.value, kMinVolume, kMaxVolume);
@@ -62,10 +62,15 @@ bool Metronome::ApplyOutputCommand(const Command& command) {
   }
 }
 
-void Metronome::QueuePreview(int32_t sound, bool accented) {
-  if (!IsValidSound(sound)) return;
-  pending_preview_sound_ = sound;
-  pending_preview_accented_ = accented;
+void Metronome::QueuePreview(const Command& command) {
+  if (!IsValidSound(command.int_a)) return;
+  if (command.int_c != preview_epoch_.load(std::memory_order_relaxed)) return;
+  pending_preview_sound_ = command.int_a;
+  pending_preview_accented_ = command.int_b != 0;
+}
+
+void Metronome::DropPendingPreviews() {
+  preview_epoch_.fetch_add(1, std::memory_order_relaxed);
 }
 
 void Metronome::SetSoundsState(int32_t normal_sound, int32_t accent_sound) {

@@ -108,10 +108,8 @@ class Metronome {
   void SetBarMute(bool enabled, int play_bars, int mute_bars);
   void SetFollowMixer(bool enabled);
 
-  // Follow a measured beat grid instead of bpm_. `now_frame` only dates the
-  // outgoing grid for reclamation; `engine_running` must be true whenever the
-  // callback can run, so a retired grid can be freed at once rather than
-  // waiting on a clock that is not moving. Allocates on the app thread only.
+  // `now_frame` dates the outgoing grid for reclamation; `engine_running` must
+  // be true whenever the callback can run. Allocates on the app thread only.
   void SetGrid(
       std::unique_ptr<BeatGrid> grid,
       uint64_t now_frame,
@@ -120,9 +118,9 @@ class Metronome {
   // Return to constant-tempo mode, keeping the click's phase: the first bpm_
   // click falls one whole beat after the last grid beat (SPEC.md §4.2.1).
   void ClearGrid(uint64_t now_frame, bool engine_running);
-  // Frees grids retired while the clock was not advancing. The caller must
-  // guarantee the audio callback is stopped — Engine::Stop is that caller.
+  // The audio callback must be stopped, as in Engine::Start and Engine::Stop.
   void ReleaseRetiredGrids();
+  void DropPendingPreviews();
 
   bool is_running() const {
     return running_flag_.load(std::memory_order_relaxed);
@@ -227,7 +225,7 @@ class Metronome {
   ResetGrownSlots(std::span<Accent> row, int32_t old_count, int32_t new_count);
   void SetSignatureState(int32_t numerator, int32_t denominator);
   void SetSoundsState(int32_t normal_sound, int32_t accent_sound);
-  void QueuePreview(int32_t sound, bool accented);
+  void QueuePreview(const Command& command);
   void SetCountInState(const Command& command);
   void SetPolyState(bool enabled, int32_t beats);
   void ArmRamp(const Command& command);
@@ -386,6 +384,7 @@ class Metronome {
   // Grid beats after this song second wait: the loop's wrap owns that moment.
   double grid_fire_limit_ = std::numeric_limits<double>::infinity();
 
+  std::atomic<int32_t> preview_epoch_{0};
   std::atomic<bool> running_flag_{false};
   std::atomic<int32_t> current_beat_{-1};
   std::atomic<int32_t> current_poly_beat_{-1};

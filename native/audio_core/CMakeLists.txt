@@ -162,9 +162,10 @@ if(KITBAG_BUILD_TOOLS)
   # exported C ABI, not the C++ behind it. tools/media supplies the WAV writer
   # the mixer load test writes its fixture with.
   add_executable(abi_verify tools/abi_verify.cpp tools/abi_test_metronome.cpp
-                            tools/abi_test_grid_long.cpp tools/abi_verify_tuner.cpp)
+                            tools/abi_test_grid_long.cpp tools/abi_verify_tuner.cpp
+                            tools/abi_test_engine_hold.cpp tools/abi_test_engine_stress.cpp)
   target_include_directories(abi_verify PRIVATE tools tools/media)
-  target_link_libraries(abi_verify PRIVATE kitbag_core)
+  target_link_libraries(abi_verify PRIVATE kitbag_core Threads::Threads)
 
   # A6 (#11): streams a real WAV end to end through the C ABI (kb_player_load ->
   # kb_engine_render), so playback crosses the interface the app will, not the

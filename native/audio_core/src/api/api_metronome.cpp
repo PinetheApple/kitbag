@@ -28,12 +28,14 @@ extern "C" {
 
 void kb_metronome_start(kb_engine* engine) {
   if (engine != nullptr) {
+    ToEngine(engine)->SetMetronomeIntent(true);
     ToEngine(engine)->metronome().Start();
   }
 }
 
 void kb_metronome_start_at(kb_engine* engine, uint64_t start_frame) {
   if (engine != nullptr) {
+    ToEngine(engine)->SetMetronomeIntent(true);
     ToEngine(engine)->metronome().StartAt(start_frame);
   }
 }
@@ -41,12 +43,14 @@ void kb_metronome_start_at(kb_engine* engine, uint64_t start_frame) {
 void kb_metronome_stop(kb_engine* engine) {
   if (engine != nullptr) {
     ToEngine(engine)->metronome().Stop();
+    ToEngine(engine)->SetMetronomeIntent(false);
   }
 }
 
 void kb_metronome_pause(kb_engine* engine) {
   if (engine != nullptr) {
     ToEngine(engine)->metronome().Pause();
+    ToEngine(engine)->SetMetronomeIntent(false);
   }
 }
 
@@ -103,6 +107,7 @@ void kb_metronome_anchor_external(
     double bpm
 ) {
   if (engine != nullptr) {
+    ToEngine(engine)->SetMetronomeIntent(true);
     ToEngine(engine)->metronome().AnchorExternal(song_pos_sec, at_frame, bpm);
   }
 }

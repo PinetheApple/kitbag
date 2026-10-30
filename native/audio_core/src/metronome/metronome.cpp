@@ -101,6 +101,7 @@ void Metronome::PreviewSound(int sound, bool accented) {
   Command command{CommandType::kPreviewSound};
   command.int_a = sound;
   command.int_b = accented ? 1 : 0;
+  command.int_c = preview_epoch_.load(std::memory_order_relaxed);
   commands_.Push(command);
 }
 
@@ -354,9 +355,8 @@ void Metronome::BeginRun() {
   current_bar_ = -1;  // the first downbeat advances it to bar 0
   ramp_.Restart(0);
   if (ramp_.enabled()) bpm_ = ramp_.start_bpm();
-  // Anchors `position` at zero, not beat_position_: nothing can be emitted
-  // before the first frame, so a positive offset would swallow every grid
-  // point it shifts past (§4.7).
+  // Anchors `position` at zero: nothing emits before the first frame, so a
+  // positive offset would swallow every grid point it shifts past (§4.7).
   ArmCountIn();
   beat_position_ = -count_in_beats_ - LatencyBeats();
   running_ = true;
