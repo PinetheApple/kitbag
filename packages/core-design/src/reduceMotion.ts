@@ -13,9 +13,10 @@ export interface ReduceMotionStore {
 
 export function createReduceMotionStore(
   source: ReduceMotionSource,
+  initial: boolean,
 ): ReduceMotionStore {
   const listeners = new Set<() => void>();
-  let enabled = false;
+  let enabled = initial;
   let changed = false;
 
   const set = (next: boolean) => {
@@ -28,9 +29,12 @@ export function createReduceMotionStore(
     changed = true;
     set(next);
   });
-  void source.isReduceMotionEnabled().then((initial) => {
-    if (!changed) set(initial);
-  });
+  source
+    .isReduceMotionEnabled()
+    .then((seeded) => {
+      if (!changed) set(seeded);
+    })
+    .catch(() => undefined);
 
   return {
     get: () => enabled,
@@ -41,4 +45,13 @@ export function createReduceMotionStore(
       };
     },
   };
+}
+
+export function bindToValue(
+  store: ReduceMotionStore,
+  setter: (enabled: boolean) => void,
+): () => void {
+  return store.subscribe(() => {
+    setter(store.get());
+  });
 }
