@@ -19,8 +19,8 @@ export const DEFAULT_APPEARANCE: AppearanceSettings = {
 };
 
 export interface AppearancePersistence {
-  readonly read: (key: AppearanceKey) => string | undefined;
-  readonly write: (key: AppearanceKey, value: string) => void;
+  readonly load: () => Partial<AppearanceSettings>;
+  readonly save: (changed: Partial<AppearanceSettings>) => void;
 }
 
 export interface AppearanceStore extends AppearanceSettings {
@@ -29,56 +29,35 @@ export interface AppearanceStore extends AppearanceSettings {
   readonly setKeepScreenAwake: (on: boolean) => void;
 }
 
-const FLAG = { on: '1', off: '0' } as const;
-
-function isThemeChoice(value: string | undefined): value is ThemeChoice {
-  return THEME_CHOICES.some((choice) => choice === value);
-}
-
-function parseFlag(value: string | undefined, fallback: boolean): boolean {
-  if (value === FLAG.on) return true;
-  if (value === FLAG.off) return false;
-  return fallback;
-}
-
-function load(persistence: AppearancePersistence): AppearanceSettings {
-  const theme = persistence.read('theme');
-  return {
-    theme: isThemeChoice(theme) ? theme : DEFAULT_APPEARANCE.theme,
-    haptics: parseFlag(persistence.read('haptics'), DEFAULT_APPEARANCE.haptics),
-    keepScreenAwake: parseFlag(
-      persistence.read('keepScreenAwake'),
-      DEFAULT_APPEARANCE.keepScreenAwake,
-    ),
-  };
-}
-
 const inMemory: AppearancePersistence = {
-  read: () => undefined,
-  write: () => undefined,
+  load: () => ({}),
+  save: () => undefined,
 };
 
 export function createAppearanceStore(
   persistence: AppearancePersistence = inMemory,
 ): StoreApi<AppearanceStore> {
   return createStore<AppearanceStore>((set, get) => {
-    const setFlag = (key: 'haptics' | 'keepScreenAwake', on: boolean) => {
-      if (get()[key] === on) return;
-      set({ [key]: on });
-      persistence.write(key, on ? FLAG.on : FLAG.off);
+    const change = <K extends AppearanceKey>(
+      key: K,
+      value: AppearanceSettings[K],
+    ) => {
+      if (get()[key] === value) return;
+      const changed = { [key]: value } as Pick<AppearanceSettings, K>;
+      set(changed);
+      persistence.save(changed);
     };
     return {
-      ...load(persistence),
+      ...DEFAULT_APPEARANCE,
+      ...persistence.load(),
       setTheme: (theme) => {
-        if (get().theme === theme) return;
-        set({ theme });
-        persistence.write('theme', theme);
+        change('theme', theme);
       },
       setHaptics: (on) => {
-        setFlag('haptics', on);
+        change('haptics', on);
       },
       setKeepScreenAwake: (on) => {
-        setFlag('keepScreenAwake', on);
+        change('keepScreenAwake', on);
       },
     };
   });

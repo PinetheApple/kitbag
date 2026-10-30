@@ -3,23 +3,21 @@ import { describe, expect, it } from 'vitest';
 import {
   createAppearanceStore,
   DEFAULT_APPEARANCE,
-  type AppearanceKey,
   type AppearancePersistence,
+  type AppearanceSettings,
 } from './store.ts';
 
-function memoryPersistence(
-  initial: Partial<Record<AppearanceKey, string>> = {},
-) {
-  const data = new Map<AppearanceKey, string>(
-    Object.entries(initial) as [AppearanceKey, string][],
-  );
+function memoryPersistence(initial: Partial<AppearanceSettings> = {}) {
+  let stored: Partial<AppearanceSettings> = initial;
+  const saves: Partial<AppearanceSettings>[] = [];
   const persistence: AppearancePersistence = {
-    read: (key) => data.get(key),
-    write: (key, value) => {
-      data.set(key, value);
+    load: () => stored,
+    save: (changed) => {
+      saves.push(changed);
+      stored = { ...stored, ...changed };
     },
   };
-  return { persistence, data };
+  return { persistence, saves };
 }
 
 describe('appearance settings', () => {
@@ -49,21 +47,17 @@ describe('appearance settings', () => {
     expect(reloaded.keepScreenAwake).toBe(false);
   });
 
-  it('fall back to the default for a value they do not recognise', () => {
-    const { persistence } = memoryPersistence({
-      theme: 'sepia',
-      haptics: 'yes',
-      keepScreenAwake: '',
-    });
+  it('keep the defaults for whatever storage does not hold', () => {
+    const { persistence } = memoryPersistence({ haptics: false });
     const state = createAppearanceStore(persistence).getState();
     expect(state.theme).toBe(DEFAULT_APPEARANCE.theme);
-    expect(state.haptics).toBe(DEFAULT_APPEARANCE.haptics);
+    expect(state.haptics).toBe(false);
     expect(state.keepScreenAwake).toBe(DEFAULT_APPEARANCE.keepScreenAwake);
   });
 
   it('skip the write when a value does not change', () => {
-    const { persistence, data } = memoryPersistence();
+    const { persistence, saves } = memoryPersistence();
     createAppearanceStore(persistence).getState().setTheme('system');
-    expect(data.size).toBe(0);
+    expect(saves).toEqual([]);
   });
 });
