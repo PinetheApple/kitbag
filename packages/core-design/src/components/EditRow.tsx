@@ -13,8 +13,9 @@ import { textStyle } from '../textStyle.ts';
 import { createThemedStyles, useTheme } from '../ThemeProvider.tsx';
 import { minTouchTargetDp, radii } from '../tokens.ts';
 import { Icon } from './Icon.tsx';
+import { SwitchTrack, type SwitchVariant } from './Switch.tsx';
 
-export const EDIT_ROW_CONTROL_GAP = inset.editRowV * 2 + size.stroke;
+export const EDIT_ROW_PRESSABLE_GAP = inset.editRowV + size.stroke;
 
 const useStyles = createThemedStyles((theme) => ({
   group: {
@@ -126,6 +127,49 @@ export function EditRow({
         {children}
         <Icon name="forward" size="control" color="text3" />
       </View>
+    </Pressable>
+  );
+}
+
+export interface EditSwitchRowProps {
+  readonly label: string;
+  readonly value: boolean;
+  readonly onValueChange: (value: boolean) => void;
+  readonly variant?: SwitchVariant;
+}
+
+export function EditSwitchRow({
+  label,
+  value,
+  onValueChange,
+  variant,
+}: EditSwitchRowProps) {
+  const styles = useStyles();
+  const pressableStyle = useCallback(
+    ({ pressed }: PressableStateCallbackType) => [
+      styles.row,
+      styles.pressableRow,
+      pressed && styles.pressed,
+    ],
+    [styles],
+  );
+  const toggle = useCallback(() => {
+    onValueChange(!value);
+  }, [onValueChange, value]);
+  return (
+    <Pressable
+      accessibilityRole="switch"
+      accessibilityLabel={label}
+      accessibilityState={{ checked: value }}
+      aria-checked={value}
+      style={pressableStyle}
+      onPress={toggle}
+    >
+      <Text style={styles.label}>{label}</Text>
+      <SwitchTrack
+        value={value}
+        {...(variant === undefined ? {} : { variant })}
+      />
     </Pressable>
   );
 }

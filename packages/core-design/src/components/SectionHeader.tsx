@@ -1,12 +1,13 @@
 import { Text } from 'react-native';
 
-import { inset, textRoles } from '../roles.ts';
+import { bodyLineHeight, inset, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 
 const useStyles = createThemedStyles((theme) => ({
   label: {
     ...textStyle(textRoles.sectionLabel),
+    lineHeight: textRoles.sectionLabel.size * bodyLineHeight,
     color: theme.color[theme.accentInk],
     paddingHorizontal: inset.sectionLabelH,
   },

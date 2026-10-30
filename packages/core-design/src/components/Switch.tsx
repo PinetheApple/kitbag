@@ -113,6 +113,25 @@ export interface SwitchProps {
   readonly variant?: SwitchVariant;
 }
 
+export function SwitchTrack({
+  value,
+  variant = 'filled',
+}: {
+  readonly value: boolean;
+  readonly variant?: SwitchVariant;
+}) {
+  const variants: Record<SwitchVariant, ReturnType<typeof useFilledStyles>> = {
+    filled: useFilledStyles(),
+    outlined: useOutlinedStyles(),
+  };
+  const styles = variants[variant];
+  return (
+    <View style={[styles.track, value && styles.trackOn]}>
+      <View style={[styles.knob, value && styles.knobOn]} />
+    </View>
+  );
+}
+
 export function Switch({
   value,
   onValueChange,
@@ -120,11 +139,6 @@ export function Switch({
   neighbourGapDp = space.controlGap,
   variant = 'filled',
 }: SwitchProps) {
-  const variants: Record<SwitchVariant, ReturnType<typeof useFilledStyles>> = {
-    filled: useFilledStyles(),
-    outlined: useOutlinedStyles(),
-  };
-  const styles = variants[variant];
   const geometry = GEOMETRY[variant];
   const hitBox = hitBoxStyle(
     hitExtension(
@@ -145,9 +159,7 @@ export function Switch({
       style={hitBox}
       onPress={handlePress}
     >
-      <View style={[styles.track, value && styles.trackOn]}>
-        <View style={[styles.knob, value && styles.knobOn]} />
-      </View>
+      <SwitchTrack value={value} variant={variant} />
     </Pressable>
   );
 }
