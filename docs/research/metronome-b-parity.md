@@ -140,10 +140,12 @@ Each entry says why.
 - **Count-in "bar N of M"** takes M from the engine's running count-in, not the store.
 - **Status rows for screen readers.** They are labelled with the armed summary. The live
   values are not announced, so nothing re-renders per bar.
-- **Dot wrapping against SPEC D9.** D9 caps a row at 7 ("16 beats are four rows of
-  four"). The dots follow the mockup instead and hold up to 8 per line, so 16 beats
-  are two lines of eight 29 dp dots. At 7 per row with 56 dp dots, 13 to 16 beats
-  pushed the transport off a 360 × 800 screen.
+- **Dot wrapping against the old SPEC D9.** D9 asked for at least 4 dots per row ("16
+  beats are four rows of four"); the build capped a row at 7 (`MAX_LEDS_PER_ROW`). The
+  dots follow the mockup instead and hold up to 8 per line, wrapping at a group
+  boundary, so 16 beats are two lines of eight 29 dp dots. The minimum of 4 is dropped:
+  9/8 wraps 6+3. At 7 per row with 56 dp dots, 13 to 16 beats pushed the transport off
+  a 360 × 800 screen. SPEC D9 now states the new rule.
 - **Current muted beat.** The mockup's CSS fills it like a sounding beat. It stays
   hollow and dashed and its outline turns `text`, since a fill reads as a click that did
   not sound (SPEC §5.2; #175 question 7).

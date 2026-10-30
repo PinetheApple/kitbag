@@ -415,9 +415,10 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   behind the BPM numeral. This also settles #56's poly-off ruling: poly has no row on the
   screen at all, it is armed in the Practice sheet and listed in the status line. The
   value-by-value table is `docs/research/metronome-b-parity.md`. The mockup also
-  changes D9's row rule on this screen: a line holds up to eight dots and longer bars
-  wrap at a group boundary (12/8 → two lines of 3+3), because D9's seven-per-row cap
-  pushes the transport off a 360 × 800 screen at the mockup's 56 dp dots. **[user]**
+  changes D9's row rule: a line holds up to eight dots and longer bars wrap at a group
+  boundary (12/8 → two lines of 3+3). D9 asked for at least four per row; the new rule
+  drops that minimum, so 9/8 wraps 6+3. The build's own seven-per-row cap
+  (`MAX_LEDS_PER_ROW`) pushed the transport off a 360 × 800 screen at 56 dp dots. **[user]**
   The status rows and pulse marks come from `docs/research/mockups/metronome-status.html`
   (variant A and the Q6 draft, approved the same day): the mute cycle row, then the ramp
   row, two rows of height always reserved; count-in on its own row with what follows it
