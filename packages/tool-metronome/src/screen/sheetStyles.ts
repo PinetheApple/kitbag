@@ -1,6 +1,16 @@
-import { createThemedStyles, metronomeMix, mixHex } from '@kitbag/core-design';
+import {
+  createThemedStyles,
+  metronomeMix,
+  mixHex,
+  textRoles,
+  textStyle,
+} from '@kitbag/core-design';
 
 export const useSheetStyles = createThemedStyles((theme) => ({
+  songHint: {
+    ...textStyle(textRoles.songArtist),
+    color: theme.color.text2,
+  },
   selectedTile: {
     borderColor: theme.color.accent,
     backgroundColor: mixHex(

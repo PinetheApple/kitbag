@@ -22,14 +22,11 @@ import {
   songListRows,
   type SongListRow,
 } from '../logic/songList.ts';
+import { useSheetStyles } from './sheetStyles.ts';
 
 const NO_ENTRIES: readonly SetlistEntry[] = [];
 
 const useStyles = createThemedStyles((theme) => ({
-  hint: {
-    ...textStyle(textRoles.songArtist),
-    color: theme.color.text2,
-  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -109,7 +106,7 @@ export function SetlistSongsSheet({
   bottomInset,
   onDismiss,
 }: SetlistSongsSheetProps) {
-  const styles = useStyles();
+  const sheetStyles = useSheetStyles();
   const entries = useLibrary((s) => s.entries[set.id] ?? NO_ENTRIES);
   const loadedItemId = useLibrary((s) => s.loaded?.itemId ?? null);
   const loadSong = useLibrary((s) => s.loadSong);
@@ -138,7 +135,7 @@ export function SetlistSongsSheet({
       bottomInset={bottomInset}
       onDismiss={onDismiss}
     >
-      <Text style={styles.hint}>{songListHint(set)}</Text>
+      <Text style={sheetStyles.songHint}>{songListHint(set)}</Text>
       <View>
         {rows.map((row) => (
           <SongRow key={row.itemId} row={row} onPick={handlePick} />

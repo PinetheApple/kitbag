@@ -56,6 +56,7 @@ export interface LibraryActions {
   ) => Promise<void>;
   stepSong: (step: SongStep) => Promise<void>;
   leaveSetlist: () => Promise<void>;
+  clearSong: () => void;
 }
 
 export type LibraryStore = LibraryState & LibraryActions;
@@ -248,7 +249,13 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
       if (entry === undefined) return;
       await get().loadSong(entry.preset.id, entry.item.id, setlistId);
     },
-    leaveSetlist: leaveOrWarn,
+    leaveSetlist: async () => {
+      set({ loaded: null });
+      await leaveOrWarn();
+    },
+    clearSong: () => {
+      set({ loaded: null });
+    },
   };
 }
 

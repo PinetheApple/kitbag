@@ -5,6 +5,7 @@ import {
   type LoadedSong,
   type SetlistEntry,
   type SetlistSummary,
+  type SongPreset,
   type SongStep,
 } from '@kitbag/core-state';
 
@@ -101,4 +102,12 @@ export function stepA11yLabel(
 ): string {
   const name = STEP_NAME[step];
   return target === undefined ? name : `${name}, ${target.preset.name}`;
+}
+
+export function loadedSongName(
+  presets: readonly SongPreset[],
+  loaded: LoadedSong | null,
+): string | undefined {
+  if (loaded === null) return undefined;
+  return presets.find((preset) => preset.id === loaded.presetId)?.name;
 }

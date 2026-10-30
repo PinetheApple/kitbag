@@ -5,6 +5,7 @@ import { SONG_STEP } from '@kitbag/core-state';
 import { entry, summary } from './fixtures.test-helper.ts';
 import {
   activeSetView,
+  loadedSongName,
   NO_ACTIVE_SET,
   NOT_IN_SETLIST,
   setlistChipA11yLabel,
@@ -133,5 +134,19 @@ describe('song chip', () => {
       'Next song, Shuffle',
     );
     expect(stepA11yLabel(SONG_STEP.previous, undefined)).toBe('Previous song');
+  });
+});
+
+describe('loadedSongName', () => {
+  const presets = [{ id: 1, name: 'Ballad in G' }] as unknown as Parameters<
+    typeof loadedSongName
+  >[0];
+
+  it('names the loaded song for the chip', () => {
+    expect(loadedSongName(presets, loadedFrom(null, null))).toBe('Ballad in G');
+  });
+
+  it('leaves the chip with no song once the song is cleared', () => {
+    expect(soloChipText(loadedSongName(presets, null))).toBeUndefined();
   });
 });

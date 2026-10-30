@@ -164,7 +164,7 @@ describe('library store', () => {
   });
 
   async function offStage() {
-    const { library, repos } = setup();
+    const { library, repos, metronome } = setup();
     const s = library.getState();
     const gig = await s.createSetlist('Gig');
     for (const name of ['One', 'Two', 'Three'])
@@ -172,7 +172,7 @@ describe('library store', () => {
     const solo = await s.newSongFromCurrent('Solo');
     const [first] = library.getState().entries[gig] ?? [];
     if (first === undefined) throw new Error('missing first song');
-    return { library, repos, gig, solo, first };
+    return { library, repos, metronome, gig, solo, first };
   }
 
   async function onStage() {
@@ -216,12 +216,28 @@ describe('library store', () => {
     expect(loadedName(library)).toBe('Solo');
   });
 
-  it('leaves the setlist and keeps the loaded song', async () => {
-    const { library } = await onStage();
+  it('leaves the setlist and unlinks the loaded song, keeping its settings', async () => {
+    const { library, metronome } = await onStage();
+    const bpm = metronome.getState().bpm;
     await library.getState().leaveSetlist();
     expect(activeId(library)).toBeUndefined();
     expect(library.getState().played).toEqual([]);
-    expect(loadedName(library)).toBe('One');
+    expect(library.getState().loaded).toBeNull();
+    expect(metronome.getState().bpm).toBe(bpm);
+  });
+
+  it('clears the loaded song without touching the metronome or the preset', async () => {
+    const { library, metronome, repos } = setup();
+    metronome.getState().setTempo(96);
+    const id = await library.getState().newSongFromCurrent('Solo');
+    await library.getState().loadSong(id);
+    metronome.getState().setTempo(132);
+    const update = vi.spyOn(repos.presets, 'update');
+    library.getState().clearSong();
+    expect(library.getState().loaded).toBeNull();
+    expect(metronome.getState().bpm).toBe(132);
+    expect(update).not.toHaveBeenCalled();
+    expect(library.getState().presets.find((p) => p.id === id)?.bpm).toBe(96);
   });
 
   it('clears the setlist when an outside load overtakes a pin still in flight', async () => {

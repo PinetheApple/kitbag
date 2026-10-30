@@ -28,6 +28,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import {
   activeSetView,
+  loadedSongName,
   setlistChipA11yLabel,
   setlistChipLabel,
   soloChipA11yLabel,
@@ -38,6 +39,7 @@ import {
   type ActiveSet,
   type SongChipText,
 } from '../logic/setlistChip.ts';
+import { LoadedSongSheet } from './LoadedSongSheet.tsx';
 import { SetlistSongsSheet } from './SetlistSongsSheet.tsx';
 
 const NO_ENTRIES: readonly SetlistEntry[] = [];
@@ -168,9 +170,7 @@ function useSongContext(): SongContext {
   const allEntries = useLibrary((s) => s.entries);
   const loaded = useLibrary((s) => s.loaded);
   const loadedItemId = loaded?.itemId ?? null;
-  const song = useLibrary(
-    (s) => s.presets.find((p) => p.id === s.loaded?.presetId)?.name,
-  );
+  const song = useLibrary((s) => loadedSongName(s.presets, s.loaded));
   const set = useMemo(
     () => activeSetView(setlists, allEntries, loaded),
     [setlists, allEntries, loaded],
@@ -331,12 +331,25 @@ function StageBar({ context, bottomInset, onBack }: StageBarProps) {
 
 interface PlainBarProps {
   readonly song: string | undefined;
+  readonly bottomInset: number;
   readonly onBack: (() => void) | undefined;
   readonly onOpenSetlists: (() => void) | undefined;
 }
 
-function PlainBar({ song, onBack, onOpenSetlists }: PlainBarProps) {
+function PlainBar({
+  song,
+  bottomInset,
+  onBack,
+  onOpenSetlists,
+}: PlainBarProps) {
   const styles = useStyles();
+  const [songOpen, setSongOpen] = useState(false);
+  const handleOpenSong = useCallback(() => {
+    setSongOpen(true);
+  }, []);
+  const handleCloseSong = useCallback(() => {
+    setSongOpen(false);
+  }, []);
   const text = soloChipText(song);
   return (
     <View style={styles.bar}>
@@ -344,15 +357,25 @@ function PlainBar({ song, onBack, onOpenSetlists }: PlainBarProps) {
       <Text accessibilityRole="header" style={styles.title} numberOfLines={1}>
         Metronome
       </Text>
-      {onOpenSetlists === undefined ? null : text === undefined ? (
-        <SetlistsChip onPress={onOpenSetlists} />
-      ) : (
+      {text === undefined ? null : (
         <SongChip
           stage={false}
           text={text}
           label={soloChipA11yLabel(text.title)}
-          hint="Opens setlists"
-          onPress={onOpenSetlists}
+          hint="Opens the song"
+          onPress={handleOpenSong}
+        />
+      )}
+      {text !== undefined || onOpenSetlists === undefined ? null : (
+        <SetlistsChip onPress={onOpenSetlists} />
+      )}
+      {text === undefined ? null : (
+        <LoadedSongSheet
+          visible={songOpen}
+          song={text.title}
+          bottomInset={bottomInset}
+          onDismiss={handleCloseSong}
+          onOpenSetlists={onOpenSetlists}
         />
       )}
     </View>
@@ -383,6 +406,7 @@ export function MetronomeAppBar({
   return (
     <PlainBar
       song={context.song}
+      bottomInset={bottomInset}
       onBack={onBack}
       onOpenSetlists={onOpenSetlists}
     />
