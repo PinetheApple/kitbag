@@ -1,4 +1,4 @@
-import { count, gt, sql } from 'drizzle-orm';
+import { count, gt, sql, type SQL } from 'drizzle-orm';
 
 import type { DatabaseHandle } from './repository';
 import { practiceSessions } from './schema';
@@ -15,6 +15,8 @@ export interface PracticeRepository {
 
 const { durationSeconds, avgBpm } = practiceSessions;
 const timed = gt(durationSeconds, 0);
+const timedSum = (value: SQL) =>
+  sql<number | null>`sum(case when ${timed} then ${value} end)`.mapWith(Number);
 
 export function createPracticeRepository({
   db,
@@ -29,12 +31,12 @@ export function createPracticeRepository({
             totalSeconds: sql`coalesce(sum(${durationSeconds}), 0)`.mapWith(
               Number,
             ),
-            weightedBpm: sql`sum(case when ${timed} then ${avgBpm} * ${durationSeconds} end)`,
-            timedSeconds: sql`sum(case when ${timed} then ${durationSeconds} end)`,
+            weightedBpm: timedSum(sql`${avgBpm} * ${durationSeconds}`),
+            timedSeconds: timedSum(sql`${durationSeconds}`),
           })
           .from(practiceSessions);
-        const weightedBpm = Number(row?.weightedBpm ?? 0);
-        const timedSeconds = Number(row?.timedSeconds ?? 0);
+        const weightedBpm = row?.weightedBpm ?? 0;
+        const timedSeconds = row?.timedSeconds ?? 0;
         return {
           sessions: row?.sessions ?? 0,
           totalSeconds: row?.totalSeconds ?? 0,
