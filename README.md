@@ -15,6 +15,35 @@ no caps, no paywalls, ever.
 > deleted. `CHANGELOG.md` previously claimed five shipped releases and has been
 > corrected — nothing has shipped.
 
+## What it looks like
+
+Screenshots from a release build on an Android phone, dark theme then light.
+The metronome is being redesigned (#175) and is not shown.
+
+<table>
+  <tr>
+    <th>Home</th>
+    <th>Songs</th>
+    <th>Stem songs</th>
+    <th>Stem player</th>
+    <th>Tuner</th>
+  </tr>
+  <tr>
+    <td><img src="docs/images/home-dark.png" width="160" alt="Home, dark theme"></td>
+    <td><img src="docs/images/songs-dark.png" width="160" alt="Songs, dark theme"></td>
+    <td><img src="docs/images/stem-songs-dark.png" width="160" alt="Stem songs, dark theme"></td>
+    <td><img src="docs/images/stem-player-dark.png" width="160" alt="Stem player, dark theme"></td>
+    <td><img src="docs/images/tuner-dark.png" width="160" alt="Tuner, dark theme"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/home-light.png" width="160" alt="Home, light theme"></td>
+    <td><img src="docs/images/songs-light.png" width="160" alt="Songs, light theme"></td>
+    <td><img src="docs/images/stem-songs-light.png" width="160" alt="Stem songs, light theme"></td>
+    <td><img src="docs/images/stem-player-light.png" width="160" alt="Stem player, light theme"></td>
+    <td><img src="docs/images/tuner-light.png" width="160" alt="Tuner, light theme"></td>
+  </tr>
+</table>
+
 ## Architecture
 
 - **C++ realtime audio core** (`native/audio_core`) on miniaudio — sample-accurate
