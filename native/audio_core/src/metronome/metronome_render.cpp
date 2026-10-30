@@ -284,8 +284,6 @@ void Metronome::AdvanceConstantTempo(uint32_t sample_rate, BlockTempo* tempo) {
   if (counting_in_) position = AdvanceCountIn(position, *tempo, sample_rate);
   if (position >= -kGridEpsilon) {
     const int64_t sub_index = SubdivisionIndex(position, subdivision_);
-    // The previous sample must use the same rounding, or a sample within
-    // kGridEpsilon of a tick lands on neither side and the tick never fires.
     if (SubdivisionIndex(position - tempo->beats_per_sample, subdivision_) <
         sub_index) {
       FireConstantTempoTick(sub_index, sample_rate, tempo);

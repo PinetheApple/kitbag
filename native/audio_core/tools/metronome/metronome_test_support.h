@@ -337,6 +337,18 @@ MakeShiftedGrid(int count, double offset_sec, double interval_sec) {
   return grid;
 }
 
+inline double ModelTempo(
+    double start_bpm,
+    double target_bpm,
+    double step_bpm,
+    int64_t intervals
+) {
+  const double span = std::fabs(target_bpm - start_bpm);
+  const double moved =
+      std::min(static_cast<double>(intervals) * step_bpm, span);
+  return target_bpm >= start_bpm ? start_bpm + moved : start_bpm - moved;
+}
+
 void RunBasicTests();
 void RunSignatureTests();
 void RunStartAtTests();
