@@ -48,6 +48,7 @@ export {
   setSystemBarAppearance,
 } from './appChrome';
 export type { AppNightMode, AppVersion } from './appChromeTypes.ts';
+export { acquireEngineHold, type EngineHoldCommands } from './engineHold.ts';
 export type {
   KitbagCommandsConstants,
   SongTransportShowState,

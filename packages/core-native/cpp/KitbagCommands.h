@@ -8,6 +8,8 @@ namespace kitbag {
 // Frame arguments are uint64 engine frames carried as doubles, exact below 2^53.
 int32_t commandStart();
 void commandStop();
+int32_t commandHold();
+void commandRelease();
 void commandMetronomeStart(double anchorFrame);
 void commandMetronomeStartNow();
 void commandMetronomeStop();

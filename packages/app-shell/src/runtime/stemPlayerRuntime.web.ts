@@ -7,6 +7,8 @@ const ignore = () => undefined;
 configureStemPlayer({
   commands: {
     start: noEngine,
+    engineHold: noEngine,
+    engineRelease: ignore,
     loadTrack: noEngine,
     mixerUnloadTrack: ignore,
     mixerSetGain: ignore,

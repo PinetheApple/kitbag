@@ -48,6 +48,8 @@ export interface Spec extends TurboModule {
   getConstants(): KitbagCommandsConstants;
   start(): Promise<number>;
   stop(): void;
+  engineHold(): Promise<number>;
+  engineRelease(): void;
 
   metronomeStart(anchorFrame: Double): void;
   metronomeStop(): void;

@@ -111,6 +111,14 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     nativeStop()
   }
 
+  override fun engineHold(promise: Promise) {
+    promise.resolve(nativeHold())
+  }
+
+  override fun engineRelease() {
+    nativeRelease()
+  }
+
   override fun metronomeStart(anchorFrame: Double) {
     nativeMetronomeStart(anchorFrame)
   }
@@ -287,6 +295,8 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private external fun nativeInstall(runtimePtr: Long)
   private external fun nativeStart(): Int
   private external fun nativeStop()
+  private external fun nativeHold(): Int
+  private external fun nativeRelease()
   private external fun nativeMetronomeStart(anchorFrame: Double)
   private external fun nativeMetronomeStop()
   private external fun nativeMetronomePause()
