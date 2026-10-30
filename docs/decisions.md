@@ -456,3 +456,27 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   metronome's current settings, so nothing changes mid-play and nothing is written to the
   preset; the bar returns to "Metronome" and the plain Setlists chip. The loaded song is
   held in memory only, so a restart already starts with none. **[user]**
+
+- **2026-10-31 · Settings gap rulings (§12.5, §12.5.1, #170, #100)** — Coordinator,
+  revisitable by the owner; where `design/kitbag-settings.html` draws something it wins.
+  Q1: the Rig chip's idle label is a play icon and "Play · 100 BPM". Q2: while the
+  metronome runs, the chip is disabled with a hint and never touches metronome state. Q3:
+  volume snaps to 100% within ±3% of range, accessibility step 1%. Q4: the latency stepper
+  repeats after a 400 ms hold, then every 50 ms, reusing StepControl's repeat if one
+  exists. Q5: an uncalibrated Output row reads "· not calibrated"; only the live route
+  opens calibration, other routes show their stored offset. Q6: icons come from
+  core-design `Icon` only: calibrate `timer-sync-outline`, remove missing `broom`, unless
+  the design names one. Q8: Rig and Tools ship only once their native calls exist. Q9:
+  tools that cannot be installed show SOON with no size label. Q10: Backup, Restore and
+  Base directory rows are omitted until #84 and D11 are built. Q11: the Storage row is
+  total bytes · total files; Remove missing files confirms with the count. Q12: the
+  Practice readout comes from a core-db `practiceStats()`, empty state "No sessions yet";
+  session writing is #80. Q14: calibration glows use existing tokens (accent opacity) or
+  ship without and go to the owner. Q15: the calibration scatter auto-ranges to mean ±3
+  SD, at least ±50 ms, one row, dots in tap order. Q16: a tap is usable within ±250 ms of
+  its nearest click after dropping |z| > 2.5; ± is the sample SD; fewer than 8 usable taps
+  gives "Not enough steady taps; try again"; an SD over 30 ms makes the button "Use
+  anyway"; the thresholds live in one named module. Q17: output route identity is Lane A's
+  call. Splash: the light and dark splash backgrounds are hand-copied hex in `app.json`
+  and the Android `colors.xml` pair, and `splash.test.ts` asserts each equals the §12.2
+  `bg` of its theme. **[coordinator]**
