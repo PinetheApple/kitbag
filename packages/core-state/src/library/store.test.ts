@@ -324,6 +324,22 @@ describe('library store', () => {
     );
   });
 
+  it('round-trips a 12/8 subdivision through Save current and load', async () => {
+    const { library, metronome } = setup();
+    const id = await library.getState().newSongFromCurrent('Song');
+    metronome.getState().setBeats(12, 8);
+    metronome.getState().setSubdivision(4);
+    await library.getState().saveCurrentInto(id);
+    metronome.getState().setBeats(4, 4);
+    metronome.getState().setSubdivision(2);
+    await library.getState().loadSong(id);
+    expect(metronome.getState()).toMatchObject({
+      beatsPerBar: 12,
+      denominator: 8,
+      subdivision: 4,
+    });
+  });
+
   it.each([
     [KB_RAMP_UNIT.KB_RAMP_SECONDS, 30, true],
     [KB_RAMP_UNIT.KB_RAMP_MINUTES, 2.5, false],
