@@ -12,9 +12,8 @@ import {
   useSwipeHint,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { GestureDetector } from 'react-native-gesture-handler';
+import { GestureDetector, ScrollView } from 'react-native-gesture-handler';
 import {
-  ScrollView,
   Text,
   useWindowDimensions,
   View,
@@ -145,7 +144,15 @@ export function MetronomeScreen({
     [dismissHint, setTempoEndingTapSeries],
   );
 
-  const tempoSwipe = useTempoSwipe(frame.currentBpm, handleSwipeOrTypedTempo);
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollable = Math.round(contentHeight) > Math.round(bodyHeight);
+  const screenSwipe = useTempoSwipe(frame.currentBpm, handleSwipeOrTypedTempo, {
+    enabled: !scrollable,
+  });
+  const zoneSwipe = useTempoSwipe(frame.currentBpm, handleSwipeOrTypedTempo, {
+    enabled: true,
+    blocks: scrollRef,
+  });
 
   const handleNudge = useCallback(
     (delta: number) => {
@@ -216,13 +223,14 @@ export function MetronomeScreen({
   );
 
   return (
-    <GestureDetector gesture={tempoSwipe}>
+    <GestureDetector gesture={screenSwipe}>
       <View style={[styles.screen, edgeToEdgePadding]}>
         <MetronomeAppBar onBack={onBack} onOpenSetlists={onOpenSetlists} />
         <ScrollView
           style={styles.body}
           contentContainerStyle={[styles.bodyContent, gap]}
-          scrollEnabled={Math.round(contentHeight) > Math.round(bodyHeight)}
+          ref={scrollRef}
+          scrollEnabled={scrollable}
           showsVerticalScrollIndicator={false}
           onLayout={handleBodyLayout}
           onContentSizeChange={handleContentSize}
@@ -236,16 +244,18 @@ export function MetronomeScreen({
               {notes}
             </Text>
           )}
-          <View style={styles.zone} onLayout={handleZoneLayout}>
-            <SwipeTempoZone
-              bpm={bpm}
-              density={density}
-              currentBpm={frame.currentBpm}
-              barPhase={frame.barPhase}
-              onTypeTempo={handleOpenNumpad}
-              onNudge={handleNudge}
-            />
-          </View>
+          <GestureDetector gesture={zoneSwipe}>
+            <View style={styles.zone} onLayout={handleZoneLayout}>
+              <SwipeTempoZone
+                bpm={bpm}
+                density={density}
+                currentBpm={frame.currentBpm}
+                barPhase={frame.barPhase}
+                onTypeTempo={handleOpenNumpad}
+                onNudge={handleNudge}
+              />
+            </View>
+          </GestureDetector>
           <PresetRow onNudge={handleNudge} onTap={handleTap} />
           <PickerChips
             beatsPerBar={beatsPerBar}

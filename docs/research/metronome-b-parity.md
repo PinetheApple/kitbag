@@ -170,8 +170,12 @@ Each entry says why.
   wraps, the poly dots spread by time across the widest line, so they no longer sit
   under the beats they coincide with.
 - **Poly ratio label placement.** The label is sized to its text, not a 28 column. When
-  the margin left of the row cannot hold it (a full-width bar such as 12/8, or large
-  text), it moves onto its own line above the poly dots, left-aligned, 3 above them.
+  the margin left of the row cannot hold it, it follows the last poly dot if there is room
+  after it (12/8 at 3:12); otherwise, or when large text makes it taller than the dots,
+  it sits on its own line above the poly dots, left-aligned, 3 above them.
+- **Tempo swipe when the screen scrolls.** When the body is taller than the screen (large
+  text), vertical drags scroll it and only the tempo zone changes the tempo; when nothing
+  scrolls, swipe-anywhere is unchanged.
 - **First-use hint position and scrim.** The ring is centred on the measured swipe zone
   instead of 150 from the top. The scrim is Stage `bg` (#0E0D10) at 55%:
   rgba(10, 8, 14) is not a §12.2 token.
