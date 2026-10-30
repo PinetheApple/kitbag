@@ -1,17 +1,22 @@
-// Pure parse + render for the generated native constants (SPEC §13.7).
-//
-// This module is the ONLY logic behind src/generated/nativeConstants.gen.ts. It
-// takes the raw text of the engine's own source files and extracts the
-// cross-boundary constants from where the engine already defines them — it never
-// restates a value. A caller (scripts/generate-constants.ts) reads the files;
-// this module does no I/O, which is what makes it unit-testable and lets the
-// drift guard re-render deterministically.
-//
-// §13.7's rule: cross-boundary constants have exactly one owner. Here the owner
-// is the C/C++ source; this file mirrors it, and generate:check fails the build
-// if the mirror drifts. Every parser below THROWS if its target is missing —
-// never guesses — because a generator that silently emits a wrong value is the
-// exact `sync_screen.dart:14` defect (SPEC §2.3, §13.7) with a new coat of paint.
+import {
+  parseConstexprDouble,
+  parseConstexprFloat,
+  parseConstexprInt,
+  parseConstexprIntArray,
+  parseDefineInt,
+  parseDefineNumber,
+  parseEnum,
+  parseRangeAfter,
+  parseSoundNames,
+  parseTunerFields,
+  type Bounds,
+  type EnumMember,
+  type RangeBound,
+  type TunerFields,
+} from './native-parsers.ts';
+
+export * from './native-parsers.ts';
+export { renderConstants } from './native-render.ts';
 
 export interface NativeSources {
   /** native/audio_core/include/kitbag_api.h — the shipped C ABI. */
@@ -32,30 +37,6 @@ export interface NativeSources {
   readonly tempoRampHeader: string;
   /** native/audio_core/src/metronome/metronome_types.h — the tempo range. */
   readonly metronomeTypesHeader: string;
-}
-
-export interface Bounds {
-  readonly min: number;
-  readonly max: number;
-}
-
-export interface EnumMember {
-  readonly name: string;
-  readonly value: number;
-}
-
-export interface RangeBound {
-  readonly min: number;
-  readonly max: number;
-  /** true when the upper bound is exclusive, e.g. `[0, 1)`. */
-  readonly maxExclusive: boolean;
-}
-
-export interface TunerField {
-  readonly offset: number;
-  readonly width: number;
-  readonly signed: boolean;
-  readonly scale: number;
 }
 
 export interface NativeConstants {
@@ -86,11 +67,7 @@ export interface NativeConstants {
   readonly accent: readonly EnumMember[];
   readonly latencyOffsetMsBounds: RangeBound;
   readonly barPhaseBounds: RangeBound;
-  readonly tunerFields: {
-    readonly note: TunerField;
-    readonly cents: TunerField;
-    readonly confidence: TunerField;
-  };
+  readonly tunerFields: TunerFields;
   readonly tunerMaxStrings: number;
   readonly tunerAutoString: number;
   readonly tunerNoString: number;
@@ -105,201 +82,6 @@ export interface NativeConstants {
     readonly default: number;
   };
   readonly tunerIdleSleepMicros: number;
-}
-
-function fail(what: string): never {
-  throw new Error(
-    `native-constants: could not extract ${what} from the engine source. ` +
-      `The header layout changed; update the parser rather than the generated ` +
-      `output (SPEC §13.7 — one owner per constant).`,
-  );
-}
-
-/** `#define NAME <int>` from a C header. */
-export function parseDefineInt(header: string, name: string): number {
-  const match = new RegExp(`#define\\s+${name}\\s+(-?\\d+)\\b`).exec(header);
-  if (match === null) fail(`#define ${name}`);
-  return Number(match[1]);
-}
-
-/**
- * `#define NAME <number>` from a C header, where the value may be negative in
- * parentheses (`(-1)`) or fractional (`0.95`). Anything else throws.
- */
-export function parseDefineNumber(header: string, name: string): number {
-  const match = new RegExp(
-    `#define\\s+${name}\\s+(?:\\((-?\\d+(?:\\.\\d+)?)\\)|(-?\\d+(?:\\.\\d+)?))(?![\\w.])`,
-  ).exec(header);
-  if (match === null) fail(`#define ${name}`);
-  return Number(match[1] ?? match[2]);
-}
-
-/** `static constexpr int NAME = <int>;` from a C++ header. */
-export function parseConstexprInt(source: string, name: string): number {
-  const match = new RegExp(
-    `static\\s+constexpr\\s+int\\s+${name}\\s*=\\s*(-?\\d+)\\s*;`,
-  ).exec(source);
-  if (match === null) fail(`constexpr int ${name}`);
-  return Number(match[1]);
-}
-
-/** `static|inline constexpr double NAME = <number>;` from a C++ header. */
-export function parseConstexprDouble(source: string, name: string): number {
-  const match = new RegExp(
-    `(?:static|inline)\\s+constexpr\\s+double\\s+${name}\\s*=\\s*(-?\\d+(?:\\.\\d+)?)\\s*;`,
-  ).exec(source);
-  if (match === null) fail(`constexpr double ${name}`);
-  return Number(match[1]);
-}
-
-/** `static constexpr float NAME = <number>f;` from a C++ header. */
-export function parseConstexprFloat(source: string, name: string): number {
-  const match = new RegExp(
-    `static\\s+constexpr\\s+float\\s+${name}\\s*=\\s*(-?\\d+(?:\\.\\d+)?)f\\s*;`,
-  ).exec(source);
-  if (match === null) fail(`constexpr float ${name}`);
-  return Number(match[1]);
-}
-
-/** `static constexpr int NAME[] = {a, kB, ...};`; named members resolve in `source`. */
-export function parseConstexprIntArray(source: string, name: string): number[] {
-  const match = new RegExp(
-    `static\\s+constexpr\\s+int\\s+${name}\\s*\\[[^\\]]*\\]\\s*=\\s*\\{([^}]*)\\}`,
-  ).exec(source);
-  if (match === null) fail(`constexpr int ${name}[]`);
-  const values = (match[1] ?? '')
-    .split(',')
-    .map((entry) => entry.trim())
-    .filter((entry) => entry.length > 0);
-  if (values.length === 0) fail(`integer members of ${name}[]`);
-  return values.map((v) => {
-    if (/^-?\d+$/.test(v)) return Number(v);
-    const named = new RegExp(
-      `static\\s+constexpr\\s+int\\s+${v}\\s*=\\s*(-?\\d+)\\s*;`,
-    ).exec(source);
-    if (named === null) fail(`integer member ${v} of ${name}[]`);
-    return Number(named[1]);
-  });
-}
-
-/** Members of `typedef enum NAME { A = 0, B = 1, ... }`, in declaration order. */
-export function parseEnum(source: string, enumName: string): EnumMember[] {
-  const block = new RegExp(`enum\\s+${enumName}\\s*\\{([^}]*)\\}`).exec(source);
-  if (block === null) fail(`enum ${enumName}`);
-  const body = block[1] ?? '';
-  const members: EnumMember[] = [];
-  const memberRe = /([A-Z_][A-Z0-9_]*)\s*=\s*(-?\d+)/g;
-  let m: RegExpExecArray | null = memberRe.exec(body);
-  while (m !== null) {
-    members.push({ name: m[1] ?? '', value: Number(m[2]) });
-    m = memberRe.exec(body);
-  }
-  if (members.length === 0) fail(`members of enum ${enumName}`);
-  return members;
-}
-
-/**
- * A `[min, max]` / `[min, max)` range from a documenting comment. `marker` is a
- * substring that uniquely precedes the bracket on the same line, so the parser
- * anchors to the intended comment and not just any range in the file.
- */
-export function parseRangeAfter(source: string, marker: string): RangeBound {
-  const escaped = marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = new RegExp(
-    `${escaped}[^\\[]*\\[\\s*(-?\\d+)\\s*,\\s*(-?\\d+)\\s*([\\])])`,
-  ).exec(source);
-  if (match === null) fail(`range after "${marker}"`);
-  const [, minStr, maxStr, closeStr] = match;
-  return {
-    min: Number(minStr),
-    max: Number(maxStr),
-    maxExclusive: closeStr === ')',
-  };
-}
-
-/**
- * The ordered sound names. The engine has no ABI-exported string table for
- * these — the only machine-readable owner is the trailing comment on each row of
- * the `kSounds` preset array in metronome_render.cpp (`{...},  // beep`). We
- * mirror those verbatim (lowercase engine ids; display casing is a §12 concern),
- * and cross-check the count against Metronome::kSoundCount so a preset added
- * without a name — or vice versa — fails the build instead of silently
- * truncating the list.
- */
-export function parseSoundNames(
-  metronomeRender: string,
-  metronomeHeader: string,
-): string[] {
-  const expectedCount = parseConstexprInt(metronomeHeader, 'kSoundCount');
-  const table =
-    /constexpr\s+SoundPreset\s+kSounds\[[^\]]*\]\s*=\s*\{([\s\S]*?)\};/.exec(
-      metronomeRender,
-    );
-  if (table === null) fail('the kSounds preset table');
-  const body = table[1] ?? '';
-  const names: string[] = [];
-  const rowRe = /\}\s*,\s*\/\/\s*([a-z0-9-]+)/g;
-  let m: RegExpExecArray | null = rowRe.exec(body);
-  while (m !== null) {
-    names.push(m[1] ?? '');
-    m = rowRe.exec(body);
-  }
-  if (names.length !== expectedCount) {
-    fail(
-      `${String(expectedCount)} sound names to match kSoundCount, found ` +
-        `${String(names.length)} (${names.join(', ')})`,
-    );
-  }
-  return names;
-}
-
-// One parsed bit-layout row, before it is normalised into a TunerField (which
-// stores width rather than the header's inclusive hi bit).
-interface TunerRow {
-  offset: number;
-  hi: number;
-  signed: boolean;
-  scale: number;
-}
-
-/**
- * The tuner-snapshot bit layout, parsed from the field table in the
- * kb_tuner_snapshot doc comment. Signedness and the ×N scale come from the same
- * table, so the decode in src/host/snapshot.ts cannot drift from what
- * Tuner::PackSnapshot produces (SPEC §13.2).
- */
-export function parseTunerFields(
-  apiHeader: string,
-): NativeConstants['tunerFields'] {
-  const rowRe = /bits\s+(\d+)-(\d+)\s+(u?int16)\s+([^\n]*)/g;
-  const rows: TunerRow[] = [];
-  let m: RegExpExecArray | null = rowRe.exec(apiHeader);
-  while (m !== null) {
-    const [, offsetStr, hiStr, typeStr, rest] = m;
-    const scaleMatch = /x(\d+)/.exec(rest ?? '');
-    rows.push({
-      offset: Number(offsetStr),
-      hi: Number(hiStr),
-      signed: typeStr === 'int16',
-      scale: scaleMatch === null ? 1 : Number(scaleMatch[1]),
-    });
-    m = rowRe.exec(apiHeader);
-  }
-  const [note, cents, confidence] = rows;
-  if (note === undefined || cents === undefined || confidence === undefined) {
-    fail('the three kb_tuner_snapshot bit-layout rows');
-  }
-  const toField = (r: TunerRow): TunerField => ({
-    offset: r.offset,
-    width: r.hi - r.offset + 1,
-    signed: r.signed,
-    scale: r.scale,
-  });
-  return {
-    note: toField(note),
-    cents: toField(cents),
-    confidence: toField(confidence),
-  };
 }
 
 export function collectConstants(sources: NativeSources): NativeConstants {
@@ -404,185 +186,4 @@ export function collectConstants(sources: NativeSources): NativeConstants {
       'kIdleSleepMicros',
     ),
   };
-}
-
-// --- rendering --------------------------------------------------------------
-
-function renderEnum(name: string, members: readonly EnumMember[]): string {
-  const lines = members.map((mem) => `  ${mem.name}: ${String(mem.value)},`);
-  return (
-    `export const ${name} = {\n${lines.join('\n')}\n} as const;\n` +
-    `export type ${name} = (typeof ${name})[keyof typeof ${name}];\n`
-  );
-}
-
-function renderBounds(name: string, bounds: Bounds): string {
-  return (
-    `export const ${name} = {\n  min: ${String(bounds.min)},\n` +
-    `  max: ${String(bounds.max)},\n} as const;\n`
-  );
-}
-
-function renderField(field: TunerField): string {
-  return (
-    `{ offset: ${String(field.offset)}, width: ${String(field.width)}, ` +
-    `signed: ${String(field.signed)}, scale: ${String(field.scale)} }`
-  );
-}
-
-/** Deterministic, prettier-free (`.gen.ts` is prettier-ignored) TS source. */
-export function renderConstants(c: NativeConstants): string {
-  const soundNames = c.soundNames.map((n) => `'${n}'`).join(', ');
-  return `// GENERATED — DO NOT EDIT. Owner: native/audio_core (SPEC §13.7).
-// Regenerate: pnpm --filter @kitbag/core-native generate
-// Verify (CI drift guard): pnpm --filter @kitbag/core-native generate:check
-//
-// Every value here is extracted from the engine's own source, never retyped.
-// Hand-edits are reverted by the next regenerate and fail generate:check.
-
-/** Max beats a single measured grid may carry (KB_MAX_GRID_BEATS). */
-export const KB_MAX_GRID_BEATS = ${String(c.maxGridBeats)};
-
-/** Mixer track count (Mixer::kMaxTracks, SPEC §7.4). */
-export const KB_MAX_TRACKS = ${String(c.maxTracks)};
-
-/** Beats per bar the engine will hold (Metronome::kMaxBeats); it clamps above this. */
-export const KB_MAX_BEATS = ${String(c.maxBeats)};
-
-/** Shortest ramp in bars (TempoRamp::kMinBars); the engine clamps below this. */
-export const KB_MIN_RAMP_BARS = ${String(c.minRampBars)};
-
-/** Longest ramp in bars (TempoRamp::kMaxBars); the engine clamps above this. */
-export const KB_MAX_RAMP_BARS = ${String(c.maxRampBars)};
-
-/** Smallest ramp step in BPM (TempoRamp::kMinStepBpm); the engine clamps below this. */
-export const KB_MIN_RAMP_STEP_BPM = ${String(c.minRampStepBpm)};
-
-/** Tempo range the engine clamps to (kMinBpm, kMaxBpm in metronome_types.h). */
-${renderBounds('KB_BPM_BOUNDS', c.bpm)}
-/** Subdivisions per beat (Metronome::kMinSubdivision, kMaxSubdivision); clamped. */
-${renderBounds('KB_SUBDIVISION_BOUNDS', c.subdivision)}
-/** Initial sound ids (Metronome::kDefaultNormalSound, kDefaultAccentSound). */
-export const KB_DEFAULT_SOUNDS = {
-  normal: ${String(c.defaultSounds.normal)},
-  accent: ${String(c.defaultSounds.accent)},
-} as const;
-
-/** Click volume multiplier range (Metronome::kMinVolume, kMaxVolume); the engine clamps to it. */
-${renderBounds('KB_VOLUME_BOUNDS', c.volume)}
-/** Linear stem and master gain range (Mixer::kMinGain, kMaxGain); the engine clamps to it. */
-${renderBounds('KB_MIXER_GAIN_BOUNDS', c.mixerGain)}
-/** Longest play or mute run in bars (Metronome::kMaxMuteBars); clamped above. */
-export const KB_MAX_MUTE_BARS = ${String(c.muteBars.max)};
-
-/** Play and mute run bounds in bars (Metronome::kMinMuteBars, kMaxMuteBars); clamped. */
-${renderBounds('KB_MUTE_BARS_BOUNDS', c.muteBars)}
-/**
- * Time-signature denominators the engine accepts (Metronome::kDenominators,
- * SPEC §17 D1). Anything else leaves the engine's current denominator in place.
- */
-export const KB_DENOMINATORS = [${c.denominators.map(String).join(', ')}] as const;
-export type KbDenominator = (typeof KB_DENOMINATORS)[number];
-
-/** Poly-row beat count the engine holds (Metronome::kMinPolyBeats..kMaxPolyBeats); it clamps outside. */
-export const KB_POLY_BEATS_BOUNDS = {
-  min: ${String(c.minPolyBeats)},
-  max: ${String(c.maxPolyBeats)},
-} as const;
-
-/** Count-in bar choices (Metronome::kCountInBarChoices); 0 is off, anything else is ignored. */
-export const KB_COUNT_IN_BARS = [${c.countInBars.map(String).join(', ')}] as const;
-export type KbCountInBars = (typeof KB_COUNT_IN_BARS)[number];
-
-/** The count-in choice that means off (Metronome::kCountInOff). */
-export const KB_COUNT_IN_OFF = ${String(c.countInOff)};
-
-/** Sound id a distinct count-in uses until set (Metronome::kDefaultCountInSound). */
-export const KB_DEFAULT_COUNT_IN_SOUND = ${String(c.defaultCountInSound)};
-
-/** Tempo-ramp time bounds the engine clamps to (TempoRamp::kMinSeconds, kMaxSeconds). */
-${renderBounds('KB_RAMP_SECONDS_BOUNDS', c.rampSeconds)}
-/** Denominator BPM is referenced to (Metronome::kBpmReferenceDenominator): quarter note. */
-export const KB_BPM_REFERENCE_DENOMINATOR = ${String(c.bpmReferenceDenominator)};
-
-/**
- * Metronome sound ids, indexed by native sound id (SPEC §5.3, §13.7). Lowercase
- * engine tokens; display casing is a §12 concern, not an engine constant.
- */
-export const KB_SOUND_NAMES = [${soundNames}] as const;
-export type KbSoundName = (typeof KB_SOUND_NAMES)[number];
-
-/** kb_result codes. */
-${renderEnum('KB_RESULT', c.result)}
-/** kb_accent enum. */
-${renderEnum('KB_ACCENT', c.accent)}
-/** kb_ramp_unit enum. */
-${renderEnum('KB_RAMP_UNIT', c.rampUnit)}
-/** kb_ramp_state enum (kb_metronome_ramp_state). */
-${renderEnum('KB_RAMP_STATE', c.rampState)}
-/** Metronome output-latency offset range, in ms (kb_metronome_set_latency_offset). */
-export const KB_LATENCY_OFFSET_MS_BOUNDS = {
-  min: ${String(c.latencyOffsetMsBounds.min)},
-  max: ${String(c.latencyOffsetMsBounds.max)},
-} as const;
-
-/** Bar-phase range for the beat sweep (kb_metronome_bar_phase). */
-export const KB_BAR_PHASE_BOUNDS = {
-  min: ${String(c.barPhaseBounds.min)},
-  max: ${String(c.barPhaseBounds.max)},
-  maxExclusive: ${String(c.barPhaseBounds.maxExclusive)},
-} as const;
-
-/** One packed field of kb_tuner_snapshot. */
-export interface KbTunerField {
-  readonly offset: number;
-  readonly width: number;
-  readonly signed: boolean;
-  readonly scale: number;
-}
-
-/**
- * kb_tuner_snapshot bit layout (SPEC §13.2). LSB-first packed fields; decode in
- * src/host/snapshot.ts reads these so it cannot drift from Tuner::PackSnapshot.
- */
-export const KB_TUNER_SNAPSHOT_FIELDS = {
-  note: ${renderField(c.tunerFields.note)},
-  cents: ${renderField(c.tunerFields.cents)},
-  confidence: ${renderField(c.tunerFields.confidence)},
-} as const;
-
-/** Most strings a tuning may carry (KB_TUNER_MAX_STRINGS). */
-export const KB_TUNER_MAX_STRINGS = ${String(c.tunerMaxStrings)};
-
-/** kb_tuner_set_target_string argument selecting auto mode (KB_TUNER_AUTO_STRING). */
-export const KB_TUNER_AUTO_STRING = ${String(c.tunerAutoString)};
-
-/** kb_tuner_state string fields when there is none (KB_TUNER_NO_STRING). */
-export const KB_TUNER_NO_STRING = ${String(c.tunerNoString)};
-
-/** kb_tuner_state.target_midi when no note is held (KB_TUNER_NO_NOTE). */
-export const KB_TUNER_NO_NOTE = ${String(c.tunerNoNote)};
-
-/** in_tune_ratio from which the current string counts as tuned (KB_TUNER_TUNED_RATIO). */
-export const KB_TUNER_TUNED_RATIO = ${String(c.tunerTunedRatio)};
-
-/** A4 reference range and default, in Hz (TuningMode); kb_tuner_set_a4 clamps to it. */
-export const KB_TUNER_A4_HZ = {
-  min: ${String(c.tunerA4Hz.min)},
-  max: ${String(c.tunerA4Hz.max)},
-  default: ${String(c.tunerA4Hz.default)},
-} as const;
-
-/**
- * Longest the tuner's analysis thread sleeps between setter-queue drains, in
- * microseconds (Tuner::kIdleSleepMicros). A KB_ERROR_BUSY retry waits this long.
- */
-export const KB_TUNER_IDLE_SLEEP_MICROS = ${String(c.tunerIdleSleepMicros)};
-
-/** kb_tuner_instrument enum: selects the in-tune window table. */
-${renderEnum('KB_TUNER_INSTRUMENT', c.tunerInstrument)}
-/** kb_tuning_status enum. */
-${renderEnum('KB_TUNING_STATUS', c.tuningStatus)}
-/** kb_wrong_string enum: side of the target the heard string lies on. */
-${renderEnum('KB_WRONG_STRING', c.wrongString)}`;
 }
