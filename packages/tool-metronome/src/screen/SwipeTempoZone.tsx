@@ -99,8 +99,6 @@ interface TempoArrowKeyProps {
 
 const useStyles = createThemedStyles((theme) => ({
   zone: {
-    flexGrow: 1,
-    justifyContent: 'center',
     borderRadius: radius.tempoZone,
   },
   arrow: {

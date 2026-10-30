@@ -27,10 +27,10 @@ import {
   MAX_DOTS_PER_LINE,
   widestLineWidth,
 } from '../logic/ledLayout.ts';
+import { DOT_METRICS } from '../logic/belowTempo.ts';
 import { NO_PULSE, soundingPulse } from '../logic/pulseMarks.ts';
 import {
   dotPalette,
-  DOT_METRICS,
   DOT_WIDTHS,
   LINE_PITCH_GAP,
   useBeatDotStyles,

@@ -21,6 +21,7 @@ import {
 } from 'react-native';
 
 import { useLibraryRefresh } from '../library/useLibraryRefresh.ts';
+import { belowTempoReserve } from '../logic/belowTempo.ts';
 import { practiceBadgeCount } from '../logic/statusRows.ts';
 import { pushTap, tapTempoBpm } from '../logic/tapTempo.ts';
 import { BeatDots } from './BeatDots.tsx';
@@ -60,9 +61,6 @@ const useStyles = createThemedStyles((theme) => ({
   bodyContent: {
     flexGrow: 1,
     paddingTop: metronome.belowAppBar,
-  },
-  zone: {
-    flexGrow: 1,
   },
   notes: {
     ...textStyle(textRoles.fieldLabel),
@@ -214,20 +212,19 @@ export function MetronomeScreen({
   );
 
   const dotsWidth = window.width - space.screenInset * 2;
-  const layoutKey = [
-    window.width,
-    window.height,
-    window.fontScale,
-    beatsPerBar,
-    polyEnabled,
-    notes,
-  ].join('|');
+  const layoutKey = [window.width, window.height, window.fontScale, notes].join(
+    '|',
+  );
   const density = useScreenDensity(window.height, layoutKey, scrollable);
   const gap = useMemo(
     () => ({
       gap: density === 'compact' ? metronome.bodyGapCompact : space.sectionGap,
     }),
     [density],
+  );
+  const belowTempo = useMemo(
+    () => ({ ...gap, minHeight: belowTempoReserve(dotsWidth, gap.gap) }),
+    [gap, dotsWidth],
   );
 
   return (
@@ -257,7 +254,7 @@ export function MetronomeScreen({
             </Text>
           )}
           <GestureDetector gesture={zoneSwipe}>
-            <View style={styles.zone} onLayout={handleZoneLayout}>
+            <View onLayout={handleZoneLayout}>
               <SwipeTempoZone
                 bpm={bpm}
                 density={density}
@@ -276,16 +273,18 @@ export function MetronomeScreen({
             onOpenMeter={handleOpenMeter}
             onOpenSubdivision={handleOpenSubdivision}
           />
-          <BeatDots
-            beatCount={beatsPerBar}
-            subdivision={subdivision}
-            polyBeats={polyEnabled ? polyBeats : null}
-            accents={accents}
-            width={dotsWidth}
-            frame={frame}
-            onCycle={cycleAccent}
-          />
-          <StatusStack frame={frame} settings={settings} running={running} />
+          <View style={belowTempo}>
+            <BeatDots
+              beatCount={beatsPerBar}
+              subdivision={subdivision}
+              polyBeats={polyEnabled ? polyBeats : null}
+              accents={accents}
+              width={dotsWidth}
+              frame={frame}
+              onCycle={cycleAccent}
+            />
+            <StatusStack frame={frame} settings={settings} running={running} />
+          </View>
         </ScrollView>
         <Transport
           running={running}

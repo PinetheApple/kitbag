@@ -11,6 +11,7 @@ import {
 } from '@kitbag/core-design';
 
 import type { DotPalette, DotWidths } from '../logic/beatDot.ts';
+import { BEAT_LABEL_HEIGHT } from '../logic/belowTempo.ts';
 
 const RING_REACH = metronome.dotRingGap + metronome.dotRing;
 
@@ -20,24 +21,13 @@ export const DOT_WIDTHS: DotWidths = {
   silentNow: metronome.dotSilentNowBorder,
 };
 
-export const DOT_METRICS = {
-  maxDot: metronome.beatDotMax,
-  dotGap: metronome.beatDotGap,
-  groupGap: metronome.beatDotGroupGap,
-};
-
 export const PULSE_MARKS = {
   mark: metronome.pulseMark,
   gap: metronome.pulseMarkGap,
   radius: metronome.pulseMarkRadius,
 };
 
-export const LINE_PITCH_GAP =
-  metronome.beatMarkerGap +
-  metronome.pulseMark +
-  metronome.beatMarkerGap +
-  metronome.beatMarkerLineHeight +
-  metronome.beatDotLineGap;
+export const LINE_PITCH_GAP = BEAT_LABEL_HEIGHT + metronome.beatDotLineGap;
 
 function dotBorderColor(color: {
   readonly text3: string;
