@@ -36,6 +36,11 @@ struct Model {
   std::vector<Downbeat> downbeats;
 };
 
+struct SilentTicks {
+  int count = 0;
+  int64_t first = -1;
+};
+
 struct Observed {
   std::vector<float> samples;
   std::vector<Downbeat> downbeats;
@@ -51,11 +56,12 @@ std::string Label(const TickRun& run) {
     std::snprintf(
         text,
         sizeof text,
-        "ramp sub %d: %.0f->%.0f by %.0f every 2 bars",
+        "ramp sub %d: %.0f->%.0f by %.0f every %.0f bars",
         run.subdivision,
         run.start_bpm,
         run.target_bpm,
-        run.step_bpm
+        run.step_bpm,
+        kIntervalBars
     );
   } else {
     std::snprintf(
@@ -152,17 +158,16 @@ double WindowPeak(const std::vector<float>& samples, int64_t to) {
   return peak;
 }
 
-int64_t
-FirstSilentTick(const Observed& observed, const Model& model, int* silent) {
-  int64_t first = -1;
+SilentTicks FindSilentTicks(const Observed& observed, const Model& model) {
+  SilentTicks silent;
   for (const int64_t tick : model.ticks) {
     const double before = WindowPeak(observed.samples, tick - kFrameSlack);
     const double after = WindowPeak(observed.samples, tick + kRiseWindowFrames);
     if (after - before >= kMinTickRise) continue;
-    if (first < 0) first = tick;
-    ++*silent;
+    if (silent.count == 0) silent.first = tick;
+    ++silent.count;
   }
-  return first;
+  return silent;
 }
 
 bool SameDownbeat(const Downbeat& seen, const Downbeat& model) {
@@ -192,18 +197,16 @@ void ExpectEveryTick(
     const Model& model,
     const Observed& observed
 ) {
-  int silent = 0;
-  const int64_t first = FirstSilentTick(observed, model, &silent);
+  const SilentTicks silent = FindSilentTicks(observed, model);
   char detail[96];
   std::snprintf(
       detail,
       sizeof detail,
-      "%d of %zu ticks silent, first at frame %lld",
-      silent,
-      model.ticks.size(),
-      static_cast<long long>(first)
+      "first missing tick at frame %lld (%d later model ticks unmatched)",
+      static_cast<long long>(silent.first),
+      silent.count - 1
   );
-  CheckCase(silent == 0, Label(run), detail);
+  CheckCase(silent.count == 0, Label(run), detail);
 }
 
 void ExpectDownbeats(
@@ -252,7 +255,14 @@ void RunRampSubdivisionTests() {
   }
   ExpectRun({4, 120.0, 100.0, 5.0, 60.0, true});
   ExpectRun({2, 110.0, 110.0, 0.0, 40.0, false});
-  ExpectRun({14, 400.0, 400.0, 0.0, 40.0, false});
+  ExpectRun(
+      {kitbag::Metronome::kMaxSubdivision,
+       kitbag::kMaxBpm,
+       kitbag::kMaxBpm,
+       0.0,
+       40.0,
+       false}
+  );
 }
 
 }  // namespace metronome_test
