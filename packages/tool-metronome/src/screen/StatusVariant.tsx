@@ -1,3 +1,4 @@
+import { metronome } from '@kitbag/core-design';
 import type { ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import Animated, {
@@ -5,28 +6,39 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import type { StatusMode } from '../logic/statusLine.ts';
+import {
+  NO_SLOT,
+  rowSlot,
+  type StatusRow,
+  type StatusRows,
+} from '../logic/statusLine.ts';
 import { useStatusStyles } from './statusStyles.ts';
 
+const ROW_PITCH = metronome.statusLine + metronome.statusRowGap;
+
 interface StatusVariantProps {
-  readonly mode: SharedValue<StatusMode>;
-  readonly shown: StatusMode;
+  readonly rows: SharedValue<StatusRows>;
+  readonly shown: StatusRow;
   readonly style: StyleProp<ViewStyle>;
   readonly children: ReactNode;
 }
 
 export function StatusVariant({
-  mode,
+  rows,
   shown,
   style,
   children,
 }: StatusVariantProps) {
   const styles = useStatusStyles();
-  const visible = useAnimatedStyle(() => ({
-    opacity: mode.value === shown ? 1 : 0,
-  }));
+  const placed = useAnimatedStyle(() => {
+    const slot = rowSlot(rows.value, shown);
+    return {
+      opacity: slot === NO_SLOT ? 0 : 1,
+      transform: [{ translateY: slot === NO_SLOT ? 0 : slot * ROW_PITCH }],
+    };
+  });
   return (
-    <Animated.View style={[styles.variant, style, visible]}>
+    <Animated.View style={[styles.variant, style, placed]}>
       {children}
     </Animated.View>
   );

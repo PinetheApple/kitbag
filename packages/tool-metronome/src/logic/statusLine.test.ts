@@ -6,18 +6,21 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import {
+  afterCountInSummary,
   armedSummary,
   countInBarText,
   countSquare,
   CYCLE_STRIP_MAX_CELLS,
   cycleCellBar,
   cycleStripCells,
+  NO_SLOT,
   NOTHING_ARMED,
   ofText,
   practiceBadgeCount,
   rampNextText,
   rampRemainingText,
-  statusMode,
+  rowSlot,
+  statusRows,
   type PracticeSettings,
 } from './statusLine.ts';
 
@@ -82,53 +85,67 @@ describe('practice badge', () => {
   });
 });
 
-describe('statusMode', () => {
+describe('after count-in summary', () => {
+  it('lists only what starts once the count-in ends', () => {
+    const everything = {
+      ...ARMED,
+      polyEnabled: true,
+      barMute: { ...ARMED.barMute, enabled: true },
+    };
+    expect(afterCountInSummary(everything)).toBe(
+      'Ramp 100 → 140 · Play 2, mute 2',
+    );
+    expect(afterCountInSummary(OFF)).toBe('');
+  });
+});
+
+describe('statusRows', () => {
   const IDLE = {
     countingIn: 0,
-    barMuted: 0,
     barMutePosition: -1,
     rampState: KB_RAMP_STATE_OFF,
   };
-  const SOUNDING_BAR = { ...IDLE, barMutePosition: 0 };
-  const MUTED_BAR = { ...IDLE, barMuted: 1, barMutePosition: 2 };
+  const IN_CYCLE = { ...IDLE, barMutePosition: 2 };
 
-  it('puts the count-in above everything', () => {
-    expect(
-      statusMode({
-        ...MUTED_BAR,
-        countingIn: 1,
-        rampState: KB_RAMP_STATE_STEPPING,
-      }),
-    ).toBe('countIn');
+  it('shows the count-in, then what follows it', () => {
+    expect(statusRows({ ...IDLE, countingIn: 1 }, true)).toEqual({
+      first: 'countIn',
+      second: 'afterCountIn',
+    });
+    expect(statusRows({ ...IDLE, countingIn: 1 }, false)).toEqual({
+      first: 'countIn',
+      second: 'none',
+    });
   });
 
-  it('shows a muted bar over a running ramp', () => {
+  it('stacks the mute cycle above the ramp', () => {
     expect(
-      statusMode({ ...MUTED_BAR, rampState: KB_RAMP_STATE_STEPPING }),
-    ).toBe('mute');
+      statusRows({ ...IN_CYCLE, rampState: KB_RAMP_STATE_STEPPING }, true),
+    ).toEqual({ first: 'mute', second: 'ramp' });
+    expect(
+      statusRows({ ...IN_CYCLE, rampState: KB_RAMP_STATE_AT_TARGET }, true),
+    ).toEqual({ first: 'mute', second: 'reached' });
   });
 
-  it('shows the ramp on a sounding bar of the mute cycle', () => {
-    expect(
-      statusMode({ ...SOUNDING_BAR, rampState: KB_RAMP_STATE_STEPPING }),
-    ).toBe('ramp');
-    expect(
-      statusMode({ ...SOUNDING_BAR, rampState: KB_RAMP_STATE_AT_TARGET }),
-    ).toBe('reached');
+  it('keeps the mute cycle up without a ramp', () => {
+    expect(statusRows(IN_CYCLE, true)).toEqual({
+      first: 'mute',
+      second: 'none',
+    });
   });
 
-  it('keeps the cycle position up on sounding bars with no ramp running', () => {
-    expect(statusMode(SOUNDING_BAR)).toBe('mute');
+  it('moves a lone ramp to the first row', () => {
+    expect(
+      statusRows({ ...IDLE, rampState: KB_RAMP_STATE_STEPPING }, true),
+    ).toEqual({ first: 'ramp', second: 'none' });
+    expect(statusRows(IDLE, true)).toEqual({ first: 'none', second: 'none' });
   });
 
-  it('shows the ramp alone, then rests', () => {
-    expect(statusMode({ ...IDLE, rampState: KB_RAMP_STATE_STEPPING })).toBe(
-      'ramp',
-    );
-    expect(statusMode({ ...IDLE, rampState: KB_RAMP_STATE_AT_TARGET })).toBe(
-      'reached',
-    );
-    expect(statusMode(IDLE)).toBe('rest');
+  it('places each row in its slot', () => {
+    const rows = { first: 'mute', second: 'ramp' } as const;
+    expect(rowSlot(rows, 'mute')).toBe(0);
+    expect(rowSlot(rows, 'ramp')).toBe(1);
+    expect(rowSlot(rows, 'countIn')).toBe(NO_SLOT);
   });
 });
 

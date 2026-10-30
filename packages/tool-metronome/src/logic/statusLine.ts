@@ -22,19 +22,25 @@ export interface PracticeSettings {
 
 export const NOTHING_ARMED = 'Practice tools are off';
 
-export function armedSummary(settings: PracticeSettings): string {
-  const { ramp, barMute, countIn } = settings;
+function rampPart(ramp: RampConfig): string {
+  return `Ramp ${String(ramp.startBpm)} → ${String(ramp.targetBpm)}`;
+}
+
+function mutePart(barMute: BarMuteConfig): string {
+  return `Play ${String(barMute.playBars)}, mute ${String(barMute.muteBars)}`;
+}
+
+function followingParts(settings: PracticeSettings): string[] {
   const parts: string[] = [];
-  if (ramp.enabled) {
-    parts.push(`Ramp ${String(ramp.startBpm)} → ${String(ramp.targetBpm)}`);
-  }
-  if (barMute.enabled) {
-    parts.push(
-      `Play ${String(barMute.playBars)}, mute ${String(barMute.muteBars)}`,
-    );
-  }
-  if (countIn.bars !== KB_COUNT_IN_OFF) {
-    parts.push(`Count-in ${countInLabel(countIn.bars)}`);
+  if (settings.ramp.enabled) parts.push(rampPart(settings.ramp));
+  if (settings.barMute.enabled) parts.push(mutePart(settings.barMute));
+  return parts;
+}
+
+export function armedSummary(settings: PracticeSettings): string {
+  const parts = followingParts(settings);
+  if (settings.countIn.bars !== KB_COUNT_IN_OFF) {
+    parts.push(`Count-in ${countInLabel(settings.countIn.bars)}`);
   }
   if (settings.polyEnabled) {
     parts.push(
@@ -42,6 +48,10 @@ export function armedSummary(settings: PracticeSettings): string {
     );
   }
   return parts.length === 0 ? NOTHING_ARMED : parts.join(' · ');
+}
+
+export function afterCountInSummary(settings: PracticeSettings): string {
+  return followingParts(settings).join(' · ');
 }
 
 export function practiceBadgeCount(settings: PracticeSettings): number {
@@ -53,25 +63,49 @@ export function practiceBadgeCount(settings: PracticeSettings): number {
   ].filter(Boolean).length;
 }
 
-export type StatusMode = 'rest' | 'countIn' | 'mute' | 'ramp' | 'reached';
+export type StatusRow =
+  'none' | 'countIn' | 'afterCountIn' | 'mute' | 'ramp' | 'reached';
+
+export interface StatusRows {
+  readonly first: StatusRow;
+  readonly second: StatusRow;
+}
 
 export interface StatusReads {
   readonly countingIn: number;
-  readonly barMuted: number;
   readonly barMutePosition: number;
   readonly rampState: number;
 }
 
-export function statusMode(reads: StatusReads): StatusMode {
+function rampRow(rampState: number): StatusRow {
   'worklet';
-  if (reads.countingIn !== 0) return 'countIn';
-  if (reads.barMuted !== 0) return 'mute';
-  if (reads.rampState === KB_RAMP_STATE.KB_RAMP_STATE_STEPPING) return 'ramp';
-  if (reads.rampState === KB_RAMP_STATE.KB_RAMP_STATE_AT_TARGET) {
-    return 'reached';
+  if (rampState === KB_RAMP_STATE.KB_RAMP_STATE_STEPPING) return 'ramp';
+  if (rampState === KB_RAMP_STATE.KB_RAMP_STATE_AT_TARGET) return 'reached';
+  return 'none';
+}
+
+export function statusRows(
+  reads: StatusReads,
+  hasAfterCountIn: boolean,
+): StatusRows {
+  'worklet';
+  if (reads.countingIn !== 0) {
+    return {
+      first: 'countIn',
+      second: hasAfterCountIn ? 'afterCountIn' : 'none',
+    };
   }
-  if (reads.barMutePosition >= 0) return 'mute';
-  return 'rest';
+  const ramp = rampRow(reads.rampState);
+  if (reads.barMutePosition < 0) return { first: ramp, second: 'none' };
+  return { first: 'mute', second: ramp };
+}
+
+export const NO_SLOT = -1;
+
+export function rowSlot(rows: StatusRows, row: StatusRow): number {
+  'worklet';
+  if (rows.first === row) return 0;
+  return rows.second === row ? 1 : NO_SLOT;
 }
 
 export function rampNextText(nextBpm: number): string {

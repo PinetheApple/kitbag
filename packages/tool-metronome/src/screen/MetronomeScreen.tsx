@@ -31,7 +31,7 @@ import { PickerChips } from './PickerChips.tsx';
 import { PracticePill, usePracticeElapsed } from './PracticePill.tsx';
 import { PracticeSheet } from './PracticeSheet.tsx';
 import { PresetRow } from './PresetRow.tsx';
-import { StatusLine } from './StatusLine.tsx';
+import { StatusStack } from './StatusStack.tsx';
 import { SubdivisionSheet } from './SubdivisionSheet.tsx';
 import { SwipeHint } from './SwipeHint.tsx';
 import { SwipeTempoZone } from './SwipeTempoZone.tsx';
@@ -219,11 +219,9 @@ export function MetronomeScreen({
           <PickerChips
             beatsPerBar={beatsPerBar}
             denominator={denominator}
-            subdivision={subdivision}
             onOpenMeter={handleOpenMeter}
             onOpenSubdivision={handleOpenSubdivision}
           />
-          <StatusLine frame={frame} settings={settings} />
           <BeatDots
             beatCount={beatsPerBar}
             accents={accents}
@@ -231,7 +229,8 @@ export function MetronomeScreen({
             frame={frame}
             onCycle={cycleAccent}
           />
-          <BeatLegend />
+          <StatusStack frame={frame} settings={settings} running={running} />
+          {running ? null : <BeatLegend />}
           <Transport
             running={running}
             armedCount={practiceBadgeCount(settings)}

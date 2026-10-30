@@ -11,7 +11,7 @@ import {
   cycleCellBar,
   cycleStripCells,
   ofText,
-  type StatusMode,
+  type StatusRows,
 } from '../logic/statusLine.ts';
 import { LiveSlot } from './LiveSlot.tsx';
 import { useStatusStyles } from './statusStyles.ts';
@@ -96,14 +96,14 @@ function CycleCell({ cell, position, playBars, cycle }: CycleCellProps) {
 }
 
 interface MuteStatusProps {
-  readonly mode: SharedValue<StatusMode>;
+  readonly rows: SharedValue<StatusRows>;
   readonly barMuted: SharedValue<number>;
   readonly barMutePosition: SharedValue<number>;
   readonly barMute: BarMuteConfig;
 }
 
 export function MuteStatus({
-  mode,
+  rows,
   barMuted,
   barMutePosition,
   barMute,
@@ -120,7 +120,7 @@ export function MuteStatus({
   }));
   const cells = Array.from({ length: cycleStripCells(cycle) }, (_u, i) => i);
   return (
-    <StatusVariant mode={mode} shown="mute" style={styles.live}>
+    <StatusVariant rows={rows} shown="mute" style={styles.live}>
       <Icon name="muteBars" size="statusLive" color="text2" />
       <View style={cycleStyles.stack}>
         <Animated.Text style={[styles.lead, muted]}>Muted bar</Animated.Text>

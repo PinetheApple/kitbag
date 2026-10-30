@@ -8,24 +8,28 @@ import {
   space,
   textRoles,
   textStyle,
+  TRANSPARENT,
 } from '@kitbag/core-design';
+
+const LIVE_ROWS = 2;
 
 export function countInInk(bg: string, text: string): string {
   return mixHex(bg, text, metronomeMix.countInMeta);
 }
 
 export const useStatusStyles = createThemedStyles((theme) => ({
-  line: {
-    height: metronome.statusLine,
+  stack: {
+    height: metronome.statusLine * LIVE_ROWS + metronome.statusRowGap,
   },
   variant: {
     position: 'absolute',
     top: 0,
     right: 0,
-    bottom: 0,
     left: 0,
+    height: metronome.statusLine,
   },
   rest: {
+    height: metronome.statusLine,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -49,6 +53,13 @@ export const useStatusStyles = createThemedStyles((theme) => ({
   },
   reached: {
     borderColor: theme.color.accentDim,
+  },
+  afterCountIn: {
+    backgroundColor: TRANSPARENT,
+    borderStyle: 'dashed',
+  },
+  afterCountInText: {
+    color: theme.color.text2,
   },
   countIn: {
     backgroundColor: theme.color.text,

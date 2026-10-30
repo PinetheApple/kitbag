@@ -15,13 +15,14 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import {
+  afterCountInSummary,
   armedSummary,
   countInBarText,
   rampNextText,
   rampRemainingText,
-  statusMode,
+  statusRows,
   type PracticeSettings,
-  type StatusMode,
+  type StatusRows,
 } from '../logic/statusLine.ts';
 import { LiveSlot } from './LiveSlot.tsx';
 import { MuteStatus } from './MuteStatus.tsx';
@@ -47,12 +48,12 @@ const LONGEST_COUNT_IN = Math.max(...KB_COUNT_IN_BARS);
 const COUNT_IN_WIDEST = countInBarText(LONGEST_COUNT_IN - 1, LONGEST_COUNT_IN);
 
 interface RampStatusProps {
-  readonly mode: SharedValue<StatusMode>;
+  readonly rows: SharedValue<StatusRows>;
   readonly frame: StatusFrame;
   readonly ramp: RampConfig;
 }
 
-function RampStatus({ mode, frame, ramp }: RampStatusProps) {
+function RampStatus({ rows, frame, ramp }: RampStatusProps) {
   const styles = useStatusStyles();
   const { rampNextBpm, rampRemaining, rampStepProgress } = frame;
   const unit = ramp.unit;
@@ -64,7 +65,7 @@ function RampStatus({ mode, frame, ramp }: RampStatusProps) {
     transform: [{ scaleX: Math.min(1, Math.max(0, rampStepProgress.value)) }],
   }));
   return (
-    <StatusVariant mode={mode} shown="ramp" style={styles.live}>
+    <StatusVariant rows={rows} shown="ramp" style={styles.live}>
       <Icon name="ramp" size="statusLive" color="text2" />
       <LiveSlot
         text={next}
@@ -87,16 +88,16 @@ function RampStatus({ mode, frame, ramp }: RampStatusProps) {
 }
 
 function ReachedStatus({
-  mode,
+  rows,
   targetBpm,
 }: {
-  readonly mode: SharedValue<StatusMode>;
+  readonly rows: SharedValue<StatusRows>;
   readonly targetBpm: number;
 }) {
   const styles = useStatusStyles();
   return (
     <StatusVariant
-      mode={mode}
+      rows={rows}
       shown="reached"
       style={[styles.live, styles.reached]}
     >
@@ -109,11 +110,11 @@ function ReachedStatus({
 }
 
 function CountInStatus({
-  mode,
+  rows,
   countInBar,
   countInBarsTotal,
 }: {
-  readonly mode: SharedValue<StatusMode>;
+  readonly rows: SharedValue<StatusRows>;
   readonly countInBar: SharedValue<number>;
   readonly countInBarsTotal: SharedValue<number>;
 }) {
@@ -124,7 +125,7 @@ function CountInStatus({
   );
   return (
     <StatusVariant
-      mode={mode}
+      rows={rows}
       shown="countIn"
       style={[styles.live, styles.countIn]}
     >
@@ -145,50 +146,81 @@ function CountInStatus({
   );
 }
 
-interface StatusLineProps {
-  readonly frame: StatusFrame;
-  readonly settings: PracticeSettings;
+function AfterCountInStatus({
+  rows,
+  summary,
+}: {
+  readonly rows: SharedValue<StatusRows>;
+  readonly summary: string;
+}) {
+  const styles = useStatusStyles();
+  return (
+    <StatusVariant
+      rows={rows}
+      shown="afterCountIn"
+      style={[styles.live, styles.afterCountIn]}
+    >
+      <Icon name="practiceTools" size="statusLive" color="text2" />
+      <Text style={[styles.lead, styles.afterCountInText]}>Then</Text>
+      <Text style={[styles.meta, styles.pushRight]} numberOfLines={1}>
+        {summary}
+      </Text>
+    </StatusVariant>
+  );
 }
 
-export function StatusLine({ frame, settings }: StatusLineProps) {
+interface StatusStackProps {
+  readonly frame: StatusFrame;
+  readonly settings: PracticeSettings;
+  readonly running: boolean;
+}
+
+export function StatusStack({ frame, settings, running }: StatusStackProps) {
   const styles = useStatusStyles();
-  const { countingIn, barMuted, barMutePosition, rampState } = frame;
-  const mode = useDerivedValue(() =>
-    statusMode({
-      countingIn: countingIn.value,
-      barMuted: barMuted.value,
-      barMutePosition: barMutePosition.value,
-      rampState: rampState.value,
-    }),
+  const { countingIn, barMutePosition, rampState } = frame;
+  const afterCountIn = afterCountInSummary(settings);
+  const hasAfterCountIn = afterCountIn !== '';
+  const rows = useDerivedValue(() =>
+    statusRows(
+      {
+        countingIn: countingIn.value,
+        barMutePosition: barMutePosition.value,
+        rampState: rampState.value,
+      },
+      hasAfterCountIn,
+    ),
   );
   const summary = armedSummary(settings);
   return (
     <View
-      style={styles.line}
+      style={styles.stack}
       accessible
       accessibilityRole="text"
       accessibilityLabel={summary}
       pointerEvents="none"
     >
-      <StatusVariant mode={mode} shown="rest" style={styles.rest}>
-        <Icon name="practiceTools" size="statusRest" color="text2" />
-        <Text style={styles.restText} numberOfLines={1}>
-          {summary}
-        </Text>
-      </StatusVariant>
-      <RampStatus mode={mode} frame={frame} ramp={settings.ramp} />
-      <ReachedStatus mode={mode} targetBpm={settings.ramp.targetBpm} />
+      {running ? null : (
+        <View style={styles.rest}>
+          <Icon name="practiceTools" size="statusRest" color="text2" />
+          <Text style={styles.restText} numberOfLines={1}>
+            {summary}
+          </Text>
+        </View>
+      )}
       <MuteStatus
-        mode={mode}
+        rows={rows}
         barMuted={frame.barMuted}
         barMutePosition={frame.barMutePosition}
         barMute={settings.barMute}
       />
+      <RampStatus rows={rows} frame={frame} ramp={settings.ramp} />
+      <ReachedStatus rows={rows} targetBpm={settings.ramp.targetBpm} />
       <CountInStatus
-        mode={mode}
+        rows={rows}
         countInBar={frame.countInBar}
         countInBarsTotal={frame.countInBarsTotal}
       />
+      <AfterCountInStatus rows={rows} summary={afterCountIn} />
     </View>
   );
 }
