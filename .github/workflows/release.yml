@@ -14,7 +14,7 @@ jobs:
   plan:
     name: Next version
     if: github.repository == 'PinetheApple/kitbag'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
@@ -65,7 +65,7 @@ jobs:
     name: Signed APK to a GitHub release
     needs: plan
     if: needs.plan.outputs.release == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:
       contents: write

@@ -1,7 +1,14 @@
 import { useCallback } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { inset, radius, size, space, textRoles } from '../roles.ts';
+import {
+  bodyLineHeight,
+  inset,
+  radius,
+  size,
+  space,
+  textRoles,
+} from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import {
@@ -16,12 +23,14 @@ import {
 // is the option's alone.
 const TRACK_EDGE = space.segmentInset + size.stroke;
 const OPTION_HEIGHT = textRoles.segment.size + inset.segmentOptionV * 2;
+const INLINE_LINE_HEIGHT = textRoles.segment.size * bodyLineHeight;
 
-export type SegmentedControlSize = 'default' | 'large';
+export type SegmentedControlSize = 'default' | 'large' | 'inline';
 
 const OPTION_HEIGHTS: Readonly<Record<SegmentedControlSize, number>> = {
   default: OPTION_HEIGHT,
   large: size.segmentLargeOption,
+  inline: INLINE_LINE_HEIGHT + inset.segmentOptionV * 2,
 };
 
 // Option widths are flex, so only the vertical axis is grown to 48dp; sideways
@@ -67,6 +76,7 @@ interface SegmentProps<T extends string> {
   readonly selected: boolean;
   readonly accent: boolean;
   readonly large: boolean;
+  readonly inline: boolean;
   readonly hitBox: ReturnType<typeof optionHitBox>;
   readonly onSelect: (value: T) => void;
 }
@@ -123,6 +133,7 @@ const useStyles = createThemedStyles((theme) => ({
     backgroundColor: theme.color.surface1,
   },
   largeLabel: textStyle(textRoles.segmentLarge),
+  inlineLabel: { lineHeight: INLINE_LINE_HEIGHT },
 }));
 
 function Segment<T extends string>({
@@ -130,6 +141,7 @@ function Segment<T extends string>({
   selected,
   accent,
   large,
+  inline,
   hitBox,
   onSelect,
 }: SegmentProps<T>) {
@@ -143,7 +155,8 @@ function Segment<T extends string>({
       accessibilityRole="radio"
       accessibilityLabel={option.accessibilityLabel ?? option.label}
       accessibilityState={{ checked: selected }}
-      style={[styles.optionHit, hitBox]}
+      aria-checked={selected}
+      style={[!inline && styles.optionHit, hitBox]}
       onPress={handlePress}
     >
       <View
@@ -158,6 +171,7 @@ function Segment<T extends string>({
           style={[
             styles.label,
             large && styles.largeLabel,
+            inline && styles.inlineLabel,
             selected && (accent ? styles.labelAccent : styles.labelSelected),
           ]}
         >
@@ -203,6 +217,7 @@ export function SegmentedControl<T extends string>({
           selected={option.value === selected}
           accent={selectedTone === 'accent'}
           large={large}
+          inline={controlSize === 'inline'}
           hitBox={hitBox}
           onSelect={onSelect}
         />
