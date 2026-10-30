@@ -682,7 +682,10 @@ referenced but never drew: **setlists**, **setlist detail**, **preset editor**.
   setlist. A song
   loaded from outside the setlist (All songs, search) clears it. With no setlist
   active the bar keeps its title, and a song loaded on its own shows in the chip
-  as "Not in a setlist".
+  as "Not in a setlist"; the chip then opens a sheet with "Clear song" and
+  "Open setlists". Clear song and Leave setlist unlink the loaded song but keep
+  the metronome's current settings, so the bar returns to the plain "Setlists"
+  chip without the sound changing.
 - **Ramp and bar-mute are song data.** The Flutter `applyPreset` force-disables
   the ramp when loading a preset, so a song's trainer config is silently lost.
   They round-trip like any other field.
