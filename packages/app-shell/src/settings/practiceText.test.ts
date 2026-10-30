@@ -1,10 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import {
-  formatDuration,
-  formatPracticeSummary,
-  formatSessionCount,
-} from './format.ts';
+import { formatDuration, formatPracticeSummary } from './practiceText.ts';
+
+vi.mock('react-native', () => ({}));
+vi.mock('expo-haptics', () => ({}));
+vi.mock('@op-engineering/op-sqlite', () => ({}));
 
 describe('formatDuration', () => {
   it.each([
@@ -19,13 +19,12 @@ describe('formatDuration', () => {
   });
 });
 
-describe('formatSessionCount', () => {
-  it.each([
-    [1, '1 session'],
-    [2, '2 sessions'],
-    [34, '34 sessions'],
-  ])('formats %d as %s', (sessions, text) => {
-    expect(formatSessionCount(sessions)).toBe(text);
+describe('formatPracticeSummary', () => {
+  it('says one session in the singular', () => {
+    expect(
+      formatPracticeSummary({ sessions: 1, totalSeconds: 600, avgBpm: 96 })
+        .lead,
+    ).toBe('1 session');
   });
 });
 

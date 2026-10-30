@@ -8,11 +8,7 @@ import {
   SegmentedControl,
   type SegmentOption,
 } from '@kitbag/core-design';
-import {
-  formatPracticeSummary,
-  useAppearance,
-  type ThemeChoice,
-} from '@kitbag/core-state';
+import { useAppearance, type ThemeChoice } from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { Linking } from 'react-native';
 
@@ -22,6 +18,7 @@ import {
   SOURCE_LABEL,
   SOURCE_URL,
 } from './about.ts';
+import { formatPracticeSummary } from './practiceText.ts';
 import { SettingsFrame } from './SettingsFrame.tsx';
 import { usePracticeStats } from './usePracticeStats.ts';
 

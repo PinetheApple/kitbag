@@ -1,8 +1,7 @@
 import type { PracticeStats } from '@kitbag/core-db';
+import { countLabel } from '@kitbag/core-design';
+import { clockParts } from '@kitbag/core-state';
 
-import { clockParts } from '../text.ts';
-
-const SECONDS_PER_MINUTE = 60;
 const SEPARATOR = '·';
 const EMPTY_PRACTICE = 'No sessions yet';
 
@@ -12,14 +11,10 @@ export interface PracticeSummary {
 }
 
 export function formatDuration(totalSeconds: number): string {
-  if (totalSeconds > 0 && totalSeconds < SECONDS_PER_MINUTE) return '<1m';
   const { hours, minutes } = clockParts(totalSeconds);
-  if (hours === 0) return `${String(minutes)}m`;
-  return `${String(hours)}h ${String(minutes)}m`;
-}
-
-export function formatSessionCount(sessions: number): string {
-  return `${String(sessions)} ${sessions === 1 ? 'session' : 'sessions'}`;
+  if (hours > 0) return `${String(hours)}h ${String(minutes)}m`;
+  if (minutes === 0 && totalSeconds > 0) return '<1m';
+  return `${String(minutes)}m`;
 }
 
 export function formatPracticeSummary({
@@ -31,7 +26,7 @@ export function formatPracticeSummary({
   const parts = [formatDuration(totalSeconds)];
   if (avgBpm !== null) parts.push(`avg ${String(Math.round(avgBpm))} BPM`);
   return {
-    lead: formatSessionCount(sessions),
+    lead: countLabel(sessions, 'session', 'sessions'),
     detail: `${SEPARATOR} ${parts.join(` ${SEPARATOR} `)}`,
   };
 }
