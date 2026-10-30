@@ -670,6 +670,17 @@ referenced but never drew: **setlists**, **setlist detail**, **preset editor**.
   "All songs" row is the standalone library.
 - **The on-stage setlist is pinned and marked**, with a live count of what you
   have played. One setlist is active at a time.
+- **On-stage navigation lives in the metronome's app bar**
+  (`design/kitbag-metronome-setlist.html`, D2). With a setlist active the bar is
+  Back, previous, a song chip, next; the "Metronome" title gives way. The chip
+  shows the loaded song over the setlist and position ("Test gig · 2/4").
+  Previous and next load the adjacent song in one tap, through the same load
+  path as tapping it in setlist detail, and are disabled on the first and last
+  song. The chip opens the setlist's song list, the loaded song marked NOW;
+  tapping a row loads it, and "Leave setlist" deactivates the setlist. A song
+  loaded from outside the setlist (All songs, search) clears it. With no setlist
+  active the bar keeps its title, and a song loaded on its own shows in the chip
+  as "Not in a setlist".
 - **Ramp and bar-mute are song data.** The Flutter `applyPreset` force-disables
   the ramp when loading a preset, so a song's trainer config is silently lost.
   They round-trip like any other field.
@@ -1430,6 +1441,7 @@ Two migration notes that are not obvious from the table:
 | `kitbag-playalong.html` | Supersedes the Play-along section. Adds the locked state, seven more states, five sheets, and a code audit. |
 | `kitbag-settings.html` | Designs Settings, latency calibration, restore. **Supersedes exactly one §06 card** — "Settings stay contextual" — and nothing else. |
 | `kitbag-metronome-b.html` ("Chosen") and `kitbag-metronome-status.html` (variant A, Q6 pulse marks, poly row) | Owner-approved layout B (#175). **Supersede the metronome screen in `kitbag-metronome.html` §02, and §03's sheets and numpad, where they differ.** §02's setlists, setlist detail and preset editor, and §04 onward, stay binding. Recorded in `docs/decisions.md`, 2026-10-30; `docs/research/metronome-b-parity.md` is the value table. |
+| `kitbag-metronome-setlist.html` | **D2 only** ("Chosen (owner, 2026-10-30)"; #205). Supersedes the app bar in `kitbag-metronome-b.html` while a setlist is active, and adds the setlist song-list sheet. Options A–D are rejected alternatives. Recorded in `docs/decisions.md`, 2026-10-30. |
 | `kitbag-library.html` | **Variant B only** ("Two tiles, two screens"; #178). Supersedes `kitbag-ui.html` §04's Home tiles and Library: Songs and Stem songs are separate screens. Variant C is a rejected alternative. From variant A only the filter menu binds: the Songs filter icon opens it (filter by analysis status; sort by title, date added, BPM). `docs/decisions.md` (2026-10-30, #178) lists what is deliberately not built. |
 | `kitbag-stems.html` | **Variant C only** ("Bottom dock"; #137). Supersedes `kitbag-ui.html` §04's Stem player. Variants A and B are rejected alternatives; `docs/decisions.md` (2026-10-30, #137) lists what is deliberately not built. |
 
