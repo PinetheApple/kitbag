@@ -51,4 +51,32 @@ describe('pattern actions', () => {
       [2, N],
     ]);
   });
+
+  it('resets accents to the group starts when the meter changes', () => {
+    const { commands, store } = setup();
+    const { KB_ACCENT_ACCENTED: A, KB_ACCENT_NORMAL: N } = KB_ACCENT;
+    store.getState().cycleAccent(0);
+    commands.setAccent.mockClear();
+    store.getState().setBeats(7, 8);
+    expect(store.getState().accents).toEqual([A, N, A, N, A, N, N]);
+    expect(commands.setAccent.mock.calls).toEqual([
+      [0, A],
+      [1, N],
+      [2, A],
+      [3, N],
+      [4, A],
+      [5, N],
+      [6, N],
+    ]);
+  });
+
+  it('keeps edited accents when only the denominator changes', () => {
+    const { commands, store } = setup();
+    store.getState().cycleAccent(0);
+    const edited = store.getState().accents;
+    commands.setAccent.mockClear();
+    store.getState().setBeats(4, 8);
+    expect(store.getState().accents).toEqual(edited);
+    expect(commands.setAccent).not.toHaveBeenCalled();
+  });
 });

@@ -24,6 +24,7 @@ export {
   initialAccents,
   resizeAccents,
 } from './metronome/config.ts';
+export { beatGroupSizes, groupStartAccents } from './metronome/meterGroups.ts';
 export type {
   EngineBpm,
   MetronomeCommands,

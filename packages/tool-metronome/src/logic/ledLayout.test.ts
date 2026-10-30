@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   beatDotSize,
-  beatGroupSizes,
   layoutBeatLeds,
   MAX_DOTS_PER_LINE,
   MAX_LEDS_PER_ROW,
@@ -19,35 +18,14 @@ const sizesOf = (rows: readonly (readonly (readonly number[])[])[]) =>
 const ledsPerRow = (rows: readonly (readonly (readonly number[])[])[]) =>
   rows.map((row) => row.reduce((n, group) => n + group.length, 0));
 
-describe('beatGroupSizes', () => {
-  it('groups 7 as 2+2+3, the grouping the circle could never show (D9)', () => {
-    expect(beatGroupSizes(7)).toEqual([2, 2, 3]);
-  });
-
-  it('chunks a regular bar by four', () => {
-    expect(beatGroupSizes(4)).toEqual([4]);
-    expect(beatGroupSizes(8)).toEqual([4, 4]);
-    expect(beatGroupSizes(16)).toEqual([4, 4, 4, 4]);
-  });
-
-  it('groups twelve in threes, as the 12/8 mockup frame draws it', () => {
-    expect(beatGroupSizes(12)).toEqual([3, 3, 3, 3]);
-    expect(sizesOf(layoutBeatLeds(12))).toEqual([
+describe('layoutBeatLeds', () => {
+  it('lays 12/8 out as the mockup frame draws it', () => {
+    expect(sizesOf(layoutBeatLeds(12, MAX_DOTS_PER_LINE))).toEqual([
       [3, 3],
       [3, 3],
     ]);
   });
 
-  it('trails the remainder of an unlisted count', () => {
-    expect(beatGroupSizes(13)).toEqual([4, 4, 4, 1]);
-  });
-
-  it('has no groups for an empty bar', () => {
-    expect(beatGroupSizes(0)).toEqual([]);
-  });
-});
-
-describe('layoutBeatLeds', () => {
   it('lays 16 beats out as four rows of four (SPEC §5.2)', () => {
     expect(sizesOf(layoutBeatLeds(16))).toEqual([[4], [4], [4], [4]]);
   });
