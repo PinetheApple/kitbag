@@ -29,7 +29,7 @@ function clamp(bound: PresetBound): string {
   return `UPDATE song_presets SET ${column} = min(max(${value}, ${String(low)}), ${String(high)})`;
 }
 
-// Flutter read an unknown accent code as normal (legacy converters.dart);
+// Flutter read an unknown accent code as normal (SPEC §11.2);
 // the repair keeps that meaning and pads or trims to the length column.
 function repairCodes(column: string, lengthColumn: string): string {
   const byte = `hex(substr(song_presets.${column}, n, 1))`;

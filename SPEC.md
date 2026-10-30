@@ -1336,9 +1336,11 @@ as a base to build on.
 
 ## 11. Data model
 
-The schema is the durable part and survives the stack change. Current tables:
-`Setlists`, `Songs`, `PracticeSessions`, `Tunings`, `LibrarySongs`, `StemSets`,
-`Stems` (schema v6).
+The schema is the durable part and survives the stack change. The Flutter
+build's tables were `Setlists`, `Songs`, `PracticeSessions`, `Tunings`,
+`LibrarySongs`, `StemSets`, `Stems` (schema v6). That v6 DDL is the migration
+fixture in `packages/core-db/src/migrate-fixtures.test-helper.ts`; the React
+Native schema migrates it in place and is at v17 (`packages/core-db/src/migrate.ts`).
 
 ### 11.1 Persistence layer
 
@@ -1995,11 +1997,14 @@ native and stay native:
 1. **Foreground service** (§5.6) — no RN API exists. A Kotlin service, started and
    stopped through a TurboModule, holding the media session for lock-screen and
    headset controls. **This is the piece with no JS analogue and the one most
-   likely to be underestimated.**
+   likely to be underestimated.** Built: `PlaybackService` (#87, #177) carries the
+   metronome and stem songs.
 2. **Notification listener** (§8.2) — the existing `MediaSessionPlugin.kt` and
    `NotificationListenerService`, ported from a Flutter plugin to a TurboModule.
    The Android logic is correct and survives; §2.3's `requestPermission` lie and
    §8.4's missing `lastPositionUpdateTime`/`playbackSpeed` are fixed in the port.
+   **Not ported yet:** `MediaNotificationListenerService.kt` is a skeleton, so the
+   Flutter plugin and its manifest entry stay in `legacy/android/` as the source.
 3. **Audio engine lifecycle** — `kb_engine_create`/`start`/`stop` tied to the
    Android lifecycle, not to a React component's mount.
 
