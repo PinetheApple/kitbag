@@ -16,6 +16,10 @@ import { metronomeTransport } from './transportRuntime.ts';
 // file loads with the root layout.
 const commands: StemPlayerCommands = {
   start: () => getKitbagCommands().start(),
+  engineHold: () => getKitbagCommands().engineHold(),
+  engineRelease: () => {
+    getKitbagCommands().engineRelease();
+  },
   loadTrack: (track, relativePath) =>
     getKitbagCommands().loadTrack(track, relativePath),
   mixerUnloadTrack: (track) => {

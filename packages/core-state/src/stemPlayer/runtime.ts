@@ -4,6 +4,8 @@ import type { KitbagCommandsSpec } from '@kitbag/core-native';
 export type StemPlayerCommands = Pick<
   KitbagCommandsSpec,
   | 'start'
+  | 'engineHold'
+  | 'engineRelease'
   | 'loadTrack'
   | 'mixerUnloadTrack'
   | 'mixerSetGain'

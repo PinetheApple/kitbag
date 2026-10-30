@@ -38,6 +38,7 @@ import { SubdivisionSheet } from './SubdivisionSheet.tsx';
 import { SwipeHint } from './SwipeHint.tsx';
 import { SwipeTempoZone } from './SwipeTempoZone.tsx';
 import { Transport } from './Transport.tsx';
+import { useHoldEngine } from './useHoldEngine.ts';
 import { useTempoSwipe } from './useTempoSwipe.ts';
 import { useMetronomeFrame } from './useMetronomeFrame.ts';
 import { useScreenDensity } from './useScreenDensity.ts';
@@ -98,6 +99,7 @@ export function MetronomeScreen({
   onBack,
   onOpenSetlists,
 }: MetronomeScreenProps) {
+  useHoldEngine();
   useLibraryRefresh();
   const styles = useStyles();
   const window = useWindowDimensions();
