@@ -16,12 +16,15 @@
 
 namespace kitbag {
 
+class StallDetector;
+
 // Realtime audio engine. Owns the output device; the data callback is the
 // realtime thread — everything it touches must stay lock- and allocation-free.
 class Engine {
  public:
   static constexpr uint32_t kSampleRate = 48000;
   static constexpr uint32_t kChannelCount = 2;
+  static constexpr uint32_t kDefaultIdleGraceMs = 2000;
 
   Engine() = default;
   ~Engine();
@@ -32,6 +35,19 @@ class Engine {
   bool Init();
   bool Start();
   void Stop();
+  bool Hold();
+  void Release();
+  void ResetHolders();
+  int32_t holders() const;
+  void SetMetronomeIntent(bool playing) {
+    metronome_intent_.store(playing);
+  }
+  void SetMixerIntent(bool playing) {
+    mixer_intent_.store(playing);
+  }
+  void set_idle_grace_ms(uint32_t grace_ms) {
+    idle_grace_ms_.store(grace_ms, std::memory_order_relaxed);
+  }
 
   uint32_t sample_rate() const {
     return kSampleRate;
@@ -39,7 +55,7 @@ class Engine {
   // True whenever the data callback can run. RtPublisher::Publish reads this to
   // decide whether a retired payload can be freed at once.
   bool is_running() const {
-    return device_running_.load(std::memory_order_relaxed);
+    return device_running_.load(std::memory_order_acquire);
   }
   uint64_t frames_rendered() const {
     return frames_rendered_.load(std::memory_order_relaxed);
@@ -101,9 +117,14 @@ class Engine {
   static void OnNotification(const ma_device_notification* notification);
   void Render(float* output, uint32_t frame_count);
   void RenderSlice(float* output, uint32_t frame_count);
+  bool StartLocked();
+  void StopDevice();
+  void ReleaseRetired();
+  bool IsIdle() const;
   void StartWatchdog();
   void StopWatchdog();
   void WatchOutput();
+  bool WatchTick(StallDetector& stall, uint64_t* idle_since_ms);
   void RestartDevice();
 
   ma_device device_{};
@@ -120,6 +141,14 @@ class Engine {
   std::mutex watchdog_mutex_;
   std::condition_variable watchdog_wake_;
   bool watchdog_exit_ = false;
+
+  // Serializes device start/stop across control threads; the callback never
+  // takes it. The watchdog only try-locks, so Stop can join it while holding.
+  mutable std::mutex lifecycle_mutex_;
+  int32_t holders_ = 0;
+  std::atomic<bool> metronome_intent_{false};
+  std::atomic<bool> mixer_intent_{false};
+  std::atomic<uint32_t> idle_grace_ms_{kDefaultIdleGraceMs};
 
   Metronome metronome_;
   Tuner tuner_;

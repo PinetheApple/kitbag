@@ -97,6 +97,7 @@ int32_t kb_mixer_soloed(const kb_engine* engine, int32_t track) {
 
 void kb_mixer_play(kb_engine* engine) {
   if (engine == nullptr) return;
+  ToEngine(engine)->SetMixerIntent(true);
   ToEngine(engine)->mixer().Play();
 }
 
@@ -104,11 +105,13 @@ void kb_mixer_stop(kb_engine* engine) {
   if (engine == nullptr) return;
   kitbag::Engine* e = ToEngine(engine);
   e->mixer().Stop(e->frames_rendered(), e->is_running());
+  e->SetMixerIntent(false);
 }
 
 void kb_mixer_pause(kb_engine* engine) {
   if (engine == nullptr) return;
   ToEngine(engine)->mixer().Pause();
+  ToEngine(engine)->SetMixerIntent(false);
 }
 
 int32_t kb_mixer_is_playing(const kb_engine* engine) {

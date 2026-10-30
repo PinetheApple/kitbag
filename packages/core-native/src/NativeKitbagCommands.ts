@@ -42,6 +42,8 @@ export type SongTransportShowState = Readonly<{
 export interface Spec extends TurboModule {
   start(): Promise<number>;
   stop(): void;
+  engineHold(): Promise<number>;
+  engineRelease(): void;
 
   metronomeStart(anchorFrame: Double): void;
   metronomeStop(): void;

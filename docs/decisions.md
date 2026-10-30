@@ -457,6 +457,13 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   preset; the bar returns to "Metronome" and the plain Setlists chip. The loaded song is
   held in memory only, so a restart already starts with none. **[user]**
 
+- **2026-10-31 · Output device lifetime (§4, §13.3, #198)** — The engine decides when the
+  output device stops; JS never stops it on a release or a running-flag change. Holders
+  are the metronome screen while mounted, the stem player while a song is open
+  (backgrounded included) and the click-sound sheet while visible. Play intent keeps the
+  device on, so pause or stop with a screen open holds the stream. With no holder and no
+  intent, the watchdog stops the device after a 2000 ms idle grace. **[recorded — coordinator ruling]**
+
 - **2026-10-31 · Settings gap rulings (§12.5, §12.5.1, #170, #100)** — Coordinator
   rulings, revisitable by the owner, so the Settings PRs can land without waiting on each
   gap; where `design/kitbag-settings.html` draws something it wins. Every pressable

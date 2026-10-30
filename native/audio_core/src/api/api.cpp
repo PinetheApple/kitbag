@@ -48,6 +48,19 @@ void kb_engine_stop(kb_engine* engine) {
   }
 }
 
+kb_result kb_engine_hold(kb_engine* engine) {
+  if (engine == nullptr) return KB_ERROR_INVALID_ARGUMENT;
+  return ToEngine(engine)->Hold() ? KB_OK : KB_ERROR_DEVICE_START_FAILED;
+}
+
+void kb_engine_release(kb_engine* engine) {
+  if (engine != nullptr) ToEngine(engine)->Release();
+}
+
+void kb_engine_reset_holders(kb_engine* engine) {
+  if (engine != nullptr) ToEngine(engine)->ResetHolders();
+}
+
 uint32_t kb_engine_sample_rate(const kb_engine* engine) {
   return engine == nullptr ? 0 : ToEngine(engine)->sample_rate();
 }
@@ -68,6 +81,18 @@ void kb_engine_render(kb_engine* engine, float* out, uint32_t frame_count) {
 
 void kb_engine_reserve_render_frames(kb_engine* engine, uint32_t frames) {
   if (engine != nullptr) ToEngine(engine)->ReserveCallbackFrames(frames);
+}
+
+int32_t kb_engine_holders(const kb_engine* engine) {
+  return engine == nullptr ? 0 : ToEngine(engine)->holders();
+}
+
+int32_t kb_engine_device_running(const kb_engine* engine) {
+  return engine != nullptr && ToEngine(engine)->is_running() ? 1 : 0;
+}
+
+void kb_engine_set_idle_grace_ms(kb_engine* engine, uint32_t grace_ms) {
+  if (engine != nullptr) ToEngine(engine)->set_idle_grace_ms(grace_ms);
 }
 #endif  // KITBAG_BUILD_TOOLS
 

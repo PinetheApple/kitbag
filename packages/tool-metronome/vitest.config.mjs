@@ -7,7 +7,7 @@ const stub = (path) => fileURLToPath(new URL(path, import.meta.url));
 // Barrels that reach react-native (Flow) or native modules resolve to their pure parts.
 export default defineConfig({
   test: {
-    include: ['src/logic/**/*.test.ts'],
+    include: ['src/logic/**/*.test.ts', 'src/screen/useHoldEngine.test.ts'],
     alias: {
       '@kitbag/core-native': stub(
         '../core-native/src/generated/nativeConstants.gen.ts',

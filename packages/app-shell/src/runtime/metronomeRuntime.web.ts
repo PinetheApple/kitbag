@@ -1,6 +1,7 @@
 import {
   KITBAG_HOST_OBJECT_KEY,
   KB_RAMP_STATE,
+  KB_RESULT,
   KB_STOPPED_BEAT,
   KB_TUNER_NO_NOTE,
   KB_TUNER_NO_STRING,
@@ -34,6 +35,8 @@ function readBoundedQuery(
 
 const webCommands: MetronomeCommands = {
   start: () => Promise.resolve(0),
+  engineHold: () => Promise.resolve(KB_RESULT.KB_OK),
+  engineRelease: () => undefined,
   metronomeStart: () => undefined,
   metronomeStop: () => undefined,
   metronomePause: () => undefined,

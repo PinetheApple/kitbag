@@ -29,11 +29,18 @@ int32_t flag(bool value) { return value ? 1 : 0; }
 
 int32_t commandStart() { return kb_engine_start(commandEngine()); }
 void commandStop() { kb_engine_stop(commandEngine()); }
+int32_t commandHold() { return kb_engine_hold(commandEngine()); }
+void commandRelease() { kb_engine_release(commandEngine()); }
 
+// Play intent first, then the device: kitbag_engine_hold_api.h's ordering rule.
 void commandMetronomeStart(double anchorFrame) {
   kb_metronome_start_at(commandEngine(), static_cast<uint64_t>(anchorFrame));
+  commandStart();
 }
-void commandMetronomeStartNow() { kb_metronome_start(commandEngine()); }
+void commandMetronomeStartNow() {
+  kb_metronome_start(commandEngine());
+  commandStart();
+}
 void commandMetronomeStop() { kb_metronome_stop(commandEngine()); }
 void commandMetronomePause() { kb_metronome_pause(commandEngine()); }
 
@@ -112,7 +119,10 @@ void commandMixerSetMasterGain(double gain) {
   kb_mixer_set_master_gain(commandEngine(), static_cast<float>(gain));
 }
 double commandMixerMasterGain() { return kb_mixer_master_gain(commandEngine()); }
-void commandMixerPlay() { kb_mixer_play(commandEngine()); }
+void commandMixerPlay() {
+  kb_mixer_play(commandEngine());
+  commandStart();
+}
 void commandMixerPause() { kb_mixer_pause(commandEngine()); }
 void commandMixerStop() { kb_mixer_stop(commandEngine()); }
 void commandMixerSeek(double frame) {

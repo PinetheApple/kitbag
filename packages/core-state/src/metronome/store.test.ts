@@ -7,6 +7,7 @@ import {
   KB_MAX_RAMP_BARS,
   KB_RAMP_SECONDS_BOUNDS,
   KB_RAMP_UNIT,
+  KB_RESULT,
   KB_SOUND_NAMES,
   KB_VOLUME_BOUNDS,
   type KitbagHostObject,
@@ -36,6 +37,8 @@ function makeCommands() {
     setLatencyOffset: vi.fn(),
     setRamp: vi.fn(),
     setBarMute: vi.fn(),
+    engineHold: vi.fn(() => Promise.resolve<number>(KB_RESULT.KB_OK)),
+    engineRelease: vi.fn(),
   } satisfies MetronomeCommands;
 }
 
@@ -195,6 +198,7 @@ describe('sounds use engine ids, per role', () => {
   });
 
   it('previews only valid ids', () => {
+    store.getState().holdEngine();
     store.getState().previewSound(2, true);
     store.getState().previewSound(KB_SOUND_NAMES.length, false);
     expect(commands.previewSound).toHaveBeenCalledTimes(1);
@@ -384,7 +388,6 @@ describe('every mutation maps 1:1 onto an engine command', () => {
 describe('transport start / stop / pause', () => {
   it('start opens the device and starts the transport at the polled frame', () => {
     store.getState().start();
-    expect(commands.start).toHaveBeenCalledTimes(1);
     expect(commands.metronomeStart).toHaveBeenCalledWith(NOW_FRAME);
     expect(store.getState().running).toBe(true);
   });

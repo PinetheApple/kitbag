@@ -21,6 +21,8 @@ export type MetronomeCommands = Pick<
   | 'setLatencyOffset'
   | 'setRamp'
   | 'setBarMute'
+  | 'engineHold'
+  | 'engineRelease'
 >;
 
 export type NowFrame = () => number;
@@ -75,6 +77,10 @@ export const defaultCommands: MetronomeCommands = {
   },
   setBarMute: (...args) => {
     getMetronomeRuntime().commands.setBarMute(...args);
+  },
+  engineHold: () => getMetronomeRuntime().commands.engineHold(),
+  engineRelease: () => {
+    getMetronomeRuntime().commands.engineRelease();
   },
 };
 

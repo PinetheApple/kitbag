@@ -38,6 +38,8 @@ KB_EXPORT uint32_t kb_engine_sample_rate(const kb_engine* engine);
 /* Monotonic frames rendered since start; the master clock. */
 KB_EXPORT uint64_t kb_engine_frames_rendered(const kb_engine* engine);
 
+#include "kitbag_engine_hold_api.h"
+
 /* --- Offline render (verify only, NOT the shipped ABI) ------------------ */
 
 #ifdef KITBAG_BUILD_TOOLS
@@ -180,8 +182,8 @@ KB_EXPORT void kb_metronome_set_count_in(
     int32_t distinct,
     int32_t sound
 );
-/* One click of `sound` at the current volume on the next block (last wins). It
- * waits queued until kb_engine_start runs the callback; bad ids are ignored. */
+/* One click of `sound` at the current volume on the next block (last wins).
+ * Dropped if the device is stopped when issued; bad ids are ignored. */
 KB_EXPORT void
 kb_metronome_preview_sound(kb_engine* engine, int32_t sound, int32_t accented);
 /* Volume multiplier [0, 2], default 1. */

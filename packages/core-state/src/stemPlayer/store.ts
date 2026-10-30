@@ -1,5 +1,9 @@
 import type { StemSetRecord } from '@kitbag/core-db';
-import { KB_MAX_TRACKS, KB_RESULT } from '@kitbag/core-native';
+import {
+  acquireEngineHold,
+  KB_MAX_TRACKS,
+  KB_RESULT,
+} from '@kitbag/core-native';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { mixActions, transportActions } from './actions.ts';
@@ -164,6 +168,7 @@ export function createStemPlayerStore(
 ): StoreApi<StemPlayerStore> {
   let session = 0;
   let requestedTracks = 0;
+  let releaseEngine: (() => void) | null = null;
   const saver = mixSaver(
     (mixes) => runtimeOf().records.saveStemMix(mixes),
     timing.mixSaveDelayMs,
@@ -267,6 +272,7 @@ export function createStemPlayerStore(
       ...closedState,
       open: async (setId, waveformBars) => {
         if (get().setId !== null) teardown(get);
+        releaseEngine ??= acquireEngineHold(runtimeOf().commands);
         const opened = ++session;
         set({ ...closedState, status: 'loading', setId });
         try {
@@ -280,6 +286,8 @@ export function createStemPlayerStore(
         session++;
         teardown(get);
         set(closedState);
+        releaseEngine?.();
+        releaseEngine = null;
       },
       ...mixActions(set, get, runtimeOf, saver),
       ...transportActions(get, runtimeOf, scrubSeek),
