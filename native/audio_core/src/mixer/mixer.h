@@ -143,7 +143,7 @@ class Mixer {
   bool track_at_end(int track) const;
 
   /// App thread, callback quiescent. Frees every source retired but not yet
-  /// reclaimed; Engine::Stop calls it, mirroring Metronome::ReleaseRetiredGrids.
+  /// reclaimed.
   void ReleaseRetiredSources();
 
  private:

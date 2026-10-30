@@ -67,12 +67,12 @@ bool Engine::StartLocked() {
   }
   StopWatchdog();
   ReleaseRetired();
-  metronome_.DropPendingPreviews();
+  metronome_.DropQueuedPreviews();
   stopped_unexpectedly_.store(false, std::memory_order_relaxed);
   const bool started = ma_device_start(&device_) == MA_SUCCESS;
   // Set only after the device is live, so a publisher that reads this can never
   // conclude "no reader" while the callback is already running.
-  device_running_.store(started, std::memory_order_relaxed);
+  device_running_.store(started, std::memory_order_release);
   if (started) {
     StartWatchdog();
   }
@@ -99,6 +99,11 @@ void Engine::Release() {
   }
 }
 
+void Engine::ResetHolders() {
+  const std::lock_guard<std::mutex> lock(lifecycle_mutex_);
+  holders_ = 0;
+}
+
 int32_t Engine::holders() const {
   const std::lock_guard<std::mutex> lock(lifecycle_mutex_);
   return holders_;
@@ -111,7 +116,7 @@ void Engine::StopDevice() {
   }
   // ma_device_stop blocks until the callback has returned, so from here on
   // there is no reader.
-  device_running_.store(false, std::memory_order_relaxed);
+  device_running_.store(false, std::memory_order_release);
   restarting_.store(false, std::memory_order_relaxed);
 }
 
@@ -220,7 +225,7 @@ void Engine::RestartDevice() {
   ma_device_stop(&device_);
   restarting_.store(false, std::memory_order_relaxed);
   const bool started = ma_device_start(&device_) == MA_SUCCESS;
-  device_running_.store(started, std::memory_order_relaxed);
+  device_running_.store(started, std::memory_order_release);
 }
 
 void Engine::DataCallback(

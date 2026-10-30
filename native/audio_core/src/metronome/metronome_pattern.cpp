@@ -69,7 +69,7 @@ void Metronome::QueuePreview(const Command& command) {
   pending_preview_accented_ = command.int_b != 0;
 }
 
-void Metronome::DropPendingPreviews() {
+void Metronome::DropQueuedPreviews() {
   preview_epoch_.fetch_add(1, std::memory_order_relaxed);
 }
 

@@ -57,6 +57,10 @@ void kb_engine_release(kb_engine* engine) {
   if (engine != nullptr) ToEngine(engine)->Release();
 }
 
+void kb_engine_reset_holders(kb_engine* engine) {
+  if (engine != nullptr) ToEngine(engine)->ResetHolders();
+}
+
 uint32_t kb_engine_sample_rate(const kb_engine* engine) {
   return engine == nullptr ? 0 : ToEngine(engine)->sample_rate();
 }

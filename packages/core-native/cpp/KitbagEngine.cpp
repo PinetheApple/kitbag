@@ -24,6 +24,8 @@ void kitbagInstall(facebook::jsi::Runtime& rt) {
   if (g_engine == nullptr) {
     kb_engine_create(&g_engine);
   }
+  // The engine outlives a JS reload; the old runtime's surfaces never released.
+  kb_engine_reset_holders(g_engine);
   installKitbagHostObject(rt, g_engine);
 }
 

@@ -193,18 +193,18 @@ void TestPreviewPlaysOneClickWhileStopped() {
 void TestPreviewQueuedBeforeDropIsSilent() {
   kitbag::Metronome metronome;
   metronome.PreviewSound(kTom, false);
-  metronome.DropPendingPreviews();
+  metronome.DropQueuedPreviews();
   const int64_t later = kHalfBeatFrames / kBlockFrames * kBlockFrames;
   const auto left = RenderLeft(metronome, kBeatFrames, [&](int64_t at) {
     if (at == later) metronome.PreviewSound(kHihat, true);
   });
   Check(
       PeakIn(left, 0) < kSilentCeiling,
-      "preview: one queued before DropPendingPreviews never sounds"
+      "preview: one queued before DropQueuedPreviews never sounds"
   );
   Check(
       PitchIs(left, later, kHihatAccentHz),
-      "preview: one queued after DropPendingPreviews still sounds"
+      "preview: one queued after DropQueuedPreviews still sounds"
   );
 }
 

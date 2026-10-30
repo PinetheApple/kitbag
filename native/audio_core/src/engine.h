@@ -24,7 +24,7 @@ class Engine {
  public:
   static constexpr uint32_t kSampleRate = 48000;
   static constexpr uint32_t kChannelCount = 2;
-  static constexpr uint64_t kDefaultIdleGraceMs = 2000;
+  static constexpr uint32_t kDefaultIdleGraceMs = 2000;
 
   Engine() = default;
   ~Engine();
@@ -35,10 +35,9 @@ class Engine {
   bool Init();
   bool Start();
   void Stop();
-  // A holder keeps the device started. With none left and nothing playing or
-  // queued to play, the watchdog stops it once the idle grace has passed.
   bool Hold();
   void Release();
+  void ResetHolders();
   int32_t holders() const;
   void SetMetronomeIntent(bool playing) {
     metronome_intent_.store(playing);
@@ -46,7 +45,7 @@ class Engine {
   void SetMixerIntent(bool playing) {
     mixer_intent_.store(playing);
   }
-  void set_idle_grace_ms(uint64_t grace_ms) {
+  void set_idle_grace_ms(uint32_t grace_ms) {
     idle_grace_ms_.store(grace_ms, std::memory_order_relaxed);
   }
 
@@ -56,7 +55,7 @@ class Engine {
   // True whenever the data callback can run. RtPublisher::Publish reads this to
   // decide whether a retired payload can be freed at once.
   bool is_running() const {
-    return device_running_.load(std::memory_order_relaxed);
+    return device_running_.load(std::memory_order_acquire);
   }
   uint64_t frames_rendered() const {
     return frames_rendered_.load(std::memory_order_relaxed);
@@ -149,7 +148,7 @@ class Engine {
   int32_t holders_ = 0;
   std::atomic<bool> metronome_intent_{false};
   std::atomic<bool> mixer_intent_{false};
-  std::atomic<uint64_t> idle_grace_ms_{kDefaultIdleGraceMs};
+  std::atomic<uint32_t> idle_grace_ms_{kDefaultIdleGraceMs};
 
   Metronome metronome_;
   Tuner tuner_;

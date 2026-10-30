@@ -10,12 +10,8 @@ namespace abi_test {
 namespace {
 
 using kitbag_test::Check;
-using Clock = std::chrono::steady_clock;
 
 constexpr int kIterations = 2000;
-constexpr auto kPoll = std::chrono::milliseconds(10);
-constexpr auto kStopWithin = std::chrono::milliseconds(1500);
-constexpr auto kSeveralWatchTicks = std::chrono::milliseconds(700);
 
 void HoldAndPlayMetronome(kb_engine* engine) {
   for (int i = 0; i < kIterations; ++i) {
@@ -41,15 +37,6 @@ void RawStartStop(kb_engine* engine) {
     kb_engine_start(engine);
     kb_engine_stop(engine);
   }
-}
-
-bool StopsWithin(const kb_engine* engine) {
-  const Clock::time_point deadline = Clock::now() + kStopWithin;
-  while (kb_engine_device_running(engine) == 1) {
-    if (Clock::now() > deadline) return false;
-    std::this_thread::sleep_for(kPoll);
-  }
-  return true;
 }
 
 void AwaitTwoBlocks(const kb_engine* engine, Clock::time_point deadline) {

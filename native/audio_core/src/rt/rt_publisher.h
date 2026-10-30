@@ -111,8 +111,7 @@ class RtPublisher {
   // Collect can only reclaim as the clock advances, so while the engine is
   // stopped — including before it is ever started, which is when a grid is
   // usually set — nothing is reclaimable and retired payloads accumulate. The
-  // caller must guarantee the audio callback is not running; Engine::Stop is
-  // the place that can.
+  // caller must guarantee the audio callback is not running.
   void ReclaimAll() {
     retired_.clear();
   }

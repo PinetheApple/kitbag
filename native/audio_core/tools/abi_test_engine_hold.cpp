@@ -16,11 +16,7 @@ namespace abi_test {
 namespace {
 
 using kitbag_test::Check;
-using Clock = std::chrono::steady_clock;
 
-constexpr auto kPoll = std::chrono::milliseconds(10);
-constexpr auto kStopWithin = std::chrono::milliseconds(1500);
-constexpr auto kSeveralWatchTicks = std::chrono::milliseconds(700);
 constexpr uint64_t kDeferredStartFrames = 48000 * 30;
 constexpr int32_t kBeep = 0;
 constexpr uint32_t kTailFrames = 4800;
@@ -34,15 +30,6 @@ kb_engine* IdleEngine() {
 
 bool Running(const kb_engine* engine) {
   return kb_engine_device_running(engine) == 1;
-}
-
-bool StopsWithin(const kb_engine* engine, Clock::duration limit) {
-  const Clock::time_point deadline = Clock::now() + limit;
-  while (Running(engine)) {
-    if (Clock::now() > deadline) return false;
-    std::this_thread::sleep_for(kPoll);
-  }
-  return true;
 }
 
 bool StillRunningAfterTicks(const kb_engine* engine) {
@@ -75,6 +62,20 @@ void TestHoldCounts() {
   kb_engine_destroy(engine);
 }
 
+void TestResetHoldersAfterReload() {
+  kb_engine* engine = IdleEngine();
+  if (engine == nullptr) return;
+  kb_engine_hold(engine);
+  kb_engine_hold(engine);
+  kb_engine_reset_holders(engine);
+  kb_engine_reset_holders(nullptr);
+  Check(
+      kb_engine_holders(engine) == 0 && StopsWithin(engine),
+      "reset: leaked holders close and the idle device stops"
+  );
+  kb_engine_destroy(engine);
+}
+
 void TestStopsOnlyWhenIdle() {
   kb_engine* engine = IdleEngine();
   if (engine == nullptr) return;
@@ -87,7 +88,7 @@ void TestStopsOnlyWhenIdle() {
   );
   kb_engine_release(engine);
   Check(
-      StopsWithin(engine, kStopWithin),
+      StopsWithin(engine),
       "idle: the last release with nothing playing stops the device"
   );
   kb_engine_destroy(engine);
@@ -118,7 +119,7 @@ void TestPlayingOutlivesRelease(
   kb_engine_release(engine);
   Check(StillRunningAfterTicks(engine), kept);
   halt(engine);
-  Check(StopsWithin(engine, kStopWithin), stopped);
+  Check(StopsWithin(engine), stopped);
   kb_engine_destroy(engine);
 }
 
@@ -168,7 +169,7 @@ void TestPlayRestartsIdleDevice() {
   kb_mixer_play(engine);
   kb_mixer_pause(engine);
   kb_engine_release(engine);
-  Check(StopsWithin(engine, kStopWithin), "restart: the idle device stops");
+  Check(StopsWithin(engine), "restart: the idle device stops");
   PlayMetronome(engine);
   Check(
       StillRunningAfterTicks(engine),
@@ -229,6 +230,7 @@ void TestPreviewQueuedWhileStopped() {
 
 void RunEngineHoldAbiTests() {
   TestHoldCounts();
+  TestResetHoldersAfterReload();
   TestStopsOnlyWhenIdle();
   TestDefaultGraceOutlastsChurn();
   TestReleaseWhilePlaying();

@@ -118,9 +118,9 @@ class Metronome {
   // Return to constant-tempo mode, keeping the click's phase: the first bpm_
   // click falls one whole beat after the last grid beat (SPEC.md §4.2.1).
   void ClearGrid(uint64_t now_frame, bool engine_running);
-  // The audio callback must be stopped, as in Engine::Start and Engine::Stop.
+  // The audio callback must be stopped.
   void ReleaseRetiredGrids();
-  void DropPendingPreviews();
+  void DropQueuedPreviews();
 
   bool is_running() const {
     return running_flag_.load(std::memory_order_relaxed);
