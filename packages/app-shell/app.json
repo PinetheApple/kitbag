@@ -43,6 +43,16 @@
     },
     "ios": {
       "bundleIdentifier": "com.kitbag.app",
+      "splash": {
+        "image": "./assets/splash-icon.png",
+        "backgroundColor": "#F5F3EE",
+        "resizeMode": "contain",
+        "dark": {
+          "image": "./assets/splash-icon.png",
+          "backgroundColor": "#0E0D10",
+          "resizeMode": "contain"
+        }
+      },
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Kitbag uses the microphone to hear your instrument while the tuner screen is open. It stops listening when you leave the tuner or switch apps."
       }

@@ -14,7 +14,7 @@ const THIRD_PARTY = join(
   'audio_core',
   'third_party',
 );
-const LICENCE_FILE = /^(LICEN[CS]E|COPYING)(\..+)?$/i;
+const LICENCE_FILE = /^(UN)?LICEN[CS]E|^COPYING/i;
 
 const isFile = (path: string) => statSync(path).isFile();
 
@@ -29,6 +29,23 @@ function vendoredLibraries(): string[] {
     .map((path) => relative(THIRD_PARTY, dirname(path)));
   return [...headers, ...licensed].sort();
 }
+
+describe('licence file names', () => {
+  it.each([
+    'LICENSE',
+    'LICENCE.txt',
+    'LICENSE-MIT',
+    'COPYING',
+    'COPYING.LESSER',
+    'UNLICENSE',
+  ])('recognises %s', (name) => {
+    expect(LICENCE_FILE.test(name)).toBe(true);
+  });
+
+  it.each(['README.md', 'kiss_fft.h'])('ignores %s', (name) => {
+    expect(LICENCE_FILE.test(name)).toBe(false);
+  });
+});
 
 describe('attributions', () => {
   it('list every vendored native library and nothing that is not vendored', () => {

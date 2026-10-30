@@ -1,11 +1,10 @@
-import { palette, type ThemeMode } from '@kitbag/core-design';
 import {
   configureAppearancePersistence,
   type AppearanceKey,
-  type ThemeChoice,
 } from '@kitbag/core-state';
 import * as SystemUI from 'expo-system-ui';
 
+import { appearanceApplier } from './appearance';
 import { APPEARANCE_KEYS, appearancePersistence } from './appearancePreference';
 import { storedWebPreference } from './storedWebPreference';
 
@@ -17,7 +16,9 @@ configureAppearancePersistence(
   ),
 );
 
-// The browser has no OS scheme to override; the theme resolves in JS.
-export function applyAppearance(_choice: ThemeChoice, mode: ThemeMode): void {
-  SystemUI.setBackgroundColorAsync(palette.bg[mode]).catch(() => undefined);
-}
+export const applyAppearance = appearanceApplier({
+  setColorScheme: () => undefined,
+  setBackgroundColor: (hex) => {
+    SystemUI.setBackgroundColorAsync(hex).catch(() => undefined);
+  },
+});

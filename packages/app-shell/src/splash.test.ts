@@ -13,7 +13,11 @@ interface Splash {
 
 const expo = (
   JSON.parse(readFileSync(join(APP, 'app.json'), 'utf8')) as {
-    expo: { splash: Splash; android: { splash: Splash } };
+    expo: {
+      splash: Splash;
+      android: { splash: Splash };
+      ios: { splash: Splash };
+    };
   }
 ).expo;
 
@@ -29,6 +33,8 @@ describe('splash background', () => {
     expect(expo.splash.backgroundColor).toBe(palette.bg.light);
     expect(expo.android.splash.backgroundColor).toBe(palette.bg.light);
     expect(expo.android.splash.dark?.backgroundColor).toBe(palette.bg.dark);
+    expect(expo.ios.splash.backgroundColor).toBe(palette.bg.light);
+    expect(expo.ios.splash.dark?.backgroundColor).toBe(palette.bg.dark);
     expect(splashColour('values')).toBe(palette.bg.light);
     expect(splashColour('values-night')).toBe(palette.bg.dark);
   });

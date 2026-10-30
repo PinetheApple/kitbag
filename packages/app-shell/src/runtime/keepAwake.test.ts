@@ -27,7 +27,7 @@ function rig() {
   const stemPlayer = fakeSource<{ status: StemPlayerStatus }>({
     status: 'idle',
   });
-  const setting = fakeSource({ keepScreenAwake: true });
+  const appearance = fakeSource({ keepScreenAwake: true });
   const calls: boolean[] = [];
   const engine = { mixerPlaying: false };
   let tick: (() => void) | undefined;
@@ -37,7 +37,7 @@ function rig() {
     metronome,
     tuner,
     stemPlayer,
-    setting,
+    appearance,
     mixerPlaying: () => engine.mixerPlaying,
     poll: (onTick) => {
       polls++;
@@ -55,7 +55,7 @@ function rig() {
     metronome,
     tuner,
     stemPlayer,
-    setting,
+    appearance,
     calls,
     engine,
     tick: () => tick?.(),
@@ -73,24 +73,15 @@ describe('screenStaysOn', () => {
   };
 
   it('lets the screen sleep when nothing is running', () => {
-    expect(screenStaysOn(idle, true)).toBe(false);
+    expect(screenStaysOn(idle)).toBe(false);
   });
 
   it.each(['metronomeRunning', 'songPlaying', 'tunerListening'] as const)(
     'keeps the screen on while %s',
     (flag) => {
-      expect(screenStaysOn({ ...idle, [flag]: true }, true)).toBe(true);
+      expect(screenStaysOn({ ...idle, [flag]: true })).toBe(true);
     },
   );
-
-  it('never keeps the screen on with the setting off', () => {
-    const everything = {
-      metronomeRunning: true,
-      songPlaying: true,
-      tunerListening: true,
-    };
-    expect(screenStaysOn(everything, false)).toBe(false);
-  });
 });
 
 describe('wireKeepAwake', () => {
@@ -150,15 +141,15 @@ describe('wireKeepAwake', () => {
   it('releases the hold when the setting goes off and reapplies it when it comes back', () => {
     const r = rig();
     r.metronome.set({ running: true });
-    r.setting.set({ keepScreenAwake: false });
+    r.appearance.set({ keepScreenAwake: false });
     r.foreground();
-    r.setting.set({ keepScreenAwake: true });
+    r.appearance.set({ keepScreenAwake: true });
     expect(r.calls).toEqual([true, false, true]);
   });
 
   it('does not hold the screen for practice that starts with the setting off', () => {
     const r = rig();
-    r.setting.set({ keepScreenAwake: false });
+    r.appearance.set({ keepScreenAwake: false });
     r.metronome.set({ running: true });
     r.tuner.set({ mic: 'listening' });
     expect(r.calls).toEqual([]);

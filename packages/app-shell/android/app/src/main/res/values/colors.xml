@@ -1,6 +1,4 @@
 <resources>
-  <!-- #52, #100: the splash background is the §12.2 theme background; values-night
-       holds the dark one. splash.test.ts pins both to the palette. -->
   <color name="splashscreen_background">#F5F3EE</color>
   <color name="iconBackground">#0E0D10</color>
   <color name="colorPrimary">#023c69</color>

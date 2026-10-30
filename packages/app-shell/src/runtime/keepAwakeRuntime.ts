@@ -17,7 +17,7 @@ wireKeepAwake({
   metronome: metronomeStore,
   tuner: tunerStore,
   stemPlayer: stemPlayerStore,
-  setting: getAppearanceStore(),
+  appearance: getAppearanceStore(),
   mixerPlaying: () => getKitbagHostObject().mixer_playing !== 0,
   poll: (tick) => {
     const timer = setInterval(tick, MIXER_POLL_MS);

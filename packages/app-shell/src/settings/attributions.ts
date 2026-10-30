@@ -14,5 +14,6 @@ export const ATTRIBUTIONS: readonly Attribution[] = [
   },
   { name: 'Space Grotesk', licence: 'OFL-1.1' },
   { name: 'Inter', licence: 'OFL-1.1' },
-  { name: 'MaterialCommunityIcons (@expo/vector-icons)', licence: 'MIT' },
+  { name: 'Material Design Icons', licence: 'Pictogrammers Free License' },
+  { name: '@expo/vector-icons', licence: 'MIT' },
 ];
