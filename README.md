@@ -17,7 +17,8 @@ no caps, no paywalls, ever.
 
 ## What it looks like
 
-Screenshots from a release build on an Android phone, dark theme then light.
+Screenshots from Android builds, dark theme then light; the stem screens come from
+an emulator with test data.
 The metronome is being redesigned (#175) and is not shown.
 
 <table>

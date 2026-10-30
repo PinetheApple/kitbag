@@ -223,7 +223,8 @@ Short version:
 - **Phase 3** — rebuild the tools in dependency order, one issue per PR against
   `main`. Built: the metronome with setlists and presets, the Home hub, the tuner
   (#117, #127), song import with background beat analysis (#160), the Songs and
-  Stem songs screens (#178) and the stem player (#137, #177). Not built: a
+  Stem songs screens (#178) and the stem player (#137, #177; device
+  verification pending, issues open). Not built: stem speed and key (#138), a
   single-song player (§6), play along (§8), Settings (#170). Open issues are the
   backlog.
 
