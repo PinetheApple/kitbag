@@ -131,7 +131,7 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   which had never run in CI. **[recorded]**
 
 - **2026-07-24 · Phase 3 opened; F1-M1 metronome store built (§5, §13.3, #40)** —
-  Phase gate 2→3 cleared (device reading #33 PASSED). Stood up `docs/archive/phase3-tracker.md`
+  Phase gate 2→3 cleared (device reading #33 PASSED). Stood up `docs/phase3-tracker.md`
   and dispatched the one §5 task that clears headlessly: the core-state metronome
   config store. Everything else in §5 is design-gated (screens) or device-gated
   (background §5.6, soak §5.8). Store maps mutations 1:1 to TurboModule commands and
@@ -436,3 +436,8 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   through `expo`, and importing it from the `core-native` barrel would need a stub in every
   package's tests. The mixer's playing state is engine truth with no store copy, so it is
   polled once a second while a stem song is open. **[recorded]**
+
+- **2026-10-30 · Songs filter menu (§6.2, §12, #178)** — The Songs filter icon opens
+  variant A's menu from `design/kitbag-library.html`: filter by analysis status, sort by
+  title, date added or BPM. This amends the earlier #178 entry, which left the icon out
+  because its action was undefined. The menu is not built yet. **[user]**
