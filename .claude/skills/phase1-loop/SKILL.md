@@ -45,7 +45,7 @@ These are not stylistic. Each one is here because it went wrong:
 - **Never edit SPEC.md's decisions.** Recording that something landed is fine
   (annotate §2 entries in the established strikethrough style). Changing what the
   spec *requires* is the user's call.
-- **Never loosen a test to make it pass.** CLAUDE.md calls this out by name;
+- **Never loosen a test to make it pass.** AGENTS.md calls this out by name;
   `tuner_verify` was red for months before a real fix (#117).
 
 ## Picking the next task

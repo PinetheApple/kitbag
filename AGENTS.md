@@ -1,7 +1,8 @@
 # Kitbag — Agent Workflow Guide
 
-> **One file, every harness.** `CLAUDE.md` is a symlink to this file, so Claude
-> Code, pi and opencode all read exactly these instructions. Edit this file.
+> **One file, every harness.** Claude Code, pi and opencode read `AGENTS.md`
+> directly. Do not add a `CLAUDE.md` or `CLAUDE.local.md`: Claude Code reads one of
+> those instead of this file.
 
 > **`SPEC.md` is the source of truth**, and the only planning document. Not
 > `CHANGELOG.md`, not this file. If either disagrees with SPEC.md, SPEC.md wins and

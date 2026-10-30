@@ -20,7 +20,6 @@ CHANGELOG.md
 # buries a feature diff under hundreds of unrelated lines. SPEC.md is the source
 # of truth and is hand-formatted.
 SPEC.md
-CLAUDE.md
 AGENTS.md
 CONTRIBUTING.md
 CONTEXT.md
