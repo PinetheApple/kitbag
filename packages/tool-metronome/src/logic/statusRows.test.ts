@@ -118,6 +118,19 @@ describe('statusRows', () => {
     });
   });
 
+  it('keeps the count-in up while the engine already reports the ramp', () => {
+    expect(
+      statusRows(
+        {
+          countingIn: 1,
+          barMutePosition: 0,
+          rampState: KB_RAMP_STATE_STEPPING,
+        },
+        true,
+      ),
+    ).toEqual({ first: 'countIn', second: 'afterCountIn' });
+  });
+
   it('stacks the mute cycle above the ramp', () => {
     expect(
       statusRows({ ...IN_CYCLE, rampState: KB_RAMP_STATE_STEPPING }, true),

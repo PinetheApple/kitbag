@@ -33,6 +33,15 @@ describe('sounding pulse', () => {
     expect(soundingPulse(0.4, 4, 2, 1)).toBe(3);
   });
 
+  it('finds the last pulse of an odd bar', () => {
+    expect(soundingPulse(0.999, 7, 3, 6)).toBe(20);
+  });
+
+  it('gives one pulse per beat at ×1', () => {
+    expect(soundingPulse(0.3, 4, 1, 1)).toBe(1);
+    expect(pulseInBeat(1, 1, 1)).toBe(0);
+  });
+
   it('lights nothing when the phase and the current beat disagree', () => {
     expect(soundingPulse(0.49, 4, 2, 2)).toBe(NO_PULSE);
   });
