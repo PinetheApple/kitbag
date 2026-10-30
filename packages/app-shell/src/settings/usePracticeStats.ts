@@ -2,7 +2,7 @@ import type { PracticeStats } from '@kitbag/core-db';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 
-import { readPracticeStats } from './practiceStats';
+import { readPracticeStats } from '@/runtime/practiceRuntime';
 
 export function usePracticeStats(): PracticeStats | null {
   const [stats, setStats] = useState<PracticeStats | null>(null);
