@@ -1,9 +1,10 @@
 import { createThemedStyles, size, stemPlayer } from '@kitbag/core-design';
 import { useStemPlayer } from '@kitbag/core-state';
-import { useCallback, useMemo, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { BackHandler, ScrollView, Text, View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 
+import { collapseFaderOnBack } from '../logic/faderBack.ts';
 import { GainFader } from './GainFader.tsx';
 import { LevelChip } from './LevelChip.tsx';
 import { StemRowView } from './StemRowView.tsx';
@@ -78,6 +79,18 @@ export function StemList({
   const expandMaster = useCallback(() => {
     setExpanded((open) => (open === MASTER ? null : MASTER));
   }, []);
+  const open = expanded !== null;
+  useEffect(() => {
+    if (!open) return undefined;
+    const back = BackHandler.addEventListener('hardwareBackPress', () =>
+      collapseFaderOnBack(open, () => {
+        setExpanded(null);
+      }),
+    );
+    return () => {
+      back.remove();
+    };
+  }, [open]);
   const indexes = useMemo(
     () => Array.from({ length: count }, (_, i) => i),
     [count],
