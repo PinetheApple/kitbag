@@ -1,38 +1,56 @@
 #!/usr/bin/env bash
-# Fails if an APK is unsigned or signed with the template debug key.
-#
-# The first key an app is published under is locked in forever: an APK signed
-# with the repo's debug.keystore can never be upgraded by a properly-signed
-# build, and that key is public. Release signing falls back to the debug key when
-# ANDROID_KEYSTORE_* is unset (see android/app/build.gradle), so this is the gate
-# that stops a fallback build from being published.
+# Release builds fall back to the public debug key when ANDROID_KEYSTORE_* is unset,
+# and the first published key is permanent: this stops that fallback shipping.
 set -uo pipefail
 
 readonly EXIT_OK=0
-readonly EXIT_DEBUG_KEY=1
+readonly EXIT_REJECTED=1
 readonly EXIT_CANNOT_CHECK=2
 readonly EXIT_USAGE=3
 
+normalise_digest() {
+  tr 'A-F' 'a-f' | tr -d ': '
+}
+
 usage() {
   cat <<'USAGE'
-usage: verify-apk-signature.sh <apk> [debug-keystore]
+usage: verify-apk-signature.sh [--expect-sha256 HEX] <apk> [debug-keystore]
 
 Verifies that <apk> carries exactly one signer and that the signer is not the
 debug key. debug-keystore defaults to the app's checked-in debug.keystore.
+With --expect-sha256, the signer's certificate SHA-256 must also equal HEX.
 
-exit 0  signed with a non-debug key
-exit 1  unsigned, multiple signers, or signed with the debug key
+exit 0  signed with a non-debug key (and the expected one, if given)
+exit 1  unsigned, multiple signers, the debug key, or not the expected key
 exit 2  cannot determine (missing tool, unreadable keystore)
 exit 3  usage error
 USAGE
 }
 
-if [[ ${1:-} == "-h" || ${1:-} == "--help" ]]; then
-  usage
-  exit "$EXIT_USAGE"
-fi
+EXPECTED_DIGEST=""
+while [[ ${1:-} == -* ]]; do
+  case $1 in
+    -h | --help)
+      usage
+      exit "$EXIT_USAGE"
+      ;;
+    --expect-sha256)
+      EXPECTED_DIGEST=$(normalise_digest <<<"${2:-}")
+      [[ -n $EXPECTED_DIGEST ]] || {
+        usage
+        exit "$EXIT_USAGE"
+      }
+      shift 2
+      ;;
+    *)
+      usage
+      exit "$EXIT_USAGE"
+      ;;
+  esac
+done
+readonly EXPECTED_DIGEST
 
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit "$EXIT_CANNOT_CHECK"
 
 readonly APK=${1:-}
 readonly DEBUG_KEYSTORE=${2:-packages/app-shell/android/app/debug.keystore}
@@ -47,19 +65,14 @@ if [[ ! -f $APK ]]; then
   exit "$EXIT_USAGE"
 fi
 
-# apksigner is not on PATH in a default SDK install; it lives per-build-tools
-# version, so take the highest available.
-find_apksigner() {
-  if command -v apksigner >/dev/null 2>&1; then
-    command -v apksigner
-    return
-  fi
-  local sdk=${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}
-  [[ -n $sdk ]] || return 1
-  find "$sdk/build-tools" -maxdepth 2 -name apksigner -type f 2>/dev/null | sort -V | tail -1
+find_build_tool() {
+  local name=$1 sdk=${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}
+  command -v "$name" && return
+  [[ -n $sdk ]] || return 0
+  find "$sdk/build-tools" -maxdepth 2 -name "$name" -type f 2>/dev/null | sort -V | tail -1
 }
 
-APKSIGNER=$(find_apksigner)
+APKSIGNER=$(find_build_tool apksigner)
 if [[ -z ${APKSIGNER:-} || ! -x $APKSIGNER ]]; then
   echo "verify-apk-signature: apksigner not found; set ANDROID_HOME" >&2
   exit "$EXIT_CANNOT_CHECK"
@@ -76,18 +89,15 @@ VERIFY_STATUS=$?
 if ((VERIFY_STATUS != 0)); then
   echo "verify-apk-signature: APK is not signed, or apksigner rejected it:" >&2
   echo "$CERTS" | head -40 >&2
-  exit "$EXIT_DEBUG_KEY"
+  exit "$EXIT_REJECTED"
 fi
 
-# The signer label differs across build-tools versions: "Signer #1", "Signer
-# (minSdkVersion=...) #1", and "V2 Signer:" have all shipped. Match the digest
-# lines instead, which are stable, then normalise case and separators.
+# Signer labels differ across build-tools versions; the digest line is stable.
 mapfile -t DIGESTS < <(
   echo "$CERTS" |
     grep -iE 'certificate SHA-?256 digest' |
     sed -E 's/^[^:]*: *//' |
-    tr 'A-F' 'a-f' |
-    tr -d ': ' |
+    normalise_digest |
     sort -u
 )
 
@@ -100,7 +110,7 @@ fi
 if ((${#DIGESTS[@]} > 1)); then
   echo "verify-apk-signature: expected one signer, found ${#DIGESTS[@]}:" >&2
   printf '  %s\n' "${DIGESTS[@]}" >&2
-  exit "$EXIT_DEBUG_KEY"
+  exit "$EXIT_REJECTED"
 fi
 
 readonly APK_DIGEST=${DIGESTS[0]}
@@ -115,8 +125,7 @@ DEBUG_DIGEST=$(
     grep -iE 'SHA-?256:' |
     head -1 |
     sed -E 's/^[^:]*: *//' |
-    tr 'A-F' 'a-f' |
-    tr -d ': '
+    normalise_digest
 )
 
 if [[ -z $DEBUG_DIGEST ]]; then
@@ -127,8 +136,15 @@ fi
 if [[ $APK_DIGEST == "$DEBUG_DIGEST" ]]; then
   echo "verify-apk-signature: APK is signed with the DEBUG key — never publish this" >&2
   echo "  set ANDROID_KEYSTORE_PATH / ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS" >&2
-  exit "$EXIT_DEBUG_KEY"
+  exit "$EXIT_REJECTED"
 fi
 
-echo "verify-apk-signature: ok — one signer, not the debug key (sha256 ${APK_DIGEST:0:16}...)"
+if [[ -n $EXPECTED_DIGEST && $APK_DIGEST != "$EXPECTED_DIGEST" ]]; then
+  echo "verify-apk-signature: APK is not signed with the expected release certificate" >&2
+  echo "  signer   ${APK_DIGEST}" >&2
+  echo "  expected ${EXPECTED_DIGEST}" >&2
+  exit "$EXIT_REJECTED"
+fi
+
+echo "verify-apk-signature: ok — one signer, not the debug key${EXPECTED_DIGEST:+, the expected certificate} (sha256 ${APK_DIGEST:0:16}...)"
 exit "$EXIT_OK"

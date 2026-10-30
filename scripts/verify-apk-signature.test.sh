@@ -1,25 +1,16 @@
 #!/usr/bin/env bash
-# Tests verify-apk-signature.sh against a stubbed apksigner.
-#
-# The script under test is a gate whose failure mode is silence: if it wrongly
-# reports ok, a debug-signed APK ships and the published key is wrong forever.
-# One such bug already shipped — a greedy sed left the last byte of keytool's
-# colon-separated digest, so every debug-signed APK passed. These cases pin it.
-#
-# Needs only a JDK (keytool). No Android SDK, no device, no real APK.
 set -uo pipefail
 
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 
 readonly SCRIPT=scripts/verify-apk-signature.sh
-readonly TMP=$(mktemp -d)
+TMP=$(mktemp -d) || exit 1
+readonly TMP
 trap 'rm -rf "$TMP"' EXIT
 
-readonly DEBUG_DIGEST='AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99'
-readonly DEBUG_FLAT='aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899'
 readonly REAL_FLAT='1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef'
+readonly OTHER_FLAT='fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321'
 
-# A keystore whose SHA-256 the stub can echo back as the "debug" key.
 readonly KEYSTORE="$TMP/debug.keystore"
 keytool -genkeypair -v -storetype pkcs12 -keystore "$KEYSTORE" \
   -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 1 \
@@ -34,8 +25,9 @@ REAL_DEBUG_FLAT=$(
 )
 
 readonly SDK="$TMP/sdk"
-mkdir -p "$SDK/build-tools/36.0.0"
-cat > "$SDK/build-tools/36.0.0/apksigner" <<'STUB'
+readonly TOOLS="$SDK/build-tools/36.0.0"
+mkdir -p "$TOOLS"
+cat > "$TOOLS/apksigner" <<'STUB'
 #!/usr/bin/env bash
 case "$FAKE_CASE" in
   unsigned)
@@ -60,19 +52,19 @@ case "$FAKE_CASE" in
 esac
 exit 0
 STUB
-chmod +x "$SDK/build-tools/36.0.0/apksigner"
+chmod +x "$TOOLS/apksigner"
 
 readonly APK="$TMP/app.apk"
 : > "$APK"
 
 FAILED=0
 
-# expect <name> <case> <digest> <want_exit> <want_text>
 expect() {
   local name=$1 fake_case=$2 digest=$3 want_exit=$4 want_text=$5
+  shift 5
   local out status
-  out=$(ANDROID_HOME="$SDK" FAKE_CASE="$fake_case" FAKE_DIGEST="$digest" \
-    bash "$SCRIPT" "$APK" "$KEYSTORE" 2>&1)
+  out=$(PATH="$TOOLS:$PATH" ANDROID_HOME="$SDK" FAKE_CASE="$fake_case" FAKE_DIGEST="$digest" \
+    bash "$SCRIPT" "$@" "$APK" "$KEYSTORE" 2>&1)
   status=$?
   if ((status != want_exit)); then
     echo "FAIL $name: exit $status, wanted $want_exit"
@@ -99,6 +91,10 @@ expect "scheme-labelled signer parsed"  scheme_labelled "$REAL_FLAT"       0 "ok
 expect "two distinct signers rejected"  two_signers     "$REAL_FLAT"       1 "expected one signer"
 expect "uppercase digest normalised"    uppercase       "$REAL_DEBUG_FLAT" 1 "DEBUG key"
 expect "missing digest cannot check"    no_digest       "$REAL_FLAT"       2 "could not read"
+expect "expected key accepted"          numbered        "$REAL_FLAT"       0 "the expected certificate" \
+  --expect-sha256 "${REAL_FLAT^^}"
+expect "unexpected non-debug key rejected" numbered     "$OTHER_FLAT"      1 "expected release certificate" \
+  --expect-sha256 "$REAL_FLAT"
 
 if ((FAILED)); then
   echo "verify-apk-signature.test: FAILED"

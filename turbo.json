@@ -5,7 +5,12 @@
       "dependsOn": ["^typecheck"]
     },
     "lint": {},
-    "test": {},
+    "transit": {
+      "dependsOn": ["^transit"]
+    },
+    "test": {
+      "dependsOn": ["transit"]
+    },
     "generate:check": {}
   }
 }
