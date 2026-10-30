@@ -3,6 +3,7 @@ export function wheelIndex(
   pitchDp: number,
   count: number,
 ): number {
+  'worklet';
   return Math.min(Math.max(Math.round(offsetDp / pitchDp), 0), count - 1);
 }
 

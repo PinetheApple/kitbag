@@ -1,13 +1,18 @@
 import { useCallback, useEffect, useRef } from 'react';
 import {
   Pressable,
-  ScrollView,
-  Text,
   View,
   type AccessibilityActionEvent,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
+import Animated, {
+  useAnimatedRef,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  type SharedValue,
+} from 'react-native-reanimated';
 
 import { size, textRoles } from '../roles.ts';
 import { wheelPicker } from '../metronomeRoles.ts';
@@ -53,6 +58,7 @@ const useStyles = createThemedStyles((theme) => ({
   selectedText: {
     ...textStyle(textRoles.wheelSelected),
     color: theme.color.text,
+    position: 'absolute',
   },
   band: {
     position: 'absolute',
@@ -69,23 +75,36 @@ const useStyles = createThemedStyles((theme) => ({
 
 interface WheelItemProps {
   readonly value: number;
-  readonly selected: boolean;
+  readonly index: number;
+  readonly liveIndex: SharedValue<number>;
   readonly onPress: (value: number) => void;
 }
 
-function WheelItem({ value, selected, onPress }: WheelItemProps) {
+function WheelItem({ value, index, liveIndex, onPress }: WheelItemProps) {
   const styles = useStyles();
   const handlePress = useCallback(() => {
     onPress(value);
   }, [onPress, value]);
+  const plain = useAnimatedStyle(() => ({
+    opacity: liveIndex.value === index ? 0 : 1,
+  }));
+  const chosen = useAnimatedStyle(() => ({
+    opacity: liveIndex.value === index ? 1 : 0,
+  }));
   return (
     <Pressable style={styles.item} onPress={handlePress}>
-      <Text
+      <Animated.Text
         maxFontSizeMultiplier={UNSCALED_TEXT}
-        style={selected ? styles.selectedText : styles.itemText}
+        style={[styles.itemText, plain]}
       >
         {String(value)}
-      </Text>
+      </Animated.Text>
+      <Animated.Text
+        maxFontSizeMultiplier={UNSCALED_TEXT}
+        style={[styles.selectedText, chosen]}
+      >
+        {String(value)}
+      </Animated.Text>
     </Pressable>
   );
 }
@@ -104,13 +123,23 @@ export function WheelPicker({
   accessibilityLabel,
 }: WheelPickerProps) {
   const styles = useStyles();
-  const scroll = useRef<ScrollView>(null);
+  const scroll = useAnimatedRef<Animated.ScrollView>();
   const index = Math.max(values.indexOf(selected), 0);
   const initialOffset = useRef({ x: 0, y: index * PITCH }).current;
+  const liveIndex = useSharedValue(index);
+  const count = values.length;
 
   useEffect(() => {
+    liveIndex.value = index;
     scroll.current?.scrollTo({ y: index * PITCH, animated: true });
-  }, [index]);
+  }, [index, liveIndex, scroll]);
+
+  const handleScroll = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      const next = wheelIndex(event.contentOffset.y, PITCH, count);
+      if (liveIndex.value !== next) liveIndex.value = next;
+    },
+  });
 
   const settle = useCallback(
     (offsetY: number) => {
@@ -156,7 +185,7 @@ export function WheelPicker({
       style={styles.wheel}
     >
       <View style={styles.window}>
-        <ScrollView
+        <Animated.ScrollView
           ref={scroll}
           nestedScrollEnabled
           showsVerticalScrollIndicator={false}
@@ -166,16 +195,19 @@ export function WheelPicker({
           contentContainerStyle={styles.content}
           onMomentumScrollEnd={handleMomentumEnd}
           onScrollEndDrag={handleDragEnd}
+          onScroll={handleScroll}
+          scrollEventThrottle={1}
         >
-          {values.map((value) => (
+          {values.map((value, valueIndex) => (
             <WheelItem
               key={value}
               value={value}
-              selected={value === selected}
+              index={valueIndex}
+              liveIndex={liveIndex}
               onPress={onSelect}
             />
           ))}
-        </ScrollView>
+        </Animated.ScrollView>
         <View style={styles.band} />
       </View>
     </View>
