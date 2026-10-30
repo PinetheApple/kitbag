@@ -10,6 +10,7 @@ import { useCallback } from 'react';
 import { Text, View } from 'react-native';
 
 import type { PracticeField } from '../logic/practiceEntry.ts';
+import { rampStepSpoken, rampStepText } from '../logic/rampStep.ts';
 import {
   RAMP_UNIT_OPTIONS,
   rampUnitFromOption,
@@ -64,7 +65,7 @@ function TempoRow({ editor, onType }: RowsProps) {
 
 function CadenceRows({ editor, onType }: RowsProps) {
   const styles = usePracticeStyles();
-  const { stepBpm, interval, unit } = editor.ramp;
+  const { stepBpm, startBpm, targetBpm, interval, unit } = editor.ramp;
   const { setUnit } = editor;
   const handleTypeStep = useCallback(() => {
     onType('stepBpm');
@@ -85,8 +86,8 @@ function CadenceRows({ editor, onType }: RowsProps) {
         <StepControl
           variant="inlineLarge"
           label="Ramp step"
-          value={`+${String(stepBpm)}`}
-          accessibilityValue={`${bpm(stepBpm)} per step`}
+          value={rampStepText(stepBpm, startBpm, targetBpm)}
+          accessibilityValue={rampStepSpoken(stepBpm, startBpm, targetBpm)}
           neighbourGapDp={space.controlGap}
           onStep={editor.stepStepSize}
           onValuePress={handleTypeStep}
