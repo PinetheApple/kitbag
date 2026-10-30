@@ -65,7 +65,6 @@ export const size = {
   switchOutlinedHeight: 22,
   switchOutlinedKnob: 16,
   switchOutlinedKnobInset: 2,
-  readoutMinWidth: 42,
   buttonSheet: 44,
   buttonPrompt: 40,
   stepInlineLarge: 36,
@@ -162,7 +161,7 @@ export const mix = {
   listBadgeBorder: 0.45,
   cardBorder: 0.35,
   pegGlow: 0.4,
-  switchOn: 0.3,
+  switchOutlinedOn: 0.3,
 } as const;
 
 export const presetActionGrow = 1.3;
@@ -280,8 +279,6 @@ export const textRoles = {
   rowSubtitle: { family: body, weight: 400, size: 12 },
   dragIndex: { family: display, weight: 400, size: 11.5, tabular: true },
   editValue: { family: display, weight: 400, size: 13.5 },
-  editReadout: { family: display, weight: 500, size: 13.5, tabular: true },
-  editPath: { family: display, weight: 400, size: 12 },
   sectionLabel: {
     family: display,
     weight: 500,
