@@ -3,6 +3,7 @@ import {
   Icon,
   iconSizes,
   inset,
+  metronome,
   minTouchTargetDp,
   radius,
   size,
@@ -11,7 +12,7 @@ import {
   textStyle,
   typography,
 } from '@kitbag/core-design';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
   Pressable,
   Text,
@@ -25,33 +26,55 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
+import type { ScreenDensity } from '../logic/screenDensity.ts';
 import { tempoArrowDelta, type TempoArrow } from '../logic/tempoArrows.ts';
 import { tempoMarking } from '../logic/tempoMarking.ts';
 import { BarSweep } from './BarSweep.tsx';
 
 const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
-const BPM_FONT_SIZE = 88;
+const ZONE_PADDING: Readonly<
+  Record<ScreenDensity, { readonly top: number; readonly bottom: number }>
+> = {
+  roomy: { top: inset.tempoZoneTop, bottom: inset.tempoZoneBottom },
+  compact: {
+    top: inset.tempoZoneTopCompact,
+    bottom: inset.tempoZoneBottomCompact,
+  },
+};
 
-// The chevrons draw at the design's 13dp, so each arrow's 48dp target is made
-// of the free space around it: the zone's top padding above ▲, and the bar
-// sweep's gap, track and the zone's bottom padding below ▼. The remainder
-// overlaps the readout's line box (▲, 9dp) or the caption's (▼, 2dp); zIndex
-// lets the arrow win those overlaps, and the sweep below ▼.
-const ARROW_ROOM_ABOVE_UP = inset.tempoZoneTop;
-const ARROW_ROOM_BELOW_DOWN =
-  space.sectionGap + size.sweepTrack + inset.tempoZoneBottom;
+const NUMERAL_SIZE: Readonly<Record<ScreenDensity, number>> = {
+  roomy: metronome.tempoNumeral,
+  compact: typography.display.size,
+};
+
 const ARROW_SHORTFALL = minTouchTargetDp - iconSizes.chevron;
 
-const ARROW_HIT_SLOP: Readonly<Record<TempoArrow, Insets>> = {
-  up: {
-    top: ARROW_ROOM_ABOVE_UP,
-    bottom: Math.max(0, ARROW_SHORTFALL - ARROW_ROOM_ABOVE_UP),
-  },
-  down: {
-    top: Math.max(0, ARROW_SHORTFALL - ARROW_ROOM_BELOW_DOWN),
-    bottom: ARROW_ROOM_BELOW_DOWN,
-  },
+// Each 13dp chevron's 48dp target takes the zone padding beside it; the rest
+// overlaps the readout or caption, and zIndex lets the arrow win there.
+function arrowHitSlop(
+  density: ScreenDensity,
+): Readonly<Record<TempoArrow, Insets>> {
+  const roomAboveUp = ZONE_PADDING[density].top;
+  const roomBelowDown =
+    space.sectionGap + size.sweepTrack + ZONE_PADDING[density].bottom;
+  return {
+    up: {
+      top: roomAboveUp,
+      bottom: Math.max(0, ARROW_SHORTFALL - roomAboveUp),
+    },
+    down: {
+      top: Math.max(0, ARROW_SHORTFALL - roomBelowDown),
+      bottom: roomBelowDown,
+    },
+  };
+}
+
+const ARROW_HIT_SLOP: Readonly<
+  Record<ScreenDensity, Readonly<Record<TempoArrow, Insets>>>
+> = {
+  roomy: arrowHitSlop('roomy'),
+  compact: arrowHitSlop('compact'),
 };
 
 const ARROW_LABEL: Readonly<Record<TempoArrow, string>> = {
@@ -61,6 +84,7 @@ const ARROW_LABEL: Readonly<Record<TempoArrow, string>> = {
 
 interface SwipeTempoZoneProps {
   readonly bpm: number;
+  readonly density: ScreenDensity;
   readonly currentBpm: SharedValue<number>;
   readonly barPhase: SharedValue<number>;
   readonly onTypeTempo: () => void;
@@ -69,14 +93,15 @@ interface SwipeTempoZoneProps {
 
 interface TempoArrowKeyProps {
   readonly arrow: TempoArrow;
+  readonly density: ScreenDensity;
   readonly onNudge: (delta: number) => void;
 }
 
 const useStyles = createThemedStyles((theme) => ({
   zone: {
+    flexGrow: 1,
+    justifyContent: 'center',
     borderRadius: radius.tempoZone,
-    paddingTop: inset.tempoZoneTop,
-    paddingBottom: inset.tempoZoneBottom,
   },
   arrow: {
     alignSelf: 'center',
@@ -92,8 +117,8 @@ const useStyles = createThemedStyles((theme) => ({
   },
   bpm: {
     ...textStyle(typography.display),
-    fontSize: BPM_FONT_SIZE,
     fontVariant: ['tabular-nums'],
+    includeFontPadding: false,
     color: theme.color.text,
     textAlign: 'center',
     padding: 0,
@@ -105,7 +130,7 @@ const useStyles = createThemedStyles((theme) => ({
   },
 }));
 
-function TempoArrowKey({ arrow, onNudge }: TempoArrowKeyProps) {
+function TempoArrowKey({ arrow, density, onNudge }: TempoArrowKeyProps) {
   const styles = useStyles();
   const handlePress = useCallback(() => {
     onNudge(tempoArrowDelta(arrow));
@@ -115,7 +140,7 @@ function TempoArrowKey({ arrow, onNudge }: TempoArrowKeyProps) {
       accessibilityRole="button"
       accessibilityLabel={ARROW_LABEL[arrow]}
       style={styles.arrow}
-      hitSlop={ARROW_HIT_SLOP[arrow]}
+      hitSlop={ARROW_HIT_SLOP[density][arrow]}
       onPress={handlePress}
     >
       <Icon
@@ -129,20 +154,32 @@ function TempoArrowKey({ arrow, onNudge }: TempoArrowKeyProps) {
 
 export function SwipeTempoZone({
   bpm,
+  density,
   currentBpm,
   barPhase,
   onTypeTempo,
   onNudge,
 }: SwipeTempoZoneProps) {
   const styles = useStyles();
+  const zonePadding = useMemo(
+    () => ({
+      paddingTop: ZONE_PADDING[density].top,
+      paddingBottom: ZONE_PADDING[density].bottom,
+    }),
+    [density],
+  );
+  const numeral = useMemo(
+    () => ({ fontSize: NUMERAL_SIZE[density] }),
+    [density],
+  );
   // `text` is the channel an animated TextInput redraws from without a render.
   const readout = useAnimatedProps(() => {
     const text = Math.round(currentBpm.value).toString();
     return { text, defaultValue: text } as unknown as Partial<TextInputProps>;
   });
   return (
-    <View style={styles.zone}>
-      <TempoArrowKey arrow="up" onNudge={onNudge} />
+    <View style={[styles.zone, zonePadding]}>
+      <TempoArrowKey arrow="up" density={density} onNudge={onNudge} />
       <Pressable
         style={styles.readout}
         accessibilityRole="button"
@@ -154,12 +191,12 @@ export function SwipeTempoZone({
         <AnimatedTextInput
           editable={false}
           underlineColorAndroid="transparent"
-          style={styles.bpm}
+          style={[styles.bpm, numeral]}
           animatedProps={readout}
         />
       </Pressable>
       <Text style={styles.sub}>BPM · {tempoMarking(bpm)} · SWIPE ANYWHERE</Text>
-      <TempoArrowKey arrow="down" onNudge={onNudge} />
+      <TempoArrowKey arrow="down" density={density} onNudge={onNudge} />
       <BarSweep barPhase={barPhase} />
     </View>
   );

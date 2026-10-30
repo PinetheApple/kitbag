@@ -5,11 +5,13 @@ import {
   TransportKey,
   TransportKeySpacer,
 } from '@kitbag/core-design';
+import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 interface TransportProps {
   readonly running: boolean;
   readonly armedCount: number;
+  readonly gap: number;
   readonly onToggle: () => void;
   readonly onOpenPractice: () => void;
   readonly onOpenSetlists?: (() => void) | undefined;
@@ -21,7 +23,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: space.transportGapWide,
-    marginTop: 'auto',
     marginBottom: metronome.belowTransport,
   },
 });
@@ -35,13 +36,15 @@ function practiceLabel(armedCount: number): string {
 export function Transport({
   running,
   armedCount,
+  gap,
   onToggle,
   onOpenPractice,
   onOpenSetlists,
 }: TransportProps) {
   const armed = armedCount > 0;
+  const spacing = useMemo(() => ({ marginTop: gap }), [gap]);
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, spacing]}>
       {onOpenSetlists === undefined ? (
         <TransportKeySpacer size="large" />
       ) : (

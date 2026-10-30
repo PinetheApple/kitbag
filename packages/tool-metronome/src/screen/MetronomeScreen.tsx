@@ -14,6 +14,7 @@ import {
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { GestureDetector } from 'react-native-gesture-handler';
 import {
+  ScrollView,
   Text,
   useWindowDimensions,
   View,
@@ -21,6 +22,7 @@ import {
 } from 'react-native';
 
 import { useLibraryRefresh } from '../library/useLibraryRefresh.ts';
+import { screenDensity } from '../logic/screenDensity.ts';
 import { practiceBadgeCount } from '../logic/statusRows.ts';
 import { pushTap, tapTempoBpm } from '../logic/tapTempo.ts';
 import { BeatDots } from './BeatDots.tsx';
@@ -55,8 +57,13 @@ const useStyles = createThemedStyles((theme) => ({
   },
   body: {
     flex: 1,
+  },
+  bodyContent: {
+    flexGrow: 1,
     paddingTop: metronome.belowAppBar,
-    gap: space.sectionGap,
+  },
+  zone: {
+    flexGrow: 1,
   },
   notes: {
     ...textStyle(textRoles.fieldLabel),
@@ -118,6 +125,8 @@ export function MetronomeScreen({
   const [openSheet, setOpenSheet] = useState<OpenSheet>('none');
   const [bodyTop, setBodyTop] = useState(0);
   const [zone, setZone] = useState<ZoneFrame>({ top: 0, height: 0 });
+  const [bodyHeight, setBodyHeight] = useState(0);
+  const [contentHeight, setContentHeight] = useState(0);
   const tapTimes = useRef<readonly number[]>([]);
 
   const setTempoEndingTapSeries = useCallback(
@@ -180,6 +189,11 @@ export function MetronomeScreen({
 
   const handleBodyLayout = useCallback((event: LayoutChangeEvent) => {
     setBodyTop(event.nativeEvent.layout.y);
+    setBodyHeight(event.nativeEvent.layout.height);
+  }, []);
+
+  const handleContentSize = useCallback((_width: number, height: number) => {
+    setContentHeight(height);
   }, []);
 
   const handleZoneLayout = useCallback((event: LayoutChangeEvent) => {
@@ -193,12 +207,26 @@ export function MetronomeScreen({
   );
 
   const dotsWidth = window.width - space.screenInset * 2;
+  const density = screenDensity(window.height, metronome.compactBelowHeight);
+  const gap = useMemo(
+    () => ({
+      gap: density === 'compact' ? metronome.bodyGapCompact : space.sectionGap,
+    }),
+    [density],
+  );
 
   return (
     <GestureDetector gesture={tempoSwipe}>
       <View style={[styles.screen, edgeToEdgePadding]}>
         <MetronomeAppBar onBack={onBack} onOpenSetlists={onOpenSetlists} />
-        <View style={styles.body} onLayout={handleBodyLayout}>
+        <ScrollView
+          style={styles.body}
+          contentContainerStyle={[styles.bodyContent, gap]}
+          scrollEnabled={Math.round(contentHeight) > Math.round(bodyHeight)}
+          showsVerticalScrollIndicator={false}
+          onLayout={handleBodyLayout}
+          onContentSizeChange={handleContentSize}
+        >
           <PracticePill elapsedMs={elapsedMs} onReset={resetPractice} />
           {notes === null || notes.trim() === '' ? null : (
             <Text
@@ -208,9 +236,10 @@ export function MetronomeScreen({
               {notes}
             </Text>
           )}
-          <View onLayout={handleZoneLayout}>
+          <View style={styles.zone} onLayout={handleZoneLayout}>
             <SwipeTempoZone
               bpm={bpm}
+              density={density}
               currentBpm={frame.currentBpm}
               barPhase={frame.barPhase}
               onTypeTempo={handleOpenNumpad}
@@ -235,14 +264,15 @@ export function MetronomeScreen({
             onCycle={cycleAccent}
           />
           <StatusStack frame={frame} settings={settings} running={running} />
-          <Transport
-            running={running}
-            armedCount={practiceBadgeCount(settings)}
-            onToggle={handleToggleTransport}
-            onOpenPractice={handleOpenPractice}
-            onOpenSetlists={onOpenSetlists}
-          />
-        </View>
+        </ScrollView>
+        <Transport
+          running={running}
+          armedCount={practiceBadgeCount(settings)}
+          gap={gap.gap}
+          onToggle={handleToggleTransport}
+          onOpenPractice={handleOpenPractice}
+          onOpenSetlists={onOpenSetlists}
+        />
 
         {hintSeen || zone.height === 0 ? null : (
           <SwipeHint

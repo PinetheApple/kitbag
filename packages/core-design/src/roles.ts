@@ -119,6 +119,8 @@ export const inset = {
   stepInlineKeyH: 7,
   tempoZoneTop: 26,
   tempoZoneBottom: 18,
+  tempoZoneTopCompact: 6,
+  tempoZoneBottomCompact: 6,
   sweepH: 18,
   rowV: 9,
   rowH: 10,
