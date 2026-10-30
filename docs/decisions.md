@@ -457,13 +457,15 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   preset; the bar returns to "Metronome" and the plain Setlists chip. The loaded song is
   held in memory only, so a restart already starts with none. **[user]**
 
-- **2026-10-31 · Settings gap rulings (§12.5, §12.5.1, #170, #100)** — Coordinator,
-  revisitable by the owner; where `design/kitbag-settings.html` draws something it wins.
-  Q1: the Rig chip's idle label is a play icon and "Play · 100 BPM". Q2: while the
-  metronome runs, the chip is disabled with a hint and never touches metronome state. Q3:
-  volume snaps to 100% within ±3% of range, accessibility step 1%. Q4: the latency stepper
-  repeats after a 400 ms hold, then every 50 ms, reusing StepControl's repeat if one
-  exists. Q5: an uncalibrated Output row reads "· not calibrated"; only the live route
+- **2026-10-31 · Settings gap rulings (§12.5, §12.5.1, #170, #100)** — Coordinator
+  rulings, revisitable by the owner, so the Settings PRs can land without waiting on each
+  gap; where `design/kitbag-settings.html` draws something it wins. Every pressable
+  Settings row is at least 48 dp tall (§12.6); every other value keeps strict parity with
+  the mockup. Q1: the Rig chip's idle label is a play icon and "Play · 100 BPM". Q2: while
+  the metronome runs, the chip is disabled with a hint and never touches metronome state.
+  Q3: volume snaps to 100% within ±3% of range, accessibility step 1%. Q4: the latency
+  stepper repeats after a 400 ms hold, then every 50 ms, reusing StepControl's repeat if
+  one exists. Q5: an uncalibrated Output row reads "· not calibrated"; only the live route
   opens calibration, other routes show their stored offset. Q6: icons come from
   core-design `Icon` only: calibrate `timer-sync-outline`, remove missing `broom`, unless
   the design names one. Q8: Rig and Tools ship only once their native calls exist. Q9:
@@ -479,4 +481,5 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   anyway"; the thresholds live in one named module. Q17: output route identity is Lane A's
   call. Splash: the light and dark splash backgrounds are hand-copied hex in `app.json`
   and the Android `colors.xml` pair, and `splash.test.ts` asserts each equals the §12.2
-  `bg` of its theme. **[coordinator]**
+  `bg` of its theme. Still open with the owner: Q7 (one switch look or two) and Q13
+  (licence and attribution destinations, npm licences, BPM data credits). **[recorded]**
