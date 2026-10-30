@@ -72,7 +72,7 @@ stay. The glow (`mix.tempoZoneGlow`) is removed.
 | "1" marker | Space Grotesk 600 12 / 14, `text2`, 3 below the pulse marks | `textRoles.beatMarker`, `metronome.beatMarkerLineHeight`, `metronome.beatMarkerGap` |
 | Poly row | poly on only; 10 below the dot lines; dots 22, 2 border, `surface3` / `mix(text3 55%, surface3)`, centred at first-dot centre + k/n × (line width + dot gap); sounding dot `text2` fill and border, from the engine's poly beat; no accent or mute states | `metronome.polyDot`, `metronome.dotBorder`, `polyDotCentres` in `logic/polyRow.ts`, `current_poly_beat` |
 | Poly ratio | Space Grotesk 600 11, tracking .08, `text2`, 28 wide right-aligned, 8 left of the row | `textRoles.polyRatio`, `metronome.polyLabelWidth`, `metronome.polyLabelGap` |
-| Legend | stopped only; gap 16, Inter 12.5 `text2`, swatch 14 with gap 6 | `metronome.legendGap`, `textRoles.legend`, `metronome.legendSwatch`, `metronome.legendSwatchBorder`, `metronome.legendAccentBorder`, `space.chipGap` |
+| Legend | stopped only, in the second reserved status row; gap 16, Inter 12.5 `text2`, swatch 14 with gap 6 | `metronome.legendGap`, `textRoles.legend`, `metronome.legendSwatch`, `metronome.legendSwatchBorder`, `metronome.legendAccentBorder`, `space.chipGap` |
 | Count-in squares | 56 × 56, radius 14, 2 `text3`, Space Grotesk 700 26 `text2`, gap 12; done `surface3` / `text3`; current `text` fill, `bg` text | `metronome.countSquare`, `metronome.countSquareRadius`, `metronome.countSquareBorder`, `textRoles.countSquare` |
 
 ## Transport
@@ -161,6 +161,11 @@ Each entry says why.
   the numeral scales with the square, not with system text size. They overlay the dots,
   which are hidden during the count-in and stop taking taps through an animated
   `pointerEvents`; that has not been checked on a device.
+- **Short screens.** Below 860 dp tall the BPM numeral drops from 88 to the 64 display
+  role, the tempo zone's padding to 6 and the body gaps to 6, so 12/8 with pulse marks,
+  the poly row and two status rows fits 360 × 800. On taller screens the tempo zone
+  takes the spare height. When content still does not fit (large text), the body
+  scrolls and the transport stays pinned.
 - **Poly row on a wrapped bar.** The mockup draws only one line of beats. On a bar that
   wraps, the poly dots spread by time across the widest line, so they no longer sit
   under the beats they coincide with. The ratio label stops at the screen edge when the
