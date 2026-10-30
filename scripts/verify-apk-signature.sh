@@ -18,7 +18,7 @@ normalise_digest() {
 
 # Labels vary across build-tools and may hold colons, so take the trailing digest, never a cut.
 extract_digest() {
-  sed -nE "s/^(.*[^0-9A-Fa-f:])?(${SHA256_PATTERN})[[:space:]]*\$/\2/p" | normalise_digest
+  sed -nE "s/^(.*[^0-9A-Fa-f:]:?[[:space:]]*)?(${SHA256_PATTERN})[[:space:]]*\$/\2/p" | normalise_digest
 }
 
 usage() {
@@ -92,6 +92,9 @@ if ! command -v keytool >/dev/null 2>&1; then
   exit "$EXIT_CANNOT_CHECK"
 fi
 
+APKSIGNER_VERSION=$("$APKSIGNER" --version 2>/dev/null | head -1)
+echo "verify-apk-signature: using $APKSIGNER (${APKSIGNER_VERSION:-unknown version})" >&2
+
 CERTS=$("$APKSIGNER" verify --print-certs "$APK" 2>&1)
 VERIFY_STATUS=$?
 
@@ -112,7 +115,9 @@ for line in "${DIGEST_LINES[@]}"; do
   fi
   DIGESTS+=("$digest")
 done
-mapfile -t DIGESTS < <(printf '%s\n' "${DIGESTS[@]}" | grep . | sort -u)
+if ((${#DIGESTS[@]} > 0)); then
+  mapfile -t DIGESTS < <(printf '%s\n' "${DIGESTS[@]}" | sort -u)
+fi
 
 if ((${#DIGESTS[@]} == 0)); then
   echo "verify-apk-signature: could not read any SHA-256 digest from apksigner output:" >&2

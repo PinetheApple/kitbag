@@ -29,6 +29,11 @@ readonly TOOLS="$SDK/build-tools/36.0.0"
 mkdir -p "$TOOLS"
 cat > "$TOOLS/apksigner" <<'STUB'
 #!/usr/bin/env bash
+if [[ ${1:-} == --version ]]; then
+  echo "0.9-stub"
+  exit 0
+fi
+colon_pairs() { sed -E 's/(..)/\1:/g; s/:$//' <<<"${1^^}"; }
 case "$FAKE_CASE" in
   unsigned)
     echo "DOES NOT VERIFY" >&2
@@ -51,7 +56,18 @@ case "$FAKE_CASE" in
   no_colon)
     echo "Signer #1 certificate SHA-256 digest $FAKE_DIGEST" ;;
   colon_separated)
-    echo "Signer #1 certificate SHA-256 digest: $(sed -E 's/(..)/\1:/g; s/:$//' <<<"${FAKE_DIGEST^^}")" ;;
+    echo "Signer #1 certificate SHA-256 digest: $(colon_pairs "$FAKE_DIGEST")" ;;
+  glued_hex)
+    echo "Signer #1 certificate SHA-256 digest:$FAKE_DIGEST" ;;
+  glued_colon_separated)
+    echo "Signer #1 certificate SHA-256 digest:$(colon_pairs "$FAKE_DIGEST")" ;;
+  hex_run_too_long)
+    echo "Signer #1 certificate SHA-256 digest: a$FAKE_DIGEST" ;;
+  trailing_byte)
+    echo "Signer #1 certificate SHA-256 digest: $FAKE_DIGEST 1f" ;;
+  with_public_key)
+    echo "Signer #1 certificate SHA-256 digest: $FAKE_DIGEST"
+    echo "Signer #1 public key SHA-256 digest: ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff" ;;
   crlf)
     printf 'Signer #1 certificate SHA-256 digest: %s \r\n' "$FAKE_DIGEST" ;;
   garbled_digest)
@@ -114,6 +130,15 @@ expect "scheme-labelled, expected key"  scheme_labelled "$REAL_FLAT"       0 "th
   --expect-sha256 "$REAL_FLAT"
 expect "trailing CR, expected key"      crlf            "$REAL_FLAT"       0 "the expected certificate" \
   --expect-sha256 "$REAL_FLAT"
+expect "glued hex, expected key"        glued_hex       "$REAL_FLAT"       0 "the expected certificate" \
+  --expect-sha256 "$REAL_FLAT"
+expect "glued colon-separated, expected key" glued_colon_separated "$REAL_FLAT" 0 "the expected certificate" \
+  --expect-sha256 "$REAL_FLAT"
+expect "65-hex run cannot check"        hex_run_too_long "$REAL_FLAT"      2 "could not read"
+expect "trailing byte cannot check"     trailing_byte   "$REAL_FLAT"       2 "could not read"
+expect "public key digest ignored"      with_public_key "$REAL_FLAT"       0 "the expected certificate" \
+  --expect-sha256 "$REAL_FLAT"
+expect "apksigner path and version logged" numbered     "$REAL_FLAT"       0 "using $TOOLS/apksigner (0.9-stub)"
 expect "colon-separated debug rejected" colon_separated "$REAL_DEBUG_FLAT" 1 "DEBUG key"
 expect "unreadable digest line cannot check" garbled_digest "$REAL_FLAT"   2 "could not read"
 expect "unexpected non-debug key rejected" numbered     "$OTHER_FLAT"      1 "expected release certificate" \
