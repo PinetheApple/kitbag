@@ -4,6 +4,7 @@ import type { SongPreset } from '@kitbag/core-state';
 
 import { countInLabel, countInBarsFromOption } from './countIn.ts';
 import { soundLabel } from './soundChoice.ts';
+import { TEXT_PLACEHOLDER } from './textPlaceholder.ts';
 import { rampChipValue } from './trainer.ts';
 
 function modifier(preset: SongPreset): string {
@@ -33,4 +34,8 @@ export function setlistSubtitle(
     return `${songs} · ${String(played)} played tonight`;
   if (rampCount > 0) return `${songs} · ramp on ${String(rampCount)}`;
   return songs;
+}
+
+export function setlistTitle(name: string | undefined): string {
+  return name ?? TEXT_PLACEHOLDER;
 }

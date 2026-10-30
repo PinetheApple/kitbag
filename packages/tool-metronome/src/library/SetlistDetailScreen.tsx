@@ -15,7 +15,7 @@ import {
 } from '@kitbag/core-state';
 import { useCallback, useMemo } from 'react';
 
-import { songSubtitle } from '../logic/songSummary.ts';
+import { setlistTitle, songSubtitle } from '../logic/songSummary.ts';
 import type { ShellMeasuredInsets } from '../screen/MetronomeScreen.tsx';
 import { DetailSheets, useDetailMenu, type DetailMenu } from './DetailMenu.tsx';
 import { ScreenFrame } from './ScreenFrame.tsx';
@@ -193,7 +193,7 @@ export function SetlistDetailScreen(props: SetlistDetailScreenProps) {
     s.setlists.find((x) => x.setlist.id === setlistId),
   );
   const ready = useLibrary((s) => s.ready);
-  const name = summary?.setlist.name ?? '';
+  const name = setlistTitle(summary?.setlist.name);
   const songMenu = useSongMenu();
   const menu = useDetailMenu();
   if (ready && summary === undefined) return <MissingSet {...props} />;
