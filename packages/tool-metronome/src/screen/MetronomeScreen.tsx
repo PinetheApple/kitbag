@@ -21,7 +21,6 @@ import {
 } from 'react-native';
 
 import { useLibraryRefresh } from '../library/useLibraryRefresh.ts';
-import { screenDensity } from '../logic/screenDensity.ts';
 import { practiceBadgeCount } from '../logic/statusRows.ts';
 import { pushTap, tapTempoBpm } from '../logic/tapTempo.ts';
 import { BeatDots } from './BeatDots.tsx';
@@ -39,6 +38,7 @@ import { SwipeTempoZone } from './SwipeTempoZone.tsx';
 import { Transport } from './Transport.tsx';
 import { useTempoSwipe } from './useTempoSwipe.ts';
 import { useMetronomeFrame } from './useMetronomeFrame.ts';
+import { useScreenDensity } from './useScreenDensity.ts';
 import { usePracticeSettings } from './usePracticeSettings.ts';
 
 type OpenSheet = 'none' | 'numpad' | 'meter' | 'subdivision' | 'practice';
@@ -214,7 +214,15 @@ export function MetronomeScreen({
   );
 
   const dotsWidth = window.width - space.screenInset * 2;
-  const density = screenDensity(window.height, metronome.compactBelowHeight);
+  const layoutKey = [
+    window.width,
+    window.height,
+    window.fontScale,
+    beatsPerBar,
+    polyEnabled,
+    notes,
+  ].join('|');
+  const density = useScreenDensity(window.height, layoutKey, scrollable);
   const gap = useMemo(
     () => ({
       gap: density === 'compact' ? metronome.bodyGapCompact : space.sectionGap,
