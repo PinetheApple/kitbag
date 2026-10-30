@@ -5,15 +5,16 @@ All notable changes to Kitbag are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Entries below are generated from Conventional Commits by git-cliff — an entry
-cannot exist without a commit that did the work. Regenerate with
-`bash scripts/changelog.sh`, never a bare `git-cliff -o`: git-cliff has no
-config key for a start commit, so an unbounded run walks past the audit below
-and re-imports the deleted releases.
+cannot exist without a commit that did the work.
+
+**GitHub Releases are authoritative.** Each `vX.Y.Z` tag is published as a
+GitHub release with a signed APK and its notes. This file is a snapshot,
+regenerated with `bash scripts/changelog.sh` after `git fetch --tags`, so its
+newest sections can lag the releases.
 
 ---
 
-Releases are the `vX.Y.Z` git tags, each published as a GitHub release with a
-signed APK. This file once recorded 0.1.0 through 0.5.0 as shipped on
+This file once recorded 0.1.0 through 0.5.0 as shipped on
 2026-07-14; an audit on 2026-07-17 found that substantially false, and those
 entries were deleted rather than amended. `SPEC.md` §2 is the audited inventory
 of what the codebase actually did. Version numbers here are the release tags and
@@ -2422,5 +2423,29 @@ rejecting.
 Filled NOW badge, 16 sheet title and 18 Leave setlist icon through additive
 Badge, Sheet and Button options. The chip shows the setlist name when no song
 from the set is loaded, and only while the loaded song came from that set.
+
+- Rerun tests when the sources they read change (#204)
+
+app-shell's touchTargets audit reads every package's src, and every
+test imports workspace packages by source, but turbo keyed test on the
+package's own files only, so preflight replayed a stale pass.
+
+A transit task folds each dependency's files into the test hash, and
+app-shell's test task takes packages/*/src/**/*.tsx as inputs so a
+package outside its dependency graph still invalidates it. Preflight
+runs tests at concurrency 2 to stay under a 6 GB memory cap.
+
+- **release:** Pin the release cert, cap notes size, rerun-safe workflow (#211)
+
+Review fixes: the gate now requires the pinned release certificate, release
+notes are subject-only with a size guard under GitHub's body limit, a rerun with
+nothing to release skips green, third-party actions are pinned to SHAs, and the
+versionCode formula is checked against the built APK in PR CI.
+
+- **release:** Signature test stub wins over PATH, trim release-script comments (#211)
+
+The signature test pointed only ANDROID_HOME at its stub, but the script prefers
+an apksigner on PATH, so a machine with one installed tested the real tool.
+preflight now runs changelog.test.sh like CI does.
 
 
