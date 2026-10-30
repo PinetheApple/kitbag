@@ -14,12 +14,13 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
+import { DOT_METRICS } from '../logic/belowTempo.ts';
 import {
   polyDotCentres,
   polyLabelPlace,
   polyRatioLabel,
 } from '../logic/polyRow.ts';
-import { DOT_METRICS, dotPalette } from './beatDotStyles.ts';
+import { dotPalette } from './beatDotStyles.ts';
 
 const HALF_POLY_DOT = metronome.polyDot / 2;
 
@@ -48,6 +49,7 @@ const usePolyStyles = createThemedStyles((theme) => ({
   },
   labelText: {
     ...textStyle(textRoles.polyRatio),
+    lineHeight: metronome.beatMarkerLineHeight,
     color: theme.color.text2,
   },
   dot: {

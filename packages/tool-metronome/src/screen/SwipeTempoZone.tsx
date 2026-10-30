@@ -43,6 +43,11 @@ const ZONE_PADDING: Readonly<
   },
 };
 
+const SWEEP_GAP: Readonly<Record<ScreenDensity, number>> = {
+  roomy: space.sectionGap,
+  compact: metronome.bodyGapCompact,
+};
+
 const NUMERAL_SIZE: Readonly<Record<ScreenDensity, number>> = {
   roomy: metronome.tempoNumeral,
   compact: typography.display.size,
@@ -57,7 +62,7 @@ function arrowHitSlop(
 ): Readonly<Record<TempoArrow, Insets>> {
   const roomAboveUp = ZONE_PADDING[density].top;
   const roomBelowDown =
-    space.sectionGap + size.sweepTrack + ZONE_PADDING[density].bottom;
+    SWEEP_GAP[density] + size.sweepTrack + ZONE_PADDING[density].bottom;
   return {
     up: {
       top: roomAboveUp,
@@ -99,8 +104,6 @@ interface TempoArrowKeyProps {
 
 const useStyles = createThemedStyles((theme) => ({
   zone: {
-    flexGrow: 1,
-    justifyContent: 'center',
     borderRadius: radius.tempoZone,
   },
   arrow: {
@@ -197,7 +200,7 @@ export function SwipeTempoZone({
       </Pressable>
       <Text style={styles.sub}>BPM · {tempoMarking(bpm)} · SWIPE ANYWHERE</Text>
       <TempoArrowKey arrow="down" density={density} onNudge={onNudge} />
-      <BarSweep barPhase={barPhase} />
+      <BarSweep barPhase={barPhase} gap={SWEEP_GAP[density]} />
     </View>
   );
 }

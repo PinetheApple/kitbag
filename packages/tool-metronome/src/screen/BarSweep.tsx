@@ -1,10 +1,5 @@
-import {
-  createThemedStyles,
-  inset,
-  radius,
-  size,
-  space,
-} from '@kitbag/core-design';
+import { createThemedStyles, inset, radius, size } from '@kitbag/core-design';
+import { useMemo } from 'react';
 import { View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -13,6 +8,7 @@ import Animated, {
 
 interface BarSweepProps {
   readonly barPhase: SharedValue<number>;
+  readonly gap: number;
 }
 
 const useStyles = createThemedStyles((theme) => ({
@@ -20,7 +16,6 @@ const useStyles = createThemedStyles((theme) => ({
     height: size.sweepTrack,
     borderRadius: radius.sweepTrack,
     backgroundColor: theme.color.surface3,
-    marginTop: space.sectionGap,
     marginHorizontal: inset.sweepH,
     overflow: 'hidden',
   },
@@ -33,8 +28,9 @@ const useStyles = createThemedStyles((theme) => ({
   },
 }));
 
-export function BarSweep({ barPhase }: BarSweepProps) {
+export function BarSweep({ barPhase, gap }: BarSweepProps) {
   const styles = useStyles();
+  const spacing = useMemo(() => ({ marginTop: gap }), [gap]);
   const fillStyle = useAnimatedStyle(() => {
     const phase = barPhase.value;
     const clamped = phase < 0 ? 0 : phase > 1 ? 1 : phase;
@@ -42,7 +38,7 @@ export function BarSweep({ barPhase }: BarSweepProps) {
   });
 
   return (
-    <View style={styles.track}>
+    <View style={[styles.track, spacing]}>
       <Animated.View style={[styles.fill, fillStyle]} />
     </View>
   );

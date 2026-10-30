@@ -1,10 +1,20 @@
+import { clampUnit } from '@kitbag/core-design';
+
 import type { BpmBounds } from './bpmBounds.ts';
 
-export const DP_PER_BPM = 8;
+export const SWIPE_ACTIVATE_DP = 8;
 
-const FLING_TRAVEL_MS = 140;
-const MS_PER_SECOND = 1000;
-const FLING_MAX_BPM = 40;
+export const SWIPE_CANCEL_X_DP = 20;
+
+export const FINE_DP_PER_BPM = 14;
+
+export const FINE_SPEED_DP_PER_S = 250;
+
+export const FULL_SPEED_DP_PER_S = 1500;
+
+export const MAX_SPEED_GAIN = 8;
+
+export const REVERSAL_DP = 3;
 
 export function clampBpm(bpm: number, bounds: BpmBounds): number {
   'worklet';
@@ -13,37 +23,51 @@ export function clampBpm(bpm: number, bounds: BpmBounds): number {
   return bpm;
 }
 
-export function dragBpmDelta(translationY: number): number {
+export function speedGain(velocityY: number): number {
   'worklet';
-  const steps = Math.trunc(-translationY / DP_PER_BPM);
-  // Math.trunc yields -0 for a sub-step downward drag.
-  return steps === 0 ? 0 : steps;
+  const reach = clampUnit(
+    (Math.abs(velocityY) - FINE_SPEED_DP_PER_S) /
+      (FULL_SPEED_DP_PER_S - FINE_SPEED_DP_PER_S),
+  );
+  return 1 + (MAX_SPEED_GAIN - 1) * reach * reach;
 }
 
-export interface DragTempo {
+export interface SwipeTempo {
   readonly bpm: number;
-  readonly anchorBpm: number;
+  readonly residue: number;
+  readonly backtrack: number;
+  readonly translationY: number;
 }
 
-// Re-anchoring past a bound removes dead travel when the drag reverses.
-export function dragTempo(
-  anchorBpm: number,
+export function startSwipe(bpm: number): SwipeTempo {
+  'worklet';
+  return { bpm, residue: 0, backtrack: 0, translationY: 0 };
+}
+
+// Residue is travel not yet spent on a whole BPM. Moving back past
+// REVERSAL_DP drops it, so a reversal answers within one step but tremor does not.
+export function swipeTempo(
+  swipe: SwipeTempo,
   translationY: number,
+  velocityY: number,
   bounds: BpmBounds,
-): DragTempo {
+): SwipeTempo {
   'worklet';
-  const travelled = dragBpmDelta(translationY);
-  const raw = anchorBpm + travelled;
+  const travelled = swipe.translationY - translationY;
+  if (travelled === 0) return swipe;
+  const against = travelled * swipe.residue < 0;
+  const backtrack = against ? swipe.backtrack + Math.abs(travelled) : 0;
+  const reversed = backtrack >= REVERSAL_DP;
+  const residue = reversed
+    ? Math.sign(travelled) * backtrack
+    : swipe.residue + travelled * speedGain(velocityY);
+  const steps = Math.trunc(residue / FINE_DP_PER_BPM);
+  const raw = swipe.bpm + steps;
   const bpm = clampBpm(raw, bounds);
-  if (raw === bpm) return { bpm, anchorBpm };
-  return { bpm, anchorBpm: bpm - travelled };
-}
-
-export function flingBpmDelta(velocityY: number): number {
-  'worklet';
-  const travel = (velocityY * FLING_TRAVEL_MS) / MS_PER_SECOND;
-  const delta = dragBpmDelta(travel);
-  if (delta > FLING_MAX_BPM) return FLING_MAX_BPM;
-  if (delta < -FLING_MAX_BPM) return -FLING_MAX_BPM;
-  return delta;
+  return {
+    bpm,
+    residue: raw === bpm ? residue - steps * FINE_DP_PER_BPM : 0,
+    backtrack: reversed ? 0 : backtrack,
+    translationY,
+  };
 }
