@@ -12,9 +12,9 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import { MARKER_PLACEHOLDER } from '../logic/beatDot.ts';
 import type { LedRowLayout } from '../logic/ledLayout.ts';
 import { countSquare } from '../logic/statusRows.ts';
+import { TEXT_PLACEHOLDER } from '../logic/textPlaceholder.ts';
 import { useBeatDotStyles } from './beatDotStyles.ts';
 import { BeatGrid } from './BeatGrid.tsx';
 
@@ -92,7 +92,7 @@ export function CountInSquares({
       <>
         <CountSquare beat={beat} side={dotSize} currentBeat={currentBeat} />
         <View style={styles.pulseRow} />
-        <Text style={styles.marker}>{MARKER_PLACEHOLDER}</Text>
+        <Text style={styles.marker}>{TEXT_PLACEHOLDER}</Text>
       </>
     ),
     [dotSize, currentBeat, styles],

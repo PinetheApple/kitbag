@@ -1,6 +1,8 @@
 import type { LedState } from '@kitbag/core-design';
 import { KB_ACCENT } from '@kitbag/core-native';
 
+import { TEXT_PLACEHOLDER } from './textPlaceholder.ts';
+
 export function ledStateFor(accent: KB_ACCENT): LedState {
   if (accent === KB_ACCENT.KB_ACCENT_ACCENTED) return 'accented';
   if (accent === KB_ACCENT.KB_ACCENT_MUTED) return 'muted';
@@ -11,12 +13,8 @@ export function beatLabel(beat: number, state: LedState): string {
   return `Beat ${String(beat + 1)}, ${state}`;
 }
 
-// An empty Text carries no fragment, so RN's text measure cache key loses the
-// font scale and replays the old height after a text-size change (#202).
-export const MARKER_PLACEHOLDER = '\u00A0';
-
 export function beatMarker(beat: number): string {
-  return beat === 0 ? '1' : MARKER_PLACEHOLDER;
+  return beat === 0 ? '1' : TEXT_PLACEHOLDER;
 }
 
 export interface DotPalette {

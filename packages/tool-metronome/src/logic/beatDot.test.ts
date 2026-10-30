@@ -6,8 +6,8 @@ import {
   beatMarker,
   dotLook,
   ledStateFor,
-  MARKER_PLACEHOLDER,
 } from './beatDot.ts';
+import { TEXT_PLACEHOLDER } from './textPlaceholder.ts';
 
 const PALETTE = {
   accent: 'accent',
@@ -87,10 +87,10 @@ describe('beat labels', () => {
 describe('beatMarker', () => {
   it('labels only the downbeat', () => {
     expect(beatMarker(0)).toBe('1');
-    expect(beatMarker(1)).toBe(MARKER_PLACEHOLDER);
+    expect(beatMarker(1)).toBe(TEXT_PLACEHOLDER);
   });
 
   it('gives every beat text to measure, so no marker keeps an old text scale', () => {
-    expect(MARKER_PLACEHOLDER.length).toBeGreaterThan(0);
+    expect(TEXT_PLACEHOLDER).toBe('\u00A0');
   });
 });
