@@ -48,6 +48,24 @@ The metronome is being redesigned (#175) and is not shown.
   </tr>
 </table>
 
+## Install (Android)
+
+The newest signed build is always at
+<https://github.com/PinetheApple/kitbag/releases/latest/download/kitbag.apk>,
+with its checksum alongside. Every merge to `main` publishes one.
+
+```sh
+curl -fLO https://github.com/PinetheApple/kitbag/releases/latest/download/kitbag.apk
+curl -fLO https://github.com/PinetheApple/kitbag/releases/latest/download/kitbag.apk.sha256
+sha256sum -c kitbag.apk.sha256
+```
+
+Then open `kitbag.apk` on the phone (allow installs from that source), or
+`adb install kitbag.apk`. Later releases install over it.
+
+If you have a debug-signed development build installed, uninstall it first: a
+build signed with a different key cannot update it.
+
 ## Architecture
 
 - **C++ realtime audio core** (`native/audio_core`) on miniaudio — sample-accurate

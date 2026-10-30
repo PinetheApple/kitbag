@@ -28,11 +28,11 @@ RepoType: git
 Repo: https://github.com/PinetheApple/kitbag.git
 
 Builds:
-  - versionName: 0.0.1
-    versionCode: 1
-    # QUESTION: the tag does not exist yet (nothing has shipped). This recipe
-    # is only submittable once scripts/release.sh has cut v0.0.1 for real.
-    commit: v0.0.1
+  - versionName: 0.1.0
+    versionCode: 100
+    # QUESTION: v0.1.0 does not exist until the release workflow publishes it
+    # on the first merge to main; submit this recipe only after that.
+    commit: v0.1.0
     subdir: packages/app-shell/android
     gradle:
       - yes
