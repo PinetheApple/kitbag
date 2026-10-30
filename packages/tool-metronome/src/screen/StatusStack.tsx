@@ -14,7 +14,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import { rampProgressFill } from '../logic/rampProgress.ts';
+import { rampProgressFill, rampTrackShown } from '../logic/rampProgress.ts';
 import {
   afterCountInSummary,
   armedSummary,
@@ -46,6 +46,8 @@ export type StatusFrame = Pick<
   | 'rampStepProgress'
 >;
 
+const HIDDEN = 0;
+const SHOWN = 1;
 const RAMP_NEXT_WIDEST = rampNextText(BPM_BOUNDS.max);
 const LONGEST_COUNT_IN = Math.max(...KB_COUNT_IN_BARS);
 const COUNT_IN_WIDEST = countInBarText(LONGEST_COUNT_IN - 1, LONGEST_COUNT_IN);
@@ -70,12 +72,16 @@ function RampStatus({ rows, frame, ramp }: RampStatusProps) {
       {
         scaleX: rampProgressFill(
           rampStepProgress.value,
+          rampRemaining.value,
           interval,
           unit,
           still.value,
         ),
       },
     ],
+  }));
+  const track = useAnimatedStyle(() => ({
+    opacity: rampTrackShown(interval, unit, still.value) ? SHOWN : HIDDEN,
   }));
   return (
     <StatusVariant rows={rows} shown="ramp" style={styles.live}>
@@ -93,9 +99,9 @@ function RampStatus({ rows, frame, ramp }: RampStatusProps) {
         style={styles.detail}
       />
       <Text style={styles.meta}>{`target ${String(ramp.targetBpm)}`}</Text>
-      <View style={styles.progressTrack}>
+      <Animated.View style={[styles.progressTrack, track]}>
         <Animated.View style={[styles.progress, progress]} />
-      </View>
+      </Animated.View>
     </StatusVariant>
   );
 }

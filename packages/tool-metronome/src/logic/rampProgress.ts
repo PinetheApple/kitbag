@@ -1,21 +1,33 @@
 import { clampUnit } from '@kitbag/core-design';
-import { KB_RAMP_UNIT } from '@kitbag/core-native';
+import type { KB_RAMP_UNIT } from '@kitbag/core-native';
 
-import { TENTHS } from './statusRows.ts';
+import { rampRemainingTicks, rampTicksPerUnit } from './statusRows.ts';
 
-const WHOLE_UNITS = 1;
+const FULL = 1;
+const SINGLE_TICK = 1;
 
-// Reduced motion steps the bar when the countdown text ticks, never in between.
+// Under reduce motion the fill is derived from the countdown's own ticks, so the
+// bar moves only when the text beside it changes.
 export function rampProgressFill(
   progress: number,
+  remaining: number,
   interval: number,
   unit: KB_RAMP_UNIT,
   reduceMotion: boolean,
 ): number {
   'worklet';
-  const fill = clampUnit(progress);
-  if (!reduceMotion) return fill;
-  const perUnit = unit === KB_RAMP_UNIT.KB_RAMP_MINUTES ? TENTHS : WHOLE_UNITS;
-  const steps = interval * perUnit;
-  return Math.floor(fill * steps) / steps;
+  if (!reduceMotion) return clampUnit(progress);
+  const ticks = interval * rampTicksPerUnit(unit);
+  return clampUnit(FULL - rampRemainingTicks(remaining, unit) / ticks);
+}
+
+// The engine applies a one-tick step on the click that would fill it, so a
+// stepped bar would sit empty forever.
+export function rampTrackShown(
+  interval: number,
+  unit: KB_RAMP_UNIT,
+  reduceMotion: boolean,
+): boolean {
+  'worklet';
+  return !reduceMotion || interval * rampTicksPerUnit(unit) > SINGLE_TICK;
 }

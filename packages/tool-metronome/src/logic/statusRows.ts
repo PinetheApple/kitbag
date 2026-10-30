@@ -113,21 +113,33 @@ export function rampNextText(nextBpm: number): string {
   return `→ ${String(Math.round(nextBpm))}`;
 }
 
-export const TENTHS = 10;
+const TENTHS = 10;
+const WHOLE_UNITS = 1;
+
+export function rampTicksPerUnit(unit: number): number {
+  'worklet';
+  return unit === KB_RAMP_UNIT.KB_RAMP_MINUTES ? TENTHS : WHOLE_UNITS;
+}
+
+export function rampRemainingTicks(remaining: number, unit: number): number {
+  'worklet';
+  if (!(remaining > 0)) return 0;
+  return Math.ceil(remaining * rampTicksPerUnit(unit));
+}
 
 export function rampRemainingText(remaining: number, unit: number): string {
   'worklet';
-  if (!(remaining > 0)) return 'now';
+  const ticks = rampRemainingTicks(remaining, unit);
+  if (ticks === 0) return 'now';
   if (unit === KB_RAMP_UNIT.KB_RAMP_MINUTES) {
-    const minutes = Math.ceil(remaining * TENTHS) / TENTHS;
+    const minutes = ticks / TENTHS;
     const shown = Number.isInteger(minutes)
       ? String(minutes)
       : minutes.toFixed(1);
     return `in ${shown} min`;
   }
-  const whole = Math.ceil(remaining);
-  if (unit === KB_RAMP_UNIT.KB_RAMP_SECONDS) return `in ${String(whole)} s`;
-  return `in ${String(whole)} ${whole === 1 ? 'bar' : 'bars'}`;
+  if (unit === KB_RAMP_UNIT.KB_RAMP_SECONDS) return `in ${String(ticks)} s`;
+  return `in ${String(ticks)} ${ticks === 1 ? 'bar' : 'bars'}`;
 }
 
 export function ofText(index: number, total: number): string {
