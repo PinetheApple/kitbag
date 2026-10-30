@@ -468,14 +468,16 @@ seconds anchored to the start of the file; that anchor is the invariant.
 
 ### 4.6 Native dependencies
 
-What `native/audio_core` actually vendors and links, verified 2026-07-17. GPLv3
-compatibility is the constraint; both current dependencies are permissive.
+What `native/audio_core` actually vendors and links, verified 2026-07-17 and
+updated 2026-10-30. GPLv3 compatibility is the constraint: QM-DSP is
+GPL-2.0-or-later, the rest are permissive.
 
 | Dependency | Licence | Role |
 |---|---|---|
 | **miniaudio** (`third_party/miniaudio.h`) | MIT-0 / public domain | Device I/O — AAudio on Android, PipeWire on Linux, CoreAudio on iOS. One API. Also supplies the Speex-derived resampler §4.1 needs. |
 | **Signalsmith Stretch** + **signalsmith-linear** (`third_party/signalsmith/`), *planned* | MIT | Time-stretch and pitch shift for §7.6. Header-only; the linear library supplies its STFT. The same code StemDeck runs in the browser as WASM. |
-| **cycfi/q** (`third_party/cycfi_q/`) | **Boost Software License 1.0** | Vendored but unused since #117: the tuner's McLeod detector (`pitch_detector.cpp`) is ours, and nothing includes cycfi/q. Removing the tree is pending. |
+| **QM-DSP** `DownBeat` + `TempoTrackV2` (`third_party/qm-dsp/`, with bundled kissfft) | **GPL-2.0-or-later** (kissfft BSD-3-Clause) | Downbeat estimation for §4.3 (`downbeat.cpp`). Vendored 2026-07-22; the subset and the GPL note are in its `README.md`. |
+| ~~**cycfi/q** (`third_party/cycfi_q/`)~~ | Boost Software License 1.0 | **Removed 2026-10-30** (#201). Unused since #117: the tuner's McLeod detector (`pitch_detector.cpp`) is ours. |
 
 Everything else is ours: the lookahead scheduler, the mixer, the radix-2 FFT
 (`fft.cpp`), and the beat tracker.
@@ -485,8 +487,8 @@ were built. Do not assume they are present:
 
 - **SoLoud** (mixer/playback). Not used; the mixer is ours.
 - **QM-DSP `BarBeatTrack`** (beat + downbeat). Not used; `beat_tracker.cpp` is
-  hand-rolled spectral-flux → autocorrelation → DP placement, which is why there
-  are no downbeats (§2.5, §4.3).
+  hand-rolled spectral-flux → autocorrelation → DP placement. QM-DSP's
+  `DownBeat` was vendored later for §4.3's downbeats; see the table.
 - **dr_libs / stb_vorbis** (decoders). Not used; decoding goes through miniaudio.
 - **BTrack** — later-ring, out of scope (§3.3).
 
