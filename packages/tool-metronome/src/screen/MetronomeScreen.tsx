@@ -228,9 +228,17 @@ export function MetronomeScreen({
     }),
     [density],
   );
+  const fontScale = window.fontScale;
   const belowTempo = useMemo(
-    () => ({ ...gap, minHeight: belowTempoReserve(dotsWidth, gap.gap) }),
-    [gap, dotsWidth],
+    () => ({
+      ...gap,
+      minHeight: belowTempoReserve({
+        width: dotsWidth,
+        gap: gap.gap,
+        fontScale,
+      }),
+    }),
+    [gap, dotsWidth, fontScale],
   );
 
   return (

@@ -49,6 +49,7 @@ const usePolyStyles = createThemedStyles((theme) => ({
   },
   labelText: {
     ...textStyle(textRoles.polyRatio),
+    lineHeight: metronome.beatMarkerLineHeight,
     color: theme.color.text2,
   },
   dot: {

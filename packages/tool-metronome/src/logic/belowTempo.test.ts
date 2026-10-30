@@ -2,74 +2,99 @@ import { metronome, space } from '@kitbag/core-design';
 import { KB_MAX_BEATS } from '@kitbag/core-native';
 import { describe, expect, it } from 'vitest';
 
-import {
-  beatDotsHeight,
-  belowTempoHeight,
-  belowTempoReserve,
-} from './belowTempo.ts';
+import { belowTempoReserve, DOT_METRICS } from './belowTempo.ts';
+import { beatDotSize, layoutBeatLeds, MAX_DOTS_PER_LINE } from './ledLayout.ts';
 
 const SMALL_PHONE_DOTS_WIDTH = 360 - space.screenInset * 2;
 const LARGE_PHONE_DOTS_WIDTH = 411 - space.screenInset * 2;
+const FONT_SCALES = [1, 1.3] as const;
+const BEAT_COUNTS = Array.from({ length: KB_MAX_BEATS }, (_u, i) => i + 1);
 
-const MINIMAL = { beatCount: 4, poly: false };
-const BUSIEST = { beatCount: 12, poly: true };
+interface Rendered {
+  readonly beatCount: number;
+  readonly poly: boolean;
+  readonly labelAbove: boolean;
+  readonly fontScale: number;
+  readonly width: number;
+  readonly gap: number;
+}
 
-const CASES = [
+// Stacks the boxes BeatDots, PolyDots and StatusStack draw, token by token.
+function renderedBelowTempo(shape: Rendered): number {
+  const lines = layoutBeatLeds(shape.beatCount, MAX_DOTS_PER_LINE);
+  const dot = beatDotSize(lines, shape.width, DOT_METRICS);
+  const marker = Math.max(
+    metronome.beatMarkerLineHeight,
+    metronome.beatMarkerLineHeight * shape.fontScale,
+  );
+  const beat =
+    dot +
+    metronome.beatMarkerGap +
+    metronome.pulseMark +
+    metronome.beatMarkerGap +
+    marker;
+  let dots =
+    lines.length * beat + (lines.length - 1) * metronome.beatDotLineGap;
+  if (shape.poly) {
+    dots += metronome.beatDotLineGap + metronome.polyDot;
+    if (shape.labelAbove) {
+      dots +=
+        metronome.beatMarkerLineHeight * shape.fontScale +
+        metronome.beatMarkerGap;
+    }
+  }
+  const status = metronome.statusRow * 2 + metronome.statusRowGap;
+  return dots + shape.gap + status;
+}
+
+const ROOMS = [
   { width: SMALL_PHONE_DOTS_WIDTH, gap: metronome.bodyGapCompact },
   { width: LARGE_PHONE_DOTS_WIDTH, gap: space.sectionGap },
 ] as const;
 
 describe('belowTempoReserve', () => {
-  it.each(CASES)(
-    'is taller in the busiest state than the minimal one at $width dp',
+  it.each(ROOMS)(
+    'holds every meter, poly and poly-label place at $width dp',
     ({ width, gap }) => {
-      expect(belowTempoHeight(BUSIEST, width, gap)).toBeGreaterThan(
-        belowTempoHeight(MINIMAL, width, gap),
-      );
-    },
-  );
-
-  it.each(CASES)(
-    'holds every meter, with and without poly, at $width dp',
-    ({ width, gap }) => {
-      const reserve = belowTempoReserve(width, gap);
-      for (let beatCount = 1; beatCount <= KB_MAX_BEATS; beatCount += 1) {
-        for (const poly of [false, true]) {
-          expect(
-            belowTempoHeight({ beatCount, poly }, width, gap),
-          ).toBeLessThanOrEqual(reserve);
+      for (const fontScale of FONT_SCALES) {
+        const reserve = belowTempoReserve({ width, gap, fontScale });
+        for (const beatCount of BEAT_COUNTS) {
+          for (const poly of [false, true]) {
+            for (const labelAbove of [false, true]) {
+              const rendered = renderedBelowTempo({
+                beatCount,
+                poly,
+                labelAbove,
+                fontScale,
+                width,
+                gap,
+              });
+              expect(rendered).toBeLessThanOrEqual(reserve);
+            }
+          }
         }
       }
     },
   );
 
-  it.each(CASES)(
-    'is exactly the tallest meter, so nothing below the dots is wasted at $width dp',
+  it.each(ROOMS)(
+    'wastes no room past the tallest song at $width dp',
     ({ width, gap }) => {
-      const heights = Array.from({ length: KB_MAX_BEATS }, (_u, i) =>
-        belowTempoHeight({ beatCount: i + 1, poly: true }, width, gap),
-      );
-      expect(belowTempoReserve(width, gap)).toBe(Math.max(...heights));
+      for (const fontScale of FONT_SCALES) {
+        const tallest = Math.max(
+          ...BEAT_COUNTS.map((beatCount) =>
+            renderedBelowTempo({
+              beatCount,
+              poly: true,
+              labelAbove: true,
+              fontScale,
+              width,
+              gap,
+            }),
+          ),
+        );
+        expect(belowTempoReserve({ width, gap, fontScale })).toBe(tallest);
+      }
     },
   );
-});
-
-describe('beatDotsHeight', () => {
-  it('adds the poly row below the beat lines', () => {
-    const plain = beatDotsHeight(MINIMAL, SMALL_PHONE_DOTS_WIDTH);
-    const poly = beatDotsHeight(
-      { ...MINIMAL, poly: true },
-      SMALL_PHONE_DOTS_WIDTH,
-    );
-    expect(poly - plain).toBe(metronome.beatDotLineGap + metronome.polyDot);
-  });
-
-  it('wraps twelve beats onto a second line', () => {
-    const one = beatDotsHeight(MINIMAL, SMALL_PHONE_DOTS_WIDTH);
-    const two = beatDotsHeight(
-      { beatCount: 12, poly: false },
-      SMALL_PHONE_DOTS_WIDTH,
-    );
-    expect(two).toBeGreaterThan(one);
-  });
 });
