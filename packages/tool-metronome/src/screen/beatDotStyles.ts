@@ -11,7 +11,6 @@ import {
 } from '@kitbag/core-design';
 
 import type { DotPalette, DotWidths } from '../logic/beatDot.ts';
-import { BEAT_LABEL_HEIGHT } from '../logic/belowTempo.ts';
 
 const RING_REACH = metronome.dotRingGap + metronome.dotRing;
 
@@ -27,8 +26,6 @@ export const PULSE_MARKS = {
   radius: metronome.pulseMarkRadius,
 };
 
-export const LINE_PITCH_GAP = BEAT_LABEL_HEIGHT + metronome.beatDotLineGap;
-
 function dotBorderColor(color: {
   readonly text3: string;
   readonly surface3: string;
@@ -41,7 +38,6 @@ export const useBeatDotStyles = createThemedStyles((theme) => {
   return {
     lines: {
       alignItems: 'center',
-      gap: metronome.beatDotLineGap,
     },
     line: {
       flexDirection: 'row',

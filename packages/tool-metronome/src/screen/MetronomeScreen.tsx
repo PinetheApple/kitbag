@@ -234,11 +234,12 @@ export function MetronomeScreen({
       ...gap,
       minHeight: belowTempoReserve({
         width: dotsWidth,
+        density,
         gap: gap.gap,
         fontScale,
       }),
     }),
-    [gap, dotsWidth, fontScale],
+    [gap, dotsWidth, density, fontScale],
   );
 
   return (
@@ -296,6 +297,7 @@ export function MetronomeScreen({
               polyBeats={polyEnabled ? polyBeats : null}
               accents={accents}
               width={dotsWidth}
+              density={density}
               frame={frame}
               onCycle={cycleAccent}
             />

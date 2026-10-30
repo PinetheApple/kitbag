@@ -27,14 +27,15 @@ import {
   MAX_DOTS_PER_LINE,
   widestLineWidth,
 } from '../logic/ledLayout.ts';
-import { DOT_METRICS } from '../logic/belowTempo.ts';
-import { NO_PULSE, soundingPulse } from '../logic/pulseMarks.ts';
 import {
-  dotPalette,
-  DOT_WIDTHS,
-  LINE_PITCH_GAP,
-  useBeatDotStyles,
-} from './beatDotStyles.ts';
+  BEAT_LABEL_HEIGHT,
+  beatDotLineGap,
+  beatDotMetrics,
+  DOT_METRICS,
+} from '../logic/belowTempo.ts';
+import { NO_PULSE, soundingPulse } from '../logic/pulseMarks.ts';
+import type { ScreenDensity } from '../logic/screenDensity.ts';
+import { dotPalette, DOT_WIDTHS, useBeatDotStyles } from './beatDotStyles.ts';
 import { BeatGrid, type BeatPosition } from './BeatGrid.tsx';
 import { CountInSquares } from './CountInSquares.tsx';
 import { PolyDots } from './PolyDots.tsx';
@@ -102,14 +103,17 @@ function BeatDot({
   );
 }
 
-function dotGaps({ line, group, dot }: BeatPosition): NeighbourGaps {
+function dotGaps(
+  { line, group, dot }: BeatPosition,
+  linePitchGap: number,
+): NeighbourGaps {
   const across = (dotEdge: boolean, groupEdge: boolean) => {
     if (!dotEdge) return DOT_METRICS.dotGap;
     return groupEdge ? undefined : DOT_METRICS.groupGap;
   };
   return {
-    top: line.first ? undefined : LINE_PITCH_GAP,
-    bottom: line.last ? undefined : LINE_PITCH_GAP,
+    top: line.first ? undefined : linePitchGap,
+    bottom: line.last ? undefined : linePitchGap,
     left: across(dot.first, group.first),
     right: across(dot.last, group.last),
   };
@@ -129,6 +133,7 @@ interface BeatDotsProps {
   readonly polyBeats: number | null;
   readonly accents: readonly KB_ACCENT[];
   readonly width: number;
+  readonly density: ScreenDensity;
   readonly frame: BeatDotsFrame;
   readonly onCycle: (beat: number) => void;
 }
@@ -139,6 +144,7 @@ export function BeatDots({
   polyBeats,
   accents,
   width,
+  density,
   frame,
   onCycle,
 }: BeatDotsProps) {
@@ -149,7 +155,11 @@ export function BeatDots({
     () => layoutBeatLeds(beatCount, MAX_DOTS_PER_LINE),
     [beatCount],
   );
-  const dotSize = beatDotSize(lines, width, DOT_METRICS);
+  const metrics = beatDotMetrics(density, lines);
+  const dotSize = beatDotSize(lines, width, metrics);
+  const lineGap = beatDotLineGap(density);
+  const linePitchGap = BEAT_LABEL_HEIGHT + lineGap;
+  const lineSpacing = useMemo(() => ({ gap: lineGap }), [lineGap]);
   const { barPhase, countingIn, currentBeat, barMuted } = frame;
   const barPulse = useSharedValue(NO_PULSE);
   useAnimatedReaction(
@@ -176,7 +186,7 @@ export function BeatDots({
             palette={palette}
             currentBeat={currentBeat}
             barMuted={barMuted}
-            gaps={dotGaps(position)}
+            gaps={dotGaps(position, linePitchGap)}
             onPress={onCycle}
           />
           <PulseMarks
@@ -201,18 +211,19 @@ export function BeatDots({
       styles,
       subdivision,
       barPulse,
+      linePitchGap,
     ],
   );
 
   return (
     <View>
-      <Animated.View style={[styles.lines, dotsShown]}>
+      <Animated.View style={[styles.lines, lineSpacing, dotsShown]}>
         <BeatGrid lines={lines} renderBeat={renderDot} />
         {polyBeats === null ? null : (
           <PolyDots
             polyBeats={polyBeats}
             beatsPerBar={beatCount}
-            lineWidth={widestLineWidth(lines, dotSize, DOT_METRICS)}
+            lineWidth={widestLineWidth(lines, dotSize, metrics)}
             areaWidth={width}
             dotSize={dotSize}
             currentPolyBeat={frame.currentPolyBeat}
