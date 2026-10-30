@@ -66,9 +66,8 @@ while :; do pi -p "/skill:project-loop … run one full wave, then stop" || brea
 4. **Wave gate.** Merge the set to the feature branch; run the full suite on the
    integrated tree (see Wave gate). Red on green slices = an integration finding:
    file, fix, re-gate. Never advance a phase on per-slice green.
-5. **Persist.** Close issues (SHA + evidence in the issue),
-   regenerate `CHANGELOG.md` (`git cliff changelog-base..HEAD`), remove spent
-   worktrees. Every result on disk before exit — or the next invocation can't resume.
+5. **Persist.** Close issues (SHA + evidence in the issue), regenerate
+   `CHANGELOG.md` (`git cliff changelog-base..HEAD`), remove spent worktrees. Every result on disk before exit — or the next invocation can't resume.
 6. **Exit.** Report and exit — only now, with the wave fully merged and persisted.
    One wave only; the driver re-invokes fresh. A merged wave leaves **no `.loop-halt`**
    and a new commit, so the driver continues. Any terminal state that dispatched no
