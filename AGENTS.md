@@ -89,7 +89,7 @@ rebuilding the tools on top. What is here now:
 | Path | What it is |
 |------|-----------|
 | `native/audio_core/` | The C++ realtime core. Flat C ABI (`include/kitbag_api.h`), miniaudio backend — SPEC.md §4. Built in Phase 1 (PR #26); still the cheapest verification signal in the project. |
-| `packages/` | The React Native app: pnpm workspaces + Turborepo. `app-shell` (Expo router shell), `core-native` (JSI HostObject + TurboModule — the ONLY native-binding package), `core-state`, `core-db` (Drizzle v7 schema + migration), `core-plugin-api` (the abstract contract), `core-design`, `eslint-plugin-kitbag`, and the tools: `tool-metronome` (built), `tool-library`/`tool-stems`/`tool-sync`/`tool-tuner` (skeletons). |
+| `packages/` | The React Native app: pnpm workspaces + Turborepo. `app-shell` (Expo router shell), `core-native` (JSI HostObject + TurboModule — the ONLY native-binding package), `core-state`, `core-db` (Drizzle schema v17, migrating the Flutter v6 database in place), `core-plugin-api` (the abstract contract), `core-design`, `eslint-plugin-kitbag`, and the tools: `tool-metronome`, `tool-library` (Songs and Stem songs lists), `tool-stems` (stem player) and `tool-tuner` are built; `tool-sync` (play along) is a skeleton. |
 | `SPEC.md` | Product + technical spec. Source of truth. §17 records the locked decisions; §17.1 is what is still open. |
 | `design/` | The binding HTML design specs. Precedence, and which variant of a multi-variant file binds, is in SPEC.md §12. |
 | `legacy/` | `android/MediaSessionPlugin.kt` + `AndroidManifest.xml`, the Flutter-era media-session detection that play-along (§8.2, §13.9) still has to port. **Reference only — do not build against them.** Delete them once `MediaNotificationListenerService.kt` stops being a skeleton. |
@@ -220,10 +220,12 @@ Short version:
   downbeats, mixer fixes. Headlessly verified.
 - **Phase 2** ✅ (PR #39, merged 2026-07-24) — the RN skeleton; the 60fps rule
   is proven on device (#33 device gate PASSED).
-- **Phase 3** — rebuild the tools in dependency order. **In progress on
-  `feat/phase2-skeleton`**: metronome first (M1–M9 in
-  `docs/archive/phase3-tracker.md`; GitHub issues are the tickets). M3 (#46) is built
-  and awaiting design sign-off; see `.loop-halt`.
+- **Phase 3** — rebuild the tools in dependency order, one issue per PR against
+  `main`. Built: the metronome with setlists and presets, the Home hub, the tuner
+  (#117, #127), song import with background beat analysis (#160), the Songs and
+  Stem songs screens (#178) and the stem player (#137, #177). Not built: a
+  single-song player (§6), play along (§8), Settings (#170). Open issues are the
+  backlog.
 
 ## Honesty rules
 

@@ -129,8 +129,8 @@ faithfully reproduces them has failed.
   `Mixer::Pause()` is a single release store that holds `read_frame_`, and a
   following `Play()` resumes from it; `Stop()` still rewinds, which is now its
   own distinct job. Exposed on the ABI as `kb_mixer_pause` beside
-  `kb_mixer_stop`. **The UI half is still open** — the audit's "the pause button
-  calls it" cannot be fixed yet because there is no UI. See §7.3.
+  `kb_mixer_stop`. **UI half done 2026-10-29** (#137): the stem player's pause
+  calls `kb_mixer_pause`. See §7.3.
 - `bpm_lookup_service.dart:68` — comment claims title/artist similarity
   matching; the loop returns the first result with nonzero BPM. Wrong-song BPM
   likely.
@@ -862,7 +862,7 @@ first implementation**, gated on §4.1.
 - **Fix the gain slider default.** ~~It renders 0.0 because `getGain` returns 0.0
   for unloaded tracks; loaded tracks must report 1.0.~~ **Native half done
   2026-10-29** (#137): `kb_mixer_gain` reports 1.0 for any in-range track until
-  set, loaded or not. **Still outstanding:** the slider that reads it.
+  set, loaded or not. The stem player's per-stem fader reads it (#137).
 - Rows stay ≥48dp; nothing modal mid-song; no hidden swipe-mixer.
 
 ### 7.3 Transport
@@ -870,10 +870,11 @@ first implementation**, gated on §4.1.
 - **Real pause.** ~~`Stop()` resets position to 0 and the pause button calls it —
   pause currently rewinds. Split via §4.4.~~ **Native half done 2026-07-20**
   (`4d6c89a`): the §4.4 split landed — `Mixer::Pause()` holds the position,
-  `kb_mixer_stop` still rewinds, both are on the ABI. **Still outstanding:** a
-  transport UI that calls `kb_mixer_pause`. None exists.
-- **Seek UI.** `Mixer::Seek` and `MixerController.seek` exist; no screen ever
-  calls them. There is no scrubber.
+  `kb_mixer_stop` still rewinds, both are on the ABI. **UI half done 2026-10-29**
+  (#137): the stem player's pause button calls `kb_mixer_pause`.
+- **Seek UI.** ~~`Mixer::Seek` and `MixerController.seek` exist; no screen ever
+  calls them. There is no scrubber.~~ **Done 2026-10-29** (#137): the stem
+  player's scrubber and ±10 s keys seek through `kb_mixer_seek`.
 - Fix the position display — Flutter formats frames as ms against a hardcoded
   48000.
 - **A-B loop**, beat-snapped, equal-power crossfade.
@@ -1240,9 +1241,11 @@ These hold whatever the stack, and the lint layer enforces them (§13.6):
 
 ---
 
-## 10. F6 — Tuner (deferred)
+## 10. F6 — Tuner
 
 Built in Flutter (1,953 LOC) and deferred by decision. **Do not port it as-is.**
+**Rebuilt 2026-10 (#117, #127)** on a new detector rather than ported; §10.1's
+capture-path and pickup items still need a device.
 The migration changes nothing here: the problem is in the capture path and the
 DSP, both native.
 
@@ -2079,6 +2082,8 @@ The six questions that blocked schema and toolchain work were answered
 
 ### Phase 1 — Core
 
+**Closed** (PR #26), headlessly verified.
+
 §4 in full: native playback (4.1), phase anchor (4.2), downbeats (4.3), mixer
 fixes (4.4).
 
@@ -2089,6 +2094,8 @@ wasted by the stack decision, which is precisely why the previous revision of th
 spec said to do it before deciding.
 
 ### Phase 2 — Skeleton
+
+**Closed 2026-07-24** (PR #39). The 60fps gate passed on a device (#33).
 
 `core-native` + the JSI HostObject + the TurboModule + the eval-harnessed lint
 rules + the Drizzle migration off the existing v6 database. Proves §13.2 and
@@ -2107,6 +2114,11 @@ steady, that is a foundation problem and everything above it is rework.
 4. **Play along** (§8) — depends on §4.2 and §6's grids. **Fix the cast-class bug
    and get a real device reading first** (§8.3).
 5. **Tuner** (§10) — after §10.1's research.
+
+**Status 2026-10-30:** 1 is built; its redesign (#175) and the practice summary
+(#80, #85) are open. 2 is partly built: import and background beat
+analysis exist (#160), a single-song player does not. 3 is built (#137, #177).
+4 has not started; `tool-sync` is a skeleton. 5 is built (#117, #127).
 
 Plugin extensibility (§9) is not a phase; it is how each of the above is built.
 

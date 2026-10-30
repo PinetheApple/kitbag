@@ -4,10 +4,11 @@
 library, stem player, play-along sync — one app, plugin-shaped, GPLv3,
 no caps, no paywalls, ever.
 
-> **Status: rebuilding.** An audit on 2026-07-17 found the previous Flutter build
-> was a broad UI shell over an audio core missing two primitives the product
-> depends on — it could neither play a file nor start the click at a known
-> instant. That app has been removed; the C++ core stays.
+> **Status: rebuilding, nothing released.** An audit on 2026-07-17 found the
+> previous Flutter build was a broad UI shell over an audio core missing two
+> primitives the product depends on — it could neither play a file nor start the
+> click at a known instant. That app has been removed; the C++ core stays and now
+> has both.
 >
 > **[SPEC.md](SPEC.md) is the source of truth** — scope, contracts, decisions and
 > sequencing. It is the only planning document; `PLAN.md` was folded into it and
@@ -23,8 +24,8 @@ no caps, no paywalls, ever.
 - **React Native + TypeScript** UI, reached via JSI — decided 2026-07-17
   ([SPEC.md](SPEC.md) §13). Commands go through a TurboModule; polled realtime
   reads go through a JSI HostObject. Builds and runs on Android; the 60fps read
-  path is proven on a device (§13.3). The metronome is the first tool rebuilt;
-  the home hub is still a skeleton.
+  path is proven on a device (§13.3). Rebuilt so far: the metronome, the tuner,
+  the song library and the stem player. Play along and Settings are not built.
 - **Internal plugin system** — every tool declares itself to a shell that is just
   a registry. First-party only; no public SDK yet.
 
@@ -38,7 +39,7 @@ packages/           # React Native app — pnpm workspaces + Turborepo
 SPEC.md             # source of truth
 design/             # binding design specs (precedence: SPEC.md §12)
 legacy/             # Flutter-era media-session code play-along still has to port
-docs/               # trackers, decisions, research (read the tuner warning banner)
+docs/               # decisions, tuner spec, research; archive/ is historical
 scripts/            # repeatable actions — lint, format, worktrees, changelog
 ```
 
@@ -63,18 +64,20 @@ cheapest signal in the project.
 
 ### App
 
-Requirements: Node (see `.nvmrc` if present), pnpm, Android SDK + NDK.
+Requirements: Node (version in `.nvmrc`), pnpm, Android SDK + NDK.
 
 ```sh
 pnpm install
 pnpm -w typecheck && pnpm -w lint && pnpm -w test
 ```
 
-Android builds run from `packages/app-shell/android` via Gradle. Anything that
-touches a screen or the native boundary needs verifying on a real device — the
+Android builds run from `packages/app-shell/android` via Gradle;
+`bash scripts/install-on-device.sh` builds, installs and launches on a connected
+device. Anything that touches a screen or the native boundary needs verifying on a real device — the
 headless gates cannot see a broken JNI chain.
 
 ## License
 
-GPLv3 — see [LICENSE](LICENSE). Dependencies: miniaudio (public domain),
-Space Grotesk & Inter (OFL). BPM data: Deezer (attribution in-app).
+GPLv3 — see [LICENSE](LICENSE). Native dependencies: miniaudio (public domain),
+QM-DSP (GPL-2.0-or-later, with kissfft under BSD-3-Clause). Fonts: Space Grotesk
+and Inter (OFL).
