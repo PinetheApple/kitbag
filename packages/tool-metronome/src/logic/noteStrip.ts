@@ -1,4 +1,4 @@
-const EMPTY_LINE = ' ';
+import { TEXT_PLACEHOLDER } from './textPlaceholder.ts';
 
 export interface NoteStrip {
   readonly text: string;
@@ -13,6 +13,6 @@ export function noteStrip(
 ): NoteStrip | null {
   if (!songLoaded) return null;
   const line = (notes ?? '').replace(/\s+/g, ' ').trim();
-  if (line === '') return { text: EMPTY_LINE, spoken: null };
+  if (line === '') return { text: TEXT_PLACEHOLDER, spoken: null };
   return { text: line, spoken: `Song notes: ${line}` };
 }

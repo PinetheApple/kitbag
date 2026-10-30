@@ -80,10 +80,9 @@ describe('numpad display', () => {
     expect(displayDigits(type(openEntry(90), [1, 2]))).toBe('12');
   });
 
-  it('never renders an empty line, so it re-measures after a text-size change', () => {
+  it('renders the placeholder when cleared', () => {
     expect(displayDigits(cleared)).toBe(TEXT_PLACEHOLDER);
-    expect(TEXT_PLACEHOLDER.trim()).toBe('');
-    expect(TEXT_PLACEHOLDER.length).toBeGreaterThan(0);
+    expect(TEXT_PLACEHOLDER).toBe('\u00A0');
   });
 
   it('announces the value with its unit', () => {
