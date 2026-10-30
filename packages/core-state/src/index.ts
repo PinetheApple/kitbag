@@ -190,6 +190,12 @@ export {
   type SongFacts,
 } from './stemPlayer/facts.ts';
 export {
+  formatDuration,
+  formatPracticeSummary,
+  formatSessionCount,
+  type PracticeSummary,
+} from './practice/format.ts';
+export {
   clockParts,
   formatClockSeconds,
   MINUS,
