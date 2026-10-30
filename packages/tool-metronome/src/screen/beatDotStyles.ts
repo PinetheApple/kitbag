@@ -26,7 +26,15 @@ export const DOT_METRICS = {
   groupGap: metronome.beatDotGroupGap,
 };
 
+export const PULSE_MARKS = {
+  mark: metronome.pulseMark,
+  gap: metronome.pulseMarkGap,
+  radius: metronome.pulseMarkRadius,
+};
+
 export const LINE_PITCH_GAP =
+  metronome.beatMarkerGap +
+  metronome.pulseMark +
   metronome.beatMarkerGap +
   metronome.beatMarkerLineHeight +
   metronome.beatDotLineGap;
@@ -79,6 +87,22 @@ export const useBeatDotStyles = createThemedStyles((theme) => {
       lineHeight: metronome.beatMarkerLineHeight,
       minHeight: metronome.beatMarkerLineHeight,
       color: theme.color.text2,
+    },
+    pulseRow: {
+      height: metronome.pulseMark,
+      justifyContent: 'center',
+    },
+    pulseMarks: {
+      flexDirection: 'row',
+    },
+    pulseMark: {
+      backgroundColor: theme.color.surface3,
+    },
+    pulseLit: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      backgroundColor: theme.color.accent,
     },
     overlay: {
       position: 'absolute',

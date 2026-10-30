@@ -6,7 +6,7 @@ import {
   useTheme,
 } from '@kitbag/core-design';
 import { useCallback, useMemo } from 'react';
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   type SharedValue,
@@ -87,6 +87,7 @@ export function CountInSquares({
     (beat: number) => (
       <>
         <CountSquare beat={beat} side={dotSize} currentBeat={currentBeat} />
+        <View style={styles.pulseRow} />
         <Text style={styles.marker} />
       </>
     ),

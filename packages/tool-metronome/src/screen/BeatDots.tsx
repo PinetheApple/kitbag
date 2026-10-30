@@ -9,7 +9,9 @@ import { KB_ACCENT } from '@kitbag/core-native';
 import { useCallback, useMemo } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Animated, {
+  useAnimatedReaction,
   useAnimatedStyle,
+  useSharedValue,
   type SharedValue,
 } from 'react-native-reanimated';
 
@@ -24,6 +26,7 @@ import {
   layoutBeatLeds,
   MAX_DOTS_PER_LINE,
 } from '../logic/ledLayout.ts';
+import { NO_PULSE, soundingPulse } from '../logic/pulseMarks.ts';
 import {
   dotPalette,
   DOT_METRICS,
@@ -33,6 +36,7 @@ import {
 } from './beatDotStyles.ts';
 import { BeatGrid, type BeatPosition } from './BeatGrid.tsx';
 import { CountInSquares } from './CountInSquares.tsx';
+import { PulseMarks } from './PulseMarks.tsx';
 
 interface BeatDotProps {
   readonly beat: number;
@@ -110,6 +114,7 @@ function dotGaps({ line, group, dot }: BeatPosition): NeighbourGaps {
 }
 
 export interface BeatDotsFrame {
+  readonly barPhase: SharedValue<number>;
   readonly currentBeat: SharedValue<number>;
   readonly barMuted: SharedValue<number>;
   readonly countingIn: SharedValue<number>;
@@ -117,6 +122,7 @@ export interface BeatDotsFrame {
 
 interface BeatDotsProps {
   readonly beatCount: number;
+  readonly subdivision: number;
   readonly accents: readonly KB_ACCENT[];
   readonly width: number;
   readonly frame: BeatDotsFrame;
@@ -125,6 +131,7 @@ interface BeatDotsProps {
 
 export function BeatDots({
   beatCount,
+  subdivision,
   accents,
   width,
   frame,
@@ -138,28 +145,58 @@ export function BeatDots({
     [beatCount],
   );
   const dotSize = beatDotSize(lines, width, DOT_METRICS);
-  const { countingIn, currentBeat, barMuted } = frame;
+  const { barPhase, countingIn, currentBeat, barMuted } = frame;
+  const pulse = useSharedValue(NO_PULSE);
+  useAnimatedReaction(
+    () =>
+      soundingPulse(barPhase.value, beatCount, subdivision, currentBeat.value),
+    (next) => {
+      if (pulse.value !== next) pulse.value = next;
+    },
+    [beatCount, subdivision],
+  );
   const dotsShown = useAnimatedStyle(() => {
     const shown = countingIn.value === 0;
     return { opacity: shown ? 1 : 0, pointerEvents: shown ? 'auto' : 'none' };
   });
   const renderDot = useCallback(
-    (beat: number, position: BeatPosition) => (
-      <>
-        <BeatDot
-          beat={beat}
-          state={ledStateFor(accents[beat] ?? KB_ACCENT.KB_ACCENT_NORMAL)}
-          dotSize={dotSize}
-          palette={palette}
-          currentBeat={currentBeat}
-          barMuted={barMuted}
-          gaps={dotGaps(position)}
-          onPress={onCycle}
-        />
-        <Text style={styles.marker}>{beat === 0 ? '1' : ''}</Text>
-      </>
-    ),
-    [accents, dotSize, palette, currentBeat, barMuted, onCycle, styles],
+    (beat: number, position: BeatPosition) => {
+      const state = ledStateFor(accents[beat] ?? KB_ACCENT.KB_ACCENT_NORMAL);
+      return (
+        <>
+          <BeatDot
+            beat={beat}
+            state={state}
+            dotSize={dotSize}
+            palette={palette}
+            currentBeat={currentBeat}
+            barMuted={barMuted}
+            gaps={dotGaps(position)}
+            onPress={onCycle}
+          />
+          <PulseMarks
+            beat={beat}
+            pulses={subdivision}
+            dotSize={dotSize}
+            silentBeat={state === 'muted'}
+            pulse={pulse}
+            barMuted={barMuted}
+          />
+          <Text style={styles.marker}>{beat === 0 ? '1' : ''}</Text>
+        </>
+      );
+    },
+    [
+      accents,
+      dotSize,
+      palette,
+      currentBeat,
+      barMuted,
+      onCycle,
+      styles,
+      subdivision,
+      pulse,
+    ],
   );
 
   return (

@@ -219,11 +219,13 @@ export function MetronomeScreen({
           <PickerChips
             beatsPerBar={beatsPerBar}
             denominator={denominator}
+            subdivision={subdivision}
             onOpenMeter={handleOpenMeter}
             onOpenSubdivision={handleOpenSubdivision}
           />
           <BeatDots
             beatCount={beatsPerBar}
+            subdivision={subdivision}
             accents={accents}
             width={dotsWidth}
             frame={frame}
