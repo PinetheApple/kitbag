@@ -29,6 +29,14 @@ export const useStatusStyles = createThemedStyles((theme) => ({
     left: 0,
     height: metronome.statusRow,
   },
+  legendRow: {
+    position: 'absolute',
+    top: ROW_PITCH,
+    right: 0,
+    left: 0,
+    height: metronome.statusRow,
+    justifyContent: 'center',
+  },
   rest: {
     height: metronome.statusRow,
     flexDirection: 'row',

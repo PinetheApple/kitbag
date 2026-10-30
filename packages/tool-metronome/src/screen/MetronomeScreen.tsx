@@ -23,7 +23,7 @@ import {
 import { useLibraryRefresh } from '../library/useLibraryRefresh.ts';
 import { practiceBadgeCount } from '../logic/statusRows.ts';
 import { pushTap, tapTempoBpm } from '../logic/tapTempo.ts';
-import { BeatDots, BeatLegend } from './BeatDots.tsx';
+import { BeatDots } from './BeatDots.tsx';
 import { BpmNumpadSheet } from './BpmNumpadSheet.tsx';
 import { MeterSheet } from './MeterSheet.tsx';
 import { MetronomeAppBar } from './MetronomeAppBar.tsx';
@@ -235,7 +235,6 @@ export function MetronomeScreen({
             onCycle={cycleAccent}
           />
           <StatusStack frame={frame} settings={settings} running={running} />
-          {running ? null : <BeatLegend />}
           <Transport
             running={running}
             armedCount={practiceBadgeCount(settings)}

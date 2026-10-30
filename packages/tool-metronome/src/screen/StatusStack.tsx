@@ -24,6 +24,7 @@ import {
   type PracticeSettings,
   type StatusRows,
 } from '../logic/statusRows.ts';
+import { BeatLegend } from './BeatDots.tsx';
 import { LiveSlot } from './LiveSlot.tsx';
 import { MuteStatus } from './MuteStatus.tsx';
 import { countInInk, useStatusStyles } from './statusStyles.ts';
@@ -200,12 +201,17 @@ export function StatusStack({ frame, settings, running }: StatusStackProps) {
       pointerEvents="none"
     >
       {running ? null : (
-        <View style={styles.rest}>
-          <Icon name="practiceTools" size="statusRest" color="text2" />
-          <Text style={styles.restText} numberOfLines={1}>
-            {summary}
-          </Text>
-        </View>
+        <>
+          <View style={styles.rest}>
+            <Icon name="practiceTools" size="statusRest" color="text2" />
+            <Text style={styles.restText} numberOfLines={1}>
+              {summary}
+            </Text>
+          </View>
+          <View style={styles.legendRow}>
+            <BeatLegend />
+          </View>
+        </>
       )}
       <MuteStatus
         rows={rows}
