@@ -1,11 +1,11 @@
 import {
-  EDIT_ROW_CONTROL_GAP,
+  EDIT_ROW_PRESSABLE_GAP,
   EditGroup,
   EditRow,
+  EditSwitchRow,
   EditValue,
   SectionHeader,
   SegmentedControl,
-  Switch,
   type SegmentOption,
 } from '@kitbag/core-design';
 import { useAppearance, type ThemeChoice } from '@kitbag/core-state';
@@ -26,10 +26,7 @@ const THEME_OPTIONS: readonly SegmentOption<ThemeChoice>[] = [
   { value: 'light', label: 'Light' },
 ];
 
-const ROW_CONTROL_GAPS = {
-  top: EDIT_ROW_CONTROL_GAP,
-  bottom: EDIT_ROW_CONTROL_GAP,
-};
+const THEME_CONTROL_GAPS = { bottom: EDIT_ROW_PRESSABLE_GAP };
 
 const LICENCE_LABEL = 'Licence';
 const SOURCE_ROW_LABEL = 'Source & issues';
@@ -59,27 +56,21 @@ function AppearanceSection() {
             options={THEME_OPTIONS}
             selected={theme}
             onSelect={setTheme}
-            neighbourGapDp={ROW_CONTROL_GAPS}
+            neighbourGapDp={THEME_CONTROL_GAPS}
           />
         </EditRow>
-        <EditRow label="Haptics">
-          <Switch
-            variant="outlined"
-            accessibilityLabel="Haptics"
-            value={haptics}
-            onValueChange={setHaptics}
-            neighbourGapDp={ROW_CONTROL_GAPS}
-          />
-        </EditRow>
-        <EditRow label="Keep screen awake">
-          <Switch
-            variant="outlined"
-            accessibilityLabel="Keep screen awake"
-            value={keepScreenAwake}
-            onValueChange={setKeepScreenAwake}
-            neighbourGapDp={ROW_CONTROL_GAPS}
-          />
-        </EditRow>
+        <EditSwitchRow
+          variant="outlined"
+          label="Haptics"
+          value={haptics}
+          onValueChange={setHaptics}
+        />
+        <EditSwitchRow
+          variant="outlined"
+          label="Keep screen awake"
+          value={keepScreenAwake}
+          onValueChange={setKeepScreenAwake}
+        />
       </EditGroup>
     </>
   );
