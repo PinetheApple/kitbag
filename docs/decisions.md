@@ -441,3 +441,18 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   variant A's menu from `design/kitbag-library.html`: filter by analysis status, sort by
   title, date added or BPM. This amends the earlier #178 entry, which left the icon out
   because its action was undefined. The menu is not built yet. **[user]**
+
+- **2026-10-30 · Setlist navigation on the metronome (§5.4, §12, #205)** — Option D,
+  with previous and next added (D2 in `design/kitbag-metronome-setlist.html`): the
+  app-bar chip shows the song name over the setlist and position and opens the
+  setlist's song list, which ends in Leave setlist; one-tap previous and next sit
+  either side of the chip. Nothing is added to the screen body, so the busiest state
+  still fits and swipe-anywhere stays on. A, B and C are rejected: B and C overflow by
+  about 50 dp in the busiest state at 360 × 800. **[user]**
+
+- **2026-10-31 · Clearing the loaded song (§5.4, #205)** — With no setlist active, the
+  song chip opens a sheet with the song name, "Not in a setlist", Clear song and Open
+  setlists. Clear song and Leave setlist both unlink the loaded song and keep the
+  metronome's current settings, so nothing changes mid-play and nothing is written to the
+  preset; the bar returns to "Metronome" and the plain Setlists chip. The loaded song is
+  held in memory only, so a restart already starts with none. **[user]**

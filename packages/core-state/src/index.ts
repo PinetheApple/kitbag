@@ -86,6 +86,12 @@ export {
 } from './library/runtime.ts';
 export type { SetlistEntry, SetlistSummary } from './library/snapshot.ts';
 export {
+  activeSetlistOf,
+  adjacentEntry,
+  SONG_STEP,
+  type SongStep,
+} from './library/setlistPosition.ts';
+export {
   accentsOf,
   byteList,
   perAccentSoundsOf,

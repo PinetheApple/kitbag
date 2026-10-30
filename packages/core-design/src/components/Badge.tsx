@@ -18,15 +18,19 @@ import { InlineIcon } from './IconGlyph.tsx';
 
 export type BadgeTone = 'default' | 'accent' | 'success' | 'warning' | 'danger';
 
-export type BadgeVariant = 'default' | 'list';
+export type BadgeVariant = 'default' | 'list' | 'filled';
 
-export interface BadgeProps {
+interface BadgeBaseProps {
   readonly label: string;
-  readonly tone?: BadgeTone;
   readonly icon?: IconName;
   readonly accessibilityLabel?: string;
-  readonly variant?: BadgeVariant;
 }
+
+export type BadgeProps = BadgeBaseProps &
+  (
+    | { readonly tone?: BadgeTone; readonly variant?: 'default' | 'list' }
+    | { readonly tone: 'accent'; readonly variant: 'filled' }
+  );
 
 function feedbackTone(tone: BadgeTone): FeedbackTone | null {
   return tone === 'default' || tone === 'accent' ? null : tone;
@@ -69,6 +73,18 @@ const useStyles = createThemedStyles((theme) => ({
   },
   listIcon: { fontSize: iconSizes.listBadge },
   listAccentLabel: { color: theme.color[theme.accentInk] },
+  filled: {
+    paddingVertical: inset.chipV,
+    paddingHorizontal: inset.chipFillH,
+    borderRadius: radius.chip,
+    borderWidth: 0,
+    backgroundColor: theme.color.accent,
+  },
+  filledLabel: {
+    ...textStyle(textRoles.filledBadge),
+    lineHeight: textRoles.filledBadge.size * lineRatio.badge,
+    color: theme.color.onAccent,
+  },
 }));
 
 export function Badge({
@@ -81,6 +97,7 @@ export function Badge({
   const styles = useStyles();
   const theme = useTheme();
   const list = variant === 'list';
+  const filled = variant === 'filled';
   const feedback = feedbackTone(tone);
   const listBorder =
     list && feedback !== null
@@ -91,6 +108,7 @@ export function Badge({
     list && styles.listLabel,
     styles[`${tone}Label`],
     list && tone === 'accent' && styles.listAccentLabel,
+    filled && styles.filledLabel,
   ];
   return (
     <View
@@ -102,6 +120,7 @@ export function Badge({
         styles[`${tone}Box`],
         list && styles.list,
         listBorder,
+        filled && styles.filled,
       ]}
     >
       {icon === undefined ? null : (

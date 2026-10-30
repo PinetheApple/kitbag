@@ -167,6 +167,7 @@ export const lineRatio = {
   title: 1.3,
   compactBody: 1.5,
   badge: 1,
+  songChip: 1.2,
 } as const;
 
 export const homeTile = {
@@ -212,6 +213,7 @@ export const iconSizes = {
   transport: size.playGlyphBox,
   stepKey: 18,
   caret: 18,
+  skip: 26,
   statusRest: 18,
   statusLive: 20,
   transportLarge: 24,
@@ -249,12 +251,14 @@ export const textRoles = {
   tempoCaption: { family: display, weight: 400, size: 11, tracking: 0.22 },
   segment: { family: display, weight: 400, size: 12.5 },
   badge: { family: display, weight: 400, size: 10.5, tracking: 0.06 },
+  filledBadge: { family: display, weight: 600, size: 10.5, tracking: 0.12 },
   stepKey: { family: display, weight: 400, size: iconSizes.stepKey },
   stepInline: { family: display, weight: 400, size: 12.5 },
   stepInlineValue: { family: display, weight: 500, size: 12.5, tabular: true },
   transportKey: { family: display, weight: 400, size: iconSizes.transport },
   dockKey: { family: display, weight: 400, size: iconSizes.dockKey },
   sheetTitle: { family: display, weight: 500, size: 14 },
+  sheetTitleLarge: { family: display, weight: 500, size: 16 },
   sheetNumeral: {
     family: display,
     weight: 700,
@@ -299,6 +303,9 @@ export const textRoles = {
   pegNote: { family: display, weight: 400, size: 12 },
   pegString: { family: display, weight: 400, size: 11, tabular: true },
   setChip: { family: display, weight: 500, size: 13 },
+  songChipTitle: { family: display, weight: 600, size: 14 },
+  songChipContext: { family: display, weight: 500, size: 12 },
+  setlistSongMeta: { family: display, weight: 500, size: 13 },
   pickerChip: { family: display, weight: 500, size: 15 },
   status: { family: body, weight: 400, size: 14 },
   statusLead: { family: display, weight: 600, size: 14.5, tabular: true },
@@ -342,6 +349,7 @@ export const textRoles = {
   loopNote: { family: display, weight: 400, size: 12 },
   loopFlag: { family: display, weight: 700, size: 11 },
   menuRow: { family: body, weight: 400, size: 14.5 },
+  menuRowNow: { family: body, weight: 600, size: 14.5 },
   menuValue: { family: display, weight: 400, size: 14 },
   listTitle: { family: display, weight: 500, size: 15 },
   listFacts: { family: body, weight: 400, size: 12.5, tabular: true },

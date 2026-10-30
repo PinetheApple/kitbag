@@ -9,6 +9,7 @@ export const fontFaces = {
   },
   [fontFamily.body]: {
     400: 'Inter_400Regular',
+    600: 'Inter_600SemiBold',
   },
 } as const satisfies Record<string, Partial<Record<number, string>>>;
 

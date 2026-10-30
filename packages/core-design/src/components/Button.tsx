@@ -1,7 +1,15 @@
 import { Pressable, Text, View } from 'react-native';
 
 import type { IconName } from '../icons.ts';
-import { iconSizes, inset, radius, size, space, textRoles } from '../roles.ts';
+import {
+  iconSizes,
+  inset,
+  radius,
+  size,
+  space,
+  textRoles,
+  type IconSize,
+} from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
@@ -14,13 +22,14 @@ import {
 import { InlineIcon } from './IconGlyph.tsx';
 
 export type ButtonVariant = 'primary' | 'tonal' | 'ghost' | 'destructive';
-export type ButtonSize = 'default' | 'sheet' | 'prompt';
+export type ButtonSize = 'default' | 'sheet' | 'prompt' | 'target';
 
 const BUTTON_HEIGHT = textRoles.button.size + (inset.buttonV + size.stroke) * 2;
 const BUTTON_HEIGHTS: Readonly<Record<ButtonSize, number>> = {
   default: BUTTON_HEIGHT,
   sheet: size.buttonSheet,
   prompt: size.buttonPrompt,
+  target: minTouchTargetDp,
 };
 
 // A labelled button is wider than 48dp, so only the vertical axis is grown.
@@ -38,6 +47,7 @@ export interface ButtonProps {
   readonly onPress: () => void;
   readonly variant?: ButtonVariant;
   readonly icon?: IconName;
+  readonly iconSize?: IconSize;
   readonly disabled?: boolean;
   readonly fill?: boolean;
   readonly accessibilityLabel?: string;
@@ -116,6 +126,10 @@ const useStyles = createThemedStyles((theme) => ({
     minHeight: size.buttonPrompt,
     paddingVertical: 0,
   },
+  target: {
+    minHeight: minTouchTargetDp,
+    paddingVertical: 0,
+  },
 }));
 
 export function Button({
@@ -123,6 +137,7 @@ export function Button({
   onPress,
   variant = 'tonal',
   icon,
+  iconSize,
   disabled = false,
   fill = false,
   accessibilityLabel,
@@ -155,7 +170,14 @@ export function Button({
         ]}
       >
         {icon === undefined ? null : (
-          <InlineIcon name={icon} style={[styles.icon, labelStyle]} />
+          <InlineIcon
+            name={icon}
+            style={[
+              styles.icon,
+              iconSize !== undefined && { fontSize: iconSizes[iconSize] },
+              labelStyle,
+            ]}
+          />
         )}
         <Text style={[styles.label, labelStyle]}>{label}</Text>
       </View>

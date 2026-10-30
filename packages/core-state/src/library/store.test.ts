@@ -5,6 +5,7 @@ import { KB_ACCENT, KB_RAMP_UNIT } from '@kitbag/core-native';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createMetronomeStore } from '../metronome/store.ts';
+import { SONG_STEP } from './setlistPosition.ts';
 import { createLibraryStore } from './store.ts';
 
 const handles: ReturnType<typeof openTestDatabase>[] = [];
@@ -158,7 +159,148 @@ describe('library store', () => {
     expect(library.getState().loaded).toEqual({
       presetId: song,
       itemId: entry.item.id,
+      setlistId: gig,
     });
+  });
+
+  async function offStage() {
+    const { library, repos, metronome } = setup();
+    const s = library.getState();
+    const gig = await s.createSetlist('Gig');
+    for (const name of ['One', 'Two', 'Three'])
+      await s.newSongFromCurrent(name, gig);
+    const solo = await s.newSongFromCurrent('Solo');
+    const [first] = library.getState().entries[gig] ?? [];
+    if (first === undefined) throw new Error('missing first song');
+    return { library, repos, metronome, gig, solo, first };
+  }
+
+  async function onStage() {
+    const stage = await offStage();
+    const { first, gig } = stage;
+    await stage.library
+      .getState()
+      .loadSong(first.preset.id, first.item.id, gig);
+    return stage;
+  }
+
+  const loadedName = (library: ReturnType<typeof createLibraryStore>) =>
+    library
+      .getState()
+      .presets.find((p) => p.id === library.getState().loaded?.presetId)?.name;
+
+  const activeId = (library: ReturnType<typeof createLibraryStore>) =>
+    library.getState().setlists.find((x) => x.setlist.active)?.setlist.id;
+
+  it('steps through the active setlist and stops at both ends', async () => {
+    const { library, gig } = await onStage();
+    const s = library.getState();
+    await s.stepSong(SONG_STEP.previous);
+    expect(loadedName(library)).toBe('One');
+    await s.stepSong(SONG_STEP.next);
+    await s.stepSong(SONG_STEP.next);
+    expect(loadedName(library)).toBe('Three');
+    await s.stepSong(SONG_STEP.next);
+    expect(loadedName(library)).toBe('Three');
+    await s.stepSong(SONG_STEP.previous);
+    expect(loadedName(library)).toBe('Two');
+    expect(activeId(library)).toBe(gig);
+    expect(library.getState().played).toHaveLength(3);
+  });
+
+  it('clears the active setlist when a song is loaded from outside it', async () => {
+    const { library, solo } = await onStage();
+    await library.getState().loadSong(solo);
+    expect(activeId(library)).toBeUndefined();
+    expect(library.getState().played).toEqual([]);
+    expect(loadedName(library)).toBe('Solo');
+  });
+
+  it('leaves the setlist and unlinks the loaded song, keeping its settings', async () => {
+    const { library, metronome } = await onStage();
+    const bpm = metronome.getState().bpm;
+    await library.getState().leaveSetlist();
+    expect(activeId(library)).toBeUndefined();
+    expect(library.getState().played).toEqual([]);
+    expect(library.getState().loaded).toBeNull();
+    expect(metronome.getState().bpm).toBe(bpm);
+  });
+
+  it('clears the loaded song without touching the metronome or the preset', async () => {
+    const { library, metronome, repos } = setup();
+    metronome.getState().setTempo(96);
+    const id = await library.getState().newSongFromCurrent('Solo');
+    await library.getState().loadSong(id);
+    metronome.getState().setTempo(132);
+    const update = vi.spyOn(repos.presets, 'update');
+    library.getState().clearSong();
+    expect(library.getState().loaded).toBeNull();
+    expect(metronome.getState().bpm).toBe(132);
+    expect(update).not.toHaveBeenCalled();
+    expect(library.getState().presets.find((p) => p.id === id)?.bpm).toBe(96);
+  });
+
+  it('clears the setlist when an outside load overtakes a pin still in flight', async () => {
+    const { library, gig, solo, first } = await offStage();
+    const pinning = library
+      .getState()
+      .loadSong(first.preset.id, first.item.id, gig);
+    await library.getState().loadSong(solo);
+    await pinning;
+    expect(activeId(library)).toBeUndefined();
+    expect(loadedName(library)).toBe('Solo');
+  });
+
+  it('marks an outside song as off stage even when leaving the setlist fails', async () => {
+    const { library, repos, solo } = await onStage();
+    vi.spyOn(repos.setlists, 'selectActive').mockRejectedValue(
+      new Error('disk full'),
+    );
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    await expect(library.getState().loadSong(solo)).resolves.toBeUndefined();
+    expect(library.getState().loaded).toMatchObject({ setlistId: null });
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('setlist'),
+      expect.objectContaining({ message: 'disk full' }),
+    );
+  });
+
+  it('keeps the setlist and says why when Leave setlist fails', async () => {
+    const { library, repos, gig } = await onStage();
+    vi.spyOn(repos.setlists, 'selectActive').mockRejectedValue(
+      new Error('disk full'),
+    );
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    await expect(library.getState().leaveSetlist()).resolves.toBeUndefined();
+    expect(activeId(library)).toBe(gig);
+    expect(warn).toHaveBeenCalled();
+  });
+
+  it('steps by setlist item when the same song is in the set twice', async () => {
+    const { library, gig, first } = await onStage();
+    await library.getState().addToSetlist(gig, first.preset.id);
+    const items = (library.getState().entries[gig] ?? []).map((e) => e.item.id);
+    const s = library.getState();
+    await s.stepSong(SONG_STEP.next);
+    await s.stepSong(SONG_STEP.next);
+    await s.stepSong(SONG_STEP.next);
+    expect(library.getState().loaded?.itemId).toBe(items[3]);
+    expect(loadedName(library)).toBe('One');
+    await s.stepSong(SONG_STEP.previous);
+    expect(library.getState().loaded?.itemId).toBe(items[2]);
+  });
+
+  it('starts from song 1 when the loaded song is removed from the set', async () => {
+    const { library, gig, first } = await onStage();
+    await library.getState().stepSong(SONG_STEP.next);
+    const loaded = library.getState().loaded?.itemId;
+    if (loaded === undefined || loaded === null) throw new Error('not loaded');
+    await library.getState().removeFromSet(loaded);
+    await library.getState().stepSong(SONG_STEP.previous);
+    expect(library.getState().loaded?.itemId).toBe(loaded);
+    await library.getState().stepSong(SONG_STEP.next);
+    expect(library.getState().loaded?.itemId).toBe(first.item.id);
+    expect(activeId(library)).toBe(gig);
   });
 
   it('saves edits and the live metronome into a preset explicitly', async () => {
@@ -241,6 +383,7 @@ describe('library store', () => {
     expect(library.getState().loaded).toEqual({
       presetId: id,
       itemId: entry.item.id,
+      setlistId: gig,
     });
   });
 

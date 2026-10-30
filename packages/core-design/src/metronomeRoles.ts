@@ -7,6 +7,15 @@ export const metronome = {
   setChip: 36,
   setChipLeft: 14,
   setChipRight: 8,
+  setChipEnd: 8,
+  songChip: 48,
+  songChipPlain: 46,
+  songChipPlainMax: 196,
+  songChipPlainEnd: 6,
+  songChipRadius: 14,
+  songChipLeft: 12,
+  songChipRight: 6,
+  songChipGap: 4,
   meterChipMin: 104,
   meterChipLeft: 16,
   subdivisionChipMin: 160,
@@ -75,6 +84,10 @@ export const metronomeSheet = {
   soundPick: 36,
   soundPickLeft: 12,
   soundPickRight: 6,
+  songRow: 52,
+  songRowH: 8,
+  songRowRadius: 10,
+  songNumberWidth: 18,
 } as const;
 
 export const wheelPicker = {
@@ -87,6 +100,7 @@ export const wheelPicker = {
 
 export const metronomeMix = {
   setChip: 0.14,
+  songNow: 0.12,
   dotBorder: 0.55,
   countInMeta: 0.75,
   selectedTile: 0.16,

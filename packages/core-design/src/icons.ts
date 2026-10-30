@@ -25,6 +25,7 @@ export const iconGlyphs = {
   confirm: 'check',
   success: 'check-circle',
   failure: 'close-circle',
+  close: 'close',
   warning: 'alert',
   ramp: 'trending-up',
   muteBars: 'volume-off',
