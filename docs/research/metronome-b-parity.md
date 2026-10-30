@@ -5,7 +5,9 @@ Source: the "Chosen" variant in `docs/research/mockups/metronome-layouts.html`
 phone frame, where 1 CSS px = 1 dp. Colours name the §12.2 palette tokens; `mix(a N%, b)`
 is CSS `color-mix(in srgb, a N%, b)`. The last column is where the value lives in
 `@kitbag/core-design` (roles in `roles.ts`; `metronome`, `metronomeSheet`, `wheelPicker` and `metronomeMix` in
-`metronomeRoles.ts`; otherwise named).
+`metronomeRoles.ts`; otherwise named). The status rows and pulse marks follow variant A
+and the Q6 draft of `docs/research/mockups/metronome-status.html` (owner-approved on
+#175, 2026-10-30).
 
 ## Unchanged by owner ruling
 
@@ -38,10 +40,12 @@ stay. The glow (`mix.tempoZoneGlow`) is removed.
 | Chip caret | chevron-down 18, `text3` | `iconGlyphs.caretDown`, `iconSizes.caret` |
 | Notation glyph | `text`; note head 6.6 × 4.8 rotated −22°, stem 1.2 × 16.5, beam 2.2 thick, 3.4 apart, tuplet numeral Space Grotesk 700 7.5; 24 tall in the chip | `NotationGlyph`, `notationGeometry` (`notation.ts`), `metronome.notationChip`, `textRoles.notationNumeral` |
 
-## Status line
+## Status rows
 
 | Element | Mockup value | core-design |
 |---|---|---|
+| Stack | below the dots; two rows of 40, gap 6, height kept with one or no row live | `metronome.statusLine`, `metronome.statusRowGap` |
+| Row order | mute cycle, then ramp; a lone ramp takes the first row; count-in, then what follows it | `statusRows` in `logic/statusLine.ts` |
 | At rest | height 40, centred, gap 8, Inter 14 `text2`, `tune` icon 18 | `metronome.statusLine`, `space.controlGap`, `textRoles.status`, `iconGlyphs.practiceTools`, `iconSizes.statusRest` |
 | Live | `surface1`, 1 `line`, radius 12, padding 0 12, `text`, icon 20 `text2` | `radius.button`, `metronome.statusH`, `iconSizes.statusLive` |
 | Live lead | Space Grotesk 600 14.5, tabular | `textRoles.statusLead` (Space Grotesk 600 is now bundled) |
@@ -49,6 +53,7 @@ stay. The glow (`mix.tempoZoneGlow`) is removed.
 | Ramp progress | 3 tall at the bottom edge, `accent`, width = step progress | `metronome.statusProgress` |
 | Target reached | border `accentDim`, icon `accentDeep` | `iconGlyphs.check` |
 | Count-in | fill `text`, border `text`, text `bg`; icon and meta `mix(bg 75%, text)` | `metronomeMix.countInMeta`, `iconGlyphs.countingIn` |
+| After the count-in | live row, no fill, dashed 1 `line`; "Then" and meta `text2`, `tune` icon 20 | `TRANSPARENT`, `iconGlyphs.practiceTools`, `iconSizes.statusLive` |
 | Mute cycle cell | 18 × 14, radius 3, gap 3; base `surface3`; playing `text2`; muted 1.5 dashed `text2`; current gets a 2 `text` outline at 1.5 | `metronome.cycleCellWidth`, `metronome.cycleCellHeight`, `metronome.cycleCellBorder`, `metronome.cycleCellRadius`, `metronome.cycleCellGap`, `metronome.cycleNowOutline`, `metronome.cycleNowOffset` |
 
 ## Beat dots
@@ -63,8 +68,9 @@ stay. The glow (`mix.tempoZoneGlow`) is removed.
 | Muted | no fill, 2 dashed `text3` | — |
 | Sounding | `accent` fill and border; accented beat adds a 3 `accent` ring 3 outside it | `metronome.dotRing`, `metronome.dotRingGap` |
 | Muted bar | every dot hollow, 2 `text3`; sounding dot 4 `text`; muted dots stay dashed | `metronome.dotSilentNowBorder` |
-| "1" marker | Space Grotesk 600 12 / 14, `text2`, 3 below the first dot | `textRoles.beatMarker`, `metronome.beatMarkerLineHeight`, `metronome.beatMarkerGap` |
-| Legend | gap 16, Inter 12.5 `text2`, swatch 14 with gap 6 | `metronome.legendGap`, `textRoles.legend`, `metronome.legendSwatch`, `metronome.legendSwatchBorder`, `metronome.legendAccentBorder`, `space.chipGap` |
+| Pulse marks | one per subdivision pulse, 3 below the dot: 6 × 6, radius 2, gap 3, `surface3`; the sounding pulse `accent` | `metronome.pulseMark`, `metronome.pulseMarkRadius`, `metronome.pulseMarkGap`, `pulseMarkFit` in `logic/pulseMarks.ts` |
+| "1" marker | Space Grotesk 600 12 / 14, `text2`, 3 below the pulse marks | `textRoles.beatMarker`, `metronome.beatMarkerLineHeight`, `metronome.beatMarkerGap` |
+| Legend | stopped only; gap 16, Inter 12.5 `text2`, swatch 14 with gap 6 | `metronome.legendGap`, `textRoles.legend`, `metronome.legendSwatch`, `metronome.legendSwatchBorder`, `metronome.legendAccentBorder`, `space.chipGap` |
 | Count-in squares | 56 × 56, radius 14, 2 `text3`, Space Grotesk 700 26 `text2`, gap 12; done `surface3` / `text3`; current `text` fill, `bg` text | `metronome.countSquare`, `metronome.countSquareRadius`, `metronome.countSquareBorder`, `textRoles.countSquare` |
 
 ## Transport
@@ -123,19 +129,16 @@ Each entry says why.
   neutral `surface2` / `line` chip with a `text3` caret. Active set without its song
   loaded: "Wedding set · 12 songs".
 - **Armed summary text the mockup does not draw.** Nothing armed reads "Practice tools
-  are off". Mute bars read "Play 2, mute 2" and poly "Poly 3:4"; the order is ramp,
-  mute, count-in, poly. Sound is not armed state, so it is not listed.
+  are off". Mute bars read "Play 2, mute 2" (the mockup's "Mute 2+2") and poly
+  "Poly 3:4"; the order is ramp, mute, count-in, poly. Sound is not armed state, so it
+  is not listed. The row under a running count-in uses the same ramp and mute text.
 - **Ramp countdown at zero.** While a seconds or minutes step waits for its beat the
   engine reports 0 remaining; the line reads "→ 124 now".
 - **Mute cycle strip.** At most 8 cells; a longer cycle pages by eight so the current
   bar stays on the strip. Cells shrink below 18 wide when the line runs out of room
   (long cycles, 200% text) rather than clipping the outline.
-- **Status line priority.** The mockup shows each live state alone. When several are
-  live: count-in, then a muted bar of the mute cycle, then the ramp (stepping or target
-  reached), then "Playing" with the cycle position on a sounding bar, then the armed
-  summary (#175 questions 3–5). The count-in's "bar N of M" takes M from the engine's
-  running count-in, not the store.
-- **Status line for screen readers.** It is labelled with the armed summary. The live
+- **Count-in "bar N of M"** takes M from the engine's running count-in, not the store.
+- **Status rows for screen readers.** They are labelled with the armed summary. The live
   values are not announced, so nothing re-renders per bar.
 - **Dot wrapping against SPEC D9.** D9 caps a row at 7 ("16 beats are four rows of
   four"). The dots follow the mockup instead and hold up to 8 per line, so 16 beats
@@ -144,8 +147,10 @@ Each entry says why.
 - **Current muted beat.** The mockup's CSS fills it like a sounding beat. It stays
   hollow and dashed and its outline turns `text`, since a fill reads as a click that did
   not sound (SPEC §5.2; #175 question 7).
-- **Subdivided pulses while playing (#173, first criterion).** Not built: the mockup draws
-  no per-pulse indicator, only the static notation chip (#175 question 6).
+- **Pulse marks on silent pulses.** A muted beat or a muted bar lights no mark, since
+  those pulses make no click (SPEC §5.2: dim = muted). ×1 draws one mark per beat.
+- **Pulse mark size.** Marks and gaps shrink together only when the row would be wider
+  than the dot: from 7 per beat at 56 dp dots, sooner at smaller dots.
 - **12 beats group 3 + 3 + 3 + 3** whatever the denominator. The mockup only draws 12/8,
   and 6 and 9 already grouped in threes for any denominator.
 - **Count-in squares** take the dot size, so they are 56 only when the dots are, and

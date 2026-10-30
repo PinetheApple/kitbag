@@ -409,7 +409,7 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   design for #175, #56, #81, #82, #171, #172 and #173. Where it differs from
   `design/kitbag-metronome.html` §02 the mockup wins: an app bar with Back; meter and
   notation subdivision chips instead of the steppers card; beat dots on their own row with
-  a "1" marker; one status line for count-in, the mute cycle and the ramp; ramp, mute bars,
+  a "1" marker; live status as stacked rows below the dots; ramp, mute bars,
   count-in, sound and poly in one Practice sheet instead of the four-chip row; a transport
   of setlist, Play and Practice with no stopwatch key; a first-use swipe hint; no glow
   behind the BPM numeral. This also settles #56's poly-off ruling: poly has no row on the
@@ -418,6 +418,11 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   changes D9's row rule on this screen: a line holds up to eight dots and longer bars
   wrap at a group boundary (12/8 → two lines of 3+3), because D9's seven-per-row cap
   pushes the transport off a 360 × 800 screen at the mockup's 56 dp dots. **[user]**
+  The status rows and pulse marks come from `docs/research/mockups/metronome-status.html`
+  (variant A and the Q6 draft, approved the same day): the mute cycle row, then the ramp
+  row, two rows of height always reserved; count-in on its own row with what follows it
+  below; the beat legend only while stopped; one mark per subdivision pulse under each
+  dot, the sounding one in accent, driven from `bar_phase` on the UI thread. **[user]**
 
 - **2026-10-30 · Screen stays awake while practising (§12.7, §13.9, #187)** — The screen
   stays on while the metronome runs, a stem song's mixer plays, or the tuner is listening,
