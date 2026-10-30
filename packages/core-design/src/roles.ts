@@ -167,6 +167,7 @@ export const lineRatio = {
   title: 1.3,
   compactBody: 1.5,
   badge: 1,
+  songChip: 1.2,
 } as const;
 
 export const homeTile = {
@@ -250,12 +251,14 @@ export const textRoles = {
   tempoCaption: { family: display, weight: 400, size: 11, tracking: 0.22 },
   segment: { family: display, weight: 400, size: 12.5 },
   badge: { family: display, weight: 400, size: 10.5, tracking: 0.06 },
+  filledBadge: { family: display, weight: 600, size: 10.5, tracking: 0.12 },
   stepKey: { family: display, weight: 400, size: iconSizes.stepKey },
   stepInline: { family: display, weight: 400, size: 12.5 },
   stepInlineValue: { family: display, weight: 500, size: 12.5, tabular: true },
   transportKey: { family: display, weight: 400, size: iconSizes.transport },
   dockKey: { family: display, weight: 400, size: iconSizes.dockKey },
   sheetTitle: { family: display, weight: 500, size: 14 },
+  sheetTitleLarge: { family: display, weight: 500, size: 16 },
   sheetNumeral: {
     family: display,
     weight: 700,

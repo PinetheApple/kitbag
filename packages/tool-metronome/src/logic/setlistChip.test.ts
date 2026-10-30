@@ -1,24 +1,26 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  SONG_STEP,
-  type SetlistEntry,
-  type SetlistSummary,
-} from '@kitbag/core-state';
+import { SONG_STEP } from '@kitbag/core-state';
 
+import { entry, summary } from './fixtures.test-helper.ts';
 import {
-  activeSetOf,
+  activeSetView,
   NO_ACTIVE_SET,
   NOT_IN_SETLIST,
   setlistChipA11yLabel,
   setlistChipLabel,
-  songChipA11yLabel,
+  soloChipA11yLabel,
   soloChipText,
+  stageChipA11yLabel,
   stageChipText,
-  songListHint,
-  songListRows,
   stepA11yLabel,
 } from './setlistChip.ts';
+
+const loadedFrom = (setlistId: number | null, itemId: number | null) => ({
+  presetId: 1,
+  itemId,
+  setlistId,
+});
 
 describe('setlist chip', () => {
   it('shows the active set and the loaded song position', () => {
@@ -38,24 +40,7 @@ describe('setlist chip', () => {
   });
 });
 
-const summary = (
-  id: number,
-  name: string,
-  active: boolean,
-  songCount: number,
-) =>
-  ({
-    setlist: { id, name, active },
-    songCount,
-    rampCount: 0,
-  }) as unknown as SetlistSummary;
-const entry = (itemId: number, name = '', bpm = 120) =>
-  ({
-    item: { id: itemId },
-    preset: { id: itemId + 100, name, bpm },
-  }) as unknown as SetlistEntry;
-
-describe('activeSetOf', () => {
+describe('activeSetView', () => {
   const setlists = [
     summary(1, 'Practice', false, 2),
     summary(2, 'Wedding set', true, 3),
@@ -66,7 +51,7 @@ describe('activeSetOf', () => {
   };
 
   it('places the loaded song inside the active set', () => {
-    expect(activeSetOf(setlists, entries, 22)).toEqual({
+    expect(activeSetView(setlists, entries, loadedFrom(2, 22))).toEqual({
       id: 2,
       name: 'Wedding set',
       count: 3,
@@ -74,14 +59,33 @@ describe('activeSetOf', () => {
     });
   });
 
-  it('has no position for a song loaded from elsewhere', () => {
-    expect(activeSetOf(setlists, entries, 10)?.position).toBeUndefined();
-    expect(activeSetOf(setlists, entries, null)?.position).toBeUndefined();
+  it('places a song listed twice by its setlist item', () => {
+    const twice = {
+      2: [entry(20, 'A', 120, 7), entry(21), entry(22, 'A', 120, 7)],
+    };
+    expect(activeSetView(setlists, twice, loadedFrom(2, 22))?.position).toBe(3);
+  });
+
+  it('is on stage with no position when nothing or a removed song is loaded', () => {
+    expect(activeSetView(setlists, entries, null)?.position).toBeUndefined();
+    const removed = activeSetView(setlists, entries, loadedFrom(2, 99));
+    expect(removed).toMatchObject({ id: 2, position: undefined });
+  });
+
+  it('is off stage while a song from outside the set is loaded', () => {
+    expect(
+      activeSetView(setlists, entries, loadedFrom(null, null)),
+    ).toBeUndefined();
+    expect(activeSetView(setlists, entries, loadedFrom(1, 10))).toBeUndefined();
   });
 
   it('is empty when no set is active', () => {
     expect(
-      activeSetOf([summary(1, 'Practice', false, 2)], entries, 10),
+      activeSetView(
+        [summary(1, 'Practice', false, 2)],
+        entries,
+        loadedFrom(1, 10),
+      ),
     ).toBeUndefined();
   });
 });
@@ -94,8 +98,19 @@ describe('song chip', () => {
       title: 'Ballad in G',
       context: 'Test gig · 2/4',
     });
-    expect(songChipA11yLabel('Ballad in G', set)).toBe(
+    expect(stageChipA11yLabel('Ballad in G', set)).toBe(
       'Ballad in G, Setlist Test gig, song 2 of 4',
+    );
+  });
+
+  it('shows the setlist name when no song from the set is loaded', () => {
+    const unplaced = { ...set, position: undefined };
+    expect(stageChipText('Ballad in G', unplaced)).toEqual({
+      title: 'Test gig',
+      context: '4 songs',
+    });
+    expect(stageChipA11yLabel('Ballad in G', unplaced)).toBe(
+      'Setlist Test gig, 4 songs',
     );
   });
 
@@ -104,6 +119,9 @@ describe('song chip', () => {
       title: 'Ballad in G',
       context: NOT_IN_SETLIST,
     });
+    expect(soloChipA11yLabel('Ballad in G')).toBe(
+      'Ballad in G, not in a setlist',
+    );
   });
 
   it('has nothing to show with no song and no setlist', () => {
@@ -115,29 +133,5 @@ describe('song chip', () => {
       'Next song, Shuffle',
     );
     expect(stepA11yLabel(SONG_STEP.previous, undefined)).toBe('Previous song');
-  });
-});
-
-describe('song list sheet', () => {
-  it('numbers the songs and marks only the loaded one as now', () => {
-    const rows = songListRows(
-      [entry(1, 'Opener', 132), entry(2, 'Ballad in G', 96.4)],
-      2,
-    );
-    expect(rows.map((r) => [r.number, r.name, r.bpm, r.now])).toEqual([
-      ['1', 'Opener', '132', false],
-      ['2', 'Ballad in G', '96', true],
-    ]);
-  });
-
-  it('marks nothing when the loaded song is not in the set', () => {
-    const rows = songListRows([entry(1, 'Opener')], null);
-    expect(rows.some((r) => r.now)).toBe(false);
-  });
-
-  it('states the position in its hint', () => {
-    expect(songListHint({ id: 2, name: 'Gig', count: 4, position: 2 })).toBe(
-      'On stage · song 2 of 4 · tap a song to load it',
-    );
   });
 });

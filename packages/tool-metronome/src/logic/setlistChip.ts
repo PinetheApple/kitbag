@@ -2,6 +2,7 @@ import { countLabel } from '@kitbag/core-design';
 import {
   activeSetlistOf,
   SONG_STEP,
+  type LoadedSong,
   type SetlistEntry,
   type SetlistSummary,
   type SongStep,
@@ -19,15 +20,6 @@ export interface SongChipText {
   readonly context: string;
 }
 
-export interface SongListRow {
-  readonly itemId: number;
-  readonly presetId: number;
-  readonly number: string;
-  readonly name: string;
-  readonly bpm: string;
-  readonly now: boolean;
-}
-
 export const NO_ACTIVE_SET = 'Setlists';
 export const NOT_IN_SETLIST = 'Not in a setlist';
 
@@ -36,18 +28,24 @@ const STEP_NAME: Readonly<Record<SongStep, string>> = {
   [SONG_STEP.next]: 'Next song',
 };
 
-export function activeSetOf(
+function songs(count: number): string {
+  return countLabel(count, 'song', 'songs');
+}
+
+export function activeSetView(
   setlists: readonly SetlistSummary[],
   entries: Readonly<Record<number, readonly SetlistEntry[]>>,
-  loadedItemId: number | null,
+  loaded: LoadedSong | null,
 ): ActiveSet | undefined {
   const active = activeSetlistOf(setlists);
   if (active === undefined) return undefined;
-  const index = (entries[active.setlist.id] ?? []).findIndex(
-    (entry) => entry.item.id === loadedItemId,
+  const id = active.setlist.id;
+  if (loaded !== null && loaded.setlistId !== id) return undefined;
+  const index = (entries[id] ?? []).findIndex(
+    (entry) => entry.item.id === loaded?.itemId,
   );
   return {
-    id: active.setlist.id,
+    id,
     name: active.setlist.name,
     count: active.songCount,
     position: index < 0 ? undefined : index + 1,
@@ -56,17 +54,14 @@ export function activeSetOf(
 
 export function setlistChipLabel(set: ActiveSet | undefined): string {
   if (set === undefined) return NO_ACTIVE_SET;
-  if (set.position === undefined) {
-    return `${set.name} · ${countLabel(set.count, 'song', 'songs')}`;
-  }
+  if (set.position === undefined) return `${set.name} · ${songs(set.count)}`;
   return `${set.name} · ${String(set.position)}/${String(set.count)}`;
 }
 
 export function setlistChipA11yLabel(set: ActiveSet | undefined): string {
   if (set === undefined) return 'Setlists, none active';
-  if (set.position === undefined) {
-    return `Setlist ${set.name}, ${countLabel(set.count, 'song', 'songs')}`;
-  }
+  if (set.position === undefined)
+    return `Setlist ${set.name}, ${songs(set.count)}`;
   return `Setlist ${set.name}, song ${String(set.position)} of ${String(set.count)}`;
 }
 
@@ -74,7 +69,18 @@ export function stageChipText(
   song: string | undefined,
   set: ActiveSet,
 ): SongChipText {
-  return { title: song ?? set.name, context: setlistChipLabel(set) };
+  if (set.position === undefined || song === undefined)
+    return { title: set.name, context: songs(set.count) };
+  return { title: song, context: setlistChipLabel(set) };
+}
+
+export function stageChipA11yLabel(
+  song: string | undefined,
+  set: ActiveSet,
+): string {
+  const context = setlistChipA11yLabel(set);
+  if (set.position === undefined || song === undefined) return context;
+  return `${song}, ${context}`;
 }
 
 export function soloChipText(
@@ -85,13 +91,8 @@ export function soloChipText(
     : { title: song, context: NOT_IN_SETLIST };
 }
 
-export function songChipA11yLabel(
-  song: string | undefined,
-  set: ActiveSet | undefined,
-): string {
-  const context =
-    set === undefined ? NOT_IN_SETLIST : setlistChipA11yLabel(set);
-  return song === undefined ? context : `${song}, ${context}`;
+export function soloChipA11yLabel(song: string): string {
+  return `${song}, ${NOT_IN_SETLIST.toLowerCase()}`;
 }
 
 export function stepA11yLabel(
@@ -100,26 +101,4 @@ export function stepA11yLabel(
 ): string {
   const name = STEP_NAME[step];
   return target === undefined ? name : `${name}, ${target.preset.name}`;
-}
-
-export function songListHint(set: ActiveSet): string {
-  const where =
-    set.position === undefined
-      ? countLabel(set.count, 'song', 'songs')
-      : `song ${String(set.position)} of ${String(set.count)}`;
-  return `On stage · ${where} · tap a song to load it`;
-}
-
-export function songListRows(
-  entries: readonly SetlistEntry[],
-  loadedItemId: number | null,
-): SongListRow[] {
-  return entries.map(({ item, preset }, index) => ({
-    itemId: item.id,
-    presetId: preset.id,
-    number: String(index + 1),
-    name: preset.name,
-    bpm: String(Math.round(preset.bpm)),
-    now: item.id === loadedItemId,
-  }));
 }

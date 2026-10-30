@@ -1,7 +1,15 @@
 import { Pressable, Text, View } from 'react-native';
 
 import type { IconName } from '../icons.ts';
-import { iconSizes, inset, radius, size, space, textRoles } from '../roles.ts';
+import {
+  iconSizes,
+  inset,
+  radius,
+  size,
+  space,
+  textRoles,
+  type IconSize,
+} from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
@@ -39,6 +47,7 @@ export interface ButtonProps {
   readonly onPress: () => void;
   readonly variant?: ButtonVariant;
   readonly icon?: IconName;
+  readonly iconSize?: IconSize;
   readonly disabled?: boolean;
   readonly fill?: boolean;
   readonly accessibilityLabel?: string;
@@ -128,6 +137,7 @@ export function Button({
   onPress,
   variant = 'tonal',
   icon,
+  iconSize,
   disabled = false,
   fill = false,
   accessibilityLabel,
@@ -160,7 +170,14 @@ export function Button({
         ]}
       >
         {icon === undefined ? null : (
-          <InlineIcon name={icon} style={[styles.icon, labelStyle]} />
+          <InlineIcon
+            name={icon}
+            style={[
+              styles.icon,
+              iconSize !== undefined && { fontSize: iconSizes[iconSize] },
+              labelStyle,
+            ]}
+          />
         )}
         <Text style={[styles.label, labelStyle]}>{label}</Text>
       </View>

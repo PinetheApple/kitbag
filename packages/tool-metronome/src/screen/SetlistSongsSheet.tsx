@@ -16,12 +16,12 @@ import { useLibrary, type SetlistEntry } from '@kitbag/core-state';
 import { useCallback, useMemo } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import type { ActiveSet } from '../logic/setlistChip.ts';
 import {
   songListHint,
   songListRows,
-  type ActiveSet,
   type SongListRow,
-} from '../logic/setlistChip.ts';
+} from '../logic/songList.ts';
 
 const NO_ENTRIES: readonly SetlistEntry[] = [];
 
@@ -88,7 +88,7 @@ function SongRow({ row, onPick }: SongRowProps) {
       <Text style={styles.number}>{row.number}</Text>
       <Text style={[styles.name, row.now && styles.nameNow]}>{row.name}</Text>
       {row.now ? (
-        <Badge tone="accent" label="NOW" />
+        <Badge tone="accent" variant="filled" label="NOW" />
       ) : (
         <Text style={styles.bpm}>{row.bpm}</Text>
       )}
@@ -133,6 +133,7 @@ export function SetlistSongsSheet({
     <Sheet
       visible={visible}
       title={set.name}
+      titleSize="large"
       dismissLabel="Close song list"
       bottomInset={bottomInset}
       onDismiss={onDismiss}
@@ -147,6 +148,7 @@ export function SetlistSongsSheet({
         variant="ghost"
         size="target"
         icon="close"
+        iconSize="caret"
         label="Leave setlist"
         onPress={handleLeave}
       />

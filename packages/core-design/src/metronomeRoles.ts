@@ -16,7 +16,6 @@ export const metronome = {
   songChipLeft: 12,
   songChipRight: 6,
   songChipGap: 4,
-  songChipLineHeight: 1.2,
   meterChipMin: 104,
   meterChipLeft: 16,
   subdivisionChipMin: 160,

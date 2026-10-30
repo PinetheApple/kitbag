@@ -79,6 +79,7 @@ const useStyles = createThemedStyles((theme) => ({
     ...textStyle(textRoles.sheetTitle),
     color: theme.color.text,
   },
+  titleLarge: textStyle(textRoles.sheetTitleLarge),
   scroll: {
     flexGrow: 0,
     marginVertical: -SHEET_TOUCH_ROOM,
@@ -103,6 +104,7 @@ const useStyles = createThemedStyles((theme) => ({
 }));
 
 export type SheetHintSize = 'default' | 'large';
+export type SheetTitleSize = 'default' | 'large';
 
 export interface SheetHintProps {
   readonly centered?: boolean;
@@ -132,6 +134,7 @@ export function SheetHint({
 export interface SheetProps {
   readonly visible: boolean;
   readonly title: string;
+  readonly titleSize?: SheetTitleSize;
   readonly titleIcon?: IconName;
   readonly hint?: string;
   readonly dismissLabel: string;
@@ -145,6 +148,7 @@ export interface SheetProps {
 export function Sheet({
   visible,
   title,
+  titleSize = 'default',
   titleIcon,
   hint,
   dismissLabel,
@@ -155,6 +159,7 @@ export function Sheet({
   children,
 }: SheetProps) {
   const styles = useStyles();
+  const titleStyle = [styles.title, titleSize === 'large' && styles.titleLarge];
   const reduceMotion = useReducedMotion();
   const dragY = useSharedValue(0);
   const sheetHeight = useSharedValue(0);
@@ -235,9 +240,9 @@ export function Sheet({
             <View style={styles.grab} />
             <View style={styles.titleRow}>
               {titleIcon === undefined ? null : (
-                <InlineIcon name={titleIcon} style={styles.title} />
+                <InlineIcon name={titleIcon} style={titleStyle} />
               )}
-              <Text accessibilityRole="header" style={styles.title}>
+              <Text accessibilityRole="header" style={titleStyle}>
                 {title}
               </Text>
             </View>

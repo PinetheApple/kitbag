@@ -27,11 +27,12 @@ import { useCallback, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import {
-  activeSetOf,
+  activeSetView,
   setlistChipA11yLabel,
   setlistChipLabel,
-  songChipA11yLabel,
+  soloChipA11yLabel,
   soloChipText,
+  stageChipA11yLabel,
   stageChipText,
   stepA11yLabel,
   type ActiveSet,
@@ -142,12 +143,12 @@ const useStyles = createThemedStyles((theme) => ({
   },
   songTitle: {
     ...textStyle(textRoles.songChipTitle),
-    lineHeight: textRoles.songChipTitle.size * metronome.songChipLineHeight,
+    lineHeight: textRoles.songChipTitle.size * lineRatio.songChip,
     color: theme.color.text,
   },
   songContext: {
     ...textStyle(textRoles.songChipContext),
-    lineHeight: textRoles.songChipContext.size * metronome.songChipLineHeight,
+    lineHeight: textRoles.songChipContext.size * lineRatio.songChip,
     color: theme.color.text2,
   },
   stageContext: {
@@ -165,13 +166,14 @@ interface SongContext {
 function useSongContext(): SongContext {
   const setlists = useLibrary((s) => s.setlists);
   const allEntries = useLibrary((s) => s.entries);
-  const loadedItemId = useLibrary((s) => s.loaded?.itemId ?? null);
+  const loaded = useLibrary((s) => s.loaded);
+  const loadedItemId = loaded?.itemId ?? null;
   const song = useLibrary(
     (s) => s.presets.find((p) => p.id === s.loaded?.presetId)?.name,
   );
   const set = useMemo(
-    () => activeSetOf(setlists, allEntries, loadedItemId),
-    [setlists, allEntries, loadedItemId],
+    () => activeSetView(setlists, allEntries, loaded),
+    [setlists, allEntries, loaded],
   );
   const entries =
     set === undefined ? NO_ENTRIES : (allEntries[set.id] ?? NO_ENTRIES);
@@ -305,7 +307,7 @@ function StageBar({ context, bottomInset, onBack }: StageBarProps) {
       <SongChip
         stage
         text={stageChipText(song, set)}
-        label={songChipA11yLabel(song, set)}
+        label={stageChipA11yLabel(song, set)}
         hint="Opens the song list"
         onPress={handleOpenList}
       />
@@ -348,7 +350,7 @@ function PlainBar({ song, onBack, onOpenSetlists }: PlainBarProps) {
         <SongChip
           stage={false}
           text={text}
-          label={songChipA11yLabel(song, undefined)}
+          label={soloChipA11yLabel(text.title)}
           hint="Opens setlists"
           onPress={onOpenSetlists}
         />
