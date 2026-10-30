@@ -412,8 +412,9 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   a "1" marker; live status as stacked rows below the dots; ramp, mute bars,
   count-in, sound and poly in one Practice sheet instead of the four-chip row; a transport
   of setlist, Play and Practice with no stopwatch key; a first-use swipe hint; no glow
-  behind the BPM numeral. This also settles #56's poly-off ruling: poly has no row on the
-  screen at all, it is armed in the Practice sheet and listed in the status line. The
+  behind the BPM numeral. This also settles #56's poly-off ruling: poly is armed in the Practice
+  sheet, and while it is on a second row of smaller dots sits under the beat dots (owner,
+  2026-10-30, "Poly · second dot row" in `metronome-status.html`). The
   value-by-value table is `docs/research/metronome-b-parity.md`. The mockup also
   changes D9's row rule: a line holds up to eight dots and longer bars wrap at a group
   boundary (12/8 → two lines of 3+3). D9 asked for at least four per row; the new rule

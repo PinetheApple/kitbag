@@ -612,11 +612,13 @@ Ported from the Flutter build, which got this right:
   **Up to eight LEDs per line; a longer bar wraps at a group boundary**, so 12/8 is
   two lines of 3+3 and a 16-beat bar two lines of eight. That rule is what makes
   the row survive the space problem the circle was solving.
-- **Polyrhythm as a second LED row**, smaller LEDs, own accent states.
+- **Polyrhythm as a second dot row** under the beat dots, shown only while poly
+  is on. Smaller dots, each placed at its time in the bar, so a poly pulse that
+  lands on a beat sits under that beat; a `3:4` ratio label to the left. The
+  sounding poly dot fills; the row has no accent or mute states.
 - **Bar sweep** under the BPM: a thin progress ring per bar (anticipation), and
   the active LED flashes on the click (confirmation). Both — see §12.3.
-- **Practice timer pill** under the app bar. Tap to reset; the `◴` transport
-  button is its visible twin.
+- **Practice timer pill** under the app bar, with a visible reset.
 
 New:
 
@@ -629,9 +631,8 @@ New:
   had no answer on the page.
 - **Subdivision reaches 1–16** through that same stepper, showing clicks per
   beat as `×1`…`×16`. (The note glyphs `♩ ♪ ³ ♬` were dropped in #112: they fell
-  back to small or emoji renderings and were hard to read.) Poly stays a toggle
-  segment beside it;
-  its ratio is edited on the poly row's own stepper.
+  back to small or emoji renderings and were hard to read.) Poly is switched on
+  and its ratio set in the Practice sheet.
 
 ### 5.3 Four chips, four sheets
 
@@ -2244,7 +2245,8 @@ it that was knowingly untrue. It is now true.
 
 - **Grouping renders as the design draws it** — 7/8 groups visually 2+2+3.
 - **Up to eight LEDs per line.** A longer bar wraps at a group boundary, so 12/8 is
-  two lines of 3+3 and a 16-beat bar two lines of eight. Seven
+  two lines of 3+3 and a 16-beat bar two lines of eight. There is no minimum per
+  line: 9/8 wraps 6+3. Seven
   per line pushed the transport off a 360 × 800 screen at 56 dp dots (#175). This is
   the rule that makes the row survive the horizontal-space problem the circle was
   solving.

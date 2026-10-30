@@ -5,8 +5,8 @@ Source: the "Chosen" variant in `docs/research/mockups/metronome-layouts.html`
 phone frame, where 1 CSS px = 1 dp. Colours name the §12.2 palette tokens; `mix(a N%, b)`
 is CSS `color-mix(in srgb, a N%, b)`. The last column is where the value lives in
 `@kitbag/core-design` (roles in `roles.ts`; `metronome`, `metronomeSheet`, `wheelPicker` and `metronomeMix` in
-`metronomeRoles.ts`; otherwise named). The status rows and pulse marks follow variant A
-and the Q6 draft of `docs/research/mockups/metronome-status.html` (owner-approved on
+`metronomeRoles.ts`; otherwise named). The status rows, pulse marks and poly row follow
+variant A, the Q6 draft and "Poly · second dot row" of `docs/research/mockups/metronome-status.html` (owner-approved on
 #175, 2026-10-30).
 
 ## Unchanged by owner ruling
@@ -70,6 +70,8 @@ stay. The glow (`mix.tempoZoneGlow`) is removed.
 | Muted bar | every dot hollow, 2 `text3`; sounding dot 4 `text`; muted dots stay dashed | `metronome.dotSilentNowBorder` |
 | Pulse marks | one per subdivision pulse, 3 below the dot: 6 × 6, radius 2, gap 3, `surface3`; the sounding pulse `accent` | `metronome.pulseMark`, `metronome.pulseMarkRadius`, `metronome.pulseMarkGap`, `pulseMarkFit` in `logic/pulseMarks.ts` |
 | "1" marker | Space Grotesk 600 12 / 14, `text2`, 3 below the pulse marks | `textRoles.beatMarker`, `metronome.beatMarkerLineHeight`, `metronome.beatMarkerGap` |
+| Poly row | poly on only; 10 below the dot lines; dots 22, 2 border, `surface3` / `mix(text3 55%, surface3)`, centred at first-dot centre + k/n × (line width + dot gap); sounding dot `text2` fill and border, from the engine's poly beat; no accent or mute states | `metronome.polyDot`, `metronome.dotBorder`, `polyDotCentres` in `logic/polyRow.ts`, `current_poly_beat` |
+| Poly ratio | Space Grotesk 600 11, tracking .08, `text2`, 28 wide right-aligned, 8 left of the row | `textRoles.polyRatio`, `metronome.polyLabelWidth`, `metronome.polyLabelGap` |
 | Legend | stopped only; gap 16, Inter 12.5 `text2`, swatch 14 with gap 6 | `metronome.legendGap`, `textRoles.legend`, `metronome.legendSwatch`, `metronome.legendSwatchBorder`, `metronome.legendAccentBorder`, `space.chipGap` |
 | Count-in squares | 56 × 56, radius 14, 2 `text3`, Space Grotesk 700 26 `text2`, gap 12; done `surface3` / `text3`; current `text` fill, `bg` text | `metronome.countSquare`, `metronome.countSquareRadius`, `metronome.countSquareBorder`, `textRoles.countSquare` |
 
@@ -159,8 +161,10 @@ Each entry says why.
   the numeral scales with the square, not with system text size. They overlay the dots,
   which are hidden during the count-in and stop taking taps through an animated
   `pointerEvents`; that has not been checked on a device.
-- **Poly on.** The mockup never draws it, and the screen has no poly row (decisions.md,
-  2026-10-30). Poly is armed in the Practice sheet and listed in the status line.
+- **Poly row on a wrapped bar.** The mockup draws only one line of beats. On a bar that
+  wraps, the poly dots spread by time across the widest line, so they no longer sit
+  under the beats they coincide with. The ratio label stops at the screen edge when the
+  dots fill the width, and can then overlap the first poly dot.
 - **First-use hint position and scrim.** The ring is centred on the measured swipe zone
   instead of 150 from the top. The scrim is Stage `bg` (#0E0D10) at 55%:
   rgba(10, 8, 14) is not a §12.2 token.
