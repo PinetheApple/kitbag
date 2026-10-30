@@ -147,6 +147,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_count_in_long.cpp
     tools/metronome/metronome_test_ramp.cpp
     tools/metronome/metronome_test_ramp_live.cpp
+    tools/metronome/metronome_test_ramp_subdivision.cpp
     tools/metronome/metronome_test_trainer_status.cpp
     tools/metronome/metronome_test_ramp_status.cpp
     tools/metronome/metronome_test_follow.cpp

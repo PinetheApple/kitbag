@@ -3,6 +3,7 @@ import {
   IconGlyph,
   iconSizes,
   LiveText,
+  useReduceMotionValue,
   useTheme,
 } from '@kitbag/core-design';
 import { KB_COUNT_IN_BARS } from '@kitbag/core-native';
@@ -14,6 +15,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
+import { rampProgressFill, rampTrackShown } from '../logic/rampProgress.ts';
 import {
   afterCountInSummary,
   armedSummary,
@@ -24,6 +26,7 @@ import {
   type PracticeSettings,
   type StatusRows,
 } from '../logic/statusRows.ts';
+import { trackOpacity } from '../logic/trackOpacity.ts';
 import { BeatLegend } from './BeatDots.tsx';
 import { LiveSlot } from './LiveSlot.tsx';
 import { MuteStatus } from './MuteStatus.tsx';
@@ -57,13 +60,27 @@ interface RampStatusProps {
 function RampStatus({ rows, frame, ramp }: RampStatusProps) {
   const styles = useStatusStyles();
   const { rampNextBpm, rampRemaining, rampStepProgress } = frame;
-  const unit = ramp.unit;
+  const { unit, interval } = ramp;
+  const still = useReduceMotionValue();
   const next = useDerivedValue(() => rampNextText(rampNextBpm.value));
   const remaining = useDerivedValue(() =>
     rampRemainingText(rampRemaining.value, unit),
   );
   const progress = useAnimatedStyle(() => ({
-    transform: [{ scaleX: Math.min(1, Math.max(0, rampStepProgress.value)) }],
+    transform: [
+      {
+        scaleX: rampProgressFill(
+          rampStepProgress.value,
+          rampRemaining.value,
+          interval,
+          unit,
+          still.value,
+        ),
+      },
+    ],
+  }));
+  const track = useAnimatedStyle(() => ({
+    opacity: trackOpacity(rampTrackShown(interval, unit, still.value)),
   }));
   return (
     <StatusVariant rows={rows} shown="ramp" style={styles.live}>
@@ -81,9 +98,9 @@ function RampStatus({ rows, frame, ramp }: RampStatusProps) {
         style={styles.detail}
       />
       <Text style={styles.meta}>{`target ${String(ramp.targetBpm)}`}</Text>
-      <View style={styles.progressTrack}>
+      <Animated.View style={[styles.progressTrack, track]}>
         <Animated.View style={[styles.progress, progress]} />
-      </View>
+      </Animated.View>
     </StatusVariant>
   );
 }
