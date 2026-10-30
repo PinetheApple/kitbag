@@ -1,4 +1,10 @@
-import { createThemedStyles, inset, radius, size } from '@kitbag/core-design';
+import {
+  createThemedStyles,
+  inset,
+  radius,
+  size,
+  useReduceMotionValue,
+} from '@kitbag/core-design';
 import { useMemo } from 'react';
 import Animated, {
   useAnimatedStyle,
@@ -6,7 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { sweepFill } from '../logic/barSweep.ts';
-import { trackOpacity, useStillMotion } from './useStillMotion.ts';
+import { trackOpacity } from '../logic/trackOpacity.ts';
 
 interface BarSweepProps {
   readonly barPhase: SharedValue<number>;
@@ -33,7 +39,7 @@ const useStyles = createThemedStyles((theme) => ({
 export function BarSweep({ barPhase, gap }: BarSweepProps) {
   const styles = useStyles();
   const spacing = useMemo(() => ({ marginTop: gap }), [gap]);
-  const still = useStillMotion();
+  const still = useReduceMotionValue();
   const trackStyle = useAnimatedStyle(() => ({
     opacity: trackOpacity(!still.value),
   }));
