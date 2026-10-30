@@ -1,11 +1,13 @@
+#include "metronome/metronome_internal.h"
 #include "metronome_test_support.h"
 
 namespace metronome_test {
 namespace {
 
+using kitbag::metronome_detail::kSecondsPerMinute;
+
 constexpr double kRampJitterFrames = 3.0;
 constexpr int64_t kRenderMarginFrames = 1000;
-constexpr double kSecondsPerMinute = 60.0;
 constexpr double kReferenceDenominator = 4.0;
 
 int64_t Seconds(int64_t seconds) {
@@ -64,14 +66,6 @@ int64_t IntervalsSince(
   );
 }
 
-double ModelTempo(const RampCase& ramp, int64_t intervals) {
-  const double span = std::fabs(ramp.target_bpm - ramp.start_bpm);
-  const double moved =
-      std::min(static_cast<double>(intervals) * ramp.step_bpm, span);
-  return ramp.target_bpm >= ramp.start_bpm ? ramp.start_bpm + moved
-                                           : ramp.start_bpm - moved;
-}
-
 // The tempo of each beat, written from SPEC §5.3 rather than from the engine.
 std::vector<double> ModelBeatBpms(const RampCase& ramp, int total_beats) {
   const auto steps = static_cast<int64_t>(
@@ -89,7 +83,8 @@ std::vector<double> ModelBeatBpms(const RampCase& ramp, int total_beats) {
         cycle = {elapsed, bar};
         intervals = 0;
       }
-      bpm = ModelTempo(ramp, intervals);
+      bpm =
+          ModelTempo(ramp.start_bpm, ramp.target_bpm, ramp.step_bpm, intervals);
     }
     bpms.push_back(bpm);
     elapsed += BeatSeconds(ramp, bpm);
