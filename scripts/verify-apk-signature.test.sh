@@ -9,6 +9,7 @@ readonly TMP
 trap 'rm -rf "$TMP"' EXIT
 
 readonly REAL_FLAT='1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef'
+readonly OTHER_FLAT='fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321'
 
 readonly KEYSTORE="$TMP/debug.keystore"
 keytool -genkeypair -v -storetype pkcs12 -keystore "$KEYSTORE" \
@@ -24,8 +25,9 @@ REAL_DEBUG_FLAT=$(
 )
 
 readonly SDK="$TMP/sdk"
-mkdir -p "$SDK/build-tools/36.0.0"
-cat > "$SDK/build-tools/36.0.0/apksigner" <<'STUB'
+readonly TOOLS="$SDK/build-tools/36.0.0"
+mkdir -p "$TOOLS"
+cat > "$TOOLS/apksigner" <<'STUB'
 #!/usr/bin/env bash
 case "$FAKE_CASE" in
   unsigned)
@@ -50,19 +52,19 @@ case "$FAKE_CASE" in
 esac
 exit 0
 STUB
-chmod +x "$SDK/build-tools/36.0.0/apksigner"
+chmod +x "$TOOLS/apksigner"
 
 readonly APK="$TMP/app.apk"
 : > "$APK"
 
 FAILED=0
 
-# expect <name> <case> <digest> <want_exit> <want_text>
 expect() {
   local name=$1 fake_case=$2 digest=$3 want_exit=$4 want_text=$5
+  shift 5
   local out status
-  out=$(PATH="$SDK/build-tools/36.0.0:$PATH" ANDROID_HOME="$SDK" FAKE_CASE="$fake_case" FAKE_DIGEST="$digest" \
-    bash "$SCRIPT" "$APK" "$KEYSTORE" 2>&1)
+  out=$(PATH="$TOOLS:$PATH" ANDROID_HOME="$SDK" FAKE_CASE="$fake_case" FAKE_DIGEST="$digest" \
+    bash "$SCRIPT" "$@" "$APK" "$KEYSTORE" 2>&1)
   status=$?
   if ((status != want_exit)); then
     echo "FAIL $name: exit $status, wanted $want_exit"
@@ -89,6 +91,10 @@ expect "scheme-labelled signer parsed"  scheme_labelled "$REAL_FLAT"       0 "ok
 expect "two distinct signers rejected"  two_signers     "$REAL_FLAT"       1 "expected one signer"
 expect "uppercase digest normalised"    uppercase       "$REAL_DEBUG_FLAT" 1 "DEBUG key"
 expect "missing digest cannot check"    no_digest       "$REAL_FLAT"       2 "could not read"
+expect "expected key accepted"          numbered        "$REAL_FLAT"       0 "the expected certificate" \
+  --expect-sha256 "${REAL_FLAT^^}"
+expect "unexpected non-debug key rejected" numbered     "$OTHER_FLAT"      1 "expected release certificate" \
+  --expect-sha256 "$REAL_FLAT"
 
 if ((FAILED)); then
   echo "verify-apk-signature.test: FAILED"
