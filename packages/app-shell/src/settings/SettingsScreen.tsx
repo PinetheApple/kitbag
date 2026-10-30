@@ -8,7 +8,11 @@ import {
   SegmentedControl,
   type SegmentOption,
 } from '@kitbag/core-design';
-import { useAppearance, type ThemeChoice } from '@kitbag/core-state';
+import {
+  formatPracticeSummary,
+  useAppearance,
+  type ThemeChoice,
+} from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { Linking } from 'react-native';
 
@@ -19,6 +23,7 @@ import {
   SOURCE_URL,
 } from './about.ts';
 import { SettingsFrame } from './SettingsFrame.tsx';
+import { usePracticeStats } from './usePracticeStats.ts';
 
 const THEME_OPTIONS: readonly SegmentOption<ThemeChoice>[] = [
   { value: 'system', label: 'System' },
@@ -35,6 +40,32 @@ function openUrl(url: string): void {
   Linking.openURL(url).catch((error: unknown) => {
     console.warn('[kitbag] could not open link', error);
   });
+}
+
+function PracticeValue() {
+  const stats = usePracticeStats();
+  if (stats === null) return null;
+  const { lead, detail } = formatPracticeSummary(stats);
+  if (lead === null) return <EditValue muted>{detail}</EditValue>;
+  return (
+    <EditValue>
+      {`${lead} `}
+      <EditValue muted>{detail}</EditValue>
+    </EditValue>
+  );
+}
+
+function DataSection() {
+  return (
+    <>
+      <SectionHeader label="Data" />
+      <EditGroup>
+        <EditRow label="Practice">
+          <PracticeValue />
+        </EditRow>
+      </EditGroup>
+    </>
+  );
 }
 
 function AppearanceSection() {
@@ -124,6 +155,7 @@ export function SettingsScreen({
 }: SettingsScreenProps) {
   return (
     <SettingsFrame title="Settings" onBack={onBack}>
+      <DataSection />
       <AppearanceSection />
       <AboutSection onOpenAttributions={onOpenAttributions} />
     </SettingsFrame>
