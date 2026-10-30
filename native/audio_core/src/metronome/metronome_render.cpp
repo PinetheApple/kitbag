@@ -41,6 +41,12 @@ constexpr SoundPreset kSounds[Metronome::kSoundCount] = {
     {2200.0, 1500.0, 1400.0, 1800.0, 45.0},   // cowbell
 };
 
+int64_t SubdivisionIndex(double position, int subdivision) {
+  return static_cast<int64_t>(
+      std::floor(position * subdivision + kGridEpsilon)
+  );
+}
+
 }  // namespace
 
 void Metronome::TriggerClick(
@@ -277,12 +283,11 @@ void Metronome::AdvanceConstantTempo(uint32_t sample_rate, BlockTempo* tempo) {
   double position = beat_position_ + tempo->latency_beats;
   if (counting_in_) position = AdvanceCountIn(position, *tempo, sample_rate);
   if (position >= -kGridEpsilon) {
-    const auto sub_index = static_cast<int64_t>(
-        std::floor(position * subdivision_ + kGridEpsilon)
-    );
-    const double sub_start = static_cast<double>(sub_index) / subdivision_;
-    // A grid point fires on the first sample at or past it.
-    if (position - tempo->beats_per_sample < sub_start - kGridEpsilon) {
+    const int64_t sub_index = SubdivisionIndex(position, subdivision_);
+    // The previous sample must use the same rounding, or a sample within
+    // kGridEpsilon of a tick lands on neither side and the tick never fires.
+    if (SubdivisionIndex(position - tempo->beats_per_sample, subdivision_) <
+        sub_index) {
       FireConstantTempoTick(sub_index, sample_rate, tempo);
     }
     if (poly_enabled_) FirePolyTick(position, sample_rate, *tempo);
