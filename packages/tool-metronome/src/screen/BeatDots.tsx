@@ -198,7 +198,14 @@ export function BeatDots({
             barPulse={barPulse}
             barMuted={barMuted}
           />
-          <Text style={styles.marker}>{beatMarker(beat)}</Text>
+          <Text
+            style={styles.marker}
+            accessible={false}
+            importantForAccessibility="no"
+            accessibilityElementsHidden
+          >
+            {beatMarker(beat)}
+          </Text>
         </>
       );
     },
