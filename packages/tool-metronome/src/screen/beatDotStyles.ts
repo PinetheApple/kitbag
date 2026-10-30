@@ -74,9 +74,6 @@ export const useBeatDotStyles = createThemedStyles((theme) => {
       minHeight: metronome.beatMarkerLineHeight,
       color: theme.color.text2,
     },
-    markerHidden: {
-      color: TRANSPARENT,
-    },
     pulseRow: {
       height: metronome.pulseMark,
       justifyContent: 'center',
