@@ -2,8 +2,9 @@ import type { ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 
 import type { IconName } from '../icons.ts';
-import { screenBar } from '../roles.ts';
+import { screenBar, type IconSize } from '../roles.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
+import type { ColorToken } from '../tokens.ts';
 import { Icon } from './Icon.tsx';
 
 const useStyles = createThemedStyles(() => ({
@@ -22,6 +23,38 @@ const useStyles = createThemedStyles(() => ({
   },
   heading: { flex: 1, minWidth: 0 },
 }));
+
+export interface BarIconButtonProps {
+  readonly icon: IconName;
+  readonly label: string;
+  readonly onPress: () => void;
+  readonly color?: ColorToken;
+  readonly size?: IconSize;
+  readonly disabled?: boolean;
+}
+
+export function BarIconButton({
+  icon,
+  label,
+  onPress,
+  color = 'text2',
+  size = 'bar',
+  disabled = false,
+}: BarIconButtonProps) {
+  const styles = useStyles();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      style={styles.button}
+      onPress={onPress}
+    >
+      <Icon name={icon} size={size} color={disabled ? 'text3' : color} />
+    </Pressable>
+  );
+}
 
 export interface ScreenBarAction {
   readonly icon: IconName;
@@ -43,27 +76,22 @@ export function ScreenAppBar({
   const styles = useStyles();
   return (
     <View style={styles.bar}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Back"
-        style={styles.button}
+      <BarIconButton
+        icon="arrowBack"
+        label="Back"
+        color="text"
         onPress={onBack}
-      >
-        <Icon name="arrowBack" size="bar" color="text" />
-      </Pressable>
+      />
       <View style={styles.heading} accessibilityRole="header" accessible>
         {children}
       </View>
       {actions.map((action) => (
-        <Pressable
+        <BarIconButton
           key={action.label}
-          accessibilityRole="button"
-          accessibilityLabel={action.label}
-          style={styles.button}
+          icon={action.icon}
+          label={action.label}
           onPress={action.onPress}
-        >
-          <Icon name={action.icon} size="bar" color="text2" />
-        </Pressable>
+        />
       ))}
     </View>
   );

@@ -5,6 +5,7 @@ import { KB_ACCENT, KB_RAMP_UNIT } from '@kitbag/core-native';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createMetronomeStore } from '../metronome/store.ts';
+import { SONG_STEP } from './setlistPosition.ts';
 import { createLibraryStore } from './store.ts';
 
 const handles: ReturnType<typeof openTestDatabase>[] = [];
@@ -159,6 +160,59 @@ describe('library store', () => {
       presetId: song,
       itemId: entry.item.id,
     });
+  });
+
+  async function onStage() {
+    const { library } = setup();
+    const s = library.getState();
+    const gig = await s.createSetlist('Gig');
+    for (const name of ['One', 'Two', 'Three'])
+      await s.newSongFromCurrent(name, gig);
+    const solo = await s.newSongFromCurrent('Solo');
+    const [first] = library.getState().entries[gig] ?? [];
+    if (first === undefined) throw new Error('missing first song');
+    await s.loadSong(first.preset.id, first.item.id, gig);
+    return { library, gig, solo };
+  }
+
+  const loadedName = (library: ReturnType<typeof createLibraryStore>) =>
+    library
+      .getState()
+      .presets.find((p) => p.id === library.getState().loaded?.presetId)?.name;
+
+  const activeId = (library: ReturnType<typeof createLibraryStore>) =>
+    library.getState().setlists.find((x) => x.setlist.active)?.setlist.id;
+
+  it('steps through the active setlist and stops at both ends', async () => {
+    const { library, gig } = await onStage();
+    const s = library.getState();
+    await s.stepSong(SONG_STEP.previous);
+    expect(loadedName(library)).toBe('One');
+    await s.stepSong(SONG_STEP.next);
+    await s.stepSong(SONG_STEP.next);
+    expect(loadedName(library)).toBe('Three');
+    await s.stepSong(SONG_STEP.next);
+    expect(loadedName(library)).toBe('Three');
+    await s.stepSong(SONG_STEP.previous);
+    expect(loadedName(library)).toBe('Two');
+    expect(activeId(library)).toBe(gig);
+    expect(library.getState().played).toHaveLength(3);
+  });
+
+  it('clears the active setlist when a song is loaded from outside it', async () => {
+    const { library, solo } = await onStage();
+    await library.getState().loadSong(solo);
+    expect(activeId(library)).toBeUndefined();
+    expect(library.getState().played).toEqual([]);
+    expect(loadedName(library)).toBe('Solo');
+  });
+
+  it('leaves the setlist and keeps the loaded song', async () => {
+    const { library } = await onStage();
+    await library.getState().leaveSetlist();
+    expect(activeId(library)).toBeUndefined();
+    expect(library.getState().played).toEqual([]);
+    expect(loadedName(library)).toBe('One');
   });
 
   it('saves edits and the live metronome into a preset explicitly', async () => {

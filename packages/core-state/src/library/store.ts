@@ -4,6 +4,11 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import { metronomeStore, type MetronomeStore } from '../metronome/store.ts';
 import { applyPreset, presetFromMetronome } from './presetMapping.ts';
 import { getLibrary, type LibraryRepositories } from './runtime.ts';
+import {
+  activeSetlistOf,
+  adjacentEntry,
+  type SongStep,
+} from './setlistPosition.ts';
 import { takeSnapshot, type LibrarySnapshot } from './snapshot.ts';
 
 export interface LoadedSong {
@@ -48,6 +53,8 @@ export interface LibraryActions {
     itemId?: number,
     setlistId?: number,
   ) => Promise<void>;
+  stepSong: (step: SongStep) => Promise<void>;
+  leaveSetlist: () => Promise<void>;
 }
 
 export type LibraryStore = LibraryState & LibraryActions;
@@ -185,19 +192,38 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
     set({ played });
     await get().refresh();
   };
+  const leave = async () => {
+    await deps.repos().setlists.selectActive(null);
+    set({ played: [] });
+    await get().refresh();
+  };
   return {
     loadSong: async (presetId: number, itemId?: number, setlistId?: number) => {
       const preset = get().presets.find((p) => p.id === presetId);
       if (preset === undefined) return;
       applyPreset(preset, deps.metronome);
       set({ loaded: { presetId, itemId: itemId ?? null } });
-      if (setlistId === undefined || itemId === undefined) return;
+      const outside = setlistId === undefined || itemId === undefined;
+      if (outside && activeSetlistOf(get().setlists) === undefined) return;
       try {
-        await pin(setlistId, itemId);
+        await (outside ? leave() : pin(setlistId, itemId));
       } catch {
-        // The song is already playing; a failed pin only loses the on-stage marker.
+        // The song is already playing; a failed write only loses the on-stage marker.
       }
     },
+    stepSong: async (step: SongStep) => {
+      const active = activeSetlistOf(get().setlists);
+      if (active === undefined) return;
+      const setlistId = active.setlist.id;
+      const entry = adjacentEntry(
+        get().entries[setlistId] ?? [],
+        get().loaded?.itemId ?? null,
+        step,
+      );
+      if (entry === undefined) return;
+      await get().loadSong(entry.preset.id, entry.item.id, setlistId);
+    },
+    leaveSetlist: leave,
   };
 }
 
@@ -206,7 +232,7 @@ async function switchActiveSetlist(
   get: Get,
   setlistId: number,
 ): Promise<boolean> {
-  const current = get().setlists.find((s) => s.setlist.active);
+  const current = activeSetlistOf(get().setlists);
   if (current?.setlist.id === setlistId) return false;
   await deps.repos().setlists.selectActive(setlistId);
   return true;

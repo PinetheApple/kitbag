@@ -233,7 +233,11 @@ export function MetronomeScreen({
   return (
     <GestureDetector gesture={screenSwipe}>
       <View style={[styles.screen, edgeToEdgePadding]}>
-        <MetronomeAppBar onBack={onBack} onOpenSetlists={onOpenSetlists} />
+        <MetronomeAppBar
+          bottomInset={insets.bottom}
+          onBack={onBack}
+          onOpenSetlists={onOpenSetlists}
+        />
         <ScrollView
           style={styles.body}
           contentContainerStyle={[styles.bodyContent, gap]}
