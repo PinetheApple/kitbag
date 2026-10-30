@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Tests version.sh in throwaway git repos: the mirrors, the next-version rule and
-# the versionCode formula the release workflow depends on.
 set -uo pipefail
 
 REPO=$(cd "$(dirname "$0")/.." && pwd)

@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
-# Fails if an APK is unsigned or signed with the template debug key.
-#
-# The first key an app is published under is locked in forever: an APK signed
-# with the repo's debug.keystore can never be upgraded by a properly-signed
-# build, and that key is public. Release signing falls back to the debug key when
-# ANDROID_KEYSTORE_* is unset (see android/app/build.gradle), so this is the gate
-# that stops a fallback build from being published.
+# Release builds fall back to the public debug key when ANDROID_KEYSTORE_* is unset,
+# and the first published key is permanent: this stops that fallback shipping.
 set -uo pipefail
 
 readonly EXIT_OK=0
@@ -51,7 +46,7 @@ while [[ ${1:-} == -* ]]; do
 done
 readonly EXPECTED_DIGEST
 
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit "$EXIT_CANNOT_CHECK"
 
 readonly APK=${1:-}
 readonly DEBUG_KEYSTORE=${2:-packages/app-shell/android/app/debug.keystore}
@@ -66,8 +61,6 @@ if [[ ! -f $APK ]]; then
   exit "$EXIT_USAGE"
 fi
 
-# apksigner is not on PATH in a default SDK install; it lives per-build-tools
-# version, so take the highest available.
 find_apksigner() {
   if command -v apksigner >/dev/null 2>&1; then
     command -v apksigner
@@ -98,9 +91,7 @@ if ((VERIFY_STATUS != 0)); then
   exit "$EXIT_DEBUG_KEY"
 fi
 
-# The signer label differs across build-tools versions: "Signer #1", "Signer
-# (minSdkVersion=...) #1", and "V2 Signer:" have all shipped. Match the digest
-# lines instead, which are stable, then normalise case and separators.
+# Signer labels differ across build-tools versions; the digest line is stable.
 mapfile -t DIGESTS < <(
   echo "$CERTS" |
     grep -iE 'certificate SHA-?256 digest' |

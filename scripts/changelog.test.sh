@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Tests changelog.sh --notes: subject-only notes and the release-body size guard.
 set -uo pipefail
 
 REPO=$(cd "$(dirname "$0")/.." && pwd)
@@ -41,7 +40,6 @@ make_fixture() {
   echo "$dir"
 }
 
-# stub_cliff <dir> <body>: a git-cliff on PATH that prints <body>, whatever it is asked.
 stub_cliff() {
   mkdir -p "$1/stub-bin"
   printf '#!/usr/bin/env bash\ncat %q\n' "$1/stub-output" > "$1/stub-bin/git-cliff"

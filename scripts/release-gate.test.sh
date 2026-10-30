@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Tests release-gate.sh against stubbed apksigner and aapt2. Needs a JDK only.
 set -uo pipefail
 
 cd "$(dirname "$0")/.." || exit 1
