@@ -24,13 +24,13 @@ function perBeat(subdivision: number): string {
   return `${String(subdivision)} per beat`;
 }
 
-// A power-of-two subdivision names the note that plays; a tuplet counts per beat.
 export function subdivisionName(
   subdivision: number,
   denominator: number,
 ): string {
+  const noteValue = subdivision * denominator;
   return (
-    NOTE_VALUE_NAMES[subdivision * denominator] ??
+    NOTE_VALUE_NAMES[noteValue] ??
     TUPLET_NAMES[subdivision] ??
     perBeat(subdivision)
   );
