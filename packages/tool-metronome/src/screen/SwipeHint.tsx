@@ -1,7 +1,9 @@
 import {
   Button,
   createThemedStyles,
-  Icon,
+  IconGlyph,
+  iconSizes,
+  inkOnScrim,
   metronome,
   palette,
   radius,
@@ -35,7 +37,7 @@ const useStyles = createThemedStyles((theme) => ({
     borderRadius: metronome.coachRingRadius,
     borderWidth: metronome.coachRingBorder,
     borderStyle: 'dashed',
-    borderColor: theme.color.onAccent,
+    borderColor: inkOnScrim,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -88,7 +90,11 @@ export function SwipeHint({ zoneTop, zoneHeight, onDismiss }: SwipeHintProps) {
       style={[styles.scrim, ringTop]}
     >
       <View style={styles.ring} importantForAccessibility="no-hide-descendants">
-        <Icon name="swipeTempo" size="coachRing" color="onAccent" />
+        <IconGlyph
+          name="swipeTempo"
+          px={iconSizes.coachRing}
+          color={inkOnScrim}
+        />
       </View>
       <View style={styles.bubble}>
         <Text style={styles.title} accessibilityRole="header">

@@ -60,6 +60,9 @@ export const palette: Readonly<Record<ColorToken, ColorPair>> = {
   waveHot: { dark: '#FFB347', light: '#B26F0E' },
 };
 
+// Scrims stay dark in both themes, so ink on them is Daylight's on-accent.
+export const inkOnScrim = palette.onAccent.light;
+
 // --- Radii (SPEC §12.2) -----------------------------------------------------
 // cards 16, tiles 16, chips 99 (pill), buttons 12, sheets 20/20/14/14, LEDs 50%.
 // The sheet radius is asymmetric: top corners 20, bottom corners 14. LEDs are
