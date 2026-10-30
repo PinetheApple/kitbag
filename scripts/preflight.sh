@@ -49,7 +49,7 @@ while (($#)); do
   shift
 done
 
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit "$EXIT_FAILED"
 
 readonly BOLD=$'\033[1m'
 readonly RESET=$'\033[0m'
@@ -93,7 +93,7 @@ run_gate "Generation drift guards (§13.7, §13.8.1)" "pnpm -w generate:check"
 run_gate "Tests — unit suites + lint eval harness" "pnpm -w test --concurrency=2"
 run_gate "Web bundle — exports, no native-only modules (#70)" "./scripts/web-check.sh"
 run_gate "Version — app.json and its package.json mirrors agree" "./scripts/version.sh check"
-run_gate "Release-script tests" "./scripts/verify-apk-signature.test.sh && ./scripts/release.test.sh"
+run_gate "Release-script tests" "./scripts/version.test.sh && ./scripts/verify-apk-signature.test.sh && ./scripts/release-gate.test.sh && ./scripts/changelog.test.sh"
 
 if ((SKIP_NATIVE)); then
   step "Native core — skipped"

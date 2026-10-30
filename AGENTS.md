@@ -55,19 +55,30 @@ still fails. `--skip-android` and `--skip-native` drop the slow legs.
 
 ### Cutting a release
 
-```sh
-bash scripts/release.sh 0.1.0 --dry-run   # local: bump, changelog, tag, build, verify
-bash scripts/release.sh 0.1.0             # the same, then push and publish
-```
+Every merge to `main` publishes. `.github/workflows/release.yml` computes the
+next version, builds a release APK signed with the release key (Actions
+secrets), gates it with `scripts/release-gate.sh` (pinned certificate in
+`packages/app-shell/android/app/release-cert.sha256`, `versionName`,
+`versionCode`) and publishes GitHub release `vX.Y.Z` with the APK and its
+sha256. Nothing is committed back: the tag is the version source, passed to
+Gradle as `-PkitbagVersionName`.
 
-`packages/app-shell/app.json` is the one place the version lives; Gradle derives
-`versionName` and `versionCode` from it at configure time and `version.sh check`
-keeps the `package.json` copies from becoming a second source. The release
-refuses to publish before it has proved the artifact: signature gate first (a
-debug-signed APK can never be upgraded, and that key is public), then the APK's
-own `versionName` against the tag, then a published sha256. Set
-`ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD` and `ANDROID_KEY_ALIAS`
-first — see `.env.example`.
+- **Next version** — `scripts/version.sh next`, over the commits since the
+  latest `vX.Y.Z` tag: breaking (`!` or `BREAKING CHANGE`) bumps major, or minor
+  below 1.0.0; `feat` bumps minor; everything else bumps patch. With no tag yet
+  the version is `app.json`'s. A re-run with no new commits skips.
+- **Floor** — `packages/app-shell/app.json` `expo.version` is the minimum; the
+  next version is never below it. To force a jump (say 1.0.0), raise it with
+  `scripts/version.sh set 1.0.0` in a PR.
+- **versionCode** — formula and bounds in `scripts/version.sh code --help`.
+  Gradle and `version.sh next` refuse anything out of bounds; raise the floor to
+  the next minor or major instead.
+- **Concurrency** — releases run one at a time. A run still waiting when a newer
+  push arrives is dropped; the newer run's range covers its commits.
+
+Local builds stay debug-signed unless `ANDROID_KEYSTORE_*` is set (see
+`.env.example`). `scripts/version.test.sh`, `scripts/release-gate.test.sh` and
+`scripts/changelog.test.sh` cover the rule, the gate and the notes.
 
 ### Commits and PRs
 
@@ -94,7 +105,7 @@ rebuilding the tools on top. What is here now:
 | `design/` | The binding HTML design specs. Precedence, and which variant of a multi-variant file binds, is in SPEC.md §12. |
 | `legacy/` | `android/MediaSessionPlugin.kt` + `AndroidManifest.xml`, the Flutter-era media-session detection that play-along (§8.2, §13.9) still has to port. **Reference only — do not build against them.** Delete them once `MediaNotificationListenerService.kt` stops being a skeleton. |
 | `docs/` | `decisions.md` (why things were decided), `tuner-functional-spec.md`, research notes, and `archive/` (retired trackers and runbooks, historical only). GitHub issues are the tickets. **Read `docs/tuner-research.md`'s warning banner before touching the tuner.** |
-| `scripts/` | `preflight.sh` (every CI gate locally), `release.sh` + `version.sh` + `verify-apk-signature.sh` (the release path), `install-on-device.sh`, `worktree.sh` (agent worktrees), `lint.sh`/`format.sh`/`install-hooks.sh` (native gate), `changelog.sh`, `run-loop.sh`. |
+| `scripts/` | `preflight.sh` (every CI gate locally), `version.sh` + `release-gate.sh` + `verify-apk-signature.sh` (the release path, run by `release.yml`), `install-on-device.sh`, `worktree.sh` (agent worktrees), `lint.sh`/`format.sh`/`install-hooks.sh` (native gate), `changelog.sh`, `run-loop.sh`. |
 
 The old Flutter guide's references — Melos, `pubspec.yaml`, `dart analyze`,
 `custom_lint`, `scripts/lint_check.sh` — are gone. Do not restore them.
