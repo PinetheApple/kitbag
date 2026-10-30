@@ -16,7 +16,7 @@ import Animated, {
 
 import {
   polyDotCentres,
-  polyLabelBeside,
+  polyLabelPlace,
   polyRatioLabel,
 } from '../logic/polyRow.ts';
 import { DOT_METRICS, dotPalette } from './beatDotStyles.ts';
@@ -99,7 +99,8 @@ export function PolyDots({
   currentPolyBeat,
 }: PolyDotsProps) {
   const styles = usePolyStyles();
-  const [labelWidth, setLabelWidth] = useState(0);
+  const [label, setLabel] = useState({ width: 0, height: 0 });
+  const labelWidth = label.width;
   const ratio = polyRatioLabel(polyBeats, beatsPerBar);
   const centres = polyDotCentres(
     polyBeats,
@@ -107,24 +108,32 @@ export function PolyDots({
     dotSize,
     DOT_METRICS.dotGap,
   );
-  const beside = polyLabelBeside(
+  const lastDotRight = (centres.at(-1) ?? 0) + HALF_POLY_DOT;
+  const place = polyLabelPlace({
     labelWidth,
-    metronome.polyLabelGap,
-    (areaWidth - lineWidth) / 2,
-    space.screenInset,
-  );
+    labelHeight: label.height,
+    rowHeight: metronome.polyDot,
+    labelGap: metronome.polyLabelGap,
+    sideRoom: (areaWidth - lineWidth) / 2,
+    screenInset: space.screenInset,
+    afterLastDot: lineWidth - lastDotRight,
+  });
   const width = useMemo(() => ({ width: lineWidth }), [lineWidth]);
   const besidePlace = useMemo(
     () => ({
-      left: -(labelWidth + metronome.polyLabelGap),
+      left:
+        place === 'right'
+          ? lastDotRight + metronome.polyLabelGap
+          : -(labelWidth + metronome.polyLabelGap),
       width: labelWidth,
     }),
-    [labelWidth],
+    [place, lastDotRight, labelWidth],
   );
   const handleLabelLayout = useCallback((event: LayoutChangeEvent) => {
-    setLabelWidth(event.nativeEvent.layout.width);
+    const { width, height } = event.nativeEvent.layout;
+    setLabel({ width, height });
   }, []);
-  const label = <Text style={styles.labelText}>{ratio}</Text>;
+  const labelText = <Text style={styles.labelText}>{ratio}</Text>;
   return (
     <View
       style={[styles.block, width]}
@@ -140,11 +149,13 @@ export function PolyDots({
       >
         {ratio}
       </Text>
-      {beside ? null : <View style={styles.aboveLabel}>{label}</View>}
+      {place === 'above' ? (
+        <View style={styles.aboveLabel}>{labelText}</View>
+      ) : null}
       <View style={styles.row}>
-        {beside ? (
-          <View style={[styles.besideLabel, besidePlace]}>{label}</View>
-        ) : null}
+        {place === 'above' ? null : (
+          <View style={[styles.besideLabel, besidePlace]}>{labelText}</View>
+        )}
         {centres.map((centre, index) => (
           <PolyDot
             key={index}

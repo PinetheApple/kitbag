@@ -11,13 +11,24 @@ export function polyDotCentres(
   );
 }
 
-export function polyLabelBeside(
-  labelWidth: number,
-  labelGap: number,
-  sideRoom: number,
-  screenInset: number,
-): boolean {
-  return labelWidth + labelGap <= Math.max(0, sideRoom) + screenInset;
+export type PolyLabelPlace = 'left' | 'right' | 'above';
+
+export interface PolyLabelRoom {
+  readonly labelWidth: number;
+  readonly labelHeight: number;
+  readonly rowHeight: number;
+  readonly labelGap: number;
+  readonly sideRoom: number;
+  readonly screenInset: number;
+  readonly afterLastDot: number;
+}
+
+export function polyLabelPlace(room: PolyLabelRoom): PolyLabelPlace {
+  if (room.labelHeight > room.rowHeight) return 'above';
+  const needed = room.labelWidth + room.labelGap;
+  const margin = Math.max(0, room.sideRoom) + room.screenInset;
+  if (needed <= margin) return 'left';
+  return needed <= room.afterLastDot + margin ? 'right' : 'above';
 }
 
 export function polyRatioLabel(polyBeats: number, beatsPerBar: number): string {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { polyDotCentres, polyLabelBeside, polyRatioLabel } from './polyRow.ts';
+import { polyDotCentres, polyLabelPlace, polyRatioLabel } from './polyRow.ts';
 
 describe('poly dot placement', () => {
   const FOUR_BEATS = 4 * 56 + 3 * 12;
@@ -20,16 +20,44 @@ describe('poly dot placement', () => {
 });
 
 describe('poly label', () => {
-  it('sits beside the row when the margin holds it', () => {
-    expect(polyLabelBeside(20, 8, 34, 16)).toBe(true);
+  const ROOM = {
+    labelWidth: 20,
+    labelHeight: 15,
+    rowHeight: 22,
+    labelGap: 8,
+    sideRoom: 34,
+    screenInset: 16,
+    afterLastDot: 0,
+  };
+
+  it('sits left of the row when the margin holds it', () => {
+    expect(polyLabelPlace(ROOM)).toBe('left');
   });
 
-  it('moves above the row when the bar fills the width', () => {
-    expect(polyLabelBeside(27, 8, 0, 16)).toBe(false);
+  it('follows the last poly dot on a full-width bar with room after it', () => {
+    expect(
+      polyLabelPlace({
+        ...ROOM,
+        labelWidth: 27,
+        sideRoom: 0,
+        afterLastDot: 69,
+      }),
+    ).toBe('right');
   });
 
-  it('moves above the row when large text widens it', () => {
-    expect(polyLabelBeside(52, 8, 34, 16)).toBe(false);
+  it('moves above the row when large text is taller than the dots', () => {
+    expect(polyLabelPlace({ ...ROOM, labelHeight: 30 })).toBe('above');
+  });
+
+  it('moves above the row when neither side holds it', () => {
+    expect(
+      polyLabelPlace({
+        ...ROOM,
+        labelWidth: 52,
+        sideRoom: 0,
+        afterLastDot: 20,
+      }),
+    ).toBe('above');
   });
 
   it('reads poly beats against the bar', () => {
