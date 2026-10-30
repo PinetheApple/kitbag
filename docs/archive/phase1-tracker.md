@@ -5,7 +5,7 @@
 > its sequencing role is over and all issues are closed. It is kept for the
 > **graveyard** below — B1-withdrawn, the disproved-fix records, and the
 > `beat_tracker.cpp:243` latent-divide note — so a future reader does not
-> re-attempt settled work. Active phase: `docs/phase2-tracker.md`. SPEC §2 is
+> re-attempt settled work. Active phase: `docs/archive/phase2-tracker.md`. SPEC §2 is
 > the source of truth over both.
 
 > **Not a planning document, and not the ticket.** `SPEC.md` §15 is the sequencing

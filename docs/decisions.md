@@ -131,7 +131,7 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   which had never run in CI. **[recorded]**
 
 - **2026-07-24 · Phase 3 opened; F1-M1 metronome store built (§5, §13.3, #40)** —
-  Phase gate 2→3 cleared (device reading #33 PASSED). Stood up `docs/phase3-tracker.md`
+  Phase gate 2→3 cleared (device reading #33 PASSED). Stood up `docs/archive/phase3-tracker.md`
   and dispatched the one §5 task that clears headlessly: the core-state metronome
   config store. Everything else in §5 is design-gated (screens) or device-gated
   (background §5.6, soak §5.8). Store maps mutations 1:1 to TurboModule commands and
@@ -158,7 +158,7 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   and 6/8 clicks **six** times per bar, not two. Rationale: SPEC §17 D1 requires
   the beat interval to be a function of both numerator and denominator, which only
   the quarter-referenced reading satisfies. A product survey
-  (`docs/metronome-bpm-denominator-research.md`) found no standalone metronome
+  (`docs/archive/metronome-bpm-denominator-research.md`) found no standalone metronome
   ships this bare — the well-regarded ones pair it with an explicit beat-unit /
   click-unit control so compound meters can click the dotted-note pulse (Dorico's
   Beat Unit, Pro Tools' Click field, Tempo, Soundbrenner). **User decided against
@@ -169,7 +169,7 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
 
 - **2026-08-04 · M3 performance-surface gaps decided (§5.2, #46)** — Ten unambiguous
   gaps SPEC/design didn't state, decided during the M3 build (deviations recorded in
-  `docs/phase3-tracker.md`): (1) `MAX_LEDS_PER_ROW = 7` — the only simple ceiling
+  `docs/archive/phase3-tracker.md`): (1) `MAX_LEDS_PER_ROW = 7` — the only simple ceiling
   satisfying both §5.2 data points (7 on one row; 16 as four rows of four).
   (2) Irregular-meter LED groupings: 5→3+2, 7→2+2+3, 9→3+3+3; 10, 11 and up chunk
   by 4. (3) Swipe fling = 140 ms of release velocity, capped ±40 BPM (§5.2 says

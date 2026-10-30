@@ -93,7 +93,7 @@ rebuilding the tools on top. What is here now:
 | `SPEC.md` | Product + technical spec. Source of truth. §17 records the locked decisions; §17.1 is what is still open. |
 | `design/` | Four HTML design specs, all binding. Precedence is in SPEC.md §12. |
 | `legacy/` | The only Flutter-era files kept, because SPEC.md cannot reconstruct them: `MediaSessionPlugin.kt` + `AndroidManifest.xml` (ported near line-for-line, §13.9) and `database.dart` + `converters.dart` (the v6 schema and the beat-grid / `.kwav` binary formats, §11). **Reference only — do not build against them.** |
-| `docs/` | Phase trackers (`phase1/2/3-tracker.md`), `decisions.md`, research notes. The Phase 3 tracker holds the wave/conflict map; GitHub issues are the tickets. **Read `docs/tuner-research.md`'s warning banner before touching the tuner.** |
+| `docs/` | `decisions.md` (why things were decided), `tuner-functional-spec.md`, research notes, and `archive/` (retired trackers and runbooks, historical only). GitHub issues are the tickets. **Read `docs/tuner-research.md`'s warning banner before touching the tuner.** |
 | `scripts/` | `preflight.sh` (every CI gate locally), `release.sh` + `version.sh` + `verify-apk-signature.sh` (the release path), `install-on-device.sh`, `worktree.sh` (agent worktrees), `lint.sh`/`format.sh`/`install-hooks.sh` (native gate), `changelog.sh`, `run-loop.sh`. |
 
 The old Flutter guide's references — Melos, `pubspec.yaml`, `dart analyze`,
@@ -222,7 +222,7 @@ Short version:
   is proven on device (#33 device gate PASSED).
 - **Phase 3** — rebuild the tools in dependency order. **In progress on
   `feat/phase2-skeleton`**: metronome first (M1–M9 in
-  `docs/phase3-tracker.md`; GitHub issues are the tickets). M3 (#46) is built
+  `docs/archive/phase3-tracker.md`; GitHub issues are the tickets). M3 (#46) is built
   and awaiting design sign-off; see `.loop-halt`.
 
 ## Honesty rules

@@ -2,10 +2,10 @@
 # Driver for the stateless `project-loop` skill.
 #
 # Each `claude -p` invocation is a fresh, zero-context process: it reconstructs
-# state from disk (SPEC.md, docs/phase1-tracker.md, GitHub issues, docs/decisions.md,
-# git log), runs ONE FULL WAVE to completion, commits, and exits. Context never
-# accumulates. A wave is atomic — dispatch → review → fix → wave-gate → merge →
-# persist — run synchronously via blocking Agent subagents, never backgrounded.
+# state from disk (SPEC.md, GitHub issues, docs/decisions.md, git log), runs
+# ONE FULL WAVE to completion, commits, and exits. Context never accumulates.
+# A wave is atomic — dispatch → review → fix → wave-gate → merge → persist —
+# run synchronously via blocking Agent subagents, never backgrounded.
 #
 #   ./scripts/run-loop.sh            # one wave, foreground, watched (default)
 #   ./scripts/run-loop.sh --unattended   # wave after wave until a stop-point exits non-zero
@@ -30,8 +30,8 @@ cd "$(dirname "$0")/.."
 PROMPT="/project-loop — run ONE full wave to completion, then stop. Dispatch all \
 parallel tracks in a single multi-Agent message (blocking — the Agent tool runs them \
 concurrently); when they return, review (ralph + code-reviewer), fix, run the wave gate \
-on the integrated tree, merge to the feature branch, persist (issues, tracker, \
-changelog), remove spent worktrees. Do NOT exit while any dispatched work is unfinished. \
+on the integrated tree, merge to the feature branch, persist (issues, changelog), \
+remove spent worktrees. Do NOT exit while any dispatched work is unfinished. \
 NEVER spawn background 'claude -p' workers or poll for their commits across invocations. \
 Exit only when the wave is fully integrated, or at a real stop-point."
 

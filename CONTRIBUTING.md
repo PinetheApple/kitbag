@@ -88,7 +88,7 @@ could disagree, the config wins, because it is the one that runs.
 | C++ format | `native/audio_core/.clang-format` | Google style, **C++20**, 2-space, 80-col, pointer-left |
 | C++ static | `native/audio_core/.clang-tidy` | Naming (members `_`, `kConstant`, `CamelCase` types), **magic numbers**, lean bugprone/perf. Naming + magic numbers gate; rest advisory |
 | C++ tests | `native/audio_core/tools/.clang-tidy` | Same, minus magic numbers — fixtures use literal scenario values by design |
-| TS/React | `config/` | Staged until the app exists (SPEC §13.6) |
+| TS/React | `eslint.config.mjs`, `prettier.config.mjs`, `tsconfig.base.json` | `--max-warnings 0`; strict TS; the §13.1 import zones |
 
 What a linter **can't** check — enforced by the `code-reviewer` agent, which reads
 these as its rubric (distinct from `ralph`, which reviews correctness/spec; run
