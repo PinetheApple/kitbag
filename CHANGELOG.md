@@ -12,17 +12,14 @@ and re-imports the deleted releases.
 
 ---
 
+Releases are the `vX.Y.Z` git tags, each published as a GitHub release with a
+signed APK. This file once recorded 0.1.0 through 0.5.0 as shipped on
+2026-07-14; an audit on 2026-07-17 found that substantially false, and those
+entries were deleted rather than amended. `SPEC.md` §2 is the audited inventory
+of what the codebase actually did. Version numbers here are the release tags and
+have nothing to do with the deleted entries.
+
 ## Unreleased
-
-**Nothing has been released.**
-
-This file previously recorded 0.1.0 through 0.5.0 as all shipped on 2026-07-14.
-An audit on 2026-07-17 found that claim substantially false, and those entries
-were deleted rather than amended — they described work that does not exist.
-`SPEC.md` §2 is the audited inventory of what the codebase actually did, and it
-supersedes anything this file says. Version numbers restart when something
-genuinely ships.
-
 
 ### Added
 
@@ -569,6 +566,696 @@ the numpad state machine, subdivision glyphs, the tempo marking table, the
 practice clock and the touch-target arithmetic. 54 vitest tests; 18 sabotage
 mutations were run against them and all 18 were caught.
 
+- **release:** Sign release builds with a real key, gated by a verifier
+
+- **scripts:** Add preflight and device-install as one-command gates
+
+- **release:** Scripted release path with one version source (#53, #54)
+
+The repo could build an APK but had no defined way to release one: no version
+bump path, no tag convention, no published artifact, and three files each
+hand-holding a version that nothing checked against the others.
+
+app.json is now the one owner. Gradle parses it at configure time for
+versionName and derives versionCode (major*10000 + minor*100 + patch), so the
+APK cannot disagree with it, and version.sh check keeps the package.json copies
+from quietly becoming a second source.
+
+release.sh runs every gate before anything leaves the machine: preflight, then
+the signature gate (a debug-signed APK can never be upgraded and that key is
+public), then the built APK's own versionName against the tag, then a published
+sha256. Changelog generation stays on the existing git-cliff setup via
+changelog.sh, which now forwards --tag.
+
+CI gains the Android job that would have caught the Kotlin/JNI/codegen chain
+being broken from M1 to M3 while every headless gate stayed green, plus the
+version and release-script checks preflight runs, so the two stay mirrors.
+
+The version moves 0.0.0 -> 0.0.1 because the derived versionCode must be at
+least 1; this releases nothing.
+
+- **app:** Launcher, adaptive and splash icons from one SVG source (#52)
+
+design/kitbag-mark.svg is the single definition (§13.7); scripts/build-icons.sh
+renders every raster from it — app assets for app.json/future prebuilds and the
+committed android res tree that actually ships (SPEC §13.8 keeps prebuild out
+of the build path). Colours are the §12.2 tokens (bg #0E0D10, accent #FFB347,
+accentDeep #E89B2E); no new vocabulary.
+
+splashscreen_background was #FFFFFF — the white flash before the first frame;
+it is now the theme background, and the adaptive icon carries the mark inside
+the safe zone plus an Android 13 monochrome layer.
+
+Device verification (circular + squircle masks, launcher/recents/settings)
+still pending — no device attached.
+
+- **app:** Use supplied kitbag icon
+
+Replace the generated placeholder mark with the supplied bag artwork across Expo and Android launcher assets.\n\nRefs #52
+
+- Add setlist persistence repositories
+
+- Add deterministic web metronome runtime
+
+- **android:** Minify release builds, drop unused fonts and codecs (#49)
+
+R8 + shrinkResources were left at the RN defaults, shipping 23 MB of
+un-minified dex. Enabled via the template's gradle.properties flags, with
+keep rules for the TurboModule/JNI chain in proguard-rules.pro — R8
+renaming any of those classes makes native go silent with no error.
+
+The seven ~1 MB ttf files came from expo-router's unused native-tabs
+helper importing expo-symbols -> @expo-google-fonts/material-symbols;
+both are blocked at Metro resolution (nothing else references them).
+GIF/WebP/AVIF Fresco decoders are off or excluded — the app decodes no
+images yet; each knob records what re-enables it.
+
+APK 36.0 MB -> 24.54 MB. Device verification of the keep rules (metronome
+clicks under a minified build) is still pending — no device attached.
+
+- **core-design:** Shared visual primitives and themed token roles
+
+core-design exported only tokens, so every screen that reuses the metronome's
+LEDs, steppers, sheets or transport would have copied them (#68), and the app
+bar, button, chip, card and badge every design file draws had no
+implementation (#69).
+
+Adds a theme layer (ThemeProvider, useTheme, createThemedStyles) resolving
+dark and light from the §12.2 palette, with the design's color-mix tints
+derived from tokens rather than stored as hex; named geometry, spacing and
+text roles taken from the design files; one semantic icon map that forces
+text presentation on emoji-capable glyphs; and hitSlopFor, moved from
+tool-metronome with its tests.
+
+- **core-native:** Generate the ramp and mute bar limits
+
+The Ramp and Mute-bars steppers need the engine's upper bounds, and
+retyping 64 and 16 in the tool would be a second owner (SPEC §13.7).
+KB_MAX_RAMP_BARS and KB_MAX_MUTE_BARS are extracted from
+Metronome::kMaxRampBars and kMaxMuteBars like KB_MAX_BEATS.
+
+- **core-design:** Field-label and bar-preview roles, fixed icon line box
+
+Adds the roles the trainer sheets draw with: the 13.5 field label and
+the mute preview bar's height, radius, gap and opacity. Icon now sets
+its line height to its size, so a chip with a fallback-font glyph such
+as the ramp mountain is no taller than its neighbours.
+
+- **tool-metronome:** Ramp and mute-bars chips with live sheets
+
+Part A of #81. The chip row sits under the meter card and wraps; off
+chips show their name, active chips their value (ramp as the design's
+100→140). Both sheets write through the existing store actions, so a
+stepper change reaches the engine while the metronome runs, and a
+manual tempo change still clears the ramp chip.
+
+Held back until their contracts exist: the ramp's sec/min segment and
+loop-back (#77), the mute sheet's keep-counting chip, and the Sound and
+Count-in chips (#75, #76). Appending those later does not move the two
+chips already in the row.
+
+Also pins 4/4 as one ungrouped row of four LEDs (#56 ruling).
+
+- **app-shell:** Theme follows the system colour scheme
+
+- **core-state:** Nudge and resync tempo from the engine's current_bpm
+
+While a ramp runs the store's bpm is the ramp's start, not what plays, so
+a +5 nudge jumped from the wrong base. The runtime gains an engineBpm
+read (the HostObject's current_bpm); nudgeTempo steps from it, and
+clearing a ramp, stopping and pausing adopt it. With no HostObject
+installed the store keeps its own tempo. Tests drive a fake engine
+through start ramp, nudge, clear and stop, and fail if the engine read
+is removed.
+
+The web presentation host now reports the store's bpm as current_bpm, so
+the web build shows the tempo the store holds.
+
+- **core-design:** List, search, edit, empty-state, picker and drag-row modules
+
+The Tier 2 modules the setlist screens draw: ListRow (icon tile, two lines,
+trailing chevron or badge), SearchField/TextField, FloatingActionButton,
+EmptyState with one action, EditGroup/EditRow, PickerGrid, and
+DragListRow/SongRow. Reorder starts only from the drag handle, which also
+offers increment/decrement accessibility actions; the row body takes press
+and long-press, so a long-press can never reorder. reorderTarget is a pure
+worklet with tests.
+
+- **core-state:** Library store over injected setlist and preset repositories
+
+Screens reach core-db only through core-state: configureLibrary takes the
+repositories at the composition root, as configureMetronomeRuntime does
+for commands, and useLibrary exposes a snapshot (setlists active-first
+with counts, ordered entries, standalone presets) plus CRUD, search,
+reorder, move, remove, duplicate, delete, explicit save and save-current.
+Loading a song applies every preset field to the metronome, ramp and
+bar-mute included, pins its setlist and counts it as played.
+
+The metronome store gains setAccents and stored poly accents. Tests run
+the library store against core-db's real repositories on node:sqlite.
+
+- **tool-metronome:** Setlists, setlist detail, all songs and preset editor
+
+Part of #83. Setlists pins the on-stage set with its played count, searches
+sets and songs, and leads to All songs, which reuses the detail list
+grammar without reorder chrome. Setlist detail loads a song on tap (NOW
+badge, no auto-scroll), reorders from the handle, and its long-press sheet
+separates Remove from set from Delete song, which is confirmed. The editor
+changes each field into a draft that only Save writes, and asks before
+discarding unsaved edits. The transport's setlist key now opens Setlists,
+and a loaded song's notes show above the tempo.
+
+- **app-shell:** Setlist routes and the web in-memory library
+
+Thin routes mount the four screens. The device runtime configures the
+library with core-db's openDatabase(); the web runtime, which has no
+op-sqlite, configures an in-memory repository persisted to localStorage so
+the flows survive a reload in the browser. It is web-only and never on the
+device path; tests cover reorder, cross-set move, literal %/_ search, one
+active set and reload.
+
+- **core-db:** Validated, selective v4 backup export and import
+
+openDatabase().backup exports a v4 file keyed by UUID and imports one in
+two steps: plan() validates the whole file (version, fields, blobs,
+relationships) and counts new/unchanged/conflicting rows per category
+without writing; apply() rechecks the plan against the current database
+and writes it in one serialised transaction. Merge is the default and
+needs a mine/theirs resolution per conflict; replace needs explicit
+confirmation. Practice history and library songs are off by default,
+as the Restore design specifies.
+
+- **core-db:** Schema v9 gives practice sessions a uuid
+
+Backups matched sessions on startTime, which two sessions can share, so
+an export could fail its own import. v9 backfills a unique uuid like the
+other exportable tables, and backups key sessions on it.
+
+- **core-design:** Tool tiles, rows and grid for the Home hub
+
+ToolTile, ToolRow and ToolGrid draw kitbag-ui.html §04's tiles and
+cards from the §12.2 tokens. The upcoming state is muted and labelled,
+never colour-only. packTileRows keeps registry order when a 2x1 tile
+breaks a row. AppBar gains the wordmark title style Home uses.
+
+- **core-state:** Remember the last-used tool
+
+Home's Continue card needs the tool the user last opened (SPEC §12.4).
+Storage is injected; with none configured it lasts for the session.
+
+- **app-shell:** Home hub with Continue card and tool tiles
+
+Replaces the #27 skeleton with kitbag-ui.html §04. Tiles come from a
+list shaped like §9.1's ToolPlugin, so the §9.2 registry can swap in
+data. Only the metronome has a store, so it alone shows live text;
+unbuilt tools are muted with no invented figures (SPEC §2).
+
+The web build persists the last-used tool in localStorage; native has
+no key-value store yet. The 60fps gate leaves Home and is reached by
+deep link.
+
+- **tuner:** Shared contract for the tuner lanes (#118)
+
+Types and config only, so the binding, data, design, state, tool and
+shell lanes can work in disjoint files: tuner TurboModule methods and
+HostObject properties in core-native, the TuningRepository contract in
+core-db, tool-tuner's dependencies and test config, the worklet lint
+block for tool-tuner, and expo-haptics in app-shell.
+
+The web presentation host gains the tuner fields at the engine's rest
+state so it still satisfies KitbagHostObject.
+
+The Android build does not compile at this commit: the generated
+NativeKitbagCommandsSpec now declares the seven tuner methods and
+KitbagCommandsModule.kt does not implement them yet. The binding lane
+supplies them.
+
+- **core-db:** Schema v10 tunings.instrument and tuning repository (#118)
+
+The tuner's in-tune window is chosen per instrument, so a saved custom
+tuning has to record which instrument it is for. Schema v10 adds
+tunings.instrument (NOT NULL DEFAULT 0, guitar) both in the baseline and as a
+v9 -> v10 step. Built-in tunings stay code constants; only custom tunings are
+rows.
+
+createTuningRepository implements TuningRepository (list/create/update/delete)
+on the serialised transactor and is exposed as openDatabase().tunings.
+tuning-rules.ts validates 1..12 strings, notes 0..127 and the instrument enum.
+These values are mirrored because core-db may not import core-native, and
+engine-limits.test.ts pins them to kitbag_tuner_api.h and tuning_mode.h.
+
+The backup TuningRecord always writes instrument. Older v4 files that lack the
+field read it as guitar, and an out-of-range value is refused with its path.
+
+- **core-design:** Tuner strip, peg selector, live text and shape icons (#118)
+
+TunerStrip and PegSelector take engine-polled values as SharedValues and
+move them only through useAnimatedStyle (SPEC §13.3). LiveText writes a
+SharedValue<string> into a non-editable TextInput via useAnimatedProps.
+
+Arrow, check and mic are drawn from Views rather than added to the glyph
+map, since the vector icon set (#112) has not landed and glyph icons are
+ruled out.
+
+- **core-state:** Tuner store, serialised commands and mic lifecycle (#118)
+
+Human-speed tuner state only (SPEC §13.3): mode (auto, manual string,
+chromatic), current tuning, A4, strings tuned this visit, permission and
+mic status, custom tunings. Needle, cents and detected string stay in the
+HostObject for the worklet; it reports a lock through markTuned, which
+returns true once per string.
+
+Every tuner command runs through one promise queue so a later setter cannot
+overtake an earlier one (set_tuning resets the mode). KB_ERROR_BUSY is
+retried a bounded number of times, a tick apart. enter() resets to auto,
+clears the tuned set, pushes tuning/A4/mode with the mic off, then
+reset_note_presence(0) and tunerStart (SPEC §10.2 re-entry). leave() and
+app backgrounding stop capture; foregrounding restarts it if the screen is
+open, checking permission without prompting. A device init/start failure
+leaves the mic "unavailable" with retryMic.
+
+The runtime (commands, mic permission, app activity) and the
+TuningRepository are injected through configureTunerRuntime and
+configureTunings for app-shell to wire. There is no native fallback: an
+unconfigured tuner throws rather than capture without lifecycle wiring.
+Built-in tunings are not here; the store accepts any valid tuning.
+
+- **core-native:** Bind tuner commands, state reads and A4 bounds (#118)
+
+The Phase 0 contract declared seven tuner TurboModule methods and thirteen
+tuner_* HostObject properties with no native side, so the Android build
+failed. This wires each command Kotlin -> JNI -> kitbag::command* -> kb_tuner_*
+and serves every tuner_* property from one kb_tuner_read_state copy.
+
+KB_TUNER_A4_HZ {min, max, default} is now generated from TuningMode
+(tuning_mode.h) instead of being retyped by the screen (SPEC §13.7).
+
+- **tool-tuner:** Tuner screen with UI-thread needle and in-tune lock (#118)
+
+TunerScreen composes the design's tuner (pegs, note readout, graduated
+strip, Auto / A4 / Chromatic chips) from core-design and drives it from
+the core-state tuner store.
+
+useTunerFrame is the §13.3 path: a Reanimated frame callback reads the
+tuner HostObject fields on the UI thread (re-reading once when a hop
+lands mid-read) and writes the needle, note, caption, direction and
+detected-peg SharedValues. Only two things reach JS, each when it
+changes: the lock event, once per lock, and the hop's human-speed slice
+(status, string, wrong-string hint, silence). The needle follows its
+target exponentially per frame, jumps under reduced motion, snaps to
+centre while the engine's in-tune ratio is at the tuned ratio, and holds
+dimmed after the note decays until the next note or a reset.
+
+A lock calls the store's markTuned; the first lock per string this visit
+fires expo-haptics' Android confirm haptic. No sound.
+
+Built-in tunings are code constants; custom tunings go through the
+store's CRUD into the tunings table. The tuning list, tuning editor and
+A4 sheets are built from existing primitives and await design sign-off.
+
+The A4 range is a prop (a4Range) because KB_TUNER_A4_HZ is generated by
+the core-native lane that has not landed; the shell passes the constant.
+
+expo-haptics is a new peer/dev dependency of tool-tuner (already an
+app-shell dependency), hence the pnpm-lock.yaml importer entry.
+
+- **core-native:** Generate the tuner idle sleep and own the confirm haptic (#118)
+
+KB_TUNER_IDLE_SLEEP_MICROS is parsed from Tuner::kIdleSleepMicros so the
+BUSY retry can wait one analysis-loop sleep without retyping it.
+
+confirmHaptic() wraps expo-haptics here: tools may not import native modules
+(§13.1), so tool-tuner calls it through core-native and loses its own
+expo-haptics dependency. pnpm-lock moves the importer accordingly.
+
+The native-modules-thread reason now lives only in NativeKitbagCommands.ts,
+and its per-method echoes of the ABI names are gone.
+
+- **app-shell:** Wire the tuner route, runtime and mic permission (#118)
+
+Mounts TunerScreen at /tuner. Focus enters the tuner store and blur leaves
+it, so capture runs only while the screen is focused. The device runtime
+passes the TurboModule tuner commands, maps PermissionsAndroid RECORD_AUDIO
+(never_ask_again -> blocked) and forwards AppState active/background. Custom
+tunings use core-db's openDatabase() behind one lazily-opened module until
+#109's composition root absorbs it (docs/decisions.md 2026-10-14, item 6).
+On web there is no capture path, so tunerStart reports device-init failure
+and custom tunings sit in a localStorage-backed in-memory repository.
+
+The Home tile and Continue card now open the tuner and show the current
+tuning label. RECORD_AUDIO is added to the committed manifest and app.json,
+along with VIBRATE and NSMicrophoneUsageDescription.
+
+- **native:** Independent poly-row accents and poly beat sentinel
+
+Adds kb_metronome_set_poly_accent, routed through the SPSC command ring into
+a poly accent table kept separately from the main-row table. Poly clicks now
+honour those accents: muted slots are silent and accented slots play at a
+higher amplitude. Growing the poly count resets the newly included slots to
+normal and leaves kept slots unchanged.
+
+current_poly_beat publishes -1 when the metronome is stopped, when poly is
+disabled, while a beat grid is active, and after a poly count change until
+the next poly beat.
+
+- **native:** Separate normal and accent click sounds at the C ABI
+
+kb_metronome_set_sounds(engine, normal_sound, accent_sound) replaces
+kb_metronome_set_sound. Accented beats play accent_sound; normal beats and
+subdivisions play normal_sound; poly beats follow their own accent. An id
+outside the engine sound table keeps that role's previous sound instead of
+clamping to an edge sound. The sound-name table stays the one generated
+from kSounds.
+
+The metronome ABI checks move to tools/abi_test_metronome.cpp, keeping
+abi_verify.cpp under the 400-line cap.
+
+- **native:** Engine-scheduled count-in with pause that skips it
+
+kb_metronome_set_count_in(engine, bars, distinct, sound) sets 0/1/2/4
+count-in bars and either a distinct engine sound or the accent/normal pair.
+The count is part of the metronome's own position: start places beat 0 of
+bar one count_in_bars * beats_per_bar beats after the start frame, so the
+count and bar one share one engine clock and the tempo, signature and
+subdivision in force at start set its length. Subdivisions, poly and bar
+mute do not sound during the count.
+
+kb_metronome_pause stops like kb_metronome_stop but leaves the count spent,
+so the next start goes straight to bar one; stop re-arms it. Grid mode and
+anchor_external follow the song and skip the count. kb_metronome_counting_in
+mirrors the count for the UI; bar_phase stays in [0, 1) during it.
+
+- **native:** Preview a click sound at the current volume
+
+kb_metronome_preview_sound(engine, sound, accented) queues one click of an
+engine sound through the command ring. It fires at the start of the next
+audio block, whether or not the metronome is running, on the same voices
+and volume as the click. Ids outside the sound table are ignored.
+
+Also shortens the count-in ABI doc comments to two lines.
+
+- **native:** Tempo ramp over bars, seconds or minutes with loop-back
+
+kb_metronome_set_ramp now takes a duration, a kb_ramp_unit (bars, seconds
+or minutes) and a loop flag in place of a bar count. The tempo still steps
+once per downbeat. Time units measure progress in rendered frames from bar
+one, so the engine clock drives it and the current meter decides where the
+steps land. At the end the ramp holds, or plays one bar at the end tempo and
+restarts. An unknown unit or non-finite value keeps the previous ramp;
+kb_metronome_set_tempo still cancels it, and start replays it.
+
+The ramp moves into TempoRamp (tempo_ramp.h/.cpp) and the Accent/BeatGrid
+types into metronome_types.h, which keeps metronome.h under the line cap.
+
+- **core-native,core-state:** Bridge poly accents, sounds, count-in and ramp
+
+Wires the new metronome ABI through KitbagCommands, JNI, the Kotlin
+TurboModule and the TS spec: setPolyAccent, setSounds, previewSound,
+setCountIn, metronomePause and the 6-argument setRamp. This removes the
+calls to kb_metronome_set_sound and the old kb_metronome_set_ramp that
+broke the Android native build. The HostObject exposes current_poly_beat
+and counting_in.
+
+Generated constants gain KB_RAMP_UNIT, KB_POLY_BEATS_BOUNDS,
+KB_COUNT_IN_BARS, KB_DEFAULT_COUNT_IN_SOUND and the ramp duration bounds,
+all parsed from the engine headers.
+
+The metronome store adds a poly accent row, setSounds (invalid ids ignored
+per role), previewSound, setCountIn, pause via metronomePause and a
+unit/loop ramp that mirrors the engine's validation. countInArmed, the
+store-only per-accent sounds and the single setSound are gone. The web
+presentation runtime matches the new surface.
+
+- **tool-metronome:** Sound and count-in sheets, ramp unit/loop, live poly row
+
+Completes the four-chip row (Ramp, Mute bars, Sound, Count-in). The ramp
+sheet gains a bars/sec/min segment and a loop-back toggle. The sound sheet
+picks normal and accent sounds from the generated engine names and
+previews each tap at the current volume. The count-in sheet sets Off/1/2/4
+bars and distinct or same sound. The poly LED row reads store.polyAccents,
+cycles with cyclePolyAccent and flashes from current_poly_beat through a
+SharedValue.
+
+PickerGrid joins core-design. Labels and option maps live in pure logic
+modules with tests; the logic test config aliases core-native to its
+generated constants so the barrel's react-native import stays out.
+
+- **core-native:** Export tempo, mute-bar, ramp-bar and default-sound bounds
+
+The generator now emits KB_BPM_BOUNDS, KB_MUTE_BARS_BOUNDS, KB_MIN_RAMP_BARS,
+KB_SUBDIVISION_BOUNDS, KB_DEFAULT_SOUNDS and KB_COUNT_IN_OFF from the engine
+headers, so the TS lane can drop its retyped copies (SPEC §13.7).
+
+- **core-db:** Add a preferences table with synchronous reads (#121)
+
+Schema v11 adds a key-value `preferences` table, exposed from openDatabase()
+as `preferences.get/set`. Reads use executeSync so a value is available
+before a screen's first render; writes queue behind the transactor so they
+never join another caller's open transaction.
+
+- **core-db:** Store a song's ramp unit and loop, schema v12 (#109)
+
+SPEC §5.4/§5.8 require ramp to round-trip like any other field, but
+presets stored only bar ramps, so a seconds or minutes ramp saved as off
+and loop was always dropped. song_presets gains ramp_unit and ramp_loop;
+ramp_bars holds the length in that unit and is bounded per unit against
+tempo_ramp.h. Backups write both, and v4 files and web storage written
+without them read as a bar ramp without loop.
+
+- Stepped tempo ramps, +N BPM every N bars, seconds or minutes (#144)
+
+A ramp is now a start, a step, an interval, a target and loop (SPEC §5.3,
+D15). The tempo holds for one interval, then moves by exactly the step: on
+the downbeat for bars, on the next beat for seconds and minutes. The last
+step stops on the target, and loop holds it one interval before starting
+over. The smooth From/To/Over ramp is gone.
+
+- audio_core: TempoRamp steps per interval; kb_metronome_set_ramp takes
+  target, step and interval. metronome_verify models the stepped ramp per
+  beat, from the spec rather than the engine.
+- core-native: setRamp carries the step; KB_MIN_RAMP_STEP_BPM generated.
+- core-db: song_presets.ramp_step, schema v13; backups carry rampStep, and
+  older v4 files read as a step of 1.
+- core-state: RampConfig is targetBpm, stepBpm, interval.
+- tool-metronome: the ramp sheet and the preset editor gain Step, Over
+  becomes Every, and the sheet says when the target is reached.
+
+- **core-design:** Vector icons from MaterialCommunityIcons, no emoji or glyph icons (#112)
+
+Icons were emoji and unicode glyphs drawn in the platform font: some fell
+back to colour emoji, sizes and baselines varied, and they ignored the
+theme colour. Every icon now comes from one typed name map rendered by
+MaterialCommunityIcons, at token size and theme colour. InlineIcon takes
+size and colour from the text style it replaces, so call sites keep their
+tokens. The hand-drawn tuner arrows, check and mic use the same glyphs.
+
+The subdivision badge shows clicks per beat as x1-x16 instead of the
+note glyphs, which were too small to read (SPEC 5.2). Row subtitles use
+words. A lint stopgap rejects pictographs in source outside tests.
+
+- **app-shell:** Notification transport model in Kotlin (#86)
+
+What the notification shows and what each action does, with no Android
+dependency so it runs as a JVM test. Kotlin owns it because the service
+must keep handling play, pause, stop and tempo while JS is starved (#87).
+Tempo steps from the rounded effective tempo like the screen keys; prev
+and next are relative so JS stays the only owner of the setlist order.
+CI and preflight now run the app's JVM tests with the release build.
+
+- **core-native:** Foreground service and media session keep the click alive (#87)
+
+MetronomeService runs as a mediaPlayback foreground service while the
+metronome plays, with an ongoing MediaStyle notification and a media
+session. Play, pause, stop and tempo ±1 from the notification, lock
+screen or headset go straight to the engine through EngineTransport's
+JNI, so they work while JS is starved; the app hears about each action
+and updates its store. TransportModel moves to core-native with it.
+
+Prev and next stay hidden: the app has no active-setlist navigation for
+them to drive yet.
+
+- **core-native:** Media card seek bar is the practice clock (#87)
+
+Samsung's media card ignores metadata-only updates, so a clock in the subtitle
+froze between play and pause. The seek bar is the one element the card animates
+itself; it now carries practice time over 10-minute blocks.
+
+- **native:** Click soak and click-vs-grid harness (#88)
+
+click_soak judges a recorded or rendered metronome against its expected tempo
+or beat grid: dropped, doubled and jittered clicks, interval error, tempo error
+in ppm and windowed grid offset, with named exit codes. click_soak_verify pins
+it on synthetic and engine-rendered fixtures; scripts/soak-analyze.sh runs it.
+The 4h device recording is still to be made.
+
+- Library with import and background beat analysis (#160)
+
+One song list for single-file and stem songs, with search, filter chips,
+badges and an import button. Imported files are copied into the app-owned
+base directory and analyzed by a WorkManager task that survives the app
+closing; results wait natively until the app stores them. kb_analyze_song
+now streams the file in two passes, so memory no longer grows with the
+decoded song (a 60-minute file peaks at 8 MB instead of 1.9 GB) and its
+results are byte-identical to the whole-buffer version.
+
+- Import StemDeck song bundles from a zip or folder (#136)
+
+A bundle's stems are copied, streamed, into stems/<job>; its grid, bars,
+sections, lyrics, key, loudness and mix go into schema v15; peaks become
+.kwav sidecars through the one native writer. Wrong format or version is
+refused with a readable notice; the same job imports again only after a
+confirmed replace.
+
+- **audio_core:** Expose mute-cycle, count-in and ramp-step reads (#171)
+
+The status line must show which bar of a Play N / Mute N cycle is
+playing, the count-in bar, and the ramp's next tempo and when it lands.
+The engine kept none of that readable, so the UI could only guess.
+Adds seven polled reads to the C ABI and the JSI HostObject, with
+metronome_verify and abi_verify checks for each.
+
+- **metronome:** Layout B performance screen (#175, #56, #171)
+
+Rebuilds the screen below the tempo row to the approved mockup: app bar
+with the setlist chip, meter and notation subdivision chips, beat dots
+on their own row, one status line for count-in, the mute cycle and the
+ramp, and a setlist / Play / Practice transport without the stopwatch.
+Live indicators read the new HostObject values on the UI thread. The
+glow behind the numeral is gone, and a first-use swipe hint shows once.
+The meter, subdivision and Practice keys open interim sheets until the
+new ones land.
+
+- **metronome:** Subdivision, time-signature and Practice sheets (#173, #172, #81)
+
+Replaces the interim sheets: all 16 subdivisions as notation tiles, a
+time signature picked on wheels or from common meters, and one Practice
+sheet holding the stepped ramp with typed From/To, mute bars, count-in,
+sound and poly. Every value applies to a running metronome. The poly
+row and the four-chip trainer row are gone.
+
+- **core-design:** Mockup-sized control variants for the metronome (#175)
+
+The metronome's sheets draw larger buttons, steppers, segments, chips,
+preview keys and numpad keys than the shared defaults. Each gets an
+optional size variant; every other screen keeps today's sizes.
+
+- **native:** Mixer master gain, A-B loop with crossfade, metronome follows the mixer (#137)
+
+Native half of the stem player. A looping reader on each track writes the
+loop in playback order, crossfade included, so the callback reads a straight
+stream; seek, stop and loop changes rebuild every track off the callback and
+swap in together. The metronome can take its grid's song time from the
+mixer's position each block, through seek, pause and loop wraps.
+
+- Stem player screen, layout C (#137)
+
+Bottom-dock layout the owner chose in docs/research/mockups/stems-layouts.html:
+song facts as chips, per-stem level chip that opens a fader, explicit M and S
+(mutually exclusive), A-B loop on the scrubber, icon-only transport with the
+click. Stem songs store the bundle's title and artist (DB v16), library stem
+rows show BPM, key, grid and stem badges, and faders are drag-only so a tap
+cannot jump the gain.
+
+- Rename songs, stem songs and stems (#176)
+
+Library row actions gain Rename; a stem is renamed inline by long-pressing
+its name in the stem player. Only stored display names change, so a
+re-imported StemDeck bundle is still found. Schema v17 adds stem_sets.renamed
+and per-stem names: replacing a bundle keeps a renamed song's title and the
+user's stem names, matched by stem role. List row titles and subtitles are
+single-line with an ellipsis, as the design files style them.
+
+- Background playback and media notification for stem songs (#177)
+
+A stem song now keeps playing with the app in the background or the screen
+off, under the existing foreground service, renamed PlaybackService. Its
+media card shows title and artist, -10 s, play/pause, +10 s and stop, and a
+seekable progress bar. The service reads the mixer position natively, so
+seeks and loop wraps reach the bar without going through React state. One
+service owns one notification: a song card replaces the metronome's, which
+covers the click joined to the stems. Single songs get no card yet because
+no screen plays kb_player_*.
+
+- Separate Songs and Stem songs screens, library layout B (#178)
+
+The owner chose layout B in docs/research/mockups/library-layouts.html. The
+Songs and Stem songs home tiles each open their own titled screen with no
+type filter chips; setlists are reached from the Songs app bar. Rows are a
+one-line title, a facts line (length, BPM, and key for stem songs) and
+status badges, sorted by title. The shared screen app bar, FAB, empty state
+and search field gain list variants instead of library-only copies, and
+home tile titles stay on one line at large font scales.
+
+- Keep the screen on while practising (#187)
+
+The display timed out at the music stand while the metronome clicked, a stem
+song played or the tuner listened. A core-native setKeepScreenOn command sets
+FLAG_KEEP_SCREEN_ON, driven by one rule over the metronome, tuner and stem
+player state. The stem player has no playing flag in a store, so the mixer is
+read once a second while a song is open. A metronome still clicking after you
+leave its screen keeps the screen on.
+
+- **tool-metronome:** Stack live status rows below the beat dots (#175)
+
+The owner chose stacked rows (metronome-status.html, variant A) over the
+single-line priority order, so the mute cycle and a running ramp are both
+visible every bar. Two rows of height are always reserved, so the dots and
+transport do not move between states; the beat legend shows only while
+stopped.
+
+- **tool-metronome:** Pulse marks under the beat dots (#175, #173)
+
+One mark per subdivision pulse; the sounding pulse turns accent. The pulse
+comes from bar_phase in a UI-thread reaction and is written only when it
+changes, so each beat re-styles one overlay per pulse, not every frame.
+Muted beats and muted bars light nothing, since those pulses make no click.
+
+- **tool-metronome:** Poly dots as a second row under the beat dots (#175, #56)
+
+The owner kept polyrhythm on screen. Each poly dot sits at its time in the
+bar, so a pulse that coincides with a beat sits under it. The sounding dot
+reads current_poly_beat from the HostObject on the UI thread, as the
+pre-redesign poly LED row did.
+
+- **tool-metronome:** Type every Practice sheet number on the numpad (#175)
+
+The sheet says "tap a number to type it", but only the ramp From and To
+opened the numpad. Step, Every, Play and Mute bars and the poly count now
+open the same sheet, with bounds from the engine constants (the interval in
+its current unit) and clamping on confirm. The numpad sheet takes its bounds
+and unit as props, and the mute steppers use KB_MUTE_BARS_BOUNDS instead of
+a local minimum.
+
+- **metronome:** Previous/next and a song list in the app bar while a setlist is on stage (#205)
+
+The chip shows the loaded song over the setlist and position, previous and
+next load the adjacent song through loadSong, and the chip's sheet lists the
+set with Leave setlist. Loading a song from outside the set now clears the
+active setlist instead of leaving it pinned.
+
+- **metronome:** Clear the loaded song, and unlink it on Leave setlist (#205)
+
+With no setlist active the song chip opens a sheet with Clear song and Open
+setlists. Clearing or leaving drops the loaded song but keeps the metronome's
+settings, so the sound does not change mid-play and the preset is untouched.
+
+- **release:** Next version from tags, versionCode bounds, release gate (#211)
+
+version.sh next derives the release version from the latest vX.Y.Z tag and
+the conventional commits since it, never below app.json, which is now the
+0.1.0 floor. Every merge bumps at least patch; breaking bumps minor below 1.0.
+git-cliff --bumped-version was not used: it does not bump for docs/chore or
+non-conventional commits and takes 0.x breaking to 1.0.0.
+
+Gradle accepts -PkitbagVersionName so CI can build the tag's version without a
+commit back to protected main, and both Gradle and version.sh refuse versions
+outside minor/patch <= 99, where versionCode order would stop matching semver.
+release-gate.sh is the single pre-publish gate and compares the APK's
+versionCode against version.sh, pinning the two formulas to each other.
+
+release.sh and its test are removed: they committed and pushed to main, which
+the branch ruleset now refuses, and would race the release workflow.
+
 
 ### Fixed
 
@@ -991,5 +1678,749 @@ failed on a fresh checkout once the /metronome route landed — turbo's cache
 replayed a stale pass and hid it. Regenerate the route types as part of
 typecheck (expo customize tsconfig.json, idempotent and git-clean).
 StepBadge.tsx re-formatted per prettier.
+
+- **core-native:** Wire metronomeStop/setRamp/setBarMute through the TurboModule chain
+
+The codegen'd spec declared these three commands since M1 but the Kotlin
+module, JNI bridge and C++ wrappers never implemented them, so every
+Android build past that point failed at :kitbag_core-native:compileReleaseKotlin.
+Headless gates never compile Android Kotlin, which is why it went unnoticed.
+Mirrors the existing per-command pattern end to end; JNI symbols unexercised
+until a device run.
+
+- **app-shell:** Color the home skeleton's text against the dark scene
+
+The router paints every scene bg.dark, so the #27 skeleton's unstyled Text
+rendered black on near-black and the home screen read as a dead app.
+
+- **core-db:** Awaited repository transactions and dense reorder
+
+drizzle-orm 0.45's op-sqlite session.transaction() sends BEGIN, calls the
+callback without awaiting it, then COMMITs, so its transactions are not
+atomic on device. Repositories now go through a serialised transactor that
+awaits BEGIN/work/COMMIT and rolls back on error; the node:sqlite harness
+uses the same transactor.
+
+- Every open runs the migration runner, which leaves foreign keys ON.
+- Preset delete removes its setlist memberships explicitly in one transaction.
+- add/move/moveTo renumber the whole list densely, so deletion gaps heal.
+- The v6 upgrade runs v6->v7->v8 and the user_version bump as one transaction.
+- index.ts exports only openDatabase, the two repository factories and row types.
+- SPEC 11.2 records the v8 active flag and poly_accents column.
+
+- **app-shell:** Lazy native runtime, query fallbacks, shared constants for web presentation
+
+- **tool-metronome:** Declare swipe worklet helpers before their callers
+
+The worklet plugin turns 'worklet' function declarations into closures
+that capture their callees at definition, so dragTempo captured clampBpm
+before it existed and the web build threw "Cannot access 'clampBpm'
+before initialization". clampBpm now comes first. A new test fails if a
+worklet in swipeTempo.ts calls one declared after it, and it does fail
+against the old order.
+
+- **core-design:** Sheet drag on Gesture Handler, onDanger role, fewer comments
+
+Drag-to-dismiss moves from PanResponder to a react-native-gesture-handler
+Pan (the locked choice), with its own root view inside the Modal. The 25%
+threshold is SHEET_DISMISS_DRAG_FRACTION, a recorded assumption pending
+design sign-off. gesture-handler is a peer and dev dependency; the
+lockfile is regenerated at integration.
+
+The destructive button fills with feedback.danger and labels with
+theme.onDanger, which resolves to surface1: at least 4.5:1 on the danger
+fill in both modes. onAccent (4.41 light) and the design's #fff (3.03
+dark) are not. A test pins the ratio.
+
+- **core-design:** Address review of the shared primitives
+
+Card reuses theme's FEEDBACK_TOKEN, and active emphasis now requires an
+activeLabel announced with a selected state rather than relying on
+colour. SegmentedControl takes neighbourGapDp through hitSlopFor instead
+of a lone-option special case, and its container is a radiogroup of
+radio options. The sheet's dismiss decision is a pure
+shouldDismissSheet, guarded against an unmeasured height and unit
+tested, with a named drag-activation distance. iconSizes.key is gone.
+Adds the tempo-zone, sweep and pill-value roles the metronome needs,
+and style blocks move above their components for no-use-before-define.
+
+- **tool-metronome:** Tempo zone gradient, role-driven sizes, lint order
+
+The swipe zone draws the design's radial glow with RN's
+experimental_backgroundImage; the old comment claiming RN had no radial
+gradient was false. The pill, zone, sweep and screen take glyphs from
+icons and geometry from core-design roles, so the pill matches the
+chips, and the screen gap is the design's 12. workletOrder.test.ts is
+replaced by no-use-before-define for tool-metronome and core-design,
+which reports the old swipeTempo order.
+
+- **app-shell:** Home follows the active theme
+
+- **tool-metronome:** Show the engine tempo; ramp edits are a draft
+
+The BPM readout is an animated TextInput fed by current_bpm through the
+frame worklet, so a running ramp shows what plays without React state
+(§13.3); swipes anchor on that value and the numpad opens from it.
+
+Ramp steppers now edit a draft that only Start sends, so adjusting a
+running ramp no longer restarts it, and a fresh sheet prefills From/To
+with the current tempo. Sheet logic moves into useRampEditor and
+useBarMuteEditor. Chip labels read "120 to 140 BPM", and the mute
+steppers announce their value in bars.
+
+- **core-state:** Trust the engine tempo only while running
+
+Commands queue until the device opens on start, so before the first
+Start current_bpm is still the engine default: typing 97 then +5 gave
+125 and the numpad reopened at 120. The engine read now applies only
+while running; otherwise the store's tempo stands. Stop and pause read
+the engine before stopping it. New tests cover the pre-start case and
+the pause resync, and each fails if its guard is removed.
+
+The tempo readout announces its value again ("97 BPM").
+
+- **tuner:** Replace the silent detector with a string-aware tuning mode
+
+PitchAnalyzer reset its detector on every update while the note lock was
+still acquiring, so a clean tone never produced the 20 consecutive readings
+the lock needed and every reading stayed at 0 Hz.
+
+The detector is now a McLeod pitch method on 4096-sample frames with a
+2048-sample hop. A tuning mode on top of it implements
+docs/tuner-functional-spec.md: auto string selection within 350 c, manual
+string lock, chromatic mode, wrong-string hints, note presence with hold and
+reset, and an in-tune ratio. It is exposed through kitbag_tuner_api.h, and the
+new constants are generated for TypeScript. kb_tuner_snapshot is derived from
+the same tuning mode. NoteLock and the cycfi/q include paths are removed.
+
+tuner_verify was written first, from the spec, and failed against stubs
+before the implementation.
+
+- **core-db:** Backups settle, round-trip, and enforce engine bounds
+
+- Merge compares the value that would be written: references into a
+  category not being imported resolve through local ids, so a
+  default-category import run twice plans all-unchanged.
+- export(['setlists']) carries the presets it lists; a property test
+  checks every category subset of several seeded states re-imports.
+- Preset bounds (bpm, beats, denominator, sound ids, accent bytes,
+  per-accent sounds as a normal/accent pair) are checked on repository
+  writes and on import from one shared rule set. core-db cannot import
+  core-native, so the bounds mirror the engine headers under a drift test.
+- plan() takes a string only; UUIDs are lowercased; tunings need strings.
+- apply() re-validates the planned file and returns every failure,
+  including a rolled-back write, as a Result.
+
+- **core-db:** Store blobs as Uint8Array, not Node Buffer
+
+drizzle's blob buffer mode calls Buffer.isBuffer/Buffer.from when reading
+rows, and Hermes has no Buffer, so every preset read would throw on
+device. A bytes custom type maps op-sqlite's ArrayBuffer (or any view) to
+a fresh Uint8Array and passes Uint8Array through on write; base64 uses
+atob/btoa. core-db src no longer references Buffer, and a test runs the
+repositories and a backup round-trip with the Buffer global removed.
+
+- **core-db:** V9 repairs stored presets the engine would refuse
+
+Rows carried from v6 (or written before the preset rules existed) could
+break them, and backup import would then reject the app's own export.
+v9 clamps bpm, beats per bar, sound and poly beats to engine bounds, pads
+or trims accents to the bar reading unknown codes as normal (as Flutter
+did), and clears mis-sized poly or per-accent blobs.
+
+- **core-db:** Backup import accepts a tuning with no strings
+
+Export wrote empty tunings that import then refused, breaking the rule
+that every export imports. Tuning content rules belong to the tuner
+lane; until then an empty tuning round-trips unchanged, and the
+export-is-importable property test seeds one.
+
+- **core-db:** V9 repairs every field the preset rules check
+
+The repair missed poly accent codes, per-accent sound ids and the
+denominator, so a migrated row could still fail its own export->import.
+Poly accent codes outside kb_accent now read as normal, bad sound ids
+clear per-accent sounds, and a bad denominator becomes 4. The rules
+also bound ramp bpm/bars, mute bars and subdivision to the engine
+limits (mirrored under the metronome.h drift test), and v9 repairs
+those too. Triggers refuse a NULL practice_sessions.uuid, since SQLite
+cannot add NOT NULL to an existing column.
+
+- **core-db:** Validate restored tuning notes and prove every upgrade path (#118)
+
+Backup import now runs tuningViolation over the whole tuning, not only its
+instrument, so a restored row the tuner cannot load is refused like any
+other invalid field. v10 drops legacy rows that would fail that rule (no
+strings, more than 12, a note above MIDI 127); the empty-tuning round-trip
+that d889ce5 allowed is replaced by refusals.
+
+The fresh-vs-migrated parity test now starts from v6, v7, v8 and v9:
+dropping MIGRATE_V9_TO_V10 from the v8 path passed before and fails now.
+upgradeSteps is an ordered list filtered at the source version.
+
+- **core-state:** Space BUSY retries, one tuning rule, keep progress on rename (#118)
+
+BUSY retries wait one engine idle sleep (2 ms) instead of a 0 ms tick that
+could spend all three before the analysis thread drained the queue.
+
+isValidTuning is core-db's tuningViolation, so the store now refuses notes
+outside 0-127 and the duplicate instrument set is gone. Renaming the selected
+custom tuning updates its name without resetting the mode or the strings
+tuned this visit. Custom-tuning actions and the state types move out of
+store.ts; the tests split along their describe blocks over a shared harness
+(*.test-helper files get the test-file lint relaxation). CustomTuning and
+MAX_MIDI_NOTE are exported.
+
+- **tool-tuner:** Manual-only wrong-string hint, dwelled status, no stale locks (#118)
+
+- The wrong-string hint shows in manual mode only (tuner functional spec
+  §3.1); in auto it flashed on every string change.
+- The discrete slice crosses to React only after holding for 250 ms, so a
+  status flickering at the in-tune edge no longer re-renders the screen and
+  re-announces on every hop.
+- A reset records the measurement id; locks arm only once a later hop is
+  heard unlocked, and the JS side drops lock events from before the reset,
+  so a hop from the old tuning cannot mark a string of the new one.
+
+- **tool-tuner:** Renaming the selected tuning keeps the readout (#118)
+
+The readout reset key carried the tuning name, so a rename cleared the
+needle and re-armed the lock guard although the engine's tuning was
+unchanged.
+
+- **native:** Clamp raw int32 accents on drain for both accent setters
+
+kb_metronome_set_accent and kb_metronome_set_poly_accent cast the caller's
+int32 accent to the uint8 Accent enum before it reached the ring, so 256
+wrapped to muted and negative values wrapped unpredictably. The raw int32 now
+rides the command and is clamped in SetAccentSlot, so both contracts match.
+
+- **native:** Reset main-row accents exposed by a growing beat count
+
+Muting beat 4 in 4/4, switching to 3/4 and back left beat 4 muted in the
+engine while the store, which resets grown slots to normal, showed it
+normal. SetSignatureState now resets newly exposed slots to normal, the
+same policy the poly row uses, so store and engine agree with no resend.
+
+The pattern-state helpers move to metronome_pattern.cpp, which keeps
+metronome.cpp under the 400-line cap.
+
+- **native:** Exact bar one after long count-ins; review fixes for #75-#77/#93
+
+Summing beats_per_sample over a long count-in (4 bars of 16/4 at 20 BPM)
+drifted bar one a sample late. The count now snaps beat_position_ to bar
+one at the nearest sample, so a counted run matches a plain start there
+sample for sample, under any latency offset.
+
+Also from review:
+- Accent and poly-accent indexes past the current bar or poly count are
+  ignored; set_beats documents that growing resets new beats to normal.
+- Ramp BPMs are validated before clamping, so +-inf keeps the previous
+  ramp instead of becoming 400; TempoRamp owns the BPM bounds and
+  BpmAtDownbeat is renamed StepAtDownbeat.
+- static_asserts tie kitbag::Accent to kb_accent.
+- Header docs: volume comment reattached, loop cycle length, caller-chosen
+  count-in sound, preview collapse per block; stale render comments cut.
+- Tests: long count-ins at 20/400 BPM and +-100 ms, tempo change during a
+  count, preview while running, accent past the bar, +-inf ramp BPMs, and
+  pinned mid-bar seconds-ramp apply and pause restarting the ramp.
+
+- **core-state,core-native:** Clamp volume and bar-mute to engine bounds
+
+setVolume clamps to KB_VOLUME_BOUNDS, now generated from
+Metronome::kMinVolume/kMaxVolume, and setBarMute clamps play and mute bars
+to 1..KB_MAX_MUTE_BARS, before both the store state and the command, so the
+displayed intent matches what the engine holds.
+
+Removes narrating comments from the bridge glue, the metronome store and
+useMetronomeFrame, keeping one line that points at the UI-runtime
+HostObject trap.
+
+- **core-design,tool-metronome:** One-row count-in picker, sound row, readable disabled buttons
+
+PickerGrid sized cells by percentage plus a dp gap, which overflowed and
+wrapped the four count-in choices onto two rows; it now lays out explicit
+flex rows. Disabled Button dropped to 0.4 opacity, failing AA on both
+themes; it now keeps an outlineless text2 label (tested >= 4.5:1).
+Count-in sound sits in a new shared EditRow per design :561. The mute
+hint says the preview is the first eight bars from start, because the
+engine anchors the cycle at bar 0, not at the next bar.
+
+- **core-db:** Read engine limits from the headers that now own them
+
+b4426fc moved kMinBpm/kMaxBpm to metronome_types.h and the ramp bar cap to
+TempoRamp::kMaxBars, so the lookup in metronome.h returned NaN. CI showed it;
+the local run was a turbo cache replay.
+
+- **tool-tuner:** Shorten the status dwell to 200 ms (#118)
+
+- **app-shell:** Persist the last-used tool on native (#121)
+
+On Android, Home's Continue card fell back to its default after every
+restart because lastToolRuntime.ts installed no persistence and
+core-state's in-memory default applied. It now stores the tool id under
+the `last_tool` preference through the app's one database handle. The
+root layout imports the runtime before Home renders, and load is
+synchronous, so Continue does not flash the default. A database that fails
+to open logs a warning and leaves Continue empty instead of breaking Home.
+
+- **tool-tuner:** Wider needle scale, smoothed cents, return to centre on silence (#118)
+
+Slightly-out strings read far off-centre at ±50 c full scale, and the needle
+stayed held, dimmed, after the note stopped. Implements
+docs/tuner-functional-spec.md §5:
+
+- D1: linear mapping, ±220 c at 80 % of the half-width, no dead zone.
+- D2: displayed cents averaged 0.5/0.5 with the previous displayed value
+  once per new hop; cleared on silence, reset and target-note change.
+- D4: on silence the needle decays ×0.8 per 1/60 s, time-based; note,
+  caption and direction clear with it. Reduced motion jumps to centre.
+- Removes the held "Last note" reading from the screen-reader label.
+
+All of it runs in the UI-thread frame callback on SharedValues (§13.3).
+
+- **tuner:** Release hold drains string confidence (#118)
+
+The release hold was a fixed 1.2 s. Per the updated P27, the P10
+string-confidence counter now drains by one per hop once the tone stops
+and the reading clears at zero, so a full-confidence note is held about
+0.77 s and a short pluck less. The counter now builds in every mode
+(Track) so manual and chromatic modes drain the same way.
+
+T8 checks both a full-confidence release in [0.6, 0.85] s and a 0.3 s
+tone whose hold is shorter, which a fixed hold of any length fails.
+P9's held-median window shrinks from 1.0 s to 0.6 s to stay inside it.
+
+- **tool-metronome:** Tappable tempo arrows, swipe over readout, reset at 0:00 (#125)
+
+- The BPM readout is an animated TextInput. Android's EditText calls
+  requestDisallowInterceptTouchEvent on ACTION_DOWN regardless of its
+  pointerEvents, and gesture-handler's root answers that by cancelling every
+  handler, so a pan starting on the number died. The readout's Pressable is
+  now box-only and intercepts the touch before the EditText sees it.
+- The arrows step the engine tempo by one swipe step through the existing
+  nudge path, which clamps to the generated BPM bounds in core-state. Their
+  48dp targets come from hitSlop into the zone's free space so the design's
+  layout does not move.
+- Reset (pill label and the transport twin) is absent while the pill reads
+  0:00.
+- The transport key glyph uses a new iconSizes.transport token matching the
+  play glyph; the design's 11px was unreadable on device.
+
+- **core-design:** 48dp hit boxes for badge steppers and segments (#125)
+
+The badge stepper keys are 24dp and their hitSlop was capped at half the 7dp
+key gap, so each key took about 31dp. Raising the slop would not have helped:
+Fabric's native hit test (TouchTargetHelper) drops a touch outside a
+parent's frame plus its children's layout overflow, and hitSlop counts toward
+neither, so slop past a 24dp row never registers.
+
+hitExtension grows a target toward 48dp on each axis, taking at most half the
+gap to the neighbouring control on each side so neighbours meet at the
+midpoint and the nearer control wins. hitBoxStyle applies that as padding
+with matching negative margin: the box is part of layout, so Fabric hit-tests
+it, but nothing moves. The badge keys and segment options keep their visuals
+in an inner View. An inert value badge is pointerEvents none so it cannot
+swallow the keys' boxes.
+
+The step key glyph grows from 14 to 18 via iconSizes.stepKey. Inline
+steppers are unchanged.
+
+- **tool-tuner:** Caption, arrow and speech follow the displayed cents (#118)
+
+The caption and needle used D2's averaged cents while the status, arrow and
+screen-reader words used the engine's raw-hop status, so the screen could read
+"−2 CENTS · TUNE DOWN". Every channel now classifies the averaged cents,
+rounded to whole cents, against the engine's per-string in-tune window. The
+lock still snaps the needle and fires the haptic; the 200 ms dwell still gates
+what reaches React. The D2 reset on a target-note change moves into a pure
+nextReading so a test pins it.
+
+- **core-db:** Close the connection when the migration fails (#121)
+
+getDatabase() retries openDatabase() on every read after a failure, and each
+attempt leaked an open op-sqlite connection.
+
+- **app-shell:** Open the library database lazily and show a failed load (#109)
+
+Importing libraryRuntime from the root layout opened the database at
+import, so a failed migration took down app start (undoing #121). The
+repositories are now getters over getDatabase(), and refresh records a
+failure the library screens render with a retry.
+
+- **core-state:** Load a song's tempo while the metronome runs (#109)
+
+applyPreset set the tempo, then disabled the ramp, and disabling a ramp
+re-syncs from the engine's current_bpm, which still held the previous
+song's tempo. The ramp is now applied before the tempo when it is off.
+
+- **tool-metronome:** Edit a song's ramp unit and loop in the preset editor (#109)
+
+The editor could only set a ramp in bars and never its loop, so a song
+saved from a timed or looping ramp lost both on its next edit. The draft
+now carries RampConfig and BarMuteConfig (replacing the shared a/b/bars
+TrainerDraft) and the rig group adds a bars/sec/min unit and a loop row.
+
+Shared definitions replace local copies: accent cycling, resizing and
+initial accents, per-accent sounds, trainer and poly defaults come from
+core-state; subdivision, ramp and mute bounds and count-in options from
+the generated constants; the sound picker is screen/SoundSheet's, made
+reusable. Row subtitles use soundChoice/countIn labels and the VS15 icon
+tokens instead of raw glyphs.
+
+- **tool-metronome:** Guard library writes in one place and keep loads off stale ids (#109)
+
+Eight copies of the same try/catch become guarded(setError, message,
+work). Menu commands return early with no target instead of writing to
+id -1, and subscribe to the actions and name they use rather than the
+whole library store. loadSong no longer rejects when pinning the
+setlist fails after the song is already applied, so row presses never
+leave an unhandled rejection. activate is renamed switchActiveSetlist.
+
+The unsaved-changes prompt was Alert.alert, a no-op on react-native-web;
+it is now a ConfirmSheet. The count-in sheet's divider under Sound is
+restored now that EditRow no longer draws one, and Save current lists
+everything it overwrites.
+
+- **core-state:** Mark the library failed only when its snapshot fails (#109)
+
+refresh caught everything, so a search re-run after a good snapshot
+flagged the whole library unusable. Only the snapshot read sets failed
+now; both failures are logged instead of swallowed.
+
+- **tool-metronome:** Take ramp length bounds from core-state (#109)
+
+rampUnit.ts restated the engine bounds with a one-minute floor the store
+does not have, so a 30 s ramp saved in minutes clamped to 1 on any unit
+change. core-state now exports the one rule (rampDurationBounds,
+clampRampDuration); the stepper keeps whole-unit steps within it.
+
+- **core-state:** Show a ramp's start tempo once it is armed (#109)
+
+The engine's ArmRamp jumps to start_bpm, but the store kept the tempo
+set before it, so loading a ramped song while running showed the song's
+bpm rather than the tempo actually clicking.
+
+- **app-shell:** Read web-stored rampBars as the ramp length (#109)
+
+- **core-design:** Real 48 dp touch targets on Android (#126)
+
+Chip, PresetButton, Button, the AppBar keys, the beat LEDs and the inline
+stepper keys move from hitSlop to the layout hit box from #125, and take
+the gaps around them from the caller. Their slop had been capped at half
+an assumed 8 dp gap (2 dp for inline keys), which held most of them well
+short of 48 dp: chips 32.5, presets 41.5, AppBar keys 24-25, inline keys
+14x18.5. Where the caller passes real gaps they now reach 48.
+
+The sheet's ScrollView drops every touch outside its own frame, which ended
+at the content's edge, so controls at the top, bottom and sides of a sheet
+lost the outer part of any slop or hit box. The scroll frame now reaches
+SHEET_TOUCH_ROOM into the header gap and sheet padding, with matching
+content padding, so layout is unchanged.
+
+unshared() marks room no other control reaches into, so a control may take
+all of it instead of half.
+
+The old hitBoxStyle comment said hitSlop counts toward neither a parent's
+frame nor its overflow. RN 0.83.6's YogaLayoutableShadowNode::
+getContentBounds unions each child's hitSlop into the parent's overflow
+inset, so that claim does not hold in source; the comment now names the
+limits that do: clipping ancestors and later sibling views.
+
+- **tool-metronome:** Give hit boxes the real gaps around them (#126)
+
+- **tool-tuner:** Give hit boxes the real gaps around them (#126)
+
+- **core-design:** Wrapped chip rows, LED default and sheet indicator (#126)
+
+ChipRow measures which wrapped line each chip lands on and gives only the
+first and last lines the row's outer gaps; lines between share the row gap.
+Before layout a chip takes the shared gap on both sides.
+
+BeatLed falls back to an interior hit box when no row supplies one, so a
+lone pressable LED no longer loses its target.
+
+The sheet's scroll frame keeps its right edge, so the scroll indicator stays
+where it was; only the top, bottom and left reach into the padding.
+
+The minTouchTargetDp comment no longer says every control reaches 48 dp.
+
+- **tool-metronome:** Share gaps where rows wrap; real trainer chip gaps (#126)
+
+The trainer chips now get the section gaps around their row. Ramp From/To
+and the mute-bars steppers detect when the second stepper wraps under the
+first and switch both to the shared row gap, so their hit boxes no longer
+overlap at large font scales.
+
+- **build:** Track native headers as turbo inputs (#120)
+
+core-db's engine-limits test and core-native's constant generator, its
+tests and generate:check read native/audio_core sources, which turbo did
+not hash, so a native-only change replayed a cached pass. Declared per
+task rather than as globalDependencies so other packages keep caching.
+
+- **core-db:** Adapt op-sqlite 17 to drizzle's op-sqlite session (#131)
+
+op-sqlite 17's executeRawAsync resolves to { rawRows, ... } where drizzle
+maps over a bare row array, and execute() now returns a Promise where
+drizzle reads rows._array synchronously. Every insert/select with fields
+threw "rows.map is not a function" and field-less all/get returned [].
+
+drizzleClient() hands drizzle the shapes its session expects, built from
+execute/executeRaw/executeSync. A node:sqlite-backed fake exposing
+op-sqlite 17.1.2's runtime surface drives the repositories through the
+same wiring openDatabase uses.
+
+- **metronome:** Say "1 bar" in the ramp hint, not "1 bars" (#144)
+
+- **app-shell:** Give Hermes a crypto.randomUUID so new rows can be saved (#141)
+
+Every new setlist, song preset and tuning is stamped with crypto.randomUUID.
+Hermes has no Web Crypto and Expo's runtime does not add it, so each create
+threw on device and the store showed "Could not save this change". Tests
+run under Node, which has crypto, so none caught it. expo-crypto's native
+randomUUID is installed before any runtime module loads.
+
+- **core-design:** Draw sheets in the app so they clear the keyboard (#142)
+
+Sheets were RN Modals, each its own Android window. On device that window
+was resized about 258 px short of the keyboard, so the confirm button sat
+under Samsung Keyboard's suggestion strip, and focusing a field from it
+never raised the keyboard (ImeTracker: PHASE_CLIENT_VIEW_SERVED).
+
+Sheets now render through a SheetHost at the app root, over every screen.
+The app draws edge to edge, so nothing resizes for the keyboard and RN's
+Keyboard events only fire on a layout pass; the sheet pads by the inset
+react-native-keyboard-controller follows, or the nav bar when it is closed.
+Android Back closes the open sheet, as the Modal's onRequestClose did.
+
+- **audio_core:** Restart the output stream when it dies mid-play (#143)
+
+When AAudio reports an error (route change, Bluetooth, a device fault),
+miniaudio closes the stream and retries reopening it at most four times.
+If that fails it stops trying and says nothing: the device stays
+"started" with no stream behind it, so the click goes silent for good.
+
+A watchdog thread now restarts the device when frames_rendered has not
+moved for 1.5 s, or when the device stops without the engine asking. The
+engine clock carries on, so the metronome resumes on its schedule.
+StallDetector is the pure decision, pinned in metronome_verify.
+
+- **core-design:** Load Space Grotesk and Inter and pick the face per weight (#95)
+
+Text named families that were never loaded, so Android and web fell back
+to the system font. Each role now resolves to a bundled face, and the
+root layout holds the splash until those faces load. fontWeight is
+dropped because Android synthesizes bold on top of a custom face.
+
+- **core-design:** Run each chip-row line edge to edge, wrapping whole chips (#152)
+
+The trainer chips sized to their labels and packed left, so the row ended
+short of the card above, and long labels wrapped inside their pills.
+ChipRow fill lets each line's chips share the spare width and keeps labels
+on one line, so a chip that does not fit moves down whole. A wrapper view
+does the growing because Yoga drops a grown item's negative margin in a
+wrapping row, which pushed the row down by its hit-box padding.
+
+- **core-db:** Keep op-sqlite out of the web bundle (#70)
+
+Since 6bd15d9 core-state imports tuning rules from core-db's index, which
+also loaded client.ts and with it op-sqlite. op-sqlite reads its native
+constants at import, so the web build threw before the first render and
+showed a blank page. Opening a connection now goes through openConnection,
+whose .web twin never imports op-sqlite.
+
+scripts/web-check.sh exports the web build and fails if op-sqlite is in
+the bundle; preflight and CI run it.
+
+- **core-native:** One practice clock across app and notification (#87)
+
+Pause and resume from the notification now carry the service's clock, which the
+store adopts, so a starved JS thread cannot skew it. A reset while paused from the
+notification re-sends the clock without resuming playback.
+
+- Drop a stray build symlink from the tree (#160)
+
+- Review findings for StemDeck import (#136)
+
+Null instead of '' for no refusal and no waveform; one refusal for a missing
+stem; a neutral version notice; startup clears staging and sweeps stem
+folders no row references; comments trimmed; the module back under 400 lines.
+
+- **tool-metronome:** Empty the bar sweep and beat LEDs when the metronome stops (#167)
+
+- **native:** Turn off floating-point contraction so analysis rounds the same on any toolchain (#165)
+
+CI's ubuntu-26.04 GCC targets FMA by default and fused a*b+c differently in
+the streamed downbeat and QM's reference, failing the bit-identical checks.
+Reproduced with -march=x86-64-v3; -ffp-contract=off passes there and locally.
+
+- **core-native:** Drop the seek bar from the metronome notification (#163)
+
+The owner doesn't want the 00:00-10:00 bar on the media card. The session
+now publishes no duration and an unknown position; the practice clock still
+syncs to the app.
+
+- **core-native:** Plain notification with its own buttons, no media card (#163)
+
+Android 13+ draws a seek bar on every media-style card, even with no
+duration, so the owner chose a plain notification. The media session stays
+for headset and lock-screen keys.
+
+- **audio_core:** Count-in reads follow the running count-in (#171)
+
+Changing the count-in setting mid-count made count_in_bar read -1 while
+counting_in was 1, and the UI read the new setting as the bar total.
+The engine now records the running count-in's length and exposes it as
+count_in_bars_total. Also folds review cleanups into the ramp status
+tests and the HostObject property lookup.
+
+- **metronome:** Review findings for layout B (#175, #171)
+
+The ramp now shows on sounding bars while mute bars run, instead of the
+mute cycle hiding it on every bar. The count-in total comes from the
+engine's running count-in, a current muted beat stays hollow, and the
+metronome's sheets dim the screen behind them as the mockup draws. The
+setlist chip reaches 48 dp through a hit box rather than hitSlop.
+Duplicated styles, constants and storage helpers fold back onto the
+ones that already existed.
+
+- **native:** Review fixes for the stem mixer and follow mode (#137)
+
+Follow mode ignores the latency offset (owner ruling, D16): stems and click
+share the output. A beat past the loop end waits for the wrap; a loop change
+racing an old wrap plays on instead of replaying; a stem loaded mid-play
+joins at the head. Engine-rate frame units documented; comments trimmed.
+
+- Play stems through wide device callbacks (#137)
+
+Legacy AAudio delivers callbacks up to 12288 frames. The mixer dropped any
+block over kMaxBlockFrames, and the 8192-frame read-ahead ring could not hold
+one callback, so stems froze or went silent from the third callback. The
+engine now renders in slices of at most kMaxBlockFrames and sizes each ring
+from the device callback width; stream_verify plays a ramp through 12288- and
+9216-frame callbacks and fails without the sizing.
+
+- Keep the whole beat grid for long songs (#161)
+
+KB_MAX_GRID_BEATS goes from 8192 to 65536: since #160 long files import with
+bounded memory, and a 60-minute song (about 9100 beats) kept only its first
+8192 beats while the Library showed GRID. 65536 covers 5.4 hours at the
+analyser's 200 BPM ceiling. Nothing on the audio thread is sized by the cap:
+the grid is copied on the app thread and found by binary search in the
+callback.
+
+- Back collapses an open stem fader before leaving the player (#191)
+
+With a stem's or the master's fader open, the back key left the whole player
+and stopped playback. It now collapses the fader first, the way sheets close
+before their screen.
+
+- Library rows show BPM and key and keep their spacing at large text (#192)
+
+At 200% font scale the Stem songs facts line cut to "5:11 · 123 B.." and
+rows had no room above and below their text. Above the default scale the
+facts line may wrap to two lines and the row body gains vertical padding;
+at the default scale nothing changes.
+
+- **tool-metronome:** Show the beat legend inside the reserved status rows (#175)
+
+Stopped, the legend sat below the two-row stack and pushed the transport
+down. It now takes the second reserved row under the armed summary, so the
+stopped and playing screens are the same height.
+
+- **tool-metronome:** Fit the metronome on a 360 × 800 screen (#175)
+
+The tempo zone now takes the slack: it grows to fill spare height, and below
+metronome.compactBelowHeight it uses the display-role numeral, tighter zone
+padding and body gaps. The numeral drops Android's font padding. If content
+still exceeds the height, as at large text, the body scrolls and the
+transport stays pinned below it.
+
+- **core-state:** Accent group starts when the meter changes (#175)
+
+setBeats carried the old accent map over, so 4/4 to 12/8 kept only beat 1
+accented, or none if beat 1 had been tapped to normal. A new beat count now
+resets to the mockup's default of an accent on every group start and sends
+each beat to the engine; a denominator-only change keeps edited accents.
+Beat grouping moves to core-state so the store and the dot layout share it.
+
+- **tool-metronome:** Keep the poly ratio label clear of the poly dots (#175)
+
+A fixed 28 dp column clipped "3:12" and the first poly dot overlapped it on
+full-width bars. The label is now measured once and sits beside the row when
+the margin holds it, otherwise on its own line above the dots.
+
+- **tool-metronome:** Put the poly label after the last poly dot on full-width bars (#175)
+
+Stacking the label above the poly row on 12/8 cost the height that pushed
+the ramp row under the transport at 360 × 800. It now follows the last poly
+dot when there is room, and stacks only when there is not or when large
+text makes it taller than the dots.
+
+- **tool-metronome:** Scroll the body instead of changing tempo when it overflows (#175)
+
+At large text the screen-wide tempo pan took drags on the dots, so the
+status rows could not be reached. While the body scrolls, the screen-wide
+pan is off and a pan on the tempo zone blocks the scroll view; when nothing
+scrolls, swipe-anywhere is unchanged.
+
+- **tool-metronome:** Draw the swipe hint's ring and arrow in light ink on the scrim (#175)
+
+They used onAccent, which is near-black in Stage and vanished on the dark
+scrim. The scrim is dark in both themes, so a new core-design inkOnScrim
+takes Daylight's on-accent, the colour the mockup's coach is drawn in.
+
+- **core-design:** Move the wheel picker's highlight as the finger crosses each row (#175)
+
+The selected style followed the selected prop, which changes only when the
+scroll settles and onSelect commits, so the highlight lagged the finger by
+the whole drag plus the snap. A UI-thread scroll handler now tracks the row
+under the band and swaps each row between its plain and selected text by
+opacity; the value is still committed on settle.
+
+- **tool-metronome:** Compact a tall screen before it scrolls, so swipe-anywhere stays on (#175)
+
+On a 1080 × 2340 phone (891 dp) the roomy layout of 12/8 with poly overflowed
+by a few dp, so the body became scrollable and the screen-wide tempo pan was
+switched off: drags on the dots stopped changing tempo. A roomy layout that
+overflows now drops to the compact density, which stays until the window,
+text size, meter, poly or song notes change. Only content that still does
+not fit, as at large text, scrolls.
+
+- **core-design:** Open a stepper's value on any tap inside its cell (#175)
+
+The value press was the Text's own onPress, so only the glyphs were a
+target and taps beside or under the digits did nothing: 54 of 140 test taps
+opened the numpad. The whole cell between the keys is now a Pressable,
+slopped out to 48 dp, with the keys kept on top so they never lose a tap.
+
+- **core-design:** Size the stepper value's tap target with hitBoxStyle (#175)
+
+3bdc1c1 used hitSlop, which the touch-target audit allows only where its
+reach was checked against the parent frame. hitBoxStyle extends the value
+cell by half the gap to each key and out to 48 dp vertically, so it never
+overlaps the keys and the keys need no z-order.
+
+- **tool-metronome:** Sign the ramp step with the ramp's direction (#175)
+
+The Practice sheet always showed "+N", so a ramp from 118 to 103 read as
+stepping up. The engine takes the step's magnitude and the direction from
+From and To, so the step now shows −N going down, +N going up and N when
+they are equal, and a screen reader hears "N BPM down" or "up".
+
+- **library:** Serialise setlist writes and keep an outside song off stage when leaving fails (#205)
+
+An outside load decided whether to leave from setlists a pin could still be
+writing, so it could skip the leave. Pin and leave now run in order and decide
+inside the queue. LoadedSong carries its setlistId, so a failed leave cannot
+show the stage bar over an outside song, and leaveSetlist warns instead of
+rejecting.
+
+- **metronome:** Match the D2 song-list sheet and split the song-list logic (#205)
+
+Filled NOW badge, 16 sheet title and 18 Leave setlist icon through additive
+Badge, Sheet and Button options. The chip shows the setlist name when no song
+from the set is loaded, and only while the loaded song came from that set.
 
 
