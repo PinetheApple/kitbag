@@ -81,17 +81,25 @@ def enableMinifyInReleaseBuilds = (findProperty('android.enableMinifyInReleaseBu
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
-// Version (#53). app.json is the one owner; `expo prebuild` never runs here
-// (SPEC §13.8, android/ is committed), so nothing else carries its version into
-// the APK. versionCode is derived, never hand-edited alongside it.
-def kitbagVersionName = new groovy.json.JsonSlurper().parse(file("$projectRoot/app.json")).expo.version
-def kitbagVersionParts = kitbagVersionName.tokenize('.')*.toInteger()
-if (kitbagVersionParts.size() != 3) {
-    throw new GradleException("kitbag: app.json expo.version must be major.minor.patch, got '${kitbagVersionName}'")
+// The release workflow passes the tag's version; local builds fall back to app.json.
+// The versionCode formula is mirrored in scripts/version.sh and release-gate.sh compares them.
+def kitbagVersionName = (findProperty('kitbagVersionName') ?: new groovy.json.JsonSlurper().parse(file("$projectRoot/app.json")).expo.version).toString()
+def kitbagSemver = kitbagVersionName =~ /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
+if (!kitbagSemver.matches()) {
+    throw new GradleException("kitbag: version must be major.minor.patch, got '${kitbagVersionName}'")
 }
-def kitbagVersionCode = kitbagVersionParts[0] * 10000 + kitbagVersionParts[1] * 100 + kitbagVersionParts[2]
-if (kitbagVersionCode < 1) {
-    throw new GradleException("kitbag: version ${kitbagVersionName} derives versionCode ${kitbagVersionCode}; Android requires 1 or more")
+def kitbagMaxMinor = 99
+def kitbagMaxPatch = 99
+def kitbagMinVersionCode = 1
+def kitbagMaxVersionCode = 2100000000L
+def kitbagCodePerMajor = 10000
+def kitbagCodePerMinor = 100
+def kitbagMajor = kitbagSemver.group(1).toLong()
+def kitbagMinor = kitbagSemver.group(2).toLong()
+def kitbagPatch = kitbagSemver.group(3).toLong()
+def kitbagVersionCode = kitbagMajor * kitbagCodePerMajor + kitbagMinor * kitbagCodePerMinor + kitbagPatch
+if (kitbagMinor > kitbagMaxMinor || kitbagPatch > kitbagMaxPatch || kitbagVersionCode < kitbagMinVersionCode || kitbagVersionCode > kitbagMaxVersionCode) {
+    throw new GradleException("kitbag: version ${kitbagVersionName} is out of versionCode bounds (minor <= ${kitbagMaxMinor}, patch <= ${kitbagMaxPatch}, versionCode ${kitbagMinVersionCode}..${kitbagMaxVersionCode})")
 }
 
 // Release signing (#48). The keystore lives outside the repo; these three names
@@ -129,7 +137,7 @@ android {
         applicationId 'com.kitbag.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode kitbagVersionCode
+        versionCode kitbagVersionCode as Integer
         versionName kitbagVersionName
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""

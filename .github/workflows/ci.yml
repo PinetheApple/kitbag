@@ -88,8 +88,8 @@ jobs:
         run: ./scripts/web-check.sh
       - name: Version — app.json and its package.json mirrors agree (#53)
         run: ./scripts/version.sh check
-      - name: Release scripts — signature gate and release preconditions
-        run: ./scripts/verify-apk-signature.test.sh && ./scripts/release.test.sh
+      - name: Release scripts — next version, versionCode, signature and release gates
+        run: ./scripts/version.test.sh && ./scripts/verify-apk-signature.test.sh && ./scripts/release-gate.test.sh
 
   # The only gate that compiles Kotlin, the JNI glue and the codegen'd
   # TurboModule spec together. Every headless gate stayed green from M1 to M3
