@@ -114,6 +114,7 @@ configureMetronomeRuntime({
   commands: webCommands,
   nowFrame: () => presentationHost.frames_rendered,
   engineBpm: () => presentationHost.current_bpm,
+  stopEngine: () => undefined,
 });
 
 metronomeStore.getState().setTempo(initialBpm);

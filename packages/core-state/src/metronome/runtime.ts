@@ -6,6 +6,7 @@ export interface MetronomeRuntime {
   readonly commands: MetronomeCommands;
   readonly nowFrame: NowFrame;
   readonly engineBpm: EngineBpm;
+  readonly stopEngine: () => void;
 }
 
 const nativeRuntime: MetronomeRuntime = {
@@ -14,6 +15,9 @@ const nativeRuntime: MetronomeRuntime = {
   },
   nowFrame: () => getKitbagHostObject().frames_rendered,
   engineBpm: () => getKitbagHostObject().current_bpm,
+  stopEngine: () => {
+    getKitbagCommands().stop();
+  },
 };
 
 let configuredRuntime: MetronomeRuntime | undefined;

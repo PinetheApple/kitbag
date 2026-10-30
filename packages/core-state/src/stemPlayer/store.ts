@@ -1,5 +1,10 @@
 import type { StemSetRecord } from '@kitbag/core-db';
-import { KB_MAX_TRACKS, KB_RESULT } from '@kitbag/core-native';
+import {
+  engineUsers,
+  KB_MAX_TRACKS,
+  KB_RESULT,
+  type EngineUsers,
+} from '@kitbag/core-native';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { mixActions, transportActions } from './actions.ts';
@@ -161,6 +166,7 @@ async function loadTracks(
 export function createStemPlayerStore(
   runtimeOf: () => StemPlayerRuntime = getStemPlayer,
   timing: StemPlayerTiming = DEFAULT_TIMING,
+  users: EngineUsers = engineUsers,
 ): StoreApi<StemPlayerStore> {
   let session = 0;
   let requestedTracks = 0;
@@ -232,6 +238,7 @@ export function createStemPlayerStore(
         set({ status: 'missing' });
         return;
       }
+      users.claim('stems');
       if (runtime.sharedMetronome.active()) runtime.sharedMetronome.release();
       const started = await commands.start();
       const engineRate = runtime.engine.sampleRate();
@@ -280,6 +287,7 @@ export function createStemPlayerStore(
         session++;
         teardown(get);
         set(closedState);
+        if (users.release('stems')) runtimeOf().commands.stop();
       },
       ...mixActions(set, get, runtimeOf, saver),
       ...transportActions(get, runtimeOf, scrubSeek),

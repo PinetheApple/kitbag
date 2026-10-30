@@ -17,8 +17,10 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import {
   defaultCommands,
   defaultEngineBpm,
+  defaultEngineLease,
   defaultNowFrame,
   type EngineBpm,
+  type EngineLease,
   type MetronomeCommands,
   type NowFrame,
 } from './commands.ts';
@@ -326,6 +328,7 @@ export function createMetronomeStore(
   nowFrame: NowFrame = defaultNowFrame,
   engineBpm: EngineBpm = defaultEngineBpm,
   now: () => number = Date.now,
+  lease: EngineLease = defaultEngineLease,
 ): StoreApi<MetronomeStore> {
   const store = createStore<MetronomeStore>((set, get) => {
     const tempo = engineTempoOf(set, get, engineBpm);
@@ -343,6 +346,8 @@ export function createMetronomeStore(
   // Every way playback starts or stops, including the notification, goes through running.
   store.subscribe((state, previous) => {
     if (state.running === previous.running) return;
+    if (state.running) lease.users.claim('metronome');
+    else if (lease.users.release('metronome')) lease.stop();
     store.setState({
       practice: practiceAfterRunning(state.practice, state.running, now()),
     });

@@ -23,6 +23,7 @@ function fakeRuntime(frame: number): MetronomeRuntime {
     } as unknown as MetronomeRuntime['commands'],
     nowFrame: () => frame,
     engineBpm: () => 120,
+    stopEngine: vi.fn(),
   };
 }
 

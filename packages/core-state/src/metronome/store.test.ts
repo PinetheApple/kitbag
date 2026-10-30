@@ -9,6 +9,7 @@ import {
   KB_RAMP_UNIT,
   KB_SOUND_NAMES,
   KB_VOLUME_BOUNDS,
+  createEngineUsers,
   type KitbagHostObject,
 } from '@kitbag/core-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -39,13 +40,26 @@ function makeCommands() {
   } satisfies MetronomeCommands;
 }
 
+function makeLease() {
+  return { users: createEngineUsers(), stop: vi.fn() };
+}
+
 const NOW_FRAME = 48_000;
+const ENGINE_BPM = 120;
 let commands: ReturnType<typeof makeCommands>;
+let lease: ReturnType<typeof makeLease>;
 let store: ReturnType<typeof createMetronomeStore>;
 
 beforeEach(() => {
   commands = makeCommands();
-  store = createMetronomeStore(commands, () => NOW_FRAME);
+  lease = makeLease();
+  store = createMetronomeStore(
+    commands,
+    () => NOW_FRAME,
+    () => ENGINE_BPM,
+    Date.now,
+    lease,
+  );
 });
 
 // `satisfies` fails typecheck when a HostObject read is added without a key here.
@@ -402,6 +416,34 @@ describe('transport start / stop / pause', () => {
     expect(commands.metronomeStop).toHaveBeenCalledTimes(1);
   });
 
+  it('releases the output stream on stop when no stem song holds it', () => {
+    store.getState().start();
+    store.getState().stop();
+    expect(lease.stop).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the output stream on stop while a stem song holds it', () => {
+    lease.users.claim('stems');
+    store.getState().start();
+    store.getState().stop();
+    expect(lease.stop).not.toHaveBeenCalled();
+  });
+
+  it('releases the output stream when the notification stops the click', () => {
+    store.getState().start();
+    store.setState({ running: false });
+    expect(lease.stop).toHaveBeenCalledOnce();
+  });
+
+  it('starts the device again after releasing it', () => {
+    store.getState().start();
+    store.getState().stop();
+    store.getState().start();
+    expect(commands.start).toHaveBeenCalledTimes(2);
+    expect(commands.metronomeStart).toHaveBeenLastCalledWith(NOW_FRAME);
+    expect(lease.stop).toHaveBeenCalledOnce();
+  });
+
   it('keeps only count-in settings after start, not count-in progress', () => {
     store.getState().setCountIn({
       bars: 2,
@@ -435,6 +477,8 @@ describe('§5.3 tempo shown and nudged is the engine tempo, not a stale intent',
       cmds,
       () => NOW_FRAME,
       () => engine.bpm,
+      Date.now,
+      makeLease(),
     );
     return { engine, cmds, s };
   }
@@ -545,8 +589,9 @@ describe('practice clock in the store', () => {
     const store = createMetronomeStore(
       makeCommands(),
       () => 0,
-      () => 120,
+      () => ENGINE_BPM,
       () => t,
+      makeLease(),
     );
     t = 1_000;
     store.getState().start();

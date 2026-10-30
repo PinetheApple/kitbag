@@ -1,4 +1,8 @@
-import { type KitbagCommandsSpec } from '@kitbag/core-native';
+import {
+  engineUsers,
+  type EngineUsers,
+  type KitbagCommandsSpec,
+} from '@kitbag/core-native';
 
 import { getMetronomeRuntime } from './runtime.ts';
 
@@ -22,6 +26,11 @@ export type MetronomeCommands = Pick<
   | 'setRamp'
   | 'setBarMute'
 >;
+
+export interface EngineLease {
+  readonly users: EngineUsers;
+  readonly stop: () => void;
+}
 
 export type NowFrame = () => number;
 export type EngineBpm = () => number;
@@ -82,3 +91,10 @@ export const defaultNowFrame: NowFrame = () => getMetronomeRuntime().nowFrame();
 
 export const defaultEngineBpm: EngineBpm = () =>
   getMetronomeRuntime().engineBpm();
+
+export const defaultEngineLease: EngineLease = {
+  users: engineUsers,
+  stop: () => {
+    getMetronomeRuntime().stopEngine();
+  },
+};
