@@ -7,8 +7,12 @@ SCRATCH=$(mktemp -d) || exit 1
 readonly SCRATCH
 trap 'rm -rf "$SCRATCH"' EXIT
 
-readonly GITHUB_BODY_LIMIT=125000
-readonly OVERSIZED_CHARS=150000
+GITHUB_RELEASE_BODY_MAX=$(sed -n 's/^readonly GITHUB_RELEASE_BODY_MAX=\([0-9]*\)$/\1/p' "$REPO/scripts/changelog.sh")
+readonly GITHUB_RELEASE_BODY_MAX
+if [[ -z $GITHUB_RELEASE_BODY_MAX ]]; then
+  echo "changelog.test: cannot read GITHUB_RELEASE_BODY_MAX from scripts/changelog.sh" >&2
+  exit 1
+fi
 
 PASS=0
 FAIL=0
@@ -53,30 +57,39 @@ echo "size guard (stubbed git-cliff)"
 fixture=$(make_fixture)
 git -C "$fixture" tag v0.1.0
 commit "$fixture" "fix: second thing"
-oversized="## 0.1.1"$'\n\n'"### Fixed"$'\n\n'$(head -c "$OVERSIZED_CHARS" /dev/zero | tr '\0' x)
+oversized="## 0.1.1"$'\n\n'"### Fixed"$'\n\n'$(head -c "$((GITHUB_RELEASE_BODY_MAX + 1))" /dev/zero | tr '\0' x)
 stub_cliff "$fixture" "$oversized"
 notes=$(notes_in "$fixture" v0.1.1)
-if ((${#notes} < GITHUB_BODY_LIMIT)) && [[ $notes == *CHANGELOG.md* && $notes == *"compare/v0.1.0...v0.1.1"* ]]; then
-  pass "oversized notes fall back to a link to CHANGELOG.md and the compare range"
+if ((${#notes} <= GITHUB_RELEASE_BODY_MAX)) && [[ $notes == *"compare/v0.1.0...v0.1.1"* && $notes != *CHANGELOG.md* ]]; then
+  pass "oversized notes fall back to the compare range only"
 else
   fail "oversized notes fall back (got ${#notes} chars)" "$notes"
 fi
 
 stub_cliff "$fixture" "## 0.1.1"$'\n\n'"### Fixed"$'\n\n'"- Second thing"
 notes=$(notes_in "$fixture" v0.1.1)
-[[ $notes == *"- Second thing"* && $notes != *CHANGELOG.md* ]] && pass "notes under the limit pass through" ||
+if [[ $notes == *"- Second thing"* && $notes != *"too long"* ]]; then
+  pass "notes under the limit pass through"
+else
   fail "notes under the limit pass through" "$notes"
+fi
 
 stub_cliff "$fixture" "## 0.1.1"$'\n'
 notes=$(notes_in "$fixture" v0.1.1)
-[[ $notes == *"No user-facing changes in this release."* ]] && pass "no grouped commits: says so" ||
+if [[ $notes == *"No user-facing changes in this release."* ]]; then
+  pass "no grouped commits: says so"
+else
   fail "no grouped commits: says so" "$notes"
+fi
 
 fixture=$(make_fixture)
 stub_cliff "$fixture" "$oversized"
 notes=$(notes_in "$fixture" v0.1.0)
-[[ $notes == *"commits/v0.1.0"* ]] && pass "first release falls back to the tag's commit list" ||
+if [[ $notes == *"commits/v0.1.0"* ]]; then
+  pass "first release falls back to the tag's commit list"
+else
   fail "first release falls back to the tag's commit list" "$notes"
+fi
 
 echo "subject-only notes (real git-cliff)"
 if command -v git-cliff >/dev/null 2>&1; then

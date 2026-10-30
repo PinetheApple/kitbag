@@ -22,8 +22,9 @@ cd "$(git rev-parse --show-toplevel)"
 readonly AUDIT_FLOOR=9a63543
 readonly REPO_URL=https://github.com/PinetheApple/kitbag
 readonly NO_USER_FACING_CHANGES="No user-facing changes in this release."
-# GitHub rejects a release body over 125000 characters.
-readonly NOTES_MAX_CHARS=100000
+readonly GITHUB_RELEASE_BODY_MAX=125000
+readonly NOTES_HEADROOM_CHARS=25000
+readonly NOTES_MAX_CHARS=$((GITHUB_RELEASE_BODY_MAX - NOTES_HEADROOM_CHARS))
 readonly NOTES_BODY='
 {% for group, commits in commits | group_by(attribute="group") %}
 ### {{ group | upper_first }}
@@ -55,8 +56,7 @@ case ${1-} in
       else
         commits_url="${REPO_URL}/commits/${tag}"
       fi
-      printf 'These notes are too long for a GitHub release. See %s and the commits at %s.\n' \
-        "${REPO_URL}/blob/main/CHANGELOG.md" "$commits_url"
+      printf 'These notes are too long for a GitHub release. See the commits at %s.\n' "$commits_url"
     else
       echo "$notes"
     fi
