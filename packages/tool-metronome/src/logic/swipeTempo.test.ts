@@ -1,3 +1,7 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { describe, expect, it } from 'vitest';
 
 import type { BpmBounds } from './bpmBounds.ts';
@@ -7,6 +11,7 @@ import {
   FINE_SPEED_DP_PER_S,
   FULL_SPEED_DP_PER_S,
   MAX_SPEED_GAIN,
+  REVERSAL_DP,
   speedGain,
   startSwipe,
   swipeTempo,
@@ -31,7 +36,13 @@ function drag(from: SwipeTempo, distance: number, velocity: number) {
 
 const up = (dp: number) => -dp;
 
+const SPEC_FINE_DP_PER_BPM = 14;
+
 describe('speedGain', () => {
+  it('keeps the fine rate SPEC §5.2 states', () => {
+    expect(FINE_DP_PER_BPM).toBe(SPEC_FINE_DP_PER_BPM);
+  });
+
   it('keeps a slow drag at the fine rate', () => {
     expect(speedGain(SLOW)).toBe(1);
     expect(speedGain(-FINE_SPEED_DP_PER_S)).toBe(1);
@@ -83,6 +94,12 @@ describe('swipeTempo', () => {
     expect(drag(climbed, FINE_DP_PER_BPM, SLOW).bpm).toBe(120);
   });
 
+  it('keeps leftover travel through tremor smaller than a reversal', () => {
+    const climbed = drag(startSwipe(120), up(FINE_DP_PER_BPM * 2 - 1), SLOW);
+    const shaken = drag(climbed, REVERSAL_DP - 1, SLOW);
+    expect(drag(shaken, up(REVERSAL_DP), SLOW).bpm).toBe(122);
+  });
+
   it('does not change the tempo when the finger lifts, however fast it was', () => {
     const dragged = drag(startSwipe(120), up(FINE_DP_PER_BPM * 3), FAST);
     const lifted = swipeTempo(dragged, dragged.translationY, -FAST, BOUNDS);
@@ -95,5 +112,19 @@ describe('clampBpm', () => {
     expect(clampBpm(120, BOUNDS)).toBe(120);
     expect(clampBpm(1, BOUNDS)).toBe(BOUNDS.min);
     expect(clampBpm(10000, BOUNDS)).toBe(BOUNDS.max);
+  });
+});
+
+describe('useTempoSwipe', () => {
+  it('has no release handler that could move the tempo', () => {
+    const hook = readFileSync(
+      join(
+        dirname(fileURLToPath(import.meta.url)),
+        '../screen/useTempoSwipe.ts',
+      ),
+      'utf8',
+    );
+    expect(hook).not.toMatch(/\.on(End|Finalize|TouchesUp)\(/);
+    expect(hook).toMatch(/\.onUpdate\(/);
   });
 });
