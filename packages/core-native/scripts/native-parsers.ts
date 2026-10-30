@@ -1,35 +1,10 @@
-export interface Bounds {
-  readonly min: number;
-  readonly max: number;
-}
+import type {
+  EnumMember,
+  RangeBound,
+  TunerField,
+  TunerFields,
+} from './native-types.ts';
 
-export interface EnumMember {
-  readonly name: string;
-  readonly value: number;
-}
-
-export interface RangeBound {
-  readonly min: number;
-  readonly max: number;
-  /** true when the upper bound is exclusive, e.g. `[0, 1)`. */
-  readonly maxExclusive: boolean;
-}
-
-export interface TunerField {
-  readonly offset: number;
-  readonly width: number;
-  readonly signed: boolean;
-  readonly scale: number;
-}
-
-export interface TunerFields {
-  readonly note: TunerField;
-  readonly cents: TunerField;
-  readonly confidence: TunerField;
-}
-
-// Parsers throw rather than guess: a silently wrong constant is the
-// sync_screen.dart:14 defect (SPEC §2.3, §13.7).
 function fail(what: string): never {
   throw new Error(
     `native-constants: could not extract ${what} from the engine source. ` +
@@ -45,10 +20,7 @@ export function parseDefineInt(header: string, name: string): number {
   return Number(match[1]);
 }
 
-/**
- * `#define NAME <number>` from a C header, where the value may be negative in
- * parentheses (`(-1)`) or fractional (`0.95`). Anything else throws.
- */
+/** `#define NAME <number>`; the value may be `(-1)` or fractional. */
 export function parseDefineNumber(header: string, name: string): number {
   const match = new RegExp(
     `#define\\s+${name}\\s+(?:\\((-?\\d+(?:\\.\\d+)?)\\)|(-?\\d+(?:\\.\\d+)?))(?![\\w.])`,
@@ -121,11 +93,8 @@ export function parseEnum(source: string, enumName: string): EnumMember[] {
   return members;
 }
 
-/**
- * A `[min, max]` / `[min, max)` range from a documenting comment. `marker` is a
- * substring that uniquely precedes the bracket on the same line, so the parser
- * anchors to the intended comment and not just any range in the file.
- */
+// `marker` must uniquely precede the `[min, max]` or `[min, max)` bracket on the
+// same line, so the parser anchors to the intended comment.
 export function parseRangeAfter(source: string, marker: string): RangeBound {
   const escaped = marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const match = new RegExp(
@@ -140,15 +109,8 @@ export function parseRangeAfter(source: string, marker: string): RangeBound {
   };
 }
 
-/**
- * The ordered sound names. The engine has no ABI-exported string table for
- * these — the only machine-readable owner is the trailing comment on each row of
- * the `kSounds` preset array in metronome_render.cpp (`{...},  // beep`). We
- * mirror those verbatim (lowercase engine ids; display casing is a §12 concern),
- * and cross-check the count against Metronome::kSoundCount so a preset added
- * without a name — or vice versa — fails the build instead of silently
- * truncating the list.
- */
+// The engine has no ABI string table for sound names; the owner is the trailing
+// comment on each kSounds row in metronome_render.cpp.
 export function parseSoundNames(
   metronomeRender: string,
   metronomeHeader: string,
@@ -176,31 +138,25 @@ export function parseSoundNames(
   return names;
 }
 
-// One parsed bit-layout row, before it is normalised into a TunerField (which
-// stores width rather than the header's inclusive hi bit).
 interface TunerRow {
   offset: number;
-  hi: number;
+  lastBit: number;
   signed: boolean;
   scale: number;
 }
 
-/**
- * The tuner-snapshot bit layout, parsed from the field table in the
- * kb_tuner_snapshot doc comment. Signedness and the ×N scale come from the same
- * table, so the decode in src/host/snapshot.ts cannot drift from what
- * Tuner::PackSnapshot produces (SPEC §13.2).
- */
+// Signedness and scale come from the same doc-comment table, so the decode in
+// src/host/snapshot.ts cannot drift from Tuner::PackSnapshot.
 export function parseTunerFields(apiHeader: string): TunerFields {
   const rowRe = /bits\s+(\d+)-(\d+)\s+(u?int16)\s+([^\n]*)/g;
   const rows: TunerRow[] = [];
   let m: RegExpExecArray | null = rowRe.exec(apiHeader);
   while (m !== null) {
-    const [, offsetStr, hiStr, typeStr, rest] = m;
+    const [, offsetStr, lastBitStr, typeStr, rest] = m;
     const scaleMatch = /x(\d+)/.exec(rest ?? '');
     rows.push({
       offset: Number(offsetStr),
-      hi: Number(hiStr),
+      lastBit: Number(lastBitStr),
       signed: typeStr === 'int16',
       scale: scaleMatch === null ? 1 : Number(scaleMatch[1]),
     });
@@ -212,7 +168,7 @@ export function parseTunerFields(apiHeader: string): TunerFields {
   }
   const toField = (r: TunerRow): TunerField => ({
     offset: r.offset,
-    width: r.hi - r.offset + 1,
+    width: r.lastBit - r.offset + 1,
     signed: r.signed,
     scale: r.scale,
   });

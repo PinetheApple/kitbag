@@ -1,13 +1,5 @@
-// Build step: emit src/generated/nativeConstants.gen.ts from the engine source
-// (SPEC §13.7). Thin fs wrapper — all logic is in ./native-constants.ts, so the
-// generated file cannot drift from the C/C++ that owns each constant.
-//
-//   node scripts/generate-constants.ts          # write the artifact
-//   node scripts/generate-constants.ts --check   # fail if it is stale
-//
-// --check re-parses the engine source, re-renders, and byte-diffs against the
-// committed output. A header change (or a hand-edit to the .gen.ts) is caught
-// here rather than shipped. Mirrors core-design/scripts/generate-tailwind.ts.
+// --check byte-diffs a fresh render against the committed .gen.ts, so a header
+// change or a hand edit fails CI instead of shipping (SPEC §13.7).
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';

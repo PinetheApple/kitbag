@@ -1,5 +1,9 @@
-import type { NativeConstants } from './native-constants.ts';
-import type { Bounds, EnumMember, TunerField } from './native-parsers.ts';
+import type {
+  Bounds,
+  EnumMember,
+  NativeConstants,
+  TunerField,
+} from './native-types.ts';
 
 function renderEnum(name: string, members: readonly EnumMember[]): string {
   const lines = members.map((mem) => `  ${mem.name}: ${String(mem.value)},`);
