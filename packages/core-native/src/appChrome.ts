@@ -1,4 +1,4 @@
-import type { AppNightMode, AppVersion } from './appNightMode.ts';
+import type { AppNightMode, AppVersion } from './appChromeTypes.ts';
 import { getKitbagCommands } from './NativeKitbagCommands';
 
 export function getAppVersion(): AppVersion {
@@ -7,14 +7,7 @@ export function getAppVersion(): AppVersion {
 }
 
 export function setAppNightMode(mode: AppNightMode): void {
-  const commands = getKitbagCommands();
-  const native = commands.getConstants();
-  const wire: Readonly<Record<AppNightMode, string>> = {
-    system: native.nightModeSystem,
-    dark: native.nightModeDark,
-    light: native.nightModeLight,
-  };
-  commands.setAppNightMode(wire[mode]);
+  getKitbagCommands().setAppNightMode(mode);
 }
 
 export function setSystemBarAppearance(light: boolean): void {

@@ -47,11 +47,7 @@ export {
   setAppNightMode,
   setSystemBarAppearance,
 } from './appChrome';
-export {
-  APP_NIGHT_MODES,
-  type AppNightMode,
-  type AppVersion,
-} from './appNightMode.ts';
+export type { AppNightMode, AppVersion } from './appChromeTypes.ts';
 export type {
   KitbagCommandsConstants,
   SongTransportShowState,

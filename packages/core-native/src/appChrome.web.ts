@@ -1,7 +1,7 @@
 import type * as Native from './appChrome.ts';
-import type { AppVersion } from './appNightMode.ts';
+import type { AppVersion } from './appChromeTypes.ts';
 
-export const WEB_APP_VERSION: AppVersion = {
+const WEB_APP_VERSION: AppVersion = {
   versionName: 'web',
   versionCode: 0,
 };

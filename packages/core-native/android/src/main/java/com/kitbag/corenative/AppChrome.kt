@@ -16,16 +16,9 @@ internal object AppChrome {
   private const val TAG = "KitbagAppChrome"
   private const val NO_PACKAGE_FLAGS = 0
 
-  const val NIGHT_MODE_SYSTEM = "system"
-  const val NIGHT_MODE_DARK = "dark"
-  const val NIGHT_MODE_LIGHT = "light"
-
-  val CONSTANTS: Map<String, Any> =
-    mapOf(
-      "nightModeSystem" to NIGHT_MODE_SYSTEM,
-      "nightModeDark" to NIGHT_MODE_DARK,
-      "nightModeLight" to NIGHT_MODE_LIGHT,
-    )
+  private const val NIGHT_MODE_SYSTEM = "system"
+  private const val NIGHT_MODE_DARK = "dark"
+  private const val NIGHT_MODE_LIGHT = "light"
 
   fun version(context: Context): Map<String, Any> {
     val info = packageInfo(context)
@@ -37,17 +30,23 @@ internal object AppChrome {
 
   fun setNightMode(context: Context, mode: String) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-      val uiMode = uiModeManagerMode(mode) ?: return unknownMode(mode)
+      val uiMode = uiModeManagerMode(mode) ?: run {
+        unknownMode(mode)
+        return
+      }
       context.getSystemService(UiModeManager::class.java).setApplicationNightMode(uiMode)
     } else {
-      val appCompatMode = appCompatMode(mode) ?: return unknownMode(mode)
+      val appCompatMode = appCompatMode(mode) ?: run {
+        unknownMode(mode)
+        return
+      }
       UiThreadUtil.runOnUiThread { AppCompatDelegate.setDefaultNightMode(appCompatMode) }
     }
   }
 
   fun setSystemBarAppearance(activity: Activity?, light: Boolean) {
     activity ?: return
-    activity.runOnUiThread {
+    UiThreadUtil.runOnUiThread {
       WindowInsetsControllerCompat(activity.window, activity.window.decorView).apply {
         isAppearanceLightStatusBars = light
         isAppearanceLightNavigationBars = light

@@ -1,21 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { APP_NIGHT_MODES, type AppNightMode } from './appNightMode.ts';
+import type { AppNightMode } from './appChromeTypes.ts';
 import type { KitbagCommandsConstants } from './NativeKitbagCommands';
 
 const constants: KitbagCommandsConstants = {
   versionName: '1.4.2',
   versionCode: 4_000_000_042,
-  nightModeSystem: 'native-system',
-  nightModeDark: 'native-dark',
-  nightModeLight: 'native-light',
 };
-
-const wireByMode: readonly (readonly [AppNightMode, string])[] = [
-  ['system', 'native-system'],
-  ['dark', 'native-dark'],
-  ['light', 'native-light'],
-];
 
 const commands = vi.hoisted(() => ({
   getConstants: vi.fn(),
@@ -43,17 +34,13 @@ describe('appChrome (native)', () => {
     });
   });
 
-  it.each(wireByMode)(
-    'sends %s as the string the native side owns',
-    (mode, wire) => {
+  it.each<AppNightMode>(['system', 'dark', 'light'])(
+    'sends %s to native unchanged',
+    (mode) => {
       setAppNightMode(mode);
-      expect(commands.setAppNightMode).toHaveBeenCalledExactlyOnceWith(wire);
+      expect(commands.setAppNightMode).toHaveBeenCalledExactlyOnceWith(mode);
     },
   );
-
-  it('covers every declared mode', () => {
-    expect(wireByMode.map(([mode]) => mode)).toEqual([...APP_NIGHT_MODES]);
-  });
 
   it.each([true, false])('forwards light=%s to the system bars', (light) => {
     setSystemBarAppearance(light);

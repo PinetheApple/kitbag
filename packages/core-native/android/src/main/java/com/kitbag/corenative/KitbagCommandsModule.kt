@@ -81,7 +81,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   }
 
   override fun getTypedExportedConstants(): Map<String, Any> =
-    AppChrome.version(reactApplicationContext) + AppChrome.CONSTANTS
+    AppChrome.version(reactApplicationContext)
 
   override fun setAppNightMode(mode: String) {
     AppChrome.setNightMode(reactApplicationContext, mode)

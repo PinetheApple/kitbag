@@ -42,9 +42,6 @@ export type SongTransportShowState = Readonly<{
 export type KitbagCommandsConstants = Readonly<{
   versionName: string;
   versionCode: Double;
-  nightModeSystem: string;
-  nightModeDark: string;
-  nightModeLight: string;
 }>;
 
 export interface Spec extends TurboModule {
