@@ -418,3 +418,14 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   changes D9's row rule on this screen: a line holds up to eight dots and longer bars
   wrap at a group boundary (12/8 → two lines of 3+3), because D9's seven-per-row cap
   pushes the transport off a 360 × 800 screen at the mockup's 56 dp dots. **[user]**
+
+- **2026-10-30 · Screen stays awake while practising (§12.7, §13.9, #187)** — The screen
+  stays on while the metronome runs, a stem song's mixer plays, or the tuner is listening,
+  and may sleep on stop, pause, or leaving the tool. A metronome still running after you
+  leave its screen keeps the screen on. The rule is one function, `screenStaysOn` in
+  `app-shell/src/runtime/keepAwake.ts`, where #170's Settings toggle will gate it; until
+  then it is always on. The window's `FLAG_KEEP_SCREEN_ON` is set through a
+  `setKeepScreenOn` TurboModule command, not `expo-keep-awake`: that module is only linked
+  through `expo`, and importing it from the `core-native` barrel would need a stub in every
+  package's tests. The mixer's playing state is engine truth with no store copy, so it is
+  polled once a second while a stem song is open. **[recorded]**

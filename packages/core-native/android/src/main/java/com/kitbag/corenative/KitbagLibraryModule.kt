@@ -1,15 +1,9 @@
 package com.kitbag.corenative
 
-import android.app.Activity
-import android.content.ActivityNotFoundException
-import android.content.Intent
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.util.Log
-import android.provider.DocumentsContract
-import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
-import com.facebook.react.bridge.ActivityEventListener
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
@@ -22,6 +16,7 @@ import com.kitbag.corenative.library.AnalysisEvents
 import com.kitbag.corenative.library.AnalysisFailure
 import com.kitbag.corenative.library.AnalysisResult
 import com.kitbag.corenative.library.AnalysisStore
+import com.kitbag.corenative.library.DocumentPicker
 import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.LibraryStorage
 import com.kitbag.corenative.library.NativeWaveform
@@ -34,127 +29,34 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ThreadFactory
 
 class KitbagLibraryModule(reactContext: ReactApplicationContext) :
-  NativeKitbagLibrarySpec(reactContext), ActivityEventListener {
+  NativeKitbagLibrarySpec(reactContext) {
 
   private val base = LibraryStorage.base(reactContext)
   private val results = LibraryStorage.analysisStore(reactContext)
   private val io: ExecutorService = Executors.newFixedThreadPool(IO_THREADS, named("kitbag-library-io"))
   private val nameLock = Any()
   private val bundles = StemBundleBridge(reactContext.contentResolver, base)
-
-  private var pendingPick: Promise? = null
-  private var pendingRequest = 0
+  private val picker = DocumentPicker(reactContext, io, ::rejectLogged)
 
   private val listener: (AnalysisResult) -> Unit = ::emitAnalysis
 
   init {
-    reactContext.addActivityEventListener(this)
+    reactContext.addActivityEventListener(picker)
     AnalysisEvents.listener.set(listener)
     io.execute { bundles.clearStaging() }
   }
 
   override fun invalidate() {
     AnalysisEvents.listener.compareAndSet(listener, null)
-    reactApplicationContext.removeActivityEventListener(this)
+    reactApplicationContext.removeActivityEventListener(picker)
     io.shutdownNow()
-    synchronized(this) {
-      pendingPick?.reject(E_INVALIDATED, "The library module was torn down mid-pick")
-      pendingPick = null
-    }
+    picker.cancel()
     super.invalidate()
   }
 
-  override fun pickDocument(promise: Promise) {
-    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-      addCategory(Intent.CATEGORY_OPENABLE)
-      type = "*/*"
-      putExtra(Intent.EXTRA_MIME_TYPES, PICKABLE_MIME_TYPES)
-    }
-    startPick(intent, REQUEST_PICK_DOCUMENT, promise)
-  }
+  override fun pickDocument(promise: Promise) = picker.pickDocument(promise)
 
-  override fun pickFolder(promise: Promise) {
-    startPick(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), REQUEST_PICK_FOLDER, promise)
-  }
-
-  private fun startPick(intent: Intent, requestCode: Int, promise: Promise) {
-    val activity = currentActivity
-    if (activity == null) {
-      promise.reject(E_NO_ACTIVITY, "No foreground activity to show the picker from")
-      return
-    }
-    synchronized(this) {
-      if (pendingPick != null) {
-        promise.reject(E_PICK_IN_PROGRESS, "A picker is already open")
-        return
-      }
-      pendingPick = promise
-      pendingRequest = requestCode
-    }
-    activity.runOnUiThread {
-      try {
-        activity.startActivityForResult(intent, requestCode)
-      } catch (e: ActivityNotFoundException) {
-        takePendingPick(requestCode)?.reject(E_NO_PICKER, "No app on this device can pick that", e)
-      }
-    }
-  }
-
-  @Synchronized
-  private fun takePendingPick(requestCode: Int): Promise? {
-    if (pendingRequest != requestCode) return null
-    return pendingPick.also {
-      pendingPick = null
-      pendingRequest = 0
-    }
-  }
-
-  override fun onActivityResult(activity: Activity, requestCode: Int, resultCode: Int, data: Intent?) {
-    if (requestCode != REQUEST_PICK_DOCUMENT && requestCode != REQUEST_PICK_FOLDER) return
-    val promise = takePendingPick(requestCode) ?: return
-    val uri = data?.data
-    if (resultCode != Activity.RESULT_OK || uri == null) {
-      promise.resolve(null)
-      return
-    }
-    io.execute {
-      try {
-        promise.resolve(
-          if (requestCode == REQUEST_PICK_DOCUMENT) describeDocument(uri) else describeFolder(uri),
-        )
-      } catch (e: Exception) {
-        rejectLogged(promise, E_PICK_FAILED, "Could not read the picked item", e)
-      }
-    }
-  }
-
-  override fun onNewIntent(intent: Intent) = Unit
-
-  private fun describeDocument(uri: Uri): WritableMap =
-    Arguments.createMap().apply {
-      putString("uri", uri.toString())
-      putString("name", displayName(uri) ?: uri.lastPathSegment.orEmpty())
-      putString("mimeType", reactApplicationContext.contentResolver.getType(uri).orEmpty())
-    }
-
-  // The grant is not persisted; it lasts while the process does, replace sheet included.
-  private fun describeFolder(treeUri: Uri): WritableMap {
-    val documentUri = DocumentsContract.buildDocumentUriUsingTree(
-      treeUri,
-      DocumentsContract.getTreeDocumentId(treeUri),
-    )
-    return Arguments.createMap().apply {
-      putString("uri", treeUri.toString())
-      putString("name", displayName(documentUri) ?: treeUri.lastPathSegment.orEmpty())
-    }
-  }
-
-  private fun displayName(uri: Uri): String? =
-    reactApplicationContext.contentResolver
-      .query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
-      ?.use { cursor ->
-        if (cursor.moveToFirst() && !cursor.isNull(0)) cursor.getString(0) else null
-      }
+  override fun pickFolder(promise: Promise) = picker.pickFolder(promise)
 
   override fun importAudio(uri: String, relativeDir: String, promise: Promise) {
     io.execute {
@@ -178,7 +80,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     if (!dir.isDirectory && !dir.mkdirs()) throw IOException("Could not create $dir")
     val fallbackExtension = reactApplicationContext.contentResolver.getType(source)
       ?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) }
-    val safeName = LibraryPaths.safeFileName(displayName(source) ?: source.lastPathSegment, fallbackExtension)
+    val safeName = LibraryPaths.safeFileName(picker.displayName(source) ?: source.lastPathSegment, fallbackExtension)
     return synchronized(nameLock) {
       File(dir, LibraryPaths.uniqueFileName(safeName, dir.list()?.toList().orEmpty()))
         .also { it.createNewFile() }
@@ -389,17 +291,6 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     private const val IO_THREADS = 2
     private const val MILLIS_PER_SECOND = 1000.0
 
-    private const val REQUEST_PICK_DOCUMENT = 0x4b42
-    private const val REQUEST_PICK_FOLDER = 0x4b43
-
-    private val PICKABLE_MIME_TYPES =
-      arrayOf("audio/*", "application/zip", "application/x-zip-compressed")
-
-    private const val E_NO_ACTIVITY = "E_NO_ACTIVITY"
-    private const val E_PICK_IN_PROGRESS = "E_PICK_IN_PROGRESS"
-    private const val E_NO_PICKER = "E_NO_PICKER"
-    private const val E_PICK_FAILED = "E_PICK_FAILED"
-    private const val E_INVALIDATED = "E_INVALIDATED"
     private const val E_IMPORT_FAILED = "E_IMPORT_FAILED"
     private const val E_RESULTS_FAILED = "E_RESULTS_FAILED"
     private const val E_DELETE_FAILED = "E_DELETE_FAILED"
