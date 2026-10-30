@@ -10,7 +10,7 @@ export const metronome = {
   subdivisionChipLeft: 12,
   pickerChipRight: 10,
   notationChip: 24,
-  statusLine: 40,
+  statusRow: 40,
   statusRowGap: 6,
   statusH: 12,
   statusMetaGap: 6,

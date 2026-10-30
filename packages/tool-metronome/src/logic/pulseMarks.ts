@@ -7,11 +7,12 @@ export interface PulseMarkMetrics {
 }
 
 export function pulseMarkFit(
-  pulses: number,
+  pulsesPerBeat: number,
   dotSize: number,
   metrics: PulseMarkMetrics,
 ): PulseMarkMetrics {
-  const natural = pulses * metrics.mark + (pulses - 1) * metrics.gap;
+  const natural =
+    pulsesPerBeat * metrics.mark + (pulsesPerBeat - 1) * metrics.gap;
   const scale = natural > dotSize ? dotSize / natural : 1;
   return {
     mark: metrics.mark * scale,
@@ -23,22 +24,24 @@ export function pulseMarkFit(
 export function soundingPulse(
   barPhase: number,
   beatsPerBar: number,
-  subdivision: number,
+  pulsesPerBeat: number,
   currentBeat: number,
 ): number {
   'worklet';
-  if (currentBeat < 0 || subdivision < 1) return NO_PULSE;
-  const pulse = Math.floor(barPhase * beatsPerBar * subdivision);
-  return Math.floor(pulse / subdivision) === currentBeat ? pulse : NO_PULSE;
+  if (currentBeat < 0 || pulsesPerBeat < 1) return NO_PULSE;
+  const barPulse = Math.floor(barPhase * beatsPerBar * pulsesPerBeat);
+  return Math.floor(barPulse / pulsesPerBeat) === currentBeat
+    ? barPulse
+    : NO_PULSE;
 }
 
 export function pulseInBeat(
-  pulse: number,
+  barPulse: number,
   beat: number,
-  subdivision: number,
+  pulsesPerBeat: number,
 ): number {
   'worklet';
-  if (pulse < 0) return NO_PULSE;
-  const local = pulse - beat * subdivision;
-  return local >= 0 && local < subdivision ? local : NO_PULSE;
+  if (barPulse < 0) return NO_PULSE;
+  const local = barPulse - beat * pulsesPerBeat;
+  return local >= 0 && local < pulsesPerBeat ? local : NO_PULSE;
 }

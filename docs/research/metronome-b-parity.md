@@ -44,9 +44,9 @@ stay. The glow (`mix.tempoZoneGlow`) is removed.
 
 | Element | Mockup value | core-design |
 |---|---|---|
-| Stack | below the dots; two rows of 40, gap 6, height kept with one or no row live | `metronome.statusLine`, `metronome.statusRowGap` |
-| Row order | mute cycle, then ramp; a lone ramp takes the first row; count-in, then what follows it | `statusRows` in `logic/statusLine.ts` |
-| At rest | height 40, centred, gap 8, Inter 14 `text2`, `tune` icon 18 | `metronome.statusLine`, `space.controlGap`, `textRoles.status`, `iconGlyphs.practiceTools`, `iconSizes.statusRest` |
+| Stack | below the dots; two rows of 40, gap 6, height kept with one or no row live | `metronome.statusRow`, `metronome.statusRowGap` |
+| Row order | mute cycle, then ramp; a lone ramp takes the first row; count-in, then what follows it | `statusRows` in `logic/statusRows.ts` |
+| At rest | height 40, centred, gap 8, Inter 14 `text2`, `tune` icon 18 | `metronome.statusRow`, `space.controlGap`, `textRoles.status`, `iconGlyphs.practiceTools`, `iconSizes.statusRest` |
 | Live | `surface1`, 1 `line`, radius 12, padding 0 12, `text`, icon 20 `text2` | `radius.button`, `metronome.statusH`, `iconSizes.statusLive` |
 | Live lead | Space Grotesk 600 14.5, tabular | `textRoles.statusLead` (Space Grotesk 600 is now bundled) |
 | Live meta | Space Grotesk 500 13 `text2`, tabular, right-aligned; mute meta 6 after the lead | `textRoles.statusMeta`, `metronome.statusMetaGap` |

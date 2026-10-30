@@ -21,7 +21,7 @@ import {
 } from 'react-native';
 
 import { useLibraryRefresh } from '../library/useLibraryRefresh.ts';
-import { practiceBadgeCount } from '../logic/statusLine.ts';
+import { practiceBadgeCount } from '../logic/statusRows.ts';
 import { pushTap, tapTempoBpm } from '../logic/tapTempo.ts';
 import { BeatDots, BeatLegend } from './BeatDots.tsx';
 import { BpmNumpadSheet } from './BpmNumpadSheet.tsx';

@@ -22,7 +22,7 @@ import {
   rowSlot,
   statusRows,
   type PracticeSettings,
-} from './statusLine.ts';
+} from './statusRows.ts';
 
 const OFF: PracticeSettings = {
   ramp: {

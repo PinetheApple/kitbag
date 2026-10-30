@@ -12,6 +12,7 @@ import {
 } from '@kitbag/core-design';
 
 const LIVE_ROWS = 2;
+export const ROW_PITCH = metronome.statusRow + metronome.statusRowGap;
 
 export function countInInk(bg: string, text: string): string {
   return mixHex(bg, text, metronomeMix.countInMeta);
@@ -19,17 +20,17 @@ export function countInInk(bg: string, text: string): string {
 
 export const useStatusStyles = createThemedStyles((theme) => ({
   stack: {
-    height: metronome.statusLine * LIVE_ROWS + metronome.statusRowGap,
+    height: ROW_PITCH * (LIVE_ROWS - 1) + metronome.statusRow,
   },
   variant: {
     position: 'absolute',
     top: 0,
     right: 0,
     left: 0,
-    height: metronome.statusLine,
+    height: metronome.statusRow,
   },
   rest: {
-    height: metronome.statusLine,
+    height: metronome.statusRow,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

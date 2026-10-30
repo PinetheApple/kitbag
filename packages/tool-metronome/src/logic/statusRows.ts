@@ -30,7 +30,7 @@ function mutePart(barMute: BarMuteConfig): string {
   return `Play ${String(barMute.playBars)}, mute ${String(barMute.muteBars)}`;
 }
 
-function followingParts(settings: PracticeSettings): string[] {
+function rampAndMuteParts(settings: PracticeSettings): string[] {
   const parts: string[] = [];
   if (settings.ramp.enabled) parts.push(rampPart(settings.ramp));
   if (settings.barMute.enabled) parts.push(mutePart(settings.barMute));
@@ -38,7 +38,7 @@ function followingParts(settings: PracticeSettings): string[] {
 }
 
 export function armedSummary(settings: PracticeSettings): string {
-  const parts = followingParts(settings);
+  const parts = rampAndMuteParts(settings);
   if (settings.countIn.bars !== KB_COUNT_IN_OFF) {
     parts.push(`Count-in ${countInLabel(settings.countIn.bars)}`);
   }
@@ -51,7 +51,7 @@ export function armedSummary(settings: PracticeSettings): string {
 }
 
 export function afterCountInSummary(settings: PracticeSettings): string {
-  return followingParts(settings).join(' · ');
+  return rampAndMuteParts(settings).join(' · ');
 }
 
 export function practiceBadgeCount(settings: PracticeSettings): number {

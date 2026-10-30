@@ -1,7 +1,7 @@
 import { useMetronome } from '@kitbag/core-state';
 import { useMemo } from 'react';
 
-import type { PracticeSettings } from '../logic/statusLine.ts';
+import type { PracticeSettings } from '../logic/statusRows.ts';
 
 export function usePracticeSettings(): PracticeSettings {
   const ramp = useMetronome((s) => s.ramp);

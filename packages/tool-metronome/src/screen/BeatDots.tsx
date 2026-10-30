@@ -146,12 +146,12 @@ export function BeatDots({
   );
   const dotSize = beatDotSize(lines, width, DOT_METRICS);
   const { barPhase, countingIn, currentBeat, barMuted } = frame;
-  const pulse = useSharedValue(NO_PULSE);
+  const barPulse = useSharedValue(NO_PULSE);
   useAnimatedReaction(
     () =>
       soundingPulse(barPhase.value, beatCount, subdivision, currentBeat.value),
     (next) => {
-      if (pulse.value !== next) pulse.value = next;
+      if (barPulse.value !== next) barPulse.value = next;
     },
     [beatCount, subdivision],
   );
@@ -176,10 +176,10 @@ export function BeatDots({
           />
           <PulseMarks
             beat={beat}
-            pulses={subdivision}
+            pulsesPerBeat={subdivision}
             dotSize={dotSize}
             silentBeat={state === 'muted'}
-            pulse={pulse}
+            barPulse={barPulse}
             barMuted={barMuted}
           />
           <Text style={styles.marker}>{beat === 0 ? '1' : ''}</Text>
@@ -195,7 +195,7 @@ export function BeatDots({
       onCycle,
       styles,
       subdivision,
-      pulse,
+      barPulse,
     ],
   );
 

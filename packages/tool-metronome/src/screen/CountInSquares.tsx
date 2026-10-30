@@ -13,7 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import type { LedRowLayout } from '../logic/ledLayout.ts';
-import { countSquare } from '../logic/statusLine.ts';
+import { countSquare } from '../logic/statusRows.ts';
 import { useBeatDotStyles } from './beatDotStyles.ts';
 import { BeatGrid } from './BeatGrid.tsx';
 

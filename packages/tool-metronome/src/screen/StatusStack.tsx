@@ -23,7 +23,7 @@ import {
   statusRows,
   type PracticeSettings,
   type StatusRows,
-} from '../logic/statusLine.ts';
+} from '../logic/statusRows.ts';
 import { LiveSlot } from './LiveSlot.tsx';
 import { MuteStatus } from './MuteStatus.tsx';
 import { countInInk, useStatusStyles } from './statusStyles.ts';

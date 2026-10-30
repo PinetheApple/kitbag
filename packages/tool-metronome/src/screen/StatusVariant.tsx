@@ -1,4 +1,3 @@
-import { metronome } from '@kitbag/core-design';
 import type { ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import Animated, {
@@ -11,10 +10,8 @@ import {
   rowSlot,
   type StatusRow,
   type StatusRows,
-} from '../logic/statusLine.ts';
-import { useStatusStyles } from './statusStyles.ts';
-
-const ROW_PITCH = metronome.statusLine + metronome.statusRowGap;
+} from '../logic/statusRows.ts';
+import { ROW_PITCH, useStatusStyles } from './statusStyles.ts';
 
 interface StatusVariantProps {
   readonly rows: SharedValue<StatusRows>;

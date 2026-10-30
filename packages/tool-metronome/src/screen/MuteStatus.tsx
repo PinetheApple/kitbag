@@ -12,7 +12,7 @@ import {
   cycleStripCells,
   ofText,
   type StatusRows,
-} from '../logic/statusLine.ts';
+} from '../logic/statusRows.ts';
 import { LiveSlot } from './LiveSlot.tsx';
 import { useStatusStyles } from './statusStyles.ts';
 import { StatusVariant } from './StatusVariant.tsx';
