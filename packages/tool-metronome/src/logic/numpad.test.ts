@@ -2,12 +2,15 @@ import { describe, expect, it } from 'vitest';
 
 import {
   confirmEntry,
+  displayDigits,
+  entryLabel,
   openEntry,
   pressBackspace,
   pressDigit,
   type NumpadEntry,
 } from './numpad.ts';
 import type { BpmBounds } from './bpmBounds.ts';
+import { TEXT_PLACEHOLDER } from './textPlaceholder.ts';
 
 // Mirrors core-state's BPM_BOUNDS shape; the screen passes the real one.
 const BOUNDS: BpmBounds = { min: 20, max: 400 };
@@ -67,5 +70,29 @@ describe('confirmEntry', () => {
     expect(
       confirmEntry(pressBackspace(openEntry(124)), BOUNDS),
     ).toBeUndefined();
+  });
+});
+
+describe('numpad display', () => {
+  const cleared = pressBackspace(openEntry(124));
+
+  it('shows the digits typed', () => {
+    expect(displayDigits(type(openEntry(90), [1, 2]))).toBe('12');
+  });
+
+  it('never renders an empty line, so it re-measures after a text-size change', () => {
+    expect(displayDigits(cleared)).toBe(TEXT_PLACEHOLDER);
+    expect(TEXT_PLACEHOLDER.trim()).toBe('');
+    expect(TEXT_PLACEHOLDER.length).toBeGreaterThan(0);
+  });
+
+  it('announces the value with its unit', () => {
+    expect(entryLabel(openEntry(124), 'Tempo', 'BPM')).toBe('Tempo, 124 BPM');
+  });
+
+  it('announces a cleared pad in words, not the placeholder', () => {
+    const label = entryLabel(cleared, 'Tempo', 'BPM');
+    expect(label).toBe('Tempo, nothing entered');
+    expect(label).not.toContain(TEXT_PLACEHOLDER);
   });
 });
