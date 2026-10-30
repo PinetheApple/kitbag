@@ -6,7 +6,7 @@
     "icon": "./assets/icon.png",
     "splash": {
       "image": "./assets/splash-icon.png",
-      "backgroundColor": "#0E0D10",
+      "backgroundColor": "#F5F3EE",
       "resizeMode": "contain"
     },
     "orientation": "portrait",
@@ -16,6 +16,16 @@
     "android": {
       "package": "com.kitbag.app",
       "predictiveBackGestureEnabled": false,
+      "splash": {
+        "image": "./assets/splash-icon.png",
+        "backgroundColor": "#F5F3EE",
+        "resizeMode": "contain",
+        "dark": {
+          "image": "./assets/splash-icon.png",
+          "backgroundColor": "#0E0D10",
+          "resizeMode": "contain"
+        }
+      },
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon/foreground.png",
         "backgroundImage": "./assets/adaptive-icon/background.png",

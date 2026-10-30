@@ -6,9 +6,15 @@ export interface PracticeActivity {
   readonly tunerListening: boolean;
 }
 
-export function screenStaysOn(activity: PracticeActivity): boolean {
+export function screenStaysOn(
+  activity: PracticeActivity,
+  allowed: boolean,
+): boolean {
   return (
-    activity.metronomeRunning || activity.songPlaying || activity.tunerListening
+    allowed &&
+    (activity.metronomeRunning ||
+      activity.songPlaying ||
+      activity.tunerListening)
   );
 }
 
@@ -21,6 +27,7 @@ export interface KeepAwakeDeps {
   readonly metronome: Source<{ readonly running: boolean }>;
   readonly tuner: Source<{ readonly mic: MicStatus }>;
   readonly stemPlayer: Source<{ readonly status: StemPlayerStatus }>;
+  readonly setting: Source<{ readonly keepScreenAwake: boolean }>;
   readonly mixerPlaying: () => boolean;
   readonly poll: (tick: () => void) => () => void;
   readonly onForeground: (listener: () => void) => void;
@@ -34,11 +41,14 @@ export function wireKeepAwake(deps: KeepAwakeDeps): void {
   const songOpen = () => deps.stemPlayer.getState().status === 'ready';
 
   const apply = () => {
-    const on = screenStaysOn({
-      metronomeRunning: deps.metronome.getState().running,
-      songPlaying: songOpen() && deps.mixerPlaying(),
-      tunerListening: deps.tuner.getState().mic === 'listening',
-    });
+    const on = screenStaysOn(
+      {
+        metronomeRunning: deps.metronome.getState().running,
+        songPlaying: songOpen() && deps.mixerPlaying(),
+        tunerListening: deps.tuner.getState().mic === 'listening',
+      },
+      deps.setting.getState().keepScreenAwake,
+    );
     if (on === kept) return;
     kept = on;
     deps.setKeepScreenOn(on);
@@ -63,6 +73,7 @@ export function wireKeepAwake(deps: KeepAwakeDeps): void {
 
   deps.metronome.subscribe(apply);
   deps.tuner.subscribe(apply);
+  deps.setting.subscribe(apply);
   deps.stemPlayer.subscribe(followSong);
   deps.onForeground(reapply);
   followSong();

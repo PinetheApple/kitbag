@@ -27,6 +27,7 @@ function rig() {
   const stemPlayer = fakeSource<{ status: StemPlayerStatus }>({
     status: 'idle',
   });
+  const setting = fakeSource({ keepScreenAwake: true });
   const calls: boolean[] = [];
   const engine = { mixerPlaying: false };
   let tick: (() => void) | undefined;
@@ -36,6 +37,7 @@ function rig() {
     metronome,
     tuner,
     stemPlayer,
+    setting,
     mixerPlaying: () => engine.mixerPlaying,
     poll: (onTick) => {
       polls++;
@@ -53,6 +55,7 @@ function rig() {
     metronome,
     tuner,
     stemPlayer,
+    setting,
     calls,
     engine,
     tick: () => tick?.(),
@@ -70,15 +73,24 @@ describe('screenStaysOn', () => {
   };
 
   it('lets the screen sleep when nothing is running', () => {
-    expect(screenStaysOn(idle)).toBe(false);
+    expect(screenStaysOn(idle, true)).toBe(false);
   });
 
   it.each(['metronomeRunning', 'songPlaying', 'tunerListening'] as const)(
     'keeps the screen on while %s',
     (flag) => {
-      expect(screenStaysOn({ ...idle, [flag]: true })).toBe(true);
+      expect(screenStaysOn({ ...idle, [flag]: true }, true)).toBe(true);
     },
   );
+
+  it('never keeps the screen on with the setting off', () => {
+    const everything = {
+      metronomeRunning: true,
+      songPlaying: true,
+      tunerListening: true,
+    };
+    expect(screenStaysOn(everything, false)).toBe(false);
+  });
 });
 
 describe('wireKeepAwake', () => {
@@ -133,6 +145,23 @@ describe('wireKeepAwake', () => {
     r.tuner.set({ mic: 'listening' });
     r.metronome.set({ running: false });
     expect(r.calls).toEqual([true]);
+  });
+
+  it('releases the hold when the setting goes off and reapplies it when it comes back', () => {
+    const r = rig();
+    r.metronome.set({ running: true });
+    r.setting.set({ keepScreenAwake: false });
+    r.foreground();
+    r.setting.set({ keepScreenAwake: true });
+    expect(r.calls).toEqual([true, false, true]);
+  });
+
+  it('does not hold the screen for practice that starts with the setting off', () => {
+    const r = rig();
+    r.setting.set({ keepScreenAwake: false });
+    r.metronome.set({ running: true });
+    r.tuner.set({ mic: 'listening' });
+    expect(r.calls).toEqual([]);
   });
 
   it('re-sends the hold on foreground only while it is held', () => {
