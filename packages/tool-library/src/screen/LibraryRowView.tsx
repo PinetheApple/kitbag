@@ -25,7 +25,7 @@ import {
   type SongBadge,
 } from '@kitbag/core-state';
 import { useCallback } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Text, useWindowDimensions, View } from 'react-native';
 
 import { failureText } from '../logic/notices.ts';
 import { rowBadges, rowSubtitle, spokenRow } from '../logic/rowText.ts';
@@ -36,6 +36,10 @@ const MORE_HIT_BOX = hitBoxStyle(
     right: unshared(libraryList.rowEnd),
   }),
 );
+
+const FACTS_LINES = 1;
+const SCALED_FACTS_LINES = 2;
+const DEFAULT_FONT_SCALE = 1;
 
 const useStyles = createThemedStyles((theme) => ({
   row: {
@@ -57,6 +61,9 @@ const useStyles = createThemedStyles((theme) => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: libraryList.rowGap,
+  },
+  scaledBody: {
+    paddingVertical: (libraryList.rowHeight - libraryList.tile) / 2,
   },
   tile: {
     width: libraryList.tile,
@@ -131,6 +138,7 @@ export function LibraryRowView({
   onOpenStemSet,
 }: LibraryRowViewProps) {
   const styles = useStyles();
+  const { fontScale } = useWindowDimensions();
   const codes = useSongLibrary((s) => s.codes);
   const status = rowStatus(row);
   const failure = row.kind === 'song' ? analysisFailure(row, codes) : null;
@@ -149,7 +157,10 @@ export function LibraryRowView({
           status,
           failure === null ? null : failureText(failure).status,
         )}
-        style={styles.body}
+        style={[
+          styles.body,
+          fontScale > DEFAULT_FONT_SCALE && styles.scaledBody,
+        ]}
         onLongPress={openActions}
         {...(row.kind === 'stems'
           ? { accessibilityRole: 'button' as const, onPress: open }
@@ -160,7 +171,12 @@ export function LibraryRowView({
           <Text style={styles.title} numberOfLines={1}>
             {row.title}
           </Text>
-          <Text style={styles.facts} numberOfLines={1}>
+          <Text
+            style={styles.facts}
+            numberOfLines={
+              fontScale > DEFAULT_FONT_SCALE ? SCALED_FACTS_LINES : FACTS_LINES
+            }
+          >
             {rowSubtitle(row, status, failure)}
           </Text>
         </View>
