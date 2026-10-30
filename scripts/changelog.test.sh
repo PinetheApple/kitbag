@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# Tests changelog.sh --notes: subject-only notes and the release-body size guard.
+set -uo pipefail
+
+REPO=$(cd "$(dirname "$0")/.." && pwd)
+readonly REPO
+SCRATCH=$(mktemp -d) || exit 1
+readonly SCRATCH
+trap 'rm -rf "$SCRATCH"' EXIT
+
+readonly GITHUB_BODY_LIMIT=125000
+readonly OVERSIZED_CHARS=150000
+
+PASS=0
+FAIL=0
+
+pass() {
+  printf '  ok    %s\n' "$1"
+  PASS=$((PASS + 1))
+}
+
+fail() {
+  printf '  FAIL  %s\n%s\n' "$1" "${2:0:2000}"
+  FAIL=$((FAIL + 1))
+}
+
+commit() {
+  git -C "$1" -c user.email=t@t -c user.name=t commit -q --allow-empty -m "$2" "${@:3}"
+}
+
+make_fixture() {
+  local dir
+  dir=$(mktemp -d "$SCRATCH/repo.XXXXXX")
+  mkdir -p "$dir/scripts" "$dir/packages/app-shell"
+  cp "$REPO/scripts/changelog.sh" "$REPO/scripts/version.sh" "$dir/scripts/"
+  cp "$REPO/cliff.toml" "$dir/"
+  echo '{"expo":{"version":"0.1.0"}}' > "$dir/packages/app-shell/app.json"
+  git -C "$dir" init -q -b main
+  git -C "$dir" add -A
+  commit "$dir" "feat: first thing"
+  echo "$dir"
+}
+
+# stub_cliff <dir> <body>: a git-cliff on PATH that prints <body>, whatever it is asked.
+stub_cliff() {
+  mkdir -p "$1/stub-bin"
+  printf '#!/usr/bin/env bash\ncat %q\n' "$1/stub-output" > "$1/stub-bin/git-cliff"
+  chmod +x "$1/stub-bin/git-cliff"
+  printf '%s' "$2" > "$1/stub-output"
+}
+
+notes_in() { (cd "$1" && PATH="$1/stub-bin:$PATH" ./scripts/changelog.sh --notes "$2" 2>/dev/null); }
+
+echo "size guard (stubbed git-cliff)"
+fixture=$(make_fixture)
+git -C "$fixture" tag v0.1.0
+commit "$fixture" "fix: second thing"
+oversized="## 0.1.1"$'\n\n'"### Fixed"$'\n\n'$(head -c "$OVERSIZED_CHARS" /dev/zero | tr '\0' x)
+stub_cliff "$fixture" "$oversized"
+notes=$(notes_in "$fixture" v0.1.1)
+if ((${#notes} < GITHUB_BODY_LIMIT)) && [[ $notes == *CHANGELOG.md* && $notes == *"compare/v0.1.0...v0.1.1"* ]]; then
+  pass "oversized notes fall back to a link to CHANGELOG.md and the compare range"
+else
+  fail "oversized notes fall back (got ${#notes} chars)" "$notes"
+fi
+
+stub_cliff "$fixture" "## 0.1.1"$'\n\n'"### Fixed"$'\n\n'"- Second thing"
+notes=$(notes_in "$fixture" v0.1.1)
+[[ $notes == *"- Second thing"* && $notes != *CHANGELOG.md* ]] && pass "notes under the limit pass through" ||
+  fail "notes under the limit pass through" "$notes"
+
+stub_cliff "$fixture" "## 0.1.1"$'\n'
+notes=$(notes_in "$fixture" v0.1.1)
+[[ $notes == *"No user-facing changes in this release."* ]] && pass "no grouped commits: says so" ||
+  fail "no grouped commits: says so" "$notes"
+
+fixture=$(make_fixture)
+stub_cliff "$fixture" "$oversized"
+notes=$(notes_in "$fixture" v0.1.0)
+[[ $notes == *"commits/v0.1.0"* ]] && pass "first release falls back to the tag's commit list" ||
+  fail "first release falls back to the tag's commit list" "$notes"
+
+echo "subject-only notes (real git-cliff)"
+if command -v git-cliff >/dev/null 2>&1; then
+  fixture=$(make_fixture)
+  git -C "$fixture" tag v0.1.0
+  commit "$fixture" "fix: second thing" -m "A commit body that belongs in CHANGELOG.md only."
+  notes=$(notes_in "$fixture" v0.1.1)
+  if [[ $notes == *"Second thing"* && $notes != *"commit body"* ]]; then
+    pass "notes carry subjects, not bodies"
+  else
+    fail "notes carry subjects, not bodies" "$notes"
+  fi
+else
+  echo "  SKIP  notes carry subjects, not bodies — git-cliff not installed"
+fi
+
+echo
+if ((FAIL)); then
+  printf 'changelog tests: %d passed, %d FAILED\n' "$PASS" "$FAIL"
+  exit 1
+fi
+printf 'changelog tests: %d passed\n' "$PASS"

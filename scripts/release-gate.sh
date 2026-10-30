@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Proves a release APK before it is published, then stages it under the stable
-# asset name with its sha256. Nothing is written unless every check passes.
 set -uo pipefail
 
 readonly EXIT_OK=0
@@ -9,23 +7,27 @@ readonly EXIT_CANNOT_CHECK=2
 readonly EXIT_USAGE=3
 
 readonly ASSET=kitbag.apk
-readonly SEMVER_RE='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
-readonly TAG_PREFIX=v
 SCRIPTS=$(cd "$(dirname "$0")" && pwd)
 readonly SCRIPTS
+readonly RELEASE_CERT_FILE="$SCRIPTS/../packages/app-shell/android/app/release-cert.sha256"
 
 usage() {
   cat <<'USAGE'
 usage: release-gate.sh [--out DIR] <apk> <version> [previous-tag]
+       release-gate.sh --version-only <apk> <version>
 
-Fails unless <apk> is signed with one non-debug key, its versionName is
-<version>, its versionCode is the one version.sh derives for <version>, and
-that code is above [previous-tag]'s. On success writes kitbag.apk and
-kitbag.apk.sha256 to DIR (default dist/release).
+Fails unless <apk> is signed by exactly the pinned release certificate
+(packages/app-shell/android/app/release-cert.sha256), its versionName is
+<version>, its versionCode is the one `version.sh code` derives, and that code
+is above [previous-tag]'s. On success stages kitbag.apk and kitbag.apk.sha256
+in DIR (default dist/release).
 
-exit 0  passed, artifacts written
+--version-only checks versionName and versionCode only and stages nothing:
+CI's pin of build.gradle's versionCode formula to version.sh's.
+
+exit 0  passed
 exit 1  the APK failed a gate
-exit 2  cannot check (missing aapt2/apksigner/keytool)
+exit 2  cannot check (missing aapt2)
 exit 3  usage error
 USAGE
 }
@@ -36,6 +38,7 @@ fail() {
 }
 
 out_dir=$(cd "$SCRIPTS/.." && pwd)/dist/release
+version_only=0
 args=()
 while (($#)); do
   case $1 in
@@ -44,6 +47,7 @@ while (($#)); do
       out_dir=$2
       shift
       ;;
+    --version-only) version_only=1 ;;
     -h | --help)
       usage
       exit "$EXIT_USAGE"
@@ -54,7 +58,7 @@ while (($#)); do
   shift
 done
 
-if ((${#args[@]} < 2 || ${#args[@]} > 3)); then
+if ((${#args[@]} < 2 || ${#args[@]} > 3 || (version_only && ${#args[@]} != 2))); then
   usage >&2
   exit "$EXIT_USAGE"
 fi
@@ -64,20 +68,19 @@ readonly VERSION=${args[1]}
 readonly PREVIOUS_TAG=${args[2]-}
 
 [[ -f $APK ]] || fail "no such APK: $APK" "$EXIT_USAGE"
-[[ $VERSION =~ $SEMVER_RE ]] || fail "version must be major.minor.patch, got '$VERSION'" "$EXIT_USAGE"
-if [[ -n $PREVIOUS_TAG ]] && ! [[ $PREVIOUS_TAG == "$TAG_PREFIX"* && ${PREVIOUS_TAG#"$TAG_PREFIX"} =~ $SEMVER_RE ]]; then
-  fail "previous tag must be ${TAG_PREFIX}major.minor.patch, got '$PREVIOUS_TAG'" "$EXIT_USAGE"
+expected_code=$("$SCRIPTS/version.sh" code "$VERSION") || fail "invalid release version '$VERSION'" "$EXIT_USAGE"
+previous_code=""
+if [[ -n $PREVIOUS_TAG ]]; then
+  previous_code=$("$SCRIPTS/version.sh" code "$PREVIOUS_TAG") || fail "invalid previous tag '$PREVIOUS_TAG'" "$EXIT_USAGE"
 fi
 
 apk_path=$(realpath "$APK")
 readonly APK_PATH=$apk_path
 
-"$SCRIPTS/verify-apk-signature.sh" "$APK_PATH"
-signature_status=$?
-if ((signature_status == EXIT_REJECTED)); then
-  fail "signature gate rejected $APK" "$EXIT_REJECTED"
-elif ((signature_status != EXIT_OK)); then
-  fail "signature gate could not check $APK" "$EXIT_CANNOT_CHECK"
+if ((!version_only)); then
+  release_cert=$(<"$RELEASE_CERT_FILE") || fail "cannot read $RELEASE_CERT_FILE" "$EXIT_CANNOT_CHECK"
+  "$SCRIPTS/verify-apk-signature.sh" --expect-sha256 "$release_cert" "$APK_PATH" ||
+    fail "signature gate did not accept $APK (reason above)" "$EXIT_REJECTED"
 fi
 
 find_aapt2() {
@@ -98,24 +101,25 @@ apk_code=$(sed -n "s/^package:.* versionCode='\([^']*\)'.*/\1/p" <<<"$badging")
 [[ -n $apk_name && $apk_code =~ ^[0-9]+$ ]] || fail "could not read versionName/versionCode from aapt2" "$EXIT_CANNOT_CHECK"
 
 [[ $apk_name == "$VERSION" ]] || fail "APK versionName ${apk_name}, release is ${VERSION}" "$EXIT_REJECTED"
-
-expected_code=$("$SCRIPTS/version.sh" code "$VERSION") || fail "version.sh cannot derive a versionCode for ${VERSION}" "$EXIT_REJECTED"
 ((apk_code == expected_code)) ||
   fail "APK versionCode ${apk_code}, version.sh derives ${expected_code} for ${VERSION} — build.gradle and version.sh disagree" "$EXIT_REJECTED"
 
 previous_note="first release"
-if [[ -n $PREVIOUS_TAG ]]; then
-  previous_code=$("$SCRIPTS/version.sh" code "${PREVIOUS_TAG#"$TAG_PREFIX"}") ||
-    fail "version.sh cannot derive a versionCode for ${PREVIOUS_TAG}" "$EXIT_REJECTED"
+if [[ -n $previous_code ]]; then
   ((apk_code > previous_code)) ||
     fail "APK versionCode ${apk_code} is not above ${PREVIOUS_TAG}'s ${previous_code}; it would not install over it" "$EXIT_REJECTED"
   previous_note="above ${PREVIOUS_TAG}'s ${previous_code}"
+fi
+
+if ((version_only)); then
+  echo "release-gate: ok — versionName ${apk_name}, versionCode ${apk_code} matches version.sh"
+  exit "$EXIT_OK"
 fi
 
 mkdir -p "$out_dir" || fail "cannot create $out_dir" "$EXIT_CANNOT_CHECK"
 cp "$APK_PATH" "$out_dir/$ASSET" || fail "cannot write $out_dir/$ASSET" "$EXIT_CANNOT_CHECK"
 (cd "$out_dir" && sha256sum "$ASSET" > "$ASSET.sha256") || fail "sha256sum failed" "$EXIT_CANNOT_CHECK"
 
-echo "release-gate: ok — versionName ${apk_name}, versionCode ${apk_code} (${previous_note})"
+echo "release-gate: ok — ${ASSET} versionName ${apk_name}, versionCode ${apk_code} (${previous_note})"
 cat "$out_dir/$ASSET.sha256"
 exit "$EXIT_OK"

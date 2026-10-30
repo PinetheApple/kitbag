@@ -55,29 +55,30 @@ still fails. `--skip-android` and `--skip-native` drop the slow legs.
 
 ### Cutting a release
 
-Merging to `main` publishes. `.github/workflows/release.yml` computes the next
-version, builds a release APK signed with the release key (Actions secrets),
-gates it with `scripts/release-gate.sh` (signature, `versionName`, `versionCode`)
-and publishes GitHub release `vX.Y.Z` with `kitbag.apk` and its sha256. Nothing
-is committed back: the tag is the version source, passed to Gradle as
-`-PkitbagVersionName`.
+Every merge to `main` publishes. `.github/workflows/release.yml` computes the
+next version, builds a release APK signed with the release key (Actions
+secrets), gates it with `scripts/release-gate.sh` (pinned certificate in
+`packages/app-shell/android/app/release-cert.sha256`, `versionName`,
+`versionCode`) and publishes GitHub release `vX.Y.Z` with the APK and its
+sha256. Nothing is committed back: the tag is the version source, passed to
+Gradle as `-PkitbagVersionName`.
 
 - **Next version** — `scripts/version.sh next`, over the commits since the
   latest `vX.Y.Z` tag: breaking (`!` or `BREAKING CHANGE`) bumps major, or minor
-  below 1.0.0; `feat` bumps minor; everything else bumps patch. Every merge
-  publishes. With no tag yet the version is `app.json`'s.
+  below 1.0.0; `feat` bumps minor; everything else bumps patch. With no tag yet
+  the version is `app.json`'s. A re-run with no new commits skips.
 - **Floor** — `packages/app-shell/app.json` `expo.version` is the minimum; the
   next version is never below it. To force a jump (say 1.0.0), raise it with
   `scripts/version.sh set 1.0.0` in a PR.
-- **versionCode** — `major*10000 + minor*100 + patch`, with minor and patch
-  ≤ 99 and the code ≤ 2100000000. Gradle and `version.sh next` refuse anything
-  out of bounds; raise the floor to the next minor or major instead.
+- **versionCode** — formula and bounds in `scripts/version.sh code --help`.
+  Gradle and `version.sh next` refuse anything out of bounds; raise the floor to
+  the next minor or major instead.
 - **Concurrency** — releases run one at a time. A run still waiting when a newer
   push arrives is dropped; the newer run's range covers its commits.
 
 Local builds stay debug-signed unless `ANDROID_KEYSTORE_*` is set (see
-`.env.example`). `scripts/version.test.sh` and `scripts/release-gate.test.sh`
-cover the rule and the gate.
+`.env.example`). `scripts/version.test.sh`, `scripts/release-gate.test.sh` and
+`scripts/changelog.test.sh` cover the rule, the gate and the notes.
 
 ### Commits and PRs
 

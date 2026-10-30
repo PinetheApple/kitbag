@@ -15,22 +15,41 @@ readonly EXIT_USAGE=3
 
 usage() {
   cat <<'USAGE'
-usage: verify-apk-signature.sh <apk> [debug-keystore]
+usage: verify-apk-signature.sh [--expect-sha256 HEX] <apk> [debug-keystore]
 
 Verifies that <apk> carries exactly one signer and that the signer is not the
 debug key. debug-keystore defaults to the app's checked-in debug.keystore.
+With --expect-sha256, the signer's certificate SHA-256 must also equal HEX.
 
-exit 0  signed with a non-debug key
-exit 1  unsigned, multiple signers, or signed with the debug key
+exit 0  signed with a non-debug key (and the expected one, if given)
+exit 1  unsigned, multiple signers, the debug key, or not the expected key
 exit 2  cannot determine (missing tool, unreadable keystore)
 exit 3  usage error
 USAGE
 }
 
-if [[ ${1:-} == "-h" || ${1:-} == "--help" ]]; then
-  usage
-  exit "$EXIT_USAGE"
-fi
+EXPECTED_DIGEST=""
+while [[ ${1:-} == -* ]]; do
+  case $1 in
+    -h | --help)
+      usage
+      exit "$EXIT_USAGE"
+      ;;
+    --expect-sha256)
+      EXPECTED_DIGEST=$(tr 'A-F' 'a-f' <<<"${2:-}" | tr -d ': ')
+      [[ -n $EXPECTED_DIGEST ]] || {
+        usage
+        exit "$EXIT_USAGE"
+      }
+      shift 2
+      ;;
+    *)
+      usage
+      exit "$EXIT_USAGE"
+      ;;
+  esac
+done
+readonly EXPECTED_DIGEST
 
 cd "$(dirname "$0")/.."
 
@@ -130,5 +149,12 @@ if [[ $APK_DIGEST == "$DEBUG_DIGEST" ]]; then
   exit "$EXIT_DEBUG_KEY"
 fi
 
-echo "verify-apk-signature: ok — one signer, not the debug key (sha256 ${APK_DIGEST:0:16}...)"
+if [[ -n $EXPECTED_DIGEST && $APK_DIGEST != "$EXPECTED_DIGEST" ]]; then
+  echo "verify-apk-signature: APK is not signed with the expected release certificate" >&2
+  echo "  signer   ${APK_DIGEST}" >&2
+  echo "  expected ${EXPECTED_DIGEST}" >&2
+  exit "$EXIT_DEBUG_KEY"
+fi
+
+echo "verify-apk-signature: ok — one signer, not the debug key${EXPECTED_DIGEST:+, the expected certificate} (sha256 ${APK_DIGEST:0:16}...)"
 exit "$EXIT_OK"

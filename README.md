@@ -52,7 +52,7 @@ The metronome is being redesigned (#175) and is not shown.
 
 The newest signed build is always at
 <https://github.com/PinetheApple/kitbag/releases/latest/download/kitbag.apk>,
-with its checksum alongside. Every merge to `main` publishes one.
+with its checksum alongside. It is built for arm64-v8a only (64-bit ARM phones).
 
 ```sh
 curl -fLO https://github.com/PinetheApple/kitbag/releases/latest/download/kitbag.apk

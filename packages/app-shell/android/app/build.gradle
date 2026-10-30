@@ -81,8 +81,6 @@ def enableMinifyInReleaseBuilds = (findProperty('android.enableMinifyInReleaseBu
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
-// The release workflow passes the tag's version; local builds fall back to app.json.
-// The versionCode formula is mirrored in scripts/version.sh and release-gate.sh compares them.
 def kitbagVersionName = (findProperty('kitbagVersionName') ?: new groovy.json.JsonSlurper().parse(file("$projectRoot/app.json")).expo.version).toString()
 def kitbagSemver = kitbagVersionName =~ /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
 if (!kitbagSemver.matches()) {

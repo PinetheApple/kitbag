@@ -27,6 +27,7 @@ IssueTracker: https://github.com/PinetheApple/kitbag/issues
 RepoType: git
 Repo: https://github.com/PinetheApple/kitbag.git
 
+# Every entry passes its tag's version as kitbagVersionName; app.json is only the floor.
 Builds:
   - versionName: 0.1.0
     versionCode: 100
@@ -36,6 +37,8 @@ Builds:
     subdir: packages/app-shell/android
     gradle:
       - yes
+    gradleprops:
+      - kitbagVersionName=0.1.0
     init:
       - corepack enable
       - pnpm install --frozen-lockfile

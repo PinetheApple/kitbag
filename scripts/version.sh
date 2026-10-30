@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# The app version: app.json is the floor, the latest vX.Y.Z tag is the last
-# release, and `next` is the one place the next release version is decided.
 set -euo pipefail
 
 readonly EXIT_DRIFT=1
@@ -29,7 +27,7 @@ readonly MIRRORS=(package.json packages/app-shell/package.json)
 usage() {
   cat <<'USAGE'
 usage: version.sh current | set <major.minor.patch> | check
-       version.sh next | latest-tag | code <major.minor.patch>
+       version.sh next | latest-tag | code <major.minor.patch | vX.Y.Z>
 
   current     print the version app.json holds (the release floor)
   set         write <version> to app.json and the package.json mirrors
@@ -37,7 +35,10 @@ usage: version.sh current | set <major.minor.patch> | check
   next        print the next release version: bump the latest vX.Y.Z tag by the
               commits since it, never below app.json; app.json itself if untagged
   latest-tag  print the highest vX.Y.Z tag, or nothing
-  code        print the Android versionCode for <version>
+  code        print the Android versionCode for <version>:
+              major*10000 + minor*100 + patch, with minor and patch <= 99 and
+              the code in 1..2100000000 (the Play Store cap); semver order
+              then equals versionCode order
 
 Bump: breaking (! or BREAKING CHANGE) -> major, or minor below 1.0.0;
 feat -> minor; anything else -> patch.
@@ -74,7 +75,7 @@ write_json_version() {
   ' "$1" "$2"
 }
 
-# Mirrored in android/app/build.gradle; release-gate.sh compares the two on every release.
+# Mirrored in android/app/build.gradle; CI and the release gate compare the built APK against this.
 version_code() {
   local major minor patch code
   IFS=. read -r major minor patch <<<"$1"
@@ -92,18 +93,16 @@ latest_tag() {
     tail -1
 }
 
-# Prints 0 when $1 < $2, 1 when equal, 2 when greater.
-compare_versions() {
+version_at_least() {
   local a b i
   IFS=. read -ra a <<<"$1"
   IFS=. read -ra b <<<"$2"
   for i in 0 1 2; do
     if ((a[i] != b[i])); then
-      ((a[i] < b[i])) && echo 0 || echo 2
+      ((a[i] > b[i]))
       return
     fi
   done
-  echo 1
 }
 
 bumped_version() {
@@ -135,12 +134,19 @@ next_version() {
   candidate=$floor
   if [[ -n $tag ]]; then
     candidate=$(bumped_version "$tag")
-    (($(compare_versions "$candidate" "$floor") > 0)) || candidate=$floor
+    version_at_least "$candidate" "$floor" || candidate=$floor
   fi
   version_code "$candidate" >/dev/null ||
     die "next version ${candidate} is out of bounds (minor and patch <= ${MAX_MINOR}); raise the floor in ${APP_JSON} with 'scripts/version.sh set' in a PR" "$EXIT_OUT_OF_BOUNDS"
   echo "$candidate"
 }
+
+for arg in "$@"; do
+  if [[ $arg == -h || $arg == --help ]]; then
+    usage
+    exit "$EXIT_USAGE"
+  fi
+done
 
 case ${1-} in
   current)
@@ -177,13 +183,10 @@ case ${1-} in
     ;;
   code)
     version=${2-}
+    [[ $version != "$TAG_PREFIX"* ]] || version=${version#"$TAG_PREFIX"}
     require_semver "$version"
     version_code "$version" ||
       die "${version} is out of bounds (minor and patch <= ${MAX_MINOR}, versionCode ${MIN_VERSION_CODE}..${MAX_VERSION_CODE})" "$EXIT_OUT_OF_BOUNDS"
-    ;;
-  -h | --help)
-    usage
-    exit "$EXIT_USAGE"
     ;;
   *)
     usage >&2

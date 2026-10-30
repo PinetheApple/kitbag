@@ -6,15 +6,62 @@ on:
 
 permissions: {}
 
-# A run waiting here is replaced by a newer push; the newer run's tag range covers its commits.
 concurrency:
   group: release
   cancel-in-progress: false
 
 jobs:
+  plan:
+    name: Next version
+    if: github.repository == 'PinetheApple/kitbag'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    env:
+      EXIT_NOTHING_TO_RELEASE: 4
+    outputs:
+      release: ${{ steps.version.outputs.release }}
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      previous: ${{ steps.version.outputs.previous }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Version — next from the latest tag and the commits since it
+        id: version
+        run: |
+          status=0
+          version=$(scripts/version.sh next) || status=$?
+          if ((status == EXIT_NOTHING_TO_RELEASE)); then
+            echo "::notice::No commits since $(scripts/version.sh latest-tag); nothing to release"
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          ((status == 0)) || exit "$status"
+          previous=$(scripts/version.sh latest-tag)
+          tag="v${version}"
+          if ! remote_tag=$(git ls-remote --tags origin "refs/tags/${tag}"); then
+            echo "::error::git ls-remote failed; cannot tell whether ${tag} exists"
+            exit 1
+          fi
+          if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null || [[ -n $remote_tag ]]; then
+            echo "::error::${tag} already exists"
+            exit 1
+          fi
+          {
+            echo "release=true"
+            echo "version=${version}"
+            echo "tag=${tag}"
+            echo "previous=${previous}"
+          } >> "$GITHUB_OUTPUT"
+
   release:
     name: Signed APK to a GitHub release
-    if: github.repository == 'PinetheApple/kitbag'
+    needs: plan
+    if: needs.plan.outputs.release == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -27,8 +74,11 @@ jobs:
       GIT_CLIFF_VERSION: 2.13.1
       GIT_CLIFF_SHA512: e716cce3a07dda41b1e370d6afbd7a59eb3d4739509fb7856aeec8da2be28c0396584e29e106141c1a1c535c1827dbc1f60417524f5cfb1da9e11f700bd00f30
       APK: packages/app-shell/android/app/build/outputs/apk/release/app-release.apk
+      VERSION: ${{ needs.plan.outputs.version }}
+      TAG: ${{ needs.plan.outputs.tag }}
+      PREVIOUS: ${{ needs.plan.outputs.previous }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -47,26 +97,7 @@ jobs:
           echo "${GIT_CLIFF_SHA512}  $RUNNER_TEMP/$archive" | sha512sum -c -
           tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP"
           echo "$RUNNER_TEMP/git-cliff-${GIT_CLIFF_VERSION}" >> "$GITHUB_PATH"
-      - name: Version — next from the latest tag and the commits since it
-        id: version
-        run: |
-          version=$(scripts/version.sh next)
-          previous=$(scripts/version.sh latest-tag)
-          tag="v${version}"
-          if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null ||
-            [[ -n $(git ls-remote --tags origin "refs/tags/${tag}") ]]; then
-            echo "::error::${tag} already exists"
-            exit 1
-          fi
-          {
-            echo "version=${version}"
-            echo "tag=${tag}"
-            echo "previous=${previous}"
-          } >> "$GITHUB_OUTPUT"
       - name: Release notes — conventional commits since the previous tag
-        env:
-          TAG: ${{ steps.version.outputs.tag }}
-          PREVIOUS: ${{ steps.version.outputs.previous }}
         run: |
           scripts/changelog.sh --notes "$TAG" > "$NOTES_FILE"
           {
@@ -76,19 +107,19 @@ jobs:
             echo
             cat "$NOTES_FILE"
           } >> "$GITHUB_STEP_SUMMARY"
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: pnpm
-      - uses: actions/setup-java@v6
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
           java-version: 17
-      - uses: gradle/actions/setup-gradle@v6
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           cache-read-only: true
-      - uses: actions/cache/restore@v6
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ccache
           key: ccache-${{ runner.os }}-${{ github.sha }}
@@ -113,28 +144,23 @@ jobs:
           ANDROID_KEYSTORE_PATH: ${{ env.KEYSTORE_FILE }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          VERSION: ${{ steps.version.outputs.version }}
         run: ./gradlew :app:assembleRelease -PkitbagVersionName="$VERSION"
       - name: Keystore — delete
         if: always()
         run: rm -f "$KEYSTORE_FILE"
-      - name: Gate — signature, versionName, versionCode; stage kitbag.apk + sha256
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-          PREVIOUS: ${{ steps.version.outputs.previous }}
+      - name: Gate — pinned certificate, versionName, versionCode; stage the APK + sha256
         run: scripts/release-gate.sh --out "$ARTIFACT_DIR" "$APK" "$VERSION" ${PREVIOUS:+"$PREVIOUS"}
       - name: Publish the GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.version.outputs.tag }}
         run: |
-          cd "$ARTIFACT_DIR"
-          gh release create "$TAG" kitbag.apk kitbag.apk.sha256 \
+          gh release create "$TAG" "$ARTIFACT_DIR"/* \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "$TAG" \
             --notes-file "$NOTES_FILE"
           {
             echo
-            echo "Published: $(cat kitbag.apk.sha256)"
+            echo "Published:"
+            cat "$ARTIFACT_DIR"/*.sha256
           } >> "$GITHUB_STEP_SUMMARY"
