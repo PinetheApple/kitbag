@@ -68,11 +68,10 @@ pnpm -w format           # prettier
 pnpm -w generate:check   # generation drift guards (SPEC.md §13.7)
 ```
 
-Releases go through `bash scripts/release.sh <version>` — it is the only path
-that bumps the version, regenerates the changelog with `scripts/changelog.sh`,
-and refuses to publish an APK that is debug-signed or whose `versionName` does
-not match the tag. The version itself lives once, in
-`packages/app-shell/app.json`; `versionCode` is derived from it in Gradle.
+Every merge to `main` publishes a signed release through
+`.github/workflows/release.yml`; AGENTS.md "Cutting a release" has the version
+rule. `packages/app-shell/app.json` holds the version floor, and `versionCode`
+is derived from the version in Gradle.
 
 Anything that reaches a screen or the native boundary needs a device before it can
 be called done. A green build does not prove the JNI/TurboModule chain is intact —
