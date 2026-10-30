@@ -9,6 +9,7 @@ import {
 import type { IconName } from '../icons.ts';
 import { iconSizes, inset, radius, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
+import { minTouchTargetDp } from '../tokens.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import {
   hitBoxStyle,
@@ -40,6 +41,27 @@ const INLINE_EDGE_V = inset.stepInlineV + size.stroke;
 
 const LARGE_KEY_HEIGHT = size.stepInlineLarge - size.stroke * 2;
 const LARGE_EDGE_H = inset.stepInlineLargeH + size.stroke;
+
+const halfShortfall = (extent: number) =>
+  Math.max(0, (minTouchTargetDp - extent) / 2);
+
+const VALUE_ROW_HEIGHT: Readonly<Record<StepControlVariant, number>> = {
+  badge: size.stepKey,
+  inline: INLINE_KEY_HEIGHT + INLINE_EDGE_V * 2,
+  inlineLarge: size.stepInlineLarge,
+};
+
+function valueHitSlop(variant: StepControlVariant) {
+  const vertical = halfShortfall(VALUE_ROW_HEIGHT[variant]);
+  const horizontal =
+    variant === 'badge' ? 0 : halfShortfall(size.stepValueMinWidth);
+  return {
+    top: vertical,
+    bottom: vertical,
+    left: horizontal,
+    right: horizontal,
+  };
+}
 
 const A11Y_ACTIONS = [{ name: 'increment' }, { name: 'decrement' }] as const;
 const A11Y_ACTIONS_WITH_ACTIVATE = [...A11Y_ACTIONS, { name: 'activate' }];
@@ -195,6 +217,13 @@ const useStyles = createThemedStyles((theme) => ({
     minWidth: size.stepValueMinWidth,
     alignItems: 'center',
   },
+  tappableValue: {
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+  },
+  keyOnTop: {
+    zIndex: 1,
+  },
   inlineValue: {
     ...textStyle(textRoles.stepInlineValue),
     color: theme.color.text,
@@ -256,7 +285,7 @@ export function StepControl({
 
   const key = (glyph: IconName, hitBox: HitBox, onPress: () => void) =>
     inline ? (
-      <Pressable style={hitBox} onPress={onPress}>
+      <Pressable style={[hitBox, styles.keyOnTop]} onPress={onPress}>
         <View style={[styles.inlineKey, large && styles.largeKey]}>
           <InlineIcon
             name={glyph}
@@ -265,12 +294,27 @@ export function StepControl({
         </View>
       </Pressable>
     ) : (
-      <Pressable style={hitBox} onPress={onPress}>
+      <Pressable style={[hitBox, styles.keyOnTop]} onPress={onPress}>
         <View style={styles.badgeKey}>
           <InlineIcon name={glyph} style={styles.badgeKeyText} />
         </View>
       </Pressable>
     );
+
+  const valueBoxStyle = inline
+    ? styles.inlineValueBox
+    : [styles.badgeValueBox, accented && styles.badgeValueBoxAccented];
+  const valueText = (
+    <Text
+      style={
+        inline
+          ? [styles.inlineValue, large && styles.largeValue]
+          : [styles.badgeValue, accented && styles.badgeValueAccented]
+      }
+    >
+      {value}
+    </Text>
+  );
 
   return (
     <View
@@ -289,29 +333,17 @@ export function StepControl({
       }
     >
       {key('decrease', hitBoxes.decrement, handleDecrement)}
-      <View
-        style={
-          inline
-            ? [styles.inlineValueBox, !valueTappable && styles.inertValue]
-            : [
-                styles.badgeValueBox,
-                accented && styles.badgeValueBoxAccented,
-                // An inert badge must not swallow the keys' hit boxes.
-                !valueTappable && styles.inertValue,
-              ]
-        }
-      >
-        <Text
-          style={
-            inline
-              ? [styles.inlineValue, large && styles.largeValue]
-              : [styles.badgeValue, accented && styles.badgeValueAccented]
-          }
+      {valueTappable ? (
+        <Pressable
+          style={[valueBoxStyle, styles.tappableValue]}
+          hitSlop={valueHitSlop(variant)}
           onPress={onValuePress}
         >
-          {value}
-        </Text>
-      </View>
+          {valueText}
+        </Pressable>
+      ) : (
+        <View style={[valueBoxStyle, styles.inertValue]}>{valueText}</View>
+      )}
       {key('increase', hitBoxes.increment, handleIncrement)}
     </View>
   );
