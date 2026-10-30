@@ -31,7 +31,7 @@ description: |
   user: "tuner_verify fails T14, fix it"
   assistant: "I'll use the audio-core-engineer agent."
   <commentary>
-  The agent must fix the detector, never loosen the test — CLAUDE.md calls this out
+  The agent must fix the detector, never loosen the test — AGENTS.md calls this out
   by name. It should also treat a passing test as suspect until sabotage proves it
   can fail.
   </commentary>

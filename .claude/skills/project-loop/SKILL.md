@@ -1,6 +1,6 @@
 ---
 name: project-loop
-description: Drives the whole Kitbag build across all phases (SPEC.md §15) autonomously. Stateless per iteration — each invocation reconstructs state from disk (SPEC, tracker, issues, decisions log), runs ONE FULL WAVE to completion (parallel tracks dispatched concurrently and awaited as a set → review → fix → wave gate → merge → persist), then exits for an external driver to re-invoke fresh, so context never grows. Never backgrounds workers or polls across invocations. Stops only at four boundaries it cannot self-clear. Use when the user says "run/drive/build the whole project", "build to completion", or "keep going across phases". For a single Phase-1 issue, use phase1-loop.
+description: Drives the whole Kitbag build across all phases (SPEC.md §15) autonomously. Stateless per iteration — each invocation reconstructs state from disk (SPEC, issues, decisions log), runs ONE FULL WAVE to completion (parallel tracks dispatched concurrently and awaited as a set → review → fix → wave gate → merge → persist), then exits for an external driver to re-invoke fresh, so context never grows. Never backgrounds workers or polls across invocations. Stops only at four boundaries it cannot self-clear. Use when the user says "run/drive/build the whole project", "build to completion", or "keep going across phases". For a single Phase-1 issue, use phase1-loop.
 ---
 
 # Project loop
@@ -9,7 +9,7 @@ The all-phase orchestrator. `phase1-loop` lands **one** issue; this decides *whi
 issues, in what order, in parallel, across phases — and hands back at the right time.
 
 **Stateless: one full wave per fresh invocation.** State lives on disk (SPEC.md,
-`docs/phase1-tracker.md`, GitHub issues, `docs/decisions.md`, `git log`) — never in a
+GitHub issues, `docs/decisions.md`, `git log`) — never in a
 running context. Each invocation reconstructs where things stand from that alone, runs
 **one complete wave** (dispatch → review → fix → wave-gate → merge → persist), commits,
 exits. An external driver re-invokes with a clean context, so the build's context never
@@ -49,9 +49,8 @@ while :; do pi -p "/skill:project-loop … run one full wave, then stop" || brea
 
 ## The wave — run to completion, then exit
 
-1. **Reconstruct from disk.** Read SPEC.md §15, the tracker current-state block,
-   `docs/decisions.md`, open issues. Confirm `gh` is on **PinetheApple** (`gh auth
-   switch --user PinetheApple` if a write 404s — the dir hook does not fire in the
+1. **Reconstruct from disk.** Read SPEC.md §15, `docs/decisions.md` and the open
+   issues. Confirm `gh` is on **PinetheApple** (`gh auth switch --user PinetheApple` if a write 404s — the dir hook does not fire in the
    non-interactive Bash tool). Assume nothing from a prior context.
 2. **Pick the set.** If advancing the phase hits a stop-point (device, design),
    halt (see Stop-points). Else take the largest **file-disjoint, single-owner,
@@ -67,9 +66,8 @@ while :; do pi -p "/skill:project-loop … run one full wave, then stop" || brea
 4. **Wave gate.** Merge the set to the feature branch; run the full suite on the
    integrated tree (see Wave gate). Red on green slices = an integration finding:
    file, fix, re-gate. Never advance a phase on per-slice green.
-5. **Persist.** Close issues (SHA + evidence in the issue), tracker line → `[x]`,
-   regenerate `CHANGELOG.md` (`git cliff changelog-base..HEAD`), remove spent
-   worktrees. Every result on disk before exit — or the next invocation can't resume.
+5. **Persist.** Close issues (SHA + evidence in the issue), regenerate
+   `CHANGELOG.md` (`git cliff changelog-base..HEAD`), remove spent worktrees. Every result on disk before exit — or the next invocation can't resume.
 6. **Exit.** Report and exit — only now, with the wave fully merged and persisted.
    One wave only; the driver re-invokes fresh. A merged wave leaves **no `.loop-halt`**
    and a new commit, so the driver continues. Any terminal state that dispatched no
@@ -92,8 +90,9 @@ Phase gate to advance: **1→2** all §4 issues closed + wave gate green; **2→
 
 ## Parallelism — bounded by the conflict map
 
-- **File-disjoint tasks run parallel; file-sharing tasks serialize.** Read the tracker
-  conflict map each cycle (A/B share `mixer.cpp` → serial; C/D disjoint → parallel).
+- **File-disjoint tasks run parallel; file-sharing tasks serialize.** Read the issues'
+  `--blocked-by` links and the files each touches, every cycle (A/B share `mixer.cpp`
+  → serial; C/D disjoint → parallel).
 - The C ABI (`kitbag_api.h`) is **single-owner** (§13.7): one in-flight task per symbol.
 - Route by domain: native/C++ → `audio-core-engineer`; RN/TS → `rn-engineer` (not the
   web `react-engineer` — §13.3 breaks under web-React idioms). Review: `ralph` +

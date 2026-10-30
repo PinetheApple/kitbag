@@ -158,7 +158,7 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   and 6/8 clicks **six** times per bar, not two. Rationale: SPEC §17 D1 requires
   the beat interval to be a function of both numerator and denominator, which only
   the quarter-referenced reading satisfies. A product survey
-  (`docs/metronome-bpm-denominator-research.md`) found no standalone metronome
+  (`docs/archive/metronome-bpm-denominator-research.md`) found no standalone metronome
   ships this bare — the well-regarded ones pair it with an explicit beat-unit /
   click-unit control so compound meters can click the dotted-note pulse (Dorico's
   Beat Unit, Pro Tools' Click field, Tempo, Soundbrenner). **User decided against
@@ -169,7 +169,7 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
 
 - **2026-08-04 · M3 performance-surface gaps decided (§5.2, #46)** — Ten unambiguous
   gaps SPEC/design didn't state, decided during the M3 build (deviations recorded in
-  `docs/phase3-tracker.md`): (1) `MAX_LEDS_PER_ROW = 7` — the only simple ceiling
+  `docs/archive/phase3-tracker.md`): (1) `MAX_LEDS_PER_ROW = 7` — the only simple ceiling
   satisfying both §5.2 data points (7 on one row; 16 as four rows of four).
   (2) Irregular-meter LED groupings: 5→3+2, 7→2+2+3, 9→3+3+3; 10, 11 and up chunk
   by 4. (3) Swipe fling = 140 ms of release velocity, capped ±40 BPM (§5.2 says
@@ -363,7 +363,7 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   **[recorded]**
 
 - **2026-10-30 · Stem player layout (§7.2, §7.3, §12, #137)** — The owner chose variant C
-  ("Bottom dock") in `docs/research/mockups/stems-layouts.html`; for the stem player it
+  ("Bottom dock") in `design/kitbag-stems.html`; for the stem player it
   supersedes `design/kitbag-ui.html` §04. Deliberately out: the BPM and key chips' speed
   and pitch actions (#138), count-in, and LUFS. Reset mix sets every stem and the master
   to 0 dB with nothing muted or soloed, and saves the stems. On one stem, mute and solo
@@ -385,7 +385,7 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   so changing `SKIP_SECONDS` means redrawing them. **[recorded]**
 
 - **2026-10-30 · Home and Library layout (§6.2, §12.4, #178)** — The owner chose variant B
-  ("Two tiles, two screens") in `docs/research/mockups/library-layouts.html`; for the Home
+  ("Two tiles, two screens") in `design/kitbag-library.html`; for the Home
   tiles and the Library it supersedes `design/kitbag-ui.html` §04. Songs and Stem songs are
   separate titled screens (`/library`, `/stems`) without filter chips; Setlists open from
   the Songs app bar. Rows sort by title and show title, length · BPM · key, and status
@@ -436,3 +436,8 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   through `expo`, and importing it from the `core-native` barrel would need a stub in every
   package's tests. The mixer's playing state is engine truth with no store copy, so it is
   polled once a second while a stem song is open. **[recorded]**
+
+- **2026-10-30 · Songs filter menu (§6.2, §12, #178)** — The Songs filter icon opens
+  variant A's menu from `design/kitbag-library.html`: filter by analysis status, sort by
+  title, date added or BPM. This amends the earlier #178 entry, which left the icon out
+  because its action was undefined. The menu is not built yet. **[user]**

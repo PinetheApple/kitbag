@@ -64,7 +64,7 @@ is well-built. The Flutter app was deleted 2026-07-17; the stack is React Native
    ESLint replacement (§13.6) is unbuilt. You are the enforcement.
 4. **The 60fps rule** (§4.5, §13.3): does any realtime value touch React state? It
    must not — worklets read the JSI HostObject on the UI thread.
-5. **Docs**: do AGENTS.md/CLAUDE.md/CHANGELOG match reality? This repo has a history
+5. **Docs**: do AGENTS.md/CHANGELOG match reality? This repo has a history
    of documentation that actively lied — five releases claimed as shipped, a comment
    describing intent as behaviour, an invented constant that reached a design file.
 

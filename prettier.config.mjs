@@ -1,6 +1,3 @@
-// Wired into the workspace root at Phase 2 (SPEC §13/§13.6). Was staged under
-// config/ before the RN app existed; see config/README.md for that history.
-
 /**
  * printWidth is 80 to match the C++ realtime core, which is the source of
  * truth (`native/audio_core/.clang-format`: ColumnLimit 80, IndentWidth 2).

@@ -52,7 +52,7 @@ config wins; you cover only what the config cannot check.
 
 - **The linters own the mechanical layer.** `native/audio_core/.clang-format`
   (formatting), `.clang-tidy` (identifier naming, magic numbers in `src/`, bugprone
-  checks), and the staged `config/` ESLint. **Run them first** and do not repeat
+  checks), and the root `eslint.config.mjs`. **Run them first** and do not repeat
   their findings:
   ```sh
   bash scripts/lint.sh          # whole tree, or --staged for the commit

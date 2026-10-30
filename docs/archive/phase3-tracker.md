@@ -86,7 +86,7 @@ broken Kotlin/JNI chain was confirmed to fail the build that CI now runs.
 **Done:** M1a (#41) — `kb_metronome_set_beats` gains the D1 denominator; the beat
 interval is now `(60/bpm) × (4/denominator)` with BPM quarter-note referenced, so
 6/8 clicks six times per bar (no separate click-unit control — see
-`docs/decisions.md` and `docs/metronome-bpm-denominator-research.md`).
+`docs/decisions.md` and `docs/archive/metronome-bpm-denominator-research.md`).
 `metronome_verify` 224 → 264 checks, ralph + code-reviewer pass.
 **Done:** M1b ([#45](https://github.com/PinetheApple/kitbag/issues/45), follow-up to #41) — the TS/Kotlin half is wired: `NativeKitbagCommands.ts`,
 `KitbagCommandsModule.kt` and `KitbagJni.cpp` (stopgap removed) carry the denominator,

@@ -50,7 +50,7 @@
 - **Notable:** Chart display of pitch changes over time is a UX differentiator.
   Customizable A4 (415-466Hz). Supports all instruments.
 
-### GuitarTuna
+### An established tuner app
 
 - **Algorithm v7.1+:** Multi-stage pipeline:
   1. Real-time FFT peak tracking

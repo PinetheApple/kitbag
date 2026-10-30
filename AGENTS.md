@@ -1,7 +1,8 @@
 # Kitbag — Agent Workflow Guide
 
-> **One file, every harness.** `CLAUDE.md` is a symlink to this file, so Claude
-> Code, pi and opencode all read exactly these instructions. Edit this file.
+> **One file, every harness.** Claude Code, pi and opencode read `AGENTS.md`
+> directly. Do not add a `CLAUDE.md` or `CLAUDE.local.md`: Claude Code reads one of
+> those instead of this file.
 
 > **`SPEC.md` is the source of truth**, and the only planning document. Not
 > `CHANGELOG.md`, not this file. If either disagrees with SPEC.md, SPEC.md wins and
@@ -88,11 +89,11 @@ rebuilding the tools on top. What is here now:
 | Path | What it is |
 |------|-----------|
 | `native/audio_core/` | The C++ realtime core. Flat C ABI (`include/kitbag_api.h`), miniaudio backend — SPEC.md §4. Built in Phase 1 (PR #26); still the cheapest verification signal in the project. |
-| `packages/` | The React Native app: pnpm workspaces + Turborepo. `app-shell` (Expo router shell), `core-native` (JSI HostObject + TurboModule — the ONLY native-binding package), `core-state`, `core-db` (Drizzle v7 schema + migration), `core-plugin-api` (the abstract contract), `core-design`, `eslint-plugin-kitbag`, and the tools: `tool-metronome` (built), `tool-library`/`tool-stems`/`tool-sync`/`tool-tuner` (skeletons). |
+| `packages/` | The React Native app: pnpm workspaces + Turborepo. `app-shell` (Expo router shell), `core-native` (JSI HostObject + TurboModule — the ONLY native-binding package), `core-state`, `core-db` (Drizzle schema v17, migrating the Flutter v6 database in place), `core-plugin-api` (the abstract contract), `core-design`, `eslint-plugin-kitbag`, and the tools: `tool-metronome`, `tool-library` (Songs and Stem songs lists), `tool-stems` (stem player) and `tool-tuner` are built; `tool-sync` (play along) is a skeleton. |
 | `SPEC.md` | Product + technical spec. Source of truth. §17 records the locked decisions; §17.1 is what is still open. |
-| `design/` | Four HTML design specs, all binding. Precedence is in SPEC.md §12. |
-| `legacy/` | The only Flutter-era files kept, because SPEC.md cannot reconstruct them: `MediaSessionPlugin.kt` + `AndroidManifest.xml` (ported near line-for-line, §13.9) and `database.dart` + `converters.dart` (the v6 schema and the beat-grid / `.kwav` binary formats, §11). **Reference only — do not build against them.** |
-| `docs/` | Phase trackers (`phase1/2/3-tracker.md`), `decisions.md`, research notes. The Phase 3 tracker holds the wave/conflict map; GitHub issues are the tickets. **Read `docs/tuner-research.md`'s warning banner before touching the tuner.** |
+| `design/` | The binding HTML design specs. Precedence, and which variant of a multi-variant file binds, is in SPEC.md §12. |
+| `legacy/` | `android/MediaSessionPlugin.kt` + `AndroidManifest.xml`, the Flutter-era media-session detection that play-along (§8.2, §13.9) still has to port. **Reference only — do not build against them.** Delete them once `MediaNotificationListenerService.kt` stops being a skeleton. |
+| `docs/` | `decisions.md` (why things were decided), `tuner-functional-spec.md`, research notes, and `archive/` (retired trackers and runbooks, historical only). GitHub issues are the tickets. **Read `docs/tuner-research.md`'s warning banner before touching the tuner.** |
 | `scripts/` | `preflight.sh` (every CI gate locally), `release.sh` + `version.sh` + `verify-apk-signature.sh` (the release path), `install-on-device.sh`, `worktree.sh` (agent worktrees), `lint.sh`/`format.sh`/`install-hooks.sh` (native gate), `changelog.sh`, `run-loop.sh`. |
 
 The old Flutter guide's references — Melos, `pubspec.yaml`, `dart analyze`,
@@ -219,10 +220,13 @@ Short version:
   downbeats, mixer fixes. Headlessly verified.
 - **Phase 2** ✅ (PR #39, merged 2026-07-24) — the RN skeleton; the 60fps rule
   is proven on device (#33 device gate PASSED).
-- **Phase 3** — rebuild the tools in dependency order. **In progress on
-  `feat/phase2-skeleton`**: metronome first (M1–M9 in
-  `docs/phase3-tracker.md`; GitHub issues are the tickets). M3 (#46) is built
-  and awaiting design sign-off; see `.loop-halt`.
+- **Phase 3** — rebuild the tools in dependency order, one issue per PR against
+  `main`. Built: the metronome with setlists and presets, the Home hub, the tuner
+  (#117, #127), song import with background beat analysis (#160), the Songs and
+  Stem songs screens (#178) and the stem player (#137, #177; device
+  verification pending, issues open). Not built: stem speed and key (#138), a
+  single-song player (§6), play along (§8), Settings (#170). Open issues are the
+  backlog.
 
 ## Honesty rules
 

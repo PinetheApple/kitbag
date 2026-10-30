@@ -1,6 +1,6 @@
 ---
 name: phase1-loop
-description: Drives Kitbag's Phase 1 core work autonomously — picks the next unblocked GitHub issue, implements it via the audio-core-engineer agent, runs the ralph + code-reviewer loop, fixes findings, commits, and updates the issue and tracker. Use whenever the user says "run the loop", "work through Phase 1", "next task", "keep going on the core", or asks what to work on next in native/audio_core. Also use when resuming after a break to re-establish where the work stands.
+description: Drives Kitbag's Phase 1 core work autonomously — picks the next unblocked GitHub issue, implements it via the audio-core-engineer agent, runs the ralph + code-reviewer loop, fixes findings, commits, and updates the issue. Use whenever the user says "run the loop", "work through Phase 1", "next task", "keep going on the core", or asks what to work on next in native/audio_core. Also use when resuming after a break to re-establish where the work stands.
 ---
 
 # Phase 1 loop
@@ -45,7 +45,7 @@ These are not stylistic. Each one is here because it went wrong:
 - **Never edit SPEC.md's decisions.** Recording that something landed is fine
   (annotate §2 entries in the established strikethrough style). Changing what the
   spec *requires* is the user's call.
-- **Never loosen a test to make it pass.** CLAUDE.md calls this out by name;
+- **Never loosen a test to make it pass.** AGENTS.md calls this out by name;
   `tuner_verify` was red for months before a real fix (#117).
 
 ## Picking the next task
@@ -85,8 +85,7 @@ Tell the user which issue you picked and why before starting.
 
 ## The pass
 
-**1. Mark it in progress.** `gh issue edit <N> --add-label in-progress`, and set
-the tracker line to `[~]`.
+**1. Mark it in progress.** `gh issue edit <N> --add-label in-progress`.
 
 **2. Implement via the `audio-core-engineer` agent.** Not `general-purpose` —
 it carries no realtime rubric and will allocate on the callback or write a test
@@ -190,19 +189,15 @@ to the user — say what was found and what it means.
 - Regenerate the changelog from the log:
   `git cliff changelog-base..HEAD -o CHANGELOG.md` (config in `cliff.toml`;
   `feat`→Added, `fix`→Fixed; test/docs/chore are dropped from the user-facing
-  file and live only in the tracker + issue). **The `changelog-base..HEAD` range
+  file; the issue and `git log` keep them). **The `changelog-base..HEAD` range
   is mandatory** — the `changelog-base` tag marks the Flutter-removal reset
   (`9a63543`); generating from the *full* log resurrects the deleted 0.1–0.5
   Flutter/tuner `feat` commits, which is exactly the phantom history SPEC.md §2
   killed. Commit the regenerated `CHANGELOG.md`. **Do not hand-edit
   `CHANGELOG.md`** — the commit log is the source of truth; editing the generated
   file just drifts from it.
-- tracker line → `[x]` with a one-line result and the issue number. **Do not
-  embed the commit SHA** — `git log` already maps the work to its SHA, and
-  backfilling a SHA into a committed tracker line forced a second commit every
-  pass. (Historical lines that still carry a SHA are fine; leave them.)
-- `gh issue close <N> --comment "<what landed, commit SHA, verify evidence>"` —
-  the SHA belongs here, in the issue's review trail, not in the tracker body.
+- `gh issue close <N> --comment "<what landed, commit SHA, verify evidence>"`.
+  The issue is the only status record; the SHA goes in this comment.
 
 **Grep the tree for siblings before committing** — a defect found once is a
 pattern until proven otherwise, and this holds for code as much as prose. The

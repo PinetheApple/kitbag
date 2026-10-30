@@ -1,6 +1,3 @@
-// Wired into the workspace root at Phase 2 (SPEC §13/§13.6). Was staged under
-// config/ before the RN app existed; see config/README.md for that history.
-//
 // Invocation (SPEC §13.6 — the `custom_lint --fatal-infos` analogue):
 //   pnpm eslint . --max-warnings 0
 // Rules below are set to "error" so `--max-warnings 0` is the whole gate.

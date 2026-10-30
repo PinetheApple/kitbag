@@ -25,7 +25,8 @@
 //     SharedValue host objects onto the UI runtime.
 //
 // #33 verified this on a physical Android device on 2026-07-24: the sweep
-// tracks live tempo through a 3 s JS starvation (docs/phase2-tracker.md, Wave 5).
+// tracks live tempo through a 3 s JS starvation
+// (docs/archive/phase2-tracker.md, Wave 5).
 
 import {
   getKitbagCommands,

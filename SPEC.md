@@ -47,7 +47,7 @@ framework migration.
 | The Kotlin platform code | `MediaSessionPlugin.kt`, `NotificationListenerService`. Ports from a Flutter plugin to a TurboModule; the Android logic is the same. |
 | The database schema (§11) | SQLite either way. |
 | The design system (§12) | Tokens, components and §12.6 experience rules are framework-agnostic by construction. |
-| The design specs in `design/` | Four HTML files, all still binding. |
+| The design specs in `design/` | All still binding (§12). |
 | The plugin model (§9) | It was always an interface, not a Flutter idiom. |
 
 | Does not survive | Replacement |
@@ -129,8 +129,8 @@ faithfully reproduces them has failed.
   `Mixer::Pause()` is a single release store that holds `read_frame_`, and a
   following `Play()` resumes from it; `Stop()` still rewinds, which is now its
   own distinct job. Exposed on the ABI as `kb_mixer_pause` beside
-  `kb_mixer_stop`. **The UI half is still open** — the audit's "the pause button
-  calls it" cannot be fixed yet because there is no UI. See §7.3.
+  `kb_mixer_stop`. **UI half done 2026-10-29** (#137): the stem player's pause
+  calls `kb_mixer_pause`. See §7.3.
 - `bpm_lookup_service.dart:68` — comment claims title/artist similarity
   matching; the loop returns the first result with nonzero BPM. Wrong-song BPM
   likely.
@@ -468,14 +468,16 @@ seconds anchored to the start of the file; that anchor is the invariant.
 
 ### 4.6 Native dependencies
 
-What `native/audio_core` actually vendors and links, verified 2026-07-17. GPLv3
-compatibility is the constraint; both current dependencies are permissive.
+What `native/audio_core` actually vendors and links, verified 2026-07-17 and
+updated 2026-10-30. GPLv3 compatibility is the constraint: QM-DSP is
+GPL-2.0-or-later, the rest are permissive.
 
 | Dependency | Licence | Role |
 |---|---|---|
 | **miniaudio** (`third_party/miniaudio.h`) | MIT-0 / public domain | Device I/O — AAudio on Android, PipeWire on Linux, CoreAudio on iOS. One API. Also supplies the Speex-derived resampler §4.1 needs. |
 | **Signalsmith Stretch** + **signalsmith-linear** (`third_party/signalsmith/`), *planned* | MIT | Time-stretch and pitch shift for §7.6. Header-only; the linear library supplies its STFT. The same code StemDeck runs in the browser as WASM. |
-| **cycfi/q** (`third_party/cycfi_q/`) | **Boost Software License 1.0** | Vendored but unused since #117: the tuner's McLeod detector (`pitch_detector.cpp`) is ours, and nothing includes cycfi/q. Removing the tree is pending. |
+| **QM-DSP** `DownBeat` + `TempoTrackV2` (`third_party/qm-dsp/`, with bundled kissfft) | **GPL-2.0-or-later** (kissfft BSD-3-Clause) | Downbeat estimation for §4.3 (`downbeat.cpp`). Vendored 2026-07-22; the subset and the GPL note are in its `README.md`. |
+| ~~**cycfi/q** (`third_party/cycfi_q/`)~~ | Boost Software License 1.0 | **Removed 2026-10-30** (#201). Unused since #117: the tuner's McLeod detector (`pitch_detector.cpp`) is ours. |
 
 Everything else is ours: the lookahead scheduler, the mixer, the radix-2 FFT
 (`fft.cpp`), and the beat tracker.
@@ -485,8 +487,8 @@ were built. Do not assume they are present:
 
 - **SoLoud** (mixer/playback). Not used; the mixer is ours.
 - **QM-DSP `BarBeatTrack`** (beat + downbeat). Not used; `beat_tracker.cpp` is
-  hand-rolled spectral-flux → autocorrelation → DP placement, which is why there
-  are no downbeats (§2.5, §4.3).
+  hand-rolled spectral-flux → autocorrelation → DP placement. QM-DSP's
+  `DownBeat` was vendored later for §4.3's downbeats; see the table.
 - **dr_libs / stb_vorbis** (decoders). Not used; decoding goes through miniaudio.
 - **BTrack** — later-ring, out of scope (§3.3).
 
@@ -854,7 +856,8 @@ first implementation**, gated on §4.1.
   is per-row with no exclusivity.
 - **Master gain.** ~~The mixer has none.~~ **Native half done 2026-10-29**
   (#137): `kb_mixer_set_master_gain` scales the summed stems; the metronome and
-  the player are outside it. **Still outstanding:** a master control in the UI.
+  the player are outside it. **UI half done 2026-10-29** (#137): the stem
+  player's Master row.
 - Gain range: reconsider linear 0.0–2.0 (`mixer.h:18-19`). dB with a taper is
   the mixer convention.
 - **Debounce DB writes.** Flutter's `updateGain` fires per pointer event — a
@@ -862,7 +865,7 @@ first implementation**, gated on §4.1.
 - **Fix the gain slider default.** ~~It renders 0.0 because `getGain` returns 0.0
   for unloaded tracks; loaded tracks must report 1.0.~~ **Native half done
   2026-10-29** (#137): `kb_mixer_gain` reports 1.0 for any in-range track until
-  set, loaded or not. **Still outstanding:** the slider that reads it.
+  set, loaded or not. The stem player's per-stem fader reads it (#137).
 - Rows stay ≥48dp; nothing modal mid-song; no hidden swipe-mixer.
 
 ### 7.3 Transport
@@ -870,16 +873,21 @@ first implementation**, gated on §4.1.
 - **Real pause.** ~~`Stop()` resets position to 0 and the pause button calls it —
   pause currently rewinds. Split via §4.4.~~ **Native half done 2026-07-20**
   (`4d6c89a`): the §4.4 split landed — `Mixer::Pause()` holds the position,
-  `kb_mixer_stop` still rewinds, both are on the ABI. **Still outstanding:** a
-  transport UI that calls `kb_mixer_pause`. None exists.
-- **Seek UI.** `Mixer::Seek` and `MixerController.seek` exist; no screen ever
-  calls them. There is no scrubber.
+  `kb_mixer_stop` still rewinds, both are on the ABI. **UI half done 2026-10-29**
+  (#137): the stem player's pause button calls `kb_mixer_pause`.
+- **Seek UI.** ~~`Mixer::Seek` and `MixerController.seek` exist; no screen ever
+  calls them. There is no scrubber.~~ **Done 2026-10-29** (#137): the stem
+  player's scrubber and ±10 s keys seek through `kb_mixer_seek`.
 - Fix the position display — Flutter formats frames as ms against a hardcoded
-  48000.
-- **A-B loop**, beat-snapped, equal-power crossfade.
-- **Per-stem waveforms.** Absent. The waveform renderer is shared UI (§13.1) —
-  it does not live in the library tool.
-- Metronome joins the stem mix on the same grid.
+  48000. **Done** (#137): the clock converts frames at the engine rate.
+- **A-B loop**, beat-snapped, equal-power crossfade. **Built** (#137): the
+  loop points snap to the grid and the native loop reader crossfades on a
+  sine/cosine curve.
+- **Per-stem waveforms.** ~~Absent.~~ **Built** (#137): each stem row draws its
+  waveform. The waveform renderer is shared UI (§13.1) — it does not live in the
+  library tool.
+- Metronome joins the stem mix on the same grid. **Built** (#137): the
+  transport's click key follows the stem grid (D16).
 - Speed and key controls; see §7.6.
 
 ### 7.4 Track count
@@ -1240,9 +1248,11 @@ These hold whatever the stack, and the lint layer enforces them (§13.6):
 
 ---
 
-## 10. F6 — Tuner (deferred)
+## 10. F6 — Tuner
 
 Built in Flutter (1,953 LOC) and deferred by decision. **Do not port it as-is.**
+**Rebuilt 2026-10 (#117, #127)** on a new detector rather than ported; §10.1's
+capture-path and pickup items still need a device.
 The migration changes nothing here: the problem is in the capture path and the
 DSP, both native.
 
@@ -1298,8 +1308,8 @@ Investigate, in this order:
   bass B0.
 - **Detection band.** Constraining to the preset's per-string band is the
   octave-error fix; confirm it is applied. (`kb_tuner_set_band` exists.)
-- **Benchmark against GuitarTuna** on the same device and instrument. It is the
-  UX bar.
+- **Benchmark against the reference tuner app** (one app, chosen by the owner)
+  on the same device and instrument. It is the UX bar.
 
 Treat the current implementation as a prototype that identified the problem, not
 as a base to build on.
@@ -1307,7 +1317,7 @@ as a base to build on.
 ### 10.2 Behaviour (when built)
 
 - Chromatic + instrument presets; auto string detection; A4 415–466Hz.
-- **Hold detected notes longer** — calibrate to GuitarTuna's feel.
+- **Hold detected notes longer** — calibrate to the reference tuner app's feel.
 - **Reset on re-entry.** The in-tune green state currently persists after leaving
   and returning.
 - **Custom tunings** — user-defined note lists (Drop D, DADGAD), saved.
@@ -1317,9 +1327,9 @@ as a base to build on.
   ring = in tune, amber glow = detected), giant note readout, graduated red→green
   strip with a fixed centre line, Auto/A4/Chromatic chips. The built tuner does
   not.
-- **Needle position carries the signal; colour reinforces.** GuitarTuna users
-  revolted when a redesign removed the graduated strip with a centre line; we keep
-  it. Position + "TUNE UP ↑" text + colour = three redundant channels,
+- **Needle position carries the signal; colour reinforces.** Users of the reference
+  tuner app revolted when a redesign removed the graduated strip with a centre
+  line; we keep it. Position + "TUNE UP ↑" text + colour = three redundant channels,
   colourblind-safe (§12.6).
 - In-tune lock: needle snaps to centre, peg ring turns green, one confirmation
   haptic tick. **No sound** — you are listening to the string.
@@ -1336,9 +1346,11 @@ as a base to build on.
 
 ## 11. Data model
 
-The schema is the durable part and survives the stack change. Current tables:
-`Setlists`, `Songs`, `PracticeSessions`, `Tunings`, `LibrarySongs`, `StemSets`,
-`Stems` (schema v6).
+The schema is the durable part and survives the stack change. The Flutter
+build's tables were `Setlists`, `Songs`, `PracticeSessions`, `Tunings`,
+`LibrarySongs`, `StemSets`, `Stems` (schema v6). A reconstruction of that v6 DDL is the
+migration fixture in `packages/core-db/src/migrate-fixtures.test-helper.ts`; the React
+Native schema migrates it in place and is at v17 (`packages/core-db/src/migrate.ts`).
 
 ### 11.1 Persistence layer
 
@@ -1418,6 +1430,8 @@ Two migration notes that are not obvious from the table:
 | `kitbag-playalong.html` | Supersedes the Play-along section. Adds the locked state, seven more states, five sheets, and a code audit. |
 | `kitbag-settings.html` | Designs Settings, latency calibration, restore. **Supersedes exactly one §06 card** — "Settings stay contextual" — and nothing else. |
 | `kitbag-metronome-b.html` ("Chosen") and `kitbag-metronome-status.html` (variant A, Q6 pulse marks, poly row) | Owner-approved layout B (#175). **Supersede the metronome screen in `kitbag-metronome.html` §02, and §03's sheets and numpad, where they differ.** §02's setlists, setlist detail and preset editor, and §04 onward, stay binding. Recorded in `docs/decisions.md`, 2026-10-30; `docs/research/metronome-b-parity.md` is the value table. |
+| `kitbag-library.html` | **Variant B only** ("Two tiles, two screens"; #178). Supersedes `kitbag-ui.html` §04's Home tiles and Library: Songs and Stem songs are separate screens. Variant C is a rejected alternative. From variant A only the filter menu binds: the Songs filter icon opens it (filter by analysis status; sort by title, date added, BPM). `docs/decisions.md` (2026-10-30, #178) lists what is deliberately not built. |
+| `kitbag-stems.html` | **Variant C only** ("Bottom dock"; #137). Supersedes `kitbag-ui.html` §04's Stem player. Variants A and B are rejected alternatives; `docs/decisions.md` (2026-10-30, #137) lists what is deliberately not built. |
 
 ### 12.1 Principles (kitbag-ui §01)
 
@@ -1513,8 +1527,9 @@ Setlists, Setlist detail, Preset editor, Settings, Latency calibration, Restore.
   path to what you were doing dominates the top. The Flutter build has a hardcoded
   "Pick up where you left off" subtitle and a card that navigates to `basePath`
   without resuming anything. It must track the last-used tool for real.
-- **2×2 tool tiles with live subtext** (current BPM, tuning, library count). The
-  built version has none.
+  **Built** (#111, #127): Continue tracks the last-used tool across restarts.
+- **2×2 tool tiles with live subtext** (current BPM, tuning, library count).
+  **Built** (#111, #127).
 - **No bottom-nav**: it caps at ~5 destinations and Kitbag will outgrow it; a hub
   scales with the plugin roster.
 - **Customizable layout**: sensible fixed order by default; long-press any tile
@@ -1995,11 +2010,14 @@ native and stay native:
 1. **Foreground service** (§5.6) — no RN API exists. A Kotlin service, started and
    stopped through a TurboModule, holding the media session for lock-screen and
    headset controls. **This is the piece with no JS analogue and the one most
-   likely to be underestimated.**
+   likely to be underestimated.** Built: `PlaybackService` (#87, #177) carries the
+   metronome and stem songs.
 2. **Notification listener** (§8.2) — the existing `MediaSessionPlugin.kt` and
    `NotificationListenerService`, ported from a Flutter plugin to a TurboModule.
    The Android logic is correct and survives; §2.3's `requestPermission` lie and
    §8.4's missing `lastPositionUpdateTime`/`playbackSpeed` are fixed in the port.
+   **Not ported yet:** `MediaNotificationListenerService.kt` is a skeleton, so the
+   Flutter plugin and its manifest entry stay in `legacy/android/` as the source.
 3. **Audio engine lifecycle** — `kb_engine_create`/`start`/`stop` tied to the
    Android lifecycle, not to a React component's mount.
 
@@ -2072,6 +2090,8 @@ The six questions that blocked schema and toolchain work were answered
 
 ### Phase 1 — Core
 
+**Closed** (PR #26), headlessly verified.
+
 §4 in full: native playback (4.1), phase anchor (4.2), downbeats (4.3), mixer
 fixes (4.4).
 
@@ -2082,6 +2102,8 @@ wasted by the stack decision, which is precisely why the previous revision of th
 spec said to do it before deciding.
 
 ### Phase 2 — Skeleton
+
+**Closed 2026-07-24** (PR #39). The 60fps gate passed on a device (#33).
 
 `core-native` + the JSI HostObject + the TurboModule + the eval-harnessed lint
 rules + the Drizzle migration off the existing v6 database. Proves §13.2 and
@@ -2100,6 +2122,12 @@ steady, that is a foundation problem and everything above it is rework.
 4. **Play along** (§8) — depends on §4.2 and §6's grids. **Fix the cast-class bug
    and get a real device reading first** (§8.3).
 5. **Tuner** (§10) — after §10.1's research.
+
+**Status 2026-10-30:** 1 is built; its redesign (#175) and the practice summary
+(#80, #85) are open. 2 is partly built: import and background beat
+analysis exist (#160), a single-song player does not. 3 is built; device
+verification pending (#137, #177 open), and speed and key (§7.6, #138) are not
+built. 4 has not started; `tool-sync` is a skeleton. 5 is built (#117, #127).
 
 Plugin extensibility (§9) is not a phase; it is how each of the above is built.
 
