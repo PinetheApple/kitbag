@@ -4,9 +4,13 @@
 set -uo pipefail
 
 readonly EXIT_OK=0
-readonly EXIT_DEBUG_KEY=1
+readonly EXIT_REJECTED=1
 readonly EXIT_CANNOT_CHECK=2
 readonly EXIT_USAGE=3
+
+normalise_digest() {
+  tr 'A-F' 'a-f' | tr -d ': '
+}
 
 usage() {
   cat <<'USAGE'
@@ -31,7 +35,7 @@ while [[ ${1:-} == -* ]]; do
       exit "$EXIT_USAGE"
       ;;
     --expect-sha256)
-      EXPECTED_DIGEST=$(tr 'A-F' 'a-f' <<<"${2:-}" | tr -d ': ')
+      EXPECTED_DIGEST=$(normalise_digest <<<"${2:-}")
       [[ -n $EXPECTED_DIGEST ]] || {
         usage
         exit "$EXIT_USAGE"
@@ -61,17 +65,14 @@ if [[ ! -f $APK ]]; then
   exit "$EXIT_USAGE"
 fi
 
-find_apksigner() {
-  if command -v apksigner >/dev/null 2>&1; then
-    command -v apksigner
-    return
-  fi
-  local sdk=${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}
-  [[ -n $sdk ]] || return 1
-  find "$sdk/build-tools" -maxdepth 2 -name apksigner -type f 2>/dev/null | sort -V | tail -1
+find_build_tool() {
+  local name=$1 sdk=${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}
+  command -v "$name" && return
+  [[ -n $sdk ]] || return 0
+  find "$sdk/build-tools" -maxdepth 2 -name "$name" -type f 2>/dev/null | sort -V | tail -1
 }
 
-APKSIGNER=$(find_apksigner)
+APKSIGNER=$(find_build_tool apksigner)
 if [[ -z ${APKSIGNER:-} || ! -x $APKSIGNER ]]; then
   echo "verify-apk-signature: apksigner not found; set ANDROID_HOME" >&2
   exit "$EXIT_CANNOT_CHECK"
@@ -88,7 +89,7 @@ VERIFY_STATUS=$?
 if ((VERIFY_STATUS != 0)); then
   echo "verify-apk-signature: APK is not signed, or apksigner rejected it:" >&2
   echo "$CERTS" | head -40 >&2
-  exit "$EXIT_DEBUG_KEY"
+  exit "$EXIT_REJECTED"
 fi
 
 # Signer labels differ across build-tools versions; the digest line is stable.
@@ -96,8 +97,7 @@ mapfile -t DIGESTS < <(
   echo "$CERTS" |
     grep -iE 'certificate SHA-?256 digest' |
     sed -E 's/^[^:]*: *//' |
-    tr 'A-F' 'a-f' |
-    tr -d ': ' |
+    normalise_digest |
     sort -u
 )
 
@@ -110,7 +110,7 @@ fi
 if ((${#DIGESTS[@]} > 1)); then
   echo "verify-apk-signature: expected one signer, found ${#DIGESTS[@]}:" >&2
   printf '  %s\n' "${DIGESTS[@]}" >&2
-  exit "$EXIT_DEBUG_KEY"
+  exit "$EXIT_REJECTED"
 fi
 
 readonly APK_DIGEST=${DIGESTS[0]}
@@ -125,8 +125,7 @@ DEBUG_DIGEST=$(
     grep -iE 'SHA-?256:' |
     head -1 |
     sed -E 's/^[^:]*: *//' |
-    tr 'A-F' 'a-f' |
-    tr -d ': '
+    normalise_digest
 )
 
 if [[ -z $DEBUG_DIGEST ]]; then
@@ -137,14 +136,14 @@ fi
 if [[ $APK_DIGEST == "$DEBUG_DIGEST" ]]; then
   echo "verify-apk-signature: APK is signed with the DEBUG key — never publish this" >&2
   echo "  set ANDROID_KEYSTORE_PATH / ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS" >&2
-  exit "$EXIT_DEBUG_KEY"
+  exit "$EXIT_REJECTED"
 fi
 
 if [[ -n $EXPECTED_DIGEST && $APK_DIGEST != "$EXPECTED_DIGEST" ]]; then
   echo "verify-apk-signature: APK is not signed with the expected release certificate" >&2
   echo "  signer   ${APK_DIGEST}" >&2
   echo "  expected ${EXPECTED_DIGEST}" >&2
-  exit "$EXIT_DEBUG_KEY"
+  exit "$EXIT_REJECTED"
 fi
 
 echo "verify-apk-signature: ok — one signer, not the debug key${EXPECTED_DIGEST:+, the expected certificate} (sha256 ${APK_DIGEST:0:16}...)"

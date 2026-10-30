@@ -26,7 +26,6 @@ fail() {
   FAIL=$((FAIL + 1))
 }
 
-# expect <name> <want_exit> <want_text> <command...>
 expect() {
   local name=$1 want_exit=$2 want_text=$3
   shift 3
@@ -41,7 +40,6 @@ expect() {
   fi
 }
 
-# expect_stdout <name> <want_stdout> <command...>: exit 0 and stdout exactly <want_stdout>.
 expect_stdout() {
   local name=$1 want=$2
   shift 2
@@ -75,15 +73,14 @@ make_fixture() {
 
 version_in() { (cd "$1" && ./scripts/version.sh "${@:2}"); }
 
-# fixture_after <floor> <tag> <subject> [body]
 fixture_after() {
-  local dir
-  dir=$(make_fixture "$1")
-  git -C "$dir" tag "$2"
-  if (($# > 3)); then
-    commit "$dir" "$3" -m "$4"
+  local floor=$1 tag=$2 subject=$3 body=${4-} dir
+  dir=$(make_fixture "$floor")
+  git -C "$dir" tag "$tag"
+  if [[ -n $body ]]; then
+    commit "$dir" "$subject" -m "$body"
   else
-    commit "$dir" "$3"
+    commit "$dir" "$subject"
   fi
   echo "$dir"
 }

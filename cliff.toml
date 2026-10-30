@@ -55,7 +55,6 @@ tag_pattern = "v[0-9]*"
 topo_order = false
 sort_commits = "oldest"
 
-# Only user-facing types reach the changelog; issues and the tracker carry the rest.
 commit_parsers = [
   { message = "^feat", group = "Added" },
   { message = "^fix", group = "Fixed" },

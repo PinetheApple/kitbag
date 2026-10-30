@@ -47,6 +47,17 @@ STUB
 chmod +x "$SDK_FULL/$TOOLS/apksigner" "$SDK_FULL/$TOOLS/aapt2"
 cp "$SDK_FULL/$TOOLS/apksigner" "$SDK_NO_AAPT2/$TOOLS/"
 
+host_path_without_build_tools() {
+  local dir kept=()
+  IFS=: read -ra dirs <<<"$PATH"
+  for dir in "${dirs[@]}"; do
+    [[ -x $dir/aapt2 || -x $dir/apksigner ]] || kept+=("$dir")
+  done
+  (IFS=: && echo "${kept[*]}")
+}
+HOST_PATH=$(host_path_without_build_tools)
+readonly HOST_PATH
+
 readonly APK="$SCRATCH/app-release.apk"
 echo "not really an apk" > "$APK"
 
@@ -61,12 +72,11 @@ signed_with() { FAKE_SIGNER=$1; }
 apk_reports() { FAKE_NAME=$1 FAKE_CODE=$2; }
 sdk() { SDK=$1; }
 
-# expect <name> <want_exit> <want_text> <gate args...>
 expect() {
   local name=$1 want_exit=$2 want_text=$3
   shift 3
   local out_dir="$SCRATCH/out-$((PASS + FAIL))" output status problem=""
-  output=$(PATH="$SDK/$TOOLS:$PATH" ANDROID_HOME="$SDK" ANDROID_SDK_ROOT='' \
+  output=$(PATH="$SDK/$TOOLS:$HOST_PATH" ANDROID_HOME="$SDK" ANDROID_SDK_ROOT='' \
     FAKE_SIGNER="$FAKE_SIGNER" FAKE_NAME="$FAKE_NAME" FAKE_CODE="$FAKE_CODE" \
     bash "$GATE" --out "$out_dir" "$@" 2>&1)
   status=$?

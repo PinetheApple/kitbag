@@ -9,26 +9,26 @@ readonly EXIT_USAGE=3
 readonly ASSET=kitbag.apk
 SCRIPTS=$(cd "$(dirname "$0")" && pwd)
 readonly SCRIPTS
-readonly RELEASE_CERT_FILE="$SCRIPTS/../packages/app-shell/android/app/release-cert.sha256"
+readonly RELEASE_CERT=packages/app-shell/android/app/release-cert.sha256
+readonly RELEASE_CERT_FILE="$SCRIPTS/../$RELEASE_CERT"
 
 usage() {
-  cat <<'USAGE'
+  cat <<USAGE
 usage: release-gate.sh [--out DIR] <apk> <version> [previous-tag]
        release-gate.sh --version-only <apk> <version>
 
 Fails unless <apk> is signed by exactly the pinned release certificate
-(packages/app-shell/android/app/release-cert.sha256), its versionName is
-<version>, its versionCode is the one `version.sh code` derives, and that code
-is above [previous-tag]'s. On success stages kitbag.apk and kitbag.apk.sha256
-in DIR (default dist/release).
+(${RELEASE_CERT}), its versionName is <version>, its versionCode is the one
+\`version.sh code\` derives, and that code is above [previous-tag]'s. On success
+stages ${ASSET} and ${ASSET}.sha256 in DIR (default dist/release).
 
 --version-only checks versionName and versionCode only and stages nothing:
 CI's pin of build.gradle's versionCode formula to version.sh's.
 
-exit 0  passed
-exit 1  the APK failed a gate
-exit 2  cannot check (missing aapt2)
-exit 3  usage error
+exit ${EXIT_OK}  passed
+exit ${EXIT_REJECTED}  the APK failed a gate
+exit ${EXIT_CANNOT_CHECK}  cannot check (missing aapt2)
+exit ${EXIT_USAGE}  usage error
 USAGE
 }
 
@@ -83,16 +83,14 @@ if ((!version_only)); then
     fail "signature gate did not accept $APK (reason above)" "$EXIT_REJECTED"
 fi
 
-find_aapt2() {
-  local sdk=${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}
-  if [[ -z $sdk ]]; then
-    command -v aapt2 || true
-    return
-  fi
-  find "$sdk/build-tools" -maxdepth 2 -name aapt2 -type f 2>/dev/null | sort -V | tail -1
+find_build_tool() {
+  local name=$1 sdk=${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}
+  command -v "$name" && return
+  [[ -n $sdk ]] || return 0
+  find "$sdk/build-tools" -maxdepth 2 -name "$name" -type f 2>/dev/null | sort -V | tail -1
 }
 
-aapt2=$(find_aapt2)
+aapt2=$(find_build_tool aapt2)
 [[ -n $aapt2 && -x $aapt2 ]] || fail "aapt2 not found; set ANDROID_HOME — the version gates cannot run" "$EXIT_CANNOT_CHECK"
 
 badging=$("$aapt2" dump badging "$APK_PATH" 2>&1) || fail "aapt2 could not read $APK: $badging" "$EXIT_CANNOT_CHECK"

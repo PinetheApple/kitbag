@@ -6,8 +6,10 @@ readonly EXIT_USAGE=2
 readonly EXIT_OUT_OF_BOUNDS=3
 readonly EXIT_NOTHING_TO_RELEASE=4
 
-readonly SEMVER_RE='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+readonly SEMVER_CORE='(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)'
+readonly SEMVER_RE="^${SEMVER_CORE}\$"
 readonly TAG_PREFIX=v
+readonly TAG_RE="^${TAG_PREFIX}${SEMVER_CORE}\$"
 readonly MAX_MINOR=99
 readonly MAX_PATCH=99
 readonly CODE_PER_MAJOR=10000
@@ -25,7 +27,7 @@ readonly APP_JSON=packages/app-shell/app.json
 readonly MIRRORS=(package.json packages/app-shell/package.json)
 
 usage() {
-  cat <<'USAGE'
+  cat <<USAGE
 usage: version.sh current | set <major.minor.patch> | check
        version.sh next | latest-tag | code <major.minor.patch | vX.Y.Z>
 
@@ -36,18 +38,18 @@ usage: version.sh current | set <major.minor.patch> | check
               commits since it, never below app.json; app.json itself if untagged
   latest-tag  print the highest vX.Y.Z tag, or nothing
   code        print the Android versionCode for <version>:
-              major*10000 + minor*100 + patch, with minor and patch <= 99 and
-              the code in 1..2100000000 (the Play Store cap); semver order
-              then equals versionCode order
+              major*${CODE_PER_MAJOR} + minor*${CODE_PER_MINOR} + patch, with minor <= ${MAX_MINOR},
+              patch <= ${MAX_PATCH} and the code in ${MIN_VERSION_CODE}..${MAX_VERSION_CODE} (the Play Store
+              cap); semver order then equals versionCode order
 
 Bump: breaking (! or BREAKING CHANGE) -> major, or minor below 1.0.0;
 feat -> minor; anything else -> patch.
 
 exit 0  ok
-exit 1  versions have drifted
-exit 2  usage error
-exit 3  version out of versionCode bounds (minor, patch <= 99)
-exit 4  no commits since the latest tag
+exit ${EXIT_DRIFT}  versions have drifted
+exit ${EXIT_USAGE}  usage error
+exit ${EXIT_OUT_OF_BOUNDS}  version out of versionCode bounds
+exit ${EXIT_NOTHING_TO_RELEASE}  no commits since the latest tag
 USAGE
 }
 
@@ -88,7 +90,7 @@ version_code() {
 
 latest_tag() {
   git tag -l "${TAG_PREFIX}*" |
-    { grep -E "^${TAG_PREFIX}${SEMVER_RE:1}" || true; } |
+    { grep -E "$TAG_RE" || true; } |
     sort -V |
     tail -1
 }
@@ -183,7 +185,7 @@ case ${1-} in
     ;;
   code)
     version=${2-}
-    [[ $version != "$TAG_PREFIX"* ]] || version=${version#"$TAG_PREFIX"}
+    version=${version#"$TAG_PREFIX"}
     require_semver "$version"
     version_code "$version" ||
       die "${version} is out of bounds (minor and patch <= ${MAX_MINOR}, versionCode ${MIN_VERSION_CODE}..${MAX_VERSION_CODE})" "$EXIT_OUT_OF_BOUNDS"
