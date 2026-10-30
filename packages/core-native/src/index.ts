@@ -41,7 +41,7 @@ export {
 } from './host/snapshot.ts';
 export * from './generated/nativeConstants.gen.ts';
 
-export { confirmHaptic } from './haptics.ts';
+export { confirmHaptic, tickHaptic } from './haptics.ts';
 export type {
   SongTransportShowState,
   TransportEvent,

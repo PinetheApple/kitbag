@@ -7,3 +7,10 @@ export function confirmHaptic(): void {
   if (Platform.OS !== 'android') return;
   performAndroidHapticsAsync(AndroidHaptics.Confirm).catch(() => undefined);
 }
+
+export function tickHaptic(): void {
+  if (Platform.OS !== 'android') return;
+  performAndroidHapticsAsync(AndroidHaptics.Segment_Tick).catch(
+    () => undefined,
+  );
+}
