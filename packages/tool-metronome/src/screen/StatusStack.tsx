@@ -3,6 +3,7 @@ import {
   IconGlyph,
   iconSizes,
   LiveText,
+  useReduceMotionValue,
   useTheme,
 } from '@kitbag/core-design';
 import { KB_COUNT_IN_BARS } from '@kitbag/core-native';
@@ -25,13 +26,13 @@ import {
   type PracticeSettings,
   type StatusRows,
 } from '../logic/statusRows.ts';
+import { trackOpacity } from '../logic/trackOpacity.ts';
 import { BeatLegend } from './BeatDots.tsx';
 import { LiveSlot } from './LiveSlot.tsx';
 import { MuteStatus } from './MuteStatus.tsx';
 import { countInInk, useStatusStyles } from './statusStyles.ts';
 import { StatusVariant } from './StatusVariant.tsx';
 import type { MetronomeFrameValues } from './useMetronomeFrame.ts';
-import { trackOpacity, useStillMotion } from './useStillMotion.ts';
 
 export type StatusFrame = Pick<
   MetronomeFrameValues,
@@ -60,7 +61,7 @@ function RampStatus({ rows, frame, ramp }: RampStatusProps) {
   const styles = useStatusStyles();
   const { rampNextBpm, rampRemaining, rampStepProgress } = frame;
   const { unit, interval } = ramp;
-  const still = useStillMotion();
+  const still = useReduceMotionValue();
   const next = useDerivedValue(() => rampNextText(rampNextBpm.value));
   const remaining = useDerivedValue(() =>
     rampRemainingText(rampRemaining.value, unit),
