@@ -14,7 +14,7 @@ import {
   configureMetronomeRuntime,
   DEFAULT_BPM,
   metronomeStore,
-  type MetronomeRuntime,
+  type MetronomeCommands,
 } from '@kitbag/core-state';
 
 const PHASE_STEPS = 1000;
@@ -33,7 +33,7 @@ function readBoundedQuery(
   return Math.min(Math.max(value, min), max);
 }
 
-const webCommands: MetronomeRuntime['commands'] = {
+const webCommands: MetronomeCommands = {
   start: () => Promise.resolve(0),
   engineHold: () => Promise.resolve(KB_RESULT.KB_OK),
   engineRelease: () => undefined,

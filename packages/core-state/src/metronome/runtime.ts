@@ -1,13 +1,9 @@
-import {
-  getKitbagCommands,
-  getKitbagHostObject,
-  type EngineHoldCommands,
-} from '@kitbag/core-native';
+import { getKitbagCommands, getKitbagHostObject } from '@kitbag/core-native';
 
 import type { EngineBpm, MetronomeCommands, NowFrame } from './commands.ts';
 
 export interface MetronomeRuntime {
-  readonly commands: MetronomeCommands & EngineHoldCommands;
+  readonly commands: MetronomeCommands;
   readonly nowFrame: NowFrame;
   readonly engineBpm: EngineBpm;
 }

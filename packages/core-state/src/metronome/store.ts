@@ -9,8 +9,7 @@ import {
   KB_RAMP_UNIT,
   KB_SUBDIVISION_BOUNDS,
   KB_VOLUME_BOUNDS,
-  holdEngine,
-  type EngineHoldCommands,
+  acquireEngineHold,
   type KbCountInBars,
   type KbDenominator,
 } from '@kitbag/core-native';
@@ -19,7 +18,6 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import {
   defaultCommands,
   defaultEngineBpm,
-  defaultEngineHold,
   defaultNowFrame,
   type EngineBpm,
   type MetronomeCommands,
@@ -307,7 +305,6 @@ function transportActions(
     },
 
     start: () => {
-      void commands.start();
       commands.metronomeStart(nowFrame());
       set({ running: true });
     },
@@ -331,22 +328,25 @@ export function createMetronomeStore(
   nowFrame: NowFrame = defaultNowFrame,
   engineBpm: EngineBpm = defaultEngineBpm,
   now: () => number = Date.now,
-  engine: EngineHoldCommands = defaultEngineHold,
 ): StoreApi<MetronomeStore> {
-  const holds = new Set<() => void>();
+  let holds = 0;
   const store = createStore<MetronomeStore>((set, get) => {
     const tempo = engineTempoOf(set, get, engineBpm);
     return {
       ...initialConfig(),
       ...patternActions(set, get, commands),
-      ...soundActions(set, get, commands, () => holds.size > 0),
+      ...soundActions(set, get, commands, () => holds > 0),
       ...tempoActions(set, get, commands, tempo),
       ...transportActions(set, commands, nowFrame, tempo),
       holdEngine: () => {
-        const release = holdEngine(engine);
-        holds.add(release);
+        const release = acquireEngineHold(commands);
+        let held = true;
+        holds++;
         return () => {
-          if (holds.delete(release)) release();
+          if (!held) return;
+          held = false;
+          holds--;
+          release();
         };
       },
       resetPractice: () => {

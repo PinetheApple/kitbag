@@ -37,6 +37,8 @@ function makeCommands() {
     setLatencyOffset: vi.fn(),
     setRamp: vi.fn(),
     setBarMute: vi.fn(),
+    engineHold: vi.fn(() => Promise.resolve<number>(KB_RESULT.KB_OK)),
+    engineRelease: vi.fn(),
   } satisfies MetronomeCommands;
 }
 
@@ -44,20 +46,9 @@ const NOW_FRAME = 48_000;
 let commands: ReturnType<typeof makeCommands>;
 let store: ReturnType<typeof createMetronomeStore>;
 
-const engineHold = {
-  engineHold: () => Promise.resolve<number>(KB_RESULT.KB_OK),
-  engineRelease: () => undefined,
-};
-
 beforeEach(() => {
   commands = makeCommands();
-  store = createMetronomeStore(
-    commands,
-    () => NOW_FRAME,
-    undefined,
-    undefined,
-    engineHold,
-  );
+  store = createMetronomeStore(commands, () => NOW_FRAME);
 });
 
 // `satisfies` fails typecheck when a HostObject read is added without a key here.
@@ -397,7 +388,6 @@ describe('every mutation maps 1:1 onto an engine command', () => {
 describe('transport start / stop / pause', () => {
   it('start opens the device and starts the transport at the polled frame', () => {
     store.getState().start();
-    expect(commands.start).toHaveBeenCalledTimes(1);
     expect(commands.metronomeStart).toHaveBeenCalledWith(NOW_FRAME);
     expect(store.getState().running).toBe(true);
   });

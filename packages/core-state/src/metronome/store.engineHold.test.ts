@@ -1,4 +1,4 @@
-import { KB_RESULT, type EngineHoldCommands } from '@kitbag/core-native';
+import { KB_RESULT } from '@kitbag/core-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { type MetronomeCommands } from './commands.ts';
@@ -7,6 +7,7 @@ import { createMetronomeStore } from './store.ts';
 const SOUND = 2;
 const CYCLES = 12;
 const FAILED_HOLDS = 3;
+const UNREACHED_HOLDS = 1;
 
 function makeCommands() {
   return {
@@ -27,30 +28,17 @@ function makeCommands() {
     setLatencyOffset: vi.fn(),
     setRamp: vi.fn(),
     setBarMute: vi.fn(),
+    engineHold: vi.fn(() => Promise.resolve<number>(KB_RESULT.KB_OK)),
+    engineRelease: vi.fn(),
   } satisfies MetronomeCommands;
 }
 
-function makeEngine() {
-  return {
-    engineHold: vi.fn(() => Promise.resolve<number>(KB_RESULT.KB_OK)),
-    engineRelease: vi.fn(),
-  } satisfies EngineHoldCommands;
-}
-
 let commands: ReturnType<typeof makeCommands>;
-let engine: ReturnType<typeof makeEngine>;
 let store: ReturnType<typeof createMetronomeStore>;
 
 beforeEach(() => {
   commands = makeCommands();
-  engine = makeEngine();
-  store = createMetronomeStore(
-    commands,
-    () => 0,
-    () => 0,
-    Date.now,
-    engine,
-  );
+  store = createMetronomeStore(commands, () => 0);
 });
 
 describe('the metronome screen holding the output device', () => {
@@ -58,8 +46,8 @@ describe('the metronome screen holding the output device', () => {
     const release = store.getState().holdEngine();
     release();
     release();
-    expect(engine.engineHold).toHaveBeenCalledOnce();
-    expect(engine.engineRelease).toHaveBeenCalledOnce();
+    expect(commands.engineHold).toHaveBeenCalledOnce();
+    expect(commands.engineRelease).toHaveBeenCalledOnce();
   });
 
   it('keeps the hold through stop, pause and a notification stop', () => {
@@ -70,12 +58,12 @@ describe('the metronome screen holding the output device', () => {
     store.getState().pause();
     store.setState({ running: true });
     store.setState({ running: false });
-    expect(engine.engineRelease).not.toHaveBeenCalled();
+    expect(commands.engineRelease).not.toHaveBeenCalled();
   });
 
-  it('balances holds and releases when holds fail', async () => {
+  it('releases every hold that reached the engine, failed or not', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    engine.engineHold
+    commands.engineHold
       .mockResolvedValueOnce(KB_RESULT.KB_ERROR_DEVICE_START_FAILED)
       .mockRejectedValueOnce(new Error('no module'))
       .mockImplementationOnce(() => {
@@ -88,8 +76,10 @@ describe('the metronome screen holding the output device', () => {
     await vi.waitFor(() => {
       expect(warn).toHaveBeenCalledTimes(FAILED_HOLDS);
     });
-    expect(engine.engineHold).toHaveBeenCalledTimes(CYCLES);
-    expect(engine.engineRelease).toHaveBeenCalledTimes(CYCLES);
+    expect(commands.engineHold).toHaveBeenCalledTimes(CYCLES);
+    expect(commands.engineRelease).toHaveBeenCalledTimes(
+      CYCLES - UNREACHED_HOLDS,
+    );
     warn.mockRestore();
   });
 });
@@ -103,9 +93,9 @@ describe('previewing a sound', () => {
     store.getState().previewSound(SOUND, false);
     expect(commands.previewSound).toHaveBeenCalledOnce();
     expect(commands.previewSound).toHaveBeenCalledWith(SOUND, true);
-    const [held] = engine.engineHold.mock.invocationCallOrder;
+    const [held] = commands.engineHold.mock.invocationCallOrder;
     const [previewed] = commands.previewSound.mock.invocationCallOrder;
-    const [released] = engine.engineRelease.mock.invocationCallOrder;
+    const [released] = commands.engineRelease.mock.invocationCallOrder;
     expect(held).toBeLessThan(previewed ?? 0);
     expect(previewed).toBeLessThan(released ?? 0);
   });

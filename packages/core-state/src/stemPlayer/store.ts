@@ -1,5 +1,9 @@
 import type { StemSetRecord } from '@kitbag/core-db';
-import { holdEngine, KB_MAX_TRACKS, KB_RESULT } from '@kitbag/core-native';
+import {
+  acquireEngineHold,
+  KB_MAX_TRACKS,
+  KB_RESULT,
+} from '@kitbag/core-native';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { mixActions, transportActions } from './actions.ts';
@@ -268,7 +272,7 @@ export function createStemPlayerStore(
       ...closedState,
       open: async (setId, waveformBars) => {
         if (get().setId !== null) teardown(get);
-        releaseEngine ??= holdEngine(runtimeOf().commands);
+        releaseEngine ??= acquireEngineHold(runtimeOf().commands);
         const opened = ++session;
         set({ ...closedState, status: 'loading', setId });
         try {

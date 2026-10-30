@@ -7,18 +7,22 @@ const warnHoldFailed = (reason: unknown) => {
   console.warn('[kitbag] engine hold failed', reason);
 };
 
-// The engine needs one release per hold call, whatever the hold returned or threw.
-export function holdEngine(commands: EngineHoldCommands): () => void {
-  const hold = async () => commands.engineHold();
-  hold()
-    .then((result) => {
-      if (result !== KB_RESULT.KB_OK) warnHoldFailed(result);
-    })
-    .catch(warnHoldFailed);
-  let held = true;
+const warnUnlessHeld = (result: number) => {
+  if (result !== KB_RESULT.KB_OK) warnHoldFailed(result);
+};
+
+const releaseNothing = () => undefined;
+
+export function acquireEngineHold(commands: EngineHoldCommands): () => void {
+  let pending: Promise<number>;
+  try {
+    pending = commands.engineHold();
+  } catch (error: unknown) {
+    warnHoldFailed(error);
+    return releaseNothing;
+  }
+  void pending.then(warnUnlessHeld, warnHoldFailed);
   return () => {
-    if (!held) return;
-    held = false;
     commands.engineRelease();
   };
 }

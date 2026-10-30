@@ -39,6 +39,8 @@ function setup(engineBpm = () => 120) {
     setLatencyOffset: vi.fn(),
     setRamp: vi.fn(),
     setBarMute: vi.fn(),
+    engineHold: vi.fn(),
+    engineRelease: vi.fn(),
   };
   const metronome = createMetronomeStore(commands, () => 0, engineBpm);
   const library = createLibraryStore({
