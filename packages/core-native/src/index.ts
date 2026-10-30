@@ -42,7 +42,18 @@ export {
 export * from './generated/nativeConstants.gen.ts';
 
 export { confirmHaptic, tickHaptic } from './haptics.ts';
+export {
+  getAppVersion,
+  setAppNightMode,
+  setSystemBarAppearance,
+} from './appChrome';
+export {
+  APP_NIGHT_MODES,
+  type AppNightMode,
+  type AppVersion,
+} from './appNightMode.ts';
 export type {
+  KitbagCommandsConstants,
   SongTransportShowState,
   TransportEvent,
   TransportShowState,

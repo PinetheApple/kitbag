@@ -39,7 +39,16 @@ export type SongTransportShowState = Readonly<{
   skipSeconds: Double;
 }>;
 
+export type KitbagCommandsConstants = Readonly<{
+  versionName: string;
+  versionCode: Double;
+  nightModeSystem: string;
+  nightModeDark: string;
+  nightModeLight: string;
+}>;
+
 export interface Spec extends TurboModule {
+  getConstants(): KitbagCommandsConstants;
   start(): Promise<number>;
   stop(): void;
 
@@ -113,6 +122,8 @@ export interface Spec extends TurboModule {
   songTransportShow(state: SongTransportShowState): void;
   songTransportHide(): void;
   setKeepScreenOn(on: boolean): void;
+  setAppNightMode(mode: string): void;
+  setSystemBarAppearance(light: boolean): void;
   readonly onTransport: EventEmitter<TransportEvent>;
 }
 

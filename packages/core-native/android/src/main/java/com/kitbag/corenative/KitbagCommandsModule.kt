@@ -80,6 +80,17 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     }
   }
 
+  override fun getTypedExportedConstants(): Map<String, Any> =
+    AppChrome.version(reactApplicationContext) + AppChrome.CONSTANTS
+
+  override fun setAppNightMode(mode: String) {
+    AppChrome.setNightMode(reactApplicationContext, mode)
+  }
+
+  override fun setSystemBarAppearance(light: Boolean) {
+    AppChrome.setSystemBarAppearance(reactApplicationContext.currentActivity, light)
+  }
+
   private fun emitTransport(state: TransportState, practice: PracticeClock) {
     emitOnTransport(
       Arguments.createMap().apply {
