@@ -16,6 +16,7 @@ import {
   soundsWith,
   type SoundRole,
 } from '../logic/soundChoice.ts';
+import { useHoldEngine } from './useHoldEngine.ts';
 
 // Heads the sheet; the picker grid below does not reach into the gap.
 const ROLE_GAPS = {
@@ -41,6 +42,7 @@ export function SoundPickerSheet({
   sounds,
   onChange,
 }: SoundPickerSheetProps) {
+  useHoldEngine(visible);
   const [role, setRole] = useState<SoundRole>(SOUND_ROLE.normal);
   const previewSound = useMetronome((state) => state.previewSound);
   const pick = useCallback(

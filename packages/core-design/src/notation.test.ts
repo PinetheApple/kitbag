@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { notationLayout } from './notation.ts';
+import { drawsNotation, notationLayout } from './notation.ts';
 
 // Expected values are the mockup's subdivision SVGs (design/kitbag-metronome-b.html).
 const near = (actual: number, expected: number) => {
@@ -61,5 +61,42 @@ describe('notationLayout', () => {
     );
     expect(numbered).toEqual([3, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15]);
     near(notationLayout(9).numeral?.x ?? 0, 26.2);
+  });
+});
+
+const SUBDIVISIONS = Array.from({ length: 16 }, (_u, i) => i + 1);
+
+const drawnIn = (denominator: number) =>
+  SUBDIVISIONS.filter((n) => drawsNotation(n, denominator));
+
+const beamsIn = (denominator: number) =>
+  drawnIn(denominator).map((n) => notationLayout(n, denominator).beams.length);
+
+describe('drawsNotation', () => {
+  it('draws every subdivision in 4/4 and defaults to it', () => {
+    expect(drawnIn(4)).toEqual(SUBDIVISIONS);
+    expect(beamsIn(4)).toEqual(
+      SUBDIVISIONS.map((n) => notationLayout(n).beams.length),
+    );
+  });
+
+  it.each([
+    { beats: 6, denominator: 8 },
+    { beats: 12, denominator: 8 },
+  ])(
+    'beams one deeper in $beats/$denominator and drops what the tiles never draw',
+    ({ denominator }) => {
+      expect(drawnIn(denominator)).toEqual([
+        2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+      ]);
+      expect(beamsIn(denominator)).toEqual([
+        2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4,
+      ]);
+    },
+  );
+
+  it('beams one shallower in 2/2 and drops halves and unbeamed groups', () => {
+    expect(drawnIn(2)).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
+    expect(beamsIn(2)).toEqual([1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 3]);
   });
 });

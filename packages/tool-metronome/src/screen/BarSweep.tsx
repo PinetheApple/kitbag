@@ -3,16 +3,20 @@ import {
   inset,
   radius,
   size,
-  space,
+  useReduceMotionValue,
 } from '@kitbag/core-design';
-import { View } from 'react-native';
+import { useMemo } from 'react';
 import Animated, {
   useAnimatedStyle,
   type SharedValue,
 } from 'react-native-reanimated';
 
+import { sweepFill } from '../logic/barSweep.ts';
+import { trackOpacity } from '../logic/trackOpacity.ts';
+
 interface BarSweepProps {
   readonly barPhase: SharedValue<number>;
+  readonly gap: number;
 }
 
 const useStyles = createThemedStyles((theme) => ({
@@ -20,7 +24,6 @@ const useStyles = createThemedStyles((theme) => ({
     height: size.sweepTrack,
     borderRadius: radius.sweepTrack,
     backgroundColor: theme.color.surface3,
-    marginTop: space.sectionGap,
     marginHorizontal: inset.sweepH,
     overflow: 'hidden',
   },
@@ -33,17 +36,20 @@ const useStyles = createThemedStyles((theme) => ({
   },
 }));
 
-export function BarSweep({ barPhase }: BarSweepProps) {
+export function BarSweep({ barPhase, gap }: BarSweepProps) {
   const styles = useStyles();
-  const fillStyle = useAnimatedStyle(() => {
-    const phase = barPhase.value;
-    const clamped = phase < 0 ? 0 : phase > 1 ? 1 : phase;
-    return { transform: [{ scaleX: clamped }] };
-  });
+  const spacing = useMemo(() => ({ marginTop: gap }), [gap]);
+  const still = useReduceMotionValue();
+  const trackStyle = useAnimatedStyle(() => ({
+    opacity: trackOpacity(!still.value),
+  }));
+  const fillStyle = useAnimatedStyle(() => ({
+    transform: [{ scaleX: sweepFill(barPhase.value, still.value) }],
+  }));
 
   return (
-    <View style={styles.track}>
+    <Animated.View style={[styles.track, spacing, trackStyle]}>
       <Animated.View style={[styles.fill, fillStyle]} />
-    </View>
+    </Animated.View>
   );
 }

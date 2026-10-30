@@ -21,6 +21,8 @@ import {
 } from 'react-native';
 
 import { useLibraryRefresh } from '../library/useLibraryRefresh.ts';
+import { belowTempoReserve } from '../logic/belowTempo.ts';
+import { noteStrip, type NoteStrip } from '../logic/noteStrip.ts';
 import { practiceBadgeCount } from '../logic/statusRows.ts';
 import { pushTap, tapTempoBpm } from '../logic/tapTempo.ts';
 import { BeatDots } from './BeatDots.tsx';
@@ -36,6 +38,7 @@ import { SubdivisionSheet } from './SubdivisionSheet.tsx';
 import { SwipeHint } from './SwipeHint.tsx';
 import { SwipeTempoZone } from './SwipeTempoZone.tsx';
 import { Transport } from './Transport.tsx';
+import { useHoldEngine } from './useHoldEngine.ts';
 import { useTempoSwipe } from './useTempoSwipe.ts';
 import { useMetronomeFrame } from './useMetronomeFrame.ts';
 import { useScreenDensity } from './useScreenDensity.ts';
@@ -61,9 +64,6 @@ const useStyles = createThemedStyles((theme) => ({
     flexGrow: 1,
     paddingTop: metronome.belowAppBar,
   },
-  zone: {
-    flexGrow: 1,
-  },
   notes: {
     ...textStyle(textRoles.fieldLabel),
     color: theme.color.text2,
@@ -82,14 +82,16 @@ export interface MetronomeScreenProps {
   readonly onOpenSetlists?: () => void;
 }
 
-function useLoadedNotes(): string | null {
-  return useLibrary((state) => {
+function useNoteStrip(): NoteStrip | null {
+  const songLoaded = useLibrary((state) => state.loaded !== null);
+  const notes = useLibrary((state) => {
     const loadedId = state.loaded?.presetId;
     if (loadedId === undefined) return null;
     return (
       state.presets.find((preset) => preset.id === loadedId)?.notes ?? null
     );
   });
+  return useMemo(() => noteStrip(songLoaded, notes), [songLoaded, notes]);
 }
 
 export function MetronomeScreen({
@@ -97,6 +99,7 @@ export function MetronomeScreen({
   onBack,
   onOpenSetlists,
 }: MetronomeScreenProps) {
+  useHoldEngine();
   useLibraryRefresh();
   const styles = useStyles();
   const window = useWindowDimensions();
@@ -116,7 +119,7 @@ export function MetronomeScreen({
   const stop = useMetronome((s) => s.stop);
   const hintSeen = useSwipeHint((s) => s.seen);
   const dismissHint = useSwipeHint((s) => s.dismiss);
-  const notes = useLoadedNotes();
+  const strip = useNoteStrip();
   const settings = usePracticeSettings();
 
   const frame = useMetronomeFrame(running, bpm);
@@ -218,9 +221,7 @@ export function MetronomeScreen({
     window.width,
     window.height,
     window.fontScale,
-    beatsPerBar,
-    polyEnabled,
-    notes,
+    strip === null,
   ].join('|');
   const density = useScreenDensity(window.height, layoutKey, scrollable);
   const gap = useMemo(
@@ -228,6 +229,19 @@ export function MetronomeScreen({
       gap: density === 'compact' ? metronome.bodyGapCompact : space.sectionGap,
     }),
     [density],
+  );
+  const fontScale = window.fontScale;
+  const belowTempo = useMemo(
+    () => ({
+      ...gap,
+      minHeight: belowTempoReserve({
+        width: dotsWidth,
+        density,
+        gap: gap.gap,
+        fontScale,
+      }),
+    }),
+    [gap, dotsWidth, density, fontScale],
   );
 
   return (
@@ -248,16 +262,18 @@ export function MetronomeScreen({
           onContentSizeChange={handleContentSize}
         >
           <PracticePill elapsedMs={elapsedMs} onReset={resetPractice} />
-          {notes === null || notes.trim() === '' ? null : (
+          {strip === null ? null : (
             <Text
-              accessibilityLabel={`Song notes: ${notes}`}
+              accessible={strip.spoken !== null}
+              accessibilityLabel={strip.spoken ?? undefined}
+              numberOfLines={1}
               style={styles.notes}
             >
-              {notes}
+              {strip.text}
             </Text>
           )}
           <GestureDetector gesture={zoneSwipe}>
-            <View style={styles.zone} onLayout={handleZoneLayout}>
+            <View onLayout={handleZoneLayout}>
               <SwipeTempoZone
                 bpm={bpm}
                 density={density}
@@ -276,16 +292,19 @@ export function MetronomeScreen({
             onOpenMeter={handleOpenMeter}
             onOpenSubdivision={handleOpenSubdivision}
           />
-          <BeatDots
-            beatCount={beatsPerBar}
-            subdivision={subdivision}
-            polyBeats={polyEnabled ? polyBeats : null}
-            accents={accents}
-            width={dotsWidth}
-            frame={frame}
-            onCycle={cycleAccent}
-          />
-          <StatusStack frame={frame} settings={settings} running={running} />
+          <View style={belowTempo}>
+            <BeatDots
+              beatCount={beatsPerBar}
+              subdivision={subdivision}
+              polyBeats={polyEnabled ? polyBeats : null}
+              accents={accents}
+              width={dotsWidth}
+              density={density}
+              frame={frame}
+              onCycle={cycleAccent}
+            />
+            <StatusStack frame={frame} settings={settings} running={running} />
+          </View>
         </ScrollView>
         <Transport
           running={running}

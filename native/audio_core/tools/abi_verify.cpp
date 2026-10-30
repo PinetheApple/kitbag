@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include "abi_test_engine_hold.h"
 #include "abi_test_metronome.h"
 #include "abi_verify_tuner.h"
 #include "check.h"
@@ -24,7 +25,7 @@ using kitbag_test::g_failures;
 
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 89;
+constexpr int kExpectedChecks = 113;
 
 void ExpectRejected(
     kb_engine* engine,
@@ -298,6 +299,7 @@ int main() {
   TestPlayerNullSafe();
   abi_test::RunMetronomeAbiTests();
   abi_test::RunLongGridAbiTests();
+  abi_test::RunEngineHoldAbiTests();
   RunTunerAbiTests(engine);
 
   if (!RunFileFixtureTests(engine)) {

@@ -16,7 +16,6 @@ import Animated, {
   SlideInDown,
   SlideOutDown,
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
@@ -32,6 +31,7 @@ import {
   shouldDismissSheet,
 } from '../sheetDismiss.ts';
 import { palette, radii } from '../tokens.ts';
+import { useReduceMotionMode } from '../useReduceMotion.ts';
 import { InlineIcon } from './IconGlyph.tsx';
 import { useSheetPortal } from './SheetHost.tsx';
 
@@ -160,7 +160,16 @@ export function Sheet({
 }: SheetProps) {
   const styles = useStyles();
   const titleStyle = [styles.title, titleSize === 'large' && styles.titleLarge];
-  const reduceMotion = useReducedMotion();
+  const motion = useReduceMotionMode();
+  const transitions = useMemo(
+    () => ({
+      scrimIn: FadeIn.reduceMotion(motion),
+      scrimOut: FadeOut.reduceMotion(motion),
+      sheetIn: SlideInDown.reduceMotion(motion),
+      sheetOut: SlideOutDown.reduceMotion(motion),
+    }),
+    [motion],
+  );
   const dragY = useSharedValue(0);
   const sheetHeight = useSharedValue(0);
 
@@ -183,9 +192,9 @@ export function Sheet({
             scheduleOnRN(onDismiss);
             return;
           }
-          dragY.value = reduceMotion ? 0 : withSpring(0);
+          dragY.value = withSpring(0, { reduceMotion: motion });
         }),
-    [dragY, sheetHeight, onDismiss, reduceMotion],
+    [dragY, sheetHeight, onDismiss, motion],
   );
 
   // Edge to edge, nothing resizes for the keyboard and RN's keyboard events
@@ -218,8 +227,8 @@ export function Sheet({
   const content = visible ? (
     <View style={styles.frame}>
       <Animated.View
-        entering={FadeIn}
-        exiting={FadeOut}
+        entering={transitions.scrimIn}
+        exiting={transitions.scrimOut}
         style={[StyleSheet.absoluteFill, dim && styles.scrim]}
       >
         <Pressable
@@ -230,8 +239,8 @@ export function Sheet({
         />
       </Animated.View>
       <Animated.View
-        entering={SlideInDown}
-        exiting={SlideOutDown}
+        entering={transitions.sheetIn}
+        exiting={transitions.sheetOut}
         style={[styles.sheet, sheetStyle]}
         onLayout={handleLayout}
       >

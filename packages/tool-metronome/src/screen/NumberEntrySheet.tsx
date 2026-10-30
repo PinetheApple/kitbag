@@ -12,6 +12,8 @@ import { Text, View } from 'react-native';
 import type { BpmBounds } from '../logic/bpmBounds.ts';
 import {
   confirmEntry,
+  displayDigits,
+  entryLabel,
   openEntry,
   pressBackspace,
   pressDigit,
@@ -86,9 +88,9 @@ export function NumberEntrySheet({
         <Text
           style={styles.entry}
           accessibilityLiveRegion="polite"
-          accessibilityLabel={`${title}, ${entry.digits} ${unit}`}
+          accessibilityLabel={entryLabel(entry, title, unit)}
         >
-          {entry.digits}
+          {displayDigits(entry)}
         </Text>
         <SheetHint centered size="large">
           {bounds.min} – {bounds.max} {unit}

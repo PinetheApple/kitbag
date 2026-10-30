@@ -7,8 +7,10 @@
 // (§13.7); see bpmBounds.ts.
 
 import type { BpmBounds } from './bpmBounds.ts';
+import { TEXT_PLACEHOLDER } from './textPlaceholder.ts';
 
 const RADIX = 10;
+const NOTHING_ENTERED = 'nothing entered';
 
 export interface NumpadEntry {
   readonly digits: string;
@@ -48,6 +50,19 @@ export function pressBackspace(entry: NumpadEntry): NumpadEntry {
   // the finger never typed.
   if (entry.untouched) return { digits: '', untouched: false };
   return { digits: entry.digits.slice(0, -1), untouched: false };
+}
+
+export function displayDigits(entry: NumpadEntry): string {
+  return entry.digits === '' ? TEXT_PLACEHOLDER : entry.digits;
+}
+
+export function entryLabel(
+  entry: NumpadEntry,
+  title: string,
+  unit: string,
+): string {
+  if (entry.digits === '') return `${title}, ${NOTHING_ENTERED}`;
+  return `${title}, ${entry.digits} ${unit}`;
 }
 
 /**

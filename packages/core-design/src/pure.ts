@@ -3,3 +3,6 @@ export * from './icons.ts';
 export * from './clampUnit.ts';
 export * from './percent.ts';
 export * from './sliderMath.ts';
+export * from './tokens.ts';
+export * from './roles.ts';
+export * from './metronomeRoles.ts';

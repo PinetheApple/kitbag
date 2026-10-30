@@ -94,7 +94,7 @@ class Player {
   }
 
   /// App thread, callback quiescent. Frees a source retired but not yet
-  /// reclaimed; Engine::Stop calls it, mirroring the mixer.
+  /// reclaimed.
   void ReleaseRetiredSources() {
     stream_.ReleaseRetiredSources();
   }

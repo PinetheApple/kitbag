@@ -457,6 +457,13 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   preset; the bar returns to "Metronome" and the plain Setlists chip. The loaded song is
   held in memory only, so a restart already starts with none. **[user]**
 
+- **2026-10-31 · Output device lifetime (§4, §13.3, #198)** — The engine decides when the
+  output device stops; JS never stops it on a release or a running-flag change. Holders
+  are the metronome screen while mounted, the stem player while a song is open
+  (backgrounded included) and the click-sound sheet while visible. Play intent keeps the
+  device on, so pause or stop with a screen open holds the stream. With no holder and no
+  intent, the watchdog stops the device after a 2000 ms idle grace. **[recorded — coordinator ruling]**
+
 - **2026-10-31 · Polyrhythm N against M (§5.2, §12, #203)** — Option A in
   `design/kitbag-metronome-poly.html`: the Practice sheet's Polyrhythm switch moves into
   the heading, with a "Poly [− N +] against [− M +]" row and a one-cycle strip below it;

@@ -38,6 +38,8 @@ export const metronome = {
   beatDotGap: 12,
   beatDotGroupGap: 22,
   beatDotLineGap: 10,
+  beatDotLineGapCompact: 6,
+  beatDotMaxCompactMultiLine: 38,
   dotBorder: 2,
   dotAccentBorder: 5,
   dotSilentNowBorder: 4,

@@ -23,6 +23,8 @@ function setup() {
     setLatencyOffset: vi.fn(),
     setRamp: vi.fn(),
     setBarMute: vi.fn(),
+    engineHold: vi.fn(),
+    engineRelease: vi.fn(),
   } satisfies MetronomeCommands;
   return { commands, store: createMetronomeStore(commands, () => 0) };
 }

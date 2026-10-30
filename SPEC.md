@@ -602,7 +602,9 @@ touch any of it.**
 Ported from the Flutter build, which got this right:
 
 - **Swipe anywhere** — the whole screen is the tempo control. Vertical drag
-  ±1 BPM per ~8dp, fling for coarse jumps. Chevrons plus a first-use hint
+  ±1 BPM per ~14dp when slow, accelerating with drag speed to a capped rate;
+  a light haptic tick each time a drag changes the tempo. Lifting the finger
+  never changes the tempo (no fling, #209). Chevrons plus a first-use hint
   animation teach it; the presets are the visible fallback (§12.6).
 - **Preset steppers −10 / −5 / TAP / +5 / +10** in one thumb-height row.
 - **Beat LEDs are the editor** — tap a beat to cycle accent → normal → mute.
@@ -2392,8 +2394,8 @@ Genuinely unresolved. None block work; four are confirmations.
   Confirm on device that they never disagree after a manual reorder mid-gig.
 - **Wordmark/branding.** "KITBAG" set in Space Grotesk; a logo pass can come before
   first release.
-- **Swipe axis & sensitivity.** Vertical ±1 BPM/8dp proposed; confirm on device once
-  the metronome exists.
+- **Swipe axis & sensitivity.** Vertical, speed-scaled from ±1 BPM/14dp (#209);
+  confirm the feel on device.
 
 ---
 

@@ -9,6 +9,7 @@ import {
   KB_RAMP_UNIT,
   KB_SUBDIVISION_BOUNDS,
   KB_VOLUME_BOUNDS,
+  acquireEngineHold,
   type KbCountInBars,
   type KbDenominator,
 } from '@kitbag/core-native';
@@ -90,6 +91,7 @@ export interface MetronomeActions {
   setPolyAccents: (accents: readonly KB_ACCENT[]) => void;
   setSounds: (normal: number, accent: number) => void;
   previewSound: (sound: number, accented: boolean) => void;
+  holdEngine: () => () => void;
   setVolume: (volume: number) => void;
   setLatency: (latencyMs: number) => void;
   setRamp: (config: RampConfig) => void;
@@ -185,6 +187,7 @@ function soundActions(
   set: Set,
   get: Get,
   commands: MetronomeCommands,
+  engineHeld: () => boolean,
 ): Pick<
   MetronomeActions,
   'setSounds' | 'previewSound' | 'setVolume' | 'setLatency' | 'setCountIn'
@@ -202,7 +205,7 @@ function soundActions(
     },
 
     previewSound: (sound, accented) => {
-      if (!isSoundId(sound)) return;
+      if (!isSoundId(sound) || !engineHeld()) return;
       commands.previewSound(sound, accented);
     },
 
@@ -302,7 +305,6 @@ function transportActions(
     },
 
     start: () => {
-      void commands.start();
       commands.metronomeStart(nowFrame());
       set({ running: true });
     },
@@ -327,14 +329,26 @@ export function createMetronomeStore(
   engineBpm: EngineBpm = defaultEngineBpm,
   now: () => number = Date.now,
 ): StoreApi<MetronomeStore> {
+  let holds = 0;
   const store = createStore<MetronomeStore>((set, get) => {
     const tempo = engineTempoOf(set, get, engineBpm);
     return {
       ...initialConfig(),
       ...patternActions(set, get, commands),
-      ...soundActions(set, get, commands),
+      ...soundActions(set, get, commands, () => holds > 0),
       ...tempoActions(set, get, commands, tempo),
       ...transportActions(set, commands, nowFrame, tempo),
+      holdEngine: () => {
+        const release = acquireEngineHold(commands);
+        let held = true;
+        holds++;
+        return () => {
+          if (!held) return;
+          held = false;
+          holds--;
+          release();
+        };
+      },
       resetPractice: () => {
         set((s) => ({ practice: resetPracticeClock(s.practice, now()) }));
       },

@@ -10,11 +10,12 @@ import {
   space,
   textRoles,
   textStyle,
+  useReduceMotionMode,
   withAlpha,
 } from '@kitbag/core-design';
 import { useMemo } from 'react';
 import { Text, View } from 'react-native';
-import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 // The scrim stays dark on Daylight too, so it takes Stage's background.
 const SCRIM = withAlpha(palette.bg.dark, metronome.coachScrim);
@@ -73,7 +74,8 @@ interface SwipeHintProps {
 
 export function SwipeHint({ zoneTop, zoneHeight, onDismiss }: SwipeHintProps) {
   const styles = useStyles();
-  const reduceMotion = useReducedMotion();
+  const motion = useReduceMotionMode();
+  const entering = useMemo(() => FadeIn.reduceMotion(motion), [motion]);
   const ringTop = useMemo(
     () => ({
       paddingTop: Math.max(
@@ -85,7 +87,7 @@ export function SwipeHint({ zoneTop, zoneHeight, onDismiss }: SwipeHintProps) {
   );
   return (
     <Animated.View
-      {...(reduceMotion ? {} : { entering: FadeIn })}
+      entering={entering}
       accessibilityViewIsModal
       style={[styles.scrim, ringTop]}
     >

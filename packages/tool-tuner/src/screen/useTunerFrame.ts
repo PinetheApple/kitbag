@@ -1,7 +1,11 @@
 // §13.3: the needle, note, caption and detected peg are SharedValues written on
 // the UI thread; only the lock event and the dwelled discrete slice reach JS.
 
-import { opacity, type TuneGlyph } from '@kitbag/core-design';
+import {
+  opacity,
+  useReduceMotionValue,
+  type TuneGlyph,
+} from '@kitbag/core-design';
 import {
   KB_TUNER_NO_STRING,
   KITBAG_HOST_OBJECT_KEY,
@@ -10,7 +14,6 @@ import {
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import {
   useFrameCallback,
-  useReducedMotion,
   useSharedValue,
   type FrameInfo,
   type SharedValue,
@@ -83,8 +86,6 @@ export function useTunerFrame({
   onDiscrete,
   onReset,
 }: TunerFrameOptions): TunerFrameValues {
-  const reduceMotion = useReducedMotion();
-
   const needle = useSharedValue(0);
   const needleTarget = useSharedValue(0);
   const active = useSharedValue(0);
@@ -107,7 +108,7 @@ export function useTunerFrame({
   const armed = useSharedValue(false);
   // The JS copy rejects lock events already in flight when a reset lands.
   const resetIdOnJs = useRef(Number.NEGATIVE_INFINITY);
-  const still = useSharedValue(reduceMotion);
+  const still = useReduceMotionValue();
 
   // scheduleOnRN needs a JS function; these stay stable so the frame callback
   // is registered once, and forward to the latest props.
@@ -222,10 +223,6 @@ export function useTunerFrame({
   );
 
   const frame = useFrameCallback(onFrame, false);
-
-  useEffect(() => {
-    still.value = reduceMotion;
-  }, [reduceMotion, still]);
 
   // Runs before `listening` turns the poll on, because entry starts the mic
   // asynchronously; a new tuning or mode while listening resets in place.

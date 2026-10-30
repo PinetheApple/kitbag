@@ -48,6 +48,16 @@ Java_com_kitbag_corenative_KitbagCommandsModule_nativeStop(JNIEnv*, jobject) {
   kitbag::commandStop();
 }
 
+JNIEXPORT jint JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeHold(JNIEnv*, jobject) {
+  return static_cast<jint>(kitbag::commandHold());
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeRelease(JNIEnv*, jobject) {
+  kitbag::commandRelease();
+}
+
 JNIEXPORT void JNICALL
 Java_com_kitbag_corenative_KitbagCommandsModule_nativeMetronomeStart(JNIEnv*, jobject, jdouble anchorFrame) {
   kitbag::commandMetronomeStart(anchorFrame);
@@ -274,7 +284,6 @@ Java_com_kitbag_corenative_KitbagCommandsModule_nativeTunerResetNotePresence(JNI
 // Must not need the JS thread (SPEC §5.8): the service calls these directly.
 JNIEXPORT void JNICALL
 Java_com_kitbag_corenative_EngineTransport_nativeStart(JNIEnv*, jobject) {
-  kitbag::commandStart();
   kitbag::commandMetronomeStartNow();
 }
 

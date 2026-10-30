@@ -39,6 +39,8 @@ function setup(engineBpm = () => 120) {
     setLatencyOffset: vi.fn(),
     setRamp: vi.fn(),
     setBarMute: vi.fn(),
+    engineHold: vi.fn(),
+    engineRelease: vi.fn(),
   };
   const metronome = createMetronomeStore(commands, () => 0, engineBpm);
   const library = createLibraryStore({
@@ -322,6 +324,22 @@ describe('library store', () => {
     expect(Array.from(preset?.accents ?? [])[0]).toBe(
       KB_ACCENT.KB_ACCENT_NORMAL,
     );
+  });
+
+  it('round-trips a 12/8 subdivision through Save current and load', async () => {
+    const { library, metronome } = setup();
+    const id = await library.getState().newSongFromCurrent('Song');
+    metronome.getState().setBeats(12, 8);
+    metronome.getState().setSubdivision(4);
+    await library.getState().saveCurrentInto(id);
+    metronome.getState().setBeats(4, 4);
+    metronome.getState().setSubdivision(2);
+    await library.getState().loadSong(id);
+    expect(metronome.getState()).toMatchObject({
+      beatsPerBar: 12,
+      denominator: 8,
+      subdivision: 4,
+    });
   });
 
   it.each([
