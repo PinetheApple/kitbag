@@ -59,6 +59,7 @@ export const iconGlyphs = {
   error: 'alert-circle',
   folder: 'folder',
   storage: 'database-outline',
+  removeMissing: 'backspace-reverse-outline',
 } as const satisfies Record<string, VectorGlyph>;
 
 export type IconName = keyof typeof iconGlyphs;

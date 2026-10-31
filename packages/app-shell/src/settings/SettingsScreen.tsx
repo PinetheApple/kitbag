@@ -22,10 +22,10 @@ import {
 import { formatAppVersion } from './appVersion.ts';
 import { formatPracticeSummary } from './practiceText.ts';
 import { SettingsFrame } from './SettingsFrame.tsx';
-import { StorageSheet } from './StorageSheet.tsx';
+import { StorageSheets, type StorageSheetKind } from './StorageSheet.tsx';
 import { storageSummary } from './storageText.ts';
 import { usePracticeStats } from './usePracticeStats.ts';
-import { useStorageReport } from './useStorageReport.ts';
+import { useStorage } from './useStorage.ts';
 
 const THEME_OPTIONS: readonly SegmentOption<ThemeChoice>[] = [
   { value: 'system', label: 'System' },
@@ -59,14 +59,21 @@ function PracticeValue() {
 }
 
 function DataSection() {
-  const { report, refresh } = useStorageReport();
+  const { report, missing, refresh, removeMissing } = useStorage();
   const summary = report === null ? null : storageSummary(report);
-  const [storageOpen, setStorageOpen] = useState(false);
+  const [sheet, setSheet] = useState<StorageSheetKind>('none');
   const openStorage = useCallback(() => {
-    setStorageOpen(true);
+    setSheet('storage');
   }, []);
+  const askRemove = useCallback(() => {
+    setSheet('confirm');
+  }, []);
+  const remove = useCallback(() => {
+    setSheet('storage');
+    removeMissing();
+  }, [removeMissing]);
   const closeStorage = useCallback(() => {
-    setStorageOpen(false);
+    setSheet('none');
   }, []);
   return (
     <>
@@ -85,10 +92,14 @@ function DataSection() {
           {summary === null ? null : <EditValue>{summary}</EditValue>}
         </EditRow>
       </EditGroup>
-      <StorageSheet
-        visible={storageOpen}
+      <StorageSheets
+        kind={sheet}
         report={report}
+        missingCount={missing.length}
         onShow={refresh}
+        onAskRemove={askRemove}
+        onRemove={remove}
+        onCancelRemove={openStorage}
         onDismiss={closeStorage}
       />
     </>
