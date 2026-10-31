@@ -1,20 +1,12 @@
 import { countLabel } from '@kitbag/core-design';
 import {
-  activeSetlistOf,
   SONG_STEP,
+  type ActiveSet,
   type LoadedSong,
   type SetlistEntry,
-  type SetlistSummary,
   type SongPreset,
   type SongStep,
 } from '@kitbag/core-state';
-
-export interface ActiveSet {
-  readonly id: number;
-  readonly name: string;
-  readonly count: number;
-  readonly position: number | undefined;
-}
 
 export interface SongChipText {
   readonly title: string;
@@ -31,26 +23,6 @@ const STEP_NAME: Readonly<Record<SongStep, string>> = {
 
 function songs(count: number): string {
   return countLabel(count, 'song', 'songs');
-}
-
-export function activeSetView(
-  setlists: readonly SetlistSummary[],
-  entries: Readonly<Record<number, readonly SetlistEntry[]>>,
-  loaded: LoadedSong | null,
-): ActiveSet | undefined {
-  const active = activeSetlistOf(setlists);
-  if (active === undefined) return undefined;
-  const id = active.setlist.id;
-  if (loaded !== null && loaded.setlistId !== id) return undefined;
-  const index = (entries[id] ?? []).findIndex(
-    (entry) => entry.item.id === loaded?.itemId,
-  );
-  return {
-    id,
-    name: active.setlist.name,
-    count: active.songCount,
-    position: index < 0 ? undefined : index + 1,
-  };
 }
 
 export function setlistChipLabel(set: ActiveSet | undefined): string {

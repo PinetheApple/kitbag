@@ -12,11 +12,14 @@ import {
   textStyle,
   TRANSPARENT,
 } from '@kitbag/core-design';
-import { useLibrary, type SetlistEntry } from '@kitbag/core-state';
+import {
+  useLibrary,
+  type ActiveSet,
+  type SetlistEntry,
+} from '@kitbag/core-state';
 import { useCallback, useMemo } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import type { ActiveSet } from '../logic/setlistChip.ts';
 import {
   songListHint,
   songListRows,
