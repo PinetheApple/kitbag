@@ -57,12 +57,16 @@ const useStyles = createThemedStyles((theme) => ({
     backgroundColor: theme.color.bg,
     paddingHorizontal: space.screenInset,
   },
+  // A ScrollView clips its content; the poly row's last pulse and cycle
+  // bracket hang past the content edge into the screen inset.
   body: {
     flex: 1,
+    marginHorizontal: -space.screenInset,
   },
   bodyContent: {
     flexGrow: 1,
     paddingTop: metronome.belowAppBar,
+    paddingHorizontal: space.screenInset,
   },
   notes: {
     ...textStyle(textRoles.fieldLabel),
@@ -110,6 +114,7 @@ export function MetronomeScreen({
   const accents = useMetronome((s) => s.accents);
   const polyEnabled = useMetronome((s) => s.polyEnabled);
   const polyBeats = useMetronome((s) => s.polyBeats);
+  const polyAgainst = useMetronome((s) => s.polyAgainst);
   const running = useMetronome((s) => s.running);
   const setTempo = useMetronome((s) => s.setTempo);
   const nudgeTempo = useMetronome((s) => s.nudgeTempo);
@@ -297,6 +302,7 @@ export function MetronomeScreen({
               beatCount={beatsPerBar}
               subdivision={subdivision}
               polyBeats={polyEnabled ? polyBeats : null}
+              polyAgainst={polyAgainst}
               accents={accents}
               width={dotsWidth}
               density={density}

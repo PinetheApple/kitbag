@@ -52,6 +52,17 @@ export const metronome = {
   beatMarkerLineHeight: 14,
   polyDot: 22,
   polyLabelGap: 8,
+  polyRow: 36,
+  polyBracket: 6,
+  polyBracketGap: 6,
+  polyBracketBorder: 1.5,
+  polyBracketNowBorder: 2,
+  polyBracketRadius: 4,
+  polyLegendGap: 14,
+  polyLegendSwatch: 12,
+  polyLegendBracketWidth: 18,
+  polyLegendBracketHeight: 5,
+  polyLegendBracketRadius: 3,
   legendGap: 16,
   legendSwatch: 14,
   legendSwatchBorder: 1.5,
@@ -83,6 +94,13 @@ export const metronomeSheet = {
   practiceSectionV: 10,
   mutePreview: 14,
   mutePreviewDashed: 1.5,
+  polyStripGap: 4,
+  polyStripPadV: 2,
+  polyStripLane: 12,
+  polyStripBarStart: 1,
+  polyStripBarEnd: 2,
+  polyStripDot: 12,
+  polyStripRing: 3,
   soundPick: 36,
   soundPickLeft: 12,
   soundPickRight: 6,
@@ -90,6 +108,11 @@ export const metronomeSheet = {
   songRowH: 8,
   songRowRadius: 10,
   songNumberWidth: 18,
+} as const;
+
+export const metronomeEditor = {
+  subRowIndent: 14,
+  toggleRowMin: 52,
 } as const;
 
 export const wheelPicker = {

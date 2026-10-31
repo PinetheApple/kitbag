@@ -31,6 +31,7 @@ function makeCommands() {
     setAccent: vi.fn(),
     setPoly: vi.fn(),
     setPolyAccent: vi.fn(),
+    setPolyAgainst: vi.fn(),
     setSounds: vi.fn(),
     previewSound: vi.fn(),
     setCountIn: vi.fn(),

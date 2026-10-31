@@ -240,6 +240,7 @@ describe('migrate', () => {
         ramp_unit: 0,
         ramp_loop: 0,
         ramp_step: 1,
+        poly_against: 0,
       })),
     );
     expect(presets()[0]?.ramp_length).toBe(8);

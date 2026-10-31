@@ -43,6 +43,7 @@ export interface SongPresetRecord {
   polyAccents: string | null;
   polyEnabled: boolean;
   polyBeats: number;
+  polyAgainst: number;
   sound: number;
   rampEnabled: boolean;
   rampStartBpm: number | null;

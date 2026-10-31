@@ -16,7 +16,7 @@ function setup() {
 }
 
 const HEADPHONES = {
-  route: 'bt-a2dp:EE:FF:WH-1000XM4',
+  route: 'bt-a2dp:headphones',
   offsetMs: 182,
   name: 'WH-1000XM4',
   kind: 'bluetooth',
