@@ -105,6 +105,10 @@ export {
   type SongStep,
 } from './library/setlistPosition.ts';
 export {
+  transportSetlistOf,
+  type TransportSetlistPlace,
+} from './library/transportSetlist.ts';
+export {
   accentsOf,
   byteList,
   perAccentSoundsOf,
