@@ -141,6 +141,8 @@ export interface Spec extends TurboModule {
   setAppNightMode(mode: string): void;
   setSystemBarAppearance(light: boolean): void;
   readonly onTransport: EventEmitter<TransportEvent>;
+  /** A stop from the song notification or media session; mixerStop() does not fire it. */
+  readonly onSongStopped: EventEmitter<void>;
   getOutputRoute(): Promise<OutputRoute>;
   readonly onOutputRoute: EventEmitter<OutputRoute>;
 }
