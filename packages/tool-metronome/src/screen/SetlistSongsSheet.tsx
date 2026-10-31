@@ -37,6 +37,7 @@ import {
 } from './UnsavedChanges.tsx';
 
 const NO_ENTRIES: readonly SetlistEntry[] = [];
+const UNSAVED_NAME_LINES = 2;
 const useStyles = createThemedStyles((theme) => ({
   row: {
     flexDirection: 'row',
@@ -84,6 +85,7 @@ const useStyles = createThemedStyles((theme) => ({
   name: {
     ...textStyle(textRoles.menuRow),
     flexShrink: 1,
+    minWidth: 0,
     color: theme.color.text,
   },
   nameNow: textStyle(textRoles.menuRowNow),
@@ -122,7 +124,7 @@ function SongRow({
       <View style={styles.nameLine}>
         <Text
           style={[styles.name, row.now && styles.nameNow]}
-          numberOfLines={unsaved ? 1 : undefined}
+          numberOfLines={unsaved ? UNSAVED_NAME_LINES : undefined}
         >
           {row.name}
         </Text>
