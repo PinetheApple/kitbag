@@ -36,6 +36,7 @@ const useStyles = createThemedStyles((theme) => ({
     paddingVertical: inset.editRowV,
     paddingHorizontal: inset.editRowH,
   },
+  singleLine: { flexWrap: 'nowrap' },
   pressableRow: { minHeight: minTouchTargetDp },
   pressed: { backgroundColor: theme.color.surface2 },
   label: {
@@ -66,6 +67,7 @@ const useStyles = createThemedStyles((theme) => ({
     color: theme.color.text,
   },
   muted: { color: theme.color.text3 },
+  path: { flexShrink: 1 },
 }));
 
 export function EditDivider() {
@@ -91,6 +93,7 @@ export function EditGroup({ children }: { readonly children: ReactNode }) {
 export interface EditRowProps {
   readonly label: string;
   readonly children?: ReactNode;
+  readonly singleLine?: boolean;
   readonly onPress?: () => void;
   readonly accessibilityRole?: AccessibilityRole;
   readonly accessibilityLabel?: string;
@@ -99,6 +102,7 @@ export interface EditRowProps {
 export function EditRow({
   label,
   children,
+  singleLine = false,
   onPress,
   accessibilityRole = 'button',
   accessibilityLabel,
@@ -107,14 +111,15 @@ export function EditRow({
   const pressableStyle = useCallback(
     ({ pressed }: PressableStateCallbackType) => [
       styles.row,
+      singleLine && styles.singleLine,
       styles.pressableRow,
       pressed && styles.pressed,
     ],
-    [styles],
+    [styles, singleLine],
   );
   if (onPress === undefined) {
     return (
-      <View style={styles.row}>
+      <View style={[styles.row, singleLine && styles.singleLine]}>
         <Text style={styles.label}>{label}</Text>
         <View style={styles.value}>{children}</View>
       </View>
@@ -188,6 +193,19 @@ export function EditValue({
 }) {
   const styles = useStyles();
   return <Text style={[styles.text, muted && styles.muted]}>{children}</Text>;
+}
+
+export function EditPath({ children }: { readonly children: string }) {
+  const styles = useStyles();
+  return (
+    <Text
+      style={[styles.text, styles.path]}
+      numberOfLines={1}
+      ellipsizeMode="head"
+    >
+      {children}
+    </Text>
+  );
 }
 
 export interface EditTextInputProps {

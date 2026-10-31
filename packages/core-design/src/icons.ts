@@ -58,6 +58,7 @@ export const iconGlyphs = {
   analyzing: 'refresh',
   error: 'alert-circle',
   folder: 'folder',
+  storage: 'database-outline',
 } as const satisfies Record<string, VectorGlyph>;
 
 export type IconName = keyof typeof iconGlyphs;
