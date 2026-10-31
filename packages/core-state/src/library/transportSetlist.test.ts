@@ -66,4 +66,13 @@ describe('transportSetlistOf', () => {
     const state = { ...library(loadedAt(1)), setlists: [] };
     expect(transportSetlistOf(state)).toBeNull();
   });
+
+  it('is null when the loaded song is not in the active setlist', () => {
+    const inactive = {
+      ...summary,
+      setlist: { ...summary.setlist, active: false },
+    };
+    const state = { ...library(loadedAt(1)), setlists: [inactive] };
+    expect(transportSetlistOf(state)).toBeNull();
+  });
 });
