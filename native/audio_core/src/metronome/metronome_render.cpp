@@ -208,8 +208,12 @@ void Metronome::BeginPendingStart(
   observed_generation_ = view.generation;
 }
 
+double Metronome::LastSoundedPosition(double beats_per_sample) const {
+  return beat_position_ + LatencyBeats() - beats_per_sample;
+}
+
 int64_t Metronome::LastSoundedBeat(double beats_per_sample) const {
-  return TickIndex(beat_position_ + LatencyBeats() - beats_per_sample, 1.0);
+  return TickIndex(LastSoundedPosition(beats_per_sample), 1.0);
 }
 
 void Metronome::SyncBarFromPosition(double beats_per_sample) {
@@ -294,35 +298,33 @@ void Metronome::AdvanceConstantTempo(uint32_t sample_rate, BlockTempo* tempo) {
   beat_position_ += tempo->beats_per_sample;
 }
 
+// Every mirror describes the last rendered frame, the one current_beat and
+// current_bar_ have already seen; the next frame's downbeat has not fired yet.
 void Metronome::PublishBlockMirrors(
     const BeatGrid* grid,
-    uint64_t frame,
+    uint64_t end_frame,
     uint32_t sample_rate
 ) {
+  const double beats_per_sample = BlockTempoFor(sample_rate).beats_per_sample;
   if (!running_) {
     current_bpm_.store(bpm_, std::memory_order_relaxed);
   } else if (grid != nullptr) {
+    const uint64_t last_frame = end_frame == 0 ? 0 : end_frame - 1;
     PublishGridMirrors(
         *grid,
-        follow_mixer_ ? follow_seconds_ : GridSeconds(*grid, frame, sample_rate)
+        follow_mixer_ ? follow_seconds_
+                      : GridSeconds(*grid, last_frame, sample_rate)
     );
     current_poly_beat_.store(-1, std::memory_order_relaxed);
   } else {
-    // Track `position`, not beat_position_, so the sweep, the LED and the
-    // audible click share one time base (§4.5); the mapping to real latency
-    // is §4.2's phase-anchor decision.
-    const double position = beat_position_ + LatencyBeats();
     bar_phase_.store(
-        BarFraction(position, beats_per_bar_),
+        BarFraction(LastSoundedPosition(beats_per_sample), beats_per_bar_),
         std::memory_order_relaxed
     );
     current_bpm_.store(bpm_, std::memory_order_relaxed);
   }
   poly_downbeat_phase_.store(
-      PolyDownbeatPhase(
-          grid != nullptr,
-          BlockTempoFor(sample_rate).beats_per_sample
-      ),
+      PolyDownbeatPhase(grid != nullptr, beats_per_sample),
       std::memory_order_relaxed
   );
   PublishTrainerMirrors(grid != nullptr, sample_rate);

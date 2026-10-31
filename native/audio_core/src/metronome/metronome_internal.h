@@ -4,6 +4,7 @@
 // Shared by metronome.cpp, metronome_render.cpp and metronome_grid.cpp. Not
 // part of any public surface; kitbag_api.h is the contract external callers read.
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 
@@ -27,11 +28,13 @@ T Clamp(T value, T low, T high) {
   return value < low ? low : (value > high ? high : value);
 }
 
+// Epsilon as TickIndex, so a bar whose downbeat fired reads ~0, not ~1.
 inline double BarFraction(double position, int beats_per_bar) {
   const auto bar_beats = static_cast<double>(beats_per_bar);
-  double in_bar = std::fmod(position, bar_beats);
+  double in_bar = std::fmod(position + kGridEpsilon, bar_beats);
   if (in_bar < 0.0) in_bar += bar_beats;
-  return in_bar / bar_beats;
+  // A tiny negative remainder plus bar_beats rounds up to bar_beats exactly.
+  return std::min(in_bar / bar_beats, std::nextafter(1.0, 0.0));
 }
 
 template <std::size_t N>

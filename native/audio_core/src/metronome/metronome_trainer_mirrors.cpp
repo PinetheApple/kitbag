@@ -37,9 +37,8 @@ void Metronome::PublishTrainerMirrors(bool gridded, uint32_t sample_rate) {
   }
   RampStatus ramp;
   if (running_ && !gridded) {
-    // bar_phase_ is one sample ahead of current_bar_; read the frame just fired.
-    const double fired = beat_position_ + LatencyBeats() -
-                         BlockTempoFor(sample_rate).beats_per_sample;
+    const double fired =
+        LastSoundedPosition(BlockTempoFor(sample_rate).beats_per_sample);
     ramp = ramp_.Status(
         current_bar_,
         BarFraction(fired, beats_per_bar_),

@@ -369,6 +369,7 @@ void RunRampSubdivisionTests();
 void RunTrainerStatusTests();
 void RunRampStatusTests();
 void RunFollowTests();
+void RunBarPhaseTests();
 
 }  // namespace metronome_test
 

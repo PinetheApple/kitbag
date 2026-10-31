@@ -281,6 +281,7 @@ class Metronome {
   // Derives current_bar_ from the current latency-shifted position, so an anchor
   // lands the bar counter on the song's bar rather than counting downbeats.
   void SyncBarFromPosition(double beats_per_sample);
+  double LastSoundedPosition(double beats_per_sample) const;
   int64_t LastSoundedBeat(double beats_per_sample) const;
   void AdvanceConstantTempo(uint32_t sample_rate, BlockTempo* tempo);
   void FireConstantTempoTick(
@@ -292,7 +293,7 @@ class Metronome {
   double PolyDownbeatPhase(bool gridded, double beats_per_sample) const;
   void PublishBlockMirrors(
       const BeatGrid* grid,
-      uint64_t frame,
+      uint64_t end_frame,
       uint32_t sample_rate
   );
   void PublishTrainerMirrors(bool gridded, uint32_t sample_rate);
