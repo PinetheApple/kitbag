@@ -26,8 +26,8 @@ static_assert(
 
 namespace {
 
-// Queued, not left to the callback: a stop drained in the same block as the
-// start would leave the metronome stopped and the rig click running.
+// Stopped here, not left to the callback: a metronome start and stop drained in
+// one block never show it a started metronome.
 void TakeOverFromRigClick(kitbag::Engine* engine) {
   engine->SetMetronomeIntent(true);
   engine->metronome().rig_click().Stop();

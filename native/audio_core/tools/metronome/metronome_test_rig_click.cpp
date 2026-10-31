@@ -8,9 +8,12 @@ using kitbag::RigClick;
 
 constexpr int64_t kRigTicks = 24;
 constexpr RigCase kRigCases[] = {{100, 1}, {100, 3}, {97, 1}, {133, 4}};
-// Neither tempo is a double. 38.4 * 3 rounds low, so tick 1's whole quotient
-// computes a hair above 25000; 123.4's tick 617 is whole too.
-constexpr RigCase kFractionalCases[] = {{384, 3, 10}, {1234, 1, 10}};
+// Neither tempo is exact in binary. 38.4 * 3 rounds low, so tick 1's whole
+// quotient computes a hair above 25000; 123.4's tick 617 is whole too.
+constexpr RigCase kFractionalCases[] = {
+    {.bpm_numerator = 384, .subdivision = 3, .bpm_denominator = 10},
+    {.bpm_numerator = 1234, .subdivision = 1, .bpm_denominator = 10},
+};
 constexpr int64_t kFractionalTicks = 640;
 constexpr RigCase kHundred = {100, 1};
 constexpr RigCase kHundredTriplets = {100, 3};

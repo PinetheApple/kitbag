@@ -133,7 +133,7 @@ void TestIdleStop() {
   kb_engine_destroy(engine);
 }
 
-bool InactiveAndIdle(kb_engine* engine) {
+bool InactiveAndIdleAfterBlock(kb_engine* engine) {
   return !Active(engine) && kb_engine_idle(engine) == 1;
 }
 
@@ -141,11 +141,11 @@ void TestMetronomeTakesOver() {
   kb_engine* engine = nullptr;
   if (kb_engine_create(&engine) != KB_OK) return;
   StartRig(engine, kRigBpm, kRigSubdivision);
-  Render(engine, kBlock);
+  Check(Active(engine), "rig click: takeover test starts with the rig running");
   kb_metronome_start(engine);
   kb_metronome_stop(engine);
   Check(
-      InactiveAndIdle(engine),
+      InactiveAndIdleAfterBlock(engine),
       "rig click: a metronome start and stop in one block stop it and go idle"
   );
   kb_engine_destroy(engine);
@@ -160,7 +160,7 @@ void TestStopSurvivesFullRing() {
   }
   kb_rig_click_stop(engine);
   Check(
-      full && InactiveAndIdle(engine),
+      full && InactiveAndIdleAfterBlock(engine),
       "rig click: a stop after a full ring of starts still stops it"
   );
   kb_engine_destroy(engine);

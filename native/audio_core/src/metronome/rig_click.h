@@ -15,8 +15,7 @@ class RigClick {
  public:
   static constexpr int kNoTick = -1;
 
-  // App thread. Start is false when the ring is full; Stop never queues, so a
-  // full ring cannot lose it.
+  // App thread. Start is false when the ring is full.
   bool Start(double bpm, int subdivision, uint64_t start_frame);
   void Stop();
 
