@@ -353,6 +353,7 @@ void RunBasicTests();
 void RunSignatureTests();
 void RunStartAtTests();
 void RunLatencyTests();
+void RunLatencyFreeRunTests();
 void RunGridTests();
 void RunAnchorTests();
 void RunPolyTests();

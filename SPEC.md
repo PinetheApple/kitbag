@@ -323,8 +323,15 @@ Requirements:
   non-constant-tempo songs work, which a single `setTempo` cannot.
 - Re-anchoring mid-playback must be glitch-free (no double-click, no dropped
   beat).
-- All three compose with the existing latency offset so the click lands on the
-  beat *at the speaker*, not at the buffer.
+- `set_grid` and `anchor_external` compose with the existing latency offset so
+  the click lands on the beat *at the speaker*, not at the buffer.
+- `kb_metronome_start_at`'s `start_frame` is buffer (mixer) time. The song and
+  the click share one output stream and so share its output latency; the
+  offset compensates only the click's perception relative to the listener, so
+  on a free run `start_at` fires beat 0 on the requested frame whatever the
+  offset. With a grid set, `start_at` gates rather than places: grid beat `t`
+  sounds at `t − offset`, and only beats landing at or after `start_frame` sound
+  (`BeginPendingStart` seeds the cursor through `GridSeconds`).
 
 **Past the last grid beat, the click goes silent and stays silent.** Every song
 reaches this. `is_running()` keeps reporting true, and `bar_phase` and
@@ -496,36 +503,34 @@ were built. Do not assume they are present:
 > the error was harmless, but it is the kind of thing that should be read off the
 > vendored `LICENSE` rather than a table. Attribution obligations still apply.
 
-### 4.7 The latency clamp is a doc comment
+### 4.7 The latency clamp
 
-`kitbag_api.h:63` documents `kb_metronome_set_latency_offset` as `[-100, 100]`
-ms. **Nothing enforces it.** `kb_metronome_set_latency_offset` passes straight
-through to `Metronome::SetLatencyOffset` (`metronome.cpp:90`), which pushes the
-raw value onto the command queue. The clamp lives in two Dart constants and a
-stale comment.
+The engine clamps `kb_metronome_set_latency_offset` to **±300 ms**
+(`Metronome::kMaxLatencyOffsetMs`), applied when the command is drained. The
+generated `KB_LATENCY_OFFSET_MS_BOUNDS` is read from that constant, and
+`kitbag_api.h` documents the same range.
 
-This matters because ±100 ms **cannot reach Bluetooth**, which routinely lands
-150–250 ms late — the most common problem the control exists to solve. The bounds
-are a decision, not an engine constraint, and they cost a line each.
+The bound is sized for Bluetooth, which routinely lands 150–250 ms late — the most
+common problem the control exists to solve, and one ±100 ms cannot reach. The
+bounds are a decision, not an engine constraint.
 
 **Decided (D5):** latency offset **±300 ms**; phase nudge **±½ beat**
 (tempo-dependent); downbeat shift in beats. Three quantities, three constants, no
-shared value. Update the doc comment to match — a stale comment that reads like a
-constraint is how this became three bugs.
+shared value.
 
 **Checked 2026-07-17 — there is no window, and the check found two live bugs,
 now fixed.** `Metronome::Render` applies the offset as a per-sample phase bias,
 `position = beat_position_ + latency_beats`, and evaluates the grid from the
 biased position. Nothing is queued, so no queue depth bounds the offset, and the
-±100 ms rejection is the clamp at `metronome.cpp` (`kSetLatencyOffset`) rather
+±300 ms rejection is the clamp at `metronome.cpp` (`kSetLatencyOffset`) rather
 than any structural limit.
 
 The first measurement — click spacing exact to 0.000 frames at 60/120/240 BPM,
 ±300 ms, and 600 ms — was **true at constant tempo and scoped too narrowly to
 support the conclusion it was used for** ("widen the clamp, the scheduler is
 untouched"). It measured spacing between clicks that fired, at a fixed tempo.
-Both bugs lived exactly in that blind spot, and both reproduced *inside* the
-existing ±100 ms clamp. Both are now fixed and pinned by
+Both bugs lived exactly in that blind spot, and both reproduced inside a ±100 ms
+clamp. Both are now fixed and pinned by
 `TestLatencyOffsetKeepsBeatZero` and `TestLatencyOffsetSurvivesRamp` in
 `metronome_verify`:
 
@@ -552,13 +557,12 @@ existing ±100 ms clamp. Both are now fixed and pinned by
   double-incrementing `current_bar_`). Found by the first fix's own reviewer:
   the machinery to prevent it existed and was not applied here. **Fixed** by the
   same phase-preservation in `kSetLatencyOffset` while running.
-- **Under a grid the mid-run change has a bounded residue.** Grid mode reads the
+- **Under a grid a mid-run change drops or delays beats.** Grid mode reads the
   offset through `GridSeconds` rather than through `beat_position_`, so changing
-  it shifts the song-time mapping without moving `grid_cursor_`. The one beat
-  straddling the change can therefore land early or late by up to the clamp. It
-  is bounded to that single beat: the next crossing re-seeds `grid_cursor_`
-  against the new offset. Accepted, not fixed — the alternative is re-seeking the
-  cursor from the callback on every offset change.
+  it shifts the song-time mapping without moving `grid_cursor_`. The effect
+  scales with the size of the change, up to twice the clamp: on a 400 BPM grid,
+  −300 → +300 ms drops 4 beats and +300 → −300 ms leaves a 0.75 s gap. What a
+  mid-song change should do is open (#245).
 
 **The rule these three fixes share, and the decision that comes with it:** a
 change to the offset *or* the tempo preserves `position` phase — it never steps
@@ -571,12 +575,8 @@ against a reference, which §4.2's phase anchor supplies by writing
 real output latency is §4.2's call**, not settled here.
 
 **What this means for D5.** The offset is a phase bias with no structural bound,
-so the clamp is the only limiter and ±300 ms is a one-line change to it — plus
-moving `kitbag_api.h:63`'s doc comment, which documents `[-100, 100]` as an engine
-constraint when it is D5's decision. **The widening itself is deliberately not
-done here:** it is a decision to land with the calibration screen that motivates
-it (§12.8), and the regressions that now guard the interaction should be green
-before and after it.
+so the clamp is the only limiter. `metronome_verify` runs the regressions above at
+the ±300 ms bound and pins the bound itself by value.
 
 ---
 
@@ -1599,18 +1599,21 @@ became load-bearing: volume, latency offset and subdivision accents live here no
 the supersession: ≤7 primary choices.)
 
 - **The click runs while you're in Rig.** A chip in the section header starts a
-  100 BPM click and becomes `■ Stop · 100 BPM`. **Volume and latency are
-  meaningless as numbers** — they are things you hear. Without this, Rig is a form
-  you fill in blind, which is exactly what it is today. It stops on leaving and
-  does not touch the metronome's own state.
+  100 BPM click and becomes `■ Stop · 100 BPM`. **Volume and subdivision accents
+  are meaningless as numbers** — they are things you hear. Without this, Rig is a
+  form you fill in blind, which is exactly what it is today. It stops on leaving
+  and does not touch the metronome's own state. **Latency is the exception**: a
+  constant offset is unobservable on a free-running click (§4.7), so the Rig click
+  sounds the same at any value. It is set by calibration (§12.5.1) or by ear
+  against a track.
 - **Volume has a detent at unity.** Range 0–200% (`maxVolume = 2`), so 100% is
   dead centre — the one value you want to return to. The tick is visible and the
   thumb catches. Past ~150% the fill turns red rather than the app policing it;
   the readout still says `150%` and the tick is positional (colour is not the only
   signal).
 - **Latency is a stepper, not a slider.** 1 ms per tap, long-press to repeat.
-  **Range ±300 ms** (D5) — the build's slider is `divisions: 20` across ±100 ms,
-  which is **10 ms a step, a third of a semiquaver at 120 BPM**: audible, not fine
+  **Range ±300 ms** (D5) — the Flutter build's slider was `divisions: 20` across
+  ±100 ms, which is **10 ms a step, a third of a semiquaver at 120 BPM**: audible, not fine
   enough to null a click against a track, and unable to reach Bluetooth at either
   end. A stepper also makes the value legible, which a 120dp slider never was.
 - **Latency belongs to the output, not the app.** Your offset for wired
@@ -1681,8 +1684,7 @@ asks them to.
 calibration screen would have measured offsets it was unable to apply. The range
 is now ±300 ms. The lookahead check ran 2026-07-17: there is no window, the
 offset is a phase bias, and the two latency bugs the check exposed are fixed and
-pinned in `metronome_verify` (§4.7). Widening the clamp to ±300 ms is a one-liner
-left to land with the calibration screen that needs it (§12.8).
+pinned in `metronome_verify` (§4.7). The engine clamps at ±300 ms.
 
 ### 12.6 Experience rules — acceptance criteria, not aspirations
 
@@ -1743,6 +1745,8 @@ decisions they carry are the reason the files read as they now do:
 | `kitbag-playalong.html` §04 | **Delete the ad state.** | D10 |
 | `kitbag-playalong.html` §05 | Phase sheet shows the **total** (`+190 ms total · 180 route + 10 song`). | D6 |
 | `kitbag-metronome.html` §05 | Close both open questions: volume/latency are global (**no** preset-editor override, so the editor is already right); subdivision accents are global. | D2, D3 |
+| `kitbag-settings.html` §06 | Latency open question closed (2026-10-31): **±300 ms, clamped by the engine.** | D5 |
+| `kitbag-playalong.html` §07 | "±100 ms appears three times" closed (2026-10-31): latency ±300 ms engine-clamped, phase ±½ beat, downbeat in beats. | D5 |
 
 **Designed, needs states:**
 
@@ -2111,9 +2115,8 @@ The six questions that blocked schema and toolchain work were answered
 - **The lookahead question** — answered: there is no window, the offset is a
   phase bias. The check also exposed two live latency bugs (any positive offset
   swallowed beat 0; a ramp and an offset corrupted each other), both now **fixed
-  and pinned** in `metronome_verify` (§4.7). Widening the clamp to ±300 ms is a
-  one-liner deferred to the calibration screen that needs it; the regressions
-  guard the interaction across it.
+  and pinned** in `metronome_verify` (§4.7). The clamp is widened to ±300 ms and
+  the regressions run at that bound.
 - **The §12.8 design-file edits** — all six landed, so no screen gets built from
   a superseded mock.
 - **The record corrected** — `CHANGELOG.md` rewritten to claim nothing, and the
@@ -2270,12 +2273,10 @@ Three bounds, three separate constants, no shared value:
 | Phase nudge | **±½ beat, tempo-dependent** | Phase is modular; a whole beat of offset is none. ±175 ms at 171 BPM, ±500 ms at 60 — so a constant was the wrong *shape* of limit. |
 | Downbeat shift | beats, not ms | A different quantity entirely (§8.6). |
 
-Cheap, per §4.7: the native side does not clamp, so this is two constants and a
-stale doc comment in `kitbag_api.h:63`.
-
-**One check before it lands:** confirm the scheduler's lookahead window absorbs a
-300 ms offset. That is where a large value actually bites, and it is the only part
-of this that is not a one-line change.
+**Built.** The engine clamps the latency offset at ±300 ms
+(`Metronome::kMaxLatencyOffsetMs`), and the generated TS bound is read from that
+constant. The lookahead check is resolved: there is no window, the offset is a
+phase bias (§4.7).
 
 ### D6 — Show the total, name both parts.
 

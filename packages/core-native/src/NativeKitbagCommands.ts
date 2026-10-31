@@ -47,6 +47,13 @@ export type SongTransportShowState = Readonly<{
   skipSeconds: Double;
 }>;
 
+export type OutputRoute = Readonly<{
+  id: string;
+  name: string;
+  kind: 'speaker' | 'wired' | 'bluetooth' | 'usb' | 'other';
+  certain: boolean;
+}>;
+
 export type KitbagCommandsConstants = Readonly<{
   versionName: string;
   versionCode: Double;
@@ -134,6 +141,8 @@ export interface Spec extends TurboModule {
   setAppNightMode(mode: string): void;
   setSystemBarAppearance(light: boolean): void;
   readonly onTransport: EventEmitter<TransportEvent>;
+  getOutputRoute(): Promise<OutputRoute>;
+  readonly onOutputRoute: EventEmitter<OutputRoute>;
 }
 
 // Lazy: resolving throws until the native module is registered, and the barrel

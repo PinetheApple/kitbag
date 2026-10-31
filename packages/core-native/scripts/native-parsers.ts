@@ -117,6 +117,29 @@ export function parseRangeAfter(source: string, marker: string): RangeBound {
   };
 }
 
+/** ±`name` (a constexpr double in `source`), required to match the range `doc` states after `marker`. */
+export function parseDocumentedSymmetricBound(
+  source: string,
+  name: string,
+  doc: string,
+  marker: string,
+): RangeBound {
+  const max = parseConstexprDouble(source, name);
+  const documented = parseRangeAfter(doc, marker);
+  if (
+    documented.min !== -max ||
+    documented.max !== max ||
+    documented.maxExclusive
+  ) {
+    throw new Error(
+      `native-constants: the range after "${marker}" is ` +
+        `[${String(documented.min)}, ${String(documented.max)}] but ${name} is ` +
+        `${String(max)}; update the doc comment to match the constant.`,
+    );
+  }
+  return { min: -max, max, maxExclusive: false };
+}
+
 // The engine has no ABI string table for sound names; the owner is the trailing
 // comment on each kSounds row in metronome_render.cpp.
 export function parseSoundNames(

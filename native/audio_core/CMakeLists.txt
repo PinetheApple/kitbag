@@ -141,6 +141,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_signature.cpp
     tools/metronome/metronome_test_grid.cpp
     tools/metronome/metronome_test_latency.cpp
+    tools/metronome/metronome_test_latency_free.cpp
     tools/metronome/metronome_test_startat.cpp
     tools/metronome/metronome_test_anchor.cpp
     tools/metronome/metronome_test_poly.cpp
