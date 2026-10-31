@@ -42,6 +42,26 @@ export {
   type LastToolPersistence,
   type LastToolStore,
 } from './lastTool/store.ts';
+export { useHomeLayout } from './home/useHomeLayout.ts';
+export {
+  configureHomeLayoutPersistence,
+  createHomeLayoutStore,
+  getHomeLayoutStore,
+  type HomeLayoutPersistence,
+  type HomeLayoutStore,
+  type SavedArrangement,
+} from './home/store.ts';
+export {
+  hiddenTiles,
+  hideTile,
+  moveTile,
+  reconcileArrangement,
+  resizeTile,
+  showTile,
+  visibleTiles,
+  type ArrangedTile,
+  type Arrangement,
+} from './home/arrangement.ts';
 export { useAppearance } from './appearance/useAppearance.ts';
 export {
   configureAppearancePersistence,
