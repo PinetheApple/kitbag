@@ -75,6 +75,15 @@ export const KB_POLY_BEATS_BOUNDS = {
   max: 16,
 } as const;
 
+/** kb_metronome_set_poly_against's default (KB_POLY_AGAINST_BAR): the cycle spans the bar and follows the meter. */
+export const KB_POLY_AGAINST_BAR = 0;
+
+/** Explicit poly cycle lengths in main beats (Metronome::kMinPolyAgainst..kMaxPolyAgainst); the engine ignores others. */
+export const KB_POLY_AGAINST_BOUNDS = {
+  min: 1,
+  max: 16,
+} as const;
+
 /** Count-in bar choices (Metronome::kCountInBarChoices); 0 is off, anything else is ignored. */
 export const KB_COUNT_IN_BARS = [0, 1, 2, 4] as const;
 export type KbCountInBars = (typeof KB_COUNT_IN_BARS)[number];

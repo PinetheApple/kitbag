@@ -71,6 +71,9 @@ void commandSetPoly(bool enabled, int32_t beats) {
 void commandSetPolyAccent(int32_t beatIndex, int32_t accent) {
   kb_metronome_set_poly_accent(commandEngine(), beatIndex, accent);
 }
+void commandSetPolyAgainst(int32_t mainBeats) {
+  kb_metronome_set_poly_against(commandEngine(), mainBeats);
+}
 void commandSetSounds(int32_t normalSound, int32_t accentSound) {
   kb_metronome_set_sounds(commandEngine(), normalSound, accentSound);
 }

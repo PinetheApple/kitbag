@@ -29,13 +29,16 @@ export function parseDefineNumber(header: string, name: string): number {
   return Number(match[1] ?? match[2]);
 }
 
-/** `static constexpr int NAME = <int>;` from a C++ header. */
+/** `static constexpr int NAME = <int>|kOther;`; kOther resolves in `source`. */
 export function parseConstexprInt(source: string, name: string): number {
   const match = new RegExp(
-    `static\\s+constexpr\\s+int\\s+${name}\\s*=\\s*(-?\\d+)\\s*;`,
+    `static\\s+constexpr\\s+int\\s+${name}\\s*=\\s*(-?\\d+|k\\w+)\\s*;`,
   ).exec(source);
   if (match === null) fail(`constexpr int ${name}`);
-  return Number(match[1]);
+  const value = match[1] ?? '';
+  return /^-?\d+$/.test(value)
+    ? Number(value)
+    : parseConstexprInt(source, value);
 }
 
 /** `static|inline constexpr double NAME = <number>;` from a C++ header. */

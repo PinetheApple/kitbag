@@ -62,6 +62,7 @@ export interface Spec extends TurboModule {
   setAccent(beatIndex: Int32, accent: Int32): void;
   setPoly(enabled: boolean, beats: Int32): void;
   setPolyAccent(beatIndex: Int32, accent: Int32): void;
+  setPolyAgainst(mainBeats: Int32): void;
   setSounds(normalSound: Int32, accentSound: Int32): void;
   previewSound(sound: Int32, accented: boolean): void;
   setCountIn(bars: Int32, distinct: boolean, sound: Int32): void;
