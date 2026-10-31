@@ -17,7 +17,8 @@ configureAppearancePersistence(
 );
 
 export const applyAppearance = appearanceApplier({
-  setColorScheme: () => undefined,
+  setNightMode: () => undefined,
+  setSystemBarAppearance: () => undefined,
   setBackgroundColor: (hex) => {
     SystemUI.setBackgroundColorAsync(hex).catch(() => undefined);
   },

@@ -1,13 +1,17 @@
 import { palette } from '@kitbag/core-design';
+import type { AppNightMode } from '@kitbag/core-native';
 import type { ThemeChoice } from '@kitbag/core-state';
-import type { ColorSchemeName } from 'react-native';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   appearanceApplier,
+  keepNightMode,
   resolveThemeMode,
   statusBarStyle,
 } from './appearance.ts';
+
+const setColorScheme = vi.hoisted(() => vi.fn());
+vi.mock('react-native', () => ({ Appearance: { setColorScheme } }));
 
 describe('resolveThemeMode', () => {
   it.each(['light', 'dark'] as const)(
@@ -39,23 +43,62 @@ describe('statusBarStyle', () => {
   });
 });
 
+function recordingApplier() {
+  const calls = {
+    nightModes: [] as AppNightMode[],
+    lightBars: [] as boolean[],
+    backgrounds: [] as string[],
+  };
+  const apply = appearanceApplier({
+    setNightMode: (mode) => calls.nightModes.push(mode),
+    setSystemBarAppearance: (light) => calls.lightBars.push(light),
+    setBackgroundColor: (hex) => calls.backgrounds.push(hex),
+  });
+  return { apply, calls };
+}
+
 describe('appearanceApplier', () => {
-  it.each([
-    ['system', 'unspecified'],
-    ['dark', 'dark'],
-    ['light', 'light'],
-  ] as const)(
-    'hands the OS %s as %s with the resolved background',
-    (choice: ThemeChoice, scheme: ColorSchemeName) => {
-      const schemes: ColorSchemeName[] = [];
-      const backgrounds: string[] = [];
-      const apply = appearanceApplier({
-        setColorScheme: (s) => schemes.push(s),
-        setBackgroundColor: (hex) => backgrounds.push(hex),
-      });
+  it.each<ThemeChoice>(['system', 'dark', 'light'])(
+    'hands native night mode %s unchanged with the resolved background',
+    (choice) => {
+      const { apply, calls } = recordingApplier();
       apply(choice, 'light');
-      expect(schemes).toEqual([scheme]);
-      expect(backgrounds).toEqual([palette.bg.light]);
+      expect(calls.nightModes).toEqual([choice]);
+      expect(calls.backgrounds).toEqual([palette.bg.light]);
     },
   );
+
+  it('never pins the RN colour scheme over the native night mode', () => {
+    const { apply } = recordingApplier();
+    apply('light', 'light');
+    expect(setColorScheme).not.toHaveBeenCalled();
+  });
+
+  it('asks for dark bar icons only while the resolved theme is light', () => {
+    const { apply, calls } = recordingApplier();
+    apply('system', 'dark');
+    apply('system', 'light');
+    apply('system', 'dark');
+    expect(calls.lightBars).toEqual([false, true, false]);
+  });
+});
+
+describe('keepNightMode', () => {
+  it('applies the stored choice at once and again on every foreground', () => {
+    let choice: ThemeChoice = 'light';
+    let foreground = (): void => undefined;
+    const applied: AppNightMode[] = [];
+    keepNightMode({
+      choice: () => choice,
+      setNightMode: (mode) => applied.push(mode),
+      onForeground: (listener) => {
+        foreground = listener;
+      },
+    });
+    expect(applied).toEqual(['light']);
+    choice = 'dark';
+    foreground();
+    foreground();
+    expect(applied).toEqual(['light', 'dark', 'dark']);
+  });
 });
