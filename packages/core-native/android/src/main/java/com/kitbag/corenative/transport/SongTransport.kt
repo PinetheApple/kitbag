@@ -10,7 +10,10 @@ data class Song(
   val durationFrames: Long,
   val restartFromFrame: Long,
   val skipSeconds: Double,
-)
+) {
+  // SystemUI formats the artist into "%1$s by %2$s", so a null would read as "null".
+  val cardArtist: String get() = if (artist.isNullOrBlank()) "" else artist
+}
 
 data class SongProgress(val playing: Boolean, val positionFrames: Long)
 

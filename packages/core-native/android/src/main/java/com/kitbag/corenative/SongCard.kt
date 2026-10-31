@@ -109,7 +109,7 @@ internal class SongCard(
     session.setMetadata(
       MediaMetadataCompat.Builder()
         .putString(MediaMetadataCompat.METADATA_KEY_TITLE, current.title)
-        .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, current.artist)
+        .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, current.cardArtist)
         .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, durationMillis)
         .build(),
     )
@@ -131,7 +131,7 @@ internal class SongCard(
     NotificationCompat.Builder(context, channelId)
       .setSmallIcon(R.drawable.kitbag_notification)
       .setContentTitle(current.title)
-      .setContentText(current.artist)
+      .setContentText(current.cardArtist)
       .setContentIntent(launchIntent)
       .setOngoing(playing)
       .setDeleteIntent(actionIntent(SongAction.STOP))

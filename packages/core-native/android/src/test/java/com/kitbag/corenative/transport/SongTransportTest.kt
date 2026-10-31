@@ -27,6 +27,17 @@ class SongTransportTest {
     SongProgress(playing, (seconds * rate).toLong())
 
   @Test
+  fun `card artist is the song's artist`() {
+    assertEquals("The Beatles", song.cardArtist)
+  }
+
+  @Test
+  fun `card artist is empty, never null, when the song has none`() {
+    assertEquals("", song.copy(artist = null).cardArtist)
+    assertEquals("", song.copy(artist = "  ").cardArtist)
+  }
+
+  @Test
   fun `length is the song's frames in milliseconds`() {
     assertEquals(180_000L, transport.durationMillis)
   }
