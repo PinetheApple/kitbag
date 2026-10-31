@@ -325,6 +325,10 @@ Requirements:
   beat).
 - All three compose with the existing latency offset so the click lands on the
   beat *at the speaker*, not at the buffer.
+- `kb_metronome_start_at`'s `start_frame` is buffer (mixer) time. The song and
+  the click share one output stream and so share its output latency; the
+  offset compensates only the click's perception relative to the listener, so
+  `start_at` fires beat 0 on the requested frame whatever the offset.
 
 **Past the last grid beat, the click goes silent and stays silent.** Every song
 reaches this. `is_running()` keeps reporting true, and `bar_phase` and
