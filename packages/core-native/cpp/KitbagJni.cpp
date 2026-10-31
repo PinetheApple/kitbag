@@ -58,6 +58,11 @@ Java_com_kitbag_corenative_KitbagCommandsModule_nativeRelease(JNIEnv*, jobject) 
   kitbag::commandRelease();
 }
 
+JNIEXPORT jint JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeOutputDeviceId(JNIEnv*, jobject) {
+  return kb_engine_output_device_id(kitbag::kitbagEngine());
+}
+
 JNIEXPORT void JNICALL
 Java_com_kitbag_corenative_KitbagCommandsModule_nativeMetronomeStart(JNIEnv*, jobject, jdouble anchorFrame) {
   kitbag::commandMetronomeStart(anchorFrame);

@@ -150,8 +150,8 @@ export type KB_RAMP_STATE = (typeof KB_RAMP_STATE)[keyof typeof KB_RAMP_STATE];
 
 /** Metronome output-latency offset range, in ms (kb_metronome_set_latency_offset). */
 export const KB_LATENCY_OFFSET_MS_BOUNDS = {
-  min: -100,
-  max: 100,
+  min: -300,
+  max: 300,
 } as const;
 
 /** Bar-phase range for the beat sweep (kb_metronome_bar_phase). */
