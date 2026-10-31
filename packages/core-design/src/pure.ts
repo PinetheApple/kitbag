@@ -6,3 +6,7 @@ export * from './sliderMath.ts';
 export * from './tokens.ts';
 export * from './roles.ts';
 export * from './metronomeRoles.ts';
+export * from './homeArrangeRoles.ts';
+export * from './toolGrid.ts';
+export * from './snackbarRoles.ts';
+export * from './snackbarTimer.ts';

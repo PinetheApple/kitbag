@@ -44,6 +44,7 @@ const webCommands: MetronomeCommands = {
   setTempo: () => undefined,
   setBeats: () => undefined,
   setSubdivision: () => undefined,
+  setSubdivisionAccents: () => undefined,
   setAccent: () => undefined,
   setPoly: () => undefined,
   setPolyAccent: () => undefined,

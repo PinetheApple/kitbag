@@ -40,6 +40,10 @@ export function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
+export function roundToEngineBpm(bpm: number): number {
+  return clamp(Math.round(bpm), KB_BPM_BOUNDS.min, KB_BPM_BOUNDS.max);
+}
+
 export function isSoundId(id: number): boolean {
   return Number.isInteger(id) && id >= 0 && id < KB_SOUND_NAMES.length;
 }

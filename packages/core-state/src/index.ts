@@ -47,6 +47,26 @@ export {
   type LastToolPersistence,
   type LastToolStore,
 } from './lastTool/store.ts';
+export { useHomeLayout } from './home/useHomeLayout.ts';
+export {
+  configureHomeLayoutPersistence,
+  createHomeLayoutStore,
+  getHomeLayoutStore,
+  type HomeLayoutPersistence,
+  type HomeLayoutStore,
+  type SavedArrangement,
+} from './home/store.ts';
+export {
+  hiddenTiles,
+  hideTile,
+  moveTile,
+  reconcileArrangement,
+  resizeTile,
+  showTile,
+  visibleTiles,
+  type ArrangedTile,
+  type Arrangement,
+} from './home/arrangement.ts';
 export { useAppearance } from './appearance/useAppearance.ts';
 export {
   configureAppearancePersistence,
@@ -93,6 +113,8 @@ export { useLibrary } from './library/useLibrary.ts';
 export {
   createLibraryStore,
   libraryStore,
+  loadedPresetOf,
+  type DiscardedChanges,
   type LibraryStore,
   type LoadedSong,
   type PresetEdit,
@@ -114,6 +136,7 @@ export { transportSetlistOf } from './library/transportSetlist.ts';
 export {
   accentsOf,
   byteList,
+  isLoadedSongUnsaved,
   perAccentSoundsOf,
   rampUnitOf,
   toBlob,
@@ -202,3 +225,14 @@ export {
   MINUS,
   type ClockParts,
 } from './text.ts';
+export {
+  findMissingRows,
+  removeMissingRows,
+  type MissingFilesSource,
+  type MissingRowsRemoval,
+  type StoredRowFiles,
+} from './storage/missingRows.ts';
+export {
+  storedRowFiles,
+  type StoredFilesRecords,
+} from './storage/storedRowFiles.ts';

@@ -80,6 +80,13 @@ const useStyles = createThemedStyles((theme) => ({
     color: theme.color.text,
   },
   titleLarge: textStyle(textRoles.sheetTitleLarge),
+  titleScreen: textStyle(textRoles.appBarTitle),
+  titleAction: {
+    marginLeft: 'auto',
+  },
+  titleBesideAction: {
+    flexShrink: 1,
+  },
   scroll: {
     flexGrow: 0,
     marginVertical: -SHEET_TOUCH_ROOM,
@@ -104,7 +111,7 @@ const useStyles = createThemedStyles((theme) => ({
 }));
 
 export type SheetHintSize = 'default' | 'large';
-export type SheetTitleSize = 'default' | 'large';
+export type SheetTitleSize = 'default' | 'large' | 'screen';
 
 export interface SheetHintProps {
   readonly centered?: boolean;
@@ -136,12 +143,14 @@ export interface SheetProps {
   readonly title: string;
   readonly titleSize?: SheetTitleSize;
   readonly titleIcon?: IconName;
+  readonly titleAction?: ReactNode;
   readonly hint?: string;
   readonly dismissLabel: string;
   readonly bottomInset?: number;
   readonly onDismiss: () => void;
   readonly onShow?: () => void;
   readonly dim?: boolean;
+  readonly scrollEnabled?: boolean;
   readonly children: ReactNode;
 }
 
@@ -150,16 +159,23 @@ export function Sheet({
   title,
   titleSize = 'default',
   titleIcon,
+  titleAction,
   hint,
   dismissLabel,
   bottomInset = 0,
   onDismiss,
   onShow,
   dim = false,
+  scrollEnabled = true,
   children,
 }: SheetProps) {
   const styles = useStyles();
-  const titleStyle = [styles.title, titleSize === 'large' && styles.titleLarge];
+  const titleStyle = [
+    styles.title,
+    titleSize === 'large' && styles.titleLarge,
+    titleSize === 'screen' && styles.titleScreen,
+    titleAction !== undefined && styles.titleBesideAction,
+  ];
   const motion = useReduceMotionMode();
   const transitions = useMemo(
     () => ({
@@ -254,6 +270,9 @@ export function Sheet({
               <Text accessibilityRole="header" style={titleStyle}>
                 {title}
               </Text>
+              {titleAction === undefined ? null : (
+                <View style={styles.titleAction}>{titleAction}</View>
+              )}
             </View>
           </View>
         </GestureDetector>
@@ -261,6 +280,7 @@ export function Sheet({
           style={styles.scroll}
           contentContainerStyle={styles.content}
           bounces={false}
+          scrollEnabled={scrollEnabled}
           keyboardShouldPersistTaps="handled"
           scrollIndicatorInsets={INDICATOR_INSETS}
         >

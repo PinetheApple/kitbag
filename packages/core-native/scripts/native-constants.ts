@@ -5,6 +5,7 @@ import {
   parseConstexprIntArray,
   parseDefineInt,
   parseDefineNumber,
+  parseDocumentedSymmetricBound,
   parseEnum,
   parseRangeAfter,
   parseSoundNames,
@@ -88,7 +89,9 @@ export function collectConstants(sources: NativeSources): NativeConstants {
     ),
     result: parseEnum(sources.apiHeader, 'kb_result'),
     accent: parseEnum(sources.apiHeader, 'kb_accent'),
-    latencyOffsetMsBounds: parseRangeAfter(
+    latencyOffsetMsBounds: parseDocumentedSymmetricBound(
+      sources.metronomeHeader,
+      'kMaxLatencyOffsetMs',
       sources.apiHeader,
       'Output latency offset in ms',
     ),

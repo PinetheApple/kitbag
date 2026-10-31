@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include "abi_test_engine_clock.h"
 #include "abi_test_engine_hold.h"
 #include "abi_test_metronome.h"
 #include "abi_verify_tuner.h"
@@ -25,7 +26,7 @@ using kitbag_test::g_failures;
 
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 122;
+constexpr int kExpectedChecks = 153;
 
 void ExpectRejected(
     kb_engine* engine,
@@ -259,6 +260,17 @@ bool RunFileFixtureTests(kb_engine* engine) {
   return true;
 }
 
+void RunOwnEngineSuites() {
+  TestPlayerNullSafe();
+  abi_test::RunMetronomeAbiTests();
+  abi_test::RunLongGridAbiTests();
+  abi_test::RunPolyAbiTests();
+  abi_test::RunSubdivisionAccentAbiTests();
+  abi_test::RunRigClickAbiTests();
+  abi_test::RunEngineHoldAbiTests();
+  abi_test::RunEngineClockAbiTests();
+}
+
 // Returns the process exit code, so main stays a list of what it runs.
 int Report() {
   if (g_checks != kExpectedChecks) {
@@ -283,9 +295,8 @@ int Report() {
 int main() {
   kb_engine* engine = nullptr;
   if (kb_engine_create(&engine) != KB_OK || engine == nullptr) {
-    // Not a skip: without an engine none of the below is exercised, and a tool
-    // that reports success having asserted nothing is how this repo got its
-    // §2 audit.
+    // Not a skip: a tool that passes having asserted nothing is how this repo
+    // got its §2 audit.
     std::fprintf(stderr, "abi_verify: could not create an engine\n");
     return 1;
   }
@@ -296,11 +307,7 @@ int main() {
   TestSetGridRejectsOversize(engine);
   TestClearGrid(engine);
   TestMixerTransportIsNullSafe(engine);
-  TestPlayerNullSafe();
-  abi_test::RunMetronomeAbiTests();
-  abi_test::RunLongGridAbiTests();
-  abi_test::RunPolyAbiTests();
-  abi_test::RunEngineHoldAbiTests();
+  RunOwnEngineSuites();
   RunTunerAbiTests(engine);
 
   if (!RunFileFixtureTests(engine)) {

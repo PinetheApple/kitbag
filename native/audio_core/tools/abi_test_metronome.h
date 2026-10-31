@@ -6,6 +6,8 @@ namespace abi_test {
 void RunMetronomeAbiTests();
 void RunLongGridAbiTests();
 void RunPolyAbiTests();
+void RunSubdivisionAccentAbiTests();
+void RunRigClickAbiTests();
 
 }  // namespace abi_test
 

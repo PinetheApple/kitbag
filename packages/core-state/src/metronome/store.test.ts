@@ -1,6 +1,7 @@
 import {
   KB_ACCENT,
   KB_DEFAULT_COUNT_IN_SOUND,
+  KB_LATENCY_OFFSET_MS_BOUNDS,
   KB_MAX_BEATS,
   KB_MAX_MUTE_BARS,
   KB_POLY_BEATS_BOUNDS,
@@ -27,6 +28,7 @@ function makeCommands() {
     setTempo: vi.fn(),
     setBeats: vi.fn(),
     setSubdivision: vi.fn(),
+    setSubdivisionAccents: vi.fn(),
     setAccent: vi.fn(),
     setPoly: vi.fn(),
     setPolyAccent: vi.fn(),
@@ -362,9 +364,14 @@ describe('every mutation maps 1:1 onto an engine command', () => {
     store.getState().setVolume(1.5);
     expect(commands.setVolume).toHaveBeenCalledWith(1.5);
 
-    store.getState().setLatency(250); // clamped to the generated +100 bound
-    expect(store.getState().latencyOffset).toBe(100);
-    expect(commands.setLatencyOffset).toHaveBeenCalledWith(100);
+    const { min, max } = KB_LATENCY_OFFSET_MS_BOUNDS;
+    store.getState().setLatency(max - 50);
+    expect(commands.setLatencyOffset).toHaveBeenLastCalledWith(max - 50);
+    store.getState().setLatency(max + 150);
+    expect(store.getState().latencyOffset).toBe(max);
+    expect(commands.setLatencyOffset).toHaveBeenLastCalledWith(max);
+    store.getState().setLatency(min - 150);
+    expect(commands.setLatencyOffset).toHaveBeenLastCalledWith(min);
 
     store.getState().setBarMute({ enabled: true, playBars: 3, muteBars: 1 });
     expect(commands.setBarMute).toHaveBeenCalledWith(true, 3, 1);

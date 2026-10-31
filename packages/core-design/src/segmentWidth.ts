@@ -1,9 +1,11 @@
-// A flex: 1 option in a shrink-to-fit track takes an equal share of the
-// options' summed natural widths, which is how the design's segment sizes.
-export function equalOptionWidth(
+export interface OptionMinWidth {
+  readonly minWidth: number;
+}
+
+// A floor, not a width, so a label grown by font scale widens instead of wrapping.
+export function equalOptionMinWidth(
   labelWidths: readonly number[],
   padding: number,
-): number {
-  const total = labelWidths.reduce((sum, width) => sum + width, 0);
-  return total / labelWidths.length + padding * 2;
+): OptionMinWidth {
+  return { minWidth: Math.max(...labelWidths) + padding * 2 };
 }

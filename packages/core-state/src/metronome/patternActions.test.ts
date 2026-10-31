@@ -17,6 +17,7 @@ function setup() {
     setTempo: vi.fn(),
     setBeats: vi.fn(),
     setSubdivision: vi.fn(),
+    setSubdivisionAccents: vi.fn(),
     setAccent: vi.fn(),
     setPoly: vi.fn(),
     setPolyAccent: vi.fn(),

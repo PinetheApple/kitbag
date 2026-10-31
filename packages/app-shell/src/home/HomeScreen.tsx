@@ -1,7 +1,9 @@
 import {
   AppBar,
   AppBarAction,
+  Button,
   createThemedStyles,
+  homeArrange,
   space,
   ToolGrid,
   ToolRow,
@@ -9,18 +11,26 @@ import {
 } from '@kitbag/core-design';
 import {
   summarize,
+  useHomeLayout,
   useLastTool,
   useMetronome,
   useSongLibrary,
   useTuner,
+  visibleTiles,
 } from '@kitbag/core-state';
 import { DEFAULT_TUNING, tuningLabel } from '@kitbag/tool-tuner';
 import { useRouter, type Href } from 'expo-router';
-import { useMemo } from 'react';
-import { ScrollView } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useSettingsRoutes } from '../settings/settingsRoutes.ts';
+import { ArrangeSheet } from './ArrangeSheet.tsx';
+import {
+  homeArrangement,
+  toolFor,
+  type HomeArrangement,
+} from './arrangement.ts';
 import {
   continueTarget,
   HOME_TOOLS,
@@ -45,6 +55,11 @@ const useStyles = createThemedStyles((theme) => ({
   content: {
     paddingHorizontal: space.screenInset,
     gap: space.sectionGap,
+  },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: homeArrange.appBarGap,
   },
 }));
 
@@ -93,6 +108,19 @@ function useLiveText(): Readonly<Record<string, LiveText>> {
   }, [metronome, tuning, libraryRows, libraryFailed]);
 }
 
+function useArrangement() {
+  const saved = useHomeLayout((s) => s.arrangement);
+  const arrange = useHomeLayout((s) => s.arrange);
+  const arrangement = useMemo(() => homeArrangement(saved), [saved]);
+  const onArrange = useCallback(
+    (next: HomeArrangement) => {
+      if (next !== arrangement) arrange(next);
+    },
+    [arrangement, arrange],
+  );
+  return { arrangement, onArrange };
+}
+
 export function HomeScreen() {
   const styles = useStyles();
   const insets = useSafeAreaInsets();
@@ -100,6 +128,14 @@ export function HomeScreen() {
   const liveText = useLiveText();
   const lastToolId = useLastTool((s) => s.toolId);
   const { openSettings } = useSettingsRoutes();
+  const { arrangement, onArrange } = useArrangement();
+  const [arranging, setArranging] = useState(false);
+  const openArrange = useCallback(() => {
+    setArranging(true);
+  }, []);
+  const closeArrange = useCallback(() => {
+    setArranging(false);
+  }, []);
 
   const contentInsets = useMemo(
     () => ({
@@ -122,21 +158,22 @@ export function HomeScreen() {
   const resume = continueTarget(lastToolId, HOME_TOOLS);
   const resumeText = resume === undefined ? undefined : liveText[resume.id];
 
-  const tiles: ToolGridItem[] = HOME_TOOLS.flatMap((tool) =>
-    tool.layout === 'row'
-      ? []
-      : [
-          {
-            id: tool.id,
-            size: tool.layout,
-            icon: tool.icon,
-            title: tool.name,
-            subtext: liveText[tool.id]?.tile ?? UPCOMING_SUBTEXT,
-            status: tool.homeTile === undefined ? 'upcoming' : 'ready',
-            onPress: open(tool),
-          },
-        ],
-  );
+  const tiles: ToolGridItem[] = visibleTiles(arrangement).flatMap((tile) => {
+    const tool = toolFor(tile);
+    if (tool === undefined) return [];
+    return [
+      {
+        id: tool.id,
+        size: tile.size,
+        icon: tool.icon,
+        title: tool.name,
+        subtext: liveText[tool.id]?.tile ?? UPCOMING_SUBTEXT,
+        status: tool.homeTile === undefined ? 'upcoming' : 'ready',
+        onPress: open(tool),
+        onLongPress: openArrange,
+      },
+    ];
+  });
   const rows = HOME_TOOLS.filter((tool) => tool.layout === 'row');
 
   return (
@@ -148,11 +185,22 @@ export function HomeScreen() {
         wordmark
         title="Kitbag"
         trailing={
-          <AppBarAction
-            icon="settings"
-            accessibilityLabel="Settings"
-            onPress={openSettings}
-          />
+          <View style={styles.actions}>
+            <Button
+              variant="tonal"
+              size="small"
+              icon="edit"
+              iconSize="field"
+              label="Edit"
+              accessibilityLabel="Edit Home layout"
+              onPress={openArrange}
+            />
+            <AppBarAction
+              icon="settings"
+              accessibilityLabel="Settings"
+              onPress={openSettings}
+            />
+          </View>
         }
       />
 
@@ -186,6 +234,14 @@ export function HomeScreen() {
         title="More tools"
         subtitle="Future tools arrive as plugins"
         status="upcoming"
+      />
+
+      <ArrangeSheet
+        visible={arranging}
+        arrangement={arrangement}
+        bottomInset={insets.bottom}
+        onArrange={onArrange}
+        onDone={closeArrange}
       />
     </ScrollView>
   );

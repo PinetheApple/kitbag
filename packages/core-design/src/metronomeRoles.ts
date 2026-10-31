@@ -22,6 +22,8 @@ export const metronome = {
   songChipRight: 6,
   songChipGap: 4,
   pickerChip: 42,
+  unsavedDot: 10,
+  unsavedDotGap: 6,
   meterChipMin: 94,
   meterChipLeft: 16,
   subdivisionChipMin: 144,
@@ -116,6 +118,12 @@ export const metronomeSheet = {
   songRowH: 8,
   songRowRadius: 10,
   songNumberWidth: 18,
+  nowAction: 36,
+  nowActionRadius: 10,
+  nowActionSaveH: 12,
+  nowActionRevertH: 10,
+  nowActionIconGap: 4,
+  nowNameMin: 40,
 } as const;
 
 export const metronomeEditor = {

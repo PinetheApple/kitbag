@@ -353,6 +353,7 @@ void RunBasicTests();
 void RunSignatureTests();
 void RunStartAtTests();
 void RunLatencyTests();
+void RunLatencyFreeRunTests();
 void RunGridTests();
 void RunAnchorTests();
 void RunPolyTests();
@@ -361,6 +362,10 @@ void RunPolyRatioLiveTests();
 void RunPolyTransportTests();
 void RunPolyPhaseTests();
 void RunSoundTests();
+void RunSubdivisionAccentTests();
+void RunRigClickScheduleTests();
+void RunRigClickSoundTests();
+void RunRigClickIsolationTests();
 void RunCountInTests();
 void RunLongCountInTests();
 void RunRampTests();
@@ -369,6 +374,7 @@ void RunRampSubdivisionTests();
 void RunTrainerStatusTests();
 void RunRampStatusTests();
 void RunFollowTests();
+void RunBarPhaseTests();
 
 }  // namespace metronome_test
 

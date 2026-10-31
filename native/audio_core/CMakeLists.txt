@@ -32,6 +32,7 @@ add_library(kitbag_core SHARED
   src/api/api_analysis.cpp
   src/api/api_media.cpp
   src/api/api_metronome.cpp
+  src/api/api_rig_click.cpp
   src/api/api_tuning.cpp
   src/analysis/beat_tracker.cpp
   src/analysis/downbeat.cpp
@@ -44,12 +45,14 @@ add_library(kitbag_core SHARED
   src/media/resampling_source_reader.cpp
   src/engine.cpp
   src/dsp/fft.cpp
+  src/metronome/click_voices.cpp
   src/metronome/metronome.cpp
   src/metronome/metronome_count_in.cpp
   src/metronome/metronome_grid.cpp
   src/metronome/metronome_pattern.cpp
   src/metronome/metronome_render.cpp
   src/metronome/metronome_trainer_mirrors.cpp
+  src/metronome/rig_click.cpp
   src/metronome/tempo_ramp.cpp
   src/media/miniaudio_impl.c
   src/media/streaming_track.cpp
@@ -125,12 +128,14 @@ if(KITBAG_BUILD_TOOLS)
   target_compile_definitions(kitbag_core PUBLIC KITBAG_BUILD_TOOLS)
 
   set(KITBAG_METRONOME_SOURCES
+    src/metronome/click_voices.cpp
     src/metronome/metronome.cpp
     src/metronome/metronome_count_in.cpp
     src/metronome/metronome_grid.cpp
     src/metronome/metronome_pattern.cpp
     src/metronome/metronome_render.cpp
     src/metronome/metronome_trainer_mirrors.cpp
+    src/metronome/rig_click.cpp
     src/metronome/tempo_ramp.cpp)
 
   add_executable(metronome_verify
@@ -139,6 +144,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_signature.cpp
     tools/metronome/metronome_test_grid.cpp
     tools/metronome/metronome_test_latency.cpp
+    tools/metronome/metronome_test_latency_free.cpp
     tools/metronome/metronome_test_startat.cpp
     tools/metronome/metronome_test_anchor.cpp
     tools/metronome/metronome_test_poly.cpp
@@ -147,6 +153,10 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_poly_transport.cpp
     tools/metronome/metronome_test_poly_phase.cpp
     tools/metronome/metronome_test_sound.cpp
+    tools/metronome/metronome_test_subdivision_accents.cpp
+    tools/metronome/metronome_test_rig_click.cpp
+    tools/metronome/metronome_test_rig_click_sound.cpp
+    tools/metronome/metronome_test_rig_click_isolation.cpp
     tools/metronome/metronome_test_count_in.cpp
     tools/metronome/metronome_test_count_in_long.cpp
     tools/metronome/metronome_test_ramp.cpp
@@ -155,6 +165,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_trainer_status.cpp
     tools/metronome/metronome_test_ramp_status.cpp
     tools/metronome/metronome_test_follow.cpp
+    tools/metronome/metronome_test_bar_phase.cpp
     tools/rt/rt_publisher_verify.cpp
     tools/rt/stall_detector_test.cpp
     ${KITBAG_METRONOME_SOURCES})
@@ -169,7 +180,9 @@ if(KITBAG_BUILD_TOOLS)
   add_executable(abi_verify tools/abi_verify.cpp tools/abi_test_metronome.cpp
                             tools/abi_test_grid_long.cpp tools/abi_verify_tuner.cpp
                             tools/abi_test_engine_hold.cpp tools/abi_test_engine_stress.cpp
-                            tools/abi_test_poly.cpp)
+                            tools/abi_test_poly.cpp tools/abi_test_subdivision_accents.cpp
+                            tools/abi_test_rig_click.cpp
+                            tools/abi_test_engine_clock.cpp)
   target_include_directories(abi_verify PRIVATE src tools tools/media)
   target_link_libraries(abi_verify PRIVATE kitbag_core Threads::Threads)
 

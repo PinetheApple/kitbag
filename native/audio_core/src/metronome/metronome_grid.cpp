@@ -13,6 +13,7 @@ using metronome_detail::Clamp;
 using metronome_detail::kGridEpsilon;
 using metronome_detail::kMsPerSecond;
 using metronome_detail::kSecondsPerMinute;
+using metronome_detail::PhaseBelowOne;
 
 namespace {
 
@@ -108,10 +109,10 @@ void Metronome::RenderGridSubdivision(
   const double interval = times[grid_cursor_] - previous;
   const double tick = previous + interval * grid_next_sub_ / subdivision_;
   if (song_seconds + kGridEpsilon >= tick && tick <= grid_fire_limit_) {
-    ++grid_next_sub_;
+    const int slot = grid_next_sub_++;
     // The tick sits in [grid_cursor_-1, grid_cursor_], so its owning beat is
     // grid_beat_index_ (== grid_cursor_-1, and >= 0 given the guard above).
-    OnSubdivisionTick(grid_beat_index_, sample_rate);
+    OnSubdivisionTick(grid_beat_index_, slot, sample_rate);
   }
 }
 
@@ -126,11 +127,13 @@ void Metronome::PublishGridMirrors(const BeatGrid& grid, double song_seconds) {
   const double interval = times[grid_cursor_] - previous;
   if (interval <= 0.0) return;
 
-  const double beat_fraction = (song_seconds - previous) / interval;
+  // Same epsilon as BeatDue: the fired beat reads >= 0, the next one < 1.
+  const double beat_fraction =
+      (song_seconds + kGridEpsilon - previous) / interval;
   const double beat_in_bar =
       static_cast<double>(grid_beat_index_ % beats_per_bar_);
   bar_phase_.store(
-      (beat_in_bar + beat_fraction) / beats_per_bar_,
+      PhaseBelowOne((beat_in_bar + beat_fraction) / beats_per_bar_),
       std::memory_order_relaxed
   );
   // Clamped to the same range SetTempo enforces: a beat tracker emits outlier
