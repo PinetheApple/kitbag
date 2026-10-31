@@ -14,6 +14,8 @@ constexpr int kHihatSound = 4;
 constexpr int64_t kRiseWindowFrames = 32;
 constexpr int64_t kFrameSlack = 2;
 constexpr double kHihatAccentHz = 5000.0;
+constexpr double kHihatDecayPerSecond = 120.0;
+constexpr double kMinTickRise = 0.05;
 constexpr int64_t kBeatFrames = kSampleRate / 2;
 
 inline int64_t FramesFor(double seconds) {
