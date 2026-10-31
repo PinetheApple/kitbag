@@ -97,6 +97,19 @@ export function polySpanPlace(
   return { left, width: polyX(span.end, beatsPerBar, row) - left };
 }
 
+export function polySpanInArea(
+  span: PolyCycleSpan,
+  beatsPerBar: number,
+  row: PolyRowGeometry,
+  areaWidth: number,
+): { readonly left: number; readonly width: number } {
+  const place = polySpanPlace(span, beatsPerBar, row);
+  const areaRight =
+    row.lineWidth + Math.max(0, (areaWidth - row.lineWidth) / 2);
+  const right = Math.min(place.left + place.width, areaRight);
+  return { left: place.left, width: right - place.left };
+}
+
 export function polyDotSize(
   ratio: PolyRatio,
   row: PolyRowGeometry,
@@ -124,8 +137,8 @@ export function polyLabelPlace(room: PolyLabelRoom): PolyLabelPlace {
   if (room.labelHeight > room.rowHeight) return 'above';
   const needed = room.labelWidth + room.labelGap;
   const margin = Math.max(0, room.sideRoom) + room.screenInset;
-  if (needed <= margin) return 'left';
-  return needed <= room.afterLastDot + margin ? 'right' : 'above';
+  if (needed <= room.afterLastDot + margin) return 'right';
+  return needed <= margin ? 'left' : 'above';
 }
 
 export function polyRatioLabel(ratio: PolyRatio): string {
