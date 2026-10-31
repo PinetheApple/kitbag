@@ -26,7 +26,11 @@ export type StemPlayerCommands = Pick<
   | 'metronomeStop'
   | 'songTransportShow'
   | 'songTransportHide'
->;
+> & {
+  readonly onSongStopped: (handler: () => void) => {
+    readonly remove: () => void;
+  };
+};
 
 // Synchronous HostObject reads, taken at human speed on the JS thread.
 export interface StemPlayerEngine {

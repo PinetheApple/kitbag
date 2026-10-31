@@ -72,6 +72,7 @@ const commands: StemPlayerCommands = {
   songTransportHide: () => {
     getKitbagCommands().songTransportHide();
   },
+  onSongStopped: (handler) => getKitbagCommands().onSongStopped(handler),
 };
 
 configureStemPlayer({

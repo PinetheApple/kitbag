@@ -13,6 +13,16 @@ export function stopClick({ commands }: StemPlayerRuntime): void {
   commands.metronomeStop();
 }
 
+export function clickOff({
+  set,
+  get,
+  runtimeOf,
+}: Pick<ActionContext, 'set' | 'get' | 'runtimeOf'>): void {
+  if (!get().click) return;
+  set({ click: false });
+  stopClick(runtimeOf());
+}
+
 export function clickActions({
   set,
   get,
@@ -20,11 +30,6 @@ export function clickActions({
   session,
 }: ActionContext): Pick<StemPlayerActions, 'toggleClick'> {
   const { busy, call } = sessionGate(session);
-
-  const stop = () => {
-    set({ click: false });
-    stopClick(runtimeOf());
-  };
 
   const start = async () => {
     const { commands, engine, sharedMetronome } = runtimeOf();
@@ -48,7 +53,7 @@ export function clickActions({
     toggleClick: async () => {
       if (busy()) return;
       if (get().click) {
-        stop();
+        clickOff({ set, get, runtimeOf });
         return;
       }
       await start();

@@ -28,10 +28,12 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
       nativeInstall(runtimePtr)
     }
     PlaybackService.listener = ::emitTransport
+    PlaybackService.songListener = ::emitOnSongStopped
   }
 
   override fun invalidate() {
     PlaybackService.listener = null
+    PlaybackService.songListener = null
     super.invalidate()
   }
 

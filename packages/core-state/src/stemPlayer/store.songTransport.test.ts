@@ -60,4 +60,38 @@ describe('the song notification', () => {
     expect(commands.metronomeFollowMixer).toHaveBeenCalledWith(true);
     expect(commands.songTransportShow).toHaveBeenCalledTimes(1);
   });
+
+  it('stopping the song from it ends the joined click', async () => {
+    const { commands, store, stopSongFromNotification } = await opened([
+      stem(1),
+    ]);
+    await store.getState().toggleClick();
+    store.getState().togglePlay();
+    stopSongFromNotification();
+    expect(store.getState().click).toBe(false);
+    expect(commands.metronomeFollowMixer).toHaveBeenLastCalledWith(false);
+    expect(commands.clearGrid).toHaveBeenCalledTimes(1);
+    expect(commands.metronomeStop).toHaveBeenCalledTimes(1);
+  });
+
+  it('stopping the song from it leaves a click that was off alone', async () => {
+    const { commands, store, stopSongFromNotification } = await opened([
+      stem(1),
+    ]);
+    store.getState().togglePlay();
+    stopSongFromNotification();
+    expect(store.getState().click).toBe(false);
+    expect(commands.metronomeStop).not.toHaveBeenCalled();
+  });
+
+  it('is not listened to once the player closes', async () => {
+    const { commands, store, stopSongFromNotification } = await opened([
+      stem(1),
+    ]);
+    await store.getState().toggleClick();
+    store.getState().close();
+    commands.metronomeStop.mockClear();
+    stopSongFromNotification();
+    expect(commands.metronomeStop).not.toHaveBeenCalled();
+  });
 });
