@@ -38,6 +38,7 @@ KB_EXPORT uint32_t kb_engine_sample_rate(const kb_engine* engine);
 /* Monotonic frames rendered since start; the master clock. */
 KB_EXPORT uint64_t kb_engine_frames_rendered(const kb_engine* engine);
 
+#include "kitbag_engine_clock_api.h"
 #include "kitbag_engine_hold_api.h"
 
 /* --- Offline render (verify only, NOT the shipped ABI) ------------------ */
