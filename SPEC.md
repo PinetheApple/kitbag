@@ -500,36 +500,34 @@ were built. Do not assume they are present:
 > the error was harmless, but it is the kind of thing that should be read off the
 > vendored `LICENSE` rather than a table. Attribution obligations still apply.
 
-### 4.7 The latency clamp is a doc comment
+### 4.7 The latency clamp
 
-`kitbag_api.h:63` documents `kb_metronome_set_latency_offset` as `[-100, 100]`
-ms. **Nothing enforces it.** `kb_metronome_set_latency_offset` passes straight
-through to `Metronome::SetLatencyOffset` (`metronome.cpp:90`), which pushes the
-raw value onto the command queue. The clamp lives in two Dart constants and a
-stale comment.
+The engine clamps `kb_metronome_set_latency_offset` to **±300 ms**
+(`Metronome::kMaxLatencyOffsetMs`), applied when the command is drained. The
+generated `KB_LATENCY_OFFSET_MS_BOUNDS` is read from that constant, and
+`kitbag_api.h` documents the same range.
 
-This matters because ±100 ms **cannot reach Bluetooth**, which routinely lands
-150–250 ms late — the most common problem the control exists to solve. The bounds
-are a decision, not an engine constraint, and they cost a line each.
+The bound is sized for Bluetooth, which routinely lands 150–250 ms late — the most
+common problem the control exists to solve, and one ±100 ms cannot reach. The
+bounds are a decision, not an engine constraint.
 
 **Decided (D5):** latency offset **±300 ms**; phase nudge **±½ beat**
 (tempo-dependent); downbeat shift in beats. Three quantities, three constants, no
-shared value. Update the doc comment to match — a stale comment that reads like a
-constraint is how this became three bugs.
+shared value.
 
 **Checked 2026-07-17 — there is no window, and the check found two live bugs,
 now fixed.** `Metronome::Render` applies the offset as a per-sample phase bias,
 `position = beat_position_ + latency_beats`, and evaluates the grid from the
 biased position. Nothing is queued, so no queue depth bounds the offset, and the
-±100 ms rejection is the clamp at `metronome.cpp` (`kSetLatencyOffset`) rather
+±300 ms rejection is the clamp at `metronome.cpp` (`kSetLatencyOffset`) rather
 than any structural limit.
 
 The first measurement — click spacing exact to 0.000 frames at 60/120/240 BPM,
 ±300 ms, and 600 ms — was **true at constant tempo and scoped too narrowly to
 support the conclusion it was used for** ("widen the clamp, the scheduler is
 untouched"). It measured spacing between clicks that fired, at a fixed tempo.
-Both bugs lived exactly in that blind spot, and both reproduced *inside* the
-existing ±100 ms clamp. Both are now fixed and pinned by
+Both bugs lived exactly in that blind spot, and both reproduced inside a ±100 ms
+clamp. Both are now fixed and pinned by
 `TestLatencyOffsetKeepsBeatZero` and `TestLatencyOffsetSurvivesRamp` in
 `metronome_verify`:
 
@@ -575,12 +573,8 @@ against a reference, which §4.2's phase anchor supplies by writing
 real output latency is §4.2's call**, not settled here.
 
 **What this means for D5.** The offset is a phase bias with no structural bound,
-so the clamp is the only limiter and ±300 ms is a one-line change to it — plus
-moving `kitbag_api.h:63`'s doc comment, which documents `[-100, 100]` as an engine
-constraint when it is D5's decision. **The widening itself is deliberately not
-done here:** it is a decision to land with the calibration screen that motivates
-it (§12.8), and the regressions that now guard the interaction should be green
-before and after it.
+so the clamp is the only limiter. `metronome_verify` runs the regressions above at
+the ±300 ms bound and pins the bound itself by value.
 
 ---
 
@@ -1605,8 +1599,8 @@ the supersession: ≤7 primary choices.)
   the readout still says `150%` and the tick is positional (colour is not the only
   signal).
 - **Latency is a stepper, not a slider.** 1 ms per tap, long-press to repeat.
-  **Range ±300 ms** (D5) — the build's slider is `divisions: 20` across ±100 ms,
-  which is **10 ms a step, a third of a semiquaver at 120 BPM**: audible, not fine
+  **Range ±300 ms** (D5) — the Flutter build's slider was `divisions: 20` across
+  ±100 ms, which is **10 ms a step, a third of a semiquaver at 120 BPM**: audible, not fine
   enough to null a click against a track, and unable to reach Bluetooth at either
   end. A stepper also makes the value legible, which a 120dp slider never was.
 - **Latency belongs to the output, not the app.** Your offset for wired
@@ -1678,8 +1672,7 @@ asks them to.
 calibration screen would have measured offsets it was unable to apply. The range
 is now ±300 ms. The lookahead check ran 2026-07-17: there is no window, the
 offset is a phase bias, and the two latency bugs the check exposed are fixed and
-pinned in `metronome_verify` (§4.7). Widening the clamp to ±300 ms is a one-liner
-left to land with the calibration screen that needs it (§12.8).
+pinned in `metronome_verify` (§4.7). The engine clamps at ±300 ms.
 
 ### 12.6 Experience rules — acceptance criteria, not aspirations
 
