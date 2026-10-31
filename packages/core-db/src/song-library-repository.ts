@@ -267,6 +267,10 @@ async function deleteSong(
   return row;
 }
 
+async function listSongFiles(db: Database) {
+  return db.select({ id: songs.id, filePath: songs.filePath }).from(songs);
+}
+
 async function renameSong(db: Database, id: number, title: string) {
   await db.update(songs).set({ title }).where(eq(songs.id, id));
 }
@@ -295,6 +299,7 @@ export function createSongLibraryRepository({
     saveStemMix: (mixes: readonly StemMix[]) =>
       transaction(() => saveStemMix(db, mixes)),
     listStemSetFolders: () => serial(() => listStemSetFolders(db)),
+    listSongFiles: () => serial(() => listSongFiles(db)),
     renameSong: (id: number, title: string) =>
       serial(() => renameSong(db, id, title)),
     renameStemSet: (id: number, title: string) =>

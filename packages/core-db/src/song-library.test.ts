@@ -334,6 +334,16 @@ describe('song library repository', () => {
     expect(await library.list()).toEqual([]);
   });
 
+  it('lists each song with its stored file path', async () => {
+    const { library } = setup();
+    const first = await library.insertSong(song('Everlong'));
+    const second = await library.insertSong(song('Take Five'));
+    expect(await library.listSongFiles()).toEqual([
+      { id: first, filePath: 'songs/uuid-Everlong/Everlong.mp3' },
+      { id: second, filePath: 'songs/uuid-Take Five/Take Five.mp3' },
+    ]);
+  });
+
   it('packs values without a Buffer', () => {
     expect(packFloat32([1])).toEqual(Uint8Array.from([0, 0, 0x80, 0x3f]));
     expect(packInt32([-1])).toEqual(Uint8Array.from([0xff, 0xff, 0xff, 0xff]));
