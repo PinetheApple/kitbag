@@ -562,3 +562,9 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   for the render test; react-dom and react-native-web were already pinned by app-shell. The
   subdivision sheet's ×1 tile draws the glyph under x/8 too, extrapolated from the chip,
   since the design's tile grid shows only x/4. **[recorded]**
+- **2026-10-31 · A mid-song latency change in grid mode drops the crossed beats (§4.7, #245)**
+  — When the offset changes while a song grid drives the click, the click jumps straight to
+  its new position: no catch-up burst for the beats the change crossed, the same way the
+  stems jump. **[user]** A change that moves the position back keeps the cursor, so no beat
+  sounds twice and the click waits for the next unsounded beat. That half is the engine's
+  reading of "dropped", not a separate owner ruling. **[recorded]**

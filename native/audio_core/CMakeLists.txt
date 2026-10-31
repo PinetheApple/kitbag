@@ -166,6 +166,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_ramp_status.cpp
     tools/metronome/metronome_test_follow.cpp
     tools/metronome/metronome_test_bar_phase.cpp
+    tools/metronome/metronome_test_grid_offset.cpp
     tools/rt/rt_publisher_verify.cpp
     tools/rt/stall_detector_test.cpp
     ${KITBAG_METRONOME_SOURCES})

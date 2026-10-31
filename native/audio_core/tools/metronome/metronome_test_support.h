@@ -41,13 +41,14 @@ inline void DetectOnsets(
     int64_t block_start,
     std::vector<int64_t>* onsets,
     int64_t* last_onset,
-    float* previous_abs
+    float* previous_abs,
+    int64_t hold_frames = kOnsetHoldFrames
 ) {
   for (uint32_t frame = 0; frame < kBlockFrames; ++frame) {
     const float amplitude = std::fabs(buffer[frame * kChannels]);
     const int64_t index = block_start + frame;
     if (amplitude > kOnsetThreshold && *previous_abs <= kOnsetThreshold &&
-        index - *last_onset >= kOnsetHoldFrames) {
+        index - *last_onset >= hold_frames) {
       onsets->push_back(index);
       *last_onset = index;
     }
@@ -375,6 +376,7 @@ void RunTrainerStatusTests();
 void RunRampStatusTests();
 void RunFollowTests();
 void RunBarPhaseTests();
+void RunGridOffsetChangeTests();
 
 }  // namespace metronome_test
 

@@ -557,12 +557,19 @@ clamp. Both are now fixed and pinned by
   double-incrementing `current_bar_`). Found by the first fix's own reviewer:
   the machinery to prevent it existed and was not applied here. **Fixed** by the
   same phase-preservation in `kSetLatencyOffset` while running.
-- **Under a grid a mid-run change drops or delays beats.** Grid mode reads the
-  offset through `GridSeconds` rather than through `beat_position_`, so changing
-  it shifts the song-time mapping without moving `grid_cursor_`. The effect
-  scales with the size of the change, up to twice the clamp: on a 400 BPM grid,
-  −300 → +300 ms drops 4 beats and +300 → −300 ms leaves a 0.75 s gap. What a
-  mid-song change should do is open (#245).
+- **Under a grid a mid-run change jumps the click; crossed beats are dropped**
+  (owner, 2026-10-31, #245). Grid mode reads the offset through `GridSeconds`, so
+  a change moves the song position the click is on. When the position moves
+  forward, the cursor re-seeks: the next click is the first beat at or after the
+  new position, on its new-offset frame, and the beats in between never sound
+  (−300 → +300 ms on a 400 BPM grid drops 4). It used to fire them as one
+  off-grid click at the change. When the position moves back, the cursor stays:
+  no beat that already sounded repeats, so the click is silent until the next
+  unsounded beat's new-offset frame, a gap of up to the change plus one interval
+  (0.75 s for +300 → −300 ms at 400 BPM). Re-seeking back would replay the beats
+  in between, and a small change would sound one beat twice a few ms apart.
+  Pinned by `RunGridOffsetChangeTests` in `metronome_verify`. The follow-mixer
+  click ignores the offset (D16), so a change there moves nothing.
 
 **The rule these three fixes share, and the decision that comes with it:** a
 change to the offset *or* the tempo preserves `position` phase — it never steps

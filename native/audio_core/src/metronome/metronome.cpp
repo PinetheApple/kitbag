@@ -320,11 +320,14 @@ void Metronome::ArmRamp(const Command& command) {
 
 void Metronome::SetLatencyPreservingPhase(double latency_ms) {
   const double before = LatencyBeats();
+  const double before_ms = latency_offset_ms_;
   latency_offset_ms_ =
       Clamp(latency_ms, -kMaxLatencyOffsetMs, kMaxLatencyOffsetMs);
-  if (running_) {
-    beat_position_ += before - LatencyBeats();
-  }
+  if (!running_) return;
+  beat_position_ += before - LatencyBeats();
+  // A grid position that moved forward drops the beats it crossed (§4.7); one
+  // that moved back keeps its cursor, so no beat that already sounded repeats.
+  if (latency_offset_ms_ > before_ms) ReacquireGrid();
 }
 
 void Metronome::StopRun() {
