@@ -25,6 +25,7 @@ void commandSetSubdivision(int32_t subdivision);
 void commandSetAccent(int32_t beatIndex, int32_t accent);
 void commandSetPoly(bool enabled, int32_t beats);
 void commandSetPolyAccent(int32_t beatIndex, int32_t accent);
+void commandSetPolyAgainst(int32_t mainBeats);
 void commandSetSounds(int32_t normalSound, int32_t accentSound);
 void commandPreviewSound(int32_t sound, bool accented);
 void commandSetCountIn(int32_t bars, bool distinct, int32_t sound);

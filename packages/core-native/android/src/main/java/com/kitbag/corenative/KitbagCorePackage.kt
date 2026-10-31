@@ -12,7 +12,7 @@ import com.facebook.react.module.model.ReactModuleInfoProvider
  * through this package, both kept on the single kb_engine* the HostObject owns
  * (SPEC §4.5):
  *   1. The KitbagCommands TurboModule (getModule below), routing each command to
- *      kitbag::command* via JNI (KitbagJni.cpp).
+ *      kitbag::command* via JNI (KitbagJni*.cpp).
  *   2. The JSI HostObject install (kitbag::kitbagInstall) — triggered from the
  *      TurboModule's constructor (KitbagCommandsModule.init), because that is the
  *      first point a live JSI runtime handle is available. The 60fps read path

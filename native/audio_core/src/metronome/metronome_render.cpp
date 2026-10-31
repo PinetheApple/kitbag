@@ -41,10 +41,15 @@ constexpr SoundPreset kSounds[Metronome::kSoundCount] = {
     {2200.0, 1500.0, 1400.0, 1800.0, 45.0},   // cowbell
 };
 
-int64_t SubdivisionIndex(double position, int subdivision) {
+int64_t TickIndex(double position, double ticks_per_beat) {
   return static_cast<int64_t>(
-      std::floor(position * subdivision + kGridEpsilon)
+      std::floor(position * ticks_per_beat + kGridEpsilon)
   );
+}
+
+bool CrossesTick(double previous, double position, double ticks_per_beat) {
+  return TickIndex(previous, ticks_per_beat) <
+         TickIndex(position, ticks_per_beat);
 }
 
 }  // namespace
@@ -154,8 +159,8 @@ Metronome::BlockTempo Metronome::BlockTempoFor(uint32_t sample_rate) const {
   tempo.beats_per_sample =
       bpm_ * BeatUnitScale() / (kSecondsPerMinute * sample_rate);
   tempo.latency_beats = LatencyBeats();
-  tempo.poly_scale =
-      static_cast<double>(poly_beats_) / static_cast<double>(beats_per_bar_);
+  tempo.poly_ticks_per_beat = static_cast<double>(poly_beats_) /
+                              static_cast<double>(EffectivePolyAgainst());
   return tempo;
 }
 
@@ -203,12 +208,12 @@ void Metronome::BeginPendingStart(
   observed_generation_ = view.generation;
 }
 
-void Metronome::SyncBarFromPosition() {
-  const double position = beat_position_ + LatencyBeats();
-  // The last beat strictly before `position` — the one already sounded. Below
-  // the first downbeat there is none, so the bar counter waits at -1.
-  const auto last_beat =
-      static_cast<int64_t>(std::floor(position - kGridEpsilon));
+int64_t Metronome::LastSoundedBeat(double beats_per_sample) const {
+  return TickIndex(beat_position_ + LatencyBeats() - beats_per_sample, 1.0);
+}
+
+void Metronome::SyncBarFromPosition(double beats_per_sample) {
+  const int64_t last_beat = LastSoundedBeat(beats_per_sample);
   current_bar_ = last_beat < 0 ? -1 : last_beat / beats_per_bar_;
 }
 
@@ -235,8 +240,8 @@ void Metronome::BeginAnchorExternal(
   counting_in_ = false;
   count_in_armed_ = false;
   ReacquireGrid();
-  SyncBarFromPosition();
   *tempo = BlockTempoFor(sample_rate);
+  SyncBarFromPosition(tempo->beats_per_sample);
 }
 
 void Metronome::FireConstantTempoTick(
@@ -265,30 +270,25 @@ void Metronome::FireConstantTempoTick(
   OnBeatBoundary(beat_index, sample_rate);
 }
 
-void Metronome::FirePolyTick(
-    double position,
-    uint32_t sample_rate,
-    const BlockTempo& tempo
-) {
-  const auto poly_index = static_cast<int64_t>(
-      std::floor(position * tempo.poly_scale + kGridEpsilon)
-  );
-  const double poly_start = static_cast<double>(poly_index) / tempo.poly_scale;
-  if (position - tempo.beats_per_sample < poly_start - kGridEpsilon) {
-    OnPolyBoundary(static_cast<int>(poly_index % poly_beats_), sample_rate);
-  }
-}
-
 void Metronome::AdvanceConstantTempo(uint32_t sample_rate, BlockTempo* tempo) {
   double position = beat_position_ + tempo->latency_beats;
   if (counting_in_) position = AdvanceCountIn(position, *tempo, sample_rate);
   if (position >= -kGridEpsilon) {
-    const int64_t sub_index = SubdivisionIndex(position, subdivision_);
-    if (SubdivisionIndex(position - tempo->beats_per_sample, subdivision_) <
-        sub_index) {
-      FireConstantTempoTick(sub_index, sample_rate, tempo);
+    // Read before FireConstantTempoTick: a ramp step there rewrites
+    // tempo->beats_per_sample.
+    const double previous = position - tempo->beats_per_sample;
+    if (CrossesTick(previous, position, subdivision_)) {
+      FireConstantTempoTick(
+          TickIndex(position, subdivision_),
+          sample_rate,
+          tempo
+      );
     }
-    if (poly_enabled_) FirePolyTick(position, sample_rate, *tempo);
+    const double poly_ticks = tempo->poly_ticks_per_beat;
+    if (poly_enabled_ && CrossesTick(previous, position, poly_ticks)) {
+      const int64_t poly_index = TickIndex(position, poly_ticks);
+      OnPolyBoundary(static_cast<int>(poly_index % poly_beats_), sample_rate);
+    }
     ramp_.AdvanceFrame();
   }
   beat_position_ += tempo->beats_per_sample;
@@ -318,6 +318,13 @@ void Metronome::PublishBlockMirrors(
     );
     current_bpm_.store(bpm_, std::memory_order_relaxed);
   }
+  poly_downbeat_phase_.store(
+      PolyDownbeatPhase(
+          grid != nullptr,
+          BlockTempoFor(sample_rate).beats_per_sample
+      ),
+      std::memory_order_relaxed
+  );
   PublishTrainerMirrors(grid != nullptr, sample_rate);
 }
 

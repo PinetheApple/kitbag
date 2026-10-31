@@ -158,15 +158,6 @@ kb_metronome_set_subdivision(kb_engine* engine, int32_t subdivision);
  * current bar is ignored. kb_metronome_set_poly_accent shares both rules. */
 KB_EXPORT void
 kb_metronome_set_accent(kb_engine* engine, int32_t beat_index, int32_t accent);
-KB_EXPORT void
-kb_metronome_set_poly(kb_engine* engine, int32_t enabled, int32_t beats);
-/* Independent of the main row; slot 0 defaults accented. Slots past the poly
- * count are ignored; growing it resets new slots to normal. */
-KB_EXPORT void kb_metronome_set_poly_accent(
-    kb_engine* engine,
-    int32_t beat_index,
-    int32_t accent
-);
 /* Ids index KB_SOUND_NAMES; accent_sound voices accented main and poly beats,
  * normal_sound the rest. An out-of-table id keeps the role's last sound. */
 KB_EXPORT void kb_metronome_set_sounds(
@@ -211,9 +202,6 @@ KB_EXPORT void kb_metronome_set_ramp(
 KB_EXPORT int32_t kb_metronome_is_running(const kb_engine* engine);
 /* Beat index within the bar, -1 when stopped. Poll for UI. */
 KB_EXPORT int32_t kb_metronome_current_beat(const kb_engine* engine);
-/* Poly beat index within its cycle; -1 when stopped, poly disabled or a beat
- * grid is set, and after a poly count change until the next poly beat. */
-KB_EXPORT int32_t kb_metronome_current_poly_beat(const kb_engine* engine);
 /* Position within the bar, [0, 1). For beat-sweep UI. */
 KB_EXPORT double kb_metronome_bar_phase(const kb_engine* engine);
 /* Effective BPM including ramp progress. Poll for UI. */
@@ -221,6 +209,7 @@ KB_EXPORT double kb_metronome_current_bpm(const kb_engine* engine);
 /* 1 during count-in; current_beat and bar_phase follow the count bars. */
 KB_EXPORT int32_t kb_metronome_counting_in(const kb_engine* engine);
 
+#include "kitbag_metronome_poly_api.h"
 #include "kitbag_metronome_trainer_api.h"
 
 /* --- Tuner -------------------------------------------------------------- */

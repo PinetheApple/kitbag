@@ -8,6 +8,8 @@ export interface KitbagHostObject {
   readonly current_beat: number;
   /** kb_metronome_current_poly_beat — poly beat, -1 when stopped, off, gridded or just resized. */
   readonly current_poly_beat: number;
+  /** kb_metronome_poly_downbeat_phase — poly cycle fraction elapsed at this bar's downbeat, [0, 1); KB_POLY_PHASE_NONE without a cycle. */
+  readonly poly_downbeat_phase: number;
   /** kb_metronome_counting_in — 1 while the count-in plays, else 0. */
   readonly counting_in: number;
   /** kb_metronome_current_bpm — effective BPM including ramp progress. */

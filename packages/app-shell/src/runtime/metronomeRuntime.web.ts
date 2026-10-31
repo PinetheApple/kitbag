@@ -1,5 +1,6 @@
 import {
   KITBAG_HOST_OBJECT_KEY,
+  KB_POLY_PHASE_NONE,
   KB_RAMP_STATE,
   KB_RESULT,
   KB_STOPPED_BEAT,
@@ -76,6 +77,7 @@ const presentationHost: KitbagHostObject = Object.freeze({
     ),
   ),
   current_poly_beat: KB_STOPPED_BEAT,
+  poly_downbeat_phase: KB_POLY_PHASE_NONE,
   counting_in: 0,
   bar_muted: 0,
   bar_mute_position: -1,

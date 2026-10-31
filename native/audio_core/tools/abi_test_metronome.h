@@ -5,6 +5,7 @@ namespace abi_test {
 
 void RunMetronomeAbiTests();
 void RunLongGridAbiTests();
+void RunPolyAbiTests();
 
 }  // namespace abi_test
 

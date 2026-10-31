@@ -40,9 +40,38 @@ void Metronome::ResetGrownSlots(
 void Metronome::SetSignatureState(int32_t numerator, int32_t denominator) {
   const int32_t count = Clamp(numerator, 1, kMaxBeats);
   ResetGrownSlots(accents_, beats_per_bar_, count);
+  const int against_before = EffectivePolyAgainst();
   beats_per_bar_ = count;
+  if (EffectivePolyAgainst() != against_before) {
+    current_poly_beat_.store(-1, std::memory_order_relaxed);
+  }
   if (IsOneOf(kDenominators, denominator)) {
     SetDenominatorPreservingPhase(denominator);
+  }
+}
+
+bool Metronome::ApplyPatternCommand(const Command& command) {
+  switch (command.type) {
+    case CommandType::kSetBeats:
+      SetSignatureState(command.int_a, command.int_b);
+      return true;
+    case CommandType::kSetSubdivision:
+      subdivision_ = Clamp(command.int_a, kMinSubdivision, kMaxSubdivision);
+      return true;
+    case CommandType::kSetAccent:
+      SetAccentSlot(accents_, beats_per_bar_, command);
+      return true;
+    case CommandType::kSetPolyAccent:
+      SetAccentSlot(poly_accents_, poly_beats_, command);
+      return true;
+    case CommandType::kSetPoly:
+      SetPolyState(command.int_a != 0, command.int_b);
+      return true;
+    case CommandType::kSetPolyAgainst:
+      SetPolyAgainstState(command.int_a);
+      return true;
+    default:
+      return false;
   }
 }
 
@@ -86,6 +115,30 @@ void Metronome::SetPolyState(bool enabled, int32_t beats) {
   }
   poly_enabled_ = enabled;
   poly_beats_ = count;
+}
+
+void Metronome::SetPolyAgainstState(int32_t main_beats) {
+  const bool in_range =
+      main_beats >= kMinPolyAgainst && main_beats <= kMaxPolyAgainst;
+  if (!in_range && main_beats != KB_POLY_AGAINST_BAR) return;
+  if (main_beats != poly_against_) {
+    current_poly_beat_.store(-1, std::memory_order_relaxed);
+  }
+  poly_against_ = main_beats;
+}
+
+int Metronome::EffectivePolyAgainst() const {
+  return poly_against_ == KB_POLY_AGAINST_BAR ? beats_per_bar_ : poly_against_;
+}
+
+double
+Metronome::PolyDownbeatPhase(bool gridded, double beats_per_sample) const {
+  if (!running_ || gridded || !poly_enabled_) return KB_POLY_PHASE_NONE;
+  const int64_t last_beat = LastSoundedBeat(beats_per_sample);
+  if (last_beat < 0) return KB_POLY_PHASE_NONE;
+  const int64_t downbeat = last_beat - last_beat % beats_per_bar_;
+  const int against = EffectivePolyAgainst();
+  return static_cast<double>(downbeat % against) / against;
 }
 
 }  // namespace kitbag

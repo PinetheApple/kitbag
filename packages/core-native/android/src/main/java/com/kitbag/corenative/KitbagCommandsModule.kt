@@ -169,6 +169,10 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     nativeSetPolyAccent(beatIndex.toInt(), accent.toInt())
   }
 
+  override fun setPolyAgainst(mainBeats: Double) {
+    nativeSetPolyAgainst(mainBeats.toInt())
+  }
+
   override fun setSounds(normalSound: Double, accentSound: Double) {
     nativeSetSounds(normalSound.toInt(), accentSound.toInt())
   }
@@ -307,6 +311,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private external fun nativeSetAccent(beatIndex: Int, accent: Int)
   private external fun nativeSetPoly(enabled: Boolean, beats: Int)
   private external fun nativeSetPolyAccent(beatIndex: Int, accent: Int)
+  private external fun nativeSetPolyAgainst(mainBeats: Int)
   private external fun nativeSetSounds(normalSound: Int, accentSound: Int)
   private external fun nativePreviewSound(sound: Int, accented: Boolean)
   private external fun nativeSetCountIn(bars: Int, distinct: Boolean, sound: Int)

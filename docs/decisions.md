@@ -505,3 +505,14 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   splash cannot follow the in-app choice: the system draws the starting window from the
   manifest theme before any app code runs; no workaround. The About Version row is
   hidden on web, where no installed package has a version. **[recorded]**
+
+- **2026-10-31 · Polyrhythm N against M (§5.2, §12, #203)** — Option A in
+  `design/kitbag-metronome-poly.html`: the Practice sheet's Polyrhythm switch moves into
+  the heading, with a "Poly [− N +] against [− M +]" row and a one-cycle strip below it;
+  the song editor shows a Polyrhythm On/Off row, then Poly and Against rows when on. When
+  Against equals the beats per bar it reads "4 bar" (in 4/4) and follows meter changes, so
+  existing songs (M defaults to the bar) play as before. The main-screen poly row is drawn
+  as in that file: pulses at their time across the bar, a ring on each cycle's start, a
+  bracket over each cycle's span, and a redraw on the downbeat when the cycle does not
+  divide the bar. B (one ratio value with a wheel sheet) and C (poly stepper with a
+  Bar | Beats switch) are rejected. **[user]**

@@ -56,6 +56,7 @@ const HOST_OBJECT_KEYS = Object.keys({
   bar_phase: true,
   current_beat: true,
   current_poly_beat: true,
+  poly_downbeat_phase: true,
   counting_in: true,
   current_bpm: true,
   frames_rendered: true,

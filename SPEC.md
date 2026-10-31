@@ -617,9 +617,13 @@ Ported from the Flutter build, which got this right:
   two lines of 3+3 and a 16-beat bar two lines of eight. That rule is what makes
   the row survive the space problem the circle was solving.
 - **Polyrhythm as a second dot row** under the beat dots, shown only while poly
-  is on. Smaller dots, each placed at its time in the bar, so a poly pulse that
-  lands on a beat sits under that beat; a `3:4` ratio label to the left. The
-  sounding poly dot fills; the row has no accent or mute states.
+  is on. The ratio is N poly beats against M main beats (`3:2`, `5:3`); M
+  defaults to the bar, and while it equals the beats per bar it follows later
+  meter changes. Smaller dots, each placed at its time in the bar, so a poly
+  pulse that lands on a beat sits under that beat; a `3:2` ratio label to the
+  left. Each cycle's first pulse is ringed and a bracket marks each cycle's
+  span; when the cycle does not divide the bar the row redraws on the downbeat
+  (`design/kitbag-metronome-poly.html`). The sounding poly dot fills.
 - **Bar sweep** under the BPM: a thin progress ring per bar (anticipation), and
   the active LED flashes on the click (confirmation). Both — see §12.3.
 - **Practice timer pill** under the app bar, with a visible reset.
@@ -636,7 +640,8 @@ New:
 - **Subdivision reaches 1–16** through that same stepper, showing clicks per
   beat as `×1`…`×16`. (The note glyphs `♩ ♪ ³ ♬` were dropped in #112: they fell
   back to small or emoji renderings and were hard to read.) Poly is switched on
-  and its ratio set in the Practice sheet.
+  and both numbers set in the Practice sheet and song editor, as Poly and
+  Against steppers.
 
 ### 5.3 Four chips, four sheets
 
@@ -1449,6 +1454,7 @@ Two migration notes that are not obvious from the table:
 | `kitbag-settings.html` | Designs Settings, latency calibration, restore. **Supersedes exactly one §06 card** — "Settings stay contextual" — and nothing else. |
 | `kitbag-metronome-b.html` ("Chosen") and `kitbag-metronome-status.html` (variant A, Q6 pulse marks, poly row) | Owner-approved layout B (#175). **Supersede the metronome screen in `kitbag-metronome.html` §02, and §03's sheets and numpad, where they differ.** §02's setlists, setlist detail and preset editor, and §04 onward, stay binding. Recorded in `docs/decisions.md`, 2026-10-30; `docs/research/metronome-b-parity.md` is the value table. |
 | `kitbag-metronome-setlist.html` | **D2 only** ("Chosen (owner, 2026-10-30)"; #205). Supersedes the app bar in `kitbag-metronome-b.html` while a setlist is active, and adds the setlist song-list sheet. Options A–D are rejected alternatives. Recorded in `docs/decisions.md`, 2026-10-30. |
+| `kitbag-metronome-poly.html` | **A and the main-screen poly row only** ("Chosen (owner, 2026-10-31)"; #203). Supersedes the Polyrhythm section of the Practice sheet in `kitbag-metronome-b.html` and the poly row in `kitbag-metronome-status.html`, and adds the song editor's Poly and Against rows. Options B and C are rejected alternatives. Recorded in `docs/decisions.md`, 2026-10-31. |
 | `kitbag-library.html` | **Variant B only** ("Two tiles, two screens"; #178). Supersedes `kitbag-ui.html` §04's Home tiles and Library: Songs and Stem songs are separate screens. Variant C is a rejected alternative. From variant A only the filter menu binds: the Songs filter icon opens it (filter by analysis status; sort by title, date added, BPM). `docs/decisions.md` (2026-10-30, #178) lists what is deliberately not built. |
 | `kitbag-stems.html` | **Variant C only** ("Bottom dock"; #137). Supersedes `kitbag-ui.html` §04's Stem player. Variants A and B are rejected alternatives; `docs/decisions.md` (2026-10-30, #137) lists what is deliberately not built. |
 

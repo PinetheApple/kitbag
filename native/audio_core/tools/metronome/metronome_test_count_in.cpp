@@ -6,7 +6,6 @@ namespace {
 constexpr int kWoodblock = 1;
 constexpr int kClick = 2;
 constexpr int kTom = 3;
-constexpr int kHihat = 4;
 
 constexpr double kBeepAccentHz = 1760.0;
 constexpr double kBeepBeatHz = 1174.7;
@@ -14,7 +13,6 @@ constexpr double kWoodblockAccentHz = 2400.0;
 constexpr double kWoodblockBeatHz = 1800.0;
 constexpr double kClickAccentHz = 3600.0;
 constexpr double kTomBeatHz = 450.0;
-constexpr double kHihatAccentHz = 5000.0;
 constexpr double kSilentCeiling = 0.01;
 
 constexpr int64_t kWaltzBeatFrames = 28800;
@@ -117,7 +115,7 @@ void TestPauseResumeAndStopStart() {
 
 void TestSameSoundAndInvalidValues() {
   kitbag::Metronome same;
-  same.SetSounds(kTom, kHihat);
+  same.SetSounds(kTom, kHihatSound);
   same.SetCountIn(1, false, kWoodblock);
   same.SetTempo(120.0);
   same.Start();

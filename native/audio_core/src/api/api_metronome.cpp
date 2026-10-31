@@ -160,6 +160,12 @@ void kb_metronome_set_poly_accent(
   }
 }
 
+void kb_metronome_set_poly_against(kb_engine* engine, int32_t main_beats) {
+  if (engine != nullptr) {
+    ToEngine(engine)->metronome().SetPolyAgainst(main_beats);
+  }
+}
+
 void kb_metronome_set_sounds(
     kb_engine* engine,
     int32_t normal_sound,
@@ -259,6 +265,12 @@ int32_t kb_metronome_current_beat(const kb_engine* engine) {
 int32_t kb_metronome_current_poly_beat(const kb_engine* engine) {
   return engine == nullptr ? -1
                            : ToEngine(engine)->metronome().current_poly_beat();
+}
+
+double kb_metronome_poly_downbeat_phase(const kb_engine* engine) {
+  return engine == nullptr
+             ? KB_POLY_PHASE_NONE
+             : ToEngine(engine)->metronome().poly_downbeat_phase();
 }
 
 double kb_metronome_bar_phase(const kb_engine* engine) {
