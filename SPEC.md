@@ -1614,9 +1614,8 @@ the supersession: ≤7 primary choices.)
 - **Subdivision accents are global and live here** (**D2**). They preview in the
   row as the same LEDs used everywhere, then open a sheet: one pattern **per
   subdivision count**, not one pattern, since the count is per-song (1–16) — the
-  pattern you set for `♬` applies to every song using `♬`. **This needs engine
-  work** — §5.1's implemented list is per-*beat* accents only. It is the only
-  control on the screen that is not a re-skin of something that already runs.
+  pattern you set for `♬` applies to every song using `♬`. The engine plays
+  these patterns (D2, #170); the row, the sheet and their storage are not built.
 - **Volume and latency are the only rig settings, and they are global** (**D3**).
   No per-song override; `SongPresets` carries neither column. Volume per song is
   genuinely lost — the quiet acoustic number in a loud set needs this slider.
@@ -2207,9 +2206,18 @@ to `7/8`** — the mock's original claim becomes buildable rather than aspiratio
 One pattern **per subdivision count** (1–16), as `kitbag-settings.html` draws it:
 the pattern set for `♬` applies to every song using `♬`. No per-song schema.
 
-**Still engine work.** §5.1's implemented list is per-*beat* accents only, so this
-remains the one control on the Settings screen that is not a re-skin of something
-already running. C API, scheduler, and schema for the global patterns.
+**Off-beat ticks only, played with the accent sound** (owner, 2026-10-31). A pattern
+accents subdivision ticks after the first. Slot 0, the on-beat tick, never overrides
+the per-beat accents (accent / normal / muted), and a muted beat silences its
+subdivision ticks, accented or not. An accented tick plays the accent sound's
+accented click, not a louder normal sound; unaccented off-beat ticks are unchanged.
+
+**As built (#170):** `kb_metronome_set_subdivision_accents(engine, subdivision,
+slot_mask)` sets one row: bit *s* accents slot *s*, bit 0 is ignored, one command
+per row. Rows start empty when the engine is created and survive stop/start; they
+are not stored, so whatever persists the patterns must replay them on launch.
+Grid mode applies them to the measured beats' subdivisions. **Not built:** the
+schema for the global patterns and the Settings row and sheet.
 
 ### D3 — Volume and latency are **global only**. Both columns go.
 

@@ -516,3 +516,10 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   bracket over each cycle's span, and a redraw on the downbeat when the cycle does not
   divide the bar. B (one ratio value with a wheel sheet) and C (poly stepper with a
   Bar | Beats switch) are rejected. **[user]**
+
+- **2026-10-31 · Subdivision accents: slot 0 and the sound (§17 D2, §12.5, #170)** —
+  Global subdivision-accent patterns apply to off-beat ticks only: slot 0, the on-beat
+  tick, never overrides the per-beat accents (accent / normal / muted), and a muted beat
+  silences its accented ticks too. An accented subdivision tick plays the accent sound's
+  accented click, not a louder normal sound; unaccented off-beat ticks keep today's
+  sound. **[user]**
