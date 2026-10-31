@@ -516,3 +516,12 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   bracket over each cycle's span, and a redraw on the downbeat when the cycle does not
   divide the bar. B (one ratio value with a wheel sheet) and C (poly stepper with a
   Bar | Beats switch) are rejected. **[user]**
+
+- **2026-10-31 · Home edit mode (§12, §12.4, §12.6, #113)** — Option B in
+  `design/kitbag-home-arrange.html`: Edit, or a long-press on a tile, opens an Arrange
+  sheet with one row per tool (drag handle, 1×1/2×1 size toggle, hide), and hidden tools
+  sit in a Hidden section with Show. The Home grid never moves while editing. Reorder is
+  handle-only, for the same stage-safety reason as `kitbag-metronome.html:447`: a
+  long-press must not become an accidental reorder. A (launcher-style whole-tile drag) and
+  C (in-place handles with a toolbar) are rejected and kept as reference in
+  `docs/research/mockups/113/`. **[user]**

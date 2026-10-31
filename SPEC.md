@@ -1457,6 +1457,7 @@ Two migration notes that are not obvious from the table:
 | `kitbag-metronome-poly.html` | **A and the main-screen poly row only** ("Chosen (owner, 2026-10-31)"; #203). Supersedes the Polyrhythm section of the Practice sheet in `kitbag-metronome-b.html` and the poly row in `kitbag-metronome-status.html`, and adds the song editor's Poly and Against rows. Options B and C are rejected alternatives. Recorded in `docs/decisions.md`, 2026-10-31. |
 | `kitbag-library.html` | **Variant B only** ("Two tiles, two screens"; #178). Supersedes `kitbag-ui.html` §04's Home tiles and Library: Songs and Stem songs are separate screens. Variant C is a rejected alternative. From variant A only the filter menu binds: the Songs filter icon opens it (filter by analysis status; sort by title, date added, BPM). `docs/decisions.md` (2026-10-30, #178) lists what is deliberately not built. |
 | `kitbag-stems.html` | **Variant C only** ("Bottom dock"; #137). Supersedes `kitbag-ui.html` §04's Stem player. Variants A and B are rejected alternatives; `docs/decisions.md` (2026-10-30, #137) lists what is deliberately not built. |
+| `kitbag-home-arrange.html` | **Option B only** ("Chosen (owner, 2026-10-31)"; #113). Supersedes the "long-press any tile for edit mode" bullet in `kitbag-ui.html` §04 Home and §12.4's customizable-layout bullet as to *how* editing works: Edit, or a long-press on a tile, opens the Arrange sheet. Options A and C are rejected alternatives, kept as reference in `docs/research/mockups/113/`. Recorded in `docs/decisions.md`, 2026-10-31. |
 
 ### 12.1 Principles (kitbag-ui §01)
 
@@ -1557,9 +1558,10 @@ Setlists, Setlist detail, Preset editor, Settings, Latency calibration, Restore.
   **Built** (#111, #127).
 - **No bottom-nav**: it caps at ~5 destinations and Kitbag will outgrow it; a hub
   scales with the plugin roster.
-- **Customizable layout**: sensible fixed order by default; long-press any tile
-  for edit mode — reorder, resize (1×1 ↔ 2×1), pin/hide. Same mechanic as
-  launcher home screens, so zero learning cost. Not built.
+- **Customizable layout**: sensible fixed order by default. Edit, or a long-press
+  on any tile, opens the Arrange sheet (`kitbag-home-arrange.html`): reorder by
+  drag handle only, resize (1×1 ↔ 2×1), hide/show. The grid itself never moves
+  under a finger.
 - Muted upcoming tools visibly present — the extensibility story is part of the UI.
 
 **Restore** (settings design §03) is the screen with a precondition:
