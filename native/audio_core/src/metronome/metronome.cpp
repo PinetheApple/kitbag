@@ -205,7 +205,7 @@ bool Metronome::RouteCommand(const Command& command) {
     case CommandType::kSetTempo:
     case CommandType::kSetLatencyOffset:
     case CommandType::kSetFollowMixer:
-      return ApplyTempoCommand(command);
+      return ApplyClockCommand(command);
     case CommandType::kSetRamp:
     case CommandType::kSetBarMute:
     case CommandType::kSetCountIn:
@@ -263,7 +263,7 @@ void Metronome::StashPendingAnchor(const Command& command) {
   pending_anchor_frame_ = command.frame;
 }
 
-bool Metronome::ApplyTempoCommand(const Command& command) {
+bool Metronome::ApplyClockCommand(const Command& command) {
   switch (command.type) {
     case CommandType::kSetTempo:
       SetBpmPreservingPhase(Clamp(command.value, kMinBpm, kMaxBpm));

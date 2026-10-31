@@ -201,7 +201,7 @@ class Metronome {
   bool ApplyTransportCommand(const Command& command);
   void ReacquireGrid();
   void StashPendingAnchor(const Command& command);
-  bool ApplyTempoCommand(const Command& command);
+  bool ApplyClockCommand(const Command& command);
   bool ApplyTrainerCommand(const Command& command);
   bool ApplyPatternCommand(const Command& command);
   bool ApplyOutputCommand(const Command& command);
@@ -239,6 +239,8 @@ class Metronome {
   void OnBeatBoundary(int beat_index, uint32_t sample_rate);
   void OnSubdivisionTick(int64_t owning_beat, int slot, uint32_t sample_rate);
   bool SubdivisionSlotAccented(int slot) const;
+  uint16_t& AccentRowFor(int subdivision);
+  uint16_t AccentRowFor(int subdivision) const;
   void OnPolyBoundary(int poly_index, uint32_t sample_rate);
   bool BarIsMuted(int64_t bar) const;
   double LatencyBeats() const;
@@ -320,7 +322,7 @@ class Metronome {
   int beats_per_bar_ = 4;
   int denominator_ = kBpmReferenceDenominator;
   int subdivision_ = kMinSubdivision;
-  // Row r - kMinSubdivision holds subdivision r; bit s accents slot s of a beat.
+  static_assert(kMaxSubdivision <= std::numeric_limits<uint16_t>::digits);
   uint16_t subdivision_accents_[kMaxSubdivision] = {};
   Accent accents_[kMaxBeats] = {};
   bool poly_enabled_ = false;

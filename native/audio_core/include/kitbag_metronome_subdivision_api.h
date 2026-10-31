@@ -12,7 +12,7 @@ extern "C" {
 
 /* --- Metronome: subdivision accents -------------------------------------- */
 
-/* Global accent pattern for one subdivision count, not per song (SPEC §17 D2).
+/* Accent pattern for one subdivision count.
  * Bit s of slot_mask accents tick s of every beat while `subdivision` (the
  * kb_metronome_set_subdivision count) is current; an accented tick plays the
  * accent sound's accented click. Bit 0, the on-beat tick, is ignored: beats

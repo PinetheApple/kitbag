@@ -1,28 +1,22 @@
 #include <array>
+#include <optional>
 #include <string>
 
-#include "metronome_test_audio.h"
+#include "metronome_test_poly_model.h"
 
 namespace metronome_test {
 namespace {
 
 using kitbag::Accent;
 
-constexpr int kTom = 3;
 constexpr int kBeatsPerBar = 4;
 constexpr int64_t kBarFrames = kBeatsPerBar * kBeatFrames;
-constexpr double kTomBeatHz = 450.0;
-constexpr double kTomSubdivisionHz = 300.0;
-constexpr double kTomPolyHz = 520.0;
-constexpr double kBeepAccentHz = 1760.0;
-constexpr double kSilentCeiling = 0.01;
-constexpr double kPolyNormalPeak = 0.5;
 constexpr double kPeakTolerance = 0.05;
 constexpr double kGridIntervalSec = 0.6;
 constexpr int kGridBeats = 12;
 constexpr auto kGridBeatFrames =
     static_cast<int64_t>(kGridIntervalSec * kSampleRate);
-constexpr int kSilent = 0;
+constexpr int64_t kMidBeatChangeFrame = 122 * int64_t{kBlockFrames};
 
 using BarAccents = std::array<Accent, kBeatsPerBar>;
 
@@ -37,17 +31,21 @@ constexpr int32_t SlotBit(int slot) {
   return int32_t{1} << slot;
 }
 
-double ExpectedHz(Accent beat, int slot, int32_t mask) {
-  if (beat == Accent::kMuted) return kSilent;
+std::optional<double> ExpectedHz(Accent beat, int slot, int32_t mask) {
+  if (beat == Accent::kMuted) return std::nullopt;
   if (slot == 0) {
     return beat == Accent::kAccented ? kHihatAccentHz : kTomBeatHz;
   }
   return (mask & SlotBit(slot)) != 0 ? kHihatAccentHz : kTomSubdivisionHz;
 }
 
-bool TickMatches(const std::vector<float>& left, int64_t onset, double hz) {
-  if (hz == kSilent) return PeakIn(left, onset) < kSilentCeiling;
-  return PitchIs(left, onset, hz);
+bool TickMatches(
+    const std::vector<float>& left,
+    int64_t onset,
+    std::optional<double> hz
+) {
+  if (!hz) return PeakIn(left, onset) < kSilentCeiling;
+  return PitchIs(left, onset, *hz);
 }
 
 struct BarSpec {
@@ -63,7 +61,7 @@ bool ExpectBar(const std::vector<float>& left, const BarSpec& bar) {
     for (int slot = 0; slot < bar.subdivision; ++slot) {
       const int64_t onset = bar.start + beat * bar.beat_frames +
                             slot * bar.beat_frames / bar.subdivision;
-      const double hz = ExpectedHz(bar.accents[beat], slot, bar.mask);
+      const auto hz = ExpectedHz(bar.accents[beat], slot, bar.mask);
       if (TickMatches(left, onset, hz)) continue;
       std::fprintf(
           stderr,
@@ -71,7 +69,7 @@ bool ExpectBar(const std::vector<float>& left, const BarSpec& bar) {
           beat,
           slot,
           static_cast<long long>(onset),
-          hz,
+          hz.value_or(0.0),
           PitchAt(left, onset)
       );
       return false;
@@ -173,20 +171,45 @@ void TestMutedBeatSilencesItsAccents() {
   metronome.SetSubdivisionAccents(4, off_beats);
   StartTomHihat(metronome, kSecondMuted);
   const auto left = RenderLeft(metronome, kBarFrames);
-  bool silent = true;
-  for (int slot = 1; slot < 4; ++slot) {
-    silent = silent && PeakIn(left, kBeatFrames + slot * kBeatFrames / 4) <
-                           kSilentCeiling;
-  }
-  CheckCase(
-      silent,
-      "sub accents: a muted beat silences its accented ticks",
-      ""
-  );
-  CheckCase(
+  Check(
       ExpectBar(left, {0, kBeatFrames, 4, off_beats, kSecondMuted}),
-      "sub accents: unmuted beats around it keep their accented ticks",
-      ""
+      "sub accents: a muted beat silences its accented ticks, others keep them"
+  );
+}
+
+void TestMutedBarSilencesAccents() {
+  const int32_t off_beats = SlotBit(1) | SlotBit(2) | SlotBit(3);
+  kitbag::Metronome metronome;
+  metronome.SetSubdivision(4);
+  metronome.SetSubdivisionAccents(4, off_beats);
+  metronome.SetBarMute(true, 1, 1);
+  StartTomHihat(metronome, kDefaultBar);
+  const auto left = RenderLeft(metronome, 2 * kBarFrames);
+  Check(
+      ExpectBar(left, {0, kBeatFrames, 4, off_beats, kDefaultBar}),
+      "sub accents: the played bar of a 1/1 bar mute keeps its accents"
+  );
+  Check(
+      PeakOver(left, kBarFrames, 2 * kBarFrames) < kSilentCeiling,
+      "sub accents: the muted bar silences its accented ticks"
+  );
+}
+
+void TestMidBeatChangeUsesNewRow() {
+  kitbag::Metronome metronome;
+  metronome.SetSubdivision(4);
+  metronome.SetSubdivisionAccents(4, SlotBit(2));
+  metronome.SetSubdivisionAccents(2, SlotBit(1));
+  StartTomHihat(metronome, kDefaultBar);
+  const auto left = RenderLeft(metronome, kBarFrames, [&](int64_t at) {
+    if (at == kMidBeatChangeFrame) metronome.SetSubdivision(2);
+  });
+  const int64_t quarter = kBeatFrames / 4;
+  Check(
+      PitchIs(left, kBeatFrames + quarter, kTomSubdivisionHz) &&
+          PitchIs(left, kBeatFrames + 2 * quarter, kHihatAccentHz) &&
+          PeakIn(left, kBeatFrames + 3 * quarter) < kSilentCeiling,
+      "sub accents: a change to sub 2 mid-beat plays row 2 for the rest of it"
   );
 }
 
@@ -199,15 +222,13 @@ void TestSubdivisionChangePicksNewRow() {
   const auto left = RenderLeft(metronome, 2 * kBarFrames, [&](int64_t at) {
     if (at == kBarFrames) metronome.SetSubdivision(3);
   });
-  CheckCase(
+  Check(
       ExpectBar(left, {0, kBeatFrames, 4, SlotBit(2), kDefaultBar}),
-      "sub accents: row 4 drives the sub-4 bar",
-      ""
+      "sub accents: row 4 drives the sub-4 bar"
   );
-  CheckCase(
+  Check(
       ExpectBar(left, {kBarFrames, kBeatFrames, 3, SlotBit(1), kDefaultBar}),
-      "sub accents: after a change to sub 3, row 3 drives the bar",
-      ""
+      "sub accents: after a change to sub 3, row 3 drives the bar"
   );
 }
 
@@ -220,13 +241,12 @@ void TestTablePersistsAcrossStopStart() {
   metronome.Stop();
   RenderLeft(metronome, kBeatFrames);
   metronome.Start();
-  CheckCase(
+  Check(
       ExpectBar(
           RenderLeft(metronome, kBarFrames),
           {0, kBeatFrames, 4, SlotBit(3), kDefaultBar}
       ),
-      "sub accents: the table survives stop and start",
-      ""
+      "sub accents: the table survives stop and start"
   );
 }
 
@@ -238,11 +258,10 @@ void TestPolyTicksUnaffected() {
   StartTomHihat(metronome, kDefaultBar);
   const auto left = RenderLeft(metronome, kBarFrames);
   const int64_t poly_tick = kBarFrames / 3;
-  CheckCase(
+  Check(
       PitchIs(left, poly_tick, kTomPolyHz) &&
           std::fabs(PeakIn(left, poly_tick) - kPolyNormalPeak) < kPeakTolerance,
-      "sub accents: a normal poly tick keeps its voice and level",
-      ""
+      "sub accents: a normal poly tick keeps its voice and level"
   );
 }
 
@@ -255,10 +274,9 @@ void TestGridSubdivisionsAccented() {
   StartTomHihat(metronome, kDefaultBar);
   const auto left =
       RenderLeft(metronome, kBeatsPerBar * kGridBeatFrames + kBlockFrames);
-  CheckCase(
+  Check(
       ExpectBar(left, {0, kGridBeatFrames, 4, SlotBit(2), kDefaultBar}),
-      "sub accents: grid mode accents the same slot of each measured beat",
-      ""
+      "sub accents: grid mode accents the same slot of each measured beat"
   );
 }
 
@@ -270,6 +288,8 @@ void RunSubdivisionAccentTests() {
   TestSlotZeroAloneChangesNothing();
   TestSlotZeroBesideSlotTwo();
   TestMutedBeatSilencesItsAccents();
+  TestMutedBarSilencesAccents();
+  TestMidBeatChangeUsesNewRow();
   TestSubdivisionChangePicksNewRow();
   TestTablePersistsAcrossStopStart();
   TestPolyTicksUnaffected();

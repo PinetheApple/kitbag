@@ -15,8 +15,8 @@ using metronome_detail::kAccentAmplitude;
 using metronome_detail::kBeatAmplitude;
 using metronome_detail::kGridEpsilon;
 using metronome_detail::kSecondsPerMinute;
+using metronome_detail::kSubdivisionAmplitude;
 
-constexpr double kSubdivisionAmplitude = 0.3;
 constexpr double kPolyBeatAmplitude = 0.5;
 constexpr double kPolyAccentAmplitude = 0.8;
 
@@ -75,8 +75,7 @@ void Metronome::OnBeatBoundary(int beat_index, uint32_t sample_rate) {
 }
 
 bool Metronome::SubdivisionSlotAccented(int slot) const {
-  const uint16_t row = subdivision_accents_[subdivision_ - kMinSubdivision];
-  return ((row >> slot) & 1U) != 0;
+  return ((AccentRowFor(subdivision_) >> slot) & 1U) != 0;
 }
 
 void Metronome::OnSubdivisionTick(

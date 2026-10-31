@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <limits>
 
 #include "metronome/metronome.h"
 #include "metronome/metronome_internal.h"
@@ -11,9 +10,6 @@ using metronome_detail::IsOneOf;
 
 namespace {
 
-static_assert(
-    Metronome::kMaxSubdivision <= std::numeric_limits<uint16_t>::digits
-);
 constexpr int32_t kAllSlotsMask =
     (int32_t{1} << Metronome::kMaxSubdivision) - 1;
 
@@ -68,8 +64,15 @@ void Metronome::SetSubdivisionAccentRow(
   const bool row_valid =
       subdivision >= kMinSubdivision && subdivision <= kMaxSubdivision;
   if (!row_valid || slot_mask < 0 || slot_mask > kAllSlotsMask) return;
-  subdivision_accents_[subdivision - kMinSubdivision] =
-      static_cast<uint16_t>(slot_mask);
+  AccentRowFor(subdivision) = static_cast<uint16_t>(slot_mask);
+}
+
+uint16_t& Metronome::AccentRowFor(int subdivision) {
+  return subdivision_accents_[subdivision - kMinSubdivision];
+}
+
+uint16_t Metronome::AccentRowFor(int subdivision) const {
+  return subdivision_accents_[subdivision - kMinSubdivision];
 }
 
 bool Metronome::ApplyPatternCommand(const Command& command) {

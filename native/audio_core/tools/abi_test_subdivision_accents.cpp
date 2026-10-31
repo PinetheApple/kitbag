@@ -1,9 +1,7 @@
 #include "kitbag_api.h"
 
-#include <cmath>
-#include <vector>
-
 #include "abi_test_metronome.h"
+#include "abi_test_render.h"
 #include "check.h"
 #include "metronome/metronome.h"
 #include "metronome/metronome_internal.h"
@@ -12,31 +10,15 @@ namespace abi_test {
 namespace {
 
 using kitbag::Metronome;
+using kitbag::metronome_detail::kAccentAmplitude;
 using kitbag::metronome_detail::kSecondsPerMinute;
+using kitbag::metronome_detail::kSubdivisionAmplitude;
 using kitbag_test::Check;
 
-constexpr uint32_t kChannels = 2;
-constexpr double kAccentClickPeak = 0.9;
-constexpr double kSubdivisionPeak = 0.3;
-constexpr double kPeakTolerance = 0.05;
 constexpr double kSlowBpm = 30.0;
 constexpr int32_t kOffBeatSlot = 1;
 constexpr int32_t kOffBeatBit = int32_t{1} << kOffBeatSlot;
 constexpr int32_t kPastLastSlotBit = int32_t{1} << Metronome::kMaxSubdivision;
-
-double RenderPeak(kb_engine* engine, uint32_t frames) {
-  std::vector<float> out(static_cast<size_t>(frames) * kChannels);
-  kb_engine_render(engine, out.data(), frames);
-  double peak = 0.0;
-  for (const float sample : out) {
-    peak = std::fmax(peak, std::fabs(static_cast<double>(sample)));
-  }
-  return peak;
-}
-
-bool Near(double actual, double expected) {
-  return std::fabs(actual - expected) <= kPeakTolerance;
-}
 
 kb_engine* EngineAt(double bpm, int32_t subdivision) {
   kb_engine* engine = nullptr;
@@ -68,15 +50,15 @@ double OffBeatPeakAfter(int32_t first_mask, int32_t second_mask) {
 
 void TestMaskBounds() {
   Check(
-      Near(OffBeatPeakAfter(0, kOffBeatBit), kAccentClickPeak),
+      Near(OffBeatPeakAfter(0, kOffBeatBit), kAccentAmplitude),
       "set_subdivision_accents: bit 1 accents the off-beat tick"
   );
   Check(
-      Near(OffBeatPeakAfter(kOffBeatBit, kPastLastSlotBit), kAccentClickPeak),
+      Near(OffBeatPeakAfter(kOffBeatBit, kPastLastSlotBit), kAccentAmplitude),
       "set_subdivision_accents: a mask past the last slot is ignored, not cut"
   );
   Check(
-      Near(OffBeatPeakAfter(0, -kOffBeatBit), kSubdivisionPeak),
+      Near(OffBeatPeakAfter(0, -kOffBeatBit), kSubdivisionAmplitude),
       "set_subdivision_accents: a negative mask is ignored"
   );
 }
@@ -92,7 +74,7 @@ void TestRowBounds() {
   Check(
       Near(
           FirstOffBeatPeak(engine, kSlowBpm, Metronome::kMaxSubdivision),
-          kSubdivisionPeak
+          kSubdivisionAmplitude
       ),
       "set_subdivision_accents: a row past kMaxSubdivision is ignored"
   );
@@ -106,7 +88,7 @@ void TestRowBounds() {
   );
   kb_metronome_set_subdivision_accents(nullptr, 2, kOffBeatBit);
   Check(
-      Near(FirstOffBeatPeak(engine, kSlowBpm, 2), kSubdivisionPeak),
+      Near(FirstOffBeatPeak(engine, kSlowBpm, 2), kSubdivisionAmplitude),
       "set_subdivision_accents: row 0 and a null engine are no-ops"
   );
   kb_engine_destroy(engine);
