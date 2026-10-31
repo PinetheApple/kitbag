@@ -1,5 +1,4 @@
-import { createStore, type StoreApi } from 'zustand/vanilla';
-
+import { persistedStore } from '../persistedStore.ts';
 import type { Arrangement } from './arrangement.ts';
 
 export type SavedArrangement = Arrangement<string>;
@@ -15,38 +14,17 @@ export interface HomeLayoutStore {
   readonly arrange: (arrangement: SavedArrangement) => void;
 }
 
-const inMemory: HomeLayoutPersistence = {
-  load: () => undefined,
-  save: () => undefined,
-};
-
-export function createHomeLayoutStore(
-  persistence: HomeLayoutPersistence = inMemory,
-): StoreApi<HomeLayoutStore> {
-  return createStore<HomeLayoutStore>((set, get) => ({
+const homeLayout = persistedStore<HomeLayoutPersistence, HomeLayoutStore>(
+  'Home layout',
+  { load: () => undefined, save: () => undefined },
+  (persistence, commit) => ({
     arrangement: persistence.load(),
     arrange: (arrangement) => {
-      if (get().arrangement === arrangement) return;
-      set({ arrangement });
-      persistence.save(arrangement);
+      commit('arrangement', arrangement, persistence.save);
     },
-  }));
-}
+  }),
+);
 
-let configured: StoreApi<HomeLayoutStore> | undefined;
-
-export function configureHomeLayoutPersistence(
-  persistence: HomeLayoutPersistence,
-): void {
-  if (configured !== undefined) {
-    throw new Error(
-      'Home layout store already exists; configure persistence before first use',
-    );
-  }
-  configured = createHomeLayoutStore(persistence);
-}
-
-export function getHomeLayoutStore(): StoreApi<HomeLayoutStore> {
-  configured ??= createHomeLayoutStore();
-  return configured;
-}
+export const createHomeLayoutStore = homeLayout.create;
+export const configureHomeLayoutPersistence = homeLayout.configure;
+export const getHomeLayoutStore = homeLayout.get;
