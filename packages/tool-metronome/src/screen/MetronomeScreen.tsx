@@ -57,12 +57,16 @@ const useStyles = createThemedStyles((theme) => ({
     backgroundColor: theme.color.bg,
     paddingHorizontal: space.screenInset,
   },
+  // A ScrollView clips its content; the poly row's last pulse and cycle
+  // bracket hang past the content edge into the screen inset.
   body: {
     flex: 1,
+    marginHorizontal: -space.screenInset,
   },
   bodyContent: {
     flexGrow: 1,
     paddingTop: metronome.belowAppBar,
+    paddingHorizontal: space.screenInset,
   },
   notes: {
     ...textStyle(textRoles.fieldLabel),
