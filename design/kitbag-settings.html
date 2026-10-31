@@ -760,13 +760,10 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
   <h2>Open questions</h2>
   <div class="rule"></div>
   <ul class="qs">
-    <li><b>±100 ms cannot reach Bluetooth.</b>
-    <code>metronome_controller.dart:68</code> clamps <code>latencyOffsetMs</code> to ±100.
-    Bluetooth output is routinely 150–250 ms late, so the control cannot express the most
-    common problem it exists to solve — and the calibration screen will measure offsets it is
-    physically unable to apply. Widen the range (how far? the clamp is also in the C API), or
-    declare Bluetooth unsupported for play-along and say so in the UI. <b>Blocks the
-    calibration screen.</b></li>
+    <li><b>Decided 2026-10-31 — D5: ±300 ms, clamped by the engine.</b> Bluetooth output is
+    routinely 150–250 ms late, which ±100 ms could not reach. The engine clamps the offset to
+    ±300 ms (<code>Metronome::kMaxLatencyOffsetMs</code>), so the calibration screen can apply
+    what it measures and Bluetooth stays supported for play-along. (SPEC §17 D5.)</li>
     <li><b>Per-song override: what does “inherited” look like?</b> Decided: Settings holds the
     default, the preset editor holds an optional per-song override for volume and latency.
     That forces an edit to <code>design/kitbag-metronome.html</code>, whose preset editor draws
