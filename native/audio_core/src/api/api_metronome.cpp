@@ -144,6 +144,16 @@ void kb_metronome_set_accent(
   }
 }
 
+void kb_metronome_set_subdivision_accents(
+    kb_engine* engine,
+    int32_t subdivision,
+    int32_t slot_mask
+) {
+  if (engine != nullptr) {
+    ToEngine(engine)->metronome().SetSubdivisionAccents(subdivision, slot_mask);
+  }
+}
+
 void kb_metronome_set_poly(kb_engine* engine, int32_t enabled, int32_t beats) {
   if (engine != nullptr) {
     ToEngine(engine)->metronome().SetPolyrhythm(enabled != 0, beats);

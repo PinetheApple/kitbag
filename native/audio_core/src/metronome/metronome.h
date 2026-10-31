@@ -73,6 +73,7 @@ class Metronome {
   void SetTempo(double bpm);
   void SetTimeSignature(int numerator, int denominator);
   void SetSubdivision(int subdivision);
+  void SetSubdivisionAccents(int subdivision, int32_t slot_mask);
   void SetAccent(int beat_index, int32_t accent);
   void SetAccent(int beat_index, Accent accent) {
     SetAccent(beat_index, static_cast<int32_t>(accent));
@@ -149,6 +150,7 @@ class Metronome {
     kSetTempo,
     kSetBeats,
     kSetSubdivision,
+    kSetSubdivisionAccents,
     kSetAccent,
     kSetPoly,
     kSetPolyAccent,
@@ -197,7 +199,6 @@ class Metronome {
   void ApplyCommand(const Command& command);
   bool RouteCommand(const Command& command);
   bool ApplyTransportCommand(const Command& command);
-  bool ApplyFollowCommand(const Command& command);
   void ReacquireGrid();
   void StashPendingAnchor(const Command& command);
   bool ApplyTempoCommand(const Command& command);
@@ -213,6 +214,7 @@ class Metronome {
   static void
   ResetGrownSlots(std::span<Accent> row, int32_t old_count, int32_t new_count);
   void SetSignatureState(int32_t numerator, int32_t denominator);
+  void SetSubdivisionAccentRow(int32_t subdivision, int32_t slot_mask);
   void SetSoundsState(int32_t normal_sound, int32_t accent_sound);
   void QueuePreview(const Command& command);
   void SetCountInState(const Command& command);
@@ -235,7 +237,8 @@ class Metronome {
 
   void TriggerPreset(int sound, bool accented, uint32_t sample_rate);
   void OnBeatBoundary(int beat_index, uint32_t sample_rate);
-  void OnSubdivisionTick(int64_t owning_beat, uint32_t sample_rate);
+  void OnSubdivisionTick(int64_t owning_beat, int slot, uint32_t sample_rate);
+  bool SubdivisionSlotAccented(int slot) const;
   void OnPolyBoundary(int poly_index, uint32_t sample_rate);
   bool BarIsMuted(int64_t bar) const;
   double LatencyBeats() const;
@@ -317,6 +320,8 @@ class Metronome {
   int beats_per_bar_ = 4;
   int denominator_ = kBpmReferenceDenominator;
   int subdivision_ = kMinSubdivision;
+  // Row r - kMinSubdivision holds subdivision r; bit s accents slot s of a beat.
+  uint16_t subdivision_accents_[kMaxSubdivision] = {};
   Accent accents_[kMaxBeats] = {};
   bool poly_enabled_ = false;
   int poly_beats_ = 3;

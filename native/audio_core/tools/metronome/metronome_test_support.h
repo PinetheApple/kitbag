@@ -361,6 +361,7 @@ void RunPolyRatioLiveTests();
 void RunPolyTransportTests();
 void RunPolyPhaseTests();
 void RunSoundTests();
+void RunSubdivisionAccentTests();
 void RunCountInTests();
 void RunLongCountInTests();
 void RunRampTests();

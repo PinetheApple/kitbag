@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <limits>
 
 #include "metronome/metronome.h"
 #include "metronome/metronome_internal.h"
@@ -7,6 +8,16 @@ namespace kitbag {
 
 using metronome_detail::Clamp;
 using metronome_detail::IsOneOf;
+
+namespace {
+
+static_assert(
+    Metronome::kMaxSubdivision <= std::numeric_limits<uint16_t>::digits
+);
+constexpr int32_t kAllSlotsMask =
+    (int32_t{1} << Metronome::kMaxSubdivision) - 1;
+
+}  // namespace
 
 void Metronome::InitAccentRow(std::span<Accent> row) {
   std::fill(row.begin(), row.end(), Accent::kNormal);
@@ -50,6 +61,17 @@ void Metronome::SetSignatureState(int32_t numerator, int32_t denominator) {
   }
 }
 
+void Metronome::SetSubdivisionAccentRow(
+    int32_t subdivision,
+    int32_t slot_mask
+) {
+  const bool row_valid =
+      subdivision >= kMinSubdivision && subdivision <= kMaxSubdivision;
+  if (!row_valid || slot_mask < 0 || slot_mask > kAllSlotsMask) return;
+  subdivision_accents_[subdivision - kMinSubdivision] =
+      static_cast<uint16_t>(slot_mask);
+}
+
 bool Metronome::ApplyPatternCommand(const Command& command) {
   switch (command.type) {
     case CommandType::kSetBeats:
@@ -57,6 +79,9 @@ bool Metronome::ApplyPatternCommand(const Command& command) {
       return true;
     case CommandType::kSetSubdivision:
       subdivision_ = Clamp(command.int_a, kMinSubdivision, kMaxSubdivision);
+      return true;
+    case CommandType::kSetSubdivisionAccents:
+      SetSubdivisionAccentRow(command.int_a, command.int_b);
       return true;
     case CommandType::kSetAccent:
       SetAccentSlot(accents_, beats_per_bar_, command);

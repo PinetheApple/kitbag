@@ -210,6 +210,7 @@ KB_EXPORT double kb_metronome_current_bpm(const kb_engine* engine);
 KB_EXPORT int32_t kb_metronome_counting_in(const kb_engine* engine);
 
 #include "kitbag_metronome_poly_api.h"
+#include "kitbag_metronome_subdivision_api.h"
 #include "kitbag_metronome_trainer_api.h"
 
 /* --- Tuner -------------------------------------------------------------- */

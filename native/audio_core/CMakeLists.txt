@@ -149,6 +149,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_poly_transport.cpp
     tools/metronome/metronome_test_poly_phase.cpp
     tools/metronome/metronome_test_sound.cpp
+    tools/metronome/metronome_test_subdivision_accents.cpp
     tools/metronome/metronome_test_count_in.cpp
     tools/metronome/metronome_test_count_in_long.cpp
     tools/metronome/metronome_test_ramp.cpp
@@ -171,7 +172,7 @@ if(KITBAG_BUILD_TOOLS)
   add_executable(abi_verify tools/abi_verify.cpp tools/abi_test_metronome.cpp
                             tools/abi_test_grid_long.cpp tools/abi_verify_tuner.cpp
                             tools/abi_test_engine_hold.cpp tools/abi_test_engine_stress.cpp
-                            tools/abi_test_poly.cpp)
+                            tools/abi_test_poly.cpp tools/abi_test_subdivision_accents.cpp)
   target_include_directories(abi_verify PRIVATE src tools tools/media)
   target_link_libraries(abi_verify PRIVATE kitbag_core Threads::Threads)
 
