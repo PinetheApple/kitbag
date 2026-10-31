@@ -104,6 +104,8 @@ export {
   SONG_STEP,
   type SongStep,
 } from './library/setlistPosition.ts';
+export { activeSetView, type ActiveSet } from './library/activeSet.ts';
+export { transportSetlistOf } from './library/transportSetlist.ts';
 export {
   accentsOf,
   byteList,

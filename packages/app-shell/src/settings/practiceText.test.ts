@@ -1,10 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { formatDuration, formatPracticeSummary } from './practiceText.ts';
-
-vi.mock('react-native', () => ({}));
-vi.mock('expo-haptics', () => ({}));
-vi.mock('@op-engineering/op-sqlite', () => ({}));
 
 describe('formatDuration', () => {
   it.each([

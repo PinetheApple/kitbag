@@ -10,6 +10,7 @@
     "harness.ts",
     "eval.config.ts",
     "eval.test.ts",
+    "nodeStubs.ts",
     "declarations.d.ts"
   ]
 }

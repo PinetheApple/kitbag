@@ -22,13 +22,39 @@ class TransportModelTest {
     setlist: SetlistPosition? = null,
   ) = TransportState(playback, bpm, rampRunning, beatsPerBar = 4, beatUnit = 4, setlist = setlist)
 
-  private fun song(index: Int) = SetlistPosition("Wedding set", "Blackbird", index, songCount = 12)
+  private fun song(index: Int?) = SetlistPosition(SUBTITLE, index, songCount = 12)
 
   @Test
-  fun `title is tempo and signature, subtitle follows the design's set, song and position`() {
+  fun `title is tempo and signature, subtitle is the text the app sent`() {
     val view = model.view(state(bpm = 119.6, setlist = song(2)))
     assertEquals("120 BPM · 4/4", view.title)
-    assertEquals("Wedding set · Blackbird (3/12)", view.subtitle)
+    assertEquals(SUBTITLE, view.subtitle)
+  }
+
+  @Test
+  fun `a setlist rebuilds from its parts, and absent or out-of-range parts give none`() {
+    assertEquals(song(2), SetlistPosition.from(SUBTITLE, 2, songCount = 12))
+    assertEquals(song(null), SetlistPosition.from(SUBTITLE, null, songCount = 12))
+    assertNull(SetlistPosition.from(null, 2, songCount = 12))
+    assertNull(SetlistPosition.from(SUBTITLE, 12, songCount = 12))
+    assertNull(SetlistPosition.from(SUBTITLE, -1, songCount = 12))
+  }
+
+  @Test
+  fun `a setlist with no current song offers only next, and only when it has songs`() {
+    assertEquals(listOf(TEMPO_DOWN, PAUSE, TEMPO_UP, NEXT, STOP), model.view(state(setlist = song(null))).actions)
+    assertEquals(listOf(TransportCommand.NextSong), model.commandsFor(state(setlist = song(null)), NEXT))
+    assertEquals(none, model.commandsFor(state(setlist = song(null)), PREVIOUS))
+    val empty = SetlistPosition(SUBTITLE, null, songCount = 0)
+    assertEquals(listOf(TEMPO_DOWN, PAUSE, TEMPO_UP, STOP), model.view(state(setlist = empty)).actions)
+  }
+
+  @Test
+  fun `a song step reaches the app as its wire name`() {
+    assertEquals("previous", SongStepWire.of(PREVIOUS))
+    assertEquals("next", SongStepWire.of(NEXT))
+    assertNull(SongStepWire.of(PLAY))
+    assertNull(SongStepWire.of(null))
   }
 
   @Test
@@ -109,5 +135,9 @@ class TransportModelTest {
   fun `named finds an action and ignores an unknown name`() {
     assertEquals(TEMPO_UP, TransportAction.named("TEMPO_UP"))
     assertNull(TransportAction.named("REWIND"))
+  }
+
+  private companion object {
+    const val SUBTITLE = "Wedding set · Blackbird (3/12)"
   }
 }

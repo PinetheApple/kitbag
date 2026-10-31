@@ -4,12 +4,6 @@ import { describe, expect, it, vi } from 'vitest';
 
 const stored = vi.hoisted(() => new Map([['last_tool', 'tuner']]));
 
-// core-state's barrel reaches react-native, expo-haptics and op-sqlite, none of
-// which load under node; nothing here touches them.
-vi.mock('react-native', () => ({}));
-vi.mock('expo-haptics', () => ({}));
-vi.mock('@op-engineering/op-sqlite', () => ({}));
-
 vi.mock('./database', () => ({
   getDatabase: () => ({
     preferences: {

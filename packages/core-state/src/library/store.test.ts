@@ -305,6 +305,17 @@ describe('library store', () => {
     expect(activeId(library)).toBe(gig);
   });
 
+  it('with the set active and no song loaded, Next loads song 1 and Previous does nothing', async () => {
+    const { library, gig, first } = await onStage();
+    await library.getState().stepSong(SONG_STEP.next);
+    library.getState().clearSong();
+    await library.getState().stepSong(SONG_STEP.previous);
+    expect(library.getState().loaded).toBeNull();
+    await library.getState().stepSong(SONG_STEP.next);
+    expect(library.getState().loaded?.itemId).toBe(first.item.id);
+    expect(activeId(library)).toBe(gig);
+  });
+
   it('saves edits and the live metronome into a preset explicitly', async () => {
     const { library, metronome } = setup();
     const s = library.getState();
