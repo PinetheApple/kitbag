@@ -4,6 +4,9 @@ export const MIN_BPM = 20;
 export const MAX_BPM = 400;
 export const MAX_BEATS = 16;
 export const MAX_POLY_BEATS = 16;
+export const POLY_AGAINST_BAR = 0;
+export const MIN_POLY_AGAINST = 1;
+export const MAX_POLY_AGAINST = MAX_BEATS;
 export const MAX_SUBDIVISION = 16;
 export const MAX_RAMP_BARS = 64;
 export const MAX_MUTE_BARS = 16;
@@ -39,6 +42,7 @@ export interface PresetShape {
   denominator: number;
   sound: number;
   polyBeats: number;
+  polyAgainst?: number | undefined;
   rampStartBpm: number | null;
   rampEndBpm: number | null;
   rampLength: number | null;
@@ -200,6 +204,12 @@ function blobViolation(preset: PresetShape): RuleViolation | undefined {
   return undefined;
 }
 
+export const isPolyAgainst = (value: number) =>
+  value === POLY_AGAINST_BAR ||
+  (Number.isInteger(value) &&
+    value >= MIN_POLY_AGAINST &&
+    value <= MAX_POLY_AGAINST);
+
 export function presetViolation(
   preset: PresetShape,
 ): RuleViolation | undefined {
@@ -211,13 +221,18 @@ export function presetViolation(
   const units: readonly number[] = Object.values(RAMP_UNITS);
   if (!units.includes(preset.rampUnit))
     return { field: 'rampUnit', reason: `expected ${units.join('/')}` };
-  // Not in PRESET_BOUNDS: the v9 repair builds SQL from those, before v13
-  // added the column.
+  // Not in PRESET_BOUNDS: the v9 repair builds SQL from those, before v13 and
+  // v18 added these columns.
   const step = preset.rampStep ?? MIN_RAMP_STEP;
   if (!(step >= MIN_RAMP_STEP && step <= MAX_STEP))
     return {
       field: 'rampStep',
       reason: `expected ${String(MIN_RAMP_STEP)}–${String(MAX_STEP)}`,
+    };
+  if (!isPolyAgainst(preset.polyAgainst ?? POLY_AGAINST_BAR))
+    return {
+      field: 'polyAgainst',
+      reason: `expected ${String(POLY_AGAINST_BAR)} or ${String(MIN_POLY_AGAINST)}–${String(MAX_POLY_AGAINST)}`,
     };
   return boundViolation(preset) ?? blobViolation(preset);
 }

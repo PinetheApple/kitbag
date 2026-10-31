@@ -73,6 +73,16 @@ describe('backup validation', () => {
     });
   });
 
+  it('refuses a poly cycle outside the engine bounds', async () => {
+    const failure = await rejected((file) => {
+      first(file.songPresets).polyAgainst = 17;
+    });
+    expect(failure).toMatchObject({
+      kind: 'invalidField',
+      path: '$.songPresets[0].polyAgainst',
+    });
+  });
+
   it('refuses a malformed field', async () => {
     const failure = await rejected((file) => {
       first(file.songPresets).bpm = '120';

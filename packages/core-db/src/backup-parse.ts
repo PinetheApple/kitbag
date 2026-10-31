@@ -24,7 +24,12 @@ import {
   type Reader,
 } from './backup-reader';
 import { decodeBase64, presetBytes } from './base64';
-import { MIN_RAMP_STEP, presetViolation, RAMP_UNITS } from './preset-rules';
+import {
+  MIN_RAMP_STEP,
+  POLY_AGAINST_BAR,
+  presetViolation,
+  RAMP_UNITS,
+} from './preset-rules';
 import { INSTRUMENTS, tuningViolation } from './tuning-rules';
 
 const FLOAT32_BYTES = 4;
@@ -65,6 +70,7 @@ function readPresetMusic(r: Reader) {
     polyAccents: r.nullableBlob('polyAccents'),
     polyEnabled: r.boolean('polyEnabled'),
     polyBeats: r.count('polyBeats'),
+    polyAgainst: r.optionalCount('polyAgainst', POLY_AGAINST_BAR),
   };
 }
 

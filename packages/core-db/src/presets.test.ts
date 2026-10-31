@@ -31,6 +31,7 @@ const EVERY_FIELD = {
   polyAccents: new Uint8Array([2, 1, 1, 0, 1]),
   polyEnabled: true,
   polyBeats: 5,
+  polyAgainst: 3,
   sound: 2,
   rampEnabled: true,
   rampStartBpm: 100,
@@ -64,6 +65,7 @@ const EDITED = {
   polyAccents: new Uint8Array([1, 2]),
   polyEnabled: false,
   polyBeats: 2,
+  polyAgainst: 0,
   sound: 0,
   rampEnabled: false,
   rampStartBpm: null,
@@ -168,6 +170,9 @@ describe('song preset repository', () => {
     ['perAccentSounds', { perAccentSounds: new Uint8Array([1, 2, 3]) }],
     ['perAccentSounds', { perAccentSounds: new Uint8Array([1, 6]) }],
     ['polyAccents', { polyAccents: new Uint8Array([1, 1]) }],
+    ['polyAgainst', { polyAgainst: 17 }],
+    ['polyAgainst', { polyAgainst: -1 }],
+    ['polyAgainst', { polyAgainst: 2.5 }],
   ])('refuses to create a preset with an invalid %s', async (field, change) => {
     const { presets } = setup();
     await expect(presets.create({ ...EVERY_FIELD, ...change })).rejects.toThrow(
