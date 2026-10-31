@@ -1,5 +1,5 @@
-import { useCallback } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { Pressable, Text, View, type LayoutChangeEvent } from 'react-native';
 
 import {
   bodyLineHeight,
@@ -9,6 +9,7 @@ import {
   space,
   textRoles,
 } from '../roles.ts';
+import { equalOptionWidth } from '../segmentWidth.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import {
@@ -79,6 +80,8 @@ interface SegmentProps<T extends string> {
   readonly large: boolean;
   readonly inline: boolean;
   readonly editRow: boolean;
+  readonly width: number | undefined;
+  readonly onLabelWidth: (value: T, width: number) => void;
   readonly hitBox: ReturnType<typeof optionHitBox>;
   readonly onSelect: (value: T) => void;
 }
@@ -149,6 +152,8 @@ function Segment<T extends string>({
   large,
   inline,
   editRow,
+  width,
+  onLabelWidth,
   hitBox,
   onSelect,
 }: SegmentProps<T>) {
@@ -156,6 +161,16 @@ function Segment<T extends string>({
   const handlePress = useCallback(() => {
     onSelect(option.value);
   }, [onSelect, option.value]);
+  const handleLabelLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      onLabelWidth(option.value, event.nativeEvent.layout.width);
+    },
+    [onLabelWidth, option.value],
+  );
+  const sized = useMemo(
+    () => (width === undefined ? undefined : { width }),
+    [width],
+  );
 
   return (
     <Pressable
@@ -171,6 +186,7 @@ function Segment<T extends string>({
           styles.option,
           large && styles.largeOption,
           editRow && styles.editRowOption,
+          sized,
           selected && styles.optionSelected,
           selected && large && styles.largeOptionSelected,
         ]}
@@ -182,6 +198,7 @@ function Segment<T extends string>({
             inline && styles.inlineLabel,
             selected && (accent ? styles.labelAccent : styles.labelSelected),
           ]}
+          onLayout={editRow ? handleLabelLayout : undefined}
         >
           {option.label}
         </Text>
@@ -204,6 +221,22 @@ export function SegmentedControl<T extends string>({
   const styles = useStyles();
   const editRow = controlSize === 'editRow';
   const large = controlSize === 'large' || editRow;
+  const [labelWidths, setLabelWidths] = useState<Partial<Record<T, number>>>(
+    {},
+  );
+  const handleLabelWidth = useCallback((value: T, width: number) => {
+    setLabelWidths((prev) =>
+      prev[value] === width ? prev : { ...prev, [value]: width },
+    );
+  }, []);
+  const measured = options.flatMap((option) => {
+    const width = labelWidths[option.value];
+    return width === undefined ? [] : [width];
+  });
+  const optionWidth =
+    editRow && measured.length === options.length
+      ? equalOptionWidth(measured, inset.segmentEditRowOptionH)
+      : undefined;
   const hitBox = optionHitBox(
     neighbourGaps(neighbourGapDp),
     compact,
@@ -228,6 +261,8 @@ export function SegmentedControl<T extends string>({
           large={large}
           inline={controlSize === 'inline'}
           editRow={editRow}
+          width={optionWidth}
+          onLabelWidth={handleLabelWidth}
           hitBox={hitBox}
           onSelect={onSelect}
         />

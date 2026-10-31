@@ -168,7 +168,7 @@ function PolyRows({ editor }: { readonly editor: PresetEditor }) {
           <SubRow>
             <EditRow label="Poly" minHeight={minTouchTargetDp}>
               <StepControl
-                variant="inlineLarge"
+                variant="inlineLargeTextGlyph"
                 label="Poly"
                 value={String(draft.polyBeats)}
                 accessibilityValue={countLabel(
@@ -184,7 +184,7 @@ function PolyRows({ editor }: { readonly editor: PresetEditor }) {
           <SubRow>
             <EditRow label="Against" minHeight={minTouchTargetDp}>
               <StepControl
-                variant="inlineLarge"
+                variant="inlineLargeTextGlyph"
                 label="Against"
                 value={against.value}
                 suffix={against.suffix}
