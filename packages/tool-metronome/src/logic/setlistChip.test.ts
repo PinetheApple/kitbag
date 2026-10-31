@@ -5,6 +5,8 @@ import { SONG_STEP } from '@kitbag/core-state';
 import { entry } from './fixtures.test-helper.ts';
 import {
   loadedSongName,
+  notSavedMessage,
+  nowRowA11yLabel,
   NO_ACTIVE_SET,
   NOT_IN_SETLIST,
   setlistChipA11yLabel,
@@ -69,8 +71,34 @@ describe('song chip', () => {
       title: 'Ballad in G',
       context: 'Test gig · 2/4',
     });
-    expect(stageChipA11yLabel('Ballad in G', set)).toBe(
+    expect(stageChipA11yLabel('Ballad in G', set, false)).toBe(
       'Ballad in G, Setlist Test gig, song 2 of 4',
+    );
+  });
+
+  it('keeps the chip text and says so aloud when the song has unsaved changes', () => {
+    expect(stageChipText('Ballad in G', set).title).toBe('Ballad in G');
+    expect(soloChipText('Ballad in G')?.title).toBe('Ballad in G');
+    expect(stageChipA11yLabel('Ballad in G', set, true)).toBe(
+      'Ballad in G, unsaved changes, Setlist Test gig, song 2 of 4',
+    );
+    expect(soloChipA11yLabel('Ballad in G', true)).toBe(
+      'Ballad in G, unsaved changes, not in a setlist',
+    );
+  });
+
+  it('says the NOW row has unsaved changes', () => {
+    expect(nowRowA11yLabel('2. Ballad in G, 139 BPM', true)).toBe(
+      '2. Ballad in G, 139 BPM, now loaded, unsaved changes',
+    );
+    expect(nowRowA11yLabel('2. Ballad in G, 139 BPM', false)).toBe(
+      '2. Ballad in G, 139 BPM, now loaded',
+    );
+  });
+
+  it('names the song whose changes were dropped', () => {
+    expect(notSavedMessage('Ballad in G')).toBe(
+      'Changes to Ballad in G not saved',
     );
   });
 
@@ -80,7 +108,7 @@ describe('song chip', () => {
       title: 'Test gig',
       context: '4 songs',
     });
-    expect(stageChipA11yLabel('Ballad in G', unplaced)).toBe(
+    expect(stageChipA11yLabel('Ballad in G', unplaced, true)).toBe(
       'Setlist Test gig, 4 songs',
     );
   });
@@ -90,7 +118,7 @@ describe('song chip', () => {
       title: 'Ballad in G',
       context: NOT_IN_SETLIST,
     });
-    expect(soloChipA11yLabel('Ballad in G')).toBe(
+    expect(soloChipA11yLabel('Ballad in G', false)).toBe(
       'Ballad in G, not in a setlist',
     );
   });

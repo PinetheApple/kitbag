@@ -5,6 +5,7 @@ import {
   metronomeMix,
   metronomeSheet,
   mixHex,
+  metronome,
   Sheet,
   size,
   space,
@@ -25,9 +26,16 @@ import {
   songListRows,
   type SongListRow,
 } from '../logic/songList.ts';
+import { nowRowA11yLabel } from '../logic/setlistChip.ts';
 import { useSheetStyles } from './sheetStyles.ts';
+import {
+  NowRowActions,
+  UnsavedDot,
+  useLoadedSongUnsaved,
+} from './UnsavedChanges.tsx';
 
 const NO_ENTRIES: readonly SetlistEntry[] = [];
+const UNSAVED_NAME_LINES = 2;
 
 const useStyles = createThemedStyles((theme) => ({
   row: {
@@ -54,9 +62,16 @@ const useStyles = createThemedStyles((theme) => ({
     textAlign: 'right',
     color: theme.color.text3,
   },
+  nameLine: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: metronome.unsavedDotGap,
+  },
   name: {
     ...textStyle(textRoles.menuRow),
-    flex: 1,
+    flexShrink: 1,
     color: theme.color.text,
   },
   nameNow: textStyle(textRoles.menuRowNow),
@@ -73,6 +88,8 @@ interface SongRowProps {
 
 function SongRow({ row, onPick }: SongRowProps) {
   const styles = useStyles();
+  const loadedUnsaved = useLoadedSongUnsaved();
+  const unsaved = row.now && loadedUnsaved;
   const handlePress = useCallback(() => {
     onPick(row);
   }, [onPick, row]);
@@ -80,13 +97,22 @@ function SongRow({ row, onPick }: SongRowProps) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={row.now ? `${spoken}, now loaded` : spoken}
+      accessibilityLabel={row.now ? nowRowA11yLabel(spoken, unsaved) : spoken}
       accessibilityState={{ selected: row.now }}
       style={[styles.row, row.now && styles.rowNow]}
       onPress={handlePress}
     >
       <Text style={styles.number}>{row.number}</Text>
-      <Text style={[styles.name, row.now && styles.nameNow]}>{row.name}</Text>
+      <View style={styles.nameLine}>
+        <Text
+          style={[styles.name, row.now && styles.nameNow]}
+          numberOfLines={unsaved ? UNSAVED_NAME_LINES : undefined}
+        >
+          {row.name}
+        </Text>
+        {unsaved ? <UnsavedDot /> : null}
+      </View>
+      {unsaved ? <NowRowActions /> : null}
       {row.now ? (
         <Badge tone="accent" variant="filled" label="NOW" />
       ) : (

@@ -41,6 +41,7 @@ import {
 } from '../logic/setlistChip.ts';
 import { LoadedSongSheet } from './LoadedSongSheet.tsx';
 import { SetlistSongsSheet } from './SetlistSongsSheet.tsx';
+import { UnsavedDot, useLoadedSongUnsaved } from './UnsavedChanges.tsx';
 
 const NO_ENTRIES: readonly SetlistEntry[] = [];
 const BAR_BLEED = screenBar.h - space.screenInset;
@@ -143,7 +144,13 @@ const useStyles = createThemedStyles((theme) => ({
   stageLines: {
     flex: 1,
   },
+  titleLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: metronome.unsavedDotGap,
+  },
   songTitle: {
+    flexShrink: 1,
     ...textStyle(textRoles.songChipTitle),
     lineHeight: textRoles.songChipTitle.size * lineRatio.songChip,
     color: theme.color.text,
@@ -183,18 +190,23 @@ function useSongContext(): SongContext {
 function SongChipFace({
   text,
   stage,
+  unsaved,
 }: {
   readonly text: SongChipText;
   readonly stage: boolean;
+  readonly unsaved: boolean;
 }) {
   const styles = useStyles();
   const ink = useTheme().accentInk;
   return (
     <>
       <View style={[styles.lines, stage && styles.stageLines]}>
-        <Text style={styles.songTitle} numberOfLines={1}>
-          {text.title}
-        </Text>
+        <View style={styles.titleLine}>
+          <Text style={styles.songTitle} numberOfLines={1}>
+            {text.title}
+          </Text>
+          {unsaved ? <UnsavedDot /> : null}
+        </View>
         <Text
           style={[styles.songContext, stage && styles.stageContext]}
           numberOfLines={1}
@@ -209,7 +221,7 @@ function SongChipFace({
 
 interface SongChipProps {
   readonly text: SongChipText;
-  readonly label: string;
+  readonly label: (unsaved: boolean) => string;
   readonly hint: string;
   readonly stage: boolean;
   readonly onPress: () => void;
@@ -217,20 +229,21 @@ interface SongChipProps {
 
 function SongChip({ text, label, hint, stage, onPress }: SongChipProps) {
   const styles = useStyles();
+  const unsaved = useLoadedSongUnsaved();
   const face = [styles.songChip, stage ? styles.stageChip : styles.plainChip];
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={label(unsaved)}
       accessibilityHint={hint}
       style={stage ? face : styles.plainChipHit}
       onPress={onPress}
     >
       {stage ? (
-        <SongChipFace text={text} stage />
+        <SongChipFace text={text} stage unsaved={unsaved} />
       ) : (
         <View style={face}>
-          <SongChipFace text={text} stage={false} />
+          <SongChipFace text={text} stage={false} unsaved={unsaved} />
         </View>
       )}
     </Pressable>
@@ -293,6 +306,10 @@ function StageBar({ context, bottomInset, onBack }: StageBarProps) {
   const handleCloseList = useCallback(() => {
     setListOpen(false);
   }, []);
+  const chipLabel = useCallback(
+    (unsaved: boolean) => stageChipA11yLabel(song, set, unsaved),
+    [song, set],
+  );
   return (
     <View style={[styles.bar, styles.stageBar]}>
       {onBack === undefined ? null : <BackButton onBack={onBack} />}
@@ -307,7 +324,7 @@ function StageBar({ context, bottomInset, onBack }: StageBarProps) {
       <SongChip
         stage
         text={stageChipText(song, set)}
-        label={stageChipA11yLabel(song, set)}
+        label={chipLabel}
         hint="Opens the song list"
         onPress={handleOpenList}
       />
@@ -350,6 +367,11 @@ function PlainBar({
   const handleCloseSong = useCallback(() => {
     setSongOpen(false);
   }, []);
+  const chipLabel = useCallback(
+    (unsaved: boolean) =>
+      song === undefined ? '' : soloChipA11yLabel(song, unsaved),
+    [song],
+  );
   const text = soloChipText(song);
   return (
     <View style={styles.bar}>
@@ -361,7 +383,7 @@ function PlainBar({
         <SongChip
           stage={false}
           text={text}
-          label={soloChipA11yLabel(text.title)}
+          label={chipLabel}
           hint="Opens the song"
           onPress={handleOpenSong}
         />

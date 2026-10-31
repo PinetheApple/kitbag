@@ -15,6 +15,8 @@ export interface SongChipText {
 
 export const NO_ACTIVE_SET = 'Setlists';
 export const NOT_IN_SETLIST = 'Not in a setlist';
+export const UNSAVED_CHANGES = 'Unsaved changes';
+const UNSAVED = UNSAVED_CHANGES.toLowerCase();
 
 const STEP_NAME: Readonly<Record<SongStep, string>> = {
   [SONG_STEP.previous]: 'Previous song',
@@ -56,13 +58,18 @@ export function stageChipText(
   return { title: song, context: setlistChipLabel(set) };
 }
 
+function spokenSong(song: string, unsaved: boolean): string {
+  return unsaved ? `${song}, ${UNSAVED}` : song;
+}
+
 export function stageChipA11yLabel(
   song: string | undefined,
   set: ActiveSet,
+  unsaved: boolean,
 ): string {
   const context = setlistChipA11yLabel(set);
   if (set.position === undefined || song === undefined) return context;
-  return `${song}, ${context}`;
+  return `${spokenSong(song, unsaved)}, ${context}`;
 }
 
 export function soloChipText(
@@ -73,8 +80,18 @@ export function soloChipText(
     : { title: song, context: NOT_IN_SETLIST };
 }
 
-export function soloChipA11yLabel(song: string): string {
-  return `${song}, ${NOT_IN_SETLIST.toLowerCase()}`;
+export function soloChipA11yLabel(song: string, unsaved: boolean): string {
+  return `${spokenSong(song, unsaved)}, ${NOT_IN_SETLIST.toLowerCase()}`;
+}
+
+export function nowRowA11yLabel(spoken: string, unsaved: boolean): string {
+  return unsaved
+    ? `${spoken}, now loaded, ${UNSAVED}`
+    : `${spoken}, now loaded`;
+}
+
+export function notSavedMessage(song: string): string {
+  return `Changes to ${song} not saved`;
 }
 
 export function stepA11yLabel(
