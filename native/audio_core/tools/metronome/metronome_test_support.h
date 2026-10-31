@@ -356,6 +356,8 @@ void RunLatencyTests();
 void RunGridTests();
 void RunAnchorTests();
 void RunPolyTests();
+void RunPolyRatioTests();
+void RunPolyRatioLiveTests();
 void RunSoundTests();
 void RunCountInTests();
 void RunLongCountInTests();

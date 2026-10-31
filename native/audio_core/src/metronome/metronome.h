@@ -7,6 +7,7 @@
 #include <memory>
 #include <span>
 
+#include "kitbag_metronome_poly_api.h"
 #include "media/loop_layout.h"
 #include "metronome/metronome_types.h"
 #include "metronome/tempo_ramp.h"
@@ -16,10 +17,8 @@
 
 namespace kitbag {
 
-// Sample-accurate metronome sequencer driven from the audio callback. Position
-// is a fractional beat index advanced per sample, so a tempo change alters the
-// increment and never the phase; app-thread mutations arrive through a
-// lock-free SPSC ring drained at the top of each block. SPEC.md §4.2.
+// Position is a fractional beat index advanced per sample, so a tempo change
+// alters the increment and never the phase. SPEC.md §4.2.
 class Metronome {
  public:
   static constexpr int kMaxBeats = 16;
@@ -27,6 +26,8 @@ class Metronome {
   static constexpr int kMaxSubdivision = 16;
   static constexpr int kMinPolyBeats = 2;
   static constexpr int kMaxPolyBeats = 16;
+  static constexpr int kMinPolyAgainst = 1;
+  static constexpr int kMaxPolyAgainst = kMaxBeats;
   static constexpr int kSoundCount = 6;
   // BPM stays quarter-note referenced whatever the time signature, so the beat
   // interval is (60 / bpm) * (kBpmReferenceDenominator / denominator) seconds.
@@ -64,17 +65,13 @@ class Metronome {
 
   // App-thread API. Non-blocking; drops commands if the ring is full.
   void Start();
-  // Sample-accurate start on engine frame `start_frame` (cf.
-  // Engine::frames_rendered). Only takes effect while stopped; an already-past
-  // frame starts on the next sample, never before the transport. SPEC.md §4.2.
+  // Only while stopped; an already-past frame starts on the next sample, never
+  // before the transport. SPEC.md §4.2.
   void StartAt(uint64_t start_frame);
   void Stop();
   void Pause();
-  // Anchor the click to a transport this engine does not clock: at engine frame
-  // `at_frame` the external song was `song_pos_sec` in, running at `bpm`. The
-  // song's beat 0 sits at song second 0. Re-callable; a re-anchor moves only
-  // future clicks. Starts the click if stopped. A grid set via SetGrid wins:
-  // this is a no-op until ClearGrid. SPEC.md §4.2.
+  // At engine frame `at_frame` the external song was `song_pos_sec` in at `bpm`.
+  // Contract: kb_metronome_anchor_external; a set grid wins until ClearGrid.
   void AnchorExternal(double song_pos_sec, uint64_t at_frame, double bpm);
   void SetTempo(double bpm);
   void SetTimeSignature(int numerator, int denominator);
@@ -85,6 +82,7 @@ class Metronome {
   }
   void SetPolyrhythm(bool enabled, int beats);
   void SetPolyAccent(int beat_index, int32_t accent);
+  void SetPolyAgainst(int main_beats);
   void SetPolyAccent(int beat_index, Accent accent) {
     SetPolyAccent(beat_index, static_cast<int32_t>(accent));
   }
@@ -154,6 +152,7 @@ class Metronome {
     kSetAccent,
     kSetPoly,
     kSetPolyAccent,
+    kSetPolyAgainst,
     kSetSounds,
     kSetCountIn,
     kPreviewSound,
@@ -188,7 +187,6 @@ class Metronome {
   struct BlockTempo {
     double beats_per_sample = 0.0;
     double latency_beats = 0.0;
-    double poly_scale = 1.0;
   };
 
   // The block's grid and its identity, from one acquire load (SPEC.md §4.2.1).
@@ -201,9 +199,8 @@ class Metronome {
   static constexpr int64_t kReseedFollow = -1;
   static constexpr size_t kCommandRingSize = 128;
 
-  // Command drain. ApplyCommand holds the only exhaustive switch over
-  // CommandType; the handlers below are partial by design and say so with a
-  // `default:`, and each reports whether it consumed the command.
+  // ApplyCommand holds the only exhaustive switch over CommandType; the
+  // handlers below are partial and say so with a `default:`.
   void ApplyPendingCommands();
   void ApplyCommand(const Command& command);
   bool RouteCommand(const Command& command);
@@ -228,6 +225,7 @@ class Metronome {
   void QueuePreview(const Command& command);
   void SetCountInState(const Command& command);
   void SetPolyState(bool enabled, int32_t beats);
+  void SetPolyAgainstState(int32_t main_beats);
   void ArmRamp(const Command& command);
   // Phase-preserving like a bpm change; inert while stopped, where there is no
   // phase to hold and kStart re-anchors from the offset. SPEC.md §4.7.
@@ -289,8 +287,8 @@ class Metronome {
       uint32_t sample_rate,
       BlockTempo* tempo
   );
-  void
-  FirePolyTick(double position, uint32_t sample_rate, const BlockTempo& tempo);
+  void FirePolyTick(double position, double previous, uint32_t sample_rate);
+  double PolyScale() const;
   void PublishBlockMirrors(
       const BeatGrid* grid,
       uint64_t frame,
@@ -336,6 +334,7 @@ class Metronome {
   Accent accents_[kMaxBeats] = {};
   bool poly_enabled_ = false;
   int poly_beats_ = 3;
+  int poly_against_ = KB_POLY_AGAINST_BAR;
   Accent poly_accents_[kMaxPolyBeats] = {};
   int normal_sound_ = kDefaultNormalSound;
   int accent_sound_ = kDefaultAccentSound;
@@ -357,9 +356,8 @@ class Metronome {
   double pending_anchor_bpm_ = kDefaultBpm;
   uint64_t pending_anchor_frame_ = 0;
 
-  // Grid mode. The publisher is the app→RT seam; everything below it is
-  // RT-owned. Why identity is a generation, why zero forces a re-seed, and why
-  // the bar is derived here but incremented at constant tempo: SPEC.md §4.2.1.
+  // The publisher is the app→RT seam; everything below it is RT-owned. Why
+  // identity is a generation and zero forces a re-seed: SPEC.md §4.2.1.
   RtPublisher<BeatGrid> grid_;
   uint64_t observed_generation_ = 0;
   size_t grid_cursor_ = 0;

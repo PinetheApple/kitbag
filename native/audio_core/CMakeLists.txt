@@ -142,6 +142,8 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_startat.cpp
     tools/metronome/metronome_test_anchor.cpp
     tools/metronome/metronome_test_poly.cpp
+    tools/metronome/metronome_test_poly_ratio.cpp
+    tools/metronome/metronome_test_poly_ratio_live.cpp
     tools/metronome/metronome_test_sound.cpp
     tools/metronome/metronome_test_count_in.cpp
     tools/metronome/metronome_test_count_in_long.cpp
@@ -154,7 +156,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/rt/rt_publisher_verify.cpp
     tools/rt/stall_detector_test.cpp
     ${KITBAG_METRONOME_SOURCES})
-  target_include_directories(metronome_verify PRIVATE src tools tools/metronome tools/rt)
+  target_include_directories(metronome_verify PRIVATE src include tools tools/metronome tools/rt)
   # metronome.cpp is compiled again here, outside kitbag_core's options.
   target_compile_options(metronome_verify PRIVATE -Werror=switch)
   target_link_libraries(metronome_verify PRIVATE m)
@@ -164,8 +166,9 @@ if(KITBAG_BUILD_TOOLS)
   # the mixer load test writes its fixture with.
   add_executable(abi_verify tools/abi_verify.cpp tools/abi_test_metronome.cpp
                             tools/abi_test_grid_long.cpp tools/abi_verify_tuner.cpp
-                            tools/abi_test_engine_hold.cpp tools/abi_test_engine_stress.cpp)
-  target_include_directories(abi_verify PRIVATE tools tools/media)
+                            tools/abi_test_engine_hold.cpp tools/abi_test_engine_stress.cpp
+                            tools/abi_test_poly.cpp)
+  target_include_directories(abi_verify PRIVATE src tools tools/media)
   target_link_libraries(abi_verify PRIVATE kitbag_core Threads::Threads)
 
   # A6 (#11): streams a real WAV end to end through the C ABI (kb_player_load ->
@@ -367,7 +370,7 @@ if(KITBAG_BUILD_TOOLS)
     src/media/miniaudio_decoder.cpp
     src/media/miniaudio_impl.c
   )
-  target_include_directories(click_soak_lib PUBLIC src tools tools/soak third_party)
+  target_include_directories(click_soak_lib PUBLIC src include tools tools/soak third_party)
   target_link_libraries(click_soak_lib PUBLIC Threads::Threads m ${CMAKE_DL_LIBS})
 
   add_executable(click_soak tools/soak/click_soak_main.cpp)
@@ -375,7 +378,7 @@ if(KITBAG_BUILD_TOOLS)
 
   add_executable(metronome_render tools/soak/metronome_render_main.cpp
     ${KITBAG_METRONOME_SOURCES})
-  target_include_directories(metronome_render PRIVATE src tools/soak tools/media)
+  target_include_directories(metronome_render PRIVATE src include tools/soak tools/media)
   target_link_libraries(metronome_render PRIVATE m)
 
   add_executable(click_soak_verify

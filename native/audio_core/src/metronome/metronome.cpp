@@ -82,6 +82,12 @@ void Metronome::SetPolyAccent(int beat_index, int32_t accent) {
   commands_.Push(command);
 }
 
+void Metronome::SetPolyAgainst(int main_beats) {
+  Command command{CommandType::kSetPolyAgainst};
+  command.int_a = main_beats;
+  commands_.Push(command);
+}
+
 void Metronome::SetSounds(int normal_sound, int accent_sound) {
   Command command{CommandType::kSetSounds};
   command.int_a = normal_sound;
@@ -203,6 +209,7 @@ bool Metronome::RouteCommand(const Command& command) {
     case CommandType::kSetAccent:
     case CommandType::kSetPoly:
     case CommandType::kSetPolyAccent:
+    case CommandType::kSetPolyAgainst:
       return ApplyPatternCommand(command);
     case CommandType::kSetSounds:
     case CommandType::kPreviewSound:
@@ -282,28 +289,6 @@ bool Metronome::ApplyTrainerCommand(const Command& command) {
       return true;
     case CommandType::kSetCountIn:
       SetCountInState(command);
-      return true;
-    default:
-      return false;
-  }
-}
-
-bool Metronome::ApplyPatternCommand(const Command& command) {
-  switch (command.type) {
-    case CommandType::kSetBeats:
-      SetSignatureState(command.int_a, command.int_b);
-      return true;
-    case CommandType::kSetSubdivision:
-      subdivision_ = Clamp(command.int_a, kMinSubdivision, kMaxSubdivision);
-      return true;
-    case CommandType::kSetAccent:
-      SetAccentSlot(accents_, beats_per_bar_, command);
-      return true;
-    case CommandType::kSetPolyAccent:
-      SetAccentSlot(poly_accents_, poly_beats_, command);
-      return true;
-    case CommandType::kSetPoly:
-      SetPolyState(command.int_a != 0, command.int_b);
       return true;
     default:
       return false;

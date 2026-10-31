@@ -25,7 +25,7 @@ using kitbag_test::g_failures;
 
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 113;
+constexpr int kExpectedChecks = 119;
 
 void ExpectRejected(
     kb_engine* engine,
@@ -299,6 +299,7 @@ int main() {
   TestPlayerNullSafe();
   abi_test::RunMetronomeAbiTests();
   abi_test::RunLongGridAbiTests();
+  abi_test::RunPolyAbiTests();
   abi_test::RunEngineHoldAbiTests();
   RunTunerAbiTests(engine);
 

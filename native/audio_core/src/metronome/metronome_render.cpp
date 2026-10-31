@@ -41,9 +41,11 @@ constexpr SoundPreset kSounds[Metronome::kSoundCount] = {
     {2200.0, 1500.0, 1400.0, 1800.0, 45.0},   // cowbell
 };
 
-int64_t SubdivisionIndex(double position, int subdivision) {
+// The one boundary test for subdivision and poly ticks: a tick fires when the
+// index of the previous sample is below the current one's.
+int64_t TickIndex(double position, double ticks_per_beat) {
   return static_cast<int64_t>(
-      std::floor(position * subdivision + kGridEpsilon)
+      std::floor(position * ticks_per_beat + kGridEpsilon)
   );
 }
 
@@ -154,8 +156,6 @@ Metronome::BlockTempo Metronome::BlockTempoFor(uint32_t sample_rate) const {
   tempo.beats_per_sample =
       bpm_ * BeatUnitScale() / (kSecondsPerMinute * sample_rate);
   tempo.latency_beats = LatencyBeats();
-  tempo.poly_scale =
-      static_cast<double>(poly_beats_) / static_cast<double>(beats_per_bar_);
   return tempo;
 }
 
@@ -265,16 +265,20 @@ void Metronome::FireConstantTempoTick(
   OnBeatBoundary(beat_index, sample_rate);
 }
 
+double Metronome::PolyScale() const {
+  const int against =
+      poly_against_ == KB_POLY_AGAINST_BAR ? beats_per_bar_ : poly_against_;
+  return static_cast<double>(poly_beats_) / static_cast<double>(against);
+}
+
 void Metronome::FirePolyTick(
     double position,
-    uint32_t sample_rate,
-    const BlockTempo& tempo
+    double previous,
+    uint32_t sample_rate
 ) {
-  const auto poly_index = static_cast<int64_t>(
-      std::floor(position * tempo.poly_scale + kGridEpsilon)
-  );
-  const double poly_start = static_cast<double>(poly_index) / tempo.poly_scale;
-  if (position - tempo.beats_per_sample < poly_start - kGridEpsilon) {
+  const double scale = PolyScale();
+  const int64_t poly_index = TickIndex(position, scale);
+  if (TickIndex(previous, scale) < poly_index) {
     OnPolyBoundary(static_cast<int>(poly_index % poly_beats_), sample_rate);
   }
 }
@@ -283,12 +287,13 @@ void Metronome::AdvanceConstantTempo(uint32_t sample_rate, BlockTempo* tempo) {
   double position = beat_position_ + tempo->latency_beats;
   if (counting_in_) position = AdvanceCountIn(position, *tempo, sample_rate);
   if (position >= -kGridEpsilon) {
-    const int64_t sub_index = SubdivisionIndex(position, subdivision_);
-    if (SubdivisionIndex(position - tempo->beats_per_sample, subdivision_) <
-        sub_index) {
+    // Read before FireConstantTempoTick, whose ramp step rewrites the step.
+    const double previous = position - tempo->beats_per_sample;
+    const int64_t sub_index = TickIndex(position, subdivision_);
+    if (TickIndex(previous, subdivision_) < sub_index) {
       FireConstantTempoTick(sub_index, sample_rate, tempo);
     }
-    if (poly_enabled_) FirePolyTick(position, sample_rate, *tempo);
+    if (poly_enabled_) FirePolyTick(position, previous, sample_rate);
     ramp_.AdvanceFrame();
   }
   beat_position_ += tempo->beats_per_sample;

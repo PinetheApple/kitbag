@@ -46,6 +46,31 @@ void Metronome::SetSignatureState(int32_t numerator, int32_t denominator) {
   }
 }
 
+bool Metronome::ApplyPatternCommand(const Command& command) {
+  switch (command.type) {
+    case CommandType::kSetBeats:
+      SetSignatureState(command.int_a, command.int_b);
+      return true;
+    case CommandType::kSetSubdivision:
+      subdivision_ = Clamp(command.int_a, kMinSubdivision, kMaxSubdivision);
+      return true;
+    case CommandType::kSetAccent:
+      SetAccentSlot(accents_, beats_per_bar_, command);
+      return true;
+    case CommandType::kSetPolyAccent:
+      SetAccentSlot(poly_accents_, poly_beats_, command);
+      return true;
+    case CommandType::kSetPoly:
+      SetPolyState(command.int_a != 0, command.int_b);
+      return true;
+    case CommandType::kSetPolyAgainst:
+      SetPolyAgainstState(command.int_a);
+      return true;
+    default:
+      return false;
+  }
+}
+
 bool Metronome::ApplyOutputCommand(const Command& command) {
   switch (command.type) {
     case CommandType::kSetSounds:
@@ -86,6 +111,14 @@ void Metronome::SetPolyState(bool enabled, int32_t beats) {
   }
   poly_enabled_ = enabled;
   poly_beats_ = count;
+}
+
+void Metronome::SetPolyAgainstState(int32_t main_beats) {
+  const bool in_range =
+      main_beats >= kMinPolyAgainst && main_beats <= kMaxPolyAgainst;
+  if (in_range || main_beats == KB_POLY_AGAINST_BAR) {
+    poly_against_ = main_beats;
+  }
 }
 
 }  // namespace kitbag

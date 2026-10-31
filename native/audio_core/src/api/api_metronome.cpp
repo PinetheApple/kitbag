@@ -160,6 +160,12 @@ void kb_metronome_set_poly_accent(
   }
 }
 
+void kb_metronome_set_poly_against(kb_engine* engine, int32_t main_beats) {
+  if (engine != nullptr) {
+    ToEngine(engine)->metronome().SetPolyAgainst(main_beats);
+  }
+}
+
 void kb_metronome_set_sounds(
     kb_engine* engine,
     int32_t normal_sound,
