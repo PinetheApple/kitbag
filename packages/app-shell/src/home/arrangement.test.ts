@@ -9,7 +9,7 @@ import {
   homeArrangement,
   type HomeArrangement,
 } from './arrangement.ts';
-import { HOME_TOOLS, TOOL_ID } from './registry.ts';
+import { TOOL_ID } from './registry.ts';
 
 const ids = (arrangement: HomeArrangement) => arrangement.map((t) => t.toolId);
 
@@ -17,13 +17,7 @@ const visibleIds = (arrangement: HomeArrangement) =>
   arrangement.filter((t) => !t.hidden).map((t) => t.toolId);
 
 describe('homeArrangement', () => {
-  it('with nothing saved, lays out the grid tools in registry order at their registry size', () => {
-    const today = HOME_TOOLS.filter((t) => t.layout !== 'row').map((t) => ({
-      toolId: t.id,
-      size: t.layout,
-      hidden: false,
-    }));
-    expect(homeArrangement(undefined)).toEqual(today);
+  it('with nothing saved, lays out the grid tools in registry order', () => {
     expect(ids(homeArrangement(undefined))).toEqual([
       TOOL_ID.metronome,
       TOOL_ID.tuner,

@@ -1,6 +1,6 @@
 import type { Preferences } from '@kitbag/core-db';
 import type { SavedArrangement } from '@kitbag/core-state';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   decodeArrangement,
@@ -24,6 +24,10 @@ function memoryPreferences(): Preferences {
   };
 }
 
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 describe('home layout on the database', () => {
   it('survives a reload', () => {
     const preferences = memoryPreferences();
@@ -38,7 +42,7 @@ describe('home layout on the database', () => {
   });
 
   it('falls back to the default, without throwing, when the database will not open', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const persistence = homeLayoutPreference(() => {
       throw new Error('cannot open');
     });
@@ -46,7 +50,6 @@ describe('home layout on the database', () => {
     expect(() => {
       persistence.save(LAYOUT);
     }).not.toThrow();
-    warn.mockRestore();
   });
 });
 

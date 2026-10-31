@@ -145,9 +145,10 @@ interface ArrangeRowProps {
   readonly count: number;
   readonly arrangement: HomeArrangement;
   readonly onArrange: (next: HomeArrangement) => void;
+  readonly onDragActive: (active: boolean) => void;
 }
 
-export function useArrangeActions(
+function useArrangeActions(
   arrangement: HomeArrangement,
   tile: HomeTile,
   onArrange: (next: HomeArrangement) => void,
@@ -165,6 +166,39 @@ export function useArrangeActions(
     [arrangement, tile.toolId, onArrange],
   );
   return { actions, onAction };
+}
+
+interface RowLabelProps {
+  readonly tile: HomeTile;
+  readonly tool: HomeToolEntry;
+  readonly spoken: string;
+  readonly arrangement: HomeArrangement;
+  readonly onArrange: (next: HomeArrangement) => void;
+}
+
+export function RowLabel({
+  tile,
+  tool,
+  spoken,
+  arrangement,
+  onArrange,
+}: RowLabelProps) {
+  const styles = useArrangeRowStyles();
+  const { actions, onAction } = useArrangeActions(arrangement, tile, onArrange);
+  return (
+    <View
+      accessible
+      accessibilityLabel={spoken}
+      accessibilityActions={actions}
+      onAccessibilityAction={onAction}
+      style={styles.label}
+    >
+      <InlineIcon name={tool.icon} style={styles.icon} />
+      <Text style={styles.name} numberOfLines={1}>
+        {tool.name}
+      </Text>
+    </View>
+  );
 }
 
 function useLift(offset: ReturnType<typeof useHandleDrag>['offset']) {
@@ -199,6 +233,7 @@ export function ArrangeRow({
   count,
   arrangement,
   onArrange,
+  onDragActive,
 }: ArrangeRowProps) {
   const styles = useArrangeRowStyles();
   const handleMove = useCallback(
@@ -216,12 +251,13 @@ export function ArrangeRow({
   const handleHide = useCallback(() => {
     onArrange(hideTile(arrangement, tile.toolId));
   }, [arrangement, tile.toolId, onArrange]);
-  const { actions, onAction } = useArrangeActions(arrangement, tile, onArrange);
-  const drag = useHandleDrag({ index, count, onMove: handleMove });
+  const drag = useHandleDrag({
+    index,
+    count,
+    onMove: handleMove,
+    onDragActive,
+  });
   const lift = useLift(drag.offset);
-  const liftedHandle = useAnimatedStyle(() => ({
-    opacity: drag.offset.value === 0 ? 0 : 1,
-  }));
 
   return (
     <Animated.View style={lift.slot} onLayout={drag.onLayout}>
@@ -237,24 +273,19 @@ export function ArrangeRow({
           >
             <InlineIcon name="dragHandle" style={styles.handleGlyph} />
             <Animated.View
-              style={[StyleSheet.absoluteFill, styles.center, liftedHandle]}
+              style={[StyleSheet.absoluteFill, styles.center, lift.drop]}
             >
               <InlineIcon name="dragHandle" style={styles.handleGlyphLifted} />
             </Animated.View>
           </View>
         </GestureDetector>
-        <View
-          accessible
-          accessibilityLabel={`${tool.name}, ${String(index + 1)} of ${String(count)}, ${SIZE_LABEL[tile.size]}`}
-          accessibilityActions={actions}
-          onAccessibilityAction={onAction}
-          style={styles.label}
-        >
-          <InlineIcon name={tool.icon} style={styles.icon} />
-          <Text style={styles.name} numberOfLines={1}>
-            {tool.name}
-          </Text>
-        </View>
+        <RowLabel
+          tile={tile}
+          tool={tool}
+          spoken={`${tool.name}, ${String(index + 1)} of ${String(count)}, ${SIZE_LABEL[tile.size]}`}
+          arrangement={arrangement}
+          onArrange={onArrange}
+        />
         <SegmentedControl
           size="row"
           options={SIZE_OPTIONS}

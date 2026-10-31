@@ -89,9 +89,9 @@ export function applyArrangeAction(
   const index = visibleTiles(arrangement).findIndex((t) => t.toolId === toolId);
   switch (name) {
     case ARRANGE_ACTION.moveUp:
-      return index > 0 ? moveTile(arrangement, toolId, index - 1) : arrangement;
+      return moveTile(arrangement, toolId, index - 1);
     case ARRANGE_ACTION.moveDown:
-      return index < 0 ? arrangement : moveTile(arrangement, toolId, index + 1);
+      return moveTile(arrangement, toolId, index + 1);
     case ARRANGE_ACTION.makeWide:
       return resizeTile(arrangement, toolId, '2x1');
     case ARRANGE_ACTION.makeSingle:

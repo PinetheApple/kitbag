@@ -4,19 +4,14 @@ import {
   createThemedStyles,
   homeArrange,
   homeArrangeText,
-  InlineIcon,
   Sheet,
   textStyle,
 } from '@kitbag/core-design';
 import { hiddenTiles, showTile, visibleTiles } from '@kitbag/core-state';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { Text, View } from 'react-native';
 
-import {
-  ArrangeRow,
-  useArrangeActions,
-  useArrangeRowStyles,
-} from './ArrangeRow.tsx';
+import { ArrangeRow, RowLabel, useArrangeRowStyles } from './ArrangeRow.tsx';
 import { toolFor, type HomeArrangement, type HomeTile } from './arrangement.ts';
 import type { HomeToolEntry } from './registry.ts';
 
@@ -49,22 +44,16 @@ function HiddenRow({ tile, tool, arrangement, onArrange }: HiddenRowProps) {
   const handleShow = useCallback(() => {
     onArrange(showTile(arrangement, tile.toolId));
   }, [arrangement, tile.toolId, onArrange]);
-  const { actions, onAction } = useArrangeActions(arrangement, tile, onArrange);
   return (
     <View style={[styles.row, styles.hiddenRow]}>
       <View style={styles.handle} />
-      <View
-        accessible
-        accessibilityLabel={`${tool.name}, hidden`}
-        accessibilityActions={actions}
-        onAccessibilityAction={onAction}
-        style={styles.label}
-      >
-        <InlineIcon name={tool.icon} style={styles.icon} />
-        <Text style={styles.name} numberOfLines={1}>
-          {tool.name}
-        </Text>
-      </View>
+      <RowLabel
+        tile={tile}
+        tool={tool}
+        spoken={`${tool.name}, hidden`}
+        arrangement={arrangement}
+        onArrange={onArrange}
+      />
       <Button
         variant="tonal"
         size="small"
@@ -100,6 +89,7 @@ export function ArrangeSheet({
   onDone,
 }: ArrangeSheetProps) {
   const styles = useStyles();
+  const [dragging, setDragging] = useState(false);
   const shown = visibleTiles(arrangement).flatMap(withTool);
   const hidden = hiddenTiles(arrangement).flatMap(withTool);
   return (
@@ -121,6 +111,7 @@ export function ArrangeSheet({
       bottomInset={bottomInset}
       onDismiss={onDone}
       dim
+      scrollEnabled={!dragging}
     >
       <View style={styles.body}>
         <Text style={styles.hint}>
@@ -135,6 +126,7 @@ export function ArrangeSheet({
             count={shown.length}
             arrangement={arrangement}
             onArrange={onArrange}
+            onDragActive={setDragging}
           />
         ))}
         <Text accessibilityRole="header" style={styles.section}>
