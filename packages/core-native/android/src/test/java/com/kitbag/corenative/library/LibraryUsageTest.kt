@@ -36,24 +36,40 @@ class LibraryUsageTest {
   private fun measure() = LibraryUsage.measure(base, database)
 
   @Test
-  fun `song audio counts every regular file under songs, nested or empty`() {
+  fun `each finished import folder is one song, and its waveform is not another`() {
     file("songs/a/one.mp3", 100)
     file("songs/a/one.kwav", 10)
-    file("songs/b/deep/two.flac", 200)
-    file("songs/c/zero.wav", 0)
-    File(base, "songs/empty").mkdirs()
+    file("songs/b/two.flac", 200)
+    file("songs/b/deep/extra.bin", 5)
 
-    assertEquals(FileTally(files = 4, bytes = 310), measure().libraryAudio)
+    assertEquals(LibraryAudioUsage(songs = 2, bytes = 315), measure().libraryAudio)
   }
 
   @Test
-  fun `directories are never counted as files`() {
+  fun `an import still copying is not a song yet, but its bytes count`() {
+    file("songs/a/three.mp3", 0)
+    file("songs/a/.three.mp3.part", 40)
+
+    assertEquals(LibraryAudioUsage(songs = 0, bytes = 40), measure().libraryAudio)
+  }
+
+  @Test
+  fun `hidden folders, empty folders and loose files under songs are not songs`() {
+    file("songs/.hidden/a.mp3", 5)
+    File(base, "songs/empty/sub").mkdirs()
+    file("songs/loose.mp3", 6)
+
+    assertEquals(LibraryAudioUsage(songs = 0, bytes = 11), measure().libraryAudio)
+  }
+
+  @Test
+  fun `directories hold no bytes`() {
     File(base, "songs/a/b/c").mkdirs()
     File(base, "stems/set/d").mkdirs()
 
     val usage = measure()
-    assertEquals(FileTally(files = 0, bytes = 0), usage.libraryAudio)
-    assertEquals(0L, usage.stemBytes)
+    assertEquals(LibraryAudioUsage(songs = 0, bytes = 0), usage.libraryAudio)
+    assertEquals(StemSetUsage(count = 1, bytes = 0), usage.stemSets)
   }
 
   @Test
@@ -63,14 +79,14 @@ class LibraryUsageTest {
     File(outside, "dir/inner.wav").writeBytes(ByteArray(7000))
     file("songs/a/real.mp3", 50)
     link("songs/a/linked.wav", File(outside, "big.wav"))
+    link("songs/b/only-link.wav", File(outside, "big.wav"))
     link("songs/linkdir", File(outside, "dir"))
     link("stems/linkset", File(outside, "dir"))
     link("songs/a/dangling.wav", File(outside, "absent.wav"))
 
     val usage = measure()
-    assertEquals(FileTally(files = 1, bytes = 50), usage.libraryAudio)
-    assertEquals(0, usage.stemSets)
-    assertEquals(0L, usage.stemBytes)
+    assertEquals(LibraryAudioUsage(songs = 1, bytes = 50), usage.libraryAudio)
+    assertEquals(StemSetUsage(count = 0, bytes = 0), usage.stemSets)
   }
 
   @Test
@@ -81,7 +97,7 @@ class LibraryUsageTest {
     val linkedBase = File(temp.root, "linked-library")
     Files.createSymbolicLink(linkedBase.toPath(), real.toPath())
 
-    assertEquals(FileTally(files = 1, bytes = 30), LibraryUsage.measure(linkedBase, database).libraryAudio)
+    assertEquals(LibraryAudioUsage(songs = 1, bytes = 30), LibraryUsage.measure(linkedBase, database).libraryAudio)
   }
 
   @Test
@@ -94,18 +110,17 @@ class LibraryUsageTest {
     file("stems/stray.flac", 7)
 
     val usage = measure()
-    assertEquals(3, usage.stemSets)
-    assertEquals(730L, usage.stemBytes)
-    assertEquals(FileTally(files = 0, bytes = 0), usage.libraryAudio)
+    assertEquals(StemSetUsage(count = 3, bytes = 730), usage.stemSets)
+    assertEquals(LibraryAudioUsage(songs = 0, bytes = 0), usage.libraryAudio)
   }
 
   @Test
-  fun `files outside songs and stems count as library audio`() {
+  fun `files outside songs and stems count in library audio bytes`() {
     file(".analysis-results/a.json", 12)
     file(".analysis-staging/b.kwav", 8)
     file("loose.mp3", 5)
 
-    assertEquals(FileTally(files = 3, bytes = 25), measure().libraryAudio)
+    assertEquals(LibraryAudioUsage(songs = 0, bytes = 25), measure().libraryAudio)
   }
 
   @Test
@@ -113,9 +128,8 @@ class LibraryUsageTest {
     base.deleteRecursively()
 
     val usage = measure()
-    assertEquals(FileTally(files = 0, bytes = 0), usage.libraryAudio)
-    assertEquals(0, usage.stemSets)
-    assertEquals(0L, usage.stemBytes)
+    assertEquals(LibraryAudioUsage(songs = 0, bytes = 0), usage.libraryAudio)
+    assertEquals(StemSetUsage(count = 0, bytes = 0), usage.stemSets)
   }
 
   @Test

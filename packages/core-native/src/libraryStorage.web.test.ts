@@ -4,7 +4,7 @@ import { missingFiles, storageReport } from './libraryStorage.web.ts';
 
 it('reports an empty library with no location', async () => {
   await expect(storageReport('kitbag')).resolves.toEqual({
-    libraryAudio: { files: 0, bytes: 0 },
+    libraryAudio: { songs: 0, bytes: 0 },
     stemSets: { count: 0, bytes: 0 },
     database: { bytes: 0 },
     location: '',

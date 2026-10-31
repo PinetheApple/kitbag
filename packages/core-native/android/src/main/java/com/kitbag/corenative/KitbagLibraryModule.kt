@@ -24,6 +24,7 @@ import com.kitbag.corenative.library.LibraryUsage
 import com.kitbag.corenative.library.NativeWaveform
 import com.kitbag.corenative.library.StemBundleBridge
 import com.kitbag.corenative.library.StemBundleRefusedException
+import com.kitbag.corenative.library.StorageUsage
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.ExecutorService
@@ -277,31 +278,32 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       try {
         require(databaseName.isNotEmpty() && File(databaseName).name == databaseName) { "Not a database name" }
         val usage = LibraryUsage.measure(base, reactApplicationContext.getDatabasePath(databaseName))
-        promise.resolve(
-          Arguments.createMap().apply {
-            putMap(
-              "libraryAudio",
-              Arguments.createMap().apply {
-                putInt("files", usage.libraryAudio.files)
-                putDouble("bytes", usage.libraryAudio.bytes.toDouble())
-              },
-            )
-            putMap(
-              "stemSets",
-              Arguments.createMap().apply {
-                putInt("count", usage.stemSets)
-                putDouble("bytes", usage.stemBytes.toDouble())
-              },
-            )
-            putMap("database", Arguments.createMap().apply { putDouble("bytes", usage.databaseBytes.toDouble()) })
-            putString("location", base.absolutePath)
-          },
-        )
+        promise.resolve(usage.toMap(base.absolutePath))
       } catch (e: Exception) {
         rejectLogged(promise, E_STORAGE_FAILED, "Could not measure storage", e)
       }
     }
   }
+
+  private fun StorageUsage.toMap(location: String): WritableMap =
+    Arguments.createMap().apply {
+      putMap(
+        "libraryAudio",
+        Arguments.createMap().apply {
+          putInt("songs", libraryAudio.songs)
+          putDouble("bytes", libraryAudio.bytes.toDouble())
+        },
+      )
+      putMap(
+        "stemSets",
+        Arguments.createMap().apply {
+          putInt("count", stemSets.count)
+          putDouble("bytes", stemSets.bytes.toDouble())
+        },
+      )
+      putMap("database", Arguments.createMap().apply { putDouble("bytes", databaseBytes.toDouble()) })
+      putString("location", location)
+    }
 
   override fun missingFiles(relativePaths: ReadableArray, promise: Promise) {
     io.execute {

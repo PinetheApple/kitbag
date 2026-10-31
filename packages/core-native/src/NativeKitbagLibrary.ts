@@ -102,7 +102,7 @@ export type ImportedStemBundle = Readonly<{
 }>;
 
 export type LibraryAudioUsage = Readonly<{
-  files: Int32;
+  songs: Int32;
   bytes: Double;
 }>;
 

@@ -3,7 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import type { StorageReport } from './NativeKitbagLibrary';
 
 const report: StorageReport = {
-  libraryAudio: { files: 18, bytes: 840_000_000 },
+  libraryAudio: { songs: 18, bytes: 840_000_000 },
   stemSets: { count: 1, bytes: 320_000_000 },
   database: { bytes: 1_200_000 },
   location: '/data/user/0/app/files/library',
