@@ -10,7 +10,7 @@ import {
 } from '@kitbag/core-design';
 import { getAppVersion } from '@kitbag/core-native';
 import { useAppearance, type ThemeChoice } from '@kitbag/core-state';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Linking, Platform } from 'react-native';
 
 import {
@@ -22,7 +22,10 @@ import {
 import { formatAppVersion } from './appVersion.ts';
 import { formatPracticeSummary } from './practiceText.ts';
 import { SettingsFrame } from './SettingsFrame.tsx';
+import { StorageSheet } from './StorageSheet.tsx';
+import { storageSummary } from './storageText.ts';
 import { usePracticeStats } from './usePracticeStats.ts';
+import { useStorageReport } from './useStorageReport.ts';
 
 const THEME_OPTIONS: readonly SegmentOption<ThemeChoice>[] = [
   { value: 'system', label: 'System' },
@@ -33,6 +36,7 @@ const THEME_OPTIONS: readonly SegmentOption<ThemeChoice>[] = [
 const THEME_CONTROL_GAPS = { bottom: EDIT_ROW_PRESSABLE_GAP };
 
 const LICENCE_LABEL = 'Licence';
+const STORAGE_LABEL = 'Storage';
 const SOURCE_ROW_LABEL = 'Source & issues';
 
 function openUrl(url: string): void {
@@ -55,6 +59,15 @@ function PracticeValue() {
 }
 
 function DataSection() {
+  const { report, refresh } = useStorageReport();
+  const summary = report === null ? null : storageSummary(report);
+  const [storageOpen, setStorageOpen] = useState(false);
+  const openStorage = useCallback(() => {
+    setStorageOpen(true);
+  }, []);
+  const closeStorage = useCallback(() => {
+    setStorageOpen(false);
+  }, []);
   return (
     <>
       <SectionHeader label="Data" />
@@ -62,7 +75,22 @@ function DataSection() {
         <EditRow label="Practice">
           <PracticeValue />
         </EditRow>
+        <EditRow
+          label={STORAGE_LABEL}
+          accessibilityLabel={
+            summary === null ? STORAGE_LABEL : `${STORAGE_LABEL}, ${summary}`
+          }
+          onPress={openStorage}
+        >
+          {summary === null ? null : <EditValue>{summary}</EditValue>}
+        </EditRow>
       </EditGroup>
+      <StorageSheet
+        visible={storageOpen}
+        report={report}
+        onShow={refresh}
+        onDismiss={closeStorage}
+      />
     </>
   );
 }
