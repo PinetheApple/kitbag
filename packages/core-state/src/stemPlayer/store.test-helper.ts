@@ -64,6 +64,7 @@ export function record(stems: StoredStem[]): StemSetRecord {
 
 export function fakeRuntime(set: StemSetRecord) {
   const engine = { position: 0, playing: false };
+  const songStopped = new Set<() => void>();
   const commands = {
     start: vi.fn(() => Promise.resolve(0)),
     stop: vi.fn(),
@@ -91,6 +92,10 @@ export function fakeRuntime(set: StemSetRecord) {
     metronomeStop: vi.fn(),
     songTransportShow: vi.fn(),
     songTransportHide: vi.fn(),
+    onSongStopped: vi.fn((handler: () => void) => {
+      songStopped.add(handler);
+      return { remove: () => songStopped.delete(handler) };
+    }),
   };
   const records = {
     readStemSet: vi.fn(() => Promise.resolve<StemSetRecord | undefined>(set)),
@@ -110,7 +115,22 @@ export function fakeRuntime(set: StemSetRecord) {
     },
     readWaveform: vi.fn(() => Promise.resolve([0.5])),
   };
-  return { runtime, commands, records, engine, sharedMetronome };
+  const stopSongFromNotification = () => {
+    engine.playing = false;
+    engine.position = 0;
+    songStopped.forEach((handler) => {
+      handler();
+    });
+  };
+  return {
+    runtime,
+    commands,
+    records,
+    engine,
+    sharedMetronome,
+    stopSongFromNotification,
+    songStopListeners: songStopped,
+  };
 }
 
 export async function opened(stems: StoredStem[]) {
