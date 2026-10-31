@@ -7,14 +7,18 @@ import {
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { mixActions, transportActions } from './actions.ts';
-import { clickActions, stopClick } from './clickActions.ts';
+import { clickActions, turnClickOff, stopClick } from './clickActions.ts';
 import { debounce } from './debounce.ts';
 import { NO_SONG_FACTS, songFacts, type SongFacts } from './facts.ts';
 import { loopActions } from './loopActions.ts';
 import { UNITY_GAIN } from './mix.ts';
 import { mixSaver } from './mixSaver.ts';
 import { renameActions } from './renameActions.ts';
-import { getStemPlayer, type StemPlayerRuntime } from './runtime.ts';
+import {
+  getStemPlayer,
+  type StemPlayerCommands,
+  type StemPlayerRuntime,
+} from './runtime.ts';
 import { secondsToFrames } from './time.ts';
 
 const MIX_SAVE_DELAY_MS = 600;
@@ -169,6 +173,9 @@ export function createStemPlayerStore(
   let session = 0;
   let requestedTracks = 0;
   let releaseEngine: (() => void) | null = null;
+  let songStopSubscription: ReturnType<
+    StemPlayerCommands['onSongStopped']
+  > | null = null;
   const saver = mixSaver(
     (mixes) => runtimeOf().records.saveStemMix(mixes),
     timing.mixSaveDelayMs,
@@ -273,6 +280,9 @@ export function createStemPlayerStore(
       open: async (setId, waveformBars) => {
         if (get().setId !== null) teardown(get);
         releaseEngine ??= acquireEngineHold(runtimeOf().commands);
+        songStopSubscription ??= runtimeOf().commands.onSongStopped(() => {
+          turnClickOff(context);
+        });
         const opened = ++session;
         set({ ...closedState, status: 'loading', setId });
         try {
@@ -288,6 +298,8 @@ export function createStemPlayerStore(
         set(closedState);
         releaseEngine?.();
         releaseEngine = null;
+        songStopSubscription?.remove();
+        songStopSubscription = null;
       },
       ...mixActions(set, get, runtimeOf, saver),
       ...transportActions(get, runtimeOf, scrubSeek),

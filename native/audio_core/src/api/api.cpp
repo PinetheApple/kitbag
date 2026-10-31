@@ -69,6 +69,27 @@ uint64_t kb_engine_frames_rendered(const kb_engine* engine) {
   return engine == nullptr ? 0 : ToEngine(engine)->frames_rendered();
 }
 
+kb_result kb_engine_clock_pair(
+    const kb_engine* engine,
+    int64_t* out_frame,
+    int64_t* out_monotonic_ns
+) {
+  if (engine == nullptr || out_frame == nullptr ||
+      out_monotonic_ns == nullptr) {
+    return KB_ERROR_INVALID_ARGUMENT;
+  }
+  kitbag::ClockPair pair{};
+  if (!ToEngine(engine)->ReadRenderClock(&pair)) return KB_ERROR_BUSY;
+  *out_frame = pair.frame;
+  *out_monotonic_ns = pair.monotonic_ns;
+  return KB_OK;
+}
+
+int32_t kb_engine_output_device_id(const kb_engine* engine) {
+  return engine == nullptr ? KB_NO_OUTPUT_DEVICE_ID
+                           : ToEngine(engine)->OutputDeviceId();
+}
+
 #ifdef KITBAG_BUILD_TOOLS
 void kb_engine_render(kb_engine* engine, float* out, uint32_t frame_count) {
   if (engine == nullptr || out == nullptr || frame_count == 0) return;

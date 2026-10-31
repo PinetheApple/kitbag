@@ -5,6 +5,7 @@ import '@/runtime/songLibraryRuntime';
 import '@/runtime/stemPlayerRuntime';
 import '@/runtime/tunerRuntime';
 import '@/runtime/lastToolRuntime';
+import '@/runtime/homeLayoutRuntime';
 import '@/runtime/swipeHintRuntime';
 import '@/runtime/appearanceRuntime';
 import '@/runtime/transportRuntime';

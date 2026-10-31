@@ -1,8 +1,7 @@
 // Which tool the user last opened, for Home's Continue card (SPEC §12.4). The
-// id is opaque here: core-state does not know the tool roster, so Home checks
-// it against its own list before trusting it.
+// id is opaque here: Home checks it against its own roster before trusting it.
 
-import { createStore, type StoreApi } from 'zustand/vanilla';
+import { persistedStore } from '../persistedStore.ts';
 
 export interface LastToolPersistence {
   readonly load: () => string | undefined;
@@ -14,40 +13,18 @@ export interface LastToolStore {
   readonly markUsed: (toolId: string) => void;
 }
 
-// Session-only, for a caller that never configures storage.
-const inMemory: LastToolPersistence = {
-  load: () => undefined,
-  save: () => undefined,
-};
-
-export function createLastToolStore(
-  persistence: LastToolPersistence = inMemory,
-): StoreApi<LastToolStore> {
-  return createStore<LastToolStore>((set, get) => ({
+const lastTool = persistedStore<LastToolPersistence, LastToolStore>(
+  'Last-tool',
+  { load: () => undefined, save: () => undefined },
+  (persistence, commit) => ({
     toolId: persistence.load(),
     markUsed: (toolId) => {
-      if (get().toolId === toolId) return;
-      set({ toolId });
-      persistence.save(toolId);
+      commit('toolId', toolId, persistence.save);
     },
-  }));
-}
+  }),
+);
 
-let configured: StoreApi<LastToolStore> | undefined;
-
+export const createLastToolStore = lastTool.create;
 /** Install the platform's storage. Call once, before Home first renders. */
-export function configureLastToolPersistence(
-  persistence: LastToolPersistence,
-): void {
-  if (configured !== undefined) {
-    throw new Error(
-      'Last-tool store already exists; configure persistence before first use',
-    );
-  }
-  configured = createLastToolStore(persistence);
-}
-
-export function getLastToolStore(): StoreApi<LastToolStore> {
-  configured ??= createLastToolStore();
-  return configured;
-}
+export const configureLastToolPersistence = lastTool.configure;
+export const getLastToolStore = lastTool.get;

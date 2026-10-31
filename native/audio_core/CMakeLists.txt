@@ -144,6 +144,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_signature.cpp
     tools/metronome/metronome_test_grid.cpp
     tools/metronome/metronome_test_latency.cpp
+    tools/metronome/metronome_test_latency_free.cpp
     tools/metronome/metronome_test_startat.cpp
     tools/metronome/metronome_test_anchor.cpp
     tools/metronome/metronome_test_poly.cpp
@@ -179,7 +180,8 @@ if(KITBAG_BUILD_TOOLS)
                             tools/abi_test_grid_long.cpp tools/abi_verify_tuner.cpp
                             tools/abi_test_engine_hold.cpp tools/abi_test_engine_stress.cpp
                             tools/abi_test_poly.cpp tools/abi_test_subdivision_accents.cpp
-                            tools/abi_test_rig_click.cpp)
+                            tools/abi_test_rig_click.cpp
+                            tools/abi_test_engine_clock.cpp)
   target_include_directories(abi_verify PRIVATE src tools tools/media)
   target_link_libraries(abi_verify PRIVATE kitbag_core Threads::Threads)
 

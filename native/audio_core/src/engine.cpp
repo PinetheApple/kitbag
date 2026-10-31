@@ -4,7 +4,12 @@
 #include <chrono>
 #include <cstdint>
 
+#include "rt/monotonic_clock.h"
 #include "rt/stall_detector.h"
+
+#ifdef MA_SUPPORT_AAUDIO
+#include <dlfcn.h>
+#endif
 
 namespace kitbag {
 
@@ -47,6 +52,8 @@ bool Engine::Init() {
     return false;
   }
   device_ready_ = true;
+  ResolveDeviceIdReader();
+  RefreshOutputDeviceId();
   // Fixed-size callbacks (the miniaudio default) are exactly this wide; a later
   // reroute keeps this width but may widen the backend period (decisions.md).
   ReserveCallbackFrames(device_.playback.intermediaryBufferCap);
@@ -122,7 +129,9 @@ void Engine::StopDevice() {
   // ma_device_stop blocks until the callback has returned, so from here on
   // there is no reader.
   device_running_.store(false, std::memory_order_release);
+  output_device_id_.store(KB_NO_OUTPUT_DEVICE_ID, std::memory_order_relaxed);
   restarting_.store(false, std::memory_order_relaxed);
+  render_clock_.Clear();
 }
 
 // Control thread only, device stopped: the retire lists belong to the
@@ -140,8 +149,46 @@ bool Engine::IsIdle() const {
          !mixer_.is_playing() && !metronome_.rig_click().is_active();
 }
 
+int32_t Engine::OutputDeviceId() const {
+  if (!is_running()) return KB_NO_OUTPUT_DEVICE_ID;
+  return output_device_id_.load(std::memory_order_relaxed);
+}
+
+// Not in miniaudio's AAudio table, and linking it would stop API 24-26 loading.
+void Engine::ResolveDeviceIdReader() {
+#ifdef MA_SUPPORT_AAUDIO
+  ma_context* context = device_.pContext;
+  if (context->backend != ma_backend_aaudio) {
+    return;
+  }
+  aaudio_device_id_ = reinterpret_cast<AAudioDeviceIdFn>(
+      dlsym(context->aaudio.hAAudio, "AAudioStream_getDeviceId")
+  );
+#endif
+}
+
+// Only from miniaudio's started and rerouted notifications or Init, when the
+// stream is open: a reroute replaces it on miniaudio's thread, outside our locks.
+void Engine::RefreshOutputDeviceId() {
+#ifdef MA_SUPPORT_AAUDIO
+  auto* stream =
+      static_cast<struct AAudioStreamStruct*>(device_.aaudio.pStreamPlayback);
+  if (aaudio_device_id_ != nullptr && stream != nullptr) {
+    output_device_id_.store(
+        aaudio_device_id_(stream),
+        std::memory_order_relaxed
+    );
+  }
+#endif
+}
+
 void Engine::OnNotification(const ma_device_notification* notification) {
   auto* engine = static_cast<Engine*>(notification->pDevice->pUserData);
+  if (notification->type == ma_device_notification_type_started ||
+      notification->type == ma_device_notification_type_rerouted) {
+    engine->RefreshOutputDeviceId();
+    return;
+  }
   if (notification->type != ma_device_notification_type_stopped ||
       engine->restarting_.load(std::memory_order_relaxed)) {
     return;
@@ -248,6 +295,10 @@ void Engine::DataCallback(
 // Scratch covers kMaxBlockFrames; the read-ahead behind it is sized for the
 // whole callback (ReserveCallbackFrames), so slicing never outruns a ring.
 void Engine::Render(float* output, uint32_t frame_count) {
+  render_clock_.Publish(
+      static_cast<int64_t>(frames_rendered_.load(std::memory_order_relaxed)),
+      MonotonicNs()
+  );
   while (frame_count > 0) {
     const uint32_t slice =
         std::min(frame_count, StreamingTrack::kMaxBlockFrames);

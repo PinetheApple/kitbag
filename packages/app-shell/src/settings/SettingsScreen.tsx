@@ -90,13 +90,11 @@ function AppearanceSection() {
           />
         </EditRow>
         <EditSwitchRow
-          variant="outlined"
           label="Haptics"
           value={haptics}
           onValueChange={setHaptics}
         />
         <EditSwitchRow
-          variant="outlined"
           label="Keep screen awake"
           value={keepScreenAwake}
           onValueChange={setKeepScreenAwake}

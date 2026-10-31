@@ -7,11 +7,13 @@
 #include <mutex>
 #include <thread>
 
+#include "kitbag_engine_hold_api.h"
 #include "media/decoder.h"
 #include "metronome/metronome.h"
 #include "miniaudio.h"
 #include "mixer/mixer.h"
 #include "player/player.h"
+#include "rt/clock_pair_mirror.h"
 #include "tuner/tuner.h"
 
 namespace kitbag {
@@ -70,6 +72,11 @@ class Engine {
   uint64_t frames_rendered() const {
     return frames_rendered_.load(std::memory_order_relaxed);
   }
+  bool ReadRenderClock(ClockPair* out) const {
+    return render_clock_.Read(out);
+  }
+
+  int32_t OutputDeviceId() const;
 
   // App thread, before any load: read-ahead for callbacks up to [frames] wide.
   void ReserveCallbackFrames(uint32_t frames) {
@@ -136,12 +143,19 @@ class Engine {
   void WatchOutput();
   bool WatchTick(StallDetector& stall, uint64_t* idle_since_ms);
   void RestartDevice();
+  void ResolveDeviceIdReader();
+  void RefreshOutputDeviceId();
 
   ma_device device_{};
   bool device_ready_ = false;
 
+  using AAudioDeviceIdFn = int32_t (*)(struct AAudioStreamStruct*);
+  AAudioDeviceIdFn aaudio_device_id_ = nullptr;
+  std::atomic<int32_t> output_device_id_{KB_NO_OUTPUT_DEVICE_ID};
+
   std::atomic<bool> device_running_{false};
   std::atomic<uint64_t> frames_rendered_{0};
+  ClockPairMirror render_clock_;
 
   // Restarts the device when its stream dies while the engine should be
   // playing: miniaudio gives up rerouting after a few attempts and never says.
