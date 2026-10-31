@@ -1,4 +1,3 @@
-import { metronome } from '@kitbag/core-design';
 import { KB_POLY_AGAINST_BAR, KB_POLY_PHASE_NONE } from '@kitbag/core-native';
 import { effectivePolyAgainst } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
@@ -22,7 +21,8 @@ import {
 const ROW = { lineWidth: 4 * 56 + 3 * 12, dotSize: 56, dotGap: 12 };
 const EXACT_PLACES = 9;
 const DESIGN_PLACES = 1;
-const POLY_DOT_RADIUS = metronome.polyDot / 2;
+const DESIGN_POLY_DOT = 22;
+const POLY_DOT_RADIUS = DESIGN_POLY_DOT / 2;
 const roundTo = (value: number, places: number) => {
   const scale = 10 ** places;
   return Math.round(value * scale) / scale;
@@ -265,13 +265,21 @@ describe('cycle offset', () => {
 describe('poly dot size', () => {
   it('keeps the full dot while pulses have room', () => {
     expect(
-      polyDotSize({ polyBeats: 3, against: 2, beatsPerBar: 4 }, ROW, 22),
-    ).toBe(22);
+      polyDotSize(
+        { polyBeats: 3, against: 2, beatsPerBar: 4 },
+        ROW,
+        DESIGN_POLY_DOT,
+      ),
+    ).toBe(DESIGN_POLY_DOT);
   });
 
   it('shrinks only when pulses would touch', () => {
     expect(
-      polyDotSize({ polyBeats: 16, against: 1, beatsPerBar: 4 }, ROW, 22),
+      polyDotSize(
+        { polyBeats: 16, against: 1, beatsPerBar: 4 },
+        ROW,
+        DESIGN_POLY_DOT,
+      ),
     ).toBeCloseTo(272 / 64);
   });
 });

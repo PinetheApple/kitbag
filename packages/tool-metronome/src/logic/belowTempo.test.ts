@@ -17,26 +17,22 @@ const LARGE_PHONE_DOTS_WIDTH = 411 - space.screenInset * 2;
 const FONT_SCALES = [1, 1.3] as const;
 const BEAT_COUNTS = Array.from({ length: KB_MAX_BEATS }, (_u, i) => i + 1);
 
-// Emulator at fontScale 1.0, build 8663a62: where the dots start and where the
-// body ends above the transport.
+// Where the dots start and where the body ends above the transport: large is
+// the emulator at fontScale 1.0 (build 8663a62), small the approved #243 mockup.
 const MEASURED = {
-  small: { dotsTop: 424.3, bodyBottom: 686.1 },
+  small: { dotsTop: 418, bodyBottom: 658 },
   large: { dotsTop: 436.4, bodyBottom: 813.8 },
 } as const;
-
-const COMPACT_SWEEP_SAVING = space.sectionGap - metronome.bodyGapCompact;
 
 const SMALL_COMPACT: BelowTempoRoom = {
   width: SMALL_PHONE_DOTS_WIDTH,
   density: 'compact',
-  gap: metronome.bodyGapCompact,
   fontScale: 1,
 };
 
 const LARGE_ROOMY: BelowTempoRoom = {
   width: LARGE_PHONE_DOTS_WIDTH,
   density: 'roomy',
-  gap: space.sectionGap,
   fontScale: 1,
 };
 
@@ -47,7 +43,8 @@ interface Rendered {
   readonly fontScale: number;
 }
 
-// Stacks the boxes BeatDots, PolyDots and StatusStack draw on a roomy screen.
+// Stacks the boxes BeatDots, PolyDots, the legend and StatusStack draw on a
+// roomy screen, stopped and running.
 function renderedRoomy(shape: Rendered): number {
   const lines = layoutBeatLeds(shape.beatCount, MAX_DOTS_PER_LINE);
   const dot = beatDotSize(lines, LARGE_PHONE_DOTS_WIDTH, DOT_METRICS);
@@ -61,11 +58,13 @@ function renderedRoomy(shape: Rendered): number {
   let dots =
     lines.length * beat + (lines.length - 1) * metronome.beatDotLineGap;
   if (shape.poly) {
-    dots += metronome.beatDotLineGap + metronome.polyDot;
+    dots += metronome.beatDotLineGap + metronome.polyRow;
     if (shape.labelAbove) dots += label + metronome.beatMarkerGap;
   }
-  const status = metronome.statusRow * 2 + metronome.statusRowGap;
-  return dots + space.sectionGap + status;
+  const legend = metronome.legendTop + metronome.legendRow * shape.fontScale;
+  const stopped = legend + metronome.statusRow;
+  const running = metronome.statusRow * 2 + metronome.statusRowGap;
+  return dots + Math.max(stopped, running);
 }
 
 describe('belowTempoReserve', () => {
@@ -109,8 +108,7 @@ describe('the body at fontScale 1.0', () => {
   });
 
   it('fits every song with its poly label beside the dots at 360 x 800', () => {
-    const budget =
-      MEASURED.small.bodyBottom - MEASURED.small.dotsTop + COMPACT_SWEEP_SAVING;
+    const budget = MEASURED.small.bodyBottom - MEASURED.small.dotsTop;
     expect(tallestBelowTempo('labelBeside', SMALL_COMPACT)).toBeLessThanOrEqual(
       budget,
     );

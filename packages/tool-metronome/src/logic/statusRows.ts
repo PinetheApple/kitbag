@@ -118,10 +118,15 @@ export function statusRows(
 
 export const NO_SLOT = -1;
 
+const UPPER_SLOT = 0;
+
+export const LOWER_SLOT = 1;
+
 export function rowSlot(rows: StatusRows, row: StatusRow): number {
   'worklet';
-  if (rows.first === row) return 0;
-  return rows.second === row ? 1 : NO_SLOT;
+  if (rows.second === row) return LOWER_SLOT;
+  if (rows.first !== row) return NO_SLOT;
+  return rows.second === 'none' ? LOWER_SLOT : UPPER_SLOT;
 }
 
 export function rampNextText(nextBpm: number): string {

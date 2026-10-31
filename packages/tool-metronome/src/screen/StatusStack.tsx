@@ -8,6 +8,7 @@ import {
 } from '@kitbag/core-design';
 import { KB_COUNT_IN_BARS } from '@kitbag/core-native';
 import { BPM_BOUNDS, type RampConfig } from '@kitbag/core-state';
+import { useMemo } from 'react';
 import { Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -15,6 +16,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
+import { statusStackHeight } from '../logic/belowTempo.ts';
 import { rampProgressFill, rampTrackShown } from '../logic/rampProgress.ts';
 import {
   afterCountInSummary,
@@ -22,14 +24,11 @@ import {
   countInBarText,
   rampNextText,
   rampRemainingText,
-  restLegend,
   statusRows,
   type PracticeSettings,
   type StatusRows,
 } from '../logic/statusRows.ts';
 import { trackOpacity } from '../logic/trackOpacity.ts';
-import { BeatLegend } from './BeatDots.tsx';
-import { PolyLegend } from './PolyLegend.tsx';
 import { LiveSlot } from './LiveSlot.tsx';
 import { MuteStatus } from './MuteStatus.tsx';
 import { countInInk, useStatusStyles } from './statusStyles.ts';
@@ -211,27 +210,25 @@ export function StatusStack({ frame, settings, running }: StatusStackProps) {
     ),
   );
   const summary = armedSummary(settings);
-  const legend = restLegend(running, settings.polyEnabled);
+  const stack = useMemo(
+    () => ({ height: statusStackHeight(running) }),
+    [running],
+  );
   return (
     <View
-      style={styles.stack}
+      style={stack}
       accessible
       accessibilityRole="text"
       accessibilityLabel={summary}
       pointerEvents="none"
     >
-      {legend === null ? null : (
-        <>
-          <View style={styles.rest}>
-            <Icon name="practiceTools" size="statusRest" color="text2" />
-            <Text style={styles.restText} numberOfLines={1}>
-              {summary}
-            </Text>
-          </View>
-          <View style={styles.legendRow}>
-            {legend === 'poly' ? <PolyLegend /> : <BeatLegend />}
-          </View>
-        </>
+      {running ? null : (
+        <View style={styles.rest}>
+          <Icon name="practiceTools" size="statusRest" color="text2" />
+          <Text style={styles.restText} numberOfLines={1}>
+            {summary}
+          </Text>
+        </View>
       )}
       <MuteStatus
         rows={rows}

@@ -14,6 +14,7 @@ import {
   CYCLE_STRIP_MAX_CELLS,
   cycleCellBar,
   cycleStripCells,
+  LOWER_SLOT,
   NO_SLOT,
   NOTHING_ARMED,
   ofText,
@@ -180,6 +181,12 @@ describe('statusRows', () => {
     expect(rowSlot(rows, 'mute')).toBe(0);
     expect(rowSlot(rows, 'ramp')).toBe(1);
     expect(rowSlot(rows, 'countIn')).toBe(NO_SLOT);
+  });
+
+  it('drops a lone row to the lower slot, beside the player controls', () => {
+    const rows = { first: 'ramp', second: 'none' } as const;
+    expect(rowSlot(rows, 'ramp')).toBe(LOWER_SLOT);
+    expect(rowSlot(rows, 'mute')).toBe(NO_SLOT);
   });
 });
 
