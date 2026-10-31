@@ -16,8 +16,12 @@ import android.os.Looper
 import android.support.v4.media.session.MediaSessionCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
+import com.kitbag.corenative.transport.CardEffect
+import com.kitbag.corenative.transport.CardEvent
+import com.kitbag.corenative.transport.CardRouting
 import com.kitbag.corenative.transport.Playback
 import com.kitbag.corenative.transport.PracticeClock
+import com.kitbag.corenative.transport.SessionButton
 import com.kitbag.corenative.transport.SetlistPosition
 import com.kitbag.corenative.transport.Song
 import com.kitbag.corenative.transport.SongAction
@@ -35,6 +39,7 @@ class PlaybackService : Service() {
   private var practice = PracticeClock.IDLE
   private lateinit var card: MetronomeCard
   private var song: SongCard? = null
+  private val routing = CardRouting()
   private val clock = Handler(Looper.getMainLooper())
   private val tick = Runnable { onTick() }
 
@@ -64,25 +69,35 @@ class PlaybackService : Service() {
   // Not sticky: a restarted process has no engine, so there is nothing to resume.
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     lastStartId = startId
-    val songShowing = song != null
-    when (intent?.action) {
-      ACTION_SHOW -> if (!songShowing) show(intent)
-      ACTION_TRANSPORT -> if (!songShowing) {
-        intent.getStringExtra(EXTRA_ACTION)?.let(TransportAction::named)?.let(::handle)
-      }
-      ACTION_HIDE -> if (!songShowing) finish()
-      ACTION_SONG_SHOW -> showSong(intent)
-      ACTION_SONG -> songTapped(intent)
-      ACTION_SONG_HIDE -> if (songShowing) endSong()
-      else -> finish()
-    }
+    perform(routing.on(event(intent)), intent)
     return START_NOT_STICKY
   }
 
-  private fun songTapped(intent: Intent) {
-    val songCard = song ?: return finish()
-    intent.getStringExtra(EXTRA_ACTION)?.let(SongAction::named)?.let(songCard::handle)
+  private fun event(intent: Intent?): CardEvent =
+    when (intent?.action) {
+      ACTION_SHOW -> CardEvent.MetronomeShow
+      ACTION_TRANSPORT -> CardEvent.MetronomeTransport(intent.getStringExtra(EXTRA_ACTION))
+      ACTION_HIDE -> CardEvent.MetronomeHide
+      ACTION_SONG_SHOW -> CardEvent.SongShow
+      ACTION_SONG -> CardEvent.SongTapped(intent.getStringExtra(EXTRA_ACTION))
+      ACTION_SONG_HIDE -> CardEvent.SongHide
+      else -> CardEvent.Unrecognised
+    }
+
+  private fun perform(effect: CardEffect, intent: Intent? = null) {
+    when (effect) {
+      CardEffect.None -> Unit
+      CardEffect.ShowMetronome -> intent?.let(::show)
+      is CardEffect.Metronome -> handle(effect.action)
+      CardEffect.ShowSong -> intent?.let(::showSong)
+      is CardEffect.SongControl -> song?.handle(effect.action)
+      is CardEffect.SeekSong -> song?.seekTo(effect.positionMillis)
+      CardEffect.EndSong -> endSong()
+      CardEffect.RemoveCard -> finish()
+    }
   }
+
+  private fun route(event: CardEvent) = perform(routing.on(event))
 
   private fun showSong(intent: Intent) {
     clock.removeCallbacks(tick)
@@ -103,8 +118,7 @@ class PlaybackService : Service() {
       launchIntent(),
       ::songIntent,
       ::postForeground,
-      ::endSong,
-    ).also { song = it }
+    ) { route(CardEvent.SongStopped) }.also { song = it }
     songCard.show(next, intent.getBooleanExtra(EXTRA_PLAYING, true))
   }
 
@@ -163,7 +177,7 @@ class PlaybackService : Service() {
     practice = practice.afterPlaying(next.playback == Playback.PLAYING, System.currentTimeMillis())
     state = next
     listener?.invoke(next, practice, songStep)
-    if (next.playback == Playback.STOPPED) finish() else render()
+    if (next.playback == Playback.STOPPED) route(CardEvent.MetronomeStopped) else render()
   }
 
   // A running ramp moves the tempo without telling the service, so read it live.
@@ -204,7 +218,6 @@ class PlaybackService : Service() {
     updateSession(s, view)
     postForeground(card.notification(view, s.playback == Playback.PLAYING))
   }
-
 
   private fun updateSession(s: TransportState, view: TransportView) {
     val playing = s.playback == Playback.PLAYING
@@ -251,45 +264,23 @@ class PlaybackService : Service() {
     )
 
   private inner class SessionCallback : MediaSessionCompat.Callback() {
-    override fun onPlay() = route(SongAction.PLAY, TransportAction.PLAY)
+    override fun onPlay() = route(CardEvent.SessionPress(SessionButton.PLAY))
 
-    override fun onPause() = route(SongAction.PAUSE, TransportAction.PAUSE)
+    override fun onPause() = route(CardEvent.SessionPress(SessionButton.PAUSE))
 
-    override fun onStop() = route(SongAction.STOP, TransportAction.STOP)
+    override fun onStop() = route(CardEvent.SessionPress(SessionButton.STOP))
 
-    override fun onSkipToPrevious() = handle(TransportAction.PREVIOUS)
+    override fun onSkipToPrevious() = route(CardEvent.SessionPress(SessionButton.PREVIOUS))
 
-    override fun onSkipToNext() = handle(TransportAction.NEXT)
+    override fun onSkipToNext() = route(CardEvent.SessionPress(SessionButton.NEXT))
 
-    override fun onRewind() {
-      song?.handle(SongAction.REWIND)
-    }
+    override fun onRewind() = route(CardEvent.SessionPress(SessionButton.REWIND))
 
-    override fun onFastForward() {
-      song?.handle(SongAction.FORWARD)
-    }
+    override fun onFastForward() = route(CardEvent.SessionPress(SessionButton.FAST_FORWARD))
 
-    override fun onSeekTo(pos: Long) {
-      song?.seekTo(pos)
-    }
+    override fun onSeekTo(pos: Long) = route(CardEvent.SessionSeek(pos))
 
-    override fun onCustomAction(action: String, extras: Bundle?) {
-      val songCard = song
-      if (songCard == null) {
-        TransportAction.named(action)?.let(::handle)
-      } else {
-        SongAction.named(action)?.let(songCard::handle)
-      }
-    }
-
-    private fun route(songAction: SongAction, transportAction: TransportAction) {
-      val songCard = song
-      if (songCard == null) {
-        handle(transportAction)
-      } else {
-        songCard.handle(songAction)
-      }
-    }
+    override fun onCustomAction(action: String, extras: Bundle?) = route(CardEvent.SessionCustom(action))
   }
 
   companion object {
