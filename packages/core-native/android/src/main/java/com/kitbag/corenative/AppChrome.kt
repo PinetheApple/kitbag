@@ -66,7 +66,7 @@ internal object AppChrome {
   }
 
   // UiModeManager reads MODE_NIGHT_AUTO per app as "follow the system".
-  private fun uiModeManagerMode(mode: String): Int? =
+  internal fun uiModeManagerMode(mode: String): Int? =
     when (mode) {
       NIGHT_MODE_SYSTEM -> UiModeManager.MODE_NIGHT_AUTO
       NIGHT_MODE_DARK -> UiModeManager.MODE_NIGHT_YES
@@ -74,7 +74,7 @@ internal object AppChrome {
       else -> null
     }
 
-  private fun appCompatMode(mode: String): Int? =
+  internal fun appCompatMode(mode: String): Int? =
     when (mode) {
       NIGHT_MODE_SYSTEM -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
       NIGHT_MODE_DARK -> AppCompatDelegate.MODE_NIGHT_YES
