@@ -204,6 +204,23 @@ describe('backup round trip', () => {
     expect(restored.map((preset) => preset.polyAgainst)).toEqual([2, 2]);
   });
 
+  it('restores a poly cycle equal to its preset bar as the bar', async () => {
+    const source = openBackupDatabase();
+    await seed(source);
+    const file = JSON.parse(await source.backup.export()) as {
+      songPresets: Record<string, unknown>[];
+    };
+    for (const record of file.songPresets)
+      record.polyAgainst = record.beatsPerBar;
+    const target = openBackupDatabase();
+    expect((await restoreAll(target, JSON.stringify(file))).ok).toBe(true);
+    const restored = await target.presets.list();
+    expect(restored.map((preset) => preset.polyAgainst)).toEqual([
+      POLY_AGAINST_BAR,
+      POLY_AGAINST_BAR,
+    ]);
+  });
+
   it('reads a v4 preset written before poly against as the bar', async () => {
     const source = openBackupDatabase();
     await seed(source);

@@ -26,6 +26,7 @@ import {
 import { decodeBase64, presetBytes } from './base64';
 import {
   MIN_RAMP_STEP,
+  normalizePolyAgainst,
   POLY_AGAINST_BAR,
   presetViolation,
   RAMP_UNITS,
@@ -115,7 +116,10 @@ function readSongPreset(value: unknown, path: string): SongPresetRecord {
     ...presetBytes(record),
   });
   if (violation) invalidField(`${path}.${violation.field}`, violation.reason);
-  return record;
+  return {
+    ...record,
+    polyAgainst: normalizePolyAgainst(record.polyAgainst, record.beatsPerBar),
+  };
 }
 
 function readSetlist(value: unknown, path: string): SetlistRecord {

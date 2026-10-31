@@ -188,15 +188,29 @@ describe('library store', () => {
     );
   });
 
-  it('loads an explicit count equal to the song meter as explicit', async () => {
-    const { library, metronome } = setup();
+  it('loads a stored count equal to the song meter as the bar', async () => {
+    const { library, metronome, repos } = setup();
     const s = library.getState();
     metronome.getState().setBeats(3, 4);
-    metronome.getState().setPolyAgainst(3);
     const song = await s.newSongFromCurrent('Waltz');
-    metronome.getState().setPolyAgainst(KB_POLY_AGAINST_BAR);
+    await repos.presets.update(song, { polyAgainst: 3 });
+    await s.refresh();
+    metronome.getState().setBeats(4, 4);
     await s.loadSong(song);
-    expect(metronome.getState().polyAgainst).toBe(3);
+    expect(metronome.getState().polyAgainst).toBe(KB_POLY_AGAINST_BAR);
+  });
+
+  it('applies the meter before the poly cycle on load', async () => {
+    const { library, metronome, commands } = setup();
+    const s = library.getState();
+    metronome.getState().setPolyAgainst(2);
+    const song = await s.newSongFromCurrent('Order');
+    commands.setBeats.mockClear();
+    commands.setPolyAgainst.mockClear();
+    await s.loadSong(song);
+    const [beats] = commands.setBeats.mock.invocationCallOrder;
+    const [against] = commands.setPolyAgainst.mock.invocationCallOrder;
+    expect(beats).toBeLessThan(against ?? 0);
   });
 
   async function offStage() {

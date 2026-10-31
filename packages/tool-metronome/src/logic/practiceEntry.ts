@@ -8,6 +8,7 @@ import {
 import {
   BPM_BOUNDS,
   effectivePolyAgainst,
+  normalizePolyAgainst,
   rampIntervalBounds,
   type BarMuteConfig,
   type RampConfig,
@@ -139,9 +140,9 @@ export function withPracticeEntry(
     case 'polyBeats':
       return { ...values, polyBeats: typed };
     case 'polyAgainst':
-      return typed ===
-        effectivePolyAgainst(values.polyAgainst, values.beatsPerBar)
-        ? values
-        : { ...values, polyAgainst: typed };
+      return {
+        ...values,
+        polyAgainst: normalizePolyAgainst(typed, values.beatsPerBar),
+      };
   }
 }

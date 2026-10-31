@@ -19,8 +19,8 @@ describe('poly against normalisation', () => {
     );
   });
 
-  it('keeps an explicit count equal to the bar explicit', () => {
-    expect(normalizePolyAgainst(FOUR, FOUR)).toBe(FOUR);
+  it('stores a count equal to the bar as the bar', () => {
+    expect(normalizePolyAgainst(FOUR, FOUR)).toBe(KB_POLY_AGAINST_BAR);
   });
 
   it.each([
@@ -53,9 +53,8 @@ describe('poly against stepping', () => {
     expect(stepPolyAgainst(KB_POLY_AGAINST_BAR, -1, FOUR)).toBe(3);
   });
 
-  it('steps an explicit count that a meter change made equal to the bar', () => {
-    expect(stepPolyAgainst(3, 1, 3)).toBe(4);
-    expect(stepPolyAgainst(3, -1, 3)).toBe(2);
+  it('agrees with typing: stepping onto the bar count reads as the bar', () => {
+    expect(stepPolyAgainst(3, 1, FOUR)).toBe(normalizePolyAgainst(FOUR, FOUR));
   });
 
   it('stops at the engine bounds', () => {

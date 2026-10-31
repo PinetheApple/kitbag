@@ -125,18 +125,30 @@ describe('poly against', () => {
     ]);
   });
 
-  it('keeps an explicit count explicit when the meter comes to equal it', () => {
+  it('turns an explicit count into the bar when the meter comes to equal it', () => {
     const { commands, store } = setup();
     store.getState().setPolyAgainst(3);
     commands.setPolyAgainst.mockClear();
     store.getState().setBeats(3, 4);
-    expect(store.getState().polyAgainst).toBe(3);
+    expect(store.getState().polyAgainst).toBe(KB_POLY_AGAINST_BAR);
+    expect(commands.setPolyAgainst).toHaveBeenCalledWith(KB_POLY_AGAINST_BAR);
+  });
+
+  it('keeps an explicit count the new meter does not equal', () => {
+    const { commands, store } = setup();
+    store.getState().setPolyAgainst(2);
+    commands.setPolyAgainst.mockClear();
+    store.getState().setBeats(3, 4);
+    expect(store.getState().polyAgainst).toBe(2);
     expect(commands.setPolyAgainst).not.toHaveBeenCalled();
   });
 
-  it('keeps an explicit count equal to the bar explicit', () => {
-    const { store } = setup();
+  it('stores a count equal to the bar as the bar', () => {
+    const { commands, store } = setup();
     store.getState().setPolyAgainst(store.getState().beatsPerBar);
-    expect(store.getState().polyAgainst).toBe(store.getState().beatsPerBar);
+    expect(store.getState().polyAgainst).toBe(KB_POLY_AGAINST_BAR);
+    expect(commands.setPolyAgainst).toHaveBeenLastCalledWith(
+      KB_POLY_AGAINST_BAR,
+    );
   });
 });

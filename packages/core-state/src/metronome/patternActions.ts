@@ -43,8 +43,11 @@ export function patternActions(
         : get().denominator;
       const meterChanged = beats !== get().beatsPerBar;
       const accents = meterChanged ? groupStartAccents(beats) : get().accents;
-      set({ beatsPerBar: beats, denominator: denom, accents });
+      const against = get().polyAgainst;
+      const polyAgainst = normalizePolyAgainst(against, beats);
+      set({ beatsPerBar: beats, denominator: denom, accents, polyAgainst });
       commands.setBeats(beats, denom);
+      if (polyAgainst !== against) commands.setPolyAgainst(polyAgainst);
       if (!meterChanged) return;
       accents.forEach((accent, beat) => {
         commands.setAccent(beat, accent);

@@ -139,7 +139,8 @@ export function editFrom(draft: PresetDraft): PresetEdit {
 export function withBeats(draft: PresetDraft, delta: number): PresetDraft {
   const beats = clampTo(draft.beatsPerBar + delta, MIN_BEATS, KB_MAX_BEATS);
   const accents = resizeAccents(draft.accents, beats);
-  return { ...draft, beatsPerBar: beats, accents };
+  const polyAgainst = normalizePolyAgainst(draft.polyAgainst, beats);
+  return { ...draft, beatsPerBar: beats, accents, polyAgainst };
 }
 
 export function withPolyBeats(draft: PresetDraft, delta: number): PresetDraft {

@@ -67,4 +67,5 @@ export const REPAIR_PRESETS: readonly string[] = [
 
 export const REPAIR_POLY_AGAINST = `UPDATE song_presets SET poly_against = ${String(POLY_AGAINST_BAR)}
   WHERE typeof(poly_against) != 'integer'
-  OR poly_against NOT BETWEEN ${String(MIN_POLY_AGAINST)} AND ${String(MAX_POLY_AGAINST)}`;
+  OR poly_against NOT BETWEEN ${String(MIN_POLY_AGAINST)} AND ${String(MAX_POLY_AGAINST)}
+  OR poly_against = beats_per_bar`;

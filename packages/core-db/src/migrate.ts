@@ -1,4 +1,4 @@
-import { REPAIR_POLY_AGAINST, REPAIR_PRESETS } from './preset-repair';
+import { REPAIR_PRESETS } from './preset-repair';
 import { POLY_AGAINST_BAR, RAMP_UNITS } from './preset-rules';
 import { INSTRUMENTS, MAX_MIDI_NOTE, MAX_STRINGS } from './tuning-rules';
 import {
@@ -280,7 +280,6 @@ export { MIGRATE_V14_TO_V15, MIGRATE_V15_TO_V16, MIGRATE_V16_TO_V17 };
 
 export const MIGRATE_V17_TO_V18: readonly string[] = [
   `ALTER TABLE song_presets ADD COLUMN poly_against INTEGER NOT NULL DEFAULT ${String(POLY_AGAINST_BAR)}`,
-  REPAIR_POLY_AGAINST,
 ];
 
 export const BASELINE: readonly string[] = [

@@ -100,9 +100,16 @@ describe('preset draft', () => {
     expect(withPolyAgainst(bar, 1).polyAgainst).toBe(4);
   });
 
-  it('keeps an explicit poly cycle through a meter change', () => {
+  it('turns an explicit poly cycle into the bar when the meter comes to equal it', () => {
     const draft = draftFrom({ ...PRESET, polyAgainst: 4 });
-    expect(withBeats(draft, 1).polyAgainst).toBe(4);
+    expect(withBeats(draft, 1).polyAgainst).toBe(KB_POLY_AGAINST_BAR);
+    expect(withBeats(draft, -1).polyAgainst).toBe(4);
+  });
+
+  it('reads a stored count equal to the bar as the bar', () => {
+    expect(draftFrom({ ...PRESET, polyAgainst: 3 }).polyAgainst).toBe(
+      KB_POLY_AGAINST_BAR,
+    );
   });
 
   it('reads a stored count the engine cannot hold as the bar', () => {

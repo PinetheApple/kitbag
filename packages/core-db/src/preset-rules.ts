@@ -210,6 +210,11 @@ export const isPolyAgainst = (value: number) =>
     value >= MIN_POLY_AGAINST &&
     value <= MAX_POLY_AGAINST);
 
+export const normalizePolyAgainst = (against: number, beatsPerBar: number) =>
+  isPolyAgainst(against) && against !== beatsPerBar
+    ? against
+    : POLY_AGAINST_BAR;
+
 export function presetViolation(
   preset: PresetShape,
 ): RuleViolation | undefined {

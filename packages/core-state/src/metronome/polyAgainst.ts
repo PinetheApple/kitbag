@@ -1,3 +1,4 @@
+import { normalizePolyAgainst } from '@kitbag/core-db';
 import {
   KB_POLY_AGAINST_BAR,
   KB_POLY_AGAINST_BOUNDS,
@@ -5,24 +6,7 @@ import {
 
 import { clamp } from './config.ts';
 
-function isExplicit(against: number): boolean {
-  return (
-    Number.isInteger(against) &&
-    against >= KB_POLY_AGAINST_BOUNDS.min &&
-    against <= KB_POLY_AGAINST_BOUNDS.max
-  );
-}
-
-export function normalizePolyAgainst(
-  against: number,
-  beatsPerBar: number,
-): number {
-  if (!isExplicit(against)) return KB_POLY_AGAINST_BAR;
-  // Owner rule pending: an explicit count equal to the bar stays explicit.
-  // Return KB_POLY_AGAINST_BAR here instead to make it follow later meters.
-  if (against === beatsPerBar) return against;
-  return against;
-}
+export { normalizePolyAgainst };
 
 export function effectivePolyAgainst(
   against: number,
@@ -41,6 +25,5 @@ export function stepPolyAgainst(
     KB_POLY_AGAINST_BOUNDS.min,
     KB_POLY_AGAINST_BOUNDS.max,
   );
-  if (next === effectivePolyAgainst(against, beatsPerBar)) return against;
-  return next === beatsPerBar ? KB_POLY_AGAINST_BAR : next;
+  return normalizePolyAgainst(next, beatsPerBar);
 }

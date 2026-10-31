@@ -9,6 +9,7 @@ import {
   MIN_POLY_AGAINST,
   POLY_AGAINST_BAR,
 } from './preset-rules';
+import { songPresets } from './schema';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
 const presets = (db: DatabaseSync) =>
@@ -27,12 +28,20 @@ describe('migrate v17 to v18', () => {
   });
 });
 
+describe('poly against schema', () => {
+  it('defaults a new row to the bar', () => {
+    expect(songPresets.polyAgainst.default).toBe(POLY_AGAINST_BAR);
+    expect(songPresets.polyAgainst.notNull).toBe(true);
+  });
+});
+
 describe('poly against repair', () => {
   it.each([
     [MIN_POLY_AGAINST - 2, POLY_AGAINST_BAR],
     [MAX_POLY_AGAINST + 1, POLY_AGAINST_BAR],
     [2.5, POLY_AGAINST_BAR],
     [POLY_AGAINST_BAR, POLY_AGAINST_BAR],
+    [4, POLY_AGAINST_BAR],
     [MIN_POLY_AGAINST, MIN_POLY_AGAINST],
     [MAX_POLY_AGAINST, MAX_POLY_AGAINST],
   ])('stores %s as %s', (stored, expected) => {

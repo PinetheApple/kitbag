@@ -6,7 +6,11 @@ import {
   KB_POLY_BEATS_BOUNDS,
   KB_RAMP_UNIT,
 } from '@kitbag/core-native';
-import { BPM_BOUNDS, rampIntervalBounds } from '@kitbag/core-state';
+import {
+  BPM_BOUNDS,
+  rampIntervalBounds,
+  stepPolyAgainst,
+} from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -15,6 +19,7 @@ import {
   pressDigit,
   type NumpadEntry,
 } from './numpad.ts';
+import { polyAgainstValue } from './polyRow.ts';
 import {
   practiceEntry,
   RAMP_STEP_BOUNDS,
@@ -110,6 +115,14 @@ describe('typing a practice value', () => {
     expect(typeInto('polyAgainst', [9, 9]).polyAgainst).toBe(
       KB_POLY_AGAINST_BOUNDS.max,
     );
+  });
+
+  it('agrees with the stepper: typing the bar count reads as the bar', () => {
+    const three = { ...VALUES, polyAgainst: 3 };
+    const typed = typeInto('polyAgainst', [4], three).polyAgainst;
+    expect(typed).toBe(KB_POLY_AGAINST_BAR);
+    expect(typed).toBe(stepPolyAgainst(3, 1, VALUES.beatsPerBar));
+    expect(polyAgainstValue(typed, VALUES.beatsPerBar)).toBe('4 bar');
   });
 
   it('keeps the bar when the bar count is confirmed unchanged', () => {
