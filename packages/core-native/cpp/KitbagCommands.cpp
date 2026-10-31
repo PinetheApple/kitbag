@@ -62,6 +62,9 @@ void commandSetBeats(int32_t beatsPerBar, int32_t denominator) {
 void commandSetSubdivision(int32_t subdivision) {
   kb_metronome_set_subdivision(commandEngine(), subdivision);
 }
+void commandSetSubdivisionAccents(int32_t subdivision, int32_t slotMask) {
+  kb_metronome_set_subdivision_accents(commandEngine(), subdivision, slotMask);
+}
 void commandSetAccent(int32_t beatIndex, int32_t accent) {
   kb_metronome_set_accent(commandEngine(), beatIndex, accent);
 }

@@ -22,6 +22,7 @@ void commandFollowMixer(bool enabled);
 
 void commandSetBeats(int32_t beatsPerBar, int32_t denominator);
 void commandSetSubdivision(int32_t subdivision);
+void commandSetSubdivisionAccents(int32_t subdivision, int32_t slotMask);
 void commandSetAccent(int32_t beatIndex, int32_t accent);
 void commandSetPoly(bool enabled, int32_t beats);
 void commandSetPolyAccent(int32_t beatIndex, int32_t accent);
