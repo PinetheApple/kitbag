@@ -693,6 +693,11 @@ referenced but never drew: **setlists**, **setlist detail**, **preset editor**.
   "Open setlists". Clear song and Leave setlist unlink the loaded song but keep
   the metronome's current settings, so the bar returns to the plain "Setlists"
   chip without the sound changing.
+- **Live edits are unsaved until Save** (owner, 2026-10-31; #212). Changing a
+  loaded song's settings on the metronome (tempo, meter, subdivision, accents,
+  poly, sound, ramp, mute, count-in) never writes the song; a visible mark shows
+  it has unsaved changes until the user saves. Nothing autosaves. The mark and
+  where Save lives await the owner's pick of a design.
 - **Ramp and bar-mute are song data.** The Flutter `applyPreset` force-disables
   the ramp when loading a preset, so a song's trainer config is silently lost.
   They round-trip like any other field.
