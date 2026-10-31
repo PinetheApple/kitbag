@@ -13,8 +13,8 @@ extern "C" {
 
 /* --- Engine: render clock ----------------------------------------------- */
 
-/* First engine frame of the latest render callback, and CLOCK_MONOTONIC at its
- * entry. KB_ERROR_BUSY with no callback since create or kb_engine_stop: retry. */
+/* Latest render callback's first engine frame and CLOCK_MONOTONIC at entry.
+ * KB_ERROR_BUSY: no callback since create or any stop, or retries lost. */
 KB_EXPORT kb_result kb_engine_clock_pair(
     const kb_engine* engine,
     int64_t* out_frame,

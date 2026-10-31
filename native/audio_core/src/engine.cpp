@@ -1,11 +1,10 @@
 #include "engine.h"
 
-#include <time.h>
-
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
 
+#include "rt/monotonic_clock.h"
 #include "rt/stall_detector.h"
 
 namespace kitbag {
@@ -25,15 +24,6 @@ uint64_t NowMs() {
       )
           .count()
   );
-}
-
-// vDSO on Linux and Android: no syscall, no lock, safe on the callback.
-int64_t MonotonicNs() {
-  timespec now{};
-  clock_gettime(CLOCK_MONOTONIC, &now);
-  return (std::chrono::seconds(now.tv_sec) +
-          std::chrono::nanoseconds(now.tv_nsec))
-      .count();
 }
 
 }  // namespace

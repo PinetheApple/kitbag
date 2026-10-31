@@ -82,14 +82,12 @@ export const KB_STOPPED_BEAT = -1;
 /** Must equal kHostObjectKey in cpp/KitbagHostObject.h. */
 export const KITBAG_HOST_OBJECT_KEY = '__KitbagHostObject';
 
-/** kb_engine_clock_pair; both fields NaN before the first render callback. */
+/** kb_engine_clock_pair; both fields NaN while it returns non-OK. */
 export interface EngineClockHost extends Pick<
   KitbagHostObject,
   'engine_sample_rate'
 > {
-  /** First engine frame of the latest render callback. */
   readonly clock_pair_frame: number;
-  /** CLOCK_MONOTONIC ns at that callback's entry. */
   readonly clock_pair_monotonic_ns: number;
 }
 

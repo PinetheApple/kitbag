@@ -2,18 +2,17 @@
 
 #include "abi_test_engine_clock.h"
 
-#include <time.h>
-
-#include <chrono>
 #include <cstdint>
 #include <vector>
 
 #include "check.h"
 #include "media/streaming_track.h"
+#include "rt/monotonic_clock.h"
 
 namespace abi_test {
 namespace {
 
+using kitbag::MonotonicNs;
 using kitbag_test::Check;
 
 constexpr uint32_t kChannels = 2;
@@ -24,14 +23,6 @@ constexpr uint32_t kBlockFrames[] = {
     kitbag::StreamingTrack::kMaxBlockFrames + kOddTail,
     1021,
 };
-
-int64_t MonotonicNs() {
-  timespec now{};
-  clock_gettime(CLOCK_MONOTONIC, &now);
-  return (std::chrono::seconds(now.tv_sec) +
-          std::chrono::nanoseconds(now.tv_nsec))
-      .count();
-}
 
 void Render(kb_engine* engine, uint32_t frames) {
   std::vector<float> out(static_cast<size_t>(frames) * kChannels);
