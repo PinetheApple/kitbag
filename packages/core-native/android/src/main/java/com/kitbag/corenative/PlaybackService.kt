@@ -123,7 +123,7 @@ class PlaybackService : Service() {
   }
 
   private fun songStopped() {
-    songListener?.invoke()
+    songStoppedListener?.invoke()
     route(CardEvent.SongStopped)
   }
 
@@ -340,7 +340,7 @@ class PlaybackService : Service() {
 
     @Volatile var listener: ((TransportState, PracticeClock, TransportAction?) -> Unit)? = null
 
-    @Volatile var songListener: (() -> Unit)? = null
+    @Volatile var songStoppedListener: (() -> Unit)? = null
 
     fun show(
       context: Context,

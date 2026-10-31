@@ -13,7 +13,7 @@ export function stopClick({ commands }: StemPlayerRuntime): void {
   commands.metronomeStop();
 }
 
-export function clickOff({
+export function turnClickOff({
   set,
   get,
   runtimeOf,
@@ -53,7 +53,7 @@ export function clickActions({
     toggleClick: async () => {
       if (busy()) return;
       if (get().click) {
-        clickOff({ set, get, runtimeOf });
+        turnClickOff({ set, get, runtimeOf });
         return;
       }
       await start();
