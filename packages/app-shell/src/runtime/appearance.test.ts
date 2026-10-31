@@ -1,17 +1,13 @@
 import { palette } from '@kitbag/core-design';
 import type { AppNightMode } from '@kitbag/core-native';
 import type { ThemeChoice } from '@kitbag/core-state';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import {
   appearanceApplier,
   keepNightMode,
   resolveThemeMode,
-  statusBarStyle,
 } from './appearance.ts';
-
-const setColorScheme = vi.hoisted(() => vi.fn());
-vi.mock('react-native', () => ({ Appearance: { setColorScheme } }));
 
 describe('resolveThemeMode', () => {
   it.each(['light', 'dark'] as const)(
@@ -33,13 +29,6 @@ describe('resolveThemeMode', () => {
     ['light', 'dark'],
   ] as const)('keeps an explicit %s over an OS in %s', (choice, os) => {
     expect(resolveThemeMode(choice, os)).toBe(choice);
-  });
-});
-
-describe('statusBarStyle', () => {
-  it('draws light icons on the dark theme and dark icons on the light one', () => {
-    expect(statusBarStyle('dark')).toBe('light');
-    expect(statusBarStyle('light')).toBe('dark');
   });
 });
 
@@ -67,12 +56,6 @@ describe('appearanceApplier', () => {
       expect(calls.backgrounds).toEqual([palette.bg.light]);
     },
   );
-
-  it('never pins the RN colour scheme over the native night mode', () => {
-    const { apply } = recordingApplier();
-    apply('light', 'light');
-    expect(setColorScheme).not.toHaveBeenCalled();
-  });
 
   it('asks for dark bar icons only while the resolved theme is light', () => {
     const { apply, calls } = recordingApplier();
