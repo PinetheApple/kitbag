@@ -192,15 +192,16 @@ export function ToolGrid({ tiles }: ToolGridProps) {
       {packTileRows(tiles).map((row) => (
         <View key={row.map((t) => t.id).join('|')} style={styles.gridRow}>
           {row.map((tile) => (
-            <ToolTile
-              key={tile.id}
-              icon={tile.icon}
-              title={tile.title}
-              subtext={tile.subtext}
-              status={tile.status}
-              onPress={tile.onPress}
-              onLongPress={tile.onLongPress}
-            />
+            <View key={tile.id} style={styles.gridCell}>
+              <ToolTile
+                icon={tile.icon}
+                title={tile.title}
+                subtext={tile.subtext}
+                status={tile.status}
+                onPress={tile.onPress}
+                onLongPress={tile.onLongPress}
+              />
+            </View>
           ))}
           {row.length === 1 && row[0]?.size === '1x1' ? (
             <View style={styles.gridCell} />
