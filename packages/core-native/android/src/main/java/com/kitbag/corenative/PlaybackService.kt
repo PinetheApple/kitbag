@@ -88,11 +88,13 @@ class PlaybackService : Service() {
     when (effect) {
       CardEffect.None -> Unit
       CardEffect.ShowMetronome -> intent?.let { show(it) }
+      CardEffect.HoldMetronome -> intent?.let { hold(it) }
       is CardEffect.MetronomeControl -> handle(effect.action)
       CardEffect.ShowSong -> intent?.let { showSong(it) }
       is CardEffect.SongControl -> song?.handle(effect.action)
       is CardEffect.SeekSong -> song?.seekTo(effect.positionMillis)
       CardEffect.EndSong -> endSong()
+      CardEffect.ReturnToMetronome -> returnToMetronome()
       CardEffect.RemoveCard -> finish()
     }
   }
@@ -101,8 +103,6 @@ class PlaybackService : Service() {
 
   private fun showSong(intent: Intent) {
     clock.removeCallbacks(tick)
-    state = null
-    model = null
     card.forgetMetadata()
     val next = Song(
       title = intent.getStringExtra(EXTRA_TITLE).orEmpty(),
@@ -118,14 +118,29 @@ class PlaybackService : Service() {
       launchIntent(),
       ::songIntent,
       ::postForeground,
-    ) { route(CardEvent.SongStopped) }.also { song = it }
+    ) { songStopped() }.also { song = it }
     songCard.show(next, intent.getBooleanExtra(EXTRA_PLAYING, true))
   }
 
+  private fun songStopped() {
+    songListener?.invoke()
+    route(CardEvent.SongStopped)
+  }
+
   private fun endSong() {
+    releaseSong()
+    finish()
+  }
+
+  private fun returnToMetronome() {
+    releaseSong()
+    state = state?.let(::withEngineTempo)
+    render()
+  }
+
+  private fun releaseSong() {
     song?.release()
     song = null
-    finish()
   }
 
   private fun postForeground(notification: Notification) {
@@ -138,6 +153,11 @@ class PlaybackService : Service() {
   }
 
   private fun show(intent: Intent) {
+    hold(intent)
+    render()
+  }
+
+  private fun hold(intent: Intent) {
     model = TransportModel(
       intent.getDoubleExtra(EXTRA_MIN_BPM, 0.0),
       intent.getDoubleExtra(EXTRA_MAX_BPM, 0.0),
@@ -159,7 +179,6 @@ class PlaybackService : Service() {
         intent.getIntExtra(EXTRA_SONG_COUNT, 0),
       ),
     )
-    render()
   }
 
   private fun handle(action: TransportAction) {
@@ -320,6 +339,8 @@ class PlaybackService : Service() {
     @Volatile private var startRequested = false
 
     @Volatile var listener: ((TransportState, PracticeClock, TransportAction?) -> Unit)? = null
+
+    @Volatile var songListener: (() -> Unit)? = null
 
     fun show(
       context: Context,
