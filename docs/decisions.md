@@ -520,7 +520,12 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
 - **2026-10-31 · Metronome layout (§12, #243)** — The owner approved round 2 of the main
   screen's vertical layout: a taller BPM block, smaller transport buttons, dropdowns and
   beat dots with more room between them, the legend directly under the dots while stopped,
-  and the practice-tools area bottom-aligned above the player controls. A lone live status
-  row takes the lower slot, derived from the bottom alignment. Drawn in
+  and the practice-tools area bottom-aligned above the player controls. Drawn in
   `design/kitbag-metronome.html` §02, which supersedes the main screen's sizes and vertical
-  layout in the B, status and poly files. **[user]**
+  layout in the B, status and poly files. **[user]** Where the build departs from the
+  frame **[recorded — implementation]**: hit boxes are 48 dp, not the 51 / 53 the mockup
+  notes give; the poly row keeps the 14 dp bracket band the mockup leaves out, so the
+  minimum gap between the dots and the practice tools is 0 to fit 360 × 800 without a new
+  scroll; the numeral is capped at 128 sp under font scaling, compact only; the new gaps
+  apply in roomy too; dropdown padding is unchanged; and a lone status row takes the
+  lower slot.

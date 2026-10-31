@@ -1,5 +1,8 @@
 # Metronome layout B — mockup parity table
 
+> Sizes and vertical layout superseded by `design/kitbag-metronome.html` §02 (#243);
+> `docs/decisions.md`, 2026-10-31, lists where the build departs from that frame.
+
 Source: the "Chosen" variant in `design/kitbag-metronome-b.html`
 (owner-approved on #175, 2026-10-30). Values are the mockup's CSS at its 360 × 800
 phone frame, where 1 CSS px = 1 dp. Colours name the §12.2 palette tokens; `mix(a N%, b)`
