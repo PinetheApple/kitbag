@@ -1,8 +1,13 @@
+import type { AppNightMode } from '@kitbag/core-native';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
-export const THEME_CHOICES = ['system', 'dark', 'light'] as const;
+export type ThemeChoice = AppNightMode;
 
-export type ThemeChoice = (typeof THEME_CHOICES)[number];
+export const THEME_CHOICES = [
+  'system',
+  'dark',
+  'light',
+] as const satisfies readonly ThemeChoice[];
 
 export interface AppearanceSettings {
   readonly theme: ThemeChoice;
