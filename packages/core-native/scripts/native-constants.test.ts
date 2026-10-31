@@ -301,7 +301,7 @@ describe('collectConstants (real engine source)', () => {
       'woodblock',
       'click',
       'tom',
-      'hihat',
+      'tick',
       'cowbell',
     ]);
     expect(c.result.map((m) => m.name)).toContain(

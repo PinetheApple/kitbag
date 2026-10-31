@@ -6,7 +6,6 @@ namespace {
 using kitbag::Accent;
 
 constexpr int kWoodblock = 1;
-constexpr int kClick = 2;
 constexpr int kCowbell = 5;
 
 constexpr int64_t kBarFrames = 4 * kBeatFrames;
@@ -14,8 +13,6 @@ constexpr int64_t kHalfBeatFrames = kBeatFrames / 2;
 
 constexpr double kBeepBeatHz = 1174.7;
 constexpr double kWoodblockBeatHz = 1800.0;
-constexpr double kClickAccentHz = 3600.0;
-constexpr double kHihatPolyHz = 4500.0;
 constexpr double kCowbellAccentHz = 2200.0;
 
 void StartFourFour(kitbag::Metronome& metronome) {
@@ -38,14 +35,14 @@ void TestDefaultSoundsUnchanged() {
 
 void TestNormalAndAccentSoundsIndependent() {
   kitbag::Metronome metronome;
-  metronome.SetSounds(kTom, kHihatSound);
+  metronome.SetSounds(kTom, kClickSound);
   metronome.SetSubdivision(2);
   StartFourFour(metronome);
   const auto left = RenderLeft(metronome, kBarFrames);
 
   Check(
-      PitchIs(left, 0, kHihatAccentHz),
-      "sounds: accented downbeat plays the accent sound (hihat)"
+      PitchIs(left, 0, kClickAccentHz),
+      "sounds: accented downbeat plays the accent sound (click)"
   );
   Check(
       PitchIs(left, kBeatFrames, kTomBeatHz),
@@ -59,7 +56,7 @@ void TestNormalAndAccentSoundsIndependent() {
 
 void TestInvalidSoundIdsKeepPrior() {
   kitbag::Metronome metronome;
-  metronome.SetSounds(kTom, kHihatSound);
+  metronome.SetSounds(kTom, kClickSound);
   metronome.SetSounds(-1, kitbag::Metronome::kSoundCount);
   StartFourFour(metronome);
   const auto left = RenderLeft(metronome, kBarFrames, [&](int64_t at) {
@@ -69,7 +66,7 @@ void TestInvalidSoundIdsKeepPrior() {
   });
 
   Check(
-      PitchIs(left, 0, kHihatAccentHz) &&
+      PitchIs(left, 0, kClickAccentHz) &&
           PitchIs(left, kBeatFrames, kTomBeatHz),
       "sounds: out-of-table ids keep both previous sounds"
   );
@@ -86,11 +83,11 @@ void TestInvalidSoundIdsKeepPrior() {
 
 void TestSoundsApplyLiveWhileRunning() {
   kitbag::Metronome metronome;
-  metronome.SetSounds(kTom, kHihatSound);
+  metronome.SetSounds(kTom, kClickSound);
   StartFourFour(metronome);
   const auto left = RenderLeft(metronome, 2 * kBarFrames, [&](int64_t at) {
     if (at == kBarFrames - kBlockFrames) {
-      metronome.SetSounds(kWoodblock, kClick);
+      metronome.SetSounds(kWoodblock, kCowbell);
     }
   });
 
@@ -99,7 +96,7 @@ void TestSoundsApplyLiveWhileRunning() {
       "sounds live: bar 0 normal beats keep the old sound"
   );
   Check(
-      PitchIs(left, kBarFrames, kClickAccentHz) &&
+      PitchIs(left, kBarFrames, kCowbellAccentHz) &&
           PitchIs(left, kBarFrames + kBeatFrames, kWoodblockBeatHz),
       "sounds live: the next bar plays the new accent and normal sounds"
   );
@@ -107,7 +104,7 @@ void TestSoundsApplyLiveWhileRunning() {
 
 void TestMutedBeatsAndSubdivisionsSilent() {
   kitbag::Metronome metronome;
-  metronome.SetSounds(kTom, kHihatSound);
+  metronome.SetSounds(kTom, kClickSound);
   metronome.SetSubdivision(2);
   metronome.SetAccent(0, Accent::kMuted);
   metronome.SetAccent(1, Accent::kMuted);
@@ -132,7 +129,7 @@ void TestMutedBeatsAndSubdivisionsSilent() {
 
 void TestPolyFollowsItsAccentSound() {
   kitbag::Metronome metronome;
-  metronome.SetSounds(kTom, kHihatSound);
+  metronome.SetSounds(kTom, kClickSound);
   for (int beat = 0; beat < 4; ++beat) {
     metronome.SetAccent(beat, Accent::kMuted);
   }
@@ -141,7 +138,7 @@ void TestPolyFollowsItsAccentSound() {
   const auto left = RenderLeft(metronome, kBarFrames);
 
   Check(
-      PitchIs(left, 0, kHihatPolyHz),
+      PitchIs(left, 0, kClickPolyHz),
       "sounds: accented poly beat plays the accent sound's poly voice"
   );
   Check(
@@ -161,7 +158,7 @@ void TestPreviewPlaysOneClickWhileStopped() {
   metronome.PreviewSound(kitbag::Metronome::kSoundCount, true);
   const auto left = RenderLeft(metronome, kBeatFrames, [&](int64_t at) {
     if (at == kBeatFrames / 2 / kBlockFrames * kBlockFrames) {
-      metronome.PreviewSound(kHihatSound, true);
+      metronome.PreviewSound(kClickSound, true);
     }
   });
   const int64_t second = kBeatFrames / 2 / kBlockFrames * kBlockFrames;
@@ -176,7 +173,7 @@ void TestPreviewPlaysOneClickWhileStopped() {
       "preview: scaled by the current volume"
   );
   Check(
-      PitchIs(left, second, kHihatAccentHz),
+      PitchIs(left, second, kClickAccentHz),
       "preview: the accent voice when accented, on the next block"
   );
 }
@@ -187,14 +184,14 @@ void TestPreviewQueuedBeforeDropIsSilent() {
   metronome.DropQueuedPreviews();
   const int64_t later = kHalfBeatFrames / kBlockFrames * kBlockFrames;
   const auto left = RenderLeft(metronome, kBeatFrames, [&](int64_t at) {
-    if (at == later) metronome.PreviewSound(kHihatSound, true);
+    if (at == later) metronome.PreviewSound(kClickSound, true);
   });
   Check(
       PeakIn(left, 0) < kSilentCeiling,
       "preview: one queued before DropQueuedPreviews never sounds"
   );
   Check(
-      PitchIs(left, later, kHihatAccentHz),
+      PitchIs(left, later, kClickAccentHz),
       "preview: one queued after DropQueuedPreviews still sounds"
   );
 }
@@ -224,10 +221,10 @@ void TestPreviewWhileRunning() {
   StartFourFour(previewed);
   const int64_t at = kHalfBeatFrames / kBlockFrames * kBlockFrames;
   const auto left = RenderLeft(previewed, kBarFrames, [&](int64_t block) {
-    if (block == at) previewed.PreviewSound(kHihatSound, true);
+    if (block == at) previewed.PreviewSound(kClickSound, true);
   });
   Check(
-      PitchIs(left, at, kHihatAccentHz) &&
+      PitchIs(left, at, kClickAccentHz) &&
           SameSamples(left, 0, plain_left, 0, at),
       "preview while running: the preview sounds between clicks"
   );

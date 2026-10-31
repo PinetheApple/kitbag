@@ -4,12 +4,10 @@ namespace metronome_test {
 namespace {
 
 constexpr int kWoodblock = 1;
-constexpr int kClick = 2;
 
 constexpr double kBeepBeatHz = 1174.7;
 constexpr double kWoodblockAccentHz = 2400.0;
 constexpr double kWoodblockBeatHz = 1800.0;
-constexpr double kClickAccentHz = 3600.0;
 
 constexpr int64_t kWaltzBeatFrames = 28800;
 constexpr int64_t kWaltzBarFrames = 3 * kWaltzBeatFrames;
@@ -111,19 +109,19 @@ void TestPauseResumeAndStopStart() {
 
 void TestSameSoundAndInvalidValues() {
   kitbag::Metronome same;
-  same.SetSounds(kTom, kHihatSound);
+  same.SetSounds(kTom, kClickSound);
   same.SetCountIn(1, false, kWoodblock);
   same.SetTempo(120.0);
   same.Start();
   const auto same_left = RenderLeft(same, kCommonBarFrames);
   Check(
-      PitchIs(same_left, 0, kHihatAccentHz) &&
+      PitchIs(same_left, 0, kClickAccentHz) &&
           PitchIs(same_left, kCommonBeatFrames, kTomBeatHz),
       "count-in: same mode counts with the accent and normal sounds"
   );
 
   kitbag::Metronome invalid;
-  invalid.SetCountIn(1, true, kClick);
+  invalid.SetCountIn(1, true, kClickSound);
   invalid.SetCountIn(3, true, kitbag::Metronome::kSoundCount);
   invalid.SetTempo(120.0);
   invalid.Start();

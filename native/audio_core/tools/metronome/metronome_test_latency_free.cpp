@@ -86,7 +86,7 @@ void Configure(kitbag::Metronome& metronome, const FreeRun& run) {
   metronome.SetTempo(run.start_bpm);
   metronome.SetTimeSignature(4, 4);
   metronome.SetSubdivision(run.subdivision);
-  metronome.SetSounds(kHihatSound, kHihatSound);
+  metronome.SetSounds(kTickSound, kTickSound);
   if (run.bar_mute) metronome.SetBarMute(true, 1, 1);
   if (run.poly) metronome.SetPolyrhythm(true, kPolyBeats);
   if (run.step_bpm == kNoRamp) return;
@@ -102,7 +102,7 @@ void Configure(kitbag::Metronome& metronome, const FreeRun& run) {
 }
 
 std::vector<int64_t> RiseFrames(const std::vector<float>& samples) {
-  const double decay = std::exp(-kHihatDecayPerSecond / kSampleRate);
+  const double decay = std::exp(-kTickDecayPerSecond / kSampleRate);
   std::vector<int64_t> rises;
   double envelope = 0.0;
   int64_t last = -kRiseHoldFrames;
@@ -221,7 +221,7 @@ std::vector<int64_t> RenderPreRollRises(double offset_ms, double seconds) {
   kitbag::Metronome metronome;
   metronome.SetTimeSignature(4, 4);
   metronome.SetSubdivision(kitbag::Metronome::kMaxSubdivision);
-  metronome.SetSounds(kHihatSound, kHihatSound);
+  metronome.SetSounds(kTickSound, kTickSound);
   metronome.SetLatencyOffset(offset_ms);
   metronome.AnchorExternal(kPreRollSongSeconds, 0, kitbag::kMaxBpm);
   return RiseFrames(RenderLeft(metronome, FramesFor(seconds)));
