@@ -7,6 +7,7 @@ class UnsafeLibraryPathException(path: String) :
 
 object LibraryPaths {
   private const val FALLBACK_STEM = "audio"
+  private const val HIDDEN_PREFIX = '.'
   const val SONGS_DIR_NAME = "songs"
   const val STEMS_DIR_NAME = "stems"
 
@@ -75,11 +76,13 @@ object LibraryPaths {
   fun stemFolder(base: File, folderName: String): File = childFolder(base, STEMS_DIR_NAME, folderName)
 
   private fun childFolder(base: File, parent: String, folderName: String): File {
-    if (folderName.isEmpty() || '/' in folderName || folderName.startsWith('.')) {
+    if (folderName.isEmpty() || '/' in folderName || isHiddenName(folderName)) {
       throw UnsafeLibraryPathException(folderName)
     }
     return resolve(base, "$parent/$folderName")
   }
+
+  fun isHiddenName(name: String): Boolean = name.startsWith(HIDDEN_PREFIX)
 
   private fun stemOf(name: String): String {
     val dot = name.lastIndexOf('.')
