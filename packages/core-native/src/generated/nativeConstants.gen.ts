@@ -37,8 +37,8 @@ export const KB_SUBDIVISION_BOUNDS = {
 
 /** Initial sound ids (Metronome::kDefaultNormalSound, kDefaultAccentSound). */
 export const KB_DEFAULT_SOUNDS = {
-  normal: 0,
-  accent: 0,
+  normal: 4,
+  accent: 4,
 } as const;
 
 /** Click volume multiplier range (Metronome::kMinVolume, kMaxVolume); the engine clamps to it. */

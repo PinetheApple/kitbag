@@ -19,6 +19,8 @@ using kitbag_test::Check;
 using kitbag_test::g_failures;
 
 constexpr uint32_t kSampleRate = 48000;
+// Slow enough to decay across the block-envelope and pitch windows.
+constexpr int kBeepSound = 0;
 constexpr uint32_t kChannels = 2;
 constexpr uint32_t kBlockFrames = 256;
 constexpr double kOnsetThreshold = 0.05;

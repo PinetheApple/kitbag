@@ -172,9 +172,26 @@ void TestTickPolyVoice() {
   );
 }
 
+void TestTickIsTheDefault() {
+  kitbag::Metronome metronome;
+  metronome.SetTempo(120.0);
+  metronome.SetTimeSignature(4, 4);
+  metronome.Start();
+  const auto left = RenderLeft(metronome, 2 * kBeatFrames);
+  Check(
+      HzIs(left, 0, kTickAccentHz),
+      "tick: a fresh metronome's accented downbeat is the tick"
+  );
+  Check(
+      HzIs(left, kBeatFrames, kTickBeatHz),
+      "tick: a fresh metronome's normal beat is the tick"
+  );
+}
+
 }  // namespace
 
 void RunTickTests() {
+  TestTickIsTheDefault();
   TestTickPitchAndLevel();
   TestTickEnvelope();
   TestTickSubdivisionVoices();

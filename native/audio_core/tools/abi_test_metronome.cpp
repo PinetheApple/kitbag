@@ -18,6 +18,7 @@ constexpr int32_t kTom = 3;
 constexpr int32_t kClick = 2;
 constexpr double kClickAccentHz = 3600.0;
 constexpr double kTomBeatHz = 450.0;
+constexpr int32_t kBeep = 0;
 constexpr int32_t kWoodblock = 1;
 constexpr int32_t kOutOfTableSound = 6;
 constexpr double kWoodblockAccentHz = 2400.0;
@@ -143,6 +144,7 @@ void TestCountInPauseAndStop() {
   kb_engine* engine = FourFourEngine(0);
   if (engine == nullptr) return;
   const uint32_t rate = kb_engine_sample_rate(engine);
+  kb_metronome_set_sounds(engine, kBeep, kBeep);
   kb_metronome_set_count_in(engine, 1, 1, kWoodblock);
   kb_metronome_set_count_in(nullptr, 0, 0, 0);
   kb_metronome_pause(nullptr);
