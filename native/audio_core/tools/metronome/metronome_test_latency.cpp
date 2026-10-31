@@ -1,5 +1,5 @@
-// Output-latency compensation (SPEC.md §4.7). Every check here pins a defect
-// that reproduced inside the existing ±100 ms clamp.
+// Output-latency compensation (SPEC.md §4.7). The first checks pin defects that
+// reproduced inside the original ±100 ms clamp.
 #include "metronome_test_support.h"
 
 namespace metronome_test {
@@ -234,6 +234,55 @@ void TestMutedBeatCascadesToSubdivision() {
   );
 }
 
+constexpr double kClampSongSeconds = 1.1;
+constexpr double kClampBpm = 120.0;
+constexpr double kMsPerSecond = 1000.0;
+
+double FirstAnchoredClickSeconds(double applied_ms) {
+  const double beat_seconds = 60.0 / kClampBpm;
+  const double lead = applied_ms / kMsPerSecond;
+  double beat = 0.0;
+  while (beat - kClampSongSeconds - lead < 0.0) beat += beat_seconds;
+  return beat - kClampSongSeconds - lead;
+}
+
+struct ClampCase {
+  double requested;
+  double applied;
+};
+
+// D5's ±300 ms is pinned as a value, not read from the constant it checks.
+constexpr ClampCase kClampCases[] = {
+    {250.0, 250.0},
+    {450.0, 300.0},
+    {-250.0, -250.0},
+    {-450.0, -300.0},
+};
+
+void TestLatencyOffsetClampsAtBound() {
+  for (const auto [requested, applied] : kClampCases) {
+    kitbag::Metronome metronome;
+    metronome.SetLatencyOffset(requested);
+    metronome.AnchorExternal(kClampSongSeconds, 0, kClampBpm);
+    const auto onsets = RenderAndDetectOnsets(metronome, kSampleRate);
+    const double want = FirstAnchoredClickSeconds(applied) * kSampleRate;
+    char label[96];
+    std::snprintf(
+        label,
+        sizeof label,
+        "latency clamp: %+.0f ms applies %+.0f ms (first click at %lld)",
+        requested,
+        applied,
+        static_cast<long long>(onsets.empty() ? -1 : onsets[0])
+    );
+    Check(
+        !onsets.empty() && std::fabs(static_cast<double>(onsets[0]) - want) <=
+                               kGridToleranceFrames,
+        label
+    );
+  }
+}
+
 }  // namespace
 
 void RunLatencyTests() {
@@ -243,6 +292,7 @@ void RunLatencyTests() {
   TestGridComposesWithLatency();
   TestGridReanchorComposesWithLatency();
   TestMutedBeatCascadesToSubdivision();
+  TestLatencyOffsetClampsAtBound();
 }
 
 }  // namespace metronome_test
