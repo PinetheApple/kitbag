@@ -524,4 +524,7 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   handle-only, for the same stage-safety reason as `kitbag-metronome.html:447`: a
   long-press must not become an accidental reorder. A (launcher-style whole-tile drag) and
   C (in-place handles with a toolbar) are rejected and kept as reference in
-  `docs/research/mockups/113/`. **[user]**
+  `docs/research/mockups/113/`. B has no separate pin: #113's "pin or hide" is covered by
+  order plus hide. The binding
+  file draws the sheet as the shared `Sheet` renders it (padding 14, header gap 12, 36-wide
+  grab bar, the code's scrim). **[user]**

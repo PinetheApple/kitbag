@@ -88,9 +88,10 @@ figcaption b{color:var(--ac);font-weight:500;margin-right:6px}
 /* edit-mode additions */
 .hint{margin:0;font-size:12px;color:var(--tx2);line-height:1.45}
 
-.scrim{position:absolute;inset:0;background:var(--scrim);z-index:5}
-.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--s1);border-top:1px solid var(--line);border-radius:20px 20px 0 0;padding:10px 16px 22px;z-index:6;display:flex;flex-direction:column;gap:8px;box-shadow:var(--shadow)}
-.grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 4px}
+.scrim{position:absolute;inset:0;background:rgba(14,13,16,.45);z-index:5}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--s1);border:1px solid var(--line);border-radius:20px 20px 14px 14px;padding:14px;z-index:6;display:flex;flex-direction:column;gap:12px;box-shadow:var(--shadow)}
+.sbody{display:flex;flex-direction:column;gap:8px}
+.grab{width:36px;height:4px;border-radius:2px;background:var(--s3);margin:0 auto}
 .sh-h{display:flex;align-items:center;justify-content:space-between}
 .sh-h b{font-family:'Space Grotesk';font-weight:500;font-size:17px}
 .erow{display:flex;align-items:center;gap:8px;background:var(--s2);border:1px solid var(--line);border-radius:13px;padding:4px 8px 4px 0;min-height:52px;position:relative}
@@ -126,7 +127,7 @@ figcaption b{color:var(--ac);font-weight:500;margin-right:6px}
     <figure><figcaption><b>B1</b>Normal Home. Tap Edit, or long-press any tile; both open the sheet.</figcaption><div class="pair" data-tpl="home"></div></figure>
     <figure><figcaption><b>B2</b>Arrange sheet. Drag only by the handle. The size toggle sets 1×1 / 2×1, and the eye hides the tool.</figcaption><div class="pair" data-tpl="b2"></div></figure>
     <figure><figcaption><b>B3</b>Metronome set to 2×1, which shows in the grid behind. Songs is mid-drag on its handle, moving above Tuner.</figcaption><div class="pair" data-tpl="b3"></div></figure>
-    <figure><figcaption><b>B4</b>Restore. Hiding Stems moved it to the Hidden section. Show puts it back at the end of the list.</figcaption><div class="pair" data-tpl="b4"></div></figure>
+    <figure><figcaption><b>B4</b>Restore. Hiding Stem songs moved it to the Hidden section. Show puts it back at the end of the list.</figcaption><div class="pair" data-tpl="b4"></div></figure>
   </div>
   <div class="trade">
     <ul>
@@ -151,7 +152,7 @@ figcaption b{color:var(--ac);font-weight:500;margin-right:6px}
     <div class="tile"><i class="mi em">&#xF07DA;</i><b>Metronome</b><span class="sub">124 BPM ready</span></div>
     <div class="tile"><i class="mi em">&#xF0771;</i><b>Tuner</b><span class="sub">Guitar · Standard E</span></div>
     <div class="tile"><i class="mi em">&#xF0CB8;</i><b>Songs</b><span class="sub">34 songs · 28 analyzed</span></div>
-    <div class="tile"><i class="mi em">&#xF066A;</i><b>Stems</b><span class="sub">6 stem songs</span></div>
+    <div class="tile"><i class="mi em">&#xF066A;</i><b>Stem songs</b><span class="sub">6 stem songs</span></div>
   </div>
   <div class="pcard up"><div class="trow"><div class="ticon"><i class="mi">&#xF040D;</i></div><div class="tl"><b>Play along</b><span>Coming soon</span></div><i class="mi ico" style="color:var(--tx2);font-size:20px">&#xF0142;</i></div></div>
   <div class="pcard up"><div class="trow"><div class="ticon"><i class="mi">&#xF15FC;</i></div><div class="tl"><b>More tools</b><span>Future tools arrive as plugins</span></div><i class="mi ico" style="color:var(--tx2);font-size:20px">&#xF0142;</i></div></div>
@@ -168,20 +169,22 @@ figcaption b{color:var(--ac);font-weight:500;margin-right:6px}
     <div class="tile"><i class="mi em">&#xF07DA;</i><b>Metronome</b><span class="sub">124 BPM ready</span></div>
     <div class="tile"><i class="mi em">&#xF0771;</i><b>Tuner</b><span class="sub">Guitar · Standard E</span></div>
     <div class="tile"><i class="mi em">&#xF0CB8;</i><b>Songs</b><span class="sub">34 songs · 28 analyzed</span></div>
-    <div class="tile"><i class="mi em">&#xF066A;</i><b>Stems</b><span class="sub">6 stem songs</span></div>
+    <div class="tile"><i class="mi em">&#xF066A;</i><b>Stem songs</b><span class="sub">6 stem songs</span></div>
   </div>
 </div>
 <div class="scrim"></div>
 <div class="sheet">
   <div class="grab"></div>
   <div class="sh-h"><b>Arrange Home</b><span class="btn pri sm"><i class="mi">&#xF012C;</i>Done</span></div>
-  <p class="hint">Drag the handle to reorder. Tiles fill left to right, top to bottom.</p>
-  <div class="erow"><span class="h"><i class="mi">&#xF12F0;</i></span><i class="mi ri">&#xF07DA;</i><b>Metronome</b><div class="seg"><i class="on">1×1</i><i>2×1</i></div><span class="eye"><i class="mi">&#xF06D0;</i></span></div>
-  <div class="erow"><span class="h"><i class="mi">&#xF12F0;</i></span><i class="mi ri">&#xF0771;</i><b>Tuner</b><div class="seg"><i class="on">1×1</i><i>2×1</i></div><span class="eye"><i class="mi">&#xF06D0;</i></span></div>
-  <div class="erow"><span class="h"><i class="mi">&#xF12F0;</i></span><i class="mi ri">&#xF0CB8;</i><b>Songs</b><div class="seg"><i class="on">1×1</i><i>2×1</i></div><span class="eye"><i class="mi">&#xF06D0;</i></span></div>
-  <div class="erow"><span class="h"><i class="mi">&#xF12F0;</i></span><i class="mi ri">&#xF066A;</i><b>Stems</b><div class="seg"><i class="on">1×1</i><i>2×1</i></div><span class="eye"><i class="mi">&#xF06D0;</i></span></div>
-  <div class="sec">Hidden</div>
-  <p class="hint">Nothing hidden.</p>
+  <div class="sbody">
+    <p class="hint">Drag the handle to reorder. Tiles fill left to right, top to bottom.</p>
+    <div class="erow"><span class="h"><i class="mi">&#xF12F0;</i></span><i class="mi ri">&#xF07DA;</i><b>Metronome</b><div class="seg"><i class="on">1×1</i><i>2×1</i></div><span class="eye"><i class="mi">&#xF06D0;</i></span></div>
+    <div class="erow"><span class="h"><i class="mi">&#xF12F0;</i></span><i class="mi ri">&#xF0771;</i><b>Tuner</b><div class="seg"><i class="on">1×1</i><i>2×1</i></div><span class="eye"><i class="mi">&#xF06D0;</i></span></div>
+    <div class="erow"><span class="h"><i class="mi">&#xF12F0;</i></span><i class="mi ri">&#xF0CB8;</i><b>Songs</b><div class="seg"><i class="on">1×1</i><i>2×1</i></div><span class="eye"><i class="mi">&#xF06D0;</i></span></div>
+    <div class="erow"><span class="h"><i class="mi">&#xF12F0;</i></span><i class="mi ri">&#xF066A;</i><b>Stem songs</b><div class="seg"><i class="on">1×1</i><i>2×1</i></div><span class="eye"><i class="mi">&#xF06D0;</i></span></div>
+    <div class="sec">Hidden</div>
+    <p class="hint">Nothing hidden.</p>
+  </div>
 </div>
 </template>
 
@@ -197,17 +200,19 @@ figcaption b{color:var(--ac);font-weight:500;margin-right:6px}
     <div class="tile"><i class="mi em">&#xF0CB8;</i><b>Songs</b><span class="sub">34 songs · 28 analyzed</span></div>
   </div>
 </div>
-<div class="scrim" style="opacity:.6"></div>
+<div class="scrim"></div>
 <div class="sheet">
   <div class="grab"></div>
   <div class="sh-h"><b>Arrange Home</b><span class="btn pri sm"><i class="mi">&#xF012C;</i>Done</span></div>
-  <p class="hint">Drag the handle to reorder. Tiles fill left to right, top to bottom.</p>
-  <div class="erow"><span class="h"><i class="mi">&#xF12F0;</i></span><i class="mi ri">&#xF07DA;</i><b>Metronome</b><div class="seg"><i>1×1</i><i class="on">2×1</i></div><span class="eye"><i class="mi">&#xF06D0;</i></span></div>
-  <div class="erow drop"><div class="erow lift" style="position:absolute;left:-2px;right:-2px;top:6px;margin:0"><span class="h" style="color:var(--ac)"><i class="mi">&#xF12F0;</i></span><i class="mi ri">&#xF0CB8;</i><b>Songs</b><div class="seg"><i class="on">1×1</i><i>2×1</i></div><span class="eye"><i class="mi">&#xF06D0;</i></span></div></div>
-  <div class="erow"><span class="h"><i class="mi">&#xF12F0;</i></span><i class="mi ri">&#xF0771;</i><b>Tuner</b><div class="seg"><i class="on">1×1</i><i>2×1</i></div><span class="eye"><i class="mi">&#xF06D0;</i></span></div>
-  <div class="erow"><span class="h"><i class="mi">&#xF12F0;</i></span><i class="mi ri">&#xF066A;</i><b>Stems</b><div class="seg"><i class="on">1×1</i><i>2×1</i></div><span class="eye"><i class="mi">&#xF06D0;</i></span></div>
-  <div class="sec">Hidden</div>
-  <p class="hint">Nothing hidden.</p>
+  <div class="sbody">
+    <p class="hint">Drag the handle to reorder. Tiles fill left to right, top to bottom.</p>
+    <div class="erow"><span class="h"><i class="mi">&#xF12F0;</i></span><i class="mi ri">&#xF07DA;</i><b>Metronome</b><div class="seg"><i>1×1</i><i class="on">2×1</i></div><span class="eye"><i class="mi">&#xF06D0;</i></span></div>
+    <div class="erow drop"><div class="erow lift" style="position:absolute;left:-2px;right:-2px;top:6px;margin:0"><span class="h" style="color:var(--ac)"><i class="mi">&#xF12F0;</i></span><i class="mi ri">&#xF0CB8;</i><b>Songs</b><div class="seg"><i class="on">1×1</i><i>2×1</i></div><span class="eye"><i class="mi">&#xF06D0;</i></span></div></div>
+    <div class="erow"><span class="h"><i class="mi">&#xF12F0;</i></span><i class="mi ri">&#xF0771;</i><b>Tuner</b><div class="seg"><i class="on">1×1</i><i>2×1</i></div><span class="eye"><i class="mi">&#xF06D0;</i></span></div>
+    <div class="erow"><span class="h"><i class="mi">&#xF12F0;</i></span><i class="mi ri">&#xF066A;</i><b>Stem songs</b><div class="seg"><i class="on">1×1</i><i>2×1</i></div><span class="eye"><i class="mi">&#xF06D0;</i></span></div>
+    <div class="sec">Hidden</div>
+    <p class="hint">Nothing hidden.</p>
+  </div>
 </div>
 </template>
 
@@ -223,16 +228,18 @@ figcaption b{color:var(--ac);font-weight:500;margin-right:6px}
     <div class="tile"><i class="mi em">&#xF0771;</i><b>Tuner</b><span class="sub">Guitar · Standard E</span></div>
   </div>
 </div>
-<div class="scrim" style="opacity:.6"></div>
+<div class="scrim"></div>
 <div class="sheet">
   <div class="grab"></div>
   <div class="sh-h"><b>Arrange Home</b><span class="btn pri sm"><i class="mi">&#xF012C;</i>Done</span></div>
-  <p class="hint">Drag the handle to reorder. Tiles fill left to right, top to bottom.</p>
-  <div class="erow"><span class="h"><i class="mi">&#xF12F0;</i></span><i class="mi ri">&#xF07DA;</i><b>Metronome</b><div class="seg"><i>1×1</i><i class="on">2×1</i></div><span class="eye"><i class="mi">&#xF06D0;</i></span></div>
-  <div class="erow"><span class="h"><i class="mi">&#xF12F0;</i></span><i class="mi ri">&#xF0CB8;</i><b>Songs</b><div class="seg"><i class="on">1×1</i><i>2×1</i></div><span class="eye"><i class="mi">&#xF06D0;</i></span></div>
-  <div class="erow"><span class="h"><i class="mi">&#xF12F0;</i></span><i class="mi ri">&#xF0771;</i><b>Tuner</b><div class="seg"><i class="on">1×1</i><i>2×1</i></div><span class="eye"><i class="mi">&#xF06D0;</i></span></div>
-  <div class="sec">Hidden · 1</div>
-  <div class="erow hid"><span class="h" style="opacity:0"><i class="mi">&#xF12F0;</i></span><i class="mi ri">&#xF066A;</i><b>Stems</b><span class="btn ton sm"><i class="mi" style="color:var(--ac)">&#xF06D0;</i>Show</span></div>
+  <div class="sbody">
+    <p class="hint">Drag the handle to reorder. Tiles fill left to right, top to bottom.</p>
+    <div class="erow"><span class="h"><i class="mi">&#xF12F0;</i></span><i class="mi ri">&#xF07DA;</i><b>Metronome</b><div class="seg"><i>1×1</i><i class="on">2×1</i></div><span class="eye"><i class="mi">&#xF06D0;</i></span></div>
+    <div class="erow"><span class="h"><i class="mi">&#xF12F0;</i></span><i class="mi ri">&#xF0CB8;</i><b>Songs</b><div class="seg"><i class="on">1×1</i><i>2×1</i></div><span class="eye"><i class="mi">&#xF06D0;</i></span></div>
+    <div class="erow"><span class="h"><i class="mi">&#xF12F0;</i></span><i class="mi ri">&#xF0771;</i><b>Tuner</b><div class="seg"><i class="on">1×1</i><i>2×1</i></div><span class="eye"><i class="mi">&#xF06D0;</i></span></div>
+    <div class="sec">Hidden · 1</div>
+    <div class="erow hid"><span class="h" style="opacity:0"><i class="mi">&#xF12F0;</i></span><i class="mi ri">&#xF066A;</i><b>Stem songs</b><span class="btn ton sm"><i class="mi" style="color:var(--ac)">&#xF06D0;</i>Show</span></div>
+  </div>
 </div>
 </template>
 
