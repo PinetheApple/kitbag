@@ -580,3 +580,11 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   and restores its unsaved live settings; it never delays Next. B (Save button in the app
   bar) and C (chip context line reads "Unsaved") are not chosen and are kept as
   reference in `docs/research/mockups/212/`. **[user]**
+
+- **2026-10-31 · Calibration window and the ±300 ms limit (§12.5.1, #170)** — A tap's
+  deviation is only known to within one beat, so the taps are first unwrapped around
+  their circular mean; the ±250 ms usable window is then centred on the run's median
+  deviation, not on 0, followed by the 2.5 SD drop. The click stays at 100 BPM. A result
+  whose mean, or mean ± its SD, lies past `KB_LATENCY_OFFSET_MS_BOUNDS` (±300 ms) is
+  refused with "Latency is at the limit Kitbag can correct" instead of a number, so no
+  stored offset is ever outside the bounds. **[user]**

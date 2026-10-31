@@ -1381,7 +1381,7 @@ The schema is the durable part and survives the stack change. The Flutter
 build's tables were `Setlists`, `Songs`, `PracticeSessions`, `Tunings`,
 `LibrarySongs`, `StemSets`, `Stems` (schema v6). A reconstruction of that v6 DDL is the
 migration fixture in `packages/core-db/src/migrate-fixtures.test-helper.ts`; the React
-Native schema migrates it in place and is at v18 (`packages/core-db/src/migrate.ts`).
+Native schema migrates it in place and is at v19 (`packages/core-db/src/migrate.ts`).
 
 ### 11.1 Persistence layer
 
@@ -1422,6 +1422,7 @@ rather than starting from zero.
 | `StemSets`: + speed; `Stems`: + pitch (semitones) | §7.6 — mix state is per song, like gain/mute/solo |
 | `StemSets`: + `renamed` (default 0); `Stems`: + `name` (display name, NULL shows the role) | §7.1, §7.8 — a rename is display-only and survives a re-import of the same StemDeck song; schema v17 |
 | `SongPresets`: + `poly_against` INTEGER (0 = the bar, 1..16), default 0 | §5.2 — poly N against M; a v4 backup without `polyAgainst` reads as the bar; schema v18 |
+| `route_latency`: + `name` TEXT, + `kind` TEXT (the route's display name and `OutputRoute` kind when calibrated) | §12.5 — the Output & latency sheet lists calibrated routes that are not connected; schema v19 |
 | **All paths relative** to the base directory | §2.3 (iOS) and **D11** (the directory is now user-movable) |
 | `PracticeSessions`: write `setlistId`, `songsPlayed` | §5.7 — columns exist, producer never fills them |
 | BPM cache table | §8.5 |
@@ -1680,7 +1681,11 @@ asks them to.
   against the route, not globally.
 - **16 taps, ~10 seconds.** Enough to average out a bad one, short enough that
   nobody abandons. **Fewer than 8 usable taps refuses to produce a number** rather
-  than producing a bad one — "no dead ends" means explaining, not guessing.
+  than producing a bad one — "no dead ends" means explaining, not guessing. A tap
+  is usable within ±250 ms of the run's median deviation, taken after unwrapping
+  the taps around their circular mean, and then within 2.5 SD (decisions.md,
+  2026-10-31, calibration window); a result within one SD of ±300 ms is refused
+  as at the limit.
 - The stepper stays for people who know their number: every gesture has a visible
   twin, and calibration is the gesture here.
 
