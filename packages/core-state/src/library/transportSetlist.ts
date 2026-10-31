@@ -1,13 +1,11 @@
-import type { TransportShowState } from '@kitbag/core-native';
+import type { TransportSetlist } from '@kitbag/core-native';
 
 import { activeSetlistOf } from './setlistPosition.ts';
 import type { LibraryState } from './store.ts';
 
-export type TransportSetlistPlace = TransportShowState['setlist'];
-
 export function transportSetlistOf(
   state: Pick<LibraryState, 'loaded' | 'setlists' | 'entries'>,
-): TransportSetlistPlace {
+): TransportSetlist | null {
   const { loaded } = state;
   const active = activeSetlistOf(state.setlists);
   if (loaded === null || active?.setlist.id !== loaded.setlistId) return null;

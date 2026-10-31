@@ -1,15 +1,14 @@
-import type { TransportEvent } from '@kitbag/core-native';
+import type { TransportEvent, TransportSetlist } from '@kitbag/core-native';
 import {
   SONG_STEP,
   type MetronomeConfig,
   type SongStep,
-  type TransportSetlistPlace,
 } from '@kitbag/core-state';
 
 export type TransportSource = Pick<
   MetronomeConfig,
   'running' | 'bpm' | 'beatsPerBar' | 'denominator' | 'ramp' | 'practice'
-> & { readonly setlist: TransportSetlistPlace };
+> & { readonly setlist: TransportSetlist | null };
 
 export interface TransportShown {
   readonly playing: boolean;
@@ -19,7 +18,7 @@ export interface TransportShown {
   readonly beatUnit: number;
   readonly practicePlayedMs: number;
   readonly practiceStretchStartedAt: number;
-  readonly setlist: TransportSetlistPlace;
+  readonly setlist: TransportSetlist | null;
 }
 
 export type TransportStep =
@@ -131,7 +130,7 @@ function sameShown(a: TransportShown, b: TransportShown): boolean {
   );
 }
 
-function sameSetlist(a: TransportSetlistPlace, b: TransportSetlistPlace) {
+function sameSetlist(a: TransportSetlist | null, b: TransportSetlist | null) {
   if (a === null || b === null) return a === b;
   return (Object.keys(a) as (keyof typeof a)[]).every(
     (key) => a[key] === b[key],
