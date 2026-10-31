@@ -49,23 +49,25 @@ function shownFor(
 ): TransportShown | undefined {
   if (state.running) {
     return {
+      ...cardOf(state),
       playing: true,
-      bpm: state.bpm,
-      rampRunning: state.ramp.enabled,
-      beatsPerBar: state.beatsPerBar,
-      beatUnit: state.denominator,
-      practicePlayedMs: state.practice.playedMs,
       practiceStretchStartedAt: state.practice.stretchStartedAt ?? now,
-      setlist: state.setlist,
     };
   }
-  return shown?.playing === false
-    ? {
-        ...shown,
-        practicePlayedMs: state.practice.playedMs,
-        setlist: state.setlist,
-      }
-    : undefined;
+  return shown?.playing === false ? { ...shown, ...cardOf(state) } : undefined;
+}
+
+function cardOf(
+  state: TransportSource,
+): Omit<TransportShown, 'playing' | 'practiceStretchStartedAt'> {
+  return {
+    bpm: state.bpm,
+    rampRunning: state.ramp.enabled,
+    beatsPerBar: state.beatsPerBar,
+    beatUnit: state.denominator,
+    practicePlayedMs: state.practice.playedMs,
+    setlist: state.setlist,
+  };
 }
 
 // A paused notification still owns the engine metronome: its Play restarts it.

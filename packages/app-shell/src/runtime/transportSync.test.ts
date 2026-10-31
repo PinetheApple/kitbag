@@ -153,6 +153,34 @@ describe('notificationStepAfterAppChange', () => {
     ).toEqual({ kind: 'show', shown: { ...shown, setlist: setlistAt(3) } });
   });
 
+  it('a song step while paused shows the new song tempo and meter, still paused', () => {
+    expect(
+      notificationStepAfterAppChange(
+        state({
+          running: false,
+          bpm: 90,
+          beatsPerBar: 7,
+          denominator: 8,
+          ramp: { ...ramp, enabled: true },
+          setlist: setlistAt(3),
+        }),
+        { ...pausedShown, setlist: setlistAt(2) },
+        9_000,
+      ),
+    ).toEqual({
+      kind: 'show',
+      shown: {
+        ...pausedShown,
+        bpm: 90,
+        beatsPerBar: 7,
+        beatUnit: 8,
+        rampRunning: true,
+        practicePlayedMs: 5_000,
+        setlist: setlistAt(3),
+      },
+    });
+  });
+
   it('re-shows without the setlist once the user leaves it', () => {
     expect(
       notificationStepAfterAppChange(

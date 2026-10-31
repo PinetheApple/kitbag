@@ -109,4 +109,55 @@ describe('transportRuntime', () => {
     handler?.({ ...notification, songStep: null });
     expect(stepSong).toHaveBeenCalledTimes(2);
   });
+
+  it('a step while paused sends the new song tempo, and Play keeps it', async () => {
+    await import('./transportRuntime');
+    const handler = native.onTransport.mock.calls[0]?.[0];
+    const stepSong = vi.fn(() => {
+      libraryStore.setState({ loaded: loadedAt(1) });
+      metronomeStore.setState({ bpm: 90, beatsPerBar: 7, denominator: 8 });
+      return Promise.resolve();
+    });
+    metronomeStore.setState({
+      running: true,
+      bpm: 120,
+      beatsPerBar: 4,
+      denominator: 4,
+    });
+    libraryStore.setState({
+      setlists: [summary],
+      entries: { [SETLIST_ID]: entries },
+      loaded: loadedAt(0),
+      stepSong,
+    });
+    const notification = {
+      rampRunning: false,
+      practicePlayedMs: 0,
+      practiceStretchStartedAt: 0,
+      songStep: null,
+    };
+
+    handler?.({ ...notification, playback: 'paused', bpm: 120 });
+    handler?.({
+      ...notification,
+      playback: 'paused',
+      bpm: 120,
+      songStep: 'next',
+    });
+    const card = native.transportShow.mock.lastCall?.[0];
+    expect(card).toMatchObject({
+      playing: false,
+      bpm: 90,
+      beatsPerBar: 7,
+      beatUnit: 8,
+      setlist: { songTitle: 'Blackbird' },
+    });
+
+    handler?.({ ...notification, playback: 'playing', bpm: card?.bpm ?? 0 });
+    expect(metronomeStore.getState()).toMatchObject({
+      running: true,
+      bpm: 90,
+      beatsPerBar: 7,
+    });
+  });
 });
