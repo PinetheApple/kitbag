@@ -142,6 +142,18 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     nativeMetronomeStop()
   }
 
+  override fun rigClickStart(bpm: Double, subdivision: Double, startFrame: Double, promise: Promise) {
+    promise.resolve(nativeRigClickStart(bpm, subdivision.toInt(), startFrame))
+  }
+
+  override fun rigClickStop() {
+    nativeRigClickStop()
+  }
+
+  override fun rigClickIsActive(promise: Promise) {
+    promise.resolve(nativeRigClickIsActive())
+  }
+
   override fun metronomePause() {
     nativeMetronomePause()
   }
@@ -170,6 +182,10 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
 
   override fun setSubdivision(subdivision: Double) {
     nativeSetSubdivision(subdivision.toInt())
+  }
+
+  override fun setSubdivisionAccents(subdivision: Double, slotMask: Double) {
+    nativeSetSubdivisionAccents(subdivision.toInt(), slotMask.toInt())
   }
 
   override fun setAccent(beatIndex: Double, accent: Double) {
@@ -318,11 +334,15 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private external fun nativeRelease()
   private external fun nativeMetronomeStart(anchorFrame: Double)
   private external fun nativeMetronomeStop()
+  private external fun nativeRigClickStart(bpm: Double, subdivision: Int, startFrame: Double): Int
+  private external fun nativeRigClickStop()
+  private external fun nativeRigClickIsActive(): Boolean
   private external fun nativeMetronomePause()
   private external fun nativeSetTempo(bpm: Double)
   private external fun nativeSetGrid(beatTimesSec: DoubleArray, anchorFrame: Double): Int
   private external fun nativeSetBeats(beatsPerBar: Int, denominator: Int)
   private external fun nativeSetSubdivision(subdivision: Int)
+  private external fun nativeSetSubdivisionAccents(subdivision: Int, slotMask: Int)
   private external fun nativeSetAccent(beatIndex: Int, accent: Int)
   private external fun nativeSetPoly(enabled: Boolean, beats: Int)
   private external fun nativeSetPolyAccent(beatIndex: Int, accent: Int)

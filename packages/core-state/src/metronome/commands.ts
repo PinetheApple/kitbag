@@ -11,6 +11,7 @@ export type MetronomeCommands = Pick<
   | 'setTempo'
   | 'setBeats'
   | 'setSubdivision'
+  | 'setSubdivisionAccents'
   | 'setAccent'
   | 'setPoly'
   | 'setPolyAccent'
@@ -47,6 +48,9 @@ export const defaultCommands: MetronomeCommands = {
   },
   setSubdivision: (...args) => {
     getMetronomeRuntime().commands.setSubdivision(...args);
+  },
+  setSubdivisionAccents: (...args) => {
+    getMetronomeRuntime().commands.setSubdivisionAccents(...args);
   },
   setAccent: (...args) => {
     getMetronomeRuntime().commands.setAccent(...args);

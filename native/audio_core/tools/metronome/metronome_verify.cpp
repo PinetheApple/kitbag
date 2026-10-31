@@ -7,7 +7,7 @@
 
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 523;
+constexpr int kExpectedChecks = 561;
 
 void RunAllTests() {
   metronome_test::RunBasicTests();
@@ -22,6 +22,10 @@ void RunAllTests() {
   metronome_test::RunPolyTransportTests();
   metronome_test::RunPolyPhaseTests();
   metronome_test::RunSoundTests();
+  metronome_test::RunSubdivisionAccentTests();
+  metronome_test::RunRigClickScheduleTests();
+  metronome_test::RunRigClickSoundTests();
+  metronome_test::RunRigClickIsolationTests();
   metronome_test::RunCountInTests();
   metronome_test::RunLongCountInTests();
   metronome_test::RunRampTests();

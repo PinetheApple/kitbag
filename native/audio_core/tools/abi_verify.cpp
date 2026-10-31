@@ -25,7 +25,7 @@ using kitbag_test::g_failures;
 
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 122;
+constexpr int kExpectedChecks = 142;
 
 void ExpectRejected(
     kb_engine* engine,
@@ -259,6 +259,15 @@ bool RunFileFixtureTests(kb_engine* engine) {
   return true;
 }
 
+void RunSplitSuites() {
+  abi_test::RunMetronomeAbiTests();
+  abi_test::RunLongGridAbiTests();
+  abi_test::RunPolyAbiTests();
+  abi_test::RunSubdivisionAccentAbiTests();
+  abi_test::RunRigClickAbiTests();
+  abi_test::RunEngineHoldAbiTests();
+}
+
 // Returns the process exit code, so main stays a list of what it runs.
 int Report() {
   if (g_checks != kExpectedChecks) {
@@ -283,9 +292,8 @@ int Report() {
 int main() {
   kb_engine* engine = nullptr;
   if (kb_engine_create(&engine) != KB_OK || engine == nullptr) {
-    // Not a skip: without an engine none of the below is exercised, and a tool
-    // that reports success having asserted nothing is how this repo got its
-    // §2 audit.
+    // Not a skip: a tool that passes having asserted nothing is how this repo
+    // got its §2 audit.
     std::fprintf(stderr, "abi_verify: could not create an engine\n");
     return 1;
   }
@@ -297,10 +305,7 @@ int main() {
   TestClearGrid(engine);
   TestMixerTransportIsNullSafe(engine);
   TestPlayerNullSafe();
-  abi_test::RunMetronomeAbiTests();
-  abi_test::RunLongGridAbiTests();
-  abi_test::RunPolyAbiTests();
-  abi_test::RunEngineHoldAbiTests();
+  RunSplitSuites();
   RunTunerAbiTests(engine);
 
   if (!RunFileFixtureTests(engine)) {

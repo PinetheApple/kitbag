@@ -12,17 +12,14 @@ namespace {
 using metronome_detail::BarFraction;
 using metronome_detail::Clamp;
 using metronome_detail::kAccentAmplitude;
+using metronome_detail::kAccentedSubdivisionGain;
 using metronome_detail::kBeatAmplitude;
 using metronome_detail::kGridEpsilon;
 using metronome_detail::kSecondsPerMinute;
+using metronome_detail::kSubdivisionAmplitude;
 
-constexpr double kTau = 6.283185307179586;
-
-constexpr double kSubdivisionAmplitude = 0.3;
 constexpr double kPolyBeatAmplitude = 0.5;
 constexpr double kPolyAccentAmplitude = 0.8;
-// A decaying voice is retired once it falls below audibility.
-constexpr double kVoiceSilenceAmplitude = 1e-4;
 
 struct SoundPreset {
   double accent_hz;
@@ -54,38 +51,9 @@ bool CrossesTick(double previous, double position, double ticks_per_beat) {
 
 }  // namespace
 
-void Metronome::TriggerClick(
-    double frequency_hz,
-    double amplitude,
-    double decay_per_second,
-    uint32_t sample_rate
-) {
-  Voice* slot = nullptr;
-  for (Voice& voice : voices_) {
-    if (!voice.active) {
-      slot = &voice;
-      break;
-    }
-  }
-  if (slot == nullptr) {
-    slot = &voices_[0];
-    for (Voice& voice : voices_) {
-      if (voice.amplitude < slot->amplitude) {
-        slot = &voice;
-      }
-    }
-  }
-  slot->active = true;
-  slot->phase = 0.0;
-  slot->phase_step = kTau * frequency_hz / sample_rate;
-  slot->amplitude = amplitude;
-  slot->decay_per_sample =
-      std::exp(-decay_per_second / static_cast<double>(sample_rate));
-}
-
 void Metronome::TriggerPreset(int sound, bool accented, uint32_t sample_rate) {
   const SoundPreset& preset = kSounds[sound];
-  TriggerClick(
+  voices_.Trigger(
       accented ? preset.accent_hz : preset.beat_hz,
       accented ? kAccentAmplitude : kBeatAmplitude,
       preset.decay_per_second,
@@ -107,23 +75,46 @@ void Metronome::OnBeatBoundary(int beat_index, uint32_t sample_rate) {
   );
 }
 
-void Metronome::OnSubdivisionTick(int64_t owning_beat, uint32_t sample_rate) {
-  // owning_beat is the caller's speaker-time beat (position, not beat_position_):
-  // a muted beat must silence its own subdivisions at the speaker, so attribution
-  // uses the same latency-shifted base the tick fires on (#21, decisions.md).
-  // Callers only fire at a non-negative beat, so no accents_[-1]; D5's 300ms
-  // clamp lifts latency past one beat but keeps that invariant — revisit anyway.
+void Metronome::OnSubdivisionTick(
+    int64_t owning_beat,
+    int slot,
+    uint32_t sample_rate
+) {
+  // Speaker-time beat, never negative, so a muted beat silences its own ticks
+  // at the speaker (#21). Recheck non-negativity if latency can exceed a beat.
   const int beat_in_bar = static_cast<int>(owning_beat % beats_per_bar_);
   if (accents_[beat_in_bar] == Accent::kMuted || BarIsMuted(current_bar_)) {
     return;
   }
-  const SoundPreset& sound = kSounds[normal_sound_];
-  TriggerClick(
-      sound.subdivision_hz,
-      kSubdivisionAmplitude,
+  TriggerSubdivision(subdivision_, slot, sample_rate);
+}
+
+bool Metronome::SubdivisionSlotAccented(int subdivision, int slot) const {
+  return ((AccentRowFor(subdivision) >> slot) & 1U) != 0;
+}
+
+void Metronome::TriggerSubdivision(
+    int subdivision,
+    int slot,
+    uint32_t sample_rate
+) {
+  const bool accented = SubdivisionSlotAccented(subdivision, slot);
+  const SoundPreset& sound = kSounds[accented ? accent_sound_ : normal_sound_];
+  voices_.Trigger(
+      accented ? sound.accent_hz : sound.subdivision_hz,
+      accented ? kAccentAmplitude * kAccentedSubdivisionGain
+               : kSubdivisionAmplitude,
       sound.decay_per_second,
       sample_rate
   );
+}
+
+void Metronome::OnRigTick(int slot, uint32_t sample_rate) {
+  if (slot == 0) {
+    TriggerPreset(normal_sound_, false, sample_rate);
+    return;
+  }
+  TriggerSubdivision(rig_click_.subdivision(), slot, sample_rate);
 }
 
 void Metronome::OnPolyBoundary(int poly_index, uint32_t sample_rate) {
@@ -132,26 +123,12 @@ void Metronome::OnPolyBoundary(int poly_index, uint32_t sample_rate) {
   if (accent == Accent::kMuted || BarIsMuted(current_bar_)) return;
   const bool accented = accent == Accent::kAccented;
   const SoundPreset& sound = kSounds[accented ? accent_sound_ : normal_sound_];
-  TriggerClick(
+  voices_.Trigger(
       sound.poly_hz,
       accented ? kPolyAccentAmplitude : kPolyBeatAmplitude,
       sound.decay_per_second,
       sample_rate
   );
-}
-
-float Metronome::RenderVoices() {
-  double sample = 0.0;
-  for (Voice& voice : voices_) {
-    if (!voice.active) continue;
-    sample += voice.amplitude * std::sin(voice.phase);
-    voice.phase += voice.phase_step;
-    voice.amplitude *= voice.decay_per_sample;
-    if (voice.amplitude < kVoiceSilenceAmplitude) {
-      voice.active = false;
-    }
-  }
-  return static_cast<float>(sample);
 }
 
 Metronome::BlockTempo Metronome::BlockTempoFor(uint32_t sample_rate) const {
@@ -251,8 +228,9 @@ void Metronome::FireConstantTempoTick(
 ) {
   // sub_index is on the speaker-time base and never negative here.
   const int64_t beat = sub_index / subdivision_;
-  if (sub_index % subdivision_ != 0) {
-    if (subdivision_ > 1) OnSubdivisionTick(beat, sample_rate);
+  const auto slot = static_cast<int>(sub_index % subdivision_);
+  if (slot != 0) {
+    OnSubdivisionTick(beat, slot, sample_rate);
     return;
   }
   const auto beat_index = static_cast<int>(beat % beats_per_bar_);
@@ -334,6 +312,11 @@ Metronome::GridView Metronome::BeginBlock(
     BlockTempo* tempo
 ) {
   ApplyPendingCommands();
+  rig_click_.BeginBlock(
+      block_start_frame,
+      sample_rate,
+      running_ || has_pending_start_ || has_pending_anchor_
+  );
   if (pending_preview_sound_ >= 0) {
     TriggerPreset(
         pending_preview_sound_,
@@ -378,7 +361,9 @@ void Metronome::Render(
     } else if (running_) {
       AdvanceConstantTempo(sample_rate, &tempo);
     }
-    const float sample = RenderVoices() * volume_;
+    const int rig_slot = rig_click_.ConsumeTickAt(now);
+    if (rig_slot != RigClick::kNoTick) OnRigTick(rig_slot, sample_rate);
+    const float sample = voices_.Render() * volume_;
     for (uint32_t channel = 0; channel < channel_count; ++channel) {
       output[frame * channel_count + channel] += sample;
     }

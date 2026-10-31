@@ -63,6 +63,14 @@ export interface Spec extends TurboModule {
   metronomeStop(): void;
   metronomePause(): void;
 
+  rigClickStart(
+    bpm: Double,
+    subdivision: Int32,
+    startFrame: Double,
+  ): Promise<number>;
+  rigClickStop(): void;
+  rigClickIsActive(): Promise<boolean>;
+
   setTempo(bpm: Double): void;
   setGrid(
     beatTimesSec: readonly Double[],
@@ -73,6 +81,7 @@ export interface Spec extends TurboModule {
 
   setBeats(beatsPerBar: Int32, denominator: Int32): void;
   setSubdivision(subdivision: Int32): void;
+  setSubdivisionAccents(subdivision: Int32, slotMask: Int32): void;
   setAccent(beatIndex: Int32, accent: Int32): void;
   setPoly(enabled: boolean, beats: Int32): void;
   setPolyAccent(beatIndex: Int32, accent: Int32): void;

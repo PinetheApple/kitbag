@@ -523,3 +523,10 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   write a song. §2.1's "live-BPM autosave" row is the Flutter-era audit and stays as
   history. The mark, where Save lives, Revert and what a step does to unsaved edits wait
   on the owner's pick of a design. **[user]**
+- **2026-10-31 · Subdivision accents: slot 0 and the sound (§17 D2, §12.5, #170)** —
+  Global subdivision-accent patterns apply to off-beat ticks only: slot 0, the on-beat
+  tick, never overrides the per-beat accents (accent / normal / muted), and a muted beat
+  silences its accented ticks too. An accented subdivision tick plays the accent sound's
+  accented click, not a louder normal sound, at a lower level than an accented beat
+  (`kAccentedSubdivisionGain`, owner ruling 2026-10-31); unaccented off-beat ticks
+  keep today's sound. **[user]**

@@ -10,7 +10,13 @@ namespace metronome_test {
 constexpr int64_t kPitchWindow = 2400;
 constexpr double kPitchTolerance = 0.05;
 
+constexpr int kTom = 3;
 constexpr int kHihatSound = 4;
+constexpr double kTomBeatHz = 450.0;
+constexpr double kTomSubdivisionHz = 300.0;
+constexpr double kTomPolyHz = 520.0;
+constexpr double kBeepAccentHz = 1760.0;
+constexpr double kSilentCeiling = 0.01;
 constexpr int64_t kRiseWindowFrames = 32;
 constexpr int64_t kFrameSlack = 2;
 constexpr double kHihatAccentHz = 5000.0;
