@@ -118,7 +118,7 @@ export function statusRows(
 
 export const NO_SLOT = -1;
 
-const UPPER_SLOT = 0;
+export const UPPER_SLOT = 0;
 
 export const LOWER_SLOT = 1;
 

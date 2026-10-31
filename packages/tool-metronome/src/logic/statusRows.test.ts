@@ -16,6 +16,7 @@ import {
   cycleStripCells,
   LOWER_SLOT,
   NO_SLOT,
+  UPPER_SLOT,
   NOTHING_ARMED,
   ofText,
   practiceBadgeCount,
@@ -178,8 +179,8 @@ describe('statusRows', () => {
 
   it('places each row in its slot', () => {
     const rows = { first: 'mute', second: 'ramp' } as const;
-    expect(rowSlot(rows, 'mute')).toBe(0);
-    expect(rowSlot(rows, 'ramp')).toBe(1);
+    expect(rowSlot(rows, 'mute')).toBe(UPPER_SLOT);
+    expect(rowSlot(rows, 'ramp')).toBe(LOWER_SLOT);
     expect(rowSlot(rows, 'countIn')).toBe(NO_SLOT);
   });
 
@@ -187,6 +188,9 @@ describe('statusRows', () => {
     const rows = { first: 'ramp', second: 'none' } as const;
     expect(rowSlot(rows, 'ramp')).toBe(LOWER_SLOT);
     expect(rowSlot(rows, 'mute')).toBe(NO_SLOT);
+    expect(
+      (['ramp', 'mute'] as const).map((row) => rowSlot(rows, row)),
+    ).not.toContain(UPPER_SLOT);
   });
 });
 

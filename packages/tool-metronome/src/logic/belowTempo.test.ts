@@ -17,12 +17,11 @@ const LARGE_PHONE_DOTS_WIDTH = 411 - space.screenInset * 2;
 const FONT_SCALES = [1, 1.3] as const;
 const BEAT_COUNTS = Array.from({ length: KB_MAX_BEATS }, (_u, i) => i + 1);
 
-// Where the dots start and where the body ends above the transport: large is
-// the emulator at fontScale 1.0 (build 8663a62), small the approved #243 mockup.
-const MEASURED = {
-  small: { dotsTop: 418, bodyBottom: 658 },
-  large: { dotsTop: 436.4, bodyBottom: 813.8 },
-} as const;
+// Where the dots start and where the body ends above the transport, at fontScale
+// 1.0. Emulator-measured on 8663a62, before #243.
+const MEASURED_LARGE = { dotsTop: 436.4, bodyBottom: 813.8 } as const;
+
+const R2_MOCKUP_SMALL = { dotsTop: 418, bodyBottom: 658 } as const;
 
 const SMALL_COMPACT: BelowTempoRoom = {
   width: SMALL_PHONE_DOTS_WIDTH,
@@ -48,7 +47,8 @@ interface Rendered {
 function renderedRoomy(shape: Rendered): number {
   const lines = layoutBeatLeds(shape.beatCount, MAX_DOTS_PER_LINE);
   const dot = beatDotSize(lines, LARGE_PHONE_DOTS_WIDTH, DOT_METRICS);
-  const label = metronome.beatMarkerLineHeight * shape.fontScale;
+  const scale = Math.max(1, shape.fontScale);
+  const label = metronome.beatMarkerLineHeight * scale;
   const beat =
     dot +
     metronome.beatMarkerGap +
@@ -61,7 +61,7 @@ function renderedRoomy(shape: Rendered): number {
     dots += metronome.beatDotLineGap + metronome.polyRow;
     if (shape.labelAbove) dots += label + metronome.beatMarkerGap;
   }
-  const legend = metronome.legendTop + metronome.legendRow * shape.fontScale;
+  const legend = metronome.legendTop + metronome.legendRow * scale;
   const stopped = legend + metronome.statusRow;
   const running = metronome.statusRow * 2 + metronome.statusRowGap;
   return dots + Math.max(stopped, running);
@@ -103,12 +103,12 @@ describe('belowTempoReserve', () => {
 
 describe('the body at fontScale 1.0', () => {
   it('fits the roomy reserve above the transport at 411 x 914', () => {
-    const budget = MEASURED.large.bodyBottom - MEASURED.large.dotsTop;
+    const budget = MEASURED_LARGE.bodyBottom - MEASURED_LARGE.dotsTop;
     expect(belowTempoReserve(LARGE_ROOMY)).toBeLessThanOrEqual(budget);
   });
 
   it('fits every song with its poly label beside the dots at 360 x 800', () => {
-    const budget = MEASURED.small.bodyBottom - MEASURED.small.dotsTop;
+    const budget = R2_MOCKUP_SMALL.bodyBottom - R2_MOCKUP_SMALL.dotsTop;
     expect(tallestBelowTempo('labelBeside', SMALL_COMPACT)).toBeLessThanOrEqual(
       budget,
     );

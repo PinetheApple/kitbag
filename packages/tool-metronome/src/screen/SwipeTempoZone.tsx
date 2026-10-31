@@ -53,8 +53,8 @@ const NUMERAL_SIZE: Readonly<Record<ScreenDensity, number>> = {
   compact: metronome.tempoNumeralCompact,
 };
 
-const NUMERAL_MAX_SCALE: Readonly<Record<ScreenDensity, number>> = {
-  roomy: metronome.tempoNumeralScaledMax / NUMERAL_SIZE.roomy,
+const NUMERAL_MAX_SCALE: Readonly<Record<ScreenDensity, number | undefined>> = {
+  roomy: undefined,
   compact: metronome.tempoNumeralScaledMax / NUMERAL_SIZE.compact,
 };
 

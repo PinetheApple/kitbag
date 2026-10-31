@@ -4,6 +4,7 @@ import {
   hitExtension,
   Icon,
   metronome,
+  minTouchTargetDp,
   NotationGlyph,
   radius,
   size,
@@ -16,9 +17,8 @@ import { Pressable, Text, View } from 'react-native';
 import { meterLabel, spokenMeter } from '../logic/meter.ts';
 import { subdivisionName } from '../logic/subdivision.ts';
 
-// Chips are wider than 48dp, so only the height grows.
 const CHIP_HIT_BOX = hitBoxStyle(
-  hitExtension(metronome.meterChipMin, metronome.pickerChip, {
+  hitExtension(minTouchTargetDp, metronome.pickerChip, {
     top: space.controlGap,
     bottom: metronome.controlsToDots,
   }),

@@ -19,10 +19,10 @@ import {
 } from './polyRow.ts';
 
 const ROW = { lineWidth: 4 * 56 + 3 * 12, dotSize: 56, dotGap: 12 };
+const POLY_FILE_DOT = 22;
 const EXACT_PLACES = 9;
 const DESIGN_PLACES = 1;
-const DESIGN_POLY_DOT = 22;
-const POLY_DOT_RADIUS = DESIGN_POLY_DOT / 2;
+const POLY_DOT_RADIUS = POLY_FILE_DOT / 2;
 const roundTo = (value: number, places: number) => {
   const scale = 10 ** places;
   return Math.round(value * scale) / scale;
@@ -268,9 +268,9 @@ describe('poly dot size', () => {
       polyDotSize(
         { polyBeats: 3, against: 2, beatsPerBar: 4 },
         ROW,
-        DESIGN_POLY_DOT,
+        POLY_FILE_DOT,
       ),
-    ).toBe(DESIGN_POLY_DOT);
+    ).toBe(POLY_FILE_DOT);
   });
 
   it('shrinks only when pulses would touch', () => {
@@ -278,7 +278,7 @@ describe('poly dot size', () => {
       polyDotSize(
         { polyBeats: 16, against: 1, beatsPerBar: 4 },
         ROW,
-        DESIGN_POLY_DOT,
+        POLY_FILE_DOT,
       ),
     ).toBeCloseTo(272 / 64);
   });
