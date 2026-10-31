@@ -27,6 +27,17 @@ class SongTransportTest {
     SongProgress(playing, (seconds * rate).toLong())
 
   @Test
+  fun `media artist is the artist given`() {
+    assertEquals("The Beatles", mediaArtist("The Beatles"))
+  }
+
+  @Test
+  fun `media artist is empty, never null, when there is none`() {
+    assertEquals("", mediaArtist(null))
+    assertEquals("", mediaArtist("  "))
+  }
+
+  @Test
   fun `length is the song's frames in milliseconds`() {
     assertEquals(180_000L, transport.durationMillis)
   }

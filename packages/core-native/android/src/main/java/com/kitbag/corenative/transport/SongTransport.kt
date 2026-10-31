@@ -12,6 +12,9 @@ data class Song(
   val skipSeconds: Double,
 )
 
+// SystemUI formats the artist into "%1$s by %2$s", so a null would read as "null".
+fun mediaArtist(artist: String?): String = if (artist.isNullOrBlank()) "" else artist
+
 data class SongProgress(val playing: Boolean, val positionFrames: Long)
 
 enum class SongAction {
