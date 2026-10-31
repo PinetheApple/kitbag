@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { END_SLACK_SECONDS, SKIP_SECONDS } from './songTransport.ts';
-import { opened, RATE, record, stem } from './store.test-helper.ts';
+import { BARS, opened, RATE, record, stem } from './store.test-helper.ts';
 
 const DURATION_FRAMES = 10 * RATE;
 
@@ -65,9 +65,11 @@ describe('the song notification', () => {
     const { commands, store, stopSongFromNotification } = await opened([
       stem(1),
     ]);
+    await store.getState().open(7, BARS);
     await store.getState().toggleClick();
     store.getState().togglePlay();
     stopSongFromNotification();
+    expect(commands.onSongStopped).toHaveBeenCalledTimes(1);
     expect(store.getState().click).toBe(false);
     expect(commands.metronomeFollowMixer).toHaveBeenLastCalledWith(false);
     expect(commands.clearGrid).toHaveBeenCalledTimes(1);
@@ -85,13 +87,9 @@ describe('the song notification', () => {
   });
 
   it('is not listened to once the player closes', async () => {
-    const { commands, store, stopSongFromNotification } = await opened([
-      stem(1),
-    ]);
-    await store.getState().toggleClick();
+    const { songStopListeners, store } = await opened([stem(1)]);
+    expect(songStopListeners.size).toBe(1);
     store.getState().close();
-    commands.metronomeStop.mockClear();
-    stopSongFromNotification();
-    expect(commands.metronomeStop).not.toHaveBeenCalled();
+    expect(songStopListeners.size).toBe(0);
   });
 });

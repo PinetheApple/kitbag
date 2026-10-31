@@ -68,6 +68,16 @@ class CardRoutingTest {
   }
 
   @Test
+  fun `a metronome hidden and shown again behind a song returns when the song ends`() {
+    showMetronome()
+    showSong()
+    routing.on(CardEvent.MetronomeHidden)
+    assertEquals(CardEffect.HoldMetronome, routing.on(CardEvent.MetronomeShown))
+    assertEquals(CardEffect.HoldMetronome, routing.on(CardEvent.MetronomeShown))
+    assertEquals(CardEffect.ReturnToMetronome, routing.on(CardEvent.SongStopped))
+  }
+
+  @Test
   fun `a session stop reaches the song, and the song stopping ends the song`() {
     showSong()
     assertEquals(CardEffect.SongControl(SongAction.STOP), press(SessionButton.STOP))

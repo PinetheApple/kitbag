@@ -129,6 +129,7 @@ export function fakeRuntime(set: StemSetRecord) {
     engine,
     sharedMetronome,
     stopSongFromNotification,
+    songStopListeners: songStopped,
   };
 }
 
