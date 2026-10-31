@@ -31,6 +31,15 @@ export function setlistChipLabel(set: ActiveSet | undefined): string {
   return `${set.name} · ${String(set.position)}/${String(set.count)}`;
 }
 
+export function transportSubtitle(
+  set: ActiveSet,
+  song: string | undefined,
+): string {
+  if (set.position === undefined || song === undefined)
+    return setlistChipLabel(set);
+  return `${set.name} · ${song} (${String(set.position)}/${String(set.count)})`;
+}
+
 export function setlistChipA11yLabel(set: ActiveSet | undefined): string {
   if (set === undefined) return 'Setlists, none active';
   if (set.position === undefined)

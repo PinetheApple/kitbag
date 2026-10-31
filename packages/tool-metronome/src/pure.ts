@@ -1,1 +1,1 @@
-export { setlistChipLabel } from './logic/setlistChip.ts';
+export { transportSubtitle } from './logic/setlistChip.ts';

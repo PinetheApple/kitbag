@@ -14,6 +14,7 @@ import {
   stageChipA11yLabel,
   stageChipText,
   stepA11yLabel,
+  transportSubtitle,
 } from './setlistChip.ts';
 
 const loadedFrom = (setlistId: number | null, itemId: number | null) => ({
@@ -37,6 +38,26 @@ describe('setlist chip', () => {
   it('claims no set when none is active', () => {
     expect(setlistChipLabel(undefined)).toBe(NO_ACTIVE_SET);
     expect(setlistChipA11yLabel(undefined)).toBe('Setlists, none active');
+  });
+});
+
+describe('transportSubtitle', () => {
+  const set = { id: 1, name: 'Wedding set', count: 3, position: 2 };
+
+  it('names the set, the song and its position, as the notification design shows', () => {
+    expect(transportSubtitle(set, 'Blackbird')).toBe(
+      'Wedding set · Blackbird (2/3)',
+    );
+    expect(transportSubtitle({ ...set, position: 1 }, 'Intro')).toBe(
+      'Wedding set · Intro (1/3)',
+    );
+  });
+
+  it('falls back to the chip copy with no current song', () => {
+    expect(transportSubtitle({ ...set, position: undefined }, undefined)).toBe(
+      'Wedding set · 3 songs',
+    );
+    expect(transportSubtitle(set, undefined)).toBe(setlistChipLabel(set));
   });
 });
 
