@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  merge_group:
+    types: [checks_requested]
 
 # The Flutter app is gone (SPEC.md §13 — the stack is React Native + TypeScript).
 # The native core is the only buildable target today; the RN jobs land with the app.
