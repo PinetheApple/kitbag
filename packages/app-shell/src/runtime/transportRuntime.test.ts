@@ -14,11 +14,6 @@ const native = vi.hoisted(() => ({
   onTransport: vi.fn<(handler: (event: TransportEvent) => void) => void>(),
 }));
 
-// core-state's barrel reaches react-native, expo-haptics and op-sqlite, none of
-// which load under node; nothing here touches them.
-vi.mock('react-native', () => ({}));
-vi.mock('expo-haptics', () => ({}));
-vi.mock('@op-engineering/op-sqlite', () => ({}));
 vi.mock('./notificationPermission', () => ({
   askForNotificationsOnce: () => undefined,
 }));

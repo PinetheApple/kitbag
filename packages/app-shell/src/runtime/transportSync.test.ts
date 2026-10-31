@@ -1,6 +1,6 @@
 import type { TransportEvent } from '@kitbag/core-native';
 import { SONG_STEP, type RampConfig } from '@kitbag/core-state';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import {
   notificationStepAfterAppChange,
@@ -11,12 +11,6 @@ import {
   type TransportShown,
   type TransportSource,
 } from './transportSync';
-
-// core-state's barrel reaches react-native, expo-haptics and op-sqlite, none of
-// which load under node; nothing here touches them.
-vi.mock('react-native', () => ({}));
-vi.mock('expo-haptics', () => ({}));
-vi.mock('@op-engineering/op-sqlite', () => ({}));
 
 const ramp: RampConfig = {
   enabled: false,

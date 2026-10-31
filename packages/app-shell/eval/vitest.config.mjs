@@ -6,6 +6,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     include: ['eval/eval.test.ts', 'src/**/*.test.ts'],
+    setupFiles: ['eval/nodeStubs.ts'],
     // Each run spins a real ESLint pass over the scenario tree; give it room.
     testTimeout: 30000,
     hookTimeout: 30000,
