@@ -20,7 +20,6 @@ using kitbag_test::Check;
 constexpr uint64_t kDeferredStartFrames = 48000 * 30;
 constexpr int32_t kBeep = 0;
 constexpr uint32_t kTailFrames = 4800;
-constexpr int32_t kUntouchedDeviceId = 7919;
 
 kb_engine* IdleEngine() {
   kb_engine* engine = nullptr;
@@ -227,31 +226,21 @@ void TestPreviewQueuedWhileStopped() {
   kb_engine_destroy(engine);
 }
 
-bool NoDeviceIdAndUntouched(const kb_engine* engine) {
-  int32_t device_id = kUntouchedDeviceId;
-  return kb_engine_output_device_id(engine, &device_id) ==
-             KB_ERROR_DEVICE_START_FAILED &&
-         device_id == kUntouchedDeviceId;
-}
-
 void TestOutputDeviceIdOffAndroid() {
-  int32_t device_id = kUntouchedDeviceId;
   Check(
-      kb_engine_output_device_id(nullptr, &device_id) ==
-              KB_ERROR_INVALID_ARGUMENT &&
-          device_id == kUntouchedDeviceId,
-      "device id: a null engine is rejected and out is untouched"
+      kb_engine_output_device_id(nullptr) == KB_NO_OUTPUT_DEVICE_ID,
+      "device id: a null engine reads KB_NO_OUTPUT_DEVICE_ID"
   );
   kb_engine* engine = IdleEngine();
   if (engine == nullptr) return;
   Check(
-      kb_engine_output_device_id(engine, nullptr) == KB_ERROR_INVALID_ARGUMENT,
-      "device id: a null out is rejected"
+      kb_engine_output_device_id(engine) == KB_NO_OUTPUT_DEVICE_ID,
+      "device id: none while stopped"
   );
-  Check(NoDeviceIdAndUntouched(engine), "device id: none while stopped");
   kb_engine_hold(engine);
   Check(
-      Running(engine) && NoDeviceIdAndUntouched(engine),
+      Running(engine) &&
+          kb_engine_output_device_id(engine) == KB_NO_OUTPUT_DEVICE_ID,
       "device id: none on a started non-AAudio device"
   );
   kb_engine_destroy(engine);

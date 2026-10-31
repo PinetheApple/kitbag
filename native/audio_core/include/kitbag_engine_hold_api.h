@@ -44,15 +44,13 @@ KB_EXPORT void kb_engine_reset_holders(kb_engine* engine);
 
 /* --- Engine: output route ----------------------------------------------- */
 
-/* Writes the id of the device the output stream plays on, as Android's
- * AudioDeviceInfo.getId() reports it: a handle for this connection, not a
- * stable name, and briefly stale after a failed reroute, so match it against
- * the current device list. Known only while the device is started on AAudio
- * (Android 8.1 and later); otherwise, and always on desktop, returns
- * KB_ERROR_DEVICE_START_FAILED. KB_ERROR_INVALID_ARGUMENT for a null engine or
- * out. out_device_id is written only on KB_OK. */
-KB_EXPORT kb_result
-kb_engine_output_device_id(const kb_engine* engine, int32_t* out_device_id);
+/* kb_engine_output_device_id when the id is unknown: AAUDIO_UNSPECIFIED, which
+ * no AudioDeviceInfo.getId() returns. */
+#define KB_NO_OUTPUT_DEVICE_ID 0
+
+/* AudioDeviceInfo.getId() of the playing AAudio stream: a per-connection handle,
+ * briefly stale after a failed reroute, so match it against the device list. */
+KB_EXPORT int32_t kb_engine_output_device_id(const kb_engine* engine);
 
 #ifdef KITBAG_BUILD_TOOLS
 /* Verify only: open holders, whether the device is started, and the idle

@@ -123,7 +123,7 @@ void Engine::StopDevice() {
   // ma_device_stop blocks until the callback has returned, so from here on
   // there is no reader.
   device_running_.store(false, std::memory_order_release);
-  output_device_id_.store(kNoOutputDeviceId, std::memory_order_relaxed);
+  output_device_id_.store(KB_NO_OUTPUT_DEVICE_ID, std::memory_order_relaxed);
   restarting_.store(false, std::memory_order_relaxed);
 }
 
@@ -141,13 +141,9 @@ bool Engine::IsIdle() const {
          !metronome_.is_running() && !mixer_.is_playing();
 }
 
-bool Engine::OutputDeviceId(int32_t* out_device_id) const {
-  const int32_t device_id = output_device_id_.load(std::memory_order_relaxed);
-  if (!is_running() || device_id == kNoOutputDeviceId) {
-    return false;
-  }
-  *out_device_id = device_id;
-  return true;
+int32_t Engine::OutputDeviceId() const {
+  if (!is_running()) return KB_NO_OUTPUT_DEVICE_ID;
+  return output_device_id_.load(std::memory_order_relaxed);
 }
 
 // Not in miniaudio's AAudio table, and linking it would stop API 24-26 loading.

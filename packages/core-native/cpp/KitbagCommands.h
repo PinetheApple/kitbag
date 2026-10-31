@@ -10,7 +10,6 @@ int32_t commandStart();
 void commandStop();
 int32_t commandHold();
 void commandRelease();
-int32_t commandOutputDeviceId();
 void commandMetronomeStart(double anchorFrame);
 void commandMetronomeStartNow();
 void commandMetronomeStop();

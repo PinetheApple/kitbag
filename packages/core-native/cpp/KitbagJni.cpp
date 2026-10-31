@@ -60,7 +60,7 @@ Java_com_kitbag_corenative_KitbagCommandsModule_nativeRelease(JNIEnv*, jobject) 
 
 JNIEXPORT jint JNICALL
 Java_com_kitbag_corenative_KitbagCommandsModule_nativeOutputDeviceId(JNIEnv*, jobject) {
-  return static_cast<jint>(kitbag::commandOutputDeviceId());
+  return kb_engine_output_device_id(kitbag::kitbagEngine());
 }
 
 JNIEXPORT void JNICALL

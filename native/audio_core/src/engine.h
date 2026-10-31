@@ -7,6 +7,7 @@
 #include <mutex>
 #include <thread>
 
+#include "kitbag_engine_hold_api.h"
 #include "media/decoder.h"
 #include "metronome/metronome.h"
 #include "miniaudio.h"
@@ -25,7 +26,6 @@ class Engine {
   static constexpr uint32_t kSampleRate = 48000;
   static constexpr uint32_t kChannelCount = 2;
   static constexpr uint32_t kDefaultIdleGraceMs = 2000;
-  static constexpr int32_t kNoOutputDeviceId = 0;
 
   Engine() = default;
   ~Engine();
@@ -61,7 +61,7 @@ class Engine {
   uint64_t frames_rendered() const {
     return frames_rendered_.load(std::memory_order_relaxed);
   }
-  bool OutputDeviceId(int32_t* out_device_id) const;
+  int32_t OutputDeviceId() const;
 
   // App thread, before any load: read-ahead for callbacks up to [frames] wide.
   void ReserveCallbackFrames(uint32_t frames) {
@@ -136,7 +136,7 @@ class Engine {
 
   using AAudioDeviceIdFn = int32_t (*)(struct AAudioStreamStruct*);
   AAudioDeviceIdFn aaudio_device_id_ = nullptr;
-  std::atomic<int32_t> output_device_id_{kNoOutputDeviceId};
+  std::atomic<int32_t> output_device_id_{KB_NO_OUTPUT_DEVICE_ID};
 
   std::atomic<bool> device_running_{false};
   std::atomic<uint64_t> frames_rendered_{0};

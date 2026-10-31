@@ -25,20 +25,12 @@ LockedEngine commandEngine() {
 }
 
 int32_t flag(bool value) { return value ? 1 : 0; }
-
-constexpr int32_t kNoOutputDeviceId = -1;
 }  // namespace
 
 int32_t commandStart() { return kb_engine_start(commandEngine()); }
 void commandStop() { kb_engine_stop(commandEngine()); }
 int32_t commandHold() { return kb_engine_hold(commandEngine()); }
 void commandRelease() { kb_engine_release(commandEngine()); }
-int32_t commandOutputDeviceId() {
-  int32_t deviceId = kNoOutputDeviceId;
-  if (kitbagEngine() == nullptr) return deviceId;
-  kb_engine_output_device_id(commandEngine(), &deviceId);
-  return deviceId;
-}
 
 // Play intent first, then the device: kitbag_engine_hold_api.h's ordering rule.
 void commandMetronomeStart(double anchorFrame) {
