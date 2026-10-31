@@ -295,7 +295,7 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
   <h2>You cannot set the rig in silence</h2>
   <div class="rule"></div>
   <div class="prin">
-    <div class="card"><b>The rig is audible</b>Volume and latency are meaningless as numbers.
+    <div class="card"><b>The rig is audible</b>Volume and subdivision accents are meaningless as numbers.
     The Rig section runs a click while you're in it — every control applies live, the same
     reason the metronome's modifiers are sheets and not screens.</div>
     <div class="card"><b>Latency is measured, not guessed</b>Nobody knows their offset in
@@ -446,10 +446,12 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
       <h3>Settings — five sections, one of which matters</h3>
       <ul>
         <li><b>The click runs while you're in Rig.</b> The chip in the section header starts a
-        100 BPM click and turns into <code>■ Stop · 100 BPM</code>. Volume and latency are not
-        numbers you can reason about — they are things you hear. Without this the Rig section
-        is a form you fill in blind, which is exactly what it is today. It stops on leaving
-        the screen, and it does not touch the metronome's own tempo or state.</li>
+        100 BPM click and turns into <code>■ Stop · 100 BPM</code>. Volume and subdivision
+        accents are not numbers you can reason about — they are things you hear. Without this
+        the Rig section is a form you fill in blind, which is exactly what it is today. It
+        stops on leaving the screen, and it does not touch the metronome's own tempo or state.
+        Latency is the exception: a lone click sounds the same at any offset, so it is set by
+        calibration or by ear against a track.</li>
         <li><b>Volume has a detent at unity.</b> Range is 0–200% (<code>maxVolume = 2</code>),
         so 100% is dead centre — the one value you want to return to. The tick is visible and
         the thumb catches there. Above 100% is boost, and boost is clipping if the sample is
@@ -760,13 +762,10 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
   <h2>Open questions</h2>
   <div class="rule"></div>
   <ul class="qs">
-    <li><b>±100 ms cannot reach Bluetooth.</b>
-    <code>metronome_controller.dart:68</code> clamps <code>latencyOffsetMs</code> to ±100.
-    Bluetooth output is routinely 150–250 ms late, so the control cannot express the most
-    common problem it exists to solve — and the calibration screen will measure offsets it is
-    physically unable to apply. Widen the range (how far? the clamp is also in the C API), or
-    declare Bluetooth unsupported for play-along and say so in the UI. <b>Blocks the
-    calibration screen.</b></li>
+    <li><b>Decided 2026-10-31 — D5: ±300 ms, clamped by the engine.</b> Bluetooth output is
+    routinely 150–250 ms late, which ±100 ms could not reach. The engine clamps the offset to
+    ±300 ms (<code>Metronome::kMaxLatencyOffsetMs</code>), so the calibration screen can apply
+    what it measures and Bluetooth stays supported for play-along. (SPEC §17 D5.)</li>
     <li><b>Per-song override: what does “inherited” look like?</b> Decided: Settings holds the
     default, the preset editor holds an optional per-song override for volume and latency.
     That forces an edit to <code>design/kitbag-metronome.html</code>, whose preset editor draws
@@ -787,10 +786,6 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
     rather than discovered later. <b>The picker itself, its “moving your files” progress
     state and its unwritable-target failure path are undesigned</b> — SPEC §12.8.
     (SPEC §17 D11.)</li>
-    <li><b>Subdivision accents need the engine first.</b> The design assumes a per-count accent
-    pattern the native core does not have. Confirm the scope — C API, schema, and the
-    scheduler — before this sheet is built. It is the only control in §03 that is not a
-    re-skin of something that already runs.</li>
     <li><b>Merge identity for existing installs.</b> v4 UUIDs solve merge going forward, but
     anyone with data today has rows with no id. Backfill on migration is easy; the hard part is
     that two devices that both backfill independently produce different ids for the same

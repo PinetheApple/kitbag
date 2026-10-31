@@ -117,7 +117,10 @@ void TestStartCancelsPendingStartAt() {
 // A latency offset must not swallow beat 0 on the deferred path either — the
 // immediate path is pinned by TestLatencyOffsetKeepsBeatZero.
 void TestStartAtKeepsBeatZeroUnderLatencyOffset() {
-  for (const double offset_ms : {0.5, 100.0, -100.0}) {
+  for (const double offset_ms :
+       {0.5,
+        kitbag::Metronome::kMaxLatencyOffsetMs,
+        -kitbag::Metronome::kMaxLatencyOffsetMs}) {
     kitbag::Metronome metronome;
     metronome.SetTempo(120.0);
     metronome.SetLatencyOffset(offset_ms);

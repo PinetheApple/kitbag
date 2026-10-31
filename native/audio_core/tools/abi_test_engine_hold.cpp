@@ -226,6 +226,26 @@ void TestPreviewQueuedWhileStopped() {
   kb_engine_destroy(engine);
 }
 
+void TestOutputDeviceIdOffAndroid() {
+  Check(
+      kb_engine_output_device_id(nullptr) == KB_NO_OUTPUT_DEVICE_ID,
+      "device id: a null engine reads KB_NO_OUTPUT_DEVICE_ID"
+  );
+  kb_engine* engine = IdleEngine();
+  if (engine == nullptr) return;
+  Check(
+      kb_engine_output_device_id(engine) == KB_NO_OUTPUT_DEVICE_ID,
+      "device id: none while stopped"
+  );
+  kb_engine_hold(engine);
+  Check(
+      Running(engine) &&
+          kb_engine_output_device_id(engine) == KB_NO_OUTPUT_DEVICE_ID,
+      "device id: none on a started non-AAudio device"
+  );
+  kb_engine_destroy(engine);
+}
+
 }  // namespace
 
 void RunEngineHoldAbiTests() {
@@ -238,6 +258,7 @@ void RunEngineHoldAbiTests() {
   TestPlayRestartsIdleDevice();
   TestPreviewIssuedWhileRunning();
   TestPreviewQueuedWhileStopped();
+  TestOutputDeviceIdOffAndroid();
   RunEngineLifecycleStress();
 }
 

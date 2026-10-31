@@ -14,6 +14,9 @@ void commandMetronomeStart(double anchorFrame);
 void commandMetronomeStartNow();
 void commandMetronomeStop();
 void commandMetronomePause();
+int32_t commandRigClickStart(double bpm, int32_t subdivision, double startFrame);
+void commandRigClickStop();
+bool commandRigClickIsActive();
 
 void commandSetTempo(double bpm);
 int32_t commandSetGrid(const double* beatTimesSec, int32_t count, double anchorFrame);
@@ -22,6 +25,7 @@ void commandFollowMixer(bool enabled);
 
 void commandSetBeats(int32_t beatsPerBar, int32_t denominator);
 void commandSetSubdivision(int32_t subdivision);
+void commandSetSubdivisionAccents(int32_t subdivision, int32_t slotMask);
 void commandSetAccent(int32_t beatIndex, int32_t accent);
 void commandSetPoly(bool enabled, int32_t beats);
 void commandSetPolyAccent(int32_t beatIndex, int32_t accent);

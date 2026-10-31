@@ -18,7 +18,8 @@ typedef enum kb_result {
   KB_ERROR_INVALID_ARGUMENT = 1,
   KB_ERROR_DEVICE_INIT_FAILED = 2,
   KB_ERROR_DEVICE_START_FAILED = 3,
-  KB_ERROR_BUSY = 4,     /* a queue was full; nothing changed, retry */
+  KB_ERROR_BUSY = 4,     /* refused for now (a full queue, or a conflicting
+                            source); nothing changed */
   KB_ERROR_INTERNAL = 5, /* the core failed, not the caller: out of memory, or
                             a file that changed while being read */
 } kb_result;
@@ -38,6 +39,7 @@ KB_EXPORT uint32_t kb_engine_sample_rate(const kb_engine* engine);
 /* Monotonic frames rendered since start; the master clock. */
 KB_EXPORT uint64_t kb_engine_frames_rendered(const kb_engine* engine);
 
+#include "kitbag_engine_clock_api.h"
 #include "kitbag_engine_hold_api.h"
 
 /* --- Offline render (verify only, NOT the shipped ABI) ------------------ */
@@ -182,7 +184,7 @@ KB_EXPORT void kb_metronome_set_volume(kb_engine* engine, double volume);
 /* enabled != 0 (default 0): grid second t clicks as the mixer plays song frame
  * t * engine rate. set_grid's anchor and the latency offset are ignored. */
 KB_EXPORT void kb_metronome_follow_mixer(kb_engine* engine, int32_t enabled);
-/* Output latency offset in ms [-100, 100]; positive = trigger earlier. */
+/* Output latency offset in ms [-300, 300]; positive = trigger earlier. */
 KB_EXPORT void
 kb_metronome_set_latency_offset(kb_engine* engine, double latency_ms);
 /* Stepped ramp (SPEC §5.3): holds start_bpm for one interval, then moves by
@@ -210,7 +212,9 @@ KB_EXPORT double kb_metronome_current_bpm(const kb_engine* engine);
 KB_EXPORT int32_t kb_metronome_counting_in(const kb_engine* engine);
 
 #include "kitbag_metronome_poly_api.h"
+#include "kitbag_metronome_subdivision_api.h"
 #include "kitbag_metronome_trainer_api.h"
+#include "kitbag_rig_click_api.h"
 
 /* --- Tuner -------------------------------------------------------------- */
 

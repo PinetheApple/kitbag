@@ -517,9 +517,48 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   divide the bar. B (one ratio value with a wheel sheet) and C (poly stepper with a
   Bar | Beats switch) are rejected. **[user]**
 
+- **2026-10-31 · Subdivision accents: slot 0 and the sound (§17 D2, §12.5, #170)** —
+  Global subdivision-accent patterns apply to off-beat ticks only: slot 0, the on-beat
+  tick, never overrides the per-beat accents (accent / normal / muted), and a muted beat
+  silences its accented ticks too. An accented subdivision tick plays the accent sound's
+  accented click, not a louder normal sound, at a lower level than an accented beat
+  (`kAccentedSubdivisionGain`, owner ruling 2026-10-31); unaccented off-beat ticks
+  keep today's sound. **[user]**
+
+- **2026-10-31 · Settings owner answers (§5.1, §12.2, §12.5, #170, #189)** — The owner
+  answered the questions the Settings gap rulings left open. Q7: the switch drawn in
+  `design/kitbag-settings.html` (bordered pill, accent-tinted track when on) is the only
+  switch in the app; the older solid switch is removed. Q13: Licence and Source open the
+  GitHub repository; Attributions lists the vendored native libraries, the fonts and the
+  icon set; no BPM-data credits until that feature exists. Contrast: the light-theme
+  section labels keep the darker `accentInk` exception. Q15 and Q16: the calibration
+  thresholds recorded in the Settings gap rulings are confirmed. Q18: global subdivision
+  accents apply to off-beat ticks only, since slot 0 is the on-beat click with its own
+  per-beat accents, and an accented tick plays the accent sound. **[recorded]**
+
+- **2026-10-31 · Home edit mode (§12, §12.4, §12.6, #113)** — Option B in
+  `design/kitbag-home-arrange.html`: Edit, or a long-press on a tile, opens an Arrange
+  sheet with one row per tool (drag handle, 1×1/2×1 size toggle, hide), and hidden tools
+  sit in a Hidden section with Show. The Home grid never moves while editing. Reorder is
+  handle-only, for the same stage-safety reason as `kitbag-metronome.html:447`: a
+  long-press must not become an accidental reorder. A (launcher-style whole-tile drag) and
+  C (in-place handles with a toolbar) are rejected and kept as reference in
+  `docs/research/mockups/113/`. B has no separate pin: #113's "pin or hide" is covered by
+  order plus hide. The binding
+  file draws the sheet as the shared `Sheet` renders it (padding 14, header gap 12, 36-wide
+  grab bar, the code's scrim). **[user]**
+
 - **2026-10-31 · Explicit save for live edits (§5.4, #212)** — Live edits to a loaded song
   never write it; nothing autosaves, and a visible mark shows unsaved changes until Save.
   This matches what the app already does: only the preset editor's Save and "Save current"
   write a song. §2.1's "live-BPM autosave" row is the Flutter-era audit and stays as
   history. The mark, where Save lives, Revert and what a step does to unsaved edits wait
   on the owner's pick of a design. **[user]**
+- **2026-10-31 · react-native-svg for the x/8 flagged eighth (§12, §13.8, #212)** — Approved
+  as a dependency for one glyph: the flagged eighth that the subdivision chip and tile draw
+  for one click per beat in x/8, copied from `design/kitbag-metronome-b.html`. MIT; its
+  Android module depends only on React Native and Fresco, so nothing proprietary reaches
+  F-Droid. No other icon moves to SVG. `@types/react-dom` joins core-design's devDependencies
+  for the render test; react-dom and react-native-web were already pinned by app-shell. The
+  subdivision sheet's ×1 tile draws the glyph under x/8 too, extrapolated from the chip,
+  since the design's tile grid shows only x/4. **[recorded]**

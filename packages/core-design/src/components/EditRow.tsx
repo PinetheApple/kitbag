@@ -9,11 +9,12 @@ import {
 } from 'react-native';
 
 import { bodyLineHeight, inset, size, space, textRoles } from '../roles.ts';
+import { switchA11y } from '../switch.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles, useTheme } from '../ThemeProvider.tsx';
 import { minTouchTargetDp, radii } from '../tokens.ts';
 import { Icon } from './Icon.tsx';
-import { SwitchTrack, type SwitchVariant } from './Switch.tsx';
+import { SwitchTrack } from './Switch.tsx';
 
 export const EDIT_ROW_PRESSABLE_GAP = inset.editRowV + size.stroke;
 
@@ -36,6 +37,7 @@ const useStyles = createThemedStyles((theme) => ({
     paddingVertical: inset.editRowV,
     paddingHorizontal: inset.editRowH,
   },
+  singleLine: { flexWrap: 'nowrap' },
   pressableRow: { minHeight: minTouchTargetDp },
   pressed: { backgroundColor: theme.color.surface2 },
   label: {
@@ -66,6 +68,7 @@ const useStyles = createThemedStyles((theme) => ({
     color: theme.color.text,
   },
   muted: { color: theme.color.text3 },
+  path: { flexShrink: 1 },
 }));
 
 export function EditDivider() {
@@ -91,6 +94,7 @@ export function EditGroup({ children }: { readonly children: ReactNode }) {
 export interface EditRowProps {
   readonly label: string;
   readonly children?: ReactNode;
+  readonly singleLine?: boolean;
   readonly onPress?: () => void;
   readonly accessibilityRole?: AccessibilityRole;
   readonly accessibilityLabel?: string;
@@ -99,6 +103,7 @@ export interface EditRowProps {
 export function EditRow({
   label,
   children,
+  singleLine = false,
   onPress,
   accessibilityRole = 'button',
   accessibilityLabel,
@@ -107,14 +112,15 @@ export function EditRow({
   const pressableStyle = useCallback(
     ({ pressed }: PressableStateCallbackType) => [
       styles.row,
+      singleLine && styles.singleLine,
       styles.pressableRow,
       pressed && styles.pressed,
     ],
-    [styles],
+    [styles, singleLine],
   );
   if (onPress === undefined) {
     return (
-      <View style={styles.row}>
+      <View style={[styles.row, singleLine && styles.singleLine]}>
         <Text style={styles.label}>{label}</Text>
         <View style={styles.value}>{children}</View>
       </View>
@@ -140,14 +146,12 @@ export interface EditSwitchRowProps {
   readonly label: string;
   readonly value: boolean;
   readonly onValueChange: (value: boolean) => void;
-  readonly variant?: SwitchVariant;
 }
 
 export function EditSwitchRow({
   label,
   value,
   onValueChange,
-  variant,
 }: EditSwitchRowProps) {
   const styles = useStyles();
   const pressableStyle = useCallback(
@@ -163,18 +167,13 @@ export function EditSwitchRow({
   }, [onValueChange, value]);
   return (
     <Pressable
-      accessibilityRole="switch"
+      {...switchA11y(value)}
       accessibilityLabel={label}
-      accessibilityState={{ checked: value }}
-      aria-checked={value}
       style={pressableStyle}
       onPress={toggle}
     >
       <Text style={styles.label}>{label}</Text>
-      <SwitchTrack
-        value={value}
-        {...(variant === undefined ? {} : { variant })}
-      />
+      <SwitchTrack value={value} />
     </Pressable>
   );
 }
@@ -188,6 +187,19 @@ export function EditValue({
 }) {
   const styles = useStyles();
   return <Text style={[styles.text, muted && styles.muted]}>{children}</Text>;
+}
+
+export function EditPath({ children }: { readonly children: string }) {
+  const styles = useStyles();
+  return (
+    <Text
+      style={[styles.text, styles.path]}
+      numberOfLines={1}
+      ellipsizeMode="head"
+    >
+      {children}
+    </Text>
+  );
 }
 
 export interface EditTextInputProps {

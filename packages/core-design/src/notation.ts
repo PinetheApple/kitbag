@@ -21,6 +21,33 @@ export const notationGeometry = {
   rightPad: 6,
 } as const;
 
+export const flaggedEighthGeometry = {
+  width: 14,
+  headX: 5,
+  stemTop: 6,
+  flagPath: 'M8.6 6c.6 3 4.4 4.6 4.2 9.4-.3-2.8-2.4-4.4-4.2-4.9z',
+} as const;
+
+export interface FlaggedEighthShape {
+  readonly viewBox: string;
+  readonly width: number;
+  readonly height: number;
+  readonly head: {
+    readonly cx: number;
+    readonly cy: number;
+    readonly rx: number;
+    readonly ry: number;
+    readonly transform: string;
+  };
+  readonly stem: {
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+  };
+  readonly flagPath: string;
+}
+
 export interface NotationBeam {
   readonly y: number;
 }
@@ -50,7 +77,14 @@ function beamCount(clicks: number, denominator: number): number {
   );
 }
 
-// The tiles draw only a lone quarter or a beamed group.
+export function drawsFlaggedEighth(
+  subdivision: number,
+  denominator: number,
+): boolean {
+  const clicks = clicksOf(subdivision);
+  return clicks === 1 && beamCount(clicks, denominator) === 1;
+}
+
 export function drawsNotation(
   subdivision: number,
   denominator: number,
@@ -58,12 +92,13 @@ export function drawsNotation(
   const clicks = clicksOf(subdivision);
   const beams = beamCount(clicks, denominator);
   const loneQuarter = clicks === 1 && beams === 0;
+  const loneEighth = clicks === 1 && beams === 1;
   const beamedGroup =
     clicks > 1 &&
     Number.isInteger(beams) &&
     beams > 0 &&
     beams <= notationGeometry.maxBeams;
-  return loneQuarter || beamedGroup;
+  return loneQuarter || loneEighth || beamedGroup;
 }
 
 export function notationLayout(
@@ -96,5 +131,29 @@ export function notationLayout(
     beamWidth,
     beams,
     numeral,
+  };
+}
+
+export function flaggedEighthShape(height: number): FlaggedEighthShape {
+  const g = notationGeometry;
+  const f = flaggedEighthGeometry;
+  return {
+    viewBox: `0 0 ${String(f.width)} ${String(g.height)}`,
+    width: (f.width * height) / g.height,
+    height,
+    head: {
+      cx: f.headX,
+      cy: g.headY,
+      rx: g.headWidth / 2,
+      ry: g.headHeight / 2,
+      transform: `rotate(${String(g.headTiltDeg)} ${String(f.headX)} ${String(g.headY)})`,
+    },
+    stem: {
+      x: f.headX + g.stemOffsetX,
+      y: f.stemTop,
+      width: g.stemWidth,
+      height: g.headY - f.stemTop,
+    },
+    flagPath: f.flagPath,
   };
 }

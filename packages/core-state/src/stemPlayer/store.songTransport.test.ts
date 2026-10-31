@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { END_SLACK_SECONDS, SKIP_SECONDS } from './songTransport.ts';
-import { opened, RATE, record, stem } from './store.test-helper.ts';
+import { BARS, opened, RATE, record, stem } from './store.test-helper.ts';
 
 const DURATION_FRAMES = 10 * RATE;
 
@@ -59,5 +59,37 @@ describe('the song notification', () => {
     expect(sharedMetronome.release).toHaveBeenCalledTimes(1);
     expect(commands.metronomeFollowMixer).toHaveBeenCalledWith(true);
     expect(commands.songTransportShow).toHaveBeenCalledTimes(1);
+  });
+
+  it('stopping the song from it ends the joined click', async () => {
+    const { commands, store, stopSongFromNotification } = await opened([
+      stem(1),
+    ]);
+    await store.getState().open(7, BARS);
+    await store.getState().toggleClick();
+    store.getState().togglePlay();
+    stopSongFromNotification();
+    expect(commands.onSongStopped).toHaveBeenCalledTimes(1);
+    expect(store.getState().click).toBe(false);
+    expect(commands.metronomeFollowMixer).toHaveBeenLastCalledWith(false);
+    expect(commands.clearGrid).toHaveBeenCalledTimes(1);
+    expect(commands.metronomeStop).toHaveBeenCalledTimes(1);
+  });
+
+  it('stopping the song from it leaves a click that was off alone', async () => {
+    const { commands, store, stopSongFromNotification } = await opened([
+      stem(1),
+    ]);
+    store.getState().togglePlay();
+    stopSongFromNotification();
+    expect(store.getState().click).toBe(false);
+    expect(commands.metronomeStop).not.toHaveBeenCalled();
+  });
+
+  it('is not listened to once the player closes', async () => {
+    const { songStopListeners, store } = await opened([stem(1)]);
+    expect(songStopListeners.size).toBe(1);
+    store.getState().close();
+    expect(songStopListeners.size).toBe(0);
   });
 });

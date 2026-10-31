@@ -47,6 +47,13 @@ export type SongTransportShowState = Readonly<{
   skipSeconds: Double;
 }>;
 
+export type OutputRoute = Readonly<{
+  id: string;
+  name: string;
+  kind: 'speaker' | 'wired' | 'bluetooth' | 'usb' | 'other';
+  certain: boolean;
+}>;
+
 export type KitbagCommandsConstants = Readonly<{
   versionName: string;
   versionCode: Double;
@@ -63,6 +70,14 @@ export interface Spec extends TurboModule {
   metronomeStop(): void;
   metronomePause(): void;
 
+  rigClickStart(
+    bpm: Double,
+    subdivision: Int32,
+    startFrame: Double,
+  ): Promise<number>;
+  rigClickStop(): void;
+  rigClickIsActive(): Promise<boolean>;
+
   setTempo(bpm: Double): void;
   setGrid(
     beatTimesSec: readonly Double[],
@@ -73,6 +88,7 @@ export interface Spec extends TurboModule {
 
   setBeats(beatsPerBar: Int32, denominator: Int32): void;
   setSubdivision(subdivision: Int32): void;
+  setSubdivisionAccents(subdivision: Int32, slotMask: Int32): void;
   setAccent(beatIndex: Int32, accent: Int32): void;
   setPoly(enabled: boolean, beats: Int32): void;
   setPolyAccent(beatIndex: Int32, accent: Int32): void;
@@ -133,6 +149,10 @@ export interface Spec extends TurboModule {
   setAppNightMode(mode: string): void;
   setSystemBarAppearance(light: boolean): void;
   readonly onTransport: EventEmitter<TransportEvent>;
+  /** A stop from the song notification or media session; mixerStop() does not fire it. */
+  readonly onSongStopped: EventEmitter<void>;
+  getOutputRoute(): Promise<OutputRoute>;
+  readonly onOutputRoute: EventEmitter<OutputRoute>;
 }
 
 // Lazy: resolving throws until the native module is registered, and the barrel
