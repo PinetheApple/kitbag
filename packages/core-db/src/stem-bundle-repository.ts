@@ -221,6 +221,12 @@ export async function listStemSetFolders(db: Database): Promise<string[]> {
   return rows.flatMap(({ folder }) => (folder === null ? [] : [folder]));
 }
 
+export async function listStemFiles(db: Database) {
+  return db
+    .select({ setId: stems.stemSetId, filePath: stems.filePath })
+    .from(stems);
+}
+
 export async function deleteStemSet(
   db: Database,
   id: number,

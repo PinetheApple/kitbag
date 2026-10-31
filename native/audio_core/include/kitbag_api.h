@@ -184,7 +184,7 @@ KB_EXPORT void kb_metronome_set_volume(kb_engine* engine, double volume);
 /* enabled != 0 (default 0): grid second t clicks as the mixer plays song frame
  * t * engine rate. set_grid's anchor and the latency offset are ignored. */
 KB_EXPORT void kb_metronome_follow_mixer(kb_engine* engine, int32_t enabled);
-/* Output latency offset in ms [-100, 100]; positive = trigger earlier. */
+/* Output latency offset in ms [-300, 300]; positive = trigger earlier. */
 KB_EXPORT void
 kb_metronome_set_latency_offset(kb_engine* engine, double latency_ms);
 /* Stepped ramp (SPEC §5.3): holds start_bpm for one interval, then moves by

@@ -260,7 +260,8 @@ bool RunFileFixtureTests(kb_engine* engine) {
   return true;
 }
 
-void RunSplitSuites() {
+void RunOwnEngineSuites() {
+  TestPlayerNullSafe();
   abi_test::RunMetronomeAbiTests();
   abi_test::RunLongGridAbiTests();
   abi_test::RunPolyAbiTests();
@@ -306,8 +307,7 @@ int main() {
   TestSetGridRejectsOversize(engine);
   TestClearGrid(engine);
   TestMixerTransportIsNullSafe(engine);
-  TestPlayerNullSafe();
-  RunSplitSuites();
+  RunOwnEngineSuites();
   RunTunerAbiTests(engine);
 
   if (!RunFileFixtureTests(engine)) {

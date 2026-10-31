@@ -14,7 +14,7 @@ import { createSongPresetRepository } from './song-preset-repository';
 import { createTransactor } from './transaction';
 import { createTuningRepository } from './tuning-repository';
 
-const DATABASE_NAME = 'kitbag';
+export const DATABASE_NAME = 'kitbag';
 
 export type Connection = Pick<
   DB,

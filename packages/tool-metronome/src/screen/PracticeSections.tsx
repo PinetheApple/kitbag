@@ -8,6 +8,7 @@ import {
   StepControl,
   type StepDelta,
   Switch,
+  unshared,
 } from '@kitbag/core-design';
 import { useMetronome } from '@kitbag/core-state';
 import { useCallback } from 'react';
@@ -90,6 +91,11 @@ export function PracticeMute({ onType }: TypeProps) {
         <>
           <View style={styles.grow} />
           <Switch
+            neighbourGapDp={{
+              top: unshared(metronomeSheet.practiceSectionV),
+              bottom: space.controlGap,
+              right: 0,
+            }}
             accessibilityLabel="Mute bars"
             value={enabled}
             onValueChange={editor.toggle}
@@ -210,6 +216,12 @@ export function PracticePoly({ onType }: TypeProps) {
         <>
           <View style={styles.grow} />
           <Switch
+            neighbourGapDp={{
+              top: unshared(metronomeSheet.practiceSectionV),
+              bottom: unshared(metronomeSheet.practiceSectionV),
+              left: space.rowGap,
+              right: 0,
+            }}
             accessibilityLabel="Polyrhythm"
             value={polyEnabled}
             onValueChange={handleToggle}

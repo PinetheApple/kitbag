@@ -72,10 +72,11 @@ class Engine {
   uint64_t frames_rendered() const {
     return frames_rendered_.load(std::memory_order_relaxed);
   }
-  int32_t OutputDeviceId() const;
   bool ReadRenderClock(ClockPair* out) const {
     return render_clock_.Read(out);
   }
+
+  int32_t OutputDeviceId() const;
 
   // App thread, before any load: read-ahead for callbacks up to [frames] wide.
   void ReserveCallbackFrames(uint32_t frames) {

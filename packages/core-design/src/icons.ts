@@ -40,11 +40,13 @@ export const iconGlyphs = {
   saveInto: 'tray-arrow-down',
   dragHandle: 'drag-horizontal-variant',
   notes: 'pencil-outline',
+  edit: 'pencil-outline',
+  show: 'eye-outline',
   song: 'music-note',
   songs: 'playlist-music',
   metronome: 'metronome',
   tuner: 'guitar-acoustic',
-  stems: 'tune',
+  stems: 'tune-vertical',
   playAlong: 'play-circle-outline',
   moreTools: 'dots-grid',
   arrowUp: 'arrow-up',
@@ -64,6 +66,8 @@ export const iconGlyphs = {
   routeBluetooth: 'bluetooth',
   routeUsb: 'usb',
   routeOther: 'speaker',
+  storage: 'database-outline',
+  removeMissing: 'backspace-reverse-outline',
 } as const satisfies Record<string, VectorGlyph>;
 
 export type IconName = keyof typeof iconGlyphs;

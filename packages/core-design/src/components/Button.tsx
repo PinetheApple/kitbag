@@ -1,7 +1,9 @@
 import { Pressable, Text, View } from 'react-native';
 
+import { homeArrange, homeArrangeText } from '../homeArrangeRoles.ts';
 import type { IconName } from '../icons.ts';
 import {
+  bodyLineHeight,
   iconSizes,
   inset,
   radius,
@@ -22,7 +24,7 @@ import {
 import { InlineIcon } from './IconGlyph.tsx';
 
 export type ButtonVariant = 'primary' | 'tonal' | 'ghost' | 'destructive';
-export type ButtonSize = 'default' | 'sheet' | 'prompt' | 'target';
+export type ButtonSize = 'default' | 'sheet' | 'prompt' | 'target' | 'small';
 
 const BUTTON_HEIGHT = textRoles.button.size + (inset.buttonV + size.stroke) * 2;
 const BUTTON_HEIGHTS: Readonly<Record<ButtonSize, number>> = {
@@ -30,6 +32,9 @@ const BUTTON_HEIGHTS: Readonly<Record<ButtonSize, number>> = {
   sheet: size.buttonSheet,
   prompt: size.buttonPrompt,
   target: minTouchTargetDp,
+  small:
+    homeArrangeText.smallButton.size * bodyLineHeight +
+    (homeArrange.smallButtonV + size.stroke) * 2,
 };
 
 // A labelled button is wider than 48dp, so only the vertical axis is grown.
@@ -48,6 +53,7 @@ export interface ButtonProps {
   readonly variant?: ButtonVariant;
   readonly icon?: IconName;
   readonly iconSize?: IconSize;
+  readonly iconTone?: 'label' | 'accent';
   readonly disabled?: boolean;
   readonly fill?: boolean;
   readonly accessibilityLabel?: string;
@@ -130,6 +136,18 @@ const useStyles = createThemedStyles((theme) => ({
     minHeight: minTouchTargetDp,
     paddingVertical: 0,
   },
+  small: {
+    gap: space.chipGap,
+    paddingVertical: homeArrange.smallButtonV,
+    paddingHorizontal: homeArrange.smallButtonH,
+  },
+  smallLabel: {
+    ...textStyle(homeArrangeText.smallButton),
+    lineHeight: homeArrangeText.smallButton.size * bodyLineHeight,
+  },
+  accentIcon: {
+    color: theme.color.accent,
+  },
 }));
 
 export function Button({
@@ -138,6 +156,7 @@ export function Button({
   variant = 'tonal',
   icon,
   iconSize,
+  iconTone = 'label',
   disabled = false,
   fill = false,
   accessibilityLabel,
@@ -176,10 +195,19 @@ export function Button({
               styles.icon,
               iconSize !== undefined && { fontSize: iconSizes[iconSize] },
               labelStyle,
+              iconTone === 'accent' && !disabled && styles.accentIcon,
             ]}
           />
         )}
-        <Text style={[styles.label, labelStyle]}>{label}</Text>
+        <Text
+          style={[
+            styles.label,
+            buttonSize === 'small' && styles.smallLabel,
+            labelStyle,
+          ]}
+        >
+          {label}
+        </Text>
       </View>
     </Pressable>
   );
