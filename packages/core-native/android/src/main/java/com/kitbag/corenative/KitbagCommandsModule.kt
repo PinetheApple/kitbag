@@ -205,6 +205,10 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     nativeSetSubdivision(subdivision.toInt())
   }
 
+  override fun setSubdivisionAccents(subdivision: Double, slotMask: Double) {
+    nativeSetSubdivisionAccents(subdivision.toInt(), slotMask.toInt())
+  }
+
   override fun setAccent(beatIndex: Double, accent: Double) {
     nativeSetAccent(beatIndex.toInt(), accent.toInt())
   }
@@ -360,6 +364,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private external fun nativeSetGrid(beatTimesSec: DoubleArray, anchorFrame: Double): Int
   private external fun nativeSetBeats(beatsPerBar: Int, denominator: Int)
   private external fun nativeSetSubdivision(subdivision: Int)
+  private external fun nativeSetSubdivisionAccents(subdivision: Int, slotMask: Int)
   private external fun nativeSetAccent(beatIndex: Int, accent: Int)
   private external fun nativeSetPoly(enabled: Boolean, beats: Int)
   private external fun nativeSetPolyAccent(beatIndex: Int, accent: Int)

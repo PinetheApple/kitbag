@@ -17,6 +17,11 @@ Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetSubdivision(JNIEnv*, jo
 }
 
 JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetSubdivisionAccents(JNIEnv*, jobject, jint subdivision, jint slotMask) {
+  kitbag::commandSetSubdivisionAccents(subdivision, slotMask);
+}
+
+JNIEXPORT void JNICALL
 Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetAccent(JNIEnv*, jobject, jint beatIndex, jint accent) {
   kitbag::commandSetAccent(beatIndex, accent);
 }

@@ -517,6 +517,14 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   divide the bar. B (one ratio value with a wheel sheet) and C (poly stepper with a
   Bar | Beats switch) are rejected. **[user]**
 
+- **2026-10-31 · Subdivision accents: slot 0 and the sound (§17 D2, §12.5, #170)** —
+  Global subdivision-accent patterns apply to off-beat ticks only: slot 0, the on-beat
+  tick, never overrides the per-beat accents (accent / normal / muted), and a muted beat
+  silences its accented ticks too. An accented subdivision tick plays the accent sound's
+  accented click, not a louder normal sound, at a lower level than an accented beat
+  (`kAccentedSubdivisionGain`, owner ruling 2026-10-31); unaccented off-beat ticks
+  keep today's sound. **[user]**
+
 - **2026-10-31 · Settings owner answers (§5.1, §12.2, §12.5, #170, #189)** — The owner
   answered the questions the Settings gap rulings left open. Q7: the switch drawn in
   `design/kitbag-settings.html` (bordered pill, accent-tinted track when on) is the only

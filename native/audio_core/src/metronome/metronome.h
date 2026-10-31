@@ -9,6 +9,7 @@
 
 #include "kitbag_metronome_poly_api.h"
 #include "media/loop_layout.h"
+#include "metronome/click_voices.h"
 #include "metronome/metronome_types.h"
 #include "metronome/tempo_ramp.h"
 #include "metronome/trainer_mirrors.h"
@@ -71,6 +72,7 @@ class Metronome {
   void SetTempo(double bpm);
   void SetTimeSignature(int numerator, int denominator);
   void SetSubdivision(int subdivision);
+  void SetSubdivisionAccents(int subdivision, int32_t slot_mask);
   void SetAccent(int beat_index, int32_t accent);
   void SetAccent(int beat_index, Accent accent) {
     SetAccent(beat_index, static_cast<int32_t>(accent));
@@ -147,6 +149,7 @@ class Metronome {
     kSetTempo,
     kSetBeats,
     kSetSubdivision,
+    kSetSubdivisionAccents,
     kSetAccent,
     kSetPoly,
     kSetPolyAccent,
@@ -173,14 +176,6 @@ class Metronome {
     uint64_t frame = 0;  // engine-clock frame for kStartAt (see StartAt / §4.2)
   };
 
-  struct Voice {
-    bool active = false;
-    double phase = 0.0;
-    double phase_step = 0.0;
-    double amplitude = 0.0;
-    double decay_per_sample = 0.0;
-  };
-
   // Per-block tempo derivatives, recomputed whenever bpm_ changes mid-block.
   struct BlockTempo {
     double beats_per_sample = 0.0;
@@ -194,7 +189,6 @@ class Metronome {
     uint64_t generation = 0;
   };
 
-  static constexpr int kMaxVoices = 8;
   static constexpr int64_t kReseedFollow = -1;
   static constexpr size_t kCommandRingSize = 128;
 
@@ -204,10 +198,9 @@ class Metronome {
   void ApplyCommand(const Command& command);
   bool RouteCommand(const Command& command);
   bool ApplyTransportCommand(const Command& command);
-  bool ApplyFollowCommand(const Command& command);
   void ReacquireGrid();
   void StashPendingAnchor(const Command& command);
-  bool ApplyTempoCommand(const Command& command);
+  bool ApplyClockCommand(const Command& command);
   bool ApplyTrainerCommand(const Command& command);
   bool ApplyPatternCommand(const Command& command);
   bool ApplyOutputCommand(const Command& command);
@@ -220,6 +213,7 @@ class Metronome {
   static void
   ResetGrownSlots(std::span<Accent> row, int32_t old_count, int32_t new_count);
   void SetSignatureState(int32_t numerator, int32_t denominator);
+  void SetSubdivisionAccentRow(int32_t subdivision, int32_t slot_mask);
   void SetSoundsState(int32_t normal_sound, int32_t accent_sound);
   void QueuePreview(const Command& command);
   void SetCountInState(const Command& command);
@@ -240,17 +234,13 @@ class Metronome {
   );
   void OnCountInBeat(int64_t beat, uint32_t sample_rate);
 
-  void TriggerClick(
-      double frequency_hz,
-      double amplitude,
-      double decay_per_second,
-      uint32_t sample_rate
-  );
   void TriggerPreset(int sound, bool accented, uint32_t sample_rate);
   void OnBeatBoundary(int beat_index, uint32_t sample_rate);
-  void OnSubdivisionTick(int64_t speaker_beat, uint32_t sample_rate);
+  void OnSubdivisionTick(int64_t speaker_beat, int slot, uint32_t sample_rate);
+  bool SubdivisionSlotAccented(int slot) const;
+  uint16_t& AccentRowFor(int subdivision);
+  uint16_t AccentRowFor(int subdivision) const;
   void OnPolyBoundary(int poly_index, uint32_t sample_rate);
-  float RenderVoices();
   bool BarIsMuted(int64_t bar) const;
   double LatencyBeats() const;
   double BeatUnitScale() const;
@@ -331,6 +321,8 @@ class Metronome {
   int beats_per_bar_ = 4;
   int denominator_ = kBpmReferenceDenominator;
   int subdivision_ = kMinSubdivision;
+  static_assert(kMaxSubdivision <= std::numeric_limits<uint16_t>::digits);
+  uint16_t subdivision_accents_[kMaxSubdivision] = {};
   Accent accents_[kMaxBeats] = {};
   bool poly_enabled_ = false;
   int poly_beats_ = 3;
@@ -374,7 +366,7 @@ class Metronome {
   int mute_bars_ = 1;
   double volume_ = 1.0;
   double latency_offset_ms_ = 0.0;
-  Voice voices_[kMaxVoices];
+  ClickVoices voices_;
   bool follow_mixer_ = false;
   // Any other song frame, a seek or a loop wrap, reseeds the cursor.
   int64_t follow_next_frame_ = kReseedFollow;

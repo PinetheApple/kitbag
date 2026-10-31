@@ -5,6 +5,7 @@
 #include <cmath>
 #include <vector>
 
+#include "abi_test_render.h"
 #include "check.h"
 
 namespace abi_test {
@@ -12,7 +13,6 @@ namespace {
 
 using kitbag_test::Check;
 
-constexpr uint32_t kChannels = 2;
 constexpr uint32_t kPitchWindow = 2400;
 constexpr int32_t kTom = 3;
 constexpr int32_t kHihat = 4;
@@ -23,28 +23,6 @@ constexpr int32_t kOutOfTableSound = 6;
 constexpr double kWoodblockAccentHz = 2400.0;
 constexpr double kBeepAccentHz = 1760.0;
 constexpr double kPitchTolerance = 0.05;
-
-std::vector<float> Render(kb_engine* engine, uint32_t frames) {
-  std::vector<float> out(static_cast<size_t>(frames) * kChannels);
-  kb_engine_render(engine, out.data(), frames);
-  return out;
-}
-
-double RenderPeakOf(const std::vector<float>& out) {
-  double peak = 0.0;
-  for (const float sample : out) {
-    peak = std::fmax(peak, std::fabs(static_cast<double>(sample)));
-  }
-  return peak;
-}
-
-double RenderPeak(kb_engine* engine, uint32_t frames) {
-  return RenderPeakOf(Render(engine, frames));
-}
-
-bool NearPeak(double actual, double expected) {
-  return std::fabs(actual - expected) <= 0.05;
-}
 
 kb_engine* FourFourEngine(int32_t poly_beats) {
   kb_engine* engine = nullptr;
@@ -66,7 +44,7 @@ void TestSetAccentClamps() {
   kb_metronome_start(engine);
   RenderPeak(engine, beat_frames);
   Check(
-      NearPeak(RenderPeak(engine, beat_frames), 0.9),
+      Near(RenderPeak(engine, beat_frames), 0.9),
       "set_accent: 256 clamps to accented, not wrapped to muted"
   );
   Check(
@@ -74,7 +52,7 @@ void TestSetAccentClamps() {
       "set_accent: -1 clamps to muted"
   );
   Check(
-      NearPeak(RenderPeak(engine, beat_frames), 0.9),
+      Near(RenderPeak(engine, beat_frames), 0.9),
       "set_accent: ACCENTED+1 clamps to accented; null engine is a no-op"
   );
   kb_engine_destroy(engine);
@@ -97,7 +75,7 @@ void TestSetPolyAccentClamps() {
       "set_poly_accent: -1 clamps to muted"
   );
   Check(
-      NearPeak(RenderPeak(engine, poly_beat_frames), 0.8),
+      Near(RenderPeak(engine, poly_beat_frames), 0.8),
       "set_poly_accent: 256 clamps to accented; null engine is a no-op"
   );
   Check(
@@ -105,7 +83,7 @@ void TestSetPolyAccentClamps() {
       "current_poly_beat: reads poly slot 1 through the ABI"
   );
   Check(
-      NearPeak(RenderPeak(engine, poly_beat_frames), 0.8),
+      Near(RenderPeak(engine, poly_beat_frames), 0.8),
       "set_poly_accent: ACCENTED+1 clamps to accented"
   );
   kb_engine_destroy(engine);
@@ -192,7 +170,7 @@ void TestPreviewSoundAtVolume() {
       "preview_sound: a stopped engine plays one click of the given sound"
   );
   Check(
-      NearPeak(RenderPeakOf(out), 0.3),
+      Near(RenderPeakOf(out), 0.3),
       "preview_sound: the click is scaled by the current volume"
   );
   kb_engine_destroy(engine);
