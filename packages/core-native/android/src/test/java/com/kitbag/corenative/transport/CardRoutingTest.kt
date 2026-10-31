@@ -8,20 +8,28 @@ class CardRoutingTest {
 
   private fun press(button: SessionButton) = routing.on(CardEvent.SessionPressed(button))
 
+  private fun showMetronome() {
+    routing.on(CardEvent.MetronomeShown)
+  }
+
   private fun showSong() {
     routing.on(CardEvent.SongShown)
   }
 
   private fun assertSongShowing() {
-    assertEquals(CardEffect.None, routing.on(CardEvent.MetronomeShown))
+    assertEquals(CardEffect.HoldMetronome, routing.on(CardEvent.MetronomeShown))
   }
 
   private fun assertNoSongShowing() {
     assertEquals(CardEffect.ShowMetronome, routing.on(CardEvent.MetronomeShown))
   }
 
+  private fun assertNoCard() {
+    assertEquals(CardEffect.RemoveCard, routing.on(CardEvent.MetronomeTapped(TransportAction.PLAY.name)))
+  }
+
   @Test
-  fun `the metronome's show, transport and hide are ignored while a song shows`() {
+  fun `the metronome's taps and hide leave the song card alone while a song shows`() {
     showSong()
     assertEquals(CardEffect.None, routing.on(CardEvent.MetronomeTapped(TransportAction.PAUSE.name)))
     assertEquals(CardEffect.None, routing.on(CardEvent.MetronomeHidden))
@@ -36,11 +44,37 @@ class CardRoutingTest {
   }
 
   @Test
-  fun `a song stop currently ends the card even when the metronome showed before the song`() {
-    routing.on(CardEvent.MetronomeShown)
+  fun `a song stop returns to the metronome card when the metronome showed before the song`() {
+    showMetronome()
     showSong()
+    assertEquals(CardEffect.ReturnToMetronome, routing.on(CardEvent.SongStopped))
+    assertEquals(CardEffect.MetronomeControl(TransportAction.PAUSE), press(SessionButton.PAUSE))
+  }
+
+  @Test
+  fun `a metronome shown behind a song returns when the song is hidden`() {
+    showSong()
+    assertEquals(CardEffect.HoldMetronome, routing.on(CardEvent.MetronomeShown))
+    assertEquals(CardEffect.ReturnToMetronome, routing.on(CardEvent.SongHidden))
+  }
+
+  @Test
+  fun `a metronome hidden behind a song does not return when the song ends`() {
+    showMetronome()
+    showSong()
+    routing.on(CardEvent.MetronomeHidden)
     assertEquals(CardEffect.EndSong, routing.on(CardEvent.SongStopped))
-    assertNoSongShowing()
+    assertNoCard()
+  }
+
+  @Test
+  fun `a metronome hidden and shown again behind a song returns when the song ends`() {
+    showMetronome()
+    showSong()
+    routing.on(CardEvent.MetronomeHidden)
+    assertEquals(CardEffect.HoldMetronome, routing.on(CardEvent.MetronomeShown))
+    assertEquals(CardEffect.HoldMetronome, routing.on(CardEvent.MetronomeShown))
+    assertEquals(CardEffect.ReturnToMetronome, routing.on(CardEvent.SongStopped))
   }
 
   @Test
@@ -61,7 +95,7 @@ class CardRoutingTest {
 
   @Test
   fun `session play and pause go to the metronome otherwise, and seek does nothing`() {
-    routing.on(CardEvent.MetronomeShown)
+    showMetronome()
     assertEquals(CardEffect.MetronomeControl(TransportAction.PLAY), press(SessionButton.PLAY))
     assertEquals(CardEffect.MetronomeControl(TransportAction.PAUSE), press(SessionButton.PAUSE))
     assertEquals(CardEffect.None, routing.on(CardEvent.SessionSeeked(SEEK_MILLIS)))
@@ -69,6 +103,7 @@ class CardRoutingTest {
 
   @Test
   fun `skips reach only the metronome, rewind and fast forward only the song`() {
+    showMetronome()
     assertEquals(CardEffect.MetronomeControl(TransportAction.NEXT), press(SessionButton.NEXT))
     assertEquals(CardEffect.None, press(SessionButton.REWIND))
     showSong()
@@ -78,6 +113,7 @@ class CardRoutingTest {
 
   @Test
   fun `custom actions and taps are read as the active card's actions`() {
+    showMetronome()
     assertEquals(
       CardEffect.MetronomeControl(TransportAction.TEMPO_UP),
       routing.on(CardEvent.SessionCustomPressed(TransportAction.TEMPO_UP.name)),
@@ -99,39 +135,63 @@ class CardRoutingTest {
   }
 
   @Test
-  fun `song hide ends a showing song and is ignored otherwise`() {
-    assertEquals(CardEffect.None, routing.on(CardEvent.SongHidden))
+  fun `song hide ends a showing song and otherwise stops a service with no card`() {
+    assertEquals(CardEffect.RemoveCard, routing.on(CardEvent.SongHidden))
     showSong()
     assertEquals(CardEffect.EndSong, routing.on(CardEvent.SongHidden))
     assertNoSongShowing()
   }
 
   @Test
-  fun `a song tap with no song showing currently removes the metronome card`() {
-    routing.on(CardEvent.MetronomeShown)
-    assertEquals(
-      CardEffect.RemoveCard,
-      routing.on(CardEvent.SongTapped(SongAction.PLAY.name)),
-    )
+  fun `a song tap with no song showing leaves the metronome card`() {
+    showMetronome()
+    assertEquals(CardEffect.None, routing.on(CardEvent.SongTapped(SongAction.PLAY.name)))
+    assertEquals(CardEffect.None, routing.on(CardEvent.SongStopped))
+    assertEquals(CardEffect.MetronomeControl(TransportAction.PAUSE), press(SessionButton.PAUSE))
   }
 
   @Test
   fun `the metronome stopping or hiding removes its card`() {
-    routing.on(CardEvent.MetronomeShown)
+    showMetronome()
     assertEquals(
       CardEffect.MetronomeControl(TransportAction.STOP),
       routing.on(CardEvent.MetronomeTapped(TransportAction.STOP.name)),
     )
     assertEquals(CardEffect.RemoveCard, routing.on(CardEvent.MetronomeStopped))
-    routing.on(CardEvent.MetronomeShown)
+    showMetronome()
     assertEquals(CardEffect.RemoveCard, routing.on(CardEvent.MetronomeHidden))
   }
 
   @Test
-  fun `an unrecognised start currently removes the card but keeps the song routing`() {
+  fun `a late metronome tap or session press after its card is removed stops the service instead`() {
+    showMetronome()
+    routing.on(CardEvent.MetronomeHidden)
+    assertEquals(CardEffect.RemoveCard, routing.on(CardEvent.MetronomeTapped(TransportAction.PLAY.name)))
+    assertEquals(CardEffect.RemoveCard, press(SessionButton.PLAY))
+    assertEquals(
+      CardEffect.RemoveCard,
+      routing.on(CardEvent.SessionCustomPressed(TransportAction.TEMPO_UP.name)),
+    )
+  }
+
+  @Test
+  fun `a service started by a stale action with no card stops itself`() {
+    assertNoCard()
+    assertEquals(CardEffect.RemoveCard, routing.on(CardEvent.SongTapped(SongAction.PLAY.name)))
+    assertEquals(CardEffect.RemoveCard, routing.on(CardEvent.SongStopped))
+  }
+
+  @Test
+  fun `an unrecognised start keeps the showing card and its routing`() {
     showSong()
-    assertEquals(CardEffect.RemoveCard, routing.on(CardEvent.StartUnrecognised))
+    assertEquals(CardEffect.None, routing.on(CardEvent.StartUnrecognised))
     assertSongShowing()
+  }
+
+  @Test
+  fun `an unrecognised start with no card stops the service`() {
+    assertEquals(CardEffect.RemoveCard, routing.on(CardEvent.StartUnrecognised))
+    assertNoSongShowing()
   }
 
   private companion object {

@@ -1,6 +1,8 @@
 #include "KitbagHostObject.h"
 
 #include <cstddef>
+#include <cstdint>
+#include <limits>
 #include <string>
 
 #include "kitbag_api.h"
@@ -55,12 +57,27 @@ const T* FindProp(const T (&table)[N], const std::string& prop) {
   return nullptr;
 }
 
-struct TrainerProp {
+struct EngineProp {
   const char* name;
   double (*read)(const kb_engine*);
 };
 
-constexpr TrainerProp kTrainerProps[] = {
+struct ClockReading {
+  double frame;
+  double monotonic_ns;
+};
+
+ClockReading ReadClockPair(const kb_engine* engine) {
+  int64_t frame = 0;
+  int64_t monotonic_ns = 0;
+  if (kb_engine_clock_pair(engine, &frame, &monotonic_ns) != KB_OK) {
+    const double none = std::numeric_limits<double>::quiet_NaN();
+    return {none, none};
+  }
+  return {static_cast<double>(frame), static_cast<double>(monotonic_ns)};
+}
+
+constexpr EngineProp kEngineProps[] = {
     {"bar_muted",
      [](const kb_engine* e) { return static_cast<double>(kb_metronome_bar_muted(e)); }},
     {"bar_mute_position",
@@ -77,6 +94,10 @@ constexpr TrainerProp kTrainerProps[] = {
      [](const kb_engine* e) { return kb_metronome_ramp_remaining(e); }},
     {"ramp_step_progress",
      [](const kb_engine* e) { return kb_metronome_ramp_step_progress(e); }},
+    {"clock_pair_frame",
+     [](const kb_engine* e) { return ReadClockPair(e).frame; }},
+    {"clock_pair_monotonic_ns",
+     [](const kb_engine* e) { return ReadClockPair(e).monotonic_ns; }},
 };
 
 constexpr const char* kPropertyNames[] = {
@@ -109,8 +130,8 @@ double Read(kb_engine* engine, const std::string& prop, bool* found) {
   }
   if (prop == "mixer_playing") return kb_mixer_is_playing(engine);
   if (prop == "engine_sample_rate") return kb_engine_sample_rate(engine);
-  if (const TrainerProp* trainer = FindProp(kTrainerProps, prop)) {
-    return trainer->read(engine);
+  if (const EngineProp* entry = FindProp(kEngineProps, prop)) {
+    return entry->read(engine);
   }
   if (const TunerProp* tuner = FindProp(kTunerProps, prop)) {
     kb_tuner_state state{};
@@ -134,7 +155,7 @@ std::vector<PropNameID> KitbagHostObject::getPropertyNames(Runtime& rt) {
   for (const char* prop : kPropertyNames) {
     names.push_back(PropNameID::forUtf8(rt, prop));
   }
-  for (const TrainerProp& entry : kTrainerProps) {
+  for (const EngineProp& entry : kEngineProps) {
     names.push_back(PropNameID::forUtf8(rt, entry.name));
   }
   for (const TunerProp& entry : kTunerProps) {

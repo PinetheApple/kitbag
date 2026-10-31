@@ -1,4 +1,10 @@
-export type ToolTileSize = '1x1' | '2x1';
+export const TOOL_TILE_SIZES = ['1x1', '2x1'] as const;
+
+export type ToolTileSize = (typeof TOOL_TILE_SIZES)[number];
+
+export function isToolTileSize(value: string): value is ToolTileSize {
+  return TOOL_TILE_SIZES.some((size) => size === value);
+}
 
 export interface SizedTile {
   readonly size: ToolTileSize;

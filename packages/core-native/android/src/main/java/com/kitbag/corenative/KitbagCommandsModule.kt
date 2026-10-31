@@ -23,6 +23,8 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   NativeKitbagCommandsSpec(reactContext) {
 
   private val libraryBase = LibraryStorage.base(reactContext)
+  private val transportListener: (TransportState, PracticeClock, TransportAction?) -> Unit = ::emitTransport
+  private val songStoppedListener: () -> Unit = ::emitOnSongStopped
   private val outputRoutes =
     OutputRouteWatcher(reactContext, ::outputDeviceId, ::emitOutputRoute)
 
@@ -31,12 +33,17 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     if (runtimePtr != 0L) {
       nativeInstall(runtimePtr)
     }
-    PlaybackService.listener = ::emitTransport
+    PlaybackService.listener = transportListener
+    PlaybackService.songStoppedListener = songStoppedListener
     outputRoutes.start()
   }
 
+  // A reloaded module's init can run before the old one's invalidate.
   override fun invalidate() {
-    PlaybackService.listener = null
+    if (PlaybackService.listener === transportListener) PlaybackService.listener = null
+    if (PlaybackService.songStoppedListener === songStoppedListener) {
+      PlaybackService.songStoppedListener = null
+    }
     outputRoutes.stop()
     super.invalidate()
   }
