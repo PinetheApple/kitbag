@@ -495,3 +495,13 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   labels use `theme.accentInk` (light: `accentDeep`), a contrast exception to the design's
   accent: the design value is about 3.7:1 on the light background at 10.5 px, under
   4.5:1. **[recorded]**
+
+- **2026-10-31 · Native night mode and splash (§12.2, §12.5, #100, #170)** — The theme
+  choice drives the native night mode (`setAppNightMode`), applied at JS start and on
+  every return to `active`. expo-system-ui's activity `onCreate` resets the AppCompat
+  night mode on every API level; below 31 that undoes the choice, hence the re-apply. On
+  31+ it is harmless only because `app.json` `userInterfaceStyle: "automatic"` maps to
+  FOLLOW_SYSTEM; changing that value would pin the theme. Below API 31 the cold-start
+  splash cannot follow the in-app choice: the system draws the starting window from the
+  manifest theme before any app code runs; no workaround. The About Version row is
+  hidden on web, where no installed package has a version. **[recorded]**

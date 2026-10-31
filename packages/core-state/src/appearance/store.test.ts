@@ -1,10 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import type { AppNightMode } from '@kitbag/core-native';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 
 import {
   createAppearanceStore,
   DEFAULT_APPEARANCE,
+  THEME_CHOICES,
   type AppearancePersistence,
   type AppearanceSettings,
+  type ThemeChoice,
 } from './store.ts';
 
 function memoryPersistence(initial: Partial<AppearanceSettings> = {}) {
@@ -59,5 +62,15 @@ describe('appearance settings', () => {
     const { persistence, saves } = memoryPersistence();
     createAppearanceStore(persistence).getState().setTheme('system');
     expect(saves).toEqual([]);
+  });
+});
+
+describe('theme choices', () => {
+  it('are exactly the native night modes, each listed once', () => {
+    expectTypeOf<ThemeChoice>().toEqualTypeOf<AppNightMode>();
+    expectTypeOf<
+      (typeof THEME_CHOICES)[number]
+    >().toEqualTypeOf<AppNightMode>();
+    expect(new Set(THEME_CHOICES).size).toBe(THEME_CHOICES.length);
   });
 });

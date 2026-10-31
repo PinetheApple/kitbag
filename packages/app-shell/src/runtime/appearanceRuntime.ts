@@ -1,13 +1,17 @@
-import { setHapticsEnabled } from '@kitbag/core-native';
+import {
+  setAppNightMode,
+  setHapticsEnabled,
+  setSystemBarAppearance,
+} from '@kitbag/core-native';
 import {
   configureAppearancePersistence,
   getAppearanceStore,
 } from '@kitbag/core-state';
 import * as SystemUI from 'expo-system-ui';
-import { Appearance } from 'react-native';
 
-import { appearanceApplier } from './appearance';
+import { appearanceApplier, keepNightMode } from './appearance';
 import { appearancePreference } from './appearancePreference';
+import { onAppForeground } from './appForeground';
 import { getDatabase } from './database';
 
 configureAppearancePersistence(
@@ -20,10 +24,16 @@ store.subscribe((state) => {
   setHapticsEnabled(state.haptics);
 });
 
+// expo-system-ui resets the night mode in every activity onCreate; see docs/decisions.md.
+keepNightMode({
+  choice: () => store.getState().theme,
+  setNightMode: setAppNightMode,
+  onForeground: onAppForeground,
+});
+
 export const applyAppearance = appearanceApplier({
-  setColorScheme: (scheme) => {
-    Appearance.setColorScheme(scheme);
-  },
+  setNightMode: setAppNightMode,
+  setSystemBarAppearance,
   setBackgroundColor: (hex) => {
     SystemUI.setBackgroundColorAsync(hex).catch(() => undefined);
   },

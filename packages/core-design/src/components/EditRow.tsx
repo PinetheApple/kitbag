@@ -8,7 +8,7 @@ import {
   type PressableStateCallbackType,
 } from 'react-native';
 
-import { inset, size, space, textRoles } from '../roles.ts';
+import { bodyLineHeight, inset, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles, useTheme } from '../ThemeProvider.tsx';
 import { minTouchTargetDp, radii } from '../tokens.ts';
@@ -40,6 +40,7 @@ const useStyles = createThemedStyles((theme) => ({
   pressed: { backgroundColor: theme.color.surface2 },
   label: {
     ...textStyle(textRoles.editRowKey),
+    lineHeight: textRoles.editRowKey.size * bodyLineHeight,
     color: theme.color.text2,
     flexShrink: 0,
   },
@@ -59,7 +60,11 @@ const useStyles = createThemedStyles((theme) => ({
     padding: 0,
     textAlign: 'right',
   },
-  text: { ...textStyle(textRoles.editValue), color: theme.color.text },
+  text: {
+    ...textStyle(textRoles.editValue),
+    lineHeight: textRoles.editValue.size * bodyLineHeight,
+    color: theme.color.text,
+  },
   muted: { color: theme.color.text3 },
 }));
 
