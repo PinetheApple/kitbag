@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, Text, View, type LayoutChangeEvent } from 'react-native';
 
 import {
@@ -9,7 +9,7 @@ import {
   space,
   textRoles,
 } from '../roles.ts';
-import { equalOptionWidth } from '../segmentWidth.ts';
+import { equalOptionSize } from '../segmentWidth.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import {
@@ -80,7 +80,7 @@ interface SegmentProps<T extends string> {
   readonly large: boolean;
   readonly inline: boolean;
   readonly editRow: boolean;
-  readonly width: number | undefined;
+  readonly sized: { readonly minWidth: number } | undefined;
   readonly onLabelWidth: (value: T, width: number) => void;
   readonly hitBox: ReturnType<typeof optionHitBox>;
   readonly onSelect: (value: T) => void;
@@ -152,7 +152,7 @@ function Segment<T extends string>({
   large,
   inline,
   editRow,
-  width,
+  sized,
   onLabelWidth,
   hitBox,
   onSelect,
@@ -166,10 +166,6 @@ function Segment<T extends string>({
       onLabelWidth(option.value, event.nativeEvent.layout.width);
     },
     [onLabelWidth, option.value],
-  );
-  const sized = useMemo(
-    () => (width === undefined ? undefined : { width }),
-    [width],
   );
 
   return (
@@ -233,9 +229,9 @@ export function SegmentedControl<T extends string>({
     const width = labelWidths[option.value];
     return width === undefined ? [] : [width];
   });
-  const optionWidth =
+  const optionSize =
     editRow && measured.length === options.length
-      ? equalOptionWidth(measured, inset.segmentEditRowOptionH)
+      ? equalOptionSize(measured, inset.segmentEditRowOptionH)
       : undefined;
   const hitBox = optionHitBox(
     neighbourGaps(neighbourGapDp),
@@ -261,7 +257,7 @@ export function SegmentedControl<T extends string>({
           large={large}
           inline={controlSize === 'inline'}
           editRow={editRow}
-          width={optionWidth}
+          sized={optionSize}
           onLabelWidth={handleLabelWidth}
           hitBox={hitBox}
           onSelect={onSelect}
