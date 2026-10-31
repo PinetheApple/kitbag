@@ -109,6 +109,7 @@ void TestThirdTickOfFourAccented() {
 
 void TestAccentClickWhenSoundsMatch() {
   kitbag::Metronome metronome;
+  metronome.SetSounds(kBeepSound, kBeepSound);
   metronome.SetSubdivision(2);
   metronome.SetSubdivisionAccents(2, SlotBit(1));
   metronome.SetTempo(120.0);
@@ -116,7 +117,7 @@ void TestAccentClickWhenSoundsMatch() {
   const auto left = RenderLeft(metronome, kBarFrames);
   CheckCase(
       PitchIs(left, kBeatFrames + kBeatFrames / 2, kBeepAccentHz),
-      "sub accents: default sounds, the accented off-beat is the accent click",
+      "sub accents: matching sounds, the accented off-beat is the accent click",
       "not the normal sound's subdivision voice made louder"
   );
 }

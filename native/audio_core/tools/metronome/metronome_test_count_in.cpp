@@ -80,6 +80,7 @@ void TestChangesBeforeStartSetCountLength() {
 
 void TestPauseResumeAndStopStart() {
   kitbag::Metronome metronome;
+  metronome.SetSounds(kBeepSound, kBeepSound);
   metronome.SetCountIn(1, true, kWoodblock);
   metronome.SetTempo(120.0);
   metronome.SetTimeSignature(4, 4);
@@ -121,6 +122,7 @@ void TestSameSoundAndInvalidValues() {
   );
 
   kitbag::Metronome invalid;
+  invalid.SetSounds(kBeepSound, kBeepSound);
   invalid.SetCountIn(1, true, kClickSound);
   invalid.SetCountIn(3, true, kitbag::Metronome::kSoundCount);
   invalid.SetTempo(120.0);
@@ -186,6 +188,7 @@ void TestCountInMirrors() {
 
 void TestGridSkipsCountIn() {
   kitbag::Metronome gridded;
+  gridded.SetSounds(kBeepSound, kBeepSound);
   gridded.SetCountIn(1, true, kWoodblock);
   gridded.SetGrid(MakeShiftedGrid(16, 1.0, 0.5), 0, true);
   gridded.Start();
@@ -204,6 +207,7 @@ void TestGridSkipsCountIn() {
 void TestAnchorSkipsCountIn() {
   constexpr int64_t kAnchorFrame = 2560;
   kitbag::Metronome anchored;
+  anchored.SetSounds(kBeepSound, kBeepSound);
   anchored.SetCountIn(1, true, kWoodblock);
   anchored.Start();
   const auto left = RenderLeft(anchored, kCommonBarFrames, [&](int64_t at) {

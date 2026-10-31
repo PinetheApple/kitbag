@@ -171,8 +171,8 @@ void TestGridStartAtRestoresGeneration() {
   constexpr int64_t kJustBeforeFrames = 50;
   constexpr size_t kDecayBlocks = 25;
   const auto tick_frame = static_cast<int64_t>(kSubTickSec * kSampleRate);
-
   kitbag::Metronome metronome;
+  metronome.SetSounds(kBeepSound, kBeepSound);
   metronome.SetTimeSignature(4, 4);
   metronome.SetSubdivision(2);
   metronome.SetGrid(MakeDriftingGrid(40, 0.5, 0.0, 0), 0, true);
@@ -279,6 +279,7 @@ void TestGridReanchorKeepsBarPhase() {
 // onset detector (cf. C3's anchor_external case).
 void TestGridReanchorNoRefire() {
   kitbag::Metronome metronome;
+  metronome.SetSounds(kBeepSound, kBeepSound);
   metronome.SetTimeSignature(4, 4);
   metronome.SetGrid(MakeDriftingGrid(40, 0.5, 0.0, 0), 0, true);
   metronome.Start();

@@ -37,8 +37,8 @@ class Metronome {
   static constexpr int kDenominators[] = {2, 4, 8, 16};
   static constexpr int kCountInOff = 0;
   static constexpr int kCountInBarChoices[] = {kCountInOff, 1, 2, 4};
-  static constexpr int kDefaultNormalSound = 0;
-  static constexpr int kDefaultAccentSound = 0;
+  static constexpr int kDefaultNormalSound = 4;
+  static constexpr int kDefaultAccentSound = 4;
   static constexpr int kDefaultCountInSound = 1;
   static constexpr int kMinMuteBars = 1;
   static constexpr int kMaxMuteBars = 16;

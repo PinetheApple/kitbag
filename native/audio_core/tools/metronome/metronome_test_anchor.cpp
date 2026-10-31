@@ -113,6 +113,7 @@ void TestReanchorConsistentKeepsOnsets() {
 // re-fire at the swap block (305), spikes far above the decaying tail.
 void TestReanchorConsistentNoRefire() {
   kitbag::Metronome metronome;
+  metronome.SetSounds(kBeepSound, kBeepSound);
   metronome.SetTimeSignature(4, 4);
   metronome.AnchorExternal(0.1, 0, 120.0);
   ConsistentReanchor swap{&metronome};

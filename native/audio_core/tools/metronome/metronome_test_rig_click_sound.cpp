@@ -82,6 +82,7 @@ void TestSoundsFromTheRigRow() {
 
 double RigBeatPeak(double volume) {
   Metronome metronome;
+  metronome.SetSounds(kBeepSound, kBeepSound);
   metronome.SetVolume(volume);
   metronome.rig_click().Start(kHundred.bpm(), kHundred.subdivision, kRigStart);
   return PeakIn(RenderLeft(metronome, kRigStart + kPitchWindow), kRigStart);

@@ -290,7 +290,7 @@ describe('collectConstants (real engine source)', () => {
     expect(c.minRampBars).toBe(1);
     expect(c.bpm).toEqual({ min: 20, max: 400 });
     expect(c.subdivision).toEqual({ min: 1, max: 16 });
-    expect(c.defaultSounds).toEqual({ normal: 0, accent: 0 });
+    expect(c.defaultSounds).toEqual({ normal: 4, accent: 4 });
     expect(c.countInOff).toBe(0);
     expect(c.volume).toEqual({ min: 0, max: 2 });
     expect(c.mixerGain).toEqual({ min: 0, max: 2 });

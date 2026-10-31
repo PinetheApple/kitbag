@@ -11,7 +11,6 @@ constexpr int kCowbell = 5;
 constexpr int64_t kBarFrames = 4 * kBeatFrames;
 constexpr int64_t kHalfBeatFrames = kBeatFrames / 2;
 
-constexpr double kBeepBeatHz = 1174.7;
 constexpr double kWoodblockBeatHz = 1800.0;
 constexpr double kCowbellAccentHz = 2200.0;
 
@@ -19,18 +18,6 @@ void StartFourFour(kitbag::Metronome& metronome) {
   metronome.SetTempo(120.0);
   metronome.SetTimeSignature(4, 4);
   metronome.Start();
-}
-
-void TestDefaultSoundsUnchanged() {
-  kitbag::Metronome metronome;
-  StartFourFour(metronome);
-  const auto left = RenderLeft(metronome, kBarFrames);
-
-  Check(PitchIs(left, 0, kBeepAccentHz), "sounds: default accent is beep");
-  Check(
-      PitchIs(left, kBeatFrames, kBeepBeatHz),
-      "sounds: default normal beat is beep"
-  );
 }
 
 void TestNormalAndAccentSoundsIndependent() {
@@ -238,7 +225,6 @@ void TestPreviewWhileRunning() {
 }  // namespace
 
 void RunSoundTests() {
-  TestDefaultSoundsUnchanged();
   TestNormalAndAccentSoundsIndependent();
   TestInvalidSoundIdsKeepPrior();
   TestSoundsApplyLiveWhileRunning();
