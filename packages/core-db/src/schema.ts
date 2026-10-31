@@ -222,6 +222,8 @@ export const bpmCache = sqliteTable(
 export const routeLatency = sqliteTable('route_latency', {
   route: text('route').primaryKey(),
   offsetMs: real('offset_ms').notNull(),
+  name: text('name'),
+  kind: text('kind'),
 });
 
 export const preferences = sqliteTable('preferences', {

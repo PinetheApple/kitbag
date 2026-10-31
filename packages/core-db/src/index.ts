@@ -7,6 +7,10 @@ export {
 export type { Preferences } from './preferences';
 export type { PracticeRepository, PracticeStats } from './practice-repository';
 export type {
+  RouteLatency,
+  RouteLatencyRepository,
+} from './route-latency-repository';
+export type {
   BarMark,
   BundleStem,
   ExistingStemSet,

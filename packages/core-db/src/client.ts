@@ -7,6 +7,7 @@ import { migrate, type MigrationDriver } from './migrate';
 import { openConnection } from './openConnection';
 import { createPracticeRepository } from './practice-repository';
 import { createPreferences } from './preferences';
+import { createRouteLatencyRepository } from './route-latency-repository';
 import { createSetlistRepository } from './setlist-repository';
 import { createSongLibraryRepository } from './song-library-repository';
 import { createSongPresetRepository } from './song-preset-repository';
@@ -63,6 +64,7 @@ export function connectDatabase(connection: Connection) {
     songLibrary: createSongLibraryRepository(handle),
     backup: createBackupService(handle),
     practice: createPracticeRepository(handle),
+    routeLatency: createRouteLatencyRepository(handle),
     preferences: createPreferences(
       (sql, params) => connection.executeSync(sql, params).rows,
       handle.transactor,
