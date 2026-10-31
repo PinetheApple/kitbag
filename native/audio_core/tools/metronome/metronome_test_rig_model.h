@@ -1,10 +1,11 @@
 #ifndef KITBAG_TOOLS_METRONOME_METRONOME_TEST_RIG_MODEL_H
 #define KITBAG_TOOLS_METRONOME_METRONOME_TEST_RIG_MODEL_H
 
+#include <cstdio>
 #include <string>
 
 #include "metronome/metronome_internal.h"
-#include "metronome_test_audio.h"
+#include "metronome_test_support.h"
 
 namespace metronome_test {
 
@@ -13,8 +14,14 @@ constexpr auto kSecondsPerMinuteInt =
     static_cast<int64_t>(kitbag::metronome_detail::kSecondsPerMinute);
 
 struct RigCase {
-  int bpm;
+  int64_t bpm_numerator;
   int subdivision;
+  int64_t bpm_denominator = 1;
+
+  constexpr double bpm() const {
+    return static_cast<double>(bpm_numerator) /
+           static_cast<double>(bpm_denominator);
+  }
 };
 
 struct RigTick {
@@ -25,8 +32,9 @@ struct RigTick {
 // Integer arithmetic, independent of the engine's doubles: tick k sounds on the
 // first frame f with (f - start) * bpm * subdivision >= k * 60 * rate.
 inline RigTick ModelTick(int64_t start, const RigCase& rig, int64_t tick) {
-  const int64_t numerator = tick * kSecondsPerMinuteInt * kSampleRate;
-  const int64_t denominator = int64_t{rig.bpm} * rig.subdivision;
+  const int64_t numerator =
+      tick * kSecondsPerMinuteInt * kSampleRate * rig.bpm_denominator;
+  const int64_t denominator = rig.bpm_numerator * rig.subdivision;
   return {
       start + (numerator + denominator - 1) / denominator,
       static_cast<int>(tick % rig.subdivision),
@@ -34,13 +42,11 @@ inline RigTick ModelTick(int64_t start, const RigCase& rig, int64_t tick) {
 }
 
 inline std::string RigLabel(const char* what, const RigCase& rig) {
-  return std::string("rig click: ") + what + " at " + std::to_string(rig.bpm) +
-         " BPM / " + std::to_string(rig.subdivision);
+  char tempo[32];
+  std::snprintf(tempo, sizeof tempo, "%g", rig.bpm());
+  return std::string("rig click: ") + what + " at " + tempo + " BPM / " +
+         std::to_string(rig.subdivision);
 }
-
-void RunRigClickScheduleTests();
-void RunRigClickSoundTests();
-void RunRigClickIsolationTests();
 
 }  // namespace metronome_test
 

@@ -39,6 +39,7 @@ class Engine {
   void Release();
   void ResetHolders();
   int32_t holders() const;
+  bool idle() const;
   void SetMetronomeIntent(bool playing) {
     metronome_intent_.store(playing);
   }

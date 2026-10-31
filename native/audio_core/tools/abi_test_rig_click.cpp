@@ -5,7 +5,6 @@
 #include <thread>
 
 #include "abi_test_engine_hold.h"
-#include "abi_test_metronome.h"
 #include "abi_test_render.h"
 #include "check.h"
 #include "metronome/metronome.h"
@@ -20,6 +19,7 @@ constexpr double kRigBpm = 100.0;
 constexpr int32_t kRigSubdivision = 1;
 constexpr uint32_t kBlock = 256;
 constexpr double kInfinity = std::numeric_limits<double>::infinity();
+constexpr int kMoreStartsThanTheRingHolds = 64;
 
 kb_result StartRig(kb_engine* engine, double bpm, int32_t subdivision) {
   return kb_rig_click_start(engine, bpm, subdivision, 0);
@@ -130,12 +130,38 @@ void TestIdleStop() {
       StopsWithin(engine),
       "rig click: stopping it lets the idle stop happen"
   );
-  PlayRig(engine);
+  kb_engine_destroy(engine);
+}
+
+bool InactiveAndIdle(kb_engine* engine) {
+  return !Active(engine) && kb_engine_idle(engine) == 1;
+}
+
+void TestMetronomeTakesOver() {
+  kb_engine* engine = nullptr;
+  if (kb_engine_create(&engine) != KB_OK) return;
+  StartRig(engine, kRigBpm, kRigSubdivision);
+  Render(engine, kBlock);
   kb_metronome_start(engine);
   kb_metronome_stop(engine);
   Check(
-      StopsWithin(engine),
-      "rig click: a metronome start takes over its play intent"
+      InactiveAndIdle(engine),
+      "rig click: a metronome start and stop in one block stop it and go idle"
+  );
+  kb_engine_destroy(engine);
+}
+
+void TestStopSurvivesFullRing() {
+  kb_engine* engine = nullptr;
+  if (kb_engine_create(&engine) != KB_OK) return;
+  bool full = false;
+  for (int i = 0; i < kMoreStartsThanTheRingHolds && !full; ++i) {
+    full = StartRig(engine, kRigBpm, kRigSubdivision) == KB_ERROR_BUSY;
+  }
+  kb_rig_click_stop(engine);
+  Check(
+      full && InactiveAndIdle(engine),
+      "rig click: a stop after a full ring of starts still stops it"
   );
   kb_engine_destroy(engine);
 }
@@ -150,6 +176,8 @@ void RunRigClickAbiTests() {
   TestBusyWhileMetronomeStarted(engine);
   kb_engine_destroy(engine);
   TestIdleStop();
+  TestMetronomeTakesOver();
+  TestStopSurvivesFullRing();
 }
 
 }  // namespace abi_test

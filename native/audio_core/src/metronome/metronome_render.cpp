@@ -89,12 +89,16 @@ void Metronome::OnSubdivisionTick(
   TriggerSubdivision(subdivision_, slot, sample_rate);
 }
 
+bool Metronome::SubdivisionSlotAccented(int subdivision, int slot) const {
+  return ((AccentRowFor(subdivision) >> slot) & 1U) != 0;
+}
+
 void Metronome::TriggerSubdivision(
     int subdivision,
     int slot,
     uint32_t sample_rate
 ) {
-  const bool accented = ((AccentRowFor(subdivision) >> slot) & 1U) != 0;
+  const bool accented = SubdivisionSlotAccented(subdivision, slot);
   const SoundPreset& sound = kSounds[accented ? accent_sound_ : normal_sound_];
   voices_.Trigger(
       accented ? sound.accent_hz : sound.subdivision_hz,
@@ -357,7 +361,7 @@ void Metronome::Render(
     } else if (running_) {
       AdvanceConstantTempo(sample_rate, &tempo);
     }
-    const int rig_slot = rig_click_.TickAt(now);
+    const int rig_slot = rig_click_.ConsumeTickAt(now);
     if (rig_slot != RigClick::kNoTick) OnRigTick(rig_slot, sample_rate);
     const float sample = voices_.Render() * volume_;
     for (uint32_t channel = 0; channel < channel_count; ++channel) {

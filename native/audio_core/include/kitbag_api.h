@@ -18,8 +18,8 @@ typedef enum kb_result {
   KB_ERROR_INVALID_ARGUMENT = 1,
   KB_ERROR_DEVICE_INIT_FAILED = 2,
   KB_ERROR_DEVICE_START_FAILED = 3,
-  KB_ERROR_BUSY = 4,     /* a queue was full, or the rig click met a started
-                            metronome; nothing changed, retry */
+  KB_ERROR_BUSY = 4,     /* refused for now (a full queue, or a conflicting
+                            source); nothing changed */
   KB_ERROR_INTERNAL = 5, /* the core failed, not the caller: out of memory, or
                             a file that changed while being read */
 } kb_result;

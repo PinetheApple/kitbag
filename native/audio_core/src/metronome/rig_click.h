@@ -15,9 +15,10 @@ class RigClick {
  public:
   static constexpr int kNoTick = -1;
 
-  // App thread. False when the command ring is full.
+  // App thread. Start is false when the ring is full; Stop never queues, so a
+  // full ring cannot lose it.
   bool Start(double bpm, int subdivision, uint64_t start_frame);
-  bool Stop();
+  void Stop();
 
   bool is_active() const {
     return active_flag_.load(std::memory_order_relaxed);
@@ -29,30 +30,36 @@ class RigClick {
       uint32_t sample_rate,
       bool metronome_started
   );
-  // RT: the slot of the tick due on `frame`, or kNoTick. Frames must ascend.
-  int TickAt(uint64_t frame);
+  // RT: consumes the tick due on `frame` and returns its slot, or kNoTick.
+  int ConsumeTickAt(uint64_t frame);
   int subdivision() const {
     return subdivision_;
   }
 
  private:
-  struct Command {
-    bool start = false;
+  struct StartCommand {
     double bpm = 0.0;
     int32_t subdivision = 0;
     uint64_t frame = 0;
+    uint32_t stop_epoch = 0;
   };
 
   static constexpr size_t kCommandRingSize = 16;
 
-  void
-  Arm(const Command& command, uint64_t block_start_frame, uint32_t sample_rate);
+  void Arm(
+      const StartCommand& command,
+      uint64_t block_start_frame,
+      uint32_t sample_rate
+  );
   int64_t FirstTickAtOrAfter(uint64_t frame) const;
   uint64_t FrameOfTick(int64_t tick) const;
 
-  SpscRing<Command, kCommandRingSize> commands_;
+  SpscRing<StartCommand, kCommandRingSize> commands_;
+  // Bumped by every Stop; a start survives only if no stop followed its push.
+  std::atomic<uint32_t> stop_epoch_{0};
 
   bool active_ = false;
+  uint32_t armed_epoch_ = 0;
   int subdivision_ = 1;
   uint64_t start_frame_ = 0;
   double frames_per_minute_ = 0.0;

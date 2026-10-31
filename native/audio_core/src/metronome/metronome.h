@@ -246,6 +246,7 @@ class Metronome {
   void OnBeatBoundary(int beat_index, uint32_t sample_rate);
   void OnSubdivisionTick(int64_t owning_beat, int slot, uint32_t sample_rate);
   void TriggerSubdivision(int subdivision, int slot, uint32_t sample_rate);
+  bool SubdivisionSlotAccented(int subdivision, int slot) const;
   void OnRigTick(int slot, uint32_t sample_rate);
   uint16_t& AccentRowFor(int subdivision);
   uint16_t AccentRowFor(int subdivision) const;

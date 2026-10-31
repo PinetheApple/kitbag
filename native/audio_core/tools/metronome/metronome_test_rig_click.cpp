@@ -1,3 +1,4 @@
+#include "metronome_test_audio.h"
 #include "metronome_test_rig_model.h"
 
 namespace metronome_test {
@@ -7,6 +8,10 @@ using kitbag::RigClick;
 
 constexpr int64_t kRigTicks = 24;
 constexpr RigCase kRigCases[] = {{100, 1}, {100, 3}, {97, 1}, {133, 4}};
+// Neither tempo is a double. 38.4 * 3 rounds low, so tick 1's whole quotient
+// computes a hair above 25000; 123.4's tick 617 is whole too.
+constexpr RigCase kFractionalCases[] = {{384, 3, 10}, {1234, 1, 10}};
+constexpr int64_t kFractionalTicks = 640;
 constexpr RigCase kHundred = {100, 1};
 constexpr RigCase kHundredTriplets = {100, 3};
 constexpr int64_t kLateBlock = 391 * int64_t{kBlockFrames};
@@ -22,7 +27,7 @@ CollectTicks(RigClick& rig, int64_t total_frames, OnBlock on_block) {
     on_block(block);
     rig.BeginBlock(static_cast<uint64_t>(block), kSampleRate, false);
     for (int64_t frame = block; frame < block + kBlockFrames; ++frame) {
-      const int slot = rig.TickAt(static_cast<uint64_t>(frame));
+      const int slot = rig.ConsumeTickAt(static_cast<uint64_t>(frame));
       if (slot != RigClick::kNoTick) ticks.push_back({frame, slot});
     }
   }
@@ -37,17 +42,23 @@ bool MatchesModel(
     int64_t count
 ) {
   if (static_cast<int64_t>(ticks.size()) < count) {
-    std::fprintf(stderr, "  %zu ticks, want %lld\n", ticks.size(), count);
+    std::fprintf(
+        stderr,
+        "  %zu ticks, want %lld\n",
+        ticks.size(),
+        static_cast<long long>(count)
+    );
     return false;
   }
   for (int64_t i = 0; i < count; ++i) {
-    const RigTick want = ModelTick(start, rig, first_tick + i);
+    const int64_t tick = first_tick + i;
+    const RigTick want = ModelTick(start, rig, tick);
     const RigTick got = ticks[static_cast<size_t>(i)];
     if (got.frame == want.frame && got.slot == want.slot) continue;
     std::fprintf(
         stderr,
         "  tick %lld: frame %lld slot %d, want frame %lld slot %d\n",
-        static_cast<long long>(first_tick + i),
+        static_cast<long long>(tick),
         static_cast<long long>(got.frame),
         got.slot,
         static_cast<long long>(want.frame),
@@ -58,20 +69,23 @@ bool MatchesModel(
   return true;
 }
 
+void ExpectModelTicks(const RigCase& rig, int64_t count) {
+  RigClick click;
+  click.Start(rig.bpm(), rig.subdivision, kRigStart);
+  const auto ticks =
+      CollectTicks(click, ModelTick(kRigStart, rig, count).frame, [](int64_t) {
+      });
+  CheckCase(
+      MatchesModel(ticks, rig, kRigStart, 0, count),
+      RigLabel("ticks on start + ceil(k * period)", rig),
+      "every tick on its model frame and slot"
+  );
+}
+
 void TestTicksFollowTheFrameRule() {
-  for (const RigCase& rig : kRigCases) {
-    RigClick click;
-    click.Start(rig.bpm, rig.subdivision, kRigStart);
-    const auto ticks = CollectTicks(
-        click,
-        ModelTick(kRigStart, rig, kRigTicks).frame,
-        [](int64_t) {}
-    );
-    CheckCase(
-        MatchesModel(ticks, rig, kRigStart, 0, kRigTicks),
-        RigLabel("ticks on start + ceil(k * period)", rig),
-        "every tick on its model frame and slot"
-    );
+  for (const RigCase& rig : kRigCases) ExpectModelTicks(rig, kRigTicks);
+  for (const RigCase& rig : kFractionalCases) {
+    ExpectModelTicks(rig, kFractionalTicks);
   }
 }
 
@@ -85,7 +99,7 @@ void ExpectLateStart(
       click,
       ModelTick(start_frame, kHundred, first_tick + kTicksChecked).frame,
       OnceAtFrame(kLateBlock, [&click, start_frame](int64_t) {
-        click.Start(kHundred.bpm, kHundred.subdivision, start_frame);
+        click.Start(kHundred.bpm(), kHundred.subdivision, start_frame);
       })
   );
   CheckCase(
@@ -104,7 +118,7 @@ void TestPastStartKeepsSchedule() {
 
 void TestStopFromNextBlock() {
   RigClick click;
-  click.Start(kHundredTriplets.bpm, kHundredTriplets.subdivision, kRigStart);
+  click.Start(kHundredTriplets.bpm(), kHundredTriplets.subdivision, kRigStart);
   const auto ticks = CollectTicks(
       click,
       2 * kStopBlock,
@@ -132,7 +146,7 @@ std::vector<int64_t> TriggerFrames(const std::vector<float>& left) {
 void TestAudibleOnsetsOnModel() {
   constexpr RigCase kOdd = {97, 1};
   kitbag::Metronome metronome;
-  metronome.rig_click().Start(kOdd.bpm, kOdd.subdivision, kRigStart);
+  metronome.rig_click().Start(kOdd.bpm(), kOdd.subdivision, kRigStart);
   const auto triggers = TriggerFrames(
       RenderLeft(metronome, ModelTick(kRigStart, kOdd, kRigTicks).frame)
   );

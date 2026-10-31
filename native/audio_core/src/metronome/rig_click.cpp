@@ -8,17 +8,25 @@ namespace kitbag {
 
 using metronome_detail::kSecondsPerMinute;
 
+namespace {
+
+// A decimal tempo is inexact in binary, so a quotient that is whole can compute
+// a hair above it; far below the spacing of a real fractional part.
+constexpr double kWholeFrameTolerance = 1e-6;
+
+}  // namespace
+
 bool RigClick::Start(double bpm, int subdivision, uint64_t start_frame) {
-  Command command;
-  command.start = true;
-  command.bpm = bpm;
-  command.subdivision = subdivision;
-  command.frame = start_frame;
-  return commands_.Push(command);
+  return commands_.Push({
+      .bpm = bpm,
+      .subdivision = subdivision,
+      .frame = start_frame,
+      .stop_epoch = stop_epoch_.load(std::memory_order_relaxed),
+  });
 }
 
-bool RigClick::Stop() {
-  return commands_.Push(Command{});
+void RigClick::Stop() {
+  stop_epoch_.fetch_add(1, std::memory_order_release);
 }
 
 void RigClick::BeginBlock(
@@ -26,24 +34,23 @@ void RigClick::BeginBlock(
     uint32_t sample_rate,
     bool metronome_started
 ) {
-  Command command;
+  StartCommand command;
   while (commands_.Pop(&command)) {
-    if (command.start && !metronome_started) {
-      Arm(command, block_start_frame, sample_rate);
-    } else {
-      active_ = false;
-    }
+    Arm(command, block_start_frame, sample_rate);
   }
-  if (metronome_started) active_ = false;
+  // Loaded after the drain, so every popped start's epoch is at most this one.
+  const uint32_t stop_epoch = stop_epoch_.load(std::memory_order_acquire);
+  if (metronome_started || armed_epoch_ != stop_epoch) active_ = false;
   active_flag_.store(active_, std::memory_order_relaxed);
 }
 
 void RigClick::Arm(
-    const Command& command,
+    const StartCommand& command,
     uint64_t block_start_frame,
     uint32_t sample_rate
 ) {
   active_ = true;
+  armed_epoch_ = command.stop_epoch;
   subdivision_ = command.subdivision;
   start_frame_ = command.frame;
   frames_per_minute_ = kSecondsPerMinute * sample_rate;
@@ -66,12 +73,13 @@ int64_t RigClick::FirstTickAtOrAfter(uint64_t frame) const {
 
 uint64_t RigClick::FrameOfTick(int64_t tick) const {
   const double offset = std::ceil(
-      static_cast<double>(tick) * frames_per_minute_ / ticks_per_minute_
+      static_cast<double>(tick) * frames_per_minute_ / ticks_per_minute_ -
+      kWholeFrameTolerance
   );
   return start_frame_ + static_cast<uint64_t>(offset);
 }
 
-int RigClick::TickAt(uint64_t frame) {
+int RigClick::ConsumeTickAt(uint64_t frame) {
   if (!active_ || frame < next_tick_frame_) return kNoTick;
   const auto slot = static_cast<int>(next_tick_ % subdivision_);
   ++next_tick_;

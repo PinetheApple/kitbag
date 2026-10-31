@@ -2,7 +2,6 @@
 // asserts click onsets land where the contract says. Suite entry point only.
 #include <cstdio>
 
-#include "metronome_test_rig_model.h"
 #include "metronome_test_support.h"
 #include "rt_test_support.h"
 

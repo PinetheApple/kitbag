@@ -15,9 +15,11 @@ extern "C" {
 /* A click independent of the metronome's pattern, tempo and transport.
  * Tick k (k = beat * subdivision + slot) sounds on engine frame
  * start_frame + ceil(k * 60 * sample_rate / (bpm * subdivision)), on the
- * kb_engine_frames_rendered clock. Slot 0 plays the normal sound's beat click;
- * other slots play the subdivision voice, or the accent sound's accented click
- * where kb_metronome_set_subdivision_accents marks the slot for `subdivision`.
+ * kb_engine_frames_rendered clock; a quotient within 1e-6 of a whole frame
+ * counts as whole, so a decimal bpm lands as written. Slot 0 plays the normal
+ * sound's beat click; other slots play the subdivision voice, or the accent
+ * sound's accented click where kb_metronome_set_subdivision_accents marks the
+ * slot for `subdivision`.
  * Volume is kb_metronome_set_volume's. The latency offset moves no tick, as on
  * a metronome started with kb_metronome_start_at.
  * A start_frame already past when the engine drains the call keeps its
@@ -28,7 +30,9 @@ extern "C" {
  * outside the metronome's tempo range, a subdivision outside
  * Metronome::kMinSubdivision..kMaxSubdivision or a negative start_frame, and
  * KB_ERROR_BUSY while the metronome is started or its queue is full; either
- * leaves everything unchanged. Starting the metronome stops the rig click. */
+ * leaves everything unchanged. Starting the metronome stops the rig click.
+ * After KB_OK, is_active reads 0 until the next rendered block; after a
+ * metronome stop, BUSY lasts until that stop has been rendered. */
 KB_EXPORT kb_result kb_rig_click_start(
     kb_engine* engine,
     double bpm,
@@ -36,7 +40,7 @@ KB_EXPORT kb_result kb_rig_click_start(
     int64_t start_frame
 );
 /* No tick sounds from the next rendered block; a click already sounding decays.
- * Clears the rig click's play intent. */
+ * Clears the rig click's play intent. Never lost to a full queue. */
 KB_EXPORT void kb_rig_click_stop(kb_engine* engine);
 /* 1 while the rig click is running, as of the last rendered block. */
 KB_EXPORT int32_t kb_rig_click_is_active(const kb_engine* engine);

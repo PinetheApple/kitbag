@@ -1,3 +1,4 @@
+#include "metronome_test_audio.h"
 #include "metronome_test_rig_model.h"
 
 namespace metronome_test {
@@ -47,8 +48,7 @@ bool TickSoundsMatch(const std::vector<float>& left, int64_t ticks) {
   return true;
 }
 
-void TestSoundsFromTheRigRow() {
-  Metronome metronome;
+void ConfigureConflictingPattern(Metronome& metronome) {
   metronome.SetSounds(kTom, kHihatSound);
   metronome.SetSubdivision(kMetronomeSubdivision);
   metronome.SetSubdivisionAccents(
@@ -61,8 +61,13 @@ void TestSoundsFromTheRigRow() {
   );
   metronome.SetAccent(1, Accent::kMuted);
   metronome.SetBarMute(true, 1, 1);
+}
+
+void TestSoundsFromTheRigRow() {
+  Metronome metronome;
+  ConfigureConflictingPattern(metronome);
   metronome.rig_click()
-      .Start(kSixteenths.bpm, kSixteenths.subdivision, kRigStart);
+      .Start(kSixteenths.bpm(), kSixteenths.subdivision, kRigStart);
   const int64_t ticks = kRigBeats * kSixteenths.subdivision;
   const auto left = RenderLeft(
       metronome,
@@ -78,7 +83,7 @@ void TestSoundsFromTheRigRow() {
 double RigBeatPeak(double volume) {
   Metronome metronome;
   metronome.SetVolume(volume);
-  metronome.rig_click().Start(kHundred.bpm, kHundred.subdivision, kRigStart);
+  metronome.rig_click().Start(kHundred.bpm(), kHundred.subdivision, kRigStart);
   return PeakIn(RenderLeft(metronome, kRigStart + kPitchWindow), kRigStart);
 }
 
@@ -99,9 +104,10 @@ std::vector<float> RenderUnderLatency(bool rig) {
   Metronome metronome;
   metronome.SetLatencyOffset(kLatencyMs);
   metronome.SetAccent(0, Accent::kNormal);
-  metronome.SetTempo(kHundred.bpm);
+  metronome.SetTempo(kHundred.bpm());
   if (rig) {
-    metronome.rig_click().Start(kHundred.bpm, kHundred.subdivision, kRigStart);
+    metronome.rig_click()
+        .Start(kHundred.bpm(), kHundred.subdivision, kRigStart);
   } else {
     metronome.StartAt(kRigStart);
   }

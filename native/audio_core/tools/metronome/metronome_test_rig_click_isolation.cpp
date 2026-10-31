@@ -1,3 +1,4 @@
+#include "metronome_test_audio.h"
 #include "metronome_test_rig_model.h"
 
 namespace metronome_test {
@@ -80,7 +81,7 @@ Twin RunTwin(bool with_rig) {
   Twin twin;
   auto on_block = [&metronome, with_rig](int64_t block) {
     if (with_rig && block == kRigOn) {
-      metronome.rig_click().Start(kRig.bpm, kRig.subdivision, kRigOn);
+      metronome.rig_click().Start(kRig.bpm(), kRig.subdivision, kRigOn);
     }
     if (with_rig && block == kRigOff) metronome.rig_click().Stop();
     if (block == kMetronomeOn) metronome.StartAt(kMetronomeOn + kStartAtDelay);
@@ -120,7 +121,7 @@ std::vector<float> MetronomeAfterRig(bool rig_first, bool* rig_active) {
   metronome.SetTempo(120.0);
   auto on_block = [&metronome, rig_first](int64_t block) {
     if (rig_first && block == kRigOn) {
-      metronome.rig_click().Start(kRig.bpm, kRig.subdivision, kRigOn);
+      metronome.rig_click().Start(kRig.bpm(), kRig.subdivision, kRigOn);
     }
     if (block == kMetronomeOn) metronome.Start();
   };
@@ -152,7 +153,7 @@ std::vector<float> RigStartedDuring(bool start_at, bool rig, bool* active) {
   }
   auto on_block = [&metronome, rig](int64_t block) {
     if (rig && block == kRigOn) {
-      metronome.rig_click().Start(kRig.bpm, kRig.subdivision, kRigOn);
+      metronome.rig_click().Start(kRig.bpm(), kRig.subdivision, kRigOn);
     }
   };
   auto after_block = [&metronome, active](int64_t) {

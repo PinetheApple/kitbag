@@ -104,6 +104,11 @@ void Engine::ResetHolders() {
   holders_ = 0;
 }
 
+bool Engine::idle() const {
+  const std::lock_guard<std::mutex> lock(lifecycle_mutex_);
+  return IsIdle();
+}
+
 int32_t Engine::holders() const {
   const std::lock_guard<std::mutex> lock(lifecycle_mutex_);
   return holders_;
