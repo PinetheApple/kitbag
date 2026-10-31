@@ -12,7 +12,6 @@ constexpr int kBeatsPerBar = 4;
 constexpr int kDenominator = 4;
 constexpr double kIntervalBars = 2.0;
 constexpr double kBpmTolerance = 1e-9;
-constexpr double kMinTickRise = 0.05;
 
 struct TickRun {
   int subdivision;

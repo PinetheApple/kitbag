@@ -136,7 +136,7 @@ describe('nativeConstants.gen', () => {
     expect(KB_RESULT.KB_OK).toBe(0);
     expect(KB_RESULT.KB_ERROR_DEVICE_START_FAILED).toBe(3);
     expect(KB_ACCENT.KB_ACCENT_ACCENTED).toBe(2);
-    expect(KB_LATENCY_OFFSET_MS_BOUNDS).toEqual({ min: -100, max: 100 });
+    expect(KB_LATENCY_OFFSET_MS_BOUNDS).toEqual({ min: -300, max: 300 });
     expect(KB_BAR_PHASE_BOUNDS.maxExclusive).toBe(true);
   });
 

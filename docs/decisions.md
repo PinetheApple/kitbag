@@ -527,3 +527,10 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   thresholds recorded in the Settings gap rulings are confirmed. Q18: global subdivision
   accents apply to off-beat ticks only, since slot 0 is the on-beat click with its own
   per-beat accents, and an accented tick plays the accent sound. **[recorded]**
+
+- **2026-10-31 · Explicit save for live edits (§5.4, #212)** — Live edits to a loaded song
+  never write it; nothing autosaves, and a visible mark shows unsaved changes until Save.
+  This matches what the app already does: only the preset editor's Save and "Save current"
+  write a song. §2.1's "live-BPM autosave" row is the Flutter-era audit and stays as
+  history. The mark, where Save lives, Revert and what a step does to unsaved edits wait
+  on the owner's pick of a design. **[user]**
