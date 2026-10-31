@@ -1,7 +1,11 @@
 import { createSetlistRepository } from '@kitbag/core-db/src/setlist-repository';
 import { createSongPresetRepository } from '@kitbag/core-db/src/song-preset-repository';
 import { openTestDatabase } from '@kitbag/core-db/src/sqlite.test-helper';
-import { KB_ACCENT, KB_RAMP_UNIT } from '@kitbag/core-native';
+import {
+  KB_ACCENT,
+  KB_POLY_AGAINST_BAR,
+  KB_RAMP_UNIT,
+} from '@kitbag/core-native';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createMetronomeStore } from '../metronome/store.ts';
@@ -32,6 +36,7 @@ function setup(engineBpm = () => 120) {
     setAccent: vi.fn(),
     setPoly: vi.fn(),
     setPolyAccent: vi.fn(),
+    setPolyAgainst: vi.fn(),
     setSounds: vi.fn(),
     previewSound: vi.fn(),
     setCountIn: vi.fn(),
@@ -163,6 +168,35 @@ describe('library store', () => {
       itemId: entry.item.id,
       setlistId: gig,
     });
+  });
+
+  it('saves the poly cycle with a song and sends it back on load', async () => {
+    const { library, metronome, commands } = setup();
+    const s = library.getState();
+    metronome.getState().setPoly(true, 3);
+    metronome.getState().setPolyAgainst(2);
+    const explicit = await s.newSongFromCurrent('Three against two');
+    metronome.getState().setPolyAgainst(KB_POLY_AGAINST_BAR);
+    const bar = await s.newSongFromCurrent('Three against the bar');
+    await s.loadSong(explicit);
+    expect(metronome.getState().polyAgainst).toBe(2);
+    expect(commands.setPolyAgainst).toHaveBeenLastCalledWith(2);
+    await s.loadSong(bar);
+    expect(metronome.getState().polyAgainst).toBe(KB_POLY_AGAINST_BAR);
+    expect(commands.setPolyAgainst).toHaveBeenLastCalledWith(
+      KB_POLY_AGAINST_BAR,
+    );
+  });
+
+  it('loads an explicit count equal to the song meter as explicit', async () => {
+    const { library, metronome } = setup();
+    const s = library.getState();
+    metronome.getState().setBeats(3, 4);
+    metronome.getState().setPolyAgainst(3);
+    const song = await s.newSongFromCurrent('Waltz');
+    metronome.getState().setPolyAgainst(KB_POLY_AGAINST_BAR);
+    await s.loadSong(song);
+    expect(metronome.getState().polyAgainst).toBe(3);
   });
 
   async function offStage() {

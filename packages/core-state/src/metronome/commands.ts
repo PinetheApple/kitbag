@@ -14,6 +14,7 @@ export type MetronomeCommands = Pick<
   | 'setAccent'
   | 'setPoly'
   | 'setPolyAccent'
+  | 'setPolyAgainst'
   | 'setSounds'
   | 'previewSound'
   | 'setCountIn'
@@ -56,6 +57,9 @@ export const defaultCommands: MetronomeCommands = {
   },
   setPolyAccent: (...args) => {
     getMetronomeRuntime().commands.setPolyAccent(...args);
+  },
+  setPolyAgainst: (...args) => {
+    getMetronomeRuntime().commands.setPolyAgainst(...args);
   },
   setSounds: (...args) => {
     getMetronomeRuntime().commands.setSounds(...args);

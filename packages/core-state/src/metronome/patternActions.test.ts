@@ -1,4 +1,8 @@
-import { KB_ACCENT } from '@kitbag/core-native';
+import {
+  KB_ACCENT,
+  KB_POLY_AGAINST_BAR,
+  KB_POLY_AGAINST_BOUNDS,
+} from '@kitbag/core-native';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { MetronomeCommands } from './commands.ts';
@@ -16,6 +20,7 @@ function setup() {
     setAccent: vi.fn(),
     setPoly: vi.fn(),
     setPolyAccent: vi.fn(),
+    setPolyAgainst: vi.fn(),
     setSounds: vi.fn(),
     previewSound: vi.fn(),
     setCountIn: vi.fn(),
@@ -80,5 +85,58 @@ describe('pattern actions', () => {
     store.getState().setBeats(4, 8);
     expect(store.getState().accents).toEqual(edited);
     expect(commands.setAccent).not.toHaveBeenCalled();
+  });
+});
+
+describe('poly against', () => {
+  it('starts on the bar', () => {
+    const { store } = setup();
+    expect(store.getState().polyAgainst).toBe(KB_POLY_AGAINST_BAR);
+  });
+
+  it('sends every change to the engine', () => {
+    const { commands, store } = setup();
+    store.getState().setPolyAgainst(2);
+    expect(store.getState().polyAgainst).toBe(2);
+    expect(commands.setPolyAgainst).toHaveBeenLastCalledWith(2);
+  });
+
+  it('stores and sends the bar sentinel for a count it cannot hold', () => {
+    const { commands, store } = setup();
+    store.getState().setPolyAgainst(2);
+    store.getState().setPolyAgainst(KB_POLY_AGAINST_BOUNDS.max + 1);
+    expect(store.getState().polyAgainst).toBe(KB_POLY_AGAINST_BAR);
+    expect(commands.setPolyAgainst).toHaveBeenLastCalledWith(
+      KB_POLY_AGAINST_BAR,
+    );
+  });
+
+  it('steps through the beats per bar onto the bar', () => {
+    const { commands, store } = setup();
+    store.getState().setPolyAgainst(3);
+    store.getState().stepPolyAgainst(1);
+    expect(store.getState().polyAgainst).toBe(KB_POLY_AGAINST_BAR);
+    store.getState().stepPolyAgainst(1);
+    expect(store.getState().polyAgainst).toBe(5);
+    expect(commands.setPolyAgainst.mock.calls).toEqual([
+      [3],
+      [KB_POLY_AGAINST_BAR],
+      [5],
+    ]);
+  });
+
+  it('keeps an explicit count explicit when the meter comes to equal it', () => {
+    const { commands, store } = setup();
+    store.getState().setPolyAgainst(3);
+    commands.setPolyAgainst.mockClear();
+    store.getState().setBeats(3, 4);
+    expect(store.getState().polyAgainst).toBe(3);
+    expect(commands.setPolyAgainst).not.toHaveBeenCalled();
+  });
+
+  it('keeps an explicit count equal to the bar explicit', () => {
+    const { store } = setup();
+    store.getState().setPolyAgainst(store.getState().beatsPerBar);
+    expect(store.getState().polyAgainst).toBe(store.getState().beatsPerBar);
   });
 });

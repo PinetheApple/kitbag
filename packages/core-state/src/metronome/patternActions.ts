@@ -9,6 +9,7 @@ import type { StoreApi } from 'zustand/vanilla';
 import type { MetronomeCommands } from './commands.ts';
 import { clamp, cycleAccentValue, resizeAccents } from './config.ts';
 import { groupStartAccents } from './meterGroups.ts';
+import { normalizePolyAgainst, stepPolyAgainst } from './polyAgainst.ts';
 import type { Denominator, MetronomeActions, MetronomeStore } from './store.ts';
 
 const BEATS_MIN = 1;
@@ -28,6 +29,8 @@ export function patternActions(
   | 'cycleAccent'
   | 'setAccents'
   | 'setPoly'
+  | 'setPolyAgainst'
+  | 'stepPolyAgainst'
   | 'cyclePolyAccent'
   | 'setPolyAccents'
 > {
@@ -85,6 +88,17 @@ export function patternActions(
         polyAccents: resizeAccents(s.polyAccents, polyBeats),
       }));
       commands.setPoly(enabled, polyBeats);
+    },
+
+    setPolyAgainst: (against) => {
+      const polyAgainst = normalizePolyAgainst(against, get().beatsPerBar);
+      set({ polyAgainst });
+      commands.setPolyAgainst(polyAgainst);
+    },
+
+    stepPolyAgainst: (delta) => {
+      const { polyAgainst, beatsPerBar } = get();
+      get().setPolyAgainst(stepPolyAgainst(polyAgainst, delta, beatsPerBar));
     },
 
     cyclePolyAccent: (beat) => {
