@@ -5,6 +5,7 @@ import {
   homeArrange,
   homeArrangeText,
   Sheet,
+  useDragGroup,
   textStyle,
 } from '@kitbag/core-design';
 import { hiddenTiles, showTile, visibleTiles } from '@kitbag/core-state';
@@ -90,6 +91,7 @@ export function ArrangeSheet({
 }: ArrangeSheetProps) {
   const styles = useStyles();
   const [dragging, setDragging] = useState(false);
+  const group = useDragGroup(arrangement);
   const shown = visibleTiles(arrangement).flatMap(withTool);
   const hidden = hiddenTiles(arrangement).flatMap(withTool);
   return (
@@ -127,6 +129,7 @@ export function ArrangeSheet({
             arrangement={arrangement}
             onArrange={onArrange}
             onDragActive={setDragging}
+            group={group}
           />
         ))}
         <Text accessibilityRole="header" style={styles.section}>

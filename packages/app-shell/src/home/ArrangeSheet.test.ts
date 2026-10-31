@@ -62,6 +62,7 @@ vi.mock('@kitbag/core-design', async (original) => {
       onLayout: () => undefined,
       offset: { value: 0 },
     }),
+    useDragGroup: () => ({}),
     useTheme: () => ({ color: {}, shadow: '' }),
   };
 });

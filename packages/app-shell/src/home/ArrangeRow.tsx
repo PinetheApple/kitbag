@@ -10,8 +10,11 @@ import {
   size,
   textStyle,
   unshared,
+  neighbourShift,
+  slotShift,
   useHandleDrag,
   useTheme,
+  type DragGroup,
   type SegmentOption,
   type ToolTileSize,
 } from '@kitbag/core-design';
@@ -146,6 +149,7 @@ interface ArrangeRowProps {
   readonly arrangement: HomeArrangement;
   readonly onArrange: (next: HomeArrangement) => void;
   readonly onDragActive: (active: boolean) => void;
+  readonly group: DragGroup;
 }
 
 function useArrangeActions(
@@ -201,15 +205,42 @@ export function RowLabel({
   );
 }
 
-function useLift(offset: ReturnType<typeof useHandleDrag>['offset']) {
+function useLift(
+  offset: ReturnType<typeof useHandleDrag>['offset'],
+  group: DragGroup,
+  index: number,
+) {
   const theme = useTheme();
   const { line, surface2, surface3, accent } = theme.color;
   const shadow = theme.shadow;
   const slot = useAnimatedStyle(() => ({
     zIndex: offset.value === 0 ? RESTING_Z : LIFTED_Z,
+    transform: [
+      {
+        translateY: neighbourShift(
+          index,
+          group.from.value,
+          group.target.value,
+          group.pitch.value,
+        ),
+      },
+    ],
+  }));
+  const lifted = useAnimatedStyle(() => ({
+    opacity: offset.value === 0 ? 0 : 1,
   }));
   const drop = useAnimatedStyle(() => ({
     opacity: offset.value === 0 ? 0 : 1,
+    transform: [
+      {
+        translateY: slotShift(
+          index,
+          group.from.value,
+          group.target.value,
+          group.pitch.value,
+        ),
+      },
+    ],
   }));
   const row = useAnimatedStyle(() => {
     const lifted = offset.value !== 0;
@@ -223,7 +254,7 @@ function useLift(offset: ReturnType<typeof useHandleDrag>['offset']) {
       boxShadow: lifted ? shadow : NO_SHADOW,
     };
   });
-  return { slot, drop, row };
+  return { slot, lifted, drop, row };
 }
 
 export function ArrangeRow({
@@ -234,6 +265,7 @@ export function ArrangeRow({
   arrangement,
   onArrange,
   onDragActive,
+  group,
 }: ArrangeRowProps) {
   const styles = useArrangeRowStyles();
   const handleMove = useCallback(
@@ -256,8 +288,9 @@ export function ArrangeRow({
     count,
     onMove: handleMove,
     onDragActive,
+    group,
   });
-  const lift = useLift(drag.offset);
+  const lift = useLift(drag.offset, group, index);
 
   return (
     <Animated.View style={lift.slot} onLayout={drag.onLayout}>
@@ -273,7 +306,7 @@ export function ArrangeRow({
           >
             <InlineIcon name="dragHandle" style={styles.handleGlyph} />
             <Animated.View
-              style={[StyleSheet.absoluteFill, styles.center, lift.drop]}
+              style={[StyleSheet.absoluteFill, styles.center, lift.lifted]}
             >
               <InlineIcon name="dragHandle" style={styles.handleGlyphLifted} />
             </Animated.View>

@@ -84,6 +84,9 @@ const useStyles = createThemedStyles((theme) => ({
   titleAction: {
     marginLeft: 'auto',
   },
+  titleBesideAction: {
+    flexShrink: 1,
+  },
   scroll: {
     flexGrow: 0,
     marginVertical: -SHEET_TOUCH_ROOM,
@@ -171,6 +174,7 @@ export function Sheet({
     styles.title,
     titleSize === 'large' && styles.titleLarge,
     titleSize === 'screen' && styles.titleScreen,
+    titleAction !== undefined && styles.titleBesideAction,
   ];
   const motion = useReduceMotionMode();
   const transitions = useMemo(

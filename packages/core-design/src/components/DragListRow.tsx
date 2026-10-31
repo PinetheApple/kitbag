@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useLayoutEffect, useMemo } from 'react';
 import {
   Text,
   View,
@@ -9,6 +9,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
+  type SharedValue,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
@@ -16,7 +17,7 @@ import { inset, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
-import { dropTarget } from '../dragReorder.ts';
+import { dropTarget, NO_DRAG, reorderTarget } from '../dragReorder.ts';
 import { Icon } from './Icon.tsx';
 import {
   RowPress,
@@ -41,24 +42,62 @@ const useStyles = createThemedStyles((theme) => ({
   },
 }));
 
+export interface DragGroup {
+  readonly from: SharedValue<number>;
+  readonly target: SharedValue<number>;
+  readonly pitch: SharedValue<number>;
+}
+
+// Rows sharing a group make room for the dragged row as it moves. A drop holds
+// the shifted layout until `order` changes, so rows never flash back first.
+export function useDragGroup(order: unknown): DragGroup {
+  const from = useSharedValue(NO_DRAG);
+  const target = useSharedValue(NO_DRAG);
+  const pitch = useSharedValue(0);
+  useLayoutEffect(() => {
+    from.value = NO_DRAG;
+    target.value = NO_DRAG;
+  }, [order, from, target]);
+  return useMemo(() => ({ from, target, pitch }), [from, target, pitch]);
+}
+
 export interface DragReorder {
   readonly index: number;
   readonly count: number;
   readonly onMove: (from: number, to: number) => void;
   readonly onDragActive?: (active: boolean) => void;
+  readonly group?: DragGroup;
 }
 
 export function useHandleDrag(reorder: DragReorder) {
   const offset = useSharedValue(0);
   const pitch = useSharedValue(0);
-  const { index, count, onMove, onDragActive } = reorder;
+  const moved = useSharedValue(false);
+  const { index, count, onMove, onDragActive, group } = reorder;
+  useLayoutEffect(() => {
+    offset.value = 0;
+  }, [index, offset]);
   const pan = Gesture.Pan()
     .hitSlop(HANDLE_HIT_SLOP)
     .onBegin(() => {
+      moved.value = false;
       if (onDragActive !== undefined) scheduleOnRN(onDragActive, true);
+    })
+    .onStart(() => {
+      if (group === undefined) return;
+      group.from.value = index;
+      group.target.value = index;
+      group.pitch.value = pitch.value;
     })
     .onUpdate((event) => {
       offset.value = event.translationY;
+      if (group === undefined) return;
+      group.target.value = reorderTarget(
+        index,
+        event.translationY,
+        pitch.value,
+        count,
+      );
     })
     .onEnd((event, success) => {
       const to = dropTarget(
@@ -68,11 +107,15 @@ export function useHandleDrag(reorder: DragReorder) {
         count,
         success,
       );
-      if (to !== null) scheduleOnRN(onMove, index, to);
+      if (to === null) return;
+      moved.value = true;
+      scheduleOnRN(onMove, index, to);
     })
     .onFinalize(() => {
-      offset.value = 0;
       if (onDragActive !== undefined) scheduleOnRN(onDragActive, false);
+      if (group !== undefined && moved.value) return;
+      offset.value = 0;
+      if (group !== undefined) group.from.value = NO_DRAG;
     });
   const style = useAnimatedStyle(() => ({
     transform: [{ translateY: offset.value }],
