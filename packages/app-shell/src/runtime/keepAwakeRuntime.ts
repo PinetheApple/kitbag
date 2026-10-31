@@ -5,10 +5,10 @@ import {
   stemPlayerStore,
   tunerStore,
 } from '@kitbag/core-state';
-import { AppState } from 'react-native';
 
 // Configures the appearance store before getAppearanceStore() below reads it.
 import './appearanceRuntime';
+import { onAppForeground } from './appForeground';
 import { wireKeepAwake } from './keepAwake.ts';
 
 const MIXER_POLL_MS = 1000;
@@ -25,11 +25,7 @@ wireKeepAwake({
       clearInterval(timer);
     };
   },
-  onForeground: (listener) => {
-    AppState.addEventListener('change', (state) => {
-      if (state === 'active') listener();
-    });
-  },
+  onForeground: onAppForeground,
   setKeepScreenOn: (on) => {
     getKitbagCommands().setKeepScreenOn(on);
   },

@@ -8,10 +8,10 @@ import {
   getAppearanceStore,
 } from '@kitbag/core-state';
 import * as SystemUI from 'expo-system-ui';
-import { AppState } from 'react-native';
 
 import { appearanceApplier, keepNightMode } from './appearance';
 import { appearancePreference } from './appearancePreference';
+import { onAppForeground } from './appForeground';
 import { getDatabase } from './database';
 
 configureAppearancePersistence(
@@ -24,16 +24,11 @@ store.subscribe((state) => {
   setHapticsEnabled(state.haptics);
 });
 
-// Below API 31 expo-system-ui resets the night mode in every activity onCreate,
-// and a recreated activity always resumes, so re-apply on each return to active.
+// expo-system-ui resets the night mode in every activity onCreate; see docs/decisions.md.
 keepNightMode({
   choice: () => store.getState().theme,
   setNightMode: setAppNightMode,
-  onForeground: (listener) => {
-    AppState.addEventListener('change', (state) => {
-      if (state === 'active') listener();
-    });
-  },
+  onForeground: onAppForeground,
 });
 
 export const applyAppearance = appearanceApplier({
