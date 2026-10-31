@@ -1,3 +1,4 @@
+import { countLabel } from '@kitbag/core-design';
 import { KB_POLY_AGAINST_BAR } from '@kitbag/core-native';
 import { effectivePolyAgainst } from '@kitbag/core-state';
 
@@ -134,15 +135,18 @@ export function polyRatioLabel(ratio: PolyRatio): string {
 export interface PolyAgainstLabel {
   readonly value: string;
   readonly suffix: string | undefined;
+  readonly spoken: string;
 }
 
 export function polyAgainstLabel(
   against: number,
   beatsPerBar: number,
 ): PolyAgainstLabel {
+  const main = effectivePolyAgainst(against, beatsPerBar);
+  const count = countLabel(main, 'beat', 'beats');
   return against === KB_POLY_AGAINST_BAR
-    ? { value: String(beatsPerBar), suffix: 'bar' }
-    : { value: String(against), suffix: undefined };
+    ? { value: String(main), suffix: 'bar', spoken: `${count}, the bar` }
+    : { value: String(main), suffix: undefined, spoken: count };
 }
 
 export interface PolyStripCaption {

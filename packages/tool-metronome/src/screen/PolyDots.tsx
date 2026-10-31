@@ -8,7 +8,7 @@ import {
   TRANSPARENT,
   useTheme,
 } from '@kitbag/core-design';
-import { effectivePolyAgainst, useMetronome } from '@kitbag/core-state';
+import { effectivePolyAgainst } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
 import { Text, View, type LayoutChangeEvent } from 'react-native';
 import Animated, {
@@ -90,18 +90,15 @@ interface PlacedSpan {
 
 type SpanColumn = readonly (PlacedSpan | null)[];
 
-function spanColumns(
-  ratio: PolyRatio,
-  row: PolyRowGeometry,
-): readonly SpanColumn[] {
-  const bars = polyBarTable(ratio);
-  const count = Math.max(...bars.map((bar) => bar.spans.length));
+function columnsOf<Item, Placed>(
+  rows: readonly (readonly Item[])[],
+  place: (item: Item) => Placed,
+): readonly (readonly (Placed | null)[])[] {
+  const count = Math.max(...rows.map((row) => row.length));
   return Array.from({ length: count }, (_u, index) =>
-    bars.map((bar) => {
-      const span = bar.spans[index];
-      if (span === undefined) return null;
-      const place = polySpanPlace(span, ratio.beatsPerBar, row);
-      return { ...place, cycle: span.cycle };
+    rows.map((row) => {
+      const item = row[index];
+      return item === undefined ? null : place(item);
     }),
   );
 }
@@ -111,14 +108,25 @@ function pulseColumns(
   row: PolyRowGeometry,
   size: number,
 ): readonly PulseColumn[] {
-  const bars = polyBarTable(ratio);
-  const count = Math.max(...bars.map((bar) => bar.pulses.length));
-  return Array.from({ length: count }, (_u, index) =>
-    bars.map((bar) => {
-      const pulse = bar.pulses[index];
-      if (pulse === undefined) return null;
-      const centre = polyX(pulse.beat, ratio.beatsPerBar, row);
-      return { left: centre - size / 2, slot: pulse.slot, cycle: pulse.cycle };
+  return columnsOf(
+    polyBarTable(ratio).map((bar) => bar.pulses),
+    (pulse) => ({
+      left: polyX(pulse.beat, ratio.beatsPerBar, row) - size / 2,
+      slot: pulse.slot,
+      cycle: pulse.cycle,
+    }),
+  );
+}
+
+function spanColumns(
+  ratio: PolyRatio,
+  row: PolyRowGeometry,
+): readonly SpanColumn[] {
+  return columnsOf(
+    polyBarTable(ratio).map((bar) => bar.spans),
+    (span) => ({
+      ...polySpanPlace(span, ratio.beatsPerBar, row),
+      cycle: span.cycle,
     }),
   );
 }
@@ -200,6 +208,7 @@ export interface PolyDotsFrame {
 
 interface PolyDotsProps {
   readonly polyBeats: number;
+  readonly polyAgainst: number;
   readonly beatsPerBar: number;
   readonly lineWidth: number;
   readonly areaWidth: number;
@@ -220,6 +229,7 @@ function usePolyFrame(frame: PolyDotsFrame, against: number) {
 
 export function PolyDots({
   polyBeats,
+  polyAgainst,
   beatsPerBar,
   lineWidth,
   areaWidth,
@@ -227,8 +237,7 @@ export function PolyDots({
   frame,
 }: PolyDotsProps) {
   const styles = usePolyStyles();
-  const storedAgainst = useMetronome((s) => s.polyAgainst);
-  const against = effectivePolyAgainst(storedAgainst, beatsPerBar);
+  const against = effectivePolyAgainst(polyAgainst, beatsPerBar);
   const ratio = useMemo(
     () => ({ polyBeats, against, beatsPerBar }),
     [polyBeats, against, beatsPerBar],

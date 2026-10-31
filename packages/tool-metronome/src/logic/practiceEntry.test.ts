@@ -122,7 +122,7 @@ describe('typing a practice value', () => {
     const typed = typeInto('polyAgainst', [4], three).polyAgainst;
     expect(typed).toBe(KB_POLY_AGAINST_BAR);
     expect(typed).toBe(stepPolyAgainst(3, 1, VALUES.beatsPerBar));
-    expect(polyAgainstLabel(typed, VALUES.beatsPerBar)).toEqual({
+    expect(polyAgainstLabel(typed, VALUES.beatsPerBar)).toMatchObject({
       value: '4',
       suffix: 'bar',
     });

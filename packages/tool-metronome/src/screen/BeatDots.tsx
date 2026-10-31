@@ -133,6 +133,7 @@ interface BeatDotsProps {
   readonly beatCount: number;
   readonly subdivision: number;
   readonly polyBeats: number | null;
+  readonly polyAgainst: number;
   readonly accents: readonly KB_ACCENT[];
   readonly width: number;
   readonly density: ScreenDensity;
@@ -144,6 +145,7 @@ export function BeatDots({
   beatCount,
   subdivision,
   polyBeats,
+  polyAgainst,
   accents,
   width,
   density,
@@ -231,6 +233,7 @@ export function BeatDots({
         {polyBeats === null ? null : (
           <PolyDots
             polyBeats={polyBeats}
+            polyAgainst={polyAgainst}
             beatsPerBar={beatCount}
             lineWidth={widestLineWidth(lines, dotSize, metrics)}
             areaWidth={width}

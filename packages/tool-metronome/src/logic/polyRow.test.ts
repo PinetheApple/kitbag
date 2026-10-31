@@ -1,3 +1,4 @@
+import { metronome } from '@kitbag/core-design';
 import { KB_POLY_AGAINST_BAR, KB_POLY_PHASE_NONE } from '@kitbag/core-native';
 import { effectivePolyAgainst } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
@@ -19,8 +20,14 @@ import {
 } from './polyRow.ts';
 
 const ROW = { lineWidth: 4 * 56 + 3 * 12, dotSize: 56, dotGap: 12 };
-const PRECISION = 1e9;
-const exact = (value: number) => Math.round(value * PRECISION) / PRECISION;
+const EXACT_PLACES = 9;
+const DESIGN_PLACES = 1;
+const POLY_DOT_RADIUS = metronome.polyDot / 2;
+const roundTo = (value: number, places: number) => {
+  const scale = 10 ** places;
+  return Math.round(value * scale) / scale;
+};
+const exact = (value: number) => roundTo(value, EXACT_PLACES);
 
 function pulsesOf(ratio: PolyRatio, offset: number) {
   return polyBar(ratio, offset).pulses.map(({ beat, slot, cycle }) => [
@@ -67,11 +74,12 @@ describe('3:2 in 4/4', () => {
 
   it('places pulses and brackets where the design draws them', () => {
     const lefts = polyBar(ratio, 0).pulses.map((pulse) =>
-      exact(polyX(pulse.beat, ratio.beatsPerBar, ROW) - 11),
+      roundTo(
+        polyX(pulse.beat, ratio.beatsPerBar, ROW) - POLY_DOT_RADIUS,
+        DESIGN_PLACES,
+      ),
     );
-    expect(lefts.map((left) => Math.round(left * 10) / 10)).toEqual([
-      17, 62.3, 107.7, 153, 198.3, 243.7,
-    ]);
+    expect(lefts).toEqual([17, 62.3, 107.7, 153, 198.3, 243.7]);
     expect(
       polyBar(ratio, 0).spans.map((span) =>
         polySpanPlace(span, ratio.beatsPerBar, ROW),
@@ -250,7 +258,7 @@ describe('cycle offset', () => {
   });
 
   it('lights no cycle while stopped', () => {
-    expect(soundingCycle(-1, 0, 3)).toBe(NO_CYCLE);
+    expect(soundingCycle(-1, 2, 3)).toBe(NO_CYCLE);
   });
 });
 
@@ -273,11 +281,16 @@ describe('against value', () => {
     expect(polyAgainstLabel(KB_POLY_AGAINST_BAR, 4)).toEqual({
       value: '4',
       suffix: 'bar',
+      spoken: '4 beats, the bar',
     });
   });
 
   it('reads an explicit count as a bare number', () => {
-    expect(polyAgainstLabel(2, 4)).toEqual({ value: '2', suffix: undefined });
+    expect(polyAgainstLabel(2, 4)).toEqual({
+      value: '2',
+      suffix: undefined,
+      spoken: '2 beats',
+    });
   });
 });
 

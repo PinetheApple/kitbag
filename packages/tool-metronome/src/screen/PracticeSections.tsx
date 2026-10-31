@@ -9,8 +9,7 @@ import {
   type StepDelta,
   Switch,
 } from '@kitbag/core-design';
-import { KB_POLY_AGAINST_BAR } from '@kitbag/core-native';
-import { effectivePolyAgainst, useMetronome } from '@kitbag/core-state';
+import { useMetronome } from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { Text, View } from 'react-native';
 
@@ -175,15 +174,6 @@ export function PracticeCountIn() {
   );
 }
 
-function againstSpoken(against: number, beatsPerBar: number): string {
-  const count = countLabel(
-    effectivePolyAgainst(against, beatsPerBar),
-    'beat',
-    'beats',
-  );
-  return against === KB_POLY_AGAINST_BAR ? `${count}, the bar` : count;
-}
-
 export function PracticePoly({ onType }: TypeProps) {
   const styles = usePracticeStyles();
   const beatsPerBar = useMetronome((s) => s.beatsPerBar);
@@ -245,7 +235,7 @@ export function PracticePoly({ onType }: TypeProps) {
           label="Against"
           value={againstLabel.value}
           suffix={againstLabel.suffix}
-          accessibilityValue={againstSpoken(polyAgainst, beatsPerBar)}
+          accessibilityValue={againstLabel.spoken}
           neighbourGapDp={space.controlGap}
           onStep={stepAgainst}
           onValuePress={handleTypeAgainst}

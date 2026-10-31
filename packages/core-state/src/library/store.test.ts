@@ -1,59 +1,9 @@
-import { createSetlistRepository } from '@kitbag/core-db/src/setlist-repository';
-import { createSongPresetRepository } from '@kitbag/core-db/src/song-preset-repository';
-import { openTestDatabase } from '@kitbag/core-db/src/sqlite.test-helper';
-import {
-  KB_ACCENT,
-  KB_POLY_AGAINST_BAR,
-  KB_RAMP_UNIT,
-} from '@kitbag/core-native';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { KB_ACCENT, KB_RAMP_UNIT } from '@kitbag/core-native';
+import { describe, expect, it, vi } from 'vitest';
 
-import { createMetronomeStore } from '../metronome/store.ts';
 import { SONG_STEP } from './setlistPosition.ts';
-import { createLibraryStore } from './store.ts';
-
-const handles: ReturnType<typeof openTestDatabase>[] = [];
-
-afterEach(() => {
-  for (const { connection } of handles.splice(0)) connection.close();
-});
-
-function setup(engineBpm = () => 120) {
-  const handle = openTestDatabase();
-  handles.push(handle);
-  const repos = {
-    setlists: createSetlistRepository(handle),
-    presets: createSongPresetRepository(handle),
-  };
-  const commands = {
-    start: vi.fn(() => Promise.resolve(0)),
-    metronomeStart: vi.fn(),
-    metronomeStop: vi.fn(),
-    metronomePause: vi.fn(),
-    setTempo: vi.fn(),
-    setBeats: vi.fn(),
-    setSubdivision: vi.fn(),
-    setAccent: vi.fn(),
-    setPoly: vi.fn(),
-    setPolyAccent: vi.fn(),
-    setPolyAgainst: vi.fn(),
-    setSounds: vi.fn(),
-    previewSound: vi.fn(),
-    setCountIn: vi.fn(),
-    setVolume: vi.fn(),
-    setLatencyOffset: vi.fn(),
-    setRamp: vi.fn(),
-    setBarMute: vi.fn(),
-    engineHold: vi.fn(),
-    engineRelease: vi.fn(),
-  };
-  const metronome = createMetronomeStore(commands, () => 0, engineBpm);
-  const library = createLibraryStore({
-    repos: () => repos,
-    metronome: () => metronome.getState(),
-  });
-  return { library, metronome, commands, repos };
-}
+import type { createLibraryStore } from './store.ts';
+import { setup } from './store.test-helper.ts';
 
 async function songsIn(
   library: ReturnType<typeof createLibraryStore>,
@@ -168,49 +118,6 @@ describe('library store', () => {
       itemId: entry.item.id,
       setlistId: gig,
     });
-  });
-
-  it('saves the poly cycle with a song and sends it back on load', async () => {
-    const { library, metronome, commands } = setup();
-    const s = library.getState();
-    metronome.getState().setPoly(true, 3);
-    metronome.getState().setPolyAgainst(2);
-    const explicit = await s.newSongFromCurrent('Three against two');
-    metronome.getState().setPolyAgainst(KB_POLY_AGAINST_BAR);
-    const bar = await s.newSongFromCurrent('Three against the bar');
-    await s.loadSong(explicit);
-    expect(metronome.getState().polyAgainst).toBe(2);
-    expect(commands.setPolyAgainst).toHaveBeenLastCalledWith(2);
-    await s.loadSong(bar);
-    expect(metronome.getState().polyAgainst).toBe(KB_POLY_AGAINST_BAR);
-    expect(commands.setPolyAgainst).toHaveBeenLastCalledWith(
-      KB_POLY_AGAINST_BAR,
-    );
-  });
-
-  it('loads a stored count equal to the song meter as the bar', async () => {
-    const { library, metronome, repos } = setup();
-    const s = library.getState();
-    metronome.getState().setBeats(3, 4);
-    const song = await s.newSongFromCurrent('Waltz');
-    await repos.presets.update(song, { polyAgainst: 3 });
-    await s.refresh();
-    metronome.getState().setBeats(4, 4);
-    await s.loadSong(song);
-    expect(metronome.getState().polyAgainst).toBe(KB_POLY_AGAINST_BAR);
-  });
-
-  it('applies the meter before the poly cycle on load', async () => {
-    const { library, metronome, commands } = setup();
-    const s = library.getState();
-    metronome.getState().setPolyAgainst(2);
-    const song = await s.newSongFromCurrent('Order');
-    commands.setBeats.mockClear();
-    commands.setPolyAgainst.mockClear();
-    await s.loadSong(song);
-    const [beats] = commands.setBeats.mock.invocationCallOrder;
-    const [against] = commands.setPolyAgainst.mock.invocationCallOrder;
-    expect(beats).toBeLessThan(against ?? 0);
   });
 
   async function offStage() {

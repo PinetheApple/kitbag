@@ -134,6 +134,17 @@ describe('poly against', () => {
     expect(commands.setPolyAgainst).toHaveBeenCalledWith(KB_POLY_AGAINST_BAR);
   });
 
+  it('sends the meter before the bar it turns the count into', () => {
+    const { commands, store } = setup();
+    store.getState().setPolyAgainst(3);
+    commands.setBeats.mockClear();
+    commands.setPolyAgainst.mockClear();
+    store.getState().setBeats(3, 4);
+    const [beats] = commands.setBeats.mock.invocationCallOrder;
+    const [against] = commands.setPolyAgainst.mock.invocationCallOrder;
+    expect(beats).toBeLessThan(against ?? 0);
+  });
+
   it('keeps an explicit count the new meter does not equal', () => {
     const { commands, store } = setup();
     store.getState().setPolyAgainst(2);

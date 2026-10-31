@@ -11,6 +11,7 @@ import {
 } from '@kitbag/core-state';
 
 import { countInLabel } from './countIn.ts';
+import { polyRatioLabel } from './polyRow.ts';
 
 export interface PracticeSettings {
   readonly ramp: RampConfig;
@@ -45,11 +46,12 @@ export function armedSummary(settings: PracticeSettings): string {
     parts.push(`Count-in ${countInLabel(settings.countIn.bars)}`);
   }
   if (settings.polyEnabled) {
-    const against = effectivePolyAgainst(
-      settings.polyAgainst,
-      settings.beatsPerBar,
-    );
-    parts.push(`Poly ${String(settings.polyBeats)}:${String(against)}`);
+    const ratio = polyRatioLabel({
+      polyBeats: settings.polyBeats,
+      against: effectivePolyAgainst(settings.polyAgainst, settings.beatsPerBar),
+      beatsPerBar: settings.beatsPerBar,
+    });
+    parts.push(`Poly ${ratio}`);
   }
   return parts.length === 0 ? NOTHING_ARMED : parts.join(' · ');
 }
