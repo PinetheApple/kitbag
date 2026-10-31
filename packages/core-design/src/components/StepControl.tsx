@@ -307,7 +307,7 @@ export function StepControl({
   const valueBoxStyle = inline
     ? styles.inlineValueBox
     : [styles.badgeValueBox, accented && styles.badgeValueBoxAccented];
-  const valueLine = (
+  const valueNumber = (
     <Text
       style={
         inline
@@ -318,12 +318,12 @@ export function StepControl({
       {value}
     </Text>
   );
-  const valueText =
+  const valueContent =
     suffix === undefined ? (
-      valueLine
+      valueNumber
     ) : (
       <View style={styles.suffixed}>
-        {valueLine}
+        {valueNumber}
         <Text style={styles.suffix}>{suffix}</Text>
       </View>
     );
@@ -354,10 +354,10 @@ export function StepControl({
           ]}
           onPress={onValuePress}
         >
-          {valueText}
+          {valueContent}
         </Pressable>
       ) : (
-        <View style={[valueBoxStyle, styles.inertValue]}>{valueText}</View>
+        <View style={[valueBoxStyle, styles.inertValue]}>{valueContent}</View>
       )}
       {key('increase', hitBoxes.increment, handleIncrement)}
     </View>

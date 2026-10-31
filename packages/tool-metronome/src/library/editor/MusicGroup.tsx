@@ -5,13 +5,14 @@ import {
   EditRow,
   EditTextInput,
   metronomeEditor,
+  minTouchTargetDp,
   space,
   StepControl,
   type StepDelta,
 } from '@kitbag/core-design';
 import { KB_STOPPED_BEAT, KB_SUBDIVISION_BOUNDS } from '@kitbag/core-native';
 import { BPM_BOUNDS } from '@kitbag/core-state';
-import { useCallback } from 'react';
+import { useCallback, type ReactNode } from 'react';
 import { View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 
@@ -28,9 +29,13 @@ import { BeatLeds } from '../../screen/BeatLeds.tsx';
 
 const SUB_ROW = {
   paddingLeft: metronomeEditor.subRowIndent,
-  minHeight: metronomeEditor.subRowMin,
+  minHeight: minTouchTargetDp,
   justifyContent: 'center',
 } as const;
+
+function SubRow({ children }: { readonly children: ReactNode }) {
+  return <View style={SUB_ROW}>{children}</View>;
+}
 
 const EDITOR_LED_GAPS = {
   top: space.rowGap,
@@ -159,7 +164,7 @@ function PolyRows({ editor }: { readonly editor: PresetEditor }) {
       {draft.polyEnabled ? (
         <>
           <EditDivider />
-          <View style={SUB_ROW}>
+          <SubRow>
             <EditRow label="Poly">
               <StepControl
                 variant="inlineLarge"
@@ -173,19 +178,20 @@ function PolyRows({ editor }: { readonly editor: PresetEditor }) {
                 onStep={stepPoly}
               />
             </EditRow>
-          </View>
+          </SubRow>
           <EditDivider />
-          <View style={SUB_ROW}>
+          <SubRow>
             <EditRow label="Against">
               <StepControl
                 variant="inlineLarge"
                 label="Against"
                 value={against.value}
                 suffix={against.suffix}
+                accessibilityValue={against.spoken}
                 onStep={stepAgainst}
               />
             </EditRow>
-          </View>
+          </SubRow>
         </>
       ) : null}
     </>

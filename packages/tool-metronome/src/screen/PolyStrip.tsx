@@ -1,4 +1,5 @@
 import {
+  asPercent,
   createThemedStyles,
   metronomeSheet,
   radius,
@@ -12,8 +13,6 @@ import { useMemo } from 'react';
 import { Text, View } from 'react-native';
 
 import { polyStripCaption } from '../logic/polyRow.ts';
-
-const FULL_PERCENT = 100;
 
 const useStripStyles = createThemedStyles((theme) => ({
   strip: {
@@ -72,7 +71,7 @@ export function PolyStrip({ polyBeats, against, beatsPerBar }: PolyStripProps) {
   const pulses = useMemo(
     () =>
       Array.from({ length: polyBeats }, (_u, k) => ({
-        left: `${String((k / polyBeats) * FULL_PERCENT)}%` as `${number}%`,
+        left: asPercent(k / polyBeats),
       })),
     [polyBeats],
   );

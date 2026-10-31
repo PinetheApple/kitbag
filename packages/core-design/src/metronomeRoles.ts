@@ -107,7 +107,6 @@ export const metronomeSheet = {
 
 export const metronomeEditor = {
   subRowIndent: 14,
-  subRowMin: 48,
 } as const;
 
 export const wheelPicker = {
