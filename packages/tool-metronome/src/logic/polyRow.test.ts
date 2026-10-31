@@ -130,6 +130,7 @@ describe('5:3 in 4/4 over bars 1 to 4', () => {
       [1, 2, 4],
     ]);
     expect(soundingCycle(1, 1, ratio.against)).toBe(0);
+    expect(soundingCycle(2, 1, ratio.against)).toBe(1);
   });
 
   it('bar 3: one pulse is left of the carried cycle', () => {
@@ -145,6 +146,7 @@ describe('5:3 in 4/4 over bars 1 to 4', () => {
       [0, 0, 1],
       [1, 1, 4],
     ]);
+    expect(soundingCycle(1, 2, ratio.against)).toBe(1);
   });
 
   it('bar 4 draws bar 1 again', () => {
@@ -172,6 +174,16 @@ describe('3:4, against the bar', () => {
         polySpanPlace(span, ratio.beatsPerBar, ROW),
       ),
     ).toEqual([{ left: 28, width: 272 }]);
+  });
+});
+
+describe('3:6 in 4/4', () => {
+  it('leaves a pulse on the barline to the next bar', () => {
+    const ratio = { polyBeats: 3, against: 6, beatsPerBar: 4 };
+    expect(pulsesOf(ratio, 0)).toEqual([
+      [0, 0, 0],
+      [2, 1, 0],
+    ]);
   });
 });
 
