@@ -40,6 +40,8 @@ import type { HomeToolEntry } from './registry.ts';
 const RESTING_Z = 0;
 const LIFTED_Z = 1;
 const RESTING_SCALE = 1;
+// RN parses an empty list as no shadow; it rejects the CSS keyword `none`.
+const NO_SHADOW = '';
 const ROW_EDGE =
   unshared(homeArrange.rowPadV + size.stroke) + homeArrange.rowGap;
 const EYE_HIT_BOX = hitBoxStyle(
@@ -184,7 +186,7 @@ function useLift(offset: ReturnType<typeof useHandleDrag>['offset']) {
       ],
       borderColor: lifted ? accent : line,
       backgroundColor: lifted ? surface3 : surface2,
-      boxShadow: lifted ? shadow : 'none',
+      boxShadow: lifted ? shadow : NO_SHADOW,
     };
   });
   return { slot, drop, row };
