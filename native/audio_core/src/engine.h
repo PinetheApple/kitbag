@@ -45,6 +45,15 @@ class Engine {
   void SetMixerIntent(bool playing) {
     mixer_intent_.store(playing);
   }
+  void SetRigClickIntent(bool playing) {
+    rig_click_intent_.store(playing);
+  }
+  bool rig_click_intent() const {
+    return rig_click_intent_.load();
+  }
+  bool metronome_intent() const {
+    return metronome_intent_.load();
+  }
   void set_idle_grace_ms(uint32_t grace_ms) {
     idle_grace_ms_.store(grace_ms, std::memory_order_relaxed);
   }
@@ -148,6 +157,7 @@ class Engine {
   int32_t holders_ = 0;
   std::atomic<bool> metronome_intent_{false};
   std::atomic<bool> mixer_intent_{false};
+  std::atomic<bool> rig_click_intent_{false};
   std::atomic<uint32_t> idle_grace_ms_{kDefaultIdleGraceMs};
 
   Metronome metronome_;

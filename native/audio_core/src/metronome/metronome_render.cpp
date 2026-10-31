@@ -75,10 +75,6 @@ void Metronome::OnBeatBoundary(int beat_index, uint32_t sample_rate) {
   );
 }
 
-bool Metronome::SubdivisionSlotAccented(int slot) const {
-  return ((AccentRowFor(subdivision_) >> slot) & 1U) != 0;
-}
-
 void Metronome::OnSubdivisionTick(
     int64_t owning_beat,
     int slot,
@@ -90,7 +86,15 @@ void Metronome::OnSubdivisionTick(
   if (accents_[beat_in_bar] == Accent::kMuted || BarIsMuted(current_bar_)) {
     return;
   }
-  const bool accented = SubdivisionSlotAccented(slot);
+  TriggerSubdivision(subdivision_, slot, sample_rate);
+}
+
+void Metronome::TriggerSubdivision(
+    int subdivision,
+    int slot,
+    uint32_t sample_rate
+) {
+  const bool accented = ((AccentRowFor(subdivision) >> slot) & 1U) != 0;
   const SoundPreset& sound = kSounds[accented ? accent_sound_ : normal_sound_];
   voices_.Trigger(
       accented ? sound.accent_hz : sound.subdivision_hz,
@@ -99,6 +103,14 @@ void Metronome::OnSubdivisionTick(
       sound.decay_per_second,
       sample_rate
   );
+}
+
+void Metronome::OnRigTick(int slot, uint32_t sample_rate) {
+  if (slot == 0) {
+    TriggerPreset(normal_sound_, false, sample_rate);
+    return;
+  }
+  TriggerSubdivision(rig_click_.subdivision(), slot, sample_rate);
 }
 
 void Metronome::OnPolyBoundary(int poly_index, uint32_t sample_rate) {
@@ -296,6 +308,11 @@ Metronome::GridView Metronome::BeginBlock(
     BlockTempo* tempo
 ) {
   ApplyPendingCommands();
+  rig_click_.BeginBlock(
+      block_start_frame,
+      sample_rate,
+      running_ || has_pending_start_ || has_pending_anchor_
+  );
   if (pending_preview_sound_ >= 0) {
     TriggerPreset(
         pending_preview_sound_,
@@ -340,6 +357,8 @@ void Metronome::Render(
     } else if (running_) {
       AdvanceConstantTempo(sample_rate, &tempo);
     }
+    const int rig_slot = rig_click_.TickAt(now);
+    if (rig_slot != RigClick::kNoTick) OnRigTick(rig_slot, sample_rate);
     const float sample = voices_.Render() * volume_;
     for (uint32_t channel = 0; channel < channel_count; ++channel) {
       output[frame * channel_count + channel] += sample;

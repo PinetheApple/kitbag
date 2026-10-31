@@ -2,12 +2,13 @@
 // asserts click onsets land where the contract says. Suite entry point only.
 #include <cstdio>
 
+#include "metronome_test_rig_model.h"
 #include "metronome_test_support.h"
 #include "rt_test_support.h"
 
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 539;
+constexpr int kExpectedChecks = 559;
 
 void RunAllTests() {
   metronome_test::RunBasicTests();
@@ -23,6 +24,9 @@ void RunAllTests() {
   metronome_test::RunPolyPhaseTests();
   metronome_test::RunSoundTests();
   metronome_test::RunSubdivisionAccentTests();
+  metronome_test::RunRigClickScheduleTests();
+  metronome_test::RunRigClickSoundTests();
+  metronome_test::RunRigClickIsolationTests();
   metronome_test::RunCountInTests();
   metronome_test::RunLongCountInTests();
   metronome_test::RunRampTests();

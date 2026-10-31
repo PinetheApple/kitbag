@@ -131,7 +131,8 @@ void Engine::ReleaseRetired() {
 // The mirrors cover a stop still queued in the ring, the intents a start.
 bool Engine::IsIdle() const {
   return holders_ == 0 && !metronome_intent_.load() && !mixer_intent_.load() &&
-         !metronome_.is_running() && !mixer_.is_playing();
+         !rig_click_intent_.load() && !metronome_.is_running() &&
+         !mixer_.is_playing() && !metronome_.rig_click().is_active();
 }
 
 void Engine::OnNotification(const ma_device_notification* notification) {

@@ -11,6 +11,7 @@
 #include "media/loop_layout.h"
 #include "metronome/click_voices.h"
 #include "metronome/metronome_types.h"
+#include "metronome/rig_click.h"
 #include "metronome/tempo_ramp.h"
 #include "metronome/trainer_mirrors.h"
 #include "rt/rt_publisher.h"
@@ -139,6 +140,12 @@ class Metronome {
   const TrainerMirrors& trainer_mirrors() const {
     return trainer_mirrors_;
   }
+  RigClick& rig_click() {
+    return rig_click_;
+  }
+  const RigClick& rig_click() const {
+    return rig_click_;
+  }
 
  private:
   enum class CommandType : uint8_t {
@@ -238,7 +245,8 @@ class Metronome {
   void TriggerPreset(int sound, bool accented, uint32_t sample_rate);
   void OnBeatBoundary(int beat_index, uint32_t sample_rate);
   void OnSubdivisionTick(int64_t owning_beat, int slot, uint32_t sample_rate);
-  bool SubdivisionSlotAccented(int slot) const;
+  void TriggerSubdivision(int subdivision, int slot, uint32_t sample_rate);
+  void OnRigTick(int slot, uint32_t sample_rate);
   uint16_t& AccentRowFor(int subdivision);
   uint16_t AccentRowFor(int subdivision) const;
   void OnPolyBoundary(int poly_index, uint32_t sample_rate);
@@ -368,6 +376,7 @@ class Metronome {
   double volume_ = 1.0;
   double latency_offset_ms_ = 0.0;
   ClickVoices voices_;
+  RigClick rig_click_;
   bool follow_mixer_ = false;
   // Any other song frame, a seek or a loop wrap, reseeds the cursor.
   int64_t follow_next_frame_ = kReseedFollow;

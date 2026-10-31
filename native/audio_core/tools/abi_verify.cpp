@@ -25,7 +25,7 @@ using kitbag_test::g_failures;
 
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 127;
+constexpr int kExpectedChecks = 140;
 
 void ExpectRejected(
     kb_engine* engine,
@@ -259,6 +259,15 @@ bool RunFileFixtureTests(kb_engine* engine) {
   return true;
 }
 
+void RunSplitSuites() {
+  abi_test::RunMetronomeAbiTests();
+  abi_test::RunLongGridAbiTests();
+  abi_test::RunPolyAbiTests();
+  abi_test::RunSubdivisionAccentAbiTests();
+  abi_test::RunRigClickAbiTests();
+  abi_test::RunEngineHoldAbiTests();
+}
+
 // Returns the process exit code, so main stays a list of what it runs.
 int Report() {
   if (g_checks != kExpectedChecks) {
@@ -296,11 +305,7 @@ int main() {
   TestClearGrid(engine);
   TestMixerTransportIsNullSafe(engine);
   TestPlayerNullSafe();
-  abi_test::RunMetronomeAbiTests();
-  abi_test::RunLongGridAbiTests();
-  abi_test::RunPolyAbiTests();
-  abi_test::RunSubdivisionAccentAbiTests();
-  abi_test::RunEngineHoldAbiTests();
+  RunSplitSuites();
   RunTunerAbiTests(engine);
 
   if (!RunFileFixtureTests(engine)) {
