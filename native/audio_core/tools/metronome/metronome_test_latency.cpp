@@ -168,6 +168,41 @@ void TestGridReanchorComposesWithLatency() {
   );
 }
 
+constexpr double kStartAtGridFirstSec = 0.37;
+constexpr double kStartAtGridIntervalSec = 0.41;
+constexpr int64_t kStartAtGridFrame = 54240;
+
+// Under a grid, start_at gates rather than places beat 0: beat t sounds at
+// t - offset, and only beats at or after the start frame sound.
+void TestGridStartAtComposesWithLatency() {
+  const double bound = kitbag::Metronome::kMaxLatencyOffsetMs;
+  for (const double offset_ms : {0.0, bound, -bound}) {
+    kitbag::Metronome metronome;
+    metronome.SetTimeSignature(4, 4);
+    metronome.SetLatencyOffset(offset_ms);
+    auto grid =
+        MakeShiftedGrid(20, kStartAtGridFirstSec, kStartAtGridIntervalSec);
+    const auto times = grid->beat_times_sec;
+    metronome.SetGrid(std::move(grid), 0, true);
+    metronome.StartAt(static_cast<uint64_t>(kStartAtGridFrame));
+    const int64_t total = kSampleRate * 4;
+    const double start_sec =
+        static_cast<double>(kStartAtGridFrame) / kSampleRate;
+    std::vector<double> expected;
+    for (const double t : times) {
+      const double at = t - offset_ms / kMsPerSecond;
+      if (at >= start_sec && at * kSampleRate < static_cast<double>(total)) {
+        expected.push_back(at);
+      }
+    }
+    ExpectOnsetsAtSeconds(
+        RenderAndDetectOnsets(metronome, total),
+        expected,
+        "grid + start_at + latency: beat t sounds at t - offset, from the start"
+    );
+  }
+}
+
 // Peak |sample| over an absolute frame window, rendered fresh from frame 0.
 // Isolates one click the onset detector cannot: at bpm 400 subdivisions sit
 // 3600 frames apart, below kOnsetHoldFrames, so the detector merges them.
@@ -293,6 +328,7 @@ void RunLatencyTests() {
   TestLatencyOffsetSurvivesRamp();
   TestGridComposesWithLatency();
   TestGridReanchorComposesWithLatency();
+  TestGridStartAtComposesWithLatency();
   TestMutedBeatCascadesToSubdivision();
   TestLatencyOffsetClampsAtBound();
 }

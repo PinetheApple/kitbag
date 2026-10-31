@@ -329,8 +329,9 @@ Requirements:
   the click share one output stream and so share its output latency; the
   offset compensates only the click's perception relative to the listener, so
   on a free run `start_at` fires beat 0 on the requested frame whatever the
-  offset. With a grid set, `BeginPendingStart` seeds the grid cursor through
-  `GridSeconds`, which includes the offset, so the grid's clicks land early by it.
+  offset. With a grid set, `start_at` gates rather than places: grid beat `t`
+  sounds at `t − offset`, and only beats landing at or after `start_frame` sound
+  (`BeginPendingStart` seeds the cursor through `GridSeconds`).
 
 **Past the last grid beat, the click goes silent and stays silent.** Every song
 reaches this. `is_running()` keeps reporting true, and `bar_phase` and
