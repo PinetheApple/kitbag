@@ -18,6 +18,13 @@ export type TransportEvent = Readonly<{
   practiceStretchStartedAt: Double;
 }>;
 
+export type TransportSetlist = Readonly<{
+  setlistName: string;
+  songTitle: string;
+  index: Int32;
+  songCount: Int32;
+}>;
+
 export type TransportShowState = Readonly<{
   playing: boolean;
   bpm: Double;
@@ -28,6 +35,7 @@ export type TransportShowState = Readonly<{
   maxBpm: Double;
   practicePlayedMs: Double;
   practiceStretchStartedAt: Double;
+  setlist: TransportSetlist | null;
 }>;
 
 export type SongTransportShowState = Readonly<{

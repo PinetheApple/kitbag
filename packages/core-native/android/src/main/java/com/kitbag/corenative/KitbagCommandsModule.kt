@@ -11,6 +11,7 @@ import com.kitbag.corenative.library.LibraryStorage
 import com.kitbag.corenative.library.UnsafeLibraryPathException
 import com.kitbag.corenative.transport.Playback
 import com.kitbag.corenative.transport.PracticeClock
+import com.kitbag.corenative.transport.SetlistPosition
 import com.kitbag.corenative.transport.Song
 import com.kitbag.corenative.transport.TransportState
 
@@ -41,7 +42,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
         rampRunning = state.getBoolean("rampRunning"),
         beatsPerBar = state.getInt("beatsPerBar"),
         beatUnit = state.getInt("beatUnit"),
-        setlist = null,
+        setlist = state.getMap("setlist")?.let(::setlistPosition),
       ),
       state.getDouble("minBpm"),
       state.getDouble("maxBpm"),
@@ -49,6 +50,14 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
       state.getDouble("practiceStretchStartedAt").toLong(),
     )
   }
+
+  private fun setlistPosition(setlist: ReadableMap): SetlistPosition =
+    SetlistPosition(
+      setlistName = setlist.getString("setlistName").orEmpty(),
+      songTitle = setlist.getString("songTitle").orEmpty(),
+      index = setlist.getInt("index"),
+      songCount = setlist.getInt("songCount"),
+    )
 
   override fun transportHide() {
     PlaybackService.hide(reactApplicationContext)
