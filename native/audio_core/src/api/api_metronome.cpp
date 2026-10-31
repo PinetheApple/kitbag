@@ -267,6 +267,12 @@ int32_t kb_metronome_current_poly_beat(const kb_engine* engine) {
                            : ToEngine(engine)->metronome().current_poly_beat();
 }
 
+double kb_metronome_poly_downbeat_phase(const kb_engine* engine) {
+  return engine == nullptr
+             ? KB_POLY_PHASE_NONE
+             : ToEngine(engine)->metronome().poly_downbeat_phase();
+}
+
 double kb_metronome_bar_phase(const kb_engine* engine) {
   return engine == nullptr ? 0.0 : ToEngine(engine)->metronome().bar_phase();
 }

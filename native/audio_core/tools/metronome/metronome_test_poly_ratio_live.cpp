@@ -3,8 +3,6 @@
 namespace metronome_test {
 namespace {
 
-constexpr double kRunSeconds = 30.0;
-constexpr int64_t kChangeFrame = 230 * static_cast<int64_t>(kBlockFrames);
 constexpr double kChangedBpm = 131.0;
 constexpr int kRampIntervalBars = 1;
 
@@ -14,16 +12,12 @@ struct RampRun {
   double step_bpm;
 };
 
-int64_t RunFrames() {
-  return static_cast<int64_t>(kRunSeconds * kSampleRate);
-}
-
 void TestTempoChange() {
   const PolySetup setup{5, 3, 4, 4, 97.0};
   kitbag::Metronome metronome;
   StartPolyOnly(metronome, setup);
   const std::vector<float> left =
-      RenderPolyLeft(metronome, RunFrames(), [&](int64_t at) {
+      RenderLeft(metronome, FramesFor(kRunSeconds), [&](int64_t at) {
         if (at == kChangeFrame) metronome.SetTempo(kChangedBpm);
       });
   const PolySpan first = FirstSpan(setup);
@@ -35,7 +29,7 @@ void TestTempoChange() {
   );
   ExpectPolyTicks(
       PolyLabel("tempo change to 131 keeps", setup),
-      ModelPolyTicks({first, after}, setup.poly, RunFrames()),
+      ModelPolyTicks({first, after}, setup.poly, FramesFor(kRunSeconds)),
       left
   );
 }
@@ -45,7 +39,7 @@ std::vector<PolySpan> RampSpans(const RampRun& run) {
   const int against = EffectiveAgainst(setup.against, setup.numerator);
   std::vector<PolySpan> spans;
   double seconds = 0.0;
-  for (int bar = 0; seconds * kSampleRate < RunFrames(); ++bar) {
+  for (int bar = 0; seconds * kSampleRate < FramesFor(kRunSeconds); ++bar) {
     const double bpm = ModelTempo(
         setup.bpm,
         run.target_bpm,
@@ -87,16 +81,16 @@ void ExpectRamp(const RampRun& run) {
   );
   metronome.Start();
   const std::vector<float> left =
-      RenderPolyLeft(metronome, RunFrames(), [](int64_t) {});
+      RenderLeft(metronome, FramesFor(kRunSeconds), [](int64_t) {});
   ExpectPolyTicks(
       RampLabel(run),
-      ModelPolyTicks(RampSpans(run), run.setup.poly, RunFrames()),
+      ModelPolyTicks(RampSpans(run), run.setup.poly, FramesFor(kRunSeconds)),
       left
   );
 }
 
-// D2 is the 400->200 case: a slowing step on a downbeat that a poly tick
-// shares used to judge that tick against the new, shorter step.
+// The 400->200 run puts a slowing step on downbeats a poly tick shares; that
+// tick is judged against the step it was reached with, not the new one.
 void TestRamps() {
   ExpectRamp({{3, 2, 4, 4, 90.0}, 150.0, 15.0});
   ExpectRamp({{5, 3, 4, 4, 100.0}, 160.0, 20.0});
@@ -115,7 +109,7 @@ void ExpectMeterChange(const MeterChange& change, const char* what) {
   kitbag::Metronome metronome;
   StartPolyOnly(metronome, setup);
   const std::vector<float> left =
-      RenderPolyLeft(metronome, RunFrames(), [&](int64_t at) {
+      RenderLeft(metronome, FramesFor(kRunSeconds), [&](int64_t at) {
         if (at != kChangeFrame) return;
         metronome.SetTimeSignature(change.numerator, change.denominator);
         MuteMainBeats(metronome, change.numerator);
@@ -129,7 +123,7 @@ void ExpectMeterChange(const MeterChange& change, const char* what) {
   );
   ExpectPolyTicks(
       PolyLabel(what, setup),
-      ModelPolyTicks({first, after}, setup.poly, RunFrames()),
+      ModelPolyTicks({first, after}, setup.poly, FramesFor(kRunSeconds)),
       left
   );
 }

@@ -358,6 +358,8 @@ void RunAnchorTests();
 void RunPolyTests();
 void RunPolyRatioTests();
 void RunPolyRatioLiveTests();
+void RunPolyTransportTests();
+void RunPolyPhaseTests();
 void RunSoundTests();
 void RunCountInTests();
 void RunLongCountInTests();

@@ -9,18 +9,15 @@
 #include <string>
 
 #include "metronome/metronome_internal.h"
-#include "metronome_test_support.h"
+#include "metronome_test_audio.h"
 
 namespace metronome_test {
 
-constexpr int kPolyHihat = 4;
-constexpr int64_t kPolyRiseFrames = 32;
-constexpr int64_t kPolyFrameSlack = 2;
-constexpr int64_t kPolyOnsetGapFrames = 2 * kPolyRiseFrames;
+constexpr double kRunSeconds = 30.0;
+constexpr int64_t kChangeFrame = 230 * static_cast<int64_t>(kBlockFrames);
+constexpr int64_t kPolyOnsetGapFrames = 2 * kRiseWindowFrames;
 constexpr double kPolyMinRise = 0.2;
 constexpr double kPolyLevelTolerance = 0.15;
-constexpr double kPolyCycleStartLevel = 0.8;
-constexpr double kPolyBeatLevel = 0.5;
 constexpr double kPolyModelEpsilon = 1e-9;
 
 // Constant tempo and cycle length from start_beat until the next span.
@@ -50,7 +47,7 @@ inline double SecondsPerBeat(double bpm, int denominator) {
 }
 
 inline int64_t PolyAuditLimit(int64_t total_frames) {
-  return total_frames - kPolyRiseFrames - kPolyFrameSlack;
+  return total_frames - kRiseWindowFrames - kFrameSlack;
 }
 
 inline void AppendSpanTicks(
@@ -71,7 +68,7 @@ inline void AppendSpanTicks(
         span.start_seconds + (beat - span.start_beat) * span.seconds_per_beat;
     const auto frame = static_cast<int64_t>(std::ceil(seconds * kSampleRate));
     if (frame >= limit) return;
-    ticks->push_back({frame, index % poly_beats == 0});
+    if (frame >= 0) ticks->push_back({frame, index % poly_beats == 0});
   }
 }
 
@@ -106,25 +103,16 @@ SpanFrom(const PolySpan& before, int64_t frame, double spb, int against) {
   return {beat, seconds, spb, against};
 }
 
-inline double PeakOver(const std::vector<float>& left, int64_t lo, int64_t hi) {
-  double peak = 0.0;
-  for (int64_t i = std::max<int64_t>(lo, 0);
-       i < std::min<int64_t>(hi, static_cast<int64_t>(left.size()));
-       ++i) {
-    peak = std::max(peak, std::fabs(static_cast<double>(left[i])));
-  }
-  return peak;
-}
-
 inline double RiseAt(const std::vector<float>& left, int64_t frame) {
-  return PeakOver(left, frame, frame + kPolyRiseFrames) -
-         PeakOver(left, frame - kPolyRiseFrames, frame);
+  return PeakOver(left, frame, frame + kRiseWindowFrames) -
+         PeakOver(left, frame - kRiseWindowFrames, frame);
 }
 
-inline int CountPolyOnsets(const std::vector<float>& left, int64_t limit) {
+inline int
+CountPolyOnsets(const std::vector<float>& left, int64_t from, int64_t limit) {
   int onsets = 0;
-  int64_t next_allowed = 0;
-  for (int64_t frame = 0; frame < limit; ++frame) {
+  int64_t next_allowed = from;
+  for (int64_t frame = from; frame < limit; ++frame) {
     if (frame < next_allowed || RiseAt(left, frame) < kPolyMinRise) continue;
     ++onsets;
     next_allowed = frame + kPolyOnsetGapFrames;
@@ -137,42 +125,30 @@ inline void AuditTick(
     const PolyTick& tick,
     PolyAudit* audit
 ) {
-  const int64_t from = tick.frame - kPolyFrameSlack;
-  const double before = PeakOver(left, from - kPolyRiseFrames, from);
-  const double after = PeakOver(left, from, tick.frame + kPolyRiseFrames);
+  const int64_t from = tick.frame - kFrameSlack;
+  const double before = PeakOver(left, from - kRiseWindowFrames, from);
+  const double after = PeakOver(left, from, tick.frame + kRiseWindowFrames);
   if (after - before < kPolyMinRise) {
     if (audit->missing++ == 0) audit->first_missing = tick.frame;
     return;
   }
-  const double want = tick.cycle_start ? kPolyCycleStartLevel : kPolyBeatLevel;
+  const double want = tick.cycle_start ? kPolyAccentPeak : kPolyNormalPeak;
   if (std::fabs(after - want) > kPolyLevelTolerance) {
     if (audit->wrong_level++ == 0) audit->first_wrong_level = tick.frame;
   }
 }
 
-inline PolyAudit AuditPoly(
-    const std::vector<float>& left,
-    const std::vector<PolyTick>& ticks,
-    int64_t total_frames
-) {
-  PolyAudit audit;
-  for (const PolyTick& tick : ticks) AuditTick(left, tick, &audit);
-  audit.onsets = CountPolyOnsets(left, PolyAuditLimit(total_frames));
-  return audit;
-}
-
-inline void CheckPoly(bool passed, const std::string& label, const char* what) {
-  if (!passed) std::fprintf(stderr, "  %s: %s\n", label.c_str(), what);
-  Check(passed, label.c_str());
-}
-
+// Onsets before `audit_from` belong to something else, such as a count-in.
 inline void ExpectPolyTicks(
     const std::string& label,
     const std::vector<PolyTick>& model,
-    const std::vector<float>& left
+    const std::vector<float>& left,
+    int64_t audit_from = 0
 ) {
-  const PolyAudit audit =
-      AuditPoly(left, model, static_cast<int64_t>(left.size()));
+  PolyAudit audit;
+  for (const PolyTick& tick : model) AuditTick(left, tick, &audit);
+  const auto total = static_cast<int64_t>(left.size());
+  audit.onsets = CountPolyOnsets(left, audit_from, PolyAuditLimit(total));
   char what[128];
   std::snprintf(
       what,
@@ -181,7 +157,7 @@ inline void ExpectPolyTicks(
       audit.missing,
       static_cast<long long>(audit.first_missing)
   );
-  CheckPoly(audit.missing == 0, label, what);
+  CheckCase(audit.missing == 0, label, what);
   std::snprintf(
       what,
       sizeof what,
@@ -189,7 +165,7 @@ inline void ExpectPolyTicks(
       audit.wrong_level,
       static_cast<long long>(audit.first_wrong_level)
   );
-  CheckPoly(audit.wrong_level == 0, label, what);
+  CheckCase(audit.wrong_level == 0, label, what);
   std::snprintf(
       what,
       sizeof what,
@@ -197,32 +173,7 @@ inline void ExpectPolyTicks(
       audit.onsets,
       model.size()
   );
-  CheckPoly(audit.onsets == static_cast<int>(model.size()), label, what);
-}
-
-template <typename OnBlock>
-std::vector<float> RenderPolyLeft(
-    kitbag::Metronome& metronome,
-    int64_t total_frames,
-    OnBlock on_block
-) {
-  std::vector<float> left;
-  std::vector<float> buffer(static_cast<size_t>(kBlockFrames) * kChannels);
-  for (int64_t start = 0; start < total_frames; start += kBlockFrames) {
-    on_block(start);
-    std::fill(buffer.begin(), buffer.end(), 0.0f);
-    metronome.Render(
-        buffer.data(),
-        kBlockFrames,
-        kSampleRate,
-        kChannels,
-        static_cast<uint64_t>(start)
-    );
-    for (uint32_t frame = 0; frame < kBlockFrames; ++frame) {
-      left.push_back(buffer[static_cast<size_t>(frame) * kChannels]);
-    }
-  }
-  return left;
+  CheckCase(audit.onsets == static_cast<int>(model.size()), label, what);
 }
 
 inline void MuteMainBeats(kitbag::Metronome& metronome, int beats_per_bar) {
@@ -269,7 +220,7 @@ inline void
 ConfigurePolyOnly(kitbag::Metronome& metronome, const PolySetup& setup) {
   metronome.SetTempo(setup.bpm);
   metronome.SetTimeSignature(setup.numerator, setup.denominator);
-  metronome.SetSounds(kPolyHihat, kPolyHihat);
+  metronome.SetSounds(kHihatSound, kHihatSound);
   metronome.SetPolyrhythm(true, setup.poly);
   metronome.SetPolyAgainst(setup.against);
   MuteMainBeats(metronome, setup.numerator);

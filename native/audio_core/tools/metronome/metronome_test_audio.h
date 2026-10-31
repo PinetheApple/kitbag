@@ -1,6 +1,8 @@
 #ifndef KITBAG_TOOLS_METRONOME_METRONOME_TEST_AUDIO_H
 #define KITBAG_TOOLS_METRONOME_METRONOME_TEST_AUDIO_H
 
+#include <string>
+
 #include "metronome_test_support.h"
 
 namespace metronome_test {
@@ -8,11 +10,29 @@ namespace metronome_test {
 constexpr int64_t kPitchWindow = 2400;
 constexpr double kPitchTolerance = 0.05;
 
-template <typename OnBlock>
+constexpr int kHihatSound = 4;
+constexpr int64_t kRiseWindowFrames = 32;
+constexpr int64_t kFrameSlack = 2;
+constexpr double kPolyAccentPeak = 0.8;
+constexpr double kPolyNormalPeak = 0.5;
+
+inline int64_t FramesFor(double seconds) {
+  return static_cast<int64_t>(seconds * kSampleRate);
+}
+
+inline void
+CheckCase(bool passed, const std::string& label, const char* detail) {
+  if (!passed) std::fprintf(stderr, "  %s: %s\n", label.c_str(), detail);
+  Check(passed, label.c_str());
+}
+
+// `after_block(end)` runs once each block's mirrors are published.
+template <typename OnBlock, typename AfterBlock>
 std::vector<float> RenderLeft(
     kitbag::Metronome& metronome,
     int64_t total_frames,
-    OnBlock on_block
+    OnBlock on_block,
+    AfterBlock after_block
 ) {
   std::vector<float> left;
   std::vector<float> buffer(static_cast<size_t>(kBlockFrames) * kChannels);
@@ -30,13 +50,35 @@ std::vector<float> RenderLeft(
     for (uint32_t frame = 0; frame < kBlockFrames; ++frame) {
       left.push_back(buffer[static_cast<size_t>(frame) * kChannels]);
     }
+    after_block(rendered + kBlockFrames);
   }
   return left;
+}
+
+template <typename OnBlock>
+std::vector<float> RenderLeft(
+    kitbag::Metronome& metronome,
+    int64_t total_frames,
+    OnBlock on_block
+) {
+  return RenderLeft(metronome, total_frames, on_block, [](int64_t) {});
 }
 
 inline std::vector<float>
 RenderLeft(kitbag::Metronome& metronome, int64_t frames) {
   return RenderLeft(metronome, frames, [](int64_t) {});
+}
+
+inline double PeakOver(const std::vector<float>& left, int64_t lo, int64_t hi) {
+  double peak = 0.0;
+  const int64_t end = std::min<int64_t>(hi, static_cast<int64_t>(left.size()));
+  for (int64_t i = std::max<int64_t>(lo, 0); i < end; ++i) {
+    peak = std::max(
+        peak,
+        std::fabs(static_cast<double>(left[static_cast<size_t>(i)]))
+    );
+  }
+  return peak;
 }
 
 inline double PitchAt(const std::vector<float>& left, int64_t onset) {

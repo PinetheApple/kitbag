@@ -41,12 +41,15 @@ constexpr SoundPreset kSounds[Metronome::kSoundCount] = {
     {2200.0, 1500.0, 1400.0, 1800.0, 45.0},   // cowbell
 };
 
-// The one boundary test for subdivision and poly ticks: a tick fires when the
-// index of the previous sample is below the current one's.
 int64_t TickIndex(double position, double ticks_per_beat) {
   return static_cast<int64_t>(
       std::floor(position * ticks_per_beat + kGridEpsilon)
   );
+}
+
+bool CrossesTick(double previous, double position, double ticks_per_beat) {
+  return TickIndex(previous, ticks_per_beat) <
+         TickIndex(position, ticks_per_beat);
 }
 
 }  // namespace
@@ -156,6 +159,8 @@ Metronome::BlockTempo Metronome::BlockTempoFor(uint32_t sample_rate) const {
   tempo.beats_per_sample =
       bpm_ * BeatUnitScale() / (kSecondsPerMinute * sample_rate);
   tempo.latency_beats = LatencyBeats();
+  tempo.poly_ticks_per_beat =
+      static_cast<double>(poly_beats_) / static_cast<double>(PolyAgainst());
   return tempo;
 }
 
@@ -265,35 +270,25 @@ void Metronome::FireConstantTempoTick(
   OnBeatBoundary(beat_index, sample_rate);
 }
 
-double Metronome::PolyScale() const {
-  const int against =
-      poly_against_ == KB_POLY_AGAINST_BAR ? beats_per_bar_ : poly_against_;
-  return static_cast<double>(poly_beats_) / static_cast<double>(against);
-}
-
-void Metronome::FirePolyTick(
-    double position,
-    double previous,
-    uint32_t sample_rate
-) {
-  const double scale = PolyScale();
-  const int64_t poly_index = TickIndex(position, scale);
-  if (TickIndex(previous, scale) < poly_index) {
-    OnPolyBoundary(static_cast<int>(poly_index % poly_beats_), sample_rate);
-  }
-}
-
 void Metronome::AdvanceConstantTempo(uint32_t sample_rate, BlockTempo* tempo) {
   double position = beat_position_ + tempo->latency_beats;
   if (counting_in_) position = AdvanceCountIn(position, *tempo, sample_rate);
   if (position >= -kGridEpsilon) {
-    // Read before FireConstantTempoTick, whose ramp step rewrites the step.
+    // Read before FireConstantTempoTick: a ramp step there rewrites
+    // tempo->beats_per_sample.
     const double previous = position - tempo->beats_per_sample;
-    const int64_t sub_index = TickIndex(position, subdivision_);
-    if (TickIndex(previous, subdivision_) < sub_index) {
-      FireConstantTempoTick(sub_index, sample_rate, tempo);
+    if (CrossesTick(previous, position, subdivision_)) {
+      FireConstantTempoTick(
+          TickIndex(position, subdivision_),
+          sample_rate,
+          tempo
+      );
     }
-    if (poly_enabled_) FirePolyTick(position, previous, sample_rate);
+    const double poly_ticks = tempo->poly_ticks_per_beat;
+    if (poly_enabled_ && CrossesTick(previous, position, poly_ticks)) {
+      const int64_t poly_index = TickIndex(position, poly_ticks);
+      OnPolyBoundary(static_cast<int>(poly_index % poly_beats_), sample_rate);
+    }
     ramp_.AdvanceFrame();
   }
   beat_position_ += tempo->beats_per_sample;
@@ -323,6 +318,10 @@ void Metronome::PublishBlockMirrors(
     );
     current_bpm_.store(bpm_, std::memory_order_relaxed);
   }
+  poly_downbeat_phase_.store(
+      PolyDownbeatPhase(grid != nullptr),
+      std::memory_order_relaxed
+  );
   PublishTrainerMirrors(grid != nullptr, sample_rate);
 }
 

@@ -3,17 +3,12 @@
 namespace metronome_test {
 namespace {
 
-constexpr double kRunSeconds = 30.0;
 constexpr double kLongRunSeconds = 60.0;
-
-int64_t FramesFor(double seconds) {
-  return static_cast<int64_t>(seconds * kSampleRate);
-}
 
 std::vector<float> RenderSetup(const PolySetup& setup, int64_t frames) {
   kitbag::Metronome metronome;
   StartPolyOnly(metronome, setup);
-  return RenderPolyLeft(metronome, frames, [](int64_t) {});
+  return RenderLeft(metronome, frames);
 }
 
 void ExpectConstant(const PolySetup& setup, double seconds) {
@@ -62,13 +57,13 @@ void TestOutOfRangeAgainstIgnored() {
   ExpectPolyTicks(
       PolyLabel("out-of-range against keeps", setup),
       ModelPolyTicks({FirstSpan(setup)}, setup.poly, frames),
-      RenderPolyLeft(metronome, frames, [](int64_t) {})
+      RenderLeft(metronome, frames)
   );
 }
 
-// D1: below a scale of 1 the old boundary test re-fired a tick on the next
-// sample; above 1 it skipped ticks. 400 BPM puts both inside one minute.
-void TestRoundingAtMaxTempo() {
+// At 400 BPM both a poly step below one tick per beat and one above it put a
+// tick boundary inside a sample's rounding margin within a minute.
+void TestTickBoundariesAtMaxTempo() {
   ExpectConstant(
       {3, KB_POLY_AGAINST_BAR, 4, 4, kitbag::kMaxBpm},
       kLongRunSeconds
@@ -79,37 +74,22 @@ void TestRoundingAtMaxTempo() {
   );
 }
 
-bool SameSamples(const std::vector<float>& a, const std::vector<float>& b) {
-  return a.size() == b.size() &&
-         std::equal(a.begin(), a.end(), b.begin(), [](float x, float y) {
-           return x == y;
-         });
-}
-
-std::vector<float> RenderDefault(const PolySetup& setup, int64_t frames) {
+std::vector<float>
+RenderWithMainRow(const PolySetup& setup, bool set_against, int64_t frames) {
   kitbag::Metronome metronome;
   metronome.SetTempo(setup.bpm);
   metronome.SetTimeSignature(setup.numerator, setup.denominator);
   metronome.SetPolyrhythm(true, setup.poly);
+  if (set_against) metronome.SetPolyAgainst(setup.against);
   metronome.Start();
-  return RenderPolyLeft(metronome, frames, [](int64_t) {});
-}
-
-std::vector<float> RenderExplicit(const PolySetup& setup, int64_t frames) {
-  kitbag::Metronome metronome;
-  metronome.SetTempo(setup.bpm);
-  metronome.SetTimeSignature(setup.numerator, setup.denominator);
-  metronome.SetPolyrhythm(true, setup.poly);
-  metronome.SetPolyAgainst(setup.against);
-  metronome.Start();
-  return RenderPolyLeft(metronome, frames, [](int64_t) {});
+  return RenderLeft(metronome, frames);
 }
 
 void ExpectDefaultMatches(const PolySetup& setup) {
   const int64_t frames = FramesFor(kRunSeconds);
-  const std::vector<float> fallback = RenderDefault(setup, frames);
   Check(
-      SameSamples(fallback, RenderExplicit(setup, frames)),
+      RenderWithMainRow(setup, false, frames) ==
+          RenderWithMainRow(setup, true, frames),
       PolyLabel("unset against plays sample-identical to", setup).c_str()
   );
 }
@@ -128,7 +108,7 @@ void RunPolyRatioTests() {
   TestRatiosAgainstSevenEight();
   TestAgainstBounds();
   TestOutOfRangeAgainstIgnored();
-  TestRoundingAtMaxTempo();
+  TestTickBoundariesAtMaxTempo();
   TestDefaultIsTheBar();
 }
 

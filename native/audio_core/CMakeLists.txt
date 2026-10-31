@@ -144,6 +144,8 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_poly.cpp
     tools/metronome/metronome_test_poly_ratio.cpp
     tools/metronome/metronome_test_poly_ratio_live.cpp
+    tools/metronome/metronome_test_poly_transport.cpp
+    tools/metronome/metronome_test_poly_phase.cpp
     tools/metronome/metronome_test_sound.cpp
     tools/metronome/metronome_test_count_in.cpp
     tools/metronome/metronome_test_count_in_long.cpp

@@ -1,7 +1,7 @@
 #include <string>
 
 #include "metronome/metronome_internal.h"
-#include "metronome_test_support.h"
+#include "metronome_test_audio.h"
 
 namespace metronome_test {
 namespace {
@@ -11,10 +11,7 @@ using kitbag::metronome_detail::kSecondsPerMinute;
 constexpr int kBeatsPerBar = 4;
 constexpr int kDenominator = 4;
 constexpr double kIntervalBars = 2.0;
-constexpr int kHihatSound = 4;
 constexpr double kBpmTolerance = 1e-9;
-constexpr int64_t kFrameSlack = 2;
-constexpr int64_t kRiseWindowFrames = 32;
 constexpr double kMinTickRise = 0.05;
 
 struct TickRun {
@@ -47,7 +44,7 @@ struct Observed {
 };
 
 int64_t TotalFrames(const TickRun& run) {
-  return static_cast<int64_t>(run.seconds * kSampleRate);
+  return FramesFor(run.seconds);
 }
 
 std::string Label(const TickRun& run) {
@@ -125,37 +122,22 @@ Observed RenderRun(const TickRun& run) {
   kitbag::Metronome metronome;
   StartRun(metronome, run);
   Observed observed;
-  std::vector<float> buffer(kBlockFrames * kChannels);
   int previous = -1;
-  for (int64_t start = 0; start < TotalFrames(run); start += kBlockFrames) {
-    std::fill(buffer.begin(), buffer.end(), 0.0f);
-    metronome.Render(
-        buffer.data(),
-        kBlockFrames,
-        kSampleRate,
-        kChannels,
-        static_cast<uint64_t>(start)
-    );
-    for (uint32_t frame = 0; frame < kBlockFrames; ++frame) {
-      observed.samples.push_back(buffer[frame * kChannels]);
-    }
+  const auto on_block = [](int64_t) {};
+  const auto after_block = [&](int64_t end) {
     const int beat = metronome.current_beat();
     if (beat == 0 && previous != 0) {
-      observed.downbeats.push_back(
-          {start + kBlockFrames, metronome.current_bpm()}
-      );
+      observed.downbeats.push_back({end, metronome.current_bpm()});
     }
     previous = beat;
-  }
+  };
+  observed.samples =
+      RenderLeft(metronome, TotalFrames(run), on_block, after_block);
   return observed;
 }
 
 double WindowPeak(const std::vector<float>& samples, int64_t to) {
-  double peak = 0.0;
-  for (int64_t i = std::max<int64_t>(to - kRiseWindowFrames, 0); i < to; ++i) {
-    peak = std::max(peak, std::fabs(static_cast<double>(samples[i])));
-  }
-  return peak;
+  return PeakOver(samples, to - kRiseWindowFrames, to);
 }
 
 SilentTicks FindSilentTicks(const Observed& observed, const Model& model) {
@@ -185,11 +167,6 @@ size_t FirstMismatchedBar(const Observed& observed, const Model& model) {
     }
   }
   return bars;
-}
-
-void CheckCase(bool passed, const std::string& label, const char* detail) {
-  if (!passed) std::fprintf(stderr, "  %s: %s\n", label.c_str(), detail);
-  Check(passed, label.c_str());
 }
 
 void ExpectEveryTick(

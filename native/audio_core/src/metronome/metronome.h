@@ -65,13 +65,11 @@ class Metronome {
 
   // App-thread API. Non-blocking; drops commands if the ring is full.
   void Start();
-  // Only while stopped; an already-past frame starts on the next sample, never
-  // before the transport. SPEC.md §4.2.
+  // Contract: kb_metronome_start_at.
   void StartAt(uint64_t start_frame);
   void Stop();
   void Pause();
-  // At engine frame `at_frame` the external song was `song_pos_sec` in at `bpm`.
-  // Contract: kb_metronome_anchor_external; a set grid wins until ClearGrid.
+  // Contract: kb_metronome_anchor_external.
   void AnchorExternal(double song_pos_sec, uint64_t at_frame, double bpm);
   void SetTempo(double bpm);
   void SetTimeSignature(int numerator, int denominator);
@@ -128,6 +126,9 @@ class Metronome {
   }
   int32_t current_poly_beat() const {
     return current_poly_beat_.load(std::memory_order_relaxed);
+  }
+  double poly_downbeat_phase() const {
+    return poly_downbeat_phase_.load(std::memory_order_relaxed);
   }
   double bar_phase() const {
     return bar_phase_.load(std::memory_order_relaxed);
@@ -187,6 +188,7 @@ class Metronome {
   struct BlockTempo {
     double beats_per_sample = 0.0;
     double latency_beats = 0.0;
+    double poly_ticks_per_beat = 1.0;
   };
 
   // The block's grid and its identity, from one acquire load (SPEC.md §4.2.1).
@@ -287,8 +289,8 @@ class Metronome {
       uint32_t sample_rate,
       BlockTempo* tempo
   );
-  void FirePolyTick(double position, double previous, uint32_t sample_rate);
-  double PolyScale() const;
+  int PolyAgainst() const;
+  double PolyDownbeatPhase(bool gridded) const;
   void PublishBlockMirrors(
       const BeatGrid* grid,
       uint64_t frame,
@@ -386,6 +388,7 @@ class Metronome {
   std::atomic<bool> running_flag_{false};
   std::atomic<int32_t> current_beat_{-1};
   std::atomic<int32_t> current_poly_beat_{-1};
+  std::atomic<double> poly_downbeat_phase_{KB_POLY_PHASE_NONE};
   std::atomic<double> bar_phase_{0.0};
   std::atomic<double> current_bpm_{kDefaultBpm};
   TrainerMirrors trainer_mirrors_;

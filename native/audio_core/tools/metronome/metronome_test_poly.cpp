@@ -1,4 +1,4 @@
-#include "metronome_test_support.h"
+#include "metronome_test_audio.h"
 
 namespace metronome_test {
 namespace {
@@ -11,8 +11,6 @@ constexpr int64_t kFifthFrames = kBarFrames / 5;
 constexpr int64_t kQuarterFrames = kBarFrames / 4;
 constexpr int64_t kSixteenthFrames = kBarFrames / 16;
 constexpr int64_t kPeakWindow = 480;
-constexpr double kPolyAccentPeak = 0.8;
-constexpr double kPolyNormalPeak = 0.5;
 constexpr double kMainAccentPeak = 0.9;
 constexpr double kMainNormalPeak = 0.6;
 constexpr double kPeakTolerance = 0.05;
