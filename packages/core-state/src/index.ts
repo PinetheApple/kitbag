@@ -197,3 +197,10 @@ export {
   MINUS,
   type ClockParts,
 } from './text.ts';
+export {
+  findMissingRows,
+  removeMissingRows,
+  type MissingFilesSource,
+  type MissingRowsRemoval,
+  type StoredRowFiles,
+} from './storage/missingRows.ts';
