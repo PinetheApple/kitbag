@@ -27,6 +27,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CalibrationScatter } from './CalibrationScatter.tsx';
+import { CALIBRATE_LATENCY } from './settingsLabels.ts';
 import {
   calibrationView,
   routeMeta,
@@ -34,7 +35,6 @@ import {
 } from './calibrationView.ts';
 import { useCalibrationSession } from './useCalibrationSession.ts';
 
-const TITLE = 'Calibrate latency';
 const TAP_PROMPT = 'TAP ON EVERY CLICK';
 const TAP_CAPTION = `OF ${String(CALIBRATION.taps)} TAPS`;
 const RESULT_LEAD = 'Your taps land';
@@ -246,13 +246,12 @@ export function CalibrationScreen({ onBack }: CalibrationScreenProps) {
       );
   }, [session, onBack]);
 
-  const refused = phase === 'done' && outcome?.kind === 'refused';
   const useLabel =
     view.result?.kind === 'measured' ? view.result.useLabel : USE;
 
   return (
     <View style={[styles.screen, frame]}>
-      <AppBar title={TITLE} onBack={onBack} />
+      <AppBar title={CALIBRATE_LATENCY} onBack={onBack} />
       <Pressable
         style={styles.body}
         onPressIn={handleTap}
@@ -276,7 +275,7 @@ export function CalibrationScreen({ onBack }: CalibrationScreenProps) {
             fill
             onPress={handleStartOver}
           />
-          {refused ? null : (
+          {!view.showUse ? null : (
             <Button
               label={useLabel}
               variant="primary"

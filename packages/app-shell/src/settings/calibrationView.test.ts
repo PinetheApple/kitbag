@@ -5,7 +5,13 @@ import {
 } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
-import { calibrationView, routeMeta } from './calibrationView.ts';
+import {
+  calibrationView,
+  routeMeta,
+  SCATTER,
+  scatterHalfRangeMs,
+  scatterX,
+} from './calibrationView.ts';
 
 type ViewState = Pick<
   CalibrationSession,
@@ -92,7 +98,7 @@ describe('calibration view', () => {
     const view = calibrationView(
       state({
         phase: 'done',
-        deviations: alternating(400, 3),
+        deviations: alternating(0, 290),
         outcome: { kind: 'refused', usable: 0 },
       }),
     );
@@ -101,6 +107,7 @@ describe('calibration view', () => {
       text: 'Not enough steady taps; try again',
     });
     expect(view.canUse).toBe(false);
+    expect(view.showUse).toBe(false);
   });
 
   it('cannot be used against an uncertain route', () => {
@@ -144,7 +151,7 @@ describe('calibration view', () => {
   it('draws one dot per tap in tap order, zero centred', () => {
     const view = calibrationView(state({ deviations: [0, 25, -50] }));
     expect(view.dots.map((d) => d.x)).toEqual([0.5, 0.75, 0]);
-    expect(view.axisMs).toBe(CALIBRATION.minScatterHalfRangeMs);
+    expect(view.axisMs).toBe(SCATTER.minHalfRangeMs);
   });
 
   it('places the mean line on the usable mean', () => {
@@ -159,5 +166,60 @@ describe('route meta', () => {
     expect(
       routeMeta({ id: 'speaker', name: '', kind: 'speaker', certain: true }),
     ).toBe('calibrating now');
+  });
+});
+
+describe('calibration messages', () => {
+  it('says why Use is off when the output stayed unknown', () => {
+    const view = calibrationView(
+      state({
+        phase: 'done',
+        route: { ...HEADPHONES, certain: false },
+        deviations: alternating(12, 3),
+        outcome: {
+          kind: 'measured',
+          meanMs: 12,
+          sdMs: 3,
+          usable: 16,
+          steady: true,
+        },
+      }),
+    );
+    expect(view.result).toEqual({
+      kind: 'message',
+      text: 'Can’t tell which output is in use. Try again.',
+    });
+    expect(view.showUse).toBe(true);
+  });
+
+  it('says the click stopped under the run', () => {
+    expect(calibrationView(state({ phase: 'stopped' })).result).toEqual({
+      kind: 'message',
+      text: 'The click stopped. Start over to calibrate.',
+    });
+  });
+
+  it('shows the failure when the route or click could not start', () => {
+    expect(calibrationView(state({ phase: 'failed' })).result).toEqual({
+      kind: 'message',
+      text: 'The click could not start; try again',
+    });
+  });
+});
+
+describe('scatter', () => {
+  it('spans at least ±50 ms', () => {
+    expect(scatterHalfRangeMs(0, 0)).toBe(SCATTER.minHalfRangeMs);
+    expect(scatterHalfRangeMs(12, 3)).toBe(SCATTER.minHalfRangeMs);
+  });
+
+  it('widens to keep mean ±3 SD on screen', () => {
+    expect(scatterHalfRangeMs(40, 10)).toBe(70);
+    expect(scatterHalfRangeMs(-40, 10)).toBe(70);
+  });
+
+  it('pins a tap off the axis to its edge', () => {
+    expect(scatterX(200, 50)).toBe(1);
+    expect(scatterX(-200, 50)).toBe(0);
   });
 });

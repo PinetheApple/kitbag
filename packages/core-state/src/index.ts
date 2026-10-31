@@ -205,13 +205,11 @@ export {
 export { CALIBRATION } from './rig/calibrationRules.ts';
 export {
   analyseTaps,
-  appliedOffset,
-  scatterHalfRangeMs,
-  scatterX,
-  type AppliedOffset,
+  storedOffsetMs,
   type CalibrationOutcome,
 } from './rig/calibrationStats.ts';
 export {
+  canUseOutcome,
   createCalibrationSession,
   type CalibrationDeps,
   type CalibrationNotice,

@@ -25,6 +25,7 @@ import {
 import { formatAppVersion } from './appVersion.ts';
 import { formatPracticeSummary } from './practiceText.ts';
 import { SettingsFrame } from './SettingsFrame.tsx';
+import { CALIBRATE_LATENCY } from './settingsLabels.ts';
 import { usePracticeStats } from './usePracticeStats.ts';
 
 const THEME_OPTIONS: readonly SegmentOption<ThemeChoice>[] = [
@@ -36,7 +37,6 @@ const THEME_OPTIONS: readonly SegmentOption<ThemeChoice>[] = [
 const THEME_CONTROL_GAPS = { bottom: EDIT_ROW_PRESSABLE_GAP };
 
 const LICENCE_LABEL = 'Licence';
-const CALIBRATE_LABEL = 'Calibrate latency';
 
 const useStyles = createThemedStyles(() => ({
   chipRow: { flexDirection: 'row', paddingHorizontal: inset.sectionLabelH },
@@ -73,7 +73,7 @@ function RigSection({
       <SectionHeader label="Rig" />
       <View style={styles.chipRow}>
         <Chip
-          label={CALIBRATE_LABEL}
+          label={CALIBRATE_LATENCY}
           icon="calibrate"
           onPress={onOpenCalibration}
         />

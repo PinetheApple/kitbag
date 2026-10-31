@@ -1,15 +1,10 @@
-import {
-  KB_LATENCY_OFFSET_MS_BOUNDS,
-  type EngineClockPair,
-} from '@kitbag/core-native';
+import type { EngineClockPair } from '@kitbag/core-native';
 import { describe, expect, it } from 'vitest';
 
 import { CALIBRATION } from './calibrationRules.ts';
 import {
   analyseTaps,
-  appliedOffset,
-  scatterHalfRangeMs,
-  scatterX,
+  storedOffsetMs,
   tapDeviationMs,
   usableDeviations,
 } from './calibrationStats.ts';
@@ -25,6 +20,8 @@ const PAIR: EngineClockPair = {
 };
 const START_MS = PAIR.monotonicNs / 1_000_000;
 const SCHEDULE = { startFrame: START_FRAME, bpm: CALIBRATION.bpm };
+
+const SPREAD_MS = [-16, -8, 8, 16];
 
 const steady = (offset: number, count: number = CALIBRATION.taps) =>
   Array.from({ length: count }, (_, i) => offset + (i % 2 === 0 ? -2 : 2));
@@ -69,15 +66,30 @@ describe('tap deviation', () => {
 });
 
 describe('usable taps', () => {
-  it('drops a tap further than the click window from its click', () => {
-    const late = CALIBRATION.maxClickDistanceMs + 1;
-    expect(usableDeviations([...steady(10, 10), late])).toHaveLength(10);
-    expect(usableDeviations([...steady(10, 10), -late])).toHaveLength(10);
+  it('drops a tap further than the window from the run’s median', () => {
+    const far = 10 + CALIBRATION.usableWindowMs + 10;
+    expect(usableDeviations([...steady(10, 10), far])).toHaveLength(10);
+    expect(usableDeviations([...steady(10, 10), 20 - far])).toHaveLength(10);
   });
 
-  it('keeps a tap exactly at the window edge', () => {
-    const edge = CALIBRATION.maxClickDistanceMs;
-    expect(usableDeviations([edge, edge, edge])).toEqual([edge, edge, edge]);
+  it('keeps a tap exactly at the window edge from the median', () => {
+    const edge = CALIBRATION.usableWindowMs;
+    expect(usableDeviations([0, 0, 0, edge])).toEqual([0, 0, 0, edge]);
+  });
+
+  it('measures a route late by nearly the whole window without cutting it short', () => {
+    const late = 240;
+    const taps = Array.from(
+      { length: CALIBRATION.taps },
+      (_, i) => late + (SPREAD_MS[i % SPREAD_MS.length] ?? 0),
+    );
+    const outcome = analyseTaps(taps);
+    expect(outcome).toMatchObject({
+      kind: 'measured',
+      usable: CALIBRATION.taps,
+    });
+    if (outcome.kind === 'measured')
+      expect(outcome.meanMs).toBeCloseTo(late, 0);
   });
 
   it('drops a tap more than 2.5 SD from the mean', () => {
@@ -101,10 +113,11 @@ describe('calibration result', () => {
   });
 
   it('refuses with fewer than 8 usable taps', () => {
-    const tooWild = CALIBRATION.maxClickDistanceMs + 50;
+    const wild = CALIBRATION.usableWindowMs + 40;
     const taps = [
       ...steady(12, CALIBRATION.minUsableTaps - 1),
-      ...Array<number>(9).fill(tooWild),
+      ...Array<number>(4).fill(-wild),
+      ...Array<number>(5).fill(wild),
     ];
     expect(analyseTaps(taps)).toEqual({
       kind: 'refused',
@@ -132,49 +145,14 @@ describe('calibration result', () => {
   });
 });
 
-describe('applied offset', () => {
+describe('stored offset', () => {
   it('rounds to the stepper’s 1 ms', () => {
-    expect(appliedOffset(12.4)).toEqual({ offsetMs: 12, clamped: false });
-    expect(appliedOffset(-12.6)).toEqual({ offsetMs: -13, clamped: false });
-  });
-
-  it('clamps to the engine bounds and says so', () => {
-    expect(appliedOffset(KB_LATENCY_OFFSET_MS_BOUNDS.max + 80)).toEqual({
-      offsetMs: KB_LATENCY_OFFSET_MS_BOUNDS.max,
-      clamped: true,
-    });
-    expect(appliedOffset(KB_LATENCY_OFFSET_MS_BOUNDS.min - 80)).toEqual({
-      offsetMs: KB_LATENCY_OFFSET_MS_BOUNDS.min,
-      clamped: true,
-    });
-  });
-});
-
-describe('scatter', () => {
-  it('spans at least ±50 ms', () => {
-    expect(scatterHalfRangeMs(0, 0)).toBe(CALIBRATION.minScatterHalfRangeMs);
-    expect(scatterHalfRangeMs(12, 3)).toBe(CALIBRATION.minScatterHalfRangeMs);
-  });
-
-  it('widens to keep mean ±3 SD on screen', () => {
-    expect(scatterHalfRangeMs(40, 10)).toBe(70);
-    expect(scatterHalfRangeMs(-40, 10)).toBe(70);
-  });
-
-  it('puts zero in the middle and late taps to the right', () => {
-    expect(scatterX(0, 50)).toBe(0.5);
-    expect(scatterX(25, 50)).toBe(0.75);
-    expect(scatterX(-50, 50)).toBe(0);
-  });
-
-  it('pins a tap off the axis to its edge', () => {
-    expect(scatterX(200, 50)).toBe(1);
-    expect(scatterX(-200, 50)).toBe(0);
+    expect(storedOffsetMs(12.4)).toBe(12);
+    expect(storedOffsetMs(-12.6)).toBe(-13);
   });
 });
 
 describe('sign against the engine', () => {
-  // §4.7: the engine biases its position by +offset, so a click sounds offset ms earlier.
   const emittedMs = (gridMs: number, offsetMs: number) => gridMs - offsetMs;
 
   it('makes a late route sound on the beat once applied', () => {
@@ -192,7 +170,7 @@ describe('sign against the engine', () => {
     );
     const outcome = analyseTaps(taps);
     if (outcome.kind !== 'measured') throw new Error('expected a result');
-    const { offsetMs } = appliedOffset(outcome.meanMs);
+    const offsetMs = storedOffsetMs(outcome.meanMs);
     expect(offsetMs).toBe(outputLatencyMs);
     const heardMs = emittedMs(grid[0] ?? 0, offsetMs) + outputLatencyMs;
     expect(heardMs).toBeCloseTo(grid[0] ?? 0);

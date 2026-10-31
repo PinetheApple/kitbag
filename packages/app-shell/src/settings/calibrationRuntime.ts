@@ -15,6 +15,7 @@ export const calibrationDeps: CalibrationDeps = {
   stopClick: () => {
     getKitbagCommands().rigClickStop();
   },
+  isClickActive: () => getKitbagCommands().rigClickIsActive(),
   nowFrame: () => getKitbagHostObject().frames_rendered,
   readClockPair: getEngineClockPair,
   getOutputRoute,

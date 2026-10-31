@@ -1,14 +1,10 @@
 import {
-  KB_LATENCY_OFFSET_MS_BOUNDS,
   renderedFrameToMonotonicMs,
   type EngineClockPair,
 } from '@kitbag/core-native';
 
+import { SECONDS_PER_MINUTE } from '../text.ts';
 import { CALIBRATION } from './calibrationRules.ts';
-
-const SECONDS_PER_MINUTE = 60;
-const MS_PER_MINUTE = 60_000;
-const HALF = 0.5;
 
 export interface ClickSchedule {
   readonly startFrame: number;
@@ -25,11 +21,6 @@ export type CalibrationOutcome =
       readonly steady: boolean;
     };
 
-export interface AppliedOffset {
-  readonly offsetMs: number;
-  readonly clamped: boolean;
-}
-
 export function tapDeviationMs(
   tapMs: number,
   pair: EngineClockPair,
@@ -37,7 +28,10 @@ export function tapDeviationMs(
 ): number {
   const framesPerBeat = (pair.sampleRate * SECONDS_PER_MINUTE) / schedule.bpm;
   const startMs = renderedFrameToMonotonicMs(schedule.startFrame, pair);
-  const beatsSinceStart = ((tapMs - startMs) * schedule.bpm) / MS_PER_MINUTE;
+  const msPerBeat =
+    renderedFrameToMonotonicMs(schedule.startFrame + framesPerBeat, pair) -
+    startMs;
+  const beatsSinceStart = (tapMs - startMs) / msPerBeat;
   const beat = Math.max(0, Math.round(beatsSinceStart));
   const clickFrame = schedule.startFrame + beat * framesPerBeat;
   return tapMs - renderedFrameToMonotonicMs(clickFrame, pair);
@@ -55,9 +49,17 @@ export function sampleSd(values: readonly number[]): number {
   return Math.sqrt(squares / (values.length - 1));
 }
 
+export function median(values: readonly number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 1) return sorted[middle] ?? 0;
+  return mean(sorted.slice(middle - 1, middle + 1));
+}
+
 export function usableDeviations(deviations: readonly number[]): number[] {
+  const typical = median(deviations);
   const near = deviations.filter(
-    (d) => Math.abs(d) <= CALIBRATION.maxClickDistanceMs,
+    (d) => Math.abs(d - typical) <= CALIBRATION.usableWindowMs,
   );
   const centre = mean(near);
   const sd = sampleSd(near);
@@ -80,23 +82,6 @@ export function analyseTaps(deviations: readonly number[]): CalibrationOutcome {
   };
 }
 
-export function appliedOffset(meanMs: number): AppliedOffset {
-  const rounded = Math.round(meanMs);
-  const offsetMs = Math.min(
-    KB_LATENCY_OFFSET_MS_BOUNDS.max,
-    Math.max(KB_LATENCY_OFFSET_MS_BOUNDS.min, rounded),
-  );
-  return { offsetMs, clamped: offsetMs !== rounded };
-}
-
-export function scatterHalfRangeMs(meanMs: number, sdMs: number): number {
-  return Math.max(
-    CALIBRATION.minScatterHalfRangeMs,
-    Math.abs(meanMs) + CALIBRATION.scatterSdSpan * sdMs,
-  );
-}
-
-export function scatterX(deviationMs: number, halfRangeMs: number): number {
-  const x = HALF + deviationMs / (2 * halfRangeMs);
-  return Math.min(1, Math.max(0, x));
+export function storedOffsetMs(meanMs: number): number {
+  return Math.round(meanMs);
 }

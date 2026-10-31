@@ -9,17 +9,18 @@ const PRESENTATION_RATE = 48_000;
 const MS_PER_SECOND = 1000;
 const NS_PER_MS = 1_000_000;
 
-const presentationFrame = () =>
-  (globalThis.performance.now() * PRESENTATION_RATE) / MS_PER_SECOND;
+const presentationFrame = (nowMs: number) =>
+  (nowMs * PRESENTATION_RATE) / MS_PER_SECOND;
 
 export const calibrationDeps: typeof Native.calibrationDeps = {
   startClick: () => Promise.resolve(KB_RESULT.KB_OK),
   stopClick: () => undefined,
-  nowFrame: presentationFrame,
+  isClickActive: () => Promise.resolve(true),
+  nowFrame: () => presentationFrame(globalThis.performance.now()),
   readClockPair: () => {
     const now = globalThis.performance.now();
     return {
-      frame: (now * PRESENTATION_RATE) / MS_PER_SECOND,
+      frame: presentationFrame(now),
       monotonicNs: now * NS_PER_MS,
       sampleRate: PRESENTATION_RATE,
     };

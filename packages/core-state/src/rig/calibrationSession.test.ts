@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 
 import { CALIBRATION } from './calibrationRules.ts';
 import {
+  canUseOutcome,
   createCalibrationSession,
   type CalibrationDeps,
 } from './calibrationSession.ts';
@@ -24,24 +25,46 @@ const SPEAKER: OutputRoute = {
   certain: true,
 };
 const HEADPHONES: OutputRoute = {
-  id: 'bt-a2dp:EE:FF:WH-1000XM4',
+  id: 'bt-a2dp:headphones',
   name: 'WH-1000XM4',
   kind: 'bluetooth',
   certain: true,
 };
 
-function pairAt(ms: number, gapMs = 0): EngineClockPair {
+function pairAt(ms: number, gapMs = 0, rate = RATE): EngineClockPair {
   return {
-    frame: START_FRAME + ((ms - START_MS - gapMs) * RATE) / 1000,
+    frame: START_FRAME + ((ms - START_MS - gapMs) * rate) / 1000,
     monotonicNs: ms * 1_000_000,
-    sampleRate: RATE,
+    sampleRate: rate,
   };
 }
 
-function harness(
-  routes: OutputRoute[] = [HEADPHONES],
-  clickResult: number = KB_RESULT.KB_OK,
-) {
+interface Deferred {
+  readonly promise: Promise<number>;
+  readonly resolve: (result: number) => void;
+}
+
+function deferred(): Deferred {
+  let resolve: (result: number) => void = () => undefined;
+  const promise = new Promise<number>((r) => {
+    resolve = r;
+  });
+  return { promise, resolve };
+}
+
+const flush = () => new Promise((r) => setTimeout(r, 0));
+
+interface HarnessOptions {
+  readonly routes?: readonly OutputRoute[];
+  readonly clickResult?: number;
+  readonly routeError?: boolean;
+}
+
+function harness({
+  routes = [HEADPHONES],
+  clickResult = KB_RESULT.KB_OK,
+  routeError = false,
+}: HarnessOptions = {}) {
   const calls = {
     starts: [] as number[][],
     stops: 0,
@@ -50,18 +73,26 @@ function harness(
   };
   let routeListener: ((route: OutputRoute) => void) | undefined;
   let pair: EngineClockPair | null = pairAt(START_MS);
+  let clickActive = true;
+  const pendingStarts: Deferred[] = [];
+  let deferStarts = false;
   const queue = [...routes];
   const deps: CalibrationDeps = {
     startClick: (bpm, subdivision, startFrame) => {
       calls.starts.push([bpm, subdivision, startFrame]);
-      return Promise.resolve(clickResult);
+      if (!deferStarts) return Promise.resolve(clickResult);
+      const start = deferred();
+      pendingStarts.push(start);
+      return start.promise;
     },
     stopClick: () => {
       calls.stops += 1;
     },
+    isClickActive: () => Promise.resolve(clickActive),
     nowFrame: () => START_FRAME,
     readClockPair: () => pair,
     getOutputRoute: () => {
+      if (routeError) return Promise.reject(new Error('no route'));
       const next = queue.length > 1 ? queue.shift() : queue[0];
       return next === undefined
         ? Promise.reject(new Error('no route'))
@@ -82,9 +113,9 @@ function harness(
     },
   };
   const session = createCalibrationSession(deps);
-  const tapAt = (beat: number, lateMs: number, gapMs = 0) => {
+  const tapAt = (beat: number, lateMs: number, gapMs = 0, rate = RATE) => {
     const ms = START_MS + beat * MS_PER_BEAT + lateMs;
-    pair = pairAt(ms - 3, gapMs);
+    pair = pairAt(ms - 3, gapMs, rate);
     session.getState().tap(ms);
   };
   const tapRun = (lateMs: number, count: number = CALIBRATION.taps) => {
@@ -96,8 +127,15 @@ function harness(
     calls,
     tapAt,
     tapRun,
+    pendingStarts,
+    deferStarts: () => {
+      deferStarts = true;
+    },
     setPair: (next: EngineClockPair | null) => {
       pair = next;
+    },
+    stopClickExternally: () => {
+      clickActive = false;
     },
     emitRoute: (route: OutputRoute) => routeListener?.(route),
   };
@@ -150,6 +188,31 @@ describe('calibration session', () => {
     });
   });
 
+  it('re-arms the click when the sample rate changes', async () => {
+    const { session, calls, tapAt } = harness();
+    await session.getState().open();
+    tapAt(1, 10);
+    tapAt(2, 10, 0, RATE / 2);
+    await flush();
+    expect(calls.starts).toHaveLength(2);
+    expect(session.getState()).toMatchObject({
+      phase: 'running',
+      deviations: [],
+      notice: 'engine-restarted',
+    });
+  });
+
+  it('ends the run when the click stopped under it', async () => {
+    const { session, tapAt, stopClickExternally } = harness();
+    await session.getState().open();
+    stopClickExternally();
+    tapAt(1, 10);
+    await flush();
+    expect(session.getState().phase).toBe('stopped');
+    tapAt(2, 10);
+    expect(session.getState().deviations).toHaveLength(1);
+  });
+
   it('restarts the run when the route changes mid-run, and says so', async () => {
     const { session, tapAt, emitRoute } = harness();
     await session.getState().open();
@@ -172,25 +235,39 @@ describe('calibration session', () => {
 
   it('re-reads an uncertain route once the click runs', async () => {
     const guess = { ...SPEAKER, certain: false };
-    const { session } = harness([guess, HEADPHONES]);
+    const { session } = harness({ routes: [guess, HEADPHONES] });
     await session.getState().open();
     expect(session.getState().route).toEqual(HEADPHONES);
   });
 
+  it('treats a guess replaced by a confirmed route as confirmation, not a change', async () => {
+    const guess = { ...SPEAKER, certain: false };
+    const { session, tapAt, emitRoute } = harness({ routes: [guess] });
+    await session.getState().open();
+    tapAt(1, 10);
+    emitRoute(HEADPHONES);
+    expect(session.getState()).toMatchObject({
+      route: HEADPHONES,
+      notice: null,
+    });
+    expect(session.getState().deviations).toHaveLength(1);
+  });
+
   it('never stores against a route that stays uncertain', async () => {
     const guess = { ...SPEAKER, certain: false };
-    const { session, calls, tapRun } = harness([guess]);
+    const { session, calls, tapRun } = harness({ routes: [guess] });
     await session.getState().open();
     tapRun(12);
+    expect(canUseOutcome(session.getState())).toBe(false);
     await session.getState().use();
     expect(calls.saved).toEqual([]);
     expect(calls.applied).toEqual([]);
   });
 
-  it('stores the result against the live route and applies it', async () => {
+  it('stores the rounded mean against the live route and applies it', async () => {
     const { session, calls, tapRun } = harness();
     await session.getState().open();
-    tapRun(12);
+    tapRun(12.4);
     await session.getState().use();
     expect(calls.saved).toEqual([
       {
@@ -204,9 +281,11 @@ describe('calibration session', () => {
   });
 
   it('stores nothing when it refused to produce a number', async () => {
-    const { session, calls, tapRun } = harness();
+    const { session, calls, tapAt } = harness();
     await session.getState().open();
-    tapRun(CALIBRATION.maxClickDistanceMs + 20);
+    const wild = CALIBRATION.usableWindowMs + 30;
+    for (let i = 1; i <= CALIBRATION.taps; i += 1)
+      tapAt(i, i % 2 === 0 ? wild : -wild);
     expect(session.getState().outcome).toMatchObject({ kind: 'refused' });
     await session.getState().use();
     expect(calls.saved).toEqual([]);
@@ -226,9 +305,16 @@ describe('calibration session', () => {
   });
 
   it('reports a busy engine instead of running', async () => {
-    const { session } = harness([HEADPHONES], KB_RESULT.KB_ERROR_BUSY);
+    const { session } = harness({ clickResult: KB_RESULT.KB_ERROR_BUSY });
     await session.getState().open();
     expect(session.getState().phase).toBe('busy');
+  });
+
+  it('fails when the output route cannot be read', async () => {
+    const { session, calls } = harness({ routeError: true });
+    await session.getState().open();
+    expect(session.getState().phase).toBe('failed');
+    expect(calls.starts).toEqual([]);
   });
 
   it('stops the click on close and ignores taps after it', async () => {
@@ -241,11 +327,30 @@ describe('calibration session', () => {
   });
 
   it('stops a click whose start resolves after close', async () => {
-    const { session, calls } = harness();
-    const opening = session.getState().open();
-    session.getState().close();
+    const h = harness();
+    h.deferStarts();
+    const opening = h.session.getState().open();
+    await flush();
+    h.session.getState().close();
+    h.pendingStarts[0]?.resolve(KB_RESULT.KB_OK);
     await opening;
-    expect(calls.stops - 1).toBeGreaterThanOrEqual(calls.starts.length);
-    expect(session.getState().phase).toBe('idle');
+    expect(h.calls.stops).toBe(2);
+    expect(h.session.getState().phase).toBe('idle');
+  });
+
+  it('leaves a newer open’s click running when a stale start resolves', async () => {
+    const h = harness();
+    h.deferStarts();
+    const stale = h.session.getState().open();
+    await flush();
+    h.session.getState().close();
+    const fresh = h.session.getState().open();
+    await flush();
+    h.pendingStarts[1]?.resolve(KB_RESULT.KB_OK);
+    await fresh;
+    h.pendingStarts[0]?.resolve(KB_RESULT.KB_OK);
+    await stale;
+    expect(h.calls.stops).toBe(1);
+    expect(h.session.getState().phase).toBe('running');
   });
 });

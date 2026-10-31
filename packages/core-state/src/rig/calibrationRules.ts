@@ -5,10 +5,8 @@ export const CALIBRATION = {
   subdivision: KB_SUBDIVISION_BOUNDS.min,
   taps: 16,
   minUsableTaps: 8,
-  maxClickDistanceMs: 250,
+  usableWindowMs: 250,
   maxAbsZ: 2.5,
   steadySdMs: 30,
-  scatterSdSpan: 3,
-  minScatterHalfRangeMs: 50,
   engineJumpMs: 50,
 } as const;

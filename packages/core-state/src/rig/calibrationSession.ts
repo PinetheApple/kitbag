@@ -1,5 +1,6 @@
 import {
   KB_RESULT,
+  renderedFrameToMonotonicMs,
   type EngineClockPair,
   type OutputRoute,
 } from '@kitbag/core-native';
@@ -9,14 +10,11 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import { CALIBRATION } from './calibrationRules.ts';
 import {
   analyseTaps,
-  appliedOffset,
+  storedOffsetMs,
   tapDeviationMs,
   type CalibrationOutcome,
   type ClickSchedule,
 } from './calibrationStats.ts';
-
-const MS_PER_SECOND = 1000;
-const NS_PER_MS = 1_000_000;
 
 export interface CalibrationDeps {
   readonly startClick: (
@@ -25,6 +23,7 @@ export interface CalibrationDeps {
     startFrame: number,
   ) => Promise<number>;
   readonly stopClick: () => void;
+  readonly isClickActive: () => Promise<boolean>;
   readonly nowFrame: () => number;
   readonly readClockPair: () => EngineClockPair | null;
   readonly getOutputRoute: () => Promise<OutputRoute>;
@@ -36,7 +35,7 @@ export interface CalibrationDeps {
 }
 
 export type CalibrationPhase =
-  'idle' | 'starting' | 'running' | 'done' | 'busy' | 'failed';
+  'idle' | 'starting' | 'running' | 'done' | 'busy' | 'failed' | 'stopped';
 
 export type CalibrationNotice = 'route-changed' | 'engine-restarted';
 
@@ -66,15 +65,24 @@ const IDLE: CalibrationState = {
   notice: null,
 };
 
+export function canUseOutcome(
+  state: Pick<CalibrationState, 'phase' | 'outcome' | 'route'>,
+): boolean {
+  return (
+    state.phase === 'done' &&
+    state.outcome?.kind === 'measured' &&
+    state.route?.certain === true
+  );
+}
+
 export function engineRestarted(
   previous: EngineClockPair,
   next: EngineClockPair,
 ): boolean {
-  if (previous.sampleRate !== next.sampleRate) return true;
-  const renderedMs =
-    ((next.frame - previous.frame) * MS_PER_SECOND) / next.sampleRate;
-  const elapsedMs = (next.monotonicNs - previous.monotonicNs) / NS_PER_MS;
-  return Math.abs(renderedMs - elapsedMs) > CALIBRATION.engineJumpMs;
+  const drift =
+    renderedFrameToMonotonicMs(next.frame, next) -
+    renderedFrameToMonotonicMs(next.frame, previous);
+  return Math.abs(drift) > CALIBRATION.engineJumpMs;
 }
 
 export function createCalibrationSession(
@@ -82,9 +90,13 @@ export function createCalibrationSession(
 ): StoreApi<CalibrationSession> {
   return createStore<CalibrationSession>((set, get) => {
     let generation = 0;
+    let openGeneration: number | null = null;
     let schedule: ClickSchedule | null = null;
+    let scheduleRate: number | null = null;
     let lastPair: EngineClockPair | null = null;
     let unwatch: (() => void) | null = null;
+
+    const current = (opened: number) => opened === generation;
 
     const restartRun = (notice: CalibrationNotice | null) => {
       lastPair = null;
@@ -92,12 +104,54 @@ export function createCalibrationSession(
     };
 
     const onRoute = (route: OutputRoute) => {
-      const { phase, route: current } = get();
+      const { phase, route: shown } = get();
       if (phase !== 'running' && phase !== 'done') return;
       set({ route });
-      if (current !== null && current.id !== route.id) {
+      if (shown?.certain === true && shown.id !== route.id) {
         restartRun('route-changed');
       }
+    };
+
+    const armClick = async (opened: number) => {
+      const startFrame = deps.nowFrame();
+      const result = await deps.startClick(
+        CALIBRATION.bpm,
+        CALIBRATION.subdivision,
+        startFrame,
+      );
+      if (!current(opened)) {
+        if (result === KB_RESULT.KB_OK && openGeneration === null) {
+          deps.stopClick();
+        }
+        return false;
+      }
+      if (result !== KB_RESULT.KB_OK) {
+        set({ phase: result === KB_RESULT.KB_ERROR_BUSY ? 'busy' : 'failed' });
+        return false;
+      }
+      schedule = { startFrame, bpm: CALIBRATION.bpm };
+      scheduleRate = null;
+      return true;
+    };
+
+    const rearm = (opened: number) => {
+      schedule = null;
+      restartRun('engine-restarted');
+      armClick(opened).catch(() => {
+        if (current(opened)) set({ phase: 'failed' });
+      });
+    };
+
+    const confirmClickRunning = (opened: number) => {
+      deps.isClickActive().then(
+        (active) => {
+          if (!active && current(opened) && get().phase === 'running') {
+            schedule = null;
+            set({ phase: 'stopped' });
+          }
+        },
+        () => undefined,
+      );
     };
 
     const stop = () => {
@@ -108,42 +162,36 @@ export function createCalibrationSession(
       lastPair = null;
     };
 
+    const openSession = async (opened: number) => {
+      let route = await deps.getOutputRoute();
+      if (!current(opened)) return;
+      if (!(await armClick(opened))) return;
+      if (!route.certain) {
+        route = await deps.getOutputRoute();
+        if (!current(opened)) return;
+      }
+      set({ phase: 'running', route });
+      unwatch = deps.watchOutputRoute(onRoute);
+    };
+
     return {
       ...IDLE,
 
       open: async () => {
         stop();
         const opened = generation;
+        openGeneration = opened;
         set({ ...IDLE, phase: 'starting' });
-        let route = await deps.getOutputRoute();
-        if (opened !== generation) return;
-        const startFrame = deps.nowFrame();
-        const result = await deps.startClick(
-          CALIBRATION.bpm,
-          CALIBRATION.subdivision,
-          startFrame,
-        );
-        if (opened !== generation) {
-          if (result === KB_RESULT.KB_OK) deps.stopClick();
-          return;
+        try {
+          await openSession(opened);
+        } catch {
+          if (current(opened)) set({ phase: 'failed' });
         }
-        if (result !== KB_RESULT.KB_OK) {
-          set({
-            phase: result === KB_RESULT.KB_ERROR_BUSY ? 'busy' : 'failed',
-          });
-          return;
-        }
-        if (!route.certain) {
-          route = await deps.getOutputRoute();
-          if (opened !== generation) return;
-        }
-        schedule = { startFrame, bpm: CALIBRATION.bpm };
-        set({ phase: 'running', route });
-        unwatch = deps.watchOutputRoute(onRoute);
       },
 
       close: () => {
         stop();
+        openGeneration = null;
         deps.stopClick();
         set(IDLE);
       },
@@ -152,11 +200,18 @@ export function createCalibrationSession(
         if (get().phase !== 'running' || schedule === null) return;
         const pair = deps.readClockPair();
         if (pair === null) return;
+        const opened = generation;
+        scheduleRate ??= pair.sampleRate;
+        if (pair.sampleRate !== scheduleRate) {
+          rearm(opened);
+          return;
+        }
         if (lastPair !== null && engineRestarted(lastPair, pair)) {
           restartRun('engine-restarted');
           return;
         }
         lastPair = pair;
+        confirmClickRunning(opened);
         const deviations = [
           ...get().deviations,
           tapDeviationMs(timestampMs, pair, schedule),
@@ -183,11 +238,13 @@ export function createCalibrationSession(
       },
 
       use: async () => {
-        const { outcome, route } = get();
-        if (outcome?.kind !== 'measured' || route?.certain !== true) {
+        const state = get();
+        const { outcome, route } = state;
+        if (!canUseOutcome(state) || outcome?.kind !== 'measured') {
           return false;
         }
-        const { offsetMs } = appliedOffset(outcome.meanMs);
+        if (route === null) return false;
+        const offsetMs = storedOffsetMs(outcome.meanMs);
         await deps.saveRouteLatency({
           route: route.id,
           offsetMs,
