@@ -1,9 +1,12 @@
 import {
+  bodyLineHeight,
   createThemedStyles,
   EditRow,
   LiveText,
+  minTouchTargetDp,
   rig,
   Slider,
+  textRoles,
 } from '@kitbag/core-design';
 import { useMetronome } from '@kitbag/core-state';
 import { useCallback, useEffect } from 'react';
@@ -20,9 +23,13 @@ import { setLiveVolume } from './rigRuntime';
 
 const LABEL = 'Click volume';
 
+// The slider's 48dp hit area overhangs the row instead of making it taller.
+const HIT_OVERHANG =
+  (minTouchTargetDp - textRoles.editRowKey.size * bodyLineHeight) / 2;
+
 const useStyles = createThemedStyles(() => ({
-  slider: { width: rig.sliderWidth },
-  readout: { minWidth: rig.readoutMinWidth },
+  slider: { width: rig.sliderWidth, marginVertical: -HIT_OVERHANG },
+  readout: { width: rig.readoutWidth },
 }));
 
 export function VolumeRow() {

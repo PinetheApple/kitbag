@@ -15,7 +15,7 @@ export const calibration = {
 
 export const rig = {
   sliderWidth: 96,
-  readoutMinWidth: 42,
+  readoutWidth: 42,
   accentLedsV: 6,
 } as const;
 
