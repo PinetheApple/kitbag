@@ -18,6 +18,7 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.kitbag.corenative.transport.Playback
 import com.kitbag.corenative.transport.PracticeClock
+import com.kitbag.corenative.transport.SetlistPosition
 import com.kitbag.corenative.transport.Song
 import com.kitbag.corenative.transport.SongAction
 import com.kitbag.corenative.transport.TransportAction
@@ -138,7 +139,11 @@ class PlaybackService : Service() {
       rampRunning = intent.getBooleanExtra(EXTRA_RAMP_RUNNING, false),
       beatsPerBar = intent.getIntExtra(EXTRA_BEATS_PER_BAR, 0),
       beatUnit = intent.getIntExtra(EXTRA_BEAT_UNIT, 0),
-      setlist = null,
+      setlist = SetlistPosition.from(
+        intent.getStringExtra(EXTRA_SETLIST_SUBTITLE),
+        if (intent.hasExtra(EXTRA_SONG_INDEX)) intent.getIntExtra(EXTRA_SONG_INDEX, 0) else null,
+        intent.getIntExtra(EXTRA_SONG_COUNT, 0),
+      ),
     )
     render()
   }
@@ -147,13 +152,17 @@ class PlaybackService : Service() {
     val transportModel = model ?: return
     val current = state?.let(::withEngineTempo) ?: return
     var next = current
-    for (command in transportModel.commandsFor(current, action)) {
+    val commands = transportModel.commandsFor(current, action)
+    for (command in commands) {
       execute(command)
       next = applied(next, command)
     }
+    val songStep = action.takeIf {
+      TransportCommand.PreviousSong in commands || TransportCommand.NextSong in commands
+    }
     practice = practice.afterPlaying(next.playback == Playback.PLAYING, System.currentTimeMillis())
     state = next
-    listener?.invoke(next, practice)
+    listener?.invoke(next, practice, songStep)
     if (next.playback == Playback.STOPPED) finish() else render()
   }
 
@@ -310,12 +319,15 @@ class PlaybackService : Service() {
     private const val EXTRA_PLAYING = "playing"
     private const val EXTRA_PRACTICE_PLAYED_MS = "practicePlayedMs"
     private const val EXTRA_PRACTICE_STRETCH_STARTED_AT = "practiceStretchStartedAt"
+    private const val EXTRA_SETLIST_SUBTITLE = "setlistSubtitle"
+    private const val EXTRA_SONG_INDEX = "songIndex"
+    private const val EXTRA_SONG_COUNT = "songCount"
 
     @Volatile private var running = false
 
     @Volatile private var startRequested = false
 
-    @Volatile var listener: ((TransportState, PracticeClock) -> Unit)? = null
+    @Volatile var listener: ((TransportState, PracticeClock, TransportAction?) -> Unit)? = null
 
     fun show(
       context: Context,
@@ -338,6 +350,10 @@ class PlaybackService : Service() {
         .putExtra(EXTRA_MAX_BPM, maxBpm)
         .putExtra(EXTRA_PRACTICE_PLAYED_MS, practicePlayedMs)
         .putExtra(EXTRA_PRACTICE_STRETCH_STARTED_AT, practiceStretchStartedAt)
+      state.setlist?.let {
+        intent.putExtra(EXTRA_SETLIST_SUBTITLE, it.subtitle).putExtra(EXTRA_SONG_COUNT, it.songCount)
+        it.index?.let { index -> intent.putExtra(EXTRA_SONG_INDEX, index) }
+      }
       start(context, intent)
     }
 

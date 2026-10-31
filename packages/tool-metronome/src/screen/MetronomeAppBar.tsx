@@ -18,16 +18,17 @@ import {
   useTheme,
 } from '@kitbag/core-design';
 import {
+  activeSetView,
   adjacentEntry,
   SONG_STEP,
   useLibrary,
+  type ActiveSet,
   type SetlistEntry,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import {
-  activeSetView,
   loadedSongName,
   setlistChipA11yLabel,
   setlistChipLabel,
@@ -36,7 +37,6 @@ import {
   stageChipA11yLabel,
   stageChipText,
   stepA11yLabel,
-  type ActiveSet,
   type SongChipText,
 } from '../logic/setlistChip.ts';
 import { LoadedSongSheet } from './LoadedSongSheet.tsx';

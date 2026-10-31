@@ -1,10 +1,14 @@
-import type { TransportEvent } from '@kitbag/core-native';
-import type { MetronomeConfig } from '@kitbag/core-state';
+import type { TransportEvent, TransportSetlist } from '@kitbag/core-native';
+import {
+  SONG_STEP,
+  type MetronomeConfig,
+  type SongStep,
+} from '@kitbag/core-state';
 
 export type TransportSource = Pick<
   MetronomeConfig,
   'running' | 'bpm' | 'beatsPerBar' | 'denominator' | 'ramp' | 'practice'
->;
+> & { readonly setlist: TransportSetlist | null };
 
 export interface TransportShown {
   readonly playing: boolean;
@@ -14,6 +18,7 @@ export interface TransportShown {
   readonly beatUnit: number;
   readonly practicePlayedMs: number;
   readonly practiceStretchStartedAt: number;
+  readonly setlist: TransportSetlist | null;
 }
 
 export type TransportStep =
@@ -43,18 +48,25 @@ function shownFor(
 ): TransportShown | undefined {
   if (state.running) {
     return {
+      ...cardOf(state),
       playing: true,
-      bpm: state.bpm,
-      rampRunning: state.ramp.enabled,
-      beatsPerBar: state.beatsPerBar,
-      beatUnit: state.denominator,
-      practicePlayedMs: state.practice.playedMs,
       practiceStretchStartedAt: state.practice.stretchStartedAt ?? now,
     };
   }
-  return shown?.playing === false
-    ? { ...shown, practicePlayedMs: state.practice.playedMs }
-    : undefined;
+  return shown?.playing === false ? { ...shown, ...cardOf(state) } : undefined;
+}
+
+function cardOf(
+  state: TransportSource,
+): Omit<TransportShown, 'playing' | 'practiceStretchStartedAt'> {
+  return {
+    bpm: state.bpm,
+    rampRunning: state.ramp.enabled,
+    beatsPerBar: state.beatsPerBar,
+    beatUnit: state.denominator,
+    practicePlayedMs: state.practice.playedMs,
+    setlist: state.setlist,
+  };
 }
 
 // A paused notification still owns the engine metronome: its Play restarts it.
@@ -81,6 +93,19 @@ export function shownAfterNativeChange(
     : { ...followed, bpm: event.bpm, rampRunning: false };
 }
 
+const SONG_STEP_OF_WIRE: Readonly<
+  Record<NonNullable<TransportEvent['songStep']>, SongStep>
+> = {
+  previous: SONG_STEP.previous,
+  next: SONG_STEP.next,
+};
+
+export function songStepFor(event: TransportEvent): SongStep | undefined {
+  return event.songStep === null
+    ? undefined
+    : SONG_STEP_OF_WIRE[event.songStep];
+}
+
 export function storePatchFor(
   event: TransportEvent,
   current: Pick<MetronomeConfig, 'bpm' | 'ramp'>,
@@ -100,7 +125,14 @@ export function storePatchFor(
 }
 
 function sameShown(a: TransportShown, b: TransportShown): boolean {
-  return (Object.keys(a) as (keyof TransportShown)[]).every(
+  return (Object.keys(a) as (keyof TransportShown)[]).every((key) =>
+    key === 'setlist' ? sameSetlist(a.setlist, b.setlist) : a[key] === b[key],
+  );
+}
+
+function sameSetlist(a: TransportSetlist | null, b: TransportSetlist | null) {
+  if (a === null || b === null) return a === b;
+  return (Object.keys(a) as (keyof typeof a)[]).every(
     (key) => a[key] === b[key],
   );
 }

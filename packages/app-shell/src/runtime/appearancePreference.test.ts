@@ -1,14 +1,10 @@
 import type { Preferences } from '@kitbag/core-db';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import {
   APPEARANCE_KEYS,
   appearancePreference,
 } from './appearancePreference.ts';
-
-vi.mock('react-native', () => ({}));
-vi.mock('expo-haptics', () => ({}));
-vi.mock('@op-engineering/op-sqlite', () => ({}));
 
 function memoryPreferences(initial: Record<string, string> = {}) {
   const data = new Map<string, string>(Object.entries(initial));
