@@ -7,7 +7,7 @@ import {
 } from '@kitbag/core-native';
 import { metronomeStore, type CalibrationDeps } from '@kitbag/core-state';
 
-import { getDatabase } from '@/runtime/database';
+import { routeLatency } from './rigRuntime';
 
 export const calibrationDeps: CalibrationDeps = {
   startClick: (bpm, subdivision, startFrame) =>
@@ -20,7 +20,7 @@ export const calibrationDeps: CalibrationDeps = {
   readClockPair: getEngineClockPair,
   getOutputRoute,
   watchOutputRoute,
-  saveRouteLatency: (entry) => getDatabase().routeLatency.save(entry),
+  saveRouteLatency: (entry) => routeLatency.getState().record(entry),
   applyLatency: (offsetMs) => {
     metronomeStore.getState().setLatency(offsetMs);
   },

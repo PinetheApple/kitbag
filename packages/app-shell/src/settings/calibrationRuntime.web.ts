@@ -2,6 +2,7 @@ import { KB_RESULT, getOutputRoute } from '@kitbag/core-native';
 import { metronomeStore, type CalibrationDeps } from '@kitbag/core-state';
 
 import type * as Native from './calibrationRuntime.ts';
+import { routeLatency } from './rigRuntime';
 
 // The web build has no engine; a clock on performance.now, the base of a web
 // touch timestamp, lets the screen run silently for layout work.
@@ -27,7 +28,7 @@ export const calibrationDeps: typeof Native.calibrationDeps = {
   },
   getOutputRoute,
   watchOutputRoute: () => () => undefined,
-  saveRouteLatency: () => Promise.resolve(),
+  saveRouteLatency: (entry) => routeLatency.getState().record(entry),
   applyLatency: (offsetMs) => {
     metronomeStore.getState().setLatency(offsetMs);
   },
