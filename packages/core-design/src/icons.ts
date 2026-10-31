@@ -46,7 +46,7 @@ export const iconGlyphs = {
   songs: 'playlist-music',
   metronome: 'metronome',
   tuner: 'guitar-acoustic',
-  stems: 'tune',
+  stems: 'tune-vertical',
   playAlong: 'play-circle-outline',
   moreTools: 'dots-grid',
   arrowUp: 'arrow-up',
