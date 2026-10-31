@@ -1,24 +1,37 @@
 import {
+  countLabel,
+  EditDivider,
   EditGroup,
   EditRow,
   EditTextInput,
+  metronomeEditor,
+  minTouchTargetDp,
   space,
   StepControl,
   type StepDelta,
 } from '@kitbag/core-design';
 import { KB_STOPPED_BEAT, KB_SUBDIVISION_BOUNDS } from '@kitbag/core-native';
 import { BPM_BOUNDS } from '@kitbag/core-state';
-import { useCallback } from 'react';
+import { useCallback, type ReactNode } from 'react';
+import { View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 
 import {
   withBeats,
   withCycledAccent,
   withNextDenominator,
+  withPolyAgainst,
   withPolyBeats,
 } from '../../logic/presetDraft.ts';
+import { polyAgainstLabel } from '../../logic/polyRow.ts';
 import { subdivisionLabel } from '../../logic/subdivision.ts';
 import { BeatLeds } from '../../screen/BeatLeds.tsx';
+
+const SUB_ROW = { paddingLeft: metronomeEditor.subRowIndent } as const;
+
+function SubRow({ children }: { readonly children: ReactNode }) {
+  return <View style={SUB_ROW}>{children}</View>;
+}
 
 const EDITOR_LED_GAPS = {
   top: space.rowGap,
@@ -118,7 +131,7 @@ function AccentsRow({ editor }: { readonly editor: PresetEditor }) {
   );
 }
 
-function PolyRow({ editor }: { readonly editor: PresetEditor }) {
+function PolyRows({ editor }: { readonly editor: PresetEditor }) {
   const { draft, update } = editor;
   const toggle = useCallback(
     (polyEnabled: boolean) => {
@@ -126,25 +139,63 @@ function PolyRow({ editor }: { readonly editor: PresetEditor }) {
     },
     [update],
   );
-  const step = useCallback(
+  const stepPoly = useCallback(
     (delta: StepDelta) => {
       update((d) => withPolyBeats(d, delta));
     },
     [update],
   );
+  const stepAgainst = useCallback(
+    (delta: StepDelta) => {
+      update((d) => withPolyAgainst(d, delta));
+    },
+    [update],
+  );
+  const against = polyAgainstLabel(draft.polyAgainst, draft.beatsPerBar);
   return (
-    <EditRow label="Polyrhythm">
-      {draft.polyEnabled ? (
-        <StepControl
-          variant="inline"
-          label="Polyrhythm beats"
-          value={`${String(draft.polyBeats)}:${String(draft.beatsPerBar)}`}
-          accessibilityValue={`${String(draft.polyBeats)} beats`}
-          onStep={step}
+    <>
+      <EditRow label="Polyrhythm" minHeight={metronomeEditor.toggleRowMin}>
+        <OnOff
+          on={draft.polyEnabled}
+          label="Polyrhythm"
+          inRow
+          onChange={toggle}
         />
+      </EditRow>
+      {draft.polyEnabled ? (
+        <>
+          <EditDivider />
+          <SubRow>
+            <EditRow label="Poly" minHeight={minTouchTargetDp}>
+              <StepControl
+                variant="inlineLargeTextGlyph"
+                label="Poly"
+                value={String(draft.polyBeats)}
+                accessibilityValue={countLabel(
+                  draft.polyBeats,
+                  'beat',
+                  'beats',
+                )}
+                onStep={stepPoly}
+              />
+            </EditRow>
+          </SubRow>
+          <EditDivider />
+          <SubRow>
+            <EditRow label="Against" minHeight={minTouchTargetDp}>
+              <StepControl
+                variant="inlineLargeTextGlyph"
+                label="Against"
+                value={against.value}
+                suffix={against.suffix}
+                accessibilityValue={against.spoken}
+                onStep={stepAgainst}
+              />
+            </EditRow>
+          </SubRow>
+        </>
       ) : null}
-      <OnOff on={draft.polyEnabled} label="Polyrhythm" onChange={toggle} />
-    </EditRow>
+    </>
   );
 }
 
@@ -189,7 +240,7 @@ export function MusicGroup({ editor }: { readonly editor: PresetEditor }) {
       <SignatureRow editor={editor} />
       <SubdivisionRow editor={editor} />
       <AccentsRow editor={editor} />
-      <PolyRow editor={editor} />
+      <PolyRows editor={editor} />
     </EditGroup>
   );
 }

@@ -8,7 +8,9 @@ import {
   MAX_BEATS,
   MAX_BPM,
   MAX_MUTE_BARS,
+  MAX_POLY_AGAINST,
   MAX_POLY_BEATS,
+  MIN_POLY_AGAINST,
   MAX_RAMP_BARS,
   MAX_RAMP_SECONDS,
   MIN_RAMP_SECONDS,
@@ -17,6 +19,7 @@ import {
   MAX_SUBDIVISION,
   MIN_BPM,
   NORMAL_ACCENT,
+  POLY_AGAINST_BAR,
   SOUND_COUNT,
 } from './preset-rules';
 import { INSTRUMENTS, MAX_MIDI_NOTE, MAX_STRINGS } from './tuning-rules';
@@ -33,6 +36,7 @@ const headers = {
   'tempo_ramp.h': source('src/metronome/tempo_ramp.h'),
 };
 const api = source('include/kitbag_api.h');
+const polyApi = source('include/kitbag_metronome_poly_api.h');
 const tunerApi = source('include/kitbag_tuner_api.h');
 const tuningMode = source('src/tuner/tuning_mode.h');
 
@@ -53,6 +57,9 @@ describe('engine limits mirrored in core-db', () => {
     expect(Number(constant('kMaxBpm', 'metronome_types.h'))).toBe(MAX_BPM);
     expect(Number(constant('kMaxBeats'))).toBe(MAX_BEATS);
     expect(Number(constant('kMaxPolyBeats'))).toBe(MAX_POLY_BEATS);
+    expect(Number(constant('kMinPolyAgainst'))).toBe(MIN_POLY_AGAINST);
+    expect(constant('kMaxPolyAgainst')).toBe('kMaxBeats');
+    expect(MAX_POLY_AGAINST).toBe(MAX_BEATS);
     expect(Number(constant('kSoundCount'))).toBe(SOUND_COUNT);
     expect(Number(constant('kMaxSubdivision'))).toBe(MAX_SUBDIVISION);
     expect(Number(constant('kMaxBars', 'tempo_ramp.h'))).toBe(MAX_RAMP_BARS);
@@ -68,6 +75,12 @@ describe('engine limits mirrored in core-db', () => {
       DEFAULT_DENOMINATOR,
     );
     expect(constant('kDenominators')).toBe(`{${DENOMINATORS.join(', ')}}`);
+  });
+
+  it('match the poly against sentinel in kitbag_metronome_poly_api.h', () => {
+    expect(Number(/#define KB_POLY_AGAINST_BAR (\d+)/.exec(polyApi)?.[1])).toBe(
+      POLY_AGAINST_BAR,
+    );
   });
 
   it('match the kb_accent enum in kitbag_api.h', () => {

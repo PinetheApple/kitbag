@@ -3,13 +3,15 @@ import {
   KB_RAMP_STATE,
   KB_RAMP_UNIT,
 } from '@kitbag/core-native';
-import type {
-  BarMuteConfig,
-  CountInConfig,
-  RampConfig,
+import {
+  effectivePolyAgainst,
+  type BarMuteConfig,
+  type CountInConfig,
+  type RampConfig,
 } from '@kitbag/core-state';
 
 import { countInLabel } from './countIn.ts';
+import { polyRatioLabel } from './polyRow.ts';
 
 export interface PracticeSettings {
   readonly ramp: RampConfig;
@@ -17,6 +19,7 @@ export interface PracticeSettings {
   readonly countIn: CountInConfig;
   readonly polyEnabled: boolean;
   readonly polyBeats: number;
+  readonly polyAgainst: number;
   readonly beatsPerBar: number;
 }
 
@@ -43,11 +46,24 @@ export function armedSummary(settings: PracticeSettings): string {
     parts.push(`Count-in ${countInLabel(settings.countIn.bars)}`);
   }
   if (settings.polyEnabled) {
-    parts.push(
-      `Poly ${String(settings.polyBeats)}:${String(settings.beatsPerBar)}`,
-    );
+    const ratio = polyRatioLabel({
+      polyBeats: settings.polyBeats,
+      against: effectivePolyAgainst(settings.polyAgainst, settings.beatsPerBar),
+      beatsPerBar: settings.beatsPerBar,
+    });
+    parts.push(`Poly ${ratio}`);
   }
   return parts.length === 0 ? NOTHING_ARMED : parts.join(' · ');
+}
+
+export type RestLegend = 'beat' | 'poly';
+
+export function restLegend(
+  running: boolean,
+  polyEnabled: boolean,
+): RestLegend | null {
+  if (running) return null;
+  return polyEnabled ? 'poly' : 'beat';
 }
 
 export function afterCountInSummary(settings: PracticeSettings): string {

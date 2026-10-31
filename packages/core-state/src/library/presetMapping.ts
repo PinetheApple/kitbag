@@ -53,6 +53,7 @@ export function presetFromMetronome(config: MetronomeConfig): PresetFields {
     perAccentSounds: toBlob([config.sounds.normal, config.sounds.accent]),
     polyEnabled: config.polyEnabled,
     polyBeats: config.polyBeats,
+    polyAgainst: config.polyAgainst,
     polyAccents: toBlob(config.polyAccents),
     sound: config.sounds.normal,
     rampEnabled: config.ramp.enabled,
@@ -111,6 +112,7 @@ export function applyPreset(
   store.setAccents(accentsOf(preset.accents));
   store.setSubdivision(preset.subdivision);
   store.setPoly(preset.polyEnabled, preset.polyBeats);
+  store.setPolyAgainst(preset.polyAgainst);
   store.setPolyAccents(accentsOf(preset.polyAccents));
   const sounds = perAccentSoundsOf(preset.perAccentSounds, preset.sound);
   store.setSounds(sounds.normal, sounds.accent);

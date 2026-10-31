@@ -22,12 +22,14 @@ import {
   countInBarText,
   rampNextText,
   rampRemainingText,
+  restLegend,
   statusRows,
   type PracticeSettings,
   type StatusRows,
 } from '../logic/statusRows.ts';
 import { trackOpacity } from '../logic/trackOpacity.ts';
 import { BeatLegend } from './BeatDots.tsx';
+import { PolyLegend } from './PolyLegend.tsx';
 import { LiveSlot } from './LiveSlot.tsx';
 import { MuteStatus } from './MuteStatus.tsx';
 import { countInInk, useStatusStyles } from './statusStyles.ts';
@@ -209,6 +211,7 @@ export function StatusStack({ frame, settings, running }: StatusStackProps) {
     ),
   );
   const summary = armedSummary(settings);
+  const legend = restLegend(running, settings.polyEnabled);
   return (
     <View
       style={styles.stack}
@@ -217,7 +220,7 @@ export function StatusStack({ frame, settings, running }: StatusStackProps) {
       accessibilityLabel={summary}
       pointerEvents="none"
     >
-      {running ? null : (
+      {legend === null ? null : (
         <>
           <View style={styles.rest}>
             <Icon name="practiceTools" size="statusRest" color="text2" />
@@ -226,7 +229,7 @@ export function StatusStack({ frame, settings, running }: StatusStackProps) {
             </Text>
           </View>
           <View style={styles.legendRow}>
-            <BeatLegend />
+            {legend === 'poly' ? <PolyLegend /> : <BeatLegend />}
           </View>
         </>
       )}

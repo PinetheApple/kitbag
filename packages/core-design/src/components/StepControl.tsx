@@ -20,7 +20,8 @@ import {
 import { InlineIcon } from './IconGlyph.tsx';
 
 export type StepDelta = -1 | 1;
-export type StepControlVariant = 'badge' | 'inline' | 'inlineLarge';
+export type StepControlVariant =
+  'badge' | 'inline' | 'inlineLarge' | 'inlineLargeTextGlyph';
 
 const STEP_DOWN: StepDelta = -1;
 const STEP_UP: StepDelta = 1;
@@ -47,6 +48,7 @@ const A11Y_ACTIONS_WITH_ACTIVATE = [...A11Y_ACTIONS, { name: 'activate' }];
 export interface StepControlProps {
   readonly label: string;
   readonly value: string;
+  readonly suffix?: string | undefined;
   readonly accessibilityValue?: string;
   readonly onStep: (delta: StepDelta) => void;
   readonly onValuePress?: () => void;
@@ -236,12 +238,25 @@ const useStyles = createThemedStyles((theme) => ({
   largeKeyText: {
     fontSize: iconSizes.stepInlineLargeKey,
   },
+  textGlyphKey: {
+    fontSize: iconSizes.stepTextGlyphKey,
+  },
   largeValue: textStyle(textRoles.stepInlineLargeValue),
+  suffixed: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  suffix: {
+    ...textStyle(textRoles.stepValueSuffix),
+    marginLeft: space.stepSuffixGap,
+    color: theme.color.text2,
+  },
 }));
 
 export function StepControl({
   label,
   value,
+  suffix,
   accessibilityValue,
   onStep,
   onValuePress,
@@ -251,7 +266,8 @@ export function StepControl({
 }: StepControlProps) {
   const styles = useStyles();
   const valueTappable = onValuePress !== undefined;
-  const large = variant === 'inlineLarge';
+  const textGlyph = variant === 'inlineLargeTextGlyph';
+  const large = variant === 'inlineLarge' || textGlyph;
   const inline = variant === 'inline' || large;
   const gaps = neighbourGaps(neighbourGapDp);
   const hitBoxes = large
@@ -281,7 +297,11 @@ export function StepControl({
         <View style={[styles.inlineKey, large && styles.largeKey]}>
           <InlineIcon
             name={glyph}
-            style={[styles.inlineKeyText, large && styles.largeKeyText]}
+            style={[
+              styles.inlineKeyText,
+              large && styles.largeKeyText,
+              textGlyph && styles.textGlyphKey,
+            ]}
           />
         </View>
       </Pressable>
@@ -296,7 +316,7 @@ export function StepControl({
   const valueBoxStyle = inline
     ? styles.inlineValueBox
     : [styles.badgeValueBox, accented && styles.badgeValueBoxAccented];
-  const valueText = (
+  const valueNumber = (
     <Text
       style={
         inline
@@ -307,13 +327,23 @@ export function StepControl({
       {value}
     </Text>
   );
+  const valueContent =
+    suffix === undefined ? (
+      valueNumber
+    ) : (
+      <View style={styles.suffixed}>
+        {valueNumber}
+        <Text style={styles.suffix}>{suffix}</Text>
+      </View>
+    );
+  const spokenValue = suffix === undefined ? value : `${value} ${suffix}`;
 
   return (
     <View
       accessible
       accessibilityRole="adjustable"
       accessibilityLabel={label}
-      accessibilityValue={{ text: accessibilityValue ?? value }}
+      accessibilityValue={{ text: accessibilityValue ?? spokenValue }}
       accessibilityActions={
         valueTappable ? A11Y_ACTIONS_WITH_ACTIVATE : A11Y_ACTIONS
       }
@@ -333,10 +363,10 @@ export function StepControl({
           ]}
           onPress={onValuePress}
         >
-          {valueText}
+          {valueContent}
         </Pressable>
       ) : (
-        <View style={[valueBoxStyle, styles.inertValue]}>{valueText}</View>
+        <View style={[valueBoxStyle, styles.inertValue]}>{valueContent}</View>
       )}
       {key('increase', hitBoxes.increment, handleIncrement)}
     </View>
