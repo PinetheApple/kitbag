@@ -37,15 +37,17 @@ import {
 } from './UnsavedChanges.tsx';
 
 const NO_ENTRIES: readonly SetlistEntry[] = [];
-const UNSAVED_NAME_LINES = 2;
-
 const useStyles = createThemedStyles((theme) => ({
   row: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
-    gap: space.sectionGap,
+    alignContent: 'center',
+    columnGap: space.sectionGap,
+    rowGap: space.controlGap,
     minHeight: metronomeSheet.songRow,
     paddingHorizontal: metronomeSheet.songRowH,
+    paddingVertical: space.controlGap,
     borderBottomWidth: size.stroke,
     borderBottomColor: theme.color.line,
   },
@@ -64,9 +66,17 @@ const useStyles = createThemedStyles((theme) => ({
     textAlign: 'right',
     color: theme.color.text3,
   },
+  trail: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sectionGap,
+    marginLeft: 'auto',
+  },
   nameLine: {
-    flex: 1,
-    minWidth: 0,
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: metronomeSheet.nowNameMin,
+    minWidth: metronomeSheet.nowNameMin,
     flexDirection: 'row',
     alignItems: 'center',
     gap: metronome.unsavedDotGap,
@@ -112,18 +122,22 @@ function SongRow({
       <View style={styles.nameLine}>
         <Text
           style={[styles.name, row.now && styles.nameNow]}
-          numberOfLines={unsaved ? UNSAVED_NAME_LINES : undefined}
+          numberOfLines={unsaved ? 1 : undefined}
         >
           {row.name}
         </Text>
         {unsaved ? <UnsavedDot /> : null}
       </View>
-      {unsaved ? <NowRowActions onError={onSaveError} /> : null}
-      {row.now ? (
-        <Badge tone="accent" variant="filled" label="NOW" />
-      ) : (
-        <Text style={styles.bpm}>{row.bpm}</Text>
-      )}
+      <View style={styles.trail}>
+        {unsaved ? <NowRowActions onError={onSaveError} /> : null}
+        {row.now ? (
+          <View>
+            <Badge tone="accent" variant="filled" label="NOW" />
+          </View>
+        ) : (
+          <Text style={styles.bpm}>{row.bpm}</Text>
+        )}
+      </View>
     </Pressable>
   );
 }

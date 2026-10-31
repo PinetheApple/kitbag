@@ -115,6 +115,7 @@ export const metronomeSheet = {
   nowActionSaveH: 12,
   nowActionRevertH: 10,
   nowActionIconGap: 4,
+  nowNameMin: 40,
 } as const;
 
 export const metronomeEditor = {
