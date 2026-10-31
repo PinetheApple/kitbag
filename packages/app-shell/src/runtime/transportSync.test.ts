@@ -232,7 +232,6 @@ describe('songStepFor', () => {
 
   it('has no step for any other event', () => {
     expect(songStepFor(event())).toBeUndefined();
-    expect(songStepFor(event({ songStep: 'sideways' }))).toBeUndefined();
   });
 });
 

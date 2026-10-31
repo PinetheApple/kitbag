@@ -13,6 +13,7 @@ import com.kitbag.corenative.transport.Playback
 import com.kitbag.corenative.transport.PracticeClock
 import com.kitbag.corenative.transport.SetlistPosition
 import com.kitbag.corenative.transport.Song
+import com.kitbag.corenative.transport.SongStepWire
 import com.kitbag.corenative.transport.TransportAction
 import com.kitbag.corenative.transport.TransportState
 
@@ -113,7 +114,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
         putBoolean("rampRunning", state.rampRunning)
         putDouble("practicePlayedMs", practice.playedMillis.toDouble())
         putDouble("practiceStretchStartedAt", (practice.stretchStartedAt ?: 0L).toDouble())
-        putString("songStep", songStep?.name?.lowercase())
+        putString("songStep", SongStepWire.of(songStep))
       },
     )
   }

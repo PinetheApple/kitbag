@@ -48,6 +48,14 @@ class TransportModelTest {
   }
 
   @Test
+  fun `a song step reaches the app as its wire name`() {
+    assertEquals("previous", SongStepWire.of(PREVIOUS))
+    assertEquals("next", SongStepWire.of(NEXT))
+    assertNull(SongStepWire.of(PLAY))
+    assertNull(SongStepWire.of(null))
+  }
+
+  @Test
   fun `no setlist means no subtitle and no previous or next`() {
     val view = model.view(state())
     assertNull(view.subtitle)

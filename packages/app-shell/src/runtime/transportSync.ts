@@ -94,10 +94,17 @@ export function shownAfterNativeChange(
     : { ...followed, bpm: event.bpm, rampRunning: false };
 }
 
+const SONG_STEP_OF_WIRE: Readonly<
+  Record<NonNullable<TransportEvent['songStep']>, SongStep>
+> = {
+  previous: SONG_STEP.previous,
+  next: SONG_STEP.next,
+};
+
 export function songStepFor(event: TransportEvent): SongStep | undefined {
-  return Object.entries(SONG_STEP).find(
-    ([name]) => name === event.songStep,
-  )?.[1];
+  return event.songStep === null
+    ? undefined
+    : SONG_STEP_OF_WIRE[event.songStep];
 }
 
 export function storePatchFor(

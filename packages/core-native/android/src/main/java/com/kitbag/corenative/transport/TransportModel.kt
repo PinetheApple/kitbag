@@ -26,6 +26,18 @@ data class SetlistPosition(
   }
 }
 
+object SongStepWire {
+  private const val PREVIOUS = "previous"
+  private const val NEXT = "next"
+
+  fun of(action: TransportAction?): String? =
+    when (action) {
+      TransportAction.PREVIOUS -> PREVIOUS
+      TransportAction.NEXT -> NEXT
+      else -> null
+    }
+}
+
 data class TransportState(
   val playback: Playback,
   val bpm: Double,
