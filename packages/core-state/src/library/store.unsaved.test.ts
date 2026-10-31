@@ -18,6 +18,7 @@ async function gig() {
   const first = await s.newSongFromCurrent('Opener', setlistId);
   metronome.getState().setTempo(NEXT_BPM);
   const second = await s.newSongFromCurrent('Ballad', setlistId);
+  await s.newSongFromCurrent('Shuffle', setlistId);
   const [opener] = library.getState().entries[setlistId] ?? [];
   if (opener === undefined) throw new Error('missing opener');
   await s.loadSong(first, opener.item.id, setlistId);
@@ -104,10 +105,11 @@ describe('discarding unsaved changes', () => {
   });
 
   it('keeps the snapshot through a clean step, so undo still works', async () => {
-    const { library, metronome, first } = await gig();
+    const { library, metronome, first, second } = await gig();
     metronome.getState().setTempo(EDITED_BPM);
     await library.getState().stepSong(SONG_STEP.next);
     await library.getState().stepSong(SONG_STEP.next);
+    expect(library.getState().loaded?.presetId).not.toBe(second);
     expect(library.getState().discarded?.loaded.presetId).toBe(first);
     await library.getState().undoDiscard();
     expect(library.getState().loaded?.presetId).toBe(first);
