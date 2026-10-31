@@ -50,7 +50,12 @@ const SWEEP_GAP: Readonly<Record<ScreenDensity, number>> = {
 
 const NUMERAL_SIZE: Readonly<Record<ScreenDensity, number>> = {
   roomy: metronome.tempoNumeral,
-  compact: typography.display.size,
+  compact: metronome.tempoNumeralCompact,
+};
+
+const NUMERAL_MAX_SCALE: Readonly<Record<ScreenDensity, number | undefined>> = {
+  roomy: undefined,
+  compact: metronome.tempoNumeralScaledMax / NUMERAL_SIZE.compact,
 };
 
 const ARROW_SHORTFALL = minTouchTargetDp - iconSizes.chevron;
@@ -194,6 +199,7 @@ export function SwipeTempoZone({
         <AnimatedTextInput
           editable={false}
           underlineColorAndroid="transparent"
+          maxFontSizeMultiplier={NUMERAL_MAX_SCALE[density]}
           style={[styles.bpm, numeral]}
           animatedProps={readout}
         />

@@ -74,6 +74,15 @@ export function polyBar(ratio: PolyRatio, offset: number): PolyBar {
   return { pulses, spans };
 }
 
+// Bar n starts n * beatsPerBar beats into the cycle, so only these offsets are ever drawn.
+export function polyBarOffsets(ratio: PolyRatio): readonly number[] {
+  const offsets = new Set<number>();
+  for (let bar = 0; bar < ratio.against; bar++) {
+    offsets.add((bar * ratio.beatsPerBar) % ratio.against);
+  }
+  return [...offsets];
+}
+
 export function polyBarTable(ratio: PolyRatio): readonly PolyBar[] {
   return Array.from({ length: ratio.against }, (_u, offset) =>
     polyBar(ratio, offset),
@@ -95,6 +104,32 @@ export function polySpanPlace(
 ): { readonly left: number; readonly width: number } {
   const left = polyX(span.start, beatsPerBar, row);
   return { left, width: polyX(span.end, beatsPerBar, row) - left };
+}
+
+export function polyLastDotRight(
+  ratio: PolyRatio,
+  row: PolyRowGeometry,
+  dotSize: number,
+): number {
+  const centres = polyBarOffsets(ratio).flatMap((offset) =>
+    polyBar(ratio, offset).pulses.map((pulse) =>
+      polyX(pulse.beat, ratio.beatsPerBar, row),
+    ),
+  );
+  return Math.max(...centres) + dotSize / 2;
+}
+
+export function polySpanInArea(
+  span: PolyCycleSpan,
+  beatsPerBar: number,
+  row: PolyRowGeometry,
+  areaWidth: number,
+): { readonly left: number; readonly width: number } {
+  const place = polySpanPlace(span, beatsPerBar, row);
+  const areaRight =
+    row.lineWidth + Math.max(0, (areaWidth - row.lineWidth) / 2);
+  const right = Math.min(place.left + place.width, areaRight);
+  return { left: place.left, width: right - place.left };
 }
 
 export function polyDotSize(
@@ -124,8 +159,8 @@ export function polyLabelPlace(room: PolyLabelRoom): PolyLabelPlace {
   if (room.labelHeight > room.rowHeight) return 'above';
   const needed = room.labelWidth + room.labelGap;
   const margin = Math.max(0, room.sideRoom) + room.screenInset;
-  if (needed <= margin) return 'left';
-  return needed <= room.afterLastDot + margin ? 'right' : 'above';
+  if (needed <= room.afterLastDot + margin) return 'right';
+  return needed <= margin ? 'left' : 'above';
 }
 
 export function polyRatioLabel(ratio: PolyRatio): string {

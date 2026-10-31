@@ -23,13 +23,14 @@ import {
 import { useLibraryRefresh } from '../library/useLibraryRefresh.ts';
 import { belowTempoReserve } from '../logic/belowTempo.ts';
 import { noteStrip, type NoteStrip } from '../logic/noteStrip.ts';
-import { practiceBadgeCount } from '../logic/statusRows.ts';
+import { practiceBadgeCount, restLegend } from '../logic/statusRows.ts';
 import { pushTap, tapTempoBpm } from '../logic/tapTempo.ts';
-import { BeatDots } from './BeatDots.tsx';
+import { BeatDots, BeatLegend } from './BeatDots.tsx';
 import { NumberEntrySheet } from './NumberEntrySheet.tsx';
 import { MeterSheet } from './MeterSheet.tsx';
 import { MetronomeAppBar } from './MetronomeAppBar.tsx';
 import { PickerChips } from './PickerChips.tsx';
+import { PolyLegend } from './PolyLegend.tsx';
 import { PracticePill, usePracticeElapsed } from './PracticePill.tsx';
 import { PracticeSheet } from './PracticeSheet.tsx';
 import { PresetRow } from './PresetRow.tsx';
@@ -73,6 +74,14 @@ const useStyles = createThemedStyles((theme) => ({
     ...textStyle(textRoles.fieldLabel),
     color: theme.color.text2,
     textAlign: 'center',
+  },
+  legend: {
+    marginTop: metronome.legendTop,
+    minHeight: metronome.legendRow,
+    justifyContent: 'center',
+  },
+  toolsPush: {
+    flexGrow: 1,
   },
 }));
 
@@ -230,25 +239,19 @@ export function MetronomeScreen({
     strip === null,
   ].join('|');
   const density = useScreenDensity(window.height, layoutKey, scrollable);
-  const gap = useMemo(
-    () => ({
-      gap: density === 'compact' ? metronome.bodyGapCompact : space.sectionGap,
-    }),
-    [density],
-  );
+  const bodyGap =
+    density === 'compact' ? metronome.bodyGapCompact : space.sectionGap;
+  const topGap = useMemo(() => ({ marginTop: bodyGap }), [bodyGap]);
   const fontScale = window.fontScale;
   const belowTempo = useMemo(
     () => ({
-      ...gap,
-      minHeight: belowTempoReserve({
-        width: dotsWidth,
-        density,
-        gap: gap.gap,
-        fontScale,
-      }),
+      flexGrow: 1,
+      marginTop: metronome.controlsToDots,
+      minHeight: belowTempoReserve({ width: dotsWidth, density, fontScale }),
     }),
-    [gap, dotsWidth, density, fontScale],
+    [dotsWidth, density, fontScale],
   );
+  const legend = restLegend(running, polyEnabled);
 
   return (
     <GestureDetector gesture={screenSwipe}>
@@ -260,7 +263,7 @@ export function MetronomeScreen({
         />
         <ScrollView
           style={styles.body}
-          contentContainerStyle={[styles.bodyContent, gap]}
+          contentContainerStyle={styles.bodyContent}
           ref={scrollRef}
           scrollEnabled={scrollable}
           showsVerticalScrollIndicator={false}
@@ -273,13 +276,13 @@ export function MetronomeScreen({
               accessible={strip.spoken !== null}
               accessibilityLabel={strip.spoken ?? undefined}
               numberOfLines={1}
-              style={styles.notes}
+              style={[styles.notes, topGap]}
             >
               {strip.text}
             </Text>
           )}
           <GestureDetector gesture={zoneSwipe}>
-            <View onLayout={handleZoneLayout}>
+            <View style={topGap} onLayout={handleZoneLayout}>
               <SwipeTempoZone
                 bpm={bpm}
                 density={density}
@@ -310,13 +313,19 @@ export function MetronomeScreen({
               frame={frame}
               onCycle={cycleAccent}
             />
+            {legend === null ? null : (
+              <View style={styles.legend}>
+                {legend === 'poly' ? <PolyLegend /> : <BeatLegend />}
+              </View>
+            )}
+            <View style={styles.toolsPush} />
             <StatusStack frame={frame} settings={settings} running={running} />
           </View>
         </ScrollView>
         <Transport
           running={running}
           armedCount={practiceBadgeCount(settings)}
-          gap={gap.gap}
+          gap={bodyGap}
           onToggle={handleToggleTransport}
           onOpenPractice={handleOpenPractice}
           onOpenSetlists={onOpenSetlists}

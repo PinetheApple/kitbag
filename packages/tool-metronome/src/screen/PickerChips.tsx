@@ -1,5 +1,7 @@
 import {
   createThemedStyles,
+  hitBoxStyle,
+  hitExtension,
   Icon,
   metronome,
   minTouchTargetDp,
@@ -15,18 +17,26 @@ import { Pressable, Text, View } from 'react-native';
 import { meterLabel, spokenMeter } from '../logic/meter.ts';
 import { subdivisionName } from '../logic/subdivision.ts';
 
+const CHIP_HIT_BOX = hitBoxStyle(
+  hitExtension(minTouchTargetDp, metronome.pickerChip, {
+    top: space.controlGap,
+    bottom: metronome.controlsToDots,
+  }),
+);
+
 const useStyles = createThemedStyles((theme) => ({
   row: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: space.rowGap,
+    marginTop: space.controlGap,
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.chipGap,
-    minHeight: minTouchTargetDp,
+    minHeight: metronome.pickerChip,
     paddingRight: metronome.pickerChipRight,
     borderRadius: radius.button,
     borderWidth: size.stroke,
@@ -73,26 +83,30 @@ export function PickerChips({
         accessibilityRole="button"
         accessibilityLabel={`Time signature, ${spokenMeter(meter)}`}
         accessibilityHint="Changes the time signature"
-        style={[styles.chip, styles.meter]}
+        style={CHIP_HIT_BOX}
         onPress={onOpenMeter}
       >
-        <Text style={styles.label}>{meterLabel(meter)}</Text>
-        <Icon name="caretDown" size="caret" color="text3" />
+        <View style={[styles.chip, styles.meter]}>
+          <Text style={styles.label}>{meterLabel(meter)}</Text>
+          <Icon name="caretDown" size="caret" color="text3" />
+        </View>
       </Pressable>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`Subdivision, ${name}`}
         accessibilityHint="Changes the subdivision"
-        style={[styles.chip, styles.subdivision]}
+        style={CHIP_HIT_BOX}
         onPress={onOpenSubdivision}
       >
-        <NotationGlyph
-          subdivision={subdivision}
-          denominator={denominator}
-          height={metronome.notationChip}
-        />
-        <Text style={styles.label}>{name}</Text>
-        <Icon name="caretDown" size="caret" color="text3" />
+        <View style={[styles.chip, styles.subdivision]}>
+          <NotationGlyph
+            subdivision={subdivision}
+            denominator={denominator}
+            height={metronome.notationChip}
+          />
+          <Text style={styles.label}>{name}</Text>
+          <Icon name="caretDown" size="caret" color="text3" />
+        </View>
       </Pressable>
     </View>
   );

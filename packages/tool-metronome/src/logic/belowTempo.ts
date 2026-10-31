@@ -49,8 +49,12 @@ const LIVE_STATUS_ROWS = 2;
 
 export const STATUS_ROW_PITCH = metronome.statusRow + metronome.statusRowGap;
 
-export const STATUS_STACK_HEIGHT =
+const STATUS_STACK_HEIGHT =
   STATUS_ROW_PITCH * (LIVE_STATUS_ROWS - 1) + metronome.statusRow;
+
+export function statusStackHeight(running: boolean): number {
+  return running ? STATUS_STACK_HEIGHT : metronome.statusRow;
+}
 
 export type PolyRow = 'off' | 'labelBeside' | 'labelAbove';
 
@@ -62,7 +66,6 @@ export interface BeatDotsShape {
 export interface BelowTempoRoom {
   readonly width: number;
   readonly density: ScreenDensity;
-  readonly gap: number;
   readonly fontScale: number;
 }
 
@@ -84,7 +87,7 @@ export function beatLinePitch(
 
 function polyBlockHeight(poly: PolyRow, room: BelowTempoRoom): number {
   if (poly === 'off') return 0;
-  const row = beatDotLineGap(room.density) + metronome.polyDot;
+  const row = beatDotLineGap(room.density) + metronome.polyRow;
   if (poly === 'labelBeside') return row;
   return row + drawnLabelLine(room.fontScale) + metronome.beatMarkerGap;
 }
@@ -105,11 +108,17 @@ export function beatDotsHeight(
   return beatLines + polyBlockHeight(shape.poly, room);
 }
 
+function legendHeight(fontScale: number): number {
+  return metronome.legendTop + metronome.legendRow * Math.max(1, fontScale);
+}
+
 export function belowTempoHeight(
   shape: BeatDotsShape,
   room: BelowTempoRoom,
 ): number {
-  return beatDotsHeight(shape, room) + room.gap + STATUS_STACK_HEIGHT;
+  const stopped = legendHeight(room.fontScale) + statusStackHeight(false);
+  const running = statusStackHeight(true);
+  return beatDotsHeight(shape, room) + Math.max(stopped, running);
 }
 
 export function tallestBelowTempo(poly: PolyRow, room: BelowTempoRoom): number {

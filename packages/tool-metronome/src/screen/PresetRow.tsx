@@ -1,4 +1,4 @@
-import { PresetButton, space, unshared } from '@kitbag/core-design';
+import { metronome, PresetButton, space, unshared } from '@kitbag/core-design';
 import { useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -7,11 +7,10 @@ const COARSE_NUDGE = 10;
 const NUDGES = [-COARSE_NUDGE, -FINE_NUDGE, FINE_NUDGE, COARSE_NUDGE] as const;
 const TAP_INSERT_INDEX = NUDGES.length / 2;
 
-// The tempo zone's arrows stop at its edge and the card below takes touches
-// only inside its frame, so the section gap on either side is the row's alone.
+// The tempo zone's arrows stop at its edge, so the gap above is the row's alone.
 const ROW_GAPS = {
-  top: unshared(space.sectionGap),
-  bottom: unshared(space.sectionGap),
+  top: unshared(metronome.tempoToControls),
+  bottom: space.controlGap,
 };
 
 interface NudgeKeyProps {
@@ -23,6 +22,8 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     gap: space.controlGap,
+    marginTop: metronome.tempoToControls,
+    paddingHorizontal: metronome.presetRowInset,
   },
 });
 

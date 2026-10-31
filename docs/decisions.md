@@ -517,6 +517,21 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   divide the bar. B (one ratio value with a wheel sheet) and C (poly stepper with a
   Bar | Beats switch) are rejected. **[user]**
 
+- **2026-10-31 · Metronome layout (§12, #243)** — The owner approved round 2 of the main
+  screen's vertical layout: a taller BPM block, smaller transport buttons, dropdowns and
+  beat dots with more room between them, the legend directly under the dots while stopped,
+  and the practice-tools area bottom-aligned above the player controls. Drawn in
+  `design/kitbag-metronome.html` §02, which supersedes the main screen's sizes and vertical
+  layout in the B, status and poly files. **[user]** Where the build departs from the
+  frame **[recorded — implementation]**: hit boxes are 48 dp, not the 51 / 53 the mockup
+  notes give; the poly row keeps the 14 dp bracket band the mockup leaves out, so the
+  minimum gap between the dots and the practice tools is 0 to fit 360 × 800 without a new
+  scroll; the numeral is capped at 128 sp under font scaling, compact only; the new gaps
+  apply in roomy too; dropdown padding is unchanged; and a lone status row takes the
+  lower slot. 360×800, busy (16/16 + poly + two status rows) at font scale 1.15 scrolls
+  by about 20 dp, which hides half the ramp row until you scroll. The mockup's 16 dp spare
+  does not survive the poly bracket band.
+
 - **2026-10-31 · Subdivision accents: slot 0 and the sound (§17 D2, §12.5, #170)** —
   Global subdivision-accent patterns apply to off-beat ticks only: slot 0, the on-beat
   tick, never overrides the per-beat accents (accent / normal / muted), and a muted beat
