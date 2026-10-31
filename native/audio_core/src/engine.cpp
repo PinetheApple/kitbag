@@ -1,5 +1,7 @@
 #include "engine.h"
 
+#include <time.h>
+
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
@@ -23,6 +25,15 @@ uint64_t NowMs() {
       )
           .count()
   );
+}
+
+// vDSO on Linux and Android: no syscall, no lock, safe on the callback.
+int64_t MonotonicNs() {
+  timespec now{};
+  clock_gettime(CLOCK_MONOTONIC, &now);
+  return (std::chrono::seconds(now.tv_sec) +
+          std::chrono::nanoseconds(now.tv_nsec))
+      .count();
 }
 
 }  // namespace
@@ -118,6 +129,7 @@ void Engine::StopDevice() {
   // there is no reader.
   device_running_.store(false, std::memory_order_release);
   restarting_.store(false, std::memory_order_relaxed);
+  render_clock_.Clear();
 }
 
 // Control thread only, device stopped: the retire lists belong to the
@@ -242,6 +254,10 @@ void Engine::DataCallback(
 // Scratch covers kMaxBlockFrames; the read-ahead behind it is sized for the
 // whole callback (ReserveCallbackFrames), so slicing never outruns a ring.
 void Engine::Render(float* output, uint32_t frame_count) {
+  render_clock_.Publish(
+      static_cast<int64_t>(frames_rendered_.load(std::memory_order_relaxed)),
+      MonotonicNs()
+  );
   while (frame_count > 0) {
     const uint32_t slice =
         std::min(frame_count, StreamingTrack::kMaxBlockFrames);
