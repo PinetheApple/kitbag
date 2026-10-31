@@ -236,7 +236,46 @@ export {
   type CalibrationPhase,
   type CalibrationSession,
 } from './rig/calibrationSession.ts';
-export { routeDetail, routeTitle } from './rig/routeLabel.ts';
+export {
+  isOutputRouteKind,
+  routeDetail,
+  routeTitle,
+} from './rig/routeLabel.ts';
+export { RIG_CLICK_BPM } from './rig/rigClickRules.ts';
+export {
+  createRigClick,
+  type RigClick,
+  type RigClickDeps,
+  type RigClickPhase,
+  type RigClickStore,
+} from './rig/rigClick.ts';
+export {
+  createRouteLatencyStore,
+  ROUTE_LATENCY_SAVE_DELAY_MS,
+  type RouteLatencyActions,
+  type RouteLatencyDeps,
+  type RouteLatencyState,
+  type RouteLatencyStore,
+} from './rig/routeLatency.ts';
+export {
+  accentedSlots,
+  configureSubdivisionAccentsPersistence,
+  createSubdivisionAccentsStore,
+  getSubdivisionAccentsStore,
+  ON_BEAT_SLOT,
+  replaySubdivisionAccents,
+  toggleSlotMask,
+  type SendSubdivisionAccents,
+  type SubdivisionAccentsPersistence,
+  type SubdivisionAccentsSettings,
+  type SubdivisionAccentsStore,
+  type SubdivisionAccentsStoreApi,
+} from './rig/subdivisionAccents.ts';
+export {
+  useRigClick,
+  useRouteLatency,
+  useSubdivisionAccents,
+} from './rig/useRig.ts';
 export { formatOffsetMs } from './rig/latencyText.ts';
 export {
   useCalibration,

@@ -1,7 +1,7 @@
 import type { OutputRoute } from '@kitbag/core-native';
 import { describe, expect, it } from 'vitest';
 
-import { routeDetail, routeTitle } from './routeLabel.ts';
+import { isOutputRouteKind, routeDetail, routeTitle } from './routeLabel.ts';
 
 const route = (kind: OutputRoute['kind'], name = ''): OutputRoute => ({
   id: kind,
@@ -28,5 +28,11 @@ describe('route label', () => {
   it('falls back to the kind when a device reports no name', () => {
     expect(routeTitle(route('bluetooth'))).toBe('Bluetooth');
     expect(routeTitle(route('other'))).toBe('Audio output');
+  });
+
+  it('recognises only the route kinds the engine reports', () => {
+    expect(isOutputRouteKind('bluetooth')).toBe(true);
+    expect(isOutputRouteKind('toString')).toBe(false);
+    expect(isOutputRouteKind('hdmi')).toBe(false);
   });
 });
