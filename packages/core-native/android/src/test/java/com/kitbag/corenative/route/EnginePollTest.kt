@@ -26,20 +26,32 @@ class EnginePollTest {
   }
 
   @Test
-  fun `no device reports the change and stops polling`() {
+  fun `losing the device reports the change and backs off to five seconds`() {
     val poll = EnginePoll()
     poll.start(now = 0, deviceId = 7)
     assertTrue(poll.onPoll(now = 1_000, deviceId = null))
-    assertNull(poll.nextPollAt)
+    assertEquals(6_000L, poll.nextPollAt)
   }
 
   @Test
-  fun `a start that has no device yet polls once and stops quietly`() {
+  fun `null stays at the five second cadence`() {
     val poll = EnginePoll()
     poll.start(now = 0, deviceId = null)
     assertEquals(1_000L, poll.nextPollAt)
     assertFalse(poll.onPoll(now = 1_000, deviceId = null))
-    assertNull(poll.nextPollAt)
+    assertEquals(6_000L, poll.nextPollAt)
+    assertFalse(poll.onPoll(now = 6_000, deviceId = null))
+    assertEquals(11_000L, poll.nextPollAt)
+  }
+
+  @Test
+  fun `null, then an id appears with no start call, triggers a settle and returns to one second`() {
+    val poll = EnginePoll()
+    poll.start(now = 0, deviceId = 7)
+    poll.onPoll(now = 1_000, deviceId = null)
+    val nextAt = checkNotNull(poll.nextPollAt)
+    assertTrue(poll.onPoll(now = nextAt, deviceId = 9))
+    assertEquals(nextAt + 1_000L, poll.nextPollAt)
   }
 
   @Test
@@ -48,13 +60,15 @@ class EnginePollTest {
     poll.start(now = 0, deviceId = 7)
     poll.onPoll(now = 1_000, deviceId = null)
     poll.start(now = 2_000, deviceId = 9)
+    assertEquals(3_000L, poll.nextPollAt)
     assertFalse(poll.onPoll(now = 3_000, deviceId = 9))
   }
 
   @Test
-  fun `stop cancels the pending poll`() {
+  fun `stop ends polling`() {
     val poll = EnginePoll()
-    poll.start(now = 0, deviceId = 7)
+    poll.start(now = 0, deviceId = null)
+    poll.onPoll(now = 1_000, deviceId = null)
     poll.stop()
     assertNull(poll.nextPollAt)
   }

@@ -8,13 +8,13 @@ class EnginePoll {
 
   fun start(now: Long, deviceId: Int?) {
     lastDeviceId = deviceId
-    nextPollAt = now + INTERVAL_MILLIS
+    nextPollAt = now + RUNNING_INTERVAL_MILLIS
   }
 
   fun onPoll(now: Long, deviceId: Int?): Boolean {
     val changed = deviceId != lastDeviceId
     lastDeviceId = deviceId
-    nextPollAt = deviceId?.let { now + INTERVAL_MILLIS }
+    nextPollAt = now + if (deviceId == null) IDLE_INTERVAL_MILLIS else RUNNING_INTERVAL_MILLIS
     return changed
   }
 
@@ -23,6 +23,7 @@ class EnginePoll {
   }
 
   private companion object {
-    const val INTERVAL_MILLIS = 1_000L
+    const val RUNNING_INTERVAL_MILLIS = 1_000L
+    const val IDLE_INTERVAL_MILLIS = 5_000L
   }
 }
