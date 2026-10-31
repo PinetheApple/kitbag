@@ -1373,7 +1373,7 @@ The schema is the durable part and survives the stack change. The Flutter
 build's tables were `Setlists`, `Songs`, `PracticeSessions`, `Tunings`,
 `LibrarySongs`, `StemSets`, `Stems` (schema v6). A reconstruction of that v6 DDL is the
 migration fixture in `packages/core-db/src/migrate-fixtures.test-helper.ts`; the React
-Native schema migrates it in place and is at v17 (`packages/core-db/src/migrate.ts`).
+Native schema migrates it in place and is at v18 (`packages/core-db/src/migrate.ts`).
 
 ### 11.1 Persistence layer
 
@@ -1413,6 +1413,7 @@ rather than starting from zero.
 | `StemSets`: + sections, + lyrics (synced LRC, plain, offset, user retiming) | §7.7 |
 | `StemSets`: + speed; `Stems`: + pitch (semitones) | §7.6 — mix state is per song, like gain/mute/solo |
 | `StemSets`: + `renamed` (default 0); `Stems`: + `name` (display name, NULL shows the role) | §7.1, §7.8 — a rename is display-only and survives a re-import of the same StemDeck song; schema v17 |
+| `SongPresets`: + `poly_against` INTEGER (0 = the bar, 1..16), default 0 | §5.2 — poly N against M; a v4 backup without `polyAgainst` reads as the bar; schema v18 |
 | **All paths relative** to the base directory | §2.3 (iOS) and **D11** (the directory is now user-movable) |
 | `PracticeSessions`: write `setlistId`, `songsPlayed` | §5.7 — columns exist, producer never fills them |
 | BPM cache table | §8.5 |
