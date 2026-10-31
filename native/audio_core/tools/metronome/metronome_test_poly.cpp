@@ -14,7 +14,6 @@ constexpr int64_t kPeakWindow = 480;
 constexpr double kMainAccentPeak = 0.9;
 constexpr double kMainNormalPeak = 0.6;
 constexpr double kPeakTolerance = 0.05;
-constexpr double kSilentCeiling = 0.1;
 
 struct PolyRun {
   std::vector<float> left;
