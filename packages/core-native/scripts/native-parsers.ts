@@ -30,7 +30,12 @@ export function parseDefineNumber(header: string, name: string): number {
 }
 
 /** `static constexpr int NAME = <int>|kOther;`; kOther resolves in `source`. */
-export function parseConstexprInt(source: string, name: string): number {
+export function parseConstexprInt(
+  source: string,
+  name: string,
+  seen: readonly string[] = [],
+): number {
+  if (seen.includes(name)) fail(`constexpr int ${name} (alias cycle)`);
   const match = new RegExp(
     `static\\s+constexpr\\s+int\\s+${name}\\s*=\\s*(-?\\d+|k\\w+)\\s*;`,
   ).exec(source);
@@ -38,7 +43,7 @@ export function parseConstexprInt(source: string, name: string): number {
   const value = match[1] ?? '';
   return /^-?\d+$/.test(value)
     ? Number(value)
-    : parseConstexprInt(source, value);
+    : parseConstexprInt(source, value, [...seen, name]);
 }
 
 /** `static|inline constexpr double NAME = <number>;` from a C++ header. */

@@ -82,13 +82,17 @@ constexpr TrainerProp kTrainerProps[] = {
 constexpr const char* kPropertyNames[] = {
     "bar_phase",       "current_beat",    "current_poly_beat", "counting_in",
     "current_bpm",     "frames_rendered", "tuner_snapshot",    "player_position",
-    "mixer_position",  "mixer_playing",   "engine_sample_rate"};
+    "mixer_position",  "mixer_playing",   "engine_sample_rate",
+    "poly_downbeat_phase"};
 
 double Read(kb_engine* engine, const std::string& prop, bool* found) {
   *found = true;
   if (prop == "bar_phase") return kb_metronome_bar_phase(engine);
   if (prop == "current_beat") return kb_metronome_current_beat(engine);
   if (prop == "current_poly_beat") return kb_metronome_current_poly_beat(engine);
+  if (prop == "poly_downbeat_phase") {
+    return kb_metronome_poly_downbeat_phase(engine);
+  }
   if (prop == "counting_in") return kb_metronome_counting_in(engine);
   if (prop == "current_bpm") return kb_metronome_current_bpm(engine);
   if (prop == "frames_rendered") {

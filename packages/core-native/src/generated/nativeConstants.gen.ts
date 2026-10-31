@@ -78,6 +78,9 @@ export const KB_POLY_BEATS_BOUNDS = {
 /** kb_metronome_set_poly_against's default (KB_POLY_AGAINST_BAR): the cycle spans the bar and follows the meter. */
 export const KB_POLY_AGAINST_BAR = 0;
 
+/** kb_metronome_poly_downbeat_phase when there is no poly cycle to place (KB_POLY_PHASE_NONE). */
+export const KB_POLY_PHASE_NONE = -1;
+
 /** Explicit poly cycle lengths in main beats (Metronome::kMinPolyAgainst..kMaxPolyAgainst); the engine ignores others. */
 export const KB_POLY_AGAINST_BOUNDS = {
   min: 1,

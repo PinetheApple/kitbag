@@ -81,7 +81,9 @@ describe('parseConstexprInt', () => {
   const header =
     'static constexpr int kMaxBeats = 16;\n' +
     'static constexpr int kMaxPolyAgainst = kMaxBeats;\n' +
-    'static constexpr int kOrphan = kMissing;\n';
+    'static constexpr int kOrphan = kMissing;\n' +
+    'static constexpr int kLoopA = kLoopB;\n' +
+    'static constexpr int kLoopB = kLoopA;\n';
   it('reads a literal', () => {
     expect(parseConstexprInt(header, 'kMaxBeats')).toBe(16);
   });
@@ -90,6 +92,9 @@ describe('parseConstexprInt', () => {
   });
   it('throws when the named constant is absent', () => {
     expect(() => parseConstexprInt(header, 'kOrphan')).toThrow(/kMissing/);
+  });
+  it('throws on an alias cycle instead of recursing forever', () => {
+    expect(() => parseConstexprInt(header, 'kLoopA')).toThrow(/alias cycle/);
   });
 });
 
@@ -289,6 +294,7 @@ describe('collectConstants (real engine source)', () => {
     expect(c.minPolyBeats).toBe(2);
     expect(c.maxPolyBeats).toBe(16);
     expect(c.polyAgainstBar).toBe(0);
+    expect(c.polyPhaseNone).toBe(-1);
     expect(c.polyAgainst).toEqual({ min: 1, max: c.maxBeats });
     expect(c.countInBars).toEqual([0, 1, 2, 4]);
     expect(c.defaultCountInSound).toBe(1);

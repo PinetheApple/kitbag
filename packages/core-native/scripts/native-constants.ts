@@ -24,6 +24,7 @@ export function collectConstants(sources: NativeSources): NativeConstants {
     minPolyBeats: parseConstexprInt(sources.metronomeHeader, 'kMinPolyBeats'),
     maxPolyBeats: parseConstexprInt(sources.metronomeHeader, 'kMaxPolyBeats'),
     polyAgainstBar: parseDefineInt(sources.polyHeader, 'KB_POLY_AGAINST_BAR'),
+    polyPhaseNone: parseDefineNumber(sources.polyHeader, 'KB_POLY_PHASE_NONE'),
     polyAgainst: {
       min: parseConstexprInt(sources.metronomeHeader, 'kMinPolyAgainst'),
       max: parseConstexprInt(sources.metronomeHeader, 'kMaxPolyAgainst'),

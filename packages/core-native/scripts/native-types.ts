@@ -57,6 +57,7 @@ export interface NativeConstants {
   readonly minPolyBeats: number;
   readonly maxPolyBeats: number;
   readonly polyAgainstBar: number;
+  readonly polyPhaseNone: number;
   readonly polyAgainst: Bounds;
   readonly countInBars: readonly number[];
   readonly countInOff: number;
