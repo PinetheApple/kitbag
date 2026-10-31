@@ -1,15 +1,9 @@
 import { useCallback } from 'react';
 import { Pressable, View } from 'react-native';
 
-import { size, space } from '../roles.ts';
-import { switchA11y, switchStyles } from '../switchStyles.ts';
+import { switchA11y, switchHitBox, switchStyles } from '../switchStyles.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
-import {
-  hitBoxStyle,
-  hitExtension,
-  neighbourGaps,
-  type NeighbourGaps,
-} from '../touchTarget.ts';
+import type { NeighbourGaps } from '../touchTarget.ts';
 
 const useStyles = createThemedStyles(switchStyles);
 
@@ -33,15 +27,9 @@ export function Switch({
   value,
   onValueChange,
   accessibilityLabel,
-  neighbourGapDp = space.controlGap,
+  neighbourGapDp,
 }: SwitchProps) {
-  const hitBox = hitBoxStyle(
-    hitExtension(
-      size.switchWidth,
-      size.switchHeight,
-      neighbourGaps(neighbourGapDp),
-    ),
-  );
+  const hitBox = switchHitBox(neighbourGapDp);
   const handlePress = useCallback(() => {
     onValueChange(!value);
   }, [onValueChange, value]);

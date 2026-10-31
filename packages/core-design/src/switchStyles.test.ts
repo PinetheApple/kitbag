@@ -3,8 +3,9 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { switchA11y, switchStyles } from './switchStyles.ts';
+import { switchA11y, switchHitBox, switchStyles } from './switchStyles.ts';
 import { mixHex, themes } from './theme.ts';
+import { minTouchTargetDp } from './tokens.ts';
 
 const DESIGN_TOG = {
   width: 38,
@@ -62,6 +63,20 @@ describe('switchStyles', () => {
       });
     },
   );
+});
+
+describe('switchHitBox', () => {
+  it('reaches the minimum touch target in both dimensions by default', () => {
+    const box = switchHitBox();
+    expect(
+      DESIGN_TOG.width + box.paddingLeft + box.paddingRight,
+    ).toBeGreaterThanOrEqual(minTouchTargetDp);
+    expect(
+      DESIGN_TOG.height + box.paddingTop + box.paddingBottom,
+    ).toBeGreaterThanOrEqual(minTouchTargetDp);
+    expect(box.marginLeft).toBe(-box.paddingLeft);
+    expect(box.marginTop).toBe(-box.paddingTop);
+  });
 });
 
 describe('switchA11y', () => {
