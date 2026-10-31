@@ -9,6 +9,7 @@
 
 #include "kitbag_metronome_poly_api.h"
 #include "media/loop_layout.h"
+#include "metronome/click_voices.h"
 #include "metronome/metronome_types.h"
 #include "metronome/tempo_ramp.h"
 #include "metronome/trainer_mirrors.h"
@@ -174,14 +175,6 @@ class Metronome {
     uint64_t frame = 0;  // engine-clock frame for kStartAt (see StartAt / §4.2)
   };
 
-  struct Voice {
-    bool active = false;
-    double phase = 0.0;
-    double phase_step = 0.0;
-    double amplitude = 0.0;
-    double decay_per_sample = 0.0;
-  };
-
   // Per-block tempo derivatives, recomputed whenever bpm_ changes mid-block.
   struct BlockTempo {
     double beats_per_sample = 0.0;
@@ -195,7 +188,6 @@ class Metronome {
     uint64_t generation = 0;
   };
 
-  static constexpr int kMaxVoices = 8;
   static constexpr int64_t kReseedFollow = -1;
   static constexpr size_t kCommandRingSize = 128;
 
@@ -241,17 +233,10 @@ class Metronome {
   );
   void OnCountInBeat(int64_t beat, uint32_t sample_rate);
 
-  void TriggerClick(
-      double frequency_hz,
-      double amplitude,
-      double decay_per_second,
-      uint32_t sample_rate
-  );
   void TriggerPreset(int sound, bool accented, uint32_t sample_rate);
   void OnBeatBoundary(int beat_index, uint32_t sample_rate);
   void OnSubdivisionTick(int64_t owning_beat, uint32_t sample_rate);
   void OnPolyBoundary(int poly_index, uint32_t sample_rate);
-  float RenderVoices();
   bool BarIsMuted(int64_t bar) const;
   double LatencyBeats() const;
   double BeatUnitScale() const;
@@ -375,7 +360,7 @@ class Metronome {
   int mute_bars_ = 1;
   double volume_ = 1.0;
   double latency_offset_ms_ = 0.0;
-  Voice voices_[kMaxVoices];
+  ClickVoices voices_;
   bool follow_mixer_ = false;
   // Any other song frame, a seek or a loop wrap, reseeds the cursor.
   int64_t follow_next_frame_ = kReseedFollow;

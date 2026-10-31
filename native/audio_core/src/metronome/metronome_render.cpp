@@ -16,13 +16,9 @@ using metronome_detail::kBeatAmplitude;
 using metronome_detail::kGridEpsilon;
 using metronome_detail::kSecondsPerMinute;
 
-constexpr double kTau = 6.283185307179586;
-
 constexpr double kSubdivisionAmplitude = 0.3;
 constexpr double kPolyBeatAmplitude = 0.5;
 constexpr double kPolyAccentAmplitude = 0.8;
-// A decaying voice is retired once it falls below audibility.
-constexpr double kVoiceSilenceAmplitude = 1e-4;
 
 struct SoundPreset {
   double accent_hz;
@@ -54,38 +50,9 @@ bool CrossesTick(double previous, double position, double ticks_per_beat) {
 
 }  // namespace
 
-void Metronome::TriggerClick(
-    double frequency_hz,
-    double amplitude,
-    double decay_per_second,
-    uint32_t sample_rate
-) {
-  Voice* slot = nullptr;
-  for (Voice& voice : voices_) {
-    if (!voice.active) {
-      slot = &voice;
-      break;
-    }
-  }
-  if (slot == nullptr) {
-    slot = &voices_[0];
-    for (Voice& voice : voices_) {
-      if (voice.amplitude < slot->amplitude) {
-        slot = &voice;
-      }
-    }
-  }
-  slot->active = true;
-  slot->phase = 0.0;
-  slot->phase_step = kTau * frequency_hz / sample_rate;
-  slot->amplitude = amplitude;
-  slot->decay_per_sample =
-      std::exp(-decay_per_second / static_cast<double>(sample_rate));
-}
-
 void Metronome::TriggerPreset(int sound, bool accented, uint32_t sample_rate) {
   const SoundPreset& preset = kSounds[sound];
-  TriggerClick(
+  voices_.Trigger(
       accented ? preset.accent_hz : preset.beat_hz,
       accented ? kAccentAmplitude : kBeatAmplitude,
       preset.decay_per_second,
@@ -118,7 +85,7 @@ void Metronome::OnSubdivisionTick(int64_t owning_beat, uint32_t sample_rate) {
     return;
   }
   const SoundPreset& sound = kSounds[normal_sound_];
-  TriggerClick(
+  voices_.Trigger(
       sound.subdivision_hz,
       kSubdivisionAmplitude,
       sound.decay_per_second,
@@ -132,26 +99,12 @@ void Metronome::OnPolyBoundary(int poly_index, uint32_t sample_rate) {
   if (accent == Accent::kMuted || BarIsMuted(current_bar_)) return;
   const bool accented = accent == Accent::kAccented;
   const SoundPreset& sound = kSounds[accented ? accent_sound_ : normal_sound_];
-  TriggerClick(
+  voices_.Trigger(
       sound.poly_hz,
       accented ? kPolyAccentAmplitude : kPolyBeatAmplitude,
       sound.decay_per_second,
       sample_rate
   );
-}
-
-float Metronome::RenderVoices() {
-  double sample = 0.0;
-  for (Voice& voice : voices_) {
-    if (!voice.active) continue;
-    sample += voice.amplitude * std::sin(voice.phase);
-    voice.phase += voice.phase_step;
-    voice.amplitude *= voice.decay_per_sample;
-    if (voice.amplitude < kVoiceSilenceAmplitude) {
-      voice.active = false;
-    }
-  }
-  return static_cast<float>(sample);
 }
 
 Metronome::BlockTempo Metronome::BlockTempoFor(uint32_t sample_rate) const {
@@ -378,7 +331,7 @@ void Metronome::Render(
     } else if (running_) {
       AdvanceConstantTempo(sample_rate, &tempo);
     }
-    const float sample = RenderVoices() * volume_;
+    const float sample = voices_.Render() * volume_;
     for (uint32_t channel = 0; channel < channel_count; ++channel) {
       output[frame * channel_count + channel] += sample;
     }

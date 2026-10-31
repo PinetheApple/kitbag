@@ -44,6 +44,7 @@ add_library(kitbag_core SHARED
   src/media/resampling_source_reader.cpp
   src/engine.cpp
   src/dsp/fft.cpp
+  src/metronome/click_voices.cpp
   src/metronome/metronome.cpp
   src/metronome/metronome_count_in.cpp
   src/metronome/metronome_grid.cpp
@@ -125,6 +126,7 @@ if(KITBAG_BUILD_TOOLS)
   target_compile_definitions(kitbag_core PUBLIC KITBAG_BUILD_TOOLS)
 
   set(KITBAG_METRONOME_SOURCES
+    src/metronome/click_voices.cpp
     src/metronome/metronome.cpp
     src/metronome/metronome_count_in.cpp
     src/metronome/metronome_grid.cpp
