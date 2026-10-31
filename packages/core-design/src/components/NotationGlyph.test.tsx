@@ -25,14 +25,13 @@ function render(
 }
 
 describe('NotationGlyph', () => {
-  it.each([7, 12].map((beats) => ({ beats })))(
-    'draws the flagged eighth as svg for one click per beat in $beats/8',
-    () => {
-      const markup = render(1, 8);
-      expect(markup).toContain('<svg');
-      expect(markup).toContain(`<path d="${flaggedEighthGeometry.flagPath}">`);
-    },
-  );
+  it('draws the flagged eighth as svg for one click per beat in x/8', () => {
+    const markup = render(1, 8);
+    expect(markup).toContain('<svg');
+    expect(markup).toContain('<ellipse');
+    expect(markup).toContain('<rect');
+    expect(markup).toContain(`<path d="${flaggedEighthGeometry.flagPath}">`);
+  });
 
   it('keeps svg out of every other denominator and subdivision', () => {
     const drawnWithSvg = [2, 4, 8].flatMap((denominator) =>

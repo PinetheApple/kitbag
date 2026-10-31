@@ -37,7 +37,7 @@ export interface FlaggedEighthShape {
     readonly cy: number;
     readonly rx: number;
     readonly ry: number;
-    readonly rotate: string;
+    readonly transform: string;
   };
   readonly stem: {
     readonly x: number;
@@ -85,7 +85,6 @@ export function drawsFlaggedEighth(
   return clicks === 1 && beamCount(clicks, denominator) === 1;
 }
 
-// The tiles draw only a lone quarter, a lone flagged eighth or a beamed group.
 export function drawsNotation(
   subdivision: number,
   denominator: number,
@@ -93,7 +92,7 @@ export function drawsNotation(
   const clicks = clicksOf(subdivision);
   const beams = beamCount(clicks, denominator);
   const loneQuarter = clicks === 1 && beams === 0;
-  const loneEighth = drawsFlaggedEighth(subdivision, denominator);
+  const loneEighth = clicks === 1 && beams === 1;
   const beamedGroup =
     clicks > 1 &&
     Number.isInteger(beams) &&
@@ -147,7 +146,7 @@ export function flaggedEighthShape(height: number): FlaggedEighthShape {
       cy: g.headY,
       rx: g.headWidth / 2,
       ry: g.headHeight / 2,
-      rotate: `rotate(${String(g.headTiltDeg)} ${String(f.headX)} ${String(g.headY)})`,
+      transform: `rotate(${String(g.headTiltDeg)} ${String(f.headX)} ${String(g.headY)})`,
     },
     stem: {
       x: f.headX + g.stemOffsetX,

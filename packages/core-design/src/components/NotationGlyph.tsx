@@ -49,7 +49,7 @@ function FlaggedEighth({ height, ink }: FlaggedEighthProps) {
           cy={shape.head.cy}
           rx={shape.head.rx}
           ry={shape.head.ry}
-          transform={shape.head.rotate}
+          transform={shape.head.transform}
         />
         <Rect {...shape.stem} />
         <Path d={shape.flagPath} />

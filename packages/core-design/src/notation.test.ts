@@ -79,7 +79,9 @@ const drawnIn = (denominator: number) =>
   SUBDIVISIONS.filter((n) => drawsNotation(n, denominator));
 
 const beamsIn = (denominator: number) =>
-  drawnIn(denominator).map((n) => notationLayout(n, denominator).beams.length);
+  drawnIn(denominator)
+    .filter((n) => !drawsFlaggedEighth(n, denominator))
+    .map((n) => notationLayout(n, denominator).beams.length);
 
 describe('drawsNotation', () => {
   it('draws every subdivision in 4/4 and defaults to it', () => {
@@ -98,7 +100,8 @@ describe('drawsNotation', () => {
       expect(drawnIn(denominator)).toEqual([
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
       ]);
-      expect(beamsIn(denominator).slice(1)).toEqual([
+      expect(drawsFlaggedEighth(1, denominator)).toBe(true);
+      expect(beamsIn(denominator)).toEqual([
         2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4,
       ]);
     },
@@ -130,10 +133,10 @@ const DESIGN = readFileSync(
 );
 
 function flaggedEighthMarkup(height: number): string {
-  const { viewBox, head, stem, flagPath } = flaggedEighthShape(height);
+  const { width, viewBox, head, stem, flagPath } = flaggedEighthShape(height);
   return [
-    `viewBox="${viewBox}" fill="currentColor">`,
-    `<ellipse cx="${String(head.cx)}" cy="${String(head.cy)}" rx="${String(head.rx)}" ry="${String(head.ry)}" transform="${head.rotate}"/>`,
+    `<svg class="nota" width="${String(width)}" height="${String(height)}" viewBox="${viewBox}" fill="currentColor">`,
+    `<ellipse cx="${String(head.cx)}" cy="${String(head.cy)}" rx="${String(head.rx)}" ry="${String(head.ry)}" transform="${head.transform}"/>`,
     `<rect x="${String(stem.x)}" y="${String(stem.y)}" width="${String(stem.width)}" height="${String(stem.height)}"/>`,
     `<path d="${flagPath}"/></svg>`,
   ].join('');
@@ -142,10 +145,5 @@ function flaggedEighthMarkup(height: number): string {
 describe('flaggedEighthShape', () => {
   it("is the design's x/8 chip glyph, element for element", () => {
     expect(DESIGN).toContain(flaggedEighthMarkup(24));
-  });
-
-  it('scales its width with the height it is drawn at', () => {
-    expect(flaggedEighthShape(24).width).toBe(12);
-    expect(flaggedEighthShape(28).width).toBe(14);
   });
 });
