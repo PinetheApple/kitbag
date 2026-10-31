@@ -1,9 +1,10 @@
+import { space } from './roles.ts';
 import { fontFamily, type TypeRole } from './tokens.ts';
 
 export const homeArrange = {
   appBarGap: 10,
   hintLine: 1.45,
-  rowGap: 8,
+  rowGap: space.controlGap,
   rowMinHeight: 52,
   rowRadius: 13,
   rowPadV: 4,

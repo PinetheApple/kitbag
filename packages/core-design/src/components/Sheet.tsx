@@ -147,6 +147,7 @@ export interface SheetProps {
   readonly onDismiss: () => void;
   readonly onShow?: () => void;
   readonly dim?: boolean;
+  readonly scrollEnabled?: boolean;
   readonly children: ReactNode;
 }
 
@@ -162,6 +163,7 @@ export function Sheet({
   onDismiss,
   onShow,
   dim = false,
+  scrollEnabled = true,
   children,
 }: SheetProps) {
   const styles = useStyles();
@@ -274,6 +276,7 @@ export function Sheet({
           style={styles.scroll}
           contentContainerStyle={styles.content}
           bounces={false}
+          scrollEnabled={scrollEnabled}
           keyboardShouldPersistTaps="handled"
           scrollIndicatorInsets={INDICATOR_INSETS}
         >

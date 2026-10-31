@@ -16,7 +16,7 @@ import { inset, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
-import { reorderTarget } from '../dragReorder.ts';
+import { dropTarget } from '../dragReorder.ts';
 import { Icon } from './Icon.tsx';
 import {
   RowPress,
@@ -45,21 +45,34 @@ export interface DragReorder {
   readonly index: number;
   readonly count: number;
   readonly onMove: (from: number, to: number) => void;
+  readonly onDragActive?: (active: boolean) => void;
 }
 
 export function useHandleDrag(reorder: DragReorder) {
   const offset = useSharedValue(0);
   const pitch = useSharedValue(0);
-  const { index, count, onMove } = reorder;
+  const { index, count, onMove, onDragActive } = reorder;
   const pan = Gesture.Pan()
     .hitSlop(HANDLE_HIT_SLOP)
+    .onBegin(() => {
+      if (onDragActive !== undefined) scheduleOnRN(onDragActive, true);
+    })
     .onUpdate((event) => {
       offset.value = event.translationY;
     })
-    .onEnd((event) => {
-      const to = reorderTarget(index, event.translationY, pitch.value, count);
+    .onEnd((event, success) => {
+      const to = dropTarget(
+        index,
+        event.translationY,
+        pitch.value,
+        count,
+        success,
+      );
+      if (to !== null) scheduleOnRN(onMove, index, to);
+    })
+    .onFinalize(() => {
       offset.value = 0;
-      if (to !== index) scheduleOnRN(onMove, index, to);
+      if (onDragActive !== undefined) scheduleOnRN(onDragActive, false);
     });
   const style = useAnimatedStyle(() => ({
     transform: [{ translateY: offset.value }],
