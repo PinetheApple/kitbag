@@ -188,9 +188,6 @@ describe('statusRows', () => {
     const rows = { first: 'ramp', second: 'none' } as const;
     expect(rowSlot(rows, 'ramp')).toBe(LOWER_SLOT);
     expect(rowSlot(rows, 'mute')).toBe(NO_SLOT);
-    expect(
-      (['ramp', 'mute'] as const).map((row) => rowSlot(rows, row)),
-    ).not.toContain(UPPER_SLOT);
   });
 });
 

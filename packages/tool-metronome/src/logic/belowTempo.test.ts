@@ -21,7 +21,7 @@ const BEAT_COUNTS = Array.from({ length: KB_MAX_BEATS }, (_u, i) => i + 1);
 // 1.0. Emulator-measured on 8663a62, before #243.
 const MEASURED_LARGE = { dotsTop: 436.4, bodyBottom: 813.8 } as const;
 
-const R2_MOCKUP_SMALL = { dotsTop: 418, bodyBottom: 658 } as const;
+const APPROVED_MOCKUP_SMALL = { dotsTop: 418, bodyBottom: 658 } as const;
 
 const SMALL_COMPACT: BelowTempoRoom = {
   width: SMALL_PHONE_DOTS_WIDTH,
@@ -108,7 +108,7 @@ describe('the body at fontScale 1.0', () => {
   });
 
   it('fits every song with its poly label beside the dots at 360 x 800', () => {
-    const budget = R2_MOCKUP_SMALL.bodyBottom - R2_MOCKUP_SMALL.dotsTop;
+    const budget = APPROVED_MOCKUP_SMALL.bodyBottom - APPROVED_MOCKUP_SMALL.dotsTop;
     expect(tallestBelowTempo('labelBeside', SMALL_COMPACT)).toBeLessThanOrEqual(
       budget,
     );
