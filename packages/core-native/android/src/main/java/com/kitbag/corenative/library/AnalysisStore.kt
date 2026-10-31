@@ -21,7 +21,7 @@ class AnalysisStore(private val dir: File) {
   }
 
   fun pending(): List<AnalysisResult> =
-    dir.listFiles { file -> file.name.endsWith(RESULT_SUFFIX) && !file.name.startsWith(".") }
+    dir.listFiles { file -> file.name.endsWith(RESULT_SUFFIX) && !LibraryPaths.isHiddenName(file.name) }
       .orEmpty()
       .mapNotNull { file ->
         try {

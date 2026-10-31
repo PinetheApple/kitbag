@@ -31,7 +31,7 @@ class StemBundleBridge(private val resolver: ContentResolver, private val base: 
   fun stemFolderNames(): WritableArray =
     Arguments.createArray().apply {
       File(base, LibraryPaths.STEMS_DIR_NAME)
-        .listFiles { file -> file.isDirectory && !file.name.startsWith('.') }
+        .listFiles { file -> file.isDirectory && !LibraryPaths.isHiddenName(file.name) }
         .orEmpty()
         .forEach { pushString(it.name) }
     }

@@ -85,6 +85,11 @@ kb_result kb_engine_clock_pair(
   return KB_OK;
 }
 
+int32_t kb_engine_output_device_id(const kb_engine* engine) {
+  return engine == nullptr ? KB_NO_OUTPUT_DEVICE_ID
+                           : ToEngine(engine)->OutputDeviceId();
+}
+
 #ifdef KITBAG_BUILD_TOOLS
 void kb_engine_render(kb_engine* engine, float* out, uint32_t frame_count) {
   if (engine == nullptr || out == nullptr || frame_count == 0) return;
