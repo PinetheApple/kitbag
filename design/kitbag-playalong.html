@@ -916,22 +916,12 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
     output route, Play along nudges per song, and they add up — so the sheet names the sum
     and its parts: <code>+190 ms total · 180 route + 10 song</code>. Neither control is
     hidden, and the number the user hears is the number on screen. (SPEC §17 D6.)</li>
-    <li><b>±100 ms appears three times and is wrong in three different ways.</b>
-    <code>metronome_controller.dart:68</code> clamps the latency offset, which cannot reach
-    Bluetooth (Settings §06). <code>sync_screen.dart:365</code> clamps the phase nudge, which
-    should be ±half a beat — a tempo-dependent bound, ±175 ms at 171 BPM and ±500 ms at 60, so
-    a constant is the wrong <em>shape</em> of limit, not just the wrong number. The nudge also
-    has no reason to share a constant with the latency offset: they are different quantities
-    that happen to be measured in milliseconds. <b>Decide the three bounds separately.</b>
-    <br><br>Checked, and it is cheaper than it looks: <b>the native side does not clamp at
-    all.</b> <code>kb_metronome_set_latency_offset</code> passes straight through to
-    <code>Metronome::SetLatencyOffset</code> (<code>metronome.cpp:90</code>), which pushes the
-    raw value onto the command queue. The <code>[-100, 100]</code> in
-    <code>kitbag_api.h:63</code> is a <em>doc comment</em> and nothing enforces it. So the limit
-    is two Dart constants and a stale comment, not an engine constraint — the question is
-    genuinely “what should the bounds be”, and the answer costs a line each. What still needs
-    checking before widening: whether the scheduler's lookahead window can absorb a 250 ms
-    offset, since that is where a large value would actually bite.</li>
+    <li><b>Decided 2026-10-31 — D5: ±300 ms, clamped by the engine.</b> Three bounds, three
+    constants. The latency offset is clamped to ±300 ms by the engine, which reaches Bluetooth
+    (Settings §06). The phase nudge is ±half a beat — tempo-dependent, ±175 ms at 171 BPM and
+    ±500 ms at 60 — and shares no constant with the latency offset. The downbeat shift is in
+    beats. The scheduler has no lookahead window to absorb: the offset is a phase bias.
+    (SPEC §17 D5.)</li>
     <li><b>GetSongBPM needs a key, and this is a public repo.</b> SPEC §8.5 requires the tier
     and forbids shipping a shared key. Either a proxy Kitbag runs — which is a server, a cost
     and a privacy surface for an offline-first GPL app — or every user brings their own key,

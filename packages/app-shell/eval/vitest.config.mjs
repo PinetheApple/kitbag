@@ -4,6 +4,7 @@ import { defineConfig } from 'vitest/config';
 
 // Reuses the vitest toolchain established in eslint-plugin-kitbag (SPEC §14).
 export default defineConfig({
+  esbuild: { jsx: 'automatic' },
   test: {
     include: ['eval/eval.test.ts', 'src/**/*.test.ts'],
     setupFiles: ['eval/nodeStubs.ts'],

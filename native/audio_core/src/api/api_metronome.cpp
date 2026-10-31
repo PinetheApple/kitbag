@@ -24,18 +24,30 @@ static_assert(
     KB_RAMP_STATE_AT_TARGET == static_cast<int>(kitbag::RampState::kAtTarget)
 );
 
+namespace {
+
+// Stopped here, not left to the callback: a metronome start and stop drained in
+// one block never show it a started metronome.
+void TakeOverFromRigClick(kitbag::Engine* engine) {
+  engine->SetMetronomeIntent(true);
+  engine->metronome().rig_click().Stop();
+  engine->SetRigClickIntent(false);
+}
+
+}  // namespace
+
 extern "C" {
 
 void kb_metronome_start(kb_engine* engine) {
   if (engine != nullptr) {
-    ToEngine(engine)->SetMetronomeIntent(true);
+    TakeOverFromRigClick(ToEngine(engine));
     ToEngine(engine)->metronome().Start();
   }
 }
 
 void kb_metronome_start_at(kb_engine* engine, uint64_t start_frame) {
   if (engine != nullptr) {
-    ToEngine(engine)->SetMetronomeIntent(true);
+    TakeOverFromRigClick(ToEngine(engine));
     ToEngine(engine)->metronome().StartAt(start_frame);
   }
 }
@@ -107,7 +119,7 @@ void kb_metronome_anchor_external(
     double bpm
 ) {
   if (engine != nullptr) {
-    ToEngine(engine)->SetMetronomeIntent(true);
+    TakeOverFromRigClick(ToEngine(engine));
     ToEngine(engine)->metronome().AnchorExternal(song_pos_sec, at_frame, bpm);
   }
 }
@@ -141,6 +153,16 @@ void kb_metronome_set_accent(
 ) {
   if (engine != nullptr) {
     ToEngine(engine)->metronome().SetAccent(beat_index, accent);
+  }
+}
+
+void kb_metronome_set_subdivision_accents(
+    kb_engine* engine,
+    int32_t subdivision,
+    int32_t slot_mask
+) {
+  if (engine != nullptr) {
+    ToEngine(engine)->metronome().SetSubdivisionAccents(subdivision, slot_mask);
   }
 }
 

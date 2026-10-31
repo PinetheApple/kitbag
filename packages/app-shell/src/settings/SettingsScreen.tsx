@@ -10,7 +10,7 @@ import {
 } from '@kitbag/core-design';
 import { getAppVersion } from '@kitbag/core-native';
 import { useAppearance, type ThemeChoice } from '@kitbag/core-state';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useReducer } from 'react';
 import { Linking, Platform } from 'react-native';
 
 import {
@@ -22,7 +22,14 @@ import {
 import { formatAppVersion } from './appVersion.ts';
 import { formatPracticeSummary } from './practiceText.ts';
 import { SettingsFrame } from './SettingsFrame.tsx';
+import { StorageSheets } from './StorageSheet.tsx';
+import {
+  nextStorageSheet,
+  type StorageSheetEvent,
+} from './storageSheetFlow.ts';
+import { STORAGE_LABEL, storageSummary } from './storageText.ts';
 import { usePracticeStats } from './usePracticeStats.ts';
+import { useStorage } from './useStorage.ts';
 
 const THEME_OPTIONS: readonly SegmentOption<ThemeChoice>[] = [
   { value: 'system', label: 'System' },
@@ -55,6 +62,25 @@ function PracticeValue() {
 }
 
 function DataSection() {
+  const { report, missing, removalFailed, refresh, removeMissing } =
+    useStorage();
+  const summary = report === null ? null : storageSummary(report);
+  const [sheet, send] = useReducer(nextStorageSheet, 'none');
+  const handlers = useMemo(() => {
+    const on = (event: StorageSheetEvent) => () => {
+      send(event);
+    };
+    return {
+      open: on('open'),
+      askRemove: on('askRemove'),
+      cancelRemove: on('cancelRemove'),
+      dismiss: on('dismiss'),
+    };
+  }, []);
+  const remove = useCallback(() => {
+    send('remove');
+    removeMissing();
+  }, [removeMissing]);
   return (
     <>
       <SectionHeader label="Data" />
@@ -62,7 +88,27 @@ function DataSection() {
         <EditRow label="Practice">
           <PracticeValue />
         </EditRow>
+        <EditRow
+          label={STORAGE_LABEL}
+          accessibilityLabel={
+            summary === null ? STORAGE_LABEL : `${STORAGE_LABEL}, ${summary}`
+          }
+          onPress={handlers.open}
+        >
+          {summary === null ? null : <EditValue>{summary}</EditValue>}
+        </EditRow>
       </EditGroup>
+      <StorageSheets
+        kind={sheet}
+        report={report}
+        missingCount={missing.length}
+        removalFailed={removalFailed}
+        onShow={refresh}
+        onAskRemove={handlers.askRemove}
+        onRemove={remove}
+        onCancelRemove={handlers.cancelRemove}
+        onDismiss={handlers.dismiss}
+      />
     </>
   );
 }
@@ -90,13 +136,11 @@ function AppearanceSection() {
           />
         </EditRow>
         <EditSwitchRow
-          variant="outlined"
           label="Haptics"
           value={haptics}
           onValueChange={setHaptics}
         />
         <EditSwitchRow
-          variant="outlined"
           label="Keep screen awake"
           value={keepScreenAwake}
           onValueChange={setKeepScreenAwake}

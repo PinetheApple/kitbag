@@ -61,6 +61,13 @@ void Metronome::SetSubdivision(int subdivision) {
   commands_.Push(command);
 }
 
+void Metronome::SetSubdivisionAccents(int subdivision, int32_t slot_mask) {
+  Command command{CommandType::kSetSubdivisionAccents};
+  command.int_a = subdivision;
+  command.int_b = slot_mask;
+  commands_.Push(command);
+}
+
 void Metronome::SetAccent(int beat_index, int32_t accent) {
   Command command{CommandType::kSetAccent};
   command.int_a = beat_index;
@@ -195,17 +202,17 @@ bool Metronome::RouteCommand(const Command& command) {
     case CommandType::kPause:
     case CommandType::kAnchorExternal:
       return ApplyTransportCommand(command);
-    case CommandType::kSetFollowMixer:
-      return ApplyFollowCommand(command);
     case CommandType::kSetTempo:
     case CommandType::kSetLatencyOffset:
-      return ApplyTempoCommand(command);
+    case CommandType::kSetFollowMixer:
+      return ApplyClockCommand(command);
     case CommandType::kSetRamp:
     case CommandType::kSetBarMute:
     case CommandType::kSetCountIn:
       return ApplyTrainerCommand(command);
     case CommandType::kSetBeats:
     case CommandType::kSetSubdivision:
+    case CommandType::kSetSubdivisionAccents:
     case CommandType::kSetAccent:
     case CommandType::kSetPoly:
     case CommandType::kSetPolyAccent:
@@ -249,13 +256,6 @@ bool Metronome::ApplyTransportCommand(const Command& command) {
   }
 }
 
-bool Metronome::ApplyFollowCommand(const Command& command) {
-  if (command.type != CommandType::kSetFollowMixer) return false;
-  follow_mixer_ = command.int_a != 0;
-  ReacquireGrid();
-  return true;
-}
-
 void Metronome::StashPendingAnchor(const Command& command) {
   has_pending_anchor_ = true;
   pending_anchor_song_pos_ = command.value;
@@ -263,7 +263,7 @@ void Metronome::StashPendingAnchor(const Command& command) {
   pending_anchor_frame_ = command.frame;
 }
 
-bool Metronome::ApplyTempoCommand(const Command& command) {
+bool Metronome::ApplyClockCommand(const Command& command) {
   switch (command.type) {
     case CommandType::kSetTempo:
       SetBpmPreservingPhase(Clamp(command.value, kMinBpm, kMaxBpm));
@@ -271,6 +271,10 @@ bool Metronome::ApplyTempoCommand(const Command& command) {
       return true;
     case CommandType::kSetLatencyOffset:
       SetLatencyPreservingPhase(command.value);
+      return true;
+    case CommandType::kSetFollowMixer:
+      follow_mixer_ = command.int_a != 0;
+      ReacquireGrid();
       return true;
     default:
       return false;

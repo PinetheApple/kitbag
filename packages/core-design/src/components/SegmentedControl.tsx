@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Pressable, Text, View, type LayoutChangeEvent } from 'react-native';
 
+import { homeArrange, homeArrangeText } from '../homeArrangeRoles.ts';
 import {
   bodyLineHeight,
   inset,
@@ -23,23 +24,37 @@ import {
 // In a track, an option's edge sits inside the inset and border, a strip that
 // is the option's alone.
 const TRACK_EDGE = space.segmentInset + size.stroke;
+const ROW_TRACK_EDGE = homeArrange.segmentInset + size.stroke;
 const OPTION_HEIGHT = textRoles.segment.size + inset.segmentOptionV * 2;
 const INLINE_LINE_HEIGHT = textRoles.segment.size * bodyLineHeight;
 
-export type SegmentedControlSize = 'default' | 'large' | 'inline' | 'editRow';
+export type SegmentedControlSize =
+  | 'default'
+  | 'large'
+  | 'inline'
+  | 'editRow'
+  | 'row';
 
 const OPTION_HEIGHTS: Readonly<Record<SegmentedControlSize, number>> = {
   default: OPTION_HEIGHT,
   large: size.segmentLargeOption,
   inline: INLINE_LINE_HEIGHT + inset.segmentOptionV * 2,
   editRow: size.segmentEditRowOption,
+  row:
+    homeArrangeText.segment.size * bodyLineHeight +
+    homeArrange.segmentOptionV * 2,
 };
 
 // Option widths are flex, so only the vertical axis is grown to 48dp; sideways
 // every option takes the same half of the gap between options, which keeps
 // their visible widths equal.
-function optionHitBox(gaps: NeighbourGaps, compact: boolean, height: number) {
-  const edge = compact ? 0 : TRACK_EDGE;
+function optionHitBox(
+  gaps: NeighbourGaps,
+  compact: boolean,
+  height: number,
+  trackEdge: number,
+) {
+  const edge = compact ? 0 : trackEdge;
   const vertical = hitExtension(height, height, {
     top: unshared(edge) + (gaps.top ?? Number.POSITIVE_INFINITY),
     bottom: unshared(edge) + (gaps.bottom ?? Number.POSITIVE_INFINITY),
@@ -82,6 +97,7 @@ interface SegmentProps<T extends string> {
   readonly editRow: boolean;
   readonly sized: { readonly minWidth: number } | undefined;
   readonly onLabelWidth: (value: T, width: number) => void;
+  readonly row: boolean;
   readonly hitBox: ReturnType<typeof optionHitBox>;
   readonly onSelect: (value: T) => void;
 }
@@ -143,6 +159,17 @@ const useStyles = createThemedStyles((theme) => ({
     paddingHorizontal: inset.segmentEditRowOptionH,
   },
   inlineLabel: { lineHeight: INLINE_LINE_HEIGHT },
+  rowTrack: {
+    padding: homeArrange.segmentInset,
+  },
+  rowOption: {
+    paddingVertical: homeArrange.segmentOptionV,
+    paddingHorizontal: homeArrange.segmentOptionH,
+  },
+  rowLabel: {
+    ...textStyle(homeArrangeText.segment),
+    lineHeight: homeArrangeText.segment.size * bodyLineHeight,
+  },
 }));
 
 function Segment<T extends string>({
@@ -154,6 +181,7 @@ function Segment<T extends string>({
   editRow,
   sized,
   onLabelWidth,
+  row,
   hitBox,
   onSelect,
 }: SegmentProps<T>) {
@@ -174,7 +202,7 @@ function Segment<T extends string>({
       accessibilityLabel={option.accessibilityLabel ?? option.label}
       accessibilityState={{ checked: selected }}
       aria-checked={selected}
-      style={[!inline && !editRow && styles.optionHit, hitBox]}
+      style={[!inline && !editRow && !row && styles.optionHit, hitBox]}
       onPress={handlePress}
     >
       <View
@@ -183,6 +211,7 @@ function Segment<T extends string>({
           large && styles.largeOption,
           editRow && styles.editRowOption,
           sized,
+          row && styles.rowOption,
           selected && styles.optionSelected,
           selected && large && styles.largeOptionSelected,
         ]}
@@ -192,6 +221,7 @@ function Segment<T extends string>({
             styles.label,
             large && styles.largeLabel,
             inline && styles.inlineLabel,
+            row && styles.rowLabel,
             selected && (accent ? styles.labelAccent : styles.labelSelected),
           ]}
           onLayout={editRow ? handleLabelLayout : undefined}
@@ -233,10 +263,12 @@ export function SegmentedControl<T extends string>({
     editRow && measured.length === options.length
       ? equalOptionSize(measured, inset.segmentEditRowOptionH)
       : undefined;
+  const row = controlSize === 'row';
   const hitBox = optionHitBox(
     neighbourGaps(neighbourGapDp),
     compact,
     OPTION_HEIGHTS[controlSize],
+    row ? ROW_TRACK_EDGE : TRACK_EDGE,
   );
   return (
     <View
@@ -245,6 +277,7 @@ export function SegmentedControl<T extends string>({
       style={[
         compact ? styles.compact : styles.track,
         large && !compact && styles.largeTrack,
+        row && !compact && styles.rowTrack,
         fill && styles.fill,
       ]}
     >
@@ -259,6 +292,7 @@ export function SegmentedControl<T extends string>({
           editRow={editRow}
           sized={optionSize}
           onLabelWidth={handleLabelWidth}
+          row={row}
           hitBox={hitBox}
           onSelect={onSelect}
         />

@@ -13,7 +13,9 @@ export type { Spec as KitbagCommandsSpec } from './NativeKitbagCommands';
 export { getKitbagLibrary } from './NativeKitbagLibrary';
 export type {
   AnalysisResult,
+  DatabaseUsage,
   ImportedAudio,
+  LibraryAudioUsage,
   ImportedStem,
   ImportedStemBundle,
   LibraryConstants,
@@ -23,7 +25,10 @@ export type {
   StemBundleCheck,
   StemBundleLyrics,
   StemBundleSection,
+  StemSetUsage,
+  StorageReport,
 } from './NativeKitbagLibrary';
+export { missingFiles, storageReport } from './libraryStorage';
 
 // --- #30 (P2-A3) JSI HostObject: polled realtime reads (§13.2, §13.3) --------
 export {
@@ -39,6 +44,11 @@ export {
   tunerCents,
   tunerConfidence,
 } from './host/snapshot.ts';
+export {
+  type EngineClockPair,
+  renderedFrameToMonotonicMs,
+} from './host/engineClock.ts';
+export { getEngineClockPair } from './engineClock';
 export * from './generated/nativeConstants.gen.ts';
 
 export { confirmHaptic, setHapticsEnabled, tickHaptic } from './haptics.ts';
@@ -48,6 +58,8 @@ export {
   setSystemBarAppearance,
 } from './appChrome';
 export type { AppNightMode, AppVersion } from './appChromeTypes.ts';
+export { getOutputRoute, watchOutputRoute } from './outputRoute';
+export type { OutputRoute, OutputRouteKind } from './outputRouteTypes.ts';
 export { acquireEngineHold, type EngineHoldCommands } from './engineHold.ts';
 export type {
   KitbagCommandsConstants,

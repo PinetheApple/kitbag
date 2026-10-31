@@ -7,6 +7,7 @@ import android.webkit.MimeTypeMap
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
+import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.WritableMap
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -19,9 +20,11 @@ import com.kitbag.corenative.library.AnalysisStore
 import com.kitbag.corenative.library.DocumentPicker
 import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.LibraryStorage
+import com.kitbag.corenative.library.LibraryUsage
 import com.kitbag.corenative.library.NativeWaveform
 import com.kitbag.corenative.library.StemBundleBridge
 import com.kitbag.corenative.library.StemBundleRefusedException
+import com.kitbag.corenative.library.StorageUsage
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.ExecutorService
@@ -270,6 +273,49 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     }
   }
 
+  override fun storageReport(databaseName: String, promise: Promise) {
+    io.execute {
+      try {
+        require(databaseName.isNotEmpty() && File(databaseName).name == databaseName) { "Not a database name" }
+        val usage = LibraryUsage.measure(base, reactApplicationContext.getDatabasePath(databaseName))
+        promise.resolve(usage.toMap(base.absolutePath))
+      } catch (e: Exception) {
+        rejectLogged(promise, E_STORAGE_FAILED, "Could not measure storage", e)
+      }
+    }
+  }
+
+  private fun StorageUsage.toMap(location: String): WritableMap =
+    Arguments.createMap().apply {
+      putMap(
+        "libraryAudio",
+        Arguments.createMap().apply {
+          putInt("songs", libraryAudio.songs)
+          putDouble("bytes", libraryAudio.bytes.toDouble())
+        },
+      )
+      putMap(
+        "stemSets",
+        Arguments.createMap().apply {
+          putInt("count", stemSets.count)
+          putDouble("bytes", stemSets.bytes.toDouble())
+        },
+      )
+      putMap("database", Arguments.createMap().apply { putDouble("bytes", databaseBytes.toDouble()) })
+      putString("location", location)
+    }
+
+  override fun missingFiles(relativePaths: ReadableArray, promise: Promise) {
+    io.execute {
+      try {
+        val paths = (0 until relativePaths.size()).asSequence().mapNotNull { relativePaths.getString(it) }
+        promise.resolve(Arguments.createArray().apply { LibraryUsage.missing(base, paths).forEach(::pushString) })
+      } catch (e: Exception) {
+        rejectLogged(promise, E_STORAGE_FAILED, "Could not check library files", e)
+      }
+    }
+  }
+
   // Raw causes carry paths; JS gets the code and shows its own text.
   private fun rejectLogged(promise: Promise, code: String, message: String, cause: Exception) {
     Log.w(TAG, "$code: $message", cause)
@@ -296,6 +342,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     private const val E_DELETE_FAILED = "E_DELETE_FAILED"
     private const val E_LIST_FAILED = "E_LIST_FAILED"
     private const val E_WAVEFORM_FAILED = "E_WAVEFORM_FAILED"
+    private const val E_STORAGE_FAILED = "E_STORAGE_FAILED"
 
     private fun named(name: String) = ThreadFactory { Thread(it, name) }
   }

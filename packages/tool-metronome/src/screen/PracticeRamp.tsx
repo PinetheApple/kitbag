@@ -1,10 +1,12 @@
 import {
   Chip,
+  metronomeSheet,
   SegmentedControl,
   SheetHint,
   space,
   StepControl,
   Switch,
+  unshared,
 } from '@kitbag/core-design';
 import { useCallback } from 'react';
 import { Text, View } from 'react-native';
@@ -136,6 +138,11 @@ export function PracticeRamp({ onType }: PracticeRampProps) {
         <>
           <View style={styles.grow} />
           <Switch
+            neighbourGapDp={{
+              top: unshared(metronomeSheet.practiceSectionV),
+              bottom: space.controlGap,
+              right: 0,
+            }}
             accessibilityLabel="Tempo ramp"
             value={enabled}
             onValueChange={editor.toggle}
