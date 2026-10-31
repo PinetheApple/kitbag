@@ -27,14 +27,14 @@ class SongTransportTest {
     SongProgress(playing, (seconds * rate).toLong())
 
   @Test
-  fun `card artist is the song's artist`() {
-    assertEquals("The Beatles", song.cardArtist)
+  fun `media artist is the artist given`() {
+    assertEquals("The Beatles", mediaArtist("The Beatles"))
   }
 
   @Test
-  fun `card artist is empty, never null, when the song has none`() {
-    assertEquals("", song.copy(artist = null).cardArtist)
-    assertEquals("", song.copy(artist = "  ").cardArtist)
+  fun `media artist is empty, never null, when there is none`() {
+    assertEquals("", mediaArtist(null))
+    assertEquals("", mediaArtist("  "))
   }
 
   @Test

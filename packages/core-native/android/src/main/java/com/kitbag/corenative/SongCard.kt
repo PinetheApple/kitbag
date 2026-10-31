@@ -17,6 +17,7 @@ import com.kitbag.corenative.transport.SongCommand
 import com.kitbag.corenative.transport.SongPlayback
 import com.kitbag.corenative.transport.SongProgress
 import com.kitbag.corenative.transport.SongTransport
+import com.kitbag.corenative.transport.mediaArtist
 import kotlin.math.roundToInt
 
 internal class SongCard(
@@ -109,7 +110,7 @@ internal class SongCard(
     session.setMetadata(
       MediaMetadataCompat.Builder()
         .putString(MediaMetadataCompat.METADATA_KEY_TITLE, current.title)
-        .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, current.cardArtist)
+        .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, mediaArtist(current.artist))
         .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, durationMillis)
         .build(),
     )
@@ -131,7 +132,7 @@ internal class SongCard(
     NotificationCompat.Builder(context, channelId)
       .setSmallIcon(R.drawable.kitbag_notification)
       .setContentTitle(current.title)
-      .setContentText(current.cardArtist)
+      .setContentText(mediaArtist(current.artist))
       .setContentIntent(launchIntent)
       .setOngoing(playing)
       .setDeleteIntent(actionIntent(SongAction.STOP))
