@@ -67,6 +67,9 @@ const useStyles = createThemedStyles((theme) => ({
     textAlign: 'right',
     color: theme.color.text3,
   },
+  numberUnsaved: {
+    width: 'auto',
+  },
   trail: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -120,7 +123,9 @@ function SongRow({
       style={[styles.row, row.now && styles.rowNow]}
       onPress={handlePress}
     >
-      <Text style={styles.number}>{row.number}</Text>
+      <Text style={[styles.number, unsaved && styles.numberUnsaved]}>
+        {row.number}
+      </Text>
       <View style={styles.nameLine}>
         <Text
           style={[styles.name, row.now && styles.nameNow]}

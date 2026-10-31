@@ -63,15 +63,14 @@ const useStyles = createThemedStyles((theme) => ({
     alignItems: 'center',
     gap: metronomeSheet.nowActionIconGap,
     borderRadius: metronomeSheet.nowActionRadius,
-    borderWidth: size.stroke,
   },
   rowRevert: {
+    borderWidth: size.stroke,
     paddingHorizontal: metronomeSheet.nowActionRevertH,
     borderColor: theme.color.line,
   },
   rowSave: {
     paddingHorizontal: metronomeSheet.nowActionSaveH,
-    borderColor: theme.color.accent,
     backgroundColor: theme.color.accent,
   },
   rowLabel: {
