@@ -787,10 +787,6 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
     rather than discovered later. <b>The picker itself, its “moving your files” progress
     state and its unwritable-target failure path are undesigned</b> — SPEC §12.8.
     (SPEC §17 D11.)</li>
-    <li><b>Subdivision accents need the engine first.</b> The design assumes a per-count accent
-    pattern the native core does not have. Confirm the scope — C API, schema, and the
-    scheduler — before this sheet is built. It is the only control in §03 that is not a
-    re-skin of something that already runs.</li>
     <li><b>Merge identity for existing installs.</b> v4 UUIDs solve merge going forward, but
     anyone with data today has rows with no id. Backfill on migration is easy; the hard part is
     that two devices that both backfill independently produce different ids for the same
