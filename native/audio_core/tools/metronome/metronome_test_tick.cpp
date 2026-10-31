@@ -1,5 +1,6 @@
 #include <string>
 
+#include "metronome/metronome_internal.h"
 #include "metronome_test_audio.h"
 
 namespace metronome_test {
@@ -10,20 +11,22 @@ constexpr double kTickBeatHz = 1000.0;
 constexpr double kTickSubdivisionHz = 800.0;
 constexpr double kTickPolyHz = 1225.0;
 
-constexpr double kReferencePlainToAccent = 0.7;
-constexpr double kLevelRatioTolerance = 0.05;
-constexpr double kAccentedOffBeatGain = 0.75;
+using kitbag::metronome_detail::kAccentAmplitude;
+using kitbag::metronome_detail::kAccentedSubdivisionGain;
+using kitbag::metronome_detail::kBeatAmplitude;
+
+constexpr double kLevelRatioTolerance = 0.005;
 constexpr double kOffBeatGainTolerance = 0.02;
-// The interpolated crossing-span estimate of a clean sine is within 0.1%.
+// The crossing-span estimate errs ~0.1%; 1% leaves margin and still rejects 2%.
 constexpr double kHzTolerance = 0.01;
 
-constexpr double kFloorDb = -80.0;
+constexpr double kDbPerAmplitudeDecade = 20.0;
+constexpr double kFloorDb = -kTickFloorDecades * kDbPerAmplitudeDecade;
 constexpr double kFloorDbTolerance = 2.0;
 constexpr double kCyclesToFirstPeak = 0.25;
 constexpr double kPitchSeconds = 0.03;
 constexpr double kEarlyWindowSeconds = 0.005;
 constexpr double kLateWindowSeconds = 0.025;
-constexpr double kDbPerAmplitudeDecade = 20.0;
 
 constexpr int kSubdivision = 4;
 constexpr int kAccentedSlot = 2;
@@ -58,6 +61,18 @@ bool HzIs(const std::vector<float>& left, int64_t onset, double hz) {
   return false;
 }
 
+bool NearIs(double measured, double want, double tolerance, const char* what) {
+  if (std::fabs(measured - want) <= tolerance) return true;
+  std::fprintf(
+      stderr,
+      "  %s: want %.4f, measured %.4f\n",
+      what,
+      want,
+      measured
+  );
+  return false;
+}
+
 double VoicePeak(const std::vector<float>& left, int64_t onset) {
   return PeakOver(left, onset, onset + FramesFor(kTickDecaySeconds));
 }
@@ -87,14 +102,20 @@ void CheckEnvelope(
     double hz,
     const char* name
 ) {
-  const double floor_db = FloorDbAtDecayEnd(left, hz);
-  if (std::fabs(floor_db - kFloorDb) > kFloorDbTolerance) {
-    std::fprintf(stderr, "  %s: %.1f dB under peak at 35 ms\n", name, floor_db);
-  }
+  const std::string label =
+      std::string("tick: ") + name + " falls 80 dB by 35 ms at the shared rate";
   Check(
-      std::fabs(floor_db - kFloorDb) <= kFloorDbTolerance,
-      (std::string("tick: ") + name + " decays to -80 dB at 35 ms").c_str()
+      NearIs(FloorDbAtDecayEnd(left, hz), kFloorDb, kFloorDbTolerance, name),
+      label.c_str()
   );
+}
+
+// Each voice's first sine peak lands a quarter cycle in, after some decay.
+double PlainToAccentPeakRatio() {
+  const double gap =
+      kCyclesToFirstPeak / kTickBeatHz - kCyclesToFirstPeak / kTickAccentHz;
+  return kBeatAmplitude / kAccentAmplitude *
+         std::exp(-kTickDecayPerSecond * gap);
 }
 
 void TestTickPitchAndLevel() {
@@ -102,13 +123,14 @@ void TestTickPitchAndLevel() {
   const auto plain = Preview(false);
   Check(HzIs(accent, 0, kTickAccentHz), "tick: accent is a 1500 Hz sine");
   Check(HzIs(plain, 0, kTickBeatHz), "tick: plain beat is a 1000 Hz sine");
-  const double ratio = VoicePeak(plain, 0) / VoicePeak(accent, 0);
-  if (std::fabs(ratio - kReferencePlainToAccent) > kLevelRatioTolerance) {
-    std::fprintf(stderr, "  plain/accent peak ratio %.3f\n", ratio);
-  }
   Check(
-      std::fabs(ratio - kReferencePlainToAccent) <= kLevelRatioTolerance,
-      "tick: plain beat peaks at ~0.7 of the accent"
+      NearIs(
+          VoicePeak(plain, 0) / VoicePeak(accent, 0),
+          PlainToAccentPeakRatio(),
+          kLevelRatioTolerance,
+          "plain/accent peak"
+      ),
+      "tick: plain beat peaks at kBeatAmplitude / kAccentAmplitude"
   );
 }
 
@@ -147,13 +169,14 @@ void TestTickSubdivisionVoices() {
       HzIs(left, kSubdivisionFrames, kTickSubdivisionHz),
       "tick: a plain subdivision is an 800 Hz sine"
   );
-  const double gain = VoicePeak(left, accented_slot) / VoicePeak(left, 0);
-  if (std::fabs(gain - kAccentedOffBeatGain) > kOffBeatGainTolerance) {
-    std::fprintf(stderr, "  accented off-beat / downbeat %.3f\n", gain);
-  }
   Check(
       HzIs(left, accented_slot, kTickAccentHz) &&
-          std::fabs(gain - kAccentedOffBeatGain) <= kOffBeatGainTolerance,
+          NearIs(
+              VoicePeak(left, accented_slot) / VoicePeak(left, 0),
+              kAccentedSubdivisionGain,
+              kOffBeatGainTolerance,
+              "accented off-beat / downbeat"
+          ),
       "tick: an accented off-beat is the accent pitch at the off-beat gain"
   );
 }
