@@ -35,6 +35,7 @@ int32_t commandHold() { return kb_engine_hold(commandEngine()); }
 void commandRelease() { kb_engine_release(commandEngine()); }
 int32_t commandOutputDeviceId() {
   int32_t deviceId = kNoOutputDeviceId;
+  if (kitbagEngine() == nullptr) return deviceId;
   kb_engine_output_device_id(commandEngine(), &deviceId);
   return deviceId;
 }

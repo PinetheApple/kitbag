@@ -9,6 +9,8 @@ import com.facebook.react.bridge.ReadableMap
 import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.LibraryStorage
 import com.kitbag.corenative.library.UnsafeLibraryPathException
+import com.kitbag.corenative.route.OutputRoute
+import com.kitbag.corenative.route.OutputRouteWatcher
 import com.kitbag.corenative.transport.Playback
 import com.kitbag.corenative.transport.PracticeClock
 import com.kitbag.corenative.transport.SetlistPosition
@@ -21,6 +23,8 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   NativeKitbagCommandsSpec(reactContext) {
 
   private val libraryBase = LibraryStorage.base(reactContext)
+  private val outputRoutes =
+    OutputRouteWatcher(reactContext, ::nativeOutputDeviceId, ::emitOutputRoute)
 
   init {
     val runtimePtr = reactContext.javaScriptContextHolder?.get() ?: 0L
@@ -28,10 +32,12 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
       nativeInstall(runtimePtr)
     }
     PlaybackService.listener = ::emitTransport
+    outputRoutes.start()
   }
 
   override fun invalidate() {
     PlaybackService.listener = null
+    outputRoutes.stop()
     super.invalidate()
   }
 
@@ -118,8 +124,26 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     )
   }
 
+  override fun getOutputRoute(promise: Promise) {
+    promise.resolve(outputRouteMap(outputRoutes.current()))
+  }
+
+  private fun emitOutputRoute(route: OutputRoute) {
+    emitOnOutputRoute(outputRouteMap(route))
+  }
+
+  private fun outputRouteMap(route: OutputRoute) =
+    Arguments.createMap().apply {
+      putString("id", route.id)
+      putString("name", route.name)
+      putString("kind", route.kind.wire)
+      putBoolean("certain", route.certain)
+    }
+
   override fun start(promise: Promise) {
-    promise.resolve(nativeStart())
+    val result = nativeStart()
+    outputRoutes.trigger()
+    promise.resolve(result)
   }
 
   override fun stop() {
@@ -127,7 +151,9 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   }
 
   override fun engineHold(promise: Promise) {
-    promise.resolve(nativeHold())
+    val result = nativeHold()
+    outputRoutes.trigger()
+    promise.resolve(result)
   }
 
   override fun engineRelease() {

@@ -48,6 +48,8 @@ export {
   setSystemBarAppearance,
 } from './appChrome';
 export type { AppNightMode, AppVersion } from './appChromeTypes.ts';
+export { getOutputRoute, watchOutputRoute } from './outputRoute';
+export type { OutputRoute, OutputRouteKind } from './outputRouteTypes.ts';
 export { acquireEngineHold, type EngineHoldCommands } from './engineHold.ts';
 export type {
   KitbagCommandsConstants,
