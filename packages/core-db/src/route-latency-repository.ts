@@ -9,6 +9,7 @@ export interface RouteLatencyRepository {
   get(route: string): Promise<RouteLatency | null>;
   list(): Promise<RouteLatency[]>;
   save(entry: RouteLatency): Promise<void>;
+  remove(route: string): Promise<void>;
 }
 
 export function createRouteLatencyRepository({
@@ -32,6 +33,10 @@ export function createRouteLatencyRepository({
           target: routeLatency.route,
           set: { offsetMs, name, kind },
         });
+      }),
+    remove: (route) =>
+      transactor.serial(async () => {
+        await db.delete(routeLatency).where(eq(routeLatency.route, route));
       }),
   };
 }
