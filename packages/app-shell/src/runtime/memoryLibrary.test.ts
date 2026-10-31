@@ -1,9 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { createMemoryLibrary, type TextStorage } from './memoryLibrary.ts';
-
-vi.mock('react-native', () => ({}));
-vi.mock('expo-haptics', () => ({}));
 
 function memoryStorage(): TextStorage & { data: Map<string, string> } {
   const data = new Map<string, string>();

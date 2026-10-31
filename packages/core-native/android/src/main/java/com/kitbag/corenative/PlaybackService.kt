@@ -16,8 +16,13 @@ import android.os.Looper
 import android.support.v4.media.session.MediaSessionCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
+import com.kitbag.corenative.transport.CardEffect
+import com.kitbag.corenative.transport.CardEvent
+import com.kitbag.corenative.transport.CardRouting
 import com.kitbag.corenative.transport.Playback
 import com.kitbag.corenative.transport.PracticeClock
+import com.kitbag.corenative.transport.SessionButton
+import com.kitbag.corenative.transport.SetlistPosition
 import com.kitbag.corenative.transport.Song
 import com.kitbag.corenative.transport.SongAction
 import com.kitbag.corenative.transport.TransportAction
@@ -34,6 +39,7 @@ class PlaybackService : Service() {
   private var practice = PracticeClock.IDLE
   private lateinit var card: MetronomeCard
   private var song: SongCard? = null
+  private val routing = CardRouting()
   private val clock = Handler(Looper.getMainLooper())
   private val tick = Runnable { onTick() }
 
@@ -63,25 +69,35 @@ class PlaybackService : Service() {
   // Not sticky: a restarted process has no engine, so there is nothing to resume.
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     lastStartId = startId
-    val songShowing = song != null
-    when (intent?.action) {
-      ACTION_SHOW -> if (!songShowing) show(intent)
-      ACTION_TRANSPORT -> if (!songShowing) {
-        intent.getStringExtra(EXTRA_ACTION)?.let(TransportAction::named)?.let(::handle)
-      }
-      ACTION_HIDE -> if (!songShowing) finish()
-      ACTION_SONG_SHOW -> showSong(intent)
-      ACTION_SONG -> songTapped(intent)
-      ACTION_SONG_HIDE -> if (songShowing) endSong()
-      else -> finish()
-    }
+    perform(routing.on(event(intent)), intent)
     return START_NOT_STICKY
   }
 
-  private fun songTapped(intent: Intent) {
-    val songCard = song ?: return finish()
-    intent.getStringExtra(EXTRA_ACTION)?.let(SongAction::named)?.let(songCard::handle)
+  private fun event(intent: Intent?): CardEvent =
+    when (intent?.action) {
+      ACTION_SHOW -> CardEvent.MetronomeShown
+      ACTION_TRANSPORT -> CardEvent.MetronomeTapped(intent.getStringExtra(EXTRA_ACTION))
+      ACTION_HIDE -> CardEvent.MetronomeHidden
+      ACTION_SONG_SHOW -> CardEvent.SongShown
+      ACTION_SONG -> CardEvent.SongTapped(intent.getStringExtra(EXTRA_ACTION))
+      ACTION_SONG_HIDE -> CardEvent.SongHidden
+      else -> CardEvent.StartUnrecognised
+    }
+
+  private fun perform(effect: CardEffect, intent: Intent?) {
+    when (effect) {
+      CardEffect.None -> Unit
+      CardEffect.ShowMetronome -> intent?.let { show(it) }
+      is CardEffect.MetronomeControl -> handle(effect.action)
+      CardEffect.ShowSong -> intent?.let { showSong(it) }
+      is CardEffect.SongControl -> song?.handle(effect.action)
+      is CardEffect.SeekSong -> song?.seekTo(effect.positionMillis)
+      CardEffect.EndSong -> endSong()
+      CardEffect.RemoveCard -> finish()
+    }
   }
+
+  private fun route(event: CardEvent) = perform(routing.on(event), null)
 
   private fun showSong(intent: Intent) {
     clock.removeCallbacks(tick)
@@ -102,8 +118,7 @@ class PlaybackService : Service() {
       launchIntent(),
       ::songIntent,
       ::postForeground,
-      ::endSong,
-    ).also { song = it }
+    ) { route(CardEvent.SongStopped) }.also { song = it }
     songCard.show(next, intent.getBooleanExtra(EXTRA_PLAYING, true))
   }
 
@@ -138,7 +153,11 @@ class PlaybackService : Service() {
       rampRunning = intent.getBooleanExtra(EXTRA_RAMP_RUNNING, false),
       beatsPerBar = intent.getIntExtra(EXTRA_BEATS_PER_BAR, 0),
       beatUnit = intent.getIntExtra(EXTRA_BEAT_UNIT, 0),
-      setlist = null,
+      setlist = SetlistPosition.from(
+        intent.getStringExtra(EXTRA_SETLIST_SUBTITLE),
+        if (intent.hasExtra(EXTRA_SONG_INDEX)) intent.getIntExtra(EXTRA_SONG_INDEX, 0) else null,
+        intent.getIntExtra(EXTRA_SONG_COUNT, 0),
+      ),
     )
     render()
   }
@@ -147,14 +166,18 @@ class PlaybackService : Service() {
     val transportModel = model ?: return
     val current = state?.let(::withEngineTempo) ?: return
     var next = current
-    for (command in transportModel.commandsFor(current, action)) {
+    val commands = transportModel.commandsFor(current, action)
+    for (command in commands) {
       execute(command)
       next = applied(next, command)
     }
+    val songStep = action.takeIf {
+      TransportCommand.PreviousSong in commands || TransportCommand.NextSong in commands
+    }
     practice = practice.afterPlaying(next.playback == Playback.PLAYING, System.currentTimeMillis())
     state = next
-    listener?.invoke(next, practice)
-    if (next.playback == Playback.STOPPED) finish() else render()
+    listener?.invoke(next, practice, songStep)
+    if (next.playback == Playback.STOPPED) route(CardEvent.MetronomeStopped) else render()
   }
 
   // A running ramp moves the tempo without telling the service, so read it live.
@@ -195,7 +218,6 @@ class PlaybackService : Service() {
     updateSession(s, view)
     postForeground(card.notification(view, s.playback == Playback.PLAYING))
   }
-
 
   private fun updateSession(s: TransportState, view: TransportView) {
     val playing = s.playback == Playback.PLAYING
@@ -242,45 +264,24 @@ class PlaybackService : Service() {
     )
 
   private inner class SessionCallback : MediaSessionCompat.Callback() {
-    override fun onPlay() = route(SongAction.PLAY, TransportAction.PLAY)
+    override fun onPlay() = route(CardEvent.SessionPressed(SessionButton.PLAY))
 
-    override fun onPause() = route(SongAction.PAUSE, TransportAction.PAUSE)
+    override fun onPause() = route(CardEvent.SessionPressed(SessionButton.PAUSE))
 
-    override fun onStop() = route(SongAction.STOP, TransportAction.STOP)
+    override fun onStop() = route(CardEvent.SessionPressed(SessionButton.STOP))
 
-    override fun onSkipToPrevious() = handle(TransportAction.PREVIOUS)
+    override fun onSkipToPrevious() = route(CardEvent.SessionPressed(SessionButton.PREVIOUS))
 
-    override fun onSkipToNext() = handle(TransportAction.NEXT)
+    override fun onSkipToNext() = route(CardEvent.SessionPressed(SessionButton.NEXT))
 
-    override fun onRewind() {
-      song?.handle(SongAction.REWIND)
-    }
+    override fun onRewind() = route(CardEvent.SessionPressed(SessionButton.REWIND))
 
-    override fun onFastForward() {
-      song?.handle(SongAction.FORWARD)
-    }
+    override fun onFastForward() = route(CardEvent.SessionPressed(SessionButton.FAST_FORWARD))
 
-    override fun onSeekTo(pos: Long) {
-      song?.seekTo(pos)
-    }
+    override fun onSeekTo(pos: Long) = route(CardEvent.SessionSeeked(pos))
 
-    override fun onCustomAction(action: String, extras: Bundle?) {
-      val songCard = song
-      if (songCard == null) {
-        TransportAction.named(action)?.let(::handle)
-      } else {
-        SongAction.named(action)?.let(songCard::handle)
-      }
-    }
-
-    private fun route(songAction: SongAction, transportAction: TransportAction) {
-      val songCard = song
-      if (songCard == null) {
-        handle(transportAction)
-      } else {
-        songCard.handle(songAction)
-      }
-    }
+    override fun onCustomAction(action: String, extras: Bundle?) =
+      route(CardEvent.SessionCustomPressed(action))
   }
 
   companion object {
@@ -310,12 +311,15 @@ class PlaybackService : Service() {
     private const val EXTRA_PLAYING = "playing"
     private const val EXTRA_PRACTICE_PLAYED_MS = "practicePlayedMs"
     private const val EXTRA_PRACTICE_STRETCH_STARTED_AT = "practiceStretchStartedAt"
+    private const val EXTRA_SETLIST_SUBTITLE = "setlistSubtitle"
+    private const val EXTRA_SONG_INDEX = "songIndex"
+    private const val EXTRA_SONG_COUNT = "songCount"
 
     @Volatile private var running = false
 
     @Volatile private var startRequested = false
 
-    @Volatile var listener: ((TransportState, PracticeClock) -> Unit)? = null
+    @Volatile var listener: ((TransportState, PracticeClock, TransportAction?) -> Unit)? = null
 
     fun show(
       context: Context,
@@ -338,6 +342,10 @@ class PlaybackService : Service() {
         .putExtra(EXTRA_MAX_BPM, maxBpm)
         .putExtra(EXTRA_PRACTICE_PLAYED_MS, practicePlayedMs)
         .putExtra(EXTRA_PRACTICE_STRETCH_STARTED_AT, practiceStretchStartedAt)
+      state.setlist?.let {
+        intent.putExtra(EXTRA_SETLIST_SUBTITLE, it.subtitle).putExtra(EXTRA_SONG_COUNT, it.songCount)
+        it.index?.let { index -> intent.putExtra(EXTRA_SONG_INDEX, index) }
+      }
       start(context, intent)
     }
 

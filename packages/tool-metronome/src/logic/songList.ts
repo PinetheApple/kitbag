@@ -1,7 +1,5 @@
 import { countLabel } from '@kitbag/core-design';
-import type { SetlistEntry } from '@kitbag/core-state';
-
-import type { ActiveSet } from './setlistChip.ts';
+import type { ActiveSet, SetlistEntry } from '@kitbag/core-state';
 
 export interface SongListRow {
   readonly itemId: number;

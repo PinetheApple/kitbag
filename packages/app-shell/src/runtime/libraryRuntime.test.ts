@@ -3,10 +3,6 @@ import { describe, expect, it, vi } from 'vitest';
 
 const opens = vi.hoisted(() => ({ count: 0 }));
 
-vi.mock('react-native', () => ({}));
-vi.mock('expo-haptics', () => ({}));
-vi.mock('@op-engineering/op-sqlite', () => ({}));
-
 vi.mock('./database.ts', () => ({
   getDatabase: () => {
     opens.count += 1;

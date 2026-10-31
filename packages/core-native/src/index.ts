@@ -53,5 +53,6 @@ export type {
   KitbagCommandsConstants,
   SongTransportShowState,
   TransportEvent,
+  TransportSetlist,
   TransportShowState,
 } from './NativeKitbagCommands';

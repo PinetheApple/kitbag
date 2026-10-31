@@ -58,7 +58,7 @@ while :; do pi -p "/skill:project-loop … run one full wave, then stop" || brea
    `.loop-halt` with the reason, report, exit.
 3. **Run it — dispatch the whole set, then block on all of it.** Fire every task's pass
    concurrently (per-phase executor), each in its own worktree
-   (`bash scripts/worktree.sh create <track> main`) — one message of concurrent `Agent`
+   (`git worktree add .claude/worktrees/<track> -b <branch> main`) — one message of concurrent `Agent`
    calls on Claude Code, or N `subagent_spawn` calls followed by a single
    `subagent_wait` on every returned id on pi. Do not exit here; wait for all of them.
    Stay thin on the main thread — ask subagents for verdicts, not transcripts. Log any

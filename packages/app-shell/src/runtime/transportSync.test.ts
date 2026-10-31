@@ -1,10 +1,11 @@
 import type { TransportEvent } from '@kitbag/core-native';
-import type { RampConfig } from '@kitbag/core-state';
+import { SONG_STEP, type RampConfig } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
 import {
   notificationStepAfterAppChange,
   shownAfterNativeChange,
+  songStepFor,
   storePatchFor,
   transportActive,
   type TransportShown,
@@ -27,6 +28,7 @@ const state = (over: Partial<TransportSource> = {}): TransportSource => ({
   denominator: 4,
   ramp,
   practice: { playedMs: 5_000, stretchStartedAt: 1_000 },
+  setlist: null,
   ...over,
 });
 const shown: TransportShown = {
@@ -37,13 +39,20 @@ const shown: TransportShown = {
   beatUnit: 4,
   practicePlayedMs: 5_000,
   practiceStretchStartedAt: 1_000,
+  setlist: null,
 };
+const setlistAt = (index: number) => ({
+  subtitle: `Wedding set · Blackbird (${String(index + 1)}/12)`,
+  index,
+  songCount: 12,
+});
 const event = (over: Partial<TransportEvent> = {}): TransportEvent => ({
   playback: 'playing',
   bpm: 107,
   rampRunning: false,
   practicePlayedMs: 30_000,
   practiceStretchStartedAt: 7_000,
+  songStep: null,
   ...over,
 });
 const pausedShown: TransportShown = {
@@ -118,6 +127,79 @@ describe('notificationStepAfterAppChange', () => {
       shown: { ...pausedShown, practicePlayedMs: 0 },
     });
   });
+
+  it('re-shows when the setlist position moves, and not for an equal copy', () => {
+    const atThird = { ...shown, setlist: setlistAt(2) };
+    expect(
+      notificationStepAfterAppChange(
+        state({ setlist: setlistAt(2) }),
+        atThird,
+        9_000,
+      ),
+    ).toEqual({ kind: 'none' });
+    expect(
+      notificationStepAfterAppChange(
+        state({ setlist: setlistAt(3) }),
+        atThird,
+        9_000,
+      ),
+    ).toEqual({ kind: 'show', shown: { ...shown, setlist: setlistAt(3) } });
+  });
+
+  it('a song step while paused shows the new song tempo and meter, still paused', () => {
+    expect(
+      notificationStepAfterAppChange(
+        state({
+          running: false,
+          bpm: 90,
+          beatsPerBar: 7,
+          denominator: 8,
+          ramp: { ...ramp, enabled: true },
+          setlist: setlistAt(3),
+        }),
+        { ...pausedShown, setlist: setlistAt(2) },
+        9_000,
+      ),
+    ).toEqual({
+      kind: 'show',
+      shown: {
+        ...pausedShown,
+        bpm: 90,
+        beatsPerBar: 7,
+        beatUnit: 8,
+        rampRunning: true,
+        practicePlayedMs: 5_000,
+        setlist: setlistAt(3),
+      },
+    });
+  });
+
+  it('re-shows without the setlist once the user leaves it', () => {
+    expect(
+      notificationStepAfterAppChange(
+        state(),
+        { ...shown, setlist: setlistAt(2) },
+        9_000,
+      ),
+    ).toEqual({ kind: 'show', shown });
+  });
+
+  it('a song step while paused from the pocket moves the setlist without resuming', () => {
+    expect(
+      notificationStepAfterAppChange(
+        state({ running: false, setlist: setlistAt(4) }),
+        pausedShown,
+        9_000,
+      ),
+    ).toEqual({
+      kind: 'show',
+      shown: {
+        ...pausedShown,
+        practicePlayedMs: 5_000,
+        setlist: setlistAt(4),
+      },
+    });
+  });
 });
 
 describe('shownAfterNativeChange', () => {
@@ -136,6 +218,19 @@ describe('shownAfterNativeChange', () => {
     expect(
       shownAfterNativeChange(shown, event({ playback: 'stopped' })),
     ).toBeUndefined();
+  });
+});
+
+describe('songStepFor', () => {
+  it('maps previous and next from the notification to song steps', () => {
+    expect(songStepFor(event({ songStep: 'previous' }))).toBe(
+      SONG_STEP.previous,
+    );
+    expect(songStepFor(event({ songStep: 'next' }))).toBe(SONG_STEP.next);
+  });
+
+  it('has no step for any other event', () => {
+    expect(songStepFor(event())).toBeUndefined();
   });
 });
 

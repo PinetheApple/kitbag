@@ -1,6 +1,6 @@
 # Kitbag — Agent Workflow Guide
 
-> **One file, every harness.** Claude Code, pi and opencode read `AGENTS.md`
+> **One file, every harness.** Claude Code and pi read `AGENTS.md`
 > directly. Do not add a `CLAUDE.md` or `CLAUDE.local.md`: Claude Code reads one of
 > those instead of this file.
 
@@ -105,7 +105,7 @@ rebuilding the tools on top. What is here now:
 | `design/` | The binding HTML design specs. Precedence, and which variant of a multi-variant file binds, is in SPEC.md §12. |
 | `legacy/` | `android/MediaSessionPlugin.kt` + `AndroidManifest.xml`, the Flutter-era media-session detection that play-along (§8.2, §13.9) still has to port. **Reference only — do not build against them.** Delete them once `MediaNotificationListenerService.kt` stops being a skeleton. |
 | `docs/` | `decisions.md` (why things were decided), `tuner-functional-spec.md`, research notes, and `archive/` (retired trackers and runbooks, historical only). GitHub issues are the tickets. **Read `docs/tuner-research.md`'s warning banner before touching the tuner.** |
-| `scripts/` | `preflight.sh` (every CI gate locally), `version.sh` + `release-gate.sh` + `verify-apk-signature.sh` (the release path, run by `release.yml`), `install-on-device.sh`, `worktree.sh` (agent worktrees), `lint.sh`/`format.sh`/`install-hooks.sh` (native gate), `changelog.sh`, `run-loop.sh`. |
+| `scripts/` | `preflight.sh` (every CI gate locally), `version.sh` + `release-gate.sh` + `verify-apk-signature.sh` (the release path, run by `release.yml`), `install-on-device.sh`, `lint.sh`/`format.sh`/`install-hooks.sh` (native gate), `changelog.sh`, `run-loop.sh`. |
 
 The old Flutter guide's references — Melos, `pubspec.yaml`, `dart analyze`,
 `custom_lint`, `scripts/lint_check.sh` — are gone. Do not restore them.
@@ -208,10 +208,9 @@ on — don't over-rotate.
 ## Git worktrees
 
 ```bash
-bash scripts/worktree.sh create <session-id> main
-cd ../kitbag-agent-<session-id>
+git worktree add .claude/worktrees/<name> -b <branch> main
 # ... work, commit, push ...
-bash scripts/worktree.sh remove <session-id>
+git worktree remove .claude/worktrees/<name>
 ```
 
 The main checkout stays on its feature branch; agent worktrees branch off `main`.

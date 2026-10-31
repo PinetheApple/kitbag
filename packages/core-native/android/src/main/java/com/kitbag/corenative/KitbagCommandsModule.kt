@@ -11,7 +11,10 @@ import com.kitbag.corenative.library.LibraryStorage
 import com.kitbag.corenative.library.UnsafeLibraryPathException
 import com.kitbag.corenative.transport.Playback
 import com.kitbag.corenative.transport.PracticeClock
+import com.kitbag.corenative.transport.SetlistPosition
 import com.kitbag.corenative.transport.Song
+import com.kitbag.corenative.transport.SongStepWire
+import com.kitbag.corenative.transport.TransportAction
 import com.kitbag.corenative.transport.TransportState
 
 class KitbagCommandsModule(reactContext: ReactApplicationContext) :
@@ -41,7 +44,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
         rampRunning = state.getBoolean("rampRunning"),
         beatsPerBar = state.getInt("beatsPerBar"),
         beatUnit = state.getInt("beatUnit"),
-        setlist = null,
+        setlist = state.getMap("setlist")?.let(::setlistPosition),
       ),
       state.getDouble("minBpm"),
       state.getDouble("maxBpm"),
@@ -49,6 +52,13 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
       state.getDouble("practiceStretchStartedAt").toLong(),
     )
   }
+
+  private fun setlistPosition(setlist: ReadableMap): SetlistPosition? =
+    SetlistPosition.from(
+      subtitle = setlist.getString("subtitle"),
+      index = if (setlist.isNull("index")) null else setlist.getInt("index"),
+      songCount = setlist.getInt("songCount"),
+    )
 
   override fun transportHide() {
     PlaybackService.hide(reactApplicationContext)
@@ -91,7 +101,11 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     AppChrome.setSystemBarAppearance(reactApplicationContext.currentActivity, light)
   }
 
-  private fun emitTransport(state: TransportState, practice: PracticeClock) {
+  private fun emitTransport(
+    state: TransportState,
+    practice: PracticeClock,
+    songStep: TransportAction?,
+  ) {
     emitOnTransport(
       Arguments.createMap().apply {
         putString("playback", state.playback.name.lowercase())
@@ -99,6 +113,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
         putBoolean("rampRunning", state.rampRunning)
         putDouble("practicePlayedMs", practice.playedMillis.toDouble())
         putDouble("practiceStretchStartedAt", (practice.stretchStartedAt ?: 0L).toDouble())
+        putString("songStep", SongStepWire.of(songStep))
       },
     )
   }
