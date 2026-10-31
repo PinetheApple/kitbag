@@ -44,6 +44,22 @@ void commandMetronomeStartNow() {
 void commandMetronomeStop() { kb_metronome_stop(commandEngine()); }
 void commandMetronomePause() { kb_metronome_pause(commandEngine()); }
 
+int32_t commandRigClickStart(double bpm, int32_t subdivision, double startFrame) {
+  constexpr double kExactFrameLimit = static_cast<double>(int64_t{1} << 53);
+  constexpr int64_t kRejectedFrame = -1;
+  // Casting NaN or an out-of-range double to int64_t is undefined behaviour.
+  const int64_t frame = startFrame >= 0.0 && startFrame < kExactFrameLimit
+                            ? static_cast<int64_t>(startFrame)
+                            : kRejectedFrame;
+  const int32_t queued = kb_rig_click_start(commandEngine(), bpm, subdivision, frame);
+  if (queued != KB_OK) return queued;
+  const int32_t started = commandStart();
+  if (started != KB_OK) kb_rig_click_stop(commandEngine());
+  return started;
+}
+void commandRigClickStop() { kb_rig_click_stop(commandEngine()); }
+bool commandRigClickIsActive() { return kb_rig_click_is_active(commandEngine()) != 0; }
+
 void commandSetTempo(double bpm) { kb_metronome_set_tempo(commandEngine(), bpm); }
 
 int32_t commandSetGrid(const double* beatTimesSec, int32_t count, double anchorFrame) {

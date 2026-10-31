@@ -111,6 +111,11 @@ void Engine::ResetHolders() {
   holders_ = 0;
 }
 
+bool Engine::idle() const {
+  const std::lock_guard<std::mutex> lock(lifecycle_mutex_);
+  return IsIdle();
+}
+
 int32_t Engine::holders() const {
   const std::lock_guard<std::mutex> lock(lifecycle_mutex_);
   return holders_;
@@ -140,7 +145,8 @@ void Engine::ReleaseRetired() {
 // The mirrors cover a stop still queued in the ring, the intents a start.
 bool Engine::IsIdle() const {
   return holders_ == 0 && !metronome_intent_.load() && !mixer_intent_.load() &&
-         !metronome_.is_running() && !mixer_.is_playing();
+         !rig_click_intent_.load() && !metronome_.is_running() &&
+         !mixer_.is_playing() && !metronome_.rig_click().is_active();
 }
 
 int32_t Engine::OutputDeviceId() const {

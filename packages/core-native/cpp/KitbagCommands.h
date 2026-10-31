@@ -14,6 +14,9 @@ void commandMetronomeStart(double anchorFrame);
 void commandMetronomeStartNow();
 void commandMetronomeStop();
 void commandMetronomePause();
+int32_t commandRigClickStart(double bpm, int32_t subdivision, double startFrame);
+void commandRigClickStop();
+bool commandRigClickIsActive();
 
 void commandSetTempo(double bpm);
 int32_t commandSetGrid(const double* beatTimesSec, int32_t count, double anchorFrame);

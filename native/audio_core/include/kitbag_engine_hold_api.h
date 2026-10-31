@@ -53,10 +53,12 @@ KB_EXPORT void kb_engine_reset_holders(kb_engine* engine);
 KB_EXPORT int32_t kb_engine_output_device_id(const kb_engine* engine);
 
 #ifdef KITBAG_BUILD_TOOLS
-/* Verify only: open holders, whether the device is started, and the idle
- * grace in ms (0 stops on the watchdog's next check). */
+/* Verify only: open holders, whether the device is started, whether the idle
+ * rule above holds now, and the idle grace in ms (0 stops on the watchdog's
+ * next check). */
 KB_EXPORT int32_t kb_engine_holders(const kb_engine* engine);
 KB_EXPORT int32_t kb_engine_device_running(const kb_engine* engine);
+KB_EXPORT int32_t kb_engine_idle(const kb_engine* engine);
 KB_EXPORT void
 kb_engine_set_idle_grace_ms(kb_engine* engine, uint32_t grace_ms);
 #endif /* KITBAG_BUILD_TOOLS */

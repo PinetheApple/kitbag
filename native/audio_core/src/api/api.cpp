@@ -112,6 +112,10 @@ int32_t kb_engine_device_running(const kb_engine* engine) {
   return engine != nullptr && ToEngine(engine)->is_running() ? 1 : 0;
 }
 
+int32_t kb_engine_idle(const kb_engine* engine) {
+  return engine != nullptr && ToEngine(engine)->idle() ? 1 : 0;
+}
+
 void kb_engine_set_idle_grace_ms(kb_engine* engine, uint32_t grace_ms) {
   if (engine != nullptr) ToEngine(engine)->set_idle_grace_ms(grace_ms);
 }

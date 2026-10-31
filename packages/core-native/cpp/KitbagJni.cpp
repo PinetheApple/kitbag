@@ -73,6 +73,21 @@ Java_com_kitbag_corenative_KitbagCommandsModule_nativeMetronomeStop(JNIEnv*, job
   kitbag::commandMetronomeStop();
 }
 
+JNIEXPORT jint JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeRigClickStart(JNIEnv*, jobject, jdouble bpm, jint subdivision, jdouble startFrame) {
+  return static_cast<jint>(kitbag::commandRigClickStart(bpm, subdivision, startFrame));
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeRigClickStop(JNIEnv*, jobject) {
+  kitbag::commandRigClickStop();
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeRigClickIsActive(JNIEnv*, jobject) {
+  return kitbag::commandRigClickIsActive() ? JNI_TRUE : JNI_FALSE;
+}
+
 JNIEXPORT void JNICALL
 Java_com_kitbag_corenative_KitbagCommandsModule_nativeMetronomePause(JNIEnv*, jobject) {
   kitbag::commandMetronomePause();

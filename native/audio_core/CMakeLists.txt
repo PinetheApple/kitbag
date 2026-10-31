@@ -32,6 +32,7 @@ add_library(kitbag_core SHARED
   src/api/api_analysis.cpp
   src/api/api_media.cpp
   src/api/api_metronome.cpp
+  src/api/api_rig_click.cpp
   src/api/api_tuning.cpp
   src/analysis/beat_tracker.cpp
   src/analysis/downbeat.cpp
@@ -51,6 +52,7 @@ add_library(kitbag_core SHARED
   src/metronome/metronome_pattern.cpp
   src/metronome/metronome_render.cpp
   src/metronome/metronome_trainer_mirrors.cpp
+  src/metronome/rig_click.cpp
   src/metronome/tempo_ramp.cpp
   src/media/miniaudio_impl.c
   src/media/streaming_track.cpp
@@ -133,6 +135,7 @@ if(KITBAG_BUILD_TOOLS)
     src/metronome/metronome_pattern.cpp
     src/metronome/metronome_render.cpp
     src/metronome/metronome_trainer_mirrors.cpp
+    src/metronome/rig_click.cpp
     src/metronome/tempo_ramp.cpp)
 
   add_executable(metronome_verify
@@ -151,6 +154,9 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_poly_phase.cpp
     tools/metronome/metronome_test_sound.cpp
     tools/metronome/metronome_test_subdivision_accents.cpp
+    tools/metronome/metronome_test_rig_click.cpp
+    tools/metronome/metronome_test_rig_click_sound.cpp
+    tools/metronome/metronome_test_rig_click_isolation.cpp
     tools/metronome/metronome_test_count_in.cpp
     tools/metronome/metronome_test_count_in_long.cpp
     tools/metronome/metronome_test_ramp.cpp
@@ -174,6 +180,7 @@ if(KITBAG_BUILD_TOOLS)
                             tools/abi_test_grid_long.cpp tools/abi_verify_tuner.cpp
                             tools/abi_test_engine_hold.cpp tools/abi_test_engine_stress.cpp
                             tools/abi_test_poly.cpp tools/abi_test_subdivision_accents.cpp
+                            tools/abi_test_rig_click.cpp
                             tools/abi_test_engine_clock.cpp)
   target_include_directories(abi_verify PRIVATE src tools tools/media)
   target_link_libraries(abi_verify PRIVATE kitbag_core Threads::Threads)
