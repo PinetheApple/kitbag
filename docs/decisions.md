@@ -516,3 +516,11 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   bracket over each cycle's span, and a redraw on the downbeat when the cycle does not
   divide the bar. B (one ratio value with a wheel sheet) and C (poly stepper with a
   Bar | Beats switch) are rejected. **[user]**
+
+- **2026-10-31 · Metronome layout (§12, #243)** — The owner approved round 2 of the main
+  screen's vertical layout: a taller BPM block, smaller transport buttons, dropdowns and
+  beat dots with more room between them, the legend directly under the dots while stopped,
+  and the practice-tools area bottom-aligned above the player controls. A lone live status
+  row takes the lower slot, derived from the bottom alignment. Drawn in
+  `design/kitbag-metronome.html` §02, which supersedes the main screen's sizes and vertical
+  layout in the B, status and poly files. **[user]**
