@@ -179,7 +179,8 @@ if(KITBAG_BUILD_TOOLS)
                             tools/abi_test_grid_long.cpp tools/abi_verify_tuner.cpp
                             tools/abi_test_engine_hold.cpp tools/abi_test_engine_stress.cpp
                             tools/abi_test_poly.cpp tools/abi_test_subdivision_accents.cpp
-                            tools/abi_test_rig_click.cpp)
+                            tools/abi_test_rig_click.cpp
+                            tools/abi_test_engine_clock.cpp)
   target_include_directories(abi_verify PRIVATE src tools tools/media)
   target_link_libraries(abi_verify PRIVATE kitbag_core Threads::Threads)
 

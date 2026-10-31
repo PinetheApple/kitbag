@@ -39,6 +39,11 @@ export {
   tunerCents,
   tunerConfidence,
 } from './host/snapshot.ts';
+export {
+  type EngineClockPair,
+  renderedFrameToMonotonicMs,
+} from './host/engineClock.ts';
+export { getEngineClockPair } from './engineClock';
 export * from './generated/nativeConstants.gen.ts';
 
 export { confirmHaptic, setHapticsEnabled, tickHaptic } from './haptics.ts';

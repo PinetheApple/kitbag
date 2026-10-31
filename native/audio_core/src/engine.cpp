@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cstdint>
 
+#include "rt/monotonic_clock.h"
 #include "rt/stall_detector.h"
 
 #ifdef MA_SUPPORT_AAUDIO
@@ -130,6 +131,7 @@ void Engine::StopDevice() {
   device_running_.store(false, std::memory_order_release);
   output_device_id_.store(KB_NO_OUTPUT_DEVICE_ID, std::memory_order_relaxed);
   restarting_.store(false, std::memory_order_relaxed);
+  render_clock_.Clear();
 }
 
 // Control thread only, device stopped: the retire lists belong to the
@@ -293,6 +295,10 @@ void Engine::DataCallback(
 // Scratch covers kMaxBlockFrames; the read-ahead behind it is sized for the
 // whole callback (ReserveCallbackFrames), so slicing never outruns a ring.
 void Engine::Render(float* output, uint32_t frame_count) {
+  render_clock_.Publish(
+      static_cast<int64_t>(frames_rendered_.load(std::memory_order_relaxed)),
+      MonotonicNs()
+  );
   while (frame_count > 0) {
     const uint32_t slice =
         std::min(frame_count, StreamingTrack::kMaxBlockFrames);

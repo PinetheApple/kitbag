@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include "abi_test_engine_clock.h"
 #include "abi_test_engine_hold.h"
 #include "abi_test_metronome.h"
 #include "abi_verify_tuner.h"
@@ -25,7 +26,7 @@ using kitbag_test::g_failures;
 
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 145;
+constexpr int kExpectedChecks = 153;
 
 void ExpectRejected(
     kb_engine* engine,
@@ -266,6 +267,7 @@ void RunSplitSuites() {
   abi_test::RunSubdivisionAccentAbiTests();
   abi_test::RunRigClickAbiTests();
   abi_test::RunEngineHoldAbiTests();
+  abi_test::RunEngineClockAbiTests();
 }
 
 // Returns the process exit code, so main stays a list of what it runs.

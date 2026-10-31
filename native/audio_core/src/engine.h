@@ -13,6 +13,7 @@
 #include "miniaudio.h"
 #include "mixer/mixer.h"
 #include "player/player.h"
+#include "rt/clock_pair_mirror.h"
 #include "tuner/tuner.h"
 
 namespace kitbag {
@@ -72,6 +73,9 @@ class Engine {
     return frames_rendered_.load(std::memory_order_relaxed);
   }
   int32_t OutputDeviceId() const;
+  bool ReadRenderClock(ClockPair* out) const {
+    return render_clock_.Read(out);
+  }
 
   // App thread, before any load: read-ahead for callbacks up to [frames] wide.
   void ReserveCallbackFrames(uint32_t frames) {
@@ -150,6 +154,7 @@ class Engine {
 
   std::atomic<bool> device_running_{false};
   std::atomic<uint64_t> frames_rendered_{0};
+  ClockPairMirror render_clock_;
 
   // Restarts the device when its stream dies while the engine should be
   // playing: miniaudio gives up rerouting after a few attempts and never says.
