@@ -1,10 +1,13 @@
 import type { TransportEvent } from '@kitbag/core-native';
-import type { MetronomeConfig } from '@kitbag/core-state';
+import type {
+  MetronomeConfig,
+  TransportSetlistPlace,
+} from '@kitbag/core-state';
 
 export type TransportSource = Pick<
   MetronomeConfig,
   'running' | 'bpm' | 'beatsPerBar' | 'denominator' | 'ramp' | 'practice'
->;
+> & { readonly setlist: TransportSetlistPlace };
 
 export interface TransportShown {
   readonly playing: boolean;
@@ -14,6 +17,7 @@ export interface TransportShown {
   readonly beatUnit: number;
   readonly practicePlayedMs: number;
   readonly practiceStretchStartedAt: number;
+  readonly setlist: TransportSetlistPlace;
 }
 
 export type TransportStep =
@@ -50,10 +54,15 @@ function shownFor(
       beatUnit: state.denominator,
       practicePlayedMs: state.practice.playedMs,
       practiceStretchStartedAt: state.practice.stretchStartedAt ?? now,
+      setlist: state.setlist,
     };
   }
   return shown?.playing === false
-    ? { ...shown, practicePlayedMs: state.practice.playedMs }
+    ? {
+        ...shown,
+        practicePlayedMs: state.practice.playedMs,
+        setlist: state.setlist,
+      }
     : undefined;
 }
 
@@ -100,7 +109,14 @@ export function storePatchFor(
 }
 
 function sameShown(a: TransportShown, b: TransportShown): boolean {
-  return (Object.keys(a) as (keyof TransportShown)[]).every(
+  return (Object.keys(a) as (keyof TransportShown)[]).every((key) =>
+    key === 'setlist' ? sameSetlist(a.setlist, b.setlist) : a[key] === b[key],
+  );
+}
+
+function sameSetlist(a: TransportSetlistPlace, b: TransportSetlistPlace) {
+  if (a === null || b === null) return a === b;
+  return (Object.keys(a) as (keyof typeof a)[]).every(
     (key) => a[key] === b[key],
   );
 }

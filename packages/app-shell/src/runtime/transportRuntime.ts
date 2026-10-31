@@ -1,5 +1,10 @@
 import { getKitbagCommands } from '@kitbag/core-native';
-import { BPM_BOUNDS, metronomeStore } from '@kitbag/core-state';
+import {
+  BPM_BOUNDS,
+  libraryStore,
+  metronomeStore,
+  transportSetlistOf,
+} from '@kitbag/core-state';
 
 import { askForNotificationsOnce } from './notificationPermission';
 import {
@@ -14,10 +19,13 @@ let shown: TransportShown | undefined;
 let applyingNative = false;
 
 // Reads the latest state: a nested setState can hand later listeners an older snapshot.
-metronomeStore.subscribe(() => {
+function syncFromApp() {
   if (applyingNative) return;
   const step = notificationStepAfterAppChange(
-    metronomeStore.getState(),
+    {
+      ...metronomeStore.getState(),
+      setlist: transportSetlistOf(libraryStore.getState()),
+    },
     shown,
     Date.now(),
   );
@@ -33,7 +41,10 @@ metronomeStore.subscribe(() => {
     shown = undefined;
     getKitbagCommands().transportHide();
   }
-});
+}
+
+metronomeStore.subscribe(syncFromApp);
+libraryStore.subscribe(syncFromApp);
 
 getKitbagCommands().onTransport((event) => {
   shown = shownAfterNativeChange(shown, event);

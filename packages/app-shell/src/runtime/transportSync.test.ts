@@ -27,6 +27,7 @@ const state = (over: Partial<TransportSource> = {}): TransportSource => ({
   denominator: 4,
   ramp,
   practice: { playedMs: 5_000, stretchStartedAt: 1_000 },
+  setlist: null,
   ...over,
 });
 const shown: TransportShown = {
@@ -37,7 +38,14 @@ const shown: TransportShown = {
   beatUnit: 4,
   practicePlayedMs: 5_000,
   practiceStretchStartedAt: 1_000,
+  setlist: null,
 };
+const setlistAt = (index: number) => ({
+  setlistName: 'Wedding set',
+  songTitle: 'Blackbird',
+  index,
+  songCount: 12,
+});
 const event = (over: Partial<TransportEvent> = {}): TransportEvent => ({
   playback: 'playing',
   bpm: 107,
@@ -116,6 +124,51 @@ describe('notificationStepAfterAppChange', () => {
     ).toEqual({
       kind: 'show',
       shown: { ...pausedShown, practicePlayedMs: 0 },
+    });
+  });
+
+  it('re-shows when the setlist position moves, and not for an equal copy', () => {
+    const atThird = { ...shown, setlist: setlistAt(2) };
+    expect(
+      notificationStepAfterAppChange(
+        state({ setlist: setlistAt(2) }),
+        atThird,
+        9_000,
+      ),
+    ).toEqual({ kind: 'none' });
+    expect(
+      notificationStepAfterAppChange(
+        state({ setlist: setlistAt(3) }),
+        atThird,
+        9_000,
+      ),
+    ).toEqual({ kind: 'show', shown: { ...shown, setlist: setlistAt(3) } });
+  });
+
+  it('re-shows without the setlist once the user leaves it', () => {
+    expect(
+      notificationStepAfterAppChange(
+        state(),
+        { ...shown, setlist: setlistAt(2) },
+        9_000,
+      ),
+    ).toEqual({ kind: 'show', shown });
+  });
+
+  it('a song step while paused from the pocket moves the setlist without resuming', () => {
+    expect(
+      notificationStepAfterAppChange(
+        state({ running: false, setlist: setlistAt(4) }),
+        pausedShown,
+        9_000,
+      ),
+    ).toEqual({
+      kind: 'show',
+      shown: {
+        ...pausedShown,
+        practicePlayedMs: 5_000,
+        setlist: setlistAt(4),
+      },
     });
   });
 });
