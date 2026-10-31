@@ -127,22 +127,23 @@ struct LevelPeaks {
   double plain_off_beat;
 };
 
-LevelPeaks RenderBeepLevelPeaks() {
-  constexpr int kSoundBeep = 0;
+LevelPeaks RenderLevelPeaks() {
   kitbag::Metronome metronome;
   metronome.SetSubdivision(4);
   metronome.SetSubdivisionAccents(4, SlotBit(2));
-  metronome.SetSounds(kSoundBeep, kSoundBeep);
-  metronome.SetAccent(0, Accent::kAccented);
   metronome.SetTempo(120.0);
   metronome.Start();
   const auto left = RenderLeft(metronome, kBeatFrames);
-  const int64_t quarter = kBeatFrames / 4;
-  return {PeakIn(left, 0), PeakIn(left, 2 * quarter), PeakIn(left, quarter)};
+  const int64_t slot_frames = kBeatFrames / 4;
+  return {
+      PeakIn(left, 0),
+      PeakIn(left, 2 * slot_frames),
+      PeakIn(left, slot_frames)
+  };
 }
 
 void TestAccentedOffBeatSitsBetweenLevels() {
-  const LevelPeaks peaks = RenderBeepLevelPeaks();
+  const LevelPeaks peaks = RenderLevelPeaks();
   const bool below_beat =
       peaks.accented_beat - peaks.accented_off_beat > kDistinctLevelMargin;
   const bool above_plain =
