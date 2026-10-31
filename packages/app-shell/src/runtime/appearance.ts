@@ -1,7 +1,6 @@
 import { palette, type ThemeMode } from '@kitbag/core-design';
 import type { AppNightMode } from '@kitbag/core-native';
 import type { ThemeChoice } from '@kitbag/core-state';
-import type { StatusBarStyle } from 'expo-status-bar';
 import type { ColorSchemeName } from 'react-native';
 
 export function resolveThemeMode(
@@ -10,15 +9,6 @@ export function resolveThemeMode(
 ): ThemeMode {
   if (choice !== 'system') return choice;
   return os === 'light' ? 'light' : 'dark';
-}
-
-const STATUS_BAR_STYLE: Readonly<Record<ThemeMode, StatusBarStyle>> = {
-  dark: 'light',
-  light: 'dark',
-};
-
-export function statusBarStyle(mode: ThemeMode): StatusBarStyle {
-  return STATUS_BAR_STYLE[mode];
 }
 
 export interface SystemAppearance {

@@ -23,7 +23,6 @@ import { useAppearance } from '@kitbag/core-state';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
 import { VariableContextProvider } from 'nativewind';
 import { useEffect, useMemo } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -34,7 +33,7 @@ import {
 } from 'react-native-safe-area-context';
 import { StyleSheet, useColorScheme } from 'react-native';
 
-import { resolveThemeMode, statusBarStyle } from '@/runtime/appearance';
+import { resolveThemeMode } from '@/runtime/appearance';
 import { applyAppearance } from '@/runtime/appearanceRuntime';
 import { useKitbagRuntime } from '@/runtime/bootstrapRuntime';
 import { designFonts } from '@/runtime/designFonts';
@@ -68,7 +67,6 @@ export default function RootLayout() {
   return (
     <ThemeProvider mode={mode}>
       <VariableContextProvider value={CSS_VARIABLES[mode]}>
-        <StatusBar style={statusBarStyle(mode)} />
         <ThemedRoot />
       </VariableContextProvider>
     </ThemeProvider>
