@@ -9,6 +9,8 @@ import com.facebook.react.bridge.ReadableMap
 import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.LibraryStorage
 import com.kitbag.corenative.library.UnsafeLibraryPathException
+import com.kitbag.corenative.route.OutputRoute
+import com.kitbag.corenative.route.OutputRouteWatcher
 import com.kitbag.corenative.transport.Playback
 import com.kitbag.corenative.transport.PracticeClock
 import com.kitbag.corenative.transport.SetlistPosition
@@ -23,6 +25,8 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private val libraryBase = LibraryStorage.base(reactContext)
   private val transportListener: (TransportState, PracticeClock, TransportAction?) -> Unit = ::emitTransport
   private val songStoppedListener: () -> Unit = ::emitOnSongStopped
+  private val outputRoutes =
+    OutputRouteWatcher(reactContext, ::outputDeviceId, ::emitOutputRoute)
 
   init {
     val runtimePtr = reactContext.javaScriptContextHolder?.get() ?: 0L
@@ -31,6 +35,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     }
     PlaybackService.listener = transportListener
     PlaybackService.songStoppedListener = songStoppedListener
+    outputRoutes.start()
   }
 
   // A reloaded module's init can run before the old one's invalidate.
@@ -39,6 +44,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     if (PlaybackService.songStoppedListener === songStoppedListener) {
       PlaybackService.songStoppedListener = null
     }
+    outputRoutes.stop()
     super.invalidate()
   }
 
@@ -125,8 +131,26 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     )
   }
 
+  override fun getOutputRoute(promise: Promise) {
+    outputRoutes.report { promise.resolve(outputRouteMap(it)) }
+  }
+
+  private fun emitOutputRoute(route: OutputRoute) {
+    emitOnOutputRoute(outputRouteMap(route))
+  }
+
+  private fun outputRouteMap(route: OutputRoute) =
+    Arguments.createMap().apply {
+      putString("id", route.id)
+      putString("name", route.name)
+      putString("kind", route.kind.wire)
+      putBoolean("certain", route.certain)
+    }
+
   override fun start(promise: Promise) {
-    promise.resolve(nativeStart())
+    val result = nativeStart()
+    outputRoutes.engineStarted()
+    promise.resolve(result)
   }
 
   override fun stop() {
@@ -134,7 +158,9 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   }
 
   override fun engineHold(promise: Promise) {
-    promise.resolve(nativeHold())
+    val result = nativeHold()
+    outputRoutes.engineStarted()
+    promise.resolve(result)
   }
 
   override fun engineRelease() {
@@ -323,6 +349,10 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private external fun nativeStop()
   private external fun nativeHold(): Int
   private external fun nativeRelease()
+  private fun outputDeviceId(): Int? =
+    nativeOutputDeviceId().takeIf { it != NO_OUTPUT_DEVICE_ID }
+
+  private external fun nativeOutputDeviceId(): Int
   private external fun nativeMetronomeStart(anchorFrame: Double)
   private external fun nativeMetronomeStop()
   private external fun nativeMetronomePause()
@@ -374,6 +404,9 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
 
   companion object {
     private const val E_UNSAFE_PATH = "E_UNSAFE_PATH"
+
+    // Owned by KB_NO_OUTPUT_DEVICE_ID in kitbag_engine_hold_api.h.
+    private const val NO_OUTPUT_DEVICE_ID = 0
 
     init {
       System.loadLibrary("kitbag_jsi")

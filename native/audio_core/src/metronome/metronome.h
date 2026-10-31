@@ -40,9 +40,8 @@ class Metronome {
   static constexpr int kDefaultCountInSound = 1;
   static constexpr int kMinMuteBars = 1;
   static constexpr int kMaxMuteBars = 16;
-  // Output-latency compensation bound (D5). Widening this to 300 is the whole
-  // of D5's clamp change; see SPEC.md §4.7 for what moves with it.
-  static constexpr double kMaxLatencyOffsetMs = 100.0;
+  // Output-latency compensation bound: D5, sized for Bluetooth (SPEC.md §4.7).
+  static constexpr double kMaxLatencyOffsetMs = 300.0;
   static constexpr double kDefaultBpm = 120.0;
   static constexpr double kMinVolume = 0.0;
   static constexpr double kMaxVolume = 2.0;
@@ -249,7 +248,7 @@ class Metronome {
   );
   void TriggerPreset(int sound, bool accented, uint32_t sample_rate);
   void OnBeatBoundary(int beat_index, uint32_t sample_rate);
-  void OnSubdivisionTick(int64_t owning_beat, uint32_t sample_rate);
+  void OnSubdivisionTick(int64_t speaker_beat, uint32_t sample_rate);
   void OnPolyBoundary(int poly_index, uint32_t sample_rate);
   float RenderVoices();
   bool BarIsMuted(int64_t bar) const;

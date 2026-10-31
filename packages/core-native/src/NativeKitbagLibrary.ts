@@ -101,6 +101,27 @@ export type ImportedStemBundle = Readonly<{
   lyrics: StemBundleLyrics | null;
 }>;
 
+export type LibraryAudioUsage = Readonly<{
+  songs: Int32;
+  bytes: Double;
+}>;
+
+export type StemSetUsage = Readonly<{
+  count: Int32;
+  bytes: Double;
+}>;
+
+export type DatabaseUsage = Readonly<{
+  bytes: Double;
+}>;
+
+export type StorageReport = Readonly<{
+  libraryAudio: LibraryAudioUsage;
+  stemSets: StemSetUsage;
+  database: DatabaseUsage;
+  location: string;
+}>;
+
 export type LibraryConstants = Readonly<{
   songsDir: string;
   stemsDir: string;
@@ -140,6 +161,8 @@ export interface Spec extends TurboModule {
     relativePath: string,
     buckets: Int32,
   ): Promise<readonly Double[]>;
+  storageReport(databaseName: string): Promise<StorageReport>;
+  missingFiles(relativePaths: readonly string[]): Promise<readonly string[]>;
 }
 
 export function getKitbagLibrary(): Spec {
