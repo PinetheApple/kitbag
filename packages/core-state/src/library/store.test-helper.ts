@@ -46,6 +46,7 @@ export function setup(engineBpm = () => 120) {
   const library = createLibraryStore({
     repos: () => repos,
     metronome: () => metronome.getState(),
+    now: Date.now,
   });
   return { library, metronome, commands, repos };
 }
