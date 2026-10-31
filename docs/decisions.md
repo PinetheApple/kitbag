@@ -464,6 +464,48 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   device on, so pause or stop with a screen open holds the stream. With no holder and no
   intent, the watchdog stops the device after a 2000 ms idle grace. **[recorded — coordinator ruling]**
 
+- **2026-10-31 · Settings gap rulings (§12.5, §12.5.1, #170, #100)** — Coordinator
+  rulings, revisitable by the owner, so the Settings PRs can land without waiting on each
+  gap; where `design/kitbag-settings.html` draws something it wins. Every pressable
+  Settings row is at least 48 dp tall (§12.6); every other value keeps strict parity with
+  the mockup. Q1: the Rig chip's idle label is a play icon and "Play · 100 BPM". Q2: while
+  the metronome runs, the chip is disabled with a hint and never touches metronome state.
+  Q3: volume snaps to 100% within ±3% of range, accessibility step 1%. Q4: the latency
+  stepper repeats after a 400 ms hold, then every 50 ms, reusing StepControl's repeat if
+  one exists. Q5: an uncalibrated Output row reads "· not calibrated"; only the live route
+  opens calibration, other routes show their stored offset. Q6: icons come from
+  core-design `Icon` only: calibrate `timer-sync-outline`, remove missing `broom`, unless
+  the design names one. Q8: Rig and Tools ship only once their native calls exist. Q9:
+  tools that cannot be installed show SOON with no size label. Q10: Backup, Restore and
+  Base directory rows are omitted until #84 and D11 are built. Q11: the Storage row is
+  total bytes · total files; Remove missing files confirms with the count. Q12: the
+  Practice readout comes from a core-db `practiceStats()`, empty state "No sessions yet";
+  session writing is #80. Q14: calibration glows use existing tokens (accent opacity) or
+  ship without and go to the owner. Q15: the calibration scatter auto-ranges to mean ±3
+  SD, at least ±50 ms, one row, dots in tap order. Q16: a tap is usable within ±250 ms of
+  its nearest click after dropping |z| > 2.5; ± is the sample SD; fewer than 8 usable taps
+  gives "Not enough steady taps; try again"; an SD over 30 ms makes the button "Use
+  anyway"; the thresholds live in one named module. Q17: output route identity is Lane A's
+  call. Splash: the light and dark splash backgrounds are hand-copied hex in `app.json`
+  and the Android `colors.xml` pair, and `splash.test.ts` asserts each equals the §12.2
+  `bg` of its theme. Still open with the owner: Q7 (one switch look or two) and Q13
+  (licence and attribution destinations, npm licences, BPM data credits). **[recorded]**
+
+- **2026-10-31 · Settings section labels (§12.2, §12.6, #170, #189)** — Settings section
+  labels use `theme.accentInk` (light: `accentDeep`), a contrast exception to the design's
+  accent: the design value is about 3.7:1 on the light background at 10.5 px, under
+  4.5:1. **[recorded]**
+
+- **2026-10-31 · Native night mode and splash (§12.2, §12.5, #100, #170)** — The theme
+  choice drives the native night mode (`setAppNightMode`), applied at JS start and on
+  every return to `active`. expo-system-ui's activity `onCreate` resets the AppCompat
+  night mode on every API level; below 31 that undoes the choice, hence the re-apply. On
+  31+ it is harmless only because `app.json` `userInterfaceStyle: "automatic"` maps to
+  FOLLOW_SYSTEM; changing that value would pin the theme. Below API 31 the cold-start
+  splash cannot follow the in-app choice: the system draws the starting window from the
+  manifest theme before any app code runs; no workaround. The About Version row is
+  hidden on web, where no installed package has a version. **[recorded]**
+
 - **2026-10-31 · Polyrhythm N against M (§5.2, §12, #203)** — Option A in
   `design/kitbag-metronome-poly.html`: the Practice sheet's Polyrhythm switch moves into
   the heading, with a "Poly [− N +] against [− M +]" row and a one-cycle strip below it;

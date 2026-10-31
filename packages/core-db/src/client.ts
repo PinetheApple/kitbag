@@ -5,6 +5,7 @@ import { createBackupService } from './backup';
 import * as schema from './schema';
 import { migrate, type MigrationDriver } from './migrate';
 import { openConnection } from './openConnection';
+import { createPracticeRepository } from './practice-repository';
 import { createPreferences } from './preferences';
 import { createSetlistRepository } from './setlist-repository';
 import { createSongLibraryRepository } from './song-library-repository';
@@ -61,6 +62,7 @@ export function connectDatabase(connection: Connection) {
     tunings: createTuningRepository(handle),
     songLibrary: createSongLibraryRepository(handle),
     backup: createBackupService(handle),
+    practice: createPracticeRepository(handle),
     preferences: createPreferences(
       (sql, params) => connection.executeSync(sql, params).rows,
       handle.transactor,

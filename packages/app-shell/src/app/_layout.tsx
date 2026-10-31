@@ -6,15 +6,24 @@ import '@/runtime/stemPlayerRuntime';
 import '@/runtime/tunerRuntime';
 import '@/runtime/lastToolRuntime';
 import '@/runtime/swipeHintRuntime';
+import '@/runtime/appearanceRuntime';
 import '@/runtime/transportRuntime';
 import '@/runtime/keepAwakeRuntime';
 
 import '@/global.css';
 
-import { SheetHost, ThemeProvider, useTheme } from '@kitbag/core-design';
+import {
+  SheetHost,
+  ThemeProvider,
+  themeVars,
+  useTheme,
+  type ThemeMode,
+} from '@kitbag/core-design';
+import { useAppearance } from '@kitbag/core-state';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { VariableContextProvider } from 'nativewind';
 import { useEffect, useMemo } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
@@ -24,18 +33,30 @@ import {
 } from 'react-native-safe-area-context';
 import { StyleSheet, useColorScheme } from 'react-native';
 
+import { resolveThemeMode } from '@/runtime/appearance';
+import { applyAppearance } from '@/runtime/appearanceRuntime';
 import { useKitbagRuntime } from '@/runtime/bootstrapRuntime';
 import { designFonts } from '@/runtime/designFonts';
 import { useSongLibraryAnalysis } from '@/runtime/songLibraryRuntime';
 
 void SplashScreen.preventAutoHideAsync();
 
+const CSS_VARIABLES: Readonly<Record<ThemeMode, Record<string, string>>> = {
+  dark: themeVars('dark'),
+  light: themeVars('light'),
+};
+
 export default function RootLayout() {
   useKitbagRuntime();
   useSongLibraryAnalysis();
   const [fontsLoaded, fontError] = useFonts(designFonts);
   const fontsSettled = fontsLoaded || fontError !== null;
-  const mode = useColorScheme() === 'light' ? 'light' : 'dark';
+  const themeChoice = useAppearance((s) => s.theme);
+  const mode = resolveThemeMode(themeChoice, useColorScheme());
+
+  useEffect(() => {
+    applyAppearance(themeChoice, mode);
+  }, [themeChoice, mode]);
 
   useEffect(() => {
     if (fontsSettled) void SplashScreen.hideAsync();
@@ -45,7 +66,9 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider mode={mode}>
-      <ThemedRoot />
+      <VariableContextProvider value={CSS_VARIABLES[mode]}>
+        <ThemedRoot />
+      </VariableContextProvider>
     </ThemeProvider>
   );
 }

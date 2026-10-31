@@ -27,6 +27,7 @@ function rig() {
   const stemPlayer = fakeSource<{ status: StemPlayerStatus }>({
     status: 'idle',
   });
+  const appearance = fakeSource({ keepScreenAwake: true });
   const calls: boolean[] = [];
   const engine = { mixerPlaying: false };
   let tick: (() => void) | undefined;
@@ -36,6 +37,7 @@ function rig() {
     metronome,
     tuner,
     stemPlayer,
+    appearance,
     mixerPlaying: () => engine.mixerPlaying,
     poll: (onTick) => {
       polls++;
@@ -53,6 +55,7 @@ function rig() {
     metronome,
     tuner,
     stemPlayer,
+    appearance,
     calls,
     engine,
     tick: () => tick?.(),
@@ -133,6 +136,23 @@ describe('wireKeepAwake', () => {
     r.tuner.set({ mic: 'listening' });
     r.metronome.set({ running: false });
     expect(r.calls).toEqual([true]);
+  });
+
+  it('releases the hold when the setting goes off and reapplies it when it comes back', () => {
+    const r = rig();
+    r.metronome.set({ running: true });
+    r.appearance.set({ keepScreenAwake: false });
+    r.foreground();
+    r.appearance.set({ keepScreenAwake: true });
+    expect(r.calls).toEqual([true, false, true]);
+  });
+
+  it('does not hold the screen for practice that starts with the setting off', () => {
+    const r = rig();
+    r.appearance.set({ keepScreenAwake: false });
+    r.metronome.set({ running: true });
+    r.tuner.set({ mic: 'listening' });
+    expect(r.calls).toEqual([]);
   });
 
   it('re-sends the hold on foreground only while it is held', () => {

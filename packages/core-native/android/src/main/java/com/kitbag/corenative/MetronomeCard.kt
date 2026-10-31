@@ -11,6 +11,7 @@ import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import com.kitbag.corenative.transport.TransportAction
 import com.kitbag.corenative.transport.TransportView
+import com.kitbag.corenative.transport.mediaArtist
 
 internal class MetronomeCard(
   private val context: Context,
@@ -32,7 +33,7 @@ internal class MetronomeCard(
       session.setMetadata(
         MediaMetadataCompat.Builder()
           .putString(MediaMetadataCompat.METADATA_KEY_TITLE, metadata.first)
-          .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, metadata.second)
+          .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, mediaArtist(metadata.second))
           .build(),
       )
     }
@@ -53,7 +54,7 @@ internal class MetronomeCard(
     NotificationCompat.Builder(context, channelId)
       .setSmallIcon(R.drawable.kitbag_notification)
       .setContentTitle(view.title)
-      .setContentText(view.subtitle)
+      .setContentText(mediaArtist(view.subtitle))
       .setContentIntent(launchIntent)
       .setOngoing(playing)
       .setDeleteIntent(actionIntent(TransportAction.STOP))

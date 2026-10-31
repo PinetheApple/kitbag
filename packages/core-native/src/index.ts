@@ -41,9 +41,16 @@ export {
 } from './host/snapshot.ts';
 export * from './generated/nativeConstants.gen.ts';
 
-export { confirmHaptic, tickHaptic } from './haptics.ts';
+export { confirmHaptic, setHapticsEnabled, tickHaptic } from './haptics.ts';
+export {
+  getAppVersion,
+  setAppNightMode,
+  setSystemBarAppearance,
+} from './appChrome';
+export type { AppNightMode, AppVersion } from './appChromeTypes.ts';
 export { acquireEngineHold, type EngineHoldCommands } from './engineHold.ts';
 export type {
+  KitbagCommandsConstants,
   SongTransportShowState,
   TransportEvent,
   TransportShowState,

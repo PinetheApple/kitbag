@@ -5,6 +5,7 @@ export {
   type SongPresetRepository,
 } from './client';
 export type { Preferences } from './preferences';
+export type { PracticeRepository, PracticeStats } from './practice-repository';
 export type {
   BarMark,
   BundleStem,
