@@ -1,7 +1,7 @@
 import type { AppStateStatus } from 'react-native';
 import { describe, expect, it } from 'vitest';
 
-import { attachRigClick, type AppStateSource } from './rigClickLifecycle.ts';
+import { attachRig, type AppStateSource } from './rigClickLifecycle.ts';
 
 function harness() {
   let listener: ((state: AppStateStatus) => void) | undefined;
@@ -16,41 +16,58 @@ function harness() {
       };
     },
   };
-  let stops = 0;
-  const detach = attachRigClick(
+  const counts = { stops: 0, holds: 0, releases: 0 };
+  const detach = attachRig(
     {
       stop: () => {
-        stops += 1;
+        counts.stops += 1;
       },
+    },
+    () => {
+      counts.holds += 1;
+      return () => {
+        counts.releases += 1;
+      };
     },
     appState,
   );
   return {
     detach,
     appState: (state: AppStateStatus) => listener?.(state),
-    stops: () => stops,
+    counts,
     removed: () => removed,
   };
 }
 
-describe('rig click lifecycle', () => {
-  it('stops the click when Settings loses focus or unmounts', () => {
+describe('rig lifecycle', () => {
+  it('holds the engine while Rig is in focus', () => {
+    const rig = harness();
+    expect(rig.counts.holds).toBe(1);
+    expect(rig.counts.releases).toBe(0);
+  });
+
+  it('stops the click and releases the engine on blur or unmount', () => {
     const rig = harness();
     rig.detach();
-    expect(rig.stops()).toBe(1);
+    expect(rig.counts.stops).toBe(1);
+    expect(rig.counts.releases).toBe(1);
     expect(rig.removed()).toBe(1);
   });
 
-  it('stops the click when the app goes to the background', () => {
+  it('stops and releases in the background, and holds again on return', () => {
     const rig = harness();
     rig.appState('background');
-    expect(rig.stops()).toBe(1);
+    expect(rig.counts).toEqual({ stops: 1, holds: 1, releases: 1 });
+    rig.appState('active');
+    expect(rig.counts.holds).toBe(2);
+    rig.detach();
+    expect(rig.counts.releases).toBe(2);
   });
 
-  it('keeps playing through an inactive blip', () => {
+  it('keeps playing and holding through an inactive blip', () => {
     const rig = harness();
     rig.appState('inactive');
     rig.appState('active');
-    expect(rig.stops()).toBe(0);
+    expect(rig.counts).toEqual({ stops: 0, holds: 1, releases: 0 });
   });
 });

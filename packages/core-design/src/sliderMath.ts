@@ -4,6 +4,7 @@ import { clampUnit } from './clampUnit.ts';
 // so a stray tap can never change a level.
 export type SliderMode = 'seek' | 'fader';
 export type SliderGesture = 'tap' | 'pan';
+export type SliderLook = 'level';
 
 export interface SliderTouch {
   readonly x: number;

@@ -1631,7 +1631,8 @@ the supersession: ≤7 primary choices.)
   row as the same LEDs used everywhere, then open a sheet: one pattern **per
   subdivision count**, not one pattern, since the count is per-song (1–16) — the
   pattern you set for `♬` applies to every song using `♬`. The engine plays
-  these patterns (D2, #170); the row, the sheet and their storage are not built.
+  these patterns (D2, #170). The patterns are stored as preferences and replayed
+  to the engine at launch and on every edit (#170).
 - **Volume and latency are the only rig settings, and they are global** (**D3**).
   No per-song override; `SongPresets` carries neither column. Volume per song is
   genuinely lost — the quiet acoustic number in a loud set needs this slider.
@@ -2238,8 +2239,9 @@ unchanged.
 slot_mask)` sets one row: bit *s* accents slot *s*, bit 0 is ignored, one command
 per row. Rows start empty when the engine is created and survive stop/start; they
 are not stored, so whatever persists the patterns must replay them on launch.
-Grid mode applies them to the measured beats' subdivisions. **Not built:** the
-schema for the global patterns and the Settings row and sheet.
+Grid mode applies them to the measured beats' subdivisions. The Settings row and
+sheet edit them; the patterns persist as preferences (one mask per count, no
+schema change) and are replayed at launch and on every edit (#170).
 
 ### D3 — Volume and latency are **global only**. Both columns go.
 

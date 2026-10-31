@@ -4,7 +4,7 @@ import type {
   SubdivisionAccentsSettings,
 } from '@kitbag/core-state';
 
-import type { StoredPreference } from '../runtime/storedPreference';
+import type { StoredPreference } from '@/runtime/storedPreference';
 
 export const RIG_KEYS = {
   volume: 'rig_volume',

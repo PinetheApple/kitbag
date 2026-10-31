@@ -26,14 +26,19 @@ import { AccentLeds } from './AccentLeds.tsx';
 import { AccentsSheet } from './AccentsSheet.tsx';
 import { OutputSheet, RouteSheet, useRouteRows } from './OutputSheets.tsx';
 import { routeLatency } from './rigRuntime';
-import { outputName, outputStatus, rigChip, rigClickHint } from './rigText.ts';
-import { CALIBRATE_LATENCY } from './settingsLabels.ts';
+import {
+  outputName,
+  outputStatus,
+  previewLedSize,
+  rigChip,
+  rigClickHint,
+} from './rigText.ts';
+import { CALIBRATE_LATENCY, SUBDIVISION_ACCENTS } from './settingsLabels.ts';
 import { useRigClickSession } from './useRigClickSession.ts';
 import { VolumeRow } from './VolumeRow.tsx';
 
 const LATENCY_LABEL = 'Latency offset';
 const OUTPUT_LABEL = 'Output';
-const ACCENTS_LABEL = 'Subdivision accents';
 const STEP_GAPS = {
   top: EDIT_ROW_PRESSABLE_GAP,
   bottom: EDIT_ROW_PRESSABLE_GAP,
@@ -76,7 +81,7 @@ function LatencyRow() {
         onStep={step}
         variant="inline"
         wide
-        repeat
+        repeatOnHold
         neighbourGapDp={STEP_GAPS}
       />
     </EditRow>
@@ -89,8 +94,8 @@ function OutputRow({ onPress }: { readonly onPress: () => void }) {
     routeLatency,
     (s) => s.live !== null && s.stored[s.live.id] !== undefined,
   );
-  const name = live === null ? null : outputName(live);
-  const status = outputStatus(calibrated);
+  const name = outputName(live);
+  const status = live === null ? null : outputStatus(calibrated);
   return (
     <EditRow
       label={OUTPUT_LABEL}
@@ -99,7 +104,9 @@ function OutputRow({ onPress }: { readonly onPress: () => void }) {
         .join(', ')}
       onPress={onPress}
     >
-      {name === null ? null : (
+      {status === null ? (
+        <EditValue muted>{name}</EditValue>
+      ) : (
         <EditValue>
           {`${name} `}
           <EditValue muted>{status}</EditValue>
@@ -113,8 +120,8 @@ function AccentsRow({ onPress }: { readonly onPress: () => void }) {
   const count = useSubdivisionAccents((s) => s.lastCount);
   const mask = useSubdivisionAccents((s) => s.masks[s.lastCount] ?? 0);
   return (
-    <EditRow label={ACCENTS_LABEL} onPress={onPress}>
-      <AccentLeds mask={mask} count={count} size="small" />
+    <EditRow label={SUBDIVISION_ACCENTS} onPress={onPress}>
+      <AccentLeds mask={mask} count={count} size={previewLedSize(count)} />
     </EditRow>
   );
 }
@@ -176,7 +183,7 @@ export function RigSection({
         <Chip
           label={chip.label}
           icon={chip.icon}
-          active={chip.icon === 'stop'}
+          active={chip.active}
           disabled={running}
           onPress={handlers.toggleClick}
         />

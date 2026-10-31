@@ -1,12 +1,18 @@
 import { BeatLedRow, type LedSize, type LedState } from '@kitbag/core-design';
-import { KB_STOPPED_BEAT } from '@kitbag/core-native';
+import { KB_STOPPED_BEAT, KB_SUBDIVISION_BOUNDS } from '@kitbag/core-native';
 import { accentedSlots, ON_BEAT_SLOT } from '@kitbag/core-state';
 import { useMemo } from 'react';
 import { useSharedValue } from 'react-native-reanimated';
 
 import { slotLayout } from './slotLayout.ts';
 
-const PER_ROW: Readonly<Record<LedSize, number>> = { small: 4, main: 8 };
+const SHEET_LEDS_PER_ROW = 8;
+
+const PER_ROW: Readonly<Record<LedSize, number>> = {
+  main: SHEET_LEDS_PER_ROW,
+  small: KB_SUBDIVISION_BOUNDS.max,
+  tiny: KB_SUBDIVISION_BOUNDS.max,
+};
 
 function slotLabel(slot: number, state: LedState): string {
   if (slot === ON_BEAT_SLOT) return 'Slot 1, the beat, accented by the beat';

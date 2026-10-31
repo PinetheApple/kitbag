@@ -1,4 +1,10 @@
-import type { IconName } from '@kitbag/core-design';
+import {
+  rig,
+  size,
+  space,
+  type IconName,
+  type LedSize,
+} from '@kitbag/core-design';
 import {
   KB_VOLUME_BOUNDS,
   type OutputRoute,
@@ -9,6 +15,7 @@ import {
   accentedSlots,
   formatOffsetMs,
   isOutputRouteKind,
+  isSounding,
   ON_BEAT_SLOT,
   RIG_CLICK_BPM,
   routeDetail,
@@ -27,6 +34,7 @@ const JOIN = ` ${SEPARATOR} `;
 
 const OTHER_KIND: OutputRouteKind = 'other';
 const IN_USE_NOW = 'in use now';
+const UNKNOWN_OUTPUT = 'Unknown output';
 const NEVER_CALIBRATED = 'never calibrated';
 const BEAT_SLOT = 'Beat';
 const ACCENT_SLOT = 'accent';
@@ -59,26 +67,38 @@ export function volumePercent(volume: number): string {
 export interface RigChip {
   readonly label: string;
   readonly icon: IconName;
+  readonly active: boolean;
 }
 
 export function rigChip(phase: RigClickPhase): RigChip {
-  const sounding = phase === 'starting' || phase === 'playing';
+  const active = isSounding(phase);
   return {
-    label: `${sounding ? 'Stop' : 'Play'}${JOIN}${String(RIG_CLICK_BPM)} BPM`,
-    icon: sounding ? 'stop' : 'play',
+    label: `${active ? 'Stop' : 'Play'}${JOIN}${String(RIG_CLICK_BPM)} BPM`,
+    icon: active ? 'stop' : 'play',
+    active,
   };
+}
+
+const ledsWidth = (count: number, led: number, gap: number) =>
+  count * led + (count - 1) * gap;
+
+export function previewLedSize(count: number): LedSize {
+  return ledsWidth(count, size.ledSmall, space.ledGap) <= rig.accentPreviewWidth
+    ? 'small'
+    : 'tiny';
 }
 
 export function rigClickHint(
   phase: RigClickPhase,
   metronomeRunning: boolean,
 ): string | null {
-  if (metronomeRunning || phase === 'busy') return NEEDS_STOPPED_METRONOME;
-  if (phase === 'failed') return CLICK_FAILED;
+  if (metronomeRunning) return NEEDS_STOPPED_METRONOME;
+  if (phase === 'busy' || phase === 'failed') return CLICK_FAILED;
   return null;
 }
 
-export function outputName(route: OutputRoute): string {
+export function outputName(route: OutputRoute | null): string {
+  if (route === null) return UNKNOWN_OUTPUT;
   const detail = routeDetail(route);
   return route.kind === 'wired' && detail !== null
     ? `${routeTitle(route)}${JOIN}${detail}`

@@ -18,13 +18,14 @@ import {
 } from '../touchTarget.ts';
 
 export type LedState = 'accented' | 'normal' | 'muted';
-export type LedSize = 'main' | 'small';
+export type LedSize = 'main' | 'small' | 'tiny';
 
 export type BeatLedLayout = readonly (readonly (readonly number[])[])[];
 
 const LED_PX: Readonly<Record<LedSize, number>> = {
   main: size.ledMain,
   small: size.ledSmall,
+  tiny: size.ledTiny,
 };
 
 type HitBox = ReturnType<typeof hitBoxStyle>;
@@ -59,6 +60,7 @@ const INTERIOR: LedPosition = { first: false, last: false };
 const DEFAULT_HIT_BOX: Readonly<Record<LedSize, HitBox>> = {
   main: ledHitBox('main', {}, INTERIOR, INTERIOR, INTERIOR),
   small: ledHitBox('small', {}, INTERIOR, INTERIOR, INTERIOR),
+  tiny: ledHitBox('tiny', {}, INTERIOR, INTERIOR, INTERIOR),
 };
 
 const edges = (index: number, count: number): LedPosition => ({
@@ -96,6 +98,15 @@ const useStyles = createThemedStyles(() => ({
     height: size.ledSmall,
     borderRadius: ledRadius,
     borderWidth: size.ledSmallBorder,
+  },
+  tiny: {
+    width: size.ledTiny,
+    height: size.ledTiny,
+    borderRadius: ledRadius,
+    borderWidth: size.ledTinyBorder,
+  },
+  tinyGroup: {
+    gap: space.ledTinyGap,
   },
   muted: {
     opacity: opacity.muted,
@@ -156,7 +167,7 @@ export function BeatLed({
   const led = (
     <Animated.View
       style={[
-        ledSize === 'small' ? styles.small : styles.main,
+        styles[ledSize],
         state === 'muted' ? styles.muted : null,
         flashStyle,
       ]}
@@ -211,7 +222,10 @@ export function BeatLedRow({
       {layout.map((row, rowIndex) => (
         <View key={rowIndex} style={styles.row}>
           {row.map((group, groupIndex) => (
-            <View key={groupIndex} style={styles.group}>
+            <View
+              key={groupIndex}
+              style={[styles.group, ledSize === 'tiny' && styles.tinyGroup]}
+            >
               {group.map((beat, ledIndex) => {
                 const state = states[beat] ?? 'normal';
                 return (

@@ -13,12 +13,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { routeLatency } from './rigRuntime';
 import { routeRows, type RouteRowView } from './rigText.ts';
 import { RouteRow } from './RouteRow.tsx';
-import { CALIBRATE_LATENCY } from './settingsLabels.ts';
+import { CALIBRATE_LATENCY, CLOSE } from './settingsLabels.ts';
 
 const OUTPUT_TITLE = 'Output & latency';
 const OUTPUT_HINT =
   'Kitbag keeps an offset for each output and applies the one in use. Tap an output to calibrate or clear it.';
-const CLOSE = 'Close';
 const CLEAR = 'Clear';
 
 const useStyles = createThemedStyles(() => ({

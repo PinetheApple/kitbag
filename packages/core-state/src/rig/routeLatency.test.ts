@@ -210,10 +210,52 @@ describe('route latency', () => {
     expect(calls.unwatched).toBe(1);
   });
 
-  it('ignores steps before any route is known', async () => {
-    const { store, calls } = harness();
+  it('applies steps live but stores nothing while the route is unknown', async () => {
+    const { store, calls, applied } = harness();
     await store.getState().start();
     store.getState().step(1);
-    expect(calls.applied).toEqual([]);
+    expect(applied()).toBe(1);
+    await vi.advanceTimersByTimeAsync(ROUTE_LATENCY_SAVE_DELAY_MS);
+    expect(calls.saved).toEqual([]);
+  });
+
+  it('keeps a manual step when a guessed route is reported again', async () => {
+    const { store, route, applied } = harness();
+    await store.getState().start();
+    route(GUESSED);
+    store.getState().step(4);
+    route(GUESSED);
+    expect(applied()).toBe(186);
+  });
+
+  it('never writes a pending step back over a cleared route', async () => {
+    const { store, route, calls } = harness();
+    await store.getState().start();
+    route(HEADPHONES);
+    store.getState().step(1);
+    await store.getState().clear(HEADPHONES.id);
+    await vi.advanceTimersByTimeAsync(ROUTE_LATENCY_SAVE_DELAY_MS);
+    expect(calls.saved).toEqual([]);
+    expect(store.getState().stored[HEADPHONES.id]).toBeUndefined();
+  });
+
+  it('never writes a pending step back over a calibration', async () => {
+    const { store, route, calls } = harness();
+    await store.getState().start();
+    route(HEADPHONES);
+    store.getState().step(1);
+    const calibrated = { ...HEADPHONES_ROW, offsetMs: 150 };
+    await store.getState().record(calibrated);
+    await vi.advanceTimersByTimeAsync(ROUTE_LATENCY_SAVE_DELAY_MS);
+    expect(calls.saved).toEqual([calibrated]);
+  });
+
+  it('writes a pending step at once when flushed', async () => {
+    const { store, route, calls } = harness();
+    await store.getState().start();
+    route(HEADPHONES);
+    store.getState().step(1);
+    store.getState().flush();
+    expect(calls.saved).toEqual([{ ...HEADPHONES_ROW, offsetMs: 183 }]);
   });
 });

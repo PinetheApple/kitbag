@@ -1,10 +1,15 @@
-import { KB_VOLUME_BOUNDS, type OutputRoute } from '@kitbag/core-native';
+import {
+  KB_SUBDIVISION_BOUNDS,
+  KB_VOLUME_BOUNDS,
+  type OutputRoute,
+} from '@kitbag/core-native';
 import { describe, expect, it } from 'vitest';
 
 import {
   accentLabels,
   outputName,
   outputStatus,
+  previewLedSize,
   rigChip,
   rigClickHint,
   routeRows,
@@ -34,11 +39,16 @@ const HEADPHONES: OutputRoute = {
 
 describe('rig click chip', () => {
   it('offers to stop once the click is starting or playing', () => {
-    expect(rigChip('idle')).toEqual({ label: 'Play · 100 BPM', icon: 'play' });
+    expect(rigChip('idle')).toEqual({
+      label: 'Play · 100 BPM',
+      icon: 'play',
+      active: false,
+    });
     expect(rigChip('starting').label).toBe('Stop · 100 BPM');
     expect(rigChip('playing')).toEqual({
       label: 'Stop · 100 BPM',
       icon: 'stop',
+      active: true,
     });
   });
 
@@ -47,7 +57,7 @@ describe('rig click chip', () => {
       'Stop the metronome to hear the rig click',
     );
     expect(rigClickHint('busy', false)).toBe(
-      'Stop the metronome to hear the rig click',
+      'The click could not start; try again',
     );
     expect(rigClickHint('failed', false)).toBe(
       'The click could not start; try again',
@@ -77,11 +87,25 @@ describe('click volume slider', () => {
   });
 });
 
+describe('accent row preview', () => {
+  it('keeps the design’s LEDs while they fit on one line', () => {
+    expect(previewLedSize(4)).toBe('small');
+  });
+
+  it('shrinks the LEDs so 16 slots still fit on one line', () => {
+    expect(previewLedSize(KB_SUBDIVISION_BOUNDS.max)).toBe('tiny');
+  });
+});
+
 describe('output row', () => {
   it('names the speaker and the jack by kind and other routes by name', () => {
     expect(outputName(SPEAKER)).toBe('Phone speaker');
     expect(outputName(WIRED)).toBe('Wired headphones · 3.5 mm');
     expect(outputName(HEADPHONES)).toBe('WH-1000XM4');
+  });
+
+  it('says the output is unknown when the route could not be read', () => {
+    expect(outputName(null)).toBe('Unknown output');
   });
 
   it('says whether the live route has a stored offset', () => {

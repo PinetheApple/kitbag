@@ -11,19 +11,18 @@ import {
   type StepDelta,
 } from '@kitbag/core-design';
 import { KB_SUBDIVISION_BOUNDS } from '@kitbag/core-native';
-import { useSubdivisionAccents } from '@kitbag/core-state';
+import { clamp, useSubdivisionAccents } from '@kitbag/core-state';
 import { useCallback, useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AccentLeds } from './AccentLeds.tsx';
 import { accentLabels } from './rigText.ts';
+import { CLOSE, SUBDIVISION_ACCENTS } from './settingsLabels.ts';
 
-const TITLE = 'Subdivision accents';
 const SUBDIVISION = 'Subdivision';
 const ALL_NORMAL = 'All normal';
 const HEAR_IT = 'Hear it';
-const CLOSE = 'Close';
 const HINT =
   'One pattern per subdivision count, for every song that uses it. Tap a tick to accent it; the first tick is the beat, accented by the beat.';
 
@@ -45,10 +44,7 @@ const useStyles = createThemedStyles((theme) => ({
 }));
 
 const clampCount = (count: number) =>
-  Math.min(
-    KB_SUBDIVISION_BOUNDS.max,
-    Math.max(KB_SUBDIVISION_BOUNDS.min, count),
-  );
+  clamp(count, KB_SUBDIVISION_BOUNDS.min, KB_SUBDIVISION_BOUNDS.max);
 
 export interface AccentsSheetProps {
   readonly visible: boolean;
@@ -93,7 +89,7 @@ export function AccentsSheet({
   return (
     <Sheet
       visible={visible}
-      title={TITLE}
+      title={SUBDIVISION_ACCENTS}
       titleIcon="subdivisionAccents"
       dismissLabel={CLOSE}
       bottomInset={insets.bottom}

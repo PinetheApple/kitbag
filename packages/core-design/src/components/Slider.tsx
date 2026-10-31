@@ -19,6 +19,7 @@ import {
   releaseTarget,
   snapToDetent,
   type SliderDetent,
+  type SliderLook,
   type SliderMode,
 } from '../sliderMath.ts';
 import { asPercent } from '../percent.ts';
@@ -45,12 +46,10 @@ export interface SliderProps {
   readonly step: number;
   readonly mode: SliderMode;
   readonly tick?: number;
-  /** The value the thumb catches at while dragged within reach of it. */
   readonly detent?: SliderDetent;
-  /** The fill turns red past this value. */
   readonly warnAbove?: number;
   /** Draws the thinner settings thumb and tick; the gesture is still `mode`'s. */
-  readonly look?: 'level';
+  readonly look?: SliderLook;
 }
 
 const useStyles = createThemedStyles((theme) => ({
@@ -92,7 +91,7 @@ const useStyles = createThemedStyles((theme) => ({
   },
 }));
 
-function geometryStyles(look: SliderMode | 'level') {
+function geometryStyles(look: SliderMode | SliderLook) {
   const { track, thumb } = sliderGeometry[look];
   return {
     track: { height: track, borderRadius: track / 2 },

@@ -5,6 +5,8 @@ import {
 import type { RouteLatency } from '@kitbag/core-db';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
+import { clamp } from '../metronome/config.ts';
+
 export const ROUTE_LATENCY_SAVE_DELAY_MS = 600;
 
 export interface RouteLatencyDeps {
@@ -26,6 +28,7 @@ export interface RouteLatencyState {
 export interface RouteLatencyActions {
   readonly start: () => Promise<void>;
   readonly stop: () => void;
+  readonly flush: () => void;
   readonly step: (deltaMs: number) => void;
   readonly record: (entry: RouteLatency) => Promise<void>;
   readonly clear: (route: string) => Promise<void>;
@@ -36,9 +39,10 @@ export type RouteLatencyStore = StoreApi<
 >;
 
 const clampOffset = (offsetMs: number) =>
-  Math.min(
+  clamp(
+    offsetMs,
+    KB_LATENCY_OFFSET_MS_BOUNDS.min,
     KB_LATENCY_OFFSET_MS_BOUNDS.max,
-    Math.max(KB_LATENCY_OFFSET_MS_BOUNDS.min, offsetMs),
   );
 
 const warn = (error: unknown) => {
@@ -76,9 +80,10 @@ export function createRouteLatencyStore(
     };
 
     const onRoute = (route: OutputRoute) => {
+      const same = get().live?.id === route.id;
       if (pending?.route !== route.id) flush();
       set({ live: route });
-      deps.applyLatency(get().stored[route.id]?.offsetMs ?? 0);
+      if (!same) deps.applyLatency(get().stored[route.id]?.offsetMs ?? 0);
     };
 
     return {
@@ -104,12 +109,13 @@ export function createRouteLatencyStore(
         unwatch = null;
       },
 
+      flush,
+
       step: (deltaMs) => {
         const { live, stored } = get();
-        if (live === null) return;
         const offsetMs = clampOffset(deps.appliedLatency() + deltaMs);
         deps.applyLatency(offsetMs);
-        if (!live.certain) return;
+        if (live?.certain !== true) return;
         const entry: RouteLatency = {
           route: live.id,
           offsetMs,

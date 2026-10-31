@@ -21,7 +21,7 @@ export interface RigClick {
 
 export type RigClickStore = StoreApi<RigClick>;
 
-const sounding = (phase: RigClickPhase) =>
+export const isSounding = (phase: RigClickPhase) =>
   phase === 'starting' || phase === 'playing';
 
 export function createRigClick(deps: RigClickDeps): RigClickStore {
@@ -44,7 +44,7 @@ export function createRigClick(deps: RigClickDeps): RigClickStore {
         return;
       }
       if (started !== generation) {
-        if (result === KB_RESULT.KB_OK && !sounding(get().phase)) {
+        if (result === KB_RESULT.KB_OK && !isSounding(get().phase)) {
           deps.stopClick();
         }
         return;
@@ -66,7 +66,7 @@ export function createRigClick(deps: RigClickDeps): RigClickStore {
       play,
       stop,
       toggle: () => {
-        if (sounding(get().phase)) {
+        if (isSounding(get().phase)) {
           stop();
           return Promise.resolve();
         }

@@ -18,6 +18,7 @@ export {
   type CountInBars,
 } from './metronome/store.ts';
 export {
+  clamp,
   clampRampInterval,
   cycleAccentValue,
   rampIntervalBounds,
@@ -248,6 +249,7 @@ export {
 export { RIG_CLICK_BPM } from './rig/rigClickRules.ts';
 export {
   createRigClick,
+  isSounding,
   type RigClick,
   type RigClickDeps,
   type RigClickPhase,

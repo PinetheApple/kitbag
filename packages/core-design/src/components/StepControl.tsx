@@ -55,8 +55,7 @@ export interface StepControlProps {
   readonly onValuePress?: () => void;
   readonly variant?: StepControlVariant;
   readonly accented?: boolean;
-  /** Holding a key keeps stepping until it is released. */
-  readonly repeat?: boolean;
+  readonly repeatOnHold?: boolean;
   readonly wide?: boolean;
   /** Gaps to the controls around the cluster, for the keys' 48dp hit boxes;
    * a number applies to every side, an omitted side has no neighbour. */
@@ -269,7 +268,7 @@ export function StepControl({
   onValuePress,
   variant = 'badge',
   accented = false,
-  repeat = false,
+  repeatOnHold = false,
   wide = false,
   neighbourGapDp = space.stepKeyGap,
 }: StepControlProps) {
@@ -298,7 +297,7 @@ export function StepControl({
     repeater.hold(handleIncrement);
   }, [repeater, handleIncrement]);
   const repeatProps = (onHold: () => void) =>
-    repeat
+    repeatOnHold
       ? {
           onLongPress: onHold,
           onPressOut: repeater.release,
