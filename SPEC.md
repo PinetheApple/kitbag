@@ -1596,10 +1596,13 @@ became load-bearing: volume, latency offset and subdivision accents live here no
 the supersession: ≤7 primary choices.)
 
 - **The click runs while you're in Rig.** A chip in the section header starts a
-  100 BPM click and becomes `■ Stop · 100 BPM`. **Volume and latency are
-  meaningless as numbers** — they are things you hear. Without this, Rig is a form
-  you fill in blind, which is exactly what it is today. It stops on leaving and
-  does not touch the metronome's own state.
+  100 BPM click and becomes `■ Stop · 100 BPM`. **Volume and subdivision accents
+  are meaningless as numbers** — they are things you hear. Without this, Rig is a
+  form you fill in blind, which is exactly what it is today. It stops on leaving
+  and does not touch the metronome's own state. **Latency is the exception**: a
+  constant offset is unobservable on a free-running click (§4.7), so the Rig click
+  sounds the same at any value. It is set by calibration (§12.5.1) or by ear
+  against a track.
 - **Volume has a detent at unity.** Range 0–200% (`maxVolume = 2`), so 100% is
   dead centre — the one value you want to return to. The tick is visible and the
   thumb catches. Past ~150% the fill turns red rather than the app policing it;
