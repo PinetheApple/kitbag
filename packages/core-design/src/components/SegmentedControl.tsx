@@ -10,7 +10,7 @@ import {
   space,
   textRoles,
 } from '../roles.ts';
-import { equalOptionSize } from '../segmentWidth.ts';
+import { equalOptionMinWidth, type OptionMinWidth } from '../segmentWidth.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import {
@@ -29,11 +29,7 @@ const OPTION_HEIGHT = textRoles.segment.size + inset.segmentOptionV * 2;
 const INLINE_LINE_HEIGHT = textRoles.segment.size * bodyLineHeight;
 
 export type SegmentedControlSize =
-  | 'default'
-  | 'large'
-  | 'inline'
-  | 'editRow'
-  | 'row';
+  'default' | 'large' | 'inline' | 'editRow' | 'row';
 
 const OPTION_HEIGHTS: Readonly<Record<SegmentedControlSize, number>> = {
   default: OPTION_HEIGHT,
@@ -95,7 +91,7 @@ interface SegmentProps<T extends string> {
   readonly large: boolean;
   readonly inline: boolean;
   readonly editRow: boolean;
-  readonly sized: { readonly minWidth: number } | undefined;
+  readonly minWidthStyle: OptionMinWidth | undefined;
   readonly onLabelWidth: (value: T, width: number) => void;
   readonly row: boolean;
   readonly hitBox: ReturnType<typeof optionHitBox>;
@@ -179,7 +175,7 @@ function Segment<T extends string>({
   large,
   inline,
   editRow,
-  sized,
+  minWidthStyle,
   onLabelWidth,
   row,
   hitBox,
@@ -210,7 +206,7 @@ function Segment<T extends string>({
           styles.option,
           large && styles.largeOption,
           editRow && styles.editRowOption,
-          sized,
+          minWidthStyle,
           row && styles.rowOption,
           selected && styles.optionSelected,
           selected && large && styles.largeOptionSelected,
@@ -259,9 +255,9 @@ export function SegmentedControl<T extends string>({
     const width = labelWidths[option.value];
     return width === undefined ? [] : [width];
   });
-  const optionSize =
-    editRow && measured.length === options.length
-      ? equalOptionSize(measured, inset.segmentEditRowOptionH)
+  const minWidthStyle =
+    editRow && options.length > 0 && measured.length === options.length
+      ? equalOptionMinWidth(measured, inset.segmentEditRowOptionH)
       : undefined;
   const row = controlSize === 'row';
   const hitBox = optionHitBox(
@@ -290,7 +286,7 @@ export function SegmentedControl<T extends string>({
           large={large}
           inline={controlSize === 'inline'}
           editRow={editRow}
-          sized={optionSize}
+          minWidthStyle={minWidthStyle}
           onLabelWidth={handleLabelWidth}
           row={row}
           hitBox={hitBox}
