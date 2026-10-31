@@ -1,4 +1,3 @@
-import { countLabel } from '@kitbag/core-design';
 import type { LibraryRow } from '@kitbag/core-db';
 import type { StorageReport } from '@kitbag/core-native';
 
@@ -11,22 +10,38 @@ export interface StorageDeps {
 export interface StorageSnapshot {
   readonly report: StorageReport | null;
   readonly missing: readonly LibraryRow[];
+  readonly removalFailed: boolean;
+}
+
+export const EMPTY_STORAGE: StorageSnapshot = {
+  report: null,
+  missing: [],
+  removalFailed: false,
+};
+
+function warn(what: string, error: unknown) {
+  console.warn(`[kitbag] ${what}`, error);
 }
 
 function settled<T>(result: PromiseSettledResult<T>, what: string): T | null {
   if (result.status === 'fulfilled') return result.value;
-  console.warn(`[kitbag] could not read ${what}`, result.reason);
+  warn(`could not read ${what}`, result.reason);
   return null;
 }
 
-export async function loadStorage(deps: StorageDeps): Promise<StorageSnapshot> {
+export async function loadStorage(
+  deps: StorageDeps,
+  removalFailed = false,
+): Promise<StorageSnapshot> {
   const [report, missing] = await Promise.allSettled([
-    deps.readReport(),
-    deps.findMissing(),
+    Promise.resolve().then(deps.readReport),
+    Promise.resolve().then(deps.findMissing),
   ]);
+  const stillMissing = settled(missing, 'missing files') ?? [];
   return {
     report: settled(report, 'storage'),
-    missing: settled(missing, 'missing files') ?? [],
+    missing: stillMissing,
+    removalFailed: removalFailed && stillMissing.length > 0,
   };
 }
 
@@ -34,19 +49,11 @@ export async function removeMissingThenLoad(
   deps: StorageDeps,
 ): Promise<StorageSnapshot> {
   try {
-    await deps.removeMissing();
+    await Promise.resolve().then(deps.removeMissing);
   } catch (error) {
-    console.warn('[kitbag] could not remove missing files', error);
+    warn('could not remove missing files', error);
   }
-  return loadStorage(deps);
-}
-
-export function removeMissingLabel(count: number): string {
-  return `Remove missing files (${String(count)})`;
-}
-
-export function removeMissingTitle(count: number): string {
-  return `Remove ${countLabel(count, 'missing song', 'missing songs')}?`;
+  return loadStorage(deps, true);
 }
 
 export interface StorageLoader {
@@ -55,25 +62,29 @@ export interface StorageLoader {
   readonly cancel: () => void;
 }
 
-// Work runs one at a time, so a refresh asked for mid-removal reads after it;
-// only the newest request publishes.
+// Serialised: a refresh issued mid-removal must read after the deletes land.
 export function storageLoader(
   deps: StorageDeps,
   publish: (snapshot: StorageSnapshot) => void,
 ): StorageLoader {
   let queue = Promise.resolve();
   let latest = 0;
+  let last = EMPTY_STORAGE;
   const run = (work: () => Promise<StorageSnapshot>) => {
     latest += 1;
     const request = latest;
-    queue = queue.then(async () => {
-      const snapshot = await work();
-      if (request === latest) publish(snapshot);
-    });
+    queue = queue
+      .then(async () => {
+        last = await work();
+        if (request === latest) publish(last);
+      })
+      .catch((error: unknown) => {
+        warn('storage update failed', error);
+      });
     return queue;
   };
   return {
-    refresh: () => run(() => loadStorage(deps)),
+    refresh: () => run(() => loadStorage(deps, last.removalFailed)),
     removeMissing: () => run(() => removeMissingThenLoad(deps)),
     cancel: () => {
       latest += 1;

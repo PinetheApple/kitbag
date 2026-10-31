@@ -2,8 +2,10 @@ import { countLabel } from '@kitbag/core-design';
 import type { StorageReport } from '@kitbag/core-native';
 
 import { formatBytes } from './bytes.ts';
+import { SEPARATOR } from './separator.ts';
 
-const SEPARATOR = '·';
+export const STORAGE_LABEL = 'Storage';
+export const REMOVAL_FAILED = 'Some files could not be removed. Try again.';
 
 const fileCount = (count: number) => countLabel(count, 'file', 'files');
 
@@ -24,4 +26,12 @@ export function stemSetsText({ stemSets }: StorageReport): string {
 
 export function databaseText({ database }: StorageReport): string {
   return formatBytes(database.bytes);
+}
+
+export function removeMissingLabel(count: number): string {
+  return `Remove missing files (${String(count)})`;
+}
+
+export function removeMissingTitle(count: number): string {
+  return `Remove ${countLabel(count, 'missing song', 'missing songs')}?`;
 }

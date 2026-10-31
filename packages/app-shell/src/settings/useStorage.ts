@@ -1,13 +1,15 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 
-import { storageLoader, type StorageSnapshot } from './storageModel.ts';
+import {
+  EMPTY_STORAGE,
+  storageLoader,
+  type StorageSnapshot,
+} from './storageModel.ts';
 import { storageDeps } from './storageRuntime';
 
-const EMPTY: StorageSnapshot = { report: null, missing: [] };
-
 export function useStorage() {
-  const [snapshot, setSnapshot] = useState<StorageSnapshot>(EMPTY);
+  const [snapshot, setSnapshot] = useState<StorageSnapshot>(EMPTY_STORAGE);
   const loader = useMemo(() => storageLoader(storageDeps, setSnapshot), []);
   const refresh = useCallback(() => {
     void loader.refresh();

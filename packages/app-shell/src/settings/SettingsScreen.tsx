@@ -10,7 +10,7 @@ import {
 } from '@kitbag/core-design';
 import { getAppVersion } from '@kitbag/core-native';
 import { useAppearance, type ThemeChoice } from '@kitbag/core-state';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useReducer } from 'react';
 import { Linking, Platform } from 'react-native';
 
 import {
@@ -22,8 +22,12 @@ import {
 import { formatAppVersion } from './appVersion.ts';
 import { formatPracticeSummary } from './practiceText.ts';
 import { SettingsFrame } from './SettingsFrame.tsx';
-import { StorageSheets, type StorageSheetKind } from './StorageSheet.tsx';
-import { storageSummary } from './storageText.ts';
+import { StorageSheets } from './StorageSheet.tsx';
+import {
+  nextStorageSheet,
+  type StorageSheetEvent,
+} from './storageSheetFlow.ts';
+import { STORAGE_LABEL, storageSummary } from './storageText.ts';
 import { usePracticeStats } from './usePracticeStats.ts';
 import { useStorage } from './useStorage.ts';
 
@@ -36,7 +40,6 @@ const THEME_OPTIONS: readonly SegmentOption<ThemeChoice>[] = [
 const THEME_CONTROL_GAPS = { bottom: EDIT_ROW_PRESSABLE_GAP };
 
 const LICENCE_LABEL = 'Licence';
-const STORAGE_LABEL = 'Storage';
 const SOURCE_ROW_LABEL = 'Source & issues';
 
 function openUrl(url: string): void {
@@ -59,22 +62,25 @@ function PracticeValue() {
 }
 
 function DataSection() {
-  const { report, missing, refresh, removeMissing } = useStorage();
+  const { report, missing, removalFailed, refresh, removeMissing } =
+    useStorage();
   const summary = report === null ? null : storageSummary(report);
-  const [sheet, setSheet] = useState<StorageSheetKind>('none');
-  const openStorage = useCallback(() => {
-    setSheet('storage');
-  }, []);
-  const askRemove = useCallback(() => {
-    setSheet('confirm');
+  const [sheet, send] = useReducer(nextStorageSheet, 'none');
+  const handlers = useMemo(() => {
+    const on = (event: StorageSheetEvent) => () => {
+      send(event);
+    };
+    return {
+      open: on('open'),
+      askRemove: on('askRemove'),
+      cancelRemove: on('cancelRemove'),
+      dismiss: on('dismiss'),
+    };
   }, []);
   const remove = useCallback(() => {
-    setSheet('storage');
+    send('remove');
     removeMissing();
   }, [removeMissing]);
-  const closeStorage = useCallback(() => {
-    setSheet('none');
-  }, []);
   return (
     <>
       <SectionHeader label="Data" />
@@ -87,7 +93,7 @@ function DataSection() {
           accessibilityLabel={
             summary === null ? STORAGE_LABEL : `${STORAGE_LABEL}, ${summary}`
           }
-          onPress={openStorage}
+          onPress={handlers.open}
         >
           {summary === null ? null : <EditValue>{summary}</EditValue>}
         </EditRow>
@@ -96,11 +102,12 @@ function DataSection() {
         kind={sheet}
         report={report}
         missingCount={missing.length}
+        removalFailed={removalFailed}
         onShow={refresh}
-        onAskRemove={askRemove}
+        onAskRemove={handlers.askRemove}
         onRemove={remove}
-        onCancelRemove={openStorage}
-        onDismiss={closeStorage}
+        onCancelRemove={handlers.cancelRemove}
+        onDismiss={handlers.dismiss}
       />
     </>
   );

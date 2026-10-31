@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest';
 import {
   databaseText,
   libraryAudioText,
+  removeMissingLabel,
+  removeMissingTitle,
   stemSetsText,
   storageSummary,
 } from './storageText.ts';
@@ -33,5 +35,16 @@ describe('storage text', () => {
     expect(libraryAudioText(REPORT)).toBe('18 files · 840 MB');
     expect(stemSetsText(REPORT)).toBe('1 · 320 MB');
     expect(databaseText(REPORT)).toBe('1.2 MB');
+  });
+});
+
+describe('removeMissingLabel', () => {
+  it('names the count of rows it would remove', () => {
+    expect(removeMissingLabel(2)).toBe('Remove missing files (2)');
+  });
+
+  it('asks about one song or several', () => {
+    expect(removeMissingTitle(1)).toBe('Remove 1 missing song?');
+    expect(removeMissingTitle(3)).toBe('Remove 3 missing songs?');
   });
 });

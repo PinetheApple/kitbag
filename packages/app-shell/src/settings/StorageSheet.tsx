@@ -15,8 +15,19 @@ import type { ReactNode } from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { removeMissingLabel, removeMissingTitle } from './storageModel.ts';
-import { databaseText, libraryAudioText, stemSetsText } from './storageText.ts';
+import {
+  showsRemoveMissing,
+  type StorageSheetKind,
+} from './storageSheetFlow.ts';
+import {
+  databaseText,
+  libraryAudioText,
+  REMOVAL_FAILED,
+  removeMissingLabel,
+  removeMissingTitle,
+  stemSetsText,
+  STORAGE_LABEL,
+} from './storageText.ts';
 
 const useStyles = createThemedStyles(() => ({
   actions: { flexDirection: 'row', gap: space.controlGap },
@@ -53,19 +64,20 @@ function StorageRows({ report }: { readonly report: StorageReport }) {
       <SheetRow label="Database">
         <EditValue>{databaseText(report)}</EditValue>
       </SheetRow>
-      <SheetRow label="Location" singleLine>
-        <EditPath>{report.location}</EditPath>
-      </SheetRow>
+      {report.location === '' ? null : (
+        <SheetRow label="Location" singleLine>
+          <EditPath>{report.location}</EditPath>
+        </SheetRow>
+      )}
     </>
   );
 }
-
-export type StorageSheetKind = 'none' | 'storage' | 'confirm';
 
 export interface StorageSheetsProps {
   readonly kind: StorageSheetKind;
   readonly report: StorageReport | null;
   readonly missingCount: number;
+  readonly removalFailed: boolean;
   readonly onShow: () => void;
   readonly onAskRemove: () => void;
   readonly onRemove: () => void;
@@ -111,6 +123,7 @@ export function StorageSheets({
   kind,
   report,
   missingCount,
+  removalFailed,
   onShow,
   onAskRemove,
   onRemove,
@@ -122,7 +135,7 @@ export function StorageSheets({
     <>
       <Sheet
         visible={kind === 'storage'}
-        title="Storage"
+        title={STORAGE_LABEL}
         titleIcon="storage"
         dismissLabel="Close storage"
         bottomInset={insets.bottom}
@@ -130,7 +143,8 @@ export function StorageSheets({
         onDismiss={onDismiss}
       >
         {report === null ? null : <StorageRows report={report} />}
-        {missingCount > 0 ? (
+        {removalFailed ? <SheetHint>{REMOVAL_FAILED}</SheetHint> : null}
+        {showsRemoveMissing(missingCount) ? (
           <Chip
             icon="removeMissing"
             label={removeMissingLabel(missingCount)}
