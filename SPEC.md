@@ -597,6 +597,9 @@ Tempo, time signature, subdivisions (1–16), per-beat 3-state accents
 ramp, bar muting. All implemented in C++ and correct. **The migration does not
 touch any of it.**
 
+Global subdivision accents (**D2**), one pattern per subdivision count, were added
+to the engine afterwards (#170).
+
 ### 5.2 Performance surface
 
 Ported from the Flutter build, which got this right:
