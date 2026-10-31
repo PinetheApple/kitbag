@@ -63,7 +63,8 @@ describe('transportRuntime', () => {
     });
 
     const sends = native.transportShow.mock.calls.length;
-    libraryStore.setState({ loaded: null });
+    const left = { ...summary, setlist: { ...summary.setlist, active: false } };
+    libraryStore.setState({ loaded: null, setlists: [left] });
     expect(native.transportShow).toHaveBeenCalledTimes(sends + 1);
     expect(lastShownSetlist()).toBeNull();
   });
@@ -152,6 +153,21 @@ describe('transportRuntime', () => {
       running: true,
       bpm: 90,
       beatsPerBar: 7,
+    });
+  });
+
+  it('with the set active and no song loaded, the card shows the chip copy', async () => {
+    await import('./transportRuntime');
+    metronomeStore.setState({ running: true });
+    libraryStore.setState({
+      setlists: [summary],
+      entries: { [SETLIST_ID]: entries },
+      loaded: null,
+    });
+    expect(lastShownSetlist()).toEqual({
+      subtitle: 'Wedding set · 2 songs',
+      index: null,
+      songCount: 2,
     });
   });
 });

@@ -5,6 +5,7 @@ import {
   metronomeStore,
   transportSetlistOf,
 } from '@kitbag/core-state';
+import { setlistChipLabel } from '@kitbag/tool-metronome';
 
 import { askForNotificationsOnce } from './notificationPermission';
 import {
@@ -25,7 +26,7 @@ function syncFromApp() {
   const step = notificationStepAfterAppChange(
     {
       ...metronomeStore.getState(),
-      setlist: transportSetlistOf(libraryStore.getState()),
+      setlist: transportSetlistOf(setlistChipLabel, libraryStore.getState()),
     },
     shown,
     Date.now(),

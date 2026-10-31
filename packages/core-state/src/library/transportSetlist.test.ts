@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
+import type { ActiveSet } from './activeSet.ts';
 import type { SetlistEntry, SetlistSummary } from './snapshot.ts';
 import type { LoadedSong } from './store.ts';
 import { transportSetlistOf } from './transportSetlist.ts';
 
 const SETLIST_ID = 7;
+const setLabel = (set: ActiveSet) => `${set.name} label`;
 const titles = ['Intro', 'Blackbird', 'Encore'];
 const entries: SetlistEntry[] = titles.map(
   (name, index) =>
@@ -30,17 +32,21 @@ const loadedAt = (index: number): LoadedSong => ({
 });
 
 describe('transportSetlistOf', () => {
-  it('is null with no song loaded', () => {
-    expect(transportSetlistOf(library(null))).toBeNull();
+  it('with no song loaded, shows the set label with no current song', () => {
+    expect(transportSetlistOf(setLabel, library(null))).toEqual({
+      subtitle: 'Wedding set label',
+      index: null,
+      songCount: 3,
+    });
   });
 
   it('is null for a song loaded outside a setlist', () => {
     const loaded = { presetId: 200, itemId: null, setlistId: null };
-    expect(transportSetlistOf(library(loaded))).toBeNull();
+    expect(transportSetlistOf(setLabel, library(loaded))).toBeNull();
   });
 
   it('places a song mid-setlist under the design subtitle', () => {
-    expect(transportSetlistOf(library(loadedAt(1)))).toEqual({
+    expect(transportSetlistOf(setLabel, library(loadedAt(1)))).toEqual({
       subtitle: 'Wedding set · Blackbird (2/3)',
       index: 1,
       songCount: 3,
@@ -48,25 +54,28 @@ describe('transportSetlistOf', () => {
   });
 
   it('places the first and the last song', () => {
-    expect(transportSetlistOf(library(loadedAt(0)))).toMatchObject({
+    expect(transportSetlistOf(setLabel, library(loadedAt(0)))).toMatchObject({
       subtitle: 'Wedding set · Intro (1/3)',
       index: 0,
     });
-    expect(transportSetlistOf(library(loadedAt(2)))).toEqual({
+    expect(transportSetlistOf(setLabel, library(loadedAt(2)))).toEqual({
       subtitle: 'Wedding set · Encore (3/3)',
       index: 2,
       songCount: 3,
     });
   });
 
-  it('is null once the item is no longer in the setlist', () => {
+  it('treats a song removed from the set as no current song', () => {
     const removed = { ...loadedAt(1), itemId: 999 };
-    expect(transportSetlistOf(library(removed))).toBeNull();
+    expect(transportSetlistOf(setLabel, library(removed))).toMatchObject({
+      subtitle: 'Wedding set label',
+      index: null,
+    });
   });
 
   it('is null once the setlist is gone', () => {
     const state = { ...library(loadedAt(1)), setlists: [] };
-    expect(transportSetlistOf(state)).toBeNull();
+    expect(transportSetlistOf(setLabel, state)).toBeNull();
   });
 
   it('is null when the loaded song is not in the active setlist', () => {
@@ -79,6 +88,6 @@ describe('transportSetlistOf', () => {
       setlist: { ...summary.setlist, id: SETLIST_ID + 1 },
     };
     const state = { ...library(loadedAt(1)), setlists: [other, inactive] };
-    expect(transportSetlistOf(state)).toBeNull();
+    expect(transportSetlistOf(setLabel, state)).toBeNull();
   });
 });

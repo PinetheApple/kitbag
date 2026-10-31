@@ -10,10 +10,13 @@ export default defineConfig({
     // Each run spins a real ESLint pass over the scenario tree; give it room.
     testTimeout: 30000,
     hookTimeout: 30000,
-    // The core-design barrel reaches react-native; Home's text needs only its pure parts.
+    // These barrels reach react-native UI; tests need only their pure parts.
     alias: {
       '@kitbag/core-design': fileURLToPath(
         new URL('../../core-design/src/pure.ts', import.meta.url),
+      ),
+      '@kitbag/tool-metronome': fileURLToPath(
+        new URL('../../tool-metronome/src/pure.ts', import.meta.url),
       ),
     },
   },
