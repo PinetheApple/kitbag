@@ -197,3 +197,25 @@ export {
   MINUS,
   type ClockParts,
 } from './text.ts';
+export { CALIBRATION } from './rig/calibrationRules.ts';
+export {
+  analyseTaps,
+  appliedOffset,
+  scatterHalfRangeMs,
+  scatterX,
+  type AppliedOffset,
+  type CalibrationOutcome,
+} from './rig/calibrationStats.ts';
+export {
+  createCalibrationSession,
+  type CalibrationDeps,
+  type CalibrationNotice,
+  type CalibrationPhase,
+  type CalibrationSession,
+} from './rig/calibrationSession.ts';
+export { routeDetail, routeTitle } from './rig/routeLabel.ts';
+export { formatOffsetMs } from './rig/latencyText.ts';
+export {
+  useCalibration,
+  type CalibrationSessionStore,
+} from './rig/useCalibration.ts';
