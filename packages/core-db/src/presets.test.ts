@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { POLY_AGAINST_BAR } from './preset-rules';
 import type { NewSongPreset } from './repository';
 import { createSetlistRepository } from './setlist-repository';
 import { createSongPresetRepository } from './song-preset-repository';
@@ -179,6 +180,29 @@ describe('song preset repository', () => {
       `Song preset ${field}`,
     );
     expect(await presets.list()).toEqual([]);
+  });
+
+  it('stores a poly cycle equal to the bar as the bar on create', async () => {
+    const { presets } = setup();
+    const created = await presets.create({ ...EVERY_FIELD, polyAgainst: 7 });
+    expect(created.polyAgainst).toBe(POLY_AGAINST_BAR);
+  });
+
+  it('stores a poly cycle equal to the bar as the bar on update', async () => {
+    const { presets } = setup();
+    const created = await presets.create(EVERY_FIELD);
+    await presets.update(created.id, { polyAgainst: 7 });
+    expect((await presets.get(created.id))?.polyAgainst).toBe(POLY_AGAINST_BAR);
+  });
+
+  it('turns a kept poly cycle into the bar when an update makes the meter equal it', async () => {
+    const { presets } = setup();
+    const created = await presets.create(EVERY_FIELD);
+    await presets.update(created.id, {
+      beatsPerBar: 3,
+      accents: new Uint8Array([2, 1, 1]),
+    });
+    expect((await presets.get(created.id))?.polyAgainst).toBe(POLY_AGAINST_BAR);
   });
 
   it('refuses an update that breaks the bar and keeps the row', async () => {

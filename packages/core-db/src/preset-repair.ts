@@ -2,11 +2,8 @@ import {
   ACCENT_LEVELS,
   DEFAULT_DENOMINATOR,
   DENOMINATORS,
-  MAX_POLY_AGAINST,
-  MIN_POLY_AGAINST,
   NORMAL_ACCENT,
   PER_ACCENT_SOUND_BYTES,
-  POLY_AGAINST_BAR,
   PRESET_BOUNDS,
   SOUND_COUNT,
   type PresetBound,
@@ -64,8 +61,3 @@ export const REPAIR_PRESETS: readonly string[] = [
     WHERE length(per_accent_sounds) NOT IN (0, ${String(PER_ACCENT_SOUND_BYTES)})
     OR (length(per_accent_sounds) > 0 AND (${perAccentSoundsInvalid}))`,
 ];
-
-export const REPAIR_POLY_AGAINST = `UPDATE song_presets SET poly_against = ${String(POLY_AGAINST_BAR)}
-  WHERE typeof(poly_against) != 'integer'
-  OR poly_against NOT BETWEEN ${String(MIN_POLY_AGAINST)} AND ${String(MAX_POLY_AGAINST)}
-  OR poly_against = beats_per_bar`;

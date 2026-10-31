@@ -3,12 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { migrate, SCHEMA_VERSION } from './migrate';
 import { buildV17Fixture, pragma, rows } from './migrate-fixtures.test-helper';
-import { REPAIR_POLY_AGAINST } from './preset-repair';
-import {
-  MAX_POLY_AGAINST,
-  MIN_POLY_AGAINST,
-  POLY_AGAINST_BAR,
-} from './preset-rules';
+import { POLY_AGAINST_BAR } from './preset-rules';
 import { songPresets } from './schema';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
@@ -32,26 +27,5 @@ describe('poly against schema', () => {
   it('defaults a new row to the bar', () => {
     expect(songPresets.polyAgainst.default).toBe(POLY_AGAINST_BAR);
     expect(songPresets.polyAgainst.notNull).toBe(true);
-  });
-});
-
-describe('poly against repair', () => {
-  it.each([
-    [MIN_POLY_AGAINST - 2, POLY_AGAINST_BAR],
-    [MAX_POLY_AGAINST + 1, POLY_AGAINST_BAR],
-    [2.5, POLY_AGAINST_BAR],
-    [POLY_AGAINST_BAR, POLY_AGAINST_BAR],
-    [4, POLY_AGAINST_BAR],
-    [MIN_POLY_AGAINST, MIN_POLY_AGAINST],
-    [MAX_POLY_AGAINST, MAX_POLY_AGAINST],
-  ])('stores %s as %s', (stored, expected) => {
-    const db = buildV17Fixture();
-    migrate(nodeSqliteDriver(db));
-    db.prepare('UPDATE song_presets SET poly_against = ? WHERE id = 1').run(
-      stored,
-    );
-    db.exec(REPAIR_POLY_AGAINST);
-    const [first] = presets(db);
-    expect(first?.poly_against).toBe(expected);
   });
 });

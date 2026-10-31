@@ -43,7 +43,6 @@ export interface SongPresetRecord {
   polyAccents: string | null;
   polyEnabled: boolean;
   polyBeats: number;
-  // v4 files from before schema v18 omit it and read as the bar.
   polyAgainst: number;
   sound: number;
   rampEnabled: boolean;
