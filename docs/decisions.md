@@ -528,3 +528,10 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   order plus hide. The binding
   file draws the sheet as the shared `Sheet` renders it (padding 14, header gap 12, 36-wide
   grab bar, the code's scrim). **[user]**
+
+- **2026-10-31 · Explicit save for live edits (§5.4, #212)** — Live edits to a loaded song
+  never write it; nothing autosaves, and a visible mark shows unsaved changes until Save.
+  This matches what the app already does: only the preset editor's Save and "Save current"
+  write a song. §2.1's "live-BPM autosave" row is the Flutter-era audit and stays as
+  history. The mark, where Save lives, Revert and what a step does to unsaved edits wait
+  on the owner's pick of a design. **[user]**
