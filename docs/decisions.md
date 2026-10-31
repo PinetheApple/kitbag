@@ -524,3 +524,10 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   accented click, not a louder normal sound, at a lower level than an accented beat
   (`kAccentedSubdivisionGain`, owner ruling 2026-10-31); unaccented off-beat ticks
   keep today's sound. **[user]**
+
+- **2026-10-31 · Explicit save for live edits (§5.4, #212)** — Live edits to a loaded song
+  never write it; nothing autosaves, and a visible mark shows unsaved changes until Save.
+  This matches what the app already does: only the preset editor's Save and "Save current"
+  write a song. §2.1's "live-BPM autosave" row is the Flutter-era audit and stays as
+  history. The mark, where Save lives, Revert and what a step does to unsaved edits wait
+  on the owner's pick of a design. **[user]**
