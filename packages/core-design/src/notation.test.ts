@@ -1,6 +1,15 @@
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { describe, expect, it } from 'vitest';
 
-import { drawsNotation, notationLayout } from './notation.ts';
+import {
+  drawsFlaggedEighth,
+  drawsNotation,
+  flaggedEighthShape,
+  notationLayout,
+} from './notation.ts';
 
 // Expected values are the mockup's subdivision SVGs (design/kitbag-metronome-b.html).
 const near = (actual: number, expected: number) => {
@@ -87,9 +96,9 @@ describe('drawsNotation', () => {
     'beams one deeper in $beats/$denominator and drops what the tiles never draw',
     ({ denominator }) => {
       expect(drawnIn(denominator)).toEqual([
-        2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
       ]);
-      expect(beamsIn(denominator)).toEqual([
+      expect(beamsIn(denominator).slice(1)).toEqual([
         2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4,
       ]);
     },
@@ -98,5 +107,45 @@ describe('drawsNotation', () => {
   it('beams one shallower in 2/2 and drops halves and unbeamed groups', () => {
     expect(drawnIn(2)).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
     expect(beamsIn(2)).toEqual([1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 3]);
+  });
+});
+
+describe('drawsFlaggedEighth', () => {
+  it('flags one click per beat in x/8 and nothing else', () => {
+    const flagged = [2, 4, 8, 16].flatMap((denominator) =>
+      SUBDIVISIONS.filter((n) => drawsFlaggedEighth(n, denominator)).map(
+        (n) => `${String(n)}/${String(denominator)}`,
+      ),
+    );
+    expect(flagged).toEqual(['1/8']);
+  });
+});
+
+const DESIGN = readFileSync(
+  resolve(
+    dirname(fileURLToPath(import.meta.url)),
+    '../../../design/kitbag-metronome-b.html',
+  ),
+  'utf8',
+);
+
+function flaggedEighthMarkup(height: number): string {
+  const { viewBox, head, stem, flagPath } = flaggedEighthShape(height);
+  return [
+    `viewBox="${viewBox}" fill="currentColor">`,
+    `<ellipse cx="${String(head.cx)}" cy="${String(head.cy)}" rx="${String(head.rx)}" ry="${String(head.ry)}" transform="${head.rotate}"/>`,
+    `<rect x="${String(stem.x)}" y="${String(stem.y)}" width="${String(stem.width)}" height="${String(stem.height)}"/>`,
+    `<path d="${flagPath}"/></svg>`,
+  ].join('');
+}
+
+describe('flaggedEighthShape', () => {
+  it("is the design's x/8 chip glyph, element for element", () => {
+    expect(DESIGN).toContain(flaggedEighthMarkup(24));
+  });
+
+  it('scales its width with the height it is drawn at', () => {
+    expect(flaggedEighthShape(24).width).toBe(12);
+    expect(flaggedEighthShape(28).width).toBe(14);
   });
 });

@@ -516,3 +516,9 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   bracket over each cycle's span, and a redraw on the downbeat when the cycle does not
   divide the bar. B (one ratio value with a wheel sheet) and C (poly stepper with a
   Bar | Beats switch) are rejected. **[user]**
+
+- **2026-10-31 · react-native-svg for the x/8 flagged eighth (§12, §13.8, #212)** — Approved
+  as a dependency for one glyph: the flagged eighth that the subdivision chip and tile draw
+  for one click per beat in x/8, copied from `design/kitbag-metronome-b.html`. MIT; its
+  Android module depends only on React Native and Fresco, so nothing proprietary reaches
+  F-Droid. No other icon moves to SVG. **[recorded]**

@@ -1,8 +1,11 @@
 import { useMemo } from 'react';
 import { Text, View } from 'react-native';
+import Svg, { Ellipse, Path, Rect } from 'react-native-svg';
 
 import {
+  drawsFlaggedEighth,
   drawsNotation,
+  flaggedEighthShape,
   notationGeometry as g,
   notationLayout,
 } from '../notation.ts';
@@ -23,6 +26,38 @@ export interface NotationGlyphProps {
   readonly color?: ColorToken;
 }
 
+interface FlaggedEighthProps {
+  readonly height: number;
+  readonly ink: string;
+}
+
+function FlaggedEighth({ height, ink }: FlaggedEighthProps) {
+  const shape = useMemo(() => flaggedEighthShape(height), [height]);
+  return (
+    <View
+      importantForAccessibility="no-hide-descendants"
+      accessibilityElementsHidden
+    >
+      <Svg
+        width={shape.width}
+        height={shape.height}
+        viewBox={shape.viewBox}
+        fill={ink}
+      >
+        <Ellipse
+          cx={shape.head.cx}
+          cy={shape.head.cy}
+          rx={shape.head.rx}
+          ry={shape.head.ry}
+          transform={shape.head.rotate}
+        />
+        <Rect {...shape.stem} />
+        <Path d={shape.flagPath} />
+      </Svg>
+    </View>
+  );
+}
+
 export function NotationGlyph({
   subdivision,
   denominator = g.tileDenominator,
@@ -39,6 +74,8 @@ export function NotationGlyph({
   const numeralSize = textRoles.notationNumeral.size * scale;
   const numeralBox = numeralSize * NUMERAL_BOX_EMS;
   if (!drawsNotation(subdivision, denominator)) return null;
+  if (drawsFlaggedEighth(subdivision, denominator))
+    return <FlaggedEighth height={height} ink={ink} />;
 
   return (
     <View
