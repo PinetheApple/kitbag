@@ -13,6 +13,7 @@ using metronome_detail::Clamp;
 using metronome_detail::kGridEpsilon;
 using metronome_detail::kMsPerSecond;
 using metronome_detail::kSecondsPerMinute;
+using metronome_detail::PhaseBelowOne;
 
 namespace {
 
@@ -132,7 +133,7 @@ void Metronome::PublishGridMirrors(const BeatGrid& grid, double song_seconds) {
   const double beat_in_bar =
       static_cast<double>(grid_beat_index_ % beats_per_bar_);
   bar_phase_.store(
-      (beat_in_bar + beat_fraction) / beats_per_bar_,
+      PhaseBelowOne((beat_in_bar + beat_fraction) / beats_per_bar_),
       std::memory_order_relaxed
   );
   // Clamped to the same range SetTempo enforces: a beat tracker emits outlier

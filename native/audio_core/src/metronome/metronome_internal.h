@@ -28,13 +28,18 @@ T Clamp(T value, T low, T high) {
   return value < low ? low : (value > high ? high : value);
 }
 
-// Epsilon as TickIndex, so a bar whose downbeat fired reads ~0, not ~1.
+// Rounding at the wrap, or the firing epsilon at a loop's fire limit, can land
+// a phase on 1.0; the published range is [0, 1).
+inline double PhaseBelowOne(double phase) {
+  return std::min(phase, std::nextafter(1.0, 0.0));
+}
+
+// Same epsilon as TickIndex, so a bar whose downbeat fired reads ~0, not ~1.
 inline double BarFraction(double position, int beats_per_bar) {
   const auto bar_beats = static_cast<double>(beats_per_bar);
   double in_bar = std::fmod(position + kGridEpsilon, bar_beats);
   if (in_bar < 0.0) in_bar += bar_beats;
-  // A tiny negative remainder plus bar_beats rounds up to bar_beats exactly.
-  return std::min(in_bar / bar_beats, std::nextafter(1.0, 0.0));
+  return PhaseBelowOne(in_bar / bar_beats);
 }
 
 template <std::size_t N>
