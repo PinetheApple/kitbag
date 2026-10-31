@@ -131,9 +131,12 @@ bool NearPhase(double actual, double expected) {
   return std::fabs(actual - expected) <= kPhaseTolerance;
 }
 
-// 120 BPM in 4/4: one beat is half a second, so `beats` is a frame count.
+uint32_t BeatFrames(const kb_engine* engine) {
+  return kb_engine_sample_rate(engine) / 2;
+}
+
 double PhaseAfterBeats(kb_engine* engine, uint32_t beats) {
-  RenderPeak(engine, kb_engine_sample_rate(engine) / 2 * beats);
+  RenderPeak(engine, BeatFrames(engine) * beats);
   return kb_metronome_poly_downbeat_phase(engine);
 }
 
@@ -168,11 +171,14 @@ void TestDownbeatPhaseAcrossMeterChange() {
       before && first && second,
       "poly_downbeat_phase: explicit 3 keeps its cycle across 4/4 -> 5/4"
   );
+  kb_engine_destroy(engine);
+}
+
+void TestDownbeatPhaseNullEngine() {
   Check(
       kb_metronome_poly_downbeat_phase(nullptr) == KB_POLY_PHASE_NONE,
       "poly_downbeat_phase: a null engine reads KB_POLY_PHASE_NONE"
   );
-  kb_engine_destroy(engine);
 }
 
 }  // namespace
@@ -185,6 +191,7 @@ void RunPolyAbiTests() {
   TestAgainstUpperBound();
   TestDownbeatPhaseFiveThree();
   TestDownbeatPhaseAcrossMeterChange();
+  TestDownbeatPhaseNullEngine();
 }
 
 }  // namespace abi_test

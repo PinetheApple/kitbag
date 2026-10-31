@@ -65,11 +65,9 @@ class Metronome {
 
   // App-thread API. Non-blocking; drops commands if the ring is full.
   void Start();
-  // Contract: kb_metronome_start_at.
   void StartAt(uint64_t start_frame);
   void Stop();
   void Pause();
-  // Contract: kb_metronome_anchor_external.
   void AnchorExternal(double song_pos_sec, uint64_t at_frame, double bpm);
   void SetTempo(double bpm);
   void SetTimeSignature(int numerator, int denominator);
@@ -282,15 +280,17 @@ class Metronome {
   BeginAnchorExternal(uint64_t now, uint32_t sample_rate, BlockTempo* tempo);
   // Derives current_bar_ from the current latency-shifted position, so an anchor
   // lands the bar counter on the song's bar rather than counting downbeats.
-  void SyncBarFromPosition();
+  void SyncBarFromPosition(double beats_per_sample);
+  // The tick rule applied to the last rendered sample: the beat already heard.
+  int64_t LastSoundedBeat(double beats_per_sample) const;
   void AdvanceConstantTempo(uint32_t sample_rate, BlockTempo* tempo);
   void FireConstantTempoTick(
       int64_t sub_index,
       uint32_t sample_rate,
       BlockTempo* tempo
   );
-  int PolyAgainst() const;
-  double PolyDownbeatPhase(bool gridded) const;
+  int EffectivePolyAgainst() const;
+  double PolyDownbeatPhase(bool gridded, double beats_per_sample) const;
   void PublishBlockMirrors(
       const BeatGrid* grid,
       uint64_t frame,

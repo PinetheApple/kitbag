@@ -10,7 +10,6 @@ constexpr int kClick = 2;
 constexpr int kTom = 3;
 constexpr int kCowbell = 5;
 
-constexpr int64_t kBeatFrames = kSampleRate / 2;
 constexpr int64_t kBarFrames = 4 * kBeatFrames;
 constexpr int64_t kHalfBeatFrames = kBeatFrames / 2;
 constexpr double kSilentCeiling = 0.01;
@@ -22,7 +21,6 @@ constexpr double kClickAccentHz = 3600.0;
 constexpr double kTomBeatHz = 450.0;
 constexpr double kTomSubdivisionHz = 300.0;
 constexpr double kTomPolyHz = 520.0;
-constexpr double kHihatAccentHz = 5000.0;
 constexpr double kHihatPolyHz = 4500.0;
 constexpr double kCowbellAccentHz = 2200.0;
 

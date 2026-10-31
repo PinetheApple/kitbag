@@ -7,9 +7,7 @@ constexpr PolySetup kFiveThree{5, 3, 4, 4, 97.0};
 constexpr int kCountInBars = 1;
 constexpr double kAnchorSongSeconds = 1.3;
 constexpr double kLatencyMs = 37.0;
-constexpr double kChangedBpm = 131.0;
 constexpr int64_t kStartFrame = 12345;
-constexpr int kChangedAgainst = 2;
 
 int64_t RunTotal() {
   return FramesFor(kRunSeconds);
@@ -69,8 +67,6 @@ void TestStartAt() {
   );
 }
 
-// The offset moves the whole beat clock earlier, so the poly row must read the
-// latency-shifted position and keep it through a tempo change.
 void TestLatencyOffsetWithTempoChange() {
   kitbag::Metronome metronome;
   ConfigurePolyOnly(metronome, kFiveThree);

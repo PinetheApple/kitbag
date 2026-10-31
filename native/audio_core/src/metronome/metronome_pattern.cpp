@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <cmath>
 
 #include "metronome/metronome.h"
 #include "metronome/metronome_internal.h"
@@ -8,7 +7,6 @@ namespace kitbag {
 
 using metronome_detail::Clamp;
 using metronome_detail::IsOneOf;
-using metronome_detail::kGridEpsilon;
 
 void Metronome::InitAccentRow(std::span<Accent> row) {
   std::fill(row.begin(), row.end(), Accent::kNormal);
@@ -42,7 +40,11 @@ void Metronome::ResetGrownSlots(
 void Metronome::SetSignatureState(int32_t numerator, int32_t denominator) {
   const int32_t count = Clamp(numerator, 1, kMaxBeats);
   ResetGrownSlots(accents_, beats_per_bar_, count);
+  const int against_before = EffectivePolyAgainst();
   beats_per_bar_ = count;
+  if (EffectivePolyAgainst() != against_before) {
+    current_poly_beat_.store(-1, std::memory_order_relaxed);
+  }
   if (IsOneOf(kDenominators, denominator)) {
     SetDenominatorPreservingPhase(denominator);
   }
@@ -125,20 +127,17 @@ void Metronome::SetPolyAgainstState(int32_t main_beats) {
   poly_against_ = main_beats;
 }
 
-int Metronome::PolyAgainst() const {
+int Metronome::EffectivePolyAgainst() const {
   return poly_against_ == KB_POLY_AGAINST_BAR ? beats_per_bar_ : poly_against_;
 }
 
-// The bar is the one holding the last beat already sounded, the same rule
-// SyncBarFromPosition uses.
-double Metronome::PolyDownbeatPhase(bool gridded) const {
+double
+Metronome::PolyDownbeatPhase(bool gridded, double beats_per_sample) const {
   if (!running_ || gridded || !poly_enabled_) return KB_POLY_PHASE_NONE;
-  const double position = beat_position_ + LatencyBeats();
-  const auto last_beat =
-      static_cast<int64_t>(std::floor(position - kGridEpsilon));
+  const int64_t last_beat = LastSoundedBeat(beats_per_sample);
   if (last_beat < 0) return KB_POLY_PHASE_NONE;
   const int64_t downbeat = last_beat - last_beat % beats_per_bar_;
-  const int against = PolyAgainst();
+  const int against = EffectivePolyAgainst();
   return static_cast<double>(downbeat % against) / against;
 }
 

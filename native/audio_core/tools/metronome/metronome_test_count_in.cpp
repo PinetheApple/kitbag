@@ -13,7 +13,6 @@ constexpr double kWoodblockAccentHz = 2400.0;
 constexpr double kWoodblockBeatHz = 1800.0;
 constexpr double kClickAccentHz = 3600.0;
 constexpr double kTomBeatHz = 450.0;
-constexpr double kHihatAccentHz = 5000.0;
 constexpr double kSilentCeiling = 0.01;
 
 constexpr int64_t kWaltzBeatFrames = 28800;

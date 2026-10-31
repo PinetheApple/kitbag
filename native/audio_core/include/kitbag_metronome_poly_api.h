@@ -1,8 +1,7 @@
 #ifndef KITBAG_METRONOME_POLY_API_H
 #define KITBAG_METRONOME_POLY_API_H
 
-/* The metronome's polyrhythm row. Each header includes the other under its
- * guard, so either order works. */
+/* Each header includes the other under its guard, so either order works. */
 #include "kitbag_api.h"
 
 #include <stdint.h>
@@ -30,12 +29,15 @@ KB_EXPORT void kb_metronome_set_poly_accent(
     int32_t beat_index,
     int32_t accent
 );
-/* Cycles span main_beats beats from beat 0 (song beat 0 if anchored). Only
- * KB_POLY_AGAINST_BAR follows meter changes, not an equal explicit value. */
+/* Cycles span main_beats beats from beat 0 (song beat 0 if anchored). An
+ * explicit value, even one equal to the bar, ignores later
+ * kb_metronome_set_beats; others out of range are ignored. */
 KB_EXPORT void
 kb_metronome_set_poly_against(kb_engine* engine, int32_t main_beats);
 /* Poly beat index within its cycle; -1 when stopped, poly disabled or a beat
- * grid is set, and after a poly count change until the next poly beat. */
+ * grid is set, and from a change of the poly count or of the effective
+ * main_beats (set_poly_against, or set_beats under KB_POLY_AGAINST_BAR) until
+ * the next poly beat. */
 KB_EXPORT int32_t kb_metronome_current_poly_beat(const kb_engine* engine);
 /* Fraction of the poly cycle already elapsed at the current bar's downbeat,
  * [0, 1); KB_POLY_PHASE_NONE when stopped, poly off, gridded or before beat 0. */

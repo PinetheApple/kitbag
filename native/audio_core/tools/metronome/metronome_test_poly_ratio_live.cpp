@@ -3,7 +3,6 @@
 namespace metronome_test {
 namespace {
 
-constexpr double kChangedBpm = 131.0;
 constexpr int kRampIntervalBars = 1;
 
 struct RampRun {

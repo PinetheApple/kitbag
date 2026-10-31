@@ -14,6 +14,10 @@
 namespace metronome_test {
 
 constexpr double kRunSeconds = 30.0;
+constexpr double kChangedBpm = 131.0;
+constexpr int kChangedAgainst = 2;
+constexpr double kPolyAccentPeak = 0.8;
+constexpr double kPolyNormalPeak = 0.5;
 constexpr int64_t kChangeFrame = 230 * static_cast<int64_t>(kBlockFrames);
 constexpr int64_t kPolyOnsetGapFrames = 2 * kRiseWindowFrames;
 constexpr double kPolyMinRise = 0.2;
@@ -138,17 +142,16 @@ inline void AuditTick(
   }
 }
 
-// Onsets before `audit_from` belong to something else, such as a count-in.
 inline void ExpectPolyTicks(
     const std::string& label,
     const std::vector<PolyTick>& model,
     const std::vector<float>& left,
-    int64_t audit_from = 0
+    int64_t first_poly_frame = 0
 ) {
   PolyAudit audit;
   for (const PolyTick& tick : model) AuditTick(left, tick, &audit);
   const auto total = static_cast<int64_t>(left.size());
-  audit.onsets = CountPolyOnsets(left, audit_from, PolyAuditLimit(total));
+  audit.onsets = CountPolyOnsets(left, first_poly_frame, PolyAuditLimit(total));
   char what[128];
   std::snprintf(
       what,

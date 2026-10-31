@@ -159,8 +159,8 @@ Metronome::BlockTempo Metronome::BlockTempoFor(uint32_t sample_rate) const {
   tempo.beats_per_sample =
       bpm_ * BeatUnitScale() / (kSecondsPerMinute * sample_rate);
   tempo.latency_beats = LatencyBeats();
-  tempo.poly_ticks_per_beat =
-      static_cast<double>(poly_beats_) / static_cast<double>(PolyAgainst());
+  tempo.poly_ticks_per_beat = static_cast<double>(poly_beats_) /
+                              static_cast<double>(EffectivePolyAgainst());
   return tempo;
 }
 
@@ -208,12 +208,13 @@ void Metronome::BeginPendingStart(
   observed_generation_ = view.generation;
 }
 
-void Metronome::SyncBarFromPosition() {
-  const double position = beat_position_ + LatencyBeats();
-  // The last beat strictly before `position` — the one already sounded. Below
-  // the first downbeat there is none, so the bar counter waits at -1.
-  const auto last_beat =
-      static_cast<int64_t>(std::floor(position - kGridEpsilon));
+int64_t Metronome::LastSoundedBeat(double beats_per_sample) const {
+  return TickIndex(beat_position_ + LatencyBeats() - beats_per_sample, 1.0);
+}
+
+// Below the first downbeat no beat has sounded, so the bar counter waits at -1.
+void Metronome::SyncBarFromPosition(double beats_per_sample) {
+  const int64_t last_beat = LastSoundedBeat(beats_per_sample);
   current_bar_ = last_beat < 0 ? -1 : last_beat / beats_per_bar_;
 }
 
@@ -240,8 +241,8 @@ void Metronome::BeginAnchorExternal(
   counting_in_ = false;
   count_in_armed_ = false;
   ReacquireGrid();
-  SyncBarFromPosition();
   *tempo = BlockTempoFor(sample_rate);
+  SyncBarFromPosition(tempo->beats_per_sample);
 }
 
 void Metronome::FireConstantTempoTick(
@@ -319,7 +320,10 @@ void Metronome::PublishBlockMirrors(
     current_bpm_.store(bpm_, std::memory_order_relaxed);
   }
   poly_downbeat_phase_.store(
-      PolyDownbeatPhase(grid != nullptr),
+      PolyDownbeatPhase(
+          grid != nullptr,
+          BlockTempoFor(sample_rate).beats_per_sample
+      ),
       std::memory_order_relaxed
   );
   PublishTrainerMirrors(grid != nullptr, sample_rate);

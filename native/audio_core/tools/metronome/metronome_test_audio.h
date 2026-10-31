@@ -13,8 +13,8 @@ constexpr double kPitchTolerance = 0.05;
 constexpr int kHihatSound = 4;
 constexpr int64_t kRiseWindowFrames = 32;
 constexpr int64_t kFrameSlack = 2;
-constexpr double kPolyAccentPeak = 0.8;
-constexpr double kPolyNormalPeak = 0.5;
+constexpr double kHihatAccentHz = 5000.0;
+constexpr int64_t kBeatFrames = kSampleRate / 2;
 
 inline int64_t FramesFor(double seconds) {
   return static_cast<int64_t>(seconds * kSampleRate);

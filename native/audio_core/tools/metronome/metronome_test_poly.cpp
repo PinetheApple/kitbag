@@ -1,4 +1,4 @@
-#include "metronome_test_audio.h"
+#include "metronome_test_poly_model.h"
 
 namespace metronome_test {
 namespace {
