@@ -25,6 +25,7 @@ class Engine {
   static constexpr uint32_t kSampleRate = 48000;
   static constexpr uint32_t kChannelCount = 2;
   static constexpr uint32_t kDefaultIdleGraceMs = 2000;
+  static constexpr int32_t kNoOutputDeviceId = 0;
 
   Engine() = default;
   ~Engine();
@@ -60,6 +61,7 @@ class Engine {
   uint64_t frames_rendered() const {
     return frames_rendered_.load(std::memory_order_relaxed);
   }
+  bool OutputDeviceId(int32_t* out_device_id) const;
 
   // App thread, before any load: read-ahead for callbacks up to [frames] wide.
   void ReserveCallbackFrames(uint32_t frames) {
@@ -126,9 +128,15 @@ class Engine {
   void WatchOutput();
   bool WatchTick(StallDetector& stall, uint64_t* idle_since_ms);
   void RestartDevice();
+  void ResolveDeviceIdReader();
+  void RefreshOutputDeviceId();
 
   ma_device device_{};
   bool device_ready_ = false;
+
+  using AAudioDeviceIdFn = int32_t (*)(struct AAudioStreamStruct*);
+  AAudioDeviceIdFn aaudio_device_id_ = nullptr;
+  std::atomic<int32_t> output_device_id_{kNoOutputDeviceId};
 
   std::atomic<bool> device_running_{false};
   std::atomic<uint64_t> frames_rendered_{0};

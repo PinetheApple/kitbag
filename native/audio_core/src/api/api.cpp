@@ -69,6 +69,16 @@ uint64_t kb_engine_frames_rendered(const kb_engine* engine) {
   return engine == nullptr ? 0 : ToEngine(engine)->frames_rendered();
 }
 
+kb_result
+kb_engine_output_device_id(const kb_engine* engine, int32_t* out_device_id) {
+  if (engine == nullptr || out_device_id == nullptr) {
+    return KB_ERROR_INVALID_ARGUMENT;
+  }
+  return ToEngine(engine)->OutputDeviceId(out_device_id)
+             ? KB_OK
+             : KB_ERROR_DEVICE_START_FAILED;
+}
+
 #ifdef KITBAG_BUILD_TOOLS
 void kb_engine_render(kb_engine* engine, float* out, uint32_t frame_count) {
   if (engine == nullptr || out == nullptr || frame_count == 0) return;
