@@ -3,14 +3,12 @@
 namespace metronome_test {
 namespace {
 
-constexpr PolySetup kFiveThree{5, 3, 4, 4, 120.0};
+constexpr PolySetup kFiveThreeAt120{5, 3, 4, 4, 120.0};
 constexpr double kPhaseTolerance = 1e-12;
-constexpr uint32_t kAlignedBlockFrames = 240;
+constexpr uint32_t kDownbeatAlignedBlockFrames = 240;
 constexpr double kAgreementSeconds = 120.0;
-constexpr double kMaxLatencyMs = kitbag::Metronome::kMaxLatencyOffsetMs;
 constexpr int64_t kGridFrame = 200 * static_cast<int64_t>(kBlockFrames);
 constexpr int64_t kMeterChangeTick = 80 * static_cast<int64_t>(kBlockFrames);
-constexpr int kThreeFour = 3;
 constexpr double kOneThird = 1.0 / 3.0;
 constexpr double kTwoThirds = 2.0 / 3.0;
 constexpr int64_t kMidBarZero = 2 * kBeatFrames;
@@ -71,7 +69,7 @@ void ExpectPhases(
 
 void TestFiveThreeAcrossBars() {
   kitbag::Metronome metronome;
-  StartPolyOnly(metronome, kFiveThree);
+  StartPolyOnly(metronome, kFiveThreeAt120);
   const std::vector<PhaseRead> reads = {
       {kMidBarZero, 0.0},
       {kMidBarOne, kOneThird},
@@ -120,7 +118,7 @@ void TestAcrossMeterChange() {
 
 void TestNoPhaseWithoutACycle() {
   kitbag::Metronome metronome;
-  ConfigurePolyOnly(metronome, kFiveThree);
+  ConfigurePolyOnly(metronome, kFiveThreeAt120);
   metronome.SetCountIn(1, false, 0);
   const bool idle = metronome.poly_downbeat_phase() == KB_POLY_PHASE_NONE;
   metronome.Start();
@@ -143,7 +141,7 @@ void TestNoPhaseWithoutACycle() {
 
 void TestBeatResetsWhenAgainstChanges() {
   kitbag::Metronome metronome;
-  StartPolyOnly(metronome, kFiveThree);
+  StartPolyOnly(metronome, kFiveThreeAt120);
   constexpr int64_t kAfterTickOne = 60 * static_cast<int64_t>(kBlockFrames);
   int32_t before = 0;
   int32_t reset = 0;
@@ -172,28 +170,33 @@ struct AgreementRun {
 
 double ExpectedPhase(int64_t bar) {
   if (bar < 0) return KB_POLY_PHASE_NONE;
-  const int64_t downbeat = bar * kFiveThree.numerator;
-  return static_cast<double>(downbeat % kFiveThree.against) /
-         kFiveThree.against;
+  const int64_t downbeat = bar * kFiveThreeAt120.numerator;
+  return static_cast<double>(downbeat % kFiveThreeAt120.against) /
+         kFiveThreeAt120.against;
 }
 
-// Blocks of 240 frames end exactly on every downbeat at 60, 120 and 150 BPM.
-int CountDisagreements(const AgreementRun& run) {
-  kitbag::Metronome metronome;
-  ConfigurePolyOnly(metronome, {5, 3, 4, 4, run.bpm});
+void StartAgreementRun(kitbag::Metronome& metronome, const AgreementRun& run) {
+  PolySetup setup = kFiveThreeAt120;
+  setup.bpm = run.bpm;
+  ConfigurePolyOnly(metronome, setup);
   metronome.SetLatencyOffset(run.latency_ms);
   metronome.Start();
+}
+
+int CountDisagreements(const AgreementRun& run) {
+  kitbag::Metronome metronome;
+  StartAgreementRun(metronome, run);
   std::vector<float> buffer(
-      static_cast<size_t>(kAlignedBlockFrames) * kChannels
+      static_cast<size_t>(kDownbeatAlignedBlockFrames) * kChannels
   );
   int64_t bar = -1;
   int previous = -1;
   int disagreements = 0;
   for (int64_t start = 0; start < FramesFor(kAgreementSeconds);
-       start += kAlignedBlockFrames) {
+       start += kDownbeatAlignedBlockFrames) {
     metronome.Render(
         buffer.data(),
-        kAlignedBlockFrames,
+        kDownbeatAlignedBlockFrames,
         kSampleRate,
         kChannels,
         static_cast<uint64_t>(start)
@@ -214,7 +217,7 @@ void TestPhaseAgreesWithCurrentBeat() {
            {60.0, 0.0},
            {120.0, 0.0},
            {150.0, 0.0},
-           {120.0, kMaxLatencyMs},
+           {120.0, kitbag::Metronome::kMaxLatencyOffsetMs},
        }) {
     char label[96];
     std::snprintf(
@@ -234,7 +237,7 @@ void TestPhaseAgreesWithCurrentBeat() {
 
 void TestNoPhaseUnderAGrid() {
   kitbag::Metronome metronome;
-  StartPolyOnly(metronome, kFiveThree);
+  StartPolyOnly(metronome, kFiveThreeAt120);
   const std::vector<PhaseRead> reads = {
       {kMidBarZero, 0.0},
       {kMidBarTwo, KB_POLY_PHASE_NONE},
@@ -256,7 +259,7 @@ int32_t PolyBeatAfterMeterChange(const PolySetup& setup) {
   StartPolyOnly(metronome, setup);
   int32_t after = 0;
   const auto on_block = [&](int64_t at) {
-    if (at == kMeterChangeTick) metronome.SetTimeSignature(kThreeFour, 4);
+    if (at == kMeterChangeTick) metronome.SetTimeSignature(3, 4);
   };
   const auto after_block = [&](int64_t end) {
     if (end == kMeterChangeTick + kBlockFrames) {
@@ -273,7 +276,7 @@ void TestBeatResetsWhenTheFollowedBarChanges() {
       "current_poly_beat: -1 after 4/4 -> 3/4 changes a followed against"
   );
   Check(
-      PolyBeatAfterMeterChange(kFiveThree) == 1,
+      PolyBeatAfterMeterChange(kFiveThreeAt120) == 1,
       "current_poly_beat: kept when a meter change leaves an explicit against"
   );
 }

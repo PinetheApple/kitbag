@@ -281,7 +281,6 @@ class Metronome {
   // Derives current_bar_ from the current latency-shifted position, so an anchor
   // lands the bar counter on the song's bar rather than counting downbeats.
   void SyncBarFromPosition(double beats_per_sample);
-  // The tick rule applied to the last rendered sample: the beat already heard.
   int64_t LastSoundedBeat(double beats_per_sample) const;
   void AdvanceConstantTempo(uint32_t sample_rate, BlockTempo* tempo);
   void FireConstantTempoTick(

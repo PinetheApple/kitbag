@@ -284,6 +284,26 @@ void TestAnchorComposesWithLatency() {
   }
 }
 
+double PeakAnchoredJustPastDownbeat(int64_t lo, int64_t hi) {
+  kitbag::Metronome metronome;
+  metronome.SetTimeSignature(4, 4);
+  metronome.SetBarMute(true, 1, 1);
+  metronome.AnchorExternal(2.0 + 0.5 / kSampleRate, 0, 120.0);
+  return WindowedPeak(metronome, lo, hi);
+}
+
+void TestAnchorJustPastDownbeatCountsBarOnce() {
+  Check(
+      PeakAnchoredJustPastDownbeat(0, 6000) < 0.1,
+      "anchor half a sample past song beat 4: muted bar 1 stays silent"
+  );
+  Check(
+      PeakAnchoredJustPastDownbeat(95000, 100000) > 0.5,
+      "anchor half a sample past song beat 4: bar 2 sounds, cycle not a bar "
+      "late"
+  );
+}
+
 }  // namespace
 
 void RunAnchorTests() {
@@ -296,6 +316,7 @@ void RunAnchorTests() {
   TestReanchorConsistentNoRefire();
   TestReanchorShiftedTouchesFutureOnly();
   TestAnchorComposesWithLatency();
+  TestAnchorJustPastDownbeatCountsBarOnce();
 }
 
 }  // namespace metronome_test

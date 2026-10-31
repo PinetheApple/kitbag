@@ -212,7 +212,6 @@ int64_t Metronome::LastSoundedBeat(double beats_per_sample) const {
   return TickIndex(beat_position_ + LatencyBeats() - beats_per_sample, 1.0);
 }
 
-// Below the first downbeat no beat has sounded, so the bar counter waits at -1.
 void Metronome::SyncBarFromPosition(double beats_per_sample) {
   const int64_t last_beat = LastSoundedBeat(beats_per_sample);
   current_bar_ = last_beat < 0 ? -1 : last_beat / beats_per_bar_;

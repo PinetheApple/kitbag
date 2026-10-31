@@ -131,12 +131,12 @@ bool NearPhase(double actual, double expected) {
   return std::fabs(actual - expected) <= kPhaseTolerance;
 }
 
-uint32_t BeatFrames(const kb_engine* engine) {
+uint32_t BeatFramesAt120Bpm(const kb_engine* engine) {
   return kb_engine_sample_rate(engine) / 2;
 }
 
 double PhaseAfterBeats(kb_engine* engine, uint32_t beats) {
-  RenderPeak(engine, BeatFrames(engine) * beats);
+  RenderPeak(engine, BeatFramesAt120Bpm(engine) * beats);
   return kb_metronome_poly_downbeat_phase(engine);
 }
 
