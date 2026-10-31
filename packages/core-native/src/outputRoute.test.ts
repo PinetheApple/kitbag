@@ -19,6 +19,7 @@ const native = vi.hoisted(() => {
   const state = {
     listener: undefined as ((route: unknown) => void) | undefined,
     resolveGet: undefined as ((route: unknown) => void) | undefined,
+    rejectGet: undefined as ((error: unknown) => void) | undefined,
   };
   const remove = vi.fn();
   return {
@@ -27,8 +28,9 @@ const native = vi.hoisted(() => {
     commands: {
       getOutputRoute: vi.fn(
         () =>
-          new Promise((resolve) => {
+          new Promise((resolve, reject) => {
             state.resolveGet = resolve;
+            state.rejectGet = reject;
           }),
       ),
       onOutputRoute: vi.fn((listener: (route: unknown) => void) => {
@@ -87,6 +89,15 @@ describe('watchOutputRoute', () => {
     await settle();
     expect(native.remove).toHaveBeenCalledOnce();
     expect(seen).not.toHaveBeenCalled();
+  });
+
+  it('drops a failed current-route read and still delivers the next event', async () => {
+    const seen = vi.fn();
+    watchOutputRoute(seen);
+    native.state.rejectGet?.(new Error('module invalidated'));
+    await settle();
+    native.state.listener?.(headset);
+    expect(seen.mock.calls).toEqual([[headset]]);
   });
 });
 

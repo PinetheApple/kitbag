@@ -68,4 +68,25 @@ class RouteSettleTest {
   fun `an untriggered settle has nothing to read`() {
     assertNull(RouteSettle(speaker).pendingReadAt)
   }
+
+  @Test
+  fun `a route a get reported becomes the baseline so the next true read emits`() {
+    val settle = RouteSettle(speaker)
+    assertEquals(buds, settle.observe(buds))
+    settle.trigger(now = 0)
+    assertEquals(listOf(speaker), drain(settle) { speaker }.mapNotNull { it.second })
+  }
+
+  @Test
+  fun `a get that sees the emitted route reports no change`() {
+    assertNull(RouteSettle(speaker).observe(speaker))
+  }
+
+  @Test
+  fun `a get leaves a pending settle where it was`() {
+    val settle = RouteSettle(speaker)
+    settle.trigger(now = 0)
+    settle.observe(buds)
+    assertEquals(250L, settle.pendingReadAt)
+  }
 }

@@ -24,7 +24,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
 
   private val libraryBase = LibraryStorage.base(reactContext)
   private val outputRoutes =
-    OutputRouteWatcher(reactContext, ::nativeOutputDeviceId, ::emitOutputRoute)
+    OutputRouteWatcher(reactContext, ::outputDeviceId, ::emitOutputRoute)
 
   init {
     val runtimePtr = reactContext.javaScriptContextHolder?.get() ?: 0L
@@ -125,7 +125,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   }
 
   override fun getOutputRoute(promise: Promise) {
-    promise.resolve(outputRouteMap(outputRoutes.current()))
+    outputRoutes.report { promise.resolve(outputRouteMap(it)) }
   }
 
   private fun emitOutputRoute(route: OutputRoute) {
@@ -142,7 +142,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
 
   override fun start(promise: Promise) {
     val result = nativeStart()
-    outputRoutes.trigger()
+    outputRoutes.engineStarted()
     promise.resolve(result)
   }
 
@@ -152,7 +152,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
 
   override fun engineHold(promise: Promise) {
     val result = nativeHold()
-    outputRoutes.trigger()
+    outputRoutes.engineStarted()
     promise.resolve(result)
   }
 
@@ -342,6 +342,9 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private external fun nativeStop()
   private external fun nativeHold(): Int
   private external fun nativeRelease()
+  private fun outputDeviceId(): Int? =
+    nativeOutputDeviceId().takeIf { it != NO_OUTPUT_DEVICE_ID }
+
   private external fun nativeOutputDeviceId(): Int
   private external fun nativeMetronomeStart(anchorFrame: Double)
   private external fun nativeMetronomeStop()
@@ -394,6 +397,9 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
 
   companion object {
     private const val E_UNSAFE_PATH = "E_UNSAFE_PATH"
+
+    // Owned by KB_NO_OUTPUT_DEVICE_ID in kitbag_engine_hold_api.h.
+    private const val NO_OUTPUT_DEVICE_ID = 0
 
     init {
       System.loadLibrary("kitbag_jsi")

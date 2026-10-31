@@ -95,6 +95,12 @@ class OutputRoutesTest {
   }
 
   @Test
+  fun `an all-XX address adds no octets`() {
+    val id = idOf(sink(AudioDeviceInfo.TYPE_BLUETOOTH_A2DP, address = "XX:XX:XX:XX:XX:XX"))
+    assertEquals("bt-a2dp::Buds", id)
+  }
+
+  @Test
   fun `two same-name A2DP headsets differ by last octets and collide when those match`() {
     val a = idOf(sink(AudioDeviceInfo.TYPE_BLUETOOTH_A2DP, address = "00:11:22:33:44:55"))
     val b = idOf(sink(AudioDeviceInfo.TYPE_BLUETOOTH_A2DP, address = "00:11:22:33:44:56"))

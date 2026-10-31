@@ -1,6 +1,8 @@
 import { getKitbagCommands } from './NativeKitbagCommands';
 import type { OutputRoute } from './outputRouteTypes.ts';
 
+const ignoreFailedRead = (): undefined => undefined;
+
 export function getOutputRoute(): Promise<OutputRoute> {
   return getKitbagCommands().getOutputRoute();
 }
@@ -15,9 +17,10 @@ export function watchOutputRoute(
     changed = true;
     listener(route);
   });
-  void commands.getOutputRoute().then((route) => {
+  const deliverCurrent = (route: OutputRoute): void => {
     if (watching && !changed) listener(route);
-  });
+  };
+  void commands.getOutputRoute().then(deliverCurrent, ignoreFailedRead);
   return () => {
     watching = false;
     subscription.remove();

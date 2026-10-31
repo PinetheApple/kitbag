@@ -12,16 +12,14 @@ import android.os.SystemClock
 
 class OutputRouteWatcher(
   context: Context,
-  private val engineDeviceId: () -> Int,
+  private val engineDeviceId: () -> Int?,
   private val onChange: (OutputRoute) -> Unit,
 ) {
   private val audio = context.getSystemService(AudioManager::class.java)
   private val handler = Handler(Looper.getMainLooper())
-  private val knownSinks = mutableSetOf<Int>()
+  private val knownSinks = KnownSinks()
+  private val enginePoll = EnginePoll()
   private var settle: RouteSettle? = null
-
-  @Volatile
-  private var lastAdded: Int? = null
 
   private val read = Runnable {
     val active = settle ?: return@Runnable
@@ -29,27 +27,27 @@ class OutputRouteWatcher(
     reschedule(active)
   }
 
+  private val poll = Runnable {
+    if (enginePoll.onPoll(SystemClock.uptimeMillis(), engineDeviceId())) triggerNow()
+    reschedulePoll()
+  }
+
   private val devices = object : AudioDeviceCallback() {
     override fun onAudioDevicesAdded(added: Array<AudioDeviceInfo>) {
-      val fresh = added.filter { it.isSink && knownSinks.add(it.id) }
-      if (fresh.isEmpty()) return
-      OutputRoutes.preferred(fresh.map(::sinkOf))?.let { lastAdded = it.handle }
-      triggerNow()
+      if (knownSinks.added(sinksOf(added))) triggerNow()
     }
 
     override fun onAudioDevicesRemoved(removed: Array<AudioDeviceInfo>) {
-      val gone = removed.filter { it.isSink && knownSinks.remove(it.id) }.map { it.id }
-      if (gone.isEmpty()) return
-      if (lastAdded in gone) lastAdded = null
-      triggerNow()
+      if (knownSinks.removed(sinksOf(removed))) triggerNow()
     }
   }
 
   fun start() {
     handler.post {
-      knownSinks += outputs().map { it.id }
+      knownSinks.seed(outputs().map(::sinkOf))
       settle = RouteSettle(current())
       audio.registerAudioDeviceCallback(devices, handler)
+      startPoll()
     }
   }
 
@@ -58,19 +56,33 @@ class OutputRouteWatcher(
     handler.post {
       audio.unregisterAudioDeviceCallback(devices)
       settle = null
+      enginePoll.stop()
+      handler.removeCallbacks(read)
+      handler.removeCallbacks(poll)
     }
   }
 
-  fun trigger() {
-    handler.post(::triggerNow)
+  fun engineStarted() {
+    handler.post {
+      triggerNow()
+      startPoll()
+    }
   }
 
-  fun current(): OutputRoute =
+  fun report(deliver: (OutputRoute) -> Unit) {
+    handler.post {
+      val route = current()
+      settle?.observe(route)?.let(onChange)
+      deliver(route)
+    }
+  }
+
+  private fun current(): OutputRoute =
     OutputRoutes.resolve(
-      engineDeviceId().takeIf { it >= 0 },
+      engineDeviceId(),
       outputs().map(::sinkOf),
       policySink(),
-      lastAdded,
+      knownSinks.lastAdded,
       Build.MODEL,
     )
 
@@ -84,6 +96,20 @@ class OutputRouteWatcher(
     handler.removeCallbacks(read)
     active.pendingReadAt?.let { handler.postAtTime(read, it) }
   }
+
+  private fun startPoll() {
+    if (settle == null) return
+    enginePoll.start(SystemClock.uptimeMillis(), engineDeviceId())
+    reschedulePoll()
+  }
+
+  private fun reschedulePoll() {
+    handler.removeCallbacks(poll)
+    enginePoll.nextPollAt?.let { handler.postAtTime(poll, it) }
+  }
+
+  private fun sinksOf(devices: Array<AudioDeviceInfo>): List<SinkDevice> =
+    devices.filter { it.isSink }.map(::sinkOf)
 
   private fun outputs(): List<AudioDeviceInfo> =
     audio.getDevices(AudioManager.GET_DEVICES_OUTPUTS).toList()

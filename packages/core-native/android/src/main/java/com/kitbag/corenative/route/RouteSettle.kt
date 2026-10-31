@@ -1,13 +1,6 @@
 package com.kitbag.corenative.route
 
-object SettleSchedule {
-  val READ_OFFSETS_MILLIS = longArrayOf(250L, 1_000L, 2_000L)
-}
-
-class RouteSettle(
-  private var emitted: OutputRoute?,
-  private val readOffsetsMillis: LongArray = SettleSchedule.READ_OFFSETS_MILLIS,
-) {
+class RouteSettle(private var emitted: OutputRoute?) {
   private var triggeredAt = 0L
   private var step = 0
 
@@ -17,14 +10,22 @@ class RouteSettle(
   fun trigger(now: Long) {
     triggeredAt = now
     step = 0
-    pendingReadAt = triggeredAt + readOffsetsMillis[step]
+    pendingReadAt = triggeredAt + READ_OFFSETS_MILLIS[step]
   }
 
   fun onRead(route: OutputRoute): OutputRoute? {
     step += 1
-    pendingReadAt = readOffsetsMillis.getOrNull(step)?.let { triggeredAt + it }
+    pendingReadAt = READ_OFFSETS_MILLIS.getOrNull(step)?.let { triggeredAt + it }
+    return observe(route)
+  }
+
+  fun observe(route: OutputRoute): OutputRoute? {
     if (route == emitted) return null
     emitted = route
     return route
+  }
+
+  private companion object {
+    val READ_OFFSETS_MILLIS = longArrayOf(250L, 1_000L, 2_000L)
   }
 }
