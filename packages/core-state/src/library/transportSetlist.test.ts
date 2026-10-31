@@ -72,7 +72,11 @@ describe('transportSetlistOf', () => {
       ...summary,
       setlist: { ...summary.setlist, active: false },
     };
-    const state = { ...library(loadedAt(1)), setlists: [inactive] };
+    const other = {
+      ...summary,
+      setlist: { ...summary.setlist, id: SETLIST_ID + 1 },
+    };
+    const state = { ...library(loadedAt(1)), setlists: [other, inactive] };
     expect(transportSetlistOf(state)).toBeNull();
   });
 });
