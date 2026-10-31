@@ -13,11 +13,18 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { clampUnit } from '../clampUnit.ts';
-import { dragTarget, releaseTarget, type SliderMode } from '../sliderMath.ts';
+import {
+  dragTarget,
+  pastWarning,
+  releaseTarget,
+  snapToDetent,
+  type SliderDetent,
+  type SliderMode,
+} from '../sliderMath.ts';
 import { asPercent } from '../percent.ts';
 import { radius } from '../roles.ts';
 import { sliderGeometry } from '../stemPlayerRoles.ts';
-import { createThemedStyles } from '../ThemeProvider.tsx';
+import { createThemedStyles, useTheme } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
 
 const NOT_DRAGGING = -1;
@@ -38,6 +45,12 @@ export interface SliderProps {
   readonly step: number;
   readonly mode: SliderMode;
   readonly tick?: number;
+  /** The value the thumb catches at while dragged within reach of it. */
+  readonly detent?: SliderDetent;
+  /** The fill turns red past this value. */
+  readonly warnAbove?: number;
+  /** Draws the thinner settings thumb and tick; the gesture is still `mode`'s. */
+  readonly look?: 'level';
 }
 
 const useStyles = createThemedStyles((theme) => ({
@@ -72,10 +85,15 @@ const useStyles = createThemedStyles((theme) => ({
     backgroundColor: theme.color.text3,
     opacity: sliderGeometry.tickOpacity,
   },
+  levelTick: {
+    width: sliderGeometry.levelTick,
+    marginLeft: -sliderGeometry.levelTick / 2,
+    opacity: 1,
+  },
 }));
 
-function geometryStyles(mode: SliderMode) {
-  const { track, thumb } = sliderGeometry[mode];
+function geometryStyles(look: SliderMode | 'level') {
+  const { track, thumb } = sliderGeometry[look];
   return {
     track: { height: track, borderRadius: track / 2 },
     thumb: {
@@ -90,12 +108,13 @@ function geometryStyles(mode: SliderMode) {
 const GEOMETRY = {
   seek: geometryStyles('seek'),
   fader: geometryStyles('fader'),
+  level: geometryStyles('level'),
 } as const;
 
 function useSliderGesture(props: SliderProps, width: SharedValue<number>) {
   const drag = useSharedValue(NOT_DRAGGING);
   const origin = useSharedValue(0);
-  const { value, onSlide, onRelease, onCancel, mode } = props;
+  const { value, onSlide, onRelease, onCancel, mode, detent } = props;
   const commit = (target: number | null) => {
     'worklet';
     if (target === null) return;
@@ -109,11 +128,14 @@ function useSliderGesture(props: SliderProps, width: SharedValue<number>) {
       origin.value = value.value;
     })
     .onUpdate((event) => {
-      drag.value = dragTarget(mode, origin.value, {
-        x: event.x,
-        translationX: event.translationX,
-        width: width.value,
-      });
+      drag.value = snapToDetent(
+        dragTarget(mode, origin.value, {
+          x: event.x,
+          translationX: event.translationX,
+          width: width.value,
+        }),
+        detent,
+      );
       if (onSlide !== undefined) scheduleOnRN(onSlide, drag.value);
     })
     .onEnd((_, success) => {
@@ -124,11 +146,14 @@ function useSliderGesture(props: SliderProps, width: SharedValue<number>) {
       drag.value = NOT_DRAGGING;
     });
   const tap = Gesture.Tap().onEnd((event, success) => {
-    const target = dragTarget(mode, value.value, {
-      x: event.x,
-      translationX: 0,
-      width: width.value,
-    });
+    const target = snapToDetent(
+      dragTarget(mode, value.value, {
+        x: event.x,
+        translationX: 0,
+        width: width.value,
+      }),
+      detent,
+    );
     commit(releaseTarget(mode, 'tap', success, target, value.value));
   });
   return { gesture: Gesture.Race(pan, tap), drag };
@@ -136,7 +161,11 @@ function useSliderGesture(props: SliderProps, width: SharedValue<number>) {
 
 export function Slider(props: SliderProps) {
   const styles = useStyles();
-  const { value, onRelease, step } = props;
+  const theme = useTheme();
+  const { value, onRelease, step, warnAbove } = props;
+  const fillColor = theme.color.accent;
+  const warnColor = theme.color.red;
+  const geometry = GEOMETRY[props.look ?? props.mode];
   const width = useSharedValue(0);
   const { gesture, drag } = useSliderGesture(props, width);
   const onLayout = useCallback(
@@ -154,7 +183,10 @@ export function Slider(props: SliderProps) {
   );
   const fillStyle = useAnimatedStyle(() => {
     const shown = drag.value === NOT_DRAGGING ? value.value : drag.value;
-    return { transform: [{ scaleX: clampUnit(shown) }] };
+    return {
+      transform: [{ scaleX: clampUnit(shown) }],
+      backgroundColor: pastWarning(shown, warnAbove) ? warnColor : fillColor,
+    };
   });
   const thumbStyle = useAnimatedStyle(() => {
     const shown = drag.value === NOT_DRAGGING ? value.value : drag.value;
@@ -171,19 +203,18 @@ export function Slider(props: SliderProps) {
         onAccessibilityAction={onAction}
         style={styles.hitArea}
       >
-        <View
-          style={[styles.track, GEOMETRY[props.mode].track]}
-          onLayout={onLayout}
-        >
-          <Animated.View
-            style={[styles.fill, GEOMETRY[props.mode].track, fillStyle]}
-          />
+        <View style={[styles.track, geometry.track]} onLayout={onLayout}>
+          <Animated.View style={[styles.fill, geometry.track, fillStyle]} />
           {props.tick === undefined ? null : (
-            <View style={[styles.tick, { left: asPercent(props.tick) }]} />
+            <View
+              style={[
+                styles.tick,
+                props.look === 'level' && styles.levelTick,
+                { left: asPercent(props.tick) },
+              ]}
+            />
           )}
-          <Animated.View
-            style={[styles.thumb, GEOMETRY[props.mode].thumb, thumbStyle]}
-          />
+          <Animated.View style={[styles.thumb, geometry.thumb, thumbStyle]} />
         </View>
       </View>
     </GestureDetector>

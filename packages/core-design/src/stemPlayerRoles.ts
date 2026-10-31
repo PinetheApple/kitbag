@@ -52,10 +52,12 @@ export const stemPlayer = {
 export const sliderGeometry = {
   seek: { track: 8, thumb: 28 },
   fader: { track: 4, thumb: 20 },
+  level: { track: 4, thumb: 16 },
   minWidth: 70,
   tick: 2,
   tickOverhang: 5,
   tickOpacity: 0.6,
+  levelTick: 1,
 } as const;
 
 export const stemPlayerMix = {

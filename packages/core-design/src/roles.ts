@@ -30,6 +30,7 @@ export const size = {
   ledSmallBorder: 1.5,
   stepKey: 24,
   stepValueMinWidth: 40,
+  stepValueWideMinWidth: 52,
   transportKey: 42,
   playButton: 58,
   playGlyphBox: 22,
@@ -279,6 +280,7 @@ export const textRoles = {
   rowSubtitle: { family: body, weight: 400, size: 12 },
   dragIndex: { family: display, weight: 400, size: 11.5, tabular: true },
   editValue: { family: display, weight: 400, size: 13.5 },
+  levelReadout: { family: display, weight: 500, size: 13.5, tabular: true },
   sectionLabel: {
     family: display,
     weight: 500,

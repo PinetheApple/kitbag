@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { dragTarget, releaseTarget } from './sliderMath.ts';
+import {
+  dragTarget,
+  pastWarning,
+  releaseTarget,
+  snapToDetent,
+} from './sliderMath.ts';
 
 const WIDTH = 200;
 
@@ -24,5 +29,31 @@ describe('slider gestures', () => {
     expect(dragTarget('fader', 0.5, touch)).toBe(0.7);
     expect(dragTarget('seek', 0.5, touch)).toBe(0.1);
     expect(dragTarget('fader', 0.9, touch)).toBe(1);
+  });
+});
+
+describe('slider detent', () => {
+  const detent = { at: 0.5, reach: 0.03 };
+
+  it('catches the thumb anywhere within reach of the detent', () => {
+    expect(snapToDetent(0.48, detent)).toBe(0.5);
+    expect(snapToDetent(0.525, detent)).toBe(0.5);
+  });
+
+  it('lets the thumb go once it is past the reach', () => {
+    expect(snapToDetent(0.46, detent)).toBe(0.46);
+    expect(snapToDetent(0.54, detent)).toBe(0.54);
+  });
+
+  it('leaves a slider without a detent alone', () => {
+    expect(snapToDetent(0.49, undefined)).toBe(0.49);
+  });
+});
+
+describe('slider warning fill', () => {
+  it('warns only past the threshold', () => {
+    expect(pastWarning(0.75, 0.75)).toBe(false);
+    expect(pastWarning(0.76, 0.75)).toBe(true);
+    expect(pastWarning(0.9, undefined)).toBe(false);
   });
 });

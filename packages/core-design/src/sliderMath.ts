@@ -36,3 +36,25 @@ export function releaseTarget(
   if (completed) return target;
   return mode === 'fader' ? origin : null;
 }
+
+export interface SliderDetent {
+  readonly at: number;
+  readonly reach: number;
+}
+
+export function snapToDetent(
+  fraction: number,
+  detent: SliderDetent | undefined,
+): number {
+  'worklet';
+  if (detent === undefined) return fraction;
+  return Math.abs(fraction - detent.at) <= detent.reach ? detent.at : fraction;
+}
+
+export function pastWarning(
+  fraction: number,
+  warnAbove: number | undefined,
+): boolean {
+  'worklet';
+  return warnAbove !== undefined && fraction > warnAbove;
+}

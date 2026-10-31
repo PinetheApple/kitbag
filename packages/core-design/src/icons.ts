@@ -68,6 +68,9 @@ export const iconGlyphs = {
   routeOther: 'speaker',
   storage: 'database-outline',
   removeMissing: 'backspace-reverse-outline',
+  stop: 'stop',
+  subdivisionAccents: 'music-note-sixteenth',
+  output: 'speaker',
 } as const satisfies Record<string, VectorGlyph>;
 
 export type IconName = keyof typeof iconGlyphs;
