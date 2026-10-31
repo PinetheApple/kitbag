@@ -3,10 +3,11 @@ import {
   KB_RAMP_STATE,
   KB_RAMP_UNIT,
 } from '@kitbag/core-native';
-import type {
-  BarMuteConfig,
-  CountInConfig,
-  RampConfig,
+import {
+  effectivePolyAgainst,
+  type BarMuteConfig,
+  type CountInConfig,
+  type RampConfig,
 } from '@kitbag/core-state';
 
 import { countInLabel } from './countIn.ts';
@@ -17,6 +18,7 @@ export interface PracticeSettings {
   readonly countIn: CountInConfig;
   readonly polyEnabled: boolean;
   readonly polyBeats: number;
+  readonly polyAgainst: number;
   readonly beatsPerBar: number;
 }
 
@@ -43,9 +45,11 @@ export function armedSummary(settings: PracticeSettings): string {
     parts.push(`Count-in ${countInLabel(settings.countIn.bars)}`);
   }
   if (settings.polyEnabled) {
-    parts.push(
-      `Poly ${String(settings.polyBeats)}:${String(settings.beatsPerBar)}`,
+    const against = effectivePolyAgainst(
+      settings.polyAgainst,
+      settings.beatsPerBar,
     );
+    parts.push(`Poly ${String(settings.polyBeats)}:${String(against)}`);
   }
   return parts.length === 0 ? NOTHING_ARMED : parts.join(' · ');
 }

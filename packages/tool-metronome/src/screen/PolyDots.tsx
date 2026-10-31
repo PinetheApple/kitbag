@@ -5,24 +5,31 @@ import {
   space,
   textRoles,
   textStyle,
+  TRANSPARENT,
   useTheme,
 } from '@kitbag/core-design';
+import { effectivePolyAgainst, useMetronome } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
 import { Text, View, type LayoutChangeEvent } from 'react-native';
 import Animated, {
   useAnimatedStyle,
+  useDerivedValue,
   type SharedValue,
 } from 'react-native-reanimated';
 
 import { DOT_METRICS } from '../logic/belowTempo.ts';
 import {
-  polyDotCentres,
+  polyBarTable,
+  polyCycleOffset,
+  polyDotSize,
   polyLabelPlace,
   polyRatioLabel,
+  polyX,
+  soundingCycle,
+  type PolyRatio,
+  type PolyRowGeometry,
 } from '../logic/polyRow.ts';
 import { dotPalette } from './beatDotStyles.ts';
-
-const HALF_POLY_DOT = metronome.polyDot / 2;
 
 const usePolyStyles = createThemedStyles((theme) => ({
   block: {
@@ -54,33 +61,79 @@ const usePolyStyles = createThemedStyles((theme) => ({
   },
   dot: {
     position: 'absolute',
-    top: 0,
-    width: metronome.polyDot,
-    height: metronome.polyDot,
     borderRadius: radius.circle,
-    borderWidth: metronome.dotBorder,
   },
 }));
 
-interface PolyDotProps {
-  readonly index: number;
+interface PlacedPulse {
   readonly left: number;
+  readonly slot: number;
+  readonly cycle: number;
+}
+
+type PulseColumn = readonly (PlacedPulse | null)[];
+
+function pulseColumns(
+  ratio: PolyRatio,
+  row: PolyRowGeometry,
+  size: number,
+): readonly PulseColumn[] {
+  const bars = polyBarTable(ratio);
+  const count = Math.max(...bars.map((bar) => bar.pulses.length));
+  return Array.from({ length: count }, (_u, index) =>
+    bars.map((bar) => {
+      const pulse = bar.pulses[index];
+      if (pulse === undefined) return null;
+      const centre = polyX(pulse.beat, ratio.beatsPerBar, row);
+      return { left: centre - size / 2, slot: pulse.slot, cycle: pulse.cycle };
+    }),
+  );
+}
+
+interface PolyDotProps {
+  readonly column: PulseColumn;
+  readonly size: number;
+  readonly offset: SharedValue<number>;
+  readonly cycle: SharedValue<number>;
   readonly currentPolyBeat: SharedValue<number>;
 }
 
-function PolyDot({ index, left, currentPolyBeat }: PolyDotProps) {
+function PolyDot({
+  column,
+  size,
+  offset,
+  cycle,
+  currentPolyBeat,
+}: PolyDotProps) {
   const styles = usePolyStyles();
   const { color } = useTheme();
   const palette = useMemo(() => dotPalette(color), [color]);
-  const place = useMemo(() => ({ left }), [left]);
+  const box = useMemo(
+    () => ({ top: (metronome.polyDot - size) / 2, width: size, height: size }),
+    [size],
+  );
   const look = useAnimatedStyle(() => {
-    const sounding = currentPolyBeat.value === index;
+    const pulse = column[offset.value] ?? null;
+    if (pulse === null) return { opacity: 0 };
+    const sounding =
+      pulse.slot === currentPolyBeat.value && pulse.cycle === cycle.value;
+    const ring = pulse.slot === 0;
+    const rest = ring ? TRANSPARENT : palette.fill;
     return {
-      backgroundColor: sounding ? color.text2 : palette.fill,
-      borderColor: sounding ? color.text2 : palette.border,
+      opacity: 1,
+      left: pulse.left,
+      backgroundColor: sounding ? color.text2 : rest,
+      borderColor: sounding || ring ? color.text2 : palette.border,
+      borderWidth: ring ? metronome.dotRing : metronome.dotBorder,
     };
   });
-  return <Animated.View style={[styles.dot, place, look]} />;
+  return <Animated.View style={[styles.dot, box, look]} />;
+}
+
+export interface PolyDotsFrame {
+  readonly currentBeat: SharedValue<number>;
+  readonly currentPolyBeat: SharedValue<number>;
+  readonly polyDownbeatPhase: SharedValue<number>;
 }
 
 interface PolyDotsProps {
@@ -89,7 +142,18 @@ interface PolyDotsProps {
   readonly lineWidth: number;
   readonly areaWidth: number;
   readonly dotSize: number;
-  readonly currentPolyBeat: SharedValue<number>;
+  readonly frame: PolyDotsFrame;
+}
+
+function usePolyFrame(frame: PolyDotsFrame, against: number) {
+  const { currentBeat, polyDownbeatPhase } = frame;
+  const offset = useDerivedValue(() =>
+    polyCycleOffset(polyDownbeatPhase.value, against),
+  );
+  const cycle = useDerivedValue(() =>
+    soundingCycle(currentBeat.value, offset.value, against),
+  );
+  return { offset, cycle };
 }
 
 export function PolyDots({
@@ -98,19 +162,30 @@ export function PolyDots({
   lineWidth,
   areaWidth,
   dotSize,
-  currentPolyBeat,
+  frame,
 }: PolyDotsProps) {
   const styles = usePolyStyles();
+  const storedAgainst = useMetronome((s) => s.polyAgainst);
+  const against = effectivePolyAgainst(storedAgainst, beatsPerBar);
+  const ratio = useMemo(
+    () => ({ polyBeats, against, beatsPerBar }),
+    [polyBeats, against, beatsPerBar],
+  );
+  const row = useMemo(
+    () => ({ lineWidth, dotSize, dotGap: DOT_METRICS.dotGap }),
+    [lineWidth, dotSize],
+  );
+  const size = polyDotSize(ratio, row, metronome.polyDot);
+  const columns = useMemo(
+    () => pulseColumns(ratio, row, size),
+    [ratio, row, size],
+  );
+  const { offset, cycle } = usePolyFrame(frame, against);
   const [label, setLabel] = useState({ width: 0, height: 0 });
   const labelWidth = label.width;
-  const ratio = polyRatioLabel(polyBeats, beatsPerBar);
-  const centres = polyDotCentres(
-    polyBeats,
-    lineWidth,
-    dotSize,
-    DOT_METRICS.dotGap,
-  );
-  const lastDotRight = (centres.at(-1) ?? 0) + HALF_POLY_DOT;
+  const text = polyRatioLabel(ratio);
+  const lastDotRight =
+    Math.max(...columns.flat().map((pulse) => pulse?.left ?? 0)) + size;
   const place = polyLabelPlace({
     labelWidth,
     labelHeight: label.height,
@@ -135,13 +210,13 @@ export function PolyDots({
     const { width, height } = event.nativeEvent.layout;
     setLabel({ width, height });
   }, []);
-  const labelText = <Text style={styles.labelText}>{ratio}</Text>;
+  const labelText = <Text style={styles.labelText}>{text}</Text>;
   return (
     <View
       style={[styles.block, width]}
       accessible
       accessibilityRole="text"
-      accessibilityLabel={`Polyrhythm ${ratio}`}
+      accessibilityLabel={`Polyrhythm ${text}`}
       pointerEvents="none"
     >
       <Text
@@ -149,7 +224,7 @@ export function PolyDots({
         importantForAccessibility="no"
         onLayout={handleLabelLayout}
       >
-        {ratio}
+        {text}
       </Text>
       {place === 'above' ? (
         <View style={styles.aboveLabel}>{labelText}</View>
@@ -158,12 +233,14 @@ export function PolyDots({
         {place === 'above' ? null : (
           <View style={[styles.besideLabel, besidePlace]}>{labelText}</View>
         )}
-        {centres.map((centre, index) => (
+        {columns.map((column, index) => (
           <PolyDot
             key={index}
-            index={index}
-            left={centre - HALF_POLY_DOT}
-            currentPolyBeat={currentPolyBeat}
+            column={column}
+            size={size}
+            offset={offset}
+            cycle={cycle}
+            currentPolyBeat={frame.currentPolyBeat}
           />
         ))}
       </View>

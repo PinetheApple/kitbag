@@ -9,7 +9,8 @@ import {
   type StepDelta,
   Switch,
 } from '@kitbag/core-design';
-import { useMetronome } from '@kitbag/core-state';
+import { KB_POLY_AGAINST_BAR } from '@kitbag/core-native';
+import { effectivePolyAgainst, useMetronome } from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { Text, View } from 'react-native';
 
@@ -21,6 +22,7 @@ import {
   COUNT_IN_MODE_OPTIONS,
   type CountInMode,
 } from '../logic/countIn.ts';
+import { polyAgainstValue } from '../logic/polyRow.ts';
 import type { PracticeField } from '../logic/practiceEntry.ts';
 import { PracticeSection, usePracticeStyles } from './PracticeSection.tsx';
 import { useBarMuteEditor } from './useBarMuteEditor.ts';
@@ -172,12 +174,23 @@ export function PracticeCountIn() {
   );
 }
 
+function againstSpoken(against: number, beatsPerBar: number): string {
+  const count = countLabel(
+    effectivePolyAgainst(against, beatsPerBar),
+    'beat',
+    'beats',
+  );
+  return against === KB_POLY_AGAINST_BAR ? `${count}, the bar` : count;
+}
+
 export function PracticePoly({ onType }: TypeProps) {
   const styles = usePracticeStyles();
   const beatsPerBar = useMetronome((s) => s.beatsPerBar);
   const polyEnabled = useMetronome((s) => s.polyEnabled);
   const polyBeats = useMetronome((s) => s.polyBeats);
+  const polyAgainst = useMetronome((s) => s.polyAgainst);
   const setPoly = useMetronome((s) => s.setPoly);
+  const stepAgainst = useMetronome((s) => s.stepPolyAgainst);
   const handleStep = useCallback(
     (delta: StepDelta) => {
       setPoly(polyEnabled, polyBeats + delta);
@@ -193,6 +206,9 @@ export function PracticePoly({ onType }: TypeProps) {
   const handleTypeCount = useCallback(() => {
     onType('polyBeats');
   }, [onType]);
+  const handleTypeAgainst = useCallback(() => {
+    onType('polyAgainst');
+  }, [onType]);
   return (
     <PracticeSection
       last
@@ -201,15 +217,6 @@ export function PracticePoly({ onType }: TypeProps) {
       heading={
         <>
           <View style={styles.grow} />
-          <StepControl
-            variant="inlineLarge"
-            label="Poly count"
-            value={`${String(polyBeats)} : ${String(beatsPerBar)}`}
-            accessibilityValue={`${String(polyBeats)} against ${String(beatsPerBar)}`}
-            neighbourGapDp={space.controlGap}
-            onStep={handleStep}
-            onValuePress={handleTypeCount}
-          />
           <Switch
             accessibilityLabel="Polyrhythm"
             value={polyEnabled}
@@ -217,6 +224,30 @@ export function PracticePoly({ onType }: TypeProps) {
           />
         </>
       }
-    />
+    >
+      <View style={styles.row}>
+        <Text style={styles.label}>Poly</Text>
+        <StepControl
+          variant="inlineLarge"
+          label="Poly count"
+          value={String(polyBeats)}
+          accessibilityValue={countLabel(polyBeats, 'beat', 'beats')}
+          neighbourGapDp={space.controlGap}
+          onStep={handleStep}
+          onValuePress={handleTypeCount}
+        />
+        <View style={styles.grow} />
+        <Text style={styles.label}>against</Text>
+        <StepControl
+          variant="inlineLarge"
+          label="Against"
+          value={polyAgainstValue(polyAgainst, beatsPerBar)}
+          accessibilityValue={againstSpoken(polyAgainst, beatsPerBar)}
+          neighbourGapDp={space.controlGap}
+          onStep={stepAgainst}
+          onValuePress={handleTypeAgainst}
+        />
+      </View>
+    </PracticeSection>
   );
 }

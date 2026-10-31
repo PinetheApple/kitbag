@@ -124,6 +124,7 @@ export interface BeatDotsFrame {
   readonly barPhase: SharedValue<number>;
   readonly currentBeat: SharedValue<number>;
   readonly currentPolyBeat: SharedValue<number>;
+  readonly polyDownbeatPhase: SharedValue<number>;
   readonly barMuted: SharedValue<number>;
   readonly countingIn: SharedValue<number>;
 }
@@ -234,7 +235,7 @@ export function BeatDots({
             lineWidth={widestLineWidth(lines, dotSize, metrics)}
             areaWidth={width}
             dotSize={dotSize}
-            currentPolyBeat={frame.currentPolyBeat}
+            frame={frame}
           />
         )}
       </Animated.View>

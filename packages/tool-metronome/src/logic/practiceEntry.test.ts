@@ -1,6 +1,8 @@
 import {
   KB_MIN_RAMP_STEP_BPM,
   KB_MUTE_BARS_BOUNDS,
+  KB_POLY_AGAINST_BAR,
+  KB_POLY_AGAINST_BOUNDS,
   KB_POLY_BEATS_BOUNDS,
   KB_RAMP_UNIT,
 } from '@kitbag/core-native';
@@ -33,6 +35,7 @@ const VALUES: PracticeValues = {
   },
   barMute: { enabled: true, playBars: 2, muteBars: 2 },
   polyBeats: 3,
+  polyAgainst: KB_POLY_AGAINST_BAR,
   beatsPerBar: 4,
 };
 
@@ -98,6 +101,27 @@ describe('typing a practice value', () => {
     );
   });
 
+  it('types the against count within the engine range', () => {
+    expect(practiceEntry('polyAgainst', VALUES).value).toBe(4);
+    expect(typeInto('polyAgainst', [2]).polyAgainst).toBe(2);
+    expect(typeInto('polyAgainst', [0]).polyAgainst).toBe(
+      KB_POLY_AGAINST_BOUNDS.min,
+    );
+    expect(typeInto('polyAgainst', [9, 9]).polyAgainst).toBe(
+      KB_POLY_AGAINST_BOUNDS.max,
+    );
+  });
+
+  it('keeps the bar when the bar count is confirmed unchanged', () => {
+    expect(typeInto('polyAgainst', [4]).polyAgainst).toBe(KB_POLY_AGAINST_BAR);
+  });
+
+  it('titles the poly count against the cycle it plays over', () => {
+    expect(
+      practiceEntry('polyBeats', { ...VALUES, polyAgainst: 2 }).title,
+    ).toBe('Poly against 2');
+  });
+
   it('titles each entry so a screen reader can tell them apart', () => {
     const fields: PracticeField[] = [
       'startBpm',
@@ -107,6 +131,7 @@ describe('typing a practice value', () => {
       'playBars',
       'muteBars',
       'polyBeats',
+      'polyAgainst',
     ];
     const titles = fields.map((field) => practiceEntry(field, VALUES).title);
     expect(titles).toEqual([
@@ -117,6 +142,7 @@ describe('typing a practice value', () => {
       'Play bars',
       'Mute bars',
       'Poly against 4',
+      'Against',
     ]);
   });
 });

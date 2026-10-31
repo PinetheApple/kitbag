@@ -1,11 +1,13 @@
 import {
   KB_MIN_RAMP_STEP_BPM,
   KB_MUTE_BARS_BOUNDS,
+  KB_POLY_AGAINST_BOUNDS,
   KB_POLY_BEATS_BOUNDS,
   type KB_RAMP_UNIT,
 } from '@kitbag/core-native';
 import {
   BPM_BOUNDS,
+  effectivePolyAgainst,
   rampIntervalBounds,
   type BarMuteConfig,
   type RampConfig,
@@ -16,7 +18,13 @@ import { RAMP_BPM_ENTRY, withRampBpm, type RampBpmField } from './rampEntry.ts';
 import { rampUnitLabel } from './rampUnit.ts';
 
 export type PracticeField =
-  RampBpmField | 'stepBpm' | 'interval' | 'playBars' | 'muteBars' | 'polyBeats';
+  | RampBpmField
+  | 'stepBpm'
+  | 'interval'
+  | 'playBars'
+  | 'muteBars'
+  | 'polyBeats'
+  | 'polyAgainst';
 
 export const RAMP_STEP_BOUNDS: BpmBounds = {
   min: KB_MIN_RAMP_STEP_BPM,
@@ -27,6 +35,7 @@ export interface PracticeValues {
   readonly ramp: RampConfig;
   readonly barMute: BarMuteConfig;
   readonly polyBeats: number;
+  readonly polyAgainst: number;
   readonly beatsPerBar: number;
 }
 
@@ -48,6 +57,7 @@ export function practiceEntry(
   values: PracticeValues,
 ): PracticeEntry {
   const { ramp, barMute } = values;
+  const against = effectivePolyAgainst(values.polyAgainst, values.beatsPerBar);
   switch (field) {
     case 'startBpm':
     case 'targetBpm':
@@ -91,11 +101,19 @@ export function practiceEntry(
       };
     case 'polyBeats':
       return {
-        title: `Poly against ${String(values.beatsPerBar)}`,
+        title: `Poly against ${String(against)}`,
         confirm: 'Set poly count',
         unit: 'beats',
         bounds: KB_POLY_BEATS_BOUNDS,
         value: values.polyBeats,
+      };
+    case 'polyAgainst':
+      return {
+        title: 'Against',
+        confirm: 'Set against',
+        unit: 'beats',
+        bounds: KB_POLY_AGAINST_BOUNDS,
+        value: against,
       };
   }
 }
@@ -120,5 +138,10 @@ export function withPracticeEntry(
       return { ...values, barMute: { ...barMute, muteBars: typed } };
     case 'polyBeats':
       return { ...values, polyBeats: typed };
+    case 'polyAgainst':
+      return typed ===
+        effectivePolyAgainst(values.polyAgainst, values.beatsPerBar)
+        ? values
+        : { ...values, polyAgainst: typed };
   }
 }

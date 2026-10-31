@@ -1,4 +1,5 @@
 import {
+  KB_POLY_PHASE_NONE,
   KB_RAMP_STATE,
   KB_STOPPED_BEAT,
   KITBAG_HOST_OBJECT_KEY,
@@ -22,6 +23,7 @@ const IDLE_FRAME = {
   barPhase: 0,
   currentBeat: KB_STOPPED_BEAT,
   currentPolyBeat: KB_STOPPED_BEAT,
+  polyDownbeatPhase: KB_POLY_PHASE_NONE,
   countingIn: 0,
   countInBar: NOT_ACTIVE,
   countInBarsTotal: 0,
@@ -37,6 +39,7 @@ export interface MetronomeFrameValues {
   readonly barPhase: SharedValue<number>;
   readonly currentBeat: SharedValue<number>;
   readonly currentPolyBeat: SharedValue<number>;
+  readonly polyDownbeatPhase: SharedValue<number>;
   readonly currentBpm: SharedValue<number>;
   readonly countingIn: SharedValue<number>;
   readonly countInBar: SharedValue<number>;
@@ -62,6 +65,9 @@ export function useMetronomeFrame(
   const barPhase = useSharedValue<number>(IDLE_FRAME.barPhase);
   const currentBeat = useSharedValue<number>(IDLE_FRAME.currentBeat);
   const currentPolyBeat = useSharedValue<number>(IDLE_FRAME.currentPolyBeat);
+  const polyDownbeatPhase = useSharedValue<number>(
+    IDLE_FRAME.polyDownbeatPhase,
+  );
   const currentBpm = useSharedValue(bpm);
   const countingIn = useSharedValue<number>(IDLE_FRAME.countingIn);
   const countInBar = useSharedValue<number>(IDLE_FRAME.countInBar);
@@ -83,6 +89,7 @@ export function useMetronomeFrame(
     barPhase.value = host.bar_phase;
     assign(currentBeat, host.current_beat);
     assign(currentPolyBeat, host.current_poly_beat);
+    assign(polyDownbeatPhase, host.poly_downbeat_phase);
     assign(currentBpm, host.current_bpm);
     assign(countingIn, host.counting_in);
     assign(countInBar, host.count_in_bar);
@@ -101,6 +108,7 @@ export function useMetronomeFrame(
       barPhase.value = IDLE_FRAME.barPhase;
       currentBeat.value = IDLE_FRAME.currentBeat;
       currentPolyBeat.value = IDLE_FRAME.currentPolyBeat;
+      polyDownbeatPhase.value = IDLE_FRAME.polyDownbeatPhase;
       countingIn.value = IDLE_FRAME.countingIn;
       countInBar.value = IDLE_FRAME.countInBar;
       countInBarsTotal.value = IDLE_FRAME.countInBarsTotal;
@@ -117,6 +125,7 @@ export function useMetronomeFrame(
     barPhase,
     currentBeat,
     currentPolyBeat,
+    polyDownbeatPhase,
     countingIn,
     countInBar,
     countInBarsTotal,
@@ -136,6 +145,7 @@ export function useMetronomeFrame(
     barPhase,
     currentBeat,
     currentPolyBeat,
+    polyDownbeatPhase,
     currentBpm,
     countingIn,
     countInBar,

@@ -1,5 +1,6 @@
 import {
   KB_COUNT_IN_OFF,
+  KB_POLY_AGAINST_BAR,
   KB_RAMP_STATE,
   KB_RAMP_UNIT,
 } from '@kitbag/core-native';
@@ -38,6 +39,7 @@ const OFF: PracticeSettings = {
   countIn: { bars: KB_COUNT_IN_OFF, distinct: true, sound: 1 },
   polyEnabled: false,
   polyBeats: 3,
+  polyAgainst: KB_POLY_AGAINST_BAR,
   beatsPerBar: 4,
 };
 
@@ -63,6 +65,12 @@ describe('armed practice summary', () => {
     };
     expect(armedSummary(everything)).toBe(
       'Ramp 100 → 140 · Play 2, mute 2 · Count-in 1 bar · Poly 3:4',
+    );
+  });
+
+  it('reads an explicit poly cycle by its own count', () => {
+    expect(armedSummary({ ...OFF, polyEnabled: true, polyAgainst: 2 })).toBe(
+      'Poly 3:2',
     );
   });
 

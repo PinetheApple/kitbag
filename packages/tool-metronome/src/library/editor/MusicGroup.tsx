@@ -1,4 +1,6 @@
 import {
+  countLabel,
+  EditDivider,
   EditGroup,
   EditRow,
   EditTextInput,
@@ -15,8 +17,10 @@ import {
   withBeats,
   withCycledAccent,
   withNextDenominator,
+  withPolyAgainst,
   withPolyBeats,
 } from '../../logic/presetDraft.ts';
+import { polyAgainstValue } from '../../logic/polyRow.ts';
 import { subdivisionLabel } from '../../logic/subdivision.ts';
 import { BeatLeds } from '../../screen/BeatLeds.tsx';
 
@@ -118,7 +122,7 @@ function AccentsRow({ editor }: { readonly editor: PresetEditor }) {
   );
 }
 
-function PolyRow({ editor }: { readonly editor: PresetEditor }) {
+function PolyRows({ editor }: { readonly editor: PresetEditor }) {
   const { draft, update } = editor;
   const toggle = useCallback(
     (polyEnabled: boolean) => {
@@ -126,25 +130,47 @@ function PolyRow({ editor }: { readonly editor: PresetEditor }) {
     },
     [update],
   );
-  const step = useCallback(
+  const stepPoly = useCallback(
     (delta: StepDelta) => {
       update((d) => withPolyBeats(d, delta));
     },
     [update],
   );
+  const stepAgainst = useCallback(
+    (delta: StepDelta) => {
+      update((d) => withPolyAgainst(d, delta));
+    },
+    [update],
+  );
   return (
-    <EditRow label="Polyrhythm">
+    <>
+      <EditRow label="Polyrhythm">
+        <OnOff on={draft.polyEnabled} label="Polyrhythm" onChange={toggle} />
+      </EditRow>
       {draft.polyEnabled ? (
-        <StepControl
-          variant="inline"
-          label="Polyrhythm beats"
-          value={`${String(draft.polyBeats)}:${String(draft.beatsPerBar)}`}
-          accessibilityValue={`${String(draft.polyBeats)} beats`}
-          onStep={step}
-        />
+        <>
+          <EditDivider />
+          <EditRow label="Poly">
+            <StepControl
+              variant="inline"
+              label="Poly"
+              value={String(draft.polyBeats)}
+              accessibilityValue={countLabel(draft.polyBeats, 'beat', 'beats')}
+              onStep={stepPoly}
+            />
+          </EditRow>
+          <EditDivider />
+          <EditRow label="Against">
+            <StepControl
+              variant="inline"
+              label="Against"
+              value={polyAgainstValue(draft.polyAgainst, draft.beatsPerBar)}
+              onStep={stepAgainst}
+            />
+          </EditRow>
+        </>
       ) : null}
-      <OnOff on={draft.polyEnabled} label="Polyrhythm" onChange={toggle} />
-    </EditRow>
+    </>
   );
 }
 
@@ -189,7 +215,7 @@ export function MusicGroup({ editor }: { readonly editor: PresetEditor }) {
       <SignatureRow editor={editor} />
       <SubdivisionRow editor={editor} />
       <AccentsRow editor={editor} />
-      <PolyRow editor={editor} />
+      <PolyRows editor={editor} />
     </EditGroup>
   );
 }
