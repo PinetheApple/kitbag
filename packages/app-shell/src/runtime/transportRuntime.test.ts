@@ -1,12 +1,17 @@
-import type { TransportShowState } from '@kitbag/core-native';
+import type { TransportEvent, TransportShowState } from '@kitbag/core-native';
 import type { SetlistEntry, SetlistSummary } from '@kitbag/core-state';
-import { libraryStore, metronomeStore } from '@kitbag/core-state';
+import {
+  libraryStore,
+  metronomeStore,
+  SONG_STEP,
+  type SongStep,
+} from '@kitbag/core-state';
 import { describe, expect, it, vi } from 'vitest';
 
 const native = vi.hoisted(() => ({
   transportShow: vi.fn<(state: TransportShowState) => void>(),
   transportHide: vi.fn(),
-  onTransport: vi.fn(),
+  onTransport: vi.fn<(handler: (event: TransportEvent) => void) => void>(),
 }));
 
 // core-state's barrel reaches react-native, expo-haptics and op-sqlite, none of
@@ -67,5 +72,41 @@ describe('transportRuntime', () => {
     libraryStore.setState({ loaded: null });
     expect(native.transportShow).toHaveBeenCalledTimes(sends + 1);
     expect(lastShownSetlist()).toBeNull();
+  });
+
+  it('steps the setlist from the notification, then re-sends the moved song', async () => {
+    await import('./transportRuntime');
+    const handler = native.onTransport.mock.calls[0]?.[0];
+    const stepSong = vi.fn((step: SongStep) => {
+      libraryStore.setState({
+        loaded: loadedAt(step === SONG_STEP.next ? 1 : 0),
+      });
+      return Promise.resolve();
+    });
+    libraryStore.setState({
+      setlists: [summary],
+      entries: { [SETLIST_ID]: entries },
+      loaded: loadedAt(0),
+      stepSong,
+    });
+    metronomeStore.setState({ running: true });
+    const notification = {
+      playback: 'playing',
+      bpm: metronomeStore.getState().bpm,
+      rampRunning: false,
+      practicePlayedMs: 0,
+      practiceStretchStartedAt: 0,
+    };
+
+    handler?.({ ...notification, songStep: 'next' });
+    expect(stepSong).toHaveBeenLastCalledWith(SONG_STEP.next);
+    expect(lastShownSetlist()).toMatchObject({ songTitle: 'Blackbird' });
+
+    handler?.({ ...notification, songStep: 'previous' });
+    expect(stepSong).toHaveBeenLastCalledWith(SONG_STEP.previous);
+    expect(lastShownSetlist()).toMatchObject({ songTitle: 'Intro' });
+
+    handler?.({ ...notification, songStep: null });
+    expect(stepSong).toHaveBeenCalledTimes(2);
   });
 });

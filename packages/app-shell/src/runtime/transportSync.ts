@@ -1,7 +1,9 @@
 import type { TransportEvent } from '@kitbag/core-native';
-import type {
-  MetronomeConfig,
-  TransportSetlistPlace,
+import {
+  SONG_STEP,
+  type MetronomeConfig,
+  type SongStep,
+  type TransportSetlistPlace,
 } from '@kitbag/core-state';
 
 export type TransportSource = Pick<
@@ -88,6 +90,12 @@ export function shownAfterNativeChange(
   return event.rampRunning
     ? followed
     : { ...followed, bpm: event.bpm, rampRunning: false };
+}
+
+export function songStepFor(event: TransportEvent): SongStep | undefined {
+  return Object.entries(SONG_STEP).find(
+    ([name]) => name === event.songStep,
+  )?.[1];
 }
 
 export function storePatchFor(

@@ -1,15 +1,22 @@
 import type { TransportEvent } from '@kitbag/core-native';
-import type { RampConfig } from '@kitbag/core-state';
-import { describe, expect, it } from 'vitest';
+import { SONG_STEP, type RampConfig } from '@kitbag/core-state';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   notificationStepAfterAppChange,
   shownAfterNativeChange,
+  songStepFor,
   storePatchFor,
   transportActive,
   type TransportShown,
   type TransportSource,
 } from './transportSync';
+
+// core-state's barrel reaches react-native, expo-haptics and op-sqlite, none of
+// which load under node; nothing here touches them.
+vi.mock('react-native', () => ({}));
+vi.mock('expo-haptics', () => ({}));
+vi.mock('@op-engineering/op-sqlite', () => ({}));
 
 const ramp: RampConfig = {
   enabled: false,
@@ -52,6 +59,7 @@ const event = (over: Partial<TransportEvent> = {}): TransportEvent => ({
   rampRunning: false,
   practicePlayedMs: 30_000,
   practiceStretchStartedAt: 7_000,
+  songStep: null,
   ...over,
 });
 const pausedShown: TransportShown = {
@@ -189,6 +197,20 @@ describe('shownAfterNativeChange', () => {
     expect(
       shownAfterNativeChange(shown, event({ playback: 'stopped' })),
     ).toBeUndefined();
+  });
+});
+
+describe('songStepFor', () => {
+  it('maps previous and next from the notification to song steps', () => {
+    expect(songStepFor(event({ songStep: 'previous' }))).toBe(
+      SONG_STEP.previous,
+    );
+    expect(songStepFor(event({ songStep: 'next' }))).toBe(SONG_STEP.next);
+  });
+
+  it('has no step for any other event', () => {
+    expect(songStepFor(event())).toBeUndefined();
+    expect(songStepFor(event({ songStep: 'sideways' }))).toBeUndefined();
   });
 });
 
