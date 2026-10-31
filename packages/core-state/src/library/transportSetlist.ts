@@ -1,22 +1,17 @@
 import type { TransportSetlist } from '@kitbag/core-native';
 
-import { activeSetlistOf } from './setlistPosition.ts';
+import { activeSetView } from './activeSet.ts';
 import type { LibraryState } from './store.ts';
 
 export function transportSetlistOf(
   state: Pick<LibraryState, 'loaded' | 'setlists' | 'entries'>,
 ): TransportSetlist | null {
-  const { loaded } = state;
-  const active = activeSetlistOf(state.setlists);
-  if (loaded === null || active?.setlist.id !== loaded.setlistId) return null;
-  const entries = state.entries[active.setlist.id] ?? [];
-  const index = entries.findIndex((entry) => entry.item.id === loaded.itemId);
-  const entry = entries[index];
-  if (entry === undefined) return null;
+  const set = activeSetView(state.setlists, state.entries, state.loaded);
+  if (set?.position === undefined) return null;
+  const song = state.entries[set.id]?.[set.position - 1]?.preset.name ?? '';
   return {
-    setlistName: active.setlist.name,
-    songTitle: entry.preset.name,
-    index,
-    songCount: entries.length,
+    subtitle: `${set.name} · ${song} (${String(set.position)}/${String(set.count)})`,
+    index: set.position - 1,
+    songCount: set.count,
   };
 }

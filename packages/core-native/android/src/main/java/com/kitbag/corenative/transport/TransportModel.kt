@@ -4,25 +4,17 @@ import kotlin.math.roundToInt
 
 enum class Playback { STOPPED, PLAYING, PAUSED }
 
-data class SetlistPosition(
-  val setlistName: String,
-  val songTitle: String,
-  val index: Int,
-  val songCount: Int,
-) {
+data class SetlistPosition(val subtitle: String, val index: Int?, val songCount: Int) {
   init {
-    require(index in 0 until songCount) { "song $index outside a setlist of $songCount" }
+    require(index == null || index in 0 until songCount) {
+      "song $index outside a setlist of $songCount"
+    }
   }
 
   companion object {
-    fun from(
-      setlistName: String?,
-      songTitle: String?,
-      index: Int,
-      songCount: Int,
-    ): SetlistPosition? =
-      if (setlistName == null || index !in 0 until songCount) null
-      else SetlistPosition(setlistName, songTitle.orEmpty(), index, songCount)
+    fun from(subtitle: String?, index: Int?, songCount: Int): SetlistPosition? =
+      if (subtitle == null || (index != null && index !in 0 until songCount)) null
+      else SetlistPosition(subtitle, index, songCount)
   }
 }
 
@@ -96,7 +88,7 @@ class TransportModel(private val minBpm: Double, private val maxBpm: Double) {
       if (hasNext(state)) add(TransportAction.NEXT)
       if (state.playback != Playback.STOPPED) add(TransportAction.STOP)
     }
-    return TransportView(title(state), subtitle(state), actions, sessionActions(actions))
+    return TransportView(title(state), state.setlist?.subtitle, actions, sessionActions(actions))
   }
 
   // System media controls lack room for six; with both neighbours the tempo keys give way.
@@ -138,14 +130,13 @@ class TransportModel(private val minBpm: Double, private val maxBpm: Double) {
 
   private fun hasPrevious(state: TransportState): Boolean = (state.setlist?.index ?: 0) > 0
 
+  // With no current song, Next loads the first one.
   private fun hasNext(state: TransportState): Boolean =
-    state.setlist?.let { it.index < it.songCount - 1 } ?: false
+    state.setlist?.let { (it.index ?: -1) < it.songCount - 1 } ?: false
 
   private fun title(state: TransportState): String =
     "${state.bpm.roundToInt()} BPM · ${state.beatsPerBar}/${state.beatUnit}"
 
-  private fun subtitle(state: TransportState): String? =
-    state.setlist?.let { "${it.setlistName} · ${it.songTitle} (${it.index + 1}/${it.songCount})" }
 
   private companion object {
     const val TEMPO_STEP_BPM = 1.0

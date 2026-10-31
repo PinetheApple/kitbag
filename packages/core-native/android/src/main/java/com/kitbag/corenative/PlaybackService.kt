@@ -140,9 +140,8 @@ class PlaybackService : Service() {
       beatsPerBar = intent.getIntExtra(EXTRA_BEATS_PER_BAR, 0),
       beatUnit = intent.getIntExtra(EXTRA_BEAT_UNIT, 0),
       setlist = SetlistPosition.from(
-        intent.getStringExtra(EXTRA_SETLIST_NAME),
-        intent.getStringExtra(EXTRA_SONG_TITLE),
-        intent.getIntExtra(EXTRA_SONG_INDEX, 0),
+        intent.getStringExtra(EXTRA_SETLIST_SUBTITLE),
+        if (intent.hasExtra(EXTRA_SONG_INDEX)) intent.getIntExtra(EXTRA_SONG_INDEX, 0) else null,
         intent.getIntExtra(EXTRA_SONG_COUNT, 0),
       ),
     )
@@ -320,8 +319,7 @@ class PlaybackService : Service() {
     private const val EXTRA_PLAYING = "playing"
     private const val EXTRA_PRACTICE_PLAYED_MS = "practicePlayedMs"
     private const val EXTRA_PRACTICE_STRETCH_STARTED_AT = "practiceStretchStartedAt"
-    private const val EXTRA_SETLIST_NAME = "setlistName"
-    private const val EXTRA_SONG_TITLE = "songTitle"
+    private const val EXTRA_SETLIST_SUBTITLE = "setlistSubtitle"
     private const val EXTRA_SONG_INDEX = "songIndex"
     private const val EXTRA_SONG_COUNT = "songCount"
 
@@ -353,11 +351,8 @@ class PlaybackService : Service() {
         .putExtra(EXTRA_PRACTICE_PLAYED_MS, practicePlayedMs)
         .putExtra(EXTRA_PRACTICE_STRETCH_STARTED_AT, practiceStretchStartedAt)
       state.setlist?.let {
-        intent
-          .putExtra(EXTRA_SETLIST_NAME, it.setlistName)
-          .putExtra(EXTRA_SONG_TITLE, it.songTitle)
-          .putExtra(EXTRA_SONG_INDEX, it.index)
-          .putExtra(EXTRA_SONG_COUNT, it.songCount)
+        intent.putExtra(EXTRA_SETLIST_SUBTITLE, it.subtitle).putExtra(EXTRA_SONG_COUNT, it.songCount)
+        it.index?.let { index -> intent.putExtra(EXTRA_SONG_INDEX, index) }
       }
       start(context, intent)
     }

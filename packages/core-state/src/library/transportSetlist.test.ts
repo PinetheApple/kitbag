@@ -39,19 +39,21 @@ describe('transportSetlistOf', () => {
     expect(transportSetlistOf(library(loaded))).toBeNull();
   });
 
-  it('places a song mid-setlist', () => {
+  it('places a song mid-setlist under the design subtitle', () => {
     expect(transportSetlistOf(library(loadedAt(1)))).toEqual({
-      setlistName: 'Wedding set',
-      songTitle: 'Blackbird',
+      subtitle: 'Wedding set · Blackbird (2/3)',
       index: 1,
       songCount: 3,
     });
   });
 
   it('places the first and the last song', () => {
-    expect(transportSetlistOf(library(loadedAt(0)))?.index).toBe(0);
-    expect(transportSetlistOf(library(loadedAt(2)))).toMatchObject({
-      songTitle: 'Encore',
+    expect(transportSetlistOf(library(loadedAt(0)))).toMatchObject({
+      subtitle: 'Wedding set · Intro (1/3)',
+      index: 0,
+    });
+    expect(transportSetlistOf(library(loadedAt(2)))).toEqual({
+      subtitle: 'Wedding set · Encore (3/3)',
       index: 2,
       songCount: 3,
     });

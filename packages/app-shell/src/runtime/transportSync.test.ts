@@ -42,8 +42,7 @@ const shown: TransportShown = {
   setlist: null,
 };
 const setlistAt = (index: number) => ({
-  setlistName: 'Wedding set',
-  songTitle: 'Blackbird',
+  subtitle: `Wedding set · Blackbird (${String(index + 1)}/12)`,
   index,
   songCount: 12,
 });

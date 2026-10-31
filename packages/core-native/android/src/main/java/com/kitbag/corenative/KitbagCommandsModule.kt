@@ -55,9 +55,8 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
 
   private fun setlistPosition(setlist: ReadableMap): SetlistPosition? =
     SetlistPosition.from(
-      setlistName = setlist.getString("setlistName"),
-      songTitle = setlist.getString("songTitle"),
-      index = setlist.getInt("index"),
+      subtitle = setlist.getString("subtitle"),
+      index = if (setlist.isNull("index")) null else setlist.getInt("index"),
       songCount = setlist.getInt("songCount"),
     )
 

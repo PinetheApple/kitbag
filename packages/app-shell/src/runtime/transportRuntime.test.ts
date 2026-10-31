@@ -51,15 +51,14 @@ describe('transportRuntime', () => {
     });
     metronomeStore.setState({ running: true });
     expect(lastShownSetlist()).toEqual({
-      setlistName: 'Wedding set',
-      songTitle: 'Intro',
+      subtitle: 'Wedding set · Intro (1/2)',
       index: 0,
       songCount: 2,
     });
 
     libraryStore.setState({ loaded: loadedAt(1) });
     expect(lastShownSetlist()).toMatchObject({
-      songTitle: 'Blackbird',
+      subtitle: 'Wedding set · Blackbird (2/2)',
       index: 1,
     });
 
@@ -95,11 +94,11 @@ describe('transportRuntime', () => {
 
     handler?.({ ...notification, songStep: 'next' });
     expect(stepSong).toHaveBeenLastCalledWith(SONG_STEP.next);
-    expect(lastShownSetlist()).toMatchObject({ songTitle: 'Blackbird' });
+    expect(lastShownSetlist()).toMatchObject({ index: 1 });
 
     handler?.({ ...notification, songStep: 'previous' });
     expect(stepSong).toHaveBeenLastCalledWith(SONG_STEP.previous);
-    expect(lastShownSetlist()).toMatchObject({ songTitle: 'Intro' });
+    expect(lastShownSetlist()).toMatchObject({ index: 0 });
 
     handler?.({ ...notification, songStep: null });
     expect(stepSong).toHaveBeenCalledTimes(2);
@@ -145,7 +144,7 @@ describe('transportRuntime', () => {
       bpm: 90,
       beatsPerBar: 7,
       beatUnit: 8,
-      setlist: { songTitle: 'Blackbird' },
+      setlist: { subtitle: 'Wedding set · Blackbird (2/2)' },
     });
 
     handler?.({ ...notification, playback: 'playing', bpm: card?.bpm ?? 0 });

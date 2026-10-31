@@ -20,9 +20,8 @@ export type TransportEvent = Readonly<{
 }>;
 
 export type TransportSetlist = Readonly<{
-  setlistName: string;
-  songTitle: string;
-  index: Int32;
+  subtitle: string;
+  index: Int32 | null;
   songCount: Int32;
 }>;
 
