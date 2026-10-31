@@ -47,7 +47,7 @@ export interface DragReorder {
   readonly onMove: (from: number, to: number) => void;
 }
 
-function useHandleDrag(reorder: DragReorder) {
+export function useHandleDrag(reorder: DragReorder) {
   const offset = useSharedValue(0);
   const pitch = useSharedValue(0);
   const { index, count, onMove } = reorder;
@@ -68,7 +68,7 @@ function useHandleDrag(reorder: DragReorder) {
   const onLayout = (event: LayoutChangeEvent) => {
     pitch.value = event.nativeEvent.layout.height + space.controlGap;
   };
-  return { pan, style, onLayout };
+  return { pan, style, onLayout, offset };
 }
 
 function useHandleActions(reorder: DragReorder) {

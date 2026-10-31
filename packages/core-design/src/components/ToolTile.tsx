@@ -139,6 +139,7 @@ export interface ToolTileProps {
   readonly subtext: string;
   readonly status: ToolStatus;
   readonly onPress?: (() => void) | undefined;
+  readonly onLongPress?: (() => void) | undefined;
 }
 
 export function ToolTile({
@@ -147,6 +148,7 @@ export function ToolTile({
   subtext,
   status,
   onPress,
+  onLongPress,
 }: ToolTileProps) {
   const styles = useStyles();
   const upcoming = status === 'upcoming';
@@ -157,6 +159,7 @@ export function ToolTile({
       accessibilityState={{ disabled: upcoming }}
       disabled={upcoming}
       onPress={onPress}
+      onLongPress={onLongPress}
       style={[styles.tile, upcoming && styles.upcoming]}
     >
       <Glyph name={icon} style={styles.tileGlyph} />
@@ -196,6 +199,7 @@ export function ToolGrid({ tiles }: ToolGridProps) {
               subtext={tile.subtext}
               status={tile.status}
               onPress={tile.onPress}
+              onLongPress={tile.onLongPress}
             />
           ))}
           {row.length === 1 && row[0]?.size === '1x1' ? (

@@ -40,6 +40,8 @@ export const iconGlyphs = {
   saveInto: 'tray-arrow-down',
   dragHandle: 'drag-horizontal-variant',
   notes: 'pencil-outline',
+  edit: 'pencil-outline',
+  show: 'eye-outline',
   song: 'music-note',
   songs: 'playlist-music',
   metronome: 'metronome',
