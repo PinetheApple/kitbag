@@ -63,6 +63,14 @@ export interface Spec extends TurboModule {
   metronomeStop(): void;
   metronomePause(): void;
 
+  rigClickStart(
+    bpm: Double,
+    subdivision: Int32,
+    startFrame: Double,
+  ): Promise<number>;
+  rigClickStop(): void;
+  rigClickIsActive(): Promise<boolean>;
+
   setTempo(bpm: Double): void;
   setGrid(
     beatTimesSec: readonly Double[],

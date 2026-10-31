@@ -142,6 +142,18 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     nativeMetronomeStop()
   }
 
+  override fun rigClickStart(bpm: Double, subdivision: Double, startFrame: Double, promise: Promise) {
+    promise.resolve(nativeRigClickStart(bpm, subdivision.toInt(), startFrame))
+  }
+
+  override fun rigClickStop() {
+    nativeRigClickStop()
+  }
+
+  override fun rigClickIsActive(promise: Promise) {
+    promise.resolve(nativeRigClickIsActive())
+  }
+
   override fun metronomePause() {
     nativeMetronomePause()
   }
@@ -322,6 +334,9 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private external fun nativeRelease()
   private external fun nativeMetronomeStart(anchorFrame: Double)
   private external fun nativeMetronomeStop()
+  private external fun nativeRigClickStart(bpm: Double, subdivision: Int, startFrame: Double): Int
+  private external fun nativeRigClickStop()
+  private external fun nativeRigClickIsActive(): Boolean
   private external fun nativeMetronomePause()
   private external fun nativeSetTempo(bpm: Double)
   private external fun nativeSetGrid(beatTimesSec: DoubleArray, anchorFrame: Double): Int
