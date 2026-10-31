@@ -29,7 +29,7 @@ constexpr int64_t kPlayFrom = 40000;
 // Due by kGridEpsilon at song frame end - 1, but past the loop's fire limit.
 constexpr double kHeldBeatFrame = kLoopEnd - 1 + 3e-5;
 
-enum class StartMode { kStart, kCountIn, kAnchor, kGrid };
+enum class StartMode : uint8_t { kStart, kCountIn, kAnchor, kGrid };
 
 struct BarPhaseCase {
   const char* label;
@@ -267,7 +267,7 @@ void TestGridPhaseAtLoopEdge() {
   metronome.SetGrid(MakeLoopGrid(), 0, true);
   metronome.SetFollowMixer(true);
   metronome.Start();
-  std::vector<float> buffer(kBlockFrames * kChannels);
+  std::vector<float> buffer(static_cast<size_t>(kBlockFrames) * kChannels);
   const int64_t edge = kLoopEnd - kPlayFrom;
   for (int64_t done = 0; done < edge;) {
     const auto frames =
