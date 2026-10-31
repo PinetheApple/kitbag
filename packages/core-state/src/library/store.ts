@@ -4,7 +4,7 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import { metronomeStore, type MetronomeStore } from '../metronome/store.ts';
 import {
   applyPreset,
-  isLoadedSongEdited,
+  isLoadedSongUnsaved,
   presetFromMetronome,
   type LiveSongFields,
 } from './presetMapping.ts';
@@ -120,7 +120,7 @@ function discardedNow(
   const preset = loadedPresetOf(state);
   if (state.loaded === null || preset === undefined) return null;
   const live = deps.metronome();
-  if (!isLoadedSongEdited(preset, live)) return null;
+  if (!isLoadedSongUnsaved(preset, live)) return null;
   return {
     loaded: state.loaded,
     settings: presetFromMetronome(live),
@@ -266,15 +266,14 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
     itemId: number | null,
     setlistId: number | null,
   ) => {
-    const presetId = preset.id;
     applyPreset(preset, deps.metronome);
     if (setlistId === null || itemId === null) {
-      set({ loaded: { presetId, itemId: null, setlistId: null } });
+      set({ loaded: { presetId: preset.id, itemId: null, setlistId: null } });
       // The stage bar keys off loaded.setlistId, so it hides even if this fails.
       await leaveOrWarn();
       return;
     }
-    set({ loaded: { presetId, itemId, setlistId } });
+    set({ loaded: { presetId: preset.id, itemId, setlistId } });
     try {
       await pin(setlistId, itemId);
     } catch {
@@ -282,7 +281,8 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
     }
   };
   const noteDiscard = () => {
-    set({ discarded: discardedNow(get(), deps) });
+    const discarded = discardedNow(get(), deps);
+    if (discarded !== null) set({ discarded });
   };
   return {
     loadSong: async (presetId: number, itemId?: number, setlistId?: number) => {
@@ -325,7 +325,8 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
       const { discarded } = get();
       if (discarded === null) return;
       const { loaded, settings } = discarded;
-      const preset = get().presets.find((p) => p.id === loaded.presetId);
+      const preset = loadedPresetOf({ presets: get().presets, loaded });
+      set({ discarded: null });
       noteDiscard();
       if (preset === undefined) return;
       await link({ ...preset, ...settings }, loaded.itemId, loaded.setlistId);

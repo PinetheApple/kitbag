@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import type { MetronomeStore } from '../metronome/store.ts';
 import {
   applyPreset,
-  isLoadedSongEdited,
+  isLoadedSongUnsaved,
   presetFromMetronome,
   toBlob,
 } from './presetMapping.ts';
@@ -35,7 +35,7 @@ async function loadedSong(engineBpm?: () => number) {
     return found;
   };
   const edited = () =>
-    isLoadedSongEdited(preset(), fixture.metronome.getState());
+    isLoadedSongUnsaved(preset(), fixture.metronome.getState());
   return { ...fixture, id, preset, edited };
 }
 
@@ -126,7 +126,7 @@ const EDITS: readonly [string, (m: MetronomeStore) => void][] = [
   ],
 ];
 
-describe('isLoadedSongEdited', () => {
+describe('isLoadedSongUnsaved', () => {
   it('is false right after a load', async () => {
     const { edited } = await loadedSong();
     expect(edited()).toBe(false);
@@ -165,6 +165,19 @@ describe('isLoadedSongEdited', () => {
     expect(edited()).toBe(false);
   });
 
+  it('reads a fractional song tempo at the precision the engine plays', async () => {
+    const fractional = 120.5;
+    const { library, metronome, id, edited } = await loadedSong(
+      () => fractional,
+    );
+    await library.getState().savePreset(id, { bpm: fractional });
+    await library.getState().loadSong(id);
+    metronome.getState().start();
+    metronome.getState().stop();
+    expect(metronome.getState().bpm).not.toBe(fractional);
+    expect(edited()).toBe(false);
+  });
+
   it('marks a subdivision change on a 12/8 song', async () => {
     const { library, metronome, id, edited } = await loadedSong();
     metronome.getState().setBeats(12, 8);
@@ -179,9 +192,9 @@ describe('isLoadedSongEdited', () => {
     const live = metronome.getState();
     expect(live.polyAgainst).toBe(KB_POLY_AGAINST_BAR);
     const explicit = { ...preset(), polyAgainst: live.beatsPerBar };
-    expect(isLoadedSongEdited(explicit, live)).toBe(false);
+    expect(isLoadedSongUnsaved(explicit, live)).toBe(false);
     const liveExplicit = { ...live, polyAgainst: live.beatsPerBar };
-    expect(isLoadedSongEdited(preset(), liveExplicit)).toBe(false);
+    expect(isLoadedSongUnsaved(preset(), liveExplicit)).toBe(false);
   });
 });
 

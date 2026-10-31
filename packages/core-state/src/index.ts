@@ -116,7 +116,7 @@ export { transportSetlistOf } from './library/transportSetlist.ts';
 export {
   accentsOf,
   byteList,
-  isLoadedSongEdited,
+  isLoadedSongUnsaved,
   perAccentSoundsOf,
   rampUnitOf,
   toBlob,

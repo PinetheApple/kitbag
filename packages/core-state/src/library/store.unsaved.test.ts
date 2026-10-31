@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { isLoadedSongEdited } from './presetMapping.ts';
+import { isLoadedSongUnsaved } from './presetMapping.ts';
 import { SONG_STEP } from './setlistPosition.ts';
 import { loadedPresetOf } from './store.ts';
 import { setup } from './store.test-helper.ts';
@@ -24,7 +24,7 @@ async function gig() {
   const edited = () => {
     const preset = loadedPresetOf(library.getState());
     return (
-      preset !== undefined && isLoadedSongEdited(preset, metronome.getState())
+      preset !== undefined && isLoadedSongUnsaved(preset, metronome.getState())
     );
   };
   return { ...fixture, setlistId, first, second, opener, edited };
@@ -103,12 +103,24 @@ describe('discarding unsaved changes', () => {
     expect(library.getState().discarded).toBeNull();
   });
 
-  it('drops an older snapshot on the next clean step', async () => {
-    const { library, metronome } = await gig();
+  it('keeps the snapshot through a clean step, so undo still works', async () => {
+    const { library, metronome, first } = await gig();
     metronome.getState().setTempo(EDITED_BPM);
     await library.getState().stepSong(SONG_STEP.next);
+    await library.getState().stepSong(SONG_STEP.next);
+    expect(library.getState().discarded?.loaded.presetId).toBe(first);
+    await library.getState().undoDiscard();
+    expect(library.getState().loaded?.presetId).toBe(first);
+    expect(metronome.getState().bpm).toBe(EDITED_BPM);
+  });
+
+  it('replaces the snapshot when a later step discards changes too', async () => {
+    const { library, metronome, second } = await gig();
+    metronome.getState().setTempo(EDITED_BPM);
+    await library.getState().stepSong(SONG_STEP.next);
+    metronome.getState().setTempo(EDITED_BPM + 1);
     await library.getState().stepSong(SONG_STEP.previous);
-    expect(library.getState().discarded).toBeNull();
+    expect(library.getState().discarded?.loaded.presetId).toBe(second);
   });
 
   it('snapshots on Leave setlist and undo rejoins the setlist', async () => {
@@ -125,14 +137,14 @@ describe('discarding unsaved changes', () => {
   });
 
   it('snapshots on Clear song and on loading another song', async () => {
-    const { library, metronome, second } = await gig();
+    const { library, metronome, first, second } = await gig();
     metronome.getState().setTempo(EDITED_BPM);
     library.getState().clearSong();
     expect(library.getState().discarded).not.toBeNull();
     await library.getState().undoDiscard();
     metronome.getState().setTempo(EDITED_BPM + 1);
     await library.getState().loadSong(second);
-    expect(library.getState().discarded?.loaded.presetId).not.toBe(second);
+    expect(library.getState().discarded?.loaded.presetId).toBe(first);
   });
 
   it('forgets the snapshot when dismissed', async () => {

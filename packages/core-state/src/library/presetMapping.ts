@@ -2,6 +2,7 @@ import type { NewSongPreset, SongPreset } from '@kitbag/core-db';
 import { KB_ACCENT, KB_RAMP_UNIT } from '@kitbag/core-native';
 
 import {
+  roundToEngineBpm,
   isCountInBars,
   normalizeRamp,
   resizeAccents,
@@ -121,7 +122,7 @@ function songSettingsOf(
 ): SongSettings {
   const ramp = rampOf(preset, current.ramp);
   return {
-    bpm: preset.bpm,
+    bpm: roundToEngineBpm(preset.bpm),
     beatsPerBar: preset.beatsPerBar,
     denominator: preset.denominator,
     subdivision: preset.subdivision,
@@ -145,7 +146,7 @@ function songSettingsOf(
 
 function liveSettingsOf(config: MetronomeConfig): SongSettings {
   return {
-    bpm: config.bpm,
+    bpm: roundToEngineBpm(config.bpm),
     beatsPerBar: config.beatsPerBar,
     denominator: config.denominator,
     subdivision: config.subdivision,
@@ -176,7 +177,7 @@ function sameValue(a: unknown, b: unknown): boolean {
 }
 
 // A running ramp moves the live tempo (syncTempoFromEngine), so it is no edit.
-export function isLoadedSongEdited(
+export function isLoadedSongUnsaved(
   preset: SongPreset,
   live: MetronomeConfig,
 ): boolean {
@@ -191,14 +192,18 @@ export function isLoadedSongEdited(
 
 // setTempo switches a ramp off, and switching one off re-reads the engine's
 // tempo, which is stale until the engine catches up; so order by ramp state.
-function applyTempo(song: SongSettings, store: MetronomeStore): void {
-  if (song.ramp.enabled) {
-    store.setTempo(song.bpm);
-    store.setRamp(song.ramp);
+function applyTempo(
+  bpm: number,
+  ramp: RampConfig,
+  store: MetronomeStore,
+): void {
+  if (ramp.enabled) {
+    store.setTempo(bpm);
+    store.setRamp(ramp);
     return;
   }
-  store.setRamp(song.ramp);
-  store.setTempo(song.bpm);
+  store.setRamp(ramp);
+  store.setTempo(bpm);
 }
 
 export function applyPreset(
@@ -216,5 +221,5 @@ export function applyPreset(
   store.setSounds(song.sounds.normal, song.sounds.accent);
   store.setCountIn({ ...store.countIn, bars: song.countInBars });
   store.setBarMute(song.barMute);
-  applyTempo(song, store);
+  applyTempo(preset.bpm, song.ramp, store);
 }
