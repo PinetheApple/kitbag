@@ -13,6 +13,17 @@ data class SetlistPosition(
   init {
     require(index in 0 until songCount) { "song $index outside a setlist of $songCount" }
   }
+
+  companion object {
+    fun from(
+      setlistName: String?,
+      songTitle: String?,
+      index: Int,
+      songCount: Int,
+    ): SetlistPosition? =
+      if (setlistName == null || index !in 0 until songCount) null
+      else SetlistPosition(setlistName, songTitle.orEmpty(), index, songCount)
+  }
 }
 
 data class TransportState(

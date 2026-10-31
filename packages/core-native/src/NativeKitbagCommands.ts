@@ -16,6 +16,7 @@ export type TransportEvent = Readonly<{
   rampRunning: boolean;
   practicePlayedMs: Double;
   practiceStretchStartedAt: Double;
+  songStep: string | null;
 }>;
 
 export type TransportSetlist = Readonly<{

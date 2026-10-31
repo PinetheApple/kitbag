@@ -32,6 +32,22 @@ class TransportModelTest {
   }
 
   @Test
+  fun `a setlist rebuilds from its parts, and absent or out-of-range parts give none`() {
+    assertEquals(song(2), SetlistPosition.from("Wedding set", "Blackbird", 2, songCount = 12))
+    assertNull(SetlistPosition.from(null, "Blackbird", 2, songCount = 12))
+    assertNull(SetlistPosition.from("Wedding set", "Blackbird", 12, songCount = 12))
+    assertNull(SetlistPosition.from("Wedding set", "Blackbird", -1, songCount = 12))
+  }
+
+  @Test
+  fun `a setlist without a song title still places the song`() {
+    assertEquals(
+      SetlistPosition("Wedding set", "", 0, songCount = 1),
+      SetlistPosition.from("Wedding set", null, 0, songCount = 1),
+    )
+  }
+
+  @Test
   fun `no setlist means no subtitle and no previous or next`() {
     val view = model.view(state())
     assertNull(view.subtitle)
