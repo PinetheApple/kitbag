@@ -82,12 +82,31 @@ export const KB_STOPPED_BEAT = -1;
 /** Must equal kHostObjectKey in cpp/KitbagHostObject.h. */
 export const KITBAG_HOST_OBJECT_KEY = '__KitbagHostObject';
 
+/** kb_engine_clock_pair; both fields NaN before the first render callback. */
+export interface EngineClockHost extends Pick<
+  KitbagHostObject,
+  'engine_sample_rate'
+> {
+  /** First engine frame of the latest render callback. */
+  readonly clock_pair_frame: number;
+  /** CLOCK_MONOTONIC ns at that callback's entry. */
+  readonly clock_pair_monotonic_ns: number;
+}
+
 interface HostGlobal {
-  [KITBAG_HOST_OBJECT_KEY]?: KitbagHostObject;
+  [KITBAG_HOST_OBJECT_KEY]?: KitbagHostObject & EngineClockHost;
 }
 
 /** JS-thread setup only; worklets read the global property directly. */
 export function getKitbagHostObject(): KitbagHostObject {
+  return installedHost();
+}
+
+export function getEngineClockHost(): EngineClockHost {
+  return installedHost();
+}
+
+function installedHost(): KitbagHostObject & EngineClockHost {
   const host = (globalThis as HostGlobal)[KITBAG_HOST_OBJECT_KEY];
   if (host === undefined) {
     throw new Error(
