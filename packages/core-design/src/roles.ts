@@ -71,6 +71,7 @@ export const size = {
   stepInlineLarge: 36,
   stepInlineLargeKey: 28,
   segmentLargeOption: 34,
+  segmentEditRowOption: 32,
   chipLarge: 34,
   transportKeySmall: 40,
   numpadKeyLarge: 52,
@@ -144,6 +145,7 @@ export const inset = {
   keyBadgeH: 4,
   stepInlineLargeH: 2,
   sectionLabelH: 2,
+  segmentEditRowOptionH: 10,
 } as const;
 
 export const opacity = {
@@ -228,6 +230,8 @@ export const iconSizes = {
   coachRing: 48,
   practiceHeading: 24,
   stepInlineLargeKey: 18,
+  // The minus glyph's ink is 14/24 of its box; 13 matches an 18px text minus.
+  stepTextGlyphKey: 13,
   chipLarge: 16,
   transportSmall: 20,
   numpadKeyLarge: 24,
@@ -328,6 +332,7 @@ export const textRoles = {
   beatMarker: { family: display, weight: 600, size: 12 },
   polyRatio: { family: display, weight: 600, size: 11, tracking: 0.08 },
   polyStripCaption: { family: display, weight: 500, size: 11 },
+  polyLegend: { family: body, weight: 400, size: 12 },
   stepValueSuffix: { family: display, weight: 500, size: 11 },
   legend: { family: body, weight: 400, size: 12.5 },
   countSquare: { family: display, weight: 700, size: 26, tabular: true },

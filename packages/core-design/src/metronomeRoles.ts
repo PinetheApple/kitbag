@@ -58,6 +58,11 @@ export const metronome = {
   polyBracketBorder: 1.5,
   polyBracketNowBorder: 2,
   polyBracketRadius: 4,
+  polyLegendGap: 14,
+  polyLegendSwatch: 12,
+  polyLegendBracketWidth: 18,
+  polyLegendBracketHeight: 5,
+  polyLegendBracketRadius: 3,
   legendGap: 16,
   legendSwatch: 14,
   legendSwatchBorder: 1.5,
@@ -107,6 +112,7 @@ export const metronomeSheet = {
 
 export const metronomeEditor = {
   subRowIndent: 14,
+  toggleRowMin: 52,
 } as const;
 
 export const wheelPicker = {

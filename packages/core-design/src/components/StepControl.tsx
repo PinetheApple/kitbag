@@ -20,7 +20,8 @@ import {
 import { InlineIcon } from './IconGlyph.tsx';
 
 export type StepDelta = -1 | 1;
-export type StepControlVariant = 'badge' | 'inline' | 'inlineLarge';
+export type StepControlVariant =
+  'badge' | 'inline' | 'inlineLarge' | 'inlineLargeTextGlyph';
 
 const STEP_DOWN: StepDelta = -1;
 const STEP_UP: StepDelta = 1;
@@ -237,6 +238,9 @@ const useStyles = createThemedStyles((theme) => ({
   largeKeyText: {
     fontSize: iconSizes.stepInlineLargeKey,
   },
+  textGlyphKey: {
+    fontSize: iconSizes.stepTextGlyphKey,
+  },
   largeValue: textStyle(textRoles.stepInlineLargeValue),
   suffixed: {
     flexDirection: 'row',
@@ -262,7 +266,8 @@ export function StepControl({
 }: StepControlProps) {
   const styles = useStyles();
   const valueTappable = onValuePress !== undefined;
-  const large = variant === 'inlineLarge';
+  const textGlyph = variant === 'inlineLargeTextGlyph';
+  const large = variant === 'inlineLarge' || textGlyph;
   const inline = variant === 'inline' || large;
   const gaps = neighbourGaps(neighbourGapDp);
   const hitBoxes = large
@@ -292,7 +297,11 @@ export function StepControl({
         <View style={[styles.inlineKey, large && styles.largeKey]}>
           <InlineIcon
             name={glyph}
-            style={[styles.inlineKeyText, large && styles.largeKeyText]}
+            style={[
+              styles.inlineKeyText,
+              large && styles.largeKeyText,
+              textGlyph && styles.textGlyphKey,
+            ]}
           />
         </View>
       </Pressable>

@@ -220,7 +220,7 @@ export function PracticePoly({ onType }: TypeProps) {
       <View style={styles.row}>
         <Text style={styles.label}>Poly</Text>
         <StepControl
-          variant="inlineLarge"
+          variant="inlineLargeTextGlyph"
           label="Poly count"
           value={String(polyBeats)}
           accessibilityValue={countLabel(polyBeats, 'beat', 'beats')}
@@ -231,7 +231,7 @@ export function PracticePoly({ onType }: TypeProps) {
         <View style={styles.grow} />
         <Text style={styles.label}>against</Text>
         <StepControl
-          variant="inlineLarge"
+          variant="inlineLargeTextGlyph"
           label="Against"
           value={againstLabel.value}
           suffix={againstLabel.suffix}
