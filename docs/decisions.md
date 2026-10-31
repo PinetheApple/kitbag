@@ -528,6 +528,18 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   accents apply to off-beat ticks only, since slot 0 is the on-beat click with its own
   per-beat accents, and an accented tick plays the accent sound. **[recorded]**
 
+- **2026-10-31 · Home edit mode (§12, §12.4, §12.6, #113)** — Option B in
+  `design/kitbag-home-arrange.html`: Edit, or a long-press on a tile, opens an Arrange
+  sheet with one row per tool (drag handle, 1×1/2×1 size toggle, hide), and hidden tools
+  sit in a Hidden section with Show. The Home grid never moves while editing. Reorder is
+  handle-only, for the same stage-safety reason as `kitbag-metronome.html:447`: a
+  long-press must not become an accidental reorder. A (launcher-style whole-tile drag) and
+  C (in-place handles with a toolbar) are rejected and kept as reference in
+  `docs/research/mockups/113/`. B has no separate pin: #113's "pin or hide" is covered by
+  order plus hide. The binding
+  file draws the sheet as the shared `Sheet` renders it (padding 14, header gap 12, 36-wide
+  grab bar, the code's scrim). **[user]**
+
 - **2026-10-31 · Explicit save for live edits (§5.4, #212)** — Live edits to a loaded song
   never write it; nothing autosaves, and a visible mark shows unsaved changes until Save.
   This matches what the app already does: only the preset editor's Save and "Save current"
