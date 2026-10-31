@@ -16,6 +16,9 @@ constexpr double kGridEpsilon = 1e-9;
 constexpr double kAccentAmplitude = 0.9;
 constexpr double kBeatAmplitude = 0.6;
 constexpr double kSubdivisionAmplitude = 0.3;
+// About 2.5 dB under an accented beat: audibly apart from it, still far above
+// a plain off-beat.
+constexpr double kAccentedSubdivisionGain = 0.75;
 
 constexpr double kSecondsPerMinute = 60.0;
 constexpr double kMsPerMinute = 60000.0;

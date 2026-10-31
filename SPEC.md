@@ -2213,7 +2213,9 @@ the pattern set for `♬` applies to every song using `♬`. No per-song schema.
 accents subdivision ticks after the first. Slot 0, the on-beat tick, never overrides
 the per-beat accents (accent / normal / muted), and a muted beat silences its
 subdivision ticks, accented or not. An accented tick plays the accent sound's
-accented click, not a louder normal sound; unaccented off-beat ticks are unchanged.
+accented click, not a louder normal sound, at a lower level than an accented beat
+so the two stay distinct (owner, 2026-10-31); unaccented off-beat ticks are
+unchanged.
 
 **As built (#170):** `kb_metronome_set_subdivision_accents(engine, subdivision,
 slot_mask)` sets one row: bit *s* accents slot *s*, bit 0 is ignored, one command

@@ -521,5 +521,6 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   Global subdivision-accent patterns apply to off-beat ticks only: slot 0, the on-beat
   tick, never overrides the per-beat accents (accent / normal / muted), and a muted beat
   silences its accented ticks too. An accented subdivision tick plays the accent sound's
-  accented click, not a louder normal sound; unaccented off-beat ticks keep today's
-  sound. **[user]**
+  accented click, not a louder normal sound, at a lower level than an accented beat
+  (`kAccentedSubdivisionGain`, owner ruling 2026-10-31); unaccented off-beat ticks
+  keep today's sound. **[user]**

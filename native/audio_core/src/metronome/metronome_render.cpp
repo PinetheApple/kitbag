@@ -12,6 +12,7 @@ namespace {
 using metronome_detail::BarFraction;
 using metronome_detail::Clamp;
 using metronome_detail::kAccentAmplitude;
+using metronome_detail::kAccentedSubdivisionGain;
 using metronome_detail::kBeatAmplitude;
 using metronome_detail::kGridEpsilon;
 using metronome_detail::kSecondsPerMinute;
@@ -89,14 +90,12 @@ void Metronome::OnSubdivisionTick(
   if (accents_[beat_in_bar] == Accent::kMuted || BarIsMuted(current_bar_)) {
     return;
   }
-  if (SubdivisionSlotAccented(slot)) {
-    TriggerPreset(accent_sound_, true, sample_rate);
-    return;
-  }
-  const SoundPreset& sound = kSounds[normal_sound_];
+  const bool accented = SubdivisionSlotAccented(slot);
+  const SoundPreset& sound = kSounds[accented ? accent_sound_ : normal_sound_];
   voices_.Trigger(
-      sound.subdivision_hz,
-      kSubdivisionAmplitude,
+      accented ? sound.accent_hz : sound.subdivision_hz,
+      accented ? kAccentAmplitude * kAccentedSubdivisionGain
+               : kSubdivisionAmplitude,
       sound.decay_per_second,
       sample_rate
   );

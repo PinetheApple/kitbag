@@ -12,6 +12,7 @@ using kitbag::Accent;
 constexpr int kBeatsPerBar = 4;
 constexpr int64_t kBarFrames = kBeatsPerBar * kBeatFrames;
 constexpr double kPeakTolerance = 0.05;
+constexpr double kDistinctLevelMargin = 0.1;
 constexpr double kGridIntervalSec = 0.6;
 constexpr int kGridBeats = 12;
 constexpr auto kGridBeatFrames =
@@ -117,6 +118,51 @@ void TestAccentClickWhenSoundsMatch() {
       PitchIs(left, kBeatFrames + kBeatFrames / 2, kBeepAccentHz),
       "sub accents: default sounds, the accented off-beat is the accent click",
       "not the normal sound's subdivision voice made louder"
+  );
+}
+
+struct LevelPeaks {
+  double accented_beat;
+  double accented_off_beat;
+  double plain_off_beat;
+};
+
+LevelPeaks RenderBeepLevelPeaks() {
+  constexpr int kSoundBeep = 0;
+  kitbag::Metronome metronome;
+  metronome.SetSubdivision(4);
+  metronome.SetSubdivisionAccents(4, SlotBit(2));
+  metronome.SetSounds(kSoundBeep, kSoundBeep);
+  metronome.SetAccent(0, Accent::kAccented);
+  metronome.SetTempo(120.0);
+  metronome.Start();
+  const auto left = RenderLeft(metronome, kBeatFrames);
+  const int64_t quarter = kBeatFrames / 4;
+  return {PeakIn(left, 0), PeakIn(left, 2 * quarter), PeakIn(left, quarter)};
+}
+
+void TestAccentedOffBeatSitsBetweenLevels() {
+  const LevelPeaks peaks = RenderBeepLevelPeaks();
+  const bool below_beat =
+      peaks.accented_beat - peaks.accented_off_beat > kDistinctLevelMargin;
+  const bool above_plain =
+      peaks.accented_off_beat - peaks.plain_off_beat > kDistinctLevelMargin;
+  if (!below_beat || !above_plain) {
+    std::fprintf(
+        stderr,
+        "  peaks: accented beat %.3f, accented off-beat %.3f, off-beat %.3f\n",
+        peaks.accented_beat,
+        peaks.accented_off_beat,
+        peaks.plain_off_beat
+    );
+  }
+  Check(
+      below_beat,
+      "sub accents: an accented off-beat is quieter than an accented beat"
+  );
+  Check(
+      above_plain,
+      "sub accents: an accented off-beat is louder than a plain off-beat"
   );
 }
 
@@ -285,6 +331,7 @@ void TestGridSubdivisionsAccented() {
 void RunSubdivisionAccentTests() {
   TestThirdTickOfFourAccented();
   TestAccentClickWhenSoundsMatch();
+  TestAccentedOffBeatSitsBetweenLevels();
   TestSlotZeroAloneChangesNothing();
   TestSlotZeroBesideSlotTwo();
   TestMutedBeatSilencesItsAccents();

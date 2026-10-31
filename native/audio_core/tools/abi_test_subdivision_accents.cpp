@@ -11,6 +11,7 @@ namespace {
 
 using kitbag::Metronome;
 using kitbag::metronome_detail::kAccentAmplitude;
+using kitbag::metronome_detail::kAccentedSubdivisionGain;
 using kitbag::metronome_detail::kSecondsPerMinute;
 using kitbag::metronome_detail::kSubdivisionAmplitude;
 using kitbag_test::Check;
@@ -19,6 +20,8 @@ constexpr double kSlowBpm = 30.0;
 constexpr int32_t kOffBeatSlot = 1;
 constexpr int32_t kOffBeatBit = int32_t{1} << kOffBeatSlot;
 constexpr int32_t kPastLastSlotBit = int32_t{1} << Metronome::kMaxSubdivision;
+constexpr double kAccentedOffBeatPeak =
+    kAccentAmplitude * kAccentedSubdivisionGain;
 
 kb_engine* EngineAt(double bpm, int32_t subdivision) {
   kb_engine* engine = nullptr;
@@ -50,11 +53,14 @@ double OffBeatPeakAfter(int32_t first_mask, int32_t second_mask) {
 
 void TestMaskBounds() {
   Check(
-      Near(OffBeatPeakAfter(0, kOffBeatBit), kAccentAmplitude),
+      Near(OffBeatPeakAfter(0, kOffBeatBit), kAccentedOffBeatPeak),
       "set_subdivision_accents: bit 1 accents the off-beat tick"
   );
   Check(
-      Near(OffBeatPeakAfter(kOffBeatBit, kPastLastSlotBit), kAccentAmplitude),
+      Near(
+          OffBeatPeakAfter(kOffBeatBit, kPastLastSlotBit),
+          kAccentedOffBeatPeak
+      ),
       "set_subdivision_accents: a mask past the last slot is ignored, not cut"
   );
   Check(
