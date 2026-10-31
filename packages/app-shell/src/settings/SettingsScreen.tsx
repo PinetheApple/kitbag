@@ -1,9 +1,12 @@
 import {
+  Chip,
+  createThemedStyles,
   EDIT_ROW_PRESSABLE_GAP,
   EditGroup,
   EditRow,
   EditSwitchRow,
   EditValue,
+  inset,
   SectionHeader,
   SegmentedControl,
   type SegmentOption,
@@ -11,7 +14,7 @@ import {
 import { getAppVersion } from '@kitbag/core-native';
 import { useAppearance, type ThemeChoice } from '@kitbag/core-state';
 import { useCallback, useMemo } from 'react';
-import { Linking, Platform } from 'react-native';
+import { Linking, Platform, View } from 'react-native';
 
 import {
   LICENCE_NAME,
@@ -33,6 +36,11 @@ const THEME_OPTIONS: readonly SegmentOption<ThemeChoice>[] = [
 const THEME_CONTROL_GAPS = { bottom: EDIT_ROW_PRESSABLE_GAP };
 
 const LICENCE_LABEL = 'Licence';
+const CALIBRATE_LABEL = 'Calibrate latency';
+
+const useStyles = createThemedStyles(() => ({
+  chipRow: { flexDirection: 'row', paddingHorizontal: inset.sectionLabelH },
+}));
 const SOURCE_ROW_LABEL = 'Source & issues';
 
 function openUrl(url: string): void {
@@ -51,6 +59,26 @@ function PracticeValue() {
       {`${lead} `}
       <EditValue muted>{detail}</EditValue>
     </EditValue>
+  );
+}
+
+function RigSection({
+  onOpenCalibration,
+}: {
+  readonly onOpenCalibration: () => void;
+}) {
+  const styles = useStyles();
+  return (
+    <>
+      <SectionHeader label="Rig" />
+      <View style={styles.chipRow}>
+        <Chip
+          label={CALIBRATE_LABEL}
+          icon="calibrate"
+          onPress={onOpenCalibration}
+        />
+      </View>
+    </>
   );
 }
 
@@ -158,14 +186,17 @@ function AboutSection({
 export interface SettingsScreenProps {
   readonly onBack: () => void;
   readonly onOpenAttributions: () => void;
+  readonly onOpenCalibration: () => void;
 }
 
 export function SettingsScreen({
   onBack,
   onOpenAttributions,
+  onOpenCalibration,
 }: SettingsScreenProps) {
   return (
     <SettingsFrame title="Settings" onBack={onBack}>
+      <RigSection onOpenCalibration={onOpenCalibration} />
       <DataSection />
       <AppearanceSection />
       <AboutSection onOpenAttributions={onOpenAttributions} />
