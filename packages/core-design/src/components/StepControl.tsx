@@ -47,6 +47,7 @@ const A11Y_ACTIONS_WITH_ACTIVATE = [...A11Y_ACTIONS, { name: 'activate' }];
 export interface StepControlProps {
   readonly label: string;
   readonly value: string;
+  readonly suffix?: string | undefined;
   readonly accessibilityValue?: string;
   readonly onStep: (delta: StepDelta) => void;
   readonly onValuePress?: () => void;
@@ -237,11 +238,21 @@ const useStyles = createThemedStyles((theme) => ({
     fontSize: iconSizes.stepInlineLargeKey,
   },
   largeValue: textStyle(textRoles.stepInlineLargeValue),
+  suffixed: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  suffix: {
+    ...textStyle(textRoles.stepValueSuffix),
+    marginLeft: space.stepSuffixGap,
+    color: theme.color.text2,
+  },
 }));
 
 export function StepControl({
   label,
   value,
+  suffix,
   accessibilityValue,
   onStep,
   onValuePress,
@@ -296,7 +307,7 @@ export function StepControl({
   const valueBoxStyle = inline
     ? styles.inlineValueBox
     : [styles.badgeValueBox, accented && styles.badgeValueBoxAccented];
-  const valueText = (
+  const valueLine = (
     <Text
       style={
         inline
@@ -307,13 +318,23 @@ export function StepControl({
       {value}
     </Text>
   );
+  const valueText =
+    suffix === undefined ? (
+      valueLine
+    ) : (
+      <View style={styles.suffixed}>
+        {valueLine}
+        <Text style={styles.suffix}>{suffix}</Text>
+      </View>
+    );
+  const spokenValue = suffix === undefined ? value : `${value} ${suffix}`;
 
   return (
     <View
       accessible
       accessibilityRole="adjustable"
       accessibilityLabel={label}
-      accessibilityValue={{ text: accessibilityValue ?? value }}
+      accessibilityValue={{ text: accessibilityValue ?? spokenValue }}
       accessibilityActions={
         valueTappable ? A11Y_ACTIONS_WITH_ACTIVATE : A11Y_ACTIONS
       }

@@ -19,6 +19,7 @@ export const space = {
   headstockBottom: 2,
   transportGapWide: 28,
   waveBarGap: 1.5,
+  stepSuffixGap: 3,
 } as const;
 
 export const size = {
@@ -326,6 +327,8 @@ export const textRoles = {
   statusMeta: { family: display, weight: 500, size: 13, tabular: true },
   beatMarker: { family: display, weight: 600, size: 12 },
   polyRatio: { family: display, weight: 600, size: 11, tracking: 0.08 },
+  polyStripCaption: { family: display, weight: 500, size: 11 },
+  stepValueSuffix: { family: display, weight: 500, size: 11 },
   legend: { family: body, weight: 400, size: 12.5 },
   countSquare: { family: display, weight: 700, size: 26, tabular: true },
   keyBadge: { family: display, weight: 700, size: 10.5, tabular: true },
