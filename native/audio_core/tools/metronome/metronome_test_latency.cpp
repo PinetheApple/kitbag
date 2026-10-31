@@ -1,5 +1,5 @@
-// Output-latency compensation (SPEC.md §4.7). The first checks pin defects that
-// reproduced inside the original ±100 ms clamp.
+// Output-latency compensation (SPEC.md §4.7). The ±100 ms cases pin defects that
+// reproduced at that offset.
 #include "metronome/metronome_internal.h"
 #include "metronome_test_support.h"
 
@@ -243,9 +243,9 @@ constexpr double kClampBpm = 120.0;
 double FirstAnchoredClickSeconds(double applied_ms) {
   const double beat_seconds = 60.0 / kClampBpm;
   const double lead = applied_ms / kMsPerSecond;
-  double beat = 0.0;
-  while (beat - kClampSongSeconds - lead < 0.0) beat += beat_seconds;
-  return beat - kClampSongSeconds - lead;
+  const double first_beat =
+      std::ceil((kClampSongSeconds + lead) / beat_seconds) * beat_seconds;
+  return first_beat - kClampSongSeconds - lead;
 }
 
 struct ClampCase {

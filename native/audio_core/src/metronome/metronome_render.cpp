@@ -107,10 +107,9 @@ void Metronome::OnBeatBoundary(int beat_index, uint32_t sample_rate) {
   );
 }
 
-void Metronome::OnSubdivisionTick(int64_t owning_beat, uint32_t sample_rate) {
-  // Speaker-time beat, so a muted beat mutes its subdivisions at the speaker
-  // (#21). Never negative: ticks fire only at position >= 0, whatever the offset.
-  const int beat_in_bar = static_cast<int>(owning_beat % beats_per_bar_);
+void Metronome::OnSubdivisionTick(int64_t speaker_beat, uint32_t sample_rate) {
+  // Mutes with its own speaker-time beat (#21).
+  const int beat_in_bar = static_cast<int>(speaker_beat % beats_per_bar_);
   if (accents_[beat_in_bar] == Accent::kMuted || BarIsMuted(current_bar_)) {
     return;
   }

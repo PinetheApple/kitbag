@@ -21,7 +21,6 @@ constexpr double kPreRollSongSeconds = -1.0;
 constexpr double kPreRollRenderSeconds = 1.5;
 
 struct FreeRun {
-  const char* name;
   double start_bpm;
   double target_bpm = 0.0;
   double step_bpm = kNoRamp;
@@ -39,13 +38,8 @@ struct OffsetPlan {
   int64_t switch_frame;
 };
 
-constexpr FreeRun kDownbeatRun{
-    .name = "120 BPM",
-    .start_bpm = 120.0,
-    .seconds = 4.0
-};
+constexpr FreeRun kDownbeatRun{.start_bpm = 120.0, .seconds = 4.0};
 constexpr FreeRun kRampDown{
-    .name = "bar ramp 211->97",
     .start_bpm = 211.0,
     .target_bpm = 97.0,
     .step_bpm = 19.0,
@@ -54,53 +48,36 @@ constexpr FreeRun kRampDown{
 
 constexpr FreeRun kRuns[] = {
     kRampDown,
-    {.name = "bar ramp 97->211",
-     .start_bpm = 97.0,
-     .target_bpm = 211.0,
-     .step_bpm = 19.0,
-     .seconds = 16.0},
-    {.name = "time ramp 211->97",
-     .start_bpm = 211.0,
+    {.start_bpm = 97.0, .target_bpm = 211.0, .step_bpm = 19.0, .seconds = 16.0},
+    {.start_bpm = 211.0,
      .target_bpm = 97.0,
      .step_bpm = 19.0,
      .interval = 1.3,
      .unit = kRampSeconds,
      .subdivision = 3,
      .seconds = 16.0},
-    {.name = "bar mute 1/1 at 131",
-     .start_bpm = 131.0,
-     .subdivision = 2,
-     .bar_mute = true,
-     .seconds = 16.0},
-    {.name = "bar mute + ramp 211->97",
-     .start_bpm = 211.0,
+    {.start_bpm = 131.0, .subdivision = 2, .bar_mute = true, .seconds = 16.0},
+    {.start_bpm = 211.0,
      .target_bpm = 97.0,
      .step_bpm = 19.0,
      .bar_mute = true,
      .seconds = 24.0},
-    {.name = "poly 3 + ramp 211->97",
-     .start_bpm = 211.0,
+    {.start_bpm = 211.0,
      .target_bpm = 97.0,
      .step_bpm = 19.0,
      .poly = true,
      .seconds = 20.0},
-    {.name = "20 BPM sub 3",
-     .start_bpm = kitbag::kMinBpm,
-     .subdivision = 3,
-     .seconds = 40.0},
-    {.name = "bar ramp 20->39",
-     .start_bpm = kitbag::kMinBpm,
+    {.start_bpm = kitbag::kMinBpm, .subdivision = 3, .seconds = 40.0},
+    {.start_bpm = kitbag::kMinBpm,
      .target_bpm = 39.0,
      .step_bpm = 7.0,
      .seconds = 60.0},
-    {.name = "bar ramp 400->353 sub 4",
-     .start_bpm = kitbag::kMaxBpm,
+    {.start_bpm = kitbag::kMaxBpm,
      .target_bpm = 353.0,
      .step_bpm = 16.0,
      .subdivision = 4,
      .seconds = 8.0},
-    {.name = "400 BPM sub 16",
-     .start_bpm = kitbag::kMaxBpm,
+    {.start_bpm = kitbag::kMaxBpm,
      .subdivision = kitbag::Metronome::kMaxSubdivision,
      .seconds = 6.0},
 };
@@ -171,13 +148,34 @@ int64_t At(const std::vector<int64_t>& frames, size_t index) {
   return index < frames.size() ? frames[index] : -1;
 }
 
+std::string Describe(const FreeRun& run) {
+  char text[64];
+  if (run.step_bpm == kNoRamp) {
+    std::snprintf(text, sizeof text, "%.0f BPM", run.start_bpm);
+  } else {
+    std::snprintf(
+        text,
+        sizeof text,
+        "%s ramp %.0f->%.0f",
+        run.unit == kRampSeconds ? "time" : "bar",
+        run.start_bpm,
+        run.target_bpm
+    );
+  }
+  std::string out = text;
+  if (run.subdivision > 1) out += " sub " + std::to_string(run.subdivision);
+  if (run.bar_mute) out += " + bar mute";
+  if (run.poly) out += " + poly " + std::to_string(kPolyBeats);
+  return out;
+}
+
 std::string Label(const FreeRun& run, const OffsetPlan& plan) {
   char text[128];
   std::snprintf(
       text,
       sizeof text,
       "free run %s, %+.1f -> %+.1f ms",
-      run.name,
+      Describe(run).c_str(),
       plan.start_ms,
       plan.switch_ms
   );
@@ -230,14 +228,11 @@ std::vector<int64_t> RenderPreRollRises(double offset_ms, double seconds) {
 }
 
 std::vector<int64_t>
-ShiftedInRange(const std::vector<int64_t>& frames, int64_t shift) {
+ShiftedWithin(const std::vector<int64_t>& frames, int64_t shift, int64_t end) {
   std::vector<int64_t> shifted;
   for (const int64_t frame : frames) {
     const int64_t moved = frame + shift;
-    if (moved >= 0 &&
-        moved < FramesFor(kPreRollRenderSeconds) - kRiseHoldFrames) {
-      shifted.push_back(moved);
-    }
+    if (moved >= 0 && moved < end) shifted.push_back(moved);
   }
   return shifted;
 }
@@ -267,30 +262,46 @@ std::string PreRollDetail(const PreRollResult& r) {
   return detail;
 }
 
-void ExpectSilentBeforeSongBeatZero(double offset_ms) {
+PreRollResult MeasurePreRoll(double offset_ms) {
   const auto early =
       static_cast<int64_t>(std::lround(offset_ms / kMsPerSecond * kSampleRate));
   const double reference_seconds =
       kPreRollRenderSeconds + std::fabs(offset_ms) / kMsPerSecond;
+  const int64_t end = FramesFor(kPreRollRenderSeconds) - kRiseHoldFrames;
   PreRollResult r;
-  r.want = ShiftedInRange(RenderPreRollRises(0.0, reference_seconds), -early);
-  r.seen =
-      ShiftedInRange(RenderPreRollRises(offset_ms, kPreRollRenderSeconds), 0);
+  r.want =
+      ShiftedWithin(RenderPreRollRises(0.0, reference_seconds), -early, end);
+  r.seen = ShiftedWithin(
+      RenderPreRollRises(offset_ms, kPreRollRenderSeconds),
+      0,
+      end
+  );
   r.index = FirstMismatch(r.want, r.seen);
   r.beat_zero = FramesFor(-kPreRollSongSeconds) - early;
-  const bool starts_on_beat_zero =
-      !r.seen.empty() && std::llabs(r.seen[0] - r.beat_zero) <= kFrameSlack;
+  return r;
+}
+
+std::string PreRollLabel(double offset_ms) {
   char label[96];
   std::snprintf(
       label,
       sizeof label,
-      "pre-roll anchor 400 BPM sub 16, %+.1f ms: silent until song beat 0",
+      "pre-roll anchor %.0f BPM sub %d, %+.1f ms: silent until song beat 0",
+      kitbag::kMaxBpm,
+      kitbag::Metronome::kMaxSubdivision,
       offset_ms
   );
+  return label;
+}
+
+void ExpectSilentBeforeSongBeatZero(double offset_ms) {
+  const PreRollResult r = MeasurePreRoll(offset_ms);
+  const bool starts_on_beat_zero =
+      !r.seen.empty() && std::llabs(r.seen[0] - r.beat_zero) <= kFrameSlack;
   CheckCase(
       starts_on_beat_zero && r.seen.size() == r.want.size() &&
           r.index == r.want.size(),
-      label,
+      PreRollLabel(offset_ms),
       PreRollDetail(r).c_str()
   );
 }
