@@ -1,7 +1,5 @@
 package com.kitbag.corenative.transport
 
-enum class Card { NONE, METRONOME, SONG }
-
 enum class SessionButton(val song: SongAction?, val metronome: TransportAction?) {
   PLAY(SongAction.PLAY, TransportAction.PLAY),
   PAUSE(SongAction.PAUSE, TransportAction.PAUSE),
@@ -13,29 +11,29 @@ enum class SessionButton(val song: SongAction?, val metronome: TransportAction?)
 }
 
 sealed interface CardEvent {
-  data object MetronomeShow : CardEvent
+  data object MetronomeShown : CardEvent
 
-  data class MetronomeTransport(val action: String?) : CardEvent
+  data class MetronomeTapped(val action: String?) : CardEvent
 
-  data object MetronomeHide : CardEvent
+  data object MetronomeHidden : CardEvent
 
   data object MetronomeStopped : CardEvent
 
-  data object SongShow : CardEvent
+  data object SongShown : CardEvent
 
   data class SongTapped(val action: String?) : CardEvent
 
-  data object SongHide : CardEvent
+  data object SongHidden : CardEvent
 
   data object SongStopped : CardEvent
 
-  data object Unrecognised : CardEvent
+  data object StartUnrecognised : CardEvent
 
-  data class SessionPress(val button: SessionButton) : CardEvent
+  data class SessionPressed(val button: SessionButton) : CardEvent
 
-  data class SessionSeek(val positionMillis: Long) : CardEvent
+  data class SessionSeeked(val positionMillis: Long) : CardEvent
 
-  data class SessionCustom(val action: String) : CardEvent
+  data class SessionCustomPressed(val action: String) : CardEvent
 }
 
 sealed interface CardEffect {
@@ -43,7 +41,7 @@ sealed interface CardEffect {
 
   data object ShowMetronome : CardEffect
 
-  data class Metronome(val action: TransportAction) : CardEffect
+  data class MetronomeControl(val action: TransportAction) : CardEffect
 
   data object ShowSong : CardEffect
 
@@ -57,38 +55,54 @@ sealed interface CardEffect {
 }
 
 class CardRouting {
-  var active: Card = Card.NONE
-    private set
+  private var songShowing = false
 
-  private val songShowing: Boolean
-    get() = active == Card.SONG
+  fun on(event: CardEvent): CardEffect = if (songShowing) whileSong(event) else withoutSong(event)
 
-  fun on(event: CardEvent): CardEffect =
+  private fun whileSong(event: CardEvent): CardEffect =
     when (event) {
-      CardEvent.MetronomeShow -> if (songShowing) CardEffect.None else become(Card.METRONOME, CardEffect.ShowMetronome)
-      is CardEvent.MetronomeTransport ->
-        if (songShowing) CardEffect.None else metronome(event.action?.let(TransportAction::named))
-      CardEvent.MetronomeHide -> if (songShowing) CardEffect.None else become(Card.NONE, CardEffect.RemoveCard)
-      CardEvent.MetronomeStopped -> become(Card.NONE, CardEffect.RemoveCard)
-      CardEvent.SongShow -> become(Card.SONG, CardEffect.ShowSong)
-      is CardEvent.SongTapped ->
-        if (songShowing) song(event.action?.let(SongAction::named)) else become(Card.NONE, CardEffect.RemoveCard)
-      CardEvent.SongHide -> if (songShowing) become(Card.NONE, CardEffect.EndSong) else CardEffect.None
-      CardEvent.SongStopped -> become(Card.NONE, CardEffect.EndSong)
-      CardEvent.Unrecognised -> CardEffect.RemoveCard
-      is CardEvent.SessionPress -> if (songShowing) song(event.button.song) else metronome(event.button.metronome)
-      is CardEvent.SessionSeek -> if (songShowing) CardEffect.SeekSong(event.positionMillis) else CardEffect.None
-      is CardEvent.SessionCustom ->
-        if (songShowing) song(SongAction.named(event.action)) else metronome(TransportAction.named(event.action))
+      CardEvent.MetronomeShown -> CardEffect.None
+      is CardEvent.MetronomeTapped -> CardEffect.None
+      CardEvent.MetronomeHidden -> CardEffect.None
+      CardEvent.MetronomeStopped -> songEnded(CardEffect.RemoveCard)
+      CardEvent.SongShown -> CardEffect.ShowSong
+      is CardEvent.SongTapped -> song(event.action?.let(SongAction::named))
+      CardEvent.SongHidden -> songEnded(CardEffect.EndSong)
+      CardEvent.SongStopped -> songEnded(CardEffect.EndSong)
+      CardEvent.StartUnrecognised -> CardEffect.RemoveCard
+      is CardEvent.SessionPressed -> song(event.button.song)
+      is CardEvent.SessionSeeked -> CardEffect.SeekSong(event.positionMillis)
+      is CardEvent.SessionCustomPressed -> song(SongAction.named(event.action))
     }
 
-  private fun become(card: Card, effect: CardEffect): CardEffect {
-    active = card
+  private fun withoutSong(event: CardEvent): CardEffect =
+    when (event) {
+      CardEvent.MetronomeShown -> CardEffect.ShowMetronome
+      is CardEvent.MetronomeTapped -> metronome(event.action?.let(TransportAction::named))
+      CardEvent.MetronomeHidden -> CardEffect.RemoveCard
+      CardEvent.MetronomeStopped -> CardEffect.RemoveCard
+      CardEvent.SongShown -> songStarted()
+      is CardEvent.SongTapped -> CardEffect.RemoveCard
+      CardEvent.SongHidden -> CardEffect.None
+      CardEvent.SongStopped -> CardEffect.EndSong
+      CardEvent.StartUnrecognised -> CardEffect.RemoveCard
+      is CardEvent.SessionPressed -> metronome(event.button.metronome)
+      is CardEvent.SessionSeeked -> CardEffect.None
+      is CardEvent.SessionCustomPressed -> metronome(TransportAction.named(event.action))
+    }
+
+  private fun songStarted(): CardEffect {
+    songShowing = true
+    return CardEffect.ShowSong
+  }
+
+  private fun songEnded(effect: CardEffect): CardEffect {
+    songShowing = false
     return effect
   }
 
   private fun metronome(action: TransportAction?): CardEffect =
-    action?.let { CardEffect.Metronome(it) } ?: CardEffect.None
+    action?.let { CardEffect.MetronomeControl(it) } ?: CardEffect.None
 
   private fun song(action: SongAction?): CardEffect =
     action?.let { CardEffect.SongControl(it) } ?: CardEffect.None

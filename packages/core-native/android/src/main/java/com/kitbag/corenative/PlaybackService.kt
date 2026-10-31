@@ -75,21 +75,21 @@ class PlaybackService : Service() {
 
   private fun event(intent: Intent?): CardEvent =
     when (intent?.action) {
-      ACTION_SHOW -> CardEvent.MetronomeShow
-      ACTION_TRANSPORT -> CardEvent.MetronomeTransport(intent.getStringExtra(EXTRA_ACTION))
-      ACTION_HIDE -> CardEvent.MetronomeHide
-      ACTION_SONG_SHOW -> CardEvent.SongShow
+      ACTION_SHOW -> CardEvent.MetronomeShown
+      ACTION_TRANSPORT -> CardEvent.MetronomeTapped(intent.getStringExtra(EXTRA_ACTION))
+      ACTION_HIDE -> CardEvent.MetronomeHidden
+      ACTION_SONG_SHOW -> CardEvent.SongShown
       ACTION_SONG -> CardEvent.SongTapped(intent.getStringExtra(EXTRA_ACTION))
-      ACTION_SONG_HIDE -> CardEvent.SongHide
-      else -> CardEvent.Unrecognised
+      ACTION_SONG_HIDE -> CardEvent.SongHidden
+      else -> CardEvent.StartUnrecognised
     }
 
-  private fun perform(effect: CardEffect, intent: Intent? = null) {
+  private fun perform(effect: CardEffect, intent: Intent?) {
     when (effect) {
       CardEffect.None -> Unit
-      CardEffect.ShowMetronome -> intent?.let(::show)
-      is CardEffect.Metronome -> handle(effect.action)
-      CardEffect.ShowSong -> intent?.let(::showSong)
+      CardEffect.ShowMetronome -> intent?.let { show(it) }
+      is CardEffect.MetronomeControl -> handle(effect.action)
+      CardEffect.ShowSong -> intent?.let { showSong(it) }
       is CardEffect.SongControl -> song?.handle(effect.action)
       is CardEffect.SeekSong -> song?.seekTo(effect.positionMillis)
       CardEffect.EndSong -> endSong()
@@ -97,7 +97,7 @@ class PlaybackService : Service() {
     }
   }
 
-  private fun route(event: CardEvent) = perform(routing.on(event))
+  private fun route(event: CardEvent) = perform(routing.on(event), null)
 
   private fun showSong(intent: Intent) {
     clock.removeCallbacks(tick)
@@ -264,23 +264,24 @@ class PlaybackService : Service() {
     )
 
   private inner class SessionCallback : MediaSessionCompat.Callback() {
-    override fun onPlay() = route(CardEvent.SessionPress(SessionButton.PLAY))
+    override fun onPlay() = route(CardEvent.SessionPressed(SessionButton.PLAY))
 
-    override fun onPause() = route(CardEvent.SessionPress(SessionButton.PAUSE))
+    override fun onPause() = route(CardEvent.SessionPressed(SessionButton.PAUSE))
 
-    override fun onStop() = route(CardEvent.SessionPress(SessionButton.STOP))
+    override fun onStop() = route(CardEvent.SessionPressed(SessionButton.STOP))
 
-    override fun onSkipToPrevious() = route(CardEvent.SessionPress(SessionButton.PREVIOUS))
+    override fun onSkipToPrevious() = route(CardEvent.SessionPressed(SessionButton.PREVIOUS))
 
-    override fun onSkipToNext() = route(CardEvent.SessionPress(SessionButton.NEXT))
+    override fun onSkipToNext() = route(CardEvent.SessionPressed(SessionButton.NEXT))
 
-    override fun onRewind() = route(CardEvent.SessionPress(SessionButton.REWIND))
+    override fun onRewind() = route(CardEvent.SessionPressed(SessionButton.REWIND))
 
-    override fun onFastForward() = route(CardEvent.SessionPress(SessionButton.FAST_FORWARD))
+    override fun onFastForward() = route(CardEvent.SessionPressed(SessionButton.FAST_FORWARD))
 
-    override fun onSeekTo(pos: Long) = route(CardEvent.SessionSeek(pos))
+    override fun onSeekTo(pos: Long) = route(CardEvent.SessionSeeked(pos))
 
-    override fun onCustomAction(action: String, extras: Bundle?) = route(CardEvent.SessionCustom(action))
+    override fun onCustomAction(action: String, extras: Bundle?) =
+      route(CardEvent.SessionCustomPressed(action))
   }
 
   companion object {
