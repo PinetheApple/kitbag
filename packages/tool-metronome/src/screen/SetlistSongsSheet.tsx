@@ -7,6 +7,7 @@ import {
   mixHex,
   metronome,
   Sheet,
+  SheetHint,
   size,
   space,
   textRoles,
@@ -18,7 +19,7 @@ import {
   type ActiveSet,
   type SetlistEntry,
 } from '@kitbag/core-state';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import {
@@ -26,6 +27,7 @@ import {
   songListRows,
   type SongListRow,
 } from '../logic/songList.ts';
+import { type ErrorSetter } from '../library/sheets.tsx';
 import { nowRowA11yLabel } from '../logic/setlistChip.ts';
 import { useSheetStyles } from './sheetStyles.ts';
 import {
@@ -84,12 +86,16 @@ const useStyles = createThemedStyles((theme) => ({
 interface SongRowProps {
   readonly row: SongListRow;
   readonly onPick: (row: SongListRow) => void;
+  readonly onSaveError: ErrorSetter;
 }
 
-function SongRow({ row, onPick }: SongRowProps) {
+function SongRow({
+  row,
+  onPick,
+  onSaveError,
+  unsaved,
+}: SongRowProps & { readonly unsaved: boolean }) {
   const styles = useStyles();
-  const loadedUnsaved = useLoadedSongUnsaved();
-  const unsaved = row.now && loadedUnsaved;
   const handlePress = useCallback(() => {
     onPick(row);
   }, [onPick, row]);
@@ -112,7 +118,7 @@ function SongRow({ row, onPick }: SongRowProps) {
         </Text>
         {unsaved ? <UnsavedDot /> : null}
       </View>
-      {unsaved ? <NowRowActions /> : null}
+      {unsaved ? <NowRowActions onError={onSaveError} /> : null}
       {row.now ? (
         <Badge tone="accent" variant="filled" label="NOW" />
       ) : (
@@ -120,6 +126,11 @@ function SongRow({ row, onPick }: SongRowProps) {
       )}
     </Pressable>
   );
+}
+
+function NowSongRow(props: SongRowProps) {
+  const unsaved = useLoadedSongUnsaved();
+  return <SongRow {...props} unsaved={unsaved} />;
 }
 
 export interface SetlistSongsSheetProps {
@@ -140,6 +151,7 @@ export function SetlistSongsSheet({
   const loadedItemId = useLibrary((s) => s.loaded?.itemId ?? null);
   const loadSong = useLibrary((s) => s.loadSong);
   const leaveSetlist = useLibrary((s) => s.leaveSetlist);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const rows = useMemo(
     () => songListRows(entries, loadedItemId),
     [entries, loadedItemId],
@@ -166,10 +178,26 @@ export function SetlistSongsSheet({
     >
       <Text style={sheetStyles.songHint}>{songListHint(set)}</Text>
       <View>
-        {rows.map((row) => (
-          <SongRow key={row.itemId} row={row} onPick={handlePick} />
-        ))}
+        {rows.map((row) =>
+          row.now ? (
+            <NowSongRow
+              key={row.itemId}
+              row={row}
+              onPick={handlePick}
+              onSaveError={setSaveError}
+            />
+          ) : (
+            <SongRow
+              key={row.itemId}
+              row={row}
+              onPick={handlePick}
+              onSaveError={setSaveError}
+              unsaved={false}
+            />
+          ),
+        )}
       </View>
+      {saveError === null ? null : <SheetHint>{saveError}</SheetHint>}
       <Button
         variant="ghost"
         size="target"

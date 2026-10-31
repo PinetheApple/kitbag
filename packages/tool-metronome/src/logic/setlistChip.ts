@@ -102,8 +102,10 @@ export function stepA11yLabel(
   return target === undefined ? name : `${name}, ${target.preset.name}`;
 }
 
+export type NamedSong = Pick<SongPreset, 'id' | 'name'>;
+
 export function loadedSongName(
-  presets: readonly SongPreset[],
+  presets: readonly NamedSong[],
   loaded: LoadedSong | null,
 ): string | undefined {
   if (loaded === null) return undefined;

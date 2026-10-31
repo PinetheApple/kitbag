@@ -1,15 +1,21 @@
 import { SNACKBAR_DURATION_MS } from '@kitbag/core-design';
-import type { DiscardedChanges, SongPreset } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
-import { unsavedSnackbarView } from './unsavedSnackbar.ts';
+import type { NamedSong } from './setlistChip.ts';
+import { unsavedSnackbarView, type DiscardedSong } from './unsavedSnackbar.ts';
 
 const DISCARDED_AT = 1_000;
-const presets = [{ id: 1, name: 'Ballad in G' }] as unknown as SongPreset[];
-const discarded = {
-  loaded: { presetId: 1, itemId: 4, setlistId: 2 },
-  at: DISCARDED_AT,
-} as unknown as DiscardedChanges;
+
+function song(id: number, name: string): NamedSong {
+  return { id, name };
+}
+
+function discardedSong(presetId: number, at: number): DiscardedSong {
+  return { loaded: { presetId, itemId: 4, setlistId: 2 }, at };
+}
+
+const presets = [song(1, 'Ballad in G')];
+const discarded = discardedSong(1, DISCARDED_AT);
 
 describe('unsavedSnackbarView', () => {
   it('names the song for the full duration right after the discard', () => {
@@ -19,6 +25,13 @@ describe('unsavedSnackbarView', () => {
     });
   });
 
+  it('runs the full duration when the app was already visible', () => {
+    const earlier = DISCARDED_AT - SNACKBAR_DURATION_MS;
+    expect(unsavedSnackbarView(discarded, presets, earlier)?.timeLeftMs).toBe(
+      SNACKBAR_DURATION_MS,
+    );
+  });
+
   it('shows only what is left when the app comes back mid-window', () => {
     const half = SNACKBAR_DURATION_MS / 2;
     expect(
@@ -26,7 +39,7 @@ describe('unsavedSnackbarView', () => {
     ).toBe(half);
   });
 
-  it('shows nothing once the window has passed', () => {
+  it('shows nothing when the app comes back after the window', () => {
     const late = DISCARDED_AT + SNACKBAR_DURATION_MS;
     expect(unsavedSnackbarView(discarded, presets, late)).toBeUndefined();
   });

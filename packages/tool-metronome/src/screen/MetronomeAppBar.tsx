@@ -221,20 +221,27 @@ function SongChipFace({
 
 interface SongChipProps {
   readonly text: SongChipText;
-  readonly label: (unsaved: boolean) => string;
+  readonly label: string;
   readonly hint: string;
   readonly stage: boolean;
+  readonly unsaved: boolean;
   readonly onPress: () => void;
 }
 
-function SongChip({ text, label, hint, stage, onPress }: SongChipProps) {
+function SongChip({
+  text,
+  label,
+  hint,
+  stage,
+  unsaved,
+  onPress,
+}: SongChipProps) {
   const styles = useStyles();
-  const unsaved = useLoadedSongUnsaved();
   const face = [styles.songChip, stage ? styles.stageChip : styles.plainChip];
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={label(unsaved)}
+      accessibilityLabel={label}
       accessibilityHint={hint}
       style={stage ? face : styles.plainChipHit}
       onPress={onPress}
@@ -306,10 +313,7 @@ function StageBar({ context, bottomInset, onBack }: StageBarProps) {
   const handleCloseList = useCallback(() => {
     setListOpen(false);
   }, []);
-  const chipLabel = useCallback(
-    (unsaved: boolean) => stageChipA11yLabel(song, set, unsaved),
-    [song, set],
-  );
+  const unsaved = useLoadedSongUnsaved();
   return (
     <View style={[styles.bar, styles.stageBar]}>
       {onBack === undefined ? null : <BackButton onBack={onBack} />}
@@ -324,8 +328,9 @@ function StageBar({ context, bottomInset, onBack }: StageBarProps) {
       <SongChip
         stage
         text={stageChipText(song, set)}
-        label={chipLabel}
+        label={stageChipA11yLabel(song, set, unsaved)}
         hint="Opens the song list"
+        unsaved={unsaved}
         onPress={handleOpenList}
       />
       <BarIconButton
@@ -367,11 +372,7 @@ function PlainBar({
   const handleCloseSong = useCallback(() => {
     setSongOpen(false);
   }, []);
-  const chipLabel = useCallback(
-    (unsaved: boolean) =>
-      song === undefined ? '' : soloChipA11yLabel(song, unsaved),
-    [song],
-  );
+  const unsaved = useLoadedSongUnsaved();
   const text = soloChipText(song);
   return (
     <View style={styles.bar}>
@@ -383,8 +384,9 @@ function PlainBar({
         <SongChip
           stage={false}
           text={text}
-          label={chipLabel}
+          label={soloChipA11yLabel(text.title, unsaved)}
           hint="Opens the song"
+          unsaved={unsaved}
           onPress={handleOpenSong}
         />
       )}

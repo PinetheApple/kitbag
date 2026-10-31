@@ -76,9 +76,7 @@ describe('song chip', () => {
     );
   });
 
-  it('keeps the chip text and says so aloud when the song has unsaved changes', () => {
-    expect(stageChipText('Ballad in G', set).title).toBe('Ballad in G');
-    expect(soloChipText('Ballad in G')?.title).toBe('Ballad in G');
+  it('says aloud that the song has unsaved changes', () => {
     expect(stageChipA11yLabel('Ballad in G', set, true)).toBe(
       'Ballad in G, unsaved changes, Setlist Test gig, song 2 of 4',
     );

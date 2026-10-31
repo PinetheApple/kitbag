@@ -8,6 +8,7 @@ import {
   metronome,
   metronomeSheet,
   minTouchTargetDp,
+  SheetHint,
   size,
   space,
   textRoles,
@@ -16,14 +17,15 @@ import {
   type IconName,
 } from '@kitbag/core-design';
 import {
-  isLoadedSongEdited,
+  isLoadedSongUnsaved,
   loadedPresetOf,
   useLibrary,
   useMetronome,
 } from '@kitbag/core-state';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import { guarded, type ErrorSetter } from '../library/sheets.tsx';
 import { UNSAVED_CHANGES } from '../logic/setlistChip.ts';
 
 const ROW_ROOM = (metronomeSheet.songRow - metronomeSheet.nowAction) / 2;
@@ -89,7 +91,7 @@ const useStyles = createThemedStyles((theme) => ({
 export function useLoadedSongUnsaved(): boolean {
   const preset = useLibrary(loadedPresetOf);
   return useMetronome(
-    (live) => preset !== undefined && isLoadedSongEdited(preset, live),
+    (live) => preset !== undefined && isLoadedSongUnsaved(preset, live),
   );
 }
 
@@ -108,12 +110,14 @@ export function UnsavedNote() {
   );
 }
 
-function useSaveRevert() {
+export const SAVE_FAILED = 'Could not save the song. Try again.';
+
+function useSaveRevert(onError: ErrorSetter) {
   const save = useLibrary((s) => s.saveLoadedSong);
   const revert = useLibrary((s) => s.revertLoadedSong);
   const handleSave = useCallback(() => {
-    void save();
-  }, [save]);
+    void guarded(onError, SAVE_FAILED, save);
+  }, [onError, save]);
   return { handleSave, revert };
 }
 
@@ -156,8 +160,8 @@ const SAVE = {
   spoken: 'Save changes to the song',
 } as const;
 
-export function NowRowActions() {
-  const { handleSave, revert } = useSaveRevert();
+export function NowRowActions({ onError }: { readonly onError: ErrorSetter }) {
+  const { handleSave, revert } = useSaveRevert(onError);
   return (
     <>
       <RowAction {...REVERT} primary={false} onPress={revert} />
@@ -168,27 +172,31 @@ export function NowRowActions() {
 
 export function SheetSaveRevert() {
   const styles = useStyles();
-  const { handleSave, revert } = useSaveRevert();
+  const [error, setError] = useState<string | null>(null);
+  const { handleSave, revert } = useSaveRevert(setError);
   return (
-    <View style={styles.sheetActions}>
-      <Button
-        variant="ghost"
-        size="sheet"
-        icon={REVERT.icon}
-        label={REVERT.label}
-        accessibilityLabel={REVERT.spoken}
-        fill
-        onPress={revert}
-      />
-      <Button
-        variant="primary"
-        size="sheet"
-        icon={SAVE.icon}
-        label={SAVE.label}
-        accessibilityLabel={SAVE.spoken}
-        fill
-        onPress={handleSave}
-      />
-    </View>
+    <>
+      <View style={styles.sheetActions}>
+        <Button
+          variant="ghost"
+          size="sheet"
+          icon={REVERT.icon}
+          label={REVERT.label}
+          accessibilityLabel={REVERT.spoken}
+          fill
+          onPress={revert}
+        />
+        <Button
+          variant="primary"
+          size="sheet"
+          icon={SAVE.icon}
+          label={SAVE.label}
+          accessibilityLabel={SAVE.spoken}
+          fill
+          onPress={handleSave}
+        />
+      </View>
+      {error === null ? null : <SheetHint>{error}</SheetHint>}
+    </>
   );
 }
