@@ -4,30 +4,30 @@ import type { StoredRowFiles } from './missingRows.ts';
 
 export type StoredFilesRecords = Pick<
   SongLibraryRepository,
-  'list' | 'listSongFiles' | 'readStemSet'
+  'list' | 'listSongFiles' | 'listStemFiles'
 >;
 
-async function audioPaths(
-  records: StoredFilesRecords,
+function pathsOf(
   row: LibraryRow,
-  songPaths: ReadonlyMap<number, string>,
-): Promise<readonly string[]> {
-  if (row.kind === 'stems') {
-    const set = await records.readStemSet(row.id);
-    return set?.stems.map((stem) => stem.filePath) ?? [];
-  }
-  const path = songPaths.get(row.id);
+  songs: ReadonlyMap<number, string>,
+  stems: ReadonlyMap<number, string[]>,
+) {
+  if (row.kind === 'stems') return stems.get(row.id) ?? [];
+  const path = songs.get(row.id);
   return path === undefined ? [] : [path];
 }
 
 export async function storedRowFiles(
   records: StoredFilesRecords,
 ): Promise<StoredRowFiles[]> {
-  const songPaths = new Map(
+  const songs = new Map(
     (await records.listSongFiles()).map(({ id, filePath }) => [id, filePath]),
   );
-  const stored: StoredRowFiles[] = [];
-  for (const row of await records.list())
-    stored.push({ row, audioPaths: await audioPaths(records, row, songPaths) });
-  return stored;
+  const stems = new Map<number, string[]>();
+  for (const { setId, filePath } of await records.listStemFiles())
+    stems.set(setId, [...(stems.get(setId) ?? []), filePath]);
+  return (await records.list()).map((row) => ({
+    row,
+    audioPaths: pathsOf(row, songs, stems),
+  }));
 }

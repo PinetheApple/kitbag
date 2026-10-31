@@ -1,42 +1,16 @@
 import type { LibraryRow } from '@kitbag/core-db';
 import { describe, expect, it, vi } from 'vitest';
 
+import { songRow, stemsRow } from './fixtures.test-helper.ts';
 import {
   findMissingRows,
   removeMissingRows,
   type StoredRowFiles,
 } from './missingRows.ts';
 
-const created = new Date(0);
-
-const SONG: LibraryRow = {
-  kind: 'song',
-  id: 1,
-  title: 'Everlong',
-  artist: 'Foo Fighters',
-  durationSec: 250,
-  bpm: null,
-  hasGrid: false,
-  analysisStatus: 'done',
-  analysisError: null,
-  inSetlist: false,
-  createdAt: created,
-};
-
-const OTHER_SONG: LibraryRow = { ...SONG, id: 2, title: 'Take Five' };
-
-const STEMS: LibraryRow = {
-  kind: 'stems',
-  id: 1,
-  title: 'Redbone',
-  stemCount: 2,
-  durationSec: 326,
-  bpm: null,
-  key: null,
-  scale: null,
-  hasGrid: false,
-  createdAt: created,
-};
+const SONG = songRow();
+const OTHER_SONG = songRow({ id: 2, title: 'Take Five' });
+const STEMS = stemsRow();
 
 const STORED: readonly StoredRowFiles[] = [
   { row: SONG, audioPaths: ['songs/a/Everlong.mp3'] },
