@@ -17,6 +17,7 @@ import {
   parseConstexprIntArray,
   parseDefineInt,
   parseDefineNumber,
+  parseDocumentedSymmetricBound,
   parseEnum,
   parseRangeAfter,
   parseSoundNames,
@@ -194,6 +195,41 @@ describe('parseRangeAfter', () => {
   });
   it('throws when the marker is absent', () => {
     expect(() => parseRangeAfter('no range here', 'offset in ms')).toThrow();
+  });
+});
+
+describe('parseDocumentedSymmetricBound', () => {
+  const constant = 'static constexpr double kMaxOffsetMs = 250.0;';
+  const marker = 'offset in ms';
+  it('reads ±constant when the doc agrees', () => {
+    expect(
+      parseDocumentedSymmetricBound(
+        constant,
+        'kMaxOffsetMs',
+        'offset in ms [-250, 250];',
+        marker,
+      ),
+    ).toEqual({ min: -250, max: 250, maxExclusive: false });
+  });
+  it('throws when the doc and the constant disagree', () => {
+    expect(() =>
+      parseDocumentedSymmetricBound(
+        constant,
+        'kMaxOffsetMs',
+        'offset in ms [-100, 100];',
+        marker,
+      ),
+    ).toThrow(/kMaxOffsetMs is 250/);
+  });
+  it('throws when the constant is absent', () => {
+    expect(() =>
+      parseDocumentedSymmetricBound(
+        '',
+        'kMaxOffsetMs',
+        'offset in ms [-250, 250];',
+        marker,
+      ),
+    ).toThrow(/kMaxOffsetMs/);
   });
 });
 

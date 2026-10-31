@@ -17,6 +17,7 @@ export * from './percent.ts';
 export * from './stemPlayerRoles.ts';
 export * from './libraryRoles.ts';
 export * from './metronomeRoles.ts';
+export * from './homeArrangeRoles.ts';
 export * from './snackbarRoles.ts';
 export * from './snackbarTimer.ts';
 export * from './ThemeProvider.tsx';

@@ -5,15 +5,11 @@ namespace {
 
 constexpr int kWoodblock = 1;
 constexpr int kClick = 2;
-constexpr int kTom = 3;
 
-constexpr double kBeepAccentHz = 1760.0;
 constexpr double kBeepBeatHz = 1174.7;
 constexpr double kWoodblockAccentHz = 2400.0;
 constexpr double kWoodblockBeatHz = 1800.0;
 constexpr double kClickAccentHz = 3600.0;
-constexpr double kTomBeatHz = 450.0;
-constexpr double kSilentCeiling = 0.01;
 
 constexpr int64_t kWaltzBeatFrames = 28800;
 constexpr int64_t kWaltzBarFrames = 3 * kWaltzBeatFrames;

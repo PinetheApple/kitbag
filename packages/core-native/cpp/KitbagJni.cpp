@@ -58,6 +58,11 @@ Java_com_kitbag_corenative_KitbagCommandsModule_nativeRelease(JNIEnv*, jobject) 
   kitbag::commandRelease();
 }
 
+JNIEXPORT jint JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeOutputDeviceId(JNIEnv*, jobject) {
+  return kb_engine_output_device_id(kitbag::kitbagEngine());
+}
+
 JNIEXPORT void JNICALL
 Java_com_kitbag_corenative_KitbagCommandsModule_nativeMetronomeStart(JNIEnv*, jobject, jdouble anchorFrame) {
   kitbag::commandMetronomeStart(anchorFrame);
@@ -66,6 +71,21 @@ Java_com_kitbag_corenative_KitbagCommandsModule_nativeMetronomeStart(JNIEnv*, jo
 JNIEXPORT void JNICALL
 Java_com_kitbag_corenative_KitbagCommandsModule_nativeMetronomeStop(JNIEnv*, jobject) {
   kitbag::commandMetronomeStop();
+}
+
+JNIEXPORT jint JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeRigClickStart(JNIEnv*, jobject, jdouble bpm, jint subdivision, jdouble startFrame) {
+  return static_cast<jint>(kitbag::commandRigClickStart(bpm, subdivision, startFrame));
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeRigClickStop(JNIEnv*, jobject) {
+  kitbag::commandRigClickStop();
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeRigClickIsActive(JNIEnv*, jobject) {
+  return kitbag::commandRigClickIsActive() ? JNI_TRUE : JNI_FALSE;
 }
 
 JNIEXPORT void JNICALL

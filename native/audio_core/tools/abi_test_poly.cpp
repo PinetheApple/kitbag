@@ -1,9 +1,9 @@
 #include "kitbag_api.h"
 
 #include <cmath>
-#include <vector>
 
 #include "abi_test_metronome.h"
+#include "abi_test_render.h"
 #include "check.h"
 #include "metronome/metronome.h"
 
@@ -13,31 +13,15 @@ namespace {
 using kitbag::Metronome;
 using kitbag_test::Check;
 
-constexpr uint32_t kChannels = 2;
 constexpr int32_t kPolyBeats = 3;
 constexpr int32_t kBeatsPerBar = 4;
 constexpr double kPhaseTolerance = 1e-12;
 constexpr double kPolyNormalPeak = 0.5;
 constexpr double kPolyAccentPeak = 0.8;
-constexpr double kPeakTolerance = 0.05;
 constexpr double kSilentCeiling = 0.1;
-
-double RenderPeak(kb_engine* engine, uint32_t frames) {
-  std::vector<float> out(static_cast<size_t>(frames) * kChannels);
-  kb_engine_render(engine, out.data(), frames);
-  double peak = 0.0;
-  for (const float sample : out) {
-    peak = std::fmax(peak, std::fabs(static_cast<double>(sample)));
-  }
-  return peak;
-}
 
 uint32_t ThirdSecondFrames(const kb_engine* engine) {
   return kb_engine_sample_rate(engine) / 3;
-}
-
-bool Near(double actual, double expected) {
-  return std::fabs(actual - expected) <= kPeakTolerance;
 }
 
 kb_engine* PolyOnlyEngine() {
