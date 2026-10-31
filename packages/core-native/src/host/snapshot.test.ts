@@ -130,7 +130,7 @@ describe('nativeConstants.gen', () => {
       'woodblock',
       'click',
       'tom',
-      'hihat',
+      'tick',
       'cowbell',
     ]);
     expect(KB_RESULT.KB_OK).toBe(0);

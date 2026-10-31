@@ -13,7 +13,7 @@ export const SOUND_ROLE_OPTIONS = [
   { value: SOUND_ROLE.accent, label: soundRoleName(SOUND_ROLE.accent) },
 ] as const;
 
-const DISPLAY_NAMES: Partial<Record<string, string>> = { hihat: 'Hi-hat' };
+const DISPLAY_NAMES: Partial<Record<string, string>> = {};
 
 function displayName(name: string): string {
   return DISPLAY_NAMES[name] ?? name.charAt(0).toUpperCase() + name.slice(1);

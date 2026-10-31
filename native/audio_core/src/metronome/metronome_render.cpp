@@ -1,6 +1,7 @@
 // The audio callback: voice synthesis and the per-sample sequencer loop.
 // Allocation-free, lock-free, no syscalls (SPEC.md §4.5).
 #include <cmath>
+#include <numbers>
 
 #include "metronome/metronome.h"
 #include "metronome/metronome_internal.h"
@@ -29,13 +30,18 @@ struct SoundPreset {
   double decay_per_second;
 };
 
+constexpr double kTickFloorDecades = 4.0;
+constexpr double kTickDecaySeconds = 0.035;
+constexpr double kTickDecayPerSecond =
+    kTickFloorDecades * std::numbers::ln10 / kTickDecaySeconds;
+
 constexpr SoundPreset kSounds[Metronome::kSoundCount] = {
-    {1760.0, 1174.7, 880.0, 1480.0, 30.0},    // beep
-    {2400.0, 1800.0, 1400.0, 2000.0, 60.0},   // woodblock
-    {3600.0, 2800.0, 2200.0, 3200.0, 90.0},   // click
-    {600.0, 450.0, 300.0, 520.0, 60.0},       // tom
-    {5000.0, 4000.0, 3500.0, 4500.0, 120.0},  // hihat
-    {2200.0, 1500.0, 1400.0, 1800.0, 45.0},   // cowbell
+    {1760.0, 1174.7, 880.0, 1480.0, 30.0},                 // beep
+    {2400.0, 1800.0, 1400.0, 2000.0, 60.0},                // woodblock
+    {3600.0, 2800.0, 2200.0, 3200.0, 90.0},                // click
+    {600.0, 450.0, 300.0, 520.0, 60.0},                    // tom
+    {1500.0, 1000.0, 800.0, 1225.0, kTickDecayPerSecond},  // tick
+    {2200.0, 1500.0, 1400.0, 1800.0, 45.0},                // cowbell
 };
 
 int64_t TickIndex(double position, double ticks_per_beat) {

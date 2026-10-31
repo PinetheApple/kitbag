@@ -102,7 +102,7 @@ void StartRun(kitbag::Metronome& metronome, const TickRun& run) {
   metronome.SetTempo(run.start_bpm);
   metronome.SetTimeSignature(kBeatsPerBar, kDenominator);
   metronome.SetSubdivision(run.subdivision);
-  metronome.SetSounds(kHihatSound, kHihatSound);
+  metronome.SetSounds(kClickSound, kClickSound);
   if (run.ramped) {
     metronome.SetRamp(
         true,

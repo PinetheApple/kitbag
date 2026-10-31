@@ -28,7 +28,7 @@ constexpr int32_t SlotBit(int slot) {
 
 double WantHz(int slot) {
   if (slot == 0) return kTomBeatHz;
-  return slot == kRigAccentedSlot ? kHihatAccentHz : kTomSubdivisionHz;
+  return slot == kRigAccentedSlot ? kClickAccentHz : kTomSubdivisionHz;
 }
 
 bool TickSoundsMatch(const std::vector<float>& left, int64_t ticks) {
@@ -49,7 +49,7 @@ bool TickSoundsMatch(const std::vector<float>& left, int64_t ticks) {
 }
 
 void ConfigureConflictingPattern(Metronome& metronome) {
-  metronome.SetSounds(kTom, kHihatSound);
+  metronome.SetSounds(kTom, kClickSound);
   metronome.SetSubdivision(kMetronomeSubdivision);
   metronome.SetSubdivisionAccents(
       kMetronomeSubdivision,

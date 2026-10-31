@@ -20,7 +20,7 @@ describe('sound picker names come from the engine table', () => {
       'Woodblock',
       'Click',
       'Tom',
-      'Hi-hat',
+      'Tick',
       'Cowbell',
     ]);
   });

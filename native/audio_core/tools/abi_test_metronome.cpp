@@ -15,8 +15,8 @@ using kitbag_test::Check;
 
 constexpr uint32_t kPitchWindow = 2400;
 constexpr int32_t kTom = 3;
-constexpr int32_t kHihat = 4;
-constexpr double kHihatAccentHz = 5000.0;
+constexpr int32_t kClick = 2;
+constexpr double kClickAccentHz = 3600.0;
 constexpr double kTomBeatHz = 450.0;
 constexpr int32_t kWoodblock = 1;
 constexpr int32_t kOutOfTableSound = 6;
@@ -104,12 +104,12 @@ void TestSetSoundsSelectsPerRole() {
   if (engine == nullptr) return;
   const uint32_t rate = kb_engine_sample_rate(engine);
   const uint32_t beat_frames = rate / 2;
-  kb_metronome_set_sounds(engine, kTom, kHihat);
+  kb_metronome_set_sounds(engine, kTom, kClick);
   kb_metronome_set_sounds(engine, -1, 256);
   kb_metronome_set_sounds(nullptr, 0, 0);
   kb_metronome_start(engine);
   Check(
-      PitchIs(Render(engine, beat_frames), rate, kHihatAccentHz),
+      PitchIs(Render(engine, beat_frames), rate, kClickAccentHz),
       "set_sounds: accented downbeat plays accent_sound after invalid ids"
   );
   Check(

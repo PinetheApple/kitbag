@@ -1,6 +1,7 @@
 #ifndef KITBAG_TOOLS_METRONOME_METRONOME_TEST_AUDIO_H
 #define KITBAG_TOOLS_METRONOME_METRONOME_TEST_AUDIO_H
 
+#include <numbers>
 #include <string>
 
 #include "metronome_test_support.h"
@@ -11,7 +12,7 @@ constexpr int64_t kPitchWindow = 2400;
 constexpr double kPitchTolerance = 0.05;
 
 constexpr int kTom = 3;
-constexpr int kHihatSound = 4;
+constexpr int kClickSound = 2;
 constexpr double kTomBeatHz = 450.0;
 constexpr double kTomSubdivisionHz = 300.0;
 constexpr double kTomPolyHz = 520.0;
@@ -19,8 +20,14 @@ constexpr double kBeepAccentHz = 1760.0;
 constexpr double kSilentCeiling = 0.01;
 constexpr int64_t kRiseWindowFrames = 32;
 constexpr int64_t kFrameSlack = 2;
-constexpr double kHihatAccentHz = 5000.0;
-constexpr double kHihatDecayPerSecond = 120.0;
+constexpr double kClickAccentHz = 3600.0;
+constexpr double kClickPolyHz = 3200.0;
+constexpr double kClickDecayPerSecond = 90.0;
+constexpr int kTickSound = 4;
+constexpr double kTickDecaySeconds = 0.035;
+constexpr double kTickFloorDecades = 4.0;
+constexpr double kTickDecayPerSecond =
+    kTickFloorDecades * std::numbers::ln10 / kTickDecaySeconds;
 constexpr double kMinTickRise = 0.05;
 constexpr int64_t kBeatFrames = kSampleRate / 2;
 

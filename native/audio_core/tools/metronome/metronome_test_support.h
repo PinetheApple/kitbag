@@ -362,6 +362,7 @@ void RunPolyRatioLiveTests();
 void RunPolyTransportTests();
 void RunPolyPhaseTests();
 void RunSoundTests();
+void RunTickTests();
 void RunSubdivisionAccentTests();
 void RunRigClickScheduleTests();
 void RunRigClickSoundTests();

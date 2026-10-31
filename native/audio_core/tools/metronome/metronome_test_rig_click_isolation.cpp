@@ -58,14 +58,14 @@ MetronomeView View(const Metronome& metronome) {
 }
 
 void ConfigureEveryField(Metronome& metronome) {
-  metronome.SetSounds(kTom, kHihatSound);
+  metronome.SetSounds(kTom, kClickSound);
   metronome.SetTempo(87.0);
   metronome.SetTimeSignature(7, 8);
   metronome.SetSubdivision(3);
   metronome.SetSubdivisionAccents(3, 2);
   metronome.SetAccent(2, Accent::kMuted);
   metronome.SetPolyrhythm(true, 3);
-  metronome.SetCountIn(1, true, kHihatSound);
+  metronome.SetCountIn(1, true, kClickSound);
   metronome.SetBarMute(true, 2, 1);
   metronome.SetRamp(true, 80.0, 120.0, 5.0, 2.0, kRampBars, false);
 }
