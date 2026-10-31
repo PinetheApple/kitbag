@@ -2,7 +2,12 @@ import type { NewSongPreset, Setlist, SongPreset } from '@kitbag/core-db';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { metronomeStore, type MetronomeStore } from '../metronome/store.ts';
-import { applyPreset, presetFromMetronome } from './presetMapping.ts';
+import {
+  applyPreset,
+  isLoadedSongEdited,
+  presetFromMetronome,
+  type LiveSongFields,
+} from './presetMapping.ts';
 import { getLibrary, type LibraryRepositories } from './runtime.ts';
 import {
   activeSetlistOf,
@@ -17,6 +22,12 @@ export interface LoadedSong {
   readonly setlistId: number | null;
 }
 
+export interface DiscardedChanges {
+  readonly loaded: LoadedSong;
+  readonly settings: LiveSongFields;
+  readonly at: number;
+}
+
 export interface SearchResults {
   readonly query: string;
   readonly setlists: readonly Setlist[];
@@ -27,6 +38,7 @@ export interface LibraryState extends LibrarySnapshot {
   readonly ready: boolean;
   readonly failed: boolean;
   readonly loaded: LoadedSong | null;
+  readonly discarded: DiscardedChanges | null;
   readonly played: readonly number[];
   readonly results: SearchResults | null;
 }
@@ -49,6 +61,10 @@ export interface LibraryActions {
   deletePreset: (presetId: number) => Promise<void>;
   savePreset: (presetId: number, edit: PresetEdit) => Promise<void>;
   saveCurrentInto: (presetId: number) => Promise<void>;
+  saveLoadedSong: () => Promise<void>;
+  revertLoadedSong: () => void;
+  undoDiscard: () => Promise<void>;
+  dismissDiscarded: () => void;
   loadSong: (
     presetId: number,
     itemId?: number,
@@ -67,11 +83,13 @@ type Get = StoreApi<LibraryStore>['getState'];
 export interface LibraryDeps {
   readonly repos: () => LibraryRepositories;
   readonly metronome: () => MetronomeStore;
+  readonly now: () => number;
 }
 
 const defaultDeps: LibraryDeps = {
   repos: getLibrary,
   metronome: () => metronomeStore.getState(),
+  now: Date.now,
 };
 
 const EMPTY: LibraryState = {
@@ -82,9 +100,33 @@ const EMPTY: LibraryState = {
   presets: [],
   standalone: [],
   loaded: null,
+  discarded: null,
   played: [],
   results: null,
 };
+
+export function loadedPresetOf(
+  state: Pick<LibraryState, 'presets' | 'loaded'>,
+): SongPreset | undefined {
+  const { loaded } = state;
+  if (loaded === null) return undefined;
+  return state.presets.find((preset) => preset.id === loaded.presetId);
+}
+
+function discardedNow(
+  state: LibraryState,
+  deps: LibraryDeps,
+): DiscardedChanges | null {
+  const preset = loadedPresetOf(state);
+  if (state.loaded === null || preset === undefined) return null;
+  const live = deps.metronome();
+  if (!isLoadedSongEdited(preset, live)) return null;
+  return {
+    loaded: state.loaded,
+    settings: presetFromMetronome(live),
+    at: deps.now(),
+  };
+}
 
 function copyName(name: string): string {
   return `${name} copy`;
@@ -219,23 +261,35 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
       console.warn('[kitbag] leaving the setlist failed', error);
     }
   };
+  const link = async (
+    preset: SongPreset,
+    itemId: number | null,
+    setlistId: number | null,
+  ) => {
+    const presetId = preset.id;
+    applyPreset(preset, deps.metronome);
+    if (setlistId === null || itemId === null) {
+      set({ loaded: { presetId, itemId: null, setlistId: null } });
+      // The stage bar keys off loaded.setlistId, so it hides even if this fails.
+      await leaveOrWarn();
+      return;
+    }
+    set({ loaded: { presetId, itemId, setlistId } });
+    try {
+      await pin(setlistId, itemId);
+    } catch {
+      // The song is already playing; a failed pin only loses the on-stage marker.
+    }
+  };
+  const noteDiscard = () => {
+    set({ discarded: discardedNow(get(), deps) });
+  };
   return {
     loadSong: async (presetId: number, itemId?: number, setlistId?: number) => {
       const preset = get().presets.find((p) => p.id === presetId);
       if (preset === undefined) return;
-      applyPreset(preset, deps.metronome);
-      if (setlistId === undefined || itemId === undefined) {
-        set({ loaded: { presetId, itemId: null, setlistId: null } });
-        // The stage bar keys off loaded.setlistId, so it hides even if this fails.
-        await leaveOrWarn();
-        return;
-      }
-      set({ loaded: { presetId, itemId, setlistId } });
-      try {
-        await pin(setlistId, itemId);
-      } catch {
-        // The song is already playing; a failed pin only loses the on-stage marker.
-      }
+      noteDiscard();
+      await link(preset, itemId ?? null, setlistId ?? null);
     },
     stepSong: async (step: SongStep) => {
       const active = activeSetlistOf(get().setlists);
@@ -250,11 +304,34 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
       await get().loadSong(entry.preset.id, entry.item.id, setlistId);
     },
     leaveSetlist: async () => {
+      noteDiscard();
       set({ loaded: null });
       await leaveOrWarn();
     },
     clearSong: () => {
+      noteDiscard();
       set({ loaded: null });
+    },
+    saveLoadedSong: async () => {
+      const { loaded } = get();
+      if (loaded === null) return;
+      await get().saveCurrentInto(loaded.presetId);
+    },
+    revertLoadedSong: () => {
+      const preset = loadedPresetOf(get());
+      if (preset !== undefined) applyPreset(preset, deps.metronome);
+    },
+    undoDiscard: async () => {
+      const { discarded } = get();
+      if (discarded === null) return;
+      const { loaded, settings } = discarded;
+      const preset = get().presets.find((p) => p.id === loaded.presetId);
+      noteDiscard();
+      if (preset === undefined) return;
+      await link({ ...preset, ...settings }, loaded.itemId, loaded.setlistId);
+    },
+    dismissDiscarded: () => {
+      set({ discarded: null });
     },
   };
 }
