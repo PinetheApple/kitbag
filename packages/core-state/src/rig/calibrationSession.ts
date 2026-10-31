@@ -35,7 +35,14 @@ export interface CalibrationDeps {
 }
 
 export type CalibrationPhase =
-  'idle' | 'starting' | 'running' | 'done' | 'busy' | 'failed' | 'stopped';
+  | 'idle'
+  | 'starting'
+  | 'running'
+  | 'done'
+  | 'busy'
+  | 'failed'
+  | 'route-failed'
+  | 'stopped';
 
 export type CalibrationNotice = 'route-changed' | 'engine-restarted';
 
