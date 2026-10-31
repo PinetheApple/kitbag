@@ -108,11 +108,8 @@ void Metronome::OnBeatBoundary(int beat_index, uint32_t sample_rate) {
 }
 
 void Metronome::OnSubdivisionTick(int64_t owning_beat, uint32_t sample_rate) {
-  // owning_beat is the caller's speaker-time beat (position, not beat_position_):
-  // a muted beat must silence its own subdivisions at the speaker, so attribution
-  // uses the same latency-shifted base the tick fires on (#21, decisions.md).
-  // Callers only fire at a non-negative beat, so no accents_[-1]; D5's 300ms
-  // clamp lifts latency past one beat but keeps that invariant — revisit anyway.
+  // Speaker-time beat, so a muted beat mutes its subdivisions at the speaker
+  // (#21). Never negative: ticks fire only at position >= 0, whatever the offset.
   const int beat_in_bar = static_cast<int>(owning_beat % beats_per_bar_);
   if (accents_[beat_in_bar] == Accent::kMuted || BarIsMuted(current_bar_)) {
     return;

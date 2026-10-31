@@ -1,9 +1,12 @@
 // Output-latency compensation (SPEC.md §4.7). The first checks pin defects that
 // reproduced inside the original ±100 ms clamp.
+#include "metronome/metronome_internal.h"
 #include "metronome_test_support.h"
 
 namespace metronome_test {
 namespace {
+
+using kitbag::metronome_detail::kMsPerSecond;
 
 // An offset must not swallow the downbeat (regression: +0.5 ms ate beat 0).
 void TestLatencyOffsetKeepsBeatZero() {
@@ -236,7 +239,6 @@ void TestMutedBeatCascadesToSubdivision() {
 
 constexpr double kClampSongSeconds = 1.1;
 constexpr double kClampBpm = 120.0;
-constexpr double kMsPerSecond = 1000.0;
 
 double FirstAnchoredClickSeconds(double applied_ms) {
   const double beat_seconds = 60.0 / kClampBpm;

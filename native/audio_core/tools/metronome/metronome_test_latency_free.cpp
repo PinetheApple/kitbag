@@ -2,10 +2,13 @@
 #include <limits>
 #include <string>
 
+#include "metronome/metronome_internal.h"
 #include "metronome_test_audio.h"
 
 namespace metronome_test {
 namespace {
+
+using kitbag::metronome_detail::kMsPerSecond;
 
 constexpr int64_t kRiseHoldFrames = 64;
 constexpr int64_t kNeverFrame = std::numeric_limits<int64_t>::max();
@@ -14,6 +17,8 @@ constexpr int kPolyBeats = 3;
 constexpr double kSmallestOffsetMs = 0.5;
 constexpr double kMaxOffsetMs = kitbag::Metronome::kMaxLatencyOffsetMs;
 constexpr double kSwitchSeconds = 5.3;
+constexpr double kPreRollSongSeconds = -1.0;
+constexpr double kPreRollRenderSeconds = 1.5;
 
 struct FreeRun {
   const char* name;
@@ -214,6 +219,82 @@ void ExpectDownbeatAtFrameZero(double offset_ms) {
   );
 }
 
+std::vector<int64_t> RenderPreRollRises(double offset_ms, double seconds) {
+  kitbag::Metronome metronome;
+  metronome.SetTimeSignature(4, 4);
+  metronome.SetSubdivision(kitbag::Metronome::kMaxSubdivision);
+  metronome.SetSounds(kHihatSound, kHihatSound);
+  metronome.SetLatencyOffset(offset_ms);
+  metronome.AnchorExternal(kPreRollSongSeconds, 0, kitbag::kMaxBpm);
+  return RiseFrames(RenderLeft(metronome, FramesFor(seconds)));
+}
+
+std::vector<int64_t>
+ShiftedInRange(const std::vector<int64_t>& frames, int64_t shift) {
+  std::vector<int64_t> shifted;
+  for (const int64_t frame : frames) {
+    const int64_t moved = frame + shift;
+    if (moved >= 0 &&
+        moved < FramesFor(kPreRollRenderSeconds) - kRiseHoldFrames) {
+      shifted.push_back(moved);
+    }
+  }
+  return shifted;
+}
+
+struct PreRollResult {
+  std::vector<int64_t> seen;
+  std::vector<int64_t> want;
+  size_t index;
+  int64_t beat_zero;
+};
+
+std::string PreRollDetail(const PreRollResult& r) {
+  char detail[192];
+  std::snprintf(
+      detail,
+      sizeof detail,
+      "first click %lld, beat 0 at %lld; %zu clicks vs %zu; click %zu at %lld, "
+      "0 ms run has %lld",
+      static_cast<long long>(At(r.seen, 0)),
+      static_cast<long long>(r.beat_zero),
+      r.seen.size(),
+      r.want.size(),
+      r.index,
+      static_cast<long long>(At(r.seen, r.index)),
+      static_cast<long long>(At(r.want, r.index))
+  );
+  return detail;
+}
+
+void ExpectSilentBeforeSongBeatZero(double offset_ms) {
+  const auto early =
+      static_cast<int64_t>(std::lround(offset_ms / kMsPerSecond * kSampleRate));
+  const double reference_seconds =
+      kPreRollRenderSeconds + std::fabs(offset_ms) / kMsPerSecond;
+  PreRollResult r;
+  r.want = ShiftedInRange(RenderPreRollRises(0.0, reference_seconds), -early);
+  r.seen =
+      ShiftedInRange(RenderPreRollRises(offset_ms, kPreRollRenderSeconds), 0);
+  r.index = FirstMismatch(r.want, r.seen);
+  r.beat_zero = FramesFor(-kPreRollSongSeconds) - early;
+  const bool starts_on_beat_zero =
+      !r.seen.empty() && std::llabs(r.seen[0] - r.beat_zero) <= kFrameSlack;
+  char label[96];
+  std::snprintf(
+      label,
+      sizeof label,
+      "pre-roll anchor 400 BPM sub 16, %+.1f ms: silent until song beat 0",
+      offset_ms
+  );
+  CheckCase(
+      starts_on_beat_zero && r.seen.size() == r.want.size() &&
+          r.index == r.want.size(),
+      label,
+      PreRollDetail(r).c_str()
+  );
+}
+
 }  // namespace
 
 void RunLatencyFreeRunTests() {
@@ -228,6 +309,8 @@ void RunLatencyFreeRunTests() {
       kRampDown,
       {-kMaxOffsetMs, kMaxOffsetMs, FramesFor(kSwitchSeconds)}
   );
+  ExpectSilentBeforeSongBeatZero(kMaxOffsetMs);
+  ExpectSilentBeforeSongBeatZero(-kMaxOffsetMs);
 }
 
 }  // namespace metronome_test
