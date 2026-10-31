@@ -344,6 +344,16 @@ describe('song library repository', () => {
     ]);
   });
 
+  it('lists each stem file with its stem set', async () => {
+    const { handle, library } = setup();
+    const redbone = await addStemSet(handle, 'Redbone', [320, 326.5]);
+    await addStemSet(handle, 'Empty', []);
+    expect(await library.listStemFiles()).toEqual([
+      { setId: redbone, filePath: 'stems/Redbone/0.flac' },
+      { setId: redbone, filePath: 'stems/Redbone/1.flac' },
+    ]);
+  });
+
   it('packs values without a Buffer', () => {
     expect(packFloat32([1])).toEqual(Uint8Array.from([0, 0, 0x80, 0x3f]));
     expect(packInt32([-1])).toEqual(Uint8Array.from([0xff, 0xff, 0xff, 0xff]));

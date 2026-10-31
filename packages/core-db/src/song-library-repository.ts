@@ -8,6 +8,7 @@ import {
   deleteStemSet,
   findStemSetByJobId,
   insertStemBundle,
+  listStemFiles,
   listStemSetFolders,
   readStemSet,
   replaceStemBundle,
@@ -300,6 +301,7 @@ export function createSongLibraryRepository({
       transaction(() => saveStemMix(db, mixes)),
     listStemSetFolders: () => serial(() => listStemSetFolders(db)),
     listSongFiles: () => serial(() => listSongFiles(db)),
+    listStemFiles: () => serial(() => listStemFiles(db)),
     renameSong: (id: number, title: string) =>
       serial(() => renameSong(db, id, title)),
     renameStemSet: (id: number, title: string) =>
