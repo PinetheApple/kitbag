@@ -517,6 +517,17 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   divide the bar. B (one ratio value with a wheel sheet) and C (poly stepper with a
   Bar | Beats switch) are rejected. **[user]**
 
+- **2026-10-31 · Settings owner answers (§5.1, §12.2, §12.5, #170, #189)** — The owner
+  answered the questions the Settings gap rulings left open. Q7: the switch drawn in
+  `design/kitbag-settings.html` (bordered pill, accent-tinted track when on) is the only
+  switch in the app; the older solid switch is removed. Q13: Licence and Source open the
+  GitHub repository; Attributions lists the vendored native libraries, the fonts and the
+  icon set; no BPM-data credits until that feature exists. Contrast: the light-theme
+  section labels keep the darker `accentInk` exception. Q15 and Q16: the calibration
+  thresholds recorded in the Settings gap rulings are confirmed. Q18: global subdivision
+  accents apply to off-beat ticks only, since slot 0 is the on-beat click with its own
+  per-beat accents, and an accented tick plays the accent sound. **[recorded]**
+
 - **2026-10-31 · Home edit mode (§12, §12.4, §12.6, #113)** — Option B in
   `design/kitbag-home-arrange.html`: Edit, or a long-press on a tile, opens an Arrange
   sheet with one row per tool (drag handle, 1×1/2×1 size toggle, hide), and hidden tools

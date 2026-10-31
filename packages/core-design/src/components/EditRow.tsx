@@ -9,11 +9,12 @@ import {
 } from 'react-native';
 
 import { bodyLineHeight, inset, size, space, textRoles } from '../roles.ts';
+import { switchA11y } from '../switch.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles, useTheme } from '../ThemeProvider.tsx';
 import { minTouchTargetDp, radii } from '../tokens.ts';
 import { Icon } from './Icon.tsx';
-import { SwitchTrack, type SwitchVariant } from './Switch.tsx';
+import { SwitchTrack } from './Switch.tsx';
 
 export const EDIT_ROW_PRESSABLE_GAP = inset.editRowV + size.stroke;
 
@@ -140,14 +141,12 @@ export interface EditSwitchRowProps {
   readonly label: string;
   readonly value: boolean;
   readonly onValueChange: (value: boolean) => void;
-  readonly variant?: SwitchVariant;
 }
 
 export function EditSwitchRow({
   label,
   value,
   onValueChange,
-  variant,
 }: EditSwitchRowProps) {
   const styles = useStyles();
   const pressableStyle = useCallback(
@@ -163,18 +162,13 @@ export function EditSwitchRow({
   }, [onValueChange, value]);
   return (
     <Pressable
-      accessibilityRole="switch"
+      {...switchA11y(value)}
       accessibilityLabel={label}
-      accessibilityState={{ checked: value }}
-      aria-checked={value}
       style={pressableStyle}
       onPress={toggle}
     >
       <Text style={styles.label}>{label}</Text>
-      <SwitchTrack
-        value={value}
-        {...(variant === undefined ? {} : { variant })}
-      />
+      <SwitchTrack value={value} />
     </Pressable>
   );
 }
