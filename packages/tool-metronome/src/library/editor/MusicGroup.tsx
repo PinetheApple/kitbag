@@ -27,11 +27,7 @@ import { polyAgainstLabel } from '../../logic/polyRow.ts';
 import { subdivisionLabel } from '../../logic/subdivision.ts';
 import { BeatLeds } from '../../screen/BeatLeds.tsx';
 
-const SUB_ROW = {
-  paddingLeft: metronomeEditor.subRowIndent,
-  minHeight: minTouchTargetDp,
-  justifyContent: 'center',
-} as const;
+const SUB_ROW = { paddingLeft: metronomeEditor.subRowIndent } as const;
 
 function SubRow({ children }: { readonly children: ReactNode }) {
   return <View style={SUB_ROW}>{children}</View>;
@@ -158,14 +154,19 @@ function PolyRows({ editor }: { readonly editor: PresetEditor }) {
   const against = polyAgainstLabel(draft.polyAgainst, draft.beatsPerBar);
   return (
     <>
-      <EditRow label="Polyrhythm">
-        <OnOff on={draft.polyEnabled} label="Polyrhythm" onChange={toggle} />
+      <EditRow label="Polyrhythm" minHeight={metronomeEditor.toggleRowMin}>
+        <OnOff
+          on={draft.polyEnabled}
+          label="Polyrhythm"
+          inRow
+          onChange={toggle}
+        />
       </EditRow>
       {draft.polyEnabled ? (
         <>
           <EditDivider />
           <SubRow>
-            <EditRow label="Poly">
+            <EditRow label="Poly" minHeight={minTouchTargetDp}>
               <StepControl
                 variant="inlineLarge"
                 label="Poly"
@@ -181,7 +182,7 @@ function PolyRows({ editor }: { readonly editor: PresetEditor }) {
           </SubRow>
           <EditDivider />
           <SubRow>
-            <EditRow label="Against">
+            <EditRow label="Against" minHeight={minTouchTargetDp}>
               <StepControl
                 variant="inlineLarge"
                 label="Against"

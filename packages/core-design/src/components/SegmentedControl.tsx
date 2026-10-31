@@ -25,12 +25,13 @@ const TRACK_EDGE = space.segmentInset + size.stroke;
 const OPTION_HEIGHT = textRoles.segment.size + inset.segmentOptionV * 2;
 const INLINE_LINE_HEIGHT = textRoles.segment.size * bodyLineHeight;
 
-export type SegmentedControlSize = 'default' | 'large' | 'inline';
+export type SegmentedControlSize = 'default' | 'large' | 'inline' | 'editRow';
 
 const OPTION_HEIGHTS: Readonly<Record<SegmentedControlSize, number>> = {
   default: OPTION_HEIGHT,
   large: size.segmentLargeOption,
   inline: INLINE_LINE_HEIGHT + inset.segmentOptionV * 2,
+  editRow: size.segmentEditRowOption,
 };
 
 // Option widths are flex, so only the vertical axis is grown to 48dp; sideways
@@ -77,6 +78,7 @@ interface SegmentProps<T extends string> {
   readonly accent: boolean;
   readonly large: boolean;
   readonly inline: boolean;
+  readonly editRow: boolean;
   readonly hitBox: ReturnType<typeof optionHitBox>;
   readonly onSelect: (value: T) => void;
 }
@@ -133,6 +135,10 @@ const useStyles = createThemedStyles((theme) => ({
     backgroundColor: theme.color.surface1,
   },
   largeLabel: textStyle(textRoles.segmentLarge),
+  editRowOption: {
+    minHeight: size.segmentEditRowOption,
+    paddingHorizontal: inset.segmentEditRowOptionH,
+  },
   inlineLabel: { lineHeight: INLINE_LINE_HEIGHT },
 }));
 
@@ -142,6 +148,7 @@ function Segment<T extends string>({
   accent,
   large,
   inline,
+  editRow,
   hitBox,
   onSelect,
 }: SegmentProps<T>) {
@@ -156,13 +163,14 @@ function Segment<T extends string>({
       accessibilityLabel={option.accessibilityLabel ?? option.label}
       accessibilityState={{ checked: selected }}
       aria-checked={selected}
-      style={[!inline && styles.optionHit, hitBox]}
+      style={[!inline && !editRow && styles.optionHit, hitBox]}
       onPress={handlePress}
     >
       <View
         style={[
           styles.option,
           large && styles.largeOption,
+          editRow && styles.editRowOption,
           selected && styles.optionSelected,
           selected && large && styles.largeOptionSelected,
         ]}
@@ -194,7 +202,8 @@ export function SegmentedControl<T extends string>({
   size: controlSize = 'default',
 }: SegmentedControlProps<T>) {
   const styles = useStyles();
-  const large = controlSize === 'large';
+  const editRow = controlSize === 'editRow';
+  const large = controlSize === 'large' || editRow;
   const hitBox = optionHitBox(
     neighbourGaps(neighbourGapDp),
     compact,
@@ -218,6 +227,7 @@ export function SegmentedControl<T extends string>({
           accent={selectedTone === 'accent'}
           large={large}
           inline={controlSize === 'inline'}
+          editRow={editRow}
           hitBox={hitBox}
           onSelect={onSelect}
         />
