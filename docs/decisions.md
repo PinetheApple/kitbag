@@ -554,3 +554,11 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   write a song. §2.1's "live-BPM autosave" row is the Flutter-era audit and stays as
   history. The mark, where Save lives, Revert and what a step does to unsaved edits wait
   on the owner's pick of a design. **[user]**
+- **2026-10-31 · react-native-svg for the x/8 flagged eighth (§12, §13.8, #212)** — Approved
+  as a dependency for one glyph: the flagged eighth that the subdivision chip and tile draw
+  for one click per beat in x/8, copied from `design/kitbag-metronome-b.html`. MIT; its
+  Android module depends only on React Native and Fresco, so nothing proprietary reaches
+  F-Droid. No other icon moves to SVG. `@types/react-dom` joins core-design's devDependencies
+  for the render test; react-dom and react-native-web were already pinned by app-shell. The
+  subdivision sheet's ×1 tile draws the glyph under x/8 too, extrapolated from the chip,
+  since the design's tile grid shows only x/4. **[recorded]**
