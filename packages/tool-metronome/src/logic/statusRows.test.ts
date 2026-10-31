@@ -18,6 +18,7 @@ import {
   NOTHING_ARMED,
   ofText,
   practiceBadgeCount,
+  restLegend,
   rampNextText,
   rampRemainingText,
   rowSlot,
@@ -76,6 +77,18 @@ describe('armed practice summary', () => {
 
   it('falls back to a neutral hint with nothing armed', () => {
     expect(armedSummary(OFF)).toBe(NOTHING_ARMED);
+  });
+});
+
+describe('legend while stopped', () => {
+  it('shows the poly legend instead of the beat legend while poly is on', () => {
+    expect(restLegend(false, true)).toBe('poly');
+    expect(restLegend(false, false)).toBe('beat');
+  });
+
+  it('hides every legend while running', () => {
+    expect(restLegend(true, true)).toBeNull();
+    expect(restLegend(true, false)).toBeNull();
   });
 });
 

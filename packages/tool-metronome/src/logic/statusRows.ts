@@ -56,6 +56,16 @@ export function armedSummary(settings: PracticeSettings): string {
   return parts.length === 0 ? NOTHING_ARMED : parts.join(' · ');
 }
 
+export type RestLegend = 'beat' | 'poly';
+
+export function restLegend(
+  running: boolean,
+  polyEnabled: boolean,
+): RestLegend | null {
+  if (running) return null;
+  return polyEnabled ? 'poly' : 'beat';
+}
+
 export function afterCountInSummary(settings: PracticeSettings): string {
   return rampAndMuteParts(settings).join(' · ');
 }
