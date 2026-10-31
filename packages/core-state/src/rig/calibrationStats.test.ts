@@ -1,9 +1,13 @@
-import type { EngineClockPair } from '@kitbag/core-native';
+import {
+  KB_LATENCY_OFFSET_MS_BOUNDS,
+  type EngineClockPair,
+} from '@kitbag/core-native';
 import { describe, expect, it } from 'vitest';
 
 import { CALIBRATION } from './calibrationRules.ts';
 import {
   analyseTaps,
+  mean,
   storedOffsetMs,
   tapDeviationMs,
   usableDeviations,
@@ -113,14 +117,10 @@ describe('calibration result', () => {
   });
 
   it('refuses with fewer than 8 usable taps', () => {
-    const wild = CALIBRATION.usableWindowMs + 40;
-    const taps = [
-      ...steady(12, CALIBRATION.minUsableTaps - 1),
-      ...Array<number>(4).fill(-wild),
-      ...Array<number>(5).fill(wild),
-    ];
+    const taps = steady(12, CALIBRATION.minUsableTaps - 1);
     expect(analyseTaps(taps)).toEqual({
       kind: 'refused',
+      reason: 'too-few',
       usable: CALIBRATION.minUsableTaps - 1,
     });
   });
@@ -174,5 +174,71 @@ describe('sign against the engine', () => {
     expect(offsetMs).toBe(outputLatencyMs);
     const heardMs = emittedMs(grid[0] ?? 0, offsetMs) + outputLatencyMs;
     expect(heardMs).toBeCloseTo(grid[0] ?? 0);
+  });
+});
+
+describe('at the wrap', () => {
+  const ROUTE_SD_MS = 25;
+  const NORMAL_SCORES = [
+    -1.53, -1.15, -0.89, -0.67, -0.49, -0.32, -0.16, 0, 0, 0.16, 0.32, 0.49,
+    0.67, 0.89, 1.15, 1.53,
+  ];
+  const tapsFor = (trueMs: number) =>
+    NORMAL_SCORES.map((z, i) =>
+      tapDeviationMs(
+        START_MS + (i + 1) * MS_PER_BEAT + trueMs + z * ROUTE_SD_MS,
+        PAIR,
+        SCHEDULE,
+      ),
+    );
+
+  it('sees taps on both sides of the wrap for a route near it', () => {
+    const taps = tapsFor(290);
+    expect(taps.some((d) => d > 0)).toBe(true);
+    expect(taps.some((d) => d < 0)).toBe(true);
+  });
+
+  it.each([290, -290])(
+    'measures a %d ms route across the wrap with its own sign',
+    (trueMs) => {
+      const usable = usableDeviations(tapsFor(trueMs));
+      expect(usable).toHaveLength(CALIBRATION.taps);
+      expect(mean(usable)).toBeCloseTo(trueMs, 0);
+    },
+  );
+
+  it.each([290, -290])(
+    'refuses a %d ms route whose spread crosses the limit',
+    (trueMs) => {
+      expect(analyseTaps(tapsFor(trueMs))).toMatchObject({
+        kind: 'refused',
+        reason: 'at-limit',
+      });
+    },
+  );
+
+  it('refuses a 320 ms route as past the limit', () => {
+    expect(analyseTaps(tapsFor(320))).toMatchObject({
+      kind: 'refused',
+      reason: 'at-limit',
+    });
+  });
+
+  it('refuses an even split across the wrap rather than averaging it to zero', () => {
+    const edge = MS_PER_BEAT / 2 - 5;
+    const split = Array.from({ length: CALIBRATION.taps }, (_, i) =>
+      i % 2 === 0 ? edge : -edge,
+    );
+    expect(analyseTaps(split)).toMatchObject({ kind: 'refused' });
+  });
+
+  it('never measures a value it could not store', () => {
+    for (let trueMs = -MS_PER_BEAT; trueMs <= MS_PER_BEAT; trueMs += 5) {
+      const outcome = analyseTaps(tapsFor(trueMs));
+      if (outcome.kind !== 'measured') continue;
+      const stored = storedOffsetMs(outcome.meanMs);
+      expect(stored).toBeGreaterThanOrEqual(KB_LATENCY_OFFSET_MS_BOUNDS.min);
+      expect(stored).toBeLessThanOrEqual(KB_LATENCY_OFFSET_MS_BOUNDS.max);
+    }
   });
 });

@@ -94,17 +94,17 @@ describe('calibration view', () => {
     expect(view.result).toMatchObject({ useLabel: 'Use anyway' });
   });
 
-  it('refuses with no number after a run without 8 usable taps', () => {
+  it('refuses with no number when the latency is at the limit', () => {
     const view = calibrationView(
       state({
         phase: 'done',
         deviations: alternating(0, 290),
-        outcome: { kind: 'refused', usable: 0 },
+        outcome: { kind: 'refused', reason: 'at-limit', usable: 16 },
       }),
     );
     expect(view.result).toEqual({
       kind: 'message',
-      text: 'Not enough steady taps; try again',
+      text: 'Latency is at the limit Kitbag can correct',
     });
     expect(view.canUse).toBe(false);
     expect(view.showUse).toBe(false);
@@ -199,7 +199,28 @@ describe('calibration messages', () => {
     });
   });
 
-  it('shows the failure when the route or click could not start', () => {
+  it('refuses with no number when too few taps were steady', () => {
+    const view = calibrationView(
+      state({
+        phase: 'done',
+        deviations: alternating(12, 3, CALIBRATION.minUsableTaps - 1),
+        outcome: { kind: 'refused', reason: 'too-few', usable: 7 },
+      }),
+    );
+    expect(view.result).toEqual({
+      kind: 'message',
+      text: 'Not enough steady taps; try again',
+    });
+  });
+
+  it('says the output could not be read', () => {
+    expect(calibrationView(state({ phase: 'route-failed' })).result).toEqual({
+      kind: 'message',
+      text: 'Couldn’t read the audio output. Try again.',
+    });
+  });
+
+  it('shows the failure when the click could not start', () => {
     expect(calibrationView(state({ phase: 'failed' })).result).toEqual({
       kind: 'message',
       text: 'The click could not start; try again',

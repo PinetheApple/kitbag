@@ -10,11 +10,15 @@ import {
   type CalibrationOutcome,
   type CalibrationPhase,
   type CalibrationSession,
+  type RefusalReason,
 } from '@kitbag/core-state';
 
 const CALIBRATING_NOW = 'calibrating now';
 const META_SEPARATOR = ' · ';
-const REFUSED = 'Not enough steady taps; try again';
+const REFUSED: Readonly<Record<RefusalReason, string>> = {
+  'too-few': 'Not enough steady taps; try again',
+  'at-limit': 'Latency is at the limit Kitbag can correct',
+};
 const ROUTE_UNKNOWN = 'Can’t tell which output is in use. Try again.';
 const USE_ANYWAY = 'Use anyway';
 
@@ -26,6 +30,7 @@ const NOTICE_TEXT: Readonly<Record<CalibrationNotice, string>> = {
 const PHASE_TEXT: Partial<Readonly<Record<CalibrationPhase, string>>> = {
   busy: 'Stop the metronome to calibrate',
   failed: 'The click could not start; try again',
+  'route-failed': 'Couldn’t read the audio output. Try again.',
   stopped: 'The click stopped. Start over to calibrate.',
 };
 
@@ -107,7 +112,9 @@ function resultOf(
     return { kind: 'message', text: NOTICE_TEXT[state.notice] };
   }
   if (live.kind === 'refused') {
-    return state.phase === 'done' ? { kind: 'message', text: REFUSED } : null;
+    return state.phase === 'done'
+      ? { kind: 'message', text: REFUSED[live.reason] }
+      : null;
   }
   if (state.phase === 'done' && state.route?.certain !== true) {
     return { kind: 'message', text: ROUTE_UNKNOWN };

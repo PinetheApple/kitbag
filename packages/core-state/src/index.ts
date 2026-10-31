@@ -230,6 +230,7 @@ export {
   analyseTaps,
   storedOffsetMs,
   type CalibrationOutcome,
+  type RefusalReason,
 } from './rig/calibrationStats.ts';
 export {
   canUseOutcome,
