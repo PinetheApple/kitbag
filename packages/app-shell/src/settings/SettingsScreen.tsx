@@ -8,9 +8,10 @@ import {
   SegmentedControl,
   type SegmentOption,
 } from '@kitbag/core-design';
+import { getAppVersion } from '@kitbag/core-native';
 import { useAppearance, type ThemeChoice } from '@kitbag/core-state';
-import { useCallback } from 'react';
-import { Linking } from 'react-native';
+import { useCallback, useMemo } from 'react';
+import { Linking, Platform } from 'react-native';
 
 import {
   LICENCE_NAME,
@@ -18,6 +19,7 @@ import {
   SOURCE_LABEL,
   SOURCE_URL,
 } from './about.ts';
+import { formatAppVersion } from './appVersion.ts';
 import { formatPracticeSummary } from './practiceText.ts';
 import { SettingsFrame } from './SettingsFrame.tsx';
 import { usePracticeStats } from './usePracticeStats.ts';
@@ -104,6 +106,17 @@ function AppearanceSection() {
   );
 }
 
+const SHOWS_APP_VERSION = Platform.OS !== 'web';
+
+function VersionRow() {
+  const version = useMemo(() => formatAppVersion(getAppVersion()), []);
+  return (
+    <EditRow label="Version">
+      <EditValue muted>{version}</EditValue>
+    </EditRow>
+  );
+}
+
 function AboutSection({
   onOpenAttributions,
 }: {
@@ -119,6 +132,7 @@ function AboutSection({
     <>
       <SectionHeader label="About" />
       <EditGroup>
+        {SHOWS_APP_VERSION && <VersionRow />}
         <EditRow
           label={LICENCE_LABEL}
           accessibilityRole="link"
