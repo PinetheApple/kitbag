@@ -7,7 +7,7 @@
 
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 594;
+constexpr int kExpectedChecks = 647;
 
 void RunAllTests() {
   metronome_test::RunBasicTests();
@@ -35,6 +35,7 @@ void RunAllTests() {
   metronome_test::RunTrainerStatusTests();
   metronome_test::RunRampStatusTests();
   metronome_test::RunFollowTests();
+  metronome_test::RunBarPhaseTests();
   rt_test::RunPublisherTests();
   rt_test::RunStallDetectorTests();
 }

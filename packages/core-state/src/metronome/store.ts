@@ -27,6 +27,7 @@ import {
 import {
   BPM_BOUNDS,
   clamp,
+  roundToEngineBpm,
   initialAccents,
   isCountInBars,
   isSoundId,
@@ -165,9 +166,7 @@ function readEngineTempo(engineBpm: EngineBpm, fallback: number): number {
   } catch {
     return fallback;
   }
-  return Number.isFinite(bpm)
-    ? clamp(Math.round(bpm), BPM_BOUNDS.min, BPM_BOUNDS.max)
-    : fallback;
+  return Number.isFinite(bpm) ? roundToEngineBpm(bpm) : fallback;
 }
 
 interface EngineTempo {
