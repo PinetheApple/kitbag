@@ -32,8 +32,8 @@ T Clamp(T value, T low, T high) {
   return value < low ? low : (value > high ? high : value);
 }
 
-// Rounding at the wrap, or the firing epsilon at a loop's fire limit, can land
-// a phase on 1.0; the published range is [0, 1).
+// Rounding at the wrap, or the firing epsilon at a loop's fire limit, can put
+// a phase at or past 1.0; the published range is [0, 1).
 inline double PhaseBelowOne(double phase) {
   return std::min(phase, std::nextafter(1.0, 0.0));
 }

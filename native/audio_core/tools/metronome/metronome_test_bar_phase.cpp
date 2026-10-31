@@ -210,7 +210,7 @@ void CheckCase(const BarPhaseCase& c) {
 void TestBarPhaseOnBlockAlignedDownbeats() {
   const BarPhaseCase cases[] = {
       {"free run 400 BPM 48k", 400.0, 48000, 256, 0.0, StartMode::kStart},
-      {"free run 150 BPM 44.1k +25ms",
+      {"free run 150 BPM 44.1k +25ms, cancelled by start",
        150.0,
        44100,
        480,
