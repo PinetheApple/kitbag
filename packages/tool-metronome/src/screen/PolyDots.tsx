@@ -23,6 +23,7 @@ import {
   polyCycleOffset,
   polyDotSize,
   polyLabelPlace,
+  polyLastDotRight,
   polyRatioLabel,
   polySpanInArea,
   polyX,
@@ -260,8 +261,7 @@ export function PolyDots({
   const [label, setLabel] = useState({ width: 0, height: 0 });
   const labelWidth = label.width;
   const text = polyRatioLabel(ratio);
-  const lastDotRight =
-    Math.max(...columns.flat().map((pulse) => pulse?.left ?? 0)) + size;
+  const lastDotRight = polyLastDotRight(ratio, row, size);
   const place = polyLabelPlace({
     labelWidth,
     labelHeight: label.height,

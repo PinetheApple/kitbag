@@ -1,4 +1,4 @@
-import { space } from '@kitbag/core-design';
+import { metronome, space } from '@kitbag/core-design';
 import { KB_POLY_AGAINST_BAR, KB_POLY_PHASE_NONE } from '@kitbag/core-native';
 import { effectivePolyAgainst } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
@@ -18,6 +18,7 @@ import {
   polyCycleOffset,
   polyDotSize,
   polyLabelPlace,
+  polyLastDotRight,
   polyRatioLabel,
   polyStripCaption,
   polySpanInArea,
@@ -414,4 +415,35 @@ describe('cycle bracket inside the dots area', () => {
       polySpanPlace(wholeBar, SIXTEEN, row),
     );
   });
+});
+
+describe('poly label beside 16/16 at 411 wide', () => {
+  const R2_LABEL_BOX = 40;
+  const areaWidth = 411 - space.screenInset * 2;
+  const lines = layoutBeatLeds(16, MAX_DOTS_PER_LINE);
+
+  for (const density of ['compact', 'roomy'] as const) {
+    const metrics = beatDotMetrics(density, lines);
+    const dotSize = beatDotSize(lines, areaWidth, metrics);
+    const lineWidth = widestLineWidth(lines, dotSize, metrics);
+    const row = { lineWidth, dotSize, dotGap: DOT_METRICS.dotGap };
+
+    for (const polyBeats of [3, 5]) {
+      it(`puts ${String(polyBeats)}:16 right of the row, ${density}`, () => {
+        const ratio = { polyBeats, against: 16, beatsPerBar: 16 };
+        const size = polyDotSize(ratio, row, metronome.polyDot);
+        expect(
+          polyLabelPlace({
+            labelWidth: R2_LABEL_BOX,
+            labelHeight: metronome.beatMarkerLineHeight,
+            rowHeight: metronome.polyDot,
+            labelGap: metronome.polyLabelGap,
+            sideRoom: (areaWidth - lineWidth) / 2,
+            screenInset: space.screenInset,
+            afterLastDot: lineWidth - polyLastDotRight(ratio, row, size),
+          }),
+        ).toBe('right');
+      });
+    }
+  }
 });

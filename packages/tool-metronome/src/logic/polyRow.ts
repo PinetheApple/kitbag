@@ -74,6 +74,15 @@ export function polyBar(ratio: PolyRatio, offset: number): PolyBar {
   return { pulses, spans };
 }
 
+// Bar n starts n * beatsPerBar beats into the cycle, so only these offsets are ever drawn.
+export function polyBarOffsets(ratio: PolyRatio): readonly number[] {
+  const offsets = new Set<number>();
+  for (let bar = 0; bar < ratio.against; bar++) {
+    offsets.add((bar * ratio.beatsPerBar) % ratio.against);
+  }
+  return [...offsets];
+}
+
 export function polyBarTable(ratio: PolyRatio): readonly PolyBar[] {
   return Array.from({ length: ratio.against }, (_u, offset) =>
     polyBar(ratio, offset),
@@ -95,6 +104,19 @@ export function polySpanPlace(
 ): { readonly left: number; readonly width: number } {
   const left = polyX(span.start, beatsPerBar, row);
   return { left, width: polyX(span.end, beatsPerBar, row) - left };
+}
+
+export function polyLastDotRight(
+  ratio: PolyRatio,
+  row: PolyRowGeometry,
+  dotSize: number,
+): number {
+  const centres = polyBarOffsets(ratio).flatMap((offset) =>
+    polyBar(ratio, offset).pulses.map((pulse) =>
+      polyX(pulse.beat, ratio.beatsPerBar, row),
+    ),
+  );
+  return Math.max(...centres) + dotSize / 2;
 }
 
 export function polySpanInArea(
