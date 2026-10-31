@@ -4,6 +4,7 @@ import {
   EditGroup,
   EditRow,
   EditTextInput,
+  metronomeEditor,
   space,
   StepControl,
   type StepDelta,
@@ -11,6 +12,7 @@ import {
 import { KB_STOPPED_BEAT, KB_SUBDIVISION_BOUNDS } from '@kitbag/core-native';
 import { BPM_BOUNDS } from '@kitbag/core-state';
 import { useCallback } from 'react';
+import { View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 
 import {
@@ -20,9 +22,15 @@ import {
   withPolyAgainst,
   withPolyBeats,
 } from '../../logic/presetDraft.ts';
-import { polyAgainstValue } from '../../logic/polyRow.ts';
+import { polyAgainstLabel } from '../../logic/polyRow.ts';
 import { subdivisionLabel } from '../../logic/subdivision.ts';
 import { BeatLeds } from '../../screen/BeatLeds.tsx';
+
+const SUB_ROW = {
+  paddingLeft: metronomeEditor.subRowIndent,
+  minHeight: metronomeEditor.subRowMin,
+  justifyContent: 'center',
+} as const;
 
 const EDITOR_LED_GAPS = {
   top: space.rowGap,
@@ -142,6 +150,7 @@ function PolyRows({ editor }: { readonly editor: PresetEditor }) {
     },
     [update],
   );
+  const against = polyAgainstLabel(draft.polyAgainst, draft.beatsPerBar);
   return (
     <>
       <EditRow label="Polyrhythm">
@@ -150,24 +159,33 @@ function PolyRows({ editor }: { readonly editor: PresetEditor }) {
       {draft.polyEnabled ? (
         <>
           <EditDivider />
-          <EditRow label="Poly">
-            <StepControl
-              variant="inline"
-              label="Poly"
-              value={String(draft.polyBeats)}
-              accessibilityValue={countLabel(draft.polyBeats, 'beat', 'beats')}
-              onStep={stepPoly}
-            />
-          </EditRow>
+          <View style={SUB_ROW}>
+            <EditRow label="Poly">
+              <StepControl
+                variant="inlineLarge"
+                label="Poly"
+                value={String(draft.polyBeats)}
+                accessibilityValue={countLabel(
+                  draft.polyBeats,
+                  'beat',
+                  'beats',
+                )}
+                onStep={stepPoly}
+              />
+            </EditRow>
+          </View>
           <EditDivider />
-          <EditRow label="Against">
-            <StepControl
-              variant="inline"
-              label="Against"
-              value={polyAgainstValue(draft.polyAgainst, draft.beatsPerBar)}
-              onStep={stepAgainst}
-            />
-          </EditRow>
+          <View style={SUB_ROW}>
+            <EditRow label="Against">
+              <StepControl
+                variant="inlineLarge"
+                label="Against"
+                value={against.value}
+                suffix={against.suffix}
+                onStep={stepAgainst}
+              />
+            </EditRow>
+          </View>
         </>
       ) : null}
     </>

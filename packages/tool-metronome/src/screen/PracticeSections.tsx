@@ -22,8 +22,9 @@ import {
   COUNT_IN_MODE_OPTIONS,
   type CountInMode,
 } from '../logic/countIn.ts';
-import { polyAgainstValue } from '../logic/polyRow.ts';
+import { polyAgainstLabel } from '../logic/polyRow.ts';
 import type { PracticeField } from '../logic/practiceEntry.ts';
+import { PolyStrip } from './PolyStrip.tsx';
 import { PracticeSection, usePracticeStyles } from './PracticeSection.tsx';
 import { useBarMuteEditor } from './useBarMuteEditor.ts';
 
@@ -209,6 +210,7 @@ export function PracticePoly({ onType }: TypeProps) {
   const handleTypeAgainst = useCallback(() => {
     onType('polyAgainst');
   }, [onType]);
+  const againstLabel = polyAgainstLabel(polyAgainst, beatsPerBar);
   return (
     <PracticeSection
       last
@@ -241,13 +243,19 @@ export function PracticePoly({ onType }: TypeProps) {
         <StepControl
           variant="inlineLarge"
           label="Against"
-          value={polyAgainstValue(polyAgainst, beatsPerBar)}
+          value={againstLabel.value}
+          suffix={againstLabel.suffix}
           accessibilityValue={againstSpoken(polyAgainst, beatsPerBar)}
           neighbourGapDp={space.controlGap}
           onStep={stepAgainst}
           onValuePress={handleTypeAgainst}
         />
       </View>
+      <PolyStrip
+        polyBeats={polyBeats}
+        against={polyAgainst}
+        beatsPerBar={beatsPerBar}
+      />
     </PracticeSection>
   );
 }

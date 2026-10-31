@@ -1,4 +1,5 @@
 import { KB_POLY_AGAINST_BAR } from '@kitbag/core-native';
+import { effectivePolyAgainst } from '@kitbag/core-state';
 
 export interface PolyRatio {
   readonly polyBeats: number;
@@ -130,8 +131,36 @@ export function polyRatioLabel(ratio: PolyRatio): string {
   return `${String(ratio.polyBeats)}:${String(ratio.against)}`;
 }
 
-export function polyAgainstValue(against: number, beatsPerBar: number): string {
+export interface PolyAgainstLabel {
+  readonly value: string;
+  readonly suffix: string | undefined;
+}
+
+export function polyAgainstLabel(
+  against: number,
+  beatsPerBar: number,
+): PolyAgainstLabel {
   return against === KB_POLY_AGAINST_BAR
-    ? `${String(beatsPerBar)} bar`
-    : String(against);
+    ? { value: String(beatsPerBar), suffix: 'bar' }
+    : { value: String(against), suffix: undefined };
+}
+
+export interface PolyStripCaption {
+  readonly cycle: string;
+  readonly span: string;
+}
+
+export function polyStripCaption(
+  polyBeats: number,
+  against: number,
+  beatsPerBar: number,
+): PolyStripCaption {
+  const main = effectivePolyAgainst(against, beatsPerBar);
+  return {
+    cycle: `one cycle: ${String(polyBeats)} poly over ${String(main)} main`,
+    span:
+      against === KB_POLY_AGAINST_BAR
+        ? 'the bar'
+        : `${String(main)} of ${String(beatsPerBar)} beats`,
+  };
 }

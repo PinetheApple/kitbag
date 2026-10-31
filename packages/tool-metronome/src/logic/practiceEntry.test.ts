@@ -19,7 +19,7 @@ import {
   pressDigit,
   type NumpadEntry,
 } from './numpad.ts';
-import { polyAgainstValue } from './polyRow.ts';
+import { polyAgainstLabel } from './polyRow.ts';
 import {
   practiceEntry,
   RAMP_STEP_BOUNDS,
@@ -122,7 +122,10 @@ describe('typing a practice value', () => {
     const typed = typeInto('polyAgainst', [4], three).polyAgainst;
     expect(typed).toBe(KB_POLY_AGAINST_BAR);
     expect(typed).toBe(stepPolyAgainst(3, 1, VALUES.beatsPerBar));
-    expect(polyAgainstValue(typed, VALUES.beatsPerBar)).toBe('4 bar');
+    expect(polyAgainstLabel(typed, VALUES.beatsPerBar)).toEqual({
+      value: '4',
+      suffix: 'bar',
+    });
   });
 
   it('keeps the bar when the bar count is confirmed unchanged', () => {

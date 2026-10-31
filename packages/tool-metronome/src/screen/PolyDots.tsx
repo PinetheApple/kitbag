@@ -24,6 +24,7 @@ import {
   polyDotSize,
   polyLabelPlace,
   polyRatioLabel,
+  polySpanPlace,
   polyX,
   soundingCycle,
   type PolyRatio,
@@ -37,7 +38,7 @@ const usePolyStyles = createThemedStyles((theme) => ({
     gap: metronome.beatMarkerGap,
   },
   row: {
-    height: metronome.polyDot,
+    height: metronome.polyRow,
   },
   besideLabel: {
     position: 'absolute',
@@ -63,6 +64,14 @@ const usePolyStyles = createThemedStyles((theme) => ({
     position: 'absolute',
     borderRadius: radius.circle,
   },
+  bracket: {
+    position: 'absolute',
+    top: metronome.polyDot + metronome.polyBracketGap,
+    height: metronome.polyBracket,
+    borderTopWidth: 0,
+    borderBottomLeftRadius: metronome.polyBracketRadius,
+    borderBottomRightRadius: metronome.polyBracketRadius,
+  },
 }));
 
 interface PlacedPulse {
@@ -72,6 +81,30 @@ interface PlacedPulse {
 }
 
 type PulseColumn = readonly (PlacedPulse | null)[];
+
+interface PlacedSpan {
+  readonly left: number;
+  readonly width: number;
+  readonly cycle: number;
+}
+
+type SpanColumn = readonly (PlacedSpan | null)[];
+
+function spanColumns(
+  ratio: PolyRatio,
+  row: PolyRowGeometry,
+): readonly SpanColumn[] {
+  const bars = polyBarTable(ratio);
+  const count = Math.max(...bars.map((bar) => bar.spans.length));
+  return Array.from({ length: count }, (_u, index) =>
+    bars.map((bar) => {
+      const span = bar.spans[index];
+      if (span === undefined) return null;
+      const place = polySpanPlace(span, ratio.beatsPerBar, row);
+      return { ...place, cycle: span.cycle };
+    }),
+  );
+}
 
 function pulseColumns(
   ratio: PolyRatio,
@@ -130,6 +163,35 @@ function PolyDot({
   return <Animated.View style={[styles.dot, box, look]} />;
 }
 
+interface CycleBracketProps {
+  readonly column: SpanColumn;
+  readonly offset: SharedValue<number>;
+  readonly cycle: SharedValue<number>;
+}
+
+function CycleBracket({ column, offset, cycle }: CycleBracketProps) {
+  const styles = usePolyStyles();
+  const { color } = useTheme();
+  const look = useAnimatedStyle(() => {
+    const span = column[offset.value] ?? null;
+    if (span === null) return { opacity: 0 };
+    const now = span.cycle === cycle.value;
+    const border = now
+      ? metronome.polyBracketNowBorder
+      : metronome.polyBracketBorder;
+    return {
+      opacity: 1,
+      left: span.left,
+      width: span.width,
+      borderColor: now ? color.text2 : color.text3,
+      borderLeftWidth: border,
+      borderRightWidth: border,
+      borderBottomWidth: border,
+    };
+  });
+  return <Animated.View style={[styles.bracket, look]} />;
+}
+
 export interface PolyDotsFrame {
   readonly currentBeat: SharedValue<number>;
   readonly currentPolyBeat: SharedValue<number>;
@@ -180,6 +242,7 @@ export function PolyDots({
     () => pulseColumns(ratio, row, size),
     [ratio, row, size],
   );
+  const spans = useMemo(() => spanColumns(ratio, row), [ratio, row]);
   const { offset, cycle } = usePolyFrame(frame, against);
   const [label, setLabel] = useState({ width: 0, height: 0 });
   const labelWidth = label.width;
@@ -233,6 +296,14 @@ export function PolyDots({
         {place === 'above' ? null : (
           <View style={[styles.besideLabel, besidePlace]}>{labelText}</View>
         )}
+        {spans.map((column, index) => (
+          <CycleBracket
+            key={index}
+            column={column}
+            offset={offset}
+            cycle={cycle}
+          />
+        ))}
         {columns.map((column, index) => (
           <PolyDot
             key={index}

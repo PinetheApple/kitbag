@@ -4,13 +4,14 @@ import { describe, expect, it } from 'vitest';
 
 import {
   NO_CYCLE,
-  polyAgainstValue,
+  polyAgainstLabel,
   polyBar,
   polyBarTable,
   polyCycleOffset,
   polyDotSize,
   polyLabelPlace,
   polyRatioLabel,
+  polyStripCaption,
   polySpanPlace,
   polyX,
   soundingCycle,
@@ -269,11 +270,30 @@ describe('poly dot size', () => {
 
 describe('against value', () => {
   it('reads the sentinel as the bar', () => {
-    expect(polyAgainstValue(KB_POLY_AGAINST_BAR, 4)).toBe('4 bar');
+    expect(polyAgainstLabel(KB_POLY_AGAINST_BAR, 4)).toEqual({
+      value: '4',
+      suffix: 'bar',
+    });
   });
 
-  it('reads an explicit count equal to the bar as a number', () => {
-    expect(polyAgainstValue(4, 4)).toBe('4');
+  it('reads an explicit count as a bare number', () => {
+    expect(polyAgainstLabel(2, 4)).toEqual({ value: '2', suffix: undefined });
+  });
+});
+
+describe('one-cycle strip caption', () => {
+  it('reads an explicit cycle as part of the bar', () => {
+    expect(polyStripCaption(3, 2, 4)).toEqual({
+      cycle: 'one cycle: 3 poly over 2 main',
+      span: '2 of 4 beats',
+    });
+  });
+
+  it('reads the sentinel as the bar', () => {
+    expect(polyStripCaption(3, KB_POLY_AGAINST_BAR, 4)).toEqual({
+      cycle: 'one cycle: 3 poly over 4 main',
+      span: 'the bar',
+    });
   });
 });
 
