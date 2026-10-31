@@ -108,7 +108,8 @@ describe('the body at fontScale 1.0', () => {
   });
 
   it('fits every song with its poly label beside the dots at 360 x 800', () => {
-    const budget = APPROVED_MOCKUP_SMALL.bodyBottom - APPROVED_MOCKUP_SMALL.dotsTop;
+    const budget =
+      APPROVED_MOCKUP_SMALL.bodyBottom - APPROVED_MOCKUP_SMALL.dotsTop;
     expect(tallestBelowTempo('labelBeside', SMALL_COMPACT)).toBeLessThanOrEqual(
       budget,
     );
