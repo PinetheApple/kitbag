@@ -1,4 +1,4 @@
-import { mix, radius, size } from './roles.ts';
+import { mix, radius, size, space } from './roles.ts';
 import { mixHex, type Theme } from './theme.ts';
 import {
   hitBoxStyle,
@@ -7,7 +7,7 @@ import {
   type NeighbourGaps,
 } from './touchTarget.ts';
 
-export const switchKnobTravel =
+const knobOnLeft =
   size.switchWidth - size.stroke * 2 - size.switchKnob - size.switchKnobInset;
 
 export function switchStyles(theme: Theme) {
@@ -34,7 +34,7 @@ export function switchStyles(theme: Theme) {
       borderRadius: radius.circle,
       backgroundColor: color.text3,
     },
-    knobOn: { left: switchKnobTravel, backgroundColor: color.accent },
+    knobOn: { left: knobOnLeft, backgroundColor: color.accent },
   };
 }
 
@@ -46,7 +46,7 @@ export function switchA11y(value: boolean) {
   };
 }
 
-export function switchHitBox(gaps?: number | NeighbourGaps) {
+export function switchHitBox(gaps: number | NeighbourGaps = space.controlGap) {
   return hitBoxStyle(
     hitExtension(size.switchWidth, size.switchHeight, neighbourGaps(gaps)),
   );

@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 
 import { bodyLineHeight, inset, size, space, textRoles } from '../roles.ts';
-import { switchA11y } from '../switchStyles.ts';
+import { switchA11y } from '../switch.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles, useTheme } from '../ThemeProvider.tsx';
 import { minTouchTargetDp, radii } from '../tokens.ts';

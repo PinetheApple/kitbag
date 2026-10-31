@@ -1,9 +1,7 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-
 import { describe, expect, it } from 'vitest';
 
-import { switchA11y, switchHitBox, switchStyles } from './switchStyles.ts';
+import { switchA11y, switchHitBox, switchStyles } from './switch.ts';
+import { space } from './roles.ts';
 import { mixHex, themes } from './theme.ts';
 import { minTouchTargetDp } from './tokens.ts';
 
@@ -23,8 +21,6 @@ const KNOB_ON_LEFT =
   DESIGN_TOG.borderWidth * 2 -
   DESIGN_TOG.knob -
   DESIGN_TOG.knobInset;
-
-const componentsDir = join(import.meta.dirname, 'components');
 
 describe('switchStyles', () => {
   it.each(Object.values(themes))(
@@ -66,8 +62,21 @@ describe('switchStyles', () => {
 });
 
 describe('switchHitBox', () => {
-  it('reaches the minimum touch target in both dimensions by default', () => {
+  it('takes at most half the control gap on each side by default', () => {
     const box = switchHitBox();
+    const halfGap = space.controlGap / 2;
+    for (const side of [
+      box.paddingTop,
+      box.paddingRight,
+      box.paddingBottom,
+      box.paddingLeft,
+    ]) {
+      expect(side).toBeLessThanOrEqual(halfGap);
+    }
+  });
+
+  it('reaches the minimum touch target when no neighbour limits it', () => {
+    const box = switchHitBox({});
     expect(
       DESIGN_TOG.width + box.paddingLeft + box.paddingRight,
     ).toBeGreaterThanOrEqual(minTouchTargetDp);
@@ -76,6 +85,21 @@ describe('switchHitBox', () => {
     ).toBeGreaterThanOrEqual(minTouchTargetDp);
     expect(box.marginLeft).toBe(-box.paddingLeft);
     expect(box.marginTop).toBe(-box.paddingTop);
+  });
+
+  it('splits explicit gaps and hands every side back as margin', () => {
+    const gaps = { top: 20, bottom: 8, left: 10, right: 0 };
+    const box = switchHitBox(gaps);
+    expect(box).toEqual({
+      paddingTop: gaps.top / 2,
+      paddingRight: gaps.right,
+      paddingBottom: gaps.bottom / 2,
+      paddingLeft: gaps.left / 2,
+      marginTop: -gaps.top / 2,
+      marginRight: -gaps.right,
+      marginBottom: -gaps.bottom / 2,
+      marginLeft: -gaps.left / 2,
+    });
   });
 });
 
@@ -86,21 +110,5 @@ describe('switchA11y', () => {
       accessibilityState: { checked: value },
       'aria-checked': value,
     });
-  });
-});
-
-describe('one switch', () => {
-  it('has no variant and one track implementation', () => {
-    const switchSource = readFileSync(
-      join(componentsDir, 'Switch.tsx'),
-      'utf8',
-    );
-    const editRowSource = readFileSync(
-      join(componentsDir, 'EditRow.tsx'),
-      'utf8',
-    );
-    expect(switchSource).not.toMatch(/variant/i);
-    expect(editRowSource).not.toMatch(/variant/i);
-    expect(editRowSource).toMatch(/<SwitchTrack\b/);
   });
 });

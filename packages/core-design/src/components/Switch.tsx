@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { Pressable, View } from 'react-native';
 
-import { switchA11y, switchHitBox, switchStyles } from '../switchStyles.ts';
+import { switchA11y, switchHitBox, switchStyles } from '../switch.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import type { NeighbourGaps } from '../touchTarget.ts';
 
