@@ -38,6 +38,7 @@ import { SubdivisionSheet } from './SubdivisionSheet.tsx';
 import { SwipeHint } from './SwipeHint.tsx';
 import { SwipeTempoZone } from './SwipeTempoZone.tsx';
 import { Transport } from './Transport.tsx';
+import { UnsavedSnackbar } from './UnsavedSnackbar.tsx';
 import { useHoldEngine } from './useHoldEngine.ts';
 import { useTempoSwipe } from './useTempoSwipe.ts';
 import { useMetronomeFrame } from './useMetronomeFrame.ts';
@@ -321,6 +322,7 @@ export function MetronomeScreen({
           onOpenSetlists={onOpenSetlists}
         />
 
+        <UnsavedSnackbar bottomInset={insets.bottom} />
         {hintSeen || zone.height === 0 ? null : (
           <SwipeHint
             zoneTop={bodyTop + zone.top}

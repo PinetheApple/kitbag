@@ -1381,7 +1381,7 @@ The schema is the durable part and survives the stack change. The Flutter
 build's tables were `Setlists`, `Songs`, `PracticeSessions`, `Tunings`,
 `LibrarySongs`, `StemSets`, `Stems` (schema v6). A reconstruction of that v6 DDL is the
 migration fixture in `packages/core-db/src/migrate-fixtures.test-helper.ts`; the React
-Native schema migrates it in place and is at v18 (`packages/core-db/src/migrate.ts`).
+Native schema migrates it in place and is at v19 (`packages/core-db/src/migrate.ts`).
 
 ### 11.1 Persistence layer
 
@@ -1422,6 +1422,7 @@ rather than starting from zero.
 | `StemSets`: + speed; `Stems`: + pitch (semitones) | §7.6 — mix state is per song, like gain/mute/solo |
 | `StemSets`: + `renamed` (default 0); `Stems`: + `name` (display name, NULL shows the role) | §7.1, §7.8 — a rename is display-only and survives a re-import of the same StemDeck song; schema v17 |
 | `SongPresets`: + `poly_against` INTEGER (0 = the bar, 1..16), default 0 | §5.2 — poly N against M; a v4 backup without `polyAgainst` reads as the bar; schema v18 |
+| `route_latency`: + `name` TEXT, + `kind` TEXT (the route's display name and `OutputRoute` kind when calibrated) | §12.5 — the Output & latency sheet lists calibrated routes that are not connected; schema v19 |
 | **All paths relative** to the base directory | §2.3 (iOS) and **D11** (the directory is now user-movable) |
 | `PracticeSessions`: write `setlistId`, `songsPlayed` | §5.7 — columns exist, producer never fills them |
 | BPM cache table | §8.5 |
@@ -1464,6 +1465,7 @@ Two migration notes that are not obvious from the table:
 | `kitbag-metronome-b.html` ("Chosen") and `kitbag-metronome-status.html` (variant A, Q6 pulse marks, poly row) | Owner-approved layout B (#175). **Supersede the metronome screen in `kitbag-metronome.html` §02, and §03's sheets and numpad, where they differ.** §02's setlists, setlist detail and preset editor, and §04 onward, stay binding. Recorded in `docs/decisions.md`, 2026-10-30; `docs/research/metronome-b-parity.md` is the value table. |
 | `kitbag-metronome-setlist.html` | **D2 only** ("Chosen (owner, 2026-10-30)"; #205). Supersedes the app bar in `kitbag-metronome-b.html` while a setlist is active, and adds the setlist song-list sheet. Options A–D are rejected alternatives. Recorded in `docs/decisions.md`, 2026-10-30. |
 | `kitbag-metronome-poly.html` | **A and the main-screen poly row only** ("Chosen (owner, 2026-10-31)"; #203). Supersedes the Polyrhythm section of the Practice sheet in `kitbag-metronome-b.html` and the poly row in `kitbag-metronome-status.html`, and adds the song editor's Poly and Against rows. Options B and C are rejected alternatives. Recorded in `docs/decisions.md`, 2026-10-31. |
+| `kitbag-metronome-unsaved.html` | **Option A** ("Chosen (owner, 2026-10-31)"; #212). Extends the song chip in `kitbag-metronome-setlist.html` D2 with the unsaved-changes dot, adds Save and Revert to that file's song-list NOW row and to the loaded-song sheet, and adds the "not saved" snackbar with Undo. Options B and C are rejected; `docs/research/mockups/212/` keeps them for reference. Recorded in `docs/decisions.md`, 2026-10-31. |
 | `kitbag-library.html` | **Variant B only** ("Two tiles, two screens"; #178). Supersedes `kitbag-ui.html` §04's Home tiles and Library: Songs and Stem songs are separate screens. Variant C is a rejected alternative. From variant A only the filter menu binds: the Songs filter icon opens it (filter by analysis status; sort by title, date added, BPM). `docs/decisions.md` (2026-10-30, #178) lists what is deliberately not built. |
 | `kitbag-stems.html` | **Variant C only** ("Bottom dock"; #137). Supersedes `kitbag-ui.html` §04's Stem player. Variants A and B are rejected alternatives; `docs/decisions.md` (2026-10-30, #137) lists what is deliberately not built. |
 | `kitbag-home-arrange.html` | **Option B only** ("Chosen (owner, 2026-10-31)"; #113). Supersedes the "long-press any tile for edit mode" bullet in `kitbag-ui.html` §04 Home and §12.4's customizable-layout bullet as to *how* editing works: Edit, or a long-press on a tile, opens the Arrange sheet. Options A and C are rejected alternatives, kept as reference in `docs/research/mockups/113/`. Recorded in `docs/decisions.md`, 2026-10-31. |
@@ -1679,7 +1681,11 @@ asks them to.
   against the route, not globally.
 - **16 taps, ~10 seconds.** Enough to average out a bad one, short enough that
   nobody abandons. **Fewer than 8 usable taps refuses to produce a number** rather
-  than producing a bad one — "no dead ends" means explaining, not guessing.
+  than producing a bad one — "no dead ends" means explaining, not guessing. A tap
+  is usable within ±250 ms of the run's median deviation, taken after unwrapping
+  the taps around their circular mean, and then within 2.5 SD (decisions.md,
+  2026-10-31, calibration window); a result within one SD of ±300 ms is refused
+  as at the limit.
 - The stepper stays for people who know their number: every gesture has a visible
   twin, and calibration is the gesture here.
 

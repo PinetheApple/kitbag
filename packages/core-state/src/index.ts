@@ -113,6 +113,8 @@ export { useLibrary } from './library/useLibrary.ts';
 export {
   createLibraryStore,
   libraryStore,
+  loadedPresetOf,
+  type DiscardedChanges,
   type LibraryStore,
   type LoadedSong,
   type PresetEdit,
@@ -134,6 +136,7 @@ export { transportSetlistOf } from './library/transportSetlist.ts';
 export {
   accentsOf,
   byteList,
+  isLoadedSongUnsaved,
   perAccentSoundsOf,
   rampUnitOf,
   toBlob,
@@ -227,6 +230,7 @@ export {
   analyseTaps,
   storedOffsetMs,
   type CalibrationOutcome,
+  type RefusalReason,
 } from './rig/calibrationStats.ts';
 export {
   canUseOutcome,

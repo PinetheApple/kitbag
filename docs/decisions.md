@@ -568,3 +568,23 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   for the render test; react-dom and react-native-web were already pinned by app-shell. The
   subdivision sheet's ×1 tile draws the glyph under x/8 too, extrapolated from the chip,
   since the design's tile grid shows only x/4. **[recorded]**
+
+- **2026-10-31 · Unsaved changes on a loaded song (§5.4, §12, #212)** — Nothing
+  autosaves. Option A in `design/kitbag-metronome-unsaved.html`: an accent dot after the
+  song name on the metronome's song chip while the live settings differ from the loaded
+  song, with Save and Revert side by side in the loaded-song sheet and the setlist song
+  list's NOW row. Save overwrites the song silently, without a confirm; Revert reloads the
+  saved song. Stepping (app bar or media notification), loading another song, Leave
+  setlist or Clear song with unsaved changes discards them as before and shows a
+  non-blocking 6 s snackbar, "Changes to <song> not saved", whose Undo re-links the song
+  and restores its unsaved live settings; it never delays Next. B (Save button in the app
+  bar) and C (chip context line reads "Unsaved") are not chosen and are kept as
+  reference in `docs/research/mockups/212/`. **[user]**
+
+- **2026-10-31 · Calibration window and the ±300 ms limit (§12.5.1, #170)** — A tap's
+  deviation is only known to within one beat, so the taps are first unwrapped around
+  their circular mean; the ±250 ms usable window is then centred on the run's median
+  deviation, not on 0, followed by the 2.5 SD drop. The click stays at 100 BPM. A result
+  whose mean, or mean ± its SD, lies past `KB_LATENCY_OFFSET_MS_BOUNDS` (±300 ms) is
+  refused with "Latency is at the limit Kitbag can correct" instead of a number, so no
+  stored offset is ever outside the bounds. **[user]**

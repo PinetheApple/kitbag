@@ -49,6 +49,7 @@ export type {
 export {
   CATEGORIES,
   DEFAULT_IMPORT_CATEGORIES,
+  MS_PER_SECOND,
   type Category,
   type Conflict,
   type ImportFailure,

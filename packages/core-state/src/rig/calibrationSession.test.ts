@@ -76,6 +76,8 @@ function harness({
   let clickActive = true;
   const pendingStarts: Deferred[] = [];
   let deferStarts = false;
+  let routeReads = 0;
+  let routeReadLimit = Number.POSITIVE_INFINITY;
   const queue = [...routes];
   const deps: CalibrationDeps = {
     startClick: (bpm, subdivision, startFrame) => {
@@ -92,7 +94,9 @@ function harness({
     nowFrame: () => START_FRAME,
     readClockPair: () => pair,
     getOutputRoute: () => {
-      if (routeError) return Promise.reject(new Error('no route'));
+      if (routeError || (routeReads += 1) > routeReadLimit) {
+        return Promise.reject(new Error('no route'));
+      }
       const next = queue.length > 1 ? queue.shift() : queue[0];
       return next === undefined
         ? Promise.reject(new Error('no route'))
@@ -134,6 +138,9 @@ function harness({
     setPair: (next: EngineClockPair | null) => {
       pair = next;
     },
+    failRouteReads: () => {
+      routeReadLimit = routeReads + 1;
+    },
     stopClickExternally: () => {
       clickActive = false;
     },
@@ -161,6 +168,7 @@ describe('calibration session', () => {
     expect(session.getState().deviations).toHaveLength(CALIBRATION.taps - 1);
     expect(session.getState().phase).toBe('running');
     tapRun(12, 1);
+    await flush();
     expect(session.getState().phase).toBe('done');
     expect(session.getState().outcome).toMatchObject({
       kind: 'measured',
@@ -258,6 +266,8 @@ describe('calibration session', () => {
     const { session, calls, tapRun } = harness({ routes: [guess] });
     await session.getState().open();
     tapRun(12);
+    await flush();
+    expect(session.getState().phase).toBe('done');
     expect(canUseOutcome(session.getState())).toBe(false);
     await session.getState().use();
     expect(calls.saved).toEqual([]);
@@ -268,6 +278,7 @@ describe('calibration session', () => {
     const { session, calls, tapRun } = harness();
     await session.getState().open();
     tapRun(12.4);
+    await flush();
     await session.getState().use();
     expect(calls.saved).toEqual([
       {
@@ -286,7 +297,11 @@ describe('calibration session', () => {
     const wild = CALIBRATION.usableWindowMs + 30;
     for (let i = 1; i <= CALIBRATION.taps; i += 1)
       tapAt(i, i % 2 === 0 ? wild : -wild);
-    expect(session.getState().outcome).toMatchObject({ kind: 'refused' });
+    await flush();
+    expect(session.getState().outcome).toMatchObject({
+      kind: 'refused',
+      reason: 'at-limit',
+    });
     await session.getState().use();
     expect(calls.saved).toEqual([]);
   });
@@ -310,11 +325,44 @@ describe('calibration session', () => {
     expect(session.getState().phase).toBe('busy');
   });
 
-  it('fails when the output route cannot be read', async () => {
+  it('says the output could not be read when the route read fails', async () => {
     const { session, calls } = harness({ routeError: true });
     await session.getState().open();
-    expect(session.getState().phase).toBe('failed');
+    expect(session.getState().phase).toBe('route-failed');
     expect(calls.starts).toEqual([]);
+  });
+
+  it('stops the armed click when the confirming route read fails', async () => {
+    const guess = { ...SPEAKER, certain: false };
+    const h = harness({ routes: [guess] });
+    h.failRouteReads();
+    await h.session.getState().open();
+    expect(h.calls.starts).toHaveLength(1);
+    expect(h.calls.stops).toBe(1);
+    expect(h.session.getState().phase).toBe('route-failed');
+  });
+
+  it('shows no result when the click stopped before the last tap', async () => {
+    const { session, tapRun, stopClickExternally } = harness();
+    await session.getState().open();
+    tapRun(12, CALIBRATION.taps - 1);
+    await flush();
+    stopClickExternally();
+    tapRun(12, 1);
+    await flush();
+    expect(session.getState()).toMatchObject({
+      phase: 'stopped',
+      outcome: null,
+    });
+  });
+
+  it('takes the click’s sample rate when it is armed', async () => {
+    const { session, calls, tapAt } = harness();
+    await session.getState().open();
+    tapAt(1, 10, 0, RATE / 2);
+    await flush();
+    expect(calls.starts).toHaveLength(2);
+    expect(session.getState().notice).toBe('engine-restarted');
   });
 
   it('stops the click on close and ignores taps after it', async () => {

@@ -322,6 +322,7 @@ export const textRoles = {
   songChipTitle: { family: display, weight: 600, size: 14 },
   songChipContext: { family: display, weight: 500, size: 12 },
   setlistSongMeta: { family: display, weight: 500, size: 13 },
+  nowAction: { family: display, weight: 600, size: 13 },
   pickerChip: { family: display, weight: 500, size: 15 },
   status: { family: body, weight: 400, size: 14 },
   statusLead: { family: display, weight: 600, size: 14.5, tabular: true },

@@ -35,7 +35,14 @@ export interface CalibrationDeps {
 }
 
 export type CalibrationPhase =
-  'idle' | 'starting' | 'running' | 'done' | 'busy' | 'failed' | 'stopped';
+  | 'idle'
+  | 'starting'
+  | 'running'
+  | 'done'
+  | 'busy'
+  | 'failed'
+  | 'route-failed'
+  | 'stopped';
 
 export type CalibrationNotice = 'route-changed' | 'engine-restarted';
 
@@ -130,7 +137,7 @@ export function createCalibrationSession(
         return false;
       }
       schedule = { startFrame, bpm: CALIBRATION.bpm };
-      scheduleRate = null;
+      scheduleRate = deps.readClockPair()?.sampleRate ?? null;
       return true;
     };
 
@@ -154,6 +161,33 @@ export function createCalibrationSession(
       );
     };
 
+    const finishRun = (opened: number, deviations: readonly number[]) => {
+      const settle = (active: boolean) => {
+        if (!current(opened) || get().deviations !== deviations) return;
+        if (!active) {
+          schedule = null;
+          set({ phase: 'stopped' });
+          return;
+        }
+        set({ phase: 'done', outcome: analyseTaps(deviations) });
+      };
+      deps.isClickActive().then(settle, () => {
+        settle(true);
+      });
+    };
+
+    const readRoute = async (opened: number, clickArmed: boolean) => {
+      try {
+        return await deps.getOutputRoute();
+      } catch {
+        if (current(opened)) {
+          if (clickArmed) deps.stopClick();
+          set({ phase: 'route-failed' });
+        }
+        return null;
+      }
+    };
+
     const stop = () => {
       generation += 1;
       unwatch?.();
@@ -163,12 +197,12 @@ export function createCalibrationSession(
     };
 
     const openSession = async (opened: number) => {
-      let route = await deps.getOutputRoute();
-      if (!current(opened)) return;
+      let route = await readRoute(opened, false);
+      if (route === null || !current(opened)) return;
       if (!(await armClick(opened))) return;
       if (!route.certain) {
-        route = await deps.getOutputRoute();
-        if (!current(opened)) return;
+        route = await readRoute(opened, true);
+        if (route === null || !current(opened)) return;
       }
       set({ phase: 'running', route });
       unwatch = deps.watchOutputRoute(onRoute);
@@ -197,7 +231,9 @@ export function createCalibrationSession(
       },
 
       tap: (timestampMs) => {
-        if (get().phase !== 'running' || schedule === null) return;
+        const { phase, deviations: taken } = get();
+        if (phase !== 'running' || schedule === null) return;
+        if (taken.length >= CALIBRATION.taps) return;
         const pair = deps.readClockPair();
         if (pair === null) return;
         const opened = generation;
@@ -211,21 +247,16 @@ export function createCalibrationSession(
           return;
         }
         lastPair = pair;
-        confirmClickRunning(opened);
         const deviations = [
-          ...get().deviations,
+          ...taken,
           tapDeviationMs(timestampMs, pair, schedule),
         ];
+        set({ deviations, notice: null });
         if (deviations.length < CALIBRATION.taps) {
-          set({ deviations, notice: null });
+          confirmClickRunning(opened);
           return;
         }
-        set({
-          deviations,
-          notice: null,
-          phase: 'done',
-          outcome: analyseTaps(deviations),
-        });
+        finishRun(opened, deviations);
       },
 
       startOver: () => {
