@@ -2,7 +2,8 @@ import type { PracticeStats } from '@kitbag/core-db';
 import { countLabel } from '@kitbag/core-design';
 import { clockParts } from '@kitbag/core-state';
 
-const SEPARATOR = '·';
+import { SEPARATOR } from './separator.ts';
+
 const EMPTY_PRACTICE = 'No sessions yet';
 
 export interface PracticeSummary {

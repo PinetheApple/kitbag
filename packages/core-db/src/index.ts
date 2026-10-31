@@ -1,4 +1,5 @@
 export {
+  DATABASE_NAME,
   openDatabase,
   type KitbagDatabase,
   type SetlistRepository,
