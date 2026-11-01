@@ -34,7 +34,10 @@ export function stem(id: number, change: Partial<StoredStem> = {}): StoredStem {
   };
 }
 
-export function record(stems: StoredStem[]): StemSetRecord {
+export function record(
+  stems: StoredStem[],
+  change: Partial<StemSetRecord> = {},
+): StemSetRecord {
   return {
     id: 7,
     uuid: 'u',
@@ -59,6 +62,7 @@ export function record(stems: StoredStem[]): StemSetRecord {
     lyrics: null,
     lyricsRetimed: null,
     stems,
+    ...change,
   };
 }
 
@@ -101,6 +105,9 @@ export function fakeRuntime(set: StemSetRecord) {
     readStemSet: vi.fn(() => Promise.resolve<StemSetRecord | undefined>(set)),
     saveStemMix: vi.fn(() => Promise.resolve()),
     renameStem: vi.fn<StemPlayerRecords['renameStem']>(() => Promise.resolve()),
+    saveLyricsRetimed: vi.fn<StemPlayerRecords['saveLyricsRetimed']>(() =>
+      Promise.resolve(),
+    ),
   };
   const sharedMetronome = { active: vi.fn(() => false), release: vi.fn() };
   const runtime: StemPlayerRuntime = {
@@ -133,8 +140,11 @@ export function fakeRuntime(set: StemSetRecord) {
   };
 }
 
-export async function opened(stems: StoredStem[]) {
-  const fake = fakeRuntime(record(stems));
+export async function opened(
+  stems: StoredStem[],
+  change: Partial<StemSetRecord> = {},
+) {
+  const fake = fakeRuntime(record(stems, change));
   const store = createStemPlayerStore(() => fake.runtime, {
     mixSaveDelayMs: SAVE_MS,
     scrubSeekDelayMs: SEEK_MS,

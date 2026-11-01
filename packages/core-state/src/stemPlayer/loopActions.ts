@@ -14,7 +14,7 @@ export function loopActions({
   get,
   runtimeOf,
   session,
-}: ActionContext): Pick<StemPlayerActions, 'markLoop'> {
+}: ActionContext): Pick<StemPlayerActions, 'markLoop' | 'loopSection'> {
   const { busy, call } = sessionGate(session);
   const positionSeconds = () =>
     framesToSeconds(runtimeOf().engine.position(), get().engineRate);
@@ -29,7 +29,7 @@ export function loopActions({
     else set({ loopFailure: 'engine' });
   };
 
-  const setLoop = async (bounds: LoopSeconds) => {
+  const setLoop = async (bounds: LoopSeconds): Promise<boolean> => {
     const { engineRate, durationFrames } = get();
     const startFrame = secondsToFrames(bounds.startSec, engineRate);
     const endFrame = Math.min(
@@ -38,7 +38,7 @@ export function loopActions({
     );
     if (endFrame <= startFrame) {
       set({ loop: { kind: 'off' }, loopFailure: 'tooShort' });
-      return;
+      return false;
     }
     const { commands } = runtimeOf();
     const { result, live } = await call(() =>
@@ -46,7 +46,7 @@ export function loopActions({
     );
     if (!live) {
       if (result === KB_RESULT.KB_OK) void commands.mixerClearLoop();
-      return;
+      return false;
     }
     if (result === KB_RESULT.KB_OK) {
       set({
@@ -55,10 +55,12 @@ export function loopActions({
           startSec: bounds.startSec,
           endSec: framesToSeconds(endFrame, engineRate),
         },
+        loopFailure: null,
       });
-      return;
+      return true;
     }
     set({ loop: { kind: 'off' }, loopFailure: failureOf(result) });
+    return false;
   };
 
   return {
@@ -85,6 +87,12 @@ export function loopActions({
         return;
       }
       await setLoop(bounds);
+    },
+    loopSection: async (index) => {
+      const section = get().sections[index];
+      if (busy() || section === undefined) return;
+      if (await setLoop(section))
+        get().seek(secondsToFrames(section.startSec, get().engineRate));
     },
   };
 }
