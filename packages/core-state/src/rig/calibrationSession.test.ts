@@ -298,6 +298,24 @@ describe('calibration session', () => {
     expect(calls.applied).toEqual([12]);
   });
 
+  it('stores the running result mid-run once enough taps are in', async () => {
+    const { session, calls, tapRun } = harness();
+    await session.getState().open();
+    tapRun(12, CALIBRATION.minUsableTaps);
+    expect(session.getState().phase).toBe('running');
+    expect(await session.getState().use()).toBe(true);
+    expect(calls.saved).toMatchObject([{ route: HEADPHONES.id, offsetMs: 12 }]);
+    expect(calls.applied).toEqual([12]);
+  });
+
+  it('stores nothing mid-run below the usable-tap minimum', async () => {
+    const { session, calls, tapRun } = harness();
+    await session.getState().open();
+    tapRun(12, CALIBRATION.minUsableTaps - 1);
+    expect(await session.getState().use()).toBe(false);
+    expect(calls.saved).toEqual([]);
+  });
+
   it('stores nothing when it refused to produce a number', async () => {
     const { session, calls, tapAt } = harness();
     await session.getState().open();

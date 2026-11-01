@@ -200,7 +200,7 @@ void PrintUsage(std::FILE* out) {
       "                        click is the origin and offset is not gated\n"
       "  --grid <file>         one beat time in seconds per line\n\n"
       "A second click less than ~50 ms after the first (measured on the\n"
-      "default sound; longer for slower-decaying sounds) merges into one\n"
+      "beep sound; longer for slower-decaying sounds) merges into one\n"
       "onset and is not counted as doubled. Record with the default click\n"
       "sound: a low preset (tom) through a resonant speaker can time accents\n"
       "and beats on different half-cycles, ~1.4 ms apart, read as jitter.\n\n",

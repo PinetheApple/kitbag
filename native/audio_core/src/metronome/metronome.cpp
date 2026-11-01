@@ -9,6 +9,7 @@ namespace kitbag {
 
 using metronome_detail::Clamp;
 using metronome_detail::kMsPerMinute;
+using metronome_detail::kMsPerSecond;
 
 void Metronome::Start() {
   commands_.Push({CommandType::kStart});
@@ -272,10 +273,13 @@ bool Metronome::ApplyClockCommand(const Command& command) {
     case CommandType::kSetLatencyOffset:
       SetLatencyPreservingPhase(command.value);
       return true;
-    case CommandType::kSetFollowMixer:
-      follow_mixer_ = command.int_a != 0;
+    case CommandType::kSetFollowMixer: {
+      const bool follow = command.int_a != 0;
+      if (follow_mixer_ != follow) last_onset_ = {};
+      follow_mixer_ = follow;
       ReacquireGrid();
       return true;
+    }
     default:
       return false;
   }
@@ -320,11 +324,12 @@ void Metronome::ArmRamp(const Command& command) {
 
 void Metronome::SetLatencyPreservingPhase(double latency_ms) {
   const double before = LatencyBeats();
+  const double before_ms = latency_offset_ms_;
   latency_offset_ms_ =
       Clamp(latency_ms, -kMaxLatencyOffsetMs, kMaxLatencyOffsetMs);
-  if (running_) {
-    beat_position_ += before - LatencyBeats();
-  }
+  if (!running_) return;
+  beat_position_ += before - LatencyBeats();
+  pending_grid_shift_sec_ += (latency_offset_ms_ - before_ms) / kMsPerSecond;
 }
 
 void Metronome::StopRun() {
@@ -349,6 +354,7 @@ void Metronome::BeginRun() {
   ArmCountIn();
   beat_position_ = -count_in_beats_ - LatencyBeats();
   running_ = true;
+  last_onset_ = {};
   ReacquireGrid();
   // Publish now, not only at the end of the drain: a deferred StartAt calls
   // BeginRun from the render loop, after the drain already stored the flag.

@@ -229,6 +229,7 @@ export function CalibrationScreen({ onBack }: CalibrationScreenProps) {
               variant="primary"
               fill
               disabled={!view.canUse}
+              outlinedWhenDisabled
               onPress={handleUse}
             />
           )}

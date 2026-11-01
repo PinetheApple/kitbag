@@ -557,12 +557,26 @@ clamp. Both are now fixed and pinned by
   double-incrementing `current_bar_`). Found by the first fix's own reviewer:
   the machinery to prevent it existed and was not applied here. **Fixed** by the
   same phase-preservation in `kSetLatencyOffset` while running.
-- **Under a grid a mid-run change drops or delays beats.** Grid mode reads the
-  offset through `GridSeconds` rather than through `beat_position_`, so changing
-  it shifts the song-time mapping without moving `grid_cursor_`. The effect
-  scales with the size of the change, up to twice the clamp: on a 400 BPM grid,
-  −300 → +300 ms drops 4 beats and +300 → −300 ms leaves a 0.75 s gap. What a
-  mid-song change should do is open (#245).
+- **Under a grid a mid-run change jumps the click with the song** (owner,
+  2026-10-31, #245). Grid mode reads the offset through `GridSeconds`, so a change
+  moves the song position the click is on. Every change re-seeks the cursor, and
+  on the engine clock no re-seek (a republished grid and `anchor_external`
+  included) lands on a beat or subdivision tick at or before the last one heard
+  this run on the same grid anchor. The follow-mixer clock has no such floor: its
+  loop wraps and song seeks replay beats by design. Forward, the crossed beats are
+  dropped: the next click is the first beat at or after the new position, on its
+  new-offset frame (−300 → +300 ms on a 400 BPM grid drops 4). Back by at least
+  one grid interval — the spacing of the beats the cursor sits between — that
+  floor is lifted and the beats from the new position replay at their new-offset
+  frames, as the stems do; within one run on one anchor, only this replay sounds a
+  beat twice. Back by less, the floor holds: the next click is the next unsounded
+  beat, and `bar_phase` holds at the last sounded beat until the position passes
+  it again. Changes drained in one block act as their sum. A new run, a grid with
+  another anchor, or a switch to or from the follow-mixer clock starts a fresh
+  floor. A re-seek also places the subdivision cursor, so the ticks it skipped
+  never fire as a burst. Pinned by `RunGridOffsetChangeTests` in
+  `metronome_verify`. The follow-mixer click ignores the offset (D16), so a change
+  there moves nothing.
 
 **The rule these three fixes share, and the decision that comes with it:** a
 change to the offset *or* the tempo preserves `position` phase — it never steps
@@ -623,9 +637,11 @@ Ported from the Flutter build, which got this right:
   is on. The ratio is N poly beats against M main beats (`3:2`, `5:3`); M
   defaults to the bar, and while it equals the beats per bar it follows later
   meter changes. Smaller dots, each placed at its time in the bar, so a poly
-  pulse that lands on a beat sits under that beat; a `3:2` ratio label to the
-  left. Each cycle's first pulse is ringed and a bracket marks each cycle's
-  span; when the cycle does not divide the bar the row redraws on the downbeat
+  pulse that lands on a beat sits under that beat; a `3:2` ratio label right of
+  the row, else left of it, else above it (`design/kitbag-metronome.html` §02;
+  order per `docs/decisions.md` 2026-11-01).
+  Each cycle's first pulse is ringed and a bracket marks each cycle's span; when
+  the cycle does not divide the bar the row redraws on the downbeat
   (`design/kitbag-metronome-poly.html`). The sounding poly dot fills.
 - **Bar sweep** under the BPM: a thin progress ring per bar (anticipation), and
   the active LED flashes on the click (confirmation). Both — see §12.3.
@@ -1460,9 +1476,10 @@ Two migration notes that are not obvious from the table:
 | `kitbag-metronome.html` | Supersedes the metronome section of `kitbag-ui.html`. Adds setlists, setlist detail, preset editor, four sheets, the numpad, practice summary, notification/lock screen. |
 | `kitbag-playalong.html` | Supersedes the Play-along section. Adds the locked state, seven more states, five sheets, and a code audit. |
 | `kitbag-settings.html` | Designs Settings, latency calibration, restore. **Supersedes exactly one §06 card** — "Settings stay contextual" — and nothing else. |
-| `kitbag-metronome-b.html` ("Chosen") and `kitbag-metronome-status.html` (variant A, Q6 pulse marks, poly row) | Owner-approved layout B (#175). **Supersede the metronome screen in `kitbag-metronome.html` §02, and §03's sheets and numpad, where they differ.** §02's setlists, setlist detail and preset editor, and §04 onward, stay binding. Recorded in `docs/decisions.md`, 2026-10-30; `docs/research/metronome-b-parity.md` is the value table. |
+| `kitbag-metronome-b.html` ("Chosen") and `kitbag-metronome-status.html` (variant A, Q6 pulse marks, poly row) | Owner-approved layout B (#175). **Supersede the metronome screen in `kitbag-metronome.html` §02, and §03's sheets and numpad, where they differ**, except sizes and vertical layout, which the #243 frame in `kitbag-metronome.html` §02 sets. §02's setlists, setlist detail and preset editor, and §04 onward, stay binding. Recorded in `docs/decisions.md`, 2026-10-30; `docs/research/metronome-b-parity.md` is the value table. |
 | `kitbag-metronome-setlist.html` | **D2 only** ("Chosen (owner, 2026-10-30)"; #205). Supersedes the app bar in `kitbag-metronome-b.html` while a setlist is active, and adds the setlist song-list sheet. Options A–D are rejected alternatives. Recorded in `docs/decisions.md`, 2026-10-30. |
 | `kitbag-metronome-poly.html` | **A and the main-screen poly row only** ("Chosen (owner, 2026-10-31)"; #203). Supersedes the Polyrhythm section of the Practice sheet in `kitbag-metronome-b.html` and the poly row in `kitbag-metronome-status.html`, and adds the song editor's Poly and Against rows. Options B and C are rejected alternatives. Recorded in `docs/decisions.md`, 2026-10-31. |
+| `kitbag-metronome.html` §02, "Metronome — vertical layout and control sizes" | **#243 only** (owner-approved 2026-10-31). Supersedes the main screen's control sizes and vertical layout in `kitbag-metronome-b.html`, `kitbag-metronome-status.html` and `kitbag-metronome-poly.html`; their colours, glyphs and content stand. Recorded in `docs/decisions.md`, 2026-10-31. |
 | `kitbag-metronome-unsaved.html` | **Option A** ("Chosen (owner, 2026-10-31)"; #212). Extends the song chip in `kitbag-metronome-setlist.html` D2 with the unsaved-changes dot, adds Save and Revert to that file's song-list NOW row and to the loaded-song sheet, and adds the "not saved" snackbar with Undo. Options B and C are rejected; `docs/research/mockups/212/` keeps them for reference. Recorded in `docs/decisions.md`, 2026-10-31. |
 | `kitbag-library.html` | **Variant B only** ("Two tiles, two screens"; #178). Supersedes `kitbag-ui.html` §04's Home tiles and Library: Songs and Stem songs are separate screens. Variant C is a rejected alternative. From variant A only the filter menu binds: the Songs filter icon opens it (filter by analysis status; sort by title, date added, BPM). `docs/decisions.md` (2026-10-30, #178) lists what is deliberately not built. |
 | `kitbag-stems.html` | **Variant C only** ("Bottom dock"; #137). Supersedes `kitbag-ui.html` §04's Stem player. Variants A and B are rejected alternatives; `docs/decisions.md` (2026-10-30, #137) lists what is deliberately not built. |

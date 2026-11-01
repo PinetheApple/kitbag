@@ -6,6 +6,7 @@ import {
 import type { OutputRoute } from '@kitbag/core-native';
 import {
   analyseTaps,
+  BEAT_MS,
   canUseOutcome,
   CALIBRATION,
   formatOffsetMs,
@@ -43,12 +44,17 @@ const PHASE_TEXT: Partial<Readonly<Record<CalibrationPhase, string>>> = {
 };
 
 export const SCATTER = {
-  minHalfRangeMs: 50,
+  axisStepMs: { tight: 50, steady: 100, loose: 200, nearLimit: 400 },
   sdSpan: 3,
   dotTop: 0.2,
   dotSpan: 0.6,
   dotStep: 0.618034,
 } as const;
+
+export const SCATTER_AXIS_STEPS_MS: readonly number[] = [
+  ...Object.values(SCATTER.axisStepMs),
+  BEAT_MS,
+];
 
 export const SCATTER_AXIS_LINE_HEIGHT =
   calibrationText.scatterAxis.size * bodyLineHeight;
@@ -56,6 +62,8 @@ export const SCATTER_AXIS_LINE_HEIGHT =
 export const SCATTER_DOT_BAND = {
   top: 0,
   bottom: calibration.axisBottom + SCATTER_AXIS_LINE_HEIGHT,
+  left: calibration.axisSide,
+  right: calibration.axisSide,
 } as const;
 
 const CENTRE = 0.5;
@@ -97,10 +105,8 @@ export function routeMeta(route: OutputRoute): string {
 }
 
 export function scatterHalfRangeMs(meanMs: number, sdMs: number): number {
-  return Math.max(
-    SCATTER.minHalfRangeMs,
-    Math.abs(meanMs) + SCATTER.sdSpan * sdMs,
-  );
+  const spanMs = Math.abs(meanMs) + SCATTER.sdSpan * sdMs;
+  return SCATTER_AXIS_STEPS_MS.find((step) => step >= spanMs) ?? BEAT_MS;
 }
 
 export function scatterX(deviationMs: number, halfRangeMs: number): number {
@@ -149,9 +155,10 @@ export function calibrationView(state: ViewState): CalibrationView {
   const measured = live.kind === 'measured' ? live : null;
   const refused = state.phase === 'done' && live.kind === 'refused';
   const unwrapped = unwrapDeviations(state.deviations);
-  const axisMs = refused
-    ? scatterHalfRangeMs(mean(unwrapped), sampleSd(unwrapped))
-    : scatterHalfRangeMs(measured?.meanMs ?? 0, measured?.sdMs ?? 0);
+  const axisMs =
+    measured === null
+      ? scatterHalfRangeMs(mean(unwrapped), sampleSd(unwrapped))
+      : scatterHalfRangeMs(measured.meanMs, measured.sdMs);
   return {
     count: state.deviations.length,
     progress: state.deviations.length / CALIBRATION.taps,

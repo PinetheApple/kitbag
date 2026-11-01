@@ -223,7 +223,7 @@ inline void
 ConfigurePolyOnly(kitbag::Metronome& metronome, const PolySetup& setup) {
   metronome.SetTempo(setup.bpm);
   metronome.SetTimeSignature(setup.numerator, setup.denominator);
-  metronome.SetSounds(kHihatSound, kHihatSound);
+  metronome.SetSounds(kClickSound, kClickSound);
   metronome.SetPolyrhythm(true, setup.poly);
   metronome.SetPolyAgainst(setup.against);
   MuteMainBeats(metronome, setup.numerator);
