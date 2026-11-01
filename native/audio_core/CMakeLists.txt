@@ -423,6 +423,12 @@ if(KITBAG_BUILD_TOOLS)
   target_include_directories(stretch_verify PRIVATE src tools)
   target_link_libraries(stretch_verify PRIVATE signalsmith_stretch m)
 
+  add_executable(stretch_bench
+    tools/stretch/stretch_bench.cpp
+    src/stretch/time_stretch.cpp)
+  target_include_directories(stretch_bench PRIVATE src tools/stretch)
+  target_link_libraries(stretch_bench PRIVATE signalsmith_stretch m)
+
   add_executable(click_soak_verify
     tools/soak/click_soak_verify.cpp
     tools/soak/click_soak_test_classify.cpp
