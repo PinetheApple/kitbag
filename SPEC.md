@@ -790,8 +790,8 @@ the single most RN-specific piece of §5** — see §13.9.
   rule (§12.6). Longest stretch is shown in the summary only and not stored.
 - **What ends a session.** Transport Stop only pauses it. The practice pill's
   **End** (in place of reset) ends it and opens the summary; leaving the
-  metronome screen with played time also ends it. A phone call or going to the
-  background never does.
+  metronome screen while stopped, with played time, also ends it. Leaving while
+  playing keeps it running. A phone call or going to the background never does.
 
 ### 5.8 Acceptance
 

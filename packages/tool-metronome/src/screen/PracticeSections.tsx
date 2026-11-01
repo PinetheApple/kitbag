@@ -27,6 +27,7 @@ import { polyAgainstLabel } from '../logic/polyRow.ts';
 import type { PracticeField } from '../logic/practiceEntry.ts';
 import { PolyStrip } from './PolyStrip.tsx';
 import { PracticeSection, usePracticeStyles } from './PracticeSection.tsx';
+import { mutedCellStyles } from './mutedCellStyles.ts';
 import { useBarMuteEditor } from './useBarMuteEditor.ts';
 
 const bars = (count: number) => countLabel(count, 'bar', 'bars');
@@ -44,11 +45,11 @@ const usePreviewStyles = createThemedStyles((theme) => ({
   playing: {
     backgroundColor: theme.color.text2,
   },
-  muted: {
-    borderWidth: metronomeSheet.mutePreviewDashed,
-    borderStyle: 'dashed',
-    borderColor: theme.color.decor,
-  },
+  ...mutedCellStyles(
+    metronomeSheet.mutePreviewDashed,
+    radius.barPreview,
+    theme.color.decor,
+  ),
 }));
 
 function MutePreview({ preview }: { readonly preview: readonly boolean[] }) {
@@ -61,10 +62,14 @@ function MutePreview({ preview }: { readonly preview: readonly boolean[] }) {
       style={styles.preview}
     >
       {preview.map((playing, bar) => (
-        <View
-          key={bar}
-          style={[styles.cell, playing ? styles.playing : styles.muted]}
-        />
+        <View key={bar} style={[styles.cell, playing && styles.playing]}>
+          {playing ? null : (
+            <>
+              <View style={styles.mutedOutline} />
+              <View style={styles.mutedEnds} />
+            </>
+          )}
+        </View>
       ))}
     </View>
   );
