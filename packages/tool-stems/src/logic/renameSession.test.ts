@@ -20,7 +20,7 @@ describe('createRenameSession', () => {
     expect(ends.save).not.toHaveBeenCalled();
   });
 
-  it('cancels when Back closes the keyboard', () => {
+  it('cancel ends the edit without saving', () => {
     const { ends, session } = typedSession();
     session.cancel();
     expect(ends.cancel).toHaveBeenCalledOnce();
