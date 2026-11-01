@@ -22,9 +22,11 @@ import {
   polyBarTable,
   polyCycleOffset,
   polyDotSize,
+  polyLabelLeft,
   polyLabelPlace,
+  polyLastDotRight,
   polyRatioLabel,
-  polySpanPlace,
+  polySpanInArea,
   polyX,
   soundingCycle,
   type PolyRatio,
@@ -121,11 +123,12 @@ function pulseColumns(
 function spanColumns(
   ratio: PolyRatio,
   row: PolyRowGeometry,
+  areaWidth: number,
 ): readonly SpanColumn[] {
   return columnsOf(
     polyBarTable(ratio).map((bar) => bar.spans),
     (span) => ({
-      ...polySpanPlace(span, ratio.beatsPerBar, row),
+      ...polySpanInArea(span, ratio.beatsPerBar, row, areaWidth),
       cycle: span.cycle,
     }),
   );
@@ -251,18 +254,19 @@ export function PolyDots({
     () => pulseColumns(ratio, row, size),
     [ratio, row, size],
   );
-  const spans = useMemo(() => spanColumns(ratio, row), [ratio, row]);
+  const spans = useMemo(
+    () => spanColumns(ratio, row, areaWidth),
+    [ratio, row, areaWidth],
+  );
   const { offset, cycle } = usePolyFrame(frame, against);
   const [label, setLabel] = useState({ width: 0, height: 0 });
   const labelWidth = label.width;
   const text = polyRatioLabel(ratio);
-  const lastDotRight =
-    Math.max(...columns.flat().map((pulse) => pulse?.left ?? 0)) + size;
+  const lastDotRight = polyLastDotRight(ratio, row, size);
   const place = polyLabelPlace({
     labelWidth,
     labelHeight: label.height,
     rowHeight: metronome.polyDot,
-    labelGap: metronome.polyLabelGap,
     sideRoom: (areaWidth - lineWidth) / 2,
     screenInset: space.screenInset,
     afterLastDot: lineWidth - lastDotRight,
@@ -270,10 +274,7 @@ export function PolyDots({
   const width = useMemo(() => ({ width: lineWidth }), [lineWidth]);
   const besidePlace = useMemo(
     () => ({
-      left:
-        place === 'right'
-          ? lastDotRight + metronome.polyLabelGap
-          : -(labelWidth + metronome.polyLabelGap),
+      left: polyLabelLeft(place, lastDotRight, labelWidth),
       width: labelWidth,
     }),
     [place, lastDotRight, labelWidth],

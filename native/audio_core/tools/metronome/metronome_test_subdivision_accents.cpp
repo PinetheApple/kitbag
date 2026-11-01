@@ -35,9 +35,9 @@ constexpr int32_t SlotBit(int slot) {
 std::optional<double> ExpectedHz(Accent beat, int slot, int32_t mask) {
   if (beat == Accent::kMuted) return std::nullopt;
   if (slot == 0) {
-    return beat == Accent::kAccented ? kHihatAccentHz : kTomBeatHz;
+    return beat == Accent::kAccented ? kClickAccentHz : kTomBeatHz;
   }
-  return (mask & SlotBit(slot)) != 0 ? kHihatAccentHz : kTomSubdivisionHz;
+  return (mask & SlotBit(slot)) != 0 ? kClickAccentHz : kTomSubdivisionHz;
 }
 
 bool TickMatches(
@@ -79,8 +79,8 @@ bool ExpectBar(const std::vector<float>& left, const BarSpec& bar) {
   return true;
 }
 
-void StartTomHihat(kitbag::Metronome& metronome, const BarAccents& accents) {
-  metronome.SetSounds(kTom, kHihatSound);
+void StartTomClick(kitbag::Metronome& metronome, const BarAccents& accents) {
+  metronome.SetSounds(kTom, kClickSound);
   metronome.SetTempo(120.0);
   metronome.SetTimeSignature(kBeatsPerBar, 4);
   for (int beat = 0; beat < kBeatsPerBar; ++beat) {
@@ -93,7 +93,7 @@ void TestThirdTickOfFourAccented() {
   kitbag::Metronome metronome;
   metronome.SetSubdivision(4);
   metronome.SetSubdivisionAccents(4, SlotBit(2));
-  StartTomHihat(metronome, kDefaultBar);
+  StartTomClick(metronome, kDefaultBar);
   const auto left = RenderLeft(metronome, 2 * kBarFrames);
   for (int bar = 0; bar < 2; ++bar) {
     CheckCase(
@@ -109,6 +109,7 @@ void TestThirdTickOfFourAccented() {
 
 void TestAccentClickWhenSoundsMatch() {
   kitbag::Metronome metronome;
+  metronome.SetSounds(kBeepSound, kBeepSound);
   metronome.SetSubdivision(2);
   metronome.SetSubdivisionAccents(2, SlotBit(1));
   metronome.SetTempo(120.0);
@@ -116,7 +117,7 @@ void TestAccentClickWhenSoundsMatch() {
   const auto left = RenderLeft(metronome, kBarFrames);
   CheckCase(
       PitchIs(left, kBeatFrames + kBeatFrames / 2, kBeepAccentHz),
-      "sub accents: default sounds, the accented off-beat is the accent click",
+      "sub accents: matching sounds, the accented off-beat is the accent click",
       "not the normal sound's subdivision voice made louder"
   );
 }
@@ -177,12 +178,12 @@ constexpr BarAccents kMixedBar = {
 void TestSlotZeroAloneChangesNothing() {
   kitbag::Metronome plain;
   plain.SetSubdivision(4);
-  StartTomHihat(plain, kMixedBar);
+  StartTomClick(plain, kMixedBar);
   const auto plain_left = RenderLeft(plain, kBarFrames);
   kitbag::Metronome slot_zero;
   slot_zero.SetSubdivision(4);
   slot_zero.SetSubdivisionAccents(4, SlotBit(0));
-  StartTomHihat(slot_zero, kMixedBar);
+  StartTomClick(slot_zero, kMixedBar);
   const auto left = RenderLeft(slot_zero, kBarFrames);
   CheckCase(
       SameSamples(left, 0, plain_left, 0, kBarFrames),
@@ -196,7 +197,7 @@ void TestSlotZeroBesideSlotTwo() {
   kitbag::Metronome metronome;
   metronome.SetSubdivision(4);
   metronome.SetSubdivisionAccents(4, mask);
-  StartTomHihat(metronome, kMixedBar);
+  StartTomClick(metronome, kMixedBar);
   const auto left = RenderLeft(metronome, kBarFrames);
   CheckCase(
       ExpectBar(left, {0, kBeatFrames, 4, mask, kMixedBar}),
@@ -216,7 +217,7 @@ void TestMutedBeatSilencesItsAccents() {
   kitbag::Metronome metronome;
   metronome.SetSubdivision(4);
   metronome.SetSubdivisionAccents(4, off_beats);
-  StartTomHihat(metronome, kSecondMuted);
+  StartTomClick(metronome, kSecondMuted);
   const auto left = RenderLeft(metronome, kBarFrames);
   Check(
       ExpectBar(left, {0, kBeatFrames, 4, off_beats, kSecondMuted}),
@@ -230,7 +231,7 @@ void TestMutedBarSilencesAccents() {
   metronome.SetSubdivision(4);
   metronome.SetSubdivisionAccents(4, off_beats);
   metronome.SetBarMute(true, 1, 1);
-  StartTomHihat(metronome, kDefaultBar);
+  StartTomClick(metronome, kDefaultBar);
   const auto left = RenderLeft(metronome, 2 * kBarFrames);
   Check(
       ExpectBar(left, {0, kBeatFrames, 4, off_beats, kDefaultBar}),
@@ -247,14 +248,14 @@ void TestMidBeatChangeUsesNewRow() {
   metronome.SetSubdivision(4);
   metronome.SetSubdivisionAccents(4, SlotBit(2));
   metronome.SetSubdivisionAccents(2, SlotBit(1));
-  StartTomHihat(metronome, kDefaultBar);
+  StartTomClick(metronome, kDefaultBar);
   const auto left = RenderLeft(metronome, kBarFrames, [&](int64_t at) {
     if (at == kMidBeatChangeFrame) metronome.SetSubdivision(2);
   });
   const int64_t quarter = kBeatFrames / 4;
   Check(
       PitchIs(left, kBeatFrames + quarter, kTomSubdivisionHz) &&
-          PitchIs(left, kBeatFrames + 2 * quarter, kHihatAccentHz) &&
+          PitchIs(left, kBeatFrames + 2 * quarter, kClickAccentHz) &&
           PeakIn(left, kBeatFrames + 3 * quarter) < kSilentCeiling,
       "sub accents: a change to sub 2 mid-beat plays row 2 for the rest of it"
   );
@@ -265,7 +266,7 @@ void TestSubdivisionChangePicksNewRow() {
   metronome.SetSubdivision(4);
   metronome.SetSubdivisionAccents(4, SlotBit(2));
   metronome.SetSubdivisionAccents(3, SlotBit(1));
-  StartTomHihat(metronome, kDefaultBar);
+  StartTomClick(metronome, kDefaultBar);
   const auto left = RenderLeft(metronome, 2 * kBarFrames, [&](int64_t at) {
     if (at == kBarFrames) metronome.SetSubdivision(3);
   });
@@ -283,7 +284,7 @@ void TestTablePersistsAcrossStopStart() {
   kitbag::Metronome metronome;
   metronome.SetSubdivision(4);
   metronome.SetSubdivisionAccents(4, SlotBit(3));
-  StartTomHihat(metronome, kDefaultBar);
+  StartTomClick(metronome, kDefaultBar);
   RenderLeft(metronome, kBarFrames);
   metronome.Stop();
   RenderLeft(metronome, kBeatFrames);
@@ -302,7 +303,7 @@ void TestPolyTicksUnaffected() {
   metronome.SetSubdivision(4);
   metronome.SetSubdivisionAccents(4, SlotBit(1) | SlotBit(2) | SlotBit(3));
   metronome.SetPolyrhythm(true, 3);
-  StartTomHihat(metronome, kDefaultBar);
+  StartTomClick(metronome, kDefaultBar);
   const auto left = RenderLeft(metronome, kBarFrames);
   const int64_t poly_tick = kBarFrames / 3;
   Check(
@@ -318,7 +319,7 @@ void TestGridSubdivisionsAccented() {
   metronome.SetSubdivisionAccents(4, SlotBit(2));
   metronome
       .SetGrid(MakeShiftedGrid(kGridBeats, 0.0, kGridIntervalSec), 0, true);
-  StartTomHihat(metronome, kDefaultBar);
+  StartTomClick(metronome, kDefaultBar);
   const auto left =
       RenderLeft(metronome, kBeatsPerBar * kGridBeatFrames + kBlockFrames);
   Check(

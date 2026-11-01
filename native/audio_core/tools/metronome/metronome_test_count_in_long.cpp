@@ -45,7 +45,7 @@ void ExpectBarOneExact(double bpm, double latency_ms, const char* label) {
   const int64_t bar_one = int64_t{kLongBars} * kLongBeats * BeatFrames(bpm);
   kitbag::Metronome counted;
   Configure(counted, bpm, latency_ms);
-  counted.SetCountIn(kLongBars, true, kHihatSound);
+  counted.SetCountIn(kLongBars, true, kClickSound);
   counted.Start();
   kitbag::Metronome plain;
   Configure(plain, bpm, latency_ms);
@@ -60,7 +60,7 @@ std::vector<int64_t> CountInWithTempoChange(double latency_ms) {
   kitbag::Metronome metronome;
   metronome.SetTempo(120.0);
   metronome.SetLatencyOffset(latency_ms);
-  metronome.SetCountIn(1, true, kHihatSound);
+  metronome.SetCountIn(1, true, kClickSound);
   metronome.Start();
   return RenderContinuous(metronome, int64_t{kSampleRate} * 4, [&](int64_t at) {
     if (at == change) metronome.SetTempo(60.0);

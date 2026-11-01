@@ -153,6 +153,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_poly_transport.cpp
     tools/metronome/metronome_test_poly_phase.cpp
     tools/metronome/metronome_test_sound.cpp
+    tools/metronome/metronome_test_tick.cpp
     tools/metronome/metronome_test_subdivision_accents.cpp
     tools/metronome/metronome_test_rig_click.cpp
     tools/metronome/metronome_test_rig_click_sound.cpp

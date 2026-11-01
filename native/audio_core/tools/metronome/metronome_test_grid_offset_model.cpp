@@ -17,8 +17,9 @@ using kitbag::metronome_detail::kMsPerSecond;
 constexpr double kFirstBeatSec = 0.5;
 constexpr int64_t kAttackFrames = 1;
 constexpr double kAnchorBpm = 120.0;
-// Outlasts a hi-hat accent's tail above the onset threshold (~1160 frames).
-constexpr int64_t kHoldFrames = 1500;
+// Outlasts a tick accent's tail above the onset threshold (~530 frames) and
+// stays under a +20 -> 0 ms wait's 960-frame double, so that double is seen.
+constexpr int64_t kHoldFrames = 640;
 constexpr int64_t kTailFrames = kSampleRate;
 constexpr double kNeverSounded = -std::numeric_limits<double>::infinity();
 
@@ -94,7 +95,7 @@ void StartOnGrid(
     const OffsetChange& change,
     bool follow
 ) {
-  metronome.SetSounds(kHihatSound, kHihatSound);
+  metronome.SetSounds(kTickSound, kTickSound);
   metronome.SetSubdivision(change.subdivision);
   metronome.SetGrid(MakeGrid(change, 0), 0, true);
   metronome.SetLatencyOffset(change.from_ms);
