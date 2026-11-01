@@ -482,7 +482,7 @@ GPL-2.0-or-later, the rest are permissive.
 | Dependency | Licence | Role |
 |---|---|---|
 | **miniaudio** (`third_party/miniaudio.h`) | MIT-0 / public domain | Device I/O — AAudio on Android, PipeWire on Linux, CoreAudio on iOS. One API. Also supplies the Speex-derived resampler §4.1 needs. |
-| **Signalsmith Stretch** + **signalsmith-linear** (`third_party/signalsmith/`), *planned* | MIT | Time-stretch and pitch shift for §7.6. Header-only; the linear library supplies its STFT. The same code StemDeck runs in the browser as WASM. |
+| **Signalsmith Stretch** 1.4.0 + **signalsmith-linear** 0.6.4 (`third_party/signalsmith/`) | MIT | Time-stretch and pitch shift for §7.6. Header-only; the linear library supplies its STFT. The same code StemDeck runs in the browser as WASM. Vendored 2026-11-01; pins in each directory's `README.md`. |
 | **QM-DSP** `DownBeat` + `TempoTrackV2` (`third_party/qm-dsp/`, with bundled kissfft) | **GPL-2.0-or-later** (kissfft BSD-3-Clause) | Downbeat estimation for §4.3 (`downbeat.cpp`). Vendored 2026-07-22; the subset and the GPL note are in its `README.md`. |
 | ~~**cycfi/q** (`third_party/cycfi_q/`)~~ | Boost Software License 1.0 | **Removed 2026-10-30** (#201). Unused since #117: the tuner's McLeod detector (`pitch_detector.cpp`) is ours. |
 

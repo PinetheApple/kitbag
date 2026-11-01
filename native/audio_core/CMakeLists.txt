@@ -119,6 +119,12 @@ target_compile_definitions(qm_dsp PUBLIC kiss_fft_scalar=double)
 # come transitively from qm_dsp's PUBLIC dirs.
 target_link_libraries(kitbag_core PRIVATE qm_dsp)
 
+add_library(signalsmith_stretch INTERFACE)
+target_include_directories(signalsmith_stretch SYSTEM INTERFACE
+  third_party/signalsmith/stretch
+  third_party/signalsmith/linear)
+target_link_libraries(kitbag_core PRIVATE signalsmith_stretch)
+
 option(KITBAG_BUILD_TOOLS "Build native test tools" OFF)
 if(KITBAG_BUILD_TOOLS)
   # Compiles kb_engine_render into the library and reveals its header
