@@ -21,6 +21,7 @@ export const space = {
   transportGapWide: 28,
   waveBarGap: 1.5,
   stepSuffixGap: 3,
+  checkLabelGap: 9,
 } as const;
 
 export const size = {
@@ -76,6 +77,7 @@ export const size = {
   transportKeySmall: 40,
   numpadKeyLarge: 52,
   presetButton: 37,
+  checkBox: 19,
 } as const;
 
 export const radius = {
@@ -105,6 +107,7 @@ export const radius = {
   segmentLargeOption: 9,
   numpadKeyLarge: 12,
   waveBar: 1,
+  checkBox: 6,
 } as const;
 
 export const inset = {
@@ -244,6 +247,7 @@ export const iconSizes = {
   listTile: 22,
   listFab: 28,
   emptyMark: 36,
+  checkMark: 11,
 } as const;
 
 export type IconSize = keyof typeof iconSizes;
