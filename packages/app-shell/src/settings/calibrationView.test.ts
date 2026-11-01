@@ -59,6 +59,7 @@ const acrossTheWrap = alternating(WRAP_CENTRE_MS, WRAP_HALF_MS).map((d) =>
   d > BEAT_MS / 2 ? d - BEAT_MS : d,
 );
 
+const EARLY_WIDE_MS = 80;
 const WRAP_LIMIT_MS = KB_LATENCY_OFFSET_MS_BOUNDS.max;
 const WRAP_LIMIT_HALF_MS = 10;
 const atTheLimit = alternating(WRAP_LIMIT_MS, WRAP_LIMIT_HALF_MS).map((d) =>
@@ -72,14 +73,45 @@ describe('calibration view', () => {
     expect(view.progress).toBe(12 / CALIBRATION.taps);
   });
 
-  it('shows the running result once enough taps are in, without letting it be used', () => {
+  it('offers the running result for use once enough taps are in', () => {
     const view = calibrationView(state({ deviations: alternating(12, 3, 12) }));
     expect(view.result).toEqual({
       kind: 'measured',
       badge: '+12 ms LATE · ±3 ms',
       useLabel: 'Use +12 ms',
     });
+    expect(view.canUse).toBe(true);
+  });
+
+  it('keeps Use off mid-run below the usable-tap minimum', () => {
+    const view = calibrationView(
+      state({
+        deviations: alternating(12, 3, CALIBRATION.minUsableTaps - 1),
+      }),
+    );
+    expect(view.result).toBeNull();
     expect(view.canUse).toBe(false);
+    expect(view.showUse).toBe(true);
+  });
+
+  it('keeps Use off mid-run on a run the final rules would refuse', () => {
+    const view = calibrationView(state({ deviations: atTheLimit }));
+    expect(view.result).toBeNull();
+    expect(view.canUse).toBe(false);
+  });
+
+  it('rescales the axis live so early wide taps stay inside it', () => {
+    const view = calibrationView(
+      state({
+        deviations: alternating(
+          0,
+          EARLY_WIDE_MS,
+          CALIBRATION.minUsableTaps - 2,
+        ),
+      }),
+    );
+    expect(view.axisMs).toBeGreaterThan(EARLY_WIDE_MS);
+    expect(view.dots.every((d) => d.x > 0 && d.x < 1)).toBe(true);
   });
 
   it('can be used once the run is done', () => {
@@ -170,9 +202,12 @@ describe('calibration view', () => {
   });
 
   it('draws one dot per tap in tap order, zero centred', () => {
-    const view = calibrationView(state({ deviations: [0, 25, -50] }));
-    expect(view.dots.map((d) => d.x)).toEqual([0.5, 0.75, 0]);
-    expect(view.axisMs).toBe(SCATTER.minHalfRangeMs);
+    const deviations = [0, 25, -50];
+    const view = calibrationView(state({ deviations }));
+    expect(view.dots.map((d) => d.x)).toEqual(
+      deviations.map((d) => scatterX(d, view.axisMs)),
+    );
+    expect(view.dots[0]?.x).toBe(0.5);
   });
 
   it('offers use anyway for messy taps near the limit', () => {
@@ -307,6 +342,11 @@ describe('scatter', () => {
       bandHeight * (SCATTER.dotTop + SCATTER.dotSpan) +
       calibration.dot / 2;
     expect(lowestDotEdge).toBeLessThanOrEqual(labelRowTop);
+  });
+
+  it('insets the dot band so an edge dot stays whole inside the border', () => {
+    expect(SCATTER_DOT_BAND.left).toBeGreaterThanOrEqual(calibration.dot / 2);
+    expect(SCATTER_DOT_BAND.right).toBeGreaterThanOrEqual(calibration.dot / 2);
   });
 
   it('pins a tap off the axis to its edge', () => {

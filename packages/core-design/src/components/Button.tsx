@@ -55,6 +55,7 @@ export interface ButtonProps {
   readonly iconSize?: IconSize;
   readonly iconTone?: 'label' | 'accent';
   readonly disabled?: boolean;
+  readonly outlinedWhenDisabled?: boolean;
   readonly fill?: boolean;
   readonly accessibilityLabel?: string;
   /** Gaps to the controls above and below, for the 48dp hit box; a number
@@ -86,6 +87,9 @@ const useStyles = createThemedStyles((theme) => ({
   disabled: {
     backgroundColor: 'transparent',
     borderColor: 'transparent',
+  },
+  disabledOutline: {
+    borderColor: theme.color.line,
   },
   primary: {
     backgroundColor: theme.color.accent,
@@ -158,6 +162,7 @@ export function Button({
   iconSize,
   iconTone = 'label',
   disabled = false,
+  outlinedWhenDisabled = false,
   fill = false,
   accessibilityLabel,
   neighbourGapDp = space.controlGap,
@@ -186,6 +191,7 @@ export function Button({
           buttonSize !== 'default' && styles[buttonSize],
           fill && styles.fillFace,
           disabled && styles.disabled,
+          disabled && outlinedWhenDisabled && styles.disabledOutline,
         ]}
       >
         {icon === undefined ? null : (
