@@ -37,17 +37,19 @@ function sheetWith(key: string): Styles {
   return found;
 }
 
+const status = sheetWith('strip');
+const preview = sheetWith('preview');
 const strips = [
   {
     name: 'status row cycle strip',
-    row: sheetWith('strip').strip,
-    cell: sheetWith('strip').cell,
+    row: status.strip,
+    cell: status.cell,
     gap: metronome.cycleCellGap,
   },
   {
     name: 'Practice sheet mute preview',
-    row: sheetWith('preview').preview,
-    cell: sheetWith('preview').cell,
+    row: preview.preview,
+    cell: preview.cell,
     gap: space.barPreviewGap,
   },
 ];
@@ -57,9 +59,14 @@ it.each(strips)(
   ({ row, cell, gap }) => {
     expect(row?.flexDirection).toBe('row');
     expect(row?.gap).toBeGreaterThanOrEqual(gap);
-    expect(gap).toBeGreaterThan(0);
     for (const margin of MARGINS) expect(cell?.[margin]).toBeUndefined();
     const shrinks = cell?.flex === 1 || Number(cell?.flexShrink) >= 1;
     expect(shrinks).toBe(true);
   },
 );
+
+it('keeps the current-bar ring inside the gap to its neighbours', () => {
+  const reach = -Number(status.now?.left);
+  expect(reach).toBe(metronome.cycleNowOffset + metronome.cycleNowOutline);
+  expect(reach).toBeLessThan(Number(status.strip?.gap));
+});

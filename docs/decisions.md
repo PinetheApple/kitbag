@@ -642,3 +642,9 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   because it is a single settings control, not a live mix where a stray tap would jump a
   playing level. The stem faders are unchanged. **[coordinator — emulator round; the owner
   may overturn]**
+
+- **2026-11-01 · Current-bar ring pulled inside the cycle gap (§12.2, #264)** — The
+  status row's current-bar ring is a 1.5 dp outline with no offset, so it reaches 1.5 dp
+  past its cell and a visible gap stays against the 3 dp cycle gap. At 340 dp the old
+  3.5 dp reach overlapped both neighbours. The 3 dp gap is kept. This departs slightly
+  from the design files, which draw the overlap. **[recorded — coordinator ruling]**
