@@ -152,6 +152,9 @@ export function MetronomeScreen({
   const [openSheet, setOpenSheet] = useState<OpenSheet>(() =>
     summarySheetOnMount(getPracticeSessionStore().getState().pending),
   );
+  // The summary can open on mount, before the hint's first layout, so a hint
+  // drawn under it would take Back first; it waits for the summary to close.
+  const summaryShown = openSheet === 'summary' && pendingPractice !== null;
   const [bodyTop, setBodyTop] = useState(0);
   const [zone, setZone] = useState<ZoneFrame>({ top: 0, height: 0 });
   const [bodyHeight, setBodyHeight] = useState(0);
@@ -349,7 +352,7 @@ export function MetronomeScreen({
         />
 
         <UnsavedSnackbar bottomInset={insets.bottom} />
-        {hintSeen || zone.height === 0 ? null : (
+        {hintSeen || zone.height === 0 || summaryShown ? null : (
           <SwipeHint
             zoneTop={bodyTop + zone.top}
             zoneHeight={zone.height}

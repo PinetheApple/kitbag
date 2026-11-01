@@ -5,6 +5,7 @@ import {
   iconSizes,
   inkOnScrim,
   metronome,
+  onHardwareBack,
   palette,
   radius,
   space,
@@ -14,7 +15,7 @@ import {
   withAlpha,
 } from '@kitbag/core-design';
 import { useEffect, useMemo } from 'react';
-import { BackHandler, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 // The scrim stays dark on Daylight too, so it takes Stage's background.
@@ -76,15 +77,7 @@ export function SwipeHint({ zoneTop, zoneHeight, onDismiss }: SwipeHintProps) {
   const styles = useStyles();
   const motion = useReduceMotionMode();
   const entering = useMemo(() => FadeIn.reduceMotion(motion), [motion]);
-  useEffect(() => {
-    const back = BackHandler.addEventListener('hardwareBackPress', () => {
-      onDismiss();
-      return true;
-    });
-    return () => {
-      back.remove();
-    };
-  }, [onDismiss]);
+  useEffect(() => onHardwareBack(onDismiss), [onDismiss]);
   const ringTop = useMemo(
     () => ({
       paddingTop: Math.max(
