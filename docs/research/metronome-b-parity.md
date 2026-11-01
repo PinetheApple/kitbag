@@ -134,8 +134,8 @@ Each entry says why.
   neutral `surface2` / `line` chip with a `text3` caret. Active set without its song
   loaded: "Wedding set · 12 songs".
 - **Armed summary text the mockup does not draw.** Nothing armed reads "Practice tools
-  are off". Mute bars read "Play 2, mute 2" (the mockup's "Mute 2+2") and poly
-  "Poly 3:4"; the order is ramp, mute, count-in, poly. Sound is not armed state, so it
+  are off". Mute bars read "Mute 2+2" as the mockup draws it (spoken "Mute bars:
+  play 2, mute 2") and poly "Poly 3:4"; the order is ramp, mute, count-in, poly. Sound is not armed state, so it
   is not listed. The row under a running count-in uses the same ramp and mute text.
 - **Ramp countdown at zero.** While a seconds or minutes step waits for its beat the
   engine reports 0 remaining; the line reads "→ 124 now".

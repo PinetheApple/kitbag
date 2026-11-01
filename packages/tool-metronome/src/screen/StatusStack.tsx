@@ -24,6 +24,7 @@ import {
   countInBarText,
   rampNextText,
   rampRemainingText,
+  spokenArmedSummary,
   statusRows,
   type PracticeSettings,
   type StatusRows,
@@ -219,7 +220,7 @@ export function StatusStack({ frame, settings, running }: StatusStackProps) {
       style={stack}
       accessible
       accessibilityRole="text"
-      accessibilityLabel={summary}
+      accessibilityLabel={spokenArmedSummary(settings)}
       pointerEvents="none"
     >
       {running ? null : (

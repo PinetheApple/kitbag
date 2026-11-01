@@ -29,19 +29,28 @@ function rampPart(ramp: RampConfig): string {
   return `Ramp ${String(ramp.startBpm)} → ${String(ramp.targetBpm)}`;
 }
 
+type MuteWording = (barMute: BarMuteConfig) => string;
+
 function mutePart(barMute: BarMuteConfig): string {
-  return `Play ${String(barMute.playBars)}, mute ${String(barMute.muteBars)}`;
+  return `Mute ${String(barMute.playBars)}+${String(barMute.muteBars)}`;
 }
 
-function rampAndMuteParts(settings: PracticeSettings): string[] {
+function spokenMutePart(barMute: BarMuteConfig): string {
+  return `Mute bars: play ${String(barMute.playBars)}, mute ${String(barMute.muteBars)}`;
+}
+
+function rampAndMuteParts(
+  settings: PracticeSettings,
+  mute: MuteWording = mutePart,
+): string[] {
   const parts: string[] = [];
   if (settings.ramp.enabled) parts.push(rampPart(settings.ramp));
-  if (settings.barMute.enabled) parts.push(mutePart(settings.barMute));
+  if (settings.barMute.enabled) parts.push(mute(settings.barMute));
   return parts;
 }
 
-export function armedSummary(settings: PracticeSettings): string {
-  const parts = rampAndMuteParts(settings);
+function summary(settings: PracticeSettings, mute: MuteWording): string {
+  const parts = rampAndMuteParts(settings, mute);
   if (settings.countIn.bars !== KB_COUNT_IN_OFF) {
     parts.push(`Count-in ${countInLabel(settings.countIn.bars)}`);
   }
@@ -54,6 +63,14 @@ export function armedSummary(settings: PracticeSettings): string {
     parts.push(`Poly ${ratio}`);
   }
   return parts.length === 0 ? NOTHING_ARMED : parts.join(' · ');
+}
+
+export function armedSummary(settings: PracticeSettings): string {
+  return summary(settings, mutePart);
+}
+
+export function spokenArmedSummary(settings: PracticeSettings): string {
+  return summary(settings, spokenMutePart);
 }
 
 export type RestLegend = 'beat' | 'poly';
