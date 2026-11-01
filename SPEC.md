@@ -1687,8 +1687,8 @@ asks them to.
   2026-10-31, calibration window); a mean past ±300 ms is refused as at the
   limit, and so is a steady run (SD ≤ 30 ms) within one SD of it, while an
   unsteady one inside it gets "Use anyway". At 100 BPM a steady route past
-  ±300 ms cannot be told from one a beat away, so it is stored as the nearer
-  offset: +320 ms reads as −280 ms (accepted by the owner).
+  ±300 ms cannot be told from one a beat away, so with a tight spread it is
+  stored as the nearer offset: +320 ms reads as −280 ms (accepted by the owner).
 - The stepper stays for people who know their number: every gesture has a visible
   twin, and calibration is the gesture here.
 

@@ -590,5 +590,5 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   stored offset is ever outside the bounds. The mean ± SD check applies only to a steady
   run (SD ≤ 30 ms); an unsteady run whose mean is inside ±300 ms gets "Use anyway"
   (owner ruling, 2026-10-31). At 100 BPM a steady route past ±300 ms cannot be told from
-  one a beat away, so it is stored as the nearer offset (+320 ms reads as −280 ms); the
-  owner accepted this. **[user]**
+  one a beat away, so with a tight spread it is stored as the nearer offset (+320 ms
+  reads as −280 ms); the owner accepted this. **[user]**
