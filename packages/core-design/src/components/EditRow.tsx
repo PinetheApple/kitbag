@@ -150,7 +150,7 @@ export function EditRow({
       <Text style={styles.label}>{label}</Text>
       <View style={styles.value}>
         {children}
-        <Icon name="forward" size="control" color="text3" />
+        <Icon name="forward" size="control" color="decor" />
       </View>
     </Pressable>
   );

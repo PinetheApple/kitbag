@@ -77,7 +77,7 @@ const useStyles = createThemedStyles((theme) => ({
   },
   prompt: {
     ...textStyle(calibrationText.tapPrompt),
-    color: theme.color.accent,
+    color: theme.color[theme.accentInk],
     textAlign: 'center',
     backgroundColor: theme.color.surface2,
     borderWidth: size.stroke,

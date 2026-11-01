@@ -27,10 +27,10 @@ export const PULSE_MARKS = {
 };
 
 function dotBorderColor(color: {
-  readonly text3: string;
+  readonly decor: string;
   readonly surface3: string;
 }): string {
-  return mixHex(color.text3, color.surface3, metronomeMix.dotBorder);
+  return mixHex(color.decor, color.surface3, metronomeMix.dotBorder);
 }
 
 export const useBeatDotStyles = createThemedStyles((theme) => {
@@ -138,7 +138,7 @@ export const useBeatDotStyles = createThemedStyles((theme) => {
     },
     swatchMuted: {
       borderWidth: metronome.legendSwatchBorder,
-      borderColor: theme.color.text3,
+      borderColor: theme.color.decor,
       borderStyle: 'dashed',
     },
   };
@@ -147,14 +147,14 @@ export const useBeatDotStyles = createThemedStyles((theme) => {
 export function dotPalette(color: {
   readonly accent: string;
   readonly surface3: string;
-  readonly text3: string;
+  readonly decor: string;
   readonly text: string;
 }): DotPalette {
   return {
     accent: color.accent,
     fill: color.surface3,
     border: dotBorderColor(color),
-    hollow: color.text3,
+    hollow: color.decor,
     silentNow: color.text,
     clear: TRANSPARENT,
   };

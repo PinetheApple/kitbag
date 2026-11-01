@@ -51,7 +51,7 @@ export function BarIconButton({
       style={styles.button}
       onPress={onPress}
     >
-      <Icon name={icon} size={size} color={disabled ? 'text3' : color} />
+      <Icon name={icon} size={size} color={disabled ? 'decor' : color} />
     </Pressable>
   );
 }
