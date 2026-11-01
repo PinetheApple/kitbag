@@ -10,6 +10,7 @@ export * from './dragReorder.ts';
 export * from './sheetDismiss.ts';
 export * from './toolGrid.ts';
 export * from './countLabel.ts';
+export * from './rowLabel.ts';
 export * from './tunerVisuals.ts';
 export * from './waveform.ts';
 export * from './clampUnit.ts';

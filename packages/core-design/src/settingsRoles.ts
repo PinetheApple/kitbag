@@ -45,7 +45,3 @@ export const toolsManager = {
   noteV: 10,
   noteH: 12,
 } as const;
-
-export const toolsManagerText = {
-  small: { family: fontFamily.body, weight: 400, size: 13.5 },
-} as const satisfies Record<string, TypeRole>;

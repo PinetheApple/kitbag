@@ -2,7 +2,8 @@ import { useCallback, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import type { IconName } from '../icons.ts';
-import { radius, size, space, textRoles } from '../roles.ts';
+import { bodyLineHeight, radius, size, space, textRoles } from '../roles.ts';
+import { rowLabel } from '../rowLabel.ts';
 import { switchA11y } from '../switch.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
@@ -38,6 +39,10 @@ const useStyles = createThemedStyles((theme) => ({
   body: { flex: 1, minWidth: 0 },
   title: { ...textStyle(textRoles.rowTitle), color: theme.color.text },
   subtitle: { ...textStyle(textRoles.rowSubtitle), color: theme.color.text2 },
+  bodyLinesTitle: { lineHeight: textRoles.rowTitle.size * bodyLineHeight },
+  bodyLinesSubtitle: {
+    lineHeight: textRoles.rowSubtitle.size * bodyLineHeight,
+  },
 }));
 
 export interface RowTextProps {
@@ -45,18 +50,37 @@ export interface RowTextProps {
   readonly subtitle?: string | undefined;
 }
 
-export function RowText({ title, subtitle }: RowTextProps) {
+export function RowText({
+  title,
+  subtitle,
+  bodyLines = false,
+}: RowTextProps & { readonly bodyLines?: boolean }) {
   const styles = useStyles();
   return (
     <View style={styles.body}>
-      <Text style={styles.title} numberOfLines={1}>
+      <Text
+        style={[styles.title, bodyLines && styles.bodyLinesTitle]}
+        numberOfLines={1}
+      >
         {title}
       </Text>
       {subtitle === undefined ? null : (
-        <Text style={styles.subtitle} numberOfLines={1}>
+        <Text
+          style={[styles.subtitle, bodyLines && styles.bodyLinesSubtitle]}
+          numberOfLines={1}
+        >
           {subtitle}
         </Text>
       )}
+    </View>
+  );
+}
+
+export function RowIcon({ icon }: { readonly icon: IconName }) {
+  const styles = useStyles();
+  return (
+    <View style={styles.tile}>
+      <Icon name={icon} size="tile" color="text" />
     </View>
   );
 }
@@ -82,9 +106,7 @@ export function ListRow(props: ListRowProps) {
       onPress={props.onPress}
       onLongPress={props.onLongPress}
     >
-      <View style={styles.tile}>
-        <Icon name={icon} size="tile" color="text" />
-      </View>
+      <RowIcon icon={icon} />
       <RowText title={title} subtitle={subtitle} />
       {trailing ?? <Icon name="forward" size="action" />}
     </Pressable>
@@ -111,16 +133,12 @@ export function ListSwitchRow({
   return (
     <Pressable
       {...switchA11y(value)}
-      accessibilityLabel={
-        subtitle === undefined ? title : `${title}, ${subtitle}`
-      }
+      accessibilityLabel={rowLabel(title, subtitle)}
       style={styles.row}
       onPress={toggle}
     >
-      <View style={styles.tile}>
-        <Icon name={icon} size="tile" color="text" />
-      </View>
-      <RowText title={title} subtitle={subtitle} />
+      <RowIcon icon={icon} />
+      <RowText title={title} subtitle={subtitle} bodyLines />
       <SwitchTrack value={value} />
     </Pressable>
   );
