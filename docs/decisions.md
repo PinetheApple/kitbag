@@ -709,6 +709,12 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   and its summary shows on the next metronome visit. Leaving while playing keeps the same
   session running, since background practice counts. A session stopped from the notification
   while away stays open until End or the next stopped leave. **[coord]**
+- **2026-11-02 · Solid ends on muted bar cells (§12.2, #264)** — The status file draws a
+  muted cell as a fully dashed 1.5px outline: `tx2` in the status strip, `decor` in the
+  Practice sheet preview. Both now ship a dashed outline with solid left and right edges
+  in the same colour. Android does not anchor dashes at the corners, so narrow dashed cells
+  lose their ends and a run of muted cells reads as one dashed bar. This departs from
+  `design/kitbag-metronome-status.html`. **[recorded]**
 
 - **2026-11-02 · Predictive back stays off (§12, #191)** — The app manifest keeps
   `android:enableOnBackInvokedCallback="false"`. An open stem fader and an inline stem
