@@ -2,9 +2,7 @@ import {
   Badge,
   Button,
   createThemedStyles,
-  metronomeMix,
   metronomeSheet,
-  mixHex,
   metronome,
   Sheet,
   SheetHint,
@@ -55,11 +53,7 @@ const useStyles = createThemedStyles((theme) => ({
   rowNow: {
     borderRadius: metronomeSheet.songRowRadius,
     borderBottomColor: TRANSPARENT,
-    backgroundColor: mixHex(
-      theme.color.accent,
-      theme.color.surface1,
-      metronomeMix.songNow,
-    ),
+    backgroundColor: theme.songNowFill,
   },
   number: {
     ...textStyle(textRoles.setlistSongMeta),

@@ -6,9 +6,7 @@ import {
   Icon,
   lineRatio,
   metronome,
-  metronomeMix,
   minTouchTargetDp,
-  mixHex,
   radius,
   screenBar,
   size,
@@ -131,11 +129,7 @@ const useStyles = createThemedStyles((theme) => ({
     minWidth: 0,
     minHeight: metronome.songChip,
     borderColor: theme.color.accentDim,
-    backgroundColor: mixHex(
-      theme.color.accent,
-      theme.color.surface2,
-      metronomeMix.setChip,
-    ),
+    backgroundColor: theme.setChipFill,
   },
   lines: {
     flexShrink: 1,

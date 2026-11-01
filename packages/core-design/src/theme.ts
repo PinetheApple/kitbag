@@ -1,3 +1,4 @@
+import { metronomeMix } from './metronomeRoles.ts';
 import { mix } from './roles.ts';
 import {
   resolveTheme,
@@ -49,6 +50,9 @@ export interface Theme {
   readonly accentInk: ColorToken;
   readonly activeControlFill: string;
   readonly activeCardFill: string;
+  readonly songNowFill: string;
+  readonly setChipFill: string;
+  readonly selectedTileFill: string;
   readonly onDanger: string;
   readonly disabledLabel: string;
   readonly feedback: Readonly<Record<FeedbackTone, FeedbackColors>>;
@@ -82,6 +86,13 @@ export function buildTheme(mode: ThemeMode): Theme {
     accentInk: mode === 'light' ? 'accentDeep' : 'accent',
     activeControlFill: mixHex(color.accent, color.surface2, mix.activeControl),
     activeCardFill: mixHex(color.accent, color.surface1, mix.activeCard),
+    songNowFill: mixHex(color.accent, color.surface1, metronomeMix.songNow),
+    setChipFill: mixHex(color.accent, color.surface2, metronomeMix.setChip),
+    selectedTileFill: mixHex(
+      color.accent,
+      color.surface2,
+      metronomeMix.selectedTile,
+    ),
     onDanger: color.surface1,
     disabledLabel: color.text2,
     feedback: {
