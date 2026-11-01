@@ -46,17 +46,7 @@ const useStyles = createThemedStyles((theme) => ({
   },
   plot: {
     position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: SCATTER_DOT_BAND.left,
-    right: SCATTER_DOT_BAND.right,
-  },
-  dotBand: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: SCATTER_DOT_BAND.top,
-    bottom: SCATTER_DOT_BAND.bottom,
+    ...SCATTER_DOT_BAND,
   },
   dot: {
     position: 'absolute',
@@ -110,14 +100,12 @@ export function CalibrationScatter({
       style={styles.scatter}
       importantForAccessibility="no-hide-descendants"
     >
-      <View style={styles.zero} />
       <View style={styles.plot}>
+        <View style={styles.zero} />
         {meanPlace === null ? null : <View style={[styles.mean, meanPlace]} />}
-        <View style={styles.dotBand}>
-          {dots.map((dot, index) => (
-            <Dot key={index} dot={dot} />
-          ))}
-        </View>
+        {dots.map((dot, index) => (
+          <Dot key={index} dot={dot} />
+        ))}
       </View>
       <Text style={[styles.axis, styles.axisStart]}>
         {formatOffsetMs(-axis)}
