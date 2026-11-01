@@ -602,3 +602,11 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   deleted, and a tool turned back on returns to its place in the Home layout. One tool
   always stays on. `design/kitbag-settings.html` still draws Get and SOON rows; they are
   not built. **[user]**
+
+- **2026-11-01 · Turning a tool Off stops it (§9.3, §12.5, #170)** — Off means disabled
+  everywhere, so switching the metronome Off stops it and drops its notification, and
+  switching Stem songs Off closes an open stem song, which stops it and hides its
+  notification. Coordinator call; the owner may overturn it. **[recorded]**
+
+- **2026-11-01 · More tools opens Tools (§9.3, §12.4, #170)** — Home's "More tools" row
+  opens Settings → Tools. Coordinator call; the owner may overturn it. **[recorded]**
