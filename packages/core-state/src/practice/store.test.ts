@@ -2,7 +2,7 @@ import type { NewPracticeSession } from '@kitbag/core-db';
 import { describe, expect, it, vi } from 'vitest';
 
 import { setup } from '../library/store.test-helper.ts';
-import { PRACTICE_TEMPO_SAMPLE_MS } from './session.ts';
+import { MIN_SAVED_PLAYED_MS, PRACTICE_TEMPO_SAMPLE_MS } from './session.ts';
 import {
   createPracticeSessionStore,
   type PracticePersistence,
@@ -179,6 +179,63 @@ describe('practice session store', () => {
       summary?.uuid,
     ]);
     expect(h.practice.getState().pending).toBeNull();
+  });
+
+  it('lets a discard during a failing save drop the summary', async () => {
+    const h = harness();
+    let fail: (error: Error) => void = () => undefined;
+    h.insert.mockImplementationOnce(
+      () =>
+        new Promise((_, reject) => {
+          fail = reject;
+        }),
+    );
+    h.metronome.getState().start();
+    h.advance(MINUTE);
+    h.metronome.getState().stop();
+    h.practice.getState().endSession();
+    const save = h.practice.getState().saveSession();
+    await vi.waitFor(() => {
+      expect(h.insert).toHaveBeenCalledTimes(1);
+    });
+    h.practice.getState().discardSession();
+    fail(new Error('disk full'));
+    await save.catch(() => undefined);
+    expect(h.practice.getState().pending).toBeNull();
+    await h.practice.getState().saveSession();
+    expect(h.insert).toHaveBeenCalledTimes(1);
+  });
+
+  it('ends a session under one whole second with nothing to save', () => {
+    const h = harness();
+    h.metronome.getState().start();
+    h.advance(MIN_SAVED_PLAYED_MS - 1);
+    h.metronome.getState().stop();
+    expect(h.practice.getState().endSession()).toBeNull();
+    expect(h.practice.getState()).toMatchObject({
+      session: null,
+      pending: null,
+    });
+  });
+
+  it('keeps a session of exactly one second', () => {
+    const h = harness();
+    h.metronome.getState().start();
+    h.advance(MIN_SAVED_PLAYED_MS);
+    h.metronome.getState().stop();
+    expect(h.practice.getState().endSession()?.playedMs).toBe(
+      MIN_SAVED_PLAYED_MS,
+    );
+  });
+
+  it('reads the tempo once when it ends a session', () => {
+    const engineBpm = vi.fn(() => 100);
+    const h = harness(engineBpm);
+    h.metronome.getState().start();
+    h.advance(MINUTE);
+    engineBpm.mockClear();
+    h.practice.getState().endSession();
+    expect(engineBpm).toHaveBeenCalledTimes(1);
   });
 
   it('discard writes nothing', async () => {

@@ -11,6 +11,7 @@ import {
 import { metronomeStore, type MetronomeStore } from '../metronome/store.ts';
 import {
   endPracticeSession,
+  MIN_SAVED_PLAYED_MS,
   PRACTICE_TEMPO_SAMPLE_MS,
   practiceSessionAfterContext,
   practiceSessionAfterRunning,
@@ -85,16 +86,27 @@ export function createPracticeSessionStore(
 ): StoreApi<PracticeSessionStore> {
   const { metronome, library, now } = deps;
   let saving: Promise<void> | null = null;
+  let discardedWhileSaving: string | null = null;
 
   const store = createStore<PracticeSessionStore>((set, get) => {
+    const clearIfPending = (summary: PracticeSummary) => {
+      if (get().pending?.uuid === summary.uuid) set({ pending: null });
+    };
     const write = (summary: PracticeSummary) =>
       Promise.resolve()
         .then(() => deps.persistence.insert(practiceRecordOf(summary)))
-        .then(() => {
-          if (get().pending?.uuid === summary.uuid) set({ pending: null });
-        })
+        .then(
+          () => {
+            clearIfPending(summary);
+          },
+          (error: unknown) => {
+            if (discardedWhileSaving !== summary.uuid) throw error;
+            clearIfPending(summary);
+          },
+        )
         .finally(() => {
           saving = null;
+          discardedWhileSaving = null;
         });
     return {
       session: null,
@@ -103,17 +115,14 @@ export function createPracticeSessionStore(
         const { session, pending } = get();
         if (session === null || pending !== null) return null;
         const at = now();
-        const tempo = metronome.getState();
-        const summary = endPracticeSession(session, at, tempo.readTempo());
+        const metronomeState = metronome.getState();
+        const bpm = metronomeState.readTempo();
+        const ended = endPracticeSession(session, at, bpm);
+        const summary = ended.playedMs >= MIN_SAVED_PLAYED_MS ? ended : null;
         set({
           pending: summary,
-          session: tempo.running
-            ? startPracticeSession(
-                deps.newUuid(),
-                at,
-                tempo.readTempo(),
-                session.context,
-              )
+          session: metronomeState.running
+            ? startPracticeSession(deps.newUuid(), at, bpm, session.context)
             : null,
         });
         return summary;
@@ -127,6 +136,7 @@ export function createPracticeSessionStore(
       },
       discardSession: () => {
         if (saving === null) set({ pending: null });
+        else discardedWhileSaving = get().pending?.uuid ?? null;
       },
     };
   });

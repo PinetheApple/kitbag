@@ -1,3 +1,5 @@
+import { MS_PER_SECOND } from '@kitbag/core-db';
+
 import {
   IDLE_PRACTICE,
   practiceAfterRunning,
@@ -6,6 +8,7 @@ import {
 } from '../metronome/practice.ts';
 
 export const PRACTICE_TEMPO_SAMPLE_MS = 1000;
+export const MIN_SAVED_PLAYED_MS = MS_PER_SECOND;
 
 export interface PracticeSong {
   readonly uuid: string;
@@ -38,9 +41,9 @@ export interface PracticeSession {
   readonly uuid: string;
   readonly startedAt: number;
   readonly clock: PracticeClock;
-  readonly stretchFrom: number;
+  readonly songStretchFrom: number;
   readonly context: PracticeContext;
-  readonly setlist: PracticeSetlist | null;
+  readonly practicedSetlist: PracticeSetlist | null;
   readonly songs: readonly PracticeSong[];
   readonly longest: PracticeStretch | null;
   readonly tempo: TempoAverage;
@@ -83,7 +86,7 @@ function withStretchClosed(
   at: number,
 ): PracticeSession {
   const stretch = {
-    ms: Math.max(0, at - session.stretchFrom),
+    ms: Math.max(0, at - session.songStretchFrom),
     title: session.context.song?.title ?? null,
   };
   return { ...session, longest: longer(session.longest, stretch) };
@@ -95,7 +98,7 @@ function withContextPlayed(session: PracticeSession): PracticeSession {
     song === null || session.songs.some((played) => played.uuid === song.uuid);
   return {
     ...session,
-    setlist: session.setlist ?? setlist,
+    practicedSetlist: session.practicedSetlist ?? setlist,
     songs: known ? session.songs : [...session.songs, song],
   };
 }
@@ -110,9 +113,9 @@ export function startPracticeSession(
     uuid,
     startedAt: at,
     clock: practiceAfterRunning(IDLE_PRACTICE, true, at),
-    stretchFrom: at,
+    songStretchFrom: at,
     context,
-    setlist: null,
+    practicedSetlist: null,
     songs: [],
     longest: null,
     tempo: { bpmMs: 0, ms: 0, bpm, sampledAt: at },
@@ -130,7 +133,7 @@ export function practiceSessionAfterRunning(
     return withContextPlayed({
       ...session,
       clock: practiceAfterRunning(session.clock, true, at),
-      stretchFrom: at,
+      songStretchFrom: at,
       tempo: { ...session.tempo, bpm, sampledAt: at },
     });
   const closed = withStretchClosed(session, at);
@@ -163,7 +166,7 @@ export function practiceSessionAfterContext(
   if (sameSong(session.context.song, context.song))
     return withContextPlayed({ ...session, context });
   const closed = withStretchClosed(session, at);
-  return withContextPlayed({ ...closed, context, stretchFrom: at });
+  return withContextPlayed({ ...closed, context, songStretchFrom: at });
 }
 
 export function endPracticeSession(
@@ -177,7 +180,7 @@ export function endPracticeSession(
     uuid: ended.uuid,
     startedAt: ended.startedAt,
     playedMs: practiceElapsedMs(ended.clock, at),
-    setlist: ended.setlist,
+    setlist: ended.practicedSetlist,
     songs: ended.songs,
     avgBpm: tempo.ms > 0 ? tempo.bpmMs / tempo.ms : tempo.bpm,
     longestStretch: ended.longest,
