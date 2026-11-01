@@ -95,9 +95,11 @@ describe('practice session store', () => {
     const h = harness();
     h.metronome.getState().start();
     h.advance(MINUTE);
-    h.practice.getState().endSession();
+    const first = h.practice.getState().endSession();
     h.advance(MINUTE);
     expect(h.practice.getState().session?.uuid).toBe('session-2');
+    expect(h.practice.getState().endSession()).toBeNull();
+    expect(h.practice.getState().pending).toBe(first);
   });
 
   it('samples the ramp-effective tempo only while playing', () => {
@@ -138,6 +140,7 @@ describe('practice session store', () => {
 
   it('saves once however often save is called', async () => {
     const h = harness();
+    h.metronome.getState().setTempo(100);
     h.metronome.getState().start();
     h.advance(90_000);
     h.metronome.getState().stop();
