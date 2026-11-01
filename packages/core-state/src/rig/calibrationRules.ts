@@ -1,7 +1,9 @@
 import { KB_SUBDIVISION_BOUNDS } from '@kitbag/core-native';
 
+import { RIG_CLICK_BPM } from './rigClickRules.ts';
+
 export const CALIBRATION = {
-  bpm: 100,
+  bpm: RIG_CLICK_BPM,
   subdivision: KB_SUBDIVISION_BOUNDS.min,
   taps: 16,
   minUsableTaps: 8,

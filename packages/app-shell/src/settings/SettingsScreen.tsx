@@ -1,12 +1,9 @@
 import {
-  Chip,
-  createThemedStyles,
   EDIT_ROW_PRESSABLE_GAP,
   EditGroup,
   EditRow,
   EditSwitchRow,
   EditValue,
-  inset,
   SectionHeader,
   SegmentedControl,
   type SegmentOption,
@@ -14,7 +11,7 @@ import {
 import { getAppVersion } from '@kitbag/core-native';
 import { useAppearance, type ThemeChoice } from '@kitbag/core-state';
 import { useCallback, useMemo, useReducer } from 'react';
-import { Linking, Platform, View } from 'react-native';
+import { Linking, Platform } from 'react-native';
 
 import {
   LICENCE_NAME,
@@ -24,8 +21,8 @@ import {
 } from './about.ts';
 import { formatAppVersion } from './appVersion.ts';
 import { formatPracticeSummary } from './practiceText.ts';
+import { RigSection } from './RigSection.tsx';
 import { SettingsFrame } from './SettingsFrame.tsx';
-import { CALIBRATE_LATENCY } from './settingsLabels.ts';
 import { StorageSheets } from './StorageSheet.tsx';
 import {
   nextStorageSheet,
@@ -45,9 +42,6 @@ const THEME_CONTROL_GAPS = { bottom: EDIT_ROW_PRESSABLE_GAP };
 
 const LICENCE_LABEL = 'Licence';
 
-const useStyles = createThemedStyles(() => ({
-  chipRow: { flexDirection: 'row', paddingHorizontal: inset.sectionLabelH },
-}));
 const SOURCE_ROW_LABEL = 'Source & issues';
 
 function openUrl(url: string): void {
@@ -66,26 +60,6 @@ function PracticeValue() {
       {`${lead} `}
       <EditValue muted>{detail}</EditValue>
     </EditValue>
-  );
-}
-
-function RigSection({
-  onOpenCalibration,
-}: {
-  readonly onOpenCalibration: () => void;
-}) {
-  const styles = useStyles();
-  return (
-    <>
-      <SectionHeader label="Rig" />
-      <View style={styles.chipRow}>
-        <Chip
-          label={CALIBRATE_LATENCY}
-          icon="calibrate"
-          onPress={onOpenCalibration}
-        />
-      </View>
-    </>
   );
 }
 

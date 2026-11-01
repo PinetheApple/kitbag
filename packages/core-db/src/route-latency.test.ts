@@ -58,4 +58,14 @@ describe('route latency', () => {
       expect.arrayContaining([speaker, HEADPHONES]),
     );
   });
+
+  it('forgets a cleared route and leaves the others', async () => {
+    const repo = setup();
+    const speaker = { ...HEADPHONES, route: 'speaker', kind: 'speaker' };
+    await repo.save(HEADPHONES);
+    await repo.save(speaker);
+    await repo.remove(HEADPHONES.route);
+    expect(await repo.get(HEADPHONES.route)).toBeNull();
+    expect(await repo.list()).toEqual([speaker]);
+  });
 });

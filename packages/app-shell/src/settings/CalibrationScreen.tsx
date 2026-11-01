@@ -6,16 +6,13 @@ import {
   calibration,
   calibrationText,
   createThemedStyles,
-  Icon,
   inset,
   radius,
   size,
   space,
   textRoles,
   textStyle,
-  type IconName,
 } from '@kitbag/core-design';
-import type { OutputRoute, OutputRouteKind } from '@kitbag/core-native';
 import { CALIBRATION, routeTitle, useCalibration } from '@kitbag/core-state';
 import { useCallback, useMemo } from 'react';
 import {
@@ -27,6 +24,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CalibrationScatter } from './CalibrationScatter.tsx';
+import { RouteRow } from './RouteRow.tsx';
 import { CALIBRATE_LATENCY } from './settingsLabels.ts';
 import {
   calibrationView,
@@ -41,14 +39,6 @@ const RESULT_LEAD = 'Your taps land';
 const START_OVER = 'Start over';
 const USE = 'Use';
 
-const ROUTE_ICON: Readonly<Record<OutputRouteKind, IconName>> = {
-  speaker: 'routeSpeaker',
-  wired: 'routeWired',
-  bluetooth: 'routeBluetooth',
-  usb: 'routeUsb',
-  other: 'routeOther',
-};
-
 const useStyles = createThemedStyles((theme) => ({
   screen: {
     flex: 1,
@@ -56,36 +46,6 @@ const useStyles = createThemedStyles((theme) => ({
     paddingHorizontal: space.screenInset,
   },
   body: { flex: 1, gap: space.sectionGap },
-  routeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: calibration.routeRowGap,
-    backgroundColor: theme.activeCardFill,
-    borderWidth: size.stroke,
-    borderColor: theme.color.accentDim,
-    borderRadius: radius.row,
-    paddingVertical: inset.rowV,
-    paddingHorizontal: calibration.routeRowH,
-  },
-  routeIcon: {
-    width: size.toolIcon,
-    height: size.toolIcon,
-    borderRadius: radius.toolIcon,
-    backgroundColor: theme.color.surface2,
-    borderWidth: size.stroke,
-    borderColor: theme.color.line,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  routeText: { flex: 1, minWidth: 0 },
-  routeName: {
-    ...textStyle(calibrationText.routeName),
-    color: theme.color.text,
-  },
-  routeMeta: {
-    ...textStyle(calibrationText.routeMeta),
-    color: theme.color.text2,
-  },
   tapZone: {
     borderRadius: radius.tempoZone,
     paddingVertical: calibration.tapZoneV,
@@ -147,25 +107,6 @@ const useStyles = createThemedStyles((theme) => ({
     textAlign: 'center',
   },
 }));
-
-function RouteRow({ route }: { readonly route: OutputRoute }) {
-  const styles = useStyles();
-  return (
-    <View style={styles.routeRow}>
-      <View style={styles.routeIcon}>
-        <Icon name={ROUTE_ICON[route.kind]} size="tile" color="text" />
-      </View>
-      <View style={styles.routeText}>
-        <Text style={styles.routeName} numberOfLines={1}>
-          {routeTitle(route)}
-        </Text>
-        <Text style={styles.routeMeta} numberOfLines={1}>
-          {routeMeta(route)}
-        </Text>
-      </View>
-    </View>
-  );
-}
 
 function TapZone({ count, progress }: { count: number; progress: number }) {
   const styles = useStyles();
@@ -258,7 +199,14 @@ export function CalibrationScreen({ onBack }: CalibrationScreenProps) {
         accessibilityRole="button"
         accessibilityLabel={TAP_PROMPT}
       >
-        {route === null ? null : <RouteRow route={route} />}
+        {route === null ? null : (
+          <RouteRow
+            kind={route.kind}
+            title={routeTitle(route)}
+            meta={routeMeta(route)}
+            active
+          />
+        )}
         <TapZone count={view.count} progress={view.progress} />
         <Text style={styles.prompt}>{TAP_PROMPT}</Text>
         <CalibrationScatter

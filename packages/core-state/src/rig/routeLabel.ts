@@ -21,6 +21,10 @@ const NAMED_BY_KIND: ReadonlySet<OutputRouteKind> = new Set([
   'wired',
 ]);
 
+export function isOutputRouteKind(kind: string): kind is OutputRouteKind {
+  return Object.hasOwn(KIND_TITLE, kind);
+}
+
 export function routeTitle(route: OutputRoute): string {
   if (NAMED_BY_KIND.has(route.kind)) return KIND_TITLE[route.kind];
   const name = route.name.trim();

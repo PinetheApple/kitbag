@@ -472,8 +472,10 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   the metronome runs, the chip is disabled with a hint and never touches metronome state.
   Q3: volume snaps to 100% within ±3% of range, accessibility step 1%. Q4: the latency
   stepper repeats after a 400 ms hold, then every 50 ms, reusing StepControl's repeat if
-  one exists. Q5: an uncalibrated Output row reads "· not calibrated"; only the live route
-  opens calibration, other routes show their stored offset. Q6: icons come from
+  one exists. Q5 (revised 2026-11-01): the Output row shows the live route's stored offset ("· 0 ms"
+  when none), or "· not saved" for an unknown or guessed route; `route_latency` cannot tell
+  a calibrated offset from a stepped one, so the row never says "calibrated". Only the
+  live route opens calibration, other routes show their stored offset. Q6: icons come from
   core-design `Icon` only: calibrate `timer-sync-outline`, remove missing `broom`, unless
   the design names one. Q8: Rig and Tools ship only once their native calls exist. Q9:
   tools that cannot be installed show SOON with no size label. Q10: Backup, Restore and
@@ -615,3 +617,10 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   last poly dot at 18 dp, then sits 8 dp left of the row, then above it. It follows the
   owner-approved round 2 frame (`design/kitbag-metronome.html` §02) rather than the poly
   file's left placement. **[recorded — coordinator ruling]**
+
+- **2026-11-01 · The Settings click-volume slider sets on a tap (§12.5, #170)** — A tap on
+  the Click volume track sets the level there, and a drag keeps the thumb under the finger;
+  the unity detent stays. This departs from the drag-only stem faders (2026-10-29, #137)
+  because it is a single settings control, not a live mix where a stray tap would jump a
+  playing level. The stem faders are unchanged. **[coordinator — emulator round; the owner
+  may overturn]**
