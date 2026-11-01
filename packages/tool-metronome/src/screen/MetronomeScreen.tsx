@@ -26,6 +26,7 @@ import { belowTempoReserve } from '../logic/belowTempo.ts';
 import { noteStrip, type NoteStrip } from '../logic/noteStrip.ts';
 import { endPractice, summarySheetOnMount } from '../logic/practiceSummary.ts';
 import { practiceBadgeCount, restLegend } from '../logic/statusRows.ts';
+import { showSwipeHint } from '../logic/swipeHint.ts';
 import { pushTap, tapTempoBpm } from '../logic/tapTempo.ts';
 import { BeatDots, BeatLegend } from './BeatDots.tsx';
 import { NumberEntrySheet } from './NumberEntrySheet.tsx';
@@ -152,8 +153,8 @@ export function MetronomeScreen({
   const [openSheet, setOpenSheet] = useState<OpenSheet>(() =>
     summarySheetOnMount(getPracticeSessionStore().getState().pending),
   );
-  // The summary can open on mount, before the hint's first layout, so a hint
-  // drawn under it would take Back first; it waits for the summary to close.
+  // The summary can open on mount, before the hint's first layout; a hint
+  // drawn under it would take Back first.
   const summaryShown = openSheet === 'summary' && pendingPractice !== null;
   const [bodyTop, setBodyTop] = useState(0);
   const [zone, setZone] = useState<ZoneFrame>({ top: 0, height: 0 });
@@ -352,13 +353,13 @@ export function MetronomeScreen({
         />
 
         <UnsavedSnackbar bottomInset={insets.bottom} />
-        {hintSeen || zone.height === 0 || summaryShown ? null : (
+        {showSwipeHint(hintSeen, zone.height, summaryShown) ? (
           <SwipeHint
             zoneTop={bodyTop + zone.top}
             zoneHeight={zone.height}
             onDismiss={dismissHint}
           />
-        )}
+        ) : null}
 
         <NumberEntrySheet
           visible={openSheet === 'numpad'}
