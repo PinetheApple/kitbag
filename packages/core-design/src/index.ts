@@ -49,6 +49,7 @@ export * from './components/IconGlyph.tsx';
 export * from './components/Sheet.tsx';
 export * from './components/Snackbar.tsx';
 export * from './components/SheetHost.tsx';
+export { onHardwareBack } from './components/hardwareBack';
 export * from './components/StepControl.tsx';
 export * from './components/TextField.tsx';
 export * from './components/ToolTile.tsx';

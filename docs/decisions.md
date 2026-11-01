@@ -715,3 +715,17 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   in the same colour. Android does not anchor dashes at the corners, so narrow dashed cells
   lose their ends and a run of muted cells reads as one dashed bar. This departs from
   `design/kitbag-metronome-status.html`. **[recorded]**
+
+- **2026-11-02 · Predictive back stays off (§12, #191)** — The app manifest keeps
+  `android:enableOnBackInvokedCallback="false"`. An open stem fader and an inline stem
+  rename take Back through React Native's `BackHandler` to collapse or cancel before the
+  screen pops, as the sheets do, and predictive back must not bypass them. Any keyboard
+  dismissal without a blur (the IME hide key, the nav-bar chevron, Back) cancels the
+  rename, because the app cannot tell these apart. **[user]** In React Native 0.83.6,
+  `BackHandler` listeners run only from `ReactActivity.onBackPressed()`.
+  On Android 16 with targetSdk 36, which the build takes from React Native's version
+  catalog, `ReactActivity` registers an always-enabled `OnBackPressedCallback` that calls
+  it, so the handlers run with or without the flag. Below Android 16 it registers none, and
+  Android 13 to 15 stop calling `onBackPressed()` once an app opts in (Android's documented
+  behaviour, not read in source): Back would skip every `BackHandler` handler and leave the
+  app. **[recorded]**
