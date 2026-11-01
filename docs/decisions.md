@@ -715,8 +715,8 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   rename take Back through React Native's `BackHandler` to collapse or cancel before the
   screen pops, as the sheets do, and predictive back must not bypass them. Any keyboard
   dismissal without a blur (the IME hide key, the nav-bar chevron, Back) cancels the
-  rename, because the app cannot tell these apart. **[user]** In
-  React Native 0.83.6, `BackHandler` listeners run only from `ReactActivity.onBackPressed()`.
+  rename, because the app cannot tell these apart. **[user]** In React Native 0.83.6,
+  `BackHandler` listeners run only from `ReactActivity.onBackPressed()`.
   On Android 16 with targetSdk 36, which the build takes from React Native's version
   catalog, `ReactActivity` registers an always-enabled `OnBackPressedCallback` that calls
   it, so the handlers run with or without the flag. Below Android 16 it registers none, and
