@@ -472,8 +472,10 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   the metronome runs, the chip is disabled with a hint and never touches metronome state.
   Q3: volume snaps to 100% within ±3% of range, accessibility step 1%. Q4: the latency
   stepper repeats after a 400 ms hold, then every 50 ms, reusing StepControl's repeat if
-  one exists. Q5: an uncalibrated Output row reads "· not calibrated"; only the live route
-  opens calibration, other routes show their stored offset. Q6: icons come from
+  one exists. Q5 (revised 2026-11-01): the Output row shows the live route's stored offset ("· 0 ms"
+  when none), or "· not saved" for an unknown or guessed route; `route_latency` cannot tell
+  a calibrated offset from a stepped one, so the row never says "calibrated". Only the
+  live route opens calibration, other routes show their stored offset. Q6: icons come from
   core-design `Icon` only: calibrate `timer-sync-outline`, remove missing `broom`, unless
   the design names one. Q8: Rig and Tools ship only once their native calls exist. Q9:
   tools that cannot be installed show SOON with no size label. Q10: Backup, Restore and
@@ -599,10 +601,54 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   backward change waits for the next beat that has not sounded, so no beat sounds twice.
   The interval is the spacing of the two beats the cursor sits between. **[user]**
 
+- **2026-10-31 · Calibration window and the ±300 ms limit (§12.5.1, #170)** — A tap's
+  deviation is only known to within one beat, so the taps are first unwrapped around
+  their circular mean; the ±250 ms usable window is then centred on the run's median
+  deviation, not on 0, followed by the 2.5 SD drop. The click stays at 100 BPM. A result
+  whose mean, or mean ± its SD, lies past `KB_LATENCY_OFFSET_MS_BOUNDS` (±300 ms) is
+  refused with "Latency is at the limit Kitbag can correct" instead of a number, so no
+  stored offset is ever outside the bounds. The mean ± SD check applies only to a steady
+  run (SD ≤ 30 ms); an unsteady run whose mean is inside ±300 ms gets "Use anyway"
+  (owner ruling, 2026-10-31). At 100 BPM a steady route past ±300 ms cannot be told from
+  one a beat away, so with a tight spread it is stored as the nearer offset (+320 ms
+  reads as −280 ms); the owner accepted this. **[user]**
+
+- **2026-10-31 · Tools screen and tool switches (§9.3, §12.5, #170)** — The Tools screen
+  lists only the built tools, each with an on/off switch, read from the Home registry
+  (`HOME_TOOLS`), never a second list. It has no Get or SOON rows, and the Settings row
+  reads "N on". Off is separate from Arrange's Hide. Off removes a tool everywhere: its
+  Home tile, its Arrange row, its routes (a route to an Off tool goes back to Home), the
+  Continue card and links from other tools. Hide only removes the Home tile. Nothing is
+  deleted, and a tool turned back on returns to its place in the Home layout. One tool
+  always stays on. `design/kitbag-settings.html` still draws Get and SOON rows; they are
+  not built. **[user]**
+
+- **2026-11-01 · Turning a tool Off stops it (§9.3, §12.5, #170)** — Off means disabled
+  everywhere, so switching the metronome Off stops it and drops its notification, and
+  switching Stem songs Off closes an open stem song, which stops it and hides its
+  notification. Coordinator call; the owner may overturn it. **[recorded]**
+
+- **2026-11-01 · More tools opens Tools (§9.3, §12.4, #170)** — Home's "More tools" row
+  opens Settings → Tools. Coordinator call; the owner may overturn it. **[recorded]**
+
 - **2026-11-01 · Poly ratio label goes right first (§5.2, #243)** — The label follows the
   last poly dot at 18 dp, then sits 8 dp left of the row, then above it. It follows the
   owner-approved round 2 frame (`design/kitbag-metronome.html` §02) rather than the poly
   file's left placement. **[recorded — coordinator ruling]**
+
+- **2026-11-01 · The Settings click-volume slider sets on a tap (§12.5, #170)** — A tap on
+  the Click volume track sets the level there, and a drag keeps the thumb under the finger;
+  the unity detent stays. This departs from the drag-only stem faders (2026-10-29, #137)
+  because it is a single settings control, not a live mix where a stray tap would jump a
+  playing level. The stem faders are unchanged. **[coordinator — emulator round; the owner
+  may overturn]**
+
+- **2026-11-01 · Count-in per song or on every song (§5.3, #265)** — The
+  `design/kitbag-metronome.html` §03 chip "Count in on every song" sits in layout B's
+  Practice sheet, under the Count-in section; off means per song. The choice and the
+  live count-in persist as `preferences` keys, with no migration, and travel in a backup
+  category scoped to count-in (`countInSettings`), not a general preferences dump.
+  **[recorded — coordinator ruling]**
 
 - **2026-11-01 · Small text contrast (§12.2, #189)** — Text under 18sp holds 4.5:1 on
   every ground it sits on, in both themes. `text2`, `text3` and light `accentDeep` move in

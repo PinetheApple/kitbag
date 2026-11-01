@@ -2,9 +2,11 @@ import { SetlistDetailScreen } from '@kitbag/tool-metronome';
 import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { TOOL_ID } from '@/home/registry';
+import { gated } from '@/home/ToolGate';
 import { useLibraryRoutes } from '@/runtime/libraryRoutes';
 
-export default function SetlistDetailRoute() {
+function SetlistDetailRoute() {
   const insets = useSafeAreaInsets();
   const routes = useLibraryRoutes();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -18,3 +20,5 @@ export default function SetlistDetailRoute() {
     />
   );
 }
+
+export default gated(TOOL_ID.metronome, SetlistDetailRoute);

@@ -170,6 +170,7 @@ export interface ChipProps {
    * applies to both, an omitted side has no neighbour. */
   readonly neighbourGapDp?: number | NeighbourGaps;
   readonly size?: ChipSize;
+  readonly disabled?: boolean;
 }
 
 export function Chip({
@@ -183,6 +184,7 @@ export function Chip({
   accessibilityLabel,
   neighbourGapDp,
   size: chipSize = 'default',
+  disabled = false,
 }: ChipProps) {
   const styles = useStyles();
   const id = useId();
@@ -213,7 +215,8 @@ export function Chip({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
-      accessibilityState={{ selected: active }}
+      accessibilityState={{ selected: active, disabled }}
+      disabled={disabled}
       style={[styles.chipHit, hitBox, fill && styles.fillHit]}
       {...(fill ? {} : layoutProps)}
       onPress={onPress}

@@ -18,8 +18,23 @@ export {
   type CountInBars,
 } from './metronome/store.ts';
 export {
+  COUNT_IN_SCOPE,
+  COUNT_IN_SCOPES,
+  DEFAULT_COUNT_IN_SCOPE,
+  isCountInScope,
+  type CountInScope,
+} from './metronome/countInScope.ts';
+export {
+  configureCountInPersistence,
+  type CountInPersistence,
+  type CountInSettings,
+} from './metronome/countInPersistence.ts';
+export {
+  clamp,
   clampRampInterval,
   cycleAccentValue,
+  isCountInBars,
+  isSoundId,
   rampIntervalBounds,
   initialAccents,
   resizeAccents,
@@ -63,10 +78,27 @@ export {
   reconcileArrangement,
   resizeTile,
   showTile,
+  tilesFor,
   visibleTiles,
+  withOffTiles,
   type ArrangedTile,
   type Arrangement,
 } from './home/arrangement.ts';
+export { useTools } from './tools/useTools.ts';
+export {
+  configureToolsPersistence,
+  createToolsStore,
+  getToolsStore,
+  type ToolsPersistence,
+  type ToolsStore,
+} from './tools/store.ts';
+export {
+  switchTool,
+  TOOL_SWITCH,
+  toolsOn,
+  type ToolSwitch,
+  type ToolSwitchResult,
+} from './tools/switches.ts';
 export { useAppearance } from './appearance/useAppearance.ts';
 export {
   configureAppearancePersistence,
@@ -225,6 +257,72 @@ export {
   MINUS,
   type ClockParts,
 } from './text.ts';
+export { CALIBRATION } from './rig/calibrationRules.ts';
+export {
+  analyseTaps,
+  BEAT_MS,
+  mean,
+  sampleSd,
+  storedOffsetMs,
+  unwrapDeviations,
+  type CalibrationOutcome,
+  type RefusalReason,
+} from './rig/calibrationStats.ts';
+export {
+  canUseOutcome,
+  createCalibrationSession,
+  type CalibrationDeps,
+  type CalibrationNotice,
+  type CalibrationPhase,
+  type CalibrationSession,
+} from './rig/calibrationSession.ts';
+export {
+  isOutputRouteKind,
+  routeDetail,
+  routeTitle,
+} from './rig/routeLabel.ts';
+export { storedRoute } from './rig/storedRoute.ts';
+export { RIG_CLICK_BPM } from './rig/rigClickRules.ts';
+export {
+  createRigClick,
+  isSounding,
+  type RigClick,
+  type RigClickDeps,
+  type RigClickPhase,
+  type RigClickStore,
+} from './rig/rigClick.ts';
+export {
+  createRouteLatencyStore,
+  ROUTE_LATENCY_SAVE_DELAY_MS,
+  type RouteLatencyActions,
+  type RouteLatencyDeps,
+  type RouteLatencyState,
+  type RouteLatencyStore,
+} from './rig/routeLatency.ts';
+export {
+  accentedSlots,
+  configureSubdivisionAccentsPersistence,
+  createSubdivisionAccentsStore,
+  getSubdivisionAccentsStore,
+  ON_BEAT_SLOT,
+  replaySubdivisionAccents,
+  toggleSlotMask,
+  type SendSubdivisionAccents,
+  type SubdivisionAccentsPersistence,
+  type SubdivisionAccentsSettings,
+  type SubdivisionAccentsStore,
+  type SubdivisionAccentsStoreApi,
+} from './rig/subdivisionAccents.ts';
+export {
+  useRigClick,
+  useRouteLatency,
+  useSubdivisionAccents,
+} from './rig/useRig.ts';
+export { formatOffsetMs } from './rig/latencyText.ts';
+export {
+  useCalibration,
+  type CalibrationSessionStore,
+} from './rig/useCalibration.ts';
 export {
   findMissingRows,
   removeMissingRows,

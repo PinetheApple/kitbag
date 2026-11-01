@@ -9,6 +9,7 @@ import {
   type BackupFile,
   type Category,
   type CategoryRecords,
+  type CountInSettingRecord,
   type LibrarySongRecord,
   type PracticeSessionRecord,
   type SetlistRecord,
@@ -24,6 +25,7 @@ import {
   type Reader,
 } from './backup-reader';
 import { decodeBase64, presetBytes } from './base64';
+import { COUNT_IN_STORED_KEYS } from './count-in-preferences';
 import {
   MIN_RAMP_STEP,
   normalizePolyAgainst,
@@ -167,6 +169,17 @@ function readPracticeSession(
   };
 }
 
+function readCountInSetting(
+  value: unknown,
+  path: string,
+): CountInSettingRecord {
+  const r = reader(value, path);
+  const record = { key: r.string('key'), value: r.string('value') };
+  if (!COUNT_IN_STORED_KEYS.includes(record.key))
+    invalidField(`${path}.key`, 'not a count-in setting');
+  return record;
+}
+
 const READERS: {
   [C in Category]: (value: unknown, path: string) => CategoryRecords[C][number];
 } = {
@@ -175,6 +188,7 @@ const READERS: {
   setlists: readSetlist,
   tunings: readTuning,
   practiceSessions: readPracticeSession,
+  countInSettings: readCountInSetting,
 };
 
 function readCategory<C extends Category>(
@@ -221,7 +235,7 @@ function checkIdentities(records: CategoryRecords) {
   for (const category of CATEGORIES) {
     const seen = new Set<string>();
     for (const record of records[category]) {
-      const key = recordKey(record);
+      const key = recordKey(category, record);
       if (seen.has(key)) reject({ kind: 'duplicateIdentity', category, key });
       seen.add(key);
     }
