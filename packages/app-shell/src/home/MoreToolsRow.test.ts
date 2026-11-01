@@ -18,12 +18,14 @@ vi.mock('@kitbag/core-design', async (original) => ({
 }));
 
 const { MoreToolsRow } = await import('./MoreToolsRow.tsx');
+const { MORE_TOOLS_SUBTEXT } = await import('./subtext.ts');
 
 describe('MoreToolsRow', () => {
   it('opens Settings → Tools', () => {
     renderToStaticMarkup(createElement(MoreToolsRow));
     const row = rendered[0];
     expect(row?.status).toBe('ready');
+    expect(row?.subtitle).toBe(MORE_TOOLS_SUBTEXT);
     (row?.onPress as () => void)();
     expect(push).toHaveBeenCalledWith('/settings/tools');
   });
