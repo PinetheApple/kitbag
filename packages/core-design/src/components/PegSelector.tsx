@@ -74,7 +74,7 @@ const useStyles = createThemedStyles((theme) => ({
     color: theme.color.text,
   },
   noteTuned: {
-    color: theme.color.green,
+    color: theme.feedback.success.ink,
   },
   noteDetected: {
     color: theme.color[theme.accentInk],

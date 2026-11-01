@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import { textRoles } from './roles.ts';
 import { textStyle } from './textStyle.ts';
-import { buildTheme, mixHex, themes, type Theme } from './theme.ts';
+import {
+  buildTheme,
+  mixHex,
+  themes,
+  type FeedbackTone,
+  type Theme,
+} from './theme.ts';
 import { COLOR_TOKENS, palette, type ThemeMode } from './tokens.ts';
 
 const MODES: readonly ThemeMode[] = ['dark', 'light'];
@@ -87,6 +93,12 @@ describe('disabledLabel', () => {
 });
 
 const AA_NON_TEXT = 3;
+const MIN_TEXT_STEP = 1.5;
+const FEEDBACK_TONES: readonly FeedbackTone[] = [
+  'success',
+  'warning',
+  'danger',
+];
 
 type Grounds = (theme: Theme) => Record<string, string>;
 
@@ -133,6 +145,16 @@ const SMALL_TEXT: Readonly<Record<string, InkOnGrounds>> = {
   text2: { ink: ({ color }) => color.text2, grounds: allGrounds },
   accentInk: { ink: accentInk, grounds: allGrounds },
   text3: { ink: ({ color }) => color.text3, grounds: restingGrounds },
+  onAccent: {
+    ink: ({ color }) => color.onAccent,
+    grounds: (theme) => ({ accentTextFill: theme.accentTextFill }),
+  },
+  successInk: {
+    ink: (theme) => theme.feedback.success.ink,
+    grounds: allGrounds,
+  },
+  warningInk: { ink: (theme) => theme.feedback.warning.ink, grounds: surfaces },
+  dangerInk: { ink: (theme) => theme.feedback.danger.ink, grounds: surfaces },
 };
 
 const ICONS: Readonly<Record<string, InkOnGrounds>> = {
@@ -159,11 +181,19 @@ describe('small text', () => {
     },
   );
 
-  it.each(MODES)('keeps text above text2 above text3 in %s', (mode) => {
+  it.each(MODES)('steps text, text2 and text3 apart in %s', (mode) => {
     const { color } = themes[mode];
-    const onBg = (hex: string) => contrast(hex, color.bg);
-    expect(onBg(color.text)).toBeGreaterThan(onBg(color.text2));
-    expect(onBg(color.text2)).toBeGreaterThan(onBg(color.text3));
+    expect(contrast(color.text, color.text2)).toBeGreaterThanOrEqual(
+      MIN_TEXT_STEP,
+    );
+    expect(contrast(color.text2, color.text3)).toBeGreaterThanOrEqual(
+      MIN_TEXT_STEP,
+    );
+  });
+
+  it.each(FEEDBACK_TONES)('keeps the dark %s ink on its token', (tone) => {
+    const { feedback } = themes.dark;
+    expect(feedback[tone].ink).toBe(feedback[tone].fg);
   });
 });
 

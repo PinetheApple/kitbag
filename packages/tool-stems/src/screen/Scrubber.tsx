@@ -48,7 +48,10 @@ const useStyles = createThemedStyles((theme) => ({
     ...textStyle(textRoles.loopNote),
     color: theme.color[theme.accentInk],
   },
-  failText: { ...textStyle(textRoles.loopNote), color: theme.color.red },
+  failText: {
+    ...textStyle(textRoles.loopNote),
+    color: theme.feedback.danger.ink,
+  },
   elapsed: { flexShrink: 0 },
   total: { ...textStyle(textRoles.scrubTime), color: theme.color.text2 },
   bar: {
@@ -76,7 +79,7 @@ const useStyles = createThemedStyles((theme) => ({
     width: stemPlayer.loopFlagWidth,
     minHeight: stemPlayer.loopFlagHeight,
     borderRadius: stemPlayer.loopFlagRadius,
-    backgroundColor: theme.color.accent,
+    backgroundColor: theme.accentTextFill,
     alignItems: 'center',
     justifyContent: 'center',
   },

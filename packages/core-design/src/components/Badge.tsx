@@ -56,11 +56,11 @@ const useStyles = createThemedStyles((theme) => ({
   accentBox: { borderColor: theme.color.accentDim },
   accentLabel: { color: theme.color[theme.accentInk] },
   successBox: { borderColor: theme.feedback.success.badgeBorder },
-  successLabel: { color: theme.feedback.success.fg },
+  successLabel: { color: theme.feedback.success.ink },
   warningBox: { borderColor: theme.feedback.warning.badgeBorder },
-  warningLabel: { color: theme.feedback.warning.fg },
+  warningLabel: { color: theme.feedback.warning.ink },
   dangerBox: { borderColor: theme.feedback.danger.badgeBorder },
-  dangerLabel: { color: theme.feedback.danger.fg },
+  dangerLabel: { color: theme.feedback.danger.ink },
   list: {
     paddingVertical: libraryList.badgeV,
     gap: libraryList.badgeIconGap,
@@ -77,7 +77,7 @@ const useStyles = createThemedStyles((theme) => ({
     paddingHorizontal: inset.chipFillH,
     borderRadius: radius.chip,
     borderWidth: 0,
-    backgroundColor: theme.color.accent,
+    backgroundColor: theme.accentTextFill,
   },
   filledLabel: {
     ...textStyle(textRoles.filledBadge),

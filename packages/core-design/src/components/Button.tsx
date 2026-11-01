@@ -88,7 +88,7 @@ const useStyles = createThemedStyles((theme) => ({
     borderColor: 'transparent',
   },
   primary: {
-    backgroundColor: theme.color.accent,
+    backgroundColor: theme.accentTextFill,
   },
   tonal: {
     backgroundColor: theme.color.surface2,

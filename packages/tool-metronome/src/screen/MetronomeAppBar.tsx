@@ -208,7 +208,7 @@ function SongChipFace({
           {text.context}
         </Text>
       </View>
-      <Icon name="caretDown" size="caret" color={stage ? ink : 'text3'} />
+      <Icon name="caretDown" size="caret" color={stage ? ink : 'decor'} />
     </>
   );
 }
@@ -265,7 +265,7 @@ function SetlistsChip({ onPress }: { readonly onPress: () => void }) {
         <Text style={styles.setLabel} numberOfLines={1}>
           {setlistChipLabel(undefined)}
         </Text>
-        <Icon name="caretDown" size="caret" color="text3" />
+        <Icon name="caretDown" size="caret" color="decor" />
       </View>
     </Pressable>
   );

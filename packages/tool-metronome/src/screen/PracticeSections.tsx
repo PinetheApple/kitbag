@@ -46,7 +46,7 @@ const usePreviewStyles = createThemedStyles((theme) => ({
   muted: {
     borderWidth: metronomeSheet.mutePreviewDashed,
     borderStyle: 'dashed',
-    borderColor: theme.color.text3,
+    borderColor: theme.color.decor,
   },
 }));
 

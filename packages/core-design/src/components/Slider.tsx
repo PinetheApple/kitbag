@@ -69,7 +69,7 @@ const useStyles = createThemedStyles((theme) => ({
     bottom: -sliderGeometry.tickOverhang,
     width: sliderGeometry.tick,
     marginLeft: -sliderGeometry.tick / 2,
-    backgroundColor: theme.color.text3,
+    backgroundColor: theme.color.decor,
     opacity: sliderGeometry.tickOpacity,
   },
 }));

@@ -32,7 +32,7 @@ export function switchStyles(theme: Theme) {
       width: size.switchKnob,
       height: size.switchKnob,
       borderRadius: radius.circle,
-      backgroundColor: color.text3,
+      backgroundColor: color.decor,
     },
     knobOn: { left: knobOnLeft, backgroundColor: color.accent },
   };
