@@ -7,6 +7,7 @@ import type { RouteLatency } from '@kitbag/core-db';
 import { describe, expect, it } from 'vitest';
 
 import { CALIBRATION } from './calibrationRules.ts';
+import { BEAT_MS } from './calibrationStats.ts';
 import {
   canUseOutcome,
   createCalibrationSession,
@@ -14,7 +15,6 @@ import {
 } from './calibrationSession.ts';
 
 const RATE = 48_000;
-const MS_PER_BEAT = 60_000 / CALIBRATION.bpm;
 const START_FRAME = 48_000;
 const START_MS = 1_000;
 
@@ -122,7 +122,7 @@ function harness({
   };
   const session = createCalibrationSession(deps);
   const tapAt = (beat: number, lateMs: number, gapMs = 0, rate = RATE) => {
-    const ms = START_MS + beat * MS_PER_BEAT + lateMs;
+    const ms = START_MS + beat * BEAT_MS + lateMs;
     pair = pairAt(ms - 3, gapMs, rate);
     session.getState().tap(ms);
   };
@@ -187,7 +187,7 @@ describe('calibration session', () => {
     const { session, setPair } = harness();
     await session.getState().open();
     setPair(null);
-    session.getState().tap(START_MS + MS_PER_BEAT);
+    session.getState().tap(START_MS + BEAT_MS);
     expect(session.getState().deviations).toEqual([]);
   });
 
@@ -388,7 +388,7 @@ describe('calibration session', () => {
     const { session, calls } = harness();
     await session.getState().open();
     session.getState().close();
-    session.getState().tap(START_MS + MS_PER_BEAT);
+    session.getState().tap(START_MS + BEAT_MS);
     expect(calls.stops).toBe(1);
     expect(session.getState()).toMatchObject({ phase: 'idle', deviations: [] });
   });

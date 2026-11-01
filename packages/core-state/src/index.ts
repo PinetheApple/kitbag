@@ -228,6 +228,9 @@ export {
 export { CALIBRATION } from './rig/calibrationRules.ts';
 export {
   analyseTaps,
+  BEAT_MS,
+  mean,
+  sampleSd,
   storedOffsetMs,
   unwrapDeviations,
   type CalibrationOutcome,

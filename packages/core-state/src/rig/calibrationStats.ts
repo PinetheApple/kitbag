@@ -8,7 +8,7 @@ import {
 import { SECONDS_PER_MINUTE } from '../text.ts';
 import { CALIBRATION } from './calibrationRules.ts';
 
-const BEAT_MS = (SECONDS_PER_MINUTE * MS_PER_SECOND) / CALIBRATION.bpm;
+export const BEAT_MS = (SECONDS_PER_MINUTE * MS_PER_SECOND) / CALIBRATION.bpm;
 const FULL_TURN = 2 * Math.PI;
 
 export type RefusalReason = 'too-few' | 'at-limit';

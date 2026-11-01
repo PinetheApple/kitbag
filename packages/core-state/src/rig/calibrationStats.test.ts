@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { CALIBRATION } from './calibrationRules.ts';
 import {
   analyseTaps,
+  BEAT_MS,
   mean,
   sampleSd,
   storedOffsetMs,
@@ -15,8 +16,7 @@ import {
 } from './calibrationStats.ts';
 
 const RATE = 48_000;
-const MS_PER_BEAT = 60_000 / CALIBRATION.bpm;
-const FRAMES_PER_BEAT = (RATE * MS_PER_BEAT) / 1000;
+const FRAMES_PER_BEAT = (RATE * BEAT_MS) / 1000;
 const START_FRAME = 96_000;
 const PAIR: EngineClockPair = {
   frame: START_FRAME,
@@ -34,34 +34,30 @@ const steady = (offset: number, count: number = CALIBRATION.taps) =>
 describe('tap deviation', () => {
   it('is positive for a tap after its click', () => {
     expect(
-      tapDeviationMs(START_MS + 3 * MS_PER_BEAT + 12, PAIR, SCHEDULE),
+      tapDeviationMs(START_MS + 3 * BEAT_MS + 12, PAIR, SCHEDULE),
     ).toBeCloseTo(12);
   });
 
   it('is negative for a tap before its click', () => {
     expect(
-      tapDeviationMs(START_MS + 5 * MS_PER_BEAT - 40, PAIR, SCHEDULE),
+      tapDeviationMs(START_MS + 5 * BEAT_MS - 40, PAIR, SCHEDULE),
     ).toBeCloseTo(-40);
   });
 
   it('measures against the nearest click, not the previous one', () => {
     expect(
-      tapDeviationMs(
-        START_MS + 4 * MS_PER_BEAT + 0.6 * MS_PER_BEAT,
-        PAIR,
-        SCHEDULE,
-      ),
-    ).toBeCloseTo(-0.4 * MS_PER_BEAT);
+      tapDeviationMs(START_MS + 4 * BEAT_MS + 0.6 * BEAT_MS, PAIR, SCHEDULE),
+    ).toBeCloseTo(-0.4 * BEAT_MS);
   });
 
   it('reads click times through a pair stamped later in the run', () => {
     const later: EngineClockPair = {
       frame: START_FRAME + 7 * FRAMES_PER_BEAT + 480,
-      monotonicNs: PAIR.monotonicNs + (7 * MS_PER_BEAT + 10) * 1_000_000,
+      monotonicNs: PAIR.monotonicNs + (7 * BEAT_MS + 10) * 1_000_000,
       sampleRate: RATE,
     };
     expect(
-      tapDeviationMs(START_MS + 8 * MS_PER_BEAT + 30, later, SCHEDULE),
+      tapDeviationMs(START_MS + 8 * BEAT_MS + 30, later, SCHEDULE),
     ).toBeCloseTo(30);
   });
 
@@ -160,7 +156,7 @@ describe('sign against the engine', () => {
     const outputLatencyMs = 40;
     const grid = Array.from(
       { length: CALIBRATION.taps },
-      (_, i) => START_MS + (i + 1) * MS_PER_BEAT,
+      (_, i) => START_MS + (i + 1) * BEAT_MS,
     );
     const taps = grid.map((g, i) =>
       tapDeviationMs(
@@ -189,7 +185,7 @@ describe('at the wrap', () => {
   const tapsFor = (trueMs: number, sdMs: number = ROUTE_SD_MS) =>
     NORMAL_SCORES.map((z, i) =>
       tapDeviationMs(
-        START_MS + (i + 1) * MS_PER_BEAT + trueMs + z * sdMs,
+        START_MS + (i + 1) * BEAT_MS + trueMs + z * sdMs,
         PAIR,
         SCHEDULE,
       ),
@@ -234,32 +230,37 @@ describe('at the wrap', () => {
     },
   );
 
-  it.each([1, -1])(
-    'refuses an unsteady run whose mean is past the limit (sign %d)',
-    (sign) => {
-      const main = 268;
-      const stray = 411;
-      const taps = Array.from({ length: CALIBRATION.taps }, (_, i) =>
-        tapDeviationMs(
-          START_MS +
-            (i + 1) * MS_PER_BEAT +
-            sign * (i % 4 === 0 ? stray : main),
-          PAIR,
-          SCHEDULE,
-        ),
-      );
-      const usable = usableDeviations(taps);
-      expect(usable).toHaveLength(CALIBRATION.taps);
-      expect(Math.abs(mean(usable))).toBeGreaterThan(
-        KB_LATENCY_OFFSET_MS_BOUNDS.max,
-      );
-      expect(sampleSd(usable)).toBeGreaterThan(CALIBRATION.steadySdMs);
-      expect(analyseTaps(taps)).toMatchObject({
-        kind: 'refused',
-        reason: 'at-limit',
-      });
-    },
-  );
+  it.each([
+    ['late', 1],
+    ['early', -1],
+  ])('refuses an unsteady %s run whose mean is past the limit', (_, sign) => {
+    const strayEvery = 4;
+    const strayGapMs = BEAT_MS / strayEvery;
+    const pastLimitMs = 3;
+    const mainMs =
+      KB_LATENCY_OFFSET_MS_BOUNDS.max + pastLimitMs - strayGapMs / strayEvery;
+    const strayMs = mainMs + strayGapMs;
+    expect(strayGapMs).toBeLessThanOrEqual(CALIBRATION.usableWindowMs);
+    const taps = Array.from({ length: CALIBRATION.taps }, (_, i) =>
+      tapDeviationMs(
+        START_MS +
+          (i + 1) * BEAT_MS +
+          sign * (i % strayEvery === 0 ? strayMs : mainMs),
+        PAIR,
+        SCHEDULE,
+      ),
+    );
+    const usable = usableDeviations(taps);
+    expect(usable).toHaveLength(CALIBRATION.taps);
+    expect(Math.abs(mean(usable))).toBeGreaterThan(
+      KB_LATENCY_OFFSET_MS_BOUNDS.max,
+    );
+    expect(sampleSd(usable)).toBeGreaterThan(CALIBRATION.steadySdMs);
+    expect(analyseTaps(taps)).toMatchObject({
+      kind: 'refused',
+      reason: 'at-limit',
+    });
+  });
 
   it('refuses a 320 ms route, read as −280, whose spread crosses the limit', () => {
     expect(analyseTaps(tapsFor(320))).toMatchObject({
@@ -272,11 +273,11 @@ describe('at the wrap', () => {
     const outcome = analyseTaps(tapsFor(320, TIGHT_SD_MS));
     expect(outcome).toMatchObject({ kind: 'measured', steady: true });
     if (outcome.kind === 'measured')
-      expect(storedOffsetMs(outcome.meanMs)).toBe(320 - MS_PER_BEAT);
+      expect(storedOffsetMs(outcome.meanMs)).toBe(320 - BEAT_MS);
   });
 
   it('refuses an even split across the wrap rather than averaging it to zero', () => {
-    const edge = MS_PER_BEAT / 2 - 5;
+    const edge = BEAT_MS / 2 - 5;
     const split = Array.from({ length: CALIBRATION.taps }, (_, i) =>
       i % 2 === 0 ? edge : -edge,
     );
@@ -284,7 +285,7 @@ describe('at the wrap', () => {
   });
 
   it('never measures a value it could not store', () => {
-    for (let trueMs = -MS_PER_BEAT; trueMs <= MS_PER_BEAT; trueMs += 5) {
+    for (let trueMs = -BEAT_MS; trueMs <= BEAT_MS; trueMs += 5) {
       const outcome = analyseTaps(tapsFor(trueMs));
       if (outcome.kind !== 'measured') continue;
       const stored = storedOffsetMs(outcome.meanMs);
