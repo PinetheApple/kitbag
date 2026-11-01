@@ -48,7 +48,7 @@ export const HOME_TOOLS: readonly HomeToolEntry[] = [
     icon: 'songs',
     homeTile: { label: 'Songs', route: '/library' },
     layout: '1x1',
-    summary: 'Imported audio, beats found in the background',
+    summary: 'Imported songs, beats analyzed',
   },
   {
     id: TOOL_ID.stems,
