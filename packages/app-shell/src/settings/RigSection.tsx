@@ -90,15 +90,14 @@ function LatencyRow() {
 
 function OutputRow({ onPress }: { readonly onPress: () => void }) {
   const live = useRouteLatency(routeLatency, (s) => s.live);
-  const calibrated = useRouteLatency(
-    routeLatency,
-    (s) => s.live !== null && s.stored[s.live.id] !== undefined,
+  const storedOffsetMs = useRouteLatency(routeLatency, (s) =>
+    s.live === null ? undefined : s.stored[s.live.id]?.offsetMs,
   );
-  const { name, status } = outputLine(live, calibrated);
+  const { name, status } = outputLine(live, storedOffsetMs);
   return (
     <EditRow
       label={OUTPUT_LABEL}
-      accessibilityLabel={`${OUTPUT_LABEL}, ${outputAccessibilityLabel(live, calibrated)}`}
+      accessibilityLabel={`${OUTPUT_LABEL}, ${outputAccessibilityLabel(live, storedOffsetMs)}`}
       onPress={onPress}
     >
       <EditValue>

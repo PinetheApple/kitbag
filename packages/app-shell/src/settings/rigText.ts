@@ -20,8 +20,6 @@ const JOIN = ` ${SEPARATOR} `;
 
 const IN_USE_NOW = 'in use now';
 const UNKNOWN_OUTPUT = 'Unknown output';
-const CALIBRATED = 'calibrated';
-const NOT_CALIBRATED = 'not calibrated';
 const NEVER_CALIBRATED = 'never calibrated';
 const BEAT_SLOT = 'Beat';
 const ACCENT_SLOT = 'accent';
@@ -64,9 +62,12 @@ function routeNameParts(route: OutputRoute | null): string[] {
     : [routeTitle(route)];
 }
 
-function routeStatus(live: OutputRoute | null, calibrated: boolean): string {
+function routeStatus(
+  live: OutputRoute | null,
+  storedOffsetMs: number | undefined,
+): string {
   if (live?.certain !== true) return NOT_SAVED;
-  return calibrated ? CALIBRATED : NOT_CALIBRATED;
+  return formatOffsetMs(storedOffsetMs ?? 0);
 }
 
 export interface OutputLine {
@@ -76,19 +77,19 @@ export interface OutputLine {
 
 export function outputLine(
   live: OutputRoute | null,
-  calibrated: boolean,
+  storedOffsetMs: number | undefined,
 ): OutputLine {
   return {
     name: routeNameParts(live).join(JOIN),
-    status: `${JOIN}${routeStatus(live, calibrated)}`,
+    status: `${JOIN}${routeStatus(live, storedOffsetMs)}`,
   };
 }
 
 export function outputAccessibilityLabel(
   live: OutputRoute | null,
-  calibrated: boolean,
+  storedOffsetMs: number | undefined,
 ): string {
-  return [...routeNameParts(live), routeStatus(live, calibrated)].join(
+  return [...routeNameParts(live), routeStatus(live, storedOffsetMs)].join(
     A11Y_JOIN,
   );
 }

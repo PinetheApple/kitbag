@@ -180,6 +180,15 @@ describe('route latency', () => {
     expect(applied()).toBe(182);
   });
 
+  it('shows a manual step after a calibration as the stored offset at once', async () => {
+    const { store, route } = harness([]);
+    await store.getState().start();
+    route(SPEAKER);
+    await store.getState().record({ ...HEADPHONES_ROW, route: SPEAKER.id });
+    store.getState().step(3);
+    expect(store.getState().stored[SPEAKER.id]?.offsetMs).toBe(185);
+  });
+
   it('clears a route back to never calibrated', async () => {
     const { store, route, calls, applied } = harness();
     await store.getState().start();

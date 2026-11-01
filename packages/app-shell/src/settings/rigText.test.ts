@@ -62,28 +62,36 @@ const GUESSED: OutputRoute = { ...HEADPHONES, certain: false };
 
 describe('output row', () => {
   it('names the speaker and the jack by kind and other routes by name', () => {
-    expect(outputLine(SPEAKER, false).name).toBe('Phone speaker');
-    expect(outputLine(WIRED, false).name).toBe('Wired headphones · 3.5 mm');
-    expect(outputLine(HEADPHONES, false).name).toBe('WH-1000XM4');
+    expect(outputLine(SPEAKER, undefined).name).toBe('Phone speaker');
+    expect(outputLine(WIRED, undefined).name).toBe('Wired headphones · 3.5 mm');
+    expect(outputLine(HEADPHONES, undefined).name).toBe('WH-1000XM4');
   });
 
-  it('says whether the live route has a stored offset', () => {
-    expect(outputLine(SPEAKER, true)).toEqual({
+  it('shows the offset stored for the live route, however it was set', () => {
+    expect(outputLine(SPEAKER, 3)).toEqual({
       name: 'Phone speaker',
-      status: ' · calibrated',
+      status: ' · +3 ms',
     });
-    expect(outputLine(SPEAKER, false).status).toBe(' · not calibrated');
+    expect(outputLine(SPEAKER, -12).status).toBe(' · \u221212 ms');
+  });
+
+  it('shows no offset for a route with nothing stored', () => {
+    expect(outputLine(SPEAKER, undefined).status).toBe(' · 0 ms');
+  });
+
+  it('never claims a calibration', () => {
+    expect(outputLine(SPEAKER, 3).status).not.toMatch(/calibrated/);
   });
 
   it('says a step is not saved while the route is guessed', () => {
-    expect(outputLine(GUESSED, true)).toEqual({
+    expect(outputLine(GUESSED, 3)).toEqual({
       name: 'WH-1000XM4',
       status: ' · not saved',
     });
   });
 
   it('says the output is unknown and a step is not saved when the route could not be read', () => {
-    expect(outputLine(null, false)).toEqual({
+    expect(outputLine(null, undefined)).toEqual({
       name: 'Unknown output',
       status: ' · not saved',
     });
@@ -92,13 +100,13 @@ describe('output row', () => {
 
 describe('output row for a screen reader', () => {
   it('reads the route, its detail and its status as a list, without separators', () => {
-    expect(outputAccessibilityLabel(SPEAKER, false)).toBe(
-      'Phone speaker, not calibrated',
+    expect(outputAccessibilityLabel(SPEAKER, undefined)).toBe(
+      'Phone speaker, 0 ms',
     );
-    expect(outputAccessibilityLabel(WIRED, true)).toBe(
-      'Wired headphones, 3.5 mm, calibrated',
+    expect(outputAccessibilityLabel(WIRED, 3)).toBe(
+      'Wired headphones, 3.5 mm, +3 ms',
     );
-    expect(outputAccessibilityLabel(null, false)).toBe(
+    expect(outputAccessibilityLabel(null, undefined)).toBe(
       'Unknown output, not saved',
     );
   });
