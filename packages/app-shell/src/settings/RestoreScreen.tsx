@@ -56,8 +56,6 @@ const MODE_OPTIONS: readonly SegmentOption<ImportMode>[] = [
 
 type OpenSheet = 'none' | 'conflicts' | 'replace';
 
-const BOLD_BODY = 600;
-
 const useStyles = createThemedStyles((theme) => ({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.rowGap },
   spacer: { flexGrow: 1 },
@@ -73,7 +71,7 @@ const useStyles = createThemedStyles((theme) => ({
     color: theme.color.text,
     flexShrink: 1,
   },
-  strong: textStyle({ ...textRoles.fieldLabel, weight: BOLD_BODY }),
+  strong: textStyle(textRoles.bannerEmphasis),
 }));
 
 function SourceCard({ review }: { readonly review: RestoreReview }) {

@@ -299,6 +299,7 @@ export const textRoles = {
   emptyTitle: { family: display, weight: 500, size: 14 },
   emptyReason: { family: body, weight: 400, size: 12 },
   fieldLabel: { family: body, weight: 400, size: 13.5 },
+  bannerEmphasis: { family: body, weight: 600, size: 13.5 },
   editRowKey: { family: body, weight: 400, size: 13 },
   wordmark: {
     family: display,
