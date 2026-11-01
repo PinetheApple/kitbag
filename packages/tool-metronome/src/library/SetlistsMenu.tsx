@@ -1,4 +1,5 @@
-import { useLibrary } from '@kitbag/core-state';
+import { backupFilesAvailable } from '@kitbag/core-native';
+import { shareSetlist, useLibrary } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
 
 import { ActionsSheet, ConfirmSheet, guarded, NameSheet } from './sheets.tsx';
@@ -12,6 +13,8 @@ type Open =
     };
 
 const NONE: Open = { kind: 'none' };
+
+const EXPORT_FAILED = 'Could not export this setlist. Try again.';
 
 export function useSetlistsMenu(onCreated: (setlistId: number) => void) {
   const [open, setOpen] = useState<Open>(NONE);
@@ -60,6 +63,9 @@ function useSetlistCommands(menu: SetlistsMenu) {
   const name = useLibrary(
     (s) => s.setlists.find((x) => x.setlist.id === target)?.setlist.name ?? '',
   );
+  const uuid = useLibrary(
+    (s) => s.setlists.find((x) => x.setlist.id === target)?.setlist.uuid,
+  );
   const { close, onCreated } = menu;
   const run = (work: () => Promise<unknown>) =>
     guarded(
@@ -80,6 +86,13 @@ function useSetlistCommands(menu: SetlistsMenu) {
       }),
     rename: (v: string) => onTarget((id) => renameSetlist(id, v)),
     duplicate: () => onTarget(duplicateSetlist),
+    exportSetlist: () =>
+      uuid === undefined
+        ? Promise.resolve()
+        : guarded(menu.setError, EXPORT_FAILED, async () => {
+            await shareSetlist({ uuid, name });
+            close();
+          }),
     remove: () => onTarget(deleteSetlist),
   };
 }
@@ -99,6 +112,9 @@ function SetlistActions({ menu, bottomInset }: SheetsProps) {
       },
     },
     { label: 'Duplicate', onPress: cmd.duplicate },
+    ...(backupFilesAvailable()
+      ? [{ label: 'Export', onPress: cmd.exportSetlist }]
+      : []),
     {
       label: 'Delete setlist',
       variant: 'destructive' as const,

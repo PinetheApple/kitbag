@@ -11,6 +11,7 @@ import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.WritableMap
+import java.io.IOException
 import java.util.concurrent.Executor
 
 class DocumentPicker(
@@ -31,13 +32,22 @@ class DocumentPicker(
     startPick(intent, REQUEST_PICK_DOCUMENT, promise)
   }
 
+  fun pickBackup(promise: Promise) {
+    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+      addCategory(Intent.CATEGORY_OPENABLE)
+      type = "*/*"
+      putExtra(Intent.EXTRA_MIME_TYPES, BACKUP_MIME_TYPES)
+    }
+    startPick(intent, REQUEST_PICK_BACKUP, promise)
+  }
+
   fun pickFolder(promise: Promise) {
     startPick(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), REQUEST_PICK_FOLDER, promise)
   }
 
   fun cancel() {
     synchronized(this) {
-      pendingPick?.reject(E_INVALIDATED, "The library module was torn down mid-pick")
+      pendingPick?.reject(LibraryErrors.INVALIDATED, "The library module was torn down mid-pick")
       pendingPick = null
     }
   }
@@ -45,12 +55,12 @@ class DocumentPicker(
   private fun startPick(intent: Intent, requestCode: Int, promise: Promise) {
     val activity = context.currentActivity
     if (activity == null) {
-      promise.reject(E_NO_ACTIVITY, "No foreground activity to show the picker from")
+      promise.reject(LibraryErrors.NO_ACTIVITY, "No foreground activity to show the picker from")
       return
     }
     synchronized(this) {
       if (pendingPick != null) {
-        promise.reject(E_PICK_IN_PROGRESS, "A picker is already open")
+        promise.reject(LibraryErrors.PICK_IN_PROGRESS, "A picker is already open")
         return
       }
       pendingPick = promise
@@ -60,7 +70,7 @@ class DocumentPicker(
       try {
         activity.startActivityForResult(intent, requestCode)
       } catch (e: ActivityNotFoundException) {
-        takePendingPick(requestCode)?.reject(E_NO_PICKER, "No app on this device can pick that", e)
+        takePendingPick(requestCode)?.reject(LibraryErrors.NO_PICKER, "No app on this device can pick that", e)
       }
     }
   }
@@ -75,7 +85,7 @@ class DocumentPicker(
   }
 
   override fun onActivityResult(activity: Activity, requestCode: Int, resultCode: Int, data: Intent?) {
-    if (requestCode != REQUEST_PICK_DOCUMENT && requestCode != REQUEST_PICK_FOLDER) return
+    if (requestCode !in PICK_REQUESTS) return
     val promise = takePendingPick(requestCode) ?: return
     val uri = data?.data
     if (resultCode != Activity.RESULT_OK || uri == null) {
@@ -85,10 +95,14 @@ class DocumentPicker(
     io.execute {
       try {
         promise.resolve(
-          if (requestCode == REQUEST_PICK_DOCUMENT) describeDocument(uri) else describeFolder(uri),
+          when (requestCode) {
+            REQUEST_PICK_DOCUMENT -> describeDocument(uri)
+            REQUEST_PICK_BACKUP -> readBackup(uri)
+            else -> describeFolder(uri)
+          },
         )
       } catch (e: Exception) {
-        rejectLogged(promise, E_PICK_FAILED, "Could not read the picked item", e)
+        rejectLogged(promise, LibraryErrors.PICK_FAILED, "Could not read the picked item", e)
       }
     }
   }
@@ -101,6 +115,16 @@ class DocumentPicker(
       putString("name", displayName(uri) ?: uri.lastPathSegment.orEmpty())
       putString("mimeType", context.contentResolver.getType(uri).orEmpty())
     }
+
+  private fun readBackup(uri: Uri): WritableMap {
+    val bytes = context.contentResolver.openInputStream(uri)?.use { BackupFiles.readCapped(it) }
+      ?: throw IOException("Could not open the picked file")
+    return Arguments.createMap().apply {
+      putString("name", displayName(uri) ?: uri.lastPathSegment.orEmpty())
+      putDouble("bytes", bytes.size.toDouble())
+      putString("contents", bytes.toString(Charsets.UTF_8))
+    }
+  }
 
   // The grant is not persisted; it lasts while the process does, replace sheet included.
   private fun describeFolder(treeUri: Uri): WritableMap {
@@ -124,14 +148,12 @@ class DocumentPicker(
   private companion object {
     const val REQUEST_PICK_DOCUMENT = 0x4b42
     const val REQUEST_PICK_FOLDER = 0x4b43
+    const val REQUEST_PICK_BACKUP = 0x4b44
+    val PICK_REQUESTS = setOf(REQUEST_PICK_DOCUMENT, REQUEST_PICK_FOLDER, REQUEST_PICK_BACKUP)
 
     val PICKABLE_MIME_TYPES =
       arrayOf("audio/*", "application/zip", "application/x-zip-compressed")
-
-    const val E_NO_ACTIVITY = "E_NO_ACTIVITY"
-    const val E_PICK_IN_PROGRESS = "E_PICK_IN_PROGRESS"
-    const val E_NO_PICKER = "E_NO_PICKER"
-    const val E_PICK_FAILED = "E_PICK_FAILED"
-    const val E_INVALIDATED = "E_INVALIDATED"
+    val BACKUP_MIME_TYPES =
+      arrayOf(BackupFiles.JSON_MIME, "text/plain", "application/octet-stream")
   }
 }
