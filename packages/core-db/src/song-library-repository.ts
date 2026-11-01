@@ -16,6 +16,7 @@ import {
   type NewStemBundle,
   type StemMix,
 } from './stem-bundle-repository';
+import { saveLyricsRetimed, type RetimedLyrics } from './stem-lyrics';
 import { renameStem, renameStemSet } from './stem-rename';
 
 export interface LibrarySongRow {
@@ -308,6 +309,8 @@ export function createSongLibraryRepository({
       serial(() => renameStemSet(db, id, title)),
     renameStem: (id: number, name: string) =>
       serial(() => renameStem(db, id, name)),
+    saveLyricsRetimed: (id: number, times: RetimedLyrics | null) =>
+      serial(() => saveLyricsRetimed(db, id, times)),
   };
 }
 

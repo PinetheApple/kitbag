@@ -340,6 +340,45 @@ describe('StemDeck bundles in the song library', () => {
   });
 });
 
+describe('tap-along lyric retiming', () => {
+  const TIMES = [11.9, 15.2];
+
+  it('saves per-line times for a song and resets them', async () => {
+    const { library } = setup();
+    const id = await library.insertStemBundle(FULL);
+    const other = await library.insertStemBundle(BARE);
+    await library.saveLyricsRetimed(id, TIMES);
+    expect((await library.readStemSet(id))?.lyricsRetimed).toEqual(TIMES);
+    expect((await library.readStemSet(other))?.lyricsRetimed).toBeNull();
+    await library.saveLyricsRetimed(id, null);
+    expect((await library.readStemSet(id))?.lyricsRetimed).toBeNull();
+  });
+
+  it('stores a versioned JSON object in the existing column', async () => {
+    const { handle, library } = setup();
+    const id = await library.insertStemBundle(FULL);
+    await library.saveLyricsRetimed(id, TIMES);
+    const [row] = await handle.db.select().from(stemSets);
+    expect(JSON.parse(row?.lyricsRetimed ?? '')).toEqual({
+      version: 1,
+      times: TIMES,
+    });
+  });
+
+  it.each([
+    ['text that is not JSON', 'not json'],
+    ['another version', '{"version":2,"times":[1,2]}'],
+    ['a bare array', '[1,2]'],
+    ['a time that is not a number', '{"version":1,"times":[1,"2"]}'],
+    ['a time that is not finite', '{"version":1,"times":[1,null]}'],
+  ])('reads %s as no retiming', async (_, stored) => {
+    const { handle, library } = setup();
+    const id = await library.insertStemBundle(FULL);
+    await handle.db.update(stemSets).set({ lyricsRetimed: stored });
+    expect((await library.readStemSet(id))?.lyricsRetimed).toBeNull();
+  });
+});
+
 describe('StemDeck bundles over the op-sqlite 17 connection', () => {
   it('inserts, replaces and reads back', async () => {
     const database = connectDatabase(fakeOpSqlite().connection);
@@ -357,6 +396,10 @@ describe('StemDeck bundles over the op-sqlite 17 connection', () => {
       sections: FULL.sections,
       lyrics: FULL.lyrics,
     });
+    await database.songLibrary.saveLyricsRetimed(id, [11.9, 15.2]);
+    expect((await database.songLibrary.readStemSet(id))?.lyricsRetimed).toEqual(
+      [11.9, 15.2],
+    );
     await database.close();
   });
 });

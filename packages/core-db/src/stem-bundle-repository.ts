@@ -5,6 +5,7 @@ import { stems, stemSets } from './schema';
 import { packFloat32, packInt32, unpackFloat32, unpackInt32 } from './packing';
 import { STEM_SET_SOURCE, type StemSetSource } from './stem-set-source';
 import { applyUserNames, readUserNames } from './stem-rename';
+import { parseRetimedLyrics, type RetimedLyrics } from './stem-lyrics';
 
 const STEM_FORMAT = 'flac';
 const BAR_MARK_FIELDS = 2;
@@ -82,7 +83,7 @@ export interface StemSetRecord extends Omit<
   readonly sampleRate: number | null;
   readonly createdAt: Date;
   readonly speed: number;
-  readonly lyricsRetimed: string | null;
+  readonly lyricsRetimed: RetimedLyrics | null;
   readonly stems: readonly StoredStem[];
 }
 
@@ -324,7 +325,7 @@ export async function readStemSet(
             offsetSec: row.lyricsOffset ?? 0,
             instrumental,
           },
-    lyricsRetimed: row.lyricsRetimed,
+    lyricsRetimed: parseRetimedLyrics(row.lyricsRetimed),
     stems: await readStems(db, id),
   };
 }
