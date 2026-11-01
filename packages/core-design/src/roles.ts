@@ -8,6 +8,7 @@ export const space = {
   stepKeyGap: 7,
   controlGap: 8,
   ledGap: 9,
+  ledTinyGap: 2,
   rowGap: 10,
   sectionGap: 12,
   screenInset: 16,
@@ -28,8 +29,11 @@ export const size = {
   ledMainBorder: 2,
   ledSmall: 16,
   ledSmallBorder: 1.5,
+  ledTiny: 7,
+  ledTinyBorder: 1,
   stepKey: 24,
   stepValueMinWidth: 40,
+  stepValueWideMinWidth: 52,
   transportKey: 42,
   playButton: 58,
   playGlyphBox: 22,
@@ -279,6 +283,7 @@ export const textRoles = {
   rowSubtitle: { family: body, weight: 400, size: 12 },
   dragIndex: { family: display, weight: 400, size: 11.5, tabular: true },
   editValue: { family: display, weight: 400, size: 13.5 },
+  levelReadout: { family: display, weight: 500, size: 13.5, tabular: true },
   sectionLabel: {
     family: display,
     weight: 500,
@@ -379,6 +384,11 @@ export const textRoles = {
 } as const satisfies Record<string, TypeRole>;
 
 export type TextRoleName = keyof typeof textRoles;
+
+export const rowLineHeight = {
+  title: textRoles.rowTitle.size * bodyLineHeight,
+  subtitle: textRoles.rowSubtitle.size * bodyLineHeight,
+} as const;
 
 export const appBarTitleMinSize = 15;
 
