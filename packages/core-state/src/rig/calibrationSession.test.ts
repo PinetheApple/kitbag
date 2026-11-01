@@ -74,6 +74,7 @@ function harness({
   let routeListener: ((route: OutputRoute) => void) | undefined;
   let pair: EngineClockPair | null = pairAt(START_MS);
   let clickActive = true;
+  let clickQueryFails = false;
   const pendingStarts: Deferred[] = [];
   let deferStarts = false;
   let routeReads = 0;
@@ -90,7 +91,10 @@ function harness({
     stopClick: () => {
       calls.stops += 1;
     },
-    isClickActive: () => Promise.resolve(clickActive),
+    isClickActive: () =>
+      clickQueryFails
+        ? Promise.reject(new Error('no answer'))
+        : Promise.resolve(clickActive),
     nowFrame: () => START_FRAME,
     readClockPair: () => pair,
     getOutputRoute: () => {
@@ -143,6 +147,9 @@ function harness({
     },
     stopClickExternally: () => {
       clickActive = false;
+    },
+    failClickQuery: () => {
+      clickQueryFails = true;
     },
     emitRoute: (route: OutputRoute) => routeListener?.(route),
   };
@@ -353,6 +360,18 @@ describe('calibration session', () => {
     expect(session.getState()).toMatchObject({
       phase: 'stopped',
       outcome: null,
+    });
+  });
+
+  it('finishes the run when the click state cannot be read', async () => {
+    const { session, tapRun, failClickQuery } = harness();
+    await session.getState().open();
+    failClickQuery();
+    tapRun(12);
+    await flush();
+    expect(session.getState()).toMatchObject({
+      phase: 'done',
+      outcome: { kind: 'measured' },
     });
   });
 
