@@ -107,7 +107,7 @@ const useStyles = createThemedStyles((theme) => ({
     flexShrink: 1,
   },
   labelActive: {
-    color: theme.color.accent,
+    color: theme.color[theme.accentInk],
   },
   largeChip: {
     minHeight: size.chipLarge,

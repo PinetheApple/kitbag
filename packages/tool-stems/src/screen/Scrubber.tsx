@@ -44,7 +44,10 @@ const useStyles = createThemedStyles((theme) => ({
     alignItems: 'center',
     gap: stemPlayer.loopNoteGap,
   },
-  noteText: { ...textStyle(textRoles.loopNote), color: theme.color.accent },
+  noteText: {
+    ...textStyle(textRoles.loopNote),
+    color: theme.color[theme.accentInk],
+  },
   failText: { ...textStyle(textRoles.loopNote), color: theme.color.red },
   elapsed: { flexShrink: 0 },
   total: { ...textStyle(textRoles.scrubTime), color: theme.color.text2 },

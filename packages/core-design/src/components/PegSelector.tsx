@@ -77,7 +77,7 @@ const useStyles = createThemedStyles((theme) => ({
     color: theme.color.green,
   },
   noteDetected: {
-    color: theme.color.accent,
+    color: theme.color[theme.accentInk],
   },
   badge: {
     position: 'absolute',
@@ -95,7 +95,7 @@ const useStyles = createThemedStyles((theme) => ({
     color: theme.color.text2,
   },
   stringNumberLocked: {
-    color: theme.color.accent,
+    color: theme.color[theme.accentInk],
   },
   lockBar: {
     width: size.pegLockBar,

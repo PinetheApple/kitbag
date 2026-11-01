@@ -187,7 +187,7 @@ const useStyles = createThemedStyles((theme) => ({
     color: theme.color.text2,
   },
   badgeValueAccented: {
-    color: theme.color.accent,
+    color: theme.color[theme.accentInk],
   },
   inlineCluster: {
     flexDirection: 'row',

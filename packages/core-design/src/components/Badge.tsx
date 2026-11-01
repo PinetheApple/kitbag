@@ -54,7 +54,7 @@ const useStyles = createThemedStyles((theme) => ({
   defaultBox: { borderColor: theme.color.line },
   defaultLabel: { color: theme.color.text2 },
   accentBox: { borderColor: theme.color.accentDim },
-  accentLabel: { color: theme.color.accent },
+  accentLabel: { color: theme.color[theme.accentInk] },
   successBox: { borderColor: theme.feedback.success.badgeBorder },
   successLabel: { color: theme.feedback.success.fg },
   warningBox: { borderColor: theme.feedback.warning.badgeBorder },
@@ -72,7 +72,6 @@ const useStyles = createThemedStyles((theme) => ({
     lineHeight: textRoles.listBadge.size * lineRatio.badge,
   },
   listIcon: { fontSize: iconSizes.listBadge },
-  listAccentLabel: { color: theme.color[theme.accentInk] },
   filled: {
     paddingVertical: inset.chipV,
     paddingHorizontal: inset.chipFillH,
@@ -107,7 +106,6 @@ export function Badge({
     styles.label,
     list && styles.listLabel,
     styles[`${tone}Label`],
-    list && tone === 'accent' && styles.listAccentLabel,
     filled && styles.filledLabel,
   ];
   return (
