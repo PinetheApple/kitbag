@@ -694,7 +694,8 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   prompt appears alongside it. Back or a tap outside the prompt counts as Not now. The
   prompt is remembered only once answered, so a prompt cut off by the app closing comes
   back on the next start. The system dialog counts as asked once it answers, including a
-  first denial. A blocked answer opens the app's system notification settings, since it
+  first denial; a permission already granted at the first start also counts as asked. A
+  blocked answer opens the app's system notification settings, since it
   can come back with no dialog shown. Android keeps an existing channel's importance, so
   the cards move to new channel IDs and the LOW ones are deleted. The ask state (never,
   declined, asked) is a device-local `preferences` key with no migration and is not
