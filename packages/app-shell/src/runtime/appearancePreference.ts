@@ -6,7 +6,13 @@ import {
   type AppearanceSettings,
 } from '@kitbag/core-state';
 
-import { storedPreference, type StoredPreference } from './storedPreference';
+import {
+  encodeFlag,
+  readFlag,
+  storedPreference,
+  writeChanged,
+  type StoredPreference,
+} from './storedPreference';
 
 export const APPEARANCE_KEYS: Readonly<Record<AppearanceKey, string>> = {
   theme: 'appearance_theme',
@@ -14,17 +20,8 @@ export const APPEARANCE_KEYS: Readonly<Record<AppearanceKey, string>> = {
   keepScreenAwake: 'appearance_keep_screen_awake',
 };
 
-const FLAG = { on: '1', off: '0' } as const;
-
-function readFlag(stored: StoredPreference): boolean | undefined {
-  const value = stored.read();
-  if (value === FLAG.on) return true;
-  if (value === FLAG.off) return false;
-  return undefined;
-}
-
 function encode(value: AppearanceSettings[AppearanceKey]): string {
-  if (typeof value === 'boolean') return value ? FLAG.on : FLAG.off;
+  if (typeof value === 'boolean') return encodeFlag(value);
   return value;
 }
 
@@ -43,10 +40,7 @@ export function appearancePersistence(
       };
     },
     save: (changed) => {
-      for (const key of Object.keys(changed) as AppearanceKey[]) {
-        const value = changed[key];
-        if (value !== undefined) stored(key).write(encode(value));
-      }
+      writeChanged(changed, stored, encode);
     },
   };
 }
