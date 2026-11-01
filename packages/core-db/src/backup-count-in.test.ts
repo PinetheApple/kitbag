@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { CATEGORIES } from './backup-format';
+import {
+  CATEGORIES,
+  recordKey,
+  recordLabel,
+  type BackupRecord,
+} from './backup-format';
 import {
   openBackupDatabase,
   seed,
@@ -13,6 +18,9 @@ import {
   COUNT_IN_PREFERENCE_KEYS,
   COUNT_IN_STORED_KEYS,
 } from './count-in-preferences';
+
+const SONG_UUID = '00000000-0000-4000-8000-000000000001';
+const SONG_NAME = 'Blackbird';
 
 function countIn({ preferences }: BackupDatabase) {
   return Object.fromEntries(
@@ -104,5 +112,17 @@ describe('count-in settings in a backup', () => {
       ok: false,
       error: { kind: 'invalidField', path: '$.countInSettings[0].key' },
     });
+  });
+});
+
+describe('backup record identity', () => {
+  it('keys a song by uuid even when it carries a key field', () => {
+    const song = {
+      uuid: SONG_UUID,
+      name: SONG_NAME,
+      key: 'E minor',
+    } as unknown as BackupRecord;
+    expect(recordKey('songPresets', song)).toBe(SONG_UUID);
+    expect(recordLabel('songPresets', song)).toBe(SONG_NAME);
   });
 });

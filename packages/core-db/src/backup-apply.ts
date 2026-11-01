@@ -214,7 +214,7 @@ async function relinkUntouched(
     if (!replaced(target) || replaced(source)) continue;
     const table = REFERENCE_TABLES[source];
     for (const record of records[source]) {
-      const id = ids[source].get(recordKey(record));
+      const id = ids[source].get(recordKey(source, record));
       const uuid = referenceOf(record, reference);
       if (id === undefined || uuid === null) continue;
       await db
@@ -237,7 +237,7 @@ async function upsertAll(
         mode: plan.mode,
         ids,
       });
-      ids[category].set(recordKey(record), id);
+      ids[category].set(recordKey(category, record), id);
     }
 }
 

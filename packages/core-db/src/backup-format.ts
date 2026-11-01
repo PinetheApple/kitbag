@@ -184,12 +184,19 @@ export function referenceOf(
   return typeof value === 'string' ? value : null;
 }
 
-export function recordKey(record: BackupRecord): string {
-  return 'key' in record ? record.key : record.uuid;
+function isCountInSetting(
+  category: Category,
+  record: BackupRecord,
+): record is CountInSettingRecord {
+  return category === 'countInSettings' && 'key' in record;
 }
 
-export function recordLabel(record: BackupRecord): string {
-  if ('key' in record) return record.key;
+export function recordKey(category: Category, record: BackupRecord): string {
+  return isCountInSetting(category, record) ? record.key : record.uuid;
+}
+
+export function recordLabel(category: Category, record: BackupRecord): string {
+  if (isCountInSetting(category, record)) return record.key;
   if ('name' in record) return record.name;
   if ('title' in record) return record.title;
   return new Date(record.startTime * MS_PER_SECOND).toISOString();

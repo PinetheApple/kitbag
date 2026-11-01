@@ -235,7 +235,7 @@ function checkIdentities(records: CategoryRecords) {
   for (const category of CATEGORIES) {
     const seen = new Set<string>();
     for (const record of records[category]) {
-      const key = recordKey(record);
+      const key = recordKey(category, record);
       if (seen.has(key)) reject({ kind: 'duplicateIdentity', category, key });
       seen.add(key);
     }
