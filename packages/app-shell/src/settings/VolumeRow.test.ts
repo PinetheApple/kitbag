@@ -11,7 +11,10 @@ const sliders = vi.hoisted(() => [] as Props[]);
 
 vi.mock('react-native', async () => {
   const { createElement: h } = await import('react');
-  return { View: (props: Props) => h('div', null, props.children) };
+  return {
+    View: (props: Props) => h('div', null, props.children),
+    useWindowDimensions: () => ({ fontScale: 1 }),
+  };
 });
 
 vi.mock('react-native-reanimated', () => ({

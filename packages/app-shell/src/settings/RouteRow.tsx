@@ -5,6 +5,7 @@ import {
   createThemedStyles,
   Icon,
   inset,
+  lineLimit,
   radius,
   size,
   textStyle,
@@ -15,6 +16,7 @@ import { useCallback, type ReactNode } from 'react';
 import {
   Pressable,
   Text,
+  useWindowDimensions,
   View,
   type PressableStateCallbackType,
 } from 'react-native';
@@ -26,6 +28,8 @@ const ROUTE_ICON: Readonly<Record<OutputRouteKind, IconName>> = {
   usb: 'routeUsb',
   other: 'routeOther',
 };
+
+const ROUTE_TEXT_LINES = 1;
 
 const useStyles = createThemedStyles((theme) => ({
   row: {
@@ -82,16 +86,17 @@ function RouteRowBody({
   offset,
 }: RouteRowProps): ReactNode {
   const styles = useStyles();
+  const lines = lineLimit(useWindowDimensions().fontScale, ROUTE_TEXT_LINES);
   return (
     <>
       <View style={styles.icon}>
         <Icon name={ROUTE_ICON[kind]} size="tile" color="text" />
       </View>
       <View style={styles.text}>
-        <Text style={styles.name} numberOfLines={1}>
+        <Text style={styles.name} numberOfLines={lines}>
           {title}
         </Text>
-        <Text style={styles.meta} numberOfLines={1}>
+        <Text style={styles.meta} numberOfLines={lines}>
           {meta}
         </Text>
       </View>

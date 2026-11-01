@@ -2,6 +2,7 @@ import {
   bodyLineHeight,
   createThemedStyles,
   EditRow,
+  grownTextScale,
   LiveText,
   minTouchTargetDp,
   rig,
@@ -9,8 +10,8 @@ import {
   textRoles,
 } from '@kitbag/core-design';
 import { useMetronome } from '@kitbag/core-state';
-import { useCallback, useEffect } from 'react';
-import { View } from 'react-native';
+import { useCallback, useEffect, useMemo } from 'react';
+import { useWindowDimensions, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 
 import {
@@ -28,11 +29,15 @@ const SLIDER_HIT_OVERHANG =
 
 const useStyles = createThemedStyles(() => ({
   slider: { width: rig.sliderWidth, marginVertical: -SLIDER_HIT_OVERHANG },
-  readout: { width: rig.readoutWidth },
 }));
 
 export function VolumeRow() {
   const styles = useStyles();
+  const { fontScale } = useWindowDimensions();
+  const readoutWidth = useMemo(
+    () => ({ width: rig.readoutWidth * grownTextScale(fontScale) }),
+    [fontScale],
+  );
   const volume = useMetronome((s) => s.volume);
   const setVolume = useMetronome((s) => s.setVolume);
   const fraction = useSharedValue(fractionOfVolume(volume));
@@ -81,7 +86,7 @@ export function VolumeRow() {
         text={readout}
         role="levelReadout"
         align="right"
-        style={styles.readout}
+        style={readoutWidth}
       />
     </EditRow>
   );
