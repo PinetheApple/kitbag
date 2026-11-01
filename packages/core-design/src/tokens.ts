@@ -51,7 +51,7 @@ export const palette: Readonly<Record<ColorToken, ColorPair>> = {
   surface3: { dark: '#2E2C3A', light: '#E3DFD4' },
   line: { dark: '#33303F', light: '#DCD7CA' },
   text: { dark: '#ECEAF0', light: '#221F26' },
-  text2: { dark: '#BDBBC6', light: '#47434F' },
+  text2: { dark: '#BDBBC6', light: '#433F4B' },
   text3: { dark: '#9793A2', light: '#6C6573' },
   decor: { dark: '#6C6878', light: '#98929F' },
   accent: { dark: '#FFB347', light: '#B26F0E' },

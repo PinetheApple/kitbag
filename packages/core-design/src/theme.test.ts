@@ -94,6 +94,7 @@ describe('disabledLabel', () => {
 
 const AA_NON_TEXT = 3;
 const MIN_TEXT_STEP = 1.5;
+const LIGHT_TEXT2_STEP = 1.8;
 const FEEDBACK_TONES: readonly FeedbackTone[] = [
   'success',
   'warning',
@@ -138,6 +139,12 @@ const restingGrounds: Grounds = (theme) => ({
   songNowFill: theme.songNowFill,
 });
 
+// Dark red is 3.48 to 3.82:1 on the selected-control fills; no red text sits on them.
+const redTextGrounds: Grounds = (theme) =>
+  theme.mode === 'light'
+    ? allGrounds(theme)
+    : { ...restingGrounds(theme), surface3: theme.color.surface3 };
+
 const accentInk = (theme: Theme) => theme.color[theme.accentInk];
 
 const SMALL_TEXT: Readonly<Record<string, InkOnGrounds>> = {
@@ -153,13 +160,23 @@ const SMALL_TEXT: Readonly<Record<string, InkOnGrounds>> = {
     ink: (theme) => theme.feedback.success.ink,
     grounds: allGrounds,
   },
-  warningInk: { ink: (theme) => theme.feedback.warning.ink, grounds: surfaces },
-  dangerInk: { ink: (theme) => theme.feedback.danger.ink, grounds: surfaces },
+  warningInk: {
+    ink: (theme) => theme.feedback.warning.ink,
+    grounds: allGrounds,
+  },
+  dangerInk: {
+    ink: (theme) => theme.feedback.danger.ink,
+    grounds: redTextGrounds,
+  },
 };
 
 const ICONS: Readonly<Record<string, InkOnGrounds>> = {
   accent: { ink: ({ color }) => color.accent, grounds: surfaces },
   accentInk: { ink: accentInk, grounds: tintedFills },
+  onAccent: {
+    ink: ({ color }) => color.onAccent,
+    grounds: ({ color }) => ({ accent: color.accent }),
+  },
 };
 
 function contrastCases(table: Readonly<Record<string, InkOnGrounds>>) {
@@ -189,6 +206,17 @@ describe('small text', () => {
     expect(contrast(color.text2, color.text3)).toBeGreaterThanOrEqual(
       MIN_TEXT_STEP,
     );
+  });
+
+  it('reaches the owner text2 step in light', () => {
+    const { color } = themes.light;
+    expect(contrast(color.text2, color.text3)).toBeGreaterThanOrEqual(
+      LIGHT_TEXT2_STEP,
+    );
+  });
+
+  it('keeps the dark text fill on accent', () => {
+    expect(themes.dark.accentTextFill).toBe(themes.dark.color.accent);
   });
 
   it.each(FEEDBACK_TONES)('keeps the dark %s ink on its token', (tone) => {
