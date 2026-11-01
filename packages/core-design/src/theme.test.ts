@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
+import { metronomeMix } from './metronomeRoles.ts';
 import { textRoles } from './roles.ts';
 import { textStyle } from './textStyle.ts';
-import { buildTheme, mixHex, themes } from './theme.ts';
-import { COLOR_TOKENS, palette } from './tokens.ts';
+import { buildTheme, mixHex, themes, type Theme } from './theme.ts';
+import { COLOR_TOKENS, palette, type ThemeMode } from './tokens.ts';
+
+const MODES: readonly ThemeMode[] = ['dark', 'light'];
 
 describe('mixHex', () => {
   it('returns either input at the ends of the range', () => {
@@ -81,6 +84,72 @@ describe('disabledLabel', () => {
         );
       }
     }
+  });
+});
+
+function restingGrounds(theme: Theme): Record<string, string> {
+  const { color } = theme;
+  return {
+    bg: color.bg,
+    surface1: color.surface1,
+    surface2: color.surface2,
+    activeCardFill: theme.activeCardFill,
+    songNow: mixHex(color.accent, color.surface1, metronomeMix.songNow),
+  };
+}
+
+function allGrounds(theme: Theme): Record<string, string> {
+  const { color } = theme;
+  return {
+    ...restingGrounds(theme),
+    surface3: color.surface3,
+    activeControlFill: theme.activeControlFill,
+    setChip: mixHex(color.accent, color.surface2, metronomeMix.setChip),
+    selectedTile: mixHex(
+      color.accent,
+      color.surface2,
+      metronomeMix.selectedTile,
+    ),
+  };
+}
+
+// text3 never labels a selected or raised control, so it is held to the resting grounds only.
+const SMALL_TEXT_GROUNDS = {
+  text: allGrounds,
+  text2: allGrounds,
+  accentInk: allGrounds,
+  text3: restingGrounds,
+} as const;
+
+function smallTextInk(theme: Theme, ink: keyof typeof SMALL_TEXT_GROUNDS) {
+  return ink === 'accentInk' ? theme.color[theme.accentInk] : theme.color[ink];
+}
+
+describe('small text', () => {
+  const cases = MODES.flatMap((mode) =>
+    Object.entries(SMALL_TEXT_GROUNDS).flatMap(([ink, grounds]) =>
+      Object.entries(grounds(themes[mode])).map(
+        ([ground, hex]) => [mode, ink, ground, hex] as const,
+      ),
+    ),
+  );
+
+  it.each(cases)(
+    'reads at AA text contrast in %s: %s on %s',
+    (mode, ink, _ground, hex) => {
+      const fg = smallTextInk(
+        themes[mode],
+        ink as keyof typeof SMALL_TEXT_GROUNDS,
+      );
+      expect(contrast(fg, hex)).toBeGreaterThanOrEqual(AA_TEXT);
+    },
+  );
+
+  it.each(MODES)('keeps text above text2 above text3 in %s', (mode) => {
+    const { color } = themes[mode];
+    const onBg = (hex: string) => contrast(hex, color.bg);
+    expect(onBg(color.text)).toBeGreaterThan(onBg(color.text2));
+    expect(onBg(color.text2)).toBeGreaterThan(onBg(color.text3));
   });
 });
 
