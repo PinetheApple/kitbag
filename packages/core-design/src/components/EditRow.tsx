@@ -128,7 +128,7 @@ export interface EditRowProps {
   readonly label: string;
   readonly children?: ReactNode;
   readonly singleLine?: boolean;
-  readonly onPress?: () => void;
+  readonly onPress?: (() => void) | undefined;
   readonly accessibilityRole?: AccessibilityRole;
   readonly accessibilityLabel?: string;
   /** A fixed-height row: the control is centred in it with no vertical padding. */
