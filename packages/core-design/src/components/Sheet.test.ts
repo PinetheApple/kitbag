@@ -113,5 +113,5 @@ it('caps the sheet below the status bar so tall content scrolls inside it', () =
     justifyContent: 'flex-end',
   });
   expect(slot.flexShrink).toBe(1);
-  expect(slot.marginTop).toBeGreaterThanOrEqual(STATUS_BAR);
+  expect(slot.marginTop).toBe(STATUS_BAR);
 });
