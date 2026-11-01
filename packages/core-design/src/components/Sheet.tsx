@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, type ReactNode } from 'react';
 import {
-  BackHandler,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -32,6 +31,7 @@ import {
 } from '../sheetDismiss.ts';
 import { palette, radii } from '../tokens.ts';
 import { useReduceMotionMode } from '../useReduceMotion.ts';
+import { onHardwareBack } from './hardwareBack';
 import { InlineIcon } from './IconGlyph.tsx';
 import { useSheetPortal } from './SheetHost.tsx';
 
@@ -45,6 +45,9 @@ const useStyles = createThemedStyles((theme) => ({
   frame: {
     flex: 1,
     justifyContent: 'flex-end',
+  },
+  sheetSlot: {
+    flexShrink: 1,
   },
   sheet: {
     flexShrink: 1,
@@ -229,13 +232,7 @@ export function Sheet({
     if (!visible) return undefined;
     dragY.value = 0;
     onShow?.();
-    const back = BackHandler.addEventListener('hardwareBackPress', () => {
-      onDismiss();
-      return true;
-    });
-    return () => {
-      back.remove();
-    };
+    return onHardwareBack(onDismiss);
     // onShow and onDismiss run per opening, not per new callback identity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
@@ -257,36 +254,40 @@ export function Sheet({
       <Animated.View
         entering={transitions.sheetIn}
         exiting={transitions.sheetOut}
-        style={[styles.sheet, sheetStyle]}
-        onLayout={handleLayout}
+        style={styles.sheetSlot}
       >
-        <GestureDetector gesture={dragToDismiss}>
-          <View style={styles.header}>
-            <View style={styles.grab} />
-            <View style={styles.titleRow}>
-              {titleIcon === undefined ? null : (
-                <InlineIcon name={titleIcon} style={titleStyle} />
-              )}
-              <Text accessibilityRole="header" style={titleStyle}>
-                {title}
-              </Text>
-              {titleAction === undefined ? null : (
-                <View style={styles.titleAction}>{titleAction}</View>
-              )}
-            </View>
-          </View>
-        </GestureDetector>
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.content}
-          bounces={false}
-          scrollEnabled={scrollEnabled}
-          keyboardShouldPersistTaps="handled"
-          scrollIndicatorInsets={INDICATOR_INSETS}
+        <Animated.View
+          style={[styles.sheet, sheetStyle]}
+          onLayout={handleLayout}
         >
-          {children}
-          {hint === undefined ? null : <SheetHint>{hint}</SheetHint>}
-        </ScrollView>
+          <GestureDetector gesture={dragToDismiss}>
+            <View style={styles.header}>
+              <View style={styles.grab} />
+              <View style={styles.titleRow}>
+                {titleIcon === undefined ? null : (
+                  <InlineIcon name={titleIcon} style={titleStyle} />
+                )}
+                <Text accessibilityRole="header" style={titleStyle}>
+                  {title}
+                </Text>
+                {titleAction === undefined ? null : (
+                  <View style={styles.titleAction}>{titleAction}</View>
+                )}
+              </View>
+            </View>
+          </GestureDetector>
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={styles.content}
+            bounces={false}
+            scrollEnabled={scrollEnabled}
+            keyboardShouldPersistTaps="handled"
+            scrollIndicatorInsets={INDICATOR_INSETS}
+          >
+            {children}
+            {hint === undefined ? null : <SheetHint>{hint}</SheetHint>}
+          </ScrollView>
+        </Animated.View>
       </Animated.View>
     </View>
   ) : null;
