@@ -650,6 +650,13 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   category scoped to count-in (`countInSettings`), not a general preferences dump.
   **[recorded — coordinator ruling]**
 
+- **2026-11-01 · Transport Stop pauses a practice session; End on the pill ends it (§5.7, #80, #85)**
+  — The metronome has only Play/Stop, so Stop cannot double as the session end. Stop
+  pauses; the pill's reset becomes **End**, which ends the session and opens the summary;
+  leaving the metronome screen with played time also ends it. A phone call or going to
+  the background never ends it. Longest stretch is shown in the summary only, so the
+  schema does not change. **[owner]**
+
 - **2026-11-01 · Small text contrast (§12.2, #189)** — Text under 18sp holds 4.5:1 on
   every ground it sits on, in both themes. `text2`, `text3` and light `accentDeep` move in
   lightness only to clear it, and the `text2` step stays above `text3`. Accent-coloured text
