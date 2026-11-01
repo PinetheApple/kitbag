@@ -11,6 +11,7 @@ import {
   EditCheckRow,
   EditGroup,
   EditValue,
+  Icon,
   RowIcon,
   RowText,
   SegmentedControl,
@@ -61,6 +62,16 @@ const useStyles = createThemedStyles((theme) => ({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.rowGap },
   hint: { ...textStyle(textRoles.fieldLabel), color: theme.color.text3 },
   banner: { ...textStyle(textRoles.fieldLabel), color: theme.color.text },
+  bannerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.chipGap,
+  },
+  bannerText: {
+    ...textStyle(textRoles.fieldLabel),
+    color: theme.color.text,
+    flexShrink: 1,
+  },
   strong: textStyle({ ...textRoles.fieldLabel, weight: BOLD_BODY }),
 }));
 
@@ -132,10 +143,13 @@ function ConflictBanner({
       onPress={onReview}
     >
       <Card emphasis="active" activeLabel={`${text} ${REVIEW_LABEL}`}>
-        <Text style={styles.banner}>
-          {`${text} `}
-          <Text style={styles.strong}>{REVIEW_LABEL}</Text>
-        </Text>
+        <View style={styles.bannerRow}>
+          <Icon name="warning" size="control" color="text" />
+          <Text style={styles.bannerText}>
+            {`${text} `}
+            <Text style={styles.strong}>{REVIEW_LABEL}</Text>
+          </Text>
+        </View>
       </Card>
     </Pressable>
   );
