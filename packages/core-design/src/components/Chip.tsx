@@ -13,7 +13,7 @@ import { Pressable, Text, View, type LayoutChangeEvent } from 'react-native';
 import type { IconName } from '../icons.ts';
 import { inset, radius, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
-import { createThemedStyles } from '../ThemeProvider.tsx';
+import { createThemedStyles, useTheme } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
 import {
   hitBoxStyle,
@@ -131,7 +131,8 @@ function ChipFace({
   large = false,
 }: ChipFaceProps) {
   const styles = useStyles();
-  const glyphColor = active ? 'accent' : 'text2';
+  const theme = useTheme();
+  const glyphColor = active ? theme.accentInk : 'text2';
   const glyphSize = large ? 'chipLarge' : 'chip';
   return (
     <>

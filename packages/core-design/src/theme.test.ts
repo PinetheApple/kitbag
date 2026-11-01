@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 
-import { metronomeMix } from './metronomeRoles.ts';
 import { textRoles } from './roles.ts';
 import { textStyle } from './textStyle.ts';
 import { buildTheme, mixHex, themes, type Theme } from './theme.ts';
@@ -21,7 +20,7 @@ describe('mixHex', () => {
 
 describe('themes', () => {
   it('resolves every token from the palette for both modes', () => {
-    for (const mode of ['dark', 'light'] as const) {
+    for (const mode of MODES) {
       for (const token of COLOR_TOKENS) {
         expect(themes[mode].color[token]).toBe(palette[token][mode]);
       }
@@ -65,7 +64,7 @@ function contrast(a: string, b: string): number {
 
 describe('onDanger', () => {
   it('reads at AA text contrast on the danger fill in both modes', () => {
-    for (const mode of ['dark', 'light'] as const) {
+    for (const mode of MODES) {
       const theme = themes[mode];
       expect(
         contrast(theme.onDanger, theme.feedback.danger.fg),
@@ -76,7 +75,7 @@ describe('onDanger', () => {
 
 describe('disabledLabel', () => {
   it('reads at AA text contrast on a sheet and on the screen in both modes', () => {
-    for (const mode of ['dark', 'light'] as const) {
+    for (const mode of MODES) {
       const theme = themes[mode];
       for (const ground of [theme.color.surface1, theme.color.bg]) {
         expect(contrast(theme.disabledLabel, ground)).toBeGreaterThanOrEqual(
@@ -87,61 +86,73 @@ describe('disabledLabel', () => {
   });
 });
 
-function restingGrounds(theme: Theme): Record<string, string> {
-  const { color } = theme;
-  return {
-    bg: color.bg,
-    surface1: color.surface1,
-    surface2: color.surface2,
-    activeCardFill: theme.activeCardFill,
-    songNow: mixHex(color.accent, color.surface1, metronomeMix.songNow),
-  };
+const AA_NON_TEXT = 3;
+
+type Grounds = (theme: Theme) => Record<string, string>;
+
+interface InkOnGrounds {
+  readonly ink: (theme: Theme) => string;
+  readonly grounds: Grounds;
 }
 
-function allGrounds(theme: Theme): Record<string, string> {
-  const { color } = theme;
-  return {
-    ...restingGrounds(theme),
-    surface3: color.surface3,
-    activeControlFill: theme.activeControlFill,
-    setChip: mixHex(color.accent, color.surface2, metronomeMix.setChip),
-    selectedTile: mixHex(
-      color.accent,
-      color.surface2,
-      metronomeMix.selectedTile,
-    ),
-  };
-}
+const surfaces: Grounds = ({ color }) => ({
+  bg: color.bg,
+  surface1: color.surface1,
+  surface2: color.surface2,
+  surface3: color.surface3,
+});
 
-// text3 never labels a selected or raised control, so it is held to the resting grounds only.
-const SMALL_TEXT_GROUNDS = {
-  text: allGrounds,
-  text2: allGrounds,
-  accentInk: allGrounds,
-  text3: restingGrounds,
-} as const;
+const tintedFills: Grounds = (theme) => ({
+  activeControlFill: theme.activeControlFill,
+  activeCardFill: theme.activeCardFill,
+  songNowFill: theme.songNowFill,
+  setChipFill: theme.setChipFill,
+  selectedTileFill: theme.selectedTileFill,
+});
 
-function smallTextInk(theme: Theme, ink: keyof typeof SMALL_TEXT_GROUNDS) {
-  return ink === 'accentInk' ? theme.color[theme.accentInk] : theme.color[ink];
-}
+const allGrounds: Grounds = (theme) => ({
+  ...surfaces(theme),
+  ...tintedFills(theme),
+});
 
-describe('small text', () => {
-  const cases = MODES.flatMap((mode) =>
-    Object.entries(SMALL_TEXT_GROUNDS).flatMap(([ink, grounds]) =>
+const restingGrounds: Grounds = (theme) => ({
+  bg: theme.color.bg,
+  surface1: theme.color.surface1,
+  surface2: theme.color.surface2,
+  activeCardFill: theme.activeCardFill,
+  songNowFill: theme.songNowFill,
+});
+
+const accentInk = (theme: Theme) => theme.color[theme.accentInk];
+
+const SMALL_TEXT: Readonly<Record<string, InkOnGrounds>> = {
+  text: { ink: ({ color }) => color.text, grounds: allGrounds },
+  text2: { ink: ({ color }) => color.text2, grounds: allGrounds },
+  accentInk: { ink: accentInk, grounds: allGrounds },
+  text3: { ink: ({ color }) => color.text3, grounds: restingGrounds },
+};
+
+const ICONS: Readonly<Record<string, InkOnGrounds>> = {
+  accent: { ink: ({ color }) => color.accent, grounds: surfaces },
+  accentInk: { ink: accentInk, grounds: tintedFills },
+};
+
+function contrastCases(table: Readonly<Record<string, InkOnGrounds>>) {
+  return MODES.flatMap((mode) =>
+    Object.entries(table).flatMap(([name, { ink, grounds }]) =>
       Object.entries(grounds(themes[mode])).map(
-        ([ground, hex]) => [mode, ink, ground, hex] as const,
+        ([ground, hex]) =>
+          [mode, name, ground, contrast(ink(themes[mode]), hex)] as const,
       ),
     ),
   );
+}
 
-  it.each(cases)(
+describe('small text', () => {
+  it.each(contrastCases(SMALL_TEXT))(
     'reads at AA text contrast in %s: %s on %s',
-    (mode, ink, _ground, hex) => {
-      const fg = smallTextInk(
-        themes[mode],
-        ink as keyof typeof SMALL_TEXT_GROUNDS,
-      );
-      expect(contrast(fg, hex)).toBeGreaterThanOrEqual(AA_TEXT);
+    (_mode, _ink, _ground, ratio) => {
+      expect(ratio).toBeGreaterThanOrEqual(AA_TEXT);
     },
   );
 
@@ -151,6 +162,15 @@ describe('small text', () => {
     expect(onBg(color.text)).toBeGreaterThan(onBg(color.text2));
     expect(onBg(color.text2)).toBeGreaterThan(onBg(color.text3));
   });
+});
+
+describe('icons', () => {
+  it.each(contrastCases(ICONS))(
+    'reads at AA non-text contrast in %s: %s on %s',
+    (_mode, _ink, _ground, ratio) => {
+      expect(ratio).toBeGreaterThanOrEqual(AA_NON_TEXT);
+    },
+  );
 });
 
 describe('textStyle', () => {

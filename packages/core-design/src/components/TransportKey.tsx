@@ -66,7 +66,7 @@ const useStyles = createThemedStyles((theme) => ({
     color: theme.color.text,
   },
   glyphSelected: {
-    color: theme.color.accent,
+    color: theme.color[theme.accentInk],
   },
   spacer: {
     width: size.transportKey,
