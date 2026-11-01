@@ -1,4 +1,4 @@
-import { eq, isNotNull } from 'drizzle-orm';
+import { eq, inArray, isNotNull, sql } from 'drizzle-orm';
 
 import { ANALYSIS_STATUS } from './analysis-status';
 import {
@@ -7,6 +7,7 @@ import {
   REFERENCES,
   type BackupRecord,
   type Category,
+  type CountInSettingRecord,
   type LibrarySongRecord,
   type PracticeSessionRecord,
   type SetlistRecord,
@@ -16,9 +17,11 @@ import {
 import type { ImportPlan, Writes } from './backup-plan';
 import { decodeBase64, nullableBytes, presetBytes } from './base64';
 import { fromSeconds, type IdMaps, type Snapshot } from './backup-snapshot';
+import { COUNT_IN_KEYS } from './count-in-preferences';
 import { found, type Database } from './repository';
 import {
   practiceSessions,
+  preferences,
   setlistItems,
   setlists,
   songPresets,
@@ -135,6 +138,19 @@ function simpleUpsert(
   };
 }
 
+async function upsertCountInSetting(
+  db: Database,
+  record: CountInSettingRecord,
+): Promise<number> {
+  const { key, value } = record;
+  const rows = await db
+    .insert(preferences)
+    .values({ key, value })
+    .onConflictDoUpdate({ target: preferences.key, set: { value } })
+    .returning({ id: sql<number>`rowid` });
+  return found(rows, 'Preference upsert').id;
+}
+
 const UPSERTS: Record<Category, Upsert> = {
   librarySongs: simpleUpsert(songs, librarySongValues),
   songPresets: simpleUpsert(songPresets, songPresetValues),
@@ -144,6 +160,7 @@ const UPSERTS: Record<Category, Upsert> = {
     notes: decodeBase64(record.notes),
   })),
   practiceSessions: simpleUpsert(practiceSessions, practiceValues),
+  countInSettings: upsertCountInSetting as Upsert,
 };
 
 async function deleteCategory(db: Database, category: Category) {
@@ -161,6 +178,10 @@ async function deleteCategory(db: Database, category: Category) {
       .where(isNotNull(songPresets.librarySongId));
     await db.delete(songs);
   } else if (category === 'tunings') await db.delete(tunings);
+  else if (category === 'countInSettings')
+    await db
+      .delete(preferences)
+      .where(inArray(preferences.key, [...COUNT_IN_KEYS]));
   else await db.delete(practiceSessions);
 }
 

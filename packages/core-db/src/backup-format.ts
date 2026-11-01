@@ -8,6 +8,7 @@ export const CATEGORIES = [
   'setlists',
   'tunings',
   'practiceSessions',
+  'countInSettings',
 ] as const;
 export type Category = (typeof CATEGORIES)[number];
 
@@ -15,6 +16,7 @@ export const DEFAULT_IMPORT_CATEGORIES: readonly Category[] = [
   'songPresets',
   'setlists',
   'tunings',
+  'countInSettings',
 ];
 
 export interface LibrarySongRecord {
@@ -91,12 +93,20 @@ export interface PracticeSessionRecord {
   songsPlayed: string | null;
 }
 
+// The value stays the stored text: only the app knows which values are valid,
+// and it reads anything else as the default.
+export interface CountInSettingRecord {
+  key: string;
+  value: string;
+}
+
 export interface CategoryRecords {
   librarySongs: LibrarySongRecord[];
   songPresets: SongPresetRecord[];
   setlists: SetlistRecord[];
   tunings: TuningRecord[];
   practiceSessions: PracticeSessionRecord[];
+  countInSettings: CountInSettingRecord[];
 }
 
 export type BackupRecord = CategoryRecords[Category][number];
@@ -175,10 +185,11 @@ export function referenceOf(
 }
 
 export function recordKey(record: BackupRecord): string {
-  return record.uuid;
+  return 'key' in record ? record.key : record.uuid;
 }
 
 export function recordLabel(record: BackupRecord): string {
+  if ('key' in record) return record.key;
   if ('name' in record) return record.name;
   if ('title' in record) return record.title;
   return new Date(record.startTime * MS_PER_SECOND).toISOString();

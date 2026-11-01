@@ -1,4 +1,4 @@
-import { asc } from 'drizzle-orm';
+import { asc, inArray, sql } from 'drizzle-orm';
 
 import {
   MS_PER_SECOND,
@@ -10,9 +10,11 @@ import {
   type SongPresetRecord,
 } from './backup-format';
 import { encodeBase64, nullableBase64, presetBase64 } from './base64';
+import { COUNT_IN_KEYS } from './count-in-preferences';
 import type { Database } from './repository';
 import {
   practiceSessions,
+  preferences,
   setlistItems,
   setlists,
   songPresets,
@@ -122,6 +124,15 @@ async function loadRows(db: Database) {
       .select()
       .from(practiceSessions)
       .orderBy(asc(practiceSessions.id)),
+    countInRows: await db
+      .select({
+        id: sql<number>`rowid`,
+        key: preferences.key,
+        value: preferences.value,
+      })
+      .from(preferences)
+      .where(inArray(preferences.key, [...COUNT_IN_KEYS]))
+      .orderBy(asc(preferences.key)),
   };
 }
 
@@ -141,6 +152,7 @@ export async function loadSnapshot(db: Database): Promise<Snapshot> {
     practiceSessions: rows.practiceRows.map((row) =>
       practiceRecord(row, uuidOf(rows.setlistRows)),
     ),
+    countInSettings: rows.countInRows.map(({ key, value }) => ({ key, value })),
   };
   return { records, ids: idMaps(rows) };
 }
@@ -154,5 +166,6 @@ function idMaps(rows: Awaited<ReturnType<typeof loadRows>>): IdMaps {
     setlists: byUuid(rows.setlistRows),
     tunings: byUuid(rows.tuningRows),
     practiceSessions: byUuid(rows.practiceRows),
+    countInSettings: new Map(rows.countInRows.map((row) => [row.key, row.id])),
   };
 }
