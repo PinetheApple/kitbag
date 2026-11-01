@@ -414,6 +414,26 @@ describe('transport start / stop / pause', () => {
     expect(commands.metronomeStop).toHaveBeenCalledTimes(1);
   });
 
+  it('re-arms the count-in on stop then start, never on pause then resume', () => {
+    store.getState().setCountIn({
+      bars: 2,
+      distinct: true,
+      sound: KB_DEFAULT_COUNT_IN_SOUND,
+    });
+    commands.setCountIn.mockClear();
+    store.getState().start();
+    store.getState().pause();
+    store.getState().start();
+    expect(commands.metronomeStop).not.toHaveBeenCalled();
+    expect(commands.setCountIn).not.toHaveBeenCalled();
+
+    store.getState().stop();
+    store.getState().start();
+    expect(commands.metronomeStop).toHaveBeenCalledOnce();
+    expect(commands.metronomeStart).toHaveBeenCalledTimes(3);
+    expect(commands.setCountIn).not.toHaveBeenCalled();
+  });
+
   it('keeps only count-in settings after start, not count-in progress', () => {
     store.getState().setCountIn({
       bars: 2,

@@ -18,8 +18,22 @@ export {
   type CountInBars,
 } from './metronome/store.ts';
 export {
+  COUNT_IN_SCOPE,
+  COUNT_IN_SCOPES,
+  DEFAULT_COUNT_IN_SCOPE,
+  isCountInScope,
+  type CountInScope,
+} from './metronome/countInScope.ts';
+export {
+  configureCountInPersistence,
+  type CountInPersistence,
+  type CountInSettings,
+} from './metronome/countInPersistence.ts';
+export {
   clampRampInterval,
   cycleAccentValue,
+  isCountInBars,
+  isSoundId,
   rampIntervalBounds,
   initialAccents,
   resizeAccents,
