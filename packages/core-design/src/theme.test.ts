@@ -139,7 +139,7 @@ const restingGrounds: Grounds = (theme) => ({
   songNowFill: theme.songNowFill,
 });
 
-// Dark red is 3.48 to 3.82:1 on the selected-control fills; no red text sits on them.
+// Dark red is 3.48 to 3.82:1 on the accent-tinted control and tile fills; no red text sits there.
 const redTextGrounds: Grounds = (theme) =>
   theme.mode === 'light'
     ? allGrounds(theme)

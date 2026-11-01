@@ -1545,8 +1545,8 @@ Rules that come with them:
   reaches the 1.8:1 `text2` step over `text3`, with `text` 1.59:1 above `text2`.
 - `decor` is for non-text marks only: icons that read as quiet or disabled, dot and
   swatch borders, switch knobs, slider ticks. Text never uses it. It is an accepted
-  exception to the 3:1 non-text bar: light `decor` is about 2.7:1 on `bg`, kept so these
-  marks look as they did before #189.
+  exception to the 3:1 non-text bar in both themes, down to about 2.3:1 (light, on
+  `surface3`), kept so these marks look as they did before #189.
 - `text3` sits only on `bg`, `surface1`, `surface2`, `activeCardFill` and the setlist
   NOW row fill; never on `surface3`, `activeControlFill`, or the set chip, selected tile
   or stem tile fills.
@@ -1555,7 +1555,8 @@ Rules that come with them:
   (the same split), so `onAccent` holds 4.5:1 on it; fills with only icons keep `accent`.
 - Red, amber and green used as text take `redInk`, `amberInk` and `greenInk`, darker in
   light and equal to the base token in dark. Fills, icons and borders keep the base token.
-  Dark red text stays off the selected-control fills, where it is under 4.5:1.
+  Dark red text stays off `activeControlFill` and the set chip, selected tile and stem tile
+  fills, where it is under 4.5:1.
 - Accent icons hold 3:1 on every ground; on an accent-tinted fill that needs `accentInk`.
 
 **Type.** Two faces, both OFL. **Space Grotesk** for display, numerics and labels

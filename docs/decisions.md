@@ -619,8 +619,8 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   previous `text3` values move to a `decor` token for non-text marks, so they look as
   before. `text2` moves further from `text3` for a clearer step. **[user]**
 - **2026-11-01 · The text2 step and decor (§12.2, #189)** — The owner asked for `text2` about
-  1.8:1 over `text3`, and kept `decor` under the 3:1 non-text bar in light (about 2.7:1 on
-  `bg`) so those marks look as before. **[user]** Light meets the step: `text2` `#433F4B` is
+  1.8:1 over `text3`, and kept `decor` under the 3:1 non-text bar in both themes (down to
+  about 2.3:1, light on `surface3`) so those marks look as before. **[user]** Light meets the step: `text2` `#433F4B` is
   1.83:1 over `text3` and 1.59:1 under `text`. Dark falls short at 1.58:1 over `text3` and
   1.59:1 under `text`: `text3` cannot drop below its 4.5:1 floor on the setlist NOW row, and
   1.8:1 would leave `text` only 1.39:1 above `text2`. **[recorded]**
