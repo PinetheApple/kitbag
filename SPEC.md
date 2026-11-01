@@ -624,7 +624,8 @@ Ported from the Flutter build, which got this right:
   defaults to the bar, and while it equals the beats per bar it follows later
   meter changes. Smaller dots, each placed at its time in the bar, so a poly
   pulse that lands on a beat sits under that beat; a `3:2` ratio label right of
-  the row, else left of it, else above it (`design/kitbag-metronome.html` §02).
+  the row, else left of it, else above it (`design/kitbag-metronome.html` §02;
+  order per `docs/decisions.md` 2026-11-01).
   Each cycle's first pulse is ringed and a bracket marks each cycle's span; when
   the cycle does not divide the bar the row redraws on the downbeat
   (`design/kitbag-metronome-poly.html`). The sounding poly dot fills.

@@ -591,6 +591,6 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   reference in `docs/research/mockups/212/`. **[user]**
 
 - **2026-11-01 · Poly ratio label goes right first (§5.2, #243)** — The label follows the
-  last poly dot at 18 dp, then sits 8 dp left of the row, then above it, following the
-  approved round 2 mockup rather than the poly file's left placement. Coordinator ruling.
-  **[recorded]**
+  last poly dot at 18 dp, then sits 8 dp left of the row, then above it. It follows the
+  owner-approved round 2 frame (`design/kitbag-metronome.html` §02) rather than the poly
+  file's left placement. **[recorded — coordinator ruling]**
