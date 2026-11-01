@@ -8,11 +8,7 @@ import { storedPreference } from './storedPreference';
 
 const KEY = 'notification_permission_ask';
 const NEVER: NotificationAsk = 'never';
-const STORED: readonly NotificationAsk[] = ['asked', 'blocked'];
-
-function isStored(value: string | undefined): value is NotificationAsk {
-  return STORED.some((ask) => ask === value);
-}
+const ASKED: NotificationAsk = 'asked';
 
 export function notificationAskPreference(
   preferences: () => Preferences,
@@ -23,10 +19,7 @@ export function notificationAskPreference(
     'notification permission ask',
   );
   return {
-    load: () => {
-      const value = stored.read();
-      return isStored(value) ? value : NEVER;
-    },
+    load: () => (stored.read() === ASKED ? ASKED : NEVER),
     save: (ask) => {
       stored.write(ask);
     },

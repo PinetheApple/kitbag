@@ -23,7 +23,7 @@ import {
 } from './about.ts';
 import { formatAppVersion } from './appVersion.ts';
 import {
-  PLAYBACK_CARD_LABEL,
+  NOTIFICATIONS_LABEL,
   type NotificationRow,
 } from './notificationText.ts';
 import { formatPracticeSummary } from './practiceText.ts';
@@ -139,23 +139,20 @@ function DataSection() {
   );
 }
 
-function PlaybackCardRow({
+function NotificationsRow({
   row,
-  onPress,
+  onEnable,
 }: {
   readonly row: NotificationRow;
-  readonly onPress: () => void;
+  readonly onEnable: () => void;
 }) {
-  const value = row.value === null ? null : <EditValue>{row.value}</EditValue>;
-  if (row.action === 'none')
-    return <EditRow label={PLAYBACK_CARD_LABEL}>{value}</EditRow>;
   return (
     <EditRow
-      label={PLAYBACK_CARD_LABEL}
-      accessibilityLabel={rowLabel(PLAYBACK_CARD_LABEL, row.value ?? undefined)}
-      onPress={onPress}
+      label={NOTIFICATIONS_LABEL}
+      accessibilityLabel={rowLabel(NOTIFICATIONS_LABEL, row.value ?? undefined)}
+      onPress={row.action === 'none' ? undefined : onEnable}
     >
-      {value}
+      {row.value === null ? null : <EditValue>{row.value}</EditValue>}
     </EditRow>
   );
 }
@@ -167,7 +164,7 @@ function AppearanceSection() {
   const setTheme = useAppearance((s) => s.setTheme);
   const setHaptics = useAppearance((s) => s.setHaptics);
   const setKeepScreenAwake = useAppearance((s) => s.setKeepScreenAwake);
-  const playbackCard = useNotificationRow();
+  const notifications = useNotificationRow();
   return (
     <>
       <SectionHeader label="Appearance" />
@@ -193,10 +190,10 @@ function AppearanceSection() {
           value={keepScreenAwake}
           onValueChange={setKeepScreenAwake}
         />
-        {playbackCard.row === null ? null : (
-          <PlaybackCardRow
-            row={playbackCard.row}
-            onPress={playbackCard.press}
+        {notifications.row === null ? null : (
+          <NotificationsRow
+            row={notifications.row}
+            onEnable={notifications.enable}
           />
         )}
       </EditGroup>

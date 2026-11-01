@@ -4,13 +4,15 @@ import {
   type NotificationStatus,
 } from '@kitbag/core-state';
 
-export const PLAYBACK_CARD_LABEL = 'Playback card';
+export const NOTIFICATIONS_LABEL = 'Notifications';
 
-const VALUE: Readonly<Record<NotificationAction, string>> = {
-  none: 'On',
-  request: 'Off',
-  openSettings: 'Off · open settings',
-};
+const ON = 'On';
+const OFF = 'Off';
+
+function valueOf(granted: boolean | undefined): string | null {
+  if (granted === undefined) return null;
+  return granted ? ON : OFF;
+}
 
 export interface NotificationRow {
   readonly value: string | null;
@@ -21,6 +23,8 @@ export function notificationRow(
   status: NotificationStatus,
 ): NotificationRow | null {
   if (!status.required) return null;
-  const action = notificationAction(status);
-  return { value: status.granted === undefined ? null : VALUE[action], action };
+  return {
+    value: valueOf(status.granted),
+    action: notificationAction(status),
+  };
 }

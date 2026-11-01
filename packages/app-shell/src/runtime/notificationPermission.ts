@@ -7,7 +7,7 @@ import Constants from 'expo-constants';
 import { Linking, PermissionsAndroid, Platform } from 'react-native';
 
 import { getDatabase } from './database.ts';
-import { permissionFromRequest } from './micPermission.ts';
+import { permissionFromRequest } from './permissionAnswer.ts';
 import { notificationAskPreference } from './notificationPreference.ts';
 
 const POST_NOTIFICATIONS_RUNTIME_SDK = 33;
@@ -31,8 +31,8 @@ function openNotificationSettings(): void {
   opened.catch(warn);
 }
 
-configureNotificationPermission(
-  {
+configureNotificationPermission({
+  source: {
     required:
       Platform.OS === 'android' &&
       Platform.Version >= POST_NOTIFICATIONS_RUNTIME_SDK,
@@ -51,8 +51,8 @@ configureNotificationPermission(
       ),
     openSettings: openNotificationSettings,
   },
-  notificationAskPreference(() => getDatabase().preferences),
-);
+  persistence: notificationAskPreference(() => getDatabase().preferences),
+});
 
 export function askForNotificationsOnce(): void {
   void getNotificationPermissionStore().getState().playbackStarted();

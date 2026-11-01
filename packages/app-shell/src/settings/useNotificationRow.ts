@@ -10,7 +10,7 @@ export function useNotificationRow() {
   const granted = useNotificationPermission((s) => s.granted);
   const ask = useNotificationPermission((s) => s.ask);
   const refresh = useNotificationPermission((s) => s.refresh);
-  const retry = useNotificationPermission((s) => s.retry);
+  const enable = useNotificationPermission((s) => s.enable);
   useFocusEffect(
     useCallback(() => {
       void refresh();
@@ -24,8 +24,11 @@ export function useNotificationRow() {
       subscription.remove();
     };
   }, [refresh]);
-  const press = useCallback(() => {
-    void retry();
-  }, [retry]);
-  return { row: notificationRow({ required, granted, ask }), press };
+  const handleEnable = useCallback(() => {
+    void enable();
+  }, [enable]);
+  return {
+    row: notificationRow({ required, granted, ask }),
+    enable: handleEnable,
+  };
 }

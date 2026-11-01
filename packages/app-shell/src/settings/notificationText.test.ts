@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { notificationRow } from './notificationText.ts';
 
-describe('playback card row', () => {
+describe('notifications row', () => {
   it('is hidden where the platform has no runtime permission', () => {
     expect(
       notificationRow({ required: false, granted: false, ask: 'never' }),
@@ -21,15 +21,15 @@ describe('playback card row', () => {
     ).toEqual({ value: 'On', action: 'none' });
   });
 
-  it('reads Off and asks again while the system still shows the dialog', () => {
+  it('reads Off and asks the system when it has never been asked', () => {
     expect(
-      notificationRow({ required: true, granted: false, ask: 'asked' }),
+      notificationRow({ required: true, granted: false, ask: 'never' }),
     ).toEqual({ value: 'Off', action: 'request' });
   });
 
-  it('points at the system settings once the dialog is blocked', () => {
+  it('reads Off and opens the system settings once asked', () => {
     expect(
-      notificationRow({ required: true, granted: false, ask: 'blocked' }),
-    ).toEqual({ value: 'Off · open settings', action: 'openSettings' });
+      notificationRow({ required: true, granted: false, ask: 'asked' }),
+    ).toEqual({ value: 'Off', action: 'openSettings' });
   });
 });

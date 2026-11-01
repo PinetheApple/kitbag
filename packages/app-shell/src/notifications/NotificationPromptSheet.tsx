@@ -10,6 +10,8 @@ import { useCallback } from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CLOSE } from '@/settings/settingsLabels';
+
 const useStyles = createThemedStyles(() => ({
   actions: { flexDirection: 'row', gap: space.controlGap },
 }));
@@ -29,7 +31,7 @@ export function NotificationPromptSheet() {
     <Sheet
       visible={prompting}
       title="Show the playback card?"
-      dismissLabel={NOT_NOW}
+      dismissLabel={CLOSE}
       bottomInset={insets.bottom}
       onDismiss={notNow}
     >

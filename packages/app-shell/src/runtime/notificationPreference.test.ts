@@ -18,8 +18,8 @@ describe('notification ask on the database', () => {
   it('is never asked on a fresh install, and remembered after a reload', () => {
     const preferences = memoryPreferences();
     expect(notificationAskPreference(() => preferences).load()).toBe('never');
-    notificationAskPreference(() => preferences).save('blocked');
-    expect(notificationAskPreference(() => preferences).load()).toBe('blocked');
+    notificationAskPreference(() => preferences).save('asked');
+    expect(notificationAskPreference(() => preferences).load()).toBe('asked');
   });
 
   it('reads a value it does not recognise as never asked', () => {
