@@ -27,17 +27,17 @@ export function switchTool(
   toolId: string,
   on: boolean,
 ): ToolSwitchResult {
-  const isOff = off.includes(toolId);
-  if (!roster.includes(toolId) || isOff !== on) {
+  const shownOn = toolsOn(roster, off);
+  const alreadySet = shownOn.includes(toolId) === on;
+  if (!roster.includes(toolId) || alreadySet) {
     return { outcome: TOOL_SWITCH.unchanged, off };
   }
-  if (on) {
-    return {
-      outcome: TOOL_SWITCH.switched,
-      off: off.filter((id) => id !== toolId),
-    };
-  }
-  const stillOn = toolsOn(roster, off).filter((id) => id !== toolId);
+  const stillOn = on
+    ? [...shownOn, toolId]
+    : shownOn.filter((id) => id !== toolId);
   if (stillOn.length === 0) return { outcome: TOOL_SWITCH.lastOn, off };
-  return { outcome: TOOL_SWITCH.switched, off: [...off, toolId] };
+  return {
+    outcome: TOOL_SWITCH.switched,
+    off: roster.filter((id) => !stillOn.includes(id)),
+  };
 }

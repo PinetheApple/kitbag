@@ -61,4 +61,14 @@ describe('switchTool', () => {
       TOOL_SWITCH.unchanged,
     );
   });
+
+  it('treats a stored all-off set as all on, the way it is shown', () => {
+    expect(switchTool(ROSTER, ROSTER, 'tuner', false)).toEqual({
+      outcome: TOOL_SWITCH.switched,
+      off: ['tuner'],
+    });
+    expect(switchTool(ROSTER, ROSTER, 'tuner', true).outcome).toBe(
+      TOOL_SWITCH.unchanged,
+    );
+  });
 });
