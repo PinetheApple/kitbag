@@ -71,6 +71,14 @@ export function canApply(state: RestoreState): boolean {
   );
 }
 
+export type CommitStep = 'wait' | 'review' | 'confirmReplace' | 'apply';
+
+export function commitStep(state: RestoreState): CommitStep {
+  if (state.phase !== 'review' || state.planning) return 'wait';
+  if (state.plan.unresolved.length > 0) return 'review';
+  return state.plan.mode === 'replace' ? 'confirmReplace' : 'apply';
+}
+
 interface PlanRequest {
   readonly mode: ImportMode;
   readonly categories?: readonly Category[];
@@ -114,7 +122,7 @@ export function createRestoreStore(deps: () => BackupDeps = getBackup) {
 
     const replanCurrent = (change: (state: RestoreReview) => PlanRequest) => {
       const state = review();
-      if (state === null) return Promise.resolve();
+      if (state === null || state.planning) return Promise.resolve();
       return replan(state, change(state));
     };
 

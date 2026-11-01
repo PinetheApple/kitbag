@@ -8,7 +8,12 @@ import {
 } from '@kitbag/core-db/src/backup.test-helper';
 import { describe, expect, it, vi } from 'vitest';
 
-import { canApply, createRestoreStore, planConflicts } from './restore.ts';
+import {
+  canApply,
+  commitStep,
+  createRestoreStore,
+  planConflicts,
+} from './restore.ts';
 import type { BackupDeps } from './runtime.ts';
 
 type Picked = Awaited<ReturnType<BackupDeps['pick']>>;
@@ -228,5 +233,52 @@ describe('applying', () => {
     const state = review(h.state());
     expect(state.stale).toBe(true);
     expect(h.afterRestore).not.toHaveBeenCalled();
+  });
+});
+
+describe('the commit button', () => {
+  it('opens the conflict review while any conflict is open, never applying', async () => {
+    const { target, text } = await diverged();
+    const h = harness(target, file(text));
+    await h.store.getState().pick();
+    expect(commitStep(h.state())).toBe('review');
+    for (const c of planConflicts(review(h.state()).plan))
+      await h.store.getState().resolve(c, 'mine');
+    expect(commitStep(h.state())).toBe('apply');
+  });
+
+  it('asks for the typed word before a replace', async () => {
+    const { target, text } = await diverged();
+    const h = harness(target, file(text));
+    await h.store.getState().pick();
+    await h.store.getState().setMode('replace');
+    expect(commitStep(h.state())).toBe('confirmReplace');
+  });
+
+  it('waits while a plan is being counted', async () => {
+    const { text } = await seededExport();
+    const h = harness(openBackupDatabase(), file(text));
+    await h.store.getState().pick();
+    const pending = h.store.getState().toggleCategory('tunings');
+    expect(commitStep(h.state())).toBe('wait');
+    await pending;
+  });
+});
+
+describe('actions during a re-count', () => {
+  it('ignores a resolve sent before the toggle is counted, keeping the toggle', async () => {
+    const { target, text } = await diverged();
+    const h = harness(target, file(text));
+    await h.store.getState().pick();
+    const [conflict] = planConflicts(review(h.state()).plan);
+    if (!conflict) throw new Error('conflict expected');
+
+    const toggled = h.store.getState().toggleCategory('tunings');
+    const resolved = h.store.getState().resolve(conflict, 'mine');
+    await Promise.all([toggled, resolved]);
+
+    const state = review(h.state());
+    expect(state.plan.categories).not.toContain('tunings');
+    expect(state.resolutions).toEqual({});
   });
 });

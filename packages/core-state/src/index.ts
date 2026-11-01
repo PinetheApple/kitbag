@@ -380,9 +380,11 @@ export {
 } from './backup/share.ts';
 export {
   canApply,
+  commitStep,
   createRestoreStore,
   planConflicts,
   restoreStore,
+  type CommitStep,
   type RestoreActions,
   type RestoreFailure,
   type RestoreReview,
