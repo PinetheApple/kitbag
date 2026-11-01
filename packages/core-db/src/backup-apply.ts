@@ -17,7 +17,7 @@ import {
 import type { ImportPlan, Writes } from './backup-plan';
 import { decodeBase64, nullableBytes, presetBytes } from './base64';
 import { fromSeconds, type IdMaps, type Snapshot } from './backup-snapshot';
-import { COUNT_IN_KEYS } from './count-in-preferences';
+import { COUNT_IN_STORED_KEYS } from './count-in-preferences';
 import { found, type Database } from './repository';
 import {
   practiceSessions,
@@ -177,12 +177,15 @@ async function deleteCategory(db: Database, category: Category) {
       .set({ librarySongId: null })
       .where(isNotNull(songPresets.librarySongId));
     await db.delete(songs);
-  } else if (category === 'tunings') await db.delete(tunings);
-  else if (category === 'countInSettings')
+  } else if (category === 'tunings') {
+    await db.delete(tunings);
+  } else if (category === 'countInSettings') {
     await db
       .delete(preferences)
-      .where(inArray(preferences.key, [...COUNT_IN_KEYS]));
-  else await db.delete(practiceSessions);
+      .where(inArray(preferences.key, [...COUNT_IN_STORED_KEYS]));
+  } else {
+    await db.delete(practiceSessions);
+  }
 }
 
 async function adoptActiveSetlist(db: Database, plan: ImportPlan, ids: IdMaps) {

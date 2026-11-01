@@ -25,7 +25,7 @@ import {
   type Reader,
 } from './backup-reader';
 import { decodeBase64, presetBytes } from './base64';
-import { COUNT_IN_KEYS } from './count-in-preferences';
+import { COUNT_IN_STORED_KEYS } from './count-in-preferences';
 import {
   MIN_RAMP_STEP,
   normalizePolyAgainst,
@@ -175,7 +175,7 @@ function readCountInSetting(
 ): CountInSettingRecord {
   const r = reader(value, path);
   const record = { key: r.string('key'), value: r.string('value') };
-  if (!COUNT_IN_KEYS.includes(record.key))
+  if (!COUNT_IN_STORED_KEYS.includes(record.key))
     invalidField(`${path}.key`, 'not a count-in setting');
   return record;
 }

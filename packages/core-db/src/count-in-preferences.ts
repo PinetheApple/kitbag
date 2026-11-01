@@ -5,6 +5,6 @@ export const COUNT_IN_PREFERENCE_KEYS = {
   sound: 'count_in_sound',
 } as const;
 
-export const COUNT_IN_KEYS: readonly string[] = Object.values(
+export const COUNT_IN_STORED_KEYS: readonly string[] = Object.values(
   COUNT_IN_PREFERENCE_KEYS,
 );

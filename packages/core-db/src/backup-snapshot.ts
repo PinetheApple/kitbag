@@ -10,7 +10,7 @@ import {
   type SongPresetRecord,
 } from './backup-format';
 import { encodeBase64, nullableBase64, presetBase64 } from './base64';
-import { COUNT_IN_KEYS } from './count-in-preferences';
+import { COUNT_IN_STORED_KEYS } from './count-in-preferences';
 import type { Database } from './repository';
 import {
   practiceSessions,
@@ -131,7 +131,7 @@ async function loadRows(db: Database) {
         value: preferences.value,
       })
       .from(preferences)
-      .where(inArray(preferences.key, [...COUNT_IN_KEYS]))
+      .where(inArray(preferences.key, [...COUNT_IN_STORED_KEYS]))
       .orderBy(asc(preferences.key)),
   };
 }

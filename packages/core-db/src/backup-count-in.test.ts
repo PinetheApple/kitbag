@@ -9,13 +9,14 @@ import {
   unwrap,
   type BackupDatabase,
 } from './backup.test-helper';
-import { COUNT_IN_PREFERENCE_KEYS } from './count-in-preferences';
-
-const COUNT_IN_KEYS = Object.values(COUNT_IN_PREFERENCE_KEYS);
+import {
+  COUNT_IN_PREFERENCE_KEYS,
+  COUNT_IN_STORED_KEYS,
+} from './count-in-preferences';
 
 function countIn({ preferences }: BackupDatabase) {
   return Object.fromEntries(
-    COUNT_IN_KEYS.flatMap((key) => {
+    COUNT_IN_STORED_KEYS.flatMap((key) => {
       const value = preferences.get(key);
       return value === undefined ? [] : [[key, value]];
     }),
