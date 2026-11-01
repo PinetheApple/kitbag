@@ -5,10 +5,12 @@ import { formatDuration, formatPracticeSummary } from './practiceText.ts';
 describe('formatDuration', () => {
   it.each([
     [0, '0m'],
-    [59, '<1m'],
-    [60, '1m'],
-    [3599, '59m'],
-    [3600, '1h 0m'],
+    [29, 'under 1m'],
+    [30, '1m'],
+    [89, '1m'],
+    [110, '2m'],
+    [3569, '59m'],
+    [3570, '1h 0m'],
     [66_000, '18h 20m'],
   ])('formats %d s as %s', (seconds, text) => {
     expect(formatDuration(seconds)).toBe(text);
