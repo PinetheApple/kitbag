@@ -9,6 +9,7 @@ namespace kitbag {
 
 using metronome_detail::Clamp;
 using metronome_detail::kMsPerMinute;
+using metronome_detail::kMsPerSecond;
 
 void Metronome::Start() {
   commands_.Push({CommandType::kStart});
@@ -325,9 +326,7 @@ void Metronome::SetLatencyPreservingPhase(double latency_ms) {
       Clamp(latency_ms, -kMaxLatencyOffsetMs, kMaxLatencyOffsetMs);
   if (!running_) return;
   beat_position_ += before - LatencyBeats();
-  // A grid position that moved forward drops the beats it crossed (§4.7); one
-  // that moved back keeps its cursor, so no beat that already sounded repeats.
-  if (latency_offset_ms_ > before_ms) ReacquireGrid();
+  pending_grid_shift_sec_ += (latency_offset_ms_ - before_ms) / kMsPerSecond;
 }
 
 void Metronome::StopRun() {

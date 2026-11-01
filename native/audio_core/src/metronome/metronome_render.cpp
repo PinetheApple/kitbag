@@ -1,6 +1,7 @@
 // The audio callback: voice synthesis and the per-sample sequencer loop.
 // Allocation-free, lock-free, no syscalls (SPEC.md §4.5).
 #include <cmath>
+#include <utility>
 
 #include "metronome/metronome.h"
 #include "metronome/metronome_internal.h"
@@ -150,17 +151,20 @@ Metronome::AcquireGrid(uint64_t block_start_frame, uint32_t sample_rate) {
     view.grid = &node->value;
     view.generation = node->generation;
   }
-  if (view.generation != observed_generation_) {
-    // Changed, cleared, or the run just started or stopped: re-seed from where
-    // the click is now, so beats that already fired are never revisited.
+  // Changed, cleared, or the run just started or stopped: re-seed from where
+  // the click is now, so beats that already fired are never revisited.
+  const bool changed = view.generation != observed_generation_;
+  if (changed) {
     observed_generation_ = view.generation;
     follow_next_frame_ = kReseedFollow;
-    if (view.grid != nullptr && !follow_mixer_) {
-      SeekGridCursor(
-          *view.grid,
-          GridSeconds(*view.grid, block_start_frame, sample_rate)
-      );
-    }
+  }
+  const double shift_sec = std::exchange(pending_grid_shift_sec_, 0.0);
+  if (view.grid == nullptr || follow_mixer_) return view;
+  if (changed || GridShiftReseeks(*view.grid, shift_sec)) {
+    SeekGridCursor(
+        *view.grid,
+        GridSeconds(*view.grid, block_start_frame, sample_rate)
+    );
   }
   return view;
 }

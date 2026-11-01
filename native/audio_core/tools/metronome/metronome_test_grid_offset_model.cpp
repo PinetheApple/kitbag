@@ -1,0 +1,140 @@
+#include <algorithm>
+#include <cmath>
+#include <limits>
+#include <memory>
+#include <vector>
+
+#include "metronome/metronome_internal.h"
+#include "metronome_test_audio.h"
+#include "metronome_test_grid_offset.h"
+
+namespace metronome_test {
+namespace {
+
+using kitbag::metronome_detail::kMsPerSecond;
+
+constexpr double kFirstBeatSec = 0.5;
+constexpr int64_t kAttackFrames = 1;
+// Outlasts a hi-hat accent's tail above the onset threshold (~1160 frames).
+constexpr int64_t kHoldFrames = 1500;
+constexpr int64_t kTailFrames = kSampleRate;
+
+double BeatSec(const OffsetChange& change, int beat) {
+  return kFirstBeatSec + change.interval_sec * beat;
+}
+
+std::vector<double> TickSeconds(const OffsetChange& change) {
+  std::vector<double> ticks;
+  for (int beat = 0; beat < kOffsetGridBeats; ++beat) {
+    ticks.push_back(BeatSec(change, beat));
+    if (beat + 1 == kOffsetGridBeats) break;
+    for (int slot = 1; slot < change.subdivision; ++slot) {
+      ticks.push_back(
+          BeatSec(change, beat) +
+          change.interval_sec * slot / change.subdivision
+      );
+    }
+  }
+  return ticks;
+}
+
+int64_t FireFrame(double tick_sec, double offset_ms) {
+  return std::llround((tick_sec - offset_ms / kMsPerSecond) * kSampleRate);
+}
+
+void StartOnGrid(
+    kitbag::Metronome& metronome,
+    const OffsetChange& change,
+    bool follow
+) {
+  metronome.SetSounds(kHihatSound, kHihatSound);
+  metronome.SetSubdivision(change.subdivision);
+  auto grid = std::make_unique<kitbag::BeatGrid>();
+  for (int beat = 0; beat < kOffsetGridBeats; ++beat) {
+    grid->beat_times_sec.push_back(BeatSec(change, beat));
+  }
+  metronome.SetGrid(std::move(grid), 0, true);
+  metronome.SetLatencyOffset(change.from_ms);
+  metronome.SetFollowMixer(follow);
+  metronome.Start();
+}
+
+void RenderBlock(
+    kitbag::Metronome& metronome,
+    std::vector<float>* buffer,
+    int64_t done,
+    bool follow
+) {
+  std::fill(buffer->begin(), buffer->end(), 0.0f);
+  const kitbag::SongClock clock{
+      .playing = true,
+      .first = done,
+      .frames = kBlockFrames
+  };
+  metronome.Render(
+      buffer->data(),
+      kBlockFrames,
+      kSampleRate,
+      kChannels,
+      static_cast<uint64_t>(done),
+      follow ? &clock : nullptr
+  );
+}
+
+}  // namespace
+
+std::vector<int64_t>
+ExpectedOnsets(const OffsetChange& change, ShiftRule rule) {
+  std::vector<int64_t> onsets;
+  for (const double tick : TickSeconds(change)) {
+    const int64_t old_frame = FireFrame(tick, change.from_ms);
+    const int64_t new_frame = FireFrame(tick, change.to_ms);
+    const bool sounded = old_frame < change.change_frame;
+    if (sounded) onsets.push_back(old_frame + kAttackFrames);
+    const bool replays = !sounded || rule == ShiftRule::kReseek;
+    if (replays && new_frame >= change.change_frame) {
+      onsets.push_back(new_frame + kAttackFrames);
+    }
+  }
+  std::sort(onsets.begin(), onsets.end());
+  return onsets;
+}
+
+size_t CrossedTicks(const OffsetChange& change) {
+  size_t crossed = 0;
+  for (const double tick : TickSeconds(change)) {
+    if (FireFrame(tick, change.from_ms) >= change.change_frame &&
+        FireFrame(tick, change.to_ms) < change.change_frame) {
+      ++crossed;
+    }
+  }
+  return crossed;
+}
+
+OffsetRender RenderOffsetChange(
+    const OffsetChange& change,
+    int64_t change_frame,
+    bool follow
+) {
+  kitbag::Metronome metronome;
+  StartOnGrid(metronome, change, follow);
+  const int64_t total = FireFrame(
+                            BeatSec(change, kOffsetGridBeats - 1),
+                            -kitbag::Metronome::kMaxLatencyOffsetMs
+                        ) +
+                        kTailFrames;
+  std::vector<float> buffer(static_cast<size_t>(kBlockFrames) * kChannels);
+  OffsetRender render{{}, std::numeric_limits<double>::infinity()};
+  int64_t last = -kHoldFrames;
+  float previous = 0.0f;
+  for (int64_t done = 0; done < total; done += kBlockFrames) {
+    if (done == change_frame) metronome.SetLatencyOffset(change.to_ms);
+    RenderBlock(metronome, &buffer, done, follow);
+    DetectOnsets(buffer, done, &render.onsets, &last, &previous, kHoldFrames);
+    render.min_bar_phase =
+        std::min(render.min_bar_phase, metronome.bar_phase());
+  }
+  return render;
+}
+
+}  // namespace metronome_test

@@ -1,6 +1,7 @@
+#include "metronome_test_grid_offset.h"
+
 #include <algorithm>
 #include <cmath>
-#include <memory>
 #include <string>
 #include <vector>
 
@@ -14,147 +15,141 @@ using kitbag::metronome_detail::kMsPerSecond;
 
 constexpr double kFullClampMs = kitbag::Metronome::kMaxLatencyOffsetMs;
 constexpr double kSmallOffsetMs = 20.0;
-constexpr double kFirstBeatSec = 0.5;
-constexpr int kGridBeats = 60;
+constexpr double kNearFromMs = 100.0;
+constexpr double kThresholdMarginMs = 5.0;
 constexpr double kFastIntervalSec = 0.15;
 constexpr double kSlowIntervalSec = 0.37;
+constexpr int kNoSubdivision = 1;
+constexpr int kSixteenths = 4;
 constexpr int64_t kChangeFrame = int64_t{750} * kBlockFrames;
-// Inside the 20 ms before beat 23 of the fast grid, so +20 ms crosses it.
-constexpr int64_t kSmallChangeFrame = int64_t{737} * kBlockFrames;
-constexpr int64_t kNeverFrame = -1;
-constexpr int64_t kAttackFrames = 1;
+// 32 frames after beat 23 sounds at +20 ms, 928 before it sounds at 0 ms.
+constexpr int64_t kFastSmallChangeFrame = int64_t{737} * kBlockFrames;
+// 64 frames after beat 10 sounds at +20 ms, 896 before it sounds at 0 ms.
+constexpr int64_t kSlowSmallChangeFrame = int64_t{784} * kBlockFrames;
+// 101 ms after downbeat 24 sounds at +100 ms, so a short move back passes it.
+constexpr int64_t kDownbeatChangeFrame = int64_t{769} * kBlockFrames;
+// At -300 ms, 5 ms past the third sixteenth; 50 ms after the last tick at +300,
+// so an onset at the change is not hidden by the detector's hold.
+constexpr int64_t kSubSeekChangeFrame = int64_t{758} * kBlockFrames;
 constexpr int64_t kFrameTolerance = 1;
-// Outlasts a hi-hat accent's tail above the onset threshold (~1160 frames).
-constexpr int64_t kHoldFrames = 1500;
-constexpr int64_t kTailFrames = kSampleRate;
 constexpr size_t kIssueCrossedBeats = 4;
 
-struct OffsetChange {
-  const char* name;
-  double interval_sec;
-  double from_ms;
-  double to_ms;
-  int64_t change_frame;
+constexpr double JustUnderIntervalMs(double interval_sec) {
+  return kNearFromMs - (interval_sec * kMsPerSecond - kThresholdMarginMs);
+}
+
+constexpr double JustOverIntervalMs(double interval_sec) {
+  return kNearFromMs - (interval_sec * kMsPerSecond + kThresholdMarginMs);
+}
+
+constexpr OffsetChange kIssueCase{
+    "400 bpm -300 -> +300",
+    kFastIntervalSec,
+    -kFullClampMs,
+    kFullClampMs,
+    kChangeFrame,
+    ShiftRule::kDrop,
+    kNoSubdivision
+};
+
+constexpr OffsetChange kFastJustUnder{
+    "400 bpm back just under a beat",
+    kFastIntervalSec,
+    kNearFromMs,
+    JustUnderIntervalMs(kFastIntervalSec),
+    kDownbeatChangeFrame,
+    ShiftRule::kWait,
+    kNoSubdivision
 };
 
 constexpr OffsetChange kChanges[] = {
-    {"400 bpm -300 -> +300",
-     kFastIntervalSec,
-     -kFullClampMs,
-     kFullClampMs,
-     kChangeFrame},
+    kIssueCase,
     {"400 bpm +300 -> -300",
      kFastIntervalSec,
      kFullClampMs,
      -kFullClampMs,
-     kChangeFrame},
-    {"0.37 s -300 -> +300",
-     kSlowIntervalSec,
-     -kFullClampMs,
-     kFullClampMs,
-     kChangeFrame},
-    {"0.37 s +300 -> -300",
-     kSlowIntervalSec,
-     kFullClampMs,
-     -kFullClampMs,
-     kChangeFrame},
+     kChangeFrame,
+     ShiftRule::kReseek,
+     kNoSubdivision},
     {"400 bpm 0 -> +20",
      kFastIntervalSec,
      0.0,
      kSmallOffsetMs,
-     kSmallChangeFrame},
+     kFastSmallChangeFrame,
+     ShiftRule::kDrop,
+     kNoSubdivision},
     {"400 bpm +20 -> 0",
      kFastIntervalSec,
      kSmallOffsetMs,
      0.0,
-     kSmallChangeFrame},
+     kFastSmallChangeFrame,
+     ShiftRule::kWait,
+     kNoSubdivision},
+    kFastJustUnder,
+    {"400 bpm back just over a beat",
+     kFastIntervalSec,
+     kNearFromMs,
+     JustOverIntervalMs(kFastIntervalSec),
+     kDownbeatChangeFrame,
+     ShiftRule::kReseek,
+     kNoSubdivision},
+    {"0.37 s -300 -> +300",
+     kSlowIntervalSec,
+     -kFullClampMs,
+     kFullClampMs,
+     kChangeFrame,
+     ShiftRule::kDrop,
+     kNoSubdivision},
+    {"0.37 s +300 -> -300",
+     kSlowIntervalSec,
+     kFullClampMs,
+     -kFullClampMs,
+     kChangeFrame,
+     ShiftRule::kReseek,
+     kNoSubdivision},
+    {"0.37 s 0 -> +20",
+     kSlowIntervalSec,
+     0.0,
+     kSmallOffsetMs,
+     kSlowSmallChangeFrame,
+     ShiftRule::kDrop,
+     kNoSubdivision},
+    {"0.37 s +20 -> 0",
+     kSlowIntervalSec,
+     kSmallOffsetMs,
+     0.0,
+     kSlowSmallChangeFrame,
+     ShiftRule::kWait,
+     kNoSubdivision},
+    {"0.37 s back just under a beat",
+     kSlowIntervalSec,
+     kNearFromMs,
+     JustUnderIntervalMs(kSlowIntervalSec),
+     kChangeFrame,
+     ShiftRule::kWait,
+     kNoSubdivision},
+    {"0.37 s back just over a beat",
+     kSlowIntervalSec,
+     kNearFromMs,
+     JustOverIntervalMs(kSlowIntervalSec),
+     kChangeFrame,
+     ShiftRule::kReseek,
+     kNoSubdivision},
+    {"0.37 s x4 -300 -> +300",
+     kSlowIntervalSec,
+     -kFullClampMs,
+     kFullClampMs,
+     kChangeFrame,
+     ShiftRule::kDrop,
+     kSixteenths},
+    {"0.37 s x4 +300 -> -300",
+     kSlowIntervalSec,
+     kFullClampMs,
+     -kFullClampMs,
+     kSubSeekChangeFrame,
+     ShiftRule::kReseek,
+     kSixteenths},
 };
-constexpr const OffsetChange& kIssueCase = kChanges[0];
-
-struct Model {
-  std::vector<int64_t> onsets;
-  std::vector<int64_t> crossed;
-};
-
-double BeatSec(const OffsetChange& change, int beat) {
-  return kFirstBeatSec + change.interval_sec * beat;
-}
-
-int64_t FireFrame(double beat_sec, double offset_ms) {
-  return std::llround((beat_sec - offset_ms / kMsPerSecond) * kSampleRate);
-}
-
-Model Expect(const OffsetChange& change) {
-  Model model;
-  for (int beat = 0; beat < kGridBeats; ++beat) {
-    const int64_t old_frame = FireFrame(BeatSec(change, beat), change.from_ms);
-    const int64_t new_frame = FireFrame(BeatSec(change, beat), change.to_ms);
-    if (old_frame < change.change_frame) {
-      model.onsets.push_back(old_frame + kAttackFrames);
-    } else if (new_frame >= change.change_frame) {
-      model.onsets.push_back(new_frame + kAttackFrames);
-    } else {
-      model.crossed.push_back(old_frame);
-    }
-  }
-  return model;
-}
-
-void StartOnGrid(
-    kitbag::Metronome& metronome,
-    const OffsetChange& change,
-    bool follow
-) {
-  metronome.SetSounds(kHihatSound, kHihatSound);
-  auto grid = std::make_unique<kitbag::BeatGrid>();
-  for (int beat = 0; beat < kGridBeats; ++beat) {
-    grid->beat_times_sec.push_back(BeatSec(change, beat));
-  }
-  metronome.SetGrid(std::move(grid), 0, true);
-  metronome.SetLatencyOffset(change.from_ms);
-  metronome.SetFollowMixer(follow);
-  metronome.Start();
-}
-
-void RenderBlock(
-    kitbag::Metronome& metronome,
-    std::vector<float>* buffer,
-    int64_t done,
-    bool follow
-) {
-  std::fill(buffer->begin(), buffer->end(), 0.0f);
-  const kitbag::SongClock clock{
-      .playing = true,
-      .first = done,
-      .frames = kBlockFrames
-  };
-  metronome.Render(
-      buffer->data(),
-      kBlockFrames,
-      kSampleRate,
-      kChannels,
-      static_cast<uint64_t>(done),
-      follow ? &clock : nullptr
-  );
-}
-
-std::vector<int64_t>
-RenderOnsets(const OffsetChange& change, int64_t change_frame, bool follow) {
-  kitbag::Metronome metronome;
-  StartOnGrid(metronome, change, follow);
-  const int64_t total =
-      FireFrame(BeatSec(change, kGridBeats - 1), -kFullClampMs) + kTailFrames;
-  std::vector<float> buffer(static_cast<size_t>(kBlockFrames) * kChannels);
-  std::vector<int64_t> onsets;
-  int64_t last = -kHoldFrames;
-  float previous = 0.0f;
-  for (int64_t done = 0; done < total; done += kBlockFrames) {
-    if (done == change_frame) metronome.SetLatencyOffset(change.to_ms);
-    RenderBlock(metronome, &buffer, done, follow);
-    DetectOnsets(buffer, done, &onsets, &last, &previous, kHoldFrames);
-  }
-  return onsets;
-}
 
 bool MatchesOneForOne(
     const std::vector<int64_t>& onsets,
@@ -182,6 +177,13 @@ int64_t LargestGap(const std::vector<int64_t>& onsets) {
   return gap;
 }
 
+int64_t GapBound(const OffsetChange& change) {
+  const double waited_sec = change.rule == ShiftRule::kWait
+                                ? (change.from_ms - change.to_ms) / kMsPerSecond
+                                : 0.0;
+  return std::llround((2.0 * change.interval_sec + waited_sec) * kSampleRate);
+}
+
 std::vector<int64_t>
 OnsetsBefore(const std::vector<int64_t>& onsets, int64_t frame) {
   std::vector<int64_t> before;
@@ -191,61 +193,66 @@ OnsetsBefore(const std::vector<int64_t>& onsets, int64_t frame) {
   return before;
 }
 
-void CheckBeatsAndGaps(
-    const OffsetChange& change,
-    const std::vector<int64_t>& onsets,
-    const std::string& label
-) {
-  const Model model = Expect(change);
-  std::string detail;
-  const bool on_time = MatchesOneForOne(onsets, model.onsets, &detail);
-  CheckCase(
-      on_time,
-      label + ": every click on its live-offset frame",
-      detail.c_str()
-  );
-  const size_t sounded = kGridBeats - model.crossed.size();
-  CheckCase(
-      onsets.size() == sounded,
-      label + ": exactly the crossed beats are dropped",
-      std::to_string(onsets.size()).c_str()
-  );
-  const double backward_sec =
-      std::max(0.0, change.from_ms - change.to_ms) / kMsPerSecond;
-  const auto gap_bound = static_cast<int64_t>(
-      (2.0 * change.interval_sec + backward_sec) * kSampleRate
-  );
-  CheckCase(
-      LargestGap(onsets) <= gap_bound + kFrameTolerance,
-      label + ": no silence beyond the crossed span",
-      std::to_string(LargestGap(onsets)).c_str()
-  );
+bool FixtureSeparatesRules(const OffsetChange& change) {
+  if (change.rule == ShiftRule::kDrop) return CrossedTicks(change) > 0;
+  return ExpectedOnsets(change, ShiftRule::kReseek) !=
+         ExpectedOnsets(change, ShiftRule::kWait);
 }
 
 void CheckOffsetChange(const OffsetChange& change) {
   const std::string label = std::string("grid offset ") + change.name;
-  const auto onsets = RenderOnsets(change, change.change_frame, false);
-  CheckBeatsAndGaps(change, onsets, label);
-  const auto baseline = RenderOnsets(change, kNeverFrame, false);
+  const auto onsets =
+      RenderOffsetChange(change, change.change_frame, false).onsets;
+  std::string detail;
+  const bool on_time =
+      MatchesOneForOne(onsets, ExpectedOnsets(change, change.rule), &detail);
+  CheckCase(
+      on_time,
+      label + ": every tick on its rule's frame",
+      detail.c_str()
+  );
+  const int64_t gap = LargestGap(onsets);
+  CheckCase(
+      gap <= GapBound(change) + kFrameTolerance,
+      label + ": no silence beyond the rule's span",
+      std::to_string(gap).c_str()
+  );
+  const auto baseline =
+      RenderOffsetChange(change, kNoOffsetChange, false).onsets;
   Check(
       OnsetsBefore(onsets, change.change_frame) ==
           OnsetsBefore(baseline, change.change_frame),
       (label + ": clicks before the change are untouched").c_str()
   );
+  Check(
+      FixtureSeparatesRules(change),
+      (label + ": fixture tells the rules apart").c_str()
+  );
 }
 
 void TestIssueCaseCrossesFourBeats() {
   Check(
-      Expect(kIssueCase).crossed.size() == kIssueCrossedBeats,
+      CrossedTicks(kIssueCase) == kIssueCrossedBeats,
       "grid offset model: -300 -> +300 at 400 bpm crosses four beats"
   );
 }
 
 void TestFollowIgnoresAMidRunChange() {
   Check(
-      RenderOnsets(kIssueCase, kChangeFrame, true) ==
-          RenderOnsets(kIssueCase, kNeverFrame, true),
+      RenderOffsetChange(kIssueCase, kChangeFrame, true).onsets ==
+          RenderOffsetChange(kIssueCase, kNoOffsetChange, true).onsets,
       "grid offset follow: a mid-run change moves no click"
+  );
+}
+
+void TestBarPhaseHoldsThroughAWait() {
+  const double min_phase =
+      RenderOffsetChange(kFastJustUnder, kDownbeatChangeFrame, false)
+          .min_bar_phase;
+  CheckCase(
+      min_phase >= 0.0,
+      "grid offset wait: bar_phase never negative",
+      std::to_string(min_phase).c_str()
   );
 }
 
@@ -255,6 +262,7 @@ void RunGridOffsetChangeTests() {
   for (const OffsetChange& change : kChanges) CheckOffsetChange(change);
   TestIssueCaseCrossesFourBeats();
   TestFollowIgnoresAMidRunChange();
+  TestBarPhaseHoldsThroughAWait();
 }
 
 }  // namespace metronome_test

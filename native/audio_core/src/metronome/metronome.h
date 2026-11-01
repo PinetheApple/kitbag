@@ -253,8 +253,7 @@ class Metronome {
   bool BarIsMuted(int64_t bar) const;
   double LatencyBeats() const;
   double BeatUnitScale() const;
-  // The only ways bpm_ and denominator_ may change while running. See
-  // SetBeatRate's definition.
+  // The only ways bpm_ and denominator_ may change while running.
   void SetBpmPreservingPhase(double new_bpm);
   void SetDenominatorPreservingPhase(int32_t denominator);
   void SetBeatRate(double new_bpm, int new_denominator);
@@ -317,9 +316,9 @@ class Metronome {
   // click lands on the beat at the speaker rather than at the buffer (§4.7).
   double
   GridSeconds(const BeatGrid& grid, uint64_t frame, uint32_t sample_rate) const;
-  // Places grid_cursor_ on the first beat at or after `song_seconds`. Binary
-  // search — bounded and allocation-free, so it is safe from the callback.
+  // Binary search: bounded and allocation-free, so safe from the callback.
   void SeekGridCursor(const BeatGrid& grid, double song_seconds);
+  bool GridShiftReseeks(const BeatGrid& grid, double shift_sec) const;
   void SyncGridBar();
   void PublishGridMirrors(const BeatGrid& grid, double song_seconds);
 
@@ -367,6 +366,7 @@ class Metronome {
   // Next subdivision tick to fire inside the current beat interval, 1-based;
   // subdivision_ means "none left before the next beat".
   int grid_next_sub_ = 1;
+  double pending_grid_shift_sec_ = 0.0;
   // Bar counter, -1 until the first downbeat after Start. Incremented at
   // constant tempo, derived from the grid in grid mode — SPEC.md §4.2.1.
   int64_t current_bar_ = -1;

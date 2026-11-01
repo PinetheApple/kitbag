@@ -1,6 +1,7 @@
 // Grid mode: following a song's measured beat times instead of a single BPM.
 // Called from the audio callback; the concurrency argument is SPEC.md §4.2.1.
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <vector>
 
@@ -28,6 +29,21 @@ bool BeatDue(
          times[cursor] <= fire_limit;
 }
 
+int FirstUnsoundedSub(
+    const std::vector<double>& times,
+    size_t cursor,
+    int subdivision,
+    double song_seconds
+) {
+  if (cursor == 0 || cursor >= times.size()) return 1;
+  const double previous = times[cursor - 1];
+  const double interval = times[cursor] - previous;
+  const double ticks = std::ceil(
+      (song_seconds - kGridEpsilon - previous) / interval * subdivision
+  );
+  return Clamp(static_cast<int>(ticks), 1, subdivision);
+}
+
 }  // namespace
 
 double Metronome::GridSeconds(
@@ -53,8 +69,20 @@ void Metronome::SeekGridCursor(const BeatGrid& grid, double song_seconds) {
       std::lower_bound(times.begin(), times.end(), song_seconds - kGridEpsilon);
   grid_cursor_ = static_cast<size_t>(first_at_or_after - times.begin());
   grid_beat_index_ = static_cast<int64_t>(grid_cursor_) - 1;
-  grid_next_sub_ = 1;
+  grid_next_sub_ =
+      FirstUnsoundedSub(times, grid_cursor_, subdivision_, song_seconds);
   SyncGridBar();
+}
+
+// A backward move of a whole beat interval or more replays like the stems; a
+// shorter one waits, so no beat sounds twice (§4.7).
+bool Metronome::GridShiftReseeks(const BeatGrid& grid, double shift_sec) const {
+  const auto& times = grid.beat_times_sec;
+  if (shift_sec > 0.0) return true;
+  if (shift_sec == 0.0 || times.size() < 2) return false;
+  const size_t next = Clamp<size_t>(grid_cursor_, 1, times.size() - 1);
+  const double replay_threshold_sec = times[next] - times[next - 1];
+  return -shift_sec + kGridEpsilon >= replay_threshold_sec;
 }
 
 // Derived, never incremented: a re-anchor re-crosses downbeats, and counting
@@ -127,9 +155,10 @@ void Metronome::PublishGridMirrors(const BeatGrid& grid, double song_seconds) {
   const double interval = times[grid_cursor_] - previous;
   if (interval <= 0.0) return;
 
-  // Same epsilon as BeatDue: the fired beat reads >= 0, the next one < 1.
+  // Same epsilon as BeatDue: the fired beat reads >= 0, the next one < 1. A
+  // backward wait puts the position behind the fired beat; hold there.
   const double beat_fraction =
-      (song_seconds + kGridEpsilon - previous) / interval;
+      std::max(0.0, (song_seconds + kGridEpsilon - previous) / interval);
   const double beat_in_bar =
       static_cast<double>(grid_beat_index_ % beats_per_bar_);
   bar_phase_.store(
