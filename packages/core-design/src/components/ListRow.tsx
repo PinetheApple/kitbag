@@ -2,7 +2,7 @@ import { useCallback, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import type { IconName } from '../icons.ts';
-import { bodyLineHeight, radius, size, space, textRoles } from '../roles.ts';
+import { radius, rowLineHeight, size, space, textRoles } from '../roles.ts';
 import { rowLabel } from '../rowLabel.ts';
 import { switchA11y } from '../switch.ts';
 import { textStyle } from '../textStyle.ts';
@@ -39,10 +39,8 @@ const useStyles = createThemedStyles((theme) => ({
   body: { flex: 1, minWidth: 0 },
   title: { ...textStyle(textRoles.rowTitle), color: theme.color.text },
   subtitle: { ...textStyle(textRoles.rowSubtitle), color: theme.color.text2 },
-  bodyLinesTitle: { lineHeight: textRoles.rowTitle.size * bodyLineHeight },
-  bodyLinesSubtitle: {
-    lineHeight: textRoles.rowSubtitle.size * bodyLineHeight,
-  },
+  bodyLinesTitle: { lineHeight: rowLineHeight.title },
+  bodyLinesSubtitle: { lineHeight: rowLineHeight.subtitle },
 }));
 
 export interface RowTextProps {

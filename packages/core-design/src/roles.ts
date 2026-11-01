@@ -385,6 +385,11 @@ export const textRoles = {
 
 export type TextRoleName = keyof typeof textRoles;
 
+export const rowLineHeight = {
+  title: textRoles.rowTitle.size * bodyLineHeight,
+  subtitle: textRoles.rowSubtitle.size * bodyLineHeight,
+} as const;
+
 export const appBarTitleMinSize = 15;
 
 export const playGlyphPathLarge = {
