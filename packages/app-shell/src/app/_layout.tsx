@@ -11,6 +11,7 @@ import '@/runtime/appearanceRuntime';
 import '@/runtime/transportRuntime';
 import '@/runtime/keepAwakeRuntime';
 import '@/settings/rigRuntime';
+import '@/settings/toolsRuntime';
 
 import '@/global.css';
 

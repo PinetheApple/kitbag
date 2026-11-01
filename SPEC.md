@@ -1263,10 +1263,9 @@ do not write a new one.
 
 ### 9.3 Tools manager
 
-Every tool lists its true size; heavy plugins download on demand from CDN with
-checksum verification; upcoming tools visible as `SOON` linking to the GitHub
-issue. **"Get", never "Buy"** — everything is free forever, and the verb is the
-brand.
+The Tools screen lists only the built tools, each with an on/off switch (owner,
+2026-10-31; §12.5). It shows no sizes, no "Get" and no `SOON` rows, and upcoming
+tools are not listed.
 
 Resolved (settings design §03): the Tools manager is the one screen that owns
 tool toggles, reached from Settings by a single row. The Flutter
@@ -1277,9 +1276,8 @@ buttons, which is two visual languages for one column and a badge that looks lik
 a label but was meant to be tapped. Off tools leave the home screen; nothing is
 deleted.
 
-The toggle is `tool_enabled_<id>` in preferences and already drives the filtered
-plugin list. **Moving the UI does not move the state** — that row costs a screen,
-not a refactor.
+Each switch is stored as `tool_enabled_<id>` in preferences (`"true"` or
+`"false"`; a missing key is on).
 
 No Play Asset Delivery (breaks F-Droid reproducible builds). No public plugin SDK
 yet — first-party plugins against an internal interface.
@@ -1654,6 +1652,10 @@ the supersession: ≤7 primary choices.)
   No per-song override; `SongPresets` carries neither column. Volume per song is
   genuinely lost — the quiet acoustic number in a loud set needs this slider.
   Accepted, and it is the reason the Rig section has to be good.
+- **Tools lists only built tools** (owner, 2026-10-31). Each has an on/off switch, and
+  the Settings row reads "N on". `kitbag-settings.html`'s sizes, Get and SOON rows are
+  not built (§9.3). Off removes a tool everywhere and is separate from Home's Hide;
+  `docs/decisions.md` has the ruling.
 - **Practice is a readout, not a doorway.** Sessions, total time, average tempo,
   no chevron — the viewer is later work, so the row promises nothing behind it.
   The numbers are already computed; average tempo is the one addition, and it is

@@ -1,9 +1,11 @@
 import { AllSongsScreen } from '@kitbag/tool-metronome';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { TOOL_ID } from '@/home/registry';
+import { gated } from '@/home/ToolGate';
 import { useLibraryRoutes } from '@/runtime/libraryRoutes';
 
-export default function AllSongsRoute() {
+function AllSongsRoute() {
   const insets = useSafeAreaInsets();
   const routes = useLibraryRoutes();
   return (
@@ -15,3 +17,5 @@ export default function AllSongsRoute() {
     />
   );
 }
+
+export default gated(TOOL_ID.metronome, AllSongsRoute);

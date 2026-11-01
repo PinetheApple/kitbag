@@ -613,6 +613,24 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   one a beat away, so with a tight spread it is stored as the nearer offset (+320 ms
   reads as −280 ms); the owner accepted this. **[user]**
 
+- **2026-10-31 · Tools screen and tool switches (§9.3, §12.5, #170)** — The Tools screen
+  lists only the built tools, each with an on/off switch, read from the Home registry
+  (`HOME_TOOLS`), never a second list. It has no Get or SOON rows, and the Settings row
+  reads "N on". Off is separate from Arrange's Hide. Off removes a tool everywhere: its
+  Home tile, its Arrange row, its routes (a route to an Off tool goes back to Home), the
+  Continue card and links from other tools. Hide only removes the Home tile. Nothing is
+  deleted, and a tool turned back on returns to its place in the Home layout. One tool
+  always stays on. `design/kitbag-settings.html` still draws Get and SOON rows; they are
+  not built. **[user]**
+
+- **2026-11-01 · Turning a tool Off stops it (§9.3, §12.5, #170)** — Off means disabled
+  everywhere, so switching the metronome Off stops it and drops its notification, and
+  switching Stem songs Off closes an open stem song, which stops it and hides its
+  notification. Coordinator call; the owner may overturn it. **[recorded]**
+
+- **2026-11-01 · More tools opens Tools (§9.3, §12.4, #170)** — Home's "More tools" row
+  opens Settings → Tools. Coordinator call; the owner may overturn it. **[recorded]**
+
 - **2026-11-01 · Poly ratio label goes right first (§5.2, #243)** — The label follows the
   last poly dot at 18 dp, then sits 8 dp left of the row, then above it. It follows the
   owner-approved round 2 frame (`design/kitbag-metronome.html` §02) rather than the poly

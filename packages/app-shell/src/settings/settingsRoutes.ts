@@ -17,6 +17,9 @@ export function useSettingsRoutes() {
       openCalibration: () => {
         router.push('/settings/calibrate');
       },
+      openTools: () => {
+        router.push('/settings/tools');
+      },
     }),
     [router],
   );

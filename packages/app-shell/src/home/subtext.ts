@@ -2,6 +2,8 @@ import { countLabel } from '@kitbag/core-design';
 import type { LibrarySummary } from '@kitbag/core-state';
 
 export const UPCOMING_SUBTEXT = 'Coming soon';
+export const MORE_TOOLS_TITLE = 'More tools';
+export const MORE_TOOLS_SUBTEXT = 'Turn tools on or off';
 export const LIBRARY_UNAVAILABLE_SUBTEXT = 'Library unavailable';
 
 export interface MetronomeSummary {
