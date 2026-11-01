@@ -4,7 +4,9 @@ import {
   canUseOutcome,
   CALIBRATION,
   formatOffsetMs,
+  mean,
   routeDetail,
+  sampleSd,
   storedOffsetMs,
   unwrapDeviations,
   type CalibrationNotice,
@@ -132,12 +134,15 @@ function resultOf(
 export function calibrationView(state: ViewState): CalibrationView {
   const live = analyseTaps(state.deviations);
   const measured = live.kind === 'measured' ? live : null;
-  const axisMs = scatterHalfRangeMs(measured?.meanMs ?? 0, measured?.sdMs ?? 0);
   const refused = state.phase === 'done' && live.kind === 'refused';
+  const unwrapped = unwrapDeviations(state.deviations);
+  const axisMs = refused
+    ? scatterHalfRangeMs(mean(unwrapped), sampleSd(unwrapped))
+    : scatterHalfRangeMs(measured?.meanMs ?? 0, measured?.sdMs ?? 0);
   return {
     count: state.deviations.length,
     progress: state.deviations.length / CALIBRATION.taps,
-    dots: unwrapDeviations(state.deviations).map((deviation, index) => ({
+    dots: unwrapped.map((deviation, index) => ({
       x: scatterX(deviation, axisMs),
       y: dotY(index),
     })),
