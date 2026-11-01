@@ -225,7 +225,11 @@ export function Sheet({
     transform: [{ translateY: dragY.value }],
   }));
 
-  const { show, hide } = useSheetPortal();
+  const { show, hide, topInset } = useSheetPortal();
+  const slotStyle = useMemo(
+    () => [styles.sheetSlot, { marginTop: topInset }],
+    [styles.sheetSlot, topInset],
+  );
   const id = useId();
 
   useEffect(() => {
@@ -255,7 +259,7 @@ export function Sheet({
       <Animated.View
         entering={transitions.sheetIn}
         exiting={transitions.sheetOut}
-        style={styles.sheetSlot}
+        style={slotStyle}
       >
         <Animated.View
           style={[styles.sheet, sheetStyle]}

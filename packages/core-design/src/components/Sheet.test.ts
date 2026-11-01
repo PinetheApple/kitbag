@@ -3,7 +3,8 @@ import { expect, it, vi } from 'vitest';
 
 const DRAG = { drag: true };
 const transition = (name: string) => ({ reduceMotion: () => name });
-const portal = { show: vi.fn(), hide: vi.fn() };
+const STATUS_BAR = 24;
+const portal = { show: vi.fn(), hide: vi.fn(), topInset: STATUS_BAR };
 const chain = {
   activeOffsetY: () => chain,
   onUpdate: () => chain,
@@ -69,12 +70,13 @@ type Props = Readonly<{
   children?: ReactNode;
 }>;
 
-function child(element: ReactElement<Props>, index: number) {
-  const kids = element.props.children;
-  return (Array.isArray(kids) ? kids : [kids])[index] as ReactElement<Props>;
+function flat(style: unknown): Record<string, unknown> {
+  const parts: unknown[] = [style].flat(Infinity).filter(Boolean);
+  return Object.assign({}, ...parts) as Record<string, unknown>;
 }
 
-it('keeps the slide animation off the view that carries the drag transform', () => {
+function openSheet() {
+  portal.show.mockClear();
   Sheet({
     visible: true,
     title: 'T',
@@ -82,7 +84,16 @@ it('keeps the slide animation off the view that carries the drag transform', () 
     onDismiss: vi.fn(),
     children: null,
   });
-  const frame = portal.show.mock.calls[0]?.[1] as ReactElement<Props>;
+  return portal.show.mock.calls[0]?.[1] as ReactElement<Props>;
+}
+
+function child(element: ReactElement<Props>, index: number) {
+  const kids = element.props.children;
+  return (Array.isArray(kids) ? kids : [kids])[index] as ReactElement<Props>;
+}
+
+it('keeps the slide animation off the view that carries the drag transform', () => {
+  const frame = openSheet();
   const outer = child(frame, 1);
   const inner = child(outer, 0);
   expect(outer.props).toMatchObject({
@@ -92,4 +103,15 @@ it('keeps the slide animation off the view that carries the drag transform', () 
   expect([outer.props.style].flat()).not.toContain(DRAG);
   expect(inner.props.entering).toBeUndefined();
   expect([inner.props.style].flat()).toContain(DRAG);
+});
+
+it('caps the sheet below the status bar so tall content scrolls inside it', () => {
+  const frame = openSheet();
+  const slot = flat(child(frame, 1).props.style);
+  expect(flat(frame.props.style)).toMatchObject({
+    flex: 1,
+    justifyContent: 'flex-end',
+  });
+  expect(slot.flexShrink).toBe(1);
+  expect(slot.marginTop).toBeGreaterThanOrEqual(STATUS_BAR);
 });
