@@ -8,6 +8,8 @@
 #include <cmath>
 #include <cstddef>
 
+#include "metronome/metronome_types.h"
+
 namespace kitbag {
 namespace metronome_detail {
 
@@ -44,6 +46,13 @@ inline double BarFraction(double position, int beats_per_bar) {
   double in_bar = std::fmod(position + kGridEpsilon, bar_beats);
   if (in_bar < 0.0) in_bar += bar_beats;
   return PhaseBelowOne(in_bar / bar_beats);
+}
+
+// One epsilon clears the seek's own lower_bound tolerance, the second keeps
+// the onset itself behind the cursor. Another anchor is another timeline.
+inline double OnsetFloorSec(const BeatGrid& grid, const GridOnset& onset) {
+  if (grid.anchor_frame != onset.anchor_frame) return GridOnset{}.song_sec;
+  return onset.song_sec + kGridEpsilon + kGridEpsilon;
 }
 
 template <std::size_t N>

@@ -1,5 +1,6 @@
 // The audio callback: voice synthesis and the per-sample sequencer loop.
 // Allocation-free, lock-free, no syscalls (SPEC.md §4.5).
+#include <algorithm>
 #include <cmath>
 #include <utility>
 
@@ -18,6 +19,7 @@ using metronome_detail::kBeatAmplitude;
 using metronome_detail::kGridEpsilon;
 using metronome_detail::kSecondsPerMinute;
 using metronome_detail::kSubdivisionAmplitude;
+using metronome_detail::OnsetFloorSec;
 
 constexpr double kPolyBeatAmplitude = 0.5;
 constexpr double kPolyAccentAmplitude = 0.8;
@@ -151,8 +153,6 @@ Metronome::AcquireGrid(uint64_t block_start_frame, uint32_t sample_rate) {
     view.grid = &node->value;
     view.generation = node->generation;
   }
-  // Changed, cleared, or the run just started or stopped: re-seed from where
-  // the click is now, so beats that already fired are never revisited.
   const bool changed = view.generation != observed_generation_;
   if (changed) {
     observed_generation_ = view.generation;
@@ -160,10 +160,16 @@ Metronome::AcquireGrid(uint64_t block_start_frame, uint32_t sample_rate) {
   }
   const double shift_sec = std::exchange(pending_grid_shift_sec_, 0.0);
   if (view.grid == nullptr || follow_mixer_) return view;
-  if (changed || GridShiftReseeks(*view.grid, shift_sec)) {
+  // Only a whole-beat backward shift clears the floor to replay (§4.7); other
+  // re-seeds land past the last onset this run heard on this anchor.
+  if (GridShiftReplays(*view.grid, shift_sec)) last_onset_ = {};
+  if (changed || shift_sec != 0.0) {
     SeekGridCursor(
         *view.grid,
-        GridSeconds(*view.grid, block_start_frame, sample_rate)
+        std::max(
+            GridSeconds(*view.grid, block_start_frame, sample_rate),
+            OnsetFloorSec(*view.grid, last_onset_)
+        )
     );
   }
   return view;

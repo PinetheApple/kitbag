@@ -15,10 +15,16 @@ using kitbag::metronome_detail::kMsPerSecond;
 
 constexpr double kFullClampMs = kitbag::Metronome::kMaxLatencyOffsetMs;
 constexpr double kSmallOffsetMs = 20.0;
-constexpr double kNearFromMs = 100.0;
+constexpr double kThresholdFromMs = 100.0;
 constexpr double kThresholdMarginMs = 5.0;
 constexpr double kFastIntervalSec = 0.15;
 constexpr double kSlowIntervalSec = 0.37;
+constexpr double kShortIntervalSec = 0.2;
+constexpr double kLongIntervalSec = 0.4;
+constexpr int kIntervalSwitchBeat = 20;
+constexpr double kBetweenIntervalsToMs =
+    kThresholdFromMs -
+    (kShortIntervalSec + kLongIntervalSec) / 2.0 * kMsPerSecond;
 constexpr int kNoSubdivision = 1;
 constexpr int kSixteenths = 4;
 constexpr int64_t kChangeFrame = int64_t{750} * kBlockFrames;
@@ -31,15 +37,16 @@ constexpr int64_t kDownbeatChangeFrame = int64_t{769} * kBlockFrames;
 // At -300 ms, 5 ms past the third sixteenth; 50 ms after the last tick at +300,
 // so an onset at the change is not hidden by the detector's hold.
 constexpr int64_t kSubSeekChangeFrame = int64_t{758} * kBlockFrames;
-constexpr int64_t kFrameTolerance = 1;
+// 5 ms after the switch beat sounds at +100 ms, on the 0.4 s interval ahead.
+constexpr int64_t kSwitchChangeFrame = int64_t{826} * kBlockFrames;
 constexpr size_t kIssueCrossedBeats = 4;
 
-constexpr double JustUnderIntervalMs(double interval_sec) {
-  return kNearFromMs - (interval_sec * kMsPerSecond - kThresholdMarginMs);
+constexpr double OffsetBackJustUnderABeat(double interval_sec) {
+  return kThresholdFromMs - (interval_sec * kMsPerSecond - kThresholdMarginMs);
 }
 
-constexpr double JustOverIntervalMs(double interval_sec) {
-  return kNearFromMs - (interval_sec * kMsPerSecond + kThresholdMarginMs);
+constexpr double OffsetBackJustOverABeat(double interval_sec) {
+  return kThresholdFromMs - (interval_sec * kMsPerSecond + kThresholdMarginMs);
 }
 
 constexpr OffsetChange kIssueCase{
@@ -55,8 +62,8 @@ constexpr OffsetChange kIssueCase{
 constexpr OffsetChange kFastJustUnder{
     "400 bpm back just under a beat",
     kFastIntervalSec,
-    kNearFromMs,
-    JustUnderIntervalMs(kFastIntervalSec),
+    kThresholdFromMs,
+    OffsetBackJustUnderABeat(kFastIntervalSec),
     kDownbeatChangeFrame,
     ShiftRule::kWait,
     kNoSubdivision
@@ -88,8 +95,8 @@ constexpr OffsetChange kChanges[] = {
     kFastJustUnder,
     {"400 bpm back just over a beat",
      kFastIntervalSec,
-     kNearFromMs,
-     JustOverIntervalMs(kFastIntervalSec),
+     kThresholdFromMs,
+     OffsetBackJustOverABeat(kFastIntervalSec),
      kDownbeatChangeFrame,
      ShiftRule::kReseek,
      kNoSubdivision},
@@ -123,15 +130,15 @@ constexpr OffsetChange kChanges[] = {
      kNoSubdivision},
     {"0.37 s back just under a beat",
      kSlowIntervalSec,
-     kNearFromMs,
-     JustUnderIntervalMs(kSlowIntervalSec),
+     kThresholdFromMs,
+     OffsetBackJustUnderABeat(kSlowIntervalSec),
      kChangeFrame,
      ShiftRule::kWait,
      kNoSubdivision},
     {"0.37 s back just over a beat",
      kSlowIntervalSec,
-     kNearFromMs,
-     JustOverIntervalMs(kSlowIntervalSec),
+     kThresholdFromMs,
+     OffsetBackJustOverABeat(kSlowIntervalSec),
      kChangeFrame,
      ShiftRule::kReseek,
      kNoSubdivision},
@@ -149,25 +156,16 @@ constexpr OffsetChange kChanges[] = {
      kSubSeekChangeFrame,
      ShiftRule::kReseek,
      kSixteenths},
+    {"0.2 s then 0.4 s, back 0.3 s on the 0.4 s interval",
+     kShortIntervalSec,
+     kThresholdFromMs,
+     kBetweenIntervalsToMs,
+     kSwitchChangeFrame,
+     ShiftRule::kWait,
+     kNoSubdivision,
+     kIntervalSwitchBeat,
+     kLongIntervalSec},
 };
-
-bool MatchesOneForOne(
-    const std::vector<int64_t>& onsets,
-    const std::vector<int64_t>& expected,
-    std::string* detail
-) {
-  for (size_t i = 0; i < std::min(onsets.size(), expected.size()); ++i) {
-    if (std::llabs(onsets[i] - expected[i]) > kFrameTolerance) {
-      *detail = "onset " + std::to_string(i) + " at " +
-                std::to_string(onsets[i]) + ", expected " +
-                std::to_string(expected[i]);
-      return false;
-    }
-  }
-  *detail = std::to_string(onsets.size()) + " onsets, expected " +
-            std::to_string(expected.size());
-  return onsets.size() == expected.size();
-}
 
 int64_t LargestGap(const std::vector<int64_t>& onsets) {
   int64_t gap = 0;
@@ -181,7 +179,9 @@ int64_t GapBound(const OffsetChange& change) {
   const double waited_sec = change.rule == ShiftRule::kWait
                                 ? (change.from_ms - change.to_ms) / kMsPerSecond
                                 : 0.0;
-  return std::llround((2.0 * change.interval_sec + waited_sec) * kSampleRate);
+  const double widest_sec =
+      std::max(change.interval_sec, change.interval_after_switch_sec);
+  return std::llround((2.0 * widest_sec + waited_sec) * kSampleRate);
 }
 
 std::vector<int64_t>
@@ -201,8 +201,7 @@ bool FixtureSeparatesRules(const OffsetChange& change) {
 
 void CheckOffsetChange(const OffsetChange& change) {
   const std::string label = std::string("grid offset ") + change.name;
-  const auto onsets =
-      RenderOffsetChange(change, change.change_frame, false).onsets;
+  const auto onsets = RenderOffsetChange(change, false).onsets;
   std::string detail;
   const bool on_time =
       MatchesOneForOne(onsets, ExpectedOnsets(change, change.rule), &detail);
@@ -217,8 +216,9 @@ void CheckOffsetChange(const OffsetChange& change) {
       label + ": no silence beyond the rule's span",
       std::to_string(gap).c_str()
   );
-  const auto baseline =
-      RenderOffsetChange(change, kNoOffsetChange, false).onsets;
+  OffsetChange unchanged = change;
+  unchanged.change_frame = kNoOffsetChange;
+  const auto baseline = RenderOffsetChange(unchanged, false).onsets;
   Check(
       OnsetsBefore(onsets, change.change_frame) ==
           OnsetsBefore(baseline, change.change_frame),
@@ -238,17 +238,18 @@ void TestIssueCaseCrossesFourBeats() {
 }
 
 void TestFollowIgnoresAMidRunChange() {
+  OffsetChange unchanged = kIssueCase;
+  unchanged.change_frame = kNoOffsetChange;
   Check(
-      RenderOffsetChange(kIssueCase, kChangeFrame, true).onsets ==
-          RenderOffsetChange(kIssueCase, kNoOffsetChange, true).onsets,
+      RenderOffsetChange(kIssueCase, true).onsets ==
+          RenderOffsetChange(unchanged, true).onsets,
       "grid offset follow: a mid-run change moves no click"
   );
 }
 
 void TestBarPhaseHoldsThroughAWait() {
   const double min_phase =
-      RenderOffsetChange(kFastJustUnder, kDownbeatChangeFrame, false)
-          .min_bar_phase;
+      RenderOffsetChange(kFastJustUnder, false).min_bar_phase;
   CheckCase(
       min_phase >= 0.0,
       "grid offset wait: bar_phase never negative",
@@ -263,6 +264,7 @@ void RunGridOffsetChangeTests() {
   TestIssueCaseCrossesFourBeats();
   TestFollowIgnoresAMidRunChange();
   TestBarPhaseHoldsThroughAWait();
+  RunGridOffsetStepTests();
 }
 
 }  // namespace metronome_test

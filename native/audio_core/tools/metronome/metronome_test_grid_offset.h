@@ -3,11 +3,17 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <span>
+#include <string>
 #include <vector>
 
 namespace metronome_test {
 
 enum class ShiftRule : uint8_t { kDrop, kReseek, kWait };
+
+constexpr int kOffsetGridBeats = 60;
+constexpr int64_t kNoOffsetChange = -1;
+constexpr int64_t kFrameTolerance = 1;
 
 struct OffsetChange {
   const char* name;
@@ -17,6 +23,17 @@ struct OffsetChange {
   int64_t change_frame;
   ShiftRule rule;
   int subdivision;
+  int switch_beat = kOffsetGridBeats;
+  double interval_after_switch_sec = 0.0;
+};
+
+enum class StepKind : uint8_t { kOffset, kRepublish, kFollowOff, kRestart };
+
+struct OffsetStep {
+  int64_t frame;
+  StepKind kind;
+  double offset_ms;
+  uint64_t anchor_frame;
 };
 
 struct OffsetRender {
@@ -24,16 +41,26 @@ struct OffsetRender {
   double min_bar_phase;
 };
 
-constexpr int kOffsetGridBeats = 60;
-constexpr int64_t kNoOffsetChange = -1;
-
 std::vector<int64_t> ExpectedOnsets(const OffsetChange& change, ShiftRule rule);
-size_t CrossedTicks(const OffsetChange& change);
-OffsetRender RenderOffsetChange(
+std::vector<int64_t> ExpectedStepOnsets(
     const OffsetChange& change,
-    int64_t change_frame,
+    std::span<const OffsetStep> steps,
     bool follow
 );
+bool MatchesOneForOne(
+    const std::vector<int64_t>& onsets,
+    const std::vector<int64_t>& expected,
+    std::string* detail
+);
+size_t CrossedTicks(const OffsetChange& change);
+double BeatSec(const OffsetChange& change, int beat);
+OffsetRender RenderOffsetChange(const OffsetChange& change, bool follow);
+OffsetRender RenderOffsetSteps(
+    const OffsetChange& change,
+    std::span<const OffsetStep> steps,
+    bool follow
+);
+void RunGridOffsetStepTests();
 
 }  // namespace metronome_test
 

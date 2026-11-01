@@ -74,12 +74,9 @@ void Metronome::SeekGridCursor(const BeatGrid& grid, double song_seconds) {
   SyncGridBar();
 }
 
-// A backward move of a whole beat interval or more replays like the stems; a
-// shorter one waits, so no beat sounds twice (§4.7).
-bool Metronome::GridShiftReseeks(const BeatGrid& grid, double shift_sec) const {
+bool Metronome::GridShiftReplays(const BeatGrid& grid, double shift_sec) const {
   const auto& times = grid.beat_times_sec;
-  if (shift_sec > 0.0) return true;
-  if (shift_sec == 0.0 || times.size() < 2) return false;
+  if (shift_sec >= 0.0 || times.size() < 2) return false;
   const size_t next = Clamp<size_t>(grid_cursor_, 1, times.size() - 1);
   const double replay_threshold_sec = times[next] - times[next - 1];
   return -shift_sec + kGridEpsilon >= replay_threshold_sec;
@@ -112,6 +109,7 @@ void Metronome::RenderGridBeat(
   }
   SyncGridBar();
   grid_next_sub_ = 1;
+  last_onset_ = {times[grid_cursor_ - 1], grid.anchor_frame};
   // Re-anchoring the constant-tempo phase onto this beat is what makes
   // ClearGrid's "keeps its phase" true (SPEC.md §4.2.1).
   beat_position_ = static_cast<double>(grid_beat_index_) - LatencyBeats();
@@ -138,6 +136,7 @@ void Metronome::RenderGridSubdivision(
   const double tick = previous + interval * grid_next_sub_ / subdivision_;
   if (song_seconds + kGridEpsilon >= tick && tick <= grid_fire_limit_) {
     const int slot = grid_next_sub_++;
+    last_onset_ = {tick, grid.anchor_frame};
     // The tick sits in [grid_cursor_-1, grid_cursor_], so its owning beat is
     // grid_beat_index_ (== grid_cursor_-1, and >= 0 given the guard above).
     OnSubdivisionTick(grid_beat_index_, slot, sample_rate);

@@ -318,7 +318,7 @@ class Metronome {
   GridSeconds(const BeatGrid& grid, uint64_t frame, uint32_t sample_rate) const;
   // Binary search: bounded and allocation-free, so safe from the callback.
   void SeekGridCursor(const BeatGrid& grid, double song_seconds);
-  bool GridShiftReseeks(const BeatGrid& grid, double shift_sec) const;
+  bool GridShiftReplays(const BeatGrid& grid, double shift_sec) const;
   void SyncGridBar();
   void PublishGridMirrors(const BeatGrid& grid, double song_seconds);
 
@@ -363,10 +363,10 @@ class Metronome {
   uint64_t observed_generation_ = 0;
   size_t grid_cursor_ = 0;
   int64_t grid_beat_index_ = -1;
-  // Next subdivision tick to fire inside the current beat interval, 1-based;
-  // subdivision_ means "none left before the next beat".
+  // 1-based next subdivision tick in the beat; subdivision_ means none left.
   int grid_next_sub_ = 1;
   double pending_grid_shift_sec_ = 0.0;
+  GridOnset last_onset_;
   // Bar counter, -1 until the first downbeat after Start. Incremented at
   // constant tempo, derived from the grid in grid mode — SPEC.md §4.2.1.
   int64_t current_bar_ = -1;

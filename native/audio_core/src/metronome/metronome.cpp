@@ -274,6 +274,7 @@ bool Metronome::ApplyClockCommand(const Command& command) {
       SetLatencyPreservingPhase(command.value);
       return true;
     case CommandType::kSetFollowMixer:
+      if (follow_mixer_ != (command.int_a != 0)) last_onset_ = {};
       follow_mixer_ = command.int_a != 0;
       ReacquireGrid();
       return true;
@@ -351,6 +352,7 @@ void Metronome::BeginRun() {
   ArmCountIn();
   beat_position_ = -count_in_beats_ - LatencyBeats();
   running_ = true;
+  last_onset_ = {};
   ReacquireGrid();
   // Publish now, not only at the end of the drain: a deferred StartAt calls
   // BeginRun from the render loop, after the drain already stored the flag.
