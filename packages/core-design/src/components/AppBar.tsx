@@ -12,6 +12,7 @@ import {
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { hitBoxStyle, hitExtension, unshared } from '../touchTarget.ts';
+import { useTextIconScale } from '../useTextIconScale.ts';
 import { Icon } from './Icon.tsx';
 
 const TITLE_MIN_SCALE = appBarTitleMinSize / textRoles.appBarTitle.size;
@@ -78,6 +79,7 @@ export function AppBar({
   wordmark = false,
 }: AppBarProps) {
   const styles = useStyles();
+  const iconScale = useTextIconScale();
   return (
     <View style={styles.bar}>
       <View style={styles.lead}>
@@ -88,7 +90,7 @@ export function AppBar({
             style={styles.back}
             onPress={onBack}
           >
-            <Icon name="back" size="title" color="text" />
+            <Icon name="back" size="title" color="text" scale={iconScale} />
           </Pressable>
         )}
         <Text
@@ -118,6 +120,7 @@ export function AppBarAction({
   accessibilityLabel,
   onPress,
 }: AppBarActionProps) {
+  const iconScale = useTextIconScale();
   return (
     <Pressable
       accessibilityRole="button"
@@ -125,7 +128,7 @@ export function AppBarAction({
       style={ACTION_HIT_BOX}
       onPress={onPress}
     >
-      <Icon name={icon} size="action" color="text2" />
+      <Icon name={icon} size="action" color="text2" scale={iconScale} />
     </Pressable>
   );
 }

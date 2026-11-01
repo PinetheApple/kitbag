@@ -5,6 +5,7 @@ import type { IconName } from '../icons.ts';
 import { screenBar, type IconSize } from '../roles.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import type { ColorToken } from '../tokens.ts';
+import { useTextIconScale } from '../useTextIconScale.ts';
 import { Icon } from './Icon.tsx';
 
 const useStyles = createThemedStyles(() => ({
@@ -42,6 +43,7 @@ export function BarIconButton({
   disabled = false,
 }: BarIconButtonProps) {
   const styles = useStyles();
+  const iconScale = useTextIconScale();
   return (
     <Pressable
       accessibilityRole="button"
@@ -51,7 +53,12 @@ export function BarIconButton({
       style={styles.button}
       onPress={onPress}
     >
-      <Icon name={icon} size={size} color={disabled ? 'decor' : color} />
+      <Icon
+        name={icon}
+        size={size}
+        color={disabled ? 'decor' : color}
+        scale={iconScale}
+      />
     </Pressable>
   );
 }
