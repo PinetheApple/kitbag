@@ -2,7 +2,7 @@ import { KB_RESULT, KB_TUNER_AUTO_STRING } from '@kitbag/core-native';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { MAX_BUSY_RETRIES } from './commands.ts';
-import type { MicPermission } from './runtime.ts';
+import type { PermissionAnswer } from '../permission.ts';
 import { createTunerStore } from './store.ts';
 import {
   BUSY,
@@ -130,10 +130,10 @@ describe('leave', () => {
   });
 
   it('never starts when leaving before the permission answer lands', async () => {
-    let answer: (p: MicPermission) => void = () => undefined;
+    let answer: (p: PermissionAnswer) => void = () => undefined;
     fakes.micPermission.request.mockImplementationOnce(
       () =>
-        new Promise<MicPermission>((resolve) => {
+        new Promise<PermissionAnswer>((resolve) => {
           answer = resolve;
         }),
     );
@@ -305,10 +305,10 @@ describe('app background / foreground', () => {
   });
 
   it('does not start when backgrounded during the permission prompt', async () => {
-    let answer: (p: MicPermission) => void = () => undefined;
+    let answer: (p: PermissionAnswer) => void = () => undefined;
     fakes.micPermission.request.mockImplementationOnce(
       () =>
-        new Promise<MicPermission>((resolve) => {
+        new Promise<PermissionAnswer>((resolve) => {
           answer = resolve;
         }),
     );

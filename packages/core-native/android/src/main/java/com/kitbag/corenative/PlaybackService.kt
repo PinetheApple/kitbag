@@ -48,8 +48,7 @@ class PlaybackService : Service() {
   override fun onCreate() {
     super.onCreate()
     running = true
-    createChannel(CHANNEL_ID, R.string.kitbag_metronome_channel)
-    createChannel(SONG_CHANNEL_ID, R.string.kitbag_songs_channel)
+    createChannels()
     session = MediaSessionCompat(this, SESSION_TAG).apply {
       setCallback(SessionCallback())
       isActive = true
@@ -251,11 +250,22 @@ class PlaybackService : Service() {
     stopSelf(lastStartId)
   }
 
-  private fun createChannel(id: String, name: Int) {
+  // Android keeps a channel's importance once created, so raising it takes a new ID.
+  private fun createChannels() {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-    val channel = NotificationChannel(id, getString(name), NotificationManager.IMPORTANCE_LOW)
-    getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+    val manager = getSystemService(NotificationManager::class.java)
+    RETIRED_CHANNEL_IDS.forEach(manager::deleteNotificationChannel)
+    manager.createNotificationChannel(silentChannel(CHANNEL_ID, R.string.kitbag_metronome_channel))
+    manager.createNotificationChannel(silentChannel(SONG_CHANNEL_ID, R.string.kitbag_songs_channel))
   }
+
+  private fun silentChannel(id: String, name: Int): NotificationChannel =
+    NotificationChannel(id, getString(name), NotificationManager.IMPORTANCE_DEFAULT).apply {
+      setSound(null, null)
+      enableVibration(false)
+      setShowBadge(false)
+      lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+    }
 
   private fun launchIntent(): PendingIntent? =
     packageManager.getLaunchIntentForPackage(packageName)?.let {
@@ -304,7 +314,7 @@ class PlaybackService : Service() {
   }
 
   companion object {
-    private const val CHANNEL_ID = "kitbag_metronome"
+    private const val CHANNEL_ID = "kitbag_metronome_card"
     private const val NOTIFICATION_ID = 1
     private const val SESSION_TAG = "KitbagMetronome"
     private const val TICK_MILLIS = 1000L
@@ -314,7 +324,8 @@ class PlaybackService : Service() {
     private const val ACTION_SONG_SHOW = "com.kitbag.corenative.SONG_SHOW"
     private const val ACTION_SONG_HIDE = "com.kitbag.corenative.SONG_HIDE"
     private const val ACTION_SONG = "com.kitbag.corenative.SONG"
-    private const val SONG_CHANNEL_ID = "kitbag_songs"
+    private const val SONG_CHANNEL_ID = "kitbag_songs_card"
+    private val RETIRED_CHANNEL_IDS = listOf("kitbag_metronome", "kitbag_songs")
     private const val EXTRA_TITLE = "title"
     private const val EXTRA_ARTIST = "artist"
     private const val EXTRA_DURATION_FRAMES = "durationFrames"

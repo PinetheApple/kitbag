@@ -154,7 +154,6 @@ export {
   configureTunings,
   type AppActivity,
   type AppActivitySource,
-  type MicPermission,
   type MicPermissionSource,
   type TunerRuntime,
 } from './tuner/runtime.ts';
@@ -226,6 +225,22 @@ export type {
   LibrarySongRow,
   LibraryStemSetRow,
 } from '@kitbag/core-db';
+export type { PermissionAnswer } from './permission.ts';
+export { useNotificationPermission } from './notifications/useNotificationPermission.ts';
+export {
+  configureNotificationPermission,
+  createNotificationPermissionStore,
+  getNotificationPermissionStore,
+  notificationAction,
+  NOTIFICATION_ASK,
+  type NotificationAction,
+  type NotificationAsk,
+  type NotificationAskPersistence,
+  type NotificationPermissionRuntime,
+  type NotificationPermissionSource,
+  type NotificationPermissionStore,
+  type NotificationStatus,
+} from './notifications/store.ts';
 export { useSwipeHint } from './firstUse/useSwipeHint.ts';
 export {
   configureSwipeHintPersistence,

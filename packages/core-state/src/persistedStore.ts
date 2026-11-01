@@ -15,17 +15,25 @@ export interface PersistedStore<P, S> {
 export function persistedStore<P, S>(
   name: string,
   inMemory: P,
-  init: (persistence: P, commit: Commit<S>) => S,
+  init: (
+    persistence: P,
+    commit: Commit<S>,
+    transient: Pick<StoreApi<S>, 'getState' | 'setState'>,
+  ) => S,
 ): PersistedStore<P, S> {
   const create = (persistence: P = inMemory) =>
     createStore<S>((set, get) =>
-      init(persistence, (key, value, save) => {
-        if (get()[key] === value) return;
-        const changed: Partial<S> = {};
-        changed[key] = value;
-        set(changed);
-        save(value);
-      }),
+      init(
+        persistence,
+        (key, value, save) => {
+          if (get()[key] === value) return;
+          const changed: Partial<S> = {};
+          changed[key] = value;
+          set(changed);
+          save(value);
+        },
+        { getState: get, setState: set },
+      ),
     );
   let configured: StoreApi<S> | undefined;
   return {
