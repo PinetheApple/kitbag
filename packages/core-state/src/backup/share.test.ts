@@ -34,10 +34,14 @@ describe('setlistBackupFileName', () => {
     expect(setlistBackupFileName('  Jazz / Standards!! ')).toBe(
       'kitbag_setlist_jazz-standards.json',
     );
+    expect(setlistBackupFileName('Set 2 -- Late')).toBe(
+      'kitbag_setlist_set-2-late.json',
+    );
   });
 
   it('falls back when nothing path-safe is left', () => {
-    expect(setlistBackupFileName('★★★')).toBe('kitbag_setlist.json');
+    expect(setlistBackupFileName('★★★')).toBe('kitbag_setlist_setlist.json');
+    expect(setlistBackupFileName('')).toBe('kitbag_setlist_setlist.json');
   });
 
   it('bounds a long name', () => {

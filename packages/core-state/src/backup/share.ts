@@ -5,6 +5,7 @@ import { getBackup, type BackupDeps } from './runtime.ts';
 export const LIBRARY_BACKUP_FILE_NAME = 'kitbag_export.json';
 
 const SETLIST_FILE_PREFIX = 'kitbag_setlist';
+const FALLBACK_SLUG = 'setlist';
 const FILE_EXTENSION = '.json';
 const MAX_SLUG_LENGTH = 64;
 
@@ -14,9 +15,7 @@ export function setlistBackupFileName(name: string): string {
     .replace(/[^a-z0-9]+/g, '-')
     .slice(0, MAX_SLUG_LENGTH)
     .replace(/^-+|-+$/g, '');
-  const stem =
-    slug === '' ? SETLIST_FILE_PREFIX : `${SETLIST_FILE_PREFIX}_${slug}`;
-  return `${stem}${FILE_EXTENSION}`;
+  return `${SETLIST_FILE_PREFIX}_${slug === '' ? FALLBACK_SLUG : slug}${FILE_EXTENSION}`;
 }
 
 export async function shareLibraryBackup(
