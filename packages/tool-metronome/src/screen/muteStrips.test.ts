@@ -14,6 +14,10 @@ vi.mock('@kitbag/core-design', async (importOriginal) => ({
     return () => styles;
   },
 }));
+vi.mock('react-native', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  StyleSheet: { absoluteFill: {} },
+}));
 vi.mock('@kitbag/core-state', () => ({ useMetronome: vi.fn() }));
 vi.mock('react-native-reanimated', () => ({ default: { View: 'View' } }));
 vi.mock('./LiveSlot.tsx', () => ({ LiveSlot: 'LiveSlot' }));
