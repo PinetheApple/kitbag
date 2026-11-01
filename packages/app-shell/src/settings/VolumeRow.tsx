@@ -68,7 +68,7 @@ export function VolumeRow() {
           onRelease={release}
           onCancel={cancel}
           step={VOLUME_SLIDER.step}
-          mode="fader"
+          mode={VOLUME_SLIDER.mode}
           look="level"
           tick={VOLUME_SLIDER.detent.at}
           detent={VOLUME_SLIDER.detent}
