@@ -517,12 +517,21 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   divide the bar. B (one ratio value with a wheel sheet) and C (poly stepper with a
   Bar | Beats switch) are rejected. **[user]**
 
-- **2026-10-31 · Explicit save for live edits (§5.4, #212)** — Live edits to a loaded song
-  never write it; nothing autosaves, and a visible mark shows unsaved changes until Save.
-  This matches what the app already does: only the preset editor's Save and "Save current"
-  write a song. §2.1's "live-BPM autosave" row is the Flutter-era audit and stays as
-  history. The mark, where Save lives, Revert and what a step does to unsaved edits wait
-  on the owner's pick of a design. **[user]**
+- **2026-10-31 · Metronome layout (§12, #243)** — The owner approved round 2 of the main
+  screen's vertical layout: a taller BPM block, smaller transport buttons, dropdowns and
+  beat dots with more room between them, the legend directly under the dots while stopped,
+  and the practice-tools area bottom-aligned above the player controls. Drawn in
+  `design/kitbag-metronome.html` §02, which supersedes the main screen's sizes and vertical
+  layout in the B, status and poly files. **[user]** Where the build departs from the
+  frame **[recorded — implementation]**: hit boxes are 48 dp, not the 51 / 53 the mockup
+  notes give; the poly row keeps the 14 dp bracket band the mockup leaves out, so the
+  minimum gap between the dots and the practice tools is 0 to fit 360 × 800 without a new
+  scroll; the numeral is capped at 128 sp under font scaling, compact only; the new gaps
+  apply in roomy too; dropdown padding is unchanged; and a lone status row takes the
+  lower slot. 360×800, busy (16/16 + poly + two status rows) at font scale 1.15 scrolls
+  by about 20 dp, which hides half the ramp row until you scroll. The mockup's 16 dp spare
+  does not survive the poly bracket band.
+
 - **2026-10-31 · Subdivision accents: slot 0 and the sound (§17 D2, §12.5, #170)** —
   Global subdivision-accent patterns apply to off-beat ticks only: slot 0, the on-beat
   tick, never overrides the per-beat accents (accent / normal / muted), and a muted beat
@@ -580,6 +589,15 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   and restores its unsaved live settings; it never delays Next. B (Save button in the app
   bar) and C (chip context line reads "Unsaved") are not chosen and are kept as
   reference in `docs/research/mockups/212/`. **[user]**
+- **2026-10-31 · A mid-song latency change in grid mode drops the crossed beats (§4.7, #245)**
+  — When the offset moves a song grid's position forward, the click jumps straight to its
+  new position: no catch-up burst for the beats the change crossed, the same way the stems
+  jump. **[user]**
+- **2026-10-31 · A backward latency change in grid mode re-seeks only by a whole beat (§4.7, #245)**
+  — When the change moves the position back by at least one grid interval, the click
+  re-seeks with the song as the stems do, and the beats from there replay. A smaller
+  backward change waits for the next beat that has not sounded, so no beat sounds twice.
+  The interval is the spacing of the two beats the cursor sits between. **[user]**
 
 - **2026-10-31 · Calibration window and the ±300 ms limit (§12.5.1, #170)** — A tap's
   deviation is only known to within one beat, so the taps are first unwrapped around
@@ -592,3 +610,8 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   (owner ruling, 2026-10-31). At 100 BPM a steady route past ±300 ms cannot be told from
   one a beat away, so with a tight spread it is stored as the nearer offset (+320 ms
   reads as −280 ms); the owner accepted this. **[user]**
+
+- **2026-11-01 · Poly ratio label goes right first (§5.2, #243)** — The label follows the
+  last poly dot at 18 dp, then sits 8 dp left of the row, then above it. It follows the
+  owner-approved round 2 frame (`design/kitbag-metronome.html` §02) rather than the poly
+  file's left placement. **[recorded — coordinator ruling]**

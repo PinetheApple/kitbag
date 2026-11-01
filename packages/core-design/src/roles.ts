@@ -75,6 +75,7 @@ export const size = {
   chipLarge: 34,
   transportKeySmall: 40,
   numpadKeyLarge: 52,
+  presetButton: 37,
 } as const;
 
 export const radius = {
@@ -115,7 +116,6 @@ export const inset = {
   chipFillH: 8,
   badgeV: 2,
   badgeH: 7,
-  presetV: 9,
   numpadKeyV: 13,
   segmentOptionV: 6,
   segmentOptionH: 4,
@@ -125,8 +125,8 @@ export const inset = {
   stepInlineKeyH: 7,
   tempoZoneTop: 26,
   tempoZoneBottom: 18,
-  tempoZoneTopCompact: 6,
-  tempoZoneBottomCompact: 6,
+  tempoZoneTopCompact: 12,
+  tempoZoneBottomCompact: 12,
   sweepH: 18,
   rowV: 9,
   rowH: 10,
@@ -254,8 +254,8 @@ const body = fontFamily.body;
 export const textRoles = {
   appBarTitle: { family: display, weight: 500, size: 17 },
   button: { family: display, weight: 500, size: 14 },
-  presetAction: { family: display, weight: 700, size: 14 },
-  preset: { family: display, weight: 500, size: 13.5, tabular: true },
+  presetAction: { family: display, weight: 700, size: 13 },
+  preset: { family: display, weight: 500, size: 12.5, tabular: true },
   chip: { family: display, weight: 400, size: 12.5 },
   chipValue: { family: display, weight: 500, size: 12.5, tabular: true },
   chipAside: { family: display, weight: 400, size: 11 },
@@ -326,7 +326,7 @@ export const textRoles = {
   songChipContext: { family: display, weight: 500, size: 12 },
   setlistSongMeta: { family: display, weight: 500, size: 13 },
   nowAction: { family: display, weight: 600, size: 13 },
-  pickerChip: { family: display, weight: 500, size: 15 },
+  pickerChip: { family: display, weight: 500, size: 13.5 },
   status: { family: body, weight: 400, size: 14 },
   statusLead: { family: display, weight: 600, size: 14.5, tabular: true },
   statusMeta: { family: display, weight: 500, size: 13, tabular: true },

@@ -1,6 +1,9 @@
 // The audio callback: voice synthesis and the per-sample sequencer loop.
 // Allocation-free, lock-free, no syscalls (SPEC.md §4.5).
+#include <algorithm>
 #include <cmath>
+#include <numbers>
+#include <utility>
 
 #include "metronome/metronome.h"
 #include "metronome/metronome_internal.h"
@@ -17,6 +20,7 @@ using metronome_detail::kBeatAmplitude;
 using metronome_detail::kGridEpsilon;
 using metronome_detail::kSecondsPerMinute;
 using metronome_detail::kSubdivisionAmplitude;
+using metronome_detail::OnsetFloorSec;
 
 constexpr double kPolyBeatAmplitude = 0.5;
 constexpr double kPolyAccentAmplitude = 0.8;
@@ -29,13 +33,18 @@ struct SoundPreset {
   double decay_per_second;
 };
 
+constexpr double kTickFloorDecades = 4.0;
+constexpr double kTickDecaySeconds = 0.035;
+constexpr double kTickDecayPerSecond =
+    kTickFloorDecades * std::numbers::ln10 / kTickDecaySeconds;
+
 constexpr SoundPreset kSounds[Metronome::kSoundCount] = {
-    {1760.0, 1174.7, 880.0, 1480.0, 30.0},    // beep
-    {2400.0, 1800.0, 1400.0, 2000.0, 60.0},   // woodblock
-    {3600.0, 2800.0, 2200.0, 3200.0, 90.0},   // click
-    {600.0, 450.0, 300.0, 520.0, 60.0},       // tom
-    {5000.0, 4000.0, 3500.0, 4500.0, 120.0},  // hihat
-    {2200.0, 1500.0, 1400.0, 1800.0, 45.0},   // cowbell
+    {1760.0, 1174.7, 880.0, 1480.0, 30.0},                 // beep
+    {2400.0, 1800.0, 1400.0, 2000.0, 60.0},                // woodblock
+    {3600.0, 2800.0, 2200.0, 3200.0, 90.0},                // click
+    {600.0, 450.0, 300.0, 520.0, 60.0},                    // tom
+    {1500.0, 1000.0, 800.0, 1225.0, kTickDecayPerSecond},  // tick
+    {2200.0, 1500.0, 1400.0, 1800.0, 45.0},                // cowbell
 };
 
 int64_t TickIndex(double position, double ticks_per_beat) {
@@ -150,17 +159,24 @@ Metronome::AcquireGrid(uint64_t block_start_frame, uint32_t sample_rate) {
     view.grid = &node->value;
     view.generation = node->generation;
   }
-  if (view.generation != observed_generation_) {
-    // Changed, cleared, or the run just started or stopped: re-seed from where
-    // the click is now, so beats that already fired are never revisited.
+  const bool changed = view.generation != observed_generation_;
+  if (changed) {
     observed_generation_ = view.generation;
     follow_next_frame_ = kReseedFollow;
-    if (view.grid != nullptr && !follow_mixer_) {
-      SeekGridCursor(
-          *view.grid,
-          GridSeconds(*view.grid, block_start_frame, sample_rate)
-      );
-    }
+  }
+  const double shift_sec = std::exchange(pending_grid_shift_sec_, 0.0);
+  if (view.grid == nullptr || follow_mixer_) return view;
+  // Only a whole-beat backward shift clears the floor to replay (§4.7); other
+  // re-seeds land past the last onset this run heard on this anchor.
+  if (!changed && GridShiftReplays(*view.grid, shift_sec)) last_onset_ = {};
+  if (changed || shift_sec != 0.0) {
+    SeekGridCursor(
+        *view.grid,
+        std::max(
+            GridSeconds(*view.grid, block_start_frame, sample_rate),
+            OnsetFloorSec(*view.grid, last_onset_)
+        )
+    );
   }
   return view;
 }
@@ -215,6 +231,7 @@ void Metronome::BeginAnchorExternal(
   // Song second → this signature's beat unit, so an 8th-note bar anchors on the
   // song's clock like a quarter-note one.
   beat_position_ = song_seconds * bpm_ * BeatUnitScale() / kSecondsPerMinute;
+  if (!running_) last_onset_ = {};
   running_ = true;
   running_flag_.store(true, std::memory_order_relaxed);
   counting_in_ = false;

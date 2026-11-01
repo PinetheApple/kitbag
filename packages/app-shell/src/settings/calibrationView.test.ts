@@ -16,6 +16,7 @@ import {
   calibrationView,
   routeMeta,
   SCATTER,
+  SCATTER_AXIS_STEPS_MS,
   SCATTER_DOT_BAND,
   scatterHalfRangeMs,
   scatterX,
@@ -318,14 +319,39 @@ describe('calibration messages', () => {
 });
 
 describe('scatter', () => {
-  it('spans at least ±50 ms', () => {
-    expect(scatterHalfRangeMs(0, 0)).toBe(SCATTER.minHalfRangeMs);
-    expect(scatterHalfRangeMs(12, 3)).toBe(SCATTER.minHalfRangeMs);
+  it('spans at least the smallest axis step', () => {
+    expect(scatterHalfRangeMs(0, 0)).toBe(SCATTER_AXIS_STEPS_MS[0]);
+    expect(scatterHalfRangeMs(12, 3)).toBe(SCATTER_AXIS_STEPS_MS[0]);
   });
 
-  it('widens to keep mean ±3 SD on screen', () => {
-    expect(scatterHalfRangeMs(40, 10)).toBe(70);
-    expect(scatterHalfRangeMs(-40, 10)).toBe(70);
+  it('snaps mean ±3 SD up to the next axis step', () => {
+    expect(scatterHalfRangeMs(198, 0)).toBe(200);
+    expect(scatterHalfRangeMs(40, 10)).toBe(100);
+    expect(scatterHalfRangeMs(-40, 10)).toBe(100);
+    expect(scatterHalfRangeMs(300, 10)).toBe(400);
+    expect(scatterHalfRangeMs(-300, 10)).toBe(400);
+  });
+
+  it.each(SCATTER_AXIS_STEPS_MS)(
+    'keeps a span of exactly %d ms on that step',
+    (step) => {
+      expect(scatterHalfRangeMs(step, 0)).toBe(step);
+    },
+  );
+
+  it('moves to the next step just past a step', () => {
+    const steps = SCATTER_AXIS_STEPS_MS;
+    steps.slice(0, -1).forEach((step, i) => {
+      expect(scatterHalfRangeMs(step + 1, 0)).toBe(steps[i + 1]);
+    });
+  });
+
+  it('caps the axis at one beat', () => {
+    expect(SCATTER_AXIS_STEPS_MS[SCATTER_AXIS_STEPS_MS.length - 1]).toBe(
+      BEAT_MS,
+    );
+    expect(scatterHalfRangeMs(BEAT_MS + 1, 0)).toBe(BEAT_MS);
+    expect(scatterHalfRangeMs(-BEAT_MS, BEAT_MS)).toBe(BEAT_MS);
   });
 
   it('keeps every dot above the axis label row', () => {
