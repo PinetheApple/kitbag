@@ -39,3 +39,13 @@ export const calibrationText = {
   tapPrompt: { family: fontFamily.display, weight: 500, size: 16 },
   scatterAxis: { family: fontFamily.display, weight: 400, size: 9.5 },
 } as const satisfies Record<string, TypeRole>;
+
+export const toolsManager = {
+  introH: 2,
+  noteV: 10,
+  noteH: 12,
+} as const;
+
+export const toolsManagerText = {
+  small: { family: fontFamily.body, weight: 400, size: 13.5 },
+} as const satisfies Record<string, TypeRole>;

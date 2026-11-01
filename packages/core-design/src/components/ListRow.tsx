@@ -1,12 +1,14 @@
-import type { ReactNode } from 'react';
+import { useCallback, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import type { IconName } from '../icons.ts';
 import { radius, size, space, textRoles } from '../roles.ts';
+import { switchA11y } from '../switch.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { radii } from '../tokens.ts';
 import { Icon } from './Icon.tsx';
+import { SwitchTrack } from './Switch.tsx';
 
 const useStyles = createThemedStyles((theme) => ({
   row: {
@@ -85,6 +87,41 @@ export function ListRow(props: ListRowProps) {
       </View>
       <RowText title={title} subtitle={subtitle} />
       {trailing ?? <Icon name="forward" size="action" />}
+    </Pressable>
+  );
+}
+
+export interface ListSwitchRowProps extends RowTextProps {
+  readonly icon: IconName;
+  readonly value: boolean;
+  readonly onValueChange: (value: boolean) => void;
+}
+
+export function ListSwitchRow({
+  icon,
+  title,
+  subtitle,
+  value,
+  onValueChange,
+}: ListSwitchRowProps) {
+  const styles = useStyles();
+  const toggle = useCallback(() => {
+    onValueChange(!value);
+  }, [onValueChange, value]);
+  return (
+    <Pressable
+      {...switchA11y(value)}
+      accessibilityLabel={
+        subtitle === undefined ? title : `${title}, ${subtitle}`
+      }
+      style={styles.row}
+      onPress={toggle}
+    >
+      <View style={styles.tile}>
+        <Icon name={icon} size="tile" color="text" />
+      </View>
+      <RowText title={title} subtitle={subtitle} />
+      <SwitchTrack value={value} />
     </Pressable>
   );
 }
