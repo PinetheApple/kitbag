@@ -1,8 +1,7 @@
-import { createStore, type StoreApi } from 'zustand/vanilla';
-
+import { persistedStore } from '../persistedStore.ts';
 import type { PermissionAnswer } from '../permission.ts';
 
-export type NotificationAsk = 'never' | 'asked' | 'blocked';
+export type NotificationAsk = 'never' | 'asked';
 
 export type NotificationAction = 'none' | 'request' | 'openSettings';
 
@@ -18,6 +17,11 @@ export interface NotificationAskPersistence {
   readonly save: (ask: NotificationAsk) => void;
 }
 
+export interface NotificationPermissionRuntime {
+  readonly source: NotificationPermissionSource;
+  readonly persistence: NotificationAskPersistence;
+}
+
 export interface NotificationStatus {
   readonly required: boolean;
   readonly granted: boolean | undefined;
@@ -30,8 +34,10 @@ export interface NotificationPermissionStore extends NotificationStatus {
   readonly allow: () => Promise<void>;
   readonly notNow: () => void;
   readonly refresh: () => Promise<void>;
-  readonly retry: () => Promise<void>;
+  readonly enable: () => Promise<void>;
 }
+
+const ASKED: NotificationAsk = 'asked';
 
 export function notificationAction({
   required,
@@ -39,34 +45,36 @@ export function notificationAction({
   ask,
 }: NotificationStatus): NotificationAction {
   if (!required || granted !== false) return 'none';
-  return ask === 'blocked' ? 'openSettings' : 'request';
+  return ask === 'never' ? 'request' : 'openSettings';
 }
 
-const noRuntimePermission: NotificationPermissionSource = {
-  required: false,
-  granted: () => Promise.resolve(true),
-  request: () => Promise.resolve('granted'),
-  openSettings: () => undefined,
+const unsupported: NotificationPermissionRuntime = {
+  source: {
+    required: false,
+    granted: () => Promise.resolve(true),
+    request: () => Promise.resolve('granted'),
+    openSettings: () => undefined,
+  },
+  persistence: { load: () => 'never', save: () => undefined },
 };
 
-const inMemory: NotificationAskPersistence = {
-  load: () => 'never',
-  save: () => undefined,
-};
-
-export function createNotificationPermissionStore(
-  source: NotificationPermissionSource = noRuntimePermission,
-  persistence: NotificationAskPersistence = inMemory,
-): StoreApi<NotificationPermissionStore> {
-  return createStore<NotificationPermissionStore>((set, get) => {
-    const remember = (ask: NotificationAsk) => {
-      set({ ask });
-      persistence.save(ask);
+const notifications = persistedStore<
+  NotificationPermissionRuntime,
+  NotificationPermissionStore
+>(
+  'Notification permission',
+  unsupported,
+  ({ source, persistence }, commit, { getState, setState }) => {
+    let offered = false;
+    const remember = () => {
+      commit('ask', ASKED, persistence.save);
     };
+    // A blocked answer may come back with no dialog shown, so the tap must not dead-end.
     const request = async () => {
+      remember();
       const answer = await source.request();
-      set({ granted: answer === 'granted' });
-      if (answer === 'blocked') remember('blocked');
+      setState({ granted: answer === 'granted' });
+      if (answer === 'blocked') source.openSettings();
     };
     return {
       required: source.required,
@@ -74,46 +82,33 @@ export function createNotificationPermissionStore(
       ask: persistence.load(),
       prompting: false,
       playbackStarted: async () => {
-        if (!source.required || get().ask !== 'never') return;
-        remember('asked');
+        if (!source.required || offered || getState().ask !== 'never') return;
+        offered = true;
         const granted = await source.granted();
-        set({ granted, prompting: !granted });
+        setState({ granted, prompting: !granted });
+        if (granted) remember();
       },
       allow: async () => {
-        set({ prompting: false });
+        setState({ prompting: false });
         await request();
       },
       notNow: () => {
-        set({ prompting: false });
+        setState({ prompting: false });
+        remember();
       },
       refresh: async () => {
         if (!source.required) return;
-        set({ granted: await source.granted() });
+        setState({ granted: await source.granted() });
       },
-      retry: async () => {
-        const action = notificationAction(get());
+      enable: async () => {
+        const action = notificationAction(getState());
         if (action === 'request') await request();
         if (action === 'openSettings') source.openSettings();
       },
     };
-  });
-}
+  },
+);
 
-let configured: StoreApi<NotificationPermissionStore> | undefined;
-
-export function configureNotificationPermission(
-  source: NotificationPermissionSource,
-  persistence: NotificationAskPersistence,
-): void {
-  if (configured !== undefined) {
-    throw new Error(
-      'Notification permission store already exists; configure it before first use',
-    );
-  }
-  configured = createNotificationPermissionStore(source, persistence);
-}
-
-export function getNotificationPermissionStore(): StoreApi<NotificationPermissionStore> {
-  configured ??= createNotificationPermissionStore();
-  return configured;
-}
+export const createNotificationPermissionStore = notifications.create;
+export const configureNotificationPermission = notifications.configure;
+export const getNotificationPermissionStore = notifications.get;

@@ -10,13 +10,10 @@ import type { PermissionAnswer } from '../permission.ts';
 
 import type { TunerCommands } from './commands.ts';
 
-export type MicPermission = PermissionAnswer;
-
 export interface MicPermissionSource {
   /** Current answer without prompting. */
-  readonly check: () => Promise<MicPermission>;
-  /** Prompt if the platform still allows it; `blocked` = never ask again. */
-  readonly request: () => Promise<MicPermission>;
+  readonly check: () => Promise<PermissionAnswer>;
+  readonly request: () => Promise<PermissionAnswer>;
 }
 
 /** App-level foreground state. Forward RN's `active` and `background` only. */

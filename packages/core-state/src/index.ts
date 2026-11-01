@@ -137,7 +137,6 @@ export {
   configureTunings,
   type AppActivity,
   type AppActivitySource,
-  type MicPermission,
   type MicPermissionSource,
   type TunerRuntime,
 } from './tuner/runtime.ts';
@@ -219,6 +218,7 @@ export {
   type NotificationAction,
   type NotificationAsk,
   type NotificationAskPersistence,
+  type NotificationPermissionRuntime,
   type NotificationPermissionSource,
   type NotificationPermissionStore,
   type NotificationStatus,
