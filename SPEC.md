@@ -1637,6 +1637,10 @@ the supersession: ≤7 primary choices.)
   No per-song override; `SongPresets` carries neither column. Volume per song is
   genuinely lost — the quiet acoustic number in a loud set needs this slider.
   Accepted, and it is the reason the Rig section has to be good.
+- **Tools lists only built tools** (owner, 2026-10-31). Each has an on/off switch, and
+  the Settings row reads "N on". `kitbag-settings.html`'s Get and SOON rows, and §9.3's
+  sizes, are not built. Off removes a tool everywhere and is separate from Home's Hide;
+  `docs/decisions.md` has the ruling.
 - **Practice is a readout, not a doorway.** Sessions, total time, average tempo,
   no chevron — the viewer is later work, so the row promises nothing behind it.
   The numbers are already computed; average tempo is the one addition, and it is
