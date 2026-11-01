@@ -26,6 +26,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useSettingsRoutes } from '../settings/settingsRoutes.ts';
 import { ArrangeSheet } from './ArrangeSheet.tsx';
+import { MoreToolsRow } from './MoreToolsRow.tsx';
 import {
   arrangedWithOff,
   shownArrangement,
@@ -235,13 +236,7 @@ export function HomeScreen() {
         />
       ))}
 
-      {/* Upcoming plugins have no screen yet; the Tools screen lists built tools only. */}
-      <ToolRow
-        icon="moreTools"
-        title="More tools"
-        subtitle="Future tools arrive as plugins"
-        status="upcoming"
-      />
+      <MoreToolsRow />
 
       <ArrangeSheet
         visible={arranging}
