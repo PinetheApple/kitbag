@@ -1,6 +1,7 @@
 import '@/runtime/cryptoRuntime';
 import '@/runtime/metronomeRuntime';
 import '@/runtime/libraryRuntime';
+import '@/runtime/practiceRuntime';
 import '@/runtime/songLibraryRuntime';
 import '@/runtime/stemPlayerRuntime';
 import '@/runtime/tunerRuntime';
@@ -8,8 +9,11 @@ import '@/runtime/lastToolRuntime';
 import '@/runtime/homeLayoutRuntime';
 import '@/runtime/swipeHintRuntime';
 import '@/runtime/appearanceRuntime';
+import '@/runtime/countInRuntime';
 import '@/runtime/transportRuntime';
 import '@/runtime/keepAwakeRuntime';
+import '@/settings/rigRuntime';
+import '@/settings/toolsRuntime';
 
 import '@/global.css';
 
@@ -25,12 +29,13 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { VariableContextProvider } from 'nativewind';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import {
   initialWindowMetrics,
   SafeAreaProvider,
+  useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 import { StyleSheet, useColorScheme } from 'react-native';
 
@@ -92,13 +97,18 @@ function ThemedRoot() {
     <GestureHandlerRootView style={rootStyle}>
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
         <KeyboardProvider navigationBarTranslucent statusBarTranslucent>
-          <SheetHost>
+          <InsetSheetHost>
             <Stack screenOptions={screenOptions} />
-          </SheetHost>
+          </InsetSheetHost>
         </KeyboardProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
+}
+
+function InsetSheetHost({ children }: { readonly children: ReactNode }) {
+  const insets = useSafeAreaInsets();
+  return <SheetHost topInset={insets.top}>{children}</SheetHost>;
 }
 
 const styles = StyleSheet.create({

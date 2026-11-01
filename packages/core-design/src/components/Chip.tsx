@@ -13,7 +13,7 @@ import { Pressable, Text, View, type LayoutChangeEvent } from 'react-native';
 import type { IconName } from '../icons.ts';
 import { inset, radius, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
-import { createThemedStyles } from '../ThemeProvider.tsx';
+import { createThemedStyles, useTheme } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
 import {
   hitBoxStyle,
@@ -107,7 +107,7 @@ const useStyles = createThemedStyles((theme) => ({
     flexShrink: 1,
   },
   labelActive: {
-    color: theme.color.accent,
+    color: theme.color[theme.accentInk],
   },
   largeChip: {
     minHeight: size.chipLarge,
@@ -131,7 +131,8 @@ function ChipFace({
   large = false,
 }: ChipFaceProps) {
   const styles = useStyles();
-  const glyphColor = active ? 'accent' : 'text2';
+  const theme = useTheme();
+  const glyphColor = active ? theme.accentInk : 'text2';
   const glyphSize = large ? 'chipLarge' : 'chip';
   return (
     <>
@@ -169,6 +170,7 @@ export interface ChipProps {
    * applies to both, an omitted side has no neighbour. */
   readonly neighbourGapDp?: number | NeighbourGaps;
   readonly size?: ChipSize;
+  readonly disabled?: boolean;
 }
 
 export function Chip({
@@ -182,6 +184,7 @@ export function Chip({
   accessibilityLabel,
   neighbourGapDp,
   size: chipSize = 'default',
+  disabled = false,
 }: ChipProps) {
   const styles = useStyles();
   const id = useId();
@@ -212,7 +215,8 @@ export function Chip({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
-      accessibilityState={{ selected: active }}
+      accessibilityState={{ selected: active, disabled }}
+      disabled={disabled}
       style={[styles.chipHit, hitBox, fill && styles.fillHit]}
       {...(fill ? {} : layoutProps)}
       onPress={onPress}

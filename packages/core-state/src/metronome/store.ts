@@ -36,6 +36,7 @@ import {
   type PerAccentSounds,
   type RampConfig,
 } from './config.ts';
+import { DEFAULT_COUNT_IN_SCOPE, type CountInScope } from './countInScope.ts';
 import { patternActions } from './patternActions.ts';
 import {
   IDLE_PRACTICE,
@@ -76,6 +77,7 @@ export interface MetronomeConfig {
   readonly ramp: RampConfig;
   readonly barMute: BarMuteConfig;
   readonly countIn: CountInConfig;
+  readonly countInScope: CountInScope;
   readonly running: boolean;
   readonly practice: PracticeClock;
 }
@@ -85,6 +87,7 @@ export interface MetronomeActions {
   nudgeTempo: (delta: number) => void;
   resetPractice: () => void;
   syncTempoFromEngine: () => void;
+  readTempo: () => number;
   setBeats: (beatsPerBar: number, denominator: number) => void;
   setSubdivision: (subdivision: number) => void;
   cycleAccent: (beat: number) => void;
@@ -102,6 +105,7 @@ export interface MetronomeActions {
   setRamp: (config: RampConfig) => void;
   setBarMute: (config: BarMuteConfig) => void;
   setCountIn: (config: CountInConfig) => void;
+  setCountInScope: (scope: CountInScope) => void;
   start: () => void;
   stop: () => void;
   pause: () => void;
@@ -150,6 +154,7 @@ function initialConfig(): MetronomeConfig {
       distinct: true,
       sound: KB_DEFAULT_COUNT_IN_SOUND,
     },
+    countInScope: DEFAULT_COUNT_IN_SCOPE,
     running: false,
     practice: IDLE_PRACTICE,
   };
@@ -249,7 +254,7 @@ function tempoActions(
   tempo: EngineTempo,
 ): Pick<
   MetronomeActions,
-  'setTempo' | 'nudgeTempo' | 'syncTempoFromEngine' | 'setRamp'
+  'setTempo' | 'nudgeTempo' | 'syncTempoFromEngine' | 'readTempo' | 'setRamp'
 > {
   return {
     setTempo: (bpm) => {
@@ -263,6 +268,8 @@ function tempoActions(
     },
 
     syncTempoFromEngine: tempo.sync,
+
+    readTempo: tempo.read,
 
     setRamp: (config) => {
       const ramp = normalizeRamp(config);
@@ -352,6 +359,9 @@ export function createMetronomeStore(
           holds--;
           release();
         };
+      },
+      setCountInScope: (countInScope) => {
+        set({ countInScope });
       },
       resetPractice: () => {
         set((s) => ({ practice: resetPracticeClock(s.practice, now()) }));

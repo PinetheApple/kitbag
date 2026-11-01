@@ -13,13 +13,19 @@ import { removeSheet, upsertSheet, type SheetSlot } from '../sheetSlots.ts';
 interface SheetPortal {
   readonly show: (id: string, node: ReactNode) => void;
   readonly hide: (id: string) => void;
+  readonly topInset: number;
+}
+
+export interface SheetHostProps {
+  readonly topInset: number;
+  readonly children: ReactNode;
 }
 
 const SheetPortalContext = createContext<SheetPortal | null>(null);
 
 // Sheets draw here, over the whole app, instead of in an RN Modal: a Modal is
 // its own Android window, which sizes itself wrong for the keyboard (#142).
-export function SheetHost({ children }: { readonly children: ReactNode }) {
+export function SheetHost({ topInset, children }: SheetHostProps) {
   const [slots, setSlots] = useState<readonly SheetSlot[]>([]);
   const show = useCallback((id: string, node: ReactNode) => {
     setSlots((current) => upsertSheet(current, id, node));
@@ -27,7 +33,10 @@ export function SheetHost({ children }: { readonly children: ReactNode }) {
   const hide = useCallback((id: string) => {
     setSlots((current) => removeSheet(current, id));
   }, []);
-  const portal = useMemo(() => ({ show, hide }), [show, hide]);
+  const portal = useMemo(
+    () => ({ show, hide, topInset }),
+    [show, hide, topInset],
+  );
   return (
     <SheetPortalContext.Provider value={portal}>
       {children}

@@ -21,6 +21,7 @@ import {
   ofText,
   practiceBadgeCount,
   restLegend,
+  spokenArmedSummary,
   rampNextText,
   rampRemainingText,
   rowSlot,
@@ -67,8 +68,20 @@ describe('armed practice summary', () => {
       barMute: { ...all.barMute, enabled: true },
     };
     expect(armedSummary(everything)).toBe(
-      'Ramp 100 → 140 · Play 2, mute 2 · Count-in 1 bar · Poly 3:4',
+      'Ramp 100 → 140 · Mute 2+2 · Count-in 1 bar · Poly 3:4',
     );
+  });
+
+  it('spells the mute cycle out for a screen reader', () => {
+    const everything = {
+      ...ARMED,
+      polyEnabled: true,
+      barMute: { ...ARMED.barMute, enabled: true },
+    };
+    expect(spokenArmedSummary(everything)).toBe(
+      'Ramp 100 → 140 · Mute bars: play 2, mute 2 · Count-in 1 bar · Poly 3:4',
+    );
+    expect(spokenArmedSummary(OFF)).toBe(NOTHING_ARMED);
   });
 
   it('reads an explicit poly cycle by its own count', () => {
@@ -115,9 +128,7 @@ describe('after count-in summary', () => {
       polyEnabled: true,
       barMute: { ...ARMED.barMute, enabled: true },
     };
-    expect(afterCountInSummary(everything)).toBe(
-      'Ramp 100 → 140 · Play 2, mute 2',
-    );
+    expect(afterCountInSummary(everything)).toBe('Ramp 100 → 140 · Mute 2+2');
     expect(afterCountInSummary(OFF)).toBe('');
   });
 });

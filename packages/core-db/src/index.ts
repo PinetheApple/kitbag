@@ -6,7 +6,16 @@ export {
   type SongPresetRepository,
 } from './client';
 export type { Preferences } from './preferences';
-export type { PracticeRepository, PracticeStats } from './practice-repository';
+export { COUNT_IN_PREFERENCE_KEYS } from './count-in-preferences';
+export type {
+  NewPracticeSession,
+  PracticeRepository,
+  PracticeStats,
+} from './practice-repository';
+export type {
+  RouteLatency,
+  RouteLatencyRepository,
+} from './route-latency-repository';
 export type {
   BarMark,
   BundleStem,
@@ -45,6 +54,7 @@ export type {
 export {
   CATEGORIES,
   DEFAULT_IMPORT_CATEGORIES,
+  MS_PER_SECOND,
   type Category,
   type Conflict,
   type ImportFailure,

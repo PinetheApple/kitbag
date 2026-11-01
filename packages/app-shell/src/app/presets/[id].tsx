@@ -11,6 +11,8 @@ import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { TOOL_ID } from '@/home/registry';
+import { gated } from '@/home/ToolGate';
 import { useLibraryRoutes } from '@/runtime/libraryRoutes';
 
 function useDiscardGuard() {
@@ -35,7 +37,7 @@ function useDiscardGuard() {
   return { pending: blocked !== null, setDirty, keep, discard };
 }
 
-export default function PresetEditorRoute() {
+function PresetEditorRoute() {
   const insets = useSafeAreaInsets();
   const routes = useLibraryRoutes();
   const guard = useDiscardGuard();
@@ -58,3 +60,5 @@ export default function PresetEditorRoute() {
     </>
   );
 }
+
+export default gated(TOOL_ID.metronome, PresetEditorRoute);

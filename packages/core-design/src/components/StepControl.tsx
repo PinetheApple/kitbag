@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Pressable,
   Text,
@@ -8,6 +8,7 @@ import {
 
 import type { IconName } from '../icons.ts';
 import { iconSizes, inset, radius, size, space, textRoles } from '../roles.ts';
+import { createStepRepeat, STEP_REPEAT } from '../stepRepeat.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import {
@@ -54,6 +55,8 @@ export interface StepControlProps {
   readonly onValuePress?: () => void;
   readonly variant?: StepControlVariant;
   readonly accented?: boolean;
+  readonly repeatOnHold?: boolean;
+  readonly wide?: boolean;
   /** Gaps to the controls around the cluster, for the keys' 48dp hit boxes;
    * a number applies to every side, an omitted side has no neighbour. */
   readonly neighbourGapDp?: number | NeighbourGaps;
@@ -187,7 +190,7 @@ const useStyles = createThemedStyles((theme) => ({
     color: theme.color.text2,
   },
   badgeValueAccented: {
-    color: theme.color.accent,
+    color: theme.color[theme.accentInk],
   },
   inlineCluster: {
     flexDirection: 'row',
@@ -212,6 +215,9 @@ const useStyles = createThemedStyles((theme) => ({
   inlineValueBox: {
     minWidth: size.stepValueMinWidth,
     alignItems: 'center',
+  },
+  wideValueBox: {
+    minWidth: size.stepValueWideMinWidth,
   },
   tappableValue: {
     alignSelf: 'stretch',
@@ -262,6 +268,8 @@ export function StepControl({
   onValuePress,
   variant = 'badge',
   accented = false,
+  repeatOnHold = false,
+  wide = false,
   neighbourGapDp = space.stepKeyGap,
 }: StepControlProps) {
   const styles = useStyles();
@@ -280,6 +288,22 @@ export function StepControl({
   const handleIncrement = useCallback(() => {
     onStep(STEP_UP);
   }, [onStep]);
+  const [repeater] = useState(createStepRepeat);
+  useEffect(() => repeater.release, [repeater]);
+  const holdDecrement = useCallback(() => {
+    repeater.hold(handleDecrement);
+  }, [repeater, handleDecrement]);
+  const holdIncrement = useCallback(() => {
+    repeater.hold(handleIncrement);
+  }, [repeater, handleIncrement]);
+  const repeatProps = (onHold: () => void) =>
+    repeatOnHold
+      ? {
+          onLongPress: onHold,
+          onPressOut: repeater.release,
+          delayLongPress: STEP_REPEAT.delayMs,
+        }
+      : {};
 
   const handleAccessibilityAction = useCallback(
     (event: AccessibilityActionEvent) => {
@@ -291,9 +315,14 @@ export function StepControl({
     [onStep, onValuePress],
   );
 
-  const key = (glyph: IconName, hitBox: HitBox, onPress: () => void) =>
+  const key = (
+    glyph: IconName,
+    hitBox: HitBox,
+    onPress: () => void,
+    onHold: () => void,
+  ) =>
     inline ? (
-      <Pressable style={hitBox} onPress={onPress}>
+      <Pressable style={hitBox} onPress={onPress} {...repeatProps(onHold)}>
         <View style={[styles.inlineKey, large && styles.largeKey]}>
           <InlineIcon
             name={glyph}
@@ -306,7 +335,7 @@ export function StepControl({
         </View>
       </Pressable>
     ) : (
-      <Pressable style={hitBox} onPress={onPress}>
+      <Pressable style={hitBox} onPress={onPress} {...repeatProps(onHold)}>
         <View style={styles.badgeKey}>
           <InlineIcon name={glyph} style={styles.badgeKeyText} />
         </View>
@@ -314,7 +343,7 @@ export function StepControl({
     );
 
   const valueBoxStyle = inline
-    ? styles.inlineValueBox
+    ? [styles.inlineValueBox, wide && styles.wideValueBox]
     : [styles.badgeValueBox, accented && styles.badgeValueBoxAccented];
   const valueNumber = (
     <Text
@@ -354,7 +383,7 @@ export function StepControl({
           : styles.badgeCluster
       }
     >
-      {key('decrease', hitBoxes.decrement, handleDecrement)}
+      {key('decrease', hitBoxes.decrement, handleDecrement, holdDecrement)}
       {valueTappable ? (
         <Pressable
           style={[
@@ -368,7 +397,7 @@ export function StepControl({
       ) : (
         <View style={[valueBoxStyle, styles.inertValue]}>{valueContent}</View>
       )}
-      {key('increase', hitBoxes.increment, handleIncrement)}
+      {key('increase', hitBoxes.increment, handleIncrement, holdIncrement)}
     </View>
   );
 }

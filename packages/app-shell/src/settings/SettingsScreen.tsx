@@ -4,12 +4,14 @@ import {
   EditRow,
   EditSwitchRow,
   EditValue,
+  ListRow,
+  rowLabel,
   SectionHeader,
   SegmentedControl,
   type SegmentOption,
 } from '@kitbag/core-design';
 import { getAppVersion } from '@kitbag/core-native';
-import { useAppearance, type ThemeChoice } from '@kitbag/core-state';
+import { useAppearance, useTools, type ThemeChoice } from '@kitbag/core-state';
 import { useCallback, useMemo, useReducer } from 'react';
 import { Linking, Platform } from 'react-native';
 
@@ -21,6 +23,7 @@ import {
 } from './about.ts';
 import { formatAppVersion } from './appVersion.ts';
 import { formatPracticeSummary } from './practiceText.ts';
+import { RigSection } from './RigSection.tsx';
 import { SettingsFrame } from './SettingsFrame.tsx';
 import { StorageSheets } from './StorageSheet.tsx';
 import {
@@ -29,6 +32,7 @@ import {
 } from './storageSheetFlow.ts';
 import { STORAGE_LABEL, storageSummary } from './storageText.ts';
 import { usePracticeStats } from './usePracticeStats.ts';
+import { TOOLS_TITLE, toolsOnSummary } from './toolsText.ts';
 import { useStorage } from './useStorage.ts';
 
 const THEME_OPTIONS: readonly SegmentOption<ThemeChoice>[] = [
@@ -40,6 +44,7 @@ const THEME_OPTIONS: readonly SegmentOption<ThemeChoice>[] = [
 const THEME_CONTROL_GAPS = { bottom: EDIT_ROW_PRESSABLE_GAP };
 
 const LICENCE_LABEL = 'Licence';
+
 const SOURCE_ROW_LABEL = 'Source & issues';
 
 function openUrl(url: string): void {
@@ -58,6 +63,22 @@ function PracticeValue() {
       {`${lead} `}
       <EditValue muted>{detail}</EditValue>
     </EditValue>
+  );
+}
+
+function ToolsSection({ onOpenTools }: { readonly onOpenTools: () => void }) {
+  const summary = toolsOnSummary(useTools((s) => s.off));
+  return (
+    <>
+      <SectionHeader label={TOOLS_TITLE} />
+      <ListRow
+        icon="settings"
+        title={TOOLS_TITLE}
+        subtitle={summary}
+        accessibilityLabel={rowLabel(TOOLS_TITLE, summary)}
+        onPress={onOpenTools}
+      />
+    </>
   );
 }
 
@@ -202,14 +223,20 @@ function AboutSection({
 export interface SettingsScreenProps {
   readonly onBack: () => void;
   readonly onOpenAttributions: () => void;
+  readonly onOpenCalibration: () => void;
+  readonly onOpenTools: () => void;
 }
 
 export function SettingsScreen({
   onBack,
   onOpenAttributions,
+  onOpenCalibration,
+  onOpenTools,
 }: SettingsScreenProps) {
   return (
     <SettingsFrame title="Settings" onBack={onBack}>
+      <RigSection onOpenCalibration={onOpenCalibration} />
+      <ToolsSection onOpenTools={onOpenTools} />
       <DataSection />
       <AppearanceSection />
       <AboutSection onOpenAttributions={onOpenAttributions} />

@@ -48,7 +48,7 @@ function CountSquare({ beat, side, currentBeat }: SquareProps) {
     if (state === 'done') {
       return { backgroundColor: color.surface3, borderColor: color.surface3 };
     }
-    return { backgroundColor: TRANSPARENT, borderColor: color.text3 };
+    return { backgroundColor: TRANSPARENT, borderColor: color.decor };
   });
   const ink = useAnimatedStyle(() => {
     const state = countSquare(beat, currentBeat.value);

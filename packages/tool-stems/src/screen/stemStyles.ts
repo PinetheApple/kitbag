@@ -95,5 +95,5 @@ export const useStemStyles = createThemedStyles((theme) => ({
     textAlign: 'center',
   },
   levelTextZero: { color: theme.color.text3 },
-  levelTextOpen: { color: theme.color.accent },
+  levelTextOpen: { color: theme.color[theme.accentInk] },
 }));

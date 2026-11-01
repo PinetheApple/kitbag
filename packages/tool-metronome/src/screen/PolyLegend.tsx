@@ -47,7 +47,7 @@ const useLegendStyles = createThemedStyles((theme) => {
       height: metronome.polyLegendBracketHeight,
       borderWidth: metronome.legendSwatchBorder,
       borderTopWidth: 0,
-      borderColor: theme.color.text3,
+      borderColor: theme.color.decor,
       borderBottomLeftRadius: metronome.polyLegendBracketRadius,
       borderBottomRightRadius: metronome.polyLegendBracketRadius,
     },
