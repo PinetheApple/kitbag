@@ -2,6 +2,7 @@ import {
   Icon,
   IconGlyph,
   iconSizes,
+  isTextScaled,
   LiveText,
   useReduceMotionValue,
   useTheme,
@@ -9,14 +10,18 @@ import {
 import { KB_COUNT_IN_BARS } from '@kitbag/core-native';
 import { BPM_BOUNDS, type RampConfig } from '@kitbag/core-state';
 import { useMemo } from 'react';
-import { Text, View } from 'react-native';
+import { Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useDerivedValue,
   type SharedValue,
 } from 'react-native-reanimated';
 
-import { statusStackHeight } from '../logic/belowTempo.ts';
+import {
+  statusRowHeight,
+  statusStackHeight,
+  statusTextLines,
+} from '../logic/belowTempo.ts';
 import { rampProgressFill, rampTrackShown } from '../logic/rampProgress.ts';
 import {
   afterCountInSummary,
@@ -61,6 +66,7 @@ interface RampStatusProps {
 
 function RampStatus({ rows, frame, ramp }: RampStatusProps) {
   const styles = useStatusStyles();
+  const scaled = isTextScaled(useWindowDimensions().fontScale);
   const { rampNextBpm, rampRemaining, rampStepProgress } = frame;
   const { unit, interval } = ramp;
   const still = useReduceMotionValue();
@@ -99,7 +105,9 @@ function RampStatus({ rows, frame, ramp }: RampStatusProps) {
         align="left"
         style={styles.detail}
       />
-      <Text style={styles.meta}>{`target ${String(ramp.targetBpm)}`}</Text>
+      <Text style={[styles.meta, scaled && styles.ownLine]}>
+        {`target ${String(ramp.targetBpm)}`}
+      </Text>
       <Animated.View style={[styles.progressTrack, track]}>
         <Animated.View style={[styles.progress, progress]} />
       </Animated.View>
@@ -174,15 +182,20 @@ function AfterCountInStatus({
   readonly summary: string;
 }) {
   const styles = useStatusStyles();
+  const lines = statusTextLines(useWindowDimensions().fontScale);
   return (
     <StatusVariant
       rows={rows}
       shown="afterCountIn"
       style={[styles.live, styles.afterCountIn]}
+      wrapsWhenScaled={false}
     >
       <Icon name="practiceTools" size="statusLive" color="text2" />
       <Text style={[styles.lead, styles.afterCountInText]}>Then</Text>
-      <Text style={[styles.meta, styles.pushRight]} numberOfLines={1}>
+      <Text
+        style={[styles.meta, styles.pushRight, styles.shrink]}
+        numberOfLines={lines}
+      >
         {summary}
       </Text>
     </StatusVariant>
@@ -197,6 +210,7 @@ interface StatusStackProps {
 
 export function StatusStack({ frame, settings, running }: StatusStackProps) {
   const styles = useStatusStyles();
+  const { fontScale } = useWindowDimensions();
   const { countingIn, barMutePosition, rampState } = frame;
   const afterCountIn = afterCountInSummary(settings);
   const hasAfterCountIn = afterCountIn !== '';
@@ -212,8 +226,12 @@ export function StatusStack({ frame, settings, running }: StatusStackProps) {
   );
   const summary = armedSummary(settings);
   const stack = useMemo(
-    () => ({ height: statusStackHeight(running) }),
-    [running],
+    () => ({ height: statusStackHeight(running, fontScale) }),
+    [running, fontScale],
+  );
+  const restRow = useMemo(
+    () => ({ height: statusRowHeight(fontScale) }),
+    [fontScale],
   );
   return (
     <View
@@ -224,9 +242,12 @@ export function StatusStack({ frame, settings, running }: StatusStackProps) {
       pointerEvents="none"
     >
       {running ? null : (
-        <View style={styles.rest}>
+        <View style={[styles.rest, restRow]}>
           <Icon name="practiceTools" size="statusRest" color="text2" />
-          <Text style={styles.restText} numberOfLines={1}>
+          <Text
+            style={styles.restText}
+            numberOfLines={statusTextLines(fontScale)}
+          >
             {summary}
           </Text>
         </View>

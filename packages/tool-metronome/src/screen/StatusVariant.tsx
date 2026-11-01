@@ -1,11 +1,16 @@
-import type { ReactNode } from 'react';
-import type { StyleProp, ViewStyle } from 'react-native';
+import { isTextScaled } from '@kitbag/core-design';
+import { useMemo, type ReactNode } from 'react';
+import {
+  useWindowDimensions,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import Animated, {
   useAnimatedStyle,
   type SharedValue,
 } from 'react-native-reanimated';
 
-import { STATUS_ROW_PITCH } from '../logic/belowTempo.ts';
+import { statusRowHeight, statusRowPitch } from '../logic/belowTempo.ts';
 import {
   NO_SLOT,
   rowSlot,
@@ -18,6 +23,7 @@ interface StatusVariantProps {
   readonly rows: SharedValue<StatusRows>;
   readonly shown: StatusRow;
   readonly style: StyleProp<ViewStyle>;
+  readonly wrapsWhenScaled?: boolean;
   readonly children: ReactNode;
 }
 
@@ -25,20 +31,28 @@ export function StatusVariant({
   rows,
   shown,
   style,
+  wrapsWhenScaled = true,
   children,
 }: StatusVariantProps) {
   const styles = useStatusStyles();
+  const { fontScale } = useWindowDimensions();
+  const pitch = statusRowPitch(fontScale);
+  const frame = useMemo(
+    () => ({ height: statusRowHeight(fontScale) }),
+    [fontScale],
+  );
+  const wraps = wrapsWhenScaled && isTextScaled(fontScale);
   const placed = useAnimatedStyle(() => {
     const slot = rowSlot(rows.value, shown);
     return {
       opacity: slot === NO_SLOT ? 0 : 1,
-      transform: [
-        { translateY: slot === NO_SLOT ? 0 : slot * STATUS_ROW_PITCH },
-      ],
+      transform: [{ translateY: slot === NO_SLOT ? 0 : slot * pitch }],
     };
   });
   return (
-    <Animated.View style={[styles.variant, style, placed]}>
+    <Animated.View
+      style={[styles.variant, style, frame, wraps && styles.wrapped, placed]}
+    >
       {children}
     </Animated.View>
   );

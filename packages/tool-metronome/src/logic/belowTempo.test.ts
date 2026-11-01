@@ -7,6 +7,10 @@ import {
   beatLinePitch,
   belowTempoReserve,
   DOT_METRICS,
+  statusRowHeight,
+  statusRowPitch,
+  statusStackHeight,
+  statusTextLines,
   tallestBelowTempo,
   type BelowTempoRoom,
 } from './belowTempo.ts';
@@ -14,7 +18,7 @@ import { beatDotSize, layoutBeatLeds, MAX_DOTS_PER_LINE } from './ledLayout.ts';
 
 const SMALL_PHONE_DOTS_WIDTH = 360 - space.screenInset * 2;
 const LARGE_PHONE_DOTS_WIDTH = 411 - space.screenInset * 2;
-const FONT_SCALES = [1, 1.3] as const;
+const FONT_SCALES = [1, 1.3, 2] as const;
 const BEAT_COUNTS = Array.from({ length: KB_MAX_BEATS }, (_u, i) => i + 1);
 
 // Where the dots start and where the body ends above the transport, at fontScale
@@ -62,8 +66,9 @@ function renderedRoomy(shape: Rendered): number {
     if (shape.labelAbove) dots += label + metronome.beatMarkerGap;
   }
   const legend = metronome.legendTop + metronome.legendRow * scale;
-  const stopped = legend + metronome.statusRow;
-  const running = metronome.statusRow * 2 + metronome.statusRowGap;
+  const row = metronome.statusRow * scale;
+  const stopped = legend + row;
+  const running = row * 2 + metronome.statusRowGap;
   return dots + Math.max(stopped, running);
 }
 
@@ -140,5 +145,35 @@ describe('beatLinePitch', () => {
         beatDotsHeight(TWELVE_EIGHT, { ...SMALL_COMPACT, fontScale }),
       ).toBeCloseTo(2 * pitch - metronome.beatDotLineGapCompact);
     }
+  });
+});
+
+describe('the status stack', () => {
+  it('keeps the drawn row height at the default text size', () => {
+    expect(statusRowHeight(1)).toBe(metronome.statusRow);
+    expect(statusRowHeight(0.85)).toBe(metronome.statusRow);
+  });
+
+  it('grows each row with the text so a wrapped second line fits', () => {
+    expect(statusRowHeight(2)).toBe(metronome.statusRow * 2);
+    expect(statusRowPitch(2)).toBe(
+      metronome.statusRow * 2 + metronome.statusRowGap,
+    );
+  });
+
+  it('stacks two grown rows while running and one while stopped', () => {
+    for (const fontScale of FONT_SCALES) {
+      const row = statusRowHeight(fontScale);
+      expect(statusStackHeight(false, fontScale)).toBe(row);
+      expect(statusStackHeight(true, fontScale)).toBe(
+        statusRowPitch(fontScale) + row,
+      );
+    }
+  });
+
+  it('lets status text take a second line once the text grows', () => {
+    expect(statusTextLines(1)).toBe(1);
+    expect(statusTextLines(1.3)).toBe(2);
+    expect(statusTextLines(2)).toBe(2);
   });
 });

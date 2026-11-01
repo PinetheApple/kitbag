@@ -21,10 +21,20 @@ export const useStatusStyles = createThemedStyles((theme) => ({
     top: 0,
     right: 0,
     left: 0,
-    height: metronome.statusRow,
+  },
+  wrapped: {
+    flexWrap: 'wrap',
+    alignContent: 'center',
+    rowGap: 0,
+  },
+  ownLine: {
+    flexBasis: '100%',
+    textAlign: 'right',
+  },
+  shrink: {
+    flexShrink: 1,
   },
   rest: {
-    height: metronome.statusRow,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
