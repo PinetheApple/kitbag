@@ -1,20 +1,12 @@
-import {
-  KB_SUBDIVISION_BOUNDS,
-  KB_VOLUME_BOUNDS,
-  type OutputRoute,
-} from '@kitbag/core-native';
+import type { OutputRoute } from '@kitbag/core-native';
 import { describe, expect, it } from 'vitest';
 
 import {
   accentLabels,
-  outputName,
-  outputStatus,
-  previewLedSize,
+  outputLine,
   rigChip,
   rigClickHint,
   routeRows,
-  VOLUME_SLIDER,
-  volumeOfFraction,
   volumePercent,
 } from './rigText.ts';
 
@@ -66,20 +58,7 @@ describe('rig click chip', () => {
   });
 });
 
-describe('click volume slider', () => {
-  it('puts unity at the centre of the range', () => {
-    expect(VOLUME_SLIDER.detent.at).toBe(0.5);
-    expect(volumeOfFraction(VOLUME_SLIDER.detent.at)).toBe(1);
-  });
-
-  it('catches within 3% of the range either side of unity', () => {
-    expect(VOLUME_SLIDER.detent.reach * KB_VOLUME_BOUNDS.max).toBeCloseTo(0.06);
-  });
-
-  it('turns red only past 150%', () => {
-    expect(volumeOfFraction(VOLUME_SLIDER.warnAbove)).toBe(1.5);
-  });
-
+describe('click volume readout', () => {
   it('reads out a whole percentage, red or not', () => {
     expect(volumePercent(1)).toBe('100%');
     expect(volumePercent(1.7)).toBe('170%');
@@ -87,30 +66,35 @@ describe('click volume slider', () => {
   });
 });
 
-describe('accent row preview', () => {
-  it('keeps the design’s LEDs while they fit on one line', () => {
-    expect(previewLedSize(4)).toBe('small');
-  });
-
-  it('shrinks the LEDs so 16 slots still fit on one line', () => {
-    expect(previewLedSize(KB_SUBDIVISION_BOUNDS.max)).toBe('tiny');
-  });
-});
+const GUESSED: OutputRoute = { ...HEADPHONES, certain: false };
 
 describe('output row', () => {
   it('names the speaker and the jack by kind and other routes by name', () => {
-    expect(outputName(SPEAKER)).toBe('Phone speaker');
-    expect(outputName(WIRED)).toBe('Wired headphones · 3.5 mm');
-    expect(outputName(HEADPHONES)).toBe('WH-1000XM4');
-  });
-
-  it('says the output is unknown when the route could not be read', () => {
-    expect(outputName(null)).toBe('Unknown output');
+    expect(outputLine(SPEAKER, false).name).toBe('Phone speaker');
+    expect(outputLine(WIRED, false).name).toBe('Wired headphones · 3.5 mm');
+    expect(outputLine(HEADPHONES, false).name).toBe('WH-1000XM4');
   });
 
   it('says whether the live route has a stored offset', () => {
-    expect(outputStatus(true)).toBe('· calibrated');
-    expect(outputStatus(false)).toBe('· not calibrated');
+    expect(outputLine(SPEAKER, true)).toEqual({
+      name: 'Phone speaker',
+      status: ' · calibrated',
+    });
+    expect(outputLine(SPEAKER, false).status).toBe(' · not calibrated');
+  });
+
+  it('says a step is not saved while the route is guessed', () => {
+    expect(outputLine(GUESSED, true)).toEqual({
+      name: 'WH-1000XM4',
+      status: ' · not saved',
+    });
+  });
+
+  it('says the output is unknown and a step is not saved when the route could not be read', () => {
+    expect(outputLine(null, false)).toEqual({
+      name: 'Unknown output',
+      status: ' · not saved',
+    });
   });
 });
 

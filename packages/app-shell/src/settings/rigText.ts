@@ -1,40 +1,28 @@
-import {
-  rig,
-  size,
-  space,
-  type IconName,
-  type LedSize,
-} from '@kitbag/core-design';
-import {
-  KB_VOLUME_BOUNDS,
-  type OutputRoute,
-  type OutputRouteKind,
-} from '@kitbag/core-native';
+import type { IconName } from '@kitbag/core-design';
+import type { OutputRoute } from '@kitbag/core-native';
 import type { RouteLatency } from '@kitbag/core-db';
 import {
   accentedSlots,
   formatOffsetMs,
-  isOutputRouteKind,
   isSounding,
   ON_BEAT_SLOT,
   RIG_CLICK_BPM,
   routeDetail,
   routeTitle,
+  storedRoute,
   type RigClickPhase,
 } from '@kitbag/core-state';
 
 import { SEPARATOR } from './separator.ts';
+import { NOT_SAVED } from './settingsLabels.ts';
 
 const PERCENT = 100;
-const UNITY_VOLUME = 1;
-const DETENT_REACH_OF_RANGE = 0.03;
-const WARN_ABOVE_VOLUME = 1.5;
-const ACCESSIBILITY_STEP_PERCENT = 1;
 const JOIN = ` ${SEPARATOR} `;
 
-const OTHER_KIND: OutputRouteKind = 'other';
 const IN_USE_NOW = 'in use now';
 const UNKNOWN_OUTPUT = 'Unknown output';
+const CALIBRATED = 'calibrated';
+const NOT_CALIBRATED = 'not calibrated';
 const NEVER_CALIBRATED = 'never calibrated';
 const BEAT_SLOT = 'Beat';
 const ACCENT_SLOT = 'accent';
@@ -42,23 +30,6 @@ const NORMAL_SLOT = 'normal';
 
 const NEEDS_STOPPED_METRONOME = 'Stop the metronome to hear the rig click';
 const CLICK_FAILED = 'The click could not start; try again';
-
-export const VOLUME_SLIDER = {
-  detent: {
-    at: UNITY_VOLUME / KB_VOLUME_BOUNDS.max,
-    reach: DETENT_REACH_OF_RANGE,
-  },
-  warnAbove: WARN_ABOVE_VOLUME / KB_VOLUME_BOUNDS.max,
-  step: ACCESSIBILITY_STEP_PERCENT / PERCENT / KB_VOLUME_BOUNDS.max,
-} as const;
-
-export function volumeOfFraction(fraction: number): number {
-  return fraction * KB_VOLUME_BOUNDS.max;
-}
-
-export function fractionOfVolume(volume: number): number {
-  return volume / KB_VOLUME_BOUNDS.max;
-}
 
 export function volumePercent(volume: number): string {
   return `${String(Math.round(volume * PERCENT))}%`;
@@ -79,15 +50,6 @@ export function rigChip(phase: RigClickPhase): RigChip {
   };
 }
 
-const ledsWidth = (count: number, led: number, gap: number) =>
-  count * led + (count - 1) * gap;
-
-export function previewLedSize(count: number): LedSize {
-  return ledsWidth(count, size.ledSmall, space.ledGap) <= rig.accentPreviewWidth
-    ? 'small'
-    : 'tiny';
-}
-
 export function rigClickHint(
   phase: RigClickPhase,
   metronomeRunning: boolean,
@@ -97,25 +59,30 @@ export function rigClickHint(
   return null;
 }
 
-export function outputName(route: OutputRoute | null): string {
-  if (route === null) return UNKNOWN_OUTPUT;
+function routeName(route: OutputRoute): string {
   const detail = routeDetail(route);
   return route.kind === 'wired' && detail !== null
     ? `${routeTitle(route)}${JOIN}${detail}`
     : routeTitle(route);
 }
 
-export function outputStatus(calibrated: boolean): string {
-  return `${SEPARATOR} ${calibrated ? 'calibrated' : 'not calibrated'}`;
+function routeStatus(live: OutputRoute | null, calibrated: boolean): string {
+  if (live?.certain !== true) return NOT_SAVED;
+  return calibrated ? CALIBRATED : NOT_CALIBRATED;
 }
 
-export function storedRoute(row: RouteLatency): OutputRoute {
-  const kind = row.kind ?? OTHER_KIND;
+export interface OutputLine {
+  readonly name: string;
+  readonly status: string;
+}
+
+export function outputLine(
+  live: OutputRoute | null,
+  calibrated: boolean,
+): OutputLine {
   return {
-    id: row.route,
-    name: row.name ?? '',
-    kind: isOutputRouteKind(kind) ? kind : OTHER_KIND,
-    certain: true,
+    name: live === null ? UNKNOWN_OUTPUT : routeName(live),
+    status: `${JOIN}${routeStatus(live, calibrated)}`,
   };
 }
 
