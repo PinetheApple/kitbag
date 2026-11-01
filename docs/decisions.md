@@ -684,6 +684,26 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   3.5 dp reach overlapped both neighbours. The 3 dp gap is kept. This departs slightly
   from the design files, which draw the overlap. **[recorded — coordinator ruling]**
 
+- **2026-11-01 · Notification permission and the playback card channel (§5.6, §12.5, #277)**
+  — Kitbag asks for the notification permission on the first playback start, not at
+  launch, with one line saying why: the playback card in the shade and on the lock
+  screen. Declining keeps playback working and Kitbag does not ask again on later starts;
+  Settings offers one retry route. The metronome and stem song cards move to DEFAULT
+  importance with no sound, vibration or heads-up, so they show expanded in the shade and
+  on the lock screen instead of under Silent. **[user]** Playback starts at once and the
+  prompt appears alongside it. Back or a tap outside the prompt counts as Not now. The
+  prompt is remembered only once answered, so a prompt cut off by the app closing comes
+  back on the next start. The system dialog counts as asked once it answers, including a
+  first denial; a permission already granted at the first start also counts as asked. A
+  blocked answer opens the app's system notification settings, since it
+  can come back with no dialog shown. Android keeps an existing channel's importance, so
+  the cards move to new channel IDs and the LOW ones are deleted. The ask state (never,
+  declined, asked) is a device-local `preferences` key with no migration and is not
+  carried in a backup. **[recorded]** The Settings row is "Notifications" in Appearance,
+  under Keep screen awake, reading "On" or "Off". Off has a chevron: it shows the system
+  dialog if Kitbag has never shown it, including after Not now on the prompt, and
+  otherwise opens the app's system notification settings. On does nothing. **[coord]**
+
 - **2026-11-02 · Leaving the metronome ends a practice session only when stopped (§5.6, §5.7, #85)**
   — Leaving the screen with the transport stopped and at least 1 s played ends the session,
   and its summary shows on the next metronome visit. Leaving while playing keeps the same

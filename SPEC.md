@@ -771,6 +771,8 @@ the single most RN-specific piece of §5** — see §13.9.
 - **Notification transport** — play/pause, stop, current BPM and signature, then
   the set and song. Not "Kitbag is running". Prev/Next **only** with an active
   setlist — no dead controls.
+- **Shown, silent**: a DEFAULT-importance channel with no sound or vibration; the
+  notification permission is asked on the first playback start (#277).
 - **Ongoing and non-dismissible while running**, which is what a foreground
   service requires and what a musician wants: it is the off switch when the
   phone is in a pocket.

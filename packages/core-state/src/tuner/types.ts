@@ -1,7 +1,7 @@
 import type { NewTuning, Tuning } from '@kitbag/core-db';
 
 import type { TunerCommands } from './commands.ts';
-import type { MicPermission } from './runtime.ts';
+import type { PermissionAnswer } from '../permission.ts';
 
 export type TunerMode =
   | { readonly kind: 'auto' }
@@ -38,7 +38,7 @@ export interface TunerState {
   readonly a4Hz: number | null;
   /** String indices tuned since the screen was entered, ascending. */
   readonly tunedStrings: readonly number[];
-  readonly permission: MicPermission | 'unknown';
+  readonly permission: PermissionAnswer | 'unknown';
   readonly mic: MicStatus;
   readonly customTunings: readonly CustomTuning[];
   readonly commandError: TunerCommandError | null;

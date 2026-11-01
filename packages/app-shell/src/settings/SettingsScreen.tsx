@@ -22,6 +22,10 @@ import {
   SOURCE_URL,
 } from './about.ts';
 import { formatAppVersion } from './appVersion.ts';
+import {
+  NOTIFICATIONS_LABEL,
+  type NotificationRow,
+} from './notificationText.ts';
 import { formatPracticeSummary } from './practiceText.ts';
 import { RigSection } from './RigSection.tsx';
 import { SettingsFrame } from './SettingsFrame.tsx';
@@ -33,6 +37,7 @@ import {
 import { STORAGE_LABEL, storageSummary } from './storageText.ts';
 import { usePracticeStats } from './usePracticeStats.ts';
 import { TOOLS_TITLE, toolsOnSummary } from './toolsText.ts';
+import { useNotificationRow } from './useNotificationRow.ts';
 import { useStorage } from './useStorage.ts';
 
 const THEME_OPTIONS: readonly SegmentOption<ThemeChoice>[] = [
@@ -134,6 +139,24 @@ function DataSection() {
   );
 }
 
+function NotificationsRow({
+  row,
+  onEnable,
+}: {
+  readonly row: NotificationRow;
+  readonly onEnable: () => void;
+}) {
+  return (
+    <EditRow
+      label={NOTIFICATIONS_LABEL}
+      accessibilityLabel={rowLabel(NOTIFICATIONS_LABEL, row.value ?? undefined)}
+      onPress={row.action === 'none' ? undefined : onEnable}
+    >
+      {row.value === null ? null : <EditValue>{row.value}</EditValue>}
+    </EditRow>
+  );
+}
+
 function AppearanceSection() {
   const theme = useAppearance((s) => s.theme);
   const haptics = useAppearance((s) => s.haptics);
@@ -141,6 +164,7 @@ function AppearanceSection() {
   const setTheme = useAppearance((s) => s.setTheme);
   const setHaptics = useAppearance((s) => s.setHaptics);
   const setKeepScreenAwake = useAppearance((s) => s.setKeepScreenAwake);
+  const notifications = useNotificationRow();
   return (
     <>
       <SectionHeader label="Appearance" />
@@ -166,6 +190,12 @@ function AppearanceSection() {
           value={keepScreenAwake}
           onValueChange={setKeepScreenAwake}
         />
+        {notifications.row === null ? null : (
+          <NotificationsRow
+            row={notifications.row}
+            onEnable={notifications.enable}
+          />
+        )}
       </EditGroup>
     </>
   );
