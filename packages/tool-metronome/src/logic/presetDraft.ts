@@ -10,9 +10,11 @@ import {
   DEFAULT_POLY_BEATS,
   DEFAULT_TRAINER_BARS,
   initialAccents,
+  normalizePolyAgainst,
   perAccentSoundsOf,
   rampUnitOf,
   resizeAccents,
+  stepPolyAgainst,
   toBlob,
   type BarMuteConfig,
   type PerAccentSounds,
@@ -37,6 +39,7 @@ export interface PresetDraft {
   readonly polyAccents: readonly KB_ACCENT[];
   readonly polyEnabled: boolean;
   readonly polyBeats: number;
+  readonly polyAgainst: number;
   readonly sound: number;
   readonly perAccentSounds: PerAccentSounds;
   readonly countInBars: number;
@@ -82,6 +85,7 @@ export function draftFrom(preset: SongPreset): PresetDraft {
     polyAccents: polyAccentsOf(preset, polyBeats),
     polyEnabled: preset.polyEnabled,
     polyBeats,
+    polyAgainst: normalizePolyAgainst(preset.polyAgainst, preset.beatsPerBar),
     sound: preset.sound,
     perAccentSounds: perAccentSoundsOf(preset.perAccentSounds, preset.sound),
     countInBars: preset.countInBars,
@@ -121,6 +125,7 @@ export function editFrom(draft: PresetDraft): PresetEdit {
     polyAccents: toBlob(draft.polyAccents),
     polyEnabled: draft.polyEnabled,
     polyBeats: draft.polyBeats,
+    polyAgainst: draft.polyAgainst,
     sound: draft.sound,
     perAccentSounds: toBlob([
       draft.perAccentSounds.normal,
@@ -134,7 +139,8 @@ export function editFrom(draft: PresetDraft): PresetEdit {
 export function withBeats(draft: PresetDraft, delta: number): PresetDraft {
   const beats = clampTo(draft.beatsPerBar + delta, MIN_BEATS, KB_MAX_BEATS);
   const accents = resizeAccents(draft.accents, beats);
-  return { ...draft, beatsPerBar: beats, accents };
+  const polyAgainst = normalizePolyAgainst(draft.polyAgainst, beats);
+  return { ...draft, beatsPerBar: beats, accents, polyAgainst };
 }
 
 export function withPolyBeats(draft: PresetDraft, delta: number): PresetDraft {
@@ -145,6 +151,16 @@ export function withPolyBeats(draft: PresetDraft, delta: number): PresetDraft {
   );
   const polyAccents = resizeAccents(draft.polyAccents, polyBeats);
   return { ...draft, polyBeats, polyAccents };
+}
+
+export function withPolyAgainst(
+  draft: PresetDraft,
+  delta: number,
+): PresetDraft {
+  return {
+    ...draft,
+    polyAgainst: stepPolyAgainst(draft.polyAgainst, delta, draft.beatsPerBar),
+  };
 }
 
 export function withNextDenominator(draft: PresetDraft): PresetDraft {

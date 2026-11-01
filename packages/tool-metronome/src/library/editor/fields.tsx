@@ -84,10 +84,12 @@ const ON_OFF: readonly SegmentOption<'off' | 'on'>[] = [
 export function OnOff({
   on,
   label,
+  inRow = false,
   onChange,
 }: {
   readonly on: boolean;
   readonly label: string;
+  readonly inRow?: boolean;
   readonly onChange: (on: boolean) => void;
 }) {
   const select = useCallback(
@@ -98,7 +100,8 @@ export function OnOff({
   );
   return (
     <SegmentedControl
-      compact
+      compact={!inRow}
+      size={inRow ? 'editRow' : 'default'}
       accessibilityLabel={label}
       options={ON_OFF}
       selected={on ? 'on' : 'off'}

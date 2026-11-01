@@ -10,6 +10,8 @@ import {
 } from './repository';
 import {
   DEFAULT_DENOMINATOR,
+  normalizePolyAgainst,
+  POLY_AGAINST_BAR,
   presetViolation,
   RAMP_UNITS,
 } from './preset-rules';
@@ -30,6 +32,13 @@ function checkPreset(values: NewSongPreset) {
   });
   if (violation)
     throw new RangeError(`Song preset ${violation.field}: ${violation.reason}`);
+}
+
+function normalizedAgainst(values: NewSongPreset): number {
+  return normalizePolyAgainst(
+    values.polyAgainst ?? POLY_AGAINST_BAR,
+    values.beatsPerBar,
+  );
 }
 
 function presetById(db: Database, id: number) {
@@ -58,7 +67,11 @@ async function insertPreset(
   return found(
     await db
       .insert(songPresets)
-      .values({ ...values, uuid: crypto.randomUUID() })
+      .values({
+        ...values,
+        polyAgainst: normalizedAgainst(values),
+        uuid: crypto.randomUUID(),
+      })
       .returning(),
     'Preset insert',
   );
@@ -81,8 +94,12 @@ async function updatePreset(
   values: Partial<Omit<NewSongPreset, 'id'>>,
 ) {
   const current = found(await presetById(db, id), `Song preset ${String(id)}`);
-  checkPreset({ ...current, ...values });
-  await db.update(songPresets).set(values).where(eq(songPresets.id, id));
+  const merged = { ...current, ...values };
+  checkPreset(merged);
+  await db
+    .update(songPresets)
+    .set({ ...values, polyAgainst: normalizedAgainst(merged) })
+    .where(eq(songPresets.id, id));
 }
 
 async function deletePreset(db: Database, id: number) {

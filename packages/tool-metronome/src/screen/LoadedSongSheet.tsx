@@ -5,6 +5,11 @@ import { Text } from 'react-native';
 
 import { NOT_IN_SETLIST } from '../logic/setlistChip.ts';
 import { useSheetStyles } from './sheetStyles.ts';
+import {
+  SheetSaveRevert,
+  UnsavedNote,
+  useLoadedSongUnsaved,
+} from './UnsavedChanges.tsx';
 
 export interface LoadedSongSheetProps {
   readonly visible: boolean;
@@ -22,6 +27,7 @@ export function LoadedSongSheet({
   onOpenSetlists,
 }: LoadedSongSheetProps) {
   const sheetStyles = useSheetStyles();
+  const unsaved = useLoadedSongUnsaved();
   const clearSong = useLibrary((s) => s.clearSong);
   const handleClear = useCallback(() => {
     onDismiss();
@@ -41,6 +47,12 @@ export function LoadedSongSheet({
       onDismiss={onDismiss}
     >
       <Text style={sheetStyles.songHint}>{NOT_IN_SETLIST}</Text>
+      {unsaved ? (
+        <>
+          <UnsavedNote />
+          <SheetSaveRevert />
+        </>
+      ) : null}
       <Button
         variant="ghost"
         size="target"

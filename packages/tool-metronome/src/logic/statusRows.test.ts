@@ -1,5 +1,6 @@
 import {
   KB_COUNT_IN_OFF,
+  KB_POLY_AGAINST_BAR,
   KB_RAMP_STATE,
   KB_RAMP_UNIT,
 } from '@kitbag/core-native';
@@ -17,6 +18,7 @@ import {
   NOTHING_ARMED,
   ofText,
   practiceBadgeCount,
+  restLegend,
   rampNextText,
   rampRemainingText,
   rowSlot,
@@ -38,6 +40,7 @@ const OFF: PracticeSettings = {
   countIn: { bars: KB_COUNT_IN_OFF, distinct: true, sound: 1 },
   polyEnabled: false,
   polyBeats: 3,
+  polyAgainst: KB_POLY_AGAINST_BAR,
   beatsPerBar: 4,
 };
 
@@ -66,8 +69,26 @@ describe('armed practice summary', () => {
     );
   });
 
+  it('reads an explicit poly cycle by its own count', () => {
+    expect(armedSummary({ ...OFF, polyEnabled: true, polyAgainst: 2 })).toBe(
+      'Poly 3:2',
+    );
+  });
+
   it('falls back to a neutral hint with nothing armed', () => {
     expect(armedSummary(OFF)).toBe(NOTHING_ARMED);
+  });
+});
+
+describe('legend while stopped', () => {
+  it('shows the poly legend instead of the beat legend while poly is on', () => {
+    expect(restLegend(false, true)).toBe('poly');
+    expect(restLegend(false, false)).toBe('beat');
+  });
+
+  it('hides every legend while running', () => {
+    expect(restLegend(true, true)).toBeNull();
+    expect(restLegend(true, false)).toBeNull();
   });
 });
 

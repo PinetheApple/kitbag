@@ -24,7 +24,13 @@ import {
   type Reader,
 } from './backup-reader';
 import { decodeBase64, presetBytes } from './base64';
-import { MIN_RAMP_STEP, presetViolation, RAMP_UNITS } from './preset-rules';
+import {
+  MIN_RAMP_STEP,
+  normalizePolyAgainst,
+  POLY_AGAINST_BAR,
+  presetViolation,
+  RAMP_UNITS,
+} from './preset-rules';
 import { INSTRUMENTS, tuningViolation } from './tuning-rules';
 
 const FLOAT32_BYTES = 4;
@@ -65,6 +71,7 @@ function readPresetMusic(r: Reader) {
     polyAccents: r.nullableBlob('polyAccents'),
     polyEnabled: r.boolean('polyEnabled'),
     polyBeats: r.count('polyBeats'),
+    polyAgainst: r.optionalCount('polyAgainst', POLY_AGAINST_BAR),
   };
 }
 
@@ -109,7 +116,10 @@ function readSongPreset(value: unknown, path: string): SongPresetRecord {
     ...presetBytes(record),
   });
   if (violation) invalidField(`${path}.${violation.field}`, violation.reason);
-  return record;
+  return {
+    ...record,
+    polyAgainst: normalizePolyAgainst(record.polyAgainst, record.beatsPerBar),
+  };
 }
 
 function readSetlist(value: unknown, path: string): SetlistRecord {

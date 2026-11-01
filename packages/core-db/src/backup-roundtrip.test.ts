@@ -9,6 +9,7 @@ import {
   type BackupDatabase,
   unwrap,
 } from './backup.test-helper';
+import { POLY_AGAINST_BAR } from './preset-rules';
 import type { SongPreset } from './repository';
 import { practiceSessions, songs, tunings } from './schema';
 import { INSTRUMENTS } from './tuning-rules';
@@ -192,6 +193,48 @@ describe('backup round trip', () => {
       rampUnit: 0,
       rampLoop: false,
     });
+  });
+
+  it('keeps an explicit poly cycle through a round trip', async () => {
+    const source = openBackupDatabase();
+    await seed(source);
+    const target = openBackupDatabase();
+    await restoreAll(target, await source.backup.export());
+    const restored = await target.presets.list();
+    expect(restored.map((preset) => preset.polyAgainst)).toEqual([2, 2]);
+  });
+
+  it('restores a poly cycle equal to its preset bar as the bar', async () => {
+    const source = openBackupDatabase();
+    await seed(source);
+    const file = JSON.parse(await source.backup.export()) as {
+      songPresets: Record<string, unknown>[];
+    };
+    for (const record of file.songPresets)
+      record.polyAgainst = record.beatsPerBar;
+    const target = openBackupDatabase();
+    expect((await restoreAll(target, JSON.stringify(file))).ok).toBe(true);
+    const restored = await target.presets.list();
+    expect(restored.map((preset) => preset.polyAgainst)).toEqual([
+      POLY_AGAINST_BAR,
+      POLY_AGAINST_BAR,
+    ]);
+  });
+
+  it('reads a v4 preset written before poly against as the bar', async () => {
+    const source = openBackupDatabase();
+    await seed(source);
+    const file = JSON.parse(await source.backup.export()) as {
+      songPresets: Record<string, unknown>[];
+    };
+    for (const record of file.songPresets) delete record.polyAgainst;
+    const target = openBackupDatabase();
+    expect((await restoreAll(target, JSON.stringify(file))).ok).toBe(true);
+    const restored = await target.presets.list();
+    expect(restored.map((preset) => preset.polyAgainst)).toEqual([
+      POLY_AGAINST_BAR,
+      POLY_AGAINST_BAR,
+    ]);
   });
 
   it('exports only the requested categories', async () => {

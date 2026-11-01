@@ -44,6 +44,7 @@ export function presetValues(name: string, librarySongId: number | null) {
     polyAccents: new Uint8Array([2, 1, 1]),
     polyEnabled: true,
     polyBeats: 3,
+    polyAgainst: 2,
     sound: 2,
     rampEnabled: true,
     rampStartBpm: 100,

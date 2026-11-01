@@ -25,6 +25,11 @@ export {
   resizeAccents,
 } from './metronome/config.ts';
 export { beatGroupSizes, groupStartAccents } from './metronome/meterGroups.ts';
+export {
+  effectivePolyAgainst,
+  normalizePolyAgainst,
+  stepPolyAgainst,
+} from './metronome/polyAgainst.ts';
 export type {
   EngineBpm,
   MetronomeCommands,
@@ -108,6 +113,8 @@ export { useLibrary } from './library/useLibrary.ts';
 export {
   createLibraryStore,
   libraryStore,
+  loadedPresetOf,
+  type DiscardedChanges,
   type LibraryStore,
   type LoadedSong,
   type PresetEdit,
@@ -129,6 +136,7 @@ export { transportSetlistOf } from './library/transportSetlist.ts';
 export {
   accentsOf,
   byteList,
+  isLoadedSongUnsaved,
   perAccentSoundsOf,
   rampUnitOf,
   toBlob,

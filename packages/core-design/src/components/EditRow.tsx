@@ -1,4 +1,10 @@
-import { Children, Fragment, useCallback, type ReactNode } from 'react';
+import {
+  Children,
+  Fragment,
+  useCallback,
+  useMemo,
+  type ReactNode,
+} from 'react';
 import {
   Pressable,
   Text,
@@ -98,6 +104,8 @@ export interface EditRowProps {
   readonly onPress?: () => void;
   readonly accessibilityRole?: AccessibilityRole;
   readonly accessibilityLabel?: string;
+  /** A fixed-height row: the control is centred in it with no vertical padding. */
+  readonly minHeight?: number;
 }
 
 export function EditRow({
@@ -107,8 +115,14 @@ export function EditRow({
   onPress,
   accessibilityRole = 'button',
   accessibilityLabel,
+  minHeight,
 }: EditRowProps) {
   const styles = useStyles();
+  const fixed = useMemo(
+    () =>
+      minHeight === undefined ? undefined : { minHeight, paddingVertical: 0 },
+    [minHeight],
+  );
   const pressableStyle = useCallback(
     ({ pressed }: PressableStateCallbackType) => [
       styles.row,
@@ -120,7 +134,7 @@ export function EditRow({
   );
   if (onPress === undefined) {
     return (
-      <View style={[styles.row, singleLine && styles.singleLine]}>
+      <View style={[styles.row, singleLine && styles.singleLine, fixed]}>
         <Text style={styles.label}>{label}</Text>
         <View style={styles.value}>{children}</View>
       </View>

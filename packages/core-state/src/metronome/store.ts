@@ -6,6 +6,7 @@ import {
   KB_DEFAULT_COUNT_IN_SOUND,
   KB_LATENCY_OFFSET_MS_BOUNDS,
   KB_MUTE_BARS_BOUNDS,
+  KB_POLY_AGAINST_BAR,
   KB_RAMP_UNIT,
   KB_SUBDIVISION_BOUNDS,
   KB_VOLUME_BOUNDS,
@@ -26,6 +27,7 @@ import {
 import {
   BPM_BOUNDS,
   clamp,
+  roundToEngineBpm,
   initialAccents,
   isCountInBars,
   isSoundId,
@@ -66,6 +68,7 @@ export interface MetronomeConfig {
   readonly accents: readonly KB_ACCENT[];
   readonly polyEnabled: boolean;
   readonly polyBeats: number;
+  readonly polyAgainst: number;
   readonly polyAccents: readonly KB_ACCENT[];
   readonly sounds: PerAccentSounds;
   readonly volume: number;
@@ -87,6 +90,8 @@ export interface MetronomeActions {
   cycleAccent: (beat: number) => void;
   setAccents: (accents: readonly KB_ACCENT[]) => void;
   setPoly: (enabled: boolean, beats: number) => void;
+  setPolyAgainst: (against: number) => void;
+  stepPolyAgainst: (delta: number) => void;
   cyclePolyAccent: (beat: number) => void;
   setPolyAccents: (accents: readonly KB_ACCENT[]) => void;
   setSounds: (normal: number, accent: number) => void;
@@ -121,6 +126,7 @@ function initialConfig(): MetronomeConfig {
     accents: initialAccents(DEFAULT_BEATS),
     polyEnabled: false,
     polyBeats: DEFAULT_POLY_BEATS,
+    polyAgainst: KB_POLY_AGAINST_BAR,
     polyAccents: initialAccents(DEFAULT_POLY_BEATS),
     sounds: { ...KB_DEFAULT_SOUNDS },
     volume: DEFAULT_VOLUME,
@@ -160,9 +166,7 @@ function readEngineTempo(engineBpm: EngineBpm, fallback: number): number {
   } catch {
     return fallback;
   }
-  return Number.isFinite(bpm)
-    ? clamp(Math.round(bpm), BPM_BOUNDS.min, BPM_BOUNDS.max)
-    : fallback;
+  return Number.isFinite(bpm) ? roundToEngineBpm(bpm) : fallback;
 }
 
 interface EngineTempo {

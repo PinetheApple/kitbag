@@ -5,7 +5,9 @@ import {
   metronomeMix,
   metronomeSheet,
   mixHex,
+  metronome,
   Sheet,
+  SheetHint,
   size,
   space,
   textRoles,
@@ -17,7 +19,7 @@ import {
   type ActiveSet,
   type SetlistEntry,
 } from '@kitbag/core-state';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import {
@@ -25,17 +27,28 @@ import {
   songListRows,
   type SongListRow,
 } from '../logic/songList.ts';
+import { type ErrorSetter } from '../library/sheets.tsx';
+import { nowRowA11yLabel } from '../logic/setlistChip.ts';
 import { useSheetStyles } from './sheetStyles.ts';
+import {
+  NowRowActions,
+  UnsavedDot,
+  useLoadedSongUnsaved,
+} from './UnsavedChanges.tsx';
 
 const NO_ENTRIES: readonly SetlistEntry[] = [];
-
+const UNSAVED_NAME_LINES = 2;
 const useStyles = createThemedStyles((theme) => ({
   row: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
-    gap: space.sectionGap,
+    alignContent: 'center',
+    columnGap: space.sectionGap,
+    rowGap: space.controlGap,
     minHeight: metronomeSheet.songRow,
     paddingHorizontal: metronomeSheet.songRowH,
+    paddingVertical: space.controlGap,
     borderBottomWidth: size.stroke,
     borderBottomColor: theme.color.line,
   },
@@ -54,9 +67,28 @@ const useStyles = createThemedStyles((theme) => ({
     textAlign: 'right',
     color: theme.color.text3,
   },
+  numberUnsaved: {
+    width: 'auto',
+  },
+  trail: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sectionGap,
+    marginLeft: 'auto',
+  },
+  nameLine: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: metronomeSheet.nowNameMin,
+    minWidth: metronomeSheet.nowNameMin,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: metronome.unsavedDotGap,
+  },
   name: {
     ...textStyle(textRoles.menuRow),
-    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
     color: theme.color.text,
   },
   nameNow: textStyle(textRoles.menuRowNow),
@@ -69,9 +101,15 @@ const useStyles = createThemedStyles((theme) => ({
 interface SongRowProps {
   readonly row: SongListRow;
   readonly onPick: (row: SongListRow) => void;
+  readonly onSaveError: ErrorSetter;
 }
 
-function SongRow({ row, onPick }: SongRowProps) {
+function SongRow({
+  row,
+  onPick,
+  onSaveError,
+  unsaved,
+}: SongRowProps & { readonly unsaved: boolean }) {
   const styles = useStyles();
   const handlePress = useCallback(() => {
     onPick(row);
@@ -80,20 +118,40 @@ function SongRow({ row, onPick }: SongRowProps) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={row.now ? `${spoken}, now loaded` : spoken}
+      accessibilityLabel={row.now ? nowRowA11yLabel(spoken, unsaved) : spoken}
       accessibilityState={{ selected: row.now }}
       style={[styles.row, row.now && styles.rowNow]}
       onPress={handlePress}
     >
-      <Text style={styles.number}>{row.number}</Text>
-      <Text style={[styles.name, row.now && styles.nameNow]}>{row.name}</Text>
-      {row.now ? (
-        <Badge tone="accent" variant="filled" label="NOW" />
-      ) : (
-        <Text style={styles.bpm}>{row.bpm}</Text>
-      )}
+      <Text style={[styles.number, unsaved && styles.numberUnsaved]}>
+        {row.number}
+      </Text>
+      <View style={styles.nameLine}>
+        <Text
+          style={[styles.name, row.now && styles.nameNow]}
+          numberOfLines={unsaved ? UNSAVED_NAME_LINES : undefined}
+        >
+          {row.name}
+        </Text>
+        {unsaved ? <UnsavedDot /> : null}
+      </View>
+      <View style={styles.trail}>
+        {unsaved ? <NowRowActions onError={onSaveError} /> : null}
+        {row.now ? (
+          <View>
+            <Badge tone="accent" variant="filled" label="NOW" />
+          </View>
+        ) : (
+          <Text style={styles.bpm}>{row.bpm}</Text>
+        )}
+      </View>
     </Pressable>
   );
+}
+
+function NowSongRow(props: SongRowProps) {
+  const unsaved = useLoadedSongUnsaved();
+  return <SongRow {...props} unsaved={unsaved} />;
 }
 
 export interface SetlistSongsSheetProps {
@@ -114,6 +172,7 @@ export function SetlistSongsSheet({
   const loadedItemId = useLibrary((s) => s.loaded?.itemId ?? null);
   const loadSong = useLibrary((s) => s.loadSong);
   const leaveSetlist = useLibrary((s) => s.leaveSetlist);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const rows = useMemo(
     () => songListRows(entries, loadedItemId),
     [entries, loadedItemId],
@@ -140,10 +199,26 @@ export function SetlistSongsSheet({
     >
       <Text style={sheetStyles.songHint}>{songListHint(set)}</Text>
       <View>
-        {rows.map((row) => (
-          <SongRow key={row.itemId} row={row} onPick={handlePick} />
-        ))}
+        {rows.map((row) =>
+          row.now ? (
+            <NowSongRow
+              key={row.itemId}
+              row={row}
+              onPick={handlePick}
+              onSaveError={setSaveError}
+            />
+          ) : (
+            <SongRow
+              key={row.itemId}
+              row={row}
+              onPick={handlePick}
+              onSaveError={setSaveError}
+              unsaved={false}
+            />
+          ),
+        )}
       </View>
+      {saveError === null ? null : <SheetHint>{saveError}</SheetHint>}
       <Button
         variant="ghost"
         size="target"

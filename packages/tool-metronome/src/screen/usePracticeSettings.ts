@@ -9,9 +9,18 @@ export function usePracticeSettings(): PracticeSettings {
   const countIn = useMetronome((s) => s.countIn);
   const polyEnabled = useMetronome((s) => s.polyEnabled);
   const polyBeats = useMetronome((s) => s.polyBeats);
+  const polyAgainst = useMetronome((s) => s.polyAgainst);
   const beatsPerBar = useMetronome((s) => s.beatsPerBar);
   return useMemo(
-    () => ({ ramp, barMute, countIn, polyEnabled, polyBeats, beatsPerBar }),
-    [ramp, barMute, countIn, polyEnabled, polyBeats, beatsPerBar],
+    () => ({
+      ramp,
+      barMute,
+      countIn,
+      polyEnabled,
+      polyBeats,
+      polyAgainst,
+      beatsPerBar,
+    }),
+    [ramp, barMute, countIn, polyEnabled, polyBeats, polyAgainst, beatsPerBar],
   );
 }

@@ -9,7 +9,11 @@ import {
 } from 'drizzle-orm/sqlite-core';
 
 import { ANALYSIS_STATUS, ANALYSIS_STATUSES } from './analysis-status';
-import { DEFAULT_DENOMINATOR, RAMP_UNITS } from './preset-rules';
+import {
+  DEFAULT_DENOMINATOR,
+  POLY_AGAINST_BAR,
+  RAMP_UNITS,
+} from './preset-rules';
 import { STEM_SET_SOURCE, STEM_SET_SOURCES } from './stem-set-source';
 import { INSTRUMENTS } from './tuning-rules';
 
@@ -75,6 +79,7 @@ export const songPresets = sqliteTable('song_presets', {
   polyAccents: bytes('poly_accents'),
   polyEnabled: integer('poly_enabled', { mode: 'boolean' }).notNull(),
   polyBeats: integer('poly_beats').notNull(),
+  polyAgainst: integer('poly_against').notNull().default(POLY_AGAINST_BAR),
   sound: integer('sound').notNull(),
   rampEnabled: integer('ramp_enabled', { mode: 'boolean' })
     .notNull()

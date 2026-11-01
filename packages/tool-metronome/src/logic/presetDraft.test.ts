@@ -1,4 +1,8 @@
-import { KB_ACCENT, KB_RAMP_UNIT } from '@kitbag/core-native';
+import {
+  KB_ACCENT,
+  KB_POLY_AGAINST_BAR,
+  KB_RAMP_UNIT,
+} from '@kitbag/core-native';
 import type { SongPreset } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
@@ -10,6 +14,7 @@ import {
   withCycledAccent,
   withCycledPolyAccent,
   withNextDenominator,
+  withPolyAgainst,
   withPolyBeats,
 } from './presetDraft.ts';
 import { setlistSubtitle, songSubtitle } from './songSummary.ts';
@@ -33,6 +38,7 @@ const PRESET = {
   polyAccents: Uint8Array.from([A, N, M]),
   polyEnabled: false,
   polyBeats: 0,
+  polyAgainst: 2,
   sound: 1,
   rampEnabled: true,
   rampStartBpm: 96,
@@ -82,6 +88,34 @@ describe('preset draft', () => {
     expect(polyFour.polyAccents).toEqual([A, N, M, N]);
     expect(withCycledPolyAccent(polyFour, 2).polyAccents).toEqual([A, N, A, N]);
     expect(withNextDenominator(four).denominator).toBe(8);
+  });
+
+  it('saves the poly cycle and steps it through the bar', () => {
+    const draft = draftFrom(PRESET);
+    expect(draft.polyAgainst).toBe(2);
+    expect(editFrom(draft).polyAgainst).toBe(2);
+    const bar = withPolyAgainst(draft, 1);
+    expect(bar.polyAgainst).toBe(KB_POLY_AGAINST_BAR);
+    expect(editFrom(bar).polyAgainst).toBe(KB_POLY_AGAINST_BAR);
+    expect(withPolyAgainst(bar, 1).polyAgainst).toBe(4);
+  });
+
+  it('turns an explicit poly cycle into the bar when the meter comes to equal it', () => {
+    const draft = draftFrom({ ...PRESET, polyAgainst: 4 });
+    expect(withBeats(draft, 1).polyAgainst).toBe(KB_POLY_AGAINST_BAR);
+    expect(withBeats(draft, -1).polyAgainst).toBe(4);
+  });
+
+  it('reads a stored count equal to the bar as the bar', () => {
+    expect(draftFrom({ ...PRESET, polyAgainst: 3 }).polyAgainst).toBe(
+      KB_POLY_AGAINST_BAR,
+    );
+  });
+
+  it('reads a stored count the engine cannot hold as the bar', () => {
+    expect(draftFrom({ ...PRESET, polyAgainst: 99 }).polyAgainst).toBe(
+      KB_POLY_AGAINST_BAR,
+    );
   });
 
   it('keeps a ramp unit change through save and reload', () => {

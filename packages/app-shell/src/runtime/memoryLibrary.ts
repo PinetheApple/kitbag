@@ -4,7 +4,7 @@ import type {
   SetlistItem,
   SongPreset,
 } from '@kitbag/core-db';
-import { KB_RAMP_UNIT } from '@kitbag/core-native';
+import { KB_POLY_AGAINST_BAR, KB_RAMP_UNIT } from '@kitbag/core-native';
 import type { LibraryRepositories } from '@kitbag/core-state';
 
 const BLOB_FIELDS = ['accents', 'perAccentSounds', 'polyAccents'] as const;
@@ -25,6 +25,7 @@ const PRESET_DEFAULTS = {
   denominator: 4,
   perAccentSounds: null,
   polyAccents: null,
+  polyAgainst: KB_POLY_AGAINST_BAR,
   rampEnabled: false,
   rampStartBpm: null,
   rampEndBpm: null,

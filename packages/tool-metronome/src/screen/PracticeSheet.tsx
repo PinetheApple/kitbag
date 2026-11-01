@@ -29,10 +29,11 @@ function usePracticeValues(): PracticeValues {
   const ramp = useMetronome((s) => s.ramp);
   const barMute = useMetronome((s) => s.barMute);
   const polyBeats = useMetronome((s) => s.polyBeats);
+  const polyAgainst = useMetronome((s) => s.polyAgainst);
   const beatsPerBar = useMetronome((s) => s.beatsPerBar);
   return useMemo(
-    () => ({ ramp, barMute, polyBeats, beatsPerBar }),
-    [ramp, barMute, polyBeats, beatsPerBar],
+    () => ({ ramp, barMute, polyBeats, polyAgainst, beatsPerBar }),
+    [ramp, barMute, polyBeats, polyAgainst, beatsPerBar],
   );
 }
 
@@ -49,6 +50,7 @@ function PracticeNumpad({
   const setRamp = useMetronome((s) => s.setRamp);
   const setBarMute = useMetronome((s) => s.setBarMute);
   const setPoly = useMetronome((s) => s.setPoly);
+  const setPolyAgainst = useMetronome((s) => s.setPolyAgainst);
   const polyEnabled = useMetronome((s) => s.polyEnabled);
   const shown = field ?? 'startBpm';
   const entry = practiceEntry(shown, values);
@@ -60,8 +62,11 @@ function PracticeNumpad({
       if (next.polyBeats !== values.polyBeats) {
         setPoly(polyEnabled, next.polyBeats);
       }
+      if (next.polyAgainst !== values.polyAgainst) {
+        setPolyAgainst(next.polyAgainst);
+      }
     },
-    [values, shown, setRamp, setBarMute, setPoly, polyEnabled],
+    [values, shown, setRamp, setBarMute, setPoly, setPolyAgainst, polyEnabled],
   );
   return (
     <NumberEntrySheet
