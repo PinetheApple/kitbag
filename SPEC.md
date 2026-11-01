@@ -1516,8 +1516,9 @@ one (§12.5).
 | `surface3` | `#2E2C3A` | `#E3DFD4` |
 | `line` | `#33303F` | `#DCD7CA` |
 | `text` | `#ECEAF0` | `#221F26` |
-| `text2` | `#ADAAB8` | `#5D5868` |
+| `text2` | `#BDBBC6` | `#47434F` |
 | `text3` | `#9793A2` | `#6C6573` |
+| `decor` | `#6C6878` | `#98929F` |
 | `accent` | `#FFB347` | `#B26F0E` |
 | `accentDeep` | `#E89B2E` | `#80510B` |
 | `accentDim` | `#8A6A35` | `#D8B27C` |
@@ -1525,6 +1526,9 @@ one (§12.5).
 | `red` (flat) | `#FF5C5C` | `#CC4444` |
 | `amber` | `#FFC24B` | `#9A6E06` |
 | `green` (in-tune) | `#4ADE80` | `#1E8A4F` |
+| `redInk` | `#FF5C5C` | `#A82E2E` |
+| `amberInk` | `#FFC24B` | `#785505` |
+| `greenInk` | `#4ADE80` | `#17683C` |
 | `wave` | `#4E4A5E` | `#C9C3B4` |
 | `waveHot` | `#FFB347` | `#B26F0E` |
 
@@ -1535,14 +1539,18 @@ Rules that come with them:
   channel and **never doubles as accent.**
 - Dark text is off-white; **pure white halates on OLED.**
 - **Elevation = lighter surface, not shadow.**
-- Text under 18sp holds 4.5:1 against every ground it sits on, in both themes, except
-  two light-theme cases still open in #189: `onAccent` on an `accent` fill (3.82:1), and
-  `red`, `amber` and `green` used as text (down to 2.97:1).
+- Text under 18sp holds 4.5:1 against every ground it sits on, in both themes.
+- `text`, `text2` and `text3` stay at least 1.5:1 apart from each other.
+- `decor` is for non-text marks only: icons that read as quiet or disabled, dot and
+  swatch borders, switch knobs, slider ticks. Text never uses it.
 - `text3` sits only on `bg`, `surface1`, `surface2`, `activeCardFill` and the setlist
   NOW row fill; never on `surface3`, `activeControlFill`, or the set chip, selected tile
   or stem tile fills.
 - `accent` is for fills and icons. Accent-coloured text uses `accentInk`: `accent` in
-  dark, `accentDeep` in light.
+  dark, `accentDeep` in light. An `accent` fill that carries text uses `accentTextFill`
+  (the same split), so `onAccent` holds 4.5:1 on it; fills with only icons keep `accent`.
+- Red, amber and green used as text take `redInk`, `amberInk` and `greenInk`, darker in
+  light and equal to the base token in dark. Fills, icons and borders keep the base token.
 - Accent icons hold 3:1 on every ground; on an accent-tinted fill that needs `accentInk`.
 
 **Type.** Two faces, both OFL. **Space Grotesk** for display, numerics and labels

@@ -605,10 +605,16 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   file's left placement. **[recorded — coordinator ruling]**
 
 - **2026-11-01 · Small text contrast (§12.2, #189)** — Text under 18sp holds 4.5:1 on
-  every ground it sits on, in both themes (two light exceptions open, #189). `text2`, `text3` and light `accentDeep` move in
+  every ground it sits on, in both themes. `text2`, `text3` and light `accentDeep` move in
   lightness only to clear it, and the `text2` step stays above `text3`. Accent-coloured text
   uses `accentInk`, generalising the Settings section label exception; `accent` is
   unchanged for fills and icons. **[recorded]**
 - **2026-11-01 · Accent icons on tinted fills (§12.2, #189)** — In light, an accent icon on an
   accent-tinted fill uses `accentInk` so it holds 3:1; light `accent` is 2.76:1 on
   `activeControlFill`. **[recorded — coordinator ruling]**
+- **2026-11-01 · Text fills, feedback inks, decor and the text2 step (§12.2, #189)** — An
+  accent fill that carries text uses `accentDeep` in light (`accentTextFill`); plain fills
+  and icons keep `accent`. Red, amber and green used as small text take darker light-only
+  inks (`redInk`, `amberInk`, `greenInk`); fills, icons and borders keep the base token. The
+  previous `text3` values move to a `decor` token for non-text marks, so they look as
+  before. `text2` moves further from `text3` for a clearer step. **[user]**
