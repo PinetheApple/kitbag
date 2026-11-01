@@ -1,13 +1,13 @@
 import { expect, it } from 'vitest';
 
 import {
-  BACKUP_FILES_AVAILABLE,
+  backupFilesAvailable,
   pickBackup,
   shareBackup,
 } from './backupFiles.web.ts';
 
 it('is unavailable on web', () => {
-  expect(BACKUP_FILES_AVAILABLE).toBe(false);
+  expect(backupFilesAvailable()).toBe(false);
 });
 
 it('picks nothing and refuses to share', async () => {

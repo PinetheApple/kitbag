@@ -1,6 +1,10 @@
+import { Platform } from 'react-native';
+
 import { getKitbagLibrary, type PickedBackup } from './NativeKitbagLibrary';
 
-export const BACKUP_FILES_AVAILABLE = true;
+export function backupFilesAvailable(): boolean {
+  return Platform.OS === 'android';
+}
 
 export function pickBackup(): Promise<PickedBackup | null> {
   return getKitbagLibrary().pickBackup();

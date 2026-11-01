@@ -1,6 +1,7 @@
 import type * as Native from './backupFiles.ts';
 
-export const BACKUP_FILES_AVAILABLE = false;
+export const backupFilesAvailable: typeof Native.backupFilesAvailable = () =>
+  false;
 
 export const pickBackup: typeof Native.pickBackup = () => Promise.resolve(null);
 

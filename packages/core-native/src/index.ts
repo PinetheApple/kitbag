@@ -30,11 +30,7 @@ export type {
   StorageReport,
 } from './NativeKitbagLibrary';
 export { missingFiles, storageReport } from './libraryStorage';
-export {
-  BACKUP_FILES_AVAILABLE,
-  pickBackup,
-  shareBackup,
-} from './backupFiles';
+export { backupFilesAvailable, pickBackup, shareBackup } from './backupFiles';
 
 // --- #30 (P2-A3) JSI HostObject: polled realtime reads (§13.2, §13.3) --------
 export {

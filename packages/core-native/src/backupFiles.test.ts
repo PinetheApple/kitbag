@@ -5,20 +5,21 @@ const library = vi.hoisted(() => ({
   shareBackup: vi.fn(),
 }));
 
+vi.mock('react-native', () => ({ Platform: { OS: 'android' } }));
+
 vi.mock('./NativeKitbagLibrary', () => ({
   getKitbagLibrary: () => library,
 }));
 
-const { BACKUP_FILES_AVAILABLE, pickBackup, shareBackup } = await import(
-  './backupFiles.ts'
-);
+const { backupFilesAvailable, pickBackup, shareBackup } =
+  await import('./backupFiles.ts');
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
-it('is available on a native build', () => {
-  expect(BACKUP_FILES_AVAILABLE).toBe(true);
+it('is available on Android', () => {
+  expect(backupFilesAvailable()).toBe(true);
 });
 
 it('hands back the picked file as native read it', async () => {
