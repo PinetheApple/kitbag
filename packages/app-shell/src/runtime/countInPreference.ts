@@ -11,6 +11,7 @@ import {
   encodeFlag,
   readFlag,
   storedPreference,
+  writeChanged,
   type StoredPreference,
 } from './storedPreference';
 
@@ -47,10 +48,7 @@ export function countInPersistence(
       };
     },
     save: (changed) => {
-      for (const key of Object.keys(changed) as CountInKey[]) {
-        const value = changed[key];
-        if (value !== undefined) stored(key).write(encode(value));
-      }
+      writeChanged(changed, stored, encode);
     },
   };
 }

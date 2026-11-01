@@ -45,3 +45,14 @@ export function readFlag(stored: StoredPreference): boolean | undefined {
 export function encodeFlag(on: boolean): string {
   return on ? PREFERENCE_FLAG.on : PREFERENCE_FLAG.off;
 }
+
+export function writeChanged<T extends object>(
+  changed: Partial<T>,
+  stored: (key: keyof T) => StoredPreference,
+  encode: (value: T[keyof T]) => string,
+): void {
+  for (const key of Object.keys(changed) as (keyof T)[]) {
+    const value = changed[key];
+    if (value !== undefined) stored(key).write(encode(value));
+  }
+}
