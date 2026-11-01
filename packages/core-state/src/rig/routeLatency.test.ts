@@ -23,6 +23,7 @@ const HEADPHONES: OutputRoute = {
   kind: 'bluetooth',
   certain: true,
 };
+const MANUAL_STEP_MS = 3;
 const GUESSED: OutputRoute = { ...HEADPHONES, certain: false };
 
 const HEADPHONES_ROW: RouteLatency = {
@@ -185,8 +186,10 @@ describe('route latency', () => {
     await store.getState().start();
     route(SPEAKER);
     await store.getState().record({ ...HEADPHONES_ROW, route: SPEAKER.id });
-    store.getState().step(3);
-    expect(store.getState().stored[SPEAKER.id]?.offsetMs).toBe(185);
+    store.getState().step(MANUAL_STEP_MS);
+    expect(store.getState().stored[SPEAKER.id]?.offsetMs).toBe(
+      HEADPHONES_ROW.offsetMs + MANUAL_STEP_MS,
+    );
   });
 
   it('clears a route back to never calibrated', async () => {

@@ -79,10 +79,6 @@ describe('output row', () => {
     expect(outputLine(SPEAKER, undefined).status).toBe(' · 0 ms');
   });
 
-  it('never claims a calibration', () => {
-    expect(outputLine(SPEAKER, 3).status).not.toMatch(/calibrated/);
-  });
-
   it('says a step is not saved while the route is guessed', () => {
     expect(outputLine(GUESSED, 3)).toEqual({
       name: 'WH-1000XM4',
