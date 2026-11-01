@@ -61,6 +61,7 @@ add_library(kitbag_core SHARED
   src/mixer/mixer_render.cpp
   src/player/player.cpp
   src/player/player_render.cpp
+  src/stretch/time_stretch.cpp
   src/tuner/note_smoother.cpp
   src/tuner/pitch_detector.cpp
   src/tuner/tuner.cpp
@@ -124,6 +125,9 @@ target_include_directories(signalsmith_stretch SYSTEM INTERFACE
   third_party/signalsmith/stretch
   third_party/signalsmith/linear)
 target_link_libraries(kitbag_core PRIVATE signalsmith_stretch)
+# The vendor warns -O0 runs up to 10x slower; AGP debug builds are Debug.
+set_source_files_properties(src/stretch/time_stretch.cpp
+  PROPERTIES COMPILE_OPTIONS "$<$<CONFIG:Debug>:-O2>")
 
 option(KITBAG_BUILD_TOOLS "Build native test tools" OFF)
 if(KITBAG_BUILD_TOOLS)
@@ -405,6 +409,19 @@ if(KITBAG_BUILD_TOOLS)
     ${KITBAG_METRONOME_SOURCES})
   target_include_directories(metronome_render PRIVATE src include tools/soak tools/media)
   target_link_libraries(metronome_render PRIVATE m)
+
+  add_executable(stretch_verify
+    tools/stretch/stretch_verify.cpp
+    tools/stretch/stretch_test_support.cpp
+    tools/stretch/stretch_test_alloc.cpp
+    tools/stretch/stretch_test_rate.cpp
+    tools/stretch/stretch_test_pitch.cpp
+    tools/stretch/stretch_test_latency.cpp
+    src/stretch/time_stretch.cpp
+    src/tuner/pitch_detector.cpp
+    src/dsp/fft.cpp)
+  target_include_directories(stretch_verify PRIVATE src tools)
+  target_link_libraries(stretch_verify PRIVATE signalsmith_stretch m)
 
   add_executable(click_soak_verify
     tools/soak/click_soak_verify.cpp
