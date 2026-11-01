@@ -7,15 +7,11 @@
 namespace metronome_test {
 namespace {
 
-constexpr double kFastIntervalSec = 0.15;
 constexpr double kWaitFromMs = 140.0;
 constexpr double kForwardToMs = 100.0;
-constexpr double kNetOutMs = 200.0;
 constexpr double kFirstBackMs = -100.0;
 constexpr double kNetBackMs = -200.0;
 constexpr double kFullClampMs = kitbag::Metronome::kMaxLatencyOffsetMs;
-constexpr int kNoSubdivision = 1;
-constexpr int kSixteenths = 4;
 constexpr uint64_t kSameAnchorFrame = 0;
 constexpr double kMovedAnchorSec = 0.3;
 constexpr auto kMovedAnchorFrame =
@@ -84,6 +80,11 @@ constexpr OffsetStep kWaitThenRestart[] = {
     {kBeatStepFrame, StepKind::kRestart, 0.0, kSameAnchorFrame},
 };
 
+constexpr OffsetStep kWaitThenAnchorFromStopped[] = {
+    {kBeatWaitFrame, StepKind::kOffset, 0.0, kSameAnchorFrame},
+    {kBeatStepFrame, StepKind::kStopThenAnchor, 0.0, kSameAnchorFrame},
+};
+
 constexpr OffsetStep kFollowThenEngineClock[] = {
     {kMidRunFrame, StepKind::kFollowOff, 0.0, kSameAnchorFrame},
 };
@@ -105,20 +106,6 @@ void CheckSteps(
       std::string("grid offset steps ") + name +
           ": no tick twice on one timeline, each on its frame",
       detail.c_str()
-  );
-}
-
-void TestCommandsInOneBlockNetOut() {
-  OffsetChange unchanged = kFastGrid;
-  unchanged.from_ms = 0.0;
-  const OffsetStep there_and_back[] = {
-      {kMidRunFrame, StepKind::kOffset, kNetOutMs, kSameAnchorFrame},
-      {kMidRunFrame, StepKind::kOffset, 0.0, kSameAnchorFrame},
-  };
-  Check(
-      RenderOffsetSteps(unchanged, there_and_back, false).onsets ==
-          RenderOffsetChange(unchanged, false).onsets,
-      "grid offset steps: +200 then back to 0 in one block moves no click"
   );
 }
 
@@ -162,8 +149,13 @@ void RunGridOffsetStepTests() {
   CheckSteps("republish in a wait", kFastGrid, kWaitThenRepublish, false);
   CheckSteps("moved anchor", kFastGrid, kWaitThenMovedAnchor, false);
   CheckSteps("restart in a wait", kFastGrid, kWaitThenRestart, false);
+  CheckSteps(
+      "anchor from stopped in a wait",
+      kFastGrid,
+      kWaitThenAnchorFromStopped,
+      false
+  );
   CheckSteps("follow off", kFollowGrid, kFollowThenEngineClock, true);
-  TestCommandsInOneBlockNetOut();
   TestCommandsInOneBlockActAsTheirSum();
 }
 

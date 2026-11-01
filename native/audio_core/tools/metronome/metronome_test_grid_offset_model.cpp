@@ -16,6 +16,7 @@ using kitbag::metronome_detail::kMsPerSecond;
 
 constexpr double kFirstBeatSec = 0.5;
 constexpr int64_t kAttackFrames = 1;
+constexpr double kAnchorBpm = 120.0;
 // Outlasts a hi-hat accent's tail above the onset threshold (~1160 frames).
 constexpr int64_t kHoldFrames = 1500;
 constexpr int64_t kTailFrames = kSampleRate;
@@ -64,7 +65,8 @@ std::vector<Segment> SegmentsOf(
         step.kind == StepKind::kRepublish && step.anchor_frame != anchor_frame;
     if (moved) anchor_frame = step.anchor_frame;
     if (moved || step.kind == StepKind::kFollowOff ||
-        step.kind == StepKind::kRestart) {
+        step.kind == StepKind::kRestart ||
+        step.kind == StepKind::kStopThenAnchor) {
       ++timeline;
     }
     segments.push_back(
@@ -122,6 +124,11 @@ void ApplyStep(
     case StepKind::kRestart:
       metronome.Stop();
       metronome.Start();
+      return;
+    case StepKind::kStopThenAnchor:
+      metronome.Stop();
+      metronome
+          .AnchorExternal(0.0, static_cast<uint64_t>(step.frame), kAnchorBpm);
       return;
   }
 }

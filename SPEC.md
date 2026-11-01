@@ -560,21 +560,23 @@ clamp. Both are now fixed and pinned by
 - **Under a grid a mid-run change jumps the click with the song** (owner,
   2026-10-31, #245). Grid mode reads the offset through `GridSeconds`, so a change
   moves the song position the click is on. Every change re-seeks the cursor, and
-  no re-seek (a republished grid and `anchor_external` included) lands on a beat
-  or subdivision tick at or before the last one heard this run on the same grid
-  anchor. Forward, the crossed beats are dropped: the next click is the first beat
-  at or after the new position, on its new-offset frame (−300 → +300 ms on a 400
-  BPM grid drops 4). Back by at least one grid interval — the spacing of the beats
-  the cursor sits between — that floor is lifted and the beats from the new
-  position replay at their new-offset frames, as the stems do; within one run on
-  one anchor, only this replay sounds a beat twice. Back by less, the floor holds:
-  the next click is the next unsounded beat, and `bar_phase` holds at the last
-  sounded beat until the position passes it again. Changes drained in one block
-  act as their sum. A new run, a grid with another anchor, or a switch to or from
-  the follow-mixer clock starts a fresh floor. A re-seek also places the
-  subdivision cursor, so the ticks it skipped never fire as a burst. Pinned by
-  `RunGridOffsetChangeTests` in `metronome_verify`. The follow-mixer click ignores
-  the offset (D16), so a change there moves nothing.
+  on the engine clock no re-seek (a republished grid and `anchor_external`
+  included) lands on a beat or subdivision tick at or before the last one heard
+  this run on the same grid anchor. The follow-mixer clock has no such floor: its
+  loop wraps and song seeks replay beats by design. Forward, the crossed beats are
+  dropped: the next click is the first beat at or after the new position, on its
+  new-offset frame (−300 → +300 ms on a 400 BPM grid drops 4). Back by at least
+  one grid interval — the spacing of the beats the cursor sits between — that
+  floor is lifted and the beats from the new position replay at their new-offset
+  frames, as the stems do; within one run on one anchor, only this replay sounds a
+  beat twice. Back by less, the floor holds: the next click is the next unsounded
+  beat, and `bar_phase` holds at the last sounded beat until the position passes
+  it again. Changes drained in one block act as their sum. A new run, a grid with
+  another anchor, or a switch to or from the follow-mixer clock starts a fresh
+  floor. A re-seek also places the subdivision cursor, so the ticks it skipped
+  never fire as a burst. Pinned by `RunGridOffsetChangeTests` in
+  `metronome_verify`. The follow-mixer click ignores the offset (D16), so a change
+  there moves nothing.
 
 **The rule these three fixes share, and the decision that comes with it:** a
 change to the offset *or* the tempo preserves `position` phase — it never steps

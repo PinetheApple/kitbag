@@ -162,7 +162,7 @@ Metronome::AcquireGrid(uint64_t block_start_frame, uint32_t sample_rate) {
   if (view.grid == nullptr || follow_mixer_) return view;
   // Only a whole-beat backward shift clears the floor to replay (§4.7); other
   // re-seeds land past the last onset this run heard on this anchor.
-  if (GridShiftReplays(*view.grid, shift_sec)) last_onset_ = {};
+  if (!changed && GridShiftReplays(*view.grid, shift_sec)) last_onset_ = {};
   if (changed || shift_sec != 0.0) {
     SeekGridCursor(
         *view.grid,
@@ -225,6 +225,7 @@ void Metronome::BeginAnchorExternal(
   // Song second → this signature's beat unit, so an 8th-note bar anchors on the
   // song's clock like a quarter-note one.
   beat_position_ = song_seconds * bpm_ * BeatUnitScale() / kSecondsPerMinute;
+  if (!running_) last_onset_ = {};
   running_ = true;
   running_flag_.store(true, std::memory_order_relaxed);
   counting_in_ = false;

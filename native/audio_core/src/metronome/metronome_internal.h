@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <limits>
 
 #include "metronome/metronome_types.h"
 
@@ -15,6 +16,7 @@ namespace metronome_detail {
 
 // Guards against a boundary landing infinitesimally below an integer.
 constexpr double kGridEpsilon = 1e-9;
+constexpr double kNoFloorSec = -std::numeric_limits<double>::infinity();
 
 constexpr double kAccentAmplitude = 0.9;
 constexpr double kBeatAmplitude = 0.6;
@@ -51,7 +53,7 @@ inline double BarFraction(double position, int beats_per_bar) {
 // One epsilon clears the seek's own lower_bound tolerance, the second keeps
 // the onset itself behind the cursor. Another anchor is another timeline.
 inline double OnsetFloorSec(const BeatGrid& grid, const GridOnset& onset) {
-  if (grid.anchor_frame != onset.anchor_frame) return GridOnset{}.song_sec;
+  if (grid.anchor_frame != onset.anchor_frame) return kNoFloorSec;
   return onset.song_sec + kGridEpsilon + kGridEpsilon;
 }
 

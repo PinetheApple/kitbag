@@ -17,7 +17,6 @@ constexpr double kFullClampMs = kitbag::Metronome::kMaxLatencyOffsetMs;
 constexpr double kSmallOffsetMs = 20.0;
 constexpr double kThresholdFromMs = 100.0;
 constexpr double kThresholdMarginMs = 5.0;
-constexpr double kFastIntervalSec = 0.15;
 constexpr double kSlowIntervalSec = 0.37;
 constexpr double kShortIntervalSec = 0.2;
 constexpr double kLongIntervalSec = 0.4;
@@ -25,8 +24,6 @@ constexpr int kIntervalSwitchBeat = 20;
 constexpr double kBetweenIntervalsToMs =
     kThresholdFromMs -
     (kShortIntervalSec + kLongIntervalSec) / 2.0 * kMsPerSecond;
-constexpr int kNoSubdivision = 1;
-constexpr int kSixteenths = 4;
 constexpr int64_t kChangeFrame = int64_t{750} * kBlockFrames;
 // 32 frames after beat 23 sounds at +20 ms, 928 before it sounds at 0 ms.
 constexpr int64_t kFastSmallChangeFrame = int64_t{737} * kBlockFrames;

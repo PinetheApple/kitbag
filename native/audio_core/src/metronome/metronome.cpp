@@ -273,11 +273,13 @@ bool Metronome::ApplyClockCommand(const Command& command) {
     case CommandType::kSetLatencyOffset:
       SetLatencyPreservingPhase(command.value);
       return true;
-    case CommandType::kSetFollowMixer:
-      if (follow_mixer_ != (command.int_a != 0)) last_onset_ = {};
-      follow_mixer_ = command.int_a != 0;
+    case CommandType::kSetFollowMixer: {
+      const bool follow = command.int_a != 0;
+      if (follow_mixer_ != follow) last_onset_ = {};
+      follow_mixer_ = follow;
       ReacquireGrid();
       return true;
+    }
     default:
       return false;
   }

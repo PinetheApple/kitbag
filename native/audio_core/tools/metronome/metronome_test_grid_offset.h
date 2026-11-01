@@ -14,6 +14,9 @@ enum class ShiftRule : uint8_t { kDrop, kReseek, kWait };
 constexpr int kOffsetGridBeats = 60;
 constexpr int64_t kNoOffsetChange = -1;
 constexpr int64_t kFrameTolerance = 1;
+constexpr double kFastIntervalSec = 0.15;
+constexpr int kNoSubdivision = 1;
+constexpr int kSixteenths = 4;
 
 struct OffsetChange {
   const char* name;
@@ -27,7 +30,13 @@ struct OffsetChange {
   double interval_after_switch_sec = 0.0;
 };
 
-enum class StepKind : uint8_t { kOffset, kRepublish, kFollowOff, kRestart };
+enum class StepKind : uint8_t {
+  kOffset,
+  kRepublish,
+  kFollowOff,
+  kRestart,
+  kStopThenAnchor
+};
 
 struct OffsetStep {
   int64_t frame;
