@@ -657,11 +657,14 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   Settings offers one retry route. The metronome and stem song cards move to DEFAULT
   importance with no sound, vibration or heads-up, so they show expanded in the shade and
   on the lock screen instead of under Silent. **[user]** Playback starts at once and the
-  ask appears alongside it. The prompt counts as asked only once answered, so a prompt cut
-  off by the app closing comes back on the next start. Android keeps an existing
-  channel's importance, so the cards move to new channel IDs and the LOW ones are deleted.
-  Whether Kitbag has asked is a device-local `preferences` key with no migration and is
-  not carried in a backup. **[recorded]** The Settings row is "Notifications" in
-  Appearance, under Keep screen awake, reading "On" or "Off". Off with a chevron asks the
-  system once if Kitbag never has, and otherwise opens the app's system notification
-  settings; On does nothing. **[coord]**
+  prompt appears alongside it. Back or a tap outside the prompt counts as Not now. The
+  prompt is remembered only once answered, so a prompt cut off by the app closing comes
+  back on the next start. The system dialog counts as asked once it answers, including a
+  first denial. A blocked answer opens the app's system notification settings, since it
+  can come back with no dialog shown. Android keeps an existing channel's importance, so
+  the cards move to new channel IDs and the LOW ones are deleted. The ask state (never,
+  declined, asked) is a device-local `preferences` key with no migration and is not
+  carried in a backup. **[recorded]** The Settings row is "Notifications" in Appearance,
+  under Keep screen awake, reading "On" or "Off". Off has a chevron: it shows the system
+  dialog if Kitbag has never shown it, including after Not now on the prompt, and
+  otherwise opens the app's system notification settings. On does nothing. **[coord]**
