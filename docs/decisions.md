@@ -589,6 +589,15 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   and restores its unsaved live settings; it never delays Next. B (Save button in the app
   bar) and C (chip context line reads "Unsaved") are not chosen and are kept as
   reference in `docs/research/mockups/212/`. **[user]**
+- **2026-10-31 · A mid-song latency change in grid mode drops the crossed beats (§4.7, #245)**
+  — When the offset moves a song grid's position forward, the click jumps straight to its
+  new position: no catch-up burst for the beats the change crossed, the same way the stems
+  jump. **[user]**
+- **2026-10-31 · A backward latency change in grid mode re-seeks only by a whole beat (§4.7, #245)**
+  — When the change moves the position back by at least one grid interval, the click
+  re-seeks with the song as the stems do, and the beats from there replay. A smaller
+  backward change waits for the next beat that has not sounded, so no beat sounds twice.
+  The interval is the spacing of the two beats the cursor sits between. **[user]**
 
 - **2026-10-31 · Calibration window and the ±300 ms limit (§12.5.1, #170)** — A tap's
   deviation is only known to within one beat, so the taps are first unwrapped around
