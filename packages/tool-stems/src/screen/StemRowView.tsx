@@ -69,6 +69,9 @@ export function StemRowView({
     },
     [renameStem, index],
   );
+  const cancelRename = useCallback(() => {
+    setEditing(false);
+  }, []);
   const expand = useCallback(() => {
     onExpand(index);
   }, [onExpand, index]);
@@ -103,7 +106,11 @@ export function StemRowView({
         ]}
       >
         {editing ? (
-          <StemNameEditor name={row.name} onDone={finishRename} />
+          <StemNameEditor
+            name={row.name}
+            onDone={finishRename}
+            onCancel={cancelRename}
+          />
         ) : (
           <Pressable
             accessible={false}
