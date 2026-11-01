@@ -5,9 +5,10 @@ import { useCallback, useEffect } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TOOL_ID } from '@/home/registry';
+import { ToolGate } from '@/home/ToolGate';
 
 // The shell, not the tool, records the visit for Home's Continue card.
-export default function MetronomeRoute() {
+function MetronomeRouteBody() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const markUsed = useLastTool((s) => s.markUsed);
@@ -32,5 +33,13 @@ export default function MetronomeRoute() {
       onBack={goBack}
       onOpenSetlists={openSetlists}
     />
+  );
+}
+
+export default function MetronomeRoute() {
+  return (
+    <ToolGate toolId={TOOL_ID.metronome}>
+      <MetronomeRouteBody />
+    </ToolGate>
   );
 }

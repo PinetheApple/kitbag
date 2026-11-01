@@ -27,7 +27,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSettingsRoutes } from '../settings/settingsRoutes.ts';
 import { ArrangeSheet } from './ArrangeSheet.tsx';
 import {
-  homeArrangement,
+  arrangedWithOff,
+  shownArrangement,
   toolFor,
   type HomeArrangement,
 } from './arrangement.ts';
@@ -36,6 +37,7 @@ import {
   HOME_TOOLS,
   TOOL_ID,
   type HomeToolEntry,
+  type ToolOnTest,
 } from './registry.ts';
 import {
   metronomeResumeSubtitle,
@@ -46,6 +48,7 @@ import {
   UPCOMING_SUBTEXT,
   type MetronomeSummary,
 } from './subtext.ts';
+import { useToolOn } from './toolsOn.ts';
 
 const useStyles = createThemedStyles((theme) => ({
   screen: {
@@ -108,15 +111,18 @@ function useLiveText(): Readonly<Record<string, LiveText>> {
   }, [metronome, tuning, libraryRows, libraryFailed]);
 }
 
-function useArrangement() {
+function useArrangement(isOn: ToolOnTest) {
   const saved = useHomeLayout((s) => s.arrangement);
   const arrange = useHomeLayout((s) => s.arrange);
-  const arrangement = useMemo(() => homeArrangement(saved), [saved]);
+  const arrangement = useMemo(
+    () => shownArrangement(saved, isOn),
+    [saved, isOn],
+  );
   const onArrange = useCallback(
     (next: HomeArrangement) => {
-      if (next !== arrangement) arrange(next);
+      if (next !== arrangement) arrange(arrangedWithOff(saved, next, isOn));
     },
-    [arrangement, arrange],
+    [arrangement, arrange, saved, isOn],
   );
   return { arrangement, onArrange };
 }
@@ -128,7 +134,8 @@ export function HomeScreen() {
   const liveText = useLiveText();
   const lastToolId = useLastTool((s) => s.toolId);
   const { openSettings } = useSettingsRoutes();
-  const { arrangement, onArrange } = useArrangement();
+  const isOn = useToolOn();
+  const { arrangement, onArrange } = useArrangement(isOn);
   const [arranging, setArranging] = useState(false);
   const openArrange = useCallback(() => {
     setArranging(true);
@@ -155,7 +162,7 @@ export function HomeScreen() {
     };
   };
 
-  const resume = continueTarget(lastToolId, HOME_TOOLS);
+  const resume = continueTarget(lastToolId, HOME_TOOLS, isOn);
   const resumeText = resume === undefined ? undefined : liveText[resume.id];
 
   const tiles: ToolGridItem[] = visibleTiles(arrangement).flatMap((tile) => {
@@ -228,7 +235,7 @@ export function HomeScreen() {
         />
       ))}
 
-      {/* The Tools manager (§9.3) is not built, so this has nowhere to go. */}
+      {/* Upcoming plugins have no screen yet; the Tools screen lists built tools only. */}
       <ToolRow
         icon="moreTools"
         title="More tools"

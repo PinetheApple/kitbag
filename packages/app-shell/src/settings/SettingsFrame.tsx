@@ -9,15 +9,22 @@ const useStyles = createThemedStyles((theme) => ({
     paddingHorizontal: space.screenInset,
     gap: space.sectionGap,
   },
+  fill: { flexGrow: 1 },
 }));
 
 export interface SettingsFrameProps {
   readonly title: string;
   readonly onBack: () => void;
   readonly children: ReactNode;
+  readonly fill?: boolean;
 }
 
-export function SettingsFrame({ title, onBack, children }: SettingsFrameProps) {
+export function SettingsFrame({
+  title,
+  onBack,
+  children,
+  fill = false,
+}: SettingsFrameProps) {
   const styles = useStyles();
   const insets = useSafeAreaInsets();
   const contentInsets = useMemo(
@@ -30,7 +37,11 @@ export function SettingsFrame({ title, onBack, children }: SettingsFrameProps) {
   return (
     <ScrollView
       style={styles.screen}
-      contentContainerStyle={[styles.content, contentInsets]}
+      contentContainerStyle={[
+        styles.content,
+        contentInsets,
+        fill && styles.fill,
+      ]}
     >
       <AppBar title={title} onBack={onBack} />
       {children}
