@@ -1516,7 +1516,7 @@ one (§12.5).
 | `surface3` | `#2E2C3A` | `#E3DFD4` |
 | `line` | `#33303F` | `#DCD7CA` |
 | `text` | `#ECEAF0` | `#221F26` |
-| `text2` | `#BDBBC6` | `#47434F` |
+| `text2` | `#BDBBC6` | `#433F4B` |
 | `text3` | `#9793A2` | `#6C6573` |
 | `decor` | `#6C6878` | `#98929F` |
 | `accent` | `#FFB347` | `#B26F0E` |
@@ -1540,9 +1540,13 @@ Rules that come with them:
 - Dark text is off-white; **pure white halates on OLED.**
 - **Elevation = lighter surface, not shadow.**
 - Text under 18sp holds 4.5:1 against every ground it sits on, in both themes.
-- `text`, `text2` and `text3` stay at least 1.5:1 apart from each other.
+- `text`, `text2` and `text3` stay at least 1.5:1 apart from each other. That floor is
+  set by dark, where `text2` sits at 1.58:1 over `text3` and 1.59:1 under `text`. Light
+  reaches the 1.8:1 `text2` step over `text3`, with `text` 1.59:1 above `text2`.
 - `decor` is for non-text marks only: icons that read as quiet or disabled, dot and
-  swatch borders, switch knobs, slider ticks. Text never uses it.
+  swatch borders, switch knobs, slider ticks. Text never uses it. It is an accepted
+  exception to the 3:1 non-text bar: light `decor` is about 2.7:1 on `bg`, kept so these
+  marks look as they did before #189.
 - `text3` sits only on `bg`, `surface1`, `surface2`, `activeCardFill` and the setlist
   NOW row fill; never on `surface3`, `activeControlFill`, or the set chip, selected tile
   or stem tile fills.
@@ -1551,6 +1555,7 @@ Rules that come with them:
   (the same split), so `onAccent` holds 4.5:1 on it; fills with only icons keep `accent`.
 - Red, amber and green used as text take `redInk`, `amberInk` and `greenInk`, darker in
   light and equal to the base token in dark. Fills, icons and borders keep the base token.
+  Dark red text stays off the selected-control fills, where it is under 4.5:1.
 - Accent icons hold 3:1 on every ground; on an accent-tinted fill that needs `accentInk`.
 
 **Type.** Two faces, both OFL. **Space Grotesk** for display, numerics and labels
