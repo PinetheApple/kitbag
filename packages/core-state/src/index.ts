@@ -225,6 +225,31 @@ export {
   MINUS,
   type ClockParts,
 } from './text.ts';
+export { CALIBRATION } from './rig/calibrationRules.ts';
+export {
+  analyseTaps,
+  BEAT_MS,
+  mean,
+  sampleSd,
+  storedOffsetMs,
+  unwrapDeviations,
+  type CalibrationOutcome,
+  type RefusalReason,
+} from './rig/calibrationStats.ts';
+export {
+  canUseOutcome,
+  createCalibrationSession,
+  type CalibrationDeps,
+  type CalibrationNotice,
+  type CalibrationPhase,
+  type CalibrationSession,
+} from './rig/calibrationSession.ts';
+export { routeDetail, routeTitle } from './rig/routeLabel.ts';
+export { formatOffsetMs } from './rig/latencyText.ts';
+export {
+  useCalibration,
+  type CalibrationSessionStore,
+} from './rig/useCalibration.ts';
 export {
   findMissingRows,
   removeMissingRows,

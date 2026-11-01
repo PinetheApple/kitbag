@@ -60,6 +60,12 @@ export const iconGlyphs = {
   analyzing: 'refresh',
   error: 'alert-circle',
   folder: 'folder',
+  calibrate: 'timer-sync-outline',
+  routeSpeaker: 'cellphone-sound',
+  routeWired: 'headphones',
+  routeBluetooth: 'bluetooth',
+  routeUsb: 'usb',
+  routeOther: 'speaker',
   storage: 'database-outline',
   removeMissing: 'backspace-reverse-outline',
 } as const satisfies Record<string, VectorGlyph>;
