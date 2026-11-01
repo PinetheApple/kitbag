@@ -1,13 +1,6 @@
 import { Pressable, Text, View } from 'react-native';
 
-import {
-  inset,
-  presetActionGrow,
-  radius,
-  size,
-  space,
-  textRoles,
-} from '../roles.ts';
+import { presetActionGrow, radius, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
@@ -20,15 +13,10 @@ import {
 
 export type PresetButtonKind = 'preset' | 'action';
 
-const HEIGHT: Readonly<Record<PresetButtonKind, number>> = {
-  preset: textRoles.preset.size + (inset.presetV + size.stroke) * 2,
-  action: textRoles.presetAction.size + (inset.buttonV + size.stroke) * 2,
-};
-
 // Widths are flex and well past 48dp, so only the vertical axis is grown.
-function presetHitBox(kind: PresetButtonKind, gaps: NeighbourGaps) {
+function presetHitBox(gaps: NeighbourGaps) {
   return hitBoxStyle(
-    hitExtension(minTouchTargetDp, HEIGHT[kind], {
+    hitExtension(minTouchTargetDp, size.presetButton, {
       top: gaps.top,
       bottom: gaps.bottom,
     }),
@@ -54,7 +42,7 @@ const useStyles = createThemedStyles((theme) => ({
   },
   preset: {
     flexGrow: 1,
-    paddingVertical: inset.presetV,
+    minHeight: size.presetButton,
     borderRadius: radius.preset,
     backgroundColor: theme.color.surface2,
     borderWidth: size.stroke,
@@ -68,7 +56,7 @@ const useStyles = createThemedStyles((theme) => ({
   },
   action: {
     flexGrow: 1,
-    paddingVertical: inset.buttonV,
+    minHeight: size.presetButton,
     borderRadius: radius.button,
     backgroundColor: theme.color.surface2,
     borderWidth: size.stroke,
@@ -97,7 +85,7 @@ export function PresetButton({
       accessibilityLabel={accessibilityLabel ?? label}
       style={[
         action ? styles.actionHit : styles.presetHit,
-        presetHitBox(kind, neighbourGaps(neighbourGapDp)),
+        presetHitBox(neighbourGaps(neighbourGapDp)),
       ]}
       onPress={onPress}
     >
