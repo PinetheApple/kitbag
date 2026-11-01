@@ -6,6 +6,7 @@ import {
   bodyLineHeight,
   iconSizes,
   inset,
+  opacity,
   radius,
   size,
   space,
@@ -90,6 +91,7 @@ const useStyles = createThemedStyles((theme) => ({
   },
   disabledOutline: {
     borderColor: theme.color.line,
+    opacity: opacity.muted,
   },
   primary: {
     backgroundColor: theme.color.accent,
