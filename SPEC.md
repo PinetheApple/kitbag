@@ -1263,10 +1263,9 @@ do not write a new one.
 
 ### 9.3 Tools manager
 
-Every tool lists its true size; heavy plugins download on demand from CDN with
-checksum verification; upcoming tools visible as `SOON` linking to the GitHub
-issue. **"Get", never "Buy"** — everything is free forever, and the verb is the
-brand.
+The Tools screen lists only the built tools, each with an on/off switch (owner,
+2026-10-31; §12.5). It shows no sizes, no "Get" and no `SOON` rows, and upcoming
+tools are not listed.
 
 Resolved (settings design §03): the Tools manager is the one screen that owns
 tool toggles, reached from Settings by a single row. The Flutter
@@ -1277,9 +1276,8 @@ buttons, which is two visual languages for one column and a badge that looks lik
 a label but was meant to be tapped. Off tools leave the home screen; nothing is
 deleted.
 
-The toggle is `tool_enabled_<id>` in preferences and already drives the filtered
-plugin list. **Moving the UI does not move the state** — that row costs a screen,
-not a refactor.
+Each switch is stored as `tool_enabled_<id>` in preferences (`"true"` or
+`"false"`; a missing key is on).
 
 No Play Asset Delivery (breaks F-Droid reproducible builds). No public plugin SDK
 yet — first-party plugins against an internal interface.
@@ -1397,7 +1395,7 @@ The schema is the durable part and survives the stack change. The Flutter
 build's tables were `Setlists`, `Songs`, `PracticeSessions`, `Tunings`,
 `LibrarySongs`, `StemSets`, `Stems` (schema v6). A reconstruction of that v6 DDL is the
 migration fixture in `packages/core-db/src/migrate-fixtures.test-helper.ts`; the React
-Native schema migrates it in place and is at v18 (`packages/core-db/src/migrate.ts`).
+Native schema migrates it in place and is at v19 (`packages/core-db/src/migrate.ts`).
 
 ### 11.1 Persistence layer
 
@@ -1438,6 +1436,7 @@ rather than starting from zero.
 | `StemSets`: + speed; `Stems`: + pitch (semitones) | §7.6 — mix state is per song, like gain/mute/solo |
 | `StemSets`: + `renamed` (default 0); `Stems`: + `name` (display name, NULL shows the role) | §7.1, §7.8 — a rename is display-only and survives a re-import of the same StemDeck song; schema v17 |
 | `SongPresets`: + `poly_against` INTEGER (0 = the bar, 1..16), default 0 | §5.2 — poly N against M; a v4 backup without `polyAgainst` reads as the bar; schema v18 |
+| `route_latency`: + `name` TEXT, + `kind` TEXT (the route's display name and `OutputRoute` kind when calibrated) | §12.5 — the Output & latency sheet lists calibrated routes that are not connected; schema v19 |
 | **All paths relative** to the base directory | §2.3 (iOS) and **D11** (the directory is now user-movable) |
 | `PracticeSessions`: write `setlistId`, `songsPlayed` | §5.7 — columns exist, producer never fills them |
 | BPM cache table | §8.5 |
@@ -1647,11 +1646,16 @@ the supersession: ≤7 primary choices.)
   row as the same LEDs used everywhere, then open a sheet: one pattern **per
   subdivision count**, not one pattern, since the count is per-song (1–16) — the
   pattern you set for `♬` applies to every song using `♬`. The engine plays
-  these patterns (D2, #170); the row, the sheet and their storage are not built.
+  these patterns (D2, #170). The patterns are stored as preferences and replayed
+  to the engine at launch and on every edit (#170).
 - **Volume and latency are the only rig settings, and they are global** (**D3**).
   No per-song override; `SongPresets` carries neither column. Volume per song is
   genuinely lost — the quiet acoustic number in a loud set needs this slider.
   Accepted, and it is the reason the Rig section has to be good.
+- **Tools lists only built tools** (owner, 2026-10-31). Each has an on/off switch, and
+  the Settings row reads "N on". `kitbag-settings.html`'s sizes, Get and SOON rows are
+  not built (§9.3). Off removes a tool everywhere and is separate from Home's Hide;
+  `docs/decisions.md` has the ruling.
 - **Practice is a readout, not a doorway.** Sessions, total time, average tempo,
   no chevron — the viewer is later work, so the row promises nothing behind it.
   The numbers are already computed; average tempo is the one addition, and it is
@@ -1697,7 +1701,14 @@ asks them to.
   against the route, not globally.
 - **16 taps, ~10 seconds.** Enough to average out a bad one, short enough that
   nobody abandons. **Fewer than 8 usable taps refuses to produce a number** rather
-  than producing a bad one — "no dead ends" means explaining, not guessing.
+  than producing a bad one — "no dead ends" means explaining, not guessing. A tap
+  is usable within ±250 ms of the run's median deviation, taken after unwrapping
+  the taps around their circular mean, and then within 2.5 SD (decisions.md,
+  2026-10-31, calibration window); a mean past ±300 ms is refused as at the
+  limit, and so is a steady run (SD ≤ 30 ms) within one SD of it, while an
+  unsteady one inside it gets "Use anyway". At 100 BPM a steady route past
+  ±300 ms cannot be told from one a beat away, so with a tight spread it is
+  stored as the nearer offset: +320 ms reads as −280 ms (accepted by the owner).
 - The stepper stays for people who know their number: every gesture has a visible
   twin, and calibration is the gesture here.
 
@@ -2250,8 +2261,9 @@ unchanged.
 slot_mask)` sets one row: bit *s* accents slot *s*, bit 0 is ignored, one command
 per row. Rows start empty when the engine is created and survive stop/start; they
 are not stored, so whatever persists the patterns must replay them on launch.
-Grid mode applies them to the measured beats' subdivisions. **Not built:** the
-schema for the global patterns and the Settings row and sheet.
+Grid mode applies them to the measured beats' subdivisions. The Settings row and
+sheet edit them; the patterns persist as preferences (one mask per count, no
+schema change) and are replayed at launch and on every edit (#170).
 
 ### D3 — Volume and latency are **global only**. Both columns go.
 
