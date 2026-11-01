@@ -159,9 +159,8 @@ export function polyLabelPlace(room: PolyLabelRoom): PolyLabelPlace {
   const margin = Math.max(0, room.sideRoom) + room.screenInset;
   const neededRight = room.labelWidth + metronome.polyLabelGapRight;
   if (neededRight <= room.afterLastDot + margin) return 'right';
-  return room.labelWidth + metronome.polyLabelGapLeft <= margin
-    ? 'left'
-    : 'above';
+  const neededLeft = room.labelWidth + metronome.polyLabelGapLeft;
+  return neededLeft <= margin ? 'left' : 'above';
 }
 
 export function polyLabelLeft(

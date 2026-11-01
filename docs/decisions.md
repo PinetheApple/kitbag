@@ -589,3 +589,8 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   and restores its unsaved live settings; it never delays Next. B (Save button in the app
   bar) and C (chip context line reads "Unsaved") are not chosen and are kept as
   reference in `docs/research/mockups/212/`. **[user]**
+
+- **2026-11-01 · Poly ratio label goes right first (§5.2, #243)** — The label follows the
+  last poly dot at 18 dp, then sits 8 dp left of the row, then above it, following the
+  approved round 2 mockup rather than the poly file's left placement. Coordinator ruling.
+  **[recorded]**
