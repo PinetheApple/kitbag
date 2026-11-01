@@ -683,3 +683,8 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   past its cell and a visible gap stays against the 3 dp cycle gap. At 340 dp the old
   3.5 dp reach overlapped both neighbours. The 3 dp gap is kept. This departs slightly
   from the design files, which draw the overlap. **[recorded — coordinator ruling]**
+
+- **2026-11-02 · Leaving the metronome ends a practice session only when stopped (§5.6, §5.7, #85)**
+  — Leaving the screen with the transport stopped and at least 1 s played ends the session,
+  and its summary shows on the next metronome visit. Leaving while playing keeps the same
+  session running, since background practice counts. **[coord]**

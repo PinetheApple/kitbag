@@ -1,6 +1,7 @@
 import { countLabel } from '@kitbag/core-design';
 import type {
   getPracticeSessionStore,
+  metronomeStore,
   PracticeStretch,
   PracticeSummary,
 } from '@kitbag/core-state';
@@ -11,6 +12,8 @@ export type PracticeSessions = Pick<
   ReturnType<typeof getPracticeSessionStore>,
   'getState'
 >;
+
+export type Metronome = Pick<typeof metronomeStore, 'getState'>;
 
 export type SummarySheet = 'summary' | 'none';
 
@@ -28,6 +31,14 @@ export function endPractice(
 ): void {
   sessions.getState().endSession();
   resetClock();
+}
+
+export function leavePractice(
+  sessions: PracticeSessions,
+  metronome: Metronome,
+): void {
+  const { running, resetPractice } = metronome.getState();
+  if (!running) endPractice(sessions, resetPractice);
 }
 
 export function summarySheetOnMount(

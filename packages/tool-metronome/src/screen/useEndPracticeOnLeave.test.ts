@@ -37,6 +37,9 @@ vi.mock('@kitbag/core-state', async (original) => ({
   useMetronome: <T>(select: (state: CoreState.MetronomeStore) => T): T =>
     select(harness().metronome.getState()),
   getPracticeSessionStore: () => harness().sessions,
+  get metronomeStore() {
+    return harness().metronome;
+  },
 }));
 
 beforeEach(() => {
@@ -45,7 +48,7 @@ beforeEach(() => {
 });
 
 describe('useEndPracticeOnLeave', () => {
-  it('ends the session once when the screen goes, and not for under a second', () => {
+  it('ends a stopped session once when the screen goes, and not for under a second', () => {
     const h = harness();
     useEndPracticeOnLeave();
     h.metronome.getState().start();
@@ -62,5 +65,20 @@ describe('useEndPracticeOnLeave', () => {
     h.metronome.getState().stop();
     effects.unmount();
     expect(h.sessions.getState().pending).toHaveLength(1);
+  });
+
+  it('keeps a playing session running when the screen goes', () => {
+    const h = harness();
+    useEndPracticeOnLeave();
+    h.metronome.getState().start();
+    h.advance(2 * SECOND);
+    const uuid = h.sessions.getState().session?.uuid;
+    effects.unmount();
+    expect(h.sessions.getState().pending).toEqual([]);
+    expect(h.sessions.getState().session?.uuid).toBe(uuid);
+    h.advance(3 * SECOND);
+    h.metronome.getState().stop();
+    expect(h.pill()).toBe(5 * SECOND);
+    expect(h.sessions.getState().endSession()?.playedMs).toBe(5 * SECOND);
   });
 });
