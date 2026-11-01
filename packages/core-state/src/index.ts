@@ -287,6 +287,7 @@ export {
   clockParts,
   formatClockSeconds,
   MINUS,
+  SECONDS_PER_MINUTE,
   type ClockParts,
 } from './text.ts';
 export { CALIBRATION } from './rig/calibrationRules.ts';

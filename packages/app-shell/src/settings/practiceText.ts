@@ -1,6 +1,6 @@
 import type { PracticeStats } from '@kitbag/core-db';
 import { countLabel } from '@kitbag/core-design';
-import { clockParts } from '@kitbag/core-state';
+import { clockParts, SECONDS_PER_MINUTE } from '@kitbag/core-state';
 
 import { SEPARATOR } from './separator.ts';
 
@@ -12,9 +12,10 @@ export interface PracticeSummary {
 }
 
 export function formatDuration(totalSeconds: number): string {
-  const { hours, minutes } = clockParts(totalSeconds);
+  const wholeMinutes = Math.round(totalSeconds / SECONDS_PER_MINUTE);
+  if (wholeMinutes === 0 && totalSeconds > 0) return 'under 1m';
+  const { hours, minutes } = clockParts(wholeMinutes * SECONDS_PER_MINUTE);
   if (hours > 0) return `${String(hours)}h ${String(minutes)}m`;
-  if (minutes === 0 && totalSeconds > 0) return '<1m';
   return `${String(minutes)}m`;
 }
 

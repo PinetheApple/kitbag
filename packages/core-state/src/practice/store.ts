@@ -28,7 +28,7 @@ export interface PracticePersistence {
 
 export interface PracticeSessionState {
   readonly session: PracticeSession | null;
-  readonly pending: PracticeSummary | null;
+  readonly pending: readonly PracticeSummary[];
 }
 
 export interface PracticeSessionActions {
@@ -85,42 +85,44 @@ export function createPracticeSessionStore(
   deps: PracticeSessionDeps,
 ): StoreApi<PracticeSessionStore> {
   const { metronome, library, now } = deps;
-  let saving: Promise<void> | null = null;
-  let discardedWhileSaving: string | null = null;
+  const saving = new Map<string, Promise<void>>();
+  const discardedWhileSaving = new Set<string>();
 
   const store = createStore<PracticeSessionStore>((set, get) => {
-    const clearIfPending = (summary: PracticeSummary) => {
-      if (get().pending?.uuid === summary.uuid) set({ pending: null });
+    const dequeue = (uuid: string) => {
+      set({
+        pending: get().pending.filter((summary) => summary.uuid !== uuid),
+      });
     };
     const write = (summary: PracticeSummary) =>
       Promise.resolve()
         .then(() => deps.persistence.insert(practiceRecordOf(summary)))
         .then(
           () => {
-            clearIfPending(summary);
+            dequeue(summary.uuid);
           },
           (error: unknown) => {
-            if (discardedWhileSaving !== summary.uuid) throw error;
-            clearIfPending(summary);
+            if (!discardedWhileSaving.has(summary.uuid)) throw error;
+            dequeue(summary.uuid);
           },
         )
         .finally(() => {
-          saving = null;
-          discardedWhileSaving = null;
+          saving.delete(summary.uuid);
+          discardedWhileSaving.delete(summary.uuid);
         });
     return {
       session: null,
-      pending: null,
+      pending: [],
       endSession: () => {
         const { session, pending } = get();
-        if (session === null || pending !== null) return null;
+        if (session === null) return null;
         const at = now();
         const metronomeState = metronome.getState();
         const bpm = metronomeState.readTempo();
         const ended = endPracticeSession(session, at, bpm);
         const summary = ended.playedMs >= MIN_SAVED_PLAYED_MS ? ended : null;
         set({
-          pending: summary,
+          pending: summary === null ? pending : [summary, ...pending],
           session: metronomeState.running
             ? startPracticeSession(deps.newUuid(), at, bpm, session.context)
             : null,
@@ -128,15 +130,19 @@ export function createPracticeSessionStore(
         return summary;
       },
       saveSession: () => {
-        const { pending } = get();
-        if (saving !== null) return saving;
-        if (pending === null) return Promise.resolve();
-        saving = write(pending);
-        return saving;
+        const latest = get().pending[0];
+        if (latest === undefined) return Promise.resolve();
+        const inFlight = saving.get(latest.uuid);
+        if (inFlight !== undefined) return inFlight;
+        const written = write(latest);
+        saving.set(latest.uuid, written);
+        return written;
       },
       discardSession: () => {
-        if (saving === null) set({ pending: null });
-        else discardedWhileSaving = get().pending?.uuid ?? null;
+        const latest = get().pending[0];
+        if (latest === undefined) return;
+        if (saving.has(latest.uuid)) discardedWhileSaving.add(latest.uuid);
+        else dequeue(latest.uuid);
       },
     };
   });
