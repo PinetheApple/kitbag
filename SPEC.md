@@ -1516,10 +1516,10 @@ one (§12.5).
 | `surface3` | `#2E2C3A` | `#E3DFD4` |
 | `line` | `#33303F` | `#DCD7CA` |
 | `text` | `#ECEAF0` | `#221F26` |
-| `text2` | `#9B97A8` | `#6E687A` |
-| `text3` | `#6C6878` | `#98929F` |
+| `text2` | `#ADAAB8` | `#5D5868` |
+| `text3` | `#9793A2` | `#6C6573` |
 | `accent` | `#FFB347` | `#B26F0E` |
-| `accentDeep` | `#E89B2E` | `#8F5A0C` |
+| `accentDeep` | `#E89B2E` | `#80510B` |
 | `accentDim` | `#8A6A35` | `#D8B27C` |
 | `onAccent` | `#221600` | `#FFF7EA` |
 | `red` (flat) | `#FF5C5C` | `#CC4444` |
@@ -1535,7 +1535,10 @@ Rules that come with them:
   channel and **never doubles as accent.**
 - Dark text is off-white; **pure white halates on OLED.**
 - **Elevation = lighter surface, not shadow.**
-- Light's accent darkens to keep 4.5:1+ on white surfaces.
+- Text under 18sp holds 4.5:1 against every ground it sits on, in both themes.
+  `text3` is for resting grounds only, never a selected or raised control.
+- `accent` is for fills and icons. Accent-coloured text uses `accentInk`: `accent` in
+  dark, `accentDeep` in light.
 
 **Type.** Two faces, both OFL. **Space Grotesk** for display, numerics and labels
 — geometric, instrument-panel character, and **true tabular figures so a BPM

@@ -603,3 +603,9 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   last poly dot at 18 dp, then sits 8 dp left of the row, then above it. It follows the
   owner-approved round 2 frame (`design/kitbag-metronome.html` §02) rather than the poly
   file's left placement. **[recorded — coordinator ruling]**
+
+- **2026-11-01 · Small text contrast (§12.2, #189)** — Text under 18sp holds 4.5:1 on
+  every ground it sits on, in both themes. `text2`, `text3` and light `accentDeep` move in
+  lightness only to clear it, and the `text2` step stays above `text3`. Accent-coloured text
+  uses `accentInk`, generalising the Settings section label exception; `accent` is
+  unchanged for fills and icons. **[recorded]**
