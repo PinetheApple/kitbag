@@ -363,9 +363,11 @@ describe('poly label', () => {
   });
 
   it('needs the 18 dp right gap, not 8, to follow the last dot', () => {
+    const R2_LABEL_GAP_RIGHT = 18;
     const tight = { ...ROOM, sideRoom: 0, screenInset: 0 };
-    expect(polyLabelPlace({ ...tight, afterLastDot: 37 })).toBe('above');
-    expect(polyLabelPlace({ ...tight, afterLastDot: 38 })).toBe('right');
+    const fits = ROOM.labelWidth + R2_LABEL_GAP_RIGHT;
+    expect(polyLabelPlace({ ...tight, afterLastDot: fits - 1 })).toBe('above');
+    expect(polyLabelPlace({ ...tight, afterLastDot: fits })).toBe('right');
   });
 
   it('sits 8 left of the row, as the poly file draws 3:4', () => {
@@ -433,7 +435,9 @@ describe('cycle bracket inside the dots area', () => {
 
 describe('poly label beside 16/16 at 411 wide', () => {
   const R2_LABEL_BOX = 40;
-  const R2_LAST_POLY_DOT_RIGHT = 266.7 + 18;
+  const R2_POLY_DOT_LEFT = 266.7;
+  const R2_POLY_DOT = 18;
+  const R2_LAST_POLY_DOT_RIGHT = R2_POLY_DOT_LEFT + R2_POLY_DOT;
   const R2_LABEL_LEFT = 302.7;
   const areaWidth = 411 - space.screenInset * 2;
   const lines = layoutBeatLeds(16, MAX_DOTS_PER_LINE);
