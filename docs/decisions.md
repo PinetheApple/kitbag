@@ -683,3 +683,9 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   past its cell and a visible gap stays against the 3 dp cycle gap. At 340 dp the old
   3.5 dp reach overlapped both neighbours. The 3 dp gap is kept. This departs slightly
   from the design files, which draw the overlap. **[recorded — coordinator ruling]**
+- **2026-11-02 · Solid ends on muted bar cells (§12.2, #264)** — The status file draws a
+  muted cell as a fully dashed 1.5px outline: `tx2` in the status strip, `decor` in the
+  Practice sheet preview. Both now ship a dashed outline with solid left and right edges
+  in the same colour. Android does not anchor dashes at the corners, so narrow dashed cells
+  lose their ends and a run of muted cells reads as one dashed bar. This departs from
+  `design/kitbag-metronome-status.html`. **[recorded]**
