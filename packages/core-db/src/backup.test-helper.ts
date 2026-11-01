@@ -2,6 +2,8 @@ import { afterEach } from 'vitest';
 
 import { createBackupService } from './backup';
 import type { ImportResult } from './backup-format';
+import { COUNT_IN_PREFERENCE_KEYS } from './count-in-preferences';
+import { createPreferences } from './preferences';
 import { practiceSessions, songs, tunings } from './schema';
 import { createSetlistRepository } from './setlist-repository';
 import { createSongPresetRepository } from './song-preset-repository';
@@ -27,8 +29,20 @@ export function openBackupDatabase() {
     sets: createSetlistRepository(handle),
     presets: createSongPresetRepository(handle),
     backup: createBackupService(handle),
+    preferences: createPreferences(
+      (sql, params) => handle.connection.prepare(sql).all(...params),
+      handle.transactor,
+    ),
   };
 }
+
+export const UNRELATED_PREFERENCE = 'appearance_theme';
+
+export const SEEDED_COUNT_IN: Readonly<Record<string, string>> = {
+  [COUNT_IN_PREFERENCE_KEYS.scope]: 'always',
+  [COUNT_IN_PREFERENCE_KEYS.bars]: '2',
+  [COUNT_IN_PREFERENCE_KEYS.distinct]: '0',
+};
 
 export type BackupDatabase = ReturnType<typeof openBackupDatabase>;
 
@@ -88,7 +102,10 @@ async function seedLibrary({ handle }: BackupDatabase) {
 }
 
 export async function seed(database: BackupDatabase) {
-  const { handle, sets, presets } = database;
+  const { handle, sets, presets, preferences } = database;
+  for (const [key, value] of Object.entries(SEEDED_COUNT_IN))
+    await preferences.set(key, value);
+  await preferences.set(UNRELATED_PREFERENCE, 'light');
   const song = await seedLibrary(database);
   const opener = await presets.create(presetValues('Opener', song.id));
   const closer = await presets.create(presetValues('Closer', null));

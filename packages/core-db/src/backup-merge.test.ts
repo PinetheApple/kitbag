@@ -23,7 +23,7 @@ async function divergedPair() {
 }
 
 describe('backup merge', () => {
-  it('defaults to setlists, presets and tunings; history and library off', async () => {
+  it('defaults to setlists, presets, tunings and count-in; history and library off', async () => {
     const source = openBackupDatabase();
     await seed(source);
     const target = openBackupDatabase();
@@ -33,6 +33,7 @@ describe('backup merge', () => {
       'songPresets',
       'setlists',
       'tunings',
+      'countInSettings',
     ]);
   });
 
