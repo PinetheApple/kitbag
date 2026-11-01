@@ -783,9 +783,13 @@ the single most RN-specific piece of §5** — see §13.9.
 
 - Write `setlistId` and `songsPlayed` — the Flutter producer never does despite
   having an active session.
-- **Practice-end summary** on stop (not on every pause): time, set, songs,
-  average tempo, longest stretch. Save or discard. Sessions are currently
-  written silently and never shown — the peak-end rule (§12.6).
+- **Practice-end summary** when the session ends, not on every pause: time,
+  set, songs, average tempo, longest stretch. Save or discard — the peak-end
+  rule (§12.6). Longest stretch is shown in the summary only and not stored.
+- **What ends a session.** Transport Stop only pauses it. The practice pill's
+  **End** (in place of reset) ends it and opens the summary; leaving the
+  metronome screen with played time also ends it. A phone call or going to the
+  background never does.
 
 ### 5.8 Acceptance
 

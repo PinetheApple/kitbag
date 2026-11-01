@@ -603,3 +603,10 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   last poly dot at 18 dp, then sits 8 dp left of the row, then above it. It follows the
   owner-approved round 2 frame (`design/kitbag-metronome.html` §02) rather than the poly
   file's left placement. **[recorded — coordinator ruling]**
+
+- **2026-11-01 · Transport Stop pauses a practice session; End on the pill ends it (§5.7, #80, #85)**
+  — The metronome has only Play/Stop, so Stop cannot double as the session end. Stop
+  pauses; the pill's reset becomes **End**, which ends the session and opens the summary;
+  leaving the metronome screen with played time also ends it. A phone call or going to
+  the background never ends it. Longest stretch is shown in the summary only, so the
+  schema does not change. **[owner]**
