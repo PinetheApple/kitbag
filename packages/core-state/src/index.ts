@@ -64,10 +64,27 @@ export {
   reconcileArrangement,
   resizeTile,
   showTile,
+  tilesFor,
   visibleTiles,
+  withOffTiles,
   type ArrangedTile,
   type Arrangement,
 } from './home/arrangement.ts';
+export { useTools } from './tools/useTools.ts';
+export {
+  configureToolsPersistence,
+  createToolsStore,
+  getToolsStore,
+  type ToolsPersistence,
+  type ToolsStore,
+} from './tools/store.ts';
+export {
+  switchTool,
+  TOOL_SWITCH,
+  toolsOn,
+  type ToolSwitch,
+  type ToolSwitchResult,
+} from './tools/switches.ts';
 export { useAppearance } from './appearance/useAppearance.ts';
 export {
   configureAppearancePersistence,

@@ -21,6 +21,33 @@ export function hiddenTiles<Size extends string>(
   return arrangement.filter((t) => t.hidden);
 }
 
+export function tilesFor<Size extends string>(
+  arrangement: Arrangement<Size>,
+  isOn: (toolId: string) => boolean,
+): Arrangement<Size> {
+  return arrangement.filter((t) => isOn(t.toolId));
+}
+
+// An edit made while some tools are off must not move them: each off tile goes
+// back to the index it held in its section.
+export function withOffTiles<Size extends string>(
+  full: Arrangement<Size>,
+  edited: Arrangement<Size>,
+  isOn: (toolId: string) => boolean,
+): Arrangement<Size> {
+  const merge = (section: Arrangement<Size>, into: Arrangement<Size>) => {
+    const merged = [...into];
+    section.forEach((tile, index) => {
+      if (!isOn(tile.toolId)) merged.splice(index, 0, tile);
+    });
+    return merged;
+  };
+  return [
+    ...merge(visibleTiles(full), visibleTiles(edited)),
+    ...merge(hiddenTiles(full), hiddenTiles(edited)),
+  ];
+}
+
 function without<Size extends string>(
   arrangement: Arrangement<Size>,
   toolId: string,
