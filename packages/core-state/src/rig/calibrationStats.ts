@@ -76,22 +76,27 @@ function circularCentre(deviations: readonly number[]): number {
 
 // A deviation is only known modulo one beat, so a route near half a beat
 // late lands on both sides; unwrap around the circular mean before the median.
-function unwrapped(deviations: readonly number[]): number[] {
+export function unwrapDeviations(deviations: readonly number[]): number[] {
   const centre = circularCentre(deviations);
   return deviations.map(
     (d) => d - BEAT_MS * Math.round((d - centre) / BEAT_MS),
   );
 }
 
-function atLimit(meanMs: number, sdMs: number): boolean {
+function outsideBounds(lowMs: number, highMs: number): boolean {
   return (
-    meanMs - sdMs < KB_LATENCY_OFFSET_MS_BOUNDS.min ||
-    meanMs + sdMs > KB_LATENCY_OFFSET_MS_BOUNDS.max
+    lowMs < KB_LATENCY_OFFSET_MS_BOUNDS.min ||
+    highMs > KB_LATENCY_OFFSET_MS_BOUNDS.max
   );
 }
 
+function atLimit(meanMs: number, sdMs: number, steady: boolean): boolean {
+  if (outsideBounds(meanMs, meanMs)) return true;
+  return steady && outsideBounds(meanMs - sdMs, meanMs + sdMs);
+}
+
 export function usableDeviations(deviations: readonly number[]): number[] {
-  const unwrappedDeviations = unwrapped(deviations);
+  const unwrappedDeviations = unwrapDeviations(deviations);
   const typical = median(unwrappedDeviations);
   const near = unwrappedDeviations.filter(
     (d) => Math.abs(d - typical) <= CALIBRATION.usableWindowMs,
@@ -109,16 +114,11 @@ export function analyseTaps(deviations: readonly number[]): CalibrationOutcome {
   }
   const meanMs = mean(usable);
   const sdMs = sampleSd(usable);
-  if (atLimit(meanMs, sdMs)) {
+  const steady = sdMs <= CALIBRATION.steadySdMs;
+  if (atLimit(meanMs, sdMs, steady)) {
     return { kind: 'refused', reason: 'at-limit', usable: usable.length };
   }
-  return {
-    kind: 'measured',
-    meanMs,
-    sdMs,
-    usable: usable.length,
-    steady: sdMs <= CALIBRATION.steadySdMs,
-  };
+  return { kind: 'measured', meanMs, sdMs, usable: usable.length, steady };
 }
 
 export function storedOffsetMs(meanMs: number): number {

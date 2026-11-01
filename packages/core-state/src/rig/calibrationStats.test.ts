@@ -8,6 +8,7 @@ import { CALIBRATION } from './calibrationRules.ts';
 import {
   analyseTaps,
   mean,
+  sampleSd,
   storedOffsetMs,
   tapDeviationMs,
   usableDeviations,
@@ -183,10 +184,12 @@ describe('at the wrap', () => {
     -1.53, -1.15, -0.89, -0.67, -0.49, -0.32, -0.16, 0, 0, 0.16, 0.32, 0.49,
     0.67, 0.89, 1.15, 1.53,
   ];
-  const tapsFor = (trueMs: number) =>
+  const MESSY_SD_MS = 50;
+  const TIGHT_SD_MS = 2;
+  const tapsFor = (trueMs: number, sdMs: number = ROUTE_SD_MS) =>
     NORMAL_SCORES.map((z, i) =>
       tapDeviationMs(
-        START_MS + (i + 1) * MS_PER_BEAT + trueMs + z * ROUTE_SD_MS,
+        START_MS + (i + 1) * MS_PER_BEAT + trueMs + z * sdMs,
         PAIR,
         SCHEDULE,
       ),
@@ -208,20 +211,68 @@ describe('at the wrap', () => {
   );
 
   it.each([290, -290])(
-    'refuses a %d ms route whose spread crosses the limit',
+    'refuses a steady %d ms route whose spread crosses the limit',
     (trueMs) => {
-      expect(analyseTaps(tapsFor(trueMs))).toMatchObject({
+      const taps = tapsFor(trueMs);
+      expect(sampleSd(usableDeviations(taps))).toBeLessThanOrEqual(
+        CALIBRATION.steadySdMs,
+      );
+      expect(analyseTaps(taps)).toMatchObject({
         kind: 'refused',
         reason: 'at-limit',
       });
     },
   );
 
-  it('refuses a 320 ms route as past the limit', () => {
+  it.each([270, -270])(
+    'measures messy taps around %d ms for use anyway, not at the limit',
+    (trueMs) => {
+      const outcome = analyseTaps(tapsFor(trueMs, MESSY_SD_MS));
+      expect(outcome).toMatchObject({ kind: 'measured', steady: false });
+      if (outcome.kind === 'measured')
+        expect(outcome.meanMs).toBeCloseTo(trueMs, 0);
+    },
+  );
+
+  it.each([1, -1])(
+    'refuses an unsteady run whose mean is past the limit (sign %d)',
+    (sign) => {
+      const main = 268;
+      const stray = 411;
+      const taps = Array.from({ length: CALIBRATION.taps }, (_, i) =>
+        tapDeviationMs(
+          START_MS +
+            (i + 1) * MS_PER_BEAT +
+            sign * (i % 4 === 0 ? stray : main),
+          PAIR,
+          SCHEDULE,
+        ),
+      );
+      const usable = usableDeviations(taps);
+      expect(usable).toHaveLength(CALIBRATION.taps);
+      expect(Math.abs(mean(usable))).toBeGreaterThan(
+        KB_LATENCY_OFFSET_MS_BOUNDS.max,
+      );
+      expect(sampleSd(usable)).toBeGreaterThan(CALIBRATION.steadySdMs);
+      expect(analyseTaps(taps)).toMatchObject({
+        kind: 'refused',
+        reason: 'at-limit',
+      });
+    },
+  );
+
+  it('refuses a 320 ms route, read as −280, whose spread crosses the limit', () => {
     expect(analyseTaps(tapsFor(320))).toMatchObject({
       kind: 'refused',
       reason: 'at-limit',
     });
+  });
+
+  it('measures a tight 320 ms route as −280, a beat away', () => {
+    const outcome = analyseTaps(tapsFor(320, TIGHT_SD_MS));
+    expect(outcome).toMatchObject({ kind: 'measured', steady: true });
+    if (outcome.kind === 'measured')
+      expect(storedOffsetMs(outcome.meanMs)).toBe(320 - MS_PER_BEAT);
   });
 
   it('refuses an even split across the wrap rather than averaging it to zero', () => {
