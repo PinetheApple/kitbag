@@ -1,6 +1,7 @@
 import '@/runtime/cryptoRuntime';
 import '@/runtime/metronomeRuntime';
 import '@/runtime/libraryRuntime';
+import '@/runtime/practiceRuntime';
 import '@/runtime/songLibraryRuntime';
 import '@/runtime/stemPlayerRuntime';
 import '@/runtime/tunerRuntime';
