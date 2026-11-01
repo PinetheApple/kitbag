@@ -37,8 +37,8 @@ export const KB_SUBDIVISION_BOUNDS = {
 
 /** Initial sound ids (Metronome::kDefaultNormalSound, kDefaultAccentSound). */
 export const KB_DEFAULT_SOUNDS = {
-  normal: 0,
-  accent: 0,
+  normal: 4,
+  accent: 4,
 } as const;
 
 /** Click volume multiplier range (Metronome::kMinVolume, kMaxVolume); the engine clamps to it. */
@@ -110,7 +110,7 @@ export const KB_BPM_REFERENCE_DENOMINATOR = 4;
  * Metronome sound ids, indexed by native sound id (SPEC §5.3, §13.7). Lowercase
  * engine tokens; display casing is a §12 concern, not an engine constant.
  */
-export const KB_SOUND_NAMES = ['beep', 'woodblock', 'click', 'tom', 'hihat', 'cowbell'] as const;
+export const KB_SOUND_NAMES = ['beep', 'woodblock', 'click', 'tom', 'tick', 'cowbell'] as const;
 export type KbSoundName = (typeof KB_SOUND_NAMES)[number];
 
 /** kb_result codes. */

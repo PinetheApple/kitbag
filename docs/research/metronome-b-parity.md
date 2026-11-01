@@ -1,5 +1,8 @@
 # Metronome layout B — mockup parity table
 
+> Sizes and vertical layout superseded by `design/kitbag-metronome.html` §02 (#243);
+> `docs/decisions.md`, 2026-10-31, lists where the build departs from that frame.
+
 Source: the "Chosen" variant in `design/kitbag-metronome-b.html`
 (owner-approved on #175, 2026-10-30). Values are the mockup's CSS at its 360 × 800
 phone frame, where 1 CSS px = 1 dp. Colours name the §12.2 palette tokens; `mix(a N%, b)`
@@ -71,7 +74,7 @@ stay. The glow (`mix.tempoZoneGlow`) is removed.
 | Pulse marks | one per subdivision pulse, 3 below the dot: 6 × 6, radius 2, gap 3, `surface3`; the sounding pulse `accent` | `metronome.pulseMark`, `metronome.pulseMarkRadius`, `metronome.pulseMarkGap`, `pulseMarkFit` in `logic/pulseMarks.ts` |
 | "1" marker | Space Grotesk 600 12 / 14, `text2`, 3 below the pulse marks | `textRoles.beatMarker`, `metronome.beatMarkerLineHeight`, `metronome.beatMarkerGap` |
 | Poly row | poly on only; 10 below the dot lines; dots 22, 2 border, `surface3` / `mix(text3 55%, surface3)`, centred at first-dot centre + k/n × (line width + dot gap); sounding dot `text2` fill and border, from the engine's poly beat; no accent or mute states | `metronome.polyDot`, `metronome.dotBorder`, `polyDotCentres` in `logic/polyRow.ts`, `current_poly_beat` |
-| Poly ratio | Space Grotesk 600 11, tracking .08, `text2`, 28 wide right-aligned, 8 left of the row | `textRoles.polyRatio`, `metronome.polyLabelGap`; sized to its text |
+| Poly ratio | Space Grotesk 600 11, tracking .08, `text2`, sized to its text; 18 right of the last poly dot, else 8 left of the row, else above | `textRoles.polyRatio`, `metronome.polyLabelGapRight`, `metronome.polyLabelGapLeft` |
 | Legend | stopped only, in the second reserved status row; gap 16, Inter 12.5 `text2`, swatch 14 with gap 6 | `metronome.legendGap`, `textRoles.legend`, `metronome.legendSwatch`, `metronome.legendSwatchBorder`, `metronome.legendAccentBorder`, `space.chipGap` |
 | Count-in squares | 56 × 56, radius 14, 2 `text3`, Space Grotesk 700 26 `text2`, gap 12; done `surface3` / `text3`; current `text` fill, `bg` text | `metronome.countSquare`, `metronome.countSquareRadius`, `metronome.countSquareBorder`, `textRoles.countSquare` |
 
@@ -169,10 +172,11 @@ Each entry says why.
 - **Poly row on a wrapped bar.** The mockup draws only one line of beats. On a bar that
   wraps, the poly dots spread by time across the widest line, so they no longer sit
   under the beats they coincide with.
-- **Poly ratio label placement.** The label is sized to its text, not a 28 column. When
-  the margin left of the row cannot hold it, it follows the last poly dot if there is room
-  after it (12/8 at 3:12); otherwise, or when large text makes it taller than the dots,
-  it sits on its own line above the poly dots, left-aligned, 3 above them.
+- **Poly ratio label placement.** The label is sized to its text, not a 28 column. It
+  follows the last poly dot at 18 (`metronome.polyLabelGapRight`) when the room after it
+  holds the label; otherwise it sits 8 left of the row (`metronome.polyLabelGapLeft`) when
+  that margin holds it; otherwise, or when large text makes it taller than the dots, it
+  sits on its own line above the poly dots, left-aligned, 3 above them.
 - **Tempo swipe when the screen scrolls.** When the body is taller than the screen (large
   text), vertical drags scroll it and only the tempo zone changes the tempo; when nothing
   scrolls, swipe-anywhere is unchanged.

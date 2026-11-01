@@ -11,30 +11,17 @@ import {
   TRANSPARENT,
 } from '@kitbag/core-design';
 
-import { STATUS_ROW_PITCH, STATUS_STACK_HEIGHT } from '../logic/belowTempo.ts';
-
 export function countInInk(bg: string, text: string): string {
   return mixHex(bg, text, metronomeMix.countInMeta);
 }
 
 export const useStatusStyles = createThemedStyles((theme) => ({
-  stack: {
-    height: STATUS_STACK_HEIGHT,
-  },
   variant: {
     position: 'absolute',
     top: 0,
     right: 0,
     left: 0,
     height: metronome.statusRow,
-  },
-  legendRow: {
-    position: 'absolute',
-    top: STATUS_ROW_PITCH,
-    right: 0,
-    left: 0,
-    height: metronome.statusRow,
-    justifyContent: 'center',
   },
   rest: {
     height: metronome.statusRow,
