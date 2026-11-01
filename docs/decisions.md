@@ -603,3 +603,10 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   last poly dot at 18 dp, then sits 8 dp left of the row, then above it. It follows the
   owner-approved round 2 frame (`design/kitbag-metronome.html` §02) rather than the poly
   file's left placement. **[recorded — coordinator ruling]**
+
+- **2026-11-01 · Stem player sections and lyrics layout (§7.7, #139)** — Layout C from
+  `docs/research/mockups/stems-sections-lyrics.html`: a Mix | Lyrics switch, with sections as
+  a card scroller. Bundle section colours are ignored. The song facts show no loudness.
+  Holding a section over a custom A-B loop replaces it, with Undo. Retime mode plays at
+  0.75× and restores the speed on exit, once #138 lands. The UI is built at the end of the
+  backlog; the data and state layer lands first. **[user]**

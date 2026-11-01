@@ -981,7 +981,7 @@ Acceptance:
 - **Sections** on the waveform: tap to jump, long-press to loop the section.
 - **Synced lyrics** follow playback, shifted by the stored offset. Tap-along
   retiming is saved per song in Kitbag.
-- **Song facts:** key, BPM, loudness, tempo stability.
+- **Song facts:** key, BPM, tempo stability. Loudness is stored but not shown (owner, 2026-11-01).
 - **Mixdown export:** offline render of the current mix, speed and key, out
   through the share sheet (§5.5) — never a hardcoded path.
 
