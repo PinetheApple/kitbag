@@ -47,7 +47,7 @@ class DocumentPicker(
 
   fun cancel() {
     synchronized(this) {
-      pendingPick?.reject(E_INVALIDATED, "The library module was torn down mid-pick")
+      pendingPick?.reject(LibraryErrors.INVALIDATED, "The library module was torn down mid-pick")
       pendingPick = null
     }
   }
@@ -55,12 +55,12 @@ class DocumentPicker(
   private fun startPick(intent: Intent, requestCode: Int, promise: Promise) {
     val activity = context.currentActivity
     if (activity == null) {
-      promise.reject(E_NO_ACTIVITY, "No foreground activity to show the picker from")
+      promise.reject(LibraryErrors.NO_ACTIVITY, "No foreground activity to show the picker from")
       return
     }
     synchronized(this) {
       if (pendingPick != null) {
-        promise.reject(E_PICK_IN_PROGRESS, "A picker is already open")
+        promise.reject(LibraryErrors.PICK_IN_PROGRESS, "A picker is already open")
         return
       }
       pendingPick = promise
@@ -70,7 +70,7 @@ class DocumentPicker(
       try {
         activity.startActivityForResult(intent, requestCode)
       } catch (e: ActivityNotFoundException) {
-        takePendingPick(requestCode)?.reject(E_NO_PICKER, "No app on this device can pick that", e)
+        takePendingPick(requestCode)?.reject(LibraryErrors.NO_PICKER, "No app on this device can pick that", e)
       }
     }
   }
@@ -102,7 +102,7 @@ class DocumentPicker(
           },
         )
       } catch (e: Exception) {
-        rejectLogged(promise, E_PICK_FAILED, "Could not read the picked item", e)
+        rejectLogged(promise, LibraryErrors.PICK_FAILED, "Could not read the picked item", e)
       }
     }
   }
@@ -155,11 +155,5 @@ class DocumentPicker(
       arrayOf("audio/*", "application/zip", "application/x-zip-compressed")
     val BACKUP_MIME_TYPES =
       arrayOf(BackupFiles.JSON_MIME, "text/plain", "application/octet-stream")
-
-    const val E_NO_ACTIVITY = "E_NO_ACTIVITY"
-    const val E_PICK_IN_PROGRESS = "E_PICK_IN_PROGRESS"
-    const val E_NO_PICKER = "E_NO_PICKER"
-    const val E_PICK_FAILED = "E_PICK_FAILED"
-    const val E_INVALIDATED = "E_INVALIDATED"
   }
 }

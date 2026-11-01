@@ -17,19 +17,19 @@ class BackupShare(
 
   fun share(fileName: String, contents: String, promise: Promise) {
     if (!BackupFiles.isSafeFileName(fileName)) {
-      promise.reject(E_BAD_FILE_NAME, "Not a backup file name: $fileName")
+      promise.reject(LibraryErrors.BAD_FILE_NAME, "Not a backup file name: $fileName")
       return
     }
     val activity = context.currentActivity
     if (activity == null) {
-      promise.reject(E_NO_ACTIVITY, "No foreground activity to share from")
+      promise.reject(LibraryErrors.NO_ACTIVITY, "No foreground activity to share from")
       return
     }
     io.execute {
       val chooser = try {
         Intent.createChooser(sendIntent(write(fileName, contents)), null)
       } catch (e: Exception) {
-        rejectLogged(promise, E_SHARE_FAILED, "Could not write the backup", e)
+        rejectLogged(promise, LibraryErrors.SHARE_FAILED, "Could not write the backup", e)
         return@execute
       }
       activity.runOnUiThread {
@@ -37,7 +37,7 @@ class BackupShare(
           activity.startActivity(chooser)
           promise.resolve(null)
         } catch (e: ActivityNotFoundException) {
-          promise.reject(E_NO_SHARE_TARGET, "No app on this device can receive the backup", e)
+          promise.reject(LibraryErrors.NO_SHARE_TARGET, "No app on this device can receive the backup", e)
         }
       }
     }
@@ -63,10 +63,5 @@ class BackupShare(
 
   private companion object {
     const val AUTHORITY_SUFFIX = ".kitbag.backups"
-
-    const val E_BAD_FILE_NAME = "E_BAD_FILE_NAME"
-    const val E_NO_ACTIVITY = "E_NO_ACTIVITY"
-    const val E_NO_SHARE_TARGET = "E_NO_SHARE_TARGET"
-    const val E_SHARE_FAILED = "E_SHARE_FAILED"
   }
 }

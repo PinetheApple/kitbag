@@ -7,7 +7,7 @@ import java.io.InputStream
 class BackupTooLargeException : IOException("The picked file is too large to be a backup")
 
 object BackupFiles {
-  const val MAX_BACKUP_BYTES = 64 * 1024 * 1024
+  const val MAX_BACKUP_BYTES = 16 * 1024 * 1024
   const val SHARE_DIR = "backups"
   const val JSON_MIME = "application/json"
 
