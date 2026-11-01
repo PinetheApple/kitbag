@@ -1,6 +1,6 @@
 import { createThemedStyles, Icon, metronome } from '@kitbag/core-design';
 import type { BarMuteConfig } from '@kitbag/core-state';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useDerivedValue,
@@ -14,6 +14,7 @@ import {
   type StatusRows,
 } from '../logic/statusRows.ts';
 import { LiveSlot } from './LiveSlot.tsx';
+import { mutedCellStyles } from './mutedCellStyles.ts';
 import { useStatusStyles } from './statusStyles.ts';
 import { StatusVariant } from './StatusVariant.tsx';
 
@@ -44,10 +45,11 @@ const useCycleStyles = createThemedStyles((theme) => ({
     backgroundColor: theme.color.text2,
     borderColor: theme.color.text2,
   },
-  mute: {
-    borderColor: theme.color.text2,
-    borderStyle: 'dashed',
-  },
+  ...mutedCellStyles(
+    metronome.cycleCellBorder,
+    metronome.cycleCellRadius,
+    theme.color.text2,
+  ),
   now: {
     position: 'absolute',
     top: -OUTLINE_REACH,
@@ -89,7 +91,10 @@ function CycleCell({ cell, position, playBars, cycle }: CycleCellProps) {
   return (
     <View style={styles.cell}>
       <Animated.View style={[styles.face, styles.play, play]} />
-      <Animated.View style={[styles.face, styles.mute, mute]} />
+      <Animated.View style={[StyleSheet.absoluteFill, mute]}>
+        <View style={styles.mutedOutline} />
+        <View style={styles.mutedEnds} />
+      </Animated.View>
       <Animated.View style={[styles.now, now]} />
     </View>
   );

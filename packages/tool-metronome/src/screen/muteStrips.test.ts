@@ -70,3 +70,22 @@ it('keeps the current-bar ring inside the gap to its neighbours', () => {
   expect(reach).toBe(metronome.cycleNowOffset + metronome.cycleNowOutline);
   expect(reach).toBeLessThan(Number(status.strip?.gap));
 });
+
+it.each([
+  { name: 'status row cycle strip', styles: status },
+  { name: 'Practice sheet mute preview', styles: preview },
+])(
+  'the $name closes each muted cell with solid ends so neighbours read apart',
+  ({ styles }) => {
+    const outline = styles.mutedOutline;
+    const ends = styles.mutedEnds;
+    expect(outline?.borderStyle).toBe('dashed');
+    expect(ends?.borderStyle ?? 'solid').toBe('solid');
+    expect(ends?.borderColor).toBe(outline?.borderColor);
+    expect(ends?.borderRadius).toBe(outline?.borderRadius);
+    expect(ends?.borderLeftWidth).toBe(outline?.borderWidth);
+    expect(ends?.borderRightWidth).toBe(outline?.borderWidth);
+    expect(ends?.borderTopWidth ?? 0).toBe(0);
+    expect(ends?.borderBottomWidth ?? 0).toBe(0);
+  },
+);
