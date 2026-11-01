@@ -321,7 +321,7 @@ export function TunerScreen({ insets, a4Range, onBack }: TunerScreenProps) {
           />
           <TuneDirectionIcon
             direction={direction}
-            color={heard ? 'text2' : 'text3'}
+            color={heard ? 'text2' : 'decor'}
           />
         </View>
       </View>

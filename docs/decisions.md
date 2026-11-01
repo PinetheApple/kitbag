@@ -656,3 +656,24 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   leaving the metronome screen with played time also ends it. A phone call or going to
   the background never ends it. Longest stretch is shown in the summary only, so the
   schema does not change. **[owner]**
+
+- **2026-11-01 · Small text contrast (§12.2, #189)** — Text under 18sp holds 4.5:1 on
+  every ground it sits on, in both themes. `text2`, `text3` and light `accentDeep` move in
+  lightness only to clear it, and the `text2` step stays above `text3`. Accent-coloured text
+  uses `accentInk`, generalising the Settings section label exception; `accent` is
+  unchanged for fills and icons. **[recorded]**
+- **2026-11-01 · Accent icons on tinted fills (§12.2, #189)** — In light, an accent icon on an
+  accent-tinted fill uses `accentInk` so it holds 3:1; light `accent` is 2.76:1 on
+  `activeControlFill`. **[recorded — coordinator ruling]**
+- **2026-11-01 · Text fills, feedback inks, decor and the text2 step (§12.2, #189)** — An
+  accent fill that carries text uses `accentDeep` in light (`accentTextFill`); plain fills
+  and icons keep `accent`. Red, amber and green used as small text take darker light-only
+  inks (`redInk`, `amberInk`, `greenInk`); fills, icons and borders keep the base token. The
+  previous `text3` values move to a `decor` token for non-text marks, so they look as
+  before. `text2` moves further from `text3` for a clearer step. **[user]**
+- **2026-11-01 · The text2 step and decor (§12.2, #189)** — The owner asked for `text2` about
+  1.8:1 over `text3`, and kept `decor` under the 3:1 non-text bar in both themes (down to
+  about 2.3:1, light on `surface3`) so those marks look as before. **[user]** Light meets the step: `text2` `#433F4B` is
+  1.83:1 over `text3` and 1.59:1 under `text`. Dark falls short at 1.58:1 over `text3` and
+  1.59:1 under `text`: `text3` cannot drop below its 4.5:1 floor on the setlist NOW row, and
+  1.8:1 would leave `text` only 1.39:1 above `text2`. **[recorded]**

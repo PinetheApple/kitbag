@@ -27,8 +27,8 @@ const useStyles = createThemedStyles((theme) => ({
   muteOn: { backgroundColor: theme.color.red, borderColor: theme.color.red },
   muteOnText: { color: theme.onDanger },
   soloOn: {
-    backgroundColor: theme.color.accent,
-    borderColor: theme.color.accent,
+    backgroundColor: theme.accentTextFill,
+    borderColor: theme.accentTextFill,
   },
   soloOnText: { color: theme.color.onAccent },
 }));

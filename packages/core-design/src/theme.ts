@@ -1,3 +1,5 @@
+import { libraryMix } from './libraryRoles.ts';
+import { metronomeMix } from './metronomeRoles.ts';
 import { mix } from './roles.ts';
 import {
   resolveTheme,
@@ -38,6 +40,7 @@ export type FeedbackTone = 'success' | 'warning' | 'danger';
 
 export interface FeedbackColors {
   readonly fg: string;
+  readonly ink: string;
   readonly badgeBorder: string;
   readonly listBadgeBorder: string;
   readonly cardBorder: string;
@@ -47,8 +50,13 @@ export interface Theme {
   readonly mode: ThemeMode;
   readonly color: Readonly<Record<ColorToken, string>>;
   readonly accentInk: ColorToken;
+  readonly accentTextFill: string;
   readonly activeControlFill: string;
   readonly activeCardFill: string;
+  readonly songNowFill: string;
+  readonly setChipFill: string;
+  readonly selectedTileFill: string;
+  readonly stemTileFill: string;
   readonly onDanger: string;
   readonly disabledLabel: string;
   readonly feedback: Readonly<Record<FeedbackTone, FeedbackColors>>;
@@ -61,6 +69,12 @@ export const FEEDBACK_TOKEN: Readonly<Record<FeedbackTone, ColorToken>> = {
   danger: 'red',
 };
 
+const FEEDBACK_INK_TOKEN: Readonly<Record<FeedbackTone, ColorToken>> = {
+  success: 'greenInk',
+  warning: 'amberInk',
+  danger: 'redInk',
+};
+
 function feedbackColors(
   color: Readonly<Record<ColorToken, string>>,
   tone: FeedbackTone,
@@ -68,6 +82,7 @@ function feedbackColors(
   const fg = color[FEEDBACK_TOKEN[tone]];
   return {
     fg,
+    ink: color[FEEDBACK_INK_TOKEN[tone]],
     badgeBorder: mixHex(fg, color.line, mix.badgeBorder),
     listBadgeBorder: mixHex(fg, color.line, mix.listBadgeBorder),
     cardBorder: mixHex(fg, color.line, mix.cardBorder),
@@ -76,12 +91,22 @@ function feedbackColors(
 
 export function buildTheme(mode: ThemeMode): Theme {
   const color = resolveTheme(mode);
+  const accentInk: ColorToken = mode === 'light' ? 'accentDeep' : 'accent';
   return {
     mode,
     color,
-    accentInk: mode === 'light' ? 'accentDeep' : 'accent',
+    accentInk,
+    accentTextFill: color[accentInk],
     activeControlFill: mixHex(color.accent, color.surface2, mix.activeControl),
     activeCardFill: mixHex(color.accent, color.surface1, mix.activeCard),
+    songNowFill: mixHex(color.accent, color.surface1, metronomeMix.songNow),
+    setChipFill: mixHex(color.accent, color.surface2, metronomeMix.setChip),
+    selectedTileFill: mixHex(
+      color.accent,
+      color.surface2,
+      metronomeMix.selectedTile,
+    ),
+    stemTileFill: mixHex(color.accent, color.surface2, libraryMix.stemTile),
     onDanger: color.surface1,
     disabledLabel: color.text2,
     feedback: {

@@ -1,10 +1,4 @@
-import {
-  createThemedStyles,
-  metronomeMix,
-  mixHex,
-  textRoles,
-  textStyle,
-} from '@kitbag/core-design';
+import { createThemedStyles, textRoles, textStyle } from '@kitbag/core-design';
 
 export const useSheetStyles = createThemedStyles((theme) => ({
   songHint: {
@@ -13,10 +7,6 @@ export const useSheetStyles = createThemedStyles((theme) => ({
   },
   selectedTile: {
     borderColor: theme.color.accent,
-    backgroundColor: mixHex(
-      theme.color.accent,
-      theme.color.surface2,
-      metronomeMix.selectedTile,
-    ),
+    backgroundColor: theme.selectedTileFill,
   },
 }));
