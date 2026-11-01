@@ -90,10 +90,22 @@ const useStyles = createThemedStyles((theme) => ({
   titleBesideAction: {
     flexShrink: 1,
   },
-  scroll: {
-    flexGrow: 0,
+  scrollFrame: {
+    flexShrink: 1,
     marginVertical: -SHEET_TOUCH_ROOM,
     marginLeft: -SHEET_TOUCH_ROOM,
+  },
+  scroll: {
+    flexGrow: 0,
+  },
+  titleGapCover: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: SHEET_TOUCH_ROOM,
+    backgroundColor: theme.color.surface1,
+    pointerEvents: 'none',
   },
   content: {
     gap: space.sectionGap,
@@ -281,17 +293,20 @@ export function Sheet({
               </View>
             </View>
           </GestureDetector>
-          <ScrollView
-            style={styles.scroll}
-            contentContainerStyle={styles.content}
-            bounces={false}
-            scrollEnabled={scrollEnabled}
-            keyboardShouldPersistTaps="handled"
-            scrollIndicatorInsets={INDICATOR_INSETS}
-          >
-            {children}
-            {hint === undefined ? null : <SheetHint>{hint}</SheetHint>}
-          </ScrollView>
+          <View style={styles.scrollFrame}>
+            <ScrollView
+              style={styles.scroll}
+              contentContainerStyle={styles.content}
+              bounces={false}
+              scrollEnabled={scrollEnabled}
+              keyboardShouldPersistTaps="handled"
+              scrollIndicatorInsets={INDICATOR_INSETS}
+            >
+              {children}
+              {hint === undefined ? null : <SheetHint>{hint}</SheetHint>}
+            </ScrollView>
+            <View style={styles.titleGapCover} />
+          </View>
         </Animated.View>
       </Animated.View>
     </View>

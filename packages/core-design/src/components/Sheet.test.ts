@@ -115,3 +115,22 @@ it('caps the sheet below the status bar so tall content scrolls inside it', () =
   expect(slot.flexShrink).toBe(1);
   expect(slot.marginTop).toBe(STATUS_BAR);
 });
+
+it('covers the scroll touch room under the title so scrolled content clips below a gap', async () => {
+  const { SHEET_TOUCH_ROOM } = await import('./Sheet.tsx');
+  const { themes } = await import('../theme.ts');
+  const sheet = child(child(openSheet(), 1), 0);
+  const scrollFrame = child(sheet, 1);
+  const [scroll, cover] = [child(scrollFrame, 0), child(scrollFrame, 1)];
+  expect(flat(scrollFrame.props.style).marginVertical).toBe(-SHEET_TOUCH_ROOM);
+  expect(scroll.type).toBe('ScrollView');
+  expect(flat(cover.props.style)).toMatchObject({
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: SHEET_TOUCH_ROOM,
+    backgroundColor: themes.dark.color.surface1,
+    pointerEvents: 'none',
+  });
+});
