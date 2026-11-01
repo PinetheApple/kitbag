@@ -1,3 +1,8 @@
+import {
+  bodyLineHeight,
+  calibration,
+  calibrationText,
+} from '@kitbag/core-design';
 import type { OutputRoute } from '@kitbag/core-native';
 import {
   analyseTaps,
@@ -43,6 +48,14 @@ export const SCATTER = {
   dotTop: 0.2,
   dotSpan: 0.6,
   dotStep: 0.618034,
+} as const;
+
+export const SCATTER_AXIS_LINE_HEIGHT =
+  calibrationText.scatterAxis.size * bodyLineHeight;
+
+export const SCATTER_DOT_BAND = {
+  top: 0,
+  bottom: calibration.axisBottom + SCATTER_AXIS_LINE_HEIGHT,
 } as const;
 
 const CENTRE = 0.5;

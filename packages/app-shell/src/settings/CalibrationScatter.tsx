@@ -11,7 +11,11 @@ import { formatOffsetMs } from '@kitbag/core-state';
 import { useMemo } from 'react';
 import { Text, View } from 'react-native';
 
-import type { ScatterDot } from './calibrationView.ts';
+import {
+  SCATTER_AXIS_LINE_HEIGHT,
+  SCATTER_DOT_BAND,
+  type ScatterDot,
+} from './calibrationView.ts';
 
 const CENTRE = 0.5;
 const ZERO_LABEL = '0';
@@ -40,6 +44,12 @@ const useStyles = createThemedStyles((theme) => ({
     width: calibration.meanLine,
     backgroundColor: theme.color.accent,
   },
+  dotBand: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    ...SCATTER_DOT_BAND,
+  },
   dot: {
     position: 'absolute',
     width: calibration.dot,
@@ -51,6 +61,7 @@ const useStyles = createThemedStyles((theme) => ({
   },
   axis: {
     ...textStyle(calibrationText.scatterAxis),
+    lineHeight: SCATTER_AXIS_LINE_HEIGHT,
     position: 'absolute',
     bottom: calibration.axisBottom,
     color: theme.color.text3,
@@ -93,9 +104,11 @@ export function CalibrationScatter({
     >
       <View style={styles.zero} />
       {meanPlace === null ? null : <View style={[styles.mean, meanPlace]} />}
-      {dots.map((dot, index) => (
-        <Dot key={index} dot={dot} />
-      ))}
+      <View style={styles.dotBand}>
+        {dots.map((dot, index) => (
+          <Dot key={index} dot={dot} />
+        ))}
+      </View>
       <Text style={[styles.axis, styles.axisStart]}>
         {formatOffsetMs(-axis)}
       </Text>
