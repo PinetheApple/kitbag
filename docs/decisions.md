@@ -635,3 +635,10 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   last poly dot at 18 dp, then sits 8 dp left of the row, then above it. It follows the
   owner-approved round 2 frame (`design/kitbag-metronome.html` §02) rather than the poly
   file's left placement. **[recorded — coordinator ruling]**
+
+- **2026-11-01 · The Settings click-volume slider sets on a tap (§12.5, #170)** — A tap on
+  the Click volume track sets the level there, and a drag keeps the thumb under the finger;
+  the unity detent stays. This departs from the drag-only stem faders (2026-10-29, #137)
+  because it is a single settings control, not a live mix where a stray tap would jump a
+  playing level. The stem faders are unchanged. **[coordinator — emulator round; the owner
+  may overturn]**
