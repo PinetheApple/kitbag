@@ -7,6 +7,7 @@ import type { RouteLatency } from '@kitbag/core-db';
 import { describe, expect, it } from 'vitest';
 
 import { CALIBRATION } from './calibrationRules.ts';
+import { BEAT_MS } from './calibrationStats.ts';
 import {
   canUseOutcome,
   createCalibrationSession,
@@ -14,7 +15,6 @@ import {
 } from './calibrationSession.ts';
 
 const RATE = 48_000;
-const MS_PER_BEAT = 60_000 / CALIBRATION.bpm;
 const START_FRAME = 48_000;
 const START_MS = 1_000;
 
@@ -74,6 +74,7 @@ function harness({
   let routeListener: ((route: OutputRoute) => void) | undefined;
   let pair: EngineClockPair | null = pairAt(START_MS);
   let clickActive = true;
+  let clickQueryFails = false;
   const pendingStarts: Deferred[] = [];
   let deferStarts = false;
   let routeReads = 0;
@@ -90,7 +91,10 @@ function harness({
     stopClick: () => {
       calls.stops += 1;
     },
-    isClickActive: () => Promise.resolve(clickActive),
+    isClickActive: () =>
+      clickQueryFails
+        ? Promise.reject(new Error('no answer'))
+        : Promise.resolve(clickActive),
     nowFrame: () => START_FRAME,
     readClockPair: () => pair,
     getOutputRoute: () => {
@@ -118,7 +122,7 @@ function harness({
   };
   const session = createCalibrationSession(deps);
   const tapAt = (beat: number, lateMs: number, gapMs = 0, rate = RATE) => {
-    const ms = START_MS + beat * MS_PER_BEAT + lateMs;
+    const ms = START_MS + beat * BEAT_MS + lateMs;
     pair = pairAt(ms - 3, gapMs, rate);
     session.getState().tap(ms);
   };
@@ -143,6 +147,9 @@ function harness({
     },
     stopClickExternally: () => {
       clickActive = false;
+    },
+    failClickQuery: () => {
+      clickQueryFails = true;
     },
     emitRoute: (route: OutputRoute) => routeListener?.(route),
   };
@@ -180,7 +187,7 @@ describe('calibration session', () => {
     const { session, setPair } = harness();
     await session.getState().open();
     setPair(null);
-    session.getState().tap(START_MS + MS_PER_BEAT);
+    session.getState().tap(START_MS + BEAT_MS);
     expect(session.getState().deviations).toEqual([]);
   });
 
@@ -356,6 +363,18 @@ describe('calibration session', () => {
     });
   });
 
+  it('finishes the run when the click state cannot be read', async () => {
+    const { session, tapRun, failClickQuery } = harness();
+    await session.getState().open();
+    failClickQuery();
+    tapRun(12);
+    await flush();
+    expect(session.getState()).toMatchObject({
+      phase: 'done',
+      outcome: { kind: 'measured' },
+    });
+  });
+
   it('takes the click’s sample rate when it is armed', async () => {
     const { session, calls, tapAt } = harness();
     await session.getState().open();
@@ -369,7 +388,7 @@ describe('calibration session', () => {
     const { session, calls } = harness();
     await session.getState().open();
     session.getState().close();
-    session.getState().tap(START_MS + MS_PER_BEAT);
+    session.getState().tap(START_MS + BEAT_MS);
     expect(calls.stops).toBe(1);
     expect(session.getState()).toMatchObject({ phase: 'idle', deviations: [] });
   });

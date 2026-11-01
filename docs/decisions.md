@@ -587,4 +587,8 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   deviation, not on 0, followed by the 2.5 SD drop. The click stays at 100 BPM. A result
   whose mean, or mean ± its SD, lies past `KB_LATENCY_OFFSET_MS_BOUNDS` (±300 ms) is
   refused with "Latency is at the limit Kitbag can correct" instead of a number, so no
-  stored offset is ever outside the bounds. **[user]**
+  stored offset is ever outside the bounds. The mean ± SD check applies only to a steady
+  run (SD ≤ 30 ms); an unsteady run whose mean is inside ±300 ms gets "Use anyway"
+  (owner ruling, 2026-10-31). At 100 BPM a steady route past ±300 ms cannot be told from
+  one a beat away, so with a tight spread it is stored as the nearer offset (+320 ms
+  reads as −280 ms); the owner accepted this. **[user]**

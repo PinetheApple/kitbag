@@ -1,4 +1,6 @@
+import { KB_LATENCY_OFFSET_MS_BOUNDS } from '@kitbag/core-native';
 import {
+  BEAT_MS,
   CALIBRATION,
   MINUS,
   type CalibrationSession,
@@ -43,6 +45,19 @@ const alternating = (
     { length: count },
     (_, i) => centre + (i % 2 === 0 ? -half : half),
   );
+
+const CENTRE_X = 0.5;
+const WRAP_CENTRE_MS = 265;
+const WRAP_HALF_MS = 40;
+const acrossTheWrap = alternating(WRAP_CENTRE_MS, WRAP_HALF_MS).map((d) =>
+  d > BEAT_MS / 2 ? d - BEAT_MS : d,
+);
+
+const WRAP_LIMIT_MS = KB_LATENCY_OFFSET_MS_BOUNDS.max;
+const WRAP_LIMIT_HALF_MS = 10;
+const atTheLimit = alternating(WRAP_LIMIT_MS, WRAP_LIMIT_HALF_MS).map((d) =>
+  d > BEAT_MS / 2 ? d - BEAT_MS : d,
+);
 
 describe('calibration view', () => {
   it('counts taps out of 16', () => {
@@ -152,6 +167,39 @@ describe('calibration view', () => {
     const view = calibrationView(state({ deviations: [0, 25, -50] }));
     expect(view.dots.map((d) => d.x)).toEqual([0.5, 0.75, 0]);
     expect(view.axisMs).toBe(SCATTER.minHalfRangeMs);
+  });
+
+  it('offers use anyway for messy taps near the limit', () => {
+    const view = calibrationView(
+      state({ phase: 'done', deviations: acrossTheWrap }),
+    );
+    expect(view.result).toMatchObject({
+      kind: 'measured',
+      useLabel: 'Use anyway',
+    });
+    expect(view.showUse).toBe(true);
+  });
+
+  it('draws a tap past the wrap on the mean’s side of the axis', () => {
+    const view = calibrationView(state({ deviations: acrossTheWrap }));
+    const lateMs = WRAP_CENTRE_MS + WRAP_HALF_MS;
+    expect(view.dots[1]?.x).toBeCloseTo(scatterX(lateMs, view.axisMs));
+    expect(view.dots.every((d) => d.x > CENTRE_X)).toBe(true);
+  });
+
+  it('sizes the axis to a refused run’s unwrapped taps so no dot pins to an edge', () => {
+    const view = calibrationView(
+      state({
+        phase: 'done',
+        deviations: atTheLimit,
+        outcome: { kind: 'refused', reason: 'at-limit', usable: 16 },
+      }),
+    );
+    expect(view.result).toMatchObject({ kind: 'message' });
+    expect(view.axisMs).toBeGreaterThanOrEqual(
+      WRAP_LIMIT_MS + WRAP_LIMIT_HALF_MS,
+    );
+    expect(view.dots.every((d) => d.x > CENTRE_X && d.x < 1)).toBe(true);
   });
 
   it('places the mean line on the usable mean', () => {
