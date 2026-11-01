@@ -9,7 +9,7 @@ export const NOTIFICATIONS_LABEL = 'Notifications';
 const ON = 'On';
 const OFF = 'Off';
 
-function valueOf(granted: boolean | undefined): string | null {
+function grantedLabel(granted: boolean | undefined): string | null {
   if (granted === undefined) return null;
   return granted ? ON : OFF;
 }
@@ -24,7 +24,7 @@ export function notificationRow(
 ): NotificationRow | null {
   if (!status.required) return null;
   return {
-    value: valueOf(status.granted),
+    value: grantedLabel(status.granted),
     action: notificationAction(status),
   };
 }

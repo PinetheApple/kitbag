@@ -215,6 +215,7 @@ export {
   createNotificationPermissionStore,
   getNotificationPermissionStore,
   notificationAction,
+  NOTIFICATION_ASK,
   type NotificationAction,
   type NotificationAsk,
   type NotificationAskPersistence,

@@ -1,7 +1,14 @@
 import { persistedStore } from '../persistedStore.ts';
 import type { PermissionAnswer } from '../permission.ts';
 
-export type NotificationAsk = 'never' | 'asked';
+export const NOTIFICATION_ASK = {
+  never: 'never',
+  declined: 'declined',
+  asked: 'asked',
+} as const;
+
+export type NotificationAsk =
+  (typeof NOTIFICATION_ASK)[keyof typeof NOTIFICATION_ASK];
 
 export type NotificationAction = 'none' | 'request' | 'openSettings';
 
@@ -37,15 +44,13 @@ export interface NotificationPermissionStore extends NotificationStatus {
   readonly enable: () => Promise<void>;
 }
 
-const ASKED: NotificationAsk = 'asked';
-
 export function notificationAction({
   required,
   granted,
   ask,
 }: NotificationStatus): NotificationAction {
   if (!required || granted !== false) return 'none';
-  return ask === 'never' ? 'request' : 'openSettings';
+  return ask === NOTIFICATION_ASK.asked ? 'openSettings' : 'request';
 }
 
 const unsupported: NotificationPermissionRuntime = {
@@ -55,7 +60,7 @@ const unsupported: NotificationPermissionRuntime = {
     request: () => Promise.resolve('granted'),
     openSettings: () => undefined,
   },
-  persistence: { load: () => 'never', save: () => undefined },
+  persistence: { load: () => NOTIFICATION_ASK.never, save: () => undefined },
 };
 
 const notifications = persistedStore<
@@ -66,13 +71,12 @@ const notifications = persistedStore<
   unsupported,
   ({ source, persistence }, commit, { getState, setState }) => {
     let offered = false;
-    const remember = () => {
-      commit('ask', ASKED, persistence.save);
+    const remember = (ask: NotificationAsk) => {
+      commit('ask', ask, persistence.save);
     };
-    // A blocked answer may come back with no dialog shown, so the tap must not dead-end.
     const request = async () => {
-      remember();
       const answer = await source.request();
+      remember(NOTIFICATION_ASK.asked);
       setState({ granted: answer === 'granted' });
       if (answer === 'blocked') source.openSettings();
     };
@@ -82,11 +86,16 @@ const notifications = persistedStore<
       ask: persistence.load(),
       prompting: false,
       playbackStarted: async () => {
-        if (!source.required || offered || getState().ask !== 'never') return;
+        if (
+          !source.required ||
+          offered ||
+          getState().ask !== NOTIFICATION_ASK.never
+        )
+          return;
         offered = true;
         const granted = await source.granted();
         setState({ granted, prompting: !granted });
-        if (granted) remember();
+        if (granted) remember(NOTIFICATION_ASK.asked);
       },
       allow: async () => {
         setState({ prompting: false });
@@ -94,7 +103,7 @@ const notifications = persistedStore<
       },
       notNow: () => {
         setState({ prompting: false });
-        remember();
+        remember(NOTIFICATION_ASK.declined);
       },
       refresh: async () => {
         if (!source.required) return;

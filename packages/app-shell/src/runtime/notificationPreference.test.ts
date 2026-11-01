@@ -22,6 +22,14 @@ describe('notification ask on the database', () => {
     expect(notificationAskPreference(() => preferences).load()).toBe('asked');
   });
 
+  it('keeps a declined prompt across a reload', () => {
+    const preferences = memoryPreferences();
+    notificationAskPreference(() => preferences).save('declined');
+    expect(notificationAskPreference(() => preferences).load()).toBe(
+      'declined',
+    );
+  });
+
   it('reads a value it does not recognise as never asked', () => {
     const preferences = memoryPreferences({
       notification_permission_ask: 'maybe',

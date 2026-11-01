@@ -27,6 +27,12 @@ describe('notifications row', () => {
     ).toEqual({ value: 'Off', action: 'request' });
   });
 
+  it('reads Off and asks the system after the prompt was declined', () => {
+    expect(
+      notificationRow({ required: true, granted: false, ask: 'declined' }),
+    ).toEqual({ value: 'Off', action: 'request' });
+  });
+
   it('reads Off and opens the system settings once asked', () => {
     expect(
       notificationRow({ required: true, granted: false, ask: 'asked' }),

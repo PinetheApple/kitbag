@@ -42,7 +42,7 @@ describe('notification permission on playback start', () => {
     expect(request).not.toHaveBeenCalled();
     expect(save).not.toHaveBeenCalled();
     store.getState().notNow();
-    expect(save).toHaveBeenCalledWith('asked');
+    expect(save).toHaveBeenCalledWith('declined');
   });
 
   it('prompts again after a relaunch when the prompt was never answered', async () => {
@@ -74,10 +74,30 @@ describe('notification permission on playback start', () => {
     await first.store.getState().playbackStarted();
     expect(first.store.getState().prompting).toBe(false);
 
-    const relaunched = fakes({ ask: 'asked' });
-    await relaunched.store.getState().playbackStarted();
-    expect(relaunched.store.getState().prompting).toBe(false);
-    expect(relaunched.request).not.toHaveBeenCalled();
+    const relaunched = first.create();
+    await relaunched.getState().playbackStarted();
+    expect(relaunched.getState()).toMatchObject({
+      ask: 'declined',
+      prompting: false,
+    });
+    expect(first.request).not.toHaveBeenCalled();
+  });
+
+  it('saves the ask only after the system answers', async () => {
+    let answer: (value: PermissionAnswer) => void = () => undefined;
+    const { store, request, save } = fakes();
+    request.mockImplementation(
+      () =>
+        new Promise<PermissionAnswer>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    await store.getState().playbackStarted();
+    const allowing = store.getState().allow();
+    expect(save).not.toHaveBeenCalled();
+    answer('denied');
+    await allowing;
+    expect(save).toHaveBeenCalledWith('asked');
   });
 
   it('prompts once when two players start together', async () => {
@@ -114,6 +134,18 @@ describe('notification permission on playback start', () => {
 });
 
 describe('enabling notifications from Settings', () => {
+  it('asks the system after Not now, then opens settings on the next tap', async () => {
+    const { store, request, openSettings } = fakes();
+    await store.getState().playbackStarted();
+    store.getState().notNow();
+    await store.getState().enable();
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(openSettings).not.toHaveBeenCalled();
+    await store.getState().enable();
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(openSettings).toHaveBeenCalledTimes(1);
+  });
+
   it('asks the system when it has never been asked', async () => {
     const { store, request, openSettings, save } = fakes({
       answer: 'granted',
@@ -149,6 +181,7 @@ describe('notificationAction', () => {
     [{ required: true, granted: undefined, ask: 'asked' }, 'none'],
     [{ required: false, granted: false, ask: 'never' }, 'none'],
     [{ required: true, granted: false, ask: 'never' }, 'request'],
+    [{ required: true, granted: false, ask: 'declined' }, 'request'],
     [{ required: true, granted: false, ask: 'asked' }, 'openSettings'],
   ] as const)('maps %o to %s', (state, action) => {
     expect(notificationAction(state)).toBe(action);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { appActivityFromState } from './micPermission.ts';
+import { appActivityFromState } from './appActivity.ts';
 
 describe('appActivityFromState', () => {
   it('forwards active and background only', () => {

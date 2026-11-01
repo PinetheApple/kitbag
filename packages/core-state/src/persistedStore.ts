@@ -6,8 +6,6 @@ export type Commit<S> = <K extends keyof S, V extends S[K]>(
   save: (value: V) => void,
 ) => void;
 
-export type Transient<S> = Pick<StoreApi<S>, 'getState' | 'setState'>;
-
 export interface PersistedStore<P, S> {
   readonly create: (persistence?: P) => StoreApi<S>;
   readonly configure: (persistence: P) => void;
@@ -17,7 +15,11 @@ export interface PersistedStore<P, S> {
 export function persistedStore<P, S>(
   name: string,
   inMemory: P,
-  init: (persistence: P, commit: Commit<S>, transient: Transient<S>) => S,
+  init: (
+    persistence: P,
+    commit: Commit<S>,
+    transient: Pick<StoreApi<S>, 'getState' | 'setState'>,
+  ) => S,
 ): PersistedStore<P, S> {
   const create = (persistence: P = inMemory) =>
     createStore<S>((set, get) =>
