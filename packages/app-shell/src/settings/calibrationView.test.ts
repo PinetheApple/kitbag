@@ -1,3 +1,8 @@
+import {
+  bodyLineHeight,
+  calibration,
+  calibrationText,
+} from '@kitbag/core-design';
 import { KB_LATENCY_OFFSET_MS_BOUNDS } from '@kitbag/core-native';
 import {
   BEAT_MS,
@@ -11,6 +16,7 @@ import {
   calibrationView,
   routeMeta,
   SCATTER,
+  SCATTER_DOT_BAND,
   scatterHalfRangeMs,
   scatterX,
 } from './calibrationView.ts';
@@ -285,6 +291,22 @@ describe('scatter', () => {
   it('widens to keep mean ±3 SD on screen', () => {
     expect(scatterHalfRangeMs(40, 10)).toBe(70);
     expect(scatterHalfRangeMs(-40, 10)).toBe(70);
+  });
+
+  it('keeps every dot above the axis label row', () => {
+    const labelRowTop =
+      calibration.scatterHeight -
+      calibration.axisBottom -
+      calibrationText.scatterAxis.size * bodyLineHeight;
+    const bandHeight =
+      calibration.scatterHeight -
+      SCATTER_DOT_BAND.top -
+      SCATTER_DOT_BAND.bottom;
+    const lowestDotEdge =
+      SCATTER_DOT_BAND.top +
+      bandHeight * (SCATTER.dotTop + SCATTER.dotSpan) +
+      calibration.dot / 2;
+    expect(lowestDotEdge).toBeLessThanOrEqual(labelRowTop);
   });
 
   it('pins a tap off the axis to its edge', () => {
