@@ -41,7 +41,7 @@ function spokenMutePart(barMute: BarMuteConfig): string {
 
 function rampAndMuteParts(
   settings: PracticeSettings,
-  mute: MuteWording = mutePart,
+  mute: MuteWording,
 ): string[] {
   const parts: string[] = [];
   if (settings.ramp.enabled) parts.push(rampPart(settings.ramp));
@@ -84,7 +84,7 @@ export function restLegend(
 }
 
 export function afterCountInSummary(settings: PracticeSettings): string {
-  return rampAndMuteParts(settings).join(' · ');
+  return rampAndMuteParts(settings, mutePart).join(' · ');
 }
 
 export function practiceBadgeCount(settings: PracticeSettings): number {

@@ -135,8 +135,8 @@ Each entry says why.
   loaded: "Wedding set · 12 songs".
 - **Armed summary text the mockup does not draw.** Nothing armed reads "Practice tools
   are off". Mute bars read "Mute 2+2" as the mockup draws it (spoken "Mute bars:
-  play 2, mute 2") and poly "Poly 3:4"; the order is ramp, mute, count-in, poly. Sound is not armed state, so it
-  is not listed. The row under a running count-in uses the same ramp and mute text.
+  play 2, mute 2") and poly "Poly 3:4"; the order is ramp, mute, count-in, poly.
+  Sound is not armed state, so it is not listed. The row under a running count-in uses the same ramp and mute text.
 - **Ramp countdown at zero.** While a seconds or minutes step waits for its beat the
   engine reports 0 remaining; the line reads "→ 124 now".
 - **Mute cycle strip.** At most 8 cells; a longer cycle pages by eight so the current
