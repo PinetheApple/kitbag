@@ -229,12 +229,8 @@ export function applyPreset(
   store.setPolyAgainst(song.polyAgainst);
   store.setPolyAccents(song.polyAccents);
   store.setSounds(song.sounds.normal, song.sounds.accent);
-  const countIn = songCountIn(
-    store.countInScope,
-    preset.countInBars,
-    store.countIn,
-  );
-  if (countIn !== store.countIn) store.setCountIn(countIn);
+  if (store.countInScope === COUNT_IN_SCOPE.perSong)
+    store.setCountIn({ ...store.countIn, bars: song.countInBars });
   store.setBarMute(song.barMute);
   applyTempo(preset.bpm, song.ramp, store);
 }
