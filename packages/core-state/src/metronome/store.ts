@@ -85,6 +85,7 @@ export interface MetronomeActions {
   nudgeTempo: (delta: number) => void;
   resetPractice: () => void;
   syncTempoFromEngine: () => void;
+  readTempo: () => number;
   setBeats: (beatsPerBar: number, denominator: number) => void;
   setSubdivision: (subdivision: number) => void;
   cycleAccent: (beat: number) => void;
@@ -249,7 +250,7 @@ function tempoActions(
   tempo: EngineTempo,
 ): Pick<
   MetronomeActions,
-  'setTempo' | 'nudgeTempo' | 'syncTempoFromEngine' | 'setRamp'
+  'setTempo' | 'nudgeTempo' | 'syncTempoFromEngine' | 'readTempo' | 'setRamp'
 > {
   return {
     setTempo: (bpm) => {
@@ -263,6 +264,8 @@ function tempoActions(
     },
 
     syncTempoFromEngine: tempo.sync,
+
+    readTempo: tempo.read,
 
     setRamp: (config) => {
       const ramp = normalizeRamp(config);
