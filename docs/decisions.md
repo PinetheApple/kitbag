@@ -598,3 +598,8 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   re-seeks with the song as the stems do, and the beats from there replay. A smaller
   backward change waits for the next beat that has not sounded, so no beat sounds twice.
   The interval is the spacing of the two beats the cursor sits between. **[user]**
+
+- **2026-11-01 · Poly ratio label goes right first (§5.2, #243)** — The label follows the
+  last poly dot at 18 dp, then sits 8 dp left of the row, then above it. It follows the
+  owner-approved round 2 frame (`design/kitbag-metronome.html` §02) rather than the poly
+  file's left placement. **[recorded — coordinator ruling]**
