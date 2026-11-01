@@ -414,7 +414,7 @@ describe('transport start / stop / pause', () => {
     expect(commands.metronomeStop).toHaveBeenCalledTimes(1);
   });
 
-  it('re-arms the count-in on stop then start, never on pause then resume', () => {
+  it('pause then resume sends metronomePause, never metronomeStop', () => {
     store.getState().setCountIn({
       bars: 2,
       distinct: true,
@@ -424,6 +424,7 @@ describe('transport start / stop / pause', () => {
     store.getState().start();
     store.getState().pause();
     store.getState().start();
+    expect(commands.metronomePause).toHaveBeenCalledOnce();
     expect(commands.metronomeStop).not.toHaveBeenCalled();
     expect(commands.setCountIn).not.toHaveBeenCalled();
 
