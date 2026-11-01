@@ -6,9 +6,11 @@
 
 import type { TuningRepository } from '@kitbag/core-db';
 
+import type { PermissionAnswer } from '../permission.ts';
+
 import type { TunerCommands } from './commands.ts';
 
-export type MicPermission = 'granted' | 'denied' | 'blocked';
+export type MicPermission = PermissionAnswer;
 
 export interface MicPermissionSource {
   /** Current answer without prompting. */
