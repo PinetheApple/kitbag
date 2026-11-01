@@ -11,6 +11,7 @@ export default defineConfig({
       'src/logic/**/*.test.ts',
       'src/screen/useHoldEngine.test.ts',
       'src/screen/useEndPracticeOnLeave.test.ts',
+      'src/screen/muteStrips.test.ts',
     ],
     alias: {
       '@kitbag/core-native': stub(
