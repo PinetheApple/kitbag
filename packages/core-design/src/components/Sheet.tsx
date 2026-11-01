@@ -251,6 +251,7 @@ export function Sheet({
           onPress={onDismiss}
         />
       </Animated.View>
+      {/* Layout animations overwrite transforms, so the drag transform lives on the inner view. */}
       <Animated.View
         entering={transitions.sheetIn}
         exiting={transitions.sheetOut}
