@@ -1535,11 +1535,15 @@ Rules that come with them:
   channel and **never doubles as accent.**
 - Dark text is off-white; **pure white halates on OLED.**
 - **Elevation = lighter surface, not shadow.**
-- Text under 18sp holds 4.5:1 against every ground it sits on, in both themes.
-  `text3` is for resting grounds only, never a selected or raised control.
+- Text under 18sp holds 4.5:1 against every ground it sits on, in both themes, except
+  two light-theme cases still open in #189: `onAccent` on an `accent` fill (3.82:1), and
+  `red`, `amber` and `green` used as text (down to 2.97:1).
+- `text3` sits only on `bg`, `surface1`, `surface2`, `activeCardFill` and the setlist
+  NOW row fill; never on `surface3`, `activeControlFill`, or the set chip, selected tile
+  or stem tile fills.
 - `accent` is for fills and icons. Accent-coloured text uses `accentInk`: `accent` in
-  dark, `accentDeep` in light. So does an accent icon on an accent-tinted fill, which
-  must hold 3:1.
+  dark, `accentDeep` in light.
+- Accent icons hold 3:1 on every ground; on an accent-tinted fill that needs `accentInk`.
 
 **Type.** Two faces, both OFL. **Space Grotesk** for display, numerics and labels
 — geometric, instrument-panel character, and **true tabular figures so a BPM
