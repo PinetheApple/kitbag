@@ -709,3 +709,13 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   and its summary shows on the next metronome visit. Leaving while playing keeps the same
   session running, since background practice counts. A session stopped from the notification
   while away stays open until End or the next stopped leave. **[coord]**
+
+- **2026-11-02 · Text at 200% font scale (§12.6, #192)** — The stem player's name column
+  keeps the mockup's 58 dp at the default text size and grows by the font scale above it.
+  **[user, 2026-10-30]** App-bar icons (back, search, add, the metronome bar's keys) grow with
+  the font scale up to 1.5×, so the largest bar glyph (26 dp) stays inside its fixed 48 dp
+  button at 200% and the bar keeps its height; other icons stay at their design size, since
+  most sit inside fixed-size controls. The metronome's status rows grow by the font scale
+  and hold at most two lines, which is what a row grown by that scale fits; a wider row
+  wraps onto its second line rather than truncating. Library and output-route rows drop
+  their one-line limit above the default scale. **[recorded]**
