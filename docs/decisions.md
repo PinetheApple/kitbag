@@ -687,4 +687,5 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
 - **2026-11-02 · Leaving the metronome ends a practice session only when stopped (§5.6, §5.7, #85)**
   — Leaving the screen with the transport stopped and at least 1 s played ends the session,
   and its summary shows on the next metronome visit. Leaving while playing keeps the same
-  session running, since background practice counts. **[coord]**
+  session running, since background practice counts. A session stopped from the notification
+  while away stays open until End or the next stopped leave. **[coord]**
