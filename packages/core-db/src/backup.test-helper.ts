@@ -2,7 +2,8 @@ import { afterEach } from 'vitest';
 
 import { createBackupService } from './backup';
 import type { ImportResult } from './backup-format';
-import { practiceSessions, songs, tunings } from './schema';
+import { createPracticeRepository } from './practice-repository';
+import { songs, tunings } from './schema';
 import { createSetlistRepository } from './setlist-repository';
 import { createSongPresetRepository } from './song-preset-repository';
 import { openTestDatabase } from './sqlite.test-helper';
@@ -104,13 +105,13 @@ export async function seed(database: BackupDatabase) {
     instrument: INSTRUMENTS.bass,
     uuid: crypto.randomUUID(),
   });
-  await handle.db.insert(practiceSessions).values({
-    startTime: SESSION_START,
+  await createPracticeRepository(handle).insert({
+    uuid: crypto.randomUUID(),
+    startedAt: SESSION_START,
     durationSeconds: 1800,
     avgBpm: 120,
     setlistId: friday.id,
-    songsPlayed: JSON.stringify([opener.uuid, closer.uuid]),
-    uuid: crypto.randomUUID(),
+    songUuids: [opener.uuid, closer.uuid],
   });
   return { song, opener, closer, friday, acoustic };
 }

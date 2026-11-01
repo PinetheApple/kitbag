@@ -6,7 +6,11 @@ export {
   type SongPresetRepository,
 } from './client';
 export type { Preferences } from './preferences';
-export type { PracticeRepository, PracticeStats } from './practice-repository';
+export type {
+  NewPracticeSession,
+  PracticeRepository,
+  PracticeStats,
+} from './practice-repository';
 export type {
   BarMark,
   BundleStem,
@@ -45,6 +49,7 @@ export type {
 export {
   CATEGORIES,
   DEFAULT_IMPORT_CATEGORIES,
+  MS_PER_SECOND,
   type Category,
   type Conflict,
   type ImportFailure,
