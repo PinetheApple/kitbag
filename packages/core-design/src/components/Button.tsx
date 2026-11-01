@@ -94,7 +94,7 @@ const useStyles = createThemedStyles((theme) => ({
     opacity: opacity.muted,
   },
   primary: {
-    backgroundColor: theme.color.accent,
+    backgroundColor: theme.accentTextFill,
   },
   tonal: {
     backgroundColor: theme.color.surface2,

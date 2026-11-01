@@ -6,6 +6,7 @@ import {
   applyPreset,
   isLoadedSongUnsaved,
   presetFromMetronome,
+  songFieldsFromMetronome,
   type LiveSongFields,
 } from './presetMapping.ts';
 import { getLibrary, type LibraryRepositories } from './runtime.ts';
@@ -221,7 +222,10 @@ function presetEditActions(deps: LibraryDeps, get: Get) {
       await get().refresh();
     },
     saveCurrentInto: async (presetId: number) => {
-      await presets().update(presetId, presetFromMetronome(deps.metronome()));
+      await presets().update(
+        presetId,
+        songFieldsFromMetronome(deps.metronome()),
+      );
       await get().refresh();
     },
   };

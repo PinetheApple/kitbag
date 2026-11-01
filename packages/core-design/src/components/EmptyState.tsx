@@ -71,8 +71,8 @@ const useStyles = createThemedStyles((theme) => ({
     paddingHorizontal: libraryList.emptyButtonH,
     borderRadius: radius.button,
     borderWidth: size.stroke,
-    borderColor: theme.color.accent,
-    backgroundColor: theme.color.accent,
+    borderColor: theme.accentTextFill,
+    backgroundColor: theme.accentTextFill,
   },
   listButtonLabel: {
     ...textStyle(textRoles.button),

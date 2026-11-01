@@ -154,7 +154,7 @@ function TempoArrowKey({ arrow, density, onNudge }: TempoArrowKeyProps) {
       <Icon
         name={arrow === 'up' ? 'caretUp' : 'caretDown'}
         size="chevron"
-        color="text3"
+        color="decor"
       />
     </Pressable>
   );

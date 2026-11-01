@@ -122,8 +122,8 @@ function mergeConflict(
   resolutions: Resolutions,
   state: MergeState,
 ) {
-  const key = recordKey(record);
-  const conflict = { category, key, label: recordLabel(record) };
+  const key = recordKey(category, record);
+  const conflict = { category, key, label: recordLabel(category, record) };
   state.summary.conflicts.push(conflict);
   const resolution = resolutions[category]?.[key];
   if (resolution === undefined) state.unresolved.push(conflict);
@@ -139,11 +139,14 @@ function planMerge(
   resolutions: Resolutions,
 ): MergeState {
   const local = new Map(
-    snapshot.records[category].map((record) => [recordKey(record), record]),
+    snapshot.records[category].map((record) => [
+      recordKey(category, record),
+      record,
+    ]),
   );
   const state = emptyMergeState(incoming.length);
   for (const record of incoming) {
-    const key = recordKey(record);
+    const key = recordKey(category, record);
     const mine = local.get(key);
     if (mine === undefined) {
       state.summary.new += 1;

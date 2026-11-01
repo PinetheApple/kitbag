@@ -1,4 +1,5 @@
 import {
+  Chip,
   countLabel,
   createThemedStyles,
   metronomeSheet,
@@ -10,7 +11,7 @@ import {
   Switch,
   unshared,
 } from '@kitbag/core-design';
-import { useMetronome } from '@kitbag/core-state';
+import { COUNT_IN_SCOPE, useMetronome } from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { Text, View } from 'react-native';
 
@@ -46,7 +47,7 @@ const usePreviewStyles = createThemedStyles((theme) => ({
   muted: {
     borderWidth: metronomeSheet.mutePreviewDashed,
     borderStyle: 'dashed',
-    borderColor: theme.color.text3,
+    borderColor: theme.color.decor,
   },
 }));
 
@@ -135,6 +136,13 @@ export function PracticeCountIn() {
   const styles = usePracticeStyles();
   const countIn = useMetronome((s) => s.countIn);
   const setCountIn = useMetronome((s) => s.setCountIn);
+  const everySong = useMetronome(
+    (s) => s.countInScope === COUNT_IN_SCOPE.always,
+  );
+  const setCountInScope = useMetronome((s) => s.setCountInScope);
+  const handleEverySong = useCallback(() => {
+    setCountInScope(everySong ? COUNT_IN_SCOPE.perSong : COUNT_IN_SCOPE.always);
+  }, [everySong, setCountInScope]);
   const handleBars = useCallback(
     (option: string) => {
       setCountIn({ ...countIn, bars: countInBarsFromOption(option) });
@@ -176,6 +184,16 @@ export function PracticeCountIn() {
           onSelect={handleMode}
         />
       </View>
+      <Chip
+        icon="repeat"
+        label="Count in on every song"
+        active={everySong}
+        neighbourGapDp={{
+          top: space.controlGap,
+          bottom: unshared(metronomeSheet.practiceSectionV),
+        }}
+        onPress={handleEverySong}
+      />
     </PracticeSection>
   );
 }

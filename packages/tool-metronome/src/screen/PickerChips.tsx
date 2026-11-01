@@ -88,7 +88,7 @@ export function PickerChips({
       >
         <View style={[styles.chip, styles.meter]}>
           <Text style={styles.label}>{meterLabel(meter)}</Text>
-          <Icon name="caretDown" size="caret" color="text3" />
+          <Icon name="caretDown" size="caret" color="decor" />
         </View>
       </Pressable>
       <Pressable
@@ -105,7 +105,7 @@ export function PickerChips({
             height={metronome.notationChip}
           />
           <Text style={styles.label}>{name}</Text>
-          <Icon name="caretDown" size="caret" color="text3" />
+          <Icon name="caretDown" size="caret" color="decor" />
         </View>
       </Pressable>
     </View>

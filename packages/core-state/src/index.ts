@@ -18,9 +18,23 @@ export {
   type CountInBars,
 } from './metronome/store.ts';
 export {
+  COUNT_IN_SCOPE,
+  COUNT_IN_SCOPES,
+  DEFAULT_COUNT_IN_SCOPE,
+  isCountInScope,
+  type CountInScope,
+} from './metronome/countInScope.ts';
+export {
+  configureCountInPersistence,
+  type CountInPersistence,
+  type CountInSettings,
+} from './metronome/countInPersistence.ts';
+export {
   clamp,
   clampRampInterval,
   cycleAccentValue,
+  isCountInBars,
+  isSoundId,
   rampIntervalBounds,
   initialAccents,
   resizeAccents,
@@ -40,6 +54,23 @@ export {
   configureMetronomeRuntime,
   type MetronomeRuntime,
 } from './metronome/runtime.ts';
+export {
+  PRACTICE_TEMPO_SAMPLE_MS,
+  type PracticeSetlist,
+  type PracticeSong,
+  type PracticeStretch,
+  type PracticeSummary,
+} from './practice/session.ts';
+export {
+  configurePracticeSessions,
+  createPracticeSessionStore,
+  getPracticeSessionStore,
+  type PracticePersistence,
+  type PracticeSessionActions,
+  type PracticeSessionDeps,
+  type PracticeSessionState,
+  type PracticeSessionStore,
+} from './practice/store.ts';
 export { useLastTool } from './lastTool/useLastTool.ts';
 export {
   configureLastToolPersistence,

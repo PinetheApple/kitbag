@@ -63,7 +63,7 @@ const useStyles = createThemedStyles((theme) => ({
     textAlign: 'center',
   },
   selectedLabel: {
-    color: theme.color.accent,
+    color: theme.color[theme.accentInk],
   },
 }));
 

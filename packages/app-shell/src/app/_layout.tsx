@@ -1,6 +1,7 @@
 import '@/runtime/cryptoRuntime';
 import '@/runtime/metronomeRuntime';
 import '@/runtime/libraryRuntime';
+import '@/runtime/practiceRuntime';
 import '@/runtime/songLibraryRuntime';
 import '@/runtime/stemPlayerRuntime';
 import '@/runtime/tunerRuntime';
@@ -8,6 +9,7 @@ import '@/runtime/lastToolRuntime';
 import '@/runtime/homeLayoutRuntime';
 import '@/runtime/swipeHintRuntime';
 import '@/runtime/appearanceRuntime';
+import '@/runtime/countInRuntime';
 import '@/runtime/transportRuntime';
 import '@/runtime/keepAwakeRuntime';
 import '@/settings/rigRuntime';

@@ -6,7 +6,12 @@ export {
   type SongPresetRepository,
 } from './client';
 export type { Preferences } from './preferences';
-export type { PracticeRepository, PracticeStats } from './practice-repository';
+export { COUNT_IN_PREFERENCE_KEYS } from './count-in-preferences';
+export type {
+  NewPracticeSession,
+  PracticeRepository,
+  PracticeStats,
+} from './practice-repository';
 export type {
   RouteLatency,
   RouteLatencyRepository,

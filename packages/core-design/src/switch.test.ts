@@ -51,7 +51,7 @@ describe('switchStyles', () => {
         width: DESIGN_TOG.knob,
         height: DESIGN_TOG.knob,
         borderRadius: DESIGN_TOG.knobRadius,
-        backgroundColor: color.text3,
+        backgroundColor: color.decor,
       });
       expect(styles.knobOn).toEqual({
         left: KNOB_ON_LEFT,
