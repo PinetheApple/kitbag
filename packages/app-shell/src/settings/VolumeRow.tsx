@@ -13,22 +13,21 @@ import { useCallback, useEffect } from 'react';
 import { View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 
+import { volumePercent } from './rigText.ts';
 import {
   fractionOfVolume,
   VOLUME_SLIDER,
   volumeOfFraction,
-  volumePercent,
-} from './rigText.ts';
+} from './rigVolume.ts';
 import { setLiveVolume } from './rigRuntime';
 
 const LABEL = 'Click volume';
 
-// The slider's 48dp hit area overhangs the row instead of making it taller.
-const HIT_OVERHANG =
+const SLIDER_HIT_OVERHANG =
   (minTouchTargetDp - textRoles.editRowKey.size * bodyLineHeight) / 2;
 
 const useStyles = createThemedStyles(() => ({
-  slider: { width: rig.sliderWidth, marginVertical: -HIT_OVERHANG },
+  slider: { width: rig.sliderWidth, marginVertical: -SLIDER_HIT_OVERHANG },
   readout: { width: rig.readoutWidth },
 }));
 

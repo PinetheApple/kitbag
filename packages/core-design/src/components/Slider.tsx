@@ -48,7 +48,6 @@ export interface SliderProps {
   readonly tick?: number;
   readonly detent?: SliderDetent;
   readonly warnAbove?: number;
-  /** Draws the thinner settings thumb and tick; the gesture is still `mode`'s. */
   readonly look?: SliderLook;
 }
 
