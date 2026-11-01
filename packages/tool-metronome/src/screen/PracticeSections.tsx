@@ -218,7 +218,7 @@ export function PracticePoly({ onType }: TypeProps) {
           <Switch
             neighbourGapDp={{
               top: unshared(metronomeSheet.practiceSectionV),
-              bottom: unshared(metronomeSheet.practiceSectionV),
+              bottom: space.controlGap,
               left: space.rowGap,
               right: 0,
             }}
@@ -240,8 +240,7 @@ export function PracticePoly({ onType }: TypeProps) {
           onStep={handleStep}
           onValuePress={handleTypeCount}
         />
-        <View style={styles.grow} />
-        <Text style={styles.label}>against</Text>
+        <Text style={[styles.label, styles.pushRight]}>against</Text>
         <StepControl
           variant="inlineLargeTextGlyph"
           label="Against"
