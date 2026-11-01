@@ -1,4 +1,4 @@
-import { countLabel } from '@kitbag/core-design';
+import { countLabel, metronome } from '@kitbag/core-design';
 import { KB_POLY_AGAINST_BAR } from '@kitbag/core-native';
 import { effectivePolyAgainst } from '@kitbag/core-state';
 
@@ -149,7 +149,6 @@ export interface PolyLabelRoom {
   readonly labelWidth: number;
   readonly labelHeight: number;
   readonly rowHeight: number;
-  readonly labelGap: number;
   readonly sideRoom: number;
   readonly screenInset: number;
   readonly afterLastDot: number;
@@ -157,10 +156,22 @@ export interface PolyLabelRoom {
 
 export function polyLabelPlace(room: PolyLabelRoom): PolyLabelPlace {
   if (room.labelHeight > room.rowHeight) return 'above';
-  const needed = room.labelWidth + room.labelGap;
   const margin = Math.max(0, room.sideRoom) + room.screenInset;
-  if (needed <= room.afterLastDot + margin) return 'right';
-  return needed <= margin ? 'left' : 'above';
+  const neededRight = room.labelWidth + metronome.polyLabelGapRight;
+  if (neededRight <= room.afterLastDot + margin) return 'right';
+  return room.labelWidth + metronome.polyLabelGapLeft <= margin
+    ? 'left'
+    : 'above';
+}
+
+export function polyLabelLeft(
+  place: PolyLabelPlace,
+  lastDotRight: number,
+  labelWidth: number,
+): number {
+  return place === 'right'
+    ? lastDotRight + metronome.polyLabelGapRight
+    : -(labelWidth + metronome.polyLabelGapLeft);
 }
 
 export function polyRatioLabel(ratio: PolyRatio): string {

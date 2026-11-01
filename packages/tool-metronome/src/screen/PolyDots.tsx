@@ -22,6 +22,7 @@ import {
   polyBarTable,
   polyCycleOffset,
   polyDotSize,
+  polyLabelLeft,
   polyLabelPlace,
   polyLastDotRight,
   polyRatioLabel,
@@ -266,7 +267,6 @@ export function PolyDots({
     labelWidth,
     labelHeight: label.height,
     rowHeight: metronome.polyDot,
-    labelGap: metronome.polyLabelGap,
     sideRoom: (areaWidth - lineWidth) / 2,
     screenInset: space.screenInset,
     afterLastDot: lineWidth - lastDotRight,
@@ -274,10 +274,7 @@ export function PolyDots({
   const width = useMemo(() => ({ width: lineWidth }), [lineWidth]);
   const besidePlace = useMemo(
     () => ({
-      left:
-        place === 'right'
-          ? lastDotRight + metronome.polyLabelGap
-          : -(labelWidth + metronome.polyLabelGap),
+      left: polyLabelLeft(place, lastDotRight, labelWidth),
       width: labelWidth,
     }),
     [place, lastDotRight, labelWidth],

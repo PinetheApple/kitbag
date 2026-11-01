@@ -17,6 +17,7 @@ import {
   polyBarTable,
   polyCycleOffset,
   polyDotSize,
+  polyLabelLeft,
   polyLabelPlace,
   polyLastDotRight,
   polyRatioLabel,
@@ -333,7 +334,6 @@ describe('poly label', () => {
     labelWidth: 20,
     labelHeight: 15,
     rowHeight: 22,
-    labelGap: 8,
     sideRoom: 34,
     screenInset: 16,
     afterLastDot: 0,
@@ -360,6 +360,20 @@ describe('poly label', () => {
         afterLastDot: -34,
       }),
     ).toBe('left');
+  });
+
+  it('needs the 18 dp right gap, not 8, to follow the last dot', () => {
+    const tight = { ...ROOM, sideRoom: 0, screenInset: 0 };
+    expect(polyLabelPlace({ ...tight, afterLastDot: 37 })).toBe('above');
+    expect(polyLabelPlace({ ...tight, afterLastDot: 38 })).toBe('right');
+  });
+
+  it('sits 8 left of the row, as the poly file draws 3:4', () => {
+    const POLY_FILE_LABEL_WIDTH = 28;
+    const POLY_FILE_LABEL_LEFT = -36;
+    expect(polyLabelLeft('left', 0, POLY_FILE_LABEL_WIDTH)).toBe(
+      POLY_FILE_LABEL_LEFT,
+    );
   });
 
   it('moves above the row when large text is taller than the dots', () => {
@@ -419,31 +433,41 @@ describe('cycle bracket inside the dots area', () => {
 
 describe('poly label beside 16/16 at 411 wide', () => {
   const R2_LABEL_BOX = 40;
+  const R2_LAST_POLY_DOT_RIGHT = 266.7 + 18;
+  const R2_LABEL_LEFT = 302.7;
   const areaWidth = 411 - space.screenInset * 2;
   const lines = layoutBeatLeds(16, MAX_DOTS_PER_LINE);
 
-  for (const density of ['compact', 'roomy'] as const) {
+  function placeAt(density: 'compact' | 'roomy', polyBeats: number) {
     const metrics = beatDotMetrics(density, lines);
     const dotSize = beatDotSize(lines, areaWidth, metrics);
     const lineWidth = widestLineWidth(lines, dotSize, metrics);
     const row = { lineWidth, dotSize, dotGap: DOT_METRICS.dotGap };
-
-    for (const polyBeats of [3, 5]) {
-      it(`puts ${String(polyBeats)}:16 right of the row, ${density}`, () => {
-        const ratio = { polyBeats, against: 16, beatsPerBar: 16 };
-        const size = polyDotSize(ratio, row, metronome.polyDot);
-        expect(
-          polyLabelPlace({
-            labelWidth: R2_LABEL_BOX,
-            labelHeight: metronome.beatMarkerLineHeight,
-            rowHeight: metronome.polyDot,
-            labelGap: metronome.polyLabelGap,
-            sideRoom: (areaWidth - lineWidth) / 2,
-            screenInset: space.screenInset,
-            afterLastDot: lineWidth - polyLastDotRight(ratio, row, size),
-          }),
-        ).toBe('right');
-      });
-    }
+    const ratio = { polyBeats, against: 16, beatsPerBar: 16 };
+    const size = polyDotSize(ratio, row, metronome.polyDot);
+    const lastDotRight = polyLastDotRight(ratio, row, size);
+    const place = polyLabelPlace({
+      labelWidth: R2_LABEL_BOX,
+      labelHeight: metronome.beatMarkerLineHeight,
+      rowHeight: metronome.polyDot,
+      sideRoom: (areaWidth - lineWidth) / 2,
+      screenInset: space.screenInset,
+      afterLastDot: lineWidth - lastDotRight,
+    });
+    return { place, lastDotRight };
   }
+
+  for (const polyBeats of [3, 5]) {
+    it(`puts ${String(polyBeats)}:16 right of the row, compact`, () => {
+      const { place, lastDotRight } = placeAt('compact', polyBeats);
+      expect(place).toBe('right');
+      expect(
+        polyLabelLeft(place, lastDotRight, R2_LABEL_BOX) - lastDotRight,
+      ).toBeCloseTo(R2_LABEL_LEFT - R2_LAST_POLY_DOT_RIGHT, DESIGN_PLACES);
+    });
+  }
+
+  it('lifts 5:16 above the row when roomy dots leave under 18 dp', () => {
+    expect(placeAt('roomy', 5).place).toBe('above');
+  });
 });
