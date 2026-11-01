@@ -90,6 +90,19 @@ describe('count-in on every song', () => {
     expect(isLoadedSongUnsaved(preset, metronome.getState())).toBe(false);
   });
 
+  it('a new song from current takes the live count-in as its own', async () => {
+    const { metronome, library } = await always();
+    const id = await library.getState().newSongFromCurrent('New');
+    const created = library.getState().presets.find((p) => p.id === id);
+    expect(created?.countInBars).toBe(FOUR_BARS);
+    metronome.getState().setCountInScope(COUNT_IN_SCOPE.perSong);
+    metronome
+      .getState()
+      .setCountIn({ ...metronome.getState().countIn, bars: ONE_BAR });
+    await library.getState().loadSong(id);
+    expect(metronome.getState().countIn.bars).toBe(FOUR_BARS);
+  });
+
   it('saving a song keeps the song its own count-in', async () => {
     const { metronome, library, load, entries } = await always();
     await load(0);
