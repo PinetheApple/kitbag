@@ -609,3 +609,6 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   lightness only to clear it, and the `text2` step stays above `text3`. Accent-coloured text
   uses `accentInk`, generalising the Settings section label exception; `accent` is
   unchanged for fills and icons. **[recorded]**
+- **2026-11-01 · Accent icons on tinted fills (§12.2, #189)** — In light, an accent icon on an
+  accent-tinted fill uses `accentInk` so it holds 3:1; light `accent` is 2.76:1 on
+  `activeControlFill`. **[recorded — coordinator ruling]**

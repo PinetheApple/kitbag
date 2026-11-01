@@ -1538,7 +1538,8 @@ Rules that come with them:
 - Text under 18sp holds 4.5:1 against every ground it sits on, in both themes.
   `text3` is for resting grounds only, never a selected or raised control.
 - `accent` is for fills and icons. Accent-coloured text uses `accentInk`: `accent` in
-  dark, `accentDeep` in light.
+  dark, `accentDeep` in light. So does an accent icon on an accent-tinted fill, which
+  must hold 3:1.
 
 **Type.** Two faces, both OFL. **Space Grotesk** for display, numerics and labels
 — geometric, instrument-panel character, and **true tabular figures so a BPM
