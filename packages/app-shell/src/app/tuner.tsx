@@ -6,13 +6,13 @@ import { useCallback, useEffect } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TOOL_ID } from '@/home/registry';
-import { ToolGate } from '@/home/ToolGate';
+import { gated } from '@/home/ToolGate';
 
 // Route for the tuner (SPEC §10.2, #118). The tool owns the screen; the shell
 // owns when the mic may run: focus enters the store (permission, config, start)
 // and blur leaves it (stop). A pushed route over the tuner blurs it, so the mic
 // is never left capturing behind another screen.
-function TunerRouteBody() {
+function TunerRoute() {
   const insets = useSafeAreaInsets();
   const markUsed = useLastTool((s) => s.markUsed);
 
@@ -32,10 +32,4 @@ function TunerRouteBody() {
   return <TunerScreen insets={insets} a4Range={KB_TUNER_A4_HZ} />;
 }
 
-export default function TunerRoute() {
-  return (
-    <ToolGate toolId={TOOL_ID.tuner}>
-      <TunerRouteBody />
-    </ToolGate>
-  );
-}
+export default gated(TOOL_ID.tuner, TunerRoute);

@@ -4,9 +4,9 @@ import {
   ListSwitchRow,
   radii,
   size,
+  textRoles,
   textStyle,
   toolsManager,
-  toolsManagerText,
 } from '@kitbag/core-design';
 import { useTools } from '@kitbag/core-state';
 import { useCallback, useState } from 'react';
@@ -24,13 +24,12 @@ import {
 
 const useStyles = createThemedStyles((theme) => {
   const small = {
-    ...textStyle(toolsManagerText.small),
-    lineHeight: toolsManagerText.small.size * bodyLineHeight,
+    ...textStyle(textRoles.fieldLabel),
+    lineHeight: textRoles.fieldLabel.size * bodyLineHeight,
     color: theme.color.text2,
   };
   return {
     intro: { ...small, paddingHorizontal: toolsManager.introH },
-    spacer: { flex: 1 },
     note: {
       paddingVertical: toolsManager.noteV,
       paddingHorizontal: toolsManager.noteH,
@@ -82,7 +81,7 @@ export function ToolsScreen({ onBack }: { readonly onBack: () => void }) {
     [off, setOff],
   );
   return (
-    <SettingsFrame title={TOOLS_TITLE} onBack={onBack} fill>
+    <SettingsFrame title={TOOLS_TITLE} onBack={onBack}>
       <Text style={styles.intro}>{TOOLS_INTRO}</Text>
       {BUILT_TOOLS.map((tool) => (
         <ToolSwitch
@@ -92,7 +91,6 @@ export function ToolsScreen({ onBack }: { readonly onBack: () => void }) {
           onSwitch={handleSwitch}
         />
       ))}
-      <View style={styles.spacer} />
       <View style={styles.note}>
         <Text accessibilityLiveRegion="polite" style={styles.noteText}>
           {note}

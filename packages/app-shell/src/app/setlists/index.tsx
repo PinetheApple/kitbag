@@ -2,10 +2,10 @@ import { SetlistsScreen } from '@kitbag/tool-metronome';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TOOL_ID } from '@/home/registry';
-import { ToolGate } from '@/home/ToolGate';
+import { gated } from '@/home/ToolGate';
 import { useLibraryRoutes } from '@/runtime/libraryRoutes';
 
-function SetlistsRouteBody() {
+function SetlistsRoute() {
   const insets = useSafeAreaInsets();
   const routes = useLibraryRoutes();
   return (
@@ -19,10 +19,4 @@ function SetlistsRouteBody() {
   );
 }
 
-export default function SetlistsRoute() {
-  return (
-    <ToolGate toolId={TOOL_ID.metronome}>
-      <SetlistsRouteBody />
-    </ToolGate>
-  );
-}
+export default gated(TOOL_ID.metronome, SetlistsRoute);

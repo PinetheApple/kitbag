@@ -4,11 +4,11 @@ import { useEffect } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TOOL_ID } from '@/home/registry';
-import { ToolGate } from '@/home/ToolGate';
+import { gated } from '@/home/ToolGate';
 import { useToolOn } from '@/home/toolsOn';
 import { useLibraryRoutes } from '@/runtime/libraryRoutes';
 
-function SongsRouteBody() {
+function SongsRoute() {
   const insets = useSafeAreaInsets();
   const routes = useLibraryRoutes();
   const markUsed = useLastTool((s) => s.markUsed);
@@ -29,10 +29,4 @@ function SongsRouteBody() {
   );
 }
 
-export default function SongsRoute() {
-  return (
-    <ToolGate toolId={TOOL_ID.library}>
-      <SongsRouteBody />
-    </ToolGate>
-  );
-}
+export default gated(TOOL_ID.library, SongsRoute);

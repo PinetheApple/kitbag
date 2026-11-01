@@ -5,6 +5,7 @@ import {
   EditSwitchRow,
   EditValue,
   ListRow,
+  rowLabel,
   SectionHeader,
   SegmentedControl,
   type SegmentOption,
@@ -74,7 +75,7 @@ function ToolsSection({ onOpenTools }: { readonly onOpenTools: () => void }) {
         icon="settings"
         title={TOOLS_TITLE}
         subtitle={summary}
-        accessibilityLabel={`${TOOLS_TITLE}, ${summary}`}
+        accessibilityLabel={rowLabel(TOOLS_TITLE, summary)}
         onPress={onOpenTools}
       />
     </>

@@ -21,12 +21,14 @@ vi.mock('expo-router', () => ({
   },
 }));
 
-const { ToolGate } = await import('./ToolGate.tsx');
+const { gated } = await import('./ToolGate.tsx');
+
+function Body() {
+  return createElement('main', null, 'tool');
+}
 
 function render(toolId: string): string {
-  return renderToStaticMarkup(
-    createElement(ToolGate, { toolId }, createElement('main', null, 'tool')),
-  );
+  return renderToStaticMarkup(createElement(gated(toolId, Body)));
 }
 
 beforeEach(() => {
@@ -34,7 +36,7 @@ beforeEach(() => {
   tools.off = [];
 });
 
-describe('ToolGate', () => {
+describe('gated', () => {
   it('opens a tool that is on', () => {
     expect(render(TOOL_ID.tuner)).toContain('tool');
     expect(dismissTo).not.toHaveBeenCalled();

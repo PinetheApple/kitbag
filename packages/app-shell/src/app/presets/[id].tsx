@@ -12,7 +12,7 @@ import { useCallback, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TOOL_ID } from '@/home/registry';
-import { ToolGate } from '@/home/ToolGate';
+import { gated } from '@/home/ToolGate';
 import { useLibraryRoutes } from '@/runtime/libraryRoutes';
 
 function useDiscardGuard() {
@@ -37,7 +37,7 @@ function useDiscardGuard() {
   return { pending: blocked !== null, setDirty, keep, discard };
 }
 
-function PresetEditorRouteBody() {
+function PresetEditorRoute() {
   const insets = useSafeAreaInsets();
   const routes = useLibraryRoutes();
   const guard = useDiscardGuard();
@@ -61,10 +61,4 @@ function PresetEditorRouteBody() {
   );
 }
 
-export default function PresetEditorRoute() {
-  return (
-    <ToolGate toolId={TOOL_ID.metronome}>
-      <PresetEditorRouteBody />
-    </ToolGate>
-  );
-}
+export default gated(TOOL_ID.metronome, PresetEditorRoute);
