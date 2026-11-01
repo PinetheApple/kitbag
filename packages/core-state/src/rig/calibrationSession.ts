@@ -73,12 +73,12 @@ const IDLE: CalibrationState = {
 };
 
 export function canUseOutcome(
-  state: Pick<CalibrationState, 'phase' | 'outcome' | 'route'>,
+  state: Pick<CalibrationState, 'phase' | 'deviations' | 'route'>,
 ): boolean {
   return (
-    state.phase === 'done' &&
-    state.outcome?.kind === 'measured' &&
-    state.route?.certain === true
+    (state.phase === 'running' || state.phase === 'done') &&
+    state.route?.certain === true &&
+    analyseTaps(state.deviations).kind === 'measured'
   );
 }
 
@@ -270,10 +270,9 @@ export function createCalibrationSession(
 
       use: async () => {
         const state = get();
-        const { outcome, route } = state;
-        if (!canUseOutcome(state) || outcome?.kind !== 'measured') {
-          return false;
-        }
+        const { route } = state;
+        const outcome = analyseTaps(state.deviations);
+        if (!canUseOutcome(state) || outcome.kind !== 'measured') return false;
         if (route === null) return false;
         const offsetMs = storedOffsetMs(outcome.meanMs);
         await deps.saveRouteLatency({

@@ -56,6 +56,8 @@ export const SCATTER_AXIS_LINE_HEIGHT =
 export const SCATTER_DOT_BAND = {
   top: 0,
   bottom: calibration.axisBottom + SCATTER_AXIS_LINE_HEIGHT,
+  left: calibration.axisSide,
+  right: calibration.axisSide,
 } as const;
 
 const CENTRE = 0.5;
@@ -149,9 +151,10 @@ export function calibrationView(state: ViewState): CalibrationView {
   const measured = live.kind === 'measured' ? live : null;
   const refused = state.phase === 'done' && live.kind === 'refused';
   const unwrapped = unwrapDeviations(state.deviations);
-  const axisMs = refused
-    ? scatterHalfRangeMs(mean(unwrapped), sampleSd(unwrapped))
-    : scatterHalfRangeMs(measured?.meanMs ?? 0, measured?.sdMs ?? 0);
+  const axisMs =
+    measured === null
+      ? scatterHalfRangeMs(mean(unwrapped), sampleSd(unwrapped))
+      : scatterHalfRangeMs(measured.meanMs, measured.sdMs);
   return {
     count: state.deviations.length,
     progress: state.deviations.length / CALIBRATION.taps,
