@@ -1,3 +1,4 @@
+import { libraryMix } from './libraryRoles.ts';
 import { metronomeMix } from './metronomeRoles.ts';
 import { mix } from './roles.ts';
 import {
@@ -53,6 +54,7 @@ export interface Theme {
   readonly songNowFill: string;
   readonly setChipFill: string;
   readonly selectedTileFill: string;
+  readonly stemTileFill: string;
   readonly onDanger: string;
   readonly disabledLabel: string;
   readonly feedback: Readonly<Record<FeedbackTone, FeedbackColors>>;
@@ -93,6 +95,7 @@ export function buildTheme(mode: ThemeMode): Theme {
       color.surface2,
       metronomeMix.selectedTile,
     ),
+    stemTileFill: mixHex(color.accent, color.surface2, libraryMix.stemTile),
     onDanger: color.surface1,
     disabledLabel: color.text2,
     feedback: {

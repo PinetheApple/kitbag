@@ -95,11 +95,15 @@ interface InkOnGrounds {
   readonly grounds: Grounds;
 }
 
-const surfaces: Grounds = ({ color }) => ({
+const restingSurfaces: Grounds = ({ color }) => ({
   bg: color.bg,
   surface1: color.surface1,
   surface2: color.surface2,
-  surface3: color.surface3,
+});
+
+const surfaces: Grounds = (theme) => ({
+  ...restingSurfaces(theme),
+  surface3: theme.color.surface3,
 });
 
 const tintedFills: Grounds = (theme) => ({
@@ -108,6 +112,7 @@ const tintedFills: Grounds = (theme) => ({
   songNowFill: theme.songNowFill,
   setChipFill: theme.setChipFill,
   selectedTileFill: theme.selectedTileFill,
+  stemTileFill: theme.stemTileFill,
 });
 
 const allGrounds: Grounds = (theme) => ({
@@ -116,9 +121,7 @@ const allGrounds: Grounds = (theme) => ({
 });
 
 const restingGrounds: Grounds = (theme) => ({
-  bg: theme.color.bg,
-  surface1: theme.color.surface1,
-  surface2: theme.color.surface2,
+  ...restingSurfaces(theme),
   activeCardFill: theme.activeCardFill,
   songNowFill: theme.songNowFill,
 });

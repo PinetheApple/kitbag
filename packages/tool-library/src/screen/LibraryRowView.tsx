@@ -8,7 +8,6 @@ import {
   libraryMix,
   lineRatio,
   minTouchTargetDp,
-  mixHex,
   size,
   space,
   textRoles,
@@ -74,11 +73,7 @@ const useStyles = createThemedStyles((theme) => ({
     justifyContent: 'center',
   },
   stemTile: {
-    backgroundColor: mixHex(
-      theme.color.accent,
-      theme.color.surface2,
-      libraryMix.stemTile,
-    ),
+    backgroundColor: theme.stemTileFill,
   },
   text: { flex: 1, minWidth: 0 },
   title: {
