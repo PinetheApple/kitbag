@@ -54,6 +54,23 @@ export {
   configureMetronomeRuntime,
   type MetronomeRuntime,
 } from './metronome/runtime.ts';
+export {
+  PRACTICE_TEMPO_SAMPLE_MS,
+  type PracticeSetlist,
+  type PracticeSong,
+  type PracticeStretch,
+  type PracticeSummary,
+} from './practice/session.ts';
+export {
+  configurePracticeSessions,
+  createPracticeSessionStore,
+  getPracticeSessionStore,
+  type PracticePersistence,
+  type PracticeSessionActions,
+  type PracticeSessionDeps,
+  type PracticeSessionState,
+  type PracticeSessionStore,
+} from './practice/store.ts';
 export { useLastTool } from './lastTool/useLastTool.ts';
 export {
   configureLastToolPersistence,
