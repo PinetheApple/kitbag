@@ -22,6 +22,10 @@ import {
   SOURCE_URL,
 } from './about.ts';
 import { formatAppVersion } from './appVersion.ts';
+import {
+  PLAYBACK_CARD_LABEL,
+  type NotificationRow,
+} from './notificationText.ts';
 import { formatPracticeSummary } from './practiceText.ts';
 import { RigSection } from './RigSection.tsx';
 import { SettingsFrame } from './SettingsFrame.tsx';
@@ -33,6 +37,7 @@ import {
 import { STORAGE_LABEL, storageSummary } from './storageText.ts';
 import { usePracticeStats } from './usePracticeStats.ts';
 import { TOOLS_TITLE, toolsOnSummary } from './toolsText.ts';
+import { useNotificationRow } from './useNotificationRow.ts';
 import { useStorage } from './useStorage.ts';
 
 const THEME_OPTIONS: readonly SegmentOption<ThemeChoice>[] = [
@@ -134,6 +139,27 @@ function DataSection() {
   );
 }
 
+function PlaybackCardRow({
+  row,
+  onPress,
+}: {
+  readonly row: NotificationRow;
+  readonly onPress: () => void;
+}) {
+  const value = row.value === null ? null : <EditValue>{row.value}</EditValue>;
+  if (row.action === 'none')
+    return <EditRow label={PLAYBACK_CARD_LABEL}>{value}</EditRow>;
+  return (
+    <EditRow
+      label={PLAYBACK_CARD_LABEL}
+      accessibilityLabel={rowLabel(PLAYBACK_CARD_LABEL, row.value ?? undefined)}
+      onPress={onPress}
+    >
+      {value}
+    </EditRow>
+  );
+}
+
 function AppearanceSection() {
   const theme = useAppearance((s) => s.theme);
   const haptics = useAppearance((s) => s.haptics);
@@ -141,6 +167,7 @@ function AppearanceSection() {
   const setTheme = useAppearance((s) => s.setTheme);
   const setHaptics = useAppearance((s) => s.setHaptics);
   const setKeepScreenAwake = useAppearance((s) => s.setKeepScreenAwake);
+  const playbackCard = useNotificationRow();
   return (
     <>
       <SectionHeader label="Appearance" />
@@ -166,6 +193,12 @@ function AppearanceSection() {
           value={keepScreenAwake}
           onValueChange={setKeepScreenAwake}
         />
+        {playbackCard.row === null ? null : (
+          <PlaybackCardRow
+            row={playbackCard.row}
+            onPress={playbackCard.press}
+          />
+        )}
       </EditGroup>
     </>
   );

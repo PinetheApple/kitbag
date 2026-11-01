@@ -12,7 +12,7 @@ import { AppState, PermissionsAndroid, Platform } from 'react-native';
 import { getDatabase } from './database.ts';
 import {
   appActivityFromState,
-  micPermissionFromRequest,
+  permissionFromRequest,
 } from './micPermission.ts';
 
 // Device wiring for the tuner store (#118). Each command resolves the
@@ -50,7 +50,7 @@ const micPermission: MicPermissionSource = {
   request: async () => {
     if (Platform.OS !== 'android') return 'granted';
     const answer = await PermissionsAndroid.request(RECORD_AUDIO);
-    return micPermissionFromRequest(answer, PermissionsAndroid.RESULTS);
+    return permissionFromRequest(answer, PermissionsAndroid.RESULTS);
   },
 };
 

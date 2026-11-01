@@ -40,6 +40,7 @@ import { StyleSheet, useColorScheme } from 'react-native';
 import { resolveThemeMode } from '@/runtime/appearance';
 import { applyAppearance } from '@/runtime/appearanceRuntime';
 import { useKitbagRuntime } from '@/runtime/bootstrapRuntime';
+import { NotificationPromptSheet } from '@/notifications/NotificationPromptSheet';
 import { designFonts } from '@/runtime/designFonts';
 import { useSongLibraryAnalysis } from '@/runtime/songLibraryRuntime';
 
@@ -97,6 +98,7 @@ function ThemedRoot() {
         <KeyboardProvider navigationBarTranslucent statusBarTranslucent>
           <SheetHost>
             <Stack screenOptions={screenOptions} />
+            <NotificationPromptSheet />
           </SheetHost>
         </KeyboardProvider>
       </SafeAreaProvider>
