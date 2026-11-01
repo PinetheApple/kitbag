@@ -46,8 +46,14 @@ export function bindCountInPersistence(
   });
 }
 
+let unbind: (() => void) | undefined;
+
 export function configureCountInPersistence(
   persistence: CountInPersistence,
-): void {
-  bindCountInPersistence(metronomeStore, persistence);
+): () => void {
+  if (unbind !== undefined) {
+    throw new Error('Count-in persistence is already configured');
+  }
+  unbind = bindCountInPersistence(metronomeStore, persistence);
+  return unbind;
 }
