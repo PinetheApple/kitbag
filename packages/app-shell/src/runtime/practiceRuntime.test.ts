@@ -1,3 +1,4 @@
+import { MS_PER_SECOND } from '@kitbag/core-db';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@op-engineering/op-sqlite', () => ({}));
@@ -49,8 +50,11 @@ describe('savePracticeSession', () => {
     const { getPracticeSessionStore, metronomeStore } =
       await import('@kitbag/core-state');
     const practice = getPracticeSessionStore().getState();
+    vi.useFakeTimers();
     metronomeStore.setState({ running: true });
+    vi.advanceTimersByTime(MS_PER_SECOND);
     metronomeStore.setState({ running: false });
+    vi.useRealTimers();
     practice.endSession();
     await getPracticeSessionStore().getState().saveSession();
     expect(insert).toHaveBeenCalledTimes(1);

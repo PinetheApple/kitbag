@@ -205,7 +205,7 @@ function defaultDeps(persistence: PracticePersistence): PracticeSessionDeps {
     metronome: metronomeStore,
     library: libraryStore,
     persistence,
-    now: Date.now,
+    now: () => Date.now(),
     newUuid: () => crypto.randomUUID(),
     every: everySetInterval,
   };
