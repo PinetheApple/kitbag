@@ -6,7 +6,7 @@ import type {
   ImportPlan,
 } from '@kitbag/core-db';
 import { countLabel } from '@kitbag/core-design';
-import type { RestoreFailure } from '@kitbag/core-state';
+import { REPLACE_CONFIRMATION, type RestoreFailure } from '@kitbag/core-state';
 
 import { formatBytes } from './bytes.ts';
 import { SEPARATOR } from './separator.ts';
@@ -24,7 +24,6 @@ export const DONE_LABEL = 'Done';
 export const STALE_NOTICE =
   'Your library changed while this was open. Check the new counts and restore again.';
 export const SHARE_FAILED = 'Could not share the backup. Try again.';
-export const EXPORT_LABEL = 'Export';
 
 export const RESTORE_ORDER: readonly Category[] = [
   'setlists',
@@ -154,7 +153,7 @@ export function applyLabel(plan: ImportPlan): string {
 }
 
 export function replaceConfirmBody(plan: ImportPlan): string {
-  return `${modeHint(plan)} and puts the backup's in their place. Type “replace” to confirm.`;
+  return `${modeHint(plan)} and puts the backup's in their place. Type “${REPLACE_CONFIRMATION}” to confirm.`;
 }
 
 export function conflictBanner(conflicts: readonly Conflict[]): string {

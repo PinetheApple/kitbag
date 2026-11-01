@@ -1,4 +1,5 @@
 import type { CategoryPlan, ImportPlan } from '@kitbag/core-db';
+import { REPLACE_CONFIRMATION } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -8,6 +9,7 @@ import {
   conflictBanner,
   failureText,
   modeHint,
+  replaceConfirmBody,
   restoredText,
   sourceDetail,
 } from './backupText.ts';
@@ -117,6 +119,20 @@ describe('mode copy', () => {
   it('labels the replace button the same every time', () => {
     expect(applyLabel({ ...MERGE_PLAN, mode: 'replace' })).toBe(
       'Replace everything',
+    );
+  });
+});
+
+describe('replace confirmation', () => {
+  it('asks for the word the store accepts', () => {
+    const plan = {
+      ...MERGE_PLAN,
+      mode: 'replace',
+      counts: { setlists: counts({ deletes: 3 }) },
+      categories: ['setlists'],
+    } as unknown as ImportPlan;
+    expect(replaceConfirmBody(plan)).toBe(
+      `Deletes your 3 setlists and puts the backup's in their place. Type “${REPLACE_CONFIRMATION}” to confirm.`,
     );
   });
 });

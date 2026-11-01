@@ -21,7 +21,7 @@ import {
   type SegmentOption,
 } from '@kitbag/core-design';
 import {
-  canApply,
+  commitStep,
   planConflicts,
   useRestore,
   type RestoreReview,
@@ -60,6 +60,7 @@ const BOLD_BODY = 600;
 
 const useStyles = createThemedStyles((theme) => ({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.rowGap },
+  spacer: { flexGrow: 1 },
   hint: { ...textStyle(textRoles.fieldLabel), color: theme.color.text3 },
   banner: { ...textStyle(textRoles.fieldLabel), color: theme.color.text },
   bannerRow: {
@@ -155,18 +156,10 @@ function ConflictBanner({
   );
 }
 
-function useReviewActions() {
+function useReviewEdits() {
   const setMode = useRestore((s) => s.setMode);
   const toggleCategory = useRestore((s) => s.toggleCategory);
   const resolve = useRestore((s) => s.resolve);
-  const apply = useRestore((s) => s.apply);
-  const [sheet, setSheet] = useState<OpenSheet>('none');
-  const closeSheet = useCallback(() => {
-    setSheet('none');
-  }, []);
-  const openConflicts = useCallback(() => {
-    setSheet('conflicts');
-  }, []);
   const chooseMode = useCallback(
     (mode: ImportMode) => {
       void setMode(mode);
@@ -179,6 +172,30 @@ function useReviewActions() {
     },
     [toggleCategory],
   );
+  const choose = useCallback(
+    (conflict: Conflict, resolution: Resolution) => {
+      void resolve(conflict, resolution);
+    },
+    [resolve],
+  );
+  return { chooseMode, toggle, choose };
+}
+
+function useReviewSheets(review: RestoreReview) {
+  const apply = useRestore((s) => s.apply);
+  const [sheet, setSheet] = useState<OpenSheet>('none');
+  const step = commitStep(review);
+  const close = useCallback(() => {
+    setSheet('none');
+  }, []);
+  const openConflicts = useCallback(() => {
+    setSheet('conflicts');
+  }, []);
+  const commit = useCallback(() => {
+    if (step === 'review') setSheet('conflicts');
+    else if (step === 'confirmReplace') setSheet('replace');
+    else if (step === 'apply') void apply();
+  }, [step, apply]);
   const confirmReplace = useCallback(
     (typed: string) => {
       setSheet('none');
@@ -186,28 +203,21 @@ function useReviewActions() {
     },
     [apply],
   );
-  const choose = useCallback(
-    (conflict: Conflict, resolution: Resolution) => {
-      void resolve(conflict, resolution);
-    },
-    [resolve],
-  );
   return {
-    ...{ sheet, setSheet, closeSheet, openConflicts, chooseMode, toggle },
-    ...{ choose, apply, confirmReplace },
+    sheet,
+    waiting: step === 'wait',
+    close,
+    openConflicts,
+    commit,
+    confirmReplace,
   };
 }
 
 function Review({ review }: { readonly review: RestoreReview }) {
   const styles = useStyles();
-  const actions = useReviewActions();
+  const edits = useReviewEdits();
+  const sheets = useReviewSheets(review);
   const { plan } = review;
-  const replacing = plan.mode === 'replace';
-  const { apply, setSheet } = actions;
-  const commit = useCallback(() => {
-    if (replacing) setSheet('replace');
-    else void apply();
-  }, [replacing, apply, setSheet]);
   const categories = RESTORE_ORDER.filter((category) =>
     plan.file.categories.includes(category),
   );
@@ -215,11 +225,10 @@ function Review({ review }: { readonly review: RestoreReview }) {
     <>
       <SourceCard review={review} />
       <SegmentedControl
-        fill
         accessibilityLabel="Restore mode"
         options={MODE_OPTIONS}
         selected={plan.mode}
-        onSelect={actions.chooseMode}
+        onSelect={edits.chooseMode}
       />
       <Text style={styles.hint}>{modeHint(plan)}</Text>
       <EditGroup>
@@ -228,36 +237,36 @@ function Review({ review }: { readonly review: RestoreReview }) {
             key={category}
             category={category}
             review={review}
-            onToggle={actions.toggle}
+            onToggle={edits.toggle}
           />
         ))}
       </EditGroup>
-      <ConflictBanner review={review} onReview={actions.openConflicts} />
+      <ConflictBanner review={review} onReview={sheets.openConflicts} />
       {review.stale ? (
         <Card emphasis="warning" statusIcon="warning" statusLabel="Warning">
           <Text style={styles.banner}>{STALE_NOTICE}</Text>
         </Card>
       ) : null}
+      <View style={styles.spacer} />
       <Button
         label={applyLabel(plan)}
-        variant={replacing ? 'destructive' : 'primary'}
-        fill
-        disabled={!canApply(review)}
-        onPress={commit}
+        variant={plan.mode === 'replace' ? 'destructive' : 'primary'}
+        disabled={sheets.waiting}
+        onPress={sheets.commit}
       />
       <ConflictSheet
-        visible={actions.sheet === 'conflicts'}
+        visible={sheets.sheet === 'conflicts'}
         conflicts={planConflicts(plan)}
         resolutions={review.resolutions}
-        onResolve={actions.choose}
-        onDismiss={actions.closeSheet}
+        onResolve={edits.choose}
+        onDismiss={sheets.close}
       />
       <ReplaceSheet
-        visible={actions.sheet === 'replace'}
+        visible={sheets.sheet === 'replace'}
         body={replaceConfirmBody(plan)}
         confirmLabel={applyLabel(plan)}
-        onConfirm={actions.confirmReplace}
-        onDismiss={actions.closeSheet}
+        onConfirm={sheets.confirmReplace}
+        onDismiss={sheets.close}
       />
     </>
   );
@@ -283,14 +292,13 @@ function Outcome({
           {body}
         </Card>
       ) : (
-        <Card emphasis="success" statusIcon="success" statusLabel="Done">
+        <Card emphasis="success" statusIcon="success" statusLabel={DONE_LABEL}>
           {body}
         </Card>
       )}
       <Button
         label={actionLabel}
         variant={failed ? 'tonal' : 'primary'}
-        fill
         onPress={onAction}
       />
     </>
@@ -326,7 +334,7 @@ function RestoreBody({ onBack }: { readonly onBack: () => void }) {
         />
       );
     case 'empty':
-      return <Button label={PICK_AGAIN} fill onPress={pickAgain} />;
+      return <Button label={PICK_AGAIN} onPress={pickAgain} />;
     case 'reading':
       return null;
   }
@@ -336,7 +344,7 @@ export function RestoreScreen({ onBack }: { readonly onBack: () => void }) {
   const reset = useRestore((s) => s.reset);
   useEffect(() => reset, [reset]);
   return (
-    <SettingsFrame title={RESTORE_TITLE} onBack={onBack}>
+    <SettingsFrame title={RESTORE_TITLE} onBack={onBack} fillScreen>
       <RestoreBody onBack={onBack} />
     </SettingsFrame>
   );
