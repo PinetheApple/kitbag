@@ -575,8 +575,11 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   bar) and C (chip context line reads "Unsaved") are not chosen and are kept as
   reference in `docs/research/mockups/212/`. **[user]**
 - **2026-10-31 · A mid-song latency change in grid mode drops the crossed beats (§4.7, #245)**
-  — When the offset changes while a song grid drives the click, the click jumps straight to
-  its new position: no catch-up burst for the beats the change crossed, the same way the
-  stems jump. **[user]** A change that moves the position back keeps the cursor, so no beat
-  sounds twice and the click waits for the next unsounded beat. That half is the engine's
-  reading of "dropped", not a separate owner ruling. **[recorded]**
+  — When the offset moves a song grid's position forward, the click jumps straight to its
+  new position: no catch-up burst for the beats the change crossed, the same way the stems
+  jump. **[user]**
+- **2026-10-31 · A backward latency change in grid mode re-seeks only by a whole beat (§4.7, #245)**
+  — When the change moves the position back by at least one grid interval, the click
+  re-seeks with the song as the stems do, and the beats from there replay. A smaller
+  backward change waits for the next beat that has not sounded, so no beat sounds twice.
+  The interval is the spacing of the two beats the cursor sits between. **[user]**
