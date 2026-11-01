@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatPracticeElapsed, hasPracticeToReset } from './practiceTimer.ts';
+import { formatPracticeElapsed, hasPracticeToEnd } from './practiceTimer.ts';
 
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
@@ -23,14 +23,14 @@ describe('formatPracticeElapsed', () => {
   });
 });
 
-describe('hasPracticeToReset', () => {
-  it('hides reset while the pill reads 0:00', () => {
-    expect(hasPracticeToReset(0)).toBe(false);
-    expect(hasPracticeToReset(SECOND - 1)).toBe(false);
+describe('hasPracticeToEnd', () => {
+  it('hides End while the pill reads 0:00', () => {
+    expect(hasPracticeToEnd(0)).toBe(false);
+    expect(hasPracticeToEnd(SECOND - 1)).toBe(false);
   });
 
-  it('offers reset from the first second the pill shows', () => {
-    expect(hasPracticeToReset(SECOND)).toBe(true);
-    expect(hasPracticeToReset(HOUR)).toBe(true);
+  it('offers End from the first second the pill shows', () => {
+    expect(hasPracticeToEnd(SECOND)).toBe(true);
+    expect(hasPracticeToEnd(HOUR)).toBe(true);
   });
 });
