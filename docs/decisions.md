@@ -603,3 +603,9 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   last poly dot at 18 dp, then sits 8 dp left of the row, then above it. It follows the
   owner-approved round 2 frame (`design/kitbag-metronome.html` §02) rather than the poly
   file's left placement. **[recorded — coordinator ruling]**
+- **2026-11-01 · Count-in per song or on every song (§5.3, #265)** — The
+  `design/kitbag-metronome.html` §03 chip "Count in on every song" sits in layout B's
+  Practice sheet, under the Count-in section; off means per song. The choice and the
+  live count-in persist as `preferences` keys, with no migration, and travel in a backup
+  category scoped to count-in (`countInSettings`), not a general preferences dump.
+  **[recorded — coordinator ruling]**

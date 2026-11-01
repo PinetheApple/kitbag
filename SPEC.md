@@ -674,7 +674,7 @@ value applies live, which is the entire reason they are sheets and not screens.
 | **⛰ Ramp** | Start, step (±BPM), every N with a bars·sec·min segment, target, loop-back-at-end; the sheet shows the total time it adds up to. Stepped, not smooth (**D15**): the tempo holds for one interval, then moves by exactly the step — on the downbeat for bars, on the next beat for seconds and minutes — and lands exactly on the target. Changing tempo by hand cancels a running ramp and the chip clears with it. |
 | **▨ Mute bars** | Play N / mute N steppers, an eight-bar preview. Silent bars still light the LEDs — you keep the visual, lose the click. |
 | **♩ Sound** | Normal/Accent segment, then a 6-way picker. **Not a cycler** — the Flutter chip cycles, so reaching sound 6 takes 5 taps and you cannot see what you are choosing between. Per-accent-level sound assignment is in scope: a tom on one, a block on the rest. |
-| **⏱ Count-in** | Off / 1 / 2 / 4 bars, distinct-or-same sound, per-song or always. Counts in on start only, never after a pause mid-bar. |
+| **⏱ Count-in** | Off / 1 / 2 / 4 bars, distinct-or-same sound, per-song or always. Per song (the default) loads each song's own count-in, and none for a song without one; the "Count in on every song" chip keeps one count-in across loads, setlist steps and Revert, and outside the song's saved data, until it is turned off. The choice and the last count-in survive a restart and a backup. Counts in on start only, never after a pause mid-bar. |
 
 **Sound names come from the engine.** `soundNames` is indexed by native sound
 id. Do not declare a local list — that is exactly how `sync_screen.dart:14` came
