@@ -653,12 +653,15 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
 - **2026-11-01 · Notification permission and the playback card channel (§5.6, §12.5, #277)**
   — Kitbag asks for the notification permission on the first playback start, not at
   launch, with one line saying why: the playback card in the shade and on the lock
-  screen. Playback starts at once and the ask appears alongside it. **[user]** Declining
-  keeps playback working, and Kitbag does not ask again on later starts; a Playback card
-  row in Settings shows the status and asks again, or opens the system settings once the
-  system will not show the dialog. **[user]** The metronome and stem song cards move to
-  DEFAULT importance with no sound, vibration or heads-up, so they show expanded in the
-  shade and on the lock screen instead of under Silent. Android keeps an existing
-  channel's importance, so they move to new channel IDs and the LOW ones are deleted.
-  **[user]** Whether Kitbag has asked is a device-local `preferences` key with no
-  migration and is not carried in a backup. **[recorded]**
+  screen. Declining keeps playback working and Kitbag does not ask again on later starts;
+  Settings offers one retry route. The metronome and stem song cards move to DEFAULT
+  importance with no sound, vibration or heads-up, so they show expanded in the shade and
+  on the lock screen instead of under Silent. **[user]** Playback starts at once and the
+  ask appears alongside it. The prompt counts as asked only once answered, so a prompt cut
+  off by the app closing comes back on the next start. Android keeps an existing
+  channel's importance, so the cards move to new channel IDs and the LOW ones are deleted.
+  Whether Kitbag has asked is a device-local `preferences` key with no migration and is
+  not carried in a backup. **[recorded]** The Settings row is "Notifications" in
+  Appearance, under Keep screen awake, reading "On" or "Off". Off with a chevron asks the
+  system once if Kitbag never has, and otherwise opens the app's system notification
+  settings; On does nothing. **[coord]**
