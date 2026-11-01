@@ -26,15 +26,22 @@ function changedCountIn(
   );
 }
 
-export function bindCountInPersistence(
+function applyStoredCountIn(
   store: StoreApi<MetronomeStore>,
   persistence: CountInPersistence,
-): () => void {
+): void {
   const { scope, ...stored } = persistence.load();
   const state = store.getState();
   if (scope !== undefined) state.setCountInScope(scope);
   if (Object.keys(stored).length > 0)
     state.setCountIn({ ...state.countIn, ...stored });
+}
+
+export function bindCountInPersistence(
+  store: StoreApi<MetronomeStore>,
+  persistence: CountInPersistence,
+): () => void {
+  applyStoredCountIn(store, persistence);
   return store.subscribe((next, prev) => {
     const changed: Partial<CountInSettings> = {
       ...changedCountIn(next.countIn, prev.countIn),
@@ -47,6 +54,7 @@ export function bindCountInPersistence(
 }
 
 let unbind: (() => void) | undefined;
+let configured: CountInPersistence | undefined;
 
 export function configureCountInPersistence(
   persistence: CountInPersistence,
@@ -54,6 +62,11 @@ export function configureCountInPersistence(
   if (unbind !== undefined) {
     throw new Error('Count-in persistence is already configured');
   }
+  configured = persistence;
   unbind = bindCountInPersistence(metronomeStore, persistence);
   return unbind;
+}
+
+export function reloadCountInPersistence(): void {
+  if (configured !== undefined) applyStoredCountIn(metronomeStore, configured);
 }

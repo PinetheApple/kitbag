@@ -26,6 +26,7 @@ export {
 } from './metronome/countInScope.ts';
 export {
   configureCountInPersistence,
+  reloadCountInPersistence,
   type CountInPersistence,
   type CountInSettings,
 } from './metronome/countInPersistence.ts';
