@@ -7,6 +7,7 @@ import {
 } from '@kitbag/core-design';
 import {
   BPM_BOUNDS,
+  getPracticeSessionStore,
   useLibrary,
   useMetronome,
   useSwipeHint,
@@ -23,6 +24,7 @@ import {
 import { useLibraryRefresh } from '../library/useLibraryRefresh.ts';
 import { belowTempoReserve } from '../logic/belowTempo.ts';
 import { noteStrip, type NoteStrip } from '../logic/noteStrip.ts';
+import { endPractice, summarySheetOnMount } from '../logic/practiceSummary.ts';
 import { practiceBadgeCount, restLegend } from '../logic/statusRows.ts';
 import { pushTap, tapTempoBpm } from '../logic/tapTempo.ts';
 import { BeatDots, BeatLegend } from './BeatDots.tsx';
@@ -33,6 +35,10 @@ import { PickerChips } from './PickerChips.tsx';
 import { PolyLegend } from './PolyLegend.tsx';
 import { PracticePill, usePracticeElapsed } from './PracticePill.tsx';
 import { PracticeSheet } from './PracticeSheet.tsx';
+import {
+  PracticeSummarySheet,
+  usePendingPractice,
+} from './PracticeSummarySheet.tsx';
 import { PresetRow } from './PresetRow.tsx';
 import { StatusStack } from './StatusStack.tsx';
 import { SubdivisionSheet } from './SubdivisionSheet.tsx';
@@ -40,13 +46,15 @@ import { SwipeHint } from './SwipeHint.tsx';
 import { SwipeTempoZone } from './SwipeTempoZone.tsx';
 import { Transport } from './Transport.tsx';
 import { UnsavedSnackbar } from './UnsavedSnackbar.tsx';
+import { useEndPracticeOnLeave } from './useEndPracticeOnLeave.ts';
 import { useHoldEngine } from './useHoldEngine.ts';
 import { useTempoSwipe } from './useTempoSwipe.ts';
 import { useMetronomeFrame } from './useMetronomeFrame.ts';
 import { useScreenDensity } from './useScreenDensity.ts';
 import { usePracticeSettings } from './usePracticeSettings.ts';
 
-type OpenSheet = 'none' | 'numpad' | 'meter' | 'subdivision' | 'practice';
+type OpenSheet =
+  'none' | 'numpad' | 'meter' | 'subdivision' | 'practice' | 'summary';
 
 interface ZoneFrame {
   readonly top: number;
@@ -114,6 +122,7 @@ export function MetronomeScreen({
   onOpenSetlists,
 }: MetronomeScreenProps) {
   useHoldEngine();
+  useEndPracticeOnLeave();
   useLibraryRefresh();
   const styles = useStyles();
   const window = useWindowDimensions();
@@ -139,7 +148,10 @@ export function MetronomeScreen({
 
   const frame = useMetronomeFrame(running, bpm);
   const { elapsedMs, reset: resetPractice } = usePracticeElapsed();
-  const [openSheet, setOpenSheet] = useState<OpenSheet>('none');
+  const pendingPractice = usePendingPractice();
+  const [openSheet, setOpenSheet] = useState<OpenSheet>(() =>
+    summarySheetOnMount(getPracticeSessionStore().getState().pending),
+  );
   const [bodyTop, setBodyTop] = useState(0);
   const [zone, setZone] = useState<ZoneFrame>({ top: 0, height: 0 });
   const [bodyHeight, setBodyHeight] = useState(0);
@@ -212,6 +224,11 @@ export function MetronomeScreen({
     setOpenSheet('none');
   }, []);
 
+  const handleEndPractice = useCallback(() => {
+    endPractice(getPracticeSessionStore(), resetPractice);
+    setOpenSheet('summary');
+  }, [resetPractice]);
+
   const handleBodyLayout = useCallback((event: LayoutChangeEvent) => {
     setBodyTop(event.nativeEvent.layout.y);
     setBodyHeight(event.nativeEvent.layout.height);
@@ -270,7 +287,7 @@ export function MetronomeScreen({
           onLayout={handleBodyLayout}
           onContentSizeChange={handleContentSize}
         >
-          <PracticePill elapsedMs={elapsedMs} onReset={resetPractice} />
+          <PracticePill elapsedMs={elapsedMs} onEnd={handleEndPractice} />
           {strip === null ? null : (
             <Text
               accessible={strip.spoken !== null}
@@ -363,6 +380,12 @@ export function MetronomeScreen({
         />
         <PracticeSheet
           visible={openSheet === 'practice'}
+          bottomInset={insets.bottom}
+          onDismiss={handleCloseSheet}
+        />
+        <PracticeSummarySheet
+          visible={openSheet === 'summary'}
+          summary={pendingPractice}
           bottomInset={insets.bottom}
           onDismiss={handleCloseSheet}
         />
