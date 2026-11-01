@@ -135,7 +135,7 @@ const useStyles = createThemedStyles((theme) => ({
     color: theme.color.text,
   },
   labelAccent: {
-    color: theme.color.accent,
+    color: theme.color[theme.accentInk],
   },
   largeTrack: {
     borderRadius: radius.segmentLarge,

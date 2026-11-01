@@ -12,6 +12,7 @@ import {
   minTouchTargetDp,
   SHEET_TOUCH_ROOM,
   unshared,
+  useTheme,
 } from '@kitbag/core-design';
 import {
   tuningFromCustom,
@@ -79,6 +80,7 @@ interface TuningRowProps {
 
 function TuningRow({ tuning, selected, onSelect }: TuningRowProps) {
   const styles = useStyles();
+  const theme = useTheme();
   const notes = tuning.notes.map(noteName).join(' ');
   const handlePress = useCallback(() => {
     onSelect(tuning);
@@ -95,7 +97,9 @@ function TuningRow({ tuning, selected, onSelect }: TuningRowProps) {
         <Text style={styles.title}>{tuning.name}</Text>
         <Text style={styles.subtitle}>{notes}</Text>
       </View>
-      {selected ? <Icon name="check" size="control" color="accent" /> : null}
+      {selected ? (
+        <Icon name="check" size="control" color={theme.accentInk} />
+      ) : null}
     </Pressable>
   );
 }

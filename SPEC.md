@@ -785,9 +785,13 @@ the single most RN-specific piece of §5** — see §13.9.
 
 - Write `setlistId` and `songsPlayed` — the Flutter producer never does despite
   having an active session.
-- **Practice-end summary** on stop (not on every pause): time, set, songs,
-  average tempo, longest stretch. Save or discard. Sessions are currently
-  written silently and never shown — the peak-end rule (§12.6).
+- **Practice-end summary** when the session ends, not on every pause: time,
+  set, songs, average tempo, longest stretch. Save or discard — the peak-end
+  rule (§12.6). Longest stretch is shown in the summary only and not stored.
+- **What ends a session.** Transport Stop only pauses it. The practice pill's
+  **End** (in place of reset) ends it and opens the summary; leaving the
+  metronome screen with played time also ends it. A phone call or going to the
+  background never does.
 
 ### 5.8 Acceptance
 
@@ -1517,15 +1521,19 @@ one (§12.5).
 | `surface3` | `#2E2C3A` | `#E3DFD4` |
 | `line` | `#33303F` | `#DCD7CA` |
 | `text` | `#ECEAF0` | `#221F26` |
-| `text2` | `#9B97A8` | `#6E687A` |
-| `text3` | `#6C6878` | `#98929F` |
+| `text2` | `#BDBBC6` | `#433F4B` |
+| `text3` | `#9793A2` | `#6C6573` |
+| `decor` | `#6C6878` | `#98929F` |
 | `accent` | `#FFB347` | `#B26F0E` |
-| `accentDeep` | `#E89B2E` | `#8F5A0C` |
+| `accentDeep` | `#E89B2E` | `#80510B` |
 | `accentDim` | `#8A6A35` | `#D8B27C` |
 | `onAccent` | `#221600` | `#FFF7EA` |
 | `red` (flat) | `#FF5C5C` | `#CC4444` |
 | `amber` | `#FFC24B` | `#9A6E06` |
 | `green` (in-tune) | `#4ADE80` | `#1E8A4F` |
+| `redInk` | `#FF5C5C` | `#A82E2E` |
+| `amberInk` | `#FFC24B` | `#785505` |
+| `greenInk` | `#4ADE80` | `#17683C` |
 | `wave` | `#4E4A5E` | `#C9C3B4` |
 | `waveHot` | `#FFB347` | `#B26F0E` |
 
@@ -1536,7 +1544,25 @@ Rules that come with them:
   channel and **never doubles as accent.**
 - Dark text is off-white; **pure white halates on OLED.**
 - **Elevation = lighter surface, not shadow.**
-- Light's accent darkens to keep 4.5:1+ on white surfaces.
+- Text under 18sp holds 4.5:1 against every ground it sits on, in both themes.
+- `text`, `text2` and `text3` stay at least 1.5:1 apart from each other. That floor is
+  set by dark, where `text2` sits at 1.58:1 over `text3` and 1.59:1 under `text`. Light
+  reaches the 1.8:1 `text2` step over `text3`, with `text` 1.59:1 above `text2`.
+- `decor` is for non-text marks only: icons that read as quiet or disabled, dot and
+  swatch borders, switch knobs, slider ticks. Text never uses it. It is an accepted
+  exception to the 3:1 non-text bar in both themes, down to about 2.3:1 (light, on
+  `surface3`), kept so these marks look as they did before #189.
+- `text3` sits only on `bg`, `surface1`, `surface2`, `activeCardFill` and the setlist
+  NOW row fill; never on `surface3`, `activeControlFill`, or the set chip, selected tile
+  or stem tile fills.
+- `accent` is for fills and icons. Accent-coloured text uses `accentInk`: `accent` in
+  dark, `accentDeep` in light. An `accent` fill that carries text uses `accentTextFill`
+  (the same split), so `onAccent` holds 4.5:1 on it; fills with only icons keep `accent`.
+- Red, amber and green used as text take `redInk`, `amberInk` and `greenInk`, darker in
+  light and equal to the base token in dark. Fills, icons and borders keep the base token.
+  Dark red text stays off `activeControlFill` and the set chip, selected tile and stem tile
+  fills, where it is under 4.5:1.
+- Accent icons hold 3:1 on every ground; on an accent-tinted fill that needs `accentInk`.
 
 **Type.** Two faces, both OFL. **Space Grotesk** for display, numerics and labels
 — geometric, instrument-panel character, and **true tabular figures so a BPM

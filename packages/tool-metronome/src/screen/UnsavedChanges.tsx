@@ -71,7 +71,7 @@ const useStyles = createThemedStyles((theme) => ({
   },
   rowSave: {
     paddingHorizontal: metronomeSheet.nowActionSaveH,
-    backgroundColor: theme.color.accent,
+    backgroundColor: theme.accentTextFill,
   },
   rowLabel: {
     ...textStyle(textRoles.nowAction),

@@ -35,7 +35,7 @@ const useStyles = createThemedStyles((theme) => ({
     top: 0,
     bottom: 0,
     width: size.stroke,
-    backgroundColor: theme.color.text3,
+    backgroundColor: theme.color.decor,
   },
   mean: {
     position: 'absolute',

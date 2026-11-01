@@ -194,7 +194,7 @@ function CycleBracket({ column, offset, cycle }: CycleBracketProps) {
       opacity: 1,
       left: span.left,
       width: span.width,
-      borderColor: now ? color.text2 : color.text3,
+      borderColor: now ? color.text2 : color.decor,
       borderLeftWidth: border,
       borderRightWidth: border,
       borderBottomWidth: border,

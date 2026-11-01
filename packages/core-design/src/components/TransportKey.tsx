@@ -66,7 +66,7 @@ const useStyles = createThemedStyles((theme) => ({
     color: theme.color.text,
   },
   glyphSelected: {
-    color: theme.color.accent,
+    color: theme.color[theme.accentInk],
   },
   spacer: {
     width: size.transportKey,
@@ -106,7 +106,7 @@ const useStyles = createThemedStyles((theme) => ({
     minHeight: size.keyBadge,
     paddingHorizontal: inset.keyBadgeH,
     borderRadius: radius.keyBadge,
-    backgroundColor: theme.color.accent,
+    backgroundColor: theme.accentTextFill,
     alignItems: 'center',
     justifyContent: 'center',
   },
