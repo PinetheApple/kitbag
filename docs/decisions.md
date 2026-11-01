@@ -703,3 +703,15 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   under Keep screen awake, reading "On" or "Off". Off has a chevron: it shows the system
   dialog if Kitbag has never shown it, including after Not now on the prompt, and
   otherwise opens the app's system notification settings. On does nothing. **[coord]**
+
+- **2026-11-02 · Predictive back stays off (§12, #191)** — The app manifest keeps
+  `android:enableOnBackInvokedCallback="false"`. An open stem fader and an inline stem
+  rename take Back through React Native's `BackHandler` to collapse or cancel before the
+  screen pops, as the sheets do, and predictive back must not bypass them. **[user]** In
+  React Native 0.83.6, `BackHandler` listeners run only from `ReactActivity.onBackPressed()`.
+  On Android 16 with targetSdk 36, which the build takes from React Native's version
+  catalog, `ReactActivity` registers an always-enabled `OnBackPressedCallback` that calls
+  it, so the handlers run with or without the flag. Below Android 16 it registers none, and
+  Android 13 to 15 stop calling `onBackPressed()` once an app opts in (Android's documented
+  behaviour, not read in source): Back would skip every `BackHandler` handler and leave the
+  screen. **[recorded]**
