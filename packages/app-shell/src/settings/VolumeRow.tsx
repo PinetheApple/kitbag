@@ -13,11 +13,11 @@ import { useCallback, useEffect } from 'react';
 import { View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 
-import { volumePercent } from './rigText.ts';
 import {
   fractionOfVolume,
   VOLUME_SLIDER,
   volumeOfFraction,
+  volumePercent,
 } from './rigVolume.ts';
 import { setLiveVolume } from './rigRuntime';
 

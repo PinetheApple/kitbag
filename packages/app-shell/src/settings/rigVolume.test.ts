@@ -5,6 +5,7 @@ import {
   fractionOfVolume,
   VOLUME_SLIDER,
   volumeOfFraction,
+  volumePercent,
 } from './rigVolume.ts';
 
 describe('click volume slider', () => {
@@ -23,5 +24,13 @@ describe('click volume slider', () => {
 
   it('maps a volume back to the same slider position', () => {
     expect(fractionOfVolume(volumeOfFraction(0.3))).toBeCloseTo(0.3);
+  });
+});
+
+describe('click volume readout', () => {
+  it('reads out a whole percentage, red or not', () => {
+    expect(volumePercent(1)).toBe('100%');
+    expect(volumePercent(1.7)).toBe('170%');
+    expect(volumePercent(0.004)).toBe('0%');
   });
 });

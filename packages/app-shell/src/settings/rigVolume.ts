@@ -22,3 +22,7 @@ export function volumeOfFraction(fraction: number): number {
 export function fractionOfVolume(volume: number): number {
   return volume / KB_VOLUME_BOUNDS.max;
 }
+
+export function volumePercent(volume: number): string {
+  return `${String(Math.round(volume * PERCENT))}%`;
+}

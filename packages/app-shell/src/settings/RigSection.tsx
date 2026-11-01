@@ -27,7 +27,12 @@ import { AccentsSheet } from './AccentsSheet.tsx';
 import { OutputSheet, RouteSheet, useRouteRows } from './OutputSheets.tsx';
 import { routeLatency } from './rigRuntime';
 import { previewLedSize } from './rigLeds.ts';
-import { outputLine, rigChip, rigClickHint } from './rigText.ts';
+import {
+  outputAccessibilityLabel,
+  outputLine,
+  rigChip,
+  rigClickHint,
+} from './rigText.ts';
 import { CALIBRATE_LATENCY, SUBDIVISION_ACCENTS } from './settingsLabels.ts';
 import { useRigClickSession } from './useRigClickSession.ts';
 import { VolumeRow } from './VolumeRow.tsx';
@@ -93,7 +98,7 @@ function OutputRow({ onPress }: { readonly onPress: () => void }) {
   return (
     <EditRow
       label={OUTPUT_LABEL}
-      accessibilityLabel={`${OUTPUT_LABEL}, ${name}${status}`}
+      accessibilityLabel={`${OUTPUT_LABEL}, ${outputAccessibilityLabel(live, calibrated)}`}
       onPress={onPress}
     >
       <EditValue>

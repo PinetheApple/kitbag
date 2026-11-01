@@ -3,11 +3,11 @@ import { describe, expect, it } from 'vitest';
 
 import {
   accentLabels,
+  outputAccessibilityLabel,
   outputLine,
   rigChip,
   rigClickHint,
   routeRows,
-  volumePercent,
 } from './rigText.ts';
 
 const SPEAKER: OutputRoute = {
@@ -58,14 +58,6 @@ describe('rig click chip', () => {
   });
 });
 
-describe('click volume readout', () => {
-  it('reads out a whole percentage, red or not', () => {
-    expect(volumePercent(1)).toBe('100%');
-    expect(volumePercent(1.7)).toBe('170%');
-    expect(volumePercent(0.004)).toBe('0%');
-  });
-});
-
 const GUESSED: OutputRoute = { ...HEADPHONES, certain: false };
 
 describe('output row', () => {
@@ -95,6 +87,20 @@ describe('output row', () => {
       name: 'Unknown output',
       status: ' · not saved',
     });
+  });
+});
+
+describe('output row for a screen reader', () => {
+  it('reads the route, its detail and its status as a list, without separators', () => {
+    expect(outputAccessibilityLabel(SPEAKER, false)).toBe(
+      'Phone speaker, not calibrated',
+    );
+    expect(outputAccessibilityLabel(WIRED, true)).toBe(
+      'Wired headphones, 3.5 mm, calibrated',
+    );
+    expect(outputAccessibilityLabel(null, false)).toBe(
+      'Unknown output, not saved',
+    );
   });
 });
 

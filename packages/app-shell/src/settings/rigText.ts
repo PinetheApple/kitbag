@@ -16,7 +16,6 @@ import {
 import { SEPARATOR } from './separator.ts';
 import { NOT_SAVED } from './settingsLabels.ts';
 
-const PERCENT = 100;
 const JOIN = ` ${SEPARATOR} `;
 
 const IN_USE_NOW = 'in use now';
@@ -30,10 +29,6 @@ const NORMAL_SLOT = 'normal';
 
 const NEEDS_STOPPED_METRONOME = 'Stop the metronome to hear the rig click';
 const CLICK_FAILED = 'The click could not start; try again';
-
-export function volumePercent(volume: number): string {
-  return `${String(Math.round(volume * PERCENT))}%`;
-}
 
 export interface RigChip {
   readonly label: string;
@@ -59,11 +54,14 @@ export function rigClickHint(
   return null;
 }
 
-function routeName(route: OutputRoute): string {
+const A11Y_JOIN = ', ';
+
+function routeNameParts(route: OutputRoute | null): string[] {
+  if (route === null) return [UNKNOWN_OUTPUT];
   const detail = routeDetail(route);
   return route.kind === 'wired' && detail !== null
-    ? `${routeTitle(route)}${JOIN}${detail}`
-    : routeTitle(route);
+    ? [routeTitle(route), detail]
+    : [routeTitle(route)];
 }
 
 function routeStatus(live: OutputRoute | null, calibrated: boolean): string {
@@ -81,9 +79,18 @@ export function outputLine(
   calibrated: boolean,
 ): OutputLine {
   return {
-    name: live === null ? UNKNOWN_OUTPUT : routeName(live),
+    name: routeNameParts(live).join(JOIN),
     status: `${JOIN}${routeStatus(live, calibrated)}`,
   };
+}
+
+export function outputAccessibilityLabel(
+  live: OutputRoute | null,
+  calibrated: boolean,
+): string {
+  return [...routeNameParts(live), routeStatus(live, calibrated)].join(
+    A11Y_JOIN,
+  );
 }
 
 export interface RouteRowView {
