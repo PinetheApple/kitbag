@@ -59,6 +59,8 @@ export function LiveText({
           color: theme.color[color],
           textAlign: align,
           padding: 0,
+          // Web renders an <input>, whose intrinsic width blocks flex shrinking.
+          minWidth: 0,
           pointerEvents: 'none',
         },
         style,
