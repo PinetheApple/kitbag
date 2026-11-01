@@ -21,10 +21,10 @@ import {
   averageTempoLabel,
   longestStretchLabel,
   practiceContextLine,
+  summaryButtons,
+  type SaveState,
 } from '../logic/practiceSummary.ts';
 import { formatPracticeElapsed } from '../logic/practiceTimer.ts';
-
-type SaveState = 'idle' | 'saving' | 'failed';
 
 interface SaveAttempt {
   readonly uuid: string;
@@ -72,6 +72,7 @@ export function PracticeSummarySheet({
   const [attempt, setAttempt] = useState<SaveAttempt | null>(null);
   const uuid = summary?.uuid ?? null;
   const save: SaveState = attempt?.uuid === uuid ? attempt.state : 'idle';
+  const buttons = summaryButtons(save);
 
   const handleShow = useCallback(() => {
     setAttempt(null);
@@ -154,6 +155,7 @@ export function PracticeSummarySheet({
               variant="ghost"
               size="sheet"
               label="Discard"
+              disabled={buttons.discardDisabled}
               accessibilityLabel="Discard this practice session"
               onPress={handleDiscard}
             />
@@ -161,8 +163,8 @@ export function PracticeSummarySheet({
               fill
               variant="primary"
               size="sheet"
-              label={save === 'failed' ? 'Try again' : 'Save session'}
-              disabled={save === 'saving'}
+              label={buttons.saveLabel}
+              disabled={buttons.saveDisabled}
               onPress={handleSave}
             />
           </View>

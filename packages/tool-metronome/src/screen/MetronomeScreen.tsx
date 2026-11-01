@@ -12,7 +12,7 @@ import {
   useMetronome,
   useSwipeHint,
 } from '@kitbag/core-state';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { GestureDetector, ScrollView } from 'react-native-gesture-handler';
 import {
   Text,
@@ -24,8 +24,7 @@ import {
 import { useLibraryRefresh } from '../library/useLibraryRefresh.ts';
 import { belowTempoReserve } from '../logic/belowTempo.ts';
 import { noteStrip, type NoteStrip } from '../logic/noteStrip.ts';
-import { summarySheetOnMount } from '../logic/practiceSummary.ts';
-import { endPractice } from '../logic/practiceTimer.ts';
+import { endPractice, summarySheetOnMount } from '../logic/practiceSummary.ts';
 import { practiceBadgeCount, restLegend } from '../logic/statusRows.ts';
 import { pushTap, tapTempoBpm } from '../logic/tapTempo.ts';
 import { BeatDots, BeatLegend } from './BeatDots.tsx';
@@ -47,6 +46,7 @@ import { SwipeHint } from './SwipeHint.tsx';
 import { SwipeTempoZone } from './SwipeTempoZone.tsx';
 import { Transport } from './Transport.tsx';
 import { UnsavedSnackbar } from './UnsavedSnackbar.tsx';
+import { useEndPracticeOnLeave } from './useEndPracticeOnLeave.ts';
 import { useHoldEngine } from './useHoldEngine.ts';
 import { useTempoSwipe } from './useTempoSwipe.ts';
 import { useMetronomeFrame } from './useMetronomeFrame.ts';
@@ -122,6 +122,7 @@ export function MetronomeScreen({
   onOpenSetlists,
 }: MetronomeScreenProps) {
   useHoldEngine();
+  useEndPracticeOnLeave();
   useLibraryRefresh();
   const styles = useStyles();
   const window = useWindowDimensions();
@@ -227,13 +228,6 @@ export function MetronomeScreen({
     endPractice(getPracticeSessionStore(), resetPractice);
     setOpenSheet('summary');
   }, [resetPractice]);
-
-  useEffect(
-    () => () => {
-      endPractice(getPracticeSessionStore(), resetPractice);
-    },
-    [resetPractice],
-  );
 
   const handleBodyLayout = useCallback((event: LayoutChangeEvent) => {
     setBodyTop(event.nativeEvent.layout.y);

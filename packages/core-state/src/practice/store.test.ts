@@ -100,10 +100,10 @@ describe('practice session store', () => {
     expect(h.practice.getState().session?.uuid).toBe('session-2');
     const second = h.practice.getState().endSession();
     expect(second).toMatchObject({ uuid: 'session-2', playedMs: MINUTE });
-    expect(h.practice.getState().pending).toEqual([first, second]);
+    expect(h.practice.getState().pending).toEqual([second, first]);
   });
 
-  it('resolves queued summaries oldest first', async () => {
+  it('resolves queued summaries newest first', async () => {
     const h = harness();
     h.metronome.getState().start();
     h.advance(MINUTE);
@@ -112,22 +112,23 @@ describe('practice session store', () => {
     const second = h.practice.getState().endSession();
     h.advance(MINUTE);
     const third = h.practice.getState().endSession();
+    expect(h.practice.getState().pending).toEqual([third, second, first]);
     await h.practice.getState().saveSession();
     expect(h.insert.mock.calls.map(([record]) => record.uuid)).toEqual([
-      first?.uuid,
-    ]);
-    expect(h.practice.getState().pending).toEqual([second, third]);
-    h.practice.getState().discardSession();
-    expect(h.practice.getState().pending).toEqual([third]);
-    await h.practice.getState().saveSession();
-    expect(h.insert.mock.calls.map(([record]) => record.uuid)).toEqual([
-      first?.uuid,
       third?.uuid,
+    ]);
+    expect(h.practice.getState().pending).toEqual([second, first]);
+    h.practice.getState().discardSession();
+    expect(h.practice.getState().pending).toEqual([first]);
+    await h.practice.getState().saveSession();
+    expect(h.insert.mock.calls.map(([record]) => record.uuid)).toEqual([
+      third?.uuid,
+      first?.uuid,
     ]);
     expect(h.practice.getState().pending).toEqual([]);
   });
 
-  it('saves a summary queued behind one still saving', async () => {
+  it('puts a session ended during a save in front and saves it on its own', async () => {
     const h = harness();
     let finish: () => void = () => undefined;
     h.insert.mockImplementationOnce(
@@ -138,19 +139,24 @@ describe('practice session store', () => {
     );
     h.metronome.getState().start();
     h.advance(MINUTE);
-    h.practice.getState().endSession();
+    const first = h.practice.getState().endSession();
     const firstSave = h.practice.getState().saveSession();
-    h.advance(MINUTE);
-    const second = h.practice.getState().endSession();
-    expect(h.practice.getState().saveSession()).toBe(firstSave);
     await vi.waitFor(() => {
       expect(h.insert).toHaveBeenCalledTimes(1);
     });
+    h.advance(MINUTE);
+    const second = h.practice.getState().endSession();
+    expect(h.practice.getState().pending).toEqual([second, first]);
+    const secondSave = h.practice.getState().saveSession();
+    expect(secondSave).not.toBe(firstSave);
+    await secondSave;
+    expect(h.practice.getState().pending).toEqual([first]);
     finish();
     await firstSave;
-    expect(h.practice.getState().pending).toEqual([second]);
-    await h.practice.getState().saveSession();
-    expect(h.insert).toHaveBeenCalledTimes(2);
+    expect(h.insert.mock.calls.map(([record]) => record.uuid)).toEqual([
+      first?.uuid,
+      second?.uuid,
+    ]);
     expect(h.practice.getState().pending).toEqual([]);
   });
 

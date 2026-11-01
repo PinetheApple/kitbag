@@ -122,7 +122,7 @@ export function createPracticeSessionStore(
         const ended = endPracticeSession(session, at, bpm);
         const summary = ended.playedMs >= MIN_SAVED_PLAYED_MS ? ended : null;
         set({
-          pending: summary === null ? pending : [...pending, summary],
+          pending: summary === null ? pending : [summary, ...pending],
           session: metronomeState.running
             ? startPracticeSession(deps.newUuid(), at, bpm, session.context)
             : null,
@@ -130,19 +130,19 @@ export function createPracticeSessionStore(
         return summary;
       },
       saveSession: () => {
-        const oldest = get().pending[0];
-        if (oldest === undefined) return Promise.resolve();
-        const inFlight = saving.get(oldest.uuid);
+        const latest = get().pending[0];
+        if (latest === undefined) return Promise.resolve();
+        const inFlight = saving.get(latest.uuid);
         if (inFlight !== undefined) return inFlight;
-        const written = write(oldest);
-        saving.set(oldest.uuid, written);
+        const written = write(latest);
+        saving.set(latest.uuid, written);
         return written;
       },
       discardSession: () => {
-        const oldest = get().pending[0];
-        if (oldest === undefined) return;
-        if (saving.has(oldest.uuid)) discardedWhileSaving.add(oldest.uuid);
-        else dequeue(oldest.uuid);
+        const latest = get().pending[0];
+        if (latest === undefined) return;
+        if (saving.has(latest.uuid)) discardedWhileSaving.add(latest.uuid);
+        else dequeue(latest.uuid);
       },
     };
   });

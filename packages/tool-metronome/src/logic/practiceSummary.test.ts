@@ -1,65 +1,18 @@
-import {
-  createLibraryStore,
-  createMetronomeStore,
-  createPracticeSessionStore,
-  practiceElapsedMs,
-  type MetronomeCommands,
-  type PracticePersistence,
-  type PracticeSummary,
-} from '@kitbag/core-state';
-import { describe, expect, it, vi } from 'vitest';
+import type { PracticeSummary } from '@kitbag/core-state';
+import { describe, expect, it } from 'vitest';
 
 import {
   averageTempoLabel,
   longestStretchLabel,
   practiceContextLine,
+  summaryButtons,
   summarySheetOnMount,
 } from './practiceSummary.ts';
-import { endPractice } from './practiceTimer.ts';
-
-const SECOND = 1000;
-const MINUTE = 60 * SECOND;
-
-const noCommands = new Proxy(
-  {},
-  { get: () => () => Promise.resolve(0) },
-) as MetronomeCommands;
-
-function harness() {
-  let clock = 0;
-  let uuids = 0;
-  const now = () => clock;
-  const metronome = createMetronomeStore(
-    noCommands,
-    () => 0,
-    () => 100,
-    now,
-  );
-  const library = createLibraryStore({
-    repos: () => {
-      throw new Error('no repositories in this test');
-    },
-    metronome: () => metronome.getState(),
-    now,
-  });
-  const insert = vi.fn<PracticePersistence['insert']>(() => Promise.resolve());
-  const sessions = createPracticeSessionStore({
-    metronome,
-    library,
-    persistence: { insert },
-    now,
-    newUuid: () => `session-${String(++uuids)}`,
-    every: () => () => undefined,
-  });
-  const advance = (ms: number) => {
-    clock += ms;
-  };
-  const pill = () => practiceElapsedMs(metronome.getState().practice, clock);
-  const end = () => {
-    endPractice(sessions, metronome.getState().resetPractice);
-  };
-  return { metronome, sessions, insert, advance, pill, end };
-}
+import {
+  MINUTE,
+  practiceHarness as harness,
+  SECOND,
+} from './practiceSessions.test-helper.ts';
 
 function summary(overrides: Partial<PracticeSummary> = {}): PracticeSummary {
   return {
@@ -110,7 +63,7 @@ describe('ending a practice session', () => {
     expect(h.pill()).toBe(SECOND);
   });
 
-  it('queues a second summary behind one still pending and zeros the pill', () => {
+  it('shows the session just ended ahead of one still pending and zeros the pill', () => {
     const h = harness();
     h.metronome.getState().start();
     h.advance(MINUTE);
@@ -118,8 +71,8 @@ describe('ending a practice session', () => {
     h.advance(2 * MINUTE);
     h.end();
     expect(h.sessions.getState().pending.map((s) => s.playedMs)).toEqual([
-      MINUTE,
       2 * MINUTE,
+      MINUTE,
     ]);
     expect(h.pill()).toBe(0);
   });
@@ -147,6 +100,31 @@ describe('ending a practice session', () => {
     await h.sessions.getState().saveSession();
     expect(h.insert).not.toHaveBeenCalled();
     expect(h.sessions.getState().pending).toEqual([]);
+  });
+});
+
+describe('summaryButtons', () => {
+  it('offers both choices before a save', () => {
+    expect(summaryButtons('idle')).toEqual({
+      saveLabel: 'Save session',
+      saveDisabled: false,
+      discardDisabled: false,
+    });
+  });
+
+  it('holds Discard while a save is in flight so it cannot race the write', () => {
+    expect(summaryButtons('saving')).toMatchObject({
+      saveDisabled: true,
+      discardDisabled: true,
+    });
+  });
+
+  it('offers a retry or a discard after a failed save', () => {
+    expect(summaryButtons('failed')).toEqual({
+      saveLabel: 'Try again',
+      saveDisabled: false,
+      discardDisabled: false,
+    });
   });
 });
 

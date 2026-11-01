@@ -1,11 +1,34 @@
 import { countLabel } from '@kitbag/core-design';
-import type { PracticeStretch, PracticeSummary } from '@kitbag/core-state';
+import type {
+  getPracticeSessionStore,
+  PracticeStretch,
+  PracticeSummary,
+} from '@kitbag/core-state';
 
 import { formatPracticeElapsed } from './practiceTimer.ts';
 
-const SEPARATOR = ' · ';
+export type PracticeSessions = Pick<
+  ReturnType<typeof getPracticeSessionStore>,
+  'getState'
+>;
 
 export type SummarySheet = 'summary' | 'none';
+
+export type SaveState = 'idle' | 'saving' | 'failed';
+
+export interface SummaryButtons {
+  readonly saveLabel: string;
+  readonly saveDisabled: boolean;
+  readonly discardDisabled: boolean;
+}
+
+export function endPractice(
+  sessions: PracticeSessions,
+  resetClock: () => void,
+): void {
+  sessions.getState().endSession();
+  resetClock();
+}
 
 export function summarySheetOnMount(
   pending: readonly PracticeSummary[],
@@ -13,12 +36,21 @@ export function summarySheetOnMount(
   return pending.length === 0 ? 'none' : 'summary';
 }
 
+export function summaryButtons(save: SaveState): SummaryButtons {
+  const saving = save === 'saving';
+  return {
+    saveLabel: save === 'failed' ? 'Try again' : 'Save session',
+    saveDisabled: saving,
+    discardDisabled: saving,
+  };
+}
+
 export function practiceContextLine(summary: PracticeSummary): string | null {
   const parts: string[] = [];
   if (summary.setlist !== null) parts.push(summary.setlist.name);
   if (summary.songs.length > 0)
     parts.push(countLabel(summary.songs.length, 'song', 'songs'));
-  return parts.length === 0 ? null : parts.join(SEPARATOR);
+  return parts.length === 0 ? null : parts.join(' · ');
 }
 
 export function averageTempoLabel(avgBpm: number): string {
@@ -30,5 +62,5 @@ export function longestStretchLabel(
 ): string | null {
   if (stretch === null) return null;
   const time = formatPracticeElapsed(stretch.ms);
-  return stretch.title === null ? time : `${stretch.title}${SEPARATOR}${time}`;
+  return stretch.title === null ? time : `${stretch.title} · ${time}`;
 }
