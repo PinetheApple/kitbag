@@ -8,9 +8,9 @@ const SEPARATOR = ' · ';
 export type SummarySheet = 'summary' | 'none';
 
 export function summarySheetOnMount(
-  pending: PracticeSummary | null,
+  pending: readonly PracticeSummary[],
 ): SummarySheet {
-  return pending === null ? 'none' : 'summary';
+  return pending.length === 0 ? 'none' : 'summary';
 }
 
 export function practiceContextLine(summary: PracticeSummary): string | null {

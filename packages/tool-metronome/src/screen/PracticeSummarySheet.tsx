@@ -26,6 +26,11 @@ import { formatPracticeElapsed } from '../logic/practiceTimer.ts';
 
 type SaveState = 'idle' | 'saving' | 'failed';
 
+interface SaveAttempt {
+  readonly uuid: string;
+  readonly state: Exclude<SaveState, 'idle'>;
+}
+
 const useStyles = createThemedStyles((theme) => ({
   duration: {
     ...textStyle(textRoles.sheetNumeral),
@@ -42,12 +47,12 @@ function subscribePending(onChange: () => void): () => void {
   return getPracticeSessionStore().subscribe(onChange);
 }
 
-function pendingPractice(): PracticeSummary | null {
-  return getPracticeSessionStore().getState().pending;
+function oldestPendingPractice(): PracticeSummary | null {
+  return getPracticeSessionStore().getState().pending[0] ?? null;
 }
 
 export function usePendingPractice(): PracticeSummary | null {
-  return useSyncExternalStore(subscribePending, pendingPractice);
+  return useSyncExternalStore(subscribePending, oldestPendingPractice);
 }
 
 interface PracticeSummarySheetProps {
@@ -64,26 +69,29 @@ export function PracticeSummarySheet({
   onDismiss,
 }: PracticeSummarySheetProps) {
   const styles = useStyles();
-  const [save, setSave] = useState<SaveState>('idle');
+  const [attempt, setAttempt] = useState<SaveAttempt | null>(null);
+  const uuid = summary?.uuid ?? null;
+  const save: SaveState = attempt?.uuid === uuid ? attempt.state : 'idle';
 
   const handleShow = useCallback(() => {
-    setSave('idle');
+    setAttempt(null);
   }, []);
 
   const handleSave = useCallback(() => {
-    setSave('saving');
+    if (uuid === null) return;
+    setAttempt({ uuid, state: 'saving' });
     getPracticeSessionStore()
       .getState()
       .saveSession()
       .then(
         () => {
-          setSave('idle');
+          setAttempt(null);
         },
         () => {
-          setSave('failed');
+          setAttempt({ uuid, state: 'failed' });
         },
       );
-  }, []);
+  }, [uuid]);
 
   const handleDiscard = useCallback(() => {
     getPracticeSessionStore().getState().discardSession();

@@ -85,7 +85,7 @@ describe('ending a practice session', () => {
     h.metronome.getState().stop();
     const shown = h.pill();
     h.end();
-    expect(h.sessions.getState().pending?.playedMs).toBe(shown);
+    expect(h.sessions.getState().pending[0]?.playedMs).toBe(shown);
     expect(h.pill()).toBe(0);
   });
 
@@ -94,7 +94,7 @@ describe('ending a practice session', () => {
     h.metronome.getState().start();
     h.advance(MINUTE);
     h.metronome.getState().stop();
-    expect(h.sessions.getState().pending).toBeNull();
+    expect(h.sessions.getState().pending).toEqual([]);
     expect(h.sessions.getState().session).not.toBeNull();
     expect(h.pill()).toBe(MINUTE);
   });
@@ -104,22 +104,24 @@ describe('ending a practice session', () => {
     h.metronome.getState().start();
     h.advance(MINUTE);
     h.end();
-    expect(h.sessions.getState().pending?.playedMs).toBe(MINUTE);
+    expect(h.sessions.getState().pending[0]?.playedMs).toBe(MINUTE);
     expect(summarySheetOnMount(h.sessions.getState().pending)).toBe('summary');
     h.advance(SECOND);
     expect(h.pill()).toBe(SECOND);
   });
 
-  it('leaves the newer session and the pill alone while a summary is pending', () => {
+  it('queues a second summary behind one still pending and zeros the pill', () => {
     const h = harness();
     h.metronome.getState().start();
     h.advance(MINUTE);
     h.end();
-    const first = h.sessions.getState().pending;
-    h.advance(MINUTE);
+    h.advance(2 * MINUTE);
     h.end();
-    expect(h.sessions.getState().pending).toBe(first);
-    expect(h.pill()).toBe(MINUTE);
+    expect(h.sessions.getState().pending.map((s) => s.playedMs)).toEqual([
+      MINUTE,
+      2 * MINUTE,
+    ]);
+    expect(h.pill()).toBe(0);
   });
 
   it('saves once however often Save is pressed', async () => {
@@ -133,7 +135,7 @@ describe('ending a practice session', () => {
     ]);
     await h.sessions.getState().saveSession();
     expect(h.insert).toHaveBeenCalledTimes(1);
-    expect(h.sessions.getState().pending).toBeNull();
+    expect(h.sessions.getState().pending).toEqual([]);
   });
 
   it('writes nothing on discard', async () => {
@@ -144,17 +146,17 @@ describe('ending a practice session', () => {
     h.sessions.getState().discardSession();
     await h.sessions.getState().saveSession();
     expect(h.insert).not.toHaveBeenCalled();
-    expect(h.sessions.getState().pending).toBeNull();
+    expect(h.sessions.getState().pending).toEqual([]);
   });
 });
 
 describe('summarySheetOnMount', () => {
   it('reopens a summary that was dismissed rather than resolved', () => {
-    expect(summarySheetOnMount(summary())).toBe('summary');
+    expect(summarySheetOnMount([summary()])).toBe('summary');
   });
 
   it('opens nothing with no summary pending', () => {
-    expect(summarySheetOnMount(null)).toBe('none');
+    expect(summarySheetOnMount([])).toBe('none');
   });
 });
 
