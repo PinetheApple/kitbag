@@ -250,6 +250,7 @@ export {
   routeDetail,
   routeTitle,
 } from './rig/routeLabel.ts';
+export { storedRoute } from './rig/storedRoute.ts';
 export { RIG_CLICK_BPM } from './rig/rigClickRules.ts';
 export {
   createRigClick,
