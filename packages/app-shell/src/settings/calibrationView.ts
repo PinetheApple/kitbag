@@ -6,6 +6,7 @@ import {
   formatOffsetMs,
   routeDetail,
   storedOffsetMs,
+  unwrapDeviations,
   type CalibrationNotice,
   type CalibrationOutcome,
   type CalibrationPhase,
@@ -136,7 +137,7 @@ export function calibrationView(state: ViewState): CalibrationView {
   return {
     count: state.deviations.length,
     progress: state.deviations.length / CALIBRATION.taps,
-    dots: state.deviations.map((deviation, index) => ({
+    dots: unwrapDeviations(state.deviations).map((deviation, index) => ({
       x: scatterX(deviation, axisMs),
       y: dotY(index),
     })),

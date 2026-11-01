@@ -44,6 +44,14 @@ const alternating = (
     (_, i) => centre + (i % 2 === 0 ? -half : half),
   );
 
+const CENTRE_X = 0.5;
+const MS_PER_BEAT = 60_000 / CALIBRATION.bpm;
+const WRAP_CENTRE_MS = 265;
+const WRAP_HALF_MS = 40;
+const acrossTheWrap = alternating(WRAP_CENTRE_MS, WRAP_HALF_MS).map((d) =>
+  d > MS_PER_BEAT / 2 ? d - MS_PER_BEAT : d,
+);
+
 describe('calibration view', () => {
   it('counts taps out of 16', () => {
     const view = calibrationView(state({ deviations: alternating(12, 3, 12) }));
@@ -152,6 +160,24 @@ describe('calibration view', () => {
     const view = calibrationView(state({ deviations: [0, 25, -50] }));
     expect(view.dots.map((d) => d.x)).toEqual([0.5, 0.75, 0]);
     expect(view.axisMs).toBe(SCATTER.minHalfRangeMs);
+  });
+
+  it('offers use anyway for messy taps near the limit', () => {
+    const view = calibrationView(
+      state({ phase: 'done', deviations: acrossTheWrap }),
+    );
+    expect(view.result).toMatchObject({
+      kind: 'measured',
+      useLabel: 'Use anyway',
+    });
+    expect(view.showUse).toBe(true);
+  });
+
+  it('draws a tap past the wrap on the mean’s side of the axis', () => {
+    const view = calibrationView(state({ deviations: acrossTheWrap }));
+    const lateMs = WRAP_CENTRE_MS + WRAP_HALF_MS;
+    expect(view.dots[1]?.x).toBeCloseTo(scatterX(lateMs, view.axisMs));
+    expect(view.dots.every((d) => d.x > CENTRE_X)).toBe(true);
   });
 
   it('places the mean line on the usable mean', () => {

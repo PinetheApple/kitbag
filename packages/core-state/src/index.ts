@@ -229,6 +229,7 @@ export { CALIBRATION } from './rig/calibrationRules.ts';
 export {
   analyseTaps,
   storedOffsetMs,
+  unwrapDeviations,
   type CalibrationOutcome,
   type RefusalReason,
 } from './rig/calibrationStats.ts';
