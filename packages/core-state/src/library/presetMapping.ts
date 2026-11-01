@@ -3,10 +3,10 @@ import { KB_ACCENT, KB_RAMP_UNIT } from '@kitbag/core-native';
 
 import {
   roundToEngineBpm,
-  isCountInBars,
   normalizeRamp,
   resizeAccents,
 } from '../metronome/config.ts';
+import { COUNT_IN_SCOPE, songCountIn } from '../metronome/countInScope.ts';
 import { normalizePolyAgainst } from '../metronome/polyAgainst.ts';
 import type {
   BarMuteConfig,
@@ -80,6 +80,14 @@ export function presetFromMetronome(config: MetronomeConfig) {
 
 export type LiveSongFields = ReturnType<typeof presetFromMetronome>;
 
+export function songFieldsFromMetronome(
+  config: MetronomeConfig,
+): Partial<LiveSongFields> {
+  const fields: Partial<LiveSongFields> = presetFromMetronome(config);
+  if (config.countInScope === COUNT_IN_SCOPE.always) delete fields.countInBars;
+  return fields;
+}
+
 const RAMP_UNITS = new Set<number>(Object.values(KB_RAMP_UNIT));
 
 export function rampUnitOf(value: number): KB_RAMP_UNIT {
@@ -138,9 +146,11 @@ function songSettingsOf(
       playBars: preset.barMutePlayBars ?? current.barMute.playBars,
       muteBars: preset.barMuteMuteBars ?? current.barMute.muteBars,
     },
-    countInBars: isCountInBars(preset.countInBars)
-      ? preset.countInBars
-      : current.countIn.bars,
+    countInBars: songCountIn(
+      current.countInScope,
+      preset.countInBars,
+      current.countIn,
+    ).bars,
   };
 }
 
@@ -219,7 +229,8 @@ export function applyPreset(
   store.setPolyAgainst(song.polyAgainst);
   store.setPolyAccents(song.polyAccents);
   store.setSounds(song.sounds.normal, song.sounds.accent);
-  store.setCountIn({ ...store.countIn, bars: song.countInBars });
+  if (store.countInScope === COUNT_IN_SCOPE.perSong)
+    store.setCountIn({ ...store.countIn, bars: song.countInBars });
   store.setBarMute(song.barMute);
   applyTempo(preset.bpm, song.ramp, store);
 }

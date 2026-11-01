@@ -6,9 +6,7 @@ import * as SystemUI from 'expo-system-ui';
 
 import { appearanceApplier } from './appearance';
 import { APPEARANCE_KEYS, appearancePersistence } from './appearancePreference';
-import { storedWebPreference } from './storedWebPreference';
-
-const WEB_KEY_PREFIX = 'kitbag.';
+import { storedWebPreference, WEB_KEY_PREFIX } from './storedWebPreference';
 
 configureAppearancePersistence(
   appearancePersistence((key: AppearanceKey) =>

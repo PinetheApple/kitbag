@@ -9,8 +9,11 @@ import '@/runtime/lastToolRuntime';
 import '@/runtime/homeLayoutRuntime';
 import '@/runtime/swipeHintRuntime';
 import '@/runtime/appearanceRuntime';
+import '@/runtime/countInRuntime';
 import '@/runtime/transportRuntime';
 import '@/runtime/keepAwakeRuntime';
+import '@/settings/rigRuntime';
+import '@/settings/toolsRuntime';
 
 import '@/global.css';
 

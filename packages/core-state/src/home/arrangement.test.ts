@@ -7,7 +7,9 @@ import {
   reconcileArrangement,
   resizeTile,
   showTile,
+  tilesFor,
   visibleTiles,
+  withOffTiles,
   type ArrangedTile,
 } from './arrangement.ts';
 
@@ -160,5 +162,37 @@ describe('reconcileArrangement', () => {
       'd',
       'a',
     ]);
+  });
+});
+
+describe('tilesFor and withOffTiles', () => {
+  const isOn = (toolId: string) => toolId !== 'b';
+
+  it('leaves out the tiles of tools that are off', () => {
+    expect(ids(tilesFor(DEFAULTS, isOn))).toEqual(['a', 'c', 'd']);
+  });
+
+  it('puts an off tool back in its slot after the others are reordered', () => {
+    const edited = moveTile(tilesFor(DEFAULTS, isOn), 'd', 0);
+    expect(ids(withOffTiles(DEFAULTS, edited, isOn))).toEqual([
+      'd',
+      'b',
+      'a',
+      'c',
+    ]);
+  });
+
+  it('keeps an off tool hidden when it was hidden', () => {
+    const full = hideTile(DEFAULTS, 'b');
+    const edited = hideTile(tilesFor(full, isOn), 'c');
+    const merged = withOffTiles(full, edited, isOn);
+    expect(ids(visibleTiles(merged))).toEqual(['a', 'd']);
+    expect(ids(hiddenTiles(merged))).toEqual(['b', 'c']);
+  });
+
+  it('round-trips unchanged when nothing was edited', () => {
+    expect(withOffTiles(DEFAULTS, tilesFor(DEFAULTS, isOn), isOn)).toEqual(
+      DEFAULTS,
+    );
   });
 });

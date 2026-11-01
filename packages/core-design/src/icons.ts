@@ -60,8 +60,17 @@ export const iconGlyphs = {
   analyzing: 'refresh',
   error: 'alert-circle',
   folder: 'folder',
+  calibrate: 'timer-sync-outline',
+  routeSpeaker: 'cellphone-sound',
+  routeWired: 'headphones',
+  routeBluetooth: 'bluetooth',
+  routeUsb: 'usb',
+  routeOther: 'speaker',
   storage: 'database-outline',
   removeMissing: 'backspace-reverse-outline',
+  stop: 'stop',
+  subdivisionAccents: 'music-note-sixteenth',
+  output: 'speaker',
 } as const satisfies Record<string, VectorGlyph>;
 
 export type IconName = keyof typeof iconGlyphs;
