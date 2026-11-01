@@ -6,7 +6,7 @@
 /* ---------- tokens: Kitbag design system (dark = primary) ---------- */
 :root{
   --bg:#0E0D10; --s1:#1A1820; --s2:#242230; --s3:#2E2C3A;
-  --line:#33303F; --tx:#ECEAF0; --tx2:#BDBBC6; --tx3:#9793A2;
+  --line:#33303F; --tx:#ECEAF0; --tx2:#BDBBC6; --tx3:#9793A2; --decor:#6C6878;
   --ac:#FFB347; --ac-deep:#E89B2E; --ac-dim:#8A6A35; --on-ac:#221600;
   --red:#FF5C5C; --amb:#FFC24B; --grn:#4ADE80;
   --wave:#4E4A5E; --wave-hot:#FFB347;
@@ -15,7 +15,7 @@
 @media (prefers-color-scheme: light){
   :root{
     --bg:#F5F3EE; --s1:#FFFFFF; --s2:#ECE9E1; --s3:#E3DFD4;
-    --line:#DCD7CA; --tx:#221F26; --tx2:#47434F; --tx3:#6C6573;
+    --line:#DCD7CA; --tx:#221F26; --tx2:#433F4B; --tx3:#6C6573; --decor:#98929F;
     --ac:#B26F0E; --ac-deep:#80510B; --ac-dim:#D8B27C; --on-ac:#FFF7EA;
     --red:#CC4444; --amb:#9A6E06; --grn:#1E8A4F;
     --wave:#C9C3B4; --wave-hot:#B26F0E;
@@ -24,7 +24,7 @@
 }
 :root[data-theme="dark"]{
   --bg:#0E0D10; --s1:#1A1820; --s2:#242230; --s3:#2E2C3A;
-  --line:#33303F; --tx:#ECEAF0; --tx2:#BDBBC6; --tx3:#9793A2;
+  --line:#33303F; --tx:#ECEAF0; --tx2:#BDBBC6; --tx3:#9793A2; --decor:#6C6878;
   --ac:#FFB347; --ac-deep:#E89B2E; --ac-dim:#8A6A35; --on-ac:#221600;
   --red:#FF5C5C; --amb:#FFC24B; --grn:#4ADE80;
   --wave:#4E4A5E; --wave-hot:#FFB347;
@@ -32,7 +32,7 @@
 }
 :root[data-theme="light"]{
   --bg:#F5F3EE; --s1:#FFFFFF; --s2:#ECE9E1; --s3:#E3DFD4;
-  --line:#DCD7CA; --tx:#221F26; --tx2:#47434F; --tx3:#6C6573;
+  --line:#DCD7CA; --tx:#221F26; --tx2:#433F4B; --tx3:#6C6573; --decor:#98929F;
   --ac:#B26F0E; --ac-deep:#80510B; --ac-dim:#D8B27C; --on-ac:#FFF7EA;
   --red:#CC4444; --amb:#9A6E06; --grn:#1E8A4F;
   --wave:#C9C3B4; --wave-hot:#B26F0E;
@@ -131,7 +131,7 @@ header{padding:72px 0 0}
  radial-gradient(120% 90% at 50% 50%, color-mix(in srgb,var(--ac) 5%,transparent), transparent 70%)}
 .swipezone .num{font-size:88px;font-weight:700;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums;display:block}
 .swipezone .sub{font-family:'Space Grotesk';font-size:11px;letter-spacing:.22em;color:var(--tx2)}
-.swipezone .chev{color:var(--tx3);font-size:13px;line-height:1.1;letter-spacing:.3em;display:block}
+.swipezone .chev{color:var(--decor);font-size:13px;line-height:1.1;letter-spacing:.3em;display:block}
 .beatring{height:3px;border-radius:2px;background:var(--s3);margin:12px 18px 0;position:relative;overflow:hidden}
 .beatring i{position:absolute;left:0;top:0;bottom:0;width:34%;border-radius:2px;background:var(--ac)}
 .presetrow{display:flex;gap:8px;justify-content:center}
