@@ -138,7 +138,7 @@ export const useBeatDotStyles = createThemedStyles((theme) => {
     },
     swatchMuted: {
       borderWidth: metronome.legendSwatchBorder,
-      borderColor: theme.color.text3,
+      borderColor: theme.color.decor,
       borderStyle: 'dashed',
     },
   };
