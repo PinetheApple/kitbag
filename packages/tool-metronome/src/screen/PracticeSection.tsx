@@ -23,6 +23,7 @@ export const usePracticeStyles = createThemedStyles((theme) => ({
   },
   heading: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: space.rowGap,
   },
@@ -49,6 +50,10 @@ export const usePracticeStyles = createThemedStyles((theme) => ({
   headingFill: {
     flex: 1,
     marginLeft: space.controlGap,
+  },
+  headingByLabel: {
+    flexGrow: 1,
+    flexShrink: 1,
   },
 }));
 

@@ -1,5 +1,11 @@
 import { useCallback, useState } from 'react';
-import { Pressable, Text, View, type LayoutChangeEvent } from 'react-native';
+import {
+  Pressable,
+  Text,
+  useWindowDimensions,
+  View,
+  type LayoutChangeEvent,
+} from 'react-native';
 
 import { homeArrange, homeArrangeText } from '../homeArrangeRoles.ts';
 import {
@@ -11,6 +17,7 @@ import {
   textRoles,
 } from '../roles.ts';
 import { equalOptionMinWidth, type OptionMinWidth } from '../segmentWidth.ts';
+import { isTextScaled } from '../textScale.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import {
@@ -94,6 +101,7 @@ interface SegmentProps<T extends string> {
   readonly minWidthStyle: OptionMinWidth | undefined;
   readonly onLabelWidth: (value: T, width: number) => void;
   readonly row: boolean;
+  readonly byLabel: boolean;
   readonly hitBox: ReturnType<typeof optionHitBox>;
   readonly onSelect: (value: T) => void;
 }
@@ -117,6 +125,12 @@ const useStyles = createThemedStyles((theme) => ({
   },
   optionHit: {
     flex: 1,
+  },
+  // Grown labels set the width, so a wrapping row moves the track to its own line
+  // instead of squeezing a label until it breaks mid-word.
+  byLabel: {
+    flexGrow: 1,
+    flexShrink: 1,
   },
   option: {
     alignItems: 'center',
@@ -178,6 +192,7 @@ function Segment<T extends string>({
   minWidthStyle,
   onLabelWidth,
   row,
+  byLabel,
   hitBox,
   onSelect,
 }: SegmentProps<T>) {
@@ -198,7 +213,13 @@ function Segment<T extends string>({
       accessibilityLabel={option.accessibilityLabel ?? option.label}
       accessibilityState={{ checked: selected }}
       aria-checked={selected}
-      style={[!inline && !editRow && !row && styles.optionHit, hitBox]}
+      style={[
+        !inline &&
+          !editRow &&
+          !row &&
+          (byLabel ? styles.byLabel : styles.optionHit),
+        hitBox,
+      ]}
       onPress={handlePress}
     >
       <View
@@ -241,6 +262,7 @@ export function SegmentedControl<T extends string>({
   size: controlSize = 'default',
 }: SegmentedControlProps<T>) {
   const styles = useStyles();
+  const byLabel = isTextScaled(useWindowDimensions().fontScale);
   const editRow = controlSize === 'editRow';
   const large = controlSize === 'large' || editRow;
   const [labelWidths, setLabelWidths] = useState<Partial<Record<T, number>>>(
@@ -274,7 +296,7 @@ export function SegmentedControl<T extends string>({
         compact ? styles.compact : styles.track,
         large && !compact && styles.largeTrack,
         row && !compact && styles.rowTrack,
-        fill && styles.fill,
+        fill && (byLabel ? styles.byLabel : styles.fill),
       ]}
     >
       {options.map((option) => (
@@ -289,6 +311,7 @@ export function SegmentedControl<T extends string>({
           minWidthStyle={minWidthStyle}
           onLabelWidth={handleLabelWidth}
           row={row}
+          byLabel={byLabel}
           hitBox={hitBox}
           onSelect={onSelect}
         />
