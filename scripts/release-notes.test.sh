@@ -11,7 +11,9 @@ export LC_ALL=C.UTF-8
 readonly EXIT_OK=0
 readonly EXIT_NO_NOTE=1
 readonly EXIT_USAGE=2
-readonly EXIT_GH_FAILED=3
+readonly EXIT_OUT_OF_BOUNDS=3
+readonly EXIT_GH_FAILED=4
+readonly EXIT_GIT_FAILED=5
 
 readonly CHANGELOG_LIMIT=500
 readonly VERSION=0.26.2
@@ -59,7 +61,7 @@ make_fixture() {
   mkdir -p "$dir/scripts" "$dir/stub-bin" "$dir/bodies"
   cp "$REPO/scripts/release-notes.sh" "$REPO/scripts/version.sh" "$dir/scripts/"
   git -C "$dir" init -q -b main
-  commit "$dir" "chore: before the floor (#7)"
+  commit "$dir" "Merge pull request #7 from owner/before-the-floor"
   commit "$dir" "chore: the floor"
   floor=$(git -C "$dir" rev-parse HEAD)
   sed "s/^readonly AUDIT_FLOOR=.*/readonly AUDIT_FLOOR=${floor}/" "$REPO/scripts/changelog.sh" > "$dir/scripts/changelog.sh"
@@ -86,12 +88,19 @@ merge_pr() {
   git -C "$dir" -c user.email=t@t -c user.name=t merge -q --no-ff -m "Merge pull request #${number} from owner/topic-${number}" "topic-$number"
 }
 
-squash_pr() { commit "$1" "fix: squashed change (#$2)"; }
-
 run_in() {
   local dir=$1
   shift
   (cd "$dir" && PATH="$dir/stub-bin:$PATH" ./scripts/release-notes.sh "$@")
+}
+
+readonly STDERR="$SCRATCH/stderr"
+
+notes_in() {
+  local dir=$1
+  rm -rf "$dir/metadata"
+  run_in "$dir" "$2" "$VERSION" >/dev/null 2>"$STDERR" &&
+    cat "$dir/metadata/en-US/changelogs/${VERSION_CODE}.txt"
 }
 
 repeat() { printf "%${2}s" "" | sed "s/ /$1/g"; }
@@ -101,7 +110,7 @@ notes_of_lengths() {
   shift 2
   for length in "$@"; do
     note_body "$dir" "$number" "$(repeat "$char" "$length")"
-    squash_pr "$dir" "$number"
+    merge_pr "$dir" "$number"
     number=$((number + 1))
   done
 }
@@ -110,8 +119,9 @@ echo "collecting notes"
 fixture=$(make_fixture)
 note_body "$fixture" 1 "Tap tempo follows your taps."
 merge_pr "$fixture" 1
+git -C "$fixture" tag v0.26.1
 note_body "$fixture" 2 "The tuner holds the last note."
-squash_pr "$fixture" 2
+merge_pr "$fixture" 2
 note_body "$fixture" 3 "none"
 merge_pr "$fixture" 3
 note_body "$fixture" 4 ""
@@ -120,94 +130,76 @@ body "$fixture" 5 "## What changed"$'\n\nno block here\n'
 merge_pr "$fixture" 5
 note_body "$fixture" 6 $'  Stems keep\r\n   their    levels\r\n\r\nafter a restart.  '
 merge_pr "$fixture" 6
-stderr="$SCRATCH/stderr"
-notes=$(run_in "$fixture" --print "" "$VERSION" 2>"$stderr")
-status=$?
-want="${BULLET}Tap tempo follows your taps."$'\n'"${BULLET}The tuner holds the last note."$'\n'"${BULLET}Stems keep their levels after a restart."
-check "merge and squash subjects, in merge order; NONE, empty and missing skipped; multi-line collapsed" "$notes" "$want"
-check "a full run exits ok" "$status" "$EXIT_OK"
-if grep -q '#5' "$stderr" && ! grep -qE '#(3|4)\b' "$stderr"; then
-  pass "a missing block warns on stderr naming the PR; NONE and empty do not"
+since_first="${BULLET}The tuner holds the last note."$'\n'"${BULLET}Stems keep their levels after a restart."
+check "from the audit floor, in merge order; NONE, empty and missing skipped; multi-line collapsed" \
+  "$(notes_in "$fixture" "")" "${BULLET}Tap tempo follows your taps."$'\n'"${since_first}"
+name="a missing block warns on stderr naming the PR; NONE and empty do not"
+if grep -q '#5' "$STDERR" && ! grep -qE '#(3|4)\b' "$STDERR"; then
+  pass "$name"
 else
-  fail "a missing block warns on stderr naming the PR" "$(<"$stderr")"
+  fail "$name" "$(<"$STDERR")"
 fi
-if [[ $notes != *"#7"* ]]; then
-  pass "no previous tag starts at changelog.sh's audit floor"
-else
-  fail "no previous tag starts at changelog.sh's audit floor" "$notes"
-fi
+check "a previous tag bounds the range" "$(notes_in "$fixture" v0.26.1)" "$since_first"
 
-git -C "$fixture" tag v0.26.1 HEAD~5
-check "a previous tag bounds the range" \
-  "$(run_in "$fixture" --print v0.26.1 "$VERSION" 2>/dev/null)" \
-  "${BULLET}The tuner holds the last note."$'\n'"${BULLET}Stems keep their levels after a restart."
-
+name="a gh failure aborts, naming the PR"
 fixture=$(make_fixture)
 merge_pr "$fixture" 8
-output=$(run_in "$fixture" --print "" "$VERSION" 2>&1)
+notes_in "$fixture" "" >/dev/null
 status=$?
-if [[ $status -eq $EXIT_GH_FAILED && $output == *"#8"* ]]; then
-  pass "a gh failure aborts, naming the PR"
+if [[ $status -eq $EXIT_GH_FAILED && $(<"$STDERR") == *"#8"* ]]; then
+  pass "$name"
 else
-  fail "a gh failure aborts (exit $status, wanted $EXIT_GH_FAILED)" "$output"
+  fail "$name" "exit $status, wanted $EXIT_GH_FAILED: $(<"$STDERR")"
 fi
+
+notes_in "$fixture" v9.9.9 >/dev/null
+check "an unknown previous tag aborts" "$?" "$EXIT_GIT_FAILED"
 
 echo "fallbacks"
 fixture=$(make_fixture)
 note_body "$fixture" 1 "NONE"
 merge_pr "$fixture" 1
-check "no notes: the maintenance line" "$(run_in "$fixture" --print "" "$VERSION" 2>/dev/null)" \
-  "Maintenance release. Details: ${RELEASE_URL}"
+check "no notes: the maintenance line" "$(notes_in "$fixture" "")" "Maintenance release. Details: ${RELEASE_URL}"
 
 echo "the 500-character limit"
+name="exactly 500 characters is kept whole (bullets count once, not as bytes)"
 fixture=$(make_fixture)
 notes_of_lengths "$fixture" a 97 97 97 97 98
-notes=$(run_in "$fixture" --print "" "$VERSION" 2>/dev/null)
+notes=$(notes_in "$fixture" "")
 if ((${#notes} == CHANGELOG_LIMIT)) && [[ $notes != *"More:"* ]]; then
-  pass "exactly 500 characters is kept whole (bullets count once, not as bytes)"
+  pass "$name"
 else
-  fail "exactly 500 characters is kept whole (${#notes} chars)" "$notes"
+  fail "$name" "${#notes} characters: $notes"
 fi
 
 fixture=$(make_fixture)
 notes_of_lengths "$fixture" a 97 97 97 97 99
-notes=$(run_in "$fixture" --print "" "$VERSION" 2>/dev/null)
 line="${BULLET}$(repeat a 97)"
-want="${line}"$'\n'"${line}"$'\n'"${line}"$'\n'"${line}"$'\n'"${MORE_LINE}"
-check "501 characters drops whole lines from the end and links the release" "$notes" "$want"
-if ((${#notes} <= CHANGELOG_LIMIT)); then
-  pass "the trimmed text, More link included, fits in 500"
-else
-  fail "the trimmed text fits in 500 (${#notes} chars)" "$notes"
-fi
+check "501 characters drops whole lines from the end and links the release, within 500" \
+  "$(notes_in "$fixture" "")" "${line}"$'\n'"${line}"$'\n'"${line}"$'\n'"${line}"$'\n'"${MORE_LINE}"
 
 fixture=$(make_fixture)
 notes_of_lengths "$fixture" a 470 30
-check "a single note over the limit leaves only the link" \
-  "$(run_in "$fixture" --print "" "$VERSION" 2>/dev/null)" "$MORE_LINE"
+check "a single note over the limit leaves only the link" "$(notes_in "$fixture" "")" "$MORE_LINE"
 
+name="multibyte notes are counted in characters"
 fixture=$(make_fixture)
 notes_of_lengths "$fixture" é 97 97 97 97 98
-notes=$(run_in "$fixture" --print "" "$VERSION" 2>/dev/null)
+notes=$(notes_in "$fixture" "")
 if ((${#notes} == CHANGELOG_LIMIT)) && [[ $notes != *"More:"* ]] && (($(printf '%s' "$notes" | wc -c) > CHANGELOG_LIMIT)); then
-  pass "multibyte notes are counted in characters"
+  pass "$name"
 else
-  fail "multibyte notes are counted in characters (${#notes} chars)" "$notes"
+  fail "$name" "${#notes} characters: $notes"
 fi
 
 echo "the changelog file"
 fixture=$(make_fixture)
 note_body "$fixture" 1 "Tap tempo follows your taps."
 merge_pr "$fixture" 1
-stdout=$(run_in "$fixture" "" "$VERSION" 2>/dev/null)
-file="$fixture/metadata/en-US/changelogs/${VERSION_CODE}.txt"
-if [[ -f $file && $(<"$file") == "${BULLET}Tap tempo follows your taps." && -z $stdout ]]; then
-  pass "writes metadata/en-US/changelogs/<versionCode>.txt (0.26.2 -> 2602.txt), nothing on stdout"
-else
-  fail "writes ${VERSION_CODE}.txt" "$(ls -R "$fixture/metadata" 2>&1) stdout: $stdout"
-fi
+check "prints the path it wrote: <versionCode>.txt (0.26.2 -> 2602.txt)" \
+  "$(run_in "$fixture" "" "$VERSION" 2>/dev/null)" "metadata/en-US/changelogs/${VERSION_CODE}.txt"
 run_in "$fixture" "" 0.100.0 >/dev/null 2>&1
-check "an out-of-bounds version is refused" "$?" "$EXIT_USAGE"
+check "an out-of-bounds version is refused" "$?" "$EXIT_OUT_OF_BOUNDS"
 
 echo "--check-body"
 check_body() { printf '%s' "$1" | "$REPO/scripts/release-notes.sh" --check-body >/dev/null 2>&1; echo $?; }

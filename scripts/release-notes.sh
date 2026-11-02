@@ -5,33 +5,37 @@ export LC_ALL=C.UTF-8
 readonly EXIT_OK=0
 readonly EXIT_NO_NOTE=1
 readonly EXIT_USAGE=2
-readonly EXIT_GH_FAILED=3
+readonly EXIT_OUT_OF_BOUNDS=3
+readonly EXIT_GH_FAILED=4
+readonly EXIT_GIT_FAILED=5
+readonly EXIT_NO_CONSTANT=6
 
 readonly CHANGELOG_LIMIT=500
 readonly CHANGELOG_DIR=metadata/en-US/changelogs
 readonly BULLET='• '
 readonly NONE_NOTE=NONE
 readonly MERGE_SUBJECT_RE='^Merge pull request #([0-9]+) '
-readonly SQUASH_SUBJECT_RE='\(#([0-9]+)\)$'
 
 usage() {
   cat <<USAGE
-usage: release-notes.sh [--print] <previous-tag-or-empty> <version>
+usage: release-notes.sh <previous-tag-or-empty> <version>
        release-notes.sh --check-body < pr-body
 
 Collects the \`\`\`release-note block of every PR merged since <previous-tag>
-(first-parent history; changelog.sh's audit floor when empty) and writes
-${CHANGELOG_DIR}/<versionCode>.txt for F-Droid: one "${BULLET}note" line each,
-at most ${CHANGELOG_LIMIT} characters. Blocks reading ${NONE_NOTE} or empty are skipped; a
-missing block is skipped with a warning.
+(first-parent history; changelog.sh's audit floor when empty), writes
+${CHANGELOG_DIR}/<versionCode>.txt for F-Droid and prints its path: one
+"${BULLET}note" line each, at most ${CHANGELOG_LIMIT} characters. Blocks reading ${NONE_NOTE} or
+empty are skipped; a missing block is skipped with a warning.
 
-  --print       write the notes to stdout instead of the file
   --check-body  fail unless the PR body on stdin has a non-empty release-note block
 
 exit ${EXIT_OK}  ok
 exit ${EXIT_NO_NOTE}  --check-body: no release-note block, or an empty one
-exit ${EXIT_USAGE}  usage error, or a version out of versionCode bounds
+exit ${EXIT_USAGE}  usage error
+exit ${EXIT_OUT_OF_BOUNDS}  version out of versionCode bounds
 exit ${EXIT_GH_FAILED}  gh could not read a PR body
+exit ${EXIT_GIT_FAILED}  git could not list the commits since <previous-tag>
+exit ${EXIT_NO_CONSTANT}  cannot read a constant from scripts/changelog.sh
 USAGE
 }
 
@@ -40,7 +44,6 @@ die() {
   exit "$2"
 }
 
-# Prints the first closed block, whitespace collapsed; fails when there is none.
 extract_note() {
   awk '
     { sub(/\r$/, "") }
@@ -60,23 +63,22 @@ extract_note() {
 changelog_constant() {
   local value
   value=$(sed -n "s/^readonly $1=\(.*\)\$/\1/p" scripts/changelog.sh)
-  [[ -n $value ]] || die "cannot read $1 from scripts/changelog.sh" "$EXIT_USAGE"
+  [[ -n $value ]] || die "cannot read $1 from scripts/changelog.sh" "$EXIT_NO_CONSTANT"
   echo "$value"
 }
 
 pr_numbers() {
-  git log --first-parent --reverse --format=%s "$1..HEAD" |
-    while IFS= read -r subject; do
-      if [[ $subject =~ $MERGE_SUBJECT_RE || $subject =~ $SQUASH_SUBJECT_RE ]]; then
-        echo "${BASH_REMATCH[1]}"
-      fi
-    done |
-    awk '!seen[$0]++'
+  local subject
+  while IFS= read -r subject; do
+    if [[ $subject =~ $MERGE_SUBJECT_RE ]]; then
+      echo "${BASH_REMATCH[1]}"
+    fi
+  done <<<"$1"
 }
 
 collect_notes() {
-  local range_start=$1 number pr_body note
-  for number in $(pr_numbers "$range_start"); do
+  local number pr_body note
+  for number in $1; do
     pr_body=$(gh pr view "$number" --json body -q .body) ||
       die "gh could not read the body of PR #${number}" "$EXIT_GH_FAILED"
     if ! note=$(extract_note <<<"$pr_body"); then
@@ -90,7 +92,7 @@ collect_notes() {
 
 # F-Droid strips the text before applying the limit, so the trailing newline is free.
 fit_to_limit() {
-  local more=$1 text="" candidate line
+  local more_line=$1 text="" candidate line
   local -a lines
   mapfile -t lines
   printf -v text '%s\n' "${lines[@]}"
@@ -102,10 +104,10 @@ fit_to_limit() {
   text=""
   for line in "${lines[@]}"; do
     candidate="${text}${line}"$'\n'
-    ((${#candidate} + ${#more} <= CHANGELOG_LIMIT)) || break
+    ((${#candidate} + ${#more_line} <= CHANGELOG_LIMIT)) || break
     text=$candidate
   done
-  echo "${text}${more}"
+  echo "${text}${more_line}"
 }
 
 check_body() {
@@ -116,11 +118,9 @@ check_body() {
   die 'the PR body needs a ```release-note block holding one user-facing line, or NONE' "$EXIT_NO_NOTE"
 }
 
-print=0
 args=()
 while (($#)); do
   case $1 in
-    --print) print=1 ;;
     --check-body) check_body ;;
     -h | --help)
       usage
@@ -140,19 +140,19 @@ version=${args[1]}
 
 cd "$(git rev-parse --show-toplevel)"
 
-code=$(scripts/version.sh code "$version") || die "no versionCode for '${version}'" "$EXIT_USAGE"
+code=$(scripts/version.sh code "$version") || exit
 release_url="$(changelog_constant REPO_URL)/releases/tag/v${version}"
-notes=$(collect_notes "${previous:-$(changelog_constant AUDIT_FLOOR)}")
+range_start=$previous
+[[ -n $range_start ]] || range_start=$(changelog_constant AUDIT_FLOOR)
+subjects=$(git log --first-parent --reverse --format=%s "${range_start}..HEAD") ||
+  die "git could not list the commits in ${range_start}..HEAD" "$EXIT_GIT_FAILED"
+notes=$(collect_notes "$(pr_numbers "$subjects")")
 if [[ -z $notes ]]; then
   text="Maintenance release. Details: ${release_url}"
 else
   text=$(fit_to_limit "More: ${release_url}" <<<"$notes")
 fi
 
-if ((print)); then
-  echo "$text"
-else
-  mkdir -p "$CHANGELOG_DIR"
-  echo "$text" > "${CHANGELOG_DIR}/${code}.txt"
-  echo "release-notes: wrote ${CHANGELOG_DIR}/${code}.txt (${#text} characters)" >&2
-fi
+mkdir -p "$CHANGELOG_DIR"
+echo "$text" > "${CHANGELOG_DIR}/${code}.txt"
+echo "${CHANGELOG_DIR}/${code}.txt"
