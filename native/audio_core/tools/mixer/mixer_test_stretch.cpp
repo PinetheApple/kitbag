@@ -263,6 +263,10 @@ void TestProcessNeverAllocates() {
       {0.0f, kKey, -kKey},
       "alloc: Process with live buses (engage, rate, move, wake, prime)"
   );
+  CheckProcessNeverAllocates(
+      {0.0f, kKey, -kKey, kKey + 1.0f, -kKey - 1.0f},
+      "alloc: the same with five buses on presetDefault"
+  );
 }
 
 }  // namespace

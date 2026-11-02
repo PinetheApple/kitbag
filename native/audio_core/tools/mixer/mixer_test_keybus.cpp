@@ -11,6 +11,9 @@ constexpr int64_t kSongFrames = int64_t{4} * kSampleRate;
 constexpr int64_t kSeekTo = kSampleRate / 2 + 7;
 constexpr int64_t kBurstAfterSeek = 40011;
 constexpr int64_t kSilentLead = kSampleRate + 11;
+constexpr int64_t kSilenceFrames = int64_t{3} * kSampleRate / 5;
+constexpr int64_t kToneTailFrames = kSampleRate / 5;
+constexpr float kRelativeOnset = 0.5f;
 constexpr int64_t kStaleBurstAfterSeek = 30011;
 constexpr int kMuteAtBlock = 60;
 constexpr int kUnmuteAtBlock = 150;
@@ -70,15 +73,19 @@ std::vector<float> RenderAlone(
   return left;
 }
 
+int64_t OnsetAfter(const std::vector<float>& left, int64_t from) {
+  const float peak = Loudest(left, from, static_cast<int64_t>(left.size()));
+  return FirstAbove(left, kRelativeOnset * peak, from);
+}
+
 void CheckOnsetsMatch(
     const std::vector<Stem>& stems,
     int64_t burst_after_seek,
-    const char* label
+    const char* label,
+    int64_t from = 0
 ) {
-  const int64_t a =
-      FirstAbove(RenderAlone(stems, 0, burst_after_seek), kOnsetThreshold);
-  const int64_t b =
-      FirstAbove(RenderAlone(stems, 1, burst_after_seek), kOnsetThreshold);
+  const int64_t a = OnsetAfter(RenderAlone(stems, 0, burst_after_seek), from);
+  const int64_t b = OnsetAfter(RenderAlone(stems, 1, burst_after_seek), from);
   std::printf(
       "mixer_verify: %s onsets %lld / %lld, expected %lld\n",
       label,
@@ -110,12 +117,16 @@ void TestSilencePathKeepsOnset() {
   const int64_t burst = kSeekTo + kSilentLead;
   const std::vector<float> bed =
       ToneFixture({.frames = kSongFrames, .burst_at = burst, .bed = true});
-  const std::vector<float> silent =
+  std::vector<float> silent =
       ToneFixture({.frames = kSongFrames, .burst_at = burst});
+  const std::vector<float> lead =
+      ToneFixture({.frames = burst - kSilenceFrames, .steady_hz = kHighHz});
+  std::copy(lead.begin(), lead.end(), silent.begin());
   CheckOnsetsMatch(
       {{bed, 0.0f}, {silent, kKeyB}},
       kSilentLead,
-      "silence: a transient after 1 s of digital silence keeps its frame"
+      "silence: audio, 0.6 s of digital silence, then a transient on time",
+      OutputFramesFor(kSilentLead - kSilenceFrames + kToneTailFrames, kSpeed)
   );
 }
 
