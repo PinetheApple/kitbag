@@ -729,3 +729,11 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   Android 13 to 15 stop calling `onBackPressed()` once an app opts in (Android's documented
   behaviour, not read in source): Back would skip every `BackHandler` handler and leave the
   app. **[recorded]**
+
+- **2026-11-02 · Back on the practice summary saves the session (§5.7, #85)** — Back,
+  a downward drag past the dismiss threshold and a tap outside the sheet all save the
+  session, as the non-destructive default; Discard stays an explicit button. The sheet
+  takes all three through one dismiss path. The save is idempotent per session, so a
+  second Back during a save writes nothing more. A failed save leaves the summary pending
+  and on screen with "Try again". This replaces the earlier choice that dismissing kept
+  the summary pending for the next visit. **[coord]**

@@ -19,6 +19,11 @@ export type SummarySheet = 'summary' | 'none';
 
 export type SaveState = 'idle' | 'saving' | 'failed';
 
+export interface SaveAttempt {
+  readonly uuid: string;
+  readonly state: Exclude<SaveState, 'idle'>;
+}
+
 export interface SummaryButtons {
   readonly saveLabel: string;
   readonly saveDisabled: boolean;
@@ -39,6 +44,27 @@ export function leavePractice(
 ): void {
   const { running, resetPractice } = metronome.getState();
   if (!running) endPractice(sessions, resetPractice);
+}
+
+export function savePendingPractice(
+  sessions: PracticeSessions,
+  onAttempt: (attempt: SaveAttempt | null) => void,
+): void {
+  const summary = sessions.getState().pending[0];
+  if (summary === undefined) return;
+  const { uuid } = summary;
+  onAttempt({ uuid, state: 'saving' });
+  sessions
+    .getState()
+    .saveSession()
+    .then(
+      () => {
+        onAttempt(null);
+      },
+      () => {
+        onAttempt({ uuid, state: 'failed' });
+      },
+    );
 }
 
 export function summarySheetOnMount(
