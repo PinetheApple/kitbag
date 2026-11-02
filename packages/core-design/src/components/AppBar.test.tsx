@@ -2,7 +2,13 @@ import type { ReactElement, ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
-import { iconSizes, screenBar, space } from '../roles.ts';
+import {
+  appBarTitleMinSize,
+  iconSizes,
+  screenBar,
+  space,
+  textRoles,
+} from '../roles.ts';
 import { ThemeProvider } from '../ThemeProvider.tsx';
 import { minTouchTargetDp, type ThemeMode } from '../tokens.ts';
 
@@ -10,8 +16,12 @@ interface HostProps {
   readonly style?: unknown;
   readonly accessibilityRole?: string;
   readonly accessibilityLabel?: string;
+  readonly numberOfLines?: number;
+  readonly minimumFontScale?: number;
   readonly children?: ReactNode;
 }
+
+const screen = vi.hoisted(() => ({ fontScale: 1 }));
 
 vi.mock('react-native', async (importOriginal) => {
   const rn = await importOriginal<typeof import('react-native')>();
@@ -20,6 +30,8 @@ vi.mock('react-native', async (importOriginal) => {
       style,
       accessibilityRole,
       accessibilityLabel,
+      numberOfLines,
+      minimumFontScale,
       children,
     }: HostProps) {
       return (
@@ -28,6 +40,8 @@ vi.mock('react-native', async (importOriginal) => {
             kind,
             role: accessibilityRole,
             label: accessibilityLabel,
+            lines: numberOfLines,
+            minScale: minimumFontScale,
             style: rn.StyleSheet.flatten(style as never),
           })}
         >
@@ -40,6 +54,10 @@ vi.mock('react-native', async (importOriginal) => {
     View: host('view'),
     Pressable: host('press'),
     Text: host('text'),
+    useWindowDimensions: () => ({
+      ...rn.useWindowDimensions(),
+      fontScale: screen.fontScale,
+    }),
   };
 });
 
@@ -59,6 +77,8 @@ interface Node {
   readonly role?: string;
   readonly label?: string;
   readonly px?: number;
+  readonly lines?: number;
+  readonly minScale?: number;
   readonly style?: Readonly<Record<string, unknown>>;
   readonly at: number;
 }
@@ -147,6 +167,28 @@ describe('AppBar', () => {
   it('puts the title in the bar as its header', () => {
     const markup = render(<AppBar title="Calibrate latency" onBack={noop} />);
     expect(header(markup)).toBe('Calibrate latency');
+  });
+
+  it.each([
+    [1, appBarTitleMinSize / textRoles.appBarTitle.size],
+    [2, 0.5],
+  ])('shrinks the title at font scale %d no further than %d', (scale, min) => {
+    screen.fontScale = scale;
+    const markup = render(<AppBar title="Metronome" onBack={noop} />);
+    screen.fontScale = 1;
+    const title = nodes(markup).find((n) => n.kind === 'text');
+    expect(title).toMatchObject({ lines: 1, minScale: min });
+  });
+
+  it('never shrinks the title below its design size once text is grown', () => {
+    const scale = 1.1;
+    screen.fontScale = scale;
+    const markup = render(<AppBar title="Metronome" onBack={noop} />);
+    screen.fontScale = 1;
+    const title = nodes(markup).find((n) => n.kind === 'text');
+    expect((title?.minScale ?? 0) * scale).toBeGreaterThanOrEqual(
+      1 - Number.EPSILON,
+    );
   });
 
   it('shows a subtitle under the title', () => {

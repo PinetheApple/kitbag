@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Text, useWindowDimensions, View } from 'react-native';
 
 import type { IconName } from '../icons.ts';
 import {
@@ -10,6 +10,7 @@ import {
   textRoles,
   type IconSize,
 } from '../roles.ts';
+import { grownTextScale, isTextScaled } from '../textScale.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import type { ColorToken } from '../tokens.ts';
@@ -17,6 +18,13 @@ import { useTextIconScale } from '../useTextIconScale.ts';
 import { Icon } from './Icon.tsx';
 
 const TITLE_MIN_SCALE = appBarTitleMinSize / textRoles.appBarTitle.size;
+
+// Android applies minimumFontScale to the already-scaled size.
+function titleMinScale(fontScale: number): number {
+  return isTextScaled(fontScale)
+    ? 1 / grownTextScale(fontScale)
+    : TITLE_MIN_SCALE;
+}
 
 const useStyles = createThemedStyles((theme) => ({
   bar: {
@@ -134,6 +142,7 @@ interface HeadingProps {
 
 function Heading({ title, subtitle, wordmark }: HeadingProps) {
   const styles = useStyles();
+  const { fontScale } = useWindowDimensions();
   return (
     <View style={styles.heading} accessibilityRole="header" accessible>
       <Text
@@ -141,7 +150,7 @@ function Heading({ title, subtitle, wordmark }: HeadingProps) {
         numberOfLines={1}
         ellipsizeMode="tail"
         adjustsFontSizeToFit
-        minimumFontScale={TITLE_MIN_SCALE}
+        minimumFontScale={titleMinScale(fontScale)}
       >
         {title}
       </Text>
