@@ -17,11 +17,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import {
-  statusRowHeight,
-  statusStackHeight,
-  statusTextLines,
-} from '../logic/belowTempo.ts';
+import { statusStackHeight, statusTextLines } from '../logic/belowTempo.ts';
 import { rampProgressFill, rampTrackShown } from '../logic/rampProgress.ts';
 import {
   afterCountInSummary,
@@ -40,6 +36,7 @@ import { MuteStatus } from './MuteStatus.tsx';
 import { countInInk, useStatusStyles } from './statusStyles.ts';
 import { StatusVariant } from './StatusVariant.tsx';
 import type { MetronomeFrameValues } from './useMetronomeFrame.ts';
+import { useStatusRowFrame } from './useStatusRowFrame.ts';
 
 export type StatusFrame = Pick<
   MetronomeFrameValues,
@@ -182,7 +179,8 @@ function AfterCountInStatus({
   readonly summary: string;
 }) {
   const styles = useStatusStyles();
-  const lines = statusTextLines(useWindowDimensions().fontScale);
+  const { fontScale } = useWindowDimensions();
+  const lines = statusTextLines(fontScale);
   return (
     <StatusVariant
       rows={rows}
@@ -193,7 +191,11 @@ function AfterCountInStatus({
       <Icon name="practiceTools" size="statusLive" color="text2" />
       <Text style={[styles.lead, styles.afterCountInText]}>Then</Text>
       <Text
-        style={[styles.meta, styles.pushRight, styles.shrink]}
+        style={[
+          styles.meta,
+          styles.pushRight,
+          isTextScaled(fontScale) && styles.shrink,
+        ]}
         numberOfLines={lines}
       >
         {summary}
@@ -229,10 +231,7 @@ export function StatusStack({ frame, settings, running }: StatusStackProps) {
     () => ({ height: statusStackHeight(running, fontScale) }),
     [running, fontScale],
   );
-  const restRow = useMemo(
-    () => ({ height: statusRowHeight(fontScale) }),
-    [fontScale],
-  );
+  const restRow = useStatusRowFrame();
   return (
     <View
       style={stack}

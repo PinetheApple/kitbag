@@ -1,5 +1,5 @@
 import { isTextScaled } from '@kitbag/core-design';
-import { useMemo, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import {
   useWindowDimensions,
   type StyleProp,
@@ -10,7 +10,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import { statusRowHeight, statusRowPitch } from '../logic/belowTempo.ts';
+import { statusRowPitch } from '../logic/belowTempo.ts';
 import {
   NO_SLOT,
   rowSlot,
@@ -18,6 +18,7 @@ import {
   type StatusRows,
 } from '../logic/statusRows.ts';
 import { useStatusStyles } from './statusStyles.ts';
+import { useStatusRowFrame } from './useStatusRowFrame.ts';
 
 interface StatusVariantProps {
   readonly rows: SharedValue<StatusRows>;
@@ -37,10 +38,7 @@ export function StatusVariant({
   const styles = useStatusStyles();
   const { fontScale } = useWindowDimensions();
   const pitch = statusRowPitch(fontScale);
-  const frame = useMemo(
-    () => ({ height: statusRowHeight(fontScale) }),
-    [fontScale],
-  );
+  const frame = useStatusRowFrame();
   const wraps = wrapsWhenScaled && isTextScaled(fontScale);
   const placed = useAnimatedStyle(() => {
     const slot = rowSlot(rows.value, shown);

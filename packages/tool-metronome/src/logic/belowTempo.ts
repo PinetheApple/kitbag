@@ -47,7 +47,8 @@ export const BEAT_LABEL_HEIGHT =
 
 const LIVE_STATUS_ROWS = 2;
 const STATUS_LINES = 1;
-// A row grown by the font scale holds two lines of text grown by the same scale.
+// statusRow (40 dp) fits two lines of 1x status text, so a row and text grown by one
+// scale still fit two. Reasoned from the row height, not measured.
 const SCALED_STATUS_LINES = 2;
 
 export function statusRowHeight(fontScale: number): number {
