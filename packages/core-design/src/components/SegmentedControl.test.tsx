@@ -3,7 +3,9 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { describe, expect, it, vi } from 'vitest';
 
+import { space } from '../roles.ts';
 import { ThemeProvider } from '../ThemeProvider.tsx';
+import { minTouchTargetDp } from '../tokens.ts';
 import {
   SegmentedControl,
   type SegmentedControlSize,
@@ -41,9 +43,8 @@ const OPTIONS = [
   { value: 'distinct', label: 'Distinct' },
 ] as const;
 
-const SIZES: readonly SegmentedControlSize[] = [
-  'default',
-  'large',
+const FLEX_SIZES: readonly SegmentedControlSize[] = ['default', 'large'];
+const CONTENT_SIZES: readonly SegmentedControlSize[] = [
   'inline',
   'editRow',
   'row',
@@ -53,7 +54,12 @@ function flat(props: Props | undefined): ViewStyle {
   return StyleSheet.flatten(props?.style as StyleProp<ViewStyle>);
 }
 
-function renderAt(fontScale: number, size: SegmentedControlSize, fill = true) {
+function renderAt(
+  fontScale: number,
+  size: SegmentedControlSize,
+  fill = true,
+  neighbourGapDp: number = space.segmentInset,
+) {
   display.fontScale = fontScale;
   rendered.track.length = 0;
   rendered.options.length = 0;
@@ -62,6 +68,7 @@ function renderAt(fontScale: number, size: SegmentedControlSize, fill = true) {
       <SegmentedControl
         size={size}
         fill={fill}
+        neighbourGapDp={neighbourGapDp}
         accessibilityLabel="Count-in sound"
         options={OPTIONS}
         selected="same"
@@ -72,6 +79,9 @@ function renderAt(fontScale: number, size: SegmentedControlSize, fill = true) {
   return {
     track: flat(rendered.track[0]),
     options: rendered.options.map(flat),
+    faces: rendered.options.map((option) =>
+      flat((option.children as { props: Props }).props),
+    ),
   };
 }
 
@@ -82,8 +92,8 @@ describe('SegmentedControl under font scale', () => {
     for (const option of options) expect(option.flex).toBe(1);
   });
 
-  it('never shrinks an option below its label once the text grows', () => {
-    for (const size of SIZES) {
+  it('never shrinks a flex option below its label once the text grows', () => {
+    for (const size of FLEX_SIZES) {
       for (const fill of [true, false]) {
         const { options } = renderAt(2, size, fill);
         for (const option of options) {
@@ -94,10 +104,28 @@ describe('SegmentedControl under font scale', () => {
     }
   });
 
+  it('leaves content-sized options to the platform default of no shrink', () => {
+    for (const size of CONTENT_SIZES) {
+      for (const option of renderAt(2, size).options) {
+        expect(option.flex).toBeUndefined();
+        expect(option.flexShrink).toBeUndefined();
+      }
+    }
+  });
+
   it('wraps options onto further rows inside the track once the text grows', () => {
-    for (const size of SIZES) {
+    for (const size of [...FLEX_SIZES, ...CONTENT_SIZES]) {
       expect(renderAt(2, size).track.flexWrap).toBe('wrap');
     }
+  });
+
+  it('gives a single row of large options the minimum target', () => {
+    const { options, faces } = renderAt(2, 'large', true, space.controlGap);
+    options.forEach((option, i) => {
+      const face = Number(faces[i]?.minHeight);
+      const reach = Number(option.paddingTop) + Number(option.paddingBottom);
+      expect(face + reach).toBeGreaterThanOrEqual(minTouchTargetDp);
+    });
   });
 
   it('lets a filling track shrink to its line so its options wrap', () => {

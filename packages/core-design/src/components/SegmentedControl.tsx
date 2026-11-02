@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View, type LayoutChangeEvent } from 'react-native';
 
 import { homeArrange, homeArrangeText } from '../homeArrangeRoles.ts';
@@ -10,60 +10,25 @@ import {
   space,
   textRoles,
 } from '../roles.ts';
+import {
+  INLINE_LINE_HEIGHT,
+  segmentHitBox,
+  wrappedRowGap,
+  type SegmentedControlSize,
+} from '../segmentHitBox.ts';
 import { equalOptionMinWidth, type OptionMinWidth } from '../segmentWidth.ts';
-import { growFromContent, growFromLabel } from '../textScale.ts';
+import { growNeverShrink, growShrinkToLine } from '../textScale.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
+import { neighbourGaps, type NeighbourGaps } from '../touchTarget.ts';
 import { useTextScaled } from '../useTextScaled.ts';
-import {
-  hitBoxStyle,
-  hitExtension,
-  neighbourGaps,
-  unshared,
-  type NeighbourGaps,
-} from '../touchTarget.ts';
 
-// In a track, an option's edge sits inside the inset and border, a strip that
-// is the option's alone.
-const TRACK_EDGE = space.segmentInset + size.stroke;
-const ROW_TRACK_EDGE = homeArrange.segmentInset + size.stroke;
-const OPTION_HEIGHT = textRoles.segment.size + inset.segmentOptionV * 2;
-const INLINE_LINE_HEIGHT = textRoles.segment.size * bodyLineHeight;
-// Wrapped options may have another row of options above or below.
-const WRAPPED_LINE_GAPS = {
-  top: space.segmentInset,
-  bottom: space.segmentInset,
-};
+export type { SegmentedControlSize } from '../segmentHitBox.ts';
 
-export type SegmentedControlSize =
-  'default' | 'large' | 'inline' | 'editRow' | 'row';
-
-const OPTION_HEIGHTS: Readonly<Record<SegmentedControlSize, number>> = {
-  default: OPTION_HEIGHT,
-  large: size.segmentLargeOption,
-  inline: INLINE_LINE_HEIGHT + inset.segmentOptionV * 2,
-  editRow: size.segmentEditRowOption,
-  row:
-    homeArrangeText.segment.size * bodyLineHeight +
-    homeArrange.segmentOptionV * 2,
-};
-
-// Option widths are flex, so only the vertical axis is grown to 48dp; sideways
-// every option takes the same half of the gap between options, which keeps
-// their visible widths equal.
-function optionHitBox(gaps: NeighbourGaps, edge: number, height: number) {
-  const vertical = hitExtension(height, height, {
-    top: unshared(edge) + (gaps.top ?? Number.POSITIVE_INFINITY),
-    bottom: unshared(edge) + (gaps.bottom ?? Number.POSITIVE_INFINITY),
-  });
-  const side = space.segmentInset / 2;
-  return hitBoxStyle({
-    top: vertical.top,
-    bottom: vertical.bottom,
-    left: side,
-    right: side,
-  });
-}
+type LineTopReport<T extends string> = (
+  value: T,
+  lineTop: number | undefined,
+) => void;
 
 export interface SegmentOption<T extends string> {
   readonly value: T;
@@ -96,7 +61,8 @@ interface SegmentProps<T extends string> {
   readonly onLabelWidth: (value: T, width: number) => void;
   readonly row: boolean;
   readonly byLabel: boolean;
-  readonly hitBox: ReturnType<typeof optionHitBox>;
+  readonly hitBox: ReturnType<typeof segmentHitBox>;
+  readonly onLineTop: LineTopReport<T> | undefined;
   readonly onSelect: (value: T) => void;
 }
 
@@ -120,11 +86,8 @@ const useStyles = createThemedStyles((theme) => ({
   optionHit: {
     flex: 1,
   },
-  byLabel: growFromLabel,
-  fillByLabel: growFromContent,
-  wraps: {
-    flexWrap: 'wrap',
-  },
+  byLabel: growNeverShrink,
+  fillByLabel: growShrinkToLine,
   option: {
     alignItems: 'center',
     paddingVertical: inset.segmentOptionV,
@@ -187,6 +150,7 @@ function Segment<T extends string>({
   row,
   byLabel,
   hitBox,
+  onLineTop,
   onSelect,
 }: SegmentProps<T>) {
   const styles = useStyles();
@@ -198,6 +162,21 @@ function Segment<T extends string>({
       onLabelWidth(option.value, event.nativeEvent.layout.width);
     },
     [onLabelWidth, option.value],
+  );
+  const handleLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      onLineTop?.(
+        option.value,
+        Math.round(event.nativeEvent.layout.y + hitBox.paddingTop),
+      );
+    },
+    [onLineTop, option.value, hitBox.paddingTop],
+  );
+  useEffect(
+    () => () => {
+      onLineTop?.(option.value, undefined);
+    },
+    [onLineTop, option.value],
   );
 
   return (
@@ -213,6 +192,7 @@ function Segment<T extends string>({
           (byLabel ? styles.byLabel : styles.optionHit),
         hitBox,
       ]}
+      onLayout={onLineTop === undefined ? undefined : handleLayout}
       onPress={handlePress}
     >
       <View
@@ -275,11 +255,29 @@ export function SegmentedControl<T extends string>({
       ? equalOptionMinWidth(measured, inset.segmentEditRowOptionH)
       : undefined;
   const row = controlSize === 'row';
-  const trackEdge = row ? ROW_TRACK_EDGE : TRACK_EDGE;
-  const hitBox = optionHitBox(
-    byLabel ? WRAPPED_LINE_GAPS : neighbourGaps(neighbourGapDp),
-    compact || byLabel ? 0 : trackEdge,
-    OPTION_HEIGHTS[controlSize],
+  const [lineTops, setLineTops] = useState<Partial<Record<T, number>>>({});
+  const handleLineTop = useCallback((value: T, lineTop: number | undefined) => {
+    setLineTops((prev) =>
+      prev[value] === lineTop ? prev : { ...prev, [value]: lineTop },
+    );
+  }, []);
+  const tops = options.flatMap((option) => {
+    const top = lineTops[option.value];
+    return top === undefined ? [] : [top];
+  });
+  const outer = neighbourGaps(neighbourGapDp);
+  const hitBoxFor = (value: T) =>
+    segmentHitBox({
+      controlSize,
+      compact,
+      outer,
+      wrapped: byLabel
+        ? { lineTop: lineTops[value], lineTops: tops }
+        : undefined,
+    });
+  const wraps = useMemo(
+    () => ({ flexWrap: 'wrap' as const, rowGap: wrappedRowGap(controlSize) }),
+    [controlSize],
   );
   return (
     <View
@@ -290,7 +288,7 @@ export function SegmentedControl<T extends string>({
         large && !compact && styles.largeTrack,
         row && !compact && styles.rowTrack,
         fill && (byLabel ? styles.fillByLabel : styles.fill),
-        byLabel && styles.wraps,
+        byLabel && wraps,
       ]}
     >
       {options.map((option) => (
@@ -306,7 +304,8 @@ export function SegmentedControl<T extends string>({
           onLabelWidth={handleLabelWidth}
           row={row}
           byLabel={byLabel}
-          hitBox={hitBox}
+          hitBox={hitBoxFor(option.value)}
+          onLineTop={byLabel ? handleLineTop : undefined}
           onSelect={onSelect}
         />
       ))}

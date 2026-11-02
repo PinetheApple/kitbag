@@ -10,11 +10,17 @@ type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
 const display = vi.hoisted(() => ({ fontScale: 1 }));
 const items = vi.hoisted(() => [] as Props[]);
+const groups = vi.hoisted(() => [] as Props[]);
 
 vi.mock('react-native', async (original) => {
   const actual = await original<Record<string, unknown>>();
+  const View = actual.View as (props: Props) => ReactNode;
   return {
     ...actual,
+    View: (props: Props) => {
+      if (props.accessibilityRole === 'radiogroup') groups.push(props);
+      return createElement(View, props);
+    },
     useWindowDimensions: () => ({ fontScale: display.fontScale }),
     Pressable: (props: Props) => {
       items.push(props);
@@ -33,6 +39,7 @@ const OPTIONS = ['Beep', 'Woodblock', 'Click', 'Tom'].map((label) => ({
 function itemStylesAt(fontScale: number): ViewStyle[] {
   display.fontScale = fontScale;
   items.length = 0;
+  groups.length = 0;
   renderToStaticMarkup(
     <ThemeProvider mode="dark">
       <PickerGrid
@@ -58,5 +65,11 @@ describe('PickerGrid under font scale', () => {
       expect(style.flex).toBeUndefined();
       expect(style.flexShrink ?? 0).toBe(0);
     }
+  });
+
+  it('wraps items onto further rows once the text grows', () => {
+    itemStylesAt(2);
+    const group = StyleSheet.flatten(groups[0]?.style as StyleProp<ViewStyle>);
+    expect(group.flexWrap).toBe('wrap');
   });
 });

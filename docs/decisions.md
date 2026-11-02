@@ -750,8 +750,12 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   scrolling the body (coordinator call, 2026-11-02, open to owner review). Above the default scale
   a segmented control's options and the sound picker's items take their label's width
   and never shrink below it, since Android wraps a squeezed label mid-word; what does
-  not fit on one line wraps onto further rows inside the track or grid. A track wider
-  than its row takes a line of its own and shrinks to it. At 1.0 the options stay equal
+  not fit on one line wraps onto further rows inside the track or grid. A `fill` track
+  wider than its row takes a line of its own and shrinks to it; a track without `fill`
+  takes the width its parent gives it. Wrapped rows of options sit far enough apart that
+  an option on a row between two others reaches a 48 dp touch target from the gaps alone,
+  so a wrapped track is taller than its options; the first and last rows reach into the
+  track edge and the neighbour gap as a single row does. At 1.0 the options stay equal
   widths and the picker keeps its columns. A stepper's value-to-suffix gap grows with
   the font scale. The click volume row lets its slider and readout drop below the label
   above the default scale rather than wrapping them beside it. Library and

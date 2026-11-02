@@ -4,7 +4,7 @@ import { Pressable, Text, View } from 'react-native';
 import { pickerRows } from '../pickerRows.ts';
 import { inset, radius, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
-import { growFromLabel } from '../textScale.ts';
+import { growNeverShrink } from '../textScale.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
 import { useTextScaled } from '../useTextScaled.ts';
@@ -50,7 +50,7 @@ const useStyles = createThemedStyles((theme) => ({
     flex: 1,
     minWidth: 0,
   },
-  byLabel: growFromLabel,
+  byLabel: growNeverShrink,
   item: {
     minHeight: minTouchTargetDp,
     alignItems: 'center',
@@ -115,48 +115,34 @@ export function PickerGrid<T extends string>({
 }: PickerGridProps<T>) {
   const styles = useStyles();
   const byLabel = useTextScaled();
-  if (byLabel) {
-    return (
-      <View
-        accessibilityRole="radiogroup"
-        accessibilityLabel={accessibilityLabel}
-        style={styles.flow}
-      >
-        {options.map((option) => (
-          <PickerItem
-            key={option.value}
-            option={option}
-            selected={option.value === selected}
-            byLabel
-            onSelect={onSelect}
-          />
-        ))}
-      </View>
-    );
-  }
+  const item = (option: PickerOption<T>) => (
+    <PickerItem
+      key={option.value}
+      option={option}
+      selected={option.value === selected}
+      byLabel={byLabel}
+      onSelect={onSelect}
+    />
+  );
   return (
     <View
       accessibilityRole="radiogroup"
       accessibilityLabel={accessibilityLabel}
-      style={styles.grid}
+      style={byLabel ? styles.flow : styles.grid}
     >
-      {pickerRows(options, columns).map((row, r) => (
-        <View key={r} style={styles.row}>
-          {row.map((option, c) =>
-            option === undefined ? (
-              <View key={`empty-${String(c)}`} style={styles.cell} />
-            ) : (
-              <PickerItem
-                key={option.value}
-                option={option}
-                selected={option.value === selected}
-                byLabel={false}
-                onSelect={onSelect}
-              />
-            ),
-          )}
-        </View>
-      ))}
+      {byLabel
+        ? options.map(item)
+        : pickerRows(options, columns).map((row, r) => (
+            <View key={r} style={styles.row}>
+              {row.map((option, c) =>
+                option === undefined ? (
+                  <View key={`empty-${String(c)}`} style={styles.cell} />
+                ) : (
+                  item(option)
+                ),
+              )}
+            </View>
+          ))}
     </View>
   );
 }
