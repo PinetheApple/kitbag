@@ -770,3 +770,19 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   bundle is memory-mapped). Compressing them was declined; the cut taken is the 17
   unused font files. Breakdown: [#49 comment](https://github.com/PinetheApple/kitbag/issues/49#issuecomment-6575336455).
   **[owner]**
+
+- **2026-11-02 · Per-release F-Droid changelogs (§13.8, #61)** — Each release writes
+  `metadata/en-US/changelogs/<versionCode>.txt` from the ```` ```release-note ```` block
+  every PR body carries (one user-facing line, or `NONE`). The release job commits it
+  as the bot on a commit off `main` and pushes only the tag; nothing is pushed to
+  `main`. F-Droid reads metadata from the tagged commit, so the file must be in it.
+  Pushing to `main` instead would need a ruleset bypass for the release job and
+  possibly a new credential; tagging off `main` needs neither. `version.sh` works
+  unchanged through plain reachability; only `changelog.sh`'s full regeneration
+  re-tags each release at its parent on `main`. **[owner]**
+
+- **2026-11-02 · The `Release note` check is required on `main` (#61)** — A PR merges
+  only with a ```` ```release-note ```` block holding a user-facing line or `NONE`; the
+  coordinator adds the check to the `main` ruleset at merge. PRs opened by a bot
+  (author type `Bot` or a `[bot]` login) pass as `NONE`, so dependency updates never
+  block on a note. **[owner]**
