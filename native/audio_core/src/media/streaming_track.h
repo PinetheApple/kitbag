@@ -9,6 +9,7 @@
 #include "media/audio_source.h"
 #include "media/loop_layout.h"
 #include "rt/rt_publisher.h"
+#include "rt/spsc_bulk_ring.h"
 
 namespace kitbag {
 
@@ -55,6 +56,12 @@ class StreamingTrack {
   /// the kMaxReadAheadFrames clamp, and primes that much more.
   void ReservePreRollFrames(uint32_t frames) {
     preroll_frames_ = frames;
+  }
+  /// The ring a source built now gets, after power-of-two rounding.
+  uint64_t ring_frames() const {
+    return SpscBulkRing<float>::RoundedCapacity(
+        static_cast<size_t>(read_ahead_frames_) + preroll_frames_
+    );
   }
 
   /// Load a file, streamed from disk from stream frame [frame]. [now_frame] and

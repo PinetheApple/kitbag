@@ -8,7 +8,7 @@
 namespace kitbag {
 
 float Mixer::ClampRate(float rate) {
-  return std::isnan(rate) ? kMaxRate : std::clamp(rate, kMinRate, kMaxRate);
+  return std::isnan(rate) ? kUnityRate : std::clamp(rate, kMinRate, kMaxRate);
 }
 
 int Mixer::ClampPitch(float semitones) {
@@ -22,7 +22,7 @@ int Mixer::ClampPitch(float semitones) {
 }
 
 bool Mixer::WantsStretch() const {
-  if (app_rate_ != kMaxRate) return true;
+  if (app_rate_ != kUnityRate) return true;
   const int count = track_count_.load(std::memory_order_relaxed);
   for (int t = 0; t < count; ++t) {
     if (tracks_[t].stream->ready() && app_pitch_[t] != 0) return true;
@@ -40,7 +40,6 @@ void Mixer::PublishBus(int slot, uint64_t now_frame, bool engine_running) {
   );
 }
 
-// Returns true when live buses were replaced, which needs a re-prime.
 bool Mixer::MatchBusConfig(int live, uint64_t now_frame, bool engine_running) {
   const bool vendor = live > TimeStretch::kMaxChosenConfigInstances;
   if (vendor == app_vendor_default_) return false;
@@ -100,24 +99,20 @@ void Mixer::MarkUsedBuses(bool* used) const {
   }
 }
 
-// Returns true when the remaining buses changed config.
 bool Mixer::FreeUnusedBuses(uint64_t now_frame, bool engine_running) {
   bool used[kKeyBusCount] = {};
   MarkUsedBuses(used);
-  int live = 0;
   for (int s = 0; s < kKeyBusCount; ++s) {
-    if (used[s] || buses_[s].Get() == nullptr) {
-      live += buses_[s].Get() != nullptr ? 1 : 0;
-      continue;
+    if (!used[s] && buses_[s].Get() != nullptr) {
+      buses_[s].Publish(nullptr, now_frame, engine_running);
     }
-    buses_[s].Publish(nullptr, now_frame, engine_running);
   }
-  return MatchBusConfig(live, now_frame, engine_running);
+  return MatchBusConfig(key_bus_count(), now_frame, engine_running);
 }
 
 void Mixer::SetRate(float rate, uint64_t now_frame, bool engine_running) {
   const float clamped = ClampRate(rate);
-  if (clamped != kMaxRate) EngageBuses({}, now_frame, engine_running);
+  if (clamped != kUnityRate) EngageBuses({}, now_frame, engine_running);
   Command command{CommandType::kSetRate};
   command.fvalue = clamped;
   if (Enqueue(command)) app_rate_ = clamped;

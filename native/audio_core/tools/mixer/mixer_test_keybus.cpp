@@ -7,7 +7,7 @@ constexpr float kSpeed = 0.75f;
 constexpr float kKeyA = 3.0f;
 constexpr float kKeyB = 1.0f;
 constexpr float kKeyMove = 2.0f;
-constexpr int64_t kSongFrames = 4 * kSampleRate;
+constexpr int64_t kSongFrames = int64_t{4} * kSampleRate;
 constexpr int64_t kSeekTo = kSampleRate / 2 + 7;
 constexpr int64_t kBurstAfterSeek = 40011;
 constexpr int64_t kSilentLead = kSampleRate + 11;
@@ -222,7 +222,7 @@ void TestEndOfSongDrains() {
   CheckNear(
       static_cast<int64_t>(left.size()),
       OutputFramesFor(kDrainSeekBack, kSpeed),
-      2 * kBlock,
+      int64_t{2} * kBlock,
       "end: auto-stop fires at the audible end, not the fed end"
   );
   CheckStoppedAtEnd(mixer);

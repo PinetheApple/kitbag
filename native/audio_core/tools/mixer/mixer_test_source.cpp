@@ -2,12 +2,10 @@
 // drains. These prove the mixer consumes the source in bounded chunks rather
 // than holding the whole decoded song, and that the drain delivers its samples.
 #include <atomic>
-#include <bit>
 #include <vector>
 
 #include "media/audio_source.h"
 #include "mixer_test_support.h"
-#include "stretch/time_stretch.h"
 
 namespace mixer_test {
 namespace {
@@ -61,15 +59,6 @@ class CountingRampReader : public kitbag::SourceReader {
   uint64_t pos_ = 0;
 };
 
-uint64_t RingFrames() {
-  const kitbag::StretchConfig stretch =
-      kitbag::TimeStretch::DefaultConfig(kSampleRate);
-  return std::bit_ceil<uint64_t>(
-      kitbag::AudioSource::kDefaultRingFrames + stretch.block_frames +
-      stretch.interval_frames
-  );
-}
-
 // The whole point of A1: memory is O(tracks), not O(duration). A 60000-frame
 // song is far longer than the ring, so a mixer that buffered the whole thing
 // would report track_buffered() near 60000 rather than a ring's worth.
@@ -87,7 +76,7 @@ void TestStreamsRatherThanBuffersWholeSong() {
   );
   mixer.Play();
   Check(
-      mixer.track_buffered(0) <= RingFrames(),
+      mixer.track_buffered(0) <= mixer.ring_frames(),
       "source: buffering is bounded by the ring"
   );
   Check(

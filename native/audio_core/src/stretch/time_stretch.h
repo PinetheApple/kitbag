@@ -9,6 +9,10 @@ struct StretchConfig {
   int block_frames = 0;
   int interval_frames = 0;
   bool split_computation = false;
+
+  int PreRollFrames() const {
+    return block_frames + interval_frames;
+  }
 };
 
 // Interleaved time-stretch and pitch shift over Signalsmith Stretch. Configure

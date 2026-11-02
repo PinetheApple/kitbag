@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <cmath>
 #include <cstring>
 
 #include "media/equal_power.h"
@@ -17,10 +16,10 @@ void AddFrame(
 ) {
   if (bus == nullptr) return;
   StreamingTrack::AddToOutput(
-      scratch + frame * channels,
+      scratch + static_cast<size_t>(frame) * channels,
       channels,
       1,
-      bus->input.data() + frame * KeyBus::kChannels,
+      bus->input.data() + static_cast<size_t>(frame) * KeyBus::kChannels,
       gain
   );
 }
@@ -40,7 +39,7 @@ KeyBus* Mixer::AnyBus() const {
 }
 
 bool Mixer::RtWantsStretch() const {
-  if (rate_target_ != kMaxRate) return true;
+  if (rate_target_ != kUnityRate) return true;
   const int count = track_count_.load(std::memory_order_relaxed);
   for (int t = 0; t < count; ++t) {
     if (tracks_[t].stream->ready() &&
@@ -223,7 +222,7 @@ void Mixer::FeedBuses(uint32_t take, bool any_solo) {
       std::memset(
           bus->input.data(),
           0,
-          take * KeyBus::kChannels * sizeof(float)
+          static_cast<size_t>(take) * KeyBus::kChannels * sizeof(float)
       );
     }
   }
@@ -260,10 +259,10 @@ void Mixer::FeedTrack(Track& tr, uint32_t channels, uint32_t got, float gain) {
   }
   if (to == nullptr || gain <= 0.0f || f >= got) return;
   StreamingTrack::AddToOutput(
-      scratch_.data() + f * channels,
+      scratch_.data() + static_cast<size_t>(f) * channels,
       channels,
       got - f,
-      to->input.data() + f * KeyBus::kChannels,
+      to->input.data() + static_cast<size_t>(f) * KeyBus::kChannels,
       gain
   );
 }
@@ -321,15 +320,17 @@ void Mixer::BlendSeam(float* output, uint32_t frame_count) {
   }
 }
 
-uint32_t Mixer::AudibleFrames(int64_t first, uint32_t frame_count) const {
-  if (layout_.looping) return frame_count;
+bool Mixer::SongEndReached(int64_t out_frame) const {
+  if (layout_.looping) return false;
   const auto longest =
       static_cast<int64_t>(longest_frames_.load(std::memory_order_relaxed));
-  if (records_.AudibleAt(first + frame_count - 1) < longest) return frame_count;
+  return records_.AudibleAt(out_frame) >= longest;
+}
+
+uint32_t Mixer::AudibleFrames(int64_t first, uint32_t frame_count) const {
+  if (!SongEndReached(first + frame_count - 1)) return frame_count;
   uint32_t frames = 0;
-  while (frames < frame_count && records_.AudibleAt(first + frames) < longest) {
-    ++frames;
-  }
+  while (frames < frame_count && !SongEndReached(first + frames)) ++frames;
   return frames;
 }
 
@@ -358,9 +359,7 @@ void Mixer::AdvanceStretch(uint32_t take, uint32_t frame_count) {
 // Feeding runs past the end of the song so the pipeline drains; the transport
 // ends when the audible frame reaches it (SPEC.md §4.4).
 void Mixer::StretchBlock(float* output, uint32_t frame_count, bool any_solo) {
-  const auto longest =
-      static_cast<int64_t>(longest_frames_.load(std::memory_order_relaxed));
-  if (!layout_.looping && records_.AudibleAt(out_clock_) >= longest) {
+  if (SongEndReached(out_clock_)) {
     playing_.store(false, std::memory_order_relaxed);
     return;
   }

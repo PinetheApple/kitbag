@@ -24,6 +24,7 @@ class Mixer {
   static constexpr float kMaxGain = 2.0f;
   static constexpr double kLoopCrossfadeSeconds = 0.005;
   static constexpr int64_t kMinLoopCrossfades = 2;
+  static constexpr float kUnityRate = 1.0f;
   static constexpr float kMinRate = 0.5f;
   static constexpr float kMaxRate = 1.0f;
   static constexpr int kMinPitchSemitones = -6;
@@ -106,8 +107,8 @@ class Mixer {
     return crossfade_frames_;
   }
 
-  /// Speed (SPEC.md §7.6), clamped to [kMinRate, kMaxRate] in the drain. Off
-  /// 1.0 the key buses engage: the app thread configures them here.
+  /// Speed (SPEC.md §7.6), clamped to [kMinRate, kMaxRate]. Off unity the
+  /// key buses engage: the app thread configures them here.
   void SetRate(float rate, uint64_t now_frame, bool engine_running);
   /// Absolute key of one stem in whole semitones, clamped to
   /// [kMinPitchSemitones, kMaxPitchSemitones]. Configures its bus if needed.
@@ -128,8 +129,10 @@ class Mixer {
   int64_t fed_frames() const {
     return transport_frame_.load(std::memory_order_relaxed);
   }
-  /// App thread: key buses configured now.
+  /// App thread only.
   int key_bus_count() const;
+  /// Frames each track's read-ahead ring holds, stretch pre-roll included.
+  uint64_t ring_frames() const;
 
   /// Callback-published mirror. Reflects the state the callback drained, so it
   /// converges within one block once the device is running.
@@ -140,9 +143,7 @@ class Mixer {
     return read_frame_.load(std::memory_order_relaxed);
   }
 
-  /// Mixes active tracks into [output] — interleaved stereo float, [frame_count]
-  /// frames at engine rate. RT-safe: drains the command ring, acquire-loads each
-  /// published source, mixes into pre-sized scratch. Allocates nothing, takes no
+  /// Interleaved stereo at engine rate. RT-safe: allocates nothing, takes no
   /// lock, frees nothing.
   void Process(float* output, uint32_t frame_count);
   /// Realtime, on the Process thread: the transport of the last block mixed.
@@ -156,8 +157,7 @@ class Mixer {
   int active_track_count() const {
     return track_count_.load(std::memory_order_relaxed);
   }
-  /// Commands dropped because the ring was full since construction. A diagnostic;
-  /// a healthy caller never overflows a 64-deep ring between blocks.
+  /// Commands dropped because the ring was full since construction.
   uint64_t dropped_commands() const {
     return dropped_commands_;
   }
@@ -165,23 +165,18 @@ class Mixer {
   /// Frames buffered ahead in a track's source. A readiness probe for priming;
   /// never called from the audio callback.
   uint64_t track_buffered(int track) const;
-  /// Realtime-safe sibling of track_buffered: reads the buffered count through
-  /// the published node (acquire load) only, so the render thread may poll it.
-  /// Exists so a concurrent test can observe a ring the callback drains (#25).
+  /// Realtime-safe sibling of track_buffered, so a concurrent test can observe
+  /// a ring the callback drains (#25).
   uint64_t rt_track_buffered(int track) const;
-  /// True once a track's source has delivered its last frame, or it has no
-  /// source at all.
+  /// True once a track's source has delivered its last frame, or has none.
   bool track_at_end(int track) const;
 
-  /// App thread, callback quiescent. Frees every source retired but not yet
-  /// reclaimed.
+  /// App thread, callback quiescent. Frees every retired source now.
   void ReleaseRetiredSources();
 
  private:
-  /// App-thread-facing per-track handle. `stream` owns the streaming transport
-  /// and the two app→RT disciplines; the gain/mute/solo mirrors are written only
-  /// by the callback drain. `stream` is heap-held so the array is default-
-  /// constructible while StreamingTrack takes the engine rate at construction.
+  // The mirrors are written only by the callback drain. `stream` is heap-held
+  // so the array is default-constructible.
   struct Track {
     std::unique_ptr<StreamingTrack> stream;
     std::atomic<float> gain{1.0f};
@@ -315,19 +310,15 @@ class Mixer {
   void FeedTrack(Track& tr, uint32_t channels, uint32_t got, float gain);
   void FeedBuses(uint32_t take, bool any_solo);
   void RunBuses(float* output, uint32_t take, uint32_t frame_count);
+  bool SongEndReached(int64_t out_frame) const;
   uint32_t AudibleFrames(int64_t first, uint32_t frame_count) const;
   void AdvanceStretch(uint32_t take, uint32_t frame_count);
   void BlendSeam(float* output, uint32_t frame_count);
   void StretchBlock(float* output, uint32_t frame_count, bool any_solo);
 
   Track tracks_[kMaxTracks];
-  // Written by the load path, read every block by the callback (track_count_ in
-  // RecomputeAnySolo/MixAllTracks, longest_frames_ in AdvanceTransport). A load
-  // overlaps the callback during playback, so these are atomic (relaxed): on
-  // armv7 a plain uint64_t longest_frames_ could tear (#23). Relaxed is enough —
-  // no ordering rides on them: the source itself crosses via the publisher's
-  // release/acquire, and the callback tolerates track_count_ momentarily ahead of
-  // the published set (MixTrack drains nothing for a not-yet-published track).
+  // Written by the load path while the callback reads them; atomic so armv7
+  // cannot tear them (#23). Relaxed: the source crosses by the publisher.
   std::atomic<int> track_count_{0};
   std::atomic<uint64_t> longest_frames_{0};
   // Drain target, sized once at construction to kMaxBlockFrames * kMaxChannels
@@ -360,19 +351,19 @@ class Mixer {
   float sample_rate_;
   // App thread: what the callback will hold once the ring drains.
   int app_pitch_[kMaxTracks] = {};
-  float app_rate_ = kMaxRate;
+  float app_rate_ = kUnityRate;
   bool app_engaged_ = false;
   bool app_vendor_default_ = false;
   // Callback-owned stretch state.
-  float rate_target_ = kMaxRate;
-  float rate_ = kMaxRate;
+  float rate_target_ = kUnityRate;
+  float rate_ = kUnityRate;
   double carry_ = 0.0;
   int64_t out_clock_ = 0;
   bool bypass_continues_ = false;
   int64_t seam_left_ = 0;
   SongRecords records_;
   std::atomic<bool> engaged_{false};
-  std::atomic<float> rate_mirror_{kMaxRate};
+  std::atomic<float> rate_mirror_{kUnityRate};
   // App thread only. Counts commands dropped because the ring was full; a
   // diagnostic, since a full ring drops rather than blocks (see Enqueue).
   uint64_t dropped_commands_ = 0;

@@ -12,7 +12,6 @@
 // contiguity alone misses the underflow, whose stale reads are often themselves
 // contiguous — only the desynced index shows.
 #include <atomic>
-#include <bit>
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
@@ -32,7 +31,6 @@
 #include "mixer/mixer.h"
 #include "player/player.h"
 #include "seek_race_loop.h"
-#include "stretch/time_stretch.h"
 #include "wav_fixture.h"
 
 namespace {
@@ -203,11 +201,7 @@ void RunMixerRace() {
   mixer.Play();
 
   RaceStats stats;
-  const kitbag::StretchConfig stretch =
-      kitbag::TimeStretch::DefaultConfig(kSampleRate);
-  stats.ring_ceiling = std::bit_ceil<uint64_t>(
-      kRingCeiling + stretch.block_frames + stretch.interval_frames
-  );
+  stats.ring_ceiling = mixer.ring_frames();
   RunRace(
       &stats,
       [&](std::vector<float>* out) { mixer.Process(out->data(), kBlock); },

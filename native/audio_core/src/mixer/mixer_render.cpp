@@ -197,7 +197,7 @@ void Mixer::AdvanceTransport(uint32_t frame_count) {
 void Mixer::Process(float* output, uint32_t frame_count) {
   // Memset, not accumulate: Engine::Render relies on this clearing whatever it
   // wrote before the call.
-  std::memset(output, 0, frame_count * 2 * sizeof(float));
+  std::memset(output, 0, static_cast<size_t>(frame_count) * 2 * sizeof(float));
   // Drain first so a seek/stop/pause applies this block even while paused, and
   // so read_frame_ is written only from here.
   ApplyPendingCommands();

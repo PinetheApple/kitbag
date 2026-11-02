@@ -19,9 +19,9 @@ Mixer::Mixer(uint32_t engine_rate)
           std::llround(kLoopCrossfadeSeconds * static_cast<double>(engine_rate))
       ),
       sample_rate_(static_cast<float>(engine_rate)) {
-  const StretchConfig stretch = TimeStretch::DefaultConfig(sample_rate_);
-  const auto preroll =
-      static_cast<uint32_t>(stretch.block_frames + stretch.interval_frames);
+  const auto preroll = static_cast<uint32_t>(
+      TimeStretch::DefaultConfig(sample_rate_).PreRollFrames()
+  );
   for (auto& track : tracks_) {
     track.stream = std::make_unique<StreamingTrack>(engine_rate);
     track.stream->ReservePreRollFrames(preroll);
@@ -77,9 +77,8 @@ void Mixer::UnloadTrack(int track, uint64_t now_frame, bool engine_running) {
   }
   tracks_[track].stream->Unload(now_frame, engine_running);
   RecomputeLongestFrames();
-  if (FreeUnusedBuses(now_frame, engine_running) && app_engaged_) {
-    Reprime(now_frame, engine_running);
-  }
+  const bool reconfigured = FreeUnusedBuses(now_frame, engine_running);
+  if (reconfigured && app_engaged_) Reprime(now_frame, engine_running);
 }
 
 bool Mixer::track_ready(int track) const {
@@ -325,6 +324,10 @@ uint64_t Mixer::track_buffered(int track) const {
 uint64_t Mixer::rt_track_buffered(int track) const {
   if (track < 0 || track >= kMaxTracks) return 0;
   return tracks_[track].stream->rt_buffered();
+}
+
+uint64_t Mixer::ring_frames() const {
+  return tracks_[0].stream->ring_frames();
 }
 
 bool Mixer::track_at_end(int track) const {

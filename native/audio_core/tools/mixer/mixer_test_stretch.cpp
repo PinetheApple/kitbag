@@ -6,14 +6,14 @@ namespace {
 constexpr float kCarryRate = 0.625f;
 constexpr uint32_t kOddBlock = 441;
 constexpr int kCarryBlocks = 997;
-constexpr int64_t kCarrySongFrames = 7 * kSampleRate;
+constexpr int64_t kCarrySongFrames = int64_t{7} * kSampleRate;
 constexpr int64_t kBypassSeek = 3001;
 constexpr int64_t kDisengageSeek = 9001;
 constexpr int kEngageBlocks = 2;
 constexpr float kSpeed = 0.75f;
 constexpr float kSlow = 0.5f;
 constexpr float kKey = 2.0f;
-constexpr int64_t kToneFrames = 4 * kSampleRate;
+constexpr int64_t kToneFrames = int64_t{4} * kSampleRate;
 constexpr int kSettleBlocks = 40;
 constexpr int kLatencyBlocks = 50;
 constexpr int64_t kLoopStart = 20011;
@@ -47,7 +47,7 @@ void TestTakeAndCarrySum() {
 void TestBypassIsSampleExact() {
   kitbag::Mixer mixer(kSampleRate);
   LoadRamp(&mixer, 0, kLoopTrackFrames, 0.0f);
-  mixer.SetRate(kitbag::Mixer::kMaxRate, 0, false);
+  mixer.SetRate(kitbag::Mixer::kUnityRate, 0, false);
   mixer.SetTrackPitch(0, 0.0f, 0, false);
   mixer.Seek(kBypassSeek, 0, false);
   mixer.Play();
@@ -58,7 +58,7 @@ void TestBypassIsSampleExact() {
   mixer.SetRate(kSpeed, 0, false);
   RenderPaced(&mixer, kEngageBlocks);
   Check(mixer.stretch_engaged(), "engage: 0.75x engages mid-play");
-  mixer.SetRate(kitbag::Mixer::kMaxRate, 0, false);
+  mixer.SetRate(kitbag::Mixer::kUnityRate, 0, false);
   RenderPaced(&mixer, 1);
   Check(mixer.stretch_engaged(), "engage: back at 1.0x it holds until a seek");
   mixer.Seek(kDisengageSeek, 0, false);
@@ -88,7 +88,7 @@ int64_t ControlLatency(float rate, float key) {
 }
 
 void CheckControlLatency(const char* state, float rate, float key) {
-  const bool bypass = rate == kitbag::Mixer::kMaxRate && key == 0.0f;
+  const bool bypass = rate == kitbag::Mixer::kUnityRate && key == 0.0f;
   const int64_t expected = bypass ? 0 : OutputFramesFor(LagFrames(rate), rate);
   const int64_t got = ControlLatency(rate, key);
   std::printf(
@@ -103,8 +103,8 @@ void CheckControlLatency(const char* state, float rate, float key) {
 }
 
 void TestControlLatencyPerState() {
-  CheckControlLatency("bypass", kitbag::Mixer::kMaxRate, 0.0f);
-  CheckControlLatency("1.0x +2 st", kitbag::Mixer::kMaxRate, kKey);
+  CheckControlLatency("bypass", kitbag::Mixer::kUnityRate, 0.0f);
+  CheckControlLatency("1.0x +2 st", kitbag::Mixer::kUnityRate, kKey);
   CheckControlLatency("0.75x", kSpeed, 0.0f);
   CheckControlLatency("0.5x", kSlow, 0.0f);
 }
