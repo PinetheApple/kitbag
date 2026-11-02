@@ -738,9 +738,10 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   keys) grow with the font scale up to 1.5×. The 48 dp buttons alone would allow about
   1.84× for the largest bar glyph (26 dp); 1.5 is a judgement, not measured, so a glyph keeps padding
   inside its button and does not outweigh the bar title beside it. Other icons stay at
-  their design size, since most sit inside fixed-size controls. The app-bar title keeps
-  its existing cap: one line, shrinking toward `appBarTitleMinSize` through
-  `minimumFontScale` before it truncates. The metronome's status rows grow by the font
+  their design size, since most sit inside fixed-size controls. The app-bar title stays
+  on one line and shrinks to fit before it truncates: at the default scale down to
+  `appBarTitleMinSize`, above it never below its design size (`minimumFontScale` is
+  `1 / fontScale` there, as Android scales from the grown size). **[coord, 2026-11-02, #287 — the owner may overturn]** The metronome's status rows grow by the font
   scale and hold at most two lines; that a grown row fits two grown lines is reasoned from
   the 40 dp row height, not measured, and needs a device check. A wider row wraps onto its
   second line rather than truncating. Above the default scale the status stack leaves the
