@@ -5,10 +5,12 @@ readonly EXIT_USAGE=2
 
 usage() {
   cat <<'USAGE'
-usage: changelog.sh                regenerate CHANGELOG.md (fetch tags first)
-       changelog.sh --notes <tag>  print GitHub release notes for <tag>: commit
-                                   subjects since the latest vX.Y.Z tag (or the
-                                   audit floor), or a link when too long
+usage: changelog.sh
+         regenerate CHANGELOG.md (fetch tags first); each vX.Y.Z tag off main
+         closes its release at its parent on main
+       changelog.sh --notes <tag> <previous-tag-or-empty>
+         print GitHub release notes for <tag>: commit subjects since
+         <previous-tag> (or the audit floor), or a link when too long
 
 exit 0  ok
 exit 2  usage error
@@ -34,15 +36,12 @@ readonly NOTES_BODY='
 {% endfor %}
 '
 
-readonly TAG_RE='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
-
-# A release tag sits on a commit off main; git-cliff only sees tags in HEAD's history,
-# so a scratch clone re-tags each one at its main-side parent.
+# git-cliff only sees tags in HEAD's history.
 clone_with_main_side_tags() {
   local clone=$1 tag commit
   git clone -q --no-checkout --no-tags . "$clone"
   git -C "$clone" update-ref --no-deref HEAD "$(git rev-parse HEAD)"
-  for tag in $(git tag -l 'v*' | grep -E "$TAG_RE"); do
+  for tag in $(scripts/version.sh tags); do
     commit=$(git rev-parse "${tag}^{commit}")
     if ! git merge-base --is-ancestor "$commit" HEAD; then
       commit=$(git rev-parse "${commit}^")
@@ -65,11 +64,11 @@ case ${1-} in
     ;;
   --notes)
     tag=${2-}
-    [[ -n $tag ]] || {
+    [[ -n $tag && $# -eq 3 ]] || {
       usage >&2
       exit "$EXIT_USAGE"
     }
-    previous=$(scripts/version.sh latest-tag)
+    previous=$3
     notes=$(git-cliff "${previous:-$AUDIT_FLOOR}..HEAD" --tag "$tag" --body "$NOTES_BODY" --strip all)
     notes=${notes#"${notes%%[![:space:]]*}"}
     if [[ $notes != *"### "* ]]; then

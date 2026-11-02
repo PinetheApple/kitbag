@@ -29,13 +29,14 @@ readonly MIRRORS=(package.json packages/app-shell/package.json)
 usage() {
   cat <<USAGE
 usage: version.sh current | set <major.minor.patch> | check
-       version.sh next | latest-tag | code <major.minor.patch | vX.Y.Z>
+       version.sh next | tags | latest-tag | code <major.minor.patch | vX.Y.Z>
 
   current     print the version app.json holds (the release floor)
   set         write <version> to app.json and the package.json mirrors
   check       fail if a mirror disagrees with app.json
   next        print the next release version: bump the latest vX.Y.Z tag by the
               commits since it, never below app.json; app.json itself if untagged
+  tags        print every vX.Y.Z tag, lowest version first
   latest-tag  print the highest vX.Y.Z tag, or nothing
   code        print the Android versionCode for <version>:
               major*${CODE_PER_MAJOR} + minor*${CODE_PER_MINOR} + patch, with minor <= ${MAX_MINOR},
@@ -88,11 +89,14 @@ version_code() {
   echo "$code"
 }
 
-latest_tag() {
+release_tags() {
   git tag -l "${TAG_PREFIX}*" |
     { grep -E "$TAG_RE" || true; } |
-    sort -V |
-    tail -1
+    sort -V
+}
+
+latest_tag() {
+  release_tags | tail -1
 }
 
 version_at_least() {
@@ -179,6 +183,9 @@ case ${1-} in
     ;;
   next)
     next_version
+    ;;
+  tags)
+    release_tags
     ;;
   latest-tag)
     latest_tag

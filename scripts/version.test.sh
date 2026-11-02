@@ -146,6 +146,7 @@ git -C "$fixture" tag v2.0
 commit "$fixture" "fix: a"
 expect_stdout "highest semver v-tag is the base, others ignored" 0.10.1 version_in "$fixture" next
 expect_stdout "latest-tag prints the base" v0.10.0 version_in "$fixture" latest-tag
+expect_stdout "tags lists only vX.Y.Z tags, lowest version first" $'v0.9.0\nv0.10.0' version_in "$fixture" tags
 expect_stdout "latest-tag prints nothing without tags" "" version_in "$(make_fixture 0.1.0)" latest-tag
 
 expect_stdout "floor beats the bump" 1.0.0 version_in "$(fixture_after 1.0.0 v0.4.2 'fix: a')" next
