@@ -20,6 +20,11 @@ To submit, this tree maps into the fdroiddata repository as
 identical, so the tree can be copied across verbatim once the recipe's
 QUESTION comments are resolved.
 
+`changelogs/<versionCode>.txt` is written per release by `scripts/release-notes.sh`
+from the merged PRs' release-note blocks, and exists only in the tagged release
+commit, never on `main`. F-Droid reads it from the tag it builds and caps it at 500
+characters.
+
 ## Submission plan (SPEC.md §13.8)
 
 The recorded strategy: **submit metadata in draft/RFP form early and read

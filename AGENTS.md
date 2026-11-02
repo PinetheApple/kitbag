@@ -60,8 +60,15 @@ next version, builds a release APK signed with the release key (Actions
 secrets), gates it with `scripts/release-gate.sh` (pinned certificate in
 `packages/app-shell/android/app/release-cert.sha256`, `versionName`,
 `versionCode`) and publishes GitHub release `vX.Y.Z` with the APK and its
-sha256. Nothing is committed back: the tag is the version source, passed to
-Gradle as `-PkitbagVersionName`.
+sha256. The tag is the version source, passed to Gradle as
+`-PkitbagVersionName`.
+
+Nothing is pushed to `main`. The job runs `scripts/release-notes.sh`, commits
+`metadata/en-US/changelogs/<versionCode>.txt` as `github-actions[bot]` on a commit
+whose parent is the merged `main` commit, and tags that commit. The APK, the gate
+and the release are all built from it, because F-Droid builds the tagged tree. Only
+the tag is pushed, after the gate passes; a failed publish deletes it again.
+`version.sh` and `changelog.sh` treat each tag as closing at its parent on `main`.
 
 - **Next version** — `scripts/version.sh next`, over the commits since the
   latest `vX.Y.Z` tag: breaking (`!` or `BREAKING CHANGE`) bumps major, or minor
@@ -77,8 +84,9 @@ Gradle as `-PkitbagVersionName`.
   push arrives is dropped; the newer run's range covers its commits.
 
 Local builds stay debug-signed unless `ANDROID_KEYSTORE_*` is set (see
-`.env.example`). `scripts/version.test.sh`, `scripts/release-gate.test.sh` and
-`scripts/changelog.test.sh` cover the rule, the gate and the notes.
+`.env.example`). `scripts/version.test.sh`, `scripts/release-gate.test.sh`,
+`scripts/changelog.test.sh` and `scripts/release-notes.test.sh` cover the rule, the
+gate and the notes.
 
 ### Commits and PRs
 
