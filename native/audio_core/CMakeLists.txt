@@ -451,6 +451,26 @@ if(KITBAG_BUILD_TOOLS)
   target_include_directories(stretch_bench PRIVATE src tools/stretch)
   target_link_libraries(stretch_bench PRIVATE signalsmith_stretch m)
 
+  add_executable(prime_bench
+    tools/mixer/prime_bench.cpp
+    src/media/streaming_track.cpp
+    src/media/looping_source_reader.cpp
+    src/mixer/key_bus.cpp
+    src/mixer/mixer.cpp
+    src/mixer/mixer_keys.cpp
+    src/mixer/mixer_render.cpp
+    src/mixer/mixer_stretch.cpp
+    src/mixer/mixer_prime.cpp
+    src/mixer/mixer_handover.cpp
+    src/stretch/time_stretch.cpp
+    src/media/audio_source.cpp
+    src/media/file_audio_reader.cpp
+    src/media/miniaudio_decoder.cpp
+    src/media/resampling_source_reader.cpp
+    src/media/miniaudio_impl.c)
+  target_include_directories(prime_bench PRIVATE src tools/media third_party)
+  target_link_libraries(prime_bench PRIVATE signalsmith_stretch Threads::Threads m ${CMAKE_DL_LIBS})
+
   add_executable(click_soak_verify
     tools/soak/click_soak_verify.cpp
     tools/soak/click_soak_test_classify.cpp
