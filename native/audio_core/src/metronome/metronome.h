@@ -8,7 +8,7 @@
 #include <span>
 
 #include "kitbag_metronome_poly_api.h"
-#include "media/loop_layout.h"
+#include "media/song_clock.h"
 #include "metronome/click_voices.h"
 #include "metronome/metronome_types.h"
 #include "metronome/rig_click.h"

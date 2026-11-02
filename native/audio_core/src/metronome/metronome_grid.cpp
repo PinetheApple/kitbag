@@ -185,8 +185,8 @@ void Metronome::RenderGridSample(
     return;
   }
   if (song == nullptr || !song->playing || frame >= song->frames) return;
-  const LoopLayout& layout = song->layout;
-  const int64_t song_frame = layout.SongFrameAt(song->first + frame);
+  const LoopLayout& layout = song->LayoutAt(frame);
+  const int64_t song_frame = song->SongFrameAt(frame);
   follow_seconds_ = static_cast<double>(song_frame) / sample_rate;
   grid_fire_limit_ = layout.looping
                          ? static_cast<double>(layout.end - 1) / sample_rate

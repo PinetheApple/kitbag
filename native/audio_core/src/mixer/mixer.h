@@ -6,7 +6,7 @@
 #include <memory>
 #include <vector>
 
-#include "media/loop_layout.h"
+#include "media/song_clock.h"
 #include "media/streaming_track.h"
 #include "rt/rt_publisher.h"
 #include "rt/spsc_ring.h"
