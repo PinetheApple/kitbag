@@ -4,48 +4,20 @@ import kotlin.math.roundToInt
 
 enum class Playback { STOPPED, PLAYING, PAUSED }
 
-data class SetlistPosition(val subtitle: String, val index: Int?, val songCount: Int) {
-  init {
-    require(index == null || index in 0 until songCount) {
-      "song $index outside a setlist of $songCount"
-    }
-  }
-
-  companion object {
-    fun from(subtitle: String?, index: Int?, songCount: Int): SetlistPosition? =
-      if (subtitle == null || (index != null && index !in 0 until songCount)) null
-      else SetlistPosition(subtitle, index, songCount)
-  }
-}
-
-object SongStepWire {
-  private const val PREVIOUS = "previous"
-  private const val NEXT = "next"
-
-  fun of(action: TransportAction?): String? =
-    when (action) {
-      TransportAction.PREVIOUS -> PREVIOUS
-      TransportAction.NEXT -> NEXT
-      else -> null
-    }
-}
-
 data class TransportState(
   val playback: Playback,
   val bpm: Double,
   val rampRunning: Boolean,
   val beatsPerBar: Int,
   val beatUnit: Int,
-  val setlist: SetlistPosition?,
+  val subtitle: String?,
 )
 
 enum class TransportAction {
-  PREVIOUS,
   TEMPO_DOWN,
   PLAY,
   PAUSE,
   TEMPO_UP,
-  NEXT,
   STOP;
 
   companion object {
@@ -57,7 +29,6 @@ data class TransportView(
   val title: String,
   val subtitle: String?,
   val actions: List<TransportAction>,
-  val sessionActions: List<TransportAction>,
 )
 
 sealed interface TransportCommand {
@@ -70,10 +41,6 @@ sealed interface TransportCommand {
   data object Stop : TransportCommand
 
   data class SetTempo(val bpm: Double) : TransportCommand
-
-  data object PreviousSong : TransportCommand
-
-  data object NextSong : TransportCommand
 }
 
 class TransportModel(private val minBpm: Double, private val maxBpm: Double) {
@@ -81,23 +48,12 @@ class TransportModel(private val minBpm: Double, private val maxBpm: Double) {
   fun view(state: TransportState): TransportView {
     val playPause =
       if (state.playback == Playback.PLAYING) TransportAction.PAUSE else TransportAction.PLAY
-    val compact = listOf(TransportAction.TEMPO_DOWN, playPause, TransportAction.TEMPO_UP)
     val actions = buildList {
-      if (hasPrevious(state)) add(TransportAction.PREVIOUS)
-      addAll(compact)
-      if (hasNext(state)) add(TransportAction.NEXT)
+      addAll(listOf(TransportAction.TEMPO_DOWN, playPause, TransportAction.TEMPO_UP))
       if (state.playback != Playback.STOPPED) add(TransportAction.STOP)
     }
-    return TransportView(title(state), state.setlist?.subtitle, actions, sessionActions(actions))
+    return TransportView(title(state), state.subtitle, actions)
   }
-
-  // System media controls lack room for six; with both neighbours the tempo keys give way.
-  private fun sessionActions(actions: List<TransportAction>): List<TransportAction> =
-    if (TransportAction.PREVIOUS in actions && TransportAction.NEXT in actions) {
-      actions - setOf(TransportAction.TEMPO_DOWN, TransportAction.TEMPO_UP)
-    } else {
-      actions
-    }
 
   fun commandsFor(state: TransportState, action: TransportAction): List<TransportCommand> =
     when (action) {
@@ -108,9 +64,6 @@ class TransportModel(private val minBpm: Double, private val maxBpm: Double) {
         if (state.playback == Playback.STOPPED) emptyList() else listOf(TransportCommand.Stop)
       TransportAction.TEMPO_DOWN -> stepTempo(state, -TEMPO_STEP_BPM)
       TransportAction.TEMPO_UP -> stepTempo(state, TEMPO_STEP_BPM)
-      TransportAction.PREVIOUS ->
-        if (hasPrevious(state)) listOf(TransportCommand.PreviousSong) else emptyList()
-      TransportAction.NEXT -> if (hasNext(state)) listOf(TransportCommand.NextSong) else emptyList()
     }
 
   private fun play(playback: Playback): List<TransportCommand> =
@@ -128,15 +81,8 @@ class TransportModel(private val minBpm: Double, private val maxBpm: Double) {
     else listOf(TransportCommand.SetTempo(next))
   }
 
-  private fun hasPrevious(state: TransportState): Boolean = (state.setlist?.index ?: 0) > 0
-
-  // With no current song, Next loads the first one.
-  private fun hasNext(state: TransportState): Boolean =
-    state.setlist?.let { (it.index ?: -1) < it.songCount - 1 } ?: false
-
   private fun title(state: TransportState): String =
     "${state.bpm.roundToInt()} BPM · ${state.beatsPerBar}/${state.beatUnit}"
-
 
   private companion object {
     const val TEMPO_STEP_BPM = 1.0

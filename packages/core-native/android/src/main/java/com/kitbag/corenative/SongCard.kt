@@ -22,7 +22,7 @@ import kotlin.math.roundToInt
 
 internal class SongCard(
   private val context: Context,
-  private val session: MediaSessionCompat,
+  private val openSession: () -> MediaSessionCompat,
   private val channelId: String,
   private val launchIntent: PendingIntent?,
   private val actionIntent: (SongAction) -> PendingIntent,
@@ -107,7 +107,7 @@ internal class SongCard(
   }
 
   private fun publishMetadata(current: Song, durationMillis: Long) {
-    session.setMetadata(
+    openSession().setMetadata(
       MediaMetadataCompat.Builder()
         .putString(MediaMetadataCompat.METADATA_KEY_TITLE, current.title)
         .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, mediaArtist(current.artist))
@@ -125,7 +125,7 @@ internal class SongCard(
     actions.filter { it in CUSTOM_ACTIONS }.forEach {
       builder.addCustomAction(it.name, label(it), icon(it))
     }
-    session.setPlaybackState(builder.build())
+    openSession().setPlaybackState(builder.build())
   }
 
   private fun notification(current: Song, actions: List<SongAction>, playing: Boolean): Notification =
@@ -141,7 +141,7 @@ internal class SongCard(
       .setCategory(NotificationCompat.CATEGORY_TRANSPORT)
       .setStyle(
         MediaStyle()
-          .setMediaSession(session.sessionToken)
+          .setMediaSession(openSession().sessionToken)
           .setShowActionsInCompactView(*COMPACT_SLOTS),
       )
       .apply { actions.forEach { addAction(icon(it), label(it), actionIntent(it)) } }
