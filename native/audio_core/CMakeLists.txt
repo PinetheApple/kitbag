@@ -235,6 +235,9 @@ if(KITBAG_BUILD_TOOLS)
     tools/mixer/mixer_test_publish.cpp
     tools/mixer/mixer_test_loop.cpp
     tools/mixer/mixer_test_relayout.cpp
+    tools/mixer/mixer_test_stretch.cpp
+    tools/mixer/mixer_test_keybus.cpp
+    tools/mixer/mixer_test_config.cpp
     src/media/streaming_track.cpp
     src/media/looping_source_reader.cpp
     src/mixer/key_bus.cpp
