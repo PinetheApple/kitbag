@@ -1,0 +1,1 @@
+• Screens stay readable at large system font sizes: labels no longer break mid-word, status rows stay above the transport, and buttons keep full-size tap targets.
