@@ -46,17 +46,20 @@ struct TimeStretch::Impl {
   signalsmith::stretch::SignalsmithStretch<float> stretch{kSeed};
 };
 
+StretchConfig TimeStretch::DefaultConfig(float sample_rate) {
+  const auto block = static_cast<int>(sample_rate * kBlockSeconds);
+  return {
+      .block_frames = block,
+      .interval_frames = block / kOverlap,
+      .split_computation = kSplitComputation
+  };
+}
+
 TimeStretch::TimeStretch() = default;
 TimeStretch::~TimeStretch() = default;
 
 void TimeStretch::Configure(int channels, float sample_rate) {
-  const auto block = static_cast<int>(sample_rate * kBlockSeconds);
-  Configure(
-      channels,
-      {.block_frames = block,
-       .interval_frames = block / kOverlap,
-       .split_computation = kSplitComputation}
-  );
+  Configure(channels, DefaultConfig(sample_rate));
 }
 
 void TimeStretch::Configure(int channels, const StretchConfig& config) {
@@ -68,6 +71,12 @@ void TimeStretch::Configure(int channels, const StretchConfig& config) {
       config.interval_frames,
       config.split_computation
   );
+}
+
+void TimeStretch::ConfigureVendorDefault(int channels, float sample_rate) {
+  channels_ = channels;
+  impl_ = std::make_unique<Impl>();
+  impl_->stretch.presetDefault(channels, sample_rate);
 }
 
 void TimeStretch::SetTransposeSemitones(float semitones) {
@@ -96,8 +105,20 @@ void TimeStretch::Seek(const float* in, int in_frames, double rate) {
   impl_->stretch.seek(ConstInterleaved{in, channels_}, in_frames, rate);
 }
 
+void TimeStretch::OutputSeek(const float* in, int in_frames) {
+  impl_->stretch.outputSeek(ConstInterleaved{in, channels_}, in_frames);
+}
+
 int TimeStretch::SeekFrames() const {
   return impl_->stretch.seekLength();
+}
+
+int TimeStretch::InputLatencyFrames() const {
+  return impl_->stretch.inputLatency();
+}
+
+int TimeStretch::OutputLatencyFrames() const {
+  return impl_->stretch.outputLatency();
 }
 
 int TimeStretch::SongLagFrames(double rate) const {
