@@ -45,7 +45,8 @@ vi.mock('@kitbag/core-design', async (original) => {
       sliders.push(props);
       return null;
     },
-    createThemedStyles: () => () => new Proxy({}, { get: () => ({}) }),
+    createThemedStyles: (factory: (theme: object) => object) => () =>
+      factory({ color: new Proxy({}, { get: () => '' }) }),
   };
 });
 
