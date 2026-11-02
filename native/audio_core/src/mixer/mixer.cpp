@@ -17,10 +17,16 @@ Mixer::Mixer(uint32_t engine_rate)
       ),
       crossfade_frames_(
           std::llround(kLoopCrossfadeSeconds * static_cast<double>(engine_rate))
-      ) {
+      ),
+      sample_rate_(static_cast<float>(engine_rate)) {
+  const StretchConfig stretch = TimeStretch::DefaultConfig(sample_rate_);
+  const auto preroll =
+      static_cast<uint32_t>(stretch.block_frames + stretch.interval_frames);
   for (auto& track : tracks_) {
     track.stream = std::make_unique<StreamingTrack>(engine_rate);
+    track.stream->ReservePreRollFrames(preroll);
   }
+  records_.Reserve(preroll / kMinRecordSpacingFrames + 2);
 }
 
 void Mixer::ReserveCallbackFrames(uint32_t frames) {
@@ -55,6 +61,7 @@ bool Mixer::LoadTrack(
     bool engine_running
 ) {
   if (track < 0 || track >= kMaxTracks) return false;
+  PrepareBusFor(track, now_frame, engine_running);
   const auto frame = static_cast<uint64_t>(PlannedHead().stream);
   StreamingTrack& stream = *tracks_[track].stream;
   if (!stream.Load(path, now_frame, engine_running, JoinStamp(), frame)) {
@@ -70,6 +77,9 @@ void Mixer::UnloadTrack(int track, uint64_t now_frame, bool engine_running) {
   }
   tracks_[track].stream->Unload(now_frame, engine_running);
   RecomputeLongestFrames();
+  if (FreeUnusedBuses(now_frame, engine_running) && app_engaged_) {
+    Reprime(now_frame, engine_running);
+  }
 }
 
 bool Mixer::track_ready(int track) const {
@@ -84,6 +94,7 @@ bool Mixer::SetTrackSource(
     bool engine_running
 ) {
   if (track < 0 || track >= kMaxTracks) return false;
+  PrepareBusFor(track, now_frame, engine_running);
   const auto frame = static_cast<uint64_t>(PlannedHead().stream);
   const SourceStamp stamp = JoinStamp();
   StreamingTrack& stream = *tracks_[track].stream;
@@ -94,8 +105,10 @@ bool Mixer::SetTrackSource(
   return true;
 }
 
-void Mixer::Enqueue(const Command& command) {
-  if (!commands_.Push(command)) ++dropped_commands_;
+bool Mixer::Enqueue(const Command& command) {
+  if (commands_.Push(command)) return true;
+  ++dropped_commands_;
+  return false;
 }
 
 void Mixer::SetGain(int track, float gain) {
@@ -162,6 +175,8 @@ void Mixer::Play() {
 void Mixer::Stop(uint64_t now_frame, bool engine_running) {
   app_playing_ = false;
   Enqueue({CommandType::kStop});
+  app_engaged_ = WantsStretch();
+  FreeUnusedBuses(now_frame, engine_running);
   Relayout({.layout = app_layout_}, now_frame, engine_running);
 }
 
@@ -176,6 +191,8 @@ void Mixer::Seek(uint64_t frame, uint64_t now_frame, bool engine_running) {
   const uint64_t longest = longest_frames_.load(std::memory_order_relaxed);
   const int64_t target =
       SeekTarget(static_cast<int64_t>(std::min(frame, longest)));
+  app_engaged_ = WantsStretch();
+  FreeUnusedBuses(now_frame, engine_running);
   Relayout({.frame = target, .layout = app_layout_}, now_frame, engine_running);
 }
 
@@ -320,6 +337,7 @@ bool Mixer::track_at_end(int track) const {
 void Mixer::ReleaseRetiredSources() {
   for (auto& track : tracks_) track.stream->ReleaseRetiredSources();
   plans_.ReclaimAll();
+  for (auto& slot : buses_) slot.ReclaimAll();
 }
 
 }  // namespace kitbag

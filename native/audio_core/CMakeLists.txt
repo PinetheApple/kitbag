@@ -57,8 +57,11 @@ add_library(kitbag_core SHARED
   src/media/miniaudio_impl.c
   src/media/streaming_track.cpp
   src/media/looping_source_reader.cpp
+  src/mixer/key_bus.cpp
   src/mixer/mixer.cpp
+  src/mixer/mixer_keys.cpp
   src/mixer/mixer_render.cpp
+  src/mixer/mixer_stretch.cpp
   src/player/player.cpp
   src/player/player_render.cpp
   src/stretch/time_stretch.cpp
@@ -234,8 +237,12 @@ if(KITBAG_BUILD_TOOLS)
     tools/mixer/mixer_test_relayout.cpp
     src/media/streaming_track.cpp
     src/media/looping_source_reader.cpp
+    src/mixer/key_bus.cpp
     src/mixer/mixer.cpp
+    src/mixer/mixer_keys.cpp
     src/mixer/mixer_render.cpp
+    src/mixer/mixer_stretch.cpp
+    src/stretch/time_stretch.cpp
     src/media/audio_source.cpp
     src/media/file_audio_reader.cpp
     src/media/miniaudio_decoder.cpp
@@ -245,7 +252,7 @@ if(KITBAG_BUILD_TOOLS)
   target_include_directories(mixer_verify PRIVATE src tools tools/mixer tools/media third_party)
   # mixer_render.cpp's exhaustive CommandType switch is load-bearing here too.
   target_compile_options(mixer_verify PRIVATE -Werror=switch)
-  target_link_libraries(mixer_verify PRIVATE Threads::Threads m ${CMAKE_DL_LIBS})
+  target_link_libraries(mixer_verify PRIVATE signalsmith_stretch Threads::Threads m ${CMAKE_DL_LIBS})
 
   # Links the sources: Player is internal, not exported through the C ABI. It
   # streams a single source through an AudioSource over a real file path, so the
@@ -275,8 +282,12 @@ if(KITBAG_BUILD_TOOLS)
     tools/seek_race_loop.cpp
     src/media/streaming_track.cpp
     src/media/looping_source_reader.cpp
+    src/mixer/key_bus.cpp
     src/mixer/mixer.cpp
+    src/mixer/mixer_keys.cpp
     src/mixer/mixer_render.cpp
+    src/mixer/mixer_stretch.cpp
+    src/stretch/time_stretch.cpp
     src/player/player.cpp
     src/player/player_render.cpp
     src/media/audio_source.cpp
@@ -287,7 +298,7 @@ if(KITBAG_BUILD_TOOLS)
   )
   target_include_directories(seek_race_verify PRIVATE src tools tools/media third_party)
   target_compile_options(seek_race_verify PRIVATE -Werror=switch)
-  target_link_libraries(seek_race_verify PRIVATE Threads::Threads m ${CMAKE_DL_LIBS})
+  target_link_libraries(seek_race_verify PRIVATE signalsmith_stretch Threads::Threads m ${CMAKE_DL_LIBS})
 
   # Drives the in-memory adapter. That this target links no miniaudio and still
   # passes is what proves the seam: the module depends on SourceReader, not on

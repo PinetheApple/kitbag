@@ -51,6 +51,11 @@ class StreamingTrack {
   /// Sizes the read-ahead of sources built after this call for device callbacks
   /// up to [frames] wide. Grow-only; capped at kMaxReadAheadFrames.
   void ReserveCallbackFrames(uint32_t frames);
+  /// Adds [frames] to the read-ahead of sources built after this call, outside
+  /// the kMaxReadAheadFrames clamp, and primes that much more.
+  void ReservePreRollFrames(uint32_t frames) {
+    preroll_frames_ = frames;
+  }
 
   /// Load a file, streamed from disk from stream frame [frame]. [now_frame] and
   /// [engine_running] date the retired source for deferred reclamation.
@@ -200,6 +205,7 @@ class StreamingTrack {
   AudioSource* previous_ = nullptr;  // app thread
   uint32_t engine_rate_;
   uint32_t read_ahead_frames_ = AudioSource::kDefaultRingFrames;  // app thread
+  uint32_t preroll_frames_ = 0;                                   // app thread
   // Resampled length, atomic because the callback reads it to end a transport
   // while a load can overlap (#23). Relaxed — no ordering rides on it; the
   // source itself crosses via the publisher's release/acquire.

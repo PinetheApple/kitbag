@@ -12,6 +12,7 @@
 // contiguity alone misses the underflow, whose stale reads are often themselves
 // contiguous — only the desynced index shows.
 #include <atomic>
+#include <bit>
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
@@ -31,6 +32,7 @@
 #include "mixer/mixer.h"
 #include "player/player.h"
 #include "seek_race_loop.h"
+#include "stretch/time_stretch.h"
 #include "wav_fixture.h"
 
 namespace {
@@ -117,6 +119,7 @@ struct RaceStats {
   std::atomic<uint64_t> blocks{0};
   std::atomic<uint64_t> audio_blocks{0};
   uint64_t seeks = 0;
+  uint64_t ring_ceiling = kRingCeiling;
 };
 
 // One render + one buffered probe. `render` fills the block, `buffered` reads
@@ -152,7 +155,7 @@ void SeekLoop(
   // Stop early once the desync is seen: the bug is proven, and letting a
   // corrupted source run on risks a hang the assertion would never reach.
   while (std::chrono::steady_clock::now() < deadline &&
-         s->max_buffered.load(std::memory_order_relaxed) <= kRingCeiling) {
+         s->max_buffered.load(std::memory_order_relaxed) <= s->ring_ceiling) {
     const uint64_t target = kTargets[s->seeks % kTargetCount];
     seek(target, s->now.load(std::memory_order_relaxed));
     ++s->seeks;
@@ -173,7 +176,7 @@ void Assert(RaceStats* s, const char* who) {
   );
   Check(s->audio_blocks.load() > 0, msg);
   std::snprintf(msg, sizeof(msg), "%s: buffered never exceeds the ring", who);
-  Check(s->max_buffered.load() <= kRingCeiling, msg);
+  Check(s->max_buffered.load() <= s->ring_ceiling, msg);
 }
 
 // Spawns the render thread, runs the seek loop for `duration`, then joins.
@@ -200,6 +203,11 @@ void RunMixerRace() {
   mixer.Play();
 
   RaceStats stats;
+  const kitbag::StretchConfig stretch =
+      kitbag::TimeStretch::DefaultConfig(kSampleRate);
+  stats.ring_ceiling = std::bit_ceil<uint64_t>(
+      kRingCeiling + stretch.block_frames + stretch.interval_frames
+  );
   RunRace(
       &stats,
       [&](std::vector<float>* out) { mixer.Process(out->data(), kBlock); },

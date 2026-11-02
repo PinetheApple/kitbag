@@ -47,7 +47,7 @@ bool StreamingTrack::BuildSource(
   if (s.channels == 0 || s.channels > kMaxChannels) return false;
   s.num_frames = reader->total_frames();
   s.source = std::make_unique<AudioSource>();
-  return s.source->Open(reader, read_ahead_frames_);
+  return s.source->Open(reader, read_ahead_frames_ + preroll_frames_);
 }
 
 // The refill thread cannot run inside a callback, so the ring holds a whole
@@ -137,7 +137,8 @@ void StreamingTrack::Prime(const Source& s) {
       s.looper != nullptr ? std::numeric_limits<uint64_t>::max() : s.num_frames;
   const uint64_t pos = src.position();
   const uint64_t remaining = num_frames > pos ? num_frames - pos : 0;
-  const uint64_t target = std::min<uint64_t>(remaining, read_ahead_frames_ / 2);
+  const uint64_t target =
+      std::min<uint64_t>(remaining, read_ahead_frames_ / 2 + preroll_frames_);
   const auto deadline = std::chrono::steady_clock::now() + kPrimeTimeout;
   while (src.buffered_frames() < target && !src.is_at_end()) {
     if (std::chrono::steady_clock::now() > deadline) break;

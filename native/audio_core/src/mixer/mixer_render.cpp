@@ -33,7 +33,20 @@ void Mixer::ApplyCommand(const Command& command) {
     case CommandType::kSetMasterGain:
       master_gain_.store(command.fvalue, std::memory_order_relaxed);
       return;
+    case CommandType::kSetRate:
+    case CommandType::kSetTrackPitch:
+      ApplyStretchCommand(command);
+      return;
   }
+}
+
+void Mixer::ApplyStretchCommand(const Command& command) {
+  if (command.type == CommandType::kSetTrackPitch) {
+    MoveToBus(tracks_[command.track], ClampPitch(command.fvalue));
+    return;
+  }
+  rate_target_ = ClampRate(command.fvalue);
+  rate_mirror_.store(rate_target_, std::memory_order_relaxed);
 }
 
 void Mixer::AdoptPlan() {
@@ -51,20 +64,26 @@ void Mixer::AdoptPlan() {
   } else {
     stream_frame_ = plan.frame;
     jump_base_.store(now, std::memory_order_relaxed);
+    engaged_.store(false, std::memory_order_relaxed);
+    bypass_continues_ = false;
   }
   layout_ = plan.layout;
   epoch_ = plan.epoch;
-  read_frame_.store(
-      static_cast<uint64_t>(layout_.SongFrameAt(stream_frame_)),
-      std::memory_order_relaxed
-  );
+  if (engaged_.load(std::memory_order_relaxed)) {
+    PushRecord();
+  } else {
+    read_frame_.store(
+        static_cast<uint64_t>(layout_.SongFrameAt(stream_frame_)),
+        std::memory_order_relaxed
+    );
+  }
   plan_generation_.store(node->generation, std::memory_order_release);
 }
 
 bool Mixer::TransportFrameFor(
     const StreamingTrack::RtView& view,
     int64_t* frame
-) {
+) const {
   if (view.source == nullptr) return false;
   if (view.stamp.epoch == epoch_) {
     *frame = stream_frame_;
@@ -188,9 +207,15 @@ void Mixer::Process(float* output, uint32_t frame_count) {
   // drained without allocating, which the callback must never do.
   if (frame_count > StreamingTrack::kMaxBlockFrames) return;
   if (!playing_.load(std::memory_order_relaxed)) return;
-
-  MixAllTracks(output, frame_count, any_solo_.load(std::memory_order_relaxed));
+  const bool any_solo = any_solo_.load(std::memory_order_relaxed);
+  if (engaged_.load(std::memory_order_relaxed) ||
+      PrimeIfReady(frame_count, any_solo)) {
+    StretchBlock(output, frame_count, any_solo);
+    return;
+  }
+  MixAllTracks(output, frame_count, any_solo);
   AdvanceTransport(frame_count);
+  bypass_continues_ = true;
 }
 
 }  // namespace kitbag

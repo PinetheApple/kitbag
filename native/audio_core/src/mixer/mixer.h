@@ -4,10 +4,12 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "media/song_clock.h"
 #include "media/streaming_track.h"
+#include "mixer/key_bus.h"
 #include "rt/rt_publisher.h"
 #include "rt/spsc_ring.h"
 
@@ -22,6 +24,10 @@ class Mixer {
   static constexpr float kMaxGain = 2.0f;
   static constexpr double kLoopCrossfadeSeconds = 0.005;
   static constexpr int64_t kMinLoopCrossfades = 2;
+  static constexpr float kMinRate = 0.5f;
+  static constexpr float kMaxRate = 1.0f;
+  static constexpr int kMinPitchSemitones = -6;
+  static constexpr int kMaxPitchSemitones = 6;
 
   /// [engine_rate] is the device/output sample rate each track is resampled to
   /// on load, so Process never sees a rate mismatch (SPEC.md §4.1). scratch_ is
@@ -100,6 +106,31 @@ class Mixer {
     return crossfade_frames_;
   }
 
+  /// Speed (SPEC.md §7.6), clamped to [kMinRate, kMaxRate] in the drain. Off
+  /// 1.0 the key buses engage: the app thread configures them here.
+  void SetRate(float rate, uint64_t now_frame, bool engine_running);
+  /// Absolute key of one stem in whole semitones, clamped to
+  /// [kMinPitchSemitones, kMaxPitchSemitones]. Configures its bus if needed.
+  void SetTrackPitch(
+      int track,
+      float semitones,
+      uint64_t now_frame,
+      bool engine_running
+  );
+  float rate() const {
+    return rate_mirror_.load(std::memory_order_relaxed);
+  }
+  int track_pitch(int track) const;
+  bool stretch_engaged() const {
+    return engaged_.load(std::memory_order_relaxed);
+  }
+  /// Song frames read from the stems since construction, pre-roll included.
+  int64_t fed_frames() const {
+    return transport_frame_.load(std::memory_order_relaxed);
+  }
+  /// App thread: key buses configured now.
+  int key_bus_count() const;
+
   /// Callback-published mirror. Reflects the state the callback drained, so it
   /// converges within one block once the device is running.
   bool is_playing() const {
@@ -156,6 +187,10 @@ class Mixer {
     std::atomic<float> gain{1.0f};
     std::atomic<bool> mute{false};
     std::atomic<bool> solo{false};
+    std::atomic<int> pitch{0};
+    // Callback only: a key change fades the stem from this bus to its new one.
+    int fade_from = 0;
+    int64_t fade_left = 0;
   };
 
   enum class CommandType : uint8_t {
@@ -166,6 +201,8 @@ class Mixer {
     kStop,
     kPause,
     kSetMasterGain,
+    kSetRate,
+    kSetTrackPitch,
   };
 
   struct Command {
@@ -187,6 +224,14 @@ class Mixer {
   };
 
   static constexpr size_t kCommandRingSize = 64;
+  static constexpr int kKeyBusCount =
+      kMaxPitchSemitones - kMinPitchSemitones + 1;
+  // A pending rate waits this long after the last record, which bounds how
+  // many records the clock needs to cover the stretch's output latency.
+  static constexpr int64_t kMinRecordSpacingFrames = 512;
+
+  static float ClampRate(float rate);
+  static int ClampPitch(float semitones);
 
   // App thread. Unload never lowers the iteration bound (see active_track_count).
   void NoteTrackLoaded(int track);
@@ -199,7 +244,7 @@ class Mixer {
   // App thread. Hands a command to the callback, dropping it if the ring is full
   // rather than blocking — the realtime choice, matching the metronome. Drops are
   // counted for diagnostics, never fatal.
-  void Enqueue(const Command& command);
+  bool Enqueue(const Command& command);
   // App thread. Rebuilds every track at the plan's frame, all or nothing, then
   // publishes the plan the callback adopts them by.
   bool Relayout(TransportPlan plan, uint64_t now_frame, bool engine_running);
@@ -219,14 +264,61 @@ class Mixer {
   // rather than a silent drop.
   void ApplyPendingCommands();
   void ApplyCommand(const Command& command);
+  void ApplyStretchCommand(const Command& command);
   void RecomputeAnySolo();
   void AdoptPlan();
-  bool TransportFrameFor(const StreamingTrack::RtView& view, int64_t* frame);
+  bool
+  TransportFrameFor(const StreamingTrack::RtView& view, int64_t* frame) const;
   bool AlignTo(AudioSource& source, int64_t frame);
 
   void MixTrack(Track& tr, float* output, uint32_t frame_count, bool any_solo);
   void MixAllTracks(float* output, uint32_t frame_count, bool any_solo);
   void AdvanceTransport(uint32_t frame_count);
+
+  // App thread: key-bus lifecycle (mixer_keys.cpp).
+  bool WantsStretch() const;
+  void PublishBus(int slot, uint64_t now_frame, bool engine_running);
+  bool MatchBusConfig(int live, uint64_t now_frame, bool engine_running);
+  void EngageBuses(
+      std::optional<int> extra,
+      uint64_t now_frame,
+      bool engine_running
+  );
+  void Reprime(uint64_t now_frame, bool engine_running);
+  void PrepareBusFor(int track, uint64_t now_frame, bool engine_running);
+  void MarkUsedBuses(bool* used) const;
+  bool FreeUnusedBuses(uint64_t now_frame, bool engine_running);
+  bool BusesAgree(const KeyBus& any) const;
+
+  // Callback: the engaged path (mixer_stretch.cpp).
+  KeyBus* BusAt(int slot) const;
+  KeyBus* AnyBus() const;
+  bool RtWantsStretch() const;
+  void CountMembers(int* members) const;
+  KeyBus* TrackBus(const Track& tr) const;
+  float TrackGain(const Track& tr, bool any_solo) const;
+  bool AlignedView(const Track& tr, StreamingTrack::RtView* view);
+  bool RingsReady(int64_t frames) const;
+  void ReadPreRoll(int64_t lag, bool any_solo);
+  void ReadTrackPreRoll(
+      const StreamingTrack::RtView& view,
+      KeyBus* bus,
+      int64_t lag,
+      float gain
+  );
+  void SeekBuses(int64_t lag);
+  bool PrimeIfReady(uint32_t frame_count, bool any_solo);
+  void ResetRecords(const TimeStretch& stretch);
+  void ApplyPendingRate();
+  void PushRecord();
+  void MoveToBus(Track& tr, int pitch);
+  void FeedTrack(Track& tr, uint32_t channels, uint32_t got, float gain);
+  void FeedBuses(uint32_t take, bool any_solo);
+  void RunBuses(float* output, uint32_t take, uint32_t frame_count);
+  uint32_t AudibleFrames(int64_t first, uint32_t frame_count) const;
+  void AdvanceStretch(uint32_t take, uint32_t frame_count);
+  void BlendSeam(float* output, uint32_t frame_count);
+  void StretchBlock(float* output, uint32_t frame_count, bool any_solo);
 
   Track tracks_[kMaxTracks];
   // Written by the load path, read every block by the callback (track_count_ in
@@ -264,6 +356,23 @@ class Mixer {
   bool app_playing_ = false;
   int64_t crossfade_frames_;
   SpscRing<Command, kCommandRingSize> commands_;
+  RtPublisher<KeyBusSlot> buses_[kKeyBusCount];
+  float sample_rate_;
+  // App thread: what the callback will hold once the ring drains.
+  int app_pitch_[kMaxTracks] = {};
+  float app_rate_ = kMaxRate;
+  bool app_engaged_ = false;
+  bool app_vendor_default_ = false;
+  // Callback-owned stretch state.
+  float rate_target_ = kMaxRate;
+  float rate_ = kMaxRate;
+  double carry_ = 0.0;
+  int64_t out_clock_ = 0;
+  bool bypass_continues_ = false;
+  int64_t seam_left_ = 0;
+  SongRecords records_;
+  std::atomic<bool> engaged_{false};
+  std::atomic<float> rate_mirror_{kMaxRate};
   // App thread only. Counts commands dropped because the ring was full; a
   // diagnostic, since a full ring drops rather than blocks (see Enqueue).
   uint64_t dropped_commands_ = 0;
