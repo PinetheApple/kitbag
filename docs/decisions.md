@@ -709,6 +709,7 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   and its summary shows on the next metronome visit. Leaving while playing keeps the same
   session running, since background practice counts. A session stopped from the notification
   while away stays open until End or the next stopped leave. **[coord]**
+
 - **2026-11-02 · Solid ends on muted bar cells (§12.2, #264)** — The status file draws a
   muted cell as a fully dashed 1.5px outline: `tx2` in the status strip, `decor` in the
   Practice sheet preview. Both now ship a dashed outline with solid left and right edges
@@ -729,6 +730,36 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   Android 13 to 15 stop calling `onBackPressed()` once an app opts in (Android's documented
   behaviour, not read in source): Back would skip every `BackHandler` handler and leave the
   app. **[recorded]**
+
+- **2026-11-02 · Text at 200% font scale (§12.6, #192)** — The stem player's name column
+  keeps the mockup's 58 dp at the default text size and grows by the font scale above it.
+  The name keeps `numberOfLines={1}`, so a long name still truncates, as the ruling
+  accepts. **[user, 2026-10-30]** App-bar icons (back, search, add, the metronome bar's
+  keys) grow with the font scale up to 1.5×. The 48 dp buttons alone would allow about
+  1.84× for the largest bar glyph (26 dp); 1.5 is a judgement, not measured, so a glyph keeps padding
+  inside its button and does not outweigh the bar title beside it. Other icons stay at
+  their design size, since most sit inside fixed-size controls. The app-bar title keeps
+  its existing cap: one line, shrinking toward `appBarTitleMinSize` through
+  `minimumFontScale` before it truncates. The metronome's status rows grow by the font
+  scale and hold at most two lines; that a grown row fits two grown lines is reasoned from
+  the 40 dp row height, not measured, and needs a device check. A wider row wraps onto its
+  second line rather than truncating. Above the default scale the status stack leaves the
+  scrolling body and sits directly above the transport, so a body that overflows cannot
+  push it out of view, at one fixed height, the running stack's, so nothing resizes on Play.
+  On a small screen at 2.0 the beat dots then sit below the fold and are reached by
+  scrolling the body (coordinator call, 2026-11-02, open to owner review). Above the default scale
+  a segmented control's options and the sound picker's items take their label's width
+  and never shrink below it, since Android wraps a squeezed label mid-word; what does
+  not fit on one line wraps onto further rows inside the track or grid. A `fill` track
+  wider than its row takes a line of its own and shrinks to it; a track without `fill`
+  takes the width its parent gives it. Wrapped rows of options sit far enough apart that
+  an option on a row between two others reaches a 48 dp touch target from the gaps alone,
+  so a wrapped track is taller than its options; the first and last rows reach into the
+  track edge and the neighbour gap as a single row does. At 1.0 the options stay equal
+  widths and the picker keeps its columns. A stepper's value-to-suffix gap grows with
+  the font scale. The click volume row lets its slider and readout drop below the label
+  above the default scale rather than wrapping them beside it. Library and
+  output-route rows drop their one-line limit above the default scale. **[recorded]**
 
 - **2026-11-02 · Metronome card is media-style, with no setlist skips (§5.6, §13.9, #284)** —
   Decided by the owner (ruling via coordinator, 2026-11-02); supersedes the 2026-10-28 #163
@@ -761,6 +792,31 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   and centred; sheet scrims stay full width. No design exists for 600 dp and wider, and
   uncapped screens stretched their tempo rows, sheets and transports across the width.
   **[coord — the owner may overturn]**
+
+- **2026-11-02 · APK size target re-set to 30.6 MB (#49)** — The release APK target is
+  30.6 MB (30,648,062 bytes, arm64-v8a release), the size measured after the font cut,
+  replacing the earlier 25 MB; the baseline is release v0.26.2 at 33,411,826 bytes. The
+  remainder is uncompressed native libraries (20.03 MB) plus the Hermes bundle, kept
+  uncompressed on purpose as Android's default (uncompressed libs load in place; the
+  bundle is memory-mapped). Compressing them was declined; the cut taken is the 17
+  unused font files. Breakdown: [#49 comment](https://github.com/PinetheApple/kitbag/issues/49#issuecomment-6575336455).
+  **[owner]**
+
+- **2026-11-02 · Per-release F-Droid changelogs (§13.8, #61)** — Each release writes
+  `metadata/en-US/changelogs/<versionCode>.txt` from the ```` ```release-note ```` block
+  every PR body carries (one user-facing line, or `NONE`). The release job commits it
+  as the bot on a commit off `main` and pushes only the tag; nothing is pushed to
+  `main`. F-Droid reads metadata from the tagged commit, so the file must be in it.
+  Pushing to `main` instead would need a ruleset bypass for the release job and
+  possibly a new credential; tagging off `main` needs neither. `version.sh` works
+  unchanged through plain reachability; only `changelog.sh`'s full regeneration
+  re-tags each release at its parent on `main`. **[owner]**
+
+- **2026-11-02 · The `Release note` check is required on `main` (#61)** — A PR merges
+  only with a ```` ```release-note ```` block holding a user-facing line or `NONE`; the
+  coordinator adds the check to the `main` ruleset at merge. PRs opened by a bot
+  (author type `Bot` or a `[bot]` login) pass as `NONE`, so dependency updates never
+  block on a note. **[owner]**
 
 - **2026-11-02 · One chevron app bar on every screen (§12, #287)** — Every screen with a
   back control uses the chevron back, not the full arrow **[user, via coordinator]**. The

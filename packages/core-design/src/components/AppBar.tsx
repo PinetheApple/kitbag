@@ -13,6 +13,7 @@ import {
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import type { ColorToken } from '../tokens.ts';
+import { useTextIconScale } from '../useTextIconScale.ts';
 import { Icon } from './Icon.tsx';
 
 const TITLE_MIN_SCALE = appBarTitleMinSize / textRoles.appBarTitle.size;
@@ -86,6 +87,7 @@ export function BarIconButton({
   disabled = false,
 }: BarIconButtonProps) {
   const styles = useStyles();
+  const iconScale = useTextIconScale();
   return (
     <Pressable
       accessibilityRole="button"
@@ -95,7 +97,12 @@ export function BarIconButton({
       style={styles.button}
       onPress={onPress}
     >
-      <Icon name={icon} size={size} color={disabled ? 'decor' : color} />
+      <Icon
+        name={icon}
+        size={size}
+        color={disabled ? 'decor' : color}
+        scale={iconScale}
+      />
     </Pressable>
   );
 }

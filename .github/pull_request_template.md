@@ -2,6 +2,15 @@ Closes #
 
 ## What changed
 
+## Release note
+
+One line a musician would notice, in plain words, or `NONE` for an internal
+change. F-Droid users read it as this release's changelog, so it must be true.
+
+```release-note
+
+```
+
 ## Acceptance criteria
 
 Copy the criteria from the issue and tick only the ones this PR actually

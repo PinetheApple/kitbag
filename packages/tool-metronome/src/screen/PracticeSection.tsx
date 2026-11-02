@@ -1,5 +1,6 @@
 import {
   createThemedStyles,
+  growShrinkToLine,
   Icon,
   type IconName,
   metronomeSheet,
@@ -23,6 +24,7 @@ export const usePracticeStyles = createThemedStyles((theme) => ({
   },
   heading: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: space.rowGap,
   },
@@ -50,6 +52,7 @@ export const usePracticeStyles = createThemedStyles((theme) => ({
     flex: 1,
     marginLeft: space.controlGap,
   },
+  headingByLabel: growShrinkToLine,
 }));
 
 interface PracticeSectionProps {

@@ -50,11 +50,16 @@ const useStripStyles = createThemedStyles((theme) => ({
   },
   caption: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    columnGap: space.controlGap,
   },
   captionText: {
     ...textStyle(textRoles.polyStripCaption),
     color: theme.color.text3,
+    flexShrink: 1,
+  },
+  span: {
+    marginLeft: 'auto',
   },
 }));
 
@@ -96,7 +101,7 @@ export function PolyStrip({ polyBeats, against, beatsPerBar }: PolyStripProps) {
       </View>
       <View style={styles.caption}>
         <Text style={styles.captionText}>{caption.cycle}</Text>
-        <Text style={styles.captionText}>{caption.span}</Text>
+        <Text style={[styles.captionText, styles.span]}>{caption.span}</Text>
       </View>
     </View>
   );

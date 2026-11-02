@@ -17,8 +17,17 @@ const useStyles = createThemedStyles((theme) => ({
     gap: stemPlayer.menuRowGap,
     minHeight: stemPlayer.menuRowMinHeight,
   },
-  label: { ...textStyle(textRoles.menuRow), color: theme.color.text, flex: 1 },
-  value: { ...textStyle(textRoles.menuValue), color: theme.color.text2 },
+  label: {
+    ...textStyle(textRoles.menuRow),
+    color: theme.color.text,
+    flexGrow: 1,
+  },
+  value: {
+    ...textStyle(textRoles.menuValue),
+    color: theme.color.text2,
+    flexShrink: 1,
+    textAlign: 'right',
+  },
 }));
 
 interface PlayerMenuProps {

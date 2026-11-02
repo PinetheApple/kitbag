@@ -11,6 +11,7 @@ export interface IconProps {
   readonly size?: IconSize;
   readonly color?: ColorToken;
   readonly accessibilityLabel?: string;
+  readonly scale?: number;
 }
 
 export function Icon({
@@ -18,6 +19,7 @@ export function Icon({
   size = 'action',
   color = 'text2',
   accessibilityLabel,
+  scale = 1,
 }: IconProps) {
   const theme = useTheme();
   const labelled = accessibilityLabel !== undefined;
@@ -27,7 +29,11 @@ export function Icon({
       importantForAccessibility={labelled ? 'yes' : 'no-hide-descendants'}
       {...(labelled ? { accessibilityLabel } : {})}
     >
-      <IconGlyph name={name} px={iconSizes[size]} color={theme.color[color]} />
+      <IconGlyph
+        name={name}
+        px={iconSizes[size] * scale}
+        color={theme.color[color]}
+      />
     </View>
   );
 }

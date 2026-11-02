@@ -12,3 +12,6 @@ export * from './toolGrid.ts';
 export * from './snackbarRoles.ts';
 export * from './snackbarTimer.ts';
 export * from './settingsRoles.ts';
+export * from './textScale.ts';
+export * from './stemPlayerRoles.ts';
+export * from './fontFaces.ts';
