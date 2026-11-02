@@ -1,4 +1,4 @@
-import { isTextScaled, metronome, space } from '@kitbag/core-design';
+import { metronome, space } from '@kitbag/core-design';
 import { KB_MAX_BEATS } from '@kitbag/core-native';
 import { describe, expect, it } from 'vitest';
 
@@ -19,7 +19,8 @@ import { beatDotSize, layoutBeatLeds, MAX_DOTS_PER_LINE } from './ledLayout.ts';
 
 const SMALL_PHONE_DOTS_WIDTH = 360 - space.screenInset * 2;
 const LARGE_PHONE_DOTS_WIDTH = 411 - space.screenInset * 2;
-const FONT_SCALES = [1, 1.3, 2] as const;
+const DEFAULT_FONT_SCALE = 1;
+const FONT_SCALES = [DEFAULT_FONT_SCALE, 1.3, 2] as const;
 const BEAT_COUNTS = Array.from({ length: KB_MAX_BEATS }, (_u, i) => i + 1);
 
 // Where the dots start and where the body ends above the transport, at fontScale
@@ -67,7 +68,7 @@ function renderedRoomy(shape: Rendered): number {
     if (shape.labelAbove) dots += label + metronome.beatMarkerGap;
   }
   const legend = metronome.legendTop + metronome.legendRow * scale;
-  if (isTextScaled(shape.fontScale)) return dots + legend;
+  if (shape.fontScale > DEFAULT_FONT_SCALE) return dots + legend;
   const row = metronome.statusRow;
   const stopped = legend + row;
   const running = row * 2 + metronome.statusRowGap;

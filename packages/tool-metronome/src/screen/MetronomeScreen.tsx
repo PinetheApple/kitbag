@@ -22,7 +22,11 @@ import {
 } from 'react-native';
 
 import { useLibraryRefresh } from '../library/useLibraryRefresh.ts';
-import { belowTempoReserve, statusStackPinned } from '../logic/belowTempo.ts';
+import {
+  belowTempoReserve,
+  statusStackHeight,
+  statusStackPinned,
+} from '../logic/belowTempo.ts';
 import { noteStrip, type NoteStrip } from '../logic/noteStrip.ts';
 import { endPractice, summarySheetOnMount } from '../logic/practiceSummary.ts';
 import { practiceBadgeCount, restLegend } from '../logic/statusRows.ts';
@@ -91,6 +95,9 @@ const useStyles = createThemedStyles((theme) => ({
   },
   toolsPush: {
     flexGrow: 1,
+  },
+  pinnedStatus: {
+    justifyContent: 'flex-end',
   },
 }));
 
@@ -274,6 +281,10 @@ export function MetronomeScreen({
   );
   const legend = restLegend(running, polyEnabled);
   const pinStatus = statusStackPinned(fontScale);
+  const pinnedFrame = useMemo(
+    () => ({ marginTop: bodyGap, height: statusStackHeight(true, fontScale) }),
+    [bodyGap, fontScale],
+  );
   const status = (
     <StatusStack frame={frame} settings={settings} running={running} />
   );
@@ -351,7 +362,9 @@ export function MetronomeScreen({
             )}
           </View>
         </ScrollView>
-        {pinStatus ? <View style={topGap}>{status}</View> : null}
+        {pinStatus ? (
+          <View style={[styles.pinnedStatus, pinnedFrame]}>{status}</View>
+        ) : null}
         <Transport
           running={running}
           armedCount={practiceBadgeCount(settings)}
