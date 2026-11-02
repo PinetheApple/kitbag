@@ -69,6 +69,7 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: write
+      pull-requests: read
     env:
       CMAKE_C_COMPILER_LAUNCHER: ccache
       CMAKE_CXX_COMPILER_LAUNCHER: ccache
@@ -83,6 +84,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - name: Paths — runner temp, outside the workspace
@@ -100,9 +102,30 @@ jobs:
           echo "${GIT_CLIFF_SHA512}  $RUNNER_TEMP/$archive" | sha512sum -c -
           tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP"
           echo "$RUNNER_TEMP/git-cliff-${GIT_CLIFF_VERSION}" >> "$GITHUB_PATH"
-      - name: Release notes — conventional commits since the previous tag
+      # The tag goes on this commit, off main: main needs PRs, and F-Droid reads the tagged tree.
+      - name: F-Droid changelog — commit it and tag that commit locally
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          scripts/changelog.sh --notes "$TAG" > "$NOTES_FILE"
+          changelog_file=$(scripts/release-notes.sh "$PREVIOUS" "$VERSION")
+          echo "CHANGELOG_FILE=${changelog_file}" >> "$GITHUB_ENV"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add metadata/en-US/changelogs
+          git commit -m "chore(release): F-Droid changelog for ${TAG}"
+          git tag "$TAG"
+          echo "RELEASE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+      - name: Release notes — the F-Droid lines, then conventional commits since the previous tag
+        run: |
+          {
+            echo "## What's new"
+            echo
+            cat "$CHANGELOG_FILE"
+            echo
+            echo "## Changes"
+            echo
+            scripts/changelog.sh --notes "$TAG" "$PREVIOUS"
+          } > "$NOTES_FILE"
           {
             echo "## ${TAG}"
             echo
@@ -153,17 +176,55 @@ jobs:
         run: rm -f "$KEYSTORE_FILE"
       - name: Gate — pinned certificate, versionName, versionCode; stage the APK + sha256
         run: scripts/release-gate.sh --out "$ARTIFACT_DIR" "$APK" "$VERSION" ${PREVIOUS:+"$PREVIOUS"}
+      - name: Push the release tag — the tag only, never a branch
+        id: push-tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh auth setup-git
+          git push origin "refs/tags/${TAG}"
       - name: Publish the GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$TAG" "$ARTIFACT_DIR"/* \
             --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" \
+            --verify-tag \
+            --target "$RELEASE_SHA" \
             --title "$TAG" \
             --notes-file "$NOTES_FILE"
+      - name: Summary — the published checksums
+        run: |
           {
             echo
             echo "Published:"
             cat "$ARTIFACT_DIR"/*.sha256
           } >> "$GITHUB_STEP_SUMMARY"
+      - name: Delete the pushed tag unless a published release holds it
+        if: (failure() || cancelled()) && steps.push-tag.outcome != 'skipped'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_NOT_FOUND: release not found
+        run: |
+          if ! remote_tag=$(git ls-remote --tags origin "refs/tags/${TAG}"); then
+            echo "::error::git ls-remote failed; leaving ${TAG} alone"
+            exit 1
+          fi
+          if [[ -z $remote_tag ]]; then
+            echo "::notice::${TAG} never reached origin; nothing to delete"
+            exit 0
+          fi
+          view_error="$RUNNER_TEMP/release-view.err"
+          if draft=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft -q .isDraft 2>"$view_error"); then
+            if [[ $draft == false ]]; then
+              echo "::warning::${TAG} is published; keeping its tag"
+              exit 0
+            fi
+            gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes
+          elif [[ $(<"$view_error") != *"$RELEASE_NOT_FOUND"* ]]; then
+            cat "$view_error"
+            echo "::error::cannot tell whether ${TAG} has a release; leaving the tag alone"
+            exit 1
+          fi
+          echo "::error::publishing ${TAG} did not finish; deleting the tag so the next run can retry"
+          git push origin ":refs/tags/${TAG}"

@@ -60,8 +60,18 @@ next version, builds a release APK signed with the release key (Actions
 secrets), gates it with `scripts/release-gate.sh` (pinned certificate in
 `packages/app-shell/android/app/release-cert.sha256`, `versionName`,
 `versionCode`) and publishes GitHub release `vX.Y.Z` with the APK and its
-sha256. Nothing is committed back: the tag is the version source, passed to
-Gradle as `-PkitbagVersionName`.
+sha256. The tag is the version source, passed to Gradle as
+`-PkitbagVersionName`.
+
+Nothing is pushed to `main`. The job runs `scripts/release-notes.sh`, commits
+`metadata/en-US/changelogs/<versionCode>.txt` as `github-actions[bot]` on a commit
+whose parent is the merged `main` commit, and tags that commit. The APK, the gate
+and the release are all built from it, because F-Droid builds the tagged tree. Only
+the tag is pushed, after the gate passes; a failed or cancelled publish deletes it
+again unless a published release holds it. `version.sh` needs nothing special: the
+tag commit's history contains its `main` parent, so `<tag>..HEAD` is exactly the
+later `main` commits. Only `changelog.sh`'s full regeneration re-tags each release
+at its parent, because git-cliff only sees tags in HEAD's history.
 
 - **Next version** — `scripts/version.sh next`, over the commits since the
   latest `vX.Y.Z` tag: breaking (`!` or `BREAKING CHANGE`) bumps major, or minor
@@ -77,8 +87,9 @@ Gradle as `-PkitbagVersionName`.
   push arrives is dropped; the newer run's range covers its commits.
 
 Local builds stay debug-signed unless `ANDROID_KEYSTORE_*` is set (see
-`.env.example`). `scripts/version.test.sh`, `scripts/release-gate.test.sh` and
-`scripts/changelog.test.sh` cover the rule, the gate and the notes.
+`.env.example`). `scripts/version.test.sh`, `scripts/release-gate.test.sh`,
+`scripts/changelog.test.sh` and `scripts/release-notes.test.sh` cover the rule, the
+gate and the notes.
 
 ### Commits and PRs
 
@@ -90,6 +101,13 @@ change is not self-evident.
 PRs state what changed, copy the issue's acceptance criteria with only the
 satisfied ones ticked, and record verification plainly: what was run, what it
 printed, and what still needs a device.
+
+Every PR body carries a ` ```release-note ` block: one user-facing line — what a
+musician notices, in plain words — or `NONE` for an internal change.
+`scripts/release-notes.sh` turns the blocks into the F-Droid changelog, so F-Droid
+users read these lines verbatim; they must be true. The `Release note` check
+(`.github/workflows/release-note.yml`) fails a PR without one, and the owner has
+made it a required check on `main`. A bot's PR passes as `NONE`.
 
 ## What is in this repo right now
 

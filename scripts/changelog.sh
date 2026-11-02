@@ -5,10 +5,12 @@ readonly EXIT_USAGE=2
 
 usage() {
   cat <<'USAGE'
-usage: changelog.sh                regenerate CHANGELOG.md (fetch tags first)
-       changelog.sh --notes <tag>  print GitHub release notes for <tag>: commit
-                                   subjects since the latest vX.Y.Z tag (or the
-                                   audit floor), or a link when too long
+usage: changelog.sh
+         regenerate CHANGELOG.md (fetch tags first); each vX.Y.Z tag off main
+         closes its release at its parent on main
+       changelog.sh --notes <tag> <previous-tag-or-empty>
+         print GitHub release notes for <tag>: commit subjects since
+         <previous-tag> (or the audit floor), or a link when too long
 
 exit 0  ok
 exit 2  usage error
@@ -34,18 +36,40 @@ readonly NOTES_BODY='
 {% endfor %}
 '
 
+# git-cliff only sees tags in HEAD's history.
+clone_with_main_side_tags() {
+  local clone=$1 tags tag commit
+  tags=$(scripts/version.sh tags)
+  git clone -q --no-checkout --no-tags . "$clone"
+  git -C "$clone" update-ref --no-deref HEAD "$(git rev-parse HEAD)"
+  for tag in $tags; do
+    commit=$(git rev-parse "${tag}^{commit}")
+    if ! git merge-base --is-ancestor "$commit" HEAD; then
+      commit=$(git rev-parse "${commit}^")
+      if ! git merge-base --is-ancestor "$commit" HEAD; then
+        echo "changelog: ${tag}'s parent is not in HEAD's history; skipped" >&2
+        continue
+      fi
+    fi
+    git -C "$clone" tag "$tag" "$commit"
+  done
+}
+
 case ${1-} in
   "")
-    git-cliff "${AUDIT_FLOOR}..HEAD" -o CHANGELOG.md
+    clone=$(mktemp -d)
+    trap 'rm -rf "$clone"' EXIT
+    clone_with_main_side_tags "$clone"
+    git-cliff --repository "$clone" --config "$PWD/cliff.toml" "${AUDIT_FLOOR}..HEAD" -o "$PWD/CHANGELOG.md"
     echo "changelog: regenerated from ${AUDIT_FLOOR}..HEAD" >&2
     ;;
   --notes)
     tag=${2-}
-    [[ -n $tag ]] || {
+    [[ -n $tag && $# -eq 3 ]] || {
       usage >&2
       exit "$EXIT_USAGE"
     }
-    previous=$(scripts/version.sh latest-tag)
+    previous=$3
     notes=$(git-cliff "${previous:-$AUDIT_FLOOR}..HEAD" --tag "$tag" --body "$NOTES_BODY" --strip all)
     notes=${notes#"${notes%%[![:space:]]*}"}
     if [[ $notes != *"### "* ]]; then
