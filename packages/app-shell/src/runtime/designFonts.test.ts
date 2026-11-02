@@ -7,9 +7,10 @@ import { describe, expect, it } from 'vitest';
 
 const ENTRY = join(import.meta.dirname, 'designFonts.ts');
 const FONT_EXTENSION = '.ttf';
+const JSON_EXTENSION = '.json';
 const FONT_PACKAGE_SCOPE = '@expo-google-fonts/';
 
-function followed(specifier: string): boolean {
+function shouldFollow(specifier: string): boolean {
   return specifier.startsWith('.') || specifier.startsWith(FONT_PACKAGE_SCOPE);
 }
 
@@ -57,11 +58,11 @@ function bundledFonts(entry: string): Set<string> {
     if (seen.has(file)) continue;
     seen.add(file);
     const resolve = createRequire(file).resolve;
-    for (const specifier of runtimeSpecifiers(file).filter(followed)) {
+    for (const specifier of runtimeSpecifiers(file).filter(shouldFollow)) {
       const target = resolve(specifier);
       if (extname(target) === FONT_EXTENSION) {
         fonts.add(basename(target, FONT_EXTENSION));
-      } else if (extname(target) !== '.json') {
+      } else if (extname(target) !== JSON_EXTENSION) {
         pending.push(target);
       }
     }
