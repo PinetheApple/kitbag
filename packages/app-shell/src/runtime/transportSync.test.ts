@@ -1,11 +1,10 @@
 import type { TransportEvent } from '@kitbag/core-native';
-import { SONG_STEP, type RampConfig } from '@kitbag/core-state';
+import type { RampConfig } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
 import {
   notificationStepAfterAppChange,
   shownAfterNativeChange,
-  songStepFor,
   storePatchFor,
   transportActive,
   type TransportShown,
@@ -43,8 +42,6 @@ const shown: TransportShown = {
 };
 const setlistAt = (index: number) => ({
   subtitle: `Wedding set · Blackbird (${String(index + 1)}/12)`,
-  index,
-  songCount: 12,
 });
 const event = (over: Partial<TransportEvent> = {}): TransportEvent => ({
   playback: 'playing',
@@ -52,7 +49,6 @@ const event = (over: Partial<TransportEvent> = {}): TransportEvent => ({
   rampRunning: false,
   practicePlayedMs: 30_000,
   practiceStretchStartedAt: 7_000,
-  songStep: null,
   ...over,
 });
 const pausedShown: TransportShown = {
@@ -218,19 +214,6 @@ describe('shownAfterNativeChange', () => {
     expect(
       shownAfterNativeChange(shown, event({ playback: 'stopped' })),
     ).toBeUndefined();
-  });
-});
-
-describe('songStepFor', () => {
-  it('maps previous and next from the notification to song steps', () => {
-    expect(songStepFor(event({ songStep: 'previous' }))).toBe(
-      SONG_STEP.previous,
-    );
-    expect(songStepFor(event({ songStep: 'next' }))).toBe(SONG_STEP.next);
-  });
-
-  it('has no step for any other event', () => {
-    expect(songStepFor(event())).toBeUndefined();
   });
 });
 

@@ -707,7 +707,7 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
           <span class="ticon">◴</span>
           <span class="tl"><b>124 BPM · 7/8</b><span>Wedding set · Blackbird (3/12)</span></span>
         </div>
-        <div class="nacts"><i>⏮ Prev</i><i>⏸ Pause</i><i>⏭ Next</i><i>■ Stop</i></div>
+        <div class="nacts"><i>− Tempo</i><i>⏸ Pause</i><i>+ Tempo</i><i>■ Stop</i></div>
       </div>
       <div style="height:10px"></div>
       <div class="pcard" style="opacity:.5"><div class="trow"><span class="ticon">♪</span><span class="tl"><b>Other notifications</b><span>Kitbag's sits above, ongoing</span></span></div></div>
@@ -724,8 +724,8 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
         <li><b>The metronome currently dies when backgrounded.</b> There is no foreground
         service. The notification is the visible face of the fix, but the fix is the
         service — a notification without one just gets killed alongside the click.</li>
-        <li><b>Prev / Next appear only with an active setlist</b>, and page the same order as
-        the setlist chip. Without one, the row is Pause and Stop only — no dead controls.</li>
+        <li><b>The row is −, Play or Pause, +, Stop</b>, setlist or not. Songs step only in
+        the app; the notification and lock screen never skip (owner, #284).</li>
         <li><b>The notification is ongoing and non-dismissible while running</b>, which is
         what a foreground service requires and what a musician wants: it is the off switch
         when the phone is in a pocket.</li>
