@@ -10,7 +10,7 @@ import {
   SegmentedControl,
   type SegmentOption,
 } from '@kitbag/core-design';
-import { getAppVersion } from '@kitbag/core-native';
+import { backupFilesAvailable, getAppVersion } from '@kitbag/core-native';
 import { useAppearance, useTools, type ThemeChoice } from '@kitbag/core-state';
 import { useCallback, useMemo, useReducer } from 'react';
 import { Linking, Platform } from 'react-native';
@@ -22,6 +22,7 @@ import {
   SOURCE_URL,
 } from './about.ts';
 import { formatAppVersion } from './appVersion.ts';
+import { BackUpRow, RestoreRow } from './BackupRows.tsx';
 import {
   NOTIFICATIONS_LABEL,
   type NotificationRow,
@@ -87,7 +88,11 @@ function ToolsSection({ onOpenTools }: { readonly onOpenTools: () => void }) {
   );
 }
 
-function DataSection() {
+function DataSection({
+  onOpenRestore,
+}: {
+  readonly onOpenRestore: () => void;
+}) {
   const { report, missing, removalFailed, refresh, removeMissing } =
     useStorage();
   const summary = report === null ? null : storageSummary(report);
@@ -103,6 +108,7 @@ function DataSection() {
       dismiss: on('dismiss'),
     };
   }, []);
+  const backups = backupFilesAvailable();
   const remove = useCallback(() => {
     send('remove');
     removeMissing();
@@ -111,6 +117,8 @@ function DataSection() {
     <>
       <SectionHeader label="Data" />
       <EditGroup>
+        {backups && <BackUpRow />}
+        {backups && <RestoreRow onOpenRestore={onOpenRestore} />}
         <EditRow label="Practice">
           <PracticeValue />
         </EditRow>
@@ -255,6 +263,7 @@ export interface SettingsScreenProps {
   readonly onOpenAttributions: () => void;
   readonly onOpenCalibration: () => void;
   readonly onOpenTools: () => void;
+  readonly onOpenRestore: () => void;
 }
 
 export function SettingsScreen({
@@ -262,12 +271,13 @@ export function SettingsScreen({
   onOpenAttributions,
   onOpenCalibration,
   onOpenTools,
+  onOpenRestore,
 }: SettingsScreenProps) {
   return (
     <SettingsFrame title="Settings" onBack={onBack}>
       <RigSection onOpenCalibration={onOpenCalibration} />
       <ToolsSection onOpenTools={onOpenTools} />
-      <DataSection />
+      <DataSection onOpenRestore={onOpenRestore} />
       <AppearanceSection />
       <AboutSection onOpenAttributions={onOpenAttributions} />
     </SettingsFrame>

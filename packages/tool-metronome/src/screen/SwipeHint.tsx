@@ -5,6 +5,7 @@ import {
   iconSizes,
   inkOnScrim,
   metronome,
+  onHardwareBack,
   palette,
   radius,
   space,
@@ -13,7 +14,7 @@ import {
   useReduceMotionMode,
   withAlpha,
 } from '@kitbag/core-design';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
@@ -76,6 +77,7 @@ export function SwipeHint({ zoneTop, zoneHeight, onDismiss }: SwipeHintProps) {
   const styles = useStyles();
   const motion = useReduceMotionMode();
   const entering = useMemo(() => FadeIn.reduceMotion(motion), [motion]);
+  useEffect(() => onHardwareBack(onDismiss), [onDismiss]);
   const ringTop = useMemo(
     () => ({
       paddingTop: Math.max(

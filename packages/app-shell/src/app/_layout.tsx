@@ -10,6 +10,7 @@ import '@/runtime/homeLayoutRuntime';
 import '@/runtime/swipeHintRuntime';
 import '@/runtime/appearanceRuntime';
 import '@/runtime/countInRuntime';
+import '@/runtime/backupRuntime';
 import '@/runtime/transportRuntime';
 import '@/runtime/keepAwakeRuntime';
 import '@/settings/rigRuntime';

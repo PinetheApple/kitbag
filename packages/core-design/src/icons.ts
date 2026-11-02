@@ -71,6 +71,7 @@ export const iconGlyphs = {
   stop: 'stop',
   subdivisionAccents: 'music-note-sixteenth',
   output: 'speaker',
+  backupFile: 'tray-arrow-down',
 } as const satisfies Record<string, VectorGlyph>;
 
 export type IconName = keyof typeof iconGlyphs;

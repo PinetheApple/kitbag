@@ -20,6 +20,9 @@ export function useSettingsRoutes() {
       openTools: () => {
         router.push('/settings/tools');
       },
+      openRestore: () => {
+        router.push('/settings/restore');
+      },
     }),
     [router],
   );

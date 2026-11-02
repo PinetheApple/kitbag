@@ -17,6 +17,7 @@ import com.kitbag.corenative.library.AnalysisEvents
 import com.kitbag.corenative.library.AnalysisFailure
 import com.kitbag.corenative.library.AnalysisResult
 import com.kitbag.corenative.library.AnalysisStore
+import com.kitbag.corenative.library.BackupShare
 import com.kitbag.corenative.library.DocumentPicker
 import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.LibraryStorage
@@ -40,6 +41,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   private val nameLock = Any()
   private val bundles = StemBundleBridge(reactContext.contentResolver, base)
   private val picker = DocumentPicker(reactContext, io, ::rejectLogged)
+  private val backups = BackupShare(reactContext, io, ::rejectLogged)
 
   private val listener: (AnalysisResult) -> Unit = ::emitAnalysis
 
@@ -60,6 +62,11 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   override fun pickDocument(promise: Promise) = picker.pickDocument(promise)
 
   override fun pickFolder(promise: Promise) = picker.pickFolder(promise)
+
+  override fun pickBackup(promise: Promise) = picker.pickBackup(promise)
+
+  override fun shareBackup(fileName: String, contents: String, promise: Promise) =
+    backups.share(fileName, contents, promise)
 
   override fun importAudio(uri: String, relativeDir: String, promise: Promise) {
     io.execute {
