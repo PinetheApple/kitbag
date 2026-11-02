@@ -1,10 +1,11 @@
 import type { PracticeSummary } from '@kitbag/core-state';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   averageTempoLabel,
   longestStretchLabel,
   practiceContextLine,
+  savePendingPractice,
   summaryButtons,
   summarySheetOnMount,
 } from './practiceSummary.ts';
@@ -103,6 +104,70 @@ describe('ending a practice session', () => {
   });
 });
 
+describe('savePendingPractice', () => {
+  function ended() {
+    const h = harness();
+    h.metronome.getState().start();
+    h.advance(MINUTE);
+    h.end();
+    return h;
+  }
+
+  it('saves the pending session once and clears it', async () => {
+    const h = ended();
+    const attempts = vi.fn();
+    savePendingPractice(h.sessions, attempts);
+    await vi.waitFor(() => {
+      expect(attempts).toHaveBeenLastCalledWith(null);
+    });
+    expect(h.insert).toHaveBeenCalledOnce();
+    expect(h.sessions.getState().pending).toEqual([]);
+  });
+
+  it('writes no duplicate when pressed again during the save', async () => {
+    const h = ended();
+    const finish: (() => void)[] = [];
+    h.insert.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish.push(resolve);
+        }),
+    );
+    savePendingPractice(h.sessions, vi.fn());
+    savePendingPractice(h.sessions, vi.fn());
+    await vi.waitFor(() => {
+      expect(h.insert).toHaveBeenCalled();
+    });
+    finish.forEach((resolve) => {
+      resolve();
+    });
+    await vi.waitFor(() => {
+      expect(h.sessions.getState().pending).toEqual([]);
+    });
+    expect(h.insert).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the session pending and offers a retry when the save fails', async () => {
+    const h = ended();
+    const uuid = h.sessions.getState().pending[0]?.uuid;
+    h.insert.mockRejectedValueOnce(new Error('disk full'));
+    const attempts = vi.fn();
+    savePendingPractice(h.sessions, attempts);
+    await vi.waitFor(() => {
+      expect(attempts).toHaveBeenLastCalledWith({ uuid, state: 'failed' });
+    });
+    expect(h.sessions.getState().pending.map((s) => s.uuid)).toEqual([uuid]);
+  });
+
+  it('does nothing with no session pending', () => {
+    const h = harness();
+    const attempts = vi.fn();
+    savePendingPractice(h.sessions, attempts);
+    expect(attempts).not.toHaveBeenCalled();
+    expect(h.insert).not.toHaveBeenCalled();
+  });
+});
+
 describe('summaryButtons', () => {
   it('offers both choices before a save', () => {
     expect(summaryButtons('idle')).toEqual({
@@ -129,7 +194,7 @@ describe('summaryButtons', () => {
 });
 
 describe('summarySheetOnMount', () => {
-  it('reopens a summary that was dismissed rather than resolved', () => {
+  it('reopens a summary left pending', () => {
     expect(summarySheetOnMount([summary()])).toBe('summary');
   });
 
