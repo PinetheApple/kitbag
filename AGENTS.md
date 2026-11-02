@@ -91,6 +91,11 @@ PRs state what changed, copy the issue's acceptance criteria with only the
 satisfied ones ticked, and record verification plainly: what was run, what it
 printed, and what still needs a device.
 
+Every PR body carries a ` ```release-note ` block: one user-facing line — what a
+musician notices, in plain words — or `NONE` for an internal change.
+`scripts/release-notes.sh` turns the blocks into the F-Droid changelog, so F-Droid
+users read these lines verbatim; they must be true. CI fails a PR without one.
+
 ## What is in this repo right now
 
 The Flutter app was **deleted on 2026-07-17** (SPEC.md §13 — the stack is React
