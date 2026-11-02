@@ -768,5 +768,6 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   as the bot on a commit off `main` and pushes only the tag; nothing is pushed to
   `main`. F-Droid reads metadata from the tagged commit, so the file must be in it.
   Pushing to `main` instead would need a ruleset bypass for the release job and
-  possibly a new credential; tagging off `main` needs neither, and `version.sh` and
-  `changelog.sh` treat each tag as closing at its parent on `main`. **[owner]**
+  possibly a new credential; tagging off `main` needs neither. `version.sh` works
+  unchanged through plain reachability; only `changelog.sh`'s full regeneration
+  re-tags each release at its parent on `main`. **[owner]**

@@ -15,18 +15,17 @@ metadata/
     └── images/             # screenshot list in its README
 ```
 
-Changelogs are named `changelogs/<versionCode>.txt`, one per release, where
-versionCode is `major*10000 + minor*100 + patch` (`scripts/version.sh code`).
+`changelogs/<versionCode>.txt` (versionCode from `scripts/version.sh code`) is
+written per release by `scripts/release-notes.sh` from the merged PRs' release-note
+blocks. It exists only in the tagged release commit, a bot commit off `main`, never
+on `main` itself; F-Droid reads it from the tag it builds and caps it at 500
+characters. So a recipe's `commit:` is `git rev-parse vX.Y.Z^{commit}`, not the
+`main` merge commit, and F-Droid shows `<CurrentVersionCode>.txt`.
 
 To submit, this tree maps into the fdroiddata repository as
 `metadata/com.kitbag.app.yml` plus `metadata/en-US/…` — the paths are
 identical, so the tree can be copied across verbatim once the recipe's
 QUESTION comments are resolved.
-
-`changelogs/<versionCode>.txt` is written per release by `scripts/release-notes.sh`
-from the merged PRs' release-note blocks, and exists only in the tagged release
-commit, never on `main`. F-Droid reads it from the tag it builds and caps it at 500
-characters.
 
 ## Submission plan (SPEC.md §13.8)
 

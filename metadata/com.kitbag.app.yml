@@ -27,9 +27,11 @@ IssueTracker: https://github.com/PinetheApple/kitbag/issues
 RepoType: git
 Repo: https://github.com/PinetheApple/kitbag.git
 
-# kitbagVersionName carries the tag's version (app.json is only the floor);
-# versionCode is major*10000 + minor*100 + patch, as scripts/version.sh code prints.
+# kitbagVersionName carries the tag's version (app.json is only the floor); versionCode is
+# `scripts/version.sh code`. commit: is `git rev-parse vX.Y.Z^{commit}`, the bot commit off main.
 Builds:
+  # QUESTION: v0.26.2 predates the release-note pipeline, so its tree has no changelog.
+  # The first submittable entry is the first release that pipeline cuts.
   - versionName: 0.26.2
     versionCode: 2602
     commit: fd4fd070234967838bbe5772f70700d20383e5f3
@@ -56,3 +58,10 @@ Builds:
     # the scanned/distributed output.
     scandelete:
       - node_modules
+
+# QUESTION: checkupdates reads versionCode from build.gradle, which computes it from
+# kitbagVersionName; unverified that it can derive the code from a tag.
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: 0.26.2
+CurrentVersionCode: 2602

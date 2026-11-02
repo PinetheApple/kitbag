@@ -67,8 +67,11 @@ Nothing is pushed to `main`. The job runs `scripts/release-notes.sh`, commits
 `metadata/en-US/changelogs/<versionCode>.txt` as `github-actions[bot]` on a commit
 whose parent is the merged `main` commit, and tags that commit. The APK, the gate
 and the release are all built from it, because F-Droid builds the tagged tree. Only
-the tag is pushed, after the gate passes; a failed publish deletes it again.
-`version.sh` and `changelog.sh` treat each tag as closing at its parent on `main`.
+the tag is pushed, after the gate passes; a failed or cancelled publish deletes it
+again unless a published release holds it. `version.sh` needs nothing special: the
+tag commit's history contains its `main` parent, so `<tag>..HEAD` is exactly the
+later `main` commits. Only `changelog.sh`'s full regeneration re-tags each release
+at its parent, because git-cliff only sees tags in HEAD's history.
 
 - **Next version** — `scripts/version.sh next`, over the commits since the
   latest `vX.Y.Z` tag: breaking (`!` or `BREAKING CHANGE`) bumps major, or minor
@@ -102,7 +105,8 @@ printed, and what still needs a device.
 Every PR body carries a ` ```release-note ` block: one user-facing line — what a
 musician notices, in plain words — or `NONE` for an internal change.
 `scripts/release-notes.sh` turns the blocks into the F-Droid changelog, so F-Droid
-users read these lines verbatim; they must be true. CI fails a PR without one.
+users read these lines verbatim; they must be true. The `Release note` check
+fails a PR without one and is required on `main`; a bot's PR counts as `NONE`.
 
 ## What is in this repo right now
 
