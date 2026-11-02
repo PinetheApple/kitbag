@@ -746,10 +746,11 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   second line rather than truncating. Above the default scale the status stack leaves the
   scrolling body and sits directly above the transport, so a body that overflows cannot
   push it out of view, at one fixed height, the running stack's, so nothing resizes on Play.
-  Segmented controls size each option from its label above the default scale, so a row
-  too narrow for the track wraps it onto its own line; a track still wider than a whole
-  line shrinks, and its labels can then break mid-word. At 1.0 the options stay equal
-  widths. Library and
+  On a small screen at 2.0 the beat dots then sit below the fold and are reached by
+  scrolling the body (coordinator call, 2026-11-02, open to owner review). Segmented controls size
+  each option from its label above the default scale, so a row too narrow for the track
+  wraps it onto its own line; a track still wider than a whole line shrinks, and its
+  labels can then break mid-word. At 1.0 the options stay equal widths. Library and
   output-route rows drop their one-line limit above the default scale. **[recorded]**
 
 - **2026-11-02 · Content is capped at 600 dp wide, centred (§12, #190)** — On screens 600 dp
