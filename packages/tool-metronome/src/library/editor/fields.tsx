@@ -1,5 +1,7 @@
 import {
+  EDIT_ROW_CONTROL_GAP,
   SegmentedControl,
+  space,
   StepControl,
   type SegmentOption,
   type StepDelta,
@@ -76,6 +78,13 @@ export function TrainerStep<K extends keyof Trainers>(
   );
 }
 
+export const EDIT_ROW_SEGMENT_GAPS = {
+  top: EDIT_ROW_CONTROL_GAP,
+  bottom: EDIT_ROW_CONTROL_GAP,
+  left: space.segmentInset,
+  right: space.segmentInset,
+};
+
 const ON_OFF: readonly SegmentOption<'off' | 'on'>[] = [
   { value: 'off', label: 'Off' },
   { value: 'on', label: 'On' },
@@ -102,6 +111,7 @@ export function OnOff({
     <SegmentedControl
       compact={!inRow}
       size={inRow ? 'editRow' : 'default'}
+      neighbourGapDp={inRow ? space.segmentInset : EDIT_ROW_SEGMENT_GAPS}
       accessibilityLabel={label}
       options={ON_OFF}
       selected={on ? 'on' : 'off'}
