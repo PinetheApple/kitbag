@@ -63,6 +63,10 @@ export function statusRowPitch(fontScale: number): number {
   return statusRowHeight(fontScale) + metronome.statusRowGap;
 }
 
+export function statusStackPinned(fontScale: number): boolean {
+  return isTextScaled(fontScale);
+}
+
 export function statusStackHeight(running: boolean, fontScale: number): number {
   const row = statusRowHeight(fontScale);
   return running
@@ -130,10 +134,12 @@ export function belowTempoHeight(
   shape: BeatDotsShape,
   room: BelowTempoRoom,
 ): number {
-  const stopped =
-    legendHeight(room.fontScale) + statusStackHeight(false, room.fontScale);
+  const dots = beatDotsHeight(shape, room);
+  const legend = legendHeight(room.fontScale);
+  if (statusStackPinned(room.fontScale)) return dots + legend;
+  const stopped = legend + statusStackHeight(false, room.fontScale);
   const running = statusStackHeight(true, room.fontScale);
-  return beatDotsHeight(shape, room) + Math.max(stopped, running);
+  return dots + Math.max(stopped, running);
 }
 
 export function tallestBelowTempo(poly: PolyRow, room: BelowTempoRoom): number {

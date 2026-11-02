@@ -22,7 +22,7 @@ import {
 } from 'react-native';
 
 import { useLibraryRefresh } from '../library/useLibraryRefresh.ts';
-import { belowTempoReserve } from '../logic/belowTempo.ts';
+import { belowTempoReserve, statusStackPinned } from '../logic/belowTempo.ts';
 import { noteStrip, type NoteStrip } from '../logic/noteStrip.ts';
 import { endPractice, summarySheetOnMount } from '../logic/practiceSummary.ts';
 import { practiceBadgeCount, restLegend } from '../logic/statusRows.ts';
@@ -273,6 +273,10 @@ export function MetronomeScreen({
     [dotsWidth, density, fontScale],
   );
   const legend = restLegend(running, polyEnabled);
+  const pinStatus = statusStackPinned(fontScale);
+  const status = (
+    <StatusStack frame={frame} settings={settings} running={running} />
+  );
 
   return (
     <GestureDetector gesture={screenSwipe}>
@@ -339,10 +343,15 @@ export function MetronomeScreen({
                 {legend === 'poly' ? <PolyLegend /> : <BeatLegend />}
               </View>
             )}
-            <View style={styles.toolsPush} />
-            <StatusStack frame={frame} settings={settings} running={running} />
+            {pinStatus ? null : (
+              <>
+                <View style={styles.toolsPush} />
+                {status}
+              </>
+            )}
           </View>
         </ScrollView>
+        {pinStatus ? <View style={topGap}>{status}</View> : null}
         <Transport
           running={running}
           armedCount={practiceBadgeCount(settings)}

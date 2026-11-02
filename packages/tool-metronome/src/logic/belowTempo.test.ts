@@ -1,4 +1,4 @@
-import { metronome, space } from '@kitbag/core-design';
+import { isTextScaled, metronome, space } from '@kitbag/core-design';
 import { KB_MAX_BEATS } from '@kitbag/core-native';
 import { describe, expect, it } from 'vitest';
 
@@ -10,6 +10,7 @@ import {
   statusRowHeight,
   statusRowPitch,
   statusStackHeight,
+  statusStackPinned,
   statusTextLines,
   tallestBelowTempo,
   type BelowTempoRoom,
@@ -47,7 +48,7 @@ interface Rendered {
 }
 
 // Stacks the boxes BeatDots, PolyDots, the legend and StatusStack draw on a
-// roomy screen, stopped and running.
+// roomy screen, stopped and running; grown text pins StatusStack outside the body.
 function renderedRoomy(shape: Rendered): number {
   const lines = layoutBeatLeds(shape.beatCount, MAX_DOTS_PER_LINE);
   const dot = beatDotSize(lines, LARGE_PHONE_DOTS_WIDTH, DOT_METRICS);
@@ -66,7 +67,8 @@ function renderedRoomy(shape: Rendered): number {
     if (shape.labelAbove) dots += label + metronome.beatMarkerGap;
   }
   const legend = metronome.legendTop + metronome.legendRow * scale;
-  const row = metronome.statusRow * scale;
+  if (isTextScaled(shape.fontScale)) return dots + legend;
+  const row = metronome.statusRow;
   const stopped = legend + row;
   const running = row * 2 + metronome.statusRowGap;
   return dots + Math.max(stopped, running);
@@ -169,6 +171,13 @@ describe('the status stack', () => {
         statusRowPitch(fontScale) + row,
       );
     }
+  });
+
+  it('pins above the transport only once the text grows', () => {
+    expect(statusStackPinned(0.85)).toBe(false);
+    expect(statusStackPinned(1)).toBe(false);
+    expect(statusStackPinned(1.3)).toBe(true);
+    expect(statusStackPinned(2)).toBe(true);
   });
 
   it('lets status text take a second line once the text grows', () => {
