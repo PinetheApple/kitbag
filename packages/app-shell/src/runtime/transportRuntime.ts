@@ -11,7 +11,6 @@ import { askForNotificationsOnce } from './notificationPermission';
 import {
   notificationStepAfterAppChange,
   shownAfterNativeChange,
-  songStepFor,
   storePatchFor,
   transportActive,
   type TransportShown,
@@ -56,8 +55,6 @@ getKitbagCommands().onTransport((event) => {
   } finally {
     applyingNative = false;
   }
-  const step = songStepFor(event);
-  if (step !== undefined) void libraryStore.getState().stepSong(step);
 });
 
 export const metronomeTransport = {

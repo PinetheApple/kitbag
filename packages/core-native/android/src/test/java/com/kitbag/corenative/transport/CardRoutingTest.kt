@@ -1,6 +1,8 @@
 package com.kitbag.corenative.transport
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CardRoutingTest {
@@ -102,12 +104,12 @@ class CardRoutingTest {
   }
 
   @Test
-  fun `skips reach only the metronome, rewind and fast forward only the song`() {
+  fun `rewind and fast forward reach only the song, and a skip name reaches nothing`() {
     showMetronome()
-    assertEquals(CardEffect.MetronomeControl(TransportAction.NEXT), press(SessionButton.NEXT))
     assertEquals(CardEffect.None, press(SessionButton.REWIND))
+    assertEquals(CardEffect.None, routing.on(CardEvent.SessionCustomPressed("NEXT")))
+    assertEquals(CardEffect.None, routing.on(CardEvent.MetronomeTapped("PREVIOUS")))
     showSong()
-    assertEquals(CardEffect.None, press(SessionButton.PREVIOUS))
     assertEquals(CardEffect.SongControl(SongAction.FORWARD), press(SessionButton.FAST_FORWARD))
   }
 
@@ -192,6 +194,35 @@ class CardRoutingTest {
   fun `an unrecognised start with no card stops the service`() {
     assertEquals(CardEffect.RemoveCard, routing.on(CardEvent.StartUnrecognised))
     assertNoSongShowing()
+  }
+
+  @Test
+  fun `a card shows from the first show until the last card goes`() {
+    assertFalse(routing.cardShowing)
+    showMetronome()
+    assertTrue(routing.cardShowing)
+    showSong()
+    routing.on(CardEvent.MetronomeStopped)
+    assertTrue(routing.cardShowing)
+    routing.on(CardEvent.SongStopped)
+    assertFalse(routing.cardShowing)
+  }
+
+  @Test
+  fun `a song returning to the metronome keeps a card showing`() {
+    showMetronome()
+    showSong()
+    routing.on(CardEvent.SongHidden)
+    assertTrue(routing.cardShowing)
+    routing.on(CardEvent.MetronomeHidden)
+    assertFalse(routing.cardShowing)
+  }
+
+  @Test
+  fun `a stale action with no card leaves no card showing`() {
+    routing.on(CardEvent.MetronomeTapped(TransportAction.PLAY.name))
+    routing.on(CardEvent.StartUnrecognised)
+    assertFalse(routing.cardShowing)
   }
 
   private companion object {
