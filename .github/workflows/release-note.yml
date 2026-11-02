@@ -1,0 +1,23 @@
+name: Release note
+
+# Kept out of ci.yml: an `edited` trigger there would re-run, or skip and so mask, the build jobs.
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  release-note:
+    name: PR body has a release-note block
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Release note — one user-facing line, or NONE
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: printf '%s' "$PR_BODY" | ./scripts/release-notes.sh --check-body
