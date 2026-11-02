@@ -2,7 +2,6 @@ import {
   AppBar,
   Chip,
   createThemedStyles,
-  inset,
   LiveText,
   PegSelector,
   space,
@@ -41,8 +40,8 @@ import { useTunerFrame } from './useTunerFrame.ts';
 // The tuning chip tops the app bar; the mode chips sit between the needle
 // strip, which takes no touches, and the screen's bottom inset.
 const TUNING_CHIP_GAPS = {
-  top: unshared(inset.appBar + space.screenInset),
-  bottom: unshared(inset.appBar) + space.sectionGap,
+  top: unshared(space.screenInset),
+  bottom: space.sectionGap,
 };
 const MODE_CHIP_GAPS = {
   top: unshared(space.sectionGap),

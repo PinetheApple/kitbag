@@ -1,9 +1,8 @@
 import {
   AppBar,
-  AppBarAction,
+  type AppBarAction,
   Button,
   createThemedStyles,
-  homeArrange,
   space,
   ToolGrid,
   ToolRow,
@@ -21,7 +20,7 @@ import {
 import { DEFAULT_TUNING, tuningLabel } from '@kitbag/tool-tuner';
 import { useRouter, type Href } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useSettingsRoutes } from '../settings/settingsRoutes.ts';
@@ -59,11 +58,6 @@ const useStyles = createThemedStyles((theme) => ({
   content: {
     paddingHorizontal: space.screenInset,
     gap: space.sectionGap,
-  },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: homeArrange.appBarGap,
   },
 }));
 
@@ -144,6 +138,10 @@ export function HomeScreen() {
   const closeArrange = useCallback(() => {
     setArranging(false);
   }, []);
+  const actions: readonly AppBarAction[] = useMemo(
+    () => [{ icon: 'settings', label: 'Settings', onPress: openSettings }],
+    [openSettings],
+  );
 
   const contentInsets = useMemo(
     () => ({
@@ -192,23 +190,17 @@ export function HomeScreen() {
       <AppBar
         wordmark
         title="Kitbag"
+        actions={actions}
         trailing={
-          <View style={styles.actions}>
-            <Button
-              variant="tonal"
-              size="small"
-              icon="edit"
-              iconSize="field"
-              label="Edit"
-              accessibilityLabel="Edit Home layout"
-              onPress={openArrange}
-            />
-            <AppBarAction
-              icon="settings"
-              accessibilityLabel="Settings"
-              onPress={openSettings}
-            />
-          </View>
+          <Button
+            variant="tonal"
+            size="small"
+            icon="edit"
+            iconSize="field"
+            label="Edit"
+            accessibilityLabel="Edit Home layout"
+            onPress={openArrange}
+          />
         }
       />
 

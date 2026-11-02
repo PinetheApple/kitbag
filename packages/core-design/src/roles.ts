@@ -111,7 +111,6 @@ export const radius = {
 } as const;
 
 export const inset = {
-  appBar: 2,
   buttonV: 10,
   buttonH: 18,
   chipV: 5,
@@ -364,7 +363,6 @@ export const textRoles = {
   segmentLarge: { family: display, weight: 400, size: 13 },
   chipLarge: { family: display, weight: 400, size: 13 },
   numpadKeyLarge: { family: display, weight: 500, size: 20, tabular: true },
-  songTitle: { family: display, weight: 500, size: 17 },
   songArtist: { family: body, weight: 400, size: 12.5 },
   stemName: { family: display, weight: 500, size: 14.5 },
   stemToggle: { family: display, weight: 700, size: 12 },

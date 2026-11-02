@@ -1,5 +1,4 @@
 export const metronome = {
-  appBar: 56,
   belowAppBar: 4,
   compactBelowHeight: 860,
   bodyGapCompact: 6,
