@@ -412,3 +412,7 @@ export const screenBar = {
   gap: 2,
   iconButton: 48,
 } as const;
+
+export const layout = {
+  maxContentWidth: 600,
+} as const;

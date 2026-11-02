@@ -21,7 +21,7 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 
 import type { IconName } from '../icons.ts';
-import { opacity, size, space, textRoles } from '../roles.ts';
+import { layout, opacity, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { withAlpha } from '../theme.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
@@ -48,6 +48,9 @@ const useStyles = createThemedStyles((theme) => ({
   },
   sheetSlot: {
     flexShrink: 1,
+    width: '100%',
+    maxWidth: layout.maxContentWidth,
+    alignSelf: 'center',
   },
   sheet: {
     flexShrink: 1,

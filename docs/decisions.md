@@ -745,3 +745,9 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   the 40 dp row height, not measured, and needs a device check. A wider row wraps onto its
   second line rather than truncating. Library and output-route rows drop their one-line
   limit above the default scale. **[recorded]**
+
+- **2026-11-02 · Content is capped at 600 dp wide, centred (§12, #190)** — On screens 600 dp
+  wide or more, every screen and every sheet is capped at `layout.maxContentWidth` (600 dp)
+  and centred; sheet scrims stay full width. No design exists for 600 dp and wider, and
+  uncapped screens stretched their tempo rows, sheets and transports across the width.
+  **[coord — the owner may overturn]**

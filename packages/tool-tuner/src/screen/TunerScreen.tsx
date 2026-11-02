@@ -18,7 +18,7 @@ import {
   type TunerTuning,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
-import { Linking, View } from 'react-native';
+import { Linking, ScrollView, View } from 'react-native';
 
 import { a4Label, effectiveA4, type A4Range } from '../logic/a4.ts';
 import { tunerHint, type HintAction } from '../logic/hints.ts';
@@ -54,6 +54,13 @@ const useStyles = createThemedStyles((theme) => ({
     flex: 1,
     backgroundColor: theme.color.bg,
     paddingHorizontal: space.screenInset,
+    gap: space.sectionGap,
+  },
+  body: {
+    flex: 1,
+  },
+  bodyContent: {
+    flexGrow: 1,
     gap: space.sectionGap,
   },
   spacer: {
@@ -287,47 +294,52 @@ export function TunerScreen({ insets, a4Range, onBack }: TunerScreenProps) {
         }
       />
 
-      {chromatic ? null : (
-        <PegSelector
-          pegs={pegs}
-          detectedIndex={detectedIndex}
-          lockedIndex={lockedIndex}
-          onPress={handlePeg}
-        />
-      )}
-
-      {hint === undefined ? null : (
-        <TunerHintCard hint={hint} onAction={handleHintAction} />
-      )}
-
-      <View style={styles.spacer} />
-
-      <View
-        accessible
-        accessibilityRole="text"
-        accessibilityLiveRegion="polite"
-        accessibilityLabel={readoutLabel}
-        style={styles.readout}
+      <ScrollView
+        style={styles.body}
+        contentContainerStyle={styles.bodyContent}
       >
-        <LiveText
-          text={noteText}
-          role="tunerNote"
-          color={heard ? 'text' : 'text3'}
-        />
-        <View style={styles.captionRow}>
-          <LiveText
-            text={captionText}
-            role="tunerCaption"
-            color={heard ? 'text2' : 'text3'}
+        {chromatic ? null : (
+          <PegSelector
+            pegs={pegs}
+            detectedIndex={detectedIndex}
+            lockedIndex={lockedIndex}
+            onPress={handlePeg}
           />
-          <TuneDirectionIcon
-            direction={direction}
-            color={heard ? 'text2' : 'decor'}
-          />
-        </View>
-      </View>
+        )}
 
-      <TunerStrip needle={needle} active={active} />
+        {hint === undefined ? null : (
+          <TunerHintCard hint={hint} onAction={handleHintAction} />
+        )}
+
+        <View style={styles.spacer} />
+
+        <View
+          accessible
+          accessibilityRole="text"
+          accessibilityLiveRegion="polite"
+          accessibilityLabel={readoutLabel}
+          style={styles.readout}
+        >
+          <LiveText
+            text={noteText}
+            role="tunerNote"
+            color={heard ? 'text' : 'text3'}
+          />
+          <View style={styles.captionRow}>
+            <LiveText
+              text={captionText}
+              role="tunerCaption"
+              color={heard ? 'text2' : 'text3'}
+            />
+            <TuneDirectionIcon
+              direction={direction}
+              color={heard ? 'text2' : 'decor'}
+            />
+          </View>
+        </View>
+
+        <TunerStrip needle={needle} active={active} />
+      </ScrollView>
 
       <View style={styles.chips}>
         <Chip

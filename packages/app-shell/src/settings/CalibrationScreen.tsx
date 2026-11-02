@@ -193,29 +193,31 @@ export function CalibrationScreen({ onBack }: CalibrationScreenProps) {
   return (
     <View style={[styles.screen, frame]}>
       <AppBar title={CALIBRATE_LATENCY} onBack={onBack} />
-      <Pressable
-        style={styles.body}
-        onPressIn={handleTap}
-        accessibilityRole="button"
-        accessibilityLabel={TAP_PROMPT}
-      >
-        {route === null ? null : (
-          <RouteRow
-            kind={route.kind}
-            title={routeTitle(route)}
-            meta={routeMeta(route)}
-            active
+      <View style={styles.body}>
+        <Pressable
+          style={styles.body}
+          onPressIn={handleTap}
+          accessibilityRole="button"
+          accessibilityLabel={TAP_PROMPT}
+        >
+          {route === null ? null : (
+            <RouteRow
+              kind={route.kind}
+              title={routeTitle(route)}
+              meta={routeMeta(route)}
+              active
+            />
+          )}
+          <TapZone count={view.count} progress={view.progress} />
+          <Text style={styles.prompt}>{TAP_PROMPT}</Text>
+          <CalibrationScatter
+            dots={view.dots}
+            meanX={view.meanX}
+            axisMs={view.axisMs}
           />
-        )}
-        <TapZone count={view.count} progress={view.progress} />
-        <Text style={styles.prompt}>{TAP_PROMPT}</Text>
-        <CalibrationScatter
-          dots={view.dots}
-          meanX={view.meanX}
-          axisMs={view.axisMs}
-        />
-        {view.result === null ? null : <ResultRow result={view.result} />}
-        <View style={styles.spacer} />
+          {view.result === null ? null : <ResultRow result={view.result} />}
+          <View style={styles.spacer} />
+        </Pressable>
         <View style={styles.actions}>
           <Button
             label={START_OVER}
@@ -239,7 +241,7 @@ export function CalibrationScreen({ onBack }: CalibrationScreenProps) {
             {`Saved for ${routeTitle(route)} only`}
           </Text>
         )}
-      </Pressable>
+      </View>
     </View>
   );
 }
