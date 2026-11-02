@@ -1,11 +1,5 @@
 import { useCallback, useState } from 'react';
-import {
-  Pressable,
-  Text,
-  useWindowDimensions,
-  View,
-  type LayoutChangeEvent,
-} from 'react-native';
+import { Pressable, Text, View, type LayoutChangeEvent } from 'react-native';
 
 import { homeArrange, homeArrangeText } from '../homeArrangeRoles.ts';
 import {
@@ -17,9 +11,10 @@ import {
   textRoles,
 } from '../roles.ts';
 import { equalOptionMinWidth, type OptionMinWidth } from '../segmentWidth.ts';
-import { isTextScaled } from '../textScale.ts';
+import { growFromContent } from '../textScale.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
+import { useTextScaled } from '../useTextScaled.ts';
 import {
   hitBoxStyle,
   hitExtension,
@@ -126,12 +121,7 @@ const useStyles = createThemedStyles((theme) => ({
   optionHit: {
     flex: 1,
   },
-  // Grown labels set the width, so a wrapping row moves the track to its own line
-  // instead of squeezing a label until it breaks mid-word.
-  byLabel: {
-    flexGrow: 1,
-    flexShrink: 1,
-  },
+  byLabel: growFromContent,
   option: {
     alignItems: 'center',
     paddingVertical: inset.segmentOptionV,
@@ -262,7 +252,7 @@ export function SegmentedControl<T extends string>({
   size: controlSize = 'default',
 }: SegmentedControlProps<T>) {
   const styles = useStyles();
-  const byLabel = isTextScaled(useWindowDimensions().fontScale);
+  const byLabel = useTextScaled();
   const editRow = controlSize === 'editRow';
   const large = controlSize === 'large' || editRow;
   const [labelWidths, setLabelWidths] = useState<Partial<Record<T, number>>>(

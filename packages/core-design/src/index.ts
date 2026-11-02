@@ -67,6 +67,7 @@ export * from './components/Waveform.tsx';
 export * from './components/Slider.tsx';
 export * from './useScreenReader.ts';
 export * from './useTextIconScale.ts';
+export * from './useTextScaled.ts';
 export * from './useReduceMotion.ts';
 export * from './useKeyboardDidHide.ts';
 export * from './sliderMath.ts';

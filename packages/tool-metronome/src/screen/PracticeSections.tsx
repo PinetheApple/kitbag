@@ -2,7 +2,6 @@ import {
   Chip,
   countLabel,
   createThemedStyles,
-  isTextScaled,
   metronomeSheet,
   radius,
   SegmentedControl,
@@ -11,10 +10,11 @@ import {
   type StepDelta,
   Switch,
   unshared,
+  useTextScaled,
 } from '@kitbag/core-design';
 import { COUNT_IN_SCOPE, useMetronome } from '@kitbag/core-state';
 import { useCallback } from 'react';
-import { Text, useWindowDimensions, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import {
   COUNT_IN_SEGMENT_OPTIONS,
@@ -140,7 +140,7 @@ export function PracticeMute({ onType }: TypeProps) {
 
 export function PracticeCountIn() {
   const styles = usePracticeStyles();
-  const scaled = isTextScaled(useWindowDimensions().fontScale);
+  const scaled = useTextScaled();
   const countIn = useMetronome((s) => s.countIn);
   const setCountIn = useMetronome((s) => s.setCountIn);
   const everySong = useMetronome(

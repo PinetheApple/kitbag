@@ -4,6 +4,10 @@ export const UNLIMITED_LINES = 0;
 
 export const TEXT_ICON_SCALE_MAX = 1.5;
 
+// Grown text sets the width, so a wrapping row moves the item to its own line
+// rather than squeezing a label until it breaks.
+export const growFromContent = { flexGrow: 1, flexShrink: 1 } as const;
+
 export function grownTextScale(fontScale: number): number {
   return Math.max(DEFAULT_FONT_SCALE, fontScale);
 }
