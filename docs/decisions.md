@@ -715,3 +715,9 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   in the same colour. Android does not anchor dashes at the corners, so narrow dashed cells
   lose their ends and a run of muted cells reads as one dashed bar. This departs from
   `design/kitbag-metronome-status.html`. **[recorded]**
+
+- **2026-11-02 · Content is capped at 600 dp wide, centred (§12, #190)** — On screens 600 dp
+  wide or more, every screen and every sheet is capped at `layout.maxContentWidth` (600 dp)
+  and centred; sheet scrims stay full width. No design exists for 600 dp and wider, and
+  uncapped screens stretched their tempo rows, sheets and transports across the width.
+  **[coord — the owner may overturn]**
