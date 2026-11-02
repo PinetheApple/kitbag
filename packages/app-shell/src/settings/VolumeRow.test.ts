@@ -10,12 +10,14 @@ type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
 const sliders = vi.hoisted(() => [] as Props[]);
 const readouts = vi.hoisted(() => [] as Props[]);
+const rows = vi.hoisted(() => [] as Props[]);
+const display = vi.hoisted(() => ({ fontScale: 1 }));
 
 vi.mock('react-native', async () => {
   const { createElement: h } = await import('react');
   return {
     View: (props: Props) => h('div', null, props.children),
-    useWindowDimensions: () => ({ fontScale: 1 }),
+    useWindowDimensions: () => ({ fontScale: display.fontScale }),
   };
 });
 
@@ -35,7 +37,10 @@ vi.mock('@kitbag/core-design', async (original) => {
   const pure = await original<Record<string, unknown>>();
   return {
     ...pure,
-    EditRow: (props: Props) => h('div', null, props.children),
+    EditRow: (props: Props) => {
+      rows.push(props);
+      return h('div', null, props.children);
+    },
     LiveText: () => null,
     LiveSlot: (props: Props) => {
       readouts.push(props);
@@ -66,5 +71,20 @@ describe('click volume row wiring', () => {
     renderToStaticMarkup(createElement(VolumeRow));
     expect(readouts[0]?.widest).toBe(volumePercent(KB_VOLUME_BOUNDS.max));
     expect(readouts[0]?.style).not.toHaveProperty('width');
+  });
+
+  it('keeps the slider and readout beside the label at the default text size', () => {
+    display.fontScale = 1;
+    rows.length = 0;
+    renderToStaticMarkup(createElement(VolumeRow));
+    expect(rows[0]?.singleLine).toBe(true);
+  });
+
+  it('lets the controls take their own line once the text grows', () => {
+    display.fontScale = 2;
+    rows.length = 0;
+    renderToStaticMarkup(createElement(VolumeRow));
+    display.fontScale = 1;
+    expect(rows[0]?.singleLine).toBe(false);
   });
 });
