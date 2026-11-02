@@ -20,7 +20,6 @@ vi.mock('react-native', async (importOriginal) => ({
 }));
 vi.mock('@kitbag/core-state', () => ({ useMetronome: vi.fn() }));
 vi.mock('react-native-reanimated', () => ({ default: { View: 'View' } }));
-vi.mock('./LiveSlot.tsx', () => ({ LiveSlot: 'LiveSlot' }));
 vi.mock('./statusStyles.ts', () => ({ useStatusStyles: vi.fn() }));
 vi.mock('./StatusVariant.tsx', () => ({ StatusVariant: 'StatusVariant' }));
 vi.mock('./PolyStrip.tsx', () => ({ PolyStrip: 'PolyStrip' }));

@@ -10,6 +10,7 @@ import {
   type StepDelta,
   Switch,
   unshared,
+  useTextScaled,
 } from '@kitbag/core-design';
 import { COUNT_IN_SCOPE, useMetronome } from '@kitbag/core-state';
 import { useCallback } from 'react';
@@ -139,6 +140,7 @@ export function PracticeMute({ onType }: TypeProps) {
 
 export function PracticeCountIn() {
   const styles = usePracticeStyles();
+  const scaled = useTextScaled();
   const countIn = useMetronome((s) => s.countIn);
   const setCountIn = useMetronome((s) => s.setCountIn);
   const everySong = useMetronome(
@@ -165,7 +167,7 @@ export function PracticeCountIn() {
       icon="countIn"
       title="Count-in"
       heading={
-        <View style={styles.headingFill}>
+        <View style={scaled ? styles.headingByLabel : styles.headingFill}>
           <SegmentedControl
             size="large"
             accessibilityLabel="Count-in length"

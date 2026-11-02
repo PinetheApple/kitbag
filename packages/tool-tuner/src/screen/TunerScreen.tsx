@@ -76,6 +76,7 @@ const useStyles = createThemedStyles((theme) => ({
   },
   chips: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     gap: space.controlGap,
   },

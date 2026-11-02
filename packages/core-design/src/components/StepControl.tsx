@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Pressable,
   Text,
+  useWindowDimensions,
   View,
   type AccessibilityActionEvent,
 } from 'react-native';
@@ -9,6 +10,7 @@ import {
 import type { IconName } from '../icons.ts';
 import { iconSizes, inset, radius, size, space, textRoles } from '../roles.ts';
 import { createStepRepeat, STEP_REPEAT } from '../stepRepeat.ts';
+import { grownTextScale } from '../textScale.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import {
@@ -254,7 +256,6 @@ const useStyles = createThemedStyles((theme) => ({
   },
   suffix: {
     ...textStyle(textRoles.stepValueSuffix),
-    marginLeft: space.stepSuffixGap,
     color: theme.color.text2,
   },
 }));
@@ -273,6 +274,11 @@ export function StepControl({
   neighbourGapDp = space.stepKeyGap,
 }: StepControlProps) {
   const styles = useStyles();
+  const textScale = grownTextScale(useWindowDimensions().fontScale);
+  const suffixGap = useMemo(
+    () => ({ marginLeft: space.stepSuffixGap * textScale }),
+    [textScale],
+  );
   const valueTappable = onValuePress !== undefined;
   const textGlyph = variant === 'inlineLargeTextGlyph';
   const large = variant === 'inlineLarge' || textGlyph;
@@ -362,7 +368,7 @@ export function StepControl({
     ) : (
       <View style={styles.suffixed}>
         {valueNumber}
-        <Text style={styles.suffix}>{suffix}</Text>
+        <Text style={[styles.suffix, suffixGap]}>{suffix}</Text>
       </View>
     );
   const spokenValue = suffix === undefined ? value : `${value} ${suffix}`;

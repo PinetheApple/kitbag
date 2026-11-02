@@ -64,7 +64,6 @@ export const useStemStyles = createThemedStyles((theme) => ({
   name: {
     ...textStyle(textRoles.stemName),
     color: theme.color.text,
-    width: stemPlayer.nameWidth,
   },
   nameQuiet: { color: theme.color.text3 },
   nameMaster: { color: theme.color.text2 },

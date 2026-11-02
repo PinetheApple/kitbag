@@ -1,4 +1,4 @@
-import { metronome } from '@kitbag/core-design';
+import { grownTextScale, isTextScaled, metronome } from '@kitbag/core-design';
 import { KB_MAX_BEATS } from '@kitbag/core-native';
 
 import {
@@ -46,14 +46,32 @@ export const BEAT_LABEL_HEIGHT =
   metronome.beatMarkerLineHeight;
 
 const LIVE_STATUS_ROWS = 2;
+const STATUS_LINES = 1;
+// statusRow (40 dp) fits two lines of 1x status text, so a row and text grown by one
+// scale still fit two. Reasoned from the row height, not measured.
+const SCALED_STATUS_LINES = 2;
 
-export const STATUS_ROW_PITCH = metronome.statusRow + metronome.statusRowGap;
+export function statusRowHeight(fontScale: number): number {
+  return metronome.statusRow * grownTextScale(fontScale);
+}
 
-const STATUS_STACK_HEIGHT =
-  STATUS_ROW_PITCH * (LIVE_STATUS_ROWS - 1) + metronome.statusRow;
+export function statusTextLines(fontScale: number): number {
+  return isTextScaled(fontScale) ? SCALED_STATUS_LINES : STATUS_LINES;
+}
 
-export function statusStackHeight(running: boolean): number {
-  return running ? STATUS_STACK_HEIGHT : metronome.statusRow;
+export function statusRowPitch(fontScale: number): number {
+  return statusRowHeight(fontScale) + metronome.statusRowGap;
+}
+
+export function statusStackPinned(fontScale: number): boolean {
+  return isTextScaled(fontScale);
+}
+
+export function statusStackHeight(running: boolean, fontScale: number): number {
+  const row = statusRowHeight(fontScale);
+  return running
+    ? statusRowPitch(fontScale) * (LIVE_STATUS_ROWS - 1) + row
+    : row;
 }
 
 export type PolyRow = 'off' | 'labelBeside' | 'labelAbove';
@@ -70,7 +88,7 @@ export interface BelowTempoRoom {
 }
 
 function drawnLabelLine(fontScale: number): number {
-  return metronome.beatMarkerLineHeight * Math.max(1, fontScale);
+  return metronome.beatMarkerLineHeight * grownTextScale(fontScale);
 }
 
 export function beatLinePitch(
@@ -109,16 +127,19 @@ export function beatDotsHeight(
 }
 
 function legendHeight(fontScale: number): number {
-  return metronome.legendTop + metronome.legendRow * Math.max(1, fontScale);
+  return metronome.legendTop + metronome.legendRow * grownTextScale(fontScale);
 }
 
 export function belowTempoHeight(
   shape: BeatDotsShape,
   room: BelowTempoRoom,
 ): number {
-  const stopped = legendHeight(room.fontScale) + statusStackHeight(false);
-  const running = statusStackHeight(true);
-  return beatDotsHeight(shape, room) + Math.max(stopped, running);
+  const dots = beatDotsHeight(shape, room);
+  const legend = legendHeight(room.fontScale);
+  if (statusStackPinned(room.fontScale)) return dots + legend;
+  const stopped = legend + statusStackHeight(false, room.fontScale);
+  const running = statusStackHeight(true, room.fontScale);
+  return dots + Math.max(stopped, running);
 }
 
 export function tallestBelowTempo(poly: PolyRow, room: BelowTempoRoom): number {

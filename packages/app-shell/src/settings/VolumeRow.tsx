@@ -2,13 +2,15 @@ import {
   bodyLineHeight,
   createThemedStyles,
   EditRow,
-  LiveText,
+  LiveSlot,
   minTouchTargetDp,
   rig,
   Slider,
   textRoles,
+  useTextScaled,
 } from '@kitbag/core-design';
 import { useMetronome } from '@kitbag/core-state';
+import { KB_VOLUME_BOUNDS } from '@kitbag/core-native';
 import { useCallback, useEffect } from 'react';
 import { View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
@@ -22,17 +24,19 @@ import {
 import { setLiveVolume } from './rigRuntime';
 
 const LABEL = 'Click volume';
+const WIDEST_READOUT = volumePercent(KB_VOLUME_BOUNDS.max);
 
 const SLIDER_HIT_OVERHANG =
   (minTouchTargetDp - textRoles.editRowKey.size * bodyLineHeight) / 2;
 
 const useStyles = createThemedStyles(() => ({
   slider: { width: rig.sliderWidth, marginVertical: -SLIDER_HIT_OVERHANG },
-  readout: { width: rig.readoutWidth },
+  readout: { minWidth: rig.readoutWidth },
 }));
 
 export function VolumeRow() {
   const styles = useStyles();
+  const scaled = useTextScaled();
   const volume = useMetronome((s) => s.volume);
   const setVolume = useMetronome((s) => s.setVolume);
   const fraction = useSharedValue(fractionOfVolume(volume));
@@ -60,7 +64,7 @@ export function VolumeRow() {
     readout.value = volumePercent(volume);
   }, [readout, volume]);
   return (
-    <EditRow label={LABEL} singleLine>
+    <EditRow label={LABEL} singleLine={!scaled}>
       <View style={styles.slider}>
         <Slider
           value={fraction}
@@ -77,9 +81,10 @@ export function VolumeRow() {
           accessibilityValue={volumePercent(volume)}
         />
       </View>
-      <LiveText
+      <LiveSlot
         text={readout}
         role="levelReadout"
+        widest={WIDEST_READOUT}
         align="right"
         style={styles.readout}
       />

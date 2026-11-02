@@ -709,6 +709,7 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   and its summary shows on the next metronome visit. Leaving while playing keeps the same
   session running, since background practice counts. A session stopped from the notification
   while away stays open until End or the next stopped leave. **[coord]**
+
 - **2026-11-02 · Solid ends on muted bar cells (§12.2, #264)** — The status file draws a
   muted cell as a fully dashed 1.5px outline: `tx2` in the status strip, `decor` in the
   Practice sheet preview. Both now ship a dashed outline with solid left and right edges
@@ -729,6 +730,36 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   Android 13 to 15 stop calling `onBackPressed()` once an app opts in (Android's documented
   behaviour, not read in source): Back would skip every `BackHandler` handler and leave the
   app. **[recorded]**
+
+- **2026-11-02 · Text at 200% font scale (§12.6, #192)** — The stem player's name column
+  keeps the mockup's 58 dp at the default text size and grows by the font scale above it.
+  The name keeps `numberOfLines={1}`, so a long name still truncates, as the ruling
+  accepts. **[user, 2026-10-30]** App-bar icons (back, search, add, the metronome bar's
+  keys) grow with the font scale up to 1.5×. The 48 dp buttons alone would allow about
+  1.84× for the largest bar glyph (26 dp); 1.5 is a judgement, not measured, so a glyph keeps padding
+  inside its button and does not outweigh the bar title beside it. Other icons stay at
+  their design size, since most sit inside fixed-size controls. The app-bar title keeps
+  its existing cap: one line, shrinking toward `appBarTitleMinSize` through
+  `minimumFontScale` before it truncates. The metronome's status rows grow by the font
+  scale and hold at most two lines; that a grown row fits two grown lines is reasoned from
+  the 40 dp row height, not measured, and needs a device check. A wider row wraps onto its
+  second line rather than truncating. Above the default scale the status stack leaves the
+  scrolling body and sits directly above the transport, so a body that overflows cannot
+  push it out of view, at one fixed height, the running stack's, so nothing resizes on Play.
+  On a small screen at 2.0 the beat dots then sit below the fold and are reached by
+  scrolling the body (coordinator call, 2026-11-02, open to owner review). Above the default scale
+  a segmented control's options and the sound picker's items take their label's width
+  and never shrink below it, since Android wraps a squeezed label mid-word; what does
+  not fit on one line wraps onto further rows inside the track or grid. A `fill` track
+  wider than its row takes a line of its own and shrinks to it; a track without `fill`
+  takes the width its parent gives it. Wrapped rows of options sit far enough apart that
+  an option on a row between two others reaches a 48 dp touch target from the gaps alone,
+  so a wrapped track is taller than its options; the first and last rows reach into the
+  track edge and the neighbour gap as a single row does. At 1.0 the options stay equal
+  widths and the picker keeps its columns. A stepper's value-to-suffix gap grows with
+  the font scale. The click volume row lets its slider and readout drop below the label
+  above the default scale rather than wrapping them beside it. Library and
+  output-route rows drop their one-line limit above the default scale. **[recorded]**
 
 - **2026-11-02 · Metronome card is media-style, with no setlist skips (§5.6, §13.9, #284)** —
   Decided by the owner (ruling via coordinator, 2026-11-02); supersedes the 2026-10-28 #163
