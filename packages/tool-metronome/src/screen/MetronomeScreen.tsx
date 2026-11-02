@@ -413,7 +413,6 @@ export function MetronomeScreen({
           visible={openSheet === 'summary'}
           summary={pendingPractice}
           bottomInset={insets.bottom}
-          onDismiss={handleCloseSheet}
         />
       </View>
     </GestureDetector>

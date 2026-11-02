@@ -21,15 +21,12 @@ import {
   averageTempoLabel,
   longestStretchLabel,
   practiceContextLine,
+  savePendingPractice,
   summaryButtons,
+  type SaveAttempt,
   type SaveState,
 } from '../logic/practiceSummary.ts';
 import { formatPracticeElapsed } from '../logic/practiceTimer.ts';
-
-interface SaveAttempt {
-  readonly uuid: string;
-  readonly state: Exclude<SaveState, 'idle'>;
-}
 
 const useStyles = createThemedStyles((theme) => ({
   duration: {
@@ -59,14 +56,12 @@ interface PracticeSummarySheetProps {
   readonly visible: boolean;
   readonly summary: PracticeSummary | null;
   readonly bottomInset: number;
-  readonly onDismiss: () => void;
 }
 
 export function PracticeSummarySheet({
   visible,
   summary,
   bottomInset,
-  onDismiss,
 }: PracticeSummarySheetProps) {
   const styles = useStyles();
   const [attempt, setAttempt] = useState<SaveAttempt | null>(null);
@@ -79,20 +74,8 @@ export function PracticeSummarySheet({
   }, []);
 
   const handleSave = useCallback(() => {
-    if (uuid === null) return;
-    setAttempt({ uuid, state: 'saving' });
-    getPracticeSessionStore()
-      .getState()
-      .saveSession()
-      .then(
-        () => {
-          setAttempt(null);
-        },
-        () => {
-          setAttempt({ uuid, state: 'failed' });
-        },
-      );
-  }, [uuid]);
+    savePendingPractice(getPracticeSessionStore(), setAttempt);
+  }, []);
 
   const handleDiscard = useCallback(() => {
     getPracticeSessionStore().getState().discardSession();
@@ -113,7 +96,7 @@ export function PracticeSummarySheet({
       bottomInset={bottomInset}
       dim
       onShow={handleShow}
-      onDismiss={onDismiss}
+      onDismiss={handleSave}
     >
       {summary === null ? null : (
         <>
