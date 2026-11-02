@@ -761,6 +761,24 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   above the default scale rather than wrapping them beside it. Library and
   output-route rows drop their one-line limit above the default scale. **[recorded]**
 
+- **2026-11-02 · Metronome card is media-style, with no setlist skips (§5.6, §13.9, #284)** —
+  Decided by the owner (ruling via coordinator, 2026-11-02); supersedes the 2026-10-28 #163
+  entry for the metronome card. #284 asks for the media notification style: One UI with
+  icons-only lock-screen notifications shows a player only for a media-style notification
+  tied to an active media session, and stock Android puts only those in the shade's media
+  area. Android 13+ draws a seek bar on it again; no duration is published, so it is greyed
+  and cannot be dragged, which the owner accepted. The card and session never carry
+  previous or next, setlist or not; songs step in the app only. The card is always −, play
+  or pause, +, stop. On Android 13+ the system builds the controls from the session's
+  playback state: play/pause from the state, and with no skip actions the custom actions
+  (minus, plus, stop) fill the slots in that order, giving [−][▶][+][Stop]. Before 13 the
+  notification's own actions draw, and the compact view is −, play or pause, +. The session
+  always offers play, pause, play/pause and stop, so headset keys work in either state; it
+  opens with the first card and is released when the last card goes, not when the service
+  ends. Also retires the notification step in the 2026-10-31 #212 entry and the tempo-key
+  rule in #87; kitbag-metronome.html §04 and kitbag-metronome-unsaved.html Frame 4 are
+  edited to match. **[user]**
+
 - **2026-11-02 · Back on the practice summary saves the session (§5.7, #85)** — Back,
   a downward drag past the dismiss threshold and a tap outside the sheet all save the
   session, as the non-destructive default; Discard stays an explicit button. The sheet

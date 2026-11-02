@@ -36,8 +36,6 @@ describe('transportSetlistOf', () => {
   it('with no song loaded, has no current song to name', () => {
     expect(transportSetlistOf(subtitleOf, library(null))).toEqual({
       subtitle: 'Wedding set|none',
-      index: null,
-      songCount: 3,
     });
   });
 
@@ -46,31 +44,25 @@ describe('transportSetlistOf', () => {
     expect(transportSetlistOf(subtitleOf, library(loaded))).toBeNull();
   });
 
-  it('places a song mid-setlist and names it for the subtitle', () => {
+  it('names a song mid-setlist in the subtitle', () => {
     expect(transportSetlistOf(subtitleOf, library(loadedAt(1)))).toEqual({
       subtitle: 'Wedding set|Blackbird',
-      index: 1,
-      songCount: 3,
     });
   });
 
-  it('places the first and the last song', () => {
-    expect(transportSetlistOf(subtitleOf, library(loadedAt(0)))).toMatchObject({
+  it('names the first and the last song', () => {
+    expect(transportSetlistOf(subtitleOf, library(loadedAt(0)))).toEqual({
       subtitle: 'Wedding set|Intro',
-      index: 0,
     });
     expect(transportSetlistOf(subtitleOf, library(loadedAt(2)))).toEqual({
       subtitle: 'Wedding set|Encore',
-      index: 2,
-      songCount: 3,
     });
   });
 
   it('treats a song removed from the set as no current song', () => {
     const removed = { ...loadedAt(1), itemId: 999 };
-    expect(transportSetlistOf(subtitleOf, library(removed))).toMatchObject({
+    expect(transportSetlistOf(subtitleOf, library(removed))).toEqual({
       subtitle: 'Wedding set|none',
-      index: null,
     });
   });
 

@@ -1,9 +1,5 @@
 import type { TransportEvent, TransportSetlist } from '@kitbag/core-native';
-import {
-  SONG_STEP,
-  type MetronomeConfig,
-  type SongStep,
-} from '@kitbag/core-state';
+import type { MetronomeConfig } from '@kitbag/core-state';
 
 export type TransportSource = Pick<
   MetronomeConfig,
@@ -91,19 +87,6 @@ export function shownAfterNativeChange(
   return event.rampRunning
     ? followed
     : { ...followed, bpm: event.bpm, rampRunning: false };
-}
-
-const SONG_STEP_OF_WIRE: Readonly<
-  Record<NonNullable<TransportEvent['songStep']>, SongStep>
-> = {
-  previous: SONG_STEP.previous,
-  next: SONG_STEP.next,
-};
-
-export function songStepFor(event: TransportEvent): SongStep | undefined {
-  return event.songStep === null
-    ? undefined
-    : SONG_STEP_OF_WIRE[event.songStep];
 }
 
 export function storePatchFor(
