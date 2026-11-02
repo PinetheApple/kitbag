@@ -745,9 +745,11 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   the 40 dp row height, not measured, and needs a device check. A wider row wraps onto its
   second line rather than truncating. Above the default scale the status stack leaves the
   scrolling body and sits directly above the transport, so a body that overflows cannot
-  push it out of view. Segmented controls size each option from its label above the
-  default scale, so a row too narrow for the track wraps it onto its own line instead of
-  breaking a label mid-word; at 1.0 the options stay equal widths. Library and
+  push it out of view, at one fixed height, the running stack's, so nothing resizes on Play.
+  Segmented controls size each option from its label above the default scale, so a row
+  too narrow for the track wraps it onto its own line; a track still wider than a whole
+  line shrinks, and its labels can then break mid-word. At 1.0 the options stay equal
+  widths. Library and
   output-route rows drop their one-line limit above the default scale. **[recorded]**
 
 - **2026-11-02 · Content is capped at 600 dp wide, centred (§12, #190)** — On screens 600 dp
