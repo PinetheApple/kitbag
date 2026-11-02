@@ -24,6 +24,7 @@ constexpr float kUnderRate = 0.1f;
 constexpr float kOverRate = 2.0f;
 constexpr int kDrainBlocks = 60;
 constexpr int kAllocBlocks = 50;
+constexpr const char* kMissingPath = "/nonexistent/kitbag_missing.wav";
 
 void TestTakeAndCarrySum() {
   kitbag::Mixer mixer(kSampleRate);
@@ -173,6 +174,22 @@ void TestPrimeLeavesNoGap() {
   CheckSoundsAtOnce(&mixer, "prime: play from stop sounds at once");
 }
 
+void CheckBusesFreed(kitbag::Mixer* mixer) {
+  mixer->Seek(0, 0, false);
+  Check(mixer->key_bus_count() == 0, "buses: a seek back to bypass frees all");
+  mixer->SetRate(kSpeed, 0, false);
+  mixer->SetTrackPitch(1, kKey, 0, false);
+  mixer->UnloadTrack(1, 0, false);
+  Check(mixer->key_bus_count() == 1, "buses: an unload frees its key's bus");
+  Check(
+      !mixer->LoadTrack(1, kMissingPath, 0, false) &&
+          mixer->key_bus_count() == 1,
+      "buses: a failed load leaves no bus behind"
+  );
+  for (int t : {0, 1}) mixer->UnloadTrack(t, 0, false);
+  Check(mixer->key_bus_count() == 0, "buses: unloading the song frees all");
+}
+
 void TestBusesAreLazyAndFreed() {
   kitbag::Mixer mixer(kSampleRate);
   for (int t : {0, 1}) LoadPcm(&mixer, t, ToneFixture({.frames = kToneFrames}));
@@ -198,8 +215,7 @@ void TestBusesAreLazyAndFreed() {
   mixer.SetRate(kOverRate, 0, false);
   Drain(&mixer);
   Check(mixer.rate() == kitbag::Mixer::kMaxRate, "rate: clamps to 1.0");
-  for (int t : {0, 1}) mixer.UnloadTrack(t, 0, false);
-  Check(mixer.key_bus_count() == 0, "buses: unloading the song frees all");
+  CheckBusesFreed(&mixer);
 }
 
 size_t CountedProcess(kitbag::Mixer* mixer, int blocks) {
@@ -214,19 +230,16 @@ size_t CountedProcess(kitbag::Mixer* mixer, int blocks) {
   return allocations;
 }
 
-void TestProcessNeverAllocates() {
-  const size_t probe_before = ThreadAllocations();
-  const std::vector<float> probe(kBlock);
-  Check(
-      ThreadAllocations() > probe_before && !probe.empty(),
-      "alloc: the counter sees this thread's allocations"
-  );
+void CheckProcessNeverAllocates(
+    std::initializer_list<float> keys,
+    const char* label
+) {
   kitbag::Mixer mixer(kSampleRate);
-  for (int t : {0, 1, 2}) {
-    LoadPcm(&mixer, t, ToneFixture({.frames = kToneFrames, .bed = true}));
+  int track = 0;
+  for (const float key : keys) {
+    LoadPcm(&mixer, track, ToneFixture({.frames = kToneFrames, .bed = true}));
+    mixer.SetTrackPitch(track++, key, 0, false);
   }
-  mixer.SetTrackPitch(1, kKey, 0, false);
-  mixer.SetTrackPitch(2, -kKey, 0, false);
   mixer.Play();
   size_t allocations = CountedProcess(&mixer, kAllocBlocks);
   mixer.SetRate(kSpeed, 0, false);
@@ -236,8 +249,18 @@ void TestProcessNeverAllocates() {
   mixer.SetTrackPitch(1, kKey, 0, false);
   mixer.Seek(kLoopFrom, 0, false);
   allocations += CountedProcess(&mixer, kAllocBlocks);
+  Check(allocations == 0, label);
+}
+
+void TestProcessNeverAllocates() {
+  const size_t probe_before = ThreadAllocations();
+  ::operator delete(::operator new(sizeof(float)));
   Check(
-      allocations == 0,
+      ThreadAllocations() > probe_before,
+      "alloc: the counter sees this thread's allocations"
+  );
+  CheckProcessNeverAllocates(
+      {0.0f, kKey, -kKey},
       "alloc: Process with live buses (engage, rate, move, wake, prime)"
   );
 }

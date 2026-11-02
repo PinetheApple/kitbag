@@ -66,6 +66,7 @@ void Mixer::AdoptPlan() {
     jump_base_.store(now, std::memory_order_relaxed);
     engaged_.store(false, std::memory_order_relaxed);
     bypass_continues_ = false;
+    bus_hold_ = false;
   }
   layout_ = plan.layout;
   epoch_ = plan.epoch;
@@ -110,6 +111,31 @@ bool Mixer::AlignTo(AudioSource& source, int64_t frame) {
     left -= n;
   }
   return static_cast<int64_t>(source.position()) == frame;
+}
+
+void Mixer::SnapshotBuses() {
+  for (int s = 0; s < kKeyBusCount; ++s) {
+    const auto* node = buses_[s].Get();
+    rt_buses_[s] = node == nullptr ? nullptr : node->value.bus.get();
+  }
+}
+
+bool Mixer::BusesAgree(uint64_t generation) const {
+  for (const KeyBus* bus : rt_buses_) {
+    if (bus != nullptr && bus->generation != generation) return false;
+  }
+  return true;
+}
+
+// Replaced buses are unprimed, so the head holds, silent, until the re-prime's
+// jump lands; playing on would skip what the old buses had been fed.
+bool Mixer::HoldForBusSwitch() {
+  if (engaged_.load(std::memory_order_relaxed) &&
+      !BusesAgree(primed_generation_)) {
+    engaged_.store(false, std::memory_order_relaxed);
+    bus_hold_ = true;
+  }
+  return bus_hold_;
 }
 
 void Mixer::ApplyPendingCommands() {
@@ -202,11 +228,12 @@ void Mixer::Process(float* output, uint32_t frame_count) {
   // so read_frame_ is written only from here.
   ApplyPendingCommands();
   AdoptPlan();
+  SnapshotBuses();
   song_clock_.playing = false;
   // Scratch is sized to kMaxBlockFrames at setup; a wider block cannot be
   // drained without allocating, which the callback must never do.
   if (frame_count > StreamingTrack::kMaxBlockFrames) return;
-  if (!playing_.load(std::memory_order_relaxed)) return;
+  if (!playing_.load(std::memory_order_relaxed) || HoldForBusSwitch()) return;
   const bool any_solo = any_solo_.load(std::memory_order_relaxed);
   if (engaged_.load(std::memory_order_relaxed) ||
       PrimeIfReady(frame_count, any_solo)) {

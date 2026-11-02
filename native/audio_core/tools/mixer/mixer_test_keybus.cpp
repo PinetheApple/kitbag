@@ -243,7 +243,7 @@ std::vector<std::vector<float>> TwoTones() {
   };
 }
 
-void TestBusMoveDoesNotClick() {
+void CheckMoveClick(std::initializer_list<float> keys, const char* label) {
   const std::vector<std::vector<float>> stems = TwoTones();
   const float budget = LoopWrapCurvature(
       stems,
@@ -255,17 +255,29 @@ void TestBusMoveDoesNotClick() {
   mixer.Play();
   std::vector<float> left = RenderPaced(&mixer, kMoveAtBlock);
   const auto moved = static_cast<int64_t>(left.size());
-  mixer.SetTrackPitch(1, kKeyMove, 0, false);
+  for (const float key : keys) mixer.SetTrackPitch(1, key, 0, false);
   const int64_t settle = 2 * OutputFramesFor(LagFrames(kSpeed), kSpeed);
   const std::vector<float> after = RenderPaced(&mixer, BlocksFor(settle));
   left.insert(left.end(), after.begin(), after.end());
   const float click = PeakCurvature(left, moved, moved + settle);
   std::printf(
-      "mixer_verify: bus move curvature %.5f, loop crossfade %.5f\n",
+      "mixer_verify: %s: curvature %.5f, loop crossfade %.5f\n",
+      label,
       static_cast<double>(click),
       static_cast<double>(budget)
   );
-  Check(click <= budget, "move: a key change clicks no more than a loop wrap");
+  Check(click <= budget, label);
+}
+
+void TestBusMoveDoesNotClick() {
+  CheckMoveClick(
+      {kKeyMove},
+      "move: a key change clicks no more than a loop wrap"
+  );
+  CheckMoveClick(
+      {kKeyB, kKeyMove},
+      "move: two key changes in one block click no more than a loop wrap"
+  );
 }
 
 void PlayIntoSecondPass(kitbag::Mixer* mixer) {

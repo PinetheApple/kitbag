@@ -131,6 +131,9 @@ class Mixer {
   }
   /// App thread only.
   int key_bus_count() const;
+  bool key_buses_vendor_default() const {
+    return app_vendor_default_;
+  }
   /// Frames each track's read-ahead ring holds, stretch pre-roll included.
   uint64_t ring_frames() const;
 
@@ -272,20 +275,36 @@ class Mixer {
 
   // App thread: key-bus lifecycle (mixer_keys.cpp).
   bool WantsStretch() const;
-  void PublishBus(int slot, uint64_t now_frame, bool engine_running);
-  bool MatchBusConfig(int live, uint64_t now_frame, bool engine_running);
+  std::unique_ptr<KeyBusSlot> MakeBus(int slot) const;
+  bool MatchBusConfig(
+      int in_use,
+      bool allow_down,
+      uint64_t now_frame,
+      bool engine_running
+  );
   void EngageBuses(
       std::optional<int> extra,
       uint64_t now_frame,
       bool engine_running
   );
   void Reprime(uint64_t now_frame, bool engine_running);
-  void PrepareBusFor(int track, uint64_t now_frame, bool engine_running);
+  uint32_t PrepareBusFor(int track, uint64_t now_frame, bool engine_running);
+  void UndoPrepare(
+      uint32_t created,
+      bool was_engaged,
+      uint64_t now_frame,
+      bool engine_running
+  );
+  uint32_t LiveBusMask() const;
   void MarkUsedBuses(bool* used) const;
-  bool FreeUnusedBuses(uint64_t now_frame, bool engine_running);
-  bool BusesAgree(const KeyBus& any) const;
+  void
+  RetireDrainedBuses(const bool* used, uint64_t now_frame, bool engine_running);
+  void FreeUnusedBuses(bool at_jump, uint64_t now_frame, bool engine_running);
 
   // Callback: the engaged path (mixer_stretch.cpp).
+  void SnapshotBuses();
+  bool HoldForBusSwitch();
+  bool BusesAgree(uint64_t generation) const;
   KeyBus* BusAt(int slot) const;
   KeyBus* AnyBus() const;
   bool RtWantsStretch() const;
@@ -354,7 +373,11 @@ class Mixer {
   float app_rate_ = kUnityRate;
   bool app_engaged_ = false;
   bool app_vendor_default_ = false;
-  // Callback-owned stretch state.
+  uint64_t app_bus_generation_ = 0;
+  // Callback-owned stretch state. rt_buses_ is loaded once per block.
+  KeyBus* rt_buses_[kKeyBusCount] = {};
+  uint64_t primed_generation_ = 0;
+  bool bus_hold_ = false;
   float rate_target_ = kUnityRate;
   float rate_ = kUnityRate;
   double carry_ = 0.0;

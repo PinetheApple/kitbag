@@ -1,6 +1,7 @@
 #ifndef KITBAG_MIXER_KEY_BUS_H
 #define KITBAG_MIXER_KEY_BUS_H
 
+#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -9,12 +10,17 @@
 
 namespace kitbag {
 
+struct KeyBusConfig {
+  bool vendor_default = false;
+  uint64_t generation = 0;
+};
+
 // Configure allocates on the app thread; after publish only the callback
-// touches it.
+// touches it, except `drained`, which the app reads to retire it.
 struct KeyBus {
   static constexpr int kChannels = 2;
 
-  void Configure(float sample_rate, int semitones, bool vendor_default);
+  void Configure(float sample_rate, int semitones, const KeyBusConfig& config);
 
   TimeStretch stretch;
   std::vector<float> input;
@@ -23,7 +29,8 @@ struct KeyBus {
   int64_t drain_frames = 0;
   int64_t idle_frames = 0;
   bool dormant = true;
-  bool vendor_default = false;
+  uint64_t generation = 0;
+  std::atomic<bool> drained{false};
 };
 
 struct KeyBusSlot {

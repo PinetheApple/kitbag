@@ -61,10 +61,12 @@ bool Mixer::LoadTrack(
     bool engine_running
 ) {
   if (track < 0 || track >= kMaxTracks) return false;
-  PrepareBusFor(track, now_frame, engine_running);
+  const bool was_engaged = app_engaged_;
+  const uint32_t created = PrepareBusFor(track, now_frame, engine_running);
   const auto frame = static_cast<uint64_t>(PlannedHead().stream);
   StreamingTrack& stream = *tracks_[track].stream;
   if (!stream.Load(path, now_frame, engine_running, JoinStamp(), frame)) {
+    UndoPrepare(created, was_engaged, now_frame, engine_running);
     return false;
   }
   NoteTrackLoaded(track);
@@ -77,8 +79,7 @@ void Mixer::UnloadTrack(int track, uint64_t now_frame, bool engine_running) {
   }
   tracks_[track].stream->Unload(now_frame, engine_running);
   RecomputeLongestFrames();
-  const bool reconfigured = FreeUnusedBuses(now_frame, engine_running);
-  if (reconfigured && app_engaged_) Reprime(now_frame, engine_running);
+  FreeUnusedBuses(false, now_frame, engine_running);
 }
 
 bool Mixer::track_ready(int track) const {
@@ -93,11 +94,13 @@ bool Mixer::SetTrackSource(
     bool engine_running
 ) {
   if (track < 0 || track >= kMaxTracks) return false;
-  PrepareBusFor(track, now_frame, engine_running);
+  const bool was_engaged = app_engaged_;
+  const uint32_t created = PrepareBusFor(track, now_frame, engine_running);
   const auto frame = static_cast<uint64_t>(PlannedHead().stream);
   const SourceStamp stamp = JoinStamp();
   StreamingTrack& stream = *tracks_[track].stream;
   if (!stream.LoadReader(reader, now_frame, engine_running, stamp, frame)) {
+    UndoPrepare(created, was_engaged, now_frame, engine_running);
     return false;
   }
   NoteTrackLoaded(track);
@@ -175,7 +178,7 @@ void Mixer::Stop(uint64_t now_frame, bool engine_running) {
   app_playing_ = false;
   Enqueue({CommandType::kStop});
   app_engaged_ = WantsStretch();
-  FreeUnusedBuses(now_frame, engine_running);
+  FreeUnusedBuses(true, now_frame, engine_running);
   Relayout({.layout = app_layout_}, now_frame, engine_running);
 }
 
@@ -191,7 +194,7 @@ void Mixer::Seek(uint64_t frame, uint64_t now_frame, bool engine_running) {
   const int64_t target =
       SeekTarget(static_cast<int64_t>(std::min(frame, longest)));
   app_engaged_ = WantsStretch();
-  FreeUnusedBuses(now_frame, engine_running);
+  FreeUnusedBuses(true, now_frame, engine_running);
   Relayout({.frame = target, .layout = app_layout_}, now_frame, engine_running);
 }
 
@@ -214,7 +217,10 @@ Mixer::LoopResult Mixer::SetLoop(
   }
   const Head head = PlannedHead();
   const int64_t song = app_layout_.SongFrameAt(head.stream);
-  const bool keep = song < end;
+  const int64_t heard = stretch_engaged()
+                            ? std::min(static_cast<int64_t>(position()), song)
+                            : song;
+  const bool keep = heard < end;
   const TransportPlan plan{
       .kind = keep && !head.jump_pending ? PlanKind::kKeep : PlanKind::kJump,
       .frame = keep ? song : start,

@@ -4,9 +4,13 @@
 
 namespace kitbag {
 
-void KeyBus::Configure(float sample_rate, int semitones, bool use_vendor) {
-  vendor_default = use_vendor;
-  if (use_vendor) {
+void KeyBus::Configure(
+    float sample_rate,
+    int semitones,
+    const KeyBusConfig& config
+) {
+  generation = config.generation;
+  if (config.vendor_default) {
     stretch.ConfigureVendorDefault(kChannels, sample_rate);
   } else {
     stretch.Configure(kChannels, sample_rate);

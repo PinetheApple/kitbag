@@ -24,11 +24,24 @@ void AddFrame(
   );
 }
 
+bool KeepAwake(KeyBus* bus, int members, uint32_t frame_count) {
+  if (members > 0 && bus->dormant) {
+    bus->stretch.Reset();
+    bus->dormant = false;
+    bus->drained.store(false, std::memory_order_relaxed);
+  }
+  bus->idle_frames = members > 0 ? 0 : bus->idle_frames + frame_count;
+  if (bus->idle_frames > bus->drain_frames) {
+    bus->dormant = true;
+    bus->drained.store(true, std::memory_order_release);
+  }
+  return !bus->dormant;
+}
+
 }  // namespace
 
 KeyBus* Mixer::BusAt(int slot) const {
-  const auto* node = buses_[slot].Get();
-  return node == nullptr ? nullptr : node->value.bus.get();
+  return rt_buses_[slot];
 }
 
 KeyBus* Mixer::AnyBus() const {
@@ -150,22 +163,12 @@ void Mixer::SeekBuses(int64_t lag) {
   }
 }
 
-bool Mixer::BusesAgree(const KeyBus& any) const {
-  for (int s = 0; s < kKeyBusCount; ++s) {
-    const KeyBus* bus = BusAt(s);
-    if (bus != nullptr && bus->vendor_default != any.vendor_default) {
-      return false;
-    }
-  }
-  return true;
-}
-
 // OutputSeek over [head, head + lag) makes the first output frame the head.
 // Mid-switch buses disagree on config, so the prime waits for the last one.
 bool Mixer::PrimeIfReady(uint32_t frame_count, bool any_solo) {
-  if (!RtWantsStretch()) return false;
+  if (bus_hold_ || !RtWantsStretch()) return false;
   KeyBus* any = AnyBus();
-  if (any == nullptr || !BusesAgree(*any)) return false;
+  if (any == nullptr || !BusesAgree(any->generation)) return false;
   const TimeStretch& stretch = any->stretch;
   const int64_t lag =
       std::min(stretch.SongLagFrames(rate_target_), stretch.SeekFrames());
@@ -173,6 +176,7 @@ bool Mixer::PrimeIfReady(uint32_t frame_count, bool any_solo) {
   if (!RingsReady(lag + take)) return false;
   rate_ = rate_target_;
   carry_ = 0.0;
+  primed_generation_ = any->generation;
   ReadPreRoll(lag, any_solo);
   SeekBuses(lag);
   ResetRecords(stretch);
@@ -235,13 +239,19 @@ void Mixer::FeedBuses(uint32_t take, bool any_solo) {
   }
 }
 
+// A move during a fade fades from whichever bus is louder, or reverses the
+// fade when it returns to its origin, so no contribution is cut at full gain.
 void Mixer::MoveToBus(Track& tr, int pitch) {
-  const int from = tr.pitch.load(std::memory_order_relaxed);
-  if (from != pitch && engaged_.load(std::memory_order_relaxed)) {
-    tr.fade_from = from;
-    tr.fade_left = crossfade_frames_;
-  }
+  const int to = tr.pitch.load(std::memory_order_relaxed);
   tr.pitch.store(pitch, std::memory_order_relaxed);
+  if (to == pitch || !engaged_.load(std::memory_order_relaxed)) return;
+  if (tr.fade_left > 0 && tr.fade_from == pitch) {
+    tr.fade_from = to;
+    tr.fade_left = crossfade_frames_ - tr.fade_left;
+    return;
+  }
+  if (2 * tr.fade_left <= crossfade_frames_) tr.fade_from = to;
+  tr.fade_left = crossfade_frames_;
 }
 
 // A stem changing key is crossfaded across the two bus inputs: a hard cut
@@ -275,14 +285,7 @@ void Mixer::RunBuses(float* output, uint32_t take, uint32_t frame_count) {
   const float master = master_gain_.load(std::memory_order_relaxed);
   for (int s = 0; s < kKeyBusCount; ++s) {
     KeyBus* bus = BusAt(s);
-    if (bus == nullptr) continue;
-    if (members[s] > 0 && bus->dormant) {
-      bus->stretch.Reset();
-      bus->dormant = false;
-    }
-    bus->idle_frames = members[s] > 0 ? 0 : bus->idle_frames + frame_count;
-    if (bus->idle_frames > bus->drain_frames) bus->dormant = true;
-    if (bus->dormant) continue;
+    if (bus == nullptr || !KeepAwake(bus, members[s], frame_count)) continue;
     bus->stretch.Process(
         bus->input.data(),
         static_cast<int>(take),

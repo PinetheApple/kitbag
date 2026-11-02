@@ -216,6 +216,7 @@ size_t ThreadAllocations();
 void RunStretchTests();
 void RunKeyBusTests();
 void RunConfigTests();
+void RunSwitchTests();
 
 }  // namespace mixer_test
 

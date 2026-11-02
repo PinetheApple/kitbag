@@ -82,6 +82,11 @@ void TestConfigFollowsLiveBusCount() {
       "config: five buses run presetDefault"
   );
   mixer.SetTrackPitch(kExtraStem, 0.0f, 0, false);
+  RenderPaced(&mixer, kSettleBlocks);
+  Check(
+      mixer.key_buses_vendor_default(),
+      "config: four keys in use mid-play stay on presetDefault"
+  );
   mixer.Seek(mixer.position(), 0, false);
   Check(mixer.key_bus_count() == kChosenBuses, "config: back to four buses");
   CheckState(
