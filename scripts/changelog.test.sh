@@ -106,6 +106,57 @@ else
   echo "  SKIP  notes carry subjects, not bodies — git-cliff not installed"
 fi
 
+echo "release tags off main (real git-cliff)"
+tag_off_main() {
+  local dir=$1 tag=$2
+  git -C "$dir" checkout -q -b "release-$tag"
+  commit "$dir" "chore(release): F-Droid changelog for $tag"
+  git -C "$dir" tag "$tag"
+  git -C "$dir" checkout -q main
+}
+
+section() { awk -v start="$2" 'index($0, start) == 1 { on = 1; next } on && /^## / { exit } on' "$1/CHANGELOG.md"; }
+
+if command -v git-cliff >/dev/null 2>&1; then
+  fixture=$(make_fixture)
+  sed -i "s/^readonly AUDIT_FLOOR=.*/readonly AUDIT_FLOOR=$(git -C "$fixture" rev-parse HEAD)/" "$fixture/scripts/changelog.sh"
+  commit "$fixture" "fix: before the first release"
+  tag_off_main "$fixture" v0.1.0
+  commit "$fixture" "feat: in the second release"
+  tag_off_main "$fixture" v0.2.0
+  git -C "$fixture" checkout -q release-v0.2.0
+  commit "$fixture" "fix: only on the release branch"
+  git -C "$fixture" tag v0.3.0
+  git -C "$fixture" checkout -q main
+  commit "$fixture" "fix: not released yet"
+  (cd "$fixture" && ./scripts/changelog.sh 2>"$fixture/stderr")
+  first=$(section "$fixture" "## 0.1.0")
+  second=$(section "$fixture" "## 0.2.0")
+  unreleased=$(section "$fixture" "## Unreleased")
+  if [[ $first == *"Before the first release"* && $second == *"In the second release"* &&
+    $second != *"Before the first release"* && $unreleased == *"Not released yet"* &&
+    $unreleased != *"In the second release"* ]]; then
+    pass "each off-main tag closes its release at the tag's main-side parent"
+  else
+    fail "each off-main tag closes its release at the tag's main-side parent" "$(<"$fixture/CHANGELOG.md")"
+  fi
+  if [[ $(<"$fixture/stderr") == *"v0.3.0"* && $(<"$fixture/CHANGELOG.md") != *"## 0.3.0"* ]]; then
+    pass "a tag whose parent is not in HEAD's history is skipped with a warning"
+  else
+    fail "a tag whose parent is not in HEAD's history is skipped with a warning" "$(<"$fixture/stderr")"
+  fi
+
+  git -C "$fixture" tag -d v0.3.0 >/dev/null
+  notes=$(notes_in "$fixture" v0.3.0)
+  if [[ $notes == *"Not released yet"* && $notes != *"In the second release"* && $notes != *"Before the first"* ]]; then
+    pass "--notes after an off-main tag gives only the commits since it"
+  else
+    fail "--notes after an off-main tag gives only the commits since it" "$notes"
+  fi
+else
+  echo "  SKIP  release tags off main — git-cliff not installed"
+fi
+
 echo
 if ((FAIL)); then
   printf 'changelog tests: %d passed, %d FAILED\n' "$PASS" "$FAIL"

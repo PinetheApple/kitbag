@@ -34,9 +34,33 @@ readonly NOTES_BODY='
 {% endfor %}
 '
 
+readonly TAG_RE='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+
+# A release tag sits on a commit off main; git-cliff only sees tags in HEAD's history,
+# so a scratch clone re-tags each one at its main-side parent.
+clone_with_main_side_tags() {
+  local clone=$1 tag commit
+  git clone -q --no-checkout --no-tags . "$clone"
+  git -C "$clone" update-ref --no-deref HEAD "$(git rev-parse HEAD)"
+  for tag in $(git tag -l 'v*' | grep -E "$TAG_RE"); do
+    commit=$(git rev-parse "${tag}^{commit}")
+    if ! git merge-base --is-ancestor "$commit" HEAD; then
+      commit=$(git rev-parse "${commit}^")
+      if ! git merge-base --is-ancestor "$commit" HEAD; then
+        echo "changelog: ${tag}'s parent is not in HEAD's history; skipped" >&2
+        continue
+      fi
+    fi
+    git -C "$clone" tag "$tag" "$commit"
+  done
+}
+
 case ${1-} in
   "")
-    git-cliff "${AUDIT_FLOOR}..HEAD" -o CHANGELOG.md
+    clone=$(mktemp -d)
+    trap 'rm -rf "$clone"' EXIT
+    clone_with_main_side_tags "$clone"
+    git-cliff --repository "$clone" --config "$PWD/cliff.toml" "${AUDIT_FLOOR}..HEAD" -o "$PWD/CHANGELOG.md"
     echo "changelog: regenerated from ${AUDIT_FLOOR}..HEAD" >&2
     ;;
   --notes)
