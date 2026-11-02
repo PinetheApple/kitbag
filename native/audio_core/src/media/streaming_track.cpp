@@ -180,6 +180,44 @@ std::unique_ptr<StreamingTrack::Source> StreamingTrack::BuildReseekSource(
   return s;
 }
 
+namespace {
+
+uint32_t
+DrainInto(AudioSource& source, uint32_t channels, float* dst, uint32_t frames) {
+  uint32_t done = 0;
+  while (done < frames) {
+    const uint32_t got = source.Read(
+        dst + static_cast<size_t>(done) * channels,
+        std::min(frames - done, StreamingTrack::kMaxBlockFrames)
+    );
+    if (got == 0) break;
+    done += got;
+  }
+  return done;
+}
+
+}  // namespace
+
+PreRead StreamingTrack::ReadAhead(
+    uint64_t frame,
+    const LoopLayout& layout,
+    float* dst,
+    uint32_t frames
+) {
+  if (load_path_.empty()) return {};
+  const auto s = BuildReseekSource(frame, {.layout = layout}, true);
+  if (s == nullptr) return {};
+  return {s->channels, DrainInto(*s->source, s->channels, dst, frames)};
+}
+
+PreRead StreamingTrack::ReadStaged(float* dst, uint32_t frames) {
+  if (staged_ == nullptr) return {};
+  return {
+      staged_->channels,
+      DrainInto(*staged_->source, staged_->channels, dst, frames)
+  };
+}
+
 bool StreamingTrack::Stage(
     uint64_t frame,
     const SourceStamp& stamp,

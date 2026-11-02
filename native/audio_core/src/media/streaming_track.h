@@ -13,6 +13,11 @@
 
 namespace kitbag {
 
+struct PreRead {
+  uint32_t channels = 0;
+  uint32_t frames = 0;
+};
+
 struct SourceStamp {
   uint64_t epoch = 0;
   LoopLayout layout;
@@ -161,6 +166,18 @@ class StreamingTrack {
       float* output,
       float gain
   );
+  /// App thread. Reads [frame, frame + frames) of the stream laid out by
+  /// [layout] through a private reader, leaving the live source untouched.
+  /// Nothing for a caller-owned reader, which the live source shares.
+  PreRead ReadAhead(
+      uint64_t frame,
+      const LoopLayout& layout,
+      float* dst,
+      uint32_t frames
+  );
+  /// App thread, between Stage and CommitStaged: takes the staged source's
+  /// first [frames] frames, so it is committed that far on.
+  PreRead ReadStaged(float* dst, uint32_t frames);
   /// Realtime-safe buffered count through the published node (acquire load), for
   /// a concurrent test to observe a ring the callback drains (#25).
   uint64_t rt_buffered() const {

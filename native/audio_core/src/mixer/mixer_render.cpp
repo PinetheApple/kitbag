@@ -56,29 +56,38 @@ void Mixer::AdoptPlan() {
     return;
   }
   const TransportPlan& plan = node->value;
+  if (plan.kind == PlanKind::kHandOver) {
+    JudgeHandOver(plan);
+  } else {
+    AdoptTransport(plan);
+  }
+  plan_generation_.store(node->generation, std::memory_order_release);
+}
+
+// A keep counts on from where its head stood when the plan was built, so an
+// old loop that wrapped meanwhile is never replayed; AlignTo skips the gap.
+void Mixer::AdoptTransport(const TransportPlan& plan) {
+  handover_pending_ = false;
   const int64_t now = transport_frame_.load(std::memory_order_relaxed);
-  // A keep counts on from where its head stood when the plan was built, so an
-  // old loop that wrapped meanwhile is never replayed; AlignTo skips the gap.
-  if (plan.kind == PlanKind::kKeep) {
+  const bool keep = plan.kind == PlanKind::kKeep;
+  if (keep) {
     stream_frame_ = plan.frame + std::max<int64_t>(now - plan.base, 0);
   } else {
     stream_frame_ = plan.frame;
     jump_base_.store(now, std::memory_order_relaxed);
     engaged_.store(false, std::memory_order_relaxed);
-    bypass_continues_ = false;
-    bus_hold_ = false;
   }
   layout_ = plan.layout;
   epoch_ = plan.epoch;
-  if (engaged_.load(std::memory_order_relaxed)) {
+  if (keep && engaged_.load(std::memory_order_relaxed)) {
     PushRecord();
-  } else {
-    read_frame_.store(
-        static_cast<uint64_t>(layout_.SongFrameAt(stream_frame_)),
-        std::memory_order_relaxed
-    );
+    return;
   }
-  plan_generation_.store(node->generation, std::memory_order_release);
+  read_frame_.store(
+      static_cast<uint64_t>(layout_.SongFrameAt(stream_frame_)),
+      std::memory_order_relaxed
+  );
+  if (plan.primed) EngageAt(plan, 0);
 }
 
 bool Mixer::TransportFrameFor(
@@ -115,7 +124,7 @@ bool Mixer::AlignTo(AudioSource& source, int64_t frame) {
 
 void Mixer::SnapshotBuses() {
   for (int s = 0; s < kKeyBusCount; ++s) {
-    const auto* node = buses_[s].Get();
+    const auto* node = buses_[bank_][s].Get();
     rt_buses_[s] = node == nullptr ? nullptr : node->value.bus.get();
   }
 }
@@ -127,15 +136,11 @@ bool Mixer::BusesAgree(uint64_t generation) const {
   return true;
 }
 
-// Replaced buses are unprimed, so the head holds, silent, until the re-prime's
-// jump lands; playing on would skip what the old buses had been fed.
-bool Mixer::HoldForBusSwitch() {
-  if (engaged_.load(std::memory_order_relaxed) &&
-      !BusesAgree(primed_generation_)) {
-    engaged_.store(false, std::memory_order_relaxed);
-    bus_hold_ = true;
-  }
-  return bus_hold_;
+// Only when a re-prime republished the bank this block was about to adopt:
+// one silent block, and the newer plan lands at the next.
+bool Mixer::HoldForBusSwitch() const {
+  return engaged_.load(std::memory_order_relaxed) &&
+         !BusesAgree(primed_generation_);
 }
 
 void Mixer::ApplyPendingCommands() {
@@ -235,14 +240,13 @@ void Mixer::Process(float* output, uint32_t frame_count) {
   if (frame_count > StreamingTrack::kMaxBlockFrames) return;
   if (!playing_.load(std::memory_order_relaxed) || HoldForBusSwitch()) return;
   const bool any_solo = any_solo_.load(std::memory_order_relaxed);
-  if (engaged_.load(std::memory_order_relaxed) ||
-      PrimeIfReady(frame_count, any_solo)) {
+  if (engaged_.load(std::memory_order_relaxed)) {
     StretchBlock(output, frame_count, any_solo);
     return;
   }
+  if (handover_pending_ && HandOverBlock(output, frame_count, any_solo)) return;
   MixAllTracks(output, frame_count, any_solo);
   AdvanceTransport(frame_count);
-  bypass_continues_ = true;
 }
 
 }  // namespace kitbag

@@ -10,6 +10,7 @@
 #include "media/song_clock.h"
 #include "media/streaming_track.h"
 #include "mixer/key_bus.h"
+#include "mixer/transport_plan.h"
 #include "rt/rt_publisher.h"
 #include "rt/spsc_ring.h"
 
@@ -29,22 +30,20 @@ class Mixer {
   static constexpr float kMaxRate = 1.0f;
   static constexpr int kMinPitchSemitones = -6;
   static constexpr int kMaxPitchSemitones = 6;
+  // Covers the app-thread pre-roll reads and OutputSeek after the switch point
+  // is picked (~12 ms for 4 buses on the host bench); a miss retries longer.
+  static constexpr double kHandOverLeadSeconds = 0.15;
+  static constexpr int kHandOverAttempts = 3;
 
-  /// [engine_rate] is the device/output sample rate each track is resampled to
-  /// on load, so Process never sees a rate mismatch (SPEC.md §4.1). scratch_ is
-  /// sized once here for the widest supported track.
   explicit Mixer(uint32_t engine_rate);
   ~Mixer() = default;
   Mixer(const Mixer&) = delete;
   Mixer& operator=(const Mixer&) = delete;
 
-  /// Load a track from a file path, streamed from disk. RT-safe: it opens,
-  /// resamples and builds the source off the callback, then publishes it by
-  /// atomic swap, so loading during playback cannot tear a read (SPEC.md §4.1).
-  /// [now_frame] is the engine clock and [engine_running] true whenever the
-  /// callback can run; together they date the retired source for deferred
-  /// reclamation — the callback never frees. Returns false for a null path, a
-  /// track outside [0, kMaxTracks), or a file that will not open.
+  /// Load a track from a file path, streamed from disk and published by atomic
+  /// swap (SPEC.md §4.1). [now_frame] and [engine_running] date the retired
+  /// source for deferred reclamation. False for a null path, a track outside
+  /// [0, kMaxTracks), or a file that will not open.
   bool LoadTrack(
       int track,
       const char* path,
@@ -52,19 +51,15 @@ class Mixer {
       bool engine_running
   );
 
-  /// Retire a track's source: publishes an empty node so the callback drains
-  /// nothing, and the old source is reclaimed off the callback. Recomputes the
-  /// transport length (B5) so a shorter remaining track ends playback in time.
+  /// Retire a track's source, reclaimed off the callback; the transport length
+  /// follows the longest remaining track (B5).
   void UnloadTrack(int track, uint64_t now_frame, bool engine_running);
 
-  /// See StreamingTrack::ReserveCallbackFrames; applies to every track.
   void ReserveCallbackFrames(uint32_t frames);
 
-  /// Non-blocking: true once a source is live (published) for a track.
   bool track_ready(int track) const;
 
-  /// Stream a track from a caller-owned reader that must outlive the track.
-  /// Same publish discipline as LoadTrack.
+  /// [reader] is caller-owned and must outlive the track.
   bool SetTrackSource(
       int track,
       SourceReader* reader,
@@ -76,7 +71,6 @@ class Mixer {
   /// next block; the getters read the callback-published mirror.
   void SetGain(int track, float gain);
   void SetMute(int track, bool muted);
-  /// While any track is soloed, only soloed tracks reach the output.
   void SetSolo(int track, bool soloed);
 
   float gain(int track) const;
@@ -107,11 +101,9 @@ class Mixer {
     return crossfade_frames_;
   }
 
-  /// Speed (SPEC.md §7.6), clamped to [kMinRate, kMaxRate]. Off unity the
-  /// key buses engage: the app thread configures them here.
+  /// Speed (SPEC.md §7.6), clamped to [kMinRate, kMaxRate].
   void SetRate(float rate, uint64_t now_frame, bool engine_running);
-  /// Absolute key of one stem in whole semitones, clamped to
-  /// [kMinPitchSemitones, kMaxPitchSemitones]. Configures its bus if needed.
+  /// Whole semitones, clamped to [kMinPitchSemitones, kMaxPitchSemitones].
   void SetTrackPitch(
       int track,
       float semitones,
@@ -129,16 +121,25 @@ class Mixer {
   int64_t fed_frames() const {
     return transport_frame_.load(std::memory_order_relaxed);
   }
-  /// App thread only.
+  /// App thread only. Both banks, so a bank left behind by a prime counts.
   int key_bus_count() const;
   bool key_buses_vendor_default() const {
     return app_vendor_default_;
   }
   /// Frames each track's read-ahead ring holds, stretch pre-roll included.
   uint64_t ring_frames() const;
+  int64_t handover_lead_frames() const {
+    return handover_lead_frames_;
+  }
+  /// Tests only: the lead of the next hand-over's first attempt.
+  void set_first_handover_lead_frames(int64_t frames) {
+    first_lead_frames_ = frames;
+  }
+  uint64_t missed_handovers() const {
+    return missed_handovers_;
+  }
 
-  /// Callback-published mirror. Reflects the state the callback drained, so it
-  /// converges within one block once the device is running.
+  /// Callback-published mirrors: they converge within one block.
   bool is_playing() const {
     return playing_.load(std::memory_order_relaxed);
   }
@@ -146,32 +147,26 @@ class Mixer {
     return read_frame_.load(std::memory_order_relaxed);
   }
 
-  /// Interleaved stereo at engine rate. RT-safe: allocates nothing, takes no
-  /// lock, frees nothing.
+  /// RT-safe: allocates nothing, takes no lock, frees nothing.
   void Process(float* output, uint32_t frame_count);
-  /// Realtime, on the Process thread: the transport of the last block mixed.
   const SongClock& song_clock() const {
     return song_clock_;
   }
 
-  /// High-water iteration bound (highest loaded track index + 1), not a live
-  /// count of loaded tracks: unload does not lower it, since the callback loops
-  /// must still cover a published track above an unloaded gap.
+  /// Highest loaded track index + 1: unload never lowers it, since the
+  /// callback must still cover a published track above an unloaded gap.
   int active_track_count() const {
     return track_count_.load(std::memory_order_relaxed);
   }
-  /// Commands dropped because the ring was full since construction.
   uint64_t dropped_commands() const {
     return dropped_commands_;
   }
   uint64_t track_frames(int track) const;
-  /// Frames buffered ahead in a track's source. A readiness probe for priming;
-  /// never called from the audio callback.
+  /// App thread. Frames buffered ahead in a track's source.
   uint64_t track_buffered(int track) const;
   /// Realtime-safe sibling of track_buffered, so a concurrent test can observe
   /// a ring the callback drains (#25).
   uint64_t rt_track_buffered(int track) const;
-  /// True once a track's source has delivered its last frame, or has none.
   bool track_at_end(int track) const;
 
   /// App thread, callback quiescent. Frees every retired source now.
@@ -209,21 +204,10 @@ class Mixer {
     float fvalue = 0.0f;
   };
 
-  // Published, never queued: a dropped plan would strand every track on an
-  // epoch the callback never adopts.
-  enum class PlanKind : uint8_t { kJump, kKeep };
-  struct TransportPlan {
-    PlanKind kind = PlanKind::kJump;
-    int64_t frame = 0;
-    // A keep's transport frame when its head stood at `frame`.
-    int64_t base = 0;
-    LoopLayout layout;
-    uint64_t epoch = 0;
-  };
-
   static constexpr size_t kCommandRingSize = 64;
   static constexpr int kKeyBusCount =
       kMaxPitchSemitones - kMinPitchSemitones + 1;
+  static constexpr int kBanks = 2;
   // A pending rate waits this long after the last record, which bounds how
   // many records the clock needs to cover the stretch's output latency.
   static constexpr int64_t kMinRecordSpacingFrames = 512;
@@ -231,21 +215,19 @@ class Mixer {
   static float ClampRate(float rate);
   static int ClampPitch(float semitones);
 
-  // App thread. Unload never lowers the iteration bound (see active_track_count).
   void NoteTrackLoaded(int track);
   SourceStamp JoinStamp() const;
-  // App thread. Rescans the loaded tracks' lengths and republishes the longest
-  // (B5): raising it on load and lowering it on unload/reload-to-shorter, so the
-  // transport auto-stop always follows the current longest track, not a stale max.
   void RecomputeLongestFrames();
 
-  // App thread. Hands a command to the callback, dropping it if the ring is full
-  // rather than blocking — the realtime choice, matching the metronome. Drops are
-  // counted for diagnostics, never fatal.
   bool Enqueue(const Command& command);
-  // App thread. Rebuilds every track at the plan's frame, all or nothing, then
-  // publishes the plan the callback adopts them by.
   bool Relayout(TransportPlan plan, uint64_t now_frame, bool engine_running);
+  bool
+  PlainRelayout(TransportPlan plan, uint64_t now_frame, bool engine_running);
+  void CommitPlan(
+      const TransportPlan& plan,
+      uint64_t now_frame,
+      bool engine_running
+  );
   bool StageAll(int64_t frame, const SourceStamp& stamp, bool engine_running);
   int64_t SeekTarget(int64_t frame) const;
   struct Head {
@@ -257,14 +239,14 @@ class Mixer {
   // clock alone so no two mirrors written in different blocks get paired.
   Head PlannedHead() const;
 
-  // Command drain, run at the top of Process. ApplyCommand holds the only
-  // exhaustive switch over CommandType, so a new command is a -Wswitch error
-  // rather than a silent drop.
+  // ApplyCommand holds the only exhaustive switch over CommandType, so a new
+  // command is a -Wswitch error rather than a silent drop.
   void ApplyPendingCommands();
   void ApplyCommand(const Command& command);
   void ApplyStretchCommand(const Command& command);
   void RecomputeAnySolo();
   void AdoptPlan();
+  void AdoptTransport(const TransportPlan& plan);
   bool
   TransportFrameFor(const StreamingTrack::RtView& view, int64_t* frame) const;
   bool AlignTo(AudioSource& source, int64_t frame);
@@ -274,21 +256,19 @@ class Mixer {
   void AdvanceTransport(uint32_t frame_count);
 
   // App thread: key-bus lifecycle (mixer_keys.cpp).
+  struct Prepared {
+    uint32_t created = 0;
+    bool prime = false;
+  };
   bool WantsStretch() const;
-  std::unique_ptr<KeyBusSlot> MakeBus(int slot) const;
-  bool MatchBusConfig(
-      int in_use,
-      bool allow_down,
-      uint64_t now_frame,
-      bool engine_running
-  );
-  void EngageBuses(
+  std::unique_ptr<KeyBusSlot> MakeBus(int slot, uint64_t generation) const;
+  bool MatchBusConfig(int in_use, bool allow_down);
+  bool EngageBuses(
       std::optional<int> extra,
       uint64_t now_frame,
       bool engine_running
   );
-  void Reprime(uint64_t now_frame, bool engine_running);
-  uint32_t PrepareBusFor(int track, uint64_t now_frame, bool engine_running);
+  Prepared PrepareBusFor(int track, uint64_t now_frame, bool engine_running);
   void UndoPrepare(
       uint32_t created,
       bool was_engaged,
@@ -296,33 +276,50 @@ class Mixer {
       bool engine_running
   );
   uint32_t LiveBusMask() const;
-  void MarkUsedBuses(bool* used) const;
+  int MarkUsedBuses(bool* used) const;
   void
   RetireDrainedBuses(const bool* used, uint64_t now_frame, bool engine_running);
-  void FreeUnusedBuses(bool at_jump, uint64_t now_frame, bool engine_running);
+  void FreeUnusedBuses(uint64_t now_frame, bool engine_running);
 
-  // Callback: the engaged path (mixer_stretch.cpp).
+  // App thread: priming a bank off the callback (mixer_prime.cpp).
+  struct Bank {
+    std::unique_ptr<KeyBusSlot> slots[kKeyBusCount];
+    uint64_t generation = 0;
+    int64_t lag = 0;
+  };
+  void PrimeNow(uint64_t now_frame, bool engine_running);
+  int64_t HeadToPrime() const;
+  bool
+  PrimedRelayout(TransportPlan plan, uint64_t now_frame, bool engine_running);
+  bool BuildBank(int64_t frame, bool staged, Bank* bank);
+  bool ReadBankPreRoll(int64_t frame, bool staged, Bank* bank);
+  void PublishBank(
+      Bank* bank,
+      TransportPlan* plan,
+      uint64_t now_frame,
+      bool engine_running
+  );
+  void
+  AdoptBank(const TransportPlan& plan, uint64_t now_frame, bool engine_running);
+  void FreeBank(int bank, uint64_t now_frame, bool engine_running);
+  void HandOver(uint64_t now_frame, bool engine_running);
+  bool TryHandOver(int64_t lead, uint64_t now_frame, bool engine_running);
+  bool AwaitVerdict(uint64_t generation) const;
+
+  // Callback: the engaged path (mixer_stretch.cpp, mixer_handover.cpp).
   void SnapshotBuses();
-  bool HoldForBusSwitch();
+  bool HoldForBusSwitch() const;
   bool BusesAgree(uint64_t generation) const;
   KeyBus* BusAt(int slot) const;
   KeyBus* AnyBus() const;
-  bool RtWantsStretch() const;
   void CountMembers(int* members) const;
   KeyBus* TrackBus(const Track& tr) const;
   float TrackGain(const Track& tr, bool any_solo) const;
   bool AlignedView(const Track& tr, StreamingTrack::RtView* view);
-  bool RingsReady(int64_t frames) const;
-  void ReadPreRoll(int64_t lag, bool any_solo);
-  void ReadTrackPreRoll(
-      const StreamingTrack::RtView& view,
-      KeyBus* bus,
-      int64_t lag,
-      float gain
-  );
-  void SeekBuses(int64_t lag);
-  bool PrimeIfReady(uint32_t frame_count, bool any_solo);
-  void ResetRecords(const TimeStretch& stretch);
+  void JudgeHandOver(const TransportPlan& plan);
+  bool EngageAt(const TransportPlan& plan, int64_t bypass_frames);
+  bool HandOverBlock(float* output, uint32_t frame_count, bool any_solo);
+  void ResetRecords(const TimeStretch& stretch, int64_t bypass_frames);
   void ApplyPendingRate();
   void PushRecord();
   void MoveToBus(Track& tr, int pitch);
@@ -340,8 +337,7 @@ class Mixer {
   // cannot tear them (#23). Relaxed: the source crosses by the publisher.
   std::atomic<int> track_count_{0};
   std::atomic<uint64_t> longest_frames_{0};
-  // Drain target, sized once at construction to kMaxBlockFrames * kMaxChannels
-  // and never reallocated.
+  // Sized once at construction and never reallocated.
   std::vector<float> scratch_;
   // Written only by the callback (command drain + block advance); the getters
   // read it. Single writer, so the Stop/Seek rewind can never be overwritten.
@@ -360,35 +356,42 @@ class Mixer {
   std::atomic<int64_t> jump_base_{0};
   SongClock song_clock_;
   RtPublisher<TransportPlan> plans_;
-  // App thread: the stamp the next build carries.
   uint64_t app_epoch_ = 0;
   LoopLayout app_layout_;
   bool app_playing_ = false;
   int64_t crossfade_frames_;
   SpscRing<Command, kCommandRingSize> commands_;
-  RtPublisher<KeyBusSlot> buses_[kKeyBusCount];
+  RtPublisher<KeyBusSlot> buses_[kBanks][kKeyBusCount];
   float sample_rate_;
   // App thread: what the callback will hold once the ring drains.
   int app_pitch_[kMaxTracks] = {};
   float app_rate_ = kUnityRate;
   bool app_engaged_ = false;
   bool app_vendor_default_ = false;
+  // App thread: the bank the newest primed plan names, and its generation.
+  int app_bank_ = 0;
+  bool app_primed_ = false;
   uint64_t app_bus_generation_ = 0;
+  uint64_t next_bus_generation_ = 0;
+  int64_t handover_lead_frames_;
+  int64_t first_lead_frames_ = 0;
+  uint64_t missed_handovers_ = 0;
   // Callback-owned stretch state. rt_buses_ is loaded once per block.
+  int bank_ = 0;
   KeyBus* rt_buses_[kKeyBusCount] = {};
   uint64_t primed_generation_ = 0;
-  bool bus_hold_ = false;
+  TransportPlan handover_;
+  bool handover_pending_ = false;
+  std::atomic<uint64_t> seen_generation_{0};
+  std::atomic<uint64_t> missed_generation_{0};
   float rate_target_ = kUnityRate;
   float rate_ = kUnityRate;
   double carry_ = 0.0;
   int64_t out_clock_ = 0;
-  bool bypass_continues_ = false;
   int64_t seam_left_ = 0;
   SongRecords records_;
   std::atomic<bool> engaged_{false};
   std::atomic<float> rate_mirror_{kUnityRate};
-  // App thread only. Counts commands dropped because the ring was full; a
-  // diagnostic, since a full ring drops rather than blocks (see Enqueue).
   uint64_t dropped_commands_ = 0;
 };
 

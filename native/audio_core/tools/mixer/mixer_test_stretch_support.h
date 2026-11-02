@@ -195,20 +195,31 @@ inline float LoopWrapCurvature(
   return PeakCurvature(left, wrap - margin, wrap + 2 * margin);
 }
 
-// The song frame the mixer's clock reports where the first onset sounds.
-inline int64_t SongFrameAtOnset(kitbag::Mixer* mixer, int blocks) {
+struct ClockedRender {
   std::vector<float> left;
   std::vector<int64_t> song;
-  for (int b = 0; b < blocks; ++b) {
-    const std::vector<float> block = RenderPaced(mixer, 1);
-    left.insert(left.end(), block.begin(), block.end());
-    const kitbag::SongClock& clock = mixer->song_clock();
-    for (uint32_t i = 0; i < kBlock; ++i) {
-      song.push_back(i < clock.frames ? clock.SongFrameAt(i) : kNotFound);
-    }
+};
+
+inline void ClockedBlock(kitbag::Mixer* mixer, ClockedRender* run) {
+  const std::vector<float> block = RenderPaced(mixer, 1);
+  run->left.insert(run->left.end(), block.begin(), block.end());
+  const kitbag::SongClock& clock = mixer->song_clock();
+  for (uint32_t i = 0; i < kBlock; ++i) {
+    run->song.push_back(i < clock.frames ? clock.SongFrameAt(i) : kNotFound);
   }
-  const int64_t onset = FirstAbove(left, kOnsetThreshold);
-  return onset == kNotFound ? kNotFound : song[onset];
+}
+
+// The song frame the mixer's clock reports where the first onset sounds.
+inline int64_t SongFrameAtOnset(kitbag::Mixer* mixer, int blocks) {
+  ClockedRender run;
+  for (int b = 0; b < blocks; ++b) ClockedBlock(mixer, &run);
+  const int64_t onset = FirstAbove(run.left, kOnsetThreshold);
+  return onset == kNotFound ? kNotFound : run.song[onset];
+}
+
+// Blocks until a mid-play engage has handed over, with a block to spare.
+inline int HandOverBlocks(const kitbag::Mixer& mixer) {
+  return static_cast<int>(mixer.handover_lead_frames() / kBlock) + 2;
 }
 
 size_t ThreadAllocations();
@@ -217,6 +228,7 @@ void RunStretchTests();
 void RunKeyBusTests();
 void RunConfigTests();
 void RunSwitchTests();
+void RunPrimeTests();
 
 }  // namespace mixer_test
 

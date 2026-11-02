@@ -62,6 +62,8 @@ add_library(kitbag_core SHARED
   src/mixer/mixer_keys.cpp
   src/mixer/mixer_render.cpp
   src/mixer/mixer_stretch.cpp
+  src/mixer/mixer_prime.cpp
+  src/mixer/mixer_handover.cpp
   src/player/player.cpp
   src/player/player_render.cpp
   src/stretch/time_stretch.cpp
@@ -239,6 +241,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/mixer/mixer_test_keybus.cpp
     tools/mixer/mixer_test_config.cpp
     tools/mixer/mixer_test_switch.cpp
+    tools/mixer/mixer_test_prime.cpp
     src/media/streaming_track.cpp
     src/media/looping_source_reader.cpp
     src/mixer/key_bus.cpp
@@ -246,6 +249,8 @@ if(KITBAG_BUILD_TOOLS)
     src/mixer/mixer_keys.cpp
     src/mixer/mixer_render.cpp
     src/mixer/mixer_stretch.cpp
+    src/mixer/mixer_prime.cpp
+    src/mixer/mixer_handover.cpp
     src/stretch/time_stretch.cpp
     src/media/audio_source.cpp
     src/media/file_audio_reader.cpp
@@ -291,6 +296,8 @@ if(KITBAG_BUILD_TOOLS)
     src/mixer/mixer_keys.cpp
     src/mixer/mixer_render.cpp
     src/mixer/mixer_stretch.cpp
+    src/mixer/mixer_prime.cpp
+    src/mixer/mixer_handover.cpp
     src/stretch/time_stretch.cpp
     src/player/player.cpp
     src/player/player_render.cpp

@@ -101,7 +101,7 @@ void LoadReaders(kitbag::Mixer* mixer, Readers* readers) {
   mixer->SetRate(kSpeed, 0, false);
 }
 
-void TestSwitchHoldsUntilReprime() {
+void TestSwitchPlaysOnWhilePriming() {
   Readers readers;
   kitbag::Mixer mixer(kSampleRate);
   LoadReaders(&mixer, &readers);
@@ -119,10 +119,10 @@ void TestSwitchHoldsUntilReprime() {
   const auto held = static_cast<int64_t>(mixer.position());
   readers[0]->Release();
   app.join();
-  CheckNear(held, kHeld, 0, "switch: the head holds until the re-prime lands");
+  Check(held > kHeld, "switch: the head runs on while the new bank primes");
   Check(
-      Loudest(window, 0, static_cast<int64_t>(window.size())) == 0.0f,
-      "switch: no unprimed or mixed-config bus plays in the window"
+      Loudest(window, 0, static_cast<int64_t>(window.size())) > 0.0f,
+      "switch: the old bank plays on while the new bank primes"
   );
   CheckNear(
       SongFrameAtOnset(&mixer, kOnsetBlocks),
@@ -209,7 +209,7 @@ void TestLoopEndBetweenHeadsKeeps() {
 }  // namespace
 
 void RunSwitchTests() {
-  TestSwitchHoldsUntilReprime();
+  TestSwitchPlaysOnWhilePriming();
   TestKeyDragKeepsChosenConfig();
   TestUnloadKeepsConfigUntilSeek();
   TestLoopEndBetweenHeadsKeeps();

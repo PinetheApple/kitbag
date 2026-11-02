@@ -9,7 +9,6 @@ constexpr int kCarryBlocks = 997;
 constexpr int64_t kCarrySongFrames = int64_t{7} * kSampleRate;
 constexpr int64_t kBypassSeek = 3001;
 constexpr int64_t kDisengageSeek = 9001;
-constexpr int kEngageBlocks = 2;
 constexpr float kSpeed = 0.75f;
 constexpr float kSlow = 0.5f;
 constexpr float kKey = 2.0f;
@@ -57,7 +56,7 @@ void TestBypassIsSampleExact() {
   Check(!mixer.stretch_engaged(), "bypass: nothing is engaged");
   Check(mixer.key_bus_count() == 0, "bypass: no key bus is configured");
   mixer.SetRate(kSpeed, 0, false);
-  RenderPaced(&mixer, kEngageBlocks);
+  RenderPaced(&mixer, HandOverBlocks(mixer));
   Check(mixer.stretch_engaged(), "engage: 0.75x engages mid-play");
   mixer.SetRate(kitbag::Mixer::kUnityRate, 0, false);
   RenderPaced(&mixer, 1);
@@ -110,6 +109,31 @@ void TestControlLatencyPerState() {
   CheckControlLatency("0.5x", kSlow, 0.0f);
 }
 
+void CheckSeamClick(
+    const std::vector<float>& left,
+    int64_t seam,
+    float budget
+) {
+  const float click = PeakCurvature(left, seam - kBlock, seam + kBlock);
+  std::printf(
+      "mixer_verify: engage seam curvature %.5f, loop crossfade %.5f\n",
+      static_cast<double>(click),
+      static_cast<double>(budget)
+  );
+  Check(click <= budget, "engage: the seam clicks no more than a loop wrap");
+}
+
+bool RenderSmoothly(kitbag::Mixer* mixer, ClockedRender* run) {
+  bool smooth = true;
+  for (int b = 0; b < HandOverBlocks(*mixer); ++b) {
+    const uint64_t last = mixer->position();
+    ClockedBlock(mixer, run);
+    smooth = smooth && mixer->position() >= last &&
+             mixer->position() - last <= kBlock;
+  }
+  return smooth;
+}
+
 void TestEngageTransition() {
   const std::vector<float> tone =
       ToneFixture({.frames = kToneFrames, .steady_hz = kBurstHz});
@@ -120,26 +144,21 @@ void TestEngageTransition() {
   kitbag::Mixer mixer(kSampleRate);
   LoadPcm(&mixer, 0, tone);
   mixer.Play();
-  std::vector<float> left = RenderPaced(&mixer, kSettleBlocks);
-  const uint64_t head = mixer.position();
-  const auto seam = static_cast<int64_t>(left.size());
+  RenderPaced(&mixer, kSettleBlocks);
+  const auto head = static_cast<int64_t>(mixer.position());
   mixer.SetRate(kSpeed, 0, false);
-  const std::vector<float> after = RenderPaced(&mixer, 1);
-  left.insert(left.end(), after.begin(), after.end());
-  Check(mixer.stretch_engaged(), "engage: the first block after is engaged");
+  const int64_t seam = mixer.handover_lead_frames();
+  ClockedRender run;
+  const bool smooth = RenderSmoothly(&mixer, &run);
+  Check(mixer.stretch_engaged(), "engage: it hands over mid-play");
+  Check(smooth, "engage: the position runs on without a jump");
   CheckNear(
-      static_cast<int64_t>(mixer.position() - head),
-      static_cast<int64_t>(kSpeed * kBlock),
-      1,
-      "engage: the position runs on at 0.75x without a jump"
+      run.song[seam],
+      head + seam,
+      0,
+      "engage: the hand-over lands on the predicted sample"
   );
-  const float click = PeakCurvature(left, seam - kBlock, seam + kBlock);
-  std::printf(
-      "mixer_verify: engage seam curvature %.5f, loop crossfade %.5f\n",
-      static_cast<double>(click),
-      static_cast<double>(budget)
-  );
-  Check(click <= budget, "engage: the seam clicks no more than a loop wrap");
+  CheckSeamClick(run.left, seam, budget);
 }
 
 void CheckSoundsAtOnce(kitbag::Mixer* mixer, const char* label) {
@@ -155,6 +174,8 @@ void CheckSoundsAtOnce(kitbag::Mixer* mixer, const char* label) {
   }
 }
 
+// The tone sits on the higher of two buses, so a prime that skips any bus
+// after the first is heard as a gap.
 void TestPrimeLeavesNoGap() {
   kitbag::Mixer mixer(kSampleRate);
   LoadPcm(
@@ -162,10 +183,12 @@ void TestPrimeLeavesNoGap() {
       0,
       ToneFixture({.frames = kToneFrames, .steady_hz = kBurstHz})
   );
+  LoadPcm(&mixer, 1, ToneFixture({.frames = kToneFrames}));
   mixer.Play();
   RenderPaced(&mixer, kSettleBlocks);
   mixer.SetRate(kSpeed, 0, false);
   CheckSoundsAtOnce(&mixer, "prime: engaging mid-play leaves no gap");
+  mixer.SetTrackPitch(0, kKey, 0, false);
   mixer.Seek(kLoopFrom, 0, false);
   CheckSoundsAtOnce(&mixer, "prime: a seek sounds at once");
   mixer.Stop(0, false);
@@ -195,6 +218,7 @@ void TestBusesAreLazyAndFreed() {
   for (int t : {0, 1}) LoadPcm(&mixer, t, ToneFixture({.frames = kToneFrames}));
   Check(mixer.key_bus_count() == 0, "buses: none before a stage engages");
   mixer.SetRate(kSpeed, 0, false);
+  Drain(&mixer);
   Check(mixer.key_bus_count() == 1, "buses: speed alone needs one");
   mixer.SetTrackPitch(1, kKey, 0, false);
   Check(mixer.key_bus_count() == 2, "buses: one per distinct semitone");

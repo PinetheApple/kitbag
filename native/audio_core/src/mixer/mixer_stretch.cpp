@@ -51,18 +51,6 @@ KeyBus* Mixer::AnyBus() const {
   return nullptr;
 }
 
-bool Mixer::RtWantsStretch() const {
-  if (rate_target_ != kUnityRate) return true;
-  const int count = track_count_.load(std::memory_order_relaxed);
-  for (int t = 0; t < count; ++t) {
-    if (tracks_[t].stream->ready() &&
-        tracks_[t].pitch.load(std::memory_order_relaxed) != 0) {
-      return true;
-    }
-  }
-  return false;
-}
-
 void Mixer::CountMembers(int* members) const {
   const int count = track_count_.load(std::memory_order_relaxed);
   for (int t = 0; t < count; ++t) {
@@ -87,117 +75,6 @@ bool Mixer::AlignedView(const Track& tr, StreamingTrack::RtView* view) {
   int64_t frame = 0;
   if (!TransportFrameFor(*view, &frame)) return false;
   return !view->stamp.align || AlignTo(*view->source, frame);
-}
-
-// Capped at what the stem has left, so a stem near its end never stalls it.
-bool Mixer::RingsReady(int64_t frames) const {
-  const int count = track_count_.load(std::memory_order_relaxed);
-  for (int t = 0; t < count; ++t) {
-    const StreamingTrack::RtView view = tracks_[t].stream->rt_view();
-    int64_t frame = 0;
-    if (!TransportFrameFor(view, &frame)) continue;
-    const auto position = static_cast<int64_t>(view.source->position());
-    int64_t need = std::max<int64_t>(frame - position, 0) + frames;
-    if (!view.stamp.layout.looping) {
-      const auto length = static_cast<int64_t>(tracks_[t].stream->frames());
-      need = std::min(need, length - position);
-    }
-    if (static_cast<int64_t>(view.source->buffered_frames()) < need) {
-      return false;
-    }
-  }
-  return true;
-}
-
-void Mixer::ReadPreRoll(int64_t lag, bool any_solo) {
-  for (int s = 0; s < kKeyBusCount; ++s) {
-    if (KeyBus* bus = BusAt(s)) {
-      std::fill(bus->preroll.begin(), bus->preroll.end(), 0.0f);
-    }
-  }
-  const int count = track_count_.load(std::memory_order_relaxed);
-  for (int t = 0; t < count; ++t) {
-    tracks_[t].fade_left = 0;
-    StreamingTrack::RtView view;
-    if (!AlignedView(tracks_[t], &view)) continue;
-    const float gain = TrackGain(tracks_[t], any_solo);
-    ReadTrackPreRoll(view, TrackBus(tracks_[t]), lag, gain);
-  }
-}
-
-void Mixer::ReadTrackPreRoll(
-    const StreamingTrack::RtView& view,
-    KeyBus* bus,
-    int64_t lag,
-    float gain
-) {
-  for (int64_t done = 0; done < lag;) {
-    const auto n = static_cast<uint32_t>(
-        std::min<int64_t>(lag - done, StreamingTrack::kMaxBlockFrames)
-    );
-    const uint32_t got = view.source->Read(scratch_.data(), n);
-    if (bus != nullptr && gain > 0.0f) {
-      float* dst = bus->preroll.data() + done * KeyBus::kChannels;
-      StreamingTrack::AddToOutput(
-          scratch_.data(),
-          view.channels,
-          got,
-          dst,
-          gain
-      );
-    }
-    done += n;
-  }
-}
-
-void Mixer::SeekBuses(int64_t lag) {
-  int members[kKeyBusCount] = {};
-  CountMembers(members);
-  for (int s = 0; s < kKeyBusCount; ++s) {
-    KeyBus* bus = BusAt(s);
-    if (bus == nullptr) continue;
-    bus->idle_frames = 0;
-    bus->dormant = members[s] == 0;
-    if (bus->dormant) continue;
-    bus->stretch.OutputSeek(bus->preroll.data(), static_cast<int>(lag));
-  }
-}
-
-// OutputSeek over [head, head + lag) makes the first output frame the head.
-// Mid-switch buses disagree on config, so the prime waits for the last one.
-bool Mixer::PrimeIfReady(uint32_t frame_count, bool any_solo) {
-  if (bus_hold_ || !RtWantsStretch()) return false;
-  KeyBus* any = AnyBus();
-  if (any == nullptr || !BusesAgree(any->generation)) return false;
-  const TimeStretch& stretch = any->stretch;
-  const int64_t lag =
-      std::min(stretch.SongLagFrames(rate_target_), stretch.SeekFrames());
-  const auto take = static_cast<int64_t>(rate_target_ * frame_count);
-  if (!RingsReady(lag + take)) return false;
-  rate_ = rate_target_;
-  carry_ = 0.0;
-  primed_generation_ = any->generation;
-  ReadPreRoll(lag, any_solo);
-  SeekBuses(lag);
-  ResetRecords(stretch);
-  stream_frame_ += lag;
-  transport_frame_.fetch_add(lag, std::memory_order_relaxed);
-  seam_left_ = bypass_continues_ ? crossfade_frames_ : 0;
-  engaged_.store(true, std::memory_order_relaxed);
-  return true;
-}
-
-void Mixer::ResetRecords(const TimeStretch& stretch) {
-  const int64_t in = stretch.InputLatencyFrames();
-  const int64_t out = stretch.OutputLatencyFrames();
-  records_.Reset(
-      {.out_first = out_clock_ - out,
-       .fed_first = static_cast<double>(stream_frame_ + in),
-       .rate = rate_,
-       .layout = layout_},
-      in,
-      out
-  );
 }
 
 void Mixer::ApplyPendingRate() {
