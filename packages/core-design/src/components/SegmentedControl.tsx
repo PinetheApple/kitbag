@@ -11,7 +11,7 @@ import {
   textRoles,
 } from '../roles.ts';
 import { equalOptionMinWidth, type OptionMinWidth } from '../segmentWidth.ts';
-import { growFromContent } from '../textScale.ts';
+import { growFromContent, growFromLabel } from '../textScale.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { useTextScaled } from '../useTextScaled.ts';
@@ -29,6 +29,11 @@ const TRACK_EDGE = space.segmentInset + size.stroke;
 const ROW_TRACK_EDGE = homeArrange.segmentInset + size.stroke;
 const OPTION_HEIGHT = textRoles.segment.size + inset.segmentOptionV * 2;
 const INLINE_LINE_HEIGHT = textRoles.segment.size * bodyLineHeight;
+// Wrapped options may have another row of options above or below.
+const WRAPPED_LINE_GAPS = {
+  top: space.segmentInset,
+  bottom: space.segmentInset,
+};
 
 export type SegmentedControlSize =
   'default' | 'large' | 'inline' | 'editRow' | 'row';
@@ -46,13 +51,7 @@ const OPTION_HEIGHTS: Readonly<Record<SegmentedControlSize, number>> = {
 // Option widths are flex, so only the vertical axis is grown to 48dp; sideways
 // every option takes the same half of the gap between options, which keeps
 // their visible widths equal.
-function optionHitBox(
-  gaps: NeighbourGaps,
-  compact: boolean,
-  height: number,
-  trackEdge: number,
-) {
-  const edge = compact ? 0 : trackEdge;
+function optionHitBox(gaps: NeighbourGaps, edge: number, height: number) {
   const vertical = hitExtension(height, height, {
     top: unshared(edge) + (gaps.top ?? Number.POSITIVE_INFINITY),
     bottom: unshared(edge) + (gaps.bottom ?? Number.POSITIVE_INFINITY),
@@ -121,7 +120,11 @@ const useStyles = createThemedStyles((theme) => ({
   optionHit: {
     flex: 1,
   },
-  byLabel: growFromContent,
+  byLabel: growFromLabel,
+  fillByLabel: growFromContent,
+  wraps: {
+    flexWrap: 'wrap',
+  },
   option: {
     alignItems: 'center',
     paddingVertical: inset.segmentOptionV,
@@ -272,11 +275,11 @@ export function SegmentedControl<T extends string>({
       ? equalOptionMinWidth(measured, inset.segmentEditRowOptionH)
       : undefined;
   const row = controlSize === 'row';
+  const trackEdge = row ? ROW_TRACK_EDGE : TRACK_EDGE;
   const hitBox = optionHitBox(
-    neighbourGaps(neighbourGapDp),
-    compact,
+    byLabel ? WRAPPED_LINE_GAPS : neighbourGaps(neighbourGapDp),
+    compact || byLabel ? 0 : trackEdge,
     OPTION_HEIGHTS[controlSize],
-    row ? ROW_TRACK_EDGE : TRACK_EDGE,
   );
   return (
     <View
@@ -286,7 +289,8 @@ export function SegmentedControl<T extends string>({
         compact ? styles.compact : styles.track,
         large && !compact && styles.largeTrack,
         row && !compact && styles.rowTrack,
-        fill && (byLabel ? styles.byLabel : styles.fill),
+        fill && (byLabel ? styles.fillByLabel : styles.fill),
+        byLabel && styles.wraps,
       ]}
     >
       {options.map((option) => (

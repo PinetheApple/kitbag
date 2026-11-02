@@ -4,8 +4,10 @@ import { Pressable, Text, View } from 'react-native';
 import { pickerRows } from '../pickerRows.ts';
 import { inset, radius, size, space, textRoles } from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
+import { growFromLabel } from '../textScale.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
+import { useTextScaled } from '../useTextScaled.ts';
 
 export interface PickerOption<T extends string> {
   readonly value: T;
@@ -27,6 +29,7 @@ type PickerColumns = (typeof PICKER_COLUMNS)[keyof typeof PICKER_COLUMNS];
 interface PickerItemProps<T extends string> {
   readonly option: PickerOption<T>;
   readonly selected: boolean;
+  readonly byLabel: boolean;
   readonly onSelect: (value: T) => void;
 }
 
@@ -38,10 +41,16 @@ const useStyles = createThemedStyles((theme) => ({
     flexDirection: 'row',
     gap: space.controlGap,
   },
+  flow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: space.controlGap,
+  },
   cell: {
     flex: 1,
     minWidth: 0,
   },
+  byLabel: growFromLabel,
   item: {
     minHeight: minTouchTargetDp,
     alignItems: 'center',
@@ -70,6 +79,7 @@ const useStyles = createThemedStyles((theme) => ({
 function PickerItem<T extends string>({
   option,
   selected,
+  byLabel,
   onSelect,
 }: PickerItemProps<T>) {
   const styles = useStyles();
@@ -82,7 +92,11 @@ function PickerItem<T extends string>({
       accessibilityRole="radio"
       accessibilityLabel={option.accessibilityLabel ?? option.label}
       accessibilityState={{ checked: selected }}
-      style={[styles.cell, styles.item, selected && styles.selected]}
+      style={[
+        byLabel ? styles.byLabel : styles.cell,
+        styles.item,
+        selected && styles.selected,
+      ]}
       onPress={handlePress}
     >
       <Text style={[styles.label, selected && styles.selectedLabel]}>
@@ -100,6 +114,26 @@ export function PickerGrid<T extends string>({
   columns = PICKER_COLUMNS.three,
 }: PickerGridProps<T>) {
   const styles = useStyles();
+  const byLabel = useTextScaled();
+  if (byLabel) {
+    return (
+      <View
+        accessibilityRole="radiogroup"
+        accessibilityLabel={accessibilityLabel}
+        style={styles.flow}
+      >
+        {options.map((option) => (
+          <PickerItem
+            key={option.value}
+            option={option}
+            selected={option.value === selected}
+            byLabel
+            onSelect={onSelect}
+          />
+        ))}
+      </View>
+    );
+  }
   return (
     <View
       accessibilityRole="radiogroup"
@@ -116,6 +150,7 @@ export function PickerGrid<T extends string>({
                 key={option.value}
                 option={option}
                 selected={option.value === selected}
+                byLabel={false}
                 onSelect={onSelect}
               />
             ),

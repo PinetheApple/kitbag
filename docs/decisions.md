@@ -747,10 +747,14 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   scrolling body and sits directly above the transport, so a body that overflows cannot
   push it out of view, at one fixed height, the running stack's, so nothing resizes on Play.
   On a small screen at 2.0 the beat dots then sit below the fold and are reached by
-  scrolling the body (coordinator call, 2026-11-02, open to owner review). Segmented controls size
-  each option from its label above the default scale, so a row too narrow for the track
-  wraps it onto its own line; a track still wider than a whole line shrinks, and its
-  labels can then break mid-word. At 1.0 the options stay equal widths. Library and
+  scrolling the body (coordinator call, 2026-11-02, open to owner review). Above the default scale
+  a segmented control's options and the sound picker's items take their label's width
+  and never shrink below it, since Android wraps a squeezed label mid-word; what does
+  not fit on one line wraps onto further rows inside the track or grid. A track wider
+  than its row takes a line of its own and shrinks to it. At 1.0 the options stay equal
+  widths and the picker keeps its columns. A stepper's value-to-suffix gap grows with
+  the font scale. The click volume row lets its slider and readout drop below the label
+  above the default scale rather than wrapping them beside it. Library and
   output-route rows drop their one-line limit above the default scale. **[recorded]**
 
 - **2026-11-02 · Back on the practice summary saves the session (§5.7, #85)** — Back,
