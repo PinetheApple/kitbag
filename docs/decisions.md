@@ -820,6 +820,7 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
 
 - **2026-11-02 · One chevron app bar on every screen (§12, #287)** — Every screen with a
   back control uses the chevron back, not the full arrow **[user, via coordinator]**. The
-  shared bar is one core-design component: 56 dp tall, the chevron and every trailing
-  action in real 48 dp keys, and the `appBarTitle` title. The binding design files are
+  shared bar is one core-design component: 56 dp tall, flush under the status bar, the
+  chevron and every icon action in real 48 dp keys, and the `appBarTitle` title; chip and
+  button trailing controls keep their ≥48 dp hit areas. The binding design files are
   edited to match. **[coord]**
