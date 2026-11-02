@@ -99,6 +99,15 @@ const NATIVE_ONLY_IMPORTS = {
   ],
 };
 
+// #49: a font package index requires every weight, and Metro ships each one.
+const FONT_INDEX_IMPORTS = [
+  '@expo-google-fonts/inter',
+  '@expo-google-fonts/space-grotesk',
+].map((name) => ({
+  name,
+  message: `Import one weight from its subpath, e.g. ${name}/400Regular (#49).`,
+}));
+
 // §13.3 stopgap: variable names that read as realtime/60fps truth. A hit means
 // the value probably belongs in a SharedValue, not React state. Case-insensitive.
 const REALTIME_NAME_RE =
@@ -124,7 +133,9 @@ function restrictImports(forbidden, clause, { includeNativeBan = true } = {}) {
   return [
     'error',
     {
-      paths: includeNativeBan ? NATIVE_ONLY_IMPORTS.paths : [],
+      paths: includeNativeBan
+        ? [...FONT_INDEX_IMPORTS, ...NATIVE_ONLY_IMPORTS.paths]
+        : FONT_INDEX_IMPORTS,
       patterns: includeNativeBan
         ? [...patterns, ...NATIVE_ONLY_IMPORTS.patterns]
         : patterns,
