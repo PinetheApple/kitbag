@@ -69,6 +69,7 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: write
+      pull-requests: read
     env:
       CMAKE_C_COMPILER_LAUNCHER: ccache
       CMAKE_CXX_COMPILER_LAUNCHER: ccache
@@ -83,6 +84,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - name: Paths — runner temp, outside the workspace
@@ -100,9 +102,31 @@ jobs:
           echo "${GIT_CLIFF_SHA512}  $RUNNER_TEMP/$archive" | sha512sum -c -
           tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP"
           echo "$RUNNER_TEMP/git-cliff-${GIT_CLIFF_VERSION}" >> "$GITHUB_PATH"
-      - name: Release notes — conventional commits since the previous tag
+      # The tag goes on this commit, off main: main needs PRs, and F-Droid reads the tagged tree.
+      - name: F-Droid changelog — commit it and tag that commit locally
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          scripts/changelog.sh --notes "$TAG" > "$NOTES_FILE"
+          scripts/release-notes.sh "$PREVIOUS" "$VERSION"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add metadata/en-US/changelogs
+          git commit -m "chore(release): F-Droid changelog for ${TAG}"
+          git tag "$TAG"
+          echo "RELEASE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+      - name: Release notes — the F-Droid lines, then conventional commits since the previous tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "## What's new"
+            echo
+            scripts/release-notes.sh --print "$PREVIOUS" "$VERSION"
+            echo
+            echo "## Changes"
+            echo
+            scripts/changelog.sh --notes "$TAG"
+          } > "$NOTES_FILE"
           {
             echo "## ${TAG}"
             echo
@@ -153,13 +177,22 @@ jobs:
         run: rm -f "$KEYSTORE_FILE"
       - name: Gate — pinned certificate, versionName, versionCode; stage the APK + sha256
         run: scripts/release-gate.sh --out "$ARTIFACT_DIR" "$APK" "$VERSION" ${PREVIOUS:+"$PREVIOUS"}
+      - name: Push the release tag — the tag only, never a branch
+        id: push-tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git -c credential.helper= -c 'credential.helper=!gh auth git-credential' \
+            push origin "refs/tags/${TAG}"
       - name: Publish the GitHub release
+        id: publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$TAG" "$ARTIFACT_DIR"/* \
             --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" \
+            --verify-tag \
+            --target "$RELEASE_SHA" \
             --title "$TAG" \
             --notes-file "$NOTES_FILE"
           {
@@ -167,3 +200,11 @@ jobs:
             echo "Published:"
             cat "$ARTIFACT_DIR"/*.sha256
           } >> "$GITHUB_STEP_SUMMARY"
+      - name: Delete the pushed tag when publishing failed
+        if: failure() && steps.push-tag.outcome == 'success' && steps.publish.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "::error::publishing ${TAG} failed; deleting the tag so the next run can retry"
+          git -c credential.helper= -c 'credential.helper=!gh auth git-credential' \
+            push origin ":refs/tags/${TAG}"
