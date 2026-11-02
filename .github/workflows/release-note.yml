@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   release-note:
-    name: PR body has a release-note block
+    name: Release note
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -20,4 +20,11 @@ jobs:
       - name: Release note — one user-facing line, or NONE
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
-        run: printf '%s' "$PR_BODY" | ./scripts/release-notes.sh --check-body
+          AUTHOR_TYPE: ${{ github.event.pull_request.user.type }}
+          AUTHOR_LOGIN: ${{ github.event.pull_request.user.login }}
+        run: |
+          if [[ $AUTHOR_TYPE == Bot || $AUTHOR_LOGIN == *'[bot]' ]]; then
+            echo "::notice::${AUTHOR_LOGIN} is a bot; its PR counts as NONE"
+            exit 0
+          fi
+          printf '%s' "$PR_BODY" | ./scripts/release-notes.sh --check-body
