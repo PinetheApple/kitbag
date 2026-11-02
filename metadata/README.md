@@ -12,8 +12,11 @@ metadata/
     ├── short_description.txt
     ├── full_description.txt
     ├── changelogs/<versionCode>.txt
-    └── images/             # pending a real device build — see its README
+    └── images/             # screenshot list in its README
 ```
+
+Changelogs are named `changelogs/<versionCode>.txt`, one per release, where
+versionCode is `major*10000 + minor*100 + patch` (`scripts/version.sh code`).
 
 To submit, this tree maps into the fdroiddata repository as
 `metadata/com.kitbag.app.yml` plus `metadata/en-US/…` — the paths are

@@ -27,18 +27,17 @@ IssueTracker: https://github.com/PinetheApple/kitbag/issues
 RepoType: git
 Repo: https://github.com/PinetheApple/kitbag.git
 
-# Every entry passes its tag's version as kitbagVersionName; app.json is only the floor.
+# kitbagVersionName carries the tag's version (app.json is only the floor);
+# versionCode is major*10000 + minor*100 + patch, as scripts/version.sh code prints.
 Builds:
-  - versionName: 0.1.0
-    versionCode: 100
-    # QUESTION: v0.1.0 does not exist until the release workflow publishes it
-    # on the first merge to main; submit this recipe only after that.
-    commit: v0.1.0
+  - versionName: 0.26.2
+    versionCode: 2602
+    commit: fd4fd070234967838bbe5772f70700d20383e5f3
     subdir: packages/app-shell/android
     gradle:
       - yes
     gradleprops:
-      - kitbagVersionName=0.1.0
+      - kitbagVersionName=0.26.2
     init:
       - corepack enable
       - pnpm install --frozen-lockfile
