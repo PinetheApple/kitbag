@@ -771,3 +771,9 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   possibly a new credential; tagging off `main` needs neither. `version.sh` works
   unchanged through plain reachability; only `changelog.sh`'s full regeneration
   re-tags each release at its parent on `main`. **[owner]**
+
+- **2026-11-02 · The `Release note` check is required on `main` (#61)** — A PR merges
+  only with a ```` ```release-note ```` block holding a user-facing line or `NONE`; the
+  coordinator adds the check to the `main` ruleset at merge. PRs opened by a bot
+  (author type `Bot` or a `[bot]` login) pass as `NONE`, so dependency updates never
+  block on a note. **[owner]**

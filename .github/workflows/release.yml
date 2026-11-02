@@ -184,7 +184,6 @@ jobs:
           gh auth setup-git
           git push origin "refs/tags/${TAG}"
       - name: Publish the GitHub release
-        id: publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -202,16 +201,30 @@ jobs:
             cat "$ARTIFACT_DIR"/*.sha256
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Delete the pushed tag unless a published release holds it
-        if: (failure() || cancelled()) && steps.push-tag.outcome == 'success'
+        if: (failure() || cancelled()) && steps.push-tag.outcome != 'skipped'
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_NOT_FOUND: release not found
         run: |
-          if draft=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft -q .isDraft); then
+          if ! remote_tag=$(git ls-remote --tags origin "refs/tags/${TAG}"); then
+            echo "::error::git ls-remote failed; leaving ${TAG} alone"
+            exit 1
+          fi
+          if [[ -z $remote_tag ]]; then
+            echo "::notice::${TAG} never reached origin; nothing to delete"
+            exit 0
+          fi
+          view_error="$RUNNER_TEMP/release-view.err"
+          if draft=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft -q .isDraft 2>"$view_error"); then
             if [[ $draft == false ]]; then
               echo "::warning::${TAG} is published; keeping its tag"
               exit 0
             fi
             gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes
+          elif [[ $(<"$view_error") != *"$RELEASE_NOT_FOUND"* ]]; then
+            cat "$view_error"
+            echo "::error::cannot tell whether ${TAG} has a release; leaving the tag alone"
+            exit 1
           fi
           echo "::error::publishing ${TAG} did not finish; deleting the tag so the next run can retry"
           git push origin ":refs/tags/${TAG}"

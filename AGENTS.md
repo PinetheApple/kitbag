@@ -106,7 +106,8 @@ Every PR body carries a ` ```release-note ` block: one user-facing line — what
 musician notices, in plain words — or `NONE` for an internal change.
 `scripts/release-notes.sh` turns the blocks into the F-Droid changelog, so F-Droid
 users read these lines verbatim; they must be true. The `Release note` check
-fails a PR without one and is required on `main`; a bot's PR counts as `NONE`.
+(`.github/workflows/release-note.yml`) fails a PR without one, and the owner has
+made it a required check on `main`. A bot's PR passes as `NONE`.
 
 ## What is in this repo right now
 

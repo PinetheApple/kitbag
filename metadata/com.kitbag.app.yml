@@ -59,8 +59,8 @@ Builds:
     scandelete:
       - node_modules
 
-# QUESTION: checkupdates reads versionCode from build.gradle, which computes it from
-# kitbagVersionName; unverified that it can derive the code from a tag.
+# QUESTION: can checkupdates derive versionCode from a tag? build.gradle computes it.
+# CurrentVersion/Code and the build entry are refreshed to the latest tag at submission.
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
 CurrentVersion: 0.26.2

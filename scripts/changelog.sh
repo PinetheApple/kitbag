@@ -38,10 +38,11 @@ readonly NOTES_BODY='
 
 # git-cliff only sees tags in HEAD's history.
 clone_with_main_side_tags() {
-  local clone=$1 tag commit
+  local clone=$1 tags tag commit
+  tags=$(scripts/version.sh tags)
   git clone -q --no-checkout --no-tags . "$clone"
   git -C "$clone" update-ref --no-deref HEAD "$(git rev-parse HEAD)"
-  for tag in $(scripts/version.sh tags); do
+  for tag in $tags; do
     commit=$(git rev-parse "${tag}^{commit}")
     if ! git merge-base --is-ancestor "$commit" HEAD; then
       commit=$(git rev-parse "${commit}^")

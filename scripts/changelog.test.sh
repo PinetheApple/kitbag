@@ -141,7 +141,7 @@ if command -v git-cliff >/dev/null 2>&1; then
   else
     fail "$name" "$(<"$fixture/CHANGELOG.md")"
   fi
-  if [[ $(<"$fixture/stderr") == *"v0.9.0"* && $(<"$fixture/CHANGELOG.md") != *"## 0.3.0"* ]]; then
+  if [[ $(<"$fixture/stderr") == *"v0.9.0's parent is not in HEAD's history; skipped"* ]]; then
     pass "a tag whose parent is not in HEAD's history is skipped with a warning"
   else
     fail "a tag whose parent is not in HEAD's history is skipped with a warning" "$(<"$fixture/stderr")"
