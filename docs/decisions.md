@@ -762,6 +762,15 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   uncapped screens stretched their tempo rows, sheets and transports across the width.
   **[coord — the owner may overturn]**
 
+- **2026-11-02 · APK size target re-set to 30.6 MB (#49)** — The release APK target is
+  30.6 MB (30,648,062 bytes, arm64-v8a release), the size measured after the font cut,
+  replacing the earlier 25 MB; the baseline is release v0.26.2 at 33,411,826 bytes. The
+  remainder is uncompressed native libraries (20.03 MB) plus the Hermes bundle, kept
+  uncompressed on purpose as Android's default (uncompressed libs load in place; the
+  bundle is memory-mapped). Compressing them was declined; the cut taken is the 17
+  unused font files. Breakdown: [#49 comment](https://github.com/PinetheApple/kitbag/issues/49#issuecomment-6575336455).
+  **[owner]**
+
 - **2026-11-02 · Per-release F-Droid changelogs (§13.8, #61)** — Each release writes
   `metadata/en-US/changelogs/<versionCode>.txt` from the ```` ```release-note ```` block
   every PR body carries (one user-facing line, or `NONE`). The release job commits it
