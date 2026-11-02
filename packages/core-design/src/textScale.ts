@@ -1,6 +1,5 @@
-export const DEFAULT_FONT_SCALE = 1;
+const DEFAULT_FONT_SCALE = 1;
 
-// React Native reads numberOfLines={0} as no limit.
 export const UNLIMITED_LINES = 0;
 
 export const TEXT_ICON_SCALE_MAX = 1.5;

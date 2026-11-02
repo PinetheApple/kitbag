@@ -5,6 +5,7 @@ import {
   grownTextScale,
   isTextScaled,
   lineLimit,
+  TEXT_ICON_SCALE_MAX,
   textIconScale,
   UNLIMITED_LINES,
 } from './textScale.ts';
@@ -49,10 +50,10 @@ describe('textIconScale', () => {
 
   it('grows icons with the text up to the cap', () => {
     expect(textIconScale(1.3)).toBe(1.3);
-    expect(textIconScale(2)).toBeLessThan(2);
+    expect(textIconScale(2)).toBe(TEXT_ICON_SCALE_MAX);
   });
 
-  it('keeps every bar glyph inside its 48 dp button at 200%', () => {
+  it('keeps every bar glyph inside its bar button at 200%', () => {
     for (const glyph of [iconSizes.bar, iconSizes.skip]) {
       expect(glyph * textIconScale(2)).toBeLessThan(screenBar.iconButton);
     }
