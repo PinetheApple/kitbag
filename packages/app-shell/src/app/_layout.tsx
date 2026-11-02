@@ -19,6 +19,7 @@ import '@/settings/toolsRuntime';
 import '@/global.css';
 
 import {
+  layout,
   SheetHost,
   ThemeProvider,
   themeVars,
@@ -90,7 +91,7 @@ function ThemedRoot() {
   const screenOptions = useMemo(
     () => ({
       headerShown: false,
-      contentStyle: { backgroundColor: theme.color.bg },
+      contentStyle: [styles.content, { backgroundColor: theme.color.bg }],
     }),
     [theme.color.bg],
   );
@@ -116,4 +117,9 @@ function InsetSheetHost({ children }: { readonly children: ReactNode }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  content: {
+    width: '100%',
+    maxWidth: layout.maxContentWidth,
+    alignSelf: 'center',
+  },
 });

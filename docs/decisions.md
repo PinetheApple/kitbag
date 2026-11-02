@@ -737,3 +737,9 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   second Back during a save writes nothing more. A failed save leaves the summary pending
   and on screen with "Try again". This replaces the earlier choice that dismissing kept
   the summary pending for the next visit. **[coord]**
+
+- **2026-11-02 · Content is capped at 600 dp wide, centred (§12, #190)** — On screens 600 dp
+  wide or more, every screen and every sheet is capped at `layout.maxContentWidth` (600 dp)
+  and centred; sheet scrims stay full width. No design exists for 600 dp and wider, and
+  uncapped screens stretched their tempo rows, sheets and transports across the width.
+  **[coord — the owner may overturn]**
