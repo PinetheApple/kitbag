@@ -27,7 +27,7 @@ const useStyles = createThemedStyles((theme) => ({
     paddingHorizontal: screenBar.h,
     marginHorizontal: -space.screenInset,
   },
-  edgeToEdge: {
+  flush: {
     marginHorizontal: 0,
   },
   packed: {
@@ -64,7 +64,7 @@ const useStyles = createThemedStyles((theme) => ({
   },
   wordmark: textStyle(textRoles.wordmark),
   subtitle: {
-    ...textStyle(textRoles.songArtist),
+    ...textStyle(textRoles.appBarSubtitle),
     color: theme.color.text2,
   },
 }));
@@ -121,7 +121,7 @@ export interface AppBarProps {
   readonly backLabel?: string;
   readonly trailing?: ReactNode;
   readonly actions?: readonly AppBarAction[];
-  readonly edgeToEdge?: boolean;
+  readonly flush?: boolean;
   readonly packed?: boolean;
   readonly children?: ReactNode;
 }
@@ -162,7 +162,7 @@ export function AppBar({
   backLabel = 'Back',
   trailing,
   actions = [],
-  edgeToEdge = false,
+  flush = false,
   packed = false,
   children,
 }: AppBarProps) {
@@ -171,7 +171,7 @@ export function AppBar({
     <View
       style={[
         styles.bar,
-        edgeToEdge && styles.edgeToEdge,
+        flush && styles.flush,
         packed && styles.packed,
         onBack === undefined && styles.noBack,
       ]}

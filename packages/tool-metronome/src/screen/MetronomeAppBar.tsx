@@ -1,6 +1,7 @@
 import {
   AppBar,
   BarIconButton,
+  barChipRoom,
   createThemedStyles,
   hitBoxStyle,
   hitExtension,
@@ -9,7 +10,6 @@ import {
   metronome,
   minTouchTargetDp,
   radius,
-  screenBar,
   size,
   space,
   textRoles,
@@ -45,7 +45,7 @@ import { UnsavedDot, useLoadedSongUnsaved } from './UnsavedChanges.tsx';
 const NO_ENTRIES: readonly SetlistEntry[] = [];
 
 function chipToBody(chipHeight: number): number {
-  return (screenBar.height - chipHeight) / 2 + metronome.belowAppBar;
+  return barChipRoom(chipHeight) + metronome.belowAppBar;
 }
 
 const SET_CHIP_HIT_BOX = hitBoxStyle(
@@ -279,38 +279,40 @@ function StageBar({ context, bottomInset, onBack }: StageBarProps) {
   }, []);
   const unsaved = useLoadedSongUnsaved();
   return (
-    <AppBar packed onBack={onBack}>
-      <BarIconButton
-        icon="previous"
-        size="skip"
-        color="text"
-        label={stepA11yLabel(SONG_STEP.previous, previous)}
-        disabled={previous === undefined}
-        onPress={handlePrevious}
-      />
-      <SongChip
-        stage
-        text={stageChipText(song, set)}
-        label={stageChipA11yLabel(song, set, unsaved)}
-        hint="Opens the song list"
-        unsaved={unsaved}
-        onPress={handleOpenList}
-      />
-      <BarIconButton
-        icon="next"
-        size="skip"
-        color="text"
-        label={stepA11yLabel(SONG_STEP.next, next)}
-        disabled={next === undefined}
-        onPress={handleNext}
-      />
+    <>
+      <AppBar packed onBack={onBack}>
+        <BarIconButton
+          icon="previous"
+          size="skip"
+          color="text"
+          label={stepA11yLabel(SONG_STEP.previous, previous)}
+          disabled={previous === undefined}
+          onPress={handlePrevious}
+        />
+        <SongChip
+          stage
+          text={stageChipText(song, set)}
+          label={stageChipA11yLabel(song, set, unsaved)}
+          hint="Opens the song list"
+          unsaved={unsaved}
+          onPress={handleOpenList}
+        />
+        <BarIconButton
+          icon="next"
+          size="skip"
+          color="text"
+          label={stepA11yLabel(SONG_STEP.next, next)}
+          disabled={next === undefined}
+          onPress={handleNext}
+        />
+      </AppBar>
       <SetlistSongsSheet
         visible={listOpen}
         set={set}
         bottomInset={bottomInset}
         onDismiss={handleCloseList}
       />
-    </AppBar>
+    </>
   );
 }
 
@@ -336,37 +338,38 @@ function PlainBar({
   }, []);
   const unsaved = useLoadedSongUnsaved();
   const text = soloChipText(song);
+  const songChip =
+    text === undefined ? undefined : (
+      <SongChip
+        stage={false}
+        text={text}
+        label={soloChipA11yLabel(text.title, unsaved)}
+        hint="Opens the song"
+        unsaved={unsaved}
+        onPress={handleOpenSong}
+      />
+    );
+  const setlistsChip =
+    onOpenSetlists === undefined ? undefined : (
+      <SetlistsChip onPress={onOpenSetlists} />
+    );
   return (
-    <AppBar
-      title="Metronome"
-      onBack={onBack}
-      trailing={
-        <>
-          {text === undefined ? null : (
-            <SongChip
-              stage={false}
-              text={text}
-              label={soloChipA11yLabel(text.title, unsaved)}
-              hint="Opens the song"
-              unsaved={unsaved}
-              onPress={handleOpenSong}
-            />
-          )}
-          {text !== undefined || onOpenSetlists === undefined ? null : (
-            <SetlistsChip onPress={onOpenSetlists} />
-          )}
-          {text === undefined ? null : (
-            <LoadedSongSheet
-              visible={songOpen}
-              song={text.title}
-              bottomInset={bottomInset}
-              onDismiss={handleCloseSong}
-              onOpenSetlists={onOpenSetlists}
-            />
-          )}
-        </>
-      }
-    />
+    <>
+      <AppBar
+        title="Metronome"
+        onBack={onBack}
+        trailing={songChip ?? setlistsChip}
+      />
+      {text === undefined ? null : (
+        <LoadedSongSheet
+          visible={songOpen}
+          song={text.title}
+          bottomInset={bottomInset}
+          onDismiss={handleCloseSong}
+          onOpenSetlists={onOpenSetlists}
+        />
+      )}
+    </>
   );
 }
 

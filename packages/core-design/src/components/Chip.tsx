@@ -24,7 +24,8 @@ import {
 } from '../touchTarget.ts';
 import { Icon } from './Icon.tsx';
 
-const CHIP_HEIGHT = textRoles.chip.size + (inset.chipV + size.stroke) * 2;
+export const CHIP_HEIGHT =
+  textRoles.chip.size + (inset.chipV + size.stroke) * 2;
 
 export type ChipSize = 'default' | 'large';
 

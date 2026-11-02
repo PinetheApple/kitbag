@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { iconSizes, screenBar, space } from '../roles.ts';
 import { ThemeProvider } from '../ThemeProvider.tsx';
-import type { ThemeMode } from '../tokens.ts';
+import { minTouchTargetDp, type ThemeMode } from '../tokens.ts';
 
 interface HostProps {
   readonly style?: unknown;
@@ -99,8 +99,8 @@ function iconIn(markup: string, key: Node): Node | undefined {
 
 function isRealKey({ style }: Node): boolean {
   return (
-    style?.width === screenBar.iconButton &&
-    style.height === screenBar.iconButton
+    Number(style?.width) >= minTouchTargetDp &&
+    Number(style?.height) >= minTouchTargetDp
   );
 }
 

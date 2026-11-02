@@ -253,6 +253,7 @@ export type IconSize = keyof typeof iconSizes;
 
 const display = fontFamily.display;
 const body = fontFamily.body;
+const songArtist = { family: body, weight: 400, size: 12.5 } as const;
 
 export const textRoles = {
   appBarTitle: { family: display, weight: 500, size: 17 },
@@ -363,7 +364,8 @@ export const textRoles = {
   segmentLarge: { family: display, weight: 400, size: 13 },
   chipLarge: { family: display, weight: 400, size: 13 },
   numpadKeyLarge: { family: display, weight: 500, size: 20, tabular: true },
-  songArtist: { family: body, weight: 400, size: 12.5 },
+  songArtist,
+  appBarSubtitle: songArtist,
   stemName: { family: display, weight: 500, size: 14.5 },
   stemToggle: { family: display, weight: 700, size: 12 },
   stemLevel: { family: display, weight: 500, size: 12, tabular: true },
@@ -410,6 +412,10 @@ export const screenBar = {
   gap: 2,
   iconButton: 48,
 } as const;
+
+export function barChipRoom(chipHeight: number): number {
+  return (screenBar.height - chipHeight) / 2;
+}
 
 export const layout = {
   maxContentWidth: 600,

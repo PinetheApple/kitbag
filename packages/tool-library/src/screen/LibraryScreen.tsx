@@ -275,7 +275,7 @@ export function LibraryScreen({
   );
   return (
     <View style={frame}>
-      <AppBar edgeToEdge title={text.title} onBack={onBack} actions={actions} />
+      <AppBar flush title={text.title} onBack={onBack} actions={actions} />
       <View style={styles.body}>
         {listed ? (
           <SearchBar text={text} covered={menu.kind !== 'none'} />

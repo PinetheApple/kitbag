@@ -19,7 +19,7 @@ export function StemAppBar({ onBack, onMenu }: StemAppBarProps) {
   );
   return (
     <AppBar
-      edgeToEdge
+      flush
       title={title === '' ? 'Stems' : title}
       subtitle={artist ?? undefined}
       onBack={onBack}

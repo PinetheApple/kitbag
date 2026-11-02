@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 const PACKAGES = join(import.meta.dirname, '..', '..');
 const SHARED_BAR = 'core-design/src/components/AppBar.tsx';
+const ICON_MAP = 'core-design/src/icons.ts';
 
 const BAR_USERS = [
   'app-shell/src/home/HomeScreen.tsx',
@@ -19,7 +20,18 @@ const BAR_USERS = [
   'tool-tuner/src/screen/TunerScreen.tsx',
 ];
 
-const BACK_GLYPH = /\b(?:icon|name)=(?:"back"|\{'back'\})|icon: 'back'/;
+const FLUSH_BAR_FRAMES = [
+  'app-shell/src/settings/CalibrationScreen.tsx',
+  'tool-library/src/screen/LibraryScreen.tsx',
+  'tool-metronome/src/library/ScreenFrame.tsx',
+  'tool-metronome/src/screen/MetronomeScreen.tsx',
+  'tool-stems/src/screen/StemPlayerScreen.tsx',
+  'tool-tuner/src/screen/TunerScreen.tsx',
+];
+
+const BACK_GLYPH =
+  /\b(?:icon|name)(?:=|: ?)(?:"back"|'back'|\{'back'\})|['"](?:chevron|arrow)-left['"]/;
+const TOP_PADDING = /paddingTop:\s*([^,}\n]*insets\.top[^,}\n]*)/g;
 
 function sources(): Record<string, string> {
   const found: Record<string, string> = {};
@@ -49,7 +61,18 @@ describe('app bar', () => {
     const drawers = Object.keys(files).filter((file) =>
       BACK_GLYPH.test(files[file] ?? ''),
     );
-    expect(drawers).toEqual([SHARED_BAR]);
+    expect(drawers.sort()).toEqual([SHARED_BAR, ICON_MAP].sort());
+  });
+
+  it('sits flush under the status bar on every screen with a bar frame', () => {
+    const tops = FLUSH_BAR_FRAMES.flatMap((file) =>
+      [...(files[file] ?? '').matchAll(TOP_PADDING)].map((match) => ({
+        file,
+        top: match[1]?.trim(),
+      })),
+    );
+    expect(new Set(tops.map((t) => t.file))).toEqual(new Set(FLUSH_BAR_FRAMES));
+    expect(tops.filter((t) => t.top !== 'insets.top')).toEqual([]);
   });
 
   it('has no full-arrow back left anywhere', () => {
