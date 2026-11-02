@@ -1,15 +1,10 @@
 #include "media/looping_source_reader.h"
 
 #include <algorithm>
-#include <cmath>
-#include <numbers>
+
+#include "media/equal_power.h"
 
 namespace kitbag {
-namespace {
-
-constexpr double kQuarterTurn = std::numbers::pi / 2.0;
-
-}  // namespace
 
 LoopingSourceReader::LoopingSourceReader(
     SourceReader* base,
@@ -88,13 +83,11 @@ void LoopingSourceReader::PrepareCrossfade() {
   SeekBase(layout_.start);
   ReadBase(blend_.data(), frames);
   for (uint64_t i = 0; i < frames; ++i) {
-    const double angle = (static_cast<double>(i) + 0.5) * kQuarterTurn /
-                         static_cast<double>(frames);
-    const auto out_gain = static_cast<float>(std::cos(angle));
-    const auto in_gain = static_cast<float>(std::sin(angle));
+    const FadeGains gains =
+        EqualPowerAt(static_cast<int64_t>(i), static_cast<int64_t>(frames));
     for (uint32_t c = 0; c < channels_; ++c) {
       const size_t at = i * channels_ + c;
-      blend_[at] = tail_[at] * out_gain + blend_[at] * in_gain;
+      blend_[at] = tail_[at] * gains.out + blend_[at] * gains.in;
     }
   }
 }
