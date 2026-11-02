@@ -17,7 +17,7 @@ vi.mock('react-native', async () => {
   const { createElement: h } = await import('react');
   return {
     View: (props: Props) => h('div', null, props.children),
-    useWindowDimensions: () => ({ fontScale: display.fontScale }),
+    useWindowDimensions: () => ({ fontScale: 1 }),
   };
 });
 
@@ -50,6 +50,8 @@ vi.mock('@kitbag/core-design', async (original) => {
       sliders.push(props);
       return null;
     },
+    useTextScaled: () =>
+      (pure.isTextScaled as (scale: number) => boolean)(display.fontScale),
     createThemedStyles: (factory: (theme: object) => object) => () =>
       factory({ color: new Proxy({}, { get: () => '' }) }),
   };

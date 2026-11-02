@@ -2,17 +2,17 @@ import {
   bodyLineHeight,
   createThemedStyles,
   EditRow,
-  isTextScaled,
   LiveSlot,
   minTouchTargetDp,
   rig,
   Slider,
   textRoles,
+  useTextScaled,
 } from '@kitbag/core-design';
 import { useMetronome } from '@kitbag/core-state';
 import { KB_VOLUME_BOUNDS } from '@kitbag/core-native';
 import { useCallback, useEffect } from 'react';
-import { useWindowDimensions, View } from 'react-native';
+import { View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 
 import {
@@ -36,7 +36,7 @@ const useStyles = createThemedStyles(() => ({
 
 export function VolumeRow() {
   const styles = useStyles();
-  const scaled = isTextScaled(useWindowDimensions().fontScale);
+  const scaled = useTextScaled();
   const volume = useMetronome((s) => s.volume);
   const setVolume = useMetronome((s) => s.setVolume);
   const fraction = useSharedValue(fractionOfVolume(volume));
