@@ -1,13 +1,15 @@
 import { releaseTarget, type SliderMode } from '@kitbag/core-design';
+import { KB_VOLUME_BOUNDS } from '@kitbag/core-native';
 import { createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
-import { VOLUME_SLIDER } from './rigVolume.ts';
+import { VOLUME_SLIDER, volumePercent } from './rigVolume.ts';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
 const sliders = vi.hoisted(() => [] as Props[]);
+const readouts = vi.hoisted(() => [] as Props[]);
 
 vi.mock('react-native', async () => {
   const { createElement: h } = await import('react');
@@ -35,6 +37,10 @@ vi.mock('@kitbag/core-design', async (original) => {
     ...pure,
     EditRow: (props: Props) => h('div', null, props.children),
     LiveText: () => null,
+    LiveSlot: (props: Props) => {
+      readouts.push(props);
+      return null;
+    },
     Slider: (props: Props) => {
       sliders.push(props);
       return null;
@@ -52,5 +58,12 @@ describe('click volume row wiring', () => {
     const mode = sliders[0]?.mode as SliderMode;
     expect(mode).toBe(VOLUME_SLIDER.mode);
     expect(releaseTarget(mode, 'tap', true, 0.25, 0.5)).toBe(0.25);
+  });
+
+  it('sizes the readout by the widest level it can show, not a fixed width', () => {
+    readouts.length = 0;
+    renderToStaticMarkup(createElement(VolumeRow));
+    expect(readouts[0]?.widest).toBe(volumePercent(KB_VOLUME_BOUNDS.max));
+    expect(readouts[0]?.style).not.toHaveProperty('width');
   });
 });

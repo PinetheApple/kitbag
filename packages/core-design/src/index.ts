@@ -36,6 +36,7 @@ export * from './components/EmptyState.tsx';
 export * from './components/FloatingActionButton.tsx';
 export * from './components/Icon.tsx';
 export * from './components/ListRow.tsx';
+export * from './components/LiveSlot.tsx';
 export * from './components/LiveText.tsx';
 export * from './components/NumpadKeypad.tsx';
 export * from './components/PegSelector.tsx';

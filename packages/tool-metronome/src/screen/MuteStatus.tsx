@@ -1,4 +1,9 @@
-import { createThemedStyles, Icon, metronome } from '@kitbag/core-design';
+import {
+  createThemedStyles,
+  Icon,
+  LiveSlot,
+  metronome,
+} from '@kitbag/core-design';
 import type { BarMuteConfig } from '@kitbag/core-state';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
@@ -13,7 +18,6 @@ import {
   ofText,
   type StatusRows,
 } from '../logic/statusRows.ts';
-import { LiveSlot } from './LiveSlot.tsx';
 import { mutedCellStyles } from './mutedCellStyles.ts';
 import { useStatusStyles } from './statusStyles.ts';
 import { StatusVariant } from './StatusVariant.tsx';

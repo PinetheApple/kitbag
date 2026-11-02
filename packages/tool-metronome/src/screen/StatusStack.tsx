@@ -3,6 +3,7 @@ import {
   IconGlyph,
   iconSizes,
   isTextScaled,
+  LiveSlot,
   LiveText,
   useReduceMotionValue,
   useTheme,
@@ -31,7 +32,6 @@ import {
   type StatusRows,
 } from '../logic/statusRows.ts';
 import { trackOpacity } from '../logic/trackOpacity.ts';
-import { LiveSlot } from './LiveSlot.tsx';
 import { MuteStatus } from './MuteStatus.tsx';
 import { countInInk, useStatusStyles } from './statusStyles.ts';
 import { StatusVariant } from './StatusVariant.tsx';

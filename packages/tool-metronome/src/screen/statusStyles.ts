@@ -95,12 +95,6 @@ export const useStatusStyles = createThemedStyles((theme) => ({
   countInMeta: {
     color: countInInk(theme.color.bg, theme.color.text),
   },
-  ghost: {
-    opacity: 0,
-  },
-  slotFill: {
-    width: '100%',
-  },
   progressTrack: {
     position: 'absolute',
     left: 0,
