@@ -733,10 +733,15 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
 
 - **2026-11-02 · Text at 200% font scale (§12.6, #192)** — The stem player's name column
   keeps the mockup's 58 dp at the default text size and grows by the font scale above it.
-  **[user, 2026-10-30]** App-bar icons (back, search, add, the metronome bar's keys) grow with
-  the font scale up to 1.5×, so the largest bar glyph (26 dp) stays inside its fixed 48 dp
-  button at 200% and the bar keeps its height; other icons stay at their design size, since
-  most sit inside fixed-size controls. The metronome's status rows grow by the font scale
-  and hold at most two lines, which is what a row grown by that scale fits; a wider row
-  wraps onto its second line rather than truncating. Library and output-route rows drop
-  their one-line limit above the default scale. **[recorded]**
+  The name keeps `numberOfLines={1}`, so a long name still truncates, as the ruling
+  accepts. **[user, 2026-10-30]** App-bar icons (back, search, add, the metronome bar's
+  keys) grow with the font scale up to 1.5×. The 48 dp buttons alone would allow about
+  1.84× for the largest bar glyph (26 dp); 1.5 is a judgement, not measured, so a glyph keeps padding
+  inside its button and does not outweigh the bar title beside it. Other icons stay at
+  their design size, since most sit inside fixed-size controls. The app-bar title keeps
+  its existing cap: one line, shrinking toward `appBarTitleMinSize` through
+  `minimumFontScale` before it truncates. The metronome's status rows grow by the font
+  scale and hold at most two lines; that a grown row fits two grown lines is reasoned from
+  the 40 dp row height, not measured, and needs a device check. A wider row wraps onto its
+  second line rather than truncating. Library and output-route rows drop their one-line
+  limit above the default scale. **[recorded]**
