@@ -6,7 +6,11 @@ import type {
   ImportPlan,
 } from '@kitbag/core-db';
 import { countLabel } from '@kitbag/core-design';
-import { REPLACE_CONFIRMATION, type RestoreFailure } from '@kitbag/core-state';
+import {
+  REPLACE_CONFIRMATION,
+  type RestoreFailure,
+  type RestoreState,
+} from '@kitbag/core-state';
 
 import { formatBytes } from './bytes.ts';
 import { SEPARATOR } from './separator.ts';
@@ -21,6 +25,7 @@ export const TAKE_THEIRS = 'Take theirs';
 export const REPLACE_TITLE = 'Replace everything?';
 export const PICK_AGAIN = 'Choose another file';
 export const DONE_LABEL = 'Done';
+export const PICK_AGAIN_HINT = 'Choose the backup file again.';
 export const STALE_NOTICE =
   'Your library changed while this was open. Check the new counts and restore again.';
 export const SHARE_FAILED = 'Could not share the backup. Try again.';
@@ -197,4 +202,8 @@ export function restoredText(
   );
   const verb = mode === 'merge' ? 'Merged' : 'Replaced with';
   return `${verb} ${incomingList(categories, counts)}.`;
+}
+
+export function restorePrompt(phase: RestoreState['phase']): string | null {
+  return phase === 'empty' ? PICK_AGAIN_HINT : null;
 }

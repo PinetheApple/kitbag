@@ -730,6 +730,14 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   behaviour, not read in source): Back would skip every `BackHandler` handler and leave the
   app. **[recorded]**
 
+- **2026-11-02 · Back on the practice summary saves the session (§5.7, #85)** — Back,
+  a downward drag past the dismiss threshold and a tap outside the sheet all save the
+  session, as the non-destructive default; Discard stays an explicit button. The sheet
+  takes all three through one dismiss path. The save is idempotent per session, so a
+  second Back during a save writes nothing more. A failed save leaves the summary pending
+  and on screen with "Try again". This replaces the earlier choice that dismissing kept
+  the summary pending for the next visit. **[coord]**
+
 - **2026-11-02 · Content is capped at 600 dp wide, centred (§12, #190)** — On screens 600 dp
   wide or more, every screen and every sheet is capped at `layout.maxContentWidth` (600 dp)
   and centred; sheet scrims stay full width. No design exists for 600 dp and wider, and

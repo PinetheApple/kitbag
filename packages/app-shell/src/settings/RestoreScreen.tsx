@@ -40,6 +40,7 @@ import {
   PICK_AGAIN,
   replaceConfirmBody,
   RESTORE_ORDER,
+  restorePrompt,
   RESTORE_TITLE,
   restoredText,
   REVIEW_LABEL,
@@ -303,6 +304,22 @@ function Outcome({
   );
 }
 
+function PickAgain({
+  prompt,
+  onPick,
+}: {
+  readonly prompt: string | null;
+  readonly onPick: () => void;
+}) {
+  const styles = useStyles();
+  return (
+    <>
+      {prompt === null ? null : <Text style={styles.hint}>{prompt}</Text>}
+      <Button label={PICK_AGAIN} onPress={onPick} />
+    </>
+  );
+}
+
 function RestoreBody({ onBack }: { readonly onBack: () => void }) {
   const restore = useRestore((s) => s.restore);
   const pick = useRestore((s) => s.pick);
@@ -332,7 +349,9 @@ function RestoreBody({ onBack }: { readonly onBack: () => void }) {
         />
       );
     case 'empty':
-      return <Button label={PICK_AGAIN} onPress={pickAgain} />;
+      return (
+        <PickAgain prompt={restorePrompt(restore.phase)} onPick={pickAgain} />
+      );
     case 'reading':
       return null;
   }

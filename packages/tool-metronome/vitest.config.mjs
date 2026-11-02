@@ -14,6 +14,7 @@ export default defineConfig({
       'src/screen/useEndPracticeOnLeave.test.ts',
       'src/screen/muteStrips.test.ts',
       'src/screen/SwipeHint.test.ts',
+      'src/screen/PracticeSummarySheet.test.ts',
     ],
     alias: {
       '@kitbag/core-native': stub(

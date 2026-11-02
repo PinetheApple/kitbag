@@ -11,6 +11,7 @@ import {
   modeHint,
   replaceConfirmBody,
   restoredText,
+  restorePrompt,
   sourceDetail,
 } from './backupText.ts';
 
@@ -181,5 +182,17 @@ describe('result', () => {
     expect(restoredText('merge', MERGE_PLAN.counts)).toBe(
       'Merged 3 setlists, 24 songs & 2 tunings.',
     );
+  });
+});
+
+describe('restorePrompt', () => {
+  it('asks for the file again when the screen has none, as after the app restarts', () => {
+    expect(restorePrompt('empty')).toBe('Choose the backup file again.');
+  });
+
+  it('says nothing while a file is read or shown', () => {
+    expect(restorePrompt('reading')).toBe(null);
+    expect(restorePrompt('review')).toBe(null);
+    expect(restorePrompt('failed')).toBe(null);
   });
 });
