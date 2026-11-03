@@ -2,13 +2,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
-import {
-  appBarTitleMinSize,
-  iconSizes,
-  screenBar,
-  space,
-  textRoles,
-} from '../roles.ts';
+import { iconSizes, screenBar, space } from '../roles.ts';
 import { ThemeProvider } from '../ThemeProvider.tsx';
 import { minTouchTargetDp, type ThemeMode } from '../tokens.ts';
 
@@ -17,7 +11,9 @@ interface HostProps {
   readonly accessibilityRole?: string;
   readonly accessibilityLabel?: string;
   readonly numberOfLines?: number;
-  readonly minimumFontScale?: number;
+  readonly ellipsizeMode?: string;
+  readonly importantForAccessibility?: string;
+  readonly onLayout?: unknown;
   readonly children?: ReactNode;
 }
 
@@ -31,7 +27,9 @@ vi.mock('react-native', async (importOriginal) => {
       accessibilityRole,
       accessibilityLabel,
       numberOfLines,
-      minimumFontScale,
+      ellipsizeMode,
+      importantForAccessibility,
+      onLayout,
       children,
     }: HostProps) {
       return (
@@ -41,7 +39,9 @@ vi.mock('react-native', async (importOriginal) => {
             role: accessibilityRole,
             label: accessibilityLabel,
             lines: numberOfLines,
-            minScale: minimumFontScale,
+            ellipsis: ellipsizeMode,
+            a11y: importantForAccessibility,
+            measures: onLayout !== undefined,
             style: rn.StyleSheet.flatten(style as never),
           })}
         >
@@ -78,7 +78,9 @@ interface Node {
   readonly label?: string;
   readonly px?: number;
   readonly lines?: number;
-  readonly minScale?: number;
+  readonly ellipsis?: string;
+  readonly a11y?: string;
+  readonly measures?: boolean;
   readonly style?: Readonly<Record<string, unknown>>;
   readonly at: number;
 }
@@ -169,26 +171,24 @@ describe('AppBar', () => {
     expect(header(markup)).toBe('Calibrate latency');
   });
 
-  it.each([
-    [1, appBarTitleMinSize / textRoles.appBarTitle.size],
-    [2, 0.5],
-  ])('shrinks the title at font scale %d no further than %d', (scale, min) => {
-    screen.fontScale = scale;
-    const markup = render(<AppBar title="Metronome" onBack={noop} />);
-    screen.fontScale = 1;
-    const title = nodes(markup).find((n) => n.kind === 'text');
-    expect(title).toMatchObject({ lines: 1, minScale: min });
+  it('measures the title offscreen, hidden from accessibility', () => {
+    const all = nodes(render(<AppBar title="Metronome" onBack={noop} />));
+    const measurer = all.find((n) => n.kind === 'text' && n.measures);
+    const hidden = all
+      .filter((n) => n.a11y === 'no-hide-descendants')
+      .findLast((n) => n.at < (measurer?.at ?? -1));
+    expect(hidden?.style).toMatchObject({ position: 'absolute', opacity: 0 });
+    expect(measurer?.style).toMatchObject({ position: 'absolute' });
   });
 
-  it('never shrinks the title below its design size once text is grown', () => {
-    const scale = 1.1;
-    screen.fontScale = scale;
+  it('keeps the shown title invisible until it is measured', () => {
     const markup = render(<AppBar title="Metronome" onBack={noop} />);
-    screen.fontScale = 1;
-    const title = nodes(markup).find((n) => n.kind === 'text');
-    expect((title?.minScale ?? 0) * scale).toBeGreaterThanOrEqual(
-      1 - Number.EPSILON,
+    const head = nodes(markup).find((n) => n.role === 'header');
+    const shown = nodes(markup).find(
+      (n) => n.kind === 'text' && n.at > (head?.at ?? -1),
     );
+    expect(shown).toMatchObject({ lines: 1, ellipsis: 'tail' });
+    expect(shown?.style?.opacity).toBe(0);
   });
 
   it('shows a subtitle under the title', () => {

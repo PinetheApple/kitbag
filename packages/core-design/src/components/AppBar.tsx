@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Pressable, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import type { IconName } from '../icons.ts';
 import {
@@ -10,21 +10,13 @@ import {
   textRoles,
   type IconSize,
 } from '../roles.ts';
-import { grownTextScale, isTextScaled } from '../textScale.ts';
+import { oneLineMeasure } from '../oneLineFit.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import type { ColorToken } from '../tokens.ts';
+import { useOneLineFit } from '../useOneLineFit.ts';
 import { useTextIconScale } from '../useTextIconScale.ts';
 import { Icon } from './Icon.tsx';
-
-const TITLE_MIN_SCALE = appBarTitleMinSize / textRoles.appBarTitle.size;
-
-// Android applies minimumFontScale to the already-scaled size.
-function titleMinScale(fontScale: number): number {
-  return isTextScaled(fontScale)
-    ? 1 / grownTextScale(fontScale)
-    : TITLE_MIN_SCALE;
-}
 
 const useStyles = createThemedStyles((theme) => ({
   bar: {
@@ -142,23 +134,39 @@ interface HeadingProps {
 
 function Heading({ title, subtitle, wordmark }: HeadingProps) {
   const styles = useStyles();
-  const { fontScale } = useWindowDimensions();
+  const role = wordmark ? textRoles.wordmark : textRoles.appBarTitle;
+  const fit = useOneLineFit(title, role.size, appBarTitleMinSize);
+  const titleStyle = [styles.title, wordmark && styles.wordmark];
   return (
-    <View style={styles.heading} accessibilityRole="header" accessible>
-      <Text
-        style={[styles.title, wordmark && styles.wordmark]}
-        numberOfLines={1}
-        ellipsizeMode="tail"
-        adjustsFontSizeToFit
-        minimumFontScale={titleMinScale(fontScale)}
+    <View style={styles.heading} onLayout={fit.onAvailableLayout}>
+      <View
+        style={oneLineMeasure.row}
+        pointerEvents="none"
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
       >
-        {title}
-      </Text>
-      {subtitle === undefined ? null : (
-        <Text style={styles.subtitle} numberOfLines={1}>
-          {subtitle}
+        <Text
+          key={title}
+          style={[titleStyle, oneLineMeasure.text]}
+          onLayout={fit.onTextLayout}
+        >
+          {title}
         </Text>
-      )}
+      </View>
+      <View accessibilityRole="header" accessible>
+        <Text
+          style={[titleStyle, fit.style]}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
+          {title}
+        </Text>
+        {subtitle === undefined ? null : (
+          <Text style={styles.subtitle} numberOfLines={1}>
+            {subtitle}
+          </Text>
+        )}
+      </View>
     </View>
   );
 }
