@@ -24,10 +24,13 @@ import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { packTileRows, type ToolTileSize } from '../toolGrid.ts';
 import { radii } from '../tokens.ts';
+import { useOneLineFit } from '../useOneLineFit.tsx';
 import { InlineIcon } from './IconGlyph.tsx';
 
 // An upcoming tool is shown but cannot open: there is nothing behind it yet.
 export type ToolStatus = 'ready' | 'upcoming';
+
+const TILE_TITLE_FLOOR = textRoles.tileTitle.size * homeTile.titleMinScale;
 
 const useStyles = createThemedStyles((theme) => ({
   grid: {
@@ -54,9 +57,11 @@ const useStyles = createThemedStyles((theme) => ({
     color: theme.color.text,
     fontSize: iconSizes.toolTile,
   },
+  tileTitleBox: {
+    marginTop: 'auto',
+  },
   tileTitle: {
     ...textStyle(textRoles.tileTitle),
-    marginTop: 'auto',
     color: theme.color.text,
   },
   tileSubtext: {
@@ -152,6 +157,12 @@ export function ToolTile({
   onLongPress,
 }: ToolTileProps) {
   const styles = useStyles();
+  const titleFit = useOneLineFit({
+    text: title,
+    role: textRoles.tileTitle,
+    floor: TILE_TITLE_FLOOR,
+    style: styles.tileTitle,
+  });
   const upcoming = status === 'upcoming';
   return (
     <Pressable
@@ -164,14 +175,16 @@ export function ToolTile({
       style={[styles.tile, upcoming && styles.upcoming]}
     >
       <Glyph name={icon} style={styles.tileGlyph} />
-      <Text
-        style={styles.tileTitle}
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={homeTile.titleMinScale}
-      >
-        {title}
-      </Text>
+      <View style={styles.tileTitleBox} onLayout={titleFit.onAvailableLayout}>
+        {titleFit.measurer}
+        <Text
+          style={[styles.tileTitle, titleFit.style]}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
+          {title}
+        </Text>
+      </View>
       <Text style={styles.tileSubtext}>{subtext}</Text>
     </Pressable>
   );

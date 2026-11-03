@@ -67,6 +67,13 @@ describe('app bar', () => {
     expect(drawers.sort()).toEqual([SHARED_BAR, ICON_MAP].sort());
   });
 
+  it('leaves native font shrinking to no screen', () => {
+    const shrinkers = Object.keys(files).filter((file) =>
+      /\badjustsFontSizeToFit\b|\bminimumFontScale\b/.test(files[file] ?? ''),
+    );
+    expect(shrinkers).toEqual([]);
+  });
+
   it('puts the bar directly under the status bar on every screen with a bar frame', () => {
     const tops = STATUS_BAR_FRAMES.flatMap((file) =>
       [...(files[file] ?? '').matchAll(TOP_PADDING)].map((match) => ({
