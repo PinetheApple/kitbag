@@ -1,0 +1,1 @@
+• Scrolling Home or a Settings screen no longer slides its content under the status bar.
