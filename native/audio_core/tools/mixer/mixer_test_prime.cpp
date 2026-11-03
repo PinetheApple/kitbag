@@ -15,11 +15,15 @@ constexpr int kEventBlocks = 3;
 // block leaves room for a slower CI host.
 constexpr double kBudgetShare = 0.5;
 constexpr double kUsPerSecond = 1e6;
+constexpr double kNsPerSecond = 1e9;
 constexpr float kAlignKey = 2.0f;
 constexpr int kAlignBlocks = 120;
 constexpr float kCancelFloor = 1e-6f;
 constexpr int64_t kMissBurst = int64_t{3} * kSampleRate / 2 + 13;
-constexpr auto kMissPeriod = std::chrono::microseconds(2667);
+constexpr double kRenderSpeedup = 4.0;
+constexpr auto kMissPeriod = std::chrono::microseconds(
+    static_cast<int64_t>(kUsPerSecond * kBlock / kSampleRate / kRenderSpeedup)
+);
 constexpr auto kMissSettle = std::chrono::milliseconds(50);
 constexpr auto kMissRun = std::chrono::milliseconds(1500);
 constexpr int64_t kRingSongFrames = 30011;
@@ -49,7 +53,7 @@ double ThreadSeconds() {
   timespec now{};
   clock_gettime(CLOCK_THREAD_CPUTIME_ID, &now);
   return static_cast<double>(now.tv_sec) +
-         static_cast<double>(now.tv_nsec) / (kUsPerSecond * kMsPerSecond);
+         static_cast<double>(now.tv_nsec) / kNsPerSecond;
 }
 
 double WorstBlock(kitbag::Mixer* mixer, int blocks) {
@@ -107,16 +111,26 @@ void TestPrimeStaysInBudget() {
   for (const GateCase& gate : kGateCases) CheckGateCase(gate, pcm);
 }
 
-float AlignedPeak(bool handover, bool inverted) {
+struct AlignCase {
+  bool handover = false;
+  bool inverted = false;
+};
+
+struct AlignResult {
+  float peak = 0.0f;
+  bool engaged = false;
+};
+
+AlignResult AlignedPeak(const AlignCase& align) {
   const std::vector<float> pcm =
       ToneFixture({.frames = kSongFrames, .burst_at = kSeekTo, .bed = true});
   std::vector<float> negative(pcm);
   for (float& v : negative) v = -v;
   kitbag::Mixer mixer(kSampleRate);
   LoadPcm(&mixer, 0, pcm);
-  if (inverted) LoadPcm(&mixer, 1, negative);
-  mixer.Seek(kSeekTo - (handover ? kSampleRate / 2 : 0), 0, false);
-  if (handover) {
+  if (align.inverted) LoadPcm(&mixer, 1, negative);
+  mixer.Seek(kSeekTo - (align.handover ? kSampleRate / 2 : 0), 0, false);
+  if (align.handover) {
     mixer.Play();
     RenderPaced(&mixer, kEventBlocks);
   }
@@ -124,24 +138,30 @@ float AlignedPeak(bool handover, bool inverted) {
     mixer.SetTrackPitch(t, kAlignKey, 0, false);
   }
   mixer.SetRate(kSpeed, 0, false);
-  if (!handover) mixer.Play();
+  if (!align.handover) mixer.Play();
   const std::vector<float> left = RenderPaced(&mixer, kAlignBlocks);
-  return mixer.stretch_engaged()
-             ? Loudest(left, 0, static_cast<int64_t>(left.size()))
-             : kOnsetThreshold;
+  return {
+      .peak = Loudest(left, 0, static_cast<int64_t>(left.size())),
+      .engaged = mixer.stretch_engaged()
+  };
+}
+
+void CheckAligned(const AlignCase& align, const char* label) {
+  const AlignResult result = AlignedPeak(align);
+  Check(result.engaged, "align: the stretch engages");
+  const bool ok = align.inverted ? result.peak <= kCancelFloor
+                                 : result.peak > kOnsetThreshold;
+  Check(ok, label);
 }
 
 void TestStemsStaySampleAligned() {
-  Check(
-      AlignedPeak(false, false) > kOnsetThreshold,
-      "align: the control without the inverted stem is loud"
-  );
-  Check(
-      AlignedPeak(false, true) <= kCancelFloor,
+  CheckAligned({}, "align: the control without the inverted stem is loud");
+  CheckAligned(
+      {.inverted = true},
       "align: a stem and its inverse cancel after an app-thread seek prime"
   );
-  Check(
-      AlignedPeak(true, true) <= kCancelFloor,
+  CheckAligned(
+      {.handover = true, .inverted = true},
       "align: a stem and its inverse cancel across a mid-play hand-over"
   );
 }
@@ -158,10 +178,7 @@ void RenderRealTime(
     const uint64_t last = mixer->position();
     mixer->Process(out.data(), kBlock);
     AppendLeft(&run->left, out, kBlock);
-    const kitbag::SongClock& clock = mixer->song_clock();
-    for (uint32_t i = 0; i < kBlock; ++i) {
-      run->song.push_back(i < clock.frames ? clock.SongFrameAt(i) : kNotFound);
-    }
+    AppendClock(*mixer, run);
     *backwards = *backwards || mixer->position() < last;
     next += kMissPeriod;
     std::this_thread::sleep_until(next);

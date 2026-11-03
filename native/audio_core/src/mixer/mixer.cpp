@@ -281,15 +281,12 @@ Mixer::Head Mixer::PlannedHead() const {
   };
 }
 
-// A jump while a stage is wanted is primed; a keep re-primes a hand-over
-// still pending, whose frame the new numbering no longer holds.
 bool Mixer::Relayout(
     TransportPlan plan,
     uint64_t now_frame,
     bool engine_running
 ) {
-  bool used[kKeyBusCount] = {};
-  if (plan.kind == PlanKind::kJump && app_engaged_ && MarkUsedBuses(used) > 0) {
+  if (plan.kind == PlanKind::kJump && app_engaged_ && BusesInUse() > 0) {
     return PrimedRelayout(plan, now_frame, engine_running);
   }
   if (!PlainRelayout(plan, now_frame, engine_running)) return false;
@@ -299,9 +296,7 @@ bool Mixer::Relayout(
     }
     app_primed_ = false;
     MatchBusConfig(0, true);
-  } else if (
-      app_primed_ && app_playing_ && !engaged_.load(std::memory_order_relaxed)
-  ) {
+  } else if (PrimeAwaitingEngage()) {
     PrimeNow(now_frame, engine_running);
   }
   return true;

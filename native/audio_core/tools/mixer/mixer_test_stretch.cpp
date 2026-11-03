@@ -47,7 +47,7 @@ void TestTakeAndCarrySum() {
 void TestBypassIsSampleExact() {
   kitbag::Mixer mixer(kSampleRate);
   LoadRamp(&mixer, 0, kLoopTrackFrames, 0.0f);
-  mixer.SetRate(kitbag::Mixer::kUnityRate, 0, false);
+  mixer.SetRate(kitbag::kUnityRate, 0, false);
   mixer.SetTrackPitch(0, 0.0f, 0, false);
   mixer.Seek(kBypassSeek, 0, false);
   mixer.Play();
@@ -58,7 +58,7 @@ void TestBypassIsSampleExact() {
   mixer.SetRate(kSpeed, 0, false);
   RenderPaced(&mixer, HandOverBlocks(mixer));
   Check(mixer.stretch_engaged(), "engage: 0.75x engages mid-play");
-  mixer.SetRate(kitbag::Mixer::kUnityRate, 0, false);
+  mixer.SetRate(kitbag::kUnityRate, 0, false);
   RenderPaced(&mixer, 1);
   Check(mixer.stretch_engaged(), "engage: back at 1.0x it holds until a seek");
   mixer.Seek(kDisengageSeek, 0, false);
@@ -88,7 +88,7 @@ int64_t ControlLatency(float rate, float key) {
 }
 
 void CheckControlLatency(const char* state, float rate, float key) {
-  const bool bypass = rate == kitbag::Mixer::kUnityRate && key == 0.0f;
+  const bool bypass = rate == kitbag::kUnityRate && key == 0.0f;
   const int64_t expected = bypass ? 0 : OutputFramesFor(LagFrames(rate), rate);
   const int64_t got = ControlLatency(rate, key);
   std::printf(
@@ -103,8 +103,8 @@ void CheckControlLatency(const char* state, float rate, float key) {
 }
 
 void TestControlLatencyPerState() {
-  CheckControlLatency("bypass", kitbag::Mixer::kUnityRate, 0.0f);
-  CheckControlLatency("1.0x +2 st", kitbag::Mixer::kUnityRate, kKey);
+  CheckControlLatency("bypass", kitbag::kUnityRate, 0.0f);
+  CheckControlLatency("1.0x +2 st", kitbag::kUnityRate, kKey);
   CheckControlLatency("0.75x", kSpeed, 0.0f);
   CheckControlLatency("0.5x", kSlow, 0.0f);
 }

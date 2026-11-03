@@ -12,6 +12,7 @@
 
 #include "mixer/key_bus.h"
 #include "mixer/mixer.h"
+#include "stretch/time_stretch.h"
 #include "wav_fixture.h"
 
 namespace {
@@ -23,7 +24,11 @@ constexpr uint32_t kChannels = 2;
 constexpr uint32_t kBlock = 512;
 constexpr int kStems = kitbag::Mixer::kMaxTracks;
 constexpr uint64_t kSongFrames = 20ULL * kSampleRate;
-constexpr int kBusCounts[] = {1, 4, 13};
+constexpr int kBusCounts[] = {
+    1,
+    kitbag::TimeStretch::kMaxChosenConfigInstances,
+    kitbag::Mixer::kKeyBusCount
+};
 constexpr float kSpeed = 0.75f;
 constexpr int kSteadyBlocks = 400;
 constexpr int kEventRepeats = 8;
@@ -106,17 +111,17 @@ struct Rig {
 
 // Keys start at 0 st, so moving stems one by one never passes through more
 // keys in use than the target, which would trip the guard mid-play.
+int KeyForStem(int stem, int buses) {
+  constexpr int kLowest = kitbag::Mixer::kMinPitchSemitones;
+  return (stem % buses - kLowest) % kitbag::Mixer::kKeyBusCount + kLowest;
+}
+
 void SetKeys(Rig* rig, bool engaged) {
-  constexpr int kKeys =
-      kitbag::Mixer::kMaxPitchSemitones - kitbag::Mixer::kMinPitchSemitones + 1;
   for (int t = 0; t < kStems; ++t) {
-    const int key =
-        (t % rig->buses - kitbag::Mixer::kMinPitchSemitones) % kKeys +
-        kitbag::Mixer::kMinPitchSemitones;
-    rig->mixer
-        ->SetTrackPitch(t, engaged ? static_cast<float>(key) : 0.0f, 0, false);
+    const int key = engaged ? KeyForStem(t, rig->buses) : 0;
+    rig->mixer->SetTrackPitch(t, static_cast<float>(key), 0, false);
   }
-  rig->mixer->SetRate(engaged ? kSpeed : kitbag::Mixer::kUnityRate, 0, false);
+  rig->mixer->SetRate(engaged ? kSpeed : kitbag::kUnityRate, 0, false);
 }
 
 void BuildRig(Rig* rig, const std::string& path, int buses) {
@@ -127,7 +132,7 @@ void BuildRig(Rig* rig, const std::string& path, int buses) {
   }
 }
 
-int HandOverBlocks(const kitbag::Mixer& mixer) {
+int EngageBlocks(const kitbag::Mixer& mixer) {
   return static_cast<int>(mixer.handover_lead_frames() / kBlock) + kEventBlocks;
 }
 
@@ -142,7 +147,7 @@ std::vector<double> EngageTimes(Rig* rig) {
     rig->mixer->Seek(SeekFrame(r), 0, false);
     WorstOf(rig->mixer.get(), kSettleBlocks);
     SetKeys(rig, true);
-    times.push_back(WorstOf(rig->mixer.get(), HandOverBlocks(*rig->mixer)));
+    times.push_back(WorstOf(rig->mixer.get(), EngageBlocks(*rig->mixer)));
   }
   return times;
 }

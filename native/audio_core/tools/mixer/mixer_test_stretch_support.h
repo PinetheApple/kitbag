@@ -200,13 +200,17 @@ struct ClockedRender {
   std::vector<int64_t> song;
 };
 
-inline void ClockedBlock(kitbag::Mixer* mixer, ClockedRender* run) {
-  const std::vector<float> block = RenderPaced(mixer, 1);
-  run->left.insert(run->left.end(), block.begin(), block.end());
-  const kitbag::SongClock& clock = mixer->song_clock();
+inline void AppendClock(const kitbag::Mixer& mixer, ClockedRender* run) {
+  const kitbag::SongClock& clock = mixer.song_clock();
   for (uint32_t i = 0; i < kBlock; ++i) {
     run->song.push_back(i < clock.frames ? clock.SongFrameAt(i) : kNotFound);
   }
+}
+
+inline void ClockedBlock(kitbag::Mixer* mixer, ClockedRender* run) {
+  const std::vector<float> block = RenderPaced(mixer, 1);
+  run->left.insert(run->left.end(), block.begin(), block.end());
+  AppendClock(*mixer, run);
 }
 
 // The song frame the mixer's clock reports where the first onset sounds.
@@ -215,6 +219,36 @@ inline int64_t SongFrameAtOnset(kitbag::Mixer* mixer, int blocks) {
   for (int b = 0; b < blocks; ++b) ClockedBlock(mixer, &run);
   const int64_t onset = FirstAbove(run.left, kOnsetThreshold);
   return onset == kNotFound ? kNotFound : run.song[onset];
+}
+
+// The start of the first whole block-long window from [from] whose peak stays
+// at or under [threshold], or kNotFound.
+inline int64_t FirstQuietWindow(
+    const std::vector<float>& left,
+    int64_t from,
+    float threshold
+) {
+  const auto size = static_cast<int64_t>(left.size());
+  for (int64_t at = from; at + kBlock <= size; at += kBlock) {
+    if (Loudest(left, at, at + kBlock) <= threshold) return at;
+  }
+  return kNotFound;
+}
+
+inline void CheckNoQuietWindow(
+    const std::vector<float>& left,
+    int64_t from,
+    const char* label
+) {
+  const int64_t quiet = FirstQuietWindow(left, from, kOnsetThreshold);
+  Check(quiet == kNotFound, label);
+  if (quiet != kNotFound) {
+    std::fprintf(
+        stderr,
+        "  quiet window at frame %lld\n",
+        static_cast<long long>(quiet)
+    );
+  }
 }
 
 // Blocks until a mid-play engage has handed over, with a block to spare.

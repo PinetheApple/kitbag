@@ -10,6 +10,7 @@
 #include "media/song_clock.h"
 #include "media/streaming_track.h"
 #include "mixer/key_bus.h"
+#include "mixer/mixer_command.h"
 #include "mixer/transport_plan.h"
 #include "rt/rt_publisher.h"
 #include "rt/spsc_ring.h"
@@ -25,11 +26,12 @@ class Mixer {
   static constexpr float kMaxGain = 2.0f;
   static constexpr double kLoopCrossfadeSeconds = 0.005;
   static constexpr int64_t kMinLoopCrossfades = 2;
-  static constexpr float kUnityRate = 1.0f;
   static constexpr float kMinRate = 0.5f;
   static constexpr float kMaxRate = 1.0f;
   static constexpr int kMinPitchSemitones = -6;
   static constexpr int kMaxPitchSemitones = 6;
+  static constexpr int kKeyBusCount =
+      kMaxPitchSemitones - kMinPitchSemitones + 1;
   // Covers the app-thread pre-roll reads and OutputSeek after the switch point
   // is picked (~12 ms for 4 buses on the host bench); a miss retries longer.
   static constexpr double kHandOverLeadSeconds = 0.15;
@@ -186,27 +188,10 @@ class Mixer {
     int64_t fade_left = 0;
   };
 
-  enum class CommandType : uint8_t {
-    kSetGain,
-    kSetMute,
-    kSetSolo,
-    kPlay,
-    kStop,
-    kPause,
-    kSetMasterGain,
-    kSetRate,
-    kSetTrackPitch,
-  };
-
-  struct Command {
-    CommandType type;
-    int32_t track = 0;
-    float fvalue = 0.0f;
-  };
+  using CommandType = MixerCommandType;
+  using Command = MixerCommand;
 
   static constexpr size_t kCommandRingSize = 64;
-  static constexpr int kKeyBusCount =
-      kMaxPitchSemitones - kMinPitchSemitones + 1;
   static constexpr int kBanks = 2;
   // A pending rate waits this long after the last record, which bounds how
   // many records the clock needs to cover the stretch's output latency.
@@ -255,7 +240,6 @@ class Mixer {
   void MixAllTracks(float* output, uint32_t frame_count, bool any_solo);
   void AdvanceTransport(uint32_t frame_count);
 
-  // App thread: key-bus lifecycle (mixer_keys.cpp).
   struct Prepared {
     uint32_t created = 0;
     bool prime = false;
@@ -263,7 +247,8 @@ class Mixer {
   bool WantsStretch() const;
   std::unique_ptr<KeyBusSlot> MakeBus(int slot, uint64_t generation) const;
   bool MatchBusConfig(int in_use, bool allow_down);
-  bool EngageBuses(
+  enum class BusChange : uint8_t { kAddedLive, kNeedsPrime };
+  BusChange EngageBuses(
       std::optional<int> extra,
       uint64_t now_frame,
       bool engine_running
@@ -277,17 +262,18 @@ class Mixer {
   );
   uint32_t LiveBusMask() const;
   int MarkUsedBuses(bool* used) const;
+  int BusesInUse() const;
   void
   RetireDrainedBuses(const bool* used, uint64_t now_frame, bool engine_running);
   void FreeUnusedBuses(uint64_t now_frame, bool engine_running);
 
-  // App thread: priming a bank off the callback (mixer_prime.cpp).
   struct Bank {
     std::unique_ptr<KeyBusSlot> slots[kKeyBusCount];
     uint64_t generation = 0;
     int64_t lag = 0;
   };
   void PrimeNow(uint64_t now_frame, bool engine_running);
+  bool PrimeAwaitingEngage() const;
   int64_t HeadToPrime() const;
   bool
   PrimedRelayout(TransportPlan plan, uint64_t now_frame, bool engine_running);
@@ -306,7 +292,6 @@ class Mixer {
   bool TryHandOver(int64_t lead, uint64_t now_frame, bool engine_running);
   bool AwaitVerdict(uint64_t generation) const;
 
-  // Callback: the engaged path (mixer_stretch.cpp, mixer_handover.cpp).
   void SnapshotBuses();
   bool HoldForBusSwitch() const;
   bool BusesAgree(uint64_t generation) const;

@@ -7,6 +7,8 @@
 
 namespace kitbag {
 
+inline constexpr float kUnityRate = 1.0f;
+
 // kHandOver keeps the live sources and switches to a primed bank at exactly
 // stream frame `frame`; a jump with `primed` starts output from its bank.
 enum class PlanKind : uint8_t { kJump, kKeep, kHandOver };
@@ -23,7 +25,7 @@ struct TransportPlan {
   bool primed = false;
   int bank = 0;
   uint64_t generation = 0;
-  float rate = 1.0f;
+  float rate = kUnityRate;
   int64_t lag = 0;
 };
 

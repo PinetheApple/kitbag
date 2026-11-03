@@ -14,17 +14,20 @@ constexpr auto kVerdictPoll = std::chrono::microseconds(500);
 
 }  // namespace
 
-// Moving in bypass: hand over ahead of the head, so playback never stops for
-// the prime. Engaged or still: a primed jump at the audible head.
+// Playing in bypass hands over ahead of the head, so playback never stops.
 void Mixer::PrimeNow(uint64_t now_frame, bool engine_running) {
-  bool used[kKeyBusCount] = {};
-  if (!app_engaged_ || MarkUsedBuses(used) == 0) return;
+  if (!app_engaged_ || BusesInUse() == 0) return;
   if (app_playing_ && !engaged_.load(std::memory_order_relaxed)) {
     HandOver(now_frame, engine_running);
     return;
   }
   const TransportPlan plan{.frame = HeadToPrime(), .layout = app_layout_};
   PrimedRelayout(plan, now_frame, engine_running);
+}
+
+bool Mixer::PrimeAwaitingEngage() const {
+  return app_primed_ && app_playing_ &&
+         !engaged_.load(std::memory_order_relaxed);
 }
 
 int64_t Mixer::HeadToPrime() const {
@@ -35,8 +38,6 @@ int64_t Mixer::HeadToPrime() const {
   return SeekTarget(app_layout_.SongFrameAt(head.stream));
 }
 
-// The staged sources give up the pre-roll, so they are committed at
-// frame + lag, where the callback carries on feeding.
 bool Mixer::PrimedRelayout(
     TransportPlan plan,
     uint64_t now_frame,
@@ -50,7 +51,11 @@ bool Mixer::PrimedRelayout(
   };
   if (!StageAll(plan.frame, stamp, true)) return false;
   Bank bank;
-  BuildBank(plan.frame, true, &bank);
+  if (!BuildBank(plan.frame, true, &bank)) {
+    const int count = track_count_.load(std::memory_order_relaxed);
+    for (int t = 0; t < count; ++t) tracks_[t].stream->DropStaged();
+    return false;
+  }
   PublishBank(&bank, &plan, now_frame, engine_running);
   CommitPlan(plan, now_frame, engine_running);
   AdoptBank(plan, now_frame, engine_running);
@@ -80,7 +85,7 @@ bool Mixer::BuildBank(int64_t frame, bool staged, Bank* bank) {
   return true;
 }
 
-// Every loaded stem is read, muted or not, so all of them end at frame + lag.
+// Every loaded stem is read, muted or not.
 bool Mixer::ReadBankPreRoll(int64_t frame, bool staged, Bank* bank) {
   const auto lag = static_cast<uint32_t>(bank->lag);
   std::vector<float> pcm(
@@ -111,20 +116,19 @@ bool Mixer::ReadBankPreRoll(int64_t frame, bool staged, Bank* bank) {
   return true;
 }
 
-// Into the bank the callback is not playing, so nothing it holds is replaced.
 void Mixer::PublishBank(
     Bank* bank,
     TransportPlan* plan,
     uint64_t now_frame,
     bool engine_running
 ) {
-  const int target = 1 - app_bank_;
+  const int idle_bank = 1 - app_bank_;
   for (int s = 0; s < kKeyBusCount; ++s) {
-    buses_[target][s]
+    buses_[idle_bank][s]
         .Publish(std::move(bank->slots[s]), now_frame, engine_running);
   }
   plan->primed = true;
-  plan->bank = target;
+  plan->bank = idle_bank;
   plan->generation = bank->generation;
   plan->rate = app_rate_;
   plan->lag = bank->lag;

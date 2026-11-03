@@ -50,9 +50,7 @@ bool Mixer::MatchBusConfig(int in_use, bool allow_down) {
   return true;
 }
 
-// True when a full prime is needed: nothing is engaged or about to be, or
-// the config switched up. Otherwise new keys get a bus in the live bank.
-bool Mixer::EngageBuses(
+Mixer::BusChange Mixer::EngageBuses(
     std::optional<int> extra,
     uint64_t now_frame,
     bool engine_running
@@ -67,7 +65,7 @@ bool Mixer::EngageBuses(
   RetireDrainedBuses(used, now_frame, engine_running);
   if (MatchBusConfig(in_use, false) || !app_primed_ ||
       !engaged_.load(std::memory_order_relaxed)) {
-    return true;
+    return BusChange::kNeedsPrime;
   }
   for (int s = 0; s < kKeyBusCount; ++s) {
     auto& slot = buses_[app_bank_][s];
@@ -75,7 +73,7 @@ bool Mixer::EngageBuses(
       slot.Publish(MakeBus(s, app_bus_generation_), now_frame, engine_running);
     }
   }
-  return false;
+  return BusChange::kAddedLive;
 }
 
 uint32_t Mixer::LiveBusMask() const {
@@ -93,8 +91,12 @@ Mixer::Prepared
 Mixer::PrepareBusFor(int track, uint64_t now_frame, bool engine_running) {
   if (!app_engaged_ && app_pitch_[track] == 0) return {};
   const uint32_t before = LiveBusMask();
-  const bool prime = EngageBuses(app_pitch_[track], now_frame, engine_running);
-  return {.created = LiveBusMask() & ~before, .prime = prime};
+  const BusChange change =
+      EngageBuses(app_pitch_[track], now_frame, engine_running);
+  return {
+      .created = LiveBusMask() & ~before,
+      .prime = change == BusChange::kNeedsPrime
+  };
 }
 
 void Mixer::UndoPrepare(
@@ -121,6 +123,11 @@ int Mixer::MarkUsedBuses(bool* used) const {
     slot = true;
   }
   return in_use;
+}
+
+int Mixer::BusesInUse() const {
+  bool used[kKeyBusCount] = {};
+  return MarkUsedBuses(used);
 }
 
 void Mixer::RetireDrainedBuses(
@@ -156,7 +163,8 @@ void Mixer::SetRate(float rate, uint64_t now_frame, bool engine_running) {
   command.fvalue = clamped;
   if (!Enqueue(command)) return;
   app_rate_ = clamped;
-  if (clamped != kUnityRate && EngageBuses({}, now_frame, engine_running)) {
+  if (clamped != kUnityRate &&
+      EngageBuses({}, now_frame, engine_running) == BusChange::kNeedsPrime) {
     PrimeNow(now_frame, engine_running);
   }
 }
@@ -174,8 +182,11 @@ void Mixer::SetTrackPitch(
   }
   const int pitch = ClampPitch(semitones);
   const int previous = std::exchange(app_pitch_[track], pitch);
-  const bool prime = (pitch != 0 || app_engaged_) &&
-                     EngageBuses(pitch, now_frame, engine_running);
+  bool prime = false;
+  if (pitch != 0 || app_engaged_) {
+    prime =
+        EngageBuses(pitch, now_frame, engine_running) == BusChange::kNeedsPrime;
+  }
   Command command{CommandType::kSetTrackPitch};
   command.track = track;
   command.fvalue = static_cast<float>(pitch);

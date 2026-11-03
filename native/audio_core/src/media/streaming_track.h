@@ -166,9 +166,8 @@ class StreamingTrack {
       float* output,
       float gain
   );
-  /// App thread. Reads [frame, frame + frames) of the stream laid out by
-  /// [layout] through a private reader, leaving the live source untouched.
-  /// Nothing for a caller-owned reader, which the live source shares.
+  /// App thread. A private reader leaves the live source untouched; a
+  /// caller-owned reader is shared with it, so that reads nothing.
   PreRead ReadAhead(
       uint64_t frame,
       const LoopLayout& layout,
