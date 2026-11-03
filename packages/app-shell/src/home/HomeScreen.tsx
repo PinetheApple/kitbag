@@ -56,8 +56,10 @@ const useStyles = createThemedStyles((theme) => ({
     flex: 1,
     backgroundColor: theme.color.bg,
   },
+  scroll: { flex: 1 },
   content: {
     paddingHorizontal: space.screenInset,
+    paddingTop: space.screenInset,
     gap: space.sectionGap,
   },
   actions: {
@@ -145,12 +147,10 @@ export function HomeScreen() {
     setArranging(false);
   }, []);
 
-  const contentInsets = useMemo(
-    () => ({
-      paddingTop: space.screenInset + insets.top,
-      paddingBottom: space.screenInset + insets.bottom,
-    }),
-    [insets.top, insets.bottom],
+  const frameInset = useMemo(() => ({ paddingTop: insets.top }), [insets.top]);
+  const contentInset = useMemo(
+    () => ({ paddingBottom: space.screenInset + insets.bottom }),
+    [insets.bottom],
   );
 
   const open = (tool: HomeToolEntry) => {
@@ -185,66 +185,68 @@ export function HomeScreen() {
   const rows = HOME_TOOLS.filter((tool) => tool.layout === 'row');
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={[styles.content, contentInsets]}
-    >
-      <AppBar
-        wordmark
-        title="Kitbag"
-        trailing={
-          <View style={styles.actions}>
-            <Button
-              variant="tonal"
-              size="small"
-              icon="edit"
-              iconSize="field"
-              label="Edit"
-              accessibilityLabel="Edit Home layout"
-              onPress={openArrange}
-            />
-            <AppBarAction
-              icon="settings"
-              accessibilityLabel="Settings"
-              onPress={openSettings}
-            />
-          </View>
-        }
-      />
-
-      {resume === undefined || resumeText === undefined ? null : (
-        <ToolRow
-          variant="resume"
-          icon={resume.icon}
-          title={`Continue · ${resume.name}`}
-          subtitle={resumeText.resume}
-          status="ready"
-          onPress={open(resume)}
+    <View style={[styles.screen, frameInset]}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.content, contentInset]}
+      >
+        <AppBar
+          wordmark
+          title="Kitbag"
+          trailing={
+            <View style={styles.actions}>
+              <Button
+                variant="tonal"
+                size="small"
+                icon="edit"
+                iconSize="field"
+                label="Edit"
+                accessibilityLabel="Edit Home layout"
+                onPress={openArrange}
+              />
+              <AppBarAction
+                icon="settings"
+                accessibilityLabel="Settings"
+                onPress={openSettings}
+              />
+            </View>
+          }
         />
-      )}
 
-      <ToolGrid tiles={tiles} />
+        {resume === undefined || resumeText === undefined ? null : (
+          <ToolRow
+            variant="resume"
+            icon={resume.icon}
+            title={`Continue · ${resume.name}`}
+            subtitle={resumeText.resume}
+            status="ready"
+            onPress={open(resume)}
+          />
+        )}
 
-      {rows.map((tool) => (
-        <ToolRow
-          key={tool.id}
-          icon={tool.icon}
-          title={tool.name}
-          subtitle={liveText[tool.id]?.tile ?? UPCOMING_SUBTEXT}
-          status={tool.homeTile === undefined ? 'upcoming' : 'ready'}
-          onPress={open(tool)}
+        <ToolGrid tiles={tiles} />
+
+        {rows.map((tool) => (
+          <ToolRow
+            key={tool.id}
+            icon={tool.icon}
+            title={tool.name}
+            subtitle={liveText[tool.id]?.tile ?? UPCOMING_SUBTEXT}
+            status={tool.homeTile === undefined ? 'upcoming' : 'ready'}
+            onPress={open(tool)}
+          />
+        ))}
+
+        <MoreToolsRow />
+
+        <ArrangeSheet
+          visible={arranging}
+          arrangement={arrangement}
+          bottomInset={insets.bottom}
+          onArrange={onArrange}
+          onDone={closeArrange}
         />
-      ))}
-
-      <MoreToolsRow />
-
-      <ArrangeSheet
-        visible={arranging}
-        arrangement={arrangement}
-        bottomInset={insets.bottom}
-        onArrange={onArrange}
-        onDone={closeArrange}
-      />
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
