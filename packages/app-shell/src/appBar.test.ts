@@ -21,7 +21,9 @@ const BAR_USERS = [
 ];
 
 const FLUSH_BAR_FRAMES = [
+  'app-shell/src/home/HomeScreen.tsx',
   'app-shell/src/settings/CalibrationScreen.tsx',
+  'app-shell/src/settings/SettingsFrame.tsx',
   'tool-library/src/screen/LibraryScreen.tsx',
   'tool-metronome/src/library/ScreenFrame.tsx',
   'tool-metronome/src/screen/MetronomeScreen.tsx',
@@ -31,7 +33,8 @@ const FLUSH_BAR_FRAMES = [
 
 const BACK_GLYPH =
   /\b(?:icon|name)(?:=|: ?)(?:"back"|'back'|\{'back'\})|['"](?:chevron|arrow)-left['"]/;
-const TOP_PADDING = /paddingTop:\s*([^,}\n]*insets\.top[^,}\n]*)/g;
+const TOP_PADDING =
+  /paddingTop:\s*([^,}\n]*(?:insets\.top|screenInset)[^,}\n]*)/g;
 
 function sources(): Record<string, string> {
   const found: Record<string, string> = {};
