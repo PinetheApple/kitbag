@@ -834,11 +834,22 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   `conversions.h` `toMapBuffer` (`:1042-1058`) never sends `minimumFontScale`, which
   only the old renderer's `ReactTextShadowNode.kt:79` used; and `minimumFontSize`
   cannot be sent from JS, since `TextNativeComponent.js` does not list it in
-  `validAttributes`. So `adjustsFontSizeToFit` shrank titles toward 4 dp. Ruling A
-  **[coord]**: one core-design helper (`fitOneLine`, `oneLineFloor`,
-  `useOneLineFit`) measures the title offscreen and sets its size in JS. The title
-  stays invisible until measured, so it never shows at the design size and then
-  shrinks; it re-measures only when the available width or the text changes. Below
-  the floor it ellipsizes on one line. Floors as ruled: `appBarTitleMinSize` at a
-  font scale of 1.0 or less, the design size above it. `ToolTile` still passes
-  `minimumFontScale`; #287 does not change it.
+  `validAttributes`. So `adjustsFontSizeToFit` shrank titles toward 4 dp. Also read
+  in the source: `TextAttributeProps.kt:169` rounds the font size up to whole px, and
+  `PixelUtil.kt:44` scales sp nonlinearly on Android 14+, so a size fitted in
+  proportion can still render a few px too wide. Ruling A **[coord]**: one
+  core-design helper (`useOneLineFit`, with `nextFitCandidate`, `oneLineFloor` and
+  `fittedStyle`) measures the label offscreen and sets its size in JS. It measures at
+  the design size, scales in proportion, then re-measures up to three more times,
+  each a pixel lower, stopping at the first fit or at the floor; if the third still
+  overflows it shows that size with an ellipsis. The label stays invisible on mount
+  until settled, so it never shows at the design size and then shrinks; when its text
+  changes in place, the previous size stays shown until the new text settles. It
+  restarts only on a width or text change. Tracking scales with the size, so the
+  measured and the shown label match. Below the floor it ellipsizes on one line. The
+  floors still hold as rendered sizes: they fall in the converter's linear range
+  (8.5 sp at 2.0), per the review's source reading, not checked against the
+  converter tables here. Floors as ruled:
+  `appBarTitleMinSize` at a font scale of 1.0 or less, the design size above it. Home
+  tool tiles use the same helper, with their floor at `homeTile.titleMinScale` of the
+  tile title's design size; no `adjustsFontSizeToFit` or `minimumFontScale` is left.
