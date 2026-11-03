@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Text, useWindowDimensions, View } from 'react-native';
 
 import type { IconName } from '../icons.ts';
 import {
@@ -10,11 +10,11 @@ import {
   textRoles,
   type IconSize,
 } from '../roles.ts';
-import { oneLineMeasure } from '../oneLineFit.ts';
+import { oneLineFloor } from '../oneLineFit.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import type { ColorToken } from '../tokens.ts';
-import { useOneLineFit } from '../useOneLineFit.ts';
+import { useOneLineFit } from '../useOneLineFit.tsx';
 import { useTextIconScale } from '../useTextIconScale.ts';
 import { Icon } from './Icon.tsx';
 
@@ -134,25 +134,18 @@ interface HeadingProps {
 
 function Heading({ title, subtitle, wordmark }: HeadingProps) {
   const styles = useStyles();
+  const { fontScale } = useWindowDimensions();
   const role = wordmark ? textRoles.wordmark : textRoles.appBarTitle;
-  const fit = useOneLineFit(title, role.size, appBarTitleMinSize);
   const titleStyle = [styles.title, wordmark && styles.wordmark];
+  const fit = useOneLineFit({
+    text: title,
+    role,
+    floor: oneLineFloor(fontScale, role.size, appBarTitleMinSize),
+    style: titleStyle,
+  });
   return (
     <View style={styles.heading} onLayout={fit.onAvailableLayout}>
-      <View
-        style={oneLineMeasure.row}
-        pointerEvents="none"
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-      >
-        <Text
-          key={title}
-          style={[titleStyle, oneLineMeasure.text]}
-          onLayout={fit.onTextLayout}
-        >
-          {title}
-        </Text>
-      </View>
+      {fit.measurer}
       <View accessibilityRole="header" accessible>
         <Text
           style={[titleStyle, fit.style]}

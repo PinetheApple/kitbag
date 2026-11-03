@@ -68,7 +68,7 @@ export * from './components/Slider.tsx';
 export * from './useScreenReader.ts';
 export * from './useTextIconScale.ts';
 export * from './useTextScaled.ts';
-export * from './useOneLineFit.ts';
+export * from './useOneLineFit.tsx';
 export * from './useReduceMotion.ts';
 export * from './useKeyboardDidHide.ts';
 export * from './sliderMath.ts';
