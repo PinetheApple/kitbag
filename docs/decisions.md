@@ -740,8 +740,9 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   inside its button and does not outweigh the bar title beside it. Other icons stay at
   their design size, since most sit inside fixed-size controls. The app-bar title stays
   on one line and shrinks to fit before it truncates: at the default scale down to
-  `appBarTitleMinSize`, above it never below its design size (`minimumFontScale` is
-  `1 / fontScale` there, as Android scales from the grown size). **[coord, 2026-11-02, #287 — the owner may overturn]** The metronome's status rows grow by the font
+  `appBarTitleMinSize`, above it never below its design size, then ellipsizes. The fit is computed in JS
+  (the #287 entry on the measured title floor). **[coord, 2026-11-02, #287 — the owner
+  may overturn]** The metronome's status rows grow by the font
   scale and hold at most two lines; that a grown row fits two grown lines is reasoned from
   the 40 dp row height, not measured, and needs a device check. A wider row wraps onto its
   second line rather than truncating. Above the default scale the status stack leaves the
@@ -825,3 +826,19 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   chevron and every icon action in real 48 dp keys, and the `appBarTitle` title; chip and
   button trailing controls keep their ≥48 dp hit areas. The binding design files are
   edited to match. **[coord]**
+
+- **2026-11-03 · App-bar titles fit by a JS-measured floor (§13.8, #287)** — Read in
+  the source, not seen on a device: on RN 0.83.6 with the new architecture, Android
+  ignores `minimumFontScale`. `TextLayoutManager.kt:799-812` reads only
+  `PA_KEY_MINIMUM_FONT_SIZE`, with a 4 dp default floor (`:922-923`);
+  `conversions.h` `toMapBuffer` (`:1042-1058`) never sends `minimumFontScale`, which
+  only the old renderer's `ReactTextShadowNode.kt:79` used; and `minimumFontSize`
+  cannot be sent from JS, since `TextNativeComponent.js` does not list it in
+  `validAttributes`. So `adjustsFontSizeToFit` shrank titles toward 4 dp. Ruling A
+  **[coord]**: one core-design helper (`fitOneLine`, `oneLineFloor`,
+  `useOneLineFit`) measures the title offscreen and sets its size in JS. The title
+  stays invisible until measured, so it never shows at the design size and then
+  shrinks; it re-measures only when the available width or the text changes. Below
+  the floor it ellipsizes on one line. Floors as ruled: `appBarTitleMinSize` at a
+  font scale of 1.0 or less, the design size above it. `ToolTile` still passes
+  `minimumFontScale`; #287 does not change it.
