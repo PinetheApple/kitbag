@@ -44,7 +44,7 @@ const TUNING_CHIP_GAPS = {
   top: unshared(barChipRoom(CHIP_HEIGHT)),
   bottom: barChipRoom(CHIP_HEIGHT) + space.sectionGap,
 };
-// The needle strip takes no touches, so the mode chips may take its gap whole.
+// The needle strip above takes no touches.
 const MODE_CHIP_GAPS = {
   top: unshared(space.sectionGap),
   bottom: unshared(space.screenInset),
