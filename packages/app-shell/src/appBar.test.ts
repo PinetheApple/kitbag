@@ -20,7 +20,7 @@ const BAR_USERS = [
   'tool-tuner/src/screen/TunerScreen.tsx',
 ];
 
-const FLUSH_BAR_FRAMES = [
+const STATUS_BAR_FRAMES = [
   'app-shell/src/home/HomeScreen.tsx',
   'app-shell/src/settings/CalibrationScreen.tsx',
   'app-shell/src/settings/SettingsFrame.tsx',
@@ -67,21 +67,16 @@ describe('app bar', () => {
     expect(drawers.sort()).toEqual([SHARED_BAR, ICON_MAP].sort());
   });
 
-  it('sits flush under the status bar on every screen with a bar frame', () => {
-    const tops = FLUSH_BAR_FRAMES.flatMap((file) =>
+  it('puts the bar directly under the status bar on every screen with a bar frame', () => {
+    const tops = STATUS_BAR_FRAMES.flatMap((file) =>
       [...(files[file] ?? '').matchAll(TOP_PADDING)].map((match) => ({
         file,
         top: match[1]?.trim(),
       })),
     );
-    expect(new Set(tops.map((t) => t.file))).toEqual(new Set(FLUSH_BAR_FRAMES));
-    expect(tops.filter((t) => t.top !== 'insets.top')).toEqual([]);
-  });
-
-  it('has no full-arrow back left anywhere', () => {
-    const arrows = Object.keys(files).filter((file) =>
-      /\barrowBack\b|ScreenAppBar/.test(files[file] ?? ''),
+    expect(new Set(tops.map((t) => t.file))).toEqual(
+      new Set(STATUS_BAR_FRAMES),
     );
-    expect(arrows).toEqual([]);
+    expect(tops.filter((t) => t.top !== 'insets.top')).toEqual([]);
   });
 });

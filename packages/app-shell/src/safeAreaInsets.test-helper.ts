@@ -75,7 +75,7 @@ function frameStyle(): Style | undefined {
 }
 
 export function itKeepsSafeAreaInsetsOutOfTheScroll(screenInset: number): void {
-  it('keeps the status bar inset out of the scrolling content, so its bar sits flush under it', () => {
+  it('adds no top padding to the scrolling content', () => {
     expect(contentStyle().paddingTop ?? 0).toBe(0);
   });
 

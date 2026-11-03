@@ -5,8 +5,8 @@ import {
   CHIP_HEIGHT,
   createThemedStyles,
   LiveText,
-  metronome,
   PegSelector,
+  screenBar,
   space,
   TuneDirectionIcon,
   TunerStrip,
@@ -40,12 +40,11 @@ import { TuningEditorSheet } from './TuningEditorSheet.tsx';
 import { TuningSheet } from './TuningSheet.tsx';
 import { useTunerFrame } from './useTunerFrame.ts';
 
-// The tuning chip tops the screen under the status bar; the mode chips sit
-// between the needle strip, which takes no touches, and the bottom inset.
 const TUNING_CHIP_GAPS = {
   top: unshared(barChipRoom(CHIP_HEIGHT)),
   bottom: barChipRoom(CHIP_HEIGHT) + space.sectionGap,
 };
+// The needle strip takes no touches, so the mode chips may take its gap whole.
 const MODE_CHIP_GAPS = {
   top: unshared(space.sectionGap),
   bottom: unshared(space.screenInset),
@@ -62,7 +61,7 @@ const useStyles = createThemedStyles((theme) => ({
     flex: 1,
   },
   tuningChip: {
-    marginRight: metronome.setChipEnd,
+    marginRight: screenBar.chipEnd,
   },
   bodyContent: {
     flexGrow: 1,

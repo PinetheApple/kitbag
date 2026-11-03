@@ -11,7 +11,6 @@ export const metronome = {
   setChip: 36,
   setChipLeft: 14,
   setChipRight: 8,
-  setChipEnd: 8,
   songChip: 48,
   songChipPlain: 46,
   songChipPlainMax: 196,

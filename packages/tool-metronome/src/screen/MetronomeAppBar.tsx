@@ -10,6 +10,7 @@ import {
   metronome,
   minTouchTargetDp,
   radius,
+  screenBar,
   size,
   space,
   textRoles,
@@ -65,7 +66,7 @@ const useStyles = createThemedStyles((theme) => ({
   setChipHit: {
     ...SET_CHIP_HIT_BOX,
     flexShrink: 1,
-    marginRight: SET_CHIP_HIT_BOX.marginRight + metronome.setChipEnd,
+    marginRight: SET_CHIP_HIT_BOX.marginRight + screenBar.chipEnd,
   },
   setChip: {
     flexDirection: 'row',
