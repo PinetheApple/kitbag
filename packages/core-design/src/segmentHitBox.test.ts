@@ -4,6 +4,7 @@ import { space } from './roles.ts';
 import {
   OPTION_HEIGHTS,
   segmentHitBox,
+  wrappedRowGap,
   type SegmentedControlSize,
 } from './segmentHitBox.ts';
 import { minTouchTargetDp } from './tokens.ts';
@@ -29,6 +30,15 @@ function targetAt(
   return OPTION_HEIGHTS[controlSize] + box.paddingTop + box.paddingBottom;
 }
 
+function gapBeside(
+  lineTop: number | undefined,
+  outerRowTop: number | undefined,
+  rowGap: number,
+): number {
+  if (lineTop === undefined) return Math.min(rowGap, space.controlGap);
+  return lineTop === outerRowTop ? space.controlGap : rowGap;
+}
+
 describe('segmentHitBox once options wrap', () => {
   it('reaches the minimum target on a row between two others', () => {
     for (const controlSize of SIZES) {
@@ -49,5 +59,38 @@ describe('segmentHitBox once options wrap', () => {
 
   it('reaches the minimum target on a single measured row of a large track', () => {
     expect(targetAt('large', 0, [0])).toBeGreaterThanOrEqual(minTouchTargetDp);
+  });
+
+  it('reaches at most half of each gap, so neighbours never overlap', () => {
+    const rows: readonly (number | undefined)[] = [...ROW_TOPS, undefined];
+    for (const controlSize of SIZES) {
+      const rowGap = wrappedRowGap(controlSize);
+      for (const lineTop of rows) {
+        const box = segmentHitBox({
+          controlSize,
+          compact: true,
+          outer: PRACTICE_NEIGHBOURS,
+          wrapped: { lineTop, lineTops: ROW_TOPS },
+        });
+        expect(box.paddingTop).toBeLessThanOrEqual(
+          gapBeside(lineTop, ROW_TOPS[0], rowGap) / 2,
+        );
+        expect(box.paddingBottom).toBeLessThanOrEqual(
+          gapBeside(lineTop, ROW_TOPS[2], rowGap) / 2,
+        );
+      }
+    }
+  });
+});
+
+describe('segmentHitBox sideways', () => {
+  it('reaches at most half the gap to a control beside the track', () => {
+    for (const controlSize of SIZES) {
+      for (const compact of [true, false]) {
+        const box = segmentHitBox({ controlSize, compact, outer: {} });
+        expect(box.paddingLeft).toBeLessThanOrEqual(space.controlGap / 2);
+        expect(box.paddingRight).toBeLessThanOrEqual(space.controlGap / 2);
+      }
+    }
   });
 });
