@@ -3,8 +3,10 @@
 
 #include <atomic>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <optional>
+#include <utility>
 #include <vector>
 
 #include "media/song_clock.h"
@@ -136,6 +138,10 @@ class Mixer {
   /// Tests only: the lead of the next hand-over's first attempt.
   void set_first_handover_lead_frames(int64_t frames) {
     first_lead_frames_ = frames;
+  }
+  /// Tests only: runs between building a hand-over's bank and publishing it.
+  void set_handover_publish_hook(std::function<void()> hook) {
+    handover_publish_hook_ = std::move(hook);
   }
   uint64_t missed_handovers() const {
     return missed_handovers_;
@@ -288,9 +294,15 @@ class Mixer {
   void
   AdoptBank(const TransportPlan& plan, uint64_t now_frame, bool engine_running);
   void FreeBank(int bank, uint64_t now_frame, bool engine_running);
+  enum class HandOverOutcome : uint8_t { kTaken, kMissed, kJump };
   void HandOver(uint64_t now_frame, bool engine_running);
-  bool TryHandOver(int64_t lead, uint64_t now_frame, bool engine_running);
-  bool AwaitVerdict(uint64_t generation) const;
+  HandOverOutcome TryHandOver(
+      const Head& head,
+      int64_t lead,
+      uint64_t now_frame,
+      bool engine_running
+  );
+  HandOverOutcome AwaitVerdict(uint64_t generation, bool engine_running) const;
 
   void SnapshotBuses();
   bool HoldForBusSwitch() const;
@@ -361,6 +373,7 @@ class Mixer {
   int64_t handover_lead_frames_;
   int64_t first_lead_frames_ = 0;
   uint64_t missed_handovers_ = 0;
+  std::function<void()> handover_publish_hook_;
   // Callback-owned stretch state. rt_buses_ is loaded once per block.
   int bank_ = 0;
   KeyBus* rt_buses_[kKeyBusCount] = {};

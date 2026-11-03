@@ -155,26 +155,34 @@ void Mixer::FreeBank(int bank, uint64_t now_frame, bool engine_running) {
 // one further ahead, and the last resort is a primed jump.
 void Mixer::HandOver(uint64_t now_frame, bool engine_running) {
   for (int attempt = 0; attempt < kHandOverAttempts; ++attempt) {
+    const Head head = PlannedHead();
+    if (head.jump_pending || engaged_.load(std::memory_order_relaxed)) break;
     const int64_t lead = attempt == 0 && first_lead_frames_ != 0
                              ? first_lead_frames_
                              : handover_lead_frames_ << attempt;
     first_lead_frames_ = 0;
-    if (TryHandOver(lead, now_frame, engine_running)) return;
+    const HandOverOutcome outcome =
+        TryHandOver(head, lead, now_frame, engine_running);
+    if (outcome == HandOverOutcome::kTaken) return;
+    if (outcome == HandOverOutcome::kJump) break;
   }
   const TransportPlan plan{.frame = HeadToPrime(), .layout = app_layout_};
   PrimedRelayout(plan, now_frame, engine_running);
 }
 
-// False only when the callback reports it had already passed the frame.
-bool Mixer::TryHandOver(int64_t lead, uint64_t now_frame, bool engine_running) {
-  const Head head = PlannedHead();
+// Adopted only once taken: the callback may engage the live bank at any block
+// until it judges this plan, so freeing that bank earlier silences it.
+Mixer::HandOverOutcome Mixer::TryHandOver(
+    const Head& head,
+    int64_t lead,
+    uint64_t now_frame,
+    bool engine_running
+) {
   Bank bank;
-  if (head.jump_pending || engaged_.load(std::memory_order_relaxed) ||
-      !BuildBank(head.stream + lead, false, &bank)) {
-    const TransportPlan jump{.frame = HeadToPrime(), .layout = app_layout_};
-    PrimedRelayout(jump, now_frame, engine_running);
-    return true;
+  if (!BuildBank(head.stream + lead, false, &bank)) {
+    return HandOverOutcome::kJump;
   }
+  if (handover_publish_hook_) handover_publish_hook_();
   TransportPlan plan{
       .kind = PlanKind::kHandOver,
       .frame = head.stream + lead,
@@ -184,22 +192,31 @@ bool Mixer::TryHandOver(int64_t lead, uint64_t now_frame, bool engine_running) {
   };
   PublishBank(&bank, &plan, now_frame, engine_running);
   CommitPlan(plan, now_frame, engine_running);
-  AdoptBank(plan, now_frame, engine_running);
-  if (!engine_running || !AwaitVerdict(plan.generation)) return true;
-  if (missed_generation_.load(std::memory_order_relaxed) != plan.generation) {
-    return true;
+  const HandOverOutcome outcome = AwaitVerdict(plan.generation, engine_running);
+  if (outcome == HandOverOutcome::kTaken) {
+    AdoptBank(plan, now_frame, engine_running);
+  } else if (outcome == HandOverOutcome::kMissed) {
+    FreeBank(plan.bank, now_frame, engine_running);
+    ++missed_handovers_;
   }
-  ++missed_handovers_;
-  return false;
+  return outcome;
 }
 
-bool Mixer::AwaitVerdict(uint64_t generation) const {
+// A quiescent callback cannot have moved since the caller's engaged check. No
+// verdict in time means it stalled: only a jump supersedes either answer.
+Mixer::HandOverOutcome
+Mixer::AwaitVerdict(uint64_t generation, bool engine_running) const {
+  if (!engine_running) return HandOverOutcome::kTaken;
   const auto deadline = std::chrono::steady_clock::now() + kVerdictTimeout;
   while (seen_generation_.load(std::memory_order_acquire) < generation) {
-    if (std::chrono::steady_clock::now() > deadline) return false;
+    if (std::chrono::steady_clock::now() > deadline) {
+      return HandOverOutcome::kJump;
+    }
     std::this_thread::sleep_for(kVerdictPoll);
   }
-  return true;
+  return missed_generation_.load(std::memory_order_relaxed) == generation
+             ? HandOverOutcome::kMissed
+             : HandOverOutcome::kTaken;
 }
 
 }  // namespace kitbag

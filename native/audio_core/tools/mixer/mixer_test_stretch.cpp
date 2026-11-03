@@ -1,3 +1,5 @@
+#include <filesystem>
+
 #include "mixer_test_stretch_support.h"
 
 namespace mixer_test {
@@ -174,21 +176,31 @@ void CheckSoundsAtOnce(kitbag::Mixer* mixer, const char* label) {
   }
 }
 
-// The tone sits on the higher of two buses, so a prime that skips any bus
-// after the first is heard as a gap.
-void TestPrimeLeavesNoGap() {
-  kitbag::Mixer mixer(kSampleRate);
+void LoadToneOverSilence(kitbag::Mixer* mixer) {
   LoadPcm(
-      &mixer,
+      mixer,
       0,
       ToneFixture({.frames = kToneFrames, .steady_hz = kBurstHz})
   );
-  LoadPcm(&mixer, 1, ToneFixture({.frames = kToneFrames}));
+  LoadPcm(mixer, 1, ToneFixture({.frames = kToneFrames}));
+}
+
+// Only the tone's bus is the higher of the two, so a prime that stops after
+// the first bus leaves it silent.
+void TestPrimeLeavesNoGap() {
+  kitbag::Mixer mixer(kSampleRate);
+  LoadToneOverSilence(&mixer);
   mixer.Play();
   RenderPaced(&mixer, kSettleBlocks);
-  mixer.SetRate(kSpeed, 0, false);
-  CheckSoundsAtOnce(&mixer, "prime: engaging mid-play leaves no gap");
   mixer.SetTrackPitch(0, kKey, 0, false);
+  const std::vector<float> left =
+      RenderPaced(&mixer, HandOverBlocks(mixer) + kSettleBlocks);
+  Check(mixer.stretch_engaged(), "prime: a key change mid-play engages");
+  CheckNoQuietWindow(
+      left,
+      mixer.handover_lead_frames(),
+      "prime: engaging mid-play leaves no gap"
+  );
   mixer.Seek(kLoopFrom, 0, false);
   CheckSoundsAtOnce(&mixer, "prime: a seek sounds at once");
   mixer.Stop(0, false);
@@ -211,6 +223,40 @@ void CheckBusesFreed(kitbag::Mixer* mixer) {
   );
   for (int t : {0, 1}) mixer->UnloadTrack(t, 0, false);
   Check(mixer->key_bus_count() == 0, "buses: unloading the song frees all");
+}
+
+enum class Restage : uint8_t { kSeek, kStop };
+
+// The deleted file fails the restage, so the stretch stays engaged.
+void CheckFailedRestageKeepsBuses(Restage restage, const char* label) {
+  kitbag::Mixer mixer(kSampleRate);
+  LoadToneOverSilence(&mixer);
+  mixer.Play();
+  mixer.SetRate(kSpeed, 0, false);
+  RenderPaced(&mixer, HandOverBlocks(mixer));
+  mixer.SetRate(kitbag::kUnityRate, 0, false);
+  std::filesystem::remove(TempFiles().back());
+  if (restage == Restage::kSeek) {
+    mixer.Seek(kDisengageSeek, 0, false);
+  } else {
+    mixer.Stop(0, false);
+    mixer.Play();
+  }
+  mixer.UnloadTrack(1, 0, false);
+  const std::vector<float> left = RenderPaced(&mixer, kSettleBlocks);
+  Check(mixer.stretch_engaged(), "restore: a failed restage stays engaged");
+  CheckNoQuietWindow(left, 0, label);
+}
+
+void TestFailedRestageKeepsBusesForTheRest() {
+  CheckFailedRestageKeepsBuses(
+      Restage::kSeek,
+      "restore: an unload after a failed seek leaves the other stems a bus"
+  );
+  CheckFailedRestageKeepsBuses(
+      Restage::kStop,
+      "restore: an unload after a failed stop leaves the other stems a bus"
+  );
 }
 
 void TestBusesAreLazyAndFreed() {
@@ -301,6 +347,7 @@ void RunStretchTests() {
   TestControlLatencyPerState();
   TestEngageTransition();
   TestPrimeLeavesNoGap();
+  TestFailedRestageKeepsBusesForTheRest();
   TestBusesAreLazyAndFreed();
   TestProcessNeverAllocates();
 }

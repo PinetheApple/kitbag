@@ -1,5 +1,6 @@
 #include <ctime>
 #include <thread>
+#include <utility>
 
 #include "mixer_test_stretch_support.h"
 
@@ -29,6 +30,9 @@ constexpr auto kMissRun = std::chrono::milliseconds(1500);
 constexpr int64_t kRingSongFrames = 30011;
 constexpr auto kFillTimeout = std::chrono::seconds(1);
 constexpr auto kFillPoll = std::chrono::microseconds(500);
+constexpr float kSecondSpeed = 0.6f;
+constexpr auto kEngageTimeout = std::chrono::seconds(1);
+constexpr auto kEngagePoll = std::chrono::microseconds(100);
 
 struct GateCase {
   int buses;
@@ -223,6 +227,54 @@ void TestMissedHandOverRePrimes() {
   );
 }
 
+bool WaitUntilEngaged(const kitbag::Mixer& mixer) {
+  const auto deadline = std::chrono::steady_clock::now() + kEngageTimeout;
+  while (!mixer.stretch_engaged() &&
+         std::chrono::steady_clock::now() < deadline) {
+    std::this_thread::sleep_for(kEngagePoll);
+  }
+  return mixer.stretch_engaged();
+}
+
+// The hook holds the second hand-over until the first has engaged, so the
+// callback refuses it while playing the bank the app thread last adopted.
+bool OverlapWhileRendering(kitbag::Mixer* mixer, ClockedRender* run) {
+  std::atomic<bool> stop{false};
+  bool backwards = false;
+  std::thread render(RenderRealTime, mixer, std::cref(stop), run, &backwards);
+  std::this_thread::sleep_for(kMissSettle);
+  mixer->SetRate(kSpeed, 0, true);
+  bool raced = false;
+  bool fired = false;
+  mixer->set_handover_publish_hook([mixer, &raced, &fired] {
+    if (std::exchange(fired, true)) return;
+    raced = WaitUntilEngaged(*mixer);
+  });
+  mixer->SetRate(kSecondSpeed, 0, true);
+  mixer->set_handover_publish_hook({});
+  std::this_thread::sleep_for(kMissSettle);
+  stop.store(true);
+  render.join();
+  return raced;
+}
+
+void TestOverlappingHandOversKeepPlaying() {
+  kitbag::Mixer mixer(kSampleRate);
+  LoadPcm(
+      &mixer,
+      0,
+      ToneFixture({.frames = kSongFrames, .steady_hz = kBurstHz})
+  );
+  mixer.Play();
+  RenderPaced(&mixer, kEventBlocks);
+  ClockedRender run;
+  const bool raced = OverlapWhileRendering(&mixer, &run);
+  Check(raced, "overlap: the first hand-over engages while the second builds");
+  Check(mixer.missed_handovers() >= 1, "overlap: the second is refused");
+  Check(mixer.stretch_engaged(), "overlap: the stretch stays engaged");
+  CheckNoQuietWindow(run.left, 0, "overlap: no block falls silent");
+}
+
 // The song fits one ring, so once it has filled, what the source has handed
 // out is its length minus what it holds, which must equal what was fed.
 int64_t SourceAheadOfFed(const kitbag::Mixer& mixer) {
@@ -273,6 +325,7 @@ void RunPrimeTests() {
   TestPrimeStaysInBudget();
   TestStemsStaySampleAligned();
   TestMissedHandOverRePrimes();
+  TestOverlappingHandOversKeepPlaying();
   TestSourcesResumeAfterPreRoll();
 }
 
