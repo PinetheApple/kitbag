@@ -1,6 +1,13 @@
 import { Pressable, Text, View } from 'react-native';
 
-import { presetActionGrow, radius, size, space, textRoles } from '../roles.ts';
+import {
+  inset,
+  presetActionGrow,
+  radius,
+  size,
+  space,
+  textRoles,
+} from '../roles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
@@ -10,6 +17,7 @@ import {
   neighbourGaps,
   type NeighbourGaps,
 } from '../touchTarget.ts';
+import { useTextScaled } from '../useTextScaled.ts';
 
 export type PresetButtonKind = 'preset' | 'action';
 
@@ -64,6 +72,9 @@ const useStyles = createThemedStyles((theme) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  scaledFace: {
+    paddingHorizontal: inset.presetLabelH,
+  },
   actionText: {
     ...textStyle(textRoles.presetAction),
     color: theme.color.text,
@@ -79,6 +90,7 @@ export function PresetButton({
 }: PresetButtonProps) {
   const styles = useStyles();
   const action = kind === 'action';
+  const scaled = useTextScaled();
   return (
     <Pressable
       accessibilityRole="button"
@@ -89,7 +101,12 @@ export function PresetButton({
       ]}
       onPress={onPress}
     >
-      <View style={action ? styles.action : styles.preset}>
+      <View
+        style={[
+          action ? styles.action : styles.preset,
+          scaled && styles.scaledFace,
+        ]}
+      >
         <Text style={action ? styles.actionText : styles.presetText}>
           {label}
         </Text>
