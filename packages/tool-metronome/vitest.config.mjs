@@ -16,6 +16,7 @@ export default defineConfig({
       'src/screen/SwipeHint.test.ts',
       'src/screen/PracticeSummarySheet.test.ts',
       'src/library/editor/RigGroup.test.tsx',
+      'src/screen/StatusStack.test.tsx',
     ],
     alias: {
       '@kitbag/core-native': stub(

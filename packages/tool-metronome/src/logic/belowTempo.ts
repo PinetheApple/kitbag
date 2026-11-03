@@ -47,12 +47,19 @@ export const BEAT_LABEL_HEIGHT =
 
 const LIVE_STATUS_ROWS = 2;
 const STATUS_LINES = 1;
-// statusRow (40 dp) fits two lines of 1x status text, so a row and text grown by one
-// scale still fit two. Reasoned from the row height, not measured.
+// Android pads each line to the font's bbox (~1.4 em), so two grown lines fill the
+// grown row; the progress bar gets its own strip below them. Computed, not measured.
 const SCALED_STATUS_LINES = 2;
 
+export function statusProgressReserve(fontScale: number): number {
+  return isTextScaled(fontScale) ? metronome.statusProgress : 0;
+}
+
 export function statusRowHeight(fontScale: number): number {
-  return metronome.statusRow * grownTextScale(fontScale);
+  return (
+    metronome.statusRow * grownTextScale(fontScale) +
+    statusProgressReserve(fontScale)
+  );
 }
 
 export function statusTextLines(fontScale: number): number {
