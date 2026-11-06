@@ -19,7 +19,6 @@ const PARAMS: OneLineParams = { size: SIZE, floor: 8.5, onePx: ONE_PX };
 
 const step = {
   available: 140,
-  size: SIZE,
   floor: 8.5,
   onePx: ONE_PX,
   previousPoint: undefined,
@@ -53,7 +52,7 @@ describe('nextFitCandidate', () => {
     expect(next).toEqual({ done: false, candidate: 13 - ONE_PX });
   });
 
-  it('always lands at least a pixel below the last candidate', () => {
+  it('steps a pixel down when two measurements are inverted', () => {
     const next = nextFitCandidate({
       ...step,
       textWidth: 141,
@@ -134,7 +133,11 @@ describe('fittedStyle', () => {
   });
 });
 
-function measure(state: OneLineSettle, textWidth: number): OneLineSettle {
+function measure(
+  state: OneLineSettle,
+  textWidth: number,
+  params = PARAMS,
+): OneLineSettle {
   return measureOneLine(
     state,
     {
@@ -142,7 +145,7 @@ function measure(state: OneLineSettle, textWidth: number): OneLineSettle {
       candidate: state.candidate,
       textWidth,
     },
-    PARAMS,
+    params,
   );
 }
 
@@ -165,12 +168,11 @@ describe('settling a one-line label', () => {
 
   it('measures at most the cap of extra passes, then shows the last candidate', () => {
     let state = measure(mounted, 164);
-    let measured = 1;
-    while (!state.settled) {
+    for (let pass = 0; pass < MAX_SETTLE_PASSES; pass += 1) {
+      expect(state.settled).toBe(false);
       state = measure(state, 141);
-      measured += 1;
     }
-    expect(measured).toBe(1 + MAX_SETTLE_PASSES);
+    expect(state.settled).toBe(true);
     expect(state.shown).toBe(state.candidate);
   });
 
@@ -211,29 +213,33 @@ describe('settling a one-line label', () => {
   });
 
   it('settles on a fit above the floor when sp grows nonlinearly', () => {
-    const toPx = (sp: number) => (sp <= 12 ? 2 * sp : 24 + (sp - 12));
-    const widthAt = (sp: number) => 5.5 * toPx(sp);
-    const params = { ...PARAMS, onePx: 1 / (2.625 * 2) };
-    let state = resizeOneLine(startOneLine('Metronome', SIZE), 140, params);
-    while (!state.settled) {
-      state = measureOneLine(
-        state,
-        {
-          generation: state.generation,
-          candidate: state.candidate,
-          textWidth: widthAt(state.candidate),
-        },
-        params,
+    const density = 2.625;
+    const fontScale = 2;
+    const kneeSp = 12;
+    const emWidths = 5.5;
+    const toPx = (sp: number) =>
+      Math.ceil(
+        density *
+          (sp <= kneeSp ? fontScale * sp : fontScale * kneeSp + (sp - kneeSp)),
       );
+    const widthAt = (sp: number) => (emWidths * toPx(sp)) / density;
+    const params = { ...PARAMS, onePx: 1 / (density * fontScale) };
+    let state = resizeOneLine(startOneLine('Metronome', SIZE), 140, params);
+    for (let i = 0; i <= MAX_SETTLE_PASSES && !state.settled; i += 1) {
+      state = measure(state, widthAt(state.candidate), params);
     }
+    expect(state.settled).toBe(true);
     expect(state.pass).toBeLessThan(MAX_SETTLE_PASSES);
     expect(widthAt(state.shown ?? 0)).toBeLessThanOrEqual(140);
     expect(state.shown).toBeGreaterThan(params.floor);
   });
 
   it('settles at the floor when even the floor overflows', () => {
-    let state = measure(mounted, 1000);
-    while (!state.settled) state = measure(state, 1000);
+    let state = mounted;
+    for (let i = 0; i <= MAX_SETTLE_PASSES && !state.settled; i += 1) {
+      state = measure(state, 1000);
+    }
+    expect(state.settled).toBe(true);
     expect(state.shown).toBe(PARAMS.floor);
   });
 
