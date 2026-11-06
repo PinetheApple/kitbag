@@ -734,7 +734,9 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
 - **2026-11-02 · Text at 200% font scale (§12.6, #192)** — The stem player's name column
   keeps the mockup's 58 dp at the default text size and grows by the font scale above it.
   The name keeps `numberOfLines={1}`, so a long name still truncates, as the ruling
-  accepts. **[user, 2026-10-30]** App-bar icons (back, search, add, the metronome bar's
+  accepts. **[user, 2026-10-30]** Stem names and Master use the #287 fit: above the default
+  scale they shrink to the column, never below their design size, before truncating;
+  at the default scale they do not shrink. **[coord]** Not yet seen on a device. App-bar icons (back, search, add, the metronome bar's
   keys) grow with the font scale up to 1.5×. The 48 dp buttons alone would allow about
   1.84× for the largest bar glyph (26 dp); 1.5 is a judgement, not measured, so a glyph keeps padding
   inside its button and does not outweigh the bar title beside it. Other icons stay at
@@ -773,7 +775,10 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   output-route rows drop their one-line limit above the default scale. **[recorded]**
   Only while the text is scaled, the tempo nudge keys (−10 to +10, TAP) keep
   `inset.presetLabelH`, 4 dp, between label and edge. **[coord, owner may overturn]**
-  Shrinking their labels to fit waits for #287's measured font-size floor. **[coord]**
+  Their labels stay on one line through the #287 fit: at the default scale they do not
+  shrink, above it they shrink to the width left by that padding, never below their
+  design size, then ellipsize. **[coord]** Computed against the 360 dp emulator bounds, not
+  yet seen on a device.
 
 - **2026-11-02 · Metronome card is media-style, with no setlist skips (§5.6, §13.9, #284)** —
   Decided by the owner (ruling via coordinator, 2026-11-02); supersedes the 2026-10-28 #163
