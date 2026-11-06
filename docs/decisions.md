@@ -639,8 +639,9 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
 - **2026-11-01 · Stem player sections and lyrics layout (§7.7, #139)** — Layout C from
   `docs/research/mockups/stems-sections-lyrics.html`: a Mix | Lyrics switch, with sections as
   a card scroller. Bundle section colours are ignored. The song facts show no loudness.
-  Holding a section over a custom A-B loop replaces it, with Undo. Retime mode plays at
-  0.75× and restores the speed on exit, once #138 lands. The UI is built at the end of the
+  Holding a section over a custom A-B loop replaces it, with Undo. Retime mode at
+  0.75×, restoring the speed on exit, is ruled but not built: retime ships at the current
+  speed behind `leaveRetime()`, and 0.75× follows #138. The UI is built at the end of the
   backlog; the data and state layer lands first. **[user]**
 
 - **2026-11-01 · The Settings click-volume slider sets on a tap (§12.5, #170)** — A tap on
@@ -824,3 +825,20 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   coordinator adds the check to the `main` ruleset at merge. PRs opened by a bot
   (author type `Bot` or a `[bot]` login) pass as `NONE`, so dependency updates never
   block on a note. **[owner]**
+
+- **2026-11-07 · A section tap during a stem loop (§7.7, #139)** — A tap on a section that
+  starts outside the active loop clears the loop and jumps, with the same Undo as holding a
+  section over a loop; a tap on a section that starts inside it just seeks.
+  **[coord, owner may overturn]**
+
+- **2026-11-07 · A re-import keeps a lyric retiming only over the same lyrics (§7.8, #139)** —
+  `replaceStemBundle` keeps `lyrics_retimed` when `lyrics_synced` is unchanged and drops it
+  otherwise. A plain-only retiming also needs `lyrics_plain` unchanged, since its times index
+  the plain lines. **[coord]**
+
+- **2026-11-07 · Lyric retimings are not backed up (§7.7, #139)** — No backup category covers
+  `stem_sets`, so a retime is lost on reinstall along with the stems, and Restore leaves it
+  untouched. **[coord]**
+
+- **2026-11-07 · `lyrics_retimed` format (§7.7, #139)** — `{version: 1, times}`, one time per
+  line for synced lyrics, or for the first lines tapped of plain-only lyrics. **[coord]**
