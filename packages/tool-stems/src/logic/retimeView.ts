@@ -1,0 +1,64 @@
+import {
+  formatClockSeconds,
+  NO_LINE,
+  RETIME_SHIFT_STEP_SEC,
+  type LyricLine,
+  type RetimeTap,
+} from '@kitbag/core-state';
+
+const TENTHS = 10;
+const SHIFT_DECIMALS = 2;
+
+export interface RetimePreview {
+  readonly done: { readonly text: string; readonly time: string } | null;
+  readonly current: string | null;
+  readonly next: string | null;
+}
+
+function sungCount(lines: readonly LyricLine[], end = lines.length): number {
+  return lines.slice(0, end).filter((line) => line.text !== '').length;
+}
+
+export function retimeLineLabel(
+  lines: readonly LyricLine[],
+  nextLine: number,
+): string {
+  const total = String(sungCount(lines));
+  if (nextLine === NO_LINE) return `All ${total} lines tapped`;
+  return `Line ${String(sungCount(lines, nextLine) + 1)} of ${total}`;
+}
+
+export function tapTimeLabel(seconds: number): string {
+  const tenths = Math.round(seconds * TENTHS);
+  const whole = Math.floor(tenths / TENTHS);
+  return `${formatClockSeconds(whole)}.${String(tenths % TENTHS)}`;
+}
+
+export function shiftLabel(steps: number): string {
+  const size = (Math.abs(steps) * RETIME_SHIFT_STEP_SEC).toFixed(
+    SHIFT_DECIMALS,
+  );
+  if (steps === 0) return `${size} s`;
+  return `${steps > 0 ? '+' : '−'}${size} s`;
+}
+
+export function retimePreview(
+  lines: readonly LyricLine[],
+  taps: readonly RetimeTap[],
+  nextLine: number,
+): RetimePreview {
+  const tap = taps.at(-1);
+  const tapped = tap === undefined ? undefined : lines[tap.line];
+  const after =
+    nextLine === NO_LINE
+      ? undefined
+      : lines.slice(nextLine + 1).find((line) => line.text !== '');
+  return {
+    done:
+      tap === undefined || tapped === undefined
+        ? null
+        : { text: tapped.text, time: tapTimeLabel(tap.timeSec) },
+    current: lines[nextLine]?.text ?? null,
+    next: after?.text ?? null,
+  };
+}

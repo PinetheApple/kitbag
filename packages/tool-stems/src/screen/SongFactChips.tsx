@@ -35,7 +35,7 @@ const useStyles = createThemedStyles((theme) => ({
   },
   quiet: {
     ...textStyle(textRoles.factQuiet),
-    color: theme.color.text3,
+    color: theme.color.text2,
     marginLeft: stemPlayer.factQuietLead,
   },
 }));

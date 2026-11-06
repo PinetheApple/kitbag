@@ -2,18 +2,24 @@ import {
   Card,
   createThemedStyles,
   EmptyState,
+  SegmentedControl,
   size,
   space,
   stemPlayer,
   textRoles,
   textStyle,
+  type SegmentOption,
 } from '@kitbag/core-design';
 import { KB_MAX_TRACKS } from '@kitbag/core-native';
 import { secondsToFrames, useStemPlayer } from '@kitbag/core-state';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
+import { detailTabLabel } from '../logic/lyricRows.ts';
+import { DetailPane } from './DetailPane.tsx';
+import { LoopUndoSnackbar } from './LoopUndoSnackbar.tsx';
 import { PlayerMenu } from './PlayerMenu.tsx';
+import { ResetDialog, RetimeBar, RetimeBody } from './RetimeMode.tsx';
 import { StemAppBar } from './StemAppBar.tsx';
 import { Scrubber } from './Scrubber.tsx';
 import { SongFactChips } from './SongFactChips.tsx';
@@ -28,8 +34,14 @@ export interface StemPlayerScreenProps {
   readonly onBack: () => void;
 }
 
+const MIX = 'mix';
+const DETAILS = 'details';
+type Tab = typeof MIX | typeof DETAILS;
+
 const useStyles = createThemedStyles((theme) => ({
   screen: { flex: 1, backgroundColor: theme.color.bg },
+  main: { flex: 1 },
+  bodyFlush: { paddingBottom: 0 },
   body: {
     flex: 1,
     paddingTop: stemPlayer.bodyTop,
@@ -104,6 +116,46 @@ function Dock({
   );
 }
 
+interface PlayerContentProps {
+  readonly frame: MixerFrameValues;
+  readonly picked: Tab;
+  readonly onPick: (tab: Tab) => void;
+}
+
+function PlayerContent({ frame, picked, onPick }: PlayerContentProps) {
+  const styles = useStyles();
+  const label = useStemPlayer((s) => detailTabLabel(s.sections, s.lyrics));
+  const options = useMemo<readonly SegmentOption<Tab>[]>(
+    () => [
+      { value: MIX, label: 'Mix' },
+      { value: DETAILS, label: label ?? '' },
+    ],
+    [label],
+  );
+  const tab = label === null ? MIX : picked;
+  return (
+    <View style={[styles.body, tab === DETAILS && styles.bodyFlush]}>
+      <SongFactChips />
+      <Notices />
+      {label === null ? null : (
+        <SegmentedControl
+          size="tab"
+          options={options}
+          selected={tab}
+          accessibilityLabel="Player view"
+          neighbourGapDp={stemPlayer.bodyGap}
+          onSelect={onPick}
+        />
+      )}
+      {tab === MIX ? (
+        <StemList progress={frame.progress} />
+      ) : (
+        <DetailPane songSec={frame.songSec} />
+      )}
+    </View>
+  );
+}
+
 interface BodyProps {
   readonly bottom: number;
   readonly onBack: () => void;
@@ -118,6 +170,8 @@ function Body({ bottom, onBack }: BodyProps) {
     s.loop.kind === 'on' ? secondsToFrames(s.loop.endSec, s.engineRate) : null,
   );
   const frame = useMixerFrame(rate, frames, loopEnd);
+  const retiming = useStemPlayer((s) => s.retime.kind === 'recording');
+  const [picked, setPicked] = useState<Tab>(MIX);
   if (status === 'failed')
     return (
       <EmptyState
@@ -148,10 +202,15 @@ function Body({ bottom, onBack }: BodyProps) {
     );
   return (
     <>
-      <View style={styles.body}>
-        <SongFactChips />
-        <Notices />
-        <StemList progress={frame.progress} />
+      <View style={styles.main}>
+        {retiming ? (
+          <View style={[styles.body, styles.bodyFlush]}>
+            <RetimeBody />
+          </View>
+        ) : (
+          <PlayerContent frame={frame} picked={picked} onPick={setPicked} />
+        )}
+        <LoopUndoSnackbar />
       </View>
       <Dock frame={frame} bottom={bottom} />
     </>
@@ -167,7 +226,15 @@ export function StemPlayerScreen({
   const ready = useStemPlayer((s) => s.status === 'ready');
   const open = useStemPlayer((s) => s.open);
   const close = useStemPlayer((s) => s.close);
+  const retiming = useStemPlayer((s) => s.retime.kind === 'recording');
   const [menu, setMenu] = useState(false);
+  const [askingReset, setAskingReset] = useState(false);
+  const askReset = useCallback(() => {
+    setAskingReset(true);
+  }, []);
+  const closeReset = useCallback(() => {
+    setAskingReset(false);
+  }, []);
   const openMenu = useCallback(() => {
     setMenu(true);
   }, []);
@@ -181,13 +248,18 @@ export function StemPlayerScreen({
   const padding = useMemo(() => ({ paddingTop: insets.top }), [insets.top]);
   return (
     <View style={[styles.screen, padding]}>
-      <StemAppBar onBack={onBack} onMenu={ready ? openMenu : null} />
+      {retiming ? (
+        <RetimeBar onAskReset={askReset} />
+      ) : (
+        <StemAppBar onBack={onBack} onMenu={ready ? openMenu : null} />
+      )}
       <Body bottom={insets.bottom} onBack={onBack} />
       <PlayerMenu
         visible={menu}
         bottomInset={insets.bottom}
         onClose={closeMenu}
       />
+      {retiming && askingReset ? <ResetDialog onClose={closeReset} /> : null}
     </View>
   );
 }

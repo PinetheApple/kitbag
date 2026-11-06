@@ -15,6 +15,7 @@ import {
 import {
   formatClock,
   formatClockSeconds,
+  framesToSeconds,
   useStemPlayer,
   type LoopFailure,
   type LoopState,
@@ -24,6 +25,8 @@ import { Text, View } from 'react-native';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
+import { loopNoteText, songSeconds } from '../logic/sectionView.ts';
+import { SectionNotches, SectionTint } from './SectionMarks.tsx';
 import type { MixerFrameValues } from './useMixerFrame.ts';
 
 const SCRUB_STEP = 0.02;
@@ -150,19 +153,13 @@ function LoopMarks({ loop }: { readonly loop: LoopState }) {
   );
 }
 
-function loopNote(loop: LoopState): string | null {
-  if (loop.kind === 'armed')
-    return `Loop from ${formatClockSeconds(loop.startSec)}`;
-  if (loop.kind === 'on')
-    return `Loop ${formatClockSeconds(loop.startSec)} – ${formatClockSeconds(loop.endSec)}`;
-  return null;
-}
-
 function LoopNote() {
   const styles = useStyles();
   const loop = useStemPlayer((s) => s.loop);
   const failure = useStemPlayer((s) => s.loopFailure);
-  const note = loopNote(loop);
+  const sections = useStemPlayer((s) => s.sections);
+  const durationSec = useStemPlayer(songSeconds);
+  const note = loopNoteText(loop, sections, durationSec);
   if (failure !== null)
     return (
       <View style={styles.note} accessibilityLiveRegion="polite">
@@ -201,6 +198,7 @@ export function Scrubber({ frame }: { readonly frame: MixerFrameValues }) {
   const scrub = useStemPlayer((s) => s.scrub);
   const cancelScrub = useStemPlayer((s) => s.cancelScrub);
   const seek = useStemPlayer((s) => s.seek);
+  const durationSec = framesToSeconds(frames, rate);
   const second = useSpokenSecond(frame);
   const slide = useCallback(
     (fraction: number) => {
@@ -237,6 +235,10 @@ export function Scrubber({ frame }: { readonly frame: MixerFrameValues }) {
           mode="seek"
           accessibilityLabel="Song position"
           accessibilityValue={`${formatClockSeconds(second)} of ${total}`}
+          behindFill={
+            <SectionTint songSec={frame.songSec} durationSec={durationSec} />
+          }
+          overFill={<SectionNotches durationSec={durationSec} />}
         />
         <LoopMarks loop={loop} />
       </View>
