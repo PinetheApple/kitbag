@@ -7,8 +7,8 @@ import { STEM_SET_SOURCE, type StemSetSource } from './stem-set-source';
 import { applyUserNames, readUserNames } from './stem-rename';
 import {
   parseRetimedLyrics,
-  restoreRetime,
-  retimeKeptBy,
+  retainedRetime,
+  saveLyricsRetimed,
   type LyricLineTimes,
 } from './stem-lyrics';
 
@@ -263,11 +263,11 @@ export async function replaceStemBundle(
   if (existing === undefined)
     return { id: await insertStemBundle(db, bundle), replaced: null };
   const names = await readUserNames(db, existing.id);
-  const retimed = await retimeKeptBy(db, existing.id, bundle.lyrics);
+  const retimed = await retainedRetime(db, existing.id, bundle.lyrics);
   const replaced = await deleteStemSet(db, existing.id);
   const id = await insertStemBundle(db, bundle);
   await applyUserNames(db, id, names);
-  await restoreRetime(db, id, retimed);
+  await saveLyricsRetimed(db, id, retimed);
   return { id, replaced };
 }
 

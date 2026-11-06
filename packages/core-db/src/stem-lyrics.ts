@@ -55,11 +55,11 @@ interface RetimeSource {
 }
 
 // A plain-only retiming indexes the plain lines, so those must match as well.
-export async function retimeKeptBy(
+export async function retainedRetime(
   db: Database,
   stemSetId: number,
   next: RetimeSource | null,
-): Promise<string | null> {
+): Promise<LyricLineTimes | null> {
   const [row] = await db
     .select({
       synced: stemSets.lyricsSynced,
@@ -73,17 +73,5 @@ export async function retimeKeptBy(
   const sameSource =
     row.synced === synced &&
     (synced !== null || row.plain === (next?.plain ?? null));
-  return sameSource ? row.retimed : null;
-}
-
-export async function restoreRetime(
-  db: Database,
-  stemSetId: number,
-  retimed: string | null,
-): Promise<void> {
-  if (retimed === null) return;
-  await db
-    .update(stemSets)
-    .set({ lyricsRetimed: retimed })
-    .where(eq(stemSets.id, stemSetId));
+  return sameSource ? parseRetimedLyrics(row.retimed) : null;
 }
