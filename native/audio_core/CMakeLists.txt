@@ -440,6 +440,10 @@ if(KITBAG_BUILD_TOOLS)
   target_include_directories(metronome_render PRIVATE src include tools/soak tools/media)
   target_link_libraries(metronome_render PRIVATE m)
 
+  add_executable(follow_render tools/soak/follow_render_main.cpp)
+  target_include_directories(follow_render PRIVATE tools/media)
+  target_link_libraries(follow_render PRIVATE kitbag_core)
+
   add_executable(stretch_verify
     tools/stretch/stretch_verify.cpp
     tools/stretch/stretch_test_support.cpp
