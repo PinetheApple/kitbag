@@ -1,6 +1,5 @@
-import { Pressable, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
-import { oneLineFloor } from '../oneLineFit.ts';
 import {
   inset,
   presetActionGrow,
@@ -9,7 +8,6 @@ import {
   space,
   textRoles,
 } from '../roles.ts';
-import { isTextScaled } from '../textScale.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
@@ -19,7 +17,8 @@ import {
   neighbourGaps,
   type NeighbourGaps,
 } from '../touchTarget.ts';
-import { useOneLineFit } from '../useOneLineFit.tsx';
+import { useTextScaled } from '../useTextScaled.ts';
+import { DesignFloorOneLineText } from './DesignFloorOneLineText.tsx';
 
 export type PresetButtonKind = 'preset' | 'action';
 
@@ -96,15 +95,7 @@ export function PresetButton({
 }: PresetButtonProps) {
   const styles = useStyles();
   const action = kind === 'action';
-  const { fontScale } = useWindowDimensions();
-  const role = action ? textRoles.presetAction : textRoles.preset;
-  const labelStyle = action ? styles.actionText : styles.presetText;
-  const fit = useOneLineFit({
-    text: label,
-    role,
-    floor: oneLineFloor(fontScale, role.size, role.size),
-    style: labelStyle,
-  });
+  const scaled = useTextScaled();
   return (
     <Pressable
       accessibilityRole="button"
@@ -118,19 +109,15 @@ export function PresetButton({
       <View
         style={[
           action ? styles.action : styles.preset,
-          isTextScaled(fontScale) && styles.scaledFace,
+          scaled && styles.scaledFace,
         ]}
       >
-        <View style={styles.labelBox} onLayout={fit.onAvailableLayout}>
-          {fit.measurer}
-          <Text
-            style={[labelStyle, fit.style]}
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            {label}
-          </Text>
-        </View>
+        <DesignFloorOneLineText
+          text={label}
+          role={action ? textRoles.presetAction : textRoles.preset}
+          style={action ? styles.actionText : styles.presetText}
+          boxStyle={styles.labelBox}
+        />
       </View>
     </Pressable>
   );

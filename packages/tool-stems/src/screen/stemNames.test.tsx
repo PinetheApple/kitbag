@@ -8,13 +8,8 @@ type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
 const NAMES = ['guitar', 'vocals', 'other'];
 const MASTER = 'Master';
-const TWO_TIMES = 2;
 
-const display = vi.hoisted(() => ({ fontScale: 1 }));
-const texts = vi.hoisted(() => [] as Props[]);
-const views = vi.hoisted(() => [] as Props[]);
-const fits = vi.hoisted(() => [] as Record<string, unknown>[]);
-const onAvailableLayout = vi.hoisted(() => () => undefined);
+const fitted = vi.hoisted(() => [] as Props[]);
 
 vi.mock('react-native', async () => {
   const { createElement: h } = await import('react');
@@ -23,15 +18,9 @@ vi.mock('react-native', async () => {
     BackHandler: { addEventListener: () => ({ remove: () => undefined }) },
     Pressable: box,
     ScrollView: box,
-    Text: (props: Props) => {
-      texts.push(props);
-      return h('span', null, props.children);
-    },
-    View: (props: Props) => {
-      views.push(props);
-      return h('div', null, props.children);
-    },
-    useWindowDimensions: () => ({ fontScale: display.fontScale }),
+    Text: box,
+    View: box,
+    useWindowDimensions: () => ({ fontScale: 1 }),
   };
 });
 
@@ -39,9 +28,9 @@ vi.mock('@kitbag/core-design', async (original) => ({
   ...(await original<Record<string, unknown>>()),
   createThemedStyles: () => () =>
     new Proxy({}, { get: (_, key) => ({ styleName: key }) }),
-  useOneLineFit: (options: Record<string, unknown>) => {
-    fits.push(options);
-    return { style: {}, onAvailableLayout, measurer: null };
+  DesignFloorOneLineText: (props: Props) => {
+    fitted.push(props);
+    return null;
   },
   Waveform: () => null,
 }));
@@ -64,62 +53,27 @@ vi.mock('./StemToggle.tsx', () => ({ StemToggle: () => null }));
 
 const { StemList } = await import('./StemList.tsx');
 
-function renderAt(fontScale: number) {
-  display.fontScale = fontScale;
-  renderToStaticMarkup(
-    createElement(StemList, { progress: {} as SharedValue<number> }),
-  );
-}
-
-function textOf(name: string): Props | undefined {
-  return texts.find((text) => text.children === name);
+function fitOf(name: string): Props | undefined {
+  return fitted.find((props) => props.text === name);
 }
 
 describe('stem list names', () => {
   beforeEach(() => {
-    texts.length = 0;
-    views.length = 0;
-    fits.length = 0;
+    fitted.length = 0;
+    renderToStaticMarkup(
+      createElement(StemList, { progress: {} as SharedValue<number> }),
+    );
   });
 
-  it.each([MASTER, ...NAMES])(
-    'holds %s to one tail-ellipsized line',
-    (name) => {
-      renderAt(TWO_TIMES);
-      expect(textOf(name)).toMatchObject({
-        numberOfLines: 1,
-        ellipsizeMode: 'tail',
-      });
-    },
-  );
-
-  it.each([MASTER, ...NAMES])(
-    'floors %s at its design size while the text is scaled',
-    (name) => {
-      renderAt(TWO_TIMES);
-      const fit = fits.find((options) => options.text === name);
-      expect(fit?.role).toBe(textRoles.stemName);
-      expect(Number(fit?.floor) * TWO_TIMES).toBeCloseTo(
-        textRoles.stemName.size,
-      );
-    },
-  );
-
-  it.each([MASTER, ...NAMES])(
-    'never shrinks %s at the default scale',
-    (name) => {
-      renderAt(1);
-      const fit = fits.find((options) => options.text === name);
-      expect(fit?.floor).toBe(textRoles.stemName.size);
-    },
-  );
+  it.each([MASTER, ...NAMES])('fits %s in the stem name role', (name) => {
+    expect(fitOf(name)?.role).toBe(textRoles.stemName);
+  });
 
   it('fits Master to the width the row leaves it', () => {
-    renderAt(TWO_TIMES);
-    const measured = views.filter(
-      (view) => view.onLayout === onAvailableLayout,
-    );
-    expect(measured.at(-1)?.style).toEqual({ styleName: 'grow' });
-    expect(measured).toHaveLength(NAMES.length + 1);
+    expect(fitOf(MASTER)?.boxStyle).toEqual({ styleName: 'grow' });
+  });
+
+  it.each(NAMES)('fits %s to the name column it sits in', (name) => {
+    expect(fitOf(name)?.boxStyle).toBeUndefined();
   });
 });

@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { StyleProp, TextStyle, ViewStyle } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
 import { describe, expect, it, vi } from 'vitest';
 
 import { inset, textRoles } from '../roles.ts';
@@ -11,7 +11,6 @@ type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
 const display = vi.hoisted(() => ({ fontScale: 1 }));
 const faces = vi.hoisted(() => [] as Props[]);
-const labels = vi.hoisted(() => [] as Props[]);
 const fits = vi.hoisted(() => [] as Record<string, unknown>[]);
 
 vi.mock('react-native', async (original) => {
@@ -21,10 +20,6 @@ vi.mock('react-native', async (original) => {
     ...actual,
     useWindowDimensions: () => ({ fontScale: display.fontScale }),
     Pressable: (props: Props) => h('div', null, props.children),
-    Text: (props: Props) => {
-      labels.push(props);
-      return h('span', null, props.children);
-    },
     View: (props: Props) => {
       faces.push(props);
       return h('div', null, props.children);
@@ -46,14 +41,13 @@ vi.mock('../useOneLineFit.tsx', async (original) => {
 const { StyleSheet } = await import('react-native');
 
 const LABEL = '−10';
-const GROWN = 2;
+const GROWN_FONT_SCALE = 2;
 const KINDS: readonly PresetButtonKind[] = ['preset', 'action'];
 const ROLE = { preset: textRoles.preset, action: textRoles.presetAction };
 
 function renderAt(fontScale: number, kind: PresetButtonKind = 'preset') {
   display.fontScale = fontScale;
   faces.length = 0;
-  labels.length = 0;
   fits.length = 0;
   renderToStaticMarkup(
     <ThemeProvider mode="dark">
@@ -70,10 +64,6 @@ function faceAt(
   return StyleSheet.flatten(faces[0]?.style as StyleProp<ViewStyle>);
 }
 
-function shownLabel(): Props | undefined {
-  return labels.find((label) => label.numberOfLines !== undefined);
-}
-
 describe('PresetButton under font scale', () => {
   it('keeps the design spacing at the default scale', () => {
     expect(faceAt(1).paddingHorizontal).toBeUndefined();
@@ -81,42 +71,17 @@ describe('PresetButton under font scale', () => {
   });
 
   it('keeps a grown label clear of the key edge', () => {
-    expect(faceAt(2).paddingHorizontal).toBe(inset.presetLabelH);
-    expect(faceAt(2, 'action').paddingHorizontal).toBe(inset.presetLabelH);
+    expect(faceAt(GROWN_FONT_SCALE).paddingHorizontal).toBe(inset.presetLabelH);
+    expect(faceAt(GROWN_FONT_SCALE, 'action').paddingHorizontal).toBe(inset.presetLabelH);
   });
 
-  it.each(KINDS)('holds the %s label to one tail-ellipsized line', (kind) => {
-    renderAt(GROWN, kind);
-    expect(shownLabel()).toMatchObject({
-      numberOfLines: 1,
-      ellipsizeMode: 'tail',
-    });
-  });
-
-  it.each(KINDS)(
-    'floors the %s label at its design size when scaled',
-    (kind) => {
-      renderAt(GROWN, kind);
-      expect(fits[0]).toMatchObject({ text: LABEL, role: ROLE[kind] });
-      expect(Number(fits[0]?.floor) * GROWN).toBeCloseTo(ROLE[kind].size);
-    },
-  );
-
-  it.each(KINDS)('never shrinks the %s label at the default scale', (kind) => {
-    renderAt(1, kind);
-    expect(fits[0]?.floor).toBe(ROLE[kind].size);
-  });
-
-  it('keeps the label invisible until it is measured', () => {
-    renderAt(GROWN);
-    const style = StyleSheet.flatten(
-      shownLabel()?.style as StyleProp<TextStyle>,
-    );
-    expect(style.opacity).toBe(0);
+  it.each(KINDS)('fits the %s label in its own role', (kind) => {
+    renderAt(GROWN_FONT_SCALE, kind);
+    expect(fits[0]).toMatchObject({ text: LABEL, role: ROLE[kind] });
   });
 
   it('measures the room inside the padding, not the face', () => {
-    renderAt(GROWN);
+    renderAt(GROWN_FONT_SCALE);
     const box = faces.filter((face) => face.onLayout !== undefined);
     expect(faces[0]?.onLayout).toBeUndefined();
     expect(box).toHaveLength(1);
