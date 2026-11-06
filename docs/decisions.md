@@ -734,7 +734,10 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
 - **2026-11-02 · Text at 200% font scale (§12.6, #192)** — The stem player's name column
   keeps the mockup's 58 dp at the default text size and grows by the font scale above it.
   The name keeps `numberOfLines={1}`, so a long name still truncates, as the ruling
-  accepts. **[user, 2026-10-30]** App-bar icons (back, search, add, the metronome bar's
+  accepts. **[user, 2026-10-30]** Stem names and Master use the #287 fit: above the default
+  scale they shrink to the column, never below their design size, before truncating;
+  at the default scale they do not shrink. **[coord]** Not yet seen on a device.
+  App-bar icons (back, search, add, the metronome bar's
   keys) grow with the font scale up to 1.5×. The 48 dp buttons alone would allow about
   1.84× for the largest bar glyph (26 dp); 1.5 is a judgement, not measured, so a glyph keeps padding
   inside its button and does not outweigh the bar title beside it. Other icons stay at
@@ -743,8 +746,10 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   `appBarTitleMinSize`, above it never below its design size, then ellipsizes. The fit is computed in JS
   (the #287 entry on the measured title floor). **[coord, 2026-11-02, #287 — the owner
   may overturn]** The metronome's status rows grow by the font
-  scale and hold at most two lines; that a grown row fits two grown lines is reasoned from
-  the 40 dp row height, not measured, and needs a device check. A wider row wraps onto its
+  scale and hold at most two lines. Android pads each line to the font's bounding box
+  (about 1.4 em), so two lines at 2.0 leave under 1 dp to spare in the grown row; a grown
+  row adds the progress bar's 3 dp below its text. Computed from the fonts' bounding
+  boxes, not measured; needs a device check. A wider row wraps onto its
   second line rather than truncating. Above the default scale the status stack leaves the
   scrolling body and sits directly above the transport, so a body that overflows cannot
   push it out of view, at one fixed height, the running stack's, so nothing resizes on Play.
@@ -753,15 +758,28 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   a segmented control's options and the sound picker's items take their label's width
   and never shrink below it, since Android wraps a squeezed label mid-word; what does
   not fit on one line wraps onto further rows inside the track or grid. A `fill` track
-  wider than its row takes a line of its own and shrinks to it; a track without `fill`
-  takes the width its parent gives it. Wrapped rows of options sit far enough apart that
+  wider than its row takes a line of its own and shrinks to it; in a column parent a
+  track without `fill` takes the parent's width and wraps inside it, while in a row
+  parent, such as an edit row, it is as wide as its options on one line and moves to a
+  line of its own rather than wrapping, so one wider than the whole row would overflow.
+  Wrapped rows of options sit far enough apart that
   an option on a row between two others reaches a 48 dp touch target from the gaps alone,
   so a wrapped track is taller than its options; the first and last rows reach into the
-  track edge and the neighbour gap as a single row does. At 1.0 the options stay equal
+  track edge and the neighbour gap as a single row does. In the preset editor the
+  Count-in and on/off tracks reach through their edit row's padding, 47.5 dp counted on
+  the option's 1.0 height, and the ramp unit track, which shares the gap above it with
+  the stepper it wraps under, 40 dp. At 2.0 the option's text doubles, so the real
+  targets are larger; that they reach 48 dp is an open device check. At 1.0 the options stay equal
   widths and the picker keeps its columns. A stepper's value-to-suffix gap grows with
   the font scale. The click volume row lets its slider and readout drop below the label
   above the default scale rather than wrapping them beside it. Library and
   output-route rows drop their one-line limit above the default scale. **[recorded]**
+  Only while the text is scaled, the tempo nudge keys (−10 to +10, TAP) keep
+  `inset.presetLabelH`, 4 dp, between label and edge. **[coord, owner may overturn]**
+  Their labels stay on one line through the #287 fit: at the default scale they do not
+  shrink, above it they shrink to the width left by that padding, never below their
+  design size, then ellipsize. **[coord]** Computed against the 360 dp emulator bounds, not
+  yet seen on a device.
 
 - **2026-11-02 · Metronome card is media-style, with no setlist skips (§5.6, §13.9, #284)** —
   Decided by the owner (ruling via coordinator, 2026-11-02); supersedes the 2026-10-28 #163

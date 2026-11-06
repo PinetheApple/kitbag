@@ -18,7 +18,11 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import { statusStackHeight, statusTextLines } from '../logic/belowTempo.ts';
+import {
+  statusProgressReserve,
+  statusStackHeight,
+  statusTextLines,
+} from '../logic/belowTempo.ts';
 import { rampProgressFill, rampTrackShown } from '../logic/rampProgress.ts';
 import {
   afterCountInSummary,
@@ -61,9 +65,18 @@ interface RampStatusProps {
   readonly ramp: RampConfig;
 }
 
+function useProgressReserve(): { readonly paddingBottom: number } {
+  const { fontScale } = useWindowDimensions();
+  return useMemo(
+    () => ({ paddingBottom: statusProgressReserve(fontScale) }),
+    [fontScale],
+  );
+}
+
 function RampStatus({ rows, frame, ramp }: RampStatusProps) {
   const styles = useStatusStyles();
   const scaled = isTextScaled(useWindowDimensions().fontScale);
+  const reserve = useProgressReserve();
   const { rampNextBpm, rampRemaining, rampStepProgress } = frame;
   const { unit, interval } = ramp;
   const still = useReduceMotionValue();
@@ -88,7 +101,7 @@ function RampStatus({ rows, frame, ramp }: RampStatusProps) {
     opacity: trackOpacity(rampTrackShown(interval, unit, still.value)),
   }));
   return (
-    <StatusVariant rows={rows} shown="ramp" style={styles.live}>
+    <StatusVariant rows={rows} shown="ramp" style={[styles.live, reserve]}>
       <Icon name="ramp" size="statusLive" color="text2" />
       <LiveSlot
         text={next}
@@ -120,11 +133,12 @@ function ReachedStatus({
   readonly targetBpm: number;
 }) {
   const styles = useStatusStyles();
+  const reserve = useProgressReserve();
   return (
     <StatusVariant
       rows={rows}
       shown="reached"
-      style={[styles.live, styles.reached]}
+      style={[styles.live, styles.reached, reserve]}
     >
       <Icon name="check" size="statusLive" color="accentDeep" />
       <Text style={styles.lead}>{`Ramp reached ${String(targetBpm)}`}</Text>

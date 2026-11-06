@@ -1,13 +1,15 @@
 import {
   createThemedStyles,
+  DesignFloorOneLineText,
   opacity,
   stemPlayer,
   stemPlayerMix,
+  textRoles,
   Waveform,
 } from '@kitbag/core-design';
 import { useStemPlayer } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, useWindowDimensions, View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 
 import { stemNameWidth } from '../logic/stemName.ts';
@@ -123,12 +125,11 @@ export function StemRowView({
               onPress={expand}
               onLongPress={startRename}
             >
-              <Text
+              <DesignFloorOneLineText
+                text={row.name}
+                role={textRoles.stemName}
                 style={[stemStyles.name, row.muted && stemStyles.nameQuiet]}
-                numberOfLines={1}
-              >
-                {row.name}
-              </Text>
+              />
             </Pressable>
             <View style={[styles.wave, row.muted && styles.waveQuiet]}>
               <Waveform

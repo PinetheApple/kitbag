@@ -147,6 +147,7 @@ export const inset = {
   stepInlineLargeH: 2,
   sectionLabelH: 2,
   segmentEditRowOptionH: 10,
+  presetLabelH: 4,
 } as const;
 
 export const opacity = {
