@@ -1,5 +1,6 @@
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Text, useWindowDimensions, View } from 'react-native';
 
+import { oneLineFloor } from '../oneLineFit.ts';
 import {
   inset,
   presetActionGrow,
@@ -8,6 +9,7 @@ import {
   space,
   textRoles,
 } from '../roles.ts';
+import { isTextScaled } from '../textScale.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
@@ -17,7 +19,7 @@ import {
   neighbourGaps,
   type NeighbourGaps,
 } from '../touchTarget.ts';
-import { useTextScaled } from '../useTextScaled.ts';
+import { useOneLineFit } from '../useOneLineFit.tsx';
 
 export type PresetButtonKind = 'preset' | 'action';
 
@@ -75,6 +77,10 @@ const useStyles = createThemedStyles((theme) => ({
   scaledFace: {
     paddingHorizontal: inset.presetLabelH,
   },
+  labelBox: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+  },
   actionText: {
     ...textStyle(textRoles.presetAction),
     color: theme.color.text,
@@ -90,7 +96,15 @@ export function PresetButton({
 }: PresetButtonProps) {
   const styles = useStyles();
   const action = kind === 'action';
-  const scaled = useTextScaled();
+  const { fontScale } = useWindowDimensions();
+  const role = action ? textRoles.presetAction : textRoles.preset;
+  const labelStyle = action ? styles.actionText : styles.presetText;
+  const fit = useOneLineFit({
+    text: label,
+    role,
+    floor: oneLineFloor(fontScale, role.size, role.size),
+    style: labelStyle,
+  });
   return (
     <Pressable
       accessibilityRole="button"
@@ -104,12 +118,19 @@ export function PresetButton({
       <View
         style={[
           action ? styles.action : styles.preset,
-          scaled && styles.scaledFace,
+          isTextScaled(fontScale) && styles.scaledFace,
         ]}
       >
-        <Text style={action ? styles.actionText : styles.presetText}>
-          {label}
-        </Text>
+        <View style={styles.labelBox} onLayout={fit.onAvailableLayout}>
+          {fit.measurer}
+          <Text
+            style={[labelStyle, fit.style]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {label}
+          </Text>
+        </View>
       </View>
     </Pressable>
   );
