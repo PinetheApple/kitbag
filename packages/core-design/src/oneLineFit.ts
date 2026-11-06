@@ -13,7 +13,7 @@ export interface FitStep extends FitPoint {
   readonly floor: number;
   readonly pass: number;
   readonly onePx: number;
-  readonly previous: FitPoint | undefined;
+  readonly previousPoint: FitPoint | undefined;
 }
 
 export type FitNext =
@@ -24,10 +24,11 @@ export type FitNext =
 // so the step falls back to a single pixel rather than dividing by the slope.
 function secantCandidate(
   { available, textWidth, candidate, onePx }: FitStep,
-  previous: FitPoint,
+  previousPoint: FitPoint,
 ): number {
   const slope =
-    (previous.textWidth - textWidth) / (previous.candidate - candidate);
+    (previousPoint.textWidth - textWidth) /
+    (previousPoint.candidate - candidate);
   const solved =
     slope > 0 ? candidate + (available - textWidth) / slope : candidate;
   return solved - onePx;
@@ -36,14 +37,14 @@ function secantCandidate(
 // Android rounds the size up to whole px and scales sp nonlinearly, so a
 // proportional fit can still overflow; later passes solve for it from two points.
 export function nextFitCandidate(step: FitStep): FitNext {
-  const { available, textWidth, candidate, floor, pass, previous } = step;
+  const { available, textWidth, candidate, floor, pass, previousPoint } = step;
   if (textWidth <= available) return { done: true, fontSize: candidate };
   if (candidate <= floor || pass >= MAX_SETTLE_PASSES)
     return { done: true, fontSize: candidate };
   const proposed =
-    previous === undefined
+    previousPoint === undefined
       ? (candidate * available) / textWidth
-      : secantCandidate(step, previous);
+      : secantCandidate(step, previousPoint);
   return { done: false, candidate: Math.max(floor, proposed) };
 }
 
@@ -79,7 +80,7 @@ export interface OneLineSettle {
   readonly candidate: number;
   readonly pass: number;
   readonly textWidth: number | undefined;
-  readonly previous: FitPoint | undefined;
+  readonly previousPoint: FitPoint | undefined;
   readonly settled: boolean;
   readonly shown: number | undefined;
 }
@@ -102,7 +103,7 @@ export function startOneLine(
     candidate: size,
     pass: 0,
     textWidth: undefined,
-    previous: undefined,
+    previousPoint: undefined,
     settled: false,
     shown: previous?.shown,
   };
@@ -118,7 +119,7 @@ function advance(state: OneLineSettle, params: OneLineParams): OneLineSettle {
     floor: params.floor,
     pass: state.pass,
     onePx: params.onePx,
-    previous: state.previous,
+    previousPoint: state.previousPoint,
   });
   return next.done
     ? { ...state, settled: true, shown: next.fontSize }
@@ -127,7 +128,10 @@ function advance(state: OneLineSettle, params: OneLineParams): OneLineSettle {
         candidate: next.candidate,
         pass: state.pass + 1,
         textWidth: undefined,
-        previous: { candidate: state.candidate, textWidth: state.textWidth },
+        previousPoint: {
+          candidate: state.candidate,
+          textWidth: state.textWidth,
+        },
       };
 }
 

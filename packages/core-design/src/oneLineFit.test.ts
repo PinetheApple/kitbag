@@ -22,7 +22,7 @@ const step = {
   size: SIZE,
   floor: 8.5,
   onePx: ONE_PX,
-  previous: undefined,
+  previousPoint: undefined,
 };
 
 describe('nextFitCandidate', () => {
@@ -48,7 +48,7 @@ describe('nextFitCandidate', () => {
       textWidth: 155,
       candidate: 15,
       pass: 1,
-      previous: { candidate: 17, textWidth: 170 },
+      previousPoint: { candidate: 17, textWidth: 170 },
     });
     expect(next).toEqual({ done: false, candidate: 13 - ONE_PX });
   });
@@ -59,7 +59,7 @@ describe('nextFitCandidate', () => {
       textWidth: 141,
       candidate: 15,
       pass: 1,
-      previous: { candidate: 17, textWidth: 130 },
+      previousPoint: { candidate: 17, textWidth: 130 },
     });
     expect(next).toEqual({ done: false, candidate: 15 - ONE_PX });
   });
@@ -70,7 +70,7 @@ describe('nextFitCandidate', () => {
       textWidth: 141,
       candidate: 15,
       pass: 1,
-      previous: { candidate: 15.5, textWidth: 141 },
+      previousPoint: { candidate: 15.5, textWidth: 141 },
     });
     expect(next).toEqual({ done: false, candidate: 15 - ONE_PX });
   });
@@ -196,7 +196,7 @@ describe('settling a one-line label', () => {
       settled: false,
       candidate: SIZE,
       available: 200,
-      previous: undefined,
+      previousPoint: undefined,
     });
     expect(resized.generation).toBeGreaterThan(fitted.generation);
   });
