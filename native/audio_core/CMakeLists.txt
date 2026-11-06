@@ -181,6 +181,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_trainer_status.cpp
     tools/metronome/metronome_test_ramp_status.cpp
     tools/metronome/metronome_test_follow.cpp
+    tools/metronome/metronome_test_follow_rate.cpp
     tools/metronome/metronome_test_bar_phase.cpp
     tools/metronome/metronome_test_grid_offset.cpp
     tools/metronome/metronome_test_grid_offset_model.cpp
@@ -243,6 +244,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/mixer/mixer_test_switch.cpp
     tools/mixer/mixer_test_prime.cpp
     tools/mixer/mixer_test_race.cpp
+    tools/mixer/mixer_test_landing.cpp
     src/media/streaming_track.cpp
     src/media/looping_source_reader.cpp
     src/mixer/key_bus.cpp

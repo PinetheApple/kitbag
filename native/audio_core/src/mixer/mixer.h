@@ -351,6 +351,7 @@ class Mixer {
   SongClock song_clock_;
   RtPublisher<TransportPlan> plans_;
   uint64_t app_epoch_ = 0;
+  bool landed_ = false;
   LoopLayout app_layout_;
   bool app_playing_ = false;
   int64_t crossfade_frames_;

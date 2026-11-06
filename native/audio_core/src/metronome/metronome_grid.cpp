@@ -185,15 +185,21 @@ void Metronome::RenderGridSample(
     return;
   }
   if (song == nullptr || !song->playing || frame >= song->frames) return;
-  const LoopLayout& layout = song->LayoutAt(frame);
-  const int64_t song_frame = song->SongFrameAt(frame);
-  follow_seconds_ = static_cast<double>(song_frame) / sample_rate;
-  grid_fire_limit_ = layout.looping
-                         ? static_cast<double>(layout.end - 1) / sample_rate
-                         : std::numeric_limits<double>::infinity();
-  // A new pass reseeks to the loop start, so a beat right on it still fires.
-  if (song_frame != follow_next_frame_) SeekGridCursor(grid, follow_seconds_);
-  follow_next_frame_ = song_frame + 1;
+  const SongPoint point = song->PointAt(frame);
+  const auto whole_frame = static_cast<double>(point.frame);
+  follow_seconds_ = (whole_frame + point.fraction) / sample_rate;
+  grid_fire_limit_ =
+      point.layout->looping
+          ? static_cast<double>(point.layout->end - 1) / sample_rate
+          : std::numeric_limits<double>::infinity();
+  // Below 1.0x a song frame repeats, which is no jump. A new pass lands inside
+  // a frame, so seek to its start or a beat right on the loop start is skipped.
+  const int64_t step = point.frame - follow_last_frame_;
+  const bool landed = song->landed && frame == 0;
+  if (follow_last_frame_ == kReseedFollow || landed || step < 0 || step > 1) {
+    SeekGridCursor(grid, whole_frame / sample_rate);
+  }
+  follow_last_frame_ = point.frame;
   RenderGridBeat(grid, follow_seconds_, sample_rate);
 }
 

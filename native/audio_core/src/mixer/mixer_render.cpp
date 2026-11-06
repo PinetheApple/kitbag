@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cstring>
+#include <utility>
 
 #include "mixer/mixer.h"
 
@@ -72,6 +73,7 @@ void Mixer::AdoptTransport(const TransportPlan& plan) {
     stream_frame_ = plan.frame;
     jump_base_.store(now, std::memory_order_relaxed);
     engaged_.store(false, std::memory_order_relaxed);
+    landed_ = true;
   }
   layout_ = plan.layout;
   epoch_ = plan.epoch;
@@ -206,6 +208,7 @@ void Mixer::AdvanceTransport(uint32_t frame_count) {
   }
   song_clock_ = {
       .playing = true,
+      .landed = std::exchange(landed_, false),
       .first = stream_frame_,
       .frames = static_cast<uint32_t>(advance),
       .layout = layout_

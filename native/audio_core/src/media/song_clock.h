@@ -11,6 +11,12 @@
 
 namespace kitbag {
 
+struct SongPoint {
+  int64_t frame = 0;
+  double fraction = 0.0;
+  const LoopLayout* layout = nullptr;
+};
+
 // From output frame out_first on, the stretch is fed stream frame
 // fed_first + rate * (out - out_first), numbered under `layout`.
 struct SongRecord {
@@ -44,16 +50,19 @@ class SongRecords {
   const SongRecord& newest() const {
     return ring_[head_];
   }
-  int64_t AudibleAt(int64_t out_frame) const {
+  SongPoint PointAt(int64_t out_frame) const {
     const int64_t at = out_frame - out_;
     const SongRecord& record = Find(at);
     const double fed = record.fed_first +
                        record.rate * static_cast<double>(at - record.out_first);
-    const auto stream = static_cast<int64_t>(std::floor(fed)) - in_;
-    return std::max<int64_t>(record.layout.SongFrameAt(stream), 0);
+    const double whole = std::floor(fed);
+    const int64_t frame =
+        record.layout.SongFrameAt(static_cast<int64_t>(whole) - in_);
+    if (frame < 0) return {.layout = &record.layout};
+    return {.frame = frame, .fraction = fed - whole, .layout = &record.layout};
   }
-  const LoopLayout& LayoutAt(int64_t out_frame) const {
-    return Find(out_frame - out_).layout;
+  int64_t AudibleAt(int64_t out_frame) const {
+    return PointAt(out_frame).frame;
   }
 
  private:
@@ -76,17 +85,19 @@ class SongRecords {
 // With records, `first` is an output frame, not a stream frame.
 struct SongClock {
   bool playing = false;
+  // This block opens on a seek, stop or play jump; a repeated frame cannot.
+  bool landed = false;
   int64_t first = 0;
   uint32_t frames = 0;
   LoopLayout layout;
   const SongRecords* records = nullptr;
 
-  int64_t SongFrameAt(uint32_t i) const {
-    return records == nullptr ? layout.SongFrameAt(first + i)
-                              : records->AudibleAt(first + i);
+  SongPoint PointAt(uint32_t i) const {
+    if (records != nullptr) return records->PointAt(first + i);
+    return {.frame = layout.SongFrameAt(first + i), .layout = &layout};
   }
-  const LoopLayout& LayoutAt(uint32_t i) const {
-    return records == nullptr ? layout : records->LayoutAt(first + i);
+  int64_t SongFrameAt(uint32_t i) const {
+    return PointAt(i).frame;
   }
 };
 

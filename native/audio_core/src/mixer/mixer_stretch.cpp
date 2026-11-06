@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cstring>
+#include <utility>
 
 #include "media/equal_power.h"
 #include "mixer/mixer.h"
@@ -221,6 +222,7 @@ void Mixer::AdvanceStretch(uint32_t take, uint32_t frame_count) {
   out_clock_ += frame_count;
   song_clock_ = {
       .playing = true,
+      .landed = std::exchange(landed_, false),
       .first = first,
       .frames = AudibleFrames(first, frame_count),
       .layout = layout_,
