@@ -1,0 +1,1 @@
+• At large font sizes, volume sliders, status text and tempo keys no longer overlap their neighbours, and preset editor switches are easier to tap.
