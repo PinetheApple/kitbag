@@ -8,7 +8,6 @@ const useStyles = createThemedStyles((theme) => ({
   scroll: { flex: 1 },
   content: {
     paddingHorizontal: space.screenInset,
-    paddingTop: space.screenInset,
     gap: space.sectionGap,
   },
   fillScreen: { flexGrow: 1 },

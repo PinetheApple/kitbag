@@ -48,7 +48,7 @@ export function ScreenFrame({
   const failed = useLibrary((s) => s.failed);
   const padding = useMemo(
     () => ({
-      paddingTop: space.screenInset + insets.top,
+      paddingTop: insets.top,
       paddingBottom: space.screenInset + insets.bottom,
     }),
     [insets.top, insets.bottom],
