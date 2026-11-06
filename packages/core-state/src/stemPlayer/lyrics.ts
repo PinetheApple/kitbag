@@ -122,6 +122,24 @@ export function firstRetimeLine(
   );
 }
 
+function previousSungLine(
+  lines: readonly LyricLine[],
+  line: number,
+): LyricLine | undefined {
+  return lines.slice(0, Math.max(0, line)).findLast((l) => l.text !== '');
+}
+
+// Lines before the first pin clamp down to it, so an earlier tap moves the take.
+function anchoredLine(
+  lines: readonly LyricLine[],
+  line: number,
+  timeSec: number,
+): number {
+  const before = previousSungLine(lines, line);
+  if (before === undefined || timeSec > before.timeSec) return line;
+  return firstRetimeLine(lines, Math.max(lyricLineAt(lines, timeSec), 0));
+}
+
 // A tap at or before an earlier one redoes the take from that line on.
 export function takeAfterTap(
   lines: readonly LyricLine[],
@@ -129,9 +147,11 @@ export function takeAfterTap(
   timeSec: number,
 ): RetimeTake | null {
   const redoFrom = taps.findIndex((tap) => tap.timeSec >= timeSec);
-  const line = taps[redoFrom]?.line ?? nextLine;
-  if (line === NO_LINE) return null;
+  const tapped = taps[redoFrom]?.line ?? nextLine;
+  if (tapped === NO_LINE) return null;
   const kept = redoFrom === NOT_FOUND ? taps : taps.slice(0, redoFrom);
+  const line =
+    kept.length === 0 ? anchoredLine(lines, tapped, timeSec) : tapped;
   return {
     taps: [...kept, { line, timeSec }],
     nextLine: nextSungLine(lines, line + 1),

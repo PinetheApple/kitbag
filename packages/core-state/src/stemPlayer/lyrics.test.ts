@@ -219,6 +219,31 @@ describe('a tap during retiming', () => {
     });
   });
 
+  describe('with no taps kept', () => {
+    const empty = { taps: [], nextLine: 3 };
+
+    it('re-anchors a tap at or before the previous sung line', () => {
+      expect(takeAfterTap(lines, empty, lines[2]?.timeSec ?? 0)).toEqual({
+        taps: [{ line: 2, timeSec: lines[2]?.timeSec }],
+        nextLine: 3,
+      });
+      expect(takeAfterTap(lines, empty, 0)).toEqual({
+        taps: [{ line: 0, timeSec: 0 }],
+        nextLine: 2,
+      });
+    });
+
+    it('leaves a tap just after the previous sung line on the next line', () => {
+      const after = (lines[2]?.timeSec ?? 0) + 0.01;
+      expect(takeAfterTap(lines, empty, after)?.taps[0]?.line).toBe(3);
+    });
+
+    it('never moves the first sung line, which has nothing before it', () => {
+      const first = { taps: [], nextLine: 0 };
+      expect(takeAfterTap(lines, first, 0)?.taps[0]?.line).toBe(0);
+    });
+  });
+
   it('redoes the take from the first tap it does not come after', () => {
     expect(takeAfterTap(lines, take, 4)).toEqual({
       taps: [

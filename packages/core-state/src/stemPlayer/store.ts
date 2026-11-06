@@ -349,7 +349,7 @@ export function createStemPlayerStore(
         songStopSubscription = null;
       },
       ...mixActions(set, get, runtimeOf, saver),
-      ...transportActions(get, runtimeOf, scrubSeek),
+      ...transportActions(set, get, runtimeOf, scrubSeek),
       ...loopActions(context),
       ...clickActions(context),
       ...renameActions(context),

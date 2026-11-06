@@ -86,6 +86,104 @@ describe('starting a retime', () => {
   });
 });
 
+describe('anchoring the take to where the song is', () => {
+  const BUNDLED = [1.5, 2.5, 3.5, 5.5];
+  const LAST_LINE = 3;
+  const TWO = 2;
+
+  async function openedAt(seconds: number) {
+    const song = await opened([stem(1)], SONG_DETAILS);
+    song.engine.position = at(seconds);
+    return song;
+  }
+
+  function savedTimes({ records }: Song) {
+    return records.saveLyricsRetimed.mock.calls.at(-1)?.[1];
+  }
+
+  it('opens on the first line at song end, where play restarts at 0', async () => {
+    const song = await openedAt(9.9);
+    song.store.getState().beginRetime(LAST_LINE);
+    expect(song.commands.mixerSeek).toHaveBeenCalledWith(0);
+    expect(song.store.getState().retime).toMatchObject({ nextLine: 0 });
+  });
+
+  it('keeps every line apart when song end restarts and taps at 1 s', async () => {
+    const song = await openedAt(9.9);
+    song.store.getState().beginRetime(LAST_LINE);
+    tapAt(song, 1);
+    await song.store.getState().commitRetime();
+    expect(savedTimes(song)).toEqual([1, 2, 3, 5]);
+  });
+
+  it('follows a seek back while nothing is tapped', async () => {
+    const song = await openedAt(5.6);
+    song.store.getState().beginRetime(LAST_LINE);
+    song.store.getState().seek(at(0.5));
+    expect(song.store.getState().retime).toMatchObject({ nextLine: 0 });
+    song.store.getState().seek(at(3.6));
+    expect(song.store.getState().retime).toMatchObject({ nextLine: TWO });
+  });
+
+  it('keeps the next line when a seek lands past the last sung line', async () => {
+    const song = await opened([stem(1)], {
+      ...SONG_DETAILS,
+      lyrics: {
+        synced: '[00:01.00]One\n[00:02.00]Two\n[00:03.00]',
+        plain: null,
+        offsetSec: 0,
+        instrumental: false,
+      },
+    });
+    song.store.getState().beginRetime(1);
+    song.store.getState().seek(at(4));
+    expect(song.store.getState().retime).toMatchObject({ nextLine: 1 });
+  });
+
+  it('leaves the next line alone on a seek once a tap is kept', async () => {
+    const song = await recording();
+    tapAt(song, 1);
+    song.store.getState().seek(at(5.6));
+    expect(song.store.getState().retime).toMatchObject({ nextLine: TWO });
+  });
+
+  it('corrects a head that wrapped back with no seek, at the tap', async () => {
+    const song = await openedAt(5.6);
+    song.store.getState().beginRetime(LAST_LINE);
+    tapAt(song, 0.6);
+    await song.store.getState().commitRetime();
+    expect(savedTimes(song)).toEqual([0.6, 1.6, 2.6, 4.6]);
+  });
+
+  it('re-anchors a tap, seek back, tap on the line playing there', async () => {
+    const song = await openedAt(3.6);
+    song.store.getState().beginRetime(TWO);
+    tapAt(song, 3.6);
+    song.store.getState().seek(at(0.5));
+    tapAt(song, 0.6);
+    expect(song.store.getState().retime).toMatchObject({
+      taps: [{ line: 0, timeSec: 0.6 }],
+      nextLine: TWO,
+    });
+    await song.store.getState().commitRetime();
+    expect(savedTimes(song)).toEqual([0.6, 1.6, 2.6, 4.6]);
+  });
+
+  it('keeps a slightly early tap on the next line', async () => {
+    const song = await openedAt(3.6);
+    song.store.getState().beginRetime(TWO);
+    tapAt(song, 2);
+    expect(song.store.getState().retime).toMatchObject({
+      taps: [{ line: TWO, timeSec: 2 }],
+      nextLine: LAST_LINE,
+    });
+    await song.store.getState().commitRetime();
+    const saved = savedTimes(song) ?? [];
+    expect(saved[0]).toBe(BUNDLED[0]);
+    expect(saved[TWO]).toBe(2);
+  });
+});
+
 describe('Undo tap', () => {
   it('gives the line back to the next tap', async () => {
     const song = await recording();
