@@ -242,6 +242,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/mixer/mixer_test_config.cpp
     tools/mixer/mixer_test_switch.cpp
     tools/mixer/mixer_test_prime.cpp
+    tools/mixer/mixer_test_race.cpp
     src/media/streaming_track.cpp
     src/media/looping_source_reader.cpp
     src/mixer/key_bus.cpp

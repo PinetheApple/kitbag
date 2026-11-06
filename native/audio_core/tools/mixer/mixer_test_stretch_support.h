@@ -263,6 +263,7 @@ void RunKeyBusTests();
 void RunConfigTests();
 void RunSwitchTests();
 void RunPrimeTests();
+void RunRaceTests();
 
 }  // namespace mixer_test
 

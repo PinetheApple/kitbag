@@ -44,11 +44,11 @@ void Mixer::ApplyStretchCommand(const Command& command) {
   rate_mirror_.store(rate_target_, std::memory_order_relaxed);
 }
 
-void Mixer::AdoptPlan() {
+bool Mixer::AdoptPlan() {
   const auto* node = plans_.Get();
   if (node == nullptr ||
       node->generation == plan_generation_.load(std::memory_order_relaxed)) {
-    return;
+    return false;
   }
   const TransportPlan& plan = node->value;
   if (plan.kind == PlanKind::kHandOver) {
@@ -57,6 +57,7 @@ void Mixer::AdoptPlan() {
     AdoptTransport(plan);
   }
   plan_generation_.store(node->generation, std::memory_order_release);
+  return true;
 }
 
 // A keep counts on from where its head stood when the plan was built, so an
@@ -228,7 +229,11 @@ void Mixer::Process(float* output, uint32_t frame_count) {
   // so read_frame_ is written only from here.
   ApplyPendingCommands();
   AdoptPlan();
+  if (snapshot_hook_) snapshot_hook_();
   SnapshotBuses();
+  // A plan is published before the bank it replaces is freed, so a bank freed
+  // under the snapshot means its successor's plan is already readable.
+  if (AdoptPlan()) SnapshotBuses();
   song_clock_.playing = false;
   // Scratch is sized to kMaxBlockFrames at setup; a wider block cannot be
   // drained without allocating, which the callback must never do.

@@ -144,6 +144,11 @@ class Mixer {
   void set_handover_publish_hook(std::function<void()> hook) {
     handover_publish_hook_ = std::move(hook);
   }
+  /// Tests only: runs on the callback between adopting a plan and loading the
+  /// block's buses.
+  void set_snapshot_hook(std::function<void()> hook) {
+    snapshot_hook_ = std::move(hook);
+  }
   uint64_t missed_handovers() const {
     return missed_handovers_;
   }
@@ -228,7 +233,7 @@ class Mixer {
   void ApplyCommand(const Command& command);
   void ApplyStretchCommand(const Command& command);
   void RecomputeAnySolo();
-  void AdoptPlan();
+  bool AdoptPlan();
   void AdoptTransport(const TransportPlan& plan);
   bool
   TransportFrameFor(const StreamingTrack::RtView& view, int64_t* frame) const;
@@ -366,6 +371,7 @@ class Mixer {
   int64_t first_lead_frames_ = 0;
   uint64_t missed_handovers_ = 0;
   std::function<void()> handover_publish_hook_;
+  std::function<void()> snapshot_hook_;
   // Callback-owned stretch state. rt_buses_ is loaded once per block.
   int bank_ = 0;
   KeyBus* rt_buses_[kKeyBusCount] = {};
