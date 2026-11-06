@@ -22,14 +22,14 @@ const step = { available: 140, size: SIZE, floor: 8.5, onePx: ONE_PX };
 describe('nextFitCandidate', () => {
   it('is done at the candidate once it fits', () => {
     expect(
-      nextFitCandidate({ ...step, width: 120, candidate: SIZE, pass: 0 }),
+      nextFitCandidate({ ...step, textWidth: 120, candidate: SIZE, pass: 0 }),
     ).toEqual({ done: true, fontSize: SIZE });
   });
 
   it('first scales the design size in proportion to the overflow', () => {
     const next = nextFitCandidate({
       ...step,
-      width: 164,
+      textWidth: 164,
       candidate: SIZE,
       pass: 0,
     });
@@ -39,7 +39,7 @@ describe('nextFitCandidate', () => {
   it('steps a further pixel down on each pass after the first', () => {
     const next = nextFitCandidate({
       ...step,
-      width: 142,
+      textWidth: 142,
       candidate: 14,
       pass: 1,
     });
@@ -49,7 +49,7 @@ describe('nextFitCandidate', () => {
   it('never proposes a candidate below the floor', () => {
     const next = nextFitCandidate({
       ...step,
-      width: 400,
+      textWidth: 400,
       candidate: SIZE,
       pass: 0,
     });
@@ -58,7 +58,7 @@ describe('nextFitCandidate', () => {
 
   it('stops at the floor when the floor still overflows', () => {
     expect(
-      nextFitCandidate({ ...step, width: 200, candidate: 8.5, pass: 1 }),
+      nextFitCandidate({ ...step, textWidth: 200, candidate: 8.5, pass: 1 }),
     ).toEqual({ done: true, fontSize: 8.5 });
   });
 
@@ -66,7 +66,7 @@ describe('nextFitCandidate', () => {
     expect(
       nextFitCandidate({
         ...step,
-        width: 141,
+        textWidth: 141,
         candidate: 12,
         pass: MAX_SETTLE_PASSES,
       }),
@@ -105,14 +105,14 @@ describe('fittedStyle', () => {
   });
 });
 
-function measure(state: OneLineSettle, width: number): OneLineSettle {
+function measure(state: OneLineSettle, textWidth: number): OneLineSettle {
   return measureOneLine(
     state,
     {
       text: state.text,
       generation: state.generation,
       candidate: state.candidate,
-      width,
+      textWidth,
     },
     PARAMS,
   );
@@ -177,7 +177,7 @@ describe('settling a one-line label', () => {
       text: mounted.text,
       generation: mounted.generation - 1,
       candidate: SIZE,
-      width: 10,
+      textWidth: 10,
     };
     expect(measureOneLine(mounted, stale, PARAMS)).toBe(mounted);
   });

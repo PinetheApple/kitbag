@@ -5,7 +5,7 @@ export const MAX_SETTLE_PASSES = 3;
 
 export interface FitStep {
   readonly available: number;
-  readonly width: number;
+  readonly textWidth: number;
   readonly candidate: number;
   readonly floor: number;
   readonly pass: number;
@@ -20,16 +20,16 @@ export type FitNext =
 // proportional fit can still overflow; later passes step a pixel lower.
 export function nextFitCandidate({
   available,
-  width,
+  textWidth,
   candidate,
   floor,
   pass,
   onePx,
 }: FitStep): FitNext {
-  if (width <= available) return { done: true, fontSize: candidate };
+  if (textWidth <= available) return { done: true, fontSize: candidate };
   if (candidate <= floor || pass >= MAX_SETTLE_PASSES)
     return { done: true, fontSize: candidate };
-  const scaled = (candidate * available) / width - (pass === 0 ? 0 : onePx);
+  const scaled = (candidate * available) / textWidth - (pass === 0 ? 0 : onePx);
   return { done: false, candidate: Math.max(floor, scaled) };
 }
 
@@ -64,7 +64,7 @@ export interface OneLineSettle {
   readonly available: number | undefined;
   readonly candidate: number;
   readonly pass: number;
-  readonly width: number | undefined;
+  readonly textWidth: number | undefined;
   readonly settled: boolean;
   readonly shown: number | undefined;
 }
@@ -73,7 +73,7 @@ export interface OneLineMeasurement {
   readonly text: string;
   readonly generation: number;
   readonly candidate: number;
-  readonly width: number;
+  readonly textWidth: number;
 }
 
 export function startOneLine(
@@ -87,17 +87,18 @@ export function startOneLine(
     available: previous?.available,
     candidate: size,
     pass: 0,
-    width: undefined,
+    textWidth: undefined,
     settled: false,
     shown: previous?.shown,
   };
 }
 
 function advance(state: OneLineSettle, params: OneLineParams): OneLineSettle {
-  if (state.available === undefined || state.width === undefined) return state;
+  if (state.available === undefined || state.textWidth === undefined)
+    return state;
   const next = nextFitCandidate({
     available: state.available,
-    width: state.width,
+    textWidth: state.textWidth,
     candidate: state.candidate,
     floor: params.floor,
     pass: state.pass,
@@ -109,7 +110,7 @@ function advance(state: OneLineSettle, params: OneLineParams): OneLineSettle {
         ...state,
         candidate: next.candidate,
         pass: state.pass + 1,
-        width: undefined,
+        textWidth: undefined,
       };
 }
 
@@ -136,8 +137,8 @@ export function measureOneLine(
   )
     return state;
   if (state.settled)
-    return measurement.width === state.width
+    return measurement.textWidth === state.textWidth
       ? state
       : startOneLine(state.text, params.size, state);
-  return advance({ ...state, width: measurement.width }, params);
+  return advance({ ...state, textWidth: measurement.textWidth }, params);
 }

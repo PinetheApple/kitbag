@@ -52,7 +52,7 @@ function OneLineMeasurer({
         text,
         generation,
         candidate,
-        width: event.nativeEvent.layout.width,
+        textWidth: event.nativeEvent.layout.width,
       });
     },
     [onMeasure, text, generation, candidate],
@@ -110,7 +110,7 @@ export function useOneLineFit({
     },
     [params],
   );
-  const shown = useMemo<TextStyle>(
+  const fitStyle = useMemo<TextStyle>(
     () =>
       state.shown === undefined ? unmeasured : fittedStyle(role, state.shown),
     [role, state.shown],
@@ -125,5 +125,5 @@ export function useOneLineFit({
       onMeasure={onMeasure}
     />
   );
-  return { style: shown, onAvailableLayout, measurer };
+  return { style: fitStyle, onAvailableLayout, measurer };
 }
