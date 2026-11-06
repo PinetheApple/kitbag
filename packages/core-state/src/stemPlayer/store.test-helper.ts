@@ -14,6 +14,22 @@ export const SAVE_MS = 500;
 export const SEEK_MS = 100;
 export const BARS = 8;
 
+export const SONG_DETAILS: Partial<StemSetRecord> = {
+  sections: [
+    { name: 'Verse', kind: 'verse', color: '', startSec: 4, endSec: 8 },
+    { name: 'Intro', kind: 'intro', color: '', startSec: 0, endSec: 4 },
+    { name: 'Outro', kind: 'outro', color: '', startSec: 8, endSec: 12 },
+  ],
+  lyrics: {
+    synced: '[00:01.00]One\n[00:02.00]\n[00:03.00]Two\n[00:05.00]Three',
+    plain: null,
+    offsetSec: 0.5,
+    instrumental: false,
+  },
+};
+
+export const at = (seconds: number) => Math.round(seconds * RATE);
+
 export function stem(id: number, change: Partial<StoredStem> = {}): StoredStem {
   return {
     id,

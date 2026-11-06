@@ -5,7 +5,12 @@ import { stems, stemSets } from './schema';
 import { packFloat32, packInt32, unpackFloat32, unpackInt32 } from './packing';
 import { STEM_SET_SOURCE, type StemSetSource } from './stem-set-source';
 import { applyUserNames, readUserNames } from './stem-rename';
-import { parseRetimedLyrics, type RetimedLyrics } from './stem-lyrics';
+import {
+  parseRetimedLyrics,
+  restoreRetime,
+  retimeKeptBy,
+  type LyricLineTimes,
+} from './stem-lyrics';
 
 const STEM_FORMAT = 'flac';
 const BAR_MARK_FIELDS = 2;
@@ -83,7 +88,7 @@ export interface StemSetRecord extends Omit<
   readonly sampleRate: number | null;
   readonly createdAt: Date;
   readonly speed: number;
-  readonly lyricsRetimed: RetimedLyrics | null;
+  readonly lyricsRetimed: LyricLineTimes | null;
   readonly stems: readonly StoredStem[];
 }
 
@@ -258,9 +263,11 @@ export async function replaceStemBundle(
   if (existing === undefined)
     return { id: await insertStemBundle(db, bundle), replaced: null };
   const names = await readUserNames(db, existing.id);
+  const retimed = await retimeKeptBy(db, existing.id, bundle.lyrics);
   const replaced = await deleteStemSet(db, existing.id);
   const id = await insertStemBundle(db, bundle);
   await applyUserNames(db, id, names);
+  await restoreRetime(db, id, retimed);
   return { id, replaced };
 }
 

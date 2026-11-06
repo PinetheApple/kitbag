@@ -92,7 +92,7 @@ export function transportActions(
   scrubSeek: Debounced<[number]>,
 ): Pick<
   StemPlayerActions,
-  'togglePlay' | 'scrub' | 'cancelScrub' | 'seek' | 'skip' | 'jumpToSection'
+  'togglePlay' | 'scrub' | 'cancelScrub' | 'seek' | 'skip'
 > {
   const seek = (frame: number) => {
     scrubSeek.cancel();
@@ -120,11 +120,6 @@ export function transportActions(
       scrubSeek.cancel();
     },
     seek,
-    jumpToSection: (index) => {
-      const section = get().sections[index];
-      if (section === undefined) return;
-      seek(secondsToFrames(section.startSec, get().engineRate));
-    },
     skip: (seconds) => {
       seek(
         runtimeOf().engine.position() +

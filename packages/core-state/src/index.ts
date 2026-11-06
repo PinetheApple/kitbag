@@ -257,6 +257,7 @@ export {
   stemPlayerStore,
   type LoopFailure,
   type LoopState,
+  type RetimeFailure,
   type RetimeState,
   type StemPlayerStatus,
   type StemPlayerStore,
@@ -280,9 +281,11 @@ export type { LyricLine } from './stemPlayer/lrc.ts';
 export {
   lyricLineAt,
   NO_LINE,
+  RETIME_SHIFT_STEP_SEC,
   type RetimeTap,
   type SongLyrics,
 } from './stemPlayer/lyrics.ts';
+export type { LoopSeconds } from './stemPlayer/loop.ts';
 export { NO_SECTION, sectionAt } from './stemPlayer/sections.ts';
 export {
   bpmFact,

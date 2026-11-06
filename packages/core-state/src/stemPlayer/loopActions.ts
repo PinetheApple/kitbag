@@ -5,6 +5,14 @@ import { sessionGate } from './sessionGate.ts';
 import type { ActionContext, LoopFailure, StemPlayerActions } from './store.ts';
 import { framesToSeconds, secondsToFrames } from './time.ts';
 
+function boundsOf({ startSec, endSec }: LoopSeconds): LoopSeconds {
+  return { startSec, endSec };
+}
+
+function loopHolds({ startSec, endSec }: LoopSeconds, seconds: number) {
+  return seconds >= startSec && seconds < endSec;
+}
+
 function failureOf(result: number): LoopFailure {
   return result === KB_RESULT.KB_ERROR_INVALID_ARGUMENT ? 'pastEnd' : 'engine';
 }
@@ -14,19 +22,32 @@ export function loopActions({
   get,
   runtimeOf,
   session,
-}: ActionContext): Pick<StemPlayerActions, 'markLoop' | 'loopSection'> {
+}: ActionContext): Pick<
+  StemPlayerActions,
+  'markLoop' | 'undoLoop' | 'jumpToSection' | 'loopSection'
+> {
   const { busy, call } = sessionGate(session);
   const positionSeconds = () =>
     framesToSeconds(runtimeOf().engine.position(), get().engineRate);
 
-  const clear = async () => {
+  const refuse = (loopFailure: LoopFailure) => {
+    set(({ loop }) => ({
+      loop: loop.kind === 'on' ? loop : { kind: 'off' },
+      loopFailure,
+    }));
+  };
+
+  const clear = async (savedLoop: LoopSeconds | null): Promise<boolean> => {
     const { result, live } = await call(() =>
       runtimeOf().commands.mixerClearLoop(),
     );
-    if (!live) return;
-    if (result === KB_RESULT.KB_OK)
-      set({ loop: { kind: 'off' }, loopFailure: null });
-    else set({ loopFailure: 'engine' });
+    if (!live) return false;
+    if (result === KB_RESULT.KB_OK) {
+      set({ loop: { kind: 'off' }, loopFailure: null, savedLoop });
+      return true;
+    }
+    set({ loopFailure: 'engine' });
+    return false;
   };
 
   const setLoop = async (bounds: LoopSeconds): Promise<boolean> => {
@@ -37,7 +58,7 @@ export function loopActions({
       durationFrames,
     );
     if (endFrame <= startFrame) {
-      set({ loop: { kind: 'off' }, loopFailure: 'tooShort' });
+      refuse('tooShort');
       return false;
     }
     const { commands } = runtimeOf();
@@ -59,7 +80,7 @@ export function loopActions({
       });
       return true;
     }
-    set({ loop: { kind: 'off' }, loopFailure: failureOf(result) });
+    refuse(failureOf(result));
     return false;
   };
 
@@ -68,7 +89,7 @@ export function loopActions({
       if (busy()) return;
       const { loop, beats } = get();
       if (loop.kind === 'on') {
-        await clear();
+        await clear(null);
         return;
       }
       if (loop.kind === 'off') {
@@ -78,21 +99,41 @@ export function loopActions({
             startSec: snapToBeat(positionSeconds(), beats),
           },
           loopFailure: null,
+          savedLoop: null,
         });
         return;
       }
       const bounds = loopBetween(loop.startSec, positionSeconds(), beats);
       if (bounds === null) {
-        set({ loop: { kind: 'off' }, loopFailure: 'tooShort' });
+        refuse('tooShort');
         return;
       }
       await setLoop(bounds);
     },
-    loopSection: async (index) => {
-      const section = get().sections[index];
+    undoLoop: async () => {
+      const { savedLoop } = get();
+      if (busy() || savedLoop === null) return;
+      if (await setLoop(savedLoop)) set({ savedLoop: null });
+    },
+    jumpToSection: async (index) => {
+      const { sections, loop } = get();
+      const section = sections[index];
       if (busy() || section === undefined) return;
-      if (await setLoop(section))
-        get().seek(secondsToFrames(section.startSec, get().engineRate));
+      if (
+        loop.kind === 'on' &&
+        !loopHolds(loop, section.startSec) &&
+        !(await clear(boundsOf(loop)))
+      )
+        return;
+      get().seek(secondsToFrames(section.startSec, get().engineRate));
+    },
+    loopSection: async (index) => {
+      const { sections, loop, savedLoop } = get();
+      const section = sections[index];
+      if (busy() || section === undefined) return;
+      if (!(await setLoop(section))) return;
+      set({ savedLoop: loop.kind === 'on' ? boundsOf(loop) : savedLoop });
+      get().seek(secondsToFrames(section.startSec, get().engineRate));
     },
   };
 }

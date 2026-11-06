@@ -29,7 +29,7 @@ export type {
   StoredSection,
   StoredStem,
 } from './stem-bundle-repository';
-export type { RetimedLyrics } from './stem-lyrics';
+export type { LyricLineTimes } from './stem-lyrics';
 export { STEM_SET_SOURCE, type StemSetSource } from './stem-set-source';
 export { ANALYSIS_STATUS, type AnalysisStatus } from './analysis-status';
 export type {

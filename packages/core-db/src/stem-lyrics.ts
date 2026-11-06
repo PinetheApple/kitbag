@@ -5,11 +5,11 @@ import { stemSets } from './schema';
 
 const RETIMED_LYRICS_VERSION = 1;
 
-export type RetimedLyrics = readonly number[];
+export type LyricLineTimes = readonly number[];
 
 interface RetimedLyricsJson {
   readonly version: typeof RETIMED_LYRICS_VERSION;
-  readonly times: RetimedLyrics;
+  readonly times: LyricLineTimes;
 }
 
 function isRetimed(value: unknown): value is RetimedLyricsJson {
@@ -22,7 +22,7 @@ function isRetimed(value: unknown): value is RetimedLyricsJson {
   );
 }
 
-export function parseRetimedLyrics(text: string | null): RetimedLyrics | null {
+export function parseRetimedLyrics(text: string | null): LyricLineTimes | null {
   if (text === null) return null;
   try {
     const parsed: unknown = JSON.parse(text);
@@ -32,7 +32,7 @@ export function parseRetimedLyrics(text: string | null): RetimedLyrics | null {
   }
 }
 
-function encodeRetimedLyrics(times: RetimedLyrics | null): string | null {
+function encodeRetimedLyrics(times: LyricLineTimes | null): string | null {
   if (times === null) return null;
   const json: RetimedLyricsJson = { version: RETIMED_LYRICS_VERSION, times };
   return JSON.stringify(json);
@@ -41,10 +41,49 @@ function encodeRetimedLyrics(times: RetimedLyrics | null): string | null {
 export async function saveLyricsRetimed(
   db: Database,
   stemSetId: number,
-  times: RetimedLyrics | null,
+  times: LyricLineTimes | null,
 ): Promise<void> {
   await db
     .update(stemSets)
     .set({ lyricsRetimed: encodeRetimedLyrics(times) })
+    .where(eq(stemSets.id, stemSetId));
+}
+
+interface RetimeSource {
+  readonly synced: string | null;
+  readonly plain: string | null;
+}
+
+// A plain-only retiming indexes the plain lines, so those must match as well.
+export async function retimeKeptBy(
+  db: Database,
+  stemSetId: number,
+  next: RetimeSource | null,
+): Promise<string | null> {
+  const [row] = await db
+    .select({
+      synced: stemSets.lyricsSynced,
+      plain: stemSets.lyricsPlain,
+      retimed: stemSets.lyricsRetimed,
+    })
+    .from(stemSets)
+    .where(eq(stemSets.id, stemSetId));
+  if (row === undefined) return null;
+  const synced = next?.synced ?? null;
+  const sameSource =
+    row.synced === synced &&
+    (synced !== null || row.plain === (next?.plain ?? null));
+  return sameSource ? row.retimed : null;
+}
+
+export async function restoreRetime(
+  db: Database,
+  stemSetId: number,
+  retimed: string | null,
+): Promise<void> {
+  if (retimed === null) return;
+  await db
+    .update(stemSets)
+    .set({ lyricsRetimed: retimed })
     .where(eq(stemSets.id, stemSetId));
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseLrc } from './lrc.ts';
+import { parseLrc, plainLyricTexts } from './lrc.ts';
 
 describe('LRC parsing', () => {
   it('reads hundredths and milliseconds', () => {
@@ -68,8 +68,31 @@ describe('LRC parsing', () => {
     ]);
   });
 
+  it('splits on a bare carriage return', () => {
+    expect(parseLrc('[00:01.00]A\r[00:02.00]B')).toEqual([
+      { timeSec: 1, text: 'A' },
+      { timeSec: 2, text: 'B' },
+    ]);
+  });
+
+  it('normalises text to composed form', () => {
+    const [line] = parseLrc('[00:01.00]Cafe\u0301');
+    expect(line?.text).toBe('Caf\u00e9');
+  });
+
   it('gives nothing for plain text', () => {
     expect(parseLrc('First line\nSecond line')).toEqual([]);
     expect(parseLrc('')).toEqual([]);
+  });
+});
+
+describe('plain lyric text', () => {
+  it('splits every line ending, normalises and drops blank lines', () => {
+    expect(plainLyricTexts('a\rb\r\n\n Cafe\u0301 \nd')).toEqual([
+      'a',
+      'b',
+      'Caf\u00e9',
+      'd',
+    ]);
   });
 });

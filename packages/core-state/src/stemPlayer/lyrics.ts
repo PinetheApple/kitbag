@@ -1,23 +1,28 @@
-import type { RetimedLyrics, StoredLyrics } from '@kitbag/core-db';
+import type { LyricLineTimes, StoredLyrics } from '@kitbag/core-db';
 
-import { parseLrc, type LyricLine } from './lrc.ts';
-import { lastAtOrBefore } from './search.ts';
+import { parseLrc, plainLyricTexts, type LyricLine } from './lrc.ts';
+import { lastAtOrBefore, NOT_FOUND } from './search.ts';
 
-export const NO_LINE = -1;
+export const NO_LINE = NOT_FOUND;
+export const RETIME_SHIFT_STEP_SEC = 0.1;
+// Sorts after every real time, so lyricLineAt never reaches an untapped line.
+const UNTIMED = Infinity;
 
 export interface SongLyrics {
   readonly lines: readonly LyricLine[];
-  readonly bundled: readonly number[];
+  readonly bundledTimes: readonly number[];
   readonly plain: string | null;
   readonly instrumental: boolean;
+  readonly synced: boolean;
   readonly retimed: boolean;
 }
 
 export const NO_LYRICS: SongLyrics = {
   lines: [],
-  bundled: [],
+  bundledTimes: [],
   plain: null,
   instrumental: false,
+  synced: false,
   retimed: false,
 };
 
@@ -26,8 +31,38 @@ export interface RetimeTap {
   readonly timeSec: number;
 }
 
+export interface RetimeTake {
+  readonly taps: readonly RetimeTap[];
+  readonly nextLine: number;
+}
+
 function inOrder(times: readonly number[]): boolean {
-  return times.every((time, i) => i === 0 || time >= (times[i - 1] ?? time));
+  return times.every((time, i) => time >= (times[i - 1] ?? time));
+}
+
+export function hasRealTime(times: readonly number[]): boolean {
+  return times.some((time) => time !== UNTIMED);
+}
+
+function bundledLines(stored: StoredLyrics): LyricLine[] {
+  const { synced, plain, offsetSec, instrumental } = stored;
+  if (instrumental) return [];
+  const parsed = synced === null ? [] : parseLrc(synced);
+  if (parsed.length > 0)
+    return parsed.map((line) => ({
+      ...line,
+      timeSec: line.timeSec + offsetSec,
+    }));
+  return plain === null
+    ? []
+    : plainLyricTexts(plain).map((text) => ({ timeSec: UNTIMED, text }));
+}
+
+function fitsLines(times: LyricLineTimes, bundled: readonly number[]) {
+  const countFits = hasRealTime(bundled)
+    ? times.length === bundled.length
+    : times.length > 0 && times.length <= bundled.length;
+  return countFits && inOrder(times);
 }
 
 export function withTimes(
@@ -42,24 +77,22 @@ export function withTimes(
 
 export function songLyrics(
   stored: StoredLyrics | null,
-  retimed: RetimedLyrics | null,
+  retimed: LyricLineTimes | null,
 ): SongLyrics {
   if (stored === null) return NO_LYRICS;
-  const { synced, plain, offsetSec, instrumental } = stored;
-  const parsed = synced === null || instrumental ? [] : parseLrc(synced);
-  const bundled = parsed.map((line) => line.timeSec + offsetSec);
-  const usable =
-    retimed !== null && retimed.length === parsed.length && inOrder(retimed);
+  const base = bundledLines(stored);
+  const bundledTimes = base.map((line) => line.timeSec);
+  const usable = retimed !== null && fitsLines(retimed, bundledTimes);
   return {
-    lines: withTimes(parsed, usable ? retimed : bundled),
-    bundled,
-    plain,
-    instrumental,
+    lines: withTimes(base, usable ? retimed : bundledTimes),
+    bundledTimes,
+    plain: stored.plain,
+    instrumental: stored.instrumental,
+    synced: usable || hasRealTime(bundledTimes),
     retimed: usable,
   };
 }
 
-// Lines and times are song time, so the lookup holds at any playback speed.
 export function lyricLineAt(
   lines: readonly LyricLine[],
   songSec: number,
@@ -77,32 +110,84 @@ export function nextSungLine(
   return NO_LINE;
 }
 
-// Taps pin their lines; each later line moves with the tap before it, then is
-// clamped between its neighbours so the times stay sorted for the lookup.
-export function retimedTimes(
+// Earlier untimed lines would break the sort, so a session cannot start past one.
+export function firstRetimeLine(
   lines: readonly LyricLine[],
-  taps: readonly RetimeTap[],
+  from: number,
+): number {
+  const untimed = lines.findIndex((line) => line.timeSec === UNTIMED);
+  return nextSungLine(
+    lines,
+    untimed === NOT_FOUND ? from : Math.min(from, untimed),
+  );
+}
+
+// A tap at or before an earlier one redoes the take from that line on.
+export function takeAfterTap(
+  lines: readonly LyricLine[],
+  { taps, nextLine }: RetimeTake,
+  timeSec: number,
+): RetimeTake | null {
+  const redoFrom = taps.findIndex((tap) => tap.timeSec >= timeSec);
+  const line = taps[redoFrom]?.line ?? nextLine;
+  if (line === NO_LINE) return null;
+  const kept = redoFrom === NOT_FOUND ? taps : taps.slice(0, redoFrom);
+  return {
+    taps: [...kept, { line, timeSec }],
+    nextLine: nextSungLine(lines, line + 1),
+  };
+}
+
+function shiftedAfterTaps(
+  lines: readonly LyricLine[],
+  pinned: ReadonlyMap<number, number>,
 ): number[] {
-  const pinned = new Map(taps.map((tap) => [tap.line, tap.timeSec]));
   let shift = 0;
-  const moved = lines.map((line, i) => {
+  return lines.map((line, i) => {
     const tapped = pinned.get(i);
     if (tapped === undefined) return line.timeSec + shift;
-    shift = tapped - line.timeSec;
+    if (line.timeSec !== UNTIMED) shift = tapped - line.timeSec;
     return tapped;
   });
+}
+
+// Sorted because lyricLineAt binary-searches these.
+function orderedBetweenPins(
+  times: readonly number[],
+  pinned: ReadonlyMap<number, number>,
+): number[] {
   const ceilings: number[] = [];
   let ceiling = Infinity;
-  for (let i = moved.length - 1; i >= 0; i--) {
+  for (let i = times.length - 1; i >= 0; i--) {
     ceiling = pinned.get(i) ?? ceiling;
     ceilings[i] = ceiling;
   }
   let floor = -Infinity;
-  return moved.map((time, i) => {
+  return times.map((time, i) => {
     const placed = pinned.has(i)
       ? time
       : Math.min(Math.max(time, floor), ceilings[i] ?? Infinity);
     floor = placed;
     return placed;
   });
+}
+
+export function retimedTimes(
+  lines: readonly LyricLine[],
+  taps: readonly RetimeTap[],
+): number[] {
+  const pinned = new Map(taps.map((tap) => [tap.line, tap.timeSec]));
+  return orderedBetweenPins(shiftedAfterTaps(lines, pinned), pinned);
+}
+
+export function shiftedTimes(
+  times: readonly number[],
+  steps: number,
+): readonly number[] {
+  if (steps === 0) return times;
+  return times.map((time) => Math.max(0, time + steps * RETIME_SHIFT_STEP_SEC));
+}
+
+export function storedTimes(times: readonly number[]): number[] {
+  return times.filter((time) => time !== UNTIMED);
 }

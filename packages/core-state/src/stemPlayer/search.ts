@@ -1,3 +1,5 @@
+export const NOT_FOUND = -1;
+
 export function lastAtOrBefore<K extends string>(
   sorted: readonly Readonly<Record<K, number>>[],
   key: K,
@@ -11,5 +13,5 @@ export function lastAtOrBefore<K extends string>(
     if ((sorted[mid]?.[key] ?? Infinity) <= value) low = mid + 1;
     else high = mid;
   }
-  return low - 1;
+  return low + NOT_FOUND;
 }

@@ -1,9 +1,9 @@
-const MS_PER_SECOND = 1000;
-const SECONDS_PER_MINUTE = 60;
+import { MS_PER_SECOND, SECONDS_PER_MINUTE } from '../text.ts';
+
 const TIME_TAG = /^\s*\[(\d{1,3}):(\d{1,2})(?:[.:](\d{1,3}))?\]/;
 const OFFSET_TAG = /^\[offset:\s*([+-]?\d+)\s*\]$/i;
 const WORD_STAMP = /<\d{1,3}:\d{1,2}(?:[.:]\d{1,3})?>/g;
-const LINE_BREAK = /\r?\n/;
+const LINE_BREAK = /\r\n?|\n/;
 const SPACES = /\s+/g;
 
 export interface LyricLine {
@@ -22,7 +22,7 @@ function stampSeconds(
   );
 }
 
-function timedLine(raw: string): LyricLine[] {
+function timedLines(raw: string): LyricLine[] {
   const stamps: number[] = [];
   let rest = raw;
   for (let tag = TIME_TAG.exec(rest); tag; tag = TIME_TAG.exec(rest)) {
@@ -34,15 +34,14 @@ function timedLine(raw: string): LyricLine[] {
   return stamps.map((timeSec) => ({ timeSec, text }));
 }
 
-// A positive [offset:ms] shows lines sooner; StemDeck reads it the same way and
-// applies the bundle's offset_sec on top.
+// LRC defines a positive [offset:ms] as earlier.
 export function parseLrc(text: string): LyricLine[] {
   let offsetSec = 0;
   const lines: LyricLine[] = [];
-  for (const raw of text.split(LINE_BREAK)) {
+  for (const raw of text.normalize('NFC').split(LINE_BREAK)) {
     const offset = OFFSET_TAG.exec(raw.trim());
     if (offset) offsetSec = Number(offset[1]) / MS_PER_SECOND;
-    else lines.push(...timedLine(raw));
+    else lines.push(...timedLines(raw));
   }
   return lines
     .map((line) => ({
@@ -50,4 +49,12 @@ export function parseLrc(text: string): LyricLine[] {
       timeSec: Math.max(0, line.timeSec - offsetSec),
     }))
     .sort((a, b) => a.timeSec - b.timeSec);
+}
+
+export function plainLyricTexts(text: string): string[] {
+  return text
+    .normalize('NFC')
+    .split(LINE_BREAK)
+    .map((line) => line.replace(SPACES, ' ').trim())
+    .filter((line) => line !== '');
 }

@@ -1,8 +1,8 @@
 import type { StoredSection } from '@kitbag/core-db';
 
-import { lastAtOrBefore } from './search.ts';
+import { lastAtOrBefore, NOT_FOUND } from './search.ts';
 
-export const NO_SECTION = -1;
+export const NO_SECTION = NOT_FOUND;
 
 export function sortedSections(
   sections: readonly StoredSection[],
