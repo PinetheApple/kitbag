@@ -1,12 +1,13 @@
 import { createThemedStyles, size, stemPlayer } from '@kitbag/core-design';
 import { useStemPlayer } from '@kitbag/core-state';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { BackHandler, ScrollView, Text, View } from 'react-native';
+import { BackHandler, ScrollView, View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 
 import { collapseFaderOnBack } from '../logic/faderBack.ts';
 import { GainFader } from './GainFader.tsx';
 import { LevelChip } from './LevelChip.tsx';
+import { StemName } from './StemName.tsx';
 import { StemRowView } from './StemRowView.tsx';
 import { useStemStyles } from './stemStyles.ts';
 
@@ -47,9 +48,11 @@ function MasterRow({
           expanded ? stemStyles.rowExpanded : stemStyles.rowMaster,
         ]}
       >
-        <Text style={[stemStyles.name, stemStyles.nameMaster, styles.grow]}>
-          Master
-        </Text>
+        <StemName
+          name="Master"
+          style={[stemStyles.name, stemStyles.nameMaster]}
+          boxStyle={styles.grow}
+        />
         <LevelChip
           label="Master"
           gain={gain}
