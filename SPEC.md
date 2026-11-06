@@ -408,8 +408,8 @@ position that crosses the ABI;** engine frames stay the unit of the clock.
 - `kb_mixer_position`, `kb_mixer_seek` and the loop points are engine-rate song
   frames (song time × engine rate), whatever the stems' own rate. The UI never
   converts by rate itself.
-- The stretch stage adds latency. It is reported alongside output latency and
-  compensated the same way (§12.5.1), so click and stems still land together.
+- The stretch stage adds latency. It is compensated inside the song-frame
+  mapping, so click and stems still land together; none of it crosses the ABI.
 
 ### 4.3 New: downbeats
 
