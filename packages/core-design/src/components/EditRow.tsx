@@ -29,8 +29,6 @@ import { minTouchTargetDp, radii } from '../tokens.ts';
 import { Icon } from './Icon.tsx';
 import { SwitchTrack } from './Switch.tsx';
 
-export const EDIT_ROW_PRESSABLE_GAP = inset.editRowV + size.stroke;
-
 const useStyles = createThemedStyles((theme) => ({
   group: {
     paddingVertical: inset.editGroupV,

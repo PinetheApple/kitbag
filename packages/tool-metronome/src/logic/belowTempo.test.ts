@@ -7,6 +7,7 @@ import {
   beatLinePitch,
   belowTempoReserve,
   DOT_METRICS,
+  statusProgressReserve,
   statusRowHeight,
   statusRowPitch,
   statusStackHeight,
@@ -158,10 +159,14 @@ describe('the status stack', () => {
   });
 
   it('grows each row with the text so a wrapped second line fits', () => {
-    expect(statusRowHeight(2)).toBe(metronome.statusRow * 2);
-    expect(statusRowPitch(2)).toBe(
-      metronome.statusRow * 2 + metronome.statusRowGap,
-    );
+    const grown = metronome.statusRow * 2 + metronome.statusProgress;
+    expect(statusRowHeight(2)).toBe(grown);
+    expect(statusRowPitch(2)).toBe(grown + metronome.statusRowGap);
+  });
+
+  it('keeps grown text clear of the progress bar along the row foot', () => {
+    expect(statusProgressReserve(1)).toBe(0);
+    expect(statusProgressReserve(2)).toBe(metronome.statusProgress);
   });
 
   it('stacks two grown rows while running and one while stopped', () => {

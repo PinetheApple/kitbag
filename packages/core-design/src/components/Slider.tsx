@@ -55,8 +55,7 @@ export interface SliderProps {
 
 const useStyles = createThemedStyles((theme) => ({
   hitArea: {
-    flexGrow: 1,
-    flexShrink: 1,
+    width: '100%',
     minWidth: sliderGeometry.minWidth,
     height: minTouchTargetDp,
     justifyContent: 'center',

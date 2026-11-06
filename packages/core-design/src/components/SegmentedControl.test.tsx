@@ -4,6 +4,7 @@ import type { StyleProp, ViewStyle } from 'react-native';
 import { describe, expect, it, vi } from 'vitest';
 
 import { size, space } from '../roles.ts';
+import { wrappedRowGap } from '../segmentHitBox.ts';
 import { ThemeProvider } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
 import {
@@ -115,7 +116,9 @@ describe('SegmentedControl under font scale', () => {
 
   it('wraps options onto further rows inside the track once the text grows', () => {
     for (const size of [...FLEX_SIZES, ...CONTENT_SIZES]) {
-      expect(renderAt(2, size).track.flexWrap).toBe('wrap');
+      const { track } = renderAt(2, size);
+      expect(track.flexWrap).toBe('wrap');
+      expect(track.rowGap).toBe(wrappedRowGap(size));
     }
   });
 
