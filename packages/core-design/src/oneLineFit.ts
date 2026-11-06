@@ -35,7 +35,7 @@ function secantCandidate(
 }
 
 // Android rounds the size up to whole px and scales sp nonlinearly, so a
-// proportional fit can still overflow; later passes solve for it from two points.
+// proportional fit can still overflow.
 export function nextFitCandidate(step: FitStep): FitNext {
   const { available, textWidth, candidate, floor, pass, previousPoint } = step;
   if (textWidth <= available) return { done: true, fontSize: candidate };
