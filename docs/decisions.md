@@ -840,16 +840,17 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   proportion can still render a few px too wide. Ruling A **[coord]**: one
   core-design helper (`useOneLineFit`, with `nextFitCandidate`, `oneLineFloor` and
   `fittedStyle`) measures the label offscreen and sets its size in JS. It measures at
-  the design size, scales in proportion, then re-measures up to three more times,
-  each a pixel lower, stopping at the first fit or at the floor; if the third still
-  overflows it shows that size with an ellipsis. The label stays invisible on mount
-  until settled, so it never shows at the design size and then shrinks; when its text
-  changes in place, the previous size stays shown until the new text settles. It
-  restarts only on a width or text change. Tracking scales with the size, so the
-  measured and the shown label match. Below the floor it ellipsizes on one line. The
-  floors still hold as rendered sizes: they fall in the converter's linear range
-  (8.5 sp at 2.0), per the review's source reading, not checked against the
-  converter tables here. Floors as ruled:
-  `appBarTitleMinSize` at a font scale of 1.0 or less, the design size above it. Home
+  the design size, re-measures at the proportional size, then takes secant passes
+  through the last two measurements, at most three settle passes in all, stopping at
+  the first fit or at the floor; after the cap it shows the last candidate with an
+  ellipsis. The label stays invisible on mount until settled, so it never shows at
+  the design size and then shrinks; when its text changes in place, the previous size
+  stays shown until the new text settles. It restarts on a width change, on a text
+  change, and when a settled measurer re-lays out at a new width, as after a late font
+  load or a font-scale change. Tracking scales with the size, so the measured and the
+  shown label match. Below the floor it ellipsizes on one line. The floors still hold
+  as rendered sizes: they fall in the converter's linear range (8.5 sp at 2.0), not
+  checked against the converter tables. Floors as ruled: `appBarTitleMinSize` at a
+  font scale of 1.0 or less, the design size above it. Home
   tool tiles use the same helper, with their floor at `homeTile.titleMinScale` of the
   tile title's design size; no `adjustsFontSizeToFit` or `minimumFontScale` is left.
