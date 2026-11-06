@@ -6,9 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { textRoles } from '../roles.ts';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
-type Layout = (event: {
-  nativeEvent: { layout: { width: number } };
-}) => void;
+type Layout = (event: { nativeEvent: { layout: { width: number } } }) => void;
 
 const display = vi.hoisted(() => ({ fontScale: 1 }));
 const texts = vi.hoisted(() => [] as Props[]);
@@ -54,8 +52,7 @@ vi.mock('react-native', async (original) => {
 });
 
 const { StyleSheet } = await import('react-native');
-const { DesignFloorOneLineText } =
-  await import('./DesignFloorOneLineText.tsx');
+const { DesignFloorOneLineText } = await import('./DesignFloorOneLineText.tsx');
 
 const ROLE = textRoles.preset;
 const LABEL = '−10';

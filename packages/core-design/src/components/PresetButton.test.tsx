@@ -72,7 +72,9 @@ describe('PresetButton under font scale', () => {
 
   it('keeps a grown label clear of the key edge', () => {
     expect(faceAt(GROWN_FONT_SCALE).paddingHorizontal).toBe(inset.presetLabelH);
-    expect(faceAt(GROWN_FONT_SCALE, 'action').paddingHorizontal).toBe(inset.presetLabelH);
+    expect(faceAt(GROWN_FONT_SCALE, 'action').paddingHorizontal).toBe(
+      inset.presetLabelH,
+    );
   });
 
   it.each(KINDS)('fits the %s label in its own role', (kind) => {
