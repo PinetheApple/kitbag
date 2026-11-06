@@ -93,11 +93,14 @@ describe('PresetButton under font scale', () => {
     });
   });
 
-  it.each(KINDS)('floors the %s label at its design size when scaled', (kind) => {
-    renderAt(GROWN, kind);
-    expect(fits[0]).toMatchObject({ text: LABEL, role: ROLE[kind] });
-    expect(Number(fits[0]?.floor) * GROWN).toBeCloseTo(ROLE[kind].size);
-  });
+  it.each(KINDS)(
+    'floors the %s label at its design size when scaled',
+    (kind) => {
+      renderAt(GROWN, kind);
+      expect(fits[0]).toMatchObject({ text: LABEL, role: ROLE[kind] });
+      expect(Number(fits[0]?.floor) * GROWN).toBeCloseTo(ROLE[kind].size);
+    },
+  );
 
   it.each(KINDS)('never shrinks the %s label at the default scale', (kind) => {
     renderAt(1, kind);
@@ -106,7 +109,9 @@ describe('PresetButton under font scale', () => {
 
   it('keeps the label invisible until it is measured', () => {
     renderAt(GROWN);
-    const style = StyleSheet.flatten(shownLabel()?.style as StyleProp<TextStyle>);
+    const style = StyleSheet.flatten(
+      shownLabel()?.style as StyleProp<TextStyle>,
+    );
     expect(style.opacity).toBe(0);
   });
 

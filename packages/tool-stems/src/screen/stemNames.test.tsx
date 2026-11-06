@@ -82,13 +82,16 @@ describe('stem list names', () => {
     fits.length = 0;
   });
 
-  it.each([MASTER, ...NAMES])('holds %s to one tail-ellipsized line', (name) => {
-    renderAt(TWO_TIMES);
-    expect(textOf(name)).toMatchObject({
-      numberOfLines: 1,
-      ellipsizeMode: 'tail',
-    });
-  });
+  it.each([MASTER, ...NAMES])(
+    'holds %s to one tail-ellipsized line',
+    (name) => {
+      renderAt(TWO_TIMES);
+      expect(textOf(name)).toMatchObject({
+        numberOfLines: 1,
+        ellipsizeMode: 'tail',
+      });
+    },
+  );
 
   it.each([MASTER, ...NAMES])(
     'floors %s at its design size while the text is scaled',
@@ -102,15 +105,20 @@ describe('stem list names', () => {
     },
   );
 
-  it.each([MASTER, ...NAMES])('never shrinks %s at the default scale', (name) => {
-    renderAt(1);
-    const fit = fits.find((options) => options.text === name);
-    expect(fit?.floor).toBe(textRoles.stemName.size);
-  });
+  it.each([MASTER, ...NAMES])(
+    'never shrinks %s at the default scale',
+    (name) => {
+      renderAt(1);
+      const fit = fits.find((options) => options.text === name);
+      expect(fit?.floor).toBe(textRoles.stemName.size);
+    },
+  );
 
   it('fits Master to the width the row leaves it', () => {
     renderAt(TWO_TIMES);
-    const measured = views.filter((view) => view.onLayout === onAvailableLayout);
+    const measured = views.filter(
+      (view) => view.onLayout === onAvailableLayout,
+    );
     expect(measured.at(-1)?.style).toEqual({ styleName: 'grow' });
     expect(measured).toHaveLength(NAMES.length + 1);
   });
