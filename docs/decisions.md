@@ -642,7 +642,7 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   Holding a section over a custom A-B loop replaces it, with Undo. Retime mode at
   0.75×, restoring the speed on exit, is ruled but not built: retime ships at the current
   speed behind `leaveRetime()`, and 0.75× follows #138 (tracked as #299). The data and state
-  layer landed first; the screens follow in `design/kitbag-stems-sections.html`. **[user]**
+  layer landed first; the screens are bound by `design/kitbag-stems-sections.html`. **[user]**
 
 - **2026-11-01 · The Settings click-volume slider sets on a tap (§12.5, #170)** — A tap on
   the Click volume track sets the level there, and a drag keeps the thumb under the finger;
@@ -859,6 +859,12 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
 - **2026-11-07 · Lyric retimings are not backed up (§7.7, #139)** — No backup category covers
   `stem_sets`, so a retime is lost on reinstall along with the stems, and Restore leaves it
   untouched. **[coord]**
+
+- **2026-11-07 · Retime hides its context lines at large text (§7.7, #139)** — At a font
+  scale of 1.5 or more (`stemSections.retimeContextMaxScale`), retime shows only the line to
+  tap; the done and next lines drop out, which `design/kitbag-stems-sections.html` does not
+  draw as a frame. Three wrapped lines otherwise push the tap pad off a 360 × 800 screen. The
+  body scrolls at every size. **[coord]**
 
 - **2026-11-07 · `lyrics_retimed` format (§7.7, #139)** — `{version: 1, times}`, one time per
   line for synced lyrics, or for the first lines tapped of plain-only lyrics. **[coord]**
