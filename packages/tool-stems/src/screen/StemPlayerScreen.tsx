@@ -229,6 +229,7 @@ export function StemPlayerScreen({
   const retiming = useStemPlayer((s) => s.retime.kind === 'recording');
   const [menu, setMenu] = useState(false);
   const [askingReset, setAskingReset] = useState(false);
+  if (askingReset && !retiming) setAskingReset(false);
   const askReset = useCallback(() => {
     setAskingReset(true);
   }, []);

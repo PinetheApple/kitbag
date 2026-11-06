@@ -144,9 +144,8 @@ export function RetimeBar({ onAskReset }: { readonly onAskReset: () => void }) {
   const retime = useStemPlayer((s) => s.retime);
   const retimed = useStemPlayer((s) => s.lyrics.retimed);
   const cancelRetime = useStemPlayer((s) => s.cancelRetime);
-  const leaveRetime = useStemPlayer((s) => s.leaveRetime);
   const commitRetime = useStemPlayer((s) => s.commitRetime);
-  useEffect(() => onHardwareBack(leaveRetime), [leaveRetime]);
+  useEffect(() => onHardwareBack(cancelRetime), [cancelRetime]);
   const save = useCallback(() => {
     void commitRetime();
   }, [commitRetime]);

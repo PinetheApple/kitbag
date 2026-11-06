@@ -1,7 +1,9 @@
+import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { display, pressHardwareBack } from '../testing/reactNativeHosts.ts';
 import {
+  flush,
   mountPlayer,
   PLAIN_LYRICS,
   SONG_DETAILS,
@@ -190,7 +192,42 @@ describe('leaving', () => {
     expect(p.labelled(RETIME)).toHaveLength(1);
   });
 
-  it('goes through leaveRetime on the back gesture and keeps the screen', async () => {
+  it('holds Back while a save runs, and a failed save still shows', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const p = await retiming();
+    let refuse: (reason: Error) => void = () => undefined;
+    p.records.saveLyricsRetimed.mockReturnValueOnce(
+      new Promise((_, reject) => {
+        refuse = reject;
+      }),
+    );
+    await p.touchDown(PAD);
+    await p.press(SAVE);
+    expect(pressHardwareBack()).toBe(true);
+    expect(p.store.getState().retime.kind).toBe('recording');
+    refuse(new Error('disk'));
+    await flush();
+    expect(p.has(NOT_SAVED)).toBe(true);
+    expect(p.store.getState().retime).toMatchObject({
+      taps: [expect.anything()],
+    });
+    warn.mockRestore();
+  });
+
+  it('drops the reset dialog when a save ends the session under it', async () => {
+    const p = await retiming();
+    await p.touchDown(PAD);
+    await p.press(RESET);
+    expect(p.has(DIALOG_TITLE)).toBe(true);
+    await act(async () => {
+      await p.store.getState().commitRetime();
+    });
+    await p.press(RETIME);
+    expect(p.store.getState().retime.kind).toBe('recording');
+    expect(p.has(DIALOG_TITLE)).toBe(false);
+  });
+
+  it('cancels on the back gesture and keeps the screen', async () => {
     const p = await retiming();
     await p.touchDown(PAD);
     expect(pressHardwareBack()).toBe(true);
