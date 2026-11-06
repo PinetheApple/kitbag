@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, type ReactNode } from 'react';
 import {
   View,
   type AccessibilityActionEvent,
@@ -49,6 +49,8 @@ export interface SliderProps {
   readonly detent?: SliderDetent;
   readonly warnAbove?: number;
   readonly look?: SliderLook;
+  readonly behindFill?: ReactNode;
+  readonly overFill?: ReactNode;
 }
 
 const useStyles = createThemedStyles((theme) => ({
@@ -202,7 +204,9 @@ export function Slider(props: SliderProps) {
         style={styles.hitArea}
       >
         <View style={[styles.track, geometry.track]} onLayout={onLayout}>
+          {props.behindFill}
           <Animated.View style={[styles.fill, geometry.track, fillStyle]} />
+          {props.overFill}
           {props.tick === undefined ? null : (
             <View
               style={[

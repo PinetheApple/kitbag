@@ -72,6 +72,7 @@ export const size = {
   stepInlineLarge: 36,
   stepInlineLargeKey: 28,
   segmentLargeOption: 34,
+  segmentTabOption: 40,
   segmentEditRowOption: 32,
   chipLarge: 34,
   transportKeySmall: 40,
@@ -113,6 +114,7 @@ export const radius = {
 export const inset = {
   buttonV: 10,
   buttonH: 18,
+  buttonBarH: 14,
   chipV: 5,
   chipH: 12,
   chipFillH: 8,
@@ -247,6 +249,11 @@ export const iconSizes = {
   listFab: 28,
   emptyMark: 36,
   checkMark: 11,
+  sectionLoop: 20,
+  lyricsChip: 18,
+  lyricsEmpty: 32,
+  retimePad: 40,
+  retimeDone: 14,
 } as const;
 
 export type IconSize = keyof typeof iconSizes;
@@ -362,6 +369,7 @@ export const textRoles = {
     tabular: true,
   },
   segmentLarge: { family: display, weight: 400, size: 13 },
+  segmentTab: { family: display, weight: 400, size: 13.5 },
   chipLarge: { family: display, weight: 400, size: 13 },
   numpadKeyLarge: { family: display, weight: 500, size: 20, tabular: true },
   songArtist,
