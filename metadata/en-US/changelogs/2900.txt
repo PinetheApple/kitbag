@@ -1,0 +1,1 @@
+• Every screen now has the same back chevron and header, and long titles shrink to a readable size before they cut off.
