@@ -202,6 +202,15 @@ describe('settling a one-line label', () => {
     expect(resized.generation).toBeGreaterThan(fitted.generation);
   });
 
+  it('settles on the resize when the measurement arrived first', () => {
+    const measured = measure(startOneLine('Metronome', SIZE), 120);
+    expect(measured.settled).toBe(false);
+    expect(resizeOneLine(measured, 140, PARAMS)).toMatchObject({
+      settled: true,
+      shown: SIZE,
+    });
+  });
+
   it('settles on a fit above the floor when sp grows nonlinearly', () => {
     const toPx = (sp: number) => (sp <= 12 ? 2 * sp : 24 + (sp - 12));
     const widthAt = (sp: number) => 5.5 * toPx(sp);
@@ -249,6 +258,11 @@ describe('settling a one-line label', () => {
       textWidth: 10,
     };
     expect(measureOneLine(mounted, stale, PARAMS)).toBe(mounted);
+  });
+
+  it('stays settled when the text re-lays out at the same width', () => {
+    const fitted = measure(mounted, 120);
+    expect(measure(fitted, 120)).toBe(fitted);
   });
 
   it('starts again when the settled text re-lays out at a new width', () => {
