@@ -15,7 +15,7 @@ import { secondsToFrames, useStemPlayer } from '@kitbag/core-state';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
-import { detailTabLabel } from '../logic/lyricRows.ts';
+import { detailTabLabel } from '../logic/detailView.ts';
 import { DetailPane } from './DetailPane.tsx';
 import { LoopUndoSnackbar } from './LoopUndoSnackbar.tsx';
 import { PlayerMenu } from './PlayerMenu.tsx';
@@ -116,6 +116,32 @@ function Dock({
   );
 }
 
+interface PlayerTabsProps {
+  readonly label: string;
+  readonly picked: Tab;
+  readonly onPick: (tab: Tab) => void;
+}
+
+function PlayerTabs({ label, picked, onPick }: PlayerTabsProps) {
+  const options = useMemo<readonly SegmentOption<Tab>[]>(
+    () => [
+      { value: MIX, label: 'Mix' },
+      { value: DETAILS, label },
+    ],
+    [label],
+  );
+  return (
+    <SegmentedControl
+      size="tab"
+      options={options}
+      selected={picked}
+      accessibilityLabel="Player view"
+      neighbourGapDp={stemPlayer.bodyGap}
+      onSelect={onPick}
+    />
+  );
+}
+
 interface PlayerContentProps {
   readonly frame: MixerFrameValues;
   readonly picked: Tab;
@@ -124,13 +150,8 @@ interface PlayerContentProps {
 
 function PlayerContent({ frame, picked, onPick }: PlayerContentProps) {
   const styles = useStyles();
-  const label = useStemPlayer((s) => detailTabLabel(s.sections, s.lyrics));
-  const options = useMemo<readonly SegmentOption<Tab>[]>(
-    () => [
-      { value: MIX, label: 'Mix' },
-      { value: DETAILS, label: label ?? '' },
-    ],
-    [label],
+  const label = useStemPlayer((s) =>
+    detailTabLabel(s.sections.length > 0, s.lyrics),
   );
   const tab = label === null ? MIX : picked;
   return (
@@ -138,14 +159,7 @@ function PlayerContent({ frame, picked, onPick }: PlayerContentProps) {
       <SongFactChips />
       <Notices />
       {label === null ? null : (
-        <SegmentedControl
-          size="tab"
-          options={options}
-          selected={tab}
-          accessibilityLabel="Player view"
-          neighbourGapDp={stemPlayer.bodyGap}
-          onSelect={onPick}
-        />
+        <PlayerTabs label={label} picked={tab} onPick={onPick} />
       )}
       {tab === MIX ? (
         <StemList progress={frame.progress} />

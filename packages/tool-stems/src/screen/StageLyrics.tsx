@@ -6,12 +6,12 @@ import {
   useReduceMotion,
 } from '@kitbag/core-design';
 import { lyricLineAt, NO_LINE, useStemPlayer } from '@kitbag/core-state';
-import { memo, useCallback, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useMemo, useRef } from 'react';
 import { ScrollView, Text, View, type LayoutChangeEvent } from 'react-native';
-import { useAnimatedReaction, type SharedValue } from 'react-native-reanimated';
-import { scheduleOnRN } from 'react-native-worklets';
+import type { SharedValue } from 'react-native-reanimated';
 
 import { lyricRows } from '../logic/lyricRows.ts';
+import { useCrossedIndex } from './useCrossedIndex.ts';
 
 export const useLyricStyles = createThemedStyles((theme) => ({
   view: { flex: 1, minHeight: 0 },
@@ -29,7 +29,8 @@ export const useLyricStyles = createThemedStyles((theme) => ({
   },
   current: {
     ...textStyle(stemSectionsText.stageCurrent),
-    lineHeight: stemSectionsText.stageCurrent.size * stemSections.currentRatio,
+    lineHeight:
+      stemSectionsText.stageCurrent.size * stemSections.currentLineRatio,
     color: theme.color.text,
   },
   currentRow: { marginVertical: stemSections.currentMargin },
@@ -76,7 +77,6 @@ const LineRow = memo(function LineRow({
   );
 });
 
-// Crossing into another line is the only thing that reaches JS (SPEC §13.3).
 export function StageLyrics({
   songSec,
 }: {
@@ -87,14 +87,7 @@ export function StageLyrics({
   const sections = useStemPlayer((s) => s.sections);
   const reduceMotion = useReduceMotion();
   const rows = useMemo(() => lyricRows(lines, sections), [lines, sections]);
-  const [current, setCurrent] = useState(NO_LINE);
-  useAnimatedReaction(
-    () => lyricLineAt(lines, songSec.value),
-    (now, before) => {
-      if (now !== before) scheduleOnRN(setCurrent, now);
-    },
-    [lines, songSec],
-  );
+  const current = useCrossedIndex(songSec, lines, lyricLineAt, NO_LINE);
   const list = useRef<ScrollView>(null);
   const viewport = useRef(0);
   const onViewport = useCallback((event: LayoutChangeEvent) => {
@@ -104,7 +97,7 @@ export function StageLyrics({
   const follow = useCallback(
     (y: number) => {
       list.current?.scrollTo({
-        y: Math.max(0, y - viewport.current * stemSections.followAt),
+        y: Math.max(0, y - viewport.current * stemSections.followAtFraction),
         animated: !reduceMotion,
       });
     },

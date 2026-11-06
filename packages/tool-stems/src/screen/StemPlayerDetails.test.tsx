@@ -6,6 +6,7 @@ import {
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { jsHops } from '../testing/reanimatedDriver.ts';
 import {
   at,
   INSTRUMENTAL,
@@ -118,7 +119,7 @@ describe('a section card', () => {
 describe('Undo for a loop', () => {
   it('is hidden until a loop has been displaced', async () => {
     const p = await open();
-    expect(p.store.getState().savedLoop).toBeNull();
+    expect(p.store.getState().undoableLoop).toBeNull();
     expect(p.labelled('Undo')).toHaveLength(0);
     await p.press(LOOP_VERSE);
     expect(p.labelled('Undo')).toHaveLength(0);
@@ -159,7 +160,7 @@ describe('Undo for a loop', () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     await act(async () => {
       p.store.setState({
-        savedLoop: { startSec: 1, endSec: 2 },
+        undoableLoop: { startSec: 1, endSec: 2 },
       });
       await Promise.resolve();
     });
@@ -168,8 +169,9 @@ describe('Undo for a loop', () => {
       vi.advanceTimersByTime(SNACKBAR_DURATION_MS);
     });
     expect(p.labelled('Undo')).toHaveLength(0);
+    expect(p.store.getState().undoableLoop).toBeNull();
     await act(async () => {
-      p.store.setState({ savedLoop: { startSec: 3, endSec: 4 } });
+      p.store.setState({ undoableLoop: { startSec: 3, endSec: 4 } });
       await Promise.resolve();
     });
     expect(p.labelled('Undo')).toHaveLength(1);
@@ -242,8 +244,10 @@ describe('realtime values (SPEC §13.3)', () => {
     const listener = vi.fn();
     const stop = p.store.subscribe(listener);
     p.commit.mockClear();
+    jsHops.count = 0;
     for (let i = 0; i < 120; i++) p.frames(3.6 + i / 400);
     expect(p.commit).not.toHaveBeenCalled();
+    expect(jsHops.count).toBe(0);
     expect(listener).not.toHaveBeenCalled();
     stop();
   });
@@ -292,9 +296,20 @@ describe('realtime values (SPEC §13.3)', () => {
       });
     });
     expect(p.scrolls).toHaveBeenCalledWith({
-      y: 400 - 300 * stemSections.followAt,
+      y: 400 - 300 * stemSections.followAtFraction,
       animated: true,
     });
+  });
+
+  it('grows the Retime chip hit box vertically only', async () => {
+    const p = await open();
+    const { paddingLeft, paddingRight, paddingTop, paddingBottom } = p.byLabel(
+      'Retime lyrics',
+    ).props.style as Record<string, number>;
+    expect(paddingLeft).toBe(0);
+    expect(paddingRight).toBe(0);
+    expect(paddingTop).toBe(6);
+    expect(paddingBottom).toBe(6);
   });
 
   it('marks only the current card as current', async () => {

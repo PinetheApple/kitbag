@@ -1,8 +1,8 @@
 import {
   asPercent,
   createThemedStyles,
+  DesignFloorOneLineText,
   Icon,
-  oneLineFloor,
   radius,
   size,
   space,
@@ -10,7 +10,6 @@ import {
   stemSectionsMix,
   stemSectionsText,
   textStyle,
-  useOneLineFit,
   useReduceMotion,
   useTheme,
   withAlpha,
@@ -31,11 +30,9 @@ import {
   type LayoutChangeEvent,
 } from 'react-native';
 import Animated, {
-  useAnimatedReaction,
   useAnimatedStyle,
   type SharedValue,
 } from 'react-native-reanimated';
-import { scheduleOnRN } from 'react-native-worklets';
 
 import {
   isSectionLoop,
@@ -45,6 +42,7 @@ import {
   songSeconds,
   type StemSection,
 } from '../logic/sectionView.ts';
+import { useCrossedIndex } from './useCrossedIndex.ts';
 
 const screenInset = space.screenInset;
 
@@ -95,7 +93,10 @@ const useStyles = createThemedStyles((theme) => ({
     ),
   },
   loopOnCurrent: {
-    backgroundColor: withAlpha(theme.color.onAccent, stemSectionsMix.loopKeyOn),
+    backgroundColor: withAlpha(
+      theme.color.onAccent,
+      stemSectionsMix.loopKeyOnCurrent,
+    ),
   },
   progress: {
     position: 'absolute',
@@ -119,38 +120,11 @@ function CardProgress({
     [section, songSec],
   );
   return (
-    <Animated.View pointerEvents="none" style={[styles.progress, width]} />
-  );
-}
-
-function CardName({
-  name,
-  current,
-}: {
-  readonly name: string;
-  readonly current: boolean;
-}) {
-  const styles = useStyles();
-  const { fontScale } = useWindowDimensions();
-  const role = stemSectionsText.name;
-  const nameStyle = [styles.name, current && styles.onFill];
-  const fit = useOneLineFit({
-    text: name,
-    role,
-    floor: oneLineFloor(fontScale, role.size, stemSections.nameMinSize),
-    style: nameStyle,
-  });
-  return (
-    <View onLayout={fit.onAvailableLayout}>
-      {fit.measurer}
-      <Text
-        style={[nameStyle, fit.style]}
-        numberOfLines={1}
-        ellipsizeMode="tail"
-      >
-        {name}
-      </Text>
-    </View>
+    <Animated.View
+      testID="section-progress"
+      pointerEvents="none"
+      style={[styles.progress, width]}
+    />
   );
 }
 
@@ -200,7 +174,11 @@ const SectionCard = memo(function SectionCard({
         onPress={jump}
         onLongPress={hold}
       >
-        <CardName name={section.name} current={current} />
+        <DesignFloorOneLineText
+          text={section.name}
+          role={stemSectionsText.name}
+          style={[styles.name, current && styles.onFill]}
+        />
         <Text
           style={[styles.range, current && styles.onFill]}
           numberOfLines={1}
@@ -225,22 +203,6 @@ const SectionCard = memo(function SectionCard({
   );
 });
 
-// Crossing into another section is the only thing that reaches JS (SPEC §13.3).
-function useCurrentSection(
-  songSec: SharedValue<number>,
-  sections: readonly StemSection[],
-): number {
-  const [current, setCurrent] = useState(NO_SECTION);
-  useAnimatedReaction(
-    () => sectionAt(sections, songSec.value),
-    (now, before) => {
-      if (now !== before) scheduleOnRN(setCurrent, now);
-    },
-    [sections, songSec],
-  );
-  return current;
-}
-
 export function SectionCards({
   songSec,
 }: {
@@ -252,7 +214,7 @@ export function SectionCards({
   const durationSec = useStemPlayer(songSeconds);
   const { fontScale } = useWindowDimensions();
   const reduceMotion = useReduceMotion();
-  const current = useCurrentSection(songSec, sections);
+  const current = useCrossedIndex(songSec, sections, sectionAt, NO_SECTION);
   const width = sectionCardWidth(fontScale);
   const list = useRef<ScrollView>(null);
   const [viewport, setViewport] = useState(0);

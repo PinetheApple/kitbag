@@ -13,5 +13,5 @@ export function lastAtOrBefore<K extends string>(
     if ((sorted[mid]?.[key] ?? Infinity) <= value) low = mid + 1;
     else high = mid;
   }
-  return low + NOT_FOUND;
+  return low - 1;
 }

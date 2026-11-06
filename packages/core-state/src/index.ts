@@ -279,8 +279,11 @@ export {
 export { SKIP_SECONDS } from './stemPlayer/songTransport.ts';
 export type { LyricLine } from './stemPlayer/lrc.ts';
 export {
+  isSungLine,
   lyricLineAt,
+  nextSungLine,
   NO_LINE,
+  NO_LYRICS,
   RETIME_SHIFT_STEP_SEC,
   type RetimeTap,
   type SongLyrics,

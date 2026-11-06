@@ -24,7 +24,7 @@ export function loopActions({
   session,
 }: ActionContext): Pick<
   StemPlayerActions,
-  'markLoop' | 'undoLoop' | 'jumpToSection' | 'loopSection'
+  'markLoop' | 'undoLoop' | 'dismissLoopUndo' | 'jumpToSection' | 'loopSection'
 > {
   const { busy, call } = sessionGate(session);
   const positionSeconds = () =>
@@ -37,13 +37,13 @@ export function loopActions({
     }));
   };
 
-  const clear = async (savedLoop: LoopSeconds | null): Promise<boolean> => {
+  const clear = async (undoableLoop: LoopSeconds | null): Promise<boolean> => {
     const { result, live } = await call(() =>
       runtimeOf().commands.mixerClearLoop(),
     );
     if (!live) return false;
     if (result === KB_RESULT.KB_OK) {
-      set({ loop: { kind: 'off' }, loopFailure: null, savedLoop });
+      set({ loop: { kind: 'off' }, loopFailure: null, undoableLoop });
       return true;
     }
     set({ loopFailure: 'engine' });
@@ -99,7 +99,7 @@ export function loopActions({
             startSec: snapToBeat(positionSeconds(), beats),
           },
           loopFailure: null,
-          savedLoop: null,
+          undoableLoop: null,
         });
         return;
       }
@@ -111,9 +111,12 @@ export function loopActions({
       await setLoop(bounds);
     },
     undoLoop: async () => {
-      const { savedLoop } = get();
-      if (busy() || savedLoop === null) return;
-      if (await setLoop(savedLoop)) set({ savedLoop: null });
+      const { undoableLoop } = get();
+      if (busy() || undoableLoop === null) return;
+      if (await setLoop(undoableLoop)) set({ undoableLoop: null });
+    },
+    dismissLoopUndo: () => {
+      set({ undoableLoop: null });
     },
     jumpToSection: async (index) => {
       const { sections, loop } = get();
@@ -128,11 +131,11 @@ export function loopActions({
       get().seek(secondsToFrames(section.startSec, get().engineRate));
     },
     loopSection: async (index) => {
-      const { sections, loop, savedLoop } = get();
+      const { sections, loop, undoableLoop } = get();
       const section = sections[index];
       if (busy() || section === undefined) return;
       if (!(await setLoop(section))) return;
-      set({ savedLoop: loop.kind === 'on' ? boundsOf(loop) : savedLoop });
+      set({ undoableLoop: loop.kind === 'on' ? boundsOf(loop) : undoableLoop });
       get().seek(secondsToFrames(section.startSec, get().engineRate));
     },
   };

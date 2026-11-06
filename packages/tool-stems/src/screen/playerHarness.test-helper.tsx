@@ -47,10 +47,12 @@ const delegating = new Proxy({} as FakeRuntime, {
 });
 configureStemPlayer(delegating);
 
+function tick(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
 export async function flush(): Promise<void> {
-  await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  });
+  await act(tick);
 }
 
 function textOf(node: ReactTestInstance | string): string {
@@ -84,7 +86,7 @@ export async function mountPlayer(change: RecordChange = SONG_DETAILS) {
         </SheetHost>
       </ThemeProvider>,
     );
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await tick();
   });
   fake.commands.mixerSeek.mockClear();
   fake.commands.mixerClearLoop.mockClear();
@@ -102,7 +104,7 @@ export async function mountPlayer(change: RecordChange = SONG_DETAILS) {
   const fire = async (label: string, handler: string) => {
     await act(async () => {
       (byLabel(label).props[handler] as () => unknown)();
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      await tick();
     });
   };
   return {

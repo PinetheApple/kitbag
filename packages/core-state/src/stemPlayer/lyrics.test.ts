@@ -9,7 +9,7 @@ import {
   retimedTimes,
   shiftedTimes,
   songLyrics,
-  storedTimes,
+  timedOnly,
   takeAfterTap,
 } from './lyrics.ts';
 
@@ -198,7 +198,7 @@ describe('plain-only lyrics', () => {
     ]);
     expect(tapped).toEqual([1, 2, Infinity]);
     expect(shiftedTimes(tapped, 1)).toEqual([1.1, 2.1, Infinity]);
-    expect(storedTimes(tapped)).toEqual([1, 2]);
+    expect(timedOnly(tapped)).toEqual([1, 2]);
   });
 });
 

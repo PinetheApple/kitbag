@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   isSectionLoop,
   loopNoteText,
-  sectionBoundaries,
+  sectionBoundaryFractions,
   sectionCardWidth,
   sectionProgress,
   sectionRange,
@@ -32,9 +32,9 @@ describe('sectionRange', () => {
   });
 });
 
-describe('sectionBoundaries', () => {
+describe('sectionBoundaryFractions', () => {
   it('gives one notch per distinct boundary inside the song', () => {
-    expect(sectionBoundaries([verse, chorus], DURATION)).toEqual([
+    expect(sectionBoundaryFractions([verse, chorus], DURATION)).toEqual([
       72 / DURATION,
       104 / DURATION,
       136 / DURATION,
@@ -43,11 +43,11 @@ describe('sectionBoundaries', () => {
 
   it('draws no notch on the song ends', () => {
     const whole = { ...verse, startSec: 0, endSec: DURATION };
-    expect(sectionBoundaries([whole], DURATION)).toEqual([]);
+    expect(sectionBoundaryFractions([whole], DURATION)).toEqual([]);
   });
 
   it('draws nothing before the duration is known', () => {
-    expect(sectionBoundaries([verse], 0)).toEqual([]);
+    expect(sectionBoundaryFractions([verse], 0)).toEqual([]);
   });
 });
 

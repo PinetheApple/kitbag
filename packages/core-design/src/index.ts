@@ -51,8 +51,6 @@ export * from './components/SegmentedControl.tsx';
 export * from './components/IconGlyph.tsx';
 export * from './components/Sheet.tsx';
 export * from './components/Snackbar.tsx';
-export * from './useOneLineFit.tsx';
-export { oneLineFloor } from './oneLineFit.ts';
 export * from './components/SheetHost.tsx';
 export { onHardwareBack } from './components/hardwareBack';
 export * from './components/StepControl.tsx';

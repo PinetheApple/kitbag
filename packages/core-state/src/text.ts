@@ -1,7 +1,6 @@
 export const MINUS = '−';
 
 export const SECONDS_PER_MINUTE = 60;
-export const MS_PER_SECOND = 1000;
 const MINUTES_PER_HOUR = 60;
 const TWO_DIGITS = 2;
 

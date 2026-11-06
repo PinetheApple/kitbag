@@ -1,5 +1,8 @@
 import {
   formatClockSeconds,
+  isSungLine,
+  MINUS,
+  nextSungLine,
   NO_LINE,
   RETIME_SHIFT_STEP_SEC,
   type LyricLine,
@@ -16,7 +19,7 @@ export interface RetimePreview {
 }
 
 function sungCount(lines: readonly LyricLine[], end = lines.length): number {
-  return lines.slice(0, end).filter((line) => line.text !== '').length;
+  return lines.slice(0, end).filter(isSungLine).length;
 }
 
 export function retimeLineLabel(
@@ -39,7 +42,7 @@ export function shiftLabel(steps: number): string {
     SHIFT_DECIMALS,
   );
   if (steps === 0) return `${size} s`;
-  return `${steps > 0 ? '+' : '−'}${size} s`;
+  return `${steps > 0 ? '+' : MINUS}${size} s`;
 }
 
 export function retimePreview(
@@ -50,15 +53,13 @@ export function retimePreview(
   const tap = taps.at(-1);
   const tapped = tap === undefined ? undefined : lines[tap.line];
   const after =
-    nextLine === NO_LINE
-      ? undefined
-      : lines.slice(nextLine + 1).find((line) => line.text !== '');
+    nextLine === NO_LINE ? NO_LINE : nextSungLine(lines, nextLine + 1);
   return {
     done:
       tap === undefined || tapped === undefined
         ? null
         : { text: tapped.text, time: tapTimeLabel(tap.timeSec) },
     current: lines[nextLine]?.text ?? null,
-    next: after?.text ?? null,
+    next: lines[after]?.text ?? null,
   };
 }

@@ -15,7 +15,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import { sectionBoundaries } from '../logic/sectionView.ts';
+import { sectionBoundaryFractions } from '../logic/sectionView.ts';
 
 const sliderTrack = sliderGeometry.seek.track;
 
@@ -61,7 +61,13 @@ export function SectionTint({
     };
   }, [sections, durationSec, current]);
   if (sections.length === 0) return null;
-  return <Animated.View pointerEvents="none" style={[styles.tint, placed]} />;
+  return (
+    <Animated.View
+      testID="section-tint"
+      pointerEvents="none"
+      style={[styles.tint, placed]}
+    />
+  );
 }
 
 export function SectionNotches({
@@ -72,7 +78,7 @@ export function SectionNotches({
   const styles = useStyles();
   const sections = useStemPlayer((s) => s.sections);
   const notches = useMemo(
-    () => sectionBoundaries(sections, durationSec),
+    () => sectionBoundaryFractions(sections, durationSec),
     [sections, durationSec],
   );
   return (
@@ -80,6 +86,7 @@ export function SectionNotches({
       {notches.map((at) => (
         <View
           key={at}
+          testID="section-notch"
           pointerEvents="none"
           style={[styles.notch, { left: asPercent(at) }]}
         />

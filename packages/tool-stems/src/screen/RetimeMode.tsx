@@ -15,11 +15,11 @@ import {
   stemSections,
   stemSectionsMix,
   stemSectionsText,
-  TEXT_ICON_SCALE_MAX,
   textStyle,
   useTheme,
+  type NeighbourGaps,
 } from '@kitbag/core-design';
-import { NO_LINE, useStemPlayer } from '@kitbag/core-state';
+import { NO_LINE, useStemPlayer, type RetimeState } from '@kitbag/core-state';
 import { useCallback, useEffect, useMemo } from 'react';
 import {
   Pressable,
@@ -46,6 +46,9 @@ const STEP_KEY_HIT_BOX = hitBoxStyle(
 );
 const STEP_EARLIER = -1;
 const STEP_LATER = 1;
+const NO_NEIGHBOUR_CONTROLS: NeighbourGaps = {};
+
+type Recording = Extract<RetimeState, { readonly kind: 'recording' }>;
 
 const useStyles = createThemedStyles((theme) => ({
   saveSlot: { marginRight: stemSections.saveEnd },
@@ -171,7 +174,7 @@ export function RetimeBar({ onAskReset }: { readonly onAskReset: () => void }) {
               size="bar"
               variant="primary"
               label="Save"
-              neighbourGapDp={{}}
+              neighbourGapDp={NO_NEIGHBOUR_CONTROLS}
               onPress={save}
             />
           </View>
@@ -182,28 +185,23 @@ export function RetimeBar({ onAskReset }: { readonly onAskReset: () => void }) {
 }
 
 // Past this size three wrapped lines push the pad off the screen.
-function useLargeText(): boolean {
-  return grownTextScale(useWindowDimensions().fontScale) >= TEXT_ICON_SCALE_MAX;
+function useShowsRetimeContext(): boolean {
+  const { fontScale } = useWindowDimensions();
+  return grownTextScale(fontScale) < stemSections.retimeContextMaxScale;
 }
 
-function RetimeLines() {
+function RetimeLines({ retime }: { readonly retime: Recording }) {
   const styles = useStyles();
   const lyricStyles = useLyricStyles();
   const lines = useStemPlayer((s) => s.lyrics.lines);
-  const retime = useStemPlayer((s) => s.retime);
-  const largeText = useLargeText();
-  const preview = useMemo(
-    () =>
-      retime.kind === 'recording'
-        ? retimePreview(lines, retime.taps, retime.nextLine)
-        : null,
+  const showsContext = useShowsRetimeContext();
+  const { done, current, next } = useMemo(
+    () => retimePreview(lines, retime.taps, retime.nextLine),
     [lines, retime],
   );
-  if (preview === null) return null;
-  const { done, current, next } = preview;
   return (
     <View style={styles.lines}>
-      {done === null || largeText ? null : (
+      {done === null || !showsContext ? null : (
         <View style={styles.done}>
           <View style={styles.doneMark}>
             <Icon name="check" size="retimeDone" color="text2" />
@@ -218,20 +216,17 @@ function RetimeLines() {
           <Text style={[lyricStyles.line, lyricStyles.current]}>{current}</Text>
         </View>
       )}
-      {next === null || largeText ? null : (
+      {next === null || !showsContext ? null : (
         <Text style={lyricStyles.line}>{next}</Text>
       )}
     </View>
   );
 }
 
-function TapPad() {
+function TapPad({ allTapped }: { readonly allTapped: boolean }) {
   const styles = useStyles();
   const theme = useTheme();
   const tapRetime = useStemPlayer((s) => s.tapRetime);
-  const allTapped = useStemPlayer(
-    (s) => s.retime.kind === 'recording' && s.retime.nextLine === NO_LINE,
-  );
   const pad = useMemo(() => tapOnce(tapRetime), [tapRetime]);
   const title = allTapped ? 'All lines tapped' : 'Tap as this line starts';
   return (
@@ -251,11 +246,8 @@ function TapPad() {
   );
 }
 
-function ShiftRow() {
+function ShiftRow({ steps }: { readonly steps: number }) {
   const styles = useStyles();
-  const steps = useStemPlayer((s) =>
-    s.retime.kind === 'recording' ? s.retime.shiftSteps : 0,
-  );
   const shiftRetime = useStemPlayer((s) => s.shiftRetime);
   const earlier = useCallback(() => {
     shiftRetime(STEP_EARLIER);
@@ -304,15 +296,14 @@ function RetimeFailureCard() {
 
 export function RetimeBody() {
   const styles = useStyles();
+  const retime = useStemPlayer((s) => s.retime);
   const undoRetimeTap = useStemPlayer((s) => s.undoRetimeTap);
-  const noTaps = useStemPlayer(
-    (s) => s.retime.kind === 'recording' && s.retime.taps.length === 0,
-  );
+  if (retime.kind !== 'recording') return null;
   return (
     <ScrollView style={styles.body} contentContainerStyle={styles.content}>
-      <RetimeLines />
+      <RetimeLines retime={retime} />
       <RetimeFailureCard />
-      <TapPad />
+      <TapPad allTapped={retime.nextLine === NO_LINE} />
       <View style={styles.undoRow}>
         <Button
           fill
@@ -321,12 +312,12 @@ export function RetimeBody() {
           icon="undo"
           iconSize="lyricsChip"
           label="Undo tap"
-          disabled={noTaps}
+          disabled={retime.taps.length === 0}
           outlinedWhenDisabled
           onPress={undoRetimeTap}
         />
       </View>
-      <ShiftRow />
+      <ShiftRow steps={retime.shiftSteps} />
     </ScrollView>
   );
 }

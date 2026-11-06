@@ -11,6 +11,13 @@ interface Reaction {
 const frameCallbacks = new Set<FrameCallback>();
 const reactions = new Set<Reaction>();
 const FRAME_MS = 16;
+const ANIMATED = Symbol('animated style');
+
+interface AnimatedStyle<T> {
+  readonly [ANIMATED]: () => T;
+}
+
+export const jsHops = { count: 0 };
 let timestamp = 0;
 
 export default {
@@ -28,8 +35,19 @@ export function makeMutable<T>(value: T): { value: T } {
   return { value };
 }
 
-export function useAnimatedStyle<T>(style: () => T): T {
-  return style();
+export function useAnimatedStyle<T>(style: () => T): AnimatedStyle<T> {
+  return { [ANIMATED]: style };
+}
+
+export function animatedStyleOf(style: unknown): Record<string, unknown> {
+  const live = [style]
+    .flat(Infinity)
+    .find(
+      (part): part is AnimatedStyle<Record<string, unknown>> =>
+        typeof part === 'object' && part !== null && ANIMATED in part,
+    );
+  if (live === undefined) throw new Error('no animated style on this node');
+  return live[ANIMATED]();
 }
 
 export function useAnimatedProps<T>(props: () => T): T {
@@ -82,6 +100,7 @@ export function scheduleOnRN<A extends unknown[]>(
   callback: (...args: A) => void,
   ...args: A
 ): void {
+  jsHops.count++;
   callback(...args);
 }
 
@@ -90,11 +109,9 @@ export function runFrame(): void {
   for (const callback of frameCallbacks) callback({ timestamp });
   for (const reaction of reactions) {
     const now = reaction.prepare();
-    if (now !== reaction.last) {
-      const before = reaction.last;
-      reaction.last = now;
-      reaction.react(now as never, before as never);
-    }
+    const before = reaction.last;
+    reaction.last = now;
+    reaction.react(now as never, before as never);
   }
 }
 
@@ -116,12 +133,4 @@ export function useReducedMotion(): boolean {
 
 export function withSpring<T>(value: T): T {
   return value;
-}
-
-export function withTiming<T>(value: T): T {
-  return value;
-}
-
-export function runOnJS<T>(callback: T): T {
-  return callback;
 }

@@ -83,7 +83,7 @@ export interface StemPlayerState {
   readonly beats: readonly number[];
   readonly loop: LoopState;
   readonly loopFailure: LoopFailure | null;
-  readonly savedLoop: LoopSeconds | null;
+  readonly undoableLoop: LoopSeconds | null;
   readonly click: boolean;
   readonly sections: readonly StoredSection[];
   readonly lyrics: SongLyrics;
@@ -106,6 +106,7 @@ export interface StemPlayerActions {
   readonly skip: (seconds: number) => void;
   readonly markLoop: () => Promise<void>;
   readonly undoLoop: () => Promise<void>;
+  readonly dismissLoopUndo: () => void;
   readonly jumpToSection: (index: number) => Promise<void>;
   readonly loopSection: (index: number) => Promise<void>;
   readonly beginRetime: (fromLine: number) => void;
@@ -155,7 +156,7 @@ const closedState: StemPlayerState = {
   beats: [],
   loop: { kind: 'off' },
   loopFailure: null,
-  savedLoop: null,
+  undoableLoop: null,
   click: false,
   sections: [],
   lyrics: NO_LYRICS,

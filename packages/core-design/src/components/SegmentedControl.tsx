@@ -55,7 +55,7 @@ interface SegmentProps<T extends string> {
   readonly selected: boolean;
   readonly accent: boolean;
   readonly large: boolean;
-  readonly tab: boolean;
+  readonly controlSize: SegmentedControlSize;
   readonly inline: boolean;
   readonly editRow: boolean;
   readonly minWidthStyle: OptionMinWidth | undefined;
@@ -146,7 +146,7 @@ function Segment<T extends string>({
   selected,
   accent,
   large,
-  tab,
+  controlSize,
   inline,
   editRow,
   minWidthStyle,
@@ -158,6 +158,7 @@ function Segment<T extends string>({
   onSelect,
 }: SegmentProps<T>) {
   const styles = useStyles();
+  const tab = controlSize === 'tab';
   const handlePress = useCallback(() => {
     onSelect(option.value);
   }, [onSelect, option.value]);
@@ -243,8 +244,7 @@ export function SegmentedControl<T extends string>({
   const styles = useStyles();
   const byLabel = useTextScaled();
   const editRow = controlSize === 'editRow';
-  const tab = controlSize === 'tab';
-  const large = controlSize === 'large' || editRow || tab;
+  const large = controlSize === 'large' || editRow || controlSize === 'tab';
   const [labelWidths, setLabelWidths] = useState<Partial<Record<T, number>>>(
     {},
   );
@@ -305,7 +305,7 @@ export function SegmentedControl<T extends string>({
           selected={option.value === selected}
           accent={selectedTone === 'accent'}
           large={large}
-          tab={tab}
+          controlSize={controlSize}
           inline={controlSize === 'inline'}
           editRow={editRow}
           minWidthStyle={minWidthStyle}

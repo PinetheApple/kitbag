@@ -7,7 +7,7 @@ import {
   NO_LINE,
   retimedTimes,
   shiftedTimes,
-  storedTimes,
+  timedOnly,
   takeAfterTap,
   withTimes,
 } from './lyrics.ts';
@@ -129,7 +129,7 @@ export function retimeActions({
         leaveRetime();
         return;
       }
-      await saveTiming(times, storedTimes(times));
+      await saveTiming(times, timedOnly(times));
     },
     cancelRetime: () => {
       if (!busy()) get().leaveRetime();

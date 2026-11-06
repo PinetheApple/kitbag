@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { detailPane, detailTabLabel, lyricRows } from './lyricRows.ts';
+import { lyricRows } from './lyricRows.ts';
 
 const section = (name: string, startSec: number, endSec: number) => ({
   name,
@@ -9,15 +9,6 @@ const section = (name: string, startSec: number, endSec: number) => ({
   startSec,
   endSec,
 });
-
-const NO_LYRICS = {
-  lines: [],
-  bundledTimes: [],
-  plain: null,
-  instrumental: false,
-  synced: false,
-  retimed: false,
-};
 
 describe('lyricRows', () => {
   const sections = [section('Chorus', 46, 72), section('Verse 2', 72, 104)];
@@ -72,51 +63,5 @@ describe('lyricRows', () => {
       sections,
     );
     expect(rows.filter((row) => row.kind === 'heading')).toHaveLength(1);
-  });
-});
-
-describe('detailTabLabel', () => {
-  const lines = [{ timeSec: 1, text: 'a' }];
-  const cards = [section('A', 0, 1)];
-
-  it('is Lyrics while the song has lines', () => {
-    expect(detailTabLabel(cards, { ...NO_LYRICS, lines })).toBe('Lyrics');
-    expect(detailTabLabel([], { ...NO_LYRICS, lines })).toBe('Lyrics');
-  });
-
-  it('becomes Sections for an instrumental or a song with no lines', () => {
-    expect(detailTabLabel(cards, { ...NO_LYRICS, instrumental: true })).toBe(
-      'Sections',
-    );
-    expect(detailTabLabel(cards, NO_LYRICS)).toBe('Sections');
-  });
-
-  it('is absent when there is nothing to show', () => {
-    expect(detailTabLabel([], NO_LYRICS)).toBeNull();
-  });
-});
-
-describe('detailPane', () => {
-  const lines = [{ timeSec: 1, text: 'a' }];
-
-  it('picks stage lines for a song with times', () => {
-    expect(detailPane({ ...NO_LYRICS, lines, synced: true })).toBe('stage');
-  });
-
-  it('picks plain text when no line has a time', () => {
-    expect(
-      detailPane({
-        ...NO_LYRICS,
-        lines: [{ timeSec: Infinity, text: 'a' }],
-        plain: 'a',
-      }),
-    ).toBe('plain');
-  });
-
-  it('says so only for a song marked instrumental', () => {
-    expect(detailPane({ ...NO_LYRICS, instrumental: true })).toBe(
-      'instrumental',
-    );
-    expect(detailPane(NO_LYRICS)).toBe('none');
   });
 });

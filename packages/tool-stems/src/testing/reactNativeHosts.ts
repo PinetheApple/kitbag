@@ -1,8 +1,6 @@
 import { act } from 'react';
 
-type StyleLike = unknown;
-
-function flatten(style: StyleLike): Record<string, unknown> {
+function flatten(style: unknown): Record<string, unknown> {
   if (Array.isArray(style))
     return Object.assign({}, ...style.map((part) => flatten(part))) as Record<
       string,
@@ -28,18 +26,11 @@ export const Pressable = 'Pressable';
 export const ScrollView = 'ScrollView';
 export const Modal = 'Modal';
 export const Platform = { OS: 'test', select: () => undefined };
-export const I18nManager = { isRTL: false };
 
 export const display = { fontScale: 1 };
 
 export function useWindowDimensions() {
   return { width: 411, height: 891, scale: 3, fontScale: display.fontScale };
-}
-
-export const Dimensions = { get: useWindowDimensions };
-
-export function useColorScheme() {
-  return 'dark';
 }
 
 const backHandlers: (() => boolean)[] = [];

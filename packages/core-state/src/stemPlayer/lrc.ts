@@ -1,4 +1,6 @@
-import { MS_PER_SECOND, SECONDS_PER_MINUTE } from '../text.ts';
+import { MS_PER_SECOND } from '@kitbag/core-db';
+
+import { SECONDS_PER_MINUTE } from '../text.ts';
 
 const TIME_TAG = /^\s*\[(\d{1,3}):(\d{1,2})(?:[.:](\d{1,3}))?\]/;
 const OFFSET_TAG = /^\[offset:\s*([+-]?\d+)\s*\]$/i;

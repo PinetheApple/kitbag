@@ -1,4 +1,4 @@
-import { grownTextScale, stemSections } from '@kitbag/core-design';
+import { clampUnit, grownTextScale, stemSections } from '@kitbag/core-design';
 import {
   formatClockSeconds,
   framesToSeconds,
@@ -32,7 +32,7 @@ export function sectionRange({ startSec, endSec }: SectionTimes): string {
   return `${formatClockSeconds(startSec)}–${formatClockSeconds(endSec)}`;
 }
 
-export function sectionBoundaries(
+export function sectionBoundaryFractions(
   sections: readonly SectionTimes[],
   durationSec: number,
 ): number[] {
@@ -53,7 +53,7 @@ export function sectionProgress(
   'worklet';
   const length = endSec - startSec;
   if (length <= 0) return 0;
-  return Math.min(1, Math.max(0, (songSec - startSec) / length));
+  return clampUnit((songSec - startSec) / length);
 }
 
 export function isSectionLoop(

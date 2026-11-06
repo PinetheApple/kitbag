@@ -8,18 +8,19 @@ import {
   textStyle,
   hitBoxStyle,
   hitExtension,
+  minTouchTargetDp,
 } from '@kitbag/core-design';
 import { lyricLineAt, useStemPlayer } from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 
-import { detailPane } from '../logic/lyricRows.ts';
+import { detailPaneKind } from '../logic/detailView.ts';
 import { SectionCards } from './SectionCards.tsx';
 import { StageLyrics, useLyricStyles } from './StageLyrics.tsx';
 
 const CHIP_HIT_BOX = hitBoxStyle(
-  hitExtension(stemSections.chipHeight, stemSections.chipHeight, {}),
+  hitExtension(minTouchTargetDp, stemSections.chipHeight, {}),
 );
 
 const useStyles = createThemedStyles((theme) => ({
@@ -150,7 +151,7 @@ export function DetailPane({
   readonly songSec: SharedValue<number>;
 }) {
   const hasSections = useStemPlayer((s) => s.sections.length > 0);
-  const pane = useStemPlayer((s) => detailPane(s.lyrics));
+  const pane = useStemPlayer((s) => detailPaneKind(s.lyrics));
   return (
     <>
       {hasSections ? <SectionCards songSec={songSec} /> : null}
