@@ -4,6 +4,7 @@ import { clampUnit } from './clampUnit.ts';
 // so a stray tap can never change a level.
 export type SliderMode = 'seek' | 'fader';
 export type SliderGesture = 'tap' | 'pan';
+export type SliderLook = 'level';
 
 export interface SliderTouch {
   readonly x: number;
@@ -35,4 +36,26 @@ export function releaseTarget(
   if (gesture === 'tap') return completed && mode === 'seek' ? target : null;
   if (completed) return target;
   return mode === 'fader' ? origin : null;
+}
+
+export interface SliderDetent {
+  readonly at: number;
+  readonly reach: number;
+}
+
+export function snapToDetent(
+  fraction: number,
+  detent: SliderDetent | undefined,
+): number {
+  'worklet';
+  if (detent === undefined) return fraction;
+  return Math.abs(fraction - detent.at) <= detent.reach ? detent.at : fraction;
+}
+
+export function pastWarning(
+  fraction: number,
+  warnAbove: number | undefined,
+): boolean {
+  'worklet';
+  return warnAbove !== undefined && fraction > warnAbove;
 }

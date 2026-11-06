@@ -6,15 +6,14 @@
 
 import type { TuningRepository } from '@kitbag/core-db';
 
-import type { TunerCommands } from './commands.ts';
+import type { PermissionAnswer } from '../permission.ts';
 
-export type MicPermission = 'granted' | 'denied' | 'blocked';
+import type { TunerCommands } from './commands.ts';
 
 export interface MicPermissionSource {
   /** Current answer without prompting. */
-  readonly check: () => Promise<MicPermission>;
-  /** Prompt if the platform still allows it; `blocked` = never ask again. */
-  readonly request: () => Promise<MicPermission>;
+  readonly check: () => Promise<PermissionAnswer>;
+  readonly request: () => Promise<PermissionAnswer>;
 }
 
 /** App-level foreground state. Forward RN's `active` and `background` only. */

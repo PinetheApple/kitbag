@@ -1,4 +1,5 @@
 import {
+  Chip,
   countLabel,
   createThemedStyles,
   metronomeSheet,
@@ -9,8 +10,9 @@ import {
   type StepDelta,
   Switch,
   unshared,
+  useTextScaled,
 } from '@kitbag/core-design';
-import { useMetronome } from '@kitbag/core-state';
+import { COUNT_IN_SCOPE, useMetronome } from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { Text, View } from 'react-native';
 
@@ -26,6 +28,7 @@ import { polyAgainstLabel } from '../logic/polyRow.ts';
 import type { PracticeField } from '../logic/practiceEntry.ts';
 import { PolyStrip } from './PolyStrip.tsx';
 import { PracticeSection, usePracticeStyles } from './PracticeSection.tsx';
+import { mutedCellStyles } from './mutedCellStyles.ts';
 import { useBarMuteEditor } from './useBarMuteEditor.ts';
 
 const bars = (count: number) => countLabel(count, 'bar', 'bars');
@@ -43,11 +46,11 @@ const usePreviewStyles = createThemedStyles((theme) => ({
   playing: {
     backgroundColor: theme.color.text2,
   },
-  muted: {
-    borderWidth: metronomeSheet.mutePreviewDashed,
-    borderStyle: 'dashed',
-    borderColor: theme.color.text3,
-  },
+  ...mutedCellStyles(
+    metronomeSheet.mutePreviewDashed,
+    radius.barPreview,
+    theme.color.decor,
+  ),
 }));
 
 function MutePreview({ preview }: { readonly preview: readonly boolean[] }) {
@@ -60,10 +63,14 @@ function MutePreview({ preview }: { readonly preview: readonly boolean[] }) {
       style={styles.preview}
     >
       {preview.map((playing, bar) => (
-        <View
-          key={bar}
-          style={[styles.cell, playing ? styles.playing : styles.muted]}
-        />
+        <View key={bar} style={[styles.cell, playing && styles.playing]}>
+          {playing ? null : (
+            <>
+              <View style={styles.mutedOutline} />
+              <View style={styles.mutedEnds} />
+            </>
+          )}
+        </View>
       ))}
     </View>
   );
@@ -133,8 +140,16 @@ export function PracticeMute({ onType }: TypeProps) {
 
 export function PracticeCountIn() {
   const styles = usePracticeStyles();
+  const scaled = useTextScaled();
   const countIn = useMetronome((s) => s.countIn);
   const setCountIn = useMetronome((s) => s.setCountIn);
+  const everySong = useMetronome(
+    (s) => s.countInScope === COUNT_IN_SCOPE.always,
+  );
+  const setCountInScope = useMetronome((s) => s.setCountInScope);
+  const handleEverySong = useCallback(() => {
+    setCountInScope(everySong ? COUNT_IN_SCOPE.perSong : COUNT_IN_SCOPE.always);
+  }, [everySong, setCountInScope]);
   const handleBars = useCallback(
     (option: string) => {
       setCountIn({ ...countIn, bars: countInBarsFromOption(option) });
@@ -152,7 +167,7 @@ export function PracticeCountIn() {
       icon="countIn"
       title="Count-in"
       heading={
-        <View style={styles.headingFill}>
+        <View style={scaled ? styles.headingByLabel : styles.headingFill}>
           <SegmentedControl
             size="large"
             accessibilityLabel="Count-in length"
@@ -176,6 +191,16 @@ export function PracticeCountIn() {
           onSelect={handleMode}
         />
       </View>
+      <Chip
+        icon="repeat"
+        label="Count in on every song"
+        active={everySong}
+        neighbourGapDp={{
+          top: space.controlGap,
+          bottom: unshared(metronomeSheet.practiceSectionV),
+        }}
+        onPress={handleEverySong}
+      />
     </PracticeSection>
   );
 }
@@ -218,7 +243,7 @@ export function PracticePoly({ onType }: TypeProps) {
           <Switch
             neighbourGapDp={{
               top: unshared(metronomeSheet.practiceSectionV),
-              bottom: unshared(metronomeSheet.practiceSectionV),
+              bottom: space.controlGap,
               left: space.rowGap,
               right: 0,
             }}
@@ -240,8 +265,7 @@ export function PracticePoly({ onType }: TypeProps) {
           onStep={handleStep}
           onValuePress={handleTypeCount}
         />
-        <View style={styles.grow} />
-        <Text style={styles.label}>against</Text>
+        <Text style={[styles.label, styles.pushRight]}>against</Text>
         <StepControl
           variant="inlineLargeTextGlyph"
           label="Against"

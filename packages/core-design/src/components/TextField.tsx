@@ -88,14 +88,15 @@ export function TextField(props: TextFieldProps) {
   const styles = useStyles();
   const theme = useTheme();
   const list = props.variant === 'list';
-  const quiet = list ? 'text2' : 'text3';
+  const placeholderInk = list ? 'text2' : 'text3';
+  const iconInk = list ? 'text2' : 'decor';
   return (
     <View style={list ? styles.listField : styles.field}>
       {props.icon === undefined ? null : (
         <Icon
           name={props.icon}
           size={list ? 'listSearch' : 'field'}
-          color={quiet}
+          color={iconInk}
         />
       )}
       <TextInput
@@ -104,7 +105,7 @@ export function TextField(props: TextFieldProps) {
         value={props.value}
         onChangeText={props.onChangeText}
         placeholder={props.placeholder}
-        placeholderTextColor={theme.color[quiet]}
+        placeholderTextColor={theme.color[placeholderInk]}
         accessibilityLabel={props.accessibilityLabel}
         autoFocus={props.autoFocus ?? false}
         editable={props.editable ?? true}

@@ -674,7 +674,7 @@ value applies live, which is the entire reason they are sheets and not screens.
 | **⛰ Ramp** | Start, step (±BPM), every N with a bars·sec·min segment, target, loop-back-at-end; the sheet shows the total time it adds up to. Stepped, not smooth (**D15**): the tempo holds for one interval, then moves by exactly the step — on the downbeat for bars, on the next beat for seconds and minutes — and lands exactly on the target. Changing tempo by hand cancels a running ramp and the chip clears with it. |
 | **▨ Mute bars** | Play N / mute N steppers, an eight-bar preview. Silent bars still light the LEDs — you keep the visual, lose the click. |
 | **♩ Sound** | Normal/Accent segment, then a 6-way picker. **Not a cycler** — the Flutter chip cycles, so reaching sound 6 takes 5 taps and you cannot see what you are choosing between. Per-accent-level sound assignment is in scope: a tom on one, a block on the rest. |
-| **⏱ Count-in** | Off / 1 / 2 / 4 bars, distinct-or-same sound, per-song or always. Counts in on start only, never after a pause mid-bar. |
+| **⏱ Count-in** | Off / 1 / 2 / 4 bars, distinct-or-same sound, per-song or always. Per song (the default) loads each song's own count-in, and none for a song without one. With the "Count in on every song" chip on, loading a song, a setlist step, Revert and saving an existing song leave the song's own count-in untouched and the live one playing; a new song from current takes the live count-in as its own. The choice and the last count-in survive a restart and a backup. Counts in on start only, never after a pause mid-bar. |
 
 **Sound names come from the engine.** `soundNames` is indexed by native sound
 id. Do not declare a local list — that is exactly how `sync_screen.dart:14` came
@@ -768,14 +768,17 @@ the single most RN-specific piece of §5** — see §13.9.
 - **Foreground service.** The metronome must survive backgrounding and screen
   lock. This is the actual requirement; the notification is its face. A
   notification without a service just gets killed alongside the click.
-- **Notification transport** — play/pause, stop, current BPM and signature, then
-  the set and song. Not "Kitbag is running". Prev/Next **only** with an active
-  setlist — no dead controls.
+- **Notification transport** — tempo −/+, play/pause, stop, current BPM and
+  signature, then the set and song. Not "Kitbag is running". No Prev/Next, setlist
+  or not: songs step in the app only (owner, #284).
+- **Shown, silent**: a DEFAULT-importance channel with no sound or vibration; the
+  notification permission is asked on the first playback start (#277).
 - **Ongoing and non-dismissible while running**, which is what a foreground
   service requires and what a musician wants: it is the off switch when the
   phone is in a pocket.
 - **Lock-screen controls** via the platform media session; responds to headset
-  buttons.
+  buttons. The card is media-style, tied to that session, so it shows on a lock
+  screen set to icons only (#284).
 - **Practice timer continues** while backgrounded. A session interrupted by a
   phone call is still a session.
 
@@ -783,9 +786,13 @@ the single most RN-specific piece of §5** — see §13.9.
 
 - Write `setlistId` and `songsPlayed` — the Flutter producer never does despite
   having an active session.
-- **Practice-end summary** on stop (not on every pause): time, set, songs,
-  average tempo, longest stretch. Save or discard. Sessions are currently
-  written silently and never shown — the peak-end rule (§12.6).
+- **Practice-end summary** when the session ends, not on every pause: time,
+  set, songs, average tempo, longest stretch. Save or discard — the peak-end
+  rule (§12.6). Longest stretch is shown in the summary only and not stored.
+- **What ends a session.** Transport Stop only pauses it. The practice pill's
+  **End** (in place of reset) ends it and opens the summary; leaving the
+  metronome screen while stopped, with played time, also ends it. Leaving while
+  playing keeps it running. A phone call or going to the background never does.
 
 ### 5.8 Acceptance
 
@@ -1263,10 +1270,9 @@ do not write a new one.
 
 ### 9.3 Tools manager
 
-Every tool lists its true size; heavy plugins download on demand from CDN with
-checksum verification; upcoming tools visible as `SOON` linking to the GitHub
-issue. **"Get", never "Buy"** — everything is free forever, and the verb is the
-brand.
+The Tools screen lists only the built tools, each with an on/off switch (owner,
+2026-10-31; §12.5). It shows no sizes, no "Get" and no `SOON` rows, and upcoming
+tools are not listed.
 
 Resolved (settings design §03): the Tools manager is the one screen that owns
 tool toggles, reached from Settings by a single row. The Flutter
@@ -1277,9 +1283,8 @@ buttons, which is two visual languages for one column and a badge that looks lik
 a label but was meant to be tapped. Off tools leave the home screen; nothing is
 deleted.
 
-The toggle is `tool_enabled_<id>` in preferences and already drives the filtered
-plugin list. **Moving the UI does not move the state** — that row costs a screen,
-not a refactor.
+Each switch is stored as `tool_enabled_<id>` in preferences (`"true"` or
+`"false"`; a missing key is on).
 
 No Play Asset Delivery (breaks F-Droid reproducible builds). No public plugin SDK
 yet — first-party plugins against an internal interface.
@@ -1397,7 +1402,7 @@ The schema is the durable part and survives the stack change. The Flutter
 build's tables were `Setlists`, `Songs`, `PracticeSessions`, `Tunings`,
 `LibrarySongs`, `StemSets`, `Stems` (schema v6). A reconstruction of that v6 DDL is the
 migration fixture in `packages/core-db/src/migrate-fixtures.test-helper.ts`; the React
-Native schema migrates it in place and is at v18 (`packages/core-db/src/migrate.ts`).
+Native schema migrates it in place and is at v19 (`packages/core-db/src/migrate.ts`).
 
 ### 11.1 Persistence layer
 
@@ -1438,6 +1443,7 @@ rather than starting from zero.
 | `StemSets`: + speed; `Stems`: + pitch (semitones) | §7.6 — mix state is per song, like gain/mute/solo |
 | `StemSets`: + `renamed` (default 0); `Stems`: + `name` (display name, NULL shows the role) | §7.1, §7.8 — a rename is display-only and survives a re-import of the same StemDeck song; schema v17 |
 | `SongPresets`: + `poly_against` INTEGER (0 = the bar, 1..16), default 0 | §5.2 — poly N against M; a v4 backup without `polyAgainst` reads as the bar; schema v18 |
+| `route_latency`: + `name` TEXT, + `kind` TEXT (the route's display name and `OutputRoute` kind when calibrated) | §12.5 — the Output & latency sheet lists calibrated routes that are not connected; schema v19 |
 | **All paths relative** to the base directory | §2.3 (iOS) and **D11** (the directory is now user-movable) |
 | `PracticeSessions`: write `setlistId`, `songsPlayed` | §5.7 — columns exist, producer never fills them |
 | BPM cache table | §8.5 |
@@ -1516,15 +1522,19 @@ one (§12.5).
 | `surface3` | `#2E2C3A` | `#E3DFD4` |
 | `line` | `#33303F` | `#DCD7CA` |
 | `text` | `#ECEAF0` | `#221F26` |
-| `text2` | `#9B97A8` | `#6E687A` |
-| `text3` | `#6C6878` | `#98929F` |
+| `text2` | `#BDBBC6` | `#433F4B` |
+| `text3` | `#9793A2` | `#6C6573` |
+| `decor` | `#6C6878` | `#98929F` |
 | `accent` | `#FFB347` | `#B26F0E` |
-| `accentDeep` | `#E89B2E` | `#8F5A0C` |
+| `accentDeep` | `#E89B2E` | `#80510B` |
 | `accentDim` | `#8A6A35` | `#D8B27C` |
 | `onAccent` | `#221600` | `#FFF7EA` |
 | `red` (flat) | `#FF5C5C` | `#CC4444` |
 | `amber` | `#FFC24B` | `#9A6E06` |
 | `green` (in-tune) | `#4ADE80` | `#1E8A4F` |
+| `redInk` | `#FF5C5C` | `#A82E2E` |
+| `amberInk` | `#FFC24B` | `#785505` |
+| `greenInk` | `#4ADE80` | `#17683C` |
 | `wave` | `#4E4A5E` | `#C9C3B4` |
 | `waveHot` | `#FFB347` | `#B26F0E` |
 
@@ -1535,7 +1545,25 @@ Rules that come with them:
   channel and **never doubles as accent.**
 - Dark text is off-white; **pure white halates on OLED.**
 - **Elevation = lighter surface, not shadow.**
-- Light's accent darkens to keep 4.5:1+ on white surfaces.
+- Text under 18sp holds 4.5:1 against every ground it sits on, in both themes.
+- `text`, `text2` and `text3` stay at least 1.5:1 apart from each other. That floor is
+  set by dark, where `text2` sits at 1.58:1 over `text3` and 1.59:1 under `text`. Light
+  reaches the 1.8:1 `text2` step over `text3`, with `text` 1.59:1 above `text2`.
+- `decor` is for non-text marks only: icons that read as quiet or disabled, dot and
+  swatch borders, switch knobs, slider ticks. Text never uses it. It is an accepted
+  exception to the 3:1 non-text bar in both themes, down to about 2.3:1 (light, on
+  `surface3`), kept so these marks look as they did before #189.
+- `text3` sits only on `bg`, `surface1`, `surface2`, `activeCardFill` and the setlist
+  NOW row fill; never on `surface3`, `activeControlFill`, or the set chip, selected tile
+  or stem tile fills.
+- `accent` is for fills and icons. Accent-coloured text uses `accentInk`: `accent` in
+  dark, `accentDeep` in light. An `accent` fill that carries text uses `accentTextFill`
+  (the same split), so `onAccent` holds 4.5:1 on it; fills with only icons keep `accent`.
+- Red, amber and green used as text take `redInk`, `amberInk` and `greenInk`, darker in
+  light and equal to the base token in dark. Fills, icons and borders keep the base token.
+  Dark red text stays off `activeControlFill` and the set chip, selected tile and stem tile
+  fills, where it is under 4.5:1.
+- Accent icons hold 3:1 on every ground; on an accent-tinted fill that needs `accentInk`.
 
 **Type.** Two faces, both OFL. **Space Grotesk** for display, numerics and labels
 — geometric, instrument-panel character, and **true tabular figures so a BPM
@@ -1647,11 +1675,16 @@ the supersession: ≤7 primary choices.)
   row as the same LEDs used everywhere, then open a sheet: one pattern **per
   subdivision count**, not one pattern, since the count is per-song (1–16) — the
   pattern you set for `♬` applies to every song using `♬`. The engine plays
-  these patterns (D2, #170); the row, the sheet and their storage are not built.
+  these patterns (D2, #170). The patterns are stored as preferences and replayed
+  to the engine at launch and on every edit (#170).
 - **Volume and latency are the only rig settings, and they are global** (**D3**).
   No per-song override; `SongPresets` carries neither column. Volume per song is
   genuinely lost — the quiet acoustic number in a loud set needs this slider.
   Accepted, and it is the reason the Rig section has to be good.
+- **Tools lists only built tools** (owner, 2026-10-31). Each has an on/off switch, and
+  the Settings row reads "N on". `kitbag-settings.html`'s sizes, Get and SOON rows are
+  not built (§9.3). Off removes a tool everywhere and is separate from Home's Hide;
+  `docs/decisions.md` has the ruling.
 - **Practice is a readout, not a doorway.** Sessions, total time, average tempo,
   no chevron — the viewer is later work, so the row promises nothing behind it.
   The numbers are already computed; average tempo is the one addition, and it is
@@ -1697,7 +1730,14 @@ asks them to.
   against the route, not globally.
 - **16 taps, ~10 seconds.** Enough to average out a bad one, short enough that
   nobody abandons. **Fewer than 8 usable taps refuses to produce a number** rather
-  than producing a bad one — "no dead ends" means explaining, not guessing.
+  than producing a bad one — "no dead ends" means explaining, not guessing. A tap
+  is usable within ±250 ms of the run's median deviation, taken after unwrapping
+  the taps around their circular mean, and then within 2.5 SD (decisions.md,
+  2026-10-31, calibration window); a mean past ±300 ms is refused as at the
+  limit, and so is a steady run (SD ≤ 30 ms) within one SD of it, while an
+  unsteady one inside it gets "Use anyway". At 100 BPM a steady route past
+  ±300 ms cannot be told from one a beat away, so with a tight spread it is
+  stored as the nearer offset: +320 ms reads as −280 ms (accepted by the owner).
 - The stepper stays for people who know their number: every gesture has a visible
   twin, and calibration is the gesture here.
 
@@ -2250,8 +2290,9 @@ unchanged.
 slot_mask)` sets one row: bit *s* accents slot *s*, bit 0 is ignored, one command
 per row. Rows start empty when the engine is created and survive stop/start; they
 are not stored, so whatever persists the patterns must replay them on launch.
-Grid mode applies them to the measured beats' subdivisions. **Not built:** the
-schema for the global patterns and the Settings row and sheet.
+Grid mode applies them to the measured beats' subdivisions. The Settings row and
+sheet edit them; the patterns persist as preferences (one mask per count, no
+schema change) and are replayed at launch and on every edit (#170).
 
 ### D3 — Volume and latency are **global only**. Both columns go.
 

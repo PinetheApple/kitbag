@@ -1,6 +1,7 @@
 import '@/runtime/cryptoRuntime';
 import '@/runtime/metronomeRuntime';
 import '@/runtime/libraryRuntime';
+import '@/runtime/practiceRuntime';
 import '@/runtime/songLibraryRuntime';
 import '@/runtime/stemPlayerRuntime';
 import '@/runtime/tunerRuntime';
@@ -8,12 +9,17 @@ import '@/runtime/lastToolRuntime';
 import '@/runtime/homeLayoutRuntime';
 import '@/runtime/swipeHintRuntime';
 import '@/runtime/appearanceRuntime';
+import '@/runtime/countInRuntime';
+import '@/runtime/backupRuntime';
 import '@/runtime/transportRuntime';
 import '@/runtime/keepAwakeRuntime';
+import '@/settings/rigRuntime';
+import '@/settings/toolsRuntime';
 
 import '@/global.css';
 
 import {
+  layout,
   SheetHost,
   ThemeProvider,
   themeVars,
@@ -25,18 +31,20 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { VariableContextProvider } from 'nativewind';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import {
   initialWindowMetrics,
   SafeAreaProvider,
+  useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 import { StyleSheet, useColorScheme } from 'react-native';
 
 import { resolveThemeMode } from '@/runtime/appearance';
 import { applyAppearance } from '@/runtime/appearanceRuntime';
 import { useKitbagRuntime } from '@/runtime/bootstrapRuntime';
+import { NotificationPromptSheet } from '@/notifications/NotificationPromptSheet';
 import { designFonts } from '@/runtime/designFonts';
 import { useSongLibraryAnalysis } from '@/runtime/songLibraryRuntime';
 
@@ -83,7 +91,7 @@ function ThemedRoot() {
   const screenOptions = useMemo(
     () => ({
       headerShown: false,
-      contentStyle: { backgroundColor: theme.color.bg },
+      contentStyle: [styles.content, { backgroundColor: theme.color.bg }],
     }),
     [theme.color.bg],
   );
@@ -92,15 +100,26 @@ function ThemedRoot() {
     <GestureHandlerRootView style={rootStyle}>
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
         <KeyboardProvider navigationBarTranslucent statusBarTranslucent>
-          <SheetHost>
+          <InsetSheetHost>
             <Stack screenOptions={screenOptions} />
-          </SheetHost>
+            <NotificationPromptSheet />
+          </InsetSheetHost>
         </KeyboardProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
 
+function InsetSheetHost({ children }: { readonly children: ReactNode }) {
+  const insets = useSafeAreaInsets();
+  return <SheetHost topInset={insets.top}>{children}</SheetHost>;
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  content: {
+    width: '100%',
+    maxWidth: layout.maxContentWidth,
+    alignSelf: 'center',
+  },
 });

@@ -14,6 +14,15 @@ export function useSettingsRoutes() {
       openAttributions: () => {
         router.push('/settings/attributions');
       },
+      openCalibration: () => {
+        router.push('/settings/calibrate');
+      },
+      openTools: () => {
+        router.push('/settings/tools');
+      },
+      openRestore: () => {
+        router.push('/settings/restore');
+      },
     }),
     [router],
   );

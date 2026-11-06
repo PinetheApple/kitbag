@@ -1,20 +1,27 @@
-Kitbag is a practice-first metronome for musicians, built as a local-first
-Android app with a realtime C++ audio core.
+Kitbag is a practice toolkit for musicians: a metronome, a tuner and a stem
+player in one local-first Android app, with a realtime C++ audio core.
 
-What it does today:
+Metronome
+- Set the tempo by swiping anywhere, tapping it in or typing it on a numpad.
+- Italian tempo markings, from Largo to Presto.
+- An editable row of beat lights: group and wrap beats, and set an accent on each.
+- A polyrhythm row, subdivisions, tempo ramps, bar muting and a count-in.
+- Presets and setlists stored on the device, with a summary of each practice session.
+- Controls in the notification while the app is in the background.
 
-- Set tempo by swiping anywhere on the screen or typing it on a numpad.
-- Conventional Italian tempo markings (LARGO through PRESTO).
-- A beat LED row you can edit directly: regroup beats, wrap rows, and set
-  accents per beat.
-- A polyrhythm row for a second beat layer.
-- Presets stored on device, with a schema that carries ramp, bar-mute and
-  count-in settings.
+Tuner
+- Reads the microphone, with a choice of tunings, your own tunings and an
+  adjustable A4 reference.
 
-Roadmap (not in the current build): setlists and song playback, a stem
-player, play-along, and a tuner. This description describes the built
-application only; roadmap items ship when they exist.
+Songs and stems
+- Import songs; Kitbag finds the tempo and beat grid in the background.
+- Play a song from its separate stems, with volume, mute and solo for each.
 
-Kitbag works entirely offline. It contains no ads, no analytics, no
-trackers, and no proprietary services. The audio engine is free software
-(GPL-3.0), and the app never phones home.
+Settings
+- Calibrate the output latency per audio route, and back up or restore your
+  library through files you choose.
+
+Not in this build: play-along with other apps, and speed or key changes in the
+stem player.
+
+Kitbag needs no account and contains no ads, analytics or trackers.

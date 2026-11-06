@@ -60,8 +60,18 @@ next version, builds a release APK signed with the release key (Actions
 secrets), gates it with `scripts/release-gate.sh` (pinned certificate in
 `packages/app-shell/android/app/release-cert.sha256`, `versionName`,
 `versionCode`) and publishes GitHub release `vX.Y.Z` with the APK and its
-sha256. Nothing is committed back: the tag is the version source, passed to
-Gradle as `-PkitbagVersionName`.
+sha256. The tag is the version source, passed to Gradle as
+`-PkitbagVersionName`.
+
+Nothing is pushed to `main`. The job runs `scripts/release-notes.sh`, commits
+`metadata/en-US/changelogs/<versionCode>.txt` as `github-actions[bot]` on a commit
+whose parent is the merged `main` commit, and tags that commit. The APK, the gate
+and the release are all built from it, because F-Droid builds the tagged tree. Only
+the tag is pushed, after the gate passes; a failed or cancelled publish deletes it
+again unless a published release holds it. `version.sh` needs nothing special: the
+tag commit's history contains its `main` parent, so `<tag>..HEAD` is exactly the
+later `main` commits. Only `changelog.sh`'s full regeneration re-tags each release
+at its parent, because git-cliff only sees tags in HEAD's history.
 
 - **Next version** — `scripts/version.sh next`, over the commits since the
   latest `vX.Y.Z` tag: breaking (`!` or `BREAKING CHANGE`) bumps major, or minor
@@ -77,8 +87,9 @@ Gradle as `-PkitbagVersionName`.
   push arrives is dropped; the newer run's range covers its commits.
 
 Local builds stay debug-signed unless `ANDROID_KEYSTORE_*` is set (see
-`.env.example`). `scripts/version.test.sh`, `scripts/release-gate.test.sh` and
-`scripts/changelog.test.sh` cover the rule, the gate and the notes.
+`.env.example`). `scripts/version.test.sh`, `scripts/release-gate.test.sh`,
+`scripts/changelog.test.sh` and `scripts/release-notes.test.sh` cover the rule, the
+gate and the notes.
 
 ### Commits and PRs
 
@@ -91,6 +102,13 @@ PRs state what changed, copy the issue's acceptance criteria with only the
 satisfied ones ticked, and record verification plainly: what was run, what it
 printed, and what still needs a device.
 
+Every PR body carries a ` ```release-note ` block: one user-facing line — what a
+musician notices, in plain words — or `NONE` for an internal change.
+`scripts/release-notes.sh` turns the blocks into the F-Droid changelog, so F-Droid
+users read these lines verbatim; they must be true. The `Release note` check
+(`.github/workflows/release-note.yml`) fails a PR without one, and the owner has
+made it a required check on `main`. A bot's PR passes as `NONE`.
+
 ## What is in this repo right now
 
 The Flutter app was **deleted on 2026-07-17** (SPEC.md §13 — the stack is React
@@ -100,7 +118,7 @@ rebuilding the tools on top. What is here now:
 | Path | What it is |
 |------|-----------|
 | `native/audio_core/` | The C++ realtime core. Flat C ABI (`include/kitbag_api.h`), miniaudio backend — SPEC.md §4. Built in Phase 1 (PR #26); still the cheapest verification signal in the project. |
-| `packages/` | The React Native app: pnpm workspaces + Turborepo. `app-shell` (Expo router shell), `core-native` (JSI HostObject + TurboModule — the ONLY native-binding package), `core-state`, `core-db` (Drizzle schema v17, migrating the Flutter v6 database in place), `core-plugin-api` (the abstract contract), `core-design`, `eslint-plugin-kitbag`, and the tools: `tool-metronome`, `tool-library` (Songs and Stem songs lists), `tool-stems` (stem player) and `tool-tuner` are built; `tool-sync` (play along) is a skeleton. |
+| `packages/` | The React Native app: pnpm workspaces + Turborepo. `app-shell` (Expo router shell), `core-native` (JSI HostObject + TurboModule — the ONLY native-binding package), `core-state`, `core-db` (Drizzle schema v19, migrating the Flutter v6 database in place), `core-plugin-api` (the abstract contract), `core-design`, `eslint-plugin-kitbag`, and the tools: `tool-metronome`, `tool-library` (Songs and Stem songs lists), `tool-stems` (stem player) and `tool-tuner` are built; `tool-sync` (play along) is a skeleton. |
 | `SPEC.md` | Product + technical spec. Source of truth. §17 records the locked decisions; §17.1 is what is still open. |
 | `design/` | The binding HTML design specs. Precedence, and which variant of a multi-variant file binds, is in SPEC.md §12. |
 | `legacy/` | `android/MediaSessionPlugin.kt` + `AndroidManifest.xml`, the Flutter-era media-session detection that play-along (§8.2, §13.9) still has to port. **Reference only — do not build against them.** Delete them once `MediaNotificationListenerService.kt` stops being a skeleton. |

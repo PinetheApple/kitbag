@@ -19,6 +19,7 @@ export type {
   ImportedStem,
   ImportedStemBundle,
   LibraryConstants,
+  PickedBackup,
   PickedDocument,
   PickedFolder,
   StemBundleBar,
@@ -29,6 +30,7 @@ export type {
   StorageReport,
 } from './NativeKitbagLibrary';
 export { missingFiles, storageReport } from './libraryStorage';
+export { backupFilesAvailable, pickBackup, shareBackup } from './backupFiles';
 
 // --- #30 (P2-A3) JSI HostObject: polled realtime reads (§13.2, §13.3) --------
 export {

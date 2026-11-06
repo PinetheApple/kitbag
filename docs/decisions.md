@@ -472,8 +472,10 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   the metronome runs, the chip is disabled with a hint and never touches metronome state.
   Q3: volume snaps to 100% within ±3% of range, accessibility step 1%. Q4: the latency
   stepper repeats after a 400 ms hold, then every 50 ms, reusing StepControl's repeat if
-  one exists. Q5: an uncalibrated Output row reads "· not calibrated"; only the live route
-  opens calibration, other routes show their stored offset. Q6: icons come from
+  one exists. Q5 (revised 2026-11-01): the Output row shows the live route's stored offset ("· 0 ms"
+  when none), or "· not saved" for an unknown or guessed route; `route_latency` cannot tell
+  a calibrated offset from a stepped one, so the row never says "calibrated". Only the
+  live route opens calibration, other routes show their stored offset. Q6: icons come from
   core-design `Icon` only: calibrate `timer-sync-outline`, remove missing `broom`, unless
   the design names one. Q8: Rig and Tools ship only once their native calls exist. Q9:
   tools that cannot be installed show SOON with no size label. Q10: Backup, Restore and
@@ -599,6 +601,36 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   backward change waits for the next beat that has not sounded, so no beat sounds twice.
   The interval is the spacing of the two beats the cursor sits between. **[user]**
 
+- **2026-10-31 · Calibration window and the ±300 ms limit (§12.5.1, #170)** — A tap's
+  deviation is only known to within one beat, so the taps are first unwrapped around
+  their circular mean; the ±250 ms usable window is then centred on the run's median
+  deviation, not on 0, followed by the 2.5 SD drop. The click stays at 100 BPM. A result
+  whose mean, or mean ± its SD, lies past `KB_LATENCY_OFFSET_MS_BOUNDS` (±300 ms) is
+  refused with "Latency is at the limit Kitbag can correct" instead of a number, so no
+  stored offset is ever outside the bounds. The mean ± SD check applies only to a steady
+  run (SD ≤ 30 ms); an unsteady run whose mean is inside ±300 ms gets "Use anyway"
+  (owner ruling, 2026-10-31). At 100 BPM a steady route past ±300 ms cannot be told from
+  one a beat away, so with a tight spread it is stored as the nearer offset (+320 ms
+  reads as −280 ms); the owner accepted this. **[user]**
+
+- **2026-10-31 · Tools screen and tool switches (§9.3, §12.5, #170)** — The Tools screen
+  lists only the built tools, each with an on/off switch, read from the Home registry
+  (`HOME_TOOLS`), never a second list. It has no Get or SOON rows, and the Settings row
+  reads "N on". Off is separate from Arrange's Hide. Off removes a tool everywhere: its
+  Home tile, its Arrange row, its routes (a route to an Off tool goes back to Home), the
+  Continue card and links from other tools. Hide only removes the Home tile. Nothing is
+  deleted, and a tool turned back on returns to its place in the Home layout. One tool
+  always stays on. `design/kitbag-settings.html` still draws Get and SOON rows; they are
+  not built. **[user]**
+
+- **2026-11-01 · Turning a tool Off stops it (§9.3, §12.5, #170)** — Off means disabled
+  everywhere, so switching the metronome Off stops it and drops its notification, and
+  switching Stem songs Off closes an open stem song, which stops it and hides its
+  notification. Coordinator call; the owner may overturn it. **[recorded]**
+
+- **2026-11-01 · More tools opens Tools (§9.3, §12.4, #170)** — Home's "More tools" row
+  opens Settings → Tools. Coordinator call; the owner may overturn it. **[recorded]**
+
 - **2026-11-01 · Poly ratio label goes right first (§5.2, #243)** — The label follows the
   last poly dot at 18 dp, then sits 8 dp left of the row, then above it. It follows the
   owner-approved round 2 frame (`design/kitbag-metronome.html` §02) rather than the poly
@@ -610,3 +642,185 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   Holding a section over a custom A-B loop replaces it, with Undo. Retime mode plays at
   0.75× and restores the speed on exit, once #138 lands. The UI is built at the end of the
   backlog; the data and state layer lands first. **[user]**
+
+- **2026-11-01 · The Settings click-volume slider sets on a tap (§12.5, #170)** — A tap on
+  the Click volume track sets the level there, and a drag keeps the thumb under the finger;
+  the unity detent stays. This departs from the drag-only stem faders (2026-10-29, #137)
+  because it is a single settings control, not a live mix where a stray tap would jump a
+  playing level. The stem faders are unchanged. **[coordinator — emulator round; the owner
+  may overturn]**
+
+- **2026-11-01 · Count-in per song or on every song (§5.3, #265)** — The
+  `design/kitbag-metronome.html` §03 chip "Count in on every song" sits in layout B's
+  Practice sheet, under the Count-in section; off means per song. The choice and the
+  live count-in persist as `preferences` keys, with no migration, and travel in a backup
+  category scoped to count-in (`countInSettings`), not a general preferences dump.
+  **[recorded — coordinator ruling]**
+
+- **2026-11-01 · Transport Stop pauses a practice session; End on the pill ends it (§5.7, #80, #85)**
+  — The metronome has only Play/Stop, so Stop cannot double as the session end. Stop
+  pauses; the pill's reset becomes **End**, which ends the session and opens the summary;
+  leaving the metronome screen with played time also ends it. A phone call or going to
+  the background never ends it. Longest stretch is shown in the summary only, so the
+  schema does not change. **[owner]**
+
+- **2026-11-01 · Small text contrast (§12.2, #189)** — Text under 18sp holds 4.5:1 on
+  every ground it sits on, in both themes. `text2`, `text3` and light `accentDeep` move in
+  lightness only to clear it, and the `text2` step stays above `text3`. Accent-coloured text
+  uses `accentInk`, generalising the Settings section label exception; `accent` is
+  unchanged for fills and icons. **[recorded]**
+- **2026-11-01 · Accent icons on tinted fills (§12.2, #189)** — In light, an accent icon on an
+  accent-tinted fill uses `accentInk` so it holds 3:1; light `accent` is 2.76:1 on
+  `activeControlFill`. **[recorded — coordinator ruling]**
+- **2026-11-01 · Text fills, feedback inks, decor and the text2 step (§12.2, #189)** — An
+  accent fill that carries text uses `accentDeep` in light (`accentTextFill`); plain fills
+  and icons keep `accent`. Red, amber and green used as small text take darker light-only
+  inks (`redInk`, `amberInk`, `greenInk`); fills, icons and borders keep the base token. The
+  previous `text3` values move to a `decor` token for non-text marks, so they look as
+  before. `text2` moves further from `text3` for a clearer step. **[user]**
+- **2026-11-01 · The text2 step and decor (§12.2, #189)** — The owner asked for `text2` about
+  1.8:1 over `text3`, and kept `decor` under the 3:1 non-text bar in both themes (down to
+  about 2.3:1, light on `surface3`) so those marks look as before. **[user]** Light meets the step: `text2` `#433F4B` is
+  1.83:1 over `text3` and 1.59:1 under `text`. Dark falls short at 1.58:1 over `text3` and
+  1.59:1 under `text`: `text3` cannot drop below its 4.5:1 floor on the setlist NOW row, and
+  1.8:1 would leave `text` only 1.39:1 above `text2`. **[recorded]**
+
+- **2026-11-01 · Current-bar ring pulled inside the cycle gap (§12.2, #264)** — The
+  status row's current-bar ring is a 1.5 dp outline with no offset, so it reaches 1.5 dp
+  past its cell and a visible gap stays against the 3 dp cycle gap. At 340 dp the old
+  3.5 dp reach overlapped both neighbours. The 3 dp gap is kept. This departs slightly
+  from the design files, which draw the overlap. **[recorded — coordinator ruling]**
+
+- **2026-11-01 · Notification permission and the playback card channel (§5.6, §12.5, #277)**
+  — Kitbag asks for the notification permission on the first playback start, not at
+  launch, with one line saying why: the playback card in the shade and on the lock
+  screen. Declining keeps playback working and Kitbag does not ask again on later starts;
+  Settings offers one retry route. The metronome and stem song cards move to DEFAULT
+  importance with no sound, vibration or heads-up, so they show expanded in the shade and
+  on the lock screen instead of under Silent. **[user]** Playback starts at once and the
+  prompt appears alongside it. Back or a tap outside the prompt counts as Not now. The
+  prompt is remembered only once answered, so a prompt cut off by the app closing comes
+  back on the next start. The system dialog counts as asked once it answers, including a
+  first denial; a permission already granted at the first start also counts as asked. A
+  blocked answer opens the app's system notification settings, since it
+  can come back with no dialog shown. Android keeps an existing channel's importance, so
+  the cards move to new channel IDs and the LOW ones are deleted. The ask state (never,
+  declined, asked) is a device-local `preferences` key with no migration and is not
+  carried in a backup. **[recorded]** The Settings row is "Notifications" in Appearance,
+  under Keep screen awake, reading "On" or "Off". Off has a chevron: it shows the system
+  dialog if Kitbag has never shown it, including after Not now on the prompt, and
+  otherwise opens the app's system notification settings. On does nothing. **[coord]**
+
+- **2026-11-02 · Leaving the metronome ends a practice session only when stopped (§5.6, §5.7, #85)**
+  — Leaving the screen with the transport stopped and at least 1 s played ends the session,
+  and its summary shows on the next metronome visit. Leaving while playing keeps the same
+  session running, since background practice counts. A session stopped from the notification
+  while away stays open until End or the next stopped leave. **[coord]**
+
+- **2026-11-02 · Solid ends on muted bar cells (§12.2, #264)** — The status file draws a
+  muted cell as a fully dashed 1.5px outline: `tx2` in the status strip, `decor` in the
+  Practice sheet preview. Both now ship a dashed outline with solid left and right edges
+  in the same colour. Android does not anchor dashes at the corners, so narrow dashed cells
+  lose their ends and a run of muted cells reads as one dashed bar. This departs from
+  `design/kitbag-metronome-status.html`. **[recorded]**
+
+- **2026-11-02 · Predictive back stays off (§12, #191)** — The app manifest keeps
+  `android:enableOnBackInvokedCallback="false"`. An open stem fader and an inline stem
+  rename take Back through React Native's `BackHandler` to collapse or cancel before the
+  screen pops, as the sheets do, and predictive back must not bypass them. Any keyboard
+  dismissal without a blur (the IME hide key, the nav-bar chevron, Back) cancels the
+  rename, because the app cannot tell these apart. **[user]** In React Native 0.83.6,
+  `BackHandler` listeners run only from `ReactActivity.onBackPressed()`.
+  On Android 16 with targetSdk 36, which the build takes from React Native's version
+  catalog, `ReactActivity` registers an always-enabled `OnBackPressedCallback` that calls
+  it, so the handlers run with or without the flag. Below Android 16 it registers none, and
+  Android 13 to 15 stop calling `onBackPressed()` once an app opts in (Android's documented
+  behaviour, not read in source): Back would skip every `BackHandler` handler and leave the
+  app. **[recorded]**
+
+- **2026-11-02 · Text at 200% font scale (§12.6, #192)** — The stem player's name column
+  keeps the mockup's 58 dp at the default text size and grows by the font scale above it.
+  The name keeps `numberOfLines={1}`, so a long name still truncates, as the ruling
+  accepts. **[user, 2026-10-30]** App-bar icons (back, search, add, the metronome bar's
+  keys) grow with the font scale up to 1.5×. The 48 dp buttons alone would allow about
+  1.84× for the largest bar glyph (26 dp); 1.5 is a judgement, not measured, so a glyph keeps padding
+  inside its button and does not outweigh the bar title beside it. Other icons stay at
+  their design size, since most sit inside fixed-size controls. The app-bar title keeps
+  its existing cap: one line, shrinking toward `appBarTitleMinSize` through
+  `minimumFontScale` before it truncates. The metronome's status rows grow by the font
+  scale and hold at most two lines; that a grown row fits two grown lines is reasoned from
+  the 40 dp row height, not measured, and needs a device check. A wider row wraps onto its
+  second line rather than truncating. Above the default scale the status stack leaves the
+  scrolling body and sits directly above the transport, so a body that overflows cannot
+  push it out of view, at one fixed height, the running stack's, so nothing resizes on Play.
+  On a small screen at 2.0 the beat dots then sit below the fold and are reached by
+  scrolling the body (coordinator call, 2026-11-02, open to owner review). Above the default scale
+  a segmented control's options and the sound picker's items take their label's width
+  and never shrink below it, since Android wraps a squeezed label mid-word; what does
+  not fit on one line wraps onto further rows inside the track or grid. A `fill` track
+  wider than its row takes a line of its own and shrinks to it; a track without `fill`
+  takes the width its parent gives it. Wrapped rows of options sit far enough apart that
+  an option on a row between two others reaches a 48 dp touch target from the gaps alone,
+  so a wrapped track is taller than its options; the first and last rows reach into the
+  track edge and the neighbour gap as a single row does. At 1.0 the options stay equal
+  widths and the picker keeps its columns. A stepper's value-to-suffix gap grows with
+  the font scale. The click volume row lets its slider and readout drop below the label
+  above the default scale rather than wrapping them beside it. Library and
+  output-route rows drop their one-line limit above the default scale. **[recorded]**
+
+- **2026-11-02 · Metronome card is media-style, with no setlist skips (§5.6, §13.9, #284)** —
+  Decided by the owner (ruling via coordinator, 2026-11-02); supersedes the 2026-10-28 #163
+  entry for the metronome card. #284 asks for the media notification style: One UI with
+  icons-only lock-screen notifications shows a player only for a media-style notification
+  tied to an active media session, and stock Android puts only those in the shade's media
+  area. Android 13+ draws a seek bar on it again; no duration is published, so it is greyed
+  and cannot be dragged, which the owner accepted. The card and session never carry
+  previous or next, setlist or not; songs step in the app only. The card is always −, play
+  or pause, +, stop. On Android 13+ the system builds the controls from the session's
+  playback state: play/pause from the state, and with no skip actions the custom actions
+  (minus, plus, stop) fill the slots in that order, giving [−][▶][+][Stop]. Before 13 the
+  notification's own actions draw, and the compact view is −, play or pause, +. The session
+  always offers play, pause, play/pause and stop, so headset keys work in either state; it
+  opens with the first card and is released when the last card goes, not when the service
+  ends. Also retires the notification step in the 2026-10-31 #212 entry and the tempo-key
+  rule in #87; kitbag-metronome.html §04 and kitbag-metronome-unsaved.html Frame 4 are
+  edited to match. **[user]**
+
+- **2026-11-02 · Back on the practice summary saves the session (§5.7, #85)** — Back,
+  a downward drag past the dismiss threshold and a tap outside the sheet all save the
+  session, as the non-destructive default; Discard stays an explicit button. The sheet
+  takes all three through one dismiss path. The save is idempotent per session, so a
+  second Back during a save writes nothing more. A failed save leaves the summary pending
+  and on screen with "Try again". This replaces the earlier choice that dismissing kept
+  the summary pending for the next visit. **[coord]**
+
+- **2026-11-02 · Content is capped at 600 dp wide, centred (§12, #190)** — On screens 600 dp
+  wide or more, every screen and every sheet is capped at `layout.maxContentWidth` (600 dp)
+  and centred; sheet scrims stay full width. No design exists for 600 dp and wider, and
+  uncapped screens stretched their tempo rows, sheets and transports across the width.
+  **[coord — the owner may overturn]**
+
+- **2026-11-02 · APK size target re-set to 30.6 MB (#49)** — The release APK target is
+  30.6 MB (30,648,062 bytes, arm64-v8a release), the size measured after the font cut,
+  replacing the earlier 25 MB; the baseline is release v0.26.2 at 33,411,826 bytes. The
+  remainder is uncompressed native libraries (20.03 MB) plus the Hermes bundle, kept
+  uncompressed on purpose as Android's default (uncompressed libs load in place; the
+  bundle is memory-mapped). Compressing them was declined; the cut taken is the 17
+  unused font files. Breakdown: [#49 comment](https://github.com/PinetheApple/kitbag/issues/49#issuecomment-6575336455).
+  **[owner]**
+
+- **2026-11-02 · Per-release F-Droid changelogs (§13.8, #61)** — Each release writes
+  `metadata/en-US/changelogs/<versionCode>.txt` from the ```` ```release-note ```` block
+  every PR body carries (one user-facing line, or `NONE`). The release job commits it
+  as the bot on a commit off `main` and pushes only the tag; nothing is pushed to
+  `main`. F-Droid reads metadata from the tagged commit, so the file must be in it.
+  Pushing to `main` instead would need a ruleset bypass for the release job and
+  possibly a new credential; tagging off `main` needs neither. `version.sh` works
+  unchanged through plain reachability; only `changelog.sh`'s full regeneration
+  re-tags each release at its parent on `main`. **[owner]**
+
+- **2026-11-02 · The `Release note` check is required on `main` (#61)** — A PR merges
+  only with a ```` ```release-note ```` block holding a user-facing line or `NONE`; the
+  coordinator adds the check to the `main` ruleset at merge. PRs opened by a bot
+  (author type `Bot` or a `[bot]` login) pass as `NONE`, so dependency updates never
+  block on a note. **[owner]**

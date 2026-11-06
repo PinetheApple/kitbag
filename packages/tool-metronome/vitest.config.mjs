@@ -6,8 +6,16 @@ const stub = (path) => fileURLToPath(new URL(path, import.meta.url));
 
 // Barrels that reach react-native (Flow) or native modules resolve to their pure parts.
 export default defineConfig({
+  esbuild: { jsx: 'automatic' },
   test: {
-    include: ['src/logic/**/*.test.ts', 'src/screen/useHoldEngine.test.ts'],
+    include: [
+      'src/logic/**/*.test.ts',
+      'src/screen/useHoldEngine.test.ts',
+      'src/screen/useEndPracticeOnLeave.test.ts',
+      'src/screen/muteStrips.test.ts',
+      'src/screen/SwipeHint.test.ts',
+      'src/screen/PracticeSummarySheet.test.ts',
+    ],
     alias: {
       '@kitbag/core-native': stub(
         '../core-native/src/generated/nativeConstants.gen.ts',

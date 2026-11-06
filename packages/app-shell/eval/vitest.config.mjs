@@ -13,6 +13,7 @@ export default defineConfig({
     hookTimeout: 30000,
     // These barrels reach react-native UI; tests need only their pure parts.
     alias: {
+      '@': fileURLToPath(new URL('../src', import.meta.url)),
       '@kitbag/core-design': fileURLToPath(
         new URL('../../core-design/src/pure.ts', import.meta.url),
       ),

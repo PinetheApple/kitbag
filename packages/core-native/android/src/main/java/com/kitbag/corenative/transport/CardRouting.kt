@@ -4,8 +4,6 @@ enum class SessionButton(val song: SongAction?, val metronome: TransportAction?)
   PLAY(SongAction.PLAY, TransportAction.PLAY),
   PAUSE(SongAction.PAUSE, TransportAction.PAUSE),
   STOP(SongAction.STOP, TransportAction.STOP),
-  PREVIOUS(null, TransportAction.PREVIOUS),
-  NEXT(null, TransportAction.NEXT),
   REWIND(SongAction.REWIND, null),
   FAST_FORWARD(SongAction.FORWARD, null),
 }
@@ -61,6 +59,9 @@ sealed interface CardEffect {
 class CardRouting {
   private var songShowing = false
   private var metronomeShowing = false
+
+  val cardShowing: Boolean
+    get() = songShowing || metronomeShowing
 
   fun on(event: CardEvent): CardEffect =
     when {

@@ -12,8 +12,14 @@ metadata/
     ├── short_description.txt
     ├── full_description.txt
     ├── changelogs/<versionCode>.txt
-    └── images/             # pending a real device build — see its README
+    └── images/             # screenshot list in its README
 ```
+
+`changelogs/<versionCode>.txt` (versionCode from `scripts/version.sh code`) is
+written per release by `scripts/release-notes.sh` from the merged PRs' release-note
+blocks. It exists only in the tagged release commit, a bot commit off `main`, never
+on `main` itself; F-Droid reads it from the tag it builds and caps it at 500
+characters. F-Droid shows `<CurrentVersionCode>.txt`.
 
 To submit, this tree maps into the fdroiddata repository as
 `metadata/com.kitbag.app.yml` plus `metadata/en-US/…` — the paths are

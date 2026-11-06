@@ -51,7 +51,7 @@ stub_cliff() {
   printf '%s' "$2" > "$1/stub-output"
 }
 
-notes_in() { (cd "$1" && PATH="$1/stub-bin:$PATH" ./scripts/changelog.sh --notes "$2" 2>/dev/null); }
+notes_in() { (cd "$1" && PATH="$1/stub-bin:$PATH" ./scripts/changelog.sh --notes "$2" "$3" 2>/dev/null); }
 
 echo "size guard (stubbed git-cliff)"
 fixture=$(make_fixture)
@@ -59,7 +59,7 @@ git -C "$fixture" tag v0.1.0
 commit "$fixture" "fix: second thing"
 oversized="## 0.1.1"$'\n\n'"### Fixed"$'\n\n'$(head -c "$((GITHUB_RELEASE_BODY_MAX + 1))" /dev/zero | tr '\0' x)
 stub_cliff "$fixture" "$oversized"
-notes=$(notes_in "$fixture" v0.1.1)
+notes=$(notes_in "$fixture" v0.1.1 v0.1.0)
 if ((${#notes} <= GITHUB_RELEASE_BODY_MAX)) && [[ $notes == *"compare/v0.1.0...v0.1.1"* && $notes != *CHANGELOG.md* ]]; then
   pass "oversized notes fall back to the compare range only"
 else
@@ -67,7 +67,7 @@ else
 fi
 
 stub_cliff "$fixture" "## 0.1.1"$'\n\n'"### Fixed"$'\n\n'"- Second thing"
-notes=$(notes_in "$fixture" v0.1.1)
+notes=$(notes_in "$fixture" v0.1.1 v0.1.0)
 if [[ $notes == *"- Second thing"* && $notes != *"too long"* ]]; then
   pass "notes under the limit pass through"
 else
@@ -75,7 +75,7 @@ else
 fi
 
 stub_cliff "$fixture" "## 0.1.1"$'\n'
-notes=$(notes_in "$fixture" v0.1.1)
+notes=$(notes_in "$fixture" v0.1.1 v0.1.0)
 if [[ $notes == *"No user-facing changes in this release."* ]]; then
   pass "no grouped commits: says so"
 else
@@ -84,7 +84,7 @@ fi
 
 fixture=$(make_fixture)
 stub_cliff "$fixture" "$oversized"
-notes=$(notes_in "$fixture" v0.1.0)
+notes=$(notes_in "$fixture" v0.1.0 "")
 if [[ $notes == *"commits/v0.1.0"* ]]; then
   pass "first release falls back to the tag's commit list"
 else
@@ -96,7 +96,7 @@ if command -v git-cliff >/dev/null 2>&1; then
   fixture=$(make_fixture)
   git -C "$fixture" tag v0.1.0
   commit "$fixture" "fix: second thing" -m "A commit body that belongs in CHANGELOG.md only."
-  notes=$(notes_in "$fixture" v0.1.1)
+  notes=$(notes_in "$fixture" v0.1.1 v0.1.0)
   if [[ $notes == *"Second thing"* && $notes != *"commit body"* ]]; then
     pass "notes carry subjects, not bodies"
   else
@@ -104,6 +104,61 @@ if command -v git-cliff >/dev/null 2>&1; then
   fi
 else
   echo "  SKIP  notes carry subjects, not bodies — git-cliff not installed"
+fi
+
+echo "release tags off main (real git-cliff)"
+tag_off_main() {
+  local dir=$1 tag=$2
+  git -C "$dir" checkout -q -b "release-$tag"
+  commit "$dir" "chore(release): F-Droid changelog for $tag"
+  git -C "$dir" tag "$tag"
+  git -C "$dir" checkout -q main
+}
+
+section() { awk -v start="$2" 'index($0, start) == 1 { on = 1; next } on && /^## / { exit } on' "$1/CHANGELOG.md"; }
+
+if command -v git-cliff >/dev/null 2>&1; then
+  fixture=$(make_fixture)
+  sed -i "s/^readonly AUDIT_FLOOR=.*/readonly AUDIT_FLOOR=$(git -C "$fixture" rev-parse HEAD)/" "$fixture/scripts/changelog.sh"
+  commit "$fixture" "fix: before the first release"
+  tag_off_main "$fixture" v0.1.0
+  commit "$fixture" "feat: in the second release"
+  tag_off_main "$fixture" v0.2.0
+  git -C "$fixture" checkout -q release-v0.2.0
+  commit "$fixture" "fix: only on the release branch"
+  git -C "$fixture" tag v0.9.0
+  git -C "$fixture" checkout -q main
+  commit "$fixture" "fix: not released yet"
+  (cd "$fixture" && ./scripts/changelog.sh 2>"$fixture/stderr")
+  name="each off-main tag closes its release at the tag's main-side parent"
+  first=$(section "$fixture" "## 0.1.0")
+  second=$(section "$fixture" "## 0.2.0")
+  unreleased=$(section "$fixture" "## Unreleased")
+  if [[ $first == *"Before the first release"* && $second == *"In the second release"* &&
+    $second != *"Before the first release"* && $unreleased == *"Not released yet"* &&
+    $unreleased != *"In the second release"* ]]; then
+    pass "$name"
+  else
+    fail "$name" "$(<"$fixture/CHANGELOG.md")"
+  fi
+  if [[ $(<"$fixture/stderr") == *"v0.9.0's parent is not in HEAD's history; skipped"* ]]; then
+    pass "a tag whose parent is not in HEAD's history is skipped with a warning"
+  else
+    fail "a tag whose parent is not in HEAD's history is skipped with a warning" "$(<"$fixture/stderr")"
+  fi
+
+  name="--notes with the new tag already on HEAD gives the commits since the previous tag"
+  git -C "$fixture" tag -d v0.9.0 >/dev/null
+  commit "$fixture" "chore(release): F-Droid changelog for v0.3.0"
+  git -C "$fixture" tag v0.3.0
+  notes=$(notes_in "$fixture" v0.3.0 v0.2.0)
+  if [[ $notes == *"Not released yet"* && $notes != *"In the second release"* && $notes != *"Before the first"* ]]; then
+    pass "$name"
+  else
+    fail "$name" "$notes"
+  fi
+else
+  echo "  SKIP  release tags off main — git-cliff not installed"
 fi
 
 echo

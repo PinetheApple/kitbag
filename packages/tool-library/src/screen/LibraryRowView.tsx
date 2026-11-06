@@ -4,11 +4,12 @@ import {
   hitBoxStyle,
   hitExtension,
   Icon,
+  isTextScaled,
   libraryList,
   libraryMix,
+  lineLimit,
   lineRatio,
   minTouchTargetDp,
-  mixHex,
   size,
   space,
   textRoles,
@@ -37,9 +38,7 @@ const MORE_HIT_BOX = hitBoxStyle(
   }),
 );
 
-const FACTS_LINES = 1;
-const SCALED_FACTS_LINES = 2;
-const DEFAULT_FONT_SCALE = 1;
+const ROW_TEXT_LINES = 1;
 
 const useStyles = createThemedStyles((theme) => ({
   row: {
@@ -74,11 +73,7 @@ const useStyles = createThemedStyles((theme) => ({
     justifyContent: 'center',
   },
   stemTile: {
-    backgroundColor: mixHex(
-      theme.color.accent,
-      theme.color.surface2,
-      libraryMix.stemTile,
-    ),
+    backgroundColor: theme.stemTileFill,
   },
   text: { flex: 1, minWidth: 0 },
   title: {
@@ -139,6 +134,7 @@ export function LibraryRowView({
 }: LibraryRowViewProps) {
   const styles = useStyles();
   const { fontScale } = useWindowDimensions();
+  const rowLines = lineLimit(fontScale, ROW_TEXT_LINES);
   const codes = useSongLibrary((s) => s.codes);
   const status = rowStatus(row);
   const failure = row.kind === 'song' ? analysisFailure(row, codes) : null;
@@ -157,10 +153,7 @@ export function LibraryRowView({
           status,
           failure === null ? null : failureText(failure).status,
         )}
-        style={[
-          styles.body,
-          fontScale > DEFAULT_FONT_SCALE && styles.scaledBody,
-        ]}
+        style={[styles.body, isTextScaled(fontScale) && styles.scaledBody]}
         onLongPress={openActions}
         {...(row.kind === 'stems'
           ? { accessibilityRole: 'button' as const, onPress: open }
@@ -168,15 +161,10 @@ export function LibraryRowView({
       >
         <RowTile stems={row.kind === 'stems'} />
         <View style={styles.text}>
-          <Text style={styles.title} numberOfLines={1}>
+          <Text style={styles.title} numberOfLines={rowLines}>
             {row.title}
           </Text>
-          <Text
-            style={styles.facts}
-            numberOfLines={
-              fontScale > DEFAULT_FONT_SCALE ? SCALED_FACTS_LINES : FACTS_LINES
-            }
-          >
+          <Text style={styles.facts} numberOfLines={rowLines}>
             {rowSubtitle(row, status, failure)}
           </Text>
         </View>

@@ -1,4 +1,5 @@
 export * from './countLabel.ts';
+export * from './rowLabel.ts';
 export * from './icons.ts';
 export * from './clampUnit.ts';
 export * from './percent.ts';
@@ -10,3 +11,7 @@ export * from './homeArrangeRoles.ts';
 export * from './toolGrid.ts';
 export * from './snackbarRoles.ts';
 export * from './snackbarTimer.ts';
+export * from './settingsRoles.ts';
+export * from './textScale.ts';
+export * from './stemPlayerRoles.ts';
+export * from './fontFaces.ts';

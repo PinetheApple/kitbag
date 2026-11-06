@@ -2,7 +2,10 @@ import { afterEach } from 'vitest';
 
 import { createBackupService } from './backup';
 import type { ImportResult } from './backup-format';
-import { practiceSessions, songs, tunings } from './schema';
+import { COUNT_IN_PREFERENCE_KEYS } from './count-in-preferences';
+import { createPracticeRepository } from './practice-repository';
+import { createPreferences } from './preferences';
+import { songs, tunings } from './schema';
 import { createSetlistRepository } from './setlist-repository';
 import { createSongPresetRepository } from './song-preset-repository';
 import { openTestDatabase } from './sqlite.test-helper';
@@ -27,8 +30,20 @@ export function openBackupDatabase() {
     sets: createSetlistRepository(handle),
     presets: createSongPresetRepository(handle),
     backup: createBackupService(handle),
+    preferences: createPreferences(
+      (sql, params) => handle.connection.prepare(sql).all(...params),
+      handle.transactor,
+    ),
   };
 }
+
+export const UNRELATED_PREFERENCE = 'appearance_theme';
+
+export const SEEDED_COUNT_IN: Readonly<Record<string, string>> = {
+  [COUNT_IN_PREFERENCE_KEYS.scope]: 'always',
+  [COUNT_IN_PREFERENCE_KEYS.bars]: '2',
+  [COUNT_IN_PREFERENCE_KEYS.distinct]: '0',
+};
 
 export type BackupDatabase = ReturnType<typeof openBackupDatabase>;
 
@@ -88,7 +103,10 @@ async function seedLibrary({ handle }: BackupDatabase) {
 }
 
 export async function seed(database: BackupDatabase) {
-  const { handle, sets, presets } = database;
+  const { handle, sets, presets, preferences } = database;
+  for (const [key, value] of Object.entries(SEEDED_COUNT_IN))
+    await preferences.set(key, value);
+  await preferences.set(UNRELATED_PREFERENCE, 'light');
   const song = await seedLibrary(database);
   const opener = await presets.create(presetValues('Opener', song.id));
   const closer = await presets.create(presetValues('Closer', null));
@@ -104,13 +122,13 @@ export async function seed(database: BackupDatabase) {
     instrument: INSTRUMENTS.bass,
     uuid: crypto.randomUUID(),
   });
-  await handle.db.insert(practiceSessions).values({
-    startTime: SESSION_START,
+  await createPracticeRepository(handle).insert({
+    uuid: crypto.randomUUID(),
+    startedAt: SESSION_START,
     durationSeconds: 1800,
     avgBpm: 120,
     setlistId: friday.id,
-    songsPlayed: JSON.stringify([opener.uuid, closer.uuid]),
-    uuid: crypto.randomUUID(),
+    songUuids: [opener.uuid, closer.uuid],
   });
   return { song, opener, closer, friday, acoustic };
 }

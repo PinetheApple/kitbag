@@ -5,13 +5,15 @@ import {
   reconcileArrangement,
   resizeTile,
   showTile,
+  tilesFor,
   visibleTiles,
+  withOffTiles,
   type ArrangedTile,
   type Arrangement,
   type SavedArrangement,
 } from '@kitbag/core-state';
 
-import { HOME_TOOLS, type HomeToolEntry } from './registry.ts';
+import { HOME_TOOLS, type HomeToolEntry, type ToolOnTest } from './registry.ts';
 
 export type HomeArrangement = Arrangement<ToolTileSize>;
 export type HomeTile = ArrangedTile<ToolTileSize>;
@@ -27,6 +29,21 @@ export function homeArrangement(
   saved: SavedArrangement | undefined,
 ): HomeArrangement {
   return reconcileArrangement(saved, DEFAULT_ARRANGEMENT, isToolTileSize);
+}
+
+export function shownArrangement(
+  saved: SavedArrangement | undefined,
+  isOn: ToolOnTest,
+): HomeArrangement {
+  return tilesFor(homeArrangement(saved), isOn);
+}
+
+export function arrangedWithOff(
+  saved: SavedArrangement | undefined,
+  edited: HomeArrangement,
+  isOn: ToolOnTest,
+): HomeArrangement {
+  return withOffTiles(homeArrangement(saved), edited, isOn);
 }
 
 export function toolFor(tile: HomeTile): HomeToolEntry | undefined {

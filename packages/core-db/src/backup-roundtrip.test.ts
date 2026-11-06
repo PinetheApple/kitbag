@@ -132,6 +132,7 @@ describe('backup round trip', () => {
       setlists: 2,
       tunings: 1,
       practiceSessions: 1,
+      countInSettings: 3,
     });
   });
 

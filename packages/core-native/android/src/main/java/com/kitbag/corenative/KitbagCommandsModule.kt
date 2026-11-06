@@ -13,17 +13,14 @@ import com.kitbag.corenative.route.OutputRoute
 import com.kitbag.corenative.route.OutputRouteWatcher
 import com.kitbag.corenative.transport.Playback
 import com.kitbag.corenative.transport.PracticeClock
-import com.kitbag.corenative.transport.SetlistPosition
 import com.kitbag.corenative.transport.Song
-import com.kitbag.corenative.transport.SongStepWire
-import com.kitbag.corenative.transport.TransportAction
 import com.kitbag.corenative.transport.TransportState
 
 class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   NativeKitbagCommandsSpec(reactContext) {
 
   private val libraryBase = LibraryStorage.base(reactContext)
-  private val transportListener: (TransportState, PracticeClock, TransportAction?) -> Unit = ::emitTransport
+  private val transportListener: (TransportState, PracticeClock) -> Unit = ::emitTransport
   private val songStoppedListener: () -> Unit = ::emitOnSongStopped
   private val outputRoutes =
     OutputRouteWatcher(reactContext, ::outputDeviceId, ::emitOutputRoute)
@@ -57,7 +54,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
         rampRunning = state.getBoolean("rampRunning"),
         beatsPerBar = state.getInt("beatsPerBar"),
         beatUnit = state.getInt("beatUnit"),
-        setlist = state.getMap("setlist")?.let(::setlistPosition),
+        subtitle = state.getMap("setlist")?.getString("subtitle"),
       ),
       state.getDouble("minBpm"),
       state.getDouble("maxBpm"),
@@ -65,13 +62,6 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
       state.getDouble("practiceStretchStartedAt").toLong(),
     )
   }
-
-  private fun setlistPosition(setlist: ReadableMap): SetlistPosition? =
-    SetlistPosition.from(
-      subtitle = setlist.getString("subtitle"),
-      index = if (setlist.isNull("index")) null else setlist.getInt("index"),
-      songCount = setlist.getInt("songCount"),
-    )
 
   override fun transportHide() {
     PlaybackService.hide(reactApplicationContext)
@@ -114,11 +104,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     AppChrome.setSystemBarAppearance(reactApplicationContext.currentActivity, light)
   }
 
-  private fun emitTransport(
-    state: TransportState,
-    practice: PracticeClock,
-    songStep: TransportAction?,
-  ) {
+  private fun emitTransport(state: TransportState, practice: PracticeClock) {
     emitOnTransport(
       Arguments.createMap().apply {
         putString("playback", state.playback.name.lowercase())
@@ -126,7 +112,6 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
         putBoolean("rampRunning", state.rampRunning)
         putDouble("practicePlayedMs", practice.playedMillis.toDouble())
         putDouble("practiceStretchStartedAt", (practice.stretchStartedAt ?: 0L).toDouble())
-        putString("songStep", SongStepWire.of(songStep))
       },
     )
   }

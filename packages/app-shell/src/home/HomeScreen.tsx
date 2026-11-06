@@ -26,8 +26,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useSettingsRoutes } from '../settings/settingsRoutes.ts';
 import { ArrangeSheet } from './ArrangeSheet.tsx';
+import { MoreToolsRow } from './MoreToolsRow.tsx';
 import {
-  homeArrangement,
+  arrangedWithOff,
+  shownArrangement,
   toolFor,
   type HomeArrangement,
 } from './arrangement.ts';
@@ -36,6 +38,7 @@ import {
   HOME_TOOLS,
   TOOL_ID,
   type HomeToolEntry,
+  type ToolOnTest,
 } from './registry.ts';
 import {
   metronomeResumeSubtitle,
@@ -46,14 +49,17 @@ import {
   UPCOMING_SUBTEXT,
   type MetronomeSummary,
 } from './subtext.ts';
+import { useToolOn } from './toolsOn.ts';
 
 const useStyles = createThemedStyles((theme) => ({
   screen: {
     flex: 1,
     backgroundColor: theme.color.bg,
   },
+  scroll: { flex: 1 },
   content: {
     paddingHorizontal: space.screenInset,
+    paddingTop: space.screenInset,
     gap: space.sectionGap,
   },
   actions: {
@@ -108,15 +114,18 @@ function useLiveText(): Readonly<Record<string, LiveText>> {
   }, [metronome, tuning, libraryRows, libraryFailed]);
 }
 
-function useArrangement() {
+function useArrangement(isOn: ToolOnTest) {
   const saved = useHomeLayout((s) => s.arrangement);
   const arrange = useHomeLayout((s) => s.arrange);
-  const arrangement = useMemo(() => homeArrangement(saved), [saved]);
+  const arrangement = useMemo(
+    () => shownArrangement(saved, isOn),
+    [saved, isOn],
+  );
   const onArrange = useCallback(
     (next: HomeArrangement) => {
-      if (next !== arrangement) arrange(next);
+      if (next !== arrangement) arrange(arrangedWithOff(saved, next, isOn));
     },
-    [arrangement, arrange],
+    [arrangement, arrange, saved, isOn],
   );
   return { arrangement, onArrange };
 }
@@ -128,7 +137,8 @@ export function HomeScreen() {
   const liveText = useLiveText();
   const lastToolId = useLastTool((s) => s.toolId);
   const { openSettings } = useSettingsRoutes();
-  const { arrangement, onArrange } = useArrangement();
+  const isOn = useToolOn();
+  const { arrangement, onArrange } = useArrangement(isOn);
   const [arranging, setArranging] = useState(false);
   const openArrange = useCallback(() => {
     setArranging(true);
@@ -137,12 +147,10 @@ export function HomeScreen() {
     setArranging(false);
   }, []);
 
-  const contentInsets = useMemo(
-    () => ({
-      paddingTop: space.screenInset + insets.top,
-      paddingBottom: space.screenInset + insets.bottom,
-    }),
-    [insets.top, insets.bottom],
+  const frameInset = useMemo(() => ({ paddingTop: insets.top }), [insets.top]);
+  const contentInset = useMemo(
+    () => ({ paddingBottom: space.screenInset + insets.bottom }),
+    [insets.bottom],
   );
 
   const open = (tool: HomeToolEntry) => {
@@ -155,7 +163,7 @@ export function HomeScreen() {
     };
   };
 
-  const resume = continueTarget(lastToolId, HOME_TOOLS);
+  const resume = continueTarget(lastToolId, HOME_TOOLS, isOn);
   const resumeText = resume === undefined ? undefined : liveText[resume.id];
 
   const tiles: ToolGridItem[] = visibleTiles(arrangement).flatMap((tile) => {
@@ -177,72 +185,68 @@ export function HomeScreen() {
   const rows = HOME_TOOLS.filter((tool) => tool.layout === 'row');
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={[styles.content, contentInsets]}
-    >
-      <AppBar
-        wordmark
-        title="Kitbag"
-        trailing={
-          <View style={styles.actions}>
-            <Button
-              variant="tonal"
-              size="small"
-              icon="edit"
-              iconSize="field"
-              label="Edit"
-              accessibilityLabel="Edit Home layout"
-              onPress={openArrange}
-            />
-            <AppBarAction
-              icon="settings"
-              accessibilityLabel="Settings"
-              onPress={openSettings}
-            />
-          </View>
-        }
-      />
-
-      {resume === undefined || resumeText === undefined ? null : (
-        <ToolRow
-          variant="resume"
-          icon={resume.icon}
-          title={`Continue · ${resume.name}`}
-          subtitle={resumeText.resume}
-          status="ready"
-          onPress={open(resume)}
+    <View style={[styles.screen, frameInset]}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.content, contentInset]}
+      >
+        <AppBar
+          wordmark
+          title="Kitbag"
+          trailing={
+            <View style={styles.actions}>
+              <Button
+                variant="tonal"
+                size="small"
+                icon="edit"
+                iconSize="field"
+                label="Edit"
+                accessibilityLabel="Edit Home layout"
+                onPress={openArrange}
+              />
+              <AppBarAction
+                icon="settings"
+                accessibilityLabel="Settings"
+                onPress={openSettings}
+              />
+            </View>
+          }
         />
-      )}
 
-      <ToolGrid tiles={tiles} />
+        {resume === undefined || resumeText === undefined ? null : (
+          <ToolRow
+            variant="resume"
+            icon={resume.icon}
+            title={`Continue · ${resume.name}`}
+            subtitle={resumeText.resume}
+            status="ready"
+            onPress={open(resume)}
+          />
+        )}
 
-      {rows.map((tool) => (
-        <ToolRow
-          key={tool.id}
-          icon={tool.icon}
-          title={tool.name}
-          subtitle={liveText[tool.id]?.tile ?? UPCOMING_SUBTEXT}
-          status={tool.homeTile === undefined ? 'upcoming' : 'ready'}
-          onPress={open(tool)}
+        <ToolGrid tiles={tiles} />
+
+        {rows.map((tool) => (
+          <ToolRow
+            key={tool.id}
+            icon={tool.icon}
+            title={tool.name}
+            subtitle={liveText[tool.id]?.tile ?? UPCOMING_SUBTEXT}
+            status={tool.homeTile === undefined ? 'upcoming' : 'ready'}
+            onPress={open(tool)}
+          />
+        ))}
+
+        <MoreToolsRow />
+
+        <ArrangeSheet
+          visible={arranging}
+          arrangement={arrangement}
+          bottomInset={insets.bottom}
+          onArrange={onArrange}
+          onDone={closeArrange}
         />
-      ))}
-
-      {/* The Tools manager (§9.3) is not built, so this has nowhere to go. */}
-      <ToolRow
-        icon="moreTools"
-        title="More tools"
-        subtitle="Future tools arrive as plugins"
-        status="upcoming"
-      />
-
-      <ArrangeSheet
-        visible={arranging}
-        arrangement={arrangement}
-        bottomInset={insets.bottom}
-        onArrange={onArrange}
-        onDone={closeArrange}
-      />
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }

@@ -3,7 +3,9 @@ import { KB_RESULT, KB_TUNER_INSTRUMENT } from '@kitbag/core-native';
 import { vi } from 'vitest';
 
 import type { TunerCommands } from './commands.ts';
-import type { AppActivity, MicPermission, TunerRuntime } from './runtime.ts';
+import type { PermissionAnswer } from '../permission.ts';
+
+import type { AppActivity, TunerRuntime } from './runtime.ts';
 import { createTunerStore } from './store.ts';
 import type { TunerStore, TunerTuning } from './types.ts';
 
@@ -47,7 +49,7 @@ export function makeFakes() {
     tunerResetNotePresence: record('tunerResetNotePresence'),
   };
 
-  let permission: MicPermission = 'granted';
+  let permission: PermissionAnswer = 'granted';
   const micPermission = {
     check: vi.fn(() => Promise.resolve(permission)),
     request: vi.fn(() => Promise.resolve(permission)),
@@ -70,7 +72,7 @@ export function makeFakes() {
     script: (name: keyof TunerCommands, results: number[]) => {
       scripts.set(name, results);
     },
-    setPermission: (p: MicPermission) => {
+    setPermission: (p: PermissionAnswer) => {
       permission = p;
     },
     emit: (a: AppActivity) => listener?.(a),

@@ -8,6 +8,7 @@ export const space = {
   stepKeyGap: 7,
   controlGap: 8,
   ledGap: 9,
+  ledTinyGap: 2,
   rowGap: 10,
   sectionGap: 12,
   screenInset: 16,
@@ -20,6 +21,7 @@ export const space = {
   transportGapWide: 28,
   waveBarGap: 1.5,
   stepSuffixGap: 3,
+  checkLabelGap: 9,
 } as const;
 
 export const size = {
@@ -28,8 +30,11 @@ export const size = {
   ledMainBorder: 2,
   ledSmall: 16,
   ledSmallBorder: 1.5,
+  ledTiny: 7,
+  ledTinyBorder: 1,
   stepKey: 24,
   stepValueMinWidth: 40,
+  stepValueWideMinWidth: 52,
   transportKey: 42,
   playButton: 58,
   playGlyphBox: 22,
@@ -72,6 +77,7 @@ export const size = {
   transportKeySmall: 40,
   numpadKeyLarge: 52,
   presetButton: 37,
+  checkBox: 19,
 } as const;
 
 export const radius = {
@@ -101,6 +107,7 @@ export const radius = {
   segmentLargeOption: 9,
   numpadKeyLarge: 12,
   waveBar: 1,
+  checkBox: 6,
 } as const;
 
 export const inset = {
@@ -240,6 +247,7 @@ export const iconSizes = {
   listTile: 22,
   listFab: 28,
   emptyMark: 36,
+  checkMark: 11,
 } as const;
 
 export type IconSize = keyof typeof iconSizes;
@@ -279,6 +287,7 @@ export const textRoles = {
   rowSubtitle: { family: body, weight: 400, size: 12 },
   dragIndex: { family: display, weight: 400, size: 11.5, tabular: true },
   editValue: { family: display, weight: 400, size: 13.5 },
+  levelReadout: { family: display, weight: 500, size: 13.5, tabular: true },
   sectionLabel: {
     family: display,
     weight: 500,
@@ -290,6 +299,7 @@ export const textRoles = {
   emptyTitle: { family: display, weight: 500, size: 14 },
   emptyReason: { family: body, weight: 400, size: 12 },
   fieldLabel: { family: body, weight: 400, size: 13.5 },
+  bannerEmphasis: { family: body, weight: 600, size: 13.5 },
   editRowKey: { family: body, weight: 400, size: 13 },
   wordmark: {
     family: display,
@@ -380,6 +390,11 @@ export const textRoles = {
 
 export type TextRoleName = keyof typeof textRoles;
 
+export const rowLineHeight = {
+  title: textRoles.rowTitle.size * bodyLineHeight,
+  subtitle: textRoles.rowSubtitle.size * bodyLineHeight,
+} as const;
+
 export const appBarTitleMinSize = 15;
 
 export const playGlyphPathLarge = {
@@ -396,4 +411,8 @@ export const screenBar = {
   h: 4,
   gap: 2,
   iconButton: 48,
+} as const;
+
+export const layout = {
+  maxContentWidth: 600,
 } as const;

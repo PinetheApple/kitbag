@@ -8,17 +8,18 @@ import {
 
 import type { IconName } from '../icons.ts';
 import {
-  bodyLineHeight,
   homeTile,
   iconSizes,
   inset,
   lineRatio,
   opacity,
   radius,
+  rowLineHeight,
   size,
   space,
   textRoles,
 } from '../roles.ts';
+import { rowLabel } from '../rowLabel.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { packTileRows, type ToolTileSize } from '../toolGrid.ts';
@@ -100,12 +101,12 @@ const useStyles = createThemedStyles((theme) => ({
   },
   rowTitle: {
     ...textStyle(textRoles.rowTitle),
-    lineHeight: textRoles.rowTitle.size * bodyLineHeight,
+    lineHeight: rowLineHeight.title,
     color: theme.color.text,
   },
   rowSubtitle: {
     ...textStyle(textRoles.rowSubtitle),
-    lineHeight: textRoles.rowSubtitle.size * bodyLineHeight,
+    lineHeight: rowLineHeight.subtitle,
     color: theme.color.text2,
   },
   chevron: {
@@ -236,7 +237,7 @@ export function ToolRow({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${title}, ${subtitle}`}
+      accessibilityLabel={rowLabel(title, subtitle)}
       accessibilityState={{ disabled: upcoming }}
       disabled={upcoming}
       onPress={onPress}

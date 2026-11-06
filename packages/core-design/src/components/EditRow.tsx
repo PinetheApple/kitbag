@@ -14,7 +14,14 @@ import {
   type PressableStateCallbackType,
 } from 'react-native';
 
-import { bodyLineHeight, inset, size, space, textRoles } from '../roles.ts';
+import {
+  bodyLineHeight,
+  inset,
+  radius,
+  size,
+  space,
+  textRoles,
+} from '../roles.ts';
 import { switchA11y } from '../switch.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles, useTheme } from '../ThemeProvider.tsx';
@@ -75,6 +82,26 @@ const useStyles = createThemedStyles((theme) => ({
   },
   muted: { color: theme.color.text3 },
   path: { flexShrink: 1 },
+  checkLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.checkLabelGap,
+    flexShrink: 0,
+  },
+  checkBox: {
+    width: size.checkBox,
+    height: size.checkBox,
+    borderRadius: radius.checkBox,
+    borderWidth: size.stroke,
+    borderColor: theme.color.line,
+    backgroundColor: theme.color.surface2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkBoxOn: {
+    borderColor: theme.color.accent,
+    backgroundColor: theme.color.accent,
+  },
 }));
 
 export function EditDivider() {
@@ -101,7 +128,7 @@ export interface EditRowProps {
   readonly label: string;
   readonly children?: ReactNode;
   readonly singleLine?: boolean;
-  readonly onPress?: () => void;
+  readonly onPress?: (() => void) | undefined;
   readonly accessibilityRole?: AccessibilityRole;
   readonly accessibilityLabel?: string;
   /** A fixed-height row: the control is centred in it with no vertical padding. */
@@ -150,7 +177,7 @@ export function EditRow({
       <Text style={styles.label}>{label}</Text>
       <View style={styles.value}>
         {children}
-        <Icon name="forward" size="control" color="text3" />
+        <Icon name="forward" size="control" color="decor" />
       </View>
     </Pressable>
   );
@@ -235,5 +262,50 @@ export function EditTextInput(props: EditTextInputProps) {
       placeholderTextColor={theme.color.text3}
       accessibilityLabel={props.accessibilityLabel}
     />
+  );
+}
+
+export interface EditCheckRowProps {
+  readonly label: string;
+  readonly checked: boolean;
+  readonly onToggle: () => void;
+  readonly children?: ReactNode;
+  readonly accessibilityLabel?: string;
+}
+
+export function EditCheckRow({
+  label,
+  checked,
+  onToggle,
+  children,
+  accessibilityLabel,
+}: EditCheckRowProps) {
+  const styles = useStyles();
+  const pressableStyle = useCallback(
+    ({ pressed }: PressableStateCallbackType) => [
+      styles.row,
+      styles.pressableRow,
+      pressed && styles.pressed,
+    ],
+    [styles],
+  );
+  return (
+    <Pressable
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked }}
+      accessibilityLabel={accessibilityLabel ?? label}
+      style={pressableStyle}
+      onPress={onToggle}
+    >
+      <View style={styles.checkLabel}>
+        <View style={[styles.checkBox, checked && styles.checkBoxOn]}>
+          {checked ? (
+            <Icon name="check" size="checkMark" color="onAccent" />
+          ) : null}
+        </View>
+        <Text style={styles.label}>{label}</Text>
+      </View>
+      <View style={styles.value}>{children}</View>
+    </Pressable>
   );
 }

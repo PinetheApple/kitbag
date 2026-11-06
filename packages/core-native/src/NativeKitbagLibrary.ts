@@ -15,6 +15,12 @@ export type PickedDocument = Readonly<{
   mimeType: string;
 }>;
 
+export type PickedBackup = Readonly<{
+  name: string;
+  bytes: Double;
+  contents: string;
+}>;
+
 export type PickedFolder = Readonly<{
   uri: string;
   name: string;
@@ -140,6 +146,8 @@ export interface Spec extends TurboModule {
   getConstants(): LibraryConstants;
   pickDocument(): Promise<PickedDocument | null>;
   pickFolder(): Promise<PickedFolder | null>;
+  pickBackup(): Promise<PickedBackup | null>;
+  shareBackup(fileName: string, contents: string): Promise<void>;
   importAudio(uri: string, relativeDir: string): Promise<ImportedAudio>;
   enqueueAnalysis(
     relativePath: string,

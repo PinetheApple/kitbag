@@ -8,7 +8,7 @@ const PALETTE = {
   accent: 'accent',
   fill: 'surface3',
   border: 'dotBorder',
-  hollow: 'text3',
+  hollow: 'decor',
   silentNow: 'text',
   clear: 'transparent',
 };
@@ -28,7 +28,7 @@ describe('dotLook', () => {
     });
     expect(dotLook('muted', false, false, PALETTE, WIDTHS)).toEqual({
       backgroundColor: 'transparent',
-      borderColor: 'text3',
+      borderColor: 'decor',
       borderWidth: 2,
     });
   });
@@ -56,7 +56,7 @@ describe('dotLook', () => {
     for (const state of ['accented', 'normal', 'muted'] as const) {
       expect(dotLook(state, false, true, PALETTE, WIDTHS)).toEqual({
         backgroundColor: 'transparent',
-        borderColor: 'text3',
+        borderColor: 'decor',
         borderWidth: 2,
       });
       expect(dotLook(state, true, true, PALETTE, WIDTHS)).toEqual({

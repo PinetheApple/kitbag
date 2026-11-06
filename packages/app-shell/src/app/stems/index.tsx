@@ -4,9 +4,10 @@ import { useEffect } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TOOL_ID } from '@/home/registry';
+import { gated } from '@/home/ToolGate';
 import { useLibraryRoutes } from '@/runtime/libraryRoutes';
 
-export default function StemSongsRoute() {
+function StemSongsRoute() {
   const insets = useSafeAreaInsets();
   const routes = useLibraryRoutes();
   const markUsed = useLastTool((s) => s.markUsed);
@@ -24,3 +25,5 @@ export default function StemSongsRoute() {
     />
   );
 }
+
+export default gated(TOOL_ID.stems, StemSongsRoute);

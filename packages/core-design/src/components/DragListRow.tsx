@@ -154,7 +154,7 @@ function Handle({ reorder }: { readonly reorder: DragReorder }) {
       onAccessibilityAction={onAction}
       style={styles.handle}
     >
-      <Icon name="dragHandle" size="control" color="text3" />
+      <Icon name="dragHandle" size="control" color="decor" />
     </View>
   );
 }

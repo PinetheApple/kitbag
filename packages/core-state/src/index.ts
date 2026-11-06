@@ -18,8 +18,24 @@ export {
   type CountInBars,
 } from './metronome/store.ts';
 export {
+  COUNT_IN_SCOPE,
+  COUNT_IN_SCOPES,
+  DEFAULT_COUNT_IN_SCOPE,
+  isCountInScope,
+  type CountInScope,
+} from './metronome/countInScope.ts';
+export {
+  configureCountInPersistence,
+  reloadCountInPersistence,
+  type CountInPersistence,
+  type CountInSettings,
+} from './metronome/countInPersistence.ts';
+export {
+  clamp,
   clampRampInterval,
   cycleAccentValue,
+  isCountInBars,
+  isSoundId,
   rampIntervalBounds,
   initialAccents,
   resizeAccents,
@@ -39,6 +55,23 @@ export {
   configureMetronomeRuntime,
   type MetronomeRuntime,
 } from './metronome/runtime.ts';
+export {
+  PRACTICE_TEMPO_SAMPLE_MS,
+  type PracticeSetlist,
+  type PracticeSong,
+  type PracticeStretch,
+  type PracticeSummary,
+} from './practice/session.ts';
+export {
+  configurePracticeSessions,
+  createPracticeSessionStore,
+  getPracticeSessionStore,
+  type PracticePersistence,
+  type PracticeSessionActions,
+  type PracticeSessionDeps,
+  type PracticeSessionState,
+  type PracticeSessionStore,
+} from './practice/store.ts';
 export { useLastTool } from './lastTool/useLastTool.ts';
 export {
   configureLastToolPersistence,
@@ -63,10 +96,27 @@ export {
   reconcileArrangement,
   resizeTile,
   showTile,
+  tilesFor,
   visibleTiles,
+  withOffTiles,
   type ArrangedTile,
   type Arrangement,
 } from './home/arrangement.ts';
+export { useTools } from './tools/useTools.ts';
+export {
+  configureToolsPersistence,
+  createToolsStore,
+  getToolsStore,
+  type ToolsPersistence,
+  type ToolsStore,
+} from './tools/store.ts';
+export {
+  switchTool,
+  TOOL_SWITCH,
+  toolsOn,
+  type ToolSwitch,
+  type ToolSwitchResult,
+} from './tools/switches.ts';
 export { useAppearance } from './appearance/useAppearance.ts';
 export {
   configureAppearancePersistence,
@@ -105,7 +155,6 @@ export {
   configureTunings,
   type AppActivity,
   type AppActivitySource,
-  type MicPermission,
   type MicPermissionSource,
   type TunerRuntime,
 } from './tuner/runtime.ts';
@@ -177,6 +226,22 @@ export type {
   LibrarySongRow,
   LibraryStemSetRow,
 } from '@kitbag/core-db';
+export type { PermissionAnswer } from './permission.ts';
+export { useNotificationPermission } from './notifications/useNotificationPermission.ts';
+export {
+  configureNotificationPermission,
+  createNotificationPermissionStore,
+  getNotificationPermissionStore,
+  notificationAction,
+  NOTIFICATION_ASK,
+  type NotificationAction,
+  type NotificationAsk,
+  type NotificationAskPersistence,
+  type NotificationPermissionRuntime,
+  type NotificationPermissionSource,
+  type NotificationPermissionStore,
+  type NotificationStatus,
+} from './notifications/store.ts';
 export { useSwipeHint } from './firstUse/useSwipeHint.ts';
 export {
   configureSwipeHintPersistence,
@@ -232,8 +297,75 @@ export {
   clockParts,
   formatClockSeconds,
   MINUS,
+  SECONDS_PER_MINUTE,
   type ClockParts,
 } from './text.ts';
+export { CALIBRATION } from './rig/calibrationRules.ts';
+export {
+  analyseTaps,
+  BEAT_MS,
+  mean,
+  sampleSd,
+  storedOffsetMs,
+  unwrapDeviations,
+  type CalibrationOutcome,
+  type RefusalReason,
+} from './rig/calibrationStats.ts';
+export {
+  canUseOutcome,
+  createCalibrationSession,
+  type CalibrationDeps,
+  type CalibrationNotice,
+  type CalibrationPhase,
+  type CalibrationSession,
+} from './rig/calibrationSession.ts';
+export {
+  isOutputRouteKind,
+  routeDetail,
+  routeTitle,
+} from './rig/routeLabel.ts';
+export { storedRoute } from './rig/storedRoute.ts';
+export { RIG_CLICK_BPM } from './rig/rigClickRules.ts';
+export {
+  createRigClick,
+  isSounding,
+  type RigClick,
+  type RigClickDeps,
+  type RigClickPhase,
+  type RigClickStore,
+} from './rig/rigClick.ts';
+export {
+  createRouteLatencyStore,
+  ROUTE_LATENCY_SAVE_DELAY_MS,
+  type RouteLatencyActions,
+  type RouteLatencyDeps,
+  type RouteLatencyState,
+  type RouteLatencyStore,
+} from './rig/routeLatency.ts';
+export {
+  accentedSlots,
+  configureSubdivisionAccentsPersistence,
+  createSubdivisionAccentsStore,
+  getSubdivisionAccentsStore,
+  ON_BEAT_SLOT,
+  replaySubdivisionAccents,
+  toggleSlotMask,
+  type SendSubdivisionAccents,
+  type SubdivisionAccentsPersistence,
+  type SubdivisionAccentsSettings,
+  type SubdivisionAccentsStore,
+  type SubdivisionAccentsStoreApi,
+} from './rig/subdivisionAccents.ts';
+export {
+  useRigClick,
+  useRouteLatency,
+  useSubdivisionAccents,
+} from './rig/useRig.ts';
+export { formatOffsetMs } from './rig/latencyText.ts';
+export {
+  useCalibration,
+  type CalibrationSessionStore,
+} from './rig/useCalibration.ts';
 export {
   findMissingRows,
   removeMissingRows,
@@ -245,3 +377,33 @@ export {
   storedRowFiles,
   type StoredFilesRecords,
 } from './storage/storedRowFiles.ts';
+export {
+  configureBackup,
+  getBackup,
+  type BackupDeps,
+} from './backup/runtime.ts';
+export {
+  LIBRARY_BACKUP_FILE_NAME,
+  setlistBackupFileName,
+  shareLibraryBackup,
+  shareSetlist,
+} from './backup/share.ts';
+export {
+  canApply,
+  commitStep,
+  createRestoreStore,
+  planConflicts,
+  restoreStore,
+  type CommitStep,
+  type RestoreActions,
+  type RestoreFailure,
+  type RestoreReview,
+  type RestoreSource,
+  type RestoreState,
+  type RestoreStore,
+} from './backup/restore.ts';
+export { useRestore } from './backup/useRestore.ts';
+export {
+  isReplaceConfirmed,
+  REPLACE_CONFIRMATION,
+} from './backup/categories.ts';

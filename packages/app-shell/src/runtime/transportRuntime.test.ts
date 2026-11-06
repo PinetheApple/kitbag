@@ -1,11 +1,6 @@
 import type { TransportEvent, TransportShowState } from '@kitbag/core-native';
 import type { SetlistEntry, SetlistSummary } from '@kitbag/core-state';
-import {
-  libraryStore,
-  metronomeStore,
-  SONG_STEP,
-  type SongStep,
-} from '@kitbag/core-state';
+import { libraryStore, metronomeStore } from '@kitbag/core-state';
 import { describe, expect, it, vi } from 'vitest';
 
 const native = vi.hoisted(() => ({
@@ -52,14 +47,11 @@ describe('transportRuntime', () => {
     metronomeStore.setState({ running: true });
     expect(lastShownSetlist()).toEqual({
       subtitle: 'Wedding set · Intro (1/2)',
-      index: 0,
-      songCount: 2,
     });
 
     libraryStore.setState({ loaded: loadedAt(1) });
-    expect(lastShownSetlist()).toMatchObject({
+    expect(lastShownSetlist()).toEqual({
       subtitle: 'Wedding set · Blackbird (2/2)',
-      index: 1,
     });
 
     const sends = native.transportShow.mock.calls.length;
@@ -69,50 +61,9 @@ describe('transportRuntime', () => {
     expect(lastShownSetlist()).toBeNull();
   });
 
-  it('steps the setlist from the notification, then re-sends the moved song', async () => {
+  it('a song change while paused sends the new song tempo, and Play keeps it', async () => {
     await import('./transportRuntime');
     const handler = native.onTransport.mock.calls[0]?.[0];
-    const stepSong = vi.fn((step: SongStep) => {
-      libraryStore.setState({
-        loaded: loadedAt(step === SONG_STEP.next ? 1 : 0),
-      });
-      return Promise.resolve();
-    });
-    libraryStore.setState({
-      setlists: [summary],
-      entries: { [SETLIST_ID]: entries },
-      loaded: loadedAt(0),
-      stepSong,
-    });
-    metronomeStore.setState({ running: true });
-    const notification = {
-      playback: 'playing',
-      bpm: metronomeStore.getState().bpm,
-      rampRunning: false,
-      practicePlayedMs: 0,
-      practiceStretchStartedAt: 0,
-    };
-
-    handler?.({ ...notification, songStep: 'next' });
-    expect(stepSong).toHaveBeenLastCalledWith(SONG_STEP.next);
-    expect(lastShownSetlist()).toMatchObject({ index: 1 });
-
-    handler?.({ ...notification, songStep: 'previous' });
-    expect(stepSong).toHaveBeenLastCalledWith(SONG_STEP.previous);
-    expect(lastShownSetlist()).toMatchObject({ index: 0 });
-
-    handler?.({ ...notification, songStep: null });
-    expect(stepSong).toHaveBeenCalledTimes(2);
-  });
-
-  it('a step while paused sends the new song tempo, and Play keeps it', async () => {
-    await import('./transportRuntime');
-    const handler = native.onTransport.mock.calls[0]?.[0];
-    const stepSong = vi.fn(() => {
-      libraryStore.setState({ loaded: loadedAt(1) });
-      metronomeStore.setState({ bpm: 90, beatsPerBar: 7, denominator: 8 });
-      return Promise.resolve();
-    });
     metronomeStore.setState({
       running: true,
       bpm: 120,
@@ -123,22 +74,16 @@ describe('transportRuntime', () => {
       setlists: [summary],
       entries: { [SETLIST_ID]: entries },
       loaded: loadedAt(0),
-      stepSong,
     });
     const notification = {
       rampRunning: false,
       practicePlayedMs: 0,
       practiceStretchStartedAt: 0,
-      songStep: null,
     };
 
     handler?.({ ...notification, playback: 'paused', bpm: 120 });
-    handler?.({
-      ...notification,
-      playback: 'paused',
-      bpm: 120,
-      songStep: 'next',
-    });
+    libraryStore.setState({ loaded: loadedAt(1) });
+    metronomeStore.setState({ bpm: 90, beatsPerBar: 7, denominator: 8 });
     const card = native.transportShow.mock.lastCall?.[0];
     expect(card).toMatchObject({
       playing: false,
@@ -164,10 +109,6 @@ describe('transportRuntime', () => {
       entries: { [SETLIST_ID]: entries },
       loaded: null,
     });
-    expect(lastShownSetlist()).toEqual({
-      subtitle: 'Wedding set · 2 songs',
-      index: null,
-      songCount: 2,
-    });
+    expect(lastShownSetlist()).toEqual({ subtitle: 'Wedding set · 2 songs' });
   });
 });

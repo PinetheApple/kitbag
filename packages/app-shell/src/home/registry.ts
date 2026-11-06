@@ -11,6 +11,8 @@ export const TOOL_ID = {
 
 export type HomeLayout = ToolTileSize | 'row';
 
+export type ToolOnTest = (toolId: string) => boolean;
+
 // The fields §9.1's ToolPlugin already carries for Home, so the §9.2 registry
 // can supply this list without the screen changing. No `homeTile` means the
 // tool is not built: Home shows it muted, with nothing to open.
@@ -18,7 +20,10 @@ export interface HomeToolEntry extends Pick<ToolPlugin, 'id' | 'name'> {
   readonly icon: IconName;
   readonly homeTile?: ToolPlugin['homeTile'];
   readonly layout: HomeLayout;
+  readonly summary?: string;
 }
+
+const CORE_SUMMARY = 'Core';
 
 export const HOME_TOOLS: readonly HomeToolEntry[] = [
   {
@@ -27,6 +32,7 @@ export const HOME_TOOLS: readonly HomeToolEntry[] = [
     icon: 'metronome',
     homeTile: { label: 'Metronome', route: '/metronome' },
     layout: '1x1',
+    summary: CORE_SUMMARY,
   },
   {
     id: TOOL_ID.tuner,
@@ -34,6 +40,7 @@ export const HOME_TOOLS: readonly HomeToolEntry[] = [
     icon: 'tuner',
     homeTile: { label: 'Tuner', route: '/tuner' },
     layout: '1x1',
+    summary: CORE_SUMMARY,
   },
   {
     id: TOOL_ID.library,
@@ -41,6 +48,7 @@ export const HOME_TOOLS: readonly HomeToolEntry[] = [
     icon: 'songs',
     homeTile: { label: 'Songs', route: '/library' },
     layout: '1x1',
+    summary: 'Imported songs, beats analyzed',
   },
   {
     id: TOOL_ID.stems,
@@ -48,14 +56,26 @@ export const HOME_TOOLS: readonly HomeToolEntry[] = [
     icon: 'stems',
     homeTile: { label: 'Stem songs', route: '/stems' },
     layout: '1x1',
+    summary: 'Mix and loop imported stems',
   },
   { id: TOOL_ID.sync, name: 'Play along', icon: 'playAlong', layout: 'row' },
 ];
 
+export interface BuiltTool extends HomeToolEntry {
+  readonly homeTile: ToolPlugin['homeTile'];
+}
+
+export const BUILT_TOOLS: readonly BuiltTool[] = HOME_TOOLS.filter(
+  (tool): tool is BuiltTool => tool.homeTile !== undefined,
+);
+
+export const BUILT_TOOL_IDS: readonly string[] = BUILT_TOOLS.map((t) => t.id);
+
 export function continueTarget(
   lastToolId: string | undefined,
   tools: readonly HomeToolEntry[],
+  isOn: ToolOnTest,
 ): HomeToolEntry | undefined {
-  if (lastToolId === undefined) return undefined;
+  if (lastToolId === undefined || !isOn(lastToolId)) return undefined;
   return tools.find((t) => t.id === lastToolId && t.homeTile !== undefined);
 }

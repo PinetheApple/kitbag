@@ -4,12 +4,14 @@ import {
   EditRow,
   EditSwitchRow,
   EditValue,
+  ListRow,
+  rowLabel,
   SectionHeader,
   SegmentedControl,
   type SegmentOption,
 } from '@kitbag/core-design';
-import { getAppVersion } from '@kitbag/core-native';
-import { useAppearance, type ThemeChoice } from '@kitbag/core-state';
+import { backupFilesAvailable, getAppVersion } from '@kitbag/core-native';
+import { useAppearance, useTools, type ThemeChoice } from '@kitbag/core-state';
 import { useCallback, useMemo, useReducer } from 'react';
 import { Linking, Platform } from 'react-native';
 
@@ -20,7 +22,13 @@ import {
   SOURCE_URL,
 } from './about.ts';
 import { formatAppVersion } from './appVersion.ts';
+import { BackUpRow, RestoreRow } from './BackupRows.tsx';
+import {
+  NOTIFICATIONS_LABEL,
+  type NotificationRow,
+} from './notificationText.ts';
 import { formatPracticeSummary } from './practiceText.ts';
+import { RigSection } from './RigSection.tsx';
 import { SettingsFrame } from './SettingsFrame.tsx';
 import { StorageSheets } from './StorageSheet.tsx';
 import {
@@ -29,6 +37,8 @@ import {
 } from './storageSheetFlow.ts';
 import { STORAGE_LABEL, storageSummary } from './storageText.ts';
 import { usePracticeStats } from './usePracticeStats.ts';
+import { TOOLS_TITLE, toolsOnSummary } from './toolsText.ts';
+import { useNotificationRow } from './useNotificationRow.ts';
 import { useStorage } from './useStorage.ts';
 
 const THEME_OPTIONS: readonly SegmentOption<ThemeChoice>[] = [
@@ -40,6 +50,7 @@ const THEME_OPTIONS: readonly SegmentOption<ThemeChoice>[] = [
 const THEME_CONTROL_GAPS = { bottom: EDIT_ROW_PRESSABLE_GAP };
 
 const LICENCE_LABEL = 'Licence';
+
 const SOURCE_ROW_LABEL = 'Source & issues';
 
 function openUrl(url: string): void {
@@ -61,7 +72,27 @@ function PracticeValue() {
   );
 }
 
-function DataSection() {
+function ToolsSection({ onOpenTools }: { readonly onOpenTools: () => void }) {
+  const summary = toolsOnSummary(useTools((s) => s.off));
+  return (
+    <>
+      <SectionHeader label={TOOLS_TITLE} />
+      <ListRow
+        icon="settings"
+        title={TOOLS_TITLE}
+        subtitle={summary}
+        accessibilityLabel={rowLabel(TOOLS_TITLE, summary)}
+        onPress={onOpenTools}
+      />
+    </>
+  );
+}
+
+function DataSection({
+  onOpenRestore,
+}: {
+  readonly onOpenRestore: () => void;
+}) {
   const { report, missing, removalFailed, refresh, removeMissing } =
     useStorage();
   const summary = report === null ? null : storageSummary(report);
@@ -77,6 +108,7 @@ function DataSection() {
       dismiss: on('dismiss'),
     };
   }, []);
+  const backups = backupFilesAvailable();
   const remove = useCallback(() => {
     send('remove');
     removeMissing();
@@ -85,6 +117,8 @@ function DataSection() {
     <>
       <SectionHeader label="Data" />
       <EditGroup>
+        {backups && <BackUpRow />}
+        {backups && <RestoreRow onOpenRestore={onOpenRestore} />}
         <EditRow label="Practice">
           <PracticeValue />
         </EditRow>
@@ -113,6 +147,24 @@ function DataSection() {
   );
 }
 
+function NotificationsRow({
+  row,
+  onEnable,
+}: {
+  readonly row: NotificationRow;
+  readonly onEnable: () => void;
+}) {
+  return (
+    <EditRow
+      label={NOTIFICATIONS_LABEL}
+      accessibilityLabel={rowLabel(NOTIFICATIONS_LABEL, row.value ?? undefined)}
+      onPress={row.action === 'none' ? undefined : onEnable}
+    >
+      {row.value === null ? null : <EditValue>{row.value}</EditValue>}
+    </EditRow>
+  );
+}
+
 function AppearanceSection() {
   const theme = useAppearance((s) => s.theme);
   const haptics = useAppearance((s) => s.haptics);
@@ -120,6 +172,7 @@ function AppearanceSection() {
   const setTheme = useAppearance((s) => s.setTheme);
   const setHaptics = useAppearance((s) => s.setHaptics);
   const setKeepScreenAwake = useAppearance((s) => s.setKeepScreenAwake);
+  const notifications = useNotificationRow();
   return (
     <>
       <SectionHeader label="Appearance" />
@@ -145,6 +198,12 @@ function AppearanceSection() {
           value={keepScreenAwake}
           onValueChange={setKeepScreenAwake}
         />
+        {notifications.row === null ? null : (
+          <NotificationsRow
+            row={notifications.row}
+            onEnable={notifications.enable}
+          />
+        )}
       </EditGroup>
     </>
   );
@@ -202,15 +261,23 @@ function AboutSection({
 export interface SettingsScreenProps {
   readonly onBack: () => void;
   readonly onOpenAttributions: () => void;
+  readonly onOpenCalibration: () => void;
+  readonly onOpenTools: () => void;
+  readonly onOpenRestore: () => void;
 }
 
 export function SettingsScreen({
   onBack,
   onOpenAttributions,
+  onOpenCalibration,
+  onOpenTools,
+  onOpenRestore,
 }: SettingsScreenProps) {
   return (
     <SettingsFrame title="Settings" onBack={onBack}>
-      <DataSection />
+      <RigSection onOpenCalibration={onOpenCalibration} />
+      <ToolsSection onOpenTools={onOpenTools} />
+      <DataSection onOpenRestore={onOpenRestore} />
       <AppearanceSection />
       <AboutSection onOpenAttributions={onOpenAttributions} />
     </SettingsFrame>

@@ -7,6 +7,9 @@ export default function SettingsRoute() {
     <SettingsScreen
       onBack={routes.back}
       onOpenAttributions={routes.openAttributions}
+      onOpenCalibration={routes.openCalibration}
+      onOpenTools={routes.openTools}
+      onOpenRestore={routes.openRestore}
     />
   );
 }
