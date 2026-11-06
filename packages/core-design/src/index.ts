@@ -45,7 +45,6 @@ export * from './components/PickerGrid.tsx';
 export * from './components/PlainListRow.tsx';
 export * from './components/PresetButton.tsx';
 export * from './components/PrimaryPlayButton.tsx';
-export * from './components/ScreenAppBar.tsx';
 export * from './components/SectionHeader.tsx';
 export * from './components/SegmentedControl.tsx';
 export * from './components/IconGlyph.tsx';

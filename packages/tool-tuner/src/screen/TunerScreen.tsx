@@ -1,10 +1,12 @@
 import {
   AppBar,
+  barChipRoom,
   Chip,
+  CHIP_HEIGHT,
   createThemedStyles,
-  inset,
   LiveText,
   PegSelector,
+  screenBar,
   space,
   TuneDirectionIcon,
   TunerStrip,
@@ -38,12 +40,11 @@ import { TuningEditorSheet } from './TuningEditorSheet.tsx';
 import { TuningSheet } from './TuningSheet.tsx';
 import { useTunerFrame } from './useTunerFrame.ts';
 
-// The tuning chip tops the app bar; the mode chips sit between the needle
-// strip, which takes no touches, and the screen's bottom inset.
 const TUNING_CHIP_GAPS = {
-  top: unshared(inset.appBar + space.screenInset),
-  bottom: unshared(inset.appBar) + space.sectionGap,
+  top: unshared(barChipRoom(CHIP_HEIGHT)),
+  bottom: barChipRoom(CHIP_HEIGHT) + space.sectionGap,
 };
+// The needle strip above takes no touches.
 const MODE_CHIP_GAPS = {
   top: unshared(space.sectionGap),
   bottom: unshared(space.screenInset),
@@ -58,6 +59,9 @@ const useStyles = createThemedStyles((theme) => ({
   },
   body: {
     flex: 1,
+  },
+  tuningChip: {
+    marginRight: screenBar.chipEnd,
   },
   bodyContent: {
     flexGrow: 1,
@@ -272,7 +276,7 @@ export function TunerScreen({ insets, a4Range, onBack }: TunerScreenProps) {
 
   const edgeToEdgePadding = useMemo(
     () => ({
-      paddingTop: space.screenInset + insets.top,
+      paddingTop: insets.top,
       paddingBottom: space.screenInset + insets.bottom,
     }),
     [insets.top, insets.bottom],
@@ -282,15 +286,17 @@ export function TunerScreen({ insets, a4Range, onBack }: TunerScreenProps) {
     <View style={[styles.screen, edgeToEdgePadding]}>
       <AppBar
         title="Tuner"
-        {...(onBack === undefined ? {} : { onBack })}
+        onBack={onBack}
         trailing={
-          <Chip
-            active
-            label={tuningLabel(tuning)}
-            accessibilityLabel={`Tuning: ${tuningLabel(tuning)}. Change tuning`}
-            neighbourGapDp={TUNING_CHIP_GAPS}
-            onPress={openTunings}
-          />
+          <View style={styles.tuningChip}>
+            <Chip
+              active
+              label={tuningLabel(tuning)}
+              accessibilityLabel={`Tuning: ${tuningLabel(tuning)}. Change tuning`}
+              neighbourGapDp={TUNING_CHIP_GAPS}
+              onPress={openTunings}
+            />
+          </View>
         }
       />
 

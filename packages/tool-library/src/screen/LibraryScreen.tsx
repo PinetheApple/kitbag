@@ -1,17 +1,16 @@
 import {
+  AppBar,
   Button,
   Card,
   createThemedStyles,
   EmptyState,
   FloatingActionButton,
   libraryList,
-  lineRatio,
-  ScreenAppBar,
   SearchField,
   space,
   textRoles,
   textStyle,
-  type ScreenBarAction,
+  type AppBarAction,
 } from '@kitbag/core-design';
 import {
   filterRows,
@@ -48,11 +47,6 @@ const FAB_ROOM = libraryList.fab + libraryList.fabBottom;
 
 const useStyles = createThemedStyles((theme) => ({
   screen: { flex: 1, backgroundColor: theme.color.bg },
-  title: {
-    ...textStyle(textRoles.appBarTitle),
-    lineHeight: textRoles.appBarTitle.size * lineRatio.appBarTitle,
-    color: theme.color.text,
-  },
   body: {
     flex: 1,
     paddingTop: libraryList.bodyTop,
@@ -264,7 +258,7 @@ export function LibraryScreen({
   const text = VIEW_TEXT[view];
   const state = useViewState(view);
   const listed = state === 'list';
-  const actions: readonly ScreenBarAction[] = useMemo(
+  const actions: readonly AppBarAction[] = useMemo(
     () =>
       onOpenSetlists === undefined
         ? []
@@ -281,11 +275,7 @@ export function LibraryScreen({
   );
   return (
     <View style={frame}>
-      <ScreenAppBar onBack={onBack} actions={actions}>
-        <Text style={styles.title} numberOfLines={1}>
-          {text.title}
-        </Text>
-      </ScreenAppBar>
+      <AppBar flush title={text.title} onBack={onBack} actions={actions} />
       <View style={styles.body}>
         {listed ? (
           <SearchBar text={text} covered={menu.kind !== 'none'} />

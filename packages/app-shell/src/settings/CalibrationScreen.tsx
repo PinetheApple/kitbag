@@ -158,7 +158,7 @@ export function CalibrationScreen({ onBack }: CalibrationScreenProps) {
   );
   const frame = useMemo(
     () => ({
-      paddingTop: space.screenInset + insets.top,
+      paddingTop: insets.top,
       paddingBottom: space.screenInset + insets.bottom,
     }),
     [insets.top, insets.bottom],
