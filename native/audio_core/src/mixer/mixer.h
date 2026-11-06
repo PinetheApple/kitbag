@@ -106,10 +106,12 @@ class Mixer {
     return crossfade_frames_;
   }
 
-  /// Speed (SPEC.md §7.6), clamped to [kMinRate, kMaxRate].
-  void SetRate(float rate, uint64_t now_frame, bool engine_running);
+  /// Speed (SPEC.md §7.6), clamped to [kMinRate, kMaxRate]. False if the
+  /// command queue is full, with nothing changed.
+  bool SetRate(float rate, uint64_t now_frame, bool engine_running);
   /// Whole semitones, clamped to [kMinPitchSemitones, kMaxPitchSemitones].
-  void SetTrackPitch(
+  /// False for a track never loaded or a full command queue, nothing changed.
+  bool SetTrackPitch(
       int track,
       float semitones,
       uint64_t now_frame,
@@ -349,9 +351,9 @@ class Mixer {
   std::atomic<int64_t> transport_frame_{0};
   std::atomic<int64_t> jump_base_{0};
   SongClock song_clock_;
+  bool landed_ = false;
   RtPublisher<TransportPlan> plans_;
   uint64_t app_epoch_ = 0;
-  bool landed_ = false;
   LoopLayout app_layout_;
   bool app_playing_ = false;
   int64_t crossfade_frames_;

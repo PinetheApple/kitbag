@@ -182,7 +182,8 @@ kb_metronome_preview_sound(kb_engine* engine, int32_t sound, int32_t accented);
 /* Volume multiplier [0, 2], default 1. */
 KB_EXPORT void kb_metronome_set_volume(kb_engine* engine, double volume);
 /* enabled != 0 (default 0): grid second t clicks as the mixer plays song frame
- * t * engine rate. set_grid's anchor and the latency offset are ignored. */
+ * t * engine rate, at any kb_mixer_set_rate. set_grid's anchor and the latency
+ * offset are ignored. */
 KB_EXPORT void kb_metronome_follow_mixer(kb_engine* engine, int32_t enabled);
 /* Output latency offset in ms [-300, 300]; positive = trigger earlier. */
 KB_EXPORT void
@@ -302,6 +303,8 @@ kb_mixer_set_loop(kb_engine* engine, int64_t start_frame, int64_t end_frame);
 KB_EXPORT kb_result kb_mixer_clear_loop(kb_engine* engine);
 KB_EXPORT int32_t kb_mixer_active_track_count(const kb_engine* engine);
 KB_EXPORT int64_t kb_mixer_track_frames(const kb_engine* engine, int32_t track);
+
+#include "kitbag_mixer_rate_api.h"
 
 /* --- Player (single-source transport) ----------------------------------- */
 

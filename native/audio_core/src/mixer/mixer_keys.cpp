@@ -157,28 +157,29 @@ void Mixer::FreeUnusedBuses(uint64_t now_frame, bool engine_running) {
   if (key_bus_count() == 0) MatchBusConfig(0, true);
 }
 
-void Mixer::SetRate(float rate, uint64_t now_frame, bool engine_running) {
+bool Mixer::SetRate(float rate, uint64_t now_frame, bool engine_running) {
   const float clamped = ClampRate(rate);
   Command command{CommandType::kSetRate};
   command.fvalue = clamped;
-  if (!Enqueue(command)) return;
+  if (!Enqueue(command)) return false;
   app_rate_ = clamped;
   if (clamped != kUnityRate &&
       EngageBuses({}, now_frame, engine_running) == BusChange::kNeedsPrime) {
     PrimeNow(now_frame, engine_running);
   }
+  return true;
 }
 
 // A lazily added bus is published before the command, so the callback that
 // pops it already sees it. The guard counts the stem at its new key only.
-void Mixer::SetTrackPitch(
+bool Mixer::SetTrackPitch(
     int track,
     float semitones,
     uint64_t now_frame,
     bool engine_running
 ) {
   if (track < 0 || track >= track_count_.load(std::memory_order_relaxed)) {
-    return;
+    return false;
   }
   const int pitch = ClampPitch(semitones);
   const int previous = std::exchange(app_pitch_[track], pitch);
@@ -192,9 +193,10 @@ void Mixer::SetTrackPitch(
   command.fvalue = static_cast<float>(pitch);
   if (!Enqueue(command)) {
     app_pitch_[track] = previous;
-    return;
+    return false;
   }
   if (prime) PrimeNow(now_frame, engine_running);
+  return true;
 }
 
 int Mixer::track_pitch(int track) const {
