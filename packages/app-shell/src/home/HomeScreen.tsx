@@ -1,9 +1,8 @@
 import {
   AppBar,
-  AppBarAction,
+  type AppBarAction,
   Button,
   createThemedStyles,
-  homeArrange,
   space,
   ToolGrid,
   ToolRow,
@@ -59,13 +58,7 @@ const useStyles = createThemedStyles((theme) => ({
   scroll: { flex: 1 },
   content: {
     paddingHorizontal: space.screenInset,
-    paddingTop: space.screenInset,
     gap: space.sectionGap,
-  },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: homeArrange.appBarGap,
   },
 }));
 
@@ -146,6 +139,10 @@ export function HomeScreen() {
   const closeArrange = useCallback(() => {
     setArranging(false);
   }, []);
+  const actions: readonly AppBarAction[] = useMemo(
+    () => [{ icon: 'settings', label: 'Settings', onPress: openSettings }],
+    [openSettings],
+  );
 
   const frameInset = useMemo(() => ({ paddingTop: insets.top }), [insets.top]);
   const contentInset = useMemo(
@@ -193,23 +190,17 @@ export function HomeScreen() {
         <AppBar
           wordmark
           title="Kitbag"
+          actions={actions}
           trailing={
-            <View style={styles.actions}>
-              <Button
-                variant="tonal"
-                size="small"
-                icon="edit"
-                iconSize="field"
-                label="Edit"
-                accessibilityLabel="Edit Home layout"
-                onPress={openArrange}
-              />
-              <AppBarAction
-                icon="settings"
-                accessibilityLabel="Settings"
-                onPress={openSettings}
-              />
-            </View>
+            <Button
+              variant="tonal"
+              size="small"
+              icon="edit"
+              iconSize="field"
+              label="Edit"
+              accessibilityLabel="Edit Home layout"
+              onPress={openArrange}
+            />
           }
         />
 

@@ -738,9 +738,11 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   keys) grow with the font scale up to 1.5×. The 48 dp buttons alone would allow about
   1.84× for the largest bar glyph (26 dp); 1.5 is a judgement, not measured, so a glyph keeps padding
   inside its button and does not outweigh the bar title beside it. Other icons stay at
-  their design size, since most sit inside fixed-size controls. The app-bar title keeps
-  its existing cap: one line, shrinking toward `appBarTitleMinSize` through
-  `minimumFontScale` before it truncates. The metronome's status rows grow by the font
+  their design size, since most sit inside fixed-size controls. The app-bar title stays
+  on one line and shrinks to fit before it truncates: at the default scale down to
+  `appBarTitleMinSize`, above it never below its design size, then ellipsizes. The fit is computed in JS
+  (the #287 entry on the measured title floor). **[coord, 2026-11-02, #287 — the owner
+  may overturn]** The metronome's status rows grow by the font
   scale and hold at most two lines; that a grown row fits two grown lines is reasoned from
   the 40 dp row height, not measured, and needs a device check. A wider row wraps onto its
   second line rather than truncating. Above the default scale the status stack leaves the
@@ -817,3 +819,38 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   coordinator adds the check to the `main` ruleset at merge. PRs opened by a bot
   (author type `Bot` or a `[bot]` login) pass as `NONE`, so dependency updates never
   block on a note. **[owner]**
+
+- **2026-11-02 · One chevron app bar on every screen (§12, #287)** — Every screen with a
+  back control uses the chevron back, not the full arrow **[user, via coordinator]**. The
+  shared bar is one core-design component: 56 dp tall, flush under the status bar, the
+  chevron and every icon action in real 48 dp keys, and the `appBarTitle` title; chip and
+  button trailing controls keep their ≥48 dp hit areas. The binding design files are
+  edited to match. **[coord]**
+
+- **2026-11-03 · App-bar titles fit by a JS-measured floor (§13.8, #287)** — Read in
+  the source, not seen on a device: on RN 0.83.6 with the new architecture, Android
+  ignores `minimumFontScale`. `TextLayoutManager.kt:799-812` reads only
+  `PA_KEY_MINIMUM_FONT_SIZE`, with a 4 dp default floor (`:922-923`);
+  `conversions.h` `toMapBuffer` (`:1042-1058`) never sends `minimumFontScale`, which
+  only the old renderer's `ReactTextShadowNode.kt:79` used; and `minimumFontSize`
+  cannot be sent from JS, since `TextNativeComponent.js` does not list it in
+  `validAttributes`. So `adjustsFontSizeToFit` shrank titles toward 4 dp. Also read
+  in the source: `TextAttributeProps.kt:169` rounds the font size up to whole px, and
+  `PixelUtil.kt:44` scales sp nonlinearly on Android 14+, so a size fitted in
+  proportion can still render a few px too wide. Ruling A **[coord]**: one
+  core-design helper (`useOneLineFit`, with `nextFitCandidate`, `oneLineFloor` and
+  `fittedStyle`) measures the label offscreen and sets its size in JS. It measures at
+  the design size, re-measures at the proportional size, then takes secant passes
+  through the last two measurements, at most three settle passes in all, stopping at
+  the first fit or at the floor; after the cap it shows the last candidate with an
+  ellipsis. The label stays invisible on mount until settled, so it never shows at
+  the design size and then shrinks; when its text changes in place, the previous size
+  stays shown until the new text settles. It restarts on a width change, on a text
+  change, and when a settled measurer re-lays out at a new width, as after a late font
+  load or a font-scale change. Tracking scales with the size, so the measured and the
+  shown label match. Below the floor it ellipsizes on one line. The floors still hold
+  as rendered sizes: they fall in the converter's linear range (8.5 sp at 2.0), not
+  checked against the converter tables. Floors as ruled: `appBarTitleMinSize` at a
+  font scale of 1.0 or less, the design size above it. Home
+  tool tiles use the same helper, with their floor at `homeTile.titleMinScale` of the
+  tile title's design size; no `adjustsFontSizeToFit` or `minimumFontScale` is left.
