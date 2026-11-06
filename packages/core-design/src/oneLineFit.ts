@@ -3,34 +3,48 @@ import type { TypeRole } from './tokens.ts';
 
 export const MAX_SETTLE_PASSES = 3;
 
-export interface FitStep {
-  readonly available: number;
-  readonly textWidth: number;
+export interface FitPoint {
   readonly candidate: number;
+  readonly textWidth: number;
+}
+
+export interface FitStep extends FitPoint {
+  readonly available: number;
   readonly floor: number;
   readonly pass: number;
   readonly onePx: number;
+  readonly previous: FitPoint | undefined;
 }
 
 export type FitNext =
   | { readonly done: true; readonly fontSize: number }
   | { readonly done: false; readonly candidate: number };
 
+// A flat or inverted pair of measurements (whole-px rounding) defines no line,
+// so the step falls back to a single pixel rather than dividing by the slope.
+function secantCandidate(
+  { available, textWidth, candidate, onePx }: FitStep,
+  previous: FitPoint,
+): number {
+  const slope =
+    (previous.textWidth - textWidth) / (previous.candidate - candidate);
+  const solved =
+    slope > 0 ? candidate + (available - textWidth) / slope : candidate;
+  return solved - onePx;
+}
+
 // Android rounds the size up to whole px and scales sp nonlinearly, so a
-// proportional fit can still overflow; later passes step a pixel lower.
-export function nextFitCandidate({
-  available,
-  textWidth,
-  candidate,
-  floor,
-  pass,
-  onePx,
-}: FitStep): FitNext {
+// proportional fit can still overflow; later passes solve for it from two points.
+export function nextFitCandidate(step: FitStep): FitNext {
+  const { available, textWidth, candidate, floor, pass, previous } = step;
   if (textWidth <= available) return { done: true, fontSize: candidate };
   if (candidate <= floor || pass >= MAX_SETTLE_PASSES)
     return { done: true, fontSize: candidate };
-  const scaled = (candidate * available) / textWidth - (pass === 0 ? 0 : onePx);
-  return { done: false, candidate: Math.max(floor, scaled) };
+  const proposed =
+    previous === undefined
+      ? (candidate * available) / textWidth
+      : secantCandidate(step, previous);
+  return { done: false, candidate: Math.max(floor, proposed) };
 }
 
 export function oneLineFloor(
@@ -65,6 +79,7 @@ export interface OneLineSettle {
   readonly candidate: number;
   readonly pass: number;
   readonly textWidth: number | undefined;
+  readonly previous: FitPoint | undefined;
   readonly settled: boolean;
   readonly shown: number | undefined;
 }
@@ -88,6 +103,7 @@ export function startOneLine(
     candidate: size,
     pass: 0,
     textWidth: undefined,
+    previous: undefined,
     settled: false,
     shown: previous?.shown,
   };
@@ -103,6 +119,7 @@ function advance(state: OneLineSettle, params: OneLineParams): OneLineSettle {
     floor: params.floor,
     pass: state.pass,
     onePx: params.onePx,
+    previous: state.previous,
   });
   return next.done
     ? { ...state, settled: true, shown: next.fontSize }
@@ -111,6 +128,7 @@ function advance(state: OneLineSettle, params: OneLineParams): OneLineSettle {
         candidate: next.candidate,
         pass: state.pass + 1,
         textWidth: undefined,
+        previous: { candidate: state.candidate, textWidth: state.textWidth },
       };
 }
 

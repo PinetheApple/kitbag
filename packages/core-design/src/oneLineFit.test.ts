@@ -17,7 +17,13 @@ const MIN = 15;
 const ONE_PX = 0.25;
 const PARAMS: OneLineParams = { size: SIZE, floor: 8.5, onePx: ONE_PX };
 
-const step = { available: 140, size: SIZE, floor: 8.5, onePx: ONE_PX };
+const step = {
+  available: 140,
+  size: SIZE,
+  floor: 8.5,
+  onePx: ONE_PX,
+  previous: undefined,
+};
 
 describe('nextFitCandidate', () => {
   it('is done at the candidate once it fits', () => {
@@ -36,14 +42,37 @@ describe('nextFitCandidate', () => {
     expect(next).toEqual({ done: false, candidate: (SIZE * 140) / 164 });
   });
 
-  it('steps a further pixel down on each pass after the first', () => {
+  it('solves the line through the last two measurements after the first pass', () => {
     const next = nextFitCandidate({
       ...step,
-      textWidth: 142,
-      candidate: 14,
+      textWidth: 155,
+      candidate: 15,
       pass: 1,
+      previous: { candidate: 17, textWidth: 170 },
     });
-    expect(next).toEqual({ done: false, candidate: (14 * 140) / 142 - ONE_PX });
+    expect(next).toEqual({ done: false, candidate: 13 - ONE_PX });
+  });
+
+  it('always lands at least a pixel below the last candidate', () => {
+    const next = nextFitCandidate({
+      ...step,
+      textWidth: 141,
+      candidate: 15,
+      pass: 1,
+      previous: { candidate: 17, textWidth: 130 },
+    });
+    expect(next).toEqual({ done: false, candidate: 15 - ONE_PX });
+  });
+
+  it('steps a pixel down when two measurements show no slope', () => {
+    const next = nextFitCandidate({
+      ...step,
+      textWidth: 141,
+      candidate: 15,
+      pass: 1,
+      previous: { candidate: 15.5, textWidth: 141 },
+    });
+    expect(next).toEqual({ done: false, candidate: 15 - ONE_PX });
   });
 
   it('never proposes a candidate below the floor', () => {
@@ -168,8 +197,48 @@ describe('settling a one-line label', () => {
       settled: false,
       candidate: SIZE,
       available: 200,
+      previous: undefined,
     });
     expect(resized.generation).toBeGreaterThan(fitted.generation);
+  });
+
+  it('settles on a fit above the floor when sp grows nonlinearly', () => {
+    const toPx = (sp: number) => (sp <= 12 ? 2 * sp : 24 + (sp - 12));
+    const widthAt = (sp: number) => 5.5 * toPx(sp);
+    const params = { ...PARAMS, onePx: 1 / (2.625 * 2) };
+    let state = resizeOneLine(startOneLine('Metronome', SIZE), 140, params);
+    while (!state.settled) {
+      state = measureOneLine(
+        state,
+        {
+          text: state.text,
+          generation: state.generation,
+          candidate: state.candidate,
+          textWidth: widthAt(state.candidate),
+        },
+        params,
+      );
+    }
+    expect(state.pass).toBeLessThan(MAX_SETTLE_PASSES);
+    expect(widthAt(state.shown ?? 0)).toBeLessThanOrEqual(140);
+    expect(state.shown).toBeGreaterThan(params.floor);
+  });
+
+  it('settles at the floor when even the floor overflows', () => {
+    let state = measure(mounted, 1000);
+    while (!state.settled) state = measure(state, 1000);
+    expect(state.shown).toBe(PARAMS.floor);
+  });
+
+  it('ignores a measurement of an older candidate in the same generation', () => {
+    const stepped = measure(mounted, 164);
+    const older = {
+      text: stepped.text,
+      generation: stepped.generation,
+      candidate: SIZE,
+      textWidth: 10,
+    };
+    expect(measureOneLine(stepped, older, PARAMS)).toBe(stepped);
   });
 
   it('ignores a measurement taken before the last restart', () => {
