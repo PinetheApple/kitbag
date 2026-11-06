@@ -138,7 +138,6 @@ function measure(state: OneLineSettle, textWidth: number): OneLineSettle {
   return measureOneLine(
     state,
     {
-      text: state.text,
       generation: state.generation,
       candidate: state.candidate,
       textWidth,
@@ -220,7 +219,6 @@ describe('settling a one-line label', () => {
       state = measureOneLine(
         state,
         {
-          text: state.text,
           generation: state.generation,
           candidate: state.candidate,
           textWidth: widthAt(state.candidate),
@@ -242,7 +240,6 @@ describe('settling a one-line label', () => {
   it('ignores a measurement of an older candidate in the same generation', () => {
     const stepped = measure(mounted, 164);
     const older = {
-      text: stepped.text,
       generation: stepped.generation,
       candidate: SIZE,
       textWidth: 10,
@@ -252,7 +249,6 @@ describe('settling a one-line label', () => {
 
   it('ignores a measurement taken before the last restart', () => {
     const stale = {
-      text: mounted.text,
       generation: mounted.generation - 1,
       candidate: SIZE,
       textWidth: 10,

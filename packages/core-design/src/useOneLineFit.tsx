@@ -49,13 +49,12 @@ function OneLineMeasurer({
   const handleLayout = useCallback(
     (event: LayoutChangeEvent) => {
       onMeasure({
-        text,
         generation,
         candidate,
         textWidth: event.nativeEvent.layout.width,
       });
     },
-    [onMeasure, text, generation, candidate],
+    [onMeasure, generation, candidate],
   );
   return (
     <View

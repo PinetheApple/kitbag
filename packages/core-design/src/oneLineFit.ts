@@ -85,7 +85,6 @@ export interface OneLineSettle {
 }
 
 export interface OneLineMeasurement {
-  readonly text: string;
   readonly generation: number;
   readonly candidate: number;
   readonly textWidth: number;
@@ -149,7 +148,6 @@ export function measureOneLine(
   params: OneLineParams,
 ): OneLineSettle {
   if (
-    measurement.text !== state.text ||
     measurement.generation !== state.generation ||
     measurement.candidate !== state.candidate
   )
