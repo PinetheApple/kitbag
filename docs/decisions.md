@@ -736,7 +736,8 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   The name keeps `numberOfLines={1}`, so a long name still truncates, as the ruling
   accepts. **[user, 2026-10-30]** Stem names and Master use the #287 fit: above the default
   scale they shrink to the column, never below their design size, before truncating;
-  at the default scale they do not shrink. **[coord]** Not yet seen on a device. App-bar icons (back, search, add, the metronome bar's
+  at the default scale they do not shrink. **[coord]** Not yet seen on a device.
+  App-bar icons (back, search, add, the metronome bar's
   keys) grow with the font scale up to 1.5×. The 48 dp buttons alone would allow about
   1.84× for the largest bar glyph (26 dp); 1.5 is a judgement, not measured, so a glyph keeps padding
   inside its button and does not outweigh the bar title beside it. Other icons stay at
