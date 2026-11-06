@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "check.h"
+#include "stem_sync_rate.h"
 #include "wav_fixture.h"
 
 namespace {
@@ -20,7 +21,7 @@ using kitbag_test::Check;
 using kitbag_test::g_checks;
 using kitbag_test::g_failures;
 
-constexpr int kExpectedChecks = 21;
+constexpr int kExpectedChecks = 40;
 constexpr uint32_t kRate = 48000;
 constexpr uint32_t kStereo = 2;
 constexpr uint32_t kBlock = 512;
@@ -342,6 +343,16 @@ void TestMixerAbi(const std::string& stem) {
   kb_engine_destroy(engine);
 }
 
+void RunRateSuites() {
+  const std::string pulses = stem_sync::WritePulseStem();
+  Check(!pulses.empty(), "fixture: the pulse stem writes");
+  if (pulses.empty()) return;
+  stem_sync::RunScriptTests(pulses);
+  stem_sync::RunLockTests(pulses);
+  stem_sync::RunReanchorTests(pulses);
+  std::filesystem::remove(pulses);
+}
+
 }  // namespace
 
 int main() {
@@ -354,6 +365,7 @@ int main() {
     TestMixerAbi(stem);
     std::filesystem::remove(stem);
   }
+  RunRateSuites();
   if (g_checks != kExpectedChecks) {
     std::fprintf(
         stderr,
