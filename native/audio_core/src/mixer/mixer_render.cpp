@@ -1,6 +1,3 @@
-// The realtime half of the mixer: the command drain and the per-block mix. Runs
-// entirely on the audio callback — allocates nothing, takes no lock, frees
-// nothing. Setup and transport live in mixer.cpp and StreamingTrack.
 #include <algorithm>
 #include <cstring>
 
@@ -8,8 +5,6 @@
 
 namespace kitbag {
 
-// The exhaustive switch has no `default:` on purpose; see the ApplyCommand
-// declaration in mixer.h.
 void Mixer::ApplyCommand(const Command& command) {
   Track& t = tracks_[command.track];
   switch (command.type) {

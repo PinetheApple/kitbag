@@ -13,6 +13,7 @@
 #include "media/streaming_track.h"
 #include "mixer/key_bus.h"
 #include "mixer/mixer_command.h"
+#include "mixer/mixer_track.h"
 #include "mixer/transport_plan.h"
 #include "rt/rt_publisher.h"
 #include "rt/spsc_ring.h"
@@ -181,19 +182,7 @@ class Mixer {
   void ReleaseRetiredSources();
 
  private:
-  // The mirrors are written only by the callback drain. `stream` is heap-held
-  // so the array is default-constructible.
-  struct Track {
-    std::unique_ptr<StreamingTrack> stream;
-    std::atomic<float> gain{1.0f};
-    std::atomic<bool> mute{false};
-    std::atomic<bool> solo{false};
-    std::atomic<int> pitch{0};
-    // Callback only: a key change fades the stem from this bus to its new one.
-    int fade_from = 0;
-    int64_t fade_left = 0;
-  };
-
+  using Track = MixerTrack;
   using CommandType = MixerCommandType;
   using Command = MixerCommand;
 
@@ -220,6 +209,9 @@ class Mixer {
       bool engine_running
   );
   bool StageAll(int64_t frame, const SourceStamp& stamp, bool engine_running);
+  void DropStaged(int count);
+  void
+  ReplanStretch(TransportPlan plan, uint64_t now_frame, bool engine_running);
   int64_t SeekTarget(int64_t frame) const;
   struct Head {
     int64_t stream;

@@ -52,14 +52,32 @@ bool Mixer::PrimedRelayout(
   if (!StageAll(plan.frame, stamp, true)) return false;
   Bank bank;
   if (!BuildBank(plan.frame, true, &bank)) {
-    const int count = track_count_.load(std::memory_order_relaxed);
-    for (int t = 0; t < count; ++t) tracks_[t].stream->DropStaged();
+    DropStaged(track_count_.load(std::memory_order_relaxed));
     return false;
   }
   PublishBank(&bank, &plan, now_frame, engine_running);
   CommitPlan(plan, now_frame, engine_running);
   AdoptBank(plan, now_frame, engine_running);
   return true;
+}
+
+bool Mixer::StageAll(
+    int64_t frame,
+    const SourceStamp& stamp,
+    bool engine_running
+) {
+  const int count = track_count_.load(std::memory_order_relaxed);
+  const auto target = static_cast<uint64_t>(std::max<int64_t>(frame, 0));
+  for (int i = 0; i < count; ++i) {
+    if (tracks_[i].stream->Stage(target, stamp, engine_running)) continue;
+    DropStaged(i);
+    return false;
+  }
+  return true;
+}
+
+void Mixer::DropStaged(int count) {
+  for (int t = 0; t < count; ++t) tracks_[t].stream->DropStaged();
 }
 
 bool Mixer::BuildBank(int64_t frame, bool staged, Bank* bank) {

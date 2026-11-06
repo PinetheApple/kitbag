@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <string>
 
 #include "mixer_test_stretch_support.h"
 
@@ -25,6 +26,8 @@ constexpr float kUnderRate = 0.1f;
 constexpr float kOverRate = 2.0f;
 constexpr int kDrainBlocks = 60;
 constexpr int kAllocBlocks = 50;
+constexpr int kToneTrack = 0;
+constexpr int kSilentTrack = 1;
 constexpr const char* kMissingPath = "/nonexistent/kitbag_missing.wav";
 
 void TestTakeAndCarrySum() {
@@ -176,13 +179,14 @@ void CheckSoundsAtOnce(kitbag::Mixer* mixer, const char* label) {
   }
 }
 
-void LoadToneOverSilence(kitbag::Mixer* mixer) {
+std::string LoadToneOverSilence(kitbag::Mixer* mixer) {
   LoadPcm(
       mixer,
-      0,
+      kToneTrack,
       ToneFixture({.frames = kToneFrames, .steady_hz = kBurstHz})
   );
-  LoadPcm(mixer, 1, ToneFixture({.frames = kToneFrames}));
+  LoadPcm(mixer, kSilentTrack, ToneFixture({.frames = kToneFrames}));
+  return TempFiles().back();
 }
 
 // Only the tone's bus is the higher of the two, so a prime that stops after
@@ -192,7 +196,7 @@ void TestPrimeLeavesNoGap() {
   LoadToneOverSilence(&mixer);
   mixer.Play();
   RenderPaced(&mixer, kSettleBlocks);
-  mixer.SetTrackPitch(0, kKey, 0, false);
+  mixer.SetTrackPitch(kToneTrack, kKey, 0, false);
   const std::vector<float> left =
       RenderPaced(&mixer, HandOverBlocks(mixer) + kSettleBlocks);
   Check(mixer.stretch_engaged(), "prime: a key change mid-play engages");
@@ -227,22 +231,21 @@ void CheckBusesFreed(kitbag::Mixer* mixer) {
 
 enum class Restage : uint8_t { kSeek, kStop };
 
-// The deleted file fails the restage, so the stretch stays engaged.
 void CheckFailedRestageKeepsBuses(Restage restage, const char* label) {
   kitbag::Mixer mixer(kSampleRate);
-  LoadToneOverSilence(&mixer);
+  const std::string silent_file = LoadToneOverSilence(&mixer);
   mixer.Play();
   mixer.SetRate(kSpeed, 0, false);
   RenderPaced(&mixer, HandOverBlocks(mixer));
   mixer.SetRate(kitbag::kUnityRate, 0, false);
-  std::filesystem::remove(TempFiles().back());
+  std::filesystem::remove(silent_file);
   if (restage == Restage::kSeek) {
     mixer.Seek(kDisengageSeek, 0, false);
   } else {
     mixer.Stop(0, false);
     mixer.Play();
   }
-  mixer.UnloadTrack(1, 0, false);
+  mixer.UnloadTrack(kSilentTrack, 0, false);
   const std::vector<float> left = RenderPaced(&mixer, kSettleBlocks);
   Check(mixer.stretch_engaged(), "restore: a failed restage stays engaged");
   CheckNoQuietWindow(left, 0, label);

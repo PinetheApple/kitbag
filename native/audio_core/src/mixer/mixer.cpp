@@ -183,10 +183,7 @@ void Mixer::Play() {
 void Mixer::Stop(uint64_t now_frame, bool engine_running) {
   app_playing_ = false;
   Enqueue({CommandType::kStop});
-  const bool was_engaged = std::exchange(app_engaged_, WantsStretch());
-  if (!Relayout({.layout = app_layout_}, now_frame, engine_running)) {
-    app_engaged_ = was_engaged;
-  }
+  ReplanStretch({.layout = app_layout_}, now_frame, engine_running);
 }
 
 void Mixer::Pause() {
@@ -200,8 +197,16 @@ void Mixer::Seek(uint64_t frame, uint64_t now_frame, bool engine_running) {
   const uint64_t longest = longest_frames_.load(std::memory_order_relaxed);
   const int64_t target =
       SeekTarget(static_cast<int64_t>(std::min(frame, longest)));
-  const bool was_engaged = std::exchange(app_engaged_, WantsStretch());
   const TransportPlan plan{.frame = target, .layout = app_layout_};
+  ReplanStretch(plan, now_frame, engine_running);
+}
+
+void Mixer::ReplanStretch(
+    TransportPlan plan,
+    uint64_t now_frame,
+    bool engine_running
+) {
+  const bool was_engaged = std::exchange(app_engaged_, WantsStretch());
   if (!Relayout(plan, now_frame, engine_running)) app_engaged_ = was_engaged;
 }
 
@@ -340,21 +345,6 @@ void Mixer::CommitPlan(
       engine_running
   );
   for (int i = 0; i < count; ++i) tracks_[i].stream->StopPrevious();
-}
-
-bool Mixer::StageAll(
-    int64_t frame,
-    const SourceStamp& stamp,
-    bool engine_running
-) {
-  const int count = track_count_.load(std::memory_order_relaxed);
-  const auto target = static_cast<uint64_t>(std::max<int64_t>(frame, 0));
-  for (int i = 0; i < count; ++i) {
-    if (tracks_[i].stream->Stage(target, stamp, engine_running)) continue;
-    for (int j = 0; j < i; ++j) tracks_[j].stream->DropStaged();
-    return false;
-  }
-  return true;
 }
 
 uint64_t Mixer::track_frames(int track) const {
