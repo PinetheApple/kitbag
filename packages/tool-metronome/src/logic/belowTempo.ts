@@ -81,6 +81,17 @@ export function statusStackHeight(running: boolean, fontScale: number): number {
     : row;
 }
 
+// A shorter pinned stack grows the scroll viewport; equal content growth leaves
+// the scroll range as the stack's resize found it.
+export function stoppedScrollSlack(
+  running: boolean,
+  fontScale: number,
+): number {
+  return statusStackPinned(fontScale) && !running
+    ? statusStackHeight(true, fontScale) - statusStackHeight(false, fontScale)
+    : 0;
+}
+
 export type PolyRow = 'off' | 'labelBeside' | 'labelAbove';
 
 export interface BeatDotsShape {

@@ -24,8 +24,8 @@ import {
 import { useLibraryRefresh } from '../library/useLibraryRefresh.ts';
 import {
   belowTempoReserve,
-  statusStackHeight,
   statusStackPinned,
+  stoppedScrollSlack,
 } from '../logic/belowTempo.ts';
 import { noteStrip, type NoteStrip } from '../logic/noteStrip.ts';
 import { endPractice, summarySheetOnMount } from '../logic/practiceSummary.ts';
@@ -95,9 +95,6 @@ const useStyles = createThemedStyles((theme) => ({
   },
   toolsPush: {
     flexGrow: 1,
-  },
-  pinnedStatus: {
-    justifyContent: 'flex-end',
   },
 }));
 
@@ -281,9 +278,9 @@ export function MetronomeScreen({
   );
   const legend = restLegend(running, polyEnabled);
   const pinStatus = statusStackPinned(fontScale);
-  const pinnedFrame = useMemo(
-    () => ({ marginTop: bodyGap, height: statusStackHeight(true, fontScale) }),
-    [bodyGap, fontScale],
+  const scrollSlack = useMemo(
+    () => ({ paddingBottom: stoppedScrollSlack(running, fontScale) }),
+    [running, fontScale],
   );
   const status = (
     <StatusStack frame={frame} settings={settings} running={running} />
@@ -299,7 +296,7 @@ export function MetronomeScreen({
         />
         <ScrollView
           style={styles.body}
-          contentContainerStyle={styles.bodyContent}
+          contentContainerStyle={[styles.bodyContent, scrollSlack]}
           ref={scrollRef}
           scrollEnabled={scrollable}
           showsVerticalScrollIndicator={false}
@@ -362,9 +359,7 @@ export function MetronomeScreen({
             )}
           </View>
         </ScrollView>
-        {pinStatus ? (
-          <View style={[styles.pinnedStatus, pinnedFrame]}>{status}</View>
-        ) : null}
+        {pinStatus ? <View style={topGap}>{status}</View> : null}
         <Transport
           running={running}
           armedCount={practiceBadgeCount(settings)}

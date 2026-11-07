@@ -12,6 +12,7 @@ import {
   statusRowPitch,
   statusStackHeight,
   statusStackPinned,
+  stoppedScrollSlack,
   statusTextLines,
   tallestBelowTempo,
   type BelowTempoRoom,
@@ -176,6 +177,27 @@ describe('the status stack', () => {
       expect(statusStackHeight(true, fontScale)).toBe(
         statusRowPitch(fontScale) + row,
       );
+    }
+  });
+
+  it('adds no scroll slack while the status stack sits in the body', () => {
+    for (const running of [false, true]) {
+      expect(stoppedScrollSlack(running, 0.85)).toBe(0);
+      expect(stoppedScrollSlack(running, 1)).toBe(0);
+    }
+  });
+
+  it('keeps the scroll range when a pinned stack shrinks on stop', () => {
+    for (const fontScale of [1.3, 2]) {
+      const stopped =
+        statusStackHeight(false, fontScale) +
+        stoppedScrollSlack(false, fontScale);
+      const running =
+        statusStackHeight(true, fontScale) +
+        stoppedScrollSlack(true, fontScale);
+      expect(stopped).toBe(running);
+      expect(stoppedScrollSlack(true, fontScale)).toBe(0);
+      expect(stoppedScrollSlack(false, fontScale)).toBeGreaterThan(0);
     }
   });
 
