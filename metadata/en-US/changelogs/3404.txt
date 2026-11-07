@@ -1,0 +1,1 @@
+• A song opened after a slowed or key-shifted stem session now plays at normal speed and in its own key.
