@@ -52,8 +52,5 @@ it('draws the played share of the lane from the first frame', () => {
     { translateX: '-75%' },
     { translateX: '75%' },
   ]);
-  expect(mountedShift(1)).toEqual([
-    { translateX: '0%' },
-    { translateX: '0%' },
-  ]);
+  expect(mountedShift(1)).toEqual([{ translateX: '0%' }, { translateX: '0%' }]);
 });
