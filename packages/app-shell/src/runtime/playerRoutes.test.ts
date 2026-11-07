@@ -64,12 +64,12 @@ describe.each(Object.entries(ROUTES))('the %s player route', (_name, route) => {
 });
 
 describe('opening a player', () => {
-  it('navigates to a stem song, so a repeat keeps one route', () => {
+  it('calls navigate for a stem song', () => {
     routes().openStemSet(4);
     expect(nav.navigate).toHaveBeenCalledWith('/stems/4');
   });
 
-  it('navigates to a song, so a repeat keeps one route', () => {
+  it('calls navigate for a song', () => {
     routes().openSong(4);
     expect(nav.navigate).toHaveBeenCalledWith('/library/4');
   });

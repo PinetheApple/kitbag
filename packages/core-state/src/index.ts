@@ -300,10 +300,8 @@ export {
   loopRange,
 } from './stemPlayer/loopText.ts';
 export { useLoopScrub } from './stemPlayer/useLoopScrub.ts';
-export {
-  useFocusedMixerHold,
-  type MixerHold,
-} from './stemPlayer/screenHold.ts';
+export type { MixerHold } from './stemPlayer/mixerSession.ts';
+export { useFocusedMixerHold } from './stemPlayer/screenHold.ts';
 export { useSongPlayer } from './songPlayer/useSongPlayer.ts';
 export { songPlayerStore } from './songPlayer/store.ts';
 export { configureSongPlayer } from './songPlayer/runtime.ts';

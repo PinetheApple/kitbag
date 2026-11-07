@@ -355,12 +355,18 @@ importers:
       '@types/react':
         specifier: ~19.2.2
         version: 19.2.17
+      '@types/react-test-renderer':
+        specifier: ~19.1.0
+        version: 19.1.0
       react:
         specifier: 19.2.0
         version: 19.2.0
       react-native:
         specifier: 0.83.6
         version: 0.83.6(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.0)
+      react-test-renderer:
+        specifier: 19.2.0
+        version: 19.2.0(react@19.2.0)
       vitest:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@26.6.2)(vite@7.3.6(@types/node@26.6.2)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.49.0)(yaml@2.9.0))
@@ -10742,7 +10748,7 @@ snapshots:
   react-test-renderer@19.2.0(react@19.2.0):
     dependencies:
       react: 19.2.0
-      react-is: 19.3.0
+      react-is: 19.3.1
       scheduler: 0.27.0
 
   react-test-renderer@19.3.1(react@19.2.0):

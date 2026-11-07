@@ -17,8 +17,8 @@ export function useLibraryRoutes() {
       openAllSongs: () => {
         router.push('/songs');
       },
+      // Unlike push, navigate keeps one screen when a double tap repeats the id.
       openStemSet: (id: number) => {
-        // Unlike push, navigate keeps one screen when a double tap repeats the id.
         router.navigate(`/stems/${String(id)}`);
       },
       openSong: (id: number) => {

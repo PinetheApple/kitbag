@@ -182,7 +182,7 @@ describe('a screen cleaning up late', () => {
     await first.loaded;
     await store.getState().open(SONG_ID + 1, BARS).loaded;
     fake.commands.mixerStop.mockClear();
-    first.close();
+    first.hold.release();
     expect(store.getState().songId).toBe(SONG_ID + 1);
     expect(fake.commands.mixerStop).not.toHaveBeenCalled();
   });
@@ -194,9 +194,9 @@ describe('a screen cleaning up late', () => {
     await first.loaded;
     const second = store.getState().open(SONG_ID, BARS);
     await second.loaded;
-    first.close();
+    first.hold.release();
     expect(store.getState().status).toBe('ready');
-    second.close();
+    second.hold.release();
     expect(store.getState().status).toBe('idle');
   });
 
@@ -205,7 +205,7 @@ describe('a screen cleaning up late', () => {
     const store = songStore(fake);
     const session = store.getState().open(SONG_ID, BARS);
     await session.loaded;
-    session.close();
+    session.hold.release();
     expect(store.getState().songId).toBeNull();
     expect(fake.commands.engineRelease).toHaveBeenCalledOnce();
   });

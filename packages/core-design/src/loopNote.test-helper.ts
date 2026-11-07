@@ -1,4 +1,4 @@
-import type { LaneGeometry } from '@kitbag/core-design';
+import type { LaneGeometry } from './loopNotePlacement.ts';
 
 export const LANE = {
   '360 at 1.0': { laneWidth: 328, barLeft: 57, barWidth: 215 },

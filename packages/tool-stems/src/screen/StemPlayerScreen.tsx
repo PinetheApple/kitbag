@@ -15,6 +15,7 @@ import {
   loopEndFrames,
   useFocusedMixerHold,
   useStemPlayer,
+  type StemPlayerStatus,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
@@ -161,6 +162,41 @@ function PlayerContent({ frame, picked, onPick }: PlayerContentProps) {
   );
 }
 
+function NotReady({
+  status,
+  onBack,
+}: {
+  readonly status: StemPlayerStatus;
+  readonly onBack: () => void;
+}) {
+  const styles = useStyles();
+  if (status === 'failed')
+    return (
+      <EmptyState
+        icon="stems"
+        title="These stems would not open"
+        reason="The song could not be read or the audio engine did not start. Go back and open it again."
+        actionLabel="Back to songs"
+        onAction={onBack}
+      />
+    );
+  if (status === 'missing')
+    return (
+      <EmptyState
+        icon="stems"
+        title="This stem song is gone"
+        reason="It was deleted from the library. Pick another song there."
+        actionLabel="Back to songs"
+        onAction={onBack}
+      />
+    );
+  return (
+    <Text accessibilityLiveRegion="polite" style={styles.note}>
+      Opening the stems…
+    </Text>
+  );
+}
+
 interface BodyProps {
   readonly bottom: number;
   readonly onBack: () => void;
@@ -175,36 +211,10 @@ function Body({ bottom, onBack }: BodyProps) {
   const frame = useMixerFrame(rate, frames, loopEnd);
   const retiming = useStemPlayer((s) => s.retime.kind === 'recording');
   const [picked, setPicked] = useState<Tab>(MIX);
-  if (status === 'failed')
-    return (
-      <View style={styles.body}>
-        <EmptyState
-          icon="stems"
-          title="These stems would not open"
-          reason="The song could not be read or the audio engine did not start. Go back and open it again."
-          actionLabel="Back to songs"
-          onAction={onBack}
-        />
-      </View>
-    );
-  if (status === 'missing')
-    return (
-      <View style={styles.body}>
-        <EmptyState
-          icon="stems"
-          title="This stem song is gone"
-          reason="It was deleted from the library. Pick another song there."
-          actionLabel="Back to songs"
-          onAction={onBack}
-        />
-      </View>
-    );
   if (status !== 'ready')
     return (
       <View style={styles.body}>
-        <Text accessibilityLiveRegion="polite" style={styles.note}>
-          Opening the stems…
-        </Text>
+        <NotReady status={status} onBack={onBack} />
       </View>
     );
   return (

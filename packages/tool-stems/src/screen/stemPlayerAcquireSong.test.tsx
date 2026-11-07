@@ -57,7 +57,9 @@ describe('the stem player screen', () => {
   beforeEach(() => {
     spies.effects.length = 0;
     spies.release.mockReset();
-    spies.acquireSong.mockReset().mockReturnValue(spies.release);
+    spies.acquireSong
+      .mockReset()
+      .mockReturnValue({ release: spies.release, live: () => true });
     spies.close.mockReset();
   });
 

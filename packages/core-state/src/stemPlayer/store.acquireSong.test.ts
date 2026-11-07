@@ -20,7 +20,7 @@ function setup() {
     mixSaveDelayMs: SAVE_MS,
     scrubSeekDelayMs: SEEK_MS,
   });
-  const acquire = () => store.getState().acquireSong(SET_ID, BARS);
+  const acquire = () => store.getState().acquireSong(SET_ID, BARS).release;
   const ready = () =>
     vi.waitFor(() => {
       expect(store.getState().status).toBe('ready');

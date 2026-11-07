@@ -30,6 +30,7 @@ import {
   useFocusedMixerHold,
   useLoopScrub,
   useSongPlayer,
+  type StemPlayerStatus,
 } from '@kitbag/core-state';
 import { useCallback, useMemo } from 'react';
 import { ScrollView, Text, View } from 'react-native';
@@ -188,6 +189,41 @@ function SongTransport({
   );
 }
 
+function NotReady({
+  status,
+  onBack,
+}: {
+  readonly status: StemPlayerStatus;
+  readonly onBack: () => void;
+}) {
+  const styles = useStyles();
+  if (status === 'failed')
+    return (
+      <EmptyState
+        icon="song"
+        title="This song would not play"
+        reason="The file could not be read, its format may not be supported, or the audio engine did not start."
+        actionLabel="Back to songs"
+        onAction={onBack}
+      />
+    );
+  if (status === 'missing')
+    return (
+      <EmptyState
+        icon="song"
+        title="This song is gone"
+        reason="It was deleted from the library. Pick another song there."
+        actionLabel="Back to songs"
+        onAction={onBack}
+      />
+    );
+  return (
+    <Text accessibilityLiveRegion="polite" style={styles.note}>
+      Opening the song…
+    </Text>
+  );
+}
+
 interface BodyProps {
   readonly bottom: number;
   readonly onBack: () => void;
@@ -202,36 +238,10 @@ function Body({ bottom, onBack, usePlayhead }: BodyProps) {
   const loopEnd = useSongPlayer(loopEndFrames);
   const playhead = usePlayhead(rate, frames, loopEnd);
   const scrub = useLoopScrub(useSongPlayer);
-  if (status === 'failed')
-    return (
-      <View style={styles.bodyContent}>
-        <EmptyState
-          icon="song"
-          title="This song would not play"
-          reason="The file could not be read, its format may not be supported, or the audio engine did not start."
-          actionLabel="Back to songs"
-          onAction={onBack}
-        />
-      </View>
-    );
-  if (status === 'missing')
-    return (
-      <View style={styles.bodyContent}>
-        <EmptyState
-          icon="song"
-          title="This song is gone"
-          reason="It was deleted from the library. Pick another song there."
-          actionLabel="Back to songs"
-          onAction={onBack}
-        />
-      </View>
-    );
   if (status !== 'ready')
     return (
       <View style={styles.bodyContent}>
-        <Text accessibilityLiveRegion="polite" style={styles.note}>
-          Opening the song…
-        </Text>
+        <NotReady status={status} onBack={onBack} />
       </View>
     );
   return (
@@ -263,7 +273,7 @@ export function SongPlayerScreen({
   const styles = useStyles();
   const open = useSongPlayer((s) => s.open);
   const acquire = useCallback(
-    () => open(songId, songPlayer.waveBars).close,
+    () => open(songId, songPlayer.waveBars).hold,
     [open, songId],
   );
   useFocusedMixerHold(focused, acquire);

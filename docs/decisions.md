@@ -927,8 +927,9 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   Play starts it, as the stem player does. Coordinator call; the owner may overturn it.
   **[recorded]**
 
-- **2026-11-07 · A refocused player reopens paused at the start (§6, §7, #297, #321)** — Only
-  the focused player screen holds the mixer. A lower song or stem screen whose session a
+- **2026-11-07 · A refocused player reopens paused at the start (§6, §7, #297, #321)** — A
+  player holds the mixer until another player displaces it; only a focused player acquires.
+  A lower song or stem screen whose session a
   screen above displaced reopens its own song when it regains focus, paused at the start,
   as #316's reopen does; position and loop are not restored. A screen that kept its session
   does not reload. Blur releases nothing, so a non-player route over a player keeps it playing. Row taps

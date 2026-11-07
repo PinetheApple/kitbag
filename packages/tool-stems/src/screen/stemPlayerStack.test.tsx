@@ -1,9 +1,11 @@
+import { stemPlayerStore } from '@kitbag/core-state';
 import { record } from '@kitbag/core-state/src/stemPlayer/store.test-helper.ts';
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   flush,
+  installFakeRuntime,
   mountPlayer,
   mountSurface,
   playerTree,
@@ -37,6 +39,16 @@ const BACK_ORDERS: readonly BackOrder[] = [
   'release before refocus',
   'refocus before release',
 ];
+
+function Gated({
+  on,
+  focused,
+}: {
+  readonly on: boolean;
+  readonly focused: boolean;
+}) {
+  return on ? playerTree({ focused }) : null;
+}
 
 let first: Player | undefined;
 let surface: Surface | undefined;
@@ -253,14 +265,18 @@ describe('a load that does not reach ready', () => {
 });
 
 describe('something else closing the player', () => {
-  it('does not reopen a focused screen a tool stopper closed', async () => {
-    const player = await openFirst();
-    player.store.getState().close();
+  it('stays closed through a refocus once the gate removed the screen', async () => {
+    const fake = installFakeRuntime(FIRST_RECORD);
+    surface = await mountSurface(<Gated on focused />);
+    expect(stemPlayerStore.getState().status).toBe('ready');
+    stemPlayerStore.getState().close();
+    surface.update(<Gated on={false} focused />);
+    surface.update(<Gated on={false} focused={false} />);
+    surface.update(<Gated on={false} focused />);
     await act(flush);
-    player.unmount();
-    expect(player.store.getState().status).toBe('idle');
-    expect(player.records.readStemSet).toHaveBeenCalledOnce();
-    expect(player.commands.engineRelease).toHaveBeenCalledOnce();
+    expect(stemPlayerStore.getState().status).toBe('idle');
+    expect(fake.records.readStemSet).toHaveBeenCalledOnce();
+    expect(fake.commands.engineRelease).toHaveBeenCalledOnce();
   });
 
   it('opens nothing for a screen mounted behind another', async () => {
@@ -279,6 +295,5 @@ describe('something else closing the player', () => {
     }
     expect(player.store.getState().status).toBe('idle');
     expect(player.records.readStemSet).toHaveBeenCalledOnce();
-    expect(player.has(OPENING)).toBe(true);
   });
 });

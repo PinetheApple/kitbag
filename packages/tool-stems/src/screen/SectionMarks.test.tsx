@@ -1,7 +1,8 @@
-import { aboveFlagsPadding, stemPlayer } from '@kitbag/core-design';
+import { stemPlayer } from '@kitbag/core-design';
+import { LANE, NOTE_AT_2X } from '@kitbag/core-design/src/loopNote.test-helper.ts';
+import { aboveFlagsPadding } from '@kitbag/core-design/src/loopNotePlacement.ts';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { LANE, NOTE_AT_2X } from '../logic/loopNote.test-helper.ts';
 import { animatedStyleOf } from '../testing/reanimatedDriver.ts';
 import {
   fireLayout,
