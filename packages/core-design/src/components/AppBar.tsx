@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Pressable, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, useWindowDimensions, View } from 'react-native';
 
 import type { IconName } from '../icons.ts';
 import {
@@ -10,13 +10,18 @@ import {
   textRoles,
   type IconSize,
 } from '../roles.ts';
-import { oneLineFloor } from '../oneLineFit.ts';
+import { oneLineFloor, titleFloorOverSubtitle } from '../oneLineFit.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import type { ColorToken } from '../tokens.ts';
 import { useOneLineFit } from '../useOneLineFit.tsx';
+import { isTextScaled } from '../textScale.ts';
 import { useTextIconScale } from '../useTextIconScale.ts';
+import { EllipsizedLine } from './EllipsizedLine.tsx';
 import { Icon } from './Icon.tsx';
+
+const SCALED_CHIP_CLEARANCE = space.controlGap - screenBar.gap;
+const SCALED_EDGE_CLEARANCE = space.screenInset - screenBar.h;
 
 const useStyles = createThemedStyles((theme) => ({
   bar: {
@@ -130,9 +135,15 @@ interface HeadingProps {
   readonly title: string;
   readonly subtitle: string | undefined;
   readonly wordmark: boolean;
+  readonly scaledEndClearance: number;
 }
 
-function Heading({ title, subtitle, wordmark }: HeadingProps) {
+function Heading({
+  title,
+  subtitle,
+  wordmark,
+  scaledEndClearance,
+}: HeadingProps) {
   const styles = useStyles();
   const { fontScale } = useWindowDimensions();
   const role = wordmark ? textRoles.wordmark : textRoles.appBarTitle;
@@ -140,28 +151,37 @@ function Heading({ title, subtitle, wordmark }: HeadingProps) {
   const fit = useOneLineFit({
     text: title,
     role,
-    floor: oneLineFloor(fontScale, role.size, appBarTitleMinSize),
+    floor: titleFloorOverSubtitle(
+      oneLineFloor(fontScale, role.size, appBarTitleMinSize),
+      subtitle === undefined ? undefined : textRoles.appBarSubtitle.size,
+    ),
     style: titleStyle,
   });
+  const clearance =
+    isTextScaled(fontScale) && scaledEndClearance > 0
+      ? { marginRight: scaledEndClearance }
+      : undefined;
   return (
-    <View style={styles.heading} onLayout={fit.onAvailableLayout}>
+    <View style={[styles.heading, clearance]} onLayout={fit.onAvailableLayout}>
       {fit.measurer}
       <View accessibilityRole="header" accessible>
-        <Text
-          style={[titleStyle, fit.style]}
-          numberOfLines={1}
-          ellipsizeMode="tail"
-        >
-          {title}
-        </Text>
+        <EllipsizedLine style={[titleStyle, fit.style]}>{title}</EllipsizedLine>
         {subtitle === undefined ? null : (
-          <Text style={styles.subtitle} numberOfLines={1}>
-            {subtitle}
-          </Text>
+          <EllipsizedLine style={styles.subtitle}>{subtitle}</EllipsizedLine>
         )}
       </View>
     </View>
   );
+}
+
+function endClearance(
+  hasChildren: boolean,
+  hasTrailing: boolean,
+  hasActions: boolean,
+): number {
+  if (hasChildren) return 0;
+  if (hasTrailing) return SCALED_CHIP_CLEARANCE;
+  return hasActions ? 0 : SCALED_EDGE_CLEARANCE;
 }
 
 export function AppBar({
@@ -196,7 +216,16 @@ export function AppBar({
       )}
       <View style={styles.middle}>
         {title === undefined ? null : (
-          <Heading title={title} subtitle={subtitle} wordmark={wordmark} />
+          <Heading
+            title={title}
+            subtitle={subtitle}
+            wordmark={wordmark}
+            scaledEndClearance={endClearance(
+              children !== undefined,
+              trailing !== undefined && trailing !== null,
+              actions.length > 0,
+            )}
+          />
         )}
         {children}
       </View>

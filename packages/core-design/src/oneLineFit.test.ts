@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  ellipsisPaintSize,
   fittedStyle,
   MAX_SETTLE_PASSES,
   measureOneLine,
@@ -8,6 +9,7 @@ import {
   oneLineFloor,
   resizeOneLine,
   startOneLine,
+  titleFloorOverSubtitle,
   type OneLineParams,
   type OneLineSettle,
 } from './oneLineFit.ts';
@@ -99,6 +101,37 @@ describe('nextFitCandidate', () => {
         pass: MAX_SETTLE_PASSES,
       }),
     ).toEqual({ done: true, fontSize: 12 });
+  });
+});
+
+describe('titleFloorOverSubtitle', () => {
+  const ARTIST = 12.5;
+
+  it('keeps a title with no line under it at its own floor', () => {
+    expect(titleFloorOverSubtitle(8.5, undefined)).toBe(8.5);
+  });
+
+  it('never lets the floor sit below the line under the title', () => {
+    expect(titleFloorOverSubtitle(oneLineFloor(2, SIZE, MIN), ARTIST)).toBe(
+      ARTIST,
+    );
+  });
+
+  it('leaves a floor already above that line alone', () => {
+    expect(titleFloorOverSubtitle(oneLineFloor(1, SIZE, MIN), ARTIST)).toBe(
+      MIN,
+    );
+  });
+});
+
+describe('ellipsisPaintSize', () => {
+  it('asks for no paint of its own at the default text size', () => {
+    expect(ellipsisPaintSize(SIZE, 1)).toBeUndefined();
+    expect(ellipsisPaintSize(SIZE, 0.85)).toBeUndefined();
+  });
+
+  it('carries the font scale once the text grows', () => {
+    expect(ellipsisPaintSize(SIZE, 2)).toBe(SIZE * 2);
   });
 });
 
