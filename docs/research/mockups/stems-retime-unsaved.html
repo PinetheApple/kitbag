@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en" data-theme="dark"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Retime — leaving with unsaved taps</title>
+<style>
+:root[data-theme="dark"]{--bg:#0E0D10;--s1:#1A1820;--s2:#242230;--line:#33303F;--tx:#ECEAF0;--tx2:#BDBBC6;--ac:#FFB347;--on-ac:#221600;--ac-dim:#8A6A35}
+:root[data-theme="light"]{--bg:#F5F3EE;--s1:#FFFFFF;--s2:#ECE9E1;--line:#DCD7CA;--tx:#221F26;--tx2:#433F4B;--ac:#80510B;--on-ac:#FFF7EA;--ac-dim:#D8B27C}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,sans-serif;margin:0;padding:32px 40px}
+h1{font-size:28px;margin:0 0 8px}
+p{color:var(--tx2);max-width:72ch}
+.phone{width:360px;height:800px;border-radius:32px;background:var(--bg);border:1px solid var(--line);overflow:hidden;position:relative;display:flex;flex-direction:column}
+.ab{height:56px;display:flex;align-items:center;gap:2px;padding:28px 12px 0 16px;flex:none}
+.ttl{flex:1}.ttl b{display:block;font-weight:500;font-size:17px}.ttl span{font-size:12.5px;color:var(--tx2)}
+.body{flex:1;margin:40px 16px 16px;border-radius:20px;border:2px dashed var(--ac-dim);display:flex;align-items:center;justify-content:center;color:var(--tx2)}
+.wrap{position:absolute;inset:0;background:rgba(14,13,16,.45);display:flex;align-items:center;padding:0 24px}
+.dialog{background:var(--s2);border-radius:20px;padding:20px 20px 16px;width:100%}
+.dialog h4{margin:0 0 8px;font-weight:500;font-size:18px}
+.dialog p{font-size:14px;line-height:1.45;margin:0 0 6px}
+.row{display:flex;gap:8px;margin-top:6px}
+.btn{flex:1;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);color:var(--tx2);font-weight:500;font-size:14px}
+.btn.pri{background:var(--ac);border-color:var(--ac);color:var(--on-ac)}
+</style></head><body>
+<h1>Retime — leaving with unsaved taps</h1>
+<p>Not drawn in <code>kitbag-stems-sections.html</code>. Close or Back with at least one tap or a shift asks first; with none, it leaves at once. Same dialog as the reset confirm. Built today without this step: Close and Back leave at once and drop the taps. Save stays in the bar, so this adds no third action.</p>
+<div class="phone">
+  <div class="ab"><div class="ttl"><b>Retime lyrics</b><span>Line 6 of 34</span></div></div>
+  <div class="body">Tap pad</div>
+  <div class="wrap"><div class="dialog"><h4>Leave without saving?</h4><p>Your 5 taps for this song are dropped. The lyrics keep their current timing.</p><div class="row"><span class="btn">Keep tapping</span><span class="btn pri">Leave</span></div></div></div>
+</div>
+</body></html>

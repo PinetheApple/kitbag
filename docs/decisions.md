@@ -636,6 +636,14 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   owner-approved round 2 frame (`design/kitbag-metronome.html` §02) rather than the poly
   file's left placement. **[recorded — coordinator ruling]**
 
+- **2026-11-01 · Stem player sections and lyrics layout (§7.7, #139)** — Layout C from
+  `docs/research/mockups/stems-sections-lyrics.html`: a Mix | Lyrics switch, with sections as
+  a card scroller. Bundle section colours are ignored. The song facts show no loudness.
+  Holding a section over a custom A-B loop replaces it, with Undo. Retime mode at
+  0.75×, restoring the speed on exit, is ruled but not built: retime ships at the current
+  speed behind `leaveRetime()`, and 0.75× follows #138 (tracked as #299). The data and state
+  layer landed first; the screens are bound by `design/kitbag-stems-sections.html`. **[user]**
+
 - **2026-11-01 · The Settings click-volume slider sets on a tap (§12.5, #170)** — A tap on
   the Click volume track sets the level there, and a drag keeps the thumb under the finger;
   the unity detent stays. This departs from the drag-only stem faders (2026-10-29, #137)
@@ -837,6 +845,39 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   coordinator adds the check to the `main` ruleset at merge. PRs opened by a bot
   (author type `Bot` or a `[bot]` login) pass as `NONE`, so dependency updates never
   block on a note. **[owner]**
+
+- **2026-11-07 · A section tap during a stem loop (§7.7, #139)** — A tap on a section that
+  starts outside the active loop clears the loop and jumps, with the same Undo as holding a
+  section over a loop; a tap on a section that starts inside it just seeks.
+  **[coord, owner may overturn]**
+
+- **2026-11-07 · A re-import keeps a lyric retiming only over the same lyrics (§7.8, #139)** —
+  `replaceStemBundle` keeps `lyrics_retimed` when `lyrics_synced` is unchanged and drops it
+  otherwise. A plain-only retiming also needs `lyrics_plain` unchanged, since its times index
+  the plain lines. **[coord]**
+
+- **2026-11-07 · Lyric retimings are not backed up (§7.7, #139)** — No backup category covers
+  `stem_sets`, so a retime is lost on reinstall along with the stems, and Restore leaves it
+  untouched. **[coord]**
+
+- **2026-11-07 · Retime pins the pad when its body overflows (§7.7, #139)** — When the retime
+  body overflows, at any font scale, the tap pad, Undo tap and Shift all lines stay pinned and
+  only the lyric lines scroll. Done and next lines scroll with the rest. Scrolling the whole
+  body is the wrong default: 3 of 3 drags starting on the pad recorded a tap, and the pad moved
+  120–160 dp between lines. Taps stay on touch-down. A body that fits stays as drawn. Once a
+  session overflows it stays pinned until it ends, so the layout cannot flip between lines.
+  When the lines left would hold fewer than two rendered current-row lines and their margins,
+  about 93 dp at font scale 2.0 on the emulator, the whole body scrolls instead so everything
+  stays reachable; 360x800, about 98–124 dp of lines, stays pinned. Coordinator call; the owner may overturn it. **[recorded]**
+
+- **2026-11-07 · Loop note placement (§7.7, #139)** — The note stays right as drawn while that
+  clears the A and B flags, then moves left of them if that clears, then onto its own row above
+  them, which makes the lane taller. It is worked out from measured layout and the loop's
+  bounds, so it changes only when the loop or the layout does. `design/kitbag-stems-sections.html`
+  draws only the first. **[recorded]**
+
+- **2026-11-07 · `lyrics_retimed` format (§7.7, #139)** — `{version: 1, times}`, one time per
+  line for synced lyrics, or for the first lines tapped of plain-only lyrics. **[coord]**
 
 - **2026-11-02 · One chevron app bar on every screen (§12, #287)** — Every screen with a
   back control uses the chevron back, not the full arrow **[user, via coordinator]**. The

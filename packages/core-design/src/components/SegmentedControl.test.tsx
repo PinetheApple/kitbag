@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { describe, expect, it, vi } from 'vitest';
 
-import { space } from '../roles.ts';
+import { size, space } from '../roles.ts';
 import { wrappedRowGap } from '../segmentHitBox.ts';
 import { ThemeProvider } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
@@ -44,7 +44,7 @@ const OPTIONS = [
   { value: 'distinct', label: 'Distinct' },
 ] as const;
 
-const FLEX_SIZES: readonly SegmentedControlSize[] = ['default', 'large'];
+const FLEX_SIZES: readonly SegmentedControlSize[] = ['default', 'large', 'tab'];
 const CONTENT_SIZES: readonly SegmentedControlSize[] = [
   'inline',
   'editRow',
@@ -128,6 +128,17 @@ describe('SegmentedControl under font scale', () => {
       const face = Number(faces[i]?.minHeight);
       const reach = Number(option.paddingTop) + Number(option.paddingBottom);
       expect(face + reach).toBeGreaterThanOrEqual(minTouchTargetDp);
+    });
+  });
+
+  it('gives a tab option its drawn height and the minimum target', () => {
+    const { options, faces } = renderAt(1, 'tab', true, space.controlGap);
+    options.forEach((option, i) => {
+      expect(faces[i]?.minHeight).toBe(size.segmentTabOption);
+      const reach = Number(option.paddingTop) + Number(option.paddingBottom);
+      expect(size.segmentTabOption + reach).toBeGreaterThanOrEqual(
+        minTouchTargetDp,
+      );
     });
   });
 
