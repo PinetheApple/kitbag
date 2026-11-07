@@ -71,7 +71,7 @@ void Metronome::SeekGridCursor(const BeatGrid& grid, double song_seconds) {
   grid_state_.beat_index = static_cast<int64_t>(grid_state_.cursor) - 1;
   grid_state_.next_sub =
       FirstUnsoundedSub(times, grid_state_.cursor, subdivision_, song_seconds);
-  SyncGridBar();
+  SyncGridBar(grid);
 }
 
 bool Metronome::GridShiftReplays(const BeatGrid& grid, double shift_sec) const {
@@ -82,13 +82,25 @@ bool Metronome::GridShiftReplays(const BeatGrid& grid, double shift_sec) const {
   return -shift_sec + kGridEpsilon >= replay_threshold_sec;
 }
 
-// Derived, never incremented: a re-anchor re-crosses downbeats, and counting
-// them would make bar-mute phase depend on re-anchor count (SPEC.md §4.2.1).
-// Grid mode ignores the denominator (D1): bars count tracker beats, so 7/8 bars
-// every 7 grid beats and PublishGridMirrors' rate is not quarter-referenced.
-void Metronome::SyncGridBar() {
+// Derived from the song's bars, never incremented: a re-anchor re-crosses
+// downbeats, and counting them would tie bar-mute phase to re-anchors (§4.2.1).
+void Metronome::SyncGridBar(const BeatGrid& grid) {
   current_bar_ =
-      grid_state_.beat_index < 0 ? -1 : grid_state_.beat_index / beats_per_bar_;
+      grid_state_.beat_index < 0
+          ? GridBar::kNoBar
+          : grid.bars[static_cast<size_t>(grid_state_.beat_index)].bar;
+}
+
+// The standalone accent row and its mutes are not the song's (SPEC.md §4.3).
+void Metronome::OnGridBeat(const GridBar& bar, uint32_t sample_rate) {
+  current_beat_.store(bar.position, std::memory_order_relaxed);
+  if (BarIsMuted(current_bar_)) return;
+  const bool accented = bar.bar != GridBar::kNoBar && bar.position == 0;
+  TriggerPreset(
+      accented ? accent_sound_ : normal_sound_,
+      accented,
+      sample_rate
+  );
 }
 
 void Metronome::RenderGridBeat(
@@ -108,14 +120,14 @@ void Metronome::RenderGridBeat(
     ++grid_state_.cursor;
     ++grid_state_.beat_index;
   }
-  SyncGridBar();
+  SyncGridBar(grid);
   grid_state_.next_sub = 1;
   grid_state_.last_onset = {times[grid_state_.cursor - 1], grid.anchor_frame};
   // Re-anchoring the constant-tempo phase onto this beat is what makes
   // ClearGrid's "keeps its phase" true (SPEC.md §4.2.1).
   beat_position_ = static_cast<double>(grid_state_.beat_index) - LatencyBeats();
-  OnBeatBoundary(
-      static_cast<int>(grid_state_.beat_index % beats_per_bar_),
+  OnGridBeat(
+      grid.bars[static_cast<size_t>(grid_state_.beat_index)],
       sample_rate
   );
 }
@@ -139,9 +151,10 @@ void Metronome::RenderGridSubdivision(
   if (song_seconds + kGridEpsilon >= tick && tick <= grid_state_.fire_limit) {
     const int slot = grid_state_.next_sub++;
     grid_state_.last_onset = {tick, grid.anchor_frame};
-    // The tick sits in [cursor-1, cursor], so its owning beat is beat_index
-    // (== cursor-1, and >= 0 given the guard above).
-    OnSubdivisionTick(grid_state_.beat_index, slot, sample_rate);
+    // The tick sits in [cursor-1, cursor]: current_bar_ is its owning beat's.
+    if (!BarIsMuted(current_bar_)) {
+      TriggerSubdivision(subdivision_, slot, sample_rate);
+    }
   }
 }
 
@@ -160,10 +173,9 @@ void Metronome::PublishGridMirrors(const BeatGrid& grid, double song_seconds) {
   // backward wait puts the position behind the fired beat; hold there.
   const double beat_fraction =
       std::max(0.0, (song_seconds + kGridEpsilon - previous) / interval);
-  const double beat_in_bar =
-      static_cast<double>(grid_state_.beat_index % beats_per_bar_);
+  const GridBar& bar = grid.bars[grid_state_.cursor - 1];
   bar_phase_.store(
-      PhaseBelowOne((beat_in_bar + beat_fraction) / beats_per_bar_),
+      PhaseBelowOne((bar.position + beat_fraction) / bar.length),
       std::memory_order_relaxed
   );
   // Clamped to the same range SetTempo enforces: a beat tracker emits outlier

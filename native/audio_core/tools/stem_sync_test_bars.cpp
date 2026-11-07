@@ -43,15 +43,26 @@ std::vector<int32_t> Downbeats(const BarCase& c) {
   return downbeats;
 }
 
-kb_engine* OpenBarEngine(const std::string& stem, float rate) {
-  kb_engine* engine = nullptr;
-  if (kb_engine_create(&engine) != KB_OK) return nullptr;
+bool SetBarGrid(kb_engine* engine, const BarCase& c) {
   std::vector<double> seconds;
   for (double beat : Beats()) seconds.push_back(beat / kSampleRate);
-  const auto count = static_cast<int32_t>(seconds.size());
+  const std::vector<int32_t> downbeats = Downbeats(c);
+  return kb_metronome_set_grid(
+             engine,
+             seconds.data(),
+             static_cast<int32_t>(seconds.size()),
+             downbeats.data(),
+             static_cast<int32_t>(downbeats.size()),
+             0
+         ) == KB_OK;
+}
+
+kb_engine*
+OpenBarEngine(const std::string& stem, const BarCase& c, float rate) {
+  kb_engine* engine = nullptr;
+  if (kb_engine_create(&engine) != KB_OK) return nullptr;
   if (kb_mixer_load_track(engine, 0, stem.c_str()) != KB_OK ||
-      kb_metronome_set_grid(engine, seconds.data(), count, 0) != KB_OK ||
-      kb_mixer_set_rate(engine, rate) != KB_OK) {
+      !SetBarGrid(engine, c) || kb_mixer_set_rate(engine, rate) != KB_OK) {
     kb_engine_destroy(engine);
     return nullptr;
   }
@@ -77,7 +88,7 @@ std::vector<int> AccentedClicks(const Take& take) {
 }
 
 void ExpectSongAccents(const std::string& stem, const BarCase& c, float rate) {
-  kb_engine* engine = OpenBarEngine(stem, rate);
+  kb_engine* engine = OpenBarEngine(stem, c, rate);
   if (engine == nullptr) return;
   Take take;
   const double until = Beats()[kBarBeats] / rate;

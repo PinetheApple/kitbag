@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cassert>
 
+#include "metronome/grid_bars.h"
 #include "metronome/metronome_internal.h"
 
 namespace kitbag {
@@ -170,6 +171,9 @@ void Metronome::SetGrid(
     uint64_t now_frame,
     bool engine_running
 ) {
+  if (grid != nullptr && grid->bars.size() != grid->beat_times_sec.size()) {
+    grid->bars = GridBars({}, grid->beat_times_sec.size());
+  }
   grid_.Publish(std::move(grid), now_frame, engine_running);
 }
 

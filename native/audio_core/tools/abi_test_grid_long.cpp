@@ -21,6 +21,8 @@ static_assert(
 constexpr double kGridIntervalSec = 0.3127;
 constexpr double kConstantBpm = 120.0;
 constexpr int32_t kBeatsPerBar = 5;
+constexpr int32_t kSongFirstDownbeat = 1;
+constexpr int32_t kSongBeatsPerBar = 3;
 constexpr int32_t kBeatUnit = 4;
 constexpr int32_t kLeadBeats = 8;
 constexpr double kTailSec = 3.0;
@@ -91,6 +93,22 @@ std::vector<double> EvenGrid() {
   return grid;
 }
 
+bool SetSongGrid(kb_engine* engine, const std::vector<double>& grid) {
+  std::vector<int32_t> downbeats;
+  for (int32_t b = kSongFirstDownbeat; b < kLongGridBeats;
+       b += kSongBeatsPerBar) {
+    downbeats.push_back(b);
+  }
+  return kb_metronome_set_grid(
+             engine,
+             grid.data(),
+             kLongGridBeats,
+             downbeats.data(),
+             static_cast<int32_t>(downbeats.size()),
+             0
+         ) == KB_OK;
+}
+
 void TestGridLocksPastPre161Cap() {
   kb_engine* engine = nullptr;
   if (kb_engine_create(&engine) != KB_OK) return;
@@ -99,7 +117,7 @@ void TestGridLocksPastPre161Cap() {
   kb_metronome_set_beats(engine, kBeatsPerBar, kBeatUnit);
   const std::vector<double> grid = EvenGrid();
   Check(
-      kb_metronome_set_grid(engine, grid.data(), kLongGridBeats, 0) == KB_OK,
+      SetSongGrid(engine, grid),
       "long grid: set_grid accepts a grid past the pre-#161 cap"
   );
   kb_metronome_start(engine);
@@ -115,7 +133,8 @@ void TestGridLocksPastPre161Cap() {
       "then silence after the last"
   );
   Check(
-      kb_metronome_current_beat(engine) == (kLongGridBeats - 1) % kBeatsPerBar,
+      kb_metronome_current_beat(engine) ==
+          (kLongGridBeats - 1 - kSongFirstDownbeat) % kSongBeatsPerBar,
       "long grid: the bar position past the end is the last grid beat's"
   );
   kb_engine_destroy(engine);

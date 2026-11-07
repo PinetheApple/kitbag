@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "click_take.h"
+#include "metronome/grid_bars.h"
 #include "metronome/metronome.h"
 #include "mixer_test_stretch_support.h"
 
@@ -19,6 +20,7 @@ constexpr int64_t kNoFrame = -1;
 constexpr int64_t kReferenceBeatLead = 24000;
 // An unaccented click reads 0.44 of the accented one before it, two stacked 1.75.
 constexpr double kMaxVoiceRatio = 1.0;
+constexpr int32_t kFirstBeatAccented[] = {0};
 
 // Picked so input + rate * output latency is not whole on the config they run.
 struct LagCase {
@@ -118,6 +120,8 @@ void FollowTwoBeats(kitbag::Metronome* metronome, int64_t beat_frame) {
       (beat - kReferenceBeatLead) / kSampleRate,
       beat / kSampleRate
   };
+  grid->bars =
+      kitbag::GridBars(kFirstBeatAccented, grid->beat_times_sec.size());
   metronome->SetTimeSignature(4, 4);
   metronome->SetGrid(std::move(grid), 0, true);
   metronome->SetFollowMixer(true);

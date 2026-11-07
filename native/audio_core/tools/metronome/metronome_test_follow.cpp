@@ -1,4 +1,5 @@
 #include "metronome_test_support.h"
+#include "song_bars.h"
 
 namespace metronome_test {
 namespace {
@@ -17,6 +18,7 @@ constexpr double kFractionalEdge = kLoopEnd - 0.3;
 constexpr double kFractionalLatencyMs = 20.3;
 // One voice at most an accent; a stacked pair sums to well over this.
 constexpr double kPeakTolerance = 1.05;
+constexpr int32_t kSongBeatsPerBar = 4;
 
 struct WrapTake {
   double single = 0.0;
@@ -56,6 +58,7 @@ WrapTake RenderWrap(double edge_frame, double latency_ms) {
   for (double frame : {12000.0, 24000.0, 36000.0, 48000.0, edge_frame}) {
     grid->beat_times_sec.push_back(frame / kSampleRate);
   }
+  SetSongBars(grid.get(), 0, kSongBeatsPerBar);
   metronome.SetGrid(std::move(grid), 0, true);
   metronome.SetLatencyOffset(latency_ms);
   metronome.SetFollowMixer(true);

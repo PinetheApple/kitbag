@@ -243,6 +243,7 @@ class Metronome {
 
   void TriggerPreset(int sound, bool accented, uint32_t sample_rate);
   void OnBeatBoundary(int beat_index, uint32_t sample_rate);
+  void OnGridBeat(const GridBar& bar, uint32_t sample_rate);
   void OnSubdivisionTick(int64_t speaker_beat, int slot, uint32_t sample_rate);
   void TriggerSubdivision(int subdivision, int slot, uint32_t sample_rate);
   bool SubdivisionSlotAccented(int subdivision, int slot) const;
@@ -319,7 +320,7 @@ class Metronome {
   // Binary search: bounded and allocation-free, so safe from the callback.
   void SeekGridCursor(const BeatGrid& grid, double song_seconds);
   bool GridShiftReplays(const BeatGrid& grid, double shift_sec) const;
-  void SyncGridBar();
+  void SyncGridBar(const BeatGrid& grid);
   void PublishGridMirrors(const BeatGrid& grid, double song_seconds);
 
   SpscRing<Command, kCommandRingSize> commands_;

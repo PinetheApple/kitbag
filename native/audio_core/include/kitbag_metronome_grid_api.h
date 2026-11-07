@@ -21,15 +21,28 @@ extern "C" {
  * must be strictly ascending and finite; they are copied during the call and
  * need not outlive it. Song second t falls on engine frame
  * anchor_frame + t * sample_rate.
+ * downbeat_indices are the song's bar-ones, indices into beat_times_sec,
+ * strictly ascending; NULL with downbeat_count 0 means the song has none. Each
+ * bar runs to the next downbeat and the last bar's length repeats; a lone
+ * downbeat's bar runs to the grid's end. Under a grid, the downbeat of each bar
+ * is accented and every other beat is normal, whatever kb_metronome_set_beats
+ * and kb_metronome_set_accent hold; beats before the first downbeat, and every
+ * beat of a grid without downbeats, are normal and outside any bar, so bar mute
+ * never silences them. current_beat and bar_phase count the song's bars; with
+ * no downbeats current_beat reads 0 and bar_phase sweeps each beat.
  * Subdivisions divide each measured interval and still sound. The tempo ramp
  * and polyrhythm are defined against a constant BPM and do not apply while a
  * grid is set.
  * Returns KB_ERROR_INVALID_ARGUMENT for a null, empty, non-ascending or
- * non-finite grid, or a count above KB_MAX_GRID_BEATS. */
+ * non-finite grid, a count above KB_MAX_GRID_BEATS, or downbeats that are
+ * NULL with a positive count, a negative count, out of range or not strictly
+ * ascending. */
 KB_EXPORT kb_result kb_metronome_set_grid(
     kb_engine* engine,
     const double* beat_times_sec,
     int32_t count,
+    const int32_t* downbeat_indices,
+    int32_t downbeat_count,
     uint64_t anchor_frame
 );
 /* Return to constant-tempo mode. The click keeps its phase: the first click at

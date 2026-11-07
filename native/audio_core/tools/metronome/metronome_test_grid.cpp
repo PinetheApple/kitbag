@@ -1,6 +1,7 @@
 // Grid mode: following measured beat times, re-anchoring, and returning to a
 // constant tempo. The reasoning these pin is SPEC.md §4.2 / §4.2.1.
 #include "metronome_test_support.h"
+#include "song_bars.h"
 
 namespace metronome_test {
 namespace {
@@ -244,18 +245,21 @@ void TestClearGridReturnsToBpm() {
   ExpectOnsetsAtSeconds(onsets, expected, "clear grid");
 }
 
-// The bar counter must be derived from the grid's beat numbering, not counted:
-// a re-anchor re-crosses a downbeat and counting would over-count (§4.2.1).
+// The bar counter must be derived from the song's bars, not counted: a
+// re-anchor re-crosses a downbeat and counting would over-count (§4.2.1).
 void TestGridReanchorKeepsBarPhase() {
   kitbag::Metronome metronome;
   metronome.SetTimeSignature(4, 4);
   metronome.SetBarMute(true, 1, 1);  // odd bars silent, even bars sounding
-  metronome.SetGrid(MakeDriftingGrid(40, 0.5, 0.0, 0), 0, true);
+  auto grid = MakeDriftingGrid(40, 0.5, 0.0, 0);
+  SetSongBars(grid.get(), 0, 4);
+  metronome.SetGrid(std::move(grid), 0, true);
   metronome.Start();
 
   // Shifted 0.4 s later, so the re-anchor lands the cursor back on beat 4 — a
   // downbeat already crossed once on the outgoing grid.
   auto shifted = MakeShiftedGrid(40, 0.4, 0.5);
+  SetSongBars(shifted.get(), 0, 4);
   const int64_t swap_at = static_cast<int64_t>(2.1 * kSampleRate);
   RenderContinuous(
       metronome,
@@ -334,51 +338,6 @@ void TestGridBpmMirrorIsClamped() {
   );
 }
 
-// A click definitely sounding, not merely brushing the onset floor: 4x
-// kOnsetThreshold, so a live subdivision clears it but a decay tail cannot.
-constexpr double kGridSoundingPeak = 0.2;
-
-// #24 (a #21 follow-up): the grid path attributes a subdivision to the interval
-// it divides, grid_state_.beat_index (the left-endpoint beat). A measured 0.15 s grid
-// (bpm 400) offset into the future so beats 0 and 1 both sound cleanly under the
-// offset. At +100 ms the latency spans 2/3 of a beat, so an owning beat off by
-// one would sound a muted beat's own subdivision.
-double GridMuteCascadePeak(kitbag::Accent beat_one, int64_t lo, int64_t hi) {
-  kitbag::Metronome metronome;
-  metronome.SetTimeSignature(4, 4);
-  metronome.SetSubdivision(2);
-  metronome.SetLatencyOffset(100.0);
-  metronome.SetAccent(1, beat_one);
-  metronome.SetGrid(MakeShiftedGrid(8, 0.2, 0.15), 0, true);
-  metronome.Start();
-  return WindowedPeak(metronome, lo, hi);
-}
-
-// Grid analogue of TestMutedBeatCascadesToSubdivision. Beat 1's subdivision
-// fires near frame 15600; muting beat 1 must silence it on the speaker-time
-// base, while beat 0's subdivision (near frame 8400) keeps sounding.
-void TestGridMutedBeatCascadesToSubdivision() {
-  const double leaked =
-      GridMuteCascadePeak(kitbag::Accent::kMuted, 15200, 16200);
-  Check(
-      leaked < kOnsetThreshold,
-      "grid mute cascade: muting beat 1 silences its own subdivision under "
-      "+100 ms"
-  );
-  const double sounding =
-      GridMuteCascadePeak(kitbag::Accent::kNormal, 15200, 16200);
-  Check(
-      sounding > kGridSoundingPeak,
-      "grid mute cascade: beat 1's subdivision sounds when it is not muted"
-  );
-  const double beat_zero_sub =
-      GridMuteCascadePeak(kitbag::Accent::kMuted, 8000, 9000);
-  Check(
-      beat_zero_sub > kGridSoundingPeak,
-      "grid mute cascade: muting beat 1 leaves beat 0's subdivision sounding"
-  );
-}
-
 }  // namespace
 
 void RunGridTests() {
@@ -394,7 +353,6 @@ void RunGridTests() {
   TestGridReanchorKeepsBarPhase();
   TestGridReanchorNoRefire();
   TestGridBpmMirrorIsClamped();
-  TestGridMutedBeatCascadesToSubdivision();
 }
 
 }  // namespace metronome_test

@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdio>
 #include <filesystem>
+#include <iterator>
 #include <string>
 #include <thread>
 #include <vector>
@@ -48,6 +49,7 @@ constexpr double kBeats[] = {
 };
 // The end sits 0.3 frames after a beat, off the grid: that beat belongs to the
 // wrap, so firing it before the wrap would stack a second click on the start's.
+constexpr int32_t kDownbeats[] = {0, 4, 8};
 constexpr int64_t kLoopStart = 41209;
 constexpr int64_t kLoopEnd = 79000;
 constexpr int kExpectedClicks = 15;
@@ -103,6 +105,8 @@ kb_engine* OpenEngine(const std::string& stem, double latency_ms) {
       engine,
       times.data(),
       static_cast<int32_t>(times.size()),
+      kDownbeats,
+      static_cast<int32_t>(std::size(kDownbeats)),
       0
   );
   kb_metronome_set_latency_offset(engine, latency_ms);
