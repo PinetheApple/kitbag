@@ -1,4 +1,4 @@
-import { releaseTarget, type SliderMode } from '@kitbag/core-design';
+import { releaseTarget, rig, type SliderMode } from '@kitbag/core-design';
 import { KB_VOLUME_BOUNDS } from '@kitbag/core-native';
 import { createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -6,18 +6,26 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { VOLUME_SLIDER, volumePercent } from './rigVolume.ts';
 
+interface SliderBox {
+  readonly width?: number;
+}
+
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
 const sliders = vi.hoisted(() => [] as Props[]);
 const readouts = vi.hoisted(() => [] as Props[]);
 const rows = vi.hoisted(() => [] as Props[]);
+const views = vi.hoisted(() => [] as Props[]);
 const display = vi.hoisted(() => ({ fontScale: 1 }));
 
 vi.mock('react-native', async () => {
   const { createElement: h } = await import('react');
   return {
-    View: (props: Props) => h('div', null, props.children),
-    useWindowDimensions: () => ({ fontScale: 1 }),
+    View: (props: Props) => {
+      views.push(props);
+      return h('div', null, props.children);
+    },
+    useWindowDimensions: () => ({ fontScale: display.fontScale }),
   };
 });
 
@@ -88,5 +96,15 @@ describe('click volume row wiring', () => {
     renderToStaticMarkup(createElement(VolumeRow));
     display.fontScale = 1;
     expect(rows[0]?.singleLine).toBe(false);
+  });
+
+  it('gives the slider a fixed width to fill at every text size', () => {
+    for (const fontScale of [1, 2]) {
+      display.fontScale = fontScale;
+      views.length = 0;
+      renderToStaticMarkup(createElement(VolumeRow));
+      display.fontScale = 1;
+      expect((views[0]?.style as SliderBox).width).toBe(rig.sliderWidth);
+    }
   });
 });

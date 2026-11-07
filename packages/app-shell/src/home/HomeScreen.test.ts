@@ -39,7 +39,6 @@ vi.mock('@kitbag/core-design', async (original) => {
   return {
     ...pure,
     AppBar: () => null,
-    AppBarAction: () => null,
     Button: () => null,
     ToolGrid: () => null,
     ToolRow: () => null,

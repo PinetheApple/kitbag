@@ -734,15 +734,22 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
 - **2026-11-02 · Text at 200% font scale (§12.6, #192)** — The stem player's name column
   keeps the mockup's 58 dp at the default text size and grows by the font scale above it.
   The name keeps `numberOfLines={1}`, so a long name still truncates, as the ruling
-  accepts. **[user, 2026-10-30]** App-bar icons (back, search, add, the metronome bar's
+  accepts. **[user, 2026-10-30]** Stem names and Master use the #287 fit: above the default
+  scale they shrink to the column, never below their design size, before truncating;
+  at the default scale they do not shrink. **[coord]** Not yet seen on a device.
+  App-bar icons (back, search, add, the metronome bar's
   keys) grow with the font scale up to 1.5×. The 48 dp buttons alone would allow about
   1.84× for the largest bar glyph (26 dp); 1.5 is a judgement, not measured, so a glyph keeps padding
   inside its button and does not outweigh the bar title beside it. Other icons stay at
-  their design size, since most sit inside fixed-size controls. The app-bar title keeps
-  its existing cap: one line, shrinking toward `appBarTitleMinSize` through
-  `minimumFontScale` before it truncates. The metronome's status rows grow by the font
-  scale and hold at most two lines; that a grown row fits two grown lines is reasoned from
-  the 40 dp row height, not measured, and needs a device check. A wider row wraps onto its
+  their design size, since most sit inside fixed-size controls. The app-bar title stays
+  on one line and shrinks to fit before it truncates: at the default scale down to
+  `appBarTitleMinSize`, above it never below its design size, then ellipsizes. The fit is computed in JS
+  (the #287 entry on the measured title floor). **[coord, 2026-11-02, #287 — the owner
+  may overturn]** The metronome's status rows grow by the font
+  scale and hold at most two lines. Android pads each line to the font's bounding box
+  (about 1.4 em), so two lines at 2.0 leave under 1 dp to spare in the grown row; a grown
+  row adds the progress bar's 3 dp below its text. Computed from the fonts' bounding
+  boxes, not measured; needs a device check. A wider row wraps onto its
   second line rather than truncating. Above the default scale the status stack leaves the
   scrolling body and sits directly above the transport, so a body that overflows cannot
   push it out of view, at one fixed height, the running stack's, so nothing resizes on Play.
@@ -751,15 +758,28 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   a segmented control's options and the sound picker's items take their label's width
   and never shrink below it, since Android wraps a squeezed label mid-word; what does
   not fit on one line wraps onto further rows inside the track or grid. A `fill` track
-  wider than its row takes a line of its own and shrinks to it; a track without `fill`
-  takes the width its parent gives it. Wrapped rows of options sit far enough apart that
+  wider than its row takes a line of its own and shrinks to it; in a column parent a
+  track without `fill` takes the parent's width and wraps inside it, while in a row
+  parent, such as an edit row, it is as wide as its options on one line and moves to a
+  line of its own rather than wrapping, so one wider than the whole row would overflow.
+  Wrapped rows of options sit far enough apart that
   an option on a row between two others reaches a 48 dp touch target from the gaps alone,
   so a wrapped track is taller than its options; the first and last rows reach into the
-  track edge and the neighbour gap as a single row does. At 1.0 the options stay equal
+  track edge and the neighbour gap as a single row does. In the preset editor the
+  Count-in and on/off tracks reach through their edit row's padding, 47.5 dp counted on
+  the option's 1.0 height, and the ramp unit track, which shares the gap above it with
+  the stepper it wraps under, 40 dp. At 2.0 the option's text doubles, so the real
+  targets are larger; that they reach 48 dp is an open device check. At 1.0 the options stay equal
   widths and the picker keeps its columns. A stepper's value-to-suffix gap grows with
   the font scale. The click volume row lets its slider and readout drop below the label
   above the default scale rather than wrapping them beside it. Library and
   output-route rows drop their one-line limit above the default scale. **[recorded]**
+  Only while the text is scaled, the tempo nudge keys (−10 to +10, TAP) keep
+  `inset.presetLabelH`, 4 dp, between label and edge. **[coord, owner may overturn]**
+  Their labels stay on one line through the #287 fit: at the default scale they do not
+  shrink, above it they shrink to the width left by that padding, never below their
+  design size, then ellipsize. **[coord]** Computed against the 360 dp emulator bounds, not
+  yet seen on a device.
 
 - **2026-11-02 · Metronome card is media-style, with no setlist skips (§5.6, §13.9, #284)** —
   Decided by the owner (ruling via coordinator, 2026-11-02); supersedes the 2026-10-28 #163
@@ -818,11 +838,46 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   (author type `Bot` or a `[bot]` login) pass as `NONE`, so dependency updates never
   block on a note. **[owner]**
 
+- **2026-11-02 · One chevron app bar on every screen (§12, #287)** — Every screen with a
+  back control uses the chevron back, not the full arrow **[user, via coordinator]**. The
+  shared bar is one core-design component: 56 dp tall, flush under the status bar, the
+  chevron and every icon action in real 48 dp keys, and the `appBarTitle` title; chip and
+  button trailing controls keep their ≥48 dp hit areas. The binding design files are
+  edited to match. **[coord]**
+
+- **2026-11-03 · App-bar titles fit by a JS-measured floor (§13.8, #287)** — Read in
+  the source, not seen on a device: on RN 0.83.6 with the new architecture, Android
+  ignores `minimumFontScale`. `TextLayoutManager.kt:799-812` reads only
+  `PA_KEY_MINIMUM_FONT_SIZE`, with a 4 dp default floor (`:922-923`);
+  `conversions.h` `toMapBuffer` (`:1042-1058`) never sends `minimumFontScale`, which
+  only the old renderer's `ReactTextShadowNode.kt:79` used; and `minimumFontSize`
+  cannot be sent from JS, since `TextNativeComponent.js` does not list it in
+  `validAttributes`. So `adjustsFontSizeToFit` shrank titles toward 4 dp. Also read
+  in the source: `TextAttributeProps.kt:169` rounds the font size up to whole px, and
+  `PixelUtil.kt:44` scales sp nonlinearly on Android 14+, so a size fitted in
+  proportion can still render a few px too wide. Ruling A **[coord]**: one
+  core-design helper (`useOneLineFit`, with `nextFitCandidate`, `oneLineFloor` and
+  `fittedStyle`) measures the label offscreen and sets its size in JS. It measures at
+  the design size, re-measures at the proportional size, then takes secant passes
+  through the last two measurements, at most three settle passes in all, stopping at
+  the first fit or at the floor; after the cap it shows the last candidate with an
+  ellipsis. The label stays invisible on mount until settled, so it never shows at
+  the design size and then shrinks; when its text changes in place, the previous size
+  stays shown until the new text settles. It restarts on a width change, on a text
+  change, and when a settled measurer re-lays out at a new width, as after a late font
+  load or a font-scale change. Tracking scales with the size, so the measured and the
+  shown label match. Below the floor it ellipsizes on one line. The floors still hold
+  as rendered sizes: they fall in the converter's linear range (8.5 sp at 2.0), not
+  checked against the converter tables. Floors as ruled: `appBarTitleMinSize` at a
+  font scale of 1.0 or less, the design size above it. Home
+  tool tiles use the same helper, with their floor at `homeTile.titleMinScale` of the
+  tile title's design size; no `adjustsFontSizeToFit` or `minimumFontScale` is left.
+
 - **2026-11-07 · A single song is a one-track mixer song (§4.1, §6.3, #297)** — The song
   player drives `kb_mixer_*` with the song on track 0, plus `setGrid` and
   `metronomeFollowMixer(true)`. `kb_player_*` stays in the ABI, and no transport or store
   code uses it. The mixer already has the loop, its crossfade and follow-click, and #138
   adds its stretch stage to the mixer; extending the player would duplicate all of them.
-  Count-in before the lock is parked on
-  #298: under a grid the engine skips it, and a JS-timed handoff was ruled out.
+  Count-in before the lock is parked on #298: under a grid the engine skips it, and a
+  JS-timed handoff was ruled out.
   **[recorded — coordinator call, owner may overturn]**

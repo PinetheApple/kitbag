@@ -1,4 +1,5 @@
 import {
+  AppBar,
   Badge,
   BeatWaveform,
   Card,
@@ -7,7 +8,6 @@ import {
   EmptyState,
   PlayerDock,
   PlayerTransport,
-  ScreenAppBar,
   ScrubRow,
   songPlayer,
   space,
@@ -56,8 +56,6 @@ const useStyles = createThemedStyles((theme) => ({
     paddingBottom: stemPlayer.bodyGap,
     gap: stemPlayer.bodyGap,
   },
-  title: { ...textStyle(textRoles.songTitle), color: theme.color.text },
-  artist: { ...textStyle(textRoles.songArtist), color: theme.color.text2 },
   lock: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -70,25 +68,21 @@ const useStyles = createThemedStyles((theme) => ({
 }));
 
 function SongAppBar({ onBack }: { readonly onBack: () => void }) {
-  const styles = useStyles();
   const title = useSongPlayer((s) => s.title);
   const artist = useSongPlayer((s) => s.artist);
   const bpm = bpmFact(useSongPlayer((s) => s.bpm));
-  const badge =
-    bpm === null ? null : (
-      <Badge label={bpm.text} accessibilityLabel={bpm.spoken} />
-    );
   return (
-    <ScreenAppBar onBack={onBack} trailing={badge}>
-      <Text style={styles.title} numberOfLines={1}>
-        {title === '' ? 'Song' : title}
-      </Text>
-      {artist === null ? null : (
-        <Text style={styles.artist} numberOfLines={1}>
-          {artist}
-        </Text>
-      )}
-    </ScreenAppBar>
+    <AppBar
+      flush
+      title={title === '' ? 'Song' : title}
+      subtitle={artist ?? undefined}
+      onBack={onBack}
+      trailing={
+        bpm === null ? null : (
+          <Badge label={bpm.text} accessibilityLabel={bpm.spoken} />
+        )
+      }
+    />
   );
 }
 
