@@ -760,10 +760,15 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   boxes, not measured; needs a device check. A wider row wraps onto its
   second line rather than truncating. Above the default scale the status stack leaves the
   scrolling body and sits directly above the transport, so a body that overflows cannot
-  push it out of view. It is one row tall stopped and two running. Stopping shrinks the stack
-  and grows the viewport, so the stopped body pads its content by that difference less the
-  legend's height, which keeps the scroll range the same as running (#304). Coordinator
-  call; the owner may overturn it. **[recorded]**
+  push it out of view. It is one row tall stopped and two running. Start and Stop leave the
+  scroll view's frame and content height alone (#304): a clip follows the stack, and the
+  running viewport reaches under the stack's extra row. Android lays out a scroll view
+  before its content and clamps the offset between the two, so a viewport that grew on Stop
+  sent the body to scroll top. Running, the content pads by the stack difference; stopped,
+  by that less the legend's modelled height. The poly legend wraps at 2.0 to about 92 dp
+  against the modelled 44, so with poly on, Start at the stopped scroll end still moves the
+  body by about 48 dp; the coordinator accepted that. Coordinator call; the owner may
+  overturn it. **[recorded]**
   On a small screen at 2.0 the beat dots then sit below the fold and are reached by
   scrolling the body (coordinator call, 2026-11-02, open to owner review). Above the default scale
   a segmented control's options and the sound picker's items take their label's width

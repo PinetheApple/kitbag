@@ -2,19 +2,33 @@ import { createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
-import { pinnedStackScrollSlack } from '../logic/belowTempo.ts';
+import {
+  pinnedStackScrollSlack,
+  pinnedViewportOverlap,
+} from '../logic/belowTempo.ts';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
+type Style = Readonly<Record<string, unknown>>;
+
+const flatStyle = vi.hoisted(
+  () =>
+    (style: unknown): Style =>
+      Object.assign({}, ...[style].flat(Infinity)) as Style,
+);
 const display = vi.hoisted(() => ({ fontScale: 1, running: false }));
 const scroll = vi.hoisted(() => ({ props: null as Props | null }));
 
 vi.mock('react-native', async () => {
   const { createElement: h } = await import('react');
-  const box = (props: Props) => h('div', null, props.children);
   return {
-    View: box,
-    Text: box,
+    View: (props: Props) =>
+      h(
+        'div',
+        { 'data-overflow': flatStyle(props.style).overflow },
+        props.children,
+      ),
+    Text: (props: Props) => h('div', null, props.children),
     useWindowDimensions: () => ({
       width: 360,
       height: 800,
@@ -29,14 +43,17 @@ vi.mock('react-native-gesture-handler', async () => {
     GestureDetector: (props: Props) => h('div', null, props.children),
     ScrollView: (props: Props) => {
       scroll.props = props;
-      return h('div', null, props.children);
+      return h('div', { 'data-scroll': true }, props.children);
     },
   };
 });
 
 vi.mock('@kitbag/core-design', async (original) => ({
   ...(await original<Record<string, unknown>>()),
-  createThemedStyles: () => () => new Proxy({}, { get: () => ({}) }),
+  createThemedStyles: (build: (theme: unknown) => unknown) => () =>
+    build({ color: {} }),
+  textRoles: {},
+  textStyle: () => ({}),
 }));
 
 vi.mock('@kitbag/core-state', () => ({
@@ -96,28 +113,49 @@ vi.mock('./UnsavedSnackbar.tsx', () => ({ UnsavedSnackbar: () => null }));
 
 const { MetronomeScreen } = await import('./MetronomeScreen.tsx');
 
-function scrollPadding(fontScale: number, running: boolean): unknown {
+function renderBody(fontScale: number, running: boolean): string {
   display.fontScale = fontScale;
   display.running = running;
-  renderToStaticMarkup(
+  return renderToStaticMarkup(
     createElement(MetronomeScreen, { insets: { top: 0, bottom: 0 } }),
   );
-  const styles = [scroll.props?.contentContainerStyle].flat() as {
-    readonly paddingBottom?: number;
-  }[];
-  return styles.find((style) => style.paddingBottom !== undefined)
-    ?.paddingBottom;
+}
+
+function scrollPadding(fontScale: number, running: boolean): unknown {
+  renderBody(fontScale, running);
+  return flatStyle(scroll.props?.contentContainerStyle).paddingBottom;
+}
+
+function viewportBottom(fontScale: number, running: boolean): unknown {
+  renderBody(fontScale, running);
+  return flatStyle(scroll.props?.style).bottom;
 }
 
 describe('MetronomeScreen scroll body', () => {
-  it('pads the content by the pinned stack slack when stopped', () => {
-    const slack = pinnedStackScrollSlack(false, 2);
-    expect(slack).toBeGreaterThan(0);
-    expect(scrollPadding(2, false)).toBe(slack);
+  it('pads the content by the pinned stack slack, running and stopped', () => {
+    for (const running of [false, true]) {
+      const slack = pinnedStackScrollSlack(running, 2);
+      expect(slack).toBeGreaterThan(0);
+      expect(scrollPadding(2, running)).toBe(slack);
+    }
   });
 
-  it('adds no padding while running or at the default text size', () => {
-    expect(scrollPadding(2, true)).toBe(0);
+  it('adds no padding at the default text size', () => {
     expect(scrollPadding(1, false)).toBe(0);
+    expect(scrollPadding(1, true)).toBe(0);
+  });
+
+  it('extends the viewport under the running stack only', () => {
+    const overlap = pinnedViewportOverlap(true, 2);
+    expect(overlap).toBeGreaterThan(0);
+    expect(viewportBottom(2, true)).toBe(-overlap);
+    expect(viewportBottom(2, false)).toBeCloseTo(0);
+    expect(viewportBottom(1, true)).toBeCloseTo(0);
+  });
+
+  it('clips the extended viewport to the space above the stack', () => {
+    expect(renderBody(2, true)).toContain(
+      '<div data-overflow="hidden"><div data-scroll="true">',
+    );
   });
 });

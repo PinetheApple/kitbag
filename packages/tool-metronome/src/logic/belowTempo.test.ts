@@ -8,6 +8,7 @@ import {
   belowTempoReserve,
   legendHeight,
   pinnedStackScrollSlack,
+  pinnedViewportOverlap,
   DOT_METRICS,
   statusProgressReserve,
   statusRowHeight,
@@ -181,38 +182,45 @@ describe('the status stack', () => {
     }
   });
 
-  it('adds no scroll slack while the status stack sits in the body', () => {
+  it('adds no overlap or slack while the status stack sits in the body', () => {
     for (const running of [false, true]) {
-      expect(pinnedStackScrollSlack(running, 0.85)).toBe(0);
-      expect(pinnedStackScrollSlack(running, 1)).toBe(0);
+      for (const fontScale of [0.85, 1]) {
+        expect(pinnedViewportOverlap(running, fontScale)).toBe(0);
+        expect(pinnedStackScrollSlack(running, fontScale)).toBe(0);
+      }
     }
   });
 
-  it('adds no scroll slack while running', () => {
-    expect(pinnedStackScrollSlack(true, 1.3)).toBe(0);
-    expect(pinnedStackScrollSlack(true, 2)).toBe(0);
+  it('keeps the viewport height when Start and Stop resize the stack', () => {
+    for (const fontScale of [1.3, 2]) {
+      const stopped =
+        pinnedViewportOverlap(false, fontScale) -
+        statusStackHeight(false, fontScale);
+      const running =
+        pinnedViewportOverlap(true, fontScale) -
+        statusStackHeight(true, fontScale);
+      expect(running).toBeCloseTo(stopped);
+    }
   });
 
-  it('matches the stopped scroll range to running, legend included', () => {
-    const VIEWPORT_RUNNING = 300;
+  it('keeps the content height when Start and Stop swap the modelled legend', () => {
     for (const fontScale of [1.3, 2]) {
-      for (const runningContent of [
-        VIEWPORT_RUNNING - 1,
-        VIEWPORT_RUNNING,
-        VIEWPORT_RUNNING + 200,
-      ]) {
-        const running = Math.max(0, runningContent - VIEWPORT_RUNNING);
-        const stoppedContent =
-          runningContent +
-          legendHeight(fontScale) +
-          pinnedStackScrollSlack(false, fontScale);
-        const stoppedViewport =
-          VIEWPORT_RUNNING +
-          statusStackHeight(true, fontScale) -
-          statusStackHeight(false, fontScale);
-        const stopped = Math.max(0, stoppedContent - stoppedViewport);
-        expect(stopped).toBeCloseTo(running);
-      }
+      expect(pinnedStackScrollSlack(true, fontScale)).toBeCloseTo(
+        pinnedStackScrollSlack(false, fontScale) + legendHeight(fontScale),
+      );
+    }
+  });
+
+  it('keeps the running scroll range of a viewport that stops above the stack', () => {
+    const VISIBLE_BODY = 300;
+    for (const fontScale of [1.3, 2]) {
+      const viewport = VISIBLE_BODY + pinnedViewportOverlap(true, fontScale);
+      const contentBeyondBody = 200;
+      const content =
+        VISIBLE_BODY +
+        contentBeyondBody +
+        pinnedStackScrollSlack(true, fontScale);
+      expect(content - viewport).toBeCloseTo(contentBeyondBody);
     }
   });
 

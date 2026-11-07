@@ -137,16 +137,30 @@ export function legendHeight(fontScale: number): number {
   return metronome.legendTop + metronome.legendRow * grownTextScale(fontScale);
 }
 
-// Stopping shrinks the pinned stack and grows the viewport; padding the content
-// keeps the scroll range the same as running. The stopped legend counts toward it.
+function pinnedStackDifference(fontScale: number): number {
+  return (
+    statusStackHeight(true, fontScale) - statusStackHeight(false, fontScale)
+  );
+}
+
+// Android lays out a ScrollView before its content and clamps the offset to the
+// range between them, so resizing the viewport on Stop loses the scroll position.
+export function pinnedViewportOverlap(
+  running: boolean,
+  fontScale: number,
+): number {
+  if (!running || !statusStackPinned(fontScale)) return 0;
+  return pinnedStackDifference(fontScale);
+}
+
 export function pinnedStackScrollSlack(
   running: boolean,
   fontScale: number,
 ): number {
-  if (running || !statusStackPinned(fontScale)) return 0;
-  const stackDifference =
-    statusStackHeight(true, fontScale) - statusStackHeight(false, fontScale);
-  return Math.max(0, stackDifference - legendHeight(fontScale));
+  if (!statusStackPinned(fontScale)) return 0;
+  const difference = pinnedStackDifference(fontScale);
+  if (running) return difference;
+  return Math.max(0, difference - legendHeight(fontScale));
 }
 
 export function belowTempoHeight(
