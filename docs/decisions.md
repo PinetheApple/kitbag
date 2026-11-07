@@ -683,3 +683,22 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   past its cell and a visible gap stays against the 3 dp cycle gap. At 340 dp the old
   3.5 dp reach overlapped both neighbours. The 3 dp gap is kept. This departs slightly
   from the design files, which draw the overlap. **[recorded — coordinator ruling]**
+
+- **2026-11-07 · Speed and key run on key buses (§7.6, #138)** — One stretch instance per
+  semitone in use, doing rate and key for its stems, with a plain mix at 1.0× and 0 st. At
+  0.2 s block and 6× overlap by default; more than four member buses put every bus on
+  `presetDefault`, moving up at once as a fresh prime and back down only at the next seek or
+  re-prime. Only buses with member stems count, and drained empties retire and free on the
+  app thread. Priming runs on the app thread: a seek or play starts once every bus is primed,
+  sample-aligned; a mid-play engage switches at a predicted sample and re-primes on a miss.
+  Instances are configured on the app thread when a stage first engages and reach the
+  callback through `RtPublisher`; a song at 1.0× and 0 st builds none.
+  **[recorded — coordinator ruling]**
+- **2026-11-07 · Stretch latency stays inside the song-frame mapping (§4.2.2, #138)** — It is
+  compensated there rather than reported with output latency, so click and stems land
+  together with no new reported number. A coordinator call the owner may overturn.
+  **[recorded — coordinator ruling]**
+- **2026-11-07 · Key at the ABI (§7.6, #138)** — `int32_t` semitones, refused outside −6 to +6;
+  the TS binding rounds on the way in and the database is unchanged. `current_bpm` stays the
+  song's tempo at any speed. Unloading a track resets its key to 0, so a key never carries to
+  the next stem in that slot. **[recorded — coordinator ruling]**
