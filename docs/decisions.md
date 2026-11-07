@@ -860,16 +860,17 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   `stem_sets`, so a retime is lost on reinstall along with the stems, and Restore leaves it
   untouched. **[coord]**
 
-- **2026-11-08 · Retime pins the pad when its body overflows (§7.7, #139)** — When the retime
+- **2026-11-07 · Retime pins the pad when its body overflows (§7.7, #139)** — When the retime
   body overflows, at any font scale, the tap pad, Undo tap and Shift all lines stay pinned and
-  only the lyric lines scroll. It replaces scrolling the whole body, where 3 of 3 drags
-  starting on the pad recorded a tap and the pad moved 120–160 dp between lines. Taps stay on
-  touch-down. The done and next lines return, since they now scroll, which replaces the earlier
-  rule hiding them at a font scale of 1.5 or more. A body that fits stays as drawn. Once a
+  only the lyric lines scroll. Done and next lines scroll with the rest. Scrolling the whole
+  body is the wrong default: 3 of 3 drags starting on the pad recorded a tap, and the pad moved
+  120–160 dp between lines. Taps stay on touch-down. A body that fits stays as drawn. Once a
   session overflows it stays pinned until it ends, so the layout cannot flip between lines.
-  Coordinator call; the owner may overturn it. **[recorded]**
+  When the controls alone cannot fit the body, as at 360x640 and font scale 2.0, the whole body
+  scrolls instead so everything stays reachable; a small lines viewport, about 98–124 dp at
+  360x800, stays pinned. Coordinator call; the owner may overturn it. **[recorded]**
 
-- **2026-11-08 · Loop note placement (§7.7, #139)** — The note stays right as drawn while that
+- **2026-11-07 · Loop note placement (§7.7, #139)** — The note stays right as drawn while that
   clears the A and B flags, then moves left of them if that clears, then onto its own row above
   them, which makes the lane taller. It is worked out from measured layout and the loop's
   bounds, so it changes only when the loop or the layout does. `design/kitbag-stems-sections.html`
