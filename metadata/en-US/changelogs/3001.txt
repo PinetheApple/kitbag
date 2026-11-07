@@ -1,0 +1,2 @@
+• Segmented controls keep their rounded corners after you tap a segment.
+• At large font sizes, song lists keep long titles readable and rows a sensible height.
