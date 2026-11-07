@@ -124,6 +124,7 @@ function resultRecord(result: AnalysisResult): AnalysisResultRecord {
     downbeats: result.downbeats,
     waveformPath:
       result.waveformRelativePath === '' ? null : result.waveformRelativePath,
+    durationSec: result.durationSec,
   };
 }
 
