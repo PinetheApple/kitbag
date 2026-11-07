@@ -760,7 +760,16 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   boxes, not measured; needs a device check. A wider row wraps onto its
   second line rather than truncating. Above the default scale the status stack leaves the
   scrolling body and sits directly above the transport, so a body that overflows cannot
-  push it out of view, at one fixed height, the running stack's, so nothing resizes on Play.
+  push it out of view. It is one row tall stopped and two running. Start and Stop leave the
+  scroll view's frame and content height alone (#304): a clip follows the stack, and the
+  running viewport reaches under the stack's extra row. Android lays out a scroll view
+  before its content, and the offset clamps to the stale range in between, so resizing the
+  viewport on Stop would lose the scroll position. Running, the content pads by the stack
+  difference; stopped, by that less the legend's modelled height. The slack models one
+  legend row, so any legend that wraps leaves the stopped range longer than running, and
+  Start at scroll end moves the body. It happens at scroll end only. The measured case is
+  2.0 with poly on, about 48 dp. Coordinator call; the owner may
+  overturn it. **[recorded]**
   On a small screen at 2.0 the beat dots then sit below the fold and are reached by
   scrolling the body (coordinator call, 2026-11-02, open to owner review). Above the default scale
   a segmented control's options and the sound picker's items take their label's width
