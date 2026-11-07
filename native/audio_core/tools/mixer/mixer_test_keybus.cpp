@@ -342,14 +342,12 @@ void TestUnloadResetsTheKey() {
   Check(mixer.key_bus_count() == 0, "unload: the next stem needs no bus");
 }
 
-// The queue cannot carry the reset, so the app side must not claim it either.
 void TestUnloadOnFullQueueKeepsBothSidesAgreed() {
   kitbag::Mixer mixer(kSampleRate);
   LoadTone(&mixer, kUnloadToneFrames);
   mixer.SetTrackPitch(0, kUnloadKey, 0, false);
   RenderPaced(&mixer, 1);
-  const uint64_t before = mixer.dropped_commands();
-  while (mixer.dropped_commands() == before) mixer.SetGain(0, 1.0f);
+  FillCommandQueue(&mixer);
   mixer.UnloadTrack(0, 0, false);
   RenderPaced(&mixer, 1);
   LoadTone(&mixer, kUnloadToneFrames);

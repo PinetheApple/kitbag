@@ -241,11 +241,14 @@ void TestUnloadResetsKey(kb_engine* engine, const std::string& path) {
 
 void ExpectPrimeFailure(
     kb_engine* engine,
-    const char* rate,
-    const char* pitch
+    const char* rate_label,
+    const char* pitch_label
 ) {
-  Check(kb_mixer_set_rate(engine, kInRange) == KB_ERROR_INTERNAL, rate);
-  Check(kb_mixer_set_track_pitch(engine, 0, 1) == KB_ERROR_INTERNAL, pitch);
+  Check(kb_mixer_set_rate(engine, kInRange) == KB_ERROR_INTERNAL, rate_label);
+  Check(
+      kb_mixer_set_track_pitch(engine, 0, 1) == KB_ERROR_INTERNAL,
+      pitch_label
+  );
   Pump(engine);
   Check(
       kb_mixer_rate(engine) == kitbag::kUnityRate &&

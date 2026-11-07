@@ -85,6 +85,13 @@ LoadSilence(kitbag::Mixer* mixer, int track, int64_t frames) {
   return TempFiles().back();
 }
 
+// A tone on track 0 over a silent stem whose file the caller can take away.
+inline std::string
+LoadToneOverFragile(kitbag::Mixer* mixer, int fragile_track, int64_t frames) {
+  LoadTone(mixer, frames);
+  return LoadSilence(mixer, fragile_track, frames);
+}
+
 inline std::string HiddenPath(const std::string& path) {
   return path + ".gone";
 }
@@ -95,6 +102,11 @@ inline void Hide(const std::string& path) {
 
 inline void Unhide(const std::string& path) {
   std::filesystem::rename(HiddenPath(path), path);
+}
+
+inline void FillCommandQueue(kitbag::Mixer* mixer) {
+  const uint64_t before = mixer->dropped_commands();
+  while (mixer->dropped_commands() == before) mixer->SetGain(0, 1.0f);
 }
 
 inline void WaitForReadAhead(const kitbag::Mixer& mixer) {
@@ -304,9 +316,9 @@ void RunRaceTests();
 void RunLandingTests();
 void RunRefusalTests();
 void RunRePrimeTests();
-void RunRetireTests();
 void RunLoadRefusalTests();
 void RunLagCarryTests();
+void RunRetireTests();
 
 }  // namespace mixer_test
 

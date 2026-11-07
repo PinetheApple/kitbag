@@ -288,8 +288,6 @@ void TestContinuationKeepsItsBeatOnce() {
   );
 }
 
-// The last onset sits near the old pass's end, ahead of the head: it is no beat
-// the jump rewinds over, and flooring on it would silence this whole pass.
 void TestContinuationAfterAWrapKeepsThePass() {
   const double beats[] = {36000.4, kLoopEnd - 500.3};
   Fixture fixture(beats);
@@ -306,13 +304,12 @@ void TestContinuationAfterAWrapKeepsThePass() {
   const int64_t wrap = LandsOn(0, kFrom, kLoopEnd, kThreeQuarters);
   fixture.RenderUntil(wrap + kWrappedBlocks * kBlockFrames);
   const int64_t rewind = fixture.done;
-  const double head = kLoopStart + kWrapLandsInFrame;
-  record = RecordFrom(rewind, head, kThreeQuarters);
+  record = RecordFrom(rewind, kLoopStart, kThreeQuarters);
   record.layout = loop;
   fixture.Reset(record);
   fixture.opens_on_jump = true;
   fixture.continues_run = true;
-  const int64_t mid = LandsOn(rewind, head, beats[0], kThreeQuarters);
+  const int64_t mid = LandsOn(rewind, kLoopStart, beats[0], kThreeQuarters);
   fixture.RenderUntil(mid + kGapFrames);
   Check(
       click_take::SameClicks(fixture.take.triggers, {end_beat, mid}),

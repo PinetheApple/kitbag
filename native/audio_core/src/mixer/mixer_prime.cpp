@@ -2,6 +2,7 @@
 #include <chrono>
 #include <memory>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include "mixer/mixer.h"
@@ -37,7 +38,7 @@ TransportPlan Mixer::ReprimePlan() const {
   return {
       .frame = SeekTarget(frame),
       .layout = app_layout_,
-      .continues = !head.jump_pending
+      .continues_run = !head.jump_pending
   };
 }
 
@@ -259,6 +260,26 @@ Mixer::AwaitVerdict(uint64_t generation, bool engine_running) const {
   return missed_generation_.load(std::memory_order_relaxed) == generation
              ? HandOverOutcome::kMissed
              : HandOverOutcome::kTaken;
+}
+
+int64_t Mixer::handover_lead_frames() const {
+  return handover_lead_frames_;
+}
+
+void Mixer::set_first_handover_lead_frames(int64_t frames) {
+  first_lead_frames_ = frames;
+}
+
+void Mixer::set_prime_publish_hook(std::function<void()> hook) {
+  prime_publish_hook_ = std::move(hook);
+}
+
+void Mixer::set_snapshot_hook(std::function<void()> hook) {
+  snapshot_hook_ = std::move(hook);
+}
+
+uint64_t Mixer::missed_handovers() const {
+  return missed_handovers_;
 }
 
 }  // namespace kitbag

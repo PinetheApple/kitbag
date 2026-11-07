@@ -160,8 +160,7 @@ void Mixer::FreeUnusedBuses(FrameClock clock, bool engine_running) {
   if (key_bus_count() == 0) MatchBusConfig(0, true);
 }
 
-// A change that fails its prime sends its undo, so both must fit up front; the
-// app thread is the only producer, so the room cannot shrink in between.
+// A change that fails its prime sends its undo, so both must fit up front.
 bool Mixer::ReserveUndoableCommand() {
   if (commands_.Free() >= kUndoableCommandSlots) return true;
   ++dropped_commands_;
@@ -247,26 +246,6 @@ int64_t Mixer::fed_frames() const {
 
 bool Mixer::key_buses_vendor_default() const {
   return app_vendor_default_;
-}
-
-int64_t Mixer::handover_lead_frames() const {
-  return handover_lead_frames_;
-}
-
-void Mixer::set_first_handover_lead_frames(int64_t frames) {
-  first_lead_frames_ = frames;
-}
-
-void Mixer::set_prime_publish_hook(std::function<void()> hook) {
-  prime_publish_hook_ = std::move(hook);
-}
-
-void Mixer::set_snapshot_hook(std::function<void()> hook) {
-  snapshot_hook_ = std::move(hook);
-}
-
-uint64_t Mixer::missed_handovers() const {
-  return missed_handovers_;
 }
 
 size_t Mixer::retired_payloads() const {

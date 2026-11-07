@@ -63,7 +63,6 @@ Take PlaySong(kb_engine* engine, double rate) {
       &take,
       static_cast<int>(out_frames / kBlock) - kTailBlocks
   );
-  kb_engine_destroy(engine);
   return take;
 }
 
@@ -74,22 +73,26 @@ Take RenderSong(const std::string& stem, const LockCase& lock) {
   if (lock.semitones != 0) {
     kb_mixer_set_track_pitch(engine, 0, lock.semitones);
   }
-  return PlaySong(engine, lock.rate);
+  Take take = PlaySong(engine, lock.rate);
+  kb_engine_destroy(engine);
+  return take;
+}
+
+std::vector<int64_t> EveryBeatClick(const Take& take, const std::string& name) {
+  std::vector<int64_t> clicks = click_take::DetectClicks(take.right);
+  const bool whole = clicks.size() == static_cast<size_t>(kBeatCount);
+  Check(whole, (name + ": every beat clicks once").c_str());
+  if (whole) return clicks;
+  std::fprintf(stderr, "  %zu clicks, want %d\n", clicks.size(), kBeatCount);
+  return {};
 }
 
 // Pulses are centred on their beats, so the stem's centre of energy is where
-// the song puts the beat, however the vocoder widens the pulse. Empty unless
-// every beat clicked once.
+// the song puts the beat, however the vocoder widens the pulse.
 std::vector<double>
 ClickOffsetsMs(const Take& take, double slowest_rate, const std::string& name) {
-  const std::vector<int64_t> clicks = click_take::DetectClicks(take.right);
-  const bool whole = clicks.size() == static_cast<size_t>(kBeatCount);
-  Check(whole, (name + ": every beat clicks once").c_str());
+  const std::vector<int64_t> clicks = EveryBeatClick(take, name);
   std::vector<double> offsets;
-  if (!whole) {
-    std::fprintf(stderr, "  %zu clicks, want %d\n", clicks.size(), kBeatCount);
-    return offsets;
-  }
   const auto half_width =
       static_cast<int64_t>(kSongWindowFrames / slowest_rate);
   for (const int64_t click : clicks) {
@@ -112,6 +115,7 @@ void CheckOnPulses(
   if (worst > kMaxLockMs) std::fprintf(stderr, "  worst %.3f ms\n", worst);
 }
 
+// Keys widen a pulse differently, so drift compares each stem with itself.
 void CheckNoDrift(
     const std::vector<double>& offsets,
     size_t stems,
@@ -144,9 +148,7 @@ std::string WriteStemOf(const std::vector<double>& beats, int index) {
              : "";
 }
 
-// Pulses alternate between the first two stems, so each sits on its own bus; a
-// key per stem takes the count past the chosen config's limit. Keys widen a pulse
-// differently, so drift compares each stem with itself.
+// Each pulse stem sits on its own bus; five keys pass the chosen config's limit.
 std::vector<std::string> WriteFiveKeyStems() {
   std::vector<double> pulses[kPulseStems];
   const std::vector<double> beats = Beats();
@@ -169,7 +171,7 @@ kb_engine* OpenFiveKeys(const std::vector<std::string>& stems, double rate) {
   kb_mixer_set_rate(engine, static_cast<float>(rate));
   for (size_t t = 0; t < stems.size(); ++t) {
     const auto track = static_cast<int32_t>(t);
-    kb_mixer_load_track(engine, track, stems[t].c_str());
+    if (t > 0) kb_mixer_load_track(engine, track, stems[t].c_str());
     kb_mixer_set_track_pitch(engine, track, kFiveKeys[t]);
   }
   return engine;
@@ -182,8 +184,9 @@ void TestClickLockedAcrossFiveKeys(
   kb_engine* engine = OpenFiveKeys(stems, rate);
   if (engine == nullptr) return;
   const std::string name = "lock five keys " + std::to_string(rate) + "x";
-  const std::vector<double> offsets =
-      ClickOffsetsMs(PlaySong(engine, rate), rate, name);
+  const Take take = PlaySong(engine, rate);
+  kb_engine_destroy(engine);
+  const std::vector<double> offsets = ClickOffsetsMs(take, rate, name);
   CheckOnPulses(offsets, name);
   CheckNoDrift(offsets, kPulseStems, name);
 }

@@ -118,9 +118,9 @@ int main() {
   mixer_test::RunLandingTests();
   mixer_test::RunRefusalTests();
   mixer_test::RunRePrimeTests();
-  mixer_test::RunRetireTests();
   mixer_test::RunLoadRefusalTests();
   mixer_test::RunLagCarryTests();
+  mixer_test::RunRetireTests();
   mixer_test::CleanupTempFiles();
   return Report();
 }

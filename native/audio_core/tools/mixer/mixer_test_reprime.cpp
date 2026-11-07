@@ -21,7 +21,7 @@ constexpr int kFifthKeyTrack = 4;
 constexpr size_t kFlipBeat = 6;
 constexpr int64_t kLeadFrames = 240;
 // Past the lead at any rate here: the callback plays on while the prime runs.
-constexpr int kBlocksDuringPrime = 4;
+constexpr int kBlocksPastLead = 4;
 constexpr int kBlocksAfter = 120;
 constexpr int64_t kVoiceWindowFrames = 4320;
 constexpr int64_t kClickRingDownFrames = 5760;
@@ -78,7 +78,7 @@ struct Rig {
     );
   }
   void FlipConfigWhilePlayingOn() {
-    mixer.set_prime_publish_hook([this] { Blocks(kBlocksDuringPrime); });
+    mixer.set_prime_publish_hook([this] { Blocks(kBlocksPastLead); });
     FlipConfig();
     mixer.set_prime_publish_hook({});
   }
@@ -156,14 +156,13 @@ void TestUserSeekStillReplays() {
       0,
       false
   );
-  rig.Blocks(kBlocksDuringPrime);
+  rig.Blocks(kBlocksPastLead);
   Check(
       ClicksFrom(rig, from) == 1,
       "re-prime: a user seek still replays its beat"
   );
 }
 
-// The re-prime lands on a head a user seek chose, so the seek's replay stands.
 void CheckSeekThenRePrimeWhilePaused(bool adopt_seek, const char* label) {
   Rig rig;
   rig.BlocksUntilHead(BeatFrame(kFlipBeat) + kLeadFrames);
@@ -179,7 +178,7 @@ void CheckSeekThenRePrimeWhilePaused(bool adopt_seek, const char* label) {
   rig.Blocks(1);
   const auto from = static_cast<int64_t>(rig.left.size());
   rig.mixer.Play();
-  rig.Blocks(kBlocksDuringPrime);
+  rig.Blocks(kBlocksPastLead);
   Check(ClicksFrom(rig, from) == 1, label);
 }
 

@@ -180,8 +180,8 @@ double FireLimitSec(const LoopLayout& layout, uint32_t sample_rate) {
                         : std::numeric_limits<double>::infinity();
 }
 
-// A re-prime rewinds the song under beats that already sounded, and only those:
-// an onset ahead of the frame last heard belongs to a pass since wrapped.
+// An onset ahead of the frame last heard belongs to a pass since wrapped, so no
+// re-prime rewound over it.
 double ContinuationSeekSec(
     const BeatGrid& grid,
     const GridOnset& last_onset,

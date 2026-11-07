@@ -71,6 +71,25 @@ bool WriteGrid(
   return static_cast<bool>(grid);
 }
 
+bool RenderClicks(
+    const std::string& stem,
+    const std::vector<double>& beats,
+    double rate,
+    double song_seconds,
+    std::vector<float>* clicks
+) {
+  kb_engine* engine = media_test::OpenFollowingEngine(stem, beats);
+  if (engine == nullptr) return false;
+  const bool rendered =
+      kb_mixer_set_rate(engine, static_cast<float>(rate)) == KB_OK;
+  if (rendered) {
+    kb_mixer_play(engine);
+    *clicks = RenderClickChannel(engine, song_seconds / rate);
+  }
+  kb_engine_destroy(engine);
+  return rendered;
+}
+
 bool Render(
     const std::string& wav,
     const std::string& grid,
@@ -85,17 +104,8 @@ bool Render(
   if (!media_test::WritePulseStemWav(stem, beat_frames, frames, kSampleRate)) {
     return false;
   }
-  kb_engine* engine = media_test::OpenFollowingEngine(stem, beats);
   std::vector<float> clicks;
-  bool rendered = false;
-  if (engine != nullptr) {
-    rendered = kb_mixer_set_rate(engine, static_cast<float>(rate)) == KB_OK;
-    if (rendered) {
-      kb_mixer_play(engine);
-      clicks = RenderClickChannel(engine, song_seconds / rate);
-    }
-    kb_engine_destroy(engine);
-  }
+  const bool rendered = RenderClicks(stem, beats, rate, song_seconds, &clicks);
   std::filesystem::remove(stem);
   return rendered &&
          media_test::WriteFloatWav(wav, clicks, kMono, kSampleRate) &&

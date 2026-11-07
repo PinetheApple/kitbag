@@ -192,21 +192,11 @@ void TestEngageTransition() {
   CheckSeamClick(run.left, seam, budget);
 }
 
-std::string LoadToneOverSilence(kitbag::Mixer* mixer) {
-  LoadPcm(
-      mixer,
-      kToneTrack,
-      ToneFixture({.frames = kToneFrames, .steady_hz = kBurstHz})
-  );
-  LoadPcm(mixer, kSilentTrack, ToneFixture({.frames = kToneFrames}));
-  return TempFiles().back();
-}
-
 // Only the tone's bus is the higher of the two, so a prime that stops after
 // the first bus leaves it silent.
 void TestPrimeLeavesNoGap() {
   kitbag::Mixer mixer(kSampleRate);
-  LoadToneOverSilence(&mixer);
+  LoadToneOverFragile(&mixer, kSilentTrack, kToneFrames);
   mixer.Play();
   RenderPaced(&mixer, kSettleBlocks);
   mixer.SetTrackPitch(kToneTrack, kKey, 0, false);
@@ -246,7 +236,8 @@ enum class Restage : uint8_t { kSeek, kStop };
 
 void CheckFailedRestageKeepsBuses(Restage restage, const char* label) {
   kitbag::Mixer mixer(kSampleRate);
-  const std::string silent_file = LoadToneOverSilence(&mixer);
+  const std::string silent_file =
+      LoadToneOverFragile(&mixer, kSilentTrack, kToneFrames);
   mixer.Play();
   mixer.SetRate(kSpeed, 0, false);
   RenderPaced(&mixer, HandOverBlocks(mixer));
