@@ -1,3 +1,4 @@
+import type { StemPlayerRuntime } from '@kitbag/core-state';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -29,14 +30,8 @@ vi.mock('./transportRuntime.ts', () => ({
 
 await import('./stemPlayerRuntime.ts');
 
-interface Commands {
-  readonly mixerSetTrackPitch: (track: number, key: number) => Promise<number>;
-  readonly mixerSetRate: (rate: number) => Promise<number>;
-  readonly mixerRate: () => Promise<number>;
-  readonly mixerTrackPitch: (track: number) => Promise<number>;
-}
 const [runtime] = mocks.configureStemPlayer.mock.lastCall as unknown as [
-  { readonly commands: Commands },
+  StemPlayerRuntime,
 ];
 const { commands } = runtime;
 
@@ -50,10 +45,16 @@ describe('stem player speed and key commands', () => {
     expect(mocks.setTrackKey.mock.calls).toEqual([[mocks.native, 2, 1.5]]);
   });
 
-  it('forwards speed and the settled reads to the module', async () => {
+  it('forwards a speed to the module', async () => {
     await commands.mixerSetRate(0.75);
     expect(mocks.native.mixerSetRate.mock.calls).toEqual([[0.75]]);
+  });
+
+  it('reads the settled speed from the module', async () => {
     await expect(commands.mixerRate()).resolves.toBe(1);
+  });
+
+  it('reads a settled key from the module for that track', async () => {
     await expect(commands.mixerTrackPitch(4)).resolves.toBe(2);
     expect(mocks.native.mixerTrackPitch.mock.calls).toEqual([[4]]);
   });
