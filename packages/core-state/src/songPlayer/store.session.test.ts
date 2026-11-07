@@ -8,6 +8,7 @@ import { createMixerClaim } from '../stemPlayer/mixerClaim.ts';
 import { createStemPlayerStore } from '../stemPlayer/store.ts';
 import {
   fakeRuntime as fakeStemRuntime,
+  RATE,
   record,
   stem,
 } from '../stemPlayer/store.test-helper.ts';
@@ -15,6 +16,7 @@ import {
   BARS,
   fakeSongRuntime,
   SONG_ID,
+  songRecord,
   songStore,
   type Fake,
 } from './store.test-helper.ts';
@@ -171,6 +173,88 @@ describe('the master level a stem song left behind', () => {
     await stores.songs.getState().open(SONG_ID, BARS).loaded;
     await stores.stemSongs.getState().open(STEM_SET_ID, BARS);
     expect(stores.stemSongs.getState().masterGain).toBe(STEM_MASTER);
+  });
+});
+
+function pendingLength(fake: Fake) {
+  let finish: (frames: number) => void = () => undefined;
+  fake.commands.mixerTrackFrames.mockImplementationOnce(
+    () =>
+      new Promise<number>((resolve) => {
+        finish = resolve;
+      }),
+  );
+  return (frames: number) => {
+    finish(frames);
+  };
+}
+
+describe('reading the song length', () => {
+  const LENGTH = 9 * RATE;
+
+  it('fails the song when the read throws, and closing still cleans up', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const stores = storesSharingOneMixer();
+    const master = sharedMaster(stores);
+    stores.songFake.commands.mixerTrackFrames.mockRejectedValueOnce(
+      new Error('torn'),
+    );
+    await stores.songs.getState().open(SONG_ID, BARS).loaded;
+    expect(stores.songs.getState().status).toBe('failed');
+    stores.songs.getState().close();
+    expect(
+      stores.songFake.commands.mixerUnloadTrack,
+    ).toHaveBeenCalledExactlyOnceWith(0);
+    expect(master.value).toBe(STEM_MASTER);
+    warn.mockRestore();
+  });
+
+  it('writes nothing when the song closes before the read lands', async () => {
+    const fake = fakeSongRuntime();
+    const finishLength = pendingLength(fake);
+    const store = songStore(fake);
+    const { loaded } = store.getState().open(SONG_ID, BARS);
+    await vi.waitFor(() => {
+      expect(fake.commands.mixerTrackFrames).toHaveBeenCalled();
+    });
+    store.getState().close();
+    finishLength(LENGTH);
+    await loaded;
+    expect(store.getState()).toMatchObject({
+      status: 'idle',
+      beats: [],
+      durationFrames: 0,
+    });
+    expect(fake.commands.mixerUnloadTrack).toHaveBeenCalledOnce();
+  });
+
+  it('leaves the song that replaced it alone when the read lands late', async () => {
+    const fake = fakeSongRuntime();
+    const newer = songRecord({
+      id: SONG_ID + 1,
+      beats: [0, 1],
+      durationSec: 4,
+    });
+    fake.records.readSong
+      .mockResolvedValueOnce(songRecord())
+      .mockResolvedValueOnce(newer);
+    const finishLength = pendingLength(fake);
+    const store = songStore(fake);
+    const first = store.getState().open(SONG_ID, BARS);
+    await vi.waitFor(() => {
+      expect(fake.commands.mixerTrackFrames).toHaveBeenCalled();
+    });
+    await store.getState().open(SONG_ID + 1, BARS).loaded;
+    const settled = store.getState();
+    finishLength(LENGTH);
+    await first.loaded;
+    expect(store.getState()).toBe(settled);
+    expect(settled).toMatchObject({
+      status: 'ready',
+      songId: SONG_ID + 1,
+      beats: newer.beats,
+    });
+    expect(fake.commands.mixerUnloadTrack).toHaveBeenCalledOnce();
   });
 });
 

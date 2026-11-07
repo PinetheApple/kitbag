@@ -1,4 +1,8 @@
-import { acquireEngineHold, KB_RESULT } from '@kitbag/core-native';
+import {
+  acquireEngineHold,
+  KB_MIXER_UNITY_RATE,
+  KB_RESULT,
+} from '@kitbag/core-native';
 
 import { stopClick, turnClickOff, type ClickSlice } from './clickActions.ts';
 import { debounce } from './debounce.ts';
@@ -112,6 +116,11 @@ export function mixerSession({
       }
       // A loop a failed clear left behind would otherwise play in this song.
       await commands.mixerClearLoop().catch(() => null);
+      // The rate is engine-wide and outlives stop and unload.
+      const rate = await commands.mixerRate();
+      if (!live(opened)) return null;
+      if (rate !== KB_MIXER_UNITY_RATE)
+        await commands.mixerSetRate(KB_MIXER_UNITY_RATE);
       return live(opened) ? engineRate : null;
     },
   };

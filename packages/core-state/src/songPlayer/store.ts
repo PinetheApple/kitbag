@@ -27,6 +27,7 @@ import { secondsToFrames } from '../stemPlayer/time.ts';
 import { getSongPlayer, type SongPlayerRuntime } from './runtime.ts';
 
 const SONG_TRACK = 0;
+const ORIGINAL_KEY = 0;
 
 interface SongPlayerState extends TransportSlice, ClickSlice, LoopSlice {
   readonly songId: number | null;
@@ -157,6 +158,11 @@ export function createSongPlayerStore(
         set({ status: 'failed' });
         return;
       }
+      // Loading over a loaded track, or a dropped unload, keeps the old key.
+      const key = await commands.mixerTrackPitch(SONG_TRACK);
+      if (!live(opened)) return;
+      if (key !== ORIGINAL_KEY)
+        await commands.mixerSetTrackPitch(SONG_TRACK, ORIGINAL_KEY);
       const decoded = await commands.mixerTrackFrames(SONG_TRACK);
       if (!live(opened)) return;
       const durationFrames =

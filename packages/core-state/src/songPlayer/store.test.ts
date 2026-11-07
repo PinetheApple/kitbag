@@ -1,4 +1,4 @@
-import { KB_RESULT } from '@kitbag/core-native';
+import { KB_MIXER_UNITY_RATE, KB_RESULT } from '@kitbag/core-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SKIP_SECONDS } from '../stemPlayer/songTransport.ts';
@@ -187,6 +187,45 @@ describe('opening a song', () => {
       commands.loadTrack.mock.invocationCallOrder[1] ?? Number.NaN,
     );
     expect(store.getState().songId).toBe(SONG_ID + 1);
+  });
+});
+
+describe('what an earlier session left on the mixer', () => {
+  const STEM_SPEED = 0.75;
+  const STEM_KEY = 3;
+
+  it('plays the song at its own speed after a slowed stem song', async () => {
+    const fake = fakeSongRuntime();
+    fake.engine.rate = STEM_SPEED;
+    await songStore(fake).getState().open(SONG_ID, BARS).loaded;
+    expect(fake.commands.mixerSetRate).toHaveBeenCalledExactlyOnceWith(
+      KB_MIXER_UNITY_RATE,
+    );
+    expect(fake.engine.rate).toBe(KB_MIXER_UNITY_RATE);
+  });
+
+  it('sets no speed when the mixer already plays at unity', async () => {
+    const { commands } = await openedSong();
+    expect(commands.mixerSetRate).not.toHaveBeenCalled();
+  });
+
+  it('plays the song in its own key when the track kept a shifted one', async () => {
+    const fake = fakeSongRuntime();
+    fake.commands.mixerTrackPitch.mockResolvedValue(STEM_KEY);
+    await songStore(fake).getState().open(SONG_ID, BARS).loaded;
+    expect(fake.commands.mixerTrackPitch).toHaveBeenCalledWith(0);
+    expect(fake.commands.mixerSetTrackPitch).toHaveBeenCalledExactlyOnceWith(
+      0,
+      0,
+    );
+    expect(fake.commands.loadTrack.mock.invocationCallOrder[0]).toBeLessThan(
+      fake.commands.mixerTrackPitch.mock.invocationCallOrder[0] ?? Number.NaN,
+    );
+  });
+
+  it('sets no key when the track has no shift', async () => {
+    const { commands } = await openedSong();
+    expect(commands.mixerSetTrackPitch).not.toHaveBeenCalled();
   });
 });
 
