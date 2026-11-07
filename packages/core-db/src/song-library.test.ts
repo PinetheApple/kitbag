@@ -384,3 +384,38 @@ describe('song library over the op-sqlite 17 connection', () => {
     await database.close();
   });
 });
+
+describe('readSong', () => {
+  it('unpacks the grid and the waveform path of an analysed song', async () => {
+    const { library } = setup();
+    const id = await library.insertSong(song('Everlong'));
+    await library.applyAnalysis(okResult('Everlong'));
+    expect(await library.readSong(id)).toEqual({
+      id,
+      title: 'Everlong',
+      artist: 'Artist',
+      filePath: 'songs/uuid-Everlong/Everlong.mp3',
+      waveformPath: 'songs/uuid-Everlong/Everlong.kwav',
+      durationSec: 250.5,
+      bpm: 158,
+      beats: [0.5, 1.25],
+      downbeats: [0, 300],
+      analysisStatus: 'done',
+    });
+  });
+
+  it('reads a song still analysing as having no grid', async () => {
+    const { library } = setup();
+    const id = await library.insertSong(song('Fresh'));
+    const read = await library.readSong(id);
+    expect(read?.beats).toEqual([]);
+    expect(read?.downbeats).toEqual([]);
+    expect(read?.waveformPath).toBeNull();
+    expect(read?.analysisStatus).toBe('analyzing');
+  });
+
+  it('reads nothing for a song that is gone', async () => {
+    const { library } = setup();
+    expect(await library.readSong(404)).toBeUndefined();
+  });
+});

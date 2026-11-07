@@ -1,7 +1,7 @@
 import { count, eq, inArray, max, sql } from 'drizzle-orm';
 
 import { ANALYSIS_STATUS, type AnalysisStatus } from './analysis-status';
-import { packFloat32, packInt32 } from './packing';
+import { packFloat32, packInt32, unpackFloat32, unpackInt32 } from './packing';
 import { found, type Database, type DatabaseHandle } from './repository';
 import { setlistItems, songPresets, songs, stems, stemSets } from './schema';
 import {
@@ -54,6 +54,19 @@ export interface NewLibrarySong {
   readonly filePath: string;
   readonly durationSec: number;
   readonly format: string;
+}
+
+export interface SongRecord {
+  readonly id: number;
+  readonly title: string;
+  readonly artist: string;
+  readonly filePath: string;
+  readonly waveformPath: string | null;
+  readonly durationSec: number;
+  readonly bpm: number | null;
+  readonly beats: readonly number[];
+  readonly downbeats: readonly number[];
+  readonly analysisStatus: AnalysisStatus;
 }
 
 export interface SongFiles {
@@ -272,6 +285,27 @@ async function listSongFiles(db: Database) {
   return db.select({ id: songs.id, filePath: songs.filePath }).from(songs);
 }
 
+async function readSong(
+  db: Database,
+  id: number,
+): Promise<SongRecord | undefined> {
+  const [row] = await db.select().from(songs).where(eq(songs.id, id));
+  if (row === undefined) return undefined;
+  return {
+    id: row.id,
+    title: row.title,
+    artist: row.artist,
+    filePath: row.filePath,
+    waveformPath: row.waveformPath,
+    durationSec: row.duration,
+    bpm: row.bpm,
+    beats: row.beatGrid === null ? [] : unpackFloat32(row.beatGrid),
+    downbeats:
+      row.downbeatIndices === null ? [] : unpackInt32(row.downbeatIndices),
+    analysisStatus: row.analysisStatus,
+  };
+}
+
 async function renameSong(db: Database, id: number, title: string) {
   await db.update(songs).set({ title }).where(eq(songs.id, id));
 }
@@ -296,6 +330,7 @@ export function createSongLibraryRepository({
       transaction(() => insertStemBundle(db, bundle)),
     replaceStemBundle: (bundle: NewStemBundle) =>
       transaction(() => replaceStemBundle(db, bundle)),
+    readSong: (id: number) => serial(() => readSong(db, id)),
     readStemSet: (id: number) => serial(() => readStemSet(db, id)),
     saveStemMix: (mixes: readonly StemMix[]) =>
       transaction(() => saveStemMix(db, mixes)),

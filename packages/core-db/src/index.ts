@@ -41,6 +41,7 @@ export type {
   StoredAnalysis,
   AnalysisOutcome,
   SongFiles,
+  SongRecord,
 } from './song-library-repository';
 export type {
   NewSongPreset,
