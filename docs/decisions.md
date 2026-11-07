@@ -1032,3 +1032,12 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
 - **2026-11-07 · Song-grid accents (§4.3, #300)** — Under a grid only each song bar's first
   beat is accented; the standalone accent row and its mutes are ignored. With no downbeats
   there is no bar accent. **[user]**
+- **2026-11-07 · Leaving retime with unsaved work (§7.7, #334)** — With at least one tap or
+  a shift, Close and Back ask "Leave without saving?" (Keep tapping / Leave), the reset
+  confirm's dialog; with neither they leave at once. Mockup:
+  `docs/research/mockups/stems-retime-unsaved.html`. **[user]**
+- **2026-11-07 · Leave-retime copy beyond the mockup (§7.7, #334)** — The mockup draws only
+  "Your 5 taps …". One tap reads "Your 1 tap for this song is dropped."; a shift alone
+  "Your offset for this song is dropped."; both "Your 2 taps and offset for this song are
+  dropped.", each followed by "The lyrics keep their current timing." The owner may
+  overturn the wording. **[recorded — lane call]**

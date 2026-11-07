@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  hasUnsavedRetime,
   leaveRetimeBody,
   retimePreview,
   retimeSubtitle,
-  retimeUnsaved,
   shiftLabel,
   tapTimeLabel,
 } from './retimeView.ts';
@@ -106,10 +106,17 @@ describe('leaveRetimeBody', () => {
     expect(leaveRetimeBody(2, 1)).toBe(
       `Your 2 taps and offset for this song are dropped. ${kept}`,
     );
+    expect(leaveRetimeBody(1, 1)).toBe(
+      `Your 1 tap and offset for this song are dropped. ${kept}`,
+    );
+  });
+
+  it('has nothing to say with no taps and no shift', () => {
+    expect(leaveRetimeBody(0, 0)).toBeNull();
   });
 });
 
-describe('retimeUnsaved', () => {
+describe('hasUnsavedRetime', () => {
   const recording = {
     kind: 'recording',
     taps: [],
@@ -119,11 +126,11 @@ describe('retimeUnsaved', () => {
   } as const;
 
   it('is set by a tap or a shift, and by nothing else', () => {
-    expect(retimeUnsaved({ kind: 'off' })).toBe(false);
-    expect(retimeUnsaved(recording)).toBe(false);
-    expect(retimeUnsaved({ ...recording, shiftSteps: 1 })).toBe(true);
+    expect(hasUnsavedRetime({ kind: 'off' })).toBe(false);
+    expect(hasUnsavedRetime(recording)).toBe(false);
+    expect(hasUnsavedRetime({ ...recording, shiftSteps: 1 })).toBe(true);
     expect(
-      retimeUnsaved({ ...recording, taps: [{ line: 0, timeSec: 1 }] }),
+      hasUnsavedRetime({ ...recording, taps: [{ line: 0, timeSec: 1 }] }),
     ).toBe(true);
   });
 });

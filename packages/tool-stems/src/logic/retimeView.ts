@@ -45,20 +45,24 @@ export function retimeSubtitle(
   return `${line} · playing at ${speed}×`;
 }
 
-export function retimeUnsaved(retime: RetimeState): boolean {
+export function hasUnsavedRetime(retime: RetimeState): boolean {
   return (
     retime.kind === 'recording' &&
     (retime.taps.length > 0 || retime.shiftSteps !== 0)
   );
 }
 
-export function leaveRetimeBody(taps: number, shiftSteps: number): string {
-  const tapped = taps > 0 ? countLabel(taps, 'tap', 'taps') : null;
-  const shifted = shiftSteps !== 0;
-  const dropped =
-    tapped === null ? 'offset' : shifted ? `${tapped} and offset` : tapped;
-  const verb = taps > 1 || (tapped !== null && shifted) ? 'are' : 'is';
-  return `Your ${dropped} for this song ${verb} dropped. The lyrics keep their current timing.`;
+export function leaveRetimeBody(
+  taps: number,
+  shiftSteps: number,
+): string | null {
+  const parts = [
+    taps > 0 ? countLabel(taps, 'tap', 'taps') : null,
+    shiftSteps !== 0 ? 'offset' : null,
+  ].filter((part) => part !== null);
+  if (parts.length === 0) return null;
+  const verb = parts.length > 1 || taps > 1 ? 'are' : 'is';
+  return `Your ${parts.join(' and ')} for this song ${verb} dropped. The lyrics keep their current timing.`;
 }
 
 export function tapTimeLabel(seconds: number): string {

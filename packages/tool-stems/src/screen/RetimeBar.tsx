@@ -12,9 +12,9 @@ import { useCallback, useEffect } from 'react';
 import { View } from 'react-native';
 
 import {
+  hasUnsavedRetime,
   leaveRetimeBody,
   retimeSubtitle,
-  retimeUnsaved,
 } from '../logic/retimeView.ts';
 import { ConfirmDialog } from './ConfirmDialog.tsx';
 
@@ -36,7 +36,7 @@ export function RetimeBar({ onAskReset, onAskLeave }: RetimeBarProps) {
   const retimed = useStemPlayer((s) => s.lyrics.retimed);
   const cancelRetime = useStemPlayer((s) => s.cancelRetime);
   const commitRetime = useStemPlayer((s) => s.commitRetime);
-  const unsaved = retimeUnsaved(retime);
+  const unsaved = hasUnsavedRetime(retime);
   const close = useCallback(() => {
     if (unsaved) onAskLeave();
     else cancelRetime();
@@ -98,18 +98,16 @@ export function ResetDialog({ onClose }: { readonly onClose: () => void }) {
 export function LeaveDialog({ onClose }: { readonly onClose: () => void }) {
   const retime = useStemPlayer((s) => s.retime);
   const cancelRetime = useStemPlayer((s) => s.cancelRetime);
-  const leave = useCallback(() => {
-    onClose();
-    cancelRetime();
-  }, [onClose, cancelRetime]);
   if (retime.kind !== 'recording') return null;
+  const body = leaveRetimeBody(retime.taps.length, retime.shiftSteps);
+  if (body === null) return null;
   return (
     <ConfirmDialog
       title="Leave without saving?"
-      body={leaveRetimeBody(retime.taps.length, retime.shiftSteps)}
+      body={body}
       cancelLabel="Keep tapping"
       confirmLabel="Leave"
-      onConfirm={leave}
+      onConfirm={cancelRetime}
       onCancel={onClose}
     />
   );
