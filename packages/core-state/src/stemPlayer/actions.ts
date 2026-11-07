@@ -1,12 +1,17 @@
 import type { Debounced } from './debounce.ts';
 import { clamp } from '../metronome/config.ts';
-import { retimeLineAt } from './lyrics.ts';
 import { soloAfter, UNITY_GAIN } from './mix.ts';
 import type { MixSaver } from './mixSaver.ts';
-import type { StemPlayerRuntime } from './runtime.ts';
+import type { MixerRuntime, StemPlayerRuntime } from './runtime.ts';
 import { restartFromFrame, songTransportShown } from './songTransport.ts';
-import type { Get, SetState, StemPlayerActions, StemRow } from './store.ts';
-import { framesToSeconds, secondsToFrames } from './time.ts';
+import type {
+  Get,
+  SetState,
+  StemPlayerActions,
+  StemPlayerState,
+  StemRow,
+} from './store.ts';
+import { secondsToFrames } from './time.ts';
 
 type RuntimeOf = () => StemPlayerRuntime;
 
@@ -87,28 +92,25 @@ export function mixActions(
   };
 }
 
+export type TransportSlice = Pick<
+  StemPlayerState,
+  'title' | 'artist' | 'durationFrames' | 'engineRate'
+>;
+
 export function transportActions(
-  set: SetState,
-  get: Get,
-  runtimeOf: RuntimeOf,
+  get: () => TransportSlice,
+  runtimeOf: () => MixerRuntime,
   scrubSeek: Debounced<[number]>,
+  afterSeek?: (frame: number) => void,
 ): Pick<
   StemPlayerActions,
   'togglePlay' | 'scrub' | 'cancelScrub' | 'seek' | 'skip'
 > {
-  const anchorRetimeTo = (frame: number) => {
-    const { retime, lyrics, engineRate } = get();
-    if (retime.kind !== 'recording' || retime.taps.length > 0) return;
-    const { lines } = lyrics;
-    const songSec = framesToSeconds(frame, engineRate);
-    const nextLine = retimeLineAt(lines, songSec);
-    if (nextLine !== retime.nextLine) set({ retime: { ...retime, nextLine } });
-  };
   const seek = (frame: number) => {
     scrubSeek.cancel();
     const clamped = clamp(frame, 0, get().durationFrames);
     runtimeOf().commands.mixerSeek(clamped);
-    anchorRetimeTo(clamped);
+    afterSeek?.(clamped);
   };
   return {
     togglePlay: () => {

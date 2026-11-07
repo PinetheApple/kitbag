@@ -19,8 +19,10 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "@types/react-test-renderer": "~19.1.0",
     "react": "19.2.0",
     "react-native": "0.83.6",
+    "react-test-renderer": "19.2.0",
     "vitest": "^5.1.0"
   }
 }

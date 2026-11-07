@@ -17,7 +17,7 @@ const spies = vi.hoisted(() => ({
 
 vi.mock('react', async (original) => ({
   ...(await original<Record<string, unknown>>()),
-  useEffect: (effect: () => (() => void) | undefined) => {
+  useLayoutEffect: (effect: () => (() => void) | undefined) => {
     spies.effects.push(effect);
   },
 }));
@@ -28,8 +28,9 @@ vi.mock('@kitbag/core-design', async (original) => ({
     new Proxy({}, { get: (_, key) => ({ styleName: key }) }),
 }));
 
-vi.mock('@kitbag/core-state', () => ({
-  secondsToFrames: () => 0,
+vi.mock('@kitbag/core-state', async (original) => ({
+  ...(await original<Record<string, unknown>>()),
+  loopEndFrames: () => null,
   useStemPlayer: (select: (state: unknown) => unknown) =>
     select({
       status: 'loading',
@@ -56,7 +57,9 @@ describe('the stem player screen', () => {
   beforeEach(() => {
     spies.effects.length = 0;
     spies.release.mockReset();
-    spies.acquireSong.mockReset().mockReturnValue(spies.release);
+    spies.acquireSong
+      .mockReset()
+      .mockReturnValue({ release: spies.release, live: () => true });
     spies.close.mockReset();
   });
 
@@ -64,6 +67,7 @@ describe('the stem player screen', () => {
     renderToStaticMarkup(
       createElement(StemPlayerScreen, {
         setId: SET_ID,
+        focused: true,
         insets: INSETS,
         onBack: nothing,
       }),

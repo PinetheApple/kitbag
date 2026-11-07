@@ -24,6 +24,7 @@ function SongsRoute() {
       insets={insets}
       onBack={routes.back}
       onOpenStemSet={routes.openStemSet}
+      onOpenSong={routes.openSong}
       {...(metronomeOn ? { onOpenSetlists: routes.openSetlists } : {})}
     />
   );

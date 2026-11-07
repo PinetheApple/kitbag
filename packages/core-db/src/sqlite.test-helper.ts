@@ -55,8 +55,10 @@ function runQuery(
   return statement.all(...values).map((row) => Object.values(row));
 }
 
-export function openTestDatabase({ foreignKeys = true } = {}) {
-  const connection = new DatabaseSync(':memory:');
+export function openTestDatabase({
+  foreignKeys = true,
+  connection = new DatabaseSync(':memory:'),
+} = {}) {
   migrate(nodeSqliteDriver(connection));
   if (!foreignKeys) connection.exec('PRAGMA foreign_keys = OFF');
   const db = drizzle(

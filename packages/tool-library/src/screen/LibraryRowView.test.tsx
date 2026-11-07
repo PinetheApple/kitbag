@@ -80,6 +80,7 @@ function render(fontScale: number) {
       selected: false,
       onActions: vi.fn(),
       onOpenStemSet: vi.fn(),
+      onOpenSong: vi.fn(),
     }),
   );
   const column = /<section>.*<\/section>/s.exec(markup)?.[0] ?? '';

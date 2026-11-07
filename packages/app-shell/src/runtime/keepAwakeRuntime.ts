@@ -2,6 +2,7 @@ import { getKitbagCommands, getKitbagHostObject } from '@kitbag/core-native';
 import {
   getAppearanceStore,
   metronomeStore,
+  songPlayerStore,
   stemPlayerStore,
   tunerStore,
 } from '@kitbag/core-state';
@@ -17,6 +18,7 @@ wireKeepAwake({
   metronome: metronomeStore,
   tuner: tunerStore,
   stemPlayer: stemPlayerStore,
+  songPlayer: songPlayerStore,
   appearance: getAppearanceStore(),
   mixerPlaying: () => getKitbagHostObject().mixer_playing !== 0,
   poll: (tick) => {

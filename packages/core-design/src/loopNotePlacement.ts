@@ -1,4 +1,4 @@
-import { stemPlayer } from '@kitbag/core-design';
+import { stemPlayer } from './stemPlayerRoles.ts';
 
 export type LoopNotePlacement = 'right' | 'left' | 'above';
 

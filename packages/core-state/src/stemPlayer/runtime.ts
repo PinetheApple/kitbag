@@ -50,22 +50,25 @@ export type StemPlayerRecords = Pick<
   'readStemSet' | 'saveStemMix' | 'renameStem' | 'saveLyricsRetimed'
 >;
 
-// The metronome tool's transport, running or paused behind its notification,
-// which the stem player's click displaces.
+// The metronome tool's transport, running or paused behind its notification;
+// opening a mixer session or starting its click displaces it.
 export interface SharedMetronome {
   readonly active: () => boolean;
   readonly release: () => void;
 }
 
-export interface StemPlayerRuntime {
+export interface MixerRuntime {
   readonly commands: StemPlayerCommands;
   readonly engine: StemPlayerEngine;
   readonly sharedMetronome: SharedMetronome;
-  readonly records: StemPlayerRecords;
   readonly readWaveform: (
     relativePath: string,
     buckets: number,
   ) => Promise<readonly number[]>;
+}
+
+export interface StemPlayerRuntime extends MixerRuntime {
+  readonly records: StemPlayerRecords;
 }
 
 let configured: StemPlayerRuntime | undefined;

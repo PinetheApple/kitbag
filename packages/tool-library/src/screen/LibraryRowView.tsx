@@ -129,6 +129,7 @@ export interface LibraryRowViewProps {
   readonly selected: boolean;
   readonly onActions: (row: LibraryRow) => void;
   readonly onOpenStemSet: (id: number) => void;
+  readonly onOpenSong: (id: number) => void;
 }
 
 export function LibraryRowView({
@@ -136,6 +137,7 @@ export function LibraryRowView({
   selected,
   onActions,
   onOpenStemSet,
+  onOpenSong,
 }: LibraryRowViewProps) {
   const styles = useStyles();
   const { fontScale } = useWindowDimensions();
@@ -147,8 +149,9 @@ export function LibraryRowView({
     onActions(row);
   }, [onActions, row]);
   const open = useCallback(() => {
-    onOpenStemSet(row.id);
-  }, [onOpenStemSet, row.id]);
+    if (row.kind === 'stems') onOpenStemSet(row.id);
+    else onOpenSong(row.id);
+  }, [onOpenStemSet, onOpenSong, row.kind, row.id]);
   const badges = (
     <View style={[styles.badges, badgesUnderText && styles.badgesUnderText]}>
       {rowBadges(row, status).map((badge) => (
@@ -167,6 +170,7 @@ export function LibraryRowView({
     <View style={[styles.row, selected && styles.selected]}>
       <Pressable
         accessible
+        accessibilityRole="button"
         accessibilityLabel={spokenRow(
           row,
           status,
@@ -174,9 +178,7 @@ export function LibraryRowView({
         )}
         style={[styles.body, isTextScaled(fontScale) && styles.scaledBody]}
         onLongPress={openActions}
-        {...(row.kind === 'stems'
-          ? { accessibilityRole: 'button' as const, onPress: open }
-          : {})}
+        onPress={open}
       >
         <RowTile stems={row.kind === 'stems'} />
         <View style={styles.text}>

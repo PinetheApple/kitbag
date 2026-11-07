@@ -10,7 +10,12 @@ import {
   stem,
   SONG_DETAILS,
 } from '@kitbag/core-state/src/stemPlayer/store.test-helper.ts';
-import { act, Profiler } from 'react';
+import {
+  act,
+  Profiler,
+  type ProfilerOnRenderCallback,
+  type ReactElement,
+} from 'react';
 import {
   create,
   type ReactTestInstance,
@@ -91,25 +96,88 @@ export function setHost(seconds: number, playing = 1): void {
   };
 }
 
-export async function mountPlayer(change: RecordChange = SONG_DETAILS) {
-  const fake = fakeRuntime(record([stem(1), stem(2)], change));
+const noRenderProbe: ProfilerOnRenderCallback = () => undefined;
+const noBack = () => undefined;
+
+export const SET_ID = 7;
+export const STEMS = [stem(1), stem(2)];
+
+interface PlayerTreeProps {
+  readonly setId?: number;
+  readonly focused?: boolean;
+  readonly onBack?: () => void;
+  readonly onRender?: ProfilerOnRenderCallback;
+}
+
+export function playerTree({
+  setId = SET_ID,
+  focused = true,
+  onBack = noBack,
+  onRender = noRenderProbe,
+}: PlayerTreeProps = {}) {
+  return (
+    <ThemeProvider mode="dark">
+      <SheetHost topInset={0}>
+        <Profiler id="player" onRender={onRender}>
+          <StemPlayerScreen
+            setId={setId}
+            focused={focused}
+            insets={INSETS}
+            onBack={onBack}
+          />
+        </Profiler>
+      </SheetHost>
+    </ThemeProvider>
+  );
+}
+
+export function installFakeRuntime(change: RecordChange = SONG_DETAILS) {
+  const fake = fakeRuntime(record(STEMS, change));
   live = fake.runtime;
+  return fake;
+}
+
+export function textsOf(renderer: ReactTestRenderer): string[] {
+  return renderer.root
+    .findAll((node) => String(node.type) === 'Text')
+    .map(textOf);
+}
+
+export async function mountSurface(element: ReactElement) {
+  let renderer: ReactTestRenderer | undefined;
+  await act(async () => {
+    renderer = create(element);
+    await tick();
+  });
+  if (renderer === undefined) throw new Error('surface did not mount');
+  const mounted = renderer;
+  return {
+    has: (text: string) => textsOf(mounted).includes(text),
+    update: (next: ReactElement) => {
+      act(() => {
+        mounted.update(next);
+      });
+    },
+    unmount: () => {
+      act(() => {
+        mounted.unmount();
+      });
+    },
+  };
+}
+
+export async function mountPlayer(change: RecordChange = SONG_DETAILS) {
+  const fake = installFakeRuntime(change);
   const commit = vi.fn();
   const scrolls = vi.fn();
   const onBack = vi.fn();
   const renderer = create(<></>, {
     createNodeMock: () => ({ scrollTo: scrolls }),
   });
+  const tree = (focused: boolean) =>
+    playerTree({ focused, onBack, onRender: commit });
   await act(async () => {
-    renderer.update(
-      <ThemeProvider mode="dark">
-        <SheetHost topInset={0}>
-          <Profiler id="player" onRender={commit}>
-            <StemPlayerScreen setId={7} insets={INSETS} onBack={onBack} />
-          </Profiler>
-        </SheetHost>
-      </ThemeProvider>,
-    );
+    renderer.update(tree(true));
     await tick();
   });
   fake.commands.mixerSeek.mockClear();
@@ -150,6 +218,11 @@ export async function mountPlayer(change: RecordChange = SONG_DETAILS) {
       setHost(seconds);
       act(() => {
         for (let i = 0; i < count; i++) runFrame();
+      });
+    },
+    setFocused: (focused: boolean) => {
+      act(() => {
+        renderer.update(tree(focused));
       });
     },
     unmount: () => {
