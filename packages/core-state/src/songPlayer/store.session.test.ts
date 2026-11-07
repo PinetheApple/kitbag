@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { MetronomeCommands } from '../metronome/commands.ts';
 import { configureMetronomeRuntime } from '../metronome/runtime.ts';
-import { metronomeStore } from '../metronome/store.ts';
+import { metronomeStore, type MetronomeStore } from '../metronome/store.ts';
 import { createMixerClaim } from '../stemPlayer/mixerClaim.ts';
 import { createStemPlayerStore } from '../stemPlayer/store.ts';
 import {
@@ -16,6 +16,7 @@ import {
   fakeSongRuntime,
   SONG_ID,
   songStore,
+  type Fake,
 } from './store.test-helper.ts';
 
 const STEM_SET_ID = 7;
@@ -213,8 +214,7 @@ describe('a screen cleaning up late', () => {
 describe('the standalone metronome', () => {
   const TEMPO = 97;
 
-  it('keeps its tempo and config through a song, but is left stopped', async () => {
-    const song = fakeSongRuntime();
+  function runMetronomeBeside(song: Fake) {
     configureMetronomeRuntime({
       commands: new Proxy(song.commands, {
         get: (commands, name) =>
@@ -234,19 +234,26 @@ describe('the standalone metronome', () => {
       metronomeStore.getState().stop();
     });
     vi.clearAllMocks();
+  }
+
+  // Stopping is what changes these two: running, and practice follows it.
+  function configOf(state: MetronomeStore) {
+    return { ...state, running: undefined, practice: undefined };
+  }
+
+  it('keeps its tempo and config through a song, but is left stopped', async () => {
+    const song = fakeSongRuntime();
+    runMetronomeBeside(song);
     const before = metronomeStore.getState();
     expect(before.running).toBe(true);
     const store = songStore(song);
     await store.getState().open(SONG_ID, BARS).loaded;
     await store.getState().toggleClick();
+    expect(store.getState().click).toBe(true);
     store.getState().close();
     const after = metronomeStore.getState();
     expect(after.running).toBe(false);
-    expect(after).toEqual({
-      ...before,
-      running: false,
-      practice: after.practice,
-    });
+    expect(configOf(after)).toEqual(configOf(before));
     expect(after.bpm).toBe(TEMPO);
     expect(after.beatsPerBar).toBe(3);
     for (const setter of Object.values(song.metronomeSetters)) {

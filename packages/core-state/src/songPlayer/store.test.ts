@@ -11,6 +11,7 @@ import {
   SONG_ID,
   songRecord,
   songStore,
+  type Fake,
 } from './store.test-helper.ts';
 
 beforeEach(() => {
@@ -96,7 +97,6 @@ describe('opening a song', () => {
     expect(fake.commands.loadTrack).not.toHaveBeenCalled();
   });
 
-  type Fake = ReturnType<typeof fakeSongRuntime>;
   it.each<[string, (fake: Fake) => void]>([
     [
       'the engine will not start',
@@ -330,7 +330,7 @@ describe('closing', () => {
     expect(store.getState().songId).toBeNull();
   });
 
-  it.each<[string, (fake: ReturnType<typeof fakeSongRuntime>) => void]>([
+  it.each<[string, (fake: Fake) => void]>([
     [
       'missing',
       (fake) => {

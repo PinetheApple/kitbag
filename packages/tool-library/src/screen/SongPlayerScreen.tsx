@@ -19,8 +19,10 @@ import {
 } from '@kitbag/core-design';
 import {
   bpmFact,
+  clickKeyLabel,
+  framesToSeconds,
+  loopEndFrames,
   loopKeyLabel,
-  secondsToFrames,
   SKIP_SECONDS,
   songBadge,
   useLoopScrub,
@@ -109,7 +111,7 @@ function SongWave({ playhead }: { readonly playhead: ScrubFrame }) {
       progress={playhead.progress}
       beats={beats}
       downbeatIndices={downbeatIndices}
-      durationSec={rate > 0 ? frames / rate : 0}
+      durationSec={framesToSeconds(frames, rate)}
       onTap={onTap}
     />
   );
@@ -140,9 +142,7 @@ function LockCard() {
         <Chip
           label={click ? 'CLICK ON' : 'CLICK OFF'}
           active={click}
-          accessibilityLabel={
-            click ? 'Stop the click' : 'Click along on the song grid'
-          }
+          accessibilityLabel={clickKeyLabel(click)}
           neighbourGapDp={NO_NEIGHBOURS}
           onPress={onToggle}
         />
@@ -188,9 +188,7 @@ function Body({ bottom, onBack, usePlayhead }: BodyProps) {
   const status = useSongPlayer((s) => s.status);
   const rate = useSongPlayer((s) => s.engineRate);
   const frames = useSongPlayer((s) => s.durationFrames);
-  const loopEnd = useSongPlayer((s) =>
-    s.loop.kind === 'on' ? secondsToFrames(s.loop.endSec, s.engineRate) : null,
-  );
+  const loopEnd = useSongPlayer(loopEndFrames);
   const playhead = usePlayhead(rate, frames, loopEnd);
   const scrub = useLoopScrub(useSongPlayer);
   if (status === 'failed')

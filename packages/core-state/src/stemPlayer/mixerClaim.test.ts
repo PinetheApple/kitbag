@@ -21,7 +21,7 @@ describe('createMixerClaim', () => {
     expect(session).not.toHaveBeenCalled();
   });
 
-  it('closes nothing after the owner released it', () => {
+  it('closes nothing after its session released the claim', () => {
     const mixer = createMixerClaim();
     const first = vi.fn();
     mixer.claim(first);
@@ -30,7 +30,7 @@ describe('createMixerClaim', () => {
     expect(first).not.toHaveBeenCalled();
   });
 
-  it('keeps the new owner when a displaced session releases late', () => {
+  it('keeps the newer claim when a displaced session releases late', () => {
     const mixer = createMixerClaim();
     const first = vi.fn();
     const second = vi.fn();

@@ -1,5 +1,10 @@
 import { PlayerTransport, TransportKey } from '@kitbag/core-design';
-import { loopKeyLabel, SKIP_SECONDS, useStemPlayer } from '@kitbag/core-state';
+import {
+  clickKeyLabel,
+  loopKeyLabel,
+  SKIP_SECONDS,
+  useStemPlayer,
+} from '@kitbag/core-state';
 import { useCallback } from 'react';
 import type { SharedValue } from 'react-native-reanimated';
 
@@ -36,9 +41,7 @@ export function StemTransport({
           icon="metronome"
           selected={click}
           disabled={!hasGrid}
-          accessibilityLabel={
-            click ? 'Stop the click' : 'Click along on the song grid'
-          }
+          accessibilityLabel={clickKeyLabel(click)}
           onPress={onClick}
         />
       }

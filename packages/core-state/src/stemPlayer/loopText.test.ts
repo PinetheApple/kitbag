@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { loopKeyLabel, loopMarks, loopNote } from './loopText.ts';
+import {
+  clickKeyLabel,
+  loopEndFrames,
+  loopKeyLabel,
+  loopMarks,
+  loopNote,
+} from './loopText.ts';
 
 const RATE = 100;
 const FRAMES = 1000;
@@ -36,6 +42,23 @@ describe('loopNote', () => {
 
   it('shows a set loop', () => {
     expect(loopNote(ON, null)?.failed).toBe(false);
+  });
+});
+
+describe('loopEndFrames', () => {
+  it('reads the end of a set loop in frames', () => {
+    expect(loopEndFrames({ loop: ON, engineRate: RATE })).toBe(500);
+  });
+
+  it.each([{ kind: 'off' } as const, ARMED])('has none for %j', (loop) => {
+    expect(loopEndFrames({ loop, engineRate: RATE })).toBeNull();
+  });
+});
+
+describe('clickKeyLabel', () => {
+  it('names what a press will do', () => {
+    expect(clickKeyLabel(true)).toBe('Stop the click');
+    expect(clickKeyLabel(false)).toBe('Click along on the song grid');
   });
 });
 

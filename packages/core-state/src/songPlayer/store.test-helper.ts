@@ -57,10 +57,9 @@ export function fakeSongRuntime(song: SongRecord = songRecord()) {
   };
 }
 
-export function songStore(
-  fake: ReturnType<typeof fakeSongRuntime>,
-  mixerClaim?: MixerClaim,
-) {
+export type Fake = ReturnType<typeof fakeSongRuntime>;
+
+export function songStore(fake: Fake, mixerClaim?: MixerClaim) {
   return createSongPlayerStore(() => fake.runtime, {
     scrubSeekDelayMs: SEEK_MS,
     ...(mixerClaim === undefined ? {} : { mixerClaim }),

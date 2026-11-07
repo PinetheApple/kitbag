@@ -10,7 +10,7 @@ import {
   type PlayerFrame,
 } from '@kitbag/core-design';
 import { KB_MAX_TRACKS } from '@kitbag/core-native';
-import { secondsToFrames, useStemPlayer } from '@kitbag/core-state';
+import { loopEndFrames, useStemPlayer } from '@kitbag/core-state';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
@@ -100,9 +100,7 @@ function Body({ bottom, onBack }: BodyProps) {
   const status = useStemPlayer((s) => s.status);
   const rate = useStemPlayer((s) => s.engineRate);
   const frames = useStemPlayer((s) => s.durationFrames);
-  const loopEnd = useStemPlayer((s) =>
-    s.loop.kind === 'on' ? secondsToFrames(s.loop.endSec, s.engineRate) : null,
-  );
+  const loopEnd = useStemPlayer(loopEndFrames);
   const frame = useMixerFrame(rate, frames, loopEnd);
   if (status === 'failed')
     return (

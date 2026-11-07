@@ -276,7 +276,11 @@ export {
   secondsToFrames,
 } from './stemPlayer/time.ts';
 export { SKIP_SECONDS } from './stemPlayer/songTransport.ts';
-export { loopKeyLabel } from './stemPlayer/loopText.ts';
+export {
+  clickKeyLabel,
+  loopEndFrames,
+  loopKeyLabel,
+} from './stemPlayer/loopText.ts';
 export { useLoopScrub } from './stemPlayer/useLoopScrub.ts';
 export { useSongPlayer } from './songPlayer/useSongPlayer.ts';
 export { songPlayerStore } from './songPlayer/store.ts';

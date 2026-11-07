@@ -45,8 +45,8 @@ export type StemPlayerRecords = Pick<
   'readStemSet' | 'saveStemMix' | 'renameStem'
 >;
 
-// The metronome tool's transport, running or paused behind its notification,
-// which the stem player's click displaces.
+// The metronome tool's transport, running or paused behind its notification;
+// opening a mixer session or starting its click displaces it.
 export interface SharedMetronome {
   readonly active: () => boolean;
   readonly release: () => void;

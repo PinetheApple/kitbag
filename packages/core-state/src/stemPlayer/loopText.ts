@@ -1,5 +1,6 @@
 import { formatClockSeconds } from '../text.ts';
-import type { LoopFailure, LoopState } from './store.ts';
+import type { LoopFailure, LoopState, StemPlayerState } from './store.ts';
+import { secondsToFrames } from './time.ts';
 
 export interface LoopMarkFractions {
   readonly start: number;
@@ -52,6 +53,17 @@ export function loopNote(
       failed: false,
     };
   return null;
+}
+
+export function loopEndFrames({
+  loop,
+  engineRate,
+}: Pick<StemPlayerState, 'loop' | 'engineRate'>): number | null {
+  return loop.kind === 'on' ? secondsToFrames(loop.endSec, engineRate) : null;
+}
+
+export function clickKeyLabel(click: boolean): string {
+  return click ? 'Stop the click' : 'Click along on the song grid';
 }
 
 export function loopKeyLabel(loop: LoopState): string {
