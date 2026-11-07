@@ -365,7 +365,7 @@ is the reasoning the code cannot restate in two lines.
 swaps an atomic pointer to a node that carries its own generation counter, so one
 acquire load in the callback yields both the value and its identity. Comparing
 addresses would be wrong rather than merely fragile: a freed grid's address can be
-recycled by the next allocation, a generation cannot. `observed_generation_` is
+recycled by the next allocation, a generation cannot. `grid_state_.observed_generation` is
 the generation the RT-owned cursor was last seeded against; when the published
 generation differs, the cursor is re-seeded **from the click's current position**,
 so a re-anchor moves only future beats and never revisits a beat that already
@@ -381,7 +381,7 @@ downbeats it swallowed.
 tempo `current_bar_` is incremented at each downbeat and never derived by
 division, so a mid-run time-signature change cannot jump ramp progress or bar-mute
 phase. In grid mode it is instead *derived* from the grid's own beat index
-(`grid_beat_index_ / beats_per_bar_`). Incrementing there would drift: a re-anchor
+(`grid_state_.beat_index / beats_per_bar_`). Incrementing there would drift: a re-anchor
 that moves the cursor backwards re-crosses downbeats, and an incrementing counter
 would over-count, making the bar-mute cycle's phase depend on how many times the
 user re-anchored. The grid's own numbering — not a count of downbeats observed —

@@ -159,22 +159,23 @@ Metronome::AcquireGrid(uint64_t block_start_frame, uint32_t sample_rate) {
     view.grid = &node->value;
     view.generation = node->generation;
   }
-  const bool changed = view.generation != observed_generation_;
+  const bool changed = view.generation != grid_state_.observed_generation;
   if (changed) {
-    observed_generation_ = view.generation;
-    follow_last_frame_ = kReseedFollow;
+    grid_state_.observed_generation = view.generation;
+    grid_state_.follow_last_frame = GridState::kReseedFollow;
   }
-  const double shift_sec = std::exchange(pending_grid_shift_sec_, 0.0);
+  const double shift_sec = std::exchange(grid_state_.pending_shift_sec, 0.0);
   if (view.grid == nullptr || follow_mixer_) return view;
   // Only a whole-beat backward shift clears the floor to replay (§4.7); other
   // re-seeds land past the last onset this run heard on this anchor.
-  if (!changed && GridShiftReplays(*view.grid, shift_sec)) last_onset_ = {};
+  const bool replays = !changed && GridShiftReplays(*view.grid, shift_sec);
+  if (replays) grid_state_.last_onset = {};
   if (changed || shift_sec != 0.0) {
     SeekGridCursor(
         *view.grid,
         std::max(
             GridSeconds(*view.grid, block_start_frame, sample_rate),
-            OnsetFloorSec(*view.grid, last_onset_)
+            OnsetFloorSec(*view.grid, grid_state_.last_onset)
         )
     );
   }
@@ -192,12 +193,12 @@ void Metronome::BeginPendingStart(
   BeginRun();
   has_pending_start_ = false;
   *tempo = BlockTempoFor(sample_rate);
-  follow_last_frame_ = kReseedFollow;
+  grid_state_.follow_last_frame = GridState::kReseedFollow;
   if (view.grid == nullptr || follow_mixer_) return;
   // Seed at the anchor: the top-of-block re-seed already ran, and a cursor left
   // at the block start swallows every beat up to the anchor into one click.
   SeekGridCursor(*view.grid, GridSeconds(*view.grid, frame, sample_rate));
-  observed_generation_ = view.generation;
+  grid_state_.observed_generation = view.generation;
 }
 
 double Metronome::LastSoundedPosition(double beats_per_sample) const {
@@ -231,7 +232,7 @@ void Metronome::BeginAnchorExternal(
   // Song second → this signature's beat unit, so an 8th-note bar anchors on the
   // song's clock like a quarter-note one.
   beat_position_ = song_seconds * bpm_ * BeatUnitScale() / kSecondsPerMinute;
-  if (!running_) last_onset_ = {};
+  if (!running_) grid_state_.last_onset = {};
   running_ = true;
   running_flag_.store(true, std::memory_order_relaxed);
   counting_in_ = false;
@@ -306,7 +307,7 @@ void Metronome::PublishBlockMirrors(
     const uint64_t last_frame = end_frame == 0 ? 0 : end_frame - 1;
     PublishGridMirrors(
         *grid,
-        follow_mixer_ ? follow_seconds_
+        follow_mixer_ ? grid_state_.follow_seconds
                       : GridSeconds(*grid, last_frame, sample_rate)
     );
     current_poly_beat_.store(-1, std::memory_order_relaxed);

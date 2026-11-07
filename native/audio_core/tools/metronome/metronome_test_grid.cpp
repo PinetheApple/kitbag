@@ -147,7 +147,7 @@ void TestGridWithStartAt() {
 }
 
 // After a deferred start the cursor must stay seeded, generation included: a
-// block that re-seeds resets grid_next_sub_ and re-fires a spent subdivision.
+// block that re-seeds resets grid_state_.next_sub and re-fires a spent subdivision.
 void TestGridStartAtKeepsSubdivisionCursor() {
   kitbag::Metronome metronome;
   metronome.SetTimeSignature(4, 4);
@@ -339,7 +339,7 @@ void TestGridBpmMirrorIsClamped() {
 constexpr double kGridSoundingPeak = 0.2;
 
 // #24 (a #21 follow-up): the grid path attributes a subdivision to the interval
-// it divides, grid_beat_index_ (the left-endpoint beat). A measured 0.15 s grid
+// it divides, grid_state_.beat_index (the left-endpoint beat). A measured 0.15 s grid
 // (bpm 400) offset into the future so beats 0 and 1 both sound cleanly under the
 // offset. At +100 ms the latency spans 2/3 of a beat, so an owning beat off by
 // one would sound a muted beat's own subdivision.
