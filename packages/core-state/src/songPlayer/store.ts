@@ -22,11 +22,13 @@ import { mixerSession, type MixerHold } from '../stemPlayer/mixerSession.ts';
 import {
   SCRUB_SEEK_DELAY_MS,
   type StemPlayerActions,
+  type StemPlayerStatus,
 } from '../stemPlayer/store.ts';
 import { secondsToFrames } from '../stemPlayer/time.ts';
 import { getSongPlayer, type SongPlayerRuntime } from './runtime.ts';
 
 const SONG_TRACK = 0;
+const ATTACHABLE: ReadonlySet<StemPlayerStatus> = new Set(['loading', 'ready']);
 
 interface SongPlayerState extends TransportSlice, ClickSlice, LoopSlice {
   readonly songId: number | null;
@@ -97,6 +99,8 @@ export function createSongPlayerStore(
   } = options;
   let trackRequested = false;
   let masterToRestore: number | null = null;
+  let loading: Promise<void> = Promise.resolve();
+  let holders = 0;
 
   const teardownTracks = () => {
     const { commands } = runtimeOf();
@@ -120,6 +124,21 @@ export function createSongPlayerStore(
       },
     });
     const { live, scrubSeek } = mixer;
+
+    const sharedHold = (opened: number): MixerHold => {
+      const own = mixer.hold(opened);
+      let held = true;
+      holders++;
+      return {
+        live: own.live,
+        release: () => {
+          if (!held || !own.live()) return;
+          held = false;
+          holders--;
+          if (holders === 0) own.release();
+        },
+      };
+    };
     const context = { set, get, runtimeOf, session: mixer.current };
 
     const loadWaveform = (opened: number, path: string, bars: number) => {
@@ -192,15 +211,17 @@ export function createSongPlayerStore(
     return {
       ...closedState,
       open: (songId, waveformBars) => {
+        const { songId: current, status } = get();
+        if (current === songId && ATTACHABLE.has(status))
+          return { hold: sharedHold(mixer.current()), loaded: loading };
         const opened = mixer.begin();
+        holders = 0;
         set({ ...closedState, status: 'loading', songId });
-        return {
-          hold: mixer.hold(opened),
-          loaded: load(opened, songId, waveformBars).catch((error: unknown) => {
-            console.warn('[kitbag] song failed to open', error);
-            if (live(opened)) set({ status: 'failed' });
-          }),
-        };
+        loading = load(opened, songId, waveformBars).catch((error: unknown) => {
+          console.warn('[kitbag] song failed to open', error);
+          if (live(opened)) set({ status: 'failed' });
+        });
+        return { hold: sharedHold(opened), loaded: loading };
       },
       close: mixer.close,
       ...transportActions(get, runtimeOf, scrubSeek),

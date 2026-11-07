@@ -99,6 +99,23 @@ describe('sharing the mixer with stem songs', () => {
     expect(stemSongs.getState().status).toBe('ready');
   });
 
+  it('reloads a song a stem song displaced when it opens again', async () => {
+    const { songs, stemSongs, songFake } = storesSharingOneMixer();
+    const first = songs.getState().open(SONG_ID, BARS);
+    await first.loaded;
+    await stemSongs.getState().open(STEM_SET_ID, BARS);
+    const again = songs.getState().open(SONG_ID, BARS);
+    await again.loaded;
+    expect(songFake.commands.loadTrack).toHaveBeenCalledTimes(2);
+    expect(first.hold.live()).toBe(false);
+    expect(again.hold.live()).toBe(true);
+    expect(stemSongs.getState().setId).toBeNull();
+    expect(songs.getState()).toMatchObject({
+      songId: SONG_ID,
+      status: 'ready',
+    });
+  });
+
   it('keeps the song playing when the displaced stem screen closes late', async () => {
     const { songs, stemSongs, stemFake } = storesSharingOneMixer();
     await stemSongs.getState().open(STEM_SET_ID, BARS);
