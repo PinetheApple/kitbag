@@ -894,22 +894,26 @@ working. Changes:
 - Lock via `kb_metronome_set_grid` (§4.2) — follows per-beat spacing, so
   non-constant tempo works.
 - Latency-compensated: click and track land together at the speaker.
-- Count-in before the lock engages. Until count-in under a grid exists (#298)
-  the Count-in chip and its group show disabled, with a note that it arrives
-  with count-in.
+- Count-in before the lock engages. Until it works under a grid (#298), the
+  Count-in chip and its sheet group show disabled with the note "arrives with
+  count-in".
 - **Click settings belong to the song.** The Count-in, Click and Accent chips
   open one shared sheet at the tapped group; changes apply live and stay with
   this song, unsaved until "Save for this song". The standalone metronome's
   settings never change. The click sound is one of the engine's sounds (§13.7).
 - "Save for this song" stores a preset that belongs to the song. A song with a
   saved preset opens with its click on; a song without one opens with it off.
-  The song's preset is hidden from the Metronome's "All songs" list.
+  The preset is a `SongPreset` linked to the library song through its existing
+  `librarySongId`; linked presets are excluded from the Metronome's "All songs"
+  list.
 - **Play on the standalone Metronome while a song's click runs** turns the
   song's click off; the song keeps playing and its card shows click off. The
-  standalone metronome starts on its own settings, untouched.
-- **The metronome is not a singleton to borrow.** Play-along and the player get
-  their own metronome state, or the shell saves and restores. See §8.9 — this is
-  one open question, not two.
+  standalone metronome starts on its own settings, untouched. Tapping CLICK OFF
+  on the card turns the song's click back on, which stops the standalone
+  metronome.
+- **One engine metronome, settled for this player.** The song's click and
+  standalone Play preempt each other, and the standalone settings never change.
+  Whether Play along gets its own metronome state is still open (§8.9).
 
 ### 6.5 Acceptance
 
@@ -1249,8 +1253,9 @@ the app layer that saves and restores around the borrow. The design cannot tell
 these apart; **the acceptance criterion can:** opening Play along and closing it
 must leave the standalone metronome exactly as it was, including mid-run.
 
-The same holds for the single-song player (§6.4). After a song closes, the
-standalone metronome stays stopped with its settings intact; it never restarts
+The single-song player (§6.4) has a narrower rule on purpose: closing a song
+restores the standalone metronome's settings intact but not its run state. A
+standalone metronome the song's click preempted stays stopped; it never restarts
 on its own.
 
 ### 8.10 States

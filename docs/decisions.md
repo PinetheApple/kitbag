@@ -1005,7 +1005,8 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   A mini-player on Home and Songs (music-note icon, title, artist, click state, play/pause,
   close, progress line); leaving the player keeps the session; Stop sits in the player's
   overflow menu, and Stop in the media notification ends the session the same way. Play on the
-  standalone Metronome turns a song's click off and the song keeps playing. Count-in, Click and
+  standalone Metronome turns a song's click off and the song keeps playing; CLICK OFF on the
+  player card turns it back on, which stops the standalone metronome (the engine has one). Count-in, Click and
   Accent open one shared sheet, apply live and stay with the song, unsaved until "Save for this
   song"; the saved preset belongs to the song, turns the click on when the song opens, and is
   hidden from the Metronome's "All songs" list; without one the click opens off. Count-in shows
@@ -1014,5 +1015,5 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   grid keeps its card, mutes the chips, draws a flat waveform and offers Re-analyse on failure.
   A-B marks at the playhead, beat-snapped, with draggable handles. Ticks thin to fit the lane,
   falling back to downbeats at a bar stride. After a song closes the standalone metronome stays
-  stopped with its settings intact. A row tap opens the player paused (coordinator call, kept).
+  stopped with its settings intact. A row tap opens the player paused.
   **[user]**
