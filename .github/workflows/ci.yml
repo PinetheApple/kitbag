@@ -90,7 +90,7 @@ jobs:
         run: ./scripts/web-check.sh
       - name: Version — app.json and its package.json mirrors agree (#53)
         run: ./scripts/version.sh check
-      - name: Release scripts — next version, versionCode, signature and release gates, preflight reruns
+      - name: Script tests
         run: ./scripts/version.test.sh && ./scripts/verify-apk-signature.test.sh && ./scripts/release-gate.test.sh && ./scripts/changelog.test.sh && ./scripts/release-notes.test.sh && ./scripts/preflight.test.sh
 
   # The only gate that compiles Kotlin, the JNI glue and the codegen'd

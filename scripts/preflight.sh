@@ -69,8 +69,6 @@ tree_fingerprint() {
   git ls-files -m -o --exclude-standard -z | xargs -0 -r sha1sum 2>/dev/null | sha1sum
 }
 
-# run_gate <name> <check-cmd> [fix-cmd]
-# Collects failures rather than exiting, so one run reports everything.
 run_gate() {
   local name=$1 check=$2 fix=${3:-} before
   GATE_REWROTE=0
@@ -95,7 +93,6 @@ run_gate() {
   return 1
 }
 
-# rerun_after_fix <name> <check-cmd>
 # Replaces the gate's result, which predates a fix's rewrite of the files it read.
 rerun_after_fix() {
   local name=$1 check=$2 kept=() gate
@@ -105,6 +102,15 @@ rerun_after_fix() {
   FAILED=(${kept[@]+"${kept[@]}"})
   run_gate "$name — after auto-fix" "$check"
 }
+
+# First, so every gate below reads what the native format fix rewrites.
+if ((SKIP_NATIVE)); then
+  step "Native core — skipped"
+else
+  run_gate "Native core — configure" \
+    "cmake -S native/audio_core -B native/audio_core/build -G Ninja -DKITBAG_BUILD_TOOLS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON >/dev/null"
+  run_gate "Native lint — clang-format + clang-tidy" "bash scripts/lint.sh >/dev/null" "bash scripts/format.sh >/dev/null"
+fi
 
 readonly TYPECHECK_GATE="Typecheck — all packages"
 readonly TYPECHECK_CHECK="pnpm -w typecheck"
@@ -127,20 +133,10 @@ run_gate "Generation drift guards (§13.7, §13.8.1)" "pnpm -w generate:check"
 run_gate "Tests — unit suites + lint eval harness" "pnpm -w test --concurrency=2"
 run_gate "Web bundle — exports, no native-only modules (#70)" "./scripts/web-check.sh"
 run_gate "Version — app.json and its package.json mirrors agree" "./scripts/version.sh check"
-run_gate "Release-script tests" "./scripts/version.test.sh && ./scripts/verify-apk-signature.test.sh && ./scripts/release-gate.test.sh && ./scripts/changelog.test.sh && ./scripts/release-notes.test.sh && ./scripts/preflight.test.sh"
+run_gate "Script tests" "./scripts/version.test.sh && ./scripts/verify-apk-signature.test.sh && ./scripts/release-gate.test.sh && ./scripts/changelog.test.sh && ./scripts/release-notes.test.sh && ./scripts/preflight.test.sh"
 
-if ((SKIP_NATIVE)); then
-  step "Native core — skipped"
-else
-  run_gate "Native core — configure" \
-    "cmake -S native/audio_core -B native/audio_core/build -G Ninja -DKITBAG_BUILD_TOOLS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON >/dev/null"
-  readonly NATIVE_BUILD_GATE="Native core — build"
-  readonly NATIVE_BUILD_CHECK="cmake --build native/audio_core/build >/dev/null"
-  run_gate "$NATIVE_BUILD_GATE" "$NATIVE_BUILD_CHECK"
-  run_gate "Native lint — clang-format + clang-tidy" "bash scripts/lint.sh >/dev/null" "bash scripts/format.sh >/dev/null"
-  if ((GATE_REWROTE)); then
-    rerun_after_fix "$NATIVE_BUILD_GATE" "$NATIVE_BUILD_CHECK"
-  fi
+if ((!SKIP_NATIVE)); then
+  run_gate "Native core — build" "cmake --build native/audio_core/build >/dev/null"
 
   step "Native verify tools"
   for tool in metronome_verify abi_verify beat_tracker_verify mixer_verify \

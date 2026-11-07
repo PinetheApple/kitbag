@@ -1,16 +1,20 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-cd "$(dirname "$0")/.." || exit 1
-
 readonly EXIT_OK=0
 readonly EXIT_FAILED=1
+
+cd "$(dirname "$0")/.." || exit "$EXIT_FAILED"
+
 readonly PREFLIGHT=scripts/preflight.sh
 readonly TYPECHECK='pnpm -w typecheck'
 readonly LINT='pnpm -w lint'
 readonly BUILD='cmake --build'
+readonly NATIVE_FIX='native fix'
+readonly VERIFY_RAN='verify fresh'
+export VERIFY_TOOL=native/audio_core/build/metronome_verify
 
-SCRATCH=$(mktemp -d) || exit 1
+SCRATCH=$(mktemp -d) || exit "$EXIT_FAILED"
 readonly SCRATCH
 trap 'rm -rf "$SCRATCH"' EXIT
 
@@ -29,12 +33,17 @@ case "$*" in
   '-w lint --fix') sed -i -E "s/LINT_FIXABLE\S*/$LINT_FIX_WRITES/" src.ts ;;
   '-w format') ! grep -q UNFORMATTED src.ts ;;
   'exec prettier --write .') sed -i "s/UNFORMATTED/$FORMAT_FIX_WRITES/" src.ts ;;
+  '-w generate:check') ! grep -q NATIVE_DRIFT native.cpp ;;
+  '-w test --concurrency=2') ! grep -q NATIVE_TEST_BREAK native.cpp ;;
 esac
 STUB
 cat > "$FAKE_BIN/cmake" <<'STUB'
 #!/usr/bin/env bash
 echo "cmake $*" >> "$CALLS"
-[[ $1 != --build ]] || ! grep -q NATIVE_BROKEN native.cpp
+[[ $1 == --build ]] || exit 0
+grep -q NATIVE_BROKEN native.cpp && exit 1
+printf '#!/usr/bin/env bash\necho "verify fresh" >> "$CALLS"\n' > "$VERIFY_TOOL"
+chmod +x "$VERIFY_TOOL"
 STUB
 chmod +x "$FAKE_BIN/pnpm" "$FAKE_BIN/cmake"
 
@@ -57,9 +66,14 @@ new_tree() {
 STUB
   cat > "$tree/scripts/format.sh" <<'STUB'
 #!/usr/bin/env bash
+echo "native fix" >> "$CALLS"
 sed -i "s/NATIVE_UNFORMATTED/$NATIVE_FIX_WRITES/" native.cpp
 STUB
   printf 'clean\n' > "$tree/native.cpp"
+  printf 'native/audio_core/build/\n' > "$tree/.gitignore"
+  mkdir -p "$tree/native/audio_core/build"
+  printf '#!/usr/bin/env bash\nexit 1\n' > "$tree/$VERIFY_TOOL"
+  chmod +x "$tree/$VERIFY_TOOL"
   git -C "$tree" init -q
   commit_all "$tree" base
 }
@@ -100,7 +114,6 @@ report() {
   fi
 }
 
-# expect <name> <src.ts text> <its git state> <want exit> <want text> [preflight args]
 expect() {
   local name=$1 src=$2 git_state=$3 want_exit=$4 want_text=$5 status problem=""
   shift 5
@@ -128,6 +141,26 @@ ran_times() {
     report "$name" ""
   else
     report "$name" "'$command' ran $count times, wanted $want"
+  fi
+}
+
+ran_before() {
+  local name=$1 first=$2 then=$3 first_line then_line
+  first_line=$(grep -n "^$first" "$CALLS" | tail -1 | cut -d: -f1)
+  then_line=$(grep -n "^$then" "$CALLS" | head -1 | cut -d: -f1)
+  if [[ -n $first_line && -n $then_line ]] && ((first_line < then_line)); then
+    report "$name" ""
+  else
+    report "$name" "'$first' at line '$first_line', '$then' at line '$then_line'"
+  fi
+}
+
+not_ran() {
+  local name=$1 command=$2
+  if grep -q "^$command" "$CALLS"; then
+    report "$name" "'$command' ran"
+  else
+    report "$name" ""
   fi
 }
 
@@ -187,11 +220,31 @@ src_is "  and the file is untouched" UNFORMATTED
 NATIVE_SRC=NATIVE_UNFORMATTED
 NATIVE_FIX_WRITES=NATIVE_BROKEN
 expect "native format fix that breaks the build fails" clean clean \
-  "$EXIT_FAILED" "FAILED: Native core — build — after auto-fix"
-ran_times "  and the build read the rewrite" "$BUILD" 2
+  "$EXIT_FAILED" "FAILED: Native core — build"
+NATIVE_FIX_WRITES=NATIVE_DRIFT
+expect "native format fix that drifts generated constants fails" clean clean \
+  "$EXIT_FAILED" "FAILED: Generation drift guards"
+NATIVE_FIX_WRITES=NATIVE_TEST_BREAK
+expect "native format fix that breaks the tests fails" clean clean \
+  "$EXIT_FAILED" "FAILED: Tests — unit suites"
 NATIVE_FIX_WRITES=clean
-expect "harmless native format fix rebuilds and passes" clean clean "$EXIT_OK" "auto-fixed:"
-ran_times "  and the build read the rewrite" "$BUILD" 2
+expect "harmless native format fix passes" clean clean "$EXIT_OK" "auto-fixed:"
+ran_before "  and every gate read the rewrite" "$NATIVE_FIX" "$TYPECHECK"
+ran_before "  and the build read the rewrite" "$NATIVE_FIX" "$BUILD"
+ran_times "  and the build ran once" "$BUILD" 1
+NATIVE_SRC=clean
+
+expect "verify tools run after the build" clean clean "$EXIT_OK" "all gates passed"
+ran_before "  in that order" "$BUILD" "$VERIFY_RAN"
+
+NATIVE_SRC=NATIVE_BROKEN
+expect "--skip-native builds nothing and verifies nothing" clean clean \
+  "$EXIT_OK" "Native core — skipped" --skip-native
+not_ran "  no cmake" cmake
+not_ran "  no verify tool" "$VERIFY_RAN"
+NATIVE_SRC=NATIVE_UNFORMATTED
+expect "--skip-native leaves native format alone" clean clean "$EXIT_OK" "" --skip-native
+not_ran "  no native fix" "$NATIVE_FIX"
 NATIVE_SRC=clean
 
 echo
