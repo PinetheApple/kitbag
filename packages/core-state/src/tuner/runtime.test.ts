@@ -10,7 +10,7 @@ function fakeRuntime(): TunerRuntime {
       check: () => Promise.resolve('granted'),
       request: () => Promise.resolve('granted'),
     },
-    appActivity: { subscribe: () => () => undefined },
+    appActivity: { current: () => 'active', subscribe: () => () => undefined },
   };
 }
 

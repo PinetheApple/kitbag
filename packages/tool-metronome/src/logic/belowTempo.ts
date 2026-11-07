@@ -133,8 +133,34 @@ export function beatDotsHeight(
   return beatLines + polyBlockHeight(shape.poly, room);
 }
 
-function legendHeight(fontScale: number): number {
+export function legendHeight(fontScale: number): number {
   return metronome.legendTop + metronome.legendRow * grownTextScale(fontScale);
+}
+
+function runningStackGrowth(fontScale: number): number {
+  return (
+    statusStackHeight(true, fontScale) - statusStackHeight(false, fontScale)
+  );
+}
+
+// Android lays out a ScrollView before its content, and the offset clamps to the
+// stale range in between, so resizing the viewport on Stop loses the scroll position.
+export function pinnedViewportOverlap(
+  running: boolean,
+  fontScale: number,
+): number {
+  if (!running || !statusStackPinned(fontScale)) return 0;
+  return runningStackGrowth(fontScale);
+}
+
+export function pinnedStackScrollSlack(
+  running: boolean,
+  fontScale: number,
+): number {
+  if (!statusStackPinned(fontScale)) return 0;
+  const growth = runningStackGrowth(fontScale);
+  if (running) return growth;
+  return Math.max(0, growth - legendHeight(fontScale));
 }
 
 export function belowTempoHeight(

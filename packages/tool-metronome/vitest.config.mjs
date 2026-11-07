@@ -17,6 +17,7 @@ export default defineConfig({
       'src/screen/PracticeSummarySheet.test.ts',
       'src/library/editor/RigGroup.test.tsx',
       'src/screen/StatusStack.test.tsx',
+      'src/screen/MetronomeScreen.test.tsx',
     ],
     alias: {
       '@kitbag/core-native': stub(

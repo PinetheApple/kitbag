@@ -6,6 +6,9 @@ import {
   beatDotsHeight,
   beatLinePitch,
   belowTempoReserve,
+  legendHeight,
+  pinnedStackScrollSlack,
+  pinnedViewportOverlap,
   DOT_METRICS,
   statusProgressReserve,
   statusRowHeight,
@@ -176,6 +179,48 @@ describe('the status stack', () => {
       expect(statusStackHeight(true, fontScale)).toBe(
         statusRowPitch(fontScale) + row,
       );
+    }
+  });
+
+  it('adds no overlap or slack while the status stack sits in the body', () => {
+    for (const running of [false, true]) {
+      for (const fontScale of [0.85, 1]) {
+        expect(pinnedViewportOverlap(running, fontScale)).toBe(0);
+        expect(pinnedStackScrollSlack(running, fontScale)).toBe(0);
+      }
+    }
+  });
+
+  it('keeps the viewport height when Start and Stop resize the stack', () => {
+    for (const fontScale of [1.3, 2]) {
+      const stopped =
+        pinnedViewportOverlap(false, fontScale) -
+        statusStackHeight(false, fontScale);
+      const running =
+        pinnedViewportOverlap(true, fontScale) -
+        statusStackHeight(true, fontScale);
+      expect(running).toBeCloseTo(stopped);
+    }
+  });
+
+  it('keeps the content height when Start and Stop swap the modelled legend', () => {
+    for (const fontScale of [1.3, 2]) {
+      expect(pinnedStackScrollSlack(true, fontScale)).toBeCloseTo(
+        pinnedStackScrollSlack(false, fontScale) + legendHeight(fontScale),
+      );
+    }
+  });
+
+  it('keeps the running scroll range of a viewport that stops above the stack', () => {
+    const VISIBLE_BODY = 300;
+    for (const fontScale of [1.3, 2]) {
+      const viewport = VISIBLE_BODY + pinnedViewportOverlap(true, fontScale);
+      const contentBeyondBody = 200;
+      const content =
+        VISIBLE_BODY +
+        contentBeyondBody +
+        pinnedStackScrollSlack(true, fontScale);
+      expect(content - viewport).toBeCloseTo(contentBeyondBody);
     }
   });
 

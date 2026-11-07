@@ -760,7 +760,16 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   boxes, not measured; needs a device check. A wider row wraps onto its
   second line rather than truncating. Above the default scale the status stack leaves the
   scrolling body and sits directly above the transport, so a body that overflows cannot
-  push it out of view, at one fixed height, the running stack's, so nothing resizes on Play.
+  push it out of view. It is one row tall stopped and two running. Start and Stop leave the
+  scroll view's frame and content height alone (#304): a clip follows the stack, and the
+  running viewport reaches under the stack's extra row. Android lays out a scroll view
+  before its content, and the offset clamps to the stale range in between, so resizing the
+  viewport on Stop would lose the scroll position. Running, the content pads by the stack
+  difference; stopped, by that less the legend's modelled height. The slack models one
+  legend row, so any legend that wraps leaves the stopped range longer than running, and
+  Start at scroll end moves the body. It happens at scroll end only. The measured case is
+  2.0 with poly on, about 48 dp. Coordinator call; the owner may
+  overturn it. **[recorded]**
   On a small screen at 2.0 the beat dots then sit below the fold and are reached by
   scrolling the body (coordinator call, 2026-11-02, open to owner review). Above the default scale
   a segmented control's options and the sound picker's items take their label's width
@@ -914,6 +923,19 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   tool tiles use the same helper, with their floor at `homeTile.titleMinScale` of the
   tile title's design size; no `adjustsFontSizeToFit` or `minimumFontScale` is left.
 
+- **2026-11-07 · App-bar titles above the default text size (§12.6, #303)** — Amends the
+  2026-11-03 #287 entry's floors. Over an artist line the title's floor is never below the
+  artist's size, so a floored title does not read smaller than the line under it. Above the
+  default scale a title clears a trailing chip by `space.controlGap` and, with nothing after
+  it, ends at `space.screenInset`; at 1.0 neither moves. Android reserves an ellipsis with
+  the text view's own paint, which `ReactTextView.setFontSize` sizes in dp while the text
+  draws in sp, and whose typeface is never set. So the reserve depends on the default face
+  as well as the size, and above 1.0 a reserve that small lets the third dot fall past the
+  box. App-bar lines nest their text in a parent whose `fontSize` carries the font scale and
+  the ratio of the widest app face's ellipsis to the default face's; over-reserving costs a
+  little text. Other ellipsized lines keep the defect. Coordinator call; the owner may
+  overturn it. **[recorded]**
+
 - **2026-11-07 · Library rows above the default text size (§12.6, #301)** — Amends the
   2026-11-02 #192 entry's one-line rule for Library rows. Above the default scale the title
   holds at most three lines and the facts two, then ellipsize, and the badges move from
@@ -921,3 +943,10 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   at 360 dp and 2.0 the badges left too little room for ordinary long words, and moving them
   gives the title 236 dp. A single word wider than that still breaks inside itself. At 1.0
   the row is unchanged. Coordinator call; the owner may overturn it. **[recorded]**
+
+- **2026-11-07 · Row ellipses and the preset editor's Name and Notes fields (§12.6, #317)** —
+  `RowText` and Library rows use the #303 reserve. It applies per view paint, so multi-line
+  titles need it too. The preset editor's Name and Notes fields wrap instead of scrolling,
+  because a glyph cut at the field's edge reads as a stray mark. `.editrow .v` doesn't forbid
+  wrapping. Return leaves the field and a pasted newline becomes a space. Coordinator call;
+  the owner may overturn it. **[recorded]**
