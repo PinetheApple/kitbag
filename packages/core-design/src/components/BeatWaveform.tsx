@@ -44,7 +44,7 @@ export function BeatWaveform({
         downbeatIndices,
         durationSec,
         width,
-        songPlayer.beatTickColumn,
+        songPlayer.beatTickMinGap,
       ),
     [beats, downbeatIndices, durationSec, width],
   );
