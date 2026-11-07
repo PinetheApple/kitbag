@@ -216,6 +216,15 @@ describe('AppBar title above the default text size', () => {
 });
 
 describe('AppBar', () => {
+  it('draws the leading key as close for a mode that cancels, not back', () => {
+    const markup = render(
+      <AppBar title="Retime lyrics" closeLabel="Close retime" onClose={noop} />,
+    );
+    const icons = nodes(markup).filter((n) => n.kind === 'icon');
+    expect(icons.map((icon) => icon.label)).toEqual(['close']);
+    expect(button(markup, 'Close retime')).toBeDefined();
+  });
+
   it.each(MODES)('draws back as a chevron in a real 48dp key (%s)', (mode) => {
     const markup = render(<AppBar title="Tuner" onBack={noop} />, mode);
     const back = button(markup, 'Back');

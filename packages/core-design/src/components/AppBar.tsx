@@ -124,6 +124,8 @@ export interface AppBarProps {
   readonly wordmark?: boolean;
   readonly onBack?: (() => void) | undefined;
   readonly backLabel?: string;
+  readonly onClose?: (() => void) | undefined;
+  readonly closeLabel?: string;
   readonly trailing?: ReactNode;
   readonly actions?: readonly AppBarAction[];
   readonly flush?: boolean;
@@ -196,6 +198,8 @@ export function AppBar({
   wordmark = false,
   onBack,
   backLabel = 'Back',
+  onClose,
+  closeLabel = 'Close',
   trailing,
   actions = [],
   flush = false,
@@ -210,7 +214,7 @@ export function AppBar({
         styles.bar,
         flush && styles.flush,
         packed && styles.packed,
-        onBack === undefined && styles.noBack,
+        onBack === undefined && onClose === undefined && styles.noBack,
       ]}
     >
       {onBack === undefined ? null : (
@@ -219,6 +223,14 @@ export function AppBar({
           label={backLabel}
           color="text"
           onPress={onBack}
+        />
+      )}
+      {onClose === undefined ? null : (
+        <BarIconButton
+          icon="close"
+          label={closeLabel}
+          color="text"
+          onPress={onClose}
         />
       )}
       <View style={styles.middle}>

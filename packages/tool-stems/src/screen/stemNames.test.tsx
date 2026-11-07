@@ -11,19 +11,6 @@ const MASTER = 'Master';
 
 const fitted = vi.hoisted(() => [] as Props[]);
 
-vi.mock('react-native', async () => {
-  const { createElement: h } = await import('react');
-  const box = (props: Props) => h('div', null, props.children);
-  return {
-    BackHandler: { addEventListener: () => ({ remove: () => undefined }) },
-    Pressable: box,
-    ScrollView: box,
-    Text: box,
-    View: box,
-    useWindowDimensions: () => ({ fontScale: 1 }),
-  };
-});
-
 vi.mock('@kitbag/core-design', async (original) => ({
   ...(await original<Record<string, unknown>>()),
   createThemedStyles: () => () =>

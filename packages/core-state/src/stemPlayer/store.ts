@@ -1,4 +1,4 @@
-import type { StemSetRecord } from '@kitbag/core-db';
+import type { StemSetRecord, StoredSection } from '@kitbag/core-db';
 import {
   acquireEngineHold,
   KB_MAX_TRACKS,
@@ -10,15 +10,24 @@ import { mixActions, transportActions } from './actions.ts';
 import { clickActions, turnClickOff, stopClick } from './clickActions.ts';
 import { debounce } from './debounce.ts';
 import { NO_SONG_FACTS, songFacts, type SongFacts } from './facts.ts';
+import type { LoopSeconds } from './loop.ts';
 import { loopActions } from './loopActions.ts';
+import {
+  NO_LYRICS,
+  songLyrics,
+  type RetimeTap,
+  type SongLyrics,
+} from './lyrics.ts';
 import { UNITY_GAIN } from './mix.ts';
 import { mixSaver } from './mixSaver.ts';
 import { renameActions } from './renameActions.ts';
+import { retimeActions } from './retimeActions.ts';
 import {
   getStemPlayer,
   type StemPlayerCommands,
   type StemPlayerRuntime,
 } from './runtime.ts';
+import { sortedSections } from './sections.ts';
 import { secondsToFrames } from './time.ts';
 
 const MIX_SAVE_DELAY_MS = 600;
@@ -44,10 +53,21 @@ export type LoopState =
       readonly endSec: number;
     };
 
+export type RetimeState =
+  | { readonly kind: 'off' }
+  | {
+      readonly kind: 'recording';
+      readonly taps: readonly RetimeTap[];
+      readonly nextLine: number;
+      readonly shiftSteps: number;
+    };
+
 export type StemPlayerStatus =
   'idle' | 'loading' | 'ready' | 'missing' | 'failed';
 
 export type LoopFailure = 'tooShort' | 'pastEnd' | 'engine';
+
+export type RetimeFailure = 'notStored';
 
 export interface StemPlayerState {
   readonly status: StemPlayerStatus;
@@ -63,7 +83,12 @@ export interface StemPlayerState {
   readonly beats: readonly number[];
   readonly loop: LoopState;
   readonly loopFailure: LoopFailure | null;
+  readonly undoableLoop: LoopSeconds | null;
   readonly click: boolean;
+  readonly sections: readonly StoredSection[];
+  readonly lyrics: SongLyrics;
+  readonly retime: RetimeState;
+  readonly retimeFailure: RetimeFailure | null;
 }
 
 export interface StemPlayerActions {
@@ -80,6 +105,18 @@ export interface StemPlayerActions {
   readonly seek: (frame: number) => void;
   readonly skip: (seconds: number) => void;
   readonly markLoop: () => Promise<void>;
+  readonly undoLoop: () => Promise<void>;
+  readonly dismissLoopUndo: () => void;
+  readonly jumpToSection: (index: number) => Promise<void>;
+  readonly loopSection: (index: number) => Promise<void>;
+  readonly beginRetime: (fromLine: number) => void;
+  readonly tapRetime: () => void;
+  readonly undoRetimeTap: () => void;
+  readonly shiftRetime: (steps: number) => void;
+  readonly commitRetime: () => Promise<void>;
+  readonly cancelRetime: () => void;
+  readonly leaveRetime: () => void;
+  readonly resetRetime: () => Promise<void>;
   readonly toggleClick: () => Promise<void>;
   readonly renameStem: (index: number, name: string) => Promise<void>;
 }
@@ -119,7 +156,12 @@ const closedState: StemPlayerState = {
   beats: [],
   loop: { kind: 'off' },
   loopFailure: null,
+  undoableLoop: null,
   click: false,
+  sections: [],
+  lyrics: NO_LYRICS,
+  retime: { kind: 'off' },
+  retimeFailure: null,
 };
 
 function longestSeconds(record: StemSetRecord): number {
@@ -271,6 +313,8 @@ export function createStemPlayerStore(
         engineRate,
         durationFrames: secondsToFrames(longestSeconds(record), engineRate),
         beats: record.beats,
+        sections: sortedSections(record.sections),
+        lyrics: songLyrics(record.lyrics, record.lyricsRetimed),
       });
       loadWaveforms(opened, record, bars);
     };
@@ -278,7 +322,10 @@ export function createStemPlayerStore(
     return {
       ...closedState,
       open: async (setId, waveformBars) => {
-        if (get().setId !== null) teardown(get);
+        if (get().setId !== null) {
+          get().leaveRetime();
+          teardown(get);
+        }
         releaseEngine ??= acquireEngineHold(runtimeOf().commands);
         songStopSubscription ??= runtimeOf().commands.onSongStopped(() => {
           turnClickOff(context);
@@ -294,6 +341,7 @@ export function createStemPlayerStore(
       },
       close: () => {
         session++;
+        get().leaveRetime();
         teardown(get);
         set(closedState);
         releaseEngine?.();
@@ -302,10 +350,11 @@ export function createStemPlayerStore(
         songStopSubscription = null;
       },
       ...mixActions(set, get, runtimeOf, saver),
-      ...transportActions(get, runtimeOf, scrubSeek),
+      ...transportActions(set, get, runtimeOf, scrubSeek),
       ...loopActions(context),
       ...clickActions(context),
       ...renameActions(context),
+      ...retimeActions(context),
     };
   });
 }
