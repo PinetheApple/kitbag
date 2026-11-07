@@ -1,0 +1,1 @@
+• The tuner keeps listening after a system font size change, and never starts the mic while the app is in the background.
