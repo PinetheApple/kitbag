@@ -53,13 +53,11 @@ export const KB_MIXER_GAIN_BOUNDS = {
   max: 2,
 } as const;
 
-/** Playback speed range (Mixer::kMinRate, kMaxRate); kb_mixer_set_rate rejects anything outside it. */
 export const KB_MIXER_RATE_BOUNDS = {
   min: 0.5,
   max: 1,
 } as const;
 
-/** Per-track key in whole semitones (Mixer::kMinPitchSemitones, kMaxPitchSemitones); kb_mixer_set_track_pitch rejects anything outside it. */
 export const KB_MIXER_PITCH_BOUNDS = {
   min: -6,
   max: 6,

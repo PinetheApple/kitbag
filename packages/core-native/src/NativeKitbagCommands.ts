@@ -122,7 +122,6 @@ export interface Spec extends TurboModule {
   mixerClearLoop(): Promise<number>;
   mixerSetRate(rate: Double): Promise<number>;
   mixerRate(): Promise<number>;
-  // Whole semitones only, or the module truncates: a stored key goes through setTrackKey.
   mixerSetTrackPitch(track: Int32, semitones: Int32): Promise<number>;
   mixerTrackPitch(track: Int32): Promise<number>;
 

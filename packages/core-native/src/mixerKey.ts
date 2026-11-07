@@ -12,11 +12,11 @@ const wholeSemitones = (stored: number) => {
   return stored < 0 && magnitude > 0 ? -magnitude : magnitude;
 };
 
+// NaN fails both comparisons, so it is refused with the rest.
 const inRange = (semitones: number) =>
   semitones >= KB_MIXER_PITCH_BOUNDS.min &&
   semitones <= KB_MIXER_PITCH_BOUNDS.max;
 
-// NaN must stop here: the module's Double.toInt() would turn it into a valid key of 0.
 export function setTrackKey(
   commands: TrackKeyCommands,
   track: number,
