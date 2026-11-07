@@ -866,9 +866,9 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   body is the wrong default: 3 of 3 drags starting on the pad recorded a tap, and the pad moved
   120–160 dp between lines. Taps stay on touch-down. A body that fits stays as drawn. Once a
   session overflows it stays pinned until it ends, so the layout cannot flip between lines.
-  When the controls alone cannot fit the body, as at 360x640 and font scale 2.0, the whole body
-  scrolls instead so everything stays reachable; a small lines viewport, about 98–124 dp at
-  360x800, stays pinned. Coordinator call; the owner may overturn it. **[recorded]**
+  When the lines left would hold fewer than two rendered current-row lines and their margins,
+  about 93 dp at font scale 2.0 on the emulator, the whole body scrolls instead so everything
+  stays reachable; 360x800, about 98–124 dp of lines, stays pinned. Coordinator call; the owner may overturn it. **[recorded]**
 
 - **2026-11-07 · Loop note placement (§7.7, #139)** — The note stays right as drawn while that
   clears the A and B flags, then moves left of them if that clears, then onto its own row above

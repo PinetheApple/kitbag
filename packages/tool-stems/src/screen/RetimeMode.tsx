@@ -22,6 +22,7 @@ import {
   Text,
   View,
   type LayoutChangeEvent,
+  type TextLayoutEvent,
 } from 'react-native';
 
 import { retimePreview, shiftLabel } from '../logic/retimeView.ts';
@@ -144,12 +145,14 @@ interface RetimeLinesProps {
   readonly retime: Recording;
   readonly onLinesLayout?: (event: LayoutChangeEvent) => void;
   readonly onCurrentLayout?: (event: LayoutChangeEvent) => void;
+  readonly onCurrentLine?: (event: TextLayoutEvent) => void;
 }
 
 function RetimeLines({
   retime,
   onLinesLayout,
   onCurrentLayout,
+  onCurrentLine,
 }: RetimeLinesProps) {
   const styles = useStyles();
   const lyricStyles = useLyricStyles();
@@ -175,7 +178,12 @@ function RetimeLines({
           style={lyricStyles.currentRow}
           onLayout={onCurrentLayout}
         >
-          <Text style={[lyricStyles.line, lyricStyles.current]}>{current}</Text>
+          <Text
+            style={[lyricStyles.line, lyricStyles.current]}
+            onTextLayout={onCurrentLine}
+          >
+            {current}
+          </Text>
         </View>
       )}
       {next === null ? null : <Text style={lyricStyles.line}>{next}</Text>}
@@ -293,6 +301,7 @@ interface PinnedRetimeProps {
   readonly retime: Recording;
   readonly onBodyLayout: (event: LayoutChangeEvent) => void;
   readonly onControlsLayout: (event: LayoutChangeEvent) => void;
+  readonly onCurrentLine: (event: TextLayoutEvent) => void;
 }
 
 // The lines take all the spare height, so no line can move the pad under a finger.
@@ -300,6 +309,7 @@ function PinnedRetime({
   retime,
   onBodyLayout,
   onControlsLayout,
+  onCurrentLine,
 }: PinnedRetimeProps) {
   const styles = useStyles();
   const { list, onLinesLayout, onCurrentLayout } = useRetimeScroll(
@@ -319,6 +329,7 @@ function PinnedRetime({
           retime={retime}
           onLinesLayout={onLinesLayout}
           onCurrentLayout={onCurrentLayout}
+          onCurrentLine={onCurrentLine}
         />
       </ScrollView>
       <View
@@ -333,7 +344,7 @@ function PinnedRetime({
 }
 
 // A drag here moves the pad, which the pinned layout exists to avoid; it is only for
-// controls too tall to pin, and it follows no line for the same reason.
+// when pinning leaves no room to read, and it follows no line for the same reason.
 function ScrollingRetime({ retime }: { readonly retime: Recording }) {
   const styles = useStyles();
   const { list } = useRetimeScroll(retime, false);
@@ -363,6 +374,7 @@ export function RetimeBody() {
         retime={retime}
         onBodyLayout={layout.onPinnedBody}
         onControlsLayout={layout.onControls}
+        onCurrentLine={layout.onCurrentLine}
       />
     );
   return (

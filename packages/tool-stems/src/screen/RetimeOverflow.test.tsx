@@ -1,3 +1,4 @@
+import { stemPlayer, stemSections } from '@kitbag/core-design';
 import { act } from 'react';
 import {
   afterEach,
@@ -47,6 +48,9 @@ describe('when the body overflows', () => {
   const BODY_AT_360_800 = 484;
   const BODY_AT_360_640 = 324;
   const CONTROLS_AT_2X = 370;
+  const LINE_AT_2X = 40.4;
+  const CHROME = stemSections.retimeGap + stemPlayer.bodyGap;
+  const bodyWithLines = (room: number) => room + CONTROLS_AT_2X + CHROME;
 
   afterEach(() => {
     display.fontScale = 1;
@@ -253,20 +257,38 @@ describe('when the body overflows', () => {
     });
   });
 
-  describe('when the controls alone cannot fit', () => {
+  describe('when the pin leaves too little room', () => {
     function measure(p: Player, body: number) {
       overflow(p);
+      const line = withTestId(p, 'retime-current')[0]?.find(
+        (node) => String(node.type) === 'Text',
+      );
+      act(() => {
+        (line?.props.onTextLayout as (e: unknown) => void)({
+          nativeEvent: { lines: [{ height: LINE_AT_2X }] },
+        });
+      });
       fireLayout(withTestId(p, 'retime-pinned')[0], { height: body });
       fireLayout(withTestId(p, 'retime-controls')[0], {
         height: CONTROLS_AT_2X,
       });
     }
 
-    it('stays pinned at 360x800, where the lines are only small', async () => {
+    it.each([
+      ['360x800', 124],
+      ['360x800 with the note on its own row', 98],
+    ])('stays pinned at %s, where two lines fit', async (_, room) => {
       const p = await retiming();
-      measure(p, BODY_AT_360_800);
+      measure(p, bodyWithLines(room));
       expect(withTestId(p, 'retime-lines')).toHaveLength(1);
       expect(withTestId(p, 'retime-body')).toHaveLength(0);
+    });
+
+    it('scrolls the whole body when two lines miss by a dp', async () => {
+      const p = await retiming();
+      measure(p, bodyWithLines(92));
+      expect(withTestId(p, 'retime-lines')).toHaveLength(0);
+      expect(withTestId(p, 'retime-body')).toHaveLength(1);
     });
 
     it('scrolls the whole body at 360x640, with everything inside', async () => {

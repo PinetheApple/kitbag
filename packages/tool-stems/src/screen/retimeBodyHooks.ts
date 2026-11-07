@@ -1,8 +1,12 @@
 import { useStemPlayer, type RetimeState } from '@kitbag/core-state';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { LayoutChangeEvent, ScrollView } from 'react-native';
+import type {
+  LayoutChangeEvent,
+  ScrollView,
+  TextLayoutEvent,
+} from 'react-native';
 
-import { controlsFit, overflows } from '../logic/retimeLayout.ts';
+import { overflows, pinnedLinesFit } from '../logic/retimeLayout.ts';
 
 type Recording = Extract<RetimeState, { readonly kind: 'recording' }>;
 type RetimeLayoutMode = 'drawn' | 'pinned' | 'scrolling';
@@ -10,14 +14,20 @@ type RetimeLayoutMode = 'drawn' | 'pinned' | 'scrolling';
 // One way only, so a layout can never flip back between lines.
 export function useRetimeLayout() {
   const [mode, setMode] = useState<RetimeLayoutMode>('drawn');
-  const heights = useRef({ viewport: 0, content: 0, body: 0, controls: 0 });
+  const heights = useRef({
+    viewport: 0,
+    content: 0,
+    body: 0,
+    controls: 0,
+    currentLine: 0,
+  });
   const checkOverflow = useCallback(() => {
     const { viewport, content } = heights.current;
     if (overflows(viewport, content)) setMode('pinned');
   }, []);
-  const checkControls = useCallback(() => {
-    const { body, controls } = heights.current;
-    if (!controlsFit(body, controls)) setMode('scrolling');
+  const checkPin = useCallback(() => {
+    const { body, controls, currentLine } = heights.current;
+    if (!pinnedLinesFit(body, controls, currentLine)) setMode('scrolling');
   }, []);
   const onViewport = useCallback(
     (event: LayoutChangeEvent) => {
@@ -36,18 +46,34 @@ export function useRetimeLayout() {
   const onPinnedBody = useCallback(
     (event: LayoutChangeEvent) => {
       heights.current.body = event.nativeEvent.layout.height;
-      checkControls();
+      checkPin();
     },
-    [checkControls],
+    [checkPin],
   );
   const onControls = useCallback(
     (event: LayoutChangeEvent) => {
       heights.current.controls = event.nativeEvent.layout.height;
-      checkControls();
+      checkPin();
     },
-    [checkControls],
+    [checkPin],
   );
-  return { mode, onViewport, onContent, onPinnedBody, onControls };
+  // Measured because Android 14+ scales large text non-linearly: 26 sp at 2.0
+  // renders about 40 dp per line, where size x fontScale says 65.
+  const onCurrentLine = useCallback(
+    (event: TextLayoutEvent) => {
+      heights.current.currentLine = event.nativeEvent.lines[0]?.height ?? 0;
+      checkPin();
+    },
+    [checkPin],
+  );
+  return {
+    mode,
+    onViewport,
+    onContent,
+    onPinnedBody,
+    onControls,
+    onCurrentLine,
+  };
 }
 
 export function useRetimeScroll(retime: Recording, followsLine: boolean) {
