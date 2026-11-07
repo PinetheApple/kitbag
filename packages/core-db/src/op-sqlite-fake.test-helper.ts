@@ -1,8 +1,8 @@
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 
-import type { Connection } from './client';
+import type { Scalar } from '@op-engineering/op-sqlite';
 
-type Scalar = string | number | boolean | null | ArrayBuffer | ArrayBufferView;
+import type { Connection } from './client';
 
 function toSqlValue(value: Scalar | undefined): SQLInputValue {
   if (value === undefined || value === null) return null;
@@ -22,27 +22,36 @@ function fromSqlValue(value: unknown): Scalar {
   return value as Scalar;
 }
 
-// Mirrors op-sqlite 17.1.2's enhanceDB(): its typed API plus the two untyped
-// wrappers it keeps for drizzle (src/functions.ts), so failures match the device.
+function onMacrotask<T>(work: () => T): Promise<T> {
+  return new Promise<void>((resolve) => setImmediate(resolve)).then(work);
+}
+
+// Mirrors op-sqlite 18.2.5: enhanceDB() in src/functions.ts over create_js_rows and
+// create_raw_result in cpp/OPUtils.cpp; async calls settle on a later macrotask.
 export function fakeOpSqlite() {
   const sqlite = new DatabaseSync(':memory:');
+  const lastWrite = sqlite.prepare(
+    'SELECT changes() AS changes, last_insert_rowid() AS rowid',
+  );
 
   function run(sql: string, params: Scalar[] = []) {
     const statement = sqlite.prepare(sql);
     const values = params.map(toSqlValue);
     const columnNames = statement.columns().map((column) => column.name);
-    const outcome =
-      columnNames.length > 0
-        ? { rows: statement.all(...values), changes: 0, lastInsertRowid: 0 }
-        : { rows: [], ...statement.run(...values) };
-    const rawRows = outcome.rows.map((row) =>
-      columnNames.map((name) => fromSqlValue(row[name])),
-    );
+    let rows: ReturnType<typeof statement.all> = [];
+    if (columnNames.length > 0) rows = statement.all(...values);
+    else statement.run(...values);
+    const { changes, rowid } = lastWrite.get() as {
+      changes: number;
+      rowid: number;
+    };
     return {
-      rowsAffected: Number(outcome.changes),
-      insertId: Number(outcome.lastInsertRowid),
+      rowsAffected: changes,
+      insertId: rowid,
+      rawRows: rows.map((row) =>
+        columnNames.map((name) => fromSqlValue(row[name])),
+      ),
       columnNames,
-      rawRows,
     };
   }
 
@@ -51,27 +60,29 @@ export function fakeOpSqlite() {
     const rows = rawRows.map((raw) =>
       Object.fromEntries(columnNames.map((name, i) => [name, raw[i] ?? null])),
     );
-    return { rowsAffected, insertId, rows };
+    return rowsAffected > 0 && insertId !== 0
+      ? { rowsAffected, insertId, rows }
+      : { rowsAffected, rows };
   }
 
   const connection = {
     executeSync: objects,
     execute: (sql: string, params?: Scalar[]) =>
-      Promise.resolve(objects(sql, params)),
+      onMacrotask(() => objects(sql, params)),
     executeRawSync: run,
     executeRaw: (sql: string, params?: Scalar[]) =>
-      Promise.resolve(run(sql, params)),
+      onMacrotask(() => run(sql, params)),
     executeAsync: (sql: string, params?: Scalar[]) =>
-      Promise.resolve(objects(sql, params)),
+      onMacrotask(() => objects(sql, params)),
     executeRawAsync: (sql: string, params?: Scalar[]) =>
-      Promise.resolve(run(sql, params)),
+      onMacrotask(() => run(sql, params)),
     close: () => {
       sqlite.close();
     },
-    closeAsync: () => {
-      sqlite.close();
-      return Promise.resolve();
-    },
+    closeAsync: () =>
+      onMacrotask(() => {
+        sqlite.close();
+      }),
   } satisfies Connection & Record<string, unknown>;
   return { connection };
 }

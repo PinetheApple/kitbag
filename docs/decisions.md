@@ -999,6 +999,25 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   the TS binding rounds on the way in and the database is unchanged. `current_bpm` stays the
   song's tempo at any speed. Unloading a track resets its key to 0, so a key carries to the next
   stem in that slot only when the command queue was full at the unload. **[recorded — coordinator ruling]**
+
+- **2026-11-07 · Single-song player, round 2 (§6.3, §6.4, §8.9, §12, #297)** — The owner
+  accepted every recommendation in the player mockup, now `design/kitbag-song-player.html`.
+  A mini-player on Home and Songs (music-note icon, title, artist, click state, play/pause,
+  close, progress line); leaving the player keeps the session; Stop sits in the player's
+  overflow menu, and Stop in the media notification ends the session the same way. Play on the
+  standalone Metronome turns a song's click off and the song keeps playing; CLICK OFF on the
+  player card turns it back on, which stops the standalone metronome (the engine has one). Count-in, Click and
+  Accent open one shared sheet, apply live and stay with the song, unsaved until "Save for this
+  song"; the saved preset belongs to the song, turns the click on when the song opens, and is
+  hidden from the Metronome's "All songs" list; without one the click opens off. Count-in shows
+  disabled until #298. The click sound is woodblock, not rimshot, which the engine lacks. The
+  1.0× key stays visible and disabled with a note until single-song speed exists. A song with no
+  grid keeps its card, mutes the chips, draws a flat waveform and offers Re-analyse on failure.
+  A-B marks at the playhead, beat-snapped, with draggable handles. Ticks thin to fit the lane,
+  falling back to downbeats at a bar stride. After a song closes the standalone metronome stays
+  stopped with its settings intact. A row tap opens the player paused.
+  **[user]**
+
 - **2026-11-07 · Song-grid downbeats at the ABI (§4, §4.2, #300)** — `kb_metronome_set_grid`
   carries the downbeat indices as an array copied during the call, and §4 now states the
   boundary rule as it is. A separate staged call would still pass an array, and per-index
