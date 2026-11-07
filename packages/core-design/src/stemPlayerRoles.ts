@@ -57,7 +57,7 @@ export const songPlayer = {
   beatTickStroke: 1,
   beatTickShort: 8,
   beatTickTall: 20,
-  beatTickColumn: 3,
+  beatTickMinGap: 3,
   waveBars: 64,
   lockGap: 10,
 } as const;
