@@ -56,7 +56,9 @@ export function makeFakes() {
   };
 
   let listener: ((a: AppActivity) => void) | undefined;
+  let activity: AppActivity = 'active';
   const appActivity = {
+    current: () => activity,
     subscribe: vi.fn((l: (a: AppActivity) => void) => {
       listener = l;
       return () => {
@@ -75,7 +77,10 @@ export function makeFakes() {
     setPermission: (p: PermissionAnswer) => {
       permission = p;
     },
-    emit: (a: AppActivity) => listener?.(a),
+    emit: (a: AppActivity) => {
+      activity = a;
+      listener?.(a);
+    },
     hasListener: () => listener !== undefined,
     micPermission,
     runtime,

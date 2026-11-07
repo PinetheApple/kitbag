@@ -20,6 +20,7 @@ export interface MicPermissionSource {
 export type AppActivity = 'active' | 'background';
 
 export interface AppActivitySource {
+  readonly current: () => AppActivity;
   readonly subscribe: (listener: (activity: AppActivity) => void) => () => void;
 }
 

@@ -52,10 +52,11 @@ export interface CustomTuningActions {
 }
 
 export interface TunerActions extends CustomTuningActions {
-  /** Screen focus. Uses the session's tuning, or `defaultTuning` if none yet. */
+  /** Uses the session's tuning, or `defaultTuning` if none yet. */
   enter: (defaultTuning: TunerTuning) => void;
-  /** Screen blur. */
   leave: () => void;
+  /** Screen focus; the returned function is the blur. */
+  acquire: (defaultTuning: TunerTuning) => () => void;
   /** Ask for the mic again (after a denial or a device failure). */
   retryMic: () => void;
   setAuto: () => void;

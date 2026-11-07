@@ -23,14 +23,14 @@ const commands: TunerCommands = {
 };
 
 // A hidden tab stands in for the app going to the background.
+const currentActivity = () =>
+  globalThis.document.visibilityState === 'hidden' ? 'background' : 'active';
+
 const appActivity: AppActivitySource = {
+  current: currentActivity,
   subscribe: (listener) => {
     const onChange = () => {
-      listener(
-        globalThis.document.visibilityState === 'hidden'
-          ? 'background'
-          : 'active',
-      );
+      listener(currentActivity());
     };
     globalThis.document.addEventListener('visibilitychange', onChange);
     return () => {
