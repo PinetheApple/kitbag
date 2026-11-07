@@ -65,7 +65,7 @@ export interface SongRecord {
   readonly durationSec: number;
   readonly bpm: number | null;
   readonly beats: readonly number[];
-  readonly downbeats: readonly number[];
+  readonly downbeatIndices: readonly number[];
   readonly analysisStatus: AnalysisStatus;
 }
 
@@ -300,7 +300,7 @@ async function readSong(
     durationSec: row.duration,
     bpm: row.bpm,
     beats: row.beatGrid === null ? [] : unpackFloat32(row.beatGrid),
-    downbeats:
+    downbeatIndices:
       row.downbeatIndices === null ? [] : unpackInt32(row.downbeatIndices),
     analysisStatus: row.analysisStatus,
   };

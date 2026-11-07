@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 vi.mock('@op-engineering/op-sqlite', () => ({}));
 
 import { connectDatabase } from './client';
+import { buildV6Fixture } from './migrate-fixtures.test-helper';
 import { fakeOpSqlite } from './op-sqlite-fake.test-helper';
 import { songPresets, songs, stems, stemSets } from './schema';
 import { createSetlistRepository } from './setlist-repository';
@@ -399,7 +400,7 @@ describe('readSong', () => {
       durationSec: 250.5,
       bpm: 158,
       beats: [0.5, 1.25],
-      downbeats: [0, 300],
+      downbeatIndices: [0, 300],
       analysisStatus: 'done',
     });
   });
@@ -409,9 +410,27 @@ describe('readSong', () => {
     const id = await library.insertSong(song('Fresh'));
     const read = await library.readSong(id);
     expect(read?.beats).toEqual([]);
-    expect(read?.downbeats).toEqual([]);
+    expect(read?.downbeatIndices).toEqual([]);
     expect(read?.waveformPath).toBeNull();
     expect(read?.analysisStatus).toBe('analyzing');
+  });
+
+  it('decodes a grid the Flutter app wrote into a v6 database', async () => {
+    const connection = buildV6Fixture();
+    connection.exec(`INSERT INTO library_songs
+      (title, artist, file_path, duration, format, created_at, beat_grid, bpm)
+      VALUES ('Old', 'Someone', 'music/old.mp3', 180, 'mp3', 1700000000,
+        X'0000003f0000a03f0080f142', 128.0)`);
+    const handle = openTestDatabase({ connection });
+    open.push(handle);
+    const library = createSongLibraryRepository(handle);
+    const [row] = connection
+      .prepare("SELECT id FROM songs WHERE title = 'Old'")
+      .all();
+    const read = await library.readSong(Number(row?.id));
+    expect(read?.beats).toEqual([0.5, 1.25, 120.75]);
+    expect(read?.downbeatIndices).toEqual([]);
+    expect(read?.analysisStatus).toBe('done');
   });
 
   it('reads nothing for a song that is gone', async () => {
