@@ -860,11 +860,20 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   `stem_sets`, so a retime is lost on reinstall along with the stems, and Restore leaves it
   untouched. **[coord]**
 
-- **2026-11-07 · Retime hides its context lines at large text (§7.7, #139)** — At a font
-  scale of 1.5 or more (`stemSections.retimeContextMaxScale`), retime shows only the line to
-  tap; the done and next lines drop out, which `design/kitbag-stems-sections.html` does not
-  draw as a frame. Three wrapped lines otherwise push the tap pad off a 360 × 800 screen. The
-  body scrolls at every size. **[coord]**
+- **2026-11-08 · Retime pins the pad when its body overflows (§7.7, #139)** — When the retime
+  body overflows, at any font scale, the tap pad, Undo tap and Shift all lines stay pinned and
+  only the lyric lines scroll. It replaces scrolling the whole body, where 3 of 3 drags
+  starting on the pad recorded a tap and the pad moved 120–160 dp between lines. Taps stay on
+  touch-down. The done and next lines return, since they now scroll, which replaces the earlier
+  rule hiding them at a font scale of 1.5 or more. A body that fits stays as drawn. Once a
+  session overflows it stays pinned until it ends, so the layout cannot flip between lines.
+  Coordinator call; the owner may overturn it. **[recorded]**
+
+- **2026-11-08 · Loop note placement (§7.7, #139)** — The note stays right as drawn while that
+  clears the A and B flags, then moves left of them if that clears, then onto its own row above
+  them, which makes the lane taller. It is worked out from measured layout and the loop's
+  bounds, so it changes only when the loop or the layout does. `design/kitbag-stems-sections.html`
+  draws only the first. **[recorded]**
 
 - **2026-11-07 · `lyrics_retimed` format (§7.7, #139)** — `{version: 1, times}`, one time per
   line for synced lyrics, or for the first lines tapped of plain-only lyrics. **[coord]**
