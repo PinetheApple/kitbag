@@ -6,13 +6,14 @@ import {
   beatDotsHeight,
   beatLinePitch,
   belowTempoReserve,
+  legendHeight,
+  pinnedStackScrollSlack,
   DOT_METRICS,
   statusProgressReserve,
   statusRowHeight,
   statusRowPitch,
   statusStackHeight,
   statusStackPinned,
-  stoppedScrollSlack,
   statusTextLines,
   tallestBelowTempo,
   type BelowTempoRoom,
@@ -182,22 +183,36 @@ describe('the status stack', () => {
 
   it('adds no scroll slack while the status stack sits in the body', () => {
     for (const running of [false, true]) {
-      expect(stoppedScrollSlack(running, 0.85)).toBe(0);
-      expect(stoppedScrollSlack(running, 1)).toBe(0);
+      expect(pinnedStackScrollSlack(running, 0.85)).toBe(0);
+      expect(pinnedStackScrollSlack(running, 1)).toBe(0);
     }
   });
 
-  it('keeps the scroll range when a pinned stack shrinks on stop', () => {
+  it('adds no scroll slack while running', () => {
+    expect(pinnedStackScrollSlack(true, 1.3)).toBe(0);
+    expect(pinnedStackScrollSlack(true, 2)).toBe(0);
+  });
+
+  it('matches the stopped scroll range to running, legend included', () => {
+    const VIEWPORT_RUNNING = 300;
     for (const fontScale of [1.3, 2]) {
-      const stopped =
-        statusStackHeight(false, fontScale) +
-        stoppedScrollSlack(false, fontScale);
-      const running =
-        statusStackHeight(true, fontScale) +
-        stoppedScrollSlack(true, fontScale);
-      expect(stopped).toBe(running);
-      expect(stoppedScrollSlack(true, fontScale)).toBe(0);
-      expect(stoppedScrollSlack(false, fontScale)).toBeGreaterThan(0);
+      for (const runningContent of [
+        VIEWPORT_RUNNING - 1,
+        VIEWPORT_RUNNING,
+        VIEWPORT_RUNNING + 200,
+      ]) {
+        const running = Math.max(0, runningContent - VIEWPORT_RUNNING);
+        const stoppedContent =
+          runningContent +
+          legendHeight(fontScale) +
+          pinnedStackScrollSlack(false, fontScale);
+        const stoppedViewport =
+          VIEWPORT_RUNNING +
+          statusStackHeight(true, fontScale) -
+          statusStackHeight(false, fontScale);
+        const stopped = Math.max(0, stoppedContent - stoppedViewport);
+        expect(stopped).toBeCloseTo(running);
+      }
     }
   });
 

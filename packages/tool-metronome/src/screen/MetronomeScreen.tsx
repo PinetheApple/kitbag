@@ -25,7 +25,7 @@ import { useLibraryRefresh } from '../library/useLibraryRefresh.ts';
 import {
   belowTempoReserve,
   statusStackPinned,
-  stoppedScrollSlack,
+  pinnedStackScrollSlack,
 } from '../logic/belowTempo.ts';
 import { noteStrip, type NoteStrip } from '../logic/noteStrip.ts';
 import { endPractice, summarySheetOnMount } from '../logic/practiceSummary.ts';
@@ -279,7 +279,7 @@ export function MetronomeScreen({
   const legend = restLegend(running, polyEnabled);
   const pinStatus = statusStackPinned(fontScale);
   const scrollSlack = useMemo(
-    () => ({ paddingBottom: stoppedScrollSlack(running, fontScale) }),
+    () => ({ paddingBottom: pinnedStackScrollSlack(running, fontScale) }),
     [running, fontScale],
   );
   const status = (

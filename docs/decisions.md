@@ -752,9 +752,10 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   boxes, not measured; needs a device check. A wider row wraps onto its
   second line rather than truncating. Above the default scale the status stack leaves the
   scrolling body and sits directly above the transport, so a body that overflows cannot
-  push it out of view. It is one row tall stopped and two running; the stopped body adds
-  the difference as scroll padding, so the stack's resize does not change the scroll range
-  or move what is above it (#304). **[coord, owner may overturn]**
+  push it out of view. It is one row tall stopped and two running. Stopping shrinks the stack
+  and grows the viewport, so the stopped body pads its content by that difference less the
+  legend's height, which keeps the scroll range the same as running (#304). Coordinator
+  call; the owner may overturn it. **[recorded]**
   On a small screen at 2.0 the beat dots then sit below the fold and are reached by
   scrolling the body (coordinator call, 2026-11-02, open to owner review). Above the default scale
   a segmented control's options and the sound picker's items take their label's width

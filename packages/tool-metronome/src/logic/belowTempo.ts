@@ -81,17 +81,6 @@ export function statusStackHeight(running: boolean, fontScale: number): number {
     : row;
 }
 
-// A shorter pinned stack grows the scroll viewport; equal content growth leaves
-// the scroll range as the stack's resize found it.
-export function stoppedScrollSlack(
-  running: boolean,
-  fontScale: number,
-): number {
-  return statusStackPinned(fontScale) && !running
-    ? statusStackHeight(true, fontScale) - statusStackHeight(false, fontScale)
-    : 0;
-}
-
 export type PolyRow = 'off' | 'labelBeside' | 'labelAbove';
 
 export interface BeatDotsShape {
@@ -144,8 +133,20 @@ export function beatDotsHeight(
   return beatLines + polyBlockHeight(shape.poly, room);
 }
 
-function legendHeight(fontScale: number): number {
+export function legendHeight(fontScale: number): number {
   return metronome.legendTop + metronome.legendRow * grownTextScale(fontScale);
+}
+
+// Stopping shrinks the pinned stack and grows the viewport; padding the content
+// keeps the scroll range the same as running. The stopped legend counts toward it.
+export function pinnedStackScrollSlack(
+  running: boolean,
+  fontScale: number,
+): number {
+  if (running || !statusStackPinned(fontScale)) return 0;
+  const stackDifference =
+    statusStackHeight(true, fontScale) - statusStackHeight(false, fontScale);
+  return Math.max(0, stackDifference - legendHeight(fontScale));
 }
 
 export function belowTempoHeight(
