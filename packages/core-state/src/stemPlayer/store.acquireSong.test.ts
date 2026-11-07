@@ -82,6 +82,7 @@ describe('a screen holding a song in the stem player', () => {
     const { commands, store, acquire, ready } = setup();
     const release = acquire();
     await ready();
+    commands.mixerStop.mockClear();
     store.getState().close();
     release();
     expect(commands.engineRelease).toHaveBeenCalledOnce();

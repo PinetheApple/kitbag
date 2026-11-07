@@ -1,10 +1,12 @@
 import { KB_MIXER_UNITY_RATE, KB_RESULT } from '@kitbag/core-native';
-import { UNITY_GAIN, type MixerRuntime } from '@kitbag/core-state';
+import {
+  UNITY_GAIN,
+  UNSHIFTED_KEY,
+  type MixerRuntime,
+} from '@kitbag/core-state';
 
 const noEngine = () => Promise.resolve<number>(KB_RESULT.KB_ERROR_INTERNAL);
 const ignore = () => undefined;
-const UNSET_RATE = KB_MIXER_UNITY_RATE;
-const UNSET_KEY = 0;
 const NO_FRAMES = 0;
 
 export const mixerRuntime: MixerRuntime = {
@@ -26,9 +28,9 @@ export const mixerRuntime: MixerRuntime = {
     mixerSetLoop: noEngine,
     mixerClearLoop: noEngine,
     mixerSetRate: noEngine,
-    mixerRate: () => Promise.resolve(UNSET_RATE),
+    mixerRate: () => Promise.resolve(KB_MIXER_UNITY_RATE),
     mixerSetTrackPitch: noEngine,
-    mixerTrackPitch: () => Promise.resolve(UNSET_KEY),
+    mixerTrackPitch: () => Promise.resolve(UNSHIFTED_KEY),
     mixerTrackFrames: () => Promise.resolve(NO_FRAMES),
     setGrid: noEngine,
     clearGrid: ignore,

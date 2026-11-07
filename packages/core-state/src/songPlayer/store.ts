@@ -12,7 +12,7 @@ import {
 } from '../stemPlayer/actions.ts';
 import { clickActions, type ClickSlice } from '../stemPlayer/clickActions.ts';
 import { loopActions, type LoopSlice } from '../stemPlayer/loopActions.ts';
-import { UNITY_GAIN } from '../stemPlayer/mix.ts';
+import { UNITY_GAIN, UNSHIFTED_KEY } from '../stemPlayer/mix.ts';
 import {
   createMixerClaim,
   mixerClaim,
@@ -133,6 +133,17 @@ export function createSongPlayerStore(
         });
     };
 
+    const unshiftKey = async (opened: number) => {
+      const { commands } = runtimeOf();
+      const key = await commands.mixerTrackPitch(SONG_TRACK);
+      if (!live(opened)) return false;
+      if (key === UNSHIFTED_KEY) return true;
+      return mixer.replanAfterReset(
+        opened,
+        commands.mixerSetTrackPitch(SONG_TRACK, UNSHIFTED_KEY),
+      );
+    };
+
     const load = async (opened: number, songId: number, bars: number) => {
       const runtime = runtimeOf();
       const { commands } = runtime;
@@ -145,6 +156,7 @@ export function createSongPlayerStore(
       set(factsOf(record));
       const engineRate = await mixer.startEngine(opened);
       if (engineRate === null) return;
+      if (!(await mixer.clearSessionLeftovers(opened))) return;
       const master = await commands.mixerMasterGain();
       if (!live(opened)) return;
       // The stem player's master level has no control on this screen.
@@ -157,6 +169,7 @@ export function createSongPlayerStore(
         set({ status: 'failed' });
         return;
       }
+      if (!(await unshiftKey(opened))) return;
       const decoded = await commands.mixerTrackFrames(SONG_TRACK);
       if (!live(opened)) return;
       const durationFrames =

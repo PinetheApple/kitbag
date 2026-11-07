@@ -40,4 +40,27 @@ describe('createMixerClaim', () => {
     mixer.claim(vi.fn());
     expect(second).toHaveBeenCalledOnce();
   });
+
+  it('settles only after the work a closed session left running', async () => {
+    const mixer = createMixerClaim();
+    let finish: () => void = () => undefined;
+    mixer.defer(
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const settled = vi.fn();
+    const waiting = mixer.settled().then(settled);
+    await Promise.resolve();
+    expect(settled).not.toHaveBeenCalled();
+    finish();
+    await waiting;
+    expect(settled).toHaveBeenCalledOnce();
+  });
+
+  it('settles when the work left running fails', async () => {
+    const mixer = createMixerClaim();
+    mixer.defer(Promise.reject(new Error('busy')));
+    await expect(mixer.settled()).resolves.toBeUndefined();
+  });
 });
