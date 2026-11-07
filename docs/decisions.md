@@ -820,8 +820,9 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
 
 - **2026-11-07 · A single song is a one-track mixer song (§4.1, §6.3, #297)** — The song
   player drives `kb_mixer_*` with the song on track 0, plus `setGrid` and
-  `metronomeFollowMixer(true)`. `kb_player_*` stays in the ABI, uncalled by new code. The
-  mixer already has the loop, its crossfade, follow-click and #138's speed stage;
-  extending the player would duplicate all four. Count-in before the lock is parked on
+  `metronomeFollowMixer(true)`. `kb_player_*` stays in the ABI, and no transport or store
+  code uses it. The mixer already has the loop, its crossfade and follow-click, and #138
+  adds its stretch stage to the mixer; extending the player would duplicate all of them.
+  Count-in before the lock is parked on
   #298: under a grid the engine skips it, and a JS-timed handoff was ruled out.
   **[recorded — coordinator call, owner may overturn]**

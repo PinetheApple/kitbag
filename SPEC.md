@@ -284,10 +284,11 @@ Requirements:
   is a scalar.** This matters more under JSI than it did under FFI: see §13.2.
 
 **A single song plays through the mixer as one track** (`kb_mixer_load_track(0,
-path)`): the mixer already has the loop and its crossfade, the click's
-follow-mixer mode and the speed stage, and extending `kb_player_*` would
-duplicate them. `kb_player_*` stays in the ABI, with no caller in the React
-Native app. Recorded in `docs/decisions.md`; the owner may overturn it.
+path)`): the mixer already has the loop and its crossfade and the click's
+follow-mixer mode, and #138 adds its stretch stage to the mixer, so extending
+`kb_player_*` would duplicate them. `kb_player_*` stays in the ABI, and no
+transport or store code uses it. Recorded in `docs/decisions.md`; the owner may
+overturn it.
 
 ### 4.2 New: phase anchor
 
