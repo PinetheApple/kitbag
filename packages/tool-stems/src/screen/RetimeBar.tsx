@@ -11,7 +11,7 @@ import { useStemPlayer } from '@kitbag/core-state';
 import { useCallback, useEffect } from 'react';
 import { View } from 'react-native';
 
-import { retimeLineLabel } from '../logic/retimeView.ts';
+import { retimeSubtitle } from '../logic/retimeView.ts';
 import { ConfirmDialog } from './ConfirmDialog.tsx';
 
 const NO_NEIGHBOUR_CONTROLS: NeighbourGaps = {};
@@ -37,7 +37,7 @@ export function RetimeBar({ onAskReset }: { readonly onAskReset: () => void }) {
     <AppBar
       flush
       title="Retime lyrics"
-      subtitle={retimeLineLabel(lines, retime.nextLine)}
+      subtitle={retimeSubtitle(lines, retime.nextLine, retime.playbackRate)}
       closeLabel="Close retime"
       onClose={cancelRetime}
       trailing={

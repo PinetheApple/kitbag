@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  retimeLineLabel,
   retimePreview,
+  retimeSubtitle,
   shiftLabel,
   tapTimeLabel,
 } from './retimeView.ts';
@@ -14,15 +14,33 @@ const lines = [
   { timeSec: 4, text: 'three' },
 ];
 
-describe('retimeLineLabel', () => {
+describe('retimeSubtitle', () => {
   it('counts sung lines only', () => {
-    expect(retimeLineLabel(lines, 0)).toBe('Line 1 of 3');
-    expect(retimeLineLabel(lines, 2)).toBe('Line 2 of 3');
-    expect(retimeLineLabel(lines, 3)).toBe('Line 3 of 3');
+    expect(retimeSubtitle(lines, 0, null)).toBe('Line 1 of 3');
+    expect(retimeSubtitle(lines, 2, null)).toBe('Line 2 of 3');
+    expect(retimeSubtitle(lines, 3, null)).toBe('Line 3 of 3');
   });
 
   it('says when every line is tapped', () => {
-    expect(retimeLineLabel(lines, -1)).toBe('All 3 lines tapped');
+    expect(retimeSubtitle(lines, -1, null)).toBe('All 3 lines tapped');
+  });
+
+  it('prints a single-precision speed as the speed', () => {
+    expect(retimeSubtitle(lines, 0, Math.fround(0.6))).toBe(
+      'Line 1 of 3 · playing at 0.6×',
+    );
+    expect(retimeSubtitle(lines, 0, Math.fround(0.75))).toBe(
+      'Line 1 of 3 · playing at 0.75×',
+    );
+  });
+
+  it('adds the speed the mixer plays', () => {
+    expect(retimeSubtitle(lines, 0, 0.75)).toBe(
+      'Line 1 of 3 · playing at 0.75×',
+    );
+    expect(retimeSubtitle(lines, -1, 0.75)).toBe(
+      'All 3 lines tapped · playing at 0.75×',
+    );
   });
 });
 

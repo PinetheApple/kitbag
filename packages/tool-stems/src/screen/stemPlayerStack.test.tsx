@@ -1,4 +1,4 @@
-import { stemPlayerStore } from '@kitbag/core-state';
+import { RETIME_PLAYBACK_RATE, stemPlayerStore } from '@kitbag/core-state';
 import { record } from '@kitbag/core-state/src/stemPlayer/store.test-helper.ts';
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -195,6 +195,7 @@ describe('another route covering the player', () => {
     await getState().loopSection(0);
     getState().togglePlay();
     getState().beginRetime(0);
+    await act(flush);
     const retime = getState().retime;
     const loop = getState().loop;
     player.commands.mixerStop.mockClear();
@@ -210,6 +211,9 @@ describe('another route covering the player', () => {
     expect(player.sharedMetronome.release).not.toHaveBeenCalled();
     expect(getState().retime).toBe(retime);
     expect(getState().loop).toBe(loop);
+    expect(player.commands.mixerSetRate.mock.calls).toEqual([
+      [RETIME_PLAYBACK_RATE],
+    ]);
   });
 
   it('still closes the song when the screen goes after being covered', async () => {

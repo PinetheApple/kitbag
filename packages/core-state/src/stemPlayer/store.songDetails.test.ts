@@ -94,6 +94,7 @@ describe('synced lyrics in the stem player', () => {
       taps: [],
       nextLine: 0,
       shiftSteps: 0,
+      playbackRate: null,
     });
     engine.position = at(1.25);
     store.getState().tapRetime();
@@ -122,6 +123,7 @@ describe('synced lyrics in the stem player', () => {
       taps: [{ line: 3, timeSec: 6 }],
       nextLine: NO_LINE,
       shiftSteps: 0,
+      playbackRate: null,
     });
   });
 

@@ -640,8 +640,7 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   `docs/research/mockups/stems-sections-lyrics.html`: a Mix | Lyrics switch, with sections as
   a card scroller. Bundle section colours are ignored. The song facts show no loudness.
   Holding a section over a custom A-B loop replaces it, with Undo. Retime mode at
-  0.75×, restoring the speed on exit, is ruled but not built: retime ships at the current
-  speed behind `leaveRetime()`, and 0.75× follows #138 (tracked as #299). The data and state
+  0.75×, restoring the speed on exit, is ruled here and built in #299. The data and state
   layer landed first; the screens are bound by `design/kitbag-stems-sections.html`. **[user]**
 
 - **2026-11-01 · The Settings click-volume slider sets on a tap (§12.5, #170)** — A tap on
@@ -999,6 +998,13 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   the TS binding rounds on the way in and the database is unchanged. `current_bpm` stays the
   song's tempo at any speed. Unloading a track resets its key to 0, so a key carries to the next
   stem in that slot only when the command queue was full at the unload. **[recorded — coordinator ruling]**
+- **2026-11-07 · Retime speed (§7.7, #299)** — Retime plays at 0.75×, or at the song's
+  current speed when that is already slower, and restores the previous speed on exit.
+  **[user]**
+- **2026-11-07 · Retime speed, implementation (§7.7, #299)** — Every exit goes through
+  `leaveRetime()`. The subtitle shows the speed that plays only once the mixer has it. A
+  refused restore stays owed to the next retime in the same song, and is dropped when
+  another song opens. **[recorded]**
 
 - **2026-11-07 · Single-song player, round 2 (§6.3, §6.4, §8.9, §12, #297)** — The owner
   accepted every recommendation in the player mockup, now `design/kitbag-song-player.html`.

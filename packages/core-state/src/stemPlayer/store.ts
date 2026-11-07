@@ -53,6 +53,7 @@ export type RetimeState =
       readonly taps: readonly RetimeTap[];
       readonly nextLine: number;
       readonly shiftSteps: number;
+      readonly playbackRate: number | null;
     };
 
 export type StemPlayerStatus =
