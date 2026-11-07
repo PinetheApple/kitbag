@@ -20,11 +20,16 @@ import {
   type LoopFailure,
   type LoopState,
 } from '@kitbag/core-state';
-import { useCallback, useState } from 'react';
-import { Text, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { Text, View, type LayoutChangeEvent } from 'react-native';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
+import {
+  aboveFlagsPadding,
+  loopNotePlacement,
+  type LoopNotePlacement,
+} from '../logic/loopNotePlacement.ts';
 import { loopNoteText, songSeconds } from '../logic/sectionView.ts';
 import { SectionNotches, SectionTint } from './SectionMarks.tsx';
 import type { MixerFrameValues } from './useMixerFrame.ts';
@@ -42,11 +47,12 @@ const useStyles = createThemedStyles((theme) => ({
   note: {
     position: 'absolute',
     top: stemPlayer.loopNoteTop,
-    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: stemPlayer.loopNoteGap,
   },
+  noteRight: { right: 0 },
+  noteLeft: { left: 0 },
   noteText: {
     ...textStyle(textRoles.loopNote),
     color: theme.color[theme.accentInk],
@@ -153,26 +159,66 @@ function LoopMarks({ loop }: { readonly loop: LoopState }) {
   );
 }
 
-function LoopNote() {
+interface LoopNoteProps {
+  readonly placement: LoopNotePlacement;
+  readonly onLayout: (event: LayoutChangeEvent) => void;
+}
+
+function LoopNote({ placement, onLayout }: LoopNoteProps) {
   const styles = useStyles();
   const loop = useStemPlayer((s) => s.loop);
   const failure = useStemPlayer((s) => s.loopFailure);
   const sections = useStemPlayer((s) => s.sections);
   const durationSec = useStemPlayer(songSeconds);
   const note = loopNoteText(loop, sections, durationSec);
-  if (failure !== null)
-    return (
-      <View style={styles.note} accessibilityLiveRegion="polite">
-        <Text style={styles.failText}>{FAILURES[failure]}</Text>
-      </View>
-    );
-  if (note === null) return null;
+  if (failure === null && note === null) return null;
   return (
-    <View style={styles.note} accessibilityLiveRegion="polite">
-      <Icon name="repeat" size="action" color="accent" />
-      <Text style={styles.noteText}>{note}</Text>
+    <View
+      testID="loop-note"
+      style={[
+        styles.note,
+        placement === 'left' ? styles.noteLeft : styles.noteRight,
+      ]}
+      accessibilityLiveRegion="polite"
+      onLayout={onLayout}
+    >
+      {failure === null ? (
+        <>
+          <Icon name="repeat" size="action" color="accent" />
+          <Text style={styles.noteText}>{note}</Text>
+        </>
+      ) : (
+        <Text style={styles.failText}>{FAILURES[failure]}</Text>
+      )}
     </View>
   );
+}
+
+// Measured once per layout and read only when the loop changes, never per frame.
+function useLoopNotePlacement(loop: LoopState, rate: number, frames: number) {
+  const [laneWidth, setLaneWidth] = useState(0);
+  const [bar, setBar] = useState({ x: 0, width: 0 });
+  const [note, setNote] = useState({ width: 0, height: 0 });
+  const onLane = useCallback((event: LayoutChangeEvent) => {
+    setLaneWidth(event.nativeEvent.layout.width);
+  }, []);
+  const onBar = useCallback((event: LayoutChangeEvent) => {
+    const { x, width } = event.nativeEvent.layout;
+    setBar({ x, width });
+  }, []);
+  const onNote = useCallback((event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    setNote({ width, height });
+  }, []);
+  const placement = loopNotePlacement({
+    laneWidth,
+    barLeft: bar.x,
+    barWidth: bar.width,
+    noteWidth: note.width,
+    start: loop.kind === 'off' ? null : fractionOf(loop.startSec, rate, frames),
+    end: loop.kind === 'on' ? fractionOf(loop.endSec, rate, frames) : null,
+  });
+  return { placement, noteHeight: note.height, onLane, onBar, onNote };
 }
 
 // The spoken position is React state, so it is kept only while a screen reader
@@ -200,6 +246,18 @@ export function Scrubber({ frame }: { readonly frame: MixerFrameValues }) {
   const seek = useStemPlayer((s) => s.seek);
   const durationSec = framesToSeconds(frames, rate);
   const second = useSpokenSecond(frame);
+  const { placement, noteHeight, onLane, onBar, onNote } = useLoopNotePlacement(
+    loop,
+    rate,
+    frames,
+  );
+  const lanePadding = useMemo(
+    () =>
+      placement === 'above'
+        ? { paddingTop: aboveFlagsPadding(noteHeight) }
+        : undefined,
+    [placement, noteHeight],
+  );
   const slide = useCallback(
     (fraction: number) => {
       scrub(Math.round(fraction * frames));
@@ -216,8 +274,12 @@ export function Scrubber({ frame }: { readonly frame: MixerFrameValues }) {
   );
   const total = formatClock(frames, rate);
   return (
-    <View style={styles.lane}>
-      <LoopNote />
+    <View
+      testID="scrub-lane"
+      style={[styles.lane, lanePadding]}
+      onLayout={onLane}
+    >
+      <LoopNote placement={placement} onLayout={onNote} />
       <View
         style={styles.elapsed}
         importantForAccessibility="no-hide-descendants"
@@ -225,7 +287,7 @@ export function Scrubber({ frame }: { readonly frame: MixerFrameValues }) {
       >
         <LiveText text={frame.elapsed} role="scrubTime" align="left" />
       </View>
-      <View style={styles.bar}>
+      <View testID="scrub-bar" style={styles.bar} onLayout={onBar}>
         <Slider
           value={frame.progress}
           onSlide={slide}

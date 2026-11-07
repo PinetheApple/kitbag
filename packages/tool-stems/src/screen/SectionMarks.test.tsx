@@ -1,3 +1,5 @@
+import { stemPlayer } from '@kitbag/core-design';
+import { act } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { animatedStyleOf } from '../testing/reanimatedDriver.ts';
@@ -59,6 +61,66 @@ describe('the scrub lane', () => {
     const p = await open();
     p.frames(9);
     expect(liveStyle(p, 'section-tint')).toMatchObject({ width: '20%' });
+  });
+});
+
+describe('the loop note', () => {
+  const FLAGGED_LATE = 'Loop Outro, 0:08 to 0:12';
+
+  function layout(node: { props: Record<string, unknown> }, box: object) {
+    act(() => {
+      (node.props.onLayout as (e: unknown) => void)({
+        nativeEvent: { layout: box },
+      });
+    });
+  }
+
+  function only(p: Player, testID: string) {
+    const [node] = withTestId(p, testID);
+    if (node === undefined) throw new Error(testID);
+    return node;
+  }
+
+  function measured(p: Player, noteWidth: number, noteHeight: number) {
+    layout(only(p, 'scrub-lane'), { width: 328 });
+    layout(only(p, 'scrub-bar'), { x: 82, width: 164 });
+    layout(only(p, 'loop-note'), { width: noteWidth, height: noteHeight });
+  }
+
+  const flat = (node: { props: Record<string, unknown> }) =>
+    Object.assign({}, ...[node.props.style].flat(2)) as Record<string, unknown>;
+
+  it('stands on its own row, clear of the flags, when no side fits', async () => {
+    const p = await open('Lyrics');
+    await p.press(FLAGGED_LATE);
+    measured(p, 234, 30);
+    const riseToFlag = -(stemPlayer.loopTintInset + stemPlayer.loopFlagTop);
+    expect(flat(only(p, 'scrub-lane')).paddingTop).toBe(
+      stemPlayer.loopNoteTop + 30 + riseToFlag,
+    );
+    expect(flat(only(p, 'loop-note')).right).toBe(0);
+  });
+
+  it('moves to the left of a late loop when it fits there', async () => {
+    const p = await open('Lyrics');
+    await p.press(FLAGGED_LATE);
+    measured(p, 60, 16);
+    const note = flat(only(p, 'loop-note'));
+    expect(note.left).toBe(0);
+    expect(note.right).toBeUndefined();
+    expect(flat(only(p, 'scrub-lane')).paddingTop).toBe(stemPlayer.laneTop);
+  });
+
+  it('never renders for the playhead, only for the loop', async () => {
+    const p = await open('Lyrics');
+    await p.press(FLAGGED_LATE);
+    measured(p, 60, 16);
+    p.frames(9);
+    p.commit.mockClear();
+    p.frames(9.5);
+    p.frames(9.9);
+    expect(p.commit).not.toHaveBeenCalled();
+    expect(flat(only(p, 'loop-note')).left).toBe(0);
   });
 });
 
