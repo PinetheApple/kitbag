@@ -1,0 +1,1 @@
+• Lyric retime now plays at 0.75× (or the song's own speed if slower) and restores the speed on exit.
