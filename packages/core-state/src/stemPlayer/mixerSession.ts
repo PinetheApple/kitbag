@@ -15,13 +15,14 @@ export interface MixerSessionContext<Slice> {
 
 type SessionSlice = ClickSlice & Pick<StemPlayerState, 'loop'>;
 
-export interface MixerSessionOptions {
-  readonly set: (change: Partial<SessionSlice>) => void;
-  readonly get: () => SessionSlice;
-  readonly runtimeOf: () => MixerRuntime;
+export interface MixerSessionOptions extends Omit<
+  MixerSessionContext<SessionSlice>,
+  'session'
+> {
   readonly scrubSeekDelayMs: number;
   readonly claim: MixerClaim;
   readonly isOpen: () => boolean;
+  readonly beforeTeardown?: () => void;
   readonly teardownTracks: () => void;
   readonly resetState: () => void;
 }
@@ -33,6 +34,7 @@ export function mixerSession({
   scrubSeekDelayMs,
   claim,
   isOpen,
+  beforeTeardown,
   teardownTracks,
   resetState,
 }: MixerSessionOptions) {
@@ -47,6 +49,7 @@ export function mixerSession({
   const live = (opened: number) => opened === session;
 
   const teardown = () => {
+    beforeTeardown?.();
     const runtime = runtimeOf();
     const { commands } = runtime;
     const { click, loop } = get();

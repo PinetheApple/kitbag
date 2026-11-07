@@ -175,7 +175,6 @@ export function createStemPlayerStore(
 
   const teardownTracks = () => {
     const { commands } = runtimeOf();
-    saver.flush();
     for (let track = 0; track < requestedTracks; track++) {
       commands.mixerSetSolo(track, false);
       commands.mixerSetMute(track, false);
@@ -193,6 +192,7 @@ export function createStemPlayerStore(
       scrubSeekDelayMs,
       claim,
       isOpen: () => get().setId !== null,
+      beforeTeardown: saver.flush,
       teardownTracks,
       resetState: () => {
         set(closedState);
