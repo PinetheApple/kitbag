@@ -125,7 +125,8 @@ KB_EXPORT void kb_metronome_set_sounds(
     int32_t accent_sound
 );
 /* Ignored unless bars is in Metronome::kCountInBarChoices; distinct != 0 uses
- * `sound`. Replays after stop, not pause; skipped under a grid or anchor. */
+ * `sound`. Replays after stop, not pause; skipped under a grid or anchor, which
+ * count in with kb_metronome_count_in_at (kitbag_song_start_api.h). */
 KB_EXPORT void kb_metronome_set_count_in(
     kb_engine* engine,
     int32_t bars,

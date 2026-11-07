@@ -51,15 +51,17 @@ double Metronome::AdvanceCountIn(
   const auto beat = static_cast<int64_t>(std::floor(position + kGridEpsilon));
   if (position - tempo.beats_per_sample <
       static_cast<double>(beat) - kGridEpsilon) {
-    OnCountInBeat(beat, sample_rate);
+    OnCountInBeat(
+        static_cast<int32_t>(
+            (beat % beats_per_bar_ + beats_per_bar_) % beats_per_bar_
+        ),
+        sample_rate
+    );
   }
   return position;
 }
 
-void Metronome::OnCountInBeat(int64_t beat, uint32_t sample_rate) {
-  const auto index = static_cast<int32_t>(
-      (beat % beats_per_bar_ + beats_per_bar_) % beats_per_bar_
-  );
+void Metronome::OnCountInBeat(int32_t index, uint32_t sample_rate) {
   current_beat_.store(index, std::memory_order_relaxed);
   const bool downbeat = index == 0;
   if (count_in_distinct_) {

@@ -181,6 +181,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_rig_click_isolation.cpp
     tools/metronome/metronome_test_count_in.cpp
     tools/metronome/metronome_test_count_in_long.cpp
+    tools/metronome/metronome_test_count_in_at.cpp
     tools/metronome/metronome_test_ramp.cpp
     tools/metronome/metronome_test_ramp_live.cpp
     tools/metronome/metronome_test_ramp_subdivision.cpp

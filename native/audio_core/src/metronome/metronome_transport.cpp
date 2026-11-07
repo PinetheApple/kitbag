@@ -12,6 +12,18 @@ void Metronome::StartAt(uint64_t start_frame) {
   commands_.Push(command);
 }
 
+bool Metronome::CountInAt(
+    uint64_t end_frame,
+    double beat_frames,
+    int beats_per_bar
+) {
+  Command command{CommandType::kStartAt};
+  command.frame = end_frame;
+  command.value = beat_frames;
+  command.int_a = beats_per_bar;
+  return commands_.Push(command);
+}
+
 void Metronome::Stop() {
   commands_.Push({CommandType::kStop});
 }
@@ -41,12 +53,7 @@ bool Metronome::ApplyTransportCommand(const Command& command) {
       BeginRun();
       return true;
     case CommandType::kStartAt:
-      // Deferred to the render loop; ignored while running, where re-anchoring
-      // a live click is set_grid's or anchor_external's job.
-      if (!running_) {
-        has_pending_start_ = true;
-        pending_start_frame_ = command.frame;
-      }
+      DeferStart(command);
       return true;
     case CommandType::kAnchorExternal:
       StashPendingAnchor(command);
@@ -60,6 +67,19 @@ bool Metronome::ApplyTransportCommand(const Command& command) {
     default:
       return false;
   }
+}
+
+// Ignored while running, where re-anchoring a live click is set_grid's or
+// anchor_external's job, unless it counts in: a counted start replaces the run.
+void Metronome::DeferStart(const Command& command) {
+  if (command.int_a > 0) {
+    ArmCountInAt(command);
+    return;
+  }
+  if (running_) return;
+  has_pending_start_ = true;
+  pending_start_frame_ = command.frame;
+  count_in_at_.Clear();
 }
 
 void Metronome::StashPendingAnchor(const Command& command) {
@@ -78,6 +98,7 @@ void Metronome::StopRun() {
   ReacquireGrid();
   counting_in_ = false;
   count_in_armed_ = true;
+  count_in_at_.Clear();
   current_beat_.store(-1, std::memory_order_relaxed);
   current_poly_beat_.store(-1, std::memory_order_relaxed);
 }
@@ -89,6 +110,7 @@ void Metronome::BeginRun() {
   // Anchors `position` at zero: nothing emits before the first frame, so a
   // positive offset would swallow every grid point it shifts past (§4.7).
   ArmCountIn();
+  count_in_at_.Clear();
   beat_position_ = -count_in_beats_ - LatencyBeats();
   running_ = true;
   grid_state_.last_onset = {};
@@ -96,6 +118,35 @@ void Metronome::BeginRun() {
   // Publish now, not only at the end of the drain: a deferred StartAt calls
   // BeginRun from the render loop, after the drain already stored the flag.
   running_flag_.store(true, std::memory_order_relaxed);
+}
+
+// The bar count-in stays unarmed: this count replaces it, and the run it
+// starts at the end is a plain start.
+void Metronome::ArmCountInAt(const Command& command) {
+  StopRun();
+  count_in_armed_ = false;
+  has_pending_start_ = true;
+  pending_start_frame_ = command.frame;
+  count_in_at_.Arm(command.frame, command.value, command.int_a, count_in_bars_);
+}
+
+bool Metronome::ScheduledCountInLive() const {
+  return has_pending_start_ && count_in_at_.armed();
+}
+
+void Metronome::RenderPendingStart(
+    const GridView& view,
+    uint64_t now,
+    uint32_t sample_rate,
+    BlockTempo* tempo
+) {
+  if (now >= pending_start_frame_) {
+    BeginPendingStart(view, now, sample_rate, tempo);
+    return;
+  }
+  if (!ScheduledCountInLive()) return;
+  const int index = count_in_at_.BeatAt(now);
+  if (index != CountInSchedule::kNoBeat) OnCountInBeat(index, sample_rate);
 }
 
 }  // namespace kitbag

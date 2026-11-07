@@ -3,6 +3,8 @@
 #include "kitbag_api.h"
 
 #include <cmath>
+#include <cstdint>
+#include <limits>
 
 #include "api/api_engine.h"
 #include "metronome/grid_bars.h"
@@ -51,6 +53,19 @@ bool ValidDownbeatArgs(const int32_t* downbeats, int32_t count, int32_t beats) {
          kitbag::ValidDownbeats({downbeats, static_cast<size_t>(count)}, beats);
 }
 
+constexpr uint64_t kMaxExactFrame = uint64_t{1}
+                                    << std::numeric_limits<double>::digits;
+
+bool ValidCountInAt(
+    uint64_t end_frame,
+    double beat_frames,
+    int32_t beats_per_bar
+) {
+  return end_frame <= kMaxExactFrame && std::isfinite(beat_frames) &&
+         beat_frames >= kitbag::CountInSchedule::kMinBeatFrames &&
+         beats_per_bar >= 1 && beats_per_bar <= kitbag::Metronome::kMaxBeats;
+}
+
 }  // namespace
 
 extern "C" {
@@ -67,6 +82,24 @@ void kb_metronome_start_at(kb_engine* engine, uint64_t start_frame) {
     TakeOverFromRigClick(ToEngine(engine));
     ToEngine(engine)->metronome().StartAt(start_frame);
   }
+}
+
+kb_result kb_metronome_count_in_at(
+    kb_engine* engine,
+    uint64_t end_frame,
+    double beat_frames,
+    int32_t beats_per_bar
+) {
+  if (engine == nullptr ||
+      !ValidCountInAt(end_frame, beat_frames, beats_per_bar)) {
+    return KB_ERROR_INVALID_ARGUMENT;
+  }
+  kitbag::Engine* target = ToEngine(engine);
+  if (!target->metronome().CountInAt(end_frame, beat_frames, beats_per_bar)) {
+    return KB_ERROR_BUSY;
+  }
+  TakeOverFromRigClick(target);
+  return KB_OK;
 }
 
 void kb_metronome_stop(kb_engine* engine) {

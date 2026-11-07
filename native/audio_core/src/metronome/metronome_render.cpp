@@ -373,9 +373,7 @@ void Metronome::Render(
 
   for (uint32_t frame = 0; frame < frame_count; ++frame) {
     const uint64_t now = block_start_frame + frame;
-    if (has_pending_start_ && now >= pending_start_frame_) {
-      BeginPendingStart(view, now, sample_rate, &tempo);
-    }
+    if (has_pending_start_) RenderPendingStart(view, now, sample_rate, &tempo);
     if (running_ && view.grid != nullptr) {
       if (counting_in_) CancelCountIn();
       // Grid mode owns the beat clock; the ramp and polyrhythm are defined

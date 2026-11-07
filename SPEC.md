@@ -343,6 +343,16 @@ Requirements:
   sounds at `t − offset`, and only beats landing at or after `start_frame` sound
   (`BeginPendingStart` seeds the cursor through `GridSeconds`).
 
+**Counted start (#298).** `kb_metronome_count_in_at` and `kb_mixer_play_at`
+(`kitbag_song_start_api.h`) each carry one absolute engine frame through their
+own command ring, as `start_at` does. Song and click start on the same frame
+because both compare it against the same block start, not because one signals
+the other. The caller snaps the head back to the whole frame at or before the
+bar's downbeat, spaces the count at the grid interval before that downbeat
+divided by the rate, and passes one end frame to both. A seek or a speed change
+during the count is the caller's cancel plus a new counted start: a pending
+`play_at` survives a seek.
+
 **Past the last grid beat, the click goes silent and stays silent.** Every song
 reaches this. `is_running()` keeps reporting true, and `bar_phase` and
 `current_bpm` freeze at their last in-grid values rather than snapping to zero.
