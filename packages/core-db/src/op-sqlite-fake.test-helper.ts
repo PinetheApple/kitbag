@@ -1,8 +1,8 @@
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 
-import type { Connection } from './client';
+import type { Scalar } from '@op-engineering/op-sqlite';
 
-type Scalar = string | number | boolean | null | ArrayBuffer | ArrayBufferView;
+import type { Connection } from './client';
 
 function toSqlValue(value: Scalar | undefined): SQLInputValue {
   if (value === undefined || value === null) return null;
@@ -22,14 +22,12 @@ function fromSqlValue(value: unknown): Scalar {
   return value as Scalar;
 }
 
-function deferred<T>(work: () => T): Promise<T> {
-  return new Promise((resolve) => {
-    resolve(work());
-  });
+function onMacrotask<T>(work: () => T): Promise<T> {
+  return new Promise<void>((resolve) => setImmediate(resolve)).then(work);
 }
 
 // Mirrors op-sqlite 18.2.5: enhanceDB() in src/functions.ts over create_js_rows and
-// create_raw_result in cpp/OPUtils.cpp, so failures match the device.
+// create_raw_result in cpp/OPUtils.cpp; async calls settle on a later macrotask.
 export function fakeOpSqlite() {
   const sqlite = new DatabaseSync(':memory:');
   const lastWrite = sqlite.prepare(
@@ -70,19 +68,19 @@ export function fakeOpSqlite() {
   const connection = {
     executeSync: objects,
     execute: (sql: string, params?: Scalar[]) =>
-      deferred(() => objects(sql, params)),
+      onMacrotask(() => objects(sql, params)),
     executeRawSync: run,
     executeRaw: (sql: string, params?: Scalar[]) =>
-      deferred(() => run(sql, params)),
+      onMacrotask(() => run(sql, params)),
     executeAsync: (sql: string, params?: Scalar[]) =>
-      deferred(() => objects(sql, params)),
+      onMacrotask(() => objects(sql, params)),
     executeRawAsync: (sql: string, params?: Scalar[]) =>
-      deferred(() => run(sql, params)),
+      onMacrotask(() => run(sql, params)),
     close: () => {
       sqlite.close();
     },
     closeAsync: () =>
-      deferred(() => {
+      onMacrotask(() => {
         sqlite.close();
       }),
   } satisfies Connection & Record<string, unknown>;

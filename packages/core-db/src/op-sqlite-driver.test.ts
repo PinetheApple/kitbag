@@ -15,7 +15,7 @@ import {
 import { fakeOpSqlite } from './op-sqlite-fake.test-helper';
 import { INSTRUMENTS } from './tuning-rules';
 
-describe('drizzle over the op-sqlite 18 connection', () => {
+describe('drizzle over the op-sqlite connection', () => {
   it('runs repository reads and writes', async () => {
     const database = connectDatabase(fakeOpSqlite().connection);
 

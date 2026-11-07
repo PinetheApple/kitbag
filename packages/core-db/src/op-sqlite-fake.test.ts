@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { fakeOpSqlite } from './op-sqlite-fake.test-helper';
 
-function seeded() {
+function withTable() {
   const { connection } = fakeOpSqlite();
   connection.executeSync(
     'CREATE TABLE t (id INTEGER PRIMARY KEY, s TEXT, b BLOB)',
@@ -10,9 +10,9 @@ function seeded() {
   return connection;
 }
 
-describe('the op-sqlite 18.2.5 fake', () => {
+describe('the op-sqlite fake', () => {
   it('omits insertId from executeSync until a write changes a row', () => {
-    const connection = seeded();
+    const connection = withTable();
     expect(connection.executeSync('PRAGMA user_version')).toStrictEqual({
       rowsAffected: 0,
       rows: [{ user_version: 0 }],
@@ -23,7 +23,7 @@ describe('the op-sqlite 18.2.5 fake', () => {
   });
 
   it('reports the previous write on a later read, as sqlite3_changes does', () => {
-    const connection = seeded();
+    const connection = withTable();
     connection.executeSync("INSERT INTO t (s) VALUES ('a'), ('b')");
     expect(connection.executeSync('SELECT s FROM t ORDER BY id')).toStrictEqual(
       { rowsAffected: 2, insertId: 2, rows: [{ s: 'a' }, { s: 'b' }] },
@@ -31,14 +31,14 @@ describe('the op-sqlite 18.2.5 fake', () => {
   });
 
   it('returns RETURNING rows with the write counts', () => {
-    const connection = seeded();
+    const connection = withTable();
     expect(
       connection.executeSync("INSERT INTO t (s) VALUES ('a') RETURNING id"),
     ).toStrictEqual({ rowsAffected: 1, insertId: 1, rows: [{ id: 1 }] });
   });
 
   it('always carries insertId and columnNames on executeRaw', async () => {
-    const connection = seeded();
+    const connection = withTable();
     expect(await connection.executeRaw('SELECT s FROM t')).toStrictEqual({
       rowsAffected: 0,
       insertId: 0,
@@ -48,7 +48,7 @@ describe('the op-sqlite 18.2.5 fake', () => {
   });
 
   it('binds a Uint8Array and reads the blob back as an ArrayBuffer', async () => {
-    const connection = seeded();
+    const connection = withTable();
     connection.executeSync('INSERT INTO t (b) VALUES (?)', [
       new Uint8Array([2, 1, 0]),
     ]);
@@ -60,6 +60,17 @@ describe('the op-sqlite 18.2.5 fake', () => {
         new Uint8Array([2, 1, 0]),
       );
     }
+  });
+
+  it('runs async statements on a later task, not before returning', async () => {
+    const connection = withTable();
+    const pending = connection.execute("INSERT INTO t (s) VALUES ('a')");
+    await Promise.resolve();
+    expect(connection.executeSync('SELECT s FROM t').rows).toEqual([]);
+    await pending;
+    expect(connection.executeSync('SELECT s FROM t').rows).toEqual([
+      { s: 'a' },
+    ]);
   });
 
   it('rejects rather than throws from the async methods', async () => {
