@@ -10,7 +10,7 @@ export default defineConfig({
     include: [
       'src/logic/**/*.test.ts',
       'src/screen/stemNames.test.tsx',
-      'src/screen/stemPlayerAttach.test.tsx',
+      'src/screen/stemPlayerAcquireSong.test.tsx',
     ],
     alias: {
       '@kitbag/core-design': stub('../core-design/src/pure.ts'),

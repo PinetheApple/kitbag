@@ -11,7 +11,7 @@ const spies = vi.hoisted(() => ({
   bars: 8,
   effects: [] as (() => (() => void) | undefined)[],
   release: vi.fn(),
-  attach: vi.fn(),
+  acquireSong: vi.fn(),
   close: vi.fn(),
 }));
 
@@ -43,7 +43,7 @@ vi.mock('@kitbag/core-state', () => ({
       engineRate: 0,
       durationFrames: 0,
       loop: { kind: 'off' },
-      attach: spies.attach,
+      acquireSong: spies.acquireSong,
       close: spies.close,
     }),
 }));
@@ -62,11 +62,11 @@ describe('the stem player screen', () => {
   beforeEach(() => {
     spies.effects.length = 0;
     spies.release.mockReset();
-    spies.attach.mockReset().mockReturnValue(spies.release);
+    spies.acquireSong.mockReset().mockReturnValue(spies.release);
     spies.close.mockReset();
   });
 
-  it('lets go through its own attachment, never a bare close', () => {
+  it('releases the song it acquired, never a bare close', () => {
     renderToStaticMarkup(
       createElement(StemPlayerScreen, {
         setId: SET_ID,
@@ -75,7 +75,7 @@ describe('the stem player screen', () => {
       }),
     );
     const cleanups = spies.effects.map((effect) => effect());
-    expect(spies.attach).toHaveBeenCalledWith(SET_ID, spies.bars);
+    expect(spies.acquireSong).toHaveBeenCalledWith(SET_ID, spies.bars);
     cleanups.forEach((cleanup) => cleanup?.());
     expect(spies.release).toHaveBeenCalledOnce();
     expect(spies.close).not.toHaveBeenCalled();

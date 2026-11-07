@@ -165,7 +165,7 @@ export function StemPlayerScreen({
 }: StemPlayerScreenProps) {
   const styles = useStyles();
   const ready = useStemPlayer((s) => s.status === 'ready');
-  const attach = useStemPlayer((s) => s.attach);
+  const acquireSong = useStemPlayer((s) => s.acquireSong);
   const [menu, setMenu] = useState(false);
   const openMenu = useCallback(() => {
     setMenu(true);
@@ -173,7 +173,7 @@ export function StemPlayerScreen({
   const closeMenu = useCallback(() => {
     setMenu(false);
   }, []);
-  useEffect(() => attach(setId, WAVEFORM_BARS), [attach, setId]);
+  useEffect(() => acquireSong(setId, WAVEFORM_BARS), [acquireSong, setId]);
   const padding = useMemo(() => ({ paddingTop: insets.top }), [insets.top]);
   return (
     <View style={[styles.screen, padding]}>
