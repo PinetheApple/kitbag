@@ -14,32 +14,16 @@ import { display, StyleSheet } from '../testing/reactNativeHosts.ts';
 import {
   fireLayout,
   flush,
-  mountPlayer,
-  SONG_DETAILS,
+  holdSave,
+  LATER,
+  NOT_SAVED,
+  PAD,
+  retiming,
+  SAVE,
+  UNDO_TAP,
   withTestId,
   type Player,
 } from './playerHarness.test-helper.tsx';
-
-const RETIME = 'Retime lyrics';
-const PAD = 'Tap as this line starts';
-const UNDO_TAP = 'Undo tap';
-const LATER = 'Shift all lines later';
-const SAVE = 'Save';
-const NOT_SAVED = 'Timing not saved. Your taps are still here, try again.';
-
-let player: Player | undefined;
-
-async function retiming() {
-  player = await mountPlayer(SONG_DETAILS);
-  await player.press('Lyrics');
-  await player.press(RETIME);
-  return player;
-}
-
-afterEach(() => {
-  player?.unmount();
-  player = undefined;
-});
 
 describe('when the body overflows', () => {
   const ONE_SECOND_FRAMES = 44100;
@@ -240,12 +224,7 @@ describe('when the body overflows', () => {
       const p = await pinned();
       await failedSave(p);
       await tapLater(p);
-      let failWrite: (reason: Error) => void = () => undefined;
-      p.records.saveLyricsRetimed.mockReturnValueOnce(
-        new Promise((_, reject) => {
-          failWrite = reject;
-        }),
-      );
+      const failWrite = holdSave(p);
       await p.press(SAVE);
       expect(p.has(NOT_SAVED)).toBe(false);
       p.scrolls.mockClear();

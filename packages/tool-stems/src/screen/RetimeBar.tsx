@@ -98,8 +98,7 @@ export function ResetDialog({ onClose }: { readonly onClose: () => void }) {
 export function LeaveDialog({ onClose }: { readonly onClose: () => void }) {
   const retime = useStemPlayer((s) => s.retime);
   const cancelRetime = useStemPlayer((s) => s.cancelRetime);
-  if (retime.kind !== 'recording') return null;
-  const body = leaveRetimeBody(retime.taps.length, retime.shiftSteps);
+  const body = leaveRetimeBody(retime);
   if (body === null) return null;
   return (
     <ConfirmDialog

@@ -1040,4 +1040,5 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   "Your 5 taps …". One tap reads "Your 1 tap for this song is dropped."; a shift alone
   "Your offset for this song is dropped."; both "Your 2 taps and offset for this song are
   dropped.", each followed by "The lyrics keep their current timing." The owner may
-  overturn the wording. **[recorded — lane call]**
+  overturn the wording. Leave pressed while a save runs does nothing visible; if that save
+  then succeeds, the user leaves with the work saved. **[recorded — lane call]**

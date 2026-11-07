@@ -52,15 +52,13 @@ export function hasUnsavedRetime(retime: RetimeState): boolean {
   );
 }
 
-export function leaveRetimeBody(
-  taps: number,
-  shiftSteps: number,
-): string | null {
+export function leaveRetimeBody(retime: RetimeState): string | null {
+  if (retime.kind !== 'recording' || !hasUnsavedRetime(retime)) return null;
+  const taps = retime.taps.length;
   const parts = [
     taps > 0 ? countLabel(taps, 'tap', 'taps') : null,
-    shiftSteps !== 0 ? 'offset' : null,
+    retime.shiftSteps !== 0 ? 'offset' : null,
   ].filter((part) => part !== null);
-  if (parts.length === 0) return null;
   const verb = parts.length > 1 || taps > 1 ? 'are' : 'is';
   return `Your ${parts.join(' and ')} for this song ${verb} dropped. The lyrics keep their current timing.`;
 }

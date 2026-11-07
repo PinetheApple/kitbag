@@ -1,42 +1,29 @@
 import { KB_MIXER_UNITY_RATE, KB_RESULT } from '@kitbag/core-native';
 import { RETIME_PLAYBACK_RATE } from '@kitbag/core-state';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { pressHardwareBack } from '../testing/reactNativeHosts.ts';
 import {
+  CLOSE,
+  DIALOG_TITLE,
   flush,
-  mountPlayer,
+  LATER,
+  mountTracked,
+  NOT_SAVED,
+  PAD,
   PLAIN_LYRICS,
+  RESET,
+  RETIME,
+  retiming,
+  SAVE,
   SONG_DETAILS,
+  UNDO_TAP,
+  unmountTracked,
   withTestId,
-  type Player,
 } from './playerHarness.test-helper.tsx';
 
-const RETIME = 'Retime lyrics';
-const PAD = 'Tap as this line starts';
-const UNDO_TAP = 'Undo tap';
-const LATER = 'Shift all lines later';
 const EARLIER = 'Shift all lines earlier';
-const RESET = 'Reset to bundle timing';
-const CLOSE = 'Close retime';
-const SAVE = 'Save';
-const NOT_SAVED = 'Timing not saved. Your taps are still here, try again.';
-const DIALOG_TITLE = 'Reset to bundle timing?';
 const slowed = (line: string) => `${line} · playing at 0.75×`;
-
-let player: Player | undefined;
-
-async function retiming(change = SONG_DETAILS) {
-  player = await mountPlayer(change);
-  await player.press('Lyrics');
-  await player.press(RETIME);
-  return player;
-}
-
-afterEach(() => {
-  player?.unmount();
-  player = undefined;
-});
 
 describe('opening retime', () => {
   it('takes over the screen and starts playback', async () => {
@@ -56,7 +43,7 @@ describe('opening retime', () => {
 
   it('claims no speed when the mixer refused it', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    player = await mountPlayer(SONG_DETAILS);
+    const player = await mountTracked(SONG_DETAILS);
     player.commands.mixerSetRate.mockResolvedValueOnce(KB_RESULT.KB_ERROR_BUSY);
     await player.press('Lyrics');
     await player.press(RETIME);
@@ -69,8 +56,7 @@ describe('opening retime', () => {
   it('restores the speed when the screen goes away mid-retime', async () => {
     const p = await retiming();
     await flush();
-    p.unmount();
-    player = undefined;
+    unmountTracked();
     await flush();
     expect(p.commands.mixerSetRate.mock.calls).toEqual([
       [RETIME_PLAYBACK_RATE],
@@ -79,7 +65,7 @@ describe('opening retime', () => {
   });
 
   it('starts at the line playing now', async () => {
-    player = await mountPlayer(SONG_DETAILS);
+    const player = await mountTracked(SONG_DETAILS);
     await player.press('Lyrics');
     player.frames(3.6);
     await player.press(RETIME);
@@ -88,7 +74,10 @@ describe('opening retime', () => {
   });
 
   it('opens from tap along on a plain-only song', async () => {
-    player = await mountPlayer({ ...SONG_DETAILS, lyrics: PLAIN_LYRICS });
+    const player = await mountTracked({
+      ...SONG_DETAILS,
+      lyrics: PLAIN_LYRICS,
+    });
     await player.press('Lyrics');
     await player.press('Tap along to sync');
     expect(player.has(slowed('Line 1 of 3'))).toBe(true);

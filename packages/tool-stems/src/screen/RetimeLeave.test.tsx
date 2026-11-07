@@ -1,39 +1,25 @@
 import { act } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { pressHardwareBack } from '../testing/reactNativeHosts.ts';
 import {
+  CLOSE,
+  DIALOG_TITLE,
   flush,
-  mountPlayer,
-  SONG_DETAILS,
-  type Player,
+  holdSave,
+  LATER,
+  NOT_SAVED,
+  PAD,
+  RESET,
+  RETIME,
+  retiming,
+  SAVE,
+  unmountTracked,
 } from './playerHarness.test-helper.tsx';
 
-const RETIME = 'Retime lyrics';
-const PAD = 'Tap as this line starts';
-const LATER = 'Shift all lines later';
-const RESET = 'Reset to bundle timing';
-const CLOSE = 'Close retime';
-const SAVE = 'Save';
-const NOT_SAVED = 'Timing not saved. Your taps are still here, try again.';
-const DIALOG_TITLE = 'Reset to bundle timing?';
 const LEAVE_TITLE = 'Leave without saving?';
 const LEAVE = 'Leave';
 const KEEP_TAPPING = 'Keep tapping';
-
-let player: Player | undefined;
-
-async function retiming(change = SONG_DETAILS) {
-  player = await mountPlayer(change);
-  await player.press('Lyrics');
-  await player.press(RETIME);
-  return player;
-}
-
-afterEach(() => {
-  player?.unmount();
-  player = undefined;
-});
 
 describe('leaving', () => {
   it('leaves at once from Close with no taps and no shift', async () => {
@@ -105,12 +91,7 @@ describe('leaving', () => {
   it('holds Back while a save runs, and a failed save still shows', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const p = await retiming();
-    let refuse: (reason: Error) => void = () => undefined;
-    p.records.saveLyricsRetimed.mockReturnValueOnce(
-      new Promise((_, reject) => {
-        refuse = reject;
-      }),
-    );
+    const refuse = holdSave(p);
     await p.touchDown(PAD);
     await p.press(SAVE);
     expect(pressHardwareBack()).toBe(true);
@@ -127,12 +108,7 @@ describe('leaving', () => {
   it('holds Leave while a save runs, and leaves once the save is refused', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const p = await retiming();
-    let refuse: (reason: Error) => void = () => undefined;
-    p.records.saveLyricsRetimed.mockReturnValueOnce(
-      new Promise((_, reject) => {
-        refuse = reject;
-      }),
-    );
+    const refuse = holdSave(p);
     await p.touchDown(PAD);
     await p.press(SAVE);
     expect(pressHardwareBack()).toBe(true);
@@ -205,8 +181,7 @@ describe('leaving', () => {
     const { leaveRetime } = p.store.getState();
     const leave = vi.fn(leaveRetime);
     p.store.setState({ leaveRetime: leave });
-    p.unmount();
-    player = undefined;
+    unmountTracked();
     p.store.setState({ leaveRetime });
     expect(leave).toHaveBeenCalled();
     expect(p.store.getState().retime.kind).toBe('off');
