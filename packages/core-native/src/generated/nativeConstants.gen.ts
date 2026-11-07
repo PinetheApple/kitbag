@@ -53,6 +53,18 @@ export const KB_MIXER_GAIN_BOUNDS = {
   max: 2,
 } as const;
 
+export const KB_MIXER_RATE_BOUNDS = {
+  min: 0.5,
+  max: 1,
+} as const;
+
+export const KB_MIXER_UNITY_RATE = 1;
+
+export const KB_MIXER_PITCH_BOUNDS = {
+  min: -6,
+  max: 6,
+} as const;
+
 /** Longest play or mute run in bars (Metronome::kMaxMuteBars); clamped above. */
 export const KB_MAX_MUTE_BARS = 16;
 

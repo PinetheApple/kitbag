@@ -1,15 +1,11 @@
-// The realtime half of the mixer: the command drain and the per-block mix. Runs
-// entirely on the audio callback — allocates nothing, takes no lock, frees
-// nothing. Setup and transport live in mixer.cpp and StreamingTrack.
 #include <algorithm>
 #include <cstring>
+#include <utility>
 
 #include "mixer/mixer.h"
 
 namespace kitbag {
 
-// The exhaustive switch has no `default:` on purpose; see the ApplyCommand
-// declaration in mixer.h.
 void Mixer::ApplyCommand(const Command& command) {
   Track& t = tracks_[command.track];
   switch (command.type) {
@@ -33,38 +29,71 @@ void Mixer::ApplyCommand(const Command& command) {
     case CommandType::kSetMasterGain:
       master_gain_.store(command.fvalue, std::memory_order_relaxed);
       return;
+    case CommandType::kSetRate:
+    case CommandType::kSetTrackPitch:
+      ApplyStretchCommand(command);
+      return;
   }
 }
 
-void Mixer::AdoptPlan() {
+void Mixer::ApplyStretchCommand(const Command& command) {
+  if (command.type == CommandType::kSetTrackPitch) {
+    MoveToBus(tracks_[command.track], ClampPitch(command.fvalue));
+    return;
+  }
+  rate_target_ = ClampRate(command.fvalue);
+  rate_mirror_.store(rate_target_, std::memory_order_relaxed);
+}
+
+bool Mixer::AdoptPlan() {
   const auto* node = plans_.Get();
   if (node == nullptr ||
       node->generation == plan_generation_.load(std::memory_order_relaxed)) {
-    return;
+    return false;
   }
   const TransportPlan& plan = node->value;
+  if (plan.kind == PlanKind::kHandOver) {
+    JudgeHandOver(plan);
+  } else {
+    AdoptTransport(plan);
+  }
+  plan_generation_.store(node->generation, std::memory_order_release);
+  return true;
+}
+
+// A keep counts on from where its head stood when the plan was built, so an
+// old loop that wrapped meanwhile is never replayed; AlignTo skips the gap.
+void Mixer::AdoptTransport(const TransportPlan& plan) {
+  handover_pending_ = false;
   const int64_t now = transport_frame_.load(std::memory_order_relaxed);
-  // A keep counts on from where its head stood when the plan was built, so an
-  // old loop that wrapped meanwhile is never replayed; AlignTo skips the gap.
-  if (plan.kind == PlanKind::kKeep) {
+  const bool keep = plan.kind == PlanKind::kKeep;
+  if (keep) {
     stream_frame_ = plan.frame + std::max<int64_t>(now - plan.base, 0);
   } else {
     stream_frame_ = plan.frame;
     jump_base_.store(now, std::memory_order_relaxed);
+    engaged_.store(false, std::memory_order_relaxed);
+    const bool over_user_jump = opens_on_jump_ && !continues_run_;
+    continues_run_ = plan.continues_run && !over_user_jump;
+    opens_on_jump_ = true;
   }
   layout_ = plan.layout;
   epoch_ = plan.epoch;
+  if (keep && engaged_.load(std::memory_order_relaxed)) {
+    PushRecord();
+    return;
+  }
   read_frame_.store(
       static_cast<uint64_t>(layout_.SongFrameAt(stream_frame_)),
       std::memory_order_relaxed
   );
-  plan_generation_.store(node->generation, std::memory_order_release);
+  if (plan.primed) EngageAt(plan, 0);
 }
 
 bool Mixer::TransportFrameFor(
     const StreamingTrack::RtView& view,
     int64_t* frame
-) {
+) const {
   if (view.source == nullptr) return false;
   if (view.stamp.epoch == epoch_) {
     *frame = stream_frame_;
@@ -91,6 +120,27 @@ bool Mixer::AlignTo(AudioSource& source, int64_t frame) {
     left -= n;
   }
   return static_cast<int64_t>(source.position()) == frame;
+}
+
+void Mixer::SnapshotBuses() {
+  for (int s = 0; s < kKeyBusCount; ++s) {
+    const auto* node = buses_[bank_][s].Get();
+    rt_buses_[s] = node == nullptr ? nullptr : node->value.bus.get();
+  }
+}
+
+bool Mixer::BusesAgree(uint64_t generation) const {
+  for (const KeyBus* bus : rt_buses_) {
+    if (bus != nullptr && bus->generation != generation) return false;
+  }
+  return true;
+}
+
+// Only when a re-prime republished the bank this block was about to adopt:
+// one silent block, and the newer plan lands at the next.
+bool Mixer::HoldForBusSwitch() const {
+  return engaged_.load(std::memory_order_relaxed) &&
+         !BusesAgree(primed_generation_);
 }
 
 void Mixer::ApplyPendingCommands() {
@@ -160,6 +210,8 @@ void Mixer::AdvanceTransport(uint32_t frame_count) {
   }
   song_clock_ = {
       .playing = true,
+      .opens_on_jump = std::exchange(opens_on_jump_, false),
+      .continues_run = std::exchange(continues_run_, false),
       .first = stream_frame_,
       .frames = static_cast<uint32_t>(advance),
       .layout = layout_
@@ -178,18 +230,28 @@ void Mixer::AdvanceTransport(uint32_t frame_count) {
 void Mixer::Process(float* output, uint32_t frame_count) {
   // Memset, not accumulate: Engine::Render relies on this clearing whatever it
   // wrote before the call.
-  std::memset(output, 0, frame_count * 2 * sizeof(float));
+  std::memset(output, 0, static_cast<size_t>(frame_count) * 2 * sizeof(float));
   // Drain first so a seek/stop/pause applies this block even while paused, and
   // so read_frame_ is written only from here.
   ApplyPendingCommands();
   AdoptPlan();
+  if (snapshot_hook_) snapshot_hook_();
+  SnapshotBuses();
+  // A plan is published before the bank it replaces is freed, so a bank freed
+  // under the snapshot means its successor's plan is already readable.
+  if (AdoptPlan()) SnapshotBuses();
   song_clock_.playing = false;
   // Scratch is sized to kMaxBlockFrames at setup; a wider block cannot be
   // drained without allocating, which the callback must never do.
   if (frame_count > StreamingTrack::kMaxBlockFrames) return;
-  if (!playing_.load(std::memory_order_relaxed)) return;
-
-  MixAllTracks(output, frame_count, any_solo_.load(std::memory_order_relaxed));
+  if (!playing_.load(std::memory_order_relaxed) || HoldForBusSwitch()) return;
+  const bool any_solo = any_solo_.load(std::memory_order_relaxed);
+  if (engaged_.load(std::memory_order_relaxed)) {
+    StretchBlock(output, frame_count, any_solo);
+    return;
+  }
+  if (handover_pending_ && HandOverBlock(output, frame_count, any_solo)) return;
+  MixAllTracks(output, frame_count, any_solo);
   AdvanceTransport(frame_count);
 }
 

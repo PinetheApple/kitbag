@@ -760,15 +760,22 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   boxes, not measured; needs a device check. A wider row wraps onto its
   second line rather than truncating. Above the default scale the status stack leaves the
   scrolling body and sits directly above the transport, so a body that overflows cannot
-  push it out of view. It is one row tall stopped and two running. Start and Stop leave the
-  scroll view's frame and content height alone (#304): a clip follows the stack, and the
-  running viewport reaches under the stack's extra row. Android lays out a scroll view
-  before its content, and the offset clamps to the stale range in between, so resizing the
-  viewport on Stop would lose the scroll position. Running, the content pads by the stack
-  difference; stopped, by that less the legend's modelled height. The slack models one
-  legend row, so any legend that wraps leaves the stopped range longer than running, and
-  Start at scroll end moves the body. It happens at scroll end only. The measured case is
-  2.0 with poly on, about 48 dp. Coordinator call; the owner may
+  push it out of view. Stopped it is one row tall. Running it
+  is as tall as the rows the armed tools show in that phase: none with nothing armed, and
+  it drops a row once a beat has played outside a count-in (#319). A row that can show is
+  reserved from Start; a tool turned on mid-run can cover pads while its sheet is open.
+  `kitbag-metronome-status.html` reserves two rows so that nothing moves; above the default
+  scale nothing moves without that reservation, because the stack is out of the body.
+  Coordinator call; the owner may overturn it. **[recorded]** Start and Stop leave the scroll
+  view's frame and content height alone (#304): the frame runs to the transport's gap in
+  every stack size and a clip follows the stack. Android lays out a scroll view before its
+  content, and the offset clamps to the stale range in between, so resizing the viewport on
+  Stop would lose the scroll position. Running, the content pads by the two-row stack and
+  its gap; stopped, by that less the legend's modelled height, so scrolling to the end with
+  fewer rows shows the same blank below the dots as the two-row range leaves. The slack
+  models one legend row, so any legend that wraps leaves the stopped range longer than
+  running, and Start at scroll end moves the body. It happens at scroll end only. The
+  measured case is 2.0 with poly on, about 48 dp. Coordinator call; the owner may
   overturn it. **[recorded]**
   On a small screen at 2.0 the beat dots then sit below the fold and are reached by
   scrolling the body (coordinator call, 2026-11-02, open to owner review). Above the default scale
@@ -950,3 +957,23 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   because a glyph cut at the field's edge reads as a stray mark. `.editrow .v` doesn't forbid
   wrapping. Return leaves the field and a pasted newline becomes a space. Coordinator call;
   the owner may overturn it. **[recorded]**
+
+- **2026-11-07 · Speed and key run on key buses (§7.6, #138)** — One stretch instance per
+  semitone in use, doing rate and key for its stems. A song that has not left 1.0× and 0 st
+  gets a plain mix; one returned there mid-play keeps its buses until the next seek or stop,
+  then gets the plain mix. At 0.2 s block and 6× overlap by default; more than four member
+  buses put every bus on `presetDefault`, moving up at once as a fresh prime and back down only at the next seek or
+  re-prime. Only buses with member stems count, and drained empties retire and free on the
+  app thread. Priming runs on the app thread: a seek or play starts once every bus is primed,
+  sample-aligned; a mid-play engage switches at a predicted sample and re-primes on a miss.
+  Instances are configured on the app thread when the song first leaves 1.0× and 0 st and
+  reach the callback through `RtPublisher`; a song at 1.0× and 0 st builds none.
+  **[recorded — coordinator ruling]**
+- **2026-11-07 · Stretch latency stays inside the song-frame mapping (§4.2.2, #138)** — It is
+  compensated there rather than reported with output latency, so click and stems land
+  together with no new reported number. A coordinator call the owner may overturn.
+  **[recorded — coordinator ruling]**
+- **2026-11-07 · Key at the ABI (§7.6, #138)** — `int32_t` semitones, refused outside −6 to +6;
+  the TS binding rounds on the way in and the database is unchanged. `current_bpm` stays the
+  song's tempo at any speed. Unloading a track resets its key to 0, so a key carries to the next
+  stem in that slot only when the command queue was full at the unload. **[recorded — coordinator ruling]**

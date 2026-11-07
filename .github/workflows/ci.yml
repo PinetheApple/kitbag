@@ -54,6 +54,8 @@ jobs:
         run: ./native/audio_core/build/tuner_verify
       - name: Click soak — dropped/doubled/jittered/offset fixtures and the engine's render
         run: ./native/audio_core/build/click_soak_verify
+      - name: Stretch — duration scales by 1/rate, pitch holds, shifts land, no allocation
+        run: ./native/audio_core/build/stretch_verify
 
   # The TypeScript workspace (Phase 2, SPEC §13/§13.6). Runs the same gate the
   # project loop runs locally: typecheck, the architecture-rule lint, the
@@ -90,8 +92,8 @@ jobs:
         run: ./scripts/web-check.sh
       - name: Version — app.json and its package.json mirrors agree (#53)
         run: ./scripts/version.sh check
-      - name: Release scripts — next version, versionCode, signature and release gates
-        run: ./scripts/version.test.sh && ./scripts/verify-apk-signature.test.sh && ./scripts/release-gate.test.sh && ./scripts/changelog.test.sh && ./scripts/release-notes.test.sh
+      - name: Script tests
+        run: ./scripts/version.test.sh && ./scripts/verify-apk-signature.test.sh && ./scripts/release-gate.test.sh && ./scripts/changelog.test.sh && ./scripts/release-notes.test.sh && ./scripts/preflight.test.sh
 
   # The only gate that compiles Kotlin, the JNI glue and the codegen'd
   # TurboModule spec together. Every headless gate stayed green from M1 to M3

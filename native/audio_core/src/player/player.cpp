@@ -19,11 +19,11 @@ void Player::Pause() {
   stream_.StopSource();
 }
 
-void Player::Seek(uint64_t frame, uint64_t now_frame, bool engine_running) {
+void Player::Seek(uint64_t frame, FrameClock clock, bool engine_running) {
   // StreamingTrack::Seek returns false only when a live rebuild failed and the
   // old source was resumed in place; suppress kSeek so the transport holds at the
   // audible position rather than jumping to the target (#25).
-  if (!stream_.Seek(frame, now_frame, engine_running)) return;
+  if (!stream_.Seek(frame, clock, engine_running)) return;
   Command command{CommandType::kSeek};
   command.frame = frame;
   Enqueue(command);

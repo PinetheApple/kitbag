@@ -8,7 +8,7 @@
 #include <span>
 
 #include "kitbag_metronome_poly_api.h"
-#include "media/loop_layout.h"
+#include "media/song_clock.h"
 #include "metronome/click_voices.h"
 #include "metronome/metronome_types.h"
 #include "metronome/rig_click.h"
@@ -380,7 +380,7 @@ class Metronome {
   RigClick rig_click_;
   bool follow_mixer_ = false;
   // Any other song frame, a seek or a loop wrap, reseeds the cursor.
-  int64_t follow_next_frame_ = kReseedFollow;
+  int64_t follow_last_frame_ = kReseedFollow;
   double follow_seconds_ = 0.0;
   // Grid beats after this song second wait: the loop's wrap owns that moment.
   double grid_fire_limit_ = std::numeric_limits<double>::infinity();

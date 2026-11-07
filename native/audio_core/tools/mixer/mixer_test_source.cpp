@@ -59,15 +59,15 @@ class CountingRampReader : public kitbag::SourceReader {
   uint64_t pos_ = 0;
 };
 
-// The whole point of A1: memory is O(tracks), not O(duration). A 20000-frame
+// The whole point of A1: memory is O(tracks), not O(duration). A 60000-frame
 // song is far longer than the ring, so a mixer that buffered the whole thing
-// would report track_buffered() near 20000 rather than a ring's worth.
+// would report track_buffered() near 60000 rather than a ring's worth.
 void TestStreamsRatherThanBuffersWholeSong() {
-  const uint64_t frames = 20000;
+  const uint64_t frames = 60000;
   CountingRampReader reader(frames, kMono, 0.0f);
   kitbag::Mixer mixer(kSampleRate);
   Check(
-      mixer.SetTrackSource(0, &reader, 0, false),
+      mixer.SetTrackSource(0, &reader, kZeroClock, false) == kLoaded,
       "source: SetTrackSource accepts a streaming reader"
   );
   Check(
@@ -76,14 +76,14 @@ void TestStreamsRatherThanBuffersWholeSong() {
   );
   mixer.Play();
   Check(
-      mixer.track_buffered(0) <= kitbag::AudioSource::kDefaultRingFrames,
+      mixer.track_buffered(0) <= mixer.ring_frames(),
       "source: buffering is bounded by the ring"
   );
   Check(
       mixer.track_buffered(0) < frames,
-      "source: the mixer holds far less than the whole 20000-frame song"
+      "source: the mixer holds far less than the whole 60000-frame song"
   );
-  mixer.Stop(0, false);
+  mixer.Stop(kZeroClock, false);
 }
 
 // Streaming pulls the reader repeatedly in bounded chunks. A reimplementation
@@ -92,10 +92,10 @@ void TestConsumesSourceInChunksNotOneShot() {
   const uint64_t frames = 4000;
   CountingRampReader reader(frames, kMono, 0.0f);
   kitbag::Mixer mixer(kSampleRate);
-  mixer.SetTrackSource(0, &reader, 0, false);
+  mixer.SetTrackSource(0, &reader, kZeroClock, false);
   mixer.Play();
   for (int b = 0; b < 4; ++b) RenderBlock(&mixer);
-  mixer.Stop(0, false);
+  mixer.Stop(kZeroClock, false);
   Check(
       reader.read_calls.load() > 1,
       "source: the reader is pulled repeatedly, not read once"
@@ -117,7 +117,7 @@ bool AnyNonZero(const std::vector<float>& out) {
 void TestDrainDeliversSourceSamples() {
   CountingRampReader reader(3000, kMono, kLongOffset);
   kitbag::Mixer mixer(kSampleRate);
-  mixer.SetTrackSource(0, &reader, 0, false);
+  mixer.SetTrackSource(0, &reader, kZeroClock, false);
   mixer.Play();
 
   const std::vector<float> b0 = RenderBlock(&mixer);
@@ -141,14 +141,14 @@ void TestDrainDeliversSourceSamples() {
   );
   Check(AnyNonZero(b0), "drain: the block is not silent");
   Check(mixer.position() == kBlock, "drain: the transport advanced one block");
-  mixer.Stop(0, false);
+  mixer.Stop(kZeroClock, false);
 }
 
 // A second block must continue from where the first left off, not replay it.
 void TestDrainContinuesNotReplays() {
   CountingRampReader reader(3000, kMono, kLongOffset);
   kitbag::Mixer mixer(kSampleRate);
-  mixer.SetTrackSource(0, &reader, 0, false);
+  mixer.SetTrackSource(0, &reader, kZeroClock, false);
   mixer.Play();
 
   RenderBlock(&mixer);
@@ -159,7 +159,7 @@ void TestDrainContinuesNotReplays() {
       kLongOffset + static_cast<float>(kBlock),
       "drain: the next block continues rather than replays"
   );
-  mixer.Stop(0, false);
+  mixer.Stop(kZeroClock, false);
 }
 
 // A source shorter than a whole number of blocks drains to its last frame, pads
@@ -168,7 +168,7 @@ void TestSourceDrainsToEndThenStops() {
   const uint64_t frames = 1300;
   CountingRampReader reader(frames, kMono, 0.0f);
   kitbag::Mixer mixer(kSampleRate);
-  mixer.SetTrackSource(0, &reader, 0, false);
+  mixer.SetTrackSource(0, &reader, kZeroClock, false);
   mixer.Play();
 
   RenderBlock(&mixer);
@@ -181,7 +181,7 @@ void TestSourceDrainsToEndThenStops() {
 
   RenderBlock(&mixer);
   Check(!mixer.is_playing(), "end: playback stops after the last frame");
-  mixer.Stop(0, false);
+  mixer.Stop(kZeroClock, false);
 }
 
 }  // namespace

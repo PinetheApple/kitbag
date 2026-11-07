@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cmath>
 #include <memory>
+#include <utility>
 
 namespace kitbag {
 
@@ -17,10 +18,19 @@ Mixer::Mixer(uint32_t engine_rate)
       ),
       crossfade_frames_(
           std::llround(kLoopCrossfadeSeconds * static_cast<double>(engine_rate))
+      ),
+      sample_rate_(static_cast<float>(engine_rate)),
+      handover_lead_frames_(
+          std::llround(kHandOverLeadSeconds * static_cast<double>(engine_rate))
       ) {
+  const auto preroll = static_cast<uint32_t>(
+      TimeStretch::DefaultConfig(sample_rate_).PreRollFrames()
+  );
   for (auto& track : tracks_) {
     track.stream = std::make_unique<StreamingTrack>(engine_rate);
+    track.stream->ReservePreRollFrames(preroll);
   }
+  records_.Reserve(preroll / kMinRecordSpacingFrames + 2);
 }
 
 void Mixer::ReserveCallbackFrames(uint32_t frames) {
@@ -48,28 +58,48 @@ void Mixer::RecomputeLongestFrames() {
   longest_frames_.store(longest, std::memory_order_relaxed);
 }
 
-bool Mixer::LoadTrack(
+Mixer::LoadResult Mixer::LoadTrack(
     int track,
     const char* path,
-    uint64_t now_frame,
+    FrameClock clock,
     bool engine_running
 ) {
-  if (track < 0 || track >= kMaxTracks) return false;
+  if (track < 0 || track >= kMaxTracks) return LoadResult::kInvalid;
+  const Prepared prepared = PrepareBusFor(track, clock, engine_running);
   const auto frame = static_cast<uint64_t>(PlannedHead().stream);
   StreamingTrack& stream = *tracks_[track].stream;
-  if (!stream.Load(path, now_frame, engine_running, JoinStamp(), frame)) {
-    return false;
+  if (!stream.Load(path, clock, engine_running, JoinStamp(), frame)) {
+    UndoPrepare(prepared, clock, engine_running);
+    return LoadResult::kInvalid;
   }
-  NoteTrackLoaded(track);
-  return true;
+  return FinishLoad(track, prepared, clock, engine_running);
 }
 
-void Mixer::UnloadTrack(int track, uint64_t now_frame, bool engine_running) {
+// A stem kept after a failed prime stays silent, and the config flag it moved
+// would put later buses out of line with the live bank.
+Mixer::LoadResult Mixer::FinishLoad(
+    int track,
+    const Prepared& prepared,
+    FrameClock clock,
+    bool engine_running
+) {
+  NoteTrackLoaded(track);
+  if (!prepared.prime || PrimeNow(clock, engine_running)) {
+    return LoadResult::kOk;
+  }
+  UnloadTrack(track, clock, engine_running);
+  UndoPrepare(prepared, clock, engine_running);
+  return LoadResult::kPrimeFailed;
+}
+
+void Mixer::UnloadTrack(int track, FrameClock clock, bool engine_running) {
   if (track < 0 || track >= track_count_.load(std::memory_order_relaxed)) {
     return;
   }
-  tracks_[track].stream->Unload(now_frame, engine_running);
+  tracks_[track].stream->Unload(clock, engine_running);
+  ResetTrackPitch(track);
   RecomputeLongestFrames();
+  FreeUnusedBuses(clock, engine_running);
 }
 
 bool Mixer::track_ready(int track) const {
@@ -77,25 +107,28 @@ bool Mixer::track_ready(int track) const {
   return tracks_[track].stream->ready();
 }
 
-bool Mixer::SetTrackSource(
+Mixer::LoadResult Mixer::SetTrackSource(
     int track,
     SourceReader* reader,
-    uint64_t now_frame,
+    FrameClock clock,
     bool engine_running
 ) {
-  if (track < 0 || track >= kMaxTracks) return false;
+  if (track < 0 || track >= kMaxTracks) return LoadResult::kInvalid;
+  const Prepared prepared = PrepareBusFor(track, clock, engine_running);
   const auto frame = static_cast<uint64_t>(PlannedHead().stream);
   const SourceStamp stamp = JoinStamp();
   StreamingTrack& stream = *tracks_[track].stream;
-  if (!stream.LoadReader(reader, now_frame, engine_running, stamp, frame)) {
-    return false;
+  if (!stream.LoadReader(reader, clock, engine_running, stamp, frame)) {
+    UndoPrepare(prepared, clock, engine_running);
+    return LoadResult::kInvalid;
   }
-  NoteTrackLoaded(track);
-  return true;
+  return FinishLoad(track, prepared, clock, engine_running);
 }
 
-void Mixer::Enqueue(const Command& command) {
-  if (!commands_.Push(command)) ++dropped_commands_;
+bool Mixer::Enqueue(const Command& command) {
+  if (commands_.Push(command)) return true;
+  ++dropped_commands_;
+  return false;
 }
 
 void Mixer::SetGain(int track, float gain) {
@@ -159,10 +192,10 @@ void Mixer::Play() {
   Enqueue({CommandType::kPlay});
 }
 
-void Mixer::Stop(uint64_t now_frame, bool engine_running) {
+void Mixer::Stop(FrameClock clock, bool engine_running) {
   app_playing_ = false;
   Enqueue({CommandType::kStop});
-  Relayout({.layout = app_layout_}, now_frame, engine_running);
+  ReplanStretch({.layout = app_layout_}, clock, engine_running);
 }
 
 void Mixer::Pause() {
@@ -172,11 +205,21 @@ void Mixer::Pause() {
   for (int i = 0; i < count; ++i) tracks_[i].stream->StopSource();
 }
 
-void Mixer::Seek(uint64_t frame, uint64_t now_frame, bool engine_running) {
+void Mixer::Seek(uint64_t frame, FrameClock clock, bool engine_running) {
   const uint64_t longest = longest_frames_.load(std::memory_order_relaxed);
   const int64_t target =
       SeekTarget(static_cast<int64_t>(std::min(frame, longest)));
-  Relayout({.frame = target, .layout = app_layout_}, now_frame, engine_running);
+  const TransportPlan plan{.frame = target, .layout = app_layout_};
+  ReplanStretch(plan, clock, engine_running);
+}
+
+void Mixer::ReplanStretch(
+    TransportPlan plan,
+    FrameClock clock,
+    bool engine_running
+) {
+  const bool was_engaged = std::exchange(app_engaged_, WantsStretch());
+  if (!Relayout(plan, clock, engine_running)) app_engaged_ = was_engaged;
 }
 
 int64_t Mixer::SeekTarget(int64_t frame) const {
@@ -187,7 +230,7 @@ int64_t Mixer::SeekTarget(int64_t frame) const {
 Mixer::LoopResult Mixer::SetLoop(
     int64_t start,
     int64_t end,
-    uint64_t now_frame,
+    FrameClock clock,
     bool engine_running
 ) {
   const auto longest =
@@ -198,7 +241,10 @@ Mixer::LoopResult Mixer::SetLoop(
   }
   const Head head = PlannedHead();
   const int64_t song = app_layout_.SongFrameAt(head.stream);
-  const bool keep = song < end;
+  const int64_t heard = stretch_engaged()
+                            ? std::min(static_cast<int64_t>(position()), song)
+                            : song;
+  const bool keep = heard < end;
   const TransportPlan plan{
       .kind = keep && !head.jump_pending ? PlanKind::kKeep : PlanKind::kJump,
       .frame = keep ? song : start,
@@ -210,11 +256,11 @@ Mixer::LoopResult Mixer::SetLoop(
           .crossfade = crossfade_frames_
       }
   };
-  return Relayout(plan, now_frame, engine_running) ? LoopResult::kOk
-                                                   : LoopResult::kRebuildFailed;
+  return Relayout(plan, clock, engine_running) ? LoopResult::kOk
+                                               : LoopResult::kRebuildFailed;
 }
 
-bool Mixer::ClearLoop(uint64_t now_frame, bool engine_running) {
+bool Mixer::ClearLoop(FrameClock clock, bool engine_running) {
   if (!app_layout_.looping) return true;
   const Head head = PlannedHead();
   const TransportPlan plan{
@@ -223,7 +269,7 @@ bool Mixer::ClearLoop(uint64_t now_frame, bool engine_running) {
       .base = head.transport,
       .layout = {}
   };
-  return Relayout(plan, now_frame, engine_running);
+  return Relayout(plan, clock, engine_running);
 }
 
 Mixer::Head Mixer::PlannedHead() const {
@@ -234,6 +280,13 @@ Mixer::Head Mixer::PlannedHead() const {
     return {.stream = now, .transport = now, .jump_pending = false};
   }
   const TransportPlan& plan = node->value;
+  if (plan.kind == PlanKind::kHandOver) {
+    return {
+        .stream = plan.frame + now - plan.base,
+        .transport = now,
+        .jump_pending = false
+    };
+  }
   int64_t base = plan.base;
   if (plan.kind == PlanKind::kJump) {
     if (node->generation != adopted) {
@@ -251,7 +304,28 @@ Mixer::Head Mixer::PlannedHead() const {
 
 bool Mixer::Relayout(
     TransportPlan plan,
-    uint64_t now_frame,
+    FrameClock clock,
+    bool engine_running
+) {
+  if (plan.kind == PlanKind::kJump && app_engaged_ && BusesInUse() > 0) {
+    return PrimedRelayout(plan, clock, engine_running);
+  }
+  if (!PlainRelayout(plan, clock, engine_running)) return false;
+  if (plan.kind == PlanKind::kJump) {
+    for (int bank = 0; bank < kBanks; ++bank) {
+      FreeBank(bank, clock, engine_running);
+    }
+    app_primed_ = false;
+    MatchBusConfig(0, true);
+  } else if (PrimeAwaitingEngage()) {
+    PrimeNow(clock, engine_running);
+  }
+  return true;
+}
+
+bool Mixer::PlainRelayout(
+    TransportPlan plan,
+    FrameClock clock,
     bool engine_running
 ) {
   plan.epoch = app_epoch_ + 1;
@@ -262,34 +336,27 @@ bool Mixer::Relayout(
       .plays_early = plan.kind == PlanKind::kKeep
   };
   if (!StageAll(plan.frame, stamp, engine_running)) return false;
+  CommitPlan(plan, clock, engine_running);
+  return true;
+}
+
+void Mixer::CommitPlan(
+    const TransportPlan& plan,
+    FrameClock clock,
+    bool engine_running
+) {
   app_epoch_ = plan.epoch;
   app_layout_ = plan.layout;
   const int count = track_count_.load(std::memory_order_relaxed);
   for (int i = 0; i < count; ++i) {
-    tracks_[i].stream->CommitStaged(now_frame, engine_running);
+    tracks_[i].stream->CommitStaged(clock, engine_running);
   }
   plans_.Publish(
       std::make_unique<TransportPlan>(plan),
-      now_frame,
+      clock.Now(),
       engine_running
   );
   for (int i = 0; i < count; ++i) tracks_[i].stream->StopPrevious();
-  return true;
-}
-
-bool Mixer::StageAll(
-    int64_t frame,
-    const SourceStamp& stamp,
-    bool engine_running
-) {
-  const int count = track_count_.load(std::memory_order_relaxed);
-  const auto target = static_cast<uint64_t>(std::max<int64_t>(frame, 0));
-  for (int i = 0; i < count; ++i) {
-    if (tracks_[i].stream->Stage(target, stamp, engine_running)) continue;
-    for (int j = 0; j < i; ++j) tracks_[j].stream->DropStaged();
-    return false;
-  }
-  return true;
 }
 
 uint64_t Mixer::track_frames(int track) const {
@@ -310,6 +377,10 @@ uint64_t Mixer::rt_track_buffered(int track) const {
   return tracks_[track].stream->rt_buffered();
 }
 
+uint64_t Mixer::ring_frames() const {
+  return tracks_[0].stream->ring_frames();
+}
+
 bool Mixer::track_at_end(int track) const {
   if (track < 0 || track >= track_count_.load(std::memory_order_relaxed)) {
     return true;
@@ -320,6 +391,9 @@ bool Mixer::track_at_end(int track) const {
 void Mixer::ReleaseRetiredSources() {
   for (auto& track : tracks_) track.stream->ReleaseRetiredSources();
   plans_.ReclaimAll();
+  for (auto& bank : buses_) {
+    for (auto& slot : bank) slot.ReclaimAll();
+  }
 }
 
 }  // namespace kitbag

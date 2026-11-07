@@ -51,7 +51,9 @@ bash scripts/install-on-device.sh    # build, install, launch, report signing + 
 `preflight.sh` must pass before committing. It collects failures rather than
 stopping at the first, so one run shows every problem instead of revealing one
 per CI round trip, and it reports which files it rewrote — commit those or CI
-still fails. `--skip-android` and `--skip-native` drop the slow legs.
+still fails. A fix that rewrites files re-runs the earlier gates that read them,
+so exit 0 covers the rewritten tree. `--skip-android` and `--skip-native` drop the
+slow legs.
 
 ### Cutting a release
 
@@ -252,9 +254,9 @@ Short version:
   `main`. Built: the metronome with setlists and presets, the Home hub, the tuner
   (#117, #127), song import with background beat analysis (#160), the Songs and
   Stem songs screens (#178) and the stem player (#137, #177; device
-  verification pending, issues open). Not built: stem speed and key (#138), a
-  single-song player (§6), play along (§8), Settings (#170). Open issues are the
-  backlog.
+  verification pending, issues open). Stem speed and key (#138): engine and
+  binding built, UI not. Not built: a single-song player (§6), play along (§8),
+  Settings (#170). Open issues are the backlog.
 
 ## Honesty rules
 

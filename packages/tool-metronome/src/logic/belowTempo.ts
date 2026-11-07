@@ -45,6 +45,7 @@ export const BEAT_LABEL_HEIGHT =
   metronome.beatMarkerGap +
   metronome.beatMarkerLineHeight;
 
+export const STATUS_REST_ROWS = 1;
 const LIVE_STATUS_ROWS = 2;
 const STATUS_LINES = 1;
 // Android pads each line to the font's bbox (~1.4 em), so two grown lines fill the
@@ -74,11 +75,18 @@ export function statusStackPinned(fontScale: number): boolean {
   return isTextScaled(fontScale);
 }
 
-export function statusStackHeight(running: boolean, fontScale: number): number {
-  const row = statusRowHeight(fontScale);
-  return running
-    ? statusRowPitch(fontScale) * (LIVE_STATUS_ROWS - 1) + row
-    : row;
+export function statusStackHeight(rows: number, fontScale: number): number {
+  if (rows === 0) return 0;
+  return statusRowPitch(fontScale) * (rows - 1) + statusRowHeight(fontScale);
+}
+
+export function statusStackRows(
+  running: boolean,
+  runRows: number,
+  fontScale: number,
+): number {
+  if (!running) return STATUS_REST_ROWS;
+  return statusStackPinned(fontScale) ? runRows : LIVE_STATUS_ROWS;
 }
 
 export type PolyRow = 'off' | 'labelBeside' | 'labelAbove';
@@ -137,30 +145,38 @@ export function legendHeight(fontScale: number): number {
   return metronome.legendTop + metronome.legendRow * grownTextScale(fontScale);
 }
 
-function runningStackGrowth(fontScale: number): number {
-  return (
-    statusStackHeight(true, fontScale) - statusStackHeight(false, fontScale)
-  );
+export function pinnedStackGap(rows: number, gap: number): number {
+  return rows === 0 ? 0 : gap;
+}
+
+function pinnedStackTaken(
+  rows: number,
+  fontScale: number,
+  gap: number,
+): number {
+  return statusStackHeight(rows, fontScale) + pinnedStackGap(rows, gap);
 }
 
 // Android lays out a ScrollView before its content, and the offset clamps to the
-// stale range in between, so resizing the viewport on Stop loses the scroll position.
+// stale range in between, so the frame runs to the transport in every stack size.
 export function pinnedViewportOverlap(
-  running: boolean,
+  stackRows: number,
   fontScale: number,
+  gap: number,
 ): number {
-  if (!running || !statusStackPinned(fontScale)) return 0;
-  return runningStackGrowth(fontScale);
+  if (!statusStackPinned(fontScale)) return 0;
+  return pinnedStackTaken(stackRows, fontScale, gap);
 }
 
 export function pinnedStackScrollSlack(
   running: boolean,
   fontScale: number,
+  gap: number,
 ): number {
   if (!statusStackPinned(fontScale)) return 0;
-  const growth = runningStackGrowth(fontScale);
-  if (running) return growth;
-  return Math.max(0, growth - legendHeight(fontScale));
+  const tallest = pinnedStackTaken(LIVE_STATUS_ROWS, fontScale, gap);
+  if (running) return tallest;
+  return Math.max(0, tallest - legendHeight(fontScale));
 }
 
 export function belowTempoHeight(
@@ -170,8 +186,8 @@ export function belowTempoHeight(
   const dots = beatDotsHeight(shape, room);
   const legend = legendHeight(room.fontScale);
   if (statusStackPinned(room.fontScale)) return dots + legend;
-  const stopped = legend + statusStackHeight(false, room.fontScale);
-  const running = statusStackHeight(true, room.fontScale);
+  const stopped = legend + statusStackHeight(STATUS_REST_ROWS, room.fontScale);
+  const running = statusStackHeight(LIVE_STATUS_ROWS, room.fontScale);
   return dots + Math.max(stopped, running);
 }
 

@@ -130,5 +130,6 @@ headless gates cannot see a broken JNI chain.
 ## License
 
 GPLv3 — see [LICENSE](LICENSE). Native dependencies: miniaudio (public domain),
-QM-DSP (GPL-2.0-or-later, with kissfft under BSD-3-Clause). Fonts: Space Grotesk
+QM-DSP (GPL-2.0-or-later, with kissfft under BSD-3-Clause), Signalsmith
+Stretch and signalsmith-linear (MIT). Fonts: Space Grotesk
 and Inter (OFL).

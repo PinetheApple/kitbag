@@ -11,6 +11,7 @@
 // buffered count stays within the ring's capacity. That bound is the assertion:
 // contiguity alone misses the underflow, whose stale reads are often themselves
 // contiguous — only the desynced index shows.
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
@@ -32,10 +33,12 @@
 #include "player/player.h"
 #include "seek_race_loop.h"
 #include "wav_fixture.h"
+#include "zero_clock.h"
 
 namespace {
 
 using kitbag_test::Check;
+using kitbag_test::kZeroClock;
 
 // Pins the calling thread to one core so the render and seek threads run on
 // different cores. Without it the scheduler often co-schedules them on one core
@@ -117,6 +120,7 @@ struct RaceStats {
   std::atomic<uint64_t> blocks{0};
   std::atomic<uint64_t> audio_blocks{0};
   uint64_t seeks = 0;
+  uint64_t ring_ceiling = kRingCeiling;
 };
 
 // One render + one buffered probe. `render` fills the block, `buffered` reads
@@ -152,7 +156,7 @@ void SeekLoop(
   // Stop early once the desync is seen: the bug is proven, and letting a
   // corrupted source run on risks a hang the assertion would never reach.
   while (std::chrono::steady_clock::now() < deadline &&
-         s->max_buffered.load(std::memory_order_relaxed) <= kRingCeiling) {
+         s->max_buffered.load(std::memory_order_relaxed) <= s->ring_ceiling) {
     const uint64_t target = kTargets[s->seeks % kTargetCount];
     seek(target, s->now.load(std::memory_order_relaxed));
     ++s->seeks;
@@ -173,7 +177,7 @@ void Assert(RaceStats* s, const char* who) {
   );
   Check(s->audio_blocks.load() > 0, msg);
   std::snprintf(msg, sizeof(msg), "%s: buffered never exceeds the ring", who);
-  Check(s->max_buffered.load() <= kRingCeiling, msg);
+  Check(s->max_buffered.load() <= s->ring_ceiling, msg);
 }
 
 // Spawns the render thread, runs the seek loop for `duration`, then joins.
@@ -194,20 +198,24 @@ void RunMixerRace() {
   RampReader reader;  // declared first: it must outlive the mixer that reads it
   kitbag::Mixer mixer(kSampleRate);
   Check(
-      mixer.SetTrackSource(0, &reader, 0, true),
+      mixer.SetTrackSource(0, &reader, kZeroClock, true) ==
+          kitbag::Mixer::LoadResult::kOk,
       "mixer-race: the ramp source loads"
   );
   mixer.Play();
 
   RaceStats stats;
+  stats.ring_ceiling = mixer.ring_frames();
   RunRace(
       &stats,
       [&](std::vector<float>* out) { mixer.Process(out->data(), kBlock); },
       [&] { return mixer.rt_track_buffered(0); },
       kMixerDuration,
-      [&](uint64_t target, uint64_t now) { mixer.Seek(target, now, true); }
+      [&](uint64_t target, uint64_t now) {
+        mixer.Seek(target, kitbag::FrameClock(now), true);
+      }
   );
-  mixer.Stop(0, false);
+  mixer.Stop(kZeroClock, false);
   mixer.ReleaseRetiredSources();
   Assert(&stats, "mixer-race");
 }
@@ -222,26 +230,35 @@ std::string WriteRaceRamp() {
   );
 }
 
+void RacePlayerSeeks(kitbag::Player* player, RaceStats* stats) {
+  RunRace(
+      stats,
+      [&](std::vector<float>* out) {
+        std::ranges::fill(*out, 0.0f);
+        player->Render(out->data(), kBlock);
+      },
+      [&] { return player->rt_buffered(); },
+      kPlayerDuration,
+      [&](uint64_t target, uint64_t now) {
+        player->Seek(target, kitbag::FrameClock(now), true);
+      }
+  );
+}
+
 void RunPlayerRace() {
   const std::string path = WriteRaceRamp();
   Check(!path.empty(), "player-race: the ramp WAV writes");
   if (path.empty()) return;
 
   kitbag::Player player(kSampleRate);
-  Check(player.Load(path.c_str(), 0, true), "player-race: the ramp WAV loads");
+  Check(
+      player.Load(path.c_str(), kZeroClock, true),
+      "player-race: the ramp WAV loads"
+  );
   player.Play();
 
   RaceStats stats;
-  RunRace(
-      &stats,
-      [&](std::vector<float>* out) {
-        for (float& s : *out) s = 0.0f;  // Render accumulates, so clear first
-        player.Render(out->data(), kBlock);
-      },
-      [&] { return player.rt_buffered(); },
-      kPlayerDuration,
-      [&](uint64_t target, uint64_t now) { player.Seek(target, now, true); }
-  );
+  RacePlayerSeeks(&player, &stats);
   player.Pause();
   player.ReleaseRetiredSources();
   Assert(&stats, "player-race");
@@ -263,7 +280,8 @@ void RunMixerPausedSeek() {
   RampReader reader;
   kitbag::Mixer mixer(kSampleRate);
   Check(
-      mixer.SetTrackSource(0, &reader, 0, true),
+      mixer.SetTrackSource(0, &reader, kZeroClock, true) ==
+          kitbag::Mixer::LoadResult::kOk,
       "mixer-paused-seek: the ramp source loads"
   );
   mixer.Play();
@@ -272,12 +290,12 @@ void RunMixerPausedSeek() {
       mixer.track_buffered(0) > 0,
       "mixer-paused-seek: primed before the seek"
   );
-  mixer.Seek(kTargets[0], kBlock, /*engine_running=*/true);
+  mixer.Seek(kTargets[0], kitbag::FrameClock(kBlock), /*engine_running=*/true);
   Check(
       mixer.track_buffered(0) > 0,
       "mixer-paused-seek: rebuilt and primed, not cleared in place"
   );
-  mixer.Stop(0, false);
+  mixer.Stop(kZeroClock, false);
   mixer.ReleaseRetiredSources();
 }
 
@@ -288,13 +306,13 @@ void RunPlayerPausedSeek() {
 
   kitbag::Player player(kSampleRate);
   Check(
-      player.Load(path.c_str(), 0, true),
+      player.Load(path.c_str(), kZeroClock, true),
       "player-paused-seek: the ramp WAV loads"
   );
   player.Play();
   player.Pause();
   Check(player.rt_buffered() > 0, "player-paused-seek: primed before the seek");
-  player.Seek(kTargets[0], kBlock, /*engine_running=*/true);
+  player.Seek(kTargets[0], kitbag::FrameClock(kBlock), /*engine_running=*/true);
   Check(
       player.rt_buffered() > 0,
       "player-paused-seek: rebuilt and primed, not cleared in place"
@@ -320,7 +338,7 @@ void RunPlayerFailedReseek() {
 
   kitbag::Player player(kSampleRate);
   Check(
-      player.Load(path.c_str(), 0, true),
+      player.Load(path.c_str(), kZeroClock, true),
       "player-failed-reseek: the WAV loads"
   );
   player.Play();
@@ -329,7 +347,7 @@ void RunPlayerFailedReseek() {
 
   std::error_code ec;
   std::filesystem::remove(path, ec);  // now a fresh open of the path fails
-  player.Seek(kFarTarget, kBlock, /*engine_running=*/true);
+  player.Seek(kFarTarget, kitbag::FrameClock(kBlock), /*engine_running=*/true);
   player.Render(out.data(), kBlock);
   Check(
       player.position() < kFarTarget,

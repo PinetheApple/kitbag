@@ -20,11 +20,16 @@ namespace kitbag {
 template <typename T>
 class SpscBulkRing {
  public:
-  // App thread. Rounds up to a power of two so the wrap is a mask, not a
-  // modulo. Must complete before the producer or consumer starts.
-  void Init(size_t capacity) {
+  // Rounds up to a power of two so the wrap is a mask, not a modulo.
+  static size_t RoundedCapacity(size_t capacity) {
     size_t rounded = 1;
     while (rounded < capacity) rounded <<= 1U;
+    return rounded;
+  }
+
+  // App thread. Must complete before the producer or consumer starts.
+  void Init(size_t capacity) {
+    const size_t rounded = RoundedCapacity(capacity);
     buffer_.assign(rounded, T{});
     mask_ = rounded - 1;
     head_.store(0, std::memory_order_relaxed);

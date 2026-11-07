@@ -14,13 +14,16 @@
 #include "check.h"
 #include "mixer/mixer.h"
 #include "wav_fixture.h"
+#include "zero_clock.h"
 
 namespace mixer_test {
 
 using kitbag_test::Check;
 using kitbag_test::g_checks;
 using kitbag_test::g_failures;
+using kitbag_test::kZeroClock;
 
+constexpr auto kLoaded = kitbag::Mixer::LoadResult::kOk;
 constexpr uint32_t kSampleRate = 48000;
 constexpr uint32_t kBlock = 512;
 constexpr uint32_t kMono = 1;
@@ -68,8 +71,7 @@ inline void FixtureFail(const char* message) {
 }
 
 // Writes an interleaved ramp to a temp WAV and loads it through the real file
-// path (kb_mixer_load_track's adapter). now_frame 0 / engine_running false: the
-// suite drives Process by hand, so no callback is concurrent.
+// path (kb_mixer_load_track's adapter).
 inline void LoadInterleaved(
     kitbag::Mixer* mixer,
     int track,
@@ -84,7 +86,7 @@ inline void LoadInterleaved(
     return;
   }
   TempFiles().push_back(path);
-  if (!mixer->LoadTrack(track, path.c_str(), 0, false)) {
+  if (mixer->LoadTrack(track, path.c_str(), kZeroClock, false) != kLoaded) {
     FixtureFail("could not load ramp WAV into the track");
   }
 }

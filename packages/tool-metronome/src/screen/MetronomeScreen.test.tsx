@@ -4,7 +4,9 @@ import { act, createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { View } from 'react-native';
 import { create, type ReactTestRenderer } from 'react-test-renderer';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { metronome } from '@kitbag/core-design';
 
 import {
   pinnedStackScrollSlack,
@@ -24,7 +26,9 @@ const display = vi.hoisted(() => ({
   fontScale: 1,
   running: false,
   hintSeen: true,
+  runRows: 2,
 }));
+const INITIAL_DISPLAY = { ...display };
 const hint = vi.hoisted(() => ({ props: null as Props | null }));
 const scroll = vi.hoisted(() => ({ props: null as Props | null }));
 
@@ -89,6 +93,9 @@ vi.mock('./useMetronomeFrame.ts', () => ({
 vi.mock('./usePracticeSettings.ts', () => ({
   usePracticeSettings: () => ({}),
 }));
+vi.mock('./useStatusRunRows.ts', () => ({
+  useStatusRunRows: () => display.runRows,
+}));
 vi.mock('./useTempoSwipe.ts', () => ({ useTempoSwipe: () => ({}) }));
 vi.mock('../logic/statusRows.ts', () => ({
   practiceBadgeCount: () => 0,
@@ -127,6 +134,8 @@ vi.mock('./UnsavedSnackbar.tsx', () => ({ UnsavedSnackbar: () => null }));
 
 const { MetronomeScreen } = await import('./MetronomeScreen.tsx');
 
+const COMPACT_GAP = metronome.bodyGapCompact;
+
 function renderBody(fontScale: number, running: boolean): string {
   display.fontScale = fontScale;
   display.running = running;
@@ -152,10 +161,26 @@ function viewportBottom(fontScale: number, running: boolean): unknown {
   return flatStyle(scroll.props?.style).bottom;
 }
 
+function mountScreen(): ReactTestRenderer {
+  (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
+  const mounted: { screen?: ReactTestRenderer } = {};
+  act(() => {
+    mounted.screen = create(
+      createElement(MetronomeScreen, { insets: { top: 0, bottom: 0 } }),
+    );
+  });
+  if (mounted.screen === undefined) throw new Error('screen did not mount');
+  return mounted.screen;
+}
+
+afterEach(() => {
+  Object.assign(display, INITIAL_DISPLAY);
+});
+
 describe('MetronomeScreen scroll body', () => {
   it('pads the content by the pinned stack slack, running and stopped', () => {
     for (const running of [false, true]) {
-      const slack = pinnedStackScrollSlack(running, 2);
+      const slack = pinnedStackScrollSlack(running, 2, COMPACT_GAP);
       expect(slack).toBeGreaterThan(0);
       expect(scrollPadding(2, running)).toBe(slack);
     }
@@ -166,12 +191,34 @@ describe('MetronomeScreen scroll body', () => {
     expect(scrollPadding(1, true)).toBe(0);
   });
 
-  it('extends the viewport under the running stack only', () => {
-    const overlap = pinnedViewportOverlap(true, 2);
-    expect(overlap).toBeGreaterThan(0);
-    expect(viewportBottom(2, true)).toBe(-overlap);
-    expect(viewportBottom(2, false)).toBe(-0);
+  it('extends the viewport under the stack the run reserves', () => {
+    for (const runRows of [0, 1, 2]) {
+      display.runRows = runRows;
+      expect(viewportBottom(2, true)).toBe(
+        -pinnedViewportOverlap(runRows, 2, COMPACT_GAP),
+      );
+    }
+  });
+
+  it('extends the viewport under the rest row while stopped', () => {
+    expect(viewportBottom(2, false)).toBe(
+      -pinnedViewportOverlap(1, 2, COMPACT_GAP),
+    );
     expect(viewportBottom(1, true)).toBe(-0);
+  });
+
+  it('drops the gap above the transport when a running stack has no row', () => {
+    const gapAbove = (runRows: number): unknown => {
+      display.fontScale = 2;
+      display.running = true;
+      display.runRows = runRows;
+      const wrapper = mountScreen().root.findByProps({
+        testID: 'pinned-status',
+      });
+      return flatStyle(wrapper.props.style).marginTop;
+    };
+    expect(gapAbove(0)).toBe(0);
+    expect(gapAbove(1)).toBe(COMPACT_GAP);
   });
 
   it('clips the extended viewport to the space above the stack', () => {
@@ -185,16 +232,9 @@ describe('MetronomeScreen scroll body', () => {
     const ZONE_TOP = 20;
     const ZONE_HEIGHT = 100;
     display.hintSeen = false;
-    (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
-    const mounted: { screen?: ReactTestRenderer } = {};
-    act(() => {
-      mounted.screen = create(
-        createElement(MetronomeScreen, { insets: { top: 0, bottom: 0 } }),
-      );
-    });
-    const laidOut = (mounted.screen?.root.findAllByType(View) ?? []).filter(
-      (view) => view.props.onLayout !== undefined,
-    );
+    const laidOut = mountScreen()
+      .root.findAllByType(View)
+      .filter((view) => view.props.onLayout !== undefined);
     const isClip = (view: { readonly props: Props }) =>
       flatStyle(view.props.style).overflow === 'hidden';
     const clip = laidOut.find(isClip);
@@ -205,6 +245,5 @@ describe('MetronomeScreen scroll body', () => {
     layOut(clip, CLIP_TOP, ZONE_HEIGHT);
     layOut(zone, ZONE_TOP, ZONE_HEIGHT);
     expect(hint.props?.zoneTop).toBe(CLIP_TOP + ZONE_TOP);
-    display.hintSeen = true;
   });
 });

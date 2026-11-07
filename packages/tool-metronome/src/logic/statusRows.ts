@@ -110,6 +110,11 @@ export interface StatusReads {
   readonly rampState: number;
 }
 
+const MUTE_OFF_POSITION = -1;
+const MUTE_FIRST_POSITION = 0;
+const COUNTING_IN = 1;
+const NOT_COUNTING_IN = 0;
+
 function rampRow(rampState: number): StatusRow {
   'worklet';
   if (rampState === KB_RAMP_STATE.KB_RAMP_STATE_STEPPING) return 'ramp';
@@ -122,15 +127,55 @@ export function statusRows(
   hasAfterCountIn: boolean,
 ): StatusRows {
   'worklet';
-  if (reads.countingIn !== 0) {
+  if (reads.countingIn !== NOT_COUNTING_IN) {
     return {
       first: 'countIn',
       second: hasAfterCountIn ? 'afterCountIn' : 'none',
     };
   }
   const ramp = rampRow(reads.rampState);
-  if (reads.barMutePosition < 0) return { first: ramp, second: 'none' };
+  if (reads.barMutePosition === MUTE_OFF_POSITION)
+    return { first: ramp, second: 'none' };
   return { first: 'mute', second: ramp };
+}
+
+export function shownRowCount(rows: StatusRows): number {
+  return [rows.first, rows.second].filter((row) => row !== 'none').length;
+}
+
+export interface ArmedRows {
+  readonly countingIn: number;
+  readonly played: number;
+}
+
+export function armedRows(settings: PracticeSettings): ArmedRows {
+  const hasAfterCountIn = afterCountInSummary(settings) !== '';
+  const played = shownRowCount(
+    statusRows(
+      {
+        countingIn: NOT_COUNTING_IN,
+        barMutePosition: settings.barMute.enabled
+          ? MUTE_FIRST_POSITION
+          : MUTE_OFF_POSITION,
+        rampState: settings.ramp.enabled
+          ? KB_RAMP_STATE.KB_RAMP_STATE_STEPPING
+          : KB_RAMP_STATE.KB_RAMP_STATE_OFF,
+      },
+      hasAfterCountIn,
+    ),
+  );
+  if (settings.countIn.bars === KB_COUNT_IN_OFF) {
+    return { countingIn: played, played };
+  }
+  const counting = statusRows(
+    {
+      countingIn: COUNTING_IN,
+      barMutePosition: MUTE_OFF_POSITION,
+      rampState: KB_RAMP_STATE.KB_RAMP_STATE_OFF,
+    },
+    hasAfterCountIn,
+  );
+  return { countingIn: shownRowCount(counting), played };
 }
 
 export const NO_SLOT = -1;

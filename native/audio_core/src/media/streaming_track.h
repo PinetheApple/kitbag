@@ -8,9 +8,16 @@
 
 #include "media/audio_source.h"
 #include "media/loop_layout.h"
+#include "rt/frame_clock.h"
 #include "rt/rt_publisher.h"
+#include "rt/spsc_bulk_ring.h"
 
 namespace kitbag {
+
+struct PreRead {
+  uint32_t channels = 0;
+  uint32_t frames = 0;
+};
 
 struct SourceStamp {
   uint64_t epoch = 0;
@@ -51,12 +58,23 @@ class StreamingTrack {
   /// Sizes the read-ahead of sources built after this call for device callbacks
   /// up to [frames] wide. Grow-only; capped at kMaxReadAheadFrames.
   void ReserveCallbackFrames(uint32_t frames);
+  /// Adds [frames] to the read-ahead of sources built after this call, outside
+  /// the kMaxReadAheadFrames clamp, and primes that much more.
+  void ReservePreRollFrames(uint32_t frames) {
+    preroll_frames_ = frames;
+  }
+  /// The ring a source built now gets, after power-of-two rounding.
+  uint64_t ring_frames() const {
+    return SpscBulkRing<float>::RoundedCapacity(
+        static_cast<size_t>(read_ahead_frames_) + preroll_frames_
+    );
+  }
 
-  /// Load a file, streamed from disk from stream frame [frame]. [now_frame] and
+  /// Load a file, streamed from disk from stream frame [frame]. [clock] and
   /// [engine_running] date the retired source for deferred reclamation.
   bool Load(
       const char* path,
-      uint64_t now_frame,
+      FrameClock clock,
       bool engine_running,
       const SourceStamp& stamp = {},
       uint64_t frame = 0
@@ -65,14 +83,14 @@ class StreamingTrack {
   /// discipline as Load; false on null reader or a source wider than stereo.
   bool LoadReader(
       SourceReader* reader,
-      uint64_t now_frame,
+      FrameClock clock,
       bool engine_running,
       const SourceStamp& stamp = {},
       uint64_t frame = 0
   );
   /// Retire the source: publishes an empty node so the drain reads nothing, and
   /// the old source is reclaimed off the callback, never freed on it.
-  void Unload(uint64_t now_frame, bool engine_running);
+  void Unload(FrameClock clock, bool engine_running);
   bool ready() const {
     return published_.Get() != nullptr;
   }
@@ -86,13 +104,13 @@ class StreamingTrack {
   /// Seek to [frame] at the engine rate. Returns false only when a live rebuild
   /// failed and the old source was resumed in place, so the owner can suppress
   /// the transport jump; true otherwise, including when nothing is loaded.
-  bool Seek(uint64_t frame, uint64_t now_frame, bool engine_running);
+  bool Seek(uint64_t frame, FrameClock clock, bool engine_running);
   /// Builds, unpublished, a source at stream frame [frame], started and primed
   /// if [start_read_ahead] or the live one runs. False if the build failed.
   bool Stage(uint64_t frame, const SourceStamp& stamp, bool start_read_ahead);
   /// Publishes what Stage built. Joining the replaced source's read-ahead is
   /// left to StopPrevious, so commits across tracks land microseconds apart.
-  void CommitStaged(uint64_t now_frame, bool engine_running);
+  void CommitStaged(FrameClock clock, bool engine_running);
   void StopPrevious();
   /// Discards what Stage built and resumes the live source's read-ahead.
   void DropStaged();
@@ -112,6 +130,9 @@ class StreamingTrack {
   }
   bool at_end() const {
     return live_source_ == nullptr || live_source_->is_at_end();
+  }
+  size_t retired_sources() const {
+    return published_.retired_size();
   }
   /// App thread, callback quiescent. Frees sources retired but not yet reclaimed.
   void ReleaseRetiredSources() {
@@ -149,6 +170,17 @@ class StreamingTrack {
       float* output,
       float gain
   );
+  /// App thread. A private reader leaves the live source untouched; a
+  /// caller-owned reader is shared with it, so that reads nothing.
+  PreRead ReadAhead(
+      uint64_t frame,
+      const LoopLayout& layout,
+      float* dst,
+      uint32_t frames
+  );
+  /// App thread, between Stage and CommitStaged: takes the staged source's
+  /// first [frames] frames, so it is committed that far on.
+  PreRead ReadStaged(float* dst, uint32_t frames);
   /// Realtime-safe buffered count through the published node (acquire load), for
   /// a concurrent test to observe a ring the callback drains (#25).
   uint64_t rt_buffered() const {
@@ -173,7 +205,7 @@ class StreamingTrack {
   bool BuildSource(Source& s, SourceReader* base, const SourceStamp& stamp);
   bool SeekBuilt(Source& s, uint64_t frame);
   void
-  Publish(std::unique_ptr<Source> s, uint64_t now_frame, bool engine_running);
+  Publish(std::unique_ptr<Source> s, FrameClock clock, bool engine_running);
   void Prime(const Source& s);
   // App thread. A fresh source at `target`, never a Clear on a ring the
   // callback may read (#25), so it is safe while the old source is live.
@@ -184,7 +216,7 @@ class StreamingTrack {
   );
   // App thread. Stops the old source, then swaps in a BuildReseekSource node.
   // Returns false if the rebuild failed and the old source was resumed in place.
-  bool ReseekLive(uint64_t frame, uint64_t now_frame, bool engine_running);
+  bool ReseekLive(uint64_t frame, FrameClock clock, bool engine_running);
 
   RtPublisher<Source> published_;
   AudioSource* live_source_ = nullptr;  // app thread; == the published source
@@ -200,6 +232,7 @@ class StreamingTrack {
   AudioSource* previous_ = nullptr;  // app thread
   uint32_t engine_rate_;
   uint32_t read_ahead_frames_ = AudioSource::kDefaultRingFrames;  // app thread
+  uint32_t preroll_frames_ = 0;                                   // app thread
   // Resampled length, atomic because the callback reads it to end a transport
   // while a load can overlap (#23). Relaxed — no ordering rides on it; the
   // source itself crosses via the publisher's release/acquire.

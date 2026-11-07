@@ -139,7 +139,7 @@ void TestMixerResamplesOnLoad() {
   SineReader reader;
   kitbag::Mixer mixer(kSampleRate);
   Check(
-      mixer.SetTrackSource(0, &reader, 0, false),
+      mixer.SetTrackSource(0, &reader, kZeroClock, false) == kLoaded,
       "resample: a 44.1kHz stem loads rather than being rejected"
   );
   const uint64_t frames = mixer.track_frames(0);
@@ -158,7 +158,7 @@ void TestMixerResamplesOnLoad() {
       at_tone > at_wrong * 8.0,
       "resample: the mixed stem plays at 1000Hz, not a skipped-resample pitch"
   );
-  mixer.Stop(0, false);
+  mixer.Stop(kZeroClock, false);
 }
 
 }  // namespace

@@ -22,6 +22,10 @@ export const useStatusStyles = createThemedStyles((theme) => ({
     right: 0,
     left: 0,
   },
+  pinnedVariant: {
+    top: 'auto',
+    bottom: 0,
+  },
   wrapped: {
     flexWrap: 'wrap',
     alignContent: 'center',

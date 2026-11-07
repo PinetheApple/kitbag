@@ -408,8 +408,8 @@ position that crosses the ABI;** engine frames stay the unit of the clock.
 - `kb_mixer_position`, `kb_mixer_seek` and the loop points are engine-rate song
   frames (song time × engine rate), whatever the stems' own rate. The UI never
   converts by rate itself.
-- The stretch stage adds latency. It is reported alongside output latency and
-  compensated the same way (§12.5.1), so click and stems still land together.
+- The stretch stage adds latency. It is compensated inside the song-frame
+  mapping, so click and stems still land together; none of it crosses the ABI.
 
 ### 4.3 New: downbeats
 
@@ -482,7 +482,7 @@ GPL-2.0-or-later, the rest are permissive.
 | Dependency | Licence | Role |
 |---|---|---|
 | **miniaudio** (`third_party/miniaudio.h`) | MIT-0 / public domain | Device I/O — AAudio on Android, PipeWire on Linux, CoreAudio on iOS. One API. Also supplies the Speex-derived resampler §4.1 needs. |
-| **Signalsmith Stretch** + **signalsmith-linear** (`third_party/signalsmith/`), *planned* | MIT | Time-stretch and pitch shift for §7.6. Header-only; the linear library supplies its STFT. The same code StemDeck runs in the browser as WASM. |
+| **Signalsmith Stretch** 1.4.0 + **signalsmith-linear** 0.6.4 (`third_party/signalsmith/`) | MIT | Time-stretch and pitch shift for §7.6. Header-only; the linear library supplies its STFT. The same code StemDeck runs in the browser as WASM. Vendored 2026-11-01; pins in each directory's `README.md`. |
 | **QM-DSP** `DownBeat` + `TempoTrackV2` (`third_party/qm-dsp/`, with bundled kissfft) | **GPL-2.0-or-later** (kissfft BSD-3-Clause) | Downbeat estimation for §4.3 (`downbeat.cpp`). Vendored 2026-07-22; the subset and the GPL note are in its `README.md`. |
 | ~~**cycfi/q** (`third_party/cycfi_q/`)~~ | Boost Software License 1.0 | **Removed 2026-10-30** (#201). Unused since #117: the tuner's McLeod detector (`pitch_detector.cpp`) is ours. |
 
@@ -963,13 +963,20 @@ when exceeded rather than silently truncating.
 StemDeck's two core practice controls; without them a stem player is a mixer.
 **D14.**
 
-- **Speed** 0.5×–1.0× in the transport, pitch held. Applied once, after the
-  mix, so the stems stay sample-locked to each other at any speed.
+- **Speed** 0.5×–1.0× in the transport, pitch held. Every stem is fed and
+  stretched from one clock at one rate, so the stems stay sample-locked to each
+  other at any speed.
 - **Key** in semitones, −6 to +6 (StemDeck's range): one control for the whole
   song, plus a per-stem override. A per-stem value is absolute, not an offset
   from the song control — the number on a row is what that row plays.
-- Native: one stretch instance per track for key, one after the mix for
-  speed. All allocated at load; nothing allocates on the audio thread.
+- Native: one stretch instance per semitone in use (a key bus), doing both
+  speed and key for the stems at that semitone; bus outputs are summed, master
+  gain after. A song that has not left 1.0× and 0 has no instance and its mix is
+  sample-exact; a song returned there mid-play keeps its instances until the
+  next seek or stop, then the same holds. Instances are built and primed on the
+  app thread and published to the callback, which starts them at one predicted
+  sample; nothing allocates on the audio thread. More than four semitones in use
+  put every bus on Signalsmith's `presetDefault`.
 - Positions, loop points, the grid and the click stay in song time (§4.2.2).
 - Mixdown export (§7.7) renders speed and key as heard.
 
