@@ -27,6 +27,7 @@ type MessageIds = 'storeFactory';
 export const zustandCreateOnlyInCoreState = createRule<Options, MessageIds>({
   name: 'zustand-create-only-in-core-state',
   meta: {
+    defaultOptions: [{}],
     type: 'problem',
     docs: {
       description:
@@ -46,7 +47,6 @@ export const zustandCreateOnlyInCoreState = createRule<Options, MessageIds>({
         'truth; do not keep a store elsewhere.',
     },
   },
-  defaultOptions: [{}],
   create(context, [options]) {
     const allowedPackage = options?.package ?? 'core-state';
     if (isInPackage(context.filename, allowedPackage)) {
