@@ -1,6 +1,7 @@
 #include "KitbagCommands.h"
 
 #include <cassert>
+#include <cmath>
 #include <limits>
 #include <mutex>
 #include <optional>
@@ -36,6 +37,13 @@ std::optional<int32_t> wholeInt32(double value) {
   const auto whole = static_cast<int32_t>(value);
   if (static_cast<double>(whole) != value) return std::nullopt;
   return whole;
+}
+
+std::optional<uint64_t> wholeFrame(double value) {
+  constexpr auto kMax =
+      static_cast<double>(uint64_t{1} << std::numeric_limits<double>::digits);
+  if (!(value >= 0.0 && value <= kMax) || std::trunc(value) != value) return std::nullopt;
+  return static_cast<uint64_t>(value);
 }
 }  // namespace
 
@@ -162,6 +170,22 @@ void commandMixerPause() { kb_mixer_pause(commandEngine()); }
 void commandMixerStop() { kb_mixer_stop(commandEngine()); }
 void commandMixerSeek(double frame) {
   kb_mixer_seek(commandEngine(), static_cast<int64_t>(frame));
+}
+// Metronome first, so a refused song start rolls back a count that is queued.
+int32_t commandSongCountIn(double endFrame, double beatFrames, int32_t beatsPerBar) {
+  const auto end = wholeFrame(endFrame);
+  if (!end) return KB_ERROR_INVALID_ARGUMENT;
+  {
+    const LockedEngine engine = commandEngine();
+    const int32_t counted = kb_metronome_count_in_at(engine, *end, beatFrames, beatsPerBar);
+    if (counted != KB_OK) return counted;
+    const int32_t queued = kb_mixer_play_at(engine, *end);
+    if (queued != KB_OK) {
+      kb_metronome_stop(engine);
+      return queued;
+    }
+  }
+  return commandStart();
 }
 int32_t commandMixerSetLoop(double startFrame, double endFrame) {
   return kb_mixer_set_loop(commandEngine(), static_cast<int64_t>(startFrame),

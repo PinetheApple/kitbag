@@ -119,6 +119,12 @@ export interface Spec extends TurboModule {
   mixerPause(): void;
   mixerStop(): void;
   mixerSeek(frame: Double): void;
+  /** Counts in and starts the song on endFrame from the head already sought to. */
+  songCountIn(
+    endFrame: Double,
+    beatFrames: Double,
+    beatsPerBar: Int32,
+  ): Promise<number>;
   mixerSetLoop(startFrame: Double, endFrame: Double): Promise<number>;
   mixerClearLoop(): Promise<number>;
   mixerSetRate(rate: Double): Promise<number>;
