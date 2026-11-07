@@ -1,6 +1,6 @@
 import { configureSongPlayer } from '@kitbag/core-state';
 
-import { mixerRuntime } from './stemPlayerRuntime';
+import { mixerRuntime } from './mixerRuntime';
 
 configureSongPlayer({
   ...mixerRuntime,

@@ -6,7 +6,7 @@ import {
   createThemedStyles,
   EmptyState,
   PlayerDock,
-  PlayPauseButton,
+  PlayerTransport,
   ScreenAppBar,
   ScrubRow,
   songPlayer,
@@ -14,36 +14,37 @@ import {
   stemPlayer,
   textRoles,
   textStyle,
-  TransportKey,
+  type PlayerFrame,
   type ScrubFrame,
 } from '@kitbag/core-design';
 import {
   bpmFact,
-  formatClock,
-  formatClockSeconds,
   loopKeyLabel,
-  loopMarks,
-  loopNote,
   secondsToFrames,
   SKIP_SECONDS,
   songBadge,
+  useLoopScrub,
   useSongPlayer,
 } from '@kitbag/core-state';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import { lockText } from '../logic/lockText.ts';
 import { frameAtTap } from '../logic/waveSeek.ts';
-import type { SongFrameValues, UseSongFrame } from './songFrame.ts';
-
-export const SONG_WAVE_BARS = songPlayer.waveBars;
 
 const NO_NEIGHBOURS = {};
 
+type UsePlayhead = (
+  engineRate: number,
+  durationFrames: number,
+  loopEndFrames: number | null,
+) => PlayerFrame;
+
 export interface SongPlayerScreenProps {
+  readonly songId: number;
   readonly insets: { readonly top: number; readonly bottom: number };
   readonly onBack: () => void;
-  readonly useFrame: UseSongFrame;
+  readonly usePlayhead: UsePlayhead;
 }
 
 const useStyles = createThemedStyles((theme) => ({
@@ -65,12 +66,6 @@ const useStyles = createThemedStyles((theme) => ({
   lockText: { flex: 1, minWidth: 0 },
   lockTitle: { ...textStyle(textRoles.listTitle), color: theme.color.text },
   lockDetail: { ...textStyle(textRoles.listFacts), color: theme.color.text2 },
-  transport: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: stemPlayer.transportGap,
-  },
   note: { ...textStyle(textRoles.fieldLabel), color: theme.color.text },
 }));
 
@@ -97,17 +92,17 @@ function SongAppBar({ onBack }: { readonly onBack: () => void }) {
   );
 }
 
-function SongWave({ frame }: { readonly frame: ScrubFrame }) {
+function SongWave({ playhead }: { readonly playhead: ScrubFrame }) {
   const envelope = useSongPlayer((s) => s.envelope);
   const beats = useSongPlayer((s) => s.beats);
-  const downbeats = useSongPlayer((s) => s.downbeats);
+  const downbeatIndices = useSongPlayer((s) => s.downbeatIndices);
   const frames = useSongPlayer((s) => s.durationFrames);
   const rate = useSongPlayer((s) => s.engineRate);
   const seek = useSongPlayer((s) => s.seek);
-  const { hold } = frame;
+  const { hold } = playhead;
   const onTap = useCallback(
-    (x: number, width: number) => {
-      const target = frameAtTap(x, width, frames);
+    (xInWaveform: number, waveformWidth: number) => {
+      const target = frameAtTap(xInWaveform, waveformWidth, frames);
       if (target === null) return;
       hold(target / frames);
       seek(target);
@@ -117,39 +112,11 @@ function SongWave({ frame }: { readonly frame: ScrubFrame }) {
   return (
     <BeatWaveform
       envelope={envelope}
-      progress={frame.progress}
+      progress={playhead.progress}
       beats={beats}
-      downbeats={downbeats}
+      downbeatIndices={downbeatIndices}
       durationSec={rate > 0 ? frames / rate : 0}
       onTap={onTap}
-    />
-  );
-}
-
-function SongScrubber({ frame }: { readonly frame: ScrubFrame }) {
-  const frames = useSongPlayer((s) => s.durationFrames);
-  const rate = useSongPlayer((s) => s.engineRate);
-  const loop = useSongPlayer((s) => s.loop);
-  const failure = useSongPlayer((s) => s.loopFailure);
-  const scrub = useSongPlayer((s) => s.scrub);
-  const cancelScrub = useSongPlayer((s) => s.cancelScrub);
-  const seek = useSongPlayer((s) => s.seek);
-  const total = formatClock(frames, rate);
-  const spokenPosition = useCallback(
-    (second: number) => `${formatClockSeconds(second)} of ${total}`,
-    [total],
-  );
-  return (
-    <ScrubRow
-      frame={frame}
-      durationFrames={frames}
-      total={total}
-      spokenPosition={spokenPosition}
-      marks={loopMarks(loop, rate, frames)}
-      note={loopNote(loop, failure)}
-      onScrub={scrub}
-      onCancel={cancelScrub}
-      onSeek={seek}
     />
   );
 }
@@ -194,61 +161,35 @@ function LockCard() {
 function SongTransport({
   playing,
 }: {
-  readonly playing: SongFrameValues['playing'];
+  readonly playing: PlayerFrame['playing'];
 }) {
-  const styles = useStyles();
   const loop = useSongPlayer((s) => s.loop);
   const togglePlay = useSongPlayer((s) => s.togglePlay);
   const skip = useSongPlayer((s) => s.skip);
   const markLoop = useSongPlayer((s) => s.markLoop);
-  const back = useCallback(() => {
-    skip(-SKIP_SECONDS);
-  }, [skip]);
-  const forward = useCallback(() => {
-    skip(SKIP_SECONDS);
-  }, [skip]);
   const onLoop = useCallback(() => {
     void markLoop();
   }, [markLoop]);
   return (
-    <View style={styles.transport}>
-      <TransportKey
-        size="dock"
-        icon="repeat"
-        selected={loop.kind !== 'off'}
-        accessibilityLabel={loopKeyLabel(loop)}
-        onPress={onLoop}
-      />
-      <TransportKey
-        size="dock"
-        icon="skipBack"
-        accessibilityLabel={`Back ${String(SKIP_SECONDS)} seconds`}
-        onPress={back}
-      />
-      <PlayPauseButton
-        size="dock"
-        playing={playing}
-        playLabel="Play"
-        pauseLabel="Pause"
-        onPress={togglePlay}
-      />
-      <TransportKey
-        size="dock"
-        icon="skipForward"
-        accessibilityLabel={`Forward ${String(SKIP_SECONDS)} seconds`}
-        onPress={forward}
-      />
-    </View>
+    <PlayerTransport
+      playing={playing}
+      loopActive={loop.kind !== 'off'}
+      loopLabel={loopKeyLabel(loop)}
+      skipSeconds={SKIP_SECONDS}
+      onLoop={onLoop}
+      onSkip={skip}
+      onTogglePlay={togglePlay}
+    />
   );
 }
 
 interface BodyProps {
   readonly bottom: number;
   readonly onBack: () => void;
-  readonly useFrame: UseSongFrame;
+  readonly usePlayhead: UsePlayhead;
 }
 
-function Body({ bottom, onBack, useFrame }: BodyProps) {
+function Body({ bottom, onBack, usePlayhead }: BodyProps) {
   const styles = useStyles();
   const status = useSongPlayer((s) => s.status);
   const rate = useSongPlayer((s) => s.engineRate);
@@ -256,7 +197,8 @@ function Body({ bottom, onBack, useFrame }: BodyProps) {
   const loopEnd = useSongPlayer((s) =>
     s.loop.kind === 'on' ? secondsToFrames(s.loop.endSec, s.engineRate) : null,
   );
-  const frame = useFrame(rate, frames, loopEnd);
+  const playhead = usePlayhead(rate, frames, loopEnd);
+  const scrub = useLoopScrub(useSongPlayer);
   if (status === 'failed')
     return (
       <EmptyState
@@ -292,29 +234,32 @@ function Body({ bottom, onBack, useFrame }: BodyProps) {
         contentContainerStyle={styles.bodyContent}
       >
         <Card>
-          <SongWave frame={frame} />
-          <SongScrubber frame={frame} />
+          <SongWave playhead={playhead} />
+          <ScrubRow frame={playhead} {...scrub} />
         </Card>
         <LockCard />
       </ScrollView>
-      <PlayerDock bottom={bottom}>
-        <SongTransport playing={frame.playing} />
+      <PlayerDock bottomInset={bottom}>
+        <SongTransport playing={playhead.playing} />
       </PlayerDock>
     </>
   );
 }
 
 export function SongPlayerScreen({
+  songId,
   insets,
   onBack,
-  useFrame,
+  usePlayhead,
 }: SongPlayerScreenProps) {
   const styles = useStyles();
+  const open = useSongPlayer((s) => s.open);
+  useEffect(() => open(songId, songPlayer.waveBars).close, [open, songId]);
   const padding = useMemo(() => ({ paddingTop: insets.top }), [insets.top]);
   return (
     <View style={[styles.screen, padding]}>
       <SongAppBar onBack={onBack} />
-      <Body bottom={insets.bottom} onBack={onBack} useFrame={useFrame} />
+      <Body bottom={insets.bottom} onBack={onBack} usePlayhead={usePlayhead} />
     </View>
   );
 }

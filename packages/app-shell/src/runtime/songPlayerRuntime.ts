@@ -1,7 +1,7 @@
 import { configureSongPlayer } from '@kitbag/core-state';
 
 import { getDatabase } from './database.ts';
-import { mixerRuntime } from './stemPlayerRuntime';
+import { mixerRuntime } from './mixerRuntime';
 
 configureSongPlayer({
   ...mixerRuntime,

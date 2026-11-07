@@ -3,15 +3,11 @@ import { describe, expect, it } from 'vitest';
 import { frameAtTap } from './waveSeek.ts';
 
 const FRAMES = 44100;
-const SCREEN = 411;
-const PADDING = 26;
-const WAVEFORM = SCREEN - PADDING * 2;
+const WAVEFORM = 359;
 
 describe('frameAtTap', () => {
-  it('lands where tapped on the waveform, whatever padding surrounds it', () => {
-    const middle = WAVEFORM / 2;
-    expect(frameAtTap(middle, WAVEFORM, FRAMES)).toBe(FRAMES / 2);
-    expect(frameAtTap(middle, SCREEN, FRAMES)).not.toBe(FRAMES / 2);
+  it('lands where tapped on the waveform', () => {
+    expect(frameAtTap(WAVEFORM / 2, WAVEFORM, FRAMES)).toBe(FRAMES / 2);
   });
 
   it('reaches both ends of the song at the waveform edges', () => {

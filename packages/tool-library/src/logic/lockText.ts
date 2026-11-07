@@ -7,7 +7,7 @@ export interface LockText {
 }
 
 const NO_CLICK = 'No click available';
-const FROM_GRID = 'from beat grid';
+const LOCK_SOURCE = 'phase auto · from beat grid';
 
 function unavailable(detail: string): LockText {
   return { title: NO_CLICK, detail, available: false };
@@ -31,7 +31,7 @@ export function lockText(
     case 'grid':
       return {
         title: click ? 'Metronome locked' : 'Metronome',
-        detail: bpmText === null ? FROM_GRID : `${bpmText} · ${FROM_GRID}`,
+        detail: bpmText === null ? LOCK_SOURCE : `${bpmText} · ${LOCK_SOURCE}`,
         available: true,
       };
   }
