@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   afterCountInSummary,
+  armedRows,
   armedSummary,
   countInBarText,
   countSquare,
@@ -27,6 +28,7 @@ import {
   rowSlot,
   statusRows,
   type PracticeSettings,
+  type StatusRows,
 } from './statusRows.ts';
 
 const OFF: PracticeSettings = {
@@ -258,5 +260,65 @@ describe('count-in squares', () => {
       'now',
       'upcoming',
     ]);
+  });
+});
+
+describe('armedRows', () => {
+  const STEPPING = KB_RAMP_STATE.KB_RAMP_STATE_STEPPING;
+  const AT_TARGET = KB_RAMP_STATE.KB_RAMP_STATE_AT_TARGET;
+  const TOOL_OFF = [false, true] as const;
+  const SHOWN_ROWS = (rows: StatusRows) =>
+    [rows.first, rows.second].filter((row) => row !== 'none').length;
+
+  function settingsFor(
+    ramp: boolean,
+    mute: boolean,
+    countIn: boolean,
+  ): PracticeSettings {
+    return {
+      ...OFF,
+      ramp: { ...OFF.ramp, enabled: ramp },
+      barMute: { ...OFF.barMute, enabled: mute },
+      countIn: { ...OFF.countIn, bars: countIn ? 2 : KB_COUNT_IN_OFF },
+    };
+  }
+
+  it('reserves no row with nothing armed, and ignores poly', () => {
+    expect(armedRows(OFF)).toEqual({ countingIn: 0, played: 0 });
+    expect(armedRows({ ...OFF, polyEnabled: true })).toEqual({
+      countingIn: 0,
+      played: 0,
+    });
+  });
+
+  it('matches the rows the engine reads show, for every armed set', () => {
+    for (const ramp of TOOL_OFF) {
+      for (const mute of TOOL_OFF) {
+        for (const countIn of TOOL_OFF) {
+          const settings = settingsFor(ramp, mute, countIn);
+          const armed = armedRows(settings);
+          const hasAfter = afterCountInSummary(settings) !== '';
+          const played = (rampState: number) => ({
+            countingIn: 0,
+            barMutePosition: mute ? 0 : -1,
+            rampState: ramp ? rampState : KB_RAMP_STATE.KB_RAMP_STATE_OFF,
+          });
+          for (const rampState of [STEPPING, AT_TARGET]) {
+            expect(SHOWN_ROWS(statusRows(played(rampState), hasAfter))).toBe(
+              armed.played,
+            );
+          }
+          const counting = statusRows(
+            {
+              countingIn: countIn ? 1 : 0,
+              barMutePosition: countIn || !mute ? -1 : 0,
+              rampState: ramp ? STEPPING : KB_RAMP_STATE.KB_RAMP_STATE_OFF,
+            },
+            hasAfter,
+          );
+          expect(SHOWN_ROWS(counting)).toBe(armed.countingIn);
+        }
+      }
+    }
   });
 });

@@ -760,12 +760,18 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   boxes, not measured; needs a device check. A wider row wraps onto its
   second line rather than truncating. Above the default scale the status stack leaves the
   scrolling body and sits directly above the transport, so a body that overflows cannot
-  push it out of view. It is one row tall stopped and two running. Start and Stop leave the
-  scroll view's frame and content height alone (#304): a clip follows the stack, and the
-  running viewport reaches under the stack's extra row. Android lays out a scroll view
+  push it out of view. Stopped it is one row tall. Running it
+  is as tall as the rows the armed tools show in that phase: none with nothing armed, and
+  it drops a row when the count-in ends (#319). A row that can show is always reserved
+  from Start, so none appears under the fingers. `kitbag-metronome-status.html` reserves two
+  rows so that nothing moves; above the default scale nothing moves without that reservation,
+  because the stack is out of the body. **[coord, owner may overturn]** Start and Stop leave the
+  scroll view's frame and content height alone (#304): the frame runs to the transport's gap
+  in every stack size and a clip follows the stack. Android lays out a scroll view
   before its content, and the offset clamps to the stale range in between, so resizing the
-  viewport on Stop would lose the scroll position. Running, the content pads by the stack
-  difference; stopped, by that less the legend's modelled height. The slack models one
+  viewport on Stop would lose the scroll position. Running, the content pads by the two-row
+  stack and its gap; stopped, by that less the legend's modelled height, so scrolling to the
+  end with fewer rows shows the same blank below the dots as the two-row range leaves. The slack models one
   legend row, so any legend that wraps leaves the stopped range longer than running, and
   Start at scroll end moves the body. It happens at scroll end only. The measured case is
   2.0 with poly on, about 48 dp. Coordinator call; the owner may

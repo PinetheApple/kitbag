@@ -25,6 +25,7 @@ import { useLibraryRefresh } from '../library/useLibraryRefresh.ts';
 import {
   belowTempoReserve,
   statusStackPinned,
+  statusStackRows,
   pinnedStackScrollSlack,
   pinnedViewportOverlap,
 } from '../logic/belowTempo.ts';
@@ -57,6 +58,7 @@ import { useHoldEngine } from './useHoldEngine.ts';
 import { useTempoSwipe } from './useTempoSwipe.ts';
 import { useMetronomeFrame } from './useMetronomeFrame.ts';
 import { useScreenDensity } from './useScreenDensity.ts';
+import { useStatusRunRows } from './useStatusRunRows.ts';
 import { usePracticeSettings } from './usePracticeSettings.ts';
 
 type OpenSheet =
@@ -289,16 +291,29 @@ export function MetronomeScreen({
   );
   const legend = restLegend(running, polyEnabled);
   const pinStatus = statusStackPinned(fontScale);
+  const runRows = useStatusRunRows(frame.countingIn, running, settings);
+  const stackRows = statusStackRows(running, runRows, fontScale);
+  const stackGap = useMemo(
+    () => ({ marginTop: stackRows === 0 ? 0 : bodyGap }),
+    [stackRows, bodyGap],
+  );
   const viewportFrame = useMemo(
-    () => ({ bottom: -pinnedViewportOverlap(running, fontScale) }),
-    [running, fontScale],
+    () => ({ bottom: -pinnedViewportOverlap(stackRows, fontScale, bodyGap) }),
+    [stackRows, fontScale, bodyGap],
   );
   const scrollSlack = useMemo(
-    () => ({ paddingBottom: pinnedStackScrollSlack(running, fontScale) }),
-    [running, fontScale],
+    () => ({
+      paddingBottom: pinnedStackScrollSlack(running, fontScale, bodyGap),
+    }),
+    [running, fontScale, bodyGap],
   );
   const status = (
-    <StatusStack frame={frame} settings={settings} running={running} />
+    <StatusStack
+      frame={frame}
+      settings={settings}
+      running={running}
+      stackRows={stackRows}
+    />
   );
 
   return (
@@ -376,7 +391,7 @@ export function MetronomeScreen({
             </View>
           </ScrollView>
         </View>
-        {pinStatus ? <View style={topGap}>{status}</View> : null}
+        {pinStatus ? <View style={stackGap}>{status}</View> : null}
         <Transport
           running={running}
           armedCount={practiceBadgeCount(settings)}

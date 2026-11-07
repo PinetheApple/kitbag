@@ -92,6 +92,7 @@ function styleAt(fontScale: number, shown: StatusRow): unknown {
       frame: FRAME,
       settings: SETTINGS,
       running: true,
+      stackRows: 2,
     }),
   );
   display.fontScale = 1;
