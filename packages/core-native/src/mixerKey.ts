@@ -7,8 +7,10 @@ import type { Spec } from './NativeKitbagCommands';
 export type TrackKeyCommands = Pick<Spec, 'mixerSetTrackPitch'>;
 
 // Half away from zero, so a key and its opposite stay opposite; Math.round alone sends -2.5 to -2.
-const wholeSemitones = (stored: number) =>
-  Math.sign(stored) * Math.round(Math.abs(stored));
+const wholeSemitones = (stored: number) => {
+  const magnitude = Math.round(Math.abs(stored));
+  return stored < 0 && magnitude > 0 ? -magnitude : magnitude;
+};
 
 const inRange = (semitones: number) =>
   semitones >= KB_MIXER_PITCH_BOUNDS.min &&

@@ -43,7 +43,7 @@ describe('setTrackKey', () => {
     const commands = fakeCommands();
     await setTrackKey(commands, TRACK, -0.4);
     const sent = commands.mixerSetTrackPitch.mock.calls[0]?.[1];
-    expect(sent === 0).toBe(true);
+    expect(sent).toBe(0);
   });
 
   it.each([
