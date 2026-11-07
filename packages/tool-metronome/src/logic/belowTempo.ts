@@ -137,20 +137,20 @@ export function legendHeight(fontScale: number): number {
   return metronome.legendTop + metronome.legendRow * grownTextScale(fontScale);
 }
 
-function pinnedStackDifference(fontScale: number): number {
+function runningStackGrowth(fontScale: number): number {
   return (
     statusStackHeight(true, fontScale) - statusStackHeight(false, fontScale)
   );
 }
 
-// Android lays out a ScrollView before its content and clamps the offset to the
-// range between them, so resizing the viewport on Stop loses the scroll position.
+// Android lays out a ScrollView before its content, and the offset clamps to the
+// stale range in between, so resizing the viewport on Stop loses the scroll position.
 export function pinnedViewportOverlap(
   running: boolean,
   fontScale: number,
 ): number {
   if (!running || !statusStackPinned(fontScale)) return 0;
-  return pinnedStackDifference(fontScale);
+  return runningStackGrowth(fontScale);
 }
 
 export function pinnedStackScrollSlack(
@@ -158,9 +158,9 @@ export function pinnedStackScrollSlack(
   fontScale: number,
 ): number {
   if (!statusStackPinned(fontScale)) return 0;
-  const difference = pinnedStackDifference(fontScale);
-  if (running) return difference;
-  return Math.max(0, difference - legendHeight(fontScale));
+  const growth = runningStackGrowth(fontScale);
+  if (running) return growth;
+  return Math.max(0, growth - legendHeight(fontScale));
 }
 
 export function belowTempoHeight(

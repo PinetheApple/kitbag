@@ -1,5 +1,9 @@
-import { createElement, type ReactNode } from 'react';
+// react-test-renderer is deprecated, but it alone exposes host props with no DOM.
+/* eslint-disable @typescript-eslint/no-deprecated */
+import { act, createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { View } from 'react-native';
+import { create, type ReactTestRenderer } from 'react-test-renderer';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -16,7 +20,12 @@ const flatStyle = vi.hoisted(
     (style: unknown): Style =>
       Object.assign({}, ...[style].flat(Infinity)) as Style,
 );
-const display = vi.hoisted(() => ({ fontScale: 1, running: false }));
+const display = vi.hoisted(() => ({
+  fontScale: 1,
+  running: false,
+  hintSeen: true,
+}));
+const hint = vi.hoisted(() => ({ props: null as Props | null }));
 const scroll = vi.hoisted(() => ({ props: null as Props | null }));
 
 vi.mock('react-native', async () => {
@@ -64,7 +73,7 @@ vi.mock('@kitbag/core-state', () => ({
   useMetronome: (select: (state: unknown) => unknown) =>
     select({ running: display.running, beatsPerBar: 4, polyEnabled: false }),
   useSwipeHint: (select: (state: unknown) => unknown) =>
-    select({ seen: true, dismiss: () => undefined }),
+    select({ seen: display.hintSeen, dismiss: () => undefined }),
 }));
 
 vi.mock('../library/useLibraryRefresh.ts', () => ({
@@ -106,7 +115,12 @@ vi.mock('./PracticeSheet.tsx', () => ({ PracticeSheet: () => null }));
 vi.mock('./PresetRow.tsx', () => ({ PresetRow: () => null }));
 vi.mock('./StatusStack.tsx', () => ({ StatusStack: () => null }));
 vi.mock('./SubdivisionSheet.tsx', () => ({ SubdivisionSheet: () => null }));
-vi.mock('./SwipeHint.tsx', () => ({ SwipeHint: () => null }));
+vi.mock('./SwipeHint.tsx', () => ({
+  SwipeHint: (props: Props) => {
+    hint.props = props;
+    return null;
+  },
+}));
 vi.mock('./SwipeTempoZone.tsx', () => ({ SwipeTempoZone: () => null }));
 vi.mock('./Transport.tsx', () => ({ Transport: () => null }));
 vi.mock('./UnsavedSnackbar.tsx', () => ({ UnsavedSnackbar: () => null }));
@@ -119,6 +133,13 @@ function renderBody(fontScale: number, running: boolean): string {
   return renderToStaticMarkup(
     createElement(MetronomeScreen, { insets: { top: 0, bottom: 0 } }),
   );
+}
+
+function layOut(view: { readonly props: Props }, y: number, height: number) {
+  const onLayout = view.props.onLayout as (event: unknown) => void;
+  act(() => {
+    onLayout({ nativeEvent: { layout: { y, height } } });
+  });
 }
 
 function scrollPadding(fontScale: number, running: boolean): unknown {
@@ -149,13 +170,41 @@ describe('MetronomeScreen scroll body', () => {
     const overlap = pinnedViewportOverlap(true, 2);
     expect(overlap).toBeGreaterThan(0);
     expect(viewportBottom(2, true)).toBe(-overlap);
-    expect(viewportBottom(2, false)).toBeCloseTo(0);
-    expect(viewportBottom(1, true)).toBeCloseTo(0);
+    expect(viewportBottom(2, false)).toBe(-0);
+    expect(viewportBottom(1, true)).toBe(-0);
   });
 
   it('clips the extended viewport to the space above the stack', () => {
     expect(renderBody(2, true)).toContain(
       '<div data-overflow="hidden"><div data-scroll="true">',
     );
+  });
+
+  it('places the swipe hint from the clip, the scroll view sitting at its top', () => {
+    const CLIP_TOP = 50;
+    const ZONE_TOP = 20;
+    const ZONE_HEIGHT = 100;
+    display.hintSeen = false;
+    (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
+    const mounted: { screen?: ReactTestRenderer } = {};
+    act(() => {
+      mounted.screen = create(
+        createElement(MetronomeScreen, { insets: { top: 0, bottom: 0 } }),
+      );
+    });
+    const laidOut = (mounted.screen?.root.findAllByType(View) ?? []).filter(
+      (view) => view.props.onLayout !== undefined,
+    );
+    const isClip = (view: { readonly props: Props }) =>
+      flatStyle(view.props.style).overflow === 'hidden';
+    const clip = laidOut.find(isClip);
+    const zone = laidOut.find((view) => !isClip(view));
+    if (clip === undefined || zone === undefined) {
+      throw new Error('clip or tempo zone has no onLayout');
+    }
+    layOut(clip, CLIP_TOP, ZONE_HEIGHT);
+    layOut(zone, ZONE_TOP, ZONE_HEIGHT);
+    expect(hint.props?.zoneTop).toBe(CLIP_TOP + ZONE_TOP);
+    display.hintSeen = true;
   });
 });
