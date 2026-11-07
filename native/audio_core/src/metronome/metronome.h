@@ -11,6 +11,7 @@
 #include "media/song_clock.h"
 #include "metronome/click_voices.h"
 #include "metronome/grid_state.h"
+#include "metronome/metronome_command.h"
 #include "metronome/metronome_types.h"
 #include "metronome/rig_click.h"
 #include "metronome/tempo_ramp.h"
@@ -148,41 +149,8 @@ class Metronome {
   }
 
  private:
-  enum class CommandType : uint8_t {
-    kStart,
-    kStartAt,
-    kStop,
-    kPause,
-    kAnchorExternal,
-    kSetTempo,
-    kSetBeats,
-    kSetSubdivision,
-    kSetSubdivisionAccents,
-    kSetAccent,
-    kSetPoly,
-    kSetPolyAccent,
-    kSetPolyAgainst,
-    kSetSounds,
-    kSetCountIn,
-    kPreviewSound,
-    kSetRamp,
-    kSetBarMute,
-    kSetVolume,
-    kSetLatencyOffset,
-    kSetFollowMixer,
-  };
-
-  struct Command {
-    CommandType type;
-    double value = 0.0;
-    double value_b = 0.0;
-    double value_c = 0.0;
-    double value_d = 0.0;
-    int32_t int_a = 0;
-    int32_t int_b = 0;
-    int32_t int_c = 0;
-    uint64_t frame = 0;  // engine-clock frame for kStartAt (see StartAt / §4.2)
-  };
+  using CommandType = MetronomeCommandType;
+  using Command = MetronomeCommand;
 
   // Per-block tempo derivatives, recomputed whenever bpm_ changes mid-block.
   struct BlockTempo {

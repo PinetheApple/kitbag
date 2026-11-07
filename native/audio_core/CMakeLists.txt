@@ -53,6 +53,7 @@ add_library(kitbag_core SHARED
   src/metronome/metronome_pattern.cpp
   src/metronome/metronome_render.cpp
   src/metronome/metronome_trainer_mirrors.cpp
+  src/metronome/metronome_transport.cpp
   src/metronome/rig_click.cpp
   src/metronome/tempo_ramp.cpp
   src/media/miniaudio_impl.c
@@ -152,6 +153,7 @@ if(KITBAG_BUILD_TOOLS)
     src/metronome/metronome_pattern.cpp
     src/metronome/metronome_render.cpp
     src/metronome/metronome_trainer_mirrors.cpp
+    src/metronome/metronome_transport.cpp
     src/metronome/rig_click.cpp
     src/metronome/tempo_ramp.cpp)
 
