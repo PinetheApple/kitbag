@@ -26,7 +26,10 @@ bool Mixer::EngageAt(const TransportPlan& plan, int64_t bypass_frames) {
   const KeyBus* any = AnyBus();
   if (any == nullptr || !BusesAgree(plan.generation)) return false;
   rate_ = plan.rate;
-  carry_ = 0.0;
+  // The lag truncates this, and the clock's first record counts the whole of it.
+  carry_ = any->stretch.InputLatencyFrames() +
+           static_cast<double>(plan.rate) * any->stretch.OutputLatencyFrames() -
+           static_cast<double>(plan.lag);
   primed_generation_ = plan.generation;
   ResetRecords(any->stretch, bypass_frames);
   stream_frame_ += plan.lag;
