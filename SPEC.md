@@ -283,6 +283,12 @@ Requirements:
   along with the buffer it took — after which **every remaining boundary value
   is a scalar.** This matters more under JSI than it did under FFI: see §13.2.
 
+**A single song plays through the mixer as one track** (`kb_mixer_load_track(0,
+path)`): the mixer already has the loop and its crossfade, the click's
+follow-mixer mode and the speed stage, and extending `kb_player_*` would
+duplicate them. `kb_player_*` stays in the ABI, with no caller in the React
+Native app. Recorded in `docs/decisions.md`; the owner may overturn it.
+
 ### 4.2 New: phase anchor
 
 **Problem.** `kb_metronome_start(engine)` takes no time argument. The click
@@ -813,9 +819,9 @@ the single most RN-specific piece of §5** — see §13.9.
 
 ### 6.1 Move playback onto the native engine
 
-**`just_audio` is removed and nothing replaces it.** `kb_player_*` (§4.1) is the
-replacement. This is the central change: song and click stop being two clocks
-and become one.
+**`just_audio` is removed and nothing replaces it.** The native mixer (§4.1) is
+the replacement, with the song as its one track. This is the central change:
+song and click stop being two clocks and become one.
 
 **Do not substitute `react-native-track-player` or `expo-av`.** They are the
 same architecture as `just_audio` — a second engine with its own clock — and
@@ -850,6 +856,9 @@ working. Changes:
 
 ### 6.3 Player
 
+- Plays through the mixer as a one-track song (§4.1), on the same transport,
+  loop and follow-click as the stem player. A song and a stem song never hold
+  the mixer together: opening one closes the other.
 - Waveform with beat-grid ticks; tall ticks on downbeats — the analysis made
   visible.
 - **Fix tap-to-seek.** Flutter measures the Scaffold's width, not the
