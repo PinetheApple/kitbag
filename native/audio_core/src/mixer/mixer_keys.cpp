@@ -108,7 +108,8 @@ void Mixer::UndoPrepare(
     FrameClock clock,
     bool engine_running
 ) {
-  RestoreEngage(prepared.before);
+  // A failed load's unload may have disengaged at rest; that must stand.
+  if (app_engaged_) RestoreEngage(prepared.before);
   for (int s = 0; s < kKeyBusCount; ++s) {
     if ((prepared.created & (1U << static_cast<unsigned>(s))) != 0) {
       buses_[app_bank_][s].Publish(nullptr, clock.Now(), engine_running);
@@ -149,6 +150,7 @@ void Mixer::RetireDrainedBuses(
 }
 
 void Mixer::FreeUnusedBuses(FrameClock clock, bool engine_running) {
+  DisengageAtRest(clock, engine_running);
   bool used[kKeyBusCount] = {};
   if (app_engaged_) MarkUsedBuses(used);
   for (int s = 0; s < kKeyBusCount; ++s) {
@@ -185,7 +187,7 @@ void Mixer::RestoreEngage(const EngageState& before) {
   app_vendor_default_ = before.vendor_default;
 }
 
-// A disengage is a jump; held to rest, where no audio plays across it.
+// A disengage is a jump; at rest no audio plays across it.
 void Mixer::DisengageAtRest(FrameClock clock, bool engine_running) {
   if (app_playing_ || !app_engaged_ || WantsStretch()) return;
   ReplanStretch(ReprimePlan(), clock, engine_running);
