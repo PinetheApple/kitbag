@@ -923,6 +923,19 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   JS-timed handoff was ruled out.
   **[recorded — coordinator call, owner may overturn]**
 
+- **2026-11-07 · App-bar titles above the default text size (§12.6, #303)** — Amends the
+  2026-11-03 #287 entry's floors. Over an artist line the title's floor is never below the
+  artist's size, so a floored title does not read smaller than the line under it. Above the
+  default scale a title clears a trailing chip by `space.controlGap` and, with nothing after
+  it, ends at `space.screenInset`; at 1.0 neither moves. Android reserves an ellipsis with
+  the text view's own paint, which `ReactTextView.setFontSize` sizes in dp while the text
+  draws in sp, and whose typeface is never set. So the reserve depends on the default face
+  as well as the size, and above 1.0 a reserve that small lets the third dot fall past the
+  box. App-bar lines nest their text in a parent whose `fontSize` carries the font scale and
+  the ratio of the widest app face's ellipsis to the default face's; over-reserving costs a
+  little text. Other ellipsized lines keep the defect. Coordinator call; the owner may
+  overturn it. **[recorded]**
+
 - **2026-11-07 · Library rows above the default text size (§12.6, #301)** — Amends the
   2026-11-02 #192 entry's one-line rule for Library rows. Above the default scale the title
   holds at most three lines and the facts two, then ellipsize, and the badges move from

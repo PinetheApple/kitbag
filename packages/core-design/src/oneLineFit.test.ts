@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  ELLIPSIS_FACE_RATIO,
+  ellipsisPaintSize,
   fittedStyle,
   MAX_SETTLE_PASSES,
   measureOneLine,
@@ -8,6 +10,7 @@ import {
   oneLineFloor,
   resizeOneLine,
   startOneLine,
+  titleFloorOverSubtitle,
   type OneLineParams,
   type OneLineSettle,
 } from './oneLineFit.ts';
@@ -99,6 +102,47 @@ describe('nextFitCandidate', () => {
         pass: MAX_SETTLE_PASSES,
       }),
     ).toEqual({ done: true, fontSize: 12 });
+  });
+});
+
+describe('titleFloorOverSubtitle', () => {
+  const ARTIST = 12.5;
+
+  it('keeps a title with no line under it at its own floor', () => {
+    expect(titleFloorOverSubtitle(8.5, undefined)).toBe(8.5);
+  });
+
+  it('never lets the floor sit below the line under the title', () => {
+    expect(titleFloorOverSubtitle(oneLineFloor(2, SIZE, MIN), ARTIST)).toBe(
+      ARTIST,
+    );
+  });
+
+  it('leaves a floor already above that line alone', () => {
+    expect(titleFloorOverSubtitle(oneLineFloor(1, SIZE, MIN), ARTIST)).toBe(
+      MIN,
+    );
+  });
+});
+
+describe('ellipsisPaintSize', () => {
+  const DEFAULT_FACE_EM = 0.669;
+  const SPACE_GROTESK_MEDIUM_EM = 0.739;
+  const INTER_REGULAR_EM = 0.864;
+  const ARTIST = 12.5;
+
+  it.each([SPACE_GROTESK_MEDIUM_EM, INTER_REGULAR_EM])(
+    'reserves at least the width of a %f em ellipsis drawn at 2.0',
+    (drawnEm) => {
+      const drawn = ARTIST * 2;
+      const reserved = ellipsisPaintSize(ARTIST, 2) * DEFAULT_FACE_EM;
+      expect(reserved).toBeGreaterThanOrEqual(drawn * drawnEm);
+    },
+  );
+
+  it('scales by the widest face over the default face', () => {
+    expect(ELLIPSIS_FACE_RATIO).toBeCloseTo(INTER_REGULAR_EM / DEFAULT_FACE_EM);
+    expect(ellipsisPaintSize(SIZE, 2)).toBe(SIZE * 2 * ELLIPSIS_FACE_RATIO);
   });
 });
 
