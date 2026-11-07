@@ -174,17 +174,9 @@ export interface PlayPauseButtonProps {
   readonly size?: TransportKeySize;
 }
 
-// The glyph follows the engine's playing flag on the UI thread; only the
-// spoken label, which changes on a press or at the song's end, renders.
-export function PlayPauseButton({
-  playing,
-  playLabel,
-  pauseLabel,
-  onPress,
-  size: buttonSize = 'standard',
-}: PlayPauseButtonProps) {
-  const styles = useStyles();
-  const dock = buttonSize === 'dock';
+// Glyphs follow the engine's playing flag on the UI thread; only the spoken
+// label renders, and it changes on a press or at the song's end.
+export function usePlayPauseLayers(playing: SharedValue<number>) {
   const [isPlaying, setIsPlaying] = useState(false);
   useAnimatedReaction(
     () => playing.value !== 0,
@@ -198,6 +190,19 @@ export function PlayPauseButton({
   const pauseStyle = useAnimatedStyle(() => ({
     opacity: playing.value === 0 ? 0 : 1,
   }));
+  return { isPlaying, playStyle, pauseStyle };
+}
+
+export function PlayPauseButton({
+  playing,
+  playLabel,
+  pauseLabel,
+  onPress,
+  size: buttonSize = 'standard',
+}: PlayPauseButtonProps) {
+  const styles = useStyles();
+  const dock = buttonSize === 'dock';
+  const { isPlaying, playStyle, pauseStyle } = usePlayPauseLayers(playing);
   return (
     <Pressable
       accessibilityRole="button"
