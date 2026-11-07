@@ -55,6 +55,7 @@ interface SegmentProps<T extends string> {
   readonly selected: boolean;
   readonly accent: boolean;
   readonly large: boolean;
+  readonly tab: boolean;
   readonly inline: boolean;
   readonly editRow: boolean;
   readonly minWidthStyle: OptionMinWidth | undefined;
@@ -120,6 +121,8 @@ const useStyles = createThemedStyles((theme) => ({
     backgroundColor: theme.color.surface1,
   },
   largeLabel: textStyle(textRoles.segmentLarge),
+  tabOption: { minHeight: size.segmentTabOption },
+  tabLabel: textStyle(textRoles.segmentTab),
   editRowOption: {
     minHeight: size.segmentEditRowOption,
     paddingHorizontal: inset.segmentEditRowOptionH,
@@ -143,6 +146,7 @@ function Segment<T extends string>({
   selected,
   accent,
   large,
+  tab,
   inline,
   editRow,
   minWidthStyle,
@@ -195,10 +199,14 @@ function Segment<T extends string>({
       onLayout={onLineTop === undefined ? undefined : handleLayout}
       onPress={handlePress}
     >
+      {/* A flattened option has no native view: selecting it creates one from
+          React's prop diff alone, which leaves out the corner radius. */}
       <View
+        collapsable={false}
         style={[
           styles.option,
           large && styles.largeOption,
+          tab && styles.tabOption,
           editRow && styles.editRowOption,
           minWidthStyle,
           row && styles.rowOption,
@@ -210,6 +218,7 @@ function Segment<T extends string>({
           style={[
             styles.label,
             large && styles.largeLabel,
+            tab && styles.tabLabel,
             inline && styles.inlineLabel,
             row && styles.rowLabel,
             selected && (accent ? styles.labelAccent : styles.labelSelected),
@@ -237,7 +246,8 @@ export function SegmentedControl<T extends string>({
   const styles = useStyles();
   const byLabel = useTextScaled();
   const editRow = controlSize === 'editRow';
-  const large = controlSize === 'large' || editRow;
+  const tab = controlSize === 'tab';
+  const large = controlSize === 'large' || editRow || tab;
   const [labelWidths, setLabelWidths] = useState<Partial<Record<T, number>>>(
     {},
   );
@@ -298,6 +308,7 @@ export function SegmentedControl<T extends string>({
           selected={option.value === selected}
           accent={selectedTone === 'accent'}
           large={large}
+          tab={tab}
           inline={controlSize === 'inline'}
           editRow={editRow}
           minWidthStyle={minWidthStyle}

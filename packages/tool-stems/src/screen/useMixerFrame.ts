@@ -29,6 +29,7 @@ export interface MixerFrameValues {
   readonly playing: SharedValue<number>;
   readonly elapsed: SharedValue<string>;
   readonly second: SharedValue<number>;
+  readonly songSec: SharedValue<number>;
   readonly hold: (fraction: number) => void;
 }
 
@@ -41,6 +42,7 @@ export function useMixerFrame(
   const playing = useSharedValue(0);
   const elapsed = useSharedValue(formatClock(0, engineRate));
   const second = useSharedValue(NO_SECOND);
+  const songSec = useSharedValue(0);
   const rate = useSharedValue(engineRate);
   const duration = useSharedValue(durationFrames);
   const loopEnd = useSharedValue(loopEndFrames ?? NO_LOOP);
@@ -108,11 +110,13 @@ export function useMixerFrame(
     lastShown.value = shown;
     const fraction = duration.value > 0 ? shown / duration.value : 0;
     if (progress.value !== fraction) progress.value = fraction;
-    const now = Math.floor(framesToSeconds(shown, rate.value));
+    const seconds = framesToSeconds(shown, rate.value);
+    if (songSec.value !== seconds) songSec.value = seconds;
+    const now = Math.floor(seconds);
     if (now === second.value) return;
     second.value = now;
     elapsed.value = formatClock(shown, rate.value);
   });
 
-  return { progress, playing, elapsed, second, hold };
+  return { progress, playing, elapsed, second, songSec, hold };
 }

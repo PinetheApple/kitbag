@@ -1,4 +1,4 @@
-import { createElement, type ReactNode } from 'react';
+import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -22,13 +22,6 @@ vi.mock('react', async (original) => ({
   },
 }));
 
-vi.mock('react-native', async () => {
-  const { createElement: h } = await import('react');
-  const box = (props: { readonly children?: ReactNode }) =>
-    h('div', null, props.children);
-  return { Text: box, View: box };
-});
-
 vi.mock('@kitbag/core-design', async (original) => ({
   ...(await original<Record<string, unknown>>()),
   createThemedStyles: () => () =>
@@ -43,6 +36,7 @@ vi.mock('@kitbag/core-state', () => ({
       engineRate: 0,
       durationFrames: 0,
       loop: { kind: 'off' },
+      retime: { kind: 'off' },
       acquireSong: spies.acquireSong,
       close: spies.close,
     }),

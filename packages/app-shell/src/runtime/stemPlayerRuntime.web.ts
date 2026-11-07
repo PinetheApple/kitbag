@@ -42,6 +42,7 @@ configureStemPlayer({
     readStemSet: () => Promise.resolve(undefined),
     saveStemMix: () => Promise.resolve(),
     renameStem: () => Promise.resolve(),
+    saveLyricsRetimed: () => Promise.resolve(),
   },
   readWaveform: () => Promise.reject(new Error('No waveforms on web')),
 });

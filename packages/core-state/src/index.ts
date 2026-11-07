@@ -257,6 +257,8 @@ export {
   stemPlayerStore,
   type LoopFailure,
   type LoopState,
+  type RetimeFailure,
+  type RetimeState,
   type StemPlayerStatus,
   type StemPlayerStore,
   type StemRow,
@@ -275,6 +277,20 @@ export {
   secondsToFrames,
 } from './stemPlayer/time.ts';
 export { SKIP_SECONDS } from './stemPlayer/songTransport.ts';
+export type { LyricLine } from './stemPlayer/lrc.ts';
+export {
+  sungLineFrom,
+  isSungLine,
+  lyricLineAt,
+  nextSungLine,
+  NO_LINE,
+  NO_LYRICS,
+  RETIME_SHIFT_STEP_SEC,
+  type RetimeTap,
+  type SongLyrics,
+} from './stemPlayer/lyrics.ts';
+export type { LoopSeconds } from './stemPlayer/loop.ts';
+export { NO_SECTION, sectionAt } from './stemPlayer/sections.ts';
 export {
   bpmFact,
   keyFact,
