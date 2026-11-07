@@ -223,7 +223,7 @@ Java_com_kitbag_corenative_KitbagCommandsModule_nativeMixerRate(JNIEnv*, jobject
 }
 
 JNIEXPORT jint JNICALL
-Java_com_kitbag_corenative_KitbagCommandsModule_nativeMixerSetTrackPitch(JNIEnv*, jobject, jint track, jint semitones) {
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeMixerSetTrackPitch(JNIEnv*, jobject, jdouble track, jdouble semitones) {
   return static_cast<jint>(kitbag::commandMixerSetTrackPitch(track, semitones));
 }
 

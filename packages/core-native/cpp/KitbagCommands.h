@@ -61,7 +61,7 @@ int32_t commandMixerSetLoop(double startFrame, double endFrame);
 int32_t commandMixerClearLoop();
 int32_t commandMixerSetRate(double rate);
 double commandMixerRate();
-int32_t commandMixerSetTrackPitch(int32_t track, int32_t semitones);
+int32_t commandMixerSetTrackPitch(double track, double semitones);
 int32_t commandMixerTrackPitch(int32_t track);
 
 // Tuner.

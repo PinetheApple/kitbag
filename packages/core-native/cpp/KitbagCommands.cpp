@@ -1,7 +1,9 @@
 #include "KitbagCommands.h"
 
 #include <cassert>
+#include <limits>
 #include <mutex>
+#include <optional>
 
 #include "KitbagEngine.h"
 #include "kitbag_api.h"
@@ -25,6 +27,16 @@ LockedEngine commandEngine() {
 }
 
 int32_t flag(bool value) { return value ? 1 : 0; }
+
+// JS numbers arrive unchecked: casting NaN or an out-of-range double is undefined behaviour.
+std::optional<int32_t> wholeInt32(double value) {
+  constexpr auto kMin = static_cast<double>(std::numeric_limits<int32_t>::min());
+  constexpr auto kMax = static_cast<double>(std::numeric_limits<int32_t>::max());
+  if (!(value >= kMin && value <= kMax)) return std::nullopt;
+  const auto whole = static_cast<int32_t>(value);
+  if (static_cast<double>(whole) != value) return std::nullopt;
+  return whole;
+}
 }  // namespace
 
 int32_t commandStart() { return kb_engine_start(commandEngine()); }
@@ -159,8 +171,11 @@ int32_t commandMixerSetRate(double rate) {
   return kb_mixer_set_rate(commandEngine(), static_cast<float>(rate));
 }
 double commandMixerRate() { return kb_mixer_rate(commandEngine()); }
-int32_t commandMixerSetTrackPitch(int32_t track, int32_t semitones) {
-  return kb_mixer_set_track_pitch(commandEngine(), track, semitones);
+int32_t commandMixerSetTrackPitch(double track, double semitones) {
+  const auto wholeTrack = wholeInt32(track);
+  const auto wholeSemitones = wholeInt32(semitones);
+  if (!wholeTrack || !wholeSemitones) return KB_ERROR_INVALID_ARGUMENT;
+  return kb_mixer_set_track_pitch(commandEngine(), *wholeTrack, *wholeSemitones);
 }
 int32_t commandMixerTrackPitch(int32_t track) {
   return kb_mixer_track_pitch(commandEngine(), track);
