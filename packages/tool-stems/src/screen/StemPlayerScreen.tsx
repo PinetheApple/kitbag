@@ -2,7 +2,7 @@ import {
   Card,
   createThemedStyles,
   EmptyState,
-  size,
+  PlayerDock,
   space,
   stemPlayer,
   textRoles,
@@ -36,16 +36,6 @@ const useStyles = createThemedStyles((theme) => ({
     paddingHorizontal: space.screenInset,
     paddingBottom: stemPlayer.bodyGap,
     gap: stemPlayer.bodyGap,
-  },
-  dock: {
-    backgroundColor: theme.color.surface1,
-    borderTopWidth: size.stroke,
-    borderColor: theme.color.line,
-    borderTopLeftRadius: stemPlayer.dockRadius,
-    borderTopRightRadius: stemPlayer.dockRadius,
-    paddingTop: stemPlayer.dockTop,
-    paddingHorizontal: stemPlayer.dockH,
-    gap: stemPlayer.dockGap,
   },
   note: { ...textStyle(textRoles.fieldLabel), color: theme.color.text },
 }));
@@ -91,16 +81,11 @@ function Dock({
   readonly frame: MixerFrameValues;
   readonly bottom: number;
 }) {
-  const styles = useStyles();
-  const padding = useMemo(
-    () => ({ paddingBottom: stemPlayer.dockBottom + bottom }),
-    [bottom],
-  );
   return (
-    <View style={[styles.dock, padding]}>
+    <PlayerDock bottom={bottom}>
       <Scrubber frame={frame} />
       <StemTransport playing={frame.playing} />
-    </View>
+    </PlayerDock>
   );
 }
 

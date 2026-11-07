@@ -1,9 +1,5 @@
 import { PlayPauseButton, stemPlayer, TransportKey } from '@kitbag/core-design';
-import {
-  SKIP_SECONDS,
-  useStemPlayer,
-  type LoopState,
-} from '@kitbag/core-state';
+import { loopKeyLabel, SKIP_SECONDS, useStemPlayer } from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
@@ -16,12 +12,6 @@ const styles = StyleSheet.create({
     gap: stemPlayer.transportGap,
   },
 });
-
-function loopLabel(loop: LoopState): string {
-  if (loop.kind === 'off') return 'Loop: set the start here';
-  if (loop.kind === 'armed') return 'Loop: set the end here';
-  return 'Clear the loop';
-}
 
 export function StemTransport({
   playing,
@@ -53,7 +43,7 @@ export function StemTransport({
         size="dock"
         icon="repeat"
         selected={loop.kind !== 'off'}
-        accessibilityLabel={loopLabel(loop)}
+        accessibilityLabel={loopKeyLabel(loop)}
         onPress={onLoop}
       />
       <TransportKey

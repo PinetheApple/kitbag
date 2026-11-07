@@ -73,12 +73,14 @@ export interface ScreenAppBarProps {
   readonly onBack: () => void;
   readonly actions?: readonly ScreenBarAction[];
   readonly children: ReactNode;
+  readonly trailing?: ReactNode;
 }
 
 export function ScreenAppBar({
   onBack,
   actions = [],
   children,
+  trailing,
 }: ScreenAppBarProps) {
   const styles = useStyles();
   return (
@@ -92,6 +94,7 @@ export function ScreenAppBar({
       <View style={styles.heading} accessibilityRole="header" accessible>
         {children}
       </View>
+      {trailing}
       {actions.map((action) => (
         <BarIconButton
           key={action.label}

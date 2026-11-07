@@ -46,13 +46,19 @@ interface ActiveCardProps extends CardBaseProps {
   readonly activeLabel: string;
 }
 
+// For a card holding its own controls: an accessible parent would swallow them.
+interface ActiveGroupCardProps extends CardBaseProps {
+  readonly emphasis: 'activeGroup';
+}
+
 interface FeedbackCardProps extends CardBaseProps {
   readonly emphasis: FeedbackTone;
   readonly statusIcon: IconName;
   readonly statusLabel: string;
 }
 
-export type CardProps = PlainCardProps | ActiveCardProps | FeedbackCardProps;
+export type CardProps =
+  PlainCardProps | ActiveCardProps | ActiveGroupCardProps | FeedbackCardProps;
 
 export function Card(props: CardProps) {
   const styles = useStyles();
@@ -68,6 +74,10 @@ export function Card(props: CardProps) {
         {props.children}
       </View>
     );
+  }
+
+  if (props.emphasis === 'activeGroup') {
+    return <View style={[styles.card, styles.active]}>{props.children}</View>;
   }
 
   if ('statusIcon' in props) {
