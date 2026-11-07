@@ -1,0 +1,1 @@
+• At large font sizes, long titles keep their place above the artist, clear nearby controls, and end in a clean ellipsis.
