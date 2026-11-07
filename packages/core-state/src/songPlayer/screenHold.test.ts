@@ -66,41 +66,44 @@ async function stack(lowerKind: Kind, upperKind: Kind) {
   return { lower, upper, lowerHold, upperHold, ready };
 }
 
-describe.each(PAIRS)('a %s screen under a %s screen', (lowerKind, upperKind) => {
-  it('reopens paused when it regains focus after the upper screen left', async () => {
-    const { lower, upper, lowerHold, upperHold, ready } = await stack(
-      lowerKind,
-      upperKind,
-    );
-    lower.fake.commands.mixerPlay.mockClear();
-    upperHold.leave();
-    lowerHold.focus(lower.acquire);
-    await ready(lower, LOWER_ID);
-    expect(lower.fake.commands.mixerPlay).not.toHaveBeenCalled();
-    if (upperKind !== lowerKind) expect(upper.opened()).toBeNull();
-  });
+describe.each(PAIRS)(
+  'a %s screen under a %s screen',
+  (lowerKind, upperKind) => {
+    it('reopens paused when it regains focus after the upper screen left', async () => {
+      const { lower, upper, lowerHold, upperHold, ready } = await stack(
+        lowerKind,
+        upperKind,
+      );
+      lower.fake.commands.mixerPlay.mockClear();
+      upperHold.leave();
+      lowerHold.focus(lower.acquire);
+      await ready(lower, LOWER_ID);
+      expect(lower.fake.commands.mixerPlay).not.toHaveBeenCalled();
+      if (upperKind !== lowerKind) expect(upper.opened()).toBeNull();
+    });
 
-  it('stays open when the upper screen unmounts after the refocus', async () => {
-    const { lower, lowerHold, upperHold, ready } = await stack(
-      lowerKind,
-      upperKind,
-    );
-    lowerHold.focus(lower.acquire);
-    await ready(lower, LOWER_ID);
-    upperHold.leave();
-    await ready(lower, LOWER_ID);
-    const { engineHold, engineRelease } = lower.fake.commands;
-    expect(engineRelease).toHaveBeenCalledTimes(
-      engineHold.mock.calls.length - 1,
-    );
-  });
+    it('stays open when the upper screen unmounts after the refocus', async () => {
+      const { lower, lowerHold, upperHold, ready } = await stack(
+        lowerKind,
+        upperKind,
+      );
+      lowerHold.focus(lower.acquire);
+      await ready(lower, LOWER_ID);
+      upperHold.leave();
+      await ready(lower, LOWER_ID);
+      const { engineHold, engineRelease } = lower.fake.commands;
+      expect(engineRelease).toHaveBeenCalledTimes(
+        engineHold.mock.calls.length - 1,
+      );
+    });
 
-  it('leaves the focused screen open when the unfocused one unmounts', async () => {
-    const { upper, lowerHold, ready } = await stack(lowerKind, upperKind);
-    lowerHold.leave();
-    await ready(upper, UPPER_ID);
-  });
-});
+    it('leaves the focused screen open when the unfocused one unmounts', async () => {
+      const { upper, lowerHold, ready } = await stack(lowerKind, upperKind);
+      lowerHold.leave();
+      await ready(upper, UPPER_ID);
+    });
+  },
+);
 
 describe('a screen that kept its session', () => {
   it('does not reopen or restart when it regains focus', async () => {
