@@ -28,6 +28,8 @@ constexpr int kMaxDrainBlocks = 400;
 constexpr double kLowHz = 220.0;
 constexpr double kHighHz = 330.0;
 constexpr float kHalf = 0.25f;
+constexpr float kUnloadKey = 4.0f;
+constexpr int64_t kUnloadToneFrames = int64_t{2} * kSampleRate;
 constexpr int kMoveAtBlock = 60;
 constexpr int64_t kMoveLoopStart = 20011;
 constexpr int64_t kMoveLoopEnd = 47123;
@@ -325,9 +327,45 @@ void TestClockMapsInFlightFramesByTheirLayout() {
   );
 }
 
+void TestUnloadResetsTheKey() {
+  kitbag::Mixer mixer(kSampleRate);
+  LoadTone(&mixer, kUnloadToneFrames);
+  mixer.SetTrackPitch(0, kUnloadKey, 0, false);
+  RenderPaced(&mixer, 1);
+  mixer.UnloadTrack(0, 0, false);
+  RenderPaced(&mixer, 1);
+  Check(mixer.track_pitch(0) == 0, "unload: the key mirror reads 0");
+  LoadTone(&mixer, kUnloadToneFrames);
+  RenderPaced(&mixer, 1);
+  Check(mixer.track_pitch(0) == 0, "unload: the next stem starts at 0 st");
+  mixer.Seek(0, 0, false);
+  Check(mixer.key_bus_count() == 0, "unload: the next stem needs no bus");
+}
+
+// The queue cannot carry the reset, so the app side must not claim it either.
+void TestUnloadOnFullQueueKeepsBothSidesAgreed() {
+  kitbag::Mixer mixer(kSampleRate);
+  LoadTone(&mixer, kUnloadToneFrames);
+  mixer.SetTrackPitch(0, kUnloadKey, 0, false);
+  RenderPaced(&mixer, 1);
+  const uint64_t before = mixer.dropped_commands();
+  while (mixer.dropped_commands() == before) mixer.SetGain(0, 1.0f);
+  mixer.UnloadTrack(0, 0, false);
+  RenderPaced(&mixer, 1);
+  LoadTone(&mixer, kUnloadToneFrames);
+  mixer.Seek(0, 0, false);
+  Check(
+      mixer.track_pitch(0) == static_cast<int>(kUnloadKey) &&
+          mixer.key_bus_count() == 1,
+      "unload: a full queue leaves the key on both sides"
+  );
+}
+
 }  // namespace
 
 void RunKeyBusTests() {
+  TestUnloadResetsTheKey();
+  TestUnloadOnFullQueueKeepsBothSidesAgreed();
   TestEqualLagAcrossBuses();
   TestSilencePathKeepsOnset();
   TestMuteNeverReplaysStaleAudio();

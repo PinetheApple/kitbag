@@ -15,14 +15,13 @@ constexpr auto kVerdictPoll = std::chrono::microseconds(500);
 }  // namespace
 
 // Playing in bypass hands over ahead of the head, so playback never stops.
-void Mixer::PrimeNow(uint64_t now_frame, bool engine_running) {
-  if (!app_engaged_ || BusesInUse() == 0) return;
+bool Mixer::PrimeNow(uint64_t now_frame, bool engine_running) {
+  if (!app_engaged_ || BusesInUse() == 0) return true;
   if (app_playing_ && !engaged_.load(std::memory_order_relaxed)) {
-    HandOver(now_frame, engine_running);
-    return;
+    return HandOver(now_frame, engine_running);
   }
   const TransportPlan plan{.frame = HeadToPrime(), .layout = app_layout_};
-  PrimedRelayout(plan, now_frame, engine_running);
+  return PrimedRelayout(plan, now_frame, engine_running);
 }
 
 bool Mixer::PrimeAwaitingEngage() const {
@@ -55,6 +54,7 @@ bool Mixer::PrimedRelayout(
     DropStaged(track_count_.load(std::memory_order_relaxed));
     return false;
   }
+  if (prime_publish_hook_) prime_publish_hook_();
   PublishBank(&bank, &plan, now_frame, engine_running);
   CommitPlan(plan, now_frame, engine_running);
   AdoptBank(plan, now_frame, engine_running);
@@ -171,7 +171,8 @@ void Mixer::FreeBank(int bank, uint64_t now_frame, bool engine_running) {
 
 // A missed switch point is never adopted late: the next attempt picks a new
 // one further ahead, and the last resort is a primed jump.
-void Mixer::HandOver(uint64_t now_frame, bool engine_running) {
+bool Mixer::HandOver(uint64_t now_frame, bool engine_running) {
+  bool stalled = false;
   for (int attempt = 0; attempt < kHandOverAttempts; ++attempt) {
     const Head head = PlannedHead();
     if (head.jump_pending || engaged_.load(std::memory_order_relaxed)) break;
@@ -181,11 +182,29 @@ void Mixer::HandOver(uint64_t now_frame, bool engine_running) {
     first_lead_frames_ = 0;
     const HandOverOutcome outcome =
         TryHandOver(head, lead, now_frame, engine_running);
-    if (outcome == HandOverOutcome::kTaken) return;
-    if (outcome == HandOverOutcome::kJump) break;
+    if (outcome == HandOverOutcome::kTaken) return true;
+    stalled = outcome == HandOverOutcome::kStalled;
+    if (outcome != HandOverOutcome::kMissed) break;
   }
   const TransportPlan plan{.frame = HeadToPrime(), .layout = app_layout_};
-  PrimedRelayout(plan, now_frame, engine_running);
+  if (PrimedRelayout(plan, now_frame, engine_running)) return true;
+  if (stalled) RetractHandOver(now_frame, engine_running);
+  return false;
+}
+
+// The stalled callback may yet wake to the plan of a change now refused; a keep
+// at the head, in the same epoch, supersedes it and touches no source.
+void Mixer::RetractHandOver(uint64_t now_frame, bool engine_running) {
+  const Head head = PlannedHead();
+  const TransportPlan keep{
+      .kind = PlanKind::kKeep,
+      .frame = head.stream,
+      .base = head.transport,
+      .layout = app_layout_,
+      .epoch = app_epoch_
+  };
+  CommitPlan(keep, now_frame, engine_running);
+  FreeBank(1 - app_bank_, now_frame, engine_running);
 }
 
 // Adopted only once taken: the callback may engage the live bank at any block
@@ -198,9 +217,9 @@ Mixer::HandOverOutcome Mixer::TryHandOver(
 ) {
   Bank bank;
   if (!BuildBank(head.stream + lead, false, &bank)) {
-    return HandOverOutcome::kJump;
+    return HandOverOutcome::kNotBuilt;
   }
-  if (handover_publish_hook_) handover_publish_hook_();
+  if (prime_publish_hook_) prime_publish_hook_();
   TransportPlan plan{
       .kind = PlanKind::kHandOver,
       .frame = head.stream + lead,
@@ -228,7 +247,7 @@ Mixer::AwaitVerdict(uint64_t generation, bool engine_running) const {
   const auto deadline = std::chrono::steady_clock::now() + kVerdictTimeout;
   while (seen_generation_.load(std::memory_order_acquire) < generation) {
     if (std::chrono::steady_clock::now() > deadline) {
-      return HandOverOutcome::kJump;
+      return HandOverOutcome::kStalled;
     }
     std::this_thread::sleep_for(kVerdictPoll);
   }

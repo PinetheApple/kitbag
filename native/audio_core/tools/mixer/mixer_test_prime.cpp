@@ -246,12 +246,12 @@ bool OverlapWhileRendering(kitbag::Mixer* mixer, ClockedRender* run) {
   mixer->SetRate(kSpeed, 0, true);
   bool raced = false;
   bool fired = false;
-  mixer->set_handover_publish_hook([mixer, &raced, &fired] {
+  mixer->set_prime_publish_hook([mixer, &raced, &fired] {
     if (std::exchange(fired, true)) return;
     raced = WaitUntilEngaged(*mixer);
   });
   mixer->SetRate(kSecondSpeed, 0, true);
-  mixer->set_handover_publish_hook({});
+  mixer->set_prime_publish_hook({});
   std::this_thread::sleep_for(kMissSettle);
   stop.store(true);
   render.join();

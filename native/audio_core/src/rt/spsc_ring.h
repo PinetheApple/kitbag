@@ -24,6 +24,13 @@ class SpscRing {
     return true;
   }
 
+  // Producer side: the consumer only frees slots, so this never overstates.
+  size_t Free() const {
+    const size_t used = head_.load(std::memory_order_relaxed) -
+                        tail_.load(std::memory_order_acquire);
+    return kMask - (used & kMask);
+  }
+
   bool Pop(T* out) {
     const size_t tail = tail_.load(std::memory_order_relaxed);
     if (tail == head_.load(std::memory_order_acquire)) {

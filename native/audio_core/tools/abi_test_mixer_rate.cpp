@@ -25,6 +25,7 @@ constexpr uint64_t kFixtureFrames = 48000;
 // Past the far end of the command ring, so the queue is certain to fill.
 constexpr int kFloodCalls = 256;
 constexpr float kInRange = 0.75f;
+constexpr int32_t kUnloadKey = 4;
 
 float BelowMinRate() {
   return std::nextafter(Mixer::kMinRate, 0.0f);
@@ -201,8 +202,98 @@ void TestPitchOnBadTrackRefused(kb_engine* engine) {
   Check(
       kb_mixer_track_pitch(engine, 1) == 0 &&
           kb_mixer_track_pitch(engine, Mixer::kMaxTracks) == 0,
-      "pitch: a track without a stem reads 0"
+      "pitch: a track never loaded reads 0"
   );
+}
+
+void TestPitchQueueFull(kb_engine* engine) {
+  const int32_t held = kb_mixer_track_pitch(engine, 0);
+  kb_result last = KB_OK;
+  for (int i = 0; i < kFloodCalls && last == KB_OK; ++i) {
+    last = kb_mixer_set_track_pitch(engine, 0, i % 2 == 0 ? held : held - 1);
+  }
+  Check(last == KB_ERROR_BUSY, "pitch: a full queue is KB_ERROR_BUSY");
+  Pump(engine);
+  Check(
+      kb_mixer_set_track_pitch(engine, 0, held) == KB_OK,
+      "pitch: the queue takes calls again after a block"
+  );
+  Pump(engine);
+}
+
+void TestUnloadResetsKey(kb_engine* engine, const std::string& path) {
+  kb_mixer_set_track_pitch(engine, 0, kUnloadKey);
+  Pump(engine);
+  kb_mixer_unload_track(engine, 0);
+  Pump(engine);
+  Check(kb_mixer_track_pitch(engine, 0) == 0, "pitch: unload resets the key");
+  Check(
+      kb_mixer_set_track_pitch(engine, 0, 1) == KB_ERROR_INVALID_ARGUMENT,
+      "pitch: an unloaded track is refused"
+  );
+  kb_mixer_load_track(engine, 0, path.c_str());
+  Pump(engine);
+  Check(
+      kb_mixer_track_pitch(engine, 0) == 0,
+      "pitch: the next stem in the slot starts at 0"
+  );
+}
+
+void ExpectPrimeFailure(
+    kb_engine* engine,
+    const char* rate,
+    const char* pitch
+) {
+  Check(kb_mixer_set_rate(engine, kInRange) == KB_ERROR_INTERNAL, rate);
+  Check(kb_mixer_set_track_pitch(engine, 0, 1) == KB_ERROR_INTERNAL, pitch);
+  Pump(engine);
+  Check(
+      kb_mixer_rate(engine) == kitbag::kUnityRate &&
+          kb_mixer_track_pitch(engine, 0) == 0,
+      "prime failure: both mirrors keep what plays"
+  );
+}
+
+struct VanishedStem {
+  kb_engine* engine = nullptr;
+  std::string kept = media_test::UniqueTempPath("kitbag_abi_kept");
+  std::string gone = media_test::UniqueTempPath("kitbag_abi_gone");
+  std::string hidden = gone + ".hidden";
+};
+
+VanishedStem OpenWithVanishedStem() {
+  VanishedStem stems;
+  media_test::WriteWav(stems.kept, kFixtureFrames);
+  media_test::WriteWav(stems.gone, kFixtureFrames);
+  kb_engine_create(&stems.engine);
+  kb_mixer_load_track(stems.engine, 0, stems.kept.c_str());
+  kb_mixer_load_track(stems.engine, 1, stems.gone.c_str());
+  std::filesystem::rename(stems.gone, stems.hidden);
+  return stems;
+}
+
+void TestPrimeFailureIsInternal() {
+  const VanishedStem stems = OpenWithVanishedStem();
+  ExpectPrimeFailure(
+      stems.engine,
+      "prime failure: stopped, the rate is KB_ERROR_INTERNAL",
+      "prime failure: stopped, the key is KB_ERROR_INTERNAL"
+  );
+  kb_mixer_play(stems.engine);
+  Pump(stems.engine);
+  ExpectPrimeFailure(
+      stems.engine,
+      "prime failure: playing, the rate is KB_ERROR_INTERNAL",
+      "prime failure: playing, the key is KB_ERROR_INTERNAL"
+  );
+  std::filesystem::rename(stems.hidden, stems.gone);
+  Check(
+      kb_mixer_set_rate(stems.engine, kInRange) == KB_OK,
+      "prime failure: the rate applies once the file is back"
+  );
+  kb_engine_destroy(stems.engine);
+  std::filesystem::remove(stems.kept);
+  std::filesystem::remove(stems.gone);
 }
 
 void TestNullEngine() {
@@ -222,6 +313,7 @@ void TestNullEngine() {
 
 void RunMixerRateAbiTests() {
   TestNullEngine();
+  TestPrimeFailureIsInternal();
   kb_engine* engine = nullptr;
   Check(kb_engine_create(&engine) == KB_OK, "rate: engine opens");
   if (engine == nullptr) return;
@@ -238,6 +330,8 @@ void RunMixerRateAbiTests() {
   TestPitchAccepted(engine);
   TestPitchOutsideRangeRefused(engine);
   TestPitchOnBadTrackRefused(engine);
+  TestPitchQueueFull(engine);
+  TestUnloadResetsKey(engine, path);
   kb_engine_destroy(engine);
   std::filesystem::remove(path);
 }

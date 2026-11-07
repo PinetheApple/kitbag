@@ -157,6 +157,24 @@ kb_result kb_mixer_clear_loop(kb_engine* engine) {
   return ok ? KB_OK : KB_ERROR_INTERNAL;
 }
 
+namespace {
+
+kb_result ToKbResult(kitbag::Mixer::StretchResult result) {
+  switch (result) {
+    case kitbag::Mixer::StretchResult::kOk:
+      return KB_OK;
+    case kitbag::Mixer::StretchResult::kBusy:
+      return KB_ERROR_BUSY;
+    case kitbag::Mixer::StretchResult::kNoTrack:
+      return KB_ERROR_INVALID_ARGUMENT;
+    case kitbag::Mixer::StretchResult::kPrimeFailed:
+      return KB_ERROR_INTERNAL;
+  }
+  return KB_ERROR_INTERNAL;
+}
+
+}  // namespace
+
 // The range test is written to fail on NaN.
 kb_result kb_mixer_set_rate(kb_engine* engine, float rate) {
   using kitbag::Mixer;
@@ -165,9 +183,9 @@ kb_result kb_mixer_set_rate(kb_engine* engine, float rate) {
     return KB_ERROR_INVALID_ARGUMENT;
   }
   kitbag::Engine* e = ToEngine(engine);
-  return e->mixer().SetRate(rate, e->frames_rendered(), e->is_running())
-             ? KB_OK
-             : KB_ERROR_BUSY;
+  return ToKbResult(
+      e->mixer().SetRate(rate, e->frames_rendered(), e->is_running())
+  );
 }
 
 float kb_mixer_rate(const kb_engine* engine) {
@@ -183,13 +201,12 @@ kb_mixer_set_track_pitch(kb_engine* engine, int32_t track, int32_t semitones) {
   }
   kitbag::Engine* e = ToEngine(engine);
   if (!e->mixer().track_ready(track)) return KB_ERROR_INVALID_ARGUMENT;
-  const bool queued = e->mixer().SetTrackPitch(
+  return ToKbResult(e->mixer().SetTrackPitch(
       track,
       static_cast<float>(semitones),
       e->frames_rendered(),
       e->is_running()
-  );
-  return queued ? KB_OK : KB_ERROR_BUSY;
+  ));
 }
 
 int32_t kb_mixer_track_pitch(const kb_engine* engine, int32_t track) {

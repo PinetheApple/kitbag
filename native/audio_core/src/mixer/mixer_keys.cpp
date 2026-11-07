@@ -157,52 +157,114 @@ void Mixer::FreeUnusedBuses(uint64_t now_frame, bool engine_running) {
   if (key_bus_count() == 0) MatchBusConfig(0, true);
 }
 
-bool Mixer::SetRate(float rate, uint64_t now_frame, bool engine_running) {
-  const float clamped = ClampRate(rate);
+// A change that fails its prime sends its undo, so both must fit up front; the
+// app thread is the only producer, so the room cannot shrink in between.
+bool Mixer::ReserveUndoableCommand() {
+  if (commands_.Free() >= kUndoableCommandSlots) return true;
+  ++dropped_commands_;
+  return false;
+}
+
+void Mixer::EnqueueRate(float rate) {
   Command command{CommandType::kSetRate};
-  command.fvalue = clamped;
-  if (!Enqueue(command)) return false;
-  app_rate_ = clamped;
-  if (clamped != kUnityRate &&
-      EngageBuses({}, now_frame, engine_running) == BusChange::kNeedsPrime) {
-    PrimeNow(now_frame, engine_running);
-  }
-  return true;
+  command.fvalue = rate;
+  Enqueue(command);
+}
+
+void Mixer::EnqueuePitch(int track, int pitch) {
+  Command command{CommandType::kSetTrackPitch};
+  command.track = track;
+  command.fvalue = static_cast<float>(pitch);
+  Enqueue(command);
+}
+
+void Mixer::RestoreEngage(const EngageState& before) {
+  app_engaged_ = before.engaged;
+  app_vendor_default_ = before.vendor_default;
+}
+
+Mixer::StretchResult
+Mixer::SetRate(float rate, uint64_t now_frame, bool engine_running) {
+  if (!ReserveUndoableCommand()) return StretchResult::kBusy;
+  const float clamped = ClampRate(rate);
+  const float previous = std::exchange(app_rate_, clamped);
+  const EngageState before{app_engaged_, app_vendor_default_};
+  const bool prime =
+      clamped != kUnityRate &&
+      EngageBuses({}, now_frame, engine_running) == BusChange::kNeedsPrime;
+  EnqueueRate(clamped);
+  if (!prime || PrimeNow(now_frame, engine_running)) return StretchResult::kOk;
+  app_rate_ = previous;
+  EnqueueRate(previous);
+  RestoreEngage(before);
+  return StretchResult::kPrimeFailed;
 }
 
 // A lazily added bus is published before the command, so the callback that
 // pops it already sees it. The guard counts the stem at its new key only.
-bool Mixer::SetTrackPitch(
+Mixer::StretchResult Mixer::SetTrackPitch(
     int track,
     float semitones,
     uint64_t now_frame,
     bool engine_running
 ) {
-  if (track < 0 || track >= track_count_.load(std::memory_order_relaxed)) {
-    return false;
-  }
+  if (!track_ready(track)) return StretchResult::kNoTrack;
+  if (!ReserveUndoableCommand()) return StretchResult::kBusy;
   const int pitch = ClampPitch(semitones);
   const int previous = std::exchange(app_pitch_[track], pitch);
+  const EngageState before{app_engaged_, app_vendor_default_};
   bool prime = false;
   if (pitch != 0 || app_engaged_) {
     prime =
         EngageBuses(pitch, now_frame, engine_running) == BusChange::kNeedsPrime;
   }
-  Command command{CommandType::kSetTrackPitch};
-  command.track = track;
-  command.fvalue = static_cast<float>(pitch);
-  if (!Enqueue(command)) {
-    app_pitch_[track] = previous;
-    return false;
-  }
-  if (prime) PrimeNow(now_frame, engine_running);
-  return true;
+  EnqueuePitch(track, pitch);
+  if (!prime || PrimeNow(now_frame, engine_running)) return StretchResult::kOk;
+  app_pitch_[track] = previous;
+  EnqueuePitch(track, previous);
+  RestoreEngage(before);
+  return StretchResult::kPrimeFailed;
+}
+
+// On a full queue the callback keeps the key, so the app side keeps it too.
+void Mixer::ResetTrackPitch(int track) {
+  if (app_pitch_[track] == 0 || commands_.Free() == 0) return;
+  app_pitch_[track] = 0;
+  EnqueuePitch(track, 0);
 }
 
 int Mixer::track_pitch(int track) const {
   return track >= 0 && track < kMaxTracks
              ? tracks_[track].pitch.load(std::memory_order_relaxed)
              : 0;
+}
+
+int64_t Mixer::fed_frames() const {
+  return transport_frame_.load(std::memory_order_relaxed);
+}
+
+bool Mixer::key_buses_vendor_default() const {
+  return app_vendor_default_;
+}
+
+int64_t Mixer::handover_lead_frames() const {
+  return handover_lead_frames_;
+}
+
+void Mixer::set_first_handover_lead_frames(int64_t frames) {
+  first_lead_frames_ = frames;
+}
+
+void Mixer::set_prime_publish_hook(std::function<void()> hook) {
+  prime_publish_hook_ = std::move(hook);
+}
+
+void Mixer::set_snapshot_hook(std::function<void()> hook) {
+  snapshot_hook_ = std::move(hook);
+}
+
+uint64_t Mixer::missed_handovers() const {
+  return missed_handovers_;
 }
 
 int Mixer::key_bus_count() const {

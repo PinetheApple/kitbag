@@ -106,12 +106,13 @@ class Mixer {
     return crossfade_frames_;
   }
 
-  /// Speed (SPEC.md §7.6), clamped to [kMinRate, kMaxRate]. False if the
-  /// command queue is full, with nothing changed.
-  bool SetRate(float rate, uint64_t now_frame, bool engine_running);
+  /// kPrimeFailed: a stem could not be read for the stretch. Anything but kOk
+  /// leaves the control as it was.
+  enum class StretchResult : uint8_t { kOk, kBusy, kNoTrack, kPrimeFailed };
+  /// Speed (SPEC.md §7.6), clamped to [kMinRate, kMaxRate].
+  StretchResult SetRate(float rate, uint64_t now_frame, bool engine_running);
   /// Whole semitones, clamped to [kMinPitchSemitones, kMaxPitchSemitones].
-  /// False for a track never loaded or a full command queue, nothing changed.
-  bool SetTrackPitch(
+  StretchResult SetTrackPitch(
       int track,
       float semitones,
       uint64_t now_frame,
@@ -125,35 +126,21 @@ class Mixer {
     return engaged_.load(std::memory_order_relaxed);
   }
   /// Song frames read from the stems since construction, pre-roll included.
-  int64_t fed_frames() const {
-    return transport_frame_.load(std::memory_order_relaxed);
-  }
+  int64_t fed_frames() const;
   /// App thread only. Both banks, so a bank left behind by a prime counts.
   int key_bus_count() const;
-  bool key_buses_vendor_default() const {
-    return app_vendor_default_;
-  }
+  bool key_buses_vendor_default() const;
   /// Frames each track's read-ahead ring holds, stretch pre-roll included.
   uint64_t ring_frames() const;
-  int64_t handover_lead_frames() const {
-    return handover_lead_frames_;
-  }
+  int64_t handover_lead_frames() const;
   /// Tests only: the lead of the next hand-over's first attempt.
-  void set_first_handover_lead_frames(int64_t frames) {
-    first_lead_frames_ = frames;
-  }
-  /// Tests only: runs between building a hand-over's bank and publishing it.
-  void set_handover_publish_hook(std::function<void()> hook) {
-    handover_publish_hook_ = std::move(hook);
-  }
+  void set_first_handover_lead_frames(int64_t frames);
+  /// Tests only: runs between building a bank and publishing it.
+  void set_prime_publish_hook(std::function<void()> hook);
   /// Tests only: runs on the callback between adopting a plan and loading the
   /// block's buses.
-  void set_snapshot_hook(std::function<void()> hook) {
-    snapshot_hook_ = std::move(hook);
-  }
-  uint64_t missed_handovers() const {
-    return missed_handovers_;
-  }
+  void set_snapshot_hook(std::function<void()> hook);
+  uint64_t missed_handovers() const;
 
   /// Callback-published mirrors: they converge within one block.
   bool is_playing() const {
@@ -194,6 +181,7 @@ class Mixer {
   using Command = MixerCommand;
 
   static constexpr size_t kCommandRingSize = 64;
+  static constexpr size_t kUndoableCommandSlots = 2;
   static constexpr int kBanks = 2;
   // A pending rate waits this long after the last record, which bounds how
   // many records the clock needs to cover the stretch's output latency.
@@ -203,6 +191,7 @@ class Mixer {
   static int ClampPitch(float semitones);
 
   void NoteTrackLoaded(int track);
+  void ResetTrackPitch(int track);
   SourceStamp JoinStamp() const;
   void RecomputeLongestFrames();
 
@@ -245,6 +234,14 @@ class Mixer {
   void MixAllTracks(float* output, uint32_t frame_count, bool any_solo);
   void AdvanceTransport(uint32_t frame_count);
 
+  struct EngageState {
+    bool engaged;
+    bool vendor_default;
+  };
+  bool ReserveUndoableCommand();
+  void EnqueueRate(float rate);
+  void EnqueuePitch(int track, int pitch);
+  void RestoreEngage(const EngageState& before);
   struct Prepared {
     uint32_t created = 0;
     bool prime = false;
@@ -277,7 +274,7 @@ class Mixer {
     uint64_t generation = 0;
     int64_t lag = 0;
   };
-  void PrimeNow(uint64_t now_frame, bool engine_running);
+  bool PrimeNow(uint64_t now_frame, bool engine_running);
   bool PrimeAwaitingEngage() const;
   int64_t HeadToPrime() const;
   bool
@@ -293,8 +290,9 @@ class Mixer {
   void
   AdoptBank(const TransportPlan& plan, uint64_t now_frame, bool engine_running);
   void FreeBank(int bank, uint64_t now_frame, bool engine_running);
-  enum class HandOverOutcome : uint8_t { kTaken, kMissed, kJump };
-  void HandOver(uint64_t now_frame, bool engine_running);
+  enum class HandOverOutcome : uint8_t { kTaken, kMissed, kNotBuilt, kStalled };
+  bool HandOver(uint64_t now_frame, bool engine_running);
+  void RetractHandOver(uint64_t now_frame, bool engine_running);
   HandOverOutcome TryHandOver(
       const Head& head,
       int64_t lead,
@@ -373,7 +371,7 @@ class Mixer {
   int64_t handover_lead_frames_;
   int64_t first_lead_frames_ = 0;
   uint64_t missed_handovers_ = 0;
-  std::function<void()> handover_publish_hook_;
+  std::function<void()> prime_publish_hook_;
   std::function<void()> snapshot_hook_;
   // Callback-owned stretch state. rt_buses_ is loaded once per block.
   int bank_ = 0;
