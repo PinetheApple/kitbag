@@ -18,6 +18,13 @@ const FAILURES: Readonly<Record<LoopFailure, string>> = {
   engine: 'Loop not set, try again',
 };
 
+export function loopRange({
+  startSec,
+  endSec,
+}: Readonly<Record<'startSec' | 'endSec', number>>): string {
+  return `${formatClockSeconds(startSec)} – ${formatClockSeconds(endSec)}`;
+}
+
 function fractionOf(seconds: number, rate: number, frames: number): number {
   return frames > 0 ? (seconds * rate) / frames : 0;
 }
@@ -49,7 +56,7 @@ export function loopNote(
     };
   if (loop.kind === 'on')
     return {
-      text: `Loop ${formatClockSeconds(loop.startSec)} – ${formatClockSeconds(loop.endSec)}`,
+      text: `Loop ${loopRange(loop)}`,
       failed: false,
     };
   return null;

@@ -25,7 +25,8 @@ import {
 import { InlineIcon } from './IconGlyph.tsx';
 
 export type ButtonVariant = 'primary' | 'tonal' | 'ghost' | 'destructive';
-export type ButtonSize = 'default' | 'sheet' | 'prompt' | 'target' | 'small';
+export type ButtonSize =
+  'default' | 'sheet' | 'prompt' | 'target' | 'small' | 'bar';
 
 const BUTTON_HEIGHT = textRoles.button.size + (inset.buttonV + size.stroke) * 2;
 const BUTTON_HEIGHTS: Readonly<Record<ButtonSize, number>> = {
@@ -33,6 +34,7 @@ const BUTTON_HEIGHTS: Readonly<Record<ButtonSize, number>> = {
   sheet: size.buttonSheet,
   prompt: size.buttonPrompt,
   target: minTouchTargetDp,
+  bar: size.buttonPrompt,
   small:
     homeArrangeText.smallButton.size * bodyLineHeight +
     (homeArrange.smallButtonV + size.stroke) * 2,
@@ -141,6 +143,11 @@ const useStyles = createThemedStyles((theme) => ({
   target: {
     minHeight: minTouchTargetDp,
     paddingVertical: 0,
+  },
+  bar: {
+    minHeight: size.buttonPrompt,
+    paddingVertical: 0,
+    paddingHorizontal: inset.buttonBarH,
   },
   small: {
     gap: space.chipGap,

@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react';
-import { Text, View } from 'react-native';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { Text, View, type LayoutChangeEvent } from 'react-native';
 import { useAnimatedReaction, type SharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
@@ -31,11 +31,12 @@ const useStyles = createThemedStyles((theme) => ({
   note: {
     position: 'absolute',
     top: stemPlayer.loopNoteTop,
-    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: stemPlayer.loopNoteGap,
   },
+  noteRight: { right: 0 },
+  noteLeft: { left: 0 },
   noteText: {
     ...textStyle(textRoles.loopNote),
     color: theme.color[theme.accentInk],
@@ -135,11 +136,32 @@ export interface ScrubNote {
   readonly failed: boolean;
 }
 
-function NoteLine({ note }: { readonly note: ScrubNote | null }) {
+export interface ScrubLaneLayout {
+  readonly noteSide: 'left' | 'right';
+  readonly paddingTop: number | null;
+  readonly onLane: (event: LayoutChangeEvent) => void;
+  readonly onBar: (event: LayoutChangeEvent) => void;
+  readonly onNote: (event: LayoutChangeEvent) => void;
+}
+
+interface NoteLineProps {
+  readonly note: ScrubNote | null;
+  readonly layout: ScrubLaneLayout | undefined;
+}
+
+function NoteLine({ note, layout }: NoteLineProps) {
   const styles = useStyles();
   if (note === null) return null;
   return (
-    <View style={styles.note} accessibilityLiveRegion="polite">
+    <View
+      testID="loop-note"
+      style={[
+        styles.note,
+        layout?.noteSide === 'left' ? styles.noteLeft : styles.noteRight,
+      ]}
+      accessibilityLiveRegion="polite"
+      onLayout={layout?.onNote}
+    >
       {note.failed ? null : <Icon name="repeat" size="action" color="accent" />}
       <Text style={note.failed ? styles.failText : styles.noteText}>
         {note.text}
@@ -184,6 +206,9 @@ export interface ScrubRowProps {
   readonly onScrub: (frame: number) => void;
   readonly onCancel: () => void;
   readonly onSeek: (frame: number) => void;
+  readonly behindFill?: ReactNode;
+  readonly overFill?: ReactNode;
+  readonly layout?: ScrubLaneLayout;
 }
 
 export function ScrubRow({
@@ -196,6 +221,9 @@ export function ScrubRow({
   onScrub,
   onCancel,
   onSeek,
+  behindFill,
+  overFill,
+  layout,
 }: ScrubRowProps) {
   const styles = useStyles();
   const second = useSpokenSecond(frame);
@@ -213,9 +241,18 @@ export function ScrubRow({
     },
     [hold, onSeek, durationFrames],
   );
+  const paddingTop = layout?.paddingTop ?? null;
+  const lanePadding = useMemo(
+    () => (paddingTop === null ? undefined : { paddingTop }),
+    [paddingTop],
+  );
   return (
-    <View style={styles.lane}>
-      <NoteLine note={note} />
+    <View
+      testID="scrub-lane"
+      style={[styles.lane, lanePadding]}
+      onLayout={layout?.onLane}
+    >
+      <NoteLine note={note} layout={layout} />
       <View
         style={styles.elapsed}
         importantForAccessibility="no-hide-descendants"
@@ -223,7 +260,7 @@ export function ScrubRow({
       >
         <LiveText text={frame.elapsed} role="scrubTime" align="left" />
       </View>
-      <View style={styles.bar}>
+      <View testID="scrub-bar" style={styles.bar} onLayout={layout?.onBar}>
         <Slider
           value={frame.progress}
           onSlide={slide}
@@ -233,6 +270,8 @@ export function ScrubRow({
           mode="seek"
           accessibilityLabel="Song position"
           accessibilityValue={spokenPosition(second)}
+          behindFill={behindFill}
+          overFill={overFill}
         />
         <LoopMarks marks={marks} />
       </View>

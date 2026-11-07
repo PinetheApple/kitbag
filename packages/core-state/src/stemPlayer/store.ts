@@ -1,17 +1,26 @@
-import type { StemSetRecord } from '@kitbag/core-db';
+import type { StemSetRecord, StoredSection } from '@kitbag/core-db';
 import { KB_MAX_TRACKS, KB_RESULT } from '@kitbag/core-native';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { mixActions, transportActions } from './actions.ts';
 import { clickActions } from './clickActions.ts';
 import { NO_SONG_FACTS, songFacts, type SongFacts } from './facts.ts';
-import { loopActions } from './loopActions.ts';
+import type { LoopSeconds } from './loop.ts';
+import { sectionLoopActions } from './loopActions.ts';
+import {
+  NO_LYRICS,
+  songLyrics,
+  type RetimeTap,
+  type SongLyrics,
+} from './lyrics.ts';
 import { UNITY_GAIN } from './mix.ts';
 import { createMixerClaim, mixerClaim, type MixerClaim } from './mixerClaim.ts';
 import { mixerSession } from './mixerSession.ts';
 import { mixSaver } from './mixSaver.ts';
 import { renameActions } from './renameActions.ts';
+import { retimeActions, retimeAnchor } from './retimeActions.ts';
 import { getStemPlayer, type StemPlayerRuntime } from './runtime.ts';
+import { sortedSections } from './sections.ts';
 import { secondsToFrames } from './time.ts';
 
 const MIX_SAVE_DELAY_MS = 600;
@@ -37,10 +46,21 @@ export type LoopState =
       readonly endSec: number;
     };
 
+export type RetimeState =
+  | { readonly kind: 'off' }
+  | {
+      readonly kind: 'recording';
+      readonly taps: readonly RetimeTap[];
+      readonly nextLine: number;
+      readonly shiftSteps: number;
+    };
+
 export type StemPlayerStatus =
   'idle' | 'loading' | 'ready' | 'missing' | 'failed';
 
 export type LoopFailure = 'tooShort' | 'pastEnd' | 'engine';
+
+export type RetimeFailure = 'notStored';
 
 export interface StemPlayerState {
   readonly status: StemPlayerStatus;
@@ -56,7 +76,12 @@ export interface StemPlayerState {
   readonly beats: readonly number[];
   readonly loop: LoopState;
   readonly loopFailure: LoopFailure | null;
+  readonly undoableLoop: LoopSeconds | null;
   readonly click: boolean;
+  readonly sections: readonly StoredSection[];
+  readonly lyrics: SongLyrics;
+  readonly retime: RetimeState;
+  readonly retimeFailure: RetimeFailure | null;
 }
 
 export interface StemPlayerActions {
@@ -73,6 +98,18 @@ export interface StemPlayerActions {
   readonly seek: (frame: number) => void;
   readonly skip: (seconds: number) => void;
   readonly markLoop: () => Promise<void>;
+  readonly undoLoop: () => Promise<void>;
+  readonly dismissLoopUndo: () => void;
+  readonly jumpToSection: (index: number) => Promise<void>;
+  readonly loopSection: (index: number) => Promise<void>;
+  readonly beginRetime: (fromLine: number) => void;
+  readonly tapRetime: () => void;
+  readonly undoRetimeTap: () => void;
+  readonly shiftRetime: (steps: number) => void;
+  readonly commitRetime: () => Promise<void>;
+  readonly cancelRetime: () => void;
+  readonly leaveRetime: () => void;
+  readonly resetRetime: () => Promise<void>;
   readonly toggleClick: () => Promise<void>;
   readonly renameStem: (index: number, name: string) => Promise<void>;
 }
@@ -111,7 +148,12 @@ const closedState: StemPlayerState = {
   beats: [],
   loop: { kind: 'off' },
   loopFailure: null,
+  undoableLoop: null,
   click: false,
+  sections: [],
+  lyrics: NO_LYRICS,
+  retime: { kind: 'off' },
+  retimeFailure: null,
 };
 
 function longestSeconds(record: StemSetRecord): number {
@@ -192,7 +234,10 @@ export function createStemPlayerStore(
       scrubSeekDelayMs,
       claim,
       isOpen: () => get().setId !== null,
-      beforeTeardown: saver.flush,
+      beforeTeardown: () => {
+        saver.flush();
+        get().leaveRetime();
+      },
       teardownTracks,
       resetState: () => {
         set(closedState);
@@ -256,6 +301,8 @@ export function createStemPlayerStore(
         engineRate,
         durationFrames: secondsToFrames(longestSeconds(record), engineRate),
         beats: record.beats,
+        sections: sortedSections(record.sections),
+        lyrics: songLyrics(record.lyrics, record.lyricsRetimed),
       });
       loadWaveforms(opened, record, bars);
     };
@@ -274,10 +321,11 @@ export function createStemPlayerStore(
       },
       close: mixer.close,
       ...mixActions(set, get, runtimeOf, saver),
-      ...transportActions(get, runtimeOf, scrubSeek),
-      ...loopActions(context),
+      ...transportActions(get, runtimeOf, scrubSeek, retimeAnchor(context)),
+      ...sectionLoopActions(context),
       ...clickActions(context),
       ...renameActions(context),
+      ...retimeActions(context),
     };
   });
 }

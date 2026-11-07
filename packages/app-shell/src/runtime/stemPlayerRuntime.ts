@@ -9,5 +9,7 @@ configureStemPlayer({
     readStemSet: (id) => getDatabase().songLibrary.readStemSet(id),
     saveStemMix: (mixes) => getDatabase().songLibrary.saveStemMix(mixes),
     renameStem: (id, name) => getDatabase().songLibrary.renameStem(id, name),
+    saveLyricsRetimed: (id, times) =>
+      getDatabase().songLibrary.saveLyricsRetimed(id, times),
   },
 });

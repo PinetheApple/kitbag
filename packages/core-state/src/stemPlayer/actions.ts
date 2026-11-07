@@ -101,6 +101,7 @@ export function transportActions(
   get: () => TransportSlice,
   runtimeOf: () => MixerRuntime,
   scrubSeek: Debounced<[number]>,
+  afterSeek?: (frame: number) => void,
 ): Pick<
   StemPlayerActions,
   'togglePlay' | 'scrub' | 'cancelScrub' | 'seek' | 'skip'
@@ -109,6 +110,7 @@ export function transportActions(
     scrubSeek.cancel();
     const clamped = clamp(frame, 0, get().durationFrames);
     runtimeOf().commands.mixerSeek(clamped);
+    afterSeek?.(clamped);
   };
   return {
     togglePlay: () => {
