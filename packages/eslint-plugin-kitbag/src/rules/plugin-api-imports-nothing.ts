@@ -38,6 +38,7 @@ type MessageIds = 'forbiddenImport';
 export const pluginApiImportsNothing = createRule<Options, MessageIds>({
   name: 'plugin-api-imports-nothing',
   meta: {
+    defaultOptions: [{}],
     type: 'problem',
     docs: {
       description:
@@ -58,7 +59,6 @@ export const pluginApiImportsNothing = createRule<Options, MessageIds>({
         'wrong.',
     },
   },
-  defaultOptions: [{}],
   create(context, [options]) {
     const guardedPackage = options?.package ?? 'core-plugin-api';
     if (!isInPackage(context.filename, guardedPackage)) {
