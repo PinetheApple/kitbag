@@ -3,18 +3,26 @@ import type { SetlistEntry, SetlistSummary } from '@kitbag/core-state';
 import { libraryStore, metronomeStore } from '@kitbag/core-state';
 import { describe, expect, it, vi } from 'vitest';
 
+type TransportHandler = (event: TransportEvent) => void;
+
 // The runtime subscribes once, at its first import, and vitest clears mock
 // history before each test, so the subscriber must outlive vi.fn's record.
 const native = vi.hoisted(() => {
-  const subscribers: ((event: TransportEvent) => void)[] = [];
+  const subscribers: TransportHandler[] = [];
   return {
     transportShow: vi.fn<(state: TransportShowState) => void>(),
     transportHide: vi.fn(),
-    onTransport: (handler: (event: TransportEvent) => void) => {
+    onTransport: (handler: TransportHandler) => {
       subscribers.push(handler);
     },
     emitTransport: (event: TransportEvent) => {
-      for (const handler of subscribers) handler(event);
+      const [handler, ...extra] = subscribers;
+      if (handler === undefined || extra.length > 0) {
+        throw new Error(
+          `expected one transport subscriber, found ${String(subscribers.length)}`,
+        );
+      }
+      handler(event);
     },
   };
 });
