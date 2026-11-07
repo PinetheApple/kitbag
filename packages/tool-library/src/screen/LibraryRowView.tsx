@@ -1,6 +1,7 @@
 import {
   Badge,
   createThemedStyles,
+  EllipsizedLine,
   hitBoxStyle,
   hitExtension,
   Icon,
@@ -25,7 +26,7 @@ import {
   type SongBadge,
 } from '@kitbag/core-state';
 import { useCallback } from 'react';
-import { Pressable, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, useWindowDimensions, View } from 'react-native';
 
 import { failureText } from '../logic/notices.ts';
 import { rowLayout } from '../logic/rowLayout.ts';
@@ -179,12 +180,12 @@ export function LibraryRowView({
       >
         <RowTile stems={row.kind === 'stems'} />
         <View style={styles.text}>
-          <Text style={styles.title} numberOfLines={titleLines}>
+          <EllipsizedLine style={styles.title} numberOfLines={titleLines}>
             {row.title}
-          </Text>
-          <Text style={styles.facts} numberOfLines={factsLines}>
+          </EllipsizedLine>
+          <EllipsizedLine style={styles.facts} numberOfLines={factsLines}>
             {rowSubtitle(row, status, failure)}
-          </Text>
+          </EllipsizedLine>
           {badgesUnderText && badges}
         </View>
         {!badgesUnderText && badges}

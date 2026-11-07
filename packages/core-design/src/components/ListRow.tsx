@@ -1,5 +1,5 @@
 import { useCallback, type ReactNode } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import type { IconName } from '../icons.ts';
 import { radius, rowLineHeight, size, space, textRoles } from '../roles.ts';
@@ -9,6 +9,7 @@ import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { radii } from '../tokens.ts';
 import { Icon } from './Icon.tsx';
+import { EllipsizedLine } from './EllipsizedLine.tsx';
 import { SwitchTrack } from './Switch.tsx';
 
 const useStyles = createThemedStyles((theme) => ({
@@ -56,19 +57,17 @@ export function RowText({
   const styles = useStyles();
   return (
     <View style={styles.body}>
-      <Text
+      <EllipsizedLine
         style={[styles.title, bodyLines && styles.bodyLinesTitle]}
-        numberOfLines={1}
       >
         {title}
-      </Text>
+      </EllipsizedLine>
       {subtitle === undefined ? null : (
-        <Text
+        <EllipsizedLine
           style={[styles.subtitle, bodyLines && styles.bodyLinesSubtitle]}
-          numberOfLines={1}
         >
           {subtitle}
-        </Text>
+        </EllipsizedLine>
       )}
     </View>
   );

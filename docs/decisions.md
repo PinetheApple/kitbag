@@ -934,3 +934,12 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   at 360 dp and 2.0 the badges left too little room for ordinary long words, and moving them
   gives the title 236 dp. A single word wider than that still breaks inside itself. At 1.0
   the row is unchanged. Coordinator call; the owner may overturn it. **[recorded]**
+
+- **2026-11-07 · Row ellipses and the preset name field (§12.6, #317)** — Extends the #303
+  reserve to Library rows and to `RowText`, so every row built on it. The reserve is per view
+  paint, not per line: the third line of a Library title lost its third dot the same way a
+  single line does. The preset editor's fields wrap instead of scrolling. A long name
+  scrolled to its end, and the sliver of a letter cut at the field's edge read as a stray
+  mark. `.editrow .v` in `design/kitbag-metronome.html` does not forbid wrapping. Return
+  still leaves the field. Other ellipsized lines keep the #303 defect. Recorded; the owner
+  may overturn it. **[recorded]**

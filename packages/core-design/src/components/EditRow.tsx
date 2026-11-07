@@ -248,6 +248,8 @@ export interface EditTextInputProps {
   readonly placeholder: string;
 }
 
+// A scrolled one-line input cuts a glyph at its edge, and a sliver reads as a
+// stray mark; wrapping never scrolls.
 export function EditTextInput(props: EditTextInputProps) {
   const styles = useStyles();
   const theme = useTheme();
@@ -259,6 +261,8 @@ export function EditTextInput(props: EditTextInputProps) {
       placeholder={props.placeholder}
       placeholderTextColor={theme.color.text3}
       accessibilityLabel={props.accessibilityLabel}
+      multiline
+      submitBehavior="blurAndSubmit"
     />
   );
 }
