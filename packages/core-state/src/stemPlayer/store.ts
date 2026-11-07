@@ -346,7 +346,7 @@ export function createStemPlayerStore(
       ...sectionLoopActions(context),
       ...clickActions(context),
       ...renameActions(context),
-      ...retimeActions(context),
+      ...retimeActions(context, claim.defer),
     };
   });
 }

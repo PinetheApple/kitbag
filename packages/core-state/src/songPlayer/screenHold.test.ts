@@ -110,6 +110,7 @@ describe('a screen that kept its session', () => {
     hold.ensureHeld(lower.acquire);
     await ready(lower, LOWER_ID);
     const loads = lower.fake.commands.loadTrack.mock.calls.length;
+    lower.fake.commands.mixerStop.mockClear();
     hold.ensureHeld(lower.acquire);
     expect(lower.fake.commands.loadTrack).toHaveBeenCalledTimes(loads);
     expect(lower.fake.commands.mixerStop).not.toHaveBeenCalled();

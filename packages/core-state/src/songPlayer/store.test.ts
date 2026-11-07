@@ -234,7 +234,6 @@ describe('what an earlier session left on the mixer', () => {
   it('sets no speed when the mixer already plays at unity', async () => {
     const { commands } = await openedSong();
     expect(commands.mixerSetRate).not.toHaveBeenCalled();
-    expect(commands.mixerStop).not.toHaveBeenCalled();
   });
 
   it('plays the song in its own key when the track kept a shifted one', async () => {
@@ -254,9 +253,9 @@ describe('what an earlier session left on the mixer', () => {
     const fake = shifted();
     const store = songStore(fake);
     await store.getState().open(SONG_ID, BARS).loaded;
-    expect(fake.commands.mixerStop).toHaveBeenCalledOnce();
+    expect(fake.commands.mixerStop).toHaveBeenCalledTimes(2);
     expect(order(fake.commands.mixerSetTrackPitch)).toBeLessThan(
-      order(fake.commands.mixerStop),
+      fake.commands.mixerStop.mock.invocationCallOrder[1] ?? Number.NaN,
     );
     expect(store.getState().status).toBe('ready');
   });
@@ -283,7 +282,7 @@ describe('what an earlier session left on the mixer', () => {
     const store = songStore(fake);
     await store.getState().open(SONG_ID, BARS).loaded;
     expect(store.getState().status).toBe('failed');
-    expect(fake.commands.mixerStop).not.toHaveBeenCalled();
+    expect(fake.commands.mixerStop).toHaveBeenCalledOnce();
   });
 });
 

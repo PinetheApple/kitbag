@@ -1,15 +1,18 @@
-import { KB_RESULT } from '@kitbag/core-native';
+import type { StemSetRecord } from '@kitbag/core-db';
+import { KB_MIXER_UNITY_RATE, KB_RESULT } from '@kitbag/core-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { MetronomeCommands } from '../metronome/commands.ts';
 import { configureMetronomeRuntime } from '../metronome/runtime.ts';
 import { metronomeStore, type MetronomeStore } from '../metronome/store.ts';
 import { createMixerClaim } from '../stemPlayer/mixerClaim.ts';
+import { RETIME_PLAYBACK_RATE } from '../stemPlayer/retimeSpeed.ts';
 import { createStemPlayerStore } from '../stemPlayer/store.ts';
 import {
   fakeRuntime as fakeStemRuntime,
   RATE,
   record,
+  SONG_DETAILS,
   stem,
 } from '../stemPlayer/store.test-helper.ts';
 import {
@@ -23,6 +26,7 @@ import {
 
 const STEM_SET_ID = 7;
 const STEM_MASTER = 0.4;
+const AUDIO_BLOCK_MS = 10;
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -32,10 +36,10 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-function storesSharingOneMixer() {
+function storesSharingOneMixer(details: Partial<StemSetRecord> = {}) {
   const mixerClaim = createMixerClaim();
   const songFake = fakeSongRuntime();
-  const stemFake = fakeStemRuntime(record([stem(1)]));
+  const stemFake = fakeStemRuntime(record([stem(1)], details));
   const songs = songStore(songFake, mixerClaim);
   const stemSongs = createStemPlayerStore(() => stemFake.runtime, {
     mixerClaim,
@@ -78,6 +82,7 @@ describe('sharing the mixer with stem songs', () => {
   it('closes an open stem song when a song opens', async () => {
     const { songs, stemSongs, stemFake } = storesSharingOneMixer();
     await stemSongs.getState().open(STEM_SET_ID, BARS);
+    stemFake.commands.mixerStop.mockClear();
     await songs.getState().open(SONG_ID, BARS).loaded;
     expect(stemSongs.getState().setId).toBeNull();
     expect(stemFake.commands.mixerStop).toHaveBeenCalledOnce();
@@ -87,6 +92,7 @@ describe('sharing the mixer with stem songs', () => {
   it('closes an open song when a stem song opens', async () => {
     const { songs, stemSongs, songFake } = storesSharingOneMixer();
     await songs.getState().open(SONG_ID, BARS).loaded;
+    songFake.commands.mixerStop.mockClear();
     await stemSongs.getState().open(STEM_SET_ID, BARS);
     expect(songs.getState().songId).toBeNull();
     expect(songFake.commands.mixerStop).toHaveBeenCalledOnce();
@@ -255,6 +261,67 @@ describe('a length read that fails or lands late', () => {
       beats: newer.beats,
     });
     expect(fake.commands.mixerUnloadTrack).toHaveBeenCalledOnce();
+  });
+});
+
+describe('a stem song closed in retime', () => {
+  const STEM_SPEED = 0.9;
+
+  function sharedRate(
+    { songFake, stemFake }: ReturnType<typeof storesSharingOneMixer>,
+    initial: number,
+  ) {
+    const rate = { value: initial };
+    songFake.commands.mixerRate.mockImplementation(() =>
+      Promise.resolve(rate.value),
+    );
+    songFake.commands.mixerSetRate.mockImplementation((next: number) => {
+      rate.value = next;
+      return Promise.resolve<number>(KB_RESULT.KB_OK);
+    });
+    stemFake.commands.mixerRate.mockImplementation(() =>
+      Promise.resolve(rate.value),
+    );
+    stemFake.commands.mixerSetRate.mockImplementation(
+      (next: number) =>
+        new Promise<number>((resolve) => {
+          setTimeout(() => {
+            rate.value = next;
+            resolve(KB_RESULT.KB_OK);
+          }, AUDIO_BLOCK_MS);
+        }),
+    );
+    return rate;
+  }
+
+  async function songAfterRetime(speedBefore: number) {
+    const stores = storesSharingOneMixer(SONG_DETAILS);
+    await stores.stemSongs.getState().open(STEM_SET_ID, BARS);
+    const rate = sharedRate(stores, speedBefore);
+    stores.stemSongs.getState().beginRetime(0);
+    await vi.runAllTimersAsync();
+    const { loaded } = stores.songs.getState().open(SONG_ID, BARS);
+    await vi.runAllTimersAsync();
+    await loaded;
+    return { ...stores, rate };
+  }
+
+  it('stops the mixer before the song loads though the speed reads unity', async () => {
+    const { songFake } = await songAfterRetime(KB_MIXER_UNITY_RATE);
+    const { mixerStop, loadTrack } = songFake.commands;
+    expect(mixerStop).toHaveBeenCalledOnce();
+    expect(mixerStop.mock.invocationCallOrder[0]).toBeLessThan(
+      loadTrack.mock.invocationCallOrder[0] ?? Number.NaN,
+    );
+  });
+
+  it('plays the song at unity after the stem speed is put back', async () => {
+    const { songs, rate, stemFake } = await songAfterRetime(STEM_SPEED);
+    expect(
+      stemFake.commands.mixerSetRate.mock.calls.map(([speed]) => speed),
+    ).toEqual([RETIME_PLAYBACK_RATE, STEM_SPEED]);
+    expect(rate.value).toBe(KB_MIXER_UNITY_RATE);
+    expect(songs.getState().status).toBe('ready');
   });
 });
 

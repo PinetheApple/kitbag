@@ -84,30 +84,32 @@ export function mixerSession({
     songStopSubscription = null;
   };
 
-  const replanAfterReset = async (
-    opened: number,
-    reset: Promise<number>,
-  ): Promise<boolean> => {
+  // Setting unity rate or key leaves the stretch engaged; only a stop or seek
+  // replans it, and a closed session's late restore can land after its stop.
+  const replanAfterReset = async (opened: number, reset: Promise<number>) => {
     const result = await reset;
     if (!live(opened)) return false;
     if (result !== KB_RESULT.KB_OK) {
       set({ status: 'failed' });
       return false;
     }
-    // Only a stop or seek takes tracks off the stretch the old value engaged.
     runtimeOf().commands.mixerStop();
     return true;
   };
 
   const clearSessionLeftovers = async (opened: number) => {
+    await claim.settled();
     const { commands } = runtimeOf();
     // A loop a failed clear left behind would otherwise play in this song.
     await commands.mixerClearLoop().catch(() => null);
     // The rate is engine-wide and outlives stop and unload.
     const rate = await commands.mixerRate();
     if (!live(opened)) return false;
-    if (rate === KB_MIXER_UNITY_RATE) return true;
-    return replanAfterReset(opened, commands.mixerSetRate(KB_MIXER_UNITY_RATE));
+    const reset =
+      rate === KB_MIXER_UNITY_RATE
+        ? Promise.resolve<number>(KB_RESULT.KB_OK)
+        : commands.mixerSetRate(KB_MIXER_UNITY_RATE);
+    return replanAfterReset(opened, reset);
   };
 
   return {

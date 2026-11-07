@@ -187,5 +187,6 @@ export async function opened(
   });
   await store.getState().open(7, BARS);
   fake.commands.mixerClearLoop.mockClear();
+  fake.commands.mixerStop.mockClear();
   return { ...fake, store };
 }
