@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  ELLIPSIS_FACE_RATIO,
   ellipsisPaintSize,
   fittedStyle,
   MAX_SETTLE_PASSES,
@@ -125,13 +126,23 @@ describe('titleFloorOverSubtitle', () => {
 });
 
 describe('ellipsisPaintSize', () => {
-  it('asks for no paint of its own at the default text size', () => {
-    expect(ellipsisPaintSize(SIZE, 1)).toBeUndefined();
-    expect(ellipsisPaintSize(SIZE, 0.85)).toBeUndefined();
-  });
+  const DEFAULT_FACE_EM = 0.669;
+  const SPACE_GROTESK_MEDIUM_EM = 0.739;
+  const INTER_REGULAR_EM = 0.864;
+  const ARTIST = 12.5;
 
-  it('carries the font scale once the text grows', () => {
-    expect(ellipsisPaintSize(SIZE, 2)).toBe(SIZE * 2);
+  it.each([SPACE_GROTESK_MEDIUM_EM, INTER_REGULAR_EM])(
+    'reserves at least the width of a %f em ellipsis drawn at 2.0',
+    (drawnEm) => {
+      const drawn = ARTIST * 2;
+      const reserved = ellipsisPaintSize(ARTIST, 2) * DEFAULT_FACE_EM;
+      expect(reserved).toBeGreaterThanOrEqual(drawn * drawnEm);
+    },
+  );
+
+  it('scales by the widest face over the default face', () => {
+    expect(ELLIPSIS_FACE_RATIO).toBeCloseTo(INTER_REGULAR_EM / DEFAULT_FACE_EM);
+    expect(ellipsisPaintSize(SIZE, 2)).toBe(SIZE * 2 * ELLIPSIS_FACE_RATIO);
   });
 });
 

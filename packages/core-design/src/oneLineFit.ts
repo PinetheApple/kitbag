@@ -63,13 +63,13 @@ export function titleFloorOverSubtitle(
   return subtitleSize === undefined ? floor : Math.max(floor, subtitleSize);
 }
 
-// ReactTextView.setFontSize sizes its own paint in dp, and Android reserves the
-// ellipsis with that paint, so above 1.0 the drawn ellipsis overruns the box.
-export function ellipsisPaintSize(
-  fontSize: number,
-  fontScale: number,
-): number | undefined {
-  return isTextScaled(fontScale) ? fontSize * fontScale : undefined;
+const DEFAULT_FACE_ELLIPSIS_EM = 0.669;
+const WIDEST_FACE_ELLIPSIS_EM = 0.864;
+export const ELLIPSIS_FACE_RATIO =
+  WIDEST_FACE_ELLIPSIS_EM / DEFAULT_FACE_ELLIPSIS_EM;
+
+export function ellipsisPaintSize(fontSize: number, fontScale: number): number {
+  return fontSize * fontScale * ELLIPSIS_FACE_RATIO;
 }
 
 export interface FittedStyle {

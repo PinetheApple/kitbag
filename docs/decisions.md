@@ -869,14 +869,19 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   shown label match. Below the floor it ellipsizes on one line. The floors still hold
   as rendered sizes: they fall in the converter's linear range (8.5 sp at 2.0), not
   checked against the converter tables. Floors as ruled: `appBarTitleMinSize` at a
-  font scale of 1.0 or less, the design size above it. Over an artist line the floor is
-  also never below the artist's size, so a floored title does not read smaller than the
-  line under it (#303). **[coord, owner may overturn]** Above the default scale a title
-  clears a trailing chip by `space.controlGap` and, with nothing after it, ends at
-  `space.screenInset`; at 1.0 neither moves. Android reserves an ellipsis with the view's
-  own paint, which `ReactTextView.java:616-620` sizes in dp while the text draws in sp, so
-  above 1.0 the third dot falls past the box and is clipped. App-bar lines work around it
-  by nesting the text in a parent whose `fontSize` carries the font scale, read in the
-  source and not yet seen on a device; other ellipsized lines still have the defect. Home
+  font scale of 1.0 or less, the design size above it. Home
   tool tiles use the same helper, with their floor at `homeTile.titleMinScale` of the
   tile title's design size; no `adjustsFontSizeToFit` or `minimumFontScale` is left.
+
+- **2026-11-07 · App-bar titles above the default text size (§12.6, #303)** — Amends the
+  2026-11-03 #287 entry's floors. Over an artist line the title's floor is never below the
+  artist's size, so a floored title does not read smaller than the line under it. Above the
+  default scale a title clears a trailing chip by `space.controlGap` and, with nothing after
+  it, ends at `space.screenInset`; at 1.0 neither moves. Android reserves an ellipsis with
+  the text view's own paint, which `ReactTextView.setFontSize` sizes in dp while the text
+  draws in sp, and whose typeface is never set. So the reserve depends on the default face
+  as well as the size, and above 1.0 a reserve that small lets the third dot fall past the
+  box. App-bar lines nest their text in a parent whose `fontSize` carries the font scale and
+  the ratio of the widest app face's ellipsis to the default face's; over-reserving costs a
+  little text. Other ellipsized lines keep the defect. Coordinator call; the owner may
+  overturn it. **[recorded]**

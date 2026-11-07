@@ -2,6 +2,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { ellipsisPaintSize } from '../oneLineFit.ts';
 import { iconSizes, screenBar, space, textRoles } from '../roles.ts';
 import { ThemeProvider } from '../ThemeProvider.tsx';
 import { minTouchTargetDp, type ThemeMode } from '../tokens.ts';
@@ -183,15 +184,23 @@ describe('AppBar title above the default text size', () => {
       expect(headingOf(bar)?.style?.marginRight).toBeUndefined();
   });
 
-  it('gives the shown title and artist a view paint at their drawn size', () => {
+  it('gives the shown title and artist a paint that reserves their ellipsis', () => {
     screen.fontScale = 2;
     const shown = nodes(
       render(<AppBar title="Long" subtitle="Artist" />),
     ).filter((n) => n.kind === 'text' && n.lines === 1);
     expect(shown.map((n) => n.style?.fontSize)).toEqual([
-      textRoles.appBarTitle.size * 2,
-      textRoles.appBarSubtitle.size * 2,
+      ellipsisPaintSize(textRoles.appBarTitle.size, 2),
+      ellipsisPaintSize(textRoles.appBarSubtitle.size, 2),
     ]);
+  });
+
+  it('keeps an empty artist line out of the scaled paint', () => {
+    screen.fontScale = 2;
+    const shown = nodes(render(<AppBar title="Long" subtitle="" />)).filter(
+      (n) => n.kind === 'text' && n.lines === 1,
+    );
+    expect(shown.at(-1)?.style?.fontSize).toBe(textRoles.appBarSubtitle.size);
   });
 
   it('keeps one plain text per line at the default text size', () => {

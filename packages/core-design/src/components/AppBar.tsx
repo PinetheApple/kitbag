@@ -20,8 +20,8 @@ import { useTextIconScale } from '../useTextIconScale.ts';
 import { EllipsizedLine } from './EllipsizedLine.tsx';
 import { Icon } from './Icon.tsx';
 
-const SCALED_CHIP_CLEARANCE = space.controlGap - screenBar.gap;
-const SCALED_EDGE_CLEARANCE = space.screenInset - screenBar.h;
+const SCALED_CHIP_EXTRA_MARGIN = space.controlGap - screenBar.gap;
+const SCALED_EDGE_EXTRA_MARGIN = space.screenInset - screenBar.h;
 
 const useStyles = createThemedStyles((theme) => ({
   bar: {
@@ -174,14 +174,20 @@ function Heading({
   );
 }
 
-function endClearance(
-  hasChildren: boolean,
-  hasTrailing: boolean,
-  hasActions: boolean,
-): number {
+interface EndNeighbours {
+  readonly hasChildren: boolean;
+  readonly hasTrailing: boolean;
+  readonly hasActions: boolean;
+}
+
+function endClearance({
+  hasChildren,
+  hasTrailing,
+  hasActions,
+}: EndNeighbours): number {
   if (hasChildren) return 0;
-  if (hasTrailing) return SCALED_CHIP_CLEARANCE;
-  return hasActions ? 0 : SCALED_EDGE_CLEARANCE;
+  if (hasTrailing) return SCALED_CHIP_EXTRA_MARGIN;
+  return hasActions ? 0 : SCALED_EDGE_EXTRA_MARGIN;
 }
 
 export function AppBar({
@@ -197,6 +203,7 @@ export function AppBar({
   children,
 }: AppBarProps) {
   const styles = useStyles();
+  const hasTrailing = trailing !== undefined && trailing !== null;
   return (
     <View
       style={[
@@ -220,18 +227,16 @@ export function AppBar({
             title={title}
             subtitle={subtitle}
             wordmark={wordmark}
-            scaledEndClearance={endClearance(
-              children !== undefined,
-              trailing !== undefined && trailing !== null,
-              actions.length > 0,
-            )}
+            scaledEndClearance={endClearance({
+              hasChildren: children !== undefined,
+              hasTrailing,
+              hasActions: actions.length > 0,
+            })}
           />
         )}
         {children}
       </View>
-      {trailing === undefined || trailing === null ? null : (
-        <View style={styles.trailing}>{trailing}</View>
-      )}
+      {hasTrailing ? <View style={styles.trailing}>{trailing}</View> : null}
       {actions.map((action) => (
         <BarIconButton
           key={action.label}
