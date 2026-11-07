@@ -1,8 +1,9 @@
 import type { ReactElement, ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { iconSizes, screenBar, space } from '../roles.ts';
+import { ellipsisPaintSize } from '../oneLineFit.ts';
+import { iconSizes, screenBar, space, textRoles } from '../roles.ts';
 import { ThemeProvider } from '../ThemeProvider.tsx';
 import { minTouchTargetDp, type ThemeMode } from '../tokens.ts';
 
@@ -140,6 +141,79 @@ function header(markup: string): string | undefined {
 function order(markup: string, ...needles: string[]): number[] {
   return needles.map((needle) => markup.indexOf(needle));
 }
+
+describe('AppBar title above the default text size', () => {
+  const headingOf = (bar: ReactElement) =>
+    nodes(render(bar)).find((n) => n.kind === 'view' && n.measures);
+
+  afterEach(() => {
+    screen.fontScale = 1;
+  });
+
+  it('clears a trailing chip and the screen edge', () => {
+    screen.fontScale = 2;
+    const chip = headingOf(
+      <AppBar title="Long" onBack={noop} trailing={<b>Saved</b>} />,
+    );
+    expect(Number(chip?.style?.marginRight) + screenBar.gap).toBe(
+      space.controlGap,
+    );
+    const edge = headingOf(<AppBar title="Long" onBack={noop} />);
+    expect(Number(edge?.style?.marginRight) + screenBar.h).toBe(
+      space.screenInset,
+    );
+  });
+
+  it('leaves a title beside an icon key to the key padding', () => {
+    screen.fontScale = 2;
+    const key = headingOf(
+      <AppBar
+        title="Long"
+        onBack={noop}
+        actions={[{ icon: 'more', label: 'Menu', onPress: noop }]}
+      />,
+    );
+    expect(key?.style?.marginRight).toBeUndefined();
+  });
+
+  it('moves nothing at the default text size', () => {
+    for (const bar of [
+      <AppBar key="chip" title="Long" trailing={<b>Saved</b>} />,
+      <AppBar key="edge" title="Long" />,
+    ])
+      expect(headingOf(bar)?.style?.marginRight).toBeUndefined();
+  });
+
+  it('gives the shown title and artist a paint that reserves their ellipsis', () => {
+    screen.fontScale = 2;
+    const shown = nodes(
+      render(<AppBar title="Long" subtitle="Artist" />),
+    ).filter((n) => n.kind === 'text' && n.lines === 1);
+    expect(shown.map((n) => n.style?.fontSize)).toEqual([
+      ellipsisPaintSize(textRoles.appBarTitle.size, 2),
+      ellipsisPaintSize(textRoles.appBarSubtitle.size, 2),
+    ]);
+  });
+
+  it('keeps an empty artist line out of the scaled paint', () => {
+    screen.fontScale = 2;
+    const shown = nodes(render(<AppBar title="Long" subtitle="" />)).filter(
+      (n) => n.kind === 'text' && n.lines === 1,
+    );
+    expect(shown.at(-1)?.style?.fontSize).toBe(textRoles.appBarSubtitle.size);
+  });
+
+  it('keeps one plain text per line at the default text size', () => {
+    const shown = nodes(
+      render(<AppBar title="Long" subtitle="Artist" />),
+    ).filter((n) => n.kind === 'text' && !n.measures);
+    expect(shown.map((n) => n.style?.fontSize)).toEqual([
+      textRoles.appBarTitle.size,
+      textRoles.appBarSubtitle.size,
+    ]);
+    expect(shown.every((n) => n.lines === 1)).toBe(true);
+  });
+});
 
 describe('AppBar', () => {
   it('draws the leading key as close for a mode that cancels, not back', () => {

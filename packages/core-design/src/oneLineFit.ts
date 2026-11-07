@@ -56,6 +56,22 @@ export function oneLineFloor(
   return isTextScaled(fontScale) ? size / grownTextScale(fontScale) : minSize;
 }
 
+export function titleFloorOverSubtitle(
+  floor: number,
+  subtitleSize: number | undefined,
+): number {
+  return subtitleSize === undefined ? floor : Math.max(floor, subtitleSize);
+}
+
+const DEFAULT_FACE_ELLIPSIS_EM = 0.669;
+const WIDEST_FACE_ELLIPSIS_EM = 0.864;
+export const ELLIPSIS_FACE_RATIO =
+  WIDEST_FACE_ELLIPSIS_EM / DEFAULT_FACE_ELLIPSIS_EM;
+
+export function ellipsisPaintSize(fontSize: number, fontScale: number): number {
+  return fontSize * fontScale * ELLIPSIS_FACE_RATIO;
+}
+
 export interface FittedStyle {
   readonly fontSize: number;
   readonly letterSpacing?: number;
