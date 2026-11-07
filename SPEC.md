@@ -283,6 +283,13 @@ Requirements:
   along with the buffer it took — after which **every remaining boundary value
   is a scalar.** This matters more under JSI than it did under FFI: see §13.2.
 
+**A single song plays through the mixer as one track** (`kb_mixer_load_track(0,
+path)`): the mixer already has the loop and its crossfade and the click's
+follow-mixer mode, and #138 adds its stretch stage to the mixer, so extending
+`kb_player_*` would duplicate them. `kb_player_*` stays in the ABI, and no
+transport or store code uses it. Recorded in `docs/decisions.md`; the owner may
+overturn it.
+
 ### 4.2 New: phase anchor
 
 **Problem.** `kb_metronome_start(engine)` takes no time argument. The click
@@ -813,9 +820,9 @@ the single most RN-specific piece of §5** — see §13.9.
 
 ### 6.1 Move playback onto the native engine
 
-**`just_audio` is removed and nothing replaces it.** `kb_player_*` (§4.1) is the
-replacement. This is the central change: song and click stop being two clocks
-and become one.
+**`just_audio` is removed and nothing replaces it.** The native mixer (§4.1) is
+the replacement, with the song as its one track. This is the central change:
+song and click stop being two clocks and become one.
 
 **Do not substitute `react-native-track-player` or `expo-av`.** They are the
 same architecture as `just_audio` — a second engine with its own clock — and
@@ -850,29 +857,63 @@ working. Changes:
 
 ### 6.3 Player
 
+- Plays through the mixer as a one-track song (§4.1), on the same transport,
+  loop and follow-click as the stem player. A song and a stem song never hold
+  the mixer together: opening one closes the other.
 - Waveform with beat-grid ticks; tall ticks on downbeats — the analysis made
-  visible.
+  visible. Ticks never sit closer than the lane allows: when every beat fits,
+  every beat is drawn; otherwise only downbeats, at a stride of 1, 2, 4, 8… bars,
+  so each tick stays individually readable.
+- **No grid yet, or analysis failed:** the metronome card stays and says why,
+  the click chips are muted, and the waveform is flat with no ticks. A failed
+  analysis offers Re-analyse (§6.2). The song still plays; seek and loop work
+  unsnapped.
 - **Fix tap-to-seek.** Flutter measures the Scaffold's width, not the
   waveform's, so seek is off by the horizontal padding. Measure the waveform.
 - **`.kwav` load off the UI thread.** Flutter does synchronous file I/O in
   `waveform_painter.dart:53`.
 - Optional beat-snapped scrub.
-- **A-B loop**, beat-snapped, equal-power crossfade 5–20ms.
+- **A-B loop**, beat-snapped, equal-power crossfade 5–20ms. The A|B key marks
+  A then B at the playhead, a third tap clears; the A and B handles on the
+  waveform drag, beat-snapped.
 - Speed control in the transport, driven by the same stretch stage as the stem
-  player (§7.6). Single-file playback gets it when the stem player has it.
-- **Mini-player** — collapses to a docked bar (title, play/pause) above the home
-  hub when leaving the screen, so the click keeps running while you open the
-  tuner or edit a setlist.
+  player (§7.6). Single-file playback gets it when the stem player has it; until
+  then the 1.0× key stays in place, looks disabled, and shows a note on tap.
+- A row tap on Songs opens the player paused.
+- **Stop** lives in the player's overflow menu, with Re-analyse. Stop ends the
+  song session and removes the mini-player. Stop in the song's media
+  notification does the same.
+- **Mini-player** — leaving the player keeps the session, so the click keeps
+  running while you open the tuner or edit a setlist. A docked bar shows on Home
+  and Songs only: music-note icon, title, artist and click state, play/pause,
+  close, and a thin progress line. A tap opens the player; close stops the song
+  as Stop does.
 
 ### 6.4 Metronome lock
 
 - Lock via `kb_metronome_set_grid` (§4.2) — follows per-beat spacing, so
   non-constant tempo works.
 - Latency-compensated: click and track land together at the speaker.
-- Count-in before the lock engages.
-- **The metronome is not a singleton to borrow.** Play-along and the player get
-  their own metronome state, or the shell saves and restores. See §8.9 — this is
-  one open question, not two.
+- Count-in before the lock engages. Until it works under a grid (#298), the
+  Count-in chip and its sheet group show disabled with the note "arrives with
+  count-in".
+- **Click settings belong to the song.** The Count-in, Click and Accent chips
+  open one shared sheet at the tapped group; changes apply live and stay with
+  this song, unsaved until "Save for this song". The standalone metronome's
+  settings never change. The click sound is one of the engine's sounds (§13.7).
+- "Save for this song" stores a preset that belongs to the song. A song with a
+  saved preset opens with its click on; a song without one opens with it off.
+  The preset is a `SongPreset` linked to the library song through its existing
+  `librarySongId`; linked presets are excluded from the Metronome's "All songs"
+  list.
+- **Play on the standalone Metronome while a song's click runs** turns the
+  song's click off; the song keeps playing and its card shows click off. The
+  standalone metronome starts on its own settings, untouched. Tapping CLICK OFF
+  on the card turns the song's click back on, which stops the standalone
+  metronome.
+- **One engine metronome, settled for this player.** The song's click and
+  standalone Play preempt each other, and the standalone settings never change.
+  Whether Play along gets its own metronome state is still open (§8.9).
 
 ### 6.5 Acceptance
 
@@ -1212,6 +1253,11 @@ the app layer that saves and restores around the borrow. The design cannot tell
 these apart; **the acceptance criterion can:** opening Play along and closing it
 must leave the standalone metronome exactly as it was, including mid-run.
 
+The single-song player (§6.4) has a narrower rule on purpose: closing a song
+restores the standalone metronome's settings intact but not its run state. A
+standalone metronome the song's click preempted stays stopped; it never restarts
+on its own.
+
 ### 8.10 States
 
 The mock drew a happy path. On this feature the rest are not edge cases — a phone
@@ -1500,6 +1546,7 @@ Two migration notes that are not obvious from the table:
 | `kitbag-library.html` | **Variant B only** ("Two tiles, two screens"; #178). Supersedes `kitbag-ui.html` §04's Home tiles and Library: Songs and Stem songs are separate screens. Variant C is a rejected alternative. From variant A only the filter menu binds: the Songs filter icon opens it (filter by analysis status; sort by title, date added, BPM). `docs/decisions.md` (2026-10-30, #178) lists what is deliberately not built. |
 | `kitbag-stems.html` | **Variant C only** ("Bottom dock"; #137). Supersedes `kitbag-ui.html` §04's Stem player. Variants A and B are rejected alternatives; `docs/decisions.md` (2026-10-30, #137) lists what is deliberately not built. |
 | `kitbag-stems-sections.html` | **Option C only** ("Chosen (owner, 2026-11-01)"; #139). Extends `kitbag-stems.html` variant C with the Mix \| Lyrics switch, section cards, lane notches and tint, stage lyrics and retime mode. Options A and B are rejected alternatives, kept in `docs/research/mockups/stems-sections-lyrics.html`. Retime's 0.75× subtitle is built (#299); its speed stepper is not (#328). Recorded in `docs/decisions.md`, 2026-11-01. |
+| `kitbag-song-player.html` | **The single-song player** (owner-approved 2026-11-07; #297). Supersedes `kitbag-ui.html` §04's Player. Draws the base player, the mini-player on Home and Songs, the Metronome's click-off snackbar, the click sheet, the 1.0× key before speed, the no-grid states and the A-B loop. Recorded in `docs/decisions.md`, 2026-11-07. |
 | `kitbag-home-arrange.html` | **Option B only** ("Chosen (owner, 2026-10-31)"; #113). Supersedes the "long-press any tile for edit mode" bullet in `kitbag-ui.html` §04 Home and §12.4's customizable-layout bullet as to *how* editing works: Edit, or a long-press on a tile, opens the Arrange sheet. Options A and C are rejected alternatives, kept as reference in `docs/research/mockups/113/`. Recorded in `docs/decisions.md`, 2026-10-31. |
 
 ### 12.1 Principles (kitbag-ui §01)
@@ -1886,9 +1933,11 @@ the New Architecture, and it means JSI.
   **TurboModule**. They are infrequent, they can be typed with codegen, and they
   may be async.
 - **Polled realtime reads** (`bar_phase`, `current_beat`, `current_bpm`,
-  `frames_rendered`, `tuner_snapshot`, `player_position`) go through a **JSI
+  `frames_rendered`, `tuner_snapshot`, `mixer_position`) go through a **JSI
   HostObject** that calls straight into the C ABI, synchronously, with no
   serialisation. This is the direct analogue of the Dart FFI call it replaces.
+  `mixer_position` is the read the transport polls; `player_position` is bound
+  but nothing polls it.
 - The HostObject is installed once, holds the single `kb_engine*` (§4.5: one
   engine per process), and is **the only thing in the codebase that holds it.**
 

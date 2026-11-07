@@ -15,11 +15,18 @@ export interface ToolStopperDeps {
       readonly close: () => void;
     };
   };
+  readonly songPlayer: {
+    readonly getState: () => {
+      readonly songId: number | null;
+      readonly close: () => void;
+    };
+  };
 }
 
 export function toolStoppers({
   metronome,
   stemPlayer,
+  songPlayer,
 }: ToolStopperDeps): ToolStoppers {
   return {
     [TOOL_ID.metronome]: () => {
@@ -28,6 +35,10 @@ export function toolStoppers({
     [TOOL_ID.stems]: () => {
       const player = stemPlayer.getState();
       if (player.setId !== null) player.close();
+    },
+    [TOOL_ID.library]: () => {
+      const player = songPlayer.getState();
+      if (player.songId !== null) player.close();
     },
   };
 }

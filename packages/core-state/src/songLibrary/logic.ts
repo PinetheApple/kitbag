@@ -25,7 +25,9 @@ export interface AnalysisFailure {
 }
 
 // A failed re-analysis keeps the grid it was replacing, so the grid still stands.
-export function songBadge(song: LibrarySongRow): SongBadge {
+export function songBadge(
+  song: Pick<LibrarySongRow, 'analysisStatus' | 'hasGrid'>,
+): SongBadge {
   switch (song.analysisStatus) {
     case ANALYSIS_STATUS.pending:
       return 'pending';

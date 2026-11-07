@@ -1,8 +1,23 @@
 import { KB_MIXER_RATE_BOUNDS, KB_RESULT } from '@kitbag/core-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  fakeSongRuntime,
+  SONG_ID,
+  songStore,
+} from '../songPlayer/store.test-helper.ts';
+import { createMixerClaim } from './mixerClaim.ts';
 import { RETIME_PLAYBACK_RATE } from './retimeSpeed.ts';
-import { at, BARS, opened, SONG_DETAILS, stem } from './store.test-helper.ts';
+import { createStemPlayerStore } from './store.ts';
+import {
+  at,
+  BARS,
+  fakeRuntime,
+  opened,
+  record,
+  SONG_DETAILS,
+  stem,
+} from './store.test-helper.ts';
 
 const OTHER_SONG_ID = 8;
 const SONG_SPEED = 0.9;
@@ -28,7 +43,7 @@ async function retiming(speed = SONG_SPEED) {
   return song;
 }
 
-function ratesSet({ commands }: Song) {
+function ratesSet({ commands }: Pick<Song, 'commands'>) {
   return commands.mixerSetRate.mock.calls.map(([rate]) => rate);
 }
 
@@ -129,7 +144,7 @@ describe('every way out of retime restores the speed it found', () => {
     [
       'an Activity relaunch',
       (song) => {
-        song.store.getState().acquireSong(7, BARS)();
+        song.store.getState().acquireSong(7, BARS).release();
       },
     ],
   ];
@@ -143,15 +158,15 @@ describe('every way out of retime restores the speed it found', () => {
 
   it('a relaunch whose old screen lets go late', async () => {
     const song = await songAt();
-    const releaseOld = song.store.getState().acquireSong(7, BARS);
+    const oldScreen = song.store.getState().acquireSong(7, BARS);
     await settle();
     song.store.getState().beginRetime(0);
     await settle();
-    const releaseNew = song.store.getState().acquireSong(7, BARS);
-    releaseOld();
+    const newScreen = song.store.getState().acquireSong(7, BARS);
+    oldScreen.release();
     await settle();
     expect(ratesSet(song)).toEqual([RETIME_PLAYBACK_RATE, SONG_SPEED]);
-    releaseNew();
+    newScreen.release();
     await settle();
     expect(ratesSet(song)).toEqual([RETIME_PLAYBACK_RATE, SONG_SPEED]);
   });
@@ -301,6 +316,25 @@ describe('a speed read that trails the last set by an audio block', () => {
       RETIME_PLAYBACK_RATE,
     ]);
     expect(playbackRate(song)).toBe(RETIME_PLAYBACK_RATE);
+  });
+});
+
+describe('a single song displacing a stem song in retime', () => {
+  it('restores the speed the retime found', async () => {
+    const mixerClaim = createMixerClaim();
+    const stemFake = fakeRuntime(record([stem(1)], SONG_DETAILS));
+    stemFake.commands.mixerRate.mockResolvedValue(SONG_SPEED);
+    const stems = createStemPlayerStore(() => stemFake.runtime, {
+      mixerClaim,
+    });
+    await stems.getState().open(7, BARS);
+    stems.getState().beginRetime(0);
+    await settle();
+    const songs = songStore(fakeSongRuntime(), mixerClaim);
+    await songs.getState().open(SONG_ID, BARS).loaded;
+    await settle();
+    expect(stems.getState().setId).toBeNull();
+    expect(ratesSet(stemFake)).toEqual([RETIME_PLAYBACK_RATE, SONG_SPEED]);
   });
 });
 

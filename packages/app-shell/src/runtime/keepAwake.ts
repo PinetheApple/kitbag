@@ -21,6 +21,7 @@ export interface KeepAwakeDeps {
   readonly metronome: Source<{ readonly running: boolean }>;
   readonly tuner: Source<{ readonly mic: MicStatus }>;
   readonly stemPlayer: Source<{ readonly status: StemPlayerStatus }>;
+  readonly songPlayer: Source<{ readonly status: StemPlayerStatus }>;
   readonly appearance: Source<{ readonly keepScreenAwake: boolean }>;
   readonly mixerPlaying: () => boolean;
   readonly poll: (tick: () => void) => () => void;
@@ -32,7 +33,9 @@ export function wireKeepAwake(deps: KeepAwakeDeps): void {
   let kept = false;
   let stopPolling: (() => void) | undefined;
 
-  const songOpen = () => deps.stemPlayer.getState().status === 'ready';
+  const songOpen = () =>
+    deps.stemPlayer.getState().status === 'ready' ||
+    deps.songPlayer.getState().status === 'ready';
 
   const apply = () => {
     const on =
@@ -68,6 +71,7 @@ export function wireKeepAwake(deps: KeepAwakeDeps): void {
   deps.tuner.subscribe(apply);
   deps.appearance.subscribe(apply);
   deps.stemPlayer.subscribe(followSong);
+  deps.songPlayer.subscribe(followSong);
   deps.onForeground(reapply);
   followSong();
 }
