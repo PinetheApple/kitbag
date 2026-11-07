@@ -1,5 +1,8 @@
 import { stemPlayer } from '@kitbag/core-design';
-import { LANE, NOTE_AT_2X } from '@kitbag/core-design/src/loopNote.test-helper.ts';
+import {
+  LANE,
+  NOTE_AT_2X,
+} from '@kitbag/core-design/src/loopNote.test-helper.ts';
 import { aboveFlagsPadding } from '@kitbag/core-design/src/loopNotePlacement.ts';
 import { afterEach, describe, expect, it } from 'vitest';
 

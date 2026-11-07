@@ -120,7 +120,9 @@ function mount(focused = true): ReactTestRenderer {
 }
 
 function styleAround(tree: ReactTestRenderer, type: string) {
-  let host: ReactTestInstance | null = tree.root.findByType(type as never).parent;
+  let host: ReactTestInstance | null = tree.root.findByType(
+    type as never,
+  ).parent;
   while (host !== null && typeof host.type !== 'string') host = host.parent;
   const style: unknown = host?.props.style;
   return Object.assign({}, ...[style].flat(Infinity)) as Record<

@@ -36,15 +36,22 @@ afterEach(() => {
 
 describe('a stem song that does not open', () => {
   it.each([
-    ['failed', 'These stems would not open', () => Promise.reject(new Error('locked'))],
+    [
+      'failed',
+      'These stems would not open',
+      () => Promise.reject(new Error('locked')),
+    ],
     ['missing', 'This stem song is gone', () => Promise.resolve(undefined)],
-  ] as const)('gives the %s box the screen inset', async (status, title, read) => {
-    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    player = await mountPlayer();
-    player.records.readStemSet.mockImplementationOnce(read);
-    const { open } = player.store.getState();
-    await act(() => open(SET_ID, BARS));
-    expect(player.store.getState().status).toBe(status);
-    expect(insetsAbove(player.textNode(title))).toContain(space.screenInset);
-  });
+  ] as const)(
+    'gives the %s box the screen inset',
+    async (status, title, read) => {
+      vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      player = await mountPlayer();
+      player.records.readStemSet.mockImplementationOnce(read);
+      const { open } = player.store.getState();
+      await act(() => open(SET_ID, BARS));
+      expect(player.store.getState().status).toBe(status);
+      expect(insetsAbove(player.textNode(title))).toContain(space.screenInset);
+    },
+  );
 });
