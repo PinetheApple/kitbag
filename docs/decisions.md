@@ -1032,7 +1032,13 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
 - **2026-11-07 · Song-grid accents (§4.3, #300)** — Under a grid only each song bar's first
   beat is accented; the standalone accent row and its mutes are ignored. With no downbeats
   there is no bar accent. **[user]**
-- **2026-11-07 · Unsupported audio formats (§6.2, #308)** — No new decoders. The picker offers
-  only WAV, MP3, FLAC and stem-bundle zips, and import refuses any other format before copying,
-  naming it. The list lives in `SupportedAudio.kt` and reaches JS as library constants.
-  **[user]**
+- **2026-11-07 · Unsupported audio formats (§6.2, #308)** — No new decoders: the picker offers
+  only formats the core decodes, and import refuses any other with a message naming it. The core
+  decodes WAV, MP3 and FLAC, plus AIFF, AIFC, W64 and RF64 through dr_wav (measured: 5 s ffmpeg
+  tones of each return `KB_OK` from `kb_player_load` and `kb_analyze_song`; AAC `.m4a` returns
+  `KB_ERROR_INVALID_ARGUMENT`). An unsupported file fails with the same code as a corrupt one,
+  so only import can tell the user which happened. The refusal copy is the owner's:
+  `Can’t import “<name>”: <FORMAT> isn’t supported. Use WAV, MP3 or FLAC.`, its list
+  built from the supported one. **[user]**
+  The list's single owner is `SupportedAudio.kt`, passed to JS as library constants.
+  **[recorded — coordinator ruling]**

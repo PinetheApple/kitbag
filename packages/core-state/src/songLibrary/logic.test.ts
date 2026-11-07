@@ -153,8 +153,14 @@ describe('import helpers', () => {
     ['Everlong.MP3', 'audio/mpeg'],
     ['take.wav', ''],
     ['take.flac', 'application/octet-stream'],
+    ['take.AIF', ''],
+    ['take.aifc', 'audio/x-aifc'],
+    ['take.w64', 'application/octet-stream'],
+    ['take.rf64', ''],
+    ['Track 01', 'audio/x-aiff'],
     ['Track 01', 'audio/flac'],
     ['Track 01. Intro', 'audio/mpeg'],
+    ['Mislabelled.m4a', 'audio/mpeg'],
   ] as const)('admits %s (%s), which the core can open', (name, mimeType) => {
     expect(checkAudioFormat({ name, mimeType }, SHARED_CODES)).toEqual({
       supported: true,
@@ -175,6 +181,22 @@ describe('import helpers', () => {
       supported: false,
       format,
     });
+  });
+
+  it('refuses nothing when the native constants predate the format lists', () => {
+    const stale = Object.fromEntries(
+      Object.entries(SHARED_CODES).filter(
+        ([key]) =>
+          key !== 'supportedAudioExtensions' &&
+          key !== 'supportedAudioMimeTypes',
+      ),
+    );
+    expect(
+      checkAudioFormat(
+        { name: 'Everlong.m4a', mimeType: 'audio/mp4' },
+        stale as unknown as typeof SHARED_CODES,
+      ),
+    ).toEqual({ supported: true });
   });
 
   it('reads the format from the stored file name', () => {

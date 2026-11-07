@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { analysisFailure, summarize } from './logic.ts';
 import {
   badges,
+  CODES,
   fakeFiles,
   importOne,
   MP3,
@@ -186,7 +187,7 @@ describe('song library store', () => {
       kind: 'formatRefused',
       name: 'Voice memo.m4a',
       format: 'm4a',
-      supported: ['wav', 'mp3', 'flac'],
+      supported: CODES.supportedAudioExtensions,
     });
     expect(store.getState().importing).toEqual([]);
     expect(store.getState().rows).toEqual([]);
@@ -201,6 +202,26 @@ describe('song library store', () => {
       .getState()
       .receiveAnalysis(result({ ok: false, error: 'unsupported' }));
     expect(badges(store)).toEqual([['Everlong', 'failed']]);
+  });
+
+  it('copies an M4A labelled as MP3 and leaves the decode failure to analysis', async () => {
+    const { store, files } = setup(
+      fakeFiles({
+        pickDocument: vi.fn(() =>
+          Promise.resolve({
+            uri: 'content://mislabelled',
+            name: 'Mislabelled.m4a',
+            mimeType: 'audio/mpeg',
+          }),
+        ),
+      }),
+    );
+    await store.getState().importSong();
+    expect(files.importAudio).toHaveBeenCalledWith(
+      'content://mislabelled',
+      'songs/f1',
+    );
+    expect(store.getState().notice).toBeNull();
   });
 
   it('says a copied file could not be added when the database refuses it', async () => {

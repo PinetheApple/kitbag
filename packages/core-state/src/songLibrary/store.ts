@@ -216,24 +216,22 @@ function importActions(
       picking = false;
     }
   };
-  const refuseFormat = (doc: PickedDocument, codes: LibraryConstants) => {
-    const check = checkAudioFormat(doc, codes);
-    if (check.supported) return false;
-    set({
-      notice: {
-        kind: 'formatRefused',
-        name: doc.name,
-        format: check.format,
-        supported: codes.supportedAudioExtensions,
-      },
-    });
-    return true;
-  };
   const importDocument = async (doc: PickedDocument) => {
     await whileImporting(set, get, doc.name, async () => {
       const codes = loadCodes(deps, get);
       set({ codes });
-      if (codes !== null && refuseFormat(doc, codes)) return;
+      const check = codes === null ? null : checkAudioFormat(doc, codes);
+      if (codes !== null && check?.supported === false) {
+        set({
+          notice: {
+            kind: 'formatRefused',
+            name: doc.name,
+            format: check.format,
+            supported: codes.supportedAudioExtensions,
+          },
+        });
+        return;
+      }
       const outcome: ImportOutcome =
         codes === null
           ? { ok: false, kind: 'copyFailed' }

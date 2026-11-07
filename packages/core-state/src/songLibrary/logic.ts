@@ -128,7 +128,7 @@ export type FormatCheck =
   | { readonly supported: true }
   | { readonly supported: false; readonly format: string };
 
-type SupportedAudio = Pick<
+type SupportedAudioLists = Pick<
   LibraryConstants,
   'supportedAudioExtensions' | 'supportedAudioMimeTypes'
 >;
@@ -149,14 +149,16 @@ function mimeFormat(mimeType: string): string {
 // one naming a format the core opens is enough.
 export function checkAudioFormat(
   file: { readonly name: string; readonly mimeType: string },
-  supported: SupportedAudio,
+  codes: LibraryConstants,
 ): FormatCheck {
+  const lists: Partial<SupportedAudioLists> = codes;
+  const extensions = lists.supportedAudioExtensions;
+  const mimeTypes = lists.supportedAudioMimeTypes;
+  if (extensions === undefined || mimeTypes === undefined)
+    return { supported: true };
   const extension = audioFormat(file.name);
   const mimeType = file.mimeType.toLocaleLowerCase();
-  if (
-    supported.supportedAudioExtensions.includes(extension) ||
-    supported.supportedAudioMimeTypes.includes(mimeType)
-  )
+  if (extensions.includes(extension) || mimeTypes.includes(mimeType))
     return { supported: true };
   const format = EXTENSION_LIKE.test(extension)
     ? extension

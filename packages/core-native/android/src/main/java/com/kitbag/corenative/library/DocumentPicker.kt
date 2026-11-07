@@ -145,15 +145,15 @@ class DocumentPicker(
         if (cursor.moveToFirst() && !cursor.isNull(0)) cursor.getString(0) else null
       }
 
-  private companion object {
-    const val REQUEST_PICK_DOCUMENT = 0x4b42
-    const val REQUEST_PICK_FOLDER = 0x4b43
-    const val REQUEST_PICK_BACKUP = 0x4b44
-    val PICK_REQUESTS = setOf(REQUEST_PICK_DOCUMENT, REQUEST_PICK_FOLDER, REQUEST_PICK_BACKUP)
+  internal companion object {
+    private const val REQUEST_PICK_DOCUMENT = 0x4b42
+    private const val REQUEST_PICK_FOLDER = 0x4b43
+    private const val REQUEST_PICK_BACKUP = 0x4b44
+    private val PICK_REQUESTS = setOf(REQUEST_PICK_DOCUMENT, REQUEST_PICK_FOLDER, REQUEST_PICK_BACKUP)
 
-    val PICKABLE_MIME_TYPES =
-      (SupportedAudio.MIME_TYPES + listOf("application/zip", "application/x-zip-compressed")).toTypedArray()
-    val BACKUP_MIME_TYPES =
+    val ZIP_MIME_TYPES = listOf("application/zip", "application/x-zip-compressed")
+    val PICKABLE_MIME_TYPES = (SupportedAudio.MIME_TYPES + ZIP_MIME_TYPES).toTypedArray()
+    private val BACKUP_MIME_TYPES =
       arrayOf(BackupFiles.JSON_MIME, "text/plain", "application/octet-stream")
   }
 }

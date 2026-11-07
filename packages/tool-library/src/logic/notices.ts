@@ -46,11 +46,11 @@ function refusalText(name: string, refusal: BundleRefusal): NoticeText {
   }
 }
 
-function formatLabels(formats: readonly string[]): string {
+function joinedFormatNames(formats: readonly string[]): string {
   const labels = formats.map((format) => format.toLocaleUpperCase());
   const last = labels.pop();
   if (last === undefined) return '';
-  return labels.length === 0 ? last : `${labels.join(', ')} and ${last}`;
+  return labels.length === 0 ? last : `${labels.join(', ')} or ${last}`;
 }
 
 function formatRefusedText(
@@ -58,13 +58,10 @@ function formatRefusedText(
   format: string,
   supported: readonly string[],
 ): NoticeText {
-  const what =
-    format === ''
-      ? 'in a format Kitbag does not recognise'
-      : `in ${format.toLocaleUpperCase()} format`;
+  const what = format === '' ? 'this format' : format.toLocaleUpperCase();
   return {
     status: 'Unsupported format',
-    text: `“${name}” is ${what}. Kitbag plays ${formatLabels(supported)}, so nothing was added. Convert it to one of those, then import it again.`,
+    text: `Can’t import “${name}”: ${what} isn’t supported. Use ${joinedFormatNames(supported)}.`,
   };
 }
 
@@ -133,8 +130,8 @@ const FAILURES: Readonly<Record<FailureKind, FailureText>> = {
     canRetry: false,
   },
   unsupported: {
-    status: 'Could not decode',
-    text: 'This file could not be decoded, so there is no beat grid to lock to. It may be damaged; import a fresh copy.',
+    status: 'Unsupported format',
+    text: 'This file’s format cannot be analyzed, so there is no beat grid to lock to.',
     canRetry: false,
   },
   interrupted: {

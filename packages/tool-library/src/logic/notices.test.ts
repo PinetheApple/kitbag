@@ -61,13 +61,13 @@ describe('format refused', () => {
   it('names the refused format and the ones Kitbag plays', () => {
     expect(noticeText(refused('m4a'))).toEqual({
       status: 'Unsupported format',
-      text: '“Voice memo.m4a” is in M4A format. Kitbag plays WAV, MP3 and FLAC, so nothing was added. Convert it to one of those, then import it again.',
+      text: 'Can’t import “Voice memo.m4a”: M4A isn’t supported. Use WAV, MP3 or FLAC.',
     });
   });
 
-  it('says the format is unrecognised when the file names none', () => {
+  it('says this format when the file names none', () => {
     expect(noticeText(refused('')).text).toBe(
-      '“Voice memo.m4a” is in a format Kitbag does not recognise. Kitbag plays WAV, MP3 and FLAC, so nothing was added. Convert it to one of those, then import it again.',
+      'Can’t import “Voice memo.m4a”: this format isn’t supported. Use WAV, MP3 or FLAC.',
     );
   });
 
@@ -113,11 +113,12 @@ describe('failureText', () => {
         canRetry: false,
       },
     );
-    expect(failureText({ kind: 'unsupported', keptGrid: false })).toEqual({
-      status: 'Could not decode',
-      text: 'This file could not be decoded, so there is no beat grid to lock to. It may be damaged; import a fresh copy.',
-      canRetry: false,
-    });
+    expect(failureText({ kind: 'unsupported', keptGrid: false })).toMatchObject(
+      {
+        status: 'Unsupported format',
+        canRetry: false,
+      },
+    );
     expect(failureText({ kind: 'interrupted', keptGrid: false }).canRetry).toBe(
       true,
     );
@@ -128,7 +129,7 @@ describe('failureText', () => {
 
   it('says the previous grid is kept when a re-analysis fails', () => {
     expect(failureText({ kind: 'unsupported', keptGrid: true })).toEqual({
-      status: 'Could not decode',
+      status: 'Unsupported format',
       text: 'Re-analysis failed; the previous beat grid is kept.',
       canRetry: true,
     });
