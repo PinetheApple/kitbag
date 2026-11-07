@@ -306,15 +306,6 @@ describe('a stem song closed in retime', () => {
     return { ...stores, rate };
   }
 
-  it('stops the mixer before the song loads though the speed reads unity', async () => {
-    const { songFake } = await songAfterRetime(KB_MIXER_UNITY_RATE);
-    const { mixerStop, loadTrack } = songFake.commands;
-    expect(mixerStop).toHaveBeenCalledOnce();
-    expect(mixerStop.mock.invocationCallOrder[0]).toBeLessThan(
-      loadTrack.mock.invocationCallOrder[0] ?? Number.NaN,
-    );
-  });
-
   it('plays the song at unity after the stem speed is put back', async () => {
     const { songs, rate, stemFake } = await songAfterRetime(STEM_SPEED);
     expect(

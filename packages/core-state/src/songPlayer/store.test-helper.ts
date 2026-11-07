@@ -75,6 +75,5 @@ export async function openedSong(song: SongRecord = songRecord()) {
   const store = songStore(fake);
   await store.getState().open(SONG_ID, BARS).loaded;
   fake.commands.mixerClearLoop.mockClear();
-  fake.commands.mixerStop.mockClear();
   return { ...fake, store };
 }

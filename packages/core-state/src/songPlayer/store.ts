@@ -138,7 +138,7 @@ export function createSongPlayerStore(
       const key = await commands.mixerTrackPitch(SONG_TRACK);
       if (!live(opened)) return false;
       if (key === UNSHIFTED_KEY) return true;
-      return mixer.replanAfterReset(
+      return mixer.awaitReset(
         opened,
         commands.mixerSetTrackPitch(SONG_TRACK, UNSHIFTED_KEY),
       );
