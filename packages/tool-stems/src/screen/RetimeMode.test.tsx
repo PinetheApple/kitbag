@@ -1,7 +1,11 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { display, pressHardwareBack } from '../testing/reactNativeHosts.ts';
+import {
+  display,
+  pressHardwareBack,
+  StyleSheet,
+} from '../testing/reactNativeHosts.ts';
 import {
   flush,
   mountPlayer,
@@ -68,27 +72,126 @@ describe('opening retime', () => {
   });
 });
 
-describe('at a large text size', () => {
+describe('when the body overflows', () => {
   afterEach(() => {
     display.fontScale = 1;
   });
 
-  it('keeps all three lines at the default size', async () => {
+  function withId(p: Player, testID: string) {
+    return p.renderer.root.findAll(
+      (node) => typeof node.type === 'string' && node.props.testID === testID,
+    );
+  }
+
+  function overflow(p: Player, content = 900, viewport = 484) {
+    const [body] = withId(p, 'retime-body');
+    act(() => {
+      (body?.props.onLayout as (e: unknown) => void)({
+        nativeEvent: { layout: { height: viewport } },
+      });
+      (body?.props.onContentSizeChange as (w: number, h: number) => void)(
+        360,
+        content,
+      );
+    });
+  }
+
+  const padStyle = (p: Player) =>
+    StyleSheet.flatten(p.byLabel(PAD).props.style);
+
+  it('stays as drawn while everything fits, or fills it to the pixel', async () => {
     const p = await retiming();
+    overflow(p, 484.5, 484);
+    expect(withId(p, 'retime-body')).toHaveLength(1);
+    expect(withId(p, 'retime-lines')).toHaveLength(0);
+    expect(padStyle(p).flexGrow).toBe(1);
+  });
+
+  it('scrolls only the lines, with the pad and Undo outside', async () => {
+    const p = await retiming();
+    overflow(p);
+    expect(withId(p, 'retime-body')).toHaveLength(0);
+    const [lines] = withId(p, 'retime-lines');
+    expect(String(lines?.type)).toBe('ScrollView');
+    const scrolling = p.renderer.root.findAll(
+      (node) => String(node.type) === 'ScrollView',
+    );
+    for (const scroller of scrolling) {
+      for (const label of [PAD, UNDO_TAP, LATER])
+        expect(
+          scroller.findAll((n) => n.props.accessibilityLabel === label),
+        ).toEqual([]);
+    }
+    expect(p.labelled(PAD)).toHaveLength(1);
+    expect(p.labelled(UNDO_TAP)).toHaveLength(1);
+  });
+
+  it('gives the lines all the spare height, so a line cannot move the pad', async () => {
+    const p = await retiming();
+    overflow(p);
+    const [lines] = withId(p, 'retime-lines');
+    expect(lines?.props.style).toMatchObject({ flex: 1 });
+    expect(padStyle(p).flexGrow).toBe(0);
+    expect(padStyle(p).flexShrink).toBe(0);
+  });
+
+  it('stays pinned through every tap in the session', async () => {
+    const p = await retiming();
+    overflow(p);
+    await p.touchDown(PAD);
+    await p.touchDown(PAD);
+    expect(withId(p, 'retime-lines')).toHaveLength(1);
+  });
+
+  it('keeps the done and next lines, and brings the line to tap to the top', async () => {
+    display.fontScale = 2;
+    const p = await retiming();
+    overflow(p);
+    p.engine.position = 44100 * 2;
     await p.touchDown(PAD);
     expect(p.has('One')).toBe(true);
     expect(p.has('Two')).toBe(true);
     expect(p.has('Three')).toBe(true);
+    const [row] = withId(p, 'retime-current');
+    p.scrolls.mockClear();
+    act(() => {
+      (row?.props.onLayout as (e: unknown) => void)({
+        nativeEvent: { layout: { y: 120 } },
+      });
+    });
+    expect(p.scrolls).toHaveBeenCalledWith({ y: 120, animated: false });
   });
 
-  it('keeps only the line to tap, so the pad stays near the top', async () => {
-    display.fontScale = 2;
+  it('keeps a failed save in the scrolling part, scrolled to it', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const p = await retiming();
+    overflow(p);
+    p.records.saveLyricsRetimed.mockRejectedValueOnce(new Error('disk'));
     await p.touchDown(PAD);
-    expect(p.has('One')).toBe(false);
-    expect(p.has('Two')).toBe(true);
-    expect(p.has('Three')).toBe(false);
-    expect(p.labelled(PAD)).toHaveLength(1);
+    await p.press(SAVE);
+    const [lines] = withId(p, 'retime-lines');
+    expect(
+      lines?.findAll(
+        (n) => String(n.type) === 'Text' && n.children[0] === NOT_SAVED,
+      ),
+    ).toHaveLength(1);
+    const [row] = withId(p, 'retime-current');
+    p.scrolls.mockClear();
+    act(() => {
+      (row?.props.onLayout as (e: unknown) => void)({
+        nativeEvent: { layout: { y: 120 } },
+      });
+    });
+    expect(p.scrolls).toHaveBeenCalledWith({ y: 0, animated: false });
+    warn.mockRestore();
+  });
+
+  it('draws no bar beside the line to tap', async () => {
+    const p = await retiming();
+    const [row] = withId(p, 'retime-current');
+    expect(row?.children.map((c) => (c as { type: string }).type)).toEqual([
+      'Text',
+    ]);
   });
 });
 
