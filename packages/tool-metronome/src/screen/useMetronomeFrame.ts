@@ -33,6 +33,7 @@ const IDLE_FRAME = {
   rampNextBpm: 0,
   rampRemaining: 0,
   rampStepProgress: 0,
+  beatPlayed: 0,
 } as const;
 
 export interface MetronomeFrameValues {
@@ -50,12 +51,18 @@ export interface MetronomeFrameValues {
   readonly rampNextBpm: SharedValue<number>;
   readonly rampRemaining: SharedValue<number>;
   readonly rampStepProgress: SharedValue<number>;
+  readonly beatPlayed: SharedValue<number>;
 }
 
 // Unchanged values skip the write, so mappers rerun on a beat, not a frame.
 function assign(target: SharedValue<number>, next: number) {
   'worklet';
   if (target.value !== next) target.value = next;
+}
+
+function isPlayedBeatRead(countingIn: number, currentBeat: number): boolean {
+  'worklet';
+  return countingIn === 0 && currentBeat !== KB_STOPPED_BEAT;
 }
 
 export function useMetronomeFrame(
@@ -78,6 +85,7 @@ export function useMetronomeFrame(
   const rampNextBpm = useSharedValue<number>(IDLE_FRAME.rampNextBpm);
   const rampRemaining = useSharedValue<number>(IDLE_FRAME.rampRemaining);
   const rampStepProgress = useSharedValue<number>(IDLE_FRAME.rampStepProgress);
+  const beatPlayed = useSharedValue<number>(IDLE_FRAME.beatPlayed);
 
   const frame = useFrameCallback(() => {
     'worklet';
@@ -86,6 +94,10 @@ export function useMetronomeFrame(
     if (host === undefined) {
       return;
     }
+    const lastReadPlayed = isPlayedBeatRead(
+      countingIn.value,
+      currentBeat.value,
+    );
     barPhase.value = host.bar_phase;
     assign(currentBeat, host.current_beat);
     assign(currentPolyBeat, host.current_poly_beat);
@@ -100,6 +112,14 @@ export function useMetronomeFrame(
     assign(rampNextBpm, host.ramp_next_bpm);
     assign(rampRemaining, host.ramp_remaining);
     assign(rampStepProgress, host.ramp_step_progress);
+    // counting_in publishes at block end, after that block's first count-in beat,
+    // so one read can straddle them; a later frame cannot.
+    if (
+      lastReadPlayed &&
+      isPlayedBeatRead(countingIn.value, currentBeat.value)
+    ) {
+      assign(beatPlayed, 1);
+    }
   }, false);
 
   useEffect(() => {
@@ -118,6 +138,7 @@ export function useMetronomeFrame(
       rampNextBpm.value = IDLE_FRAME.rampNextBpm;
       rampRemaining.value = IDLE_FRAME.rampRemaining;
       rampStepProgress.value = IDLE_FRAME.rampStepProgress;
+      beatPlayed.value = IDLE_FRAME.beatPlayed;
     }
   }, [
     frame,
@@ -135,6 +156,7 @@ export function useMetronomeFrame(
     rampNextBpm,
     rampRemaining,
     rampStepProgress,
+    beatPlayed,
   ]);
 
   useEffect(() => {
@@ -156,5 +178,6 @@ export function useMetronomeFrame(
     rampNextBpm,
     rampRemaining,
     rampStepProgress,
+    beatPlayed,
   };
 }

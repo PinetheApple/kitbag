@@ -7,14 +7,17 @@ import {
   beatLinePitch,
   belowTempoReserve,
   legendHeight,
+  pinnedStackGap,
   pinnedStackScrollSlack,
   pinnedViewportOverlap,
   DOT_METRICS,
+  STATUS_REST_ROWS,
   statusProgressReserve,
   statusRowHeight,
   statusRowPitch,
   statusStackHeight,
   statusStackPinned,
+  statusStackRows,
   statusTextLines,
   tallestBelowTempo,
   type BelowTempoRoom,
@@ -26,6 +29,8 @@ const LARGE_PHONE_DOTS_WIDTH = 411 - space.screenInset * 2;
 const DEFAULT_FONT_SCALE = 1;
 const FONT_SCALES = [DEFAULT_FONT_SCALE, 1.3, 2] as const;
 const BEAT_COUNTS = Array.from({ length: KB_MAX_BEATS }, (_u, i) => i + 1);
+const RUN_ROWS = [0, 1, 2] as const;
+const GAP = metronome.bodyGapCompact;
 
 // Where the dots start and where the body ends above the transport, at fontScale
 // 1.0. Emulator-measured on 8663a62, before #243.
@@ -172,56 +177,103 @@ describe('the status stack', () => {
     expect(statusProgressReserve(2)).toBe(metronome.statusProgress);
   });
 
-  it('stacks two grown rows while running and one while stopped', () => {
+  it('stacks each row at the grown pitch and takes no height with no row', () => {
     for (const fontScale of FONT_SCALES) {
       const row = statusRowHeight(fontScale);
-      expect(statusStackHeight(false, fontScale)).toBe(row);
-      expect(statusStackHeight(true, fontScale)).toBe(
+      expect(statusStackHeight(0, fontScale)).toBe(0);
+      expect(statusStackHeight(1, fontScale)).toBe(row);
+      expect(statusStackHeight(2, fontScale)).toBe(
         statusRowPitch(fontScale) + row,
       );
     }
   });
 
-  it('adds no overlap or slack while the status stack sits in the body', () => {
-    for (const running of [false, true]) {
-      for (const fontScale of [0.85, 1]) {
-        expect(pinnedViewportOverlap(running, fontScale)).toBe(0);
-        expect(pinnedStackScrollSlack(running, fontScale)).toBe(0);
+  it('keeps two rows running and one stopped while the stack sits in the body', () => {
+    for (const fontScale of [0.85, 1]) {
+      for (const runRows of RUN_ROWS) {
+        expect(statusStackRows(true, runRows, fontScale)).toBe(2);
+        expect(statusStackRows(false, runRows, fontScale)).toBe(1);
       }
     }
   });
 
-  it('keeps the viewport height when Start and Stop resize the stack', () => {
+  it('stacks only the rows the run shows once the stack is pinned', () => {
     for (const fontScale of [1.3, 2]) {
-      const stopped =
-        pinnedViewportOverlap(false, fontScale) -
-        statusStackHeight(false, fontScale);
-      const running =
-        pinnedViewportOverlap(true, fontScale) -
-        statusStackHeight(true, fontScale);
-      expect(running).toBeCloseTo(stopped);
+      for (const runRows of RUN_ROWS) {
+        expect(statusStackRows(true, runRows, fontScale)).toBe(runRows);
+        expect(statusStackRows(false, runRows, fontScale)).toBe(
+          STATUS_REST_ROWS,
+        );
+      }
     }
+  });
+
+  it('adds no overlap or slack while the status stack sits in the body', () => {
+    for (const fontScale of [0.85, 1]) {
+      for (const stackRows of [1, 2]) {
+        expect(pinnedViewportOverlap(stackRows, fontScale, GAP)).toBe(0);
+      }
+      for (const running of [false, true]) {
+        expect(pinnedStackScrollSlack(running, fontScale, GAP)).toBe(0);
+      }
+    }
+  });
+
+  it('holds the viewport foot above the transport at every stack size', () => {
+    for (const fontScale of [1.3, 2]) {
+      for (const stackRows of RUN_ROWS) {
+        const taken =
+          statusStackHeight(stackRows, fontScale) +
+          pinnedStackGap(stackRows, GAP);
+        expect(pinnedViewportOverlap(stackRows, fontScale, GAP)).toBeCloseTo(
+          taken,
+        );
+      }
+    }
+  });
+
+  it('keeps the stack gap only while the stack has a row', () => {
+    expect(pinnedStackGap(0, GAP)).toBe(0);
+    expect(pinnedStackGap(1, GAP)).toBe(GAP);
+    expect(pinnedStackGap(2, GAP)).toBe(GAP);
   });
 
   it('keeps the content height when Start and Stop swap the modelled legend', () => {
     for (const fontScale of [1.3, 2]) {
-      expect(pinnedStackScrollSlack(true, fontScale)).toBeCloseTo(
-        pinnedStackScrollSlack(false, fontScale) + legendHeight(fontScale),
+      expect(pinnedStackScrollSlack(true, fontScale, GAP)).toBeCloseTo(
+        pinnedStackScrollSlack(false, fontScale, GAP) + legendHeight(fontScale),
       );
     }
   });
 
-  it('keeps the running scroll range of a viewport that stops above the stack', () => {
+  it('keeps the scroll range of a viewport that stops above two rows', () => {
     const VISIBLE_BODY = 300;
+    const contentBeyondBody = 200;
     for (const fontScale of [1.3, 2]) {
-      const viewport = VISIBLE_BODY + pinnedViewportOverlap(true, fontScale);
-      const contentBeyondBody = 200;
+      const viewport = VISIBLE_BODY + pinnedViewportOverlap(2, fontScale, GAP);
       const content =
         VISIBLE_BODY +
         contentBeyondBody +
-        pinnedStackScrollSlack(true, fontScale);
+        pinnedStackScrollSlack(true, fontScale, GAP);
       expect(content - viewport).toBeCloseTo(contentBeyondBody);
     }
+  });
+
+  it('lets the stopped legend reach the foot of the clip above the rest row', () => {
+    for (const fontScale of [1.3, 2]) {
+      const restTaken = pinnedViewportOverlap(1, fontScale, GAP);
+      expect(
+        pinnedStackScrollSlack(false, fontScale, GAP),
+      ).toBeGreaterThanOrEqual(restTaken);
+    }
+  });
+
+  it('frees the 184 dp the #319 shot left blank below the clipped pads', () => {
+    const RUNNING_CLIP_FOOT_AT_360 = 508;
+    const STOP_KEY_TOP_AT_360 = 692;
+    const emptyBelowClip = STOP_KEY_TOP_AT_360 - RUNNING_CLIP_FOOT_AT_360;
+    expect(pinnedViewportOverlap(2, 2, GAP) + GAP).toBe(emptyBelowClip);
+    expect(pinnedViewportOverlap(0, 2, GAP)).toBe(0);
   });
 
   it('pins above the transport only once the text grows', () => {

@@ -1,13 +1,9 @@
 import { metronome } from '@kitbag/core-design';
-import {
-  KB_COUNT_IN_OFF,
-  KB_POLY_AGAINST_BAR,
-  KB_RAMP_UNIT,
-} from '@kitbag/core-native';
 import { createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
+import { PRACTICE_OFF } from '../logic/fixtures.test-helper.ts';
 import type { PracticeSettings, StatusRow } from '../logic/statusRows.ts';
 import type { StatusFrame } from './StatusStack.tsx';
 
@@ -65,21 +61,8 @@ vi.mock('./StatusVariant.tsx', async () => {
 const { StatusStack } = await import('./StatusStack.tsx');
 
 const SETTINGS: PracticeSettings = {
-  ramp: {
-    enabled: true,
-    startBpm: 100,
-    targetBpm: 140,
-    stepBpm: 4,
-    interval: 4,
-    unit: KB_RAMP_UNIT.KB_RAMP_BARS,
-    loop: false,
-  },
-  barMute: { enabled: false, playBars: 2, muteBars: 2 },
-  countIn: { bars: KB_COUNT_IN_OFF, distinct: true, sound: 1 },
-  polyEnabled: false,
-  polyBeats: 3,
-  polyAgainst: KB_POLY_AGAINST_BAR,
-  beatsPerBar: 4,
+  ...PRACTICE_OFF,
+  ramp: { ...PRACTICE_OFF.ramp, enabled: true },
 };
 
 const FRAME = new Proxy({}, { get: () => ({ value: 0 }) }) as StatusFrame;
@@ -92,6 +75,7 @@ function styleAt(fontScale: number, shown: StatusRow): unknown {
       frame: FRAME,
       settings: SETTINGS,
       running: true,
+      stackRows: 2,
     }),
   );
   display.fontScale = 1;

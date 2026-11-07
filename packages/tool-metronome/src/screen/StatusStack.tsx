@@ -222,9 +222,15 @@ interface StatusStackProps {
   readonly frame: StatusFrame;
   readonly settings: PracticeSettings;
   readonly running: boolean;
+  readonly stackRows: number;
 }
 
-export function StatusStack({ frame, settings, running }: StatusStackProps) {
+export function StatusStack({
+  frame,
+  settings,
+  running,
+  stackRows,
+}: StatusStackProps) {
   const styles = useStatusStyles();
   const { fontScale } = useWindowDimensions();
   const { countingIn, barMutePosition, rampState } = frame;
@@ -242,8 +248,8 @@ export function StatusStack({ frame, settings, running }: StatusStackProps) {
   );
   const summary = armedSummary(settings);
   const stack = useMemo(
-    () => ({ height: statusStackHeight(running, fontScale) }),
-    [running, fontScale],
+    () => ({ height: statusStackHeight(stackRows, fontScale) }),
+    [stackRows, fontScale],
   );
   const restRow = useStatusRowFrame();
   return (
