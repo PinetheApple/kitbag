@@ -180,10 +180,15 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     nativeSetTempo(bpm)
   }
 
-  override fun setGrid(beatTimesSec: ReadableArray, anchorFrame: Double, promise: Promise) {
-    val count = beatTimesSec.size()
-    val times = DoubleArray(count) { i -> beatTimesSec.getDouble(i) }
-    promise.resolve(nativeSetGrid(times, anchorFrame))
+  override fun setGrid(
+    beatTimesSec: ReadableArray,
+    downbeatIndices: ReadableArray,
+    anchorFrame: Double,
+    promise: Promise,
+  ) {
+    val times = DoubleArray(beatTimesSec.size()) { i -> beatTimesSec.getDouble(i) }
+    val downbeats = IntArray(downbeatIndices.size()) { i -> downbeatIndices.getInt(i) }
+    promise.resolve(nativeSetGrid(times, downbeats, anchorFrame))
   }
 
   override fun clearGrid() {
@@ -381,7 +386,11 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private external fun nativeRigClickIsActive(): Boolean
   private external fun nativeMetronomePause()
   private external fun nativeSetTempo(bpm: Double)
-  private external fun nativeSetGrid(beatTimesSec: DoubleArray, anchorFrame: Double): Int
+  private external fun nativeSetGrid(
+    beatTimesSec: DoubleArray,
+    downbeatIndices: IntArray,
+    anchorFrame: Double,
+  ): Int
   private external fun nativeSetBeats(beatsPerBar: Int, denominator: Int)
   private external fun nativeSetSubdivision(subdivision: Int)
   private external fun nativeSetSubdivisionAccents(subdivision: Int, slotMask: Int)

@@ -1,4 +1,4 @@
-import type { StemSetRecord, StoredSection } from '@kitbag/core-db';
+import type { BarMark, StemSetRecord, StoredSection } from '@kitbag/core-db';
 import {
   acquireEngineHold,
   KB_MAX_TRACKS,
@@ -81,6 +81,7 @@ export interface StemPlayerState {
   readonly engineRate: number;
   readonly durationFrames: number;
   readonly beats: readonly number[];
+  readonly bars: readonly BarMark[];
   readonly loop: LoopState;
   readonly loopFailure: LoopFailure | null;
   readonly undoableLoop: LoopSeconds | null;
@@ -155,6 +156,7 @@ const closedState: StemPlayerState = {
   engineRate: 0,
   durationFrames: 0,
   beats: [],
+  bars: [],
   loop: { kind: 'off' },
   loopFailure: null,
   undoableLoop: null,
@@ -314,6 +316,7 @@ export function createStemPlayerStore(
         engineRate,
         durationFrames: secondsToFrames(longestSeconds(record), engineRate),
         beats: record.beats,
+        bars: record.bars,
         sections: sortedSections(record.sections),
         lyrics: songLyrics(record.lyrics, record.lyricsRetimed),
       });

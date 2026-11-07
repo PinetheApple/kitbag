@@ -74,8 +74,9 @@ bool commandRigClickIsActive() { return kb_rig_click_is_active(commandEngine()) 
 
 void commandSetTempo(double bpm) { kb_metronome_set_tempo(commandEngine(), bpm); }
 
-int32_t commandSetGrid(const double* beatTimesSec, int32_t count, double anchorFrame) {
-  return kb_metronome_set_grid(commandEngine(), beatTimesSec, count, nullptr, 0,
+int32_t commandSetGrid(const double* beatTimesSec, int32_t count, const int32_t* downbeats,
+                       int32_t downbeatCount, double anchorFrame) {
+  return kb_metronome_set_grid(commandEngine(), beatTimesSec, count, downbeats, downbeatCount,
                                static_cast<uint64_t>(anchorFrame));
 }
 
