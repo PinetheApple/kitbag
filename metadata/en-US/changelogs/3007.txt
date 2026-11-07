@@ -1,0 +1,1 @@
+• At large font sizes, clipped text in song and setlist rows ends in a clean ellipsis; long preset names and notes now wrap instead of scrolling.
