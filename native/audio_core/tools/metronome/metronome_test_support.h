@@ -378,6 +378,7 @@ void RunRampSubdivisionTests();
 void RunTrainerStatusTests();
 void RunRampStatusTests();
 void RunFollowTests();
+void RunFollowRateTests();
 void RunBarPhaseTests();
 void RunGridOffsetChangeTests();
 

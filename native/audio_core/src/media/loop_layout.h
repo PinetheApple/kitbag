@@ -22,15 +22,6 @@ struct LoopLayout {
   }
 };
 
-// The mixer's transport for one callback block: block frame i sounds song frame
-// layout.SongFrameAt(first + i) while i < frames.
-struct SongClock {
-  bool playing = false;
-  int64_t first = 0;
-  uint32_t frames = 0;
-  LoopLayout layout;
-};
-
 }  // namespace kitbag
 
 #endif  // KITBAG_MEDIA_LOOP_LAYOUT_H

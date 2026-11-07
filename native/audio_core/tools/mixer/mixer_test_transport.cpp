@@ -55,7 +55,7 @@ void TestSoloKeepsPlayingForOthers() {
   LoadRamp(&mixer, 1, kLongFrames, kLongOffset);
   mixer.Play();
   mixer.SetSolo(0, true);
-  mixer.Seek(900, 0, false);
+  mixer.Seek(900, kZeroClock, false);
 
   const std::vector<float> soloed = RenderBlock(&mixer);
   ExpectSample(soloed, 3, 903.0f, "solo: only the soloed track is heard");
@@ -83,7 +83,7 @@ void TestAutoStopAtLongestTrackEnd() {
   LoadRamp(&mixer, 0, kShortFrames, 0.0f);
   LoadRamp(&mixer, 1, kLongFrames, kLongOffset);
   mixer.Play();
-  mixer.Seek(kLongFrames - 400, 0, false);
+  mixer.Seek(kLongFrames - 400, kZeroClock, false);
 
   const std::vector<float> tail = RenderBlock(&mixer);
   ExpectSample(
@@ -115,7 +115,7 @@ void TestShortStemDoesNotHoldBackTheLongOne() {
   LoadRamp(&mixer, 0, kShortFrames, 0.0f);
   LoadRamp(&mixer, 1, kLongFrames, kLongOffset);
   mixer.Play();
-  mixer.Seek(900, 0, false);
+  mixer.Seek(900, kZeroClock, false);
 
   RenderBlock(&mixer);
   Check(mixer.position() == 1412, "unequal stems: first block ends at 1412");
@@ -134,7 +134,7 @@ void TestShortStemDoesNotHoldBackTheLongOne() {
 void TestSeekAndPosition() {
   kitbag::Mixer mixer(kSampleRate);
   LoadRamp(&mixer, 0, kLongFrames, kLongOffset);
-  mixer.Seek(1234, 0, false);
+  mixer.Seek(1234, kZeroClock, false);
   Drain(&mixer);  // adopts the seek; still stopped, so no advance
   Check(mixer.position() == 1234, "seek: position reports the sought frame");
 
@@ -148,7 +148,7 @@ void TestSeekAndPosition() {
   );
   Check(mixer.position() == 1234 + kBlock, "seek: the head advances one block");
 
-  mixer.Stop(0, false);
+  mixer.Stop(kZeroClock, false);
   Drain(&mixer);  // applies kStop: playing false, head rewound
   Check(!mixer.is_playing(), "stop: playback ends");
   Check(mixer.position() == 0, "stop: the head rewinds to zero");
@@ -161,7 +161,7 @@ void TestPauseHoldsPositionStopRewinds() {
   LoadRamp(&mixer, 0, kLongFrames, kLongOffset);
   const uint64_t sought = 1234;
   const uint64_t held = sought + kBlock;
-  mixer.Seek(sought, 0, false);
+  mixer.Seek(sought, kZeroClock, false);
   mixer.Play();
   RenderBlock(&mixer);  // adopts the seek + kPlay, plays one block to `held`
 
@@ -183,7 +183,7 @@ void TestPauseHoldsPositionStopRewinds() {
       "pause: resuming advances exactly one block from the held frame"
   );
 
-  mixer.Stop(0, false);
+  mixer.Stop(kZeroClock, false);
   Drain(&mixer);
   Check(mixer.position() == 0, "pause: Stop still rewinds after a Pause");
 }
@@ -197,7 +197,7 @@ void TestReloadToShorterShrinksTransport() {
   LoadRamp(&mixer, 0, kLongFrames, 0.0f);          // 5000
   LoadRamp(&mixer, 0, kShortFrames, kLongOffset);  // reload same track to 1000
   mixer.Play();
-  mixer.Seek(kShortFrames - 100, 0, false);  // 900
+  mixer.Seek(kShortFrames - 100, kZeroClock, false);  // 900
 
   const std::vector<float> tail = RenderBlock(&mixer);
   ExpectSample(
@@ -226,9 +226,9 @@ void TestUnloadShrinksTransport() {
   kitbag::Mixer mixer(kSampleRate);
   LoadRamp(&mixer, 0, kShortFrames, 0.0f);        // 1000, kept
   LoadRamp(&mixer, 1, kLongFrames, kLongOffset);  // 5000, unloaded below
-  mixer.UnloadTrack(1, 0, false);
+  mixer.UnloadTrack(1, kZeroClock, false);
   mixer.Play();
-  mixer.Seek(kShortFrames - 100, 0, false);  // 900
+  mixer.Seek(kShortFrames - 100, kZeroClock, false);  // 900
 
   RenderBlock(&mixer);
   Check(
@@ -255,7 +255,7 @@ void TestTrackReadyReflectsPublish() {
   Check(!mixer.track_ready(0), "ready: a fresh track has no source");
   LoadRamp(&mixer, 0, kShortFrames, 0.0f);
   Check(mixer.track_ready(0), "ready: a loaded track is ready");
-  mixer.UnloadTrack(0, 0, false);
+  mixer.UnloadTrack(0, kZeroClock, false);
   Check(!mixer.track_ready(0), "ready: an unloaded track is no longer ready");
 }
 

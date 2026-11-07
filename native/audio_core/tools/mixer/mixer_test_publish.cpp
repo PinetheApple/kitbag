@@ -76,7 +76,7 @@ void TestSeekAppliesAtBlockNotBefore() {
   kitbag::Mixer mixer(kSampleRate);
   LoadRamp(&mixer, 0, kLongFrames, kLongOffset);
 
-  mixer.Seek(2000, 0, false);
+  mixer.Seek(2000, kZeroClock, false);
   Check(
       mixer.position() == 0,
       "command: a seek is not applied until the block drains it"
@@ -95,16 +95,16 @@ void TestCommandsAppliedInOrder() {
   kitbag::Mixer mixer(kSampleRate);
   LoadRamp(&mixer, 0, kLongFrames, kLongOffset);
 
-  mixer.Seek(3000, 0, false);
-  mixer.Stop(0, false);
+  mixer.Seek(3000, kZeroClock, false);
+  mixer.Stop(kZeroClock, false);
   Drain(&mixer);
   Check(
       mixer.position() == 0,
       "order: seek then stop lands on stop's rewind, not the seek"
   );
 
-  mixer.Stop(0, false);
-  mixer.Seek(3000, 0, false);
+  mixer.Stop(kZeroClock, false);
+  mixer.Seek(3000, kZeroClock, false);
   Drain(&mixer);
   Check(
       mixer.position() == 3000,
@@ -165,7 +165,7 @@ void TestDestroyWithLiveReadAheadThread() {
   BlockingReader reader;  // caller-owned, outlives the mixer below
   {
     kitbag::Mixer mixer(kSampleRate);
-    mixer.SetTrackSource(0, &reader, 0, false);
+    mixer.SetTrackSource(0, &reader, kZeroClock, false);
     mixer.Play();  // read-ahead thread now churning through the owned resampler
     // No Stop(): the mixer dtor must join the thread before the resampler dies.
   }
@@ -214,7 +214,7 @@ void TestTooWideTrackIsRejected() {
   kitbag::Mixer mixer(kSampleRate);
   FixedChannelReader three_channel(3);
   Check(
-      !mixer.SetTrackSource(0, &three_channel, 0, false),
+      mixer.SetTrackSource(0, &three_channel, kZeroClock, false) != kLoaded,
       "reject: a 3-channel source is refused at load"
   );
   Check(
@@ -224,7 +224,7 @@ void TestTooWideTrackIsRejected() {
 
   FixedChannelReader zero_channel(0);
   Check(
-      !mixer.SetTrackSource(1, &zero_channel, 0, false),
+      mixer.SetTrackSource(1, &zero_channel, kZeroClock, false) != kLoaded,
       "reject: a 0-channel source is refused at load"
   );
 }

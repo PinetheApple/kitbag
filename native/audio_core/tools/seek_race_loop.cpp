@@ -13,11 +13,13 @@
 #include "check.h"
 #include "mixer/mixer.h"
 #include "wav_fixture.h"
+#include "zero_clock.h"
 
 namespace seek_race {
 namespace {
 
 using kitbag_test::Check;
+using kitbag_test::kZeroClock;
 
 constexpr uint32_t kRate = 48000;
 constexpr uint32_t kBlock = 512;
@@ -62,10 +64,31 @@ void Relayouts(kitbag::Mixer* mixer, Stats* s) {
   const auto deadline = std::chrono::steady_clock::now() + kDuration;
   while (std::chrono::steady_clock::now() < deadline) {
     const auto start = static_cast<int64_t>(mixer->position()) + kLoopLead;
-    mixer->SetLoop(start, start + kLoopLength, s->now.load(), true);
-    mixer->ClearLoop(s->now.load(), true);
+    mixer->SetLoop(
+        start,
+        start + kLoopLength,
+        kitbag::FrameClock(s->now.load()),
+        true
+    );
+    mixer->ClearLoop(kitbag::FrameClock(s->now.load()), true);
     s->relayouts += 2;
   }
+}
+
+void RaceRelayouts(const std::string& path, Stats* stats) {
+  kitbag::Mixer mixer(kRate);
+  Check(
+      mixer.LoadTrack(0, path.c_str(), kZeroClock, true) ==
+          kitbag::Mixer::LoadResult::kOk,
+      "loop-race: loads"
+  );
+  mixer.Play();
+  std::thread renderer([&] { RenderLoop(&mixer, stats); });
+  Relayouts(&mixer, stats);
+  stats->stop.store(true);
+  renderer.join();
+  mixer.Pause();
+  mixer.ReleaseRetiredSources();
 }
 
 }  // namespace
@@ -76,17 +99,7 @@ void RunMixerLoopRace() {
   Check(!path.empty(), "loop-race: the ramp WAV writes");
   if (path.empty()) return;
   Stats stats;
-  {
-    kitbag::Mixer mixer(kRate);
-    Check(mixer.LoadTrack(0, path.c_str(), 0, true), "loop-race: loads");
-    mixer.Play();
-    std::thread renderer([&] { RenderLoop(&mixer, &stats); });
-    Relayouts(&mixer, &stats);
-    stats.stop.store(true);
-    renderer.join();
-    mixer.Pause();
-    mixer.ReleaseRetiredSources();
-  }
+  RaceRelayouts(path, &stats);
   Check(stats.blocks.load() > kMinBlocks, "loop-race: many blocks rendered");
   Check(stats.relayouts > kMinRelayouts, "loop-race: many live relayouts");
   Check(stats.heard.load() > 0, "loop-race: the ramp was heard");

@@ -69,6 +69,18 @@ export function collectConstants(sources: NativeSources): NativeConstants {
       min: parseConstexprFloat(sources.mixerHeader, 'kMinGain'),
       max: parseConstexprFloat(sources.mixerHeader, 'kMaxGain'),
     },
+    mixerRate: {
+      min: parseConstexprFloat(sources.mixerHeader, 'kMinRate'),
+      max: parseConstexprFloat(sources.mixerHeader, 'kMaxRate'),
+    },
+    mixerUnityRate: parseConstexprFloat(
+      sources.transportPlanHeader,
+      'kUnityRate',
+    ),
+    mixerPitch: {
+      min: parseConstexprInt(sources.mixerHeader, 'kMinPitchSemitones'),
+      max: parseConstexprInt(sources.mixerHeader, 'kMaxPitchSemitones'),
+    },
     rampSeconds: {
       min: parseConstexprDouble(sources.tempoRampHeader, 'kMinSeconds'),
       max: parseConstexprDouble(sources.tempoRampHeader, 'kMaxSeconds'),

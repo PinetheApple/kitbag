@@ -51,7 +51,9 @@ bash scripts/install-on-device.sh    # build, install, launch, report signing + 
 `preflight.sh` must pass before committing. It collects failures rather than
 stopping at the first, so one run shows every problem instead of revealing one
 per CI round trip, and it reports which files it rewrote — commit those or CI
-still fails. `--skip-android` and `--skip-native` drop the slow legs.
+still fails. A fix that rewrites files re-runs the earlier gates that read them,
+so exit 0 covers the rewritten tree. `--skip-android` and `--skip-native` drop the
+slow legs.
 
 ### Cutting a release
 
@@ -254,9 +256,9 @@ Short version:
   Stem songs screens (#178) and the stem player (#137, #177; device
   verification pending, issues open). The single-song player (#297) has no count-in (#298)
   and its accents ignore the song's bars (#300); leaving the screen ends the session
-  until the mini-player lands; device verification pending. Not built: stem
-  speed and key (#138), play along (§8), Settings (#170). Open issues are the
-  backlog.
+  until the mini-player lands; device verification pending. Stem speed and key
+  (#138): engine and binding built, UI not. Not built: play along (§8), Settings
+  (#170). Open issues are the backlog.
 
 ## Honesty rules
 

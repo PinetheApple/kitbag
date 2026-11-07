@@ -32,6 +32,7 @@ add_library(kitbag_jsi SHARED
   # no-op TU anywhere else.
   "${KITBAG_GLUE_DIR}/KitbagJni.cpp"
   "${KITBAG_GLUE_DIR}/KitbagJniPattern.cpp"
+  "${KITBAG_GLUE_DIR}/KitbagJniTuner.cpp"
   "${KITBAG_GLUE_DIR}/KitbagJniLibrary.cpp")
 
 target_include_directories(kitbag_jsi PRIVATE

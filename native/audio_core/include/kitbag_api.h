@@ -182,7 +182,8 @@ kb_metronome_preview_sound(kb_engine* engine, int32_t sound, int32_t accented);
 /* Volume multiplier [0, 2], default 1. */
 KB_EXPORT void kb_metronome_set_volume(kb_engine* engine, double volume);
 /* enabled != 0 (default 0): grid second t clicks as the mixer plays song frame
- * t * engine rate. set_grid's anchor and the latency offset are ignored. */
+ * t * engine rate, at any kb_mixer_set_rate. set_grid's anchor and the latency
+ * offset are ignored. */
 KB_EXPORT void kb_metronome_follow_mixer(kb_engine* engine, int32_t enabled);
 /* Output latency offset in ms [-300, 300]; positive = trigger earlier. */
 KB_EXPORT void
@@ -258,7 +259,11 @@ KB_EXPORT uint32_t kb_decoder_channels(const kb_engine* engine);
  * cannot tear a read. No PCM crosses the boundary — every mixer boundary value
  * is now a scalar or a path, which is what §13.2 relies on.
  * Returns KB_ERROR_INVALID_ARGUMENT for a null engine or path, a track outside
- * the valid range, or a file that will not open; KB_OK once published. */
+ * the valid range, or a file that will not open, keeping any held stem; KB_OK
+ * once published. With a stretch running, a stem needing a fresh prime returns
+ * KB_ERROR_INTERNAL when any loaded stem cannot be read for it: the track is
+ * left with no stem, even one it held, and key 0, unless the command queue is
+ * full, which leaves the key. What was playing carries on. */
 KB_EXPORT kb_result
 kb_mixer_load_track(kb_engine* engine, int32_t track, const char* path);
 /* Retire a track's source. RT-safe: the old source is reclaimed off the audio
@@ -302,6 +307,8 @@ kb_mixer_set_loop(kb_engine* engine, int64_t start_frame, int64_t end_frame);
 KB_EXPORT kb_result kb_mixer_clear_loop(kb_engine* engine);
 KB_EXPORT int32_t kb_mixer_active_track_count(const kb_engine* engine);
 KB_EXPORT int64_t kb_mixer_track_frames(const kb_engine* engine, int32_t track);
+
+#include "kitbag_mixer_stretch_api.h"
 
 /* --- Player (single-source transport) ----------------------------------- */
 

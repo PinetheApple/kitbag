@@ -2,6 +2,7 @@ import {
   getKitbagCommands,
   getKitbagHostObject,
   getKitbagLibrary,
+  setTrackKey,
 } from '@kitbag/core-native';
 import type { MixerRuntime, StemPlayerCommands } from '@kitbag/core-state';
 
@@ -48,6 +49,12 @@ const commands: StemPlayerCommands = {
   },
   mixerSetLoop: (start, end) => getKitbagCommands().mixerSetLoop(start, end),
   mixerClearLoop: () => getKitbagCommands().mixerClearLoop(),
+  mixerSetRate: (rate) => getKitbagCommands().mixerSetRate(rate),
+  mixerRate: () => getKitbagCommands().mixerRate(),
+  mixerSetTrackPitch: (track, semitones) =>
+    setTrackKey(getKitbagCommands(), track, semitones),
+  mixerTrackPitch: (track) => getKitbagCommands().mixerTrackPitch(track),
+  mixerTrackFrames: (track) => getKitbagCommands().mixerTrackFrames(track),
   setGrid: (beats, anchor) => getKitbagCommands().setGrid(beats, anchor),
   clearGrid: () => {
     getKitbagCommands().clearGrid();

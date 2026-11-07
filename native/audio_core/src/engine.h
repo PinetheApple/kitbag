@@ -72,6 +72,9 @@ class Engine {
   uint64_t frames_rendered() const {
     return frames_rendered_.load(std::memory_order_relaxed);
   }
+  FrameClock frame_clock() const {
+    return FrameClock::Reading(frames_rendered_);
+  }
   bool ReadRenderClock(ClockPair* out) const {
     return render_clock_.Read(out);
   }

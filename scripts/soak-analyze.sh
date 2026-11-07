@@ -10,6 +10,7 @@ usage() {
 usage: soak-analyze.sh <recording> --bpm <bpm> [--first-beat-ms <ms>]
        soak-analyze.sh <recording> --grid <beats.txt>
        soak-analyze.sh --render <out.wav> <bpm> <seconds>
+       soak-analyze.sh --follow-render <out.wav> <out-grid.txt> <rate> <song-seconds>
 
 Judges a recorded metronome against its expected grid with click_soak: clicks
 analysed, interval error mean/p50/p95/p99/max, max deviation from the local
@@ -18,6 +19,10 @@ is (re)built first, so its output never comes from a stale binary.
 
   --render   write the engine's own offline click track (4/4, one click per
              beat) as a reference; analysing it must PASS
+  --follow-render
+             write the engine's click following a stem at <rate>, and that
+             song's grid in the recording's own timeline, for --grid (SPEC.md
+             6.5, 7.6)
 
 Recording on a device (SPEC.md 5.8 soak, 6.5 click-vs-grid):
   - Metronome with no subdivision, polyrhythm, muted beats or ramp: every grid
@@ -43,7 +48,7 @@ exit 0-5  click_soak's own exit codes (listed by click_soak --help)
 exit 2    usage error
 exit 6    the native build failed
 exit 7    cmake or ninja is not installed
-exit 8    --render could not write its output file
+exit 8    --render or --follow-render could not produce its output
 USAGE
 }
 
@@ -58,6 +63,12 @@ case $1 in
     ;;
   --render)
     if (($# != 4)); then
+      usage >&2
+      exit "$EXIT_USAGE"
+    fi
+    ;;
+  --follow-render)
+    if (($# != 5)); then
       usage >&2
       exit "$EXIT_USAGE"
     fi
@@ -79,7 +90,7 @@ if [[ ! -f $BUILD/build.ninja ]] &&
   echo "soak-analyze: configuring $BUILD failed" >&2
   exit "$EXIT_BUILD_FAILED"
 fi
-if ! build_log=$(cmake --build "$BUILD" --target click_soak metronome_render 2>&1); then
+if ! build_log=$(cmake --build "$BUILD" --target click_soak metronome_render follow_render 2>&1); then
   printf '%s\n' "$build_log" >&2
   echo "soak-analyze: build failed; not running a stale click_soak" >&2
   exit "$EXIT_BUILD_FAILED"
@@ -87,6 +98,9 @@ fi
 
 if [[ $1 == --render ]]; then
   exec "$BUILD/metronome_render" "$2" "$3" "$4"
+fi
+if [[ $1 == --follow-render ]]; then
+  exec "$BUILD/follow_render" "$2" "$3" "$4" "$5"
 fi
 
 exec "$BUILD/click_soak" "$@"
