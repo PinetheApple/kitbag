@@ -152,8 +152,7 @@ function anchoredLine(
 ): number {
   const before = lines[previousSungLine(lines, line)];
   if (before === undefined || timeSec > before.timeSec) return line;
-  const anchored = retimeLineAt(lines, timeSec);
-  return anchored === NO_LINE ? line : anchored;
+  return retimeLineAt(lines, timeSec);
 }
 
 export function takeAfterTap(

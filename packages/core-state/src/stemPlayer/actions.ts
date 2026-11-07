@@ -1,6 +1,6 @@
 import type { Debounced } from './debounce.ts';
 import { clamp } from '../metronome/config.ts';
-import { NO_LINE, retimeLineAt } from './lyrics.ts';
+import { retimeLineAt } from './lyrics.ts';
 import { soloAfter, UNITY_GAIN } from './mix.ts';
 import type { MixSaver } from './mixSaver.ts';
 import type { StemPlayerRuntime } from './runtime.ts';
@@ -102,8 +102,7 @@ export function transportActions(
     const { lines } = lyrics;
     const songSec = framesToSeconds(frame, engineRate);
     const nextLine = retimeLineAt(lines, songSec);
-    if (nextLine !== NO_LINE && nextLine !== retime.nextLine)
-      set({ retime: { ...retime, nextLine } });
+    if (nextLine !== retime.nextLine) set({ retime: { ...retime, nextLine } });
   };
   const seek = (frame: number) => {
     scrubSeek.cancel();
