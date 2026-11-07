@@ -232,6 +232,11 @@ Java_com_kitbag_corenative_KitbagCommandsModule_nativeMixerTrackPitch(JNIEnv*, j
   return static_cast<jint>(kitbag::commandMixerTrackPitch(track));
 }
 
+JNIEXPORT jdouble JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeMixerTrackFrames(JNIEnv*, jobject, jdouble track) {
+  return kitbag::commandMixerTrackFrames(track);
+}
+
 JNIEXPORT void JNICALL
 Java_com_kitbag_corenative_KitbagCommandsModule_nativeClearGrid(JNIEnv*, jobject) {
   kitbag::commandClearGrid();

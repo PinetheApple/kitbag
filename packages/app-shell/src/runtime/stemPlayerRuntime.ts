@@ -58,6 +58,7 @@ const commands: StemPlayerCommands = {
   mixerSetTrackPitch: (track, semitones) =>
     setTrackKey(getKitbagCommands(), track, semitones),
   mixerTrackPitch: (track) => getKitbagCommands().mixerTrackPitch(track),
+  mixerTrackFrames: (track) => getKitbagCommands().mixerTrackFrames(track),
   setGrid: (beats, anchor) => getKitbagCommands().setGrid(beats, anchor),
   clearGrid: () => {
     getKitbagCommands().clearGrid();

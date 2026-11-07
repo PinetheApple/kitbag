@@ -23,6 +23,7 @@ export type StemPlayerCommands = Pick<
   | 'mixerRate'
   | 'mixerSetTrackPitch'
   | 'mixerTrackPitch'
+  | 'mixerTrackFrames'
   | 'setGrid'
   | 'clearGrid'
   | 'metronomeFollowMixer'

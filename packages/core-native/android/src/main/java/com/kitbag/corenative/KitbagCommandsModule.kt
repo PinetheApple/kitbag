@@ -332,6 +332,10 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     promise.resolve(nativeMixerTrackPitch(track.toInt()))
   }
 
+  override fun mixerTrackFrames(track: Double, promise: Promise) {
+    promise.resolve(nativeMixerTrackFrames(track))
+  }
+
   override fun tunerStart(promise: Promise) {
     promise.resolve(nativeTunerStart())
   }
@@ -417,6 +421,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private external fun nativeMixerRate(): Double
   private external fun nativeMixerSetTrackPitch(track: Double, semitones: Double): Int
   private external fun nativeMixerTrackPitch(track: Int): Int
+  private external fun nativeMixerTrackFrames(track: Double): Double
   private external fun nativeClearGrid()
   private external fun nativeFollowMixer(enabled: Boolean)
   private external fun nativeTunerStart(): Int

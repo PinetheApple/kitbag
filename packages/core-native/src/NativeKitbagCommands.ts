@@ -124,6 +124,7 @@ export interface Spec extends TurboModule {
   mixerRate(): Promise<number>;
   mixerSetTrackPitch(track: Int32, semitones: Int32): Promise<number>;
   mixerTrackPitch(track: Int32): Promise<number>;
+  mixerTrackFrames(track: Int32): Promise<number>;
 
   // --- Tuner (kitbag_tuner_api.h) ------------------------------------------
   //

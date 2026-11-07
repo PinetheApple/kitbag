@@ -63,6 +63,7 @@ int32_t commandMixerSetRate(double rate);
 double commandMixerRate();
 int32_t commandMixerSetTrackPitch(double track, double semitones);
 int32_t commandMixerTrackPitch(int32_t track);
+double commandMixerTrackFrames(double track);
 
 // Tuner.
 int32_t commandTunerStart();

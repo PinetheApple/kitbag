@@ -5,6 +5,7 @@ const noEngine = () => Promise.resolve<number>(KB_RESULT.KB_ERROR_INTERNAL);
 const ignore = () => undefined;
 const UNSET_RATE = KB_MIXER_UNITY_RATE;
 const UNSET_KEY = 0;
+const NO_FRAMES = 0;
 
 configureStemPlayer({
   commands: {
@@ -28,6 +29,7 @@ configureStemPlayer({
     mixerRate: () => Promise.resolve(UNSET_RATE),
     mixerSetTrackPitch: noEngine,
     mixerTrackPitch: () => Promise.resolve(UNSET_KEY),
+    mixerTrackFrames: () => Promise.resolve(NO_FRAMES),
     setGrid: noEngine,
     clearGrid: ignore,
     metronomeFollowMixer: ignore,

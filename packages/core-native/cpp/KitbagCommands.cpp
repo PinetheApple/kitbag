@@ -180,6 +180,11 @@ int32_t commandMixerSetTrackPitch(double track, double semitones) {
 int32_t commandMixerTrackPitch(int32_t track) {
   return kb_mixer_track_pitch(commandEngine(), track);
 }
+double commandMixerTrackFrames(double track) {
+  const auto wholeTrack = wholeInt32(track);
+  if (!wholeTrack) return 0.0;
+  return static_cast<double>(kb_mixer_track_frames(commandEngine(), *wholeTrack));
+}
 
 int32_t commandTunerStart() { return kb_tuner_start(commandEngine()); }
 void commandTunerStop() { kb_tuner_stop(commandEngine()); }
