@@ -182,6 +182,7 @@ export async function mountPlayer(change: RecordChange = SONG_DETAILS) {
   });
   fake.commands.mixerSeek.mockClear();
   fake.commands.mixerClearLoop.mockClear();
+  fake.commands.mixerStop.mockClear();
   const hosts = () =>
     renderer.root.findAll((node) => typeof node.type === 'string');
   const isText = (node: ReactTestInstance) => String(node.type) === 'Text';

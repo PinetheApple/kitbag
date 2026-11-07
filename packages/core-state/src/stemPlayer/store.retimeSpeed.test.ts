@@ -1,4 +1,8 @@
-import { KB_MIXER_RATE_BOUNDS, KB_RESULT } from '@kitbag/core-native';
+import {
+  KB_MIXER_RATE_BOUNDS,
+  KB_MIXER_UNITY_RATE,
+  KB_RESULT,
+} from '@kitbag/core-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -344,11 +348,17 @@ describe('a refused restore and the next song', () => {
     const song = await retiming(SONG_SPEED);
     song.commands.mixerSetRate.mockResolvedValue(KB_RESULT.KB_ERROR_BUSY);
     song.store.getState().cancelRetime();
-    await song.store.getState().open(OTHER_SONG_ID, BARS);
     await settle();
-    const tried = ratesSet(song).length;
     song.commands.mixerSetRate.mockResolvedValue(KB_RESULT.KB_OK);
     song.commands.mixerRate.mockResolvedValue(RETIME_PLAYBACK_RATE);
+    await song.store.getState().open(OTHER_SONG_ID, BARS);
+    await settle();
+    expect(song.store.getState()).toMatchObject({
+      status: 'ready',
+      setId: OTHER_SONG_ID,
+    });
+    expect(ratesSet(song).at(-1)).toBe(KB_MIXER_UNITY_RATE);
+    const tried = ratesSet(song).length;
     song.store.getState().beginRetime(0);
     await settle();
     song.store.getState().cancelRetime();
