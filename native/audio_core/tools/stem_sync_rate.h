@@ -29,6 +29,7 @@ void RenderPaced(kb_engine* engine, Take* take, int blocks);
 void RunScriptTests(const std::string& stem);
 void RunLockTests(const std::string& stem);
 void RunReanchorTests(const std::string& stem);
+void RunBarTests(const std::string& stem);
 
 }  // namespace stem_sync
 

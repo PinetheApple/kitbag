@@ -1,5 +1,6 @@
 import { KB_RESULT } from '@kitbag/core-native';
 
+import { usableDownbeats } from './bars.ts';
 import { clickGrid } from './loop.ts';
 import type { MixerSessionContext } from './mixerSession.ts';
 import type { MixerRuntime } from './runtime.ts';
@@ -8,7 +9,10 @@ import type { StemPlayerActions, StemPlayerState } from './store.ts';
 
 const GRID_ANCHOR_FRAME = 0;
 
-export type ClickSlice = Pick<StemPlayerState, 'status' | 'beats' | 'click'>;
+export type ClickSlice = Pick<
+  StemPlayerState,
+  'status' | 'beats' | 'downbeatIndices' | 'click'
+>;
 
 export function stopClick({ commands }: Pick<MixerRuntime, 'commands'>): void {
   commands.metronomeFollowMixer(false);
@@ -38,9 +42,10 @@ export function clickActions({
     const { commands, engine, sharedMetronome } = runtimeOf();
     const grid = clickGrid(get().beats);
     if (grid.length === 0) return;
+    const downbeats = usableDownbeats(get().downbeatIndices, grid.length);
     if (sharedMetronome.active()) sharedMetronome.release();
     const { result, live } = await call(() =>
-      commands.setGrid(grid, GRID_ANCHOR_FRAME),
+      commands.setGrid(grid, downbeats, GRID_ANCHOR_FRAME),
     );
     if (result !== KB_RESULT.KB_OK) return;
     if (!live || get().status !== 'ready') {

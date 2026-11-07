@@ -3,6 +3,7 @@
 #include <string>
 
 #include "metronome_test_poly_model.h"
+#include "song_bars.h"
 
 namespace metronome_test {
 namespace {
@@ -317,8 +318,9 @@ void TestGridSubdivisionsAccented() {
   kitbag::Metronome metronome;
   metronome.SetSubdivision(4);
   metronome.SetSubdivisionAccents(4, SlotBit(2));
-  metronome
-      .SetGrid(MakeShiftedGrid(kGridBeats, 0.0, kGridIntervalSec), 0, true);
+  auto grid = MakeShiftedGrid(kGridBeats, 0.0, kGridIntervalSec);
+  SetSongBars(grid.get(), 0, kBeatsPerBar);
+  metronome.SetGrid(std::move(grid), 0, true);
   StartTomClick(metronome, kDefaultBar);
   const auto left =
       RenderLeft(metronome, kBeatsPerBar * kGridBeatFrames + kBlockFrames);

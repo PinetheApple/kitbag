@@ -320,7 +320,11 @@ describe('the click', () => {
   it('follows the mixer on the song grid', async () => {
     const { store, commands } = await openedSong();
     await store.getState().toggleClick();
-    expect(commands.setGrid).toHaveBeenCalledWith(songRecord().beats, 0);
+    expect(commands.setGrid).toHaveBeenCalledWith(
+      songRecord().beats,
+      songRecord().downbeatIndices,
+      0,
+    );
     expect(commands.metronomeFollowMixer).toHaveBeenCalledWith(true);
     expect(commands.metronomeStart).toHaveBeenCalledOnce();
     expect(store.getState().click).toBe(true);

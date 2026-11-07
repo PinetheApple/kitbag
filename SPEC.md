@@ -233,8 +233,9 @@ them; nothing here blocks them.
 
 **This is the portable foundation, and it did not change with the stack.** It
 is a flat C ABI (`native/audio_core/include/kitbag_api.h`) reachable from Dart
-FFI, JSI, or anything else. Values crossing the boundary are scalars — no
-structs, no buffers, with the two documented exceptions below. Keeping it this
+FFI, JSI, or anything else. Values crossing the boundary are scalars, paths, or
+flat arrays of scalars read or filled during the call — no structs, and no buffer
+the core keeps past the call. Keeping it this
 way is what made the UI framework a swappable detail, and this section is the
 proof that it worked.
 
@@ -305,11 +306,13 @@ read-only UI getter and does not help.
 KB_EXPORT void kb_metronome_start_at(kb_engine* engine, uint64_t start_frame);
 
 /* Follow a beat grid rather than a single BPM — handles tempo drift.
-   beat_times_sec is copied; it does not need to outlive the call.
-   This and kb_analyze_song's float* out are the only non-scalar params. */
+   beat_times_sec and downbeat_indices are copied; neither needs to outlive
+   the call. */
 KB_EXPORT kb_result kb_metronome_set_grid(kb_engine* engine,
                                           const double* beat_times_sec,
                                           int32_t count,
+                                          const int32_t* downbeat_indices,
+                                          int32_t downbeat_count,
                                           uint64_t anchor_frame);
 KB_EXPORT void kb_metronome_clear_grid(kb_engine* engine);
 
@@ -372,7 +375,7 @@ is the reasoning the code cannot restate in two lines.
 swaps an atomic pointer to a node that carries its own generation counter, so one
 acquire load in the callback yields both the value and its identity. Comparing
 addresses would be wrong rather than merely fragile: a freed grid's address can be
-recycled by the next allocation, a generation cannot. `observed_generation_` is
+recycled by the next allocation, a generation cannot. `grid_state_.observed_generation` is
 the generation the RT-owned cursor was last seeded against; when the published
 generation differs, the cursor is re-seeded **from the click's current position**,
 so a re-anchor moves only future beats and never revisits a beat that already
@@ -387,8 +390,9 @@ downbeats it swallowed.
 **The bar counter has two regimes, and the difference is deliberate.** At constant
 tempo `current_bar_` is incremented at each downbeat and never derived by
 division, so a mid-run time-signature change cannot jump ramp progress or bar-mute
-phase. In grid mode it is instead *derived* from the grid's own beat index
-(`grid_beat_index_ / beats_per_bar_`). Incrementing there would drift: a re-anchor
+phase. In grid mode it is instead *derived* from the song's bar for the grid
+beat that last sounded (`BeatGrid::bars`, built from the downbeats on the app
+thread, §4.3). Incrementing there would drift: a re-anchor
 that moves the cursor backwards re-crosses downbeats, and an incrementing counter
 would over-count, making the bar-mute cycle's phase depend on how many times the
 user re-anchored. The grid's own numbering — not a count of downbeats observed —
@@ -438,8 +442,24 @@ KB_EXPORT kb_result kb_analyze_song(const char* path,
 ```
 
 The beat grid BLOB schema gains a downbeat index list. Existing grids remain
-valid (downbeats absent → treat every `beats_per_bar`-th beat as a downbeat,
-degraded but usable) — no destructive migration.
+valid — no destructive migration.
+
+**Under a grid, the click's bars are the song's.** `kb_metronome_set_grid`
+takes the downbeat indices (analysed downbeats, or StemDeck bar marks expanded
+to indices); each bar runs to the next downbeat, and the last bar's length
+repeats. The downbeat of each bar is accented and every other beat is normal.
+The standalone meter (`kb_metronome_set_beats`) and accent row, mutes included,
+do not apply under a grid: they describe a different piece of music. Bar mute,
+the subdivision mute that follows it, `current_beat` and `bar_phase` count the
+song's bars. Beats before the first downbeat are a pickup: normal, outside any
+bar, and never bar-muted; the mirrors count them back from the first bar.
+
+**Downbeats absent → no bar accent.** Every grid beat sounds normal,
+`current_beat` reads 0, `bar_phase` sweeps each beat, and bar mute does not
+apply. An accent the core cannot place on a real bar actively misleads (#300);
+a uniform click does not.
+The analyser's downbeats are always four beats apart, so an analysed song in
+3/4 still gets 4/4 bars (#332).
 
 #### 4.3.1 Why the tracker caps at `KB_MAX_GRID_BEATS`
 

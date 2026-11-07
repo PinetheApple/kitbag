@@ -21,13 +21,12 @@ namespace {
 
 bool BeatDue(
     const std::vector<double>& times,
-    size_t cursor,
-    double song_seconds,
-    double fire_limit
+    const GridState& state,
+    double song_seconds
 ) {
-  return cursor < times.size() &&
-         song_seconds + kGridEpsilon >= times[cursor] &&
-         times[cursor] <= fire_limit;
+  return state.cursor < times.size() &&
+         song_seconds + kGridEpsilon >= times[state.cursor] &&
+         times[state.cursor] <= state.fire_limit;
 }
 
 int FirstUnsoundedSub(
@@ -59,7 +58,7 @@ double Metronome::GridSeconds(
 
 // Zero is never a live generation, so the next block re-seeds the cursor.
 void Metronome::ReacquireGrid() {
-  observed_generation_ = 0;
+  grid_state_.observed_generation = 0;
 }
 
 void Metronome::SeekGridCursor(const BeatGrid& grid, double song_seconds) {
@@ -68,27 +67,40 @@ void Metronome::SeekGridCursor(const BeatGrid& grid, double song_seconds) {
   // considers already crossed is never seeked back onto.
   const auto first_at_or_after =
       std::lower_bound(times.begin(), times.end(), song_seconds - kGridEpsilon);
-  grid_cursor_ = static_cast<size_t>(first_at_or_after - times.begin());
-  grid_beat_index_ = static_cast<int64_t>(grid_cursor_) - 1;
-  grid_next_sub_ =
-      FirstUnsoundedSub(times, grid_cursor_, subdivision_, song_seconds);
-  SyncGridBar();
+  grid_state_.cursor = static_cast<size_t>(first_at_or_after - times.begin());
+  grid_state_.beat_index = static_cast<int64_t>(grid_state_.cursor) - 1;
+  grid_state_.next_sub =
+      FirstUnsoundedSub(times, grid_state_.cursor, subdivision_, song_seconds);
+  SyncGridBar(grid);
 }
 
 bool Metronome::GridShiftReplays(const BeatGrid& grid, double shift_sec) const {
   const auto& times = grid.beat_times_sec;
   if (shift_sec >= 0.0 || times.size() < 2) return false;
-  const size_t next = Clamp<size_t>(grid_cursor_, 1, times.size() - 1);
+  const size_t next = Clamp<size_t>(grid_state_.cursor, 1, times.size() - 1);
   const double replay_threshold_sec = times[next] - times[next - 1];
   return -shift_sec + kGridEpsilon >= replay_threshold_sec;
 }
 
-// Derived, never incremented: a re-anchor re-crosses downbeats, and counting
-// them would make bar-mute phase depend on re-anchor count (SPEC.md §4.2.1).
-// Grid mode ignores the denominator (D1): bars count tracker beats, so 7/8 bars
-// every 7 grid beats and PublishGridMirrors' rate is not quarter-referenced.
-void Metronome::SyncGridBar() {
-  current_bar_ = grid_beat_index_ < 0 ? -1 : grid_beat_index_ / beats_per_bar_;
+// Derived from the song's bars, never incremented: a re-anchor re-crosses
+// downbeats, and counting them would tie bar-mute phase to re-anchors (§4.2.1).
+void Metronome::SyncGridBar(const BeatGrid& grid) {
+  current_bar_ =
+      grid_state_.beat_index < 0
+          ? GridBar::kNoBar
+          : grid.bars[static_cast<size_t>(grid_state_.beat_index)].bar;
+}
+
+// The standalone accent row and its mutes are not the song's (SPEC.md §4.3).
+void Metronome::OnGridBeat(const GridBar& bar, uint32_t sample_rate) {
+  current_beat_.store(bar.position, std::memory_order_relaxed);
+  if (BarIsMuted(current_bar_)) return;
+  const bool accented = bar.bar != GridBar::kNoBar && bar.position == 0;
+  TriggerPreset(
+      accented ? accent_sound_ : normal_sound_,
+      accented,
+      sample_rate
+  );
 }
 
 void Metronome::RenderGridBeat(
@@ -97,25 +109,25 @@ void Metronome::RenderGridBeat(
     uint32_t sample_rate
 ) {
   const auto& times = grid.beat_times_sec;
-  if (!BeatDue(times, grid_cursor_, song_seconds, grid_fire_limit_)) {
+  if (!BeatDue(times, grid_state_, song_seconds)) {
     RenderGridSubdivision(grid, song_seconds, sample_rate);
     return;
   }
 
   // Advance past beats the grid packs closer than one sample so a dense grid
   // cannot fire twice for one frame — but count every one, or the bar drifts.
-  while (BeatDue(times, grid_cursor_, song_seconds, grid_fire_limit_)) {
-    ++grid_cursor_;
-    ++grid_beat_index_;
+  while (BeatDue(times, grid_state_, song_seconds)) {
+    ++grid_state_.cursor;
+    ++grid_state_.beat_index;
   }
-  SyncGridBar();
-  grid_next_sub_ = 1;
-  last_onset_ = {times[grid_cursor_ - 1], grid.anchor_frame};
+  SyncGridBar(grid);
+  grid_state_.next_sub = 1;
+  grid_state_.last_onset = {times[grid_state_.cursor - 1], grid.anchor_frame};
   // Re-anchoring the constant-tempo phase onto this beat is what makes
   // ClearGrid's "keeps its phase" true (SPEC.md §4.2.1).
-  beat_position_ = static_cast<double>(grid_beat_index_) - LatencyBeats();
-  OnBeatBoundary(
-      static_cast<int>(grid_beat_index_ % beats_per_bar_),
+  beat_position_ = static_cast<double>(grid_state_.beat_index) - LatencyBeats();
+  OnGridBeat(
+      grid.bars[static_cast<size_t>(grid_state_.beat_index)],
       sample_rate
   );
 }
@@ -128,19 +140,21 @@ void Metronome::RenderGridSubdivision(
     uint32_t sample_rate
 ) {
   const auto& times = grid.beat_times_sec;
-  if (subdivision_ <= 1 || grid_cursor_ == 0 || grid_cursor_ >= times.size() ||
-      grid_next_sub_ >= subdivision_) {
+  if (subdivision_ <= 1 || grid_state_.cursor == 0 ||
+      grid_state_.cursor >= times.size() ||
+      grid_state_.next_sub >= subdivision_) {
     return;
   }
-  const double previous = times[grid_cursor_ - 1];
-  const double interval = times[grid_cursor_] - previous;
-  const double tick = previous + interval * grid_next_sub_ / subdivision_;
-  if (song_seconds + kGridEpsilon >= tick && tick <= grid_fire_limit_) {
-    const int slot = grid_next_sub_++;
-    last_onset_ = {tick, grid.anchor_frame};
-    // The tick sits in [grid_cursor_-1, grid_cursor_], so its owning beat is
-    // grid_beat_index_ (== grid_cursor_-1, and >= 0 given the guard above).
-    OnSubdivisionTick(grid_beat_index_, slot, sample_rate);
+  const double previous = times[grid_state_.cursor - 1];
+  const double interval = times[grid_state_.cursor] - previous;
+  const double tick = previous + interval * grid_state_.next_sub / subdivision_;
+  if (song_seconds + kGridEpsilon >= tick && tick <= grid_state_.fire_limit) {
+    const int slot = grid_state_.next_sub++;
+    grid_state_.last_onset = {tick, grid.anchor_frame};
+    // The tick sits in [cursor-1, cursor]: current_bar_ is its owning beat's.
+    if (!BarIsMuted(current_bar_)) {
+      TriggerSubdivision(subdivision_, slot, sample_rate);
+    }
   }
 }
 
@@ -150,19 +164,18 @@ void Metronome::PublishGridMirrors(const BeatGrid& grid, double song_seconds) {
   const auto& times = grid.beat_times_sec;
   // Outside any interval — before the first beat, or past the last, which every
   // song reaches — hold the last sweep and tempo rather than snapping to zero.
-  if (grid_cursor_ == 0 || grid_cursor_ >= times.size()) return;
-  const double previous = times[grid_cursor_ - 1];
-  const double interval = times[grid_cursor_] - previous;
+  if (grid_state_.cursor == 0 || grid_state_.cursor >= times.size()) return;
+  const double previous = times[grid_state_.cursor - 1];
+  const double interval = times[grid_state_.cursor] - previous;
   if (interval <= 0.0) return;
 
   // Same epsilon as BeatDue: the fired beat reads >= 0, the next one < 1. A
   // backward wait puts the position behind the fired beat; hold there.
   const double beat_fraction =
       std::max(0.0, (song_seconds + kGridEpsilon - previous) / interval);
-  const double beat_in_bar =
-      static_cast<double>(grid_beat_index_ % beats_per_bar_);
+  const GridBar& bar = grid.bars[grid_state_.cursor - 1];
   bar_phase_.store(
-      PhaseBelowOne((beat_in_bar + beat_fraction) / beats_per_bar_),
+      PhaseBelowOne((bar.position + beat_fraction) / bar.length),
       std::memory_order_relaxed
   );
   // Clamped to the same range SetTempo enforces: a beat tracker emits outlier
@@ -184,12 +197,14 @@ double FireLimitSec(const LoopLayout& layout, uint32_t sample_rate) {
 // re-prime rewound over it.
 double ContinuationSeekSec(
     const BeatGrid& grid,
-    const GridOnset& last_onset,
+    const GridState& state,
     double head_sec,
-    double next_heard_sec
+    uint32_t sample_rate
 ) {
-  if (last_onset.song_sec > next_heard_sec) return head_sec;
-  return std::max(head_sec, OnsetFloorSec(grid, last_onset));
+  const double next_heard_sec =
+      static_cast<double>(state.follow_last_frame + 1) / sample_rate;
+  if (state.last_onset.song_sec > next_heard_sec) return head_sec;
+  return std::max(head_sec, OnsetFloorSec(grid, state.last_onset));
 }
 
 }  // namespace
@@ -202,33 +217,32 @@ void Metronome::RenderGridSample(
     uint32_t sample_rate
 ) {
   if (!follow_mixer_) {
-    grid_fire_limit_ = std::numeric_limits<double>::infinity();
+    grid_state_.fire_limit = std::numeric_limits<double>::infinity();
     RenderGridBeat(grid, GridSeconds(grid, now, sample_rate), sample_rate);
     return;
   }
   if (song == nullptr || !song->playing || frame >= song->frames) return;
   const SongPoint point = song->PointAt(frame);
   const auto whole_frame = static_cast<double>(point.frame);
-  follow_seconds_ = (whole_frame + point.fraction) / sample_rate;
-  grid_fire_limit_ = FireLimitSec(*point.layout, sample_rate);
+  grid_state_.follow_seconds = (whole_frame + point.fraction) / sample_rate;
+  grid_state_.fire_limit = FireLimitSec(*point.layout, sample_rate);
   // Below 1.0x a song frame repeats, which is no jump. A new pass lands inside
   // a frame, so seek to its start or a beat right on the loop start is skipped.
-  const int64_t step = point.frame - follow_last_frame_;
+  const int64_t step = point.frame - grid_state_.follow_last_frame;
   const bool opens_on_jump = song->opens_on_jump && frame == 0;
-  if (follow_last_frame_ == kReseedFollow || opens_on_jump || step < 0 ||
-      step > 1) {
+  if (grid_state_.follow_last_frame == GridState::kReseedFollow ||
+      opens_on_jump || step < 0 || step > 1) {
     const double head_sec = whole_frame / sample_rate;
-    const double next_heard_sec =
-        static_cast<double>(follow_last_frame_ + 1) / sample_rate;
+    const bool continues = opens_on_jump && song->continues_run;
     SeekGridCursor(
         grid,
-        opens_on_jump && song->continues_run
-            ? ContinuationSeekSec(grid, last_onset_, head_sec, next_heard_sec)
+        continues
+            ? ContinuationSeekSec(grid, grid_state_, head_sec, sample_rate)
             : head_sec
     );
   }
-  follow_last_frame_ = point.frame;
-  RenderGridBeat(grid, follow_seconds_, sample_rate);
+  grid_state_.follow_last_frame = point.frame;
+  RenderGridBeat(grid, grid_state_.follow_seconds, sample_rate);
 }
 
 }  // namespace kitbag

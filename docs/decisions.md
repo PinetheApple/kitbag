@@ -1023,3 +1023,12 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   falling back to downbeats at a bar stride. After a song closes the standalone metronome stays
   stopped with its settings intact. A row tap opens the player paused.
   **[user]**
+
+- **2026-11-07 · Song-grid downbeats at the ABI (§4, §4.2, #300)** — `kb_metronome_set_grid`
+  carries the downbeat indices as an array copied during the call, and §4 now states the
+  boundary rule as it is. A separate staged call would still pass an array, and per-index
+  scalar appends add a begin/add/commit protocol that can fail half-staged.
+  **[recorded — coordinator ruling]**
+- **2026-11-07 · Song-grid accents (§4.3, #300)** — Under a grid only each song bar's first
+  beat is accented; the standalone accent row and its mutes are ignored. With no downbeats
+  there is no bar accent. **[user]**

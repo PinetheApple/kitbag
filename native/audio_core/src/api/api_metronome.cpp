@@ -5,6 +5,7 @@
 #include <cmath>
 
 #include "api/api_engine.h"
+#include "metronome/grid_bars.h"
 
 using kitbag::ToEngine;
 
@@ -32,6 +33,22 @@ void TakeOverFromRigClick(kitbag::Engine* engine) {
   engine->SetMetronomeIntent(true);
   engine->metronome().rig_click().Stop();
   engine->SetRigClickIntent(false);
+}
+
+// The cursor is a monotonic walk that cannot recover from a malformed grid. NaN
+// slips through `<=`, then breaks lower_bound's ordering precondition.
+bool ValidBeatTimes(const double* times, int32_t count) {
+  for (int32_t i = 0; i < count; ++i) {
+    if (!std::isfinite(times[i])) return false;
+    if (i > 0 && times[i] <= times[i - 1]) return false;
+  }
+  return true;
+}
+
+bool ValidDownbeatArgs(const int32_t* downbeats, int32_t count, int32_t beats) {
+  if (count < 0 || (count > 0 && downbeats == nullptr)) return false;
+  return count == 0 ||
+         kitbag::ValidDownbeats({downbeats, static_cast<size_t>(count)}, beats);
 }
 
 }  // namespace
@@ -70,29 +87,22 @@ kb_result kb_metronome_set_grid(
     kb_engine* engine,
     const double* beat_times_sec,
     int32_t count,
+    const int32_t* downbeat_indices,
+    int32_t downbeat_count,
     uint64_t anchor_frame
 ) {
   if (engine == nullptr || beat_times_sec == nullptr || count <= 0 ||
-      count > KB_MAX_GRID_BEATS) {
+      count > KB_MAX_GRID_BEATS || !ValidBeatTimes(beat_times_sec, count) ||
+      !ValidDownbeatArgs(downbeat_indices, downbeat_count, count)) {
     return KB_ERROR_INVALID_ARGUMENT;
   }
-  // Reject a malformed grid here rather than letting the callback meet it: the
-  // cursor is a monotonic walk that cannot recover from one. NaN needs its own
-  // check — every comparison against it is false, so it slips through the
-  // ascending test and then violates lower_bound's ordering precondition.
-  for (int32_t i = 0; i < count; ++i) {
-    if (!std::isfinite(beat_times_sec[i])) {
-      return KB_ERROR_INVALID_ARGUMENT;
-    }
-    if (i > 0 && beat_times_sec[i] <= beat_times_sec[i - 1]) {
-      return KB_ERROR_INVALID_ARGUMENT;
-    }
-  }
-
   auto grid = std::make_unique<kitbag::BeatGrid>();
   grid->beat_times_sec.assign(beat_times_sec, beat_times_sec + count);
   grid->anchor_frame = anchor_frame;
-
+  grid->bars = kitbag::GridBars(
+      {downbeat_indices, static_cast<size_t>(downbeat_count)},
+      grid->beat_times_sec.size()
+  );
   kitbag::Engine* target = ToEngine(engine);
   target->metronome().SetGrid(
       std::move(grid),

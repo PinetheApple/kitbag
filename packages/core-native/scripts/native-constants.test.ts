@@ -41,6 +41,7 @@ const realSources: NativeSources = {
   apiHeader: read('include', 'kitbag_api.h'),
   tunerHeader: read('include', 'kitbag_tuner_api.h'),
   polyHeader: read('include', 'kitbag_metronome_poly_api.h'),
+  gridHeader: read('include', 'kitbag_metronome_grid_api.h'),
   mixerHeader: read('src', 'mixer', 'mixer.h'),
   metronomeHeader: read('src', 'metronome', 'metronome.h'),
   metronomeRender: read('src', 'metronome', 'metronome_render.cpp'),

@@ -34,6 +34,8 @@ export interface NativeSources {
   readonly tunerHeader: string;
   /** native/audio_core/include/kitbag_metronome_poly_api.h — KB_POLY_AGAINST_BAR. */
   readonly polyHeader: string;
+  /** native/audio_core/include/kitbag_metronome_grid_api.h — KB_MAX_GRID_BEATS. */
+  readonly gridHeader: string;
   /** native/audio_core/src/mixer/mixer.h — kMaxTracks lives here, not the ABI. */
   readonly mixerHeader: string;
   /** native/audio_core/src/metronome/metronome.h — kSoundCount, kMaxBeats, kDenominators. */

@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdio>
 #include <filesystem>
+#include <iterator>
 #include <string>
 #include <thread>
 #include <vector>
@@ -28,7 +29,7 @@ using kitbag_test::g_failures;
 using stem_sync::kSampleRate;
 using stem_sync::kStereo;
 
-constexpr int kExpectedChecks = 48;
+constexpr int kExpectedChecks = 56;
 constexpr uint32_t kBlock = 512;
 constexpr int64_t kStemFrames = 240000;
 // Uneven spacing, so a click on a constant tempo cannot pass for the grid.
@@ -46,6 +47,7 @@ constexpr double kBeats[] = {
     195601,
     215009
 };
+constexpr int32_t kDownbeats[] = {0, 4, 8};
 // The end sits 0.3 frames after a beat, off the grid: that beat belongs to the
 // wrap, so firing it before the wrap would stack a second click on the start's.
 constexpr int64_t kLoopStart = 41209;
@@ -103,6 +105,8 @@ kb_engine* OpenEngine(const std::string& stem, double latency_ms) {
       engine,
       times.data(),
       static_cast<int32_t>(times.size()),
+      kDownbeats,
+      static_cast<int32_t>(std::size(kDownbeats)),
       0
   );
   kb_metronome_set_latency_offset(engine, latency_ms);
@@ -310,6 +314,7 @@ void RunRateSuites() {
   stem_sync::RunScriptTests(pulses);
   stem_sync::RunLockTests(pulses);
   stem_sync::RunReanchorTests(pulses);
+  stem_sync::RunBarTests(pulses);
   std::filesystem::remove(pulses);
 }
 

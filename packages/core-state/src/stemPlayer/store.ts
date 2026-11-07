@@ -3,6 +3,7 @@ import { KB_MAX_TRACKS, KB_RESULT } from '@kitbag/core-native';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { mixActions, transportActions } from './actions.ts';
+import { barMarkDownbeats } from './bars.ts';
 import { clickActions } from './clickActions.ts';
 import { NO_SONG_FACTS, songFacts, type SongFacts } from './facts.ts';
 import type { LoopSeconds } from './loop.ts';
@@ -75,6 +76,7 @@ export interface StemPlayerState {
   readonly engineRate: number;
   readonly durationFrames: number;
   readonly beats: readonly number[];
+  readonly downbeatIndices: readonly number[];
   readonly loop: LoopState;
   readonly loopFailure: LoopFailure | null;
   readonly undoableLoop: LoopSeconds | null;
@@ -148,6 +150,7 @@ const closedState: StemPlayerState = {
   engineRate: 0,
   durationFrames: 0,
   beats: [],
+  downbeatIndices: [],
   loop: { kind: 'off' },
   loopFailure: null,
   undoableLoop: null,
@@ -303,6 +306,7 @@ export function createStemPlayerStore(
         engineRate,
         durationFrames: secondsToFrames(longestSeconds(record), engineRate),
         beats: record.beats,
+        downbeatIndices: barMarkDownbeats(record.bars, record.beats.length),
         sections: sortedSections(record.sections),
         lyrics: songLyrics(record.lyrics, record.lyricsRetimed),
       });
