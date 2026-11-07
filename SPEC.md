@@ -233,8 +233,9 @@ them; nothing here blocks them.
 
 **This is the portable foundation, and it did not change with the stack.** It
 is a flat C ABI (`native/audio_core/include/kitbag_api.h`) reachable from Dart
-FFI, JSI, or anything else. Values crossing the boundary are scalars — no
-structs, no buffers, with the three documented exceptions below. Keeping it this
+FFI, JSI, or anything else. Values crossing the boundary are scalars, paths, or
+flat arrays of scalars read or filled during the call — no structs, and no buffer
+the core keeps past the call. Keeping it this
 way is what made the UI framework a swappable detail, and this section is the
 proof that it worked.
 
@@ -305,9 +306,8 @@ read-only UI getter and does not help.
 KB_EXPORT void kb_metronome_start_at(kb_engine* engine, uint64_t start_frame);
 
 /* Follow a beat grid rather than a single BPM — handles tempo drift.
-   beat_times_sec and downbeat_indices are copied; neither need outlive the
-   call. These two and kb_analyze_song's out buffers are the only non-scalar
-   params. */
+   beat_times_sec and downbeat_indices are copied; neither needs to outlive
+   the call. */
 KB_EXPORT kb_result kb_metronome_set_grid(kb_engine* engine,
                                           const double* beat_times_sec,
                                           int32_t count,
@@ -457,8 +457,7 @@ bar, and never bar-muted; the mirrors count them back from the first bar.
 **Downbeats absent → no bar accent.** Every grid beat sounds normal,
 `current_beat` reads 0, `bar_phase` sweeps each beat, and bar mute does not
 apply. An accent the core cannot place on a real bar actively misleads (#300);
-a uniform click does not. This replaces the earlier "every `beats_per_bar`-th
-beat" fallback, which was the defect itself whenever the guess was wrong.
+a uniform click does not.
 The analyser's downbeats are always four beats apart, so an analysed song in
 3/4 still gets 4/4 bars (#332).
 

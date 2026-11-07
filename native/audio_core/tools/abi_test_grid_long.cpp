@@ -6,6 +6,7 @@
 
 #include "abi_test_metronome.h"
 #include "check.h"
+#include "downbeats.h"
 
 namespace abi_test {
 namespace {
@@ -94,11 +95,11 @@ std::vector<double> EvenGrid() {
 }
 
 bool SetSongGrid(kb_engine* engine, const std::vector<double>& grid) {
-  std::vector<int32_t> downbeats;
-  for (int32_t b = kSongFirstDownbeat; b < kLongGridBeats;
-       b += kSongBeatsPerBar) {
-    downbeats.push_back(b);
-  }
+  const std::vector<int32_t> downbeats = kitbag_test::EveryNthBeat(
+      kSongFirstDownbeat,
+      kSongBeatsPerBar,
+      kLongGridBeats
+  );
   return kb_metronome_set_grid(
              engine,
              grid.data(),

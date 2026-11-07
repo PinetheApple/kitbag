@@ -148,7 +148,7 @@ void TestGridWithStartAt() {
 }
 
 // After a deferred start the cursor must stay seeded, generation included: a
-// block that re-seeds resets grid_state_.next_sub and re-fires a spent subdivision.
+// block that re-seeds resets the next subdivision and re-fires a spent one.
 void TestGridStartAtKeepsSubdivisionCursor() {
   kitbag::Metronome metronome;
   metronome.SetTimeSignature(4, 4);

@@ -99,17 +99,17 @@ Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetTempo(JNIEnv*, jobject,
 }
 
 JNIEXPORT jint JNICALL
-Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetGrid(JNIEnv* env, jobject, jdoubleArray beatTimesSec, jintArray downbeats, jdouble anchorFrame) {
-  if (beatTimesSec == nullptr || downbeats == nullptr) {
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetGrid(JNIEnv* env, jobject, jdoubleArray beatTimesSec, jintArray downbeatIndices, jdouble anchorFrame) {
+  if (beatTimesSec == nullptr || downbeatIndices == nullptr) {
     return static_cast<jint>(kitbag::commandSetGrid(nullptr, 0, nullptr, 0, anchorFrame));
   }
   const jsize count = env->GetArrayLength(beatTimesSec);
-  const jsize downbeatCount = env->GetArrayLength(downbeats);
+  const jsize downbeatCount = env->GetArrayLength(downbeatIndices);
   jdouble* elems = env->GetDoubleArrayElements(beatTimesSec, nullptr);
-  jint* bars = env->GetIntArrayElements(downbeats, nullptr);
-  const int32_t result = kitbag::commandSetGrid(elems, static_cast<int32_t>(count), bars,
+  jint* downbeats = env->GetIntArrayElements(downbeatIndices, nullptr);
+  const int32_t result = kitbag::commandSetGrid(elems, static_cast<int32_t>(count), downbeats,
                                                 static_cast<int32_t>(downbeatCount), anchorFrame);
-  env->ReleaseIntArrayElements(downbeats, bars, JNI_ABORT);
+  env->ReleaseIntArrayElements(downbeatIndices, downbeats, JNI_ABORT);
   env->ReleaseDoubleArrayElements(beatTimesSec, elems, JNI_ABORT);
   return static_cast<jint>(result);
 }

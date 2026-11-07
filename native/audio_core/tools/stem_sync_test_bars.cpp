@@ -1,5 +1,3 @@
-// Follow mode's accents follow the song's bars (#300), at 1.0x and slowed,
-// over the ABI the stem player uses.
 #include <algorithm>
 #include <cmath>
 #include <string>
@@ -7,6 +5,7 @@
 
 #include "check.h"
 #include "click_take.h"
+#include "downbeats.h"
 #include "index_list.h"
 #include "metronome/metronome_internal.h"
 #include "mixer/transport_plan.h"
@@ -22,8 +21,8 @@ using kitbag_test::IndexList;
 
 constexpr int kBarBeats = 13;
 constexpr double kAccentFloor = (kAccentAmplitude + kBeatAmplitude) / 2.0;
-constexpr float kThreeQuarters = 0.75f;
-constexpr float kRates[] = {kitbag::kUnityRate, kThreeQuarters};
+constexpr float kSpeed = 0.75f;
+constexpr float kRates[] = {kitbag::kUnityRate, kSpeed};
 
 struct BarCase {
   const char* label;
@@ -36,11 +35,11 @@ constexpr BarCase kCases[] = {
 };
 
 std::vector<int32_t> Downbeats(const BarCase& c) {
-  std::vector<int32_t> downbeats;
-  for (int32_t b = c.first_downbeat; b < kBeatCount; b += c.beats_per_bar) {
-    downbeats.push_back(b);
-  }
-  return downbeats;
+  return kitbag_test::EveryNthBeat(
+      c.first_downbeat,
+      c.beats_per_bar,
+      kBeatCount
+  );
 }
 
 bool SetBarGrid(kb_engine* engine, const BarCase& c) {

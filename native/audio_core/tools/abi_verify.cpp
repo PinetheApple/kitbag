@@ -117,45 +117,52 @@ constexpr double kFourBeats[] = {0.0, 0.5, 1.0, 1.5};
 constexpr int32_t kFourBeatCount = 4;
 constexpr int32_t kTwoDownbeats = 2;
 
-void ExpectDownbeatsRejected(
+struct RefusedDownbeats {
+  int32_t indices[kTwoDownbeats];
+  const char* message;
+};
+constexpr RefusedDownbeats kRefusedDownbeats[] = {
+    {{1, 4}, "set_grid: downbeat past the grid"},
+    {{-1, 2}, "set_grid: negative downbeat"},
+    {{2, 2}, "set_grid: repeated downbeat"},
+    {{3, 1}, "set_grid: descending downbeats"},
+};
+
+void ExpectFourBeatsRejected(
     kb_engine* engine,
-    const int32_t (&indices)[kTwoDownbeats],
+    Downbeats downbeats,
     const char* message
 ) {
-  ExpectRejected(
-      engine,
-      kFourBeats,
-      kFourBeatCount,
-      message,
-      {indices, kTwoDownbeats}
-  );
+  ExpectRejected(engine, kFourBeats, kFourBeatCount, message, downbeats);
 }
 
 void TestSetGridChecksDownbeats(kb_engine* engine) {
-  const int32_t bars[] = {1, 3};
+  const int32_t downbeats[] = {1, 3};
+  const kb_result accepted = kb_metronome_set_grid(
+      engine,
+      kFourBeats,
+      kFourBeatCount,
+      downbeats,
+      kTwoDownbeats,
+      0
+  );
   Check(
-      kb_metronome_set_grid(engine, kFourBeats, kFourBeatCount, bars, 2, 0) ==
-          KB_OK,
+      accepted == KB_OK,
       "set_grid: ascending in-range downbeats are accepted"
   );
-  ExpectRejected(
+  ExpectFourBeatsRejected(
       engine,
-      kFourBeats,
-      kFourBeatCount,
-      "set_grid: null downbeats",
-      {nullptr, kTwoDownbeats}
+      {nullptr, kTwoDownbeats},
+      "set_grid: null downbeats"
   );
-  ExpectRejected(
+  ExpectFourBeatsRejected(
       engine,
-      kFourBeats,
-      kFourBeatCount,
-      "set_grid: negative downbeat count",
-      {bars, -1}
+      {downbeats, -1},
+      "set_grid: negative downbeat count"
   );
-  ExpectDownbeatsRejected(engine, {1, 4}, "set_grid: downbeat past the grid");
-  ExpectDownbeatsRejected(engine, {-1, 2}, "set_grid: negative downbeat");
-  ExpectDownbeatsRejected(engine, {2, 2}, "set_grid: repeated downbeat");
-  ExpectDownbeatsRejected(engine, {3, 1}, "set_grid: descending downbeats");
+  for (const auto& [indices, message] : kRefusedDownbeats) {
+    ExpectFourBeatsRejected(engine, {indices, kTwoDownbeats}, message);
+  }
 }
 
 void TestClearGrid(kb_engine* engine) {

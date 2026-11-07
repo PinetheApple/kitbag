@@ -4,8 +4,6 @@ namespace kitbag {
 
 namespace {
 
-// Beats after the last downbeat repeat the bar before it; a lone downbeat's bar
-// runs to the end of the grid.
 int32_t LastBarLength(std::span<const int32_t> downbeats, size_t beat_count) {
   const size_t last = downbeats.size() - 1;
   if (last == 0) return static_cast<int32_t>(beat_count) - downbeats[0];

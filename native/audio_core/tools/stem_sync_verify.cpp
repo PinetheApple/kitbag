@@ -47,9 +47,9 @@ constexpr double kBeats[] = {
     195601,
     215009
 };
+constexpr int32_t kDownbeats[] = {0, 4, 8};
 // The end sits 0.3 frames after a beat, off the grid: that beat belongs to the
 // wrap, so firing it before the wrap would stack a second click on the start's.
-constexpr int32_t kDownbeats[] = {0, 4, 8};
 constexpr int64_t kLoopStart = 41209;
 constexpr int64_t kLoopEnd = 79000;
 constexpr int kExpectedClicks = 15;

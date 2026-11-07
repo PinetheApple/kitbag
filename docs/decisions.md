@@ -999,9 +999,11 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   the TS binding rounds on the way in and the database is unchanged. `current_bpm` stays the
   song's tempo at any speed. Unloading a track resets its key to 0, so a key carries to the next
   stem in that slot only when the command queue was full at the unload. **[recorded — coordinator ruling]**
-- **2026-11-07 · Song-grid bars (§4.2, §4.3, #300)** — `kb_metronome_set_grid` carries the
-  downbeat indices (a third non-scalar ABI parameter, §4 amended): a separate staged call
-  would still pass an array, and per-index scalar appends add a begin/add/commit protocol
-  that can fail half-staged. Under a grid only bar position 0 is accented; the standalone
-  accent row and its mutes are ignored (overturnable). No downbeats means no bar accent.
+- **2026-11-07 · Song-grid downbeats at the ABI (§4, §4.2, #300)** — `kb_metronome_set_grid`
+  carries the downbeat indices as an array copied during the call, and §4 now states the
+  boundary rule as it is. A separate staged call would still pass an array, and per-index
+  scalar appends add a begin/add/commit protocol that can fail half-staged.
   **[recorded — coordinator ruling]**
+- **2026-11-07 · Song-grid accents (§4.3, #300)** — Under a grid only each song bar's first
+  beat is accented; the standalone accent row and its mutes are ignored. With no downbeats
+  there is no bar accent. **[user]**

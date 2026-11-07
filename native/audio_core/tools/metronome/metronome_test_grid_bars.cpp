@@ -1,10 +1,9 @@
-// Under a song grid the click's bars are the song's (#300): accents, bar mute,
-// subdivision mute and the mirrors, whatever the standalone meter and row.
 #include <cmath>
 #include <iterator>
 #include <string>
 
 #include "index_list.h"
+#include "metronome/metronome_internal.h"
 #include "metronome_test_audio.h"
 #include "song_bars.h"
 
@@ -25,6 +24,7 @@ struct BarCase {
   const char* label;
   int standalone_beats;
   std::vector<int32_t> downbeats;
+  std::vector<int> accented;
 };
 
 std::unique_ptr<kitbag::BeatGrid> BarGrid(
@@ -89,19 +89,16 @@ void ExpectSongAccents(const BarCase& c) {
   const GridTake take = TakeGrid(metronome);
   const std::string label = std::string("grid bars: ") + c.label;
   ExpectIndices(take.sounded, AllBeats(), label + ", every beat sounds");
-  ExpectIndices(
-      take.accented,
-      std::vector<int>(c.downbeats.begin(), c.downbeats.end()),
-      label + ", accents"
-  );
+  ExpectIndices(take.accented, c.accented, label + ", accents");
 }
 
 void TestAccentsFollowSongBars() {
   const BarCase cases[] = {
-      {"3/4 song, metronome 4/4", 4, {0, 3, 6, 9, 12}},
-      {"3/4 song, metronome 5/4", 5, {0, 3, 6, 9, 12}},
-      {"4/4 song opening on a pickup, metronome 4/4", 4, {1, 5, 9}},
-      {"no downbeats, metronome 4/4", 4, {}},
+      {"3/4 song, metronome 4/4", 4, {0, 3, 6, 9, 12}, {0, 3, 6, 9, 12}},
+      {"3/4 song, metronome 5/4", 5, {0, 3, 6, 9, 12}, {0, 3, 6, 9, 12}},
+      {"4/4 song opening on a pickup, metronome 4/4", 4, {1, 5, 9}, {1, 5, 9}},
+      {"no downbeats, metronome 4/4", 4, {}, {}},
+      {"last 3/4 bar repeats to the grid's end", 4, {0, 3}, {0, 3, 6, 9, 12}},
   };
   for (const BarCase& c : cases) ExpectSongAccents(c);
 }
@@ -181,11 +178,8 @@ void TestMirrorsFollowSongBars() {
 // kOnsetThreshold, so a live subdivision clears it but a decay tail cannot.
 constexpr double kGridSoundingPeak = 0.2;
 
-// #24 (a #21 follow-up): a grid subdivision belongs to the interval it divides,
-// the left-endpoint beat. A measured 0.15 s grid (bpm 400) offset into the
-// future so beats 0 and 1 both sound cleanly under the offset; one-beat song
-// bars put beat 1 alone in muted bar 1. At +100 ms the latency spans 2/3 of a
-// beat, so an owning beat off by one would sound a muted bar's subdivision.
+// +100 ms spans 2/3 of a 0.15 s beat, so an owning beat off by one would sound
+// a muted bar's subdivision.
 double GridMuteCascadePeak(bool bar_mute, int64_t lo, int64_t hi) {
   kitbag::Metronome metronome;
   metronome.SetTimeSignature(4, 4);
@@ -221,6 +215,51 @@ void TestGridMutedBarCascadesToSubdivision() {
   );
 }
 
+constexpr double kClearBeatSec = 0.5;
+constexpr int kClearBeats = 16;
+constexpr double kClearAtSec = 3.2;
+
+std::vector<int> SoundedAfterClear() {
+  kitbag::Metronome metronome;
+  metronome.SetSounds(kBeepSound, kBeepSound);
+  metronome.SetTempo(
+      kitbag::metronome_detail::kSecondsPerMinute / kClearBeatSec
+  );
+  metronome.SetTimeSignature(4, 4);
+  metronome.SetBarMute(true, 1, 1);
+  auto grid = MakeShiftedGrid(kClearBeats, 0.0, kClearBeatSec);
+  SetSongBars(grid.get(), 0, 3);
+  metronome.SetGrid(std::move(grid), 0, true);
+  metronome.Start();
+  const int64_t clear_at = FramesFor(kClearAtSec);
+  const std::vector<float> left = RenderLeft(
+      metronome,
+      FramesFor(kClearBeats * kClearBeatSec),
+      [&](int64_t at) {
+        if (at <= clear_at && clear_at < at + kBlockFrames) {
+          metronome.ClearGrid(static_cast<uint64_t>(at), true);
+        }
+      }
+  );
+  std::vector<int> sounded;
+  for (int beat = 0; beat < kClearBeats; ++beat) {
+    if (PeakIn(left, FramesFor(beat * kClearBeatSec)) >= kSilentCeiling) {
+      sounded.push_back(beat);
+    }
+  }
+  return sounded;
+}
+
+// Song bars (3/4) until the clear after beat 6, then the 4/4 count: beat 7
+// sits in constant-tempo bar 1, so it is muted with the bar-mute cycle.
+void TestClearGridRederivesTheBar() {
+  ExpectIndices(
+      SoundedAfterClear(),
+      {0, 1, 2, 6, 8, 9, 10, 11},
+      "grid bars: clear_grid hands bar mute back to the constant-tempo bar"
+  );
+}
+
 }  // namespace
 
 void RunGridBarTests() {
@@ -229,6 +268,7 @@ void RunGridBarTests() {
   TestBarMuteCountsSongBars();
   TestMirrorsFollowSongBars();
   TestGridMutedBarCascadesToSubdivision();
+  TestClearGridRederivesTheBar();
 }
 
 }  // namespace metronome_test

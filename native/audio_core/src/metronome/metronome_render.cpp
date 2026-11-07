@@ -149,6 +149,15 @@ Metronome::BlockTempo Metronome::BlockTempoFor(uint32_t sample_rate) const {
   return tempo;
 }
 
+// Song bars stop at a clear; constant tempo counts bars from beat_position_.
+void Metronome::ObserveGridChange(const GridView& view, uint32_t sample_rate) {
+  grid_state_.observed_generation = view.generation;
+  grid_state_.follow_last_frame = GridState::kReseedFollow;
+  if (view.grid == nullptr && running_) {
+    SyncBarFromPosition(BlockTempoFor(sample_rate).beats_per_sample);
+  }
+}
+
 Metronome::GridView
 Metronome::AcquireGrid(uint64_t block_start_frame, uint32_t sample_rate) {
   // One acquire load per block. Change is detected by generation, never by
@@ -160,10 +169,7 @@ Metronome::AcquireGrid(uint64_t block_start_frame, uint32_t sample_rate) {
     view.generation = node->generation;
   }
   const bool changed = view.generation != grid_state_.observed_generation;
-  if (changed) {
-    grid_state_.observed_generation = view.generation;
-    grid_state_.follow_last_frame = GridState::kReseedFollow;
-  }
+  if (changed) ObserveGridChange(view, sample_rate);
   const double shift_sec = std::exchange(grid_state_.pending_shift_sec, 0.0);
   if (view.grid == nullptr || follow_mixer_) return view;
   // Only a whole-beat backward shift clears the floor to replay (§4.7); other

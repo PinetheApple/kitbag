@@ -267,6 +267,7 @@ class Metronome {
       BlockTempo* tempo
   );
   GridView AcquireGrid(uint64_t block_start_frame, uint32_t sample_rate);
+  void ObserveGridChange(const GridView& view, uint32_t sample_rate);
   void BeginPendingStart(
       const GridView& view,
       uint64_t frame,

@@ -10,10 +10,9 @@
 
 namespace kitbag {
 
-// Ascending, distinct and each in [0, beat_count).
 bool ValidDownbeats(std::span<const int32_t> downbeats, int32_t beat_count);
 
-// App thread only: allocates. No downbeats leaves every beat barless.
+// App thread only: allocates.
 std::vector<GridBar>
 GridBars(std::span<const int32_t> downbeats, size_t beat_count);
 
