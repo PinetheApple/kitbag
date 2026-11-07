@@ -31,6 +31,8 @@ constexpr auto kPacePoll = std::chrono::microseconds(200);
 constexpr int64_t kNotFound = -1;
 constexpr double kMsPerSecond = 1000.0;
 constexpr int64_t kVoiceWindowFrames = 4320;
+constexpr int kChosenBuses = kitbag::TimeStretch::kMaxChosenConfigInstances;
+constexpr auto kKeyNeedingExtraBus = static_cast<float>(kChosenBuses);
 
 struct ToneSpec {
   int64_t frames = 0;

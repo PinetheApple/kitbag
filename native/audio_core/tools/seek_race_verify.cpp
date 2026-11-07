@@ -11,6 +11,7 @@
 // buffered count stays within the ring's capacity. That bound is the assertion:
 // contiguity alone misses the underflow, whose stale reads are often themselves
 // contiguous — only the desynced index shows.
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
@@ -233,7 +234,7 @@ void RacePlayerSeeks(kitbag::Player* player, RaceStats* stats) {
   RunRace(
       stats,
       [&](std::vector<float>* out) {
-        for (float& s : *out) s = 0.0f;  // Render accumulates, so clear first
+        std::ranges::fill(*out, 0.0f);
         player->Render(out->data(), kBlock);
       },
       [&] { return player->rt_buffered(); },

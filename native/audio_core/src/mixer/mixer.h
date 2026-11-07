@@ -46,14 +46,10 @@ class Mixer {
   Mixer(const Mixer&) = delete;
   Mixer& operator=(const Mixer&) = delete;
 
-  /// Load a track from a file path, streamed from disk and published by atomic
-  /// swap (SPEC.md §4.1). [clock] and [engine_running] date the retired
-  /// source for deferred reclamation. kInvalid for a null path, a track outside
-  /// [0, kMaxTracks), or a file that will not open: a held stem stays loaded.
-  /// kPrimeFailed when joining needs a prime that fails on any stem: this track
-  /// is left unloaded at key 0, unless the command queue is full, which leaves
-  /// the key.
+  // kInvalid keeps a held stem; kPrimeFailed unloads this track.
   enum class LoadResult : uint8_t { kOk, kInvalid, kPrimeFailed };
+
+  /// [clock] and [engine_running] date the retired source's reclamation.
   LoadResult
   LoadTrack(int track, const char* path, FrameClock clock, bool engine_running);
 

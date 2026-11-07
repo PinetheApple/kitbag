@@ -58,8 +58,6 @@ bool WriteMonoRamp(
   return media_test::WriteFloatWav(path, pcm, 1, rate);
 }
 
-// engine_running false: the suite drives Render by hand, so no callback is
-// concurrent.
 bool LoadRamp(Player* player, uint64_t frames, float offset, uint32_t rate) {
   const std::string path = NextTempPath();
   if (!WriteMonoRamp(path, frames, offset, rate)) return false;

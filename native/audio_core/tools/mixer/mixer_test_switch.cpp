@@ -9,9 +9,7 @@ namespace mixer_test {
 namespace {
 
 constexpr float kSpeed = 0.75f;
-constexpr int kChosenBuses = kitbag::TimeStretch::kMaxChosenConfigInstances;
 constexpr int kExtraStem = kChosenBuses;
-constexpr auto kFifthKey = static_cast<float>(kChosenBuses);
 constexpr int kStems = kChosenBuses + 1;
 constexpr int64_t kSongFrames = int64_t{10} * kSampleRate;
 constexpr int64_t kSeekTo = kSampleRate / 2 + 7;
@@ -111,7 +109,7 @@ void TestSwitchPlaysOnWhilePriming() {
   RenderPaced(&mixer, kSwitchAtBlock);
   readers[0]->Arm();
   std::thread app([&mixer] {
-    mixer.SetTrackPitch(kExtraStem, kFifthKey, kZeroClock, false);
+    mixer.SetTrackPitch(kExtraStem, kKeyNeedingExtraBus, kZeroClock, false);
   });
   const bool reprimed = readers[0]->WaitEntered();
   Check(reprimed, "switch: a fifth key re-primes through the stems");

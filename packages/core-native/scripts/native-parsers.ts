@@ -55,7 +55,6 @@ export function parseConstexprDouble(source: string, name: string): number {
   return Number(match[1]);
 }
 
-/** `static|inline constexpr float NAME = <number>f;` from a C++ header. */
 export function parseConstexprFloat(source: string, name: string): number {
   const match = new RegExp(
     `(?:static|inline)\\s+constexpr\\s+float\\s+${name}\\s*=\\s*(-?\\d+(?:\\.\\d+)?)f\\s*;`,

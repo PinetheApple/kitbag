@@ -4,9 +4,7 @@ namespace mixer_test {
 namespace {
 
 constexpr float kSpeed = 0.75f;
-constexpr int kChosenBuses = kitbag::TimeStretch::kMaxChosenConfigInstances;
 constexpr int kExtraStem = kChosenBuses;
-constexpr auto kFifthKey = static_cast<float>(kChosenBuses);
 constexpr int kStems = kChosenBuses + 1;
 constexpr int64_t kSongFrames = int64_t{10} * kSampleRate;
 constexpr int kSettleBlocks = 40;
@@ -74,7 +72,7 @@ void TestConfigFollowsLiveBusCount() {
   RenderPaced(&mixer, kSettleBlocks);
   Check(mixer.key_bus_count() == kChosenBuses, "config: four buses live");
   CheckState(&mixer, kChosenBuses - 1, LagFrames(kSpeed), "config: chosen");
-  mixer.SetTrackPitch(kExtraStem, kFifthKey, kZeroClock, false);
+  mixer.SetTrackPitch(kExtraStem, kKeyNeedingExtraBus, kZeroClock, false);
   Check(mixer.key_bus_count() == kStems, "config: a fifth bus is live");
   CheckState(
       &mixer,
@@ -107,13 +105,13 @@ int64_t ClockAcrossSwitch(bool up) {
       ToneFixture({.frames = kSongFrames})
   );
   if (!up) {
-    mixer.SetTrackPitch(kExtraStem, kFifthKey, kZeroClock, false);
+    mixer.SetTrackPitch(kExtraStem, kKeyNeedingExtraBus, kZeroClock, false);
   }
   mixer.Seek(kSeekTo, kZeroClock, false);
   mixer.Play();
   RenderPaced(&mixer, kSwitchAtBlock);
   if (up) {
-    mixer.SetTrackPitch(kExtraStem, kFifthKey, kZeroClock, false);
+    mixer.SetTrackPitch(kExtraStem, kKeyNeedingExtraBus, kZeroClock, false);
   } else {
     mixer.SetTrackPitch(kExtraStem, 0.0f, kZeroClock, false);
     mixer.Seek(mixer.position(), kZeroClock, false);

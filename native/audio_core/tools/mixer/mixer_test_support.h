@@ -71,8 +71,7 @@ inline void FixtureFail(const char* message) {
 }
 
 // Writes an interleaved ramp to a temp WAV and loads it through the real file
-// path (kb_mixer_load_track's adapter). now_frame 0 / engine_running false: the
-// suite drives Process by hand, so no callback is concurrent.
+// path (kb_mixer_load_track's adapter).
 inline void LoadInterleaved(
     kitbag::Mixer* mixer,
     int track,
