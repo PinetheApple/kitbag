@@ -228,7 +228,7 @@ Java_com_kitbag_corenative_KitbagCommandsModule_nativeMixerSetTrackPitch(JNIEnv*
 }
 
 JNIEXPORT jint JNICALL
-Java_com_kitbag_corenative_KitbagCommandsModule_nativeMixerTrackPitch(JNIEnv*, jobject, jint track) {
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeMixerTrackPitch(JNIEnv*, jobject, jdouble track) {
   return static_cast<jint>(kitbag::commandMixerTrackPitch(track));
 }
 

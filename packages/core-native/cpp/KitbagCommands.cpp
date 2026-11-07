@@ -177,8 +177,9 @@ int32_t commandMixerSetTrackPitch(double track, double semitones) {
   if (!wholeTrack || !wholeSemitones) return KB_ERROR_INVALID_ARGUMENT;
   return kb_mixer_set_track_pitch(commandEngine(), *wholeTrack, *wholeSemitones);
 }
-int32_t commandMixerTrackPitch(int32_t track) {
-  return kb_mixer_track_pitch(commandEngine(), track);
+int32_t commandMixerTrackPitch(double track) {
+  const auto wholeTrack = wholeInt32(track);
+  return wholeTrack ? kb_mixer_track_pitch(commandEngine(), *wholeTrack) : 0;
 }
 double commandMixerTrackFrames(double track) {
   const auto wholeTrack = wholeInt32(track);
