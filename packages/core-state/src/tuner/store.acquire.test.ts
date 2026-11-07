@@ -87,6 +87,32 @@ describe('acquire', () => {
     expect(starts()).toBe(stops());
   });
 
+  it('keeps the mic off when the old screen leaves first while backgrounded', async () => {
+    const releaseOld = s().acquire(GUITAR);
+    await settle();
+    fakes.emit('background');
+    await settle();
+
+    releaseOld();
+    const releaseNew = s().acquire(GUITAR);
+    await settle();
+
+    expect(s().mic).toBe('off');
+    expect(starts()).toBe(1);
+    expect(stops()).toBe(1);
+    expect(fakes.micPermission.request).toHaveBeenCalledTimes(1);
+
+    fakes.emit('active');
+    await settle();
+    expect(s().mic).toBe('listening');
+    expect(starts()).toBe(2);
+
+    releaseNew();
+    await settle();
+    expect(s().mic).toBe('off');
+    expect(stops()).toBe(2);
+  });
+
   it('starts cleanly when the old screen leaves first', async () => {
     const releaseOld = s().acquire(GUITAR);
     await settle();
