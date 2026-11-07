@@ -168,6 +168,41 @@ describe('song library store', () => {
     expect(files.enqueueAnalysis).not.toHaveBeenCalled();
   });
 
+  it('refuses a format the core cannot open before copying, naming it', async () => {
+    const { store, files } = setup(
+      fakeFiles({
+        pickDocument: vi.fn(() =>
+          Promise.resolve({
+            uri: 'content://voice-memo',
+            name: 'Voice memo.m4a',
+            mimeType: 'audio/mp4',
+          }),
+        ),
+      }),
+    );
+    await store.getState().importSong();
+    expect(files.importAudio).not.toHaveBeenCalled();
+    expect(store.getState().notice).toEqual({
+      kind: 'formatRefused',
+      name: 'Voice memo.m4a',
+      format: 'm4a',
+      supported: ['wav', 'mp3', 'flac'],
+    });
+    expect(store.getState().importing).toEqual([]);
+    expect(store.getState().rows).toEqual([]);
+  });
+
+  it('imports a damaged file in a supported format and lets analysis fail it', async () => {
+    const { store, files } = setup();
+    await importOne(store);
+    expect(files.importAudio).toHaveBeenCalledOnce();
+    expect(store.getState().notice).toBeNull();
+    await store
+      .getState()
+      .receiveAnalysis(result({ ok: false, error: 'unsupported' }));
+    expect(badges(store)).toEqual([['Everlong', 'failed']]);
+  });
+
   it('says a copied file could not be added when the database refuses it', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const { store, records, files } = setup();

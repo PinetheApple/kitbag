@@ -26,6 +26,7 @@ import com.kitbag.corenative.library.NativeWaveform
 import com.kitbag.corenative.library.StemBundleBridge
 import com.kitbag.corenative.library.StemBundleRefusedException
 import com.kitbag.corenative.library.StorageUsage
+import com.kitbag.corenative.library.SupportedAudio
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.ExecutorService
@@ -337,6 +338,8 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       "failureUnsupported" to AnalysisFailure.UNSUPPORTED,
       "failureInterrupted" to AnalysisFailure.INTERRUPTED,
       "failureInternal" to AnalysisFailure.INTERNAL,
+      "supportedAudioExtensions" to SupportedAudio.EXTENSIONS,
+      "supportedAudioMimeTypes" to SupportedAudio.MIME_TYPES,
     ) + StemBundleBridge.CONSTANTS
 
   companion object {

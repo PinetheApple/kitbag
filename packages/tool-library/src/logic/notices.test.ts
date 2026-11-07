@@ -49,6 +49,36 @@ describe('noticeText', () => {
   });
 });
 
+describe('format refused', () => {
+  const refused = (format: string) =>
+    ({
+      kind: 'formatRefused',
+      name: 'Voice memo.m4a',
+      format,
+      supported: ['wav', 'mp3', 'flac'],
+    }) as const;
+
+  it('names the refused format and the ones Kitbag plays', () => {
+    expect(noticeText(refused('m4a'))).toEqual({
+      status: 'Unsupported format',
+      text: '“Voice memo.m4a” is in M4A format. Kitbag plays WAV, MP3 and FLAC, so nothing was added. Convert it to one of those, then import it again.',
+    });
+  });
+
+  it('says the format is unrecognised when the file names none', () => {
+    expect(noticeText(refused('')).text).toBe(
+      '“Voice memo.m4a” is in a format Kitbag does not recognise. Kitbag plays WAV, MP3 and FLAC, so nothing was added. Convert it to one of those, then import it again.',
+    );
+  });
+
+  it('reads as a refusal, not a failure', () => {
+    expect(noticeLook(refused('ogg'))).toEqual({
+      tone: 'warning',
+      icon: 'warning',
+    });
+  });
+});
+
 describe('stem song added elsewhere', () => {
   const added = {
     kind: 'stemSongAdded',
@@ -83,12 +113,11 @@ describe('failureText', () => {
         canRetry: false,
       },
     );
-    expect(failureText({ kind: 'unsupported', keptGrid: false })).toMatchObject(
-      {
-        status: 'Unsupported format',
-        canRetry: false,
-      },
-    );
+    expect(failureText({ kind: 'unsupported', keptGrid: false })).toEqual({
+      status: 'Could not decode',
+      text: 'This file could not be decoded, so there is no beat grid to lock to. It may be damaged; import a fresh copy.',
+      canRetry: false,
+    });
     expect(failureText({ kind: 'interrupted', keptGrid: false }).canRetry).toBe(
       true,
     );
@@ -99,7 +128,7 @@ describe('failureText', () => {
 
   it('says the previous grid is kept when a re-analysis fails', () => {
     expect(failureText({ kind: 'unsupported', keptGrid: true })).toEqual({
-      status: 'Unsupported format',
+      status: 'Could not decode',
       text: 'Re-analysis failed; the previous beat grid is kept.',
       canRetry: true,
     });

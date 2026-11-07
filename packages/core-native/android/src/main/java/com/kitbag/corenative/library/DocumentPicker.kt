@@ -152,7 +152,7 @@ class DocumentPicker(
     val PICK_REQUESTS = setOf(REQUEST_PICK_DOCUMENT, REQUEST_PICK_FOLDER, REQUEST_PICK_BACKUP)
 
     val PICKABLE_MIME_TYPES =
-      arrayOf("audio/*", "application/zip", "application/x-zip-compressed")
+      (SupportedAudio.MIME_TYPES + listOf("application/zip", "application/x-zip-compressed")).toTypedArray()
     val BACKUP_MIME_TYPES =
       arrayOf(BackupFiles.JSON_MIME, "text/plain", "application/octet-stream")
   }

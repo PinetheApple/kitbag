@@ -1032,3 +1032,7 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
 - **2026-11-07 · Song-grid accents (§4.3, #300)** — Under a grid only each song bar's first
   beat is accented; the standalone accent row and its mutes are ignored. With no downbeats
   there is no bar accent. **[user]**
+- **2026-11-07 · Unsupported audio formats (§6.2, #308)** — No new decoders. The picker offers
+  only WAV, MP3, FLAC and stem-bundle zips, and import refuses any other format before copying,
+  naming it. The list lives in `SupportedAudio.kt` and reaches JS as library constants.
+  **[user]**

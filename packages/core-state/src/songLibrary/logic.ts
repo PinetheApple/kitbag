@@ -124,6 +124,46 @@ export function audioFormat(relativePath: string): string {
   return dot <= 0 ? '' : name.slice(dot + 1).toLocaleLowerCase();
 }
 
+export type FormatCheck =
+  | { readonly supported: true }
+  | { readonly supported: false; readonly format: string };
+
+type SupportedAudio = Pick<
+  LibraryConstants,
+  'supportedAudioExtensions' | 'supportedAudioMimeTypes'
+>;
+
+const AUDIO_MIME_PREFIX = 'audio/';
+const NONSTANDARD_MIME_PREFIX = 'x-';
+const EXTENSION_LIKE = /^[\da-z]+$/;
+
+function mimeFormat(mimeType: string): string {
+  if (!mimeType.startsWith(AUDIO_MIME_PREFIX)) return '';
+  const subtype = mimeType.slice(AUDIO_MIME_PREFIX.length);
+  return subtype.startsWith(NONSTANDARD_MIME_PREFIX)
+    ? subtype.slice(NONSTANDARD_MIME_PREFIX.length)
+    : subtype;
+}
+
+// Providers misreport MIME types and some names carry no extension, so either
+// one naming a format the core opens is enough.
+export function checkAudioFormat(
+  file: { readonly name: string; readonly mimeType: string },
+  supported: SupportedAudio,
+): FormatCheck {
+  const extension = audioFormat(file.name);
+  const mimeType = file.mimeType.toLocaleLowerCase();
+  if (
+    supported.supportedAudioExtensions.includes(extension) ||
+    supported.supportedAudioMimeTypes.includes(mimeType)
+  )
+    return { supported: true };
+  const format = EXTENSION_LIKE.test(extension)
+    ? extension
+    : mimeFormat(mimeType);
+  return { supported: false, format };
+}
+
 export function songFolder(songsDir: string, songUuid: string): string {
   return `${songsDir}/${songUuid}`;
 }

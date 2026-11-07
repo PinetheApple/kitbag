@@ -13,6 +13,7 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import {
   audioFormat,
+  checkAudioFormat,
   fileRemovals,
   isStemArchive,
   parentDir,
@@ -47,6 +48,12 @@ export type LibraryNotice =
       readonly kind: 'bundleRefused';
       readonly name: string;
       readonly refusal: BundleRefusal;
+    }
+  | {
+      readonly kind: 'formatRefused';
+      readonly name: string;
+      readonly format: string;
+      readonly supported: readonly string[];
     }
   | { readonly kind: 'copyFailed'; readonly name: string }
   | { readonly kind: 'addFailed'; readonly name: string }
@@ -209,16 +216,30 @@ function importActions(
       picking = false;
     }
   };
+  const refuseFormat = (doc: PickedDocument, codes: LibraryConstants) => {
+    const check = checkAudioFormat(doc, codes);
+    if (check.supported) return false;
+    set({
+      notice: {
+        kind: 'formatRefused',
+        name: doc.name,
+        format: check.format,
+        supported: codes.supportedAudioExtensions,
+      },
+    });
+    return true;
+  };
   const importDocument = async (doc: PickedDocument) => {
     await whileImporting(set, get, doc.name, async () => {
       const codes = loadCodes(deps, get);
+      set({ codes });
+      if (codes !== null && refuseFormat(doc, codes)) return;
       const outcome: ImportOutcome =
         codes === null
           ? { ok: false, kind: 'copyFailed' }
           : await importAudio(deps, doc, codes.songsDir);
       if (outcome.ok) enqueue(deps.files(), outcome.song, false);
       else set({ notice: { kind: outcome.kind, name: doc.name } });
-      set({ codes });
     });
     await get().refresh();
   };

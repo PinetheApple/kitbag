@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   analysisFailure,
   audioFormat,
+  checkAudioFormat,
   filterRows,
   isStemArchive,
   songBadge,
@@ -146,6 +147,34 @@ describe('import helpers', () => {
     expect(isStemArchive({ name: 'a.mp3', mimeType: 'audio/mpeg' })).toBe(
       false,
     );
+  });
+
+  it.each([
+    ['Everlong.MP3', 'audio/mpeg'],
+    ['take.wav', ''],
+    ['take.flac', 'application/octet-stream'],
+    ['Track 01', 'audio/flac'],
+    ['Track 01. Intro', 'audio/mpeg'],
+  ] as const)('admits %s (%s), which the core can open', (name, mimeType) => {
+    expect(checkAudioFormat({ name, mimeType }, SHARED_CODES)).toEqual({
+      supported: true,
+    });
+  });
+
+  it.each([
+    ['Everlong.m4a', 'audio/mp4', 'm4a'],
+    ['Everlong.AAC', 'audio/aac', 'aac'],
+    ['Everlong.ogg', 'audio/ogg', 'ogg'],
+    ['Everlong.opus', '', 'opus'],
+    ['Everlong', 'audio/x-m4a', 'm4a'],
+    ['Track 01. Intro', 'audio/ogg', 'ogg'],
+    ['Everlong', 'application/octet-stream', ''],
+    ['Everlong', '', ''],
+  ] as const)('refuses %s (%s) and names it %j', (name, mimeType, format) => {
+    expect(checkAudioFormat({ name, mimeType }, SHARED_CODES)).toEqual({
+      supported: false,
+      format,
+    });
   });
 
   it('reads the format from the stored file name', () => {

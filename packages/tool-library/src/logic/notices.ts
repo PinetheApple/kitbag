@@ -46,10 +46,34 @@ function refusalText(name: string, refusal: BundleRefusal): NoticeText {
   }
 }
 
+function formatLabels(formats: readonly string[]): string {
+  const labels = formats.map((format) => format.toLocaleUpperCase());
+  const last = labels.pop();
+  if (last === undefined) return '';
+  return labels.length === 0 ? last : `${labels.join(', ')} and ${last}`;
+}
+
+function formatRefusedText(
+  name: string,
+  format: string,
+  supported: readonly string[],
+): NoticeText {
+  const what =
+    format === ''
+      ? 'in a format Kitbag does not recognise'
+      : `in ${format.toLocaleUpperCase()} format`;
+  return {
+    status: 'Unsupported format',
+    text: `“${name}” is ${what}. Kitbag plays ${formatLabels(supported)}, so nothing was added. Convert it to one of those, then import it again.`,
+  };
+}
+
 export function noticeText(notice: LibraryNotice): NoticeText {
   switch (notice.kind) {
     case 'bundleRefused':
       return refusalText(notice.name, notice.refusal);
+    case 'formatRefused':
+      return formatRefusedText(notice.name, notice.format, notice.supported);
     case 'copyFailed':
       return {
         status: 'Import failed',
@@ -91,7 +115,7 @@ export interface NoticeLook {
 export function noticeLook(notice: LibraryNotice): NoticeLook {
   if (notice.kind === 'stemSongAdded')
     return { tone: 'success', icon: 'check' };
-  if (notice.kind === 'bundleRefused')
+  if (notice.kind === 'bundleRefused' || notice.kind === 'formatRefused')
     return { tone: 'warning', icon: 'warning' };
   return { tone: 'danger', icon: 'warning' };
 }
@@ -109,8 +133,8 @@ const FAILURES: Readonly<Record<FailureKind, FailureText>> = {
     canRetry: false,
   },
   unsupported: {
-    status: 'Unsupported format',
-    text: 'This file’s format cannot be analyzed, so there is no beat grid to lock to.',
+    status: 'Could not decode',
+    text: 'This file could not be decoded, so there is no beat grid to lock to. It may be damaged; import a fresh copy.',
     canRetry: false,
   },
   interrupted: {

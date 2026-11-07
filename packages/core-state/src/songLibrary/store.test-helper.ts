@@ -38,6 +38,8 @@ export const CODES: LibraryConstants = {
   failureUnsupported: 'unsupported',
   failureInterrupted: 'interrupted',
   failureInternal: 'internal',
+  supportedAudioExtensions: ['wav', 'mp3', 'flac'],
+  supportedAudioMimeTypes: ['audio/x-wav', 'audio/mpeg', 'audio/flac'],
 };
 
 export const SONG_PATH = 'songs/f1/Everlong.mp3';
