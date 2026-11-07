@@ -63,6 +63,8 @@ export interface StemPlayerRuntime {
   ) => Promise<readonly number[]>;
 }
 
+export type MixerRuntime = Omit<StemPlayerRuntime, 'records'>;
+
 let configured: StemPlayerRuntime | undefined;
 
 export function configureStemPlayer(runtime: StemPlayerRuntime): void {

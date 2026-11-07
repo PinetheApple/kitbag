@@ -1,9 +1,19 @@
 import { KB_RESULT } from '@kitbag/core-native';
 
+import type { MixerSessionContext } from './clickActions.ts';
 import { loopBetween, snapToBeat, type LoopSeconds } from './loop.ts';
 import { sessionGate } from './sessionGate.ts';
-import type { ActionContext, LoopFailure, StemPlayerActions } from './store.ts';
+import type {
+  LoopFailure,
+  StemPlayerActions,
+  StemPlayerState,
+} from './store.ts';
 import { framesToSeconds, secondsToFrames } from './time.ts';
+
+export type LoopSlice = Pick<
+  StemPlayerState,
+  'beats' | 'engineRate' | 'durationFrames' | 'loop' | 'loopFailure'
+>;
 
 function failureOf(result: number): LoopFailure {
   return result === KB_RESULT.KB_ERROR_INVALID_ARGUMENT ? 'pastEnd' : 'engine';
@@ -14,7 +24,7 @@ export function loopActions({
   get,
   runtimeOf,
   session,
-}: ActionContext): Pick<StemPlayerActions, 'markLoop'> {
+}: MixerSessionContext<LoopSlice>): Pick<StemPlayerActions, 'markLoop'> {
   const { busy, call } = sessionGate(session);
   const positionSeconds = () =>
     framesToSeconds(runtimeOf().engine.position(), get().engineRate);

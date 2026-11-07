@@ -2,9 +2,15 @@ import type { Debounced } from './debounce.ts';
 import { clamp } from '../metronome/config.ts';
 import { soloAfter, UNITY_GAIN } from './mix.ts';
 import type { MixSaver } from './mixSaver.ts';
-import type { StemPlayerRuntime } from './runtime.ts';
+import type { MixerRuntime, StemPlayerRuntime } from './runtime.ts';
 import { restartFromFrame, songTransportShown } from './songTransport.ts';
-import type { Get, SetState, StemPlayerActions, StemRow } from './store.ts';
+import type {
+  Get,
+  SetState,
+  StemPlayerActions,
+  StemPlayerState,
+  StemRow,
+} from './store.ts';
 import { secondsToFrames } from './time.ts';
 
 type RuntimeOf = () => StemPlayerRuntime;
@@ -86,9 +92,14 @@ export function mixActions(
   };
 }
 
+export type TransportSlice = Pick<
+  StemPlayerState,
+  'title' | 'artist' | 'durationFrames' | 'engineRate'
+>;
+
 export function transportActions(
-  get: Get,
-  runtimeOf: RuntimeOf,
+  get: () => TransportSlice,
+  runtimeOf: () => MixerRuntime,
   scrubSeek: Debounced<[number]>,
 ): Pick<
   StemPlayerActions,

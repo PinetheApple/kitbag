@@ -12,6 +12,7 @@ import { debounce } from './debounce.ts';
 import { NO_SONG_FACTS, songFacts, type SongFacts } from './facts.ts';
 import { loopActions } from './loopActions.ts';
 import { UNITY_GAIN } from './mix.ts';
+import { createMixerOwner, mixerOwner, type MixerOwner } from './mixerOwner.ts';
 import { mixSaver } from './mixSaver.ts';
 import { renameActions } from './renameActions.ts';
 import {
@@ -22,7 +23,7 @@ import {
 import { secondsToFrames } from './time.ts';
 
 const MIX_SAVE_DELAY_MS = 600;
-const SCRUB_SEEK_DELAY_MS = 120;
+export const SCRUB_SEEK_DELAY_MS = 120;
 
 export interface StemRow {
   readonly id: number;
@@ -169,6 +170,7 @@ async function loadTracks(
 export function createStemPlayerStore(
   runtimeOf: () => StemPlayerRuntime = getStemPlayer,
   timing: StemPlayerTiming = DEFAULT_TIMING,
+  mixer: MixerOwner = createMixerOwner(),
 ): StoreApi<StemPlayerStore> {
   let session = 0;
   let requestedTracks = 0;
@@ -275,11 +277,26 @@ export function createStemPlayerStore(
       loadWaveforms(opened, record, bars);
     };
 
+    // A second close, from a screen whose session was already displaced, must
+    // not stop the song that displaced it.
+    const close = () => {
+      if (get().setId === null) return;
+      mixer.release(close);
+      session++;
+      teardown(get);
+      set(closedState);
+      releaseEngine?.();
+      releaseEngine = null;
+      songStopSubscription?.remove();
+      songStopSubscription = null;
+    };
+
     return {
       ...closedState,
       open: async (setId, waveformBars) => {
         if (get().setId !== null) teardown(get);
         releaseEngine ??= acquireEngineHold(runtimeOf().commands);
+        mixer.claim(close);
         songStopSubscription ??= runtimeOf().commands.onSongStopped(() => {
           turnClickOff(context);
         });
@@ -292,15 +309,7 @@ export function createStemPlayerStore(
           if (live(opened)) set({ status: 'failed' });
         }
       },
-      close: () => {
-        session++;
-        teardown(get);
-        set(closedState);
-        releaseEngine?.();
-        releaseEngine = null;
-        songStopSubscription?.remove();
-        songStopSubscription = null;
-      },
+      close,
       ...mixActions(set, get, runtimeOf, saver),
       ...transportActions(get, runtimeOf, scrubSeek),
       ...loopActions(context),
@@ -310,4 +319,8 @@ export function createStemPlayerStore(
   });
 }
 
-export const stemPlayerStore = createStemPlayerStore();
+export const stemPlayerStore = createStemPlayerStore(
+  getStemPlayer,
+  DEFAULT_TIMING,
+  mixerOwner,
+);
