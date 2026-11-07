@@ -86,6 +86,7 @@ export interface StemPlayerState {
 
 export interface StemPlayerActions {
   readonly open: (setId: number, waveformBars: number) => Promise<void>;
+  readonly acquireSong: (setId: number, waveformBars: number) => () => void;
   readonly close: () => void;
   readonly setGain: (index: number, gain: number) => void;
   readonly toggleMute: (index: number) => void;
@@ -307,17 +308,35 @@ export function createStemPlayerStore(
       loadWaveforms(opened, record, bars);
     };
 
+    const beginSession = (setId: number) => {
+      const opened = mixer.begin();
+      set({ ...closedState, status: 'loading', setId });
+      return opened;
+    };
+
+    const loadSession = async (opened: number, setId: number, bars: number) => {
+      try {
+        await load(opened, setId, bars);
+      } catch (error: unknown) {
+        console.warn('[kitbag] stem song failed to open', error);
+        if (live(opened)) set({ status: 'failed' });
+      }
+    };
+
     return {
       ...closedState,
       open: async (setId, waveformBars) => {
-        const opened = mixer.begin();
-        set({ ...closedState, status: 'loading', setId });
-        try {
-          await load(opened, setId, waveformBars);
-        } catch (error: unknown) {
-          console.warn('[kitbag] stem song failed to open', error);
-          if (live(opened)) set({ status: 'failed' });
-        }
+        await loadSession(beginSession(setId), setId, waveformBars);
+      },
+      // Across an Activity relaunch the new screen can acquire before the old
+      // one unmounts, so a release only closes the session it acquired.
+      acquireSong: (setId, waveformBars) => {
+        const acquired = beginSession(setId);
+        void loadSession(acquired, setId, waveformBars);
+        const release = () => {
+          if (live(acquired)) get().close();
+        };
+        return release;
       },
       close: mixer.close,
       ...mixActions(set, get, runtimeOf, saver),
