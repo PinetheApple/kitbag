@@ -68,6 +68,7 @@ export interface StemPlayerState {
 
 export interface StemPlayerActions {
   readonly open: (setId: number, waveformBars: number) => Promise<void>;
+  readonly attach: (setId: number, waveformBars: number) => () => void;
   readonly close: () => void;
   readonly setGain: (index: number, gain: number) => void;
   readonly toggleMute: (index: number) => void;
@@ -291,6 +292,15 @@ export function createStemPlayerStore(
           console.warn('[kitbag] stem song failed to open', error);
           if (live(opened)) set({ status: 'failed' });
         }
+      },
+      // Across an Activity relaunch the new screen can open before the old one
+      // unmounts, so a screen may only close the session it opened.
+      attach: (setId, waveformBars) => {
+        void get().open(setId, waveformBars);
+        const attached = session;
+        return () => {
+          if (live(attached)) get().close();
+        };
       },
       close: () => {
         session++;
