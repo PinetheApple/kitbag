@@ -252,9 +252,9 @@ Short version:
   `main`. Built: the metronome with setlists and presets, the Home hub, the tuner
   (#117, #127), song import with background beat analysis (#160), the Songs and
   Stem songs screens (#178) and the stem player (#137, #177; device
-  verification pending, issues open). Not built: stem speed and key (#138), a
-  single-song player (§6), play along (§8), Settings (#170). Open issues are the
-  backlog.
+  verification pending, issues open). Stem speed and key (#138): engine and
+  binding built, UI not. Not built: a single-song player (§6), play along (§8),
+  Settings (#170). Open issues are the backlog.
 
 ## Honesty rules
 

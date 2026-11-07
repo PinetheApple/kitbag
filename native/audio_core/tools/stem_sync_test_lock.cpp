@@ -32,8 +32,8 @@ struct LockCase {
 constexpr size_t kPulseStems = 2;
 constexpr double kChangeFromRate = 0.75;
 constexpr double kChangeToRate = 0.5;
-// The change is heard midway between two pulses: one it splits skews its own
-// centre by milliseconds with the click still on the beat.
+// Midway between two pulses: a change up to ~58 ms before a beat moved that beat's
+// 60 ms pulse by -9 ms slowing, +7.4 ms speeding, one beat only; the click stays.
 constexpr int kBlocksBeforeChange = 961;
 constexpr int32_t kFiveKeys[] = {-2, 3, 1, 4, -5};
 constexpr double kFiveKeyRates[] = {0.75, kitbag::kUnityRate};

@@ -971,11 +971,12 @@ StemDeck's two core practice controls; without them a stem player is a mixer.
   from the song control — the number on a row is what that row plays.
 - Native: one stretch instance per semitone in use (a key bus), doing both
   speed and key for the stems at that semitone; bus outputs are summed, master
-  gain after. At 1.0× with every stem at 0 no instance exists and the mix is
-  sample-exact. Instances are built and primed on the app thread and published
-  to the callback, which starts them at one predicted sample; nothing allocates
-  on the audio thread. More than four semitones in use put every bus on the
-  vendor's default configuration.
+  gain after. A song that has not left 1.0× and 0 has no instance and its mix is
+  sample-exact; a song returned there mid-play keeps its instances until the
+  next seek or stop, then the same holds. Instances are built and primed on the
+  app thread and published to the callback, which starts them at one predicted
+  sample; nothing allocates on the audio thread. More than four semitones in use
+  put every bus on Signalsmith's `presetDefault`.
 - Positions, loop points, the grid and the click stay in song time (§4.2.2).
 - Mixdown export (§7.7) renders speed and key as heard.
 

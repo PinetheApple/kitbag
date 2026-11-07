@@ -72,6 +72,32 @@ void TestBypassIsSampleExact() {
   Check(!mixer.stretch_engaged(), "disengage: a seek at 1.0x, 0 st bypasses");
 }
 
+void TestStopAtUnityFreesTheBuses() {
+  kitbag::Mixer mixer(kSampleRate);
+  LoadRamp(&mixer, 0, kLoopTrackFrames, 0.0f);
+  mixer.Play();
+  mixer.SetRate(kSpeed, 0, false);
+  RenderPaced(&mixer, HandOverBlocks(mixer));
+  mixer.SetRate(kitbag::kUnityRate, 0, false);
+  mixer.Pause();
+  RenderPaced(&mixer, 1);
+  mixer.Play();
+  RenderPaced(&mixer, 1);
+  Check(
+      mixer.stretch_engaged() && mixer.key_bus_count() > 0,
+      "engage: back at 1.0x it holds across a pause"
+  );
+  mixer.Stop(0, false);
+  RenderPaced(&mixer, 1);
+  Check(
+      !mixer.stretch_engaged() && mixer.key_bus_count() == 0,
+      "disengage: a stop at 1.0x, 0 st frees every bus"
+  );
+  mixer.Play();
+  const std::vector<float> left = RenderPaced(&mixer, 1);
+  ExpectAt(left, 1, 1, "disengage: play after the stop is frame for frame");
+}
+
 int64_t ControlLatency(float rate, float key) {
   kitbag::Mixer mixer(kSampleRate);
   LoadPcm(
@@ -334,6 +360,7 @@ void TestProcessNeverAllocates() {
 void RunStretchTests() {
   TestTakeAndCarrySum();
   TestBypassIsSampleExact();
+  TestStopAtUnityFreesTheBuses();
   TestControlLatencyPerState();
   TestEngageTransition();
   TestPrimeLeavesNoGap();
