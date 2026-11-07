@@ -1,0 +1,1 @@
+• Fixed the stem player getting stuck on "Opening the stems…" after changing the system font size.
