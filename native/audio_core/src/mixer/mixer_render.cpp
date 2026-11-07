@@ -73,6 +73,7 @@ void Mixer::AdoptTransport(const TransportPlan& plan) {
     stream_frame_ = plan.frame;
     jump_base_.store(now, std::memory_order_relaxed);
     engaged_.store(false, std::memory_order_relaxed);
+    continues_run_ = plan.continues && (continues_run_ || !opens_on_jump_);
     opens_on_jump_ = true;
   }
   layout_ = plan.layout;
@@ -209,6 +210,7 @@ void Mixer::AdvanceTransport(uint32_t frame_count) {
   song_clock_ = {
       .playing = true,
       .opens_on_jump = std::exchange(opens_on_jump_, false),
+      .continues_run = std::exchange(continues_run_, false),
       .first = stream_frame_,
       .frames = static_cast<uint32_t>(advance),
       .layout = layout_

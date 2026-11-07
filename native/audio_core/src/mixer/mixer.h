@@ -276,7 +276,7 @@ class Mixer {
   };
   bool PrimeNow(uint64_t now_frame, bool engine_running);
   bool PrimeAwaitingEngage() const;
-  int64_t HeadToPrime() const;
+  TransportPlan ReprimePlan() const;
   bool
   PrimedRelayout(TransportPlan plan, uint64_t now_frame, bool engine_running);
   bool BuildBank(int64_t frame, bool staged, Bank* bank);
@@ -350,6 +350,7 @@ class Mixer {
   std::atomic<int64_t> jump_base_{0};
   SongClock song_clock_;
   bool opens_on_jump_ = false;
+  bool continues_run_ = false;
   RtPublisher<TransportPlan> plans_;
   uint64_t app_epoch_ = 0;
   LoopLayout app_layout_;

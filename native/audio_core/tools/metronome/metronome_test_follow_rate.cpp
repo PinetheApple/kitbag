@@ -16,6 +16,8 @@ constexpr int64_t kHead = 1777;
 // One voice at most an accent; a stacked pair sums to well over this.
 constexpr double kPeakTolerance = 1.05;
 constexpr int64_t kRingDownFrames = 20 * kBlockFrames;
+constexpr double kRewindFrames = 900.0;
+constexpr int kWrappedBlocks = 6;
 constexpr double kBpmTolerance = 1e-6;
 constexpr double kHalfSpeed = 0.5;
 // 20002 / 0.75 ends half a frame into the wrapped pass.
@@ -59,6 +61,7 @@ struct Fixture {
   int64_t quiet = kGapFrames;
   bool playing = true;
   bool opens_on_jump = false;
+  bool continues_run = false;
   Take take;
 
   template <size_t N>
@@ -92,6 +95,7 @@ struct Fixture {
       const kitbag::SongClock clock = {
           .playing = playing,
           .opens_on_jump = std::exchange(opens_on_jump, false),
+          .continues_run = std::exchange(continues_run, false),
           .first = done,
           .frames = kBlockFrames,
           .records = &records
@@ -262,6 +266,60 @@ void TestBpmMirrorStaysSongTempo() {
   );
 }
 
+void TestContinuationKeepsItsBeatOnce() {
+  Fixture fixture(kBeats);
+  fixture.Reset(RecordFrom(0, kHead, kThreeQuarters));
+  const int64_t first = LandsOn(0, kHead, kBeats[0], kThreeQuarters);
+  fixture.RenderUntil(first + kGapFrames + kBlockFrames);
+  const int64_t rewind = fixture.done;
+  const double head = kBeats[0] - kRewindFrames;
+  fixture.Reset(RecordFrom(rewind, head, kThreeQuarters));
+  fixture.opens_on_jump = true;
+  fixture.continues_run = true;
+  const int64_t next = LandsOn(rewind, head, kBeats[1], kThreeQuarters);
+  fixture.RenderUntil(next + kGapFrames);
+  Check(
+      click_take::SameClicks(fixture.take.triggers, {first, next}),
+      "follow rate: a continuation leaves a sounded beat and fires the next"
+  );
+  ExpectSingleVoices(
+      fixture.take,
+      "follow rate: a continuation stacks no voices"
+  );
+}
+
+// The last onset sits near the old pass's end, ahead of the head: it is no beat
+// the jump rewinds over, and flooring on it would silence this whole pass.
+void TestContinuationAfterAWrapKeepsThePass() {
+  const double beats[] = {36000.4, kLoopEnd - 500.3};
+  Fixture fixture(beats);
+  constexpr int64_t kFrom = kLoopEnd - 1500;
+  const kitbag::LoopLayout loop = {
+      .looping = true,
+      .start = kLoopStart,
+      .end = kLoopEnd
+  };
+  kitbag::SongRecord record = RecordFrom(0, kFrom, kThreeQuarters);
+  record.layout = loop;
+  fixture.Reset(record);
+  const int64_t end_beat = LandsOn(0, kFrom, beats[1], kThreeQuarters);
+  const int64_t wrap = LandsOn(0, kFrom, kLoopEnd, kThreeQuarters);
+  fixture.RenderUntil(wrap + kWrappedBlocks * kBlockFrames);
+  const int64_t rewind = fixture.done;
+  const double head = kLoopStart + kWrapLandsInFrame;
+  record = RecordFrom(rewind, head, kThreeQuarters);
+  record.layout = loop;
+  fixture.Reset(record);
+  fixture.opens_on_jump = true;
+  fixture.continues_run = true;
+  const int64_t mid = LandsOn(rewind, head, beats[0], kThreeQuarters);
+  fixture.RenderUntil(mid + kGapFrames);
+  Check(
+      click_take::SameClicks(fixture.take.triggers, {end_beat, mid}),
+      "follow rate: a continuation after a wrap keeps the new pass's beats"
+  );
+}
+
 }  // namespace
 
 void RunFollowRateTests() {
@@ -282,6 +340,8 @@ void RunFollowRateTests() {
   TestLoopWrapKeepsTheStartBeat();
   TestSeekBackReplaysAtRate();
   TestSeekOntoTheLastFrameReplays();
+  TestContinuationKeepsItsBeatOnce();
+  TestContinuationAfterAWrapKeepsThePass();
   TestBpmMirrorStaysSongTempo();
 }
 

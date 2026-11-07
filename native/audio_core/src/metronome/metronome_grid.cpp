@@ -14,6 +14,7 @@ using metronome_detail::Clamp;
 using metronome_detail::kGridEpsilon;
 using metronome_detail::kMsPerSecond;
 using metronome_detail::kSecondsPerMinute;
+using metronome_detail::OnsetFloorSec;
 using metronome_detail::PhaseBelowOne;
 
 namespace {
@@ -172,6 +173,27 @@ void Metronome::PublishGridMirrors(const BeatGrid& grid, double song_seconds) {
   );
 }
 
+namespace {
+
+double FireLimitSec(const LoopLayout& layout, uint32_t sample_rate) {
+  return layout.looping ? static_cast<double>(layout.end - 1) / sample_rate
+                        : std::numeric_limits<double>::infinity();
+}
+
+// A re-prime rewinds the song under beats that already sounded, and only those:
+// an onset ahead of the frame last heard belongs to a pass since wrapped.
+double ContinuationSeekSec(
+    const BeatGrid& grid,
+    const GridOnset& last_onset,
+    double head_sec,
+    double next_heard_sec
+) {
+  if (last_onset.song_sec > next_heard_sec) return head_sec;
+  return std::max(head_sec, OnsetFloorSec(grid, last_onset));
+}
+
+}  // namespace
+
 void Metronome::RenderGridSample(
     const BeatGrid& grid,
     const SongClock* song,
@@ -188,17 +210,22 @@ void Metronome::RenderGridSample(
   const SongPoint point = song->PointAt(frame);
   const auto whole_frame = static_cast<double>(point.frame);
   follow_seconds_ = (whole_frame + point.fraction) / sample_rate;
-  grid_fire_limit_ =
-      point.layout->looping
-          ? static_cast<double>(point.layout->end - 1) / sample_rate
-          : std::numeric_limits<double>::infinity();
+  grid_fire_limit_ = FireLimitSec(*point.layout, sample_rate);
   // Below 1.0x a song frame repeats, which is no jump. A new pass lands inside
   // a frame, so seek to its start or a beat right on the loop start is skipped.
   const int64_t step = point.frame - follow_last_frame_;
   const bool opens_on_jump = song->opens_on_jump && frame == 0;
   if (follow_last_frame_ == kReseedFollow || opens_on_jump || step < 0 ||
       step > 1) {
-    SeekGridCursor(grid, whole_frame / sample_rate);
+    const double head_sec = whole_frame / sample_rate;
+    const double next_heard_sec =
+        static_cast<double>(follow_last_frame_ + 1) / sample_rate;
+    SeekGridCursor(
+        grid,
+        opens_on_jump && song->continues_run
+            ? ContinuationSeekSec(grid, last_onset_, head_sec, next_heard_sec)
+            : head_sec
+    );
   }
   follow_last_frame_ = point.frame;
   RenderGridBeat(grid, follow_seconds_, sample_rate);

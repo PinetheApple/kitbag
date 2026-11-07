@@ -283,6 +283,7 @@ void RunPrimeTests();
 void RunRaceTests();
 void RunLandingTests();
 void RunRefusalTests();
+void RunRePrimeTests();
 
 }  // namespace mixer_test
 

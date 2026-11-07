@@ -59,6 +59,34 @@ void TestStretch() {
   CheckSeekLandsOnce(&mixer, "landed: a stretched seek marks one block");
 }
 
+bool ContinuesOnNextBlock(kitbag::Mixer* mixer) {
+  RenderPaced(mixer, 1);
+  return mixer->song_clock().opens_on_jump && mixer->song_clock().continues_run;
+}
+
+void TestSeekIsNoContinuation() {
+  kitbag::Mixer mixer(kSampleRate);
+  LoadTone(&mixer, kToneFrames);
+  mixer.SetRate(kSpeed, 0, false);
+  mixer.Play();
+  RenderPaced(&mixer, kSettleBlocks);
+  mixer.Seek(kSeekTo, 0, false);
+  Check(!ContinuesOnNextBlock(&mixer), "landed: a seek is no continuation");
+}
+
+// A callback that never answers leaves the last-resort jump at the head.
+void TestLastResortJumpContinues() {
+  kitbag::Mixer mixer(kSampleRate);
+  LoadTone(&mixer, kToneFrames);
+  mixer.Play();
+  RenderPaced(&mixer, kSettleBlocks);
+  mixer.SetRate(kSpeed, 0, true);
+  Check(
+      ContinuesOnNextBlock(&mixer),
+      "landed: the last-resort jump continues the run"
+  );
+}
+
 void TestSeekWhilePausedWaitsForPlay() {
   kitbag::Mixer mixer(kSampleRate);
   LoadTone(&mixer, kToneFrames);
@@ -82,6 +110,8 @@ void RunLandingTests() {
   TestBypass();
   TestStretch();
   TestSeekWhilePausedWaitsForPlay();
+  TestSeekIsNoContinuation();
+  TestLastResortJumpContinues();
 }
 
 }  // namespace mixer_test

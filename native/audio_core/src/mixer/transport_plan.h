@@ -23,6 +23,8 @@ struct TransportPlan {
   LoopLayout layout;
   uint64_t epoch = 0;
   bool primed = false;
+  // A re-prime of the head, no user's jump: it means no beat again.
+  bool continues = false;
   int bank = 0;
   uint64_t generation = 0;
   float rate = kUnityRate;

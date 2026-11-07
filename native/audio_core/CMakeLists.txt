@@ -251,6 +251,8 @@ if(KITBAG_BUILD_TOOLS)
     tools/mixer/mixer_test_race.cpp
     tools/mixer/mixer_test_landing.cpp
     tools/mixer/mixer_test_refusal.cpp
+    tools/mixer/mixer_test_reprime.cpp
+    ${KITBAG_METRONOME_SOURCES}
     src/media/streaming_track.cpp
     src/media/looping_source_reader.cpp
     src/mixer/key_bus.cpp
@@ -267,7 +269,7 @@ if(KITBAG_BUILD_TOOLS)
     src/media/resampling_source_reader.cpp
     src/media/miniaudio_impl.c
   )
-  target_include_directories(mixer_verify PRIVATE src tools tools/mixer tools/media third_party)
+  target_include_directories(mixer_verify PRIVATE src include tools tools/mixer tools/media third_party)
   # mixer_render.cpp's exhaustive CommandType switch is load-bearing here too.
   target_compile_options(mixer_verify PRIVATE -Werror=switch)
   target_link_libraries(mixer_verify PRIVATE signalsmith_stretch Threads::Threads m ${CMAKE_DL_LIBS})

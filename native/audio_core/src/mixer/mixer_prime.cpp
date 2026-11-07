@@ -20,8 +20,7 @@ bool Mixer::PrimeNow(uint64_t now_frame, bool engine_running) {
   if (app_playing_ && !engaged_.load(std::memory_order_relaxed)) {
     return HandOver(now_frame, engine_running);
   }
-  const TransportPlan plan{.frame = HeadToPrime(), .layout = app_layout_};
-  return PrimedRelayout(plan, now_frame, engine_running);
+  return PrimedRelayout(ReprimePlan(), now_frame, engine_running);
 }
 
 bool Mixer::PrimeAwaitingEngage() const {
@@ -29,12 +28,17 @@ bool Mixer::PrimeAwaitingEngage() const {
          !engaged_.load(std::memory_order_relaxed);
 }
 
-int64_t Mixer::HeadToPrime() const {
+TransportPlan Mixer::ReprimePlan() const {
   const Head head = PlannedHead();
-  if (!head.jump_pending && engaged_.load(std::memory_order_relaxed)) {
-    return SeekTarget(static_cast<int64_t>(position()));
-  }
-  return SeekTarget(app_layout_.SongFrameAt(head.stream));
+  const bool audible =
+      !head.jump_pending && engaged_.load(std::memory_order_relaxed);
+  const int64_t frame = audible ? static_cast<int64_t>(position())
+                                : app_layout_.SongFrameAt(head.stream);
+  return {
+      .frame = SeekTarget(frame),
+      .layout = app_layout_,
+      .continues = !head.jump_pending
+  };
 }
 
 bool Mixer::PrimedRelayout(
@@ -186,8 +190,7 @@ bool Mixer::HandOver(uint64_t now_frame, bool engine_running) {
     stalled = outcome == HandOverOutcome::kStalled;
     if (outcome != HandOverOutcome::kMissed) break;
   }
-  const TransportPlan plan{.frame = HeadToPrime(), .layout = app_layout_};
-  if (PrimedRelayout(plan, now_frame, engine_running)) return true;
+  if (PrimedRelayout(ReprimePlan(), now_frame, engine_running)) return true;
   if (stalled) RetractHandOver(now_frame, engine_running);
   return false;
 }
