@@ -65,17 +65,29 @@ bool Mixer::LoadTrack(
     bool engine_running
 ) {
   if (track < 0 || track >= kMaxTracks) return false;
-  const bool was_engaged = app_engaged_;
   const Prepared prepared = PrepareBusFor(track, clock, engine_running);
   const auto frame = static_cast<uint64_t>(PlannedHead().stream);
   StreamingTrack& stream = *tracks_[track].stream;
   if (!stream.Load(path, clock, engine_running, JoinStamp(), frame)) {
-    UndoPrepare(prepared.created, was_engaged, clock, engine_running);
+    UndoPrepare(prepared, clock, engine_running);
     return false;
   }
+  return FinishLoad(track, prepared, clock, engine_running);
+}
+
+// A stem kept after a failed prime stays silent, and the config flag it moved
+// would put later buses out of line with the live bank.
+bool Mixer::FinishLoad(
+    int track,
+    const Prepared& prepared,
+    FrameClock clock,
+    bool engine_running
+) {
   NoteTrackLoaded(track);
-  if (prepared.prime) PrimeNow(clock, engine_running);
-  return true;
+  if (!prepared.prime || PrimeNow(clock, engine_running)) return true;
+  UnloadTrack(track, clock, engine_running);
+  UndoPrepare(prepared, clock, engine_running);
+  return false;
 }
 
 void Mixer::UnloadTrack(int track, FrameClock clock, bool engine_running) {
@@ -100,18 +112,15 @@ bool Mixer::SetTrackSource(
     bool engine_running
 ) {
   if (track < 0 || track >= kMaxTracks) return false;
-  const bool was_engaged = app_engaged_;
   const Prepared prepared = PrepareBusFor(track, clock, engine_running);
   const auto frame = static_cast<uint64_t>(PlannedHead().stream);
   const SourceStamp stamp = JoinStamp();
   StreamingTrack& stream = *tracks_[track].stream;
   if (!stream.LoadReader(reader, clock, engine_running, stamp, frame)) {
-    UndoPrepare(prepared.created, was_engaged, clock, engine_running);
+    UndoPrepare(prepared, clock, engine_running);
     return false;
   }
-  NoteTrackLoaded(track);
-  if (prepared.prime) PrimeNow(clock, engine_running);
-  return true;
+  return FinishLoad(track, prepared, clock, engine_running);
 }
 
 bool Mixer::Enqueue(const Command& command) {

@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
 #include <numbers>
 #include <string>
 #include <thread>
@@ -82,6 +83,18 @@ inline std::string
 LoadSilence(kitbag::Mixer* mixer, int track, int64_t frames) {
   LoadPcm(mixer, track, ToneFixture({.frames = frames}));
   return TempFiles().back();
+}
+
+inline std::string HiddenPath(const std::string& path) {
+  return path + ".gone";
+}
+
+inline void Hide(const std::string& path) {
+  std::filesystem::rename(path, HiddenPath(path));
+}
+
+inline void Unhide(const std::string& path) {
+  std::filesystem::rename(HiddenPath(path), path);
 }
 
 inline void WaitForReadAhead(const kitbag::Mixer& mixer) {
@@ -292,6 +305,7 @@ void RunLandingTests();
 void RunRefusalTests();
 void RunRePrimeTests();
 void RunRetireTests();
+void RunLoadRefusalTests();
 
 }  // namespace mixer_test
 

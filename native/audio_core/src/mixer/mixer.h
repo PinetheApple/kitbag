@@ -49,7 +49,8 @@ class Mixer {
   /// Load a track from a file path, streamed from disk and published by atomic
   /// swap (SPEC.md §4.1). [clock] and [engine_running] date the retired
   /// source for deferred reclamation. False for a null path, a track outside
-  /// [0, kMaxTracks), or a file that will not open.
+  /// [0, kMaxTracks), or a file that will not open; also when joining needs a
+  /// prime that fails on any stem, which leaves this track unloaded at key 0.
   bool
   LoadTrack(int track, const char* path, FrameClock clock, bool engine_running);
 
@@ -61,7 +62,7 @@ class Mixer {
 
   bool track_ready(int track) const;
 
-  /// [reader] is caller-owned and must outlive the track.
+  /// [reader] is caller-owned and must outlive the track. Fails as LoadTrack.
   bool SetTrackSource(
       int track,
       SourceReader* reader,
@@ -237,6 +238,7 @@ class Mixer {
   void EnqueuePitch(int track, int pitch);
   void RestoreEngage(const EngageState& before);
   struct Prepared {
+    EngageState before;
     uint32_t created = 0;
     bool prime = false;
   };
@@ -247,9 +249,11 @@ class Mixer {
   BusChange
   EngageBuses(std::optional<int> extra, FrameClock clock, bool engine_running);
   Prepared PrepareBusFor(int track, FrameClock clock, bool engine_running);
-  void UndoPrepare(
-      uint32_t created,
-      bool was_engaged,
+  void
+  UndoPrepare(const Prepared& prepared, FrameClock clock, bool engine_running);
+  bool FinishLoad(
+      int track,
+      const Prepared& prepared,
       FrameClock clock,
       bool engine_running
   );

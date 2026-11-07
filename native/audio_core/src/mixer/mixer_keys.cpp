@@ -93,25 +93,24 @@ uint32_t Mixer::LiveBusMask() const {
 // Before the stem publishes, so the callback never reads it without a bus.
 Mixer::Prepared
 Mixer::PrepareBusFor(int track, FrameClock clock, bool engine_running) {
-  if (!app_engaged_ && app_pitch_[track] == 0) return {};
-  const uint32_t before = LiveBusMask();
+  Prepared prepared{.before = {app_engaged_, app_vendor_default_}};
+  if (!app_engaged_ && app_pitch_[track] == 0) return prepared;
+  const uint32_t live = LiveBusMask();
   const BusChange change =
       EngageBuses(app_pitch_[track], clock, engine_running);
-  return {
-      .created = LiveBusMask() & ~before,
-      .prime = change == BusChange::kNeedsPrime
-  };
+  prepared.created = LiveBusMask() & ~live;
+  prepared.prime = change == BusChange::kNeedsPrime;
+  return prepared;
 }
 
 void Mixer::UndoPrepare(
-    uint32_t created,
-    bool was_engaged,
+    const Prepared& prepared,
     FrameClock clock,
     bool engine_running
 ) {
-  app_engaged_ = was_engaged;
+  RestoreEngage(prepared.before);
   for (int s = 0; s < kKeyBusCount; ++s) {
-    if ((created & (1U << static_cast<unsigned>(s))) != 0) {
+    if ((prepared.created & (1U << static_cast<unsigned>(s))) != 0) {
       buses_[app_bank_][s].Publish(nullptr, clock.Now(), engine_running);
     }
   }

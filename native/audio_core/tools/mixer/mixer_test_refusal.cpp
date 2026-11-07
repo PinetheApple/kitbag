@@ -18,7 +18,6 @@ constexpr int64_t kSeekTo = kSampleRate + 7;
 constexpr int kSettleBlocks = 40;
 constexpr int kFragileTrack = 1;
 constexpr int kFifthKeyTrack = 4;
-constexpr const char* kHiddenSuffix = ".gone";
 
 std::string LoadSilence(kitbag::Mixer* mixer, int track) {
   LoadPcm(mixer, track, ToneFixture({.frames = kToneFrames}));
@@ -28,14 +27,6 @@ std::string LoadSilence(kitbag::Mixer* mixer, int track) {
 std::string LoadToneOverFragile(kitbag::Mixer* mixer) {
   LoadTone(mixer, kToneFrames);
   return LoadSilence(mixer, kFragileTrack);
-}
-
-void Hide(const std::string& path) {
-  std::filesystem::rename(path, path + kHiddenSuffix);
-}
-
-void Unhide(const std::string& path) {
-  std::filesystem::rename(path + kHiddenSuffix, path);
 }
 
 // Four distinct keys on tracks 0-3, the fifth stem sitting on a key already in use.
