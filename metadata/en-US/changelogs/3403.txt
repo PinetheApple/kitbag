@@ -1,0 +1,1 @@
+• Songs: the beat marks on a song's waveform no longer crowd into a solid comb on fast or long songs.
