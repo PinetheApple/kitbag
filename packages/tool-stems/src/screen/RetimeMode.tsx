@@ -15,7 +15,7 @@ import {
   useTheme,
 } from '@kitbag/core-design';
 import { NO_LINE, useStemPlayer, type RetimeState } from '@kitbag/core-state';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -26,6 +26,7 @@ import {
 
 import { retimePreview, shiftLabel } from '../logic/retimeView.ts';
 import { tapOnce } from '../logic/tapOnce.ts';
+import { useRetimeLayout, useRetimeScroll } from './retimeBodyHooks.ts';
 import { useLyricStyles } from './StageLyrics.tsx';
 
 const STEP_KEY_HIT_BOX = hitBoxStyle(
@@ -36,8 +37,6 @@ const STEP_KEY_HIT_BOX = hitBoxStyle(
 );
 const STEP_EARLIER = -1;
 const STEP_LATER = 1;
-// Rounding can leave a fitting body a fraction of a dp over.
-const OVERFLOW_SLOP_DP = 1;
 
 type Recording = Extract<RetimeState, { readonly kind: 'recording' }>;
 
@@ -56,6 +55,7 @@ const useStyles = createThemedStyles((theme) => ({
   },
   pinnedLines: { flex: 1, minHeight: 0 },
   pinnedLinesContent: { gap: stemSections.retimeGap },
+  controls: { flexShrink: 0, gap: stemSections.retimeGap },
   lines: {
     paddingTop: stemSections.retimeTop,
     paddingLeft: stemSections.linesLeft,
@@ -142,10 +142,15 @@ const useStyles = createThemedStyles((theme) => ({
 
 interface RetimeLinesProps {
   readonly retime: Recording;
+  readonly onLinesLayout?: (event: LayoutChangeEvent) => void;
   readonly onCurrentLayout?: (event: LayoutChangeEvent) => void;
 }
 
-function RetimeLines({ retime, onCurrentLayout }: RetimeLinesProps) {
+function RetimeLines({
+  retime,
+  onLinesLayout,
+  onCurrentLayout,
+}: RetimeLinesProps) {
   const styles = useStyles();
   const lyricStyles = useLyricStyles();
   const lines = useStemPlayer((s) => s.lyrics.lines);
@@ -154,7 +159,7 @@ function RetimeLines({ retime, onCurrentLayout }: RetimeLinesProps) {
     [lines, retime],
   );
   return (
-    <View style={styles.lines}>
+    <View testID="retime-column" style={styles.lines} onLayout={onLinesLayout}>
       {done === null ? null : (
         <View style={styles.done}>
           <View style={styles.doneMark}>
@@ -284,22 +289,25 @@ function RetimeControls({
   );
 }
 
+interface PinnedRetimeProps {
+  readonly retime: Recording;
+  readonly onBodyLayout: (event: LayoutChangeEvent) => void;
+  readonly onControlsLayout: (event: LayoutChangeEvent) => void;
+}
+
 // The lines take all the spare height, so no line can move the pad under a finger.
-function PinnedRetime({ retime }: { readonly retime: Recording }) {
+function PinnedRetime({
+  retime,
+  onBodyLayout,
+  onControlsLayout,
+}: PinnedRetimeProps) {
   const styles = useStyles();
-  const failed = useStemPlayer((s) => s.retimeFailure !== null);
-  const list = useRef<ScrollView>(null);
-  const showCurrent = useCallback(
-    (event: LayoutChangeEvent) => {
-      list.current?.scrollTo({
-        y: failed ? 0 : event.nativeEvent.layout.y,
-        animated: false,
-      });
-    },
-    [failed],
+  const { list, onLinesLayout, onCurrentLayout } = useRetimeScroll(
+    retime,
+    true,
   );
   return (
-    <View style={styles.pinned}>
+    <View testID="retime-pinned" style={styles.pinned} onLayout={onBodyLayout}>
       <ScrollView
         ref={list}
         testID="retime-lines"
@@ -307,51 +315,63 @@ function PinnedRetime({ retime }: { readonly retime: Recording }) {
         contentContainerStyle={styles.pinnedLinesContent}
       >
         <RetimeFailureCard />
-        <RetimeLines retime={retime} onCurrentLayout={showCurrent} />
+        <RetimeLines
+          retime={retime}
+          onLinesLayout={onLinesLayout}
+          onCurrentLayout={onCurrentLayout}
+        />
       </ScrollView>
-      <RetimeControls retime={retime} pinned />
+      <View
+        testID="retime-controls"
+        style={styles.controls}
+        onLayout={onControlsLayout}
+      >
+        <RetimeControls retime={retime} pinned />
+      </View>
     </View>
   );
 }
 
-function useOverflowLatch() {
-  const [overflowed, setOverflowed] = useState(false);
-  const viewport = useRef(0);
-  const content = useRef(0);
-  const check = useCallback(() => {
-    const past = content.current - viewport.current;
-    if (viewport.current > 0 && past > OVERFLOW_SLOP_DP) setOverflowed(true);
-  }, []);
-  const onViewport = useCallback(
-    (event: LayoutChangeEvent) => {
-      viewport.current = event.nativeEvent.layout.height;
-      check();
-    },
-    [check],
+// A drag here moves the pad, which the pinned layout exists to avoid; it is only for
+// controls too tall to pin, and it follows no line for the same reason.
+function ScrollingRetime({ retime }: { readonly retime: Recording }) {
+  const styles = useStyles();
+  const { list } = useRetimeScroll(retime, false);
+  return (
+    <ScrollView
+      ref={list}
+      testID="retime-body"
+      style={styles.body}
+      contentContainerStyle={styles.content}
+    >
+      <RetimeFailureCard />
+      <RetimeLines retime={retime} />
+      <RetimeControls retime={retime} pinned />
+    </ScrollView>
   );
-  const onContent = useCallback(
-    (_: number, height: number) => {
-      content.current = height;
-      check();
-    },
-    [check],
-  );
-  return { overflowed, onViewport, onContent };
 }
 
 export function RetimeBody() {
   const styles = useStyles();
   const retime = useStemPlayer((s) => s.retime);
-  const { overflowed, onViewport, onContent } = useOverflowLatch();
+  const layout = useRetimeLayout();
   if (retime.kind !== 'recording') return null;
-  if (overflowed) return <PinnedRetime retime={retime} />;
+  if (layout.mode === 'scrolling') return <ScrollingRetime retime={retime} />;
+  if (layout.mode === 'pinned')
+    return (
+      <PinnedRetime
+        retime={retime}
+        onBodyLayout={layout.onPinnedBody}
+        onControlsLayout={layout.onControls}
+      />
+    );
   return (
     <ScrollView
       testID="retime-body"
       style={styles.body}
       contentContainerStyle={styles.content}
-      onLayout={onViewport}
-      onContentSizeChange={onContent}
+      onLayout={layout.onViewport}
+      onContentSizeChange={layout.onContent}
     >
       <RetimeLines retime={retime} />
       <RetimeFailureCard />

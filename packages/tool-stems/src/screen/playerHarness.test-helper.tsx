@@ -11,7 +11,11 @@ import {
   SONG_DETAILS,
 } from '@kitbag/core-state/src/stemPlayer/store.test-helper.ts';
 import { act, Profiler } from 'react';
-import { create, type ReactTestInstance } from 'react-test-renderer';
+import {
+  create,
+  type ReactTestInstance,
+  type ReactTestRenderer,
+} from 'react-test-renderer';
 import { vi } from 'vitest';
 
 import { runFrame } from '../testing/reanimatedDriver.ts';
@@ -58,6 +62,26 @@ export async function flush(): Promise<void> {
 function textOf(node: ReactTestInstance | string): string {
   if (typeof node === 'string') return node;
   return node.children.map(textOf).join('');
+}
+
+export function withTestId(
+  { renderer }: { readonly renderer: ReactTestRenderer },
+  testID: string,
+): ReactTestInstance[] {
+  return renderer.root.findAll(
+    (node) => typeof node.type === 'string' && node.props.testID === testID,
+  );
+}
+
+export function fireLayout(
+  node: ReactTestInstance | undefined,
+  layout: object,
+): void {
+  act(() => {
+    (node?.props.onLayout as (e: unknown) => void)({
+      nativeEvent: { layout },
+    });
+  });
 }
 
 export function setHost(seconds: number, playing = 1): void {
