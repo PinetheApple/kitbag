@@ -144,7 +144,6 @@ describe('every way out of retime restores the speed it found', () => {
         song.store.getState().close();
       },
     ],
-    ['another song', (song) => song.store.getState().open(OTHER_SONG_ID, BARS)],
     [
       'an Activity relaunch',
       (song) => {
@@ -160,7 +159,24 @@ describe('every way out of retime restores the speed it found', () => {
     expect(ratesSet(song)).toEqual([RETIME_PLAYBACK_RATE, SONG_SPEED]);
   });
 
+  it('another song, which then opens at unity', async () => {
+    const song = await retiming();
+    await song.store.getState().open(OTHER_SONG_ID, BARS);
+    await settle();
+    expect(ratesSet(song)).toEqual([
+      RETIME_PLAYBACK_RATE,
+      SONG_SPEED,
+      KB_MIXER_UNITY_RATE,
+    ]);
+  });
+
   it('a relaunch whose old screen lets go late', async () => {
+    const relaunched = [
+      KB_MIXER_UNITY_RATE,
+      RETIME_PLAYBACK_RATE,
+      SONG_SPEED,
+      KB_MIXER_UNITY_RATE,
+    ];
     const song = await songAt();
     const oldScreen = song.store.getState().acquireSong(7, BARS);
     await settle();
@@ -169,10 +185,10 @@ describe('every way out of retime restores the speed it found', () => {
     const newScreen = song.store.getState().acquireSong(7, BARS);
     oldScreen.release();
     await settle();
-    expect(ratesSet(song)).toEqual([RETIME_PLAYBACK_RATE, SONG_SPEED]);
+    expect(ratesSet(song)).toEqual(relaunched);
     newScreen.release();
     await settle();
-    expect(ratesSet(song)).toEqual([RETIME_PLAYBACK_RATE, SONG_SPEED]);
+    expect(ratesSet(song)).toEqual(relaunched);
   });
 
   it('restores after a slow-down still in flight when retime ends', async () => {
@@ -327,11 +343,11 @@ describe('a single song displacing a stem song in retime', () => {
   it('restores the speed the retime found', async () => {
     const mixerClaim = createMixerClaim();
     const stemFake = fakeRuntime(record([stem(1)], SONG_DETAILS));
-    stemFake.commands.mixerRate.mockResolvedValue(SONG_SPEED);
     const stems = createStemPlayerStore(() => stemFake.runtime, {
       mixerClaim,
     });
     await stems.getState().open(7, BARS);
+    stemFake.commands.mixerRate.mockResolvedValue(SONG_SPEED);
     stems.getState().beginRetime(0);
     await settle();
     const songs = songStore(fakeSongRuntime(), mixerClaim);
