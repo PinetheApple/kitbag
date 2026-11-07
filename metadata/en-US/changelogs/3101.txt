@@ -1,0 +1,1 @@
+• At large font sizes, the running metronome no longer cuts off the beat pads above empty status space.
