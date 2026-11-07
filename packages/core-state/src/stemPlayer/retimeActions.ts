@@ -48,7 +48,7 @@ export function retimeActions({
   | 'resetRetime'
 > {
   const { busy, call } = sessionGate(session);
-  const speed = retimeSpeed(() => runtimeOf().commands);
+  const speed = retimeSpeed(() => runtimeOf().commands, session);
 
   const saveTiming = async (
     shown: LyricLineTimes,
@@ -148,7 +148,7 @@ export function retimeActions({
       if (!busy()) get().leaveRetime();
     },
     leaveRetime: () => {
-      speed.restore();
+      if (get().retime.kind === 'recording') speed.restore();
       set({ retime: { kind: 'off' }, retimeFailure: null });
     },
     resetRetime: async () => {

@@ -1,5 +1,5 @@
 import { KB_MIXER_UNITY_RATE, KB_RESULT } from '@kitbag/core-native';
-import { RETIME_PLAYBACK_RATE } from '@kitbag/core-state/src/stemPlayer/retimeSpeed.ts';
+import { RETIME_PLAYBACK_RATE } from '@kitbag/core-state';
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 

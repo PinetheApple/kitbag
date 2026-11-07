@@ -277,6 +277,7 @@ export {
   secondsToFrames,
 } from './stemPlayer/time.ts';
 export { SKIP_SECONDS } from './stemPlayer/songTransport.ts';
+export { RETIME_PLAYBACK_RATE } from './stemPlayer/retimeSpeed.ts';
 export type { LyricLine } from './stemPlayer/lrc.ts';
 export {
   sungLineFrom,

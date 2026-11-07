@@ -970,7 +970,9 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   song's tempo at any speed. Unloading a track resets its key to 0, so a key carries to the next
   stem in that slot only when the command queue was full at the unload. **[recorded — coordinator ruling]**
 - **2026-11-07 · Retime speed (§7.7, #299)** — Retime plays at 0.75×, or at the song's
-  current speed when that is already 0.75× or slower, and restores the previous speed on
-  every exit through `leaveRetime()`. The subtitle shows the speed that actually plays, only
-  once the mixer has it. A refused restore is retried on the next exit rather than re-read.
+  current speed when that is already slower, and restores the previous speed on exit.
   **[user]**
+- **2026-11-07 · Retime speed, implementation (§7.7, #299)** — Every exit goes through
+  `leaveRetime()`. The subtitle shows the speed that plays only once the mixer has it. A
+  refused restore stays owed to the next retime in the same song, and is dropped when
+  another song opens. **[recorded]**

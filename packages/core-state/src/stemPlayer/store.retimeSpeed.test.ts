@@ -7,6 +7,7 @@ import { at, BARS, opened, SONG_DETAILS, stem } from './store.test-helper.ts';
 const OTHER_SONG_ID = 8;
 const SONG_SPEED = 0.9;
 const SLOWER_THAN_RETIME = 0.6;
+const AUDIO_BLOCK_MS = 10;
 
 type Song = Awaited<ReturnType<typeof opened>>;
 
@@ -271,6 +272,55 @@ describe('a speed change the mixer refuses', () => {
       SONG_SPEED,
     ]);
     expect(song.commands.mixerRate).toHaveBeenCalledOnce();
+  });
+});
+
+describe('a speed read that trails the last set by an audio block', () => {
+  function laggingMirror(song: Song, playing: number) {
+    let mirror = playing;
+    song.commands.mixerRate.mockImplementation(() => Promise.resolve(mirror));
+    song.commands.mixerSetRate.mockImplementation((rate) => {
+      setTimeout(() => {
+        mirror = rate;
+      }, AUDIO_BLOCK_MS);
+      return Promise.resolve<number>(KB_RESULT.KB_OK);
+    });
+  }
+
+  it('slows a retime entered right after a restore', async () => {
+    const song = await songAt(SONG_SPEED);
+    laggingMirror(song, SONG_SPEED);
+    song.store.getState().beginRetime(0);
+    await settle();
+    song.store.getState().cancelRetime();
+    song.store.getState().beginRetime(0);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(ratesSet(song)).toEqual([
+      RETIME_PLAYBACK_RATE,
+      SONG_SPEED,
+      RETIME_PLAYBACK_RATE,
+    ]);
+    expect(playbackRate(song)).toBe(RETIME_PLAYBACK_RATE);
+  });
+});
+
+describe('a refused restore and the next song', () => {
+  it('does not carry the first song’s speed into the next', async () => {
+    silenceWarnings();
+    const song = await retiming(SONG_SPEED);
+    song.commands.mixerSetRate.mockResolvedValue(KB_RESULT.KB_ERROR_BUSY);
+    song.store.getState().cancelRetime();
+    await song.store.getState().open(OTHER_SONG_ID, BARS);
+    await settle();
+    const tried = ratesSet(song).length;
+    song.commands.mixerSetRate.mockResolvedValue(KB_RESULT.KB_OK);
+    song.commands.mixerRate.mockResolvedValue(RETIME_PLAYBACK_RATE);
+    song.store.getState().beginRetime(0);
+    await settle();
+    song.store.getState().cancelRetime();
+    await settle();
+    expect(ratesSet(song).slice(tried)).toEqual([]);
+    expect(playbackRate(song)).toBeUndefined();
   });
 });
 

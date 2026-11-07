@@ -11,6 +11,7 @@ import {
 
 const TENTHS = 10;
 const SHIFT_DECIMALS = 2;
+const SPEED_DECIMALS = 2;
 
 export interface RetimePreview {
   readonly done: { readonly text: string; readonly time: string } | null;
@@ -22,7 +23,7 @@ function sungCount(lines: readonly LyricLine[], end = lines.length): number {
   return lines.slice(0, end).filter(isSungLine).length;
 }
 
-export function retimeLineLabel(
+function retimeLineLabel(
   lines: readonly LyricLine[],
   nextLine: number,
 ): string {
@@ -38,7 +39,8 @@ export function retimeSubtitle(
 ): string {
   const line = retimeLineLabel(lines, nextLine);
   if (playbackRate === null) return line;
-  return `${line} · playing at ${String(playbackRate)}×`;
+  const speed = String(Number(playbackRate.toFixed(SPEED_DECIMALS)));
+  return `${line} · playing at ${speed}×`;
 }
 
 export function tapTimeLabel(seconds: number): string {
