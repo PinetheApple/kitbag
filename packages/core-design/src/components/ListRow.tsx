@@ -8,8 +8,8 @@ import { switchA11y } from '../switch.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { radii } from '../tokens.ts';
+import { EllipsizedText } from './EllipsizedText.tsx';
 import { Icon } from './Icon.tsx';
-import { EllipsizedLine } from './EllipsizedLine.tsx';
 import { SwitchTrack } from './Switch.tsx';
 
 const useStyles = createThemedStyles((theme) => ({
@@ -57,17 +57,17 @@ export function RowText({
   const styles = useStyles();
   return (
     <View style={styles.body}>
-      <EllipsizedLine
+      <EllipsizedText
         style={[styles.title, bodyLines && styles.bodyLinesTitle]}
       >
         {title}
-      </EllipsizedLine>
+      </EllipsizedText>
       {subtitle === undefined ? null : (
-        <EllipsizedLine
+        <EllipsizedText
           style={[styles.subtitle, bodyLines && styles.bodyLinesSubtitle]}
         >
           {subtitle}
-        </EllipsizedLine>
+        </EllipsizedText>
       )}
     </View>
   );

@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ellipsisPaintSize } from '../oneLineFit.ts';
 import { rowLineHeight, textRoles } from '../roles.ts';
 import { ThemeProvider } from '../ThemeProvider.tsx';
+import { dataNodes } from './dataNodes.test-helper.ts';
 
 interface HostProps {
   readonly style?: unknown;
@@ -44,13 +45,7 @@ function textNodes(fontScale: number, bodyLines = false) {
       <RowText title="Title" subtitle="Subtitle" bodyLines={bodyLines} />
     </ThemeProvider>,
   );
-  return [...markup.matchAll(/data-node="([^"]*)"/g)].map(
-    (match) =>
-      JSON.parse((match[1] ?? '{}').replace(/&quot;/g, '"')) as {
-        readonly lines?: number;
-        readonly style: Readonly<Record<string, unknown>>;
-      },
-  );
+  return dataNodes(markup);
 }
 
 describe('RowText', () => {
@@ -58,28 +53,28 @@ describe('RowText', () => {
     const [title, subtitle, ...rest] = textNodes(1);
     expect(rest).toEqual([]);
     expect(title?.lines).toBe(1);
-    expect(title?.style.fontSize).toBe(textRoles.rowTitle.size);
+    expect(title?.style?.fontSize).toBe(textRoles.rowTitle.size);
     expect(subtitle?.lines).toBe(1);
-    expect(subtitle?.style.fontSize).toBe(textRoles.rowSubtitle.size);
+    expect(subtitle?.style?.fontSize).toBe(textRoles.rowSubtitle.size);
   });
 
   it('reserves the ellipsis on both lines above the default scale', () => {
     const [titleView, title, subtitleView, subtitle] = textNodes(2);
     expect(titleView?.lines).toBe(1);
-    expect(titleView?.style.fontSize).toBe(
+    expect(titleView?.style?.fontSize).toBe(
       ellipsisPaintSize(textRoles.rowTitle.size, 2),
     );
-    expect(title?.style.fontSize).toBe(textRoles.rowTitle.size);
+    expect(title?.style?.fontSize).toBe(textRoles.rowTitle.size);
     expect(subtitleView?.lines).toBe(1);
-    expect(subtitleView?.style.fontSize).toBe(
+    expect(subtitleView?.style?.fontSize).toBe(
       ellipsisPaintSize(textRoles.rowSubtitle.size, 2),
     );
-    expect(subtitle?.style.fontSize).toBe(textRoles.rowSubtitle.size);
+    expect(subtitle?.style?.fontSize).toBe(textRoles.rowSubtitle.size);
   });
 
   it('keeps the body line heights on the drawn text', () => {
     const [, title, , subtitle] = textNodes(2, true);
-    expect(title?.style.lineHeight).toBe(rowLineHeight.title);
-    expect(subtitle?.style.lineHeight).toBe(rowLineHeight.subtitle);
+    expect(title?.style?.lineHeight).toBe(rowLineHeight.title);
+    expect(subtitle?.style?.lineHeight).toBe(rowLineHeight.subtitle);
   });
 });

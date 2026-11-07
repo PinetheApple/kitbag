@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { ThemeProvider } from '../ThemeProvider.tsx';
 
-const input = vi.hoisted(() => ({
+const input = vi.hoisted((): { props: Readonly<Record<string, unknown>> } => ({
   props: {},
 }));
 
@@ -22,18 +22,34 @@ const { EditTextInput } = await import('./EditRow.tsx');
 
 const noop = () => undefined;
 
+function renderInput(onChangeText: (value: string) => void = noop) {
+  renderToStaticMarkup(
+    <ThemeProvider mode="dark">
+      <EditTextInput
+        value="A long name"
+        onChangeText={onChangeText}
+        placeholder="Song name"
+        accessibilityLabel="Name"
+      />
+    </ThemeProvider>,
+  );
+  return input.props.onChangeText as (value: string) => void;
+}
+
 describe('EditTextInput', () => {
+  it.each([
+    ['A\nB', 'A B'],
+    ['A\r\nB', 'A B'],
+    ['A  \n\n  B\n', 'A B '],
+    ['A  B', 'A  B'],
+  ])('turns the line breaks in %j into one space', (typed, stored) => {
+    const onChangeText = vi.fn();
+    renderInput(onChangeText)(typed);
+    expect(onChangeText).toHaveBeenCalledWith(stored);
+  });
+
   it('wraps rather than scrolls, and return still leaves the field', () => {
-    renderToStaticMarkup(
-      <ThemeProvider mode="dark">
-        <EditTextInput
-          value="A long name"
-          onChangeText={noop}
-          placeholder="Song name"
-          accessibilityLabel="Name"
-        />
-      </ThemeProvider>,
-    );
+    renderInput();
     expect(input.props.multiline).toBe(true);
     expect(input.props.submitBehavior).toBe('blurAndSubmit');
   });

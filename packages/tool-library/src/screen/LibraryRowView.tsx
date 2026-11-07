@@ -1,7 +1,7 @@
 import {
   Badge,
   createThemedStyles,
-  EllipsizedLine,
+  EllipsizedText,
   hitBoxStyle,
   hitExtension,
   Icon,
@@ -180,12 +180,12 @@ export function LibraryRowView({
       >
         <RowTile stems={row.kind === 'stems'} />
         <View style={styles.text}>
-          <EllipsizedLine style={styles.title} numberOfLines={titleLines}>
+          <EllipsizedText style={styles.title} numberOfLines={titleLines}>
             {row.title}
-          </EllipsizedLine>
-          <EllipsizedLine style={styles.facts} numberOfLines={factsLines}>
+          </EllipsizedText>
+          <EllipsizedText style={styles.facts} numberOfLines={factsLines}>
             {rowSubtitle(row, status, failure)}
-          </EllipsizedLine>
+          </EllipsizedText>
           {badgesUnderText && badges}
         </View>
         {!badgesUnderText && badges}

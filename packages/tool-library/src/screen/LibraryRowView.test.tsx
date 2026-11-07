@@ -37,7 +37,7 @@ vi.mock('@kitbag/core-design', async (original) => {
   return {
     ...(await original<Record<string, unknown>>()),
     Badge: () => h('i', null, 'badge-mark'),
-    EllipsizedLine: (props: Props) =>
+    EllipsizedText: (props: Props) =>
       h('span', { 'data-lines': props.numberOfLines }, props.children),
     libraryList: new Proxy({}, { get: () => 0 }),
     Icon: () => null,
