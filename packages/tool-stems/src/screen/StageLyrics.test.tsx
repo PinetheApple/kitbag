@@ -1,14 +1,17 @@
 import { stemSections } from '@kitbag/core-design';
-import { act } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  fireLayout,
   mountPlayer,
   SONG_DETAILS,
+  withTestId,
   type Player,
 } from './playerHarness.test-helper.tsx';
 
 let player: Player | undefined;
+
+const row = (p: Player, testID: string) => withTestId(p, testID)[0];
 
 afterEach(() => {
   player?.unmount();
@@ -27,19 +30,9 @@ describe('following a seek with no current line', () => {
     const p = await mountPlayer({ ...SONG_DETAILS, lyrics: TRAILING_BLANK });
     player = p;
     await p.press('Lyrics');
-    const fire = (testID: string, layout: object) => {
-      const [node] = p.renderer.root.findAll(
-        (n) => typeof n.type === 'string' && n.props.testID === testID,
-      );
-      act(() => {
-        (node?.props.onLayout as (e: unknown) => void)({
-          nativeEvent: { layout },
-        });
-      });
-    };
-    fire('stage-lyrics', { height: 300 });
-    fire('lyric-line-0', { y: 100 });
-    fire('lyric-line-2', { y: 700 });
+    fireLayout(row(p, 'stage-lyrics'), { height: 300 });
+    fireLayout(row(p, 'lyric-line-0'), { y: 100 });
+    fireLayout(row(p, 'lyric-line-2'), { y: 700 });
     p.scrolls.mockClear();
     return p;
   }
@@ -70,14 +63,7 @@ describe('following a seek with no current line', () => {
   it('corrects the place when the target row moves after the seek', async () => {
     const p = await laidOut();
     p.frames(4);
-    const [row] = p.renderer.root.findAll(
-      (n) => typeof n.type === 'string' && n.props.testID === 'lyric-line-2',
-    );
-    act(() => {
-      (row?.props.onLayout as (e: unknown) => void)({
-        nativeEvent: { layout: { y: 650 } },
-      });
-    });
+    fireLayout(row(p, 'lyric-line-2'), { y: 650 });
     expect(p.scrolls).toHaveBeenLastCalledWith(placed(650));
   });
 
@@ -85,14 +71,7 @@ describe('following a seek with no current line', () => {
     const p = await laidOut();
     p.frames(4);
     p.scrolls.mockClear();
-    const [row] = p.renderer.root.findAll(
-      (n) => typeof n.type === 'string' && n.props.testID === 'lyric-line-0',
-    );
-    act(() => {
-      (row?.props.onLayout as (e: unknown) => void)({
-        nativeEvent: { layout: { y: 120 } },
-      });
-    });
+    fireLayout(row(p, 'lyric-line-0'), { y: 120 });
     expect(p.scrolls).not.toHaveBeenCalled();
   });
 });

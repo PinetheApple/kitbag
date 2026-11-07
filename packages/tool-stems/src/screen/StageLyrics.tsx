@@ -96,7 +96,7 @@ export function StageLyrics({
     },
     [reduceMotion],
   );
-  // A line changes height as it becomes current, so a crossing onto one lays out.
+  // A line grows as it becomes current, so its layout event is what drives the follow scroll.
   const onRowLayout = useCallback(
     (line: number, y: number, isFollowed: boolean) => {
       rowTops.current.set(line, y);
@@ -104,17 +104,12 @@ export function StageLyrics({
     },
     [scrollToRow],
   );
-  // A blank line has no row and so no layout: this is the only way to its place.
+  // A blank line or no line has no row, so no layout fires.
   const onSungLine = followed === current && current !== NO_LINE;
   useEffect(() => {
-    if (onSungLine) return;
-    if (followed === NO_LINE) {
-      list.current?.scrollTo({ y: 0, animated: !reduceMotion });
-      return;
-    }
-    const y = rowTops.current.get(followed);
-    if (y !== undefined) scrollToRow(y);
-  }, [onSungLine, followed, current, reduceMotion, scrollToRow]);
+    const y = followed === NO_LINE ? 0 : rowTops.current.get(followed);
+    if (!onSungLine && y !== undefined) scrollToRow(y);
+  }, [onSungLine, followed, scrollToRow]);
   return (
     <ScrollView
       ref={list}

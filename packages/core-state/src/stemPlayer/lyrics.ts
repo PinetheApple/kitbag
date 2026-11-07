@@ -125,7 +125,7 @@ function previousSungLine(lines: readonly LyricLine[], from: number): number {
 }
 
 // Earlier untimed lines would break the sort, so a session cannot start past one.
-export function firstRetimeLine(
+export function sungLineFrom(
   lines: readonly LyricLine[],
   from: number,
 ): number {
@@ -141,7 +141,7 @@ export function retimeLineAt(
   lines: readonly LyricLine[],
   songSec: number,
 ): number {
-  return firstRetimeLine(lines, lyricLineAt(lines, songSec));
+  return sungLineFrom(lines, lyricLineAt(lines, songSec));
 }
 
 // Lines before the first pin clamp down to it, so an earlier tap moves the take.

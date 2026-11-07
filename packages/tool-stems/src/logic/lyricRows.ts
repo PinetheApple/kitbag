@@ -1,5 +1,5 @@
 import {
-  firstRetimeLine,
+  sungLineFrom,
   formatClockSeconds,
   isSungLine,
   NO_LINE,
@@ -47,5 +47,5 @@ export function followedLine(
   lines: readonly LyricLine[],
   current: number,
 ): number {
-  return current === NO_LINE ? NO_LINE : firstRetimeLine(lines, current);
+  return current === NO_LINE ? NO_LINE : sungLineFrom(lines, current);
 }

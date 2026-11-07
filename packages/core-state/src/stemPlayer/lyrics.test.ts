@@ -2,7 +2,7 @@ import type { StoredLyrics } from '@kitbag/core-db';
 import { describe, expect, it } from 'vitest';
 
 import {
-  firstRetimeLine,
+  sungLineFrom,
   lyricLineAt,
   NO_LINE,
   nextSungLine,
@@ -186,8 +186,8 @@ describe('plain-only lyrics', () => {
 
   it('never times a line after an untimed one', () => {
     const { lines } = songLyrics(PLAIN, [1]);
-    expect(firstRetimeLine(lines, 0)).toBe(0);
-    expect(firstRetimeLine(lines, 2)).toBe(1);
+    expect(sungLineFrom(lines, 0)).toBe(0);
+    expect(sungLineFrom(lines, 2)).toBe(1);
   });
 
   it('keeps untapped lines untimed through tap, shift and storage', () => {

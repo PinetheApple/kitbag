@@ -13,6 +13,7 @@ import {
   mountPlayer,
   PLAIN_LYRICS,
   SONG_DETAILS,
+  withTestId,
   type Player,
 } from './playerHarness.test-helper.tsx';
 
@@ -315,9 +316,7 @@ describe('realtime values (SPEC §13.3)', () => {
   it('draws no bar beside the current line', async () => {
     const p = await open();
     p.frames(3.6);
-    const [row] = p.renderer.root.findAll(
-      (n) => typeof n.type === 'string' && n.props.testID === 'lyric-line-2',
-    );
+    const [row] = withTestId(p, 'lyric-line-2');
     expect(
       row?.children.map((child) => (child as { type: string }).type),
     ).toEqual(['Text']);

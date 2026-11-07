@@ -2,7 +2,7 @@ import type { LyricLineTimes } from '@kitbag/core-db';
 import { KB_RESULT } from '@kitbag/core-native';
 
 import {
-  firstRetimeLine,
+  sungLineFrom,
   hasRealTime,
   NO_LINE,
   retimedTimes,
@@ -80,7 +80,7 @@ export function retimeActions({
     beginRetime: (fromLine) => {
       if (busy()) return;
       const { lyrics, togglePlay } = get();
-      const nextLine = firstRetimeLine(lyrics.lines, fromLine);
+      const nextLine = sungLineFrom(lyrics.lines, fromLine);
       if (nextLine === NO_LINE) return;
       set({
         retime: { kind: 'recording', taps: [], nextLine, shiftSteps: 0 },
