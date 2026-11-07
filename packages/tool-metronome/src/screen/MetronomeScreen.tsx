@@ -26,6 +26,7 @@ import {
   belowTempoReserve,
   statusStackPinned,
   statusStackRows,
+  pinnedStackGap,
   pinnedStackScrollSlack,
   pinnedViewportOverlap,
 } from '../logic/belowTempo.ts';
@@ -291,10 +292,10 @@ export function MetronomeScreen({
   );
   const legend = restLegend(running, polyEnabled);
   const pinStatus = statusStackPinned(fontScale);
-  const runRows = useStatusRunRows(frame.countingIn, running, settings);
+  const runRows = useStatusRunRows(frame.beatPlayed, running, settings);
   const stackRows = statusStackRows(running, runRows, fontScale);
   const stackGap = useMemo(
-    () => ({ marginTop: stackRows === 0 ? 0 : bodyGap }),
+    () => ({ marginTop: pinnedStackGap(stackRows, bodyGap) }),
     [stackRows, bodyGap],
   );
   const viewportFrame = useMemo(
@@ -391,7 +392,11 @@ export function MetronomeScreen({
             </View>
           </ScrollView>
         </View>
-        {pinStatus ? <View style={stackGap}>{status}</View> : null}
+        {pinStatus ? (
+          <View testID="pinned-status" style={stackGap}>
+            {status}
+          </View>
+        ) : null}
         <Transport
           running={running}
           armedCount={practiceBadgeCount(settings)}

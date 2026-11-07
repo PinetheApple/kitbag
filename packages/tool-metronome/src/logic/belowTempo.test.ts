@@ -7,6 +7,7 @@ import {
   beatLinePitch,
   belowTempoReserve,
   legendHeight,
+  pinnedStackGap,
   pinnedStackScrollSlack,
   pinnedViewportOverlap,
   DOT_METRICS,
@@ -222,12 +223,19 @@ describe('the status stack', () => {
     for (const fontScale of [1.3, 2]) {
       for (const stackRows of RUN_ROWS) {
         const taken =
-          stackRows === 0 ? 0 : statusStackHeight(stackRows, fontScale) + GAP;
+          statusStackHeight(stackRows, fontScale) +
+          pinnedStackGap(stackRows, GAP);
         expect(pinnedViewportOverlap(stackRows, fontScale, GAP)).toBeCloseTo(
           taken,
         );
       }
     }
+  });
+
+  it('keeps the stack gap only while the stack has a row', () => {
+    expect(pinnedStackGap(0, GAP)).toBe(0);
+    expect(pinnedStackGap(1, GAP)).toBe(GAP);
+    expect(pinnedStackGap(2, GAP)).toBe(GAP);
   });
 
   it('keeps the content height when Start and Stop swap the modelled legend', () => {

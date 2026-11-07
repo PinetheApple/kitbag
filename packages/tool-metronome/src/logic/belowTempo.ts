@@ -145,12 +145,16 @@ export function legendHeight(fontScale: number): number {
   return metronome.legendTop + metronome.legendRow * grownTextScale(fontScale);
 }
 
+export function pinnedStackGap(rows: number, gap: number): number {
+  return rows === 0 ? 0 : gap;
+}
+
 function pinnedStackTaken(
   rows: number,
   fontScale: number,
   gap: number,
 ): number {
-  return rows === 0 ? 0 : statusStackHeight(rows, fontScale) + gap;
+  return statusStackHeight(rows, fontScale) + pinnedStackGap(rows, gap);
 }
 
 // Android lays out a ScrollView before its content, and the offset clamps to the

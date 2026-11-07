@@ -1,6 +1,5 @@
 import {
   KB_COUNT_IN_OFF,
-  KB_POLY_AGAINST_BAR,
   KB_RAMP_STATE,
   KB_RAMP_UNIT,
 } from '@kitbag/core-native';
@@ -26,28 +25,14 @@ import {
   rampNextText,
   rampRemainingText,
   rowSlot,
+  shownRowCount,
   statusRows,
   type PracticeSettings,
-  type StatusRows,
+  type StatusReads,
 } from './statusRows.ts';
+import { PRACTICE_OFF } from './fixtures.test-helper.ts';
 
-const OFF: PracticeSettings = {
-  ramp: {
-    enabled: false,
-    startBpm: 100,
-    targetBpm: 140,
-    stepBpm: 4,
-    interval: 4,
-    unit: KB_RAMP_UNIT.KB_RAMP_BARS,
-    loop: false,
-  },
-  barMute: { enabled: false, playBars: 2, muteBars: 2 },
-  countIn: { bars: KB_COUNT_IN_OFF, distinct: true, sound: 1 },
-  polyEnabled: false,
-  polyBeats: 3,
-  polyAgainst: KB_POLY_AGAINST_BAR,
-  beatsPerBar: 4,
-};
+const OFF = PRACTICE_OFF;
 
 const ARMED: PracticeSettings = {
   ...OFF,
@@ -266,9 +251,9 @@ describe('count-in squares', () => {
 describe('armedRows', () => {
   const STEPPING = KB_RAMP_STATE.KB_RAMP_STATE_STEPPING;
   const AT_TARGET = KB_RAMP_STATE.KB_RAMP_STATE_AT_TARGET;
-  const TOOL_OFF = [false, true] as const;
-  const SHOWN_ROWS = (rows: StatusRows) =>
-    [rows.first, rows.second].filter((row) => row !== 'none').length;
+  const ARMED_STATES = [false, true] as const;
+  const shownRows = (reads: StatusReads, hasAfter: boolean) =>
+    shownRowCount(statusRows(reads, hasAfter));
 
   function settingsFor(
     ramp: boolean,
@@ -292,9 +277,9 @@ describe('armedRows', () => {
   });
 
   it('matches the rows the engine reads show, for every armed set', () => {
-    for (const ramp of TOOL_OFF) {
-      for (const mute of TOOL_OFF) {
-        for (const countIn of TOOL_OFF) {
+    for (const ramp of ARMED_STATES) {
+      for (const mute of ARMED_STATES) {
+        for (const countIn of ARMED_STATES) {
           const settings = settingsFor(ramp, mute, countIn);
           const armed = armedRows(settings);
           const hasAfter = afterCountInSummary(settings) !== '';
@@ -304,19 +289,14 @@ describe('armedRows', () => {
             rampState: ramp ? rampState : KB_RAMP_STATE.KB_RAMP_STATE_OFF,
           });
           for (const rampState of [STEPPING, AT_TARGET]) {
-            expect(SHOWN_ROWS(statusRows(played(rampState), hasAfter))).toBe(
-              armed.played,
-            );
+            expect(shownRows(played(rampState), hasAfter)).toBe(armed.played);
           }
-          const counting = statusRows(
-            {
-              countingIn: countIn ? 1 : 0,
-              barMutePosition: countIn || !mute ? -1 : 0,
-              rampState: ramp ? STEPPING : KB_RAMP_STATE.KB_RAMP_STATE_OFF,
-            },
-            hasAfter,
-          );
-          expect(SHOWN_ROWS(counting)).toBe(armed.countingIn);
+          const counting = {
+            countingIn: countIn ? 1 : 0,
+            barMutePosition: countIn || !mute ? -1 : 0,
+            rampState: ramp ? STEPPING : KB_RAMP_STATE.KB_RAMP_STATE_OFF,
+          };
+          expect(shownRows(counting, hasAfter)).toBe(armed.countingIn);
         }
       }
     }
