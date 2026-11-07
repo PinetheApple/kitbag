@@ -1,0 +1,1 @@
+• Closing Kitbag from recent apps now stops the metronome or song and clears its notification.
