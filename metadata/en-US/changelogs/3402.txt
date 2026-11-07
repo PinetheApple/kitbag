@@ -1,0 +1,1 @@
+• A song opened after using slower speed or a key change now plays at normal speed without the stretch effect.
