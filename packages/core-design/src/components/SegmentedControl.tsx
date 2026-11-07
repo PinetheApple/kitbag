@@ -195,7 +195,10 @@ function Segment<T extends string>({
       onLayout={onLineTop === undefined ? undefined : handleLayout}
       onPress={handlePress}
     >
+      {/* A flattened option has no native view: selecting it creates one from
+          React's prop diff alone, which leaves out the corner radius. */}
       <View
+        collapsable={false}
         style={[
           styles.option,
           large && styles.largeOption,
