@@ -25,6 +25,7 @@ type MessageIds = 'nativeSymbol' | 'hostObject';
 export const nativeOnlyInCoreNative = createRule<Options, MessageIds>({
   name: 'native-only-in-core-native',
   meta: {
+    defaultOptions: [{}],
     type: 'problem',
     docs: {
       description:
@@ -47,7 +48,6 @@ export const nativeOnlyInCoreNative = createRule<Options, MessageIds>({
         'core-native may hold the kb_engine* (SPEC §13.2).',
     },
   },
-  defaultOptions: [{}],
   create(context, [options]) {
     const allowedPackage = options?.package ?? 'core-native';
     if (isInPackage(context.filename, allowedPackage)) {
