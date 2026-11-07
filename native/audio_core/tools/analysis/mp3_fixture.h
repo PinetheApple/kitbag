@@ -25,23 +25,22 @@ constexpr std::array<uint8_t, 4> kXingTag = {'X', 'i', 'n', 'g'};
 constexpr size_t kXingFlagsOffset = 7;
 constexpr uint8_t kXingFramesFlag = 0x01;
 constexpr size_t kXingFramesOffset = 8;
-constexpr int kBitsPerByteShift = 8;
 
 struct Mp3Bitrate {
   uint8_t index;
   uint32_t kbps;
 };
 
+constexpr Mp3Bitrate kMp3Bitrate128 = {9, 128};
+
 // The first frame is the slowest, so a first-frame-bitrate estimate overshoots.
 constexpr std::array<Mp3Bitrate, 5> kMp3Bitrates = {{
     {1, 32},
     {14, 320},
-    {9, 128},
+    kMp3Bitrate128,
     {11, 192},
     {5, 64},
 }};
-
-constexpr Mp3Bitrate kXingFrameBitrate = {9, 128};
 
 inline size_t Mp3FrameBytes(uint32_t kbps) {
   return kMp3FrameSamples * kbps * kBitsPerKbit / kBitsPerByte / kMp3Rate;
@@ -78,12 +77,12 @@ inline std::vector<uint8_t> BuildVbrMp3WithoutInfoFrame(int frames) {
 inline std::vector<uint8_t>
 BuildMp3WithXingFrameCount(int frames, uint32_t claimed_frames) {
   std::vector<uint8_t> out;
-  AppendMp3Frame(kXingFrameBitrate, &out);
+  AppendMp3Frame(kMp3Bitrate128, &out);
   const size_t tag = kMp3HeaderBytes + kMp3MonoSideInfoBytes;
   std::copy(kXingTag.begin(), kXingTag.end(), out.begin() + tag);
   out[tag + kXingFlagsOffset] = kXingFramesFlag;
   for (size_t i = 0; i < sizeof(claimed_frames); ++i) {
-    const size_t shift = (sizeof(claimed_frames) - 1 - i) * kBitsPerByteShift;
+    const size_t shift = (sizeof(claimed_frames) - 1 - i) * kBitsPerByte;
     out[tag + kXingFramesOffset + i] =
         static_cast<uint8_t>(claimed_frames >> shift);
   }
