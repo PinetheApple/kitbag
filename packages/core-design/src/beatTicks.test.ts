@@ -36,7 +36,7 @@ describe('beatTicks', () => {
   it('merges a dense grid with no downbeats into one short tick per column', () => {
     const beats = Array.from({ length: 2000 }, (_, i) => i * 0.15);
     const ticks = beatTicks(beats, [], 300, 360, COLUMN);
-    expect(ticks.length).toBeLessThanOrEqual(360 / COLUMN + 1);
+    expect(ticks).toHaveLength(120);
     expect(ticks.some((tick) => tick.tall)).toBe(false);
   });
 

@@ -3,8 +3,8 @@ export interface BeatTick {
   readonly tall: boolean;
 }
 
-// A lane too dense to tell beats apart shows bars, not a comb of beat ticks
-// with downbeats poking out of it.
+// Once beats share a column, only downbeats are drawn if the grid has any. Each
+// column still holds one tick, so bars can crowd the lane at high tempo.
 export function beatTicks(
   beats: readonly number[],
   downbeatIndices: readonly number[],
