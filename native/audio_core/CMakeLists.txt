@@ -57,10 +57,16 @@ add_library(kitbag_core SHARED
   src/media/miniaudio_impl.c
   src/media/streaming_track.cpp
   src/media/looping_source_reader.cpp
+  src/mixer/key_bus.cpp
   src/mixer/mixer.cpp
+  src/mixer/mixer_keys.cpp
   src/mixer/mixer_render.cpp
+  src/mixer/mixer_stretch.cpp
+  src/mixer/mixer_prime.cpp
+  src/mixer/mixer_handover.cpp
   src/player/player.cpp
   src/player/player_render.cpp
+  src/stretch/time_stretch.cpp
   src/tuner/note_smoother.cpp
   src/tuner/pitch_detector.cpp
   src/tuner/tuner.cpp
@@ -119,6 +125,15 @@ target_compile_definitions(qm_dsp PUBLIC kiss_fft_scalar=double)
 # come transitively from qm_dsp's PUBLIC dirs.
 target_link_libraries(kitbag_core PRIVATE qm_dsp)
 
+add_library(signalsmith_stretch INTERFACE)
+target_include_directories(signalsmith_stretch SYSTEM INTERFACE
+  third_party/signalsmith/stretch
+  third_party/signalsmith/linear)
+target_link_libraries(kitbag_core PRIVATE signalsmith_stretch)
+# The vendor warns -O0 runs up to 10x slower; AGP debug builds are Debug.
+set_source_files_properties(src/stretch/time_stretch.cpp
+  PROPERTIES COMPILE_OPTIONS "$<$<CONFIG:Debug>:-O2>")
+
 option(KITBAG_BUILD_TOOLS "Build native test tools" OFF)
 if(KITBAG_BUILD_TOOLS)
   # Compiles kb_engine_render into the library and reveals its header
@@ -166,6 +181,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_trainer_status.cpp
     tools/metronome/metronome_test_ramp_status.cpp
     tools/metronome/metronome_test_follow.cpp
+    tools/metronome/metronome_test_follow_rate.cpp
     tools/metronome/metronome_test_bar_phase.cpp
     tools/metronome/metronome_test_grid_offset.cpp
     tools/metronome/metronome_test_grid_offset_model.cpp
@@ -186,7 +202,8 @@ if(KITBAG_BUILD_TOOLS)
                             tools/abi_test_engine_hold.cpp tools/abi_test_engine_stress.cpp
                             tools/abi_test_poly.cpp tools/abi_test_subdivision_accents.cpp
                             tools/abi_test_rig_click.cpp
-                            tools/abi_test_engine_clock.cpp)
+                            tools/abi_test_engine_clock.cpp
+                            tools/abi_test_mixer_rate.cpp)
   target_include_directories(abi_verify PRIVATE src tools tools/media)
   target_link_libraries(abi_verify PRIVATE kitbag_core Threads::Threads)
 
@@ -197,8 +214,12 @@ if(KITBAG_BUILD_TOOLS)
   target_include_directories(stream_verify PRIVATE src tools/media)
   target_link_libraries(stream_verify PRIVATE kitbag_core)
 
-  add_executable(stem_sync_verify tools/stem_sync_verify.cpp)
-  target_include_directories(stem_sync_verify PRIVATE tools tools/media)
+  add_executable(stem_sync_verify tools/stem_sync_verify.cpp
+                                  tools/stem_sync_rate_support.cpp
+                                  tools/stem_sync_test_rate.cpp
+                                  tools/stem_sync_test_lock.cpp
+                                  tools/stem_sync_test_reanchor.cpp)
+  target_include_directories(stem_sync_verify PRIVATE src tools tools/media)
   target_link_libraries(stem_sync_verify PRIVATE kitbag_core)
 
   # Links the sources: TrackBeats and SidecarPath are internal, not exported.
@@ -222,20 +243,39 @@ if(KITBAG_BUILD_TOOLS)
     tools/mixer/mixer_test_publish.cpp
     tools/mixer/mixer_test_loop.cpp
     tools/mixer/mixer_test_relayout.cpp
+    tools/mixer/mixer_test_stretch.cpp
+    tools/mixer/mixer_test_keybus.cpp
+    tools/mixer/mixer_test_config.cpp
+    tools/mixer/mixer_test_switch.cpp
+    tools/mixer/mixer_test_prime.cpp
+    tools/mixer/mixer_test_race.cpp
+    tools/mixer/mixer_test_landing.cpp
+    tools/mixer/mixer_test_refusal.cpp
+    tools/mixer/mixer_test_reprime.cpp
+    tools/mixer/mixer_test_load_refusal.cpp
+    tools/mixer/mixer_test_lag_carry.cpp
+    tools/mixer/mixer_test_retire.cpp
+    ${KITBAG_METRONOME_SOURCES}
     src/media/streaming_track.cpp
     src/media/looping_source_reader.cpp
+    src/mixer/key_bus.cpp
     src/mixer/mixer.cpp
+    src/mixer/mixer_keys.cpp
     src/mixer/mixer_render.cpp
+    src/mixer/mixer_stretch.cpp
+    src/mixer/mixer_prime.cpp
+    src/mixer/mixer_handover.cpp
+    src/stretch/time_stretch.cpp
     src/media/audio_source.cpp
     src/media/file_audio_reader.cpp
     src/media/miniaudio_decoder.cpp
     src/media/resampling_source_reader.cpp
     src/media/miniaudio_impl.c
   )
-  target_include_directories(mixer_verify PRIVATE src tools tools/mixer tools/media third_party)
+  target_include_directories(mixer_verify PRIVATE src include tools tools/mixer tools/media third_party)
   # mixer_render.cpp's exhaustive CommandType switch is load-bearing here too.
   target_compile_options(mixer_verify PRIVATE -Werror=switch)
-  target_link_libraries(mixer_verify PRIVATE Threads::Threads m ${CMAKE_DL_LIBS})
+  target_link_libraries(mixer_verify PRIVATE signalsmith_stretch Threads::Threads m ${CMAKE_DL_LIBS})
 
   # Links the sources: Player is internal, not exported through the C ABI. It
   # streams a single source through an AudioSource over a real file path, so the
@@ -265,8 +305,14 @@ if(KITBAG_BUILD_TOOLS)
     tools/seek_race_loop.cpp
     src/media/streaming_track.cpp
     src/media/looping_source_reader.cpp
+    src/mixer/key_bus.cpp
     src/mixer/mixer.cpp
+    src/mixer/mixer_keys.cpp
     src/mixer/mixer_render.cpp
+    src/mixer/mixer_stretch.cpp
+    src/mixer/mixer_prime.cpp
+    src/mixer/mixer_handover.cpp
+    src/stretch/time_stretch.cpp
     src/player/player.cpp
     src/player/player_render.cpp
     src/media/audio_source.cpp
@@ -277,7 +323,7 @@ if(KITBAG_BUILD_TOOLS)
   )
   target_include_directories(seek_race_verify PRIVATE src tools tools/media third_party)
   target_compile_options(seek_race_verify PRIVATE -Werror=switch)
-  target_link_libraries(seek_race_verify PRIVATE Threads::Threads m ${CMAKE_DL_LIBS})
+  target_link_libraries(seek_race_verify PRIVATE signalsmith_stretch Threads::Threads m ${CMAKE_DL_LIBS})
 
   # Drives the in-memory adapter. That this target links no miniaudio and still
   # passes is what proves the seam: the module depends on SourceReader, not on
@@ -399,6 +445,49 @@ if(KITBAG_BUILD_TOOLS)
     ${KITBAG_METRONOME_SOURCES})
   target_include_directories(metronome_render PRIVATE src include tools/soak tools/media)
   target_link_libraries(metronome_render PRIVATE m)
+
+  add_executable(follow_render tools/soak/follow_render_main.cpp)
+  target_include_directories(follow_render PRIVATE tools tools/media tools/soak)
+  target_link_libraries(follow_render PRIVATE kitbag_core)
+
+  add_executable(stretch_verify
+    tools/stretch/stretch_verify.cpp
+    tools/stretch/stretch_test_support.cpp
+    tools/stretch/stretch_test_alloc.cpp
+    tools/stretch/stretch_test_rate.cpp
+    tools/stretch/stretch_test_pitch.cpp
+    tools/stretch/stretch_test_latency.cpp
+    src/stretch/time_stretch.cpp
+    src/tuner/pitch_detector.cpp
+    src/dsp/fft.cpp)
+  target_include_directories(stretch_verify PRIVATE src tools)
+  target_link_libraries(stretch_verify PRIVATE signalsmith_stretch m)
+
+  add_executable(stretch_bench
+    tools/stretch/stretch_bench.cpp
+    src/stretch/time_stretch.cpp)
+  target_include_directories(stretch_bench PRIVATE src tools/stretch)
+  target_link_libraries(stretch_bench PRIVATE signalsmith_stretch m)
+
+  add_executable(prime_bench
+    tools/mixer/prime_bench.cpp
+    src/media/streaming_track.cpp
+    src/media/looping_source_reader.cpp
+    src/mixer/key_bus.cpp
+    src/mixer/mixer.cpp
+    src/mixer/mixer_keys.cpp
+    src/mixer/mixer_render.cpp
+    src/mixer/mixer_stretch.cpp
+    src/mixer/mixer_prime.cpp
+    src/mixer/mixer_handover.cpp
+    src/stretch/time_stretch.cpp
+    src/media/audio_source.cpp
+    src/media/file_audio_reader.cpp
+    src/media/miniaudio_decoder.cpp
+    src/media/resampling_source_reader.cpp
+    src/media/miniaudio_impl.c)
+  target_include_directories(prime_bench PRIVATE src tools tools/media third_party)
+  target_link_libraries(prime_bench PRIVATE signalsmith_stretch Threads::Threads m ${CMAKE_DL_LIBS})
 
   add_executable(click_soak_verify
     tools/soak/click_soak_verify.cpp

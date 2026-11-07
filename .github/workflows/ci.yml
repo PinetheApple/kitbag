@@ -54,6 +54,8 @@ jobs:
         run: ./native/audio_core/build/tuner_verify
       - name: Click soak — dropped/doubled/jittered/offset fixtures and the engine's render
         run: ./native/audio_core/build/click_soak_verify
+      - name: Stretch — duration scales by 1/rate, pitch holds, shifts land, no allocation
+        run: ./native/audio_core/build/stretch_verify
 
   # The TypeScript workspace (Phase 2, SPEC §13/§13.6). Runs the same gate the
   # project loop runs locally: typecheck, the architecture-rule lint, the

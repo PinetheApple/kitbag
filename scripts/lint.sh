@@ -18,7 +18,8 @@ staged_only=false
 cpp_files() {
   if $staged_only; then
     git diff --cached --name-only --diff-filter=ACM -- \
-      'native/audio_core/***.cpp' 'native/audio_core/***.h'
+      'native/audio_core/***.cpp' 'native/audio_core/***.h' \
+      ':(exclude)native/audio_core/third_party/*'
   else
     find native/audio_core/src native/audio_core/include native/audio_core/tools \
       -name '*.cpp' -o -name '*.h'

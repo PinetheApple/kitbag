@@ -162,7 +162,7 @@ Metronome::AcquireGrid(uint64_t block_start_frame, uint32_t sample_rate) {
   const bool changed = view.generation != observed_generation_;
   if (changed) {
     observed_generation_ = view.generation;
-    follow_next_frame_ = kReseedFollow;
+    follow_last_frame_ = kReseedFollow;
   }
   const double shift_sec = std::exchange(pending_grid_shift_sec_, 0.0);
   if (view.grid == nullptr || follow_mixer_) return view;
@@ -192,7 +192,7 @@ void Metronome::BeginPendingStart(
   BeginRun();
   has_pending_start_ = false;
   *tempo = BlockTempoFor(sample_rate);
-  follow_next_frame_ = kReseedFollow;
+  follow_last_frame_ = kReseedFollow;
   if (view.grid == nullptr || follow_mixer_) return;
   // Seed at the anchor: the top-of-block re-seed already ran, and a cursor left
   // at the block start swallows every beat up to the anchor into one click.

@@ -29,6 +29,7 @@ const sources: NativeSources = {
   tunerImplHeader: read('src', 'tuner', 'tuner.h'),
   tempoRampHeader: read('src', 'metronome', 'tempo_ramp.h'),
   metronomeTypesHeader: read('src', 'metronome', 'metronome_types.h'),
+  transportPlanHeader: read('src', 'mixer', 'transport_plan.h'),
 };
 
 const rendered = renderConstants(collectConstants(sources));

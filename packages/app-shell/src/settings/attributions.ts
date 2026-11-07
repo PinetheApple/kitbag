@@ -12,6 +12,16 @@ export const ATTRIBUTIONS: readonly Attribution[] = [
     licence: 'BSD-3-Clause',
     vendoredAt: 'qm-dsp/ext/kissfft',
   },
+  {
+    name: 'Signalsmith Stretch',
+    licence: 'MIT',
+    vendoredAt: 'signalsmith/stretch',
+  },
+  {
+    name: 'signalsmith-linear',
+    licence: 'MIT',
+    vendoredAt: 'signalsmith/linear',
+  },
   { name: 'Space Grotesk', licence: 'OFL-1.1' },
   { name: 'Inter', licence: 'OFL-1.1' },
   { name: 'Material Design Icons', licence: 'Pictogrammers Free License' },
