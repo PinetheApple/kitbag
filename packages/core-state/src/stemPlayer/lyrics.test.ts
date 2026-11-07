@@ -219,6 +219,19 @@ describe('a tap during retiming', () => {
     });
   });
 
+  it('keeps the tapped line when lines share a time before a blank', () => {
+    const tied = [
+      { timeSec: 1, text: 'A' },
+      { timeSec: 3, text: 'B' },
+      { timeSec: 3, text: 'C' },
+      { timeSec: 3, text: '' },
+    ];
+    expect(takeAfterTap(tied, { taps: [], nextLine: 2 }, 3)).toEqual({
+      taps: [{ line: 2, timeSec: 3 }],
+      nextLine: NO_LINE,
+    });
+  });
+
   describe('with no taps kept', () => {
     const empty = { taps: [], nextLine: 3 };
 

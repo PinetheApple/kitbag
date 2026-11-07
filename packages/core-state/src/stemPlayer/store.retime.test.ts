@@ -1,7 +1,7 @@
 import type { StemSetRecord } from '@kitbag/core-db';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { NO_LINE } from './lyrics.ts';
+import { lyricLineAt, NO_LINE } from './lyrics.ts';
 import {
   at,
   BARS,
@@ -89,7 +89,7 @@ describe('starting a retime', () => {
 describe('anchoring the take to where the song is', () => {
   const BUNDLED = [1.5, 2.5, 3.5, 5.5];
   const LAST_LINE = 3;
-  const TWO = 2;
+  const THIRD_LINE = 2;
 
   async function openedAt(seconds: number) {
     const song = await opened([stem(1)], SONG_DETAILS);
@@ -122,10 +122,12 @@ describe('anchoring the take to where the song is', () => {
     song.store.getState().seek(at(0.5));
     expect(song.store.getState().retime).toMatchObject({ nextLine: 0 });
     song.store.getState().seek(at(3.6));
-    expect(song.store.getState().retime).toMatchObject({ nextLine: TWO });
+    expect(song.store.getState().retime).toMatchObject({
+      nextLine: THIRD_LINE,
+    });
   });
 
-  it('keeps the next line when a seek lands past the last sung line', async () => {
+  it('follows a seek past the last sung line to that line', async () => {
     const song = await opened([stem(1)], {
       ...SONG_DETAILS,
       lyrics: {
@@ -135,7 +137,7 @@ describe('anchoring the take to where the song is', () => {
         instrumental: false,
       },
     });
-    song.store.getState().beginRetime(1);
+    song.store.getState().beginRetime(0);
     song.store.getState().seek(at(4));
     expect(song.store.getState().retime).toMatchObject({ nextLine: 1 });
   });
@@ -144,7 +146,9 @@ describe('anchoring the take to where the song is', () => {
     const song = await recording();
     tapAt(song, 1);
     song.store.getState().seek(at(5.6));
-    expect(song.store.getState().retime).toMatchObject({ nextLine: TWO });
+    expect(song.store.getState().retime).toMatchObject({
+      nextLine: THIRD_LINE,
+    });
   });
 
   it('corrects a head that wrapped back with no seek, at the tap', async () => {
@@ -157,13 +161,13 @@ describe('anchoring the take to where the song is', () => {
 
   it('re-anchors a tap, seek back, tap on the line playing there', async () => {
     const song = await openedAt(3.6);
-    song.store.getState().beginRetime(TWO);
+    song.store.getState().beginRetime(THIRD_LINE);
     tapAt(song, 3.6);
     song.store.getState().seek(at(0.5));
     tapAt(song, 0.6);
     expect(song.store.getState().retime).toMatchObject({
       taps: [{ line: 0, timeSec: 0.6 }],
-      nextLine: TWO,
+      nextLine: THIRD_LINE,
     });
     await song.store.getState().commitRetime();
     expect(savedTimes(song)).toEqual([0.6, 1.6, 2.6, 4.6]);
@@ -171,16 +175,69 @@ describe('anchoring the take to where the song is', () => {
 
   it('keeps a slightly early tap on the next line', async () => {
     const song = await openedAt(3.6);
-    song.store.getState().beginRetime(TWO);
+    song.store.getState().beginRetime(THIRD_LINE);
     tapAt(song, 2);
     expect(song.store.getState().retime).toMatchObject({
-      taps: [{ line: TWO, timeSec: 2 }],
+      taps: [{ line: THIRD_LINE, timeSec: 2 }],
       nextLine: LAST_LINE,
     });
     await song.store.getState().commitRetime();
     const saved = savedTimes(song) ?? [];
     expect(saved[0]).toBe(BUNDLED[0]);
-    expect(saved[TWO]).toBe(2);
+    expect(saved[THIRD_LINE]).toBe(2);
+  });
+});
+
+describe('opening past a trailing blank line', () => {
+  const TRAILING_BLANK: Partial<StemSetRecord> = {
+    ...SONG_DETAILS,
+    lyrics: {
+      synced: '[00:01.00]A\n[00:02.00]B\n[00:07.00]',
+      plain: null,
+      offsetSec: 0,
+      instrumental: false,
+    },
+  };
+
+  async function openAt(seconds: number, change = TRAILING_BLANK) {
+    const song = await opened([stem(1)], change);
+    const { store, engine } = song;
+    engine.position = at(seconds);
+    store
+      .getState()
+      .beginRetime(lyricLineAt(store.getState().lyrics.lines, seconds));
+    return song;
+  }
+
+  it('opens on the last sung line and plays', async () => {
+    const { store, commands } = await openAt(7.5);
+    expect(store.getState().retime).toMatchObject({
+      kind: 'recording',
+      nextLine: 1,
+    });
+    expect(commands.mixerPlay).toHaveBeenCalledOnce();
+    expect(commands.mixerSeek).not.toHaveBeenCalled();
+  });
+
+  it.each([9.99, 10])('restarts on the first line from %d s', async (head) => {
+    const { store, commands } = await openAt(head);
+    expect(commands.mixerSeek).toHaveBeenCalledWith(0);
+    expect(commands.mixerPlay).toHaveBeenCalledOnce();
+    expect(store.getState().retime).toMatchObject({ nextLine: 0 });
+  });
+
+  it('stays off when the song has no sung line at all', async () => {
+    const { store, commands } = await openAt(1.5, {
+      ...SONG_DETAILS,
+      lyrics: {
+        synced: '[00:01.00]\n[00:02.00]',
+        plain: null,
+        offsetSec: 0,
+        instrumental: false,
+      },
+    });
+    expect(store.getState().retime.kind).toBe('off');
+    expect(commands.mixerPlay).not.toHaveBeenCalled();
   });
 });
 

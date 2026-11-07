@@ -116,27 +116,32 @@ export function nextSungLine(
   return NO_LINE;
 }
 
+function previousSungLine(lines: readonly LyricLine[], from: number): number {
+  for (let i = from - 1; i >= 0; i--) {
+    const line = lines[i];
+    if (line !== undefined && isSungLine(line)) return i;
+  }
+  return NO_LINE;
+}
+
 // Earlier untimed lines would break the sort, so a session cannot start past one.
 export function firstRetimeLine(
   lines: readonly LyricLine[],
   from: number,
 ): number {
   const untimed = lines.findIndex((line) => line.timeSec === UNTIMED);
-  return nextSungLine(
+  const next = nextSungLine(
     lines,
     untimed === NOT_FOUND ? from : Math.min(from, untimed),
   );
+  return next === NO_LINE ? previousSungLine(lines, lines.length) : next;
 }
 
-function previousSungLine(
+export function retimeLineAt(
   lines: readonly LyricLine[],
-  from: number,
-): LyricLine | undefined {
-  for (let i = from - 1; i >= 0; i--) {
-    const line = lines[i];
-    if (line !== undefined && isSungLine(line)) return line;
-  }
-  return undefined;
+  songSec: number,
+): number {
+  return firstRetimeLine(lines, lyricLineAt(lines, songSec));
 }
 
 // Lines before the first pin clamp down to it, so an earlier tap moves the take.
@@ -145,9 +150,10 @@ function anchoredLine(
   line: number,
   timeSec: number,
 ): number {
-  const before = previousSungLine(lines, line);
+  const before = lines[previousSungLine(lines, line)];
   if (before === undefined || timeSec > before.timeSec) return line;
-  return firstRetimeLine(lines, Math.max(lyricLineAt(lines, timeSec), 0));
+  const anchored = retimeLineAt(lines, timeSec);
+  return anchored === NO_LINE ? line : anchored;
 }
 
 export function takeAfterTap(
