@@ -2,8 +2,8 @@ import {
   Card,
   createThemedStyles,
   EmptyState,
+  PlayerDock,
   SegmentedControl,
-  size,
   space,
   stemPlayer,
   textRoles,
@@ -11,8 +11,13 @@ import {
   type SegmentOption,
 } from '@kitbag/core-design';
 import { KB_MAX_TRACKS } from '@kitbag/core-native';
-import { secondsToFrames, useStemPlayer } from '@kitbag/core-state';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  loopEndFrames,
+  useFocusedMixerHold,
+  useStemPlayer,
+  type StemPlayerStatus,
+} from '@kitbag/core-state';
+import { useCallback, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { detailTabLabel } from '../logic/detailView.ts';
@@ -31,6 +36,7 @@ import { useMixerFrame, type MixerFrameValues } from './useMixerFrame.ts';
 
 export interface StemPlayerScreenProps {
   readonly setId: number;
+  readonly focused: boolean;
   readonly insets: { readonly top: number; readonly bottom: number };
   readonly onBack: () => void;
 }
@@ -49,16 +55,6 @@ const useStyles = createThemedStyles((theme) => ({
     paddingHorizontal: space.screenInset,
     paddingBottom: stemPlayer.bodyGap,
     gap: stemPlayer.bodyGap,
-  },
-  dock: {
-    backgroundColor: theme.color.surface1,
-    borderTopWidth: size.stroke,
-    borderColor: theme.color.line,
-    borderTopLeftRadius: stemPlayer.dockRadius,
-    borderTopRightRadius: stemPlayer.dockRadius,
-    paddingTop: stemPlayer.dockTop,
-    paddingHorizontal: stemPlayer.dockH,
-    gap: stemPlayer.dockGap,
   },
   note: { ...textStyle(textRoles.fieldLabel), color: theme.color.text },
 }));
@@ -104,16 +100,11 @@ function Dock({
   readonly frame: MixerFrameValues;
   readonly bottom: number;
 }) {
-  const styles = useStyles();
-  const padding = useMemo(
-    () => ({ paddingBottom: stemPlayer.dockBottom + bottom }),
-    [bottom],
-  );
   return (
-    <View style={[styles.dock, padding]}>
+    <PlayerDock bottomInset={bottom}>
       <Scrubber frame={frame} />
       <StemTransport playing={frame.playing} />
-    </View>
+    </PlayerDock>
   );
 }
 
@@ -171,22 +162,14 @@ function PlayerContent({ frame, picked, onPick }: PlayerContentProps) {
   );
 }
 
-interface BodyProps {
-  readonly bottom: number;
+function NotReady({
+  status,
+  onBack,
+}: {
+  readonly status: StemPlayerStatus;
   readonly onBack: () => void;
-}
-
-function Body({ bottom, onBack }: BodyProps) {
+}) {
   const styles = useStyles();
-  const status = useStemPlayer((s) => s.status);
-  const rate = useStemPlayer((s) => s.engineRate);
-  const frames = useStemPlayer((s) => s.durationFrames);
-  const loopEnd = useStemPlayer((s) =>
-    s.loop.kind === 'on' ? secondsToFrames(s.loop.endSec, s.engineRate) : null,
-  );
-  const frame = useMixerFrame(rate, frames, loopEnd);
-  const retiming = useStemPlayer((s) => s.retime.kind === 'recording');
-  const [picked, setPicked] = useState<Tab>(MIX);
   if (status === 'failed')
     return (
       <EmptyState
@@ -207,12 +190,31 @@ function Body({ bottom, onBack }: BodyProps) {
         onAction={onBack}
       />
     );
+  return (
+    <Text accessibilityLiveRegion="polite" style={styles.note}>
+      Opening the stems…
+    </Text>
+  );
+}
+
+interface BodyProps {
+  readonly bottom: number;
+  readonly onBack: () => void;
+}
+
+function Body({ bottom, onBack }: BodyProps) {
+  const styles = useStyles();
+  const status = useStemPlayer((s) => s.status);
+  const rate = useStemPlayer((s) => s.engineRate);
+  const frames = useStemPlayer((s) => s.durationFrames);
+  const loopEnd = useStemPlayer(loopEndFrames);
+  const frame = useMixerFrame(rate, frames, loopEnd);
+  const retiming = useStemPlayer((s) => s.retime.kind === 'recording');
+  const [picked, setPicked] = useState<Tab>(MIX);
   if (status !== 'ready')
     return (
       <View style={styles.body}>
-        <Text accessibilityLiveRegion="polite" style={styles.note}>
-          Opening the stems…
-        </Text>
+        <NotReady status={status} onBack={onBack} />
       </View>
     );
   return (
@@ -234,6 +236,7 @@ function Body({ bottom, onBack }: BodyProps) {
 
 export function StemPlayerScreen({
   setId,
+  focused,
   insets,
   onBack,
 }: StemPlayerScreenProps) {
@@ -256,7 +259,11 @@ export function StemPlayerScreen({
   const closeMenu = useCallback(() => {
     setMenu(false);
   }, []);
-  useEffect(() => acquireSong(setId, WAVEFORM_BARS), [acquireSong, setId]);
+  const acquire = useCallback(
+    () => acquireSong(setId, WAVEFORM_BARS),
+    [acquireSong, setId],
+  );
+  useFocusedMixerHold(focused, acquire);
   const padding = useMemo(() => ({ paddingTop: insets.top }), [insets.top]);
   return (
     <View style={[styles.screen, padding]}>

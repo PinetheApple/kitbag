@@ -52,6 +52,16 @@ export const stemPlayer = {
   menuRowGap: 12,
 } as const;
 
+export const songPlayer = {
+  cardWave: 64,
+  beatTickStroke: 1,
+  beatTickShort: 8,
+  beatTickTall: 20,
+  beatTickColumn: 3,
+  waveBars: 64,
+  lockGap: 10,
+} as const;
+
 export const sliderGeometry = {
   seek: { track: 8, thumb: 28 },
   fader: { track: 4, thumb: 20 },

@@ -22,6 +22,7 @@ function StemSongsRoute() {
       insets={insets}
       onBack={routes.back}
       onOpenStemSet={routes.openStemSet}
+      onOpenSong={routes.openSong}
     />
   );
 }

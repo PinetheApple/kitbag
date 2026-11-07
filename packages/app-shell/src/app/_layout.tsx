@@ -4,6 +4,7 @@ import '@/runtime/libraryRuntime';
 import '@/runtime/practiceRuntime';
 import '@/runtime/songLibraryRuntime';
 import '@/runtime/stemPlayerRuntime';
+import '@/runtime/songPlayerRuntime';
 import '@/runtime/tunerRuntime';
 import '@/runtime/lastToolRuntime';
 import '@/runtime/homeLayoutRuntime';

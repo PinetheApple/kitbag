@@ -1,7 +1,7 @@
 import type { BarMark } from '@kitbag/core-db';
 
 // A mark opens a run of bars that lasts until the next mark or the grid's end.
-export function downbeatIndices(
+export function barMarkDownbeats(
   bars: readonly BarMark[],
   beatCount: number,
 ): readonly number[] {

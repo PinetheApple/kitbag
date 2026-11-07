@@ -372,3 +372,26 @@ describe('leaving the screen', () => {
     expect(store.getState().status).toBe('idle');
   });
 });
+
+describe('closing with a mix edit waiting to save', () => {
+  it('saves the edit before it touches the mixer', async () => {
+    const { store, commands, records } = await opened([stem(1)]);
+    store.getState().setGain(0, 0.5);
+    store.getState().close();
+    expect(records.saveStemMix.mock.invocationCallOrder[0]).toBeLessThan(
+      commands.mixerStop.mock.invocationCallOrder[0] ?? Number.NaN,
+    );
+  });
+
+  it('keeps the edit when a mixer command throws', async () => {
+    const { store, commands, records } = await opened([stem(1)]);
+    store.getState().setGain(0, 0.5);
+    commands.mixerStop.mockImplementationOnce(() => {
+      throw new Error('engine gone');
+    });
+    expect(() => {
+      store.getState().close();
+    }).toThrow('engine gone');
+    expect(records.saveStemMix).toHaveBeenCalledOnce();
+  });
+});

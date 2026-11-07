@@ -6,6 +6,7 @@ import {
   hasRealTime,
   NO_LINE,
   retimedTimes,
+  retimeLineAt,
   shiftedTimes,
   timedOnly,
   takeAfterTap,
@@ -28,6 +29,20 @@ function writeTiming(
       return KB_RESULT.KB_ERROR_INTERNAL;
     },
   );
+}
+
+export function retimeAnchor({
+  set,
+  get,
+}: Pick<ActionContext, 'set' | 'get'>): (frame: number) => void {
+  return (frame) => {
+    const { retime, lyrics, engineRate } = get();
+    if (retime.kind !== 'recording' || retime.taps.length > 0) return;
+    const { lines } = lyrics;
+    const songSec = framesToSeconds(frame, engineRate);
+    const nextLine = retimeLineAt(lines, songSec);
+    if (nextLine !== retime.nextLine) set({ retime: { ...retime, nextLine } });
+  };
 }
 
 export function retimeActions({

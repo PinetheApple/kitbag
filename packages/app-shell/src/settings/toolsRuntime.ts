@@ -1,6 +1,7 @@
 import {
   configureToolsPersistence,
   getToolsStore,
+  songPlayerStore,
   stemPlayerStore,
 } from '@kitbag/core-state';
 
@@ -22,5 +23,9 @@ configureToolsPersistence(
 
 stopWhenSwitchedOff(
   getToolsStore(),
-  toolStoppers({ metronome: metronomeTransport, stemPlayer: stemPlayerStore }),
+  toolStoppers({
+    metronome: metronomeTransport,
+    stemPlayer: stemPlayerStore,
+    songPlayer: songPlayerStore,
+  }),
 );

@@ -760,15 +760,22 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   boxes, not measured; needs a device check. A wider row wraps onto its
   second line rather than truncating. Above the default scale the status stack leaves the
   scrolling body and sits directly above the transport, so a body that overflows cannot
-  push it out of view. It is one row tall stopped and two running. Start and Stop leave the
-  scroll view's frame and content height alone (#304): a clip follows the stack, and the
-  running viewport reaches under the stack's extra row. Android lays out a scroll view
-  before its content, and the offset clamps to the stale range in between, so resizing the
-  viewport on Stop would lose the scroll position. Running, the content pads by the stack
-  difference; stopped, by that less the legend's modelled height. The slack models one
-  legend row, so any legend that wraps leaves the stopped range longer than running, and
-  Start at scroll end moves the body. It happens at scroll end only. The measured case is
-  2.0 with poly on, about 48 dp. Coordinator call; the owner may
+  push it out of view. Stopped it is one row tall. Running it
+  is as tall as the rows the armed tools show in that phase: none with nothing armed, and
+  it drops a row once a beat has played outside a count-in (#319). A row that can show is
+  reserved from Start; a tool turned on mid-run can cover pads while its sheet is open.
+  `kitbag-metronome-status.html` reserves two rows so that nothing moves; above the default
+  scale nothing moves without that reservation, because the stack is out of the body.
+  Coordinator call; the owner may overturn it. **[recorded]** Start and Stop leave the scroll
+  view's frame and content height alone (#304): the frame runs to the transport's gap in
+  every stack size and a clip follows the stack. Android lays out a scroll view before its
+  content, and the offset clamps to the stale range in between, so resizing the viewport on
+  Stop would lose the scroll position. Running, the content pads by the two-row stack and
+  its gap; stopped, by that less the legend's modelled height, so scrolling to the end with
+  fewer rows shows the same blank below the dots as the two-row range leaves. The slack
+  models one legend row, so any legend that wraps leaves the stopped range longer than
+  running, and Start at scroll end moves the body. It happens at scroll end only. The
+  measured case is 2.0 with poly on, about 48 dp. Coordinator call; the owner may
   overturn it. **[recorded]**
   On a small screen at 2.0 the beat dots then sit below the fold and are reached by
   scrolling the body (coordinator call, 2026-11-02, open to owner review). Above the default scale
@@ -922,6 +929,28 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   font scale of 1.0 or less, the design size above it. Home
   tool tiles use the same helper, with their floor at `homeTile.titleMinScale` of the
   tile title's design size; no `adjustsFontSizeToFit` or `minimumFontScale` is left.
+
+- **2026-11-07 · A row tap opens paused (§6, #297)** — A row tap opens the song paused and
+  Play starts it, as the stem player does. Coordinator call; the owner may overturn it.
+  **[recorded]**
+
+- **2026-11-07 · A refocused player reopens paused at the start (§6, §7, #297, #321)** — A
+  player holds the mixer until another player displaces it; only a focused player acquires.
+  A lower song or stem screen whose session a
+  screen above displaced reopens its own song when it regains focus, paused at the start,
+  as #316's reopen does; position and loop are not restored. A screen that kept its session
+  does not reload. Blur releases nothing, so a non-player route over a player keeps it playing. Row taps
+  use `router.navigate`, so a double tap on one row keeps one route; taps on two rows stack.
+  Coordinator call; the owner may overturn it. **[recorded]**
+
+- **2026-11-07 · A single song is a one-track mixer song (§4.1, §6.3, #297)** — The song
+  player drives `kb_mixer_*` with the song on track 0, plus `setGrid` and
+  `metronomeFollowMixer(true)`. `kb_player_*` stays in the ABI, and no transport or store
+  code uses it. The mixer already has the loop, its crossfade and follow-click, and #138
+  adds its stretch stage to the mixer; extending the player would duplicate all of them.
+  Count-in before the lock is parked on #298: under a grid the engine skips it, and a
+  JS-timed handoff was ruled out.
+  **[recorded — coordinator call, owner may overturn]**
 
 - **2026-11-07 · App-bar titles above the default text size (§12.6, #303)** — Amends the
   2026-11-03 #287 entry's floors. Over an artist line the title's floor is never below the

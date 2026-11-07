@@ -1,4 +1,3 @@
-import { stemPlayer } from '@kitbag/core-design';
 import { describe, expect, it } from 'vitest';
 
 import { LANE, NOTE_AT_1X, NOTE_AT_2X } from './loopNote.test-helper.ts';
@@ -7,6 +6,7 @@ import {
   loopNotePlacement,
   type LaneGeometry,
 } from './loopNotePlacement.ts';
+import { stemPlayer } from './stemPlayerRoles.ts';
 
 const LOOPS = {
   early: { start: 0.05, end: 0.15 },

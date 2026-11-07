@@ -267,6 +267,7 @@ export {
   configureStemPlayer,
   type SharedMetronome,
   type StemPlayerCommands,
+  type MixerRuntime,
   type StemPlayerEngine,
   type StemPlayerRecords,
   type StemPlayerRuntime,
@@ -291,6 +292,19 @@ export {
 } from './stemPlayer/lyrics.ts';
 export type { LoopSeconds } from './stemPlayer/loop.ts';
 export { NO_SECTION, sectionAt } from './stemPlayer/sections.ts';
+export {
+  clickKeyLabel,
+  loopEndFrames,
+  loopKeyLabel,
+  loopNote,
+  loopRange,
+} from './stemPlayer/loopText.ts';
+export { useLoopScrub } from './stemPlayer/useLoopScrub.ts';
+export type { MixerHold } from './stemPlayer/mixerSession.ts';
+export { useFocusedMixerHold } from './stemPlayer/screenHold.ts';
+export { useSongPlayer } from './songPlayer/useSongPlayer.ts';
+export { songPlayerStore } from './songPlayer/store.ts';
+export { configureSongPlayer } from './songPlayer/runtime.ts';
 export {
   bpmFact,
   keyFact,
