@@ -251,7 +251,7 @@ export {
   type SwipeHintStore,
 } from './firstUse/store.ts';
 export { useStemPlayer } from './stemPlayer/useStemPlayer.ts';
-export { UNITY_GAIN } from './stemPlayer/mix.ts';
+export { UNITY_GAIN, UNSHIFTED_KEY } from './stemPlayer/mix.ts';
 export {
   createStemPlayerStore,
   stemPlayerStore,

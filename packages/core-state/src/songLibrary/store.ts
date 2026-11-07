@@ -89,6 +89,7 @@ export interface SongLibraryActions {
   reanalyze: (songId: number) => Promise<void>;
   deleteRow: (row: LibraryRow) => Promise<void>;
   renameRow: (row: LibraryRow, name: string) => Promise<void>;
+  correctDuration: (songId: number, durationSec: number) => Promise<void>;
   dismissNotice: () => void;
   confirmReplace: () => Promise<void>;
   cancelReplace: () => void;
@@ -353,6 +354,15 @@ function rowActions(deps: SongLibraryDeps, set: SetState, get: Get) {
       } catch (error) {
         warn(`rename of ${row.title} failed`, error);
         set({ notice: { kind: 'renameFailed', name: row.title } });
+        return;
+      }
+      await get().refresh();
+    },
+    correctDuration: async (songId: number, durationSec: number) => {
+      try {
+        await deps.records().updateDuration(songId, durationSec);
+      } catch (error) {
+        warn(`length of song ${String(songId)} not stored`, error);
         return;
       }
       await get().refresh();

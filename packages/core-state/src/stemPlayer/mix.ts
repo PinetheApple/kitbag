@@ -1,4 +1,5 @@
 export const UNITY_GAIN = 1;
+export const UNSHIFTED_KEY = 0;
 
 export function soloAfter(
   soloed: readonly boolean[],

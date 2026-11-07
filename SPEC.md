@@ -808,6 +808,8 @@ the single most RN-specific piece of §5** — see §13.9.
   screen set to icons only (#284).
 - **Practice timer continues** while backgrounded. A session interrupted by a
   phone call is still a session.
+- **A recents swipe stops all playback** and removes its notifications; Home,
+  an app switch, lock and Back keep playing (#338).
 
 ### 5.7 Practice
 

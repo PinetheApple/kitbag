@@ -1,5 +1,5 @@
 import type { StemSetRecord, StoredStem } from '@kitbag/core-db';
-import { KB_RESULT } from '@kitbag/core-native';
+import { KB_MIXER_UNITY_RATE, KB_RESULT } from '@kitbag/core-native';
 import { vi } from 'vitest';
 
 import type {
@@ -84,7 +84,7 @@ export function record(
 
 export function fakeRuntime(set: StemSetRecord) {
   let stored = set;
-  const engine = { position: 0, playing: false };
+  const engine = { position: 0, playing: false, rate: KB_MIXER_UNITY_RATE };
   const songStopped = new Set<() => void>();
   const commands = {
     start: vi.fn(() => Promise.resolve(0)),
@@ -106,10 +106,11 @@ export function fakeRuntime(set: StemSetRecord) {
     mixerSeek: vi.fn(),
     mixerSetLoop: vi.fn(() => Promise.resolve<number>(KB_RESULT.KB_OK)),
     mixerClearLoop: vi.fn(() => Promise.resolve<number>(KB_RESULT.KB_OK)),
-    mixerSetRate: vi.fn<StemPlayerCommands['mixerSetRate']>(() =>
-      Promise.resolve(KB_RESULT.KB_OK),
-    ),
-    mixerRate: vi.fn(() => Promise.resolve(1)),
+    mixerSetRate: vi.fn<StemPlayerCommands['mixerSetRate']>((rate) => {
+      engine.rate = rate;
+      return Promise.resolve(KB_RESULT.KB_OK);
+    }),
+    mixerRate: vi.fn(() => Promise.resolve(engine.rate)),
     mixerSetTrackPitch: vi.fn(() => Promise.resolve<number>(KB_RESULT.KB_OK)),
     mixerTrackPitch: vi.fn(() => Promise.resolve(0)),
     mixerTrackFrames: vi.fn(() => Promise.resolve(0)),
@@ -186,5 +187,7 @@ export async function opened(
   });
   await store.getState().open(7, BARS);
   fake.commands.mixerClearLoop.mockClear();
+  fake.commands.mixerStop.mockClear();
+  fake.commands.mixerRate.mockClear();
   return { ...fake, store };
 }

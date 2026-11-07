@@ -27,6 +27,8 @@ sealed interface CardEvent {
 
   data object StartUnrecognised : CardEvent
 
+  data object TaskRemoved : CardEvent
+
   data class SessionPressed(val button: SessionButton) : CardEvent
 
   data class SessionSeeked(val positionMillis: Long) : CardEvent
@@ -54,6 +56,8 @@ sealed interface CardEffect {
   data object ReturnToMetronome : CardEffect
 
   data object RemoveCard : CardEffect
+
+  data class StopPlayback(val metronome: Boolean, val song: Boolean) : CardEffect
 }
 
 class CardRouting {
@@ -79,6 +83,7 @@ class CardRouting {
       is CardEvent.SongTapped -> song(event.action?.let(SongAction::named))
       CardEvent.SongHidden, CardEvent.SongStopped -> songEnded()
       CardEvent.StartUnrecognised -> CardEffect.None
+      CardEvent.TaskRemoved -> stopPlayback()
       is CardEvent.SessionPressed -> song(event.button.song)
       is CardEvent.SessionSeeked -> CardEffect.SeekSong(event.positionMillis)
       is CardEvent.SessionCustomPressed -> song(SongAction.named(event.action))
@@ -93,6 +98,7 @@ class CardRouting {
       is CardEvent.SongTapped -> CardEffect.None
       CardEvent.SongHidden, CardEvent.SongStopped -> CardEffect.None
       CardEvent.StartUnrecognised -> CardEffect.None
+      CardEvent.TaskRemoved -> stopPlayback()
       is CardEvent.SessionPressed -> metronome(event.button.metronome)
       is CardEvent.SessionSeeked -> CardEffect.None
       is CardEvent.SessionCustomPressed -> metronome(TransportAction.named(event.action))
@@ -123,6 +129,13 @@ class CardRouting {
   private fun songEnded(): CardEffect {
     songShowing = false
     return if (metronomeShowing) CardEffect.ReturnToMetronome else CardEffect.EndSong
+  }
+
+  private fun stopPlayback(): CardEffect {
+    val effect = CardEffect.StopPlayback(metronome = metronomeShowing, song = songShowing)
+    metronomeShowing = false
+    songShowing = false
+    return effect
   }
 
   private fun metronome(action: TransportAction?): CardEffect =

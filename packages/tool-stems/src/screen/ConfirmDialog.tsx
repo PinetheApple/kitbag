@@ -48,6 +48,7 @@ const useStyles = createThemedStyles((theme) => ({
 export interface ConfirmDialogProps {
   readonly title: string;
   readonly body: string;
+  readonly cancelLabel: string;
   readonly confirmLabel: string;
   readonly onConfirm: () => void;
   readonly onCancel: () => void;
@@ -56,6 +57,7 @@ export interface ConfirmDialogProps {
 export function ConfirmDialog({
   title,
   body,
+  cancelLabel,
   confirmLabel,
   onConfirm,
   onCancel,
@@ -74,7 +76,7 @@ export function ConfirmDialog({
             fill
             size="target"
             variant="ghost"
-            label="Cancel"
+            label={cancelLabel}
             onPress={onCancel}
           />
           <Button
