@@ -19,6 +19,7 @@ namespace seek_race {
 namespace {
 
 using kitbag_test::Check;
+using kitbag_test::kUnclockedFrame;
 using kitbag_test::kZeroClock;
 
 constexpr uint32_t kRate = 48000;
@@ -47,7 +48,7 @@ void RenderLoop(kitbag::Mixer* mixer, Stats* s) {
   std::vector<float> out(static_cast<size_t>(kBlock) * 2, 0.0f);
   float previous = 0.0f;
   while (!s->stop.load(std::memory_order_relaxed)) {
-    mixer->Process(out.data(), kBlock);
+    mixer->Process(out.data(), kBlock, kUnclockedFrame);
     s->now.fetch_add(kBlock, std::memory_order_relaxed);
     s->blocks.fetch_add(1, std::memory_order_relaxed);
     for (uint32_t f = 0; f < kBlock; ++f) {

@@ -87,6 +87,8 @@ class Mixer {
   /// Transport. The read-ahead work runs here on the app thread; the callback
   /// is the sole writer of the head and the playing flag.
   void Play();
+  /// Starts playback on engine frame [frame]; false when the ring is full.
+  bool PlayAt(uint64_t frame);
   /// Stops playback and rewinds the head to 0 (SPEC.md §4.4).
   void Stop(FrameClock clock, bool engine_running);
   /// Ends playback holding the head, so a following Play resumes there.
@@ -150,7 +152,7 @@ class Mixer {
   }
 
   /// RT-safe: allocates nothing, takes no lock, frees nothing.
-  void Process(float* output, uint32_t frame_count);
+  void Process(float* output, uint32_t frame_count, uint64_t block_start_frame);
   const SongClock& song_clock() const {
     return song_clock_;
   }
@@ -216,6 +218,10 @@ class Mixer {
   // command is a -Wswitch error rather than a silent drop.
   void ApplyPendingCommands();
   void ApplyCommand(const Command& command);
+  void ApplyTransportCommand(const Command& command);
+  void StartStreams();
+  uint32_t StartPendingPlay(uint64_t block_start_frame, uint32_t frame_count);
+  void PlayBlock(float* output, uint32_t frame_count);
   void ApplyStretchCommand(const Command& command);
   void RecomputeAnySolo();
   bool AdoptPlan();
@@ -331,6 +337,7 @@ class Mixer {
   // read it. Single writer, so the Stop/Seek rewind can never be overwritten.
   std::atomic<uint64_t> read_frame_{0};
   std::atomic<bool> playing_{false};
+  std::optional<uint64_t> pending_play_frame_;
   std::atomic<bool> any_solo_{false};
   std::atomic<float> master_gain_{1.0f};
   // Callback-owned transport. stream_frame_ is what every adopted source is

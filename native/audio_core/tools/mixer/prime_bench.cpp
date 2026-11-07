@@ -19,6 +19,7 @@
 namespace {
 
 using Clock = std::chrono::steady_clock;
+using kitbag_test::kUnclockedFrame;
 using kitbag_test::kZeroClock;
 
 constexpr uint32_t kSampleRate = 48000;
@@ -96,7 +97,7 @@ double TimedBlock(kitbag::Mixer* mixer) {
   static std::vector<float> out(static_cast<size_t>(kBlock) * kChannels);
   Pace(*mixer);
   const auto start = Clock::now();
-  mixer->Process(out.data(), kBlock);
+  mixer->Process(out.data(), kBlock, kUnclockedFrame);
   return MicrosSince(start);
 }
 

@@ -10,6 +10,7 @@ enum class MixerCommandType : uint8_t {
   kSetMute,
   kSetSolo,
   kPlay,
+  kPlayAt,
   kStop,
   kPause,
   kSetMasterGain,
@@ -21,6 +22,7 @@ struct MixerCommand {
   MixerCommandType type;
   int32_t track = 0;
   float fvalue = 0.0f;
+  uint64_t frame = 0;
 };
 
 }  // namespace kitbag

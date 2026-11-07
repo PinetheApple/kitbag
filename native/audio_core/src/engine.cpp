@@ -309,14 +309,14 @@ void Engine::Render(float* output, uint32_t frame_count) {
 }
 
 void Engine::RenderSlice(float* output, uint32_t frame_count) {
-  // Engine-clock frame of output[0] — the transport metronome anchoring
-  // (StartAt, grid anchors) is expressed against. Advanced once after the slice.
+  // Engine-clock frame of output[0], which every scheduled start and grid
+  // anchor is expressed against. Advanced once after the slice.
   const uint64_t block_start_frame =
       frames_rendered_.load(std::memory_order_relaxed);
 
   // Process clears the buffer (memset) and mixes the stems; the player and the
   // metronome then accumulate on top, so the three compose additively.
-  mixer_.Process(output, frame_count);
+  mixer_.Process(output, frame_count, block_start_frame);
   player_.Render(output, frame_count);
 
   metronome_.Render(

@@ -57,6 +57,9 @@ class Engine {
   bool metronome_intent() const {
     return metronome_intent_.load();
   }
+  bool mixer_intent() const {
+    return mixer_intent_.load();
+  }
   void set_idle_grace_ms(uint32_t grace_ms) {
     idle_grace_ms_.store(grace_ms, std::memory_order_relaxed);
   }

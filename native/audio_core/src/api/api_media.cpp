@@ -109,6 +109,16 @@ void kb_mixer_play(kb_engine* engine) {
   ToEngine(engine)->mixer().Play();
 }
 
+kb_result kb_mixer_play_at(kb_engine* engine, uint64_t start_frame) {
+  if (engine == nullptr) return KB_ERROR_INVALID_ARGUMENT;
+  kitbag::Engine* e = ToEngine(engine);
+  const bool had_intent = e->mixer_intent();
+  e->SetMixerIntent(true);
+  if (e->mixer().PlayAt(start_frame)) return KB_OK;
+  e->SetMixerIntent(had_intent);
+  return KB_ERROR_BUSY;
+}
+
 void kb_mixer_stop(kb_engine* engine) {
   if (engine == nullptr) return;
   kitbag::Engine* e = ToEngine(engine);

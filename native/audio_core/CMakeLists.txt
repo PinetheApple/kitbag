@@ -66,6 +66,7 @@ add_library(kitbag_core SHARED
   src/mixer/mixer_stretch.cpp
   src/mixer/mixer_prime.cpp
   src/mixer/mixer_handover.cpp
+  src/mixer/mixer_play_at.cpp
   src/player/player.cpp
   src/player/player_render.cpp
   src/stretch/time_stretch.cpp
@@ -261,6 +262,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/mixer/mixer_test_load_refusal.cpp
     tools/mixer/mixer_test_lag_carry.cpp
     tools/mixer/mixer_test_retire.cpp
+    tools/mixer/mixer_test_play_at.cpp
     ${KITBAG_METRONOME_SOURCES}
     src/media/streaming_track.cpp
     src/media/looping_source_reader.cpp
@@ -271,6 +273,7 @@ if(KITBAG_BUILD_TOOLS)
     src/mixer/mixer_stretch.cpp
     src/mixer/mixer_prime.cpp
     src/mixer/mixer_handover.cpp
+    src/mixer/mixer_play_at.cpp
     src/stretch/time_stretch.cpp
     src/media/audio_source.cpp
     src/media/file_audio_reader.cpp
@@ -318,6 +321,7 @@ if(KITBAG_BUILD_TOOLS)
     src/mixer/mixer_stretch.cpp
     src/mixer/mixer_prime.cpp
     src/mixer/mixer_handover.cpp
+    src/mixer/mixer_play_at.cpp
     src/stretch/time_stretch.cpp
     src/player/player.cpp
     src/player/player_render.cpp
@@ -486,6 +490,7 @@ if(KITBAG_BUILD_TOOLS)
     src/mixer/mixer_stretch.cpp
     src/mixer/mixer_prime.cpp
     src/mixer/mixer_handover.cpp
+    src/mixer/mixer_play_at.cpp
     src/stretch/time_stretch.cpp
     src/media/audio_source.cpp
     src/media/file_audio_reader.cpp
