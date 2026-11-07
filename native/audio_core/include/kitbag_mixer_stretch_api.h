@@ -27,12 +27,11 @@ KB_EXPORT float kb_mixer_rate(const kb_engine* engine);
 /* A loaded track's key in whole semitones [-6, 6]: absolute, not an offset from
  * any song-wide control (SPEC.md §7.6). Set it after the load: unloading a track
  * resets its key to 0, unless the command queue is full, and loading over a
- * loaded track keeps it. Returns
- * KB_ERROR_INVALID_ARGUMENT for a null engine, a value outside the range or a
- * track with no stem loaded; KB_ERROR_BUSY when the command queue is full; and
- * KB_ERROR_INTERNAL when a stem could not be read to prime the stretch. On any
- * error the old key keeps playing. Primes on the calling thread like
- * kb_mixer_set_rate. */
+ * loaded track keeps it. Returns KB_ERROR_INVALID_ARGUMENT for a null engine, a
+ * value outside the range or a track with no stem loaded; KB_ERROR_BUSY when the
+ * command queue is full; and KB_ERROR_INTERNAL when a stem could not be read to
+ * prime the stretch. On any error the old key keeps playing. Primes on the
+ * calling thread like kb_mixer_set_rate. */
 KB_EXPORT kb_result
 kb_mixer_set_track_pitch(kb_engine* engine, int32_t track, int32_t semitones);
 /* Follows set_track_pitch and unload within one block, except an unload on a

@@ -15,7 +15,6 @@ constexpr int kSettleBlocks = 40;
 constexpr int kStemCount = 5;
 constexpr int kFifthKeyTrack = 4;
 constexpr float kFreeKey = 5.0f;
-// 1.1 s at 48 kHz: a prime over a slow disk outlasting the grace window.
 constexpr uint64_t kSlowPrimeFrames =
     kitbag::RtPublisher<int>::kReclaimGraceFrames + kSampleRate / 10;
 
@@ -118,14 +117,7 @@ void FreeKeyZero(Rig* rig) {
 }
 
 void PrimeByJoiningStem(Rig* rig) {
-  const std::string path = NextTempPath();
-  media_test::WriteFloatWav(
-      path,
-      ToneFixture({.frames = kToneFrames}),
-      kMono,
-      kSampleRate
-  );
-  TempFiles().push_back(path);
+  const std::string path = WriteTempStem(ToneFixture({.frames = kToneFrames}));
   rig->mixer.LoadTrack(kFifthKeyTrack, path.c_str(), rig->Clock(), true);
 }
 

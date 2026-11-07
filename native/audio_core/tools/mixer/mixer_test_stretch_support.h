@@ -30,6 +30,7 @@ constexpr auto kPaceTimeout = std::chrono::milliseconds(10);
 constexpr auto kPacePoll = std::chrono::microseconds(200);
 constexpr int64_t kNotFound = -1;
 constexpr double kMsPerSecond = 1000.0;
+constexpr int64_t kVoiceWindowFrames = 4320;
 
 struct ToneSpec {
   int64_t frames = 0;
@@ -62,16 +63,20 @@ inline std::vector<float> ToneFixture(const ToneSpec& spec) {
   return pcm;
 }
 
-inline void
-LoadPcm(kitbag::Mixer* mixer, int track, const std::vector<float>& pcm) {
+inline std::string WriteTempStem(const std::vector<float>& pcm) {
   const std::string path = NextTempPath();
   if (!media_test::WriteFloatWav(path, pcm, kMono, kSampleRate)) {
-    FixtureFail("could not write tone WAV");
-    return;
+    FixtureFail("could not write stem WAV");
   }
   TempFiles().push_back(path);
+  return path;
+}
+
+inline void
+LoadPcm(kitbag::Mixer* mixer, int track, const std::vector<float>& pcm) {
+  const std::string path = WriteTempStem(pcm);
   if (mixer->LoadTrack(track, path.c_str(), kZeroClock, false) != kLoaded) {
-    FixtureFail("could not load tone WAV into the track");
+    FixtureFail("could not load stem WAV into the track");
   }
 }
 
@@ -85,7 +90,6 @@ LoadSilence(kitbag::Mixer* mixer, int track, int64_t frames) {
   return TempFiles().back();
 }
 
-// A tone on track 0 over a silent stem whose file the caller can take away.
 inline std::string
 LoadToneOverFragile(kitbag::Mixer* mixer, int fragile_track, int64_t frames) {
   LoadTone(mixer, frames);
@@ -303,6 +307,16 @@ inline void CheckSoundsAtOnce(kitbag::Mixer* mixer, const char* label) {
 // Blocks until a mid-play engage has handed over, with a block to spare.
 inline int HandOverBlocks(const kitbag::Mixer& mixer) {
   return static_cast<int>(mixer.handover_lead_frames() / kBlock) + 2;
+}
+
+inline double VoiceEnergy(const std::vector<float>& left, int64_t from) {
+  double energy = 0.0;
+  const auto size = static_cast<int64_t>(left.size());
+  for (int64_t k = from; k < std::min(from + kVoiceWindowFrames, size); ++k) {
+    const auto sample = static_cast<double>(left[k]);
+    energy += sample * sample;
+  }
+  return energy;
 }
 
 size_t ThreadAllocations();

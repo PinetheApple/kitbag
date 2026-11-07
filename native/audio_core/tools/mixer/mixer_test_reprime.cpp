@@ -23,7 +23,6 @@ constexpr int64_t kLeadFrames = 240;
 // Past the lead at any rate here: the callback plays on while the prime runs.
 constexpr int kBlocksPastLead = 4;
 constexpr int kBlocksAfter = 120;
-constexpr int64_t kVoiceWindowFrames = 4320;
 constexpr int64_t kClickRingDownFrames = 5760;
 // One voice reads 1.0, two stacked well over 1.9.
 constexpr double kMaxSingleVoiceRatio = 1.25;
@@ -84,16 +83,6 @@ struct Rig {
   }
 };
 
-double Energy(const std::vector<float>& left, int64_t from) {
-  double energy = 0.0;
-  const int64_t size = static_cast<int64_t>(left.size());
-  for (int64_t k = from; k < std::min(from + kVoiceWindowFrames, size); ++k) {
-    const auto sample = static_cast<double>(left[k]);
-    energy += sample * sample;
-  }
-  return energy;
-}
-
 void CheckOneVoice(
     const std::vector<float>& left,
     const std::vector<int64_t>& clicks,
@@ -101,9 +90,9 @@ void CheckOneVoice(
     const char* label
 ) {
   const bool have = clicks.size() > click && click > 0;
-  const double ratio =
-      have ? Energy(left, clicks[click]) / Energy(left, clicks[kFlipBeat - 1])
-           : 0.0;
+  const double ratio = have ? VoiceEnergy(left, clicks[click]) /
+                                  VoiceEnergy(left, clicks[kFlipBeat - 1])
+                            : 0.0;
   Check(have && ratio <= kMaxSingleVoiceRatio, label);
   if (!have || ratio > kMaxSingleVoiceRatio) {
     std::fprintf(

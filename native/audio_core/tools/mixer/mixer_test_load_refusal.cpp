@@ -1,10 +1,10 @@
 #include <algorithm>
 #include <cmath>
-#include <numbers>
 #include <string>
 #include <vector>
 
 #include "mixer_test_stretch_support.h"
+#include "stem_pulse.h"
 
 namespace mixer_test {
 namespace {
@@ -20,9 +20,6 @@ constexpr int kJoiningTrack = 0;
 constexpr int kMovedTrack = 2;
 constexpr float kFreeKey = 5.0f;
 constexpr int64_t kBeatFrames = 23917;
-constexpr int64_t kBurstHalfFrames = 1440;
-constexpr double kPulseHz = 1000.0;
-constexpr float kPulseAmplitude = 0.5f;
 constexpr float kEnergyFloor = 1e-5f;
 constexpr int kQuietFramesBetweenPulses = 2400;
 constexpr int kMeasuredBlocks = 500;
@@ -30,37 +27,29 @@ constexpr int kMeasuredBlocks = 500;
 // 6073 frames.
 constexpr double kMaxSkewFrames = 240.0;
 
-// Pulses on every second beat, starting at [first_beat], so two stems on
-// different buses alternate and a misaligned bus shows in the spacing.
-std::vector<float> PulsesEverySecondBeat(int first_beat) {
-  std::vector<float> pcm(kStemFrames, 0.0f);
-  for (int64_t centre = kBeatFrames * first_beat;
-       centre + kBurstHalfFrames < kStemFrames;
+// Two stems on different buses alternate, so a misaligned bus shows in the
+// spacing.
+std::string WritePulseStem(int first_beat) {
+  std::vector<double> beats;
+  for (int64_t centre = kBeatFrames * first_beat; centre < kStemFrames;
        centre += 2 * kBeatFrames) {
-    for (int64_t k = centre - kBurstHalfFrames; k < centre + kBurstHalfFrames;
-         ++k) {
-      const double into = static_cast<double>(k - centre + kBurstHalfFrames) /
-                          (2.0 * kBurstHalfFrames);
-      const double hann = 0.5 - 0.5 * std::cos(2.0 * std::numbers::pi * into);
-      pcm[k] = kPulseAmplitude * static_cast<float>(hann) * SineAt(kPulseHz, k);
-    }
+    beats.push_back(static_cast<double>(centre));
   }
-  return pcm;
-}
-
-std::string WriteStem(const std::vector<float>& pcm) {
   const std::string path = NextTempPath();
-  if (!media_test::WriteFloatWav(path, pcm, kMono, kSampleRate)) {
+  if (!media_test::WritePulseStemWav(path, beats, kStemFrames, kSampleRate)) {
     FixtureFail("could not write pulse WAV");
   }
   TempFiles().push_back(path);
   return path;
 }
 
-// Four distinct keys on tracks 1-4; only the last track's file is hidden later.
-std::string PlayFourKeysWithPulsesOnTheFirst(kitbag::Mixer* mixer) {
+std::string PlayFourKeysReturningLastStem(kitbag::Mixer* mixer) {
   mixer->SetRate(kSpeed, kZeroClock, false);
-  LoadPcm(mixer, kFirstKeyedTrack, PulsesEverySecondBeat(2));
+  const std::string pulses = WritePulseStem(2);
+  if (mixer->LoadTrack(kFirstKeyedTrack, pulses.c_str(), kZeroClock, false) !=
+      kLoaded) {
+    FixtureFail("could not load pulse WAV");
+  }
   std::string last;
   for (int t = kFirstKeyedTrack + 1; t <= kLastKeyedTrack; ++t) {
     last = LoadSilence(mixer, t, kStemFrames);
@@ -138,8 +127,8 @@ void CheckRefusedWithFileGone(
 
 void TestFailedPrimeRefusesTheStemAndKeepsTheConfig() {
   kitbag::Mixer mixer(kSampleRate);
-  const std::string fragile = PlayFourKeysWithPulsesOnTheFirst(&mixer);
-  const std::string joining = WriteStem(PulsesEverySecondBeat(1));
+  const std::string fragile = PlayFourKeysReturningLastStem(&mixer);
+  const std::string joining = WritePulseStem(1);
   CheckRefusedWithFileGone(&mixer, fragile, joining);
   RenderPaced(&mixer, 1);
   Check(
@@ -165,7 +154,7 @@ void TestStoppedFailedPrimeRefusesTheStem() {
   kitbag::Mixer mixer(kSampleRate);
   mixer.SetRate(kSpeed, kZeroClock, false);
   const std::string fragile = LoadSilence(&mixer, 0, kStemFrames);
-  const std::string second = WriteStem(PulsesEverySecondBeat(1));
+  const std::string second = WritePulseStem(1);
   Hide(fragile);
   Check(
       mixer.LoadTrack(1, second.c_str(), kZeroClock, false) ==
@@ -214,7 +203,7 @@ void TestFailedPrimeRefusesASource() {
 
 void TestUnopenableFileKeepsTheConfig() {
   kitbag::Mixer mixer(kSampleRate);
-  PlayFourKeysWithPulsesOnTheFirst(&mixer);
+  PlayFourKeysReturningLastStem(&mixer);
   const std::string missing = NextTempPath();
   Check(
       mixer.LoadTrack(kJoiningTrack, missing.c_str(), kZeroClock, false) ==

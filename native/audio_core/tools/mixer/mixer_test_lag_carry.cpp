@@ -17,7 +17,6 @@ constexpr int kChangeBlocks = 6;
 constexpr int kBlocksPastChange = 20;
 constexpr int64_t kNoFrame = -1;
 constexpr int64_t kReferenceBeatLead = 24000;
-constexpr int64_t kVoiceWindowFrames = 4320;
 // An unaccented click reads 0.44 of the accented one before it, two stacked 1.75.
 constexpr double kMaxVoiceRatio = 1.0;
 
@@ -110,16 +109,6 @@ void CheckNoChangeStepsBack(
         kChangeBlocks
     );
   }
-}
-
-double VoiceEnergy(const std::vector<float>& left, int64_t from) {
-  double energy = 0.0;
-  const auto size = static_cast<int64_t>(left.size());
-  for (int64_t k = from; k < std::min(from + kVoiceWindowFrames, size); ++k) {
-    const auto sample = static_cast<double>(left[k]);
-    energy += sample * sample;
-  }
-  return energy;
 }
 
 void FollowTwoBeats(kitbag::Metronome* metronome, int64_t beat_frame) {
