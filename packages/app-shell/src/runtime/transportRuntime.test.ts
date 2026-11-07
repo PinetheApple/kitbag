@@ -3,11 +3,21 @@ import type { SetlistEntry, SetlistSummary } from '@kitbag/core-state';
 import { libraryStore, metronomeStore } from '@kitbag/core-state';
 import { describe, expect, it, vi } from 'vitest';
 
-const native = vi.hoisted(() => ({
-  transportShow: vi.fn<(state: TransportShowState) => void>(),
-  transportHide: vi.fn(),
-  onTransport: vi.fn<(handler: (event: TransportEvent) => void) => void>(),
-}));
+// The runtime subscribes once, at its first import, and vitest clears mock
+// history before each test, so the subscriber must outlive vi.fn's record.
+const native = vi.hoisted(() => {
+  const subscribers: ((event: TransportEvent) => void)[] = [];
+  return {
+    transportShow: vi.fn<(state: TransportShowState) => void>(),
+    transportHide: vi.fn(),
+    onTransport: (handler: (event: TransportEvent) => void) => {
+      subscribers.push(handler);
+    },
+    emitTransport: (event: TransportEvent) => {
+      for (const handler of subscribers) handler(event);
+    },
+  };
+});
 
 vi.mock('./notificationPermission', () => ({
   askForNotificationsOnce: () => undefined,
@@ -63,7 +73,6 @@ describe('transportRuntime', () => {
 
   it('a song change while paused sends the new song tempo, and Play keeps it', async () => {
     await import('./transportRuntime');
-    const handler = native.onTransport.mock.calls[0]?.[0];
     metronomeStore.setState({
       running: true,
       bpm: 120,
@@ -81,7 +90,7 @@ describe('transportRuntime', () => {
       practiceStretchStartedAt: 0,
     };
 
-    handler?.({ ...notification, playback: 'paused', bpm: 120 });
+    native.emitTransport({ ...notification, playback: 'paused', bpm: 120 });
     libraryStore.setState({ loaded: loadedAt(1) });
     metronomeStore.setState({ bpm: 90, beatsPerBar: 7, denominator: 8 });
     const card = native.transportShow.mock.lastCall?.[0];
@@ -93,7 +102,11 @@ describe('transportRuntime', () => {
       setlist: { subtitle: 'Wedding set · Blackbird (2/2)' },
     });
 
-    handler?.({ ...notification, playback: 'playing', bpm: card?.bpm ?? 0 });
+    native.emitTransport({
+      ...notification,
+      playback: 'playing',
+      bpm: card?.bpm ?? 0,
+    });
     expect(metronomeStore.getState()).toMatchObject({
       running: true,
       bpm: 90,
