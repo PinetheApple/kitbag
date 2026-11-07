@@ -34,11 +34,11 @@ class AnalysisStoreTest {
       path, true, "", 121.5f, floatArrayOf(0.25f, 0.75f, 1.25f), intArrayOf(0, 2), "waves/a.kwav", DURATION_SEC,
     )
 
-  private fun writeWithoutDuration(path: String) {
+  private fun writeVersion1Result(path: String) {
     File(dir, "results").mkdirs()
     val file = File(dir, "results/${AnalysisStore.fileStem(path)}.result")
     DataOutputStream(file.outputStream()).use { out ->
-      out.writeInt(FORMAT_VERSION_NO_DURATION)
+      out.writeInt(1)
       out.writeUTF(path)
       out.writeBoolean(true)
       out.writeUTF("")
@@ -67,7 +67,7 @@ class AnalysisStoreTest {
 
   @Test
   fun `a result stored before durations reads back with an unknown duration`() {
-    writeWithoutDuration("songs/1/a.mp3")
+    writeVersion1Result("songs/1/a.mp3")
     val read = store.pending().single()
     assertTrue(read.ok)
     assertEquals(121.5f, read.bpm)
@@ -185,7 +185,6 @@ class AnalysisStoreTest {
   }
 
   private companion object {
-    const val FORMAT_VERSION_NO_DURATION = 1
-    const val DURATION_SEC = 4999.0 / 44100.0
+    const val DURATION_SEC = 187.25
   }
 }

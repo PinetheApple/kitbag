@@ -31,7 +31,7 @@ class AnalysisResult(
   companion object {
     private const val FORMAT_VERSION = 2
 
-    // Results stored before an update are still delivered; they carry no length.
+    // Pending results survive an app update.
     private const val FORMAT_VERSION_NO_DURATION = 1
     const val UNKNOWN_DURATION_SEC = 0.0
 

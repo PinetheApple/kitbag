@@ -154,7 +154,7 @@ kb_result AnalyzeSong(
     BeatResult* out
 ) {
   const uint32_t reader_channels = reader.channels();
-  if (reader_channels == 0 ||
+  if (reader_channels == 0 || reader.sample_rate() == 0 ||
       reader_channels >
           static_cast<uint32_t>(std::numeric_limits<int>::max())) {
     return KB_ERROR_INVALID_ARGUMENT;
