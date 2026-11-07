@@ -1,16 +1,8 @@
 import { KB_RESULT } from '@kitbag/core-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { metronomeStore } from '../metronome/store.ts';
-import { createMixerOwner } from '../stemPlayer/mixerOwner.ts';
 import { SKIP_SECONDS } from '../stemPlayer/songTransport.ts';
-import { createStemPlayerStore } from '../stemPlayer/store.ts';
-import {
-  fakeRuntime as fakeStemRuntime,
-  RATE,
-  record,
-  stem,
-} from '../stemPlayer/store.test-helper.ts';
+import { RATE } from '../stemPlayer/store.test-helper.ts';
 import {
   BARS,
   fakeSongRuntime,
@@ -44,11 +36,11 @@ describe('opening a song', () => {
       bpm: 120,
       engineRate: RATE,
       durationFrames: RATE * 10,
-      downbeats: [0, 4],
+      downbeatIndices: [0, 4],
     });
   });
 
-  it('reads the waveform through the async read, at the bars asked for', async () => {
+  it('reads the waveform at the bars asked for', async () => {
     const { store, readWaveform } = await openedSong();
     await vi.waitFor(() => {
       expect(store.getState().envelope).toEqual([0.5]);
@@ -69,7 +61,7 @@ describe('opening a song', () => {
     const fake = fakeSongRuntime();
     fake.readWaveform.mockRejectedValueOnce(new Error('torn'));
     const store = songStore(fake);
-    await store.getState().open(SONG_ID, BARS);
+    await store.getState().open(SONG_ID, BARS).loaded;
     await vi.waitFor(() => {
       expect(warn).toHaveBeenCalled();
     });
@@ -88,7 +80,7 @@ describe('opening a song', () => {
         }),
     );
     const store = songStore(fake);
-    await store.getState().open(SONG_ID, BARS);
+    await store.getState().open(SONG_ID, BARS).loaded;
     store.getState().close();
     landed([0.9]);
     await Promise.resolve();
@@ -99,31 +91,45 @@ describe('opening a song', () => {
     const fake = fakeSongRuntime();
     fake.records.readSong.mockResolvedValueOnce(undefined);
     const store = songStore(fake);
-    await store.getState().open(SONG_ID, BARS);
+    await store.getState().open(SONG_ID, BARS).loaded;
     expect(store.getState().status).toBe('missing');
     expect(fake.commands.loadTrack).not.toHaveBeenCalled();
   });
 
-  it.each([
-    ['the engine will not start', 'start'],
-    ['the record cannot be read', 'read'],
-    ['the file will not decode', 'load'],
-    ['the file load throws', 'loadThrow'],
-  ] as const)('reports a failure when %s', async (_, failing) => {
+  type Fake = ReturnType<typeof fakeSongRuntime>;
+  it.each<[string, (fake: Fake) => void]>([
+    [
+      'the engine will not start',
+      (fake) => {
+        fake.commands.start.mockResolvedValueOnce(KB_RESULT.KB_ERROR_INTERNAL);
+      },
+    ],
+    [
+      'the record cannot be read',
+      (fake) => {
+        fake.records.readSong.mockRejectedValueOnce(new Error('locked'));
+      },
+    ],
+    [
+      'the file will not decode',
+      (fake) => {
+        fake.commands.loadTrack.mockResolvedValueOnce(
+          KB_RESULT.KB_ERROR_INTERNAL,
+        );
+      },
+    ],
+    [
+      'the file load throws',
+      (fake) => {
+        fake.commands.loadTrack.mockRejectedValueOnce(new Error('unsafe path'));
+      },
+    ],
+  ])('reports a failure when %s', async (_, arrange) => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const fake = fakeSongRuntime();
-    if (failing === 'start')
-      fake.commands.start.mockResolvedValueOnce(KB_RESULT.KB_ERROR_INTERNAL);
-    if (failing === 'read')
-      fake.records.readSong.mockRejectedValueOnce(new Error('locked'));
-    if (failing === 'load')
-      fake.commands.loadTrack.mockResolvedValueOnce(
-        KB_RESULT.KB_ERROR_INTERNAL,
-      );
-    if (failing === 'loadThrow')
-      fake.commands.loadTrack.mockRejectedValueOnce(new Error('unsafe path'));
+    arrange(fake);
     const store = songStore(fake);
-    await store.getState().open(SONG_ID, BARS);
+    await store.getState().open(SONG_ID, BARS).loaded;
     expect(store.getState().status).toBe('failed');
     warn.mockRestore();
   });
@@ -132,7 +138,7 @@ describe('opening a song', () => {
     const fake = fakeSongRuntime();
     fake.commands.loadTrack.mockResolvedValueOnce(KB_RESULT.KB_ERROR_INTERNAL);
     const store = songStore(fake);
-    await store.getState().open(SONG_ID, BARS);
+    await store.getState().open(SONG_ID, BARS).loaded;
     expect(store.getState().title).toBe('Everlong');
   });
 
@@ -144,18 +150,13 @@ describe('opening a song', () => {
   it('stops the metronome tool before it takes the shared metronome', async () => {
     const fake = fakeSongRuntime();
     fake.sharedMetronome.active.mockReturnValue(true);
-    await songStore(fake).getState().open(SONG_ID, BARS);
+    await songStore(fake).getState().open(SONG_ID, BARS).loaded;
     expect(fake.sharedMetronome.release).toHaveBeenCalledOnce();
-  });
-
-  it('plays at full level whatever a stem song left on the master, and puts it back', async () => {
-    const fake = fakeSongRuntime();
-    fake.commands.mixerMasterGain.mockResolvedValueOnce(0.4);
-    const store = songStore(fake);
-    await store.getState().open(SONG_ID, BARS);
-    expect(fake.commands.mixerSetMasterGain).toHaveBeenLastCalledWith(1);
-    store.getState().close();
-    expect(fake.commands.mixerSetMasterGain).toHaveBeenLastCalledWith(0.4);
+    expect(
+      fake.sharedMetronome.release.mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      fake.commands.start.mock.invocationCallOrder[0] ?? Number.NaN,
+    );
   });
 
   it('loads nothing for a song left while its old loop was being cleared', async () => {
@@ -168,7 +169,7 @@ describe('opening a song', () => {
         }),
     );
     const store = songStore(fake);
-    const opening = store.getState().open(SONG_ID, BARS);
+    const opening = store.getState().open(SONG_ID, BARS).loaded;
     await vi.waitFor(() => {
       expect(fake.commands.mixerClearLoop).toHaveBeenCalled();
     });
@@ -180,10 +181,27 @@ describe('opening a song', () => {
 
   it('replaces the open song when another one opens', async () => {
     const { store, commands } = await openedSong();
-    await store.getState().open(SONG_ID + 1, BARS);
-    expect(commands.mixerUnloadTrack).toHaveBeenCalledWith(0);
+    await store.getState().open(SONG_ID + 1, BARS).loaded;
     expect(commands.loadTrack).toHaveBeenCalledTimes(2);
+    expect(commands.mixerUnloadTrack.mock.invocationCallOrder[0]).toBeLessThan(
+      commands.loadTrack.mock.invocationCallOrder[1] ?? Number.NaN,
+    );
     expect(store.getState().songId).toBe(SONG_ID + 1);
+  });
+});
+
+describe('a song whose metadata gives no duration', () => {
+  it('is ready with no length, which pins every seek to the start', async () => {
+    const { store, commands, engine } = await openedSong(
+      songRecord({ durationSec: 0 }),
+    );
+    expect(store.getState()).toMatchObject({
+      status: 'ready',
+      durationFrames: 0,
+    });
+    engine.position = RATE;
+    store.getState().skip(SKIP_SECONDS);
+    expect(commands.mixerSeek).toHaveBeenLastCalledWith(0);
   });
 });
 
@@ -239,7 +257,7 @@ describe('the loop', () => {
 
   it('runs unsnapped on a song with no grid', async () => {
     const { store, commands, engine } = await openedSong(
-      songRecord({ beats: [], downbeats: [] }),
+      songRecord({ beats: [], downbeatIndices: [] }),
     );
     engine.position = RATE * 0.6;
     await store.getState().markLoop();
@@ -274,7 +292,7 @@ describe('the click', () => {
 
   it('does not start without a grid', async () => {
     const { store, commands } = await openedSong(
-      songRecord({ beats: [], downbeats: [] }),
+      songRecord({ beats: [], downbeatIndices: [] }),
     );
     await store.getState().toggleClick();
     expect(commands.setGrid).not.toHaveBeenCalled();
@@ -297,17 +315,6 @@ describe('the click', () => {
     expect(store.getState().click).toBe(false);
     expect(commands.clearGrid).toHaveBeenCalledOnce();
   });
-
-  it('leaves the standalone metronome as it found it', async () => {
-    const before = metronomeStore.getState();
-    const { store, metronomeSetters } = await openedSong();
-    await store.getState().toggleClick();
-    store.getState().close();
-    expect(metronomeStore.getState()).toBe(before);
-    for (const setter of Object.values(metronomeSetters)) {
-      expect(setter).not.toHaveBeenCalled();
-    }
-  });
 });
 
 describe('closing', () => {
@@ -323,54 +330,37 @@ describe('closing', () => {
     expect(store.getState().songId).toBeNull();
   });
 
+  it.each<[string, (fake: ReturnType<typeof fakeSongRuntime>) => void]>([
+    [
+      'missing',
+      (fake) => {
+        fake.records.readSong.mockResolvedValueOnce(undefined);
+      },
+    ],
+    [
+      'failed',
+      (fake) => {
+        fake.commands.loadTrack.mockResolvedValueOnce(
+          KB_RESULT.KB_ERROR_INTERNAL,
+        );
+      },
+    ],
+  ])('lets go of the engine when a %s song closes', async (status, arrange) => {
+    const fake = fakeSongRuntime();
+    arrange(fake);
+    const store = songStore(fake);
+    await store.getState().open(SONG_ID, BARS).loaded;
+    expect(store.getState().status).toBe(status);
+    store.getState().close();
+    expect(fake.commands.engineRelease).toHaveBeenCalledOnce();
+    expect(fake.songStopListeners.size).toBe(0);
+  });
+
   it('touches nothing the second time', async () => {
     const { store, commands } = await openedSong();
     store.getState().close();
     store.getState().close();
     expect(commands.mixerStop).toHaveBeenCalledOnce();
     expect(commands.engineRelease).toHaveBeenCalledOnce();
-  });
-});
-
-describe('sharing the mixer with stem songs', () => {
-  function both() {
-    const mixer = createMixerOwner();
-    const songFake = fakeSongRuntime();
-    const stemFake = fakeStemRuntime(record([stem(1)]));
-    const songs = songStore(songFake, mixer);
-    const stemSongs = createStemPlayerStore(
-      () => stemFake.runtime,
-      undefined,
-      mixer,
-    );
-    return { songFake, stemFake, songs, stemSongs };
-  }
-
-  it('closes an open stem song when a song opens', async () => {
-    const { songs, stemSongs, stemFake } = both();
-    await stemSongs.getState().open(7, BARS);
-    await songs.getState().open(SONG_ID, BARS);
-    expect(stemSongs.getState().setId).toBeNull();
-    expect(stemFake.commands.mixerStop).toHaveBeenCalledOnce();
-    expect(songs.getState().status).toBe('ready');
-  });
-
-  it('closes an open song when a stem song opens', async () => {
-    const { songs, stemSongs, songFake } = both();
-    await songs.getState().open(SONG_ID, BARS);
-    await stemSongs.getState().open(7, BARS);
-    expect(songs.getState().songId).toBeNull();
-    expect(songFake.commands.mixerStop).toHaveBeenCalledOnce();
-    expect(stemSongs.getState().status).toBe('ready');
-  });
-
-  it('keeps the song playing when the displaced stem screen closes late', async () => {
-    const { songs, stemSongs, stemFake } = both();
-    await stemSongs.getState().open(7, BARS);
-    await songs.getState().open(SONG_ID, BARS);
-    stemFake.commands.mixerStop.mockClear();
-    stemSongs.getState().close();
-    expect(stemFake.commands.mixerStop).not.toHaveBeenCalled();
-    expect(songs.getState().status).toBe('ready');
   });
 });

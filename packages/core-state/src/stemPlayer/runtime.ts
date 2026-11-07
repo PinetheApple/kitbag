@@ -52,18 +52,19 @@ export interface SharedMetronome {
   readonly release: () => void;
 }
 
-export interface StemPlayerRuntime {
+export interface MixerRuntime {
   readonly commands: StemPlayerCommands;
   readonly engine: StemPlayerEngine;
   readonly sharedMetronome: SharedMetronome;
-  readonly records: StemPlayerRecords;
   readonly readWaveform: (
     relativePath: string,
     buckets: number,
   ) => Promise<readonly number[]>;
 }
 
-export type MixerRuntime = Omit<StemPlayerRuntime, 'records'>;
+export interface StemPlayerRuntime extends MixerRuntime {
+  readonly records: StemPlayerRecords;
+}
 
 let configured: StemPlayerRuntime | undefined;
 

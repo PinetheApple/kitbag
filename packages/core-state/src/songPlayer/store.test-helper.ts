@@ -1,10 +1,10 @@
 import type { SongRecord } from '@kitbag/core-db';
 import { vi } from 'vitest';
 
+import type { MixerClaim } from '../stemPlayer/mixerClaim.ts';
 import { fakeRuntime, record } from '../stemPlayer/store.test-helper.ts';
 import type { SongPlayerRuntime } from './runtime.ts';
 import { createSongPlayerStore } from './store.ts';
-import type { MixerOwner } from '../stemPlayer/mixerOwner.ts';
 
 export const SONG_ID = 3;
 export const BARS = 16;
@@ -20,13 +20,13 @@ export function songRecord(change: Partial<SongRecord> = {}): SongRecord {
     durationSec: 10,
     bpm: 120,
     beats: [0, 0.5, 1, 1.5, 2, 2.5, 3],
-    downbeats: [0, 4],
+    downbeatIndices: [0, 4],
     analysisStatus: 'done',
     ...change,
   };
 }
 
-export function fakeSongRuntime(song: SongRecord | undefined = songRecord()) {
+export function fakeSongRuntime(song: SongRecord = songRecord()) {
   const fake = fakeRuntime(record([]));
   const metronomeSetters = {
     setTempo: vi.fn(),
@@ -59,19 +59,18 @@ export function fakeSongRuntime(song: SongRecord | undefined = songRecord()) {
 
 export function songStore(
   fake: ReturnType<typeof fakeSongRuntime>,
-  mixer?: MixerOwner,
+  mixerClaim?: MixerClaim,
 ) {
-  return createSongPlayerStore(
-    () => fake.runtime,
-    { scrubSeekDelayMs: SEEK_MS },
-    mixer,
-  );
+  return createSongPlayerStore(() => fake.runtime, {
+    scrubSeekDelayMs: SEEK_MS,
+    ...(mixerClaim === undefined ? {} : { mixerClaim }),
+  });
 }
 
 export async function openedSong(song: SongRecord = songRecord()) {
   const fake = fakeSongRuntime(song);
   const store = songStore(fake);
-  await store.getState().open(SONG_ID, BARS);
+  await store.getState().open(SONG_ID, BARS).loaded;
   fake.commands.mixerClearLoop.mockClear();
   return { ...fake, store };
 }

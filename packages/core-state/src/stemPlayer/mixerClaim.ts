@@ -1,9 +1,9 @@
-export interface MixerOwner {
+export interface MixerClaim {
   readonly claim: (close: () => void) => void;
   readonly release: (close: () => void) => void;
 }
 
-export function createMixerOwner(): MixerOwner {
+export function createMixerClaim(): MixerClaim {
   let current: (() => void) | null = null;
   return {
     claim: (close) => {
@@ -17,4 +17,4 @@ export function createMixerOwner(): MixerOwner {
   };
 }
 
-export const mixerOwner = createMixerOwner();
+export const mixerClaim = createMixerClaim();

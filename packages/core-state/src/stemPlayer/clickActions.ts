@@ -1,6 +1,7 @@
 import { KB_RESULT } from '@kitbag/core-native';
 
 import { clickGrid } from './loop.ts';
+import type { MixerSessionContext } from './mixerSession.ts';
 import type { MixerRuntime } from './runtime.ts';
 import { sessionGate } from './sessionGate.ts';
 import type { StemPlayerActions, StemPlayerState } from './store.ts';
@@ -8,13 +9,6 @@ import type { StemPlayerActions, StemPlayerState } from './store.ts';
 const GRID_ANCHOR_FRAME = 0;
 
 export type ClickSlice = Pick<StemPlayerState, 'status' | 'beats' | 'click'>;
-
-export interface MixerSessionContext<Slice> {
-  readonly set: (change: Partial<Slice>) => void;
-  readonly get: () => Slice;
-  readonly runtimeOf: () => MixerRuntime;
-  readonly session: () => number;
-}
 
 export function stopClick({ commands }: Pick<MixerRuntime, 'commands'>): void {
   commands.metronomeFollowMixer(false);

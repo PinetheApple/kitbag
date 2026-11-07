@@ -276,25 +276,11 @@ export {
   secondsToFrames,
 } from './stemPlayer/time.ts';
 export { SKIP_SECONDS } from './stemPlayer/songTransport.ts';
-export {
-  loopKeyLabel,
-  loopMarks,
-  loopNote,
-  type LoopMarkFractions,
-  type LoopNoteText,
-} from './stemPlayer/loopText.ts';
+export { loopKeyLabel } from './stemPlayer/loopText.ts';
+export { useLoopScrub } from './stemPlayer/useLoopScrub.ts';
 export { useSongPlayer } from './songPlayer/useSongPlayer.ts';
-export {
-  createSongPlayerStore,
-  songPlayerStore,
-  type SongPlayerState,
-  type SongPlayerStore,
-} from './songPlayer/store.ts';
-export {
-  configureSongPlayer,
-  type SongPlayerRecords,
-  type SongPlayerRuntime,
-} from './songPlayer/runtime.ts';
+export { songPlayerStore } from './songPlayer/store.ts';
+export { configureSongPlayer } from './songPlayer/runtime.ts';
 export {
   bpmFact,
   keyFact,

@@ -1,25 +1,17 @@
 import type { StemSetRecord } from '@kitbag/core-db';
-import {
-  acquireEngineHold,
-  KB_MAX_TRACKS,
-  KB_RESULT,
-} from '@kitbag/core-native';
+import { KB_MAX_TRACKS, KB_RESULT } from '@kitbag/core-native';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { mixActions, transportActions } from './actions.ts';
-import { clickActions, turnClickOff, stopClick } from './clickActions.ts';
-import { debounce } from './debounce.ts';
+import { clickActions } from './clickActions.ts';
 import { NO_SONG_FACTS, songFacts, type SongFacts } from './facts.ts';
 import { loopActions } from './loopActions.ts';
 import { UNITY_GAIN } from './mix.ts';
-import { createMixerOwner, mixerOwner, type MixerOwner } from './mixerOwner.ts';
+import { createMixerClaim, mixerClaim, type MixerClaim } from './mixerClaim.ts';
+import { mixerSession } from './mixerSession.ts';
 import { mixSaver } from './mixSaver.ts';
 import { renameActions } from './renameActions.ts';
-import {
-  getStemPlayer,
-  type StemPlayerCommands,
-  type StemPlayerRuntime,
-} from './runtime.ts';
+import { getStemPlayer, type StemPlayerRuntime } from './runtime.ts';
 import { secondsToFrames } from './time.ts';
 
 const MIX_SAVE_DELAY_MS = 600;
@@ -101,10 +93,9 @@ export interface StemPlayerTiming {
   readonly scrubSeekDelayMs: number;
 }
 
-const DEFAULT_TIMING: StemPlayerTiming = {
-  mixSaveDelayMs: MIX_SAVE_DELAY_MS,
-  scrubSeekDelayMs: SCRUB_SEEK_DELAY_MS,
-};
+export interface StemPlayerOptions extends Partial<StemPlayerTiming> {
+  readonly mixerClaim?: MixerClaim;
+}
 
 const closedState: StemPlayerState = {
   status: 'idle',
@@ -169,33 +160,22 @@ async function loadTracks(
 
 export function createStemPlayerStore(
   runtimeOf: () => StemPlayerRuntime = getStemPlayer,
-  timing: StemPlayerTiming = DEFAULT_TIMING,
-  mixer: MixerOwner = createMixerOwner(),
+  options: StemPlayerOptions = {},
 ): StoreApi<StemPlayerStore> {
-  let session = 0;
+  const {
+    mixSaveDelayMs = MIX_SAVE_DELAY_MS,
+    scrubSeekDelayMs = SCRUB_SEEK_DELAY_MS,
+    mixerClaim: claim = createMixerClaim(),
+  } = options;
   let requestedTracks = 0;
-  let releaseEngine: (() => void) | null = null;
-  let songStopSubscription: ReturnType<
-    StemPlayerCommands['onSongStopped']
-  > | null = null;
   const saver = mixSaver(
     (mixes) => runtimeOf().records.saveStemMix(mixes),
-    timing.mixSaveDelayMs,
+    mixSaveDelayMs,
   );
-  const scrubSeek = debounce((frame: number) => {
-    runtimeOf().commands.mixerSeek(frame);
-  }, timing.scrubSeekDelayMs);
 
-  const teardown = (get: Get) => {
-    const runtime = runtimeOf();
-    const { commands } = runtime;
-    const { click, loop } = get();
+  const teardownTracks = () => {
+    const { commands } = runtimeOf();
     saver.flush();
-    scrubSeek.cancel();
-    if (click) stopClick(runtime);
-    commands.songTransportHide();
-    commands.mixerStop();
-    if (loop.kind === 'on') void commands.mixerClearLoop().catch(() => null);
     for (let track = 0; track < requestedTracks; track++) {
       commands.mixerSetSolo(track, false);
       commands.mixerSetMute(track, false);
@@ -206,12 +186,24 @@ export function createStemPlayerStore(
   };
 
   return createStore<StemPlayerStore>((set, get) => {
-    const live = (opened: number) => opened === session;
+    const mixer = mixerSession({
+      set,
+      get,
+      runtimeOf,
+      scrubSeekDelayMs,
+      claim,
+      isOpen: () => get().setId !== null,
+      teardownTracks,
+      resetState: () => {
+        set(closedState);
+      },
+    });
+    const { live, scrubSeek } = mixer;
     const context: ActionContext = {
       set,
       get,
       runtimeOf,
-      session: () => session,
+      session: mixer.current,
     };
     const loadWaveforms = (
       opened: number,
@@ -246,17 +238,8 @@ export function createStemPlayerStore(
         set({ status: 'missing' });
         return;
       }
-      if (runtime.sharedMetronome.active()) runtime.sharedMetronome.release();
-      const started = await commands.start();
-      const engineRate = runtime.engine.sampleRate();
-      if (!live(opened)) return;
-      if (started !== KB_RESULT.KB_OK || engineRate <= 0) {
-        set({ status: 'failed' });
-        return;
-      }
-      // A loop a failed clear left behind would otherwise play in this song.
-      await commands.mixerClearLoop().catch(() => null);
-      if (!live(opened)) return;
+      const engineRate = await mixer.startEngine(opened);
+      if (engineRate === null) return;
       const rows = rowsOf(record);
       requestedTracks = rows.length;
       const stems = await loadTracks(runtime, record, rows, () => live(opened));
@@ -277,30 +260,10 @@ export function createStemPlayerStore(
       loadWaveforms(opened, record, bars);
     };
 
-    // A second close, from a screen whose session was already displaced, must
-    // not stop the song that displaced it.
-    const close = () => {
-      if (get().setId === null) return;
-      mixer.release(close);
-      session++;
-      teardown(get);
-      set(closedState);
-      releaseEngine?.();
-      releaseEngine = null;
-      songStopSubscription?.remove();
-      songStopSubscription = null;
-    };
-
     return {
       ...closedState,
       open: async (setId, waveformBars) => {
-        if (get().setId !== null) teardown(get);
-        releaseEngine ??= acquireEngineHold(runtimeOf().commands);
-        mixer.claim(close);
-        songStopSubscription ??= runtimeOf().commands.onSongStopped(() => {
-          turnClickOff(context);
-        });
-        const opened = ++session;
+        const opened = mixer.begin();
         set({ ...closedState, status: 'loading', setId });
         try {
           await load(opened, setId, waveformBars);
@@ -309,7 +272,7 @@ export function createStemPlayerStore(
           if (live(opened)) set({ status: 'failed' });
         }
       },
-      close,
+      close: mixer.close,
       ...mixActions(set, get, runtimeOf, saver),
       ...transportActions(get, runtimeOf, scrubSeek),
       ...loopActions(context),
@@ -319,8 +282,6 @@ export function createStemPlayerStore(
   });
 }
 
-export const stemPlayerStore = createStemPlayerStore(
-  getStemPlayer,
-  DEFAULT_TIMING,
-  mixerOwner,
-);
+export const stemPlayerStore = createStemPlayerStore(getStemPlayer, {
+  mixerClaim,
+});

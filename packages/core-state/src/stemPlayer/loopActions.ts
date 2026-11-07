@@ -1,7 +1,7 @@
 import { KB_RESULT } from '@kitbag/core-native';
 
-import type { MixerSessionContext } from './clickActions.ts';
 import { loopBetween, snapToBeat, type LoopSeconds } from './loop.ts';
+import type { MixerSessionContext } from './mixerSession.ts';
 import { sessionGate } from './sessionGate.ts';
 import type {
   LoopFailure,

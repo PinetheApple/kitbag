@@ -1,0 +1,104 @@
+import { acquireEngineHold, KB_RESULT } from '@kitbag/core-native';
+
+import { stopClick, turnClickOff, type ClickSlice } from './clickActions.ts';
+import { debounce } from './debounce.ts';
+import type { MixerClaim } from './mixerClaim.ts';
+import type { MixerRuntime, StemPlayerCommands } from './runtime.ts';
+import type { StemPlayerState } from './store.ts';
+
+export interface MixerSessionContext<Slice> {
+  readonly set: (change: Partial<Slice>) => void;
+  readonly get: () => Slice;
+  readonly runtimeOf: () => MixerRuntime;
+  readonly session: () => number;
+}
+
+type SessionSlice = ClickSlice & Pick<StemPlayerState, 'loop'>;
+
+export interface MixerSessionOptions {
+  readonly set: (change: Partial<SessionSlice>) => void;
+  readonly get: () => SessionSlice;
+  readonly runtimeOf: () => MixerRuntime;
+  readonly scrubSeekDelayMs: number;
+  readonly claim: MixerClaim;
+  readonly isOpen: () => boolean;
+  readonly teardownTracks: () => void;
+  readonly resetState: () => void;
+}
+
+export function mixerSession({
+  set,
+  get,
+  runtimeOf,
+  scrubSeekDelayMs,
+  claim,
+  isOpen,
+  teardownTracks,
+  resetState,
+}: MixerSessionOptions) {
+  let session = 0;
+  let releaseEngine: (() => void) | null = null;
+  let songStopSubscription: ReturnType<
+    StemPlayerCommands['onSongStopped']
+  > | null = null;
+  const scrubSeek = debounce((frame: number) => {
+    runtimeOf().commands.mixerSeek(frame);
+  }, scrubSeekDelayMs);
+  const live = (opened: number) => opened === session;
+
+  const teardown = () => {
+    const runtime = runtimeOf();
+    const { commands } = runtime;
+    const { click, loop } = get();
+    scrubSeek.cancel();
+    if (click) stopClick(runtime);
+    commands.songTransportHide();
+    commands.mixerStop();
+    if (loop.kind === 'on') void commands.mixerClearLoop().catch(() => null);
+    teardownTracks();
+  };
+
+  // A second close, from a screen whose session was already displaced, must
+  // not stop whatever displaced it.
+  const close = () => {
+    if (!isOpen()) return;
+    claim.release(close);
+    session++;
+    teardown();
+    resetState();
+    releaseEngine?.();
+    releaseEngine = null;
+    songStopSubscription?.remove();
+    songStopSubscription = null;
+  };
+
+  return {
+    scrubSeek,
+    live,
+    close,
+    current: () => session,
+    begin: () => {
+      if (isOpen()) teardown();
+      releaseEngine ??= acquireEngineHold(runtimeOf().commands);
+      claim.claim(close);
+      songStopSubscription ??= runtimeOf().commands.onSongStopped(() => {
+        turnClickOff({ set, get, runtimeOf });
+      });
+      return ++session;
+    },
+    startEngine: async (opened: number): Promise<number | null> => {
+      const { commands, engine, sharedMetronome } = runtimeOf();
+      if (sharedMetronome.active()) sharedMetronome.release();
+      const started = await commands.start();
+      const engineRate = engine.sampleRate();
+      if (!live(opened)) return null;
+      if (started !== KB_RESULT.KB_OK || engineRate <= 0) {
+        set({ status: 'failed' });
+        return null;
+      }
+      // A loop a failed clear left behind would otherwise play in this song.
+      await commands.mixerClearLoop().catch(() => null);
+      return live(opened) ? engineRate : null;
+    },
+  };
+}
