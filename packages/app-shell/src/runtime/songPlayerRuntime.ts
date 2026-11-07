@@ -7,7 +7,7 @@ configureSongPlayer({
   ...mixerRuntime,
   records: { readSong: (id) => getDatabase().songLibrary.readSong(id) },
   library: {
-    correctLength: (id, durationSec) =>
-      songLibraryStore.getState().correctLength(id, durationSec),
+    correctDuration: (id, durationSec) =>
+      songLibraryStore.getState().correctDuration(id, durationSec),
   },
 });

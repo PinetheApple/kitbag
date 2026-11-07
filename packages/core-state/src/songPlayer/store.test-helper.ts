@@ -44,7 +44,7 @@ export function fakeSongRuntime(song: SongRecord = songRecord()) {
     readSong: vi.fn(() => Promise.resolve<SongRecord | undefined>(song)),
   };
   const library = {
-    correctLength: vi.fn(() => Promise.resolve()),
+    correctDuration: vi.fn(() => Promise.resolve()),
   };
   const readWaveform = vi.fn(() => Promise.resolve<readonly number[]>([0.5]));
   const runtime: SongPlayerRuntime = {

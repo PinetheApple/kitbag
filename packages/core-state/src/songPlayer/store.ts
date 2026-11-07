@@ -27,8 +27,7 @@ import { framesToSeconds, secondsToFrames } from '../stemPlayer/time.ts';
 import { getSongPlayer, type SongPlayerRuntime } from './runtime.ts';
 
 const SONG_TRACK = 0;
-// Import stores the platform's estimate; a decoded length off by more than this
-// replaces it, while a rate change's sub-frame rounding never rewrites it.
+// Sub-frame rounding from a rate change must never rewrite the stored length.
 export const STORED_LENGTH_TOLERANCE_SEC = 0.01;
 
 interface SongPlayerState extends TransportSlice, ClickSlice, LoopSlice {
@@ -137,9 +136,9 @@ export function createSongPlayerStore(
     };
 
     const correctStoredLength = (record: SongRecord, decodedSec: number) => {
-      const off = Math.abs(decodedSec - record.durationSec);
-      if (off <= STORED_LENGTH_TOLERANCE_SEC) return;
-      void runtimeOf().library.correctLength(record.id, decodedSec);
+      const driftSec = Math.abs(decodedSec - record.durationSec);
+      if (driftSec <= STORED_LENGTH_TOLERANCE_SEC) return;
+      void runtimeOf().library.correctDuration(record.id, decodedSec);
     };
 
     const unshiftKey = async (opened: number) => {

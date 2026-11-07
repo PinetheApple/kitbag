@@ -5,5 +5,5 @@ import { mixerRuntime } from './mixerRuntime';
 configureSongPlayer({
   ...mixerRuntime,
   records: { readSong: () => Promise.resolve(undefined) },
-  library: { correctLength: () => Promise.resolve() },
+  library: { correctDuration: () => Promise.resolve() },
 });

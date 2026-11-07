@@ -293,7 +293,7 @@ describe('song library store', () => {
   it('lists a corrected song length once it is stored', async () => {
     const { store } = setup();
     const row = await importOne(store);
-    await store.getState().correctLength(row.id, 287.4);
+    await store.getState().correctDuration(row.id, 287.4);
     expect(store.getState().rows[0]).toMatchObject({ durationSec: 287.4 });
   });
 
@@ -304,7 +304,7 @@ describe('song library store', () => {
       new Error('locked'),
     );
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    await store.getState().correctLength(row.id, 287.4);
+    await store.getState().correctDuration(row.id, 287.4);
     expect(store.getState().rows[0]).toMatchObject({ durationSec: 250 });
   });
 });

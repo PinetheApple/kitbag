@@ -24,7 +24,7 @@ async function opened(storedSec: number, decodedFrames: number) {
 describe('the stored song length', () => {
   it('is corrected to the decoded length when they differ', async () => {
     const { library } = await opened(STORED_SEC, DECODED_SEC * RATE);
-    expect(library.correctLength).toHaveBeenCalledExactlyOnceWith(
+    expect(library.correctDuration).toHaveBeenCalledExactlyOnceWith(
       SONG_ID,
       DECODED_SEC,
     );
@@ -33,12 +33,12 @@ describe('the stored song length', () => {
   it('is left alone when it is within tolerance of the decoded length', async () => {
     const nearSec = DECODED_SEC + STORED_LENGTH_TOLERANCE_SEC / 2;
     const { library } = await opened(nearSec, DECODED_SEC * RATE);
-    expect(library.correctLength).not.toHaveBeenCalled();
+    expect(library.correctDuration).not.toHaveBeenCalled();
   });
 
   it('is left alone when the mixer reads no length', async () => {
     const { library } = await opened(STORED_SEC, 0);
-    expect(library.correctLength).not.toHaveBeenCalled();
+    expect(library.correctDuration).not.toHaveBeenCalled();
   });
 
   it('is left alone when the song closes before the length read lands', async () => {
@@ -58,6 +58,6 @@ describe('the stored song length', () => {
     store.getState().close();
     finish(DECODED_SEC * RATE);
     await loaded;
-    expect(fake.library.correctLength).not.toHaveBeenCalled();
+    expect(fake.library.correctDuration).not.toHaveBeenCalled();
   });
 });

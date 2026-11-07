@@ -5,7 +5,7 @@ import type { MixerRuntime } from '../stemPlayer/runtime.ts';
 
 export interface SongPlayerRuntime extends MixerRuntime {
   readonly records: Pick<SongLibraryRepository, 'readSong'>;
-  readonly library: Pick<SongLibraryActions, 'correctLength'>;
+  readonly library: Pick<SongLibraryActions, 'correctDuration'>;
 }
 
 let configured: SongPlayerRuntime | undefined;
