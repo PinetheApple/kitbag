@@ -51,7 +51,9 @@ bash scripts/install-on-device.sh    # build, install, launch, report signing + 
 `preflight.sh` must pass before committing. It collects failures rather than
 stopping at the first, so one run shows every problem instead of revealing one
 per CI round trip, and it reports which files it rewrote — commit those or CI
-still fails. `--skip-android` and `--skip-native` drop the slow legs.
+still fails. A fix that rewrites files re-runs the earlier gates that read them,
+so exit 0 covers the rewritten tree. `--skip-android` and `--skip-native` drop the
+slow legs.
 
 ### Cutting a release
 
