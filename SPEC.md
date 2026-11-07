@@ -1886,9 +1886,11 @@ the New Architecture, and it means JSI.
   **TurboModule**. They are infrequent, they can be typed with codegen, and they
   may be async.
 - **Polled realtime reads** (`bar_phase`, `current_beat`, `current_bpm`,
-  `frames_rendered`, `tuner_snapshot`, `player_position`) go through a **JSI
+  `frames_rendered`, `tuner_snapshot`, `mixer_position`) go through a **JSI
   HostObject** that calls straight into the C ABI, synchronously, with no
   serialisation. This is the direct analogue of the Dart FFI call it replaces.
+  `mixer_position` is the read the transport polls; `player_position` is bound
+  but nothing polls it.
 - The HostObject is installed once, holds the single `kb_engine*` (§4.5: one
   engine per process), and is **the only thing in the codebase that holds it.**
 
