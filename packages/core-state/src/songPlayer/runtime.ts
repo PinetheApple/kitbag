@@ -1,9 +1,11 @@
 import type { SongLibraryRepository } from '@kitbag/core-db';
 
+import type { SongLibraryActions } from '../songLibrary/store.ts';
 import type { MixerRuntime } from '../stemPlayer/runtime.ts';
 
 export interface SongPlayerRuntime extends MixerRuntime {
   readonly records: Pick<SongLibraryRepository, 'readSong'>;
+  readonly library: Pick<SongLibraryActions, 'correctLength'>;
 }
 
 let configured: SongPlayerRuntime | undefined;

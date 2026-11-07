@@ -289,4 +289,22 @@ describe('song library store', () => {
     await store.getState().refresh();
     expect(store.getState().rows[0]).toMatchObject({ inSetlist: true });
   });
+
+  it('lists a corrected song length once it is stored', async () => {
+    const { store } = setup();
+    const row = await importOne(store);
+    await store.getState().correctLength(row.id, 287.4);
+    expect(store.getState().rows[0]).toMatchObject({ durationSec: 287.4 });
+  });
+
+  it('keeps the listed length when the correction cannot be stored', async () => {
+    const { store, records } = setup();
+    const row = await importOne(store);
+    vi.spyOn(records, 'updateDuration').mockRejectedValueOnce(
+      new Error('locked'),
+    );
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    await store.getState().correctLength(row.id, 287.4);
+    expect(store.getState().rows[0]).toMatchObject({ durationSec: 250 });
+  });
 });
