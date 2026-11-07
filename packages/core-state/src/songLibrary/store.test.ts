@@ -187,7 +187,7 @@ describe('song library store', () => {
       kind: 'formatRefused',
       name: 'Voice memo.m4a',
       format: 'm4a',
-      supported: CODES.supportedAudioExtensions,
+      supported: CODES.supportedAudioFamilies,
     });
     expect(store.getState().importing).toEqual([]);
     expect(store.getState().rows).toEqual([]);

@@ -55,19 +55,19 @@ describe('format refused', () => {
       kind: 'formatRefused',
       name: 'Voice memo.m4a',
       format,
-      supported: ['wav', 'mp3', 'flac'],
+      supported: ['WAV', 'MP3', 'FLAC', 'AIFF', 'W64'],
     }) as const;
 
   it('names the refused format and the ones Kitbag plays', () => {
     expect(noticeText(refused('m4a'))).toEqual({
       status: 'Unsupported format',
-      text: 'Can’t import “Voice memo.m4a”: M4A isn’t supported. Use WAV, MP3 or FLAC.',
+      text: 'Can’t import “Voice memo.m4a”: M4A isn’t supported. Use WAV, MP3, FLAC, AIFF or W64.',
     });
   });
 
   it('says this format when the file names none', () => {
     expect(noticeText(refused('')).text).toBe(
-      'Can’t import “Voice memo.m4a”: this format isn’t supported. Use WAV, MP3 or FLAC.',
+      'Can’t import “Voice memo.m4a”: this format isn’t supported. Use WAV, MP3, FLAC, AIFF or W64.',
     );
   });
 

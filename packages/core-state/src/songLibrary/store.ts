@@ -227,7 +227,7 @@ function importActions(
             kind: 'formatRefused',
             name: doc.name,
             format: check.format,
-            supported: codes.supportedAudioExtensions,
+            supported: codes.supportedAudioFamilies,
           },
         });
         return;

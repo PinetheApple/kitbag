@@ -338,6 +338,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       "failureUnsupported" to AnalysisFailure.UNSUPPORTED,
       "failureInterrupted" to AnalysisFailure.INTERRUPTED,
       "failureInternal" to AnalysisFailure.INTERNAL,
+      "supportedAudioFamilies" to SupportedAudio.FAMILY_NAMES,
       "supportedAudioExtensions" to SupportedAudio.EXTENSIONS,
       "supportedAudioMimeTypes" to SupportedAudio.MIME_TYPES,
     ) + StemBundleBridge.CONSTANTS

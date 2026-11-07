@@ -140,6 +140,7 @@ export type LibraryConstants = Readonly<{
   failureUnsupported: string;
   failureInterrupted: string;
   failureInternal: string;
+  supportedAudioFamilies: readonly string[];
   supportedAudioExtensions: readonly string[];
   supportedAudioMimeTypes: readonly string[];
 }>;

@@ -1038,7 +1038,9 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   tones of each return `KB_OK` from `kb_player_load` and `kb_analyze_song`; AAC `.m4a` returns
   `KB_ERROR_INVALID_ARGUMENT`). An unsupported file fails with the same code as a corrupt one,
   so only import can tell the user which happened. The refusal copy is the owner's:
-  `Can’t import “<name>”: <FORMAT> isn’t supported. Use WAV, MP3 or FLAC.`, its list
-  built from the supported one. **[user]**
+  `Can’t import “<name>”: <FORMAT> isn’t supported. Use WAV, MP3 or FLAC.` **[user]**
   The list's single owner is `SupportedAudio.kt`, passed to JS as library constants.
-  **[recorded — coordinator ruling]**
+  **[recorded — coordinator ruling]** The copy names each family once, so it reads “Use WAV, MP3,
+  FLAC, AIFF or W64”: AIF and AIFC are AIFF, RF64 is WAV. W64 and RF64 have no standard MIME
+  type, so the picker likely will not offer them, but import accepts them. **[recorded — lane
+  call]**
