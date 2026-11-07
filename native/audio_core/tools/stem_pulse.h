@@ -54,6 +54,8 @@ inline kb_engine* OpenFollowingEngine(
           engine,
           beat_seconds.data(),
           static_cast<int32_t>(beat_seconds.size()),
+          nullptr,
+          0,
           0
       ) != KB_OK) {
     kb_engine_destroy(engine);

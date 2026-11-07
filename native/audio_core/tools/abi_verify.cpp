@@ -27,16 +27,29 @@ using kitbag_test::g_failures;
 
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 199;
+constexpr int kExpectedChecks = 206;
+
+struct Downbeats {
+  const int32_t* indices = nullptr;
+  int32_t count = 0;
+};
 
 void ExpectRejected(
     kb_engine* engine,
     const double* times,
     int32_t count,
-    const char* message
+    const char* message,
+    Downbeats downbeats = {}
 ) {
   ++g_checks;
-  const kb_result result = kb_metronome_set_grid(engine, times, count, 0);
+  const kb_result result = kb_metronome_set_grid(
+      engine,
+      times,
+      count,
+      downbeats.indices,
+      downbeats.count,
+      0
+  );
   if (result != KB_ERROR_INVALID_ARGUMENT) {
     std::fprintf(
         stderr,
@@ -51,14 +64,14 @@ void ExpectRejected(
 void TestSetGridAcceptsAndNullChecks(kb_engine* engine) {
   const double ascending[] = {0.0, 0.5, 1.0, 1.5};
   Check(
-      kb_metronome_set_grid(engine, ascending, 4, 0) == KB_OK,
+      kb_metronome_set_grid(engine, ascending, 4, nullptr, 0, 0) == KB_OK,
       "set_grid: a strictly ascending finite grid is accepted"
   );
 
   ExpectRejected(engine, nullptr, 4, "set_grid: null beat_times_sec");
   ExpectRejected(engine, ascending, 0, "set_grid: empty grid");
   Check(
-      kb_metronome_set_grid(nullptr, ascending, 4, 0) ==
+      kb_metronome_set_grid(nullptr, ascending, 4, nullptr, 0, 0) ==
           KB_ERROR_INVALID_ARGUMENT,
       "set_grid: null engine"
   );
@@ -100,16 +113,68 @@ void TestSetGridRejectsOversize(kb_engine* engine) {
   );
 }
 
+constexpr double kFourBeats[] = {0.0, 0.5, 1.0, 1.5};
+constexpr int32_t kFourBeatCount = 4;
+constexpr int32_t kTwoDownbeats = 2;
+
+struct RefusedDownbeats {
+  int32_t indices[kTwoDownbeats];
+  const char* message;
+};
+constexpr RefusedDownbeats kRefusedDownbeats[] = {
+    {{1, 4}, "set_grid: downbeat past the grid"},
+    {{-1, 2}, "set_grid: negative downbeat"},
+    {{2, 2}, "set_grid: repeated downbeat"},
+    {{3, 1}, "set_grid: descending downbeats"},
+};
+
+void ExpectFourBeatsRejected(
+    kb_engine* engine,
+    Downbeats downbeats,
+    const char* message
+) {
+  ExpectRejected(engine, kFourBeats, kFourBeatCount, message, downbeats);
+}
+
+void TestSetGridChecksDownbeats(kb_engine* engine) {
+  const int32_t downbeats[] = {1, 3};
+  const kb_result accepted = kb_metronome_set_grid(
+      engine,
+      kFourBeats,
+      kFourBeatCount,
+      downbeats,
+      kTwoDownbeats,
+      0
+  );
+  Check(
+      accepted == KB_OK,
+      "set_grid: ascending in-range downbeats are accepted"
+  );
+  ExpectFourBeatsRejected(
+      engine,
+      {nullptr, kTwoDownbeats},
+      "set_grid: null downbeats"
+  );
+  ExpectFourBeatsRejected(
+      engine,
+      {downbeats, -1},
+      "set_grid: negative downbeat count"
+  );
+  for (const auto& [indices, message] : kRefusedDownbeats) {
+    ExpectFourBeatsRejected(engine, {indices, kTwoDownbeats}, message);
+  }
+}
+
 void TestClearGrid(kb_engine* engine) {
   const double ascending[] = {0.0, 0.5, 1.0, 1.5};
   Check(
-      kb_metronome_set_grid(engine, ascending, 4, 0) == KB_OK,
+      kb_metronome_set_grid(engine, ascending, 4, nullptr, 0, 0) == KB_OK,
       "clear_grid: a grid can be set before clearing"
   );
   kb_metronome_clear_grid(engine);
   kb_metronome_clear_grid(nullptr);  // a null engine is a no-op, not a crash
   Check(
-      kb_metronome_set_grid(engine, ascending, 4, 0) == KB_OK,
+      kb_metronome_set_grid(engine, ascending, 4, nullptr, 0, 0) == KB_OK,
       "clear_grid: the engine still accepts a grid after clearing"
   );
 }
@@ -307,6 +372,7 @@ int main() {
   TestSetGridRejectsNonAscending(engine);
   TestSetGridRejectsNonFinite(engine);
   TestSetGridRejectsOversize(engine);
+  TestSetGridChecksDownbeats(engine);
   TestClearGrid(engine);
   TestMixerTransportIsNullSafe(engine);
   RunOwnEngineSuites();

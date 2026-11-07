@@ -233,8 +233,9 @@ them; nothing here blocks them.
 
 **This is the portable foundation, and it did not change with the stack.** It
 is a flat C ABI (`native/audio_core/include/kitbag_api.h`) reachable from Dart
-FFI, JSI, or anything else. Values crossing the boundary are scalars — no
-structs, no buffers, with the two documented exceptions below. Keeping it this
+FFI, JSI, or anything else. Values crossing the boundary are scalars, paths, or
+flat arrays of scalars read or filled during the call — no structs, and no buffer
+the core keeps past the call. Keeping it this
 way is what made the UI framework a swappable detail, and this section is the
 proof that it worked.
 
@@ -305,11 +306,13 @@ read-only UI getter and does not help.
 KB_EXPORT void kb_metronome_start_at(kb_engine* engine, uint64_t start_frame);
 
 /* Follow a beat grid rather than a single BPM — handles tempo drift.
-   beat_times_sec is copied; it does not need to outlive the call.
-   This and kb_analyze_song's float* out are the only non-scalar params. */
+   beat_times_sec and downbeat_indices are copied; neither needs to outlive
+   the call. */
 KB_EXPORT kb_result kb_metronome_set_grid(kb_engine* engine,
                                           const double* beat_times_sec,
                                           int32_t count,
+                                          const int32_t* downbeat_indices,
+                                          int32_t downbeat_count,
                                           uint64_t anchor_frame);
 KB_EXPORT void kb_metronome_clear_grid(kb_engine* engine);
 
@@ -372,7 +375,7 @@ is the reasoning the code cannot restate in two lines.
 swaps an atomic pointer to a node that carries its own generation counter, so one
 acquire load in the callback yields both the value and its identity. Comparing
 addresses would be wrong rather than merely fragile: a freed grid's address can be
-recycled by the next allocation, a generation cannot. `observed_generation_` is
+recycled by the next allocation, a generation cannot. `grid_state_.observed_generation` is
 the generation the RT-owned cursor was last seeded against; when the published
 generation differs, the cursor is re-seeded **from the click's current position**,
 so a re-anchor moves only future beats and never revisits a beat that already
@@ -387,8 +390,9 @@ downbeats it swallowed.
 **The bar counter has two regimes, and the difference is deliberate.** At constant
 tempo `current_bar_` is incremented at each downbeat and never derived by
 division, so a mid-run time-signature change cannot jump ramp progress or bar-mute
-phase. In grid mode it is instead *derived* from the grid's own beat index
-(`grid_beat_index_ / beats_per_bar_`). Incrementing there would drift: a re-anchor
+phase. In grid mode it is instead *derived* from the song's bar for the grid
+beat that last sounded (`BeatGrid::bars`, built from the downbeats on the app
+thread, §4.3). Incrementing there would drift: a re-anchor
 that moves the cursor backwards re-crosses downbeats, and an incrementing counter
 would over-count, making the bar-mute cycle's phase depend on how many times the
 user re-anchored. The grid's own numbering — not a count of downbeats observed —
@@ -438,8 +442,24 @@ KB_EXPORT kb_result kb_analyze_song(const char* path,
 ```
 
 The beat grid BLOB schema gains a downbeat index list. Existing grids remain
-valid (downbeats absent → treat every `beats_per_bar`-th beat as a downbeat,
-degraded but usable) — no destructive migration.
+valid — no destructive migration.
+
+**Under a grid, the click's bars are the song's.** `kb_metronome_set_grid`
+takes the downbeat indices (analysed downbeats, or StemDeck bar marks expanded
+to indices); each bar runs to the next downbeat, and the last bar's length
+repeats. The downbeat of each bar is accented and every other beat is normal.
+The standalone meter (`kb_metronome_set_beats`) and accent row, mutes included,
+do not apply under a grid: they describe a different piece of music. Bar mute,
+the subdivision mute that follows it, `current_beat` and `bar_phase` count the
+song's bars. Beats before the first downbeat are a pickup: normal, outside any
+bar, and never bar-muted; the mirrors count them back from the first bar.
+
+**Downbeats absent → no bar accent.** Every grid beat sounds normal,
+`current_beat` reads 0, `bar_phase` sweeps each beat, and bar mute does not
+apply. An accent the core cannot place on a real bar actively misleads (#300);
+a uniform click does not.
+The analyser's downbeats are always four beats apart, so an analysed song in
+3/4 still gets 4/4 bars (#332).
 
 #### 4.3.1 Why the tracker caps at `KB_MAX_GRID_BEATS`
 
@@ -1545,7 +1565,7 @@ Two migration notes that are not obvious from the table:
 | `kitbag-metronome-unsaved.html` | **Option A** ("Chosen (owner, 2026-10-31)"; #212). Extends the song chip in `kitbag-metronome-setlist.html` D2 with the unsaved-changes dot, adds Save and Revert to that file's song-list NOW row and to the loaded-song sheet, and adds the "not saved" snackbar with Undo. Options B and C are rejected; `docs/research/mockups/212/` keeps them for reference. Recorded in `docs/decisions.md`, 2026-10-31. |
 | `kitbag-library.html` | **Variant B only** ("Two tiles, two screens"; #178). Supersedes `kitbag-ui.html` §04's Home tiles and Library: Songs and Stem songs are separate screens. Variant C is a rejected alternative. From variant A only the filter menu binds: the Songs filter icon opens it (filter by analysis status; sort by title, date added, BPM). `docs/decisions.md` (2026-10-30, #178) lists what is deliberately not built. |
 | `kitbag-stems.html` | **Variant C only** ("Bottom dock"; #137). Supersedes `kitbag-ui.html` §04's Stem player. Variants A and B are rejected alternatives; `docs/decisions.md` (2026-10-30, #137) lists what is deliberately not built. |
-| `kitbag-stems-sections.html` | **Option C only** ("Chosen (owner, 2026-11-01)"; #139). Extends `kitbag-stems.html` variant C with the Mix \| Lyrics switch, section cards, lane notches and tint, stage lyrics and retime mode. Options A and B are rejected alternatives, kept in `docs/research/mockups/stems-sections-lyrics.html`. Retime's 0.75× subtitle and speed stepper wait on #299. Recorded in `docs/decisions.md`, 2026-11-01. |
+| `kitbag-stems-sections.html` | **Option C only** ("Chosen (owner, 2026-11-01)"; #139). Extends `kitbag-stems.html` variant C with the Mix \| Lyrics switch, section cards, lane notches and tint, stage lyrics and retime mode. Options A and B are rejected alternatives, kept in `docs/research/mockups/stems-sections-lyrics.html`. Retime's 0.75× subtitle is built (#299); its speed stepper is not (#328). Recorded in `docs/decisions.md`, 2026-11-01. |
 | `kitbag-song-player.html` | **The single-song player** (owner-approved 2026-11-07; #297). Supersedes `kitbag-ui.html` §04's Player. Draws the base player, the mini-player on Home and Songs, the Metronome's click-off snackbar, the click sheet, the 1.0× key before speed, the no-grid states and the A-B loop. Recorded in `docs/decisions.md`, 2026-11-07. |
 | `kitbag-home-arrange.html` | **Option B only** ("Chosen (owner, 2026-10-31)"; #113). Supersedes the "long-press any tile for edit mode" bullet in `kitbag-ui.html` §04 Home and §12.4's customizable-layout bullet as to *how* editing works: Edit, or a long-press on a tile, opens the Arrange sheet. Options A and C are rejected alternatives, kept as reference in `docs/research/mockups/113/`. Recorded in `docs/decisions.md`, 2026-10-31. |
 

@@ -78,6 +78,7 @@ export interface Spec extends TurboModule {
   setTempo(bpm: Double): void;
   setGrid(
     beatTimesSec: readonly Double[],
+    downbeatIndices: readonly Int32[],
     anchorFrame: Double,
   ): Promise<number>;
   clearGrid(): void;

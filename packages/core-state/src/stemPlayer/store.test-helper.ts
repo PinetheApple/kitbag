@@ -106,7 +106,9 @@ export function fakeRuntime(set: StemSetRecord) {
     mixerSeek: vi.fn(),
     mixerSetLoop: vi.fn(() => Promise.resolve<number>(KB_RESULT.KB_OK)),
     mixerClearLoop: vi.fn(() => Promise.resolve<number>(KB_RESULT.KB_OK)),
-    mixerSetRate: vi.fn(() => Promise.resolve<number>(KB_RESULT.KB_OK)),
+    mixerSetRate: vi.fn<StemPlayerCommands['mixerSetRate']>(() =>
+      Promise.resolve(KB_RESULT.KB_OK),
+    ),
     mixerRate: vi.fn(() => Promise.resolve(1)),
     mixerSetTrackPitch: vi.fn(() => Promise.resolve<number>(KB_RESULT.KB_OK)),
     mixerTrackPitch: vi.fn(() => Promise.resolve(0)),

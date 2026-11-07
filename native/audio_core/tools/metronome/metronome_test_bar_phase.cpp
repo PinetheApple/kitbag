@@ -7,6 +7,7 @@
 
 #include "metronome/metronome_internal.h"
 #include "metronome_test_support.h"
+#include "song_bars.h"
 
 namespace metronome_test {
 namespace {
@@ -144,6 +145,7 @@ class BarPhaseRig {
     for (int beat = 0; beat < kGridBeats; ++beat) {
       grid->beat_times_sec.push_back(beat * kSecondsPerMinute / case_.bpm);
     }
+    SetSongBars(grid.get(), 0, kBeatsPerBar);
     return grid;
   }
 
@@ -244,6 +246,7 @@ std::unique_ptr<kitbag::BeatGrid> MakeLoopGrid() {
   for (double frame : {12000.0, 24000.0, 36000.0, 48000.0, kHeldBeatFrame}) {
     grid->beat_times_sec.push_back(frame / kSampleRate);
   }
+  SetSongBars(grid.get(), 0, kBeatsPerBar);
   return grid;
 }
 

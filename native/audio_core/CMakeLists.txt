@@ -46,6 +46,7 @@ add_library(kitbag_core SHARED
   src/engine.cpp
   src/dsp/fft.cpp
   src/metronome/click_voices.cpp
+  src/metronome/grid_bars.cpp
   src/metronome/metronome.cpp
   src/metronome/metronome_count_in.cpp
   src/metronome/metronome_grid.cpp
@@ -144,6 +145,7 @@ if(KITBAG_BUILD_TOOLS)
 
   set(KITBAG_METRONOME_SOURCES
     src/metronome/click_voices.cpp
+    src/metronome/grid_bars.cpp
     src/metronome/metronome.cpp
     src/metronome/metronome_count_in.cpp
     src/metronome/metronome_grid.cpp
@@ -158,6 +160,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_basic.cpp
     tools/metronome/metronome_test_signature.cpp
     tools/metronome/metronome_test_grid.cpp
+    tools/metronome/metronome_test_grid_bars.cpp
     tools/metronome/metronome_test_latency.cpp
     tools/metronome/metronome_test_latency_free.cpp
     tools/metronome/metronome_test_startat.cpp
@@ -218,7 +221,8 @@ if(KITBAG_BUILD_TOOLS)
                                   tools/stem_sync_rate_support.cpp
                                   tools/stem_sync_test_rate.cpp
                                   tools/stem_sync_test_lock.cpp
-                                  tools/stem_sync_test_reanchor.cpp)
+                                  tools/stem_sync_test_reanchor.cpp
+                                  tools/stem_sync_test_bars.cpp)
   target_include_directories(stem_sync_verify PRIVATE src tools tools/media)
   target_link_libraries(stem_sync_verify PRIVATE kitbag_core)
 

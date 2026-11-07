@@ -34,6 +34,7 @@ const OTHER_SONG = record([stem(1)], {
 async function recording(change: Partial<StemSetRecord> = SONG_DETAILS) {
   const song = await opened([stem(1)], change);
   song.store.getState().beginRetime(0);
+  await vi.runAllTimersAsync();
   return song;
 }
 

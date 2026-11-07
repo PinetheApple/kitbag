@@ -10,6 +10,7 @@
 #include "kitbag_metronome_poly_api.h"
 #include "media/song_clock.h"
 #include "metronome/click_voices.h"
+#include "metronome/grid_state.h"
 #include "metronome/metronome_types.h"
 #include "metronome/rig_click.h"
 #include "metronome/tempo_ramp.h"
@@ -196,7 +197,6 @@ class Metronome {
     uint64_t generation = 0;
   };
 
-  static constexpr int64_t kReseedFollow = -1;
   static constexpr size_t kCommandRingSize = 128;
 
   // ApplyCommand holds the only exhaustive switch over CommandType; the
@@ -243,6 +243,7 @@ class Metronome {
 
   void TriggerPreset(int sound, bool accented, uint32_t sample_rate);
   void OnBeatBoundary(int beat_index, uint32_t sample_rate);
+  void OnGridBeat(const GridBar& bar, uint32_t sample_rate);
   void OnSubdivisionTick(int64_t speaker_beat, int slot, uint32_t sample_rate);
   void TriggerSubdivision(int subdivision, int slot, uint32_t sample_rate);
   bool SubdivisionSlotAccented(int subdivision, int slot) const;
@@ -266,6 +267,7 @@ class Metronome {
       BlockTempo* tempo
   );
   GridView AcquireGrid(uint64_t block_start_frame, uint32_t sample_rate);
+  void ObserveGridChange(const GridView& view, uint32_t sample_rate);
   void BeginPendingStart(
       const GridView& view,
       uint64_t frame,
@@ -319,7 +321,7 @@ class Metronome {
   // Binary search: bounded and allocation-free, so safe from the callback.
   void SeekGridCursor(const BeatGrid& grid, double song_seconds);
   bool GridShiftReplays(const BeatGrid& grid, double shift_sec) const;
-  void SyncGridBar();
+  void SyncGridBar(const BeatGrid& grid);
   void PublishGridMirrors(const BeatGrid& grid, double song_seconds);
 
   SpscRing<Command, kCommandRingSize> commands_;
@@ -357,16 +359,9 @@ class Metronome {
   double pending_anchor_bpm_ = kDefaultBpm;
   uint64_t pending_anchor_frame_ = 0;
 
-  // The publisher is the app→RT seam; everything below it is RT-owned. Why
-  // identity is a generation and zero forces a re-seed: SPEC.md §4.2.1.
+  // The publisher is the app→RT seam; everything below it is RT-owned.
   RtPublisher<BeatGrid> grid_;
-  uint64_t observed_generation_ = 0;
-  size_t grid_cursor_ = 0;
-  int64_t grid_beat_index_ = -1;
-  // 1-based next subdivision tick in the beat; subdivision_ means none left.
-  int grid_next_sub_ = 1;
-  double pending_grid_shift_sec_ = 0.0;
-  GridOnset last_onset_;
+  GridState grid_state_;
   // Bar counter, -1 until the first downbeat after Start. Incremented at
   // constant tempo, derived from the grid in grid mode — SPEC.md §4.2.1.
   int64_t current_bar_ = -1;
@@ -379,11 +374,6 @@ class Metronome {
   ClickVoices voices_;
   RigClick rig_click_;
   bool follow_mixer_ = false;
-  // Any other song frame, a seek or a loop wrap, reseeds the cursor.
-  int64_t follow_last_frame_ = kReseedFollow;
-  double follow_seconds_ = 0.0;
-  // Grid beats after this song second wait: the loop's wrap owns that moment.
-  double grid_fire_limit_ = std::numeric_limits<double>::infinity();
 
   std::atomic<int32_t> preview_epoch_{0};
   std::atomic<bool> running_flag_{false};

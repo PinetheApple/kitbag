@@ -1,3 +1,5 @@
+import { KB_MIXER_UNITY_RATE, KB_RESULT } from '@kitbag/core-native';
+import { RETIME_PLAYBACK_RATE } from '@kitbag/core-state';
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -24,6 +26,7 @@ const DIALOG_TITLE = 'Reset to bundle timing?';
 const LEAVE_TITLE = 'Leave without saving?';
 const LEAVE = 'Leave';
 const KEEP_TAPPING = 'Keep tapping';
+const slowed = (line: string) => `${line} · playing at 0.75×`;
 
 let player: Player | undefined;
 
@@ -43,15 +46,40 @@ describe('opening retime', () => {
   it('takes over the screen and starts playback', async () => {
     const p = await retiming();
     expect(p.has('Retime lyrics')).toBe(true);
-    expect(p.has('Line 1 of 3')).toBe(true);
+    expect(p.has(slowed('Line 1 of 3'))).toBe(true);
     expect(p.labelled('Lyrics')).toHaveLength(0);
     expect(p.labelled('Player menu')).toHaveLength(0);
     expect(p.commands.mixerPlay).toHaveBeenCalledOnce();
   });
 
-  it('draws nothing of the 0.75x speed work (#299)', async () => {
+  it('says it plays at 0.75× once the mixer slowed', async () => {
     const p = await retiming();
-    expect(p.texts().join(' ')).not.toMatch(/0\.75|×/);
+    await flush();
+    expect(p.has(slowed('Line 1 of 3'))).toBe(true);
+  });
+
+  it('claims no speed when the mixer refused it', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    player = await mountPlayer(SONG_DETAILS);
+    player.commands.mixerSetRate.mockResolvedValueOnce(KB_RESULT.KB_ERROR_BUSY);
+    await player.press('Lyrics');
+    await player.press(RETIME);
+    await flush();
+    expect(player.has('Line 1 of 3')).toBe(true);
+    expect(player.texts().join(' ')).not.toMatch(/0\.75|×/);
+    warn.mockRestore();
+  });
+
+  it('restores the speed when the screen goes away mid-retime', async () => {
+    const p = await retiming();
+    await flush();
+    p.unmount();
+    player = undefined;
+    await flush();
+    expect(p.commands.mixerSetRate.mock.calls).toEqual([
+      [RETIME_PLAYBACK_RATE],
+      [KB_MIXER_UNITY_RATE],
+    ]);
   });
 
   it('starts at the line playing now', async () => {
@@ -59,7 +87,7 @@ describe('opening retime', () => {
     await player.press('Lyrics');
     player.frames(3.6);
     await player.press(RETIME);
-    expect(player.has('Line 2 of 3')).toBe(true);
+    expect(player.has(slowed('Line 2 of 3'))).toBe(true);
     expect(player.store.getState().retime).toMatchObject({ nextLine: 2 });
   });
 
@@ -67,7 +95,7 @@ describe('opening retime', () => {
     player = await mountPlayer({ ...SONG_DETAILS, lyrics: PLAIN_LYRICS });
     await player.press('Lyrics');
     await player.press('Tap along to sync');
-    expect(player.has('Line 1 of 3')).toBe(true);
+    expect(player.has(slowed('Line 1 of 3'))).toBe(true);
     expect(player.has('First line')).toBe(true);
   });
 
@@ -85,17 +113,17 @@ describe('the tap pad', () => {
     const p = await retiming();
     p.engine.position = 44100 * 2;
     await p.touchDown(PAD);
-    expect(p.has('Line 2 of 3')).toBe(true);
+    expect(p.has(slowed('Line 2 of 3'))).toBe(true);
     expect(p.has('0:02.0')).toBe(true);
     p.engine.position = 44100 * 2.5;
     await p.press(PAD);
-    expect(p.has('Line 2 of 3')).toBe(true);
+    expect(p.has(slowed('Line 2 of 3'))).toBe(true);
   });
 
   it('takes a screen reader’s press with no touch', async () => {
     const p = await retiming();
     await p.press(PAD);
-    expect(p.has('Line 2 of 3')).toBe(true);
+    expect(p.has(slowed('Line 2 of 3'))).toBe(true);
   });
 
   it('undoes the last tap', async () => {
@@ -104,7 +132,7 @@ describe('the tap pad', () => {
     await p.touchDown(PAD);
     expect(p.byLabel(UNDO_TAP).props.disabled).toBe(false);
     await p.press(UNDO_TAP);
-    expect(p.has('Line 1 of 3')).toBe(true);
+    expect(p.has(slowed('Line 1 of 3'))).toBe(true);
     expect(p.store.getState().retime).toMatchObject({ taps: [] });
   });
 
@@ -114,7 +142,7 @@ describe('the tap pad', () => {
       p.engine.position = 44100 * position;
       await p.touchDown(PAD);
     }
-    expect(p.has('All 3 lines tapped')).toBe(true);
+    expect(p.has(slowed('All 3 lines tapped'))).toBe(true);
   });
 });
 
@@ -153,7 +181,7 @@ describe('Save', () => {
     expect(p.store.getState().retime.kind).toBe('recording');
     expect(p.store.getState().retimeFailure).toBe('notStored');
     expect(p.has(NOT_SAVED)).toBe(true);
-    expect(p.has('Line 2 of 3')).toBe(true);
+    expect(p.has(slowed('Line 2 of 3'))).toBe(true);
     warn.mockRestore();
   });
 

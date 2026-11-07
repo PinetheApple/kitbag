@@ -32,7 +32,6 @@ interface SongPlayerState extends TransportSlice, ClickSlice, LoopSlice {
   readonly songId: number | null;
   readonly bpm: number | null;
   readonly analysisStatus: AnalysisStatus;
-  readonly downbeatIndices: readonly number[];
   readonly envelope: readonly number[] | null;
 }
 

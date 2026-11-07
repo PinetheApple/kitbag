@@ -13,7 +13,7 @@ import { View } from 'react-native';
 
 import {
   leaveRetimeBody,
-  retimeLineLabel,
+  retimeSubtitle,
   retimeUnsaved,
 } from '../logic/retimeView.ts';
 import { ConfirmDialog } from './ConfirmDialog.tsx';
@@ -51,7 +51,7 @@ export function RetimeBar({ onAskReset, onAskLeave }: RetimeBarProps) {
     <AppBar
       flush
       title="Retime lyrics"
-      subtitle={retimeLineLabel(lines, retime.nextLine)}
+      subtitle={retimeSubtitle(lines, retime.nextLine, retime.playbackRate)}
       closeLabel="Close retime"
       onClose={close}
       trailing={
