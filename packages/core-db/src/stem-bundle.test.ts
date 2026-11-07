@@ -410,6 +410,15 @@ describe('tap-along lyric retiming', () => {
     expect((await library.readStemSet(id))?.lyricsRetimed).toBeNull();
   });
 
+  it('stores NULL when re-importing over an unreadable retiming', async () => {
+    const { handle, library } = setup();
+    await library.insertStemBundle({ ...FULL, lyrics: SYNCED });
+    await handle.db.update(stemSets).set({ lyricsRetimed: 'not json' });
+    await library.replaceStemBundle({ ...FULL, lyrics: SYNCED });
+    const [row] = await handle.db.select().from(stemSets);
+    expect(row?.lyricsRetimed).toBeNull();
+  });
+
   it('stores a versioned JSON object in the existing column', async () => {
     const { handle, library } = setup();
     const id = await library.insertStemBundle(FULL);
