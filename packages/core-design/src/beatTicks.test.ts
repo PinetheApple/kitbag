@@ -49,14 +49,15 @@ describe('beatTicks', () => {
   });
 
   it('thins 172 BPM over 3:00 to every second bar, evenly spaced', () => {
-    const { beats, downbeats } = evenGrid(172, 180);
-    const ticks = beatTicks(beats, downbeats, 180, LANE, MIN_GAP);
+    const durationSec = 180;
+    const { beats, downbeats } = evenGrid(172, durationSec);
+    const ticks = beatTicks(beats, downbeats, durationSec, LANE, MIN_GAP);
     const stride = 2;
     expect(ticks.every((tick) => tick.tall)).toBe(true);
     expect(ticks.map((tick) => tick.x)).toEqual(
       downbeats
         .filter((_, bar) => bar % stride === 0)
-        .map((i) => ((beats[i] ?? 0) / 180) * LANE),
+        .map((i) => ((beats[i] ?? 0) / durationSec) * LANE),
     );
     const spacing = gaps(ticks);
     expect(Math.min(...spacing)).toBeGreaterThanOrEqual(MIN_GAP);
@@ -101,9 +102,36 @@ describe('beatTicks', () => {
     );
   });
 
-  it('ends on a grid whose beats share a time', () => {
+  it('stops thinning when every beat shares one time', () => {
     expect(beatTicks([1, 1, 1], [0, 1, 2], 10, 300, MIN_GAP)).toEqual([
       { x: 30, tall: true },
+    ]);
+  });
+
+  it('ignores a downbeat listed twice', () => {
+    const { beats, downbeats } = evenGrid(172, 180);
+    expect(
+      beatTicks(beats, [...downbeats, ...downbeats], 180, LANE, MIN_GAP),
+    ).toEqual(beatTicks(beats, downbeats, 180, LANE, MIN_GAP));
+  });
+
+  it('reads a grid listed out of order by its times', () => {
+    const { beats, downbeats } = evenGrid(172, 180);
+    const last = beats.length - 1;
+    const reversed = beats.map((_, i) => beats[last - i] ?? 0);
+    const reversedDownbeats = downbeats.map((i) => last - i);
+    expect(beatTicks(reversed, reversedDownbeats, 180, LANE, MIN_GAP)).toEqual(
+      beatTicks(beats, downbeats, 180, LANE, MIN_GAP),
+    );
+  });
+
+  it('has no ticks for an empty grid', () => {
+    expect(beatTicks([], [], 10, 300, MIN_GAP)).toEqual([]);
+  });
+
+  it('draws a lone beat where it falls', () => {
+    expect(beatTicks([5], [0], 10, 300, MIN_GAP)).toEqual([
+      { x: 150, tall: true },
     ]);
   });
 

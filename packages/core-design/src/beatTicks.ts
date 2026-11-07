@@ -28,19 +28,30 @@ export function beatTicks(
   minGap: number,
 ): readonly BeatTick[] {
   if (durationSec <= 0 || width <= 0) return [];
-  const xAt = (index: number) => ((beats[index] ?? 0) / durationSec) * width;
-  const inSong = (index: number) => {
-    const beat = beats[index];
-    return beat !== undefined && beat >= 0 && beat <= durationSec;
-  };
-  const beatIndices = beats.map((_, index) => index).filter(inSong);
-  const barIndices = downbeatIndices.filter(inSong).sort((a, b) => a - b);
+  const timeOf = (index: number) => beats[index] ?? NaN;
+  const xAt = (index: number) => (timeOf(index) / durationSec) * width;
+  const byTime = (indices: Iterable<number>) =>
+    [...indices]
+      .filter((index) => timeOf(index) >= 0 && timeOf(index) <= durationSec)
+      .sort((a, b) => timeOf(a) - timeOf(b))
+      .filter(
+        (index, n, sorted) =>
+          n === 0 || timeOf(index) > timeOf(sorted[n - 1] ?? index),
+      );
+  const beatIndices = byTime(beats.keys());
+  const barIndices = byTime(new Set(downbeatIndices));
   const beatStride = strideToFit(beatIndices.map(xAt), minGap);
-  if (beatStride === 1 || barIndices.length === 0) {
-    const downbeats = new Set(barIndices);
+  if (beatStride === 1) {
+    const downbeatTimes = new Set(barIndices.map(timeOf));
+    return beatIndices.map((index) => ({
+      x: xAt(index),
+      tall: downbeatTimes.has(timeOf(index)),
+    }));
+  }
+  if (barIndices.length === 0) {
     return beatIndices
       .filter((_, n) => n % beatStride === 0)
-      .map((index) => ({ x: xAt(index), tall: downbeats.has(index) }));
+      .map((index) => ({ x: xAt(index), tall: false }));
   }
   const barStride = strideToFit(barIndices.map(xAt), minGap);
   return barIndices
