@@ -86,6 +86,19 @@ function renderAt(
   };
 }
 
+describe('SegmentedControl option face', () => {
+  it('keeps a native view for every option, selected or not', () => {
+    for (const size of [...FLEX_SIZES, ...CONTENT_SIZES]) {
+      renderAt(1, size);
+      expect(rendered.options).toHaveLength(OPTIONS.length);
+      for (const option of rendered.options) {
+        const face = option.children as { props: Props };
+        expect(face.props.collapsable).toBe(false);
+      }
+    }
+  });
+});
+
 describe('SegmentedControl under font scale', () => {
   it('shares the track out equally at the default text size', () => {
     const { track, options } = renderAt(1, 'large');
