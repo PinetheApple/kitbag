@@ -19,6 +19,7 @@ import {
   type MixerClaim,
 } from '../stemPlayer/mixerClaim.ts';
 import { mixerSession } from '../stemPlayer/mixerSession.ts';
+import type { MixerHold } from '../stemPlayer/screenHold.ts';
 import {
   SCRUB_SEEK_DELAY_MS,
   type StemPlayerActions,
@@ -37,7 +38,7 @@ interface SongPlayerState extends TransportSlice, ClickSlice, LoopSlice {
 }
 
 interface SongSession {
-  readonly close: () => void;
+  readonly close: MixerHold;
   readonly loaded: Promise<void>;
 }
 
@@ -175,9 +176,7 @@ export function createSongPlayerStore(
         const opened = mixer.begin();
         set({ ...closedState, status: 'loading', songId });
         return {
-          close: () => {
-            if (live(opened)) mixer.close();
-          },
+          close: mixer.hold(opened),
           loaded: load(opened, songId, waveformBars).catch((error: unknown) => {
             console.warn('[kitbag] song failed to open', error);
             if (live(opened)) set({ status: 'failed' });

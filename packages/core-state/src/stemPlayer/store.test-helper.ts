@@ -83,6 +83,7 @@ export function record(
 }
 
 export function fakeRuntime(set: StemSetRecord) {
+  let stored = set;
   const engine = { position: 0, playing: false };
   const songStopped = new Set<() => void>();
   const commands = {
@@ -118,8 +119,19 @@ export function fakeRuntime(set: StemSetRecord) {
     }),
   };
   const records = {
-    readStemSet: vi.fn(() => Promise.resolve<StemSetRecord | undefined>(set)),
-    saveStemMix: vi.fn(() => Promise.resolve()),
+    readStemSet: vi.fn(() =>
+      Promise.resolve<StemSetRecord | undefined>(stored),
+    ),
+    saveStemMix: vi.fn<StemPlayerRecords['saveStemMix']>((mixes) => {
+      stored = {
+        ...stored,
+        stems: stored.stems.map((row) => ({
+          ...row,
+          ...mixes.find((mix) => mix.id === row.id),
+        })),
+      };
+      return Promise.resolve();
+    }),
     renameStem: vi.fn<StemPlayerRecords['renameStem']>(() => Promise.resolve()),
     saveLyricsRetimed: vi.fn<StemPlayerRecords['saveLyricsRetimed']>(() =>
       Promise.resolve(),

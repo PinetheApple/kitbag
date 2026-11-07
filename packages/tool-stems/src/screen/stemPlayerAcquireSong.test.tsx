@@ -17,7 +17,7 @@ const spies = vi.hoisted(() => ({
 
 vi.mock('react', async (original) => ({
   ...(await original<Record<string, unknown>>()),
-  useEffect: (effect: () => (() => void) | undefined) => {
+  useLayoutEffect: (effect: () => (() => void) | undefined) => {
     spies.effects.push(effect);
   },
 }));
@@ -28,7 +28,8 @@ vi.mock('@kitbag/core-design', async (original) => ({
     new Proxy({}, { get: (_, key) => ({ styleName: key }) }),
 }));
 
-vi.mock('@kitbag/core-state', () => ({
+vi.mock('@kitbag/core-state', async (original) => ({
+  ...(await original<Record<string, unknown>>()),
   loopEndFrames: () => null,
   useStemPlayer: (select: (state: unknown) => unknown) =>
     select({
@@ -64,6 +65,7 @@ describe('the stem player screen', () => {
     renderToStaticMarkup(
       createElement(StemPlayerScreen, {
         setId: SET_ID,
+        focused: true,
         insets: INSETS,
         onBack: nothing,
       }),

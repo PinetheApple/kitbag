@@ -8,12 +8,14 @@ import {
   EmptyState,
   PlayerDock,
   PlayerTransport,
+  screenBar,
   ScrubRow,
   songPlayer,
   space,
   stemPlayer,
   textRoles,
   textStyle,
+  useTextScaled,
   type PlayerFrame,
   type ScrubFrame,
 } from '@kitbag/core-design';
@@ -25,10 +27,11 @@ import {
   loopKeyLabel,
   SKIP_SECONDS,
   songBadge,
+  useFocusedMixerHold,
   useLoopScrub,
   useSongPlayer,
 } from '@kitbag/core-state';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import { lockText } from '../logic/lockText.ts';
@@ -44,6 +47,7 @@ type UsePlayhead = (
 
 export interface SongPlayerScreenProps {
   readonly songId: number;
+  readonly focused: boolean;
   readonly insets: { readonly top: number; readonly bottom: number };
   readonly onBack: () => void;
   readonly usePlayhead: UsePlayhead;
@@ -63,13 +67,17 @@ const useStyles = createThemedStyles((theme) => ({
     alignItems: 'center',
     gap: songPlayer.lockGap,
   },
+  lockStacked: { flexDirection: 'column', alignItems: 'flex-start' },
   lockText: { flex: 1, minWidth: 0 },
+  lockTextStacked: { alignSelf: 'stretch' },
+  bpm: { marginRight: screenBar.chipEnd },
   lockTitle: { ...textStyle(textRoles.listTitle), color: theme.color.text },
   lockDetail: { ...textStyle(textRoles.listFacts), color: theme.color.text2 },
   note: { ...textStyle(textRoles.fieldLabel), color: theme.color.text },
 }));
 
 function SongAppBar({ onBack }: { readonly onBack: () => void }) {
+  const styles = useStyles();
   const title = useSongPlayer((s) => s.title);
   const artist = useSongPlayer((s) => s.artist);
   const bpm = bpmFact(useSongPlayer((s) => s.bpm));
@@ -81,7 +89,9 @@ function SongAppBar({ onBack }: { readonly onBack: () => void }) {
       onBack={onBack}
       trailing={
         bpm === null ? null : (
-          <Badge label={bpm.text} accessibilityLabel={bpm.spoken} />
+          <View style={styles.bpm}>
+            <Badge label={bpm.text} accessibilityLabel={bpm.spoken} />
+          </View>
         )
       }
     />
@@ -119,6 +129,7 @@ function SongWave({ playhead }: { readonly playhead: ScrubFrame }) {
 
 function LockCard() {
   const styles = useStyles();
+  const scaled = useTextScaled();
   const click = useSongPlayer((s) => s.click);
   const hasGrid = useSongPlayer((s) => s.beats.length > 0);
   const analysisStatus = useSongPlayer((s) => s.analysisStatus);
@@ -133,8 +144,8 @@ function LockCard() {
     bpm?.text ?? null,
   );
   const row = (
-    <View style={styles.lock}>
-      <View style={styles.lockText}>
+    <View style={[styles.lock, scaled && styles.lockStacked]}>
+      <View style={scaled ? styles.lockTextStacked : styles.lockText}>
         <Text style={styles.lockTitle}>{text.title}</Text>
         <Text style={styles.lockDetail}>{text.detail}</Text>
       </View>
@@ -193,23 +204,27 @@ function Body({ bottom, onBack, usePlayhead }: BodyProps) {
   const scrub = useLoopScrub(useSongPlayer);
   if (status === 'failed')
     return (
-      <EmptyState
-        icon="song"
-        title="This song would not play"
-        reason="The file could not be read, its format may not be supported, or the audio engine did not start."
-        actionLabel="Back to songs"
-        onAction={onBack}
-      />
+      <View style={styles.bodyContent}>
+        <EmptyState
+          icon="song"
+          title="This song would not play"
+          reason="The file could not be read, its format may not be supported, or the audio engine did not start."
+          actionLabel="Back to songs"
+          onAction={onBack}
+        />
+      </View>
     );
   if (status === 'missing')
     return (
-      <EmptyState
-        icon="song"
-        title="This song is gone"
-        reason="It was deleted from the library. Pick another song there."
-        actionLabel="Back to songs"
-        onAction={onBack}
-      />
+      <View style={styles.bodyContent}>
+        <EmptyState
+          icon="song"
+          title="This song is gone"
+          reason="It was deleted from the library. Pick another song there."
+          actionLabel="Back to songs"
+          onAction={onBack}
+        />
+      </View>
     );
   if (status !== 'ready')
     return (
@@ -240,13 +255,18 @@ function Body({ bottom, onBack, usePlayhead }: BodyProps) {
 
 export function SongPlayerScreen({
   songId,
+  focused,
   insets,
   onBack,
   usePlayhead,
 }: SongPlayerScreenProps) {
   const styles = useStyles();
   const open = useSongPlayer((s) => s.open);
-  useEffect(() => open(songId, songPlayer.waveBars).close, [open, songId]);
+  const acquire = useCallback(
+    () => open(songId, songPlayer.waveBars).close,
+    [open, songId],
+  );
+  useFocusedMixerHold(focused, acquire);
   const padding = useMemo(() => ({ paddingTop: insets.top }), [insets.top]);
   return (
     <View style={[styles.screen, padding]}>

@@ -4,6 +4,7 @@ import { stopClick, turnClickOff, type ClickSlice } from './clickActions.ts';
 import { debounce } from './debounce.ts';
 import type { MixerClaim } from './mixerClaim.ts';
 import type { MixerRuntime, StemPlayerCommands } from './runtime.ts';
+import type { MixerHold } from './screenHold.ts';
 import type { StemPlayerState } from './store.ts';
 
 export interface MixerSessionContext<Slice> {
@@ -80,6 +81,13 @@ export function mixerSession({
     live,
     close,
     current: () => session,
+    hold: (opened: number): MixerHold =>
+      Object.assign(
+        () => {
+          if (live(opened)) close();
+        },
+        { live: () => live(opened) },
+      ),
     begin: () => {
       if (isOpen()) teardown();
       releaseEngine ??= acquireEngineHold(runtimeOf().commands);

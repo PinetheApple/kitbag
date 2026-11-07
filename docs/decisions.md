@@ -923,6 +923,18 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   tool tiles use the same helper, with their floor at `homeTile.titleMinScale` of the
   tile title's design size; no `adjustsFontSizeToFit` or `minimumFontScale` is left.
 
+- **2026-11-07 · A row tap opens paused (§6, #297)** — A row tap opens the song paused and
+  Play starts it, as the stem player does. Coordinator call; the owner may overturn it.
+  **[recorded]**
+
+- **2026-11-07 · A refocused player reopens paused at the start (§6, §7, #297, #321)** — Only
+  the focused player screen holds the mixer. A lower song or stem screen whose session a
+  screen above displaced reopens its own song when it regains focus, paused at the start,
+  as #316's reopen does; position and loop are not restored. A screen that kept its session
+  does not reload. Blur releases nothing, so a non-player route over a player keeps it playing. Row taps
+  use `router.navigate`, so a double tap on one row keeps one route; taps on two rows stack.
+  Coordinator call; the owner may overturn it. **[recorded]**
+
 - **2026-11-07 · A single song is a one-track mixer song (§4.1, §6.3, #297)** — The song
   player drives `kb_mixer_*` with the song on track 0, plus `setGrid` and
   `metronomeFollowMixer(true)`. `kb_player_*` stays in the ABI, and no transport or store

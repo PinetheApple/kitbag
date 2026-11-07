@@ -11,8 +11,12 @@ import {
   type SegmentOption,
 } from '@kitbag/core-design';
 import { KB_MAX_TRACKS } from '@kitbag/core-native';
-import { loopEndFrames, useStemPlayer } from '@kitbag/core-state';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  loopEndFrames,
+  useFocusedMixerHold,
+  useStemPlayer,
+} from '@kitbag/core-state';
+import { useCallback, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { detailTabLabel } from '../logic/detailView.ts';
@@ -31,6 +35,7 @@ import { useMixerFrame, type MixerFrameValues } from './useMixerFrame.ts';
 
 export interface StemPlayerScreenProps {
   readonly setId: number;
+  readonly focused: boolean;
   readonly insets: { readonly top: number; readonly bottom: number };
   readonly onBack: () => void;
 }
@@ -172,23 +177,27 @@ function Body({ bottom, onBack }: BodyProps) {
   const [picked, setPicked] = useState<Tab>(MIX);
   if (status === 'failed')
     return (
-      <EmptyState
-        icon="stems"
-        title="These stems would not open"
-        reason="The song could not be read or the audio engine did not start. Go back and open it again."
-        actionLabel="Back to songs"
-        onAction={onBack}
-      />
+      <View style={styles.body}>
+        <EmptyState
+          icon="stems"
+          title="These stems would not open"
+          reason="The song could not be read or the audio engine did not start. Go back and open it again."
+          actionLabel="Back to songs"
+          onAction={onBack}
+        />
+      </View>
     );
   if (status === 'missing')
     return (
-      <EmptyState
-        icon="stems"
-        title="This stem song is gone"
-        reason="It was deleted from the library. Pick another song there."
-        actionLabel="Back to songs"
-        onAction={onBack}
-      />
+      <View style={styles.body}>
+        <EmptyState
+          icon="stems"
+          title="This stem song is gone"
+          reason="It was deleted from the library. Pick another song there."
+          actionLabel="Back to songs"
+          onAction={onBack}
+        />
+      </View>
     );
   if (status !== 'ready')
     return (
@@ -217,6 +226,7 @@ function Body({ bottom, onBack }: BodyProps) {
 
 export function StemPlayerScreen({
   setId,
+  focused,
   insets,
   onBack,
 }: StemPlayerScreenProps) {
@@ -239,7 +249,11 @@ export function StemPlayerScreen({
   const closeMenu = useCallback(() => {
     setMenu(false);
   }, []);
-  useEffect(() => acquireSong(setId, WAVEFORM_BARS), [acquireSong, setId]);
+  const acquire = useCallback(
+    () => acquireSong(setId, WAVEFORM_BARS),
+    [acquireSong, setId],
+  );
+  useFocusedMixerHold(focused, acquire);
   const padding = useMemo(() => ({ paddingTop: insets.top }), [insets.top]);
   return (
     <View style={[styles.screen, padding]}>

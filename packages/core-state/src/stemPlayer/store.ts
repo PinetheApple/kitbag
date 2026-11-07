@@ -19,6 +19,7 @@ import { mixerSession } from './mixerSession.ts';
 import { mixSaver } from './mixSaver.ts';
 import { renameActions } from './renameActions.ts';
 import { retimeActions, retimeAnchor } from './retimeActions.ts';
+import type { MixerHold } from './screenHold.ts';
 import { getStemPlayer, type StemPlayerRuntime } from './runtime.ts';
 import { sortedSections } from './sections.ts';
 import { secondsToFrames } from './time.ts';
@@ -86,7 +87,7 @@ export interface StemPlayerState {
 
 export interface StemPlayerActions {
   readonly open: (setId: number, waveformBars: number) => Promise<void>;
-  readonly acquireSong: (setId: number, waveformBars: number) => () => void;
+  readonly acquireSong: (setId: number, waveformBars: number) => MixerHold;
   readonly close: () => void;
   readonly setGain: (index: number, gain: number) => void;
   readonly toggleMute: (index: number) => void;
@@ -333,10 +334,7 @@ export function createStemPlayerStore(
       acquireSong: (setId, waveformBars) => {
         const acquired = beginSession(setId);
         void loadSession(acquired, setId, waveformBars);
-        const release = () => {
-          if (live(acquired)) get().close();
-        };
-        return release;
+        return mixer.hold(acquired);
       },
       close: mixer.close,
       ...mixActions(set, get, runtimeOf, saver),
