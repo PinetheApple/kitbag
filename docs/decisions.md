@@ -872,3 +872,15 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   font scale of 1.0 or less, the design size above it. Home
   tool tiles use the same helper, with their floor at `homeTile.titleMinScale` of the
   tile title's design size; no `adjustsFontSizeToFit` or `minimumFontScale` is left.
+
+- **2026-11-07 · Library rows above the default text size (§12.6, #301)** — Amends the
+  2026-11-02 #192 entry's one-line rule for Library rows. Above the default scale the title
+  holds at most three lines and the facts two, then ellipsize, and the badges move from
+  beside the text to under it. Android breaks a word only when it is wider than the line,
+  so a break strategy cannot help: at 360 dp and 2.0 the badges left the title 149 dp
+  (Songs) and 107 dp (Stem songs), against about 153 dp for "Remarkably" and 194 dp for
+  "Extraordinarily" at the 27 dp the captured title draws. Without the badges beside it the
+  title has 236 dp.
+  A single word wider than that still breaks inside itself. At 1.0 the row is unchanged.
+  Computed from captured bounds and font metrics, not yet seen on a device. **[coord, owner
+  may overturn]**
