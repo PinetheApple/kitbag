@@ -12,7 +12,7 @@ import {
 } from '../stemPlayer/actions.ts';
 import { clickActions, type ClickSlice } from '../stemPlayer/clickActions.ts';
 import { loopActions, type LoopSlice } from '../stemPlayer/loopActions.ts';
-import { UNITY_GAIN } from '../stemPlayer/mix.ts';
+import { UNITY_GAIN, UNSHIFTED_KEY } from '../stemPlayer/mix.ts';
 import {
   createMixerClaim,
   mixerClaim,
@@ -27,7 +27,6 @@ import { secondsToFrames } from '../stemPlayer/time.ts';
 import { getSongPlayer, type SongPlayerRuntime } from './runtime.ts';
 
 const SONG_TRACK = 0;
-const ORIGINAL_KEY = 0;
 
 interface SongPlayerState extends TransportSlice, ClickSlice, LoopSlice {
   readonly songId: number | null;
@@ -134,6 +133,17 @@ export function createSongPlayerStore(
         });
     };
 
+    const unshiftKey = async (opened: number) => {
+      const { commands } = runtimeOf();
+      const key = await commands.mixerTrackPitch(SONG_TRACK);
+      if (!live(opened)) return false;
+      if (key === UNSHIFTED_KEY) return true;
+      return mixer.replanAfterReset(
+        opened,
+        commands.mixerSetTrackPitch(SONG_TRACK, UNSHIFTED_KEY),
+      );
+    };
+
     const load = async (opened: number, songId: number, bars: number) => {
       const runtime = runtimeOf();
       const { commands } = runtime;
@@ -158,11 +168,7 @@ export function createSongPlayerStore(
         set({ status: 'failed' });
         return;
       }
-      // Loading over a loaded track, or a dropped unload, keeps the old key.
-      const key = await commands.mixerTrackPitch(SONG_TRACK);
-      if (!live(opened)) return;
-      if (key !== ORIGINAL_KEY)
-        await commands.mixerSetTrackPitch(SONG_TRACK, ORIGINAL_KEY);
+      if (!(await unshiftKey(opened))) return;
       const decoded = await commands.mixerTrackFrames(SONG_TRACK);
       if (!live(opened)) return;
       const durationFrames =

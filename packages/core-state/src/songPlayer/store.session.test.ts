@@ -189,7 +189,7 @@ function pendingLength(fake: Fake) {
   };
 }
 
-describe('reading the song length', () => {
+describe('a length read that fails or lands late', () => {
   const LENGTH = 9 * RATE;
 
   it('fails the song when the read throws, and closing still cleans up', async () => {
