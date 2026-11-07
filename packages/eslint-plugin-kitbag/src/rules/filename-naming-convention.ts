@@ -19,6 +19,7 @@ type MessageIds = 'component' | 'util';
 export const filenameNamingConvention = createRule<[], MessageIds>({
   name: 'filename-naming-convention',
   meta: {
+    defaultOptions: [],
     type: 'suggestion',
     docs: {
       description:
@@ -31,7 +32,6 @@ export const filenameNamingConvention = createRule<[], MessageIds>({
       util: "Hook/util file '{{name}}' must be camelCase (SPEC §13.6), e.g. 'barPhase.ts' or 'useTempo.ts'.",
     },
   },
-  defaultOptions: [],
   create(context) {
     return {
       Program(node: TSESTree.Program) {

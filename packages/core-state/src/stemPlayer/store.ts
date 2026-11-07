@@ -1,4 +1,4 @@
-import type { StemSetRecord } from '@kitbag/core-db';
+import type { StemSetRecord, StoredSection } from '@kitbag/core-db';
 import {
   acquireEngineHold,
   KB_MAX_TRACKS,
@@ -10,15 +10,24 @@ import { mixActions, transportActions } from './actions.ts';
 import { clickActions, turnClickOff, stopClick } from './clickActions.ts';
 import { debounce } from './debounce.ts';
 import { NO_SONG_FACTS, songFacts, type SongFacts } from './facts.ts';
+import type { LoopSeconds } from './loop.ts';
 import { loopActions } from './loopActions.ts';
+import {
+  NO_LYRICS,
+  songLyrics,
+  type RetimeTap,
+  type SongLyrics,
+} from './lyrics.ts';
 import { UNITY_GAIN } from './mix.ts';
 import { mixSaver } from './mixSaver.ts';
 import { renameActions } from './renameActions.ts';
+import { retimeActions } from './retimeActions.ts';
 import {
   getStemPlayer,
   type StemPlayerCommands,
   type StemPlayerRuntime,
 } from './runtime.ts';
+import { sortedSections } from './sections.ts';
 import { secondsToFrames } from './time.ts';
 
 const MIX_SAVE_DELAY_MS = 600;
@@ -44,10 +53,21 @@ export type LoopState =
       readonly endSec: number;
     };
 
+export type RetimeState =
+  | { readonly kind: 'off' }
+  | {
+      readonly kind: 'recording';
+      readonly taps: readonly RetimeTap[];
+      readonly nextLine: number;
+      readonly shiftSteps: number;
+    };
+
 export type StemPlayerStatus =
   'idle' | 'loading' | 'ready' | 'missing' | 'failed';
 
 export type LoopFailure = 'tooShort' | 'pastEnd' | 'engine';
+
+export type RetimeFailure = 'notStored';
 
 export interface StemPlayerState {
   readonly status: StemPlayerStatus;
@@ -63,11 +83,17 @@ export interface StemPlayerState {
   readonly beats: readonly number[];
   readonly loop: LoopState;
   readonly loopFailure: LoopFailure | null;
+  readonly undoableLoop: LoopSeconds | null;
   readonly click: boolean;
+  readonly sections: readonly StoredSection[];
+  readonly lyrics: SongLyrics;
+  readonly retime: RetimeState;
+  readonly retimeFailure: RetimeFailure | null;
 }
 
 export interface StemPlayerActions {
   readonly open: (setId: number, waveformBars: number) => Promise<void>;
+  readonly acquireSong: (setId: number, waveformBars: number) => () => void;
   readonly close: () => void;
   readonly setGain: (index: number, gain: number) => void;
   readonly toggleMute: (index: number) => void;
@@ -80,6 +106,18 @@ export interface StemPlayerActions {
   readonly seek: (frame: number) => void;
   readonly skip: (seconds: number) => void;
   readonly markLoop: () => Promise<void>;
+  readonly undoLoop: () => Promise<void>;
+  readonly dismissLoopUndo: () => void;
+  readonly jumpToSection: (index: number) => Promise<void>;
+  readonly loopSection: (index: number) => Promise<void>;
+  readonly beginRetime: (fromLine: number) => void;
+  readonly tapRetime: () => void;
+  readonly undoRetimeTap: () => void;
+  readonly shiftRetime: (steps: number) => void;
+  readonly commitRetime: () => Promise<void>;
+  readonly cancelRetime: () => void;
+  readonly leaveRetime: () => void;
+  readonly resetRetime: () => Promise<void>;
   readonly toggleClick: () => Promise<void>;
   readonly renameStem: (index: number, name: string) => Promise<void>;
 }
@@ -119,7 +157,12 @@ const closedState: StemPlayerState = {
   beats: [],
   loop: { kind: 'off' },
   loopFailure: null,
+  undoableLoop: null,
   click: false,
+  sections: [],
+  lyrics: NO_LYRICS,
+  retime: { kind: 'off' },
+  retimeFailure: null,
 };
 
 function longestSeconds(record: StemSetRecord): number {
@@ -271,29 +314,53 @@ export function createStemPlayerStore(
         engineRate,
         durationFrames: secondsToFrames(longestSeconds(record), engineRate),
         beats: record.beats,
+        sections: sortedSections(record.sections),
+        lyrics: songLyrics(record.lyrics, record.lyricsRetimed),
       });
       loadWaveforms(opened, record, bars);
+    };
+
+    const beginSession = (setId: number) => {
+      if (get().setId !== null) {
+        get().leaveRetime();
+        teardown(get);
+      }
+      releaseEngine ??= acquireEngineHold(runtimeOf().commands);
+      songStopSubscription ??= runtimeOf().commands.onSongStopped(() => {
+        turnClickOff(context);
+      });
+      const opened = ++session;
+      set({ ...closedState, status: 'loading', setId });
+      return opened;
+    };
+
+    const loadSession = async (opened: number, setId: number, bars: number) => {
+      try {
+        await load(opened, setId, bars);
+      } catch (error: unknown) {
+        console.warn('[kitbag] stem song failed to open', error);
+        if (live(opened)) set({ status: 'failed' });
+      }
     };
 
     return {
       ...closedState,
       open: async (setId, waveformBars) => {
-        if (get().setId !== null) teardown(get);
-        releaseEngine ??= acquireEngineHold(runtimeOf().commands);
-        songStopSubscription ??= runtimeOf().commands.onSongStopped(() => {
-          turnClickOff(context);
-        });
-        const opened = ++session;
-        set({ ...closedState, status: 'loading', setId });
-        try {
-          await load(opened, setId, waveformBars);
-        } catch (error: unknown) {
-          console.warn('[kitbag] stem song failed to open', error);
-          if (live(opened)) set({ status: 'failed' });
-        }
+        await loadSession(beginSession(setId), setId, waveformBars);
+      },
+      // Across an Activity relaunch the new screen can acquire before the old
+      // one unmounts, so a release only closes the session it acquired.
+      acquireSong: (setId, waveformBars) => {
+        const acquired = beginSession(setId);
+        void loadSession(acquired, setId, waveformBars);
+        const release = () => {
+          if (live(acquired)) get().close();
+        };
+        return release;
       },
       close: () => {
         session++;
+        get().leaveRetime();
         teardown(get);
         set(closedState);
         releaseEngine?.();
@@ -302,10 +369,11 @@ export function createStemPlayerStore(
         songStopSubscription = null;
       },
       ...mixActions(set, get, runtimeOf, saver),
-      ...transportActions(get, runtimeOf, scrubSeek),
+      ...transportActions(set, get, runtimeOf, scrubSeek),
       ...loopActions(context),
       ...clickActions(context),
       ...renameActions(context),
+      ...retimeActions(context),
     };
   });
 }

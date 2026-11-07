@@ -1,13 +1,13 @@
 import {
   Badge,
   createThemedStyles,
+  EllipsizedText,
   hitBoxStyle,
   hitExtension,
   Icon,
   isTextScaled,
   libraryList,
   libraryMix,
-  lineLimit,
   lineRatio,
   minTouchTargetDp,
   size,
@@ -26,9 +26,10 @@ import {
   type SongBadge,
 } from '@kitbag/core-state';
 import { useCallback } from 'react';
-import { Pressable, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, useWindowDimensions, View } from 'react-native';
 
 import { failureText } from '../logic/notices.ts';
+import { rowLayout } from '../logic/rowLayout.ts';
 import { rowBadges, rowSubtitle, spokenRow } from '../logic/rowText.ts';
 
 const MORE_HIT_BOX = hitBoxStyle(
@@ -37,8 +38,6 @@ const MORE_HIT_BOX = hitBoxStyle(
     right: unshared(libraryList.rowEnd),
   }),
 );
-
-const ROW_TEXT_LINES = 1;
 
 const useStyles = createThemedStyles((theme) => ({
   row: {
@@ -91,6 +90,12 @@ const useStyles = createThemedStyles((theme) => ({
     gap: libraryList.badgeGap,
     flexShrink: 0,
   },
+  badgesUnderText: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'flex-start',
+    marginTop: libraryList.badgeGap,
+  },
   more: {
     ...MORE_HIT_BOX,
     width: libraryList.moreWidth,
@@ -134,7 +139,7 @@ export function LibraryRowView({
 }: LibraryRowViewProps) {
   const styles = useStyles();
   const { fontScale } = useWindowDimensions();
-  const rowLines = lineLimit(fontScale, ROW_TEXT_LINES);
+  const { titleLines, factsLines, badgesUnderText } = rowLayout(fontScale);
   const codes = useSongLibrary((s) => s.codes);
   const status = rowStatus(row);
   const failure = row.kind === 'song' ? analysisFailure(row, codes) : null;
@@ -144,6 +149,20 @@ export function LibraryRowView({
   const open = useCallback(() => {
     onOpenStemSet(row.id);
   }, [onOpenStemSet, row.id]);
+  const badges = (
+    <View style={[styles.badges, badgesUnderText && styles.badgesUnderText]}>
+      {rowBadges(row, status).map((badge) => (
+        <Badge
+          key={badge.key}
+          variant="list"
+          label={badge.label}
+          tone={badge.tone}
+          {...(badge.icon === undefined ? {} : { icon: badge.icon })}
+          accessibilityLabel={badge.spoken}
+        />
+      ))}
+    </View>
+  );
   return (
     <View style={[styles.row, selected && styles.selected]}>
       <Pressable
@@ -161,25 +180,15 @@ export function LibraryRowView({
       >
         <RowTile stems={row.kind === 'stems'} />
         <View style={styles.text}>
-          <Text style={styles.title} numberOfLines={rowLines}>
+          <EllipsizedText style={styles.title} numberOfLines={titleLines}>
             {row.title}
-          </Text>
-          <Text style={styles.facts} numberOfLines={rowLines}>
+          </EllipsizedText>
+          <EllipsizedText style={styles.facts} numberOfLines={factsLines}>
             {rowSubtitle(row, status, failure)}
-          </Text>
+          </EllipsizedText>
+          {badgesUnderText && badges}
         </View>
-        <View style={styles.badges}>
-          {rowBadges(row, status).map((badge) => (
-            <Badge
-              key={badge.key}
-              variant="list"
-              label={badge.label}
-              tone={badge.tone}
-              {...(badge.icon === undefined ? {} : { icon: badge.icon })}
-              accessibilityLabel={badge.spoken}
-            />
-          ))}
-        </View>
+        {!badgesUnderText && badges}
       </Pressable>
       <Pressable
         accessibilityRole="button"

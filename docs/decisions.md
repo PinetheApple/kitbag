@@ -636,6 +636,14 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   owner-approved round 2 frame (`design/kitbag-metronome.html` §02) rather than the poly
   file's left placement. **[recorded — coordinator ruling]**
 
+- **2026-11-01 · Stem player sections and lyrics layout (§7.7, #139)** — Layout C from
+  `docs/research/mockups/stems-sections-lyrics.html`: a Mix | Lyrics switch, with sections as
+  a card scroller. Bundle section colours are ignored. The song facts show no loudness.
+  Holding a section over a custom A-B loop replaces it, with Undo. Retime mode at
+  0.75×, restoring the speed on exit, is ruled but not built: retime ships at the current
+  speed behind `leaveRetime()`, and 0.75× follows #138 (tracked as #299). The data and state
+  layer landed first; the screens are bound by `design/kitbag-stems-sections.html`. **[user]**
+
 - **2026-11-01 · The Settings click-volume slider sets on a tap (§12.5, #170)** — A tap on
   the Click volume track sets the level there, and a drag keeps the thumb under the finger;
   the unity detent stays. This departs from the drag-only stem faders (2026-10-29, #137)
@@ -752,7 +760,16 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   boxes, not measured; needs a device check. A wider row wraps onto its
   second line rather than truncating. Above the default scale the status stack leaves the
   scrolling body and sits directly above the transport, so a body that overflows cannot
-  push it out of view, at one fixed height, the running stack's, so nothing resizes on Play.
+  push it out of view. It is one row tall stopped and two running. Start and Stop leave the
+  scroll view's frame and content height alone (#304): a clip follows the stack, and the
+  running viewport reaches under the stack's extra row. Android lays out a scroll view
+  before its content, and the offset clamps to the stale range in between, so resizing the
+  viewport on Stop would lose the scroll position. Running, the content pads by the stack
+  difference; stopped, by that less the legend's modelled height. The slack models one
+  legend row, so any legend that wraps leaves the stopped range longer than running, and
+  Start at scroll end moves the body. It happens at scroll end only. The measured case is
+  2.0 with poly on, about 48 dp. Coordinator call; the owner may
+  overturn it. **[recorded]**
   On a small screen at 2.0 the beat dots then sit below the fold and are reached by
   scrolling the body (coordinator call, 2026-11-02, open to owner review). Above the default scale
   a segmented control's options and the sound picker's items take their label's width
@@ -838,6 +855,39 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   (author type `Bot` or a `[bot]` login) pass as `NONE`, so dependency updates never
   block on a note. **[owner]**
 
+- **2026-11-07 · A section tap during a stem loop (§7.7, #139)** — A tap on a section that
+  starts outside the active loop clears the loop and jumps, with the same Undo as holding a
+  section over a loop; a tap on a section that starts inside it just seeks.
+  **[coord, owner may overturn]**
+
+- **2026-11-07 · A re-import keeps a lyric retiming only over the same lyrics (§7.8, #139)** —
+  `replaceStemBundle` keeps `lyrics_retimed` when `lyrics_synced` is unchanged and drops it
+  otherwise. A plain-only retiming also needs `lyrics_plain` unchanged, since its times index
+  the plain lines. **[coord]**
+
+- **2026-11-07 · Lyric retimings are not backed up (§7.7, #139)** — No backup category covers
+  `stem_sets`, so a retime is lost on reinstall along with the stems, and Restore leaves it
+  untouched. **[coord]**
+
+- **2026-11-07 · Retime pins the pad when its body overflows (§7.7, #139)** — When the retime
+  body overflows, at any font scale, the tap pad, Undo tap and Shift all lines stay pinned and
+  only the lyric lines scroll. Done and next lines scroll with the rest. Scrolling the whole
+  body is the wrong default: 3 of 3 drags starting on the pad recorded a tap, and the pad moved
+  120–160 dp between lines. Taps stay on touch-down. A body that fits stays as drawn. Once a
+  session overflows it stays pinned until it ends, so the layout cannot flip between lines.
+  When the lines left would hold fewer than two rendered current-row lines and their margins,
+  about 93 dp at font scale 2.0 on the emulator, the whole body scrolls instead so everything
+  stays reachable; 360x800, about 98–124 dp of lines, stays pinned. Coordinator call; the owner may overturn it. **[recorded]**
+
+- **2026-11-07 · Loop note placement (§7.7, #139)** — The note stays right as drawn while that
+  clears the A and B flags, then moves left of them if that clears, then onto its own row above
+  them, which makes the lane taller. It is worked out from measured layout and the loop's
+  bounds, so it changes only when the loop or the layout does. `design/kitbag-stems-sections.html`
+  draws only the first. **[recorded]**
+
+- **2026-11-07 · `lyrics_retimed` format (§7.7, #139)** — `{version: 1, times}`, one time per
+  line for synced lyrics, or for the first lines tapped of plain-only lyrics. **[coord]**
+
 - **2026-11-02 · One chevron app bar on every screen (§12, #287)** — Every screen with a
   back control uses the chevron back, not the full arrow **[user, via coordinator]**. The
   shared bar is one core-design component: 56 dp tall, flush under the status bar, the
@@ -872,6 +922,35 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   font scale of 1.0 or less, the design size above it. Home
   tool tiles use the same helper, with their floor at `homeTile.titleMinScale` of the
   tile title's design size; no `adjustsFontSizeToFit` or `minimumFontScale` is left.
+
+- **2026-11-07 · App-bar titles above the default text size (§12.6, #303)** — Amends the
+  2026-11-03 #287 entry's floors. Over an artist line the title's floor is never below the
+  artist's size, so a floored title does not read smaller than the line under it. Above the
+  default scale a title clears a trailing chip by `space.controlGap` and, with nothing after
+  it, ends at `space.screenInset`; at 1.0 neither moves. Android reserves an ellipsis with
+  the text view's own paint, which `ReactTextView.setFontSize` sizes in dp while the text
+  draws in sp, and whose typeface is never set. So the reserve depends on the default face
+  as well as the size, and above 1.0 a reserve that small lets the third dot fall past the
+  box. App-bar lines nest their text in a parent whose `fontSize` carries the font scale and
+  the ratio of the widest app face's ellipsis to the default face's; over-reserving costs a
+  little text. Other ellipsized lines keep the defect. Coordinator call; the owner may
+  overturn it. **[recorded]**
+
+- **2026-11-07 · Library rows above the default text size (§12.6, #301)** — Amends the
+  2026-11-02 #192 entry's one-line rule for Library rows. Above the default scale the title
+  holds at most three lines and the facts two, then ellipsize, and the badges move from
+  beside the text to under it. Android breaks a word only when it is wider than the line;
+  at 360 dp and 2.0 the badges left too little room for ordinary long words, and moving them
+  gives the title 236 dp. A single word wider than that still breaks inside itself. At 1.0
+  the row is unchanged. Coordinator call; the owner may overturn it. **[recorded]**
+
+- **2026-11-07 · Row ellipses and the preset editor's Name and Notes fields (§12.6, #317)** —
+  `RowText` and Library rows use the #303 reserve. It applies per view paint, so multi-line
+  titles need it too. The preset editor's Name and Notes fields wrap instead of scrolling,
+  because a glyph cut at the field's edge reads as a stray mark. `.editrow .v` doesn't forbid
+  wrapping. Return leaves the field and a pasted newline becomes a space. Coordinator call;
+  the owner may overturn it. **[recorded]**
+
 - **2026-11-07 · Speed and key run on key buses (§7.6, #138)** — One stretch instance per
   semitone in use, doing rate and key for its stems. A song that has not left 1.0× and 0 st
   gets a plain mix; one returned there mid-play keeps its buses until the next seek or stop,

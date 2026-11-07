@@ -10,7 +10,7 @@ import {
 import { AppState, PermissionsAndroid, Platform } from 'react-native';
 
 import { getDatabase } from './database.ts';
-import { appActivityFromState } from './appActivity.ts';
+import { appActivityFromState, currentAppActivity } from './appActivity.ts';
 import { permissionFromRequest } from './permissionAnswer.ts';
 
 // Device wiring for the tuner store (#118). Each command resolves the
@@ -53,6 +53,7 @@ const micPermission: MicPermissionSource = {
 };
 
 const appActivity: AppActivitySource = {
+  current: () => currentAppActivity(AppState.currentState),
   subscribe: (listener) => {
     const subscription = AppState.addEventListener('change', (state) => {
       const activity = appActivityFromState(state);

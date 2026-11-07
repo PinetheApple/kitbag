@@ -10,7 +10,7 @@ import {
 } from './touchTarget.ts';
 
 export type SegmentedControlSize =
-  'default' | 'large' | 'inline' | 'editRow' | 'row';
+  'default' | 'large' | 'tab' | 'inline' | 'editRow' | 'row';
 
 const NONE = Number.POSITIVE_INFINITY;
 
@@ -24,6 +24,7 @@ export const INLINE_LINE_HEIGHT = textRoles.segment.size * bodyLineHeight;
 export const OPTION_HEIGHTS: Readonly<Record<SegmentedControlSize, number>> = {
   default: textRoles.segment.size + inset.segmentOptionV * 2,
   large: size.segmentLargeOption,
+  tab: size.segmentTabOption,
   inline: INLINE_LINE_HEIGHT + inset.segmentOptionV * 2,
   editRow: size.segmentEditRowOption,
   row:

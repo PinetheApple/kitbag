@@ -6,7 +6,7 @@ import { connectDatabase } from './client';
 import { fakeOpSqlite } from './op-sqlite-fake.test-helper';
 import { stems, stemSets } from './schema';
 import { createSongLibraryRepository } from './song-library-repository';
-import type { NewStemBundle } from './stem-bundle-repository';
+import type { NewStemBundle, StoredLyrics } from './stem-bundle-repository';
 import { openTestDatabase } from './sqlite.test-helper';
 
 const open: ReturnType<typeof openTestDatabase>[] = [];
@@ -340,6 +340,110 @@ describe('StemDeck bundles in the song library', () => {
   });
 });
 
+describe('tap-along lyric retiming', () => {
+  const TIMES = [11.9, 15.2];
+  const SYNCED: StoredLyrics = {
+    synced: '[00:12.25]First line',
+    plain: 'First line',
+    offsetSec: 0,
+    instrumental: false,
+  };
+
+  it.each([
+    ['keeps', 'the synced text is unchanged', SYNCED, TIMES],
+    [
+      'keeps',
+      'only the plain text changed beside synced text',
+      { ...SYNCED, plain: 'Other' },
+      TIMES,
+    ],
+    [
+      'drops',
+      'the synced text changed',
+      { ...SYNCED, synced: '[00:01.00]Other' },
+      null,
+    ],
+    ['drops', 'the lyrics are gone', null, null],
+  ])('%s a retiming on re-import when %s', async (_, __, lyrics, kept) => {
+    const { library } = setup();
+    const id = await library.insertStemBundle({ ...FULL, lyrics: SYNCED });
+    await library.saveLyricsRetimed(id, TIMES);
+    const outcome = await library.replaceStemBundle({ ...FULL, lyrics });
+    expect((await library.readStemSet(outcome.id))?.lyricsRetimed).toEqual(
+      kept,
+    );
+  });
+
+  it.each([
+    ['keeps', 'One\nTwo', TIMES],
+    ['drops', 'One\nThree', null],
+  ])(
+    '%s a plain-only retiming on re-import of the plain text %j',
+    async (_, plain, kept) => {
+      const { library } = setup();
+      const lyrics = {
+        synced: null,
+        plain: 'One\nTwo',
+        offsetSec: 0,
+        instrumental: false,
+      };
+      const id = await library.insertStemBundle({ ...FULL, lyrics });
+      await library.saveLyricsRetimed(id, TIMES);
+      const outcome = await library.replaceStemBundle({
+        ...FULL,
+        lyrics: { ...lyrics, plain },
+      });
+      expect((await library.readStemSet(outcome.id))?.lyricsRetimed).toEqual(
+        kept,
+      );
+    },
+  );
+
+  it('saves per-line times for a song and resets them', async () => {
+    const { library } = setup();
+    const id = await library.insertStemBundle(FULL);
+    const other = await library.insertStemBundle(BARE);
+    await library.saveLyricsRetimed(id, TIMES);
+    expect((await library.readStemSet(id))?.lyricsRetimed).toEqual(TIMES);
+    expect((await library.readStemSet(other))?.lyricsRetimed).toBeNull();
+    await library.saveLyricsRetimed(id, null);
+    expect((await library.readStemSet(id))?.lyricsRetimed).toBeNull();
+  });
+
+  it('stores NULL when re-importing over an unreadable retiming', async () => {
+    const { handle, library } = setup();
+    await library.insertStemBundle({ ...FULL, lyrics: SYNCED });
+    await handle.db.update(stemSets).set({ lyricsRetimed: 'not json' });
+    await library.replaceStemBundle({ ...FULL, lyrics: SYNCED });
+    const [row] = await handle.db.select().from(stemSets);
+    expect(row?.lyricsRetimed).toBeNull();
+  });
+
+  it('stores a versioned JSON object in the existing column', async () => {
+    const { handle, library } = setup();
+    const id = await library.insertStemBundle(FULL);
+    await library.saveLyricsRetimed(id, TIMES);
+    const [row] = await handle.db.select().from(stemSets);
+    expect(JSON.parse(row?.lyricsRetimed ?? '')).toEqual({
+      version: 1,
+      times: TIMES,
+    });
+  });
+
+  it.each([
+    ['text that is not JSON', 'not json'],
+    ['another version', '{"version":2,"times":[1,2]}'],
+    ['a bare array', '[1,2]'],
+    ['a time that is not a number', '{"version":1,"times":[1,"2"]}'],
+    ['a time that is not finite', '{"version":1,"times":[1,null]}'],
+  ])('reads %s as no retiming', async (_, stored) => {
+    const { handle, library } = setup();
+    const id = await library.insertStemBundle(FULL);
+    await handle.db.update(stemSets).set({ lyricsRetimed: stored });
+    expect((await library.readStemSet(id))?.lyricsRetimed).toBeNull();
+  });
+});
+
 describe('StemDeck bundles over the op-sqlite 17 connection', () => {
   it('inserts, replaces and reads back', async () => {
     const database = connectDatabase(fakeOpSqlite().connection);
@@ -357,6 +461,10 @@ describe('StemDeck bundles over the op-sqlite 17 connection', () => {
       sections: FULL.sections,
       lyrics: FULL.lyrics,
     });
+    await database.songLibrary.saveLyricsRetimed(id, [11.9, 15.2]);
+    expect((await database.songLibrary.readStemSet(id))?.lyricsRetimed).toEqual(
+      [11.9, 15.2],
+    );
     await database.close();
   });
 });
