@@ -290,6 +290,7 @@ export function createStemPlayerStore(
       }
       const engineRate = await mixer.startEngine(opened);
       if (engineRate === null) return;
+      if (!(await mixer.clearSessionLeftovers(opened))) return;
       const rows = rowsOf(record);
       requestedTracks = rows.length;
       const stems = await loadTracks(runtime, record, rows, () => live(opened));

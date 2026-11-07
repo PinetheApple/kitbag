@@ -156,6 +156,7 @@ export function createSongPlayerStore(
       set(factsOf(record));
       const engineRate = await mixer.startEngine(opened);
       if (engineRate === null) return;
+      if (!(await mixer.clearSessionLeftovers(opened))) return;
       const master = await commands.mixerMasterGain();
       if (!live(opened)) return;
       // The stem player's master level has no control on this screen.

@@ -142,8 +142,9 @@ export function mixerSession({
         set({ status: 'failed' });
         return null;
       }
-      return (await clearSessionLeftovers(opened)) ? engineRate : null;
+      return engineRate;
     },
+    clearSessionLeftovers,
     replanAfterReset,
   };
 }
