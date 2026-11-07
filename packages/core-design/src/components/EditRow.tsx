@@ -29,6 +29,8 @@ import { minTouchTargetDp, radii } from '../tokens.ts';
 import { Icon } from './Icon.tsx';
 import { SwitchTrack } from './Switch.tsx';
 
+const LINE_BREAK_RUN = /\s*\r?\n\s*/g;
+
 const useStyles = createThemedStyles((theme) => ({
   group: {
     paddingVertical: inset.editGroupV,
@@ -248,17 +250,28 @@ export interface EditTextInputProps {
   readonly placeholder: string;
 }
 
+// A scrolled one-line input cuts a glyph at its edge, and a sliver reads as a
+// stray mark; wrapping never scrolls.
 export function EditTextInput(props: EditTextInputProps) {
   const styles = useStyles();
   const theme = useTheme();
+  const { onChangeText } = props;
+  const changeText = useCallback(
+    (text: string) => {
+      onChangeText(text.replace(LINE_BREAK_RUN, ' '));
+    },
+    [onChangeText],
+  );
   return (
     <TextInput
       style={styles.input}
       value={props.value}
-      onChangeText={props.onChangeText}
+      onChangeText={changeText}
       placeholder={props.placeholder}
       placeholderTextColor={theme.color.text3}
       accessibilityLabel={props.accessibilityLabel}
+      multiline
+      submitBehavior="blurAndSubmit"
     />
   );
 }

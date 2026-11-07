@@ -24,8 +24,9 @@ import {
 import { useLibraryRefresh } from '../library/useLibraryRefresh.ts';
 import {
   belowTempoReserve,
-  statusStackHeight,
   statusStackPinned,
+  pinnedStackScrollSlack,
+  pinnedViewportOverlap,
 } from '../logic/belowTempo.ts';
 import { noteStrip, type NoteStrip } from '../logic/noteStrip.ts';
 import { endPractice, summarySheetOnMount } from '../logic/practiceSummary.ts';
@@ -74,9 +75,16 @@ const useStyles = createThemedStyles((theme) => ({
   },
   // A ScrollView clips its content; the poly row's last pulse and cycle
   // bracket hang past the content edge into the screen inset.
-  body: {
+  bodyClip: {
     flex: 1,
     marginHorizontal: -space.screenInset,
+    overflow: 'hidden',
+  },
+  body: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
   },
   bodyContent: {
     flexGrow: 1,
@@ -95,9 +103,6 @@ const useStyles = createThemedStyles((theme) => ({
   },
   toolsPush: {
     flexGrow: 1,
-  },
-  pinnedStatus: {
-    justifyContent: 'flex-end',
   },
 }));
 
@@ -240,8 +245,11 @@ export function MetronomeScreen({
     setOpenSheet('summary');
   }, [resetPractice]);
 
-  const handleBodyLayout = useCallback((event: LayoutChangeEvent) => {
+  const handleBodyClipLayout = useCallback((event: LayoutChangeEvent) => {
     setBodyTop(event.nativeEvent.layout.y);
+  }, []);
+
+  const handleBodyLayout = useCallback((event: LayoutChangeEvent) => {
     setBodyHeight(event.nativeEvent.layout.height);
   }, []);
 
@@ -281,9 +289,13 @@ export function MetronomeScreen({
   );
   const legend = restLegend(running, polyEnabled);
   const pinStatus = statusStackPinned(fontScale);
-  const pinnedFrame = useMemo(
-    () => ({ marginTop: bodyGap, height: statusStackHeight(true, fontScale) }),
-    [bodyGap, fontScale],
+  const viewportFrame = useMemo(
+    () => ({ bottom: -pinnedViewportOverlap(running, fontScale) }),
+    [running, fontScale],
+  );
+  const scrollSlack = useMemo(
+    () => ({ paddingBottom: pinnedStackScrollSlack(running, fontScale) }),
+    [running, fontScale],
   );
   const status = (
     <StatusStack frame={frame} settings={settings} running={running} />
@@ -297,74 +309,74 @@ export function MetronomeScreen({
           onBack={onBack}
           onOpenSetlists={onOpenSetlists}
         />
-        <ScrollView
-          style={styles.body}
-          contentContainerStyle={styles.bodyContent}
-          ref={scrollRef}
-          scrollEnabled={scrollable}
-          showsVerticalScrollIndicator={false}
-          onLayout={handleBodyLayout}
-          onContentSizeChange={handleContentSize}
-        >
-          <PracticePill elapsedMs={elapsedMs} onEnd={handleEndPractice} />
-          {strip === null ? null : (
-            <Text
-              accessible={strip.spoken !== null}
-              accessibilityLabel={strip.spoken ?? undefined}
-              numberOfLines={1}
-              style={[styles.notes, topGap]}
-            >
-              {strip.text}
-            </Text>
-          )}
-          <GestureDetector gesture={zoneSwipe}>
-            <View style={topGap} onLayout={handleZoneLayout}>
-              <SwipeTempoZone
-                bpm={bpm}
-                density={density}
-                currentBpm={frame.currentBpm}
-                barPhase={frame.barPhase}
-                onTypeTempo={handleOpenNumpad}
-                onNudge={handleNudge}
-              />
-            </View>
-          </GestureDetector>
-          <PresetRow onNudge={handleNudge} onTap={handleTap} />
-          <PickerChips
-            beatsPerBar={beatsPerBar}
-            denominator={denominator}
-            subdivision={subdivision}
-            onOpenMeter={handleOpenMeter}
-            onOpenSubdivision={handleOpenSubdivision}
-          />
-          <View style={belowTempo}>
-            <BeatDots
-              beatCount={beatsPerBar}
-              subdivision={subdivision}
-              polyBeats={polyEnabled ? polyBeats : null}
-              polyAgainst={polyAgainst}
-              accents={accents}
-              width={dotsWidth}
-              density={density}
-              frame={frame}
-              onCycle={cycleAccent}
-            />
-            {legend === null ? null : (
-              <View style={styles.legend}>
-                {legend === 'poly' ? <PolyLegend /> : <BeatLegend />}
+        <View style={styles.bodyClip} onLayout={handleBodyClipLayout}>
+          <ScrollView
+            style={[styles.body, viewportFrame]}
+            contentContainerStyle={[styles.bodyContent, scrollSlack]}
+            ref={scrollRef}
+            scrollEnabled={scrollable}
+            showsVerticalScrollIndicator={false}
+            onLayout={handleBodyLayout}
+            onContentSizeChange={handleContentSize}
+          >
+            <PracticePill elapsedMs={elapsedMs} onEnd={handleEndPractice} />
+            {strip === null ? null : (
+              <Text
+                accessible={strip.spoken !== null}
+                accessibilityLabel={strip.spoken ?? undefined}
+                numberOfLines={1}
+                style={[styles.notes, topGap]}
+              >
+                {strip.text}
+              </Text>
+            )}
+            <GestureDetector gesture={zoneSwipe}>
+              <View style={topGap} onLayout={handleZoneLayout}>
+                <SwipeTempoZone
+                  bpm={bpm}
+                  density={density}
+                  currentBpm={frame.currentBpm}
+                  barPhase={frame.barPhase}
+                  onTypeTempo={handleOpenNumpad}
+                  onNudge={handleNudge}
+                />
               </View>
-            )}
-            {pinStatus ? null : (
-              <>
-                <View style={styles.toolsPush} />
-                {status}
-              </>
-            )}
-          </View>
-        </ScrollView>
-        {pinStatus ? (
-          <View style={[styles.pinnedStatus, pinnedFrame]}>{status}</View>
-        ) : null}
+            </GestureDetector>
+            <PresetRow onNudge={handleNudge} onTap={handleTap} />
+            <PickerChips
+              beatsPerBar={beatsPerBar}
+              denominator={denominator}
+              subdivision={subdivision}
+              onOpenMeter={handleOpenMeter}
+              onOpenSubdivision={handleOpenSubdivision}
+            />
+            <View style={belowTempo}>
+              <BeatDots
+                beatCount={beatsPerBar}
+                subdivision={subdivision}
+                polyBeats={polyEnabled ? polyBeats : null}
+                polyAgainst={polyAgainst}
+                accents={accents}
+                width={dotsWidth}
+                density={density}
+                frame={frame}
+                onCycle={cycleAccent}
+              />
+              {legend === null ? null : (
+                <View style={styles.legend}>
+                  {legend === 'poly' ? <PolyLegend /> : <BeatLegend />}
+                </View>
+              )}
+              {pinStatus ? null : (
+                <>
+                  <View style={styles.toolsPush} />
+                  {status}
+                </>
+              )}
+            </View>
+          </ScrollView>
+        </View>
+        {pinStatus ? <View style={topGap}>{status}</View> : null}
         <Transport
           running={running}
           armedCount={practiceBadgeCount(settings)}

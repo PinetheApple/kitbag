@@ -34,6 +34,7 @@ export * from './components/Chip.tsx';
 export * from './components/DesignFloorOneLineText.tsx';
 export * from './components/DragListRow.tsx';
 export * from './components/EditRow.tsx';
+export * from './components/EllipsizedText.tsx';
 export * from './components/EmptyState.tsx';
 export * from './components/FloatingActionButton.tsx';
 export * from './components/Icon.tsx';

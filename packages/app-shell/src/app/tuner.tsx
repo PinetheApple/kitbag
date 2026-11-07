@@ -21,12 +21,7 @@ function TunerRoute() {
   }, [markUsed]);
 
   useFocusEffect(
-    useCallback(() => {
-      tunerStore.getState().enter(DEFAULT_TUNING);
-      return () => {
-        tunerStore.getState().leave();
-      };
-    }, []),
+    useCallback(() => tunerStore.getState().acquire(DEFAULT_TUNING), []),
   );
 
   return (

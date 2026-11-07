@@ -6,6 +6,7 @@ import { ellipsisPaintSize } from '../oneLineFit.ts';
 import { iconSizes, screenBar, space, textRoles } from '../roles.ts';
 import { ThemeProvider } from '../ThemeProvider.tsx';
 import { minTouchTargetDp, type ThemeMode } from '../tokens.ts';
+import { dataNodes, type DataNode } from './dataNodes.test-helper.ts';
 
 interface HostProps {
   readonly style?: unknown;
@@ -73,54 +74,31 @@ const { AppBar } = await import('./AppBar.tsx');
 const noop = () => undefined;
 const MODES: readonly ThemeMode[] = ['light', 'dark'];
 
-interface Node {
-  readonly kind: string;
-  readonly role?: string;
-  readonly label?: string;
-  readonly px?: number;
-  readonly lines?: number;
-  readonly ellipsis?: string;
-  readonly a11y?: string;
-  readonly measures?: boolean;
-  readonly style?: Readonly<Record<string, unknown>>;
-  readonly at: number;
-}
-
-const QUOT = /&quot;/g;
-const AMP = /&amp;/g;
-
 function render(bar: ReactElement, mode: ThemeMode = 'dark'): string {
   return renderToStaticMarkup(<ThemeProvider mode={mode}>{bar}</ThemeProvider>);
 }
 
-function nodes(markup: string): Node[] {
-  return [...markup.matchAll(/data-node="([^"]*)"/g)].map((match) => ({
-    ...(JSON.parse(
-      (match[1] ?? '{}').replace(QUOT, '"').replace(AMP, '&'),
-    ) as Omit<Node, 'at'>),
-    at: match.index,
-  }));
+function buttons(markup: string): DataNode[] {
+  return dataNodes(markup).filter((n) => n.role === 'button');
 }
 
-function buttons(markup: string): Node[] {
-  return nodes(markup).filter((n) => n.role === 'button');
-}
-
-function button(markup: string, label: string): Node {
+function button(markup: string, label: string): DataNode {
   const found = buttons(markup).find((b) => b.label === label);
   if (found === undefined) throw new Error(`no button labelled ${label}`);
   return found;
 }
 
-function iconIn(markup: string, key: Node): Node | undefined {
-  const next = nodes(markup).find((n) => n.at > key.at && n.kind === 'icon');
+function iconIn(markup: string, key: DataNode): DataNode | undefined {
+  const next = dataNodes(markup).find(
+    (n) => n.at > key.at && n.kind === 'icon',
+  );
   const between = buttons(markup).find(
     (b) => b.at > key.at && b.at < (next?.at ?? 0),
   );
   return between === undefined ? next : undefined;
 }
 
-function isRealKey({ style }: Node): boolean {
+function isRealKey({ style }: DataNode): boolean {
   return (
     Number(style?.width) >= minTouchTargetDp &&
     Number(style?.height) >= minTouchTargetDp
@@ -128,7 +106,7 @@ function isRealKey({ style }: Node): boolean {
 }
 
 function header(markup: string): string | undefined {
-  const head = nodes(markup).find((n) => n.role === 'header');
+  const head = dataNodes(markup).find((n) => n.role === 'header');
   if (head === undefined) return undefined;
   const next = buttons(markup).find((b) => b.at > head.at);
   return markup
@@ -144,7 +122,7 @@ function order(markup: string, ...needles: string[]): number[] {
 
 describe('AppBar title above the default text size', () => {
   const headingOf = (bar: ReactElement) =>
-    nodes(render(bar)).find((n) => n.kind === 'view' && n.measures);
+    dataNodes(render(bar)).find((n) => n.kind === 'view' && n.measures);
 
   afterEach(() => {
     screen.fontScale = 1;
@@ -186,7 +164,7 @@ describe('AppBar title above the default text size', () => {
 
   it('gives the shown title and artist a paint that reserves their ellipsis', () => {
     screen.fontScale = 2;
-    const shown = nodes(
+    const shown = dataNodes(
       render(<AppBar title="Long" subtitle="Artist" />),
     ).filter((n) => n.kind === 'text' && n.lines === 1);
     expect(shown.map((n) => n.style?.fontSize)).toEqual([
@@ -197,14 +175,14 @@ describe('AppBar title above the default text size', () => {
 
   it('keeps an empty artist line out of the scaled paint', () => {
     screen.fontScale = 2;
-    const shown = nodes(render(<AppBar title="Long" subtitle="" />)).filter(
+    const shown = dataNodes(render(<AppBar title="Long" subtitle="" />)).filter(
       (n) => n.kind === 'text' && n.lines === 1,
     );
     expect(shown.at(-1)?.style?.fontSize).toBe(textRoles.appBarSubtitle.size);
   });
 
   it('keeps one plain text per line at the default text size', () => {
-    const shown = nodes(
+    const shown = dataNodes(
       render(<AppBar title="Long" subtitle="Artist" />),
     ).filter((n) => n.kind === 'text' && !n.measures);
     expect(shown.map((n) => n.style?.fontSize)).toEqual([
@@ -220,7 +198,7 @@ describe('AppBar', () => {
     const markup = render(
       <AppBar title="Retime lyrics" closeLabel="Close retime" onClose={noop} />,
     );
-    const icons = nodes(markup).filter((n) => n.kind === 'icon');
+    const icons = dataNodes(markup).filter((n) => n.kind === 'icon');
     expect(icons.map((icon) => icon.label)).toEqual(['close']);
     expect(button(markup, 'Close retime')).toBeDefined();
   });
@@ -236,7 +214,7 @@ describe('AppBar', () => {
   });
 
   it('is one bar height tall', () => {
-    const [bar] = nodes(render(<AppBar title="Settings" onBack={noop} />));
+    const [bar] = dataNodes(render(<AppBar title="Settings" onBack={noop} />));
     expect(bar?.style?.minHeight).toBe(screenBar.height);
   });
 
@@ -245,7 +223,7 @@ describe('AppBar', () => {
   });
 
   it('keeps a title with no back key on the screen inset', () => {
-    const [bar] = nodes(render(<AppBar title="Kitbag" wordmark />));
+    const [bar] = dataNodes(render(<AppBar title="Kitbag" wordmark />));
     expect(bar?.style?.paddingLeft).toBe(space.screenInset);
   });
 
@@ -255,7 +233,7 @@ describe('AppBar', () => {
   });
 
   it('measures the title offscreen, hidden from accessibility', () => {
-    const all = nodes(render(<AppBar title="Metronome" onBack={noop} />));
+    const all = dataNodes(render(<AppBar title="Metronome" onBack={noop} />));
     const measurer = all.find((n) => n.kind === 'text' && n.measures);
     const hidden = all
       .filter((n) => n.a11y === 'no-hide-descendants')
@@ -266,8 +244,8 @@ describe('AppBar', () => {
 
   it('keeps the shown title invisible until it is measured', () => {
     const markup = render(<AppBar title="Metronome" onBack={noop} />);
-    const head = nodes(markup).find((n) => n.role === 'header');
-    const shown = nodes(markup).find(
+    const head = dataNodes(markup).find((n) => n.role === 'header');
+    const shown = dataNodes(markup).find(
       (n) => n.kind === 'text' && n.at > (head?.at ?? -1),
     );
     expect(shown).toMatchObject({ lines: 1, ellipsis: 'tail' });

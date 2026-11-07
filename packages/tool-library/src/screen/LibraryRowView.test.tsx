@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
 const TITLE = 'A title';
+const FACTS = '0:30';
 const BADGE_MARK = 'badge-mark';
 
 const display = vi.hoisted(() => ({ fontScale: 1 }));
@@ -26,8 +27,7 @@ vi.mock('react-native', async () => {
   return {
     View: box,
     Pressable: box,
-    Text: (props: Props) =>
-      h('span', { 'data-lines': props.numberOfLines }, props.children),
+    Text: (props: Props) => h('b', null, props.children),
     useWindowDimensions: () => ({ fontScale: display.fontScale }),
   };
 });
@@ -37,6 +37,8 @@ vi.mock('@kitbag/core-design', async (original) => {
   return {
     ...(await original<Record<string, unknown>>()),
     Badge: () => h('i', null, 'badge-mark'),
+    EllipsizedText: (props: Props) =>
+      h('span', { 'data-lines': props.numberOfLines }, props.children),
     libraryList: new Proxy({}, { get: () => 0 }),
     Icon: () => null,
     createThemedStyles: () => () =>
@@ -82,9 +84,11 @@ function render(fontScale: number) {
     }),
   );
   const column = /<section>.*<\/section>/s.exec(markup)?.[0] ?? '';
-  const title = new RegExp(`data-lines="(\\d+)">${TITLE}`).exec(markup)?.[1];
+  const linesOf = (text: string) =>
+    Number(new RegExp(`data-lines="(\\d+)">${text}`).exec(markup)?.[1]);
   return {
-    titleLines: Number(title),
+    titleLines: linesOf(TITLE),
+    factsLines: linesOf(FACTS),
     badgeShown: markup.includes(BADGE_MARK),
     badgeInColumn: column.includes(BADGE_MARK),
   };
@@ -94,6 +98,7 @@ describe('LibraryRowView', () => {
   it('keeps one title line and the badges beside the text at 1.0', () => {
     expect(render(1)).toEqual({
       titleLines: 1,
+      factsLines: 1,
       badgeShown: true,
       badgeInColumn: false,
     });
@@ -102,6 +107,7 @@ describe('LibraryRowView', () => {
   it('bounds the title and puts the badges under the text at 2.0', () => {
     expect(render(2)).toEqual({
       titleLines: 3,
+      factsLines: 2,
       badgeShown: true,
       badgeInColumn: true,
     });

@@ -69,6 +69,7 @@ export function createTunerStore(
   // after a start that succeeded.
   let capturing = false;
   let unsubscribe: (() => void) | undefined;
+  let newestHold = 0;
 
   return createStore<TunerStore>((set, get) => {
     const recordFailure = (
@@ -210,6 +211,7 @@ export function createTunerStore(
       enter: (defaultTuning) => {
         if (get().open) return;
         unsubscribe = runtime().appActivity.subscribe(onActivity);
+        appActive = runtime().appActivity.current() === 'active';
         epoch++;
         const tuning = get().tuning ?? defaultTuning;
         // SPEC §10.2: no in-tune state survives leaving and coming back.
@@ -221,7 +223,7 @@ export function createTunerStore(
           mic: 'off',
           commandError: null,
         });
-        void startCapture(epoch, true);
+        if (appActive) void startCapture(epoch, true);
       },
 
       leave: () => {
@@ -229,9 +231,19 @@ export function createTunerStore(
         epoch++;
         unsubscribe?.();
         unsubscribe = undefined;
-        appActive = true;
         set({ open: false, mic: 'off' });
         stopCapture();
+      },
+
+      // Across an Activity relaunch the new screen can acquire before the old one
+      // loses focus, so only the newest hold may leave.
+      acquire: (defaultTuning) => {
+        const hold = ++newestHold;
+        get().enter(defaultTuning);
+        const release = () => {
+          if (hold === newestHold) get().leave();
+        };
+        return release;
       },
 
       retryMic: () => {
