@@ -3,6 +3,7 @@ import { Text, View, type LayoutChangeEvent } from 'react-native';
 import { useAnimatedReaction, type SharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
+import { aboveFlagsPadding, loopNotePlacement } from '../loopNotePlacement.ts';
 import { asPercent } from '../percent.ts';
 import { textRoles } from '../roles.ts';
 import {
@@ -136,20 +137,45 @@ export interface ScrubNote {
   readonly failed: boolean;
 }
 
-export interface ScrubLaneLayout {
-  readonly noteSide: 'left' | 'right';
-  readonly paddingTop: number | null;
-  readonly onLane: (event: LayoutChangeEvent) => void;
-  readonly onBar: (event: LayoutChangeEvent) => void;
-  readonly onNote: (event: LayoutChangeEvent) => void;
+function useLaneLayout(marks: ScrubMarks | null) {
+  const [laneWidth, setLaneWidth] = useState(0);
+  const [bar, setBar] = useState({ x: 0, width: 0 });
+  const [note, setNote] = useState({ width: 0, height: 0 });
+  const onLane = useCallback((event: LayoutChangeEvent) => {
+    setLaneWidth(event.nativeEvent.layout.width);
+  }, []);
+  const onBar = useCallback((event: LayoutChangeEvent) => {
+    const { x, width } = event.nativeEvent.layout;
+    setBar({ x, width });
+  }, []);
+  const onNote = useCallback((event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    setNote({ width, height });
+  }, []);
+  const placement = loopNotePlacement({
+    laneWidth,
+    barLeft: bar.x,
+    barWidth: bar.width,
+    noteWidth: note.width,
+    start: marks?.start ?? null,
+    end: marks?.end ?? null,
+  });
+  return {
+    noteSide: placement === 'left' ? 'left' : 'right',
+    paddingTop: placement === 'above' ? aboveFlagsPadding(note.height) : null,
+    onLane,
+    onBar,
+    onNote,
+  } as const;
 }
 
 interface NoteLineProps {
   readonly note: ScrubNote | null;
-  readonly layout: ScrubLaneLayout | undefined;
+  readonly side: 'left' | 'right';
+  readonly onLayout: (event: LayoutChangeEvent) => void;
 }
 
-function NoteLine({ note, layout }: NoteLineProps) {
+function NoteLine({ note, side, onLayout }: NoteLineProps) {
   const styles = useStyles();
   if (note === null) return null;
   return (
@@ -157,10 +183,10 @@ function NoteLine({ note, layout }: NoteLineProps) {
       testID="loop-note"
       style={[
         styles.note,
-        layout?.noteSide === 'left' ? styles.noteLeft : styles.noteRight,
+        side === 'left' ? styles.noteLeft : styles.noteRight,
       ]}
       accessibilityLiveRegion="polite"
-      onLayout={layout?.onNote}
+      onLayout={onLayout}
     >
       {note.failed ? null : <Icon name="repeat" size="action" color="accent" />}
       <Text style={note.failed ? styles.failText : styles.noteText}>
@@ -208,7 +234,6 @@ export interface ScrubRowProps {
   readonly onSeek: (frame: number) => void;
   readonly behindFill?: ReactNode;
   readonly overFill?: ReactNode;
-  readonly layout?: ScrubLaneLayout;
 }
 
 export function ScrubRow({
@@ -223,7 +248,6 @@ export function ScrubRow({
   onSeek,
   behindFill,
   overFill,
-  layout,
 }: ScrubRowProps) {
   const styles = useStyles();
   const second = useSpokenSecond(frame);
@@ -241,7 +265,8 @@ export function ScrubRow({
     },
     [hold, onSeek, durationFrames],
   );
-  const paddingTop = layout?.paddingTop ?? null;
+  const layout = useLaneLayout(marks);
+  const { paddingTop } = layout;
   const lanePadding = useMemo(
     () => (paddingTop === null ? undefined : { paddingTop }),
     [paddingTop],
@@ -250,9 +275,9 @@ export function ScrubRow({
     <View
       testID="scrub-lane"
       style={[styles.lane, lanePadding]}
-      onLayout={layout?.onLane}
+      onLayout={layout.onLane}
     >
-      <NoteLine note={note} layout={layout} />
+      <NoteLine note={note} side={layout.noteSide} onLayout={layout.onNote} />
       <View
         style={styles.elapsed}
         importantForAccessibility="no-hide-descendants"
@@ -260,7 +285,7 @@ export function ScrubRow({
       >
         <LiveText text={frame.elapsed} role="scrubTime" align="left" />
       </View>
-      <View testID="scrub-bar" style={styles.bar} onLayout={layout?.onBar}>
+      <View testID="scrub-bar" style={styles.bar} onLayout={layout.onBar}>
         <Slider
           value={frame.progress}
           onSlide={slide}

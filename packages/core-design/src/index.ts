@@ -70,6 +70,7 @@ export * from './components/BeatWaveform.tsx';
 export * from './components/PlayerDock.tsx';
 export * from './components/PlayerTransport.tsx';
 export * from './components/ScrubRow.tsx';
+export * from './loopNotePlacement.ts';
 export * from './components/Slider.tsx';
 export * from './useScreenReader.ts';
 export * from './useTextIconScale.ts';
