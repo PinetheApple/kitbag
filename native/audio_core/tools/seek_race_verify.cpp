@@ -195,7 +195,8 @@ void RunMixerRace() {
   RampReader reader;  // declared first: it must outlive the mixer that reads it
   kitbag::Mixer mixer(kSampleRate);
   Check(
-      mixer.SetTrackSource(0, &reader, 0, true),
+      mixer.SetTrackSource(0, &reader, 0, true) ==
+          kitbag::Mixer::LoadResult::kOk,
       "mixer-race: the ramp source loads"
   );
   mixer.Play();
@@ -265,7 +266,8 @@ void RunMixerPausedSeek() {
   RampReader reader;
   kitbag::Mixer mixer(kSampleRate);
   Check(
-      mixer.SetTrackSource(0, &reader, 0, true),
+      mixer.SetTrackSource(0, &reader, 0, true) ==
+          kitbag::Mixer::LoadResult::kOk,
       "mixer-paused-seek: the ramp source loads"
   );
   mixer.Play();

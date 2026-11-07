@@ -9,6 +9,8 @@
 namespace mixer_test {
 namespace {
 
+using LoadResult = kitbag::Mixer::LoadResult;
+
 constexpr float kSpeed = 0.75f;
 constexpr int64_t kStemFrames = int64_t{30} * kSampleRate;
 constexpr int kSettleBlocks = 40;
@@ -119,7 +121,8 @@ void CheckRefusedWithFileGone(
 ) {
   Hide(fragile);
   Check(
-      !mixer->LoadTrack(kJoiningTrack, joining.c_str(), 0, false),
+      mixer->LoadTrack(kJoiningTrack, joining.c_str(), 0, false) ==
+          LoadResult::kPrimeFailed,
       "load refusal: a load whose prime fails is refused"
   );
   Check(
@@ -146,7 +149,7 @@ void TestFailedPrimeRefusesTheStemAndKeepsTheConfig() {
       "load refusal: a later key stays on the live config"
   );
   Check(
-      mixer.LoadTrack(kJoiningTrack, joining.c_str(), 0, false) &&
+      mixer.LoadTrack(kJoiningTrack, joining.c_str(), 0, false) == kLoaded &&
           mixer.key_buses_vendor_default(),
       "load refusal: the stem loads and flips the config with the file back"
   );
@@ -164,7 +167,9 @@ void TestStoppedFailedPrimeRefusesTheStem() {
   const std::string second = WriteStem(PulsesEverySecondBeat(1));
   Hide(fragile);
   Check(
-      !mixer.LoadTrack(1, second.c_str(), 0, false) && !mixer.track_ready(1),
+      mixer.LoadTrack(1, second.c_str(), 0, false) ==
+              LoadResult::kPrimeFailed &&
+          !mixer.track_ready(1),
       "load refusal: a stopped load whose prime fails is refused"
   );
   Unhide(fragile);
@@ -198,7 +203,8 @@ void TestFailedPrimeRefusesASource() {
   const std::string fragile = LoadSilence(&mixer, 0, kStemFrames);
   Hide(fragile);
   Check(
-      !mixer.SetTrackSource(1, &reader, 0, false) && !mixer.track_ready(1),
+      mixer.SetTrackSource(1, &reader, 0, false) == LoadResult::kPrimeFailed &&
+          !mixer.track_ready(1),
       "load refusal: a source whose prime fails is refused"
   );
   Unhide(fragile);
@@ -209,7 +215,8 @@ void TestUnopenableFileKeepsTheConfig() {
   PlayFourKeysWithPulsesOnTheFirst(&mixer);
   const std::string missing = NextTempPath();
   Check(
-      !mixer.LoadTrack(kJoiningTrack, missing.c_str(), 0, false) &&
+      mixer.LoadTrack(kJoiningTrack, missing.c_str(), 0, false) ==
+              LoadResult::kInvalid &&
           !mixer.key_buses_vendor_default(),
       "load refusal: a file that will not open leaves the config as it was"
   );

@@ -67,7 +67,7 @@ void TestStreamsRatherThanBuffersWholeSong() {
   CountingRampReader reader(frames, kMono, 0.0f);
   kitbag::Mixer mixer(kSampleRate);
   Check(
-      mixer.SetTrackSource(0, &reader, 0, false),
+      mixer.SetTrackSource(0, &reader, 0, false) == kLoaded,
       "source: SetTrackSource accepts a streaming reader"
   );
   Check(

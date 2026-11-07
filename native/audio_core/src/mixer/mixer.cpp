@@ -58,36 +58,38 @@ void Mixer::RecomputeLongestFrames() {
   longest_frames_.store(longest, std::memory_order_relaxed);
 }
 
-bool Mixer::LoadTrack(
+Mixer::LoadResult Mixer::LoadTrack(
     int track,
     const char* path,
     FrameClock clock,
     bool engine_running
 ) {
-  if (track < 0 || track >= kMaxTracks) return false;
+  if (track < 0 || track >= kMaxTracks) return LoadResult::kInvalid;
   const Prepared prepared = PrepareBusFor(track, clock, engine_running);
   const auto frame = static_cast<uint64_t>(PlannedHead().stream);
   StreamingTrack& stream = *tracks_[track].stream;
   if (!stream.Load(path, clock, engine_running, JoinStamp(), frame)) {
     UndoPrepare(prepared, clock, engine_running);
-    return false;
+    return LoadResult::kInvalid;
   }
   return FinishLoad(track, prepared, clock, engine_running);
 }
 
 // A stem kept after a failed prime stays silent, and the config flag it moved
 // would put later buses out of line with the live bank.
-bool Mixer::FinishLoad(
+Mixer::LoadResult Mixer::FinishLoad(
     int track,
     const Prepared& prepared,
     FrameClock clock,
     bool engine_running
 ) {
   NoteTrackLoaded(track);
-  if (!prepared.prime || PrimeNow(clock, engine_running)) return true;
+  if (!prepared.prime || PrimeNow(clock, engine_running)) {
+    return LoadResult::kOk;
+  }
   UnloadTrack(track, clock, engine_running);
   UndoPrepare(prepared, clock, engine_running);
-  return false;
+  return LoadResult::kPrimeFailed;
 }
 
 void Mixer::UnloadTrack(int track, FrameClock clock, bool engine_running) {
@@ -105,20 +107,20 @@ bool Mixer::track_ready(int track) const {
   return tracks_[track].stream->ready();
 }
 
-bool Mixer::SetTrackSource(
+Mixer::LoadResult Mixer::SetTrackSource(
     int track,
     SourceReader* reader,
     FrameClock clock,
     bool engine_running
 ) {
-  if (track < 0 || track >= kMaxTracks) return false;
+  if (track < 0 || track >= kMaxTracks) return LoadResult::kInvalid;
   const Prepared prepared = PrepareBusFor(track, clock, engine_running);
   const auto frame = static_cast<uint64_t>(PlannedHead().stream);
   const SourceStamp stamp = JoinStamp();
   StreamingTrack& stream = *tracks_[track].stream;
   if (!stream.LoadReader(reader, clock, engine_running, stamp, frame)) {
     UndoPrepare(prepared, clock, engine_running);
-    return false;
+    return LoadResult::kInvalid;
   }
   return FinishLoad(track, prepared, clock, engine_running);
 }

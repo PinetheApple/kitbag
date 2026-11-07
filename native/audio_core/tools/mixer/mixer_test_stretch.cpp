@@ -224,7 +224,7 @@ void CheckBusesFreed(kitbag::Mixer* mixer) {
   mixer->UnloadTrack(1, 0, false);
   Check(mixer->key_bus_count() == 1, "buses: an unload frees its key's bus");
   Check(
-      !mixer->LoadTrack(1, kMissingPath, 0, false) &&
+      mixer->LoadTrack(1, kMissingPath, 0, false) != kLoaded &&
           mixer->key_bus_count() == 1,
       "buses: a failed load leaves no bus behind"
   );

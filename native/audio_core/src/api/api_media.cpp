@@ -40,9 +40,17 @@ kb_result
 kb_mixer_load_track(kb_engine* engine, int32_t track, const char* path) {
   if (engine == nullptr || path == nullptr) return KB_ERROR_INVALID_ARGUMENT;
   kitbag::Engine* e = ToEngine(engine);
-  const bool ok =
-      e->mixer().LoadTrack(track, path, e->frame_clock(), e->is_running());
-  return ok ? KB_OK : KB_ERROR_INVALID_ARGUMENT;
+  using Result = kitbag::Mixer::LoadResult;
+  switch (
+      e->mixer().LoadTrack(track, path, e->frame_clock(), e->is_running())) {
+    case Result::kOk:
+      return KB_OK;
+    case Result::kInvalid:
+      return KB_ERROR_INVALID_ARGUMENT;
+    case Result::kPrimeFailed:
+      return KB_ERROR_INTERNAL;
+  }
+  return KB_ERROR_INTERNAL;
 }
 
 void kb_mixer_unload_track(kb_engine* engine, int32_t track) {

@@ -48,10 +48,13 @@ class Mixer {
 
   /// Load a track from a file path, streamed from disk and published by atomic
   /// swap (SPEC.md §4.1). [clock] and [engine_running] date the retired
-  /// source for deferred reclamation. False for a null path, a track outside
-  /// [0, kMaxTracks), or a file that will not open; also when joining needs a
-  /// prime that fails on any stem, which leaves this track unloaded at key 0.
-  bool
+  /// source for deferred reclamation. kInvalid for a null path, a track outside
+  /// [0, kMaxTracks), or a file that will not open: a held stem stays loaded.
+  /// kPrimeFailed when joining needs a prime that fails on any stem: this track
+  /// is left unloaded at key 0, unless the command queue is full, which leaves
+  /// the key.
+  enum class LoadResult : uint8_t { kOk, kInvalid, kPrimeFailed };
+  LoadResult
   LoadTrack(int track, const char* path, FrameClock clock, bool engine_running);
 
   /// Retire a track's source, reclaimed off the callback; the transport length
@@ -63,7 +66,7 @@ class Mixer {
   bool track_ready(int track) const;
 
   /// [reader] is caller-owned and must outlive the track. Fails as LoadTrack.
-  bool SetTrackSource(
+  LoadResult SetTrackSource(
       int track,
       SourceReader* reader,
       FrameClock clock,
@@ -251,7 +254,7 @@ class Mixer {
   Prepared PrepareBusFor(int track, FrameClock clock, bool engine_running);
   void
   UndoPrepare(const Prepared& prepared, FrameClock clock, bool engine_running);
-  bool FinishLoad(
+  LoadResult FinishLoad(
       int track,
       const Prepared& prepared,
       FrameClock clock,

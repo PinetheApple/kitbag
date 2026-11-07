@@ -70,7 +70,7 @@ LoadPcm(kitbag::Mixer* mixer, int track, const std::vector<float>& pcm) {
     return;
   }
   TempFiles().push_back(path);
-  if (!mixer->LoadTrack(track, path.c_str(), 0, false)) {
+  if (mixer->LoadTrack(track, path.c_str(), 0, false) != kLoaded) {
     FixtureFail("could not load tone WAV into the track");
   }
 }

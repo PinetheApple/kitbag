@@ -264,11 +264,12 @@ struct VanishedStem {
   std::string hidden = gone + ".hidden";
 };
 
-VanishedStem OpenWithVanishedStem() {
+VanishedStem OpenWithVanishedStem(float rate = kitbag::kUnityRate) {
   VanishedStem stems;
   media_test::WriteWav(stems.kept, kFixtureFrames);
   media_test::WriteWav(stems.gone, kFixtureFrames);
   kb_engine_create(&stems.engine);
+  kb_mixer_set_rate(stems.engine, rate);
   kb_mixer_load_track(stems.engine, 0, stems.kept.c_str());
   kb_mixer_load_track(stems.engine, 1, stems.gone.c_str());
   std::filesystem::rename(stems.gone, stems.hidden);
@@ -299,6 +300,34 @@ void TestPrimeFailureIsInternal() {
   std::filesystem::remove(stems.gone);
 }
 
+void TestLoadRefusalCodesDiffer() {
+  const VanishedStem stems = OpenWithVanishedStem(kInRange);
+  const std::string joining = media_test::UniqueTempPath("kitbag_abi_join");
+  media_test::WriteWav(joining, kFixtureFrames);
+  const std::string missing = media_test::UniqueTempPath("kitbag_abi_none");
+  Check(
+      kb_mixer_load_track(stems.engine, 0, missing.c_str()) ==
+              KB_ERROR_INVALID_ARGUMENT &&
+          kb_mixer_track_ready(stems.engine, 0) == 1,
+      "load: a file that will not open is invalid and keeps the held stem"
+  );
+  Check(
+      kb_mixer_load_track(stems.engine, 0, joining.c_str()) ==
+              KB_ERROR_INTERNAL &&
+          kb_mixer_track_ready(stems.engine, 0) == 0,
+      "load: a failed prime is KB_ERROR_INTERNAL and drops the held stem"
+  );
+  std::filesystem::rename(stems.hidden, stems.gone);
+  Check(
+      kb_mixer_load_track(stems.engine, 0, joining.c_str()) == KB_OK,
+      "load: the stem loads once the file is back"
+  );
+  kb_engine_destroy(stems.engine);
+  for (const std::string& path : {stems.kept, stems.gone, joining}) {
+    std::filesystem::remove(path);
+  }
+}
+
 void TestNullEngine() {
   Check(
       kb_mixer_set_rate(nullptr, kInRange) == KB_ERROR_INVALID_ARGUMENT,
@@ -317,6 +346,7 @@ void TestNullEngine() {
 void RunMixerRateAbiTests() {
   TestNullEngine();
   TestPrimeFailureIsInternal();
+  TestLoadRefusalCodesDiffer();
   kb_engine* engine = nullptr;
   Check(kb_engine_create(&engine) == KB_OK, "rate: engine opens");
   if (engine == nullptr) return;

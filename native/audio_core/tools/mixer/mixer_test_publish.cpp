@@ -214,7 +214,7 @@ void TestTooWideTrackIsRejected() {
   kitbag::Mixer mixer(kSampleRate);
   FixedChannelReader three_channel(3);
   Check(
-      !mixer.SetTrackSource(0, &three_channel, 0, false),
+      mixer.SetTrackSource(0, &three_channel, 0, false) != kLoaded,
       "reject: a 3-channel source is refused at load"
   );
   Check(
@@ -224,7 +224,7 @@ void TestTooWideTrackIsRejected() {
 
   FixedChannelReader zero_channel(0);
   Check(
-      !mixer.SetTrackSource(1, &zero_channel, 0, false),
+      mixer.SetTrackSource(1, &zero_channel, 0, false) != kLoaded,
       "reject: a 0-channel source is refused at load"
   );
 }

@@ -259,11 +259,11 @@ KB_EXPORT uint32_t kb_decoder_channels(const kb_engine* engine);
  * cannot tear a read. No PCM crosses the boundary — every mixer boundary value
  * is now a scalar or a path, which is what §13.2 relies on.
  * Returns KB_ERROR_INVALID_ARGUMENT for a null engine or path, a track outside
- * the valid range, or a file that will not open; KB_OK once published.
- * With a stretch running, a stem that needs a fresh prime to join returns the
- * same error when any loaded stem cannot be read for it: the track is left with
- * no stem and key 0, including a stem it held before this call, and what was
- * playing carries on. */
+ * the valid range, or a file that will not open, keeping any held stem; KB_OK
+ * once published. With a stretch running, a stem needing a fresh prime returns
+ * KB_ERROR_INTERNAL when any loaded stem cannot be read for it: the track is
+ * left with no stem, even one it held, and key 0, unless the command queue is
+ * full, which leaves the key. What was playing carries on. */
 KB_EXPORT kb_result
 kb_mixer_load_track(kb_engine* engine, int32_t track, const char* path);
 /* Retire a track's source. RT-safe: the old source is reclaimed off the audio
