@@ -17,7 +17,7 @@ import type { ColorToken } from '../tokens.ts';
 import { useOneLineFit } from '../useOneLineFit.tsx';
 import { isTextScaled } from '../textScale.ts';
 import { useTextIconScale } from '../useTextIconScale.ts';
-import { EllipsizedLine } from './EllipsizedLine.tsx';
+import { EllipsizedText } from './EllipsizedText.tsx';
 import { Icon } from './Icon.tsx';
 
 const SCALED_CHIP_EXTRA_MARGIN = space.controlGap - screenBar.gap;
@@ -167,9 +167,9 @@ function Heading({
     <View style={[styles.heading, clearance]} onLayout={fit.onAvailableLayout}>
       {fit.measurer}
       <View accessibilityRole="header" accessible>
-        <EllipsizedLine style={[titleStyle, fit.style]}>{title}</EllipsizedLine>
+        <EllipsizedText style={[titleStyle, fit.style]}>{title}</EllipsizedText>
         {subtitle === undefined ? null : (
-          <EllipsizedLine style={styles.subtitle}>{subtitle}</EllipsizedLine>
+          <EllipsizedText style={styles.subtitle}>{subtitle}</EllipsizedText>
         )}
       </View>
     </View>

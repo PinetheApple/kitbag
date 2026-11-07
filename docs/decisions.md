@@ -943,3 +943,10 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   at 360 dp and 2.0 the badges left too little room for ordinary long words, and moving them
   gives the title 236 dp. A single word wider than that still breaks inside itself. At 1.0
   the row is unchanged. Coordinator call; the owner may overturn it. **[recorded]**
+
+- **2026-11-07 · Row ellipses and the preset editor's Name and Notes fields (§12.6, #317)** —
+  `RowText` and Library rows use the #303 reserve. It applies per view paint, so multi-line
+  titles need it too. The preset editor's Name and Notes fields wrap instead of scrolling,
+  because a glyph cut at the field's edge reads as a stray mark. `.editrow .v` doesn't forbid
+  wrapping. Return leaves the field and a pasted newline becomes a space. Coordinator call;
+  the owner may overturn it. **[recorded]**
