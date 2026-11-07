@@ -10,6 +10,8 @@ class CardRoutingTest {
 
   private fun press(button: SessionButton) = routing.on(CardEvent.SessionPressed(button))
 
+  private fun removeTask() = routing.on(CardEvent.TaskRemoved)
+
   private fun showMetronome() {
     routing.on(CardEvent.MetronomeShown)
   }
@@ -222,6 +224,45 @@ class CardRoutingTest {
   fun `a stale action with no card leaves no card showing`() {
     routing.on(CardEvent.MetronomeTapped(TransportAction.PLAY.name))
     routing.on(CardEvent.StartUnrecognised)
+    assertFalse(routing.cardShowing)
+  }
+
+  @Test
+  fun `removing the task stops the metronome and removes its card`() {
+    showMetronome()
+    assertEquals(CardEffect.StopPlayback(metronome = true, song = false), removeTask())
+    assertFalse(routing.cardShowing)
+  }
+
+  @Test
+  fun `removing the task stops a song and the metronome held behind it`() {
+    showMetronome()
+    showSong()
+    assertEquals(CardEffect.StopPlayback(metronome = true, song = true), removeTask())
+    assertNoCard()
+  }
+
+  @Test
+  fun `the cards stopping after the task is removed never bring the metronome card back`() {
+    showMetronome()
+    showSong()
+    removeTask()
+    assertEquals(CardEffect.RemoveCard, routing.on(CardEvent.SongStopped))
+    assertEquals(CardEffect.RemoveCard, routing.on(CardEvent.MetronomeStopped))
+    assertFalse(routing.cardShowing)
+  }
+
+  @Test
+  fun `removing the task stops a song shown alone`() {
+    showSong()
+    assertEquals(CardEffect.StopPlayback(metronome = false, song = true), removeTask())
+    assertFalse(routing.cardShowing)
+    assertNoSongShowing()
+  }
+
+  @Test
+  fun `removing the task with no card stops the service`() {
+    assertEquals(CardEffect.RemoveCard, removeTask())
     assertFalse(routing.cardShowing)
   }
 
