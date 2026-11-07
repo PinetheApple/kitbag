@@ -1,0 +1,1 @@
+• Leaving lyric retiming with unsaved taps now asks before dropping them.
