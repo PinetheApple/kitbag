@@ -13,11 +13,12 @@ import {
   type Wait,
 } from './commands.ts';
 import { customTuningActions, isValidTuning } from './customTunings.ts';
+import type { PermissionAnswer } from '../permission.ts';
+
 import {
   getTunerRuntime,
   getTunings,
   type AppActivity,
-  type MicPermission,
   type TunerRuntime,
 } from './runtime.ts';
 import type {
@@ -140,7 +141,7 @@ export function createTunerStore(
       expected === epoch && get().open && appActive;
 
     const startCapture = async (expected: number, ask: boolean) => {
-      let permission: MicPermission;
+      let permission: PermissionAnswer;
       try {
         const source = runtime().micPermission;
         permission = await (ask ? source.request() : source.check());

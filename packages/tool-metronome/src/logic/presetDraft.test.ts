@@ -6,6 +6,7 @@ import {
 import type { SongPreset } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
+import { songPreset } from './fixtures.test-helper.ts';
 import { withRampUnit } from './rampUnit.ts';
 import {
   draftFrom,
@@ -25,39 +26,7 @@ const {
   KB_ACCENT_MUTED: M,
 } = KB_ACCENT;
 
-const PRESET = {
-  id: 1,
-  uuid: 'u',
-  name: 'Blackbird',
-  bpm: 96,
-  beatsPerBar: 3,
-  denominator: 4,
-  subdivision: 2,
-  accents: Uint8Array.from([A, N, N]),
-  perAccentSounds: null,
-  polyAccents: Uint8Array.from([A, N, M]),
-  polyEnabled: false,
-  polyBeats: 0,
-  polyAgainst: 2,
-  sound: 1,
-  rampEnabled: true,
-  rampStartBpm: 96,
-  rampEndBpm: 104,
-  rampLength: 90,
-  rampUnit: 1,
-  rampLoop: true,
-  barMuteEnabled: false,
-  barMutePlayBars: null,
-  barMuteMuteBars: null,
-  countInBars: 1,
-  notes: 'Fingerstyle — count 3',
-  phaseNudge: 0,
-  title: null,
-  artist: null,
-  source: null,
-  lengthSeconds: null,
-  librarySongId: null,
-} as unknown as SongPreset;
+const PRESET = songPreset();
 
 describe('preset draft', () => {
   it('round-trips every editable field', () => {

@@ -146,6 +146,7 @@ git -C "$fixture" tag v2.0
 commit "$fixture" "fix: a"
 expect_stdout "highest semver v-tag is the base, others ignored" 0.10.1 version_in "$fixture" next
 expect_stdout "latest-tag prints the base" v0.10.0 version_in "$fixture" latest-tag
+expect_stdout "tags lists only vX.Y.Z tags, lowest version first" $'v0.9.0\nv0.10.0' version_in "$fixture" tags
 expect_stdout "latest-tag prints nothing without tags" "" version_in "$(make_fixture 0.1.0)" latest-tag
 
 expect_stdout "floor beats the bump" 1.0.0 version_in "$(fixture_after 1.0.0 v0.4.2 'fix: a')" next
@@ -156,6 +157,37 @@ fixture=$(make_fixture 0.1.0)
 git -C "$fixture" tag v0.1.0
 expect "no commits since the tag: nothing to release" "$EXIT_NOTHING_TO_RELEASE" "nothing to release" \
   version_in "$fixture" next
+
+echo "next — a release tag on a commit off main"
+tag_off_main() {
+  local dir=$1
+  git -C "$dir" checkout -q -b release
+  mkdir -p "$dir/metadata/en-US/changelogs"
+  echo "• a note" > "$dir/metadata/en-US/changelogs/100.txt"
+  git -C "$dir" add metadata
+  commit "$dir" "chore(release): F-Droid changelog for v0.1.0"
+  git -C "$dir" tag v0.1.0
+  git -C "$dir" checkout -q main
+  git -C "$dir" branch -q -D release
+}
+
+fixture=$(make_fixture 0.1.0)
+tag_off_main "$fixture"
+commit "$fixture" "fix: m2"
+commit "$fixture" "feat: m3"
+expect_stdout "an off-main tag is still the latest tag" v0.1.0 version_in "$fixture" latest-tag
+expect_stdout "next counts only the main commits after the tag's parent" 0.2.0 version_in "$fixture" next
+
+fixture=$(make_fixture 0.1.0)
+commit "$fixture" "feat: before the release"
+tag_off_main "$fixture"
+commit "$fixture" "fix: after the release"
+expect_stdout "the tag's main-side parent is not counted again" 0.1.1 version_in "$fixture" next
+
+fixture=$(make_fixture 0.1.0)
+tag_off_main "$fixture"
+expect "an off-main tag with no main commits after it: nothing to release" "$EXIT_NOTHING_TO_RELEASE" \
+  "nothing to release" version_in "$fixture" next
 
 echo "next — bounds"
 expect "patch 99 overflow refuses" "$EXIT_OUT_OF_BOUNDS" "raise" version_in "$(fixture_after 0.1.0 v0.1.99 'fix: a')" next

@@ -146,9 +146,10 @@ header{padding:72px 0 0}
 .phone .notch{width:110px;height:24px;border-radius:99px;background:color-mix(in srgb,var(--tx) 9%,var(--bg));margin:2px auto 10px}
 .scr{display:flex;flex-direction:column;gap:12px;min-height:600px}
 .statusbar{display:flex;justify-content:space-between;font-family:'Space Grotesk';font-size:12px;color:var(--tx3);padding:0 6px}
-.appbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:2px 2px}
-.appbar h5{margin:0;font-family:'Space Grotesk';font-weight:500;font-size:17px}
-.appbar .ico{color:var(--tx2);font-size:16px}
+.appbar{display:flex;align-items:center;gap:2px;min-height:56px;padding:0 4px;margin:0 -14px}
+.appbar h5{margin:0;flex:1;min-width:0;font-family:'Space Grotesk';font-weight:500;font-size:17px}
+.appbar .ico,.appbar .bk{width:48px;height:48px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--tx2);font-size:24px}
+.appbar .bk{color:var(--tx)}
 .pcard{background:var(--s1);border:1px solid var(--line);border-radius:16px;padding:14px}
 .pcard.hot{border-color:var(--ac-dim);background:color-mix(in srgb,var(--ac) 7%,var(--s1))}
 .trow{display:flex;align-items:center;gap:10px}
@@ -498,7 +499,7 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
   <div class="screen-row">
     <div class="phone"><div class="notch"></div><div class="scr">
       <div class="statusbar"><span>21:59</span><span>▲ ● ▮</span></div>
-      <div class="appbar"><h5>‹ Calibrate latency</h5></div>
+      <div class="appbar"><span class="bk"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></span><h5>Calibrate latency</h5></div>
       <div class="routerow act"><span class="ticon">◉</span><span class="rt"><b>WH-1000XM4</b><span>Bluetooth · calibrating now</span></span></div>
       <div class="tapzone">
         <span class="num">12</span>
@@ -552,7 +553,7 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
   <div class="screen-row">
     <div class="phone"><div class="notch"></div><div class="scr">
       <div class="statusbar"><span>22:03</span><span>▲ ● ▮</span></div>
-      <div class="appbar"><h5>‹ Tools</h5></div>
+      <div class="appbar"><span class="bk"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></span><h5>Tools</h5></div>
       <p class="small muted" style="margin:0 2px">Kitbag stays lean — add tools when you need them, remove them when you don't.</p>
       <div class="pcard"><div class="trow"><div class="ticon">◴</div><div class="tl"><b>Metronome</b><span>Core · 0.4 MB</span></div><span class="tog on"></span></div></div>
       <div class="pcard"><div class="trow"><div class="ticon">♪</div><div class="tl"><b>Tuner</b><span>Core · 0.3 MB</span></div><span class="tog on"></span></div></div>
@@ -590,7 +591,7 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
   <div class="screen-row">
     <div class="phone"><div class="notch"></div><div class="scr">
       <div class="statusbar"><span>22:06</span><span>▲ ● ▮</span></div>
-      <div class="appbar"><h5>‹ Restore</h5></div>
+      <div class="appbar"><span class="bk"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></span><h5>Restore</h5></div>
       <div class="pcard"><div class="trow"><span class="ticon">⇩</span><span class="tl"><b>kitbag_export.json</b><span>v4 · 14 Jul 2026 · 1.2 MB</span></span></div></div>
       <div class="seg"><i class="on">Merge</i><i>Replace</i></div>
       <span class="small" style="color:var(--tx3);padding:0 2px">Keeps what you have. Items already here are updated, not duplicated.</span>

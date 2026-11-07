@@ -68,6 +68,26 @@ async function exportBackup(
   });
 }
 
+async function exportSetlist(
+  { db }: DatabaseHandle,
+  setlistUuid: string,
+): Promise<string> {
+  const { records } = await loadSnapshot(db);
+  const setlist = records.setlists.find(({ uuid }) => uuid === setlistUuid);
+  if (setlist === undefined) throw new Error(`Setlist ${setlistUuid} missing`);
+  const listed = new Set(setlist.presetUuids);
+  return serializeBackup({
+    version: BACKUP_VERSION,
+    exportedAt: new Date().toISOString(),
+    categories: withDependencies(['setlists']),
+    records: {
+      ...records,
+      setlists: [{ ...setlist, active: false }],
+      songPresets: records.songPresets.filter(({ uuid }) => listed.has(uuid)),
+    },
+  });
+}
+
 async function summary({ db }: DatabaseHandle) {
   const { records } = await loadSnapshot(db);
   return Object.fromEntries(
@@ -104,6 +124,8 @@ export function createBackupService(handle: DatabaseHandle) {
     summary: () => serial(() => summary(handle)),
     export: (categories: readonly Category[] = CATEGORIES) =>
       serial(() => exportBackup(handle, categories)),
+    exportSetlist: (setlistUuid: string) =>
+      serial(() => exportSetlist(handle, setlistUuid)),
     plan: (input: string, options: ImportOptions = {}) =>
       serial(() =>
         asResult(

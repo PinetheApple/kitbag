@@ -9,6 +9,7 @@ export default function SettingsRoute() {
       onOpenAttributions={routes.openAttributions}
       onOpenCalibration={routes.openCalibration}
       onOpenTools={routes.openTools}
+      onOpenRestore={routes.openRestore}
     />
   );
 }

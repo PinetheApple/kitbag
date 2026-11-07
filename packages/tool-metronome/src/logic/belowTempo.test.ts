@@ -7,6 +7,12 @@ import {
   beatLinePitch,
   belowTempoReserve,
   DOT_METRICS,
+  statusProgressReserve,
+  statusRowHeight,
+  statusRowPitch,
+  statusStackHeight,
+  statusStackPinned,
+  statusTextLines,
   tallestBelowTempo,
   type BelowTempoRoom,
 } from './belowTempo.ts';
@@ -14,7 +20,8 @@ import { beatDotSize, layoutBeatLeds, MAX_DOTS_PER_LINE } from './ledLayout.ts';
 
 const SMALL_PHONE_DOTS_WIDTH = 360 - space.screenInset * 2;
 const LARGE_PHONE_DOTS_WIDTH = 411 - space.screenInset * 2;
-const FONT_SCALES = [1, 1.3] as const;
+const DEFAULT_FONT_SCALE = 1;
+const FONT_SCALES = [DEFAULT_FONT_SCALE, 1.3, 2] as const;
 const BEAT_COUNTS = Array.from({ length: KB_MAX_BEATS }, (_u, i) => i + 1);
 
 // Where the dots start and where the body ends above the transport, at fontScale
@@ -43,7 +50,7 @@ interface Rendered {
 }
 
 // Stacks the boxes BeatDots, PolyDots, the legend and StatusStack draw on a
-// roomy screen, stopped and running.
+// roomy screen, stopped and running; grown text pins StatusStack outside the body.
 function renderedRoomy(shape: Rendered): number {
   const lines = layoutBeatLeds(shape.beatCount, MAX_DOTS_PER_LINE);
   const dot = beatDotSize(lines, LARGE_PHONE_DOTS_WIDTH, DOT_METRICS);
@@ -62,8 +69,10 @@ function renderedRoomy(shape: Rendered): number {
     if (shape.labelAbove) dots += label + metronome.beatMarkerGap;
   }
   const legend = metronome.legendTop + metronome.legendRow * scale;
-  const stopped = legend + metronome.statusRow;
-  const running = metronome.statusRow * 2 + metronome.statusRowGap;
+  if (shape.fontScale > DEFAULT_FONT_SCALE) return dots + legend;
+  const row = metronome.statusRow;
+  const stopped = legend + row;
+  const running = row * 2 + metronome.statusRowGap;
   return dots + Math.max(stopped, running);
 }
 
@@ -140,5 +149,46 @@ describe('beatLinePitch', () => {
         beatDotsHeight(TWELVE_EIGHT, { ...SMALL_COMPACT, fontScale }),
       ).toBeCloseTo(2 * pitch - metronome.beatDotLineGapCompact);
     }
+  });
+});
+
+describe('the status stack', () => {
+  it('keeps the drawn row height at the default text size', () => {
+    expect(statusRowHeight(1)).toBe(metronome.statusRow);
+    expect(statusRowHeight(0.85)).toBe(metronome.statusRow);
+  });
+
+  it('grows each row with the text so a wrapped second line fits', () => {
+    const grown = metronome.statusRow * 2 + metronome.statusProgress;
+    expect(statusRowHeight(2)).toBe(grown);
+    expect(statusRowPitch(2)).toBe(grown + metronome.statusRowGap);
+  });
+
+  it('keeps grown text clear of the progress bar along the row foot', () => {
+    expect(statusProgressReserve(1)).toBe(0);
+    expect(statusProgressReserve(2)).toBe(metronome.statusProgress);
+  });
+
+  it('stacks two grown rows while running and one while stopped', () => {
+    for (const fontScale of FONT_SCALES) {
+      const row = statusRowHeight(fontScale);
+      expect(statusStackHeight(false, fontScale)).toBe(row);
+      expect(statusStackHeight(true, fontScale)).toBe(
+        statusRowPitch(fontScale) + row,
+      );
+    }
+  });
+
+  it('pins above the transport only once the text grows', () => {
+    expect(statusStackPinned(0.85)).toBe(false);
+    expect(statusStackPinned(1)).toBe(false);
+    expect(statusStackPinned(1.3)).toBe(true);
+    expect(statusStackPinned(2)).toBe(true);
+  });
+
+  it('lets status text take a second line once the text grows', () => {
+    expect(statusTextLines(1)).toBe(1);
+    expect(statusTextLines(1.3)).toBe(2);
+    expect(statusTextLines(2)).toBe(2);
   });
 });

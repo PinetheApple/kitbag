@@ -12,5 +12,5 @@ export function transportSetlistOf(
   const index = set.position === undefined ? null : set.position - 1;
   const song =
     index === null ? undefined : state.entries[set.id]?.[index]?.preset.name;
-  return { subtitle: subtitleOf(set, song), index, songCount: set.count };
+  return { subtitle: subtitleOf(set, song) };
 }

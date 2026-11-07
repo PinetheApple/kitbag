@@ -7,6 +7,7 @@ import {
 } from '@kitbag/core-design';
 import {
   BPM_BOUNDS,
+  getPracticeSessionStore,
   useLibrary,
   useMetronome,
   useSwipeHint,
@@ -21,9 +22,15 @@ import {
 } from 'react-native';
 
 import { useLibraryRefresh } from '../library/useLibraryRefresh.ts';
-import { belowTempoReserve } from '../logic/belowTempo.ts';
+import {
+  belowTempoReserve,
+  statusStackHeight,
+  statusStackPinned,
+} from '../logic/belowTempo.ts';
 import { noteStrip, type NoteStrip } from '../logic/noteStrip.ts';
+import { endPractice, summarySheetOnMount } from '../logic/practiceSummary.ts';
 import { practiceBadgeCount, restLegend } from '../logic/statusRows.ts';
+import { showSwipeHint } from '../logic/swipeHint.ts';
 import { pushTap, tapTempoBpm } from '../logic/tapTempo.ts';
 import { BeatDots, BeatLegend } from './BeatDots.tsx';
 import { NumberEntrySheet } from './NumberEntrySheet.tsx';
@@ -33,6 +40,10 @@ import { PickerChips } from './PickerChips.tsx';
 import { PolyLegend } from './PolyLegend.tsx';
 import { PracticePill, usePracticeElapsed } from './PracticePill.tsx';
 import { PracticeSheet } from './PracticeSheet.tsx';
+import {
+  PracticeSummarySheet,
+  usePendingPractice,
+} from './PracticeSummarySheet.tsx';
 import { PresetRow } from './PresetRow.tsx';
 import { StatusStack } from './StatusStack.tsx';
 import { SubdivisionSheet } from './SubdivisionSheet.tsx';
@@ -40,13 +51,15 @@ import { SwipeHint } from './SwipeHint.tsx';
 import { SwipeTempoZone } from './SwipeTempoZone.tsx';
 import { Transport } from './Transport.tsx';
 import { UnsavedSnackbar } from './UnsavedSnackbar.tsx';
+import { useEndPracticeOnLeave } from './useEndPracticeOnLeave.ts';
 import { useHoldEngine } from './useHoldEngine.ts';
 import { useTempoSwipe } from './useTempoSwipe.ts';
 import { useMetronomeFrame } from './useMetronomeFrame.ts';
 import { useScreenDensity } from './useScreenDensity.ts';
 import { usePracticeSettings } from './usePracticeSettings.ts';
 
-type OpenSheet = 'none' | 'numpad' | 'meter' | 'subdivision' | 'practice';
+type OpenSheet =
+  'none' | 'numpad' | 'meter' | 'subdivision' | 'practice' | 'summary';
 
 interface ZoneFrame {
   readonly top: number;
@@ -83,6 +96,9 @@ const useStyles = createThemedStyles((theme) => ({
   toolsPush: {
     flexGrow: 1,
   },
+  pinnedStatus: {
+    justifyContent: 'flex-end',
+  },
 }));
 
 export interface ShellMeasuredInsets {
@@ -114,6 +130,7 @@ export function MetronomeScreen({
   onOpenSetlists,
 }: MetronomeScreenProps) {
   useHoldEngine();
+  useEndPracticeOnLeave();
   useLibraryRefresh();
   const styles = useStyles();
   const window = useWindowDimensions();
@@ -139,7 +156,13 @@ export function MetronomeScreen({
 
   const frame = useMetronomeFrame(running, bpm);
   const { elapsedMs, reset: resetPractice } = usePracticeElapsed();
-  const [openSheet, setOpenSheet] = useState<OpenSheet>('none');
+  const pendingPractice = usePendingPractice();
+  const [openSheet, setOpenSheet] = useState<OpenSheet>(() =>
+    summarySheetOnMount(getPracticeSessionStore().getState().pending),
+  );
+  // The summary can open on mount, before the hint's first layout; a hint
+  // drawn under it would take Back first.
+  const summaryShown = openSheet === 'summary' && pendingPractice !== null;
   const [bodyTop, setBodyTop] = useState(0);
   const [zone, setZone] = useState<ZoneFrame>({ top: 0, height: 0 });
   const [bodyHeight, setBodyHeight] = useState(0);
@@ -212,6 +235,11 @@ export function MetronomeScreen({
     setOpenSheet('none');
   }, []);
 
+  const handleEndPractice = useCallback(() => {
+    endPractice(getPracticeSessionStore(), resetPractice);
+    setOpenSheet('summary');
+  }, [resetPractice]);
+
   const handleBodyLayout = useCallback((event: LayoutChangeEvent) => {
     setBodyTop(event.nativeEvent.layout.y);
     setBodyHeight(event.nativeEvent.layout.height);
@@ -252,6 +280,14 @@ export function MetronomeScreen({
     [dotsWidth, density, fontScale],
   );
   const legend = restLegend(running, polyEnabled);
+  const pinStatus = statusStackPinned(fontScale);
+  const pinnedFrame = useMemo(
+    () => ({ marginTop: bodyGap, height: statusStackHeight(true, fontScale) }),
+    [bodyGap, fontScale],
+  );
+  const status = (
+    <StatusStack frame={frame} settings={settings} running={running} />
+  );
 
   return (
     <GestureDetector gesture={screenSwipe}>
@@ -270,7 +306,7 @@ export function MetronomeScreen({
           onLayout={handleBodyLayout}
           onContentSizeChange={handleContentSize}
         >
-          <PracticePill elapsedMs={elapsedMs} onReset={resetPractice} />
+          <PracticePill elapsedMs={elapsedMs} onEnd={handleEndPractice} />
           {strip === null ? null : (
             <Text
               accessible={strip.spoken !== null}
@@ -318,10 +354,17 @@ export function MetronomeScreen({
                 {legend === 'poly' ? <PolyLegend /> : <BeatLegend />}
               </View>
             )}
-            <View style={styles.toolsPush} />
-            <StatusStack frame={frame} settings={settings} running={running} />
+            {pinStatus ? null : (
+              <>
+                <View style={styles.toolsPush} />
+                {status}
+              </>
+            )}
           </View>
         </ScrollView>
+        {pinStatus ? (
+          <View style={[styles.pinnedStatus, pinnedFrame]}>{status}</View>
+        ) : null}
         <Transport
           running={running}
           armedCount={practiceBadgeCount(settings)}
@@ -332,13 +375,13 @@ export function MetronomeScreen({
         />
 
         <UnsavedSnackbar bottomInset={insets.bottom} />
-        {hintSeen || zone.height === 0 ? null : (
+        {showSwipeHint(hintSeen, zone.height, summaryShown) ? (
           <SwipeHint
             zoneTop={bodyTop + zone.top}
             zoneHeight={zone.height}
             onDismiss={dismissHint}
           />
-        )}
+        ) : null}
 
         <NumberEntrySheet
           visible={openSheet === 'numpad'}
@@ -365,6 +408,11 @@ export function MetronomeScreen({
           visible={openSheet === 'practice'}
           bottomInset={insets.bottom}
           onDismiss={handleCloseSheet}
+        />
+        <PracticeSummarySheet
+          visible={openSheet === 'summary'}
+          summary={pendingPractice}
+          bottomInset={insets.bottom}
         />
       </View>
     </GestureDetector>

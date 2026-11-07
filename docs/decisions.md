@@ -684,6 +684,194 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   3.5 dp reach overlapped both neighbours. The 3 dp gap is kept. This departs slightly
   from the design files, which draw the overlap. **[recorded — coordinator ruling]**
 
+- **2026-11-01 · Notification permission and the playback card channel (§5.6, §12.5, #277)**
+  — Kitbag asks for the notification permission on the first playback start, not at
+  launch, with one line saying why: the playback card in the shade and on the lock
+  screen. Declining keeps playback working and Kitbag does not ask again on later starts;
+  Settings offers one retry route. The metronome and stem song cards move to DEFAULT
+  importance with no sound, vibration or heads-up, so they show expanded in the shade and
+  on the lock screen instead of under Silent. **[user]** Playback starts at once and the
+  prompt appears alongside it. Back or a tap outside the prompt counts as Not now. The
+  prompt is remembered only once answered, so a prompt cut off by the app closing comes
+  back on the next start. The system dialog counts as asked once it answers, including a
+  first denial; a permission already granted at the first start also counts as asked. A
+  blocked answer opens the app's system notification settings, since it
+  can come back with no dialog shown. Android keeps an existing channel's importance, so
+  the cards move to new channel IDs and the LOW ones are deleted. The ask state (never,
+  declined, asked) is a device-local `preferences` key with no migration and is not
+  carried in a backup. **[recorded]** The Settings row is "Notifications" in Appearance,
+  under Keep screen awake, reading "On" or "Off". Off has a chevron: it shows the system
+  dialog if Kitbag has never shown it, including after Not now on the prompt, and
+  otherwise opens the app's system notification settings. On does nothing. **[coord]**
+
+- **2026-11-02 · Leaving the metronome ends a practice session only when stopped (§5.6, §5.7, #85)**
+  — Leaving the screen with the transport stopped and at least 1 s played ends the session,
+  and its summary shows on the next metronome visit. Leaving while playing keeps the same
+  session running, since background practice counts. A session stopped from the notification
+  while away stays open until End or the next stopped leave. **[coord]**
+
+- **2026-11-02 · Solid ends on muted bar cells (§12.2, #264)** — The status file draws a
+  muted cell as a fully dashed 1.5px outline: `tx2` in the status strip, `decor` in the
+  Practice sheet preview. Both now ship a dashed outline with solid left and right edges
+  in the same colour. Android does not anchor dashes at the corners, so narrow dashed cells
+  lose their ends and a run of muted cells reads as one dashed bar. This departs from
+  `design/kitbag-metronome-status.html`. **[recorded]**
+
+- **2026-11-02 · Predictive back stays off (§12, #191)** — The app manifest keeps
+  `android:enableOnBackInvokedCallback="false"`. An open stem fader and an inline stem
+  rename take Back through React Native's `BackHandler` to collapse or cancel before the
+  screen pops, as the sheets do, and predictive back must not bypass them. Any keyboard
+  dismissal without a blur (the IME hide key, the nav-bar chevron, Back) cancels the
+  rename, because the app cannot tell these apart. **[user]** In React Native 0.83.6,
+  `BackHandler` listeners run only from `ReactActivity.onBackPressed()`.
+  On Android 16 with targetSdk 36, which the build takes from React Native's version
+  catalog, `ReactActivity` registers an always-enabled `OnBackPressedCallback` that calls
+  it, so the handlers run with or without the flag. Below Android 16 it registers none, and
+  Android 13 to 15 stop calling `onBackPressed()` once an app opts in (Android's documented
+  behaviour, not read in source): Back would skip every `BackHandler` handler and leave the
+  app. **[recorded]**
+
+- **2026-11-02 · Text at 200% font scale (§12.6, #192)** — The stem player's name column
+  keeps the mockup's 58 dp at the default text size and grows by the font scale above it.
+  The name keeps `numberOfLines={1}`, so a long name still truncates, as the ruling
+  accepts. **[user, 2026-10-30]** Stem names and Master use the #287 fit: above the default
+  scale they shrink to the column, never below their design size, before truncating;
+  at the default scale they do not shrink. **[coord]** Not yet seen on a device.
+  App-bar icons (back, search, add, the metronome bar's
+  keys) grow with the font scale up to 1.5×. The 48 dp buttons alone would allow about
+  1.84× for the largest bar glyph (26 dp); 1.5 is a judgement, not measured, so a glyph keeps padding
+  inside its button and does not outweigh the bar title beside it. Other icons stay at
+  their design size, since most sit inside fixed-size controls. The app-bar title stays
+  on one line and shrinks to fit before it truncates: at the default scale down to
+  `appBarTitleMinSize`, above it never below its design size, then ellipsizes. The fit is computed in JS
+  (the #287 entry on the measured title floor). **[coord, 2026-11-02, #287 — the owner
+  may overturn]** The metronome's status rows grow by the font
+  scale and hold at most two lines. Android pads each line to the font's bounding box
+  (about 1.4 em), so two lines at 2.0 leave under 1 dp to spare in the grown row; a grown
+  row adds the progress bar's 3 dp below its text. Computed from the fonts' bounding
+  boxes, not measured; needs a device check. A wider row wraps onto its
+  second line rather than truncating. Above the default scale the status stack leaves the
+  scrolling body and sits directly above the transport, so a body that overflows cannot
+  push it out of view, at one fixed height, the running stack's, so nothing resizes on Play.
+  On a small screen at 2.0 the beat dots then sit below the fold and are reached by
+  scrolling the body (coordinator call, 2026-11-02, open to owner review). Above the default scale
+  a segmented control's options and the sound picker's items take their label's width
+  and never shrink below it, since Android wraps a squeezed label mid-word; what does
+  not fit on one line wraps onto further rows inside the track or grid. A `fill` track
+  wider than its row takes a line of its own and shrinks to it; in a column parent a
+  track without `fill` takes the parent's width and wraps inside it, while in a row
+  parent, such as an edit row, it is as wide as its options on one line and moves to a
+  line of its own rather than wrapping, so one wider than the whole row would overflow.
+  Wrapped rows of options sit far enough apart that
+  an option on a row between two others reaches a 48 dp touch target from the gaps alone,
+  so a wrapped track is taller than its options; the first and last rows reach into the
+  track edge and the neighbour gap as a single row does. In the preset editor the
+  Count-in and on/off tracks reach through their edit row's padding, 47.5 dp counted on
+  the option's 1.0 height, and the ramp unit track, which shares the gap above it with
+  the stepper it wraps under, 40 dp. At 2.0 the option's text doubles, so the real
+  targets are larger; that they reach 48 dp is an open device check. At 1.0 the options stay equal
+  widths and the picker keeps its columns. A stepper's value-to-suffix gap grows with
+  the font scale. The click volume row lets its slider and readout drop below the label
+  above the default scale rather than wrapping them beside it. Library and
+  output-route rows drop their one-line limit above the default scale. **[recorded]**
+  Only while the text is scaled, the tempo nudge keys (−10 to +10, TAP) keep
+  `inset.presetLabelH`, 4 dp, between label and edge. **[coord, owner may overturn]**
+  Their labels stay on one line through the #287 fit: at the default scale they do not
+  shrink, above it they shrink to the width left by that padding, never below their
+  design size, then ellipsize. **[coord]** Computed against the 360 dp emulator bounds, not
+  yet seen on a device.
+
+- **2026-11-02 · Metronome card is media-style, with no setlist skips (§5.6, §13.9, #284)** —
+  Decided by the owner (ruling via coordinator, 2026-11-02); supersedes the 2026-10-28 #163
+  entry for the metronome card. #284 asks for the media notification style: One UI with
+  icons-only lock-screen notifications shows a player only for a media-style notification
+  tied to an active media session, and stock Android puts only those in the shade's media
+  area. Android 13+ draws a seek bar on it again; no duration is published, so it is greyed
+  and cannot be dragged, which the owner accepted. The card and session never carry
+  previous or next, setlist or not; songs step in the app only. The card is always −, play
+  or pause, +, stop. On Android 13+ the system builds the controls from the session's
+  playback state: play/pause from the state, and with no skip actions the custom actions
+  (minus, plus, stop) fill the slots in that order, giving [−][▶][+][Stop]. Before 13 the
+  notification's own actions draw, and the compact view is −, play or pause, +. The session
+  always offers play, pause, play/pause and stop, so headset keys work in either state; it
+  opens with the first card and is released when the last card goes, not when the service
+  ends. Also retires the notification step in the 2026-10-31 #212 entry and the tempo-key
+  rule in #87; kitbag-metronome.html §04 and kitbag-metronome-unsaved.html Frame 4 are
+  edited to match. **[user]**
+
+- **2026-11-02 · Back on the practice summary saves the session (§5.7, #85)** — Back,
+  a downward drag past the dismiss threshold and a tap outside the sheet all save the
+  session, as the non-destructive default; Discard stays an explicit button. The sheet
+  takes all three through one dismiss path. The save is idempotent per session, so a
+  second Back during a save writes nothing more. A failed save leaves the summary pending
+  and on screen with "Try again". This replaces the earlier choice that dismissing kept
+  the summary pending for the next visit. **[coord]**
+
+- **2026-11-02 · Content is capped at 600 dp wide, centred (§12, #190)** — On screens 600 dp
+  wide or more, every screen and every sheet is capped at `layout.maxContentWidth` (600 dp)
+  and centred; sheet scrims stay full width. No design exists for 600 dp and wider, and
+  uncapped screens stretched their tempo rows, sheets and transports across the width.
+  **[coord — the owner may overturn]**
+
+- **2026-11-02 · APK size target re-set to 30.6 MB (#49)** — The release APK target is
+  30.6 MB (30,648,062 bytes, arm64-v8a release), the size measured after the font cut,
+  replacing the earlier 25 MB; the baseline is release v0.26.2 at 33,411,826 bytes. The
+  remainder is uncompressed native libraries (20.03 MB) plus the Hermes bundle, kept
+  uncompressed on purpose as Android's default (uncompressed libs load in place; the
+  bundle is memory-mapped). Compressing them was declined; the cut taken is the 17
+  unused font files. Breakdown: [#49 comment](https://github.com/PinetheApple/kitbag/issues/49#issuecomment-6575336455).
+  **[owner]**
+
+- **2026-11-02 · Per-release F-Droid changelogs (§13.8, #61)** — Each release writes
+  `metadata/en-US/changelogs/<versionCode>.txt` from the ```` ```release-note ```` block
+  every PR body carries (one user-facing line, or `NONE`). The release job commits it
+  as the bot on a commit off `main` and pushes only the tag; nothing is pushed to
+  `main`. F-Droid reads metadata from the tagged commit, so the file must be in it.
+  Pushing to `main` instead would need a ruleset bypass for the release job and
+  possibly a new credential; tagging off `main` needs neither. `version.sh` works
+  unchanged through plain reachability; only `changelog.sh`'s full regeneration
+  re-tags each release at its parent on `main`. **[owner]**
+
+- **2026-11-02 · The `Release note` check is required on `main` (#61)** — A PR merges
+  only with a ```` ```release-note ```` block holding a user-facing line or `NONE`; the
+  coordinator adds the check to the `main` ruleset at merge. PRs opened by a bot
+  (author type `Bot` or a `[bot]` login) pass as `NONE`, so dependency updates never
+  block on a note. **[owner]**
+
+- **2026-11-02 · One chevron app bar on every screen (§12, #287)** — Every screen with a
+  back control uses the chevron back, not the full arrow **[user, via coordinator]**. The
+  shared bar is one core-design component: 56 dp tall, flush under the status bar, the
+  chevron and every icon action in real 48 dp keys, and the `appBarTitle` title; chip and
+  button trailing controls keep their ≥48 dp hit areas. The binding design files are
+  edited to match. **[coord]**
+
+- **2026-11-03 · App-bar titles fit by a JS-measured floor (§13.8, #287)** — Read in
+  the source, not seen on a device: on RN 0.83.6 with the new architecture, Android
+  ignores `minimumFontScale`. `TextLayoutManager.kt:799-812` reads only
+  `PA_KEY_MINIMUM_FONT_SIZE`, with a 4 dp default floor (`:922-923`);
+  `conversions.h` `toMapBuffer` (`:1042-1058`) never sends `minimumFontScale`, which
+  only the old renderer's `ReactTextShadowNode.kt:79` used; and `minimumFontSize`
+  cannot be sent from JS, since `TextNativeComponent.js` does not list it in
+  `validAttributes`. So `adjustsFontSizeToFit` shrank titles toward 4 dp. Also read
+  in the source: `TextAttributeProps.kt:169` rounds the font size up to whole px, and
+  `PixelUtil.kt:44` scales sp nonlinearly on Android 14+, so a size fitted in
+  proportion can still render a few px too wide. Ruling A **[coord]**: one
+  core-design helper (`useOneLineFit`, with `nextFitCandidate`, `oneLineFloor` and
+  `fittedStyle`) measures the label offscreen and sets its size in JS. It measures at
+  the design size, re-measures at the proportional size, then takes secant passes
+  through the last two measurements, at most three settle passes in all, stopping at
+  the first fit or at the floor; after the cap it shows the last candidate with an
+  ellipsis. The label stays invisible on mount until settled, so it never shows at
+  the design size and then shrinks; when its text changes in place, the previous size
+  stays shown until the new text settles. It restarts on a width change, on a text
+  change, and when a settled measurer re-lays out at a new width, as after a late font
+  load or a font-scale change. Tracking scales with the size, so the measured and the
+  shown label match. Below the floor it ellipsizes on one line. The floors still hold
+  as rendered sizes: they fall in the converter's linear range (8.5 sp at 2.0), not
+  checked against the converter tables. Floors as ruled: `appBarTitleMinSize` at a
+  font scale of 1.0 or less, the design size above it. Home
+  tool tiles use the same helper, with their floor at `homeTile.titleMinScale` of the
+  tile title's design size; no `adjustsFontSizeToFit` or `minimumFontScale` is left.
 - **2026-11-07 · Speed and key run on key buses (§7.6, #138)** — One stretch instance per
   semitone in use, doing rate and key for its stems, with a plain mix at 1.0× and 0 st. At
   0.2 s block and 6× overlap by default; more than four member buses put every bus on

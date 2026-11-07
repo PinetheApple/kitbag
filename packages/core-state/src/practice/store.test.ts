@@ -69,7 +69,7 @@ describe('practice session store', () => {
     h.advance(MINUTE);
     expect(h.practice.getState()).toMatchObject({
       session: { uuid: 'session-1' },
-      pending: null,
+      pending: [],
     });
     expect(h.practice.getState().endSession()).toMatchObject({
       uuid: 'session-1',
@@ -84,11 +84,11 @@ describe('practice session store', () => {
     h.metronome.getState().stop();
     const summary = h.practice.getState().endSession();
     expect(h.practice.getState()).toMatchObject({
-      pending: summary,
+      pending: [summary],
       session: null,
     });
     expect(h.practice.getState().endSession()).toBeNull();
-    expect(h.practice.getState().pending).toBe(summary);
+    expect(h.practice.getState().pending).toEqual([summary]);
   });
 
   it('keeps tracking in a new session when ended while still playing', () => {
@@ -98,8 +98,66 @@ describe('practice session store', () => {
     const first = h.practice.getState().endSession();
     h.advance(MINUTE);
     expect(h.practice.getState().session?.uuid).toBe('session-2');
-    expect(h.practice.getState().endSession()).toBeNull();
-    expect(h.practice.getState().pending).toBe(first);
+    const second = h.practice.getState().endSession();
+    expect(second).toMatchObject({ uuid: 'session-2', playedMs: MINUTE });
+    expect(h.practice.getState().pending).toEqual([second, first]);
+  });
+
+  it('resolves queued summaries newest first', async () => {
+    const h = harness();
+    h.metronome.getState().start();
+    h.advance(MINUTE);
+    const first = h.practice.getState().endSession();
+    h.advance(MINUTE);
+    const second = h.practice.getState().endSession();
+    h.advance(MINUTE);
+    const third = h.practice.getState().endSession();
+    expect(h.practice.getState().pending).toEqual([third, second, first]);
+    await h.practice.getState().saveSession();
+    expect(h.insert.mock.calls.map(([record]) => record.uuid)).toEqual([
+      third?.uuid,
+    ]);
+    expect(h.practice.getState().pending).toEqual([second, first]);
+    h.practice.getState().discardSession();
+    expect(h.practice.getState().pending).toEqual([first]);
+    await h.practice.getState().saveSession();
+    expect(h.insert.mock.calls.map(([record]) => record.uuid)).toEqual([
+      third?.uuid,
+      first?.uuid,
+    ]);
+    expect(h.practice.getState().pending).toEqual([]);
+  });
+
+  it('puts a session ended during a save in front and saves it on its own', async () => {
+    const h = harness();
+    let finish: () => void = () => undefined;
+    h.insert.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    h.metronome.getState().start();
+    h.advance(MINUTE);
+    const first = h.practice.getState().endSession();
+    const firstSave = h.practice.getState().saveSession();
+    await vi.waitFor(() => {
+      expect(h.insert).toHaveBeenCalledTimes(1);
+    });
+    h.advance(MINUTE);
+    const second = h.practice.getState().endSession();
+    expect(h.practice.getState().pending).toEqual([second, first]);
+    const secondSave = h.practice.getState().saveSession();
+    expect(secondSave).not.toBe(firstSave);
+    await secondSave;
+    expect(h.practice.getState().pending).toEqual([first]);
+    finish();
+    await firstSave;
+    expect(h.insert.mock.calls.map(([record]) => record.uuid)).toEqual([
+      first?.uuid,
+      second?.uuid,
+    ]);
+    expect(h.practice.getState().pending).toEqual([]);
   });
 
   it('samples the ramp-effective tempo only while playing', () => {
@@ -159,7 +217,7 @@ describe('practice session store', () => {
       setlistId: null,
       songUuids: [],
     } satisfies NewPracticeSession);
-    expect(h.practice.getState().pending).toBeNull();
+    expect(h.practice.getState().pending).toEqual([]);
   });
 
   it('keeps the summary after a failed save and retries the same uuid', async () => {
@@ -172,13 +230,13 @@ describe('practice session store', () => {
     await expect(h.practice.getState().saveSession()).rejects.toThrow(
       'disk full',
     );
-    expect(h.practice.getState().pending).toBe(summary);
+    expect(h.practice.getState().pending).toEqual([summary]);
     await h.practice.getState().saveSession();
     expect(h.insert.mock.calls.map(([record]) => record.uuid)).toEqual([
       summary?.uuid,
       summary?.uuid,
     ]);
-    expect(h.practice.getState().pending).toBeNull();
+    expect(h.practice.getState().pending).toEqual([]);
   });
 
   it('lets a discard during a failing save drop the summary', async () => {
@@ -201,7 +259,7 @@ describe('practice session store', () => {
     h.practice.getState().discardSession();
     fail(new Error('disk full'));
     await save.catch(() => undefined);
-    expect(h.practice.getState().pending).toBeNull();
+    expect(h.practice.getState().pending).toEqual([]);
     await h.practice.getState().saveSession();
     expect(h.insert).toHaveBeenCalledTimes(1);
   });
@@ -214,7 +272,7 @@ describe('practice session store', () => {
     expect(h.practice.getState().endSession()).toBeNull();
     expect(h.practice.getState()).toMatchObject({
       session: null,
-      pending: null,
+      pending: [],
     });
   });
 
@@ -246,7 +304,7 @@ describe('practice session store', () => {
     h.practice.getState().endSession();
     h.practice.getState().discardSession();
     await h.practice.getState().saveSession();
-    expect(h.practice.getState().pending).toBeNull();
+    expect(h.practice.getState().pending).toEqual([]);
     expect(h.insert).not.toHaveBeenCalled();
   });
 });

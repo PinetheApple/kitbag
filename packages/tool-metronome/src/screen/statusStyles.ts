@@ -21,10 +21,20 @@ export const useStatusStyles = createThemedStyles((theme) => ({
     top: 0,
     right: 0,
     left: 0,
-    height: metronome.statusRow,
+  },
+  wrapped: {
+    flexWrap: 'wrap',
+    alignContent: 'center',
+    rowGap: 0,
+  },
+  ownLine: {
+    flexBasis: '100%',
+    textAlign: 'right',
+  },
+  shrink: {
+    flexShrink: 1,
   },
   rest: {
-    height: metronome.statusRow,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -84,12 +94,6 @@ export const useStatusStyles = createThemedStyles((theme) => ({
   },
   countInMeta: {
     color: countInInk(theme.color.bg, theme.color.text),
-  },
-  ghost: {
-    opacity: 0,
-  },
-  slotFill: {
-    width: '100%',
   },
   progressTrack: {
     position: 'absolute',

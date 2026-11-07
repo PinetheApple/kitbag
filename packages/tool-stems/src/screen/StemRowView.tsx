@@ -1,15 +1,18 @@
 import {
   createThemedStyles,
+  DesignFloorOneLineText,
   opacity,
   stemPlayer,
   stemPlayerMix,
+  textRoles,
   Waveform,
 } from '@kitbag/core-design';
 import { useStemPlayer } from '@kitbag/core-state';
-import { useCallback, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { Pressable, useWindowDimensions, View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 
+import { stemNameWidth } from '../logic/stemName.ts';
 import { GainFader } from './GainFader.tsx';
 import { LevelChip } from './LevelChip.tsx';
 import { StemNameEditor } from './StemNameEditor.tsx';
@@ -26,7 +29,7 @@ const useStyles = createThemedStyles(() => ({
     gap: stemPlayer.rowGap,
     alignSelf: 'stretch',
   },
-  nameHit: { alignSelf: 'stretch', justifyContent: 'center' },
+  nameHit: { alignSelf: 'stretch', justifyContent: 'center', flexShrink: 1 },
   wave: { flex: 1, opacity: stemPlayerMix.wave },
   waveQuiet: { opacity: stemPlayerMix.mutedWave },
   missing: { opacity: opacity.muted },
@@ -47,6 +50,11 @@ export function StemRowView({
 }: StemRowViewProps) {
   const styles = useStyles();
   const stemStyles = useStemStyles();
+  const { fontScale } = useWindowDimensions();
+  const nameWidth = useMemo(
+    () => ({ width: stemNameWidth(fontScale) }),
+    [fontScale],
+  );
   const row = useStemPlayer((s) => s.stems[index]);
   const setGain = useStemPlayer((s) => s.setGain);
   const toggleMute = useStemPlayer((s) => s.toggleMute);
@@ -63,6 +71,9 @@ export function StemRowView({
     },
     [renameStem, index],
   );
+  const cancelRename = useCallback(() => {
+    setEditing(false);
+  }, []);
   const expand = useCallback(() => {
     onExpand(index);
   }, [onExpand, index]);
@@ -97,7 +108,11 @@ export function StemRowView({
         ]}
       >
         {editing ? (
-          <StemNameEditor name={row.name} onDone={finishRename} />
+          <StemNameEditor
+            name={row.name}
+            onDone={finishRename}
+            onCancel={cancelRename}
+          />
         ) : (
           <Pressable
             accessible={false}
@@ -106,16 +121,15 @@ export function StemRowView({
             onPress={expand}
           >
             <Pressable
-              style={styles.nameHit}
+              style={[styles.nameHit, nameWidth]}
               onPress={expand}
               onLongPress={startRename}
             >
-              <Text
+              <DesignFloorOneLineText
+                text={row.name}
+                role={textRoles.stemName}
                 style={[stemStyles.name, row.muted && stemStyles.nameQuiet]}
-                numberOfLines={1}
-              >
-                {row.name}
-              </Text>
+              />
             </Pressable>
             <View style={[styles.wave, row.muted && styles.waveQuiet]}>
               <Waveform

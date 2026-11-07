@@ -6,8 +6,6 @@
   <string name="kitbag_action_stop">Stop</string>
   <string name="kitbag_action_tempo_down">Tempo down</string>
   <string name="kitbag_action_tempo_up">Tempo up</string>
-  <string name="kitbag_action_previous">Previous song</string>
-  <string name="kitbag_action_next">Next song</string>
   <string name="kitbag_action_rewind">Back %1$d seconds</string>
   <string name="kitbag_action_forward">Forward %1$d seconds</string>
 </resources>

@@ -3,6 +3,7 @@ import {
   EditRow,
   EditValue,
   SegmentedControl,
+  space,
   type StepDelta,
 } from '@kitbag/core-design';
 import { KB_MIN_RAMP_STEP_BPM, KB_MUTE_BARS_BOUNDS } from '@kitbag/core-native';
@@ -26,8 +27,11 @@ import {
 import { soundChipLabel, soundLabel } from '../../logic/soundChoice.ts';
 import { stepWithin } from '../../logic/trainer.ts';
 import { SoundPickerSheet } from '../../screen/SoundSheet.tsx';
-import { OnOff, TrainerStep } from './fields.tsx';
+import { EDIT_ROW_SEGMENT_GAPS, OnOff, TrainerStep } from './fields.tsx';
 import type { PresetEditor } from './usePresetEditor.ts';
+
+// Once the row wraps, the unit track sits below the interval stepper.
+const UNIT_GAPS = { ...EDIT_ROW_SEGMENT_GAPS, top: space.controlGap };
 
 const stepFrom = (ramp: RampDraft, delta: StepDelta): RampDraft => ({
   ...ramp,
@@ -154,6 +158,7 @@ function RampLength({ editor }: { readonly editor: PresetEditor }) {
       />
       <SegmentedControl
         compact
+        neighbourGapDp={UNIT_GAPS}
         accessibilityLabel="Ramp interval unit"
         options={RAMP_UNIT_OPTIONS}
         selected={rampUnitOption(draft.ramp.unit)}
@@ -249,6 +254,7 @@ function CountInRow({ editor }: { readonly editor: PresetEditor }) {
     <EditRow label="Count-in">
       <SegmentedControl
         compact
+        neighbourGapDp={EDIT_ROW_SEGMENT_GAPS}
         accessibilityLabel="Count-in"
         options={COUNT_IN_BAR_OPTIONS}
         selected={String(editor.draft.countInBars)}

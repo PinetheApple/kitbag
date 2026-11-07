@@ -8,5 +8,14 @@
         android:name="com.kitbag.corenative.PlaybackService"
         android:exported="false"
         android:foregroundServiceType="mediaPlayback" />
+    <provider
+        android:name="com.kitbag.corenative.library.BackupFileProvider"
+        android:authorities="${applicationId}.kitbag.backups"
+        android:exported="false"
+        android:grantUriPermissions="true">
+      <meta-data
+          android:name="android.support.FILE_PROVIDER_PATHS"
+          android:resource="@xml/kitbag_backup_paths" />
+    </provider>
   </application>
 </manifest>

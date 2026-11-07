@@ -1,5 +1,7 @@
 import {
+  AppBar,
   BarIconButton,
+  barChipRoom,
   createThemedStyles,
   hitBoxStyle,
   hitExtension,
@@ -42,10 +44,9 @@ import { SetlistSongsSheet } from './SetlistSongsSheet.tsx';
 import { UnsavedDot, useLoadedSongUnsaved } from './UnsavedChanges.tsx';
 
 const NO_ENTRIES: readonly SetlistEntry[] = [];
-const BAR_BLEED = screenBar.h - space.screenInset;
 
 function chipToBody(chipHeight: number): number {
-  return (metronome.appBar - chipHeight) / 2 + metronome.belowAppBar;
+  return barChipRoom(chipHeight) + metronome.belowAppBar;
 }
 
 const SET_CHIP_HIT_BOX = hitBoxStyle(
@@ -62,28 +63,10 @@ const SONG_CHIP_HIT_BOX = hitBoxStyle(
 );
 
 const useStyles = createThemedStyles((theme) => ({
-  bar: {
-    minHeight: metronome.appBar,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: screenBar.gap,
-    paddingHorizontal: screenBar.h,
-    marginHorizontal: BAR_BLEED,
-  },
-  stageBar: {
-    gap: 0,
-  },
-  title: {
-    ...textStyle(textRoles.appBarTitle),
-    lineHeight: textRoles.appBarTitle.size * lineRatio.appBarTitle,
-    color: theme.color.text,
-    flex: 1,
-    minWidth: 0,
-  },
   setChipHit: {
     ...SET_CHIP_HIT_BOX,
     flexShrink: 1,
-    marginRight: SET_CHIP_HIT_BOX.marginRight + metronome.setChipEnd,
+    marginRight: SET_CHIP_HIT_BOX.marginRight + screenBar.chipEnd,
   },
   setChip: {
     flexDirection: 'row',
@@ -271,17 +254,6 @@ function SetlistsChip({ onPress }: { readonly onPress: () => void }) {
   );
 }
 
-function BackButton({ onBack }: { readonly onBack: () => void }) {
-  return (
-    <BarIconButton
-      icon="arrowBack"
-      label="Back"
-      color="text"
-      onPress={onBack}
-    />
-  );
-}
-
 interface StageBarProps {
   readonly context: SongContext & { readonly set: ActiveSet };
   readonly bottomInset: number;
@@ -289,7 +261,6 @@ interface StageBarProps {
 }
 
 function StageBar({ context, bottomInset, onBack }: StageBarProps) {
-  const styles = useStyles();
   const { song, set, entries, loadedItemId } = context;
   const stepSong = useLibrary((s) => s.stepSong);
   const [listOpen, setListOpen] = useState(false);
@@ -309,39 +280,40 @@ function StageBar({ context, bottomInset, onBack }: StageBarProps) {
   }, []);
   const unsaved = useLoadedSongUnsaved();
   return (
-    <View style={[styles.bar, styles.stageBar]}>
-      {onBack === undefined ? null : <BackButton onBack={onBack} />}
-      <BarIconButton
-        icon="previous"
-        size="skip"
-        color="text"
-        label={stepA11yLabel(SONG_STEP.previous, previous)}
-        disabled={previous === undefined}
-        onPress={handlePrevious}
-      />
-      <SongChip
-        stage
-        text={stageChipText(song, set)}
-        label={stageChipA11yLabel(song, set, unsaved)}
-        hint="Opens the song list"
-        unsaved={unsaved}
-        onPress={handleOpenList}
-      />
-      <BarIconButton
-        icon="next"
-        size="skip"
-        color="text"
-        label={stepA11yLabel(SONG_STEP.next, next)}
-        disabled={next === undefined}
-        onPress={handleNext}
-      />
+    <>
+      <AppBar packed onBack={onBack}>
+        <BarIconButton
+          icon="previous"
+          size="skip"
+          color="text"
+          label={stepA11yLabel(SONG_STEP.previous, previous)}
+          disabled={previous === undefined}
+          onPress={handlePrevious}
+        />
+        <SongChip
+          stage
+          text={stageChipText(song, set)}
+          label={stageChipA11yLabel(song, set, unsaved)}
+          hint="Opens the song list"
+          unsaved={unsaved}
+          onPress={handleOpenList}
+        />
+        <BarIconButton
+          icon="next"
+          size="skip"
+          color="text"
+          label={stepA11yLabel(SONG_STEP.next, next)}
+          disabled={next === undefined}
+          onPress={handleNext}
+        />
+      </AppBar>
       <SetlistSongsSheet
         visible={listOpen}
         set={set}
         bottomInset={bottomInset}
         onDismiss={handleCloseList}
       />
-    </View>
+    </>
   );
 }
 
@@ -358,7 +330,6 @@ function PlainBar({
   onBack,
   onOpenSetlists,
 }: PlainBarProps) {
-  const styles = useStyles();
   const [songOpen, setSongOpen] = useState(false);
   const handleOpenSong = useCallback(() => {
     setSongOpen(true);
@@ -368,25 +339,28 @@ function PlainBar({
   }, []);
   const unsaved = useLoadedSongUnsaved();
   const text = soloChipText(song);
+  const songChip =
+    text === undefined ? undefined : (
+      <SongChip
+        stage={false}
+        text={text}
+        label={soloChipA11yLabel(text.title, unsaved)}
+        hint="Opens the song"
+        unsaved={unsaved}
+        onPress={handleOpenSong}
+      />
+    );
+  const setlistsChip =
+    onOpenSetlists === undefined ? undefined : (
+      <SetlistsChip onPress={onOpenSetlists} />
+    );
   return (
-    <View style={styles.bar}>
-      {onBack === undefined ? null : <BackButton onBack={onBack} />}
-      <Text accessibilityRole="header" style={styles.title} numberOfLines={1}>
-        Metronome
-      </Text>
-      {text === undefined ? null : (
-        <SongChip
-          stage={false}
-          text={text}
-          label={soloChipA11yLabel(text.title, unsaved)}
-          hint="Opens the song"
-          unsaved={unsaved}
-          onPress={handleOpenSong}
-        />
-      )}
-      {text !== undefined || onOpenSetlists === undefined ? null : (
-        <SetlistsChip onPress={onOpenSetlists} />
-      )}
+    <>
+      <AppBar
+        title="Metronome"
+        onBack={onBack}
+        trailing={songChip ?? setlistsChip}
+      />
       {text === undefined ? null : (
         <LoadedSongSheet
           visible={songOpen}
@@ -396,7 +370,7 @@ function PlainBar({
           onOpenSetlists={onOpenSetlists}
         />
       )}
-    </View>
+    </>
   );
 }
 

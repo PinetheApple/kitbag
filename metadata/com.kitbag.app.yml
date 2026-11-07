@@ -27,18 +27,19 @@ IssueTracker: https://github.com/PinetheApple/kitbag/issues
 RepoType: git
 Repo: https://github.com/PinetheApple/kitbag.git
 
-# Every entry passes its tag's version as kitbagVersionName; app.json is only the floor.
+# kitbagVersionName carries the tag's version (app.json is only the floor); versionCode is
+# `scripts/version.sh code`. commit: is `git rev-parse vX.Y.Z^{commit}`, the bot commit off main.
 Builds:
-  - versionName: 0.1.0
-    versionCode: 100
-    # QUESTION: v0.1.0 does not exist until the release workflow publishes it
-    # on the first merge to main; submit this recipe only after that.
-    commit: v0.1.0
+  # QUESTION: v0.26.2 predates the release-note pipeline, so its tree has no changelog.
+  # The first submittable entry is the first release that pipeline cuts.
+  - versionName: 0.26.2
+    versionCode: 2602
+    commit: fd4fd070234967838bbe5772f70700d20383e5f3
     subdir: packages/app-shell/android
     gradle:
       - yes
     gradleprops:
-      - kitbagVersionName=0.1.0
+      - kitbagVersionName=0.26.2
     init:
       - corepack enable
       - pnpm install --frozen-lockfile
@@ -57,3 +58,10 @@ Builds:
     # the scanned/distributed output.
     scandelete:
       - node_modules
+
+# QUESTION: can checkupdates derive versionCode from a tag? build.gradle computes it.
+# CurrentVersion/Code and the build entry are refreshed to the latest tag at submission.
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: 0.26.2
+CurrentVersionCode: 2602

@@ -1,9 +1,7 @@
 package com.kitbag.corenative.transport
 
-import com.kitbag.corenative.transport.TransportAction.NEXT
 import com.kitbag.corenative.transport.TransportAction.PAUSE
 import com.kitbag.corenative.transport.TransportAction.PLAY
-import com.kitbag.corenative.transport.TransportAction.PREVIOUS
 import com.kitbag.corenative.transport.TransportAction.STOP
 import com.kitbag.corenative.transport.TransportAction.TEMPO_DOWN
 import com.kitbag.corenative.transport.TransportAction.TEMPO_UP
@@ -19,66 +17,30 @@ class TransportModelTest {
     playback: Playback = Playback.PLAYING,
     bpm: Double = 120.0,
     rampRunning: Boolean = false,
-    setlist: SetlistPosition? = null,
-  ) = TransportState(playback, bpm, rampRunning, beatsPerBar = 4, beatUnit = 4, setlist = setlist)
-
-  private fun song(index: Int?) = SetlistPosition(SUBTITLE, index, songCount = 12)
+    subtitle: String? = null,
+  ) = TransportState(playback, bpm, rampRunning, beatsPerBar = 4, beatUnit = 4, subtitle = subtitle)
 
   @Test
   fun `title is tempo and signature, subtitle is the text the app sent`() {
-    val view = model.view(state(bpm = 119.6, setlist = song(2)))
+    val view = model.view(state(bpm = 119.6, subtitle = SUBTITLE))
     assertEquals("120 BPM · 4/4", view.title)
     assertEquals(SUBTITLE, view.subtitle)
   }
 
   @Test
-  fun `a setlist rebuilds from its parts, and absent or out-of-range parts give none`() {
-    assertEquals(song(2), SetlistPosition.from(SUBTITLE, 2, songCount = 12))
-    assertEquals(song(null), SetlistPosition.from(SUBTITLE, null, songCount = 12))
-    assertNull(SetlistPosition.from(null, 2, songCount = 12))
-    assertNull(SetlistPosition.from(SUBTITLE, 12, songCount = 12))
-    assertNull(SetlistPosition.from(SUBTITLE, -1, songCount = 12))
+  fun `no setlist means no subtitle`() {
+    assertNull(model.view(state()).subtitle)
   }
 
   @Test
-  fun `a setlist with no current song offers only next, and only when it has songs`() {
-    assertEquals(listOf(TEMPO_DOWN, PAUSE, TEMPO_UP, NEXT, STOP), model.view(state(setlist = song(null))).actions)
-    assertEquals(listOf(TransportCommand.NextSong), model.commandsFor(state(setlist = song(null)), NEXT))
-    assertEquals(none, model.commandsFor(state(setlist = song(null)), PREVIOUS))
-    val empty = SetlistPosition(SUBTITLE, null, songCount = 0)
-    assertEquals(listOf(TEMPO_DOWN, PAUSE, TEMPO_UP, STOP), model.view(state(setlist = empty)).actions)
-  }
-
-  @Test
-  fun `a song step reaches the app as its wire name`() {
-    assertEquals("previous", SongStepWire.of(PREVIOUS))
-    assertEquals("next", SongStepWire.of(NEXT))
-    assertNull(SongStepWire.of(PLAY))
-    assertNull(SongStepWire.of(null))
-  }
-
-  @Test
-  fun `no setlist means no subtitle and no previous or next`() {
-    val view = model.view(state())
-    assertNull(view.subtitle)
-    assertEquals(listOf(TEMPO_DOWN, PAUSE, TEMPO_UP, STOP), view.actions)
-  }
-
-  @Test
-  fun `first, middle and last song emit only the neighbours that exist`() {
-    assertEquals(listOf(TEMPO_DOWN, PAUSE, TEMPO_UP, NEXT, STOP), model.view(state(setlist = song(0))).actions)
-    assertEquals(
-      listOf(PREVIOUS, TEMPO_DOWN, PAUSE, TEMPO_UP, NEXT, STOP),
-      model.view(state(setlist = song(5))).actions,
-    )
-    assertEquals(listOf(PREVIOUS, TEMPO_DOWN, PAUSE, TEMPO_UP, STOP), model.view(state(setlist = song(11))).actions)
-  }
-
-  @Test
-  fun `system media controls drop both tempo keys only when both neighbours show`() {
-    assertEquals(listOf(PREVIOUS, PAUSE, NEXT, STOP), model.view(state(setlist = song(5))).sessionActions)
-    assertEquals(listOf(TEMPO_DOWN, PAUSE, TEMPO_UP, NEXT, STOP), model.view(state(setlist = song(0))).sessionActions)
-    assertEquals(listOf(TEMPO_DOWN, PAUSE, TEMPO_UP, STOP), model.view(state()).sessionActions)
+  fun `the card is tempo down, play or pause, tempo up and stop, with or without a setlist`() {
+    for (subtitle in listOf(null, SUBTITLE)) {
+      assertEquals(listOf(TEMPO_DOWN, PAUSE, TEMPO_UP, STOP), model.view(state(subtitle = subtitle)).actions)
+      assertEquals(
+        listOf(TEMPO_DOWN, PLAY, TEMPO_UP, STOP),
+        model.view(state(Playback.PAUSED, subtitle = subtitle)).actions,
+      )
+    }
   }
 
   @Test
@@ -118,23 +80,11 @@ class TransportModelTest {
   }
 
   @Test
-  fun `previous and next are relative and do nothing past either end`() {
-    assertEquals(listOf(TransportCommand.PreviousSong), model.commandsFor(state(setlist = song(5)), PREVIOUS))
-    assertEquals(listOf(TransportCommand.NextSong), model.commandsFor(state(setlist = song(5)), NEXT))
-    assertEquals(none, model.commandsFor(state(setlist = song(0)), PREVIOUS))
-    assertEquals(none, model.commandsFor(state(setlist = song(11)), NEXT))
-    assertEquals(none, model.commandsFor(state(), NEXT))
-  }
-
-  @Test(expected = IllegalArgumentException::class)
-  fun `a position outside its setlist is rejected`() {
-    song(12)
-  }
-
-  @Test
-  fun `named finds an action and ignores an unknown name`() {
+  fun `named finds an action and ignores an unknown or retired name`() {
     assertEquals(TEMPO_UP, TransportAction.named("TEMPO_UP"))
     assertNull(TransportAction.named("REWIND"))
+    assertNull(TransportAction.named("NEXT"))
+    assertNull(TransportAction.named("PREVIOUS"))
   }
 
   private companion object {

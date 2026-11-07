@@ -21,6 +21,7 @@ export const space = {
   transportGapWide: 28,
   waveBarGap: 1.5,
   stepSuffixGap: 3,
+  checkLabelGap: 9,
 } as const;
 
 export const size = {
@@ -76,6 +77,7 @@ export const size = {
   transportKeySmall: 40,
   numpadKeyLarge: 52,
   presetButton: 37,
+  checkBox: 19,
 } as const;
 
 export const radius = {
@@ -105,10 +107,10 @@ export const radius = {
   segmentLargeOption: 9,
   numpadKeyLarge: 12,
   waveBar: 1,
+  checkBox: 6,
 } as const;
 
 export const inset = {
-  appBar: 2,
   buttonV: 10,
   buttonH: 18,
   chipV: 5,
@@ -145,6 +147,7 @@ export const inset = {
   stepInlineLargeH: 2,
   sectionLabelH: 2,
   segmentEditRowOptionH: 10,
+  presetLabelH: 4,
 } as const;
 
 export const opacity = {
@@ -244,12 +247,14 @@ export const iconSizes = {
   listTile: 22,
   listFab: 28,
   emptyMark: 36,
+  checkMark: 11,
 } as const;
 
 export type IconSize = keyof typeof iconSizes;
 
 const display = fontFamily.display;
 const body = fontFamily.body;
+const songArtist = { family: body, weight: 400, size: 12.5 } as const;
 
 export const textRoles = {
   appBarTitle: { family: display, weight: 500, size: 17 },
@@ -295,6 +300,7 @@ export const textRoles = {
   emptyTitle: { family: display, weight: 500, size: 14 },
   emptyReason: { family: body, weight: 400, size: 12 },
   fieldLabel: { family: body, weight: 400, size: 13.5 },
+  bannerEmphasis: { family: body, weight: 600, size: 13.5 },
   editRowKey: { family: body, weight: 400, size: 13 },
   wordmark: {
     family: display,
@@ -359,8 +365,8 @@ export const textRoles = {
   segmentLarge: { family: display, weight: 400, size: 13 },
   chipLarge: { family: display, weight: 400, size: 13 },
   numpadKeyLarge: { family: display, weight: 500, size: 20, tabular: true },
-  songTitle: { family: display, weight: 500, size: 17 },
-  songArtist: { family: body, weight: 400, size: 12.5 },
+  songArtist,
+  appBarSubtitle: songArtist,
   stemName: { family: display, weight: 500, size: 14.5 },
   stemToggle: { family: display, weight: 700, size: 12 },
   stemLevel: { family: display, weight: 500, size: 12, tabular: true },
@@ -406,4 +412,13 @@ export const screenBar = {
   h: 4,
   gap: 2,
   iconButton: 48,
+  chipEnd: 8,
+} as const;
+
+export function barChipRoom(chipHeight: number): number {
+  return (screenBar.height - chipHeight) / 2;
+}
+
+export const layout = {
+  maxContentWidth: 600,
 } as const;

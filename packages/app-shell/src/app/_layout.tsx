@@ -10,6 +10,7 @@ import '@/runtime/homeLayoutRuntime';
 import '@/runtime/swipeHintRuntime';
 import '@/runtime/appearanceRuntime';
 import '@/runtime/countInRuntime';
+import '@/runtime/backupRuntime';
 import '@/runtime/transportRuntime';
 import '@/runtime/keepAwakeRuntime';
 import '@/settings/rigRuntime';
@@ -18,6 +19,7 @@ import '@/settings/toolsRuntime';
 import '@/global.css';
 
 import {
+  layout,
   SheetHost,
   ThemeProvider,
   themeVars,
@@ -42,6 +44,7 @@ import { StyleSheet, useColorScheme } from 'react-native';
 import { resolveThemeMode } from '@/runtime/appearance';
 import { applyAppearance } from '@/runtime/appearanceRuntime';
 import { useKitbagRuntime } from '@/runtime/bootstrapRuntime';
+import { NotificationPromptSheet } from '@/notifications/NotificationPromptSheet';
 import { designFonts } from '@/runtime/designFonts';
 import { useSongLibraryAnalysis } from '@/runtime/songLibraryRuntime';
 
@@ -88,7 +91,7 @@ function ThemedRoot() {
   const screenOptions = useMemo(
     () => ({
       headerShown: false,
-      contentStyle: { backgroundColor: theme.color.bg },
+      contentStyle: [styles.content, { backgroundColor: theme.color.bg }],
     }),
     [theme.color.bg],
   );
@@ -99,6 +102,7 @@ function ThemedRoot() {
         <KeyboardProvider navigationBarTranslucent statusBarTranslucent>
           <InsetSheetHost>
             <Stack screenOptions={screenOptions} />
+            <NotificationPromptSheet />
           </InsetSheetHost>
         </KeyboardProvider>
       </SafeAreaProvider>
@@ -113,4 +117,9 @@ function InsetSheetHost({ children }: { readonly children: ReactNode }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  content: {
+    width: '100%',
+    maxWidth: layout.maxContentWidth,
+    alignSelf: 'center',
+  },
 });

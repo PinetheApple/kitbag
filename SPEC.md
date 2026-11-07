@@ -768,14 +768,17 @@ the single most RN-specific piece of §5** — see §13.9.
 - **Foreground service.** The metronome must survive backgrounding and screen
   lock. This is the actual requirement; the notification is its face. A
   notification without a service just gets killed alongside the click.
-- **Notification transport** — play/pause, stop, current BPM and signature, then
-  the set and song. Not "Kitbag is running". Prev/Next **only** with an active
-  setlist — no dead controls.
+- **Notification transport** — tempo −/+, play/pause, stop, current BPM and
+  signature, then the set and song. Not "Kitbag is running". No Prev/Next, setlist
+  or not: songs step in the app only (owner, #284).
+- **Shown, silent**: a DEFAULT-importance channel with no sound or vibration; the
+  notification permission is asked on the first playback start (#277).
 - **Ongoing and non-dismissible while running**, which is what a foreground
   service requires and what a musician wants: it is the off switch when the
   phone is in a pocket.
 - **Lock-screen controls** via the platform media session; responds to headset
-  buttons.
+  buttons. The card is media-style, tied to that session, so it shows on a lock
+  screen set to icons only (#284).
 - **Practice timer continues** while backgrounded. A session interrupted by a
   phone call is still a session.
 
@@ -788,8 +791,8 @@ the single most RN-specific piece of §5** — see §13.9.
   rule (§12.6). Longest stretch is shown in the summary only and not stored.
 - **What ends a session.** Transport Stop only pauses it. The practice pill's
   **End** (in place of reset) ends it and opens the summary; leaving the
-  metronome screen with played time also ends it. A phone call or going to the
-  background never does.
+  metronome screen while stopped, with played time, also ends it. Leaving while
+  playing keeps it running. A phone call or going to the background never does.
 
 ### 5.8 Acceptance
 

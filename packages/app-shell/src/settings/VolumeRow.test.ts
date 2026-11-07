@@ -1,17 +1,32 @@
-import { releaseTarget, type SliderMode } from '@kitbag/core-design';
+import { releaseTarget, rig, type SliderMode } from '@kitbag/core-design';
+import { KB_VOLUME_BOUNDS } from '@kitbag/core-native';
 import { createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
-import { VOLUME_SLIDER } from './rigVolume.ts';
+import { VOLUME_SLIDER, volumePercent } from './rigVolume.ts';
+
+interface SliderBox {
+  readonly width?: number;
+}
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
 const sliders = vi.hoisted(() => [] as Props[]);
+const readouts = vi.hoisted(() => [] as Props[]);
+const rows = vi.hoisted(() => [] as Props[]);
+const views = vi.hoisted(() => [] as Props[]);
+const display = vi.hoisted(() => ({ fontScale: 1 }));
 
 vi.mock('react-native', async () => {
   const { createElement: h } = await import('react');
-  return { View: (props: Props) => h('div', null, props.children) };
+  return {
+    View: (props: Props) => {
+      views.push(props);
+      return h('div', null, props.children);
+    },
+    useWindowDimensions: () => ({ fontScale: display.fontScale }),
+  };
 });
 
 vi.mock('react-native-reanimated', () => ({
@@ -30,13 +45,23 @@ vi.mock('@kitbag/core-design', async (original) => {
   const pure = await original<Record<string, unknown>>();
   return {
     ...pure,
-    EditRow: (props: Props) => h('div', null, props.children),
+    EditRow: (props: Props) => {
+      rows.push(props);
+      return h('div', null, props.children);
+    },
     LiveText: () => null,
+    LiveSlot: (props: Props) => {
+      readouts.push(props);
+      return null;
+    },
     Slider: (props: Props) => {
       sliders.push(props);
       return null;
     },
-    createThemedStyles: () => () => new Proxy({}, { get: () => ({}) }),
+    useTextScaled: () =>
+      (pure.isTextScaled as (scale: number) => boolean)(display.fontScale),
+    createThemedStyles: (factory: (theme: object) => object) => () =>
+      factory({ color: new Proxy({}, { get: () => '' }) }),
   };
 });
 
@@ -49,5 +74,37 @@ describe('click volume row wiring', () => {
     const mode = sliders[0]?.mode as SliderMode;
     expect(mode).toBe(VOLUME_SLIDER.mode);
     expect(releaseTarget(mode, 'tap', true, 0.25, 0.5)).toBe(0.25);
+  });
+
+  it('sizes the readout by the widest level it can show, not a fixed width', () => {
+    readouts.length = 0;
+    renderToStaticMarkup(createElement(VolumeRow));
+    expect(readouts[0]?.widest).toBe(volumePercent(KB_VOLUME_BOUNDS.max));
+    expect(readouts[0]?.style).not.toHaveProperty('width');
+  });
+
+  it('keeps the slider and readout beside the label at the default text size', () => {
+    display.fontScale = 1;
+    rows.length = 0;
+    renderToStaticMarkup(createElement(VolumeRow));
+    expect(rows[0]?.singleLine).toBe(true);
+  });
+
+  it('lets the controls take their own line once the text grows', () => {
+    display.fontScale = 2;
+    rows.length = 0;
+    renderToStaticMarkup(createElement(VolumeRow));
+    display.fontScale = 1;
+    expect(rows[0]?.singleLine).toBe(false);
+  });
+
+  it('gives the slider a fixed width to fill at every text size', () => {
+    for (const fontScale of [1, 2]) {
+      display.fontScale = fontScale;
+      views.length = 0;
+      renderToStaticMarkup(createElement(VolumeRow));
+      display.fontScale = 1;
+      expect((views[0]?.style as SliderBox).width).toBe(rig.sliderWidth);
+    }
   });
 });

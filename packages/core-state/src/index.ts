@@ -26,6 +26,7 @@ export {
 } from './metronome/countInScope.ts';
 export {
   configureCountInPersistence,
+  reloadCountInPersistence,
   type CountInPersistence,
   type CountInSettings,
 } from './metronome/countInPersistence.ts';
@@ -154,7 +155,6 @@ export {
   configureTunings,
   type AppActivity,
   type AppActivitySource,
-  type MicPermission,
   type MicPermissionSource,
   type TunerRuntime,
 } from './tuner/runtime.ts';
@@ -226,6 +226,22 @@ export type {
   LibrarySongRow,
   LibraryStemSetRow,
 } from '@kitbag/core-db';
+export type { PermissionAnswer } from './permission.ts';
+export { useNotificationPermission } from './notifications/useNotificationPermission.ts';
+export {
+  configureNotificationPermission,
+  createNotificationPermissionStore,
+  getNotificationPermissionStore,
+  notificationAction,
+  NOTIFICATION_ASK,
+  type NotificationAction,
+  type NotificationAsk,
+  type NotificationAskPersistence,
+  type NotificationPermissionRuntime,
+  type NotificationPermissionSource,
+  type NotificationPermissionStore,
+  type NotificationStatus,
+} from './notifications/store.ts';
 export { useSwipeHint } from './firstUse/useSwipeHint.ts';
 export {
   configureSwipeHintPersistence,
@@ -272,6 +288,7 @@ export {
   clockParts,
   formatClockSeconds,
   MINUS,
+  SECONDS_PER_MINUTE,
   type ClockParts,
 } from './text.ts';
 export { CALIBRATION } from './rig/calibrationRules.ts';
@@ -351,3 +368,33 @@ export {
   storedRowFiles,
   type StoredFilesRecords,
 } from './storage/storedRowFiles.ts';
+export {
+  configureBackup,
+  getBackup,
+  type BackupDeps,
+} from './backup/runtime.ts';
+export {
+  LIBRARY_BACKUP_FILE_NAME,
+  setlistBackupFileName,
+  shareLibraryBackup,
+  shareSetlist,
+} from './backup/share.ts';
+export {
+  canApply,
+  commitStep,
+  createRestoreStore,
+  planConflicts,
+  restoreStore,
+  type CommitStep,
+  type RestoreActions,
+  type RestoreFailure,
+  type RestoreReview,
+  type RestoreSource,
+  type RestoreState,
+  type RestoreStore,
+} from './backup/restore.ts';
+export { useRestore } from './backup/useRestore.ts';
+export {
+  isReplaceConfirmed,
+  REPLACE_CONFIRMATION,
+} from './backup/categories.ts';

@@ -1,10 +1,12 @@
 import {
   AppBar,
+  barChipRoom,
   Chip,
+  CHIP_HEIGHT,
   createThemedStyles,
-  inset,
   LiveText,
   PegSelector,
+  screenBar,
   space,
   TuneDirectionIcon,
   TunerStrip,
@@ -18,7 +20,7 @@ import {
   type TunerTuning,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
-import { Linking, View } from 'react-native';
+import { Linking, ScrollView, View } from 'react-native';
 
 import { a4Label, effectiveA4, type A4Range } from '../logic/a4.ts';
 import { tunerHint, type HintAction } from '../logic/hints.ts';
@@ -38,12 +40,11 @@ import { TuningEditorSheet } from './TuningEditorSheet.tsx';
 import { TuningSheet } from './TuningSheet.tsx';
 import { useTunerFrame } from './useTunerFrame.ts';
 
-// The tuning chip tops the app bar; the mode chips sit between the needle
-// strip, which takes no touches, and the screen's bottom inset.
 const TUNING_CHIP_GAPS = {
-  top: unshared(inset.appBar + space.screenInset),
-  bottom: unshared(inset.appBar) + space.sectionGap,
+  top: unshared(barChipRoom(CHIP_HEIGHT)),
+  bottom: barChipRoom(CHIP_HEIGHT) + space.sectionGap,
 };
+// The needle strip above takes no touches.
 const MODE_CHIP_GAPS = {
   top: unshared(space.sectionGap),
   bottom: unshared(space.screenInset),
@@ -54,6 +55,16 @@ const useStyles = createThemedStyles((theme) => ({
     flex: 1,
     backgroundColor: theme.color.bg,
     paddingHorizontal: space.screenInset,
+    gap: space.sectionGap,
+  },
+  body: {
+    flex: 1,
+  },
+  tuningChip: {
+    marginRight: screenBar.chipEnd,
+  },
+  bodyContent: {
+    flexGrow: 1,
     gap: space.sectionGap,
   },
   spacer: {
@@ -69,6 +80,7 @@ const useStyles = createThemedStyles((theme) => ({
   },
   chips: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     gap: space.controlGap,
   },
@@ -264,7 +276,7 @@ export function TunerScreen({ insets, a4Range, onBack }: TunerScreenProps) {
 
   const edgeToEdgePadding = useMemo(
     () => ({
-      paddingTop: space.screenInset + insets.top,
+      paddingTop: insets.top,
       paddingBottom: space.screenInset + insets.bottom,
     }),
     [insets.top, insets.bottom],
@@ -274,59 +286,66 @@ export function TunerScreen({ insets, a4Range, onBack }: TunerScreenProps) {
     <View style={[styles.screen, edgeToEdgePadding]}>
       <AppBar
         title="Tuner"
-        {...(onBack === undefined ? {} : { onBack })}
+        onBack={onBack}
         trailing={
-          <Chip
-            active
-            label={tuningLabel(tuning)}
-            accessibilityLabel={`Tuning: ${tuningLabel(tuning)}. Change tuning`}
-            neighbourGapDp={TUNING_CHIP_GAPS}
-            onPress={openTunings}
-          />
+          <View style={styles.tuningChip}>
+            <Chip
+              active
+              label={tuningLabel(tuning)}
+              accessibilityLabel={`Tuning: ${tuningLabel(tuning)}. Change tuning`}
+              neighbourGapDp={TUNING_CHIP_GAPS}
+              onPress={openTunings}
+            />
+          </View>
         }
       />
 
-      {chromatic ? null : (
-        <PegSelector
-          pegs={pegs}
-          detectedIndex={detectedIndex}
-          lockedIndex={lockedIndex}
-          onPress={handlePeg}
-        />
-      )}
-
-      {hint === undefined ? null : (
-        <TunerHintCard hint={hint} onAction={handleHintAction} />
-      )}
-
-      <View style={styles.spacer} />
-
-      <View
-        accessible
-        accessibilityRole="text"
-        accessibilityLiveRegion="polite"
-        accessibilityLabel={readoutLabel}
-        style={styles.readout}
+      <ScrollView
+        style={styles.body}
+        contentContainerStyle={styles.bodyContent}
       >
-        <LiveText
-          text={noteText}
-          role="tunerNote"
-          color={heard ? 'text' : 'text3'}
-        />
-        <View style={styles.captionRow}>
-          <LiveText
-            text={captionText}
-            role="tunerCaption"
-            color={heard ? 'text2' : 'text3'}
+        {chromatic ? null : (
+          <PegSelector
+            pegs={pegs}
+            detectedIndex={detectedIndex}
+            lockedIndex={lockedIndex}
+            onPress={handlePeg}
           />
-          <TuneDirectionIcon
-            direction={direction}
-            color={heard ? 'text2' : 'decor'}
-          />
-        </View>
-      </View>
+        )}
 
-      <TunerStrip needle={needle} active={active} />
+        {hint === undefined ? null : (
+          <TunerHintCard hint={hint} onAction={handleHintAction} />
+        )}
+
+        <View style={styles.spacer} />
+
+        <View
+          accessible
+          accessibilityRole="text"
+          accessibilityLiveRegion="polite"
+          accessibilityLabel={readoutLabel}
+          style={styles.readout}
+        >
+          <LiveText
+            text={noteText}
+            role="tunerNote"
+            color={heard ? 'text' : 'text3'}
+          />
+          <View style={styles.captionRow}>
+            <LiveText
+              text={captionText}
+              role="tunerCaption"
+              color={heard ? 'text2' : 'text3'}
+            />
+            <TuneDirectionIcon
+              direction={direction}
+              color={heard ? 'text2' : 'decor'}
+            />
+          </View>
+        </View>
+
+        <TunerStrip needle={needle} active={active} />
+      </ScrollView>
 
       <View style={styles.chips}>
         <Chip
