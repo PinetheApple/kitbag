@@ -1,0 +1,1 @@
+• A song's click now accents the song's own bars instead of the metronome's beats-per-bar.
