@@ -7,6 +7,7 @@ import {
   stemPlayer,
   textRoles,
   textStyle,
+  type PlayerFrame,
 } from '@kitbag/core-design';
 import { KB_MAX_TRACKS } from '@kitbag/core-native';
 import { secondsToFrames, useStemPlayer } from '@kitbag/core-state';
@@ -20,7 +21,7 @@ import { SongFactChips } from './SongFactChips.tsx';
 import { StemList } from './StemList.tsx';
 import { WAVEFORM_BARS } from './StemRowView.tsx';
 import { StemTransport } from './StemTransport.tsx';
-import { useMixerFrame, type MixerFrameValues } from './useMixerFrame.ts';
+import { useMixerFrame } from './useMixerFrame.ts';
 
 export interface StemPlayerScreenProps {
   readonly setId: number;
@@ -78,11 +79,11 @@ function Dock({
   frame,
   bottom,
 }: {
-  readonly frame: MixerFrameValues;
+  readonly frame: PlayerFrame;
   readonly bottom: number;
 }) {
   return (
-    <PlayerDock bottom={bottom}>
+    <PlayerDock bottomInset={bottom}>
       <Scrubber frame={frame} />
       <StemTransport playing={frame.playing} />
     </PlayerDock>

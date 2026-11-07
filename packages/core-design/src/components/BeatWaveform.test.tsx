@@ -54,7 +54,7 @@ function render(onTap: (x: number, width: number) => void) {
     envelope: null,
     progress: { value: 0 } as never,
     beats: [],
-    downbeats: [],
+    downbeatIndices: [],
     durationSec: 10,
     onTap,
   }) as ReactElement<{ readonly children: Lane }>;

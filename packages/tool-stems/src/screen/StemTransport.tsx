@@ -1,17 +1,7 @@
-import { PlayPauseButton, stemPlayer, TransportKey } from '@kitbag/core-design';
+import { PlayerTransport, TransportKey } from '@kitbag/core-design';
 import { loopKeyLabel, SKIP_SECONDS, useStemPlayer } from '@kitbag/core-state';
 import { useCallback } from 'react';
-import { StyleSheet, View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: stemPlayer.transportGap,
-  },
-});
 
 export function StemTransport({
   playing,
@@ -25,12 +15,6 @@ export function StemTransport({
   const skip = useStemPlayer((s) => s.skip);
   const markLoop = useStemPlayer((s) => s.markLoop);
   const toggleClick = useStemPlayer((s) => s.toggleClick);
-  const back = useCallback(() => {
-    skip(-SKIP_SECONDS);
-  }, [skip]);
-  const forward = useCallback(() => {
-    skip(SKIP_SECONDS);
-  }, [skip]);
   const onLoop = useCallback(() => {
     void markLoop();
   }, [markLoop]);
@@ -38,43 +22,26 @@ export function StemTransport({
     void toggleClick();
   }, [toggleClick]);
   return (
-    <View style={styles.row}>
-      <TransportKey
-        size="dock"
-        icon="repeat"
-        selected={loop.kind !== 'off'}
-        accessibilityLabel={loopKeyLabel(loop)}
-        onPress={onLoop}
-      />
-      <TransportKey
-        size="dock"
-        icon="skipBack"
-        accessibilityLabel={`Back ${String(SKIP_SECONDS)} seconds`}
-        onPress={back}
-      />
-      <PlayPauseButton
-        size="dock"
-        playing={playing}
-        playLabel="Play"
-        pauseLabel="Pause"
-        onPress={togglePlay}
-      />
-      <TransportKey
-        size="dock"
-        icon="skipForward"
-        accessibilityLabel={`Forward ${String(SKIP_SECONDS)} seconds`}
-        onPress={forward}
-      />
-      <TransportKey
-        size="dock"
-        icon="metronome"
-        selected={click}
-        disabled={!hasGrid}
-        accessibilityLabel={
-          click ? 'Stop the click' : 'Click along on the song grid'
-        }
-        onPress={onClick}
-      />
-    </View>
+    <PlayerTransport
+      playing={playing}
+      loopActive={loop.kind !== 'off'}
+      loopLabel={loopKeyLabel(loop)}
+      skipSeconds={SKIP_SECONDS}
+      onLoop={onLoop}
+      onSkip={skip}
+      onTogglePlay={togglePlay}
+      extraKey={
+        <TransportKey
+          size="dock"
+          icon="metronome"
+          selected={click}
+          disabled={!hasGrid}
+          accessibilityLabel={
+            click ? 'Stop the click' : 'Click along on the song grid'
+          }
+          onPress={onClick}
+        />
+      }
+    />
   );
 }

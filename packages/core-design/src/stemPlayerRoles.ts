@@ -51,7 +51,7 @@ export const stemPlayer = {
 
 export const songPlayer = {
   cardWave: 64,
-  beatTick: 1,
+  beatTickStroke: 1,
   beatTickShort: 8,
   beatTickTall: 20,
   beatTickColumn: 3,

@@ -18,11 +18,26 @@ describe('beatTicks', () => {
     ]);
   });
 
-  it('keeps one tick per column however long the song, and a downbeat wins it', () => {
+  it('draws bars only once beats share a column: 3:00 at 120 BPM in 4/4', () => {
+    const beats = Array.from({ length: 360 }, (_, i) => i * 0.5);
+    const bars = beats.map((_, i) => i).filter((i) => i % 4 === 0);
+    const ticks = beatTicks(beats, bars, 180, 359, COLUMN);
+    expect(ticks).toHaveLength(90);
+    expect(ticks.every((tick) => tick.tall)).toBe(true);
+  });
+
+  it('draws beats and bars together while each beat has its column', () => {
+    const beats = Array.from({ length: 16 }, (_, i) => i * 0.5);
+    const ticks = beatTicks(beats, [0, 4, 8, 12], 8, 359, COLUMN);
+    expect(ticks).toHaveLength(16);
+    expect(ticks.filter((tick) => tick.tall)).toHaveLength(4);
+  });
+
+  it('merges a dense grid with no downbeats into one short tick per column', () => {
     const beats = Array.from({ length: 2000 }, (_, i) => i * 0.15);
-    const ticks = beatTicks(beats, [1000], 300, 360, COLUMN);
+    const ticks = beatTicks(beats, [], 300, 360, COLUMN);
     expect(ticks.length).toBeLessThanOrEqual(360 / COLUMN + 1);
-    expect(ticks.filter((tick) => tick.tall)).toHaveLength(1);
+    expect(ticks.some((tick) => tick.tall)).toBe(false);
   });
 
   it('drops beats past the end of the song', () => {

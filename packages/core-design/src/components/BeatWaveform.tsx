@@ -18,17 +18,16 @@ export interface BeatWaveformProps {
   readonly envelope: readonly number[] | null;
   readonly progress: SharedValue<number>;
   readonly beats: readonly number[];
-  readonly downbeats: readonly number[];
+  readonly downbeatIndices: readonly number[];
   readonly durationSec: number;
-  /** x is relative to this waveform; width is this waveform's own. */
-  readonly onTap: (x: number, width: number) => void;
+  readonly onTap: (xInWaveform: number, waveformWidth: number) => void;
 }
 
 export function BeatWaveform({
   envelope,
   progress,
   beats,
-  downbeats,
+  downbeatIndices,
   durationSec,
   onTap,
 }: BeatWaveformProps) {
@@ -42,12 +41,12 @@ export function BeatWaveform({
     () =>
       beatTicks(
         beats,
-        downbeats,
+        downbeatIndices,
         durationSec,
         width,
         songPlayer.beatTickColumn,
       ),
-    [beats, downbeats, durationSec, width],
+    [beats, downbeatIndices, durationSec, width],
   );
   const shortPath = useMemo(
     () =>
@@ -95,12 +94,12 @@ export function BeatWaveform({
             <Path
               d={shortPath}
               stroke={theme.color.text3}
-              strokeWidth={songPlayer.beatTick}
+              strokeWidth={songPlayer.beatTickStroke}
             />
             <Path
               d={tallPath}
               stroke={theme.color.text}
-              strokeWidth={songPlayer.beatTick}
+              strokeWidth={songPlayer.beatTickStroke}
             />
           </Svg>
         )}

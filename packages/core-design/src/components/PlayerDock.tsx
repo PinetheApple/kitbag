@@ -20,15 +20,15 @@ const useStyles = createThemedStyles((theme) => ({
 }));
 
 export interface PlayerDockProps {
-  readonly bottom: number;
+  readonly bottomInset: number;
   readonly children: ReactNode;
 }
 
-export function PlayerDock({ bottom, children }: PlayerDockProps) {
+export function PlayerDock({ bottomInset, children }: PlayerDockProps) {
   const styles = useStyles();
   const padding = useMemo(
-    () => ({ paddingBottom: stemPlayer.dockBottom + bottom }),
-    [bottom],
+    () => ({ paddingBottom: stemPlayer.dockBottom + bottomInset }),
+    [bottomInset],
   );
   return <View style={[styles.dock, padding]}>{children}</View>;
 }

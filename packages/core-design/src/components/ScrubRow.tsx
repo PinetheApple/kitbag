@@ -155,6 +155,10 @@ export interface ScrubFrame {
   readonly hold: (fraction: number) => void;
 }
 
+export interface PlayerFrame extends ScrubFrame {
+  readonly playing: SharedValue<number>;
+}
+
 // The spoken position is React state, so it is kept only while a screen reader
 // runs; the visible clock stays on the UI thread (SPEC §13.3).
 function useSpokenSecond(frame: ScrubFrame): number {
