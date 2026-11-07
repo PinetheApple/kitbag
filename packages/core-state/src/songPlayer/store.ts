@@ -158,10 +158,18 @@ export function createSongPlayerStore(
         set({ status: 'failed' });
         return;
       }
+      const decoded = await commands.mixerTrackFrames(SONG_TRACK);
+      if (!live(opened)) return;
+      const durationFrames =
+        decoded > 0 ? decoded : secondsToFrames(record.durationSec, engineRate);
+      if (durationFrames <= 0) {
+        set({ status: 'failed' });
+        return;
+      }
       set({
         status: 'ready',
         engineRate,
-        durationFrames: secondsToFrames(record.durationSec, engineRate),
+        durationFrames,
         beats: record.beats,
         downbeatIndices: record.downbeatIndices,
       });

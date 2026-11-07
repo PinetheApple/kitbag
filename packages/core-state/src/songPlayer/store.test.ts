@@ -190,18 +190,54 @@ describe('opening a song', () => {
   });
 });
 
-describe('a song whose metadata gives no duration', () => {
-  it('is ready with no length, which pins every seek to the start', async () => {
-    const { store, commands, engine } = await openedSong(
-      songRecord({ durationSec: 0 }),
+describe('the song length', () => {
+  const DECODED = RATE * 10;
+
+  async function openedWithDecoded(durationSec: number, decoded: number) {
+    const fake = fakeSongRuntime(songRecord({ durationSec }));
+    fake.commands.mixerTrackFrames.mockResolvedValue(decoded);
+    const store = songStore(fake);
+    await store.getState().open(SONG_ID, BARS).loaded;
+    return { ...fake, store };
+  }
+
+  it.each([
+    ['over', 12],
+    ['under', 8],
+    ['missing', 0],
+  ])(
+    'comes from the loaded track when the metadata is %s',
+    async (_, durationSec) => {
+      const { store } = await openedWithDecoded(durationSec, DECODED);
+      expect(store.getState()).toMatchObject({
+        status: 'ready',
+        durationFrames: DECODED,
+      });
+    },
+  );
+
+  it('is read from track 0 after it loads', async () => {
+    const { commands } = await openedWithDecoded(
+      songRecord().durationSec,
+      DECODED,
     );
+    expect(commands.mixerTrackFrames).toHaveBeenCalledExactlyOnceWith(0);
+    expect(commands.loadTrack.mock.invocationCallOrder[0]).toBeLessThan(
+      commands.mixerTrackFrames.mock.invocationCallOrder[0] ?? Number.NaN,
+    );
+  });
+
+  it('falls back to the metadata when the mixer reads no length', async () => {
+    const { store } = await openedWithDecoded(9, 0);
     expect(store.getState()).toMatchObject({
       status: 'ready',
-      durationFrames: 0,
+      durationFrames: RATE * 9,
     });
-    engine.position = RATE;
-    store.getState().skip(SKIP_SECONDS);
-    expect(commands.mixerSeek).toHaveBeenLastCalledWith(0);
+  });
+
+  it('cannot open a song neither the mixer nor the metadata gives a length', async () => {
+    const { store } = await openedWithDecoded(0, 0);
+    expect(store.getState().status).toBe('failed');
   });
 });
 

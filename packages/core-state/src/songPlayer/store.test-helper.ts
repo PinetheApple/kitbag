@@ -2,7 +2,8 @@ import type { SongRecord } from '@kitbag/core-db';
 import { vi } from 'vitest';
 
 import type { MixerClaim } from '../stemPlayer/mixerClaim.ts';
-import { fakeRuntime, record } from '../stemPlayer/store.test-helper.ts';
+import { fakeRuntime, RATE, record } from '../stemPlayer/store.test-helper.ts';
+import { secondsToFrames } from '../stemPlayer/time.ts';
 import type { SongPlayerRuntime } from './runtime.ts';
 import { createSongPlayerStore } from './store.ts';
 
@@ -35,7 +36,10 @@ export function fakeSongRuntime(song: SongRecord = songRecord()) {
     setSounds: vi.fn(),
     setAccent: vi.fn(),
   };
-  const commands = { ...fake.commands, ...metronomeSetters };
+  const mixerTrackFrames = vi.fn(() =>
+    Promise.resolve(secondsToFrames(song.durationSec, RATE)),
+  );
+  const commands = { ...fake.commands, ...metronomeSetters, mixerTrackFrames };
   const records = {
     readSong: vi.fn(() => Promise.resolve<SongRecord | undefined>(song)),
   };
