@@ -335,6 +335,7 @@ void RunRePrimeTests();
 void RunLoadRefusalTests();
 void RunLagCarryTests();
 void RunRetireTests();
+void RunUnityTests();
 
 }  // namespace mixer_test
 
