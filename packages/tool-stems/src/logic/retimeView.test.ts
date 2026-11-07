@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   retimeLineLabel,
   retimePreview,
+  retimeSubtitle,
   shiftLabel,
   tapTimeLabel,
 } from './retimeView.ts';
@@ -23,6 +24,25 @@ describe('retimeLineLabel', () => {
 
   it('says when every line is tapped', () => {
     expect(retimeLineLabel(lines, -1)).toBe('All 3 lines tapped');
+  });
+});
+
+describe('retimeSubtitle', () => {
+  it('adds the speed the mixer plays', () => {
+    expect(retimeSubtitle(lines, 0, 0.75)).toBe(
+      'Line 1 of 3 · playing at 0.75×',
+    );
+    expect(retimeSubtitle(lines, -1, 0.75)).toBe(
+      'All 3 lines tapped · playing at 0.75×',
+    );
+  });
+
+  it('shows a song already slower at its own speed', () => {
+    expect(retimeSubtitle(lines, 0, 0.6)).toBe('Line 1 of 3 · playing at 0.6×');
+  });
+
+  it('is the line alone while no speed is set', () => {
+    expect(retimeSubtitle(lines, 0, null)).toBe('Line 1 of 3');
   });
 });
 

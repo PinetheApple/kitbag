@@ -31,6 +31,16 @@ export function retimeLineLabel(
   return `Line ${String(sungCount(lines, nextLine) + 1)} of ${total}`;
 }
 
+export function retimeSubtitle(
+  lines: readonly LyricLine[],
+  nextLine: number,
+  playbackRate: number | null,
+): string {
+  const line = retimeLineLabel(lines, nextLine);
+  if (playbackRate === null) return line;
+  return `${line} · playing at ${String(playbackRate)}×`;
+}
+
 export function tapTimeLabel(seconds: number): string {
   const tenths = Math.round(seconds * TENTHS);
   const whole = Math.floor(tenths / TENTHS);

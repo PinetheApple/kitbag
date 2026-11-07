@@ -11,6 +11,7 @@ import {
   takeAfterTap,
   withTimes,
 } from './lyrics.ts';
+import { retimeSpeed } from './retimeSpeed.ts';
 import type { StemPlayerRecords } from './runtime.ts';
 import { sessionGate } from './sessionGate.ts';
 import type { ActionContext, StemPlayerActions } from './store.ts';
@@ -47,6 +48,7 @@ export function retimeActions({
   | 'resetRetime'
 > {
   const { busy, call } = sessionGate(session);
+  const speed = retimeSpeed(() => runtimeOf().commands);
 
   const saveTiming = async (
     shown: LyricLineTimes,
@@ -83,8 +85,19 @@ export function retimeActions({
       const nextLine = sungLineFrom(lyrics.lines, fromLine);
       if (nextLine === NO_LINE) return;
       set({
-        retime: { kind: 'recording', taps: [], nextLine, shiftSteps: 0 },
+        retime: {
+          kind: 'recording',
+          taps: [],
+          nextLine,
+          shiftSteps: 0,
+          playbackRate: null,
+        },
         retimeFailure: null,
+      });
+      speed.enter((playbackRate) => {
+        const { retime } = get();
+        if (retime.kind === 'recording')
+          set({ retime: { ...retime, playbackRate } });
       });
       if (!runtimeOf().engine.playing()) togglePlay();
     },
@@ -135,6 +148,7 @@ export function retimeActions({
       if (!busy()) get().leaveRetime();
     },
     leaveRetime: () => {
+      speed.restore();
       set({ retime: { kind: 'off' }, retimeFailure: null });
     },
     resetRetime: async () => {
