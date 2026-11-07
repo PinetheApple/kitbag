@@ -11,7 +11,8 @@
 #include <thread>
 #include <vector>
 
-#include "pulse_stem.h"
+#include "render_exit.h"
+#include "stem_pulse.h"
 #include "wav_fixture.h"
 
 namespace {
@@ -19,10 +20,10 @@ namespace {
 constexpr uint32_t kSampleRate = 48000;
 constexpr uint32_t kStereo = 2;
 constexpr uint32_t kMono = 1;
-// Prime, so no rate under test scales a block to whole frames.
+// Prime, so no slowed rate scales a block to whole frames.
 constexpr uint32_t kBlockFrames = 251;
 constexpr double kMeanBeatSeconds = 60.0 / 117.0;
-// Non-constant tempo (SPEC.md §6.5): spacing swings 4% on a period of no whole
+// Non-constant tempo (SPEC.md §6.5): spacing swings on a period of no whole
 // number of beats, so a constant-tempo click cannot pass for the grid.
 constexpr double kTempoSwing = 0.04;
 constexpr double kSwingPerBeat = 0.37;
@@ -32,8 +33,7 @@ constexpr double kEndMarginSeconds = 1.0;
 constexpr auto kPacePerBlock = std::chrono::microseconds(250);
 constexpr int kGridDigits = 9;
 
-// Outside click_soak's 0-5, as metronome_render's are.
-enum class RenderExit : int { kWritten = 0, kUsage = 2, kFailed = 8 };
+using click_soak::RenderExit;
 
 std::vector<double> SongBeats(double song_seconds) {
   std::vector<double> beats;
@@ -45,27 +45,6 @@ std::vector<double> SongBeats(double song_seconds) {
   return beats;
 }
 
-kb_engine*
-OpenEngine(const std::string& stem, const std::vector<double>& beats) {
-  kb_engine* engine = nullptr;
-  if (kb_engine_create(&engine) != KB_OK) return nullptr;
-  if (kb_mixer_load_track(engine, 0, stem.c_str()) != KB_OK ||
-      kb_metronome_set_grid(
-          engine,
-          beats.data(),
-          static_cast<int32_t>(beats.size()),
-          0
-      ) != KB_OK) {
-    kb_engine_destroy(engine);
-    return nullptr;
-  }
-  kb_metronome_follow_mixer(engine, 1);
-  kb_metronome_start(engine);
-  return engine;
-}
-
-// The right channel: the stem is left only, so this is the click over a live
-// stretch, as a cable from the output would hear it with the stem panned away.
 std::vector<float> RenderClickChannel(kb_engine* engine, double out_seconds) {
   const auto total = static_cast<uint64_t>(out_seconds * kSampleRate);
   std::vector<float> block(static_cast<size_t>(kBlockFrames) * kStereo);
@@ -106,17 +85,20 @@ bool Render(
   if (!media_test::WritePulseStemWav(stem, beat_frames, frames, kSampleRate)) {
     return false;
   }
-  kb_engine* engine = OpenEngine(stem, beats);
-  if (engine == nullptr ||
-      kb_mixer_set_rate(engine, static_cast<float>(rate)) != KB_OK) {
-    return false;
+  kb_engine* engine = media_test::OpenFollowingEngine(stem, beats);
+  std::vector<float> clicks;
+  bool rendered = false;
+  if (engine != nullptr) {
+    rendered = kb_mixer_set_rate(engine, static_cast<float>(rate)) == KB_OK;
+    if (rendered) {
+      kb_mixer_play(engine);
+      clicks = RenderClickChannel(engine, song_seconds / rate);
+    }
+    kb_engine_destroy(engine);
   }
-  kb_mixer_play(engine);
-  const std::vector<float> clicks =
-      RenderClickChannel(engine, song_seconds / rate);
-  kb_engine_destroy(engine);
   std::filesystem::remove(stem);
-  return media_test::WriteFloatWav(wav, clicks, kMono, kSampleRate) &&
+  return rendered &&
+         media_test::WriteFloatWav(wav, clicks, kMono, kSampleRate) &&
          WriteGrid(grid, beats, rate);
 }
 

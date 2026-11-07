@@ -5,6 +5,8 @@
 #include <vector>
 
 #include "check.h"
+#include "click_take.h"
+#include "mixer/transport_plan.h"
 #include "stem_sync_rate.h"
 
 namespace stem_sync {
@@ -15,7 +17,8 @@ using kitbag_test::Check;
 constexpr double kThreeQuarters = 0.75;
 constexpr double kHalf = 0.5;
 constexpr int kBlocksPerSegment = 700;
-constexpr double kSegments[] = {kUnity, kThreeQuarters, kHalf, kUnity};
+constexpr double kSegments[] =
+    {kitbag::kUnityRate, kThreeQuarters, kHalf, kitbag::kUnityRate};
 // Both ends of an interval round up to a whole output frame.
 constexpr double kIntervalSlackFrames = 1.0;
 constexpr int kTailBlocks = 40;
@@ -34,18 +37,14 @@ bool Near(double got, double want) {
 void WalkInterval(Walk* walk, double song_gap, double out_gap, size_t beat) {
   const double here = song_gap / kSegments[walk->segment];
   if (Near(out_gap, here)) return;
-  const bool can_step = walk->segment + 1 < std::size(kSegments);
-  const double there =
-      can_step ? song_gap / kSegments[walk->segment + 1] : here;
-  if (can_step && Near(out_gap, there)) {
-    ++walk->segment;
-    return;
-  }
-  const double low = std::min(here, there) - kIntervalSlackFrames;
-  const double high = std::max(here, there) + kIntervalSlackFrames;
-  if (can_step && out_gap >= low && out_gap <= high) {
-    ++walk->segment;
-    return;
+  if (walk->segment + 1 < std::size(kSegments)) {
+    const double there = song_gap / kSegments[walk->segment + 1];
+    const double low = std::min(here, there) - kIntervalSlackFrames;
+    const double high = std::max(here, there) + kIntervalSlackFrames;
+    if (out_gap >= low && out_gap <= high) {
+      ++walk->segment;
+      return;
+    }
   }
   walk->ok = false;
   std::fprintf(
@@ -68,11 +67,11 @@ void TestRateChangesMidPlay(const std::string& stem) {
   RenderPaced(engine, &take, kBlocksPerSegment);
   kb_mixer_set_rate(engine, static_cast<float>(kHalf));
   RenderPaced(engine, &take, kBlocksPerSegment);
-  kb_mixer_set_rate(engine, static_cast<float>(kUnity));
+  kb_mixer_set_rate(engine, kitbag::kUnityRate);
   RenderPaced(engine, &take, kBlocksPerSegment + kTailBlocks);
   kb_engine_destroy(engine);
 
-  const std::vector<int64_t> clicks = DetectClicks(take.right);
+  const std::vector<int64_t> clicks = click_take::DetectClicks(take.right);
   const std::vector<double> beats = Beats();
   Walk walk;
   for (size_t i = 0; i + 1 < clicks.size(); ++i) {

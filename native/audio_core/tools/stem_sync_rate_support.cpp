@@ -1,9 +1,8 @@
 #include <chrono>
-#include <cmath>
 #include <iterator>
 #include <thread>
 
-#include "pulse_stem.h"
+#include "stem_pulse.h"
 #include "stem_sync_rate.h"
 
 namespace stem_sync {
@@ -12,9 +11,7 @@ namespace {
 constexpr double kFirstBeat = 12001.3;
 constexpr double kSpacings[] = {19877.4, 21209.9, 18013.2, 20999.7, 19777.1};
 constexpr int64_t kSongTailFrames = 12000;
-constexpr float kSilence = 1e-2f;
-constexpr int64_t kGapFrames = 480;
-// Offline pulls outrun the read-ahead thread; this stays ~20x realtime.
+// Offline pulls outrun the read-ahead thread.
 constexpr auto kPacePerBlock = std::chrono::microseconds(500);
 
 }  // namespace
@@ -35,26 +32,15 @@ int64_t SongFrames() {
 
 std::string WritePulseStem() {
   const std::string path = media_test::UniqueTempPath("kitbag_stem_rate");
-  return media_test::WritePulseStemWav(path, Beats(), SongFrames(), kRate)
+  return media_test::WritePulseStemWav(path, Beats(), SongFrames(), kSampleRate)
              ? path
              : "";
 }
 
 kb_engine* OpenFollowingEngine(const std::string& stem) {
-  kb_engine* engine = nullptr;
-  if (kb_engine_create(&engine) != KB_OK) return nullptr;
-  std::vector<double> times;
-  for (double beat : Beats()) times.push_back(beat / kRate);
-  kb_mixer_load_track(engine, 0, stem.c_str());
-  kb_metronome_set_grid(
-      engine,
-      times.data(),
-      static_cast<int32_t>(times.size()),
-      0
-  );
-  kb_metronome_follow_mixer(engine, 1);
-  kb_metronome_start(engine);
-  return engine;
+  std::vector<double> seconds;
+  for (double beat : Beats()) seconds.push_back(beat / kSampleRate);
+  return media_test::OpenFollowingEngine(stem, seconds);
 }
 
 void RenderPaced(kb_engine* engine, Take* take, int blocks) {
@@ -67,20 +53,6 @@ void RenderPaced(kb_engine* engine, Take* take, int blocks) {
       take->right.push_back(out[kStereo * f + 1]);
     }
   }
-}
-
-std::vector<int64_t> DetectClicks(const std::vector<float>& right) {
-  std::vector<int64_t> clicks;
-  int64_t quiet = kGapFrames;
-  for (size_t k = 0; k < right.size(); ++k) {
-    if (std::fabs(right[k]) <= kSilence) {
-      ++quiet;
-      continue;
-    }
-    if (quiet >= kGapFrames) clicks.push_back(static_cast<int64_t>(k) - 1);
-    quiet = 0;
-  }
-  return clicks;
 }
 
 }  // namespace stem_sync

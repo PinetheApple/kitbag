@@ -1,22 +1,25 @@
 #include <utility>
 
+#include "click_take.h"
 #include "metronome_test_support.h"
 
 namespace metronome_test {
 namespace {
 
+using click_take::kGapFrames;
+using click_take::kSilence;
 using Frames = std::vector<int64_t>;
 
 constexpr int64_t kInLatency = 3203;
 constexpr int64_t kOutLatency = 3389;
 constexpr int64_t kHead = 1777;
-constexpr float kSilence = 1e-2f;
-constexpr int64_t kGapFrames = 480;
 // One voice at most an accent; a stacked pair sums to well over this.
 constexpr double kPeakTolerance = 1.05;
 constexpr int64_t kRingDownFrames = 20 * kBlockFrames;
 constexpr double kBpmTolerance = 1e-6;
-constexpr double kHalf = 0.5;
+constexpr double kHalfSpeed = 0.5;
+// 20002 / 0.75 ends half a frame into the wrapped pass.
+constexpr double kWrapLandsInFrame = 0.5;
 constexpr double kThreeQuarters = 0.75;
 // A float no power of two scales to a whole number, as a slider's value is.
 constexpr double kInexact = static_cast<double>(0.9f);
@@ -55,7 +58,7 @@ struct Fixture {
   int64_t done = 0;
   int64_t quiet = kGapFrames;
   bool playing = true;
-  bool landed = false;
+  bool opens_on_jump = false;
   Take take;
 
   template <size_t N>
@@ -88,7 +91,7 @@ struct Fixture {
       std::fill(buffer.begin(), buffer.end(), 0.0f);
       const kitbag::SongClock clock = {
           .playing = playing,
-          .landed = std::exchange(landed, false),
+          .opens_on_jump = std::exchange(opens_on_jump, false),
           .first = done,
           .frames = kBlockFrames,
           .records = &records
@@ -110,25 +113,6 @@ struct Fixture {
 
 int64_t LandsOn(int64_t out, double song, double beat, double rate) {
   return out + static_cast<int64_t>(std::ceil((beat - song) / rate));
-}
-
-bool Same(const Frames& got, const Frames& want) {
-  bool same = got.size() == want.size();
-  for (size_t i = 0; i < got.size() && i < want.size(); ++i) {
-    if (got[i] == want[i]) continue;
-    std::fprintf(
-        stderr,
-        "  click %zu at %lld, expected %lld\n",
-        i,
-        (long long)got[i],
-        (long long)want[i]
-    );
-    same = false;
-  }
-  if (got.size() != want.size()) {
-    std::fprintf(stderr, "  %zu clicks, want %zu\n", got.size(), want.size());
-  }
-  return same;
 }
 
 double OneClickPeak() {
@@ -153,27 +137,26 @@ void TestBeatsLandOnTheStretchedFrame(double rate, const char* frames) {
   Frames want;
   for (double beat : kBeats) want.push_back(LandsOn(0, kHead, beat, rate));
   fixture.RenderUntil(want.back() + kGapFrames);
-  Check(Same(fixture.take.triggers, want), frames);
+  Check(click_take::SameClicks(fixture.take.triggers, want), frames);
   ExpectSingleVoices(fixture.take, "follow rate: a beat sounds one voice");
 }
 
-// The anchoring beat sits exactly on the song time the change reaches.
 void TestRateChangeReanchorsAtOneFrame() {
   Fixture fixture(kAnchoredBeats);
   fixture.Reset(RecordFrom(0, kHead, kThreeQuarters));
   fixture.RenderUntil(kAnchorOut);
   const int64_t change = fixture.done;
   const double song = kHead + kThreeQuarters * static_cast<double>(change);
-  fixture.records.Push(RecordFrom(change, song, kHalf));
+  fixture.records.Push(RecordFrom(change, song, kHalfSpeed));
   const Frames want = {
       LandsOn(0, kHead, kAnchoredBeats[0], kThreeQuarters),
       LandsOn(0, kHead, kAnchoredBeats[1], kThreeQuarters),
-      LandsOn(change, song, kAnchoredBeats[2], kHalf),
-      LandsOn(change, song, kAnchoredBeats[3], kHalf)
+      LandsOn(change, song, kAnchoredBeats[2], kHalfSpeed),
+      LandsOn(change, song, kAnchoredBeats[3], kHalfSpeed)
   };
   fixture.RenderUntil(want.back() + kGapFrames);
   Check(
-      Same(fixture.take.triggers, want),
+      click_take::SameClicks(fixture.take.triggers, want),
       "follow rate: a change re-anchors with no jumped or doubled beat"
   );
   ExpectSingleVoices(fixture.take, "follow rate: the change stacks no voices");
@@ -186,8 +169,8 @@ void TestChangeBesideABeatFiresItOnce() {
   Fixture fixture(beats);
   fixture.Reset(RecordFrom(0, kHead, kThreeQuarters));
   fixture.RenderUntil(change);
-  fixture.records.Push(RecordFrom(change, song, kHalf));
-  const int64_t last = LandsOn(change, song, beats[1], kHalf);
+  fixture.records.Push(RecordFrom(change, song, kHalfSpeed));
+  const int64_t last = LandsOn(change, song, beats[1], kHalfSpeed);
   fixture.RenderUntil(last + kGapFrames);
   Check(
       fixture.take.triggers.size() == 2,
@@ -195,8 +178,6 @@ void TestChangeBesideABeatFiresItOnce() {
   );
 }
 
-// 20002 / 0.75 is no whole frame, so the wrap lands half a frame into the pass:
-// a cursor seeked to that fraction would skip the beat on the loop start.
 void TestLoopWrapKeepsTheStartBeat() {
   Fixture fixture(kLoopBeats);
   kitbag::SongRecord record = RecordFrom(0, kLoopHead, kThreeQuarters);
@@ -207,50 +188,59 @@ void TestLoopWrapKeepsTheStartBeat() {
   const Frames want = {
       LandsOn(0, kLoopHead, kLoopBeats[2], kThreeQuarters),
       wrap,
-      LandsOn(wrap, kLoopStart + kHalf, kLoopBeats[1], kThreeQuarters),
-      LandsOn(wrap, kLoopStart + kHalf, kLoopBeats[2], kThreeQuarters)
+      LandsOn(
+          wrap,
+          kLoopStart + kWrapLandsInFrame,
+          kLoopBeats[1],
+          kThreeQuarters
+      ),
+      LandsOn(
+          wrap,
+          kLoopStart + kWrapLandsInFrame,
+          kLoopBeats[2],
+          kThreeQuarters
+      )
   };
   fixture.RenderUntil(want.back() + kGapFrames);
   Check(
-      Same(fixture.take.triggers, want),
+      click_take::SameClicks(fixture.take.triggers, want),
       "follow rate: a loop wrap sounds the start beat, not the end's"
   );
   ExpectSingleVoices(fixture.take, "follow rate: the wrap stacks no voices");
 }
 
-// A jump is a real discontinuity at any rate: the seek must still re-seed.
 void TestSeekBackReplaysAtRate() {
   Fixture fixture(kBeats);
-  fixture.Reset(RecordFrom(0, kHead, kHalf));
-  const int64_t first = LandsOn(0, kHead, kBeats[0], kHalf);
+  fixture.Reset(RecordFrom(0, kHead, kHalfSpeed));
+  const int64_t first = LandsOn(0, kHead, kBeats[0], kHalfSpeed);
   fixture.RenderUntil(first + kGapFrames + kBlockFrames);
   const int64_t seek = fixture.done;
-  fixture.Reset(RecordFrom(seek, kHead, kHalf));
-  const int64_t again = LandsOn(seek, kHead, kBeats[0], kHalf);
+  fixture.Reset(RecordFrom(seek, kHead, kHalfSpeed));
+  const int64_t again = LandsOn(seek, kHead, kBeats[0], kHalfSpeed);
   fixture.RenderUntil(again + kGapFrames);
   Check(
-      Same(fixture.take.triggers, {first, again}),
+      click_take::SameClicks(fixture.take.triggers, {first, again}),
       "follow rate: a seek back replays its beat at the same rate"
   );
 }
 
-// Paused just past a beat, then a seek onto the frame last heard: the step reads
-// as a repeat, so only the landing says the beat is due again.
 void TestSeekOntoTheLastFrameReplays() {
   const int64_t pause_at = 49 * kBlockFrames;
-  const double beats[] = {kHead + kHalf * static_cast<double>(pause_at - 2)};
+  const double beats[] = {
+      kHead + kHalfSpeed * static_cast<double>(pause_at - 2)
+  };
   Fixture fixture(beats);
-  fixture.Reset(RecordFrom(0, kHead, kHalf));
+  fixture.Reset(RecordFrom(0, kHead, kHalfSpeed));
   fixture.RenderUntil(pause_at);
   fixture.playing = false;
   fixture.RenderUntil(pause_at + kRingDownFrames);
-  fixture.Reset(RecordFrom(fixture.done, beats[0], kHalf));
+  fixture.Reset(RecordFrom(fixture.done, beats[0], kHalfSpeed));
   fixture.playing = true;
-  fixture.landed = true;
+  fixture.opens_on_jump = true;
   const int64_t landing = fixture.done;
   fixture.RenderUntil(landing + kGapFrames);
   Check(
-      Same(fixture.take.triggers, {pause_at - 2, landing}),
+      click_take::SameClicks(fixture.take.triggers, {pause_at - 2, landing}),
       "follow rate: a seek onto the frame last heard replays its beat"
   );
   ExpectSingleVoices(
@@ -259,12 +249,11 @@ void TestSeekOntoTheLastFrameReplays() {
   );
 }
 
-// §4.2.2 keeps the grid in song time, so the readout stays the song's tempo.
 void TestBpmMirrorStaysSongTempo() {
   const double beats[] = {12000.7, 36001.4, 60002.1};
   Fixture fixture(beats);
-  fixture.Reset(RecordFrom(0, 0.0, kHalf));
-  fixture.RenderUntil(LandsOn(0, 0.0, beats[1], kHalf) + kBlockFrames);
+  fixture.Reset(RecordFrom(0, 0.0, kHalfSpeed));
+  fixture.RenderUntil(LandsOn(0, 0.0, beats[1], kHalfSpeed) + kBlockFrames);
   const double want = 60.0 * kSampleRate / (beats[1] - beats[0]);
   const double got = fixture.metronome.current_bpm();
   Check(
@@ -277,7 +266,7 @@ void TestBpmMirrorStaysSongTempo() {
 
 void RunFollowRateTests() {
   TestBeatsLandOnTheStretchedFrame(
-      kHalf,
+      kHalfSpeed,
       "follow rate: 0.5x lands each beat on F + (t - P) * sr / rate"
   );
   TestBeatsLandOnTheStretchedFrame(

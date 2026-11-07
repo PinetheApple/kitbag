@@ -86,7 +86,7 @@ class SongRecords {
 struct SongClock {
   bool playing = false;
   // This block opens on a seek, stop or play jump; a repeated frame cannot.
-  bool landed = false;
+  bool opens_on_jump = false;
   int64_t first = 0;
   uint32_t frames = 0;
   LoopLayout layout;

@@ -73,6 +73,10 @@ LoadPcm(kitbag::Mixer* mixer, int track, const std::vector<float>& pcm) {
   }
 }
 
+inline void LoadTone(kitbag::Mixer* mixer, int64_t frames) {
+  LoadPcm(mixer, 0, ToneFixture({.frames = frames, .steady_hz = kBurstHz}));
+}
+
 inline void WaitForReadAhead(const kitbag::Mixer& mixer) {
   const auto deadline = std::chrono::steady_clock::now() + kPaceTimeout;
   for (int t = 0; t < mixer.active_track_count(); ++t) {
@@ -247,6 +251,19 @@ inline void CheckNoQuietWindow(
         stderr,
         "  quiet window at frame %lld\n",
         static_cast<long long>(quiet)
+    );
+  }
+}
+
+inline void CheckSoundsAtOnce(kitbag::Mixer* mixer, const char* label) {
+  const std::vector<float> first = RenderPaced(mixer, 1);
+  const float peak = Loudest(first, mixer->crossfade_frames(), kBlock);
+  Check(peak > kOnsetThreshold, label);
+  if (peak <= kOnsetThreshold) {
+    std::fprintf(
+        stderr,
+        "  first-block peak %.3f\n",
+        static_cast<double>(peak)
     );
   }
 }

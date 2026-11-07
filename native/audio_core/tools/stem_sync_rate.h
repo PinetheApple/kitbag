@@ -9,11 +9,10 @@
 
 namespace stem_sync {
 
-constexpr uint32_t kRate = 48000;
+constexpr uint32_t kSampleRate = 48000;
 constexpr uint32_t kStereo = 2;
-// No rate under test scales this to whole frames, so a lost fraction drifts.
+// No slowed rate scales this to whole frames, so a lost fraction drifts.
 constexpr uint32_t kBlock = 333;
-constexpr double kUnity = 1.0;
 constexpr int kBeatCount = 36;
 
 struct Take {
@@ -26,7 +25,6 @@ int64_t SongFrames();
 std::string WritePulseStem();
 kb_engine* OpenFollowingEngine(const std::string& stem);
 void RenderPaced(kb_engine* engine, Take* take, int blocks);
-std::vector<int64_t> DetectClicks(const std::vector<float>& right);
 
 void RunScriptTests(const std::string& stem);
 void RunLockTests(const std::string& stem);

@@ -4,7 +4,9 @@
 #include <vector>
 
 #include "check.h"
+#include "click_take.h"
 #include "metronome/metronome_internal.h"
+#include "mixer/transport_plan.h"
 #include "stem_sync_rate.h"
 
 namespace stem_sync {
@@ -22,14 +24,12 @@ constexpr int kPauseBlocks = 30;
 constexpr int kLoopBlocks = 1500;
 constexpr int kClearBlocks = 300;
 constexpr double kRates[] = {0.5, 0.75};
-constexpr int kMaxShownClicks = 4;
 constexpr double kFireSlackFrames =
-    kitbag::metronome_detail::kGridEpsilon * kRate;
+    kitbag::metronome_detail::kGridEpsilon * kSampleRate;
 
-// The fractional song frame the output should sound, stepped once per frame.
 struct Model {
-  double rate = kUnity;
-  double song = 0.0;
+  double rate = kitbag::kUnityRate;
+  double expected_song_frame = 0.0;
   double previous = 0.0;
   bool landed = true;
   bool playing = false;
@@ -37,26 +37,29 @@ struct Model {
   int64_t frames = 0;
   std::vector<int64_t> clicks;
   int64_t wrong_positions = 0;
+  std::vector<double> beats = Beats();
 };
 
 bool BeatSounds(const Model& model, double beat) {
   if (model.looping && beat > static_cast<double>(kLoopEnd - 1)) return false;
   const double slack = kFireSlackFrames;
-  if (beat > model.song + slack) return false;
-  return model.landed ? beat >= std::floor(model.song) - slack
+  if (beat > model.expected_song_frame + slack) return false;
+  return model.landed ? beat >= std::floor(model.expected_song_frame) - slack
                       : beat > model.previous + slack;
 }
 
 void Step(Model* model) {
-  for (double beat : Beats()) {
+  for (double beat : model->beats) {
     if (BeatSounds(*model, beat)) model->clicks.push_back(model->frames);
   }
-  model->previous = model->song;
+  model->previous = model->expected_song_frame;
   model->landed = false;
-  model->song += model->rate;
-  if (model->looping && model->song >= static_cast<double>(kLoopEnd)) {
-    model->song = static_cast<double>(kLoopStart) +
-                  (model->song - static_cast<double>(kLoopEnd));
+  model->expected_song_frame += model->rate;
+  if (model->looping &&
+      model->expected_song_frame >= static_cast<double>(kLoopEnd)) {
+    model->expected_song_frame =
+        static_cast<double>(kLoopStart) +
+        (model->expected_song_frame - static_cast<double>(kLoopEnd));
     model->landed = true;
   }
 }
@@ -67,8 +70,9 @@ void Render(kb_engine* engine, Model* model, Take* take, int blocks) {
     for (uint32_t f = 0; f < kBlock; ++f, ++model->frames) {
       if (model->playing) Step(model);
     }
-    if (model->playing && kb_mixer_position(engine) !=
-                              static_cast<int64_t>(std::floor(model->song))) {
+    if (model->playing &&
+        kb_mixer_position(engine) !=
+            static_cast<int64_t>(std::floor(model->expected_song_frame))) {
       ++model->wrong_positions;
     }
   }
@@ -76,7 +80,7 @@ void Render(kb_engine* engine, Model* model, Take* take, int blocks) {
 
 void Seek(kb_engine* engine, Model* model, int64_t frame) {
   kb_mixer_seek(engine, frame);
-  model->song = static_cast<double>(frame);
+  model->expected_song_frame = static_cast<double>(frame);
   model->landed = true;
 }
 
@@ -107,30 +111,6 @@ void RunScript(kb_engine* engine, Model* model, Take* take) {
   Render(engine, model, take, kClearBlocks);
 }
 
-bool SameClicks(
-    const std::vector<int64_t>& got,
-    const std::vector<int64_t>& want
-) {
-  bool same = got.size() == want.size();
-  int shown = 0;
-  for (size_t i = 0; i < got.size() && i < want.size(); ++i) {
-    if (got[i] == want[i]) continue;
-    same = false;
-    if (++shown > kMaxShownClicks) continue;
-    std::fprintf(
-        stderr,
-        "  click %zu at %lld, expected %lld\n",
-        i,
-        (long long)got[i],
-        (long long)want[i]
-    );
-  }
-  if (got.size() != want.size()) {
-    std::fprintf(stderr, "  %zu clicks, want %zu\n", got.size(), want.size());
-  }
-  return same;
-}
-
 void TestScriptAtRate(const std::string& stem, double rate) {
   kb_engine* engine = OpenFollowingEngine(stem);
   if (engine == nullptr) return;
@@ -142,7 +122,10 @@ void TestScriptAtRate(const std::string& stem, double rate) {
   kb_engine_destroy(engine);
   const std::string name = "rate " + std::to_string(rate);
   Check(
-      SameClicks(DetectClicks(take.right), model.clicks),
+      click_take::SameClicks(
+          click_take::DetectClicks(take.right),
+          model.clicks
+      ),
       (name + ": seek, pause and loop keep every click on its frame").c_str()
   );
   Check(

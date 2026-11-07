@@ -166,19 +166,6 @@ void TestEngageTransition() {
   CheckSeamClick(run.left, seam, budget);
 }
 
-void CheckSoundsAtOnce(kitbag::Mixer* mixer, const char* label) {
-  const std::vector<float> first = RenderPaced(mixer, 1);
-  const float peak = Loudest(first, mixer->crossfade_frames(), kBlock);
-  Check(peak > kOnsetThreshold, label);
-  if (peak <= kOnsetThreshold) {
-    std::fprintf(
-        stderr,
-        "  first-block peak %.3f\n",
-        static_cast<double>(peak)
-    );
-  }
-}
-
 std::string LoadToneOverSilence(kitbag::Mixer* mixer) {
   LoadPcm(
       mixer,

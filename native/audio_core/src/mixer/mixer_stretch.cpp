@@ -222,7 +222,7 @@ void Mixer::AdvanceStretch(uint32_t take, uint32_t frame_count) {
   out_clock_ += frame_count;
   song_clock_ = {
       .playing = true,
-      .landed = std::exchange(landed_, false),
+      .opens_on_jump = std::exchange(opens_on_jump_, false),
       .first = first,
       .frames = AudibleFrames(first, frame_count),
       .layout = layout_,

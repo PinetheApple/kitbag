@@ -441,7 +441,7 @@ if(KITBAG_BUILD_TOOLS)
   target_link_libraries(metronome_render PRIVATE m)
 
   add_executable(follow_render tools/soak/follow_render_main.cpp)
-  target_include_directories(follow_render PRIVATE tools/media)
+  target_include_directories(follow_render PRIVATE tools tools/media tools/soak)
   target_link_libraries(follow_render PRIVATE kitbag_core)
 
   add_executable(stretch_verify

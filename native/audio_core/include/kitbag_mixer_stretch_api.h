@@ -1,5 +1,5 @@
-#ifndef KITBAG_MIXER_RATE_API_H
-#define KITBAG_MIXER_RATE_API_H
+#ifndef KITBAG_MIXER_STRETCH_API_H
+#define KITBAG_MIXER_STRETCH_API_H
 
 /* Each of this and kitbag_api.h includes the other under its guard, so either
  * order works. */
@@ -37,4 +37,4 @@ KB_EXPORT int32_t kb_mixer_track_pitch(const kb_engine* engine, int32_t track);
 }
 #endif
 
-#endif /* KITBAG_MIXER_RATE_API_H */
+#endif /* KITBAG_MIXER_STRETCH_API_H */

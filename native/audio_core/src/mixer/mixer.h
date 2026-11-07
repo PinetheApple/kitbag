@@ -351,7 +351,7 @@ class Mixer {
   std::atomic<int64_t> transport_frame_{0};
   std::atomic<int64_t> jump_base_{0};
   SongClock song_clock_;
-  bool landed_ = false;
+  bool opens_on_jump_ = false;
   RtPublisher<TransportPlan> plans_;
   uint64_t app_epoch_ = 0;
   LoopLayout app_layout_;

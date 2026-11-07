@@ -5,6 +5,8 @@
 #include <vector>
 
 #include "check.h"
+#include "click_take.h"
+#include "mixer/transport_plan.h"
 #include "stem_sync_rate.h"
 
 namespace stem_sync {
@@ -24,7 +26,8 @@ struct LockCase {
   double rate;
   int32_t semitones;
 };
-constexpr LockCase kCases[] = {{0.5, 0}, {0.75, 0}, {kUnity, 3}, {0.75, -2}};
+constexpr LockCase kCases[] =
+    {{0.5, 0}, {0.75, 0}, {kitbag::kUnityRate, 3}, {0.75, -2}};
 
 double PulseCentre(const Take& take, int64_t around, int64_t half_width) {
   double weight = 0.0;
@@ -63,7 +66,7 @@ Take RenderSong(const std::string& stem, const LockCase& lock) {
 // the song puts the beat, however the vocoder widens the pulse.
 void TestClickLockedToStem(const std::string& stem, const LockCase& lock) {
   const Take take = RenderSong(stem, lock);
-  const std::vector<int64_t> clicks = DetectClicks(take.right);
+  const std::vector<int64_t> clicks = click_take::DetectClicks(take.right);
   const std::string name = "lock " + std::to_string(lock.rate) + "x " +
                            std::to_string(lock.semitones) + " st";
   const bool whole = clicks.size() == static_cast<size_t>(kBeatCount);
@@ -78,7 +81,7 @@ void TestClickLockedToStem(const std::string& stem, const LockCase& lock) {
   for (const int64_t click : clicks) {
     const double offset =
         PulseCentre(take, click, half_width) - static_cast<double>(click);
-    offsets.push_back(offset / kRate * kMsPerSecond);
+    offsets.push_back(offset / kSampleRate * kMsPerSecond);
     worst = std::max(worst, std::fabs(offsets.back()));
   }
   const double drift = std::fabs(offsets.back() - offsets.front());

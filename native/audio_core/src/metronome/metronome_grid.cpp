@@ -195,8 +195,9 @@ void Metronome::RenderGridSample(
   // Below 1.0x a song frame repeats, which is no jump. A new pass lands inside
   // a frame, so seek to its start or a beat right on the loop start is skipped.
   const int64_t step = point.frame - follow_last_frame_;
-  const bool landed = song->landed && frame == 0;
-  if (follow_last_frame_ == kReseedFollow || landed || step < 0 || step > 1) {
+  const bool opens_on_jump = song->opens_on_jump && frame == 0;
+  if (follow_last_frame_ == kReseedFollow || opens_on_jump || step < 0 ||
+      step > 1) {
     SeekGridCursor(grid, whole_frame / sample_rate);
   }
   follow_last_frame_ = point.frame;

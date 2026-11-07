@@ -4,6 +4,7 @@
 #include <string>
 
 #include "metronome/metronome_types.h"
+#include "render_exit.h"
 #include "soak_metronome_render.h"
 #include "wav_fixture.h"
 
@@ -11,8 +12,7 @@ namespace {
 
 constexpr uint32_t kSampleRate = 48000;
 
-// Outside click_soak's 0-5, so soak-analyze.sh's one exit range stays unambiguous.
-enum class RenderExit : int { kWritten = 0, kUsage = 2, kWriteFailed = 8 };
+using click_soak::RenderExit;
 
 bool ParsePositive(const char* text, double* out) {
   char* end = nullptr;
@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
           kSampleRate
       )) {
     std::fprintf(stderr, "metronome_render: cannot write %s\n", argv[1]);
-    return static_cast<int>(RenderExit::kWriteFailed);
+    return static_cast<int>(RenderExit::kFailed);
   }
   return static_cast<int>(RenderExit::kWritten);
 }

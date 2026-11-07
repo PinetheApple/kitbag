@@ -12,18 +12,23 @@
 #include <vector>
 
 #include "check.h"
+#include "click_take.h"
 #include "stem_sync_rate.h"
 #include "wav_fixture.h"
 
 namespace {
 
+using click_take::DetectClicks;
+using click_take::kGapFrames;
+using click_take::kSilence;
+using click_take::SameClicks;
 using kitbag_test::Check;
 using kitbag_test::g_checks;
 using kitbag_test::g_failures;
+using stem_sync::kSampleRate;
+using stem_sync::kStereo;
 
 constexpr int kExpectedChecks = 40;
-constexpr uint32_t kRate = 48000;
-constexpr uint32_t kStereo = 2;
 constexpr uint32_t kBlock = 512;
 constexpr int64_t kStemFrames = 240000;
 // Uneven spacing, so a click on a constant tempo cannot pass for the grid.
@@ -53,8 +58,6 @@ constexpr int64_t kPauseSeek = 87700;
 constexpr int kPauseBlocks = 20;
 // 974.4 frames at 48 kHz, so an offset that were applied would move each click.
 constexpr double kLatencyMs = 20.3;
-constexpr float kSilence = 1e-2f;
-constexpr int64_t kGapFrames = 480;
 constexpr double kHalfFrame = 0.5;
 // Every click is one voice at most an accent; two at once sum to nearly double.
 constexpr float kPeakTolerance = 1.05f;
@@ -94,7 +97,7 @@ kb_engine* OpenEngine(const std::string& stem, double latency_ms) {
   kb_engine* engine = nullptr;
   if (kb_engine_create(&engine) != KB_OK) return nullptr;
   std::vector<double> times;
-  for (double beat : kBeats) times.push_back(beat / kRate);
+  for (double beat : kBeats) times.push_back(beat / kSampleRate);
   kb_mixer_load_track(engine, 0, stem.c_str());
   kb_metronome_set_grid(
       engine,
@@ -152,49 +155,6 @@ std::vector<int64_t> ExpectedClicks(const Take& take) {
     if (take.song[k] >= 0 && IsBeatFrame(take.song[k])) clicks.push_back(k);
   }
   return clicks;
-}
-
-// A voice starts at phase zero, so its trigger frame is the silent one before
-// the first audible sample.
-std::vector<int64_t> DetectClicks(const std::vector<float>& right) {
-  std::vector<int64_t> clicks;
-  int64_t quiet = kGapFrames;
-  for (size_t k = 0; k < right.size(); ++k) {
-    if (std::fabs(right[k]) <= kSilence) {
-      ++quiet;
-      continue;
-    }
-    if (quiet >= kGapFrames) clicks.push_back(static_cast<int64_t>(k) - 1);
-    quiet = 0;
-  }
-  return clicks;
-}
-
-bool SameClicks(
-    const std::vector<int64_t>& got,
-    const std::vector<int64_t>& want
-) {
-  bool same = got.size() == want.size();
-  for (size_t i = 0; i < got.size() && i < want.size(); ++i) {
-    if (got[i] == want[i]) continue;
-    std::fprintf(
-        stderr,
-        "  click %zu at %lld, expected %lld\n",
-        i,
-        (long long)got[i],
-        (long long)want[i]
-    );
-    same = false;
-  }
-  if (got.size() != want.size()) {
-    std::fprintf(
-        stderr,
-        "  %zu clicks, expected %zu\n",
-        got.size(),
-        want.size()
-    );
-  }
-  return same;
 }
 
 // The loop-start beat sounds inside the wrap's crossfade, where the left
@@ -356,8 +316,12 @@ void RunRateSuites() {
 }  // namespace
 
 int main() {
-  const std::string stem =
-      media_test::WriteRampWav("kitbag_stem_sync", kStemFrames, kStereo, kRate);
+  const std::string stem = media_test::WriteRampWav(
+      "kitbag_stem_sync",
+      kStemFrames,
+      kStereo,
+      kSampleRate
+  );
   Check(!stem.empty(), "fixture: the stem WAV writes");
   if (!stem.empty()) {
     TestLatencyOffsetIsIgnored(stem, TestClickFollowsTheStems(stem));

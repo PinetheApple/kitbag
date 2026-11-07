@@ -13,17 +13,9 @@ constexpr int kSettleBlocks = 40;
 // Long enough to pass a hand-over's lead and a pending rate's record spacing.
 constexpr int kWatchBlocks = 120;
 
-void LoadTone(kitbag::Mixer* mixer) {
-  LoadPcm(
-      mixer,
-      0,
-      ToneFixture({.frames = kToneFrames, .steady_hz = kBurstHz})
-  );
-}
-
 bool LandedOnNextBlock(kitbag::Mixer* mixer) {
   RenderPaced(mixer, 1);
-  return mixer->song_clock().landed;
+  return mixer->song_clock().opens_on_jump;
 }
 
 bool LandsAgainWithin(kitbag::Mixer* mixer, int blocks) {
@@ -40,7 +32,7 @@ void CheckSeekLandsOnce(kitbag::Mixer* mixer, const char* once) {
 
 void TestBypass() {
   kitbag::Mixer mixer(kSampleRate);
-  LoadTone(&mixer);
+  LoadTone(&mixer, kToneFrames);
   mixer.Play();
   Check(!LandsAgainWithin(&mixer, kSettleBlocks), "landed: plain play is none");
   CheckSeekLandsOnce(&mixer, "landed: a bypass seek marks one block");
@@ -48,7 +40,7 @@ void TestBypass() {
 
 void TestStretch() {
   kitbag::Mixer mixer(kSampleRate);
-  LoadTone(&mixer);
+  LoadTone(&mixer, kToneFrames);
   mixer.Play();
   RenderPaced(&mixer, kSettleBlocks);
   mixer.SetRate(kSpeed, 0, false);
@@ -69,7 +61,7 @@ void TestStretch() {
 
 void TestSeekWhilePausedWaitsForPlay() {
   kitbag::Mixer mixer(kSampleRate);
-  LoadTone(&mixer);
+  LoadTone(&mixer, kToneFrames);
   mixer.SetRate(kSpeed, 0, false);
   mixer.Play();
   RenderPaced(&mixer, kSettleBlocks);
