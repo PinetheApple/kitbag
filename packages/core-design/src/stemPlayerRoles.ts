@@ -43,6 +43,7 @@ export const stemPlayer = {
   loopFlagRadius: 5,
   loopFlagTop: -22,
   loopNoteGap: 6,
+  loopNoteFlagClearance: 6,
   loopNoteTop: 2,
   transportGap: 18,
   transportKey: 48,

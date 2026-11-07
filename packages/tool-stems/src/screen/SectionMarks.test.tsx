@@ -1,9 +1,15 @@
 import { stemPlayer } from '@kitbag/core-design';
-import { act } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { LANE, NOTE_AT_2X } from '../logic/loopNote.test-helper.ts';
+import { aboveFlagsPadding } from '../logic/loopNotePlacement.ts';
 import { animatedStyleOf } from '../testing/reanimatedDriver.ts';
-import { mountPlayer, type Player } from './playerHarness.test-helper.tsx';
+import {
+  fireLayout,
+  mountPlayer,
+  withTestId,
+  type Player,
+} from './playerHarness.test-helper.tsx';
 
 let player: Player | undefined;
 
@@ -11,12 +17,6 @@ async function open(tab: string | null = null) {
   player = await mountPlayer();
   if (tab !== null) await player.press(tab);
   return player;
-}
-
-function withTestId(p: Player, testID: string) {
-  return p.renderer.root.findAll(
-    (node) => typeof node.type === 'string' && node.props.testID === testID,
-  );
 }
 
 function liveStyle(p: Player, testID: string) {
@@ -66,14 +66,9 @@ describe('the scrub lane', () => {
 
 describe('the loop note', () => {
   const FLAGGED_LATE = 'Loop Outro, 0:08 to 0:12';
-
-  function layout(node: { props: Record<string, unknown> }, box: object) {
-    act(() => {
-      (node.props.onLayout as (e: unknown) => void)({
-        nativeEvent: { layout: box },
-      });
-    });
-  }
+  const NARROW_NOTE = 60;
+  const NOTE_HEIGHT_AT_1X = 16;
+  const NOTE_HEIGHT_AT_2X = 30;
 
   function only(p: Player, testID: string) {
     const [node] = withTestId(p, testID);
@@ -82,9 +77,10 @@ describe('the loop note', () => {
   }
 
   function measured(p: Player, noteWidth: number, noteHeight: number) {
-    layout(only(p, 'scrub-lane'), { width: 328 });
-    layout(only(p, 'scrub-bar'), { x: 82, width: 164 });
-    layout(only(p, 'loop-note'), { width: noteWidth, height: noteHeight });
+    const lane = LANE['360 at 2.0'];
+    fireLayout(only(p, 'scrub-lane'), { width: lane.laneWidth });
+    fireLayout(only(p, 'scrub-bar'), { x: lane.barLeft, width: lane.barWidth });
+    fireLayout(only(p, 'loop-note'), { width: noteWidth, height: noteHeight });
   }
 
   const flat = (node: { props: Record<string, unknown> }) =>
@@ -93,10 +89,9 @@ describe('the loop note', () => {
   it('stands on its own row, clear of the flags, when no side fits', async () => {
     const p = await open('Lyrics');
     await p.press(FLAGGED_LATE);
-    measured(p, 234, 30);
-    const riseToFlag = -(stemPlayer.loopTintInset + stemPlayer.loopFlagTop);
+    measured(p, NOTE_AT_2X, NOTE_HEIGHT_AT_2X);
     expect(flat(only(p, 'scrub-lane')).paddingTop).toBe(
-      stemPlayer.loopNoteTop + 30 + riseToFlag,
+      aboveFlagsPadding(NOTE_HEIGHT_AT_2X),
     );
     expect(flat(only(p, 'loop-note')).right).toBe(0);
   });
@@ -104,7 +99,7 @@ describe('the loop note', () => {
   it('moves to the left of a late loop when it fits there', async () => {
     const p = await open('Lyrics');
     await p.press(FLAGGED_LATE);
-    measured(p, 60, 16);
+    measured(p, NARROW_NOTE, NOTE_HEIGHT_AT_1X);
     const note = flat(only(p, 'loop-note'));
     expect(note.left).toBe(0);
     expect(note.right).toBeUndefined();
@@ -114,7 +109,7 @@ describe('the loop note', () => {
   it('never renders for the playhead, only for the loop', async () => {
     const p = await open('Lyrics');
     await p.press(FLAGGED_LATE);
-    measured(p, 60, 16);
+    measured(p, NARROW_NOTE, NOTE_HEIGHT_AT_1X);
     p.frames(9);
     p.commit.mockClear();
     p.frames(9.5);

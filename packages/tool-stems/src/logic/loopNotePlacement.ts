@@ -14,7 +14,6 @@ export interface LoopNoteInput extends LaneGeometry {
   readonly end: number | null;
 }
 
-// A hangs left of its line and B right of its own, so the flags span past both.
 export function loopNotePlacement({
   laneWidth,
   barLeft,
@@ -24,13 +23,15 @@ export function loopNotePlacement({
   end,
 }: LoopNoteInput): LoopNotePlacement {
   if (start === null || laneWidth === 0) return 'right';
-  const flag = stemPlayer.loopFlagWidth;
-  const clear = stemPlayer.loopNoteGap;
-  const flagsLeft = barLeft + start * barWidth - flag;
-  const flagsRight =
-    end === null ? flagsLeft + flag : barLeft + end * barWidth + flag;
-  if (laneWidth - noteWidth >= flagsRight + clear) return 'right';
-  return noteWidth + clear <= flagsLeft ? 'left' : 'above';
+  const clearance = stemPlayer.loopNoteFlagClearance;
+  const startLine = barLeft + start * barWidth;
+  const startFlagLeft = startLine - stemPlayer.loopFlagWidth;
+  const endFlagRight =
+    end === null
+      ? startLine
+      : barLeft + end * barWidth + stemPlayer.loopFlagWidth;
+  if (laneWidth - noteWidth >= endFlagRight + clearance) return 'right';
+  return noteWidth + clearance <= startFlagLeft ? 'left' : 'above';
 }
 
 export function aboveFlagsPadding(noteHeight: number): number {

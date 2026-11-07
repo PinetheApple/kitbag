@@ -194,7 +194,6 @@ function LoopNote({ placement, onLayout }: LoopNoteProps) {
   );
 }
 
-// Measured once per layout and read only when the loop changes, never per frame.
 function useLoopNotePlacement(loop: LoopState, rate: number, frames: number) {
   const [laneWidth, setLaneWidth] = useState(0);
   const [bar, setBar] = useState({ x: 0, width: 0 });

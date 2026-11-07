@@ -1,17 +1,13 @@
 import { stemPlayer } from '@kitbag/core-design';
 import { describe, expect, it } from 'vitest';
 
-import { loopNotePlacement, type LaneGeometry } from './loopNotePlacement.ts';
+import { LANE, NOTE_AT_1X, NOTE_AT_2X } from './loopNote.test-helper.ts';
+import {
+  aboveFlagsPadding,
+  loopNotePlacement,
+  type LaneGeometry,
+} from './loopNotePlacement.ts';
 
-const LANE: Readonly<Record<string, LaneGeometry>> = {
-  '360 at 1.0': { laneWidth: 328, barLeft: 57, barWidth: 215 },
-  '411 at 1.0': { laneWidth: 379, barLeft: 57, barWidth: 266 },
-  '360 at 2.0': { laneWidth: 328, barLeft: 82, barWidth: 164 },
-  '411 at 2.0': { laneWidth: 379, barLeft: 82, barWidth: 215 },
-};
-// Widths read off the emulator shots of "Outro · 4:08 – 5:11".
-const NOTE_AT_1X = 121;
-const NOTE_AT_2X = 234;
 const LOOPS = {
   early: { start: 0.05, end: 0.15 },
   middle: { start: 0.45, end: 0.55 },
@@ -43,10 +39,8 @@ describe('loopNotePlacement', () => {
     ['411 at 2.0', 'middle', NOTE_AT_2X, 'above'],
     ['411 at 2.0', 'late', NOTE_AT_2X, 'above'],
   ] as const)('%s, %s loop, note %d wide: %s', (lane, loop, width, want) => {
-    const geometry = LANE[lane];
-    if (geometry === undefined) throw new Error(lane);
     expect(
-      loopNotePlacement({ ...geometry, ...LOOPS[loop], noteWidth: width }),
+      loopNotePlacement({ ...LANE[lane], ...LOOPS[loop], noteWidth: width }),
     ).toBe(want);
   });
 
@@ -68,29 +62,67 @@ describe('loopNotePlacement', () => {
   });
 
   it('keeps the drawn place with nothing measured or no flags', () => {
-    const lane = { laneWidth: 0, barLeft: 0, barWidth: 0 };
+    const unmeasured = { laneWidth: 0, barLeft: 0, barWidth: 0 };
     expect(
-      loopNotePlacement({ ...lane, start: 0.8, end: 1, noteWidth: 0 }),
+      loopNotePlacement({ ...unmeasured, start: 0.8, end: 1, noteWidth: 0 }),
     ).toBe('right');
     expect(
       loopNotePlacement({
-        laneWidth: 328,
-        barLeft: 57,
-        barWidth: 215,
+        ...LANE['360 at 1.0'],
         start: null,
         end: null,
-        noteWidth: 300,
+        noteWidth: NOTE_AT_2X,
       }),
     ).toBe('right');
   });
 
   it('clears the one flag of an armed loop', () => {
-    const lane = { laneWidth: 328, barLeft: 57, barWidth: 215 };
+    const lane = LANE['360 at 1.0'];
     expect(
-      loopNotePlacement({ ...lane, start: 0.95, end: null, noteWidth: 121 }),
+      loopNotePlacement({
+        ...lane,
+        start: 0.95,
+        end: null,
+        noteWidth: NOTE_AT_1X,
+      }),
     ).toBe('left');
     expect(
-      loopNotePlacement({ ...lane, start: 0.5, end: null, noteWidth: 121 }),
+      loopNotePlacement({
+        ...lane,
+        start: 0.5,
+        end: null,
+        noteWidth: NOTE_AT_1X,
+      }),
     ).toBe('right');
+  });
+
+  describe('at the edge of a flag', () => {
+    const lane = LANE['360 at 1.0'];
+    const start = 0.5;
+    const end = 0.5;
+    const flag = stemPlayer.loopFlagWidth;
+    const clearance = stemPlayer.loopNoteFlagClearance;
+    const line = lane.barLeft + end * lane.barWidth;
+    const place = (noteWidth: number, loop = { start, end }) =>
+      loopNotePlacement({ ...lane, ...loop, noteWidth });
+
+    it('takes the right only once the note clears the B flag', () => {
+      const roomForAll = lane.laneWidth - (line + flag + clearance);
+      expect(place(roomForAll)).toBe('right');
+      expect(place(roomForAll + flag / 2)).not.toBe('right');
+    });
+
+    it('takes the left only once the note clears the A flag', () => {
+      const wide = { start: 0.5, end: 1 };
+      const roomForAll = line - flag - clearance;
+      expect(place(roomForAll, wide)).toBe('left');
+      expect(place(roomForAll + flag / 2, wide)).toBe('above');
+    });
+  });
+});
+
+describe('aboveFlagsPadding', () => {
+  it('lifts the flags clear of the note', () => {
+    expect(aboveFlagsPadding(30)).toBe(48);
   });
 });
