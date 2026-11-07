@@ -51,6 +51,7 @@ export function result(fields: Partial<AnalysisResult> = {}): AnalysisResult {
     beats: [0.5, 1],
     downbeats: [0],
     waveformRelativePath: 'songs/f1/Everlong.kwav',
+    durationSec: 251.3,
     ...fields,
   };
 }
