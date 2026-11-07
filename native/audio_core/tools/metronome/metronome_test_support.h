@@ -358,6 +358,7 @@ void RunStartAtTests();
 void RunLatencyTests();
 void RunLatencyFreeRunTests();
 void RunGridTests();
+void RunGridBarTests();
 void RunAnchorTests();
 void RunPolyTests();
 void RunPolyRatioTests();
