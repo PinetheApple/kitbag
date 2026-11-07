@@ -1,3 +1,4 @@
+import { countLabel } from '@kitbag/core-design';
 import {
   formatClockSeconds,
   isSungLine,
@@ -6,6 +7,7 @@ import {
   NO_LINE,
   RETIME_SHIFT_STEP_SEC,
   type LyricLine,
+  type RetimeState,
   type RetimeTap,
 } from '@kitbag/core-state';
 
@@ -29,6 +31,22 @@ export function retimeLineLabel(
   const total = String(sungCount(lines));
   if (nextLine === NO_LINE) return `All ${total} lines tapped`;
   return `Line ${String(sungCount(lines, nextLine) + 1)} of ${total}`;
+}
+
+export function retimeUnsaved(retime: RetimeState): boolean {
+  return (
+    retime.kind === 'recording' &&
+    (retime.taps.length > 0 || retime.shiftSteps !== 0)
+  );
+}
+
+export function leaveRetimeBody(taps: number, shiftSteps: number): string {
+  const tapped = taps > 0 ? countLabel(taps, 'tap', 'taps') : null;
+  const shifted = shiftSteps !== 0;
+  const dropped =
+    tapped === null ? 'offset' : shifted ? `${tapped} and offset` : tapped;
+  const verb = taps > 1 || (tapped !== null && shifted) ? 'are' : 'is';
+  return `Your ${dropped} for this song ${verb} dropped. The lyrics keep their current timing.`;
 }
 
 export function tapTimeLabel(seconds: number): string {
