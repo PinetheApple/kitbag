@@ -1,0 +1,1 @@
+Maintenance release. Details: https://github.com/PinetheApple/kitbag/releases/tag/v0.30.8
