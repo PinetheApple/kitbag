@@ -5,6 +5,7 @@ import {
 } from '@kitbag/core-native';
 import {
   configureStemPlayer,
+  type MixerRuntime,
   type StemPlayerCommands,
 } from '@kitbag/core-state';
 
@@ -75,7 +76,7 @@ const commands: StemPlayerCommands = {
   onSongStopped: (handler) => getKitbagCommands().onSongStopped(handler),
 };
 
-configureStemPlayer({
+export const mixerRuntime: MixerRuntime = {
   commands,
   sharedMetronome: {
     active: metronomeTransport.active,
@@ -87,11 +88,15 @@ configureStemPlayer({
     playing: () => getKitbagHostObject().mixer_playing !== 0,
     nowFrame: () => getKitbagHostObject().frames_rendered,
   },
+  readWaveform: (path, buckets) =>
+    getKitbagLibrary().readWaveform(path, buckets),
+};
+
+configureStemPlayer({
+  ...mixerRuntime,
   records: {
     readStemSet: (id) => getDatabase().songLibrary.readStemSet(id),
     saveStemMix: (mixes) => getDatabase().songLibrary.saveStemMix(mixes),
     renameStem: (id, name) => getDatabase().songLibrary.renameStem(id, name),
   },
-  readWaveform: (path, buckets) =>
-    getKitbagLibrary().readWaveform(path, buckets),
 });

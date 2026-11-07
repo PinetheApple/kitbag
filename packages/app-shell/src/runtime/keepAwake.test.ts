@@ -27,6 +27,9 @@ function rig() {
   const stemPlayer = fakeSource<{ status: StemPlayerStatus }>({
     status: 'idle',
   });
+  const songPlayer = fakeSource<{ status: StemPlayerStatus }>({
+    status: 'idle',
+  });
   const appearance = fakeSource({ keepScreenAwake: true });
   const calls: boolean[] = [];
   const engine = { mixerPlaying: false };
@@ -37,6 +40,7 @@ function rig() {
     metronome,
     tuner,
     stemPlayer,
+    songPlayer,
     appearance,
     mixerPlaying: () => engine.mixerPlaying,
     poll: (onTick) => {
@@ -55,6 +59,7 @@ function rig() {
     metronome,
     tuner,
     stemPlayer,
+    songPlayer,
     appearance,
     calls,
     engine,
@@ -99,6 +104,18 @@ describe('wireKeepAwake', () => {
     expect(r.calls).toEqual([]);
     r.tuner.set({ mic: 'listening' });
     r.tuner.set({ mic: 'off' });
+    expect(r.calls).toEqual([true, false]);
+  });
+
+  it('holds the screen while a single song plays and lets go when it closes', () => {
+    const r = rig();
+    r.songPlayer.set({ status: 'ready' });
+    expect(r.polling()).toBe(true);
+    r.engine.mixerPlaying = true;
+    r.tick();
+    expect(r.calls).toEqual([true]);
+    r.songPlayer.set({ status: 'idle' });
+    expect(r.polling()).toBe(false);
     expect(r.calls).toEqual([true, false]);
   });
 

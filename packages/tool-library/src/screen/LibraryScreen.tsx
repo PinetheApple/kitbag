@@ -41,6 +41,7 @@ export interface LibraryScreenProps {
   readonly insets: LibraryScreenInsets;
   readonly onBack: () => void;
   readonly onOpenStemSet: (id: number) => void;
+  readonly onOpenSong: (id: number) => void;
   readonly onOpenSetlists?: () => void;
 }
 
@@ -162,9 +163,10 @@ interface ListProps {
   readonly view: LibraryView;
   readonly menu: LibraryMenu;
   readonly onOpenStemSet: (id: number) => void;
+  readonly onOpenSong: (id: number) => void;
 }
 
-function SongList({ view, menu, onOpenStemSet }: ListProps) {
+function SongList({ view, menu, onOpenStemSet, onOpenSong }: ListProps) {
   const styles = useStyles();
   const rows = useSongLibrary((s) => s.rows);
   const query = useSongLibrary((s) => s.query);
@@ -191,6 +193,7 @@ function SongList({ view, menu, onOpenStemSet }: ListProps) {
           selected={open?.kind === row.kind && open.id === row.id}
           onActions={menu.openActions}
           onOpenStemSet={onOpenStemSet}
+          onOpenSong={onOpenSong}
         />
       ))}
     </View>
@@ -220,7 +223,13 @@ interface BodyProps extends ListProps {
   readonly state: ViewState;
 }
 
-function LibraryBody({ view, state, menu, onOpenStemSet }: BodyProps) {
+function LibraryBody({
+  view,
+  state,
+  menu,
+  onOpenStemSet,
+  onOpenSong,
+}: BodyProps) {
   const startImport = useViewImport(view);
   const text = VIEW_TEXT[view];
   if (state === 'failed') return <LibraryUnavailable />;
@@ -238,7 +247,14 @@ function LibraryBody({ view, state, menu, onOpenStemSet }: BodyProps) {
         onAction={startImport}
       />
     );
-  return <SongList view={view} menu={menu} onOpenStemSet={onOpenStemSet} />;
+  return (
+    <SongList
+      view={view}
+      menu={menu}
+      onOpenStemSet={onOpenStemSet}
+      onOpenSong={onOpenSong}
+    />
+  );
 }
 
 function useEntry() {
@@ -255,6 +271,7 @@ export function LibraryScreen({
   insets,
   onBack,
   onOpenStemSet,
+  onOpenSong,
   onOpenSetlists,
 }: LibraryScreenProps) {
   const styles = useStyles();
@@ -301,6 +318,7 @@ export function LibraryScreen({
             state={state}
             menu={menu}
             onOpenStemSet={onOpenStemSet}
+            onOpenSong={onOpenSong}
           />
         </ScrollView>
       </View>

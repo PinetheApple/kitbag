@@ -4,14 +4,20 @@ import { describe, expect, it, vi } from 'vitest';
 import { TOOL_ID } from '../home/registry.ts';
 import { stopWhenSwitchedOff, toolStoppers } from './toolStoppers.ts';
 
-function fakeTools(running: boolean, stemSetId: number | null) {
+function fakeTools(
+  running: boolean,
+  stemSetId: number | null,
+  songId: number | null = null,
+) {
   const release = vi.fn();
   const close = vi.fn();
+  const closeSong = vi.fn();
   const stoppers = toolStoppers({
     metronome: { active: () => running, release },
     stemPlayer: { getState: () => ({ setId: stemSetId, close }) },
+    songPlayer: { getState: () => ({ songId, close: closeSong }) },
   });
-  return { stoppers, release, close };
+  return { stoppers, release, close, closeSong };
 }
 
 describe('toolStoppers', () => {
@@ -37,6 +43,18 @@ describe('toolStoppers', () => {
     const { stoppers, close } = fakeTools(false, null);
     stoppers[TOOL_ID.stems]?.();
     expect(close).not.toHaveBeenCalled();
+  });
+
+  it('closes an open song when the library goes off', () => {
+    const { stoppers, closeSong } = fakeTools(false, null, 3);
+    stoppers[TOOL_ID.library]?.();
+    expect(closeSong).toHaveBeenCalledOnce();
+  });
+
+  it('does nothing when no song is open', () => {
+    const { stoppers, closeSong } = fakeTools(false, null);
+    stoppers[TOOL_ID.library]?.();
+    expect(closeSong).not.toHaveBeenCalled();
   });
 });
 

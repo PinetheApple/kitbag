@@ -1,10 +1,14 @@
 import { KB_RESULT } from '@kitbag/core-native';
-import { configureStemPlayer, UNITY_GAIN } from '@kitbag/core-state';
+import {
+  configureStemPlayer,
+  UNITY_GAIN,
+  type MixerRuntime,
+} from '@kitbag/core-state';
 
 const noEngine = () => Promise.resolve<number>(KB_RESULT.KB_ERROR_INTERNAL);
 const ignore = () => undefined;
 
-configureStemPlayer({
+export const mixerRuntime: MixerRuntime = {
   commands: {
     start: noEngine,
     engineHold: noEngine,
@@ -38,10 +42,14 @@ configureStemPlayer({
     playing: () => false,
     nowFrame: () => 0,
   },
+  readWaveform: () => Promise.reject(new Error('No waveforms on web')),
+};
+
+configureStemPlayer({
+  ...mixerRuntime,
   records: {
     readStemSet: () => Promise.resolve(undefined),
     saveStemMix: () => Promise.resolve(),
     renameStem: () => Promise.resolve(),
   },
-  readWaveform: () => Promise.reject(new Error('No waveforms on web')),
 });

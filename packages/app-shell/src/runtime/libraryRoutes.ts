@@ -20,6 +20,9 @@ export function useLibraryRoutes() {
       openStemSet: (id: number) => {
         router.push(`/stems/${String(id)}`);
       },
+      openSong: (id: number) => {
+        router.push(`/library/${String(id)}`);
+      },
       openPreset: (id: number) => {
         router.push(`/presets/${String(id)}`);
       },
