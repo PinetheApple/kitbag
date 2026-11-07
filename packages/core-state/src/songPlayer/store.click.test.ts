@@ -28,4 +28,13 @@ describe("the song player's click bars", () => {
     await store.getState().toggleClick();
     expect(commands.setGrid).toHaveBeenCalledWith(BEATS, [3], 0);
   });
+
+  it('drops downbeats the engine would refuse, keeping the click', async () => {
+    const { commands, store } = await openedSong(
+      songRecord({ beats: BEATS, downbeatIndices: [-1, 1, 1.5, 3, 2, 3, 5] }),
+    );
+    await store.getState().toggleClick();
+    expect(commands.setGrid).toHaveBeenCalledWith(BEATS, [1, 3, 5], 0);
+    expect(store.getState().click).toBe(true);
+  });
 });

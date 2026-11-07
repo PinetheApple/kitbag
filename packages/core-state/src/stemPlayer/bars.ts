@@ -1,6 +1,5 @@
 import type { BarMark } from '@kitbag/core-db';
 
-// A mark opens a run of bars that lasts until the next mark or the grid's end.
 export function barMarkDownbeats(
   bars: readonly BarMark[],
   beatCount: number,
@@ -13,4 +12,18 @@ export function barMarkDownbeats(
       downbeats.push(beat);
   });
   return downbeats;
+}
+
+// set_grid refuses the whole grid for one bad index, which would lose the click.
+export function usableDownbeats(
+  indices: readonly number[],
+  beatCount: number,
+): readonly number[] {
+  const kept: number[] = [];
+  for (const index of indices) {
+    const previous = kept.at(-1) ?? -1;
+    if (Number.isInteger(index) && index > previous && index < beatCount)
+      kept.push(index);
+  }
+  return kept;
 }

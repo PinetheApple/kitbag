@@ -1,5 +1,6 @@
 import { KB_RESULT } from '@kitbag/core-native';
 
+import { usableDownbeats } from './bars.ts';
 import { clickGrid } from './loop.ts';
 import type { MixerSessionContext } from './mixerSession.ts';
 import type { MixerRuntime } from './runtime.ts';
@@ -41,9 +42,7 @@ export function clickActions({
     const { commands, engine, sharedMetronome } = runtimeOf();
     const grid = clickGrid(get().beats);
     if (grid.length === 0) return;
-    const downbeats = get().downbeatIndices.filter(
-      (beat) => beat < grid.length,
-    );
+    const downbeats = usableDownbeats(get().downbeatIndices, grid.length);
     if (sharedMetronome.active()) sharedMetronome.release();
     const { result, live } = await call(() =>
       commands.setGrid(grid, downbeats, GRID_ANCHOR_FRAME),
