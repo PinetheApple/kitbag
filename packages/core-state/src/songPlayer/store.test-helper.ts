@@ -43,10 +43,14 @@ export function fakeSongRuntime(song: SongRecord = songRecord()) {
   const records = {
     readSong: vi.fn(() => Promise.resolve<SongRecord | undefined>(song)),
   };
+  const library = {
+    correctDuration: vi.fn(() => Promise.resolve()),
+  };
   const readWaveform = vi.fn(() => Promise.resolve<readonly number[]>([0.5]));
   const runtime: SongPlayerRuntime = {
     commands,
     records,
+    library,
     readWaveform,
     engine: fake.runtime.engine,
     sharedMetronome: fake.sharedMetronome,
@@ -56,6 +60,7 @@ export function fakeSongRuntime(song: SongRecord = songRecord()) {
     runtime,
     commands,
     records,
+    library,
     readWaveform,
     metronomeSetters,
   };

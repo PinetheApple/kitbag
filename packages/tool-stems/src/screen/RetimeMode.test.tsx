@@ -1,43 +1,29 @@
 import { KB_MIXER_UNITY_RATE, KB_RESULT } from '@kitbag/core-native';
 import { RETIME_PLAYBACK_RATE } from '@kitbag/core-state';
-import { act } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { pressHardwareBack } from '../testing/reactNativeHosts.ts';
 import {
+  CLOSE,
+  DIALOG_TITLE,
   flush,
-  mountPlayer,
+  LATER,
+  mountTracked,
+  NOT_SAVED,
+  PAD,
   PLAIN_LYRICS,
+  RESET,
+  RETIME,
+  retiming,
+  SAVE,
   SONG_DETAILS,
+  UNDO_TAP,
+  unmountTracked,
   withTestId,
-  type Player,
 } from './playerHarness.test-helper.tsx';
 
-const RETIME = 'Retime lyrics';
-const PAD = 'Tap as this line starts';
-const UNDO_TAP = 'Undo tap';
-const LATER = 'Shift all lines later';
 const EARLIER = 'Shift all lines earlier';
-const RESET = 'Reset to bundle timing';
-const CLOSE = 'Close retime';
-const SAVE = 'Save';
-const NOT_SAVED = 'Timing not saved. Your taps are still here, try again.';
-const DIALOG_TITLE = 'Reset to bundle timing?';
 const slowed = (line: string) => `${line} · playing at 0.75×`;
-
-let player: Player | undefined;
-
-async function retiming(change = SONG_DETAILS) {
-  player = await mountPlayer(change);
-  await player.press('Lyrics');
-  await player.press(RETIME);
-  return player;
-}
-
-afterEach(() => {
-  player?.unmount();
-  player = undefined;
-});
 
 describe('opening retime', () => {
   it('takes over the screen and starts playback', async () => {
@@ -57,7 +43,7 @@ describe('opening retime', () => {
 
   it('claims no speed when the mixer refused it', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    player = await mountPlayer(SONG_DETAILS);
+    const player = await mountTracked(SONG_DETAILS);
     player.commands.mixerSetRate.mockResolvedValueOnce(KB_RESULT.KB_ERROR_BUSY);
     await player.press('Lyrics');
     await player.press(RETIME);
@@ -70,8 +56,7 @@ describe('opening retime', () => {
   it('restores the speed when the screen goes away mid-retime', async () => {
     const p = await retiming();
     await flush();
-    p.unmount();
-    player = undefined;
+    unmountTracked();
     await flush();
     expect(p.commands.mixerSetRate.mock.calls).toEqual([
       [RETIME_PLAYBACK_RATE],
@@ -80,7 +65,7 @@ describe('opening retime', () => {
   });
 
   it('starts at the line playing now', async () => {
-    player = await mountPlayer(SONG_DETAILS);
+    const player = await mountTracked(SONG_DETAILS);
     await player.press('Lyrics');
     player.frames(3.6);
     await player.press(RETIME);
@@ -89,7 +74,10 @@ describe('opening retime', () => {
   });
 
   it('opens from tap along on a plain-only song', async () => {
-    player = await mountPlayer({ ...SONG_DETAILS, lyrics: PLAIN_LYRICS });
+    const player = await mountTracked({
+      ...SONG_DETAILS,
+      lyrics: PLAIN_LYRICS,
+    });
     await player.press('Lyrics');
     await player.press('Tap along to sync');
     expect(player.has(slowed('Line 1 of 3'))).toBe(true);
@@ -192,76 +180,6 @@ describe('Save', () => {
     expect(p.store.getState().retime.kind).toBe('off');
     expect(p.has(NOT_SAVED)).toBe(false);
     warn.mockRestore();
-  });
-});
-
-describe('leaving', () => {
-  it('drops the session from the close button, writing nothing', async () => {
-    const p = await retiming();
-    await p.touchDown(PAD);
-    await p.press(CLOSE);
-    expect(p.store.getState().retime.kind).toBe('off');
-    expect(p.records.saveLyricsRetimed).not.toHaveBeenCalled();
-    expect(p.labelled(RETIME)).toHaveLength(1);
-  });
-
-  it('holds Back while a save runs, and a failed save still shows', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    const p = await retiming();
-    let refuse: (reason: Error) => void = () => undefined;
-    p.records.saveLyricsRetimed.mockReturnValueOnce(
-      new Promise((_, reject) => {
-        refuse = reject;
-      }),
-    );
-    await p.touchDown(PAD);
-    await p.press(SAVE);
-    expect(pressHardwareBack()).toBe(true);
-    expect(p.store.getState().retime.kind).toBe('recording');
-    refuse(new Error('disk'));
-    await flush();
-    expect(p.has(NOT_SAVED)).toBe(true);
-    expect(p.store.getState().retime).toMatchObject({
-      taps: [expect.anything()],
-    });
-    warn.mockRestore();
-  });
-
-  it('drops the reset dialog when a save ends the session under it', async () => {
-    const p = await retiming();
-    await p.touchDown(PAD);
-    await p.press(RESET);
-    expect(p.has(DIALOG_TITLE)).toBe(true);
-    await act(async () => {
-      await p.store.getState().commitRetime();
-    });
-    await p.press(RETIME);
-    expect(p.store.getState().retime.kind).toBe('recording');
-    expect(p.has(DIALOG_TITLE)).toBe(false);
-  });
-
-  it('cancels on the back gesture and keeps the screen', async () => {
-    const p = await retiming();
-    await p.touchDown(PAD);
-    expect(pressHardwareBack()).toBe(true);
-    expect(p.store.getState().retime.kind).toBe('off');
-    expect(p.onBack).not.toHaveBeenCalled();
-    expect(p.records.saveLyricsRetimed).not.toHaveBeenCalled();
-    expect(pressHardwareBack()).toBe(false);
-  });
-
-  it('goes through leaveRetime when the screen goes', async () => {
-    const p = await retiming();
-    await p.touchDown(PAD);
-    const { leaveRetime } = p.store.getState();
-    const leave = vi.fn(leaveRetime);
-    p.store.setState({ leaveRetime: leave });
-    p.unmount();
-    player = undefined;
-    p.store.setState({ leaveRetime });
-    expect(leave).toHaveBeenCalled();
-    expect(p.store.getState().retime.kind).toBe('off');
-    expect(p.records.saveLyricsRetimed).not.toHaveBeenCalled();
   });
 });
 
