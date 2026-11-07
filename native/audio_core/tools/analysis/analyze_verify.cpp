@@ -28,6 +28,7 @@ void RunDownbeatTests(const std::filesystem::path& dir);
 void RunEquivalenceTests(const std::filesystem::path& dir);
 void RunWritePeaksTests(const std::filesystem::path& dir);
 void RunLongGridTests();
+void RunLengthTests(const std::filesystem::path& dir);
 }  // namespace analyze_test
 
 namespace {
@@ -241,7 +242,7 @@ void RunGuardTests() {
 
 }  // namespace
 
-constexpr int kExpectedChecks = 88;
+constexpr int kExpectedChecks = 97;
 
 int main() {
   const std::filesystem::path dir = std::filesystem::temp_directory_path();
@@ -252,6 +253,7 @@ int main() {
   TestWaveformNonFinite();
   analyze_test::RunWritePeaksTests(dir);
   analyze_test::RunLongGridTests();
+  analyze_test::RunLengthTests(dir);
 
   if (kitbag_test::g_checks != kExpectedChecks) {
     std::fprintf(

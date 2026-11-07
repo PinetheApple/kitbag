@@ -201,6 +201,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       putArray("beats", Arguments.createArray().apply { beats.forEach { pushDouble(it.toDouble()) } })
       putArray("downbeats", Arguments.createArray().apply { downbeats.forEach { pushInt(it) } })
       putString("waveformRelativePath", waveformRelativePath)
+      putDouble("durationSec", durationSec)
     }
 
   override fun deleteLibraryFile(relativePath: String, promise: Promise) {

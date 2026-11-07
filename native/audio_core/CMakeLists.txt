@@ -376,6 +376,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/analysis/analyze_test_equivalence.cpp
     tools/analysis/analyze_test_write_peaks.cpp
     tools/analysis/analyze_test_long_grid.cpp
+    tools/analysis/analyze_test_length.cpp
     src/api/api_analysis.cpp
     src/analysis/song_analysis.cpp
     src/analysis/downbeat.cpp

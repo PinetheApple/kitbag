@@ -1,5 +1,6 @@
 package com.kitbag.corenative.library
 
+import java.io.DataOutputStream
 import java.io.File
 import java.nio.file.Files
 import org.junit.After
@@ -29,7 +30,26 @@ class AnalysisStoreTest {
   }
 
   private fun analysed(path: String) =
-    AnalysisResult(path, true, "", 121.5f, floatArrayOf(0.25f, 0.75f, 1.25f), intArrayOf(0, 2), "waves/a.kwav")
+    AnalysisResult(
+      path, true, "", 121.5f, floatArrayOf(0.25f, 0.75f, 1.25f), intArrayOf(0, 2), "waves/a.kwav", DURATION_SEC,
+    )
+
+  private fun writeWithoutDuration(path: String) {
+    File(dir, "results").mkdirs()
+    val file = File(dir, "results/${AnalysisStore.fileStem(path)}.result")
+    DataOutputStream(file.outputStream()).use { out ->
+      out.writeInt(FORMAT_VERSION_NO_DURATION)
+      out.writeUTF(path)
+      out.writeBoolean(true)
+      out.writeUTF("")
+      out.writeFloat(121.5f)
+      out.writeInt(1)
+      out.writeFloat(0.25f)
+      out.writeInt(1)
+      out.writeInt(0)
+      out.writeUTF("waves/a.kwav")
+    }
+  }
 
   @Test
   fun `a stored result reads back field for field`() {
@@ -42,6 +62,19 @@ class AnalysisStoreTest {
     assertArrayEquals(floatArrayOf(0.25f, 0.75f, 1.25f), read.beats, 0f)
     assertArrayEquals(intArrayOf(0, 2), read.downbeats)
     assertEquals("waves/a.kwav", read.waveformRelativePath)
+    assertEquals(DURATION_SEC, read.durationSec, 0.0)
+  }
+
+  @Test
+  fun `a result stored before durations reads back with an unknown duration`() {
+    writeWithoutDuration("songs/1/a.mp3")
+    val read = store.pending().single()
+    assertTrue(read.ok)
+    assertEquals(121.5f, read.bpm)
+    assertArrayEquals(floatArrayOf(0.25f), read.beats, 0f)
+    assertArrayEquals(intArrayOf(0), read.downbeats)
+    assertEquals("waves/a.kwav", read.waveformRelativePath)
+    assertEquals(AnalysisResult.UNKNOWN_DURATION_SEC, read.durationSec, 0.0)
   }
 
   @Test
@@ -52,6 +85,7 @@ class AnalysisStoreTest {
     assertEquals("boom", read.error)
     assertEquals("songs/é ü.mp3", read.relativePath)
     assertEquals(0, read.beats.size)
+    assertEquals(AnalysisResult.UNKNOWN_DURATION_SEC, read.durationSec, 0.0)
   }
 
   @Test
@@ -148,5 +182,10 @@ class AnalysisStoreTest {
     assertNull(AnalysisRun.execute(store, "b.mp3", { stopped }) { stopped = true; analysed("b.mp3") })
     assertTrue(store.pending().isEmpty())
     assertEquals(0, store.interruptedAttempts("b.mp3"))
+  }
+
+  private companion object {
+    const val FORMAT_VERSION_NO_DURATION = 1
+    const val DURATION_SEC = 4999.0 / 44100.0
   }
 }

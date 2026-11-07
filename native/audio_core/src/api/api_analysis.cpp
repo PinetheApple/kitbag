@@ -49,15 +49,33 @@ kb_result AnalyzeFile(
   return kitbag::AnalyzeSong(reader, path, waveform_dir, out);
 }
 
+struct AnalysisOutputs {
+  float* bpm;
+  float* beat_times;
+  int32_t beat_times_cap;
+  int32_t* beat_count;
+  int32_t* downbeat_indices;
+  int32_t* downbeat_count;
+  double* duration_sec;
+
+  bool Valid() const {
+    return bpm != nullptr && beat_times != nullptr && beat_count != nullptr &&
+           downbeat_indices != nullptr && downbeat_count != nullptr &&
+           duration_sec != nullptr;
+  }
+
+  void Clear() const {
+    *bpm = 0.0f;
+    *beat_count = 0;
+    *downbeat_count = 0;
+    *duration_sec = 0.0;
+  }
+};
+
 kb_result AnalyzeInto(
     const char* path,
-    float* bpm_out,
-    float* beat_times_buf,
-    int32_t beat_times_cap,
-    int32_t* beat_count_out,
-    int32_t* downbeat_indices_out,
-    int32_t* downbeat_count_out,
-    const char* waveform_dir
+    const char* waveform_dir,
+    const AnalysisOutputs& out
 ) {
   kitbag::BeatResult result;
   const kb_result status = AnalyzeFile(path, waveform_dir, &result);
@@ -65,15 +83,16 @@ kb_result AnalyzeInto(
     return status;
   }
 
-  *bpm_out = result.bpm;
+  *out.bpm = result.bpm;
+  *out.duration_sec = result.duration_sec;
   const int beat_count =
-      CopyBeatTimes(result.beat_times, beat_times_buf, beat_times_cap);
-  *beat_count_out = beat_count;
-  *downbeat_count_out = CopyDownbeats(
+      CopyBeatTimes(result.beat_times, out.beat_times, out.beat_times_cap);
+  *out.beat_count = beat_count;
+  *out.downbeat_count = CopyDownbeats(
       result.downbeat_indices,
       beat_count,
-      downbeat_indices_out,
-      beat_times_cap
+      out.downbeat_indices,
+      out.beat_times_cap
   );
   return KB_OK;
 }
@@ -90,35 +109,26 @@ kb_result kb_analyze_song(
     int32_t* beat_count_out,
     int32_t* downbeat_indices_out,
     int32_t* downbeat_count_out,
+    double* duration_sec_out,
     const char* waveform_dir
 ) {
-  if (path == nullptr || bpm_out == nullptr || beat_times_buf == nullptr ||
-      beat_count_out == nullptr || downbeat_indices_out == nullptr ||
-      downbeat_count_out == nullptr) {
-    return KB_ERROR_INVALID_ARGUMENT;
-  }
-
-  *bpm_out = 0.0f;
-  *beat_count_out = 0;
-  *downbeat_count_out = 0;
-
+  const AnalysisOutputs out = {
+      bpm_out,
+      beat_times_buf,
+      beat_times_cap,
+      beat_count_out,
+      downbeat_indices_out,
+      downbeat_count_out,
+      duration_sec_out,
+  };
+  if (path == nullptr || !out.Valid()) return KB_ERROR_INVALID_ARGUMENT;
+  out.Clear();
   // An exception must not cross the C ABI: an allocation failure has to fail
   // the call, not terminate the app.
   try {
-    return AnalyzeInto(
-        path,
-        bpm_out,
-        beat_times_buf,
-        beat_times_cap,
-        beat_count_out,
-        downbeat_indices_out,
-        downbeat_count_out,
-        waveform_dir
-    );
+    return AnalyzeInto(path, waveform_dir, out);
   } catch (...) {
-    *bpm_out = 0.0f;
-    *beat_count_out = 0;
-    *downbeat_count_out = 0;
+    out.Clear();
     return KB_ERROR_INTERNAL;
   }
 }

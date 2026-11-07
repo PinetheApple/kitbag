@@ -166,6 +166,7 @@ kb_result AnalyzeSong(
 
   const int rate = static_cast<int>(reader.sample_rate());
   *out = BeatTracker().AnalyzeFlux(std::move(first.flux), rate);
+  out->duration_sec = static_cast<double>(first.frames) / rate;
   SecondPass second =
       PlanSecondPass(*out, first.frames, channels, rate, waveform_dir);
   if (second.downbeats == nullptr && second.peaks == nullptr) return KB_OK;

@@ -41,6 +41,7 @@ export type AnalysisResult = Readonly<{
   beats: readonly Double[];
   downbeats: readonly Int32[];
   waveformRelativePath: string;
+  durationSec: Double;
 }>;
 
 export type StemBundleCheck = Readonly<{
