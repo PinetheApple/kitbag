@@ -312,6 +312,17 @@ describe('realtime values (SPEC §13.3)', () => {
     expect(paddingBottom).toBe(6);
   });
 
+  it('draws no bar beside the current line', async () => {
+    const p = await open();
+    p.frames(3.6);
+    const [row] = p.renderer.root.findAll(
+      (n) => typeof n.type === 'string' && n.props.testID === 'lyric-line-2',
+    );
+    expect(
+      row?.children.map((child) => (child as { type: string }).type),
+    ).toEqual(['Text']);
+  });
+
   it('marks only the current card as current', async () => {
     const p = await open();
     p.frames(5);

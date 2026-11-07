@@ -6,11 +6,11 @@ import {
   useReduceMotion,
 } from '@kitbag/core-design';
 import { lyricLineAt, NO_LINE, useStemPlayer } from '@kitbag/core-state';
-import { memo, useCallback, useMemo, useRef } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { ScrollView, Text, View, type LayoutChangeEvent } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 
-import { lyricRows } from '../logic/lyricRows.ts';
+import { followedLine, lyricRows } from '../logic/lyricRows.ts';
 import { useCrossedIndex } from './useCrossedIndex.ts';
 
 export const useLyricStyles = createThemedStyles((theme) => ({
@@ -34,36 +34,29 @@ export const useLyricStyles = createThemedStyles((theme) => ({
     color: theme.color.text,
   },
   currentRow: { marginVertical: stemSections.currentMargin },
-  bar: {
-    position: 'absolute',
-    left: -stemSections.linesLeft,
-    top: stemSections.currentBarInset,
-    bottom: stemSections.currentBarInset,
-    width: stemSections.currentBarWidth,
-    borderRadius: stemSections.currentBarRadius,
-    backgroundColor: theme.color.accent,
-  },
 }));
 
 interface LineRowProps {
   readonly line: number;
   readonly text: string;
   readonly current: boolean;
-  readonly onCurrentLayout: (y: number) => void;
+  readonly followed: boolean;
+  readonly onRowLayout: (line: number, y: number, followed: boolean) => void;
 }
 
 const LineRow = memo(function LineRow({
   line,
   text,
   current,
-  onCurrentLayout,
+  followed,
+  onRowLayout,
 }: LineRowProps) {
   const styles = useLyricStyles();
   const onLayout = useCallback(
     (event: LayoutChangeEvent) => {
-      if (current) onCurrentLayout(event.nativeEvent.layout.y);
+      onRowLayout(line, event.nativeEvent.layout.y, followed);
     },
-    [current, onCurrentLayout],
+    [line, followed, onRowLayout],
   );
   return (
     <View
@@ -71,7 +64,6 @@ const LineRow = memo(function LineRow({
       style={current && styles.currentRow}
       onLayout={onLayout}
     >
-      {current ? <View style={styles.bar} /> : null}
       <Text style={[styles.line, current && styles.current]}>{text}</Text>
     </View>
   );
@@ -88,13 +80,14 @@ export function StageLyrics({
   const reduceMotion = useReduceMotion();
   const rows = useMemo(() => lyricRows(lines, sections), [lines, sections]);
   const current = useCrossedIndex(songSec, lines, lyricLineAt, NO_LINE);
+  const followed = followedLine(lines, current);
   const list = useRef<ScrollView>(null);
   const viewport = useRef(0);
+  const rowTops = useRef(new Map<number, number>());
   const onViewport = useCallback((event: LayoutChangeEvent) => {
     viewport.current = event.nativeEvent.layout.height;
   }, []);
-  // A line changes height as it becomes current, so this fires on every crossing.
-  const follow = useCallback(
+  const scrollToRow = useCallback(
     (y: number) => {
       list.current?.scrollTo({
         y: Math.max(0, y - viewport.current * stemSections.followAtFraction),
@@ -103,6 +96,25 @@ export function StageLyrics({
     },
     [reduceMotion],
   );
+  // A line changes height as it becomes current, so a crossing onto one lays out.
+  const onRowLayout = useCallback(
+    (line: number, y: number, isFollowed: boolean) => {
+      rowTops.current.set(line, y);
+      if (isFollowed) scrollToRow(y);
+    },
+    [scrollToRow],
+  );
+  // A blank line has no row and so no layout: this is the only way to its place.
+  const onSungLine = followed === current && current !== NO_LINE;
+  useEffect(() => {
+    if (onSungLine) return;
+    if (followed === NO_LINE) {
+      list.current?.scrollTo({ y: 0, animated: !reduceMotion });
+      return;
+    }
+    const y = rowTops.current.get(followed);
+    if (y !== undefined) scrollToRow(y);
+  }, [onSungLine, followed, current, reduceMotion, scrollToRow]);
   return (
     <ScrollView
       ref={list}
@@ -122,7 +134,8 @@ export function StageLyrics({
             line={row.line}
             text={row.text}
             current={row.line === current}
-            onCurrentLayout={follow}
+            followed={row.line === followed}
+            onRowLayout={onRowLayout}
           />
         ),
       )}

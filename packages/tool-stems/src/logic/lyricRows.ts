@@ -1,6 +1,8 @@
 import {
+  firstRetimeLine,
   formatClockSeconds,
   isSungLine,
+  NO_LINE,
   NO_SECTION,
   sectionAt,
   type LyricLine,
@@ -39,4 +41,11 @@ export function lyricRows(
     rows.push({ kind: 'line', key: `l${String(line)}`, line, text });
   });
   return rows;
+}
+
+export function followedLine(
+  lines: readonly LyricLine[],
+  current: number,
+): number {
+  return current === NO_LINE ? NO_LINE : firstRetimeLine(lines, current);
 }
