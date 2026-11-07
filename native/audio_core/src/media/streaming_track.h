@@ -8,6 +8,7 @@
 
 #include "media/audio_source.h"
 #include "media/loop_layout.h"
+#include "rt/frame_clock.h"
 #include "rt/rt_publisher.h"
 #include "rt/spsc_bulk_ring.h"
 
@@ -69,11 +70,11 @@ class StreamingTrack {
     );
   }
 
-  /// Load a file, streamed from disk from stream frame [frame]. [now_frame] and
+  /// Load a file, streamed from disk from stream frame [frame]. [clock] and
   /// [engine_running] date the retired source for deferred reclamation.
   bool Load(
       const char* path,
-      uint64_t now_frame,
+      FrameClock clock,
       bool engine_running,
       const SourceStamp& stamp = {},
       uint64_t frame = 0
@@ -82,14 +83,14 @@ class StreamingTrack {
   /// discipline as Load; false on null reader or a source wider than stereo.
   bool LoadReader(
       SourceReader* reader,
-      uint64_t now_frame,
+      FrameClock clock,
       bool engine_running,
       const SourceStamp& stamp = {},
       uint64_t frame = 0
   );
   /// Retire the source: publishes an empty node so the drain reads nothing, and
   /// the old source is reclaimed off the callback, never freed on it.
-  void Unload(uint64_t now_frame, bool engine_running);
+  void Unload(FrameClock clock, bool engine_running);
   bool ready() const {
     return published_.Get() != nullptr;
   }
@@ -103,13 +104,13 @@ class StreamingTrack {
   /// Seek to [frame] at the engine rate. Returns false only when a live rebuild
   /// failed and the old source was resumed in place, so the owner can suppress
   /// the transport jump; true otherwise, including when nothing is loaded.
-  bool Seek(uint64_t frame, uint64_t now_frame, bool engine_running);
+  bool Seek(uint64_t frame, FrameClock clock, bool engine_running);
   /// Builds, unpublished, a source at stream frame [frame], started and primed
   /// if [start_read_ahead] or the live one runs. False if the build failed.
   bool Stage(uint64_t frame, const SourceStamp& stamp, bool start_read_ahead);
   /// Publishes what Stage built. Joining the replaced source's read-ahead is
   /// left to StopPrevious, so commits across tracks land microseconds apart.
-  void CommitStaged(uint64_t now_frame, bool engine_running);
+  void CommitStaged(FrameClock clock, bool engine_running);
   void StopPrevious();
   /// Discards what Stage built and resumes the live source's read-ahead.
   void DropStaged();
@@ -129,6 +130,9 @@ class StreamingTrack {
   }
   bool at_end() const {
     return live_source_ == nullptr || live_source_->is_at_end();
+  }
+  size_t retired_sources() const {
+    return published_.retired_size();
   }
   /// App thread, callback quiescent. Frees sources retired but not yet reclaimed.
   void ReleaseRetiredSources() {
@@ -201,7 +205,7 @@ class StreamingTrack {
   bool BuildSource(Source& s, SourceReader* base, const SourceStamp& stamp);
   bool SeekBuilt(Source& s, uint64_t frame);
   void
-  Publish(std::unique_ptr<Source> s, uint64_t now_frame, bool engine_running);
+  Publish(std::unique_ptr<Source> s, FrameClock clock, bool engine_running);
   void Prime(const Source& s);
   // App thread. A fresh source at `target`, never a Clear on a ring the
   // callback may read (#25), so it is safe while the old source is live.
@@ -212,7 +216,7 @@ class StreamingTrack {
   );
   // App thread. Stops the old source, then swaps in a BuildReseekSource node.
   // Returns false if the rebuild failed and the old source was resumed in place.
-  bool ReseekLive(uint64_t frame, uint64_t now_frame, bool engine_running);
+  bool ReseekLive(uint64_t frame, FrameClock clock, bool engine_running);
 
   RtPublisher<Source> published_;
   AudioSource* live_source_ = nullptr;  // app thread; == the published source

@@ -70,7 +70,7 @@ bool StreamingTrack::SeekBuilt(Source& s, uint64_t frame) {
 
 void StreamingTrack::Publish(
     std::unique_ptr<Source> s,
-    uint64_t now_frame,
+    FrameClock clock,
     bool engine_running
 ) {
   // The source pointee survives the move into the publisher node, so this raw
@@ -78,12 +78,12 @@ void StreamingTrack::Publish(
   live_source_ = s->source.get();
   live_num_frames_ = s->num_frames;
   num_frames_.store(s->num_frames, std::memory_order_relaxed);
-  published_.Publish(std::move(s), now_frame, engine_running);
+  published_.Publish(std::move(s), clock.Now(), engine_running);
 }
 
 bool StreamingTrack::Load(
     const char* path,
-    uint64_t now_frame,
+    FrameClock clock,
     bool engine_running,
     const SourceStamp& stamp,
     uint64_t frame
@@ -98,13 +98,13 @@ bool StreamingTrack::Load(
   s->owned_reader = std::move(reader);
   load_path_ = path;
   ext_reader_ = nullptr;
-  Publish(std::move(s), now_frame, engine_running);
+  Publish(std::move(s), clock, engine_running);
   return true;
 }
 
 bool StreamingTrack::LoadReader(
     SourceReader* reader,
-    uint64_t now_frame,
+    FrameClock clock,
     bool engine_running,
     const SourceStamp& stamp,
     uint64_t frame
@@ -115,11 +115,11 @@ bool StreamingTrack::LoadReader(
   // owned_reader stays null: the caller owns `reader` and must outlive the track.
   ext_reader_ = reader;
   load_path_.clear();
-  Publish(std::move(s), now_frame, engine_running);
+  Publish(std::move(s), clock, engine_running);
   return true;
 }
 
-void StreamingTrack::Unload(uint64_t now_frame, bool engine_running) {
+void StreamingTrack::Unload(FrameClock clock, bool engine_running) {
   // Stop the read-ahead thread now; the node itself is reclaimed off the
   // callback by the publisher, so nothing is freed on the audio thread.
   if (live_source_ != nullptr) live_source_->Stop();
@@ -128,7 +128,7 @@ void StreamingTrack::Unload(uint64_t now_frame, bool engine_running) {
   load_path_.clear();
   ext_reader_ = nullptr;
   num_frames_.store(0, std::memory_order_relaxed);
-  published_.Publish(nullptr, now_frame, engine_running);
+  published_.Publish(nullptr, clock.Now(), engine_running);
 }
 
 void StreamingTrack::Prime(const Source& s) {
@@ -237,11 +237,11 @@ bool StreamingTrack::Stage(
   return true;
 }
 
-void StreamingTrack::CommitStaged(uint64_t now_frame, bool engine_running) {
+void StreamingTrack::CommitStaged(FrameClock clock, bool engine_running) {
   resume_on_drop_ = false;
   if (staged_ == nullptr) return;
   previous_ = engine_running ? live_source_ : nullptr;
-  Publish(std::move(staged_), now_frame, engine_running);
+  Publish(std::move(staged_), clock, engine_running);
 }
 
 void StreamingTrack::StopPrevious() {
@@ -257,7 +257,7 @@ void StreamingTrack::DropStaged() {
 
 bool StreamingTrack::ReseekLive(
     uint64_t frame,
-    uint64_t now_frame,
+    FrameClock clock,
     bool engine_running
 ) {
   const uint64_t target = std::min(frame, live_num_frames_);
@@ -269,13 +269,13 @@ bool StreamingTrack::ReseekLive(
     live_source_->Start();  // rebuild failed: resume the old source in place
     return false;
   }
-  Publish(std::move(s), now_frame, engine_running);
+  Publish(std::move(s), clock, engine_running);
   return true;
 }
 
 bool StreamingTrack::Seek(
     uint64_t frame,
-    uint64_t now_frame,
+    FrameClock clock,
     bool engine_running
 ) {
   if (live_source_ == nullptr) return true;
@@ -283,7 +283,7 @@ bool StreamingTrack::Seek(
     // Rebuild whenever either side is live: the device may be draining this ring
     // (pause leaves is_running() false a block early — #25), or the read-ahead
     // thread is running and AudioSource::Seek refuses it.
-    return ReseekLive(frame, now_frame, engine_running);
+    return ReseekLive(frame, clock, engine_running);
   }
   // Device stopped and the source idle — the only truly quiescent state, so the
   // in-place Clear races nothing. Clamp a seek past the end.

@@ -41,14 +41,14 @@ kb_mixer_load_track(kb_engine* engine, int32_t track, const char* path) {
   if (engine == nullptr || path == nullptr) return KB_ERROR_INVALID_ARGUMENT;
   kitbag::Engine* e = ToEngine(engine);
   const bool ok =
-      e->mixer().LoadTrack(track, path, e->frames_rendered(), e->is_running());
+      e->mixer().LoadTrack(track, path, e->frame_clock(), e->is_running());
   return ok ? KB_OK : KB_ERROR_INVALID_ARGUMENT;
 }
 
 void kb_mixer_unload_track(kb_engine* engine, int32_t track) {
   if (engine == nullptr) return;
   kitbag::Engine* e = ToEngine(engine);
-  e->mixer().UnloadTrack(track, e->frames_rendered(), e->is_running());
+  e->mixer().UnloadTrack(track, e->frame_clock(), e->is_running());
 }
 
 int32_t kb_mixer_track_ready(const kb_engine* engine, int32_t track) {
@@ -104,7 +104,7 @@ void kb_mixer_play(kb_engine* engine) {
 void kb_mixer_stop(kb_engine* engine) {
   if (engine == nullptr) return;
   kitbag::Engine* e = ToEngine(engine);
-  e->mixer().Stop(e->frames_rendered(), e->is_running());
+  e->mixer().Stop(e->frame_clock(), e->is_running());
   e->SetMixerIntent(false);
 }
 
@@ -122,11 +122,8 @@ int32_t kb_mixer_is_playing(const kb_engine* engine) {
 void kb_mixer_seek(kb_engine* engine, int64_t frame) {
   if (engine == nullptr) return;
   kitbag::Engine* e = ToEngine(engine);
-  e->mixer().Seek(
-      static_cast<uint64_t>(frame),
-      e->frames_rendered(),
-      e->is_running()
-  );
+  e->mixer()
+      .Seek(static_cast<uint64_t>(frame), e->frame_clock(), e->is_running());
 }
 
 kb_result
@@ -134,12 +131,9 @@ kb_mixer_set_loop(kb_engine* engine, int64_t start_frame, int64_t end_frame) {
   if (engine == nullptr) return KB_ERROR_INVALID_ARGUMENT;
   kitbag::Engine* e = ToEngine(engine);
   using Result = kitbag::Mixer::LoopResult;
-  switch (e->mixer().SetLoop(
-      start_frame,
-      end_frame,
-      e->frames_rendered(),
-      e->is_running()
-  )) {
+  switch (
+      e->mixer()
+          .SetLoop(start_frame, end_frame, e->frame_clock(), e->is_running())) {
     case Result::kOk:
       return KB_OK;
     case Result::kInvalid:
@@ -153,7 +147,7 @@ kb_mixer_set_loop(kb_engine* engine, int64_t start_frame, int64_t end_frame) {
 kb_result kb_mixer_clear_loop(kb_engine* engine) {
   if (engine == nullptr) return KB_ERROR_INVALID_ARGUMENT;
   kitbag::Engine* e = ToEngine(engine);
-  const bool ok = e->mixer().ClearLoop(e->frames_rendered(), e->is_running());
+  const bool ok = e->mixer().ClearLoop(e->frame_clock(), e->is_running());
   return ok ? KB_OK : KB_ERROR_INTERNAL;
 }
 
@@ -184,7 +178,7 @@ kb_result kb_mixer_set_rate(kb_engine* engine, float rate) {
   }
   kitbag::Engine* e = ToEngine(engine);
   return ToKbResult(
-      e->mixer().SetRate(rate, e->frames_rendered(), e->is_running())
+      e->mixer().SetRate(rate, e->frame_clock(), e->is_running())
   );
 }
 
@@ -204,7 +198,7 @@ kb_mixer_set_track_pitch(kb_engine* engine, int32_t track, int32_t semitones) {
   return ToKbResult(e->mixer().SetTrackPitch(
       track,
       static_cast<float>(semitones),
-      e->frames_rendered(),
+      e->frame_clock(),
       e->is_running()
   ));
 }

@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <numbers>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -75,6 +76,12 @@ LoadPcm(kitbag::Mixer* mixer, int track, const std::vector<float>& pcm) {
 
 inline void LoadTone(kitbag::Mixer* mixer, int64_t frames) {
   LoadPcm(mixer, 0, ToneFixture({.frames = frames, .steady_hz = kBurstHz}));
+}
+
+inline std::string
+LoadSilence(kitbag::Mixer* mixer, int track, int64_t frames) {
+  LoadPcm(mixer, track, ToneFixture({.frames = frames}));
+  return TempFiles().back();
 }
 
 inline void WaitForReadAhead(const kitbag::Mixer& mixer) {
@@ -284,6 +291,7 @@ void RunRaceTests();
 void RunLandingTests();
 void RunRefusalTests();
 void RunRePrimeTests();
+void RunRetireTests();
 
 }  // namespace mixer_test
 

@@ -252,6 +252,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/mixer/mixer_test_landing.cpp
     tools/mixer/mixer_test_refusal.cpp
     tools/mixer/mixer_test_reprime.cpp
+    tools/mixer/mixer_test_retire.cpp
     ${KITBAG_METRONOME_SOURCES}
     src/media/streaming_track.cpp
     src/media/looping_source_reader.cpp

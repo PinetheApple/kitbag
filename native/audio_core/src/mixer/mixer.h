@@ -15,6 +15,7 @@
 #include "mixer/mixer_command.h"
 #include "mixer/mixer_track.h"
 #include "mixer/transport_plan.h"
+#include "rt/frame_clock.h"
 #include "rt/rt_publisher.h"
 #include "rt/spsc_ring.h"
 
@@ -46,19 +47,15 @@ class Mixer {
   Mixer& operator=(const Mixer&) = delete;
 
   /// Load a track from a file path, streamed from disk and published by atomic
-  /// swap (SPEC.md §4.1). [now_frame] and [engine_running] date the retired
+  /// swap (SPEC.md §4.1). [clock] and [engine_running] date the retired
   /// source for deferred reclamation. False for a null path, a track outside
   /// [0, kMaxTracks), or a file that will not open.
-  bool LoadTrack(
-      int track,
-      const char* path,
-      uint64_t now_frame,
-      bool engine_running
-  );
+  bool
+  LoadTrack(int track, const char* path, FrameClock clock, bool engine_running);
 
   /// Retire a track's source, reclaimed off the callback; the transport length
   /// follows the longest remaining track (B5).
-  void UnloadTrack(int track, uint64_t now_frame, bool engine_running);
+  void UnloadTrack(int track, FrameClock clock, bool engine_running);
 
   void ReserveCallbackFrames(uint32_t frames);
 
@@ -68,7 +65,7 @@ class Mixer {
   bool SetTrackSource(
       int track,
       SourceReader* reader,
-      uint64_t now_frame,
+      FrameClock clock,
       bool engine_running
   );
 
@@ -91,17 +88,17 @@ class Mixer {
   /// is the sole writer of the head and the playing flag.
   void Play();
   /// Stops playback and rewinds the head to 0 (SPEC.md §4.4).
-  void Stop(uint64_t now_frame, bool engine_running);
+  void Stop(FrameClock clock, bool engine_running);
   /// Ends playback holding the head, so a following Play resumes there.
   void Pause();
   /// Like Stop's rewind and the loop calls, rebuilds every source rather than
   /// Clear a ring the callback may read (#25). Clamps to the longest track.
-  void Seek(uint64_t frame, uint64_t now_frame, bool engine_running);
+  void Seek(uint64_t frame, FrameClock clock, bool engine_running);
 
   enum class LoopResult : uint8_t { kOk, kInvalid, kRebuildFailed };
   LoopResult
-  SetLoop(int64_t start, int64_t end, uint64_t now_frame, bool engine_running);
-  bool ClearLoop(uint64_t now_frame, bool engine_running);
+  SetLoop(int64_t start, int64_t end, FrameClock clock, bool engine_running);
+  bool ClearLoop(FrameClock clock, bool engine_running);
   int64_t crossfade_frames() const {
     return crossfade_frames_;
   }
@@ -110,12 +107,12 @@ class Mixer {
   /// leaves the control as it was.
   enum class StretchResult : uint8_t { kOk, kBusy, kNoTrack, kPrimeFailed };
   /// Speed (SPEC.md §7.6), clamped to [kMinRate, kMaxRate].
-  StretchResult SetRate(float rate, uint64_t now_frame, bool engine_running);
+  StretchResult SetRate(float rate, FrameClock clock, bool engine_running);
   /// Whole semitones, clamped to [kMinPitchSemitones, kMaxPitchSemitones].
   StretchResult SetTrackPitch(
       int track,
       float semitones,
-      uint64_t now_frame,
+      FrameClock clock,
       bool engine_running
   );
   float rate() const {
@@ -141,6 +138,8 @@ class Mixer {
   /// block's buses.
   void set_snapshot_hook(std::function<void()> hook);
   uint64_t missed_handovers() const;
+  /// Tests only: payloads retired and not yet freed, every publisher counted.
+  size_t retired_payloads() const;
 
   /// Callback-published mirrors: they converge within one block.
   bool is_playing() const {
@@ -196,18 +195,13 @@ class Mixer {
   void RecomputeLongestFrames();
 
   bool Enqueue(const Command& command);
-  bool Relayout(TransportPlan plan, uint64_t now_frame, bool engine_running);
-  bool
-  PlainRelayout(TransportPlan plan, uint64_t now_frame, bool engine_running);
-  void CommitPlan(
-      const TransportPlan& plan,
-      uint64_t now_frame,
-      bool engine_running
-  );
+  bool Relayout(TransportPlan plan, FrameClock clock, bool engine_running);
+  bool PlainRelayout(TransportPlan plan, FrameClock clock, bool engine_running);
+  void
+  CommitPlan(const TransportPlan& plan, FrameClock clock, bool engine_running);
   bool StageAll(int64_t frame, const SourceStamp& stamp, bool engine_running);
   void DropStaged(int count);
-  void
-  ReplanStretch(TransportPlan plan, uint64_t now_frame, bool engine_running);
+  void ReplanStretch(TransportPlan plan, FrameClock clock, bool engine_running);
   int64_t SeekTarget(int64_t frame) const;
   struct Head {
     int64_t stream;
@@ -250,53 +244,50 @@ class Mixer {
   std::unique_ptr<KeyBusSlot> MakeBus(int slot, uint64_t generation) const;
   bool MatchBusConfig(int in_use, bool allow_down);
   enum class BusChange : uint8_t { kAddedLive, kNeedsPrime };
-  BusChange EngageBuses(
-      std::optional<int> extra,
-      uint64_t now_frame,
-      bool engine_running
-  );
-  Prepared PrepareBusFor(int track, uint64_t now_frame, bool engine_running);
+  BusChange
+  EngageBuses(std::optional<int> extra, FrameClock clock, bool engine_running);
+  Prepared PrepareBusFor(int track, FrameClock clock, bool engine_running);
   void UndoPrepare(
       uint32_t created,
       bool was_engaged,
-      uint64_t now_frame,
+      FrameClock clock,
       bool engine_running
   );
   uint32_t LiveBusMask() const;
   int MarkUsedBuses(bool* used) const;
   int BusesInUse() const;
   void
-  RetireDrainedBuses(const bool* used, uint64_t now_frame, bool engine_running);
-  void FreeUnusedBuses(uint64_t now_frame, bool engine_running);
+  RetireDrainedBuses(const bool* used, FrameClock clock, bool engine_running);
+  void FreeUnusedBuses(FrameClock clock, bool engine_running);
 
   struct Bank {
     std::unique_ptr<KeyBusSlot> slots[kKeyBusCount];
     uint64_t generation = 0;
     int64_t lag = 0;
   };
-  bool PrimeNow(uint64_t now_frame, bool engine_running);
+  bool PrimeNow(FrameClock clock, bool engine_running);
   bool PrimeAwaitingEngage() const;
   TransportPlan ReprimePlan() const;
   bool
-  PrimedRelayout(TransportPlan plan, uint64_t now_frame, bool engine_running);
+  PrimedRelayout(TransportPlan plan, FrameClock clock, bool engine_running);
   bool BuildBank(int64_t frame, bool staged, Bank* bank);
   bool ReadBankPreRoll(int64_t frame, bool staged, Bank* bank);
   void PublishBank(
       Bank* bank,
       TransportPlan* plan,
-      uint64_t now_frame,
+      FrameClock clock,
       bool engine_running
   );
   void
-  AdoptBank(const TransportPlan& plan, uint64_t now_frame, bool engine_running);
-  void FreeBank(int bank, uint64_t now_frame, bool engine_running);
+  AdoptBank(const TransportPlan& plan, FrameClock clock, bool engine_running);
+  void FreeBank(int bank, FrameClock clock, bool engine_running);
   enum class HandOverOutcome : uint8_t { kTaken, kMissed, kNotBuilt, kStalled };
-  bool HandOver(uint64_t now_frame, bool engine_running);
-  void RetractHandOver(uint64_t now_frame, bool engine_running);
+  bool HandOver(FrameClock clock, bool engine_running);
+  void RetractHandOver(FrameClock clock, bool engine_running);
   HandOverOutcome TryHandOver(
       const Head& head,
       int64_t lead,
-      uint64_t now_frame,
+      FrameClock clock,
       bool engine_running
   );
   HandOverOutcome AwaitVerdict(uint64_t generation, bool engine_running) const;

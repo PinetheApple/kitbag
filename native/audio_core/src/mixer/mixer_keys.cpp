@@ -52,7 +52,7 @@ bool Mixer::MatchBusConfig(int in_use, bool allow_down) {
 
 Mixer::BusChange Mixer::EngageBuses(
     std::optional<int> extra,
-    uint64_t now_frame,
+    FrameClock clock,
     bool engine_running
 ) {
   app_engaged_ = true;
@@ -62,7 +62,7 @@ Mixer::BusChange Mixer::EngageBuses(
     used[*extra - kMinPitchSemitones] = true;
     ++in_use;
   }
-  RetireDrainedBuses(used, now_frame, engine_running);
+  RetireDrainedBuses(used, clock, engine_running);
   if (MatchBusConfig(in_use, false) || !app_primed_ ||
       !engaged_.load(std::memory_order_relaxed)) {
     return BusChange::kNeedsPrime;
@@ -70,7 +70,11 @@ Mixer::BusChange Mixer::EngageBuses(
   for (int s = 0; s < kKeyBusCount; ++s) {
     auto& slot = buses_[app_bank_][s];
     if (used[s] && slot.Get() == nullptr) {
-      slot.Publish(MakeBus(s, app_bus_generation_), now_frame, engine_running);
+      slot.Publish(
+          MakeBus(s, app_bus_generation_),
+          clock.Now(),
+          engine_running
+      );
     }
   }
   return BusChange::kAddedLive;
@@ -88,11 +92,11 @@ uint32_t Mixer::LiveBusMask() const {
 
 // Before the stem publishes, so the callback never reads it without a bus.
 Mixer::Prepared
-Mixer::PrepareBusFor(int track, uint64_t now_frame, bool engine_running) {
+Mixer::PrepareBusFor(int track, FrameClock clock, bool engine_running) {
   if (!app_engaged_ && app_pitch_[track] == 0) return {};
   const uint32_t before = LiveBusMask();
   const BusChange change =
-      EngageBuses(app_pitch_[track], now_frame, engine_running);
+      EngageBuses(app_pitch_[track], clock, engine_running);
   return {
       .created = LiveBusMask() & ~before,
       .prime = change == BusChange::kNeedsPrime
@@ -102,13 +106,13 @@ Mixer::PrepareBusFor(int track, uint64_t now_frame, bool engine_running) {
 void Mixer::UndoPrepare(
     uint32_t created,
     bool was_engaged,
-    uint64_t now_frame,
+    FrameClock clock,
     bool engine_running
 ) {
   app_engaged_ = was_engaged;
   for (int s = 0; s < kKeyBusCount; ++s) {
     if ((created & (1U << static_cast<unsigned>(s))) != 0) {
-      buses_[app_bank_][s].Publish(nullptr, now_frame, engine_running);
+      buses_[app_bank_][s].Publish(nullptr, clock.Now(), engine_running);
     }
   }
 }
@@ -132,7 +136,7 @@ int Mixer::BusesInUse() const {
 
 void Mixer::RetireDrainedBuses(
     const bool* used,
-    uint64_t now_frame,
+    FrameClock clock,
     bool engine_running
 ) {
   for (int s = 0; s < kKeyBusCount; ++s) {
@@ -140,18 +144,18 @@ void Mixer::RetireDrainedBuses(
     const auto* node = slot.Get();
     if (used[s] || node == nullptr) continue;
     if (node->value.bus->drained.load(std::memory_order_acquire)) {
-      slot.Publish(nullptr, now_frame, engine_running);
+      slot.Publish(nullptr, clock.Now(), engine_running);
     }
   }
 }
 
-void Mixer::FreeUnusedBuses(uint64_t now_frame, bool engine_running) {
+void Mixer::FreeUnusedBuses(FrameClock clock, bool engine_running) {
   bool used[kKeyBusCount] = {};
   if (app_engaged_) MarkUsedBuses(used);
   for (int s = 0; s < kKeyBusCount; ++s) {
     auto& slot = buses_[app_bank_][s];
     if (!used[s] && slot.Get() != nullptr) {
-      slot.Publish(nullptr, now_frame, engine_running);
+      slot.Publish(nullptr, clock.Now(), engine_running);
     }
   }
   if (key_bus_count() == 0) MatchBusConfig(0, true);
@@ -184,16 +188,16 @@ void Mixer::RestoreEngage(const EngageState& before) {
 }
 
 Mixer::StretchResult
-Mixer::SetRate(float rate, uint64_t now_frame, bool engine_running) {
+Mixer::SetRate(float rate, FrameClock clock, bool engine_running) {
   if (!ReserveUndoableCommand()) return StretchResult::kBusy;
   const float clamped = ClampRate(rate);
   const float previous = std::exchange(app_rate_, clamped);
   const EngageState before{app_engaged_, app_vendor_default_};
   const bool prime =
       clamped != kUnityRate &&
-      EngageBuses({}, now_frame, engine_running) == BusChange::kNeedsPrime;
+      EngageBuses({}, clock, engine_running) == BusChange::kNeedsPrime;
   EnqueueRate(clamped);
-  if (!prime || PrimeNow(now_frame, engine_running)) return StretchResult::kOk;
+  if (!prime || PrimeNow(clock, engine_running)) return StretchResult::kOk;
   app_rate_ = previous;
   EnqueueRate(previous);
   RestoreEngage(before);
@@ -205,7 +209,7 @@ Mixer::SetRate(float rate, uint64_t now_frame, bool engine_running) {
 Mixer::StretchResult Mixer::SetTrackPitch(
     int track,
     float semitones,
-    uint64_t now_frame,
+    FrameClock clock,
     bool engine_running
 ) {
   if (!track_ready(track)) return StretchResult::kNoTrack;
@@ -215,11 +219,10 @@ Mixer::StretchResult Mixer::SetTrackPitch(
   const EngageState before{app_engaged_, app_vendor_default_};
   bool prime = false;
   if (pitch != 0 || app_engaged_) {
-    prime =
-        EngageBuses(pitch, now_frame, engine_running) == BusChange::kNeedsPrime;
+    prime = EngageBuses(pitch, clock, engine_running) == BusChange::kNeedsPrime;
   }
   EnqueuePitch(track, pitch);
-  if (!prime || PrimeNow(now_frame, engine_running)) return StretchResult::kOk;
+  if (!prime || PrimeNow(clock, engine_running)) return StretchResult::kOk;
   app_pitch_[track] = previous;
   EnqueuePitch(track, previous);
   RestoreEngage(before);
@@ -265,6 +268,15 @@ void Mixer::set_snapshot_hook(std::function<void()> hook) {
 
 uint64_t Mixer::missed_handovers() const {
   return missed_handovers_;
+}
+
+size_t Mixer::retired_payloads() const {
+  size_t retired = plans_.retired_size();
+  for (const auto& track : tracks_) retired += track.stream->retired_sources();
+  for (const auto& bank : buses_) {
+    for (const auto& slot : bank) retired += slot.retired_size();
+  }
+  return retired;
 }
 
 int Mixer::key_bus_count() const {
