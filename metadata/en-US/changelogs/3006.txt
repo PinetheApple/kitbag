@@ -1,0 +1,1 @@
+• At large font sizes, the stopped metronome no longer leaves a blank strip above the status line while the beat pads are cut off.
