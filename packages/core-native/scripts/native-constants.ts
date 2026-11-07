@@ -73,6 +73,10 @@ export function collectConstants(sources: NativeSources): NativeConstants {
       min: parseConstexprFloat(sources.mixerHeader, 'kMinRate'),
       max: parseConstexprFloat(sources.mixerHeader, 'kMaxRate'),
     },
+    mixerUnityRate: parseConstexprFloat(
+      sources.transportPlanHeader,
+      'kUnityRate',
+    ),
     mixerPitch: {
       min: parseConstexprInt(sources.mixerHeader, 'kMinPitchSemitones'),
       max: parseConstexprInt(sources.mixerHeader, 'kMaxPitchSemitones'),

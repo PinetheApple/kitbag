@@ -48,6 +48,7 @@ export interface NativeSources {
   readonly tempoRampHeader: string;
   /** native/audio_core/src/metronome/metronome_types.h — the tempo range. */
   readonly metronomeTypesHeader: string;
+  readonly transportPlanHeader: string;
 }
 
 export interface NativeConstants {
@@ -72,6 +73,7 @@ export interface NativeConstants {
   readonly volume: Bounds;
   readonly mixerGain: Bounds;
   readonly mixerRate: Bounds;
+  readonly mixerUnityRate: number;
   readonly mixerPitch: Bounds;
   readonly rampSeconds: Bounds;
   readonly rampUnit: readonly EnumMember[];

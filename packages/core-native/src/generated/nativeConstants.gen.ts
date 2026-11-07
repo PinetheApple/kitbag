@@ -58,6 +58,8 @@ export const KB_MIXER_RATE_BOUNDS = {
   max: 1,
 } as const;
 
+export const KB_MIXER_UNITY_RATE = 1;
+
 export const KB_MIXER_PITCH_BOUNDS = {
   min: -6,
   max: 6,

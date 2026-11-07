@@ -70,6 +70,8 @@ ${renderBounds('KB_VOLUME_BOUNDS', c.volume)}
 /** Linear stem and master gain range (Mixer::kMinGain, kMaxGain); the engine clamps to it. */
 ${renderBounds('KB_MIXER_GAIN_BOUNDS', c.mixerGain)}
 ${renderBounds('KB_MIXER_RATE_BOUNDS', c.mixerRate)}
+export const KB_MIXER_UNITY_RATE = ${String(c.mixerUnityRate)};
+
 ${renderBounds('KB_MIXER_PITCH_BOUNDS', c.mixerPitch)}
 /** Longest play or mute run in bars (Metronome::kMaxMuteBars); clamped above. */
 export const KB_MAX_MUTE_BARS = ${String(c.muteBars.max)};
