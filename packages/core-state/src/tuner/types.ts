@@ -56,6 +56,8 @@ export interface TunerActions extends CustomTuningActions {
   enter: (defaultTuning: TunerTuning) => void;
   /** Screen blur. */
   leave: () => void;
+  /** Enter for one screen; the returned release leaves only for the newest. */
+  acquire: (defaultTuning: TunerTuning) => () => void;
   /** Ask for the mic again (after a denial or a device failure). */
   retryMic: () => void;
   setAuto: () => void;

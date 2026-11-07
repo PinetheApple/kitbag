@@ -69,6 +69,7 @@ export function createTunerStore(
   // after a start that succeeded.
   let capturing = false;
   let unsubscribe: (() => void) | undefined;
+  let newestHold = 0;
 
   return createStore<TunerStore>((set, get) => {
     const recordFailure = (
@@ -232,6 +233,16 @@ export function createTunerStore(
         appActive = true;
         set({ open: false, mic: 'off' });
         stopCapture();
+      },
+
+      // Across an Activity relaunch the new screen can acquire before the old one
+      // loses focus, so only the newest hold may leave.
+      acquire: (defaultTuning) => {
+        const hold = ++newestHold;
+        get().enter(defaultTuning);
+        return () => {
+          if (hold === newestHold) get().leave();
+        };
       },
 
       retryMic: () => {
