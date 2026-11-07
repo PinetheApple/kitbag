@@ -226,7 +226,8 @@ if(KITBAG_BUILD_TOOLS)
                                   tools/stem_sync_test_rate.cpp
                                   tools/stem_sync_test_lock.cpp
                                   tools/stem_sync_test_reanchor.cpp
-                                  tools/stem_sync_test_bars.cpp)
+                                  tools/stem_sync_test_bars.cpp
+                                  tools/stem_sync_test_count_in.cpp)
   target_include_directories(stem_sync_verify PRIVATE src tools tools/media)
   target_link_libraries(stem_sync_verify PRIVATE kitbag_core)
 
