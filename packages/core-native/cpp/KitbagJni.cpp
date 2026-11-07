@@ -212,6 +212,26 @@ Java_com_kitbag_corenative_KitbagCommandsModule_nativeMixerClearLoop(JNIEnv*, jo
   return static_cast<jint>(kitbag::commandMixerClearLoop());
 }
 
+JNIEXPORT jint JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeMixerSetRate(JNIEnv*, jobject, jdouble rate) {
+  return static_cast<jint>(kitbag::commandMixerSetRate(rate));
+}
+
+JNIEXPORT jdouble JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeMixerRate(JNIEnv*, jobject) {
+  return kitbag::commandMixerRate();
+}
+
+JNIEXPORT jint JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeMixerSetTrackPitch(JNIEnv*, jobject, jint track, jint semitones) {
+  return static_cast<jint>(kitbag::commandMixerSetTrackPitch(track, semitones));
+}
+
+JNIEXPORT jint JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeMixerTrackPitch(JNIEnv*, jobject, jint track) {
+  return static_cast<jint>(kitbag::commandMixerTrackPitch(track));
+}
+
 JNIEXPORT void JNICALL
 Java_com_kitbag_corenative_KitbagCommandsModule_nativeClearGrid(JNIEnv*, jobject) {
   kitbag::commandClearGrid();

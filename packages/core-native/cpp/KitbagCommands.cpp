@@ -155,6 +155,16 @@ int32_t commandMixerSetLoop(double startFrame, double endFrame) {
                            static_cast<int64_t>(endFrame));
 }
 int32_t commandMixerClearLoop() { return kb_mixer_clear_loop(commandEngine()); }
+int32_t commandMixerSetRate(double rate) {
+  return kb_mixer_set_rate(commandEngine(), static_cast<float>(rate));
+}
+double commandMixerRate() { return kb_mixer_rate(commandEngine()); }
+int32_t commandMixerSetTrackPitch(int32_t track, int32_t semitones) {
+  return kb_mixer_set_track_pitch(commandEngine(), track, semitones);
+}
+int32_t commandMixerTrackPitch(int32_t track) {
+  return kb_mixer_track_pitch(commandEngine(), track);
+}
 
 int32_t commandTunerStart() { return kb_tuner_start(commandEngine()); }
 void commandTunerStop() { kb_tuner_stop(commandEngine()); }

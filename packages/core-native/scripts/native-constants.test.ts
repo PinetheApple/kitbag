@@ -294,6 +294,14 @@ describe('collectConstants (real engine source)', () => {
     expect(c.countInOff).toBe(0);
     expect(c.volume).toEqual({ min: 0, max: 2 });
     expect(c.mixerGain).toEqual({ min: 0, max: 2 });
+    expect(c.mixerRate).toEqual({ min: 0.5, max: 1 });
+    expect(c.mixerPitch).toEqual({ min: -6, max: 6 });
+    expect(renderConstants(c)).toContain(
+      'KB_MIXER_RATE_BOUNDS = {\n  min: 0.5,\n  max: 1,\n}',
+    );
+    expect(renderConstants(c)).toContain(
+      'KB_MIXER_PITCH_BOUNDS = {\n  min: -6,\n  max: 6,\n}',
+    );
     expect(c.denominators).toEqual([2, 4, 8, 16]);
     expect(c.bpmReferenceDenominator).toBe(4);
     expect(c.soundNames).toEqual([

@@ -1,8 +1,10 @@
-import { KB_RESULT } from '@kitbag/core-native';
+import { KB_MIXER_RATE_BOUNDS, KB_RESULT } from '@kitbag/core-native';
 import { configureStemPlayer, UNITY_GAIN } from '@kitbag/core-state';
 
 const noEngine = () => Promise.resolve<number>(KB_RESULT.KB_ERROR_INTERNAL);
 const ignore = () => undefined;
+const UNSET_RATE = KB_MIXER_RATE_BOUNDS.max;
+const UNSET_KEY = 0;
 
 configureStemPlayer({
   commands: {
@@ -22,6 +24,10 @@ configureStemPlayer({
     mixerSeek: ignore,
     mixerSetLoop: noEngine,
     mixerClearLoop: noEngine,
+    mixerSetRate: noEngine,
+    mixerRate: () => Promise.resolve(UNSET_RATE),
+    mixerSetTrackPitch: noEngine,
+    mixerTrackPitch: () => Promise.resolve(UNSET_KEY),
     setGrid: noEngine,
     clearGrid: ignore,
     metronomeFollowMixer: ignore,

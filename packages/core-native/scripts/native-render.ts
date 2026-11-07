@@ -69,6 +69,10 @@ export const KB_DEFAULT_SOUNDS = {
 ${renderBounds('KB_VOLUME_BOUNDS', c.volume)}
 /** Linear stem and master gain range (Mixer::kMinGain, kMaxGain); the engine clamps to it. */
 ${renderBounds('KB_MIXER_GAIN_BOUNDS', c.mixerGain)}
+/** Playback speed range (Mixer::kMinRate, kMaxRate); kb_mixer_set_rate rejects anything outside it. */
+${renderBounds('KB_MIXER_RATE_BOUNDS', c.mixerRate)}
+/** Per-track key in whole semitones (Mixer::kMinPitchSemitones, kMaxPitchSemitones); kb_mixer_set_track_pitch rejects anything outside it. */
+${renderBounds('KB_MIXER_PITCH_BOUNDS', c.mixerPitch)}
 /** Longest play or mute run in bars (Metronome::kMaxMuteBars); clamped above. */
 export const KB_MAX_MUTE_BARS = ${String(c.muteBars.max)};
 

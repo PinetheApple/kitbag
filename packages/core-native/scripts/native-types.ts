@@ -71,6 +71,8 @@ export interface NativeConstants {
   readonly bpm: Bounds;
   readonly volume: Bounds;
   readonly mixerGain: Bounds;
+  readonly mixerRate: Bounds;
+  readonly mixerPitch: Bounds;
   readonly rampSeconds: Bounds;
   readonly rampUnit: readonly EnumMember[];
   readonly rampState: readonly EnumMember[];
