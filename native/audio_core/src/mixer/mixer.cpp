@@ -99,6 +99,7 @@ void Mixer::UnloadTrack(int track, FrameClock clock, bool engine_running) {
   tracks_[track].stream->Unload(clock, engine_running);
   ResetTrackPitch(track);
   RecomputeLongestFrames();
+  DisengageAtRest(clock, engine_running);
   FreeUnusedBuses(clock, engine_running);
 }
 

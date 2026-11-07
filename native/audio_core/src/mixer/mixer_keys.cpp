@@ -185,11 +185,18 @@ void Mixer::RestoreEngage(const EngageState& before) {
   app_vendor_default_ = before.vendor_default;
 }
 
+// A disengage is a jump; held to rest, where no audio plays across it.
+void Mixer::DisengageAtRest(FrameClock clock, bool engine_running) {
+  if (app_playing_ || !app_engaged_ || WantsStretch()) return;
+  ReplanStretch(ReprimePlan(), clock, engine_running);
+}
+
 Mixer::StretchResult
 Mixer::SetRate(float rate, FrameClock clock, bool engine_running) {
   if (!ReserveUndoableCommand()) return StretchResult::kBusy;
   const float clamped = ClampRate(rate);
   const float previous = std::exchange(app_rate_, clamped);
+  DisengageAtRest(clock, engine_running);
   const EngageState before{app_engaged_, app_vendor_default_};
   const bool prime =
       clamped != kUnityRate &&
@@ -214,6 +221,7 @@ Mixer::StretchResult Mixer::SetTrackPitch(
   if (!ReserveUndoableCommand()) return StretchResult::kBusy;
   const int pitch = ClampPitch(semitones);
   const int previous = std::exchange(app_pitch_[track], pitch);
+  DisengageAtRest(clock, engine_running);
   const EngageState before{app_engaged_, app_vendor_default_};
   bool prime = false;
   if (pitch != 0 || app_engaged_) {
