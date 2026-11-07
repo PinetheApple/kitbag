@@ -14,11 +14,13 @@
 #include "check.h"
 #include "player/player.h"
 #include "wav_fixture.h"
+#include "zero_clock.h"
 
 namespace {
 
 using kitbag::Player;
 using kitbag_test::Check;
+using kitbag_test::kZeroClock;
 
 constexpr uint32_t kSampleRate = 48000;
 constexpr uint32_t kBlock = 512;
@@ -63,7 +65,7 @@ bool LoadRamp(Player* player, uint64_t frames, float offset, uint32_t rate) {
   const std::string path = NextTempPath();
   if (!WriteMonoRamp(path, frames, offset, rate)) return false;
   TempFiles().push_back(path);
-  return player->Load(path.c_str(), 0, false);
+  return player->Load(path.c_str(), kZeroClock, false);
 }
 
 // Renders one block into a buffer pre-filled with [fill], so a test can assert
@@ -105,7 +107,7 @@ void TestLoadReadyFramesUnload() {
   Check(player.ready(), "load: ready once the source is published");
   Check(player.frames() == kLongFrames, "load: frames() reports the length");
 
-  player.Unload(0, false);
+  player.Unload(kZeroClock, false);
   Check(!player.ready(), "unload: the retired player is no longer ready");
   Check(player.frames() == 0, "unload: frames() drops to 0");
 }
@@ -171,7 +173,7 @@ void TestSeek() {
   player.Play();
   RenderBlock(&player, 0.0f);
 
-  player.Seek(2000, 0, false);
+  player.Seek(2000, kZeroClock, false);
   const std::vector<float> after = RenderBlock(&player, 0.0f);
   ExpectNear(after, 0, 0, kOffset + 2000, "seek: reads from the sought frame");
   Check(player.position() == 2000 + kBlock, "seek: position tracks the seek");
@@ -206,7 +208,7 @@ void TestEndOfSourceStops() {
       "end: load a short source"
   );
   player.Play();
-  player.Seek(600, 0, false);
+  player.Seek(600, kZeroClock, false);
   RenderBlock(&player, 0.0f);  // 600 -> clamps to 700 (source end)
   RenderBlock(&player, 0.0f);  // start >= length: transport stops
   Check(!player.is_playing(), "end: playback stops at the source end");
@@ -233,9 +235,12 @@ void TestResampleOnLoad() {
 
 void TestNullAndEmpty() {
   Player player(kSampleRate);
-  Check(!player.Load(nullptr, 0, false), "empty: a null path is rejected");
   Check(
-      !player.Load("/nonexistent/kitbag.wav", 0, false),
+      !player.Load(nullptr, kZeroClock, false),
+      "empty: a null path is rejected"
+  );
+  Check(
+      !player.Load("/nonexistent/kitbag.wav", kZeroClock, false),
       "empty: a file that will not open is rejected"
   );
   Check(player.position() == 0, "empty: a fresh player rests at frame 0");
@@ -243,7 +248,7 @@ void TestNullAndEmpty() {
 
   // Transport on a sourceless player must not crash and must not wedge playing.
   player.Play();
-  player.Seek(100, 0, false);
+  player.Seek(100, kZeroClock, false);
   player.Pause();
   std::vector<float> out(static_cast<size_t>(kBlock) * 2, 0.0f);
   player.Render(out.data(), kBlock);

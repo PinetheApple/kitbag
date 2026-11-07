@@ -13,14 +13,14 @@ constexpr int kSettleBlocks = 40;
 void TestBankFreedBeforeSnapshotSounds() {
   kitbag::Mixer mixer(kSampleRate);
   LoadTone(&mixer, kToneFrames);
-  mixer.SetRate(kSpeed, 0, false);
+  mixer.SetRate(kSpeed, kZeroClock, false);
   mixer.Play();
   RenderPaced(&mixer, kSettleBlocks);
   bool fired = false;
   mixer.set_snapshot_hook([&mixer, &fired] {
     if (fired) return;
     fired = true;
-    mixer.Seek(kSeekTo, 0, true);
+    mixer.Seek(kSeekTo, kZeroClock, true);
   });
   CheckSoundsAtOnce(
       &mixer,
@@ -36,7 +36,7 @@ void TestStalledVerdictJumps() {
   LoadTone(&mixer, kToneFrames);
   mixer.Play();
   RenderPaced(&mixer, kSettleBlocks);
-  mixer.SetRate(kSpeed, 0, true);
+  mixer.SetRate(kSpeed, kZeroClock, true);
   std::vector<float> left = RenderPaced(&mixer, 1);
   Check(
       mixer.stretch_engaged(),

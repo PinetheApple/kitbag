@@ -59,14 +59,14 @@ std::string WriteStem(const std::vector<float>& pcm) {
 
 // Four distinct keys on tracks 1-4; only the last track's file is hidden later.
 std::string PlayFourKeysWithPulsesOnTheFirst(kitbag::Mixer* mixer) {
-  mixer->SetRate(kSpeed, 0, false);
+  mixer->SetRate(kSpeed, kZeroClock, false);
   LoadPcm(mixer, kFirstKeyedTrack, PulsesEverySecondBeat(2));
   std::string last;
   for (int t = kFirstKeyedTrack + 1; t <= kLastKeyedTrack; ++t) {
     last = LoadSilence(mixer, t, kStemFrames);
   }
   for (int t = kFirstKeyedTrack; t <= kLastKeyedTrack; ++t) {
-    mixer->SetTrackPitch(t, static_cast<float>(t), 0, false);
+    mixer->SetTrackPitch(t, static_cast<float>(t), kZeroClock, false);
   }
   mixer->Play();
   RenderPaced(mixer, kSettleBlocks);
@@ -121,7 +121,7 @@ void CheckRefusedWithFileGone(
 ) {
   Hide(fragile);
   Check(
-      mixer->LoadTrack(kJoiningTrack, joining.c_str(), 0, false) ==
+      mixer->LoadTrack(kJoiningTrack, joining.c_str(), kZeroClock, false) ==
           LoadResult::kPrimeFailed,
       "load refusal: a load whose prime fails is refused"
   );
@@ -143,13 +143,14 @@ void TestFailedPrimeRefusesTheStemAndKeepsTheConfig() {
   CheckRefusedWithFileGone(&mixer, fragile, joining);
   RenderPaced(&mixer, 1);
   Check(
-      mixer.SetTrackPitch(kMovedTrack, kFreeKey, 0, false) ==
+      mixer.SetTrackPitch(kMovedTrack, kFreeKey, kZeroClock, false) ==
               kitbag::Mixer::StretchResult::kOk &&
           !mixer.key_buses_vendor_default(),
       "load refusal: a later key stays on the live config"
   );
   Check(
-      mixer.LoadTrack(kJoiningTrack, joining.c_str(), 0, false) == kLoaded &&
+      mixer.LoadTrack(kJoiningTrack, joining.c_str(), kZeroClock, false) ==
+              kLoaded &&
           mixer.key_buses_vendor_default(),
       "load refusal: the stem loads and flips the config with the file back"
   );
@@ -162,12 +163,12 @@ void TestFailedPrimeRefusesTheStemAndKeepsTheConfig() {
 
 void TestStoppedFailedPrimeRefusesTheStem() {
   kitbag::Mixer mixer(kSampleRate);
-  mixer.SetRate(kSpeed, 0, false);
+  mixer.SetRate(kSpeed, kZeroClock, false);
   const std::string fragile = LoadSilence(&mixer, 0, kStemFrames);
   const std::string second = WriteStem(PulsesEverySecondBeat(1));
   Hide(fragile);
   Check(
-      mixer.LoadTrack(1, second.c_str(), 0, false) ==
+      mixer.LoadTrack(1, second.c_str(), kZeroClock, false) ==
               LoadResult::kPrimeFailed &&
           !mixer.track_ready(1),
       "load refusal: a stopped load whose prime fails is refused"
@@ -199,11 +200,12 @@ class SilentReader : public kitbag::SourceReader {
 void TestFailedPrimeRefusesASource() {
   SilentReader reader;
   kitbag::Mixer mixer(kSampleRate);
-  mixer.SetRate(kSpeed, 0, false);
+  mixer.SetRate(kSpeed, kZeroClock, false);
   const std::string fragile = LoadSilence(&mixer, 0, kStemFrames);
   Hide(fragile);
   Check(
-      mixer.SetTrackSource(1, &reader, 0, false) == LoadResult::kPrimeFailed &&
+      mixer.SetTrackSource(1, &reader, kZeroClock, false) ==
+              LoadResult::kPrimeFailed &&
           !mixer.track_ready(1),
       "load refusal: a source whose prime fails is refused"
   );
@@ -215,7 +217,7 @@ void TestUnopenableFileKeepsTheConfig() {
   PlayFourKeysWithPulsesOnTheFirst(&mixer);
   const std::string missing = NextTempPath();
   Check(
-      mixer.LoadTrack(kJoiningTrack, missing.c_str(), 0, false) ==
+      mixer.LoadTrack(kJoiningTrack, missing.c_str(), kZeroClock, false) ==
               LoadResult::kInvalid &&
           !mixer.key_buses_vendor_default(),
       "load refusal: a file that will not open leaves the config as it was"

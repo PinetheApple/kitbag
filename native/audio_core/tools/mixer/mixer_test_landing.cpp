@@ -25,7 +25,7 @@ bool LandsAgainWithin(kitbag::Mixer* mixer, int blocks) {
 }
 
 void CheckSeekLandsOnce(kitbag::Mixer* mixer, const char* once) {
-  mixer->Seek(kSeekTo, 0, false);
+  mixer->Seek(kSeekTo, kZeroClock, false);
   const bool first = LandedOnNextBlock(mixer);
   Check(first && !LandedOnNextBlock(mixer), once);
 }
@@ -43,15 +43,15 @@ void TestStretch() {
   LoadTone(&mixer, kToneFrames);
   mixer.Play();
   RenderPaced(&mixer, kSettleBlocks);
-  mixer.SetRate(kSpeed, 0, false);
+  mixer.SetRate(kSpeed, kZeroClock, false);
   Check(!LandsAgainWithin(&mixer, kWatchBlocks), "landed: a hand-over is none");
   Check(mixer.stretch_engaged(), "landed: the hand-over engaged");
-  mixer.SetRate(kSlower, 0, false);
+  mixer.SetRate(kSlower, kZeroClock, false);
   Check(
       !LandsAgainWithin(&mixer, kWatchBlocks),
       "landed: a rate change is none"
   );
-  mixer.SetLoop(kLoopStart, kLoopEnd, 0, false);
+  mixer.SetLoop(kLoopStart, kLoopEnd, kZeroClock, false);
   Check(
       !LandsAgainWithin(&mixer, kSettleBlocks),
       "landed: a kept loop is none"
@@ -67,10 +67,10 @@ bool ContinuesOnNextBlock(kitbag::Mixer* mixer) {
 void TestSeekIsNoContinuation() {
   kitbag::Mixer mixer(kSampleRate);
   LoadTone(&mixer, kToneFrames);
-  mixer.SetRate(kSpeed, 0, false);
+  mixer.SetRate(kSpeed, kZeroClock, false);
   mixer.Play();
   RenderPaced(&mixer, kSettleBlocks);
-  mixer.Seek(kSeekTo, 0, false);
+  mixer.Seek(kSeekTo, kZeroClock, false);
   Check(!ContinuesOnNextBlock(&mixer), "landed: a seek is no continuation");
 }
 
@@ -80,7 +80,7 @@ void TestLastResortJumpContinues() {
   LoadTone(&mixer, kToneFrames);
   mixer.Play();
   RenderPaced(&mixer, kSettleBlocks);
-  mixer.SetRate(kSpeed, 0, true);
+  mixer.SetRate(kSpeed, kZeroClock, true);
   Check(
       ContinuesOnNextBlock(&mixer),
       "landed: the last-resort jump continues the run"
@@ -90,12 +90,12 @@ void TestLastResortJumpContinues() {
 void TestSeekWhilePausedWaitsForPlay() {
   kitbag::Mixer mixer(kSampleRate);
   LoadTone(&mixer, kToneFrames);
-  mixer.SetRate(kSpeed, 0, false);
+  mixer.SetRate(kSpeed, kZeroClock, false);
   mixer.Play();
   RenderPaced(&mixer, kSettleBlocks);
   mixer.Pause();
   RenderPaced(&mixer, 1);
-  mixer.Seek(kSeekTo, 0, false);
+  mixer.Seek(kSeekTo, kZeroClock, false);
   RenderPaced(&mixer, kSettleBlocks);
   mixer.Play();
   Check(

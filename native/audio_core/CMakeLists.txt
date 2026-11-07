@@ -486,7 +486,7 @@ if(KITBAG_BUILD_TOOLS)
     src/media/miniaudio_decoder.cpp
     src/media/resampling_source_reader.cpp
     src/media/miniaudio_impl.c)
-  target_include_directories(prime_bench PRIVATE src tools/media third_party)
+  target_include_directories(prime_bench PRIVATE src tools tools/media third_party)
   target_link_libraries(prime_bench PRIVATE signalsmith_stretch Threads::Threads m ${CMAKE_DL_LIBS})
 
   add_executable(click_soak_verify

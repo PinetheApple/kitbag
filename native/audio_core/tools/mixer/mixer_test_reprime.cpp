@@ -50,9 +50,9 @@ struct Rig {
     metronome.SetGrid(std::move(grid), 0, true);
     metronome.SetFollowMixer(true);
     metronome.Start();
-    mixer.SetRate(kSpeed, 0, false);
+    mixer.SetRate(kSpeed, kZeroClock, false);
     for (int t = 1; t < kFifthKeyTrack; ++t) {
-      mixer.SetTrackPitch(t, static_cast<float>(t), 0, false);
+      mixer.SetTrackPitch(t, static_cast<float>(t), kZeroClock, false);
     }
     mixer.Play();
   }
@@ -73,7 +73,7 @@ struct Rig {
     mixer.SetTrackPitch(
         kFifthKeyTrack,
         static_cast<float>(kFifthKeyTrack),
-        0,
+        kZeroClock,
         false
     );
   }
@@ -153,7 +153,7 @@ void TestUserSeekStillReplays() {
   const auto from = static_cast<int64_t>(rig.left.size());
   rig.mixer.Seek(
       static_cast<uint64_t>(BeatFrame(kFlipBeat) - kLeadFrames),
-      0,
+      kZeroClock,
       false
   );
   rig.Blocks(kBlocksPastLead);
@@ -170,7 +170,7 @@ void CheckSeekThenRePrimeWhilePaused(bool adopt_seek, const char* label) {
   rig.Blocks(1);
   rig.mixer.Seek(
       static_cast<uint64_t>(BeatFrame(kFlipBeat) - kLeadFrames),
-      0,
+      kZeroClock,
       false
   );
   if (adopt_seek) rig.Blocks(1);

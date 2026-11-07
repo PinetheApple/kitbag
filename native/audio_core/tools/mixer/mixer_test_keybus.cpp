@@ -55,11 +55,11 @@ std::vector<float> RenderAlone(
   kitbag::Mixer mixer(kSampleRate);
   for (size_t t = 0; t < stems.size(); ++t) {
     LoadPcm(&mixer, static_cast<int>(t), stems[t].pcm);
-    mixer.SetTrackPitch(static_cast<int>(t), stems[t].key, 0, false);
+    mixer.SetTrackPitch(static_cast<int>(t), stems[t].key, kZeroClock, false);
     mixer.SetMute(static_cast<int>(t), static_cast<int>(t) != heard);
   }
-  mixer.SetRate(kSpeed, 0, false);
-  mixer.Seek(kSeekTo, 0, false);
+  mixer.SetRate(kSpeed, kZeroClock, false);
+  mixer.Seek(kSeekTo, kZeroClock, false);
   mixer.Play();
   std::vector<float> left = RenderPaced(&mixer, 1);
   CheckNear(
@@ -141,8 +141,8 @@ void TestMuteNeverReplaysStaleAudio() {
           {.frames = kSongFrames, .burst_at = kSeekTo + kStaleBurstAfterSeek}
       )
   );
-  mixer.SetRate(kSpeed, 0, false);
-  mixer.Seek(kSeekTo, 0, false);
+  mixer.SetRate(kSpeed, kZeroClock, false);
+  mixer.Seek(kSeekTo, kZeroClock, false);
   mixer.Play();
   std::vector<float> left = RenderPaced(&mixer, kMuteAtBlock);
   mixer.SetMute(0, true);
@@ -167,10 +167,10 @@ void TestMuteNeverReplaysStaleAudio() {
 int64_t LateJoinOnset(const std::vector<float>& pcm, int heard) {
   kitbag::Mixer mixer(kSampleRate);
   LoadPcm(&mixer, 0, pcm);
-  mixer.SetTrackPitch(0, kKeyA, 0, false);
+  mixer.SetTrackPitch(0, kKeyA, kZeroClock, false);
   mixer.SetMute(0, heard != 0);
-  mixer.SetRate(kSpeed, 0, false);
-  mixer.Seek(kSeekTo, 0, false);
+  mixer.SetRate(kSpeed, kZeroClock, false);
+  mixer.Seek(kSeekTo, kZeroClock, false);
   mixer.Play();
   std::vector<float> left = RenderPaced(&mixer, kJoinAtBlock);
   LoadPcm(&mixer, 1, pcm);
@@ -221,9 +221,9 @@ void TestEndOfSongDrains() {
       .burst_frames = kDrainBurstFrames
   };
   LoadPcm(&mixer, 0, ToneFixture(song));
-  mixer.SetRate(kSpeed, 0, false);
+  mixer.SetRate(kSpeed, kZeroClock, false);
   const int64_t from = kDrainSong - kDrainSeekBack;
-  mixer.Seek(from, 0, false);
+  mixer.Seek(from, kZeroClock, false);
   mixer.Play();
   const std::vector<float> left = RenderUntilStopped(&mixer);
   CheckNear(
@@ -264,11 +264,11 @@ void CheckMoveClick(std::initializer_list<float> keys, const char* label) {
   );
   kitbag::Mixer mixer(kSampleRate);
   for (int t : {0, 1}) LoadPcm(&mixer, t, stems[t]);
-  mixer.SetRate(kSpeed, 0, false);
+  mixer.SetRate(kSpeed, kZeroClock, false);
   mixer.Play();
   std::vector<float> left = RenderPaced(&mixer, kMoveAtBlock);
   const auto moved = static_cast<int64_t>(left.size());
-  for (const float key : keys) mixer.SetTrackPitch(1, key, 0, false);
+  for (const float key : keys) mixer.SetTrackPitch(1, key, kZeroClock, false);
   const int64_t settle = 2 * OutputFramesFor(LagFrames(kSpeed), kSpeed);
   const std::vector<float> after = RenderPaced(&mixer, BlocksFor(settle));
   left.insert(left.end(), after.begin(), after.end());
@@ -312,12 +312,12 @@ void TestClockMapsInFlightFramesByTheirLayout() {
       0,
       ToneFixture({.frames = kSongFrames, .burst_at = kClockBurst})
   );
-  mixer.SetRate(kSpeed, 0, false);
-  mixer.SetLoop(kMoveLoopStart, kMoveLoopEnd, 0, false);
-  mixer.Seek(kClockFrom, 0, false);
+  mixer.SetRate(kSpeed, kZeroClock, false);
+  mixer.SetLoop(kMoveLoopStart, kMoveLoopEnd, kZeroClock, false);
+  mixer.Seek(kClockFrom, kZeroClock, false);
   mixer.Play();
   PlayIntoSecondPass(&mixer);
-  mixer.ClearLoop(0, false);
+  mixer.ClearLoop(kZeroClock, false);
   const int blocks = BlocksFor(OutputFramesFor(LagFrames(kSpeed), kSpeed));
   CheckNear(
       SongFrameAtOnset(&mixer, blocks),
@@ -330,28 +330,28 @@ void TestClockMapsInFlightFramesByTheirLayout() {
 void TestUnloadResetsTheKey() {
   kitbag::Mixer mixer(kSampleRate);
   LoadTone(&mixer, kUnloadToneFrames);
-  mixer.SetTrackPitch(0, kUnloadKey, 0, false);
+  mixer.SetTrackPitch(0, kUnloadKey, kZeroClock, false);
   RenderPaced(&mixer, 1);
-  mixer.UnloadTrack(0, 0, false);
+  mixer.UnloadTrack(0, kZeroClock, false);
   RenderPaced(&mixer, 1);
   Check(mixer.track_pitch(0) == 0, "unload: the key mirror reads 0");
   LoadTone(&mixer, kUnloadToneFrames);
   RenderPaced(&mixer, 1);
   Check(mixer.track_pitch(0) == 0, "unload: the next stem starts at 0 st");
-  mixer.Seek(0, 0, false);
+  mixer.Seek(0, kZeroClock, false);
   Check(mixer.key_bus_count() == 0, "unload: the next stem needs no bus");
 }
 
 void TestUnloadOnFullQueueKeepsBothSidesAgreed() {
   kitbag::Mixer mixer(kSampleRate);
   LoadTone(&mixer, kUnloadToneFrames);
-  mixer.SetTrackPitch(0, kUnloadKey, 0, false);
+  mixer.SetTrackPitch(0, kUnloadKey, kZeroClock, false);
   RenderPaced(&mixer, 1);
   FillCommandQueue(&mixer);
-  mixer.UnloadTrack(0, 0, false);
+  mixer.UnloadTrack(0, kZeroClock, false);
   RenderPaced(&mixer, 1);
   LoadTone(&mixer, kUnloadToneFrames);
-  mixer.Seek(0, 0, false);
+  mixer.Seek(0, kZeroClock, false);
   Check(
       mixer.track_pitch(0) == static_cast<int>(kUnloadKey) &&
           mixer.key_bus_count() == 1,

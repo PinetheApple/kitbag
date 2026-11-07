@@ -14,10 +14,12 @@
 #include "mixer/mixer.h"
 #include "stretch/time_stretch.h"
 #include "wav_fixture.h"
+#include "zero_clock.h"
 
 namespace {
 
 using Clock = std::chrono::steady_clock;
+using kitbag_test::kZeroClock;
 
 constexpr uint32_t kSampleRate = 48000;
 constexpr uint32_t kChannels = 2;
@@ -119,16 +121,16 @@ int KeyForStem(int stem, int buses) {
 void SetKeys(Rig* rig, bool engaged) {
   for (int t = 0; t < kStems; ++t) {
     const int key = engaged ? KeyForStem(t, rig->buses) : 0;
-    rig->mixer->SetTrackPitch(t, static_cast<float>(key), 0, false);
+    rig->mixer->SetTrackPitch(t, static_cast<float>(key), kZeroClock, false);
   }
-  rig->mixer->SetRate(engaged ? kSpeed : kitbag::kUnityRate, 0, false);
+  rig->mixer->SetRate(engaged ? kSpeed : kitbag::kUnityRate, kZeroClock, false);
 }
 
 void BuildRig(Rig* rig, const std::string& path, int buses) {
   rig->buses = buses;
   rig->mixer = std::make_unique<kitbag::Mixer>(kSampleRate);
   for (int t = 0; t < kStems; ++t) {
-    rig->mixer->LoadTrack(t, path.c_str(), 0, false);
+    rig->mixer->LoadTrack(t, path.c_str(), kZeroClock, false);
   }
 }
 
@@ -144,7 +146,7 @@ std::vector<double> EngageTimes(Rig* rig) {
   std::vector<double> times;
   for (int r = 0; r < kEventRepeats; ++r) {
     SetKeys(rig, false);
-    rig->mixer->Seek(SeekFrame(r), 0, false);
+    rig->mixer->Seek(SeekFrame(r), kZeroClock, false);
     WorstOf(rig->mixer.get(), kSettleBlocks);
     SetKeys(rig, true);
     times.push_back(WorstOf(rig->mixer.get(), EngageBlocks(*rig->mixer)));
@@ -157,10 +159,10 @@ std::vector<double> SeekTimes(Rig* rig, bool from_stop) {
   for (int r = 0; r < kEventRepeats; ++r) {
     WorstOf(rig->mixer.get(), kSettleBlocks);
     if (from_stop) {
-      rig->mixer->Stop(0, false);
+      rig->mixer->Stop(kZeroClock, false);
       rig->mixer->Play();
     } else {
-      rig->mixer->Seek(SeekFrame(r), 0, false);
+      rig->mixer->Seek(SeekFrame(r), kZeroClock, false);
     }
     times.push_back(WorstOf(rig->mixer.get(), kEventBlocks));
   }
@@ -194,7 +196,7 @@ void MixerRow(const std::string& path, int buses) {
       seek.worst,
       play.worst
   );
-  rig.mixer->Stop(0, false);
+  rig.mixer->Stop(kZeroClock, false);
 }
 
 using Buses = std::vector<std::unique_ptr<kitbag::KeyBus>>;

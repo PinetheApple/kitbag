@@ -70,7 +70,7 @@ LoadPcm(kitbag::Mixer* mixer, int track, const std::vector<float>& pcm) {
     return;
   }
   TempFiles().push_back(path);
-  if (mixer->LoadTrack(track, path.c_str(), 0, false) != kLoaded) {
+  if (mixer->LoadTrack(track, path.c_str(), kZeroClock, false) != kLoaded) {
     FixtureFail("could not load tone WAV into the track");
   }
 }
@@ -221,8 +221,8 @@ inline float LoopWrapCurvature(
   for (size_t t = 0; t < stems.size(); ++t) {
     LoadPcm(&mixer, static_cast<int>(t), stems[t]);
   }
-  mixer.SetLoop(probe.start, probe.end, 0, false);
-  mixer.Seek(probe.from, 0, false);
+  mixer.SetLoop(probe.start, probe.end, kZeroClock, false);
+  mixer.Seek(probe.from, kZeroClock, false);
   mixer.Play();
   const int64_t wrap = probe.end - probe.from;
   const int blocks = static_cast<int>(2 * wrap / kBlock) + 1;

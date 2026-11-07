@@ -11,6 +11,7 @@ namespace {
 constexpr float kSpeed = 0.75f;
 constexpr int kChosenBuses = kitbag::TimeStretch::kMaxChosenConfigInstances;
 constexpr int kExtraStem = kChosenBuses;
+constexpr auto kFifthKey = static_cast<float>(kChosenBuses);
 constexpr int kStems = kChosenBuses + 1;
 constexpr int64_t kSongFrames = int64_t{10} * kSampleRate;
 constexpr int64_t kSeekTo = kSampleRate / 2 + 7;
@@ -93,24 +94,24 @@ void LoadReaders(kitbag::Mixer* mixer, Readers* readers) {
     (*readers)[t] = std::make_unique<GatedReader>(silent);
   }
   for (int t = 0; t < kStems; ++t) {
-    mixer->SetTrackSource(t, (*readers)[t].get(), 0, false);
+    mixer->SetTrackSource(t, (*readers)[t].get(), kZeroClock, false);
   }
   for (int t = 1; t < kChosenBuses; ++t) {
-    mixer->SetTrackPitch(t, static_cast<float>(t), 0, false);
+    mixer->SetTrackPitch(t, static_cast<float>(t), kZeroClock, false);
   }
-  mixer->SetRate(kSpeed, 0, false);
+  mixer->SetRate(kSpeed, kZeroClock, false);
 }
 
 void TestSwitchPlaysOnWhilePriming() {
   Readers readers;
   kitbag::Mixer mixer(kSampleRate);
   LoadReaders(&mixer, &readers);
-  mixer.Seek(kSeekTo, 0, false);
+  mixer.Seek(kSeekTo, kZeroClock, false);
   mixer.Play();
   RenderPaced(&mixer, kSwitchAtBlock);
   readers[0]->Arm();
   std::thread app([&mixer] {
-    mixer.SetTrackPitch(kExtraStem, static_cast<float>(kChosenBuses), 0, false);
+    mixer.SetTrackPitch(kExtraStem, kFifthKey, kZeroClock, false);
   });
   const bool reprimed = readers[0]->WaitEntered();
   Check(reprimed, "switch: a fifth key re-primes through the stems");
@@ -137,13 +138,13 @@ void TestKeyDragKeepsChosenConfig() {
   const std::vector<float> tone =
       ToneFixture({.frames = kSongFrames, .bed = true});
   for (int t = 0; t < kChosenBuses; ++t) LoadPcm(&mixer, t, tone);
-  mixer.SetTrackPitch(1, -1.0f, 0, false);
-  mixer.SetTrackPitch(2, -2.0f, 0, false);
+  mixer.SetTrackPitch(1, -1.0f, kZeroClock, false);
+  mixer.SetTrackPitch(2, -2.0f, kZeroClock, false);
   mixer.Play();
   RenderPaced(&mixer, kSwitchAtBlock);
   const int64_t before = mixer.fed_frames();
   for (int step = 1; step <= kDragSteps; ++step) {
-    mixer.SetTrackPitch(3, static_cast<float>(step), 0, false);
+    mixer.SetTrackPitch(3, static_cast<float>(step), kZeroClock, false);
     RenderPaced(&mixer, kDragBlocks);
   }
   Check(
@@ -157,7 +158,7 @@ void TestKeyDragKeepsChosenConfig() {
       "drag: the guard never re-primes during a drag"
   );
   RenderPaced(&mixer, kRetireBlocks);
-  mixer.SetTrackPitch(3, static_cast<float>(kDragSteps), 0, false);
+  mixer.SetTrackPitch(3, static_cast<float>(kDragSteps), kZeroClock, false);
   Check(
       mixer.key_bus_count() == kChosenBuses,
       "drag: drained empty buses are retired by the app thread"
@@ -169,17 +170,17 @@ void TestUnloadKeepsConfigUntilSeek() {
   const std::vector<float> tone = ToneFixture({.frames = kSongFrames});
   for (int t = 0; t < kStems; ++t) LoadPcm(&mixer, t, tone);
   for (int t = 1; t < kStems; ++t) {
-    mixer.SetTrackPitch(t, static_cast<float>(t), 0, false);
+    mixer.SetTrackPitch(t, static_cast<float>(t), kZeroClock, false);
   }
   mixer.Play();
   RenderPaced(&mixer, kSwitchAtBlock);
   Check(mixer.key_buses_vendor_default(), "guard: five keys run presetDefault");
-  mixer.UnloadTrack(kExtraStem, 0, false);
+  mixer.UnloadTrack(kExtraStem, kZeroClock, false);
   Check(
       mixer.key_buses_vendor_default(),
       "guard: an unload mid-play does not switch back"
   );
-  mixer.Seek(mixer.position(), 0, false);
+  mixer.Seek(mixer.position(), kZeroClock, false);
   Check(
       !mixer.key_buses_vendor_default(),
       "guard: the next seek switches back to the chosen config"
@@ -191,11 +192,11 @@ void TestLoopEndBetweenHeadsKeeps() {
   const int64_t burst = kHeld + lag / 4;
   kitbag::Mixer mixer(kSampleRate);
   LoadPcm(&mixer, 0, ToneFixture({.frames = kSongFrames, .burst_at = burst}));
-  mixer.SetRate(kSpeed, 0, false);
-  mixer.Seek(kSeekTo, 0, false);
+  mixer.SetRate(kSpeed, kZeroClock, false);
+  mixer.Seek(kSeekTo, kZeroClock, false);
   mixer.Play();
   RenderPaced(&mixer, kSwitchAtBlock);
-  mixer.SetLoop(kHeld - kLoopLead, kHeld + lag / 2, 0, false);
+  mixer.SetLoop(kHeld - kLoopLead, kHeld + lag / 2, kZeroClock, false);
   const int64_t expected = OutputFramesFor(burst - kHeld, kSpeed);
   const std::vector<float> left = RenderPaced(&mixer, kOnsetBlocks);
   CheckNear(

@@ -33,7 +33,7 @@ constexpr const char* kMissingPath = "/nonexistent/kitbag_missing.wav";
 void TestTakeAndCarrySum() {
   kitbag::Mixer mixer(kSampleRate);
   LoadPcm(&mixer, 0, ToneFixture({.frames = kCarrySongFrames}));
-  mixer.SetRate(kCarryRate, 0, false);
+  mixer.SetRate(kCarryRate, kZeroClock, false);
   mixer.Play();
   const int64_t before = mixer.fed_frames();
   std::vector<float> out(static_cast<size_t>(kOddBlock) * 2);
@@ -52,21 +52,21 @@ void TestTakeAndCarrySum() {
 void TestBypassIsSampleExact() {
   kitbag::Mixer mixer(kSampleRate);
   LoadRamp(&mixer, 0, kLoopTrackFrames, 0.0f);
-  mixer.SetRate(kitbag::kUnityRate, 0, false);
-  mixer.SetTrackPitch(0, 0.0f, 0, false);
-  mixer.Seek(kBypassSeek, 0, false);
+  mixer.SetRate(kitbag::kUnityRate, kZeroClock, false);
+  mixer.SetTrackPitch(0, 0.0f, kZeroClock, false);
+  mixer.Seek(kBypassSeek, kZeroClock, false);
   mixer.Play();
   std::vector<float> left = RenderPaced(&mixer, 1);
   ExpectAt(left, 0, kBypassSeek, "bypass: 1.0x at 0 st has zero lag");
   Check(!mixer.stretch_engaged(), "bypass: nothing is engaged");
   Check(mixer.key_bus_count() == 0, "bypass: no key bus is configured");
-  mixer.SetRate(kSpeed, 0, false);
+  mixer.SetRate(kSpeed, kZeroClock, false);
   RenderPaced(&mixer, HandOverBlocks(mixer));
   Check(mixer.stretch_engaged(), "engage: 0.75x engages mid-play");
-  mixer.SetRate(kitbag::kUnityRate, 0, false);
+  mixer.SetRate(kitbag::kUnityRate, kZeroClock, false);
   RenderPaced(&mixer, 1);
   Check(mixer.stretch_engaged(), "engage: back at 1.0x it holds until a seek");
-  mixer.Seek(kDisengageSeek, 0, false);
+  mixer.Seek(kDisengageSeek, kZeroClock, false);
   left = RenderPaced(&mixer, 1);
   ExpectAt(left, 0, kDisengageSeek, "disengage: the seek is frame for frame");
   Check(!mixer.stretch_engaged(), "disengage: a seek at 1.0x, 0 st bypasses");
@@ -76,9 +76,9 @@ void TestStopAtUnityFreesTheBuses() {
   kitbag::Mixer mixer(kSampleRate);
   LoadRamp(&mixer, 0, kLoopTrackFrames, 0.0f);
   mixer.Play();
-  mixer.SetRate(kSpeed, 0, false);
+  mixer.SetRate(kSpeed, kZeroClock, false);
   RenderPaced(&mixer, HandOverBlocks(mixer));
-  mixer.SetRate(kitbag::kUnityRate, 0, false);
+  mixer.SetRate(kitbag::kUnityRate, kZeroClock, false);
   mixer.Pause();
   RenderPaced(&mixer, 1);
   mixer.Play();
@@ -87,7 +87,7 @@ void TestStopAtUnityFreesTheBuses() {
       mixer.stretch_engaged() && mixer.key_bus_count() > 0,
       "engage: back at 1.0x it holds across a pause"
   );
-  mixer.Stop(0, false);
+  mixer.Stop(kZeroClock, false);
   RenderPaced(&mixer, 1);
   Check(
       !mixer.stretch_engaged() && mixer.key_bus_count() == 0,
@@ -105,8 +105,8 @@ int64_t ControlLatency(float rate, float key) {
       0,
       ToneFixture({.frames = kToneFrames, .steady_hz = kBurstHz})
   );
-  mixer.SetRate(rate, 0, false);
-  mixer.SetTrackPitch(0, key, 0, false);
+  mixer.SetRate(rate, kZeroClock, false);
+  mixer.SetTrackPitch(0, key, kZeroClock, false);
   mixer.SetMute(0, true);
   mixer.Play();
   std::vector<float> left = RenderPaced(&mixer, kSettleBlocks);
@@ -177,7 +177,7 @@ void TestEngageTransition() {
   mixer.Play();
   RenderPaced(&mixer, kSettleBlocks);
   const auto head = static_cast<int64_t>(mixer.position());
-  mixer.SetRate(kSpeed, 0, false);
+  mixer.SetRate(kSpeed, kZeroClock, false);
   const int64_t seam = mixer.handover_lead_frames();
   ClockedRender run;
   const bool smooth = RenderSmoothly(&mixer, &run);
@@ -199,7 +199,7 @@ void TestPrimeLeavesNoGap() {
   LoadToneOverFragile(&mixer, kSilentTrack, kToneFrames);
   mixer.Play();
   RenderPaced(&mixer, kSettleBlocks);
-  mixer.SetTrackPitch(kToneTrack, kKey, 0, false);
+  mixer.SetTrackPitch(kToneTrack, kKey, kZeroClock, false);
   const std::vector<float> left =
       RenderPaced(&mixer, HandOverBlocks(mixer) + kSettleBlocks);
   Check(mixer.stretch_engaged(), "prime: a key change mid-play engages");
@@ -208,27 +208,27 @@ void TestPrimeLeavesNoGap() {
       mixer.handover_lead_frames(),
       "prime: engaging mid-play leaves no gap"
   );
-  mixer.Seek(kLoopFrom, 0, false);
+  mixer.Seek(kLoopFrom, kZeroClock, false);
   CheckSoundsAtOnce(&mixer, "prime: a seek sounds at once");
-  mixer.Stop(0, false);
+  mixer.Stop(kZeroClock, false);
   Drain(&mixer);
   mixer.Play();
   CheckSoundsAtOnce(&mixer, "prime: play from stop sounds at once");
 }
 
 void CheckBusesFreed(kitbag::Mixer* mixer) {
-  mixer->Seek(0, 0, false);
+  mixer->Seek(0, kZeroClock, false);
   Check(mixer->key_bus_count() == 0, "buses: a seek back to bypass frees all");
-  mixer->SetRate(kSpeed, 0, false);
-  mixer->SetTrackPitch(1, kKey, 0, false);
-  mixer->UnloadTrack(1, 0, false);
+  mixer->SetRate(kSpeed, kZeroClock, false);
+  mixer->SetTrackPitch(1, kKey, kZeroClock, false);
+  mixer->UnloadTrack(1, kZeroClock, false);
   Check(mixer->key_bus_count() == 1, "buses: an unload frees its key's bus");
   Check(
-      mixer->LoadTrack(1, kMissingPath, 0, false) != kLoaded &&
+      mixer->LoadTrack(1, kMissingPath, kZeroClock, false) != kLoaded &&
           mixer->key_bus_count() == 1,
       "buses: a failed load leaves no bus behind"
   );
-  for (int t : {0, 1}) mixer->UnloadTrack(t, 0, false);
+  for (int t : {0, 1}) mixer->UnloadTrack(t, kZeroClock, false);
   Check(mixer->key_bus_count() == 0, "buses: unloading the song frees all");
 }
 
@@ -239,17 +239,17 @@ void CheckFailedRestageKeepsBuses(Restage restage, const char* label) {
   const std::string silent_file =
       LoadToneOverFragile(&mixer, kSilentTrack, kToneFrames);
   mixer.Play();
-  mixer.SetRate(kSpeed, 0, false);
+  mixer.SetRate(kSpeed, kZeroClock, false);
   RenderPaced(&mixer, HandOverBlocks(mixer));
-  mixer.SetRate(kitbag::kUnityRate, 0, false);
+  mixer.SetRate(kitbag::kUnityRate, kZeroClock, false);
   std::filesystem::remove(silent_file);
   if (restage == Restage::kSeek) {
-    mixer.Seek(kDisengageSeek, 0, false);
+    mixer.Seek(kDisengageSeek, kZeroClock, false);
   } else {
-    mixer.Stop(0, false);
+    mixer.Stop(kZeroClock, false);
     mixer.Play();
   }
-  mixer.UnloadTrack(kSilentTrack, 0, false);
+  mixer.UnloadTrack(kSilentTrack, kZeroClock, false);
   const std::vector<float> left = RenderPaced(&mixer, kSettleBlocks);
   Check(mixer.stretch_engaged(), "restore: a failed restage stays engaged");
   CheckNoQuietWindow(left, 0, label);
@@ -270,26 +270,26 @@ void TestBusesAreLazyAndFreed() {
   kitbag::Mixer mixer(kSampleRate);
   for (int t : {0, 1}) LoadPcm(&mixer, t, ToneFixture({.frames = kToneFrames}));
   Check(mixer.key_bus_count() == 0, "buses: none before a stage engages");
-  mixer.SetRate(kSpeed, 0, false);
+  mixer.SetRate(kSpeed, kZeroClock, false);
   Drain(&mixer);
   Check(mixer.key_bus_count() == 1, "buses: speed alone needs one");
-  mixer.SetTrackPitch(1, kKey, 0, false);
+  mixer.SetTrackPitch(1, kKey, kZeroClock, false);
   Check(mixer.key_bus_count() == 2, "buses: one per distinct semitone");
-  mixer.SetTrackPitch(0, static_cast<float>(kOverPitch), 0, false);
+  mixer.SetTrackPitch(0, static_cast<float>(kOverPitch), kZeroClock, false);
   Drain(&mixer);
   Check(
       mixer.track_pitch(0) == kitbag::Mixer::kMaxPitchSemitones,
       "buses: pitch clamps to +6"
   );
-  mixer.SetTrackPitch(0, 0.0f, 0, false);
-  mixer.SetTrackPitch(1, 0.0f, 0, false);
+  mixer.SetTrackPitch(0, 0.0f, kZeroClock, false);
+  mixer.SetTrackPitch(1, 0.0f, kZeroClock, false);
   Check(mixer.key_bus_count() == 3, "buses: a move frees nothing mid-play");
-  mixer.Seek(0, 0, false);
+  mixer.Seek(0, kZeroClock, false);
   Check(mixer.key_bus_count() == 1, "buses: a seek frees the unused ones");
-  mixer.SetRate(kUnderRate, 0, false);
+  mixer.SetRate(kUnderRate, kZeroClock, false);
   Drain(&mixer);
   Check(mixer.rate() == kitbag::Mixer::kMinRate, "rate: clamps to 0.5");
-  mixer.SetRate(kOverRate, 0, false);
+  mixer.SetRate(kOverRate, kZeroClock, false);
   Drain(&mixer);
   Check(mixer.rate() == kitbag::Mixer::kMaxRate, "rate: clamps to 1.0");
   CheckBusesFreed(&mixer);
@@ -315,16 +315,16 @@ void CheckProcessNeverAllocates(
   int track = 0;
   for (const float key : keys) {
     LoadPcm(&mixer, track, ToneFixture({.frames = kToneFrames, .bed = true}));
-    mixer.SetTrackPitch(track++, key, 0, false);
+    mixer.SetTrackPitch(track++, key, kZeroClock, false);
   }
   mixer.Play();
   size_t allocations = CountedProcess(&mixer, kAllocBlocks);
-  mixer.SetRate(kSpeed, 0, false);
+  mixer.SetRate(kSpeed, kZeroClock, false);
   allocations += CountedProcess(&mixer, kAllocBlocks);
-  mixer.SetTrackPitch(1, -kKey, 0, false);
+  mixer.SetTrackPitch(1, -kKey, kZeroClock, false);
   allocations += CountedProcess(&mixer, kDrainBlocks);
-  mixer.SetTrackPitch(1, kKey, 0, false);
-  mixer.Seek(kLoopFrom, 0, false);
+  mixer.SetTrackPitch(1, kKey, kZeroClock, false);
+  mixer.Seek(kLoopFrom, kZeroClock, false);
   allocations += CountedProcess(&mixer, kAllocBlocks);
   Check(allocations == 0, label);
 }

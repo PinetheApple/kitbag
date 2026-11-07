@@ -81,14 +81,14 @@ class HookReader : public kitbag::SourceReader {
 void TestKeepAfterAnOldWrapDoesNotReplay() {
   HookReader reader;
   kitbag::Mixer mixer(kSampleRate);
-  mixer.SetTrackSource(0, &reader, 0, false);
-  mixer.SetLoop(kOldStart, kOldEnd, 0, false);
-  mixer.Seek(kHeadBeforeWrap, 0, false);
+  mixer.SetTrackSource(0, &reader, kZeroClock, false);
+  mixer.SetLoop(kOldStart, kOldEnd, kZeroClock, false);
+  mixer.Seek(kHeadBeforeWrap, kZeroClock, false);
   mixer.Play();
   RenderLeft(&mixer, 1);
   const auto head = static_cast<float>(mixer.position());
   reader.Arm([&] { RenderLeft(&mixer, kBlocksAcrossTheWrap); });
-  mixer.SetLoop(kNewStart, kNewEnd, 0, false);
+  mixer.SetLoop(kNewStart, kNewEnd, kZeroClock, false);
   ExpectAt(
       RenderLeft(&mixer, 1),
       0,
@@ -108,7 +108,7 @@ void LoadSignedRamp(kitbag::Mixer* mixer, int track, uint32_t rate) {
       step
   );
   TempFiles().push_back(path);
-  if (mixer->LoadTrack(track, path.c_str(), 0, false) != kLoaded) {
+  if (mixer->LoadTrack(track, path.c_str(), kZeroClock, false) != kLoaded) {
     FixtureFail("could not load a signed ramp");
   }
 }
@@ -123,8 +123,8 @@ float LoudestLeft(const std::vector<float>& left) {
 void TestLoadDuringALoopJoinsInSync() {
   kitbag::Mixer mixer(kSampleRate);
   LoadSignedRamp(&mixer, 0, kSampleRate);
-  mixer.SetLoop(kJoinStart, kJoinEnd, 0, false);
-  mixer.Seek(kJoinFrom, 0, false);
+  mixer.SetLoop(kJoinStart, kJoinEnd, kZeroClock, false);
+  mixer.Seek(kJoinFrom, kZeroClock, false);
   mixer.Play();
   RenderLeft(&mixer, kBlocksBeforeJoin);
   LoadSignedRamp(&mixer, 1, kSampleRate);
@@ -152,14 +152,14 @@ void TestSixStemsStaySampleLocked() {
   for (int t = 0; t < kSixStems; ++t) LoadSignedRamp(&mixer, t, kStemRate);
   mixer.Play();
   float residue = PacedResidue(&mixer, kStretchBlocks);
-  mixer.Seek(kSixSeek, 0, false);
+  mixer.Seek(kSixSeek, kZeroClock, false);
   residue = std::max(residue, PacedResidue(&mixer, kStretchBlocks));
-  mixer.SetLoop(kSixLoopStart, kSixLoopEnd, 0, false);
+  mixer.SetLoop(kSixLoopStart, kSixLoopEnd, kZeroClock, false);
   residue = std::max(residue, PacedResidue(&mixer, kLoopBlocks));
   for (int t : {2, 3}) mixer.SetMute(t, true);
   for (int t : {4, 5}) mixer.SetSolo(t, true);
   residue = std::max(residue, PacedResidue(&mixer, kStretchBlocks));
-  mixer.ClearLoop(0, false);
+  mixer.ClearLoop(kZeroClock, false);
   residue = std::max(residue, PacedResidue(&mixer, kStretchBlocks));
   Check(residue <= kEpsilon, "six: the pairs cancel through it all");
   if (residue > kEpsilon) std::fprintf(stderr, "  residue %.3f\n", residue);

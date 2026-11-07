@@ -26,7 +26,7 @@ std::string PlayFourKeysReturningFifthStem(kitbag::Mixer* mixer) {
     fifth = LoadSilence(mixer, t, kToneFrames);
   }
   for (int t = 1; t < kFifthKeyTrack; ++t) {
-    mixer->SetTrackPitch(t, static_cast<float>(t), 0, false);
+    mixer->SetTrackPitch(t, static_cast<float>(t), kZeroClock, false);
   }
   mixer->Play();
   RenderPaced(mixer, kSettleBlocks);
@@ -39,11 +39,11 @@ void TestStoppedPrimeFailureChangesNothing() {
       LoadToneOverFragile(&mixer, kFragileTrack, kToneFrames);
   Hide(fragile);
   Check(
-      mixer.SetRate(kSpeed, 0, false) == Result::kPrimeFailed,
+      mixer.SetRate(kSpeed, kZeroClock, false) == Result::kPrimeFailed,
       "refusal: a failed prime fails the rate"
   );
   Check(
-      mixer.SetTrackPitch(0, kKey, 0, false) == Result::kPrimeFailed,
+      mixer.SetTrackPitch(0, kKey, kZeroClock, false) == Result::kPrimeFailed,
       "refusal: a failed prime fails the key"
   );
   RenderPaced(&mixer, 1);
@@ -59,7 +59,7 @@ void TestStoppedPrimeFailureChangesNothing() {
       "refusal: a failed prime leaves the mixer not engaged"
   );
   Check(
-      mixer.SetRate(kSpeed, 0, false) == Result::kOk,
+      mixer.SetRate(kSpeed, kZeroClock, false) == Result::kOk,
       "refusal: the rate applies once the file is back"
   );
 }
@@ -72,7 +72,7 @@ void TestPlayingPrimeFailureStaysInBypass() {
   RenderPaced(&mixer, kSettleBlocks);
   Hide(fragile);
   Check(
-      mixer.SetRate(kSpeed, 0, false) == Result::kPrimeFailed,
+      mixer.SetRate(kSpeed, kZeroClock, false) == Result::kPrimeFailed,
       "refusal: a failed hand-over fails the rate"
   );
   const uint64_t before = mixer.position();
@@ -95,7 +95,7 @@ void TestEngagedFlipFailureKeepsTheConfig() {
   Hide(fifth);
   const float key = static_cast<float>(kFifthKeyTrack);
   Check(
-      mixer.SetTrackPitch(kFifthKeyTrack, key, 0, false) ==
+      mixer.SetTrackPitch(kFifthKeyTrack, key, kZeroClock, false) ==
           Result::kPrimeFailed,
       "refusal: a failed config flip fails the key"
   );
@@ -111,7 +111,8 @@ void TestEngagedFlipFailureKeepsTheConfig() {
   CheckNoQuietWindow(left, 0, "refusal: a failed config flip keeps sounding");
   Unhide(fifth);
   Check(
-      mixer.SetTrackPitch(kFifthKeyTrack, key, 0, false) == Result::kOk &&
+      mixer.SetTrackPitch(kFifthKeyTrack, key, kZeroClock, false) ==
+              Result::kOk &&
           mixer.key_buses_vendor_default(),
       "refusal: the flip applies once the file is back"
   );
@@ -127,7 +128,7 @@ void TestStalledHandOverThenFailureIsRetracted() {
     std::filesystem::remove(fragile);
   });
   Check(
-      mixer.SetRate(kSpeed, 0, true) == Result::kPrimeFailed,
+      mixer.SetRate(kSpeed, kZeroClock, true) == Result::kPrimeFailed,
       "refusal: a stalled hand-over whose jump fails fails the rate"
   );
   mixer.set_prime_publish_hook({});
@@ -161,7 +162,7 @@ void TestUndoSlotIsReserved() {
   Hide(fragile);
   for (int i = 0; i < capacity - 1; ++i) mixer.SetGain(0, 1.0f);
   Check(
-      mixer.SetRate(kSpeed, 0, false) == Result::kBusy,
+      mixer.SetRate(kSpeed, kZeroClock, false) == Result::kBusy,
       "refusal: one free slot is too few to undo a rate"
   );
   RenderPaced(&mixer, 1);
@@ -185,10 +186,10 @@ void TestFailedSeekDropsWhatItStaged() {
   mixer.Play();
   RenderPaced(&mixer, kSettleBlocks);
   Hide(fragile);
-  mixer.Seek(kSeekTo, 0, false);
+  mixer.Seek(kSeekTo, kZeroClock, false);
   RenderPaced(&mixer, kSettleBlocks);
   Unhide(fragile);
-  mixer.SetRate(kSpeed, 0, false);
+  mixer.SetRate(kSpeed, kZeroClock, false);
   RenderPaced(&mixer, HandOverBlocks(mixer) + kSettleBlocks);
   const std::vector<float> left = RenderPaced(&mixer, kSettleBlocks);
   const float peak = Loudest(left, 0, static_cast<int64_t>(left.size()));
@@ -206,7 +207,7 @@ void TestBusyInBypassLeavesItNotEngaged() {
   LoadTone(&mixer, kToneFrames);
   FillCommandQueue(&mixer);
   Check(
-      mixer.SetTrackPitch(0, kKey, 0, false) == Result::kBusy,
+      mixer.SetTrackPitch(0, kKey, kZeroClock, false) == Result::kBusy,
       "busy: a full queue refuses the key"
   );
   RenderPaced(&mixer, 1);
@@ -218,13 +219,14 @@ void TestBusyInBypassLeavesItNotEngaged() {
 void TestBusyEngagedPublishesNoBus() {
   kitbag::Mixer mixer(kSampleRate);
   LoadToneOverFragile(&mixer, kFragileTrack, kToneFrames);
-  mixer.SetRate(kSpeed, 0, false);
+  mixer.SetRate(kSpeed, kZeroClock, false);
   mixer.Play();
   RenderPaced(&mixer, kSettleBlocks);
   const int before = mixer.key_bus_count();
   FillCommandQueue(&mixer);
   Check(
-      mixer.SetTrackPitch(kFragileTrack, kKey, 0, false) == Result::kBusy,
+      mixer.SetTrackPitch(kFragileTrack, kKey, kZeroClock, false) ==
+          Result::kBusy,
       "busy: a full queue refuses a live key"
   );
   Check(mixer.key_bus_count() == before, "busy: a refused key adds no bus");
@@ -237,7 +239,7 @@ void TestBusyKeepsTheConfig() {
   mixer.SetTrackPitch(
       kFifthKeyTrack,
       static_cast<float>(kFifthKeyTrack),
-      0,
+      kZeroClock,
       false
   );
   Check(

@@ -235,14 +235,14 @@ int64_t kb_mixer_track_frames(const kb_engine* engine, int32_t track) {
 kb_result kb_player_load(kb_engine* engine, const char* path) {
   if (engine == nullptr || path == nullptr) return KB_ERROR_INVALID_ARGUMENT;
   kitbag::Engine* e = ToEngine(engine);
-  const bool ok = e->player().Load(path, e->frames_rendered(), e->is_running());
+  const bool ok = e->player().Load(path, e->frame_clock(), e->is_running());
   return ok ? KB_OK : KB_ERROR_INVALID_ARGUMENT;
 }
 
 void kb_player_unload(kb_engine* engine) {
   if (engine == nullptr) return;
   kitbag::Engine* e = ToEngine(engine);
-  e->player().Unload(e->frames_rendered(), e->is_running());
+  e->player().Unload(e->frame_clock(), e->is_running());
 }
 
 void kb_player_play(kb_engine* engine) {
@@ -256,11 +256,8 @@ void kb_player_pause(kb_engine* engine) {
 void kb_player_seek(kb_engine* engine, int64_t frame) {
   if (engine == nullptr) return;
   kitbag::Engine* e = ToEngine(engine);
-  e->player().Seek(
-      static_cast<uint64_t>(frame),
-      e->frames_rendered(),
-      e->is_running()
-  );
+  e->player()
+      .Seek(static_cast<uint64_t>(frame), e->frame_clock(), e->is_running());
 }
 
 int64_t kb_player_position(const kb_engine* engine) {

@@ -24,7 +24,7 @@ float EqualPowerBlend(int64_t into, int64_t crossfade) {
 }
 
 kitbag::Mixer::LoopResult SetTestLoop(kitbag::Mixer* mixer) {
-  return mixer->SetLoop(kLoopStart, kLoopEnd, 0, false);
+  return mixer->SetLoop(kLoopStart, kLoopEnd, kZeroClock, false);
 }
 
 void TestMasterGainScalesTheMix() {
@@ -33,7 +33,7 @@ void TestMasterGainScalesTheMix() {
   mixer.SetGain(0, 1.5f);
   mixer.SetMasterGain(0.3f);
   Check(mixer.master_gain() == 1.0f, "master: unchanged until drained");
-  mixer.Seek(777, 0, false);
+  mixer.Seek(777, kZeroClock, false);
   mixer.Play();
   const std::vector<float> out = RenderBlock(&mixer);
   Check(mixer.master_gain() == 0.3f, "master: the drained value is mirrored");
@@ -56,7 +56,7 @@ void TestLoopWrapsAtTheExactFrame() {
   Check(SetTestLoop(&mixer) == kitbag::Mixer::LoopResult::kOk, "loop: set");
   const int64_t from = 3000;
   const int64_t crossfade = mixer.crossfade_frames();
-  mixer.Seek(from, 0, false);
+  mixer.Seek(from, kZeroClock, false);
   mixer.Play();
   const std::vector<float> left = RenderLeft(&mixer, 12);
   for (int64_t wrap : {kLoopEnd - from, kLoopEnd - from + kLoopLength}) {
@@ -132,9 +132,9 @@ void TestCrossfadeHasNoSpike() {
   );
   SineReader reader;
   kitbag::Mixer mixer(kSampleRate);
-  mixer.SetTrackSource(0, &reader, 0, false);
-  mixer.SetLoop(kStart, kEnd, 0, false);
-  mixer.Seek(kEnd - 600, 0, false);
+  mixer.SetTrackSource(0, &reader, kZeroClock, false);
+  mixer.SetLoop(kStart, kEnd, kZeroClock, false);
+  mixer.Seek(kEnd - 600, kZeroClock, false);
   mixer.Play();
   const std::vector<float> left = RenderLeft(&mixer, 3);
   const float steady = MaxStep(left, 0, 500);
@@ -148,12 +148,12 @@ void TestSeekAroundTheLoop() {
   kitbag::Mixer mixer(kSampleRate);
   LoadRamp(&mixer, 0, kLoopTrackFrames, 0.0f);
   SetTestLoop(&mixer);
-  mixer.Seek(9000, 0, false);
+  mixer.Seek(9000, kZeroClock, false);
   Drain(&mixer);
   Check(mixer.position() == kLoopStart, "loop seek: past the end lands on A");
   mixer.Play();
   ExpectAt(RenderLeft(&mixer, 1), 0, kLoopStart, "loop seek: A sounds");
-  mixer.Seek(500, 0, false);
+  mixer.Seek(500, kZeroClock, false);
   const std::vector<float> before = RenderLeft(&mixer, 2);
   ExpectAt(before, 0, 500.0f, "loop seek: before A plays from there");
   ExpectAt(before, kLoopStart - 500, kLoopStart, "loop seek: and into A");
@@ -163,11 +163,11 @@ void TestClearLoopMidPlayContinues() {
   kitbag::Mixer mixer(kSampleRate);
   LoadRamp(&mixer, 0, kLoopTrackFrames, 0.0f);
   SetTestLoop(&mixer);
-  mixer.Seek(4000, 0, false);
+  mixer.Seek(4000, kZeroClock, false);
   mixer.Play();
   RenderLeft(&mixer, 1);
   const auto head = static_cast<float>(mixer.position());
-  Check(mixer.ClearLoop(0, false), "clear: succeeds");
+  Check(mixer.ClearLoop(kZeroClock, false), "clear: succeeds");
   const std::vector<float> left = RenderLeft(&mixer, 8);
   ExpectAt(left, 0, head, "clear: playback continues from the head");
   ExpectAt(
@@ -181,7 +181,7 @@ void TestClearLoopMidPlayContinues() {
 void TestSetLoopWhilePlaying() {
   kitbag::Mixer mixer(kSampleRate);
   LoadRamp(&mixer, 0, kLoopTrackFrames, 0.0f);
-  mixer.Seek(1000, 0, false);
+  mixer.Seek(1000, kZeroClock, false);
   mixer.Play();
   RenderLeft(&mixer, 1);
   SetTestLoop(&mixer);
@@ -191,8 +191,8 @@ void TestSetLoopWhilePlaying() {
       1000.0f + kBlock,
       "set: a head before B holds"
   );
-  mixer.ClearLoop(0, false);
-  mixer.Seek(6000, 0, false);
+  mixer.ClearLoop(kZeroClock, false);
+  mixer.Seek(6000, kZeroClock, false);
   Drain(&mixer);
   SetTestLoop(&mixer);
   ExpectAt(
@@ -210,7 +210,7 @@ void TestSetLoopRightAfterSeek() {
   LoadRamp(&mixer, 0, kLoopTrackFrames, 0.0f);
   mixer.Play();
   RenderLeft(&mixer, 4);
-  mixer.Seek(1000, 0, false);
+  mixer.Seek(1000, kZeroClock, false);
   SetTestLoop(&mixer);
   ExpectAt(RenderLeft(&mixer, 1), 0, 1000.0f, "set after seek: keeps the seek");
 }
@@ -222,17 +222,21 @@ void TestSetLoopRejectsBadBounds() {
   const int64_t shortest =
       kitbag::Mixer::kMinLoopCrossfades * mixer.crossfade_frames();
   const auto longest = static_cast<int64_t>(kLoopTrackFrames);
-  Check(mixer.SetLoop(-1, 2000, 0, false) == Result::kInvalid, "bounds: A < 0");
   Check(
-      mixer.SetLoop(0, longest + 1, 0, false) == Result::kInvalid,
+      mixer.SetLoop(-1, 2000, kZeroClock, false) == Result::kInvalid,
+      "bounds: A < 0"
+  );
+  Check(
+      mixer.SetLoop(0, longest + 1, kZeroClock, false) == Result::kInvalid,
       "bounds: B > end"
   );
   Check(
-      mixer.SetLoop(100, 100 + shortest - 1, 0, false) == Result::kInvalid,
+      mixer.SetLoop(100, 100 + shortest - 1, kZeroClock, false) ==
+          Result::kInvalid,
       "bounds: short"
   );
   Check(
-      mixer.SetLoop(100, 100 + shortest, 0, false) == Result::kOk,
+      mixer.SetLoop(100, 100 + shortest, kZeroClock, false) == Result::kOk,
       "bounds: shortest ok"
   );
 }
@@ -244,7 +248,7 @@ void TestLoopKeepsUnequalStemsAligned() {
   SetTestLoop(&mixer);
   mixer.SetMute(0, true);
   mixer.SetMute(1, true);
-  mixer.Seek(2000, 0, false);
+  mixer.Seek(2000, kZeroClock, false);
   mixer.Play();
   ExpectSilentBlock(RenderBlock(&mixer), "aligned: muting all is silent");
   Check(mixer.is_playing(), "aligned: muting all does not stop the loop");
@@ -266,13 +270,13 @@ void TestFailedRebuildMovesNothing() {
   kitbag::Mixer mixer(kSampleRate);
   LoadRamp(&mixer, 0, kLoopTrackFrames, 0.0f);
   LoadRamp(&mixer, 1, kLoopTrackFrames, kLongOffset);
-  mixer.Seek(2000, 0, false);
+  mixer.Seek(2000, kZeroClock, false);
   mixer.Play();
   RenderLeft(&mixer, 1);
   std::error_code ec;
   std::filesystem::remove(TempFiles().back(), ec);
-  mixer.Seek(9000, 0, false);
-  const Result loop = mixer.SetLoop(kLoopStart, kLoopEnd, 0, false);
+  mixer.Seek(9000, kZeroClock, false);
+  const Result loop = mixer.SetLoop(kLoopStart, kLoopEnd, kZeroClock, false);
   Check(loop == Result::kRebuildFailed, "rebuild: the loop reports failure");
   const float next = 2000.0f + kBlock;
   ExpectAt(

@@ -6,6 +6,7 @@ namespace {
 constexpr float kSpeed = 0.75f;
 constexpr int kChosenBuses = kitbag::TimeStretch::kMaxChosenConfigInstances;
 constexpr int kExtraStem = kChosenBuses;
+constexpr auto kFifthKey = static_cast<float>(kChosenBuses);
 constexpr int kStems = kChosenBuses + 1;
 constexpr int64_t kSongFrames = int64_t{10} * kSampleRate;
 constexpr int kSettleBlocks = 40;
@@ -23,9 +24,9 @@ void LoadStems(
 ) {
   for (int t = 0; t < kStems; ++t) LoadPcm(mixer, t, t == 0 ? first : rest);
   for (int t = 1; t < kChosenBuses; ++t) {
-    mixer->SetTrackPitch(t, static_cast<float>(t), 0, false);
+    mixer->SetTrackPitch(t, static_cast<float>(t), kZeroClock, false);
   }
-  mixer->SetRate(kSpeed, 0, false);
+  mixer->SetRate(kSpeed, kZeroClock, false);
 }
 
 int64_t ProbeLatency(kitbag::Mixer* mixer, int track) {
@@ -73,7 +74,7 @@ void TestConfigFollowsLiveBusCount() {
   RenderPaced(&mixer, kSettleBlocks);
   Check(mixer.key_bus_count() == kChosenBuses, "config: four buses live");
   CheckState(&mixer, kChosenBuses - 1, LagFrames(kSpeed), "config: chosen");
-  mixer.SetTrackPitch(kExtraStem, static_cast<float>(kChosenBuses), 0, false);
+  mixer.SetTrackPitch(kExtraStem, kFifthKey, kZeroClock, false);
   Check(mixer.key_bus_count() == kStems, "config: a fifth bus is live");
   CheckState(
       &mixer,
@@ -81,13 +82,13 @@ void TestConfigFollowsLiveBusCount() {
       VendorDefaultLagFrames(kSpeed),
       "config: five buses run presetDefault"
   );
-  mixer.SetTrackPitch(kExtraStem, 0.0f, 0, false);
+  mixer.SetTrackPitch(kExtraStem, 0.0f, kZeroClock, false);
   RenderPaced(&mixer, kSettleBlocks);
   Check(
       mixer.key_buses_vendor_default(),
       "config: four keys in use mid-play stay on presetDefault"
   );
-  mixer.Seek(mixer.position(), 0, false);
+  mixer.Seek(mixer.position(), kZeroClock, false);
   Check(mixer.key_bus_count() == kChosenBuses, "config: back to four buses");
   CheckState(
       &mixer,
@@ -106,16 +107,16 @@ int64_t ClockAcrossSwitch(bool up) {
       ToneFixture({.frames = kSongFrames})
   );
   if (!up) {
-    mixer.SetTrackPitch(kExtraStem, static_cast<float>(kChosenBuses), 0, false);
+    mixer.SetTrackPitch(kExtraStem, kFifthKey, kZeroClock, false);
   }
-  mixer.Seek(kSeekTo, 0, false);
+  mixer.Seek(kSeekTo, kZeroClock, false);
   mixer.Play();
   RenderPaced(&mixer, kSwitchAtBlock);
   if (up) {
-    mixer.SetTrackPitch(kExtraStem, static_cast<float>(kChosenBuses), 0, false);
+    mixer.SetTrackPitch(kExtraStem, kFifthKey, kZeroClock, false);
   } else {
-    mixer.SetTrackPitch(kExtraStem, 0.0f, 0, false);
-    mixer.Seek(mixer.position(), 0, false);
+    mixer.SetTrackPitch(kExtraStem, 0.0f, kZeroClock, false);
+    mixer.Seek(mixer.position(), kZeroClock, false);
   }
   return SongFrameAtOnset(&mixer, kOnsetBlocks);
 }

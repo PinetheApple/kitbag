@@ -10,8 +10,7 @@ namespace kitbag {
 // primes can outlast the publisher's grace window after a value taken on entry.
 class FrameClock {
  public:
-  // Implicit: a fixed frame is what a caller with no running engine has.
-  FrameClock(uint64_t fixed) : fixed_(fixed) {}
+  constexpr explicit FrameClock(uint64_t fixed) : fixed_(fixed) {}
 
   static FrameClock Reading(const std::atomic<uint64_t>& frames) {
     FrameClock clock(0);

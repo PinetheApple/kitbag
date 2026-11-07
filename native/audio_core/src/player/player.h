@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "media/streaming_track.h"
+#include "rt/frame_clock.h"
 #include "rt/spsc_ring.h"
 
 namespace kitbag {
@@ -31,17 +32,17 @@ class Player {
   Player(const Player&) = delete;
   Player& operator=(const Player&) = delete;
 
-  /// Load a file, streamed from disk. [now_frame] is the engine clock and
+  /// Load a file, streamed from disk. [clock] is the engine clock and
   /// [engine_running] true whenever the callback can run; together they date the
   /// retired source for deferred reclamation. Returns false for a null path or a
   /// file that will not open.
-  bool Load(const char* path, uint64_t now_frame, bool engine_running) {
-    return stream_.Load(path, now_frame, engine_running);
+  bool Load(const char* path, FrameClock clock, bool engine_running) {
+    return stream_.Load(path, clock, engine_running);
   }
 
   /// Retire the loaded source; the player goes back to having nothing to play.
-  void Unload(uint64_t now_frame, bool engine_running) {
-    stream_.Unload(now_frame, engine_running);
+  void Unload(FrameClock clock, bool engine_running) {
+    stream_.Unload(clock, engine_running);
   }
 
   void ReserveCallbackFrames(uint32_t frames) {
@@ -64,8 +65,8 @@ class Player {
   /// Seek to [frame] at the engine rate; the counter update is applied by the
   /// callback next block. Routes through StreamingTrack, which rebuilds and swaps
   /// a fresh source when the device is live rather than racing a ring Clear (#25).
-  /// [now_frame]/[engine_running] date the retired source as Load does.
-  void Seek(uint64_t frame, uint64_t now_frame, bool engine_running);
+  /// [clock]/[engine_running] date the retired source as Load does.
+  void Seek(uint64_t frame, FrameClock clock, bool engine_running);
 
   /// Callback-published mirrors. Converge within one block once the device runs.
   bool is_playing() const {

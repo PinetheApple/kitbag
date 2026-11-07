@@ -45,7 +45,7 @@ constexpr LagCase kCases[] = {
 void LoadStems(kitbag::Mixer* mixer, int stems) {
   for (int t = 0; t < stems; ++t) LoadSilence(mixer, t, kStemFrames);
   for (int t = 1; t < stems; ++t) {
-    mixer->SetTrackPitch(t, static_cast<float>(t), 0, false);
+    mixer->SetTrackPitch(t, static_cast<float>(t), kZeroClock, false);
   }
 }
 
@@ -67,11 +67,11 @@ bool StepsBack(kitbag::Mixer* mixer, int blocks, int64_t* last) {
 int StepsBackAfterChange(const LagCase& lag, int change_block) {
   kitbag::Mixer mixer(kSampleRate);
   LoadStems(&mixer, lag.stems);
-  mixer.SetRate(lag.rate, 0, false);
+  mixer.SetRate(lag.rate, kZeroClock, false);
   mixer.Play();
   int64_t last = kNoFrame;
   bool back = StepsBack(&mixer, change_block, &last);
-  mixer.SetRate(kitbag::kUnityRate, 0, false);
+  mixer.SetRate(kitbag::kUnityRate, kZeroClock, false);
   back |= StepsBack(&mixer, kBlocksPastChange, &last);
   return back ? 1 : 0;
 }
@@ -79,15 +79,15 @@ int StepsBackAfterChange(const LagCase& lag, int change_block) {
 int StepsBackAfterHandOver(const LagCase& lag, int change_block) {
   kitbag::Mixer mixer(kSampleRate);
   LoadStems(&mixer, lag.stems);
-  mixer.SetRate(lag.rate, 0, false);
-  mixer.SetRate(kitbag::kUnityRate, 0, false);
-  mixer.Seek(0, 0, false);
+  mixer.SetRate(lag.rate, kZeroClock, false);
+  mixer.SetRate(kitbag::kUnityRate, kZeroClock, false);
+  mixer.Seek(0, kZeroClock, false);
   mixer.Play();
   RenderPaced(&mixer, kSettleBlocks);
-  mixer.SetRate(lag.rate, 0, false);
+  mixer.SetRate(lag.rate, kZeroClock, false);
   int64_t last = kNoFrame;
   bool back = StepsBack(&mixer, HandOverBlocks(mixer) + change_block, &last);
-  mixer.SetRate(kitbag::kUnityRate, 0, false);
+  mixer.SetRate(kitbag::kUnityRate, kZeroClock, false);
   back |= StepsBack(&mixer, kBlocksPastChange, &last);
   return back ? 1 : 0;
 }
@@ -140,12 +140,14 @@ std::vector<float> RenderAcrossTheChange(const LagCase& lag) {
   kitbag::Metronome metronome;
   LoadStems(&mixer, lag.stems);
   FollowTwoBeats(&metronome, lag.beat_frame);
-  mixer.SetRate(lag.rate, 0, false);
+  mixer.SetRate(lag.rate, kZeroClock, false);
   mixer.Play();
   std::vector<float> left;
   std::vector<float> out(static_cast<size_t>(kBlock) * 2);
   for (int b = 0; b < kFirstChangeBlock + 2 * kBlocksPastChange; ++b) {
-    if (b == kFirstChangeBlock) mixer.SetRate(kitbag::kUnityRate, 0, false);
+    if (b == kFirstChangeBlock) {
+      mixer.SetRate(kitbag::kUnityRate, kZeroClock, false);
+    }
     WaitForReadAhead(mixer);
     mixer.Process(out.data(), kBlock);
     metronome

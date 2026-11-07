@@ -74,9 +74,9 @@ double WorstBlock(kitbag::Mixer* mixer, int blocks) {
 
 void SetKeys(kitbag::Mixer* mixer, int buses) {
   for (int t = 0; t < kGateStems; ++t) {
-    mixer->SetTrackPitch(t, static_cast<float>(t % buses), 0, false);
+    mixer->SetTrackPitch(t, static_cast<float>(t % buses), kZeroClock, false);
   }
-  mixer->SetRate(kSpeed, 0, false);
+  mixer->SetRate(kSpeed, kZeroClock, false);
 }
 
 void CheckGateCase(const GateCase& gate, const std::vector<float>& pcm) {
@@ -91,9 +91,9 @@ void CheckGateCase(const GateCase& gate, const std::vector<float>& pcm) {
           mixer.key_buses_vendor_default() == gate.vendor,
       gate.engaged
   );
-  mixer.Seek(kSeekTo, 0, false);
+  mixer.Seek(kSeekTo, kZeroClock, false);
   const double seek = WorstBlock(&mixer, kEventBlocks);
-  mixer.Stop(0, false);
+  mixer.Stop(kZeroClock, false);
   mixer.Play();
   const double play = WorstBlock(&mixer, kEventBlocks);
   const double budget = kBudgetShare * kBlock / kSampleRate;
@@ -133,15 +133,19 @@ AlignResult AlignedPeak(const AlignCase& align) {
   kitbag::Mixer mixer(kSampleRate);
   LoadPcm(&mixer, 0, pcm);
   if (align.inverted) LoadPcm(&mixer, 1, negative);
-  mixer.Seek(kSeekTo - (align.handover ? kSampleRate / 2 : 0), 0, false);
+  mixer.Seek(
+      kSeekTo - (align.handover ? kSampleRate / 2 : 0),
+      kZeroClock,
+      false
+  );
   if (align.handover) {
     mixer.Play();
     RenderPaced(&mixer, kEventBlocks);
   }
   for (int t = 0; t < mixer.active_track_count(); ++t) {
-    mixer.SetTrackPitch(t, kAlignKey, 0, false);
+    mixer.SetTrackPitch(t, kAlignKey, kZeroClock, false);
   }
-  mixer.SetRate(kSpeed, 0, false);
+  mixer.SetRate(kSpeed, kZeroClock, false);
   if (!align.handover) mixer.Play();
   const std::vector<float> left = RenderPaced(&mixer, kAlignBlocks);
   return {
@@ -195,7 +199,7 @@ bool EngageWhileRendering(kitbag::Mixer* mixer, ClockedRender* run) {
   std::thread render(RenderRealTime, mixer, std::cref(stop), run, &backwards);
   std::this_thread::sleep_for(kMissSettle);
   mixer->set_first_handover_lead_frames(-int64_t{kBlock});
-  mixer->SetRate(kSpeed, 0, true);
+  mixer->SetRate(kSpeed, kZeroClock, true);
   std::this_thread::sleep_for(kMissRun);
   stop.store(true);
   render.join();
@@ -243,14 +247,14 @@ bool OverlapWhileRendering(kitbag::Mixer* mixer, ClockedRender* run) {
   bool backwards = false;
   std::thread render(RenderRealTime, mixer, std::cref(stop), run, &backwards);
   std::this_thread::sleep_for(kMissSettle);
-  mixer->SetRate(kSpeed, 0, true);
+  mixer->SetRate(kSpeed, kZeroClock, true);
   bool raced = false;
   bool fired = false;
   mixer->set_prime_publish_hook([mixer, &raced, &fired] {
     if (std::exchange(fired, true)) return;
     raced = WaitUntilEngaged(*mixer);
   });
-  mixer->SetRate(kSecondSpeed, 0, true);
+  mixer->SetRate(kSecondSpeed, kZeroClock, true);
   mixer->set_prime_publish_hook({});
   std::this_thread::sleep_for(kMissSettle);
   stop.store(true);
@@ -295,7 +299,7 @@ void TestSourcesResumeAfterPreRoll() {
   const std::vector<float> pcm = ToneFixture({.frames = kRingSongFrames});
   kitbag::Mixer primed(kSampleRate);
   LoadPcm(&primed, 0, pcm);
-  primed.SetRate(kSpeed, 0, false);
+  primed.SetRate(kSpeed, kZeroClock, false);
   primed.Play();
   RenderPaced(&primed, kEventBlocks);
   CheckNear(
@@ -308,7 +312,7 @@ void TestSourcesResumeAfterPreRoll() {
   LoadPcm(&handed, 0, pcm);
   handed.Play();
   RenderPaced(&handed, kEventBlocks);
-  handed.SetRate(kSpeed, 0, false);
+  handed.SetRate(kSpeed, kZeroClock, false);
   RenderPaced(&handed, HandOverBlocks(handed));
   Check(handed.stretch_engaged(), "handover: engages within the lead");
   CheckNear(
