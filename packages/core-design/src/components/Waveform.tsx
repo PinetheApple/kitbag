@@ -6,6 +6,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { clampUnit } from '../clampUnit.ts';
+import { asPercent } from '../percent.ts';
 import { radius, space, waveMinBarFraction } from '../roles.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { waveBarHeights, type BarHeight } from '../waveform.ts';
@@ -75,8 +76,8 @@ function Bars({ heights, width, hot }: BarsProps) {
   );
 }
 
-// Clip and content counter-slide as transforms; an animated width would
-// relayout the tree on every frame.
+// Clip and content counter-slide as transforms; an animated width would relayout
+// every frame. Percent shifts keep the unmeasured first mount from drawing all played.
 export function Waveform({
   envelope,
   bars,
@@ -92,12 +93,12 @@ export function Waveform({
     setWidth(event.nativeEvent.layout.width);
   }, []);
   const clipStyle = useAnimatedStyle(() => {
-    const hidden = (1 - clampUnit(progress?.value ?? 0)) * width;
-    return { transform: [{ translateX: -hidden }] };
+    const hidden = 1 - clampUnit(progress?.value ?? 0);
+    return { transform: [{ translateX: asPercent(-hidden) }] };
   });
   const contentStyle = useAnimatedStyle(() => {
-    const hidden = (1 - clampUnit(progress?.value ?? 0)) * width;
-    return { transform: [{ translateX: hidden }] };
+    const hidden = 1 - clampUnit(progress?.value ?? 0);
+    return { transform: [{ translateX: asPercent(hidden) }] };
   });
   return (
     <View

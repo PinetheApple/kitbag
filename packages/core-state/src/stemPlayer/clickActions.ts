@@ -1,13 +1,16 @@
 import { KB_RESULT } from '@kitbag/core-native';
 
 import { clickGrid } from './loop.ts';
-import type { StemPlayerRuntime } from './runtime.ts';
+import type { MixerSessionContext } from './mixerSession.ts';
+import type { MixerRuntime } from './runtime.ts';
 import { sessionGate } from './sessionGate.ts';
-import type { ActionContext, StemPlayerActions } from './store.ts';
+import type { StemPlayerActions, StemPlayerState } from './store.ts';
 
 const GRID_ANCHOR_FRAME = 0;
 
-export function stopClick({ commands }: StemPlayerRuntime): void {
+export type ClickSlice = Pick<StemPlayerState, 'status' | 'beats' | 'click'>;
+
+export function stopClick({ commands }: Pick<MixerRuntime, 'commands'>): void {
   commands.metronomeFollowMixer(false);
   commands.clearGrid();
   commands.metronomeStop();
@@ -17,7 +20,7 @@ export function turnClickOff({
   set,
   get,
   runtimeOf,
-}: Pick<ActionContext, 'set' | 'get' | 'runtimeOf'>): void {
+}: Pick<MixerSessionContext<ClickSlice>, 'set' | 'get' | 'runtimeOf'>): void {
   if (!get().click) return;
   set({ click: false });
   stopClick(runtimeOf());
@@ -28,7 +31,7 @@ export function clickActions({
   get,
   runtimeOf,
   session,
-}: ActionContext): Pick<StemPlayerActions, 'toggleClick'> {
+}: MixerSessionContext<ClickSlice>): Pick<StemPlayerActions, 'toggleClick'> {
   const { busy, call } = sessionGate(session);
 
   const start = async () => {

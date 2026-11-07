@@ -1,0 +1,203 @@
+import {
+  ANALYSIS_STATUS,
+  type AnalysisStatus,
+  type SongRecord,
+} from '@kitbag/core-db';
+import { KB_RESULT } from '@kitbag/core-native';
+import { createStore, type StoreApi } from 'zustand/vanilla';
+
+import {
+  transportActions,
+  type TransportSlice,
+} from '../stemPlayer/actions.ts';
+import { clickActions, type ClickSlice } from '../stemPlayer/clickActions.ts';
+import { loopActions, type LoopSlice } from '../stemPlayer/loopActions.ts';
+import { UNITY_GAIN } from '../stemPlayer/mix.ts';
+import {
+  createMixerClaim,
+  mixerClaim,
+  type MixerClaim,
+} from '../stemPlayer/mixerClaim.ts';
+import { mixerSession, type MixerHold } from '../stemPlayer/mixerSession.ts';
+import {
+  SCRUB_SEEK_DELAY_MS,
+  type StemPlayerActions,
+} from '../stemPlayer/store.ts';
+import { secondsToFrames } from '../stemPlayer/time.ts';
+import { getSongPlayer, type SongPlayerRuntime } from './runtime.ts';
+
+const SONG_TRACK = 0;
+
+interface SongPlayerState extends TransportSlice, ClickSlice, LoopSlice {
+  readonly songId: number | null;
+  readonly bpm: number | null;
+  readonly analysisStatus: AnalysisStatus;
+  readonly downbeatIndices: readonly number[];
+  readonly envelope: readonly number[] | null;
+}
+
+interface SongSession {
+  readonly hold: MixerHold;
+  readonly loaded: Promise<void>;
+}
+
+type SongPlayerActions = Pick<
+  StemPlayerActions,
+  | 'togglePlay'
+  | 'scrub'
+  | 'cancelScrub'
+  | 'seek'
+  | 'skip'
+  | 'markLoop'
+  | 'toggleClick'
+> & {
+  readonly open: (songId: number, waveformBars: number) => SongSession;
+  readonly close: () => void;
+};
+
+export type SongPlayerStore = SongPlayerState & SongPlayerActions;
+
+interface SongPlayerOptions {
+  readonly scrubSeekDelayMs?: number;
+  readonly mixerClaim?: MixerClaim;
+}
+
+const closedState: SongPlayerState = {
+  status: 'idle',
+  songId: null,
+  title: '',
+  artist: null,
+  bpm: null,
+  analysisStatus: ANALYSIS_STATUS.pending,
+  durationFrames: 0,
+  engineRate: 0,
+  beats: [],
+  downbeatIndices: [],
+  envelope: null,
+  loop: { kind: 'off' },
+  loopFailure: null,
+  click: false,
+};
+
+function factsOf(record: SongRecord): Partial<SongPlayerState> {
+  return {
+    title: record.title,
+    artist: record.artist === '' ? null : record.artist,
+    bpm: record.bpm,
+    analysisStatus: record.analysisStatus,
+  };
+}
+
+export function createSongPlayerStore(
+  runtimeOf: () => SongPlayerRuntime = getSongPlayer,
+  options: SongPlayerOptions = {},
+): StoreApi<SongPlayerStore> {
+  const {
+    scrubSeekDelayMs = SCRUB_SEEK_DELAY_MS,
+    mixerClaim: claim = createMixerClaim(),
+  } = options;
+  let trackRequested = false;
+  let masterToRestore: number | null = null;
+
+  const teardownTracks = () => {
+    const { commands } = runtimeOf();
+    if (trackRequested) commands.mixerUnloadTrack(SONG_TRACK);
+    trackRequested = false;
+    if (masterToRestore !== null) commands.mixerSetMasterGain(masterToRestore);
+    masterToRestore = null;
+  };
+
+  return createStore<SongPlayerStore>((set, get) => {
+    const mixer = mixerSession({
+      set,
+      get,
+      runtimeOf,
+      scrubSeekDelayMs,
+      claim,
+      isOpen: () => get().songId !== null,
+      teardownTracks,
+      resetState: () => {
+        set(closedState);
+      },
+    });
+    const { live, scrubSeek } = mixer;
+    const context = { set, get, runtimeOf, session: mixer.current };
+
+    const loadWaveform = (opened: number, path: string, bars: number) => {
+      runtimeOf()
+        .readWaveform(path, bars)
+        .then((envelope) => {
+          if (live(opened)) set({ envelope });
+        })
+        .catch((error: unknown) => {
+          console.warn('[kitbag] song waveform unreadable', error);
+        });
+    };
+
+    const load = async (opened: number, songId: number, bars: number) => {
+      const runtime = runtimeOf();
+      const { commands } = runtime;
+      const record = await runtime.records.readSong(songId);
+      if (!live(opened)) return;
+      if (record === undefined) {
+        set({ status: 'missing' });
+        return;
+      }
+      set(factsOf(record));
+      const engineRate = await mixer.startEngine(opened);
+      if (engineRate === null) return;
+      const master = await commands.mixerMasterGain();
+      if (!live(opened)) return;
+      // The stem player's master level has no control on this screen.
+      masterToRestore = master;
+      commands.mixerSetMasterGain(UNITY_GAIN);
+      trackRequested = true;
+      const loaded = await commands.loadTrack(SONG_TRACK, record.filePath);
+      if (!live(opened)) return;
+      if (loaded !== KB_RESULT.KB_OK) {
+        set({ status: 'failed' });
+        return;
+      }
+      const decoded = await commands.mixerTrackFrames(SONG_TRACK);
+      if (!live(opened)) return;
+      const durationFrames =
+        decoded > 0 ? decoded : secondsToFrames(record.durationSec, engineRate);
+      if (durationFrames <= 0) {
+        set({ status: 'failed' });
+        return;
+      }
+      set({
+        status: 'ready',
+        engineRate,
+        durationFrames,
+        beats: record.beats,
+        downbeatIndices: record.downbeatIndices,
+      });
+      if (record.waveformPath !== null)
+        loadWaveform(opened, record.waveformPath, bars);
+    };
+
+    return {
+      ...closedState,
+      open: (songId, waveformBars) => {
+        const opened = mixer.begin();
+        set({ ...closedState, status: 'loading', songId });
+        return {
+          hold: mixer.hold(opened),
+          loaded: load(opened, songId, waveformBars).catch((error: unknown) => {
+            console.warn('[kitbag] song failed to open', error);
+            if (live(opened)) set({ status: 'failed' });
+          }),
+        };
+      },
+      close: mixer.close,
+      ...transportActions(get, runtimeOf, scrubSeek),
+      ...loopActions(context),
+      ...clickActions(context),
+    };
+  });
+}
+
+export const songPlayerStore = createSongPlayerStore(getSongPlayer, {
+  mixerClaim,
+});

@@ -930,6 +930,28 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   tool tiles use the same helper, with their floor at `homeTile.titleMinScale` of the
   tile title's design size; no `adjustsFontSizeToFit` or `minimumFontScale` is left.
 
+- **2026-11-07 · A row tap opens paused (§6, #297)** — A row tap opens the song paused and
+  Play starts it, as the stem player does. Coordinator call; the owner may overturn it.
+  **[recorded]**
+
+- **2026-11-07 · A refocused player reopens paused at the start (§6, §7, #297, #321)** — A
+  player holds the mixer until another player displaces it; only a focused player acquires.
+  A lower song or stem screen whose session a
+  screen above displaced reopens its own song when it regains focus, paused at the start,
+  as #316's reopen does; position and loop are not restored. A screen that kept its session
+  does not reload. Blur releases nothing, so a non-player route over a player keeps it playing. Row taps
+  use `router.navigate`, so a double tap on one row keeps one route; taps on two rows stack.
+  Coordinator call; the owner may overturn it. **[recorded]**
+
+- **2026-11-07 · A single song is a one-track mixer song (§4.1, §6.3, #297)** — The song
+  player drives `kb_mixer_*` with the song on track 0, plus `setGrid` and
+  `metronomeFollowMixer(true)`. `kb_player_*` stays in the ABI, and no transport or store
+  code uses it. The mixer already has the loop, its crossfade and follow-click, and #138
+  adds its stretch stage to the mixer; extending the player would duplicate all of them.
+  Count-in before the lock is parked on #298: under a grid the engine skips it, and a
+  JS-timed handoff was ruled out.
+  **[recorded — coordinator call, owner may overturn]**
+
 - **2026-11-07 · App-bar titles above the default text size (§12.6, #303)** — Amends the
   2026-11-03 #287 entry's floors. Over an artist line the title's floor is never below the
   artist's size, so a floored title does not read smaller than the line under it. Above the

@@ -2,6 +2,8 @@ import { clampUnit, grownTextScale, stemSections } from '@kitbag/core-design';
 import {
   formatClockSeconds,
   framesToSeconds,
+  loopNote,
+  loopRange,
   type LoopState,
   type StemPlayerStore,
 } from '@kitbag/core-state';
@@ -70,12 +72,10 @@ export function loopNoteText(
   sections: readonly StemSection[],
   durationSec: number,
 ): string | null {
-  if (loop.kind === 'off') return null;
-  if (loop.kind === 'armed')
-    return `Loop from ${formatClockSeconds(loop.startSec)}`;
-  const range = `${formatClockSeconds(loop.startSec)} – ${formatClockSeconds(loop.endSec)}`;
   const section = sections.find((s) => isSectionLoop(loop, s, durationSec));
-  return section === undefined ? `Loop ${range}` : `${section.name} · ${range}`;
+  if (loop.kind === 'on' && section !== undefined)
+    return `${section.name} · ${loopRange(loop)}`;
+  return loopNote(loop, null)?.text ?? null;
 }
 
 export function undoMessage(loop: LoopState): string {
