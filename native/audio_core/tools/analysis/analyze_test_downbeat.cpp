@@ -31,18 +31,10 @@ using kitbag::BeatResult;
 // without updating this expectation trips the spacing check.
 constexpr int kBeatsPerBar = 4;
 
-// The per-bar pitch step is placed at beat phase kAccentPhase, marking every
-// bar-one; the pipeline locks bar-one onto it (asserted below) and shifts to a
-// different phase for the step==0 control, so the accent drives detection.
-constexpr int kAccentPhase = 1;
-// Phase the pipeline detects for the step==0 control (clicks + steady tone);
-// measured, and distinct from the accented fixture's phase so the accent is
-// provably load-bearing. Not the bare click grid's phase: that is 1 (measured),
-// the same as kAccentPhase. The accent only wins near phases 0-1 (accent phase
-// 2 detects 3, phase 3 detects 0), and both this value and the phase-1 result
-// depend on kBeatPeriodFrames and kBarToneBaseHz; re-measure kFeaturelessPhase
-// and kAccentPhase if either constant is retuned.
-constexpr int kFeaturelessPhase = 3;
+// Measured: the control lands on the click grid's own phase 1, and accent
+// phase 3 detects 0; re-measure both if the beat period or tones are retuned.
+constexpr int kAccentPhase = 2;
+constexpr int kFeaturelessPhase = 1;
 static_assert(
     kAccentPhase != kFeaturelessPhase,
     "control cannot discriminate if accented and featureless phases match"
