@@ -29,6 +29,7 @@ void RunEquivalenceTests(const std::filesystem::path& dir);
 void RunWritePeaksTests(const std::filesystem::path& dir);
 void RunLongGridTests();
 void RunLengthTests(const std::filesystem::path& dir);
+void RunSustainedTests();
 }  // namespace analyze_test
 
 namespace {
@@ -256,19 +257,9 @@ void RunGuardTests() {
 
 }  // namespace
 
-constexpr int kExpectedChecks = 102;
+constexpr int kExpectedChecks = 111;
 
-int main() {
-  const std::filesystem::path dir = std::filesystem::temp_directory_path();
-  RunGuardTests();
-  analyze_test::RunDownbeatTests(dir);
-  analyze_test::RunEquivalenceTests(dir);
-  TestSidecarRoundTrip(dir);
-  TestWaveformNonFinite();
-  analyze_test::RunWritePeaksTests(dir);
-  analyze_test::RunLongGridTests();
-  analyze_test::RunLengthTests(dir);
-
+int Verdict() {
   if (kitbag_test::g_checks != kExpectedChecks) {
     std::fprintf(
         stderr,
@@ -288,4 +279,18 @@ int main() {
       kitbag_test::g_failures
   );
   return 1;
+}
+
+int main() {
+  const std::filesystem::path dir = std::filesystem::temp_directory_path();
+  RunGuardTests();
+  analyze_test::RunDownbeatTests(dir);
+  analyze_test::RunEquivalenceTests(dir);
+  TestSidecarRoundTrip(dir);
+  TestWaveformNonFinite();
+  analyze_test::RunWritePeaksTests(dir);
+  analyze_test::RunLongGridTests();
+  analyze_test::RunLengthTests(dir);
+  analyze_test::RunSustainedTests();
+  return Verdict();
 }

@@ -104,6 +104,60 @@ void TestTruncationDropsLateBeatsNotEarlyOnes() {
   );
 }
 
+constexpr int kBusyBeats = 200;
+constexpr float kBusyBaseline = 0.15f;
+constexpr float kBusyOffbeat = 0.5f;
+constexpr int kBusyMissable = 2;
+constexpr float kMinGapPeriods = 0.75f;
+constexpr float kSecondsPerMinute = 60.0f;
+constexpr float kBusyTempos[] = {62.0f, 120.0f, 195.0f};
+
+// Sustained sound keeps the onset above zero between beats, and an off-beat
+// hit at half strength sits where a half-period grid would place its beats.
+std::vector<float> BusyOnsets(float bpm, float* period_out) {
+  const float period = kSecondsPerMinute / (bpm * kHopTime);
+  *period_out = period;
+  std::vector<float> onset(
+      static_cast<size_t>(std::lround((kBusyBeats + 1) * period)),
+      kBusyBaseline
+  );
+  for (int i = 0; i < kBusyBeats; ++i) {
+    onset[static_cast<size_t>(std::lround(i * period))] = 1.0f;
+    onset[static_cast<size_t>(std::lround((i + 0.5f) * period))] = kBusyOffbeat;
+  }
+  return onset;
+}
+
+void TestBusyOnsetsGetOneBeatPerPeriod() {
+  for (const float bpm : kBusyTempos) {
+    float period = 0.0f;
+    const std::vector<float> onset = BusyOnsets(bpm, &period);
+    const std::vector<float> beats =
+        kitbag::BeatTracker().TrackBeats(onset, kHopTime, bpm);
+    float min_gap = INFINITY;
+    for (size_t i = 1; i < beats.size(); ++i) {
+      min_gap = std::fmin(min_gap, beats[i] - beats[i - 1]);
+    }
+    std::printf(
+        "beat_tracker_verify: busy %.0f BPM -> %zu beats of %d, min gap %.1f "
+        "of %.1f hops\n",
+        bpm,
+        beats.size(),
+        kBusyBeats,
+        min_gap / kHopTime,
+        period
+    );
+    Check(
+        std::abs(static_cast<int>(beats.size()) - kBusyBeats) <= kBusyMissable,
+        "busy onsets: one beat per period, not one per off-beat"
+    );
+    Check(
+        min_gap >= kMinGapPeriods * period * kHopTime,
+        "busy onsets: no gap shorter than three quarters of a period"
+    );
+  }
+}
+
 void TestSidecarPath() {
   // The extension lengths are the point: -4 arithmetic left .wav and .mp3
   // untouched and ate a character of the longer .flac and .opus.
@@ -130,11 +184,12 @@ void TestSidecarPath() {
 
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 16;
+constexpr int kExpectedChecks = 22;
 
 int main() {
   TestGridStaysAnchoredAtOrigin();
   TestTruncationDropsLateBeatsNotEarlyOnes();
+  TestBusyOnsetsGetOneBeatPerPeriod();
   TestSidecarPath();
 
   if (g_checks != kExpectedChecks) {
