@@ -204,7 +204,7 @@ describe('song library store', () => {
     expect(badges(store)).toEqual([['Everlong', 'failed']]);
   });
 
-  it('copies an M4A labelled as MP3 and leaves the decode failure to analysis', async () => {
+  it('refuses an M4A that Android labels as MP3, by its extension', async () => {
     const { store, files } = setup(
       fakeFiles({
         pickDocument: vi.fn(() =>
@@ -217,11 +217,11 @@ describe('song library store', () => {
       }),
     );
     await store.getState().importSong();
-    expect(files.importAudio).toHaveBeenCalledWith(
-      'content://mislabelled',
-      'songs/f1',
-    );
-    expect(store.getState().notice).toBeNull();
+    expect(files.importAudio).not.toHaveBeenCalled();
+    expect(store.getState().notice).toMatchObject({
+      kind: 'formatRefused',
+      format: 'm4a',
+    });
   });
 
   it('says a copied file could not be added when the database refuses it', async () => {

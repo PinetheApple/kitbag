@@ -28,9 +28,12 @@ object SupportedAudio {
       listOf("aiff", "aif", "aifc"),
       listOf("audio/aiff", "audio/x-aiff", "audio/aifc", "audio/x-aifc"),
     ),
-    AudioFamily("W64", listOf("w64"), emptyList()),
   )
+
+  // W64 has no Android MIME type, so the picker never offers it and the copy does not name it.
+  private val IMPORT_ONLY_EXTENSIONS = listOf("w64")
+
   val FAMILY_NAMES = FAMILIES.map { it.name }
-  val EXTENSIONS = FAMILIES.flatMap { it.extensions }
+  val EXTENSIONS = FAMILIES.flatMap { it.extensions } + IMPORT_ONLY_EXTENSIONS
   val MIME_TYPES = FAMILIES.flatMap { it.mimeTypes }
 }

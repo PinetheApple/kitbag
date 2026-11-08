@@ -5,12 +5,12 @@ import org.junit.Test
 
 class SupportedAudioTest {
   @Test
-  fun namesEachFamilyTheCoreDecodesOnce() {
-    assertEquals(listOf("WAV", "MP3", "FLAC", "AIFF", "W64"), SupportedAudio.FAMILY_NAMES)
+  fun namesEachFamilyThePickerCanOfferOnce() {
+    assertEquals(listOf("WAV", "MP3", "FLAC", "AIFF"), SupportedAudio.FAMILY_NAMES)
   }
 
   @Test
-  fun flattensTheFamiliesIntoExtensionsAndMimeTypes() {
+  fun acceptsTheFamiliesExtensionsPlusW64AtImport() {
     assertEquals(
       listOf("wav", "rf64", "mp3", "flac", "aiff", "aif", "aifc", "w64"),
       SupportedAudio.EXTENSIONS,

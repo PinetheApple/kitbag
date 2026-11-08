@@ -221,8 +221,12 @@ function importActions(
     await whileImporting(set, get, doc.name, async () => {
       const codes = loadCodes(deps, get);
       set({ codes });
-      const check = codes === null ? null : checkAudioFormat(doc, codes);
-      if (codes !== null && check?.supported === false) {
+      if (codes === null) {
+        set({ notice: { kind: 'copyFailed', name: doc.name } });
+        return;
+      }
+      const check = checkAudioFormat(doc, codes);
+      if (!check.supported) {
         set({
           notice: {
             kind: 'formatRefused',
@@ -233,10 +237,7 @@ function importActions(
         });
         return;
       }
-      const outcome: ImportOutcome =
-        codes === null
-          ? { ok: false, kind: 'copyFailed' }
-          : await importAudio(deps, doc, codes.songsDir);
+      const outcome = await importAudio(deps, doc, codes.songsDir);
       if (outcome.ok) enqueue(deps.files(), outcome.song, false);
       else set({ notice: { kind: outcome.kind, name: doc.name } });
     });

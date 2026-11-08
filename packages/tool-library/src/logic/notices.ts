@@ -47,10 +47,10 @@ function refusalText(name: string, refusal: BundleRefusal): NoticeText {
 }
 
 function joinedFormatNames(formats: readonly string[]): string {
-  const labels = [...formats];
-  const last = labels.pop();
+  const names = [...formats];
+  const last = names.pop();
   if (last === undefined) return '';
-  return labels.length === 0 ? last : `${labels.join(', ')} or ${last}`;
+  return names.length === 0 ? last : `${names.join(', ')} or ${last}`;
 }
 
 function formatRefusedText(

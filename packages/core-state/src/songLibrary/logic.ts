@@ -130,7 +130,9 @@ export type FormatCheck =
 
 type SupportedAudioLists = Pick<
   LibraryConstants,
-  'supportedAudioExtensions' | 'supportedAudioMimeTypes'
+  | 'supportedAudioFamilies'
+  | 'supportedAudioExtensions'
+  | 'supportedAudioMimeTypes'
 >;
 
 const AUDIO_MIME_PREFIX = 'audio/';
@@ -145,25 +147,31 @@ function mimeFormat(mimeType: string): string {
     : subtype;
 }
 
-// Providers misreport MIME types and some names carry no extension, so either
-// one naming a format the core opens is enough.
+// Android maps .m4a to audio/mpeg, so a name's extension outranks its MIME type.
 export function checkAudioFormat(
   file: { readonly name: string; readonly mimeType: string },
-  codes: LibraryConstants,
+  lists: Partial<SupportedAudioLists>,
 ): FormatCheck {
-  const lists: Partial<SupportedAudioLists> = codes;
-  const extensions = lists.supportedAudioExtensions;
-  const mimeTypes = lists.supportedAudioMimeTypes;
-  if (extensions === undefined || mimeTypes === undefined)
+  const {
+    supportedAudioFamilies: families,
+    supportedAudioExtensions: extensions,
+    supportedAudioMimeTypes: mimeTypes,
+  } = lists;
+  if (
+    families === undefined ||
+    extensions === undefined ||
+    mimeTypes === undefined
+  )
     return { supported: true };
   const extension = audioFormat(file.name);
+  if (EXTENSION_LIKE.test(extension))
+    return extensions.includes(extension)
+      ? { supported: true }
+      : { supported: false, format: extension };
   const mimeType = file.mimeType.toLocaleLowerCase();
-  if (extensions.includes(extension) || mimeTypes.includes(mimeType))
-    return { supported: true };
-  const format = EXTENSION_LIKE.test(extension)
-    ? extension
-    : mimeFormat(mimeType);
-  return { supported: false, format };
+  return mimeTypes.includes(mimeType)
+    ? { supported: true }
+    : { supported: false, format: mimeFormat(mimeType) };
 }
 
 export function songFolder(songsDir: string, songUuid: string): string {

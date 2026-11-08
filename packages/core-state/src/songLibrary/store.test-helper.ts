@@ -38,7 +38,7 @@ export const CODES: LibraryConstants = {
   failureUnsupported: 'unsupported',
   failureInterrupted: 'interrupted',
   failureInternal: 'internal',
-  supportedAudioFamilies: ['WAV', 'MP3', 'FLAC', 'AIFF', 'W64'],
+  supportedAudioFamilies: ['WAV', 'MP3', 'FLAC', 'AIFF'],
   supportedAudioExtensions: [
     'wav',
     'rf64',

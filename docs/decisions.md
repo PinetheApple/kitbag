@@ -1042,15 +1042,16 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   dropped.", each followed by "The lyrics keep their current timing." The owner may
   overturn the wording. Leave pressed while a save runs does nothing visible; if that save
   then succeeds, the user leaves with the work saved. **[recorded — lane call]**
-- **2026-11-07 · Unsupported audio formats (§6.2, #308)** — No new decoders: the picker offers
-  only formats the core decodes, and import refuses any other with a message naming it. The core
+- **2026-11-07 · Unsupported audio formats (§6.2, #308)** — No new decoders. The picker is
+  narrowed to the supported MIME types and import refuses any other format with a message naming
+  it, because an unsupported file fails with the same code as a corrupt one. The refusal copy is
+  `Can’t import “<name>”: <FORMAT> isn’t supported. Use <families>.` **[user]** The core
   decodes WAV, MP3 and FLAC, plus AIFF, AIFC, W64 and RF64 through dr_wav (measured: 5 s ffmpeg
   tones of each return `KB_OK` from `kb_player_load` and `kb_analyze_song`; AAC `.m4a` returns
-  `KB_ERROR_INVALID_ARGUMENT`). An unsupported file fails with the same code as a corrupt one,
-  so only import can tell the user which happened. The refusal copy is the owner's:
-  `Can’t import “<name>”: <FORMAT> isn’t supported. Use WAV, MP3 or FLAC.` **[user]**
-  The list's single owner is `SupportedAudio.kt`, passed to JS as library constants.
-  **[recorded — coordinator ruling]** The copy names each family once, so it reads “Use WAV, MP3,
-  FLAC, AIFF or W64”: AIF and AIFC are AIFF, RF64 is WAV. W64 and RF64 have no standard MIME
-  type, so the picker likely will not offer them, but import accepts them. **[recorded — lane
+  `KB_ERROR_INVALID_ARGUMENT`). Android labels `.m4a` as `audio/mpeg`, so the picker still offers
+  M4A files and import decides by the name's extension, using the MIME type only when the name
+  has none. The list's single owner is `SupportedAudio.kt`, passed to JS as library constants.
+  **[recorded — coordinator ruling]** The copy names each family once, as “Use WAV, MP3, FLAC
+  or AIFF”: AIF and AIFC are AIFF, RF64 is WAV. W64 and RF64 have no Android MIME type, so the
+  picker does not offer them; import accepts them, and the copy omits W64. **[recorded — lane
   call]**

@@ -160,7 +160,7 @@ describe('import helpers', () => {
     ['Track 01', 'audio/x-aiff'],
     ['Track 01', 'audio/flac'],
     ['Track 01. Intro', 'audio/mpeg'],
-    ['Mislabelled.m4a', 'audio/mpeg'],
+    ['take.mp3', 'application/octet-stream'],
   ] as const)('admits %s (%s), which the core can open', (name, mimeType) => {
     expect(checkAudioFormat({ name, mimeType }, SHARED_CODES)).toEqual({
       supported: true,
@@ -169,6 +169,7 @@ describe('import helpers', () => {
 
   it.each([
     ['Everlong.m4a', 'audio/mp4', 'm4a'],
+    ['Mislabelled.m4a', 'audio/mpeg', 'm4a'],
     ['Everlong.AAC', 'audio/aac', 'aac'],
     ['Everlong.ogg', 'audio/ogg', 'ogg'],
     ['Everlong.opus', '', 'opus'],
@@ -183,21 +184,33 @@ describe('import helpers', () => {
     });
   });
 
-  it('refuses nothing when the native constants predate the format lists', () => {
-    const stale = Object.fromEntries(
-      Object.entries(SHARED_CODES).filter(
-        ([key]) =>
-          key !== 'supportedAudioExtensions' &&
-          key !== 'supportedAudioMimeTypes',
-      ),
-    );
-    expect(
-      checkAudioFormat(
-        { name: 'Everlong.m4a', mimeType: 'audio/mp4' },
-        stale as unknown as typeof SHARED_CODES,
-      ),
-    ).toEqual({ supported: true });
-  });
+  const {
+    supportedAudioFamilies: families,
+    supportedAudioExtensions: extensions,
+    supportedAudioMimeTypes: mimeTypes,
+  } = SHARED_CODES;
+
+  it.each([
+    [
+      'supportedAudioFamilies',
+      { supportedAudioExtensions: extensions, supportedAudioMimeTypes: mimeTypes },
+    ],
+    [
+      'supportedAudioExtensions',
+      { supportedAudioFamilies: families, supportedAudioMimeTypes: mimeTypes },
+    ],
+    [
+      'supportedAudioMimeTypes',
+      { supportedAudioFamilies: families, supportedAudioExtensions: extensions },
+    ],
+  ] as const)(
+    'refuses nothing when native constants predate %s',
+    (_missing, lists) => {
+      expect(
+        checkAudioFormat({ name: 'Everlong.m4a', mimeType: 'audio/mp4' }, lists),
+      ).toEqual({ supported: true });
+    },
+  );
 
   it('reads the format from the stored file name', () => {
     expect(audioFormat('songs/abc/Everlong.MP3')).toBe('mp3');
