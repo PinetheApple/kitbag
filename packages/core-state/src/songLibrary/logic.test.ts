@@ -193,7 +193,10 @@ describe('import helpers', () => {
   it.each([
     [
       'supportedAudioFamilies',
-      { supportedAudioExtensions: extensions, supportedAudioMimeTypes: mimeTypes },
+      {
+        supportedAudioExtensions: extensions,
+        supportedAudioMimeTypes: mimeTypes,
+      },
     ],
     [
       'supportedAudioExtensions',
@@ -201,13 +204,19 @@ describe('import helpers', () => {
     ],
     [
       'supportedAudioMimeTypes',
-      { supportedAudioFamilies: families, supportedAudioExtensions: extensions },
+      {
+        supportedAudioFamilies: families,
+        supportedAudioExtensions: extensions,
+      },
     ],
   ] as const)(
     'refuses nothing when native constants predate %s',
     (_missing, lists) => {
       expect(
-        checkAudioFormat({ name: 'Everlong.m4a', mimeType: 'audio/mp4' }, lists),
+        checkAudioFormat(
+          { name: 'Everlong.m4a', mimeType: 'audio/mp4' },
+          lists,
+        ),
       ).toEqual({ supported: true });
     },
   );
