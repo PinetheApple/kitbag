@@ -80,7 +80,7 @@ export type AnalysisResultRecord =
   | ({
       readonly filePath: string;
       readonly ok: true;
-      readonly durationSec: number;
+      readonly durationSec: number | null;
     } & StoredAnalysis)
   | {
       readonly filePath: string;
@@ -197,10 +197,6 @@ async function unreferenced(db: Database, path: string | null) {
   return path === null || (await waveformInUse(db, path)) ? null : path;
 }
 
-function knownLength(durationSec: number) {
-  return Number.isFinite(durationSec) && durationSec > 0;
-}
-
 function analysisFields(result: AnalysisResultRecord) {
   if (!result.ok)
     return {
@@ -209,9 +205,7 @@ function analysisFields(result: AnalysisResultRecord) {
     };
   const gridded = result.beats.length > 0;
   return {
-    ...(knownLength(result.durationSec)
-      ? { duration: result.durationSec }
-      : {}),
+    ...(result.durationSec === null ? {} : { duration: result.durationSec }),
     bpm: result.bpm,
     beatGrid: gridded ? packFloat32(result.beats) : null,
     downbeatIndices: gridded ? packInt32(result.downbeats) : null,

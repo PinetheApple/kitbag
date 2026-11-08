@@ -113,6 +113,10 @@ const INITIAL: SongLibraryState = {
   codes: null,
 };
 
+function knownLength(durationSec: number) {
+  return Number.isFinite(durationSec) && durationSec > 0;
+}
+
 function resultRecord(result: AnalysisResult): AnalysisResultRecord {
   const filePath = result.relativePath;
   if (!result.ok) return { filePath, ok: false, error: result.error };
@@ -124,7 +128,7 @@ function resultRecord(result: AnalysisResult): AnalysisResultRecord {
     downbeats: result.downbeats,
     waveformPath:
       result.waveformRelativePath === '' ? null : result.waveformRelativePath,
-    durationSec: result.durationSec,
+    durationSec: knownLength(result.durationSec) ? result.durationSec : null,
   };
 }
 

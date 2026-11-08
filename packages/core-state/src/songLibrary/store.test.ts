@@ -41,6 +41,18 @@ describe('song library store', () => {
     expect(store.getState().rows[0]).toMatchObject({ durationSec: 287.4 });
   });
 
+  it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY])(
+    'keeps the listed length when the analysed length is %s',
+    async (durationSec) => {
+      const { store } = setup();
+      const row = await importOne(store);
+      await store.getState().receiveAnalysis(result({ durationSec }));
+      expect(store.getState().rows[0]).toMatchObject({
+        durationSec: row.durationSec,
+      });
+    },
+  );
+
   it('applies the same result from the event and from the stored list once', async () => {
     const { store, records } = setup();
     await importOne(store);
