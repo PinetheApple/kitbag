@@ -18,6 +18,8 @@ import {
   type MetronomeCommands,
 } from '@kitbag/core-state';
 
+import { TEMPO_QUERY } from './tempoQuery';
+
 const PHASE_STEPS = 1000;
 const MAX_PHASE = (PHASE_STEPS - 1) / PHASE_STEPS;
 
@@ -59,7 +61,7 @@ const webCommands: MetronomeCommands = {
 };
 
 const initialBpm = readBoundedQuery(
-  'bpm',
+  TEMPO_QUERY,
   DEFAULT_BPM,
   BPM_BOUNDS.min,
   BPM_BOUNDS.max,

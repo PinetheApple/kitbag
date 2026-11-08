@@ -1042,3 +1042,9 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   dropped.", each followed by "The lyrics keep their current timing." The owner may
   overturn the wording. Leave pressed while a save runs does nothing visible; if that save
   then succeeds, the user leaves with the work saved. **[recorded — lane call]**
+- **2026-11-08 · Standalone metronome across a restart (§5.4, #333)** — A kill with a song or
+  setlist step loaded relaunches into the standalone settings from before the song, so the
+  settings carried across a restart are the ones made with no song loaded.
+  **[recorded — coordinator ruling, owner may overturn]** The saved standalone state stays out
+  of the backup, which carries what core-db owns today; adding it is a follow-up for the owner.
+  **[recorded — lane call, owner may overturn]**
