@@ -310,13 +310,15 @@ KB_EXPORT int32_t kb_player_is_playing(const kb_engine* engine);
  *                    receives the indices (into the beat list) that are bar-ones;
  *                    each is < *beat_count_out
  *   downbeat_count_out: filled with number of downbeat indices written
+ *   duration_sec_out: filled with the decoded length in seconds: frames
+ *                    decoded over the file's sample rate, never a header estimate
  *   waveform_dir:    directory to write the waveform peaks sidecar ("KWAV"
  *                    binary), or NULL to skip waveform generation
  *
  * Returns KB_OK on success (even if no beats found; check *beat_count_out).
  * Returns KB_ERROR_INVALID_ARGUMENT for a null path/output pointer, a file that
- * will not open, or decoded PCM that is unusable: zero channels, a frame count
- * above INT_MAX, or any non-finite (NaN/inf) sample.
+ * will not open, or decoded PCM that is unusable: zero channels, a zero sample
+ * rate, a frame count above INT_MAX, or any non-finite (NaN/inf) sample.
  * Returns KB_ERROR_INTERNAL if analysis runs out of memory, or the file cannot
  * be rewound or decodes to a different length on the second pass.
  * On any error the outputs read 0 and no sidecar is written.
@@ -329,6 +331,7 @@ KB_EXPORT kb_result kb_analyze_song(
     int32_t* beat_count_out,
     int32_t* downbeat_indices_out,
     int32_t* downbeat_count_out,
+    double* duration_sec_out,
     const char* waveform_dir
 );
 
