@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <chrono>
 #include <iterator>
 #include <thread>
@@ -41,6 +42,20 @@ kb_engine* OpenFollowingEngine(const std::string& stem) {
   std::vector<double> seconds;
   for (double beat : Beats()) seconds.push_back(beat / kSampleRate);
   return media_test::OpenFollowingEngine(stem, seconds);
+}
+
+double PulseCentre(const Take& take, int64_t around, int64_t half_width) {
+  double weight = 0.0;
+  double moment = 0.0;
+  const auto size = static_cast<int64_t>(take.left.size());
+  const int64_t from = std::max<int64_t>(around - half_width, 0);
+  for (int64_t k = from; k < std::min(around + half_width, size); ++k) {
+    const auto i = static_cast<size_t>(k);
+    const double stem = take.left[i] - take.right[i];
+    weight += stem * stem;
+    moment += stem * stem * static_cast<double>(k);
+  }
+  return weight > 0.0 ? moment / weight : -1.0;
 }
 
 void RenderPaced(kb_engine* engine, Take* take, int blocks) {

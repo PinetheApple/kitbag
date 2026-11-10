@@ -373,6 +373,7 @@ void RunRigClickSoundTests();
 void RunRigClickIsolationTests();
 void RunCountInTests();
 void RunLongCountInTests();
+void RunCountInAtTests();
 void RunRampTests();
 void RunRampLiveTests();
 void RunRampSubdivisionTests();

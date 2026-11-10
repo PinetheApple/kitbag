@@ -221,7 +221,7 @@ void Metronome::RenderGridSample(
     RenderGridBeat(grid, GridSeconds(grid, now, sample_rate), sample_rate);
     return;
   }
-  if (song == nullptr || !song->playing || frame >= song->frames) return;
+  if (song == nullptr || !song->Plays(frame)) return;
   const SongPoint point = song->PointAt(frame);
   const auto whole_frame = static_cast<double>(point.frame);
   grid_state_.follow_seconds = (whole_frame + point.fraction) / sample_rate;
@@ -229,7 +229,7 @@ void Metronome::RenderGridSample(
   // Below 1.0x a song frame repeats, which is no jump. A new pass lands inside
   // a frame, so seek to its start or a beat right on the loop start is skipped.
   const int64_t step = point.frame - grid_state_.follow_last_frame;
-  const bool opens_on_jump = song->opens_on_jump && frame == 0;
+  const bool opens_on_jump = song->OpensAt(frame);
   if (grid_state_.follow_last_frame == GridState::kReseedFollow ||
       opens_on_jump || step < 0 || step > 1) {
     const double head_sec = whole_frame / sample_rate;

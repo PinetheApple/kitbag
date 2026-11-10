@@ -12,6 +12,7 @@
 #include "media/song_clock.h"
 #include "media/streaming_track.h"
 #include "mixer/key_bus.h"
+#include "mixer/mixer_app_state.h"
 #include "mixer/mixer_command.h"
 #include "mixer/mixer_track.h"
 #include "mixer/transport_plan.h"
@@ -87,6 +88,8 @@ class Mixer {
   /// Transport. The read-ahead work runs here on the app thread; the callback
   /// is the sole writer of the head and the playing flag.
   void Play();
+  /// False when the command ring is full.
+  bool PlayAt(uint64_t engine_frame);
   /// Stops playback and rewinds the head to 0 (SPEC.md §4.4).
   void Stop(FrameClock clock, bool engine_running);
   /// Ends playback holding the head, so a following Play resumes there.
@@ -150,7 +153,7 @@ class Mixer {
   }
 
   /// RT-safe: allocates nothing, takes no lock, frees nothing.
-  void Process(float* output, uint32_t frame_count);
+  void Process(float* output, uint32_t frame_count, uint64_t block_start_frame);
   const SongClock& song_clock() const {
     return song_clock_;
   }
@@ -170,6 +173,8 @@ class Mixer {
   /// a ring the callback drains (#25).
   uint64_t rt_track_buffered(int track) const;
   bool track_at_end(int track) const;
+  /// Tests only: whether a track's read-ahead thread runs.
+  bool track_reading(int track) const;
 
   /// App thread, callback quiescent. Frees every retired source now.
   void ReleaseRetiredSources();
@@ -203,11 +208,7 @@ class Mixer {
   void DropStaged(int count);
   void ReplanStretch(TransportPlan plan, FrameClock clock, bool engine_running);
   int64_t SeekTarget(int64_t frame) const;
-  struct Head {
-    int64_t stream;
-    int64_t transport;
-    bool jump_pending;
-  };
+  using Head = MixerHead;
   // App thread. The head in the latest plan's stream frames, from the transport
   // clock alone so no two mirrors written in different blocks get paired.
   Head PlannedHead() const;
@@ -216,6 +217,11 @@ class Mixer {
   // command is a -Wswitch error rather than a silent drop.
   void ApplyPendingCommands();
   void ApplyCommand(const Command& command);
+  void ApplyTransportCommand(const Command& command);
+  void StartStreams();
+  void StopStreams();
+  uint32_t StartPendingPlay(uint64_t block_start_frame, uint32_t frame_count);
+  void PlayBlock(float* output, uint32_t frame_count);
   void ApplyStretchCommand(const Command& command);
   void RecomputeAnySolo();
   bool AdoptPlan();
@@ -228,19 +234,12 @@ class Mixer {
   void MixAllTracks(float* output, uint32_t frame_count, bool any_solo);
   void AdvanceTransport(uint32_t frame_count);
 
-  struct EngageState {
-    bool engaged;
-    bool vendor_default;
-  };
+  using EngageState = MixerEngageState;
   bool ReserveUndoableCommand();
   void EnqueueRate(float rate);
   void EnqueuePitch(int track, int pitch);
   void RestoreEngage(const EngageState& before);
-  struct Prepared {
-    EngageState before;
-    uint32_t created = 0;
-    bool prime = false;
-  };
+  using Prepared = MixerPrepared;
   bool WantsStretch() const;
   void DisengageAtRest(FrameClock clock, bool engine_running);
   std::unique_ptr<KeyBusSlot> MakeBus(int slot, uint64_t generation) const;
@@ -332,6 +331,7 @@ class Mixer {
   // read it. Single writer, so the Stop/Seek rewind can never be overwritten.
   std::atomic<uint64_t> read_frame_{0};
   std::atomic<bool> playing_{false};
+  std::optional<uint64_t> pending_play_frame_;
   std::atomic<bool> any_solo_{false};
   std::atomic<float> master_gain_{1.0f};
   // Callback-owned transport. stream_frame_ is what every adopted source is

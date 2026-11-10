@@ -37,7 +37,9 @@ void TestTakeAndCarrySum() {
   mixer.Play();
   const int64_t before = mixer.fed_frames();
   std::vector<float> out(static_cast<size_t>(kOddBlock) * 2);
-  for (int b = 0; b < kCarryBlocks; ++b) mixer.Process(out.data(), kOddBlock);
+  for (int b = 0; b < kCarryBlocks; ++b) {
+    mixer.Process(out.data(), kOddBlock, kUnclockedFrame);
+  }
   const auto takes = static_cast<int64_t>(
       std::floor(static_cast<double>(kCarryRate) * kOddBlock * kCarryBlocks)
   );
@@ -301,7 +303,7 @@ size_t CountedProcess(kitbag::Mixer* mixer, int blocks) {
   for (int b = 0; b < blocks; ++b) {
     WaitForReadAhead(*mixer);
     const size_t before = ThreadAllocations();
-    mixer->Process(out.data(), kBlock);
+    mixer->Process(out.data(), kBlock, kUnclockedFrame);
     allocations += ThreadAllocations() - before;
   }
   return allocations;

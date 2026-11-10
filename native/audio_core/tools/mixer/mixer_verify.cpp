@@ -73,7 +73,7 @@ size_t mixer_test::ThreadAllocations() {
 
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 383;
+constexpr int kExpectedChecks = 405;
 
 namespace {
 
@@ -121,6 +121,7 @@ int main() {
   mixer_test::RunLoadRefusalTests();
   mixer_test::RunLagCarryTests();
   mixer_test::RunRetireTests();
+  mixer_test::RunPlayAtTests();
   mixer_test::RunUnityTests();
   mixer_test::CleanupTempFiles();
   return Report();
