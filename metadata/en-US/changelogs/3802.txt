@@ -1,0 +1,1 @@
+• With TalkBack on, the stem player's confirm dialogs now keep focus inside the dialog instead of letting the controls behind it be reached.
