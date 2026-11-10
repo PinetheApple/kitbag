@@ -14,10 +14,11 @@ namespace kitbag {
 
 namespace {
 
-constexpr float kMinBpm = 60.0f;
-constexpr float kMaxBpm = 200.0f;
-
-constexpr float kTransitionPenalty = 0.02f;
+// A half- or double-period step costs ln²2 of this ≈ 48 onset deviations, so
+// only an outlier onset pays for one.
+constexpr float kTightness = 100.0f;
+constexpr int kMaxGapPeriods = 2;
+constexpr int kMinGapDivisor = 2;
 
 constexpr int kSmoothingRadius = 2;  // 5-frame moving average
 
@@ -35,12 +36,14 @@ constexpr float kSecondsPerMinute = 60.0f;
 
 // A backtrack shorter than this is noise, not a beat sequence.
 constexpr size_t kMinBacktrackedBeats = 3;
-// A half-lag peak this strong relative to the winner means the winner was
-// half-time: the true pulse is twice as fast.
-constexpr float kHalfTimeRatio = 0.5f;
-// Stands in for the mean onset strength when the envelope is all zeros, so the
-// DP transition penalty stays positive instead of collapsing to no penalty.
-constexpr float kFallbackMeanOnset = 0.01f;
+// A peak at half the winner's lag this strong relative to it means the winner
+// was twice the true period. Halving only: the user's ÷2/×2 cannot undo ÷3.
+constexpr float kPulseFoldRatio = 0.5f;
+constexpr int kPulseFold = 2;
+// A longer lag must clearly beat the best, so equal harmonic peaks keep the
+// shortest.
+constexpr float kLongerLagMargin = 1.01f;
+constexpr int kPeakMargin = 1;
 
 void NormalizeByPeak(std::vector<float>& onset) {
   float max_val = 0.0f;
@@ -72,12 +75,15 @@ std::vector<float> MovingAverage(const std::vector<float>& onset) {
 std::vector<float>
 Autocorrelation(const std::vector<float>& onset, int min_lag, int max_lag) {
   const size_t n = onset.size();
+  double total = 0.0;
+  for (const float v : onset) total += v;
+  const auto mean = static_cast<float>(total / static_cast<double>(n));
   std::vector<float> acf(max_lag, 0.0f);
   for (int lag = min_lag; lag < max_lag; ++lag) {
     float sum = 0.0f;
     int count = 0;
     for (size_t i = 0; i + static_cast<size_t>(lag) < n; ++i) {
-      sum += onset[i] * onset[i + lag];
+      sum += (onset[i] - mean) * (onset[i + lag] - mean);
       ++count;
     }
     if (count > 0) {
@@ -87,25 +93,34 @@ Autocorrelation(const std::vector<float>& onset, int min_lag, int max_lag) {
   return acf;
 }
 
+bool IsPeak(const std::vector<float>& acf, int lag) {
+  return acf[lag] > acf[lag - 1] && acf[lag] > acf[lag + 1];
+}
+
+int FoldToFasterPulse(
+    const std::vector<float>& acf,
+    int best_lag,
+    int min_lag
+) {
+  const int below = best_lag / kPulseFold;
+  const int lag = acf[below + 1] > acf[below] ? below + 1 : below;
+  const bool folds = lag >= min_lag && IsPeak(acf, lag) &&
+                     acf[lag] > kPulseFoldRatio * acf[best_lag];
+  return folds ? lag : best_lag;
+}
+
 // Strongest local maximum, so a broad shoulder does not outrank a true peak.
 int BestPeakLag(const std::vector<float>& acf, int min_lag, int max_lag) {
   float max_acf = 0.0f;
   int best_lag = 0;
   for (int lag = min_lag; lag < max_lag; ++lag) {
-    bool is_peak = true;
-    if (lag > min_lag && lag < max_lag - 1) {
-      is_peak = acf[lag] > acf[lag - 1] && acf[lag] > acf[lag + 1];
-    }
-    if (is_peak && acf[lag] > max_acf) {
+    if (IsPeak(acf, lag) && acf[lag] > kLongerLagMargin * max_acf) {
       max_acf = acf[lag];
       best_lag = lag;
     }
   }
-  if (best_lag >= min_lag * 2 && best_lag / 2 >= min_lag &&
-      acf[best_lag / 2] > kHalfTimeRatio * max_acf) {
-    best_lag /= 2;
-  }
-  return best_lag;
+  if (best_lag == 0) return 0;
+  return FoldToFasterPulse(acf, best_lag, min_lag);
 }
 
 struct DpTrellis {
@@ -113,27 +128,37 @@ struct DpTrellis {
   std::vector<int> backlink;
 };
 
-// Phase 3a: forward pass. Each frame's best predecessor is the one whose gap is
-// closest to the expected period, weighted against its own accumulated score.
+// Log-ratio, so half and double the period cost alike.
+std::vector<float>
+CostByGapFrames(int rounded_period, float period_frames, float weight) {
+  std::vector<float> cost(
+      static_cast<size_t>(kMaxGapPeriods * rounded_period) + 1
+  );
+  for (size_t gap = 1; gap < cost.size(); ++gap) {
+    const float ratio = std::log(static_cast<float>(gap) / period_frames);
+    cost[gap] = weight * ratio * ratio;
+  }
+  return cost;
+}
+
 DpTrellis ForwardPass(
     const std::vector<float>& onset,
     int period,
-    float period_frames,
-    float penalty
+    const std::vector<float>& gap_cost
 ) {
   const size_t n = onset.size();
+  const int max_gap = static_cast<int>(gap_cost.size()) - 1;
   DpTrellis dp{std::vector<float>(n, 0.0f), std::vector<int>(n, -1)};
 
   for (size_t i = 0; i < n; ++i) {
-    const int search_start = std::max(0, static_cast<int>(i) - 2 * period);
-    const int search_end = std::max(0, static_cast<int>(i) - period / 2);
+    const int search_start = std::max(0, static_cast<int>(i) - max_gap);
+    const int search_end =
+        std::max(0, static_cast<int>(i) - period / kMinGapDivisor);
 
     float best_score = 0.0f;
     int best_prev = -1;
     for (int j = search_start; j < search_end && j < static_cast<int>(i); ++j) {
-      const float gap = static_cast<float>(i - j);
-      const float deviation = (gap - period_frames) / period_frames;
-      const float candidate = dp.score[j] - penalty * deviation * deviation;
+      const float candidate = dp.score[j] - gap_cost[i - j];
       if (candidate > best_score) {
         best_score = candidate;
         best_prev = j;
@@ -176,12 +201,20 @@ Backtrack(const std::vector<int>& backlink, int last_beat, float hop_time) {
   return beats;
 }
 
-float TransitionPenalty(const std::vector<float>& onset) {
-  float sum_onset = 0.0f;
-  for (const float v : onset) sum_onset += v;
-  const float mean_onset = sum_onset / onset.size();
-  return kTransitionPenalty *
-         (mean_onset > 0.0f ? mean_onset : kFallbackMeanOnset);
+float TransitionWeight(const std::vector<float>& onset) {
+  double sum = 0.0;
+  double sum_sq = 0.0;
+  for (const float v : onset) {
+    sum += v;
+    sum_sq += static_cast<double>(v) * v;
+  }
+  const double n = static_cast<double>(onset.size());
+  const double mean = sum / n;
+  const auto spread =
+      static_cast<float>(std::sqrt(std::max(0.0, sum_sq / n - mean * mean)));
+  // A flat envelope has no spread; scaling by its level still makes a half
+  // step cost more than the beat it would add.
+  return kTightness * (spread > 0.0f ? spread : static_cast<float>(mean));
 }
 
 }  // namespace
@@ -197,7 +230,7 @@ BeatResult BeatTracker::AnalyzeFlux(std::vector<float> flux, int sample_rate) {
   }
 
   result.bpm = EstimateTempo(onset, hop_time);
-  if (result.bpm < kMinBpm) {
+  if (result.bpm <= 0.0f) {
     return result;
   }
 
@@ -219,13 +252,18 @@ float BeatTracker::EstimateTempo(
 ) {
   if (onset.size() < kMinOnsetsForTempo) return 0.0f;
 
-  const int min_lag =
-      static_cast<int>(kSecondsPerMinute / (kMaxBpm * hop_time));
-  const int max_lag =
-      static_cast<int>(kSecondsPerMinute / (kMinBpm * hop_time)) + 1;
+  // The lags bracket the BPM range, so a bound tempo between two frames is
+  // searched; the margin gives the edge lags a neighbour to be judged against.
+  const int min_lag = static_cast<int>(
+      std::floor(kSecondsPerMinute / (kMaxTrackedBpm * hop_time))
+  );
+  const int max_lag = static_cast<int>(
+      std::ceil(kSecondsPerMinute / (kMinTrackedBpm * hop_time)) + 1
+  );
   if (min_lag >= max_lag || min_lag < 1) return 0.0f;
 
-  const auto acf = Autocorrelation(onset, min_lag, max_lag);
+  const auto acf =
+      Autocorrelation(onset, min_lag - kPeakMargin, max_lag + kPeakMargin);
   const int best_lag = BestPeakLag(acf, min_lag, max_lag);
   if (best_lag <= 0) return 0.0f;
 
@@ -240,12 +278,15 @@ std::vector<float> BeatTracker::TrackBeats(
   if (onset.size() < kMinOnsetsForBeats || bpm <= 0.0f) return {};
 
   const float period_frames = kSecondsPerMinute / (bpm * hop_time);
-  const int period = static_cast<int>(std::round(period_frames));
-  if (period < 2) return {};
+  const int rounded_period = static_cast<int>(std::round(period_frames));
+  if (rounded_period < 2) return {};
 
-  const DpTrellis dp =
-      ForwardPass(onset, period, period_frames, TransitionPenalty(onset));
-  const int last_beat = FinalBeatIndex(dp.score, period);
+  const DpTrellis dp = ForwardPass(
+      onset,
+      rounded_period,
+      CostByGapFrames(rounded_period, period_frames, TransitionWeight(onset))
+  );
+  const int last_beat = FinalBeatIndex(dp.score, rounded_period);
   return Backtrack(dp.backlink, last_beat, hop_time);
 }
 
