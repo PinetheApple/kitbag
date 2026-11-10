@@ -133,8 +133,15 @@ struct OnsetTrack {
   std::vector<float> beat_hops;
 };
 
-// `offbeat` sits where a half-period grid would put its extra beats.
-OnsetTrack Onsets(const std::vector<float>& beat_hops, float offbeat) {
+constexpr int kEighths = 2;
+constexpr int kTriplets = 3;
+
+// `offbeat` sits where a grid `pulses` times faster would put its extra beats.
+OnsetTrack Onsets(
+    const std::vector<float>& beat_hops,
+    float offbeat,
+    int pulses = kEighths
+) {
   const float tail = beat_hops.back() - beat_hops[beat_hops.size() - 2];
   OnsetTrack track{
       std::vector<float>(
@@ -147,9 +154,10 @@ OnsetTrack Onsets(const std::vector<float>& beat_hops, float offbeat) {
     const float next =
         i + 1 < beat_hops.size() ? beat_hops[i + 1] : beat_hops[i] + tail;
     track.onset[static_cast<size_t>(std::lround(beat_hops[i]))] = 1.0f;
-    const auto mid =
-        static_cast<size_t>(std::lround((beat_hops[i] + next) / 2));
-    if (offbeat > 0.0f) track.onset[mid] = offbeat;
+    for (int p = 1; p < pulses && offbeat > 0.0f; ++p) {
+      const float at = beat_hops[i] + (next - beat_hops[i]) * p / pulses;
+      track.onset[static_cast<size_t>(std::lround(at))] = offbeat;
+    }
   }
   return track;
 }
@@ -192,6 +200,10 @@ void TestBusyOnsetsGetOneBeatPerPeriod() {
 }
 
 constexpr int kTrackBeats = 200;
+
+std::vector<float> SteadyHops(float bpm) {
+  return BeatHops(kTrackBeats, [bpm](int) { return bpm; });
+}
 constexpr float kRampStartBpm = 120.0f;
 constexpr float kRampEndBpm = 132.0f;
 constexpr float kStepAfterBpm = 144.0f;
@@ -279,10 +291,7 @@ bool NearBpm(float got, float want) {
 void TestOctaveOverBaseline() {
   const kitbag::BeatResult eighths = AnalyzeTempoTrack(
       "80 BPM + half-strength eighths",
-      Onsets(
-          BeatHops(kTrackBeats, [](int) { return kBalladBpm; }),
-          kBusyOffbeat
-      )
+      Onsets(SteadyHops(kBalladBpm), kBusyOffbeat)
   );
   Check(
       NearBpm(eighths.bpm, 2.0f * kBalladBpm),
@@ -290,11 +299,22 @@ void TestOctaveOverBaseline() {
   );
   const kitbag::BeatResult faint = AnalyzeTempoTrack(
       "62 BPM, faint off-beats",
-      Onsets(BeatHops(kTrackBeats, [](int) { return kSlowBpm; }), kFaintOffbeat)
+      Onsets(SteadyHops(kSlowBpm), kFaintOffbeat)
   );
   Check(
       NearBpm(faint.bpm, kSlowBpm),
       "octave: a 62 BPM pulse with faint off-beats is not folded"
+  );
+}
+
+void TestTripletFeelIsNotFolded() {
+  const kitbag::BeatResult r = AnalyzeTempoTrack(
+      "62 BPM + half-strength triplets",
+      Onsets(SteadyHops(kSlowBpm), kBusyOffbeat, kTriplets)
+  );
+  Check(
+      NearBpm(r.bpm, kSlowBpm),
+      "octave: half-strength triplets keep the 62 BPM beat, not a third of it"
   );
 }
 
@@ -310,13 +330,10 @@ constexpr BoundTempo kBoundTempos[] = {
 
 void TestBoundTemposResolve() {
   for (const BoundTempo& bound : kBoundTempos) {
-    const float bpm = bound.bpm;
-    const kitbag::BeatResult r = AnalyzeTempoTrack(
-        bound.name,
-        Onsets(BeatHops(kTrackBeats, [bpm](int) { return bpm; }), 0.0f)
-    );
+    const kitbag::BeatResult r =
+        AnalyzeTempoTrack(bound.name, Onsets(SteadyHops(bound.bpm), 0.0f));
     Check(
-        NearBpm(r.bpm, bpm) && !r.beat_times.empty(),
+        NearBpm(r.bpm, bound.bpm) && !r.beat_times.empty(),
         "bounds: a pulse at a tracked-BPM bound reads as that tempo"
     );
   }
@@ -348,7 +365,7 @@ void TestSidecarPath() {
 
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 28;
+constexpr int kExpectedChecks = 29;
 
 int main() {
   TestGridStaysAnchoredAtOrigin();
@@ -357,6 +374,7 @@ int main() {
   TestRampIsFollowed();
   RecordTempoStep();
   TestOctaveOverBaseline();
+  TestTripletFeelIsNotFolded();
   TestBoundTemposResolve();
   TestSidecarPath();
 
