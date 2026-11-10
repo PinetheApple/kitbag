@@ -1,0 +1,1 @@
+• Songs now show their exact length once analysis finishes, including MP3s whose length was misread at import.
