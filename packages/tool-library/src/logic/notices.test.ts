@@ -49,6 +49,36 @@ describe('noticeText', () => {
   });
 });
 
+describe('format refused', () => {
+  const refused = (format: string) =>
+    ({
+      kind: 'formatRefused',
+      name: 'Voice memo.m4a',
+      format,
+      supported: ['WAV', 'MP3', 'FLAC', 'AIFF'],
+    }) as const;
+
+  it('names the refused format and the ones Kitbag plays', () => {
+    expect(noticeText(refused('m4a'))).toEqual({
+      status: 'Unsupported format',
+      text: 'Can’t import “Voice memo.m4a”: M4A isn’t supported. Use WAV, MP3, FLAC or AIFF.',
+    });
+  });
+
+  it('says this format when the file names none', () => {
+    expect(noticeText(refused('')).text).toBe(
+      'Can’t import “Voice memo.m4a”: this format isn’t supported. Use WAV, MP3, FLAC or AIFF.',
+    );
+  });
+
+  it('reads as a refusal, not a failure', () => {
+    expect(noticeLook(refused('ogg'))).toEqual({
+      tone: 'warning',
+      icon: 'warning',
+    });
+  });
+});
+
 describe('stem song added elsewhere', () => {
   const added = {
     kind: 'stemSongAdded',

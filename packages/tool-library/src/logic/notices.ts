@@ -46,10 +46,31 @@ function refusalText(name: string, refusal: BundleRefusal): NoticeText {
   }
 }
 
+function joinedFormatNames(formats: readonly string[]): string {
+  const names = [...formats];
+  const last = names.pop();
+  if (last === undefined) return '';
+  return names.length === 0 ? last : `${names.join(', ')} or ${last}`;
+}
+
+function formatRefusedText(
+  name: string,
+  format: string,
+  supported: readonly string[],
+): NoticeText {
+  const what = format === '' ? 'this format' : format.toUpperCase();
+  return {
+    status: 'Unsupported format',
+    text: `Can’t import “${name}”: ${what} isn’t supported. Use ${joinedFormatNames(supported)}.`,
+  };
+}
+
 export function noticeText(notice: LibraryNotice): NoticeText {
   switch (notice.kind) {
     case 'bundleRefused':
       return refusalText(notice.name, notice.refusal);
+    case 'formatRefused':
+      return formatRefusedText(notice.name, notice.format, notice.supported);
     case 'copyFailed':
       return {
         status: 'Import failed',
@@ -91,7 +112,7 @@ export interface NoticeLook {
 export function noticeLook(notice: LibraryNotice): NoticeLook {
   if (notice.kind === 'stemSongAdded')
     return { tone: 'success', icon: 'check' };
-  if (notice.kind === 'bundleRefused')
+  if (notice.kind === 'bundleRefused' || notice.kind === 'formatRefused')
     return { tone: 'warning', icon: 'warning' };
   return { tone: 'danger', icon: 'warning' };
 }
