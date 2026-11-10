@@ -88,8 +88,8 @@ class Mixer {
   /// Transport. The read-ahead work runs here on the app thread; the callback
   /// is the sole writer of the head and the playing flag.
   void Play();
-  /// Starts playback on engine frame [frame]; false when the ring is full.
-  bool PlayAt(uint64_t frame);
+  /// False when the command ring is full.
+  bool PlayAt(uint64_t engine_frame);
   /// Stops playback and rewinds the head to 0 (SPEC.md §4.4).
   void Stop(FrameClock clock, bool engine_running);
   /// Ends playback holding the head, so a following Play resumes there.
@@ -173,6 +173,8 @@ class Mixer {
   /// a ring the callback drains (#25).
   uint64_t rt_track_buffered(int track) const;
   bool track_at_end(int track) const;
+  /// Tests only: whether a track's read-ahead thread runs.
+  bool track_reading(int track) const;
 
   /// App thread, callback quiescent. Frees every retired source now.
   void ReleaseRetiredSources();
@@ -217,6 +219,7 @@ class Mixer {
   void ApplyCommand(const Command& command);
   void ApplyTransportCommand(const Command& command);
   void StartStreams();
+  void StopStreams();
   uint32_t StartPendingPlay(uint64_t block_start_frame, uint32_t frame_count);
   void PlayBlock(float* output, uint32_t frame_count);
   void ApplyStretchCommand(const Command& command);

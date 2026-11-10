@@ -255,13 +255,15 @@ void Mixer::Process(
   // under the snapshot means its successor's plan is already readable.
   if (AdoptPlan()) SnapshotBuses();
   song_clock_.playing = false;
+  song_clock_.start_index = 0;
   // Scratch is sized to kMaxBlockFrames at setup; a wider block cannot be
   // drained without allocating, which the callback must never do.
   if (frame_count > StreamingTrack::kMaxBlockFrames) return;
+  if (HoldForBusSwitch()) return;
   const uint32_t lead = StartPendingPlay(block_start_frame, frame_count);
-  if (!playing_.load(std::memory_order_relaxed) || HoldForBusSwitch()) return;
+  if (!playing_.load(std::memory_order_relaxed)) return;
   PlayBlock(output + static_cast<size_t>(lead) * 2, frame_count - lead);
-  song_clock_.offset = lead;
+  song_clock_.start_index = lead;
 }
 
 }  // namespace kitbag

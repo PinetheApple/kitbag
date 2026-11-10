@@ -52,7 +52,8 @@ void CheckFirstSound(const Run& run, uint64_t want, const char* label) {
 void CheckStartBlockClock(const kitbag::Mixer& mixer, int64_t head) {
   const kitbag::SongClock& clock = mixer.song_clock();
   Check(
-      clock.offset == kLead && !clock.Plays(kLead - 1) && clock.Plays(kLead),
+      clock.start_index == kLead && !clock.Plays(kLead - 1) &&
+          clock.Plays(kLead),
       "play_at: the song clock opens on the start frame's index"
   );
   Check(
@@ -189,6 +190,22 @@ void TestStretchedStartOnTheFrame() {
   );
 }
 
+void TestRefusedStartStopsReading() {
+  kitbag::Mixer queued(kSampleRate);
+  LoadRamp(&queued, 0, kRampFrames, kRampOffset);
+  Check(
+      queued.PlayAt(kStartFrame) && queued.track_reading(0),
+      "play_at: a queued start runs the read-ahead"
+  );
+  kitbag::Mixer refused(kSampleRate);
+  LoadRamp(&refused, 0, kRampFrames, kRampOffset);
+  FillCommandQueue(&refused);
+  Check(
+      !refused.PlayAt(kStartFrame) && !refused.track_reading(0),
+      "play_at: a refused start from rest leaves the read-ahead stopped"
+  );
+}
+
 }  // namespace
 
 void RunPlayAtTests() {
@@ -197,6 +214,7 @@ void RunPlayAtTests() {
   TestLastTransportCallWins();
   TestSeekKeepsTheStart();
   TestStretchedStartOnTheFrame();
+  TestRefusedStartStopsReading();
 }
 
 }  // namespace mixer_test

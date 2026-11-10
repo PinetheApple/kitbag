@@ -199,8 +199,7 @@ void Mixer::Stop(FrameClock clock, bool engine_running) {
 void Mixer::Pause() {
   app_playing_ = false;
   Enqueue({CommandType::kPause});
-  const int count = track_count_.load(std::memory_order_relaxed);
-  for (int i = 0; i < count; ++i) tracks_[i].stream->StopSource();
+  StopStreams();
 }
 
 void Mixer::Seek(uint64_t frame, FrameClock clock, bool engine_running) {

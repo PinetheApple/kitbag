@@ -198,7 +198,7 @@ void TestFollowStartsMidBlock() {
       .opens_on_jump = true,
       .first = kHead,
       .frames = kBlockFrames - kSongOffset,
-      .offset = kSongOffset
+      .start_index = kSongOffset
   };
   std::vector<float> out(static_cast<size_t>(kBlockFrames) * kChannels);
   metronome.Render(out.data(), kBlockFrames, kSampleRate, kChannels, 0, &song);

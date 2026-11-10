@@ -10,13 +10,26 @@ void Mixer::StartStreams() {
   for (int i = 0; i < count; ++i) tracks_[i].stream->StartAndPrime();
 }
 
-bool Mixer::PlayAt(uint64_t frame) {
+void Mixer::StopStreams() {
+  const int count = track_count_.load(std::memory_order_relaxed);
+  for (int i = 0; i < count; ++i) tracks_[i].stream->StopSource();
+}
+
+bool Mixer::track_reading(int track) const {
+  if (track < 0 || track >= track_count_.load(std::memory_order_relaxed)) {
+    return false;
+  }
+  return tracks_[track].stream->reading();
+}
+
+bool Mixer::PlayAt(uint64_t engine_frame) {
   const bool was_playing = app_playing_;
   StartStreams();
   Command command{CommandType::kPlayAt};
-  command.frame = frame;
+  command.frame = engine_frame;
   if (Enqueue(command)) return true;
   app_playing_ = was_playing;
+  if (!was_playing) StopStreams();
   return false;
 }
 
