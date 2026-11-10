@@ -36,6 +36,7 @@ export const iconGlyphs = {
   forward: 'chevron-right',
   add: 'plus',
   play: 'play',
+  pause: 'pause',
   saveInto: 'tray-arrow-down',
   dragHandle: 'drag-horizontal-variant',
   notes: 'pencil-outline',

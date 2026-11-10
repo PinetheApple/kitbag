@@ -248,6 +248,8 @@ export const iconSizes = {
   emptyButton: 20,
   listTile: 22,
   listFab: 28,
+  miniTile: 20,
+  miniPlay: 28,
   emptyMark: 36,
   checkMark: 11,
   sectionLoop: 20,

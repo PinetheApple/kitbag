@@ -69,6 +69,7 @@ export * from './components/Waveform.tsx';
 export * from './components/BeatWaveform.tsx';
 export * from './components/PlayerDock.tsx';
 export * from './components/PlayerTransport.tsx';
+export * from './components/MiniPlayerBar.tsx';
 export * from './components/ScrubRow.tsx';
 export * from './components/Slider.tsx';
 export * from './useScreenReader.ts';

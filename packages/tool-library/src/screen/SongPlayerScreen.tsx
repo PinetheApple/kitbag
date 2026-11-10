@@ -2,6 +2,7 @@ import {
   AppBar,
   Badge,
   BeatWaveform,
+  Button,
   Card,
   Chip,
   createThemedStyles,
@@ -10,12 +11,14 @@ import {
   PlayerTransport,
   screenBar,
   ScrubRow,
+  Sheet,
   songPlayer,
   space,
   stemPlayer,
   textRoles,
   textStyle,
   useTextScaled,
+  type AppBarAction,
   type PlayerFrame,
   type ScrubFrame,
 } from '@kitbag/core-design';
@@ -29,22 +32,19 @@ import {
   songBadge,
   useFocusedMixerHold,
   useLoopScrub,
+  useSongLibrary,
   useSongPlayer,
   type StemPlayerStatus,
 } from '@kitbag/core-state';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import { lockText } from '../logic/lockText.ts';
+import { songTitle } from '../logic/songTitle.ts';
 import { frameAtTap } from '../logic/waveSeek.ts';
+import type { UsePlayhead } from './playhead.ts';
 
 const NO_NEIGHBOURS = {};
-
-type UsePlayhead = (
-  engineRate: number,
-  durationFrames: number,
-  loopEndFrames: number | null,
-) => PlayerFrame;
 
 export interface SongPlayerScreenProps {
   readonly songId: number;
@@ -75,19 +75,74 @@ const useStyles = createThemedStyles((theme) => ({
   lockTitle: { ...textStyle(textRoles.listTitle), color: theme.color.text },
   lockDetail: { ...textStyle(textRoles.listFacts), color: theme.color.text2 },
   note: { ...textStyle(textRoles.fieldLabel), color: theme.color.text },
+  menu: { gap: space.controlGap },
 }));
 
-function SongAppBar({ onBack }: { readonly onBack: () => void }) {
+interface PlayerMenuProps {
+  readonly songId: number;
+  readonly visible: boolean;
+  readonly bottomInset: number;
+  readonly onDismiss: () => void;
+  readonly onBack: () => void;
+}
+
+function PlayerMenu({
+  songId,
+  visible,
+  bottomInset,
+  onDismiss,
+  onBack,
+}: PlayerMenuProps) {
+  const styles = useStyles();
+  const title = useSongPlayer((s) => s.title);
+  const close = useSongPlayer((s) => s.close);
+  const reanalyze = useSongLibrary((s) => s.reanalyze);
+  const stop = useCallback(() => {
+    onDismiss();
+    onBack();
+    close();
+  }, [onDismiss, onBack, close]);
+  const reanalyse = useCallback(() => {
+    onDismiss();
+    void reanalyze(songId);
+  }, [onDismiss, reanalyze, songId]);
+  return (
+    <Sheet
+      visible={visible}
+      title={songTitle(title)}
+      dismissLabel="Close the menu"
+      bottomInset={bottomInset}
+      onDismiss={onDismiss}
+    >
+      <View style={styles.menu}>
+        <Button label="Stop" variant="tonal" onPress={stop} />
+        <Button label="Re-analyse" variant="tonal" onPress={reanalyse} />
+      </View>
+    </Sheet>
+  );
+}
+
+interface SongAppBarProps {
+  readonly onBack: () => void;
+  readonly onMenu: () => void;
+}
+
+function SongAppBar({ onBack, onMenu }: SongAppBarProps) {
   const styles = useStyles();
   const title = useSongPlayer((s) => s.title);
   const artist = useSongPlayer((s) => s.artist);
   const bpm = bpmFact(useSongPlayer((s) => s.bpm));
+  const actions: readonly AppBarAction[] = useMemo(
+    () => [{ icon: 'more', label: 'More', onPress: onMenu }],
+    [onMenu],
+  );
   return (
     <AppBar
       flush
-      title={title === '' ? 'Song' : title}
+      title={songTitle(title)}
       subtitle={artist ?? undefined}
       onBack={onBack}
+      actions={actions}
       trailing={
         bpm === null ? null : (
           <View style={styles.bpm}>
@@ -217,6 +272,7 @@ function NotReady({
         onAction={onBack}
       />
     );
+  if (status === 'idle') return null;
   return (
     <Text accessibilityLiveRegion="polite" style={styles.note}>
       Opening the song…
@@ -277,11 +333,25 @@ export function SongPlayerScreen({
     [open, songId],
   );
   useFocusedMixerHold(focused, acquire);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const openMenu = useCallback(() => {
+    setMenuOpen(true);
+  }, []);
+  const closeMenu = useCallback(() => {
+    setMenuOpen(false);
+  }, []);
   const padding = useMemo(() => ({ paddingTop: insets.top }), [insets.top]);
   return (
     <View style={[styles.screen, padding]}>
-      <SongAppBar onBack={onBack} />
+      <SongAppBar onBack={onBack} onMenu={openMenu} />
       <Body bottom={insets.bottom} onBack={onBack} usePlayhead={usePlayhead} />
+      <PlayerMenu
+        songId={songId}
+        visible={menuOpen}
+        bottomInset={insets.bottom}
+        onDismiss={closeMenu}
+        onBack={onBack}
+      />
     </View>
   );
 }
