@@ -1,0 +1,1 @@
+• Importing an audio file Kitbag can't play (such as M4A, AAC or OGG) is now refused with a message naming the format, instead of adding a song that can't be analysed or played.
