@@ -36,4 +36,26 @@ object SupportedAudio {
   val FAMILY_NAMES = FAMILIES.map { it.name }
   val EXTENSIONS = FAMILIES.flatMap { it.extensions } + IMPORT_ONLY_EXTENSIONS
   val MIME_TYPES = FAMILIES.flatMap { it.mimeTypes }
+
+  val UNSUPPORTED_EXTENSIONS = listOf(
+    "m4a",
+    "m4b",
+    "m4r",
+    "mp4",
+    "aac",
+    "ogg",
+    "oga",
+    "opus",
+    "wma",
+    "amr",
+    "3gp",
+    "mka",
+    "webm",
+    "ape",
+    "wv",
+    "ac3",
+    "caf",
+    "mid",
+    "midi",
+  )
 }

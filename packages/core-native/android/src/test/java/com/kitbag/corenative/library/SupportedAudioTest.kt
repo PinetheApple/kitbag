@@ -39,6 +39,14 @@ class SupportedAudioTest {
   }
 
   @Test
+  fun noExtensionIsBothSupportedAndUnsupported() {
+    assertEquals(
+      emptySet<String>(),
+      SupportedAudio.EXTENSIONS.intersect(SupportedAudio.UNSUPPORTED_EXTENSIONS.toSet()),
+    )
+  }
+
+  @Test
   fun thePickerOffersSupportedAudioAndStemBundleZipsOnly() {
     assertEquals(
       SupportedAudio.MIME_TYPES + listOf("application/zip", "application/x-zip-compressed"),

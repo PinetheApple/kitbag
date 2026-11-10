@@ -58,7 +58,7 @@ function formatRefusedText(
   format: string,
   supported: readonly string[],
 ): NoticeText {
-  const what = format === '' ? 'this format' : format.toLocaleUpperCase();
+  const what = format === '' ? 'this format' : format.toUpperCase();
   return {
     status: 'Unsupported format',
     text: `Can’t import “${name}”: ${what} isn’t supported. Use ${joinedFormatNames(supported)}.`,

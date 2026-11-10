@@ -67,6 +67,27 @@ export const CODES: LibraryConstants = {
     'audio/aifc',
     'audio/x-aifc',
   ],
+  unsupportedAudioExtensions: [
+    'm4a',
+    'm4b',
+    'm4r',
+    'mp4',
+    'aac',
+    'ogg',
+    'oga',
+    'opus',
+    'wma',
+    'amr',
+    '3gp',
+    'mka',
+    'webm',
+    'ape',
+    'wv',
+    'ac3',
+    'caf',
+    'mid',
+    'midi',
+  ],
 };
 
 export const SONG_PATH = 'songs/f1/Everlong.mp3';
