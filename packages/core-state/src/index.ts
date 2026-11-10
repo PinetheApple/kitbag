@@ -311,8 +311,8 @@ export {
   type MixerClick,
   type MixerClickNotice,
   type ReleasedClick,
-} from './songPlayer/mixerClick.ts';
-export { useMixerClickNotice } from './songPlayer/useMixerClickNotice.ts';
+} from './stemPlayer/mixerClick.ts';
+export { useMixerClickNotice } from './stemPlayer/useMixerClickNotice.ts';
 export {
   bpmFact,
   keyFact,

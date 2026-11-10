@@ -8,7 +8,8 @@ export interface MixerClickSource {
 
 export interface ReleasedClick {
   readonly title: string;
-  readonly release: number;
+  readonly id: number;
+  readonly at: number;
 }
 
 export interface MixerClickNotice {
@@ -24,11 +25,9 @@ export interface MixerClick {
   readonly notice: StoreApi<MixerClickNotice>;
 }
 
-export type MixerClickRelease = Pick<MixerClick, 'active' | 'release'>;
-
-export function createMixerClick(): MixerClick {
+export function createMixerClick(now: () => number = Date.now): MixerClick {
   let source: MixerClickSource | null = null;
-  let releases = 0;
+  let releaseCount = 0;
   const notice = createStore<MixerClickNotice>((set) => ({
     released: null,
     dismiss: () => {
@@ -48,8 +47,8 @@ export function createMixerClick(): MixerClick {
       if (source === null || !active()) return;
       const title = source.title();
       source.turnOff();
-      releases++;
-      notice.setState({ released: { title, release: releases } });
+      releaseCount++;
+      notice.setState({ released: { title, id: releaseCount, at: now() } });
     },
     notice,
   };

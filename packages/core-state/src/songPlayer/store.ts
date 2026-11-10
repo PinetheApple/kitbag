@@ -18,6 +18,11 @@ import {
   mixerClaim,
   type MixerClaim,
 } from '../stemPlayer/mixerClaim.ts';
+import {
+  createMixerClick,
+  mixerClick,
+  type MixerClick,
+} from '../stemPlayer/mixerClick.ts';
 import { mixerSession, type MixerHold } from '../stemPlayer/mixerSession.ts';
 import {
   SCRUB_SEEK_DELAY_MS,
@@ -25,7 +30,6 @@ import {
   type StemPlayerStatus,
 } from '../stemPlayer/store.ts';
 import { framesToSeconds, secondsToFrames } from '../stemPlayer/time.ts';
-import { createMixerClick, mixerClick, type MixerClick } from './mixerClick.ts';
 import { getSongPlayer, type SongPlayerRuntime } from './runtime.ts';
 
 const SONG_TRACK = 0;

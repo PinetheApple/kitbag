@@ -2,12 +2,6 @@ import type { StemSetRecord, StoredSection } from '@kitbag/core-db';
 import { KB_MAX_TRACKS, KB_RESULT } from '@kitbag/core-native';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
-import {
-  createMixerClick,
-  mixerClick,
-  type MixerClick,
-} from '../songPlayer/mixerClick.ts';
-
 import { mixActions, transportActions } from './actions.ts';
 import { barMarkDownbeats } from './bars.ts';
 import { clickActions } from './clickActions.ts';
@@ -22,6 +16,7 @@ import {
 } from './lyrics.ts';
 import { UNITY_GAIN } from './mix.ts';
 import { createMixerClaim, mixerClaim, type MixerClaim } from './mixerClaim.ts';
+import { createMixerClick, mixerClick, type MixerClick } from './mixerClick.ts';
 import { mixerSession, type MixerHold } from './mixerSession.ts';
 import { mixSaver } from './mixSaver.ts';
 import { renameActions } from './renameActions.ts';

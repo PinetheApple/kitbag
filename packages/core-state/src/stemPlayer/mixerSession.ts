@@ -4,7 +4,7 @@ import {
   KB_RESULT,
 } from '@kitbag/core-native';
 
-import type { MixerClick, MixerClickSource } from '../songPlayer/mixerClick.ts';
+import type { MixerClick, MixerClickSource } from './mixerClick.ts';
 import { stopClick, turnClickOff, type ClickSlice } from './clickActions.ts';
 import { debounce } from './debounce.ts';
 import type { MixerClaim } from './mixerClaim.ts';
@@ -89,6 +89,7 @@ export function mixerSession({
     if (!isOpen()) return;
     claim.release(close);
     mixerClick.detach(clickSource);
+    pendingClick.cancel();
     session++;
     teardown();
     resetState();
@@ -136,6 +137,7 @@ export function mixerSession({
       if (isOpen()) teardown();
       releaseEngine ??= acquireEngineHold(runtimeOf().commands);
       claim.claim(close);
+      pendingClick.cancel();
       mixerClick.attach(clickSource);
       songStopSubscription ??= runtimeOf().commands.onSongStopped(() => {
         turnClickOff({ set, get, runtimeOf });

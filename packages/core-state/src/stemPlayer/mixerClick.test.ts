@@ -6,22 +6,23 @@ import {
   createMetronomeStore,
   type MetronomeStore,
 } from '../metronome/store.ts';
-import { createStemPlayerStore } from '../stemPlayer/store.ts';
-import {
-  BARS as STEM_BARS,
-  fakeRuntime as fakeStemRuntime,
-  record,
-  SAVE_MS,
-  stem,
-} from '../stemPlayer/store.test-helper.ts';
-import { createMixerClick, type MixerClick } from './mixerClick.ts';
-import { createSongPlayerStore } from './store.ts';
+import { createSongPlayerStore } from '../songPlayer/store.ts';
 import {
   BARS,
   fakeSongRuntime,
   SEEK_MS,
   SONG_ID,
   songRecord,
+} from '../songPlayer/store.test-helper.ts';
+import { createMixerClaim, type MixerClaim } from './mixerClaim.ts';
+import { createMixerClick, type MixerClick } from './mixerClick.ts';
+import { createStemPlayerStore } from './store.ts';
+import {
+  BARS as STEM_BARS,
+  fakeRuntime as fakeStemRuntime,
+  record,
+  SAVE_MS,
+  stem,
 } from './store.test-helper.ts';
 
 const STEM_SET_ID = 7;
@@ -29,6 +30,7 @@ const STANDALONE_BPM = 97;
 const STANDALONE_BEATS = 3;
 const STANDALONE_DENOMINATOR = 8;
 const NOW_FRAME = 0;
+const SONG_TITLE = songRecord().title;
 
 type MixerCommands = ReturnType<typeof fakeStemRuntime>['commands'];
 
@@ -61,16 +63,46 @@ function configOf(state: MetronomeStore) {
   return { ...state, running: undefined, practice: undefined };
 }
 
-async function openedSongClick() {
-  const songClick = createMixerClick();
+async function openedSongClick(
+  songClick: MixerClick = createMixerClick(),
+  claim: MixerClaim = createMixerClaim(),
+) {
   const fake = fakeSongRuntime(songRecord());
   const song = createSongPlayerStore(() => fake.runtime, {
     scrubSeekDelayMs: SEEK_MS,
+    mixerClaim: claim,
     mixerClick: songClick,
   });
   await song.getState().open(SONG_ID, BARS).loaded;
   const standalone = standaloneOver(fake.commands, songClick);
   return { fake, song, standalone, songClick };
+}
+
+function stemStore(
+  songClick: MixerClick,
+  claim: MixerClaim = createMixerClaim(),
+) {
+  const fake = fakeStemRuntime(record([stem(1)]));
+  const stems = createStemPlayerStore(() => fake.runtime, {
+    mixSaveDelayMs: SAVE_MS,
+    scrubSeekDelayMs: SEEK_MS,
+    mixerClaim: claim,
+    mixerClick: songClick,
+  });
+  return { fake, stems };
+}
+
+function holdSetGrid(commands: MixerCommands): () => void {
+  let gridSet: (result: number) => void = () => undefined;
+  commands.setGrid.mockImplementationOnce(
+    () =>
+      new Promise<number>((resolve) => {
+        gridSet = resolve;
+      }),
+  );
+  return () => {
+    gridSet(KB_RESULT.KB_OK);
+  };
 }
 
 async function songWithClick() {
@@ -82,12 +114,7 @@ async function songWithClick() {
 
 async function stemsWithClick() {
   const songClick = createMixerClick();
-  const fake = fakeStemRuntime(record([stem(1)]));
-  const stems = createStemPlayerStore(() => fake.runtime, {
-    mixSaveDelayMs: SAVE_MS,
-    scrubSeekDelayMs: SEEK_MS,
-    mixerClick: songClick,
-  });
+  const { fake, stems } = stemStore(songClick);
   await stems.getState().open(STEM_SET_ID, STEM_BARS);
   const standalone = standaloneOver(fake.commands, songClick);
   await stems.getState().toggleClick();
@@ -152,7 +179,7 @@ describe("standalone Play while a song's click runs", () => {
     const { standalone, songClick } = await songWithClick();
     standalone.getState().start();
     expect(songClick.notice.getState().released).toMatchObject({
-      title: 'Everlong',
+      title: SONG_TITLE,
     });
     songClick.notice.getState().dismiss();
     expect(songClick.notice.getState().released).toBeNull();
@@ -161,24 +188,18 @@ describe("standalone Play while a song's click runs", () => {
   it('cancels a song click still turning on', async () => {
     const { fake, song, standalone, songClick } = await openedSongClick();
     const { commands } = fake;
-    let gridSet: (result: number) => void = () => undefined;
-    commands.setGrid.mockImplementationOnce(
-      () =>
-        new Promise<number>((resolve) => {
-          gridSet = resolve;
-        }),
-    );
+    const gridSet = holdSetGrid(commands);
     const turningOn = song.getState().toggleClick();
     vi.clearAllMocks();
     standalone.getState().start();
-    gridSet(KB_RESULT.KB_OK);
+    gridSet();
     await turningOn;
     expect(commands.metronomeFollowMixer).not.toHaveBeenCalledWith(true);
     expect(commands.clearGrid).toHaveBeenCalledOnce();
     expect(commands.metronomeStart).toHaveBeenCalledOnce();
     expect(song.getState().click).toBe(false);
     expect(songClick.notice.getState().released).toMatchObject({
-      title: 'Everlong',
+      title: SONG_TITLE,
     });
   });
 
@@ -200,5 +221,52 @@ describe('standalone Play with no song click', () => {
     expect(fake.commands.clearGrid).not.toHaveBeenCalled();
     expect(fake.commands.metronomeFollowMixer).not.toHaveBeenCalled();
     expect(songClick.notice.getState().released).toBeNull();
+  });
+});
+
+describe('a session that ends or is displaced', () => {
+  it('sends no grid commands once the song closed first', async () => {
+    const { fake, song, standalone, songClick } = await openedSongClick();
+    await song.getState().toggleClick();
+    song.getState().close();
+    vi.clearAllMocks();
+    standalone.getState().start();
+    expect(fake.commands.clearGrid).not.toHaveBeenCalled();
+    expect(fake.commands.metronomeFollowMixer).not.toHaveBeenCalled();
+    expect(songClick.notice.getState().released).toBeNull();
+  });
+
+  it('drops a turn-on still pending when the song closes and reopens', async () => {
+    const { fake, song, standalone, songClick } = await openedSongClick();
+    const gridSet = holdSetGrid(fake.commands);
+    const turningOn = song.getState().toggleClick();
+    song.getState().close();
+    await song.getState().open(SONG_ID, BARS).loaded;
+    vi.clearAllMocks();
+    standalone.getState().start();
+    expect(fake.commands.metronomeFollowMixer).not.toHaveBeenCalled();
+    expect(songClick.notice.getState().released).toBeNull();
+    gridSet();
+    await turningOn;
+    expect(song.getState().click).toBe(false);
+  });
+
+  it('releases the stem click after a stem song displaced the song', async () => {
+    const songClick = createMixerClick();
+    const claim = createMixerClaim();
+    const { song } = await openedSongClick(songClick, claim);
+    await song.getState().toggleClick();
+    const { fake, stems } = stemStore(songClick, claim);
+    await stems.getState().open(STEM_SET_ID, STEM_BARS);
+    await stems.getState().toggleClick();
+    song.getState().close();
+    const standalone = standaloneOver(fake.commands, songClick);
+    vi.clearAllMocks();
+    standalone.getState().start();
+    expectReleasedBeforeStart(fake.commands);
+    expect(stems.getState().click).toBe(false);
+    expect(songClick.notice.getState().released).toMatchObject({
+      title: stems.getState().title,
+    });
   });
 });

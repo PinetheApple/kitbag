@@ -11,7 +11,7 @@ describe('lockText', () => {
     });
   });
 
-  it('reads click off, with the grid still ready, while the click is off', () => {
+  it('reads click off, grid ready, while the click is off', () => {
     expect(lockText('grid', false, '158 BPM')).toEqual({
       title: 'Click off',
       detail: '158 BPM · grid ready',
