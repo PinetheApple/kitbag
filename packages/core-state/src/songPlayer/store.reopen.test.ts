@@ -7,6 +7,7 @@ import {
   fakeSongRuntime,
   openedSong,
   SONG_ID,
+  songRecord,
   songStore,
 } from './store.test-helper.ts';
 
@@ -37,7 +38,7 @@ describe('opening the song that is already open', () => {
   it('keeps playing it without loading it again', async () => {
     const { store, commands, records } = await playingWithClickAndLoop();
     await store.getState().open(SONG_ID, BARS).loaded;
-    expect(records.readSong).not.toHaveBeenCalled();
+    expect(records.readSong).toHaveBeenCalledExactlyOnceWith(SONG_ID);
     expect(commands.loadTrack).not.toHaveBeenCalled();
     expect(commands.mixerStop).not.toHaveBeenCalled();
     expect(commands.mixerPause).not.toHaveBeenCalled();
@@ -55,17 +56,16 @@ describe('opening the song that is already open', () => {
     expect(commands.clearGrid).not.toHaveBeenCalled();
   });
 
-  it('closes the shared session when its last holder lets go', async () => {
+  it('closes the shared session when its last holder of a loading song lets go', async () => {
     const store = songStore(fakeSongRuntime());
     const first = store.getState().open(SONG_ID, BARS);
-    await first.loaded;
-    const again = store.getState().open(SONG_ID, BARS).hold;
-    again.release();
-    again.release();
+    const again = store.getState().open(SONG_ID, BARS);
+    again.hold.release();
+    again.hold.release();
     expect(first.hold.live()).toBe(true);
-    expect(store.getState().status).toBe('ready');
     first.hold.release();
-    expect(again.live()).toBe(false);
+    await first.loaded;
+    expect(again.hold.live()).toBe(false);
     expect(store.getState().songId).toBeNull();
   });
 
@@ -75,11 +75,10 @@ describe('opening the song that is already open', () => {
     await stale.loaded;
     store.getState().close();
     const current = store.getState().open(SONG_ID, BARS);
-    await current.loaded;
     stale.hold.release();
     expect(current.hold.live()).toBe(true);
-    expect(store.getState().status).toBe('ready');
     current.hold.release();
+    await current.loaded;
     expect(store.getState().songId).toBeNull();
   });
 
@@ -118,5 +117,40 @@ describe('opening another song', () => {
       loop: { kind: 'off' },
       status: 'ready',
     });
+  });
+});
+
+describe('reopening the live song after the library changed it', () => {
+  it('shows its new title, artist, BPM and analysis status', async () => {
+    const { store, records } = await playingWithClickAndLoop();
+    records.readSong.mockResolvedValueOnce(
+      songRecord({
+        title: 'Renamed',
+        artist: '',
+        bpm: 90,
+        analysisStatus: 'pending',
+      }),
+    );
+    await store.getState().open(SONG_ID, BARS).loaded;
+    expect(store.getState()).toMatchObject({
+      status: 'ready',
+      title: 'Renamed',
+      artist: null,
+      bpm: 90,
+      analysisStatus: 'pending',
+      click: true,
+    });
+  });
+
+  it('ends the session and shows the song as gone after a delete', async () => {
+    const { store, records, commands } = await playingWithClickAndLoop();
+    records.readSong.mockResolvedValueOnce(undefined);
+    const { hold, loaded } = store.getState().open(SONG_ID, BARS);
+    await loaded;
+    expect(store.getState().status).toBe('missing');
+    expect(hold.live()).toBe(false);
+    expect(commands.mixerStop).toHaveBeenCalledOnce();
+    expect(commands.metronomeStop).toHaveBeenCalledOnce();
+    expect(commands.engineRelease).toHaveBeenCalledOnce();
   });
 });

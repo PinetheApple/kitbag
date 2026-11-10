@@ -137,7 +137,8 @@ export function createSongPlayerStore(
           if (!held || !own.live()) return;
           held = false;
           holders--;
-          if (holders === 0) own.release();
+          // A ready song keeps playing behind the mini-player; Stop closes it.
+          if (holders === 0 && get().status !== 'ready') own.release();
         },
       };
     };
@@ -218,12 +219,31 @@ export function createSongPlayerStore(
         loadWaveform(opened, record.waveformPath, bars);
     };
 
+    const refreshFacts = async (opened: number, songId: number) => {
+      const record = await runtimeOf().records.readSong(songId);
+      if (!live(opened)) return;
+      if (record !== undefined) {
+        set(factsOf(record));
+        return;
+      }
+      mixer.close();
+      set({ status: 'missing' });
+    };
+
     return {
       ...closedState,
       open: (songId, waveformBars) => {
         const { songId: current, status } = get();
-        if (current === songId && ATTACHABLE.has(status))
-          return { hold: sharedHold(mixer.current()), loaded: loading };
+        if (current === songId && ATTACHABLE.has(status)) {
+          const opened = mixer.current();
+          const hold = sharedHold(opened);
+          loading = loading
+            .then(() => refreshFacts(opened, songId))
+            .catch((error: unknown) => {
+              console.warn('[kitbag] song facts unreadable', error);
+            });
+          return { hold, loaded: loading };
+        }
         const opened = mixer.begin();
         holders = 0;
         set({ ...closedState, status: 'loading', songId });

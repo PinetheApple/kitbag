@@ -22,12 +22,18 @@ function mixerScreens() {
       acquire: () => songs.getState().open(id, BARS).hold,
       shown: () => songs.getState(),
       opened: () => songs.getState().songId,
+      close: () => {
+        songs.getState().close();
+      },
       fake: songFake,
     }),
     stem: (id: number) => ({
       acquire: () => stems.getState().acquireSong(id, BARS),
       shown: () => stems.getState(),
       opened: () => stems.getState().setId,
+      close: () => {
+        stems.getState().close();
+      },
       fake: stemFake,
     }),
   };
@@ -117,7 +123,7 @@ describe('a screen that kept its session', () => {
   });
 });
 
-describe('the last Back', () => {
+describe('the last Back, then Stop for a song', () => {
   it.each(PAIRS)(
     'balances the engine holds: %s under %s',
     async (lowerKind, upperKind) => {
@@ -129,6 +135,10 @@ describe('the last Back', () => {
       lowerHold.ensureHeld(lower.acquire);
       await ready(lower, LOWER_ID);
       lowerHold.release();
+      if (lowerKind === 'song') {
+        expect(lower.opened()).toBe(LOWER_ID);
+        lower.close();
+      }
       expect(lower.opened()).toBeNull();
       for (const { commands } of [lower.fake, upper.fake])
         expect(commands.engineRelease).toHaveBeenCalledTimes(

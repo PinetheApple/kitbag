@@ -355,33 +355,29 @@ describe('a screen cleaning up late', () => {
     await second.loaded;
     first.hold.release();
     expect(store.getState().status).toBe('ready');
-    second.hold.release();
-    expect(store.getState().status).toBe('idle');
-  });
-
-  it('closes its own session', async () => {
-    const fake = fakeSongRuntime();
-    const store = songStore(fake);
-    const session = store.getState().open(SONG_ID, BARS);
-    await session.loaded;
-    session.hold.release();
-    expect(store.getState().songId).toBeNull();
-    expect(fake.commands.engineRelease).toHaveBeenCalledOnce();
+    expect(second.hold.live()).toBe(true);
   });
 });
 
 describe('the standalone metronome', () => {
   const TEMPO = 97;
+  const beside: { song: Fake | null } = { song: null };
+  const metronomeRuntime = {
+    commands: new Proxy(
+      {},
+      {
+        get: (_target, name) =>
+          (Reflect.get(beside.song?.commands ?? {}, name) as unknown) ??
+          (() => undefined),
+      },
+    ) as unknown as MetronomeCommands,
+    nowFrame: () => 0,
+    engineBpm: () => TEMPO,
+  };
 
   function runMetronomeBeside(song: Fake) {
-    configureMetronomeRuntime({
-      commands: new Proxy(song.commands, {
-        get: (commands, name) =>
-          (Reflect.get(commands, name) as unknown) ?? (() => undefined),
-      }) as unknown as MetronomeCommands,
-      nowFrame: () => 0,
-      engineBpm: () => TEMPO,
-    });
+    beside.song = song;
+    configureMetronomeRuntime(metronomeRuntime);
     const metronome = metronomeStore.getState();
     metronome.setTempo(TEMPO);
     metronome.setBeats(3, 4);
@@ -400,6 +396,17 @@ describe('the standalone metronome', () => {
     return { ...state, running: undefined, practice: undefined };
   }
 
+  function expectStoppedAndIntact(song: Fake, before: MetronomeStore) {
+    const after = metronomeStore.getState();
+    expect(after.running).toBe(false);
+    expect(configOf(after)).toEqual(configOf(before));
+    expect(after.bpm).toBe(TEMPO);
+    expect(after.beatsPerBar).toBe(3);
+    for (const setter of Object.values(song.metronomeSetters)) {
+      expect(setter).not.toHaveBeenCalled();
+    }
+  }
+
   it('keeps its tempo and config through a song, but is left stopped', async () => {
     const song = fakeSongRuntime();
     runMetronomeBeside(song);
@@ -410,13 +417,21 @@ describe('the standalone metronome', () => {
     await store.getState().toggleClick();
     expect(store.getState().click).toBe(true);
     store.getState().close();
-    const after = metronomeStore.getState();
-    expect(after.running).toBe(false);
-    expect(configOf(after)).toEqual(configOf(before));
-    expect(after.bpm).toBe(TEMPO);
-    expect(after.beatsPerBar).toBe(3);
-    for (const setter of Object.values(song.metronomeSetters)) {
-      expect(setter).not.toHaveBeenCalled();
-    }
+    expectStoppedAndIntact(song, before);
+  });
+
+  it('stays stopped and intact while the song outlives its player, and after it closes', async () => {
+    const song = fakeSongRuntime();
+    runMetronomeBeside(song);
+    const before = metronomeStore.getState();
+    const store = songStore(song);
+    const session = store.getState().open(SONG_ID, BARS);
+    await session.loaded;
+    await store.getState().toggleClick();
+    session.hold.release();
+    expect(store.getState().click).toBe(true);
+    expectStoppedAndIntact(song, before);
+    store.getState().close();
+    expectStoppedAndIntact(song, before);
   });
 });
