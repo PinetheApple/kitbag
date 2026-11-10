@@ -177,6 +177,8 @@ describe('standalone metronome across an app restart', () => {
     const { app, song } = await standaloneThenSong(memory);
     await app.library.getState().loadSong(song.presetId);
     await app.library.getState().deletePreset(song.presetId);
+    await settled();
+    expect(memory.stored().bpm).toBe(SONG_BPM);
     app.metronome.getState().setTempo(SONG_EDIT_BPM);
     await settled();
 
