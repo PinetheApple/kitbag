@@ -134,7 +134,7 @@ interface BarFacts {
 }
 
 // Stop closes the session while the screen is still animating out.
-function useFactsWhileOpen(): BarFacts {
+function useLastOpenFacts(): BarFacts {
   const open = useSongPlayer((s) => s.songId !== null);
   const title = useSongPlayer((s) => s.title);
   const artist = useSongPlayer((s) => s.artist);
@@ -148,7 +148,7 @@ function useFactsWhileOpen(): BarFacts {
 
 function SongAppBar({ onBack, onMenu }: SongAppBarProps) {
   const styles = useStyles();
-  const facts = useFactsWhileOpen();
+  const facts = useLastOpenFacts();
   const { title, artist } = facts;
   const bpm = bpmFact(facts.bpm);
   const actions: readonly AppBarAction[] = useMemo(

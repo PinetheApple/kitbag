@@ -5,7 +5,7 @@ import { followDockSettling, type DockNavigation } from './dockSettling.ts';
 
 export function useDockSettled(): boolean {
   const navigation = useNavigation<DockNavigation>();
-  const [settled, setSettled] = useState(true);
+  const [settled, setSettled] = useState(() => navigation.isFocused());
   useEffect(() => followDockSettling(navigation, setSettled), [navigation]);
   return settled;
 }

@@ -2,16 +2,18 @@ import { createElement, isValidElement, type ComponentType } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const NAV_BAR = 16;
+import { NAV_BAR } from '../safeAreaInsets.test-helper.ts';
 
 const state = vi.hoisted(() => ({
   docked: false,
   props: undefined as Record<string, unknown> | undefined,
 }));
 
-vi.mock('react-native-safe-area-context', () => ({
-  useSafeAreaInsets: () => ({ top: 0, bottom: NAV_BAR }),
-}));
+vi.mock(
+  'react-native-safe-area-context',
+  async () =>
+    (await import('../safeAreaInsets.test-helper.ts')).safeAreaContextMock,
+);
 vi.mock('expo-router', () => ({ useRouter: () => ({}) }));
 vi.mock('@/home/registry', () => ({
   TOOL_ID: { library: 'library', metronome: 'metronome' },

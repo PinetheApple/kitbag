@@ -946,10 +946,12 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   this supersedes "Blur releases nothing" above: leaving the player releases its hold but a
   ready song keeps playing, with its click, behind the mini-player. A song still loading, failed
   or missing closes with its last screen. Only Stop, the mini-player's close, another player
-  opening, or switching the tool off end it. Reopening the live song attaches as it is,
-  playing stays playing, and re-reads its title, artist, BPM and analysis status; a deleted
-  song ends the session and shows as gone. The bar hides while another screen covers Home or
-  Songs and returns once Back has finished, so it cannot be tapped mid-pop. **[recorded]**
+  opening, switching the tool off, or deleting the song (from Songs or from Storage) end it.
+  A rename or any library refresh updates the session's title, artist, BPM and analysis
+  status, so the bar follows. Reopening the live song attaches as it is, playing stays
+  playing, and re-reads those facts; if the song is gone by then, the player shows it as
+  gone. The bar hides while another screen covers Home or Songs and returns only once its
+  own screen has finished appearing, so it cannot be tapped mid-pop. **[recorded]**
 
 - **2026-11-07 · A single song is a one-track mixer song (§4.1, §6.3, #297)** — The song
   player drives `kb_mixer_*` with the song on track 0, plus `setGrid` and

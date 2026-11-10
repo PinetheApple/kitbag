@@ -161,3 +161,22 @@ describe('a load that does not reach ready', () => {
     expect(lower.fake.records.readSong).toHaveBeenCalledOnce();
   });
 });
+
+describe('a song that outlived its player', () => {
+  it('stops when a stem song opens', async () => {
+    const screens = mixerScreens();
+    const song = screens.song(LOWER_ID);
+    const stem = screens.stem(UPPER_ID);
+    const songScreen = screenHold();
+    songScreen.ensureHeld(song.acquire);
+    await ready(song, LOWER_ID);
+    songScreen.release();
+    expect(song.opened()).toBe(LOWER_ID);
+    screenHold().ensureHeld(stem.acquire);
+    await ready(stem, UPPER_ID);
+    expect(song.opened()).toBeNull();
+    const { mixerStop, engineHold, engineRelease } = song.fake.commands;
+    expect(mixerStop).toHaveBeenCalled();
+    expect(engineRelease).toHaveBeenCalledTimes(engineHold.mock.calls.length);
+  });
+});

@@ -102,11 +102,13 @@ describe('the Songs screen with no song playing', () => {
 describe('the Songs screen with the mini-player docked', () => {
   const dock = createElement('Dock');
 
-  it('draws the dock below the list, outside the FAB layer', () => {
+  it('draws the dock after the layer holding the list and the FAB', () => {
     const tree = mount(dock);
-    const fab = tree.root.findByType('Fab' as never);
+    const layer = tree.root.findByType('Fab' as never).parent;
     const docked = tree.root.findByType('Dock' as never);
-    expect(fab.parent).not.toBe(docked.parent);
+    const siblings = docked.parent?.children ?? [];
+    if (layer === null) throw new Error('the FAB has no layer');
+    expect(siblings.indexOf(docked)).toBe(siblings.indexOf(layer) + 1);
   });
 
   it('lifts the FAB onto the bar, which covers the navigation bar', () => {

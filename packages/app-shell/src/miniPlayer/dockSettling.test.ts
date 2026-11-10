@@ -8,6 +8,7 @@ function fakeNavigation() {
   const listeners = new Map<string, Listener>();
   const removed = vi.fn();
   const navigation = {
+    isFocused: () => true,
     addListener: (type: string, listener: Listener) => {
       listeners.set(type, listener);
       return removed;
@@ -44,6 +45,15 @@ describe('the dock under a pushed screen', () => {
     emit('blur');
     emit('transitionEnd', false);
     expect(setSettled).toHaveBeenLastCalledWith(true);
+  });
+
+  it('stays hidden on focus alone, until its screen has finished appearing', () => {
+    const { navigation, emit } = fakeNavigation();
+    const setSettled = vi.fn();
+    followDockSettling(navigation, setSettled);
+    emit('blur');
+    emit('focus');
+    expect(setSettled).not.toHaveBeenCalledWith(true);
   });
 
   it('stops listening when the screen unmounts', () => {

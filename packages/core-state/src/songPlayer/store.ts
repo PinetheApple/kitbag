@@ -1,6 +1,8 @@
 import {
   ANALYSIS_STATUS,
   type AnalysisStatus,
+  type LibraryRow,
+  type LibrarySongRow,
   type SongRecord,
 } from '@kitbag/core-db';
 import { KB_RESULT } from '@kitbag/core-native';
@@ -25,6 +27,10 @@ import {
   type StemPlayerStatus,
 } from '../stemPlayer/store.ts';
 import { framesToSeconds, secondsToFrames } from '../stemPlayer/time.ts';
+import {
+  songLibraryStore,
+  type SongLibraryState,
+} from '../songLibrary/store.ts';
 import { getSongPlayer, type SongPlayerRuntime } from './runtime.ts';
 
 const SONG_TRACK = 0;
@@ -60,9 +66,15 @@ type SongPlayerActions = Pick<
 
 export type SongPlayerStore = SongPlayerState & SongPlayerActions;
 
+export type SongLibraryRows = Pick<
+  StoreApi<Pick<SongLibraryState, 'rows' | 'ready' | 'failed'>>,
+  'subscribe'
+>;
+
 interface SongPlayerOptions {
   readonly scrubSeekDelayMs?: number;
   readonly mixerClaim?: MixerClaim;
+  readonly library?: SongLibraryRows;
 }
 
 const closedState: SongPlayerState = {
@@ -82,7 +94,12 @@ const closedState: SongPlayerState = {
   click: false,
 };
 
-function factsOf(record: SongRecord): Partial<SongPlayerState> {
+type SongFacts = Pick<
+  SongRecord,
+  'title' | 'artist' | 'bpm' | 'analysisStatus'
+>;
+
+function factsOf(record: SongFacts): Partial<SongPlayerState> {
   return {
     title: record.title,
     artist: record.artist === '' ? null : record.artist,
@@ -98,6 +115,7 @@ export function createSongPlayerStore(
   const {
     scrubSeekDelayMs = SCRUB_SEEK_DELAY_MS,
     mixerClaim: claim = createMixerClaim(),
+    library,
   } = options;
   let trackRequested = false;
   let masterToRestore: number | null = null;
@@ -137,8 +155,8 @@ export function createSongPlayerStore(
           if (!held || !own.live()) return;
           held = false;
           holders--;
-          // A ready song keeps playing behind the mini-player; Stop closes it.
-          if (holders === 0 && get().status !== 'ready') own.release();
+          const outlivesPlayer = get().status === 'ready';
+          if (holders === 0 && !outlivesPlayer) own.release();
         },
       };
     };
@@ -219,16 +237,33 @@ export function createSongPlayerStore(
         loadWaveform(opened, record.waveformPath, bars);
     };
 
-    const refreshFacts = async (opened: number, songId: number) => {
-      const record = await runtimeOf().records.readSong(songId);
-      if (!live(opened)) return;
-      if (record !== undefined) {
-        set(factsOf(record));
-        return;
-      }
+    const endAsGone = () => {
       mixer.close();
       set({ status: 'missing' });
     };
+
+    const refreshFacts = async (opened: number, songId: number) => {
+      const record = await runtimeOf().records.readSong(songId);
+      if (!live(opened)) return;
+      if (record === undefined) endAsGone();
+      else set(factsOf(record));
+    };
+
+    const followLibrary = (rows: readonly LibraryRow[]) => {
+      const { songId } = get();
+      if (songId === null) return;
+      const row = rows.find(
+        (candidate): candidate is LibrarySongRow =>
+          candidate.kind === 'song' && candidate.id === songId,
+      );
+      if (row === undefined) endAsGone();
+      else set(factsOf(row));
+    };
+
+    library?.subscribe((state, previous) => {
+      if (state.rows === previous.rows || !state.ready || state.failed) return;
+      followLibrary(state.rows);
+    });
 
     return {
       ...closedState,
@@ -263,4 +298,5 @@ export function createSongPlayerStore(
 
 export const songPlayerStore = createSongPlayerStore(getSongPlayer, {
   mixerClaim,
+  library: songLibraryStore,
 });

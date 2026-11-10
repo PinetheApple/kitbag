@@ -5,6 +5,7 @@ interface TransitionEnd {
 }
 
 export interface DockNavigation {
+  isFocused(): boolean;
   addListener(type: 'blur', listener: () => void): Unsubscribe;
   addListener(
     type: 'transitionEnd',
