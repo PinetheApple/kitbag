@@ -38,7 +38,7 @@
 namespace {
 
 using kitbag_test::Check;
-using kitbag_test::kZeroClock;
+using kitbag_test::kUnclockedFrame, kitbag_test::kZeroClock;
 
 // Pins the calling thread to one core so the render and seek threads run on
 // different cores. Without it the scheduler often co-schedules them on one core
@@ -208,7 +208,7 @@ void RunMixerRace() {
   stats.ring_ceiling = mixer.ring_frames();
   RunRace(
       &stats,
-      [&](std::vector<float>* out) { mixer.Process(out->data(), kBlock); },
+      [&](auto* out) { mixer.Process(out->data(), kBlock, kUnclockedFrame); },
       [&] { return mixer.rt_track_buffered(0); },
       kMixerDuration,
       [&](uint64_t target, uint64_t now) {

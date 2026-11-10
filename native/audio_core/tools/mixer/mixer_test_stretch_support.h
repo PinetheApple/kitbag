@@ -139,7 +139,7 @@ RenderPaced(kitbag::Mixer* mixer, int blocks, uint32_t frames = kBlock) {
   std::vector<float> out(static_cast<size_t>(frames) * 2);
   for (int b = 0; b < blocks; ++b) {
     WaitForReadAhead(*mixer);
-    mixer->Process(out.data(), frames);
+    mixer->Process(out.data(), frames, kUnclockedFrame);
     AppendLeft(&left, out, frames);
   }
   return left;
@@ -335,6 +335,7 @@ void RunRePrimeTests();
 void RunLoadRefusalTests();
 void RunLagCarryTests();
 void RunRetireTests();
+void RunPlayAtTests();
 void RunUnityTests();
 
 }  // namespace mixer_test

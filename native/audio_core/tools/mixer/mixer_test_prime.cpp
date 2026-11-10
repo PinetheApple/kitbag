@@ -66,7 +66,7 @@ double WorstBlock(kitbag::Mixer* mixer, int blocks) {
   for (int b = 0; b < blocks; ++b) {
     WaitForReadAhead(*mixer);
     const double start = ThreadSeconds();
-    mixer->Process(out.data(), kBlock);
+    mixer->Process(out.data(), kBlock, kUnclockedFrame);
     worst = std::max(worst, ThreadSeconds() - start);
   }
   return worst;
@@ -184,7 +184,7 @@ void RenderRealTime(
   auto next = std::chrono::steady_clock::now();
   while (!stop.load()) {
     const uint64_t last = mixer->position();
-    mixer->Process(out.data(), kBlock);
+    mixer->Process(out.data(), kBlock, kUnclockedFrame);
     AppendLeft(&run->left, out, kBlock);
     AppendClock(*mixer, run);
     *backwards = *backwards || mixer->position() < last;

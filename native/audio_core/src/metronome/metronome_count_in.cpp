@@ -12,8 +12,8 @@ void Metronome::SetCountInState(const Command& command) {
   if (IsOneOf(kCountInBarChoices, command.int_a)) {
     count_in_bars_ = command.int_a;
   }
-  count_in_distinct_ = command.int_b != 0;
-  if (IsValidSound(command.int_c)) count_in_sound_ = command.int_c;
+  count_in_voice_.distinct = command.int_b != 0;
+  if (IsValidSound(command.int_c)) count_in_voice_.sound = command.int_c;
 }
 
 void Metronome::PauseRun() {
@@ -51,19 +51,22 @@ double Metronome::AdvanceCountIn(
   const auto beat = static_cast<int64_t>(std::floor(position + kGridEpsilon));
   if (position - tempo.beats_per_sample <
       static_cast<double>(beat) - kGridEpsilon) {
-    OnCountInBeat(beat, sample_rate);
+    const int64_t bar = beats_per_bar_;
+    const auto in_bar = static_cast<int32_t>((beat % bar + bar) % bar);
+    OnCountInBeat(in_bar, count_in_voice_, sample_rate);
   }
   return position;
 }
 
-void Metronome::OnCountInBeat(int64_t beat, uint32_t sample_rate) {
-  const auto index = static_cast<int32_t>(
-      (beat % beats_per_bar_ + beats_per_bar_) % beats_per_bar_
-  );
+void Metronome::OnCountInBeat(
+    int32_t index,
+    CountInVoice voice,
+    uint32_t sample_rate
+) {
   current_beat_.store(index, std::memory_order_relaxed);
   const bool downbeat = index == 0;
-  if (count_in_distinct_) {
-    TriggerPreset(count_in_sound_, downbeat, sample_rate);
+  if (voice.distinct) {
+    TriggerPreset(voice.sound, downbeat, sample_rate);
   } else {
     TriggerPreset(
         downbeat ? accent_sound_ : normal_sound_,

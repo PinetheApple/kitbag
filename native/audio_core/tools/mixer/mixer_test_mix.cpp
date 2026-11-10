@@ -70,7 +70,7 @@ void TestShortStereoStemIsZeroPadded() {
 void TestProcessClearsTheBuffer() {
   kitbag::Mixer mixer(kSampleRate);
   std::vector<float> out(kBlock * 2, 7.0f);
-  mixer.Process(out.data(), kBlock);
+  mixer.Process(out.data(), kBlock, kUnclockedFrame);
   ExpectSilentBlock(out, "memset: a stopped mixer clears the buffer");
 }
 

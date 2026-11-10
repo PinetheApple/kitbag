@@ -93,10 +93,19 @@ struct SongClock {
   uint32_t frames = 0;
   LoopLayout layout;
   const SongRecords* records = nullptr;
+  // Nonzero when a scheduled start lands mid-block.
+  uint32_t start_index = 0;
 
+  bool Plays(uint32_t i) const {
+    return playing && i >= start_index && i - start_index < frames;
+  }
+  bool OpensAt(uint32_t i) const {
+    return opens_on_jump && i == start_index;
+  }
   SongPoint PointAt(uint32_t i) const {
-    if (records != nullptr) return records->PointAt(first + i);
-    return {.frame = layout.SongFrameAt(first + i), .layout = &layout};
+    const int64_t at = first + i - start_index;
+    if (records != nullptr) return records->PointAt(at);
+    return {.frame = layout.SongFrameAt(at), .layout = &layout};
   }
   int64_t SongFrameAt(uint32_t i) const {
     return PointAt(i).frame;
