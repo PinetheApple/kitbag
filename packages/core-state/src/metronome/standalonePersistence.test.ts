@@ -172,6 +172,17 @@ describe('standalone metronome across an app restart', () => {
     expect(memory.stored().bpm).toBe(SONG_BPM);
   });
 
+  it('keeps edits made after the loaded song is deleted', async () => {
+    const memory = memoryPersistence();
+    const { app, song } = await standaloneThenSong(memory);
+    await app.library.getState().loadSong(song.presetId);
+    await app.library.getState().deletePreset(song.presetId);
+    app.metronome.getState().setTempo(SONG_EDIT_BPM);
+    await settled();
+
+    expect(launch(memory).metronome.getState().bpm).toBe(SONG_EDIT_BPM);
+  });
+
   it('saves the settings left after leaving a setlist', async () => {
     const memory = memoryPersistence();
     const { app, song } = await standaloneThenSong(memory);

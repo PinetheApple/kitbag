@@ -210,11 +210,12 @@ function presetActions(deps: LibraryDeps, get: Get) {
   };
 }
 
-function presetEditActions(deps: LibraryDeps, get: Get) {
+function presetEditActions(deps: LibraryDeps, set: SetState, get: Get) {
   const presets = () => deps.repos().presets;
   return {
     deletePreset: async (presetId: number) => {
       await presets().delete(presetId);
+      if (get().loaded?.presetId === presetId) set({ loaded: null });
       await get().refresh();
     },
     savePreset: async (presetId: number, edit: PresetEdit) => {
@@ -396,7 +397,7 @@ export function createLibraryStore(
     ...setlistActions(deps, get),
     ...itemActions(deps, get),
     ...presetActions(deps, get),
-    ...presetEditActions(deps, get),
+    ...presetEditActions(deps, set, get),
     ...loadActions(deps, set, get),
   }));
 }
