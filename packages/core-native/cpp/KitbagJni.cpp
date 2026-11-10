@@ -197,6 +197,16 @@ Java_com_kitbag_corenative_KitbagCommandsModule_nativeSongCountIn(JNIEnv*, jobje
 }
 
 JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeSongPause(JNIEnv*, jobject) {
+  kitbag::commandSongPause();
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeSongStop(JNIEnv*, jobject) {
+  kitbag::commandSongStop();
+}
+
+JNIEXPORT void JNICALL
 Java_com_kitbag_corenative_KitbagCommandsModule_nativeMixerPause(JNIEnv*, jobject) {
   kitbag::commandMixerPause();
 }

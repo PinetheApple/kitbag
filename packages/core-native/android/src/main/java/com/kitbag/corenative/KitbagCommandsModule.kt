@@ -305,6 +305,14 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     promise.resolve(nativeSongCountIn(endFrame, beatFrames, beatsPerBar.toInt()))
   }
 
+  override fun songPause() {
+    nativeSongPause()
+  }
+
+  override fun songStop() {
+    nativeSongStop()
+  }
+
   override fun mixerPause() {
     nativeMixerPause()
   }
@@ -426,6 +434,8 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private external fun nativeMixerMasterGain(): Double
   private external fun nativeMixerPlay()
   private external fun nativeSongCountIn(endFrame: Double, beatFrames: Double, beatsPerBar: Int): Int
+  private external fun nativeSongPause()
+  private external fun nativeSongStop()
   private external fun nativeMixerPause()
   private external fun nativeMixerStop()
   private external fun nativeMixerSeek(frame: Double)

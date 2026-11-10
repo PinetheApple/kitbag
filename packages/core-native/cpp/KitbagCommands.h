@@ -5,7 +5,7 @@
 
 namespace kitbag {
 
-// Frame arguments are uint64 engine frames carried as doubles, exact below 2^53.
+// Frame arguments are uint64 engine frames carried as doubles, exact up to KB_MAX_EXACT_FRAME.
 int32_t commandStart();
 void commandStop();
 int32_t commandHold();
@@ -59,6 +59,8 @@ void commandMixerPause();
 void commandMixerStop();
 void commandMixerSeek(double frame);
 int32_t commandSongCountIn(double endFrame, double beatFrames, int32_t beatsPerBar);
+void commandSongPause();
+void commandSongStop();
 int32_t commandMixerSetLoop(double startFrame, double endFrame);
 int32_t commandMixerClearLoop();
 int32_t commandMixerSetRate(double rate);

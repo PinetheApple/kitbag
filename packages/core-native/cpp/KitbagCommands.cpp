@@ -40,10 +40,19 @@ std::optional<int32_t> wholeInt32(double value) {
 }
 
 std::optional<uint64_t> wholeFrame(double value) {
-  constexpr auto kMax =
-      static_cast<double>(uint64_t{1} << std::numeric_limits<double>::digits);
+  constexpr auto kMax = static_cast<double>(KB_MAX_EXACT_FRAME);
   if (!(value >= 0.0 && value <= kMax) || std::trunc(value) != value) return std::nullopt;
   return static_cast<uint64_t>(value);
+}
+
+// Metronome first, so a refused song start rolls back a count that is queued.
+int32_t queueSongCountIn(uint64_t end, double beatFrames, int32_t beatsPerBar) {
+  const LockedEngine engine = commandEngine();
+  const int32_t counted = kb_metronome_count_in_at(engine, end, beatFrames, beatsPerBar);
+  if (counted != KB_OK) return counted;
+  const int32_t queued = kb_mixer_play_at(engine, end);
+  if (queued != KB_OK) kb_metronome_stop(engine);
+  return queued;
 }
 }  // namespace
 
@@ -171,21 +180,28 @@ void commandMixerStop() { kb_mixer_stop(commandEngine()); }
 void commandMixerSeek(double frame) {
   kb_mixer_seek(commandEngine(), static_cast<int64_t>(frame));
 }
-// Metronome first, so a refused song start rolls back a count that is queued.
 int32_t commandSongCountIn(double endFrame, double beatFrames, int32_t beatsPerBar) {
   const auto end = wholeFrame(endFrame);
   if (!end) return KB_ERROR_INVALID_ARGUMENT;
-  {
+  const int32_t queued = queueSongCountIn(*end, beatFrames, beatsPerBar);
+  if (queued != KB_OK) return queued;
+  const int32_t started = commandStart();
+  if (started != KB_OK) {
     const LockedEngine engine = commandEngine();
-    const int32_t counted = kb_metronome_count_in_at(engine, *end, beatFrames, beatsPerBar);
-    if (counted != KB_OK) return counted;
-    const int32_t queued = kb_mixer_play_at(engine, *end);
-    if (queued != KB_OK) {
-      kb_metronome_stop(engine);
-      return queued;
-    }
+    kb_metronome_stop(engine);
+    kb_mixer_pause(engine);
   }
-  return commandStart();
+  return started;
+}
+void commandSongPause() {
+  const LockedEngine engine = commandEngine();
+  kb_metronome_pause(engine);
+  kb_mixer_pause(engine);
+}
+void commandSongStop() {
+  const LockedEngine engine = commandEngine();
+  kb_metronome_stop(engine);
+  kb_mixer_stop(engine);
 }
 int32_t commandMixerSetLoop(double startFrame, double endFrame) {
   return kb_mixer_set_loop(commandEngine(), static_cast<int64_t>(startFrame),

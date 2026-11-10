@@ -1,3 +1,4 @@
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <limits>
@@ -27,11 +28,13 @@ constexpr int32_t kTrackKey = -5;
 constexpr double kEndFrame = 152965.0;
 constexpr double kBeatFrames = 21209.9;
 constexpr int32_t kBeatsPerBar = 3;
-constexpr double kBeyondExactFrame = 9007199254740994.0;
+const double kBeyondExactFrame =
+    std::nextafter(static_cast<double>(KB_MAX_EXACT_FRAME), kInfinity);
 
 std::string songCalls;
 kb_result countResult = KB_OK;
 kb_result playResult = KB_OK;
+kb_result startResult = KB_OK;
 uint64_t countedEnd = 0;
 uint64_t playedFrom = 0;
 
@@ -108,6 +111,18 @@ void expectSongCountInComposed() {
   countResult = KB_ERROR_BUSY;
   expectSongCountIn(kEndFrame, KB_ERROR_BUSY, "count ");
   countResult = KB_OK;
+  startResult = KB_ERROR_DEVICE_START_FAILED;
+  expectSongCountIn(kEndFrame, KB_ERROR_DEVICE_START_FAILED, "count play start stop pause ");
+  startResult = KB_OK;
+}
+
+void expectSongTransport(void (*command)(), const char* what, const std::string& wantCalls) {
+  songCalls.clear();
+  command();
+  if (songCalls != wantCalls) {
+    std::fprintf(stderr, "%s: calls '%s'\n", what, songCalls.c_str());
+    ++failures;
+  }
 }
 
 }  // namespace
@@ -148,10 +163,13 @@ extern "C" kb_result kb_mixer_play_at(kb_engine*, uint64_t start) {
 }
 
 extern "C" void kb_metronome_stop(kb_engine*) { songCalls += "stop "; }
+extern "C" void kb_metronome_pause(kb_engine*) { songCalls += "click-pause "; }
+extern "C" void kb_mixer_pause(kb_engine*) { songCalls += "pause "; }
+extern "C" void kb_mixer_stop(kb_engine*) { songCalls += "mixer-stop "; }
 
 extern "C" kb_result kb_engine_start(kb_engine*) {
   songCalls += "start ";
-  return KB_OK;
+  return startResult;
 }
 
 int main() {
@@ -179,6 +197,8 @@ int main() {
   expectKeyRead(2, 2);
 
   expectSongCountInComposed();
+  expectSongTransport(kitbag::commandSongPause, "song pause", "click-pause pause ");
+  expectSongTransport(kitbag::commandSongStop, "song stop", "stop mixer-stop ");
 
   return failures == 0 ? 0 : 1;
 }
