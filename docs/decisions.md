@@ -942,6 +942,15 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   use `router.navigate`, so a double tap on one row keeps one route; taps on two rows stack.
   Coordinator call; the owner may overturn it. **[recorded]**
 
+- **2026-11-11 · A ready song outlives its player (§6.3, #297)** — For the single-song player
+  this supersedes "Blur releases nothing" above: leaving the player releases its hold but a
+  ready song keeps playing, with its click, behind the mini-player. A song still loading, failed
+  or missing closes with its last screen. Only Stop, the mini-player's close, another player
+  opening, or switching the tool off end it. Reopening the live song attaches as it is,
+  playing stays playing, and re-reads its title, artist, BPM and analysis status; a deleted
+  song ends the session and shows as gone. The bar hides while another screen covers Home or
+  Songs and returns once Back has finished, so it cannot be tapped mid-pop. **[recorded]**
+
 - **2026-11-07 · A single song is a one-track mixer song (§4.1, §6.3, #297)** — The song
   player drives `kb_mixer_*` with the song on track 0, plus `setGrid` and
   `metronomeFollowMixer(true)`. `kb_player_*` stays in the ABI, and no transport or store

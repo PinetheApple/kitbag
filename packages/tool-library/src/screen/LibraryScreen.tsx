@@ -18,7 +18,7 @@ import {
   useSongLibrary,
   type LibraryView,
 } from '@kitbag/core-state';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, type ReactElement } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import { copyingText, noticeLook, noticeText } from '../logic/notices.ts';
@@ -42,12 +42,14 @@ export interface LibraryScreenProps {
   readonly onOpenStemSet: (id: number) => void;
   readonly onOpenSong: (id: number) => void;
   readonly onOpenSetlists?: () => void;
+  readonly dock?: ReactElement;
 }
 
 const FAB_ROOM = libraryList.fab + libraryList.fabBottom;
 
 const useStyles = createThemedStyles((theme) => ({
   screen: { flex: 1, backgroundColor: theme.color.bg },
+  main: { flex: 1 },
   body: {
     flex: 1,
     paddingTop: libraryList.bodyTop,
@@ -267,6 +269,7 @@ export function LibraryScreen({
   onOpenStemSet,
   onOpenSong,
   onOpenSetlists,
+  dock,
 }: LibraryScreenProps) {
   const styles = useStyles();
   useEntry();
@@ -286,41 +289,45 @@ export function LibraryScreen({
     () => [styles.screen, { paddingTop: insets.top }],
     [styles.screen, insets.top],
   );
+  const mainBottomInset = dock === undefined ? insets.bottom : 0;
   const content = useMemo(
-    () => [styles.content, { paddingBottom: FAB_ROOM + insets.bottom }],
-    [styles.content, insets.bottom],
+    () => [styles.content, { paddingBottom: FAB_ROOM + mainBottomInset }],
+    [styles.content, mainBottomInset],
   );
   return (
     <View style={frame}>
-      <AppBar flush title={text.title} onBack={onBack} actions={actions} />
-      <View style={styles.body}>
+      <View style={styles.main}>
+        <AppBar flush title={text.title} onBack={onBack} actions={actions} />
+        <View style={styles.body}>
+          {listed ? (
+            <SearchBar text={text} covered={menu.kind !== 'none'} />
+          ) : null}
+          <ScrollView
+            style={styles.list}
+            contentContainerStyle={content}
+            keyboardShouldPersistTaps="handled"
+          >
+            <StatusCards />
+            <LibraryBody
+              view={view}
+              state={state}
+              menu={menu}
+              onOpenStemSet={onOpenStemSet}
+              onOpenSong={onOpenSong}
+            />
+          </ScrollView>
+        </View>
         {listed ? (
-          <SearchBar text={text} covered={menu.kind !== 'none'} />
-        ) : null}
-        <ScrollView
-          style={styles.list}
-          contentContainerStyle={content}
-          keyboardShouldPersistTaps="handled"
-        >
-          <StatusCards />
-          <LibraryBody
-            view={view}
-            state={state}
-            menu={menu}
-            onOpenStemSet={onOpenStemSet}
-            onOpenSong={onOpenSong}
+          <FloatingActionButton
+            variant="list"
+            icon={text.fabIcon}
+            accessibilityLabel={text.fabLabel}
+            bottomInset={mainBottomInset}
+            onPress={startImport}
           />
-        </ScrollView>
+        ) : null}
       </View>
-      {listed ? (
-        <FloatingActionButton
-          variant="list"
-          icon={text.fabIcon}
-          accessibilityLabel={text.fabLabel}
-          bottomInset={insets.bottom}
-          onPress={startImport}
-        />
-      ) : null}
+      {dock}
       <LibrarySheets menu={menu} bottomInset={insets.bottom} />
     </View>
   );

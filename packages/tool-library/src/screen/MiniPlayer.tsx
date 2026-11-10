@@ -17,6 +17,10 @@ export interface MiniPlayerProps {
 
 const miniPlayerShown = (s: SongPlayerStore) => s.status === 'ready';
 
+export function useMiniPlayerShown(): boolean {
+  return useSongPlayer(miniPlayerShown);
+}
+
 interface LiveProps extends MiniPlayerProps {
   readonly songId: number;
 }

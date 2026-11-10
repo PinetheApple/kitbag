@@ -6,6 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TOOL_ID } from '@/home/registry';
 import { gated } from '@/home/ToolGate';
 import { useToolOn } from '@/home/toolsOn';
+import { DockedMiniPlayer } from '@/miniPlayer/DockedMiniPlayer';
+import { useMiniPlayerDocked } from '@/miniPlayer/useMiniPlayerDocked';
 import { useLibraryRoutes } from '@/runtime/libraryRoutes';
 
 function SongsRoute() {
@@ -13,6 +15,7 @@ function SongsRoute() {
   const routes = useLibraryRoutes();
   const markUsed = useLastTool((s) => s.markUsed);
   const metronomeOn = useToolOn()(TOOL_ID.metronome);
+  const docked = useMiniPlayerDocked();
 
   useEffect(() => {
     markUsed(TOOL_ID.library);
@@ -26,6 +29,9 @@ function SongsRoute() {
       onOpenStemSet={routes.openStemSet}
       onOpenSong={routes.openSong}
       {...(metronomeOn ? { onOpenSetlists: routes.openSetlists } : {})}
+      {...(docked
+        ? { dock: <DockedMiniPlayer bottomInset={insets.bottom} /> }
+        : {})}
     />
   );
 }
