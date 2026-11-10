@@ -17,7 +17,7 @@ bool Metronome::CountInAt(
     double beat_frames,
     int beats_per_bar
 ) {
-  Command command{CommandType::kStartAt};
+  Command command{CommandType::kCountInAt};
   command.frame = end_frame;
   command.value = beat_frames;
   command.int_a = beats_per_bar;
@@ -55,6 +55,9 @@ bool Metronome::ApplyTransportCommand(const Command& command) {
     case CommandType::kStartAt:
       DeferStart(command);
       return true;
+    case CommandType::kCountInAt:
+      ArmCountInAt(command);
+      return true;
     case CommandType::kAnchorExternal:
       StashPendingAnchor(command);
       return true;
@@ -69,13 +72,9 @@ bool Metronome::ApplyTransportCommand(const Command& command) {
   }
 }
 
-// Ignored while running, where re-anchoring a live click is set_grid's or
-// anchor_external's job, unless it counts in: a counted start replaces the run.
+// Deferred to the render loop; ignored while running, where re-anchoring
+// a live click is set_grid's or anchor_external's job.
 void Metronome::DeferStart(const Command& command) {
-  if (command.int_a > 0) {
-    ArmCountInAt(command);
-    return;
-  }
   if (running_) return;
   has_pending_start_ = true;
   pending_start_frame_ = command.frame;
@@ -127,7 +126,13 @@ void Metronome::ArmCountInAt(const Command& command) {
   count_in_armed_ = false;
   has_pending_start_ = true;
   pending_start_frame_ = command.frame;
-  count_in_at_.Arm(command.frame, command.value, command.int_a, count_in_bars_);
+  count_in_at_.Arm(
+      command.frame,
+      command.value,
+      command.int_a,
+      count_in_bars_,
+      count_in_voice_
+  );
 }
 
 bool Metronome::ScheduledCountInLive() const {
@@ -146,7 +151,9 @@ void Metronome::RenderPendingStart(
   }
   if (!ScheduledCountInLive()) return;
   const int index = count_in_at_.BeatAt(now);
-  if (index != CountInSchedule::kNoBeat) OnCountInBeat(index, sample_rate);
+  if (index != CountInSchedule::kNoBeat) {
+    OnCountInBeat(index, count_in_at_.voice(), sample_rate);
+  }
 }
 
 }  // namespace kitbag

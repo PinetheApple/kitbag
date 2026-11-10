@@ -25,6 +25,9 @@ constexpr int64_t kAfterEnd = kStandaloneBeatFrames * 3 / 2;
 constexpr int64_t kCancelAt = 55040;
 constexpr int64_t kRestartAt = 70144;
 constexpr size_t kBeforeCancel = 3;
+constexpr uint32_t kSongOffset = 77;
+constexpr int64_t kGridHead = 152965;
+constexpr int kRingOutBlocks = 40;
 
 int64_t CountBeatFrame(int64_t end, int k) {
   return std::llround(static_cast<double>(end) - k * kBeatFrames);
@@ -139,6 +142,26 @@ void TestCountOffStartsOnTheEnd() {
   );
 }
 
+std::vector<float> RenderRevoiced(bool distinct, int sound) {
+  kitbag::Metronome metronome;
+  Configure(&metronome, kCountBars);
+  metronome.CountInAt(kEnd, kBeatFrames, kSongBeats);
+  return RenderLeft(metronome, kEnd, OnceAtFrame(kCancelAt, [&](int64_t) {
+                      metronome.SetCountIn(kCountBars, distinct, sound);
+                    }));
+}
+
+void TestArmedVoiceHolds() {
+  Check(
+      CountAccents(RenderRevoiced(true, kTom)),
+      "count_in_at: a count sound changed mid-count leaves the armed sound"
+  );
+  Check(
+      CountAccents(RenderRevoiced(false, kWoodblock)),
+      "count_in_at: a switch to the click's sounds mid-count leaves the count's"
+  );
+}
+
 struct CountMirrors {
   bool running_during = false;
   int32_t bar_before_fourth = -1;
@@ -181,35 +204,80 @@ void TestCountMirrors() {
   );
 }
 
-void TestFollowStartsMidBlock() {
-  constexpr uint32_t kSongOffset = 77;
-  constexpr int64_t kHead = 152965;
-  kitbag::Metronome metronome;
+void FollowGrid(kitbag::Metronome* metronome) {
   auto grid = std::make_unique<kitbag::BeatGrid>();
   grid->beat_times_sec = {
-      static_cast<double>(kHead) / kSampleRate,
-      static_cast<double>(kHead + kStandaloneBeatFrames) / kSampleRate
+      static_cast<double>(kGridHead) / kSampleRate,
+      static_cast<double>(kGridHead + kStandaloneBeatFrames) / kSampleRate
   };
-  metronome.SetGrid(std::move(grid), 0, false);
-  metronome.SetFollowMixer(true);
-  metronome.Start();
-  const kitbag::SongClock song{
-      .playing = true,
-      .opens_on_jump = true,
-      .first = kHead,
-      .frames = kBlockFrames - kSongOffset,
-      .start_index = kSongOffset
-  };
+  metronome->SetGrid(std::move(grid), 0, false);
+  metronome->SetFollowMixer(true);
+  metronome->Start();
+}
+
+std::vector<float> RenderSongBlock(
+    kitbag::Metronome* metronome,
+    const kitbag::SongClock& song,
+    uint64_t block_start
+) {
   std::vector<float> out(static_cast<size_t>(kBlockFrames) * kChannels);
-  metronome.Render(out.data(), kBlockFrames, kSampleRate, kChannels, 0, &song);
+  metronome->Render(
+      out.data(),
+      kBlockFrames,
+      kSampleRate,
+      kChannels,
+      block_start,
+      &song
+  );
   std::vector<float> left;
   for (uint32_t f = 0; f < kBlockFrames; ++f) {
     left.push_back(out[f * kChannels]);
   }
-  const std::vector<int64_t> clicks = DetectClicks(left);
+  return left;
+}
+
+const kitbag::SongClock kStartsMidBlock{
+    .playing = true,
+    .opens_on_jump = true,
+    .first = kGridHead,
+    .frames = kBlockFrames - kSongOffset,
+    .start_index = kSongOffset
+};
+
+void TestFollowStartsMidBlock() {
+  kitbag::Metronome metronome;
+  FollowGrid(&metronome);
+  const std::vector<int64_t> clicks =
+      DetectClicks(RenderSongBlock(&metronome, kStartsMidBlock, 0));
   Check(
       clicks.size() == 1 && clicks.front() == kSongOffset,
       "follow: a song starting mid-block clicks on its first frame"
+  );
+}
+
+// The pause leaves the beat's frame as the last one followed, so only the
+// jump flag tells the replayed frame from a repeated one.
+void TestFollowReplaysAJumpBackMidBlock() {
+  kitbag::Metronome metronome;
+  FollowGrid(&metronome);
+  const kitbag::SongClock up_to_beat{
+      .playing = true,
+      .first = kGridHead + 1 - kBlockFrames,
+      .frames = kBlockFrames
+  };
+  RenderSongBlock(&metronome, up_to_beat, 0);
+  const kitbag::SongClock paused;
+  for (int b = 1; b <= kRingOutBlocks; ++b) {
+    RenderSongBlock(&metronome, paused, uint64_t{kBlockFrames} * b);
+  }
+  const std::vector<int64_t> clicks = DetectClicks(RenderSongBlock(
+      &metronome,
+      kStartsMidBlock,
+      uint64_t{kBlockFrames} * (kRingOutBlocks + 1)
+  ));
+  Check(
+      clicks.size() == 1 && clicks.front() == kSongOffset,
+      "follow: a seek back onto the last beat replays it mid-block"
   );
 }
 
@@ -220,8 +288,10 @@ void RunCountInAtTests() {
   TestPastBeatsDropped();
   TestStopAndPauseCancel();
   TestCountOffStartsOnTheEnd();
+  TestArmedVoiceHolds();
   TestCountMirrors();
   TestFollowStartsMidBlock();
+  TestFollowReplaysAJumpBackMidBlock();
 }
 
 }  // namespace metronome_test

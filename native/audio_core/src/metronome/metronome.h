@@ -70,7 +70,6 @@ class Metronome {
   // App-thread API. Non-blocking; drops commands if the ring is full.
   void Start();
   void StartAt(uint64_t start_frame);
-  // Counts in on the engine clock and starts as StartAt(end_frame) would.
   bool CountInAt(uint64_t end_frame, double beat_frames, int beats_per_bar);
   void Stop();
   void Pause();
@@ -213,7 +212,7 @@ class Metronome {
       const BlockTempo& tempo,
       uint32_t sample_rate
   );
-  void OnCountInBeat(int32_t index, uint32_t sample_rate);
+  void OnCountInBeat(int32_t index, CountInVoice voice, uint32_t sample_rate);
 
   void TriggerPreset(int sound, bool accented, uint32_t sample_rate);
   void OnBeatBoundary(int beat_index, uint32_t sample_rate);
@@ -322,8 +321,7 @@ class Metronome {
   int normal_sound_ = kDefaultNormalSound;
   int accent_sound_ = kDefaultAccentSound;
   int count_in_bars_ = kCountInOff;
-  bool count_in_distinct_ = true;
-  int count_in_sound_ = kDefaultCountInSound;
+  CountInVoice count_in_voice_{.sound = kDefaultCountInSound};
   bool count_in_armed_ = true;
   int pending_preview_sound_ = -1;
   bool pending_preview_accented_ = false;

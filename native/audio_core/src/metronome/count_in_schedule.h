@@ -8,20 +8,30 @@
 
 namespace kitbag {
 
-// RT-owned. Beat k before the end sounds on the frame nearest
-// end - k * beat_frames, placed from the end so no spacing error adds up.
+struct CountInVoice {
+  int sound = 0;
+  bool distinct = true;
+};
+
+// RT-owned. Placed from the end so no spacing error adds up.
 class CountInSchedule {
  public:
   static constexpr int kNoBeat = -1;
   // Each beat then rounds to its own frame.
   static constexpr double kMinBeatFrames = 1.0;
 
-  void
-  Arm(uint64_t end_frame, double beat_frames, int beats_per_bar, int bars) {
+  void Arm(
+      uint64_t end_frame,
+      double beat_frames,
+      int beats_per_bar,
+      int bars,
+      CountInVoice voice
+  ) {
     end_frame_ = end_frame;
     beat_frames_ = beat_frames;
     beats_per_bar_ = beats_per_bar;
     bars_ = bars;
+    voice_ = voice;
     left_ = bars * beats_per_bar;
     armed_ = bars > 0;
   }
@@ -31,9 +41,10 @@ class CountInSchedule {
   bool armed() const {
     return armed_;
   }
+  CountInVoice voice() const {
+    return voice_;
+  }
 
-  // The in-bar index of the beat due on `now`. A beat already past is dropped,
-  // never sounded late.
   int BeatAt(uint64_t now) {
     const auto frame = static_cast<double>(now);
     while (left_ > 0 && FrameOf(left_) < frame - kHalfFrame) --left_;
@@ -67,6 +78,7 @@ class CountInSchedule {
   int beats_per_bar_ = 1;
   int bars_ = 0;
   int left_ = 0;
+  CountInVoice voice_;
   bool armed_ = false;
 };
 

@@ -173,14 +173,14 @@ bool Metronome::RouteCommand(const Command& command) {
   switch (command.type) {
     case CommandType::kStart:
     case CommandType::kStartAt:
+    case CommandType::kCountInAt:
     case CommandType::kStop:
     case CommandType::kPause:
     case CommandType::kAnchorExternal:
-      return ApplyTransportCommand(command);
     case CommandType::kSetTempo:
     case CommandType::kSetLatencyOffset:
     case CommandType::kSetFollowMixer:
-      return ApplyClockCommand(command);
+      return ApplyTransportCommand(command) || ApplyClockCommand(command);
     case CommandType::kSetRamp:
     case CommandType::kSetBarMute:
     case CommandType::kSetCountIn:

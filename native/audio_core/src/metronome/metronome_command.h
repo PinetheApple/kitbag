@@ -8,6 +8,7 @@ namespace kitbag {
 enum class MetronomeCommandType : uint8_t {
   kStart,
   kStartAt,
+  kCountInAt,
   kStop,
   kPause,
   kAnchorExternal,
