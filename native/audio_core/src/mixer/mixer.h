@@ -12,6 +12,7 @@
 #include "media/song_clock.h"
 #include "media/streaming_track.h"
 #include "mixer/key_bus.h"
+#include "mixer/mixer_app_state.h"
 #include "mixer/mixer_command.h"
 #include "mixer/mixer_track.h"
 #include "mixer/transport_plan.h"
@@ -205,11 +206,7 @@ class Mixer {
   void DropStaged(int count);
   void ReplanStretch(TransportPlan plan, FrameClock clock, bool engine_running);
   int64_t SeekTarget(int64_t frame) const;
-  struct Head {
-    int64_t stream;
-    int64_t transport;
-    bool jump_pending;
-  };
+  using Head = MixerHead;
   // App thread. The head in the latest plan's stream frames, from the transport
   // clock alone so no two mirrors written in different blocks get paired.
   Head PlannedHead() const;
@@ -234,19 +231,12 @@ class Mixer {
   void MixAllTracks(float* output, uint32_t frame_count, bool any_solo);
   void AdvanceTransport(uint32_t frame_count);
 
-  struct EngageState {
-    bool engaged;
-    bool vendor_default;
-  };
+  using EngageState = MixerEngageState;
   bool ReserveUndoableCommand();
   void EnqueueRate(float rate);
   void EnqueuePitch(int track, int pitch);
   void RestoreEngage(const EngageState& before);
-  struct Prepared {
-    EngageState before;
-    uint32_t created = 0;
-    bool prime = false;
-  };
+  using Prepared = MixerPrepared;
   bool WantsStretch() const;
   void DisengageAtRest(FrameClock clock, bool engine_running);
   std::unique_ptr<KeyBusSlot> MakeBus(int slot, uint64_t generation) const;
