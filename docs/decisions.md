@@ -1057,3 +1057,9 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   still offers M4A files; W64 and RF64 have no Android MIME type, so it does not offer them.
   An extensionless M4A labelled `audio/mpeg` is admitted by its MIME type and fails at analysis
   instead; telling that apart from a corrupt file is #347’s.
+- **2026-11-08 · Standalone metronome across a restart (§5.4, #333)** — A kill with a song or
+  setlist step loaded relaunches into the standalone settings from before the song, so the
+  settings carried across a restart are the ones made with no song loaded.
+  **[recorded — coordinator ruling, owner may overturn]** The saved standalone state stays out
+  of the backup, which carries what core-db owns today; adding it is a follow-up for the owner.
+  **[recorded — lane call, owner may overturn]**

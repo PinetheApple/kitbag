@@ -52,6 +52,17 @@ export function isCountInBars(bars: number): bars is KbCountInBars {
   return (KB_COUNT_IN_BARS as readonly number[]).includes(bars);
 }
 
+const ACCENTS = new Set<unknown>(Object.values(KB_ACCENT));
+const RAMP_UNITS = new Set<unknown>(Object.values(KB_RAMP_UNIT));
+
+export function isAccent(value: unknown): value is KB_ACCENT {
+  return ACCENTS.has(value);
+}
+
+export function isRampUnit(value: unknown): value is KB_RAMP_UNIT {
+  return RAMP_UNITS.has(value);
+}
+
 export function cycleAccentValue(accent: KB_ACCENT): KB_ACCENT {
   if (accent === KB_ACCENT.KB_ACCENT_ACCENTED)
     return KB_ACCENT.KB_ACCENT_NORMAL;
@@ -100,16 +111,14 @@ export function clampRampInterval(
   return clamp(whole ? Math.round(interval) : interval, min, max);
 }
 
-export function normalizeRamp(config: RampConfig): RampConfig | undefined {
-  if (!config.enabled) return config;
+export function rangeRamp(config: RampConfig): RampConfig | undefined {
   const finite = [
     config.startBpm,
     config.targetBpm,
     config.stepBpm,
     config.interval,
   ].every(Number.isFinite);
-  const units: readonly number[] = Object.values(KB_RAMP_UNIT);
-  if (!finite || config.stepBpm === 0 || !units.includes(config.unit))
+  if (!finite || config.stepBpm === 0 || !isRampUnit(config.unit))
     return undefined;
   return {
     ...config,
@@ -122,4 +131,8 @@ export function normalizeRamp(config: RampConfig): RampConfig | undefined {
     ),
     interval: clampRampInterval(config.interval, config.unit),
   };
+}
+
+export function normalizeRamp(config: RampConfig): RampConfig | undefined {
+  return config.enabled ? rangeRamp(config) : config;
 }

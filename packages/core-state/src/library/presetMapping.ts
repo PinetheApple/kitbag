@@ -2,22 +2,26 @@ import type { NewSongPreset, SongPreset } from '@kitbag/core-db';
 import { KB_ACCENT, KB_RAMP_UNIT } from '@kitbag/core-native';
 
 import {
+  isAccent,
+  isRampUnit,
   roundToEngineBpm,
   normalizeRamp,
   resizeAccents,
 } from '../metronome/config.ts';
 import { COUNT_IN_SCOPE, songCountIn } from '../metronome/countInScope.ts';
 import { normalizePolyAgainst } from '../metronome/polyAgainst.ts';
+import {
+  applyMetronomeSettings,
+  standaloneMetronomeOf,
+  type MetronomeSettingsInput,
+} from '../metronome/standalone.ts';
 import type {
-  BarMuteConfig,
   CountInBars,
   MetronomeConfig,
   MetronomeStore,
   PerAccentSounds,
   RampConfig,
 } from '../metronome/store.ts';
-
-const ACCENTS = new Set<number>(Object.values(KB_ACCENT));
 
 export type PresetFields = Omit<NewSongPreset, 'name' | 'id'>;
 
@@ -36,7 +40,7 @@ export function toBlob(values: readonly number[]): Buffer {
 
 export function accentsOf(value: unknown): KB_ACCENT[] {
   return byteList(value).map((code) =>
-    ACCENTS.has(code) ? (code as KB_ACCENT) : KB_ACCENT.KB_ACCENT_NORMAL,
+    isAccent(code) ? code : KB_ACCENT.KB_ACCENT_NORMAL,
   );
 }
 
@@ -88,12 +92,8 @@ export function songFieldsFromMetronome(
   return fields;
 }
 
-const RAMP_UNITS = new Set<number>(Object.values(KB_RAMP_UNIT));
-
 export function rampUnitOf(value: number): KB_RAMP_UNIT {
-  return RAMP_UNITS.has(value)
-    ? (value as KB_RAMP_UNIT)
-    : KB_RAMP_UNIT.KB_RAMP_BARS;
+  return isRampUnit(value) ? value : KB_RAMP_UNIT.KB_RAMP_BARS;
 }
 
 function rampOf(preset: SongPreset, current: RampConfig): RampConfig {
@@ -108,19 +108,7 @@ function rampOf(preset: SongPreset, current: RampConfig): RampConfig {
   };
 }
 
-interface SongSettings {
-  readonly bpm: number;
-  readonly beatsPerBar: number;
-  readonly denominator: number;
-  readonly subdivision: number;
-  readonly accents: readonly KB_ACCENT[];
-  readonly polyEnabled: boolean;
-  readonly polyBeats: number;
-  readonly polyAgainst: number;
-  readonly polyAccents: readonly KB_ACCENT[];
-  readonly sounds: PerAccentSounds;
-  readonly ramp: RampConfig;
-  readonly barMute: BarMuteConfig;
+interface SongSettings extends MetronomeSettingsInput {
   readonly countInBars: CountInBars;
 }
 
@@ -156,18 +144,9 @@ function songSettingsOf(
 
 function liveSettingsOf(config: MetronomeConfig): SongSettings {
   return {
+    ...standaloneMetronomeOf(config),
     bpm: roundToEngineBpm(config.bpm),
-    beatsPerBar: config.beatsPerBar,
-    denominator: config.denominator,
-    subdivision: config.subdivision,
-    accents: config.accents,
-    polyEnabled: config.polyEnabled,
-    polyBeats: config.polyBeats,
     polyAgainst: normalizePolyAgainst(config.polyAgainst, config.beatsPerBar),
-    polyAccents: config.polyAccents,
-    sounds: config.sounds,
-    ramp: config.ramp,
-    barMute: config.barMute,
     countInBars: config.countIn.bars,
   };
 }
@@ -200,37 +179,13 @@ export function isLoadedSongUnsaved(
   );
 }
 
-// setTempo switches a ramp off, and switching one off re-reads the engine's
-// tempo, which is stale until the engine catches up; so order by ramp state.
-function applyTempo(
-  bpm: number,
-  ramp: RampConfig,
-  store: MetronomeStore,
-): void {
-  if (ramp.enabled) {
-    store.setTempo(bpm);
-    store.setRamp(ramp);
-    return;
-  }
-  store.setRamp(ramp);
-  store.setTempo(bpm);
-}
-
 export function applyPreset(
   preset: SongPreset,
   metronome: () => MetronomeStore,
 ): void {
   const store = metronome();
   const song = songSettingsOf(preset, store);
-  store.setBeats(song.beatsPerBar, song.denominator);
-  store.setAccents(song.accents);
-  store.setSubdivision(song.subdivision);
-  store.setPoly(song.polyEnabled, song.polyBeats);
-  store.setPolyAgainst(song.polyAgainst);
-  store.setPolyAccents(song.polyAccents);
-  store.setSounds(song.sounds.normal, song.sounds.accent);
+  applyMetronomeSettings(store, { ...song, bpm: preset.bpm });
   if (store.countInScope === COUNT_IN_SCOPE.perSong)
     store.setCountIn({ ...store.countIn, bars: song.countInBars });
-  store.setBarMute(song.barMute);
-  applyTempo(preset.bpm, song.ramp, store);
 }
