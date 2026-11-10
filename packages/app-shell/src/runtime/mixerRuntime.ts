@@ -47,6 +47,14 @@ const commands: StemPlayerCommands = {
   mixerSeek: (frame) => {
     getKitbagCommands().mixerSeek(frame);
   },
+  songCountIn: (endFrame, beatFrames, beatsPerBar) =>
+    getKitbagCommands().songCountIn(endFrame, beatFrames, beatsPerBar),
+  songPause: () => {
+    getKitbagCommands().songPause();
+  },
+  songStop: () => {
+    getKitbagCommands().songStop();
+  },
   mixerSetLoop: (start, end) => getKitbagCommands().mixerSetLoop(start, end),
   mixerClearLoop: () => getKitbagCommands().mixerClearLoop(),
   mixerSetRate: (rate) => getKitbagCommands().mixerSetRate(rate),

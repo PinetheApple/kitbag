@@ -96,6 +96,7 @@ describe('sharing the mixer with stem songs', () => {
     await stemSongs.getState().open(STEM_SET_ID, BARS);
     expect(songs.getState().songId).toBeNull();
     expect(songFake.commands.mixerStop).toHaveBeenCalledOnce();
+    expect(songFake.commands.songStop).not.toHaveBeenCalled();
     expect(stemSongs.getState().status).toBe('ready');
   });
 
