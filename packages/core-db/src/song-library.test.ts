@@ -46,6 +46,7 @@ const okResult = (title: string, waveform = `${title}.kwav`) => ({
   beats: [0.5, 1.25],
   downbeats: [0, 300],
   waveformPath: `songs/uuid-${title}/${waveform}`,
+  durationSec: null,
 });
 
 const failure = (title: string) => ({
@@ -207,6 +208,7 @@ describe('song library repository', () => {
       beats: [],
       downbeats: [],
       waveformPath: null,
+      durationSec: null,
     });
     const [row] = await handle.db.select().from(songs).where(eq(songs.id, id));
     expect(row).toMatchObject({
@@ -447,5 +449,37 @@ describe('correcting a song length', () => {
     await library.updateDuration(fixed, 287.25);
     expect((await library.readSong(fixed))?.durationSec).toBe(287.25);
     expect((await library.readSong(kept))?.durationSec).toBe(250.5);
+  });
+});
+
+describe('storing an analysed song length', () => {
+  it('replaces the stored length with a known analysed length', async () => {
+    const { library } = setup();
+    const id = await library.insertSong(song('Measured'));
+    await library.applyAnalysis({
+      ...okResult('Measured'),
+      durationSec: 287.25,
+    });
+    expect((await library.readSong(id))?.durationSec).toBe(287.25);
+  });
+
+  it('keeps an analysed length when a later re-analysis fails', async () => {
+    const { library } = setup();
+    const id = await library.insertSong(song('Measured'));
+    await library.applyAnalysis({
+      ...okResult('Measured'),
+      durationSec: 287.25,
+    });
+    await library.applyAnalysis(failure('Measured'));
+    expect((await library.readSong(id))?.durationSec).toBe(287.25);
+  });
+
+  it('keeps the stored length when the analysis has none', async () => {
+    const { library } = setup();
+    const unknown = song('Unknown');
+    const id = await library.insertSong(unknown);
+    await library.applyAnalysis(okResult('Unknown'));
+    const read = await library.readSong(id);
+    expect(read?.durationSec).toBe(unknown.durationSec);
   });
 });
