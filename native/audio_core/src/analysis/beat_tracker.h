@@ -5,6 +5,9 @@
 
 namespace kitbag {
 
+constexpr float kMinTrackedBpm = 60.0f;
+constexpr float kMaxTrackedBpm = 200.0f;
+
 struct BeatResult {
   float bpm = 0.0f;
   std::vector<float> beat_times;  // seconds

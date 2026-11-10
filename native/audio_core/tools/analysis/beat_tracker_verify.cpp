@@ -14,7 +14,10 @@
 #include <vector>
 
 #include "analysis/beat_tracker.h"
+#include "analysis/onset_envelope.h"
 #include "analysis/sidecar_path.h"
+#include "beat_spacing.h"
+#include "metronome/metronome_internal.h"
 
 namespace {
 
@@ -48,7 +51,9 @@ void CheckPath(const char* dir, const char* song_path, const char* expected) {
   }
 }
 
-constexpr float kHopTime = 512.0f / 48000.0f;
+constexpr int kSampleRate = 48000;
+constexpr float kHopTime =
+    static_cast<float>(kitbag::kOnsetHopSize) / kSampleRate;
 constexpr float kBpm = 120.0f;
 
 // One unit-height onset spike every beat period, silence between: the DP has
@@ -104,42 +109,70 @@ void TestTruncationDropsLateBeatsNotEarlyOnes() {
   );
 }
 
+using kitbag::metronome_detail::kSecondsPerMinute;
+
 constexpr int kBusyBeats = 200;
 constexpr float kBusyBaseline = 0.15f;
 constexpr float kBusyOffbeat = 0.5f;
 constexpr int kBusyMissable = 2;
-constexpr float kMinGapPeriods = 0.75f;
-constexpr float kSecondsPerMinute = 60.0f;
-constexpr float kBusyTempos[] = {62.0f, 120.0f, 195.0f};
+constexpr float kSlowEdgeScale = 1.03f;
+constexpr float kMidBpm = 120.0f;
+constexpr float kFastEdgeScale = 0.975f;
+constexpr float kBusyTempos[] = {
+    kitbag::kMinTrackedBpm * kSlowEdgeScale,
+    kMidBpm,
+    kitbag::kMaxTrackedBpm * kFastEdgeScale,
+};
 
-// Sustained sound keeps the onset above zero between beats, and an off-beat
-// hit at half strength sits where a half-period grid would place its beats.
-std::vector<float> BusyOnsets(float bpm, float* period_out) {
-  const float period = kSecondsPerMinute / (bpm * kHopTime);
-  *period_out = period;
-  std::vector<float> onset(
-      static_cast<size_t>(std::lround((kBusyBeats + 1) * period)),
-      kBusyBaseline
-  );
-  for (int i = 0; i < kBusyBeats; ++i) {
-    onset[static_cast<size_t>(std::lround(i * period))] = 1.0f;
-    onset[static_cast<size_t>(std::lround((i + 0.5f) * period))] = kBusyOffbeat;
+float PeriodHops(float bpm) {
+  return static_cast<float>(kSecondsPerMinute) / (bpm * kHopTime);
+}
+
+struct OnsetTrack {
+  std::vector<float> onset;
+  std::vector<float> beat_hops;
+};
+
+// `offbeat` sits where a half-period grid would put its extra beats.
+OnsetTrack Onsets(const std::vector<float>& beat_hops, float offbeat) {
+  const float tail = beat_hops.back() - beat_hops[beat_hops.size() - 2];
+  OnsetTrack track{
+      std::vector<float>(
+          static_cast<size_t>(std::lround(beat_hops.back() + tail)),
+          kBusyBaseline
+      ),
+      beat_hops
+  };
+  for (size_t i = 0; i < beat_hops.size(); ++i) {
+    const float next =
+        i + 1 < beat_hops.size() ? beat_hops[i + 1] : beat_hops[i] + tail;
+    track.onset[static_cast<size_t>(std::lround(beat_hops[i]))] = 1.0f;
+    const auto mid =
+        static_cast<size_t>(std::lround((beat_hops[i] + next) / 2));
+    if (offbeat > 0.0f) track.onset[mid] = offbeat;
   }
-  return onset;
+  return track;
+}
+
+template <typename BpmAt>
+std::vector<float> BeatHops(int beats, BpmAt bpm_at) {
+  std::vector<float> hops = {0.0f};
+  for (int k = 1; k < beats; ++k) {
+    hops.push_back(hops.back() + PeriodHops(bpm_at(k - 1)));
+  }
+  return hops;
 }
 
 void TestBusyOnsetsGetOneBeatPerPeriod() {
   for (const float bpm : kBusyTempos) {
-    float period = 0.0f;
-    const std::vector<float> onset = BusyOnsets(bpm, &period);
+    const float period = PeriodHops(bpm);
+    const OnsetTrack track =
+        Onsets(BeatHops(kBusyBeats, [bpm](int) { return bpm; }), kBusyOffbeat);
     const std::vector<float> beats =
-        kitbag::BeatTracker().TrackBeats(onset, kHopTime, bpm);
-    float min_gap = INFINITY;
-    for (size_t i = 1; i < beats.size(); ++i) {
-      min_gap = std::fmin(min_gap, beats[i] - beats[i - 1]);
-    }
+        kitbag::BeatTracker().TrackBeats(track.onset, kHopTime, bpm);
+    const double min_gap = analyze_test::MinGap(beats);
     std::printf(
-        "beat_tracker_verify: busy %.0f BPM -> %zu beats of %d, min gap %.1f "
+        "beat_tracker_verify: busy %.1f BPM -> %zu beats of %d, min gap %.1f "
         "of %.1f hops\n",
         bpm,
         beats.size(),
@@ -152,8 +185,139 @@ void TestBusyOnsetsGetOneBeatPerPeriod() {
         "busy onsets: one beat per period, not one per off-beat"
     );
     Check(
-        min_gap >= kMinGapPeriods * period * kHopTime,
-        "busy onsets: no gap shorter than three quarters of a period"
+        min_gap >= analyze_test::kMinGapPeriods * period * kHopTime,
+        "busy onsets: no gap well under a period"
+    );
+  }
+}
+
+constexpr int kTrackBeats = 200;
+constexpr float kRampStartBpm = 120.0f;
+constexpr float kRampEndBpm = 132.0f;
+constexpr float kStepAfterBpm = 144.0f;
+constexpr float kOnTimeHops = 3.0f;
+
+int MissedBeats(const std::vector<float>& beats, const OnsetTrack& track) {
+  int missed = 0;
+  for (const float hop : track.beat_hops) {
+    float nearest = INFINITY;
+    for (const float t : beats) {
+      nearest = std::fmin(nearest, std::fabs(t / kHopTime - hop));
+    }
+    if (nearest > kOnTimeHops) ++missed;
+  }
+  return missed;
+}
+
+kitbag::BeatResult
+AnalyzeTempoTrack(const char* name, const OnsetTrack& track) {
+  kitbag::BeatResult r =
+      kitbag::BeatTracker().AnalyzeFlux(track.onset, kSampleRate);
+  std::printf(
+      "beat_tracker_verify: %s -> bpm %.2f, %zu beats of %zu, %d off the "
+      "played beats, min gap %.1f hops\n",
+      name,
+      r.bpm,
+      r.beat_times.size(),
+      track.beat_hops.size(),
+      MissedBeats(r.beat_times, track),
+      analyze_test::MinGap(r.beat_times) / kHopTime
+  );
+  return r;
+}
+
+void TestRampIsFollowed() {
+  const OnsetTrack track = Onsets(
+      BeatHops(
+          kTrackBeats,
+          [](int k) {
+            return kRampStartBpm + (kRampEndBpm - kRampStartBpm) *
+                                       static_cast<float>(k) /
+                                       (kTrackBeats - 1);
+          }
+      ),
+      kBusyOffbeat
+  );
+  const kitbag::BeatResult r = AnalyzeTempoTrack("ramp 120->132 BPM", track);
+  Check(
+      std::abs(static_cast<int>(r.beat_times.size()) - kTrackBeats) <=
+          kBusyMissable,
+      "ramp: one beat per played beat across a 10% tempo ramp"
+  );
+  Check(
+      MissedBeats(r.beat_times, track) == 0,
+      "ramp: every played beat has a placed beat on it"
+  );
+}
+
+// Recorded, not asserted: one global period cannot fit both halves of a jump.
+void RecordTempoStep() {
+  AnalyzeTempoTrack(
+      "step 120->144 BPM",
+      Onsets(
+          BeatHops(
+              kTrackBeats,
+              [](int k) {
+                return k < kTrackBeats / 2 ? kRampStartBpm : kStepAfterBpm;
+              }
+          ),
+          kBusyOffbeat
+      )
+  );
+}
+
+constexpr float kBalladBpm = 80.0f;
+constexpr float kSlowBpm = 62.0f;
+constexpr float kFaintOffbeat = 0.2f;
+
+bool NearBpm(float got, float want) {
+  return std::fabs(got - want) < analyze_test::kBpmTolerance * want;
+}
+
+// Pinned, not a target: half-strength eighths fold to double time, which the
+// user corrects with the tempo's ÷2.
+void TestOctaveOverBaseline() {
+  const kitbag::BeatResult eighths = AnalyzeTempoTrack(
+      "80 BPM + half-strength eighths",
+      Onsets(
+          BeatHops(kTrackBeats, [](int) { return kBalladBpm; }),
+          kBusyOffbeat
+      )
+  );
+  Check(
+      NearBpm(eighths.bpm, 2.0f * kBalladBpm),
+      "octave: half-strength eighths still read as the eighth pulse (pinned)"
+  );
+  const kitbag::BeatResult faint = AnalyzeTempoTrack(
+      "62 BPM, faint off-beats",
+      Onsets(BeatHops(kTrackBeats, [](int) { return kSlowBpm; }), kFaintOffbeat)
+  );
+  Check(
+      NearBpm(faint.bpm, kSlowBpm),
+      "octave: a 62 BPM pulse with faint off-beats is not folded"
+  );
+}
+
+struct BoundTempo {
+  const char* name;
+  float bpm;
+};
+
+constexpr BoundTempo kBoundTempos[] = {
+    {"plain pulse at the slowest tracked BPM", kitbag::kMinTrackedBpm},
+    {"plain pulse at the fastest tracked BPM", kitbag::kMaxTrackedBpm},
+};
+
+void TestBoundTemposResolve() {
+  for (const BoundTempo& bound : kBoundTempos) {
+    const float bpm = bound.bpm;
+    const kitbag::BeatResult r = AnalyzeTempoTrack(
+        bound.name,
+        Onsets(BeatHops(kTrackBeats, [bpm](int) { return bpm; }), 0.0f)
+    );
+    Check(
+        NearBpm(r.bpm, bpm) && !r.beat_times.empty(),
+        "bounds: a pulse at a tracked-BPM bound reads as that tempo"
     );
   }
 }
@@ -184,12 +348,16 @@ void TestSidecarPath() {
 
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 22;
+constexpr int kExpectedChecks = 28;
 
 int main() {
   TestGridStaysAnchoredAtOrigin();
   TestTruncationDropsLateBeatsNotEarlyOnes();
   TestBusyOnsetsGetOneBeatPerPeriod();
+  TestRampIsFollowed();
+  RecordTempoStep();
+  TestOctaveOverBaseline();
+  TestBoundTemposResolve();
   TestSidecarPath();
 
   if (g_checks != kExpectedChecks) {

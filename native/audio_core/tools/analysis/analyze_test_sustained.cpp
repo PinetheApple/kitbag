@@ -1,6 +1,5 @@
 #include "kitbag_api.h"
 
-#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdint>
@@ -11,26 +10,34 @@
 #include "analysis/beat_tracker.h"
 #include "analyze_buffer_driver.h"
 #include "analyze_test_support.h"
+#include "beat_spacing.h"
 #include "check.h"
+#include "metronome/metronome_internal.h"
 
 namespace analyze_test {
 namespace {
 
 using kitbag::BeatResult;
+using kitbag::metronome_detail::kSecondsPerMinute;
 using kitbag_test::Check;
 
 struct Tempo {
-  const char* name;
   int period_frames;
   int pulses_per_beat;
 };
 
-// Non-round periods near the tracker's 60-200 BPM edges. At 63.7 BPM the
-// off-beat hits make a 127.4 BPM pulse, which BestPeakLag folds onto.
+constexpr int PeriodFrames(double bpm) {
+  return static_cast<int>(kSecondsPerMinute * kSampleRate / bpm + 0.5);
+}
+
+constexpr double kSlowEdgeScale = 1.06;
+constexpr double kFastEdgeScale = 0.94;
+// Pinned, not a target: the off-beat hits fold the slow edge to double time,
+// which the user corrects with the tempo's ÷2.
 constexpr std::array<Tempo, 3> kTempos = {{
-    {"63.7 BPM", 41537, 2},
-    {"132.5 BPM", kBeatPeriodFrames, 1},
-    {"187.9 BPM", 14081, 1},
+    {PeriodFrames(kitbag::kMinTrackedBpm * kSlowEdgeScale), 2},
+    {kBeatPeriodFrames, 1},
+    {PeriodFrames(kitbag::kMaxTrackedBpm * kFastEdgeScale), 1},
 }};
 constexpr int kSustainedBeats = 40;
 constexpr int kBeatsPerChord = 4;
@@ -49,10 +56,7 @@ constexpr uint32_t kNoiseSeed = 12345u;
 constexpr uint32_t kLcgMul = 1664525u;
 constexpr uint32_t kLcgInc = 1013904223u;
 constexpr float kLcgScale = 1.0f / 2147483648.0f;
-constexpr double kBpmTolerance = 0.03;
 constexpr int kMissableBeats = 2;
-constexpr double kMinGapPeriods = 0.75;
-constexpr double kSecondsPerMinute = 60.0;
 constexpr float kTwoPi = 2.0f * std::numbers::pi_v<float>;
 
 float Kick(float t) {
@@ -76,8 +80,8 @@ float Pad(int beat, float song_t) {
   return kPadAmp * v;
 }
 
-// A pad sounding through every beat, a kick on the beat and a softer hit on
-// the off-beat: onsets never fall to zero between beats, as in recordings.
+// A pad, a kick on the beat and a softer hit on the off-beat: onsets never
+// fall to zero between beats, as in recordings.
 std::vector<float> MakeSustainedTrack(int period) {
   const int total = kSustainedBeats * period;
   std::vector<float> pcm(static_cast<size_t>(total) * 2, 0.0f);
@@ -96,31 +100,8 @@ std::vector<float> MakeSustainedTrack(int period) {
   return pcm;
 }
 
-double MinGap(const std::vector<float>& beats) {
-  double gap = INFINITY;
-  for (size_t i = 1; i < beats.size(); ++i) {
-    gap = std::min(gap, static_cast<double>(beats[i] - beats[i - 1]));
-  }
-  return gap;
-}
-
-BeatResult AnalyzeSustained(const Tempo& tempo) {
-  const std::vector<float> pcm = MakeSustainedTrack(tempo.period_frames);
-  const uint64_t frames = pcm.size() / 2;
-  BeatResult r;
-  AnalyzeDecodedPcm(
-      pcm.data(),
-      frames,
-      StereoInfo(frames, 2),
-      "x",
-      nullptr,
-      &r
-  );
-  return r;
-}
-
 void CheckOneBeatPerPeriod(const Tempo& tempo) {
-  const BeatResult r = AnalyzeSustained(tempo);
+  const BeatResult r = AnalyzePcm(MakeSustainedTrack(tempo.period_frames));
   const double pulse_sec = static_cast<double>(tempo.period_frames) /
                            kSampleRate / tempo.pulses_per_beat;
   const double pulse_bpm = kSecondsPerMinute / pulse_sec;
@@ -128,9 +109,9 @@ void CheckOneBeatPerPeriod(const Tempo& tempo) {
   const int beats = static_cast<int>(r.beat_times.size());
   const double min_gap = MinGap(r.beat_times);
   std::printf(
-      "analyze_verify: sustained %s -> bpm %.2f, %d beats of %d, "
+      "analyze_verify: sustained %.1f BPM -> bpm %.2f, %d beats of %d, "
       "min gap %.3f s of %.3f s period\n",
-      tempo.name,
+      kSecondsPerMinute * kSampleRate / tempo.period_frames,
       r.bpm,
       beats,
       expected,
@@ -147,7 +128,7 @@ void CheckOneBeatPerPeriod(const Tempo& tempo) {
   );
   Check(
       min_gap >= kMinGapPeriods * pulse_sec,
-      "sustained: no gap shorter than three quarters of a period"
+      "sustained: no gap well under a period"
   );
 }
 
