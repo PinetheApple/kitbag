@@ -77,7 +77,11 @@ export interface SongFiles {
 }
 
 export type AnalysisResultRecord =
-  | ({ readonly filePath: string; readonly ok: true } & StoredAnalysis)
+  | ({
+      readonly filePath: string;
+      readonly ok: true;
+      readonly durationSec: number | null;
+    } & StoredAnalysis)
   | {
       readonly filePath: string;
       readonly ok: false;
@@ -201,6 +205,7 @@ function analysisFields(result: AnalysisResultRecord) {
     };
   const gridded = result.beats.length > 0;
   return {
+    ...(result.durationSec === null ? {} : { duration: result.durationSec }),
     bpm: result.bpm,
     beatGrid: gridded ? packFloat32(result.beats) : null,
     downbeatIndices: gridded ? packInt32(result.downbeats) : null,
