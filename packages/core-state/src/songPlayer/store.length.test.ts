@@ -30,6 +30,16 @@ describe('the stored song length', () => {
     );
   });
 
+  it('is not written again when the open song is reopened', async () => {
+    const fake = fakeSongRuntime(songRecord({ durationSec: STORED_SEC }));
+    fake.commands.mixerTrackFrames.mockResolvedValue(DECODED_SEC * RATE);
+    const store = songStore(fake);
+    await store.getState().open(SONG_ID, BARS).loaded;
+    await store.getState().open(SONG_ID, BARS).loaded;
+    expect(fake.library.correctDuration).toHaveBeenCalledOnce();
+    expect(fake.commands.mixerTrackFrames).toHaveBeenCalledOnce();
+  });
+
   it('is left alone when it is within tolerance of the decoded length', async () => {
     const nearSec = DECODED_SEC + STORED_LENGTH_TOLERANCE_SEC / 2;
     const { library } = await opened(nearSec, DECODED_SEC * RATE);

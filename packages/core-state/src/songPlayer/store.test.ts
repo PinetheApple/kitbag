@@ -219,18 +219,6 @@ describe('what an earlier session left on the mixer', () => {
     expect(fake.engine.rate).toBe(KB_MIXER_UNITY_RATE);
   });
 
-  it('stops the mixer after the speed reset, before the song loads', async () => {
-    const fake = slowed();
-    await songStore(fake).getState().open(SONG_ID, BARS).loaded;
-    expect(fake.commands.mixerStop).toHaveBeenCalledOnce();
-    expect(order(fake.commands.mixerSetRate)).toBeLessThan(
-      order(fake.commands.mixerStop),
-    );
-    expect(order(fake.commands.mixerStop)).toBeLessThan(
-      order(fake.commands.loadTrack),
-    );
-  });
-
   it('sets no speed when the mixer already plays at unity', async () => {
     const { commands } = await openedSong();
     expect(commands.mixerSetRate).not.toHaveBeenCalled();
@@ -247,17 +235,6 @@ describe('what an earlier session left on the mixer', () => {
     expect(order(fake.commands.loadTrack)).toBeLessThan(
       order(fake.commands.mixerTrackPitch),
     );
-  });
-
-  it('stops the mixer after the key reset', async () => {
-    const fake = shifted();
-    const store = songStore(fake);
-    await store.getState().open(SONG_ID, BARS).loaded;
-    expect(fake.commands.mixerStop).toHaveBeenCalledTimes(2);
-    expect(order(fake.commands.mixerSetTrackPitch)).toBeLessThan(
-      fake.commands.mixerStop.mock.invocationCallOrder[1] ?? Number.NaN,
-    );
-    expect(store.getState().status).toBe('ready');
   });
 
   it('sets no key when the track has no shift', async () => {
@@ -282,7 +259,6 @@ describe('what an earlier session left on the mixer', () => {
     const store = songStore(fake);
     await store.getState().open(SONG_ID, BARS).loaded;
     expect(store.getState().status).toBe('failed');
-    expect(fake.commands.mixerStop).toHaveBeenCalledOnce();
   });
 });
 

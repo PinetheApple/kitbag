@@ -62,6 +62,17 @@ export const songPlayer = {
   lockGap: 10,
 } as const;
 
+export const miniPlayer = {
+  height: 64,
+  progress: 2,
+  progressTop: -1,
+  tile: 40,
+  tileRadius: 11,
+  gap: 10,
+  start: 12,
+  end: 4,
+} as const;
+
 export const sliderGeometry = {
   seek: { track: 8, thumb: 28 },
   fader: { track: 4, thumb: 20 },
@@ -153,6 +164,11 @@ export const stemSectionsMix = {
 
 const display = fontFamily.display;
 const body = fontFamily.body;
+
+export const miniPlayerText = {
+  title: { family: display, weight: 500, size: 14.5 },
+  detail: { family: body, weight: 400, size: 12 },
+} as const;
 
 export const stemSectionsText = {
   name: { family: display, weight: 500, size: 14.5 },
