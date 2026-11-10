@@ -108,7 +108,8 @@ void Mixer::UndoPrepare(
     FrameClock clock,
     bool engine_running
 ) {
-  RestoreEngage(prepared.before);
+  // A failed load's unload may have disengaged at rest; that must stand.
+  if (app_engaged_) RestoreEngage(prepared.before);
   for (int s = 0; s < kKeyBusCount; ++s) {
     if ((prepared.created & (1U << static_cast<unsigned>(s))) != 0) {
       buses_[app_bank_][s].Publish(nullptr, clock.Now(), engine_running);
@@ -149,6 +150,7 @@ void Mixer::RetireDrainedBuses(
 }
 
 void Mixer::FreeUnusedBuses(FrameClock clock, bool engine_running) {
+  DisengageAtRest(clock, engine_running);
   bool used[kKeyBusCount] = {};
   if (app_engaged_) MarkUsedBuses(used);
   for (int s = 0; s < kKeyBusCount; ++s) {
@@ -185,11 +187,18 @@ void Mixer::RestoreEngage(const EngageState& before) {
   app_vendor_default_ = before.vendor_default;
 }
 
+// A disengage is a jump; at rest no audio plays across it.
+void Mixer::DisengageAtRest(FrameClock clock, bool engine_running) {
+  if (app_playing_ || !app_engaged_ || WantsStretch()) return;
+  ReplanStretch(ReprimePlan(), clock, engine_running);
+}
+
 Mixer::StretchResult
 Mixer::SetRate(float rate, FrameClock clock, bool engine_running) {
   if (!ReserveUndoableCommand()) return StretchResult::kBusy;
   const float clamped = ClampRate(rate);
   const float previous = std::exchange(app_rate_, clamped);
+  DisengageAtRest(clock, engine_running);
   const EngageState before{app_engaged_, app_vendor_default_};
   const bool prime =
       clamped != kUnityRate &&
@@ -214,6 +223,7 @@ Mixer::StretchResult Mixer::SetTrackPitch(
   if (!ReserveUndoableCommand()) return StretchResult::kBusy;
   const int pitch = ClampPitch(semitones);
   const int previous = std::exchange(app_pitch_[track], pitch);
+  DisengageAtRest(clock, engine_running);
   const EngageState before{app_engaged_, app_vendor_default_};
   bool prime = false;
   if (pitch != 0 || app_engaged_) {

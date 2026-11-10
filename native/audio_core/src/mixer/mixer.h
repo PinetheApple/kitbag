@@ -248,6 +248,7 @@ class Mixer {
     bool prime = false;
   };
   bool WantsStretch() const;
+  void DisengageAtRest(FrameClock clock, bool engine_running);
   std::unique_ptr<KeyBusSlot> MakeBus(int slot, uint64_t generation) const;
   bool MatchBusConfig(int in_use, bool allow_down);
   enum class BusChange : uint8_t { kAddedLive, kNeedsPrime };

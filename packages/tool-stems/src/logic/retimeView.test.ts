@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  hasUnsavedRetime,
+  leaveRetimeBody,
   retimePreview,
   retimeSubtitle,
   shiftLabel,
@@ -82,5 +84,60 @@ describe('shiftLabel', () => {
     expect(shiftLabel(1)).toBe('+0.10 s');
     expect(shiftLabel(-3)).toBe('−0.30 s');
     expect(shiftLabel(0)).toBe('0.00 s');
+  });
+});
+
+const recording = {
+  kind: 'recording',
+  taps: [],
+  nextLine: 0,
+  shiftSteps: 0,
+  playbackRate: null,
+} as const;
+
+function unsaved(taps: number, shiftSteps: number) {
+  return {
+    ...recording,
+    taps: Array.from({ length: taps }, (_, line) => ({ line, timeSec: line })),
+    shiftSteps,
+  };
+}
+
+describe('leaveRetimeBody', () => {
+  const kept = 'The lyrics keep their current timing.';
+
+  it('counts the taps in the drawn words', () => {
+    expect(leaveRetimeBody(unsaved(5, 0))).toBe(
+      `Your 5 taps for this song are dropped. ${kept}`,
+    );
+    expect(leaveRetimeBody(unsaved(1, 0))).toBe(
+      `Your 1 tap for this song is dropped. ${kept}`,
+    );
+  });
+
+  it('names the offset when there is a shift', () => {
+    expect(leaveRetimeBody(unsaved(0, -2))).toBe(
+      `Your offset for this song is dropped. ${kept}`,
+    );
+    expect(leaveRetimeBody(unsaved(2, 1))).toBe(
+      `Your 2 taps and offset for this song are dropped. ${kept}`,
+    );
+    expect(leaveRetimeBody(unsaved(1, 1))).toBe(
+      `Your 1 tap and offset for this song are dropped. ${kept}`,
+    );
+  });
+
+  it('has nothing to say with no taps and no shift, or out of retime', () => {
+    expect(leaveRetimeBody(recording)).toBeNull();
+    expect(leaveRetimeBody({ kind: 'off' })).toBeNull();
+  });
+});
+
+describe('hasUnsavedRetime', () => {
+  it('is set by a tap or a shift, and by nothing else', () => {
+    expect(hasUnsavedRetime({ kind: 'off' })).toBe(false);
+    expect(hasUnsavedRetime(recording)).toBe(false);
+    expect(hasUnsavedRetime(unsaved(0, 1))).toBe(true);
+    expect(hasUnsavedRetime(unsaved(1, 0))).toBe(true);
   });
 });

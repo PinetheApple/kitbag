@@ -21,7 +21,7 @@ import {
   type ReactTestInstance,
   type ReactTestRenderer,
 } from 'react-test-renderer';
-import { vi } from 'vitest';
+import { afterEach, vi } from 'vitest';
 
 import { runFrame } from '../testing/reanimatedDriver.ts';
 import { StemPlayerScreen } from './StemPlayerScreen.tsx';
@@ -182,6 +182,7 @@ export async function mountPlayer(change: RecordChange = SONG_DETAILS) {
   });
   fake.commands.mixerSeek.mockClear();
   fake.commands.mixerClearLoop.mockClear();
+  fake.commands.mixerStop.mockClear();
   const hosts = () =>
     renderer.root.findAll((node) => typeof node.type === 'string');
   const isText = (node: ReactTestInstance) => String(node.type) === 'Text';
@@ -235,3 +236,52 @@ export async function mountPlayer(change: RecordChange = SONG_DETAILS) {
 }
 
 export type Player = Awaited<ReturnType<typeof mountPlayer>>;
+
+export const RETIME = 'Retime lyrics';
+export const PAD = 'Tap as this line starts';
+export const UNDO_TAP = 'Undo tap';
+export const LATER = 'Shift all lines later';
+export const RESET = 'Reset to bundle timing';
+export const CLOSE = 'Close retime';
+export const SAVE = 'Save';
+export const NOT_SAVED =
+  'Timing not saved. Your taps are still here, try again.';
+export const DIALOG_TITLE = 'Reset to bundle timing?';
+
+let tracked: Player | undefined;
+
+afterEach(() => {
+  tracked?.unmount();
+  tracked = undefined;
+});
+
+export async function mountTracked(
+  change: RecordChange = SONG_DETAILS,
+): Promise<Player> {
+  tracked = await mountPlayer(change);
+  return tracked;
+}
+
+export function unmountTracked(): void {
+  tracked?.unmount();
+  tracked = undefined;
+}
+
+export async function retiming(
+  change: RecordChange = SONG_DETAILS,
+): Promise<Player> {
+  const p = await mountTracked(change);
+  await p.press('Lyrics');
+  await p.press(RETIME);
+  return p;
+}
+
+export function holdSave(p: Player): (reason: Error) => void {
+  let refuse: (reason: Error) => void = () => undefined;
+  p.records.saveLyricsRetimed.mockReturnValueOnce(
+    new Promise((_, reject) => {
+      refuse = reject;
+    }),
+  );
+  return refuse;
+}

@@ -9,7 +9,7 @@ type OnPlaying = (rate: number) => void;
 
 export interface RetimeSpeed {
   readonly enter: (onPlaying: OnPlaying) => void;
-  readonly restore: () => void;
+  readonly restore: () => Promise<void>;
 }
 
 interface SessionRates {
@@ -90,6 +90,7 @@ export function retimeSpeed(
     restore: () => {
       generation++;
       queue(putBack);
+      return steps;
     },
   };
 }

@@ -265,6 +265,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/mixer/mixer_test_lag_carry.cpp
     tools/mixer/mixer_test_retire.cpp
     tools/mixer/mixer_test_play_at.cpp
+    tools/mixer/mixer_test_unity.cpp
     ${KITBAG_METRONOME_SOURCES}
     src/media/streaming_track.cpp
     src/media/looping_source_reader.cpp
@@ -384,6 +385,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/analysis/analyze_test_equivalence.cpp
     tools/analysis/analyze_test_write_peaks.cpp
     tools/analysis/analyze_test_long_grid.cpp
+    tools/analysis/analyze_test_length.cpp
     src/api/api_analysis.cpp
     src/analysis/song_analysis.cpp
     src/analysis/downbeat.cpp

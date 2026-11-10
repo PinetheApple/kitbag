@@ -84,6 +84,7 @@ struct AbiAnalysis {
   float bpm = -1.0f;
   int32_t beat_count = -1;
   int32_t downbeat_count = -1;
+  double duration_sec = -1.0;
   std::vector<float> beats;
   std::vector<int32_t> downbeats;
 };
@@ -107,6 +108,7 @@ inline kb_result AnalyzeThroughAbi(
       &out->beat_count,
       out->downbeats.data(),
       &out->downbeat_count,
+      &out->duration_sec,
       waveform_dir
   );
 }

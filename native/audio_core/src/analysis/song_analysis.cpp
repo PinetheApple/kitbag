@@ -154,7 +154,7 @@ kb_result AnalyzeSong(
     BeatResult* out
 ) {
   const uint32_t reader_channels = reader.channels();
-  if (reader_channels == 0 ||
+  if (reader_channels == 0 || reader.sample_rate() == 0 ||
       reader_channels >
           static_cast<uint32_t>(std::numeric_limits<int>::max())) {
     return KB_ERROR_INVALID_ARGUMENT;
@@ -166,6 +166,7 @@ kb_result AnalyzeSong(
 
   const int rate = static_cast<int>(reader.sample_rate());
   *out = BeatTracker().AnalyzeFlux(std::move(first.flux), rate);
+  out->duration_sec = static_cast<double>(first.frames) / rate;
   SecondPass second =
       PlanSecondPass(*out, first.frames, channels, rate, waveform_dir);
   if (second.downbeats == nullptr && second.peaks == nullptr) return KB_OK;

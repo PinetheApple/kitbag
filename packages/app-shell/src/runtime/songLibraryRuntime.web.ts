@@ -18,6 +18,7 @@ configureSongLibrary({
     listStemSetFolders: () => Promise.resolve([]),
     renameSong: unavailable,
     renameStemSet: unavailable,
+    updateDuration: unavailable,
   },
   files: {
     constants: () => {

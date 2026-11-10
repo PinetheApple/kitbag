@@ -67,6 +67,13 @@ class PlaybackService : Service() {
     return START_NOT_STICKY
   }
 
+  override fun onTaskRemoved(rootIntent: Intent?) {
+    route(CardEvent.TaskRemoved)
+    EngineTransport.stop()
+    EngineTransport.mixerStop()
+    super.onTaskRemoved(rootIntent)
+  }
+
   private fun event(intent: Intent?): CardEvent =
     when (intent?.action) {
       ACTION_SHOW -> CardEvent.MetronomeShown
@@ -90,6 +97,7 @@ class PlaybackService : Service() {
       CardEffect.EndSong -> endSong()
       CardEffect.ReturnToMetronome -> returnToMetronome()
       CardEffect.RemoveCard -> finish()
+      is CardEffect.StopPlayback -> stopPlayback(effect)
     }
     // The service can outlive its card while a queued start is pending, so the session ends with the card.
     if (!routing.cardShowing) releaseSession()
@@ -132,6 +140,14 @@ class PlaybackService : Service() {
     releaseSong()
     state = state?.let(::withEngineTempo)
     render()
+  }
+
+  // The cards' own Stop paths tell a still-live JS store, so a warm relaunch shows nothing playing.
+  private fun stopPlayback(effect: CardEffect.StopPlayback) {
+    if (effect.song) song?.handle(SongAction.STOP)
+    if (effect.metronome) handle(TransportAction.STOP)
+    releaseSong()
+    finish()
   }
 
   private fun releaseSong() {

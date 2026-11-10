@@ -56,6 +56,7 @@ export type SongLibraryRecords = Pick<
   | 'replaceStemBundle'
   | 'listStemSetFolders'
   | 'renameSong'
+  | 'updateDuration'
   | 'renameStemSet'
 >;
 

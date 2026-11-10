@@ -46,12 +46,10 @@ export function retimeAnchor({
   };
 }
 
-export function retimeActions({
-  set,
-  get,
-  runtimeOf,
-  session,
-}: ActionContext): Pick<
+export function retimeActions(
+  { set, get, runtimeOf, session }: ActionContext,
+  deferRestore: (restore: Promise<void>) => void,
+): Pick<
   StemPlayerActions,
   | 'beginRetime'
   | 'tapRetime'
@@ -163,7 +161,7 @@ export function retimeActions({
       if (!busy()) get().leaveRetime();
     },
     leaveRetime: () => {
-      if (get().retime.kind === 'recording') speed.restore();
+      if (get().retime.kind === 'recording') deferRestore(speed.restore());
       set({ retime: { kind: 'off' }, retimeFailure: null });
     },
     resetRetime: async () => {

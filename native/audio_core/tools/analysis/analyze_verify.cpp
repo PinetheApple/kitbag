@@ -28,6 +28,7 @@ void RunDownbeatTests(const std::filesystem::path& dir);
 void RunEquivalenceTests(const std::filesystem::path& dir);
 void RunWritePeaksTests(const std::filesystem::path& dir);
 void RunLongGridTests();
+void RunLengthTests(const std::filesystem::path& dir);
 }  // namespace analyze_test
 
 namespace {
@@ -67,6 +68,19 @@ void TestChannelsZero() {
   kitbag_test::Check(
       status == KB_ERROR_INVALID_ARGUMENT,
       "channels==0 rejected instead of dividing by zero into NaN"
+  );
+}
+
+void TestSampleRateZero() {
+  const std::vector<float> pcm(8, 0.1f);
+  kitbag::DecoderInfo info = StereoInfo(4, 2);
+  info.sample_rate = 0;
+  BeatResult result;
+  const kb_result status =
+      AnalyzeDecodedPcm(pcm.data(), 4, info, "x", nullptr, &result);
+  kitbag_test::Check(
+      status == KB_ERROR_INVALID_ARGUMENT,
+      "sample_rate==0 rejected instead of an infinite length"
   );
 }
 
@@ -234,6 +248,7 @@ void TestRewindFailure() {
 void RunGuardTests() {
   TestFrameCap();
   TestChannelsZero();
+  TestSampleRateZero();
   TestNaNPoison();
   TestFiniteOutput();
   TestRewindFailure();
@@ -241,7 +256,7 @@ void RunGuardTests() {
 
 }  // namespace
 
-constexpr int kExpectedChecks = 88;
+constexpr int kExpectedChecks = 102;
 
 int main() {
   const std::filesystem::path dir = std::filesystem::temp_directory_path();
@@ -252,6 +267,7 @@ int main() {
   TestWaveformNonFinite();
   analyze_test::RunWritePeaksTests(dir);
   analyze_test::RunLongGridTests();
+  analyze_test::RunLengthTests(dir);
 
   if (kitbag_test::g_checks != kExpectedChecks) {
     std::fprintf(
