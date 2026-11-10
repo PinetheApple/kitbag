@@ -21,7 +21,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { detailTabLabel } from '../logic/detailView.ts';
-import { leaveRetimeBody } from '../logic/retimeView.ts';
+import { hasUnsavedRetime } from '../logic/retimeView.ts';
 import { DetailPane } from './DetailPane.tsx';
 import { LoopUndoSnackbar } from './LoopUndoSnackbar.tsx';
 import { PlayerMenu } from './PlayerMenu.tsx';
@@ -238,9 +238,11 @@ function Body({ bottom, onBack }: BodyProps) {
 
 function useRetimeAsk() {
   const retiming = useStemPlayer((s) => s.retime.kind === 'recording');
-  const leaveAskable = useStemPlayer((s) => leaveRetimeBody(s.retime) !== null);
+  const unsaved = useStemPlayer((s) => hasUnsavedRetime(s.retime));
   const [asking, setAsking] = useState<RetimeAsk | null>(null);
-  if (asking !== null && !retiming) setAsking(null);
+  const stale =
+    asking !== null && (!retiming || (asking === 'leave' && !unsaved));
+  if (stale) setAsking(null);
   const askReset = useCallback(() => {
     setAsking('reset');
   }, []);
@@ -250,8 +252,7 @@ function useRetimeAsk() {
   const closeAsk = useCallback(() => {
     setAsking(null);
   }, []);
-  const shown =
-    !retiming || (asking === 'leave' && !leaveAskable) ? null : asking;
+  const shown = stale ? null : asking;
   return { retiming, shown, askReset, askLeave, closeAsk };
 }
 
@@ -266,6 +267,7 @@ export function StemPlayerScreen({
   const acquireSong = useStemPlayer((s) => s.acquireSong);
   const { retiming, shown, askReset, askLeave, closeAsk } = useRetimeAsk();
   const [menu, setMenu] = useState(false);
+  if (menu && retiming) setMenu(false);
   const openMenu = useCallback(() => {
     setMenu(true);
   }, []);
@@ -292,12 +294,12 @@ export function StemPlayerScreen({
           <StemAppBar onBack={onBack} onMenu={ready ? openMenu : null} />
         )}
         <Body bottom={insets.bottom} onBack={onBack} />
-        <PlayerMenu
-          visible={menu}
-          bottomInset={insets.bottom}
-          onClose={closeMenu}
-        />
       </View>
+      <PlayerMenu
+        visible={menu}
+        bottomInset={insets.bottom}
+        onClose={closeMenu}
+      />
       {shown === 'reset' ? <ResetDialog onClose={closeAsk} /> : null}
       {shown === 'leave' ? <LeaveDialog onClose={closeAsk} /> : null}
     </View>

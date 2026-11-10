@@ -26,6 +26,8 @@ import {
 } from './playerHarness.test-helper.tsx';
 
 const EARLIER = 'Shift all lines earlier';
+const PLAYER_MENU = 'Player menu';
+const CLOSE_MENU = 'Close the player menu';
 const slowed = (line: string) => `${line} · playing at 0.75×`;
 
 describe('opening retime', () => {
@@ -34,8 +36,17 @@ describe('opening retime', () => {
     expect(p.has('Retime lyrics')).toBe(true);
     expect(p.has(slowed('Line 1 of 3'))).toBe(true);
     expect(p.labelled('Lyrics')).toHaveLength(0);
-    expect(p.labelled('Player menu')).toHaveLength(0);
+    expect(p.labelled(PLAYER_MENU)).toHaveLength(0);
     expect(p.commands.mixerPlay).toHaveBeenCalledOnce();
+  });
+
+  it('shuts the player menu it opens over', async () => {
+    const p = await mountTracked();
+    await p.press(PLAYER_MENU);
+    expect(p.labelled(CLOSE_MENU)).toHaveLength(1);
+    await p.press('Lyrics');
+    await p.press(RETIME);
+    expect(p.labelled(CLOSE_MENU)).toHaveLength(0);
   });
 
   it('says it plays at 0.75× once the mixer slowed', async () => {

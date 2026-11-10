@@ -232,6 +232,11 @@ export async function mountPlayer(change: RecordChange = SONG_DETAILS) {
   const texts = () => hosts().filter(isText).map(textOf);
   const textNode = (text: string) =>
     hosts().find((node) => isText(node) && textOf(node) === text);
+  const byText = (text: string): ReactTestInstance => {
+    const found = textNode(text);
+    if (found === undefined) throw new Error(`no text "${text}"`);
+    return found;
+  };
   const fire = async (label: string, handler: string) => {
     await act(async () => {
       (byLabel(label).props[handler] as () => unknown)();
@@ -246,16 +251,13 @@ export async function mountPlayer(change: RecordChange = SONG_DETAILS) {
     onBack,
     labelled,
     byLabel,
+    byText,
     texts,
     has: (text: string) => texts().includes(text),
     textNode,
     readerFocus,
     readerHiding: (label: string) => readerHiding(byLabel(label)),
-    textReaderHiding: (text: string) => {
-      const node = textNode(text);
-      if (node === undefined) throw new Error(`no text "${text}"`);
-      return readerHiding(node);
-    },
+    textReaderHiding: (text: string) => readerHiding(byText(text)),
     press: (label: string) => fire(label, 'onPress'),
     hold: (label: string) => fire(label, 'onLongPress'),
     touchDown: (label: string) => fire(label, 'onPressIn'),
