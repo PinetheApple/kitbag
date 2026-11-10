@@ -7,6 +7,7 @@ import {
   CLOSE,
   DIALOG_TITLE,
   flush,
+  HIDDEN_FROM_READERS,
   LATER,
   mountTracked,
   NOT_SAVED,
@@ -14,8 +15,10 @@ import {
   PLAIN_LYRICS,
   RESET,
   RETIME,
+  RETIME_CONTROLS,
   retiming,
   SAVE,
+  SHOWN_TO_READERS,
   SONG_DETAILS,
   UNDO_TAP,
   unmountTracked,
@@ -210,6 +213,23 @@ describe('Reset', () => {
     expect(p.has(DIALOG_TITLE)).toBe(false);
     expect(p.records.saveLyricsRetimed).not.toHaveBeenCalled();
     expect(p.store.getState().retime.kind).toBe('recording');
+  });
+
+  it('puts screen reader focus on its title', async () => {
+    const p = await opened();
+    expect(p.readerFocus()).toEqual([DIALOG_TITLE]);
+  });
+
+  it('hides the screen behind it from screen readers until Cancel', async () => {
+    const p = await opened();
+    for (const label of RETIME_CONTROLS)
+      expect(p.readerHiding(label), label).toEqual(HIDDEN_FROM_READERS);
+    expect(p.textReaderHiding(DIALOG_TITLE)).toEqual(SHOWN_TO_READERS);
+    for (const label of ['Cancel', 'Reset'])
+      expect(p.readerHiding(label), label).toEqual(SHOWN_TO_READERS);
+    await p.press('Cancel');
+    for (const label of RETIME_CONTROLS)
+      expect(p.readerHiding(label), label).toEqual(SHOWN_TO_READERS);
   });
 
   it('closes only itself on the back gesture', async () => {
