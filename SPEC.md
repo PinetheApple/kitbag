@@ -744,9 +744,9 @@ referenced but never drew: **setlists**, **setlist detail**, **preset editor**.
   poly, sound, ramp, mute, count-in) never writes the song; a visible mark shows
   it has unsaved changes until the user saves. Nothing autosaves. The mark and
   where Save lives await the owner's pick of a design.
-- **The last standalone metronome state survives a restart** (owner,
-  2026-11-07; #333): tempo, meter, subdivision, accents, poly, sound, ramp and
-  mute bars come back after the app is killed, and nothing starts playing.
+- **"The last metronome state survives a restart"** (owner, 2026-11-07;
+  #333): tempo, meter, subdivision, accents, poly, sound, ramp and mute bars
+  come back after the app is killed, and nothing starts playing.
   Count-in, volume, latency and subdivision accents keep their own storage
   (§5.3, §12.5). How that meets songs:
   - Loading a song or setlist step, or editing a loaded song, never writes the

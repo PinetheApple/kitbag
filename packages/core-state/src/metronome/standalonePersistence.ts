@@ -1,7 +1,7 @@
 import type { StoreApi } from 'zustand/vanilla';
 
 import { libraryStore, type LibraryStore } from '../library/store.ts';
-import { normalizeRamp, type RampConfig } from './config.ts';
+import { rangeRamp } from './config.ts';
 import {
   applyMetronomeSettings,
   standaloneMetronomeChanged,
@@ -16,20 +16,12 @@ export interface StandaloneMetronomePersistence {
   readonly save: (settings: StandaloneMetronome) => void;
 }
 
-// normalizeRamp only ranges an enabled ramp; a stored off one is ranged too.
-function rangedRamp(ramp: RampConfig): RampConfig | undefined {
-  const ranged = normalizeRamp({ ...ramp, enabled: true });
-  return ranged === undefined
-    ? undefined
-    : { ...ranged, enabled: ramp.enabled };
-}
-
 function restore(
   metronome: StoreApi<MetronomeStore>,
   persistence: StandaloneMetronomePersistence,
 ): void {
   const { ramp, ...stored } = persistence.load();
-  const safeRamp = ramp === undefined ? undefined : rangedRamp(ramp);
+  const safeRamp = ramp === undefined ? undefined : rangeRamp(ramp);
   if (Object.keys(stored).length === 0 && safeRamp === undefined) return;
   const state = metronome.getState();
   applyMetronomeSettings(state, {

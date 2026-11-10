@@ -2,9 +2,18 @@ import type { StandaloneMetronomePersistence } from '@kitbag/core-state';
 
 export const TEMPO_QUERY = 'bpm';
 
-export function hasQueriedTempo(search: string): boolean {
-  const raw = new URLSearchParams(search).get(TEMPO_QUERY);
-  return raw !== null && raw.trim() !== '' && Number.isFinite(Number(raw));
+export function queriedNumber(
+  search: string,
+  name: string,
+): number | undefined {
+  const raw = new URLSearchParams(search).get(name);
+  if (raw === null || raw.trim() === '') return undefined;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : undefined;
+}
+
+function hasQueriedTempo(search: string): boolean {
+  return queriedNumber(search, TEMPO_QUERY) !== undefined;
 }
 
 export function queriedTempoWins(
@@ -15,9 +24,11 @@ export function queriedTempoWins(
   return {
     ...persistence,
     load: () => {
-      const settings = { ...persistence.load() };
+      const { ramp, ...settings } = persistence.load();
       delete settings.bpm;
-      return settings;
+      return ramp === undefined
+        ? settings
+        : { ...settings, ramp: { ...ramp, enabled: false } };
     },
   };
 }

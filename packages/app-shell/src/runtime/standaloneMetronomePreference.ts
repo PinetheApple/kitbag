@@ -1,8 +1,9 @@
 import type { Preferences } from '@kitbag/core-db';
-import { KB_ACCENT, KB_RAMP_UNIT } from '@kitbag/core-native';
-import type {
-  MetronomeSettingsInput,
-  StandaloneMetronomePersistence,
+import {
+  isAccent,
+  isRampUnit,
+  type MetronomeSettingsInput,
+  type StandaloneMetronomePersistence,
 } from '@kitbag/core-state';
 
 import { storedPreference, type StoredPreference } from './storedPreference';
@@ -11,14 +12,11 @@ export const STANDALONE_METRONOME_KEY = 'metronome_standalone';
 
 type Check = (value: unknown) => boolean;
 
-const ACCENTS = new Set<unknown>(Object.values(KB_ACCENT));
-const RAMP_UNITS = new Set<unknown>(Object.values(KB_RAMP_UNIT));
-
 const isNumber: Check = (value) =>
   typeof value === 'number' && Number.isFinite(value);
 const isFlag: Check = (value) => typeof value === 'boolean';
 const isAccents: Check = (value) =>
-  Array.isArray(value) && value.every((accent) => ACCENTS.has(accent));
+  Array.isArray(value) && value.every(isAccent);
 
 function isShaped(shape: Readonly<Record<string, Check>>): Check {
   return (value) =>
@@ -46,7 +44,7 @@ const FIELD_CHECKS: Readonly<Record<keyof MetronomeSettingsInput, Check>> = {
     targetBpm: isNumber,
     stepBpm: isNumber,
     interval: isNumber,
-    unit: (unit) => RAMP_UNITS.has(unit),
+    unit: isRampUnit,
     loop: isFlag,
   }),
   barMute: isShaped({

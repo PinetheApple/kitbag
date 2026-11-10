@@ -2,6 +2,8 @@ import type { NewSongPreset, SongPreset } from '@kitbag/core-db';
 import { KB_ACCENT, KB_RAMP_UNIT } from '@kitbag/core-native';
 
 import {
+  isAccent,
+  isRampUnit,
   roundToEngineBpm,
   normalizeRamp,
   resizeAccents,
@@ -21,8 +23,6 @@ import type {
   RampConfig,
 } from '../metronome/store.ts';
 
-const ACCENTS = new Set<number>(Object.values(KB_ACCENT));
-
 export type PresetFields = Omit<NewSongPreset, 'name' | 'id'>;
 
 export function byteList(value: unknown): number[] {
@@ -40,7 +40,7 @@ export function toBlob(values: readonly number[]): Buffer {
 
 export function accentsOf(value: unknown): KB_ACCENT[] {
   return byteList(value).map((code) =>
-    ACCENTS.has(code) ? (code as KB_ACCENT) : KB_ACCENT.KB_ACCENT_NORMAL,
+    isAccent(code) ? code : KB_ACCENT.KB_ACCENT_NORMAL,
   );
 }
 
@@ -92,12 +92,8 @@ export function songFieldsFromMetronome(
   return fields;
 }
 
-const RAMP_UNITS = new Set<number>(Object.values(KB_RAMP_UNIT));
-
 export function rampUnitOf(value: number): KB_RAMP_UNIT {
-  return RAMP_UNITS.has(value)
-    ? (value as KB_RAMP_UNIT)
-    : KB_RAMP_UNIT.KB_RAMP_BARS;
+  return isRampUnit(value) ? value : KB_RAMP_UNIT.KB_RAMP_BARS;
 }
 
 function rampOf(preset: SongPreset, current: RampConfig): RampConfig {

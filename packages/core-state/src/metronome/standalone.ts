@@ -1,6 +1,6 @@
 import type { MetronomeConfig, MetronomeStore, RampConfig } from './store.ts';
 
-export const STANDALONE_METRONOME_FIELDS = [
+const STANDALONE_METRONOME_FIELDS = [
   'bpm',
   'beatsPerBar',
   'denominator',
