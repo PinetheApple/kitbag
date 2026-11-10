@@ -127,11 +127,30 @@ interface SongAppBarProps {
   readonly onMenu: () => void;
 }
 
-function SongAppBar({ onBack, onMenu }: SongAppBarProps) {
-  const styles = useStyles();
+interface BarFacts {
+  readonly title: string;
+  readonly artist: string | null;
+  readonly bpm: number | null;
+}
+
+// Stop closes the session while the screen is still animating out.
+function useFactsWhileOpen(): BarFacts {
+  const open = useSongPlayer((s) => s.songId !== null);
   const title = useSongPlayer((s) => s.title);
   const artist = useSongPlayer((s) => s.artist);
-  const bpm = bpmFact(useSongPlayer((s) => s.bpm));
+  const bpm = useSongPlayer((s) => s.bpm);
+  const [kept, setKept] = useState<BarFacts>({ title, artist, bpm });
+  const changed =
+    kept.title !== title || kept.artist !== artist || kept.bpm !== bpm;
+  if (open && changed) setKept({ title, artist, bpm });
+  return open ? { title, artist, bpm } : kept;
+}
+
+function SongAppBar({ onBack, onMenu }: SongAppBarProps) {
+  const styles = useStyles();
+  const facts = useFactsWhileOpen();
+  const { title, artist } = facts;
+  const bpm = bpmFact(facts.bpm);
   const actions: readonly AppBarAction[] = useMemo(
     () => [{ icon: 'more', label: 'More', onPress: onMenu }],
     [onMenu],
