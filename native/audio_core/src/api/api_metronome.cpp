@@ -53,15 +53,16 @@ bool ValidDownbeatArgs(const int32_t* downbeats, int32_t count, int32_t beats) {
          kitbag::ValidDownbeats({downbeats, static_cast<size_t>(count)}, beats);
 }
 
-constexpr uint64_t kMaxExactFrame = uint64_t{1}
-                                    << std::numeric_limits<double>::digits;
+static_assert(
+    KB_MAX_EXACT_FRAME == uint64_t{1} << std::numeric_limits<double>::digits
+);
 
 bool ValidCountInAt(
     uint64_t end_frame,
     double beat_frames,
     int32_t beats_per_bar
 ) {
-  return end_frame <= kMaxExactFrame && std::isfinite(beat_frames) &&
+  return end_frame <= KB_MAX_EXACT_FRAME && std::isfinite(beat_frames) &&
          beat_frames >= kitbag::CountInSchedule::kMinBeatFrames &&
          beats_per_bar >= 1 && beats_per_bar <= kitbag::Metronome::kMaxBeats;
 }

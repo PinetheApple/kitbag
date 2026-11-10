@@ -1,8 +1,6 @@
 #ifndef KITBAG_SONG_START_API_H
 #define KITBAG_SONG_START_API_H
 
-/* Each of this and kitbag_api.h includes the other under its guard, so either
- * order works. */
 #include "kitbag_api.h"
 
 #include <stdint.h>
@@ -39,10 +37,10 @@ KB_EXPORT kb_result kb_mixer_play_at(kb_engine* engine, uint64_t start_frame);
  * it. Pair it with kb_mixer_play_at(end_frame) and a grid followed with
  * kb_metronome_follow_mixer(1): the song and its click start on end_frame.
  * Sets play intent like kb_metronome_start.
- * Returns KB_ERROR_INVALID_ARGUMENT for a null engine, end_frame above 2^53,
- * beat_frames below 1 or not finite, or beats_per_bar outside
- * [1, Metronome::kMaxBeats]; KB_ERROR_BUSY when the command queue is full.
- * Either leaves everything unchanged. */
+ * Returns KB_ERROR_INVALID_ARGUMENT for a null engine, end_frame above
+ * KB_MAX_EXACT_FRAME, beat_frames below 1 or not finite, or beats_per_bar
+ * outside [1, 16]; KB_ERROR_BUSY when the command queue is full. Either leaves
+ * everything unchanged. */
 KB_EXPORT kb_result kb_metronome_count_in_at(
     kb_engine* engine,
     uint64_t end_frame,

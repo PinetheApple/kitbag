@@ -62,8 +62,7 @@ KB_EXPORT void kb_metronome_clear_grid(kb_engine* engine);
  * speaker, not the buffer.
  * A measured grid set via kb_metronome_set_grid takes precedence: while a grid
  * is set this anchor is a no-op, taking effect only after kb_metronome_clear_grid.
- * at_frame crosses as a uint64_t but is exact to 2^53 frames — ~5,900 years at
- * 48kHz — so it may be passed as a JS double. No BigInt. */
+ * at_frame is exact up to KB_MAX_EXACT_FRAME. */
 KB_EXPORT void kb_metronome_anchor_external(
     kb_engine* engine,
     double song_pos_sec,

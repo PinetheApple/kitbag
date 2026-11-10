@@ -39,6 +39,10 @@ KB_EXPORT uint32_t kb_engine_sample_rate(const kb_engine* engine);
 /* Monotonic frames rendered since start; the master clock. */
 KB_EXPORT uint64_t kb_engine_frames_rendered(const kb_engine* engine);
 
+/* 2^53: frame arguments are exact up to here (~5,900 years at 48kHz), so they
+ * may be passed as JS doubles. No BigInt. */
+#define KB_MAX_EXACT_FRAME 9007199254740992ULL
+
 #include "kitbag_engine_clock_api.h"
 #include "kitbag_engine_hold_api.h"
 
@@ -84,8 +88,7 @@ KB_EXPORT void kb_metronome_start(kb_engine* engine);
 /* Sample-accurate start: the click begins on engine frame start_frame
  * (cf. kb_engine_frames_rendered), not when this call arrives. A frame already
  * past when drained starts on the next sample. Only takes effect while stopped.
- * start_frame crosses as a uint64_t but is exact to 2^53 frames — ~5,900 years
- * at 48kHz — so it may be passed as a JS double. No BigInt. */
+ * start_frame is exact up to KB_MAX_EXACT_FRAME. */
 KB_EXPORT void kb_metronome_start_at(kb_engine* engine, uint64_t start_frame);
 KB_EXPORT void kb_metronome_stop(kb_engine* engine);
 /* Stops like kb_metronome_stop but the next start plays no count-in. */
@@ -287,9 +290,8 @@ KB_EXPORT void kb_player_play(kb_engine* engine);
  * There is no stop-to-zero: rewind with kb_player_seek(engine, 0). */
 KB_EXPORT void kb_player_pause(kb_engine* engine);
 KB_EXPORT void kb_player_seek(kb_engine* engine, int64_t frame);
-/* Playback position and total length in engine-rate frames. Both cross as
- * int64_t but are exact to 2^53 frames — ~5,900 years at 48kHz — so JSI may read
- * them as a JS double. No BigInt. */
+/* Playback position and total length in engine-rate frames, exact up to
+ * KB_MAX_EXACT_FRAME. */
 KB_EXPORT int64_t kb_player_position(const kb_engine* engine);
 KB_EXPORT int64_t kb_player_frames(const kb_engine* engine);
 KB_EXPORT int32_t kb_player_is_playing(const kb_engine* engine);
