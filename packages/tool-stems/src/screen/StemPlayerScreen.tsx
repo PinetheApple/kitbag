@@ -21,6 +21,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { detailTabLabel } from '../logic/detailView.ts';
+import { hasUnsavedRetime } from '../logic/retimeView.ts';
 import { DetailPane } from './DetailPane.tsx';
 import { LoopUndoSnackbar } from './LoopUndoSnackbar.tsx';
 import { PlayerMenu } from './PlayerMenu.tsx';
@@ -235,19 +236,13 @@ function Body({ bottom, onBack }: BodyProps) {
   );
 }
 
-export function StemPlayerScreen({
-  setId,
-  focused,
-  insets,
-  onBack,
-}: StemPlayerScreenProps) {
-  const styles = useStyles();
-  const ready = useStemPlayer((s) => s.status === 'ready');
-  const acquireSong = useStemPlayer((s) => s.acquireSong);
+function useRetimeAsk() {
   const retiming = useStemPlayer((s) => s.retime.kind === 'recording');
-  const [menu, setMenu] = useState(false);
+  const unsaved = useStemPlayer((s) => hasUnsavedRetime(s.retime));
   const [asking, setAsking] = useState<RetimeAsk | null>(null);
-  if (asking !== null && !retiming) setAsking(null);
+  const stale =
+    asking !== null && (!retiming || (asking === 'leave' && !unsaved));
+  if (stale) setAsking(null);
   const askReset = useCallback(() => {
     setAsking('reset');
   }, []);
@@ -257,6 +252,22 @@ export function StemPlayerScreen({
   const closeAsk = useCallback(() => {
     setAsking(null);
   }, []);
+  const shown = stale ? null : asking;
+  return { retiming, shown, askReset, askLeave, closeAsk };
+}
+
+export function StemPlayerScreen({
+  setId,
+  focused,
+  insets,
+  onBack,
+}: StemPlayerScreenProps) {
+  const styles = useStyles();
+  const ready = useStemPlayer((s) => s.status === 'ready');
+  const acquireSong = useStemPlayer((s) => s.acquireSong);
+  const { retiming, shown, askReset, askLeave, closeAsk } = useRetimeAsk();
+  const [menu, setMenu] = useState(false);
+  if (menu && retiming) setMenu(false);
   const openMenu = useCallback(() => {
     setMenu(true);
   }, []);
@@ -269,25 +280,28 @@ export function StemPlayerScreen({
   );
   useFocusedMixerHold(focused, acquire);
   const padding = useMemo(() => ({ paddingTop: insets.top }), [insets.top]);
+  const dialogOpen = shown !== null;
   return (
     <View style={[styles.screen, padding]}>
-      {retiming ? (
-        <RetimeBar onAskReset={askReset} onAskLeave={askLeave} />
-      ) : (
-        <StemAppBar onBack={onBack} onMenu={ready ? openMenu : null} />
-      )}
-      <Body bottom={insets.bottom} onBack={onBack} />
+      <View
+        style={styles.main}
+        importantForAccessibility={dialogOpen ? 'no-hide-descendants' : 'auto'}
+        accessibilityElementsHidden={dialogOpen}
+      >
+        {retiming ? (
+          <RetimeBar onAskReset={askReset} onAskLeave={askLeave} />
+        ) : (
+          <StemAppBar onBack={onBack} onMenu={ready ? openMenu : null} />
+        )}
+        <Body bottom={insets.bottom} onBack={onBack} />
+      </View>
       <PlayerMenu
         visible={menu}
         bottomInset={insets.bottom}
         onClose={closeMenu}
       />
-      {retiming && asking === 'reset' ? (
-        <ResetDialog onClose={closeAsk} />
-      ) : null}
-      {retiming && asking === 'leave' ? (
-        <LeaveDialog onClose={closeAsk} />
-      ) : null}
+      {shown === 'reset' ? <ResetDialog onClose={closeAsk} /> : null}
+      {shown === 'leave' ? <LeaveDialog onClose={closeAsk} /> : null}
     </View>
   );
 }

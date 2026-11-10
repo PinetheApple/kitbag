@@ -7,6 +7,7 @@ import {
   CLOSE,
   DIALOG_TITLE,
   flush,
+  HIDDEN_FROM_READERS,
   LATER,
   mountTracked,
   NOT_SAVED,
@@ -14,8 +15,10 @@ import {
   PLAIN_LYRICS,
   RESET,
   RETIME,
+  RETIME_CONTROLS,
   retiming,
   SAVE,
+  SHOWN_TO_READERS,
   SONG_DETAILS,
   UNDO_TAP,
   unmountTracked,
@@ -23,6 +26,8 @@ import {
 } from './playerHarness.test-helper.tsx';
 
 const EARLIER = 'Shift all lines earlier';
+const PLAYER_MENU = 'Player menu';
+const CLOSE_MENU = 'Close the player menu';
 const slowed = (line: string) => `${line} · playing at 0.75×`;
 
 describe('opening retime', () => {
@@ -31,8 +36,17 @@ describe('opening retime', () => {
     expect(p.has('Retime lyrics')).toBe(true);
     expect(p.has(slowed('Line 1 of 3'))).toBe(true);
     expect(p.labelled('Lyrics')).toHaveLength(0);
-    expect(p.labelled('Player menu')).toHaveLength(0);
+    expect(p.labelled(PLAYER_MENU)).toHaveLength(0);
     expect(p.commands.mixerPlay).toHaveBeenCalledOnce();
+  });
+
+  it('shuts the player menu it opens over', async () => {
+    const p = await mountTracked();
+    await p.press(PLAYER_MENU);
+    expect(p.labelled(CLOSE_MENU)).toHaveLength(1);
+    await p.press('Lyrics');
+    await p.press(RETIME);
+    expect(p.labelled(CLOSE_MENU)).toHaveLength(0);
   });
 
   it('says it plays at 0.75× once the mixer slowed', async () => {
@@ -210,6 +224,23 @@ describe('Reset', () => {
     expect(p.has(DIALOG_TITLE)).toBe(false);
     expect(p.records.saveLyricsRetimed).not.toHaveBeenCalled();
     expect(p.store.getState().retime.kind).toBe('recording');
+  });
+
+  it('puts screen reader focus on its title', async () => {
+    const p = await opened();
+    expect(p.readerFocus()).toEqual([DIALOG_TITLE]);
+  });
+
+  it('hides the screen behind it from screen readers until Cancel', async () => {
+    const p = await opened();
+    for (const label of RETIME_CONTROLS)
+      expect(p.readerHiding(label), label).toEqual(HIDDEN_FROM_READERS);
+    expect(p.textReaderHiding(DIALOG_TITLE)).toEqual(SHOWN_TO_READERS);
+    for (const label of ['Cancel', 'Reset'])
+      expect(p.readerHiding(label), label).toEqual(SHOWN_TO_READERS);
+    await p.press('Cancel');
+    for (const label of RETIME_CONTROLS)
+      expect(p.readerHiding(label), label).toEqual(SHOWN_TO_READERS);
   });
 
   it('closes only itself on the back gesture', async () => {
