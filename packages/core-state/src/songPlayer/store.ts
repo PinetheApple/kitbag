@@ -25,6 +25,7 @@ import {
   type StemPlayerStatus,
 } from '../stemPlayer/store.ts';
 import { framesToSeconds, secondsToFrames } from '../stemPlayer/time.ts';
+import { createMixerClick, mixerClick, type MixerClick } from './mixerClick.ts';
 import { getSongPlayer, type SongPlayerRuntime } from './runtime.ts';
 
 const SONG_TRACK = 0;
@@ -63,6 +64,7 @@ export type SongPlayerStore = SongPlayerState & SongPlayerActions;
 interface SongPlayerOptions {
   readonly scrubSeekDelayMs?: number;
   readonly mixerClaim?: MixerClaim;
+  readonly mixerClick?: MixerClick;
 }
 
 const closedState: SongPlayerState = {
@@ -98,6 +100,7 @@ export function createSongPlayerStore(
   const {
     scrubSeekDelayMs = SCRUB_SEEK_DELAY_MS,
     mixerClaim: claim = createMixerClaim(),
+    mixerClick: songClick = createMixerClick(),
   } = options;
   let trackRequested = false;
   let masterToRestore: number | null = null;
@@ -119,6 +122,7 @@ export function createSongPlayerStore(
       runtimeOf,
       scrubSeekDelayMs,
       claim,
+      mixerClick: songClick,
       isOpen: () => get().songId !== null,
       teardownTracks,
       resetState: () => {
@@ -236,11 +240,12 @@ export function createSongPlayerStore(
       close: mixer.close,
       ...transportActions(get, runtimeOf, scrubSeek),
       ...loopActions(context),
-      ...clickActions(context),
+      ...clickActions(context, mixer.pendingClick),
     };
   });
 }
 
 export const songPlayerStore = createSongPlayerStore(getSongPlayer, {
   mixerClaim,
+  mixerClick,
 });

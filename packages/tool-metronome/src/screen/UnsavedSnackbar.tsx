@@ -1,12 +1,10 @@
-import { metronome, size, Snackbar, space } from '@kitbag/core-design';
+import { Snackbar } from '@kitbag/core-design';
 import { useLibrary } from '@kitbag/core-state';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppState } from 'react-native';
 
 import { unsavedSnackbarView } from '../logic/unsavedSnackbar.ts';
-
-const ABOVE_TRANSPORT =
-  metronome.belowTransport + size.playButtonLarge + space.sectionGap;
+import { ABOVE_TRANSPORT } from './snackbarPlacement.ts';
 
 function useVisibleSince(): number {
   const [visibleSince, setVisibleSince] = useState(Date.now);

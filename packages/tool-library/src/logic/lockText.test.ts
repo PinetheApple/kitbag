@@ -11,9 +11,13 @@ describe('lockText', () => {
     });
   });
 
-  it('claims no lock while the click is off', () => {
-    expect(lockText('grid', false, null).title).toBe('Metronome');
-    expect(lockText('grid', false, null).available).toBe(true);
+  it('reads click off, with the grid still ready, while the click is off', () => {
+    expect(lockText('grid', false, '158 BPM')).toEqual({
+      title: 'Click off',
+      detail: '158 BPM · grid ready',
+      available: true,
+    });
+    expect(lockText('grid', false, null).detail).toBe('grid ready');
   });
 
   it.each(['pending', 'analyzing', 'failed', 'noGrid'] as const)(

@@ -17,6 +17,10 @@ import {
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import {
+  mixerClick,
+  type MixerClickRelease,
+} from '../songPlayer/mixerClick.ts';
+import {
   defaultCommands,
   defaultEngineBpm,
   defaultNowFrame,
@@ -295,6 +299,7 @@ function transportActions(
   commands: MetronomeCommands,
   nowFrame: NowFrame,
   tempo: EngineTempo,
+  songClick: MixerClickRelease,
 ): Pick<MetronomeActions, 'setBarMute' | 'start' | 'stop' | 'pause'> {
   return {
     setBarMute: (config) => {
@@ -316,6 +321,8 @@ function transportActions(
     },
 
     start: () => {
+      // Left locked, the song's grid would clock this start and its stop end it.
+      if (songClick.active()) songClick.release();
       commands.metronomeStart(nowFrame());
       set({ running: true });
     },
@@ -339,6 +346,7 @@ export function createMetronomeStore(
   nowFrame: NowFrame = defaultNowFrame,
   engineBpm: EngineBpm = defaultEngineBpm,
   now: () => number = Date.now,
+  songClick: MixerClickRelease = mixerClick,
 ): StoreApi<MetronomeStore> {
   let holds = 0;
   const store = createStore<MetronomeStore>((set, get) => {
@@ -348,7 +356,7 @@ export function createMetronomeStore(
       ...patternActions(set, get, commands),
       ...soundActions(set, get, commands, () => holds > 0),
       ...tempoActions(set, get, commands, tempo),
-      ...transportActions(set, commands, nowFrame, tempo),
+      ...transportActions(set, commands, nowFrame, tempo, songClick),
       holdEngine: () => {
         const release = acquireEngineHold(commands);
         let held = true;

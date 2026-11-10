@@ -3,6 +3,7 @@ import { KB_RESULT } from '@kitbag/core-native';
 import { usableDownbeats } from './bars.ts';
 import { clickGrid } from './loop.ts';
 import type { MixerSessionContext } from './mixerSession.ts';
+import type { PendingClick } from './pendingClick.ts';
 import type { MixerRuntime } from './runtime.ts';
 import { sessionGate } from './sessionGate.ts';
 import type { StemPlayerActions, StemPlayerState } from './store.ts';
@@ -30,12 +31,10 @@ export function turnClickOff({
   stopClick(runtimeOf());
 }
 
-export function clickActions({
-  set,
-  get,
-  runtimeOf,
-  session,
-}: MixerSessionContext<ClickSlice>): Pick<StemPlayerActions, 'toggleClick'> {
+export function clickActions(
+  { set, get, runtimeOf, session }: MixerSessionContext<ClickSlice>,
+  pendingClick: PendingClick,
+): Pick<StemPlayerActions, 'toggleClick'> {
   const { busy, call } = sessionGate(session);
 
   const start = async () => {
@@ -44,11 +43,13 @@ export function clickActions({
     if (grid.length === 0) return;
     const downbeats = usableDownbeats(get().downbeatIndices, grid.length);
     if (sharedMetronome.active()) sharedMetronome.release();
+    const turnOn = pendingClick.begin();
     const { result, live } = await call(() =>
       commands.setGrid(grid, downbeats, GRID_ANCHOR_FRAME),
     );
+    const current = pendingClick.finish(turnOn);
     if (result !== KB_RESULT.KB_OK) return;
-    if (!live || get().status !== 'ready') {
+    if (!current || !live || get().status !== 'ready') {
       commands.clearGrid();
       return;
     }

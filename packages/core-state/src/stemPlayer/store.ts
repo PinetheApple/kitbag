@@ -2,6 +2,12 @@ import type { StemSetRecord, StoredSection } from '@kitbag/core-db';
 import { KB_MAX_TRACKS, KB_RESULT } from '@kitbag/core-native';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
+import {
+  createMixerClick,
+  mixerClick,
+  type MixerClick,
+} from '../songPlayer/mixerClick.ts';
+
 import { mixActions, transportActions } from './actions.ts';
 import { barMarkDownbeats } from './bars.ts';
 import { clickActions } from './clickActions.ts';
@@ -136,6 +142,7 @@ export interface StemPlayerTiming {
 
 export interface StemPlayerOptions extends Partial<StemPlayerTiming> {
   readonly mixerClaim?: MixerClaim;
+  readonly mixerClick?: MixerClick;
 }
 
 const closedState: StemPlayerState = {
@@ -213,6 +220,7 @@ export function createStemPlayerStore(
     mixSaveDelayMs = MIX_SAVE_DELAY_MS,
     scrubSeekDelayMs = SCRUB_SEEK_DELAY_MS,
     mixerClaim: claim = createMixerClaim(),
+    mixerClick: songClick = createMixerClick(),
   } = options;
   let requestedTracks = 0;
   const saver = mixSaver(
@@ -238,6 +246,7 @@ export function createStemPlayerStore(
       runtimeOf,
       scrubSeekDelayMs,
       claim,
+      mixerClick: songClick,
       isOpen: () => get().setId !== null,
       beforeTeardown: () => {
         saver.flush();
@@ -345,7 +354,7 @@ export function createStemPlayerStore(
       ...mixActions(set, get, runtimeOf, saver),
       ...transportActions(get, runtimeOf, scrubSeek, retimeAnchor(context)),
       ...sectionLoopActions(context),
-      ...clickActions(context),
+      ...clickActions(context, mixer.pendingClick),
       ...renameActions(context),
       ...retimeActions(context, claim.defer),
     };
@@ -354,4 +363,5 @@ export function createStemPlayerStore(
 
 export const stemPlayerStore = createStemPlayerStore(getStemPlayer, {
   mixerClaim,
+  mixerClick,
 });

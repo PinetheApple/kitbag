@@ -307,6 +307,13 @@ export { useSongPlayer } from './songPlayer/useSongPlayer.ts';
 export { songPlayerStore, type SongPlayerStore } from './songPlayer/store.ts';
 export { configureSongPlayer } from './songPlayer/runtime.ts';
 export {
+  createMixerClick,
+  type MixerClick,
+  type MixerClickNotice,
+  type ReleasedClick,
+} from './songPlayer/mixerClick.ts';
+export { useMixerClickNotice } from './songPlayer/useMixerClickNotice.ts';
+export {
   bpmFact,
   keyFact,
   shortKeyName,
