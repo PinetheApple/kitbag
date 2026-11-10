@@ -121,7 +121,56 @@ export function parentDir(relativePath: string): string {
 export function audioFormat(relativePath: string): string {
   const name = relativePath.slice(relativePath.lastIndexOf('/') + 1);
   const dot = name.lastIndexOf('.');
-  return dot <= 0 ? '' : name.slice(dot + 1).toLocaleLowerCase();
+  return dot <= 0 ? '' : name.slice(dot + 1).toLowerCase();
+}
+
+export type FormatCheck =
+  | { readonly supported: true }
+  | { readonly supported: false; readonly format: string };
+
+type SupportedAudioLists = Pick<
+  LibraryConstants,
+  | 'supportedAudioExtensions'
+  | 'supportedAudioMimeTypes'
+  | 'unsupportedAudioExtensions'
+>;
+
+const AUDIO_MIME_PREFIX = 'audio/';
+const NONSTANDARD_MIME_PREFIX = 'x-';
+const MIME_PARAMETER_SEPARATOR = ';';
+
+function mediaType(mimeType: string): string {
+  const end = mimeType.indexOf(MIME_PARAMETER_SEPARATOR);
+  return (end < 0 ? mimeType : mimeType.slice(0, end)).trim().toLowerCase();
+}
+
+function mimeFormat(mimeType: string): string {
+  if (!mimeType.startsWith(AUDIO_MIME_PREFIX)) return '';
+  const subtype = mimeType.slice(AUDIO_MIME_PREFIX.length);
+  return subtype.startsWith(NONSTANDARD_MIME_PREFIX)
+    ? subtype.slice(NONSTANDARD_MIME_PREFIX.length)
+    : subtype;
+}
+
+// Android maps .m4a to audio/mpeg, so a known audio extension outranks the MIME
+// type; any other text after a dot may be part of the title.
+export function checkAudioFormat(
+  file: { readonly name: string; readonly mimeType: string },
+  lists: SupportedAudioLists,
+): FormatCheck {
+  const {
+    supportedAudioExtensions: extensions,
+    supportedAudioMimeTypes: mimeTypes,
+    unsupportedAudioExtensions: unsupported,
+  } = lists;
+  const extension = audioFormat(file.name.trim());
+  if (extensions.includes(extension)) return { supported: true };
+  if (unsupported.includes(extension))
+    return { supported: false, format: extension };
+  const mimeType = mediaType(file.mimeType);
+  return mimeTypes.includes(mimeType)
+    ? { supported: true }
+    : { supported: false, format: mimeFormat(mimeType) };
 }
 
 export function songFolder(songsDir: string, songUuid: string): string {

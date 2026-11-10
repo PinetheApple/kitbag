@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { analysisFailure, summarize } from './logic.ts';
 import {
   badges,
+  CODES,
   fakeFiles,
   importOne,
   MP3,
@@ -33,6 +34,25 @@ describe('song library store', () => {
     expect(store.getState().rows[0]).toMatchObject({ bpm: 158 });
     expect(files.acknowledgeAnalysis).toHaveBeenCalledWith(SONG_PATH);
   });
+
+  it('lists the length the analysis measured', async () => {
+    const { store } = setup();
+    await importOne(store);
+    await store.getState().receiveAnalysis(result({ durationSec: 287.4 }));
+    expect(store.getState().rows[0]).toMatchObject({ durationSec: 287.4 });
+  });
+
+  it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY])(
+    'keeps the listed length when the analysed length is %s',
+    async (durationSec) => {
+      const { store } = setup();
+      const row = await importOne(store);
+      await store.getState().receiveAnalysis(result({ durationSec }));
+      expect(store.getState().rows[0]).toMatchObject({
+        durationSec: row.durationSec,
+      });
+    },
+  );
 
   it('applies the same result from the event and from the stored list once', async () => {
     const { store, records } = setup();
@@ -166,6 +186,61 @@ describe('song library store', () => {
     expect(store.getState().importing).toEqual([]);
     expect(store.getState().rows).toEqual([]);
     expect(files.enqueueAnalysis).not.toHaveBeenCalled();
+  });
+
+  it('refuses a format the core cannot open before copying, naming it', async () => {
+    const { store, files } = setup(
+      fakeFiles({
+        pickDocument: vi.fn(() =>
+          Promise.resolve({
+            uri: 'content://voice-memo',
+            name: 'Voice memo.m4a',
+            mimeType: 'audio/mp4',
+          }),
+        ),
+      }),
+    );
+    await store.getState().importSong();
+    expect(files.importAudio).not.toHaveBeenCalled();
+    expect(store.getState().notice).toEqual({
+      kind: 'formatRefused',
+      name: 'Voice memo.m4a',
+      format: 'm4a',
+      supported: CODES.supportedAudioFamilies,
+    });
+    expect(store.getState().importing).toEqual([]);
+    expect(store.getState().rows).toEqual([]);
+  });
+
+  it('imports a damaged file in a supported format and lets analysis fail it', async () => {
+    const { store, files } = setup();
+    await importOne(store);
+    expect(files.importAudio).toHaveBeenCalledOnce();
+    expect(store.getState().notice).toBeNull();
+    await store
+      .getState()
+      .receiveAnalysis(result({ ok: false, error: 'unsupported' }));
+    expect(badges(store)).toEqual([['Everlong', 'failed']]);
+  });
+
+  it('refuses an M4A that Android labels as MP3, by its extension', async () => {
+    const { store, files } = setup(
+      fakeFiles({
+        pickDocument: vi.fn(() =>
+          Promise.resolve({
+            uri: 'content://mislabelled',
+            name: 'Mislabelled.m4a',
+            mimeType: 'audio/mpeg',
+          }),
+        ),
+      }),
+    );
+    await store.getState().importSong();
+    expect(files.importAudio).not.toHaveBeenCalled();
+    expect(store.getState().notice).toMatchObject({
+      kind: 'formatRefused',
+      format: 'm4a',
+    });
   });
 
   it('says a copied file could not be added when the database refuses it', async () => {

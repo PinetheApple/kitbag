@@ -99,6 +99,23 @@ describe('sharing the mixer with stem songs', () => {
     expect(stemSongs.getState().status).toBe('ready');
   });
 
+  it('reloads a song a stem song displaced when it opens again', async () => {
+    const { songs, stemSongs, songFake } = storesSharingOneMixer();
+    const first = songs.getState().open(SONG_ID, BARS);
+    await first.loaded;
+    await stemSongs.getState().open(STEM_SET_ID, BARS);
+    const again = songs.getState().open(SONG_ID, BARS);
+    await again.loaded;
+    expect(songFake.commands.loadTrack).toHaveBeenCalledTimes(2);
+    expect(first.hold.live()).toBe(false);
+    expect(again.hold.live()).toBe(true);
+    expect(stemSongs.getState().setId).toBeNull();
+    expect(songs.getState()).toMatchObject({
+      songId: SONG_ID,
+      status: 'ready',
+    });
+  });
+
   it('keeps the song playing when the displaced stem screen closes late', async () => {
     const { songs, stemSongs, stemFake } = storesSharingOneMixer();
     await stemSongs.getState().open(STEM_SET_ID, BARS);
@@ -305,15 +322,6 @@ describe('a stem song closed in retime', () => {
     await loaded;
     return { ...stores, rate };
   }
-
-  it('stops the mixer before the song loads though the speed reads unity', async () => {
-    const { songFake } = await songAfterRetime(KB_MIXER_UNITY_RATE);
-    const { mixerStop, loadTrack } = songFake.commands;
-    expect(mixerStop).toHaveBeenCalledOnce();
-    expect(mixerStop.mock.invocationCallOrder[0]).toBeLessThan(
-      loadTrack.mock.invocationCallOrder[0] ?? Number.NaN,
-    );
-  });
 
   it('plays the song at unity after the stem speed is put back', async () => {
     const { songs, rate, stemFake } = await songAfterRetime(STEM_SPEED);

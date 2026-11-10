@@ -9,8 +9,8 @@ import {
   textStyle,
   withAlpha,
 } from '@kitbag/core-design';
-import { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
 
 const useStyles = createThemedStyles((theme) => ({
   scrim: {
@@ -63,11 +63,16 @@ export function ConfirmDialog({
   onCancel,
 }: ConfirmDialogProps) {
   const styles = useStyles();
+  const heading = useRef<Text>(null);
   useEffect(() => onHardwareBack(onCancel), [onCancel]);
+  useEffect(() => {
+    if (heading.current !== null)
+      AccessibilityInfo.sendAccessibilityEvent(heading.current, 'focus');
+  }, []);
   return (
     <View style={styles.scrim} accessibilityViewIsModal>
       <View style={styles.dialog}>
-        <Text accessibilityRole="header" style={styles.title}>
+        <Text ref={heading} accessibilityRole="header" style={styles.title}>
           {title}
         </Text>
         <Text style={styles.body}>{body}</Text>

@@ -59,7 +59,7 @@ struct Rig {
     std::vector<float> out(static_cast<size_t>(kBlock) * 2);
     for (int b = 0; b < count; ++b) {
       WaitForReadAhead(mixer);
-      mixer.Process(out.data(), kBlock);
+      mixer.Process(out.data(), kBlock, kUnclockedFrame);
       metronome
           .Render(out.data(), kBlock, kSampleRate, 2, 0, &mixer.song_clock());
       AppendLeft(&left, out, kBlock);

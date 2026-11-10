@@ -142,7 +142,7 @@ std::vector<float> RenderAcrossTheChange(const LagCase& lag) {
       mixer.SetRate(kitbag::kUnityRate, kZeroClock, false);
     }
     WaitForReadAhead(mixer);
-    mixer.Process(out.data(), kBlock);
+    mixer.Process(out.data(), kBlock, kUnclockedFrame);
     metronome
         .Render(out.data(), kBlock, kSampleRate, 2, 0, &mixer.song_clock());
     AppendLeft(&left, out, kBlock);

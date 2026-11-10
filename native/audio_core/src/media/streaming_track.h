@@ -131,6 +131,9 @@ class StreamingTrack {
   bool at_end() const {
     return live_source_ == nullptr || live_source_->is_at_end();
   }
+  bool reading() const {
+    return live_source_ != nullptr && live_source_->is_running();
+  }
   size_t retired_sources() const {
     return published_.retired_size();
   }

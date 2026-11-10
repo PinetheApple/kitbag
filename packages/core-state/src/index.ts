@@ -316,7 +316,7 @@ export { useLoopScrub } from './stemPlayer/useLoopScrub.ts';
 export type { MixerHold } from './stemPlayer/mixerSession.ts';
 export { useFocusedMixerHold } from './stemPlayer/screenHold.ts';
 export { useSongPlayer } from './songPlayer/useSongPlayer.ts';
-export { songPlayerStore } from './songPlayer/store.ts';
+export { songPlayerStore, type SongPlayerStore } from './songPlayer/store.ts';
 export { configureSongPlayer } from './songPlayer/runtime.ts';
 export {
   bpmFact,

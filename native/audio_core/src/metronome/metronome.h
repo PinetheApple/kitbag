@@ -10,7 +10,9 @@
 #include "kitbag_metronome_poly_api.h"
 #include "media/song_clock.h"
 #include "metronome/click_voices.h"
+#include "metronome/count_in_schedule.h"
 #include "metronome/grid_state.h"
+#include "metronome/metronome_command.h"
 #include "metronome/metronome_types.h"
 #include "metronome/rig_click.h"
 #include "metronome/tempo_ramp.h"
@@ -68,6 +70,7 @@ class Metronome {
   // App-thread API. Non-blocking; drops commands if the ring is full.
   void Start();
   void StartAt(uint64_t start_frame);
+  bool CountInAt(uint64_t end_frame, double beat_frames, int beats_per_bar);
   void Stop();
   void Pause();
   void AnchorExternal(double song_pos_sec, uint64_t at_frame, double bpm);
@@ -148,41 +151,8 @@ class Metronome {
   }
 
  private:
-  enum class CommandType : uint8_t {
-    kStart,
-    kStartAt,
-    kStop,
-    kPause,
-    kAnchorExternal,
-    kSetTempo,
-    kSetBeats,
-    kSetSubdivision,
-    kSetSubdivisionAccents,
-    kSetAccent,
-    kSetPoly,
-    kSetPolyAccent,
-    kSetPolyAgainst,
-    kSetSounds,
-    kSetCountIn,
-    kPreviewSound,
-    kSetRamp,
-    kSetBarMute,
-    kSetVolume,
-    kSetLatencyOffset,
-    kSetFollowMixer,
-  };
-
-  struct Command {
-    CommandType type;
-    double value = 0.0;
-    double value_b = 0.0;
-    double value_c = 0.0;
-    double value_d = 0.0;
-    int32_t int_a = 0;
-    int32_t int_b = 0;
-    int32_t int_c = 0;
-    uint64_t frame = 0;  // engine-clock frame for kStartAt (see StartAt / §4.2)
-  };
+  using CommandType = MetronomeCommandType;
+  using Command = MetronomeCommand;
 
   // Per-block tempo derivatives, recomputed whenever bpm_ changes mid-block.
   struct BlockTempo {
@@ -206,6 +176,7 @@ class Metronome {
   bool RouteCommand(const Command& command);
   bool ApplyTransportCommand(const Command& command);
   void ReacquireGrid();
+  void DeferStart(const Command& command);
   void StashPendingAnchor(const Command& command);
   bool ApplyClockCommand(const Command& command);
   bool ApplyTrainerCommand(const Command& command);
@@ -233,13 +204,15 @@ class Metronome {
   void StopRun();
   void PauseRun();
   void ArmCountIn();
+  void ArmCountInAt(const Command& command);
+  bool ScheduledCountInLive() const;
   void CancelCountIn();
   double AdvanceCountIn(
       double position,
       const BlockTempo& tempo,
       uint32_t sample_rate
   );
-  void OnCountInBeat(int64_t beat, uint32_t sample_rate);
+  void OnCountInBeat(int32_t index, CountInVoice voice, uint32_t sample_rate);
 
   void TriggerPreset(int sound, bool accented, uint32_t sample_rate);
   void OnBeatBoundary(int beat_index, uint32_t sample_rate);
@@ -271,6 +244,12 @@ class Metronome {
   void BeginPendingStart(
       const GridView& view,
       uint64_t frame,
+      uint32_t sample_rate,
+      BlockTempo* tempo
+  );
+  void RenderPendingStart(
+      const GridView& view,
+      uint64_t now,
       uint32_t sample_rate,
       BlockTempo* tempo
   );
@@ -342,8 +321,7 @@ class Metronome {
   int normal_sound_ = kDefaultNormalSound;
   int accent_sound_ = kDefaultAccentSound;
   int count_in_bars_ = kCountInOff;
-  bool count_in_distinct_ = true;
-  int count_in_sound_ = kDefaultCountInSound;
+  CountInVoice count_in_voice_{.sound = kDefaultCountInSound};
   bool count_in_armed_ = true;
   int pending_preview_sound_ = -1;
   bool pending_preview_accented_ = false;
@@ -353,6 +331,7 @@ class Metronome {
   double beat_position_ = 0.0;  // fractional beats since start
   bool has_pending_start_ = false;
   uint64_t pending_start_frame_ = 0;
+  CountInSchedule count_in_at_;
   // Held until the render loop knows block_start_frame. The last drained wins.
   bool has_pending_anchor_ = false;
   double pending_anchor_song_pos_ = 0.0;

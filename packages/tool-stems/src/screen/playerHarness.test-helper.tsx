@@ -23,6 +23,7 @@ import {
 } from 'react-test-renderer';
 import { afterEach, vi } from 'vitest';
 
+import { takeAccessibilityEvents } from '../testing/reactNativeHosts.ts';
 import { runFrame } from '../testing/reanimatedDriver.ts';
 import { StemPlayerScreen } from './StemPlayerScreen.tsx';
 
@@ -87,6 +88,40 @@ export function fireLayout(
       nativeEvent: { layout },
     });
   });
+}
+
+export interface ReaderHiding {
+  readonly android: boolean;
+  readonly ios: boolean;
+}
+
+export const HIDDEN_FROM_READERS: ReaderHiding = { android: true, ios: true };
+export const SHOWN_TO_READERS: ReaderHiding = { android: false, ios: false };
+
+function readerHiding(node: ReactTestInstance): ReaderHiding {
+  const hosts: ReactTestInstance[] = [];
+  for (
+    let step: ReactTestInstance | null = node;
+    step !== null;
+    step = step.parent
+  )
+    if (typeof step.type === 'string') hosts.push(step);
+  return {
+    android: hosts.some(
+      (host) => host.props.importantForAccessibility === 'no-hide-descendants',
+    ),
+    ios: hosts.some((host) => host.props.accessibilityElementsHidden === true),
+  };
+}
+
+interface NodeMock {
+  readonly element: ReactElement<{ readonly children?: unknown }>;
+}
+
+function readerFocus(): unknown[] {
+  return takeAccessibilityEvents()
+    .filter((event) => event.type === 'focus')
+    .map((event) => (event.handle as NodeMock).element.props.children);
 }
 
 export function setHost(seconds: number, playing = 1): void {
@@ -168,11 +203,12 @@ export async function mountSurface(element: ReactElement) {
 
 export async function mountPlayer(change: RecordChange = SONG_DETAILS) {
   const fake = installFakeRuntime(change);
+  takeAccessibilityEvents();
   const commit = vi.fn();
   const scrolls = vi.fn();
   const onBack = vi.fn();
   const renderer = create(<></>, {
-    createNodeMock: () => ({ scrollTo: scrolls }),
+    createNodeMock: (element) => ({ scrollTo: scrolls, element }),
   });
   const tree = (focused: boolean) =>
     playerTree({ focused, onBack, onRender: commit });
@@ -194,6 +230,13 @@ export async function mountPlayer(change: RecordChange = SONG_DETAILS) {
     return found;
   };
   const texts = () => hosts().filter(isText).map(textOf);
+  const textNode = (text: string) =>
+    hosts().find((node) => isText(node) && textOf(node) === text);
+  const byText = (text: string): ReactTestInstance => {
+    const found = textNode(text);
+    if (found === undefined) throw new Error(`no text "${text}"`);
+    return found;
+  };
   const fire = async (label: string, handler: string) => {
     await act(async () => {
       (byLabel(label).props[handler] as () => unknown)();
@@ -208,10 +251,13 @@ export async function mountPlayer(change: RecordChange = SONG_DETAILS) {
     onBack,
     labelled,
     byLabel,
+    byText,
     texts,
     has: (text: string) => texts().includes(text),
-    textNode: (text: string) =>
-      hosts().find((node) => isText(node) && textOf(node) === text),
+    textNode,
+    readerFocus,
+    readerHiding: (label: string) => readerHiding(byLabel(label)),
+    textReaderHiding: (text: string) => readerHiding(byText(text)),
     press: (label: string) => fire(label, 'onPress'),
     hold: (label: string) => fire(label, 'onLongPress'),
     touchDown: (label: string) => fire(label, 'onPressIn'),
@@ -247,6 +293,7 @@ export const SAVE = 'Save';
 export const NOT_SAVED =
   'Timing not saved. Your taps are still here, try again.';
 export const DIALOG_TITLE = 'Reset to bundle timing?';
+export const RETIME_CONTROLS = [PAD, UNDO_TAP, LATER, RESET, SAVE, CLOSE];
 
 let tracked: Player | undefined;
 

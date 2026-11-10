@@ -41,6 +41,7 @@ export type AnalysisResult = Readonly<{
   beats: readonly Double[];
   downbeats: readonly Int32[];
   waveformRelativePath: string;
+  durationSec: Double;
 }>;
 
 export type StemBundleCheck = Readonly<{
@@ -140,6 +141,10 @@ export type LibraryConstants = Readonly<{
   failureUnsupported: string;
   failureInterrupted: string;
   failureInternal: string;
+  supportedAudioFamilies: readonly string[];
+  supportedAudioExtensions: readonly string[];
+  supportedAudioMimeTypes: readonly string[];
+  unsupportedAudioExtensions: readonly string[];
 }>;
 
 export interface Spec extends TurboModule {

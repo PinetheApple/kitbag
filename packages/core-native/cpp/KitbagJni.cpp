@@ -191,6 +191,21 @@ Java_com_kitbag_corenative_KitbagCommandsModule_nativeMixerPlay(JNIEnv*, jobject
   kitbag::commandMixerPlay();
 }
 
+JNIEXPORT jint JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeSongCountIn(JNIEnv*, jobject, jdouble endFrame, jdouble beatFrames, jint beatsPerBar) {
+  return static_cast<jint>(kitbag::commandSongCountIn(endFrame, beatFrames, beatsPerBar));
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeSongPause(JNIEnv*, jobject) {
+  kitbag::commandSongPause();
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeSongStop(JNIEnv*, jobject) {
+  kitbag::commandSongStop();
+}
+
 JNIEXPORT void JNICALL
 Java_com_kitbag_corenative_KitbagCommandsModule_nativeMixerPause(JNIEnv*, jobject) {
   kitbag::commandMixerPause();
@@ -325,9 +340,10 @@ Java_com_kitbag_corenative_library_SongAnalyzer_nativeAnalyzeSong(JNIEnv* env, j
   float bpm = 0.0F;
   int32_t beatCount = 0;
   int32_t downbeatCount = 0;
+  double durationSec = 0.0;
   const kb_result result =
       kb_analyze_song(pathUtf.get(), &bpm, beats.data(), KB_MAX_GRID_BEATS, &beatCount,
-                      downbeats.data(), &downbeatCount, dirUtf.get());
+                      downbeats.data(), &downbeatCount, &durationSec, dirUtf.get());
   if (result == KB_ERROR_INVALID_ARGUMENT) {
     ThrowNoArgs(env, "com/kitbag/corenative/library/UnsupportedAudioException");
     return nullptr;
@@ -350,9 +366,10 @@ Java_com_kitbag_corenative_library_SongAnalyzer_nativeAnalyzeSong(JNIEnv* env, j
 
   jclass analysisClass = env->FindClass("com/kitbag/corenative/library/NativeSongAnalysis");
   if (analysisClass == nullptr) return nullptr;
-  jmethodID ctor = env->GetMethodID(analysisClass, "<init>", "(F[F[I)V");
+  jmethodID ctor = env->GetMethodID(analysisClass, "<init>", "(F[F[ID)V");
   if (ctor == nullptr) return nullptr;
-  return env->NewObject(analysisClass, ctor, static_cast<jfloat>(bpm), beatsOut, downbeatsOut);
+  return env->NewObject(analysisClass, ctor, static_cast<jfloat>(bpm), beatsOut, downbeatsOut,
+                        static_cast<jdouble>(durationSec));
 }
 
 JNIEXPORT jstring JNICALL

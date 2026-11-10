@@ -1,5 +1,5 @@
 // Write path only; 60fps reads go through the JSI HostObject (SPEC §13.3).
-// Frame arguments are uint64 engine frames as doubles, exact below 2^53.
+// Frame arguments are uint64 engine frames as doubles, exact up to KB_MAX_EXACT_FRAME.
 
 import type { TurboModule } from 'react-native';
 import { TurboModuleRegistry } from 'react-native';
@@ -119,6 +119,14 @@ export interface Spec extends TurboModule {
   mixerPause(): void;
   mixerStop(): void;
   mixerSeek(frame: Double): void;
+  /** Seek first: it starts from the current head. */
+  songCountIn(
+    endFrame: Double,
+    beatFrames: Double,
+    beatsPerBar: Int32,
+  ): Promise<number>;
+  songPause(): void;
+  songStop(): void;
   mixerSetLoop(startFrame: Double, endFrame: Double): Promise<number>;
   mixerClearLoop(): Promise<number>;
   mixerSetRate(rate: Double): Promise<number>;

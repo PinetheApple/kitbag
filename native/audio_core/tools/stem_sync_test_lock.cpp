@@ -17,12 +17,7 @@ namespace {
 
 using kitbag_test::Check;
 
-// Well under the stretch latency this guards (over 60 ms); what is left is the
-// vocoder's smear of a pulse's centre.
-constexpr double kMaxLockMs = 1.5;
 constexpr double kMaxDriftMs = 0.2;
-constexpr double kMsPerSecond = 1000.0;
-constexpr int64_t kSongWindowFrames = 9000;
 constexpr int kTailBlocks = 2;
 
 struct LockCase {
@@ -39,20 +34,6 @@ constexpr int32_t kFiveKeys[] = {-2, 3, 1, 4, -5};
 constexpr double kFiveKeyRates[] = {0.75, kitbag::kUnityRate};
 constexpr LockCase kCases[] =
     {{0.5, 0}, {0.75, 0}, {kitbag::kUnityRate, 3}, {0.75, -2}};
-
-double PulseCentre(const Take& take, int64_t around, int64_t half_width) {
-  double weight = 0.0;
-  double moment = 0.0;
-  const auto size = static_cast<int64_t>(take.left.size());
-  const int64_t from = std::max<int64_t>(around - half_width, 0);
-  for (int64_t k = from; k < std::min(around + half_width, size); ++k) {
-    const auto i = static_cast<size_t>(k);
-    const double stem = take.left[i] - take.right[i];
-    weight += stem * stem;
-    moment += stem * stem * static_cast<double>(k);
-  }
-  return weight > 0.0 ? moment / weight : -1.0;
-}
 
 Take PlaySong(kb_engine* engine, double rate) {
   Take take;

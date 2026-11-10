@@ -26,6 +26,7 @@ import com.kitbag.corenative.library.NativeWaveform
 import com.kitbag.corenative.library.StemBundleBridge
 import com.kitbag.corenative.library.StemBundleRefusedException
 import com.kitbag.corenative.library.StorageUsage
+import com.kitbag.corenative.library.SupportedAudio
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.ExecutorService
@@ -201,6 +202,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       putArray("beats", Arguments.createArray().apply { beats.forEach { pushDouble(it.toDouble()) } })
       putArray("downbeats", Arguments.createArray().apply { downbeats.forEach { pushInt(it) } })
       putString("waveformRelativePath", waveformRelativePath)
+      putDouble("durationSec", durationSec)
     }
 
   override fun deleteLibraryFile(relativePath: String, promise: Promise) {
@@ -337,6 +339,10 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       "failureUnsupported" to AnalysisFailure.UNSUPPORTED,
       "failureInterrupted" to AnalysisFailure.INTERRUPTED,
       "failureInternal" to AnalysisFailure.INTERNAL,
+      "supportedAudioFamilies" to SupportedAudio.FAMILY_NAMES,
+      "supportedAudioExtensions" to SupportedAudio.EXTENSIONS,
+      "supportedAudioMimeTypes" to SupportedAudio.MIME_TYPES,
+      "unsupportedAudioExtensions" to SupportedAudio.UNSUPPORTED_EXTENSIONS,
     ) + StemBundleBridge.CONSTANTS
 
   companion object {

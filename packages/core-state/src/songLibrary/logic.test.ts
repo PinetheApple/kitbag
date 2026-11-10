@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   analysisFailure,
   audioFormat,
+  checkAudioFormat,
   filterRows,
   isStemArchive,
   songBadge,
@@ -146,6 +147,53 @@ describe('import helpers', () => {
     expect(isStemArchive({ name: 'a.mp3', mimeType: 'audio/mpeg' })).toBe(
       false,
     );
+  });
+
+  it.each([
+    ['Everlong.MP3', 'audio/mpeg'],
+    ['take.wav', ''],
+    ['take.flac', 'application/octet-stream'],
+    ['take.AIF', ''],
+    ['take.aifc', 'audio/x-aifc'],
+    ['take.w64', 'application/octet-stream'],
+    ['take.rf64', ''],
+    ['Track 01', 'audio/x-aiff'],
+    ['Track 01', 'audio/flac'],
+    ['Track 01. Intro', 'audio/mpeg'],
+    ['take.mp3', 'application/octet-stream'],
+    ['Mr.Brightside', 'audio/mpeg'],
+    ['Live Vol.2', 'audio/wav'],
+    ['song.final', 'audio/flac'],
+    ['Take.v3', 'audio/x-aiff'],
+    ['a.MP3 ', ''],
+    ['Track 01', 'audio/MPEG; charset=binary'],
+  ] as const)('admits %s (%s), which the core can open', (name, mimeType) => {
+    expect(checkAudioFormat({ name, mimeType }, SHARED_CODES)).toEqual({
+      supported: true,
+    });
+  });
+
+  it.each([
+    ['Everlong.m4a', 'audio/mp4', 'm4a'],
+    ['Mislabelled.m4a', 'audio/mpeg', 'm4a'],
+    ['x.m4a', 'audio/mpeg', 'm4a'],
+    ['x.ogg', 'application/octet-stream', 'ogg'],
+    ['x.tar.m4a', 'audio/mpeg', 'm4a'],
+    ['song.final', 'application/octet-stream', ''],
+    ['Everlong.AAC', 'audio/aac', 'aac'],
+    ['Everlong.ogg', 'audio/ogg', 'ogg'],
+    ['Everlong.opus', '', 'opus'],
+    ['Everlong', 'audio/x-m4a', 'm4a'],
+    ['Track 01. Intro', 'audio/ogg', 'ogg'],
+    ['Track 01', 'audio/ogg; codecs=opus', 'ogg'],
+    ['Track 01', 'audio/x-aac ; rate=44100', 'aac'],
+    ['Everlong', 'application/octet-stream', ''],
+    ['Everlong', '', ''],
+  ] as const)('refuses %s (%s) and names it %j', (name, mimeType, format) => {
+    expect(checkAudioFormat({ name, mimeType }, SHARED_CODES)).toEqual({
+      supported: false,
+      format,
+    });
   });
 
   it('reads the format from the stored file name', () => {

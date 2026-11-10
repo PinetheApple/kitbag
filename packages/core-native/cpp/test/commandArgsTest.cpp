@@ -1,6 +1,8 @@
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <limits>
+#include <string>
 
 #include "KitbagCommands.h"
 #include "KitbagEngine.h"
@@ -23,6 +25,18 @@ constexpr double kInfinity = std::numeric_limits<double>::infinity();
 constexpr double kBeyondInt32 = 1e10;
 constexpr int64_t kLongTrackFrames = (int64_t{1} << 40) + 1;
 constexpr int32_t kTrackKey = -5;
+constexpr double kEndFrame = 152965.0;
+constexpr double kBeatFrames = 21209.9;
+constexpr int32_t kBeatsPerBar = 3;
+const double kBeyondExactFrame =
+    std::nextafter(static_cast<double>(KB_MAX_EXACT_FRAME), kInfinity);
+
+std::string songCalls;
+kb_result countResult = KB_OK;
+kb_result playResult = KB_OK;
+kb_result startResult = KB_OK;
+uint64_t countedEnd = 0;
+uint64_t playedFrom = 0;
 
 void fail(const char* what, double track, double value) {
   std::fprintf(stderr, "%s: track %g, value %g\n", what, track, value);
@@ -73,6 +87,44 @@ void expectKeyRead(double track, int32_t wantTrack) {
   if (key != kTrackKey) fail("key not passed through", track, key);
 }
 
+void expectSongCountIn(double endFrame, int32_t want, const std::string& wantCalls) {
+  songCalls.clear();
+  const int32_t got = kitbag::commandSongCountIn(endFrame, kBeatFrames, kBeatsPerBar);
+  if (got != want || songCalls != wantCalls) {
+    std::fprintf(stderr, "song count-in %g: %d, calls '%s'\n", endFrame, got, songCalls.c_str());
+    ++failures;
+  }
+}
+
+void expectSongCountInComposed() {
+  expectSongCountIn(kEndFrame, KB_OK, "count play start ");
+  if (countedEnd != playedFrom || static_cast<double>(playedFrom) != kEndFrame) {
+    fail("song count-in split its end frame", kEndFrame, static_cast<double>(playedFrom));
+  }
+  expectSongCountIn(kNaN, KB_ERROR_INVALID_ARGUMENT, "");
+  expectSongCountIn(-1, KB_ERROR_INVALID_ARGUMENT, "");
+  expectSongCountIn(kEndFrame + 0.5, KB_ERROR_INVALID_ARGUMENT, "");
+  expectSongCountIn(kBeyondExactFrame, KB_ERROR_INVALID_ARGUMENT, "");
+  playResult = KB_ERROR_BUSY;
+  expectSongCountIn(kEndFrame, KB_ERROR_BUSY, "count play stop ");
+  playResult = KB_OK;
+  countResult = KB_ERROR_BUSY;
+  expectSongCountIn(kEndFrame, KB_ERROR_BUSY, "count ");
+  countResult = KB_OK;
+  startResult = KB_ERROR_DEVICE_START_FAILED;
+  expectSongCountIn(kEndFrame, KB_ERROR_DEVICE_START_FAILED, "count play start stop pause ");
+  startResult = KB_OK;
+}
+
+void expectSongTransport(void (*command)(), const char* what, const std::string& wantCalls) {
+  songCalls.clear();
+  command();
+  if (songCalls != wantCalls) {
+    std::fprintf(stderr, "%s: calls '%s'\n", what, songCalls.c_str());
+    ++failures;
+  }
+}
+
 }  // namespace
 
 namespace kitbag {
@@ -98,6 +150,28 @@ extern "C" int64_t kb_mixer_track_frames(const kb_engine*, int32_t track) {
   return kLongTrackFrames;
 }
 
+extern "C" kb_result kb_metronome_count_in_at(kb_engine*, uint64_t end, double, int32_t) {
+  songCalls += "count ";
+  countedEnd = end;
+  return countResult;
+}
+
+extern "C" kb_result kb_mixer_play_at(kb_engine*, uint64_t start) {
+  songCalls += "play ";
+  playedFrom = start;
+  return playResult;
+}
+
+extern "C" void kb_metronome_stop(kb_engine*) { songCalls += "stop "; }
+extern "C" void kb_metronome_pause(kb_engine*) { songCalls += "click-pause "; }
+extern "C" void kb_mixer_pause(kb_engine*) { songCalls += "pause "; }
+extern "C" void kb_mixer_stop(kb_engine*) { songCalls += "mixer-stop "; }
+
+extern "C" kb_result kb_engine_start(kb_engine*) {
+  songCalls += "start ";
+  return startResult;
+}
+
 int main() {
   expectPitchRefused(1, 2.7);
   expectPitchRefused(1, kNaN);
@@ -121,6 +195,10 @@ int main() {
   expectKeyRefused(1.5);
   expectKeyRefused(kInfinity);
   expectKeyRead(2, 2);
+
+  expectSongCountInComposed();
+  expectSongTransport(kitbag::commandSongPause, "song pause", "click-pause pause ");
+  expectSongTransport(kitbag::commandSongStop, "song stop", "stop mixer-stop ");
 
   return failures == 0 ? 0 : 1;
 }

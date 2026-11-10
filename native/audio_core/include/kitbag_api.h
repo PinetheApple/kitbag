@@ -39,6 +39,10 @@ KB_EXPORT uint32_t kb_engine_sample_rate(const kb_engine* engine);
 /* Monotonic frames rendered since start; the master clock. */
 KB_EXPORT uint64_t kb_engine_frames_rendered(const kb_engine* engine);
 
+/* 2^53: frame arguments are exact up to here (~5,900 years at 48kHz), so they
+ * may be passed as JS doubles. No BigInt. */
+#define KB_MAX_EXACT_FRAME 9007199254740992ULL
+
 #include "kitbag_engine_clock_api.h"
 #include "kitbag_engine_hold_api.h"
 
@@ -84,8 +88,7 @@ KB_EXPORT void kb_metronome_start(kb_engine* engine);
 /* Sample-accurate start: the click begins on engine frame start_frame
  * (cf. kb_engine_frames_rendered), not when this call arrives. A frame already
  * past when drained starts on the next sample. Only takes effect while stopped.
- * start_frame crosses as a uint64_t but is exact to 2^53 frames — ~5,900 years
- * at 48kHz — so it may be passed as a JS double. No BigInt. */
+ * start_frame is exact up to KB_MAX_EXACT_FRAME. */
 KB_EXPORT void kb_metronome_start_at(kb_engine* engine, uint64_t start_frame);
 KB_EXPORT void kb_metronome_stop(kb_engine* engine);
 /* Stops like kb_metronome_stop but the next start plays no count-in. */
@@ -125,7 +128,8 @@ KB_EXPORT void kb_metronome_set_sounds(
     int32_t accent_sound
 );
 /* Ignored unless bars is in Metronome::kCountInBarChoices; distinct != 0 uses
- * `sound`. Replays after stop, not pause; skipped under a grid or anchor. */
+ * `sound`. Replays after stop, not pause; skipped under a grid or anchor, which
+ * count in with kb_metronome_count_in_at (kitbag_song_start_api.h). */
 KB_EXPORT void kb_metronome_set_count_in(
     kb_engine* engine,
     int32_t bars,
@@ -266,6 +270,7 @@ KB_EXPORT int32_t kb_mixer_active_track_count(const kb_engine* engine);
 KB_EXPORT int64_t kb_mixer_track_frames(const kb_engine* engine, int32_t track);
 
 #include "kitbag_mixer_stretch_api.h"
+#include "kitbag_song_start_api.h"
 
 /* --- Player (single-source transport) ----------------------------------- */
 
@@ -285,9 +290,8 @@ KB_EXPORT void kb_player_play(kb_engine* engine);
  * There is no stop-to-zero: rewind with kb_player_seek(engine, 0). */
 KB_EXPORT void kb_player_pause(kb_engine* engine);
 KB_EXPORT void kb_player_seek(kb_engine* engine, int64_t frame);
-/* Playback position and total length in engine-rate frames. Both cross as
- * int64_t but are exact to 2^53 frames — ~5,900 years at 48kHz — so JSI may read
- * them as a JS double. No BigInt. */
+/* Playback position and total length in engine-rate frames, exact up to
+ * KB_MAX_EXACT_FRAME. */
 KB_EXPORT int64_t kb_player_position(const kb_engine* engine);
 KB_EXPORT int64_t kb_player_frames(const kb_engine* engine);
 KB_EXPORT int32_t kb_player_is_playing(const kb_engine* engine);
@@ -310,13 +314,15 @@ KB_EXPORT int32_t kb_player_is_playing(const kb_engine* engine);
  *                    receives the indices (into the beat list) that are bar-ones;
  *                    each is < *beat_count_out
  *   downbeat_count_out: filled with number of downbeat indices written
+ *   duration_sec_out: filled with the decoded length in seconds: frames
+ *                    decoded over the file's sample rate, never a header estimate
  *   waveform_dir:    directory to write the waveform peaks sidecar ("KWAV"
  *                    binary), or NULL to skip waveform generation
  *
  * Returns KB_OK on success (even if no beats found; check *beat_count_out).
  * Returns KB_ERROR_INVALID_ARGUMENT for a null path/output pointer, a file that
- * will not open, or decoded PCM that is unusable: zero channels, a frame count
- * above INT_MAX, or any non-finite (NaN/inf) sample.
+ * will not open, or decoded PCM that is unusable: zero channels, a zero sample
+ * rate, a frame count above INT_MAX, or any non-finite (NaN/inf) sample.
  * Returns KB_ERROR_INTERNAL if analysis runs out of memory, or the file cannot
  * be rewound or decodes to a different length on the second pass.
  * On any error the outputs read 0 and no sidecar is written.
@@ -329,6 +335,7 @@ KB_EXPORT kb_result kb_analyze_song(
     int32_t* beat_count_out,
     int32_t* downbeat_indices_out,
     int32_t* downbeat_count_out,
+    double* duration_sec_out,
     const char* waveform_dir
 );
 

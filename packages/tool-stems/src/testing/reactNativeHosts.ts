@@ -61,11 +61,25 @@ export const AppState = {
   addEventListener: () => noSubscription,
 };
 
+export interface AccessibilityEvent {
+  readonly handle: unknown;
+  readonly type: string;
+}
+
+const accessibilityEvents: AccessibilityEvent[] = [];
+
 export const AccessibilityInfo = {
   addEventListener: () => noSubscription,
   isReduceMotionEnabled: () => Promise.resolve(false),
   isScreenReaderEnabled: () => Promise.resolve(false),
+  sendAccessibilityEvent: (handle: unknown, type: string) => {
+    accessibilityEvents.push({ handle, type });
+  },
 };
+
+export function takeAccessibilityEvents(): AccessibilityEvent[] {
+  return accessibilityEvents.splice(0);
+}
 
 export const TurboModuleRegistry = {
   getEnforcing: (): never => {

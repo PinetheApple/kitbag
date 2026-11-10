@@ -20,11 +20,10 @@ void Mixer::ApplyCommand(const Command& command) {
       RecomputeAnySolo();
       return;
     case CommandType::kPlay:
-      playing_.store(true, std::memory_order_relaxed);
-      return;
+    case CommandType::kPlayAt:
     case CommandType::kStop:
     case CommandType::kPause:
-      playing_.store(false, std::memory_order_relaxed);
+      ApplyTransportCommand(command);
       return;
     case CommandType::kSetMasterGain:
       master_gain_.store(command.fvalue, std::memory_order_relaxed);
@@ -227,7 +226,22 @@ void Mixer::AdvanceTransport(uint32_t frame_count) {
   );
 }
 
-void Mixer::Process(float* output, uint32_t frame_count) {
+void Mixer::PlayBlock(float* output, uint32_t frame_count) {
+  const bool any_solo = any_solo_.load(std::memory_order_relaxed);
+  if (engaged_.load(std::memory_order_relaxed)) {
+    StretchBlock(output, frame_count, any_solo);
+    return;
+  }
+  if (handover_pending_ && HandOverBlock(output, frame_count, any_solo)) return;
+  MixAllTracks(output, frame_count, any_solo);
+  AdvanceTransport(frame_count);
+}
+
+void Mixer::Process(
+    float* output,
+    uint32_t frame_count,
+    uint64_t block_start_frame
+) {
   // Memset, not accumulate: Engine::Render relies on this clearing whatever it
   // wrote before the call.
   std::memset(output, 0, static_cast<size_t>(frame_count) * 2 * sizeof(float));
@@ -241,18 +255,15 @@ void Mixer::Process(float* output, uint32_t frame_count) {
   // under the snapshot means its successor's plan is already readable.
   if (AdoptPlan()) SnapshotBuses();
   song_clock_.playing = false;
+  song_clock_.start_index = 0;
   // Scratch is sized to kMaxBlockFrames at setup; a wider block cannot be
   // drained without allocating, which the callback must never do.
   if (frame_count > StreamingTrack::kMaxBlockFrames) return;
-  if (!playing_.load(std::memory_order_relaxed) || HoldForBusSwitch()) return;
-  const bool any_solo = any_solo_.load(std::memory_order_relaxed);
-  if (engaged_.load(std::memory_order_relaxed)) {
-    StretchBlock(output, frame_count, any_solo);
-    return;
-  }
-  if (handover_pending_ && HandOverBlock(output, frame_count, any_solo)) return;
-  MixAllTracks(output, frame_count, any_solo);
-  AdvanceTransport(frame_count);
+  if (HoldForBusSwitch()) return;
+  const uint32_t lead = StartPendingPlay(block_start_frame, frame_count);
+  if (!playing_.load(std::memory_order_relaxed)) return;
+  PlayBlock(output + static_cast<size_t>(lead) * 2, frame_count - lead);
+  song_clock_.start_index = lead;
 }
 
 }  // namespace kitbag

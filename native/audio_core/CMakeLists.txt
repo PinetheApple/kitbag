@@ -53,6 +53,7 @@ add_library(kitbag_core SHARED
   src/metronome/metronome_pattern.cpp
   src/metronome/metronome_render.cpp
   src/metronome/metronome_trainer_mirrors.cpp
+  src/metronome/metronome_transport.cpp
   src/metronome/rig_click.cpp
   src/metronome/tempo_ramp.cpp
   src/media/miniaudio_impl.c
@@ -65,6 +66,7 @@ add_library(kitbag_core SHARED
   src/mixer/mixer_stretch.cpp
   src/mixer/mixer_prime.cpp
   src/mixer/mixer_handover.cpp
+  src/mixer/mixer_play_at.cpp
   src/player/player.cpp
   src/player/player_render.cpp
   src/stretch/time_stretch.cpp
@@ -152,6 +154,7 @@ if(KITBAG_BUILD_TOOLS)
     src/metronome/metronome_pattern.cpp
     src/metronome/metronome_render.cpp
     src/metronome/metronome_trainer_mirrors.cpp
+    src/metronome/metronome_transport.cpp
     src/metronome/rig_click.cpp
     src/metronome/tempo_ramp.cpp)
 
@@ -178,6 +181,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_rig_click_isolation.cpp
     tools/metronome/metronome_test_count_in.cpp
     tools/metronome/metronome_test_count_in_long.cpp
+    tools/metronome/metronome_test_count_in_at.cpp
     tools/metronome/metronome_test_ramp.cpp
     tools/metronome/metronome_test_ramp_live.cpp
     tools/metronome/metronome_test_ramp_subdivision.cpp
@@ -222,7 +226,8 @@ if(KITBAG_BUILD_TOOLS)
                                   tools/stem_sync_test_rate.cpp
                                   tools/stem_sync_test_lock.cpp
                                   tools/stem_sync_test_reanchor.cpp
-                                  tools/stem_sync_test_bars.cpp)
+                                  tools/stem_sync_test_bars.cpp
+                                  tools/stem_sync_test_count_in.cpp)
   target_include_directories(stem_sync_verify PRIVATE src tools tools/media)
   target_link_libraries(stem_sync_verify PRIVATE kitbag_core)
 
@@ -259,6 +264,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/mixer/mixer_test_load_refusal.cpp
     tools/mixer/mixer_test_lag_carry.cpp
     tools/mixer/mixer_test_retire.cpp
+    tools/mixer/mixer_test_play_at.cpp
     tools/mixer/mixer_test_unity.cpp
     ${KITBAG_METRONOME_SOURCES}
     src/media/streaming_track.cpp
@@ -270,6 +276,7 @@ if(KITBAG_BUILD_TOOLS)
     src/mixer/mixer_stretch.cpp
     src/mixer/mixer_prime.cpp
     src/mixer/mixer_handover.cpp
+    src/mixer/mixer_play_at.cpp
     src/stretch/time_stretch.cpp
     src/media/audio_source.cpp
     src/media/file_audio_reader.cpp
@@ -317,6 +324,7 @@ if(KITBAG_BUILD_TOOLS)
     src/mixer/mixer_stretch.cpp
     src/mixer/mixer_prime.cpp
     src/mixer/mixer_handover.cpp
+    src/mixer/mixer_play_at.cpp
     src/stretch/time_stretch.cpp
     src/player/player.cpp
     src/player/player_render.cpp
@@ -377,6 +385,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/analysis/analyze_test_equivalence.cpp
     tools/analysis/analyze_test_write_peaks.cpp
     tools/analysis/analyze_test_long_grid.cpp
+    tools/analysis/analyze_test_length.cpp
     src/api/api_analysis.cpp
     src/analysis/song_analysis.cpp
     src/analysis/downbeat.cpp
@@ -485,6 +494,7 @@ if(KITBAG_BUILD_TOOLS)
     src/mixer/mixer_stretch.cpp
     src/mixer/mixer_prime.cpp
     src/mixer/mixer_handover.cpp
+    src/mixer/mixer_play_at.cpp
     src/stretch/time_stretch.cpp
     src/media/audio_source.cpp
     src/media/file_audio_reader.cpp
