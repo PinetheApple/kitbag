@@ -1,47 +1,28 @@
-import { metronome, size, Snackbar, space } from '@kitbag/core-design';
+import { Snackbar } from '@kitbag/core-design';
 import { useLibrary } from '@kitbag/core-state';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AppState } from 'react-native';
+import { useCallback } from 'react';
 
-import { unsavedSnackbarView } from '../logic/unsavedSnackbar.ts';
-
-const ABOVE_TRANSPORT =
-  metronome.belowTransport + size.playButtonLarge + space.sectionGap;
-
-function useVisibleSince(): number {
-  const [visibleSince, setVisibleSince] = useState(Date.now);
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') setVisibleSince(Date.now());
-    });
-    return () => {
-      subscription.remove();
-    };
-  }, []);
-  return visibleSince;
-}
+import { ABOVE_TRANSPORT } from './snackbarPlacement.ts';
+import { useUnsavedSnackbarView } from './useUnsavedSnackbarView.ts';
+import { useVisibleSince } from './useVisibleSince.ts';
 
 export function UnsavedSnackbar({
   bottomInset,
 }: {
   readonly bottomInset: number;
 }) {
-  const discarded = useLibrary((s) => s.discarded);
-  const presets = useLibrary((s) => s.presets);
+  const discardedAt = useLibrary((s) => s.discarded?.at);
   const undo = useLibrary((s) => s.undoDiscard);
   const dismiss = useLibrary((s) => s.dismissDiscarded);
   const visibleSince = useVisibleSince();
-  const view = useMemo(
-    () => unsavedSnackbarView(discarded, presets, visibleSince),
-    [discarded, presets, visibleSince],
-  );
+  const view = useUnsavedSnackbarView(visibleSince);
   const handleUndo = useCallback(() => {
     void undo();
   }, [undo]);
   if (view === undefined) return null;
   return (
     <Snackbar
-      key={`${String(discarded?.at)}-${String(visibleSince)}`}
+      key={`${String(discardedAt)}-${String(visibleSince)}`}
       message={view.message}
       actionLabel="Undo"
       bottom={bottomInset + ABOVE_TRANSPORT}
