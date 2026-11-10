@@ -36,12 +36,13 @@ constexpr float kSecondsPerMinute = 60.0f;
 
 // A backtrack shorter than this is noise, not a beat sequence.
 constexpr size_t kMinBacktrackedBeats = 3;
-// A peak at a whole fraction of the winner's lag this strong relative to it
-// means the winner was a slower multiple of the true pulse.
+// A peak at half the winner's lag this strong relative to it means the winner
+// was twice the true period. Halving only: the user's ÷2/×2 cannot undo ÷3.
 constexpr float kPulseFoldRatio = 0.5f;
-// Every multiple that fits the BPM window, so equal harmonic peaks fold to the
-// fastest that fits.
-constexpr int kMaxPulseFold = static_cast<int>(kMaxTrackedBpm / kMinTrackedBpm);
+constexpr int kPulseFold = 2;
+// A longer lag must clearly beat the best, so equal harmonic peaks keep the
+// shortest.
+constexpr float kLongerLagMargin = 1.01f;
 constexpr int kPeakMargin = 1;
 
 void NormalizeByPeak(std::vector<float>& onset) {
@@ -96,20 +97,16 @@ bool IsPeak(const std::vector<float>& acf, int lag) {
   return acf[lag] > acf[lag - 1] && acf[lag] > acf[lag + 1];
 }
 
-int FoldToFastestPulse(
+int FoldToFasterPulse(
     const std::vector<float>& acf,
     int best_lag,
     int min_lag
 ) {
-  for (int fold = kMaxPulseFold; fold > 1; --fold) {
-    const int below = best_lag / fold;
-    const int lag = acf[below + 1] > acf[below] ? below + 1 : below;
-    if (lag >= min_lag && IsPeak(acf, lag) &&
-        acf[lag] > kPulseFoldRatio * acf[best_lag]) {
-      return lag;
-    }
-  }
-  return best_lag;
+  const int below = best_lag / kPulseFold;
+  const int lag = acf[below + 1] > acf[below] ? below + 1 : below;
+  const bool folds = lag >= min_lag && IsPeak(acf, lag) &&
+                     acf[lag] > kPulseFoldRatio * acf[best_lag];
+  return folds ? lag : best_lag;
 }
 
 // Strongest local maximum, so a broad shoulder does not outrank a true peak.
@@ -117,13 +114,13 @@ int BestPeakLag(const std::vector<float>& acf, int min_lag, int max_lag) {
   float max_acf = 0.0f;
   int best_lag = 0;
   for (int lag = min_lag; lag < max_lag; ++lag) {
-    if (IsPeak(acf, lag) && acf[lag] > max_acf) {
+    if (IsPeak(acf, lag) && acf[lag] > kLongerLagMargin * max_acf) {
       max_acf = acf[lag];
       best_lag = lag;
     }
   }
   if (best_lag == 0) return 0;
-  return FoldToFastestPulse(acf, best_lag, min_lag);
+  return FoldToFasterPulse(acf, best_lag, min_lag);
 }
 
 struct DpTrellis {
