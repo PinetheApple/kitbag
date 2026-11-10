@@ -40,6 +40,7 @@ int main(int argc, char** argv) {
   float bpm = 0.0f;
   int32_t beat_count = 0;
   int32_t downbeat_count = 0;
+  double duration_sec = 0.0;
   const kb_result status = kb_analyze_song(
       argv[1],
       &bpm,
@@ -48,9 +49,14 @@ int main(int argc, char** argv) {
       &beat_count,
       downbeats.data(),
       &downbeat_count,
+      &duration_sec,
       argc > 2 ? argv[2] : nullptr
   );
-  std::printf("status %d\n", static_cast<int>(status));
+  std::printf(
+      "status %d\nduration %.9f\n",
+      static_cast<int>(status),
+      duration_sec
+  );
   PrintResult(bpm, beats, beat_count, downbeats, downbeat_count);
   std::fprintf(stderr, "peak_rss_kib %ld\n", PeakRssKib());
   return status == KB_OK ? 0 : 1;

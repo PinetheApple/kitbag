@@ -438,3 +438,14 @@ describe('readSong', () => {
     expect(await library.readSong(404)).toBeUndefined();
   });
 });
+
+describe('correcting a song length', () => {
+  it('stores the new length on that song only', async () => {
+    const { library } = setup();
+    const kept = await library.insertSong(song('Kept'));
+    const fixed = await library.insertSong(song('Fixed'));
+    await library.updateDuration(fixed, 287.25);
+    expect((await library.readSong(fixed))?.durationSec).toBe(287.25);
+    expect((await library.readSong(kept))?.durationSec).toBe(250.5);
+  });
+});

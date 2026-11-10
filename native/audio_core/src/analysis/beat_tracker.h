@@ -10,6 +10,7 @@ struct BeatResult {
   std::vector<float> beat_times;  // seconds
   std::vector<int>
       downbeat_indices;  // indices into beat_times that are bar-ones
+  double duration_sec = 0.0;
 };
 
 /// Beat tracker using spectral flux onset detection + autocorrelation

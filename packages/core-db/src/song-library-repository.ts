@@ -307,6 +307,10 @@ async function readSong(
   };
 }
 
+async function updateDuration(db: Database, id: number, durationSec: number) {
+  await db.update(songs).set({ duration: durationSec }).where(eq(songs.id, id));
+}
+
 async function renameSong(db: Database, id: number, title: string) {
   await db.update(songs).set({ title }).where(eq(songs.id, id));
 }
@@ -338,6 +342,8 @@ export function createSongLibraryRepository({
     listStemSetFolders: () => serial(() => listStemSetFolders(db)),
     listSongFiles: () => serial(() => listSongFiles(db)),
     listStemFiles: () => serial(() => listStemFiles(db)),
+    updateDuration: (id: number, durationSec: number) =>
+      serial(() => updateDuration(db, id, durationSec)),
     renameSong: (id: number, title: string) =>
       serial(() => renameSong(db, id, title)),
     renameStemSet: (id: number, title: string) =>

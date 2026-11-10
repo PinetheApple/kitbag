@@ -25,6 +25,8 @@ const records: SongLibraryRecords = {
   listStemSetFolders: () => library().listStemSetFolders(),
   renameSong: (id, title) => library().renameSong(id, title),
   renameStemSet: (id, title) => library().renameStemSet(id, title),
+  updateDuration: (id, durationSec) =>
+    library().updateDuration(id, durationSec),
 };
 
 // Resolved per call: getKitbagLibrary throws in a build without the module.

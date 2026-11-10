@@ -24,7 +24,7 @@ import { detailTabLabel } from '../logic/detailView.ts';
 import { DetailPane } from './DetailPane.tsx';
 import { LoopUndoSnackbar } from './LoopUndoSnackbar.tsx';
 import { PlayerMenu } from './PlayerMenu.tsx';
-import { ResetDialog, RetimeBar } from './RetimeBar.tsx';
+import { LeaveDialog, ResetDialog, RetimeBar } from './RetimeBar.tsx';
 import { RetimeBody } from './RetimeMode.tsx';
 import { StemAppBar } from './StemAppBar.tsx';
 import { Scrubber } from './Scrubber.tsx';
@@ -44,6 +44,7 @@ export interface StemPlayerScreenProps {
 const MIX = 'mix';
 const DETAILS = 'details';
 type Tab = typeof MIX | typeof DETAILS;
+type RetimeAsk = 'reset' | 'leave';
 
 const useStyles = createThemedStyles((theme) => ({
   screen: { flex: 1, backgroundColor: theme.color.bg },
@@ -245,13 +246,16 @@ export function StemPlayerScreen({
   const acquireSong = useStemPlayer((s) => s.acquireSong);
   const retiming = useStemPlayer((s) => s.retime.kind === 'recording');
   const [menu, setMenu] = useState(false);
-  const [askingReset, setAskingReset] = useState(false);
-  if (askingReset && !retiming) setAskingReset(false);
+  const [asking, setAsking] = useState<RetimeAsk | null>(null);
+  if (asking !== null && !retiming) setAsking(null);
   const askReset = useCallback(() => {
-    setAskingReset(true);
+    setAsking('reset');
   }, []);
-  const closeReset = useCallback(() => {
-    setAskingReset(false);
+  const askLeave = useCallback(() => {
+    setAsking('leave');
+  }, []);
+  const closeAsk = useCallback(() => {
+    setAsking(null);
   }, []);
   const openMenu = useCallback(() => {
     setMenu(true);
@@ -268,7 +272,7 @@ export function StemPlayerScreen({
   return (
     <View style={[styles.screen, padding]}>
       {retiming ? (
-        <RetimeBar onAskReset={askReset} />
+        <RetimeBar onAskReset={askReset} onAskLeave={askLeave} />
       ) : (
         <StemAppBar onBack={onBack} onMenu={ready ? openMenu : null} />
       )}
@@ -278,7 +282,12 @@ export function StemPlayerScreen({
         bottomInset={insets.bottom}
         onClose={closeMenu}
       />
-      {retiming && askingReset ? <ResetDialog onClose={closeReset} /> : null}
+      {retiming && asking === 'reset' ? (
+        <ResetDialog onClose={closeAsk} />
+      ) : null}
+      {retiming && asking === 'leave' ? (
+        <LeaveDialog onClose={closeAsk} />
+      ) : null}
     </View>
   );
 }

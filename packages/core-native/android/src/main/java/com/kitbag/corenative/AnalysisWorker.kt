@@ -56,6 +56,7 @@ class AnalysisWorker(context: Context, params: WorkerParameters) : Worker(contex
       beats = output.result.beats,
       downbeats = output.result.downbeats,
       waveformRelativePath = output.waveform?.let { LibraryPaths.relativize(base, it) }.orEmpty(),
+      durationSec = output.result.durationSec,
     )
   }
 

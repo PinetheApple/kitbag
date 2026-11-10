@@ -24,11 +24,13 @@ import {
   type StemPlayerActions,
   type StemPlayerStatus,
 } from '../stemPlayer/store.ts';
-import { secondsToFrames } from '../stemPlayer/time.ts';
+import { framesToSeconds, secondsToFrames } from '../stemPlayer/time.ts';
 import { getSongPlayer, type SongPlayerRuntime } from './runtime.ts';
 
 const SONG_TRACK = 0;
 const ATTACHABLE: ReadonlySet<StemPlayerStatus> = new Set(['loading', 'ready']);
+// Sub-frame rounding from a rate change must never rewrite the stored length.
+export const STORED_LENGTH_TOLERANCE_SEC = 0.01;
 
 interface SongPlayerState extends TransportSlice, ClickSlice, LoopSlice {
   readonly songId: number | null;
@@ -152,6 +154,12 @@ export function createSongPlayerStore(
         });
     };
 
+    const correctStoredLength = (record: SongRecord, decodedSec: number) => {
+      const driftSec = Math.abs(decodedSec - record.durationSec);
+      if (driftSec <= STORED_LENGTH_TOLERANCE_SEC) return;
+      void runtimeOf().library.correctDuration(record.id, decodedSec);
+    };
+
     const unshiftKey = async (opened: number) => {
       const { commands } = runtimeOf();
       const key = await commands.mixerTrackPitch(SONG_TRACK);
@@ -204,6 +212,8 @@ export function createSongPlayerStore(
         beats: record.beats,
         downbeatIndices: record.downbeatIndices,
       });
+      if (decoded > 0)
+        correctStoredLength(record, framesToSeconds(decoded, engineRate));
       if (record.waveformPath !== null)
         loadWaveform(opened, record.waveformPath, bars);
     };
