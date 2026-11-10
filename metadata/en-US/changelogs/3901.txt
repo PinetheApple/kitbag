@@ -1,0 +1,1 @@
+• Song analysis no longer places twice as many beats as the music has. Songs you imported earlier keep their old beats until you tap Re-analyse on them.
