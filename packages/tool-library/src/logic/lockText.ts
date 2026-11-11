@@ -8,6 +8,11 @@ export interface LockText {
 
 const NO_CLICK = 'No click available';
 const LOCK_SOURCE = 'phase auto · from beat grid';
+const GRID_READY = 'grid ready';
+
+function withBpm(bpmText: string | null, detail: string): string {
+  return bpmText === null ? detail : `${bpmText} · ${detail}`;
+}
 
 function unavailable(detail: string): LockText {
   return { title: NO_CLICK, detail, available: false };
@@ -29,10 +34,16 @@ export function lockText(
     case 'noGrid':
       return unavailable('The analysis found no beats in this song.');
     case 'grid':
-      return {
-        title: click ? 'Metronome locked' : 'Metronome',
-        detail: bpmText === null ? LOCK_SOURCE : `${bpmText} · ${LOCK_SOURCE}`,
-        available: true,
-      };
+      return click
+        ? {
+            title: 'Metronome locked',
+            detail: withBpm(bpmText, LOCK_SOURCE),
+            available: true,
+          }
+        : {
+            title: 'Click off',
+            detail: withBpm(bpmText, GRID_READY),
+            available: true,
+          };
   }
 }

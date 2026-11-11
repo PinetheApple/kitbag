@@ -9,6 +9,9 @@
 #include <string>
 #include <vector>
 
+#include "analysis/beat_tracker.h"
+#include "analyze_buffer_driver.h"
+#include "check.h"
 #include "media/decoder.h"
 #include "wav_fixture.h"
 
@@ -50,6 +53,22 @@ inline kitbag::DecoderInfo StereoInfo(uint64_t frames, uint32_t channels) {
   info.total_frames = frames;
   info.duration_seconds = static_cast<double>(frames) / kSampleRate;
   return info;
+}
+
+// Pins the KB_OK contract so every caller can read the BeatResult unguarded.
+inline kitbag::BeatResult AnalyzePcm(const std::vector<float>& pcm) {
+  const uint64_t frames = pcm.size() / 2;
+  kitbag::BeatResult result;
+  const kb_result status = AnalyzeDecodedPcm(
+      pcm.data(),
+      frames,
+      StereoInfo(frames, 2),
+      "x",
+      nullptr,
+      &result
+  );
+  kitbag_test::Check(status == KB_OK, "analyze: decoded PCM returns KB_OK");
+  return result;
 }
 
 // `data` holds the int16 peaks actually present after the header, so a short
