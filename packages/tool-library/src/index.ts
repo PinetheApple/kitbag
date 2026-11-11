@@ -7,4 +7,8 @@ export {
   SongPlayerScreen,
   type SongPlayerScreenProps,
 } from './screen/SongPlayerScreen.tsx';
-export { MiniPlayer, type MiniPlayerProps } from './screen/MiniPlayer.tsx';
+export {
+  MiniPlayer,
+  useMiniPlayerShown,
+  type MiniPlayerProps,
+} from './screen/MiniPlayer.tsx';

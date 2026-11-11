@@ -5,7 +5,7 @@ import type { MixerClaim } from '../stemPlayer/mixerClaim.ts';
 import { fakeRuntime, RATE, record } from '../stemPlayer/store.test-helper.ts';
 import { secondsToFrames } from '../stemPlayer/time.ts';
 import type { SongPlayerRuntime } from './runtime.ts';
-import { createSongPlayerStore } from './store.ts';
+import { createSongPlayerStore, type SongLibraryRows } from './store.ts';
 
 export const SONG_ID = 3;
 export const BARS = 16;
@@ -68,10 +68,15 @@ export function fakeSongRuntime(song: SongRecord = songRecord()) {
 
 export type Fake = ReturnType<typeof fakeSongRuntime>;
 
-export function songStore(fake: Fake, mixerClaim?: MixerClaim) {
+export function songStore(
+  fake: Fake,
+  mixerClaim?: MixerClaim,
+  library?: SongLibraryRows,
+) {
   return createSongPlayerStore(() => fake.runtime, {
     scrubSeekDelayMs: SEEK_MS,
     ...(mixerClaim === undefined ? {} : { mixerClaim }),
+    ...(library === undefined ? {} : { library }),
   });
 }
 

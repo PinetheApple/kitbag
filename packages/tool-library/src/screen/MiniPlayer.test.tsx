@@ -24,7 +24,7 @@ vi.mock('@kitbag/core-state', () => ({
   useSongPlayer: (select: (state: unknown) => unknown) => select(song.state),
 }));
 
-const { MiniPlayer } = await import('./MiniPlayer.tsx');
+const { MiniPlayer, useMiniPlayerShown } = await import('./MiniPlayer.tsx');
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -110,5 +110,30 @@ describe('the mini-player', () => {
   it('opens the player on a tap', () => {
     (bar(mount()).onOpen as () => void)();
     expect(onOpenSong).toHaveBeenCalledExactlyOnceWith(SONG_ID);
+  });
+});
+
+describe('whether a screen docks the mini-player', () => {
+  function shown() {
+    let value: boolean | undefined;
+    const Probe = () => {
+      value = useMiniPlayerShown();
+      return null;
+    };
+    act(() => {
+      create(createElement(Probe));
+    });
+    return value;
+  }
+
+  it.each([
+    ['ready', true],
+    ['loading', false],
+    ['failed', false],
+    ['missing', false],
+    ['idle', false],
+  ])('a %s song: %s', (status, expected) => {
+    givenSong({ status });
+    expect(shown()).toBe(expected);
   });
 });

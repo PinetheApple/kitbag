@@ -11,7 +11,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
-const display = vi.hoisted(() => ({ scaled: false, status: 'ready' }));
+const OPEN_SONG = { songId: 1, title: 'A song', artist: 'An artist', bpm: 120 };
+const CLOSED_SONG = { songId: null, title: '', artist: null, bpm: null };
+
+const display = vi.hoisted(() => ({
+  scaled: false,
+  status: 'ready',
+  song: {},
+}));
 const commands = vi.hoisted(() => ({ close: vi.fn(), reanalyze: vi.fn() }));
 const mixer = vi.hoisted(() => ({
   session: 0,
@@ -33,7 +40,15 @@ vi.mock('@kitbag/core-design', async (original) => {
   return {
     ...(await original<Record<string, unknown>>()),
     AppBar: (props: Props) =>
-      h('AppBar', { actions: props.actions }, props.trailing as ReactNode),
+      h(
+        'AppBar',
+        {
+          actions: props.actions,
+          title: props.title,
+          subtitle: props.subtitle,
+        },
+        props.trailing as ReactNode,
+      ),
     Button: (props: Props) => h('Button', props),
     Sheet: (props: Props) =>
       props.visible === true ? h('Sheet', null, props.children) : null,
@@ -72,7 +87,8 @@ vi.mock('@kitbag/core-state', async (original) => {
     };
   };
   return {
-    bpmFact: () => ({ text: '120 BPM', spoken: '120 beats per minute' }),
+    bpmFact: (bpm: number | null) =>
+      bpm === null ? null : { text: `${String(bpm)} BPM`, spoken: '' },
     clickKeyLabel: () => '',
     framesToSeconds: () => 0,
     loopEndFrames: () => null,
@@ -86,9 +102,7 @@ vi.mock('@kitbag/core-state', async (original) => {
     useSongPlayer: (select: (state: unknown) => unknown) =>
       select({
         status: display.status,
-        title: 'A song',
-        artist: null,
-        bpm: 120,
+        ...display.song,
         click: false,
         beats: [0],
         analysisStatus: 'done',
@@ -143,6 +157,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   display.scaled = false;
   display.status = 'ready';
+  display.song = OPEN_SONG;
   Object.assign(mixer, { session: 0, opens: 0, displaced: 0, releases: 0 });
 });
 
@@ -178,6 +193,32 @@ describe('a stopped song', () => {
     expect(
       tree.root.findAll((node) => String(node.type) === 'Text'),
     ).toHaveLength(0);
+  });
+});
+
+describe('the app bar while the player leaves after Stop', () => {
+  it('keeps the song it was showing once the session closes', () => {
+    const tree = mount();
+    display.song = CLOSED_SONG;
+    display.status = 'idle';
+    act(() => {
+      tree.update(screen(true));
+    });
+    const bar = tree.root.findByType('AppBar' as never);
+    expect(bar.props).toMatchObject({
+      title: OPEN_SONG.title,
+      subtitle: OPEN_SONG.artist,
+    });
+    expect(bar.findAllByType('Badge' as never)).toHaveLength(1);
+  });
+
+  it('follows a rename while the song is open', () => {
+    const tree = mount();
+    display.song = { ...OPEN_SONG, title: 'Renamed' };
+    act(() => {
+      tree.update(screen(true));
+    });
+    expect(tree.root.findByType('AppBar' as never).props.title).toBe('Renamed');
   });
 });
 

@@ -1,6 +1,8 @@
 import {
   ANALYSIS_STATUS,
   type AnalysisStatus,
+  type LibraryRow,
+  type LibrarySongRow,
   type SongRecord,
 } from '@kitbag/core-db';
 import { KB_RESULT } from '@kitbag/core-native';
@@ -30,6 +32,10 @@ import {
   type StemPlayerStatus,
 } from '../stemPlayer/store.ts';
 import { framesToSeconds, secondsToFrames } from '../stemPlayer/time.ts';
+import {
+  songLibraryStore,
+  type SongLibraryState,
+} from '../songLibrary/store.ts';
 import { getSongPlayer, type SongPlayerRuntime } from './runtime.ts';
 
 const SONG_TRACK = 0;
@@ -65,9 +71,15 @@ type SongPlayerActions = Pick<
 
 export type SongPlayerStore = SongPlayerState & SongPlayerActions;
 
+export type SongLibraryRows = Pick<
+  StoreApi<Pick<SongLibraryState, 'rows' | 'ready' | 'failed'>>,
+  'subscribe'
+>;
+
 interface SongPlayerOptions {
   readonly scrubSeekDelayMs?: number;
   readonly mixerClaim?: MixerClaim;
+  readonly library?: SongLibraryRows;
   readonly mixerClick?: MixerClick;
 }
 
@@ -88,7 +100,12 @@ const closedState: SongPlayerState = {
   click: false,
 };
 
-function factsOf(record: SongRecord): Partial<SongPlayerState> {
+type SongFacts = Pick<
+  SongRecord,
+  'title' | 'artist' | 'bpm' | 'analysisStatus'
+>;
+
+function factsOf(record: SongFacts): Partial<SongPlayerState> {
   return {
     title: record.title,
     artist: record.artist === '' ? null : record.artist,
@@ -104,6 +121,7 @@ export function createSongPlayerStore(
   const {
     scrubSeekDelayMs = SCRUB_SEEK_DELAY_MS,
     mixerClaim: claim = createMixerClaim(),
+    library,
     mixerClick: songClick = createMixerClick(),
   } = options;
   let trackRequested = false;
@@ -145,7 +163,8 @@ export function createSongPlayerStore(
           if (!held || !own.live()) return;
           held = false;
           holders--;
-          if (holders === 0) own.release();
+          const outlivesPlayer = get().status === 'ready';
+          if (holders === 0 && !outlivesPlayer) own.release();
         },
       };
     };
@@ -226,12 +245,48 @@ export function createSongPlayerStore(
         loadWaveform(opened, record.waveformPath, bars);
     };
 
+    const endAsGone = () => {
+      mixer.close();
+      set({ status: 'missing' });
+    };
+
+    const refreshFacts = async (opened: number, songId: number) => {
+      const record = await runtimeOf().records.readSong(songId);
+      if (!live(opened)) return;
+      if (record === undefined) endAsGone();
+      else set(factsOf(record));
+    };
+
+    const followLibrary = (rows: readonly LibraryRow[]) => {
+      const { songId } = get();
+      if (songId === null) return;
+      const row = rows.find(
+        (candidate): candidate is LibrarySongRow =>
+          candidate.kind === 'song' && candidate.id === songId,
+      );
+      if (row === undefined) endAsGone();
+      else set(factsOf(row));
+    };
+
+    library?.subscribe((state, previous) => {
+      if (state.rows === previous.rows || !state.ready || state.failed) return;
+      followLibrary(state.rows);
+    });
+
     return {
       ...closedState,
       open: (songId, waveformBars) => {
         const { songId: current, status } = get();
-        if (current === songId && ATTACHABLE.has(status))
-          return { hold: sharedHold(mixer.current()), loaded: loading };
+        if (current === songId && ATTACHABLE.has(status)) {
+          const opened = mixer.current();
+          const hold = sharedHold(opened);
+          loading = loading
+            .then(() => refreshFacts(opened, songId))
+            .catch((error: unknown) => {
+              console.warn('[kitbag] song facts unreadable', error);
+            });
+          return { hold, loaded: loading };
+        }
         const opened = mixer.begin();
         holders = 0;
         set({ ...closedState, status: 'loading', songId });
@@ -251,5 +306,6 @@ export function createSongPlayerStore(
 
 export const songPlayerStore = createSongPlayerStore(getSongPlayer, {
   mixerClaim,
+  library: songLibraryStore,
   mixerClick,
 });
