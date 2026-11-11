@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@kitbag/core-native', () => ({
+  KB_COUNT_IN_OFF: 0,
   getKitbagCommands: () => mocks.native,
   getKitbagHostObject: vi.fn(),
   getKitbagLibrary: vi.fn(),
