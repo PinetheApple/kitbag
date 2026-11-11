@@ -191,6 +191,21 @@ Java_com_kitbag_corenative_KitbagCommandsModule_nativeMixerPlay(JNIEnv*, jobject
   kitbag::commandMixerPlay();
 }
 
+JNIEXPORT jint JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeSongCountIn(JNIEnv*, jobject, jdouble endFrame, jdouble beatFrames, jint beatsPerBar) {
+  return static_cast<jint>(kitbag::commandSongCountIn(endFrame, beatFrames, beatsPerBar));
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeSongPause(JNIEnv*, jobject) {
+  kitbag::commandSongPause();
+}
+
+JNIEXPORT void JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeSongStop(JNIEnv*, jobject) {
+  kitbag::commandSongStop();
+}
+
 JNIEXPORT void JNICALL
 Java_com_kitbag_corenative_KitbagCommandsModule_nativeMixerPause(JNIEnv*, jobject) {
   kitbag::commandMixerPause();

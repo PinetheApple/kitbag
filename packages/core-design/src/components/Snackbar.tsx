@@ -12,14 +12,24 @@ import { textStyle } from '../textStyle.ts';
 import { mixHex } from '../theme.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 
-export interface SnackbarProps {
+interface SnackbarBase {
   readonly message: string;
-  readonly actionLabel: string;
-  readonly onAction: () => void;
   readonly onTimeout: () => void;
   readonly bottom: number;
   readonly durationMs?: number;
 }
+
+interface SnackbarAction {
+  readonly actionLabel: string;
+  readonly onAction: () => void;
+}
+
+interface NoAction {
+  readonly actionLabel?: never;
+  readonly onAction?: never;
+}
+
+export type SnackbarProps = SnackbarBase & (SnackbarAction | NoAction);
 
 const useStyles = createThemedStyles((theme) => ({
   bar: {
@@ -35,6 +45,9 @@ const useStyles = createThemedStyles((theme) => ({
     paddingLeft: snackbar.textLeft,
     paddingRight: snackbar.actionRight,
     boxShadow: theme.shadow,
+  },
+  noAction: {
+    paddingRight: snackbar.textLeft,
   },
   message: {
     ...textStyle(snackbarText.message),
@@ -75,17 +88,23 @@ export function Snackbar({
     <View
       accessibilityLiveRegion="polite"
       accessibilityRole="alert"
-      style={[styles.bar, { bottom }]}
+      style={[
+        styles.bar,
+        actionLabel === undefined && styles.noAction,
+        { bottom },
+      ]}
     >
       <Text style={styles.message}>{message}</Text>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={actionLabel}
-        style={styles.action}
-        onPress={onAction}
-      >
-        <Text style={styles.actionLabel}>{actionLabel}</Text>
-      </Pressable>
+      {actionLabel === undefined ? null : (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={actionLabel}
+          style={styles.action}
+          onPress={onAction}
+        >
+          <Text style={styles.actionLabel}>{actionLabel}</Text>
+        </Pressable>
+      )}
     </View>
   );
 }

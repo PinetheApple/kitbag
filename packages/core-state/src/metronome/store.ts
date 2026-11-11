@@ -16,6 +16,7 @@ import {
 } from '@kitbag/core-native';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
+import { mixerClick, type MixerClick } from '../stemPlayer/mixerClick.ts';
 import {
   defaultCommands,
   defaultEngineBpm,
@@ -161,6 +162,7 @@ function initialConfig(): MetronomeConfig {
 }
 
 type Set = StoreApi<MetronomeStore>['setState'];
+type SongClickRelease = Pick<MixerClick, 'release'>;
 type Get = StoreApi<MetronomeStore>['getState'];
 
 // Commands queue until the device opens, so a stopped engine's tempo is stale.
@@ -295,6 +297,7 @@ function transportActions(
   commands: MetronomeCommands,
   nowFrame: NowFrame,
   tempo: EngineTempo,
+  songClick: SongClickRelease,
 ): Pick<MetronomeActions, 'setBarMute' | 'start' | 'stop' | 'pause'> {
   return {
     setBarMute: (config) => {
@@ -316,6 +319,8 @@ function transportActions(
     },
 
     start: () => {
+      // Left locked, the song's grid would clock this start and its stop end it.
+      songClick.release();
       commands.metronomeStart(nowFrame());
       set({ running: true });
     },
@@ -339,6 +344,7 @@ export function createMetronomeStore(
   nowFrame: NowFrame = defaultNowFrame,
   engineBpm: EngineBpm = defaultEngineBpm,
   now: () => number = Date.now,
+  songClick: SongClickRelease = mixerClick,
 ): StoreApi<MetronomeStore> {
   let holds = 0;
   const store = createStore<MetronomeStore>((set, get) => {
@@ -348,7 +354,7 @@ export function createMetronomeStore(
       ...patternActions(set, get, commands),
       ...soundActions(set, get, commands, () => holds > 0),
       ...tempoActions(set, get, commands, tempo),
-      ...transportActions(set, commands, nowFrame, tempo),
+      ...transportActions(set, commands, nowFrame, tempo, songClick),
       holdEngine: () => {
         const release = acquireEngineHold(commands);
         let held = true;

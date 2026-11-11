@@ -16,6 +16,7 @@ import {
 } from './lyrics.ts';
 import { UNITY_GAIN } from './mix.ts';
 import { createMixerClaim, mixerClaim, type MixerClaim } from './mixerClaim.ts';
+import { createMixerClick, mixerClick, type MixerClick } from './mixerClick.ts';
 import { mixerSession, type MixerHold } from './mixerSession.ts';
 import { mixSaver } from './mixSaver.ts';
 import { renameActions } from './renameActions.ts';
@@ -136,6 +137,7 @@ export interface StemPlayerTiming {
 
 export interface StemPlayerOptions extends Partial<StemPlayerTiming> {
   readonly mixerClaim?: MixerClaim;
+  readonly mixerClick?: MixerClick;
 }
 
 const closedState: StemPlayerState = {
@@ -213,6 +215,7 @@ export function createStemPlayerStore(
     mixSaveDelayMs = MIX_SAVE_DELAY_MS,
     scrubSeekDelayMs = SCRUB_SEEK_DELAY_MS,
     mixerClaim: claim = createMixerClaim(),
+    mixerClick: songClick = createMixerClick(),
   } = options;
   let requestedTracks = 0;
   const saver = mixSaver(
@@ -238,6 +241,7 @@ export function createStemPlayerStore(
       runtimeOf,
       scrubSeekDelayMs,
       claim,
+      mixerClick: songClick,
       isOpen: () => get().setId !== null,
       beforeTeardown: () => {
         saver.flush();
@@ -345,7 +349,7 @@ export function createStemPlayerStore(
       ...mixActions(set, get, runtimeOf, saver),
       ...transportActions(get, runtimeOf, scrubSeek, retimeAnchor(context)),
       ...sectionLoopActions(context),
-      ...clickActions(context),
+      ...clickActions(context, mixer.pendingClick),
       ...renameActions(context),
       ...retimeActions(context, claim.defer),
     };
@@ -354,4 +358,5 @@ export function createStemPlayerStore(
 
 export const stemPlayerStore = createStemPlayerStore(getStemPlayer, {
   mixerClaim,
+  mixerClick,
 });

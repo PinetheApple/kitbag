@@ -131,6 +131,7 @@ vi.mock('./SwipeHint.tsx', () => ({
 vi.mock('./SwipeTempoZone.tsx', () => ({ SwipeTempoZone: () => null }));
 vi.mock('./Transport.tsx', () => ({ Transport: () => null }));
 vi.mock('./UnsavedSnackbar.tsx', () => ({ UnsavedSnackbar: () => null }));
+vi.mock('./SongClickSnackbar.tsx', () => ({ SongClickSnackbar: () => null }));
 
 const { MetronomeScreen } = await import('./MetronomeScreen.tsx');
 

@@ -11,7 +11,8 @@ using metronome_detail::kGridEpsilon;
 
 namespace {
 
-CountInStatus CountInAt(double counted_beats, int beats_per_bar, int total) {
+CountInStatus
+BarCountStatus(double counted_beats, int beats_per_bar, int total) {
   const auto bar = static_cast<int32_t>(
       std::floor(counted_beats / beats_per_bar + kGridEpsilon)
   );
@@ -31,11 +32,13 @@ void Metronome::PublishTrainerMirrors(bool gridded, uint32_t sample_rate) {
       LastSoundedPosition(BlockTempoFor(sample_rate).beats_per_sample);
   CountInStatus count_in;
   if (running_ && counting_in_) {
-    count_in = CountInAt(
+    count_in = BarCountStatus(
         fired + count_in_beats_,
         beats_per_bar_,
         count_in_total_bars_
     );
+  } else if (ScheduledCountInLive()) {
+    count_in = count_in_at_.Status();
   }
   RampStatus ramp;
   if (running_ && !gridded) {

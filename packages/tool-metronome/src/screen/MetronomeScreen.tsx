@@ -49,6 +49,7 @@ import {
 } from './PracticeSummarySheet.tsx';
 import { PresetRow } from './PresetRow.tsx';
 import { StatusStack } from './StatusStack.tsx';
+import { SongClickSnackbar } from './SongClickSnackbar.tsx';
 import { SubdivisionSheet } from './SubdivisionSheet.tsx';
 import { SwipeHint } from './SwipeHint.tsx';
 import { SwipeTempoZone } from './SwipeTempoZone.tsx';
@@ -407,6 +408,7 @@ export function MetronomeScreen({
         />
 
         <UnsavedSnackbar bottomInset={insets.bottom} />
+        <SongClickSnackbar bottomInset={insets.bottom} />
         {showSwipeHint(hintSeen, zone.height, summaryShown) ? (
           <SwipeHint
             zoneTop={bodyTop + zone.top}

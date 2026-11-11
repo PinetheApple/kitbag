@@ -21,6 +21,7 @@ namespace mixer_test {
 using kitbag_test::Check;
 using kitbag_test::g_checks;
 using kitbag_test::g_failures;
+using kitbag_test::kUnclockedFrame;
 using kitbag_test::kZeroClock;
 
 constexpr auto kLoaded = kitbag::Mixer::LoadResult::kOk;
@@ -106,7 +107,7 @@ inline void CleanupTempFiles() {
 
 inline std::vector<float> RenderBlock(kitbag::Mixer* mixer) {
   std::vector<float> out(kBlock * 2, -1.0f);
-  mixer->Process(out.data(), kBlock);
+  mixer->Process(out.data(), kBlock, kUnclockedFrame);
   return out;
 }
 

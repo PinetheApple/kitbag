@@ -16,10 +16,11 @@ extern "C" {
 /* The output device stops on its own once it has been idle for a short grace:
  * no holder is open, nothing intends to play, and the metronome and
  * mixer mirrors both read stopped. Play intent is set when kb_metronome_start,
- * kb_metronome_start_at, kb_metronome_anchor_external or kb_mixer_play is
- * called, not when the callback applies it, and cleared by the matching stop
- * or pause. The mixer's intent outlasts the end of a song until
- * kb_mixer_stop or kb_mixer_pause. The player is not covered: kb_player_play
+ * kb_metronome_start_at, kb_metronome_count_in_at,
+ * kb_metronome_anchor_external, kb_mixer_play or kb_mixer_play_at is called,
+ * not when the callback applies it, and cleared by the matching stop or pause.
+ * The mixer's intent outlasts the end of a song until kb_mixer_stop or
+ * kb_mixer_pause. The player is not covered: kb_player_play
  * sets no intent and does not keep the device.
  *
  * Those calls never start the device. Call kb_engine_start after them, never

@@ -4,9 +4,11 @@ import {
   KB_RESULT,
 } from '@kitbag/core-native';
 
+import type { MixerClick, MixerClickSource } from './mixerClick.ts';
 import { stopClick, turnClickOff, type ClickSlice } from './clickActions.ts';
 import { debounce } from './debounce.ts';
 import type { MixerClaim } from './mixerClaim.ts';
+import { createPendingClick } from './pendingClick.ts';
 import type { MixerRuntime, StemPlayerCommands } from './runtime.ts';
 import type { StemPlayerState } from './store.ts';
 
@@ -17,7 +19,7 @@ export interface MixerSessionContext<Slice> {
   readonly session: () => number;
 }
 
-type SessionSlice = ClickSlice & Pick<StemPlayerState, 'loop'>;
+type SessionSlice = ClickSlice & Pick<StemPlayerState, 'loop' | 'title'>;
 
 export interface MixerHold {
   readonly release: () => void;
@@ -30,6 +32,7 @@ export interface MixerSessionOptions extends Omit<
 > {
   readonly scrubSeekDelayMs: number;
   readonly claim: MixerClaim;
+  readonly mixerClick: MixerClick;
   readonly isOpen: () => boolean;
   readonly beforeTeardown?: () => void;
   readonly teardownTracks: () => void;
@@ -42,6 +45,7 @@ export function mixerSession({
   runtimeOf,
   scrubSeekDelayMs,
   claim,
+  mixerClick,
   isOpen,
   beforeTeardown,
   teardownTracks,
@@ -56,6 +60,15 @@ export function mixerSession({
     runtimeOf().commands.mixerSeek(frame);
   }, scrubSeekDelayMs);
   const live = (opened: number) => opened === session;
+  const pendingClick = createPendingClick();
+  const clickSource: MixerClickSource = {
+    running: () => get().click || pendingClick.pending(),
+    title: () => get().title,
+    turnOff: () => {
+      pendingClick.cancel();
+      turnClickOff({ set, get, runtimeOf });
+    },
+  };
 
   const teardown = () => {
     beforeTeardown?.();
@@ -75,6 +88,8 @@ export function mixerSession({
   const close = () => {
     if (!isOpen()) return;
     claim.release(close);
+    mixerClick.detach(clickSource);
+    pendingClick.cancel();
     session++;
     teardown();
     resetState();
@@ -111,6 +126,7 @@ export function mixerSession({
     live,
     close,
     current: () => session,
+    pendingClick,
     hold: (opened: number): MixerHold => ({
       release: () => {
         if (live(opened)) close();
@@ -121,6 +137,8 @@ export function mixerSession({
       if (isOpen()) teardown();
       releaseEngine ??= acquireEngineHold(runtimeOf().commands);
       claim.claim(close);
+      pendingClick.cancel();
+      mixerClick.attach(clickSource);
       songStopSubscription ??= runtimeOf().commands.onSongStopped(() => {
         turnClickOff({ set, get, runtimeOf });
       });

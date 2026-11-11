@@ -20,6 +20,11 @@ import {
   mixerClaim,
   type MixerClaim,
 } from '../stemPlayer/mixerClaim.ts';
+import {
+  createMixerClick,
+  mixerClick,
+  type MixerClick,
+} from '../stemPlayer/mixerClick.ts';
 import { mixerSession, type MixerHold } from '../stemPlayer/mixerSession.ts';
 import {
   SCRUB_SEEK_DELAY_MS,
@@ -75,6 +80,7 @@ interface SongPlayerOptions {
   readonly scrubSeekDelayMs?: number;
   readonly mixerClaim?: MixerClaim;
   readonly library?: SongLibraryRows;
+  readonly mixerClick?: MixerClick;
 }
 
 const closedState: SongPlayerState = {
@@ -116,6 +122,7 @@ export function createSongPlayerStore(
     scrubSeekDelayMs = SCRUB_SEEK_DELAY_MS,
     mixerClaim: claim = createMixerClaim(),
     library,
+    mixerClick: songClick = createMixerClick(),
   } = options;
   let trackRequested = false;
   let masterToRestore: number | null = null;
@@ -137,6 +144,7 @@ export function createSongPlayerStore(
       runtimeOf,
       scrubSeekDelayMs,
       claim,
+      mixerClick: songClick,
       isOpen: () => get().songId !== null,
       teardownTracks,
       resetState: () => {
@@ -291,7 +299,7 @@ export function createSongPlayerStore(
       close: mixer.close,
       ...transportActions(get, runtimeOf, scrubSeek),
       ...loopActions(context),
-      ...clickActions(context),
+      ...clickActions(context, mixer.pendingClick),
     };
   });
 }
@@ -299,4 +307,5 @@ export function createSongPlayerStore(
 export const songPlayerStore = createSongPlayerStore(getSongPlayer, {
   mixerClaim,
   library: songLibraryStore,
+  mixerClick,
 });

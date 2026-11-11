@@ -9,21 +9,25 @@ import {
 
 export type DiscardedSong = Pick<DiscardedChanges, 'loaded' | 'at'>;
 
-export interface UnsavedSnackbarView {
+export interface SnackbarView {
   readonly message: string;
   readonly timeLeftMs: number;
 }
 
-// Back from the background, the window runs from the discard, not from now.
+// Back from the background or the screen reopened, the window runs from the
+// event, not from now.
+export function snackbarTimeLeftMs(at: number, visibleSince: number): number {
+  return at + SNACKBAR_DURATION_MS - Math.max(visibleSince, at);
+}
+
 export function unsavedSnackbarView(
   discarded: DiscardedSong | null,
   presets: readonly NamedSong[],
   visibleSince: number,
-): UnsavedSnackbarView | undefined {
+): SnackbarView | undefined {
   if (discarded === null) return undefined;
   const song = loadedSongName(presets, discarded.loaded);
-  const now = Math.max(visibleSince, discarded.at);
-  const timeLeftMs = discarded.at + SNACKBAR_DURATION_MS - now;
+  const timeLeftMs = snackbarTimeLeftMs(discarded.at, visibleSince);
   if (song === undefined || timeLeftMs <= 0) return undefined;
   return { message: notSavedMessage(song), timeLeftMs };
 }

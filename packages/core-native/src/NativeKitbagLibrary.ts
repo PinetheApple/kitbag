@@ -141,6 +141,10 @@ export type LibraryConstants = Readonly<{
   failureUnsupported: string;
   failureInterrupted: string;
   failureInternal: string;
+  supportedAudioFamilies: readonly string[];
+  supportedAudioExtensions: readonly string[];
+  supportedAudioMimeTypes: readonly string[];
+  unsupportedAudioExtensions: readonly string[];
 }>;
 
 export interface Spec extends TurboModule {
