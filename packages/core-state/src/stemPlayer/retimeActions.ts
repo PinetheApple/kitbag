@@ -15,6 +15,7 @@ import {
 import { retimeSpeed } from './retimeSpeed.ts';
 import type { StemPlayerRecords } from './runtime.ts';
 import { sessionGate } from './sessionGate.ts';
+import type { SongStart } from './songStart.ts';
 import type { ActionContext, StemPlayerActions } from './store.ts';
 import { framesToSeconds } from './time.ts';
 
@@ -49,6 +50,7 @@ export function retimeAnchor({
 export function retimeActions(
   { set, get, runtimeOf, session }: ActionContext,
   deferRestore: (restore: Promise<void>) => void,
+  start: Pick<SongStart, 'counting' | 'rateSet'>,
 ): Pick<
   StemPlayerActions,
   | 'beginRetime'
@@ -61,7 +63,7 @@ export function retimeActions(
   | 'resetRetime'
 > {
   const { busy, call } = sessionGate(session);
-  const speed = retimeSpeed(() => runtimeOf().commands, session);
+  const speed = retimeSpeed(() => runtimeOf().commands, session, start.rateSet);
 
   const saveTiming = async (
     shown: LyricLineTimes,
@@ -112,7 +114,7 @@ export function retimeActions(
         if (retime.kind === 'recording')
           set({ retime: { ...retime, playbackRate } });
       });
-      if (!runtimeOf().engine.playing()) togglePlay();
+      if (!runtimeOf().engine.playing() && !start.counting()) togglePlay();
     },
     tapRetime: () => {
       const { retime, lyrics, engineRate } = get();

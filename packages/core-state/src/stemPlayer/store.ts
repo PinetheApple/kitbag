@@ -23,6 +23,7 @@ import { renameActions } from './renameActions.ts';
 import { retimeActions, retimeAnchor } from './retimeActions.ts';
 import { getStemPlayer, type StemPlayerRuntime } from './runtime.ts';
 import { sortedSections } from './sections.ts';
+import { countPending, songStart } from './songStart.ts';
 import { secondsToFrames } from './time.ts';
 
 const MIX_SAVE_DELAY_MS = 600;
@@ -82,6 +83,7 @@ export interface StemPlayerState {
   readonly loopFailure: LoopFailure | null;
   readonly undoableLoop: LoopSeconds | null;
   readonly click: boolean;
+  readonly countEndFrame: number | null;
   readonly sections: readonly StoredSection[];
   readonly lyrics: SongLyrics;
   readonly retime: RetimeState;
@@ -157,6 +159,7 @@ const closedState: StemPlayerState = {
   loopFailure: null,
   undoableLoop: null,
   click: false,
+  countEndFrame: null,
   sections: [],
   lyrics: NO_LYRICS,
   retime: { kind: 'off' },
@@ -248,6 +251,8 @@ export function createStemPlayerStore(
         get().leaveRetime();
       },
       teardownTracks,
+      counting: () =>
+        countPending(get().countEndFrame, runtimeOf().engine.nowFrame()),
       resetState: () => {
         set(closedState);
       },
@@ -258,6 +263,14 @@ export function createStemPlayerStore(
       get,
       runtimeOf,
       session: mixer.current,
+    };
+    const start = songStart(context);
+    mixer.onScrubSeek(start.afterSeek);
+    const clicks = clickActions(context, mixer.pendingClick);
+    const anchorRetime = retimeAnchor(context);
+    const afterSeek = (frame: number) => {
+      anchorRetime(frame);
+      start.afterSeek(frame);
     };
     const loadWaveforms = (
       opened: number,
@@ -347,11 +360,15 @@ export function createStemPlayerStore(
       },
       close: mixer.close,
       ...mixActions(set, get, runtimeOf, saver),
-      ...transportActions(get, runtimeOf, scrubSeek, retimeAnchor(context)),
+      ...transportActions(get, runtimeOf, scrubSeek, afterSeek, start),
       ...sectionLoopActions(context),
-      ...clickActions(context, mixer.pendingClick),
+      toggleClick: async () => {
+        const turningOff = get().click;
+        await clicks.toggleClick();
+        if (turningOff && !get().click) start.clickTurnedOff();
+      },
       ...renameActions(context),
-      ...retimeActions(context, claim.defer),
+      ...retimeActions(context, claim.defer, start),
     };
   });
 }
