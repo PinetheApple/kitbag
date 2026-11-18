@@ -1,0 +1,1 @@
+• The metronome now keeps its tempo, meter and other settings after the app is closed and reopened.
