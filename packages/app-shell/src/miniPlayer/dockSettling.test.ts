@@ -47,18 +47,40 @@ describe('the dock under a pushed screen', () => {
     expect(setSettled).toHaveBeenLastCalledWith(true);
   });
 
-  it('stays hidden on focus alone, until its screen has finished appearing', () => {
+  it('stays hidden on focus alone once covered, until its screen has finished appearing', () => {
+    const { navigation, emit } = fakeNavigation();
+    const setSettled = vi.fn();
+    followDockSettling(navigation, setSettled);
+    emit('blur');
+    emit('transitionStart', true);
+    emit('transitionEnd', true);
+    emit('focus');
+    expect(setSettled).not.toHaveBeenCalledWith(true);
+  });
+
+  it('returns on focus when the push was cancelled before it covered the screen', () => {
+    const { navigation, emit } = fakeNavigation();
+    const setSettled = vi.fn();
+    followDockSettling(navigation, setSettled);
+    emit('blur');
+    emit('transitionStart', true);
+    emit('focus');
+    expect(setSettled).toHaveBeenLastCalledWith(true);
+  });
+
+  it('stays shown when the cancelled push reports the screen hidden late', () => {
     const { navigation, emit } = fakeNavigation();
     const setSettled = vi.fn();
     followDockSettling(navigation, setSettled);
     emit('blur');
     emit('focus');
-    expect(setSettled).not.toHaveBeenCalledWith(true);
+    emit('transitionEnd', true);
+    expect(setSettled).toHaveBeenLastCalledWith(true);
   });
 
   it('stops listening when the screen unmounts', () => {
     const { navigation, removed } = fakeNavigation();
     followDockSettling(navigation, vi.fn())();
-    expect(removed).toHaveBeenCalledTimes(2);
+    expect(removed).toHaveBeenCalledTimes(3);
   });
 });
