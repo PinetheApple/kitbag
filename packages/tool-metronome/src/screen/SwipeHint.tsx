@@ -1,6 +1,7 @@
 import {
   Button,
   createThemedStyles,
+  focusReaderOn,
   IconGlyph,
   iconSizes,
   inkOnScrim,
@@ -101,7 +102,11 @@ export function SwipeHint({ zoneTop, zoneHeight, onDismiss }: SwipeHintProps) {
         />
       </View>
       <View style={styles.bubble}>
-        <Text style={styles.title} accessibilityRole="header">
+        <Text
+          ref={focusReaderOn}
+          style={styles.title}
+          accessibilityRole="header"
+        >
           Swipe up or down anywhere here
         </Text>
         <Text style={styles.body}>
