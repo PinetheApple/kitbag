@@ -60,7 +60,9 @@ class StemDeckHttp(
     }
     watch(request)
     try {
-      return StemDeckResponse(connection, request)
+      val response = StemDeckResponse(connection, request)
+      if (policy is TrustPolicy.Probe) policy.hostnameMatched = request.hostnameMatches(origin.host, defaultVerifier)
+      return response
     } catch (e: IOException) {
       connection.disconnect()
       val changed = generateSequence<Throwable>(e) { it.cause }.filterIsInstance<CertificateChangedException>().firstOrNull()

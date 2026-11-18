@@ -4,6 +4,8 @@ import java.io.File
 import java.nio.file.Files
 import java.security.cert.CertificateException
 import java.security.cert.X509Certificate
+import javax.net.ssl.HostnameVerifier
+import javax.net.ssl.HttpsURLConnection
 import javax.net.ssl.X509TrustManager
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -28,8 +30,14 @@ class ServerProbeTest {
   private lateinit var root: File
   private lateinit var store: ServerStore
 
-  private fun http(systemTrusts: Boolean = false) =
-    StemDeckHttp(TlsContexts(SystemTrust(systemTrusts)), allowsPlain = { true }, defaultVerifier = { _, _ -> true })
+  // The JDK's default verifier refuses every name (its real check is internal), so tests check the SAN themselves.
+  private val sanVerifier = HostnameVerifier { host, session ->
+    val leaf = session.peerCertificates.first() as X509Certificate
+    leaf.subjectAlternativeNames.orEmpty().any { it[1] == host }
+  }
+
+  private fun http(systemTrusts: Boolean = false, verifier: HostnameVerifier = sanVerifier) =
+    StemDeckHttp(TlsContexts(SystemTrust(systemTrusts)), allowsPlain = { true }, defaultVerifier = verifier)
 
   private fun serve(key: TestKey, port: Int = 0) =
     FakeStemDeckServer(key.serverContext(), port) { _, socket -> FakeStemDeckServer.reply(socket, 200, health) }
@@ -78,6 +86,14 @@ class ServerProbeTest {
     assertEquals(TestKey.A.fingerprint, result.fingerprint)
     assertNull(result.previousFingerprint)
     assertTrue(store.trust(origin, TestKey.A.fingerprint))
+  }
+
+  @Test
+  fun `a chain Android trusts but issued for another name is new, not system`() {
+    val origin = serve(TestKey.OTHER_NAME).origin
+    assertEquals(ServerProbe.TRUST_NEW, ServerProbe({ http(systemTrusts = true) }, store).probe(origin).trust)
+    val platform = http(systemTrusts = true, verifier = HttpsURLConnection.getDefaultHostnameVerifier())
+    assertEquals(ServerProbe.TRUST_NEW, ServerProbe({ platform }, store).probe(origin).trust)
   }
 
   @Test

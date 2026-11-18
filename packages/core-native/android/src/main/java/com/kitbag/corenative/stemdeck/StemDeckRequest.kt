@@ -4,6 +4,8 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.InetAddress
 import java.net.Socket
+import javax.net.ssl.HostnameVerifier
+import javax.net.ssl.SSLSocket
 import javax.net.ssl.SSLSocketFactory
 import kotlin.concurrent.thread
 
@@ -20,6 +22,12 @@ class StemDeckRequest internal constructor(private val connection: HttpURLConnec
       socket = it
       if (aborted) closeQuietly(it)
     }
+
+  // The stack may skip a custom verifier when its own check passes, so the probe asks the verifier itself.
+  fun hostnameMatches(host: String, verifier: HostnameVerifier): Boolean {
+    val session = (socket as? SSLSocket)?.session ?: return false
+    return verifier.verify(host, session)
+  }
 
   fun limitReads(millis: Int) {
     socket?.soTimeout = millis

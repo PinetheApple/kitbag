@@ -33,6 +33,11 @@ class StemDeckRequestTest {
   }
 
   @Test
+  fun `with no TLS session the hostname never matches`() {
+    assertFalse(request().hostnameMatches("127.0.0.1") { _, _ -> true })
+  }
+
+  @Test
   fun `a socket made with no abort stays open`() {
     val socket = request().track(factory()).createSocket()
     assertFalse(socket.isClosed)

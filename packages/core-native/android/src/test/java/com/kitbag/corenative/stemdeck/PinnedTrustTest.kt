@@ -93,7 +93,9 @@ class PinnedTrustTest {
     val probe = TrustPolicy.Probe().apply { chainTrusted = true }
     assertTrue(PolicyHostnameVerifier(refuses, probe).verify("x", null))
     assertFalse(probe.systemVerified)
-    PolicyHostnameVerifier({ _, _ -> true }, probe).verify("x", null)
+    probe.hostnameMatched = false
+    assertFalse(probe.systemVerified)
+    probe.hostnameMatched = true
     assertTrue(probe.systemVerified)
   }
 }

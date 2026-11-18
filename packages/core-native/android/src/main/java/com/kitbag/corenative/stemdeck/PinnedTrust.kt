@@ -26,10 +26,10 @@ sealed class TrustPolicy {
 
     @Volatile var chainTrusted = false
 
-    // The JVM calls a custom verifier only when its own name check fails, so no call means a match.
-    @Volatile var hostnameMatched = true
+    // Set only by the explicit check after connecting; unset reads as no match.
+    @Volatile var hostnameMatched: Boolean? = null
 
-    val systemVerified: Boolean get() = chainTrusted && hostnameMatched
+    val systemVerified: Boolean get() = chainTrusted && hostnameMatched == true
   }
 }
 
@@ -95,10 +95,7 @@ class PolicyHostnameVerifier(private val default: HostnameVerifier, private val 
     when (policy) {
       is TrustPolicy.Pinned -> true
       TrustPolicy.System -> default.verify(hostname, session)
-      is TrustPolicy.Probe -> {
-        policy.hostnameMatched = default.verify(hostname, session)
-        true
-      }
+      is TrustPolicy.Probe -> true
     }
 }
 
