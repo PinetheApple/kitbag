@@ -16,6 +16,8 @@ apply plugin: "com.android.library"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
+def reactNativeAbis = project.property('reactNativeArchitectures').toString().split(',')*.trim()
+
 android {
   namespace "com.kitbag.corenative"
 
@@ -50,7 +52,7 @@ android {
                   "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,max-page-size=16384"
         // The RN plugin filters the app's ABIs by this same property, so every
         // ABI the app ships carries libkitbag_jsi.so.
-        abiFilters(*(project.property('reactNativeArchitectures').toString().split(',')*.trim()))
+        abiFilters(*reactNativeAbis)
       }
     }
   }
