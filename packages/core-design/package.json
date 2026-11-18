@@ -20,7 +20,7 @@
     "@types/react": "~19.2.2",
     "@types/react-dom": "~19.2.7",
     "lightningcss": "1.33.0",
-    "nativewind": "5.0.0-rc.0",
+    "nativewind": "5.0.0-rc.1",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-native": "0.83.6",
