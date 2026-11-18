@@ -104,6 +104,10 @@ jobs:
     name: Android release build (Linux)
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    outputs:
+      e2e: ${{ steps.e2e.outputs.run }}
+      all-flows: ${{ steps.changes.outputs.app }}
+      flows: ${{ steps.changes.outputs.flows_files }}
     # CMake reads the launchers from the environment, so no build.gradle changes.
     env:
       CMAKE_C_COMPILER_LAUNCHER: ccache
@@ -113,6 +117,35 @@ jobs:
       CCACHE_COMPILERCHECK: '%compiler% --version'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Changes — does this commit need the device flows
+        id: changes
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          list-files: json
+          filters: |
+            app:
+              - 'packages/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'e2e/subflows/**'
+              - 'e2e/make_click_song.py'
+              - 'scripts/e2e.sh'
+              - 'scripts/install-maestro.sh'
+              - '.github/workflows/ci.yml'
+            flows:
+              - added|modified: 'e2e/flows/**/*.yaml'
+      - name: Device flows — on, and the ABIs to build
+        id: e2e
+        env:
+          RUN: ${{ steps.changes.outputs.app == 'true' || steps.changes.outputs.flows == 'true' }}
+        run: |
+          echo "run=$RUN" >> "$GITHUB_OUTPUT"
+          if [[ $RUN == true ]]; then
+            echo "ABIS=arm64-v8a,x86_64" >> "$GITHUB_ENV"
+          else
+            echo "ABIS=arm64-v8a" >> "$GITHUB_ENV"
+          fi
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -139,7 +172,7 @@ jobs:
       # release-only Gradle paths (signing config selection, versionName from
       # app.json) that a debug build never exercises.
       - name: Assemble release — compiles the Kotlin/JNI/codegen chain
-        run: ./gradlew :app:assembleRelease :kitbag_core-native:testReleaseUnitTest
+        run: ./gradlew :app:assembleRelease :kitbag_core-native:testReleaseUnitTest -PreactNativeArchitectures="$ABIS"
         working-directory: packages/app-shell/android
       - name: versionCode — build.gradle's formula agrees with version.sh
         run: >-
@@ -148,8 +181,118 @@ jobs:
           "$(./scripts/version.sh current)"
       - name: ccache — hit rate for this build
         run: ccache --show-stats
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: steps.e2e.outputs.run == 'true'
+        with:
+          name: e2e-apk
+          path: packages/app-shell/android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 1
+          compression-level: 0
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: github.ref == 'refs/heads/main'
         with:
           path: ~/.cache/ccache
           key: ${{ steps.ccache-restore.outputs.cache-primary-key }}
+
+  # Runs the Maestro flows in e2e/ on an x86_64 emulator against the APK the
+  # Android job built. A job skipped by its `if` reports success to a required check.
+  e2e:
+    name: Device flows (Android emulator)
+    needs: android
+    if: needs.android.outputs.e2e == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      AVD_API_LEVEL: 35
+      AVD_TARGET: google_apis
+      AVD_ARCH: x86_64
+      AVD_RAM: 2048M
+      AVD_PROFILE: pixel_6
+      EMULATOR_OPTIONS: -no-window -gpu swiftshader_indirect -no-audio -no-boot-anim -camera-back none
+      E2E_OUT: ${{ github.workspace }}/e2e-out
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: KVM — let the runner user open /dev/kvm
+        run: |
+          rules="$RUNNER_TEMP/99-kvm4all.rules"
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' > "$rules"
+          sudo install -m 644 "$rules" /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.maestro
+          key: maestro-${{ hashFiles('scripts/install-maestro.sh') }}
+      - name: Install Maestro
+        run: bash scripts/install-maestro.sh
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: e2e-apk
+          path: apk
+      - name: Flows — every flow, or only the ones this PR changed
+        env:
+          ALL_FLOWS: ${{ needs.android.outputs.all-flows }}
+          CHANGED_FLOWS: ${{ needs.android.outputs.flows }}
+        run: |
+          flows=()
+          if [[ $ALL_FLOWS != true ]]; then
+            mapfile -t flows < <(jq -r '.[]' <<<"$CHANGED_FLOWS")
+            for flow in "${flows[@]}"; do
+              [[ $flow =~ ^e2e/flows/[A-Za-z0-9/_.-]+\.yaml$ ]] || {
+                echo "unexpected flow path: $flow" >&2
+                exit 1
+              }
+            done
+          fi
+          echo "E2E_FLOWS=${flows[*]}" >> "$GITHUB_ENV"
+          echo "flows: ${flows[*]:-all}"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-${{ env.AVD_API_LEVEL }}-${{ env.AVD_TARGET }}-${{ env.AVD_ARCH }}-${{ env.AVD_PROFILE }}-${{ env.AVD_RAM }}
+      - name: AVD — create it and save a boot snapshot for the cache
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: ${{ env.AVD_API_LEVEL }}
+          target: ${{ env.AVD_TARGET }}
+          arch: ${{ env.AVD_ARCH }}
+          profile: ${{ env.AVD_PROFILE }}
+          ram-size: ${{ env.AVD_RAM }}
+          force-avd-creation: false
+          emulator-options: ${{ env.EMULATOR_OPTIONS }}
+          disable-animations: false
+          script: echo "AVD snapshot saved"
+      - name: Device flows — install the APK, run the flows, name any failing step
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: ${{ env.AVD_API_LEVEL }}
+          target: ${{ env.AVD_TARGET }}
+          arch: ${{ env.AVD_ARCH }}
+          profile: ${{ env.AVD_PROFILE }}
+          ram-size: ${{ env.AVD_RAM }}
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save ${{ env.EMULATOR_OPTIONS }}
+          disable-animations: false
+          script: bash scripts/e2e.sh --out "$E2E_OUT" apk/app-release.apk $E2E_FLOWS
+      # Maestro names its folders after the flows, and artifact paths may not hold their colons.
+      - name: Maestro output — pack it for the artifact
+        if: always()
+        run: tar -czf "$E2E_OUT/maestro.tar.gz" -C "$E2E_OUT" maestro
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: e2e-results
+          path: |
+            ${{ env.E2E_OUT }}/*.png
+            ${{ env.E2E_OUT }}/logcat.txt
+            ${{ env.E2E_OUT }}/report.xml
+            ${{ env.E2E_OUT }}/maestro.tar.gz
+          retention-days: 14
