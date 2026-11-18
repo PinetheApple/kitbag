@@ -1,0 +1,17 @@
+appId: com.kitbag.app
+name: '#370: renaming the playing song updates the bar'
+tags:
+  - pr-370
+---
+- runFlow: ../../subflows/song-playing-behind-bar.yaml
+- tapOn: 'Actions for ${FIXTURE_SONG}'
+- tapOn: 'Rename'
+- tapOn: 'New name for ${FIXTURE_SONG}'
+- eraseText
+- inputText: 'Renamed'
+- tapOn: 'Save the new name for ${FIXTURE_SONG}'
+- hideKeyboard
+- extendedWaitUntil:
+    visible: 'Pause Renamed'
+    timeout: 5000
+- assertNotVisible: 'Open ${FIXTURE_SONG}'

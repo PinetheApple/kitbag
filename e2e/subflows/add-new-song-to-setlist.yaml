@@ -1,0 +1,9 @@
+appId: com.kitbag.app
+---
+- tapOn: 'Add song'
+- tapOn: 'New song from the metronome'
+- extendedWaitUntil:
+    visible: 'Saved'
+    timeout: 10000
+- back
+- assertVisible: '\d+\. New song, ${BPM} · .*'

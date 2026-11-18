@@ -23,6 +23,8 @@ import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { DockedMiniPlayer } from '../miniPlayer/DockedMiniPlayer.tsx';
+import { useMiniPlayerDocked } from '../miniPlayer/useMiniPlayerDocked.ts';
 import { useSettingsRoutes } from '../settings/settingsRoutes.ts';
 import { ArrangeSheet } from './ArrangeSheet.tsx';
 import { MoreToolsRow } from './MoreToolsRow.tsx';
@@ -132,6 +134,7 @@ export function HomeScreen() {
   const { openSettings } = useSettingsRoutes();
   const isOn = useToolOn();
   const { arrangement, onArrange } = useArrangement(isOn);
+  const docked = useMiniPlayerDocked();
   const [arranging, setArranging] = useState(false);
   const openArrange = useCallback(() => {
     setArranging(true);
@@ -145,9 +148,10 @@ export function HomeScreen() {
   );
 
   const frameInset = useMemo(() => ({ paddingTop: insets.top }), [insets.top]);
+  const scrollBottomInset = docked ? 0 : insets.bottom;
   const contentInset = useMemo(
-    () => ({ paddingBottom: space.screenInset + insets.bottom }),
-    [insets.bottom],
+    () => ({ paddingBottom: space.screenInset + scrollBottomInset }),
+    [scrollBottomInset],
   );
 
   const open = (tool: HomeToolEntry) => {
@@ -238,6 +242,7 @@ export function HomeScreen() {
           onDone={closeArrange}
         />
       </ScrollView>
+      {docked ? <DockedMiniPlayer bottomInset={insets.bottom} /> : null}
     </View>
   );
 }

@@ -1,0 +1,7 @@
+appId: com.kitbag.app
+---
+- tapOn: 'Setlists'
+- tapOn: 'All songs'
+- extendedWaitUntil:
+    visible: 'New song'
+    timeout: 10000

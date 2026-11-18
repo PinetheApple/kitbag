@@ -1,0 +1,14 @@
+appId: com.kitbag.app
+name: '#370: the bar pauses, resumes and closes the song'
+tags:
+  - pr-370
+---
+- runFlow: ../../subflows/song-playing-behind-bar.yaml
+- tapOn: 'Pause ${FIXTURE_SONG}'
+- assertVisible: 'Play ${FIXTURE_SONG}'
+- tapOn: 'Play ${FIXTURE_SONG}'
+- assertVisible: 'Pause ${FIXTURE_SONG}'
+- tapOn: 'Stop ${FIXTURE_SONG}'
+- extendedWaitUntil:
+    notVisible: 'Open ${FIXTURE_SONG}'
+    timeout: 5000

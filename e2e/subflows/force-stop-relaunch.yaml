@@ -1,0 +1,10 @@
+appId: com.kitbag.app
+---
+- stopApp
+- launchApp:
+    stopApp: false
+    permissions:
+      notifications: allow
+- extendedWaitUntil:
+    visible: 'Metronome, .*(ready|playing)'
+    timeout: 20000

@@ -96,9 +96,15 @@ describe('StemDeck bundle import', () => {
     [CODES.bundleRefusalTooManyStems, 'tooManyStems'],
     [CODES.bundleRefusalNoSpace, 'noSpace'],
     [CODES.bundleRefusalUnreadable, 'unreadable'],
+    [CODES.bundleRefusalStemFormat, 'stemFormat'],
     ['a code native does not promise', 'unreadable'],
   ])('refuses a %s bundle as %s, copying nothing', async (code, reason) => {
-    const check = bundleCheck({ refusal: code, version: 2, stemCount: 18 });
+    const check = bundleCheck({
+      refusal: code,
+      version: 2,
+      stemCount: 18,
+      stemFormat: 'wav',
+    });
     const fake = zipFiles();
     fake.files.checkStemBundle.mockResolvedValue(check);
     const { store, files } = setup(fake);
@@ -112,6 +118,8 @@ describe('StemDeck bundle import', () => {
         supportedVersion: 1,
         stemCount: 18,
         maxStems: 16,
+        stemFormat: 'wav',
+        supportedStemFormat: 'flac',
       },
     });
     expect(files.importStemBundle).not.toHaveBeenCalled();
@@ -144,6 +152,22 @@ describe('StemDeck bundle import', () => {
     expect(store.getState().notice).toMatchObject({
       kind: 'bundleRefused',
       refusal: { reason: 'noSpace', stemCount: 2, maxStems: 16 },
+    });
+  });
+
+  it('reads a format refusal with no format as unreadable', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const { store } = setup(
+      zipFiles({
+        importStemBundle: vi.fn(() =>
+          Promise.reject(rejection(CODES.bundleRefusalStemFormat)),
+        ),
+      }),
+    );
+    await store.getState().importSong();
+    expect(store.getState().notice).toMatchObject({
+      kind: 'bundleRefused',
+      refusal: { reason: 'unreadable' },
     });
   });
 

@@ -1,0 +1,34 @@
+appId: com.kitbag.app
+---
+- runFlow:
+    file: set-tempo.yaml
+    env:
+      BPM: 130
+- tapOn: 'Setlists'
+- tapOn: 'New setlist'
+- tapOn: 'Name'
+- inputText: 'Gig'
+- tapOn: 'Create'
+- extendedWaitUntil:
+    visible: 'No songs in this set'
+    timeout: 10000
+- runFlow:
+    file: add-new-song-to-setlist.yaml
+    env:
+      BPM: 130
+- back
+- back
+- runFlow:
+    file: set-tempo.yaml
+    env:
+      BPM: 120
+- tapOn: 'Setlists'
+- tapOn: 'Gig, .*'
+- runFlow:
+    file: add-new-song-to-setlist.yaml
+    env:
+      BPM: 120
+- assertVisible: '1\. New song, 130 · .*'
+- assertVisible: '2\. New song, 120 · .*'
+- back
+- back

@@ -12,11 +12,14 @@ import {
 } from '@kitbag/core-native';
 import {
   BPM_BOUNDS,
+  clamp,
   configureMetronomeRuntime,
   DEFAULT_BPM,
   metronomeStore,
   type MetronomeCommands,
 } from '@kitbag/core-state';
+
+import { queriedNumber, TEMPO_QUERY } from './tempoQuery';
 
 const PHASE_STEPS = 1000;
 const MAX_PHASE = (PHASE_STEPS - 1) / PHASE_STEPS;
@@ -27,12 +30,11 @@ function readBoundedQuery(
   min: number,
   max: number,
 ): number {
-  const raw = new URLSearchParams(globalThis.location.search).get(name);
-  if (raw === null || raw.trim() === '') return fallback;
-  const value = Number(raw);
-  if (!Number.isFinite(value)) return fallback;
-  return Math.min(Math.max(value, min), max);
+  const value = queriedNumber(globalThis.location.search, name);
+  return value === undefined ? fallback : clamp(value, min, max);
 }
+
+const queriedBeat = queriedNumber(globalThis.location.search, 'beat');
 
 const webCommands: MetronomeCommands = {
   start: () => Promise.resolve(0),
@@ -59,7 +61,7 @@ const webCommands: MetronomeCommands = {
 };
 
 const initialBpm = readBoundedQuery(
-  'bpm',
+  TEMPO_QUERY,
   DEFAULT_BPM,
   BPM_BOUNDS.min,
   BPM_BOUNDS.max,
@@ -70,14 +72,11 @@ const presentationHost: KitbagHostObject = Object.freeze({
     Math.round(readBoundedQuery('phase', 0, 0, 1) * PHASE_STEPS) / PHASE_STEPS,
     MAX_PHASE,
   ),
-  current_beat: Math.floor(
-    readBoundedQuery(
-      'beat',
-      KB_STOPPED_BEAT,
-      KB_STOPPED_BEAT,
-      metronomeStore.getState().beatsPerBar - 1,
-    ),
-  ),
+  get current_beat() {
+    if (queriedBeat === undefined) return KB_STOPPED_BEAT;
+    const lastBeat = metronomeStore.getState().beatsPerBar - 1;
+    return Math.floor(clamp(queriedBeat, KB_STOPPED_BEAT, lastBeat));
+  },
   current_poly_beat: KB_STOPPED_BEAT,
   poly_downbeat_phase: KB_POLY_PHASE_NONE,
   counting_in: 0,
