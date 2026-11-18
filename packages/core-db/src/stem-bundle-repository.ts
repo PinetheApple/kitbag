@@ -1,8 +1,9 @@
 import { asc, eq, isNotNull } from 'drizzle-orm';
 
 import {
-  saveStemSetMeterOverride,
-  storedMeter,
+  meterOverrideOf,
+  NO_METER_OVERRIDE,
+  saveMeterOverride,
   type MeterOverride,
 } from './meter-override';
 import { found, type Database } from './repository';
@@ -88,7 +89,7 @@ export interface StemSetRecord
       NewStemBundle,
       'jobId' | 'folder' | 'stems' | 'sampleRate' | 'channels'
     >,
-    Partial<MeterOverride> {
+    MeterOverride {
   readonly id: number;
   readonly source: StemSetSource;
   readonly jobId: string | null;
@@ -274,10 +275,7 @@ async function readMeterOverride(
     })
     .from(stemSets)
     .where(eq(stemSets.id, id));
-  return {
-    meterBeatsPerBar: storedMeter(row?.meterBeatsPerBar ?? null),
-    barOneSeconds: row?.barOneSeconds ?? null,
-  };
+  return meterOverrideOf(row ?? NO_METER_OVERRIDE);
 }
 
 export async function replaceStemBundle(
@@ -294,7 +292,7 @@ export async function replaceStemBundle(
   const id = await insertStemBundle(db, bundle);
   await applyUserNames(db, id, names);
   await saveLyricsRetimed(db, id, retimed);
-  await saveStemSetMeterOverride(db, id, meter);
+  await saveMeterOverride(db, stemSets, id, meter);
   return { id, replaced };
 }
 
@@ -341,8 +339,7 @@ export async function readStemSet(
     sampleRate: row.sampleRate,
     createdAt: row.createdAt,
     speed: row.speed,
-    meterBeatsPerBar: storedMeter(row.meterBeatsPerBar),
-    barOneSeconds: row.barOneSeconds,
+    ...meterOverrideOf(row),
     bpm: row.bpm,
     key: row.key,
     scale: row.scale,

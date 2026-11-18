@@ -64,7 +64,7 @@ export const songs = sqliteTable('songs', {
     .notNull()
     .default(ANALYSIS_STATUS.pending),
   analysisError: text('analysis_error'),
-  // Null: analysed before analysis versions were recorded.
+  // Null: no version was reported, which counts as outdated.
   analysisVersion: integer('analysis_version'),
   meterBeatsPerBar: integer('meter_beats_per_bar'),
   barOneSeconds: real('bar_one_seconds'),

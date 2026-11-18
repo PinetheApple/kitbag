@@ -13,9 +13,8 @@ import {
 
 import { ANALYSIS_STATUS, type AnalysisStatus } from './analysis-status';
 import {
-  saveSongMeterOverride,
-  saveStemSetMeterOverride,
-  storedMeter,
+  meterOverrideOf,
+  saveMeterOverride,
   type MeterOverride,
   type MeterOverridePatch,
 } from './meter-override';
@@ -75,7 +74,7 @@ export interface NewLibrarySong {
   readonly format: string;
 }
 
-export interface SongRecord extends Partial<MeterOverride> {
+export interface SongRecord extends MeterOverride {
   readonly id: number;
   readonly title: string;
   readonly artist: string;
@@ -349,8 +348,7 @@ async function readSong(
     downbeatIndices:
       row.downbeatIndices === null ? [] : unpackInt32(row.downbeatIndices),
     analysisStatus: row.analysisStatus,
-    meterBeatsPerBar: storedMeter(row.meterBeatsPerBar),
-    barOneSeconds: row.barOneSeconds,
+    ...meterOverrideOf(row),
   };
 }
 
@@ -396,9 +394,9 @@ export function createSongLibraryRepository({
     renameSong: (id: number, title: string) =>
       serial(() => renameSong(db, id, title)),
     saveSongMeterOverride: (id: number, patch: MeterOverridePatch) =>
-      serial(() => saveSongMeterOverride(db, id, patch)),
+      serial(() => saveMeterOverride(db, songs, id, patch)),
     saveStemSetMeterOverride: (id: number, patch: MeterOverridePatch) =>
-      serial(() => saveStemSetMeterOverride(db, id, patch)),
+      serial(() => saveMeterOverride(db, stemSets, id, patch)),
     renameStemSet: (id: number, title: string) =>
       serial(() => renameStemSet(db, id, title)),
     renameStem: (id: number, name: string) =>
