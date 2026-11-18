@@ -88,6 +88,10 @@ class Mixer {
   /// Transport. The read-ahead work runs here on the app thread; the callback
   /// is the sole writer of the head and the playing flag.
   void Play();
+  // App thread, the ring's only producer: a push after this cannot fail.
+  bool HasCommandRoom() const {
+    return commands_.Free() > 0;
+  }
   /// False when the command ring is full.
   bool PlayAt(uint64_t engine_frame);
   /// Stops playback and rewinds the head to 0 (SPEC.md §4.4).

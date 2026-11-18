@@ -928,10 +928,9 @@ working. Changes:
 - Lock via `kb_metronome_set_grid` (§4.2) — follows per-beat spacing, so
   non-constant tempo works.
 - Latency-compensated: click and track land together at the speaker.
-- Count-in before the lock engages. Until it works under a grid (#298), the
-  Count-in chip and its sheet group show disabled with the note "arrives with
-  count-in". The count plays whether the song's click is on or off; with it
-  off the click stays silent once the song starts.
+- Count-in before the lock engages, under a grid (#298): the song starts on the
+  frame the count ends. The count plays whether the song's click is on or off;
+  with it off the click stays silent once the song starts.
 - **Click settings belong to the song.** The Count-in, Click and Accent chips
   open one shared sheet at the tapped group; changes apply live and stay with
   this song, unsaved until "Save for this song". The standalone metronome's
