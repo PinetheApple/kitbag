@@ -77,23 +77,59 @@ class StemBundleManifestTest {
   }
 
   @Test
-  fun `a stem file that could escape or is not a stems FLAC is unreadable`() {
+  fun `a stem file that could escape or is not under stems is unreadable`() {
     val unsafe = listOf(
       "stems/../../evil.flac",
       "../stems/vocals.flac",
       "/stems/vocals.flac",
       "stems/sub/vocals.flac",
       "stems/.hidden.flac",
-      "stems/vocals.wav",
       "vocals.flac",
       "stems/a\\b.flac",
+      "stems/../../evil.wav",
+      "stems/vocals.FLAC",
+      "stems/vocals",
+      "stems/vocals.",
     )
     for (file in unsafe) {
-      assertFalse(file, StemBundleManifest.isSafeStemFile(file))
+      assertFalse(file, StemBundleManifest.isSafeStemPath(file))
       val manifest = withStem(JSONObject().put("name", "vocals").put("file", file).put("frames", 10))
       assertEquals(file, StemBundleRefusal.UNREADABLE, StemBundleManifest.check(manifest, maxStems).refusal)
     }
-    assertTrue(StemBundleManifest.isSafeStemFile("stems/lead_vocals.flac"))
+    assertTrue(StemBundleManifest.isSafeStemPath("stems/lead_vocals.flac"))
+  }
+
+  @Test
+  fun `stems in another format are refused naming that format`() {
+    for ((file, format) in listOf("stems/vocals.wav" to "wav", "stems/vocals.ogg" to "ogg")) {
+      val manifest = withStem(JSONObject().put("name", "vocals").put("file", file).put("frames", 10))
+      val check = StemBundleManifest.check(manifest, maxStems)
+      assertEquals(file, StemBundleRefusal.UNSUPPORTED_STEM_FORMAT, check.refusal)
+      assertEquals(file, format, check.stemFormat)
+      assertEquals("job123", check.jobId)
+      assertNull(check.manifest)
+    }
+  }
+
+  @Test
+  fun `one stem in another format among FLAC stems is refused naming that format`() {
+    val check = StemBundleManifest.check(withStems("stems/drums.flac", "stems/vocals.wav"), maxStems)
+    assertEquals(StemBundleRefusal.UNSUPPORTED_STEM_FORMAT, check.refusal)
+    assertEquals("wav", check.stemFormat)
+  }
+
+  @Test
+  fun `a stem with no extension beside one in another format is unreadable in either order`() {
+    for (files in listOf(listOf("stems/drums", "stems/vocals.wav"), listOf("stems/vocals.wav", "stems/drums"))) {
+      val check = StemBundleManifest.check(withStems(*files.toTypedArray()), maxStems)
+      assertEquals(files.toString(), StemBundleRefusal.UNREADABLE, check.refusal)
+    }
+  }
+
+  @Test
+  fun `a stem in another format in an otherwise damaged manifest is unreadable`() {
+    val manifest = withStem(JSONObject().put("name", "vocals").put("file", "stems/vocals.wav").put("frames", 0))
+    assertEquals(StemBundleRefusal.UNREADABLE, StemBundleManifest.check(manifest, maxStems).refusal)
   }
 
   @Test
@@ -113,6 +149,12 @@ class StemBundleManifestTest {
 
   private fun withStem(stem: JSONObject) =
     BundleFixtures.manifestJson(listOf("vocals")).put("stems", JSONArray().put(stem)).toString()
+
+  private fun withStems(vararg files: String): String {
+    val stems = JSONArray()
+    files.forEachIndexed { i, file -> stems.put(JSONObject().put("name", "stem$i").put("file", file).put("frames", 10)) }
+    return BundleFixtures.manifestJson(listOf("vocals")).put("stems", stems).toString()
+  }
 
   private fun <T> assertNotNullAnd(value: T?): T {
     assertNotNull(value)

@@ -47,6 +47,7 @@ class StemBundleBridge(private val resolver: ContentResolver, private val base: 
       "bundleRefusalTooManyStems" to StemBundleRefusal.TOO_MANY_STEMS,
       "bundleRefusalUnreadable" to StemBundleRefusal.UNREADABLE,
       "bundleRefusalNoSpace" to StemBundleRefusal.NO_SPACE,
+      "bundleRefusalStemFormat" to StemBundleRefusal.UNSUPPORTED_STEM_FORMAT,
     )
   }
 }
