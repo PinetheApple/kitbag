@@ -1,4 +1,4 @@
-import type { Preferences } from '@kitbag/core-db';
+import { STANDALONE_METRONOME_KEY, type Preferences } from '@kitbag/core-db';
 import {
   isAccent,
   isRampUnit,
@@ -7,8 +7,6 @@ import {
 } from '@kitbag/core-state';
 
 import { storedPreference, type StoredPreference } from './storedPreference';
-
-export const STANDALONE_METRONOME_KEY = 'metronome_standalone';
 
 type Check = (value: unknown) => boolean;
 

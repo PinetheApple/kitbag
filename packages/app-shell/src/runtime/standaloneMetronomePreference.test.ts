@@ -1,12 +1,9 @@
-import type { Preferences } from '@kitbag/core-db';
+import { STANDALONE_METRONOME_KEY, type Preferences } from '@kitbag/core-db';
 import { KB_ACCENT, KB_RAMP_UNIT } from '@kitbag/core-native';
 import type { StandaloneMetronome } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
-import {
-  STANDALONE_METRONOME_KEY,
-  standaloneMetronomePreference,
-} from './standaloneMetronomePreference.ts';
+import { standaloneMetronomePreference } from './standaloneMetronomePreference.ts';
 
 const SETTINGS: StandaloneMetronome = {
   bpm: 125,
