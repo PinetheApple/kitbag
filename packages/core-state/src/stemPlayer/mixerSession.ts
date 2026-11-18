@@ -59,6 +59,7 @@ export function mixerSession({
     StemPlayerCommands['onSongStopped']
   > | null = null;
   let afterScrubSeek: ((frame: number) => void) | null = null;
+  let afterClickRelease: (() => void) | null = null;
   const scrubSeek = debounce((frame: number) => {
     runtimeOf().commands.mixerSeek(frame);
     afterScrubSeek?.(frame);
@@ -66,11 +67,12 @@ export function mixerSession({
   const live = (opened: number) => opened === session;
   const pendingClick = createPendingClick();
   const clickSource: MixerClickSource = {
-    running: () => get().click || pendingClick.pending(),
+    running: () => get().click || pendingClick.pending() || counting(),
     title: () => get().title,
     turnOff: () => {
       pendingClick.cancel();
       turnClickOff({ set, get, runtimeOf });
+      afterClickRelease?.();
     },
   };
 
@@ -131,6 +133,9 @@ export function mixerSession({
     scrubSeek,
     onScrubSeek: (listener: (frame: number) => void) => {
       afterScrubSeek = listener;
+    },
+    onClickReleased: (listener: () => void) => {
+      afterClickRelease = listener;
     },
     live,
     close,

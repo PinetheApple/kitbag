@@ -266,7 +266,11 @@ export function createStemPlayerStore(
     };
     const start = songStart(context);
     mixer.onScrubSeek(start.afterSeek);
-    const clicks = clickActions(context, mixer.pendingClick);
+    mixer.onClickReleased(start.startNow);
+    const clicks = clickActions(context, mixer.pendingClick, {
+      keepCountSilent: () => start.recountClick(false),
+      keepCountClicking: () => start.recountClick(true),
+    });
     const anchorRetime = retimeAnchor(context);
     const afterSeek = (frame: number) => {
       anchorRetime(frame);
@@ -362,11 +366,7 @@ export function createStemPlayerStore(
       ...mixActions(set, get, runtimeOf, saver),
       ...transportActions(get, runtimeOf, scrubSeek, afterSeek, start),
       ...sectionLoopActions(context),
-      toggleClick: async () => {
-        const turningOff = get().click;
-        await clicks.toggleClick();
-        if (turningOff && !get().click) start.clickTurnedOff();
-      },
+      ...clicks,
       ...renameActions(context),
       ...retimeActions(context, claim.defer, start),
     };

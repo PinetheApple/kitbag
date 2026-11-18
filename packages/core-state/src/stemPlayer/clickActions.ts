@@ -15,25 +15,44 @@ export type ClickSlice = Pick<
   'status' | 'beats' | 'downbeatIndices' | 'click'
 >;
 
-export function stopClick({ commands }: Pick<MixerRuntime, 'commands'>): void {
-  commands.metronomeFollowMixer(false);
-  commands.clearGrid();
-  commands.metronomeStop();
+export interface ClickHandoff {
+  readonly keepCountSilent: () => boolean;
+  readonly keepCountClicking: () => boolean;
 }
 
-export function turnClickOff({
-  set,
-  get,
-  runtimeOf,
-}: Pick<MixerSessionContext<ClickSlice>, 'set' | 'get' | 'runtimeOf'>): void {
+const NO_HANDOFF: ClickHandoff = {
+  keepCountSilent: () => false,
+  keepCountClicking: () => false,
+};
+
+function releaseGrid({ commands }: Pick<MixerRuntime, 'commands'>): void {
+  commands.metronomeFollowMixer(false);
+  commands.clearGrid();
+}
+
+export function stopClick(runtime: Pick<MixerRuntime, 'commands'>): void {
+  releaseGrid(runtime);
+  runtime.commands.metronomeStop();
+}
+
+export function turnClickOff(
+  {
+    set,
+    get,
+    runtimeOf,
+  }: Pick<MixerSessionContext<ClickSlice>, 'set' | 'get' | 'runtimeOf'>,
+  keepCount: () => boolean = NO_HANDOFF.keepCountSilent,
+): void {
   if (!get().click) return;
   set({ click: false });
-  stopClick(runtimeOf());
+  if (keepCount()) releaseGrid(runtimeOf());
+  else stopClick(runtimeOf());
 }
 
 export function clickActions(
   { set, get, runtimeOf, session }: MixerSessionContext<ClickSlice>,
   pendingClick: PendingClick,
+  handoff: ClickHandoff = NO_HANDOFF,
 ): Pick<StemPlayerActions, 'toggleClick'> {
   const { busy, call } = sessionGate(session);
 
@@ -54,7 +73,8 @@ export function clickActions(
       return;
     }
     commands.metronomeFollowMixer(true);
-    commands.metronomeStart(engine.nowFrame());
+    if (!handoff.keepCountClicking())
+      commands.metronomeStart(engine.nowFrame());
     set({ click: true });
   };
 
@@ -62,7 +82,7 @@ export function clickActions(
     toggleClick: async () => {
       if (busy()) return;
       if (get().click) {
-        turnClickOff({ set, get, runtimeOf });
+        turnClickOff({ set, get, runtimeOf }, handoff.keepCountSilent);
         return;
       }
       await start();

@@ -6,6 +6,7 @@ import {
 } from '@kitbag/core-native';
 import { vi } from 'vitest';
 
+import { COUNT_IN_DRAIN_MARGIN_SECONDS } from './countedStart.ts';
 import type {
   StemPlayerCommands,
   StemPlayerRecords,
@@ -206,4 +207,21 @@ export async function opened(
   fake.commands.mixerClearLoop.mockClear();
   fake.commands.mixerRate.mockClear();
   return { ...fake, store };
+}
+
+export const ONE_BAR = 1;
+export const TWO_FOUR = [{ beat: 0, beatsPerBar: 2 }];
+export const BEAT = 0.5;
+export const BAR_BEATS = 2;
+export const HEAD = at(1.2);
+export const COUNT_END =
+  at(COUNT_IN_DRAIN_MARGIN_SECONDS) + ONE_BAR * BAR_BEATS * at(BEAT);
+
+export async function countingSong({ click = true } = {}) {
+  const song = await opened([stem(1)], { ...SONG_DETAILS, bars: TWO_FOUR });
+  song.countInBars.mockReturnValue(ONE_BAR);
+  if (click) await song.store.getState().toggleClick();
+  song.engine.position = HEAD;
+  vi.clearAllMocks();
+  return song;
 }
