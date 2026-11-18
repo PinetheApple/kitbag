@@ -20,6 +20,10 @@ export { renderConstants } from './native-render.ts';
 export function collectConstants(sources: NativeSources): NativeConstants {
   return {
     maxGridBeats: parseDefineInt(sources.gridHeader, 'KB_MAX_GRID_BEATS'),
+    beatAnalysisVersion: parseDefineInt(
+      sources.apiHeader,
+      'KB_BEAT_ANALYSIS_VERSION',
+    ),
     maxTracks: parseConstexprInt(sources.mixerHeader, 'kMaxTracks'),
     maxBeats: parseConstexprInt(sources.metronomeHeader, 'kMaxBeats'),
     minPolyBeats: parseConstexprInt(sources.metronomeHeader, 'kMinPolyBeats'),

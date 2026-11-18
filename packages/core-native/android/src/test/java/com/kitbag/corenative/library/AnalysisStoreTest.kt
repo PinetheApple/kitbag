@@ -32,7 +32,26 @@ class AnalysisStoreTest {
   private fun analysed(path: String) =
     AnalysisResult(
       path, true, "", 121.5f, floatArrayOf(0.25f, 0.75f, 1.25f), intArrayOf(0, 2), "waves/a.kwav", DURATION_SEC,
+      ANALYSIS_VERSION,
     )
+
+  private fun writeVersion2Result(path: String) {
+    File(dir, "results").mkdirs()
+    val file = File(dir, "results/${AnalysisStore.fileStem(path)}.result")
+    DataOutputStream(file.outputStream()).use { out ->
+      out.writeInt(2)
+      out.writeUTF(path)
+      out.writeBoolean(true)
+      out.writeUTF("")
+      out.writeFloat(121.5f)
+      out.writeInt(1)
+      out.writeFloat(0.25f)
+      out.writeInt(1)
+      out.writeInt(0)
+      out.writeUTF("waves/a.kwav")
+      out.writeDouble(DURATION_SEC)
+    }
+  }
 
   private fun writeVersion1Result(path: String) {
     File(dir, "results").mkdirs()
@@ -63,6 +82,18 @@ class AnalysisStoreTest {
     assertArrayEquals(intArrayOf(0, 2), read.downbeats)
     assertEquals("waves/a.kwav", read.waveformRelativePath)
     assertEquals(DURATION_SEC, read.durationSec, 0.0)
+    assertEquals(ANALYSIS_VERSION, read.analysisVersion)
+  }
+
+  @Test
+  fun `a result stored before analysis versions reads back with no version`() {
+    writeVersion2Result("songs/1/a.mp3")
+    val read = store.pending().single()
+    assertTrue(read.ok)
+    assertArrayEquals(floatArrayOf(0.25f), read.beats, 0f)
+    assertEquals("waves/a.kwav", read.waveformRelativePath)
+    assertEquals(DURATION_SEC, read.durationSec, 0.0)
+    assertNull(read.analysisVersion)
   }
 
   @Test
@@ -75,6 +106,7 @@ class AnalysisStoreTest {
     assertArrayEquals(intArrayOf(0), read.downbeats)
     assertEquals("waves/a.kwav", read.waveformRelativePath)
     assertEquals(AnalysisResult.UNKNOWN_DURATION_SEC, read.durationSec, 0.0)
+    assertNull(read.analysisVersion)
   }
 
   @Test
@@ -86,6 +118,7 @@ class AnalysisStoreTest {
     assertEquals("songs/é ü.mp3", read.relativePath)
     assertEquals(0, read.beats.size)
     assertEquals(AnalysisResult.UNKNOWN_DURATION_SEC, read.durationSec, 0.0)
+    assertNull(read.analysisVersion)
   }
 
   @Test
@@ -186,5 +219,6 @@ class AnalysisStoreTest {
 
   private companion object {
     const val DURATION_SEC = 187.25
+    const val ANALYSIS_VERSION = 7
   }
 }
