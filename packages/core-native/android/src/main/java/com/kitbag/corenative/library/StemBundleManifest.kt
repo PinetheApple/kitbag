@@ -22,6 +22,7 @@ class ManifestStem(val name: String, val file: String, val frames: Long) {
 class BundleManifest(
   val jobId: String,
   val title: String,
+  val artist: String?,
   val durationSec: Double,
   val sampleRate: Int,
   val channels: Int,
@@ -92,7 +93,13 @@ object StemBundleManifest {
     val parsed = (0 until stems.length()).map { parseStem(stems.opt(it)) ?: return null }
     if (parsed.distinctBy { it.name }.size != parsed.size) return null
     if (parsed.distinctBy { it.fileName.lowercase() }.size != parsed.size) return null
-    return BundleManifest(jobId, title, duration, sampleRate.toInt(), channels.toInt(), parsed)
+    return BundleManifest(jobId, title, artist(json), duration, sampleRate.toInt(), channels.toInt(), parsed)
+  }
+
+  private fun artist(json: JSONObject): String? {
+    val band = json.opt("band") as? JSONObject
+    return listOf(json.stringOrNull("artist"), band?.stringOrNull("name"), band?.stringOrNull("englishName"))
+      .firstNotNullOfOrNull { it?.trim()?.ifEmpty { null } }
   }
 
   private fun parseStem(value: Any?): ManifestStem? {

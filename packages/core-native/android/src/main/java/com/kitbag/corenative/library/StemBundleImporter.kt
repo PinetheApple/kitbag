@@ -23,7 +23,9 @@ class ImportedBundle(
   val metadata: BundleMetadata,
   val grid: BundleGrid,
   val lyrics: BundleLyrics?,
-)
+) {
+  val artist: String? get() = manifest.artist ?: metadata.heading?.artist
+}
 
 class StemBundleImporter(
   private val base: File,
