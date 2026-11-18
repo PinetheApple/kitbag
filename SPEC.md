@@ -353,7 +353,10 @@ divided by the rate, and passes one end frame to both. A seek or a speed change
 during the count is the caller's cancel plus a new counted start: a pending
 `play_at` survives a seek. With the song's click off the count still sounds
 (`start_click` 0): the metronome stops on the end frame, drops the play intent
-the count took, and a later start locks to the song's grid.
+the count took, and a later start locks to the song's grid. Toggling the click
+during the count re-issues it with the same end frame and the new `start_click`,
+dropping beats already past; the metronome tool's Play during the count ends it
+and starts the song at once, and so does a refused re-issue.
 
 **Past the last grid beat, the click goes silent and stays silent.** Every song
 reaches this. `is_running()` keeps reporting true, and `bar_phase` and

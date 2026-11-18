@@ -4,7 +4,7 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { mixActions, transportActions } from './actions.ts';
 import { barMarkDownbeats } from './bars.ts';
-import { clickActions } from './clickActions.ts';
+import { clickActions, releaseClick } from './clickActions.ts';
 import { NO_SONG_FACTS, songFacts, type SongFacts } from './facts.ts';
 import type { LoopSeconds } from './loop.ts';
 import { sectionLoopActions } from './loopActions.ts';
@@ -264,13 +264,14 @@ export function createStemPlayerStore(
       runtimeOf,
       session: mixer.current,
     };
-    const start = songStart(context);
-    mixer.onScrubSeek(start.afterSeek);
-    mixer.onClickReleased(start.startNow);
-    const clicks = clickActions(context, mixer.pendingClick, {
-      keepCountSilent: () => start.recountClick(false),
-      keepCountClicking: () => start.recountClick(true),
+    const start = songStart({
+      ...context,
+      releaseClick: () => releaseClick(context),
     });
+    mixer.onScrubSeek(start.afterSeek);
+    mixer.onClickReleased(start.endCountNow);
+    mixer.onSongStopped(start.songStopped);
+    const clicks = clickActions(context, mixer.pendingClick, start);
     const anchorRetime = retimeAnchor(context);
     const afterSeek = (frame: number) => {
       anchorRetime(frame);

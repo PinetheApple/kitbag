@@ -22,6 +22,10 @@ async function counting(options: { click?: boolean } = {}) {
   return song;
 }
 
+function lastCall(mock: { mock: { invocationCallOrder: number[] } }): number {
+  return mock.mock.invocationCallOrder.at(-1) ?? 0;
+}
+
 function counts({ commands }: Song) {
   return commands.songCountIn.mock.calls;
 }
@@ -141,12 +145,60 @@ describe('during the count', () => {
     const song = await counting();
     await song.store.getState().toggleClick();
     await song.store.getState().toggleClick();
-    expect(counts(song).map(([end, , , click]) => [end, click])).toEqual([
+    const endAndClick = counts(song).map((call) => [call[0], call[3]]);
+    expect(endAndClick).toEqual([
       [COUNT_END, true],
       [COUNT_END, false],
       [COUNT_END, true],
     ]);
     expect(song.commands.mixerPlay).not.toHaveBeenCalled();
+  });
+
+  it('turning the click off re-issues the count before releasing the grid', async () => {
+    const song = await counting();
+    await song.store.getState().toggleClick();
+    expect(lastCall(song.commands.songCountIn)).toBeLessThan(
+      lastCall(song.commands.metronomeFollowMixer),
+    );
+  });
+
+  it('a refused click-on re-issue starts the click, then the song', async () => {
+    const song = await counting({ click: false });
+    song.commands.songCountIn.mockResolvedValueOnce(KB_RESULT.KB_ERROR_BUSY);
+    await song.store.getState().toggleClick();
+    await vi.runAllTimersAsync();
+    expect(song.commands.metronomeStart).toHaveBeenCalledTimes(1);
+    expect(song.commands.mixerPlay).toHaveBeenCalledTimes(1);
+    expect(lastCall(song.commands.metronomeStart)).toBeLessThan(
+      lastCall(song.commands.mixerPlay),
+    );
+  });
+
+  it('a refusal overtaken by a later re-issue is ignored', async () => {
+    const song = await counting();
+    let answer: (code: number) => void = () => undefined;
+    song.commands.songCountIn.mockImplementationOnce(
+      () =>
+        new Promise<number>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    await song.store.getState().toggleClick();
+    await song.store.getState().toggleClick();
+    answer(KB_RESULT.KB_ERROR_BUSY);
+    await vi.runAllTimersAsync();
+    expect(song.commands.mixerPlay).not.toHaveBeenCalled();
+    expect(song.store.getState().countEndFrame).toBe(COUNT_END);
+  });
+
+  it('a click toggle after a notification Stop starts no count', async () => {
+    const song = await counting();
+    song.stopSongFromNotification();
+    vi.clearAllMocks();
+    await song.store.getState().toggleClick();
+    expect(song.commands.songCountIn).not.toHaveBeenCalled();
+    expect(song.commands.mixerPlay).not.toHaveBeenCalled();
+    expect(song.store.getState().countEndFrame).toBeNull();
   });
 
   it('a refused click-off re-issue stops the click and plays the song now', async () => {

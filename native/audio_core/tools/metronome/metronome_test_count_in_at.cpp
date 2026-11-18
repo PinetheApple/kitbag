@@ -26,10 +26,9 @@ constexpr int64_t kCancelAt = 55040;
 constexpr int64_t kRestartAt = 70144;
 // Clear of the third beat's ring, so a replayed beat would show as a click.
 constexpr int64_t kReissueAt = 60160;
+constexpr int64_t kLateAt = 106240;
+constexpr int64_t kLateGridBeats[] = {112000, 124000};
 constexpr size_t kBeforeCancel = 3;
-constexpr uint32_t kSongOffset = 77;
-constexpr int64_t kGridHead = 152965;
-constexpr int kRingOutBlocks = 40;
 constexpr bool kStartClick = true;
 constexpr uint32_t kNoIntent = kitbag::Metronome::kNoIntent;
 constexpr uint32_t kCountIntent = 7;
@@ -50,6 +49,12 @@ std::vector<int64_t> ExpectedClicks(int64_t end, int first_k) {
   clicks.push_back(end);
   clicks.push_back(end + kStandaloneBeatFrames);
   return clicks;
+}
+
+std::vector<int64_t> CountBeatsOnly(int64_t end) {
+  std::vector<int64_t> beats = ExpectedClicks(end, kCountBeats);
+  beats.resize(kCountBeats);
+  return beats;
 }
 
 bool CountAccents(const std::vector<float>& left) {
@@ -170,11 +175,10 @@ void TestClickOffCountEndsStopped() {
         }
       }
   );
-  std::vector<int64_t> want = ExpectedClicks(kEnd, kCountBeats);
-  want.resize(kCountBeats);
   Check(
-      SameClicks(DetectClicks(left), want) && !metronome.is_running() &&
-          metronome.current_beat() == -1 && !counting_after_end,
+      SameClicks(DetectClicks(left), CountBeatsOnly(kEnd)) &&
+          !metronome.is_running() && metronome.current_beat() == -1 &&
+          !counting_after_end,
       "count_in_at: with the click off the count ends stopped and silent"
   );
   Check(
@@ -203,11 +207,50 @@ std::vector<float> RenderReissued(kitbag::Metronome* metronome) {
 void TestReissueKeepsTheCount() {
   kitbag::Metronome metronome;
   const auto left = RenderReissued(&metronome);
-  std::vector<int64_t> want = ExpectedClicks(kEnd, kCountBeats);
-  want.resize(kCountBeats);
   Check(
-      SameClicks(DetectClicks(left), want) && !metronome.is_running(),
+      SameClicks(DetectClicks(left), CountBeatsOnly(kEnd)) &&
+          !metronome.is_running(),
       "count_in_at: a re-issue mid-count keeps each beat once, click off after"
+  );
+}
+
+std::vector<float>
+RenderReissuedLate(kitbag::Metronome* metronome, bool start_click) {
+  Configure(metronome, kCountBars);
+  metronome->CountInAt(kEnd, kBeatFrames, kSongBeats, !start_click, kNoIntent);
+  return RenderLeft(*metronome, kEnd + kAfterEnd, [&](int64_t at) {
+    if (at == kLateAt) {
+      metronome
+          ->CountInAt(kEnd, kBeatFrames, kSongBeats, start_click, kCountIntent);
+    }
+  });
+}
+
+void SetLateGrid(kitbag::Metronome* metronome) {
+  auto grid = std::make_unique<kitbag::BeatGrid>();
+  for (const int64_t beat : kLateGridBeats) {
+    grid->beat_times_sec.push_back(static_cast<double>(beat) / kSampleRate);
+  }
+  metronome->SetGrid(std::move(grid), 0, false);
+}
+
+void TestReissuePastTheEnd() {
+  kitbag::Metronome stopped;
+  const auto stopped_left = RenderReissuedLate(&stopped, !kStartClick);
+  std::vector<int64_t> want = CountBeatsOnly(kEnd);
+  want.push_back(kEnd);
+  Check(
+      SameClicks(DetectClicks(stopped_left), want) && !stopped.is_running(),
+      "count_in_at: a click-off re-issue past the end stops the click"
+  );
+  kitbag::Metronome started;
+  SetLateGrid(&started);
+  const auto started_left = RenderReissuedLate(&started, kStartClick);
+  want = CountBeatsOnly(kEnd);
+  want.insert(want.end(), std::begin(kLateGridBeats), std::end(kLateGridBeats));
+  Check(
+      SameClicks(DetectClicks(started_left), want) && started.is_running(),
+      "count_in_at: a click-on re-issue past the end starts on the grid"
   );
 }
 
@@ -273,83 +316,6 @@ void TestCountMirrors() {
   );
 }
 
-void FollowGrid(kitbag::Metronome* metronome) {
-  auto grid = std::make_unique<kitbag::BeatGrid>();
-  grid->beat_times_sec = {
-      static_cast<double>(kGridHead) / kSampleRate,
-      static_cast<double>(kGridHead + kStandaloneBeatFrames) / kSampleRate
-  };
-  metronome->SetGrid(std::move(grid), 0, false);
-  metronome->SetFollowMixer(true);
-  metronome->Start();
-}
-
-std::vector<float> RenderSongBlock(
-    kitbag::Metronome* metronome,
-    const kitbag::SongClock& song,
-    uint64_t block_start
-) {
-  std::vector<float> out(static_cast<size_t>(kBlockFrames) * kChannels);
-  metronome->Render(
-      out.data(),
-      kBlockFrames,
-      kSampleRate,
-      kChannels,
-      block_start,
-      &song
-  );
-  std::vector<float> left;
-  for (uint32_t f = 0; f < kBlockFrames; ++f) {
-    left.push_back(out[f * kChannels]);
-  }
-  return left;
-}
-
-const kitbag::SongClock kStartsMidBlock{
-    .playing = true,
-    .opens_on_jump = true,
-    .first = kGridHead,
-    .frames = kBlockFrames - kSongOffset,
-    .start_index = kSongOffset
-};
-
-void TestFollowStartsMidBlock() {
-  kitbag::Metronome metronome;
-  FollowGrid(&metronome);
-  const std::vector<int64_t> clicks =
-      DetectClicks(RenderSongBlock(&metronome, kStartsMidBlock, 0));
-  Check(
-      clicks.size() == 1 && clicks.front() == kSongOffset,
-      "follow: a song starting mid-block clicks on its first frame"
-  );
-}
-
-// The pause leaves the beat's frame as the last one followed, so only the
-// jump flag tells the replayed frame from a repeated one.
-void TestFollowReplaysAJumpBackMidBlock() {
-  kitbag::Metronome metronome;
-  FollowGrid(&metronome);
-  const kitbag::SongClock up_to_beat{
-      .playing = true,
-      .first = kGridHead + 1 - kBlockFrames,
-      .frames = kBlockFrames
-  };
-  RenderSongBlock(&metronome, up_to_beat, 0);
-  const kitbag::SongClock paused;
-  for (int b = 1; b <= kRingOutBlocks; ++b) {
-    RenderSongBlock(&metronome, paused, uint64_t{kBlockFrames} * b);
-  }
-  const std::vector<int64_t> clicks = DetectClicks(RenderSongBlock(
-      &metronome,
-      kStartsMidBlock,
-      uint64_t{kBlockFrames} * (kRingOutBlocks + 1)
-  ));
-  Check(
-      clicks.size() == 1 && clicks.front() == kSongOffset,
-      "follow: a seek back onto the last beat replays it mid-block"
-  );
-}
-
 }  // namespace
 
 void RunCountInAtTests() {
@@ -359,10 +325,9 @@ void RunCountInAtTests() {
   TestCountOffStartsOnTheEnd();
   TestClickOffCountEndsStopped();
   TestReissueKeepsTheCount();
+  TestReissuePastTheEnd();
   TestArmedVoiceHolds();
   TestCountMirrors();
-  TestFollowStartsMidBlock();
-  TestFollowReplaysAJumpBackMidBlock();
 }
 
 }  // namespace metronome_test

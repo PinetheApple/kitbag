@@ -17,17 +17,21 @@ export interface SongStartOptions {
   readonly get: () => SongStartSlice;
   readonly runtimeOf: () => SongStartRuntime;
   readonly session: () => number;
+  readonly releaseClick: () => boolean;
 }
 
 export interface SongStart {
   readonly play: (headFrame: number) => void;
   readonly cancel: () => boolean;
   readonly stop: () => boolean;
+  readonly songStopped: () => void;
   readonly counting: () => boolean;
   readonly afterSeek: (frame: number) => void;
   readonly rateSet: (rate: number) => void;
-  readonly recountClick: (startClick: boolean) => boolean;
-  readonly startNow: () => void;
+  readonly gridReplaced: () => void;
+  readonly recountWithClickOff: () => boolean;
+  readonly recountWithClickOn: () => boolean;
+  readonly endCountNow: () => void;
 }
 
 export function countPending(
@@ -47,6 +51,7 @@ export function songStart({
   get,
   runtimeOf,
   session,
+  releaseClick,
 }: SongStartOptions): SongStart {
   let generation = 0;
   let pending: CountedStart | null = null;
@@ -78,10 +83,14 @@ export function songStart({
     if (get().countEndFrame !== null) set({ countEndFrame: null });
   };
 
-  const settleClick = () => {
+  const rearmClick = () => {
     const { commands, engine } = runtimeOf();
     if (get().click) commands.metronomeStart(engine.nowFrame());
-    else commands.metronomeStop();
+  };
+
+  const settleClick = () => {
+    if (get().click) rearmClick();
+    else runtimeOf().commands.metronomeStop();
   };
 
   const startNow = () => {
@@ -125,7 +134,7 @@ export function songStart({
     if (!counting()) return false;
     forget();
     runtimeOf().commands.songPause();
-    if (get().click) settleClick();
+    rearmClick();
     return true;
   };
 
@@ -133,17 +142,32 @@ export function songStart({
     if (!counting()) return false;
     forget();
     runtimeOf().commands.songStop();
+    releaseClick();
     return true;
+  };
+
+  const songStopped = () => {
+    const counted = counting();
+    if (counted) forget();
+    const clicked = releaseClick();
+    if (counted || clicked) runtimeOf().commands.metronomeStop();
   };
 
   const recount = (frame: number) => {
     if (cancel()) play(frame);
   };
 
+  const recountWith = (startClick: boolean) => {
+    if (pending === null || !counting()) return false;
+    countIn(pending, startClick);
+    return true;
+  };
+
   return {
     play,
     cancel,
     stop,
+    songStopped,
     counting,
     afterSeek: recount,
     rateSet: (rate) => {
@@ -151,12 +175,12 @@ export function songStart({
       known = { session: session(), rate };
       if (changed) recount(runtimeOf().engine.position());
     },
-    recountClick: (startClick) => {
-      if (pending === null || !counting()) return false;
-      countIn(pending, startClick);
-      return true;
+    gridReplaced: () => {
+      recount(runtimeOf().engine.position());
     },
-    startNow: () => {
+    recountWithClickOff: () => recountWith(false),
+    recountWithClickOn: () => recountWith(true),
+    endCountNow: () => {
       if (counting()) startNow();
     },
   };

@@ -210,9 +210,9 @@ export async function opened(
 }
 
 export const ONE_BAR = 1;
-export const TWO_FOUR = [{ beat: 0, beatsPerBar: 2 }];
-export const BEAT = 0.5;
 export const BAR_BEATS = 2;
+export const TWO_FOUR = [{ beat: 0, beatsPerBar: BAR_BEATS }];
+export const BEAT = 0.5;
 export const HEAD = at(1.2);
 export const COUNT_END =
   at(COUNT_IN_DRAIN_MARGIN_SECONDS) + ONE_BAR * BAR_BEATS * at(BEAT);

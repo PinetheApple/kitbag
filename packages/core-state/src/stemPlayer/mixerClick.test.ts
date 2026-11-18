@@ -21,6 +21,7 @@ import { createStemPlayerStore } from './store.ts';
 import {
   BARS as STEM_BARS,
   fakeRuntime as fakeStemRuntime,
+  COUNT_END,
   ONE_BAR,
   record,
   SAVE_MS,
@@ -137,7 +138,7 @@ async function stemsCounting({ click }: { click: boolean }) {
   if (click) await stems.getState().toggleClick();
   stems.getState().togglePlay();
   vi.clearAllMocks();
-  return { commands: fake.commands, stems, standalone, songClick };
+  return { commands: fake.commands, stems, standalone, songClick, fake };
 }
 
 function lastCall(mock: { mock: { invocationCallOrder: number[] } }): number {
@@ -232,32 +233,58 @@ describe("standalone Play while a song's click runs", () => {
 });
 
 describe('standalone Play while a stem song counts in', () => {
-  it.each([true, false])(
-    'cancels the count and plays the song now, click %s',
-    async (click) => {
-      const { commands, stems, standalone, songClick } = await stemsCounting({
-        click,
-      });
-      standalone.getState().start();
-      expect(commands.mixerPlay).toHaveBeenCalledOnce();
-      expect(commands.metronomeStop).toHaveBeenCalled();
-      expect(lastCall(commands.metronomeStop)).toBeLessThan(
-        lastCall(commands.mixerPlay),
-      );
-      expect(lastCall(commands.mixerPlay)).toBeLessThan(
-        lastCall(commands.metronomeStart),
-      );
-      expect(commands.songPause).not.toHaveBeenCalled();
-      expect(commands.songCountIn).not.toHaveBeenCalled();
-      expect(stems.getState()).toMatchObject({
-        click: false,
-        countEndFrame: null,
-      });
-      expect(songClick.notice.getState().released).toMatchObject({
-        title: stems.getState().title,
-      });
-    },
-  );
+  it.each([
+    ['on', true],
+    ['off', false],
+  ])('cancels the count and plays the song now, click %s', async (_, click) => {
+    const { commands, stems, standalone, songClick } = await stemsCounting({
+      click,
+    });
+    standalone.getState().start();
+    expect(commands.mixerPlay).toHaveBeenCalledOnce();
+    expect(commands.metronomeStop).toHaveBeenCalled();
+    expect(lastCall(commands.metronomeStop)).toBeLessThan(
+      lastCall(commands.mixerPlay),
+    );
+    expect(lastCall(commands.mixerPlay)).toBeLessThan(
+      lastCall(commands.metronomeStart),
+    );
+    expect(commands.songPause).not.toHaveBeenCalled();
+    expect(commands.songCountIn).not.toHaveBeenCalled();
+    expect(stems.getState()).toMatchObject({
+      click: false,
+      countEndFrame: null,
+    });
+    expect(songClick.notice.getState().released).toMatchObject({
+      title: stems.getState().title,
+    });
+  });
+});
+
+describe('standalone Play after a click-off count ended', () => {
+  it('leaves the song alone and shows no notice', async () => {
+    const { commands, standalone, songClick, fake } = await stemsCounting({
+      click: false,
+    });
+    fake.engine.now = COUNT_END;
+    standalone.getState().start();
+    expect(commands.mixerPlay).not.toHaveBeenCalled();
+    expect(commands.metronomeStop).not.toHaveBeenCalled();
+    expect(songClick.notice.getState().released).toBeNull();
+  });
+});
+
+describe('standalone Play after a notification Stop during a count', () => {
+  it('does not restart the stopped song', async () => {
+    const { commands, standalone, songClick, fake } = await stemsCounting({
+      click: true,
+    });
+    fake.stopSongFromNotification();
+    vi.clearAllMocks();
+    standalone.getState().start();
+    expect(commands.mixerPlay).not.toHaveBeenCalled();
+    expect(songClick.notice.getState().released).toBeNull();
+  });
 });
 
 describe('standalone Play with no song click', () => {

@@ -60,6 +60,9 @@ export function mixerSession({
   > | null = null;
   let afterScrubSeek: ((frame: number) => void) | null = null;
   let afterClickRelease: (() => void) | null = null;
+  let songStopped = () => {
+    turnClickOff({ set, get, runtimeOf });
+  };
   const scrubSeek = debounce((frame: number) => {
     runtimeOf().commands.mixerSeek(frame);
     afterScrubSeek?.(frame);
@@ -137,6 +140,9 @@ export function mixerSession({
     onClickReleased: (listener: () => void) => {
       afterClickRelease = listener;
     },
+    onSongStopped: (listener: () => void) => {
+      songStopped = listener;
+    },
     live,
     close,
     current: () => session,
@@ -154,7 +160,7 @@ export function mixerSession({
       pendingClick.cancel();
       mixerClick.attach(clickSource);
       songStopSubscription ??= runtimeOf().commands.onSongStopped(() => {
-        turnClickOff({ set, get, runtimeOf });
+        songStopped();
       });
       return ++session;
     },
