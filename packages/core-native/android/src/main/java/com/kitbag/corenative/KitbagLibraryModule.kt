@@ -75,9 +75,9 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       var reserved: File? = null
       try {
         val source = Uri.parse(uri)
-        val displayName = picker.displayName(source) ?: source.lastPathSegment
+        val displayName = picker.displayName(source)
         dir = LibraryPaths.resolve(base, relativeDir, allowBase = true)
-        reserved = reserveTarget(dir, source, displayName)
+        reserved = reserveTarget(dir, source, displayName ?: source.lastPathSegment)
         copyInto(source, reserved)
         promise.resolve(importedAudio(reserved, displayName))
       } catch (e: Exception) {

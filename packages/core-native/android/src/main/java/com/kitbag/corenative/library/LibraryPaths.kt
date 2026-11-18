@@ -41,8 +41,7 @@ object LibraryPaths {
   fun safeFileName(displayName: String?, fallbackExtension: String?): String {
     val leaf = leafOf(displayName)
     val rawStem = stemOf(leaf)
-    val hasExtension = rawStem.length < leaf.length
-    val rawExtension = if (hasExtension) leaf.substring(rawStem.length + 1) else fallbackExtension.orEmpty()
+    val rawExtension = extensionOf(leaf) ?: fallbackExtension.orEmpty()
 
     val stem = rawStem
       .map { if (it.isLetterOrDigit() || it in " -_()") it else '_' }
@@ -59,7 +58,8 @@ object LibraryPaths {
     return if (extension.isEmpty()) stem else "$stem.$extension"
   }
 
-  fun displayTitle(displayName: String?): String? = stemOf(leafOf(displayName)).trim().ifEmpty { null }
+  fun displayTitle(displayName: String?): String? =
+    stemOf(leafOf(displayName)).trim().takeIf { stem -> stem.any { it.isLetterOrDigit() } }
 
   // Unique by stem, not full name: the waveform sidecar is keyed on the stem,
   // so "a.mp3" and "a.flac" in one directory would share one ".kwav".
@@ -91,5 +91,10 @@ object LibraryPaths {
   private fun stemOf(name: String): String {
     val dot = name.lastIndexOf('.')
     return if (dot > 0) name.substring(0, dot) else name
+  }
+
+  private fun extensionOf(name: String): String? {
+    val dot = name.lastIndexOf('.')
+    return if (dot > 0) name.substring(dot + 1) else null
   }
 }

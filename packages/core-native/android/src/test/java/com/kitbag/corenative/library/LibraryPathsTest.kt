@@ -79,6 +79,11 @@ class LibraryPathsTest {
   }
 
   @Test
+  fun `a trailing dot is an empty extension, not a missing one`() {
+    assertEquals("track", LibraryPaths.safeFileName("track.", "m4a"))
+  }
+
+  @Test
   fun `long names are capped`() {
     val name = LibraryPaths.safeFileName("x".repeat(500) + "." + "y".repeat(50), null)
     assertEquals(48 + 1 + 8, name.length)
@@ -105,6 +110,13 @@ class LibraryPathsTest {
     assertNull(LibraryPaths.displayTitle(""))
     assertNull(LibraryPaths.displayTitle("   .mp3"))
     assertNull(LibraryPaths.displayTitle("Music/"))
+  }
+
+  @Test
+  fun `a display name with no letter or digit has no display title`() {
+    assertNull(LibraryPaths.displayTitle(".."))
+    assertNull(LibraryPaths.displayTitle("a/.."))
+    assertNull(LibraryPaths.displayTitle("_-_.mp3"))
   }
 
   @Test
