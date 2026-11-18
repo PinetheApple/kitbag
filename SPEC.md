@@ -351,7 +351,9 @@ the other. The caller snaps the head back to the whole frame at or before the
 bar's downbeat, spaces the count at the grid interval before that downbeat
 divided by the rate, and passes one end frame to both. A seek or a speed change
 during the count is the caller's cancel plus a new counted start: a pending
-`play_at` survives a seek.
+`play_at` survives a seek. With the song's click off the count still sounds
+(`start_click` 0): the metronome stops on the end frame, drops the play intent
+the count took, and a later start locks to the song's grid.
 
 **Past the last grid beat, the click goes silent and stays silent.** Every song
 reaches this. `is_running()` keeps reporting true, and `bar_phase` and
@@ -928,7 +930,8 @@ working. Changes:
 - Latency-compensated: click and track land together at the speaker.
 - Count-in before the lock engages. Until it works under a grid (#298), the
   Count-in chip and its sheet group show disabled with the note "arrives with
-  count-in".
+  count-in". The count plays whether the song's click is on or off; with it
+  off the click stays silent once the song starts.
 - **Click settings belong to the song.** The Count-in, Click and Accent chips
   open one shared sheet at the tapped group; changes apply live and stay with
   this song, unsaved until "Save for this song". The standalone metronome's

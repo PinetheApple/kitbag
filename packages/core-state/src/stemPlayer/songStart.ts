@@ -93,7 +93,12 @@ export function songStart({
     commands.mixerSeek(counted.startFrame);
     set({ countEndFrame: counted.endFrame });
     void commands
-      .songCountIn(counted.endFrame, counted.beatFrames, counted.beatsPerBar)
+      .songCountIn(
+        counted.endFrame,
+        counted.beatFrames,
+        counted.beatsPerBar,
+        get().click,
+      )
       .catch(() => KB_RESULT.KB_ERROR_INTERNAL)
       .then((result) => {
         if (result === KB_RESULT.KB_OK) return;

@@ -49,7 +49,7 @@ describe('play with a count-in', () => {
   it('counts the bar at the head in, then starts the song where the count ends', async () => {
     const song = await counting();
     expect(song.commands.mixerSeek.mock.calls).toEqual([[BAR_AT_HEAD]]);
-    expect(counts(song)).toEqual([[COUNT_END, at(BEAT), BAR_BEATS]]);
+    expect(counts(song)).toEqual([[COUNT_END, at(BEAT), BAR_BEATS, true]]);
     expect(song.commands.mixerPlay).not.toHaveBeenCalled();
   });
 
@@ -70,7 +70,7 @@ describe('play with a count-in', () => {
     song.engine.position = SONG_END;
     song.store.getState().togglePlay();
     expect(song.commands.mixerSeek.mock.calls).toEqual([[0], [0]]);
-    expect(counts(song)).toEqual([[COUNT_END, at(BEAT), BAR_BEATS]]);
+    expect(counts(song)).toEqual([[COUNT_END, at(BEAT), BAR_BEATS, true]]);
   });
 
   it('plays the song uncounted when the engine refuses the count', async () => {

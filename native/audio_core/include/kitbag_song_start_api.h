@@ -36,7 +36,11 @@ KB_EXPORT kb_result kb_mixer_play_at(kb_engine* engine, uint64_t start_frame);
  * mirrors report the count. A start, start_at, anchor, stop or pause cancels
  * it. Pair it with kb_mixer_play_at(end_frame) and a grid followed with
  * kb_metronome_follow_mixer(1): the song and its click start on end_frame.
- * Sets play intent like kb_metronome_start.
+ * With start_click 0 the count still sounds but no click starts: from
+ * end_frame the metronome renders nothing and reads stopped, as after
+ * kb_metronome_stop, and a later kb_metronome_start locks to the song.
+ * Sets play intent like kb_metronome_start; with start_click 0 it ends on
+ * end_frame unless a later start, stop or pause has replaced it.
  * Returns KB_ERROR_INVALID_ARGUMENT for a null engine, end_frame above
  * KB_MAX_EXACT_FRAME, beat_frames below 1 or not finite, or beats_per_bar
  * outside [1, 16]; KB_ERROR_BUSY when the command queue is full. Either leaves
@@ -45,7 +49,8 @@ KB_EXPORT kb_result kb_metronome_count_in_at(
     kb_engine* engine,
     uint64_t end_frame,
     double beat_frames,
-    int32_t beats_per_bar
+    int32_t beats_per_bar,
+    int32_t start_click
 );
 
 #ifdef __cplusplus
