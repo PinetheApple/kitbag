@@ -10,6 +10,8 @@ const NO_SPACE: BundleRefusal = {
   supportedVersion: 1,
   stemCount: 6,
   maxStems: 16,
+  stemFormat: '',
+  supportedStemFormat: 'flac',
 };
 
 describe('importView', () => {

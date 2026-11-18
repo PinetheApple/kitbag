@@ -321,6 +321,30 @@ describe('adding a bundle fetched from StemDeck', () => {
     expect(store.getState().notice).toBeNull();
   });
 
+  it('returns a stem-format refusal as refused, naming the format', async () => {
+    const fake = fakeFiles();
+    fake.files.checkStemBundle.mockResolvedValue(
+      bundleCheck({
+        refusal: CODES.bundleRefusalStemFormat,
+        stemFormat: 'wav',
+      }),
+    );
+    const { store, files } = setup(fake);
+    const outcome = await store
+      .getState()
+      .addFetchedBundle(FETCHED, { replace: false });
+    expect(outcome).toMatchObject({
+      kind: 'refused',
+      refusal: {
+        reason: 'stemFormat',
+        stemFormat: 'wav',
+        supportedStemFormat: 'flac',
+      },
+    });
+    expect(files.importStemBundle).not.toHaveBeenCalled();
+    expect(store.getState().notice).toBeNull();
+  });
+
   it('returns a failed add and leaves no folder behind', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const { store, records, files } = setup();
