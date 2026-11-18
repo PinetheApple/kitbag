@@ -147,6 +147,34 @@ class StemBundleManifestTest {
     assertNull(StemBundleManifest.check(manifest, maxStems).refusal)
   }
 
+  @Test
+  fun `the artist is the manifest artist, then the band name, then its English name`() {
+    val band = JSONObject().put("id", "Q1").put("name", "Band").put("englishName", "Band EN")
+    assertEquals("Artist", artistOf { put("artist", " Artist ").put("band", band) })
+    for (absent in listOf<Any>(JSONObject.NULL, "", "  \t")) {
+      assertEquals("$absent", "Band", artistOf { put("artist", absent).put("band", band) })
+    }
+    assertEquals("Band", artistOf { put("band", band) })
+    for (empty in listOf("", " ")) {
+      val english = JSONObject(band.toString()).put("name", empty)
+      assertEquals("Band EN", artistOf { put("artist", JSONObject.NULL).put("band", english) })
+    }
+  }
+
+  @Test
+  fun `no usable artist or band leaves the artist absent`() {
+    assertNull(artistOf { this })
+    assertNull(artistOf { put("artist", JSONObject.NULL).put("band", JSONObject.NULL) })
+    val blank = JSONObject().put("id", "Q1").put("name", " ").put("englishName", "")
+    assertNull(artistOf { put("artist", "").put("band", blank) })
+    assertNull(artistOf { put("artist", 7).put("band", "Band") })
+  }
+
+  private fun artistOf(fields: JSONObject.() -> JSONObject): String? {
+    val json = BundleFixtures.manifestJson(listOf("vocals")).fields().toString()
+    return assertNotNullAnd(StemBundleManifest.check(json, maxStems).manifest).artist
+  }
+
   private fun withStem(stem: JSONObject) =
     BundleFixtures.manifestJson(listOf("vocals")).put("stems", JSONArray().put(stem)).toString()
 

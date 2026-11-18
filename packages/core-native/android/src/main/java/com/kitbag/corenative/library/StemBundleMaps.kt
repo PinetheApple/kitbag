@@ -25,7 +25,7 @@ object StemBundleMaps {
       putString("jobId", manifest.jobId)
       putString("title", manifest.title)
       putString("songTitle", metadata.heading?.title)
-      putString("artist", metadata.heading?.artist)
+      putString("artist", bundle.artist)
       putString("relativeDir", bundle.relativeDir)
       putDouble("durationSec", manifest.durationSec)
       putInt("sampleRate", manifest.sampleRate)
