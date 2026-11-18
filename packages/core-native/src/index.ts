@@ -66,6 +66,7 @@ export { acquireEngineHold, type EngineHoldCommands } from './engineHold.ts';
 export { setTrackKey, type TrackKeyCommands } from './mixerKey.ts';
 export type {
   KitbagCommandsConstants,
+  SongTransportRequest,
   SongTransportShowState,
   TransportEvent,
   TransportSetlist,

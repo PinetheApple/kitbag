@@ -3,6 +3,7 @@ import {
   KB_COUNT_IN_OFF,
   KB_MIXER_UNITY_RATE,
   KB_RESULT,
+  type SongTransportRequest,
 } from '@kitbag/core-native';
 import { vi } from 'vitest';
 
@@ -95,6 +96,7 @@ export function fakeRuntime(set: StemSetRecord) {
     rate: KB_MIXER_UNITY_RATE,
   };
   const songStopped = new Set<() => void>();
+  const songRequests = new Set<(request: SongTransportRequest) => void>();
   const commands = {
     start: vi.fn(() => Promise.resolve(0)),
     stop: vi.fn(),
@@ -139,6 +141,12 @@ export function fakeRuntime(set: StemSetRecord) {
       songStopped.add(handler);
       return { remove: () => songStopped.delete(handler) };
     }),
+    onSongTransport: vi.fn(
+      (handler: (request: SongTransportRequest) => void) => {
+        songRequests.add(handler);
+        return { remove: () => songRequests.delete(handler) };
+      },
+    ),
   };
   const records = {
     readStemSet: vi.fn(() =>
@@ -181,6 +189,11 @@ export function fakeRuntime(set: StemSetRecord) {
       handler();
     });
   };
+  const requestFromNotification = (request: SongTransportRequest) => {
+    songRequests.forEach((handler) => {
+      handler(request);
+    });
+  };
   return {
     runtime,
     commands,
@@ -190,6 +203,8 @@ export function fakeRuntime(set: StemSetRecord) {
     countInBars,
     stopSongFromNotification,
     songStopListeners: songStopped,
+    requestFromNotification,
+    songRequestListeners: songRequests,
   };
 }
 

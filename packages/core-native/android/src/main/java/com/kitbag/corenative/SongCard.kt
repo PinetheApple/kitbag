@@ -27,8 +27,10 @@ internal class SongCard(
   private val launchIntent: PendingIntent?,
   private val actionIntent: (SongAction) -> PendingIntent,
   private val post: (Notification) -> Unit,
+  private val appRequests: () -> ((SongCommand) -> Unit)?,
   private val onStopped: () -> Unit,
 ) {
+  private var startPending = false
   private var song: Song? = null
   private var transport: SongTransport? = null
   private var published: SongPlayback? = null
@@ -41,12 +43,15 @@ internal class SongCard(
     transport = SongTransport(next, EngineTransport.sampleRate())
     published = null
     postedPlaying = null
-    refresh(progress().copy(playing = playing))
+    startPending = playing
+    refresh()
   }
 
   fun handle(action: SongAction) {
     val songTransport = transport ?: return
-    val commands = songTransport.commandsFor(progress(), action)
+    val progress = progress()
+    if (toApp(songTransport.appRequest(progress, action))) return
+    val commands = songTransport.commandsFor(progress, action)
     if (SongCommand.Stop in commands) {
       commands.forEach(::execute)
       onStopped()
@@ -57,6 +62,7 @@ internal class SongCard(
 
   fun seekTo(positionMillis: Long) {
     val songTransport = transport ?: return
+    if (toApp(songTransport.appSeek(progress(), positionMillis))) return
     runCommands(songTransport, listOf(songTransport.seekTo(positionMillis)))
   }
 
@@ -67,6 +73,12 @@ internal class SongCard(
       expected = songTransport.applied(expected, command)
     }
     refresh(expected)
+  }
+
+  private fun toApp(request: SongCommand?): Boolean {
+    val send = appRequests() ?: return false
+    send(request ?: return false)
+    return true
   }
 
   fun release() {
@@ -83,7 +95,11 @@ internal class SongCard(
     }
   }
 
-  private fun progress() = SongProgress(EngineTransport.mixerPlaying(), EngineTransport.mixerPosition())
+  private fun progress(): SongProgress {
+    val playing = EngineTransport.mixerPlaying()
+    if (playing) startPending = false
+    return SongProgress(playing, EngineTransport.mixerPosition(), startPending)
+  }
 
   private fun onTick() {
     val songTransport = transport ?: return

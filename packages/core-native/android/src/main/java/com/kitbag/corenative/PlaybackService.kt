@@ -24,6 +24,7 @@ import com.kitbag.corenative.transport.PracticeClock
 import com.kitbag.corenative.transport.SessionButton
 import com.kitbag.corenative.transport.Song
 import com.kitbag.corenative.transport.SongAction
+import com.kitbag.corenative.transport.SongCommand
 import com.kitbag.corenative.transport.TransportAction
 import com.kitbag.corenative.transport.TransportCommand
 import com.kitbag.corenative.transport.TransportModel
@@ -122,6 +123,7 @@ class PlaybackService : Service() {
       launchIntent(),
       ::songIntent,
       ::postForeground,
+      { songRequestListener },
     ) { songStopped() }.also { song = it }
     songCard.show(next, intent.getBooleanExtra(EXTRA_PLAYING, true))
   }
@@ -364,6 +366,8 @@ class PlaybackService : Service() {
     @Volatile var listener: ((TransportState, PracticeClock) -> Unit)? = null
 
     @Volatile var songStoppedListener: (() -> Unit)? = null
+
+    @Volatile var songRequestListener: ((SongCommand) -> Unit)? = null
 
     fun show(
       context: Context,

@@ -44,6 +44,12 @@ export type SongTransportShowState = Readonly<{
   skipSeconds: Double;
 }>;
 
+/** A song-notification action while a counted start is pending, left for JS to apply. */
+export type SongTransportRequest = Readonly<{
+  action: 'play' | 'pause' | 'stop' | 'seek';
+  frame: Double | null;
+}>;
+
 export type OutputRoute = Readonly<{
   id: string;
   name: string;
@@ -162,6 +168,7 @@ export interface Spec extends TurboModule {
   readonly onTransport: EventEmitter<TransportEvent>;
   /** A stop from the song notification or media session; mixerStop() does not fire it. */
   readonly onSongStopped: EventEmitter<void>;
+  readonly onSongTransport: EventEmitter<SongTransportRequest>;
   getOutputRoute(): Promise<OutputRoute>;
   readonly onOutputRoute: EventEmitter<OutputRoute>;
 }

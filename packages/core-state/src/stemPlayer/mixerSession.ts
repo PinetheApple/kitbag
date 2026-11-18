@@ -2,6 +2,7 @@ import {
   acquireEngineHold,
   KB_MIXER_UNITY_RATE,
   KB_RESULT,
+  type SongTransportRequest,
 } from '@kitbag/core-native';
 
 import type { MixerClick, MixerClickSource } from './mixerClick.ts';
@@ -37,6 +38,7 @@ export interface MixerSessionOptions extends Omit<
   readonly beforeTeardown?: () => void;
   readonly teardownTracks: () => void;
   readonly counting?: () => boolean;
+  readonly onSongTransport?: (request: SongTransportRequest) => void;
   readonly resetState: () => void;
 }
 
@@ -51,12 +53,16 @@ export function mixerSession({
   beforeTeardown,
   teardownTracks,
   counting = () => false,
+  onSongTransport,
   resetState,
 }: MixerSessionOptions) {
   let session = 0;
   let releaseEngine: (() => void) | null = null;
   let songStopSubscription: ReturnType<
     StemPlayerCommands['onSongStopped']
+  > | null = null;
+  let songTransportSubscription: ReturnType<
+    StemPlayerCommands['onSongTransport']
   > | null = null;
   let afterScrubSeek: ((frame: number) => void) | null = null;
   const scrubSeek = debounce((frame: number) => {
@@ -103,6 +109,8 @@ export function mixerSession({
     releaseEngine = null;
     songStopSubscription?.remove();
     songStopSubscription = null;
+    songTransportSubscription?.remove();
+    songTransportSubscription = null;
   };
 
   const awaitReset = async (opened: number, reset: Promise<number>) => {
@@ -151,6 +159,10 @@ export function mixerSession({
       songStopSubscription ??= runtimeOf().commands.onSongStopped(() => {
         turnClickOff({ set, get, runtimeOf });
       });
+      if (onSongTransport !== undefined) {
+        songTransportSubscription ??=
+          runtimeOf().commands.onSongTransport(onSongTransport);
+      }
       return ++session;
     },
     startEngine: async (opened: number): Promise<number | null> => {

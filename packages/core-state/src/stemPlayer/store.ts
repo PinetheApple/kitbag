@@ -19,6 +19,10 @@ import { createMixerClaim, mixerClaim, type MixerClaim } from './mixerClaim.ts';
 import { createMixerClick, mixerClick, type MixerClick } from './mixerClick.ts';
 import { mixerSession, type MixerHold } from './mixerSession.ts';
 import { mixSaver } from './mixSaver.ts';
+import {
+  showCountOnSongCard,
+  songTransportRequests,
+} from './notificationTransport.ts';
 import { renameActions } from './renameActions.ts';
 import { retimeActions, retimeAnchor } from './retimeActions.ts';
 import { getStemPlayer, type StemPlayerRuntime } from './runtime.ts';
@@ -237,7 +241,7 @@ export function createStemPlayerStore(
     requestedTracks = 0;
   };
 
-  return createStore<StemPlayerStore>((set, get) => {
+  return createStore<StemPlayerStore>((set, get, store) => {
     const mixer = mixerSession({
       set,
       get,
@@ -253,6 +257,7 @@ export function createStemPlayerStore(
       teardownTracks,
       counting: () =>
         countPending(get().countEndFrame, runtimeOf().engine.nowFrame()),
+      onSongTransport: songTransportRequests(get, runtimeOf),
       resetState: () => {
         set(closedState);
       },
@@ -266,6 +271,7 @@ export function createStemPlayerStore(
     };
     const start = songStart(context);
     mixer.onScrubSeek(start.afterSeek);
+    showCountOnSongCard(store, runtimeOf);
     const clicks = clickActions(context, mixer.pendingClick);
     const anchorRetime = retimeAnchor(context);
     const afterSeek = (frame: number) => {

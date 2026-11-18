@@ -140,4 +140,41 @@ class SongTransportTest {
     assertEquals(FORWARD, SongAction.named("FORWARD"))
     assertNull(SongAction.named("TEMPO_UP"))
   }
+
+  private fun counting(seconds: Double) = SongProgress(false, (seconds * rate).toLong(), startPending = true)
+
+  @Test
+  fun `a pending start shows pause and plays nothing on the system clock`() {
+    assertEquals(listOf(REWIND, PAUSE, FORWARD, STOP), transport.actions(counting(5.0)))
+    val playback = transport.playback(counting(5.0), now = 1_000L)
+    assertEquals(PlaybackStateCompat.STATE_PLAYING, playback.state)
+    assertEquals(0f, playback.speed)
+  }
+
+  @Test
+  fun `a pending start goes to the app for every action`() {
+    assertEquals(SongCommand.Play, transport.appRequest(counting(5.0), PLAY))
+    assertEquals(SongCommand.Pause, transport.appRequest(counting(5.0), PAUSE))
+    assertEquals(SongCommand.Stop, transport.appRequest(counting(5.0), STOP))
+    assertEquals(SongCommand.Seek(0L), transport.appRequest(counting(5.0), REWIND))
+    assertEquals(SongCommand.Seek(15 * 48_000L), transport.appRequest(counting(5.0), FORWARD))
+    assertEquals(SongCommand.Seek(2 * 48_000L), transport.appSeek(counting(5.0), 2_000L))
+  }
+
+  @Test
+  fun `a started or paused song stays with the engine`() {
+    for (action in SongAction.entries) {
+      assertNull(transport.appRequest(at(5.0), action))
+      assertNull(transport.appRequest(at(5.0, playing = false), action))
+    }
+    assertNull(transport.appSeek(at(5.0), 2_000L))
+  }
+
+  @Test
+  fun `requests name their action for the app`() {
+    assertEquals(
+      listOf("play", "pause", "stop", "seek"),
+      listOf(SongCommand.Play, SongCommand.Pause, SongCommand.Stop, SongCommand.Seek(1L)).map { it.appAction },
+    )
+  }
 }
