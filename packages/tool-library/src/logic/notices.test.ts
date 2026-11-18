@@ -20,6 +20,8 @@ describe('noticeText', () => {
         supportedVersion: 1,
         stemCount: 18,
         maxStems: 16,
+        stemFormat: 'wav',
+        supportedStemFormat: 'flac',
       },
     });
 
@@ -29,6 +31,7 @@ describe('noticeText', () => {
     ['tooManyStems', 'has 18 stems; Kitbag plays up to 16'],
     ['noSpace', 'not enough free space'],
     ['unreadable', 'could not be read'],
+    ['stemFormat', 'has WAV stems; StemDeck song bundles carry FLAC stems'],
   ] as const)('says why a %s bundle was refused', (reason, why) => {
     const { text } = refused(reason);
     expect(text).toContain(why);
@@ -43,6 +46,7 @@ describe('noticeText', () => {
       'tooManyStems',
       'noSpace',
       'unreadable',
+      'stemFormat',
     ] as const;
     const statuses = new Set(reasons.map((r) => refused(r).status));
     expect(statuses.size).toBe(reasons.length);

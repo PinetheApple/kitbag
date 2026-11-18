@@ -14,6 +14,8 @@ object StemBundleMaps {
       putString("title", check.title)
       putInt("stemCount", check.stemCount)
       putInt("maxStems", maxStems)
+      putString("stemFormat", check.stemFormat)
+      putString("supportedStemFormat", StemBundleManifest.STEM_FORMAT)
     }
 
   fun imported(bundle: ImportedBundle): WritableMap =
