@@ -1,0 +1,1 @@
+• Backups now include your metronome settings, and restoring a backup brings them back.
