@@ -75,10 +75,11 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       var reserved: File? = null
       try {
         val source = Uri.parse(uri)
+        val displayName = picker.displayName(source) ?: source.lastPathSegment
         dir = LibraryPaths.resolve(base, relativeDir, allowBase = true)
-        reserved = reserveTarget(dir, source)
+        reserved = reserveTarget(dir, source, displayName)
         copyInto(source, reserved)
-        promise.resolve(importedAudio(reserved))
+        promise.resolve(importedAudio(reserved, displayName))
       } catch (e: Exception) {
         reserved?.delete()
         if (dir != null && dir != base.canonicalFile) dir.delete()
@@ -87,11 +88,11 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     }
   }
 
-  private fun reserveTarget(dir: File, source: Uri): File {
+  private fun reserveTarget(dir: File, source: Uri, displayName: String?): File {
     if (!dir.isDirectory && !dir.mkdirs()) throw IOException("Could not create $dir")
     val fallbackExtension = reactApplicationContext.contentResolver.getType(source)
       ?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) }
-    val safeName = LibraryPaths.safeFileName(picker.displayName(source) ?: source.lastPathSegment, fallbackExtension)
+    val safeName = LibraryPaths.safeFileName(displayName, fallbackExtension)
     return synchronized(nameLock) {
       File(dir, LibraryPaths.uniqueFileName(safeName, dir.list()?.toList().orEmpty()))
         .also { it.createNewFile() }
@@ -110,11 +111,11 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     }
   }
 
-  private fun importedAudio(file: File): WritableMap {
+  private fun importedAudio(file: File, displayName: String?): WritableMap {
     val metadata = readMetadata(file)
     return Arguments.createMap().apply {
       putString("relativePath", LibraryPaths.relativize(base, file))
-      putString("title", metadata.title ?: file.nameWithoutExtension)
+      putString("title", metadata.title ?: LibraryPaths.displayTitle(displayName) ?: file.nameWithoutExtension)
       putString("artist", metadata.artist.orEmpty())
       putDouble("durationSec", metadata.durationSec)
     }

@@ -4,6 +4,7 @@ import java.io.File
 import java.nio.file.Files
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Test
@@ -81,6 +82,29 @@ class LibraryPathsTest {
   fun `long names are capped`() {
     val name = LibraryPaths.safeFileName("x".repeat(500) + "." + "y".repeat(50), null)
     assertEquals(48 + 1 + 8, name.length)
+  }
+
+  @Test
+  fun `a display title keeps the file name as typed minus its extension`() {
+    assertEquals("Mr.Brightside", LibraryPaths.displayTitle("Mr.Brightside.mp3"))
+    assertEquals("Don't Stop", LibraryPaths.displayTitle("Don't Stop.mp3"))
+    assertEquals("Simon & Garfunkel", LibraryPaths.displayTitle("Simon & Garfunkel.mp3"))
+    assertEquals("a, b", LibraryPaths.displayTitle("a, b.flac"))
+  }
+
+  @Test
+  fun `a display title takes the leaf and keeps a name without an extension whole`() {
+    assertEquals("Don't Stop", LibraryPaths.displayTitle("Music/Queen/Don't Stop.mp3"))
+    assertEquals("track", LibraryPaths.displayTitle("track"))
+    assertEquals(".hidden", LibraryPaths.displayTitle(".hidden"))
+  }
+
+  @Test
+  fun `a blank or missing display name has no display title`() {
+    assertNull(LibraryPaths.displayTitle(null))
+    assertNull(LibraryPaths.displayTitle(""))
+    assertNull(LibraryPaths.displayTitle("   .mp3"))
+    assertNull(LibraryPaths.displayTitle("Music/"))
   }
 
   @Test
