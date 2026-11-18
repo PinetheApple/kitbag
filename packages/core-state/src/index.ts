@@ -247,6 +247,7 @@ export {
 } from './stemDeck/store.ts';
 export {
   configureStemDeck,
+  type StemDeckCamera,
   type StemDeckNative,
   type StemDeckRuntime,
   type UnityNoticePersistence,
@@ -292,6 +293,7 @@ export {
   type NotificationPermissionRuntime,
   type NotificationPermissionSource,
   type NotificationPermissionStore,
+  type NotificationReason,
   type NotificationStatus,
 } from './notifications/store.ts';
 export { useSwipeHint } from './firstUse/useSwipeHint.ts';

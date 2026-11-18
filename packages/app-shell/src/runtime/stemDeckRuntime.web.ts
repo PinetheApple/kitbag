@@ -19,7 +19,13 @@ configureStemDeck({
     importSnapshot: unavailable,
     settleDownload: () => undefined,
     setWatching: () => undefined,
+    scanQr: () => Promise.resolve(null),
     onImport: () => () => undefined,
   },
   unityNotice: { load: () => false, save: () => undefined },
+  camera: {
+    check: () => Promise.resolve('denied'),
+    request: () => Promise.resolve('denied'),
+    openSettings: () => undefined,
+  },
 });

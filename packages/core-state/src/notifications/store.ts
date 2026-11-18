@@ -12,6 +12,8 @@ export type NotificationAsk =
 
 export type NotificationAction = 'none' | 'request' | 'openSettings';
 
+export type NotificationReason = 'playback' | 'import';
+
 export interface NotificationPermissionSource {
   readonly required: boolean;
   readonly granted: () => Promise<boolean>;
@@ -37,7 +39,9 @@ export interface NotificationStatus {
 
 export interface NotificationPermissionStore extends NotificationStatus {
   readonly prompting: boolean;
+  readonly reason: NotificationReason;
   readonly playbackStarted: () => Promise<void>;
+  readonly importStarted: () => Promise<void>;
   readonly allow: () => Promise<void>;
   readonly notNow: () => void;
   readonly refresh: () => Promise<void>;
@@ -74,6 +78,18 @@ const notifications = persistedStore<
     const remember = (ask: NotificationAsk) => {
       commit('ask', ask, persistence.save);
     };
+    const offer = async (reason: NotificationReason) => {
+      if (
+        !source.required ||
+        offered ||
+        getState().ask !== NOTIFICATION_ASK.never
+      )
+        return;
+      offered = true;
+      const granted = await source.granted();
+      setState({ granted, prompting: !granted, reason });
+      if (granted) remember(NOTIFICATION_ASK.asked);
+    };
     const request = async () => {
       const answer = await source.request();
       remember(NOTIFICATION_ASK.asked);
@@ -85,18 +101,9 @@ const notifications = persistedStore<
       granted: undefined,
       ask: persistence.load(),
       prompting: false,
-      playbackStarted: async () => {
-        if (
-          !source.required ||
-          offered ||
-          getState().ask !== NOTIFICATION_ASK.never
-        )
-          return;
-        offered = true;
-        const granted = await source.granted();
-        setState({ granted, prompting: !granted });
-        if (granted) remember(NOTIFICATION_ASK.asked);
-      },
+      reason: 'playback',
+      playbackStarted: () => offer('playback'),
+      importStarted: () => offer('import'),
       allow: async () => {
         setState({ prompting: false });
         await request();
