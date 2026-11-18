@@ -234,7 +234,7 @@ if(KITBAG_BUILD_TOOLS)
   # Links the sources: TrackBeats and SidecarPath are internal, not exported.
   add_executable(beat_tracker_verify tools/analysis/beat_tracker_verify.cpp
     src/analysis/beat_tracker.cpp src/dsp/fft.cpp)
-  target_include_directories(beat_tracker_verify PRIVATE src include)
+  target_include_directories(beat_tracker_verify PRIVATE src include tools)
   target_link_libraries(beat_tracker_verify PRIVATE m)
 
   # Links the sources: Mixer is internal, not exported through the C ABI. Each
@@ -386,6 +386,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/analysis/analyze_test_write_peaks.cpp
     tools/analysis/analyze_test_long_grid.cpp
     tools/analysis/analyze_test_length.cpp
+    tools/analysis/analyze_test_sustained.cpp
     src/api/api_analysis.cpp
     src/analysis/song_analysis.cpp
     src/analysis/downbeat.cpp
