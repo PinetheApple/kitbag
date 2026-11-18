@@ -1,0 +1,16 @@
+appId: com.kitbag.app
+---
+- runFlow:
+    file: set-tempo.yaml
+    env:
+      BPM: ${BPM}
+- runFlow: open-all-songs.yaml
+- tapOn: 'New song'
+- extendedWaitUntil:
+    visible: 'Saved'
+    timeout: 10000
+- back
+- assertVisible: 'New song, ${BPM} · .*'
+- back
+- back
+- assertVisible: 'Tempo, ${BPM} BPM'

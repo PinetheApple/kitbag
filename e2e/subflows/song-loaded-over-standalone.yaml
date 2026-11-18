@@ -1,0 +1,16 @@
+appId: com.kitbag.app
+---
+- runFlow: launch-fresh.yaml
+- runFlow: open-metronome.yaml
+- runFlow:
+    file: create-song.yaml
+    env:
+      BPM: 130
+- runFlow:
+    file: set-tempo.yaml
+    env:
+      BPM: 125
+- runFlow:
+    file: load-new-song.yaml
+    env:
+      BPM: 130
