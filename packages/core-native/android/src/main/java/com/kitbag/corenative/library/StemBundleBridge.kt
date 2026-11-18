@@ -7,6 +7,7 @@ import android.util.Log
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.WritableArray
 import com.facebook.react.bridge.WritableMap
+import com.kitbag.corenative.stemdeck.DownloadFiles
 import java.io.File
 
 class StemBundleBridge(private val resolver: ContentResolver, private val base: File) {
@@ -36,7 +37,8 @@ class StemBundleBridge(private val resolver: ContentResolver, private val base: 
         .forEach { pushString(it.name) }
     }
 
-  private fun source(uri: String, isFolder: Boolean) = BundleSources.open(resolver, Uri.parse(uri), isFolder)
+  private fun source(uri: String, isFolder: Boolean) =
+    BundleSources.open(resolver, Uri.parse(uri), isFolder, DownloadFiles.handOffDir)
 
   companion object {
     private const val TAG = "KitbagStemBundle"
