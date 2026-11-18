@@ -61,9 +61,15 @@ export type SongLibraryRecords = Pick<
   | 'renameStemSet'
 >;
 
+export interface OpenSong {
+  readonly id: () => number | null;
+  readonly onChange: (listener: () => void) => () => void;
+}
+
 export interface SongLibraryRuntime {
   readonly records: SongLibraryRecords;
   readonly files: LibraryFiles;
+  readonly openSong: OpenSong;
 }
 
 let configured: SongLibraryRuntime | undefined;

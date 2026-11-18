@@ -16,16 +16,20 @@ import {
   checkAudioFormat,
   fileRemovals,
   isStemArchive,
-  parentDir,
   songFolder,
   songRemovals,
   type Removal,
 } from './logic.ts';
 import { cleanName } from '../names.ts';
-import { outdatedGridQueue, type OutdatedGridQueue } from './outdatedGrids.ts';
+import {
+  outdatedGridQueue,
+  requeueAndRefresh,
+  type OutdatedGridQueue,
+} from './outdatedGrids.ts';
 import {
   getSongLibrary,
   type LibraryFiles,
+  type OpenSong,
   type SongLibraryRecords,
 } from './runtime.ts';
 import { stemBundleActions, type BundleSource } from './stemBundleImport.ts';
@@ -41,6 +45,7 @@ import {
 } from './stemFolderSweep.ts';
 import {
   deleteLeftovers,
+  enqueue,
   loadCodes,
   warn,
   whileImporting,
@@ -110,12 +115,14 @@ export interface SongLibraryDeps {
   readonly records: () => SongLibraryRecords;
   readonly files: () => LibraryFiles;
   readonly newUuid: () => string;
+  readonly openSong: () => OpenSong;
 }
 
 const defaultDeps: SongLibraryDeps = {
   records: () => getSongLibrary().records,
   files: () => getSongLibrary().files,
   newUuid: () => crypto.randomUUID(),
+  openSong: () => getSongLibrary().openSong,
 };
 
 const INITIAL: SongLibraryState = {
@@ -147,16 +154,6 @@ function resultRecord(result: AnalysisResult): AnalysisResultRecord {
     durationSec: knownLength(result.durationSec) ? result.durationSec : null,
     analysisVersion: result.analysisVersion ?? null,
   };
-}
-
-function enqueue(files: LibraryFiles, song: SongFiles, replace: boolean) {
-  files.enqueueAnalysis(song.filePath, parentDir(song.filePath), replace);
-}
-
-async function requeue(deps: SongLibraryDeps, songId: number) {
-  const song = await deps.records().beginAnalysis(songId);
-  if (song !== undefined) enqueue(deps.files(), song, true);
-  return song;
 }
 
 function readActions(deps: SongLibraryDeps, set: SetState, get: Get) {
@@ -340,19 +337,24 @@ function analysisActions(
     analyzeUnfinished,
     start: async () => {
       const files = deps.files();
-      const unsubscribe = files.onAnalysis((result) => {
+      const stopResults = files.onAnalysis((result) => {
         void receiveAnalysis(result);
+      });
+      const stopWatchingPlayer = deps.openSong().onChange(() => {
+        void queue.resume();
       });
       for (const result of await files.pendingAnalyses())
         await receiveAnalysis(result);
       await analyzeUnfinished();
       await queue.resume();
       await sweepOrphanedStemFolders(deps, get, imports);
-      return unsubscribe;
+      return () => {
+        stopResults();
+        stopWatchingPlayer();
+      };
     },
     reanalyze: async (songId: number) => {
-      await requeue(deps, songId);
-      await get().refresh();
+      await requeueAndRefresh(deps, get, songId);
     },
   };
 }
@@ -407,11 +409,7 @@ export function createSongLibraryStore(
 ): StoreApi<SongLibraryStore> {
   return createStore<SongLibraryStore>((set, get) => {
     const imports = importTracker();
-    const queue = outdatedGridQueue(deps.records, async (songId) => {
-      const song = await requeue(deps, songId);
-      await get().refresh();
-      return song;
-    });
+    const queue = outdatedGridQueue(deps, get);
     return {
       ...INITIAL,
       ...readActions(deps, set, get),

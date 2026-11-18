@@ -1,7 +1,8 @@
+import type { SongFiles } from '@kitbag/core-db';
 import type { LibraryConstants } from '@kitbag/core-native';
 import type { StoreApi } from 'zustand/vanilla';
 
-import type { Removal } from './logic.ts';
+import { parentDir, type Removal } from './logic.ts';
 import type { LibraryFiles } from './runtime.ts';
 import type { SongLibraryDeps, SongLibraryStore } from './store.ts';
 
@@ -10,6 +11,14 @@ export type Get = StoreApi<SongLibraryStore>['getState'];
 
 export function warn(what: string, error: unknown) {
   console.warn(`[kitbag] ${what}`, error);
+}
+
+export function enqueue(
+  files: LibraryFiles,
+  song: SongFiles,
+  replace: boolean,
+): void {
+  files.enqueueAnalysis(song.filePath, parentDir(song.filePath), replace);
 }
 
 // Leftovers belong to a row that is already gone or a waveform already

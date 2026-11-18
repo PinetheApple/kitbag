@@ -23,6 +23,8 @@ export function songRecord(change: Partial<SongRecord> = {}): SongRecord {
     beats: [0, 0.5, 1, 1.5, 2, 2.5, 3],
     downbeatIndices: [0, 4],
     analysisStatus: 'done',
+    meterBeatsPerBar: null,
+    barOneSeconds: null,
     ...change,
   };
 }

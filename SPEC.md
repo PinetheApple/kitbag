@@ -896,9 +896,10 @@ working. Changes:
 - **Downbeats** into the grid (§4.3).
 - **Re-analyse** action for a song.
 - Each song records the analyser version (`KB_BEAT_ANALYSIS_VERSION`) that made
-  its grid. At launch, finished songs on an older version re-analyse in the
-  background, one at a time, through the Re-analyse path. A failure keeps the old
-  grid and is not retried automatically; Re-analyse retries it. The meter
+  its grid. At launch, songs whose analysis succeeded on an older version
+  re-analyse in the background, one at a time, through the Re-analyse path, each
+  at most once per session; the song open in the player waits until it closes. A
+  failure keeps the old grid and is not retried automatically; Re-analyse retries it. The meter
   override (meter, bar one) is the user's and survives re-analysis.
 - Analysis stays ambient — background, badge-driven, no "analyze" button. The
   row appears instantly with `ANALYZING` and lands on `GRID ✓` in ~10–30s. The
@@ -1552,6 +1553,7 @@ rather than starting from zero.
 | `StemSets`: + `renamed` (default 0); `Stems`: + `name` (display name, NULL shows the role) | §7.1, §7.8 — a rename is display-only and survives a re-import of the same StemDeck song; schema v17 |
 | `SongPresets`: + `poly_against` INTEGER (0 = the bar, 1..16), default 0 | §5.2 — poly N against M; a v4 backup without `polyAgainst` reads as the bar; schema v18 |
 | `route_latency`: + `name` TEXT, + `kind` TEXT (the route's display name and `OutputRoute` kind when calibrated) | §12.5 — the Output & latency sheet lists calibrated routes that are not connected; schema v19 |
+| `Songs`: + `analysis_version` INTEGER (NULL = no version reported, counted as outdated), + `meter_beats_per_bar` INTEGER (3 or 4; NULL = the detected meter), + `bar_one_seconds` REAL (NULL = the detected bar one); `StemSets`: + `meter_beats_per_bar`, + `bar_one_seconds`, same meanings | §6.2 — older grids re-analyse in the background; the meter override survives re-analysis and a stem re-import; schema v20 |
 | **All paths relative** to the base directory | §2.3 (iOS) and **D11** (the directory is now user-movable) |
 | `PracticeSessions`: write `setlistId`, `songsPlayed` | §5.7 — columns exist, producer never fills them |
 | BPM cache table | §8.5 |

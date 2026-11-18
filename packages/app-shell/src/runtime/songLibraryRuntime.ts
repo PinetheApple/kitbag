@@ -2,7 +2,9 @@ import { getKitbagLibrary } from '@kitbag/core-native';
 import {
   configureSongLibrary,
   songLibraryStore,
+  songPlayerStore,
   type LibraryFiles,
+  type OpenSong,
   type SongLibraryRecords,
 } from '@kitbag/core-state';
 import { useEffect } from 'react';
@@ -71,7 +73,15 @@ const files: LibraryFiles = {
     getKitbagLibrary().deleteStemFolder(folderName),
 };
 
-configureSongLibrary({ records, files });
+const openSong: OpenSong = {
+  id: () => songPlayerStore.getState().songId,
+  onChange: (listener) =>
+    songPlayerStore.subscribe((state, previous) => {
+      if (state.songId !== previous.songId) listener();
+    }),
+};
+
+configureSongLibrary({ records, files, openSong });
 
 export function useSongLibraryAnalysis(): void {
   useEffect(() => {

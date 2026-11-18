@@ -12,7 +12,7 @@ import {
 import { afterEach, vi } from 'vitest';
 
 import { songBadge } from './logic.ts';
-import type { LibraryFiles } from './runtime.ts';
+import type { LibraryFiles, OpenSong } from './runtime.ts';
 import { createSongLibraryStore } from './store.ts';
 
 const handles: ReturnType<typeof openTestDatabase>[] = [];
@@ -109,13 +109,19 @@ export function result(fields: Partial<AnalysisResult> = {}): AnalysisResult {
   };
 }
 
-export function legacyResult(
+export function unversionedResult(
   fields: Partial<AnalysisResult> = {},
 ): AnalysisResult {
   const entries = Object.entries(result(fields));
   return Object.fromEntries(
     entries.filter(([key]) => key !== 'analysisVersion'),
   ) as AnalysisResult;
+}
+
+export function failedResult(
+  fields: Partial<AnalysisResult> = {},
+): AnalysisResult {
+  return unversionedResult({ ...fields, ok: false, error: 'internal' });
 }
 
 export const JOB_ID = '0297074f4836';
@@ -234,17 +240,36 @@ export function fakeFiles(
   return { files, emit, stored, listeners };
 }
 
+export function fakeOpenSong() {
+  let openId: number | null = null;
+  const listeners = new Set<() => void>();
+  const openSong: OpenSong = {
+    id: () => openId,
+    onChange: (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+  const setOpenSong = (id: number | null) => {
+    openId = id;
+    for (const listener of listeners) listener();
+  };
+  return { openSong, setOpenSong };
+}
+
 export function setup(fake = fakeFiles()) {
   const handle = openTestDatabase();
   handles.push(handle);
   const records = createSongLibraryRepository(handle);
   let uuids = 0;
+  const player = fakeOpenSong();
   const store = createSongLibraryStore({
     records: () => records,
     files: () => fake.files,
     newUuid: () => `f${String((uuids += 1))}`,
+    openSong: () => player.openSong,
   });
-  return { store, records, handle, ...fake };
+  return { store, records, handle, ...player, ...fake };
 }
 
 export type Store = ReturnType<typeof setup>['store'];

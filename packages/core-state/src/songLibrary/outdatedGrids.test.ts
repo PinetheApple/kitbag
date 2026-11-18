@@ -5,10 +5,12 @@ import { describe, expect, it } from 'vitest';
 import { createSongLibraryStore } from './store.ts';
 import {
   badges,
-  legacyResult,
+  failedResult,
+  fakeOpenSong,
   result,
   settle,
   setup,
+  unversionedResult,
 } from './store.test-helper.ts';
 
 const OLD_VERSION = KB_BEAT_ANALYSIS_VERSION - 1;
@@ -17,12 +19,8 @@ type Library = ReturnType<typeof setup>;
 
 const path = (title: string) => `songs/${title}/${title}.mp3`;
 
-async function analysedSong(
-  { records }: Library,
-  title: string,
-  analysisVersion: number,
-) {
-  const id = await records.insertSong({
+const insertSong = ({ records }: Library, title: string) =>
+  records.insertSong({
     uuid: title,
     title,
     artist: '',
@@ -30,7 +28,14 @@ async function analysedSong(
     durationSec: 1,
     format: 'mp3',
   });
-  await records.applyAnalysis({
+
+async function analysedSong(
+  library: Library,
+  title: string,
+  analysisVersion: number,
+) {
+  const id = await insertSong(library, title);
+  await library.records.applyAnalysis({
     filePath: path(title),
     ok: true,
     bpm: 120,
@@ -49,15 +54,29 @@ const queued = ({ files }: Library) =>
     .filter(([, , replace]) => replace)
     .map(([songPath]) => songPath);
 
-const finish = async (library: Library, title: string, ok = true) => {
-  const fields = { relativePath: path(title), waveformRelativePath: '' };
+const storeThenQueueNext = async () => {
+  await settle();
+  await settle();
+};
+
+const finish = async (
+  library: Library,
+  title: string,
+  analysisVersion = KB_BEAT_ANALYSIS_VERSION,
+) => {
   library.emit(
-    ok
-      ? result(fields)
-      : legacyResult({ ...fields, ok: false, error: 'internal' }),
+    result({
+      relativePath: path(title),
+      waveformRelativePath: '',
+      analysisVersion,
+    }),
   );
-  await settle();
-  await settle();
+  await storeThenQueueNext();
+};
+
+const fail = async (library: Library, title: string) => {
+  library.emit(failedResult({ relativePath: path(title) }));
+  await storeThenQueueNext();
 };
 
 describe('re-analysing grids from an older analyser', () => {
@@ -91,27 +110,29 @@ describe('re-analysing grids from an older analyser', () => {
     const library = setup();
     await analysedSong(library, 'Broken', OLD_VERSION);
     await library.store.getState().start();
-    await finish(library, 'Broken', false);
+    await fail(library, 'Broken');
     expect(badges(library.store)).toEqual([['Broken', 'grid']]);
     const relaunched = createSongLibraryStore({
       records: () => library.records,
       files: () => library.files,
       newUuid: () => 'unused',
+      openSong: () => fakeOpenSong().openSong,
     });
     await relaunched.getState().start();
     expect(queued(library)).toEqual([path('Broken')]);
   });
 
+  it('tries a song once per session even if its result still reads as older', async () => {
+    const library = setup();
+    await analysedSong(library, 'Stuck', OLD_VERSION);
+    await library.store.getState().start();
+    await finish(library, 'Stuck', OLD_VERSION);
+    expect(queued(library)).toEqual([path('Stuck')]);
+  });
+
   it('stores the version the native analysis reported', async () => {
     const library = setup();
-    const id = await library.records.insertSong({
-      uuid: 'Fresh',
-      title: 'Fresh',
-      artist: '',
-      filePath: path('Fresh'),
-      durationSec: 1,
-      format: 'mp3',
-    });
+    const id = await insertSong(library, 'Fresh');
     await library.store.getState().receiveAnalysis(
       result({
         relativePath: path('Fresh'),
@@ -127,36 +148,16 @@ describe('re-analysing grids from an older analyser', () => {
 
   it('re-analyses a grid the old binary finished while the app was away', async () => {
     const library = setup();
-    await library.records.insertSong({
-      uuid: 'Away',
-      title: 'Away',
-      artist: '',
-      filePath: path('Away'),
-      durationSec: 1,
-      format: 'mp3',
-    });
-    library.stored.push(legacyResult({ relativePath: path('Away') }));
+    await insertSong(library, 'Away');
+    library.stored.push(unversionedResult({ relativePath: path('Away') }));
     await library.store.getState().start();
     expect(queued(library)).toEqual([path('Away')]);
   });
 
   it('does not queue a song whose only analysis failed', async () => {
     const library = setup();
-    await library.records.insertSong({
-      uuid: 'Failed',
-      title: 'Failed',
-      artist: '',
-      filePath: path('Failed'),
-      durationSec: 1,
-      format: 'mp3',
-    });
-    library.stored.push(
-      legacyResult({
-        relativePath: path('Failed'),
-        ok: false,
-        error: 'internal',
-      }),
-    );
+    await insertSong(library, 'Failed');
+    library.stored.push(failedResult({ relativePath: path('Failed') }));
     await library.store.getState().start();
     expect(queued(library)).toEqual([]);
     expect(badges(library.store)).toEqual([['Failed', 'failed']]);
@@ -173,6 +174,26 @@ describe('re-analysing grids from an older analyser', () => {
     if (row === undefined) throw new Error('no row');
     await library.store.getState().deleteRow(row);
     expect(queued(library)).toEqual([path('Deleted'), path('Next')]);
+  });
+
+  it('skips the song open in the player and queues it once the player closes', async () => {
+    const library = setup();
+    const open = await analysedSong(library, 'Open', OLD_VERSION);
+    library.setOpenSong(open);
+    await library.store.getState().start();
+    expect(queued(library)).toEqual([]);
+    library.setOpenSong(null);
+    await storeThenQueueNext();
+    expect(queued(library)).toEqual([path('Open')]);
+  });
+
+  it('still re-analyses the open song when asked by hand', async () => {
+    const library = setup();
+    const open = await analysedSong(library, 'Open', OLD_VERSION);
+    library.setOpenSong(open);
+    await library.store.getState().start();
+    await library.store.getState().reanalyze(open);
+    expect(queued(library)).toEqual([path('Open')]);
   });
 
   it('keeps the meter override through the re-analysis', async () => {

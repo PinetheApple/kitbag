@@ -40,6 +40,7 @@ configureSongLibrary({
     listStemFolders: () => Promise.resolve([]),
     deleteStemFolder: unavailable,
   },
+  openSong: { id: () => null, onChange: () => () => undefined },
 });
 
 export const useSongLibraryAnalysis = (): void => undefined;
