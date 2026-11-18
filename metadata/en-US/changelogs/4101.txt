@@ -1,0 +1,1 @@
+• Imported songs keep the title their file name has: dots, apostrophes, commas and & no longer turn into underscores. Songs imported earlier keep their current title; rename them to fix it.
