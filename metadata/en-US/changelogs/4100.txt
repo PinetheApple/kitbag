@@ -1,0 +1,1 @@
+• Songs keep playing when you leave the player: a mini-player on Home and Songs shows what's playing, with play/pause, close, and a tap to reopen it.
