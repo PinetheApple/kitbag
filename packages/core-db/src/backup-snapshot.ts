@@ -2,15 +2,16 @@ import { asc, inArray, sql } from 'drizzle-orm';
 
 import {
   MS_PER_SECOND,
+  PREFERENCE_KEYS,
   type Category,
   type CategoryRecords,
   type LibrarySongRecord,
   type PracticeSessionRecord,
+  type PreferenceCategory,
   type SetlistRecord,
   type SongPresetRecord,
 } from './backup-format';
 import { encodeBase64, nullableBase64, presetBase64 } from './base64';
-import { COUNT_IN_STORED_KEYS } from './count-in-preferences';
 import type { Database } from './repository';
 import {
   practiceSessions,
@@ -111,6 +112,24 @@ function practiceRecord(
   };
 }
 
+function loadPreferences(db: Database, category: PreferenceCategory) {
+  return db
+    .select({
+      id: sql<number>`rowid`,
+      key: preferences.key,
+      value: preferences.value,
+    })
+    .from(preferences)
+    .where(inArray(preferences.key, [...PREFERENCE_KEYS[category]]))
+    .orderBy(asc(preferences.key));
+}
+
+const preferenceRecords = (rows: { key: string; value: string }[]) =>
+  rows.map(({ key, value }) => ({ key, value }));
+
+const preferenceIds = (rows: { id: number; key: string }[]) =>
+  new Map(rows.map((row) => [row.key, row.id]));
+
 async function loadRows(db: Database) {
   return {
     songRows: await db.select().from(songs).orderBy(asc(songs.id)),
@@ -124,15 +143,8 @@ async function loadRows(db: Database) {
       .select()
       .from(practiceSessions)
       .orderBy(asc(practiceSessions.id)),
-    countInRows: await db
-      .select({
-        id: sql<number>`rowid`,
-        key: preferences.key,
-        value: preferences.value,
-      })
-      .from(preferences)
-      .where(inArray(preferences.key, [...COUNT_IN_STORED_KEYS]))
-      .orderBy(asc(preferences.key)),
+    countInRows: await loadPreferences(db, 'countInSettings'),
+    metronomeRows: await loadPreferences(db, 'metronomeSettings'),
   };
 }
 
@@ -152,7 +164,8 @@ export async function loadSnapshot(db: Database): Promise<Snapshot> {
     practiceSessions: rows.practiceRows.map((row) =>
       practiceRecord(row, uuidOf(rows.setlistRows)),
     ),
-    countInSettings: rows.countInRows.map(({ key, value }) => ({ key, value })),
+    countInSettings: preferenceRecords(rows.countInRows),
+    metronomeSettings: preferenceRecords(rows.metronomeRows),
   };
   return { records, ids: idMaps(rows) };
 }
@@ -166,6 +179,7 @@ function idMaps(rows: Awaited<ReturnType<typeof loadRows>>): IdMaps {
     setlists: byUuid(rows.setlistRows),
     tunings: byUuid(rows.tuningRows),
     practiceSessions: byUuid(rows.practiceRows),
-    countInSettings: new Map(rows.countInRows.map((row) => [row.key, row.id])),
+    countInSettings: preferenceIds(rows.countInRows),
+    metronomeSettings: preferenceIds(rows.metronomeRows),
   };
 }
