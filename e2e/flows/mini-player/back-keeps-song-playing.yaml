@@ -1,0 +1,9 @@
+appId: com.kitbag.app
+name: '#370: Back from the player keeps the song playing behind the bar on Songs and Home'
+tags:
+  - pr-370
+---
+- runFlow: ../../subflows/song-playing-behind-bar.yaml
+- assertVisible: 'Import a song'
+- assertVisible: 'Open ${FIXTURE_SONG}'
+- runFlow: ../../subflows/back-to-home-with-bar.yaml
