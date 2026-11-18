@@ -3,6 +3,7 @@ import { KB_RESULT } from '@kitbag/core-native';
 import { describe, expect, it, vi } from 'vitest';
 import { createStore } from 'zustand/vanilla';
 
+import { songRow } from '../storage/fixtures.test-helper.ts';
 import {
   BARS,
   fakeSongRuntime,
@@ -27,20 +28,16 @@ const REPLACED = songRecord({
 });
 
 function rowOf(song: SongRecord): LibrarySongRow {
-  return {
-    kind: 'song',
+  return songRow({
     id: song.id,
     title: song.title,
-    artist: song.artist,
-    durationSec: song.durationSec,
     bpm: song.bpm,
     hasGrid: song.beats.length > 0,
     analysisStatus: song.analysisStatus,
-    analysisError: null,
-    inSetlist: false,
-    createdAt: new Date(0),
-  };
+  });
 }
+
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 async function playing(first: SongRecord) {
   const fake = fakeSongRuntime(first);
@@ -60,6 +57,20 @@ type Playing = Awaited<ReturnType<typeof playing>>;
 function storeAnalysis({ records, library }: Playing, song: SongRecord) {
   records.readSong.mockResolvedValue(song);
   library.setState({ rows: [rowOf(song)] });
+}
+
+function heldRead(song: Playing) {
+  let answer: (record: SongRecord) => void = () => undefined;
+  song.records.readSong.mockImplementationOnce(
+    () =>
+      new Promise<SongRecord>((resolve) => {
+        answer = resolve;
+      }),
+  );
+  song.library.setState({ rows: [rowOf(REPLACED)] });
+  return (record: SongRecord) => {
+    answer(record);
+  };
 }
 
 function expectNoReload({ commands }: Playing) {
@@ -167,9 +178,9 @@ describe('a grid replaced on an analysed song', () => {
   it('resends nothing when the library changes around the same grid', async () => {
     const song = await playing(LANDED);
     await song.player.getState().toggleClick();
-    storeAnalysis(song, songRecord({ title: 'Renamed' }));
+    storeAnalysis(song, songRecord({ bpm: 119 }));
     await vi.waitFor(() => {
-      expect(song.player.getState().title).toBe('Renamed');
+      expect(song.player.getState().bpm).toBe(119);
     });
     expect(song.commands.setGrid).toHaveBeenCalledOnce();
     expect(song.readWaveform).toHaveBeenCalledOnce();
@@ -197,5 +208,46 @@ describe('a grid replaced on an analysed song', () => {
       0,
     );
     expect(song.player.getState().click).toBe(true);
+  });
+});
+
+describe('a re-read that outlives its session', () => {
+  const OTHER = songRecord({
+    id: SONG_ID + 1,
+    title: 'Monkey Wrench',
+    beats: [0.2, 0.7, 1.2],
+    downbeatIndices: [0],
+  });
+
+  it('changes nothing once the song is closed', async () => {
+    const song = await playing(LANDED);
+    await song.player.getState().toggleClick();
+    const answer = heldRead(song);
+    await vi.waitFor(() => {
+      expect(song.records.readSong).toHaveBeenCalledTimes(2);
+    });
+    song.player.getState().close();
+    answer(REPLACED);
+    await settle();
+    expect(song.player.getState()).toMatchObject({ songId: null, beats: [] });
+    expect(song.commands.setGrid).toHaveBeenCalledOnce();
+  });
+
+  it('leaves the next song alone', async () => {
+    const song = await playing(LANDED);
+    const answer = heldRead(song);
+    await vi.waitFor(() => {
+      expect(song.records.readSong).toHaveBeenCalledTimes(2);
+    });
+    song.records.readSong.mockResolvedValue(OTHER);
+    await song.player.getState().open(OTHER.id, BARS).loaded;
+    answer(REPLACED);
+    await settle();
+    expect(song.player.getState()).toMatchObject({
+      songId: OTHER.id,
+      title: OTHER.title,
+      beats: OTHER.beats,
+    });
+    expect(song.commands.setGrid).not.toHaveBeenCalled();
   });
 });

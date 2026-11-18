@@ -144,6 +144,7 @@ export function createSongPlayerStore(
   let holders = 0;
   let waveformBars = 0;
   let shownWaveform: string | null = null;
+  let latestWaveform: string | null = null;
 
   const teardownTracks = () => {
     const { commands } = runtimeOf();
@@ -187,14 +188,18 @@ export function createSongPlayerStore(
     const context = { set, get, runtimeOf, session: mixer.current };
 
     const showWaveform = (opened: number, path: string | null) => {
-      if (path === null || path === shownWaveform) return;
-      shownWaveform = path;
+      if (path === null || path === shownWaveform || path === latestWaveform)
+        return;
+      latestWaveform = path;
       runtimeOf()
         .readWaveform(path, waveformBars)
         .then((envelope) => {
-          if (live(opened)) set({ envelope });
+          if (!live(opened) || path !== latestWaveform) return;
+          shownWaveform = path;
+          set({ envelope });
         })
         .catch((error: unknown) => {
+          if (path === latestWaveform) latestWaveform = null;
           console.warn('[kitbag] song waveform unreadable', error);
         });
     };
@@ -335,6 +340,7 @@ export function createSongPlayerStore(
         holders = 0;
         waveformBars = bars;
         shownWaveform = null;
+        latestWaveform = null;
         set({ ...closedState, status: 'loading', songId });
         loading = load(opened, songId).catch((error: unknown) => {
           console.warn('[kitbag] song failed to open', error);
