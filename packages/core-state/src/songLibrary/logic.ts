@@ -6,9 +6,11 @@ import {
 } from '@kitbag/core-db';
 import type { LibraryConstants } from '@kitbag/core-native';
 
-export type LibraryView = 'songs' | 'stems';
+import { songBadge } from './badge.ts';
 
-export type SongBadge = 'pending' | 'analyzing' | 'grid' | 'noGrid' | 'failed';
+export { songBadge, type SongBadge } from './badge.ts';
+
+export type LibraryView = 'songs' | 'stems';
 
 export interface LibrarySummary {
   readonly songCount: number;
@@ -22,22 +24,6 @@ export type FailureKind =
 export interface AnalysisFailure {
   readonly kind: FailureKind;
   readonly keptGrid: boolean;
-}
-
-// A failed re-analysis keeps the grid it was replacing, so the grid still stands.
-export function songBadge(
-  song: Pick<LibrarySongRow, 'analysisStatus' | 'hasGrid'>,
-): SongBadge {
-  switch (song.analysisStatus) {
-    case ANALYSIS_STATUS.pending:
-      return 'pending';
-    case ANALYSIS_STATUS.analyzing:
-      return 'analyzing';
-    case ANALYSIS_STATUS.failed:
-      return song.hasGrid ? 'grid' : 'failed';
-    case ANALYSIS_STATUS.done:
-      return song.hasGrid ? 'grid' : 'noGrid';
-  }
 }
 
 export function failureKind(

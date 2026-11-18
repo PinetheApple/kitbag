@@ -229,6 +229,7 @@ export {
   type LibraryView,
   type SongBadge,
 } from './songLibrary/logic.ts';
+export { playerSongBadge } from './songLibrary/badge.ts';
 export type {
   BundleAddOutcome,
   BundleRefusal,
