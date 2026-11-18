@@ -134,6 +134,9 @@ vi.mock('./UnsavedSnackbar.tsx', () => ({ UnsavedSnackbar: () => null }));
 vi.mock('./SongClickSnackbar.tsx', () => ({ SongClickSnackbar: () => null }));
 
 const { MetronomeScreen } = await import('./MetronomeScreen.tsx');
+const { MetronomeAppBar } = await import('./MetronomeAppBar.tsx');
+const { SwipeHint } = await import('./SwipeHint.tsx');
+const { Transport } = await import('./Transport.tsx');
 
 const COMPACT_GAP = metronome.bodyGapCompact;
 
@@ -172,6 +175,20 @@ function mountScreen(): ReactTestRenderer {
   });
   if (mounted.screen === undefined) throw new Error('screen did not mount');
   return mounted.screen;
+}
+
+function laidOutViews(screen: ReactTestRenderer) {
+  const laidOut = screen.root
+    .findAllByType(View)
+    .filter((view) => view.props.onLayout !== undefined);
+  const isClip = (view: { readonly props: Props }) =>
+    flatStyle(view.props.style).overflow === 'hidden';
+  const clip = laidOut.find(isClip);
+  const zone = laidOut.find((view) => !isClip(view));
+  if (clip === undefined || zone === undefined) {
+    throw new Error('clip or tempo zone has no onLayout');
+  }
+  return { clip, zone };
 }
 
 afterEach(() => {
@@ -233,18 +250,56 @@ describe('MetronomeScreen scroll body', () => {
     const ZONE_TOP = 20;
     const ZONE_HEIGHT = 100;
     display.hintSeen = false;
-    const laidOut = mountScreen()
-      .root.findAllByType(View)
-      .filter((view) => view.props.onLayout !== undefined);
-    const isClip = (view: { readonly props: Props }) =>
-      flatStyle(view.props.style).overflow === 'hidden';
-    const clip = laidOut.find(isClip);
-    const zone = laidOut.find((view) => !isClip(view));
-    if (clip === undefined || zone === undefined) {
-      throw new Error('clip or tempo zone has no onLayout');
-    }
+    const { clip, zone } = laidOutViews(mountScreen());
     layOut(clip, CLIP_TOP, ZONE_HEIGHT);
     layOut(zone, ZONE_TOP, ZONE_HEIGHT);
     expect(hint.props?.zoneTop).toBe(CLIP_TOP + ZONE_TOP);
+  });
+});
+
+describe('MetronomeScreen swipe hint', () => {
+  const ZONE_HEIGHT = 100;
+  const screenElement = () =>
+    createElement(MetronomeScreen, { insets: { top: 0, bottom: 0 } });
+
+  function hintShown(): ReactTestRenderer {
+    display.hintSeen = false;
+    const screen = mountScreen();
+    layOut(laidOutViews(screen).zone, 0, ZONE_HEIGHT);
+    return screen;
+  }
+
+  function readerLayer(screen: ReactTestRenderer) {
+    return screen.root.find(
+      (node) =>
+        node.type === View &&
+        node.props.importantForAccessibility !== undefined,
+    );
+  }
+
+  it('hides the screen behind it from screen readers', () => {
+    const screen = hintShown();
+    const layer = readerLayer(screen);
+    expect(screen.root.findAllByType(SwipeHint)).toHaveLength(1);
+    expect(layer.findAllByType(SwipeHint)).toHaveLength(0);
+    expect(layer.findAllByType(MetronomeAppBar)).toHaveLength(1);
+    expect(layer.findAllByType(Transport)).toHaveLength(1);
+    expect(layer.props).toMatchObject({
+      importantForAccessibility: 'no-hide-descendants',
+      accessibilityElementsHidden: true,
+    });
+  });
+
+  it('gives the screen back to screen readers once dismissed', () => {
+    const screen = hintShown();
+    display.hintSeen = true;
+    act(() => {
+      screen.update(screenElement());
+    });
+    expect(screen.root.findAllByType(SwipeHint)).toHaveLength(0);
+    expect(readerLayer(screen).props).toMatchObject({
+      importantForAccessibility: 'auto',
+      accessibilityElementsHidden: false,
+    });
   });
 });

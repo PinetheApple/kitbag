@@ -31,6 +31,7 @@ import {
 } from '../sheetDismiss.ts';
 import { palette, radii } from '../tokens.ts';
 import { useReduceMotionMode } from '../useReduceMotion.ts';
+import { focusReaderOn } from '../readerFocus';
 import { onHardwareBack } from './hardwareBack';
 import { InlineIcon } from './IconGlyph.tsx';
 import { useSheetPortal } from './SheetHost.tsx';
@@ -287,7 +288,11 @@ export function Sheet({
                 {titleIcon === undefined ? null : (
                   <InlineIcon name={titleIcon} style={titleStyle} />
                 )}
-                <Text accessibilityRole="header" style={titleStyle}>
+                <Text
+                  ref={focusReaderOn}
+                  accessibilityRole="header"
+                  style={titleStyle}
+                >
                   {title}
                 </Text>
                 {titleAction === undefined ? null : (

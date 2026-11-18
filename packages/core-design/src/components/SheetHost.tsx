@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { readerHiding } from '../readerHiding.ts';
 import { removeSheet, upsertSheet, type SheetSlot } from '../sheetSlots.ts';
 
 interface SheetPortal {
@@ -22,6 +23,8 @@ export interface SheetHostProps {
 }
 
 const SheetPortalContext = createContext<SheetPortal | null>(null);
+
+const styles = StyleSheet.create({ app: { flex: 1 } });
 
 // Sheets draw here, over the whole app, instead of in an RN Modal: a Modal is
 // its own Android window, which sizes itself wrong for the keyboard (#142).
@@ -39,9 +42,15 @@ export function SheetHost({ topInset, children }: SheetHostProps) {
   );
   return (
     <SheetPortalContext.Provider value={portal}>
-      {children}
-      {slots.map((slot) => (
-        <View key={slot.id} style={StyleSheet.absoluteFill}>
+      <View style={styles.app} {...readerHiding(slots.length > 0)}>
+        {children}
+      </View>
+      {slots.map((slot, index) => (
+        <View
+          key={slot.id}
+          style={StyleSheet.absoluteFill}
+          {...readerHiding(index < slots.length - 1)}
+        >
           {slot.node}
         </View>
       ))}

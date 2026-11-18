@@ -5,6 +5,8 @@ const DRAG = { drag: true };
 const transition = (name: string) => ({ reduceMotion: () => name });
 const STATUS_BAR = 24;
 const portal = { show: vi.fn(), hide: vi.fn(), topInset: STATUS_BAR };
+const back = vi.hoisted(() => ({ handlers: [] as (() => void)[] }));
+const focusReaderOn = vi.hoisted(() => vi.fn());
 const chain = {
   activeOffsetY: () => chain,
   onUpdate: () => chain,
@@ -46,7 +48,13 @@ vi.mock('react-native-keyboard-controller', () => ({
 }));
 vi.mock('react-native-worklets', () => ({ scheduleOnRN: vi.fn() }));
 vi.mock('./IconGlyph.tsx', () => ({ InlineIcon: 'InlineIcon' }));
-vi.mock('./hardwareBack', () => ({ onHardwareBack: () => () => undefined }));
+vi.mock('./hardwareBack', () => ({
+  onHardwareBack: (handler: () => void) => {
+    back.handlers.push(handler);
+    return () => undefined;
+  },
+}));
+vi.mock('../readerFocus', () => ({ focusReaderOn }));
 vi.mock('./SheetHost.tsx', () => ({ useSheetPortal: () => portal }));
 vi.mock('../useReduceMotion.ts', () => ({
   useReduceMotionMode: () => 'system',
@@ -64,6 +72,8 @@ vi.mock('../ThemeProvider.tsx', async () => {
 const { Sheet } = await import('./Sheet.tsx');
 
 type Props = Readonly<{
+  accessibilityRole?: string;
+  ref?: unknown;
   entering?: unknown;
   exiting?: unknown;
   style?: unknown;
@@ -75,13 +85,13 @@ function flat(style: unknown): Record<string, unknown> {
   return Object.assign({}, ...parts) as Record<string, unknown>;
 }
 
-function openSheet() {
+function openSheet(onDismiss = vi.fn()) {
   portal.show.mockClear();
   Sheet({
     visible: true,
     title: 'T',
     dismissLabel: 'Close',
-    onDismiss: vi.fn(),
+    onDismiss,
     children: null,
   });
   return portal.show.mock.calls[0]?.[1] as ReactElement<Props>;
@@ -133,4 +143,29 @@ it('covers the scroll touch room under the title so scrolled content clips below
     backgroundColor: themes.dark.color.surface1,
     pointerEvents: 'none',
   });
+});
+
+function headers(node: unknown): ReactElement<Props>[] {
+  if (Array.isArray(node)) return node.flatMap(headers);
+  if (node === null || typeof node !== 'object' || !('props' in node))
+    return [];
+  const element = node as ReactElement<Props>;
+  const here = element.props.accessibilityRole === 'header' ? [element] : [];
+  return [...here, ...headers(element.props.children)];
+}
+
+it('moves screen reader focus to its title when it opens', () => {
+  const [title] = headers(openSheet());
+  expect(title?.props.children).toBe('T');
+  expect(title?.props.ref).toBe(focusReaderOn);
+});
+
+it('closes on hardware Back', () => {
+  back.handlers.length = 0;
+  const onDismiss = vi.fn();
+  openSheet(onDismiss);
+  back.handlers.forEach((handler) => {
+    handler();
+  });
+  expect(onDismiss).toHaveBeenCalledOnce();
 });

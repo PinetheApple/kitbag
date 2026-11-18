@@ -1,3 +1,4 @@
+import type { ReactElement, ReactNode } from 'react';
 import { expect, it, vi } from 'vitest';
 
 interface Memo {
@@ -5,14 +6,18 @@ interface Memo {
   deps: readonly unknown[];
 }
 
-const { memo, callbacks } = vi.hoisted(() => {
+const { memo, callbacks, open } = vi.hoisted(() => {
   const initial: Memo = { value: undefined, deps: [] };
-  return { memo: initial, callbacks: new Map<string, unknown>() };
+  return {
+    memo: initial,
+    callbacks: new Map<string, unknown>(),
+    open: { slots: [] as unknown[] },
+  };
 });
 
 vi.mock('react', async (importOriginal) => ({
   ...(await importOriginal<typeof import('react')>()),
-  useState: <T>(initial: T) => [initial, vi.fn()],
+  useState: () => [open.slots, vi.fn()],
   useCallback: <T>(fn: T) => {
     const key = String(fn);
     if (!callbacks.has(key)) callbacks.set(key, fn);
@@ -30,7 +35,7 @@ vi.mock('react', async (importOriginal) => ({
 }));
 vi.mock('react-native', () => ({
   View: 'View',
-  StyleSheet: { absoluteFill: {} },
+  StyleSheet: { create: <T>(styles: T) => styles, absoluteFill: {} },
 }));
 
 const { SheetHost, useSheetPortal } = await import('./SheetHost.tsx');
@@ -46,4 +51,54 @@ function usePortalInset(topInset: number) {
 it('hands sheets the top inset and follows it when it changes', () => {
   expect(usePortalInset(STATUS_BAR)).toBe(STATUS_BAR);
   expect(usePortalInset(CUTOUT_STATUS_BAR)).toBe(CUTOUT_STATUS_BAR);
+});
+
+type HostProps = Readonly<{
+  importantForAccessibility?: string;
+  accessibilityElementsHidden?: boolean;
+  children?: ReactNode;
+}>;
+
+const APP = 'app';
+const HIDDEN = {
+  importantForAccessibility: 'no-hide-descendants',
+  accessibilityElementsHidden: true,
+};
+const SHOWN = {
+  importantForAccessibility: 'auto',
+  accessibilityElementsHidden: false,
+};
+
+function layers(...ids: string[]) {
+  open.slots = ids.map((id) => ({ id, node: id }));
+  const host = SheetHost({ topInset: STATUS_BAR, children: APP });
+  const [app, ...slots] = [(host.props as HostProps).children].flat(
+    Infinity,
+  ) as ReactElement<HostProps>[];
+  if (app === undefined) throw new Error('SheetHost drew no app layer');
+  return { app, slots };
+}
+
+function hiding(layer: ReactElement<HostProps>) {
+  const { importantForAccessibility, accessibilityElementsHidden } =
+    layer.props;
+  return { importantForAccessibility, accessibilityElementsHidden };
+}
+
+it('leaves the app reachable by screen readers while no sheet is open', () => {
+  const { app } = layers();
+  expect(app.props.children).toBe(APP);
+  expect(hiding(app)).toEqual(SHOWN);
+});
+
+it('hides the app and every sheet but the top one from screen readers', () => {
+  const { app, slots } = layers('lower', 'top');
+  expect(app.props.children).toBe(APP);
+  expect(hiding(app)).toEqual(HIDDEN);
+  expect(slots.map(hiding)).toEqual([HIDDEN, SHOWN]);
+});
+
+it('gives the app back to screen readers once the sheets close', () => {
+  layers('only');
+  expect(hiding(layers().app)).toEqual(SHOWN);
 });
