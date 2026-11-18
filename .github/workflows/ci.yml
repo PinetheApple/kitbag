@@ -129,23 +129,22 @@ jobs:
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
               - 'e2e/subflows/**'
+              - 'e2e/shards'
               - 'e2e/make_click_song.py'
               - 'scripts/e2e.sh'
               - 'scripts/install-maestro.sh'
               - '.github/workflows/ci.yml'
             flows:
               - added|modified: 'e2e/flows/**/*.yaml'
-      - name: Device flows — on, and the ABIs to build
+      - name: Device flows — whether they run, and the emulator's ABI added to the build
         id: e2e
         env:
           RUN: ${{ steps.changes.outputs.app == 'true' || steps.changes.outputs.flows == 'true' }}
         run: |
           echo "run=$RUN" >> "$GITHUB_OUTPUT"
-          if [[ $RUN == true ]]; then
-            echo "ABIS=arm64-v8a,x86_64" >> "$GITHUB_ENV"
-          else
-            echo "ABIS=arm64-v8a" >> "$GITHUB_ENV"
-          fi
+          [[ $RUN == true ]] || exit 0
+          abis=$(sed -n 's/^reactNativeArchitectures=//p' packages/app-shell/android/gradle.properties)
+          echo "ABI_ARGS=-PreactNativeArchitectures=$abis,x86_64" >> "$GITHUB_ENV"
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -172,7 +171,7 @@ jobs:
       # release-only Gradle paths (signing config selection, versionName from
       # app.json) that a debug build never exercises.
       - name: Assemble release — compiles the Kotlin/JNI/codegen chain
-        run: ./gradlew :app:assembleRelease :kitbag_core-native:testReleaseUnitTest -PreactNativeArchitectures="$ABIS"
+        run: ./gradlew :app:assembleRelease :kitbag_core-native:testReleaseUnitTest ${ABI_ARGS:-}
         working-directory: packages/app-shell/android
       - name: versionCode — build.gradle's formula agrees with version.sh
         run: >-
@@ -194,19 +193,22 @@ jobs:
           path: ~/.cache/ccache
           key: ${{ steps.ccache-restore.outputs.cache-primary-key }}
 
-  # Runs the Maestro flows in e2e/ on an x86_64 emulator against the APK the
-  # Android job built. A job skipped by its `if` reports success to a required check.
-  e2e:
-    name: Device flows (Android emulator)
+  e2e-shard:
+    name: Device flows — shard ${{ matrix.shard }}
     needs: android
     if: needs.android.outputs.e2e == 'true'
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     env:
       AVD_API_LEVEL: 35
       AVD_TARGET: google_apis
       AVD_ARCH: x86_64
       AVD_RAM: 2048M
+      AVD_CORES: 4
       AVD_PROFILE: pixel_6
       EMULATOR_OPTIONS: -no-window -gpu swiftshader_indirect -no-audio -no-boot-anim -camera-back none
       E2E_OUT: ${{ github.workspace }}/e2e-out
@@ -233,32 +235,52 @@ jobs:
         with:
           name: e2e-apk
           path: apk
-      - name: Flows — every flow, or only the ones this PR changed
+      - name: Flows — this shard's slice of e2e/shards, or its share of the changed flows
+        id: flows
         env:
+          SHARD: ${{ matrix.shard }}
+          SHARDS: ${{ strategy.job-total }}
           ALL_FLOWS: ${{ needs.android.outputs.all-flows }}
           CHANGED_FLOWS: ${{ needs.android.outputs.flows }}
         run: |
+          mapfile -t slices < e2e/shards
+          ((${#slices[@]} == SHARDS)) || {
+            echo "e2e/shards has ${#slices[@]} lines for $SHARDS shards" >&2
+            exit 1
+          }
+          listed=$(tr ' ' '\n' < e2e/shards | sed '/^$/d' | sort)
+          present=$(find e2e/flows -name '*.yaml' | sed 's|^e2e/flows/||; s|\.yaml$||' | sort)
+          [[ $listed == "$present" ]] || {
+            echo "e2e/shards must list every flow under e2e/flows once:" >&2
+            diff <(echo "$listed") <(echo "$present") >&2
+            exit 1
+          }
           flows=()
-          if [[ $ALL_FLOWS != true ]]; then
-            mapfile -t flows < <(jq -r '.[]' <<<"$CHANGED_FLOWS")
-            for flow in "${flows[@]}"; do
-              [[ $flow =~ ^e2e/flows/[A-Za-z0-9/_.-]+\.yaml$ ]] || {
-                echo "unexpected flow path: $flow" >&2
+          if [[ $ALL_FLOWS == true ]]; then
+            read -ra flows <<<"${slices[SHARD - 1]}"
+          else
+            mapfile -t changed < <(jq -r '.[]' <<<"$CHANGED_FLOWS")
+            for i in "${!changed[@]}"; do
+              [[ ${changed[i]} =~ ^e2e/flows/[A-Za-z0-9/_.-]+\.yaml$ ]] || {
+                echo "unexpected flow path: ${changed[i]}" >&2
                 exit 1
               }
+              ((i % SHARDS == SHARD - 1)) && flows+=("${changed[i]}")
             done
           fi
           echo "E2E_FLOWS=${flows[*]}" >> "$GITHUB_ENV"
-          echo "flows: ${flows[*]:-all}"
+          echo "run=$((${#flows[@]} > 0))" >> "$GITHUB_OUTPUT"
+          echo "shard $SHARD/$SHARDS flows: ${flows[*]:-none}"
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: steps.flows.outputs.run == 1
         id: avd-cache
         with:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          key: avd-${{ env.AVD_API_LEVEL }}-${{ env.AVD_TARGET }}-${{ env.AVD_ARCH }}-${{ env.AVD_PROFILE }}-${{ env.AVD_RAM }}
+          key: avd-v1-${{ env.AVD_API_LEVEL }}-${{ env.AVD_TARGET }}-${{ env.AVD_ARCH }}-${{ env.AVD_PROFILE }}-${{ env.AVD_RAM }}-${{ env.AVD_CORES }}
       - name: AVD — create it and save a boot snapshot for the cache
-        if: steps.avd-cache.outputs.cache-hit != 'true'
+        if: steps.flows.outputs.run == 1 && steps.avd-cache.outputs.cache-hit != 'true'
         uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: ${{ env.AVD_API_LEVEL }}
@@ -266,11 +288,13 @@ jobs:
           arch: ${{ env.AVD_ARCH }}
           profile: ${{ env.AVD_PROFILE }}
           ram-size: ${{ env.AVD_RAM }}
+          cores: ${{ env.AVD_CORES }}
           force-avd-creation: false
           emulator-options: ${{ env.EMULATOR_OPTIONS }}
           disable-animations: false
           script: echo "AVD snapshot saved"
       - name: Device flows — install the APK, run the flows, name any failing step
+        if: steps.flows.outputs.run == 1
         uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: ${{ env.AVD_API_LEVEL }}
@@ -278,21 +302,45 @@ jobs:
           arch: ${{ env.AVD_ARCH }}
           profile: ${{ env.AVD_PROFILE }}
           ram-size: ${{ env.AVD_RAM }}
+          cores: ${{ env.AVD_CORES }}
           force-avd-creation: false
           emulator-options: -no-snapshot-save ${{ env.EMULATOR_OPTIONS }}
           disable-animations: false
           script: bash scripts/e2e.sh --out "$E2E_OUT" apk/app-release.apk $E2E_FLOWS
       # Maestro names its folders after the flows, and artifact paths may not hold their colons.
       - name: Maestro output — pack it for the artifact
-        if: always()
+        if: always() && steps.flows.outputs.run == 1
         run: tar -czf "$E2E_OUT/maestro.tar.gz" -C "$E2E_OUT" maestro
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: always()
+        if: always() && steps.flows.outputs.run == 1
         with:
-          name: e2e-results
+          name: e2e-results-shard-${{ matrix.shard }}
           path: |
             ${{ env.E2E_OUT }}/*.png
             ${{ env.E2E_OUT }}/logcat.txt
             ${{ env.E2E_OUT }}/report.xml
             ${{ env.E2E_OUT }}/maestro.tar.gz
           retention-days: 14
+
+  # The one check name a ruleset can require, whatever the shard count.
+  e2e:
+    name: Device flows (Android emulator)
+    needs: [android, e2e-shard]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Shards — every one passed, or no app code or flow changed
+        env:
+          ANDROID: ${{ needs.android.result }}
+          NEEDED: ${{ needs.android.outputs.e2e }}
+          SHARDS: ${{ needs.e2e-shard.result }}
+        run: |
+          if [[ $ANDROID == success && $NEEDED != true ]]; then
+            echo "no app code or flow changed; no shard ran"
+            exit 0
+          fi
+          [[ $SHARDS == success ]] || {
+            echo "shards: $SHARDS, android: $ANDROID" >&2
+            exit 1
+          }
