@@ -70,7 +70,10 @@ describe('analysis version', () => {
   it('stores no version for a grid from a binary that did not report one', async () => {
     const { handle, library } = setup();
     const id = await library.insertSong(song('Legacy'));
-    await library.applyAnalysis({ ...okResult('Legacy', 0), analysisVersion: null });
+    await library.applyAnalysis({
+      ...okResult('Legacy', 0),
+      analysisVersion: null,
+    });
     const [row] = await handle.db.select().from(songs).where(eq(songs.id, id));
     expect(row?.analysisVersion).toBeNull();
     expect(await library.listOutdatedAnalyses(CURRENT_VERSION)).toEqual([id]);

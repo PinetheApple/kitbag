@@ -40,7 +40,10 @@ describe('migrate v19 to v20', () => {
       VALUES ('Redbone', 1700000000, 'uuid-r')`);
     migrate(nodeSqliteDriver(db));
     expect(
-      rows(db, 'SELECT name, meter_beats_per_bar, bar_one_seconds FROM stem_sets'),
+      rows(
+        db,
+        'SELECT name, meter_beats_per_bar, bar_one_seconds FROM stem_sets',
+      ),
     ).toEqual([
       { name: 'Redbone', meter_beats_per_bar: null, bar_one_seconds: null },
     ]);

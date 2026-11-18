@@ -151,7 +151,11 @@ describe('re-analysing grids from an older analyser', () => {
       format: 'mp3',
     });
     library.stored.push(
-      legacyResult({ relativePath: path('Failed'), ok: false, error: 'internal' }),
+      legacyResult({
+        relativePath: path('Failed'),
+        ok: false,
+        error: 'internal',
+      }),
     );
     await library.store.getState().start();
     expect(queued(library)).toEqual([]);

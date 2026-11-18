@@ -84,7 +84,10 @@ export interface StoredStem extends BundleStem {
 
 export interface StemSetRecord
   extends
-    Omit<NewStemBundle, 'jobId' | 'folder' | 'stems' | 'sampleRate' | 'channels'>,
+    Omit<
+      NewStemBundle,
+      'jobId' | 'folder' | 'stems' | 'sampleRate' | 'channels'
+    >,
     Partial<MeterOverride> {
   readonly id: number;
   readonly source: StemSetSource;
