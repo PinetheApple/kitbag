@@ -32,6 +32,7 @@ class KitbagCorePackage : BaseReactPackage() {
     when (name) {
       NativeKitbagCommandsSpec.NAME -> KitbagCommandsModule(reactContext)
       NativeKitbagLibrarySpec.NAME -> KitbagLibraryModule(reactContext)
+      NativeKitbagStemDeckSpec.NAME -> KitbagStemDeckModule(reactContext)
       else -> null
     }
 
@@ -55,6 +56,15 @@ class KitbagCorePackage : BaseReactPackage() {
             false, // needsEagerInit
             false, // isCxxModule
             true, // isTurboModule
+          ),
+        NativeKitbagStemDeckSpec.NAME to
+          ReactModuleInfo(
+            NativeKitbagStemDeckSpec.NAME,
+            KitbagStemDeckModule::class.java.name,
+            false,
+            false,
+            false,
+            true,
           ),
       )
     }

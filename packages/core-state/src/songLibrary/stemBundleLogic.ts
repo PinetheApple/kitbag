@@ -25,6 +25,13 @@ export interface BundleRefusal {
   readonly supportedStemFormat: string;
 }
 
+export type BundleAddOutcome =
+  | { readonly kind: 'added' }
+  | { readonly kind: 'alreadyInLibrary' }
+  | { readonly kind: 'refused'; readonly refusal: BundleRefusal }
+  | { readonly kind: 'copyFailed' }
+  | { readonly kind: 'addFailed' };
+
 export function refusalReason(
   code: string | null,
   codes: LibraryConstants,
