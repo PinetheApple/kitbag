@@ -46,9 +46,10 @@ std::optional<uint64_t> wholeFrame(double value) {
 }
 
 // Metronome first, so a refused song start rolls back a count that is queued.
-int32_t queueSongCountIn(uint64_t end, double beatFrames, int32_t beatsPerBar) {
+int32_t queueSongCountIn(uint64_t end, double beatFrames, int32_t beatsPerBar, bool startClick) {
   const LockedEngine engine = commandEngine();
-  const int32_t counted = kb_metronome_count_in_at(engine, end, beatFrames, beatsPerBar);
+  const int32_t counted =
+      kb_metronome_count_in_at(engine, end, beatFrames, beatsPerBar, flag(startClick));
   if (counted != KB_OK) return counted;
   const int32_t queued = kb_mixer_play_at(engine, end);
   if (queued != KB_OK) kb_metronome_stop(engine);
@@ -180,10 +181,11 @@ void commandMixerStop() { kb_mixer_stop(commandEngine()); }
 void commandMixerSeek(double frame) {
   kb_mixer_seek(commandEngine(), static_cast<int64_t>(frame));
 }
-int32_t commandSongCountIn(double endFrame, double beatFrames, int32_t beatsPerBar) {
+int32_t commandSongCountIn(double endFrame, double beatFrames, int32_t beatsPerBar,
+                           bool startClick) {
   const auto end = wholeFrame(endFrame);
   if (!end) return KB_ERROR_INVALID_ARGUMENT;
-  const int32_t queued = queueSongCountIn(*end, beatFrames, beatsPerBar);
+  const int32_t queued = queueSongCountIn(*end, beatFrames, beatsPerBar, startClick);
   if (queued != KB_OK) return queued;
   const int32_t started = commandStart();
   if (started != KB_OK) {

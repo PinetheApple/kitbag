@@ -1,3 +1,4 @@
+import type { StemSetRecord } from '@kitbag/core-db';
 import { KB_RESULT } from '@kitbag/core-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -20,9 +21,11 @@ import { createStemPlayerStore } from './store.ts';
 import {
   BARS as STEM_BARS,
   fakeRuntime as fakeStemRuntime,
+  ONE_BAR,
   record,
   SAVE_MS,
   stem,
+  TWO_FOUR,
 } from './store.test-helper.ts';
 
 const STEM_SET_ID = 7;
@@ -81,8 +84,9 @@ async function openedSongClick(
 function stemStore(
   songClick: MixerClick,
   claim: MixerClaim = createMixerClaim(),
+  change: Partial<StemSetRecord> = {},
 ) {
-  const fake = fakeStemRuntime(record([stem(1)]));
+  const fake = fakeStemRuntime(record([stem(1)], change));
   const stems = createStemPlayerStore(() => fake.runtime, {
     mixSaveDelayMs: SAVE_MS,
     scrubSeekDelayMs: SEEK_MS,
@@ -118,6 +122,20 @@ async function stemsWithClick() {
   await stems.getState().open(STEM_SET_ID, STEM_BARS);
   const standalone = standaloneOver(fake.commands, songClick);
   await stems.getState().toggleClick();
+  vi.clearAllMocks();
+  return { commands: fake.commands, stems, standalone, songClick };
+}
+
+async function stemsCounting({ click }: { click: boolean }) {
+  const songClick = createMixerClick();
+  const { fake, stems } = stemStore(songClick, createMixerClaim(), {
+    bars: TWO_FOUR,
+  });
+  await stems.getState().open(STEM_SET_ID, STEM_BARS);
+  fake.countInBars.mockReturnValue(ONE_BAR);
+  const standalone = standaloneOver(fake.commands, songClick);
+  if (click) await stems.getState().toggleClick();
+  stems.getState().togglePlay();
   vi.clearAllMocks();
   return { commands: fake.commands, stems, standalone, songClick };
 }
@@ -211,6 +229,35 @@ describe("standalone Play while a song's click runs", () => {
     expect(commands.mixerStop).not.toHaveBeenCalled();
     expect(stems.getState().click).toBe(false);
   });
+});
+
+describe('standalone Play while a stem song counts in', () => {
+  it.each([true, false])(
+    'cancels the count and plays the song now, click %s',
+    async (click) => {
+      const { commands, stems, standalone, songClick } = await stemsCounting({
+        click,
+      });
+      standalone.getState().start();
+      expect(commands.mixerPlay).toHaveBeenCalledOnce();
+      expect(commands.metronomeStop).toHaveBeenCalled();
+      expect(lastCall(commands.metronomeStop)).toBeLessThan(
+        lastCall(commands.mixerPlay),
+      );
+      expect(lastCall(commands.mixerPlay)).toBeLessThan(
+        lastCall(commands.metronomeStart),
+      );
+      expect(commands.songPause).not.toHaveBeenCalled();
+      expect(commands.songCountIn).not.toHaveBeenCalled();
+      expect(stems.getState()).toMatchObject({
+        click: false,
+        countEndFrame: null,
+      });
+      expect(songClick.notice.getState().released).toMatchObject({
+        title: stems.getState().title,
+      });
+    },
+  );
 });
 
 describe('standalone Play with no song click', () => {

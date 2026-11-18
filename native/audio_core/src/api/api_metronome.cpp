@@ -4,7 +4,6 @@
 
 #include <cmath>
 #include <cstdint>
-#include <limits>
 
 #include "api/api_engine.h"
 #include "metronome/grid_bars.h"
@@ -29,14 +28,6 @@ static_assert(
 
 namespace {
 
-// Stopped here, not left to the callback: a metronome start and stop drained in
-// one block never show it a started metronome.
-void TakeOverFromRigClick(kitbag::Engine* engine) {
-  engine->SetMetronomeIntent(true);
-  engine->metronome().rig_click().Stop();
-  engine->SetRigClickIntent(false);
-}
-
 // The cursor is a monotonic walk that cannot recover from a malformed grid. NaN
 // slips through `<=`, then breaks lower_bound's ordering precondition.
 bool ValidBeatTimes(const double* times, int32_t count) {
@@ -53,54 +44,22 @@ bool ValidDownbeatArgs(const int32_t* downbeats, int32_t count, int32_t beats) {
          kitbag::ValidDownbeats({downbeats, static_cast<size_t>(count)}, beats);
 }
 
-static_assert(
-    KB_MAX_EXACT_FRAME == uint64_t{1} << std::numeric_limits<double>::digits
-);
-
-bool ValidCountInAt(
-    uint64_t end_frame,
-    double beat_frames,
-    int32_t beats_per_bar
-) {
-  return end_frame <= KB_MAX_EXACT_FRAME && std::isfinite(beat_frames) &&
-         beat_frames >= kitbag::CountInSchedule::kMinBeatFrames &&
-         beats_per_bar >= 1 && beats_per_bar <= kitbag::Metronome::kMaxBeats;
-}
-
 }  // namespace
 
 extern "C" {
 
 void kb_metronome_start(kb_engine* engine) {
   if (engine != nullptr) {
-    TakeOverFromRigClick(ToEngine(engine));
+    kitbag::TakeOverFromRigClick(ToEngine(engine));
     ToEngine(engine)->metronome().Start();
   }
 }
 
 void kb_metronome_start_at(kb_engine* engine, uint64_t start_frame) {
   if (engine != nullptr) {
-    TakeOverFromRigClick(ToEngine(engine));
+    kitbag::TakeOverFromRigClick(ToEngine(engine));
     ToEngine(engine)->metronome().StartAt(start_frame);
   }
-}
-
-kb_result kb_metronome_count_in_at(
-    kb_engine* engine,
-    uint64_t end_frame,
-    double beat_frames,
-    int32_t beats_per_bar
-) {
-  if (engine == nullptr ||
-      !ValidCountInAt(end_frame, beat_frames, beats_per_bar)) {
-    return KB_ERROR_INVALID_ARGUMENT;
-  }
-  kitbag::Engine* target = ToEngine(engine);
-  if (!target->metronome().CountInAt(end_frame, beat_frames, beats_per_bar)) {
-    return KB_ERROR_BUSY;
-  }
-  TakeOverFromRigClick(target);
-  return KB_OK;
 }
 
 void kb_metronome_stop(kb_engine* engine) {
@@ -163,7 +122,7 @@ void kb_metronome_anchor_external(
     double bpm
 ) {
   if (engine != nullptr) {
-    TakeOverFromRigClick(ToEngine(engine));
+    kitbag::TakeOverFromRigClick(ToEngine(engine));
     ToEngine(engine)->metronome().AnchorExternal(song_pos_sec, at_frame, bpm);
   }
 }

@@ -16,14 +16,17 @@ export function restartFromFrame(
   return durationFrames - secondsToFrames(END_SLACK_SECONDS, engineRate);
 }
 
+// The single-song player has no countEndFrame: it never counts in.
 export function songTransportShown(
   state: Pick<
     StemPlayerState,
     'title' | 'artist' | 'durationFrames' | 'engineRate'
-  >,
+  > &
+    Partial<Pick<StemPlayerState, 'countEndFrame'>>,
 ): SongTransportShowState {
   return {
     playing: true,
+    countingIn: state.countEndFrame != null,
     title: state.title,
     artist: state.artist,
     durationFrames: state.durationFrames,

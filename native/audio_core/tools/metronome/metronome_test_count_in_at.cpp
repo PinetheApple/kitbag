@@ -24,10 +24,15 @@ constexpr int64_t kAfterEnd = kStandaloneBeatFrames * 3 / 2;
 // After the third count beat has rung out, before the fourth.
 constexpr int64_t kCancelAt = 55040;
 constexpr int64_t kRestartAt = 70144;
+// Clear of the third beat's ring, so a replayed beat would show as a click.
+constexpr int64_t kReissueAt = 60160;
 constexpr size_t kBeforeCancel = 3;
 constexpr uint32_t kSongOffset = 77;
 constexpr int64_t kGridHead = 152965;
 constexpr int kRingOutBlocks = 40;
+constexpr bool kStartClick = true;
+constexpr uint32_t kNoIntent = kitbag::Metronome::kNoIntent;
+constexpr uint32_t kCountIntent = 7;
 
 int64_t CountBeatFrame(int64_t end, int k) {
   return std::llround(static_cast<double>(end) - k * kBeatFrames);
@@ -65,7 +70,8 @@ void TestCountPlacedFromTheEnd() {
   kitbag::Metronome metronome;
   Configure(&metronome, kCountBars);
   Check(
-      metronome.CountInAt(kEnd, kBeatFrames, kSongBeats),
+      metronome
+          .CountInAt(kEnd, kBeatFrames, kSongBeats, kStartClick, kNoIntent),
       "count_in_at: queued"
   );
   const auto left = RenderLeft(metronome, kEnd + kAfterEnd);
@@ -91,7 +97,13 @@ void TestPastBeatsDropped() {
   Configure(&metronome, kCountBars);
   const auto left =
       RenderLeft(metronome, end + kAfterEnd, OnceAtFrame(kArmAt, [&](int64_t) {
-                   metronome.CountInAt(end, kBeatFrames, kSongBeats);
+                   metronome.CountInAt(
+                       end,
+                       kBeatFrames,
+                       kSongBeats,
+                       kStartClick,
+                       kNoIntent
+                   );
                  }));
   Check(
       SameClicks(DetectClicks(left), ExpectedClicks(end, kStillAhead)),
@@ -101,7 +113,7 @@ void TestPastBeatsDropped() {
 
 std::vector<float> RenderCancelled(kitbag::Metronome* metronome, bool pause) {
   Configure(metronome, kCountBars);
-  metronome->CountInAt(kEnd, kBeatFrames, kSongBeats);
+  metronome->CountInAt(kEnd, kBeatFrames, kSongBeats, kStartClick, kNoIntent);
   return RenderLeft(*metronome, kEnd + kAfterEnd, [&](int64_t at) {
     if (at == kCancelAt && pause) metronome->Pause();
     if (at == kCancelAt && !pause) metronome->Stop();
@@ -133,7 +145,7 @@ void TestStopAndPauseCancel() {
 void TestCountOffStartsOnTheEnd() {
   kitbag::Metronome metronome;
   Configure(&metronome, kitbag::Metronome::kCountInOff);
-  metronome.CountInAt(kEnd, kBeatFrames, kSongBeats);
+  metronome.CountInAt(kEnd, kBeatFrames, kSongBeats, kStartClick, kNoIntent);
   const auto left = RenderLeft(metronome, kEnd + kAfterEnd);
   const std::vector<int64_t> clicks = DetectClicks(left);
   Check(
@@ -142,10 +154,67 @@ void TestCountOffStartsOnTheEnd() {
   );
 }
 
+void TestClickOffCountEndsStopped() {
+  kitbag::Metronome metronome;
+  Configure(&metronome, kCountBars);
+  metronome
+      .CountInAt(kEnd, kBeatFrames, kSongBeats, !kStartClick, kCountIntent);
+  bool counting_after_end = true;
+  const auto left = RenderLeft(
+      metronome,
+      kEnd + kAfterEnd,
+      [](int64_t) {},
+      [&](int64_t at) {
+        if (at > kEnd) {
+          counting_after_end = metronome.trainer_mirrors().counting_in();
+        }
+      }
+  );
+  std::vector<int64_t> want = ExpectedClicks(kEnd, kCountBeats);
+  want.resize(kCountBeats);
+  Check(
+      SameClicks(DetectClicks(left), want) && !metronome.is_running() &&
+          metronome.current_beat() == -1 && !counting_after_end,
+      "count_in_at: with the click off the count ends stopped and silent"
+  );
+  Check(
+      metronome.TakeEndedIntent() == kCountIntent &&
+          metronome.TakeEndedIntent() == kNoIntent,
+      "count_in_at: a click-off count hands its intent back once"
+  );
+}
+
+std::vector<float> RenderReissued(kitbag::Metronome* metronome) {
+  Configure(metronome, kCountBars);
+  metronome->CountInAt(kEnd, kBeatFrames, kSongBeats, kStartClick, kNoIntent);
+  return RenderLeft(*metronome, kEnd + kAfterEnd, [&](int64_t at) {
+    if (at == kReissueAt) {
+      metronome->CountInAt(
+          kEnd,
+          kBeatFrames,
+          kSongBeats,
+          !kStartClick,
+          kCountIntent
+      );
+    }
+  });
+}
+
+void TestReissueKeepsTheCount() {
+  kitbag::Metronome metronome;
+  const auto left = RenderReissued(&metronome);
+  std::vector<int64_t> want = ExpectedClicks(kEnd, kCountBeats);
+  want.resize(kCountBeats);
+  Check(
+      SameClicks(DetectClicks(left), want) && !metronome.is_running(),
+      "count_in_at: a re-issue mid-count keeps each beat once, click off after"
+  );
+}
+
 std::vector<float> RenderRevoiced(bool distinct, int sound) {
   kitbag::Metronome metronome;
   Configure(&metronome, kCountBars);
-  metronome.CountInAt(kEnd, kBeatFrames, kSongBeats);
+  metronome.CountInAt(kEnd, kBeatFrames, kSongBeats, kStartClick, kNoIntent);
   return RenderLeft(metronome, kEnd, OnceAtFrame(kCancelAt, [&](int64_t) {
                       metronome.SetCountIn(kCountBars, distinct, sound);
                     }));
@@ -185,7 +254,7 @@ void Record(const kitbag::Metronome& metronome, int64_t at, CountMirrors* log) {
 void TestCountMirrors() {
   kitbag::Metronome metronome;
   Configure(&metronome, kCountBars);
-  metronome.CountInAt(kEnd, kBeatFrames, kSongBeats);
+  metronome.CountInAt(kEnd, kBeatFrames, kSongBeats, kStartClick, kNoIntent);
   CountMirrors log;
   RenderLeft(
       metronome,
@@ -288,6 +357,8 @@ void RunCountInAtTests() {
   TestPastBeatsDropped();
   TestStopAndPauseCancel();
   TestCountOffStartsOnTheEnd();
+  TestClickOffCountEndsStopped();
+  TestReissueKeepsTheCount();
   TestArmedVoiceHolds();
   TestCountMirrors();
   TestFollowStartsMidBlock();

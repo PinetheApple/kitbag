@@ -1,33 +1,22 @@
 import { KB_COUNT_IN_OFF, KB_RESULT } from '@kitbag/core-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { COUNT_IN_DRAIN_MARGIN_SECONDS } from './countedStart.ts';
 import { RETIME_PLAYBACK_RATE } from './retimeSpeed.ts';
-import { at, opened, SONG_DETAILS, stem } from './store.test-helper.ts';
+import {
+  at,
+  BAR_BEATS,
+  BEAT,
+  COUNT_END,
+  countingSong,
+} from './store.test-helper.ts';
 
-const ONE_BAR = 1;
-const TWO_FOUR = [{ beat: 0, beatsPerBar: 2 }];
-const BEAT = 0.5;
-const BAR_BEATS = 2;
-const HEAD = at(1.2);
 const BAR_AT_HEAD = at(1);
-const COUNT_END =
-  at(COUNT_IN_DRAIN_MARGIN_SECONDS) + ONE_BAR * BAR_BEATS * at(BEAT);
 const SONG_END = at(10);
 
-type Song = Awaited<ReturnType<typeof opened>>;
+type Song = Awaited<ReturnType<typeof countingSong>>;
 
-async function countingSong({ click = true } = {}) {
-  const song = await opened([stem(1)], { ...SONG_DETAILS, bars: TWO_FOUR });
-  song.countInBars.mockReturnValue(ONE_BAR);
-  if (click) await song.store.getState().toggleClick();
-  song.engine.position = HEAD;
-  vi.clearAllMocks();
-  return song;
-}
-
-async function counting() {
-  const song = await countingSong();
+async function counting(options: { click?: boolean } = {}) {
+  const song = await countingSong(options);
   song.store.getState().togglePlay();
   await vi.runAllTimersAsync();
   return song;
@@ -49,16 +38,22 @@ describe('play with a count-in', () => {
   it('counts the bar at the head in, then starts the song where the count ends', async () => {
     const song = await counting();
     expect(song.commands.mixerSeek.mock.calls).toEqual([[BAR_AT_HEAD]]);
-    expect(counts(song)).toEqual([[COUNT_END, at(BEAT), BAR_BEATS]]);
+    expect(counts(song)).toEqual([[COUNT_END, at(BEAT), BAR_BEATS, true]]);
     expect(song.commands.mixerPlay).not.toHaveBeenCalled();
   });
 
-  it.each([
-    ['the click is off', { click: false }, ONE_BAR],
-    ['the count-in is off', { click: true }, KB_COUNT_IN_OFF],
-  ])('plays at once when %s', async (_, options, bars) => {
-    const song = await countingSong(options);
-    song.countInBars.mockReturnValue(bars);
+  it('counts in with the click off, keeping the click off after', async () => {
+    const song = await countingSong({ click: false });
+    song.store.getState().togglePlay();
+    expect(song.commands.mixerSeek.mock.calls).toEqual([[BAR_AT_HEAD]]);
+    expect(counts(song)).toEqual([[COUNT_END, at(BEAT), BAR_BEATS, false]]);
+    expect(song.commands.mixerPlay).not.toHaveBeenCalled();
+    expect(song.store.getState().countEndFrame).toBe(COUNT_END);
+  });
+
+  it('plays at once when the count-in is off', async () => {
+    const song = await countingSong();
+    song.countInBars.mockReturnValue(KB_COUNT_IN_OFF);
     song.store.getState().togglePlay();
     expect(song.commands.mixerPlay).toHaveBeenCalledTimes(1);
     expect(song.commands.songCountIn).not.toHaveBeenCalled();
@@ -70,7 +65,7 @@ describe('play with a count-in', () => {
     song.engine.position = SONG_END;
     song.store.getState().togglePlay();
     expect(song.commands.mixerSeek.mock.calls).toEqual([[0], [0]]);
-    expect(counts(song)).toEqual([[COUNT_END, at(BEAT), BAR_BEATS]]);
+    expect(counts(song)).toEqual([[COUNT_END, at(BEAT), BAR_BEATS, true]]);
   });
 
   it('plays the song uncounted when the engine refuses the count', async () => {
@@ -111,10 +106,56 @@ describe('during the count', () => {
     expect(counts(song)).toHaveLength(2);
   });
 
-  it('turning the click off starts the song now', async () => {
+  it('turning the click off keeps the count and silences the click after', async () => {
     const song = await counting();
     await song.store.getState().toggleClick();
+    expect(counts(song).at(-1)).toEqual([
+      COUNT_END,
+      at(BEAT),
+      BAR_BEATS,
+      false,
+    ]);
+    expect(song.commands.metronomeStop).not.toHaveBeenCalled();
+    expect(song.commands.mixerPlay).not.toHaveBeenCalled();
+    expect(song.commands.metronomeFollowMixer).toHaveBeenLastCalledWith(false);
+    expect(song.commands.clearGrid).toHaveBeenCalledTimes(1);
+    expect(song.store.getState()).toMatchObject({
+      click: false,
+      countEndFrame: COUNT_END,
+    });
+  });
+
+  it('turning the click on keeps the count and starts the click after', async () => {
+    const song = await counting({ click: false });
+    await song.store.getState().toggleClick();
+    expect(counts(song).at(-1)).toEqual([COUNT_END, at(BEAT), BAR_BEATS, true]);
+    expect(song.commands.metronomeStart).not.toHaveBeenCalled();
+    expect(song.commands.metronomeFollowMixer).toHaveBeenLastCalledWith(true);
+    expect(song.store.getState()).toMatchObject({
+      click: true,
+      countEndFrame: COUNT_END,
+    });
+  });
+
+  it('toggling the click off and on re-issues the same count each time', async () => {
+    const song = await counting();
+    await song.store.getState().toggleClick();
+    await song.store.getState().toggleClick();
+    expect(counts(song).map(([end, , , click]) => [end, click])).toEqual([
+      [COUNT_END, true],
+      [COUNT_END, false],
+      [COUNT_END, true],
+    ]);
+    expect(song.commands.mixerPlay).not.toHaveBeenCalled();
+  });
+
+  it('a refused click-off re-issue stops the click and plays the song now', async () => {
+    const song = await counting();
+    song.commands.songCountIn.mockResolvedValueOnce(KB_RESULT.KB_ERROR_BUSY);
+    await song.store.getState().toggleClick();
+    await vi.runAllTimersAsync();
     expect(song.commands.metronomeStop).toHaveBeenCalledTimes(1);
+    expect(song.commands.metronomeStart).not.toHaveBeenCalled();
     expect(song.commands.mixerPlay).toHaveBeenCalledTimes(1);
     expect(song.store.getState().countEndFrame).toBeNull();
   });
@@ -189,6 +230,20 @@ describe('during the count', () => {
     expect(song.commands.songStop).toHaveBeenCalledTimes(1);
     expect(song.commands.mixerStop).not.toHaveBeenCalled();
   });
+
+  it('closing a count with the click off stops the count and the song together', async () => {
+    const song = await counting({ click: false });
+    song.store.getState().close();
+    expect(song.commands.songStop).toHaveBeenCalledTimes(1);
+    expect(song.commands.mixerStop).not.toHaveBeenCalled();
+  });
+
+  it('pausing a count with the click off cancels it and arms no click', async () => {
+    const song = await counting({ click: false });
+    song.store.getState().togglePlay();
+    expect(song.commands.songPause).toHaveBeenCalledTimes(1);
+    expect(song.commands.metronomeStart).not.toHaveBeenCalled();
+  });
 });
 
 describe('after the count', () => {
@@ -208,6 +263,23 @@ describe('after the count', () => {
     song.store.getState().togglePlay();
     expect(song.commands.mixerPause).toHaveBeenCalledTimes(1);
     expect(song.commands.songPause).not.toHaveBeenCalled();
+  });
+
+  it('closing a song counted in with the click off stops the song alone', async () => {
+    const song = await counting({ click: false });
+    song.engine.now = COUNT_END;
+    song.store.getState().close();
+    expect(song.commands.mixerStop).toHaveBeenCalledTimes(1);
+    expect(song.commands.songStop).not.toHaveBeenCalled();
+    expect(song.commands.metronomeStop).not.toHaveBeenCalled();
+  });
+
+  it('turning the click on locks it to the song at once', async () => {
+    const song = await counting({ click: false });
+    song.engine.now = COUNT_END;
+    await song.store.getState().toggleClick();
+    expect(song.commands.metronomeStart).toHaveBeenCalledWith(COUNT_END);
+    expect(counts(song)).toHaveLength(1);
   });
 
   it('closing stops the song as before', async () => {

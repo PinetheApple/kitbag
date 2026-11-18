@@ -22,6 +22,7 @@ namespace {
 using click_take::DetectClicks;
 using click_take::kGapFrames;
 using click_take::kSilence;
+using click_take::Peak;
 using click_take::SameClicks;
 using kitbag_test::Check;
 using kitbag_test::g_checks;
@@ -29,7 +30,7 @@ using kitbag_test::g_failures;
 using stem_sync::kSampleRate;
 using stem_sync::kStereo;
 
-constexpr int kExpectedChecks = 75;
+constexpr int kExpectedChecks = 82;
 constexpr uint32_t kBlock = 512;
 constexpr int64_t kStemFrames = 240000;
 // Uneven spacing, so a click on a constant tempo cannot pass for the grid.
@@ -185,14 +186,6 @@ bool QuietAtPauseEnd(const Take& take) {
     loudest = std::max(loudest, std::fabs(take.right[k]));
   }
   return loudest <= kSilence;
-}
-
-float Peak(const std::vector<float>& right, size_t from, size_t to) {
-  float peak = 0.0f;
-  for (size_t k = from; k < to && k < right.size(); ++k) {
-    peak = std::max(peak, std::fabs(right[k]));
-  }
-  return peak;
 }
 
 // The first click is a downbeat, the loudest single voice the script plays.

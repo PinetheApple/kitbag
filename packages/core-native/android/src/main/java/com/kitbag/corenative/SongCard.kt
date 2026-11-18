@@ -30,7 +30,7 @@ internal class SongCard(
   private val appRequests: () -> ((SongCommand) -> Unit)?,
   private val onStopped: () -> Unit,
 ) {
-  private var startPending = false
+  private var countingIn = false
   private var song: Song? = null
   private var transport: SongTransport? = null
   private var published: SongPlayback? = null
@@ -38,32 +38,34 @@ internal class SongCard(
   private val clock = Handler(Looper.getMainLooper())
   private val tick = Runnable { onTick() }
 
-  fun show(next: Song, playing: Boolean) {
+  fun show(next: Song, playing: Boolean, countingIn: Boolean) {
     song = next
     transport = SongTransport(next, EngineTransport.sampleRate())
     published = null
     postedPlaying = null
-    startPending = playing
-    refresh()
+    this.countingIn = countingIn
+    refresh(progress().shown(playing, countingIn))
   }
 
   fun handle(action: SongAction) {
     val songTransport = transport ?: return
-    val progress = progress()
-    if (toApp(songTransport.appRequest(progress, action))) return
-    val commands = songTransport.commandsFor(progress, action)
-    if (SongCommand.Stop in commands) {
-      commands.forEach(::execute)
+    val app = appRequests()
+    val route = songTransport.route(progress(), action, app != null)
+    route.app?.let { app?.invoke(it) }
+    if (SongCommand.Stop in route.engine) {
+      route.engine.forEach(::execute)
       onStopped()
     } else {
-      runCommands(songTransport, commands)
+      runCommands(songTransport, route.engine)
     }
   }
 
   fun seekTo(positionMillis: Long) {
     val songTransport = transport ?: return
-    if (toApp(songTransport.appSeek(progress(), positionMillis))) return
-    runCommands(songTransport, listOf(songTransport.seekTo(positionMillis)))
+    val app = appRequests()
+    val route = songTransport.seekRoute(progress(), positionMillis, app != null)
+    route.app?.let { app?.invoke(it) }
+    runCommands(songTransport, route.engine)
   }
 
   private fun runCommands(songTransport: SongTransport, commands: List<SongCommand>) {
@@ -73,12 +75,6 @@ internal class SongCard(
       expected = songTransport.applied(expected, command)
     }
     refresh(expected)
-  }
-
-  private fun toApp(request: SongCommand?): Boolean {
-    val send = appRequests() ?: return false
-    send(request ?: return false)
-    return true
   }
 
   fun release() {
@@ -97,8 +93,8 @@ internal class SongCard(
 
   private fun progress(): SongProgress {
     val playing = EngineTransport.mixerPlaying()
-    if (playing) startPending = false
-    return SongProgress(playing, EngineTransport.mixerPosition(), startPending)
+    if (playing) countingIn = false
+    return SongProgress(playing, EngineTransport.mixerPosition(), countingIn)
   }
 
   private fun onTick() {
@@ -114,9 +110,9 @@ internal class SongCard(
     val playback = songTransport.playback(progress, SystemClock.elapsedRealtime())
     if (published == null) publishMetadata(current, songTransport.durationMillis)
     publishPlayback(playback, songTransport.actions(progress))
-    if (postedPlaying != progress.playing) {
-      postedPlaying = progress.playing
-      post(notification(current, songTransport.actions(progress), progress.playing))
+    if (postedPlaying != progress.shownPlaying) {
+      postedPlaying = progress.shownPlaying
+      post(notification(current, songTransport.actions(progress), progress.shownPlaying))
     }
     clock.removeCallbacks(tick)
     clock.postDelayed(tick, TICK_MILLIS)

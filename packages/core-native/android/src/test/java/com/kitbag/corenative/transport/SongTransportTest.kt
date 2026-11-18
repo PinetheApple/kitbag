@@ -141,10 +141,10 @@ class SongTransportTest {
     assertNull(SongAction.named("TEMPO_UP"))
   }
 
-  private fun counting(seconds: Double) = SongProgress(false, (seconds * rate).toLong(), startPending = true)
+  private fun counting(seconds: Double) = SongProgress(false, (seconds * rate).toLong(), countingIn = true)
 
   @Test
-  fun `a pending start shows pause and plays nothing on the system clock`() {
+  fun `a count-in shows pause and plays nothing on the system clock`() {
     assertEquals(listOf(REWIND, PAUSE, FORWARD, STOP), transport.actions(counting(5.0)))
     val playback = transport.playback(counting(5.0), now = 1_000L)
     assertEquals(PlaybackStateCompat.STATE_PLAYING, playback.state)
@@ -152,22 +152,65 @@ class SongTransportTest {
   }
 
   @Test
-  fun `a pending start goes to the app for every action`() {
-    assertEquals(SongCommand.Play, transport.appRequest(counting(5.0), PLAY))
-    assertEquals(SongCommand.Pause, transport.appRequest(counting(5.0), PAUSE))
-    assertEquals(SongCommand.Stop, transport.appRequest(counting(5.0), STOP))
-    assertEquals(SongCommand.Seek(0L), transport.appRequest(counting(5.0), REWIND))
-    assertEquals(SongCommand.Seek(15 * 48_000L), transport.appRequest(counting(5.0), FORWARD))
-    assertEquals(SongCommand.Seek(2 * 48_000L), transport.appSeek(counting(5.0), 2_000L))
+  fun `a count-in sends every action to the app and leaves the engine alone`() {
+    val expected = mapOf(
+      PLAY to SongCommand.Play,
+      PAUSE to SongCommand.Pause,
+      REWIND to SongCommand.Seek(0L),
+      FORWARD to SongCommand.Seek(15 * 48_000L),
+    )
+    for ((action, command) in expected) {
+      assertEquals(SongRoute(command, emptyList()), transport.route(counting(5.0), action, appListening = true))
+    }
+    assertEquals(
+      SongRoute(SongCommand.Seek(2 * 48_000L), emptyList()),
+      transport.seekRoute(counting(5.0), 2_000L, appListening = true),
+    )
   }
 
   @Test
-  fun `a started or paused song stays with the engine`() {
-    for (action in SongAction.entries) {
-      assertNull(transport.appRequest(at(5.0), action))
-      assertNull(transport.appRequest(at(5.0, playing = false), action))
+  fun `stop during a count-in tells the app and still stops the engine`() {
+    assertEquals(
+      SongRoute(SongCommand.Stop, listOf(SongCommand.Stop)),
+      transport.route(counting(5.0), STOP, appListening = true),
+    )
+  }
+
+  @Test
+  fun `without the count-in marker the engine keeps every action`() {
+    for (progress in listOf(at(5.0), at(5.0, playing = false))) {
+      for (action in SongAction.entries) {
+        assertEquals(
+          SongRoute(null, transport.commandsFor(progress, action)),
+          transport.route(progress, action, appListening = true),
+        )
+      }
     }
-    assertNull(transport.appSeek(at(5.0), 2_000L))
+    assertEquals(
+      SongRoute(null, listOf(SongCommand.Seek(2 * 48_000L))),
+      transport.seekRoute(at(5.0), 2_000L, appListening = true),
+    )
+  }
+
+  @Test
+  fun `a count-in with no app listening stays with the engine`() {
+    assertEquals(SongRoute(null, emptyList()), transport.route(counting(5.0), PAUSE, appListening = false))
+    assertEquals(SongRoute(null, listOf(SongCommand.Stop)), transport.route(counting(5.0), STOP, appListening = false))
+  }
+
+  @Test
+  fun `a plain playing show never routes to the app`() {
+    val shown = at(5.0, playing = false).shown(playing = true, countingIn = false)
+    assertFalse(shown.countingIn)
+    assertTrue(shown.shownPlaying)
+    assertNull(transport.route(shown, PAUSE, appListening = true).app)
+  }
+
+  @Test
+  fun `a count-in show keeps the mixer's own playing state`() {
+    val shown = at(5.0, playing = false).shown(playing = true, countingIn = true)
+    assertFalse(shown.playing)
+    assertTrue(shown.countingIn)
   }
 
   @Test

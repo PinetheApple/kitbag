@@ -2,17 +2,13 @@
 #include <cmath>
 #include <cstdio>
 #include <filesystem>
-#include <limits>
 #include <string>
 #include <vector>
 
 #include "check.h"
 #include "click_take.h"
-#include "downbeats.h"
 #include "metronome/metronome.h"
-#include "metronome/metronome_internal.h"
-#include "mixer/transport_plan.h"
-#include "stem_sync_rate.h"
+#include "stem_sync_count_in.h"
 #include "wav_fixture.h"
 
 namespace stem_sync {
@@ -20,38 +16,30 @@ namespace {
 
 using click_take::DetectClicks;
 using click_take::SameClicks;
+using count_in::CountClicks;
+using count_in::FirstBeatAfter;
+using count_in::FirstStem;
+using count_in::GridClick;
+using count_in::kBarBeats;
+using count_in::kClickOn;
+using count_in::kCountBeats;
+using count_in::kHalfFrame;
+using count_in::kNotFound;
+using count_in::kSafetyFrames;
+using count_in::kSettleBlocks;
+using count_in::kStartBeat;
+using count_in::OpenEngine;
+using count_in::PlanStart;
+using count_in::RenderUntil;
+using count_in::Start;
 using kitbag_test::Check;
 
-constexpr int32_t kBarBeats = 3;
-constexpr int32_t kFirstDownbeat = 1;
-constexpr int32_t kCountInBars = 2;
-constexpr int32_t kWoodblock = 1;
-constexpr int kCountBeats = kCountInBars * kBarBeats;
-// A downbeat 0.9 frames past a whole frame: the head snaps back onto the whole
-// frame, so the bar's first click sounds after the end frame, not on it.
-constexpr size_t kStartBeat = 7;
 constexpr size_t kGridClicks = 3;
 constexpr size_t kResumeClicks = 2;
-// The end frame's index in its block: a start applied at the block's first
-// frame comes this early.
-constexpr int64_t kEndLead = 211;
-constexpr int64_t kSafetyFrames = 4800;
-constexpr int kSettleBlocks = 30;
 constexpr int kPauseBlocks = 10;
 constexpr int64_t kResumeSeek = 300007;
 constexpr size_t kCancelAfter = 3;
-constexpr double kHalfFrame = 0.5;
-constexpr double kFireSlackFrames =
-    kitbag::metronome_detail::kGridEpsilon * kSampleRate;
 constexpr double kRates[] = {0.75, 0.5};
-constexpr int64_t kNotFound = -1;
-
-struct Start {
-  double rate = kitbag::kUnityRate;
-  int64_t head = 0;
-  double beat_frames = 0.0;
-  int64_t end = 0;
-};
 
 struct Run {
   Start start;
@@ -61,62 +49,8 @@ struct Run {
   int64_t resumed_at = 0;
 };
 
-kb_engine* OpenEngine(const std::string& stem, double rate) {
-  kb_engine* engine = nullptr;
-  if (kb_engine_create(&engine) != KB_OK) return nullptr;
-  std::vector<double> seconds;
-  for (double beat : Beats()) seconds.push_back(beat / kSampleRate);
-  const std::vector<int32_t> downbeats =
-      kitbag_test::EveryNthBeat(kFirstDownbeat, kBarBeats, kBeatCount);
-  if (kb_mixer_load_track(engine, 0, stem.c_str()) != KB_OK ||
-      kb_metronome_set_grid(
-          engine,
-          seconds.data(),
-          static_cast<int32_t>(seconds.size()),
-          downbeats.data(),
-          static_cast<int32_t>(downbeats.size()),
-          0
-      ) != KB_OK ||
-      kb_mixer_set_rate(engine, static_cast<float>(rate)) != KB_OK) {
-    kb_engine_destroy(engine);
-    return nullptr;
-  }
-  kb_metronome_set_count_in(engine, kCountInBars, 1, kWoodblock);
-  kb_metronome_follow_mixer(engine, 1);
-  kb_metronome_start(engine);
-  return engine;
-}
-
-// The caller's side of a counted start: the head on the bar's whole frame, the
-// count at the beat before it, slowed with the song.
-Start PlanStart(kb_engine* engine, double rate) {
-  const std::vector<double> beats = Beats();
-  Start start{
-      .rate = rate,
-      .head = static_cast<int64_t>(std::floor(beats[kStartBeat])),
-      .beat_frames = (beats[kStartBeat] - beats[kStartBeat - 1]) / rate
-  };
-  const int64_t earliest =
-      static_cast<int64_t>(kb_engine_frames_rendered(engine)) + kSafetyFrames +
-      std::llround(kCountBeats * start.beat_frames);
-  start.end = earliest + (kEndLead + kBlock - earliest % kBlock) % kBlock;
-  return start;
-}
-
-bool CountIn(kb_engine* engine, const Start& start) {
-  kb_mixer_seek(engine, start.head);
-  const auto end = static_cast<uint64_t>(start.end);
-  return kb_metronome_count_in_at(engine, end, start.beat_frames, kBarBeats) ==
-             KB_OK &&
-         kb_mixer_play_at(engine, end) == KB_OK;
-}
-
-// A beat sounds on the first output frame whose song position reaches it.
-int64_t GridClick(int64_t out, int64_t head, double rate, double beat) {
-  const double song_frames =
-      beat - static_cast<double>(head) - kFireSlackFrames;
-  return out +
-         static_cast<int64_t>(std::ceil(std::max(0.0, song_frames) / rate));
+bool CountInClickOn(kb_engine* engine, const Start& start) {
+  return count_in::CountIn(engine, start, kClickOn);
 }
 
 int64_t Midway(int64_t out, int64_t head, double rate, size_t beat) {
@@ -124,25 +58,6 @@ int64_t Midway(int64_t out, int64_t head, double rate, size_t beat) {
   return (GridClick(out, head, rate, beats[beat]) +
           GridClick(out, head, rate, beats[beat + 1])) /
          2;
-}
-
-size_t FirstBeatAfter(int64_t head) {
-  const std::vector<double> beats = Beats();
-  size_t i = 0;
-  while (i < beats.size() && beats[i] <= static_cast<double>(head)) ++i;
-  return i;
-}
-
-// From the song's own beats, not the caller's spacing: the count is heard at
-// the slowed song's tempo.
-std::vector<int64_t> CountClicks(const Start& start) {
-  const std::vector<double> beats = Beats();
-  const double heard = (beats[kStartBeat] - beats[kStartBeat - 1]) / start.rate;
-  std::vector<int64_t> clicks;
-  for (int k = kCountBeats; k >= 1; --k) {
-    clicks.push_back(std::llround(start.end - k * heard));
-  }
-  return clicks;
 }
 
 std::vector<int64_t> CountedStartClicks(const Start& start) {
@@ -166,16 +81,10 @@ std::vector<int64_t> ResumeClicks(const Run& run) {
   return clicks;
 }
 
-void RenderUntil(kb_engine* engine, Take* take, int64_t frame) {
-  while (static_cast<int64_t>(take->right.size()) <= frame) {
-    RenderPaced(engine, take, 1);
-  }
-}
-
 void CountInAndResume(kb_engine* engine, Run* run) {
   RenderPaced(engine, &run->take, kSettleBlocks);
   const Start& s = run->start = PlanStart(engine, run->start.rate);
-  run->queued = CountIn(engine, s);
+  run->queued = CountInClickOn(engine, s);
   const size_t last = kStartBeat + kGridClicks - 1;
   RenderUntil(engine, &run->take, Midway(s.end, s.head, s.rate, last));
   run->paused_at = static_cast<int64_t>(run->take.right.size());
@@ -217,15 +126,6 @@ void CheckClicks(const Run& run, const std::string& name) {
       SameClicks(after, ResumeClicks(run)),
       (name + ": seek and resume after the count keep the lock").c_str()
   );
-}
-
-int64_t FirstStem(const Take& take) {
-  for (size_t k = 0; k < take.left.size(); ++k) {
-    if (std::fabs(take.left[k] - take.right[k]) > kHalfFrame) {
-      return static_cast<int64_t>(k);
-    }
-  }
-  return kNotFound;
 }
 
 void TestRampStart(const std::string& ramp) {
@@ -291,7 +191,7 @@ void TestCancelDuringCount(const std::string& ramp, bool stop) {
   Take take;
   RenderPaced(engine, &take, kSettleBlocks);
   const Start start = PlanStart(engine, kitbag::kUnityRate);
-  const bool queued = CountIn(engine, start);
+  const bool queued = CountInClickOn(engine, start);
   RenderUntil(
       engine,
       &take,
@@ -313,32 +213,35 @@ void TestCancelDuringCount(const std::string& ramp, bool stop) {
   );
 }
 
+bool RefusesCountIn(kb_engine* engine, uint64_t end, double beat, int32_t bar) {
+  return kb_metronome_count_in_at(engine, end, beat, bar, kClickOn) != KB_OK;
+}
+
 void TestSongStartAbi() {
-  constexpr uint64_t kTooFar =
-      (uint64_t{1} << std::numeric_limits<double>::digits) + 1;
-  constexpr double kBeat = 12000.0;
+  constexpr double kAbiBeat = 12000.0;
   constexpr double kMinBeat = kitbag::CountInSchedule::kMinBeatFrames;
+  constexpr uint64_t kTooFar = KB_MAX_EXACT_FRAME + 1;
   constexpr int32_t kTooManyBeats = kitbag::Metronome::kMaxBeats + 1;
   kb_engine* engine = nullptr;
   Check(kb_engine_create(&engine) == KB_OK, "song start abi: engine opens");
   if (engine == nullptr) return;
   Check(
       kb_mixer_play_at(nullptr, 0) == KB_ERROR_INVALID_ARGUMENT &&
-          kb_metronome_count_in_at(nullptr, 0, kBeat, kBarBeats) ==
+          kb_metronome_count_in_at(nullptr, 0, kAbiBeat, kBarBeats, kClickOn) ==
               KB_ERROR_INVALID_ARGUMENT,
       "song start abi: a null engine is refused"
   );
   Check(
-      kb_metronome_count_in_at(engine, 0, kMinBeat / 2, kBarBeats) != KB_OK &&
-          kb_metronome_count_in_at(engine, 0, std::nan(""), kBarBeats) !=
-              KB_OK &&
-          kb_metronome_count_in_at(engine, 0, kBeat, 0) != KB_OK &&
-          kb_metronome_count_in_at(engine, 0, kBeat, kTooManyBeats) != KB_OK &&
-          kb_metronome_count_in_at(engine, kTooFar, kBeat, kBarBeats) != KB_OK,
+      RefusesCountIn(engine, 0, kMinBeat / 2, kBarBeats) &&
+          RefusesCountIn(engine, 0, std::nan(""), kBarBeats) &&
+          RefusesCountIn(engine, 0, kAbiBeat, 0) &&
+          RefusesCountIn(engine, 0, kAbiBeat, kTooManyBeats) &&
+          RefusesCountIn(engine, kTooFar, kAbiBeat, kBarBeats),
       "song start abi: count_in_at refuses a bad beat, bar or frame"
   );
   Check(
-      kb_metronome_count_in_at(engine, kTooFar - 1, kMinBeat, 1) == KB_OK &&
+      kb_metronome_count_in_at(engine, kTooFar - 1, kMinBeat, 1, kClickOn) ==
+              KB_OK &&
           kb_mixer_play_at(engine, kTooFar - 1) == KB_OK,
       "song start abi: the bounds themselves are accepted"
   );
@@ -359,6 +262,7 @@ void RunCountInTests(const std::string& pulses) {
     TestRampStart(ramp);
     TestCancelDuringCount(ramp, false);
     TestCancelDuringCount(ramp, true);
+    RunSilentCountInTests(ramp);
     std::filesystem::remove(ramp);
   }
   for (double rate : kRates) TestPulseStart(pulses, rate);

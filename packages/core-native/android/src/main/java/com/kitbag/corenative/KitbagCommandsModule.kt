@@ -85,6 +85,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
         skipSeconds = state.getDouble("skipSeconds"),
       ),
       state.getBoolean("playing"),
+      state.getBoolean("countingIn"),
     )
   }
 
@@ -317,8 +318,14 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     nativeMixerPlay()
   }
 
-  override fun songCountIn(endFrame: Double, beatFrames: Double, beatsPerBar: Double, promise: Promise) {
-    promise.resolve(nativeSongCountIn(endFrame, beatFrames, beatsPerBar.toInt()))
+  override fun songCountIn(
+    endFrame: Double,
+    beatFrames: Double,
+    beatsPerBar: Double,
+    startClick: Boolean,
+    promise: Promise,
+  ) {
+    promise.resolve(nativeSongCountIn(endFrame, beatFrames, beatsPerBar.toInt(), startClick))
   }
 
   override fun songPause() {
@@ -449,7 +456,12 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private external fun nativeMixerSetMasterGain(gain: Double)
   private external fun nativeMixerMasterGain(): Double
   private external fun nativeMixerPlay()
-  private external fun nativeSongCountIn(endFrame: Double, beatFrames: Double, beatsPerBar: Int): Int
+  private external fun nativeSongCountIn(
+    endFrame: Double,
+    beatFrames: Double,
+    beatsPerBar: Int,
+    startClick: Boolean,
+  ): Int
   private external fun nativeSongPause()
   private external fun nativeSongStop()
   private external fun nativeMixerPause()

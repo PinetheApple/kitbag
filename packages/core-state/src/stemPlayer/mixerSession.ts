@@ -38,7 +38,6 @@ export interface MixerSessionOptions extends Omit<
   readonly beforeTeardown?: () => void;
   readonly teardownTracks: () => void;
   readonly counting?: () => boolean;
-  readonly onSongTransport?: (request: SongTransportRequest) => void;
   readonly resetState: () => void;
 }
 
@@ -53,7 +52,6 @@ export function mixerSession({
   beforeTeardown,
   teardownTracks,
   counting = () => false,
-  onSongTransport,
   resetState,
 }: MixerSessionOptions) {
   let session = 0;
@@ -64,7 +62,10 @@ export function mixerSession({
   let songTransportSubscription: ReturnType<
     StemPlayerCommands['onSongTransport']
   > | null = null;
+  let songTransportListener: ((request: SongTransportRequest) => void) | null =
+    null;
   let afterScrubSeek: ((frame: number) => void) | null = null;
+  let afterClickRelease: (() => void) | null = null;
   const scrubSeek = debounce((frame: number) => {
     runtimeOf().commands.mixerSeek(frame);
     afterScrubSeek?.(frame);
@@ -72,12 +73,17 @@ export function mixerSession({
   const live = (opened: number) => opened === session;
   const pendingClick = createPendingClick();
   const clickSource: MixerClickSource = {
-    running: () => get().click || pendingClick.pending(),
+    running: () => get().click || pendingClick.pending() || counting(),
     title: () => get().title,
     turnOff: () => {
       pendingClick.cancel();
       turnClickOff({ set, get, runtimeOf });
+      afterClickRelease?.();
     },
+  };
+
+  const songStopped = () => {
+    turnClickOff({ set, get, runtimeOf });
   };
 
   const teardown = () => {
@@ -140,8 +146,15 @@ export function mixerSession({
     onScrubSeek: (listener: (frame: number) => void) => {
       afterScrubSeek = listener;
     },
+    onClickReleased: (listener: () => void) => {
+      afterClickRelease = listener;
+    },
+    onSongTransport: (listener: (request: SongTransportRequest) => void) => {
+      songTransportListener = listener;
+    },
     live,
     close,
+    songStopped,
     current: () => session,
     pendingClick,
     hold: (opened: number): MixerHold => ({
@@ -156,12 +169,11 @@ export function mixerSession({
       claim.claim(close);
       pendingClick.cancel();
       mixerClick.attach(clickSource);
-      songStopSubscription ??= runtimeOf().commands.onSongStopped(() => {
-        turnClickOff({ set, get, runtimeOf });
-      });
-      if (onSongTransport !== undefined) {
-        songTransportSubscription ??=
-          runtimeOf().commands.onSongTransport(onSongTransport);
+      songStopSubscription ??= runtimeOf().commands.onSongStopped(songStopped);
+      if (songTransportListener !== null) {
+        songTransportSubscription ??= runtimeOf().commands.onSongTransport(
+          songTransportListener,
+        );
       }
       return ++session;
     },

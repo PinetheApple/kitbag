@@ -242,6 +242,8 @@ export function createStemPlayerStore(
   };
 
   return createStore<StemPlayerStore>((set, get, store) => {
+    const counting = () =>
+      countPending(get().countEndFrame, runtimeOf().engine.nowFrame());
     const mixer = mixerSession({
       set,
       get,
@@ -255,9 +257,7 @@ export function createStemPlayerStore(
         get().leaveRetime();
       },
       teardownTracks,
-      counting: () =>
-        countPending(get().countEndFrame, runtimeOf().engine.nowFrame()),
-      onSongTransport: songTransportRequests(get, runtimeOf),
+      counting,
       resetState: () => {
         set(closedState);
       },
@@ -271,8 +271,22 @@ export function createStemPlayerStore(
     };
     const start = songStart(context);
     mixer.onScrubSeek(start.afterSeek);
+    mixer.onClickReleased(start.startNow);
+    mixer.onSongTransport(
+      songTransportRequests({
+        get,
+        runtimeOf,
+        counting,
+        stopCount: () => {
+          if (start.stop()) mixer.songStopped();
+        },
+      }),
+    );
     showCountOnSongCard(store, runtimeOf);
-    const clicks = clickActions(context, mixer.pendingClick);
+    const clicks = clickActions(context, mixer.pendingClick, {
+      keepCountSilent: () => start.recountClick(false),
+      keepCountClicking: () => start.recountClick(true),
+    });
     const anchorRetime = retimeAnchor(context);
     const afterSeek = (frame: number) => {
       anchorRetime(frame);
@@ -368,11 +382,7 @@ export function createStemPlayerStore(
       ...mixActions(set, get, runtimeOf, saver),
       ...transportActions(get, runtimeOf, scrubSeek, afterSeek, start),
       ...sectionLoopActions(context),
-      toggleClick: async () => {
-        const turningOff = get().click;
-        await clicks.toggleClick();
-        if (turningOff && !get().click) start.clickTurnedOff();
-      },
+      ...clicks,
       ...renameActions(context),
       ...retimeActions(context, claim.defer, start),
     };

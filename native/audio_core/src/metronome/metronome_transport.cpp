@@ -15,12 +15,16 @@ void Metronome::StartAt(uint64_t start_frame) {
 bool Metronome::CountInAt(
     uint64_t end_frame,
     double beat_frames,
-    int beats_per_bar
+    int beats_per_bar,
+    bool start_click,
+    uint32_t intent
 ) {
   Command command{CommandType::kCountInAt};
   command.frame = end_frame;
   command.value = beat_frames;
   command.int_a = beats_per_bar;
+  command.int_b = start_click ? 1 : 0;
+  command.int_c = static_cast<int32_t>(intent);
   return commands_.Push(command);
 }
 
@@ -78,6 +82,7 @@ void Metronome::DeferStart(const Command& command) {
   if (running_) return;
   has_pending_start_ = true;
   pending_start_frame_ = command.frame;
+  pending_start_clicks_ = true;
   count_in_at_.Clear();
 }
 
@@ -126,6 +131,8 @@ void Metronome::ArmCountInAt(const Command& command) {
   count_in_armed_ = false;
   has_pending_start_ = true;
   pending_start_frame_ = command.frame;
+  pending_start_clicks_ = command.int_b != 0;
+  pending_intent_ = static_cast<uint32_t>(command.int_c);
   count_in_at_.Arm(
       command.frame,
       command.value,
@@ -146,7 +153,12 @@ void Metronome::RenderPendingStart(
     BlockTempo* tempo
 ) {
   if (now >= pending_start_frame_) {
-    BeginPendingStart(view, now, sample_rate, tempo);
+    if (pending_start_clicks_) {
+      BeginPendingStart(view, now, sample_rate, tempo);
+    } else {
+      StopRun();
+      ended_intent_ = pending_intent_;
+    }
     return;
   }
   if (!ScheduledCountInLive()) return;

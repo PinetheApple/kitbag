@@ -37,6 +37,7 @@ export type TransportShowState = Readonly<{
 
 export type SongTransportShowState = Readonly<{
   playing: boolean;
+  countingIn: boolean;
   title: string;
   artist: string | null;
   durationFrames: Double;
@@ -44,7 +45,7 @@ export type SongTransportShowState = Readonly<{
   skipSeconds: Double;
 }>;
 
-/** A song-notification action while a counted start is pending, left for JS to apply. */
+/** A song-notification action while the card was last shown with countingIn, for JS to apply. */
 export type SongTransportRequest = Readonly<{
   action: 'play' | 'pause' | 'stop' | 'seek';
   frame: Double | null;
@@ -130,6 +131,7 @@ export interface Spec extends TurboModule {
     endFrame: Double,
     beatFrames: Double,
     beatsPerBar: Int32,
+    startClick: boolean,
   ): Promise<number>;
   songPause(): void;
   songStop(): void;
@@ -166,7 +168,8 @@ export interface Spec extends TurboModule {
   setAppNightMode(mode: string): void;
   setSystemBarAppearance(light: boolean): void;
   readonly onTransport: EventEmitter<TransportEvent>;
-  /** A stop from the song notification or media session; mixerStop() does not fire it. */
+  /** A stop from the song notification or media session; during a count-in it follows
+   *  that onSongTransport stop. mixerStop() does not fire it. */
   readonly onSongStopped: EventEmitter<void>;
   readonly onSongTransport: EventEmitter<SongTransportRequest>;
   getOutputRoute(): Promise<OutputRoute>;

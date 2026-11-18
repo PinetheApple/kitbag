@@ -1,6 +1,6 @@
 import { KB_MIXER_UNITY_RATE, KB_RESULT } from '@kitbag/core-native';
 
-import { countedStart } from './countedStart.ts';
+import { countedStart, type CountedStart } from './countedStart.ts';
 import type { MixerRuntime, StemPlayerRuntime } from './runtime.ts';
 import type { StemPlayerState } from './store.ts';
 
@@ -22,10 +22,12 @@ export interface SongStartOptions {
 export interface SongStart {
   readonly play: (headFrame: number) => void;
   readonly cancel: () => boolean;
+  readonly stop: () => boolean;
   readonly counting: () => boolean;
   readonly afterSeek: (frame: number) => void;
   readonly rateSet: (rate: number) => void;
-  readonly clickTurnedOff: () => void;
+  readonly recountClick: (startClick: boolean) => boolean;
+  readonly startNow: () => void;
 }
 
 export function countPending(
@@ -40,8 +42,6 @@ interface SessionRate {
   readonly rate: number;
 }
 
-// The count hands over to the click on its last frame, so it only runs with
-// the song's click on.
 export function songStart({
   set,
   get,
@@ -49,14 +49,15 @@ export function songStart({
   session,
 }: SongStartOptions): SongStart {
   let generation = 0;
+  let pending: CountedStart | null = null;
   let known: SessionRate = { session: session(), rate: KB_MIXER_UNITY_RATE };
   const playbackRate = () =>
     known.session === session() ? known.rate : KB_MIXER_UNITY_RATE;
 
   const plan = (headFrame: number) => {
-    const { click, beats, downbeatIndices, engineRate } = get();
-    if (!click) return null;
+    const { beats, downbeatIndices, engineRate } = get();
     const runtime = runtimeOf();
+    if (runtime.sharedMetronome.active()) return null;
     return countedStart({
       headFrame,
       nowFrame: runtime.engine.nowFrame(),
@@ -73,12 +74,40 @@ export function songStart({
 
   const forget = () => {
     generation++;
+    pending = null;
     if (get().countEndFrame !== null) set({ countEndFrame: null });
   };
 
-  const rearmClick = () => {
+  const settleClick = () => {
     const { commands, engine } = runtimeOf();
     if (get().click) commands.metronomeStart(engine.nowFrame());
+    else commands.metronomeStop();
+  };
+
+  const startNow = () => {
+    forget();
+    settleClick();
+    runtimeOf().commands.mixerPlay();
+  };
+
+  const countIn = (counted: CountedStart, startClick: boolean) => {
+    const mine = ++generation;
+    const opened = session();
+    pending = counted;
+    set({ countEndFrame: counted.endFrame });
+    void runtimeOf()
+      .commands.songCountIn(
+        counted.endFrame,
+        counted.beatFrames,
+        counted.beatsPerBar,
+        startClick,
+      )
+      .catch(() => KB_RESULT.KB_ERROR_INTERNAL)
+      .then((result) => {
+        if (result === KB_RESULT.KB_OK) return;
+        if (mine !== generation || opened !== session()) return;
+        startNow();
+      });
   };
 
   const play = (headFrame: number) => {
@@ -88,27 +117,22 @@ export function songStart({
       commands.mixerPlay();
       return;
     }
-    const mine = ++generation;
-    const opened = session();
     commands.mixerSeek(counted.startFrame);
-    set({ countEndFrame: counted.endFrame });
-    void commands
-      .songCountIn(counted.endFrame, counted.beatFrames, counted.beatsPerBar)
-      .catch(() => KB_RESULT.KB_ERROR_INTERNAL)
-      .then((result) => {
-        if (result === KB_RESULT.KB_OK) return;
-        if (mine !== generation || opened !== session()) return;
-        forget();
-        rearmClick();
-        runtimeOf().commands.mixerPlay();
-      });
+    countIn(counted, get().click);
   };
 
   const cancel = () => {
     if (!counting()) return false;
     forget();
     runtimeOf().commands.songPause();
-    rearmClick();
+    if (get().click) settleClick();
+    return true;
+  };
+
+  const stop = () => {
+    if (!counting()) return false;
+    forget();
+    runtimeOf().commands.songStop();
     return true;
   };
 
@@ -119,6 +143,7 @@ export function songStart({
   return {
     play,
     cancel,
+    stop,
     counting,
     afterSeek: recount,
     rateSet: (rate) => {
@@ -126,10 +151,13 @@ export function songStart({
       known = { session: session(), rate };
       if (changed) recount(runtimeOf().engine.position());
     },
-    clickTurnedOff: () => {
-      if (!counting()) return;
-      forget();
-      runtimeOf().commands.mixerPlay();
+    recountClick: (startClick) => {
+      if (pending === null || !counting()) return false;
+      countIn(pending, startClick);
+      return true;
+    },
+    startNow: () => {
+      if (counting()) startNow();
     },
   };
 }

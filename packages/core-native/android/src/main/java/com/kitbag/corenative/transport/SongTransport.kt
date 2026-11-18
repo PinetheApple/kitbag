@@ -15,10 +15,12 @@ data class Song(
 // SystemUI formats the artist into "%1$s by %2$s", so a null would read as "null".
 fun mediaArtist(artist: String?): String = if (artist.isNullOrBlank()) "" else artist
 
-// A start is pending while the app has said it plays and the mixer has not begun, as during a count-in.
-data class SongProgress(val playing: Boolean, val positionFrames: Long, val startPending: Boolean = false) {
+data class SongProgress(val playing: Boolean, val positionFrames: Long, val countingIn: Boolean = false) {
   val shownPlaying: Boolean
-    get() = playing || startPending
+    get() = playing || countingIn
+
+  fun shown(playing: Boolean, countingIn: Boolean): SongProgress =
+    if (countingIn) copy(countingIn = true) else copy(playing = playing, countingIn = false)
 }
 
 enum class SongAction {
@@ -51,6 +53,8 @@ val SongCommand.appAction: String
       SongCommand.Stop -> "stop"
       is SongCommand.Seek -> "seek"
     }
+
+data class SongRoute(val app: SongCommand?, val engine: List<SongCommand>)
 
 data class SongPlayback(
   val state: Int,
@@ -101,33 +105,38 @@ class SongTransport(private val song: Song, private val sampleRate: Double) {
       SongAction.FORWARD -> listOf(seek(progress.positionFrames + skipFrames))
     }
 
-  fun appRequest(progress: SongProgress, action: SongAction): SongCommand? =
-    if (!progress.startPending) {
-      null
-    } else {
-      when (action) {
-        SongAction.PLAY -> SongCommand.Play
-        SongAction.PAUSE -> SongCommand.Pause
-        SongAction.STOP -> SongCommand.Stop
-        SongAction.REWIND -> seek(progress.positionFrames - skipFrames)
-        SongAction.FORWARD -> seek(progress.positionFrames + skipFrames)
-      }
-    }
+  // A count-in is the app's to cancel; Stop still stops the engine and ends the card as after the start.
+  fun route(progress: SongProgress, action: SongAction, appListening: Boolean): SongRoute {
+    if (!progress.countingIn || !appListening) return SongRoute(null, commandsFor(progress, action))
+    val engine = if (action == SongAction.STOP) listOf(SongCommand.Stop) else emptyList()
+    return SongRoute(appCommand(progress, action), engine)
+  }
 
-  fun appSeek(progress: SongProgress, positionMillis: Long): SongCommand? =
-    if (progress.startPending) seekTo(positionMillis) else null
+  fun seekRoute(progress: SongProgress, positionMillis: Long, appListening: Boolean): SongRoute {
+    val command = seekTo(positionMillis)
+    return if (progress.countingIn && appListening) SongRoute(command, emptyList()) else SongRoute(null, listOf(command))
+  }
 
   // The engine applies a command on its next audio block, so a read straight after it is stale.
   fun applied(progress: SongProgress, command: SongCommand): SongProgress =
     when (command) {
       SongCommand.Play -> progress.copy(playing = true)
-      SongCommand.Pause -> progress.copy(playing = false, startPending = false)
+      SongCommand.Pause -> progress.copy(playing = false)
       SongCommand.Stop -> SongProgress(playing = false, positionFrames = 0L)
       is SongCommand.Seek -> progress.copy(positionFrames = command.frame)
     }
 
   fun seekTo(positionMillis: Long): SongCommand =
     seek((positionMillis * sampleRate / MILLIS_PER_SECOND).roundToLong())
+
+  private fun appCommand(progress: SongProgress, action: SongAction): SongCommand =
+    when (action) {
+      SongAction.PLAY -> SongCommand.Play
+      SongAction.PAUSE -> SongCommand.Pause
+      SongAction.STOP -> SongCommand.Stop
+      SongAction.REWIND -> seek(progress.positionFrames - skipFrames)
+      SongAction.FORWARD -> seek(progress.positionFrames + skipFrames)
+    }
 
   private fun play(progress: SongProgress): List<SongCommand> =
     when {
