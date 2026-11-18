@@ -5,6 +5,7 @@ import {
   COUNT_IN_DRAIN_MARGIN_SECONDS,
   countedStart,
   type CountedStartRequest,
+  UNMARKED_BAR_BEATS,
 } from './countedStart.ts';
 
 const RATE = 48000;
@@ -75,10 +76,20 @@ describe('a counted start', () => {
     expect(Number.isInteger(plan?.endFrame)).toBe(true);
   });
 
+  it('counts four-beat bars from the beat at the head when no bars are marked', () => {
+    const plan = countedStart(request({ downbeatIndices: [] }));
+    expect(plan?.startFrame).toBe(at(2));
+    expect(plan?.beatsPerBar).toBe(UNMARKED_BAR_BEATS);
+    expect(plan?.beatFrames).toBeCloseTo(0.5 * RATE);
+    expect(
+      countedStart(request({ downbeatIndices: [], headFrame: at(2.6) }))
+        ?.startFrame,
+    ).toBe(at(2.5));
+  });
+
   it('has no counted start without a count-in, bars, a tempo or a speed', () => {
     expect(countedStart(request({ bars: KB_COUNT_IN_OFF }))).toBeNull();
     expect(countedStart(request({ bars: 3 }))).toBeNull();
-    expect(countedStart(request({ downbeatIndices: [] }))).toBeNull();
     expect(countedStart(request({ downbeatIndices: [4] }))).toBeNull();
     expect(
       countedStart(request({ beats: [0], downbeatIndices: [0] })),

@@ -1,6 +1,7 @@
 import { KB_COUNT_IN_OFF, KB_RESULT } from '@kitbag/core-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { UNMARKED_BAR_BEATS } from './countedStart.ts';
 import { RETIME_PLAYBACK_RATE } from './retimeSpeed.ts';
 import {
   at,
@@ -8,8 +9,13 @@ import {
   BEAT,
   COUNT_END,
   countingSong,
+  HEAD,
+  opened,
+  SONG_DETAILS,
+  stem,
 } from './store.test-helper.ts';
 
+const TWO_BARS = 2;
 const BAR_AT_HEAD = at(1);
 const SONG_END = at(10);
 
@@ -53,6 +59,19 @@ describe('play with a count-in', () => {
     expect(counts(song)).toEqual([[COUNT_END, at(BEAT), BAR_BEATS, false]]);
     expect(song.commands.mixerPlay).not.toHaveBeenCalled();
     expect(song.store.getState().countEndFrame).toBe(COUNT_END);
+  });
+
+  it('counts in a stem song whose bundle marks no bars', async () => {
+    const song = await opened([stem(1)], SONG_DETAILS);
+    song.countInBars.mockReturnValue(TWO_BARS);
+    song.engine.position = HEAD;
+    vi.clearAllMocks();
+    song.store.getState().togglePlay();
+    expect(song.commands.mixerPlay).not.toHaveBeenCalled();
+    expect(song.commands.mixerSeek.mock.calls).toEqual([[BAR_AT_HEAD]]);
+    const [call] = counts(song);
+    expect(call?.[2]).toBe(UNMARKED_BAR_BEATS);
+    expect(call?.[3]).toBe(false);
   });
 
   it('plays at once when the count-in is off', async () => {
