@@ -1,0 +1,1 @@
+• No user-facing change: adds a test for opening another stem song while the previous screen is still closing.
