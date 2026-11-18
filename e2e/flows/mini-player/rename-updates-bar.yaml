@@ -4,12 +4,24 @@ tags:
   - pr-370
 ---
 - runFlow: ../../subflows/song-playing-behind-bar.yaml
-- tapOn: 'Actions for ${FIXTURE_SONG}'
-- tapOn: 'Rename'
-- tapOn: 'New name for ${FIXTURE_SONG}'
+- runFlow:
+    file: ../../subflows/tap-while-playing.yaml
+    env:
+      TARGET: 'Actions for ${FIXTURE_SONG}'
+- runFlow:
+    file: ../../subflows/tap-while-playing.yaml
+    env:
+      TARGET: 'Rename'
+- runFlow:
+    file: ../../subflows/tap-while-playing.yaml
+    env:
+      TARGET: 'New name for ${FIXTURE_SONG}'
 - eraseText
 - inputText: 'Renamed'
-- tapOn: 'Save the new name for ${FIXTURE_SONG}'
+- runFlow:
+    file: ../../subflows/tap-while-playing.yaml
+    env:
+      TARGET: 'Save the new name for ${FIXTURE_SONG}'
 - hideKeyboard
 - extendedWaitUntil:
     visible: 'Pause Renamed'

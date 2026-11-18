@@ -11,7 +11,7 @@ readonly EXIT_RUNNER_FAILED=6
 
 readonly DEFAULT_SERIAL=emulator-5554
 readonly FIXTURE_SONG=e2eclick
-readonly FIXTURE_SECONDS=90
+readonly FIXTURE_SECONDS=240
 readonly DEVICE_DOWNLOADS=/sdcard/Download
 readonly DEFAULT_MAESTRO_HEAP=-Xmx1g
 readonly ANIMATION_SETTINGS=(window_animation_scale transition_animation_scale animator_duration_scale)

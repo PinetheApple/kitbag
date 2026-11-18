@@ -4,7 +4,7 @@ tags:
   - pr-369
 ---
 - runFlow: ../../subflows/launch-fresh.yaml
-- runFlow: ../../subflows/open-metronome.yaml
+- runFlow: ../../subflows/open-metronome-first-time.yaml
 - runFlow:
     file: ../../subflows/set-tempo.yaml
     env:
