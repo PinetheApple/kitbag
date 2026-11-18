@@ -122,7 +122,7 @@ const DEFAULT_VOLUME = 1;
 export const DEFAULT_TRAINER_BARS = 4;
 export const DEFAULT_RAMP_STEP_BPM = 5;
 
-function initialConfig(): MetronomeConfig {
+export function initialConfig(): MetronomeConfig {
   return {
     bpm: DEFAULT_BPM,
     beatsPerBar: DEFAULT_BEATS,

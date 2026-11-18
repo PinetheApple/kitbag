@@ -1,9 +1,11 @@
 import {
   configureStandaloneMetronomePersistence,
+  createMetronomeStore,
   getBackup,
   libraryStore,
   metronomeStore,
   songLibraryStore,
+  standaloneMetronomeOf,
   tunerStore,
   type DiscardedChanges,
   type MetronomeSettingsInput,
@@ -38,6 +40,7 @@ await import('./backupRuntime.ts');
 
 const SONG_BPM = 90;
 const EDITED_BPM = 95;
+const RESTORED_BPM = 140;
 const LOADED_SONG = { presetId: 7, itemId: 4, setlistId: 2 };
 const DISCARDED: DiscardedChanges = {
   loaded: LOADED_SONG,
@@ -55,14 +58,22 @@ function stubRefreshes() {
   return { refresh, refreshSongs, loadCustomTunings };
 }
 
-function memoryPersistence(): StandaloneMetronomePersistence {
-  let stored: Partial<MetronomeSettingsInput> = {};
-  return {
-    load: () => stored,
-    save: (settings) => {
-      stored = settings;
-    },
-  };
+let stored: Partial<MetronomeSettingsInput> = {};
+const persistence: StandaloneMetronomePersistence = {
+  load: () => stored,
+  save: (settings) => {
+    stored = settings;
+  },
+};
+configureStandaloneMetronomePersistence(persistence);
+
+function loadSong() {
+  libraryStore.setState({
+    loaded: LOADED_SONG,
+    discarded: DISCARDED,
+    played: [LOADED_SONG.itemId],
+  });
+  metronomeStore.getState().setTempo(SONG_BPM);
 }
 
 it('restores through the app database', () => {
@@ -79,16 +90,48 @@ it('reloads setlists, library songs and tunings after a restore', async () => {
   expect(loadCustomTunings).toHaveBeenCalledOnce();
 });
 
-it('keeps edits made after a restore across a relaunch', async () => {
-  const persistence = memoryPersistence();
-  configureStandaloneMetronomePersistence(persistence);
+it('plays and keeps the restored standalone settings over the unloaded song', async () => {
   stubRefreshes();
-  libraryStore.setState({
-    loaded: LOADED_SONG,
-    discarded: DISCARDED,
-    played: [LOADED_SONG.itemId],
-  });
+  loadSong();
+  stored = { bpm: RESTORED_BPM };
+
+  await getBackup().afterRestore();
+  await Promise.resolve();
+
+  expect(metronomeStore.getState().bpm).toBe(RESTORED_BPM);
+  expect(stored.bpm).toBe(RESTORED_BPM);
+});
+
+const defaults = () => standaloneMetronomeOf(createMetronomeStore().getState());
+
+it('resets to the defaults when a replace empties the stored settings', async () => {
+  stubRefreshes();
   metronomeStore.getState().setTempo(SONG_BPM);
+  await Promise.resolve();
+  stored = {};
+
+  await getBackup().afterRestore();
+  await Promise.resolve();
+
+  expect(standaloneMetronomeOf(metronomeStore.getState())).toEqual(defaults());
+  expect(stored).toEqual(defaults());
+});
+
+it('resets to the defaults, not the unloaded song, when a replace empties them', async () => {
+  stubRefreshes();
+  loadSong();
+  stored = {};
+
+  await getBackup().afterRestore();
+  await Promise.resolve();
+
+  expect(standaloneMetronomeOf(metronomeStore.getState())).toEqual(defaults());
+  expect(stored).toEqual(defaults());
+});
+
+it('keeps edits made after a restore across a relaunch', async () => {
+  stubRefreshes();
+  loadSong();
 
   await getBackup().afterRestore();
   const { loaded, discarded, played } = libraryStore.getState();
