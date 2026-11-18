@@ -925,7 +925,9 @@ working. Changes:
 - Speed control in the transport, driven by the same stretch stage as the stem
   player (§7.6). Single-file playback gets it when the stem player has it; until
   then the 1.0× key stays in place, looks disabled, and shows a note on tap.
-- A row tap on Songs opens the player paused.
+- Tapping the Songs row of the song the mini-player is showing opens the player
+  on that song as it is, still playing if it was. Any other row tap on Songs
+  opens the player paused.
 - **Stop** lives in the player's overflow menu, with Re-analyse. Stop ends the
   song session and removes the mini-player. Stop in the song's media
   notification does the same.
