@@ -17,7 +17,12 @@ const { memo, callbacks, open } = vi.hoisted(() => {
 
 vi.mock('react', async (importOriginal) => ({
   ...(await importOriginal<typeof import('react')>()),
-  useState: () => [open.slots, vi.fn()],
+  useState: () => [
+    open.slots,
+    (update: (current: unknown[]) => unknown[]) => {
+      open.slots = update(open.slots);
+    },
+  ],
   useCallback: <T>(fn: T) => {
     const key = String(fn);
     if (!callbacks.has(key)) callbacks.set(key, fn);
@@ -54,6 +59,7 @@ it('hands sheets the top inset and follows it when it changes', () => {
 });
 
 type HostProps = Readonly<{
+  collapsable?: boolean;
   importantForAccessibility?: string;
   accessibilityElementsHidden?: boolean;
   children?: ReactNode;
@@ -69,14 +75,18 @@ const SHOWN = {
   accessibilityElementsHidden: false,
 };
 
-function layers(...ids: string[]) {
-  open.slots = ids.map((id) => ({ id, node: id }));
+function drawn() {
   const host = SheetHost({ topInset: STATUS_BAR, children: APP });
   const [app, ...slots] = [(host.props as HostProps).children].flat(
     Infinity,
   ) as ReactElement<HostProps>[];
   if (app === undefined) throw new Error('SheetHost drew no app layer');
   return { app, slots };
+}
+
+function layers(...ids: string[]) {
+  open.slots = ids.map((id) => ({ id, node: id }));
+  return drawn();
 }
 
 function hiding(layer: ReactElement<HostProps>) {
@@ -98,7 +108,18 @@ it('hides the app and every sheet but the top one from screen readers', () => {
   expect(slots.map(hiding)).toEqual([HIDDEN, SHOWN]);
 });
 
-it('gives the app back to screen readers once the sheets close', () => {
-  layers('only');
-  expect(hiding(layers().app)).toEqual(SHOWN);
+it('gives the app back to screen readers once the sheet hides', () => {
+  layers();
+  const portal = useSheetPortal();
+  portal.show('sheet', 'content');
+  expect(hiding(drawn().app)).toEqual(HIDDEN);
+  portal.hide('sheet');
+  expect(hiding(drawn().app)).toEqual(SHOWN);
+});
+
+it('keeps every layer as its own native view so hiding never re-parents it', () => {
+  const { app, slots } = layers('lower', 'top');
+  for (const layer of [app, ...slots])
+    expect(layer.props.collapsable).toBe(false);
+  expect(layers().app.props.collapsable).toBe(false);
 });

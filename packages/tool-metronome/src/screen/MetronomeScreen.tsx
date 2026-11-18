@@ -81,6 +81,14 @@ const useStyles = createThemedStyles((theme) => ({
   readerLayer: {
     flex: 1,
   },
+  snackbarLayer: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    pointerEvents: 'box-none',
+  },
   // A ScrollView clips its content; the poly row's last pulse and cycle
   // bracket hang past the content edge into the screen inset.
   bodyClip: {
@@ -326,7 +334,11 @@ export function MetronomeScreen({
   return (
     <GestureDetector gesture={screenSwipe}>
       <View style={[styles.screen, edgeToEdgePadding]}>
-        <View style={styles.readerLayer} {...readerHiding(hintShown)}>
+        <View
+          style={styles.readerLayer}
+          collapsable={false}
+          {...readerHiding(hintShown)}
+        >
           <MetronomeAppBar
             bottomInset={insets.bottom}
             onBack={onBack}
@@ -412,7 +424,12 @@ export function MetronomeScreen({
             onOpenPractice={handleOpenPractice}
             onOpenSetlists={onOpenSetlists}
           />
-
+        </View>
+        <View
+          style={styles.snackbarLayer}
+          collapsable={false}
+          {...readerHiding(hintShown)}
+        >
           <UnsavedSnackbar bottomInset={insets.bottom} />
           <SongClickSnackbar bottomInset={insets.bottom} />
         </View>

@@ -1,6 +1,6 @@
 // react-test-renderer is deprecated, but it alone exposes host props with no DOM.
 /* eslint-disable @typescript-eslint/no-deprecated */
-import { act, createElement, type ReactNode } from 'react';
+import { act, createElement, type ElementType, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { View } from 'react-native';
 import { create, type ReactTestRenderer } from 'react-test-renderer';
@@ -137,15 +137,19 @@ const { MetronomeScreen } = await import('./MetronomeScreen.tsx');
 const { MetronomeAppBar } = await import('./MetronomeAppBar.tsx');
 const { SwipeHint } = await import('./SwipeHint.tsx');
 const { Transport } = await import('./Transport.tsx');
+const { UnsavedSnackbar } = await import('./UnsavedSnackbar.tsx');
+const { SongClickSnackbar } = await import('./SongClickSnackbar.tsx');
 
 const COMPACT_GAP = metronome.bodyGapCompact;
+
+function screenElement() {
+  return createElement(MetronomeScreen, { insets: { top: 0, bottom: 0 } });
+}
 
 function renderBody(fontScale: number, running: boolean): string {
   display.fontScale = fontScale;
   display.running = running;
-  return renderToStaticMarkup(
-    createElement(MetronomeScreen, { insets: { top: 0, bottom: 0 } }),
-  );
+  return renderToStaticMarkup(screenElement());
 }
 
 function layOut(view: { readonly props: Props }, y: number, height: number) {
@@ -169,9 +173,7 @@ function mountScreen(): ReactTestRenderer {
   (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
   const mounted: { screen?: ReactTestRenderer } = {};
   act(() => {
-    mounted.screen = create(
-      createElement(MetronomeScreen, { insets: { top: 0, bottom: 0 } }),
-    );
+    mounted.screen = create(screenElement());
   });
   if (mounted.screen === undefined) throw new Error('screen did not mount');
   return mounted.screen;
@@ -259,8 +261,14 @@ describe('MetronomeScreen scroll body', () => {
 
 describe('MetronomeScreen swipe hint', () => {
   const ZONE_HEIGHT = 100;
-  const screenElement = () =>
-    createElement(MetronomeScreen, { insets: { top: 0, bottom: 0 } });
+  const HIDDEN = {
+    importantForAccessibility: 'no-hide-descendants',
+    accessibilityElementsHidden: true,
+  };
+  const SHOWN = {
+    importantForAccessibility: 'auto',
+    accessibilityElementsHidden: false,
+  };
 
   function hintShown(): ReactTestRenderer {
     display.hintSeen = false;
@@ -269,25 +277,37 @@ describe('MetronomeScreen swipe hint', () => {
     return screen;
   }
 
-  function readerLayer(screen: ReactTestRenderer) {
-    return screen.root.find(
+  function readerLayers(screen: ReactTestRenderer) {
+    const layers = screen.root.findAll(
       (node) =>
         node.type === View &&
         node.props.importantForAccessibility !== undefined,
     );
+    const holding = (type: ElementType) =>
+      layers.find((layer) => layer.findAllByType(type).length > 0);
+    const main = holding(MetronomeAppBar);
+    const snackbars = holding(UnsavedSnackbar);
+    if (main === undefined || snackbars === undefined)
+      throw new Error('a reader layer is missing');
+    return { layers, main, snackbars };
   }
 
   it('hides the screen behind it from screen readers', () => {
     const screen = hintShown();
-    const layer = readerLayer(screen);
+    const { main, snackbars } = readerLayers(screen);
     expect(screen.root.findAllByType(SwipeHint)).toHaveLength(1);
-    expect(layer.findAllByType(SwipeHint)).toHaveLength(0);
-    expect(layer.findAllByType(MetronomeAppBar)).toHaveLength(1);
-    expect(layer.findAllByType(Transport)).toHaveLength(1);
-    expect(layer.props).toMatchObject({
-      importantForAccessibility: 'no-hide-descendants',
-      accessibilityElementsHidden: true,
-    });
+    expect(main.findAllByType(SwipeHint)).toHaveLength(0);
+    expect(main.findAllByType(Transport)).toHaveLength(1);
+    expect(main.props).toMatchObject(HIDDEN);
+    expect(snackbars.findAllByType(SongClickSnackbar)).toHaveLength(1);
+    expect(snackbars.props).toMatchObject(HIDDEN);
+  });
+
+  it('keeps the snackbars out of the padded screen layer', () => {
+    const { main, snackbars } = readerLayers(hintShown());
+    expect(main.findAllByType(UnsavedSnackbar)).toHaveLength(0);
+    expect(main.findAllByType(SongClickSnackbar)).toHaveLength(0);
+    expect(snackbars.parent).toBe(main.parent);
   });
 
   it('gives the screen back to screen readers once dismissed', () => {
@@ -297,9 +317,12 @@ describe('MetronomeScreen swipe hint', () => {
       screen.update(screenElement());
     });
     expect(screen.root.findAllByType(SwipeHint)).toHaveLength(0);
-    expect(readerLayer(screen).props).toMatchObject({
-      importantForAccessibility: 'auto',
-      accessibilityElementsHidden: false,
-    });
+    for (const layer of readerLayers(screen).layers)
+      expect(layer.props).toMatchObject(SHOWN);
+  });
+
+  it('keeps each reader layer as its own native view', () => {
+    for (const layer of readerLayers(hintShown()).layers)
+      expect(layer.props.collapsable).toBe(false);
   });
 });

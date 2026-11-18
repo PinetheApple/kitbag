@@ -42,13 +42,18 @@ export function SheetHost({ topInset, children }: SheetHostProps) {
   );
   return (
     <SheetPortalContext.Provider value={portal}>
-      <View style={styles.app} {...readerHiding(slots.length > 0)}>
+      <View
+        style={styles.app}
+        collapsable={false}
+        {...readerHiding(slots.length > 0)}
+      >
         {children}
       </View>
       {slots.map((slot, index) => (
         <View
           key={slot.id}
           style={StyleSheet.absoluteFill}
+          collapsable={false}
           {...readerHiding(index < slots.length - 1)}
         >
           {slot.node}
