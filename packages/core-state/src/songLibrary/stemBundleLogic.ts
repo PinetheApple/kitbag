@@ -8,7 +8,12 @@ import type {
 import { fileRemovals, type Removal } from './logic.ts';
 
 export type BundleRefusalReason =
-  'notABundle' | 'version' | 'tooManyStems' | 'noSpace' | 'unreadable';
+  | 'notABundle'
+  | 'version'
+  | 'tooManyStems'
+  | 'noSpace'
+  | 'unreadable'
+  | 'stemFormat';
 
 export interface BundleRefusal {
   readonly reason: BundleRefusalReason;
@@ -16,6 +21,8 @@ export interface BundleRefusal {
   readonly supportedVersion: number;
   readonly stemCount: number;
   readonly maxStems: number;
+  readonly stemFormat: string;
+  readonly supportedStemFormat: string;
 }
 
 export function refusalReason(
@@ -33,6 +40,8 @@ export function refusalReason(
       return 'noSpace';
     case codes.bundleRefusalUnreadable:
       return 'unreadable';
+    case codes.bundleRefusalStemFormat:
+      return 'stemFormat';
     default:
       return null;
   }
@@ -42,12 +51,16 @@ export function refusal(
   reason: BundleRefusalReason,
   check: StemBundleCheck | null,
 ): BundleRefusal {
+  const stemFormat = check?.stemFormat ?? '';
+  const unnamed = reason === 'stemFormat' && stemFormat === '';
   return {
-    reason,
+    reason: unnamed ? 'unreadable' : reason,
     version: check?.version ?? 0,
     supportedVersion: check?.supportedVersion ?? 0,
     stemCount: check?.stemCount ?? 0,
     maxStems: check?.maxStems ?? 0,
+    stemFormat,
+    supportedStemFormat: check?.supportedStemFormat ?? '',
   };
 }
 

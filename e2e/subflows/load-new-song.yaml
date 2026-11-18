@@ -1,0 +1,8 @@
+appId: com.kitbag.app
+---
+- runFlow: open-all-songs.yaml
+- tapOn: 'New song, ${BPM} · .*'
+- extendedWaitUntil:
+    visible: 'New song, .*not in a setlist'
+    timeout: 10000
+- assertVisible: 'Tempo, ${BPM} BPM'

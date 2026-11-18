@@ -17,6 +17,7 @@ import com.kitbag.corenative.transport.SongCommand
 import com.kitbag.corenative.transport.SongPlayback
 import com.kitbag.corenative.transport.SongProgress
 import com.kitbag.corenative.transport.SongTransport
+import com.kitbag.corenative.transport.endsSong
 import com.kitbag.corenative.transport.mediaArtist
 import kotlin.math.roundToInt
 
@@ -52,7 +53,7 @@ internal class SongCard(
     val app = appRequests()
     val route = songTransport.route(progress(), action, app != null)
     route.app?.let { app?.invoke(it) }
-    if (SongCommand.Stop in route.engine) {
+    if (route.engine.any { it.endsSong }) {
       route.engine.forEach(::execute)
       onStopped()
     } else {
@@ -87,6 +88,7 @@ internal class SongCard(
       SongCommand.Play -> EngineTransport.mixerPlay()
       SongCommand.Pause -> EngineTransport.mixerPause()
       SongCommand.Stop -> EngineTransport.mixerStop()
+      SongCommand.StopCountIn -> EngineTransport.songStop()
       is SongCommand.Seek -> EngineTransport.mixerSeek(command.frame)
     }
   }

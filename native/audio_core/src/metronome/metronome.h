@@ -51,6 +51,7 @@ class Metronome {
   static constexpr double kMinVolume = 0.0;
   static constexpr double kMaxVolume = 2.0;
   static constexpr uint32_t kNoIntent = 0;
+  static constexpr size_t kCommandRingSize = 128;
 
   Metronome() {
     InitAccentRow(accents_);
@@ -129,6 +130,10 @@ class Metronome {
   void ReleaseRetiredGrids();
   void DropQueuedPreviews();
 
+  // App thread, the ring's only producer: a push after this cannot fail.
+  bool HasCommandRoom() const {
+    return commands_.Free() > 0;
+  }
   // RT: the intent of a click-off count that ended this block, once.
   uint32_t TakeEndedIntent() {
     const uint32_t ended = ended_intent_;
@@ -179,8 +184,6 @@ class Metronome {
     const BeatGrid* grid = nullptr;
     uint64_t generation = 0;
   };
-
-  static constexpr size_t kCommandRingSize = 128;
 
   // ApplyCommand holds the only exhaustive switch over CommandType; the
   // handlers below are partial and say so with a `default:`.

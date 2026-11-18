@@ -1,0 +1,9 @@
+appId: com.kitbag.app
+---
+- runFlow:
+    file: type-number.yaml
+    env:
+      OPEN: 'Tempo, .*'
+      NUMBER: ${BPM}
+      CONFIRM: 'Set tempo'
+- assertVisible: 'Tempo, ${BPM} BPM'

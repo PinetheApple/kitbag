@@ -34,6 +34,7 @@ export const CODES: LibraryConstants = {
   bundleRefusalTooManyStems: 'too-many-stems',
   bundleRefusalUnreadable: 'unreadable',
   bundleRefusalNoSpace: 'no-space',
+  bundleRefusalStemFormat: 'unsupported-stem-format',
   failureMissingFile: 'missing-file',
   failureUnsupported: 'unsupported',
   failureInterrupted: 'interrupted',
@@ -120,6 +121,8 @@ export function bundleCheck(
     title: 'Redbone',
     stemCount: 2,
     maxStems: 16,
+    stemFormat: '',
+    supportedStemFormat: 'flac',
     ...fields,
   };
 }

@@ -169,11 +169,19 @@ class SongTransportTest {
   }
 
   @Test
-  fun `stop during a count-in tells the app and still stops the engine`() {
+  fun `stop during a count-in tells the app and ends the count and the song natively`() {
     assertEquals(
-      SongRoute(SongCommand.Stop, listOf(SongCommand.Stop)),
+      SongRoute(SongCommand.Stop, listOf(SongCommand.StopCountIn)),
       transport.route(counting(5.0), STOP, appListening = true),
     )
+  }
+
+  @Test
+  fun `only stops end the song`() {
+    assertTrue(SongCommand.Stop.endsSong)
+    assertTrue(SongCommand.StopCountIn.endsSong)
+    assertFalse(SongCommand.Pause.endsSong)
+    assertFalse(SongCommand.Seek(0L).endsSong)
   }
 
   @Test
@@ -195,7 +203,10 @@ class SongTransportTest {
   @Test
   fun `a count-in with no app listening stays with the engine`() {
     assertEquals(SongRoute(null, emptyList()), transport.route(counting(5.0), PAUSE, appListening = false))
-    assertEquals(SongRoute(null, listOf(SongCommand.Stop)), transport.route(counting(5.0), STOP, appListening = false))
+    assertEquals(
+      SongRoute(null, listOf(SongCommand.StopCountIn)),
+      transport.route(counting(5.0), STOP, appListening = false),
+    )
   }
 
   @Test

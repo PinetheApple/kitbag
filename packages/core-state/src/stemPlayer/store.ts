@@ -4,7 +4,7 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { mixActions, transportActions } from './actions.ts';
 import { barMarkDownbeats } from './bars.ts';
-import { clickActions } from './clickActions.ts';
+import { clickActions, releaseClick } from './clickActions.ts';
 import { NO_SONG_FACTS, songFacts, type SongFacts } from './facts.ts';
 import type { LoopSeconds } from './loop.ts';
 import { sectionLoopActions } from './loopActions.ts';
@@ -242,8 +242,6 @@ export function createStemPlayerStore(
   };
 
   return createStore<StemPlayerStore>((set, get, store) => {
-    const counting = () =>
-      countPending(get().countEndFrame, runtimeOf().engine.nowFrame());
     const mixer = mixerSession({
       set,
       get,
@@ -257,7 +255,8 @@ export function createStemPlayerStore(
         get().leaveRetime();
       },
       teardownTracks,
-      counting,
+      counting: () =>
+        countPending(get().countEndFrame, runtimeOf().engine.nowFrame()),
       resetState: () => {
         set(closedState);
       },
@@ -269,24 +268,29 @@ export function createStemPlayerStore(
       runtimeOf,
       session: mixer.current,
     };
-    const start = songStart(context);
+    const start = songStart({
+      ...context,
+      releaseClick: () => releaseClick(context),
+    });
     mixer.onScrubSeek(start.afterSeek);
-    mixer.onClickReleased(start.startNow);
+    mixer.onClickReleased(start.endCountNow);
+    const card = showCountOnSongCard(store, runtimeOf, start.counting);
+    mixer.onSongStopped(() => {
+      card.stopped();
+      start.songStopped();
+    });
     mixer.onSongTransport(
       songTransportRequests({
         get,
         runtimeOf,
-        counting,
+        counting: start.counting,
         stopCount: () => {
-          if (start.stop()) mixer.songStopped();
+          card.stopped();
+          start.stop();
         },
       }),
     );
-    showCountOnSongCard(store, runtimeOf);
-    const clicks = clickActions(context, mixer.pendingClick, {
-      keepCountSilent: () => start.recountClick(false),
-      keepCountClicking: () => start.recountClick(true),
-    });
+    const clicks = clickActions(context, mixer.pendingClick, start);
     const anchorRetime = retimeAnchor(context);
     const afterSeek = (frame: number) => {
       anchorRetime(frame);

@@ -248,6 +248,24 @@ void TestSongStartAbi() {
   kb_engine_destroy(engine);
 }
 
+void TestFullRingClaimsNoIntent() {
+  constexpr double kBeat = 12000.0;
+  kb_engine* engine = nullptr;
+  if (kb_engine_create(&engine) != KB_OK) return;
+  const bool idle_before = kb_engine_idle(engine) != 0;
+  for (size_t i = 0; i < kitbag::Metronome::kCommandRingSize; ++i) {
+    kb_metronome_set_tempo(engine, kitbag::Metronome::kDefaultBpm);
+  }
+  const kb_result counted =
+      kb_metronome_count_in_at(engine, 0, kBeat, kBarBeats, kClickOn);
+  const bool idle_after = kb_engine_idle(engine) != 0;
+  kb_engine_destroy(engine);
+  Check(
+      idle_before && counted == KB_ERROR_BUSY && idle_after,
+      "song start abi: a full ring refuses the count before claiming intent"
+  );
+}
+
 }  // namespace
 
 void RunCountInTests(const std::string& pulses) {
@@ -267,6 +285,7 @@ void RunCountInTests(const std::string& pulses) {
   }
   for (double rate : kRates) TestPulseStart(pulses, rate);
   TestSongStartAbi();
+  TestFullRingClaimsNoIntent();
 }
 
 }  // namespace stem_sync

@@ -32,10 +32,22 @@ export {
   type CountInSettings,
 } from './metronome/countInPersistence.ts';
 export {
+  applyMetronomeSettings,
+  standaloneMetronomeOf,
+  type MetronomeSettingsInput,
+  type StandaloneMetronome,
+} from './metronome/standalone.ts';
+export {
+  configureStandaloneMetronomePersistence,
+  type StandaloneMetronomePersistence,
+} from './metronome/standalonePersistence.ts';
+export {
   clamp,
   clampRampInterval,
   cycleAccentValue,
+  isAccent,
   isCountInBars,
+  isRampUnit,
   isSoundId,
   rampIntervalBounds,
   initialAccents,

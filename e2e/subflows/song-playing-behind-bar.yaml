@@ -1,0 +1,14 @@
+appId: com.kitbag.app
+---
+- runFlow: launch-fresh.yaml
+- runFlow: import-fixture-song.yaml
+- tapOn: '${FIXTURE_SONG}, .*'
+- extendedWaitUntil:
+    visible: 'Play'
+    timeout: 10000
+- tapOn: 'Play'
+- assertVisible: 'Pause'
+- back
+- extendedWaitUntil:
+    visible: 'Pause ${FIXTURE_SONG}'
+    timeout: 5000

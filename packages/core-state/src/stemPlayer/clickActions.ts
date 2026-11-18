@@ -16,14 +16,16 @@ export type ClickSlice = Pick<
 >;
 
 export interface ClickHandoff {
-  readonly keepCountSilent: () => boolean;
-  readonly keepCountClicking: () => boolean;
+  readonly recountWithClickOff: () => boolean;
+  readonly recountWithClickOn: () => boolean;
 }
 
-const NO_HANDOFF: ClickHandoff = {
-  keepCountSilent: () => false,
-  keepCountClicking: () => false,
-};
+type ClickContext = Pick<
+  MixerSessionContext<ClickSlice>,
+  'set' | 'get' | 'runtimeOf'
+>;
+
+const noCount = () => false;
 
 function releaseGrid({ commands }: Pick<MixerRuntime, 'commands'>): void {
   commands.metronomeFollowMixer(false);
@@ -35,24 +37,30 @@ export function stopClick(runtime: Pick<MixerRuntime, 'commands'>): void {
   runtime.commands.metronomeStop();
 }
 
-export function turnClickOff(
-  {
-    set,
-    get,
-    runtimeOf,
-  }: Pick<MixerSessionContext<ClickSlice>, 'set' | 'get' | 'runtimeOf'>,
-  keepCount: () => boolean = NO_HANDOFF.keepCountSilent,
-): void {
-  if (!get().click) return;
+export function releaseClick({ set, get, runtimeOf }: ClickContext): boolean {
+  if (!get().click) return false;
   set({ click: false });
-  if (keepCount()) releaseGrid(runtimeOf());
-  else stopClick(runtimeOf());
+  releaseGrid(runtimeOf());
+  return true;
+}
+
+export function turnClickOff(
+  context: ClickContext,
+  recountWithClickOff: () => boolean = noCount,
+): void {
+  if (!context.get().click) return;
+  const recounted = recountWithClickOff();
+  releaseClick(context);
+  if (!recounted) context.runtimeOf().commands.metronomeStop();
 }
 
 export function clickActions(
   { set, get, runtimeOf, session }: MixerSessionContext<ClickSlice>,
   pendingClick: PendingClick,
-  handoff: ClickHandoff = NO_HANDOFF,
+  {
+    recountWithClickOff = noCount,
+    recountWithClickOn = noCount,
+  }: Partial<ClickHandoff> = {},
 ): Pick<StemPlayerActions, 'toggleClick'> {
   const { busy, call } = sessionGate(session);
 
@@ -73,8 +81,8 @@ export function clickActions(
       return;
     }
     commands.metronomeFollowMixer(true);
-    if (!handoff.keepCountClicking())
-      commands.metronomeStart(engine.nowFrame());
+    const recounted = recountWithClickOn();
+    if (!recounted) commands.metronomeStart(engine.nowFrame());
     set({ click: true });
   };
 
@@ -82,7 +90,7 @@ export function clickActions(
     toggleClick: async () => {
       if (busy()) return;
       if (get().click) {
-        turnClickOff({ set, get, runtimeOf }, handoff.keepCountSilent);
+        turnClickOff({ set, get, runtimeOf }, recountWithClickOff);
         return;
       }
       await start();

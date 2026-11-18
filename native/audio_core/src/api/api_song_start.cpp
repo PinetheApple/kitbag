@@ -31,6 +31,7 @@ extern "C" {
 kb_result kb_mixer_play_at(kb_engine* engine, uint64_t start_frame) {
   if (engine == nullptr) return KB_ERROR_INVALID_ARGUMENT;
   kitbag::Engine* e = ToEngine(engine);
+  if (!e->mixer().HasCommandRoom()) return KB_ERROR_BUSY;
   const bool had_intent = e->mixer_intent();
   e->SetMixerIntent(true);
   if (e->mixer().PlayAt(start_frame)) return KB_OK;
@@ -50,7 +51,9 @@ kb_result kb_metronome_count_in_at(
     return KB_ERROR_INVALID_ARGUMENT;
   }
   kitbag::Engine* target = ToEngine(engine);
-  const uint32_t had_intent = target->metronome_intent_token();
+  // A rollback could restore a token whose count already ended, which nothing
+  // would ever clear; refusing before the claim needs none.
+  if (!target->metronome().HasCommandRoom()) return KB_ERROR_BUSY;
   const uint32_t intent = target->ClaimMetronomeIntent();
   if (!target->metronome().CountInAt(
           end_frame,
@@ -59,7 +62,6 @@ kb_result kb_metronome_count_in_at(
           start_click != 0,
           intent
       )) {
-    target->RestoreMetronomeIntent(had_intent);
     return KB_ERROR_BUSY;
   }
   kitbag::StopRigClickFor(target);

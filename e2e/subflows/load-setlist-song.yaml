@@ -1,0 +1,9 @@
+appId: com.kitbag.app
+---
+- tapOn: 'Setlists'
+- tapOn: 'Gig, .*'
+- tapOn: '${POSITION}\. New song, ${BPM} · .*'
+- extendedWaitUntil:
+    visible: 'New song, Setlist Gig, song ${POSITION} of 2'
+    timeout: 10000
+- assertVisible: 'Tempo, ${BPM} BPM'

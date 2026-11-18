@@ -45,7 +45,8 @@ export type SongTransportShowState = Readonly<{
   skipSeconds: Double;
 }>;
 
-/** A song-notification action while the card was last shown with countingIn, for JS to apply. */
+/** A song-notification action while the card is marked countingIn, for JS to apply.
+ *  The mark is set by songTransportShow and dropped once the mixer reads playing. */
 export type SongTransportRequest = Readonly<{
   action: 'play' | 'pause' | 'stop' | 'seek';
   frame: Double | null;

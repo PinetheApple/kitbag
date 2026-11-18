@@ -1,0 +1,97 @@
+appId: com.kitbag.app
+name: '#369 1: standalone settings come back after a force-stop, nothing playing'
+tags:
+  - pr-369
+---
+- runFlow: ../../subflows/launch-fresh.yaml
+- runFlow: ../../subflows/open-metronome.yaml
+- runFlow:
+    file: ../../subflows/set-tempo.yaml
+    env:
+      BPM: 125
+- tapOn: 'Time signature, .*'
+- tapOn: '7 over 8'
+- tapOn: 'Set 7 over 8'
+- assertVisible: 'Time signature, 7 over 8'
+- tapOn: 'Subdivision, .*'
+- tapOn: 'Triplets(, .*)?'
+- assertVisible: 'Subdivision, Triplets'
+- tapOn: 'Beat 2, normal'
+- assertVisible: 'Beat 2, muted'
+- tapOn: 'Practice tools(, \d+ on)?'
+- tapOn:
+    text: 'Tempo ramp'
+    rightOf: 'Tempo ramp'
+- runFlow:
+    file: ../../subflows/type-number.yaml
+    env:
+      OPEN: 'Ramp from, .*'
+      NUMBER: 125
+      CONFIRM: 'Set ramp start'
+- runFlow:
+    file: ../../subflows/type-number.yaml
+    env:
+      OPEN: 'Ramp to, .*'
+      NUMBER: 130
+      CONFIRM: 'Set ramp target'
+- tapOn:
+    text: 'Mute bars'
+    rightOf: 'Mute bars'
+- runFlow:
+    file: ../../subflows/type-number.yaml
+    env:
+      OPEN: 'Play bars, .*'
+      NUMBER: 3
+      CONFIRM: 'Set bars to play'
+- runFlow:
+    file: ../../subflows/type-number.yaml
+    env:
+      OPEN: 'Mute bars, .*'
+      NUMBER: 1
+      CONFIRM: 'Set bars to mute'
+- tapOn: 'Normal sound, .*'
+- tapOn: 'Woodblock'
+- tapOn: 'Accent sound, .*'
+- tapOn: 'Cowbell'
+- scrollUntilVisible:
+    element: 'Poly count, .*'
+- tapOn:
+    text: 'Polyrhythm'
+    rightOf: 'Polyrhythm'
+- runFlow:
+    file: ../../subflows/type-number.yaml
+    env:
+      OPEN: 'Poly count, .*'
+      NUMBER: 5
+      CONFIRM: 'Set poly count'
+- runFlow:
+    file: ../../subflows/type-number.yaml
+    env:
+      OPEN: 'Against, .*'
+      NUMBER: 2
+      CONFIRM: 'Set against'
+- back
+- assertVisible: 'Practice tools, 3 on'
+- assertVisible: 'Ramp 125 → 130 · Mute bars: play 3, mute 1 · Poly 5:2'
+
+- runFlow: ../../subflows/force-stop-relaunch.yaml
+- assertVisible: 'Metronome, Ramp 125→130 BPM ready'
+- runFlow: ../../subflows/open-metronome.yaml
+- assertVisible: 'Tempo, 125 BPM'
+- assertVisible: 'Play'
+- assertVisible: 'Time signature, 7 over 8'
+- assertVisible: 'Subdivision, Triplets'
+- assertVisible: 'Beat 2, muted'
+- assertVisible: 'Polyrhythm 5:2'
+- assertVisible: 'Practice tools, 3 on'
+- assertVisible: 'Ramp 125 → 130 · Mute bars: play 3, mute 1 · Poly 5:2'
+- tapOn: 'Practice tools, 3 on'
+- assertVisible: 'Ramp from, 125 BPM'
+- assertVisible: 'Ramp to, 130 BPM'
+- assertVisible: 'Play bars, 3 bars'
+- assertVisible: 'Mute bars, 1 bar'
+- assertVisible: 'Normal sound, Woodblock'
+- assertVisible: 'Accent sound, Cowbell'
+- scrollUntilVisible:
+    element: 'Against, 2 beats'
+- assertVisible: 'Poly count, 5 beats'

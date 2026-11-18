@@ -1,0 +1,19 @@
+appId: com.kitbag.app
+---
+- tapOn: ${OPEN}
+- extendedWaitUntil:
+    visible: ${CONFIRM}
+    timeout: 5000
+- evalScript: ${output.digits = String(NUMBER).split(''); output.next = 0}
+- repeat:
+    times: ${output.digits.length}
+    commands:
+      - tapOn:
+          text: ${output.digits[output.next]}
+          below: '.* – .*'
+          index: 0
+      - evalScript: ${output.next = output.next + 1}
+- tapOn: ${CONFIRM}
+- extendedWaitUntil:
+    notVisible: ${CONFIRM}
+    timeout: 5000

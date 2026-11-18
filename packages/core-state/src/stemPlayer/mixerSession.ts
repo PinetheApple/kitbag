@@ -66,6 +66,9 @@ export function mixerSession({
     null;
   let afterScrubSeek: ((frame: number) => void) | null = null;
   let afterClickRelease: (() => void) | null = null;
+  let songStopped = () => {
+    turnClickOff({ set, get, runtimeOf });
+  };
   const scrubSeek = debounce((frame: number) => {
     runtimeOf().commands.mixerSeek(frame);
     afterScrubSeek?.(frame);
@@ -80,10 +83,6 @@ export function mixerSession({
       turnClickOff({ set, get, runtimeOf });
       afterClickRelease?.();
     },
-  };
-
-  const songStopped = () => {
-    turnClickOff({ set, get, runtimeOf });
   };
 
   const teardown = () => {
@@ -152,9 +151,11 @@ export function mixerSession({
     onSongTransport: (listener: (request: SongTransportRequest) => void) => {
       songTransportListener = listener;
     },
+    onSongStopped: (listener: () => void) => {
+      songStopped = listener;
+    },
     live,
     close,
-    songStopped,
     current: () => session,
     pendingClick,
     hold: (opened: number): MixerHold => ({
@@ -169,7 +170,9 @@ export function mixerSession({
       claim.claim(close);
       pendingClick.cancel();
       mixerClick.attach(clickSource);
-      songStopSubscription ??= runtimeOf().commands.onSongStopped(songStopped);
+      songStopSubscription ??= runtimeOf().commands.onSongStopped(() => {
+        songStopped();
+      });
       if (songTransportListener !== null) {
         songTransportSubscription ??= runtimeOf().commands.onSongTransport(
           songTransportListener,

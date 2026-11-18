@@ -1,0 +1,26 @@
+appId: com.kitbag.app
+name: '#369 3: stepping through a setlist leaves the standalone settings and the setlist alone'
+tags:
+  - pr-369
+---
+- runFlow: ../../subflows/setlist-over-standalone.yaml
+- runFlow:
+    file: ../../subflows/load-setlist-song.yaml
+    env:
+      POSITION: 1
+      BPM: 130
+- tapOn: 'Next song, New song'
+- extendedWaitUntil:
+    visible: 'New song, Setlist Gig, song 2 of 2'
+    timeout: 10000
+- assertVisible: 'Tempo, 120 BPM'
+- runFlow:
+    file: ../../subflows/relaunch-expect-tempo.yaml
+    env:
+      BPM: 125
+- assertNotVisible: 'New song, Setlist Gig, .*'
+- tapOn: 'Setlists'
+- assertVisible: 'Gig, on stage, 2 songs.*'
+- tapOn: 'Gig, .*'
+- assertVisible: '1\. New song, 130 · .*'
+- assertVisible: '2\. New song, 120 · .*'

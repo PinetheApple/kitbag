@@ -42,6 +42,8 @@ sealed interface SongCommand {
 
   data object Stop : SongCommand
 
+  data object StopCountIn : SongCommand
+
   data class Seek(val frame: Long) : SongCommand
 }
 
@@ -50,11 +52,14 @@ val SongCommand.appAction: String
     when (this) {
       SongCommand.Play -> "play"
       SongCommand.Pause -> "pause"
-      SongCommand.Stop -> "stop"
+      SongCommand.Stop, SongCommand.StopCountIn -> "stop"
       is SongCommand.Seek -> "seek"
     }
 
 data class SongRoute(val app: SongCommand?, val engine: List<SongCommand>)
+
+val SongCommand.endsSong: Boolean
+  get() = this == SongCommand.Stop || this == SongCommand.StopCountIn
 
 data class SongPlayback(
   val state: Int,
@@ -105,11 +110,13 @@ class SongTransport(private val song: Song, private val sampleRate: Double) {
       SongAction.FORWARD -> listOf(seek(progress.positionFrames + skipFrames))
     }
 
-  // A count-in is the app's to cancel; Stop still stops the engine and ends the card as after the start.
+  // A count-in is the app's to cancel; Stop also ends the count and the card natively, as after the start.
   fun route(progress: SongProgress, action: SongAction, appListening: Boolean): SongRoute {
+    if (progress.countingIn && action == SongAction.STOP) {
+      return SongRoute(if (appListening) SongCommand.Stop else null, listOf(SongCommand.StopCountIn))
+    }
     if (!progress.countingIn || !appListening) return SongRoute(null, commandsFor(progress, action))
-    val engine = if (action == SongAction.STOP) listOf(SongCommand.Stop) else emptyList()
-    return SongRoute(appCommand(progress, action), engine)
+    return SongRoute(appCommand(progress, action), emptyList())
   }
 
   fun seekRoute(progress: SongProgress, positionMillis: Long, appListening: Boolean): SongRoute {
@@ -122,7 +129,7 @@ class SongTransport(private val song: Song, private val sampleRate: Double) {
     when (command) {
       SongCommand.Play -> progress.copy(playing = true)
       SongCommand.Pause -> progress.copy(playing = false)
-      SongCommand.Stop -> SongProgress(playing = false, positionFrames = 0L)
+      SongCommand.Stop, SongCommand.StopCountIn -> SongProgress(playing = false, positionFrames = 0L)
       is SongCommand.Seek -> progress.copy(positionFrames = command.frame)
     }
 

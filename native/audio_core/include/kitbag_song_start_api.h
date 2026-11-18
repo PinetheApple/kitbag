@@ -40,7 +40,7 @@ KB_EXPORT kb_result kb_mixer_play_at(kb_engine* engine, uint64_t start_frame);
  * end_frame the metronome renders nothing and reads stopped, as after
  * kb_metronome_stop, and a later kb_metronome_start locks to the song.
  * Sets play intent like kb_metronome_start; with start_click 0 it ends on
- * end_frame unless a later start, stop or pause has replaced it.
+ * end_frame unless a later metronome call has replaced it.
  * Returns KB_ERROR_INVALID_ARGUMENT for a null engine, end_frame above
  * KB_MAX_EXACT_FRAME, beat_frames below 1 or not finite, or beats_per_bar
  * outside [1, 16]; KB_ERROR_BUSY when the command queue is full. Either leaves

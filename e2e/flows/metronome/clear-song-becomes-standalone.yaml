@@ -1,0 +1,15 @@
+appId: com.kitbag.app
+name: "#369 4: after Clear song the song's settings are the standalone ones across a force-stop"
+tags:
+  - pr-369
+---
+- runFlow: ../../subflows/song-loaded-over-standalone.yaml
+- tapOn: 'New song, .*not in a setlist'
+- tapOn: 'Clear song'
+- assertNotVisible: 'New song, .*not in a setlist'
+- assertVisible: 'Tempo, 130 BPM'
+- runFlow:
+    file: ../../subflows/relaunch-expect-tempo.yaml
+    env:
+      BPM: 130
+- assertNotVisible: 'New song, .*not in a setlist'

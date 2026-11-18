@@ -56,12 +56,6 @@ class Engine {
     metronome_intent_.store(token);
     return token;
   }
-  void RestoreMetronomeIntent(uint32_t token) {
-    metronome_intent_.store(token);
-  }
-  uint32_t metronome_intent_token() const {
-    return metronome_intent_.load();
-  }
   void SetMixerIntent(bool playing) {
     mixer_intent_.store(playing);
   }

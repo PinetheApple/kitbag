@@ -1,0 +1,9 @@
+appId: com.kitbag.app
+---
+- runFlow: launch-fresh.yaml
+- runFlow: open-metronome.yaml
+- runFlow: setlist-of-two-songs.yaml
+- runFlow:
+    file: set-tempo.yaml
+    env:
+      BPM: 125

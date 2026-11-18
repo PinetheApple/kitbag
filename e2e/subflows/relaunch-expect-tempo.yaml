@@ -1,0 +1,6 @@
+appId: com.kitbag.app
+---
+- runFlow: force-stop-relaunch.yaml
+- assertVisible: 'Metronome, ${BPM} BPM ready'
+- runFlow: open-metronome.yaml
+- assertVisible: 'Tempo, ${BPM} BPM'

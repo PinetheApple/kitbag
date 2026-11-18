@@ -353,7 +353,10 @@ divided by the rate, and passes one end frame to both. A seek or a speed change
 during the count is the caller's cancel plus a new counted start: a pending
 `play_at` survives a seek. With the song's click off the count still sounds
 (`start_click` 0): the metronome stops on the end frame, drops the play intent
-the count took, and a later start locks to the song's grid.
+the count took, and a later start locks to the song's grid. Toggling the click
+during the count re-issues it with the same end frame and the new `start_click`,
+dropping beats already past; the metronome tool's Play during the count ends it
+and starts the song at once, and so does a refused re-issue.
 
 **Past the last grid beat, the click goes silent and stays silent.** Every song
 reaches this. `is_running()` keeps reporting true, and `bar_phase` and
@@ -756,6 +759,20 @@ referenced but never drew: **setlists**, **setlist detail**, **preset editor**.
   poly, sound, ramp, mute, count-in) never writes the song; a visible mark shows
   it has unsaved changes until the user saves. Nothing autosaves. The mark and
   where Save lives await the owner's pick of a design.
+- **"The last metronome state survives a restart"** (owner, 2026-11-07;
+  #333): tempo, meter, subdivision, accents, poly, sound, ramp and mute bars
+  come back after the app is killed, and nothing starts playing.
+  Count-in, volume, latency and subdivision accents keep their own storage
+  (§5.3, §12.5). How that meets songs:
+  - Loading a song or setlist step, or editing a loaded song, never writes the
+    standalone state; a kill with a song loaded relaunches into the settings
+    from before the song. **[recorded — coordinator ruling, owner may overturn]**
+  - Clear song and Leave setlist keep the current settings, and those become
+    the saved standalone state. **[recorded — lane call, owner may overturn]**
+  - A ramp that was on restores at its start tempo, as a loaded song's does.
+    **[recorded — lane call, owner may overturn]**
+  - The saved standalone state is not in a backup.
+    **[recorded — lane call, owner may overturn]**
 - **Ramp and bar-mute are song data.** The Flutter `applyPreset` force-disables
   the ramp when loading a preset, so a song's trainer config is silently lost.
   They round-trip like any other field.
@@ -913,7 +930,9 @@ working. Changes:
 - Speed control in the transport, driven by the same stretch stage as the stem
   player (§7.6). Single-file playback gets it when the stem player has it; until
   then the 1.0× key stays in place, looks disabled, and shows a note on tap.
-- A row tap on Songs opens the player paused.
+- Tapping the Songs row of the song the mini-player is showing opens the player
+  on that song as it is, still playing if it was. Any other row tap on Songs
+  opens the player paused.
 - **Stop** lives in the player's overflow menu, with Re-analyse. Stop ends the
   song session and removes the mini-player. Stop in the song's media
   notification does the same.
@@ -928,10 +947,9 @@ working. Changes:
 - Lock via `kb_metronome_set_grid` (§4.2) — follows per-beat spacing, so
   non-constant tempo works.
 - Latency-compensated: click and track land together at the speaker.
-- Count-in before the lock engages. Until it works under a grid (#298), the
-  Count-in chip and its sheet group show disabled with the note "arrives with
-  count-in". The count plays whether the song's click is on or off; with it
-  off the click stays silent once the song starts.
+- Count-in before the lock engages, under a grid (#298): the song starts on the
+  frame the count ends. The count plays whether the song's click is on or off;
+  with it off the click stays silent once the song starts.
 - **Click settings belong to the song.** The Count-in, Click and Accent chips
   open one shared sheet at the tapped group; changes apply live and stay with
   this song, unsaved until "Save for this song". The standalone metronome's

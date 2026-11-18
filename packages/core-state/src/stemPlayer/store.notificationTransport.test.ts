@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { SongTransportShowState } from '@kitbag/core-native';
+import {
+  KB_COUNT_IN_OFF,
+  type SongTransportShowState,
+} from '@kitbag/core-native';
 
 import {
   at,
@@ -64,13 +67,34 @@ describe('a notification action during the count', () => {
     expect(song.commands.songStop).toHaveBeenCalledTimes(1);
     expect(song.commands.mixerPlay).not.toHaveBeenCalled();
     expect(song.commands.songTransportHide).not.toHaveBeenCalled();
+    expect(song.commands.songTransportShow).not.toHaveBeenCalled();
   });
 
-  it('play goes through the player toggle, which cancels the count', async () => {
+  it('a recents swipe ends the count without showing the card again', async () => {
     const song = await counting();
+    song.requestFromNotification(STOP);
+    song.stopSongFromNotification();
+    await vi.runAllTimersAsync();
+    expect(song.store.getState().countEndFrame).toBeNull();
+    expect(song.commands.songTransportShow).not.toHaveBeenCalled();
+  });
+
+  it('a stop the engine applied alone does not show the card again', async () => {
+    const song = await counting();
+    song.stopSongFromNotification();
+    await vi.runAllTimersAsync();
+    expect(song.store.getState().countEndFrame).toBeNull();
+    expect(song.commands.songTransportShow).not.toHaveBeenCalled();
+  });
+
+  it('play changes nothing, leaving the count running', async () => {
+    const song = await counting();
+    const { countEndFrame } = song.store.getState();
     song.requestFromNotification(PLAY);
-    expect(song.commands.songPause).toHaveBeenCalledTimes(1);
+    expect(song.commands.songPause).not.toHaveBeenCalled();
     expect(song.commands.mixerPlay).not.toHaveBeenCalled();
+    expect(song.commands.songCountIn).not.toHaveBeenCalled();
+    expect(song.store.getState().countEndFrame).toBe(countEndFrame);
   });
 
   it('seek counts in again from the bar at the new head', async () => {
@@ -118,13 +142,30 @@ describe('a notification action while paused', () => {
 });
 
 describe('the song card during the count', () => {
-  it('is marked counting by every show of a counted play, the last one included', async () => {
+  it('is marked counting by the last show of a counted play', async () => {
     const song = await countingSong();
     song.store.getState().togglePlay();
     await vi.runAllTimersAsync();
-    expect(shows(song).length).toBeGreaterThan(0);
-    expect(shows(song).every((state) => state.countingIn)).toBe(true);
-    expect(shows(song).at(-1)?.playing).toBe(true);
+    expect(shows(song)).toEqual([
+      expect.objectContaining({ playing: true, countingIn: false }),
+      expect.objectContaining({ playing: true, countingIn: true }),
+    ]);
+  });
+
+  it('is not marked counting by a plain play after a count ran out', async () => {
+    const song = await counting();
+    song.engine.now = COUNT_END;
+    song.engine.playing = true;
+    song.store.getState().togglePlay();
+    song.engine.playing = false;
+    song.countInBars.mockReturnValue(KB_COUNT_IN_OFF);
+    vi.clearAllMocks();
+    song.store.getState().togglePlay();
+    await vi.runAllTimersAsync();
+    expect(song.commands.mixerPlay).toHaveBeenCalledTimes(1);
+    expect(shows(song)).toEqual([
+      expect.objectContaining({ playing: true, countingIn: false }),
+    ]);
   });
 
   it('is not shown again by a recount', async () => {

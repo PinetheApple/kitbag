@@ -1,0 +1,26 @@
+appId: com.kitbag.app
+name: '#369 6: deleting the loaded song makes later edits standalone and saved'
+tags:
+  - pr-369
+---
+- runFlow: ../../subflows/song-loaded-over-standalone.yaml
+- runFlow: ../../subflows/open-all-songs.yaml
+- longPressOn: 'New song, 130 · .*'
+- tapOn: 'Edit'
+- tapOn: 'Delete'
+- tapOn: 'Delete song'
+- extendedWaitUntil:
+    notVisible: 'New song, 130 · .*'
+    timeout: 10000
+- back
+- back
+- assertNotVisible: 'New song, .*not in a setlist'
+- runFlow:
+    file: ../../subflows/set-tempo.yaml
+    env:
+      BPM: 105
+- assertNotVisible: 'New song, .*not in a setlist'
+- runFlow:
+    file: ../../subflows/relaunch-expect-tempo.yaml
+    env:
+      BPM: 105
