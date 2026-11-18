@@ -1,0 +1,1 @@
+• A stem bundle whose stems aren't FLAC is now refused with a message naming the format, instead of saying the bundle may be damaged.
