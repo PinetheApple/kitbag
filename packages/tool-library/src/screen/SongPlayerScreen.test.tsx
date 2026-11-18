@@ -18,6 +18,7 @@ const display = vi.hoisted(() => ({
   scaled: false,
   status: 'ready',
   song: {},
+  analysis: { badge: 'grid', beats: [0] as readonly number[] },
 }));
 const commands = vi.hoisted(() => ({ close: vi.fn(), reanalyze: vi.fn() }));
 const mixer = vi.hoisted(() => ({
@@ -52,7 +53,7 @@ vi.mock('@kitbag/core-design', async (original) => {
     Button: (props: Props) => h('Button', props),
     Sheet: (props: Props) =>
       props.visible === true ? h('Sheet', null, props.children) : null,
-    Badge: () => h('Badge'),
+    Badge: (props: Props) => h('Badge', { label: props.label }),
     BeatWaveform: nothing,
     Card: parent,
     Chip: () => h('Chip'),
@@ -94,7 +95,7 @@ vi.mock('@kitbag/core-state', async (original) => {
     loopEndFrames: () => null,
     loopKeyLabel: () => '',
     SKIP_SECONDS: 10,
-    songBadge: () => 'grid',
+    songBadge: () => display.analysis.badge,
     useFocusedMixerHold,
     useLoopScrub: () => ({}),
     useSongLibrary: (select: (state: unknown) => unknown) =>
@@ -104,7 +105,7 @@ vi.mock('@kitbag/core-state', async (original) => {
         status: display.status,
         ...display.song,
         click: false,
-        beats: [0],
+        beats: display.analysis.beats,
         analysisStatus: 'done',
         loop: { kind: 'off' },
         open,
@@ -158,6 +159,7 @@ beforeEach(() => {
   display.scaled = false;
   display.status = 'ready';
   display.song = OPEN_SONG;
+  display.analysis = { badge: 'grid', beats: [0] };
   Object.assign(mixer, { session: 0, opens: 0, displaced: 0, releases: 0 });
 });
 
@@ -286,5 +288,78 @@ describe('the player menu', () => {
     expect(commands.reanalyze).toHaveBeenCalledExactlyOnceWith(1);
     expect(tree.root.findAllByType('Sheet' as never)).toHaveLength(0);
     expect(commands.close).not.toHaveBeenCalled();
+  });
+});
+
+describe('a song with no beat grid', () => {
+  const GRIDLESS = {
+    analysing: { badge: 'analyzing', beats: [] },
+    failed: { badge: 'failed', beats: [] },
+    noGrid: { badge: 'noGrid', beats: [] },
+  } as const;
+
+  function barBadge(tree: ReactTestRenderer) {
+    return tree.root.findByType('AppBar' as never).findByType('Badge' as never)
+      .props.label as unknown;
+  }
+
+  function texts(tree: ReactTestRenderer) {
+    return tree.root
+      .findAll((node) => String(node.type) === 'Text')
+      .map((node) => node.props.children as unknown);
+  }
+
+  it.each([
+    ['analysing', 'ANALYZING'],
+    ['failed', 'NO GRID'],
+    ['noGrid', 'NO GRID'],
+  ] as const)('badges the bar %s as %s', (state, label) => {
+    display.analysis = GRIDLESS[state];
+    expect(barBadge(mount())).toBe(label);
+  });
+
+  it('badges the bar with the BPM once there is a grid', () => {
+    expect(barBadge(mount())).toBe('120 BPM');
+  });
+
+  it('keeps the grid badge while a re-analysis runs', () => {
+    display.analysis = { badge: 'analyzing', beats: [0] };
+    expect(barBadge(mount())).toBe('120 BPM');
+  });
+
+  it.each(['analysing', 'failed', 'noGrid'] as const)(
+    'keeps the card but offers no click toggle while %s',
+    (state) => {
+      display.analysis = GRIDLESS[state];
+      const tree = mount();
+      expect(tree.root.findAllByType('Chip' as never)).toHaveLength(0);
+      expect(texts(tree)).toContain(
+        state === 'analysing' ? 'Finding the beat' : 'No beat grid',
+      );
+    },
+  );
+
+  it('re-analyses the song from a failed card', () => {
+    display.analysis = GRIDLESS.failed;
+    const tree = mount();
+    const button = tree.root.find(
+      (node) =>
+        String(node.type) === 'Button' && node.props.label === 'Re-analyse',
+    );
+    act(() => {
+      (button.props.onPress as () => void)();
+    });
+    expect(commands.reanalyze).toHaveBeenCalledExactlyOnceWith(1);
+  });
+
+  it('offers no Re-analyse while the beat is still being found', () => {
+    display.analysis = GRIDLESS.analysing;
+    const tree = mount();
+    expect(
+      tree.root.findAll(
+        (node) =>
+          String(node.type) === 'Button' && node.props.label === 'Re-analyse',
+      ),
+    ).toHaveLength(0);
   });
 });

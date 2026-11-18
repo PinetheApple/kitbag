@@ -34,17 +34,28 @@ import {
   useLoopScrub,
   useSongLibrary,
   useSongPlayer,
+  type SongPlayerStore,
   type StemPlayerStatus,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
-import { lockText } from '../logic/lockText.ts';
+import { lockText, statusBadge, type StatusBadge } from '../logic/lockText.ts';
 import { songTitle } from '../logic/songTitle.ts';
 import { frameAtTap } from '../logic/waveSeek.ts';
 import type { UsePlayhead } from './playhead.ts';
 
 const NO_NEIGHBOURS = {};
+
+// A re-analysis keeps the grid it replaces until a new one lands.
+function badgeOf({ analysisStatus, beats }: SongPlayerStore) {
+  const hasGrid = beats.length > 0;
+  return hasGrid ? 'grid' : songBadge({ analysisStatus, hasGrid });
+}
+
+function barStatusOf(state: SongPlayerStore): StatusBadge | null {
+  return state.status === 'ready' ? statusBadge(badgeOf(state)) : null;
+}
 
 export interface SongPlayerScreenProps {
   readonly songId: number;
@@ -131,6 +142,7 @@ interface BarFacts {
   readonly title: string;
   readonly artist: string | null;
   readonly bpm: number | null;
+  readonly status: StatusBadge | null;
 }
 
 // Stop closes the session while the screen is still animating out.
@@ -139,18 +151,27 @@ function useLastOpenFacts(): BarFacts {
   const title = useSongPlayer((s) => s.title);
   const artist = useSongPlayer((s) => s.artist);
   const bpm = useSongPlayer((s) => s.bpm);
-  const [kept, setKept] = useState<BarFacts>({ title, artist, bpm });
+  const status = useSongPlayer(barStatusOf);
+  const [kept, setKept] = useState<BarFacts>({ title, artist, bpm, status });
   const changed =
-    kept.title !== title || kept.artist !== artist || kept.bpm !== bpm;
-  if (open && changed) setKept({ title, artist, bpm });
-  return open ? { title, artist, bpm } : kept;
+    kept.title !== title ||
+    kept.artist !== artist ||
+    kept.bpm !== bpm ||
+    kept.status !== status;
+  if (open && changed) setKept({ title, artist, bpm, status });
+  return open ? { title, artist, bpm, status } : kept;
 }
 
 function SongAppBar({ onBack, onMenu }: SongAppBarProps) {
   const styles = useStyles();
   const facts = useLastOpenFacts();
-  const { title, artist } = facts;
+  const { title, artist, status } = facts;
   const bpm = bpmFact(facts.bpm);
+  const shown: StatusBadge | null =
+    status ??
+    (bpm === null
+      ? null
+      : { label: bpm.text, spoken: bpm.spoken, tone: 'default' });
   const actions: readonly AppBarAction[] = useMemo(
     () => [{ icon: 'more', label: 'More', onPress: onMenu }],
     [onMenu],
@@ -163,9 +184,13 @@ function SongAppBar({ onBack, onMenu }: SongAppBarProps) {
       onBack={onBack}
       actions={actions}
       trailing={
-        bpm === null ? null : (
+        shown === null ? null : (
           <View style={styles.bpm}>
-            <Badge label={bpm.text} accessibilityLabel={bpm.spoken} />
+            <Badge
+              label={shown.label}
+              tone={shown.tone}
+              accessibilityLabel={shown.spoken}
+            />
           </View>
         )
       }
@@ -202,35 +227,42 @@ function SongWave({ playhead }: { readonly playhead: ScrubFrame }) {
   );
 }
 
-function LockCard() {
+function LockCard({ songId }: { readonly songId: number }) {
   const styles = useStyles();
   const scaled = useTextScaled();
   const click = useSongPlayer((s) => s.click);
-  const hasGrid = useSongPlayer((s) => s.beats.length > 0);
-  const analysisStatus = useSongPlayer((s) => s.analysisStatus);
+  const badge = useSongPlayer(badgeOf);
   const bpm = bpmFact(useSongPlayer((s) => s.bpm));
   const toggleClick = useSongPlayer((s) => s.toggleClick);
+  const reanalyze = useSongLibrary((s) => s.reanalyze);
   const onToggle = useCallback(() => {
     void toggleClick();
   }, [toggleClick]);
-  const text = lockText(
-    songBadge({ analysisStatus, hasGrid }),
-    click,
-    bpm?.text ?? null,
-  );
+  const onReanalyse = useCallback(() => {
+    void reanalyze(songId);
+  }, [reanalyze, songId]);
+  const text = lockText(badge, click, bpm?.text ?? null);
   const row = (
     <View style={[styles.lock, scaled && styles.lockStacked]}>
       <View style={scaled ? styles.lockTextStacked : styles.lockText}>
         <Text style={styles.lockTitle}>{text.title}</Text>
         <Text style={styles.lockDetail}>{text.detail}</Text>
       </View>
-      {text.available ? (
+      {text.action === 'click' ? (
         <Chip
           label={click ? 'CLICK ON' : 'CLICK OFF'}
           active={click}
           accessibilityLabel={clickKeyLabel(click)}
           neighbourGapDp={NO_NEIGHBOURS}
           onPress={onToggle}
+        />
+      ) : null}
+      {text.action === 'reanalyse' ? (
+        <Button
+          label="Re-analyse"
+          variant="tonal"
+          size="small"
+          onPress={onReanalyse}
         />
       ) : null}
     </View>
@@ -300,12 +332,13 @@ function NotReady({
 }
 
 interface BodyProps {
+  readonly songId: number;
   readonly bottom: number;
   readonly onBack: () => void;
   readonly usePlayhead: UsePlayhead;
 }
 
-function Body({ bottom, onBack, usePlayhead }: BodyProps) {
+function Body({ songId, bottom, onBack, usePlayhead }: BodyProps) {
   const styles = useStyles();
   const status = useSongPlayer((s) => s.status);
   const rate = useSongPlayer((s) => s.engineRate);
@@ -329,7 +362,7 @@ function Body({ bottom, onBack, usePlayhead }: BodyProps) {
           <SongWave playhead={playhead} />
           <ScrubRow frame={playhead} {...scrub} />
         </Card>
-        <LockCard />
+        <LockCard songId={songId} />
       </ScrollView>
       <PlayerDock bottomInset={bottom}>
         <SongTransport playing={playhead.playing} />
@@ -363,7 +396,12 @@ export function SongPlayerScreen({
   return (
     <View style={[styles.screen, padding]}>
       <SongAppBar onBack={onBack} onMenu={openMenu} />
-      <Body bottom={insets.bottom} onBack={onBack} usePlayhead={usePlayhead} />
+      <Body
+        songId={songId}
+        bottom={insets.bottom}
+        onBack={onBack}
+        usePlayhead={usePlayhead}
+      />
       <PlayerMenu
         songId={songId}
         visible={menuOpen}
