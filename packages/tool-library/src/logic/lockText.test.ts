@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { lockText, statusBadge } from './lockText.ts';
+import {
+  barBadge,
+  barStatusOf,
+  lockText,
+  playerStatusBadge,
+} from './lockText.ts';
 
 describe('lockText', () => {
   it('headlines the lock while the click runs', () => {
@@ -35,7 +40,7 @@ describe('lockText', () => {
     expect(lockText('failed', false, null)).toEqual({
       title: 'No beat grid',
       detail: 'Analysis failed, so no click',
-      action: 'reanalyse',
+      action: 'reanalyze',
     });
   });
 
@@ -43,22 +48,52 @@ describe('lockText', () => {
     expect(lockText('noGrid', false, null)).toEqual({
       title: 'No beat grid',
       detail: 'Analysis found no beat, so no click',
-      action: 'reanalyse',
+      action: 'reanalyze',
     });
   });
 });
 
-describe('statusBadge', () => {
-  it.each([
-    ['pending', 'ANALYZING'],
-    ['analyzing', 'ANALYZING'],
-    ['failed', 'NO GRID'],
-    ['noGrid', 'NO GRID'],
-  ] as const)('reads %s as %s', (badge, label) => {
-    expect(statusBadge(badge)?.label).toBe(label);
+describe('playerStatusBadge', () => {
+  it('reads an analysis in progress as the list does', () => {
+    expect(playerStatusBadge('analyzing')).toMatchObject({
+      label: 'ANALYZING',
+      tone: 'warning',
+    });
   });
 
+  it.each(['failed', 'noGrid'] as const)(
+    'reads %s as NO GRID in red',
+    (badge) => {
+      expect(playerStatusBadge(badge)).toMatchObject({
+        label: 'NO GRID',
+        tone: 'danger',
+      });
+    },
+  );
+
   it('leaves the bar to the BPM once there is a grid', () => {
-    expect(statusBadge('grid')).toBeNull();
+    expect(playerStatusBadge('grid')).toBeNull();
+  });
+});
+
+describe('the app-bar badge', () => {
+  const failed = { analysisStatus: 'failed', beats: [] } as const;
+
+  it('waits for the song to be ready before naming its grid', () => {
+    expect(barStatusOf({ ...failed, status: 'loading' })).toBeNull();
+    expect(barStatusOf({ ...failed, status: 'ready' })?.label).toBe('NO GRID');
+  });
+
+  it('keeps the grid while a re-analysis runs', () => {
+    expect(
+      barStatusOf({ status: 'ready', analysisStatus: 'analyzing', beats: [0] }),
+    ).toBeNull();
+  });
+
+  it('shows the status over the BPM, else the BPM', () => {
+    const status = playerStatusBadge('analyzing');
+    expect(barBadge(status, 120)).toBe(status);
+    expect(barBadge(null, 120)?.label).toBe('120 BPM');
+    expect(barBadge(null, null)).toBeNull();
   });
 });

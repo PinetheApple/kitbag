@@ -1,18 +1,18 @@
-import type { BadgeTone } from '@kitbag/core-design';
-import type { SongBadge } from '@kitbag/core-state';
+import {
+  bpmFact,
+  playerSongBadge,
+  type SongBadge,
+  type SongPlayerStore,
+} from '@kitbag/core-state';
 
-export type LockAction = 'click' | 'reanalyse' | 'none';
+import { songStatusBadge, type BadgeSpec } from './rowText.ts';
+
+export type LockAction = 'click' | 'reanalyze' | 'none';
 
 export interface LockText {
   readonly title: string;
   readonly detail: string;
   readonly action: LockAction;
-}
-
-export interface StatusBadge {
-  readonly label: string;
-  readonly spoken: string;
-  readonly tone: BadgeTone;
 }
 
 const LOCK_SOURCE = 'phase auto · from beat grid';
@@ -29,40 +29,55 @@ const NO_GRID_TEXT: Readonly<Record<'failed' | 'noGrid', LockText>> = {
   failed: {
     title: NO_GRID_TITLE,
     detail: 'Analysis failed, so no click',
-    action: 'reanalyse',
+    action: 'reanalyze',
   },
   noGrid: {
     title: NO_GRID_TITLE,
     detail: 'Analysis found no beat, so no click',
-    action: 'reanalyse',
+    action: 'reanalyze',
   },
 };
 
-const ANALYSING_BADGE: StatusBadge = {
-  label: 'ANALYZING',
-  spoken: 'Analyzing',
-  tone: 'warning',
-};
-const NO_GRID_BADGE: StatusBadge = {
-  label: 'NO GRID',
-  spoken: NO_GRID_TITLE,
+// The player draws any song it cannot click to as NO GRID, in red.
+const PLAYER_NO_GRID: BadgeSpec = {
+  ...songStatusBadge('noGrid'),
   tone: 'danger',
-};
-
-const STATUS_BADGES: Readonly<Record<SongBadge, StatusBadge | null>> = {
-  pending: ANALYSING_BADGE,
-  analyzing: ANALYSING_BADGE,
-  failed: NO_GRID_BADGE,
-  noGrid: NO_GRID_BADGE,
-  grid: null,
 };
 
 function withBpm(bpmText: string | null, detail: string): string {
   return bpmText === null ? detail : `${bpmText} · ${detail}`;
 }
 
-export function statusBadge(badge: SongBadge): StatusBadge | null {
-  return STATUS_BADGES[badge];
+export function playerStatusBadge(badge: SongBadge): BadgeSpec | null {
+  if (badge === 'grid') return null;
+  return badge === 'failed' || badge === 'noGrid'
+    ? PLAYER_NO_GRID
+    : songStatusBadge(badge);
+}
+
+type PlayerFacts = Pick<SongPlayerStore, 'status' | 'analysisStatus' | 'beats'>;
+
+export type BarBadge = Omit<BadgeSpec, 'key'>;
+
+export function lockBadgeOf({ analysisStatus, beats }: PlayerFacts): SongBadge {
+  return playerSongBadge({ analysisStatus, hasGrid: beats.length > 0 });
+}
+
+export function barStatusOf(state: PlayerFacts): BadgeSpec | null {
+  return state.status === 'ready'
+    ? playerStatusBadge(lockBadgeOf(state))
+    : null;
+}
+
+export function barBadge(
+  status: BadgeSpec | null,
+  bpm: number | null,
+): BarBadge | null {
+  if (status !== null) return status;
+  const fact = bpmFact(bpm);
+  return fact === null
+    ? null
+    : { label: fact.text, spoken: fact.spoken, tone: 'default' };
 }
 
 export function lockText(

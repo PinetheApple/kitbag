@@ -9,6 +9,8 @@ import {
 } from 'react-test-renderer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { REANALYZE_LABEL } from '../logic/viewText.ts';
+
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
 const OPEN_SONG = { songId: 1, title: 'A song', artist: 'An artist', bpm: 120 };
@@ -18,7 +20,7 @@ const display = vi.hoisted(() => ({
   scaled: false,
   status: 'ready',
   song: {},
-  analysis: { badge: 'grid', beats: [0] as readonly number[] },
+  analysis: { analysisStatus: 'done', beats: [0] as readonly number[] },
 }));
 const commands = vi.hoisted(() => ({ close: vi.fn(), reanalyze: vi.fn() }));
 const mixer = vi.hoisted(() => ({
@@ -69,8 +71,9 @@ vi.mock('@kitbag/core-design', async (original) => {
 });
 
 vi.mock('@kitbag/core-state', async (original) => {
-  const { useFocusedMixerHold } = await original<{
+  const { useFocusedMixerHold, playerSongBadge } = await original<{
     useFocusedMixerHold: unknown;
+    playerSongBadge: unknown;
   }>();
   const open = () => {
     const mine = ++mixer.session;
@@ -95,7 +98,7 @@ vi.mock('@kitbag/core-state', async (original) => {
     loopEndFrames: () => null,
     loopKeyLabel: () => '',
     SKIP_SECONDS: 10,
-    songBadge: () => display.analysis.badge,
+    playerSongBadge,
     useFocusedMixerHold,
     useLoopScrub: () => ({}),
     useSongLibrary: (select: (state: unknown) => unknown) =>
@@ -105,8 +108,7 @@ vi.mock('@kitbag/core-state', async (original) => {
         status: display.status,
         ...display.song,
         click: false,
-        beats: display.analysis.beats,
-        analysisStatus: 'done',
+        ...display.analysis,
         loop: { kind: 'off' },
         open,
         close: commands.close,
@@ -159,7 +161,7 @@ beforeEach(() => {
   display.scaled = false;
   display.status = 'ready';
   display.song = OPEN_SONG;
-  display.analysis = { badge: 'grid', beats: [0] };
+  display.analysis = { analysisStatus: 'done', beats: [0] };
   Object.assign(mixer, { session: 0, opens: 0, displaced: 0, releases: 0 });
 });
 
@@ -283,7 +285,7 @@ describe('the player menu', () => {
   it('re-analyses this song and closes the menu', () => {
     const tree = openMenu();
     act(() => {
-      (menuButton(tree, 'Re-analyse').props.onPress as () => void)();
+      (menuButton(tree, REANALYZE_LABEL).props.onPress as () => void)();
     });
     expect(commands.reanalyze).toHaveBeenCalledExactlyOnceWith(1);
     expect(tree.root.findAllByType('Sheet' as never)).toHaveLength(0);
@@ -293,9 +295,9 @@ describe('the player menu', () => {
 
 describe('a song with no beat grid', () => {
   const GRIDLESS = {
-    analysing: { badge: 'analyzing', beats: [] },
-    failed: { badge: 'failed', beats: [] },
-    noGrid: { badge: 'noGrid', beats: [] },
+    analysing: { analysisStatus: 'analyzing', beats: [] },
+    failed: { analysisStatus: 'failed', beats: [] },
+    noGrid: { analysisStatus: 'done', beats: [] },
   } as const;
 
   function barBadge(tree: ReactTestRenderer) {
@@ -323,7 +325,7 @@ describe('a song with no beat grid', () => {
   });
 
   it('keeps the grid badge while a re-analysis runs', () => {
-    display.analysis = { badge: 'analyzing', beats: [0] };
+    display.analysis = { analysisStatus: 'analyzing', beats: [0] };
     expect(barBadge(mount())).toBe('120 BPM');
   });
 
@@ -344,7 +346,7 @@ describe('a song with no beat grid', () => {
     const tree = mount();
     const button = tree.root.find(
       (node) =>
-        String(node.type) === 'Button' && node.props.label === 'Re-analyse',
+        String(node.type) === 'Button' && node.props.label === REANALYZE_LABEL,
     );
     act(() => {
       (button.props.onPress as () => void)();
@@ -358,7 +360,8 @@ describe('a song with no beat grid', () => {
     expect(
       tree.root.findAll(
         (node) =>
-          String(node.type) === 'Button' && node.props.label === 'Re-analyse',
+          String(node.type) === 'Button' &&
+          node.props.label === REANALYZE_LABEL,
       ),
     ).toHaveLength(0);
   });

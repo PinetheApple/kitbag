@@ -29,33 +29,28 @@ import {
   loopEndFrames,
   loopKeyLabel,
   SKIP_SECONDS,
-  songBadge,
   useFocusedMixerHold,
   useLoopScrub,
   useSongLibrary,
   useSongPlayer,
-  type SongPlayerStore,
   type StemPlayerStatus,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
-import { lockText, statusBadge, type StatusBadge } from '../logic/lockText.ts';
+import {
+  barBadge,
+  barStatusOf,
+  lockBadgeOf,
+  lockText,
+} from '../logic/lockText.ts';
+import type { BadgeSpec } from '../logic/rowText.ts';
 import { songTitle } from '../logic/songTitle.ts';
+import { REANALYZE_LABEL } from '../logic/viewText.ts';
 import { frameAtTap } from '../logic/waveSeek.ts';
 import type { UsePlayhead } from './playhead.ts';
 
 const NO_NEIGHBOURS = {};
-
-// A re-analysis keeps the grid it replaces until a new one lands.
-function badgeOf({ analysisStatus, beats }: SongPlayerStore) {
-  const hasGrid = beats.length > 0;
-  return hasGrid ? 'grid' : songBadge({ analysisStatus, hasGrid });
-}
-
-function barStatusOf(state: SongPlayerStore): StatusBadge | null {
-  return state.status === 'ready' ? statusBadge(badgeOf(state)) : null;
-}
 
 export interface SongPlayerScreenProps {
   readonly songId: number;
@@ -113,7 +108,7 @@ function PlayerMenu({
     onBack();
     close();
   }, [onDismiss, onBack, close]);
-  const reanalyse = useCallback(() => {
+  const onReanalyze = useCallback(() => {
     onDismiss();
     void reanalyze(songId);
   }, [onDismiss, reanalyze, songId]);
@@ -127,7 +122,7 @@ function PlayerMenu({
     >
       <View style={styles.menu}>
         <Button label="Stop" variant="tonal" onPress={stop} />
-        <Button label="Re-analyse" variant="tonal" onPress={reanalyse} />
+        <Button label={REANALYZE_LABEL} variant="tonal" onPress={onReanalyze} />
       </View>
     </Sheet>
   );
@@ -142,7 +137,7 @@ interface BarFacts {
   readonly title: string;
   readonly artist: string | null;
   readonly bpm: number | null;
-  readonly status: StatusBadge | null;
+  readonly status: BadgeSpec | null;
 }
 
 // Stop closes the session while the screen is still animating out.
@@ -164,14 +159,8 @@ function useLastOpenFacts(): BarFacts {
 
 function SongAppBar({ onBack, onMenu }: SongAppBarProps) {
   const styles = useStyles();
-  const facts = useLastOpenFacts();
-  const { title, artist, status } = facts;
-  const bpm = bpmFact(facts.bpm);
-  const shown: StatusBadge | null =
-    status ??
-    (bpm === null
-      ? null
-      : { label: bpm.text, spoken: bpm.spoken, tone: 'default' });
+  const { title, artist, status, bpm } = useLastOpenFacts();
+  const shown = barBadge(status, bpm);
   const actions: readonly AppBarAction[] = useMemo(
     () => [{ icon: 'more', label: 'More', onPress: onMenu }],
     [onMenu],
@@ -189,6 +178,7 @@ function SongAppBar({ onBack, onMenu }: SongAppBarProps) {
             <Badge
               label={shown.label}
               tone={shown.tone}
+              {...(shown.icon === undefined ? {} : { icon: shown.icon })}
               accessibilityLabel={shown.spoken}
             />
           </View>
@@ -231,14 +221,14 @@ function LockCard({ songId }: { readonly songId: number }) {
   const styles = useStyles();
   const scaled = useTextScaled();
   const click = useSongPlayer((s) => s.click);
-  const badge = useSongPlayer(badgeOf);
+  const badge = useSongPlayer(lockBadgeOf);
   const bpm = bpmFact(useSongPlayer((s) => s.bpm));
   const toggleClick = useSongPlayer((s) => s.toggleClick);
   const reanalyze = useSongLibrary((s) => s.reanalyze);
   const onToggle = useCallback(() => {
     void toggleClick();
   }, [toggleClick]);
-  const onReanalyse = useCallback(() => {
+  const onReanalyze = useCallback(() => {
     void reanalyze(songId);
   }, [reanalyze, songId]);
   const text = lockText(badge, click, bpm?.text ?? null);
@@ -257,12 +247,12 @@ function LockCard({ songId }: { readonly songId: number }) {
           onPress={onToggle}
         />
       ) : null}
-      {text.action === 'reanalyse' ? (
+      {text.action === 'reanalyze' ? (
         <Button
-          label="Re-analyse"
+          label={REANALYZE_LABEL}
           variant="tonal"
           size="small"
-          onPress={onReanalyse}
+          onPress={onReanalyze}
         />
       ) : null}
     </View>

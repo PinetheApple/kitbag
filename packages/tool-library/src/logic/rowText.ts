@@ -77,6 +77,10 @@ const STATUS_NOTES: Readonly<Partial<Record<SongBadge, string>>> = {
 
 const KEPT_GRID_NOTE = 're-analysis failed';
 
+export function songStatusBadge(badge: SongBadge): BadgeSpec {
+  return STATUS_BADGES[badge];
+}
+
 export function rowBadges(row: LibraryRow, status: SongBadge): BadgeSpec[] {
   if (row.kind === 'song') return [STATUS_BADGES[status]];
   const stems: BadgeSpec = {
