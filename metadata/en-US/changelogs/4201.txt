@@ -1,0 +1,1 @@
+• StemDeck songs now keep the artist set in StemDeck when imported, in the stem player, the media notification and the Stem songs list read-out.
