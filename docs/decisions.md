@@ -1068,3 +1068,9 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   still offers M4A files; W64 and RF64 have no Android MIME type, so it does not offer them.
   An extensionless M4A labelled `audio/mpeg` is admitted by its MIME type and fails at analysis
   instead; telling that apart from a corrupt file is #347’s.
+
+- **2026-11-19 · The mini-player song's row opens it still playing (§6.3, #297)** — Tapping the
+  Songs row of the song the mini-player is showing opens the player attached to that song as it
+  is, still playing if it was. Any other row tap opens the player paused. This refines the
+  2026-11-07 "row tap opens paused" entries, which now apply to every row but that one, and
+  confirms the 2026-11-11 attach entry above. **[user]**

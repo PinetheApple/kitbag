@@ -147,7 +147,7 @@ svg.i{fill:currentColor;display:block;flex:none}
 <section>
 <div class="kicker">Section 0</div><h2>Base player</h2>
 <div class="frames">
-<figure><figcaption><b>0 · Base player</b>From <code>kitbag-ui.html</code> §04, in the stem player's dock sizes, plus Back, a menu (Stop, Re-analyse) and beat ticks. Stop ends the song session and removes the mini-player. A row tap on Songs opens the player paused. Count-in stays muted until count-in under a grid exists (#298).</figcaption><div data-frame="base"></div></figure>
+<figure><figcaption><b>0 · Base player</b>From <code>kitbag-ui.html</code> §04, in the stem player's dock sizes, plus Back, a menu (Stop, Re-analyse) and beat ticks. Stop ends the song session and removes the mini-player. Tapping the Songs row of the song the mini-player is showing opens the player on that song as it is, still playing if it was. Any other row tap on Songs opens the player paused. Count-in stays muted until count-in under a grid exists (#298).</figcaption><div data-frame="base"></div></figure>
 <figure style="width:auto"><figcaption style="max-width:411px"><b>Ticks thin to fit the lane</b>Ticks never sit closer than 3 dp. When every beat fits, every beat is drawn, tall on downbeats. When it does not, only downbeats are drawn, at a stride of 1, 2, 4, 8… bars, so each tick stays readable. Everlong: 658 beats across 353 dp puts bars 2.1 dp apart, so every second bar is drawn. Crop is 2.625× so CSS pixels equal device pixels.</figcaption>
 <div class="crop" data-crop="fit"></div></figure>
 </div>
