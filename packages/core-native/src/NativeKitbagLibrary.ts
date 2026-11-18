@@ -42,7 +42,6 @@ export type AnalysisResult = Readonly<{
   downbeats: readonly Int32[];
   waveformRelativePath: string;
   durationSec: Double;
-  // Absent on results analysed before the field existed.
   analysisVersion?: Int32;
 }>;
 

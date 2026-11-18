@@ -260,3 +260,100 @@ describe('StemDeck bundle import', () => {
     });
   });
 });
+
+describe('adding a bundle fetched from StemDeck', () => {
+  const FETCHED = {
+    uri: 'file:/data/files/.stemdeck-downloads/0297074f4836.zip',
+    name: 'Redbone',
+    isFolder: false,
+  };
+
+  it('adds it with no prompt, no notice and no copying card', async () => {
+    const { store, files } = setup();
+    const importing: (readonly string[])[] = [];
+    store.subscribe((state) => importing.push(state.importing));
+    const outcome = await store
+      .getState()
+      .addFetchedBundle(FETCHED, { replace: false });
+    expect(outcome).toEqual({ kind: 'added' });
+    expect(files.importStemBundle).toHaveBeenCalledWith(FETCHED.uri, false);
+    expect(await stemRows(store)).toHaveLength(1);
+    expect(store.getState().notice).toBeNull();
+    expect(store.getState().replacePrompt).toBeNull();
+    expect(importing.every((names) => names.length === 0)).toBe(true);
+  });
+
+  it('reports a song already in the library and copies nothing', async () => {
+    const { store, files } = setup();
+    await store.getState().addFetchedBundle(FETCHED, { replace: false });
+    const outcome = await store
+      .getState()
+      .addFetchedBundle(FETCHED, { replace: false });
+    expect(outcome).toEqual({ kind: 'alreadyInLibrary' });
+    expect(files.importStemBundle).toHaveBeenCalledTimes(1);
+    expect(store.getState().replacePrompt).toBeNull();
+  });
+
+  it('replaces the library copy when told to, deleting the old folder', async () => {
+    const { store, files } = setup();
+    await store.getState().addFetchedBundle(FETCHED, { replace: false });
+    const outcome = await store
+      .getState()
+      .addFetchedBundle(FETCHED, { replace: true });
+    expect(outcome).toEqual({ kind: 'added' });
+    expect(await stemRows(store)).toHaveLength(1);
+    expect(files.deleteStemFolder.mock.calls).toEqual([[JOB_ID]]);
+  });
+
+  it('returns a refusal instead of showing it', async () => {
+    const fake = fakeFiles();
+    fake.files.checkStemBundle.mockResolvedValue(
+      bundleCheck({ refusal: CODES.bundleRefusalNoSpace }),
+    );
+    const { store } = setup(fake);
+    const outcome = await store
+      .getState()
+      .addFetchedBundle(FETCHED, { replace: false });
+    expect(outcome).toMatchObject({
+      kind: 'refused',
+      refusal: { reason: 'noSpace' },
+    });
+    expect(store.getState().notice).toBeNull();
+  });
+
+  it('returns a stem-format refusal as refused, naming the format', async () => {
+    const fake = fakeFiles();
+    fake.files.checkStemBundle.mockResolvedValue(
+      bundleCheck({
+        refusal: CODES.bundleRefusalStemFormat,
+        stemFormat: 'wav',
+      }),
+    );
+    const { store, files } = setup(fake);
+    const outcome = await store
+      .getState()
+      .addFetchedBundle(FETCHED, { replace: false });
+    expect(outcome).toMatchObject({
+      kind: 'refused',
+      refusal: {
+        reason: 'stemFormat',
+        stemFormat: 'wav',
+        supportedStemFormat: 'flac',
+      },
+    });
+    expect(files.importStemBundle).not.toHaveBeenCalled();
+    expect(store.getState().notice).toBeNull();
+  });
+
+  it('returns a failed add and leaves no folder behind', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const { store, records, files } = setup();
+    vi.spyOn(records, 'insertStemBundle').mockRejectedValue(new Error('db'));
+    const outcome = await store
+      .getState()
+      .addFetchedBundle(FETCHED, { replace: false });
+    expect(outcome).toEqual({ kind: 'addFailed' });
+    expect(files.deleteStemFolder.mock.calls).toEqual([[JOB_ID]]);
+    expect(store.getState().notice).toBeNull();
+  });
+});

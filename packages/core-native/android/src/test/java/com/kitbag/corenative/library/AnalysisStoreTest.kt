@@ -35,11 +35,11 @@ class AnalysisStoreTest {
       ANALYSIS_VERSION,
     )
 
-  private fun writeVersion2Result(path: String) {
+  private fun writeLegacyResult(path: String, format: Int) {
     File(dir, "results").mkdirs()
     val file = File(dir, "results/${AnalysisStore.fileStem(path)}.result")
     DataOutputStream(file.outputStream()).use { out ->
-      out.writeInt(2)
+      out.writeInt(format)
       out.writeUTF(path)
       out.writeBoolean(true)
       out.writeUTF("")
@@ -49,24 +49,7 @@ class AnalysisStoreTest {
       out.writeInt(1)
       out.writeInt(0)
       out.writeUTF("waves/a.kwav")
-      out.writeDouble(DURATION_SEC)
-    }
-  }
-
-  private fun writeVersion1Result(path: String) {
-    File(dir, "results").mkdirs()
-    val file = File(dir, "results/${AnalysisStore.fileStem(path)}.result")
-    DataOutputStream(file.outputStream()).use { out ->
-      out.writeInt(1)
-      out.writeUTF(path)
-      out.writeBoolean(true)
-      out.writeUTF("")
-      out.writeFloat(121.5f)
-      out.writeInt(1)
-      out.writeFloat(0.25f)
-      out.writeInt(1)
-      out.writeInt(0)
-      out.writeUTF("waves/a.kwav")
+      if (format >= FORMAT_NO_ANALYSIS_VERSION) out.writeDouble(DURATION_SEC)
     }
   }
 
@@ -87,7 +70,7 @@ class AnalysisStoreTest {
 
   @Test
   fun `a result stored before analysis versions reads back with no version`() {
-    writeVersion2Result("songs/1/a.mp3")
+    writeLegacyResult("songs/1/a.mp3", FORMAT_NO_ANALYSIS_VERSION)
     val read = store.pending().single()
     assertTrue(read.ok)
     assertArrayEquals(floatArrayOf(0.25f), read.beats, 0f)
@@ -98,7 +81,7 @@ class AnalysisStoreTest {
 
   @Test
   fun `a result stored before durations reads back with an unknown duration`() {
-    writeVersion1Result("songs/1/a.mp3")
+    writeLegacyResult("songs/1/a.mp3", FORMAT_NO_DURATION)
     val read = store.pending().single()
     assertTrue(read.ok)
     assertEquals(121.5f, read.bpm)
@@ -220,5 +203,7 @@ class AnalysisStoreTest {
   private companion object {
     const val DURATION_SEC = 187.25
     const val ANALYSIS_VERSION = 7
+    const val FORMAT_NO_DURATION = 1
+    const val FORMAT_NO_ANALYSIS_VERSION = 2
   }
 }

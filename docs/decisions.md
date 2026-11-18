@@ -942,6 +942,17 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   use `router.navigate`, so a double tap on one row keeps one route; taps on two rows stack.
   Coordinator call; the owner may overturn it. **[recorded]**
 
+- **2026-11-11 · A ready song outlives its player (§6.3, #297)** — For the single-song player
+  this supersedes "Blur releases nothing" above: leaving the player releases its hold but a
+  ready song keeps playing, with its click, behind the mini-player. A song still loading, failed
+  or missing closes with its last screen. Only Stop, the mini-player's close, another player
+  opening, switching the tool off, or deleting the song (from Songs or from Storage) end it.
+  A rename or any library refresh updates the session's title, artist, BPM and analysis
+  status, so the bar follows. Reopening the live song attaches as it is, playing stays
+  playing, and re-reads those facts; if the song is gone by then, the player shows it as
+  gone. The bar hides while another screen covers Home or Songs and returns only once its
+  own screen has finished appearing, so it cannot be tapped mid-pop. **[recorded]**
+
 - **2026-11-07 · A single song is a one-track mixer song (§4.1, §6.3, #297)** — The song
   player drives `kb_mixer_*` with the song on track 0, plus `setGrid` and
   `metronomeFollowMixer(true)`. `kb_player_*` stays in the ABI, and no transport or store
@@ -1057,9 +1068,16 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   still offers M4A files; W64 and RF64 have no Android MIME type, so it does not offer them.
   An extensionless M4A labelled `audio/mpeg` is admitted by its MIME type and fails at analysis
   instead; telling that apart from a corrupt file is #347’s.
+
 - **2026-11-08 · Standalone metronome across a restart (§5.4, #333)** — A kill with a song or
   setlist step loaded relaunches into the standalone settings from before the song, so the
   settings carried across a restart are the ones made with no song loaded.
   **[recorded — coordinator ruling, owner may overturn]** The saved standalone state stays out
   of the backup, which carries what core-db owns today; adding it is a follow-up for the owner.
   **[recorded — lane call, owner may overturn]**
+
+- **2026-11-19 · The mini-player song's row opens it still playing (§6.3, #297)** — Tapping the
+  Songs row of the song the mini-player is showing opens the player attached to that song as it
+  is, still playing if it was. Any other row tap opens the player paused. This refines the
+  2026-11-07 "row tap opens paused" entries, which now apply to every row but that one, and
+  confirms the 2026-11-11 attach entry above. **[user]**

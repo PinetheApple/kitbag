@@ -12,10 +12,12 @@ import {
   refusalReason,
   stemFolderName,
   stemSetRemovals,
+  type BundleAddOutcome,
+  type BundleRefusal,
   type BundleRefusalReason,
 } from './stemBundleLogic.ts';
 import type { ImportTracker } from './stemFolderSweep.ts';
-import type { SongLibraryDeps } from './store.ts';
+import type { LibraryNotice, SongLibraryDeps } from './store.ts';
 import {
   deleteLeftovers,
   loadCodes,
@@ -37,9 +39,35 @@ interface Pending {
   readonly announce: boolean;
 }
 
+type Inspected =
+  | {
+      readonly ok: true;
+      readonly check: StemBundleCheck;
+      readonly existing: Awaited<ReturnType<typeof findExisting>>;
+    }
+  | { readonly ok: false; readonly refusal: BundleRefusal };
+
 type Copied =
   | { readonly ok: true; readonly imported: ImportedStemBundle }
   | { readonly ok: false; readonly reason: BundleRefusalReason | null };
+
+function noticeFor(
+  name: string,
+  outcome: BundleAddOutcome,
+  announce: boolean,
+): LibraryNotice | null {
+  switch (outcome.kind) {
+    case 'added':
+      return announce ? { kind: 'stemSongAdded', name } : null;
+    case 'refused':
+      return { kind: 'bundleRefused', name, refusal: outcome.refusal };
+    case 'copyFailed':
+    case 'addFailed':
+      return { kind: outcome.kind, name };
+    case 'alreadyInLibrary':
+      return null;
+  }
+}
 
 async function checkBundle(
   deps: SongLibraryDeps,
@@ -110,32 +138,16 @@ export function stemBundleActions(
     return codes;
   };
 
-  const refuse = (
-    source: BundleSource,
-    reason: BundleRefusalReason,
-    check: StemBundleCheck | null,
-  ) => {
-    set({
-      notice: {
-        kind: 'bundleRefused',
-        name: source.name,
-        refusal: refusal(reason, check),
-      },
-    });
-  };
-
   const copyAndStore = async (
-    { source, check }: Pending,
+    { source, check }: Pick<Pending, 'source' | 'check'>,
     codes: LibraryConstants,
     replace: boolean,
-  ): Promise<boolean> => {
+  ): Promise<BundleAddOutcome> => {
     const copied = await copyBundle(deps, source, codes);
-    if (!copied.ok) {
-      if (copied.reason === null)
-        set({ notice: { kind: 'copyFailed', name: source.name } });
-      else refuse(source, copied.reason, check);
-      return false;
-    }
+    if (!copied.ok)
+      return copied.reason === null
+        ? { kind: 'copyFailed' }
+        : { kind: 'refused', refusal: refusal(copied.reason, check) };
     const files = deps.files();
     let replaced: StemSetFiles | null;
     try {
@@ -149,8 +161,7 @@ export function stemBundleActions(
           [{ kind: 'stemFolder', name }],
           source.name,
         );
-      set({ notice: { kind: 'addFailed', name: source.name } });
-      return false;
+      return { kind: 'addFailed' };
     }
     if (replaced !== null)
       await deleteLeftovers(
@@ -158,37 +169,70 @@ export function stemBundleActions(
         stemSetRemovals(replaced, codes.stemsDir),
         source.name,
       );
-    return true;
+    return { kind: 'added' };
   };
 
   const run = async (job: Pending, replace: boolean) => {
     const codes = codesFor(job.source);
     if (codes === null) return;
-    const added = await whileImporting(set, get, job.source.name, () =>
+    const outcome = await whileImporting(set, get, job.source.name, () =>
       imports.track(() => copyAndStore(job, codes, replace)),
     );
-    if (added && job.announce)
-      set({ notice: { kind: 'stemSongAdded', name: job.source.name } });
+    const notice = noticeFor(job.source.name, outcome, job.announce);
+    if (notice !== null) set({ notice });
     await get().refresh();
+  };
+
+  const inspect = async (
+    source: BundleSource,
+    codes: LibraryConstants,
+  ): Promise<Inspected> => {
+    const check = await checkBundle(deps, source);
+    if (check === null)
+      return { ok: false, refusal: refusal('unreadable', null) };
+    if (check.refusal !== null) {
+      const reason = refusalReason(check.refusal, codes) ?? 'unreadable';
+      return { ok: false, refusal: refusal(reason, check) };
+    }
+    return { ok: true, check, existing: await findExisting(deps, check.jobId) };
   };
 
   const examine = async (source: BundleSource) => {
     const codes = codesFor(source);
     if (codes === null) return null;
-    const check = await checkBundle(deps, source);
-    if (check === null) {
-      refuse(source, 'unreadable', null);
-      return null;
-    }
-    if (check.refusal !== null) {
-      refuse(
-        source,
-        refusalReason(check.refusal, codes) ?? 'unreadable',
-        check,
-      );
-      return null;
-    }
-    return { check, existing: await findExisting(deps, check.jobId) };
+    const inspected = await inspect(source, codes);
+    if (inspected.ok) return inspected;
+    set({
+      notice: {
+        kind: 'bundleRefused',
+        name: source.name,
+        refusal: inspected.refusal,
+      },
+    });
+    return null;
+  };
+
+  // Unattended: no prompt and no notice; the caller reports the outcome.
+  const addFetchedBundle = async (
+    source: BundleSource,
+    { replace }: { readonly replace: boolean },
+  ): Promise<BundleAddOutcome> => {
+    const codes = loadCodes(deps, get);
+    set({ codes });
+    if (codes === null) return { kind: 'copyFailed' };
+    const inspected = await inspect(source, codes);
+    if (!inspected.ok) return { kind: 'refused', refusal: inspected.refusal };
+    if (inspected.existing !== undefined && !replace)
+      return { kind: 'alreadyInLibrary' };
+    const outcome = await imports.track(() =>
+      copyAndStore(
+        { source, check: inspected.check },
+        codes,
+        inspected.existing !== undefined,
+      ),
+    );
+    await get().refresh();
+    return outcome;
   };
 
   return {
@@ -220,5 +264,6 @@ export function stemBundleActions(
       pending = null;
       set({ replacePrompt: null });
     },
+    addFetchedBundle,
   };
 }

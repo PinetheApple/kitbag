@@ -28,8 +28,12 @@ import {
   type LibraryFiles,
   type SongLibraryRecords,
 } from './runtime.ts';
-import { stemBundleActions } from './stemBundleImport.ts';
-import { stemSetRemovals, type BundleRefusal } from './stemBundleLogic.ts';
+import { stemBundleActions, type BundleSource } from './stemBundleImport.ts';
+import {
+  stemSetRemovals,
+  type BundleAddOutcome,
+  type BundleRefusal,
+} from './stemBundleLogic.ts';
 import {
   importTracker,
   sweepOrphanedStemFolders,
@@ -94,6 +98,10 @@ export interface SongLibraryActions {
   dismissNotice: () => void;
   confirmReplace: () => Promise<void>;
   cancelReplace: () => void;
+  addFetchedBundle: (
+    source: BundleSource,
+    options: { readonly replace: boolean },
+  ) => Promise<BundleAddOutcome>;
 }
 
 export type SongLibraryStore = SongLibraryState & SongLibraryActions;
@@ -274,6 +282,7 @@ function importActions(
     },
     confirmReplace: bundles.confirmReplace,
     cancelReplace: bundles.cancelReplace,
+    addFetchedBundle: bundles.addFetchedBundle,
   };
 }
 
