@@ -1,3 +1,6 @@
+import { COUNT_IN_STORED_KEYS } from './count-in-preferences';
+import { STANDALONE_METRONOME_KEY } from './standalone-metronome-preference';
+
 export const BACKUP_FORMAT = 'kitbag-backup';
 export const BACKUP_VERSION = 4;
 export const MS_PER_SECOND = 1000;
@@ -9,6 +12,7 @@ export const CATEGORIES = [
   'tunings',
   'practiceSessions',
   'countInSettings',
+  'metronomeSettings',
 ] as const;
 export type Category = (typeof CATEGORIES)[number];
 
@@ -17,6 +21,7 @@ export const DEFAULT_IMPORT_CATEGORIES: readonly Category[] = [
   'setlists',
   'tunings',
   'countInSettings',
+  'metronomeSettings',
 ];
 
 export interface LibrarySongRecord {
@@ -95,7 +100,7 @@ export interface PracticeSessionRecord {
 
 // The value stays the stored text: only the app knows which values are valid,
 // and it reads anything else as the default.
-export interface CountInSettingRecord {
+export interface PreferenceRecord {
   key: string;
   value: string;
 }
@@ -106,7 +111,8 @@ export interface CategoryRecords {
   setlists: SetlistRecord[];
   tunings: TuningRecord[];
   practiceSessions: PracticeSessionRecord[];
-  countInSettings: CountInSettingRecord[];
+  countInSettings: PreferenceRecord[];
+  metronomeSettings: PreferenceRecord[];
 }
 
 export type BackupRecord = CategoryRecords[Category][number];
@@ -184,19 +190,32 @@ export function referenceOf(
   return typeof value === 'string' ? value : null;
 }
 
-function isCountInSetting(
+export const PREFERENCE_KEYS = {
+  countInSettings: COUNT_IN_STORED_KEYS,
+  metronomeSettings: [STANDALONE_METRONOME_KEY],
+} as const satisfies Partial<Record<Category, readonly string[]>>;
+
+export type PreferenceCategory = keyof typeof PREFERENCE_KEYS;
+
+export function isPreferenceCategory(
+  category: Category,
+): category is PreferenceCategory {
+  return category in PREFERENCE_KEYS;
+}
+
+function isPreference(
   category: Category,
   record: BackupRecord,
-): record is CountInSettingRecord {
-  return category === 'countInSettings' && 'key' in record;
+): record is PreferenceRecord {
+  return isPreferenceCategory(category) && 'key' in record;
 }
 
 export function recordKey(category: Category, record: BackupRecord): string {
-  return isCountInSetting(category, record) ? record.key : record.uuid;
+  return isPreference(category, record) ? record.key : record.uuid;
 }
 
 export function recordLabel(category: Category, record: BackupRecord): string {
-  if (isCountInSetting(category, record)) return record.key;
+  if (isPreference(category, record)) return record.key;
   if ('name' in record) return record.name;
   if ('title' in record) return record.title;
   return new Date(record.startTime * MS_PER_SECOND).toISOString();

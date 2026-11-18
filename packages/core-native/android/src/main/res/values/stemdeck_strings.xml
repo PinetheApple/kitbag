@@ -1,0 +1,32 @@
+<resources>
+  <string name="kitbag_imports_channel">Imports</string>
+  <string name="kitbag_stemdeck_importing">Importing %1$d of %2$d</string>
+  <string name="kitbag_stemdeck_song_phase">%1$s · %2$s</string>
+  <string name="kitbag_stemdeck_phase_preparing">Preparing on StemDeck</string>
+  <string name="kitbag_stemdeck_phase_downloading">Downloading</string>
+  <string name="kitbag_stemdeck_phase_downloading_percent">Downloading %1$d%%</string>
+  <string name="kitbag_stemdeck_phase_importing">Importing</string>
+  <string name="kitbag_stemdeck_cancel">Cancel</string>
+  <plurals name="kitbag_stemdeck_finished">
+    <item quantity="one">%1$d song imported</item>
+    <item quantity="other">%1$d songs imported</item>
+  </plurals>
+  <string name="kitbag_stemdeck_finished_partly">%1$d of %2$d imported</string>
+  <string name="kitbag_stemdeck_from">From StemDeck.</string>
+  <string name="kitbag_stemdeck_stopped_connection">Connection lost — %1$d of %2$d imported</string>
+  <string name="kitbag_stemdeck_stopped_space">Not enough space — %1$d of %2$d imported</string>
+  <string name="kitbag_stemdeck_stopped_time">Import time limit reached — %1$d of %2$d imported</string>
+  <string name="kitbag_stemdeck_stopped_other">Import stopped — %1$d of %2$d imported</string>
+  <string name="kitbag_stemdeck_left_one">%1$s wasn\'t imported.</string>
+  <plurals name="kitbag_stemdeck_left_more">
+    <item quantity="one">%1$s and %2$d more weren\'t imported.</item>
+    <item quantity="other">%1$s and %2$d more weren\'t imported.</item>
+  </plurals>
+  <string name="kitbag_stemdeck_hint_connection">Check that StemDeck is still open and this phone is on the same Wi-Fi.</string>
+  <string name="kitbag_stemdeck_hint_space">Free some space, then retry.</string>
+  <string name="kitbag_stemdeck_hint_time">Open Kitbag to retry.</string>
+  <plurals name="kitbag_stemdeck_retry">
+    <item quantity="one">Retry %1$d song</item>
+    <item quantity="other">Retry %1$d songs</item>
+  </plurals>
+</resources>

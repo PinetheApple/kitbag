@@ -9,26 +9,31 @@ import {
   type MetronomeSettingsInput,
   type StandaloneMetronome,
 } from './standalone.ts';
-import { metronomeStore, type MetronomeStore } from './store.ts';
+import { initialConfig, metronomeStore, type MetronomeStore } from './store.ts';
 
 export interface StandaloneMetronomePersistence {
   readonly load: () => Partial<MetronomeSettingsInput>;
   readonly save: (settings: StandaloneMetronome) => void;
 }
 
+function storedSettings(
+  persistence: StandaloneMetronomePersistence,
+): Partial<MetronomeSettingsInput> | undefined {
+  const { ramp, ...stored } = persistence.load();
+  const safeRamp = ramp === undefined ? undefined : rangeRamp(ramp);
+  if (Object.keys(stored).length === 0 && safeRamp === undefined)
+    return undefined;
+  return { ...stored, ...(safeRamp === undefined ? {} : { ramp: safeRamp }) };
+}
+
 function restore(
   metronome: StoreApi<MetronomeStore>,
   persistence: StandaloneMetronomePersistence,
 ): void {
-  const { ramp, ...stored } = persistence.load();
-  const safeRamp = ramp === undefined ? undefined : rangeRamp(ramp);
-  if (Object.keys(stored).length === 0 && safeRamp === undefined) return;
+  const stored = storedSettings(persistence);
+  if (stored === undefined) return;
   const state = metronome.getState();
-  applyMetronomeSettings(state, {
-    ...standaloneMetronomeOf(state),
-    ...stored,
-    ...(safeRamp === undefined ? {} : { ramp: safeRamp }),
-  });
+  applyMetronomeSettings(state, { ...standaloneMetronomeOf(state), ...stored });
 }
 
 export function bindStandaloneMetronomePersistence(
@@ -63,6 +68,7 @@ export function bindStandaloneMetronomePersistence(
 }
 
 let unbind: (() => void) | undefined;
+let configured: StandaloneMetronomePersistence | undefined;
 
 export function configureStandaloneMetronomePersistence(
   persistence: StandaloneMetronomePersistence,
@@ -70,10 +76,19 @@ export function configureStandaloneMetronomePersistence(
   if (unbind !== undefined) {
     throw new Error('Standalone metronome persistence is already configured');
   }
+  configured = persistence;
   unbind = bindStandaloneMetronomePersistence(
     metronomeStore,
     libraryStore,
     persistence,
   );
   return unbind;
+}
+
+export function reloadStandaloneMetronomePersistence(): void {
+  if (configured === undefined) return;
+  const stored = storedSettings(configured);
+  const state = metronomeStore.getState();
+  const base = stored === undefined ? initialConfig() : state;
+  applyMetronomeSettings(state, { ...standaloneMetronomeOf(base), ...stored });
 }

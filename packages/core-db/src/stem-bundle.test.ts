@@ -165,6 +165,7 @@ describe('StemDeck bundles in the song library', () => {
         kind: 'stems',
         id,
         title: 'Song title',
+        artist: 'Someone',
         stemCount: 6,
         durationSec: FRAMES / RATE,
         bpm: 92.5,
@@ -178,9 +179,10 @@ describe('StemDeck bundles in the song library', () => {
 
   it('lists a bare bundle with no facts and no grid', async () => {
     const { library } = setup();
-    await library.insertStemBundle(BARE);
+    await library.insertStemBundle({ ...BARE, artist: null });
     expect(await library.list()).toEqual([
       expect.objectContaining({
+        artist: null,
         bpm: null,
         key: null,
         scale: null,

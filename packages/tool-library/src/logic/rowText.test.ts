@@ -32,6 +32,7 @@ const STEMS: LibraryStemSetRow = {
   kind: 'stems',
   id: 1,
   title: 'Redbone',
+  artist: null,
   stemCount: 6,
   durationSec: 326,
   bpm: 81.4,
@@ -139,6 +140,14 @@ describe('spoken row', () => {
     expect(spokenRow(STEMS, 'grid', null)).toBe(
       'Redbone, 5 minutes 26 seconds, 81 beats per minute, key F major, 6 stems, Beat grid ready',
     );
+  });
+
+  it('speaks the artist of a stem song that has one, and keeps it off the facts line', () => {
+    const named: LibraryStemSetRow = { ...STEMS, artist: 'Childish Gambino' };
+    expect(spokenRow(named, 'grid', null)).toBe(
+      'Redbone, Childish Gambino, 5 minutes 26 seconds, 81 beats per minute, key F major, 6 stems, Beat grid ready',
+    );
+    expect(rowSubtitle(named, 'grid', null)).toBe('5:26 · 81 BPM · F maj');
   });
 
   it('speaks why analysis failed, and no BPM while analyzing', () => {

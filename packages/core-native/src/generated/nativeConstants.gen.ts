@@ -8,6 +8,9 @@
 /** Max beats a single measured grid may carry (KB_MAX_GRID_BEATS). */
 export const KB_MAX_GRID_BEATS = 65536;
 
+/** Beat tracker version stamped on each successful analysis result (KB_BEAT_ANALYSIS_VERSION). */
+export const KB_BEAT_ANALYSIS_VERSION = 2;
+
 /** Mixer track count (Mixer::kMaxTracks, SPEC §7.4). */
 export const KB_MAX_TRACKS = 16;
 

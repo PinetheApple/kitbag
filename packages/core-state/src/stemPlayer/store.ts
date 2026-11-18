@@ -321,7 +321,7 @@ export function createStemPlayerStore(
       set({
         status: 'ready',
         title: record.songTitle ?? record.title,
-        artist: record.songTitle === null ? null : record.artist,
+        artist: record.artist,
         facts: songFacts(record),
         stems,
         overLimit: record.stems.length - rows.length,
