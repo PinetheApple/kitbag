@@ -51,6 +51,7 @@ const ROWS: readonly LibraryRow[] = [
     kind: 'stems',
     id: 1,
     title: 'Redbone',
+    artist: null,
     stemCount: 6,
     durationSec: 326,
     bpm: null,

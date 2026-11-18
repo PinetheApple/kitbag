@@ -1,6 +1,7 @@
 import {
   createThemedStyles,
   metronome,
+  readerHiding,
   space,
   textRoles,
   textStyle,
@@ -76,6 +77,17 @@ const useStyles = createThemedStyles((theme) => ({
     flex: 1,
     backgroundColor: theme.color.bg,
     paddingHorizontal: space.screenInset,
+  },
+  readerLayer: {
+    flex: 1,
+  },
+  snackbarLayer: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    pointerEvents: 'box-none',
   },
   // A ScrollView clips its content; the poly row's last pulse and cycle
   // bracket hang past the content edge into the screen inset.
@@ -174,6 +186,7 @@ export function MetronomeScreen({
   const summaryShown = openSheet === 'summary' && pendingPractice !== null;
   const [bodyTop, setBodyTop] = useState(0);
   const [zone, setZone] = useState<ZoneFrame>({ top: 0, height: 0 });
+  const hintShown = showSwipeHint(hintSeen, zone.height, summaryShown);
   const [bodyHeight, setBodyHeight] = useState(0);
   const [contentHeight, setContentHeight] = useState(0);
   const tapTimes = useRef<readonly number[]>([]);
@@ -321,95 +334,106 @@ export function MetronomeScreen({
   return (
     <GestureDetector gesture={screenSwipe}>
       <View style={[styles.screen, edgeToEdgePadding]}>
-        <MetronomeAppBar
-          bottomInset={insets.bottom}
-          onBack={onBack}
-          onOpenSetlists={onOpenSetlists}
-        />
-        <View style={styles.bodyClip} onLayout={handleBodyClipLayout}>
-          <ScrollView
-            style={[styles.body, viewportFrame]}
-            contentContainerStyle={[styles.bodyContent, scrollSlack]}
-            ref={scrollRef}
-            scrollEnabled={scrollable}
-            showsVerticalScrollIndicator={false}
-            onLayout={handleBodyLayout}
-            onContentSizeChange={handleContentSize}
-          >
-            <PracticePill elapsedMs={elapsedMs} onEnd={handleEndPractice} />
-            {strip === null ? null : (
-              <Text
-                accessible={strip.spoken !== null}
-                accessibilityLabel={strip.spoken ?? undefined}
-                numberOfLines={1}
-                style={[styles.notes, topGap]}
-              >
-                {strip.text}
-              </Text>
-            )}
-            <GestureDetector gesture={zoneSwipe}>
-              <View style={topGap} onLayout={handleZoneLayout}>
-                <SwipeTempoZone
-                  bpm={bpm}
-                  density={density}
-                  currentBpm={frame.currentBpm}
-                  barPhase={frame.barPhase}
-                  onTypeTempo={handleOpenNumpad}
-                  onNudge={handleNudge}
-                />
-              </View>
-            </GestureDetector>
-            <PresetRow onNudge={handleNudge} onTap={handleTap} />
-            <PickerChips
-              beatsPerBar={beatsPerBar}
-              denominator={denominator}
-              subdivision={subdivision}
-              onOpenMeter={handleOpenMeter}
-              onOpenSubdivision={handleOpenSubdivision}
-            />
-            <View style={belowTempo}>
-              <BeatDots
-                beatCount={beatsPerBar}
-                subdivision={subdivision}
-                polyBeats={polyEnabled ? polyBeats : null}
-                polyAgainst={polyAgainst}
-                accents={accents}
-                width={dotsWidth}
-                density={density}
-                frame={frame}
-                onCycle={cycleAccent}
-              />
-              {legend === null ? null : (
-                <View style={styles.legend}>
-                  {legend === 'poly' ? <PolyLegend /> : <BeatLegend />}
+        <View
+          style={styles.readerLayer}
+          collapsable={false}
+          {...readerHiding(hintShown)}
+        >
+          <MetronomeAppBar
+            bottomInset={insets.bottom}
+            onBack={onBack}
+            onOpenSetlists={onOpenSetlists}
+          />
+          <View style={styles.bodyClip} onLayout={handleBodyClipLayout}>
+            <ScrollView
+              style={[styles.body, viewportFrame]}
+              contentContainerStyle={[styles.bodyContent, scrollSlack]}
+              ref={scrollRef}
+              scrollEnabled={scrollable}
+              showsVerticalScrollIndicator={false}
+              onLayout={handleBodyLayout}
+              onContentSizeChange={handleContentSize}
+            >
+              <PracticePill elapsedMs={elapsedMs} onEnd={handleEndPractice} />
+              {strip === null ? null : (
+                <Text
+                  accessible={strip.spoken !== null}
+                  accessibilityLabel={strip.spoken ?? undefined}
+                  numberOfLines={1}
+                  style={[styles.notes, topGap]}
+                >
+                  {strip.text}
+                </Text>
+              )}
+              <GestureDetector gesture={zoneSwipe}>
+                <View style={topGap} onLayout={handleZoneLayout}>
+                  <SwipeTempoZone
+                    bpm={bpm}
+                    density={density}
+                    currentBpm={frame.currentBpm}
+                    barPhase={frame.barPhase}
+                    onTypeTempo={handleOpenNumpad}
+                    onNudge={handleNudge}
+                  />
                 </View>
-              )}
-              {pinStatus ? null : (
-                <>
-                  <View style={styles.toolsPush} />
-                  {status}
-                </>
-              )}
-            </View>
-          </ScrollView>
-        </View>
-        {pinStatus ? (
-          <View testID="pinned-status" style={stackGap}>
-            {status}
+              </GestureDetector>
+              <PresetRow onNudge={handleNudge} onTap={handleTap} />
+              <PickerChips
+                beatsPerBar={beatsPerBar}
+                denominator={denominator}
+                subdivision={subdivision}
+                onOpenMeter={handleOpenMeter}
+                onOpenSubdivision={handleOpenSubdivision}
+              />
+              <View style={belowTempo}>
+                <BeatDots
+                  beatCount={beatsPerBar}
+                  subdivision={subdivision}
+                  polyBeats={polyEnabled ? polyBeats : null}
+                  polyAgainst={polyAgainst}
+                  accents={accents}
+                  width={dotsWidth}
+                  density={density}
+                  frame={frame}
+                  onCycle={cycleAccent}
+                />
+                {legend === null ? null : (
+                  <View style={styles.legend}>
+                    {legend === 'poly' ? <PolyLegend /> : <BeatLegend />}
+                  </View>
+                )}
+                {pinStatus ? null : (
+                  <>
+                    <View style={styles.toolsPush} />
+                    {status}
+                  </>
+                )}
+              </View>
+            </ScrollView>
           </View>
-        ) : null}
-        <Transport
-          running={running}
-          armedCount={practiceBadgeCount(settings)}
-          gap={bodyGap}
-          onToggle={handleToggleTransport}
-          onOpenPractice={handleOpenPractice}
-          onOpenSetlists={onOpenSetlists}
-        />
-
-        <UnsavedSnackbar bottomInset={insets.bottom} />
-        <SongClickSnackbar bottomInset={insets.bottom} />
-        {showSwipeHint(hintSeen, zone.height, summaryShown) ? (
+          {pinStatus ? (
+            <View testID="pinned-status" style={stackGap}>
+              {status}
+            </View>
+          ) : null}
+          <Transport
+            running={running}
+            armedCount={practiceBadgeCount(settings)}
+            gap={bodyGap}
+            onToggle={handleToggleTransport}
+            onOpenPractice={handleOpenPractice}
+            onOpenSetlists={onOpenSetlists}
+          />
+        </View>
+        <View
+          style={styles.snackbarLayer}
+          collapsable={false}
+          {...readerHiding(hintShown)}
+        >
+          <UnsavedSnackbar bottomInset={insets.bottom} />
+          <SongClickSnackbar bottomInset={insets.bottom} />
+        </View>
+        {hintShown ? (
           <SwipeHint
             zoneTop={bodyTop + zone.top}
             zoneHeight={zone.height}

@@ -1,6 +1,8 @@
 import type { EmptyStateOption, IconName } from '@kitbag/core-design';
 import type { LibraryView } from '@kitbag/core-state';
 
+export const REANALYZE_LABEL = 'Re-analyse';
+
 export interface ViewText {
   readonly title: string;
   readonly search: string;

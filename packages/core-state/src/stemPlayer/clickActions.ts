@@ -31,17 +31,44 @@ export function turnClickOff({
   stopClick(runtimeOf());
 }
 
+function gridOf({ beats, downbeatIndices }: ClickSlice) {
+  const grid = clickGrid(beats);
+  return { grid, downbeats: usableDownbeats(downbeatIndices, grid.length) };
+}
+
+export async function followNewGrid({
+  set,
+  get,
+  runtimeOf,
+  session,
+}: MixerSessionContext<ClickSlice>): Promise<void> {
+  if (!get().click) return;
+  const sent = get().beats;
+  const { grid, downbeats } = gridOf(get());
+  if (grid.length === 0) {
+    turnClickOff({ set, get, runtimeOf });
+    return;
+  }
+  const opened = session();
+  const result = await runtimeOf()
+    .commands.setGrid(grid, downbeats, GRID_ANCHOR_FRAME)
+    .catch(() => KB_RESULT.KB_ERROR_INTERNAL);
+  if (opened !== session() || get().beats !== sent) return;
+  if (result !== KB_RESULT.KB_OK) turnClickOff({ set, get, runtimeOf });
+}
+
 export function clickActions(
-  { set, get, runtimeOf, session }: MixerSessionContext<ClickSlice>,
+  context: MixerSessionContext<ClickSlice>,
   pendingClick: PendingClick,
 ): Pick<StemPlayerActions, 'toggleClick'> {
+  const { set, get, runtimeOf, session } = context;
   const { busy, call } = sessionGate(session);
 
   const start = async () => {
     const { commands, engine, sharedMetronome } = runtimeOf();
-    const grid = clickGrid(get().beats);
+    const sent = get().beats;
+    const { grid, downbeats } = gridOf(get());
     if (grid.length === 0) return;
-    const downbeats = usableDownbeats(get().downbeatIndices, grid.length);
     if (sharedMetronome.active()) sharedMetronome.release();
     const turnOn = pendingClick.begin();
     const { result, live } = await call(() =>
@@ -56,6 +83,7 @@ export function clickActions(
     commands.metronomeFollowMixer(true);
     commands.metronomeStart(engine.nowFrame());
     set({ click: true });
+    if (get().beats !== sent) await followNewGrid(context);
   };
 
   return {

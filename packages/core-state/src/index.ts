@@ -38,6 +38,7 @@ export {
 } from './metronome/standalone.ts';
 export {
   configureStandaloneMetronomePersistence,
+  reloadStandaloneMetronomePersistence,
   type StandaloneMetronomePersistence,
 } from './metronome/standalonePersistence.ts';
 export {
@@ -229,6 +230,7 @@ export {
   type LibraryView,
   type SongBadge,
 } from './songLibrary/logic.ts';
+export { playerSongBadge } from './songLibrary/badge.ts';
 export type {
   BundleAddOutcome,
   BundleRefusal,

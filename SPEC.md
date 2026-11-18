@@ -766,8 +766,11 @@ referenced but never drew: **setlists**, **setlist detail**, **preset editor**.
     the saved standalone state. **[recorded — lane call, owner may overturn]**
   - A ramp that was on restores at its start tempo, as a loaded song's does.
     **[recorded — lane call, owner may overturn]**
-  - The saved standalone state is not in a backup.
-    **[recorded — lane call, owner may overturn]**
+  - The saved standalone state is backed up as its own Restore category,
+    Metronome. Merge reviews a differing value as a conflict; an older backup
+    without it leaves the local state untouched; after a restore the restored
+    state replaces an unloaded song's. **[recorded — owner approved, #378;
+    reverses the earlier lane call]**
 - **Ramp and bar-mute are song data.** The Flutter `applyPreset` force-disables
   the ramp when loading a preset, so a song's trainer config is silently lost.
   They round-trip like any other field.

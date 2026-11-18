@@ -1,6 +1,6 @@
 // react-test-renderer is deprecated, but it alone exposes host props with no DOM.
 /* eslint-disable @typescript-eslint/no-deprecated */
-import { act, createElement, type ReactNode } from 'react';
+import { act, createElement, type ElementType, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { View } from 'react-native';
 import { create, type ReactTestRenderer } from 'react-test-renderer';
@@ -134,15 +134,22 @@ vi.mock('./UnsavedSnackbar.tsx', () => ({ UnsavedSnackbar: () => null }));
 vi.mock('./SongClickSnackbar.tsx', () => ({ SongClickSnackbar: () => null }));
 
 const { MetronomeScreen } = await import('./MetronomeScreen.tsx');
+const { MetronomeAppBar } = await import('./MetronomeAppBar.tsx');
+const { SwipeHint } = await import('./SwipeHint.tsx');
+const { Transport } = await import('./Transport.tsx');
+const { UnsavedSnackbar } = await import('./UnsavedSnackbar.tsx');
+const { SongClickSnackbar } = await import('./SongClickSnackbar.tsx');
 
 const COMPACT_GAP = metronome.bodyGapCompact;
+
+function screenElement() {
+  return createElement(MetronomeScreen, { insets: { top: 0, bottom: 0 } });
+}
 
 function renderBody(fontScale: number, running: boolean): string {
   display.fontScale = fontScale;
   display.running = running;
-  return renderToStaticMarkup(
-    createElement(MetronomeScreen, { insets: { top: 0, bottom: 0 } }),
-  );
+  return renderToStaticMarkup(screenElement());
 }
 
 function layOut(view: { readonly props: Props }, y: number, height: number) {
@@ -166,12 +173,24 @@ function mountScreen(): ReactTestRenderer {
   (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
   const mounted: { screen?: ReactTestRenderer } = {};
   act(() => {
-    mounted.screen = create(
-      createElement(MetronomeScreen, { insets: { top: 0, bottom: 0 } }),
-    );
+    mounted.screen = create(screenElement());
   });
   if (mounted.screen === undefined) throw new Error('screen did not mount');
   return mounted.screen;
+}
+
+function laidOutViews(screen: ReactTestRenderer) {
+  const laidOut = screen.root
+    .findAllByType(View)
+    .filter((view) => view.props.onLayout !== undefined);
+  const isClip = (view: { readonly props: Props }) =>
+    flatStyle(view.props.style).overflow === 'hidden';
+  const clip = laidOut.find(isClip);
+  const zone = laidOut.find((view) => !isClip(view));
+  if (clip === undefined || zone === undefined) {
+    throw new Error('clip or tempo zone has no onLayout');
+  }
+  return { clip, zone };
 }
 
 afterEach(() => {
@@ -233,18 +252,77 @@ describe('MetronomeScreen scroll body', () => {
     const ZONE_TOP = 20;
     const ZONE_HEIGHT = 100;
     display.hintSeen = false;
-    const laidOut = mountScreen()
-      .root.findAllByType(View)
-      .filter((view) => view.props.onLayout !== undefined);
-    const isClip = (view: { readonly props: Props }) =>
-      flatStyle(view.props.style).overflow === 'hidden';
-    const clip = laidOut.find(isClip);
-    const zone = laidOut.find((view) => !isClip(view));
-    if (clip === undefined || zone === undefined) {
-      throw new Error('clip or tempo zone has no onLayout');
-    }
+    const { clip, zone } = laidOutViews(mountScreen());
     layOut(clip, CLIP_TOP, ZONE_HEIGHT);
     layOut(zone, ZONE_TOP, ZONE_HEIGHT);
     expect(hint.props?.zoneTop).toBe(CLIP_TOP + ZONE_TOP);
+  });
+});
+
+describe('MetronomeScreen swipe hint', () => {
+  const ZONE_HEIGHT = 100;
+  const HIDDEN = {
+    importantForAccessibility: 'no-hide-descendants',
+    accessibilityElementsHidden: true,
+  };
+  const SHOWN = {
+    importantForAccessibility: 'auto',
+    accessibilityElementsHidden: false,
+  };
+
+  function hintShown(): ReactTestRenderer {
+    display.hintSeen = false;
+    const screen = mountScreen();
+    layOut(laidOutViews(screen).zone, 0, ZONE_HEIGHT);
+    return screen;
+  }
+
+  function readerLayers(screen: ReactTestRenderer) {
+    const layers = screen.root.findAll(
+      (node) =>
+        node.type === View &&
+        node.props.importantForAccessibility !== undefined,
+    );
+    const holding = (type: ElementType) =>
+      layers.find((layer) => layer.findAllByType(type).length > 0);
+    const main = holding(MetronomeAppBar);
+    const snackbars = holding(UnsavedSnackbar);
+    if (main === undefined || snackbars === undefined)
+      throw new Error('a reader layer is missing');
+    return { layers, main, snackbars };
+  }
+
+  it('hides the screen behind it from screen readers', () => {
+    const screen = hintShown();
+    const { main, snackbars } = readerLayers(screen);
+    expect(screen.root.findAllByType(SwipeHint)).toHaveLength(1);
+    expect(main.findAllByType(SwipeHint)).toHaveLength(0);
+    expect(main.findAllByType(Transport)).toHaveLength(1);
+    expect(main.props).toMatchObject(HIDDEN);
+    expect(snackbars.findAllByType(SongClickSnackbar)).toHaveLength(1);
+    expect(snackbars.props).toMatchObject(HIDDEN);
+  });
+
+  it('keeps the snackbars out of the padded screen layer', () => {
+    const { main, snackbars } = readerLayers(hintShown());
+    expect(main.findAllByType(UnsavedSnackbar)).toHaveLength(0);
+    expect(main.findAllByType(SongClickSnackbar)).toHaveLength(0);
+    expect(snackbars.parent).toBe(main.parent);
+  });
+
+  it('gives the screen back to screen readers once dismissed', () => {
+    const screen = hintShown();
+    display.hintSeen = true;
+    act(() => {
+      screen.update(screenElement());
+    });
+    expect(screen.root.findAllByType(SwipeHint)).toHaveLength(0);
+    for (const layer of readerLayers(screen).layers)
+      expect(layer.props).toMatchObject(SHOWN);
+  });
+
+  it('keeps each reader layer as its own native view', () => {
+    for (const layer of readerLayers(hintShown()).layers)
+      expect(layer.props.collapsable).toBe(false);
   });
 });

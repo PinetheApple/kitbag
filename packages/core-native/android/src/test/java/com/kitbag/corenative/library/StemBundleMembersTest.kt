@@ -29,6 +29,16 @@ class StemBundleMembersTest {
   }
 
   @Test
+  fun `the manifest artist wins over the tags, which still name the artist when it has none`() {
+    val tagged = members.metadata("""{"audio_tags":{"artist":"Tagged","title":"Echo"}}""")
+    assertEquals("Manifest", imported("Manifest", tagged).artist)
+    assertEquals("Echo", imported("Manifest", tagged).metadata.heading?.title)
+    assertEquals("Tagged", imported(null, tagged).artist)
+    assertNull(imported(null, members.metadata("""{"audio_tags":{"artist":"Tagged"}}""")).artist)
+    assertNull(imported(null, members.metadata(null)).artist)
+  }
+
+  @Test
   fun `metadata reads the fields a player uses and ignores the rest`() {
     val metadata = members.metadata(
       """{"title":"Echo","bpm":123,"key":"F maj","scale":"Major","key_confidence":100,
@@ -155,4 +165,14 @@ class StemBundleMembersTest {
     assertArrayEquals(floatArrayOf(-0.5f, 0.5f, -0.25f, 1f), peaks.getValue("vocals"), 0f)
     assertTrue(members.peaks("{oops", listOf("vocals")).isEmpty())
   }
+
+  private fun imported(artist: String?, metadata: BundleMetadata) =
+    ImportedBundle(
+      BundleManifest("job", "Echo", artist, 1.0, 44100, 2, emptyList()),
+      "stems/job",
+      emptyList(),
+      metadata,
+      BundleGrid(),
+      null,
+    )
 }
