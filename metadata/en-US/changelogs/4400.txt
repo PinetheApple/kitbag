@@ -1,0 +1,2 @@
+• The song player now says when a song is still being analysed or has no beat grid, offers Re-analyse when analysis failed, and picks up the grid as soon as analysis finishes, without stopping the song.
+• With TalkBack on, an open sheet or the metronome's swipe hint now keeps focus inside it; the screen behind can't be reached until it closes.
