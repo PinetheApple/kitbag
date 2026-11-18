@@ -118,6 +118,13 @@ describe('opening another song', () => {
       status: 'ready',
     });
   });
+
+  it('opens it paused', async () => {
+    const { store, commands } = await playingWithClickAndLoop();
+    await store.getState().open(SONG_ID + 1, BARS).loaded;
+    expect(commands.mixerStop).toHaveBeenCalledOnce();
+    expect(commands.mixerPlay).not.toHaveBeenCalled();
+  });
 });
 
 describe('reopening the live song after the library changed it', () => {
