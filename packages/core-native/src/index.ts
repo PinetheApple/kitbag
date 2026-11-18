@@ -37,6 +37,8 @@ export type {
   StemDeckImportRequest,
   StemDeckImportSnapshot,
   StemDeckProbe,
+  StemDeckScan,
+  StemDeckScanLook,
   StemDeckServer,
   StemDeckText,
 } from './NativeKitbagStemDeck';

@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -33,7 +34,7 @@ class ImportNotifications(private val context: Context) {
     val percent = notice.percent
     val text = context.getString(R.string.kitbag_stemdeck_song_phase, notice.title, phase(notice.phase, percent))
     val cancel = serviceIntent(StemDeckImportService.ACTION_CANCEL, foreground = false)
-    return builder()
+    return builder(IMPORT_LINK)
       .setOngoing(true)
       .setOnlyAlertOnce(true)
       .setContentTitle(context.getString(R.string.kitbag_stemdeck_importing, notice.position, notice.total))
@@ -44,7 +45,7 @@ class ImportNotifications(private val context: Context) {
   }
 
   fun starting(): Notification =
-    builder()
+    builder(IMPORT_LINK)
       .setOngoing(true)
       .setContentTitle(context.getString(R.string.kitbag_stemdeck_phase_preparing))
       .setProgress(ImportNotificationModel.PERCENT, 0, true)
@@ -62,7 +63,7 @@ class ImportNotifications(private val context: Context) {
 
   fun retryBlocked(added: Int, total: Int) =
     post(
-      builder()
+      builder(IMPORT_LINK)
         .setAutoCancel(true)
         .setContentTitle(context.getString(R.string.kitbag_stemdeck_stopped_time, added, total))
         .setContentText(context.getString(R.string.kitbag_stemdeck_hint_time))
@@ -76,14 +77,15 @@ class ImportNotifications(private val context: Context) {
     } else {
       context.getString(R.string.kitbag_stemdeck_finished_partly, notice.added, notice.added + left.count)
     }
-    val builder = builder().setAutoCancel(true).setContentTitle(title)
+    val link = if (left == null) STEM_SONGS_LINK else IMPORT_LINK
+    val builder = builder(link).setAutoCancel(true).setContentTitle(title)
     if (left == null) return builder.setContentText(context.getString(R.string.kitbag_stemdeck_from)).build()
     return expanded(builder, leftText(left)).addAction(retryAction(left.count)).build()
   }
 
   private fun stopped(notice: ImportNotice.Stopped): Notification {
     val (titleId, hintId) = reasonText(notice.reason)
-    val builder = builder()
+    val builder = builder(IMPORT_LINK)
       .setAutoCancel(true)
       .setContentTitle(context.getString(titleId, notice.added, notice.total))
     val text = leftText(notice.left) + hintId?.let { " " + context.getString(it) }.orEmpty()
@@ -127,11 +129,11 @@ class ImportNotifications(private val context: Context) {
       else -> context.getString(R.string.kitbag_stemdeck_phase_preparing)
     }
 
-  private fun builder(): NotificationCompat.Builder =
+  private fun builder(link: String): NotificationCompat.Builder =
     NotificationCompat.Builder(context, CHANNEL_ID)
       .setSmallIcon(R.drawable.kitbag_notification)
       .setSilent(true)
-      .setContentIntent(launchIntent())
+      .setContentIntent(open(link))
 
   // Without the permission Android 13+ drops the post; the import itself does not depend on it.
   private fun post(notification: Notification) {
@@ -142,10 +144,11 @@ class ImportNotifications(private val context: Context) {
     }
   }
 
-  private fun launchIntent(): PendingIntent? =
-    context.packageManager.getLaunchIntentForPackage(context.packageName)?.let {
-      PendingIntent.getActivity(context, 0, it, PendingIntent.FLAG_IMMUTABLE)
-    }
+  private fun open(link: String): PendingIntent {
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(link)).setPackage(context.packageName)
+    val flags = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+    return PendingIntent.getActivity(context, link.hashCode(), intent, flags)
+  }
 
   // Retry starts a stopped service, so it must come up in the foreground; Cancel reaches one already there.
   private fun serviceIntent(action: String, foreground: Boolean): PendingIntent {
@@ -161,5 +164,9 @@ class ImportNotifications(private val context: Context) {
   companion object {
     const val CHANNEL_ID = "kitbag_imports"
     const val NOTIFICATION_ID = 2
+
+    // app-shell's expo-router file routes: app/stemdeck/import.tsx and app/stems/index.tsx.
+    const val IMPORT_LINK = "kitbag://stemdeck/import"
+    const val STEM_SONGS_LINK = "kitbag://stems"
   }
 }
