@@ -38,6 +38,7 @@ export {
 } from './metronome/standalone.ts';
 export {
   configureStandaloneMetronomePersistence,
+  reloadStandaloneMetronomePersistence,
   type StandaloneMetronomePersistence,
 } from './metronome/standalonePersistence.ts';
 export {

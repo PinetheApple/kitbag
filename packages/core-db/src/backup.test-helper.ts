@@ -6,6 +6,7 @@ import { COUNT_IN_PREFERENCE_KEYS } from './count-in-preferences';
 import { createPracticeRepository } from './practice-repository';
 import { createPreferences } from './preferences';
 import { songs, tunings } from './schema';
+import { STANDALONE_METRONOME_KEY } from './standalone-metronome-preference';
 import { createSetlistRepository } from './setlist-repository';
 import { createSongPresetRepository } from './song-preset-repository';
 import { openTestDatabase } from './sqlite.test-helper';
@@ -44,6 +45,12 @@ export const SEEDED_COUNT_IN: Readonly<Record<string, string>> = {
   [COUNT_IN_PREFERENCE_KEYS.bars]: '2',
   [COUNT_IN_PREFERENCE_KEYS.distinct]: '0',
 };
+
+export const SEEDED_STANDALONE_METRONOME = JSON.stringify({
+  bpm: 132,
+  beatsPerBar: 7,
+  denominator: 8,
+});
 
 export type BackupDatabase = ReturnType<typeof openBackupDatabase>;
 
@@ -106,6 +113,7 @@ export async function seed(database: BackupDatabase) {
   const { handle, sets, presets, preferences } = database;
   for (const [key, value] of Object.entries(SEEDED_COUNT_IN))
     await preferences.set(key, value);
+  await preferences.set(STANDALONE_METRONOME_KEY, SEEDED_STANDALONE_METRONOME);
   await preferences.set(UNRELATED_PREFERENCE, 'light');
   const song = await seedLibrary(database);
   const opener = await presets.create(presetValues('Opener', song.id));
