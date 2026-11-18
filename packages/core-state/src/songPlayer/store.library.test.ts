@@ -9,9 +9,10 @@ import { removeMissingRows } from '../storage/missingRows.ts';
 import { BARS, fakeSongRuntime, songStore } from './store.test-helper.ts';
 
 async function playingFromTheLibrary() {
-  const { store: library } = setup();
+  const { store: library, records } = setup();
   const row = await importOne(library);
   const fake = fakeSongRuntime();
+  fake.records.readSong.mockImplementation(() => records.readSong(row.id));
   const player = songStore(fake, undefined, library);
   const session = player.getState().open(row.id, BARS);
   await session.loaded;
