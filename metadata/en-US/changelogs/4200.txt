@@ -1,0 +1,1 @@
+• Groundwork for loading songs straight from a StemDeck server on your Wi-Fi: connection, trusted-certificate handling and background downloads. The screens arrive in a later release; nothing changes in the app yet.
