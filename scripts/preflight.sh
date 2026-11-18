@@ -133,7 +133,7 @@ run_gate "Generation drift guards (§13.7, §13.8.1)" "pnpm -w generate:check"
 run_gate "Tests — unit suites + lint eval harness" "pnpm -w test --concurrency=2"
 run_gate "Web bundle — exports, no native-only modules (#70)" "./scripts/web-check.sh"
 run_gate "Version — app.json and its package.json mirrors agree" "./scripts/version.sh check"
-run_gate "Script tests" "./scripts/version.test.sh && ./scripts/verify-apk-signature.test.sh && ./scripts/release-gate.test.sh && ./scripts/changelog.test.sh && ./scripts/release-notes.test.sh && ./scripts/preflight.test.sh"
+run_gate "Script tests" "./scripts/version.test.sh && ./scripts/verify-apk-signature.test.sh && ./scripts/release-gate.test.sh && ./scripts/changelog.test.sh && ./scripts/release-notes.test.sh && ./scripts/preflight.test.sh && ./scripts/lint.test.sh"
 
 if ((!SKIP_NATIVE)); then
   run_gate "Native core — build" "cmake --build native/audio_core/build >/dev/null"
