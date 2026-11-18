@@ -1,5 +1,10 @@
 import { asc, eq, isNotNull } from 'drizzle-orm';
 
+import {
+  saveStemSetMeterOverride,
+  storedMeter,
+  type MeterOverride,
+} from './meter-override';
 import { found, type Database } from './repository';
 import { stems, stemSets } from './schema';
 import { packFloat32, packInt32, unpackFloat32, unpackInt32 } from './packing';
@@ -77,10 +82,10 @@ export interface StoredStem extends BundleStem {
   readonly sampleRate: number;
 }
 
-export interface StemSetRecord extends Omit<
-  NewStemBundle,
-  'jobId' | 'folder' | 'stems' | 'sampleRate' | 'channels'
-> {
+export interface StemSetRecord
+  extends
+    Omit<NewStemBundle, 'jobId' | 'folder' | 'stems' | 'sampleRate' | 'channels'>,
+    Partial<MeterOverride> {
   readonly id: number;
   readonly source: StemSetSource;
   readonly jobId: string | null;
@@ -255,6 +260,23 @@ export async function deleteStemSet(
   };
 }
 
+async function readMeterOverride(
+  db: Database,
+  id: number,
+): Promise<MeterOverride> {
+  const [row] = await db
+    .select({
+      meterBeatsPerBar: stemSets.meterBeatsPerBar,
+      barOneSeconds: stemSets.barOneSeconds,
+    })
+    .from(stemSets)
+    .where(eq(stemSets.id, id));
+  return {
+    meterBeatsPerBar: storedMeter(row?.meterBeatsPerBar ?? null),
+    barOneSeconds: row?.barOneSeconds ?? null,
+  };
+}
+
 export async function replaceStemBundle(
   db: Database,
   bundle: NewStemBundle,
@@ -264,10 +286,12 @@ export async function replaceStemBundle(
     return { id: await insertStemBundle(db, bundle), replaced: null };
   const names = await readUserNames(db, existing.id);
   const retimed = await retainedRetime(db, existing.id, bundle.lyrics);
+  const meter = await readMeterOverride(db, existing.id);
   const replaced = await deleteStemSet(db, existing.id);
   const id = await insertStemBundle(db, bundle);
   await applyUserNames(db, id, names);
   await saveLyricsRetimed(db, id, retimed);
+  await saveStemSetMeterOverride(db, id, meter);
   return { id, replaced };
 }
 
@@ -314,6 +338,8 @@ export async function readStemSet(
     sampleRate: row.sampleRate,
     createdAt: row.createdAt,
     speed: row.speed,
+    meterBeatsPerBar: storedMeter(row.meterBeatsPerBar),
+    barOneSeconds: row.barOneSeconds,
     bpm: row.bpm,
     key: row.key,
     scale: row.scale,

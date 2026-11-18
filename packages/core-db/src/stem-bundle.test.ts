@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 vi.mock('@op-engineering/op-sqlite', () => ({}));
 
 import { connectDatabase } from './client';
+import { GRID_METER } from './meter-override';
 import { fakeOpSqlite } from './op-sqlite-fake.test-helper';
 import { stems, stemSets } from './schema';
 import { createSongLibraryRepository } from './song-library-repository';
@@ -142,6 +143,8 @@ describe('StemDeck bundles in the song library', () => {
       sections: FULL.sections,
       lyrics: FULL.lyrics,
       lyricsRetimed: null,
+      meterBeatsPerBar: null,
+      barOneSeconds: null,
       stems: FULL.stems.map((stem) => ({
         ...stem,
         id: expect.any(Number) as number,
@@ -270,6 +273,23 @@ describe('StemDeck bundles in the song library', () => {
       ],
     });
     expect(await handle.db.select().from(stems)).toHaveLength(2);
+  });
+
+  it('keeps the meter override when the bundle is imported again', async () => {
+    const { library } = setup();
+    const old = await library.insertStemBundle(FULL);
+    await library.saveStemSetMeterOverride(old, {
+      meterBeatsPerBar: GRID_METER.triple,
+      barOneSeconds: 3.5,
+    });
+    const outcome = await library.replaceStemBundle({
+      ...FULL,
+      uuid: 'set-uuid-5',
+    });
+    expect(await library.readStemSet(outcome.id)).toMatchObject({
+      meterBeatsPerBar: GRID_METER.triple,
+      barOneSeconds: 3.5,
+    });
   });
 
   it('replaces nothing when the job is new', async () => {

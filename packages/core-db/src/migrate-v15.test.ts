@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import { migrate, MIGRATE_V14_TO_V15, SCHEMA_VERSION } from './migrate';
-import { buildV14Fixture, pragma, rows } from './migrate-fixtures.test-helper';
+import {
+  buildV14Fixture,
+  pragma,
+  rows,
+  V20_STEM_SET_COLUMNS,
+} from './migrate-fixtures.test-helper';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 import { STEM_SET_SOURCES } from './stem-set-source';
 
@@ -28,6 +33,7 @@ const NEW_SET_COLUMNS = {
   song_title: null,
   artist: null,
   renamed: 0,
+  ...V20_STEM_SET_COLUMNS,
 };
 
 function withFolderSet() {

@@ -1,6 +1,24 @@
-import { count, eq, inArray, max, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  eq,
+  inArray,
+  isNull,
+  lt,
+  max,
+  or,
+  sql,
+} from 'drizzle-orm';
 
 import { ANALYSIS_STATUS, type AnalysisStatus } from './analysis-status';
+import {
+  saveSongMeterOverride,
+  saveStemSetMeterOverride,
+  storedMeter,
+  type MeterOverride,
+  type MeterOverridePatch,
+} from './meter-override';
 import { packFloat32, packInt32, unpackFloat32, unpackInt32 } from './packing';
 import { found, type Database, type DatabaseHandle } from './repository';
 import { setlistItems, songPresets, songs, stems, stemSets } from './schema';
@@ -57,7 +75,7 @@ export interface NewLibrarySong {
   readonly format: string;
 }
 
-export interface SongRecord {
+export interface SongRecord extends Partial<MeterOverride> {
   readonly id: number;
   readonly title: string;
   readonly artist: string;
@@ -81,6 +99,7 @@ export type AnalysisResultRecord =
       readonly filePath: string;
       readonly ok: true;
       readonly durationSec: number | null;
+      readonly analysisVersion: number | null;
     } & StoredAnalysis)
   | {
       readonly filePath: string;
@@ -212,6 +231,7 @@ function analysisFields(result: AnalysisResultRecord) {
     waveformPath: result.waveformPath,
     analysisStatus: ANALYSIS_STATUS.done,
     analysisError: null,
+    analysisVersion: result.analysisVersion,
   };
 }
 
@@ -273,6 +293,26 @@ async function claimUnfinished(db: Database): Promise<SongFiles[]> {
     .returning(songFiles);
 }
 
+async function listOutdatedAnalyses(
+  db: Database,
+  currentVersion: number,
+): Promise<number[]> {
+  const rows = await db
+    .select({ id: songs.id })
+    .from(songs)
+    .where(
+      and(
+        eq(songs.analysisStatus, ANALYSIS_STATUS.done),
+        or(
+          isNull(songs.analysisVersion),
+          lt(songs.analysisVersion, currentVersion),
+        ),
+      ),
+    )
+    .orderBy(asc(songs.id));
+  return rows.map(({ id }) => id);
+}
+
 async function deleteSong(
   db: Database,
   id: number,
@@ -309,6 +349,8 @@ async function readSong(
     downbeatIndices:
       row.downbeatIndices === null ? [] : unpackInt32(row.downbeatIndices),
     analysisStatus: row.analysisStatus,
+    meterBeatsPerBar: storedMeter(row.meterBeatsPerBar),
+    barOneSeconds: row.barOneSeconds,
   };
 }
 
@@ -330,6 +372,8 @@ export function createSongLibraryRepository({
     insertSong: (song: NewLibrarySong) => serial(() => insertSong(db, song)),
     beginAnalysis: (id: number) => serial(() => beginAnalysis(db, id)),
     claimUnfinishedAnalyses: () => serial(() => claimUnfinished(db)),
+    listOutdatedAnalyses: (currentVersion: number) =>
+      serial(() => listOutdatedAnalyses(db, currentVersion)),
     applyAnalysis: (result: AnalysisResultRecord) =>
       transaction(() => applyAnalysis(db, result)),
     deleteSong: (id: number) => transaction(() => deleteSong(db, id)),
@@ -351,6 +395,10 @@ export function createSongLibraryRepository({
       serial(() => updateDuration(db, id, durationSec)),
     renameSong: (id: number, title: string) =>
       serial(() => renameSong(db, id, title)),
+    saveSongMeterOverride: (id: number, patch: MeterOverridePatch) =>
+      serial(() => saveSongMeterOverride(db, id, patch)),
+    saveStemSetMeterOverride: (id: number, patch: MeterOverridePatch) =>
+      serial(() => saveStemSetMeterOverride(db, id, patch)),
     renameStemSet: (id: number, title: string) =>
       serial(() => renameStemSet(db, id, title)),
     renameStem: (id: number, name: string) =>

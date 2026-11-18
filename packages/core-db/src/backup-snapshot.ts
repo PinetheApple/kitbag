@@ -48,11 +48,22 @@ function withoutId<T extends { id: number }>(row: T): Omit<T, 'id'> {
   return copy as Omit<T, 'id'>;
 }
 
+type UnportableSongField =
+  | 'id'
+  | 'analysisStatus'
+  | 'analysisError'
+  | 'analysisVersion'
+  | 'meterBeatsPerBar'
+  | 'barOneSeconds';
+
 function portableSong(row: SongRow) {
   const copy: Partial<SongRow> = withoutId(row);
   delete copy.analysisStatus;
   delete copy.analysisError;
-  return copy as Omit<SongRow, 'id' | 'analysisStatus' | 'analysisError'>;
+  delete copy.analysisVersion;
+  delete copy.meterBeatsPerBar;
+  delete copy.barOneSeconds;
+  return copy as Omit<SongRow, UnportableSongField>;
 }
 
 // The analysis state describes this device's copy of the file, so it stays out of
