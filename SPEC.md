@@ -895,6 +895,11 @@ working. Changes:
   to their base directory, always.
 - **Downbeats** into the grid (§4.3).
 - **Re-analyse** action for a song.
+- Each song records the analyser version (`KB_BEAT_ANALYSIS_VERSION`) that made
+  its grid. At launch, finished songs on an older version re-analyse in the
+  background, one at a time, through the Re-analyse path. A failure keeps the old
+  grid and is not retried automatically; Re-analyse retries it. The meter
+  override (meter, bar one) is the user's and survives re-analysis.
 - Analysis stays ambient — background, badge-driven, no "analyze" button. The
   row appears instantly with `ANALYZING` and lands on `GRID ✓` in ~10–30s. The
   user never waits on a spinner screen.

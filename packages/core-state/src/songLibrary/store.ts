@@ -22,6 +22,7 @@ import {
   type Removal,
 } from './logic.ts';
 import { cleanName } from '../names.ts';
+import { outdatedGridQueue, type OutdatedGridQueue } from './outdatedGrids.ts';
 import {
   getSongLibrary,
   type LibraryFiles,
@@ -136,11 +137,18 @@ function resultRecord(result: AnalysisResult): AnalysisResultRecord {
     waveformPath:
       result.waveformRelativePath === '' ? null : result.waveformRelativePath,
     durationSec: knownLength(result.durationSec) ? result.durationSec : null,
+    analysisVersion: result.analysisVersion ?? null,
   };
 }
 
 function enqueue(files: LibraryFiles, song: SongFiles, replace: boolean) {
   files.enqueueAnalysis(song.filePath, parentDir(song.filePath), replace);
+}
+
+async function requeue(deps: SongLibraryDeps, songId: number) {
+  const song = await deps.records().beginAnalysis(songId);
+  if (song !== undefined) enqueue(deps.files(), song, true);
+  return song;
 }
 
 function readActions(deps: SongLibraryDeps, set: SetState, get: Get) {
@@ -271,6 +279,7 @@ function importActions(
 
 async function deleteRecord(
   deps: SongLibraryDeps,
+  queue: OutdatedGridQueue,
   row: LibraryRow,
   codes: LibraryConstants | null,
 ): Promise<Removal[]> {
@@ -283,6 +292,7 @@ async function deleteRecord(
   const song = await records.deleteSong(row.id);
   if (song === undefined) return [];
   deps.files().cancelAnalysis(song.filePath);
+  await queue.settled(song.filePath);
   return songRemovals(song, codes?.songsDir ?? null);
 }
 
@@ -290,6 +300,7 @@ function analysisActions(
   deps: SongLibraryDeps,
   get: Get,
   imports: ImportTracker,
+  queue: OutdatedGridQueue,
 ) {
   // A result can arrive both as an event and from pendingAnalyses, so applying
   // it must be idempotent; it is acknowledged only once it is stored.
@@ -307,6 +318,7 @@ function analysisActions(
       warn(`analysis result for ${result.relativePath} not stored`, error);
     }
     await get().refresh();
+    await queue.settled(result.relativePath);
   };
   const analyzeUnfinished = async () => {
     const files = deps.files();
@@ -325,23 +337,28 @@ function analysisActions(
       for (const result of await files.pendingAnalyses())
         await receiveAnalysis(result);
       await analyzeUnfinished();
+      await queue.resume();
       await sweepOrphanedStemFolders(deps, get, imports);
       return unsubscribe;
     },
     reanalyze: async (songId: number) => {
-      const song = await deps.records().beginAnalysis(songId);
-      if (song !== undefined) enqueue(deps.files(), song, true);
+      await requeue(deps, songId);
       await get().refresh();
     },
   };
 }
 
-function rowActions(deps: SongLibraryDeps, set: SetState, get: Get) {
+function rowActions(
+  deps: SongLibraryDeps,
+  set: SetState,
+  get: Get,
+  queue: OutdatedGridQueue,
+) {
   return {
     deleteRow: async (row: LibraryRow) => {
       let removals: Removal[];
       try {
-        removals = await deleteRecord(deps, row, loadCodes(deps, get));
+        removals = await deleteRecord(deps, queue, row, loadCodes(deps, get));
       } catch (error) {
         warn(`delete of ${row.title} failed`, error);
         set({ notice: { kind: 'deleteFailed', name: row.title } });
@@ -381,12 +398,17 @@ export function createSongLibraryStore(
 ): StoreApi<SongLibraryStore> {
   return createStore<SongLibraryStore>((set, get) => {
     const imports = importTracker();
+    const queue = outdatedGridQueue(deps.records, async (songId) => {
+      const song = await requeue(deps, songId);
+      await get().refresh();
+      return song;
+    });
     return {
       ...INITIAL,
       ...readActions(deps, set, get),
       ...importActions(deps, set, get, imports),
-      ...analysisActions(deps, get, imports),
-      ...rowActions(deps, set, get),
+      ...analysisActions(deps, get, imports, queue),
+      ...rowActions(deps, set, get, queue),
     };
   });
 }

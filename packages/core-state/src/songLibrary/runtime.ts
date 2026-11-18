@@ -48,6 +48,7 @@ export type SongLibraryRecords = Pick<
   | 'insertSong'
   | 'beginAnalysis'
   | 'claimUnfinishedAnalyses'
+  | 'listOutdatedAnalyses'
   | 'applyAnalysis'
   | 'deleteSong'
   | 'deleteStemSet'

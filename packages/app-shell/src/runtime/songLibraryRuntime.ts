@@ -16,6 +16,8 @@ const records: SongLibraryRecords = {
   insertSong: (song) => library().insertSong(song),
   beginAnalysis: (id) => library().beginAnalysis(id),
   claimUnfinishedAnalyses: () => library().claimUnfinishedAnalyses(),
+  listOutdatedAnalyses: (currentVersion) =>
+    library().listOutdatedAnalyses(currentVersion),
   applyAnalysis: (result) => library().applyAnalysis(result),
   deleteSong: (id) => library().deleteSong(id),
   deleteStemSet: (id) => library().deleteStemSet(id),

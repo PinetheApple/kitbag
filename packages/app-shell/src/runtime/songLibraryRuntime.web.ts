@@ -9,6 +9,7 @@ configureSongLibrary({
     insertSong: unavailable,
     beginAnalysis: () => Promise.resolve(undefined),
     claimUnfinishedAnalyses: () => Promise.resolve([]),
+    listOutdatedAnalyses: () => Promise.resolve([]),
     applyAnalysis: unavailable,
     deleteSong: () => Promise.resolve(undefined),
     deleteStemSet: () => Promise.resolve({ folder: null, files: [] }),
