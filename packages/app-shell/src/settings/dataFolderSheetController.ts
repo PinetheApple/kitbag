@@ -3,7 +3,11 @@ import type {
   MoveFinished,
   MoveStatus,
 } from '@kitbag/core-native';
-import { moveSettled, type DataFolderStore } from '@kitbag/core-state';
+import {
+  cardMounted,
+  moveSettled,
+  type DataFolderStore,
+} from '@kitbag/core-state';
 
 import {
   CLOSED,
@@ -36,17 +40,6 @@ export interface DataFolderSheetController {
 
 function otherPlace(volumes: DataFolderVolumes | null): string | null {
   return volumes?.volumes.find((volume) => !volume.inUse)?.volumeUuid ?? null;
-}
-
-function cardIn(state: DataFolderStore, volumeUuid: string): boolean {
-  const { volumes, codes } = state;
-  return (
-    volumes?.volumes.some(
-      (volume) =>
-        volume.volumeUuid === volumeUuid &&
-        volume.state === codes?.volumeStates.mounted,
-    ) === true
-  );
 }
 
 export function createDataFolderSheetController(
@@ -116,7 +109,7 @@ export function createDataFolderSheetController(
 
   const follow = (now: DataFolderStore, before: DataFolderStore) => {
     remember(now.move);
-    if (step.kind === 'returnOffer' && !cardIn(now, step.volumeUuid)) {
+    if (step.kind === 'returnOffer' && !cardMounted(now, step.volumeUuid)) {
       send({ kind: 'close' });
     }
     if (now.move !== null && before.move === null) {

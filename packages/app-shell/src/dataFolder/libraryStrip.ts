@@ -5,7 +5,7 @@ import type {
 } from '@kitbag/core-native';
 import type { LibraryView } from '@kitbag/core-state';
 
-import { viewCount } from '../nouns.ts';
+import { viewCountLabel } from '../nouns.ts';
 import { capitalised } from '../settings/capitalised.ts';
 import {
   progressBytes,
@@ -61,7 +61,7 @@ export function cardMissingTitle(place: string): string {
 }
 
 function missingDetail(count: number, view: LibraryView): string | null {
-  const counted = viewCount(count, view);
+  const counted = viewCountLabel(count, view);
   return counted === null
     ? null
     : `${counted} on it can’t play until it’s back`;

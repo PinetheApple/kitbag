@@ -256,6 +256,7 @@ export {
   folderUnavailable,
   pausedMove,
   offeredCards,
+  cardMounted,
   returnedCards,
   resumeBlocked,
   returnSourceMissing,

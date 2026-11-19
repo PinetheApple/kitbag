@@ -9,7 +9,10 @@ const VIEW_NOUNS: Readonly<Record<LibraryView, readonly [string, string]>> = {
   stems: STEM_SONG_NOUNS,
 };
 
-export function viewCount(count: number, view: LibraryView): string | null {
+export function viewCountLabel(
+  count: number,
+  view: LibraryView,
+): string | null {
   if (count === 0) return null;
   const [one, many] = VIEW_NOUNS[view];
   return countLabel(count, one, many);

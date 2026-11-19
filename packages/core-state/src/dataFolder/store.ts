@@ -128,14 +128,24 @@ export function resumeBlocked(state: DataFolderState): boolean {
   return state.pending || returnSourceMissing(state);
 }
 
+export function cardMounted(
+  { volumes, codes }: Pick<DataFolderState, 'volumes' | 'codes'>,
+  volumeUuid: string | null,
+): boolean {
+  return (
+    volumes?.volumes.some(
+      (volume) =>
+        volume.volumeUuid === volumeUuid &&
+        volume.state === codes?.volumeStates.mounted,
+    ) === true
+  );
+}
+
 export function returnSourceMissing(state: DataFolderState): boolean {
   const { move, volumes, codes } = state;
   if (move?.cardReturn !== true || volumes === null || codes === null)
     return false;
-  const source = volumes.volumes.find(
-    ({ volumeUuid }) => volumeUuid === move.sourceVolumeUuid,
-  );
-  return source?.state !== codes.volumeStates.mounted;
+  return !cardMounted(state, move.sourceVolumeUuid);
 }
 
 // A card stays declined only while it stays in: the next insertion offers it again.
@@ -144,13 +154,7 @@ function stillInserted(
   volumes: DataFolderVolumes,
   codes: DataFolderCodes | null,
 ): readonly string[] {
-  return declined.filter((uuid) =>
-    volumes.volumes.some(
-      (volume) =>
-        volume.volumeUuid === uuid &&
-        volume.state === codes?.volumeStates.mounted,
-    ),
-  );
+  return declined.filter((uuid) => cardMounted({ volumes, codes }, uuid));
 }
 
 export function folderUnavailable(state: DataFolderState): boolean {
