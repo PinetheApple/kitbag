@@ -67,8 +67,13 @@ void commandMetronomeStart(double anchorFrame) {
   kb_metronome_start_at(commandEngine(), static_cast<uint64_t>(anchorFrame));
   commandStart();
 }
+// start_at only takes effect while stopped, so a stale Resume cannot restart a running
+// click, and unlike start it keeps an anchor the app queued, which must still land.
 void commandMetronomeStartNow() {
-  kb_metronome_start(commandEngine());
+  {
+    const LockedEngine engine = commandEngine();
+    kb_metronome_start_at(engine, kb_engine_frames_rendered(engine));
+  }
   commandStart();
 }
 void commandMetronomeStop() { kb_metronome_stop(commandEngine()); }

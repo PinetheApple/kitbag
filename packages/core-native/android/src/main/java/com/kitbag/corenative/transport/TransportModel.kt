@@ -17,7 +17,9 @@ data class TransportChange(
   val state: TransportState,
   val practice: PracticeClock,
   val cardNumber: Int,
-  val tempoSet: Boolean,
+  val action: TransportAction,
+  val tempoStep: Int,
+  val engineBpm: Double,
 )
 
 enum class TransportAction {
@@ -69,8 +71,14 @@ class TransportModel(private val minBpm: Double, private val maxBpm: Double) {
         if (state.playback == Playback.PLAYING) listOf(TransportCommand.Pause) else emptyList()
       TransportAction.STOP ->
         if (state.playback == Playback.STOPPED) emptyList() else listOf(TransportCommand.Stop)
-      TransportAction.TEMPO_DOWN -> stepTempo(state, -TEMPO_STEP_BPM)
-      TransportAction.TEMPO_UP -> stepTempo(state, TEMPO_STEP_BPM)
+      TransportAction.TEMPO_DOWN, TransportAction.TEMPO_UP -> stepTempo(state, tempoStep(action))
+    }
+
+  fun tempoStep(action: TransportAction): Int =
+    when (action) {
+      TransportAction.TEMPO_DOWN -> -TEMPO_STEP_BPM
+      TransportAction.TEMPO_UP -> TEMPO_STEP_BPM
+      else -> 0
     }
 
   private fun play(playback: Playback): List<TransportCommand> =
@@ -82,8 +90,8 @@ class TransportModel(private val minBpm: Double, private val maxBpm: Double) {
 
   // Matches the screen's tempo keys: step from the rounded effective tempo, and
   // any manual change, even one pinned at a bound, cancels a running ramp.
-  private fun stepTempo(state: TransportState, delta: Double): List<TransportCommand> {
-    val next = (state.bpm.roundToInt() + delta).coerceIn(minBpm, maxBpm)
+  private fun stepTempo(state: TransportState, delta: Int): List<TransportCommand> {
+    val next = (state.bpm.roundToInt() + delta).toDouble().coerceIn(minBpm, maxBpm)
     return if (next == state.bpm && !state.rampRunning) emptyList()
     else listOf(TransportCommand.SetTempo(next))
   }
@@ -92,6 +100,6 @@ class TransportModel(private val minBpm: Double, private val maxBpm: Double) {
     "${state.bpm.roundToInt()} BPM · ${state.beatsPerBar}/${state.beatUnit}"
 
   private companion object {
-    const val TEMPO_STEP_BPM = 1.0
+    const val TEMPO_STEP_BPM = 1
   }
 }

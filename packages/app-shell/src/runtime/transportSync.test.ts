@@ -4,9 +4,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   cardStale,
-  keepsAppTempo,
   notificationStepAfterAppChange,
+  replayOnApp,
   shownAfterNativeChange,
+  shownAfterReplay,
   storePatchFor,
   transportActive,
   type TransportShown,
@@ -46,8 +47,7 @@ const setlistAt = (index: number) => ({
   subtitle: `Wedding set · Blackbird (${String(index + 1)}/12)`,
 });
 const CARD_NUMBER = 4;
-const FOLLOW = { keepTempo: false };
-const KEEP = { keepTempo: true };
+const TEMPO_STEP = 1;
 const event = (over: Partial<TransportEvent> = {}): TransportEvent => ({
   playback: 'playing',
   bpm: 107,
@@ -55,7 +55,9 @@ const event = (over: Partial<TransportEvent> = {}): TransportEvent => ({
   practicePlayedMs: 30_000,
   practiceStretchStartedAt: 7_000,
   cardNumber: CARD_NUMBER,
-  tempoSet: false,
+  action: 'play',
+  tempoStep: 0,
+  engineBpm: 107,
   ...over,
 });
 const pausedShown: TransportShown = {
@@ -205,9 +207,30 @@ describe('notificationStepAfterAppChange', () => {
   });
 });
 
+describe('shownAfterReplay', () => {
+  it('a replayed Stop drops the card and a replayed Pause keeps it up, paused', () => {
+    expect(shownAfterReplay(shown, { kind: 'stop' })).toBeUndefined();
+    expect(shownAfterReplay(shown, { kind: 'pause' })).toEqual({
+      ...shown,
+      playing: false,
+    });
+    expect(shownAfterReplay(undefined, { kind: 'pause' })).toBeUndefined();
+  });
+
+  it('a replayed start, step or no-op leaves the card to the app sync', () => {
+    for (const step of [
+      { kind: 'start' },
+      { kind: 'none' },
+      { kind: 'step', delta: TEMPO_STEP, from: 90 },
+    ] as const) {
+      expect(shownAfterReplay(shown, step)).toBe(shown);
+    }
+  });
+});
+
 describe('shownAfterNativeChange', () => {
   it('follows a tempo change from the notification, so the app does not re-send it', () => {
-    const next = shownAfterNativeChange(shown, event({ bpm: 121 }), FOLLOW);
+    const next = shownAfterNativeChange(shown, event({ bpm: 121 }));
     const app = state({
       bpm: 121,
       practice: { playedMs: 30_000, stretchStartedAt: 7_000 },
@@ -219,18 +242,8 @@ describe('shownAfterNativeChange', () => {
 
   it('forgets the notification once it was stopped natively', () => {
     expect(
-      shownAfterNativeChange(shown, event({ playback: 'stopped' }), FOLLOW),
+      shownAfterNativeChange(shown, event({ playback: 'stopped' })),
     ).toBeUndefined();
-  });
-
-  it('a Play from a service still on the previous card keeps the shown tempo', () => {
-    expect(
-      shownAfterNativeChange(
-        { ...pausedShown, bpm: 90 },
-        event({ bpm: 120 }),
-        KEEP,
-      ),
-    ).toMatchObject({ playing: true, bpm: 90 });
   });
 });
 
@@ -238,7 +251,7 @@ describe('storePatchFor', () => {
   const current = { bpm: 100, ramp: { ...ramp, enabled: true } };
 
   it('a tempo change from the notification sets the tempo and clears the ramp chip', () => {
-    expect(storePatchFor(event(), current, FOLLOW)).toMatchObject({
+    expect(storePatchFor(event(), current)).toMatchObject({
       running: true,
       bpm: 107,
       ramp: { ...ramp, enabled: false },
@@ -246,12 +259,12 @@ describe('storePatchFor', () => {
   });
 
   it('the practice clock follows the service, which timed the pause and resume itself', () => {
-    expect(storePatchFor(event(), current, FOLLOW).practice).toEqual({
+    expect(storePatchFor(event(), current).practice).toEqual({
       playedMs: 30_000,
       stretchStartedAt: 7_000,
     });
     expect(
-      storePatchFor(event({ playback: 'paused' }), current, FOLLOW).practice,
+      storePatchFor(event({ playback: 'paused' }), current).practice,
     ).toEqual({ playedMs: 30_000, stretchStartedAt: null });
   });
 
@@ -260,7 +273,6 @@ describe('storePatchFor', () => {
       storePatchFor(
         event({ playback: 'paused', bpm: 112, rampRunning: true }),
         current,
-        KEEP,
       ),
     ).toMatchObject({
       running: false,
@@ -268,39 +280,90 @@ describe('storePatchFor', () => {
       ramp: { ...ramp, enabled: true },
     });
   });
-
-  it('a kept tempo leaves the app tempo and ramp alone', () => {
-    expect(storePatchFor(event({ bpm: 120 }), current, KEEP)).toMatchObject({
-      running: true,
-      bpm: 100,
-      ramp: { ...ramp, enabled: true },
-    });
-  });
-});
-
-describe('keepsAppTempo', () => {
-  const STALE = true;
-  const CURRENT = false;
-
-  it('keeps the app tempo during a ramp, or when a service on another card did not set one', () => {
-    expect(keepsAppTempo(event({ rampRunning: true }), CURRENT)).toBe(true);
-    expect(keepsAppTempo(event(), STALE)).toBe(true);
-    expect(keepsAppTempo(event(), CURRENT)).toBe(false);
-  });
-
-  it('a tempo step on the previous card still takes the tempo the service set', () => {
-    expect(keepsAppTempo(event({ tempoSet: true }), STALE)).toBe(false);
-  });
 });
 
 describe('cardStale', () => {
-  it('is stale when the numbers differ either way, and never without a shown card', () => {
+  it('is stale when the numbers differ either way, and never without a card of its own', () => {
     const before = event({ cardNumber: CARD_NUMBER - 1 });
     const after = event({ cardNumber: CARD_NUMBER + 1 });
-    expect(cardStale(shown, before, CARD_NUMBER)).toBe(true);
-    expect(cardStale(shown, after, CARD_NUMBER)).toBe(true);
-    expect(cardStale(shown, event(), CARD_NUMBER)).toBe(false);
-    expect(cardStale(undefined, after, CARD_NUMBER)).toBe(false);
+    expect(cardStale(true, before, CARD_NUMBER)).toBe(true);
+    expect(cardStale(true, after, CARD_NUMBER)).toBe(true);
+    expect(cardStale(true, event(), CARD_NUMBER)).toBe(false);
+    expect(cardStale(false, after, CARD_NUMBER)).toBe(false);
+  });
+});
+
+describe('replayOnApp', () => {
+  const app = { running: false, bpm: 90, ramp };
+  const rampRunning = {
+    running: true,
+    bpm: 100,
+    ramp: { ...ramp, enabled: true },
+  };
+  const tempoUp = event({
+    action: 'tempo_up',
+    tempoStep: TEMPO_STEP,
+    bpm: 121,
+    engineBpm: 104.6,
+  });
+
+  it('play and pause act on whether the app is playing, not on what the service saw', () => {
+    expect(replayOnApp(event({ action: 'play' }), app)).toEqual({
+      kind: 'start',
+    });
+    expect(
+      replayOnApp(event({ action: 'play' }), { ...app, running: true }),
+    ).toEqual({ kind: 'none' });
+    expect(
+      replayOnApp(event({ action: 'pause' }), { ...app, running: true }),
+    ).toEqual({ kind: 'pause' });
+    expect(replayOnApp(event({ action: 'pause' }), app)).toEqual({
+      kind: 'none',
+    });
+  });
+
+  it('stop always stops', () => {
+    expect(replayOnApp(event({ action: 'stop' }), app)).toEqual({
+      kind: 'stop',
+    });
+  });
+
+  it('a tempo step moves by the service step from the app tempo, not the service result', () => {
+    expect(replayOnApp(tempoUp, app)).toEqual({
+      kind: 'step',
+      delta: TEMPO_STEP,
+      from: 90,
+    });
+    expect(
+      replayOnApp(event({ action: 'tempo_down', tempoStep: -TEMPO_STEP }), {
+        ...app,
+        running: true,
+      }),
+    ).toEqual({ kind: 'step', delta: -TEMPO_STEP, from: 90 });
+  });
+
+  it('during a running ramp the step starts from the engine tempo the service read first', () => {
+    expect(replayOnApp(tempoUp, rampRunning)).toEqual({
+      kind: 'step',
+      delta: TEMPO_STEP,
+      from: 104.6,
+    });
+  });
+
+  it('during a ramp, an engine that reported no tempo steps from the app tempo', () => {
+    for (const engineBpm of [Number.NaN, 0, -1]) {
+      expect(replayOnApp({ ...tempoUp, engineBpm }, rampRunning)).toEqual({
+        kind: 'step',
+        delta: TEMPO_STEP,
+        from: 100,
+      });
+    }
+  });
+
+  it('an action name the app does not know trusts the service result', () => {
+    expect(replayOnApp(event({ action: 'rewind' }), app)).toEqual({
+      kind: 'follow',
+    });
   });
 });
 
