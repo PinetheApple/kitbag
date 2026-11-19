@@ -5,6 +5,7 @@ import com.kitbag.corenative.library.DataFolderLocation
 import com.kitbag.corenative.library.DurableFiles
 import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.RootState
+import com.kitbag.corenative.library.SystemDiskSync
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -50,7 +51,7 @@ class MoveRunner(
 
   private val running = AtomicBoolean(false)
   private val cancelRequested = AtomicBoolean(false)
-  private val switchLock = Any()
+  private val cancelOrSwitchLock = Any()
 
   @Volatile private var current: MoveState? = null
 
@@ -71,9 +72,9 @@ class MoveRunner(
   fun resume(): MoveOutcome = journal.load()?.let { drive(it.copy(failure = null)) } ?: MoveOutcome.NoMove
 
   fun cancel(): Boolean =
-    synchronized(switchLock) {
+    synchronized(cancelOrSwitchLock) {
       val state = current ?: journal.load() ?: return false
-      if (state.phase >= MovePhase.SWITCHED) return false
+      if (state.phase >= MovePhase.SWITCHED || switched(state)) return false
       if (running.get()) {
         cancelRequested.set(true)
         return true
@@ -84,7 +85,7 @@ class MoveRunner(
   fun useInternalStorage(awayPaths: Collection<String>): Boolean {
     if (journal.load() != null) return false
     val card = folder.location() as? DataFolderLocation.Card ?: return false
-    if (folder.rootState(card) !is RootState.Unmounted) return false
+    if (folder.rootStateAt(card) !is RootState.Unmounted) return false
     folder.switching {
       folder.leaveAway(card.volumeUuid, awayPaths)
       folder.select(DataFolderLocation.Internal)
@@ -119,11 +120,19 @@ class MoveRunner(
       val discarded = discard(current ?: state)
       return if (discarded) MoveOutcome.Cancelled else MoveOutcome.Failed(MoveFailure.TARGET_UNAVAILABLE)
     } catch (e: IOException) {
-      current?.let { save(it.copy(failure = MoveFailure.IO.name)) }
+      current?.let(::recordIoFailure)
       return MoveOutcome.Failed(MoveFailure.IO)
     } finally {
       current = null
       running.set(false)
+    }
+  }
+
+  private fun recordIoFailure(state: MoveState) {
+    try {
+      save(state.copy(failure = MoveFailure.IO))
+    } catch (e: IOException) {
+      // The journal keeps its last good state, which resume can still use.
     }
   }
 
@@ -146,7 +155,7 @@ class MoveRunner(
       if (!targetRoot.isDirectory && !targetRoot.mkdirs()) return false
       FileOutputStream(probe).use { output ->
         output.write(PROBE_BYTES)
-        output.fd.sync()
+        SystemDiskSync.file(output)
       }
       probe.readBytes().contentEquals(PROBE_BYTES)
     } catch (e: IOException) {
@@ -162,7 +171,7 @@ class MoveRunner(
     for (entry in state.files.filterNot { it.copied }) {
       val source = File(sourceRoot, entry.path)
       next = if (source.isFile) {
-        val sha256 = DurableFiles.copy(source, File(targetRoot, entry.path), ::cancelling)
+        val sha256 = DurableFiles.copyAndHash(source, File(targetRoot, entry.path), cancelRequested::get)
         save(next.withEntry(entry.copy(sha256 = sha256)))
       } else {
         save(next.copy(files = next.files - entry))
@@ -178,7 +187,7 @@ class MoveRunner(
     for (entry in state.files.filterNot { it.verified }) {
       if (!copyMatches(targetRoot, entry)) {
         val recopy = next.withEntry(entry.copy(sha256 = null))
-        save(recopy.copy(phase = MovePhase.COPYING, failure = MoveFailure.HASH_MISMATCH.name))
+        save(recopy.copy(phase = MovePhase.COPYING, failure = MoveFailure.HASH_MISMATCH))
         throw Stop(MoveOutcome.Failed(MoveFailure.HASH_MISMATCH, entry.path))
       }
       next = save(next.withEntry(entry.copy(verified = true)))
@@ -189,11 +198,11 @@ class MoveRunner(
 
   private fun copyMatches(targetRoot: File, entry: MoveEntry): Boolean {
     val copy = File(targetRoot, entry.path)
-    return copy.isFile && DurableFiles.sha256(copy, ::cancelling) == entry.sha256
+    return copy.isFile && DurableFiles.sha256(copy, cancelRequested::get) == entry.sha256
   }
 
   private fun catchUp(state: MoveState): MoveState {
-    if (folder.location() == state.target) return save(state.copy(phase = MovePhase.SWITCHED))
+    if (switched(state)) return save(state.copy(phase = MovePhase.SWITCHED))
     val (sourceRoot, targetRoot) = roots(state)
     return folder.switching {
       val scanned = MovePlan.scan(sourceRoot)
@@ -201,10 +210,15 @@ class MoveRunner(
       val known = state.files.associateBy { it.path }
       state.files.filter { it.path !in scannedPaths }.forEach { deleteCopy(targetRoot, it.path) }
       var next = save(state.copy(files = state.files.filter { it.path in scannedPaths }))
-      for (file in scanned.filter { known[it.path]?.matches(it) != true }) {
+      for (file in scanned.filterNot { known[it.path]?.isCopyOf(it) == true }) {
+        if (file.path !in known && File(targetRoot, file.path).exists()) {
+          save(next.copy(failure = MoveFailure.TARGET_OCCUPIED))
+          throw Stop(MoveOutcome.Failed(MoveFailure.TARGET_OCCUPIED, file.path))
+        }
+        next = save(next.withEntry(MoveEntry(file.path, file.size, file.modified)))
         val copied = catchUpCopy(sourceRoot, targetRoot, file)
         if (!copied.verified) {
-          save(next.copy(failure = MoveFailure.HASH_MISMATCH.name))
+          save(next.copy(failure = MoveFailure.HASH_MISMATCH))
           throw Stop(MoveOutcome.Failed(MoveFailure.HASH_MISMATCH, file.path))
         }
         next = save(next.withEntry(copied))
@@ -216,7 +230,7 @@ class MoveRunner(
 
   private fun catchUpCopy(sourceRoot: File, targetRoot: File, file: MoveSourceFile): MoveEntry {
     val target = File(targetRoot, file.path)
-    val sha256 = DurableFiles.copy(File(sourceRoot, file.path), target, ::cancelling)
+    val sha256 = DurableFiles.copyAndHash(File(sourceRoot, file.path), target, cancelRequested::get)
     val copied = MoveEntry(file.path, file.size, file.modified, sha256)
     if (copyMatches(targetRoot, copied)) return copied.copy(verified = true)
     deleteCopy(targetRoot, file.path)
@@ -224,11 +238,13 @@ class MoveRunner(
   }
 
   private fun switchTo(state: MoveState): MoveState =
-    synchronized(switchLock) {
+    synchronized(cancelOrSwitchLock) {
       if (cancelRequested.get()) throw InterruptedIOException()
       folder.select(state.target)
       save(state.copy(phase = MovePhase.SWITCHED))
     }
+
+  private fun switched(state: MoveState) = folder.storedLocation() == state.target
 
   private fun cleaning(state: MoveState): MoveState {
     val sourceRoot = mountedRoot(state.source) ?: throw Stop(MoveOutcome.Failed(MoveFailure.SOURCE_UNAVAILABLE))
@@ -237,9 +253,13 @@ class MoveRunner(
     return save(state.copy(phase = MovePhase.DONE))
   }
 
+  // Preflight proved every planned path absent on the target, so past it each one present there is ours.
   private fun discard(state: MoveState): Boolean {
-    val targetRoot = mountedRoot(state.target) ?: return false
-    state.files.forEach { deleteCopy(targetRoot, it.path) }
+    if (switched(state)) return false
+    if (state.phase > MovePhase.PREFLIGHT) {
+      val targetRoot = mountedRoot(state.target) ?: return false
+      state.files.forEach { deleteCopy(targetRoot, it.path) }
+    }
     journal.clear()
     return true
   }
@@ -266,9 +286,7 @@ class MoveRunner(
   }
 
   private fun mountedRoot(location: DataFolderLocation): File? =
-    (folder.rootState(location) as? RootState.Mounted)?.root
-
-  private fun cancelling(): Boolean = cancelRequested.get()
+    (folder.rootStateAt(location) as? RootState.Mounted)?.root
 
   private fun save(state: MoveState): MoveState {
     journal.save(state)

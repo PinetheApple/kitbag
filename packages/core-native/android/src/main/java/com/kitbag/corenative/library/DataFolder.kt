@@ -2,10 +2,8 @@ package com.kitbag.corenative.library
 
 import android.content.Context
 import android.util.Log
-import com.kitbag.corenative.stemdeck.writeAtomically
 import java.io.File
 import java.io.IOException
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.write
@@ -31,13 +29,17 @@ sealed interface LibraryFile {
 sealed interface RootState {
   fun resolve(relativePath: String): LibraryFile
 
-  data class Mounted(val root: File, val known: Boolean, val away: List<AwayFiles> = emptyList()) : RootState {
-    // Not known: a bad state file fell back to internal, where a card's songs are absent, not gone.
+  data class Mounted(
+    val root: File,
+    // False when the state file or the away list is unreadable: an absent song may sit on a card, not be gone.
+    val known: Boolean,
+    val away: List<AwayFiles> = emptyList(),
+  ) : RootState {
     override fun resolve(relativePath: String): LibraryFile {
       val file = LibraryPaths.resolve(root, relativePath)
       if (file.exists()) return LibraryFile.Present(file)
-      away.firstOrNull { relativePath in it.paths }?.let { awayFile(it, relativePath) }?.let { return it }
-      return if (known) LibraryFile.Missing else LibraryFile.Unknown
+      val awayFile = away.firstOrNull { relativePath in it.paths }?.let { awayFile(it, relativePath) }
+      return awayFile ?: if (known) LibraryFile.Missing else LibraryFile.Unknown
     }
 
     private fun awayFile(away: AwayFiles, relativePath: String): LibraryFile? {
@@ -63,40 +65,25 @@ class DataFolder(
   private val warn: (message: String, cause: Exception) -> Unit,
 ) {
   val internalRoot = File(filesDir, DIR_NAME)
-  private val stateFile = File(filesDir, STATE_FILE_NAME)
-  private val warned = AtomicBoolean(false)
+  private val stateFile = JsonStateFile(File(filesDir, STATE_FILE_NAME), "using internal storage", warn)
   private val awayManifest = AwayManifest(File(filesDir, AwayManifest.FILE_NAME), warn)
 
-  val importLock = ReentrantReadWriteLock()
+  internal val importLock = ReentrantReadWriteLock()
 
   fun <T> importing(block: () -> T): T = importLock.read(block)
 
   fun <T> switching(block: () -> T): T = importLock.write(block)
 
-  fun location(): DataFolderLocation = readLocation() ?: DataFolderLocation.Internal
+  fun location(): DataFolderLocation = storedLocation() ?: DataFolderLocation.Internal
 
-  private fun readLocation(): DataFolderLocation? {
-    if (!stateFile.isFile) return DataFolderLocation.Internal
-    return try {
-      locationOf(JSONObject(stateFile.readText()))
-    } catch (e: JSONException) {
-      unreadable(e)
-    } catch (e: IOException) {
-      unreadable(e)
-    }
-  }
+  fun storedLocation(): DataFolderLocation? = stateFile.read(DataFolderLocation.Internal, ::locationOf)
 
-  private fun unreadable(cause: Exception): DataFolderLocation? {
-    if (warned.compareAndSet(false, true)) warn("Unreadable $STATE_FILE_NAME; using internal storage", cause)
-    return null
-  }
-
-  fun select(location: DataFolderLocation) = writeAtomically(stateFile, toJson(location).toString())
+  fun select(location: DataFolderLocation) = stateFile.write(toJson(location))
 
   fun rootState(): RootState {
-    val location = readLocation()
+    val location = storedLocation()
     val away = awayManifest.load()
-    val state = rootState(location ?: DataFolderLocation.Internal)
+    val state = rootStateAt(location ?: DataFolderLocation.Internal)
     return if (state is RootState.Mounted) {
       state.copy(known = location != null && away != null, away = awayFiles(away.orEmpty()))
     } else {
@@ -104,7 +91,7 @@ class DataFolder(
     }
   }
 
-  fun rootState(location: DataFolderLocation): RootState =
+  fun rootStateAt(location: DataFolderLocation): RootState =
     when (location) {
       DataFolderLocation.Internal -> RootState.Mounted(internalRoot, known = true)
       is DataFolderLocation.Card -> cardRoot(location.volumeUuid)?.let { RootState.Mounted(it, known = true) }
@@ -123,7 +110,7 @@ class DataFolder(
   }
 
   fun root(): File =
-    when (val state = rootState(location())) {
+    when (val state = rootStateAt(location())) {
       is RootState.Mounted -> state.root
       is RootState.Unmounted -> throw DataFolderUnavailableException(state.volumeUuid)
     }

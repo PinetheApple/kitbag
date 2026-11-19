@@ -54,7 +54,7 @@ class UseInternalStorageTest {
   }
 
   @Test
-  fun `new imports land in internal storage after the switch`() {
+  fun `a file under internal storage resolves there while the card is away`() {
     fx.runner().useInternalStorage(listOf(SONG))
     val imported = fx.write(fx.internalRoot, IMPORTED, "new".toByteArray())
     assertEquals(LibraryFile.Present(imported.canonicalFile), fx.folder.resolve(IMPORTED))

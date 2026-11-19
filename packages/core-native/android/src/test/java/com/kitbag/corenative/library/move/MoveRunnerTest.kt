@@ -68,8 +68,8 @@ class MoveRunnerTest {
     for (phase in MovePhase.values()) {
       val killer = fx.runner { if (it.phase == phase && it.path == null) throw MoveFixture.Killed() }
       assertThrows(phase.name, MoveFixture.Killed::class.java) { killer.start(card) }
-      assertEquals(phase.name, phase, fx.restart().pending()?.phase)
-      assertEquals(phase.name, MoveOutcome.Done, fx.restart().resume())
+      assertEquals(phase.name, phase, fx.newProcess().pending()?.phase)
+      assertEquals(phase.name, MoveOutcome.Done, fx.newProcess().resume())
       assertMovedToCard()
       tearDown()
       setUp()
@@ -81,9 +81,9 @@ class MoveRunnerTest {
     var copied = 0
     val killer = fx.runner { if (it.phase == MovePhase.COPYING && it.path != null && ++copied == 2) throw MoveFixture.Killed() }
     assertThrows(MoveFixture.Killed::class.java) { killer.start(card) }
-    assertEquals(2, fx.restart().pending()?.files?.count { it.copied })
+    assertEquals(2, fx.newProcess().pending()?.files?.count { it.copied })
     val torn = fx.write(fx.cardRoot, "stems/job1/.drums.wav.part", "torn".toByteArray())
-    assertEquals(MoveOutcome.Done, fx.restart().resume())
+    assertEquals(MoveOutcome.Done, fx.newProcess().resume())
     assertMovedToCard()
     assertFalse(torn.exists())
   }
@@ -95,14 +95,14 @@ class MoveRunnerTest {
     }
     assertEquals(MoveOutcome.Failed(MoveFailure.HASH_MISMATCH, DRUMS), runner.start(card))
     assertSourceUntouched()
-    val paused = fx.restart().pending()!!
+    val paused = fx.newProcess().pending()!!
     assertEquals(MovePhase.COPYING, paused.phase)
-    assertEquals(MoveFailure.HASH_MISMATCH.name, paused.failure)
+    assertEquals(MoveFailure.HASH_MISMATCH, paused.failure)
 
-    assertTrue(fx.restart().cancel())
+    assertTrue(fx.newProcess().cancel())
     assertSourceUntouched()
     assertTrue(cardHasNoFiles())
-    assertNull(fx.restart().pending())
+    assertNull(fx.newProcess().pending())
   }
 
   @Test
@@ -111,7 +111,7 @@ class MoveRunnerTest {
       if (it.phase == MovePhase.VERIFYING && it.path == null) fx.write(fx.cardRoot, DRUMS, "corrupt".toByteArray())
     }
     runner.start(card)
-    assertEquals(MoveOutcome.Done, fx.restart().resume())
+    assertEquals(MoveOutcome.Done, fx.newProcess().resume())
     assertMovedToCard()
   }
 
@@ -195,7 +195,7 @@ class MoveRunnerTest {
     assertEquals(MoveOutcome.AwaitingRelease, fx.runner().start(card))
     assertEquals(card, fx.location())
     assertEquals(fx.hashes(library), fx.visibleFiles(fx.internalRoot))
-    assertEquals(MoveOutcome.AwaitingRelease, fx.restart().resume())
+    assertEquals(MoveOutcome.AwaitingRelease, fx.newProcess().resume())
 
     fx.released = true
     File(fx.internalRoot, SONG).delete()
@@ -203,7 +203,7 @@ class MoveRunnerTest {
     assertEquals(MoveOutcome.Done, runner.resume())
     assertEquals(listOf(fx.internalRoot), gateSaw)
     assertMovedToCard()
-    assertEquals(MoveOutcome.NoMove, fx.restart().resume())
+    assertEquals(MoveOutcome.NoMove, fx.newProcess().resume())
   }
 
   @Test

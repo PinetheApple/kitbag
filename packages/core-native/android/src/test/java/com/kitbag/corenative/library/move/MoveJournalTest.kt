@@ -37,7 +37,7 @@ class MoveJournalTest {
         MoveEntry("songs/a/a.mp3", SIZE, MODIFIED, "ab12", verified = true),
         MoveEntry("stems/j/drums.wav", SIZE, MODIFIED),
       ),
-      failure = MoveFailure.HASH_MISMATCH.name,
+      failure = MoveFailure.HASH_MISMATCH,
     )
     journal.save(state)
     assertEquals(state, journal.load())
@@ -57,6 +57,7 @@ class MoveJournalTest {
       "{\"version\":99,\"phase\":\"COPYING\"}",
       "{\"version\":1,\"phase\":\"NOPE\",\"source\":{\"kind\":\"internal\"},\"target\":{\"kind\":\"internal\"},\"files\":[]}",
       "{\"version\":1,\"phase\":\"CLEANING\",\"source\":{\"kind\":\"elsewhere\"},\"target\":{\"kind\":\"internal\"},\"files\":[]}",
+      "{\"version\":1,\"phase\":\"COPYING\",\"source\":{\"kind\":\"internal\"},\"target\":{\"kind\":\"internal\"},\"failure\":\"OOPS\",\"files\":[]}",
     )
     for (contents in bad) {
       file.writeText(contents)

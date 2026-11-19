@@ -58,14 +58,14 @@ class DurableFilesTest {
   @Test
   fun `a copy reports the SHA-256 of what it copied`() {
     val target = File(cardRoot, "songs/a/a.mp3")
-    assertEquals(ABC_SHA256, DurableFiles.copy(staged("abc"), target))
+    assertEquals(ABC_SHA256, DurableFiles.copyAndHash(staged("abc"), target))
     assertEquals(ABC_SHA256, DurableFiles.sha256(target))
   }
 
   @Test
   fun `an interrupted copy leaves no target and no part`() {
     val target = File(cardRoot, "a.mp3")
-    assertThrows(InterruptedIOException::class.java) { DurableFiles.copy(staged("abc"), target) { true } }
+    assertThrows(InterruptedIOException::class.java) { DurableFiles.copyAndHash(staged("abc"), target) { true } }
     assertFalse(target.exists())
     assertFalse(DurableFiles.partOf(target).exists())
   }

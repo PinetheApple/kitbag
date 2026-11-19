@@ -99,7 +99,7 @@ class DataFolderTest {
   @Test
   fun `a malformed state file means internal and is logged once`() {
     val stateFile = File(filesDir, DataFolder.STATE_FILE_NAME)
-    for (contents in listOf("{not json", "", "[]", "\"card\"", "{\"kind\":\"card\"}")) {
+    for (contents in listOf("{not json", "", "[]", "\"card\"", "{\"kind\":\"card\"}", "{\"kind\":\"tape\"}")) {
       stateFile.writeText(contents)
       assertEquals(contents, DataFolderLocation.Internal, folder.location())
       assertEquals(contents, internalRoot(), folder.root())

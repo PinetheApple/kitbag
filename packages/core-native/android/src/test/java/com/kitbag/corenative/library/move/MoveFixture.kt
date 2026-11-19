@@ -35,8 +35,7 @@ class MoveFixture(temp: File) {
   fun runner(listener: (MoveProgress) -> Unit = {}) =
     MoveRunner(folder, MoveJournal(journalFile) { message, _ -> warnings.add(message) }, { freeBytes }, { released }, listener)
 
-  // Each kill is a new process: fresh DataFolder and runner over the same files.
-  fun restart(): MoveRunner {
+  fun newProcess(): MoveRunner {
     folder = newFolder()
     return runner()
   }
@@ -60,7 +59,7 @@ class MoveFixture(temp: File) {
     }
 
   fun hashes(library: Map<String, ByteArray>): Map<String, String> =
-    library.mapValues { (_, bytes) -> DurableFiles.hex(DurableFiles.digest().apply { update(bytes) }) }
+    library.mapValues { (_, bytes) -> DurableFiles.sha256(bytes) }
 
   fun visibleFiles(root: File): Map<String, String> =
     MovePlan.scan(root).associate { it.path to DurableFiles.sha256(File(root, it.path)) }

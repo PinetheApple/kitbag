@@ -88,10 +88,12 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     files.share(ExportFiles.shareSpec(), promise) { file }
   }
 
-  private fun libraryRoot() = DataFolder.root(reactApplicationContext)
+  private fun dataFolder() = DataFolder.get(reactApplicationContext)
+
+  private fun libraryRoot() = dataFolder().root()
 
   override fun importAudio(uri: String, relativeDir: String, promise: Promise) {
-    io.execute { DataFolder.get(reactApplicationContext).importing { importAudioLocked(uri, relativeDir, promise) } }
+    io.execute { dataFolder().importing { importAudioLocked(uri, relativeDir, promise) } }
   }
 
   private fun importAudioLocked(uri: String, relativeDir: String, promise: Promise) {
@@ -236,9 +238,11 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   override fun deleteLibraryFile(relativePath: String, promise: Promise) {
     io.execute {
       try {
-        val target = LibraryPaths.resolve(libraryRoot(), relativePath)
-        if (target.isDirectory) throw IOException("$target is a directory")
-        if (target.exists() && !target.delete()) throw IOException("Could not delete $target")
+        dataFolder().importing {
+          val target = LibraryPaths.resolve(libraryRoot(), relativePath)
+          if (target.isDirectory) throw IOException("$target is a directory")
+          if (target.exists() && !target.delete()) throw IOException("Could not delete $target")
+        }
         promise.resolve(null)
       } catch (e: Exception) {
         rejectLogged(promise, E_DELETE_FAILED, "Delete failed", e)
@@ -253,8 +257,10 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   private fun deleteFolder(promise: Promise, resolveFolder: () -> File) {
     io.execute {
       try {
-        val folder = resolveFolder()
-        if (folder.exists() && !folder.deleteRecursively()) throw IOException("Could not delete $folder")
+        dataFolder().importing {
+          val folder = resolveFolder()
+          if (folder.exists() && !folder.deleteRecursively()) throw IOException("Could not delete $folder")
+        }
         promise.resolve(null)
       } catch (e: Exception) {
         rejectLogged(promise, E_DELETE_FAILED, "Delete failed", e)
@@ -275,7 +281,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   override fun importStemBundle(uri: String, isFolder: Boolean, promise: Promise) {
     io.execute {
       try {
-        promise.resolve(DataFolder.get(reactApplicationContext).importing { bundles.import(uri, isFolder) })
+        promise.resolve(dataFolder().importing { bundles.import(uri, isFolder) })
       } catch (e: StemBundleRefusedException) {
         rejectLogged(promise, e.refusal, "The bundle was refused", e)
       } catch (e: Exception) {
