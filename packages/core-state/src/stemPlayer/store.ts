@@ -11,6 +11,12 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import { mixActions, transportActions } from './actions.ts';
 import { barMarkDownbeats, sameNumbers } from './bars.ts';
 import { clickActions, followNewGrid, releaseClick } from './clickActions.ts';
+import {
+  exportActions,
+  NO_EXPORT,
+  type ExportActions,
+  type ExportSlice,
+} from './exportActions.ts';
 import { NO_SONG_FACTS, songFacts, type SongFacts } from './facts.ts';
 import type { LoopEdge, LoopSeconds } from './loop.ts';
 import { sectionLoopActions } from './loopActions.ts';
@@ -138,7 +144,10 @@ export interface StemPlayerActions {
   ) => void;
 }
 
-export type StemPlayerStore = StemPlayerState & StemPlayerActions;
+export type StemPlayerStore = StemPlayerState &
+  ExportSlice &
+  StemPlayerActions &
+  ExportActions;
 export type SetState = StoreApi<StemPlayerStore>['setState'];
 export type Get = StoreApi<StemPlayerStore>['getState'];
 
@@ -397,6 +406,7 @@ export function createStemPlayerStore(
 
     return {
       ...closedState,
+      exportState: NO_EXPORT,
       open: async (setId, waveformBars) => {
         await loadSession(beginSession(setId), setId, waveformBars);
       },
@@ -426,6 +436,7 @@ export function createStemPlayerStore(
         set({ meterOverride, downbeatIndices: downbeats });
         void followNewGrid(context, start.gridReplaced);
       },
+      ...exportActions(context),
     };
   });
 }

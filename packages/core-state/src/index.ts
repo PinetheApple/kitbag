@@ -329,7 +329,26 @@ export {
   type StemPlayerEngine,
   type StemPlayerRecords,
   type StemPlayerRuntime,
+  type MixdownRuntime,
 } from './stemPlayer/runtime.ts';
+export {
+  EXPORT_POLL_MS,
+  exportBlock,
+  type ExportBlock,
+  type ExportSong,
+  type ExportState,
+} from './stemPlayer/exportActions.ts';
+export type { ExportSummary } from './stemPlayer/exportSummary.ts';
+export {
+  EXPORT_CANCELLED,
+  EXPORT_SHARE_FAILED,
+  EXPORT_UNSHARED,
+  exportFailureCopy,
+  megabytes,
+  percentOf,
+  type ExportCopy,
+  type ExportFailure,
+} from './stemPlayer/exportText.ts';
 export {
   formatClock,
   framesToSeconds,

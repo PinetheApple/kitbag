@@ -23,6 +23,7 @@ vi.mock('@kitbag/core-state', () => ({
   configureStemPlayer: mocks.configureStemPlayer,
 }));
 vi.mock('./database.ts', () => ({ getDatabase: vi.fn() }));
+vi.mock('./mixdownRuntime.ts', () => ({ mixdownRuntime: {} }));
 vi.mock('./notificationPermission.ts', () => ({
   askForNotificationsOnce: vi.fn(),
 }));

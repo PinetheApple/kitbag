@@ -78,6 +78,8 @@ export const iconGlyphs = {
   stemDeckServer: 'lan',
   trusted: 'shield-check-outline',
   certificateChanged: 'shield-alert-outline',
+  exportMix: 'file-export-outline',
+  share: 'share-variant',
 } as const satisfies Record<string, VectorGlyph>;
 
 export type IconName = keyof typeof iconGlyphs;

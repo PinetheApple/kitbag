@@ -6,9 +6,12 @@ import {
   textRoles,
   textStyle,
 } from '@kitbag/core-design';
-import { useStemPlayer } from '@kitbag/core-state';
+import { exportBlock, useStemPlayer } from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { Pressable, Text } from 'react-native';
+
+import { exportRowValue } from '../logic/exportView.ts';
+import { useMixdownProgress } from './useMixdownProgress.ts';
 
 const useStyles = createThemedStyles((theme) => ({
   row: {
@@ -28,15 +31,55 @@ const useStyles = createThemedStyles((theme) => ({
     flexShrink: 1,
     textAlign: 'right',
   },
+  off: { color: theme.color.text3 },
 }));
+
+interface ExportRowProps {
+  readonly visible: boolean;
+  readonly onExport: () => void;
+}
+
+function ExportRow({ visible, onExport }: ExportRowProps) {
+  const styles = useStyles();
+  const block = useStemPlayer(exportBlock);
+  const percent = useMixdownProgress(visible && block === 'running');
+  const value = exportRowValue(block, percent);
+  const disabled = block !== null;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={
+        disabled ? `Export mix: ${value}` : 'Export mix as a WAV file'
+      }
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      style={styles.row}
+      onPress={onExport}
+    >
+      <Icon
+        name="exportMix"
+        size="title"
+        color={disabled ? 'decor' : 'text2'}
+      />
+      <Text style={[styles.label, disabled && styles.off]}>Export mix</Text>
+      <Text style={[styles.value, disabled && styles.off]}>{value}</Text>
+    </Pressable>
+  );
+}
 
 interface PlayerMenuProps {
   readonly visible: boolean;
   readonly bottomInset: number;
   readonly onClose: () => void;
+  readonly onExport: () => void;
 }
 
-export function PlayerMenu({ visible, bottomInset, onClose }: PlayerMenuProps) {
+export function PlayerMenu({
+  visible,
+  bottomInset,
+  onClose,
+  onExport,
+}: PlayerMenuProps) {
   const styles = useStyles();
   const resetMix = useStemPlayer((s) => s.resetMix);
   const reset = useCallback(() => {
@@ -61,6 +104,7 @@ export function PlayerMenu({ visible, bottomInset, onClose }: PlayerMenuProps) {
         <Text style={styles.label}>Reset mix</Text>
         <Text style={styles.value}>levels, mutes, solos</Text>
       </Pressable>
+      <ExportRow visible={visible} onExport={onExport} />
     </Sheet>
   );
 }

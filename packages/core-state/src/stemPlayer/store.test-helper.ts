@@ -1,6 +1,7 @@
 import type { MeterOverride, StemSetRecord, StoredStem } from '@kitbag/core-db';
 import {
   KB_COUNT_IN_OFF,
+  KB_MIXDOWN_STATE,
   KB_MIXER_UNITY_RATE,
   KB_RESULT,
   type SongTransportRequest,
@@ -10,10 +11,12 @@ import type { StoreApi } from 'zustand/vanilla';
 
 import { COUNT_IN_DRAIN_MARGIN_SECONDS } from './countedStart.ts';
 import type {
+  MixdownRuntime,
   StemPlayerCommands,
   StemPlayerRecords,
   StemPlayerRuntime,
 } from './runtime.ts';
+import { CODES } from '../songLibrary/store.test-helper.ts';
 import { createStemPlayerStore, type StemPlayerStore } from './store.ts';
 
 export const RATE = 44100;
@@ -173,6 +176,27 @@ export function fakeRuntime(set: StemSetRecord) {
   };
   const sharedMetronome = { active: vi.fn(() => false), release: vi.fn() };
   const countInBars = vi.fn<() => number>(() => KB_COUNT_IN_OFF);
+  const mixdownEngine = {
+    state: KB_MIXDOWN_STATE.KB_MIXDOWN_STATE_IDLE as KB_MIXDOWN_STATE,
+    progress: 0,
+  };
+  const mixdown = {
+    start: vi.fn<MixdownRuntime['start']>((fileName) => {
+      mixdownEngine.state = KB_MIXDOWN_STATE.KB_MIXDOWN_STATE_RUNNING;
+      mixdownEngine.progress = 0;
+      return Promise.resolve({
+        result: KB_RESULT.KB_OK,
+        path: `/cache/exports/${fileName}`,
+      });
+    }),
+    cancel: vi.fn(),
+    progress: () => mixdownEngine.progress,
+    state: () => mixdownEngine.state,
+    share: vi.fn<MixdownRuntime['share']>(() => Promise.resolve()),
+    announce: vi.fn<MixdownRuntime['announce']>(),
+    foreground: vi.fn(() => true),
+    codes: () => CODES,
+  };
   const runtime: StemPlayerRuntime = {
     commands,
     records,
@@ -185,6 +209,7 @@ export function fakeRuntime(set: StemSetRecord) {
     },
     countInBars,
     readWaveform: vi.fn(() => Promise.resolve([0.5])),
+    mixdown,
   };
   const stopSongFromNotification = () => {
     engine.playing = false;
@@ -205,6 +230,8 @@ export function fakeRuntime(set: StemSetRecord) {
     engine,
     sharedMetronome,
     countInBars,
+    mixdown,
+    mixdownEngine,
     stopSongFromNotification,
     songStopListeners: songStopped,
     requestFromNotification,
