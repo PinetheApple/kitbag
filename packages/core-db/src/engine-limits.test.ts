@@ -20,7 +20,11 @@ import {
   MIN_BPM,
   NORMAL_ACCENT,
   POLY_AGAINST_BAR,
+  CUSTOM_SOUND_RATE,
+  CUSTOM_SOUND_SAMPLE_BYTES,
   CUSTOM_SOUND_SLOTS,
+  MAX_CUSTOM_SOUND_SECONDS,
+  WAV_HEADER_BYTES,
   SOUND_COUNT,
   TICK_SOUND,
 } from './preset-rules';
@@ -40,6 +44,10 @@ const headers = {
 };
 const api = source('include/kitbag_api.h');
 const clickSoundApi = source('include/kitbag_click_sound_api.h');
+const customSoundLimits = source('src/metronome/custom_sound_limits.h');
+const clickSoundPrepare = source('src/metronome/click_sound_prepare.cpp');
+const riffBytes = source('src/media/riff_bytes.h');
+const BITS_PER_BYTE = 8;
 const polyApi = source('include/kitbag_metronome_poly_api.h');
 const tunerApi = source('include/kitbag_tuner_api.h');
 const gridApi = source('include/kitbag_metronome_grid_api.h');
@@ -95,6 +103,24 @@ describe('engine limits mirrored in core-db', () => {
       Number(/#define KB_CUSTOM_SOUND_SLOTS (\d+)/.exec(clickSoundApi)?.[1]),
     ).toBe(CUSTOM_SOUND_SLOTS);
     expect(constant('kFirstCustomSound')).toBe('kSoundCount');
+  });
+
+  it('match the prepared click sound WAV that bounds a backup', () => {
+    expect(
+      Number(
+        /#define KB_MAX_CUSTOM_SOUND_SECONDS (\d+)/.exec(clickSoundApi)?.[1],
+      ),
+    ).toBe(MAX_CUSTOM_SOUND_SECONDS);
+    expect(
+      Number(/kCustomSoundRate = (\d+);/.exec(customSoundLimits)?.[1]),
+    ).toBe(CUSTOM_SOUND_RATE);
+    expect(
+      Number(/kFloatBits = (\d+);/.exec(clickSoundPrepare)?.[1]) /
+        BITS_PER_BYTE,
+    ).toBe(CUSTOM_SOUND_SAMPLE_BYTES);
+    expect(Number(/kHeaderBytes = (\d+);/.exec(riffBytes)?.[1])).toBe(
+      WAV_HEADER_BYTES,
+    );
   });
 
   it('match the kb_accent enum in kitbag_api.h', () => {

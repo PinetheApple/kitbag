@@ -134,7 +134,7 @@ export function createRestoreStore(deps: () => BackupDeps = getBackup) {
         .apply(state.plan, { confirmReplace });
       if (result.ok) {
         show({ phase: 'done', mode: state.plan.mode, ...result.value });
-        await deps().afterRestore();
+        await deps().afterRestore(result.value);
         return;
       }
       if (result.error.kind === 'stalePlan') {

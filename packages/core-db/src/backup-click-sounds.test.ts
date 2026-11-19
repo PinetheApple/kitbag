@@ -9,7 +9,12 @@ import {
 import { decodeBase64, encodeBase64 } from './base64';
 import { freshClickSoundFileName } from './click-sound-files';
 import type { ClickSound } from './click-sound-repository';
-import { CUSTOM_SOUND_SLOTS, SOUND_COUNT, TICK_SOUND } from './preset-rules';
+import {
+  CUSTOM_SOUND_SLOTS,
+  MAX_CUSTOM_SOUND_WAV_BYTES,
+  SOUND_COUNT,
+  TICK_SOUND,
+} from './preset-rules';
 
 type SoundIdentity = Omit<ClickSound, 'fileName'>;
 
@@ -283,6 +288,7 @@ describe('song sounds after a restore', () => {
       ),
     );
     expect(report.soundResets).toBe(1);
+    expect(report.staleSlots.local).toEqual([HAT.slot]);
     expect(await target.presets.get(local.id)).toMatchObject({
       sound: TICK_SOUND,
     });
@@ -302,6 +308,10 @@ describe('song sounds after a restore', () => {
       ),
     );
     expect(report.soundResets).toBe(0);
+    expect(report.staleSlots).toEqual({
+      local: [],
+      restored: [RIMSHOT.slot, CUSTOM_SOUND_SLOTS - 1],
+    });
     expect(await target.presets.get(local.id)).toMatchObject({
       sound: SLOT_ZERO_ID,
     });
@@ -329,6 +339,27 @@ describe('click sound records in a backup file', () => {
       ok: false,
       error: { kind: 'invalidField', path: '$.clickSounds[0].wav' },
     });
+  });
+
+  it('refuses audio longer than the engine keeps', async () => {
+    const { file } = await rimshotBackup();
+    const target = openBackupDatabase();
+    const wav = encodeBase64(new Uint8Array(MAX_CUSTOM_SOUND_WAV_BYTES + 1));
+    const bad = withClickSounds(file, [{ ...RIMSHOT, wav }]);
+    expect(await target.backup.plan(bad)).toMatchObject({
+      ok: false,
+      error: { kind: 'invalidField', path: '$.clickSounds[0].wav' },
+    });
+  });
+
+  it('accepts the longest audio the engine keeps', async () => {
+    const { file } = await rimshotBackup();
+    const target = openBackupDatabase();
+    const wav = encodeBase64(new Uint8Array(MAX_CUSTOM_SOUND_WAV_BYTES));
+    expect(
+      (await target.backup.plan(withClickSounds(file, [{ ...RIMSHOT, wav }])))
+        .ok,
+    ).toBe(true);
   });
 
   it('refuses two sounds in one slot', async () => {

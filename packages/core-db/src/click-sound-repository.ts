@@ -64,10 +64,21 @@ export function createClickSoundRepository({ db, transactor }: DatabaseHandle) {
       }),
     rename: (slot: number, name: string) =>
       serial(async () => {
+        checkSlot(slot);
         await db
           .update(clickSounds)
           .set({ name: checkedName(name) })
           .where(eq(clickSounds.slot, slot));
+      }),
+    add: (sound: ClickSound) =>
+      serial(async () => {
+        checkSlot(sound.slot);
+        const added = await db
+          .insert(clickSounds)
+          .values({ ...sound, name: checkedName(sound.name) })
+          .onConflictDoNothing()
+          .returning({ slot: clickSounds.slot });
+        return added.length > 0;
       }),
     remove: (slot: number): Promise<RemovedClickSound> =>
       transaction(async () => {

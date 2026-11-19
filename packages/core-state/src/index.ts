@@ -533,7 +533,11 @@ export {
   type ClickSoundState,
   type ClickSoundStore,
 } from './clickSounds/store.ts';
-export { releaseRemovedSound } from './clickSounds/released.ts';
+export {
+  releaseRemovedSound,
+  releaseSound,
+  releaseStaleSounds,
+} from './clickSounds/released.ts';
 export {
   configureBackup,
   getBackup,

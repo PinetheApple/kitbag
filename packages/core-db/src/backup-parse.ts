@@ -31,6 +31,7 @@ import { decodeBase64, presetBytes } from './base64';
 import { isClickSoundSlot } from './click-sound-repository';
 import {
   CUSTOM_SOUND_SLOTS,
+  MAX_CUSTOM_SOUND_WAV_BYTES,
   MIN_RAMP_STEP,
   normalizePolyAgainst,
   POLY_AGAINST_BAR,
@@ -200,8 +201,12 @@ function readClickSound(value: unknown, path: string): ClickSoundRecord {
       `expected 0–${String(CUSTOM_SOUND_SLOTS - 1)}`,
     );
   if (record.name.trim() === '') invalidField(`${path}.name`, 'expected text');
-  if (base64Length(record.wav) === 0)
-    invalidField(`${path}.wav`, 'expected audio bytes');
+  const bytes = base64Length(record.wav);
+  if (bytes === 0 || bytes > MAX_CUSTOM_SOUND_WAV_BYTES)
+    invalidField(
+      `${path}.wav`,
+      `expected 1–${String(MAX_CUSTOM_SOUND_WAV_BYTES)} audio bytes`,
+    );
   return record;
 }
 

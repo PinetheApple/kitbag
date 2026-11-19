@@ -32,13 +32,14 @@ export async function resetStaleSounds(
     .from(songPresets);
   let reset = 0;
   for (const row of rows) {
-    const kept = (soundId: number) => {
+    const soundAfterReset = (soundId: number) => {
       const slot = customSlotOf(soundId);
       return slot !== null && stale(row.uuid, slot) ? TICK_SOUND : soundId;
     };
-    const sound = kept(row.sound);
+    const sound = soundAfterReset(row.sound);
     const perAccentSounds =
-      row.perAccentSounds && Uint8Array.from(row.perAccentSounds, kept);
+      row.perAccentSounds &&
+      Uint8Array.from(row.perAccentSounds, soundAfterReset);
     if (sound === row.sound && sameBytes(perAccentSounds, row.perAccentSounds))
       continue;
     await db

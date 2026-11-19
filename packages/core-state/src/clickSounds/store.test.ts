@@ -16,6 +16,12 @@ import { createClickSoundStore } from './store.ts';
 
 const SOURCE = 'content://picked/rimshot.flac';
 const PREPARED = 'UklGRiQAAAA=';
+const STORED = {
+  slot: 0,
+  uuid: '6f1c2a3b-4d5e-4f60-8a71-92b3c4d5e6f7',
+  name: 'Stored',
+  fileName: 'stored.wav',
+};
 
 function harness(database: BackupDatabase = openBackupDatabase()) {
   const { files, stored } = database.clickSoundFiles;
@@ -90,9 +96,10 @@ describe('importing a click sound', () => {
     expect(await h.database.clickSounds.list()).toEqual([]);
   });
 
-  it('puts the old sound back in the engine when storing the new one fails', async () => {
+  it('puts the stored sound back in the engine when storing the new one fails', async () => {
     const h = harness();
     await h.state().importSound(SOURCE, 'Rimshot');
+    h.store.setState({ sounds: [] });
     vi.spyOn(h.database.clickSounds, 'put').mockRejectedValueOnce(
       new Error('disk I/O error'),
     );
@@ -101,6 +108,43 @@ describe('importing a click sound', () => {
     );
     expect(h.deps.load).toHaveBeenLastCalledWith(0, 'file-1.wav');
     expect([...h.stored.keys()]).toEqual(['file-1.wav']);
+  });
+
+  it('picks a free slot from the database, not a list sync has not filled yet', async () => {
+    const database = openBackupDatabase();
+    await database.clickSounds.put(STORED);
+    const h = harness(database);
+    const outcome = await h.state().importSound(SOURCE, 'Rimshot');
+    expect(outcome).toMatchObject({ kind: 'saved', sound: { slot: 1 } });
+    expect(await database.clickSounds.get(STORED.slot)).toEqual(STORED);
+    expect(h.deps.load).not.toHaveBeenCalledWith(
+      STORED.slot,
+      expect.anything(),
+    );
+  });
+
+  it('reports every slot full without preparing when the database holds them all', async () => {
+    const database = openBackupDatabase();
+    for (let slot = 0; slot < KB_CUSTOM_SOUND_SLOTS; slot += 1)
+      await database.clickSounds.put({ ...STORED, slot });
+    const h = harness(database);
+    expect(await h.state().importSound(SOURCE, 'Rimshot')).toEqual({
+      kind: 'full',
+    });
+    expect(h.deps.prepare).not.toHaveBeenCalled();
+  });
+
+  it('keeps a sound stored after the free-slot check and reports full', async () => {
+    const database = openBackupDatabase();
+    await database.clickSounds.put(STORED);
+    vi.spyOn(database.clickSounds, 'list').mockResolvedValueOnce([]);
+    const h = harness(database);
+    expect(await h.state().importSound(SOURCE, 'Rimshot')).toEqual({
+      kind: 'full',
+    });
+    expect(await database.clickSounds.get(STORED.slot)).toEqual(STORED);
+    expect(h.deps.load).not.toHaveBeenCalled();
+    expect(h.stored.size).toBe(0);
   });
 
   it('runs one import at a time', async () => {

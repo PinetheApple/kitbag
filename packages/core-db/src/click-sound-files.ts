@@ -1,6 +1,6 @@
 export interface ClickSoundFiles {
   read(fileName: string): Promise<string>;
-  write(fileName: string, wav: string): Promise<void>;
+  write(fileName: string, wavBase64: string): Promise<void>;
   remove(fileName: string): Promise<void>;
 }
 

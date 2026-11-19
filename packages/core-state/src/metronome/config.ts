@@ -2,6 +2,7 @@ import {
   KB_ACCENT,
   KB_BPM_BOUNDS,
   KB_COUNT_IN_BARS,
+  KB_DEFAULT_SOUNDS,
   KB_MAX_RAMP_BARS,
   KB_MIN_RAMP_BARS,
   KB_MIN_RAMP_STEP_BPM,
@@ -30,6 +31,17 @@ export interface PerAccentSounds {
   readonly normal: number;
   readonly accent: number;
 }
+
+export const usesSound = (sounds: PerAccentSounds, soundId: number) =>
+  sounds.normal === soundId || sounds.accent === soundId;
+
+export const withoutSound = (
+  sounds: PerAccentSounds,
+  soundId: number,
+): PerAccentSounds => ({
+  normal: sounds.normal === soundId ? KB_DEFAULT_SOUNDS.normal : sounds.normal,
+  accent: sounds.accent === soundId ? KB_DEFAULT_SOUNDS.accent : sounds.accent,
+});
 
 export interface CountInConfig {
   readonly bars: KbCountInBars;

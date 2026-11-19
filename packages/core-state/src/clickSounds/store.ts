@@ -49,60 +49,94 @@ export function createClickSoundStore(
         .catch(() => undefined);
     };
 
-    const restoreEngine = async (slot: number) => {
-      const previous = get().sounds.find((sound) => sound.slot === slot);
-      if (previous === undefined) deps().clear(slot);
-      else await deps().load(slot, previous.fileName);
+    const applyToEngine = async (slot: number, sound: ClickSound | null) => {
+      if (sound === null) deps().clear(slot);
+      else await deps().load(slot, sound.fileName);
     };
 
-    const save = async (
+    const saved = async (slot: number): Promise<ClickSoundOutcome> => {
+      await refresh();
+      const sound = get().sounds.find((stored) => stored.slot === slot);
+      if (sound === undefined) throw new Error('Saved click sound missing');
+      return { kind: 'saved', sound };
+    };
+
+    const prepared = async (sourceUri: string) => {
+      const fileName = deps().freshFileName();
+      const result = await deps().prepare(sourceUri, fileName);
+      return { fileName, result };
+    };
+
+    const add = async (
+      sourceUri: string,
+      name: string,
+    ): Promise<ClickSoundOutcome> => {
+      const { repository, load, newUuid } = deps();
+      const taken = new Set((await repository().list()).map((s) => s.slot));
+      const slot = SLOTS.find((free) => !taken.has(free));
+      if (slot === undefined) return { kind: 'full' };
+      const { fileName, result } = await prepared(sourceUri);
+      if (result !== KB_RESULT.KB_OK) return { kind: 'refused', result };
+      const sound = { slot, uuid: newUuid(), name, fileName };
+      const added = await repository()
+        .add(sound)
+        .catch(async (error: unknown) => {
+          await discard(fileName);
+          throw error;
+        });
+      if (!added) {
+        await discard(fileName);
+        return { kind: 'full' };
+      }
+      const loaded = await load(slot, fileName);
+      if (loaded !== KB_RESULT.KB_OK) {
+        await repository().remove(slot);
+        await discard(fileName);
+        return { kind: 'refused', result: loaded };
+      }
+      return saved(slot);
+    };
+
+    const replace = async (
       slot: number,
       sourceUri: string,
       name: string,
     ): Promise<ClickSoundOutcome> => {
-      const { prepare, load, repository, newUuid, freshFileName } = deps();
-      const fileName = freshFileName();
-      const prepared = await prepare(sourceUri, fileName);
-      if (prepared !== KB_RESULT.KB_OK)
-        return { kind: 'refused', result: prepared };
+      const { repository, load, newUuid } = deps();
+      const { fileName, result } = await prepared(sourceUri);
+      if (result !== KB_RESULT.KB_OK) return { kind: 'refused', result };
       const loaded = await load(slot, fileName);
       if (loaded !== KB_RESULT.KB_OK) {
         await discard(fileName);
         return { kind: 'refused', result: loaded };
       }
-      const sound = { slot, uuid: newUuid(), name, fileName };
       let previous: ClickSound | null;
       try {
-        previous = await repository().put(sound);
+        previous = await repository().put({
+          slot,
+          uuid: newUuid(),
+          name,
+          fileName,
+        });
       } catch (error) {
-        await restoreEngine(slot);
+        await applyToEngine(slot, await repository().get(slot));
         await discard(fileName);
         throw error;
       }
       if (previous !== null) await discard(previous.fileName);
-      await refresh();
-      const saved = get().sounds.find((stored) => stored.slot === slot);
-      return { kind: 'saved', sound: saved ?? sound };
+      return saved(slot);
     };
 
-    const guarded = async (
-      slot: number | undefined,
-      sourceUri: string,
-      name: string,
+    const oneAtATime = async (
+      work: () => Promise<ClickSoundOutcome>,
     ): Promise<ClickSoundOutcome> => {
       if (get().importing) return { kind: 'busy' };
-      if (slot === undefined) return { kind: 'full' };
       set({ importing: true });
       try {
-        return await save(slot, sourceUri, name);
+        return await work();
       } finally {
         set({ importing: false });
       }
-    };
-
-    const freeSlot = () => {
-      const taken = new Set(get().sounds.map(({ slot }) => slot));
-      return SLOTS.find((slot) => !taken.has(slot));
     };
 
     return {
@@ -110,15 +144,16 @@ export function createClickSoundStore(
       importing: false,
       sync: async () => {
         const sounds = await deps().repository().list();
-        for (const slot of SLOTS) {
-          const sound = sounds.find((row) => row.slot === slot);
-          if (sound === undefined) deps().clear(slot);
-          else await deps().load(slot, sound.fileName);
-        }
+        for (const slot of SLOTS)
+          await applyToEngine(
+            slot,
+            sounds.find((sound) => sound.slot === slot) ?? null,
+          );
         set({ sounds });
       },
-      importSound: (sourceUri, name) => guarded(freeSlot(), sourceUri, name),
-      replace: (slot, sourceUri, name) => guarded(slot, sourceUri, name),
+      importSound: (sourceUri, name) => oneAtATime(() => add(sourceUri, name)),
+      replace: (slot, sourceUri, name) =>
+        oneAtATime(() => replace(slot, sourceUri, name)),
       rename: async (slot, name) => {
         await deps().repository().rename(slot, name);
         await refresh();

@@ -88,6 +88,7 @@ export {
   type ImportResult,
   type TuningRecord,
 } from './backup-format';
+export type { StaleSlots } from './backup-apply';
 export type { ApplyOptions, ApplyReport, BackupService } from './backup';
 export {
   freshClickSoundFileName,

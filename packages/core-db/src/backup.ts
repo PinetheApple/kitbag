@@ -13,6 +13,7 @@ import {
   applyWrites,
   type ClickSoundFileLog,
   type FileContext,
+  type SoundOutcome,
 } from './backup-apply';
 import { parseBackup } from './backup-parse';
 import {
@@ -30,9 +31,8 @@ export interface ApplyOptions {
   confirmReplace?: boolean;
 }
 
-export interface ApplyReport {
+export interface ApplyReport extends SoundOutcome {
   counts: Partial<Record<Category, CategoryPlan>>;
-  soundResets: number;
 }
 
 async function asResult<T>(work: () => Promise<T>): Promise<ImportResult<T>> {
@@ -145,14 +145,14 @@ async function applyPlan(
   const fresh = computePlan(file, snapshot, plan);
   if (planFingerprint(fresh.plan) !== planFingerprint(plan))
     throw new ImportRejected({ kind: 'stalePlan' });
-  const soundResets = await applyWrites(
+  const sounds = await applyWrites(
     db,
     fresh.plan,
     fresh.writes,
     snapshot,
     fileContext,
   );
-  return { counts: fresh.plan.counts, soundResets };
+  return { counts: fresh.plan.counts, ...sounds };
 }
 
 async function removeAll(files: ClickSoundFiles, fileNames: string[]) {

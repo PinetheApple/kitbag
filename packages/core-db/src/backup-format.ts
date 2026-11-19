@@ -234,7 +234,9 @@ export function recordKey(
   record: BackupRecord | LocalRecord,
 ): string {
   if (isPreference(category, record)) return record.key;
-  return 'slot' in record ? String(record.slot) : record.uuid;
+  if (category === 'clickSounds' && 'slot' in record)
+    return String(record.slot);
+  return record.uuid;
 }
 
 export function recordLabel(category: Category, record: BackupRecord): string {

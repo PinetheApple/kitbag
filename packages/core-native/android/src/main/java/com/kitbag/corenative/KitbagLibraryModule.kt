@@ -129,11 +129,11 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     }
   }
 
-  override fun writeClickSound(fileName: String, wav: String, promise: Promise) {
+  override fun writeClickSound(fileName: String, wavBase64: String, promise: Promise) {
     val target = clickSoundFile(fileName, promise) ?: return
     io.execute {
       try {
-        ClickSoundFiles.write(target, Base64.decode(wav, Base64.NO_WRAP))
+        ClickSoundFiles.write(target, Base64.decode(wavBase64, Base64.NO_WRAP))
         promise.resolve(null)
       } catch (e: Exception) {
         rejectLogged(promise, E_CLICK_SOUND_FAILED, "Could not write the click sound", e)

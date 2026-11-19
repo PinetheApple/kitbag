@@ -1,4 +1,4 @@
-import type { BackupService } from '@kitbag/core-db';
+import type { ApplyReport, BackupService } from '@kitbag/core-db';
 import type { PickedBackup } from '@kitbag/core-native';
 
 export interface BackupDeps {
@@ -8,7 +8,7 @@ export interface BackupDeps {
   >;
   readonly pick: () => Promise<PickedBackup | null>;
   readonly share: (fileName: string, contents: string) => Promise<void>;
-  readonly afterRestore: () => Promise<void>;
+  readonly afterRestore: (report: ApplyReport) => Promise<void>;
 }
 
 let configured: BackupDeps | undefined;

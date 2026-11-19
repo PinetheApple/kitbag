@@ -180,8 +180,8 @@ export interface Spec extends TurboModule {
    *  new to each call: two prepares to one name share its .part file. */
   prepareClickSound(sourceUri: string, freshFileName: string): Promise<number>;
   readClickSound(fileName: string): Promise<string>;
-  /** Same name rule as prepareClickSound; `wav` is base64. */
-  writeClickSound(fileName: string, wav: string): Promise<void>;
+  /** Same name rule as prepareClickSound. */
+  writeClickSound(fileName: string, wavBase64: string): Promise<void>;
   deleteClickSound(fileName: string): Promise<void>;
   importAudio(uri: string, relativeDir: string): Promise<ImportedAudio>;
   enqueueAnalysis(

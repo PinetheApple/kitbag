@@ -63,8 +63,11 @@ export function readClickSound(fileName: string): Promise<string> {
   return getKitbagLibrary().readClickSound(fileName);
 }
 
-export function writeClickSound(fileName: string, wav: string): Promise<void> {
-  return getKitbagLibrary().writeClickSound(fileName, wav);
+export function writeClickSound(
+  fileName: string,
+  wavBase64: string,
+): Promise<void> {
+  return getKitbagLibrary().writeClickSound(fileName, wavBase64);
 }
 
 export function deleteClickSound(fileName: string): Promise<void> {

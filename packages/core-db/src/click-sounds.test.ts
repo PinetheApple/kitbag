@@ -108,6 +108,20 @@ describe('click sound repository', () => {
     await expect(sounds.rename(RIMSHOT.slot, '')).rejects.toThrow(RangeError);
   });
 
+  it('refuses to rename a slot the engine does not have', async () => {
+    const { sounds } = setup();
+    await expect(sounds.rename(CUSTOM_SOUND_SLOTS, 'Rim')).rejects.toThrow(
+      RangeError,
+    );
+  });
+
+  it('adds a sound only to an empty slot', async () => {
+    const { sounds } = setup();
+    expect(await sounds.add(RIMSHOT)).toBe(true);
+    expect(await sounds.add({ ...HAT, slot: RIMSHOT.slot })).toBe(false);
+    expect(await sounds.list()).toEqual([RIMSHOT]);
+  });
+
   it('removes a sound, puts Tick back on every song that used it and counts them', async () => {
     const { sounds, presets } = setup();
     await sounds.put(RIMSHOT);

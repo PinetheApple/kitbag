@@ -1130,7 +1130,9 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   file the engine may be reading, and the UUID alone says whether two sounds are the same. After a
   restore, a restored song keeps a custom sound only if the backup's sound for that slot is the
   one now in it; a song already on the device keeps it only if its slot still holds the sound it
-  held before. Every other reference becomes Tick. **[recorded — lane call, owner may overturn]**
+  held before. Every other reference becomes Tick. The standalone metronome's saved sounds
+  follow the same rule. A shared setlist carries no click sounds, so its songs' custom sounds
+  arrive as Tick. **[recorded — lane call, owner may overturn]**
 
 - **2026-11-19 · Grid grouping and click rate (#383, §4.3)** — (1) A bar whose
   length differs from the grouping's sum keeps only its downbeat accent. (2) At
