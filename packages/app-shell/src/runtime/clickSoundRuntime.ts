@@ -2,6 +2,8 @@ import { freshClickSoundFileName } from '@kitbag/core-db';
 import {
   clearCustomSound,
   deleteClickSound,
+  getKitbagLibrary,
+  listClickSounds,
   loadCustomSound,
   prepareClickSound,
 } from '@kitbag/core-native';
@@ -9,6 +11,7 @@ import {
   clickSoundStore,
   configureClickSounds,
   releaseRemovedSound,
+  restoreStore,
 } from '@kitbag/core-state';
 
 import { getDatabase } from './database.ts';
@@ -22,6 +25,11 @@ configureClickSounds({
   newUuid: () => crypto.randomUUID(),
   freshFileName: freshClickSoundFileName,
   afterRemove: releaseRemovedSound,
+  pickDocument: () => getKitbagLibrary().pickDocument(),
+  constants: () => getKitbagLibrary().getConstants(),
+  listFiles: listClickSounds,
+  restoring: () => restoreStore.getState().restore.phase === 'applying',
 });
 
-void clickSoundStore.getState().sync();
+const sounds = clickSoundStore.getState();
+void sounds.sync().then(sounds.sweepOrphans);

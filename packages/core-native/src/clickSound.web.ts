@@ -21,3 +21,6 @@ export const writeClickSound: typeof Native.writeClickSound = () =>
 
 export const deleteClickSound: typeof Native.deleteClickSound = () =>
   Promise.reject(new Error(NEEDS_APP));
+
+export const listClickSounds: typeof Native.listClickSounds = () =>
+  Promise.resolve([]);

@@ -3,6 +3,7 @@ import { useLibrary, type Setlist, type SongPreset } from '@kitbag/core-state';
 import { useCallback } from 'react';
 
 import { songSubtitle } from '../logic/songSummary.ts';
+import { useCustomSoundViews } from '../screen/CustomSounds.tsx';
 
 function SetlistResult({
   setlist,
@@ -35,7 +36,8 @@ function SongResult({
   const load = useCallback(() => {
     void loadSong(preset.id).then(onLoaded);
   }, [loadSong, preset.id, onLoaded]);
-  const subtitle = songSubtitle(preset);
+  const custom = useCustomSoundViews();
+  const subtitle = songSubtitle(preset, custom);
   return (
     <PlainListRow
       title={preset.name}

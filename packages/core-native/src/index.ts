@@ -83,6 +83,7 @@ export {
   clearCustomSound,
   customSoundLoaded,
   deleteClickSound,
+  listClickSounds,
   loadCustomSound,
   prepareClickSound,
   readClickSound,

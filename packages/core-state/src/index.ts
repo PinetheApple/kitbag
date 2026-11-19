@@ -54,6 +54,8 @@ export {
   rampIntervalBounds,
   initialAccents,
   resizeAccents,
+  usesSound,
+  withoutSound,
 } from './metronome/config.ts';
 export { beatGroupSizes, groupStartAccents } from './metronome/meterGroups.ts';
 export {
@@ -540,6 +542,7 @@ export {
   configureClickSounds,
   type ClickSoundDeps,
 } from './clickSounds/runtime.ts';
+export type { ClickSound } from '@kitbag/core-db';
 export {
   clickSoundStore,
   createClickSoundStore,
@@ -553,6 +556,21 @@ export {
   releaseSound,
   releaseStaleSounds,
 } from './clickSounds/released.ts';
+export { useClickSounds } from './clickSounds/useClickSounds.ts';
+export type {
+  ClickSoundNotice,
+  ClickSoundProblem,
+} from './clickSounds/notices.ts';
+export {
+  BUILT_IN_SOUND_NAMES,
+  DEFAULT_SOUND_NAME,
+} from './clickSounds/soundNames.ts';
+export {
+  formatName,
+  joinedFormatNames,
+  PICKER_FAILED_TEXT,
+  unsupportedImportText,
+} from './importText.ts';
 export {
   configureBackup,
   getBackup,

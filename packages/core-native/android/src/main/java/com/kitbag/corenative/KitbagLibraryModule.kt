@@ -182,6 +182,18 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     }
   }
 
+  override fun listClickSounds(promise: Promise) {
+    io.execute {
+      try {
+        val names = Arguments.createArray()
+        ClickSoundFiles.names(reactApplicationContext.filesDir).forEach { names.pushString(it) }
+        promise.resolve(names)
+      } catch (e: Exception) {
+        rejectLogged(promise, E_LIST_FAILED, "Could not list click sounds", e)
+      }
+    }
+  }
+
   private fun clickSoundFile(fileName: String, promise: Promise): File? {
     val target = ClickSoundFiles.resolve(reactApplicationContext.filesDir, fileName)
     if (target == null) promise.reject(LibraryErrors.BAD_FILE_NAME, "Not a click sound file name: $fileName")

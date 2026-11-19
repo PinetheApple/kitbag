@@ -26,6 +26,7 @@ import {
 } from '../../logic/rampUnit.ts';
 import { soundChipLabel, soundLabel } from '../../logic/soundChoice.ts';
 import { stepWithin } from '../../logic/trainer.ts';
+import { useCustomSoundViews } from '../../screen/CustomSounds.tsx';
 import { SoundPickerSheet } from '../../screen/SoundSheet.tsx';
 import { EDIT_ROW_SEGMENT_GAPS, OnOff, TrainerStep } from './fields.tsx';
 import type { PresetEditor } from './usePresetEditor.ts';
@@ -77,15 +78,16 @@ function SoundRow(props: {
     },
     [update],
   );
+  const custom = useCustomSoundViews();
   const { normal, accent } = draft.perAccentSounds;
   return (
     <EditRow label="Sound">
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Sounds, normal ${soundLabel(normal)}, accent ${soundLabel(accent)}`}
+        accessibilityLabel={`Sounds, normal ${soundLabel(normal, custom)}, accent ${soundLabel(accent, custom)}`}
         onPress={show}
       >
-        <EditValue>{soundChipLabel(draft.perAccentSounds)}</EditValue>
+        <EditValue>{soundChipLabel(draft.perAccentSounds, custom)}</EditValue>
       </Pressable>
       <SoundPickerSheet
         visible={open}

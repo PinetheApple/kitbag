@@ -19,6 +19,7 @@ import { useCallback } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import {
+  rolesUsing,
   SOUND_OPTIONS,
   SOUND_ROLE,
   soundLabel,
@@ -26,6 +27,8 @@ import {
   soundsWith,
   type SoundRole,
 } from '../logic/soundChoice.ts';
+import { CustomSoundSheets, useCustomSoundMenu } from './CustomSoundSheets.tsx';
+import { CustomSounds, useCustomSoundViews } from './CustomSounds.tsx';
 import { PracticeSection, usePracticeStyles } from './PracticeSection.tsx';
 
 const PICK_HIT_BOX = hitBoxStyle(
@@ -64,7 +67,8 @@ function SoundRow({ role, onOpen }: SoundRowProps) {
   const practiceStyles = usePracticeStyles();
   const sound = useMetronome((s) => s.sounds[role]);
   const previewSound = useMetronome((s) => s.previewSound);
-  const name = soundLabel(sound);
+  const custom = useCustomSoundViews();
+  const name = soundLabel(sound, custom);
   const handleOpen = useCallback(() => {
     onOpen(role);
   }, [onOpen, role]);
@@ -124,32 +128,59 @@ export function SoundListSheet({
   const sounds = useMetronome((s) => s.sounds);
   const setSounds = useMetronome((s) => s.setSounds);
   const previewSound = useMetronome((s) => s.previewSound);
+  const menu = useCustomSoundMenu();
   const shownRole = role ?? SOUND_ROLE.normal;
-  const handlePick = useCallback(
-    (value: string) => {
-      const id = Number(value);
+  const choose = useCallback(
+    (id: number) => {
       const next = soundsWith(sounds, shownRole, id);
       setSounds(next.normal, next.accent);
       previewSound(id, shownRole === SOUND_ROLE.accent);
+    },
+    [sounds, shownRole, setSounds, previewSound],
+  );
+  const pick = useCallback(
+    (id: number) => {
+      choose(id);
       onDismiss();
     },
-    [sounds, shownRole, setSounds, previewSound, onDismiss],
+    [choose, onDismiss],
   );
+  const pickOption = useCallback(
+    (value: string) => {
+      pick(Number(value));
+    },
+    [pick],
+  );
+  const usedBy = useCallback((id: number) => rolesUsing(sounds, id), [sounds]);
   return (
-    <Sheet
-      visible={role !== null}
-      title={`${soundRoleName(shownRole)} sound`}
-      dismissLabel={`Close ${soundRoleName(shownRole).toLowerCase()} sound`}
-      bottomInset={bottomInset}
-      dim
-      onDismiss={onDismiss}
-    >
-      <PickerGrid
-        accessibilityLabel={`${soundRoleName(shownRole)} beat sound`}
-        options={SOUND_OPTIONS}
-        selected={String(sounds[shownRole])}
-        onSelect={handlePick}
+    <>
+      <Sheet
+        visible={role !== null}
+        title={`${soundRoleName(shownRole)} sound`}
+        dismissLabel={`Close ${soundRoleName(shownRole).toLowerCase()} sound`}
+        bottomInset={bottomInset}
+        dim
+        onDismiss={onDismiss}
+      >
+        <PickerGrid
+          accessibilityLabel={`${soundRoleName(shownRole)} beat sound`}
+          options={SOUND_OPTIONS}
+          selected={String(sounds[shownRole])}
+          onSelect={pickOption}
+        />
+        <CustomSounds
+          selected={sounds[shownRole]}
+          showHint
+          onPick={pick}
+          onImported={choose}
+          onOptions={menu.open}
+        />
+      </Sheet>
+      <CustomSoundSheets
+        menu={menu}
+        bottomInset={bottomInset}
+        rolesUsing={usedBy}
       />
-    </Sheet>
+    </>
   );
 }

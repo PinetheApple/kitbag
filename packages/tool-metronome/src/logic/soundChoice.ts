@@ -1,8 +1,17 @@
-import { KB_SOUND_NAMES } from '@kitbag/core-native';
-import type { PerAccentSounds } from '@kitbag/core-state';
+import { customSoundId, isCustomSoundId } from '@kitbag/core-native';
+import {
+  BUILT_IN_SOUND_NAMES,
+  DEFAULT_SOUND_NAME,
+  type ClickSound,
+  type PerAccentSounds,
+} from '@kitbag/core-state';
 
 export const SOUND_ROLE = { normal: 'normal', accent: 'accent' } as const;
 export type SoundRole = (typeof SOUND_ROLE)[keyof typeof SOUND_ROLE];
+export const SOUND_ROLES: readonly SoundRole[] = [
+  SOUND_ROLE.normal,
+  SOUND_ROLE.accent,
+];
 
 export function soundRoleName(role: SoundRole): string {
   return role === SOUND_ROLE.accent ? 'Accent' : 'Normal';
@@ -13,18 +22,37 @@ export const SOUND_ROLE_OPTIONS = [
   { value: SOUND_ROLE.accent, label: soundRoleName(SOUND_ROLE.accent) },
 ] as const;
 
-function displayName(name: string): string {
-  return name.charAt(0).toUpperCase() + name.slice(1);
-}
-
-export const SOUND_OPTIONS = KB_SOUND_NAMES.map((name, id) => ({
+export const SOUND_OPTIONS = BUILT_IN_SOUND_NAMES.map((label, id) => ({
   value: String(id),
-  label: displayName(name),
+  label,
 }));
 
-export function soundLabel(id: number): string {
-  const name = KB_SOUND_NAMES[id];
-  return name === undefined ? 'Sound' : displayName(name);
+export interface CustomSoundView {
+  readonly id: number;
+  readonly sound: ClickSound;
+  readonly available: boolean;
+}
+
+export function customSoundViews(
+  sounds: readonly ClickSound[],
+  unavailable: readonly number[],
+): CustomSoundView[] {
+  return sounds.map((sound) => ({
+    id: customSoundId(sound.slot),
+    sound,
+    available: !unavailable.includes(sound.slot),
+  }));
+}
+
+export function soundLabel(
+  id: number,
+  custom: readonly CustomSoundView[] = [],
+): string {
+  const builtIn = BUILT_IN_SOUND_NAMES[id];
+  if (builtIn !== undefined) return builtIn;
+  if (!isCustomSoundId(id)) return 'Sound';
+  const view = custom.find((candidate) => candidate.id === id);
+  return view?.available === true ? view.sound.name : DEFAULT_SOUND_NAME;
 }
 
 export function soundsWith(
@@ -37,7 +65,15 @@ export function soundsWith(
     : { ...sounds, normal: id };
 }
 
-export function soundChipLabel(sounds: PerAccentSounds): string {
-  if (sounds.normal === sounds.accent) return soundLabel(sounds.normal);
-  return `${soundLabel(sounds.normal)} · ${soundLabel(sounds.accent)}`;
+export function rolesUsing(sounds: PerAccentSounds, id: number): SoundRole[] {
+  return SOUND_ROLES.filter((role) => sounds[role] === id);
+}
+
+export function soundChipLabel(
+  sounds: PerAccentSounds,
+  custom: readonly CustomSoundView[] = [],
+): string {
+  const normal = soundLabel(sounds.normal, custom);
+  const accent = soundLabel(sounds.accent, custom);
+  return normal === accent ? normal : `${normal} · ${accent}`;
 }

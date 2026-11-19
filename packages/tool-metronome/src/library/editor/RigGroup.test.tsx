@@ -41,6 +41,9 @@ vi.mock('@kitbag/core-design', async (original) => {
 vi.mock('../../screen/SoundSheet.tsx', () => ({
   SoundPickerSheet: () => null,
 }));
+vi.mock('../../screen/CustomSounds.tsx', () => ({
+  useCustomSoundViews: () => [],
+}));
 
 const { RigGroup } = await import('./RigGroup.tsx');
 

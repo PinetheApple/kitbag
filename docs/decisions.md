@@ -1133,6 +1133,15 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   held before. Every other reference becomes Tick. The standalone metronome's saved sounds
   follow the same rule. A shared setlist carries no click sounds, so its songs' custom sounds
   arrive as Tick. **[recorded — lane call, owner may overturn]**
+  Sheets (slice 4), where the mockup draws nothing: a stored sound the engine will not load
+  shows as a dimmed, untappable tile under an amber card saying it plays as Tick, and every
+  label for a role on it reads Tick; its options still offer Rename, Replace and Remove.
+  Replace takes the new file's name. Remove of a sound no metronome role uses reads “Every
+  saved song that uses it goes back to Tick.” Remove from the song editor also puts the edited
+  song's roles back to Tick. Import from the Practice sheet keeps the sheet open, as drawn; a
+  tile tap picks and closes, as a built-in does. Not-enough-space and other failures reuse song
+  import's wording. Click sound files no row names are deleted once at app start, after the
+  stored sounds load, unless an import or restore is running. **[REC TAKEN, owner may overturn]**
 
 - **2026-11-19 · Grid grouping and click rate (#383, §4.3)** — (1) A bar whose
   length differs from the grouping's sum keeps only its downbeat accent. (2) At

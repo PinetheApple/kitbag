@@ -6,16 +6,23 @@ import {
   space,
   unshared,
 } from '@kitbag/core-design';
-import { useMetronome, type PerAccentSounds } from '@kitbag/core-state';
+import {
+  useMetronome,
+  withoutSound,
+  type PerAccentSounds,
+} from '@kitbag/core-state';
 import { useCallback, useState } from 'react';
 
 import {
+  rolesUsing,
   SOUND_OPTIONS,
   SOUND_ROLE,
   SOUND_ROLE_OPTIONS,
   soundsWith,
   type SoundRole,
 } from '../logic/soundChoice.ts';
+import { CustomSoundSheets, useCustomSoundMenu } from './CustomSoundSheets.tsx';
+import { CustomSounds, useImportHint } from './CustomSounds.tsx';
 import { useHoldEngine } from './useHoldEngine.ts';
 
 // Heads the sheet; the picker grid below does not reach into the gap.
@@ -23,6 +30,9 @@ const ROLE_GAPS = {
   top: unshared(SHEET_TOUCH_ROOM),
   bottom: unshared(space.sectionGap),
 };
+
+const PICKER_HINT =
+  'Tap a sound to hear it at the current volume. Accent and normal beats can use different sounds.';
 
 interface SoundSheetProps {
   readonly visible: boolean;
@@ -45,37 +55,67 @@ export function SoundPickerSheet({
   useHoldEngine(visible);
   const [role, setRole] = useState<SoundRole>(SOUND_ROLE.normal);
   const previewSound = useMetronome((state) => state.previewSound);
+  const importHint = useImportHint();
+  const menu = useCustomSoundMenu();
   const pick = useCallback(
-    (value: string) => {
-      onChange(soundsWith(sounds, role, Number(value)));
-      previewSound(Number(value), role === SOUND_ROLE.accent);
+    (id: number) => {
+      onChange(soundsWith(sounds, role, id));
+      previewSound(id, role === SOUND_ROLE.accent);
     },
     [onChange, previewSound, role, sounds],
   );
+  const pickOption = useCallback(
+    (value: string) => {
+      pick(Number(value));
+    },
+    [pick],
+  );
+  const usedBy = useCallback((id: number) => rolesUsing(sounds, id), [sounds]);
+  const handleRemoved = useCallback(
+    (id: number) => {
+      onChange(withoutSound(sounds, id));
+    },
+    [onChange, sounds],
+  );
   return (
-    <Sheet
-      visible={visible}
-      title="Click sound"
-      titleIcon="sound"
-      hint="Tap a sound to hear it at the current volume. Accent and normal beats can use different sounds."
-      dismissLabel="Close click sound"
-      bottomInset={bottomInset}
-      onDismiss={onDismiss}
-    >
-      <SegmentedControl
-        fill
-        accessibilityLabel="Beat level"
-        options={SOUND_ROLE_OPTIONS}
-        selected={role}
-        neighbourGapDp={ROLE_GAPS}
-        onSelect={setRole}
+    <>
+      <Sheet
+        visible={visible}
+        title="Click sound"
+        titleIcon="sound"
+        hint={`${PICKER_HINT} ${importHint}`}
+        dismissLabel="Close click sound"
+        bottomInset={bottomInset}
+        onDismiss={onDismiss}
+      >
+        <SegmentedControl
+          fill
+          accessibilityLabel="Beat level"
+          options={SOUND_ROLE_OPTIONS}
+          selected={role}
+          neighbourGapDp={ROLE_GAPS}
+          onSelect={setRole}
+        />
+        <PickerGrid
+          accessibilityLabel={`${role} beat sound`}
+          options={SOUND_OPTIONS}
+          selected={String(sounds[role])}
+          onSelect={pickOption}
+        />
+        <CustomSounds
+          selected={sounds[role]}
+          showHint={false}
+          onPick={pick}
+          onImported={pick}
+          onOptions={menu.open}
+        />
+      </Sheet>
+      <CustomSoundSheets
+        menu={menu}
+        bottomInset={bottomInset}
+        rolesUsing={usedBy}
+        onRemoved={handleRemoved}
       />
-      <PickerGrid
-        accessibilityLabel={`${role} beat sound`}
-        options={SOUND_OPTIONS}
-        selected={String(sounds[role])}
-        onSelect={pick}
-      />
-    </Sheet>
+    </>
   );
 }

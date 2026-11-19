@@ -10,6 +10,7 @@ import { useLibrary, type SongPreset } from '@kitbag/core-state';
 import { useCallback } from 'react';
 
 import { songSubtitle } from '../logic/songSummary.ts';
+import { useCustomSoundViews } from '../screen/CustomSounds.tsx';
 import type { ShellMeasuredInsets } from '../screen/MetronomeScreen.tsx';
 import { NEW_SONG_NAME } from './DetailMenu.tsx';
 import { ScreenFrame } from './ScreenFrame.tsx';
@@ -46,7 +47,8 @@ function StandaloneRow(props: RowProps) {
     (s) => s.loaded?.presetId === preset.id && s.loaded.itemId === null,
   );
   const { load, actions } = useStandaloneRow(props);
-  const subtitle = songSubtitle(preset);
+  const custom = useCustomSoundViews();
+  const subtitle = songSubtitle(preset, custom);
   return (
     <PlainListRow
       title={preset.name}
