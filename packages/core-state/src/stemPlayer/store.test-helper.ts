@@ -83,6 +83,8 @@ export function record(
     lyrics: null,
     lyricsRetimed: null,
     stems,
+    meterBeatsPerBar: null,
+    barOneSeconds: null,
     ...change,
   };
 }

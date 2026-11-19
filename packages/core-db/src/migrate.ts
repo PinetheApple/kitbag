@@ -7,7 +7,7 @@ import {
   MIGRATE_V16_TO_V17,
 } from './migrate-stems';
 
-export const SCHEMA_VERSION = 19;
+export const SCHEMA_VERSION = 20;
 export const V6_SCHEMA_VERSION = 6;
 export const V7_SCHEMA_VERSION = 7;
 export const V8_SCHEMA_VERSION = 8;
@@ -21,6 +21,7 @@ export const V15_SCHEMA_VERSION = 15;
 export const V16_SCHEMA_VERSION = 16;
 export const V17_SCHEMA_VERSION = 17;
 export const V18_SCHEMA_VERSION = 18;
+export const V19_SCHEMA_VERSION = 19;
 
 export interface MigrationDriver {
   exec(sql: string): void;
@@ -288,6 +289,15 @@ export const MIGRATE_V18_TO_V19: readonly string[] = [
   'ALTER TABLE route_latency ADD COLUMN kind TEXT',
 ];
 
+// No CHECK on the meter: the supported set lives in meter-override.ts and may grow.
+export const MIGRATE_V19_TO_V20: readonly string[] = [
+  ...['songs', 'stem_sets'].flatMap((table) => [
+    `ALTER TABLE ${table} ADD COLUMN meter_beats_per_bar INTEGER`,
+    `ALTER TABLE ${table} ADD COLUMN bar_one_seconds REAL`,
+  ]),
+  'ALTER TABLE songs ADD COLUMN analysis_version INTEGER',
+];
+
 export const BASELINE: readonly string[] = [
   ...V11_BASELINE,
   ...MIGRATE_V11_TO_V12,
@@ -298,6 +308,7 @@ export const BASELINE: readonly string[] = [
   ...MIGRATE_V16_TO_V17,
   ...MIGRATE_V17_TO_V18,
   ...MIGRATE_V18_TO_V19,
+  ...MIGRATE_V19_TO_V20,
 ];
 
 // SQLite cannot ADD a NOT NULL column without a constant default, so migrated
@@ -370,7 +381,8 @@ const UPGRADES: readonly {
   { to: V16_SCHEMA_VERSION, steps: MIGRATE_V15_TO_V16 },
   { to: V17_SCHEMA_VERSION, steps: MIGRATE_V16_TO_V17 },
   { to: V18_SCHEMA_VERSION, steps: MIGRATE_V17_TO_V18 },
-  { to: SCHEMA_VERSION, steps: MIGRATE_V18_TO_V19 },
+  { to: V19_SCHEMA_VERSION, steps: MIGRATE_V18_TO_V19 },
+  { to: SCHEMA_VERSION, steps: MIGRATE_V19_TO_V20 },
 ];
 
 function upgradeSteps(from: number): readonly string[] {

@@ -216,6 +216,7 @@ export {
 export {
   configureSongLibrary,
   type LibraryFiles,
+  type OpenSong,
   type SongLibraryRecords,
 } from './songLibrary/runtime.ts';
 export {

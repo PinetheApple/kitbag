@@ -13,6 +13,7 @@ import {
   MIGRATE_V15_TO_V16,
   MIGRATE_V16_TO_V17,
   MIGRATE_V17_TO_V18,
+  MIGRATE_V18_TO_V19,
   V6_SCHEMA_VERSION,
   V7_SCHEMA_VERSION,
   V8_SCHEMA_VERSION,
@@ -26,6 +27,7 @@ import {
   V16_SCHEMA_VERSION,
   V17_SCHEMA_VERSION,
   V18_SCHEMA_VERSION,
+  V19_SCHEMA_VERSION,
 } from './migrate';
 
 const V6_DDL: readonly string[] = [
@@ -98,6 +100,17 @@ const V6_DATA: readonly string[] = [
   `INSERT INTO library_songs (title, artist, file_path, duration, format, created_at, bpm)
    VALUES ('Reference', 'Someone', 'music/ref.flac', 210.5, 'flac', 1700000000, 128.0)`,
 ];
+
+export const V20_SONG_COLUMNS = {
+  analysis_version: null,
+  meter_beats_per_bar: null,
+  bar_one_seconds: null,
+};
+
+export const V20_STEM_SET_COLUMNS = {
+  meter_beats_per_bar: null,
+  bar_one_seconds: null,
+};
 
 export function rows<T>(db: DatabaseSync, sql: string): T[] {
   return db.prepare(sql).all() as T[];
@@ -205,5 +218,12 @@ export function buildV18Fixture(): DatabaseSync {
   const db = buildV17Fixture();
   applyInTransaction(db, MIGRATE_V17_TO_V18);
   db.exec(`PRAGMA user_version = ${String(V18_SCHEMA_VERSION)}`);
+  return db;
+}
+
+export function buildV19Fixture(): DatabaseSync {
+  const db = buildV18Fixture();
+  applyInTransaction(db, MIGRATE_V18_TO_V19);
+  db.exec(`PRAGMA user_version = ${String(V19_SCHEMA_VERSION)}`);
   return db;
 }

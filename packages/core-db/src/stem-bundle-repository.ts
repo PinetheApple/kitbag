@@ -1,5 +1,11 @@
 import { asc, eq, isNotNull } from 'drizzle-orm';
 
+import {
+  meterOverrideOf,
+  NO_METER_OVERRIDE,
+  saveMeterOverride,
+  type MeterOverride,
+} from './meter-override';
 import { found, type Database } from './repository';
 import { stems, stemSets } from './schema';
 import { packFloat32, packInt32, unpackFloat32, unpackInt32 } from './packing';
@@ -77,10 +83,13 @@ export interface StoredStem extends BundleStem {
   readonly sampleRate: number;
 }
 
-export interface StemSetRecord extends Omit<
-  NewStemBundle,
-  'jobId' | 'folder' | 'stems' | 'sampleRate' | 'channels'
-> {
+export interface StemSetRecord
+  extends
+    Omit<
+      NewStemBundle,
+      'jobId' | 'folder' | 'stems' | 'sampleRate' | 'channels'
+    >,
+    MeterOverride {
   readonly id: number;
   readonly source: StemSetSource;
   readonly jobId: string | null;
@@ -255,6 +264,20 @@ export async function deleteStemSet(
   };
 }
 
+async function readMeterOverride(
+  db: Database,
+  id: number,
+): Promise<MeterOverride> {
+  const [row] = await db
+    .select({
+      meterBeatsPerBar: stemSets.meterBeatsPerBar,
+      barOneSeconds: stemSets.barOneSeconds,
+    })
+    .from(stemSets)
+    .where(eq(stemSets.id, id));
+  return meterOverrideOf(row ?? NO_METER_OVERRIDE);
+}
+
 export async function replaceStemBundle(
   db: Database,
   bundle: NewStemBundle,
@@ -264,10 +287,12 @@ export async function replaceStemBundle(
     return { id: await insertStemBundle(db, bundle), replaced: null };
   const names = await readUserNames(db, existing.id);
   const retimed = await retainedRetime(db, existing.id, bundle.lyrics);
+  const meter = await readMeterOverride(db, existing.id);
   const replaced = await deleteStemSet(db, existing.id);
   const id = await insertStemBundle(db, bundle);
   await applyUserNames(db, id, names);
   await saveLyricsRetimed(db, id, retimed);
+  await saveMeterOverride(db, stemSets, id, meter);
   return { id, replaced };
 }
 
@@ -314,6 +339,7 @@ export async function readStemSet(
     sampleRate: row.sampleRate,
     createdAt: row.createdAt,
     speed: row.speed,
+    ...meterOverrideOf(row),
     bpm: row.bpm,
     key: row.key,
     scale: row.scale,
