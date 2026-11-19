@@ -1,0 +1,1 @@
+• Stem songs from StemDeck: Player sheet → Tempo switches the click and bar lines between following the band and a steady constant tempo. The choice is saved per song and kept when the song is re-imported.
