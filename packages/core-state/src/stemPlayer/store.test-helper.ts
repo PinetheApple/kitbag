@@ -173,6 +173,9 @@ export function fakeRuntime(set: StemSetRecord) {
     saveLyricsRetimed: vi.fn<StemPlayerRecords['saveLyricsRetimed']>(() =>
       Promise.resolve(),
     ),
+    saveStemSetMeterOverride: vi.fn<
+      StemPlayerRecords['saveStemSetMeterOverride']
+    >(() => Promise.resolve()),
   };
   const sharedMetronome = { active: vi.fn(() => false), release: vi.fn() };
   const countInBars = vi.fn<() => number>(() => KB_COUNT_IN_OFF);
