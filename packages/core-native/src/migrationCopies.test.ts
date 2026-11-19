@@ -23,6 +23,14 @@ it('returns the free bytes native measured for the named database', () => {
   expect(library.databaseFreeBytes).toHaveBeenCalledExactlyOnceWith('kitbag');
 });
 
+it.each([-1, Number.NaN])(
+  'throws when native could not measure the free space (%s)',
+  (bytes) => {
+    library.databaseFreeBytes.mockReturnValue(bytes);
+    expect(() => databaseFreeBytes('kitbag')).toThrow('free space');
+  },
+);
+
 it('passes a removal through and throws when native refuses it', () => {
   library.removeDatabaseCopy
     .mockReturnValueOnce(true)

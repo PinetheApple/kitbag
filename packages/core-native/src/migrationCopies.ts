@@ -5,7 +5,9 @@ function required(done: boolean, action: string): void {
 }
 
 export function databaseFreeBytes(databaseName: string): number {
-  return getKitbagLibrary().databaseFreeBytes(databaseName);
+  const bytes = getKitbagLibrary().databaseFreeBytes(databaseName);
+  required(bytes >= 0, `measure free space for ${databaseName}`);
+  return bytes;
 }
 
 export function removeDatabaseCopy(

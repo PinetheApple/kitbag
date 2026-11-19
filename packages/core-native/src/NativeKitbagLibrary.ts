@@ -273,16 +273,6 @@ export interface Spec extends TurboModule {
   saveBackup(fileName: string, contents: string): Promise<boolean>;
   /** Copies the database file as it is on disk, without opening it; false when cancelled. */
   saveDatabaseCopy(databaseName: string, fileName: string): Promise<boolean>;
-  /** Free bytes on the database's volume; 0 when it cannot be measured. */
-  databaseFreeBytes(databaseName: string): Double;
-  /** Names are siblings of the database extending its name; false when refused or failed. */
-  removeDatabaseCopy(databaseName: string, fileName: string): boolean;
-  /** Syncs partName, renames it over fileName and syncs the folder. */
-  replaceDatabaseCopy(
-    databaseName: string,
-    partName: string,
-    fileName: string,
-  ): boolean;
   /** Only a file mixdownStart wrote; rejects E_BAD_FILE_NAME for any other path. */
   shareExport(path: string): Promise<void>;
   /** Rejects E_BAD_FILE_NAME for a name unsafe as a click sound file. The name must be
@@ -335,6 +325,16 @@ export interface Spec extends TurboModule {
   releaseOldCopies(): void;
   readonly onMoveProgress: EventEmitter<MoveStatus>;
   readonly onMoveFinished: EventEmitter<MoveFinished>;
+  /** Free bytes on the database's volume; negative when they cannot be measured. */
+  databaseFreeBytes(databaseName: string): Double;
+  /** False when refused or failed. */
+  removeDatabaseCopy(databaseName: string, fileName: string): boolean;
+  /** Syncs partName and renames it over fileName; false when refused or failed. */
+  replaceDatabaseCopy(
+    databaseName: string,
+    partName: string,
+    fileName: string,
+  ): boolean;
 }
 
 export function getKitbagLibrary(): Spec {

@@ -7,7 +7,7 @@ import {
 } from './migrationCopies.web.ts';
 
 it('has no database copies on web', () => {
-  expect(databaseFreeBytes('kitbag')).toBe(0);
+  expect(() => databaseFreeBytes('kitbag')).toThrow();
   expect(() => {
     removeDatabaseCopy('kitbag', 'kitbag.v24.bak');
   }).toThrow();
