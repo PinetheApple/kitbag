@@ -115,6 +115,9 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   override fun saveBackup(fileName: String, contents: String, promise: Promise) =
     picker.saveBackup(fileName, contents, promise)
 
+  override fun saveDatabaseCopy(databaseName: String, fileName: String, promise: Promise) =
+    picker.saveDatabaseCopy(databaseName, fileName, promise)
+
   override fun shareExport(path: String, promise: Promise) {
     val file = ExportFiles.resolve(reactApplicationContext.cacheDir, path)
     if (file == null) {
@@ -454,6 +457,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       "supportedAudioMimeTypes" to SupportedAudio.MIME_TYPES,
       "unsupportedAudioExtensions" to SupportedAudio.UNSUPPORTED_EXTENSIONS,
       "exportMaxBaseNameBytes" to ExportFiles.MAX_BASE_NAME_BYTES,
+      "databaseCopyUnsettled" to LibraryErrors.DATABASE_UNSETTLED,
     ) + StemBundleBridge.CONSTANTS + LibraryErrors.EXPORT_CONSTANTS + DataFolderBridge.CONSTANTS
 
   companion object {

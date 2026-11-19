@@ -9,6 +9,7 @@ import java.io.RandomAccessFile
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -94,6 +95,85 @@ class BackupSaveTest {
     assertTrue(opened.isEmpty())
   }
 
+  private fun database(bytes: ByteArray = DATABASE_BYTES): File =
+    File.createTempFile("kitbag", null).apply {
+      deleteOnExit()
+      writeBytes(bytes)
+    }
+
+  private fun copy(saved: Boolean = true, source: File = database(), opener: (String, String) -> OutputStream? = open) =
+    BackupSave.copyFile(saved, PICKED, source, opener, discard)
+
+  @Test
+  fun `copies the database file byte for byte`() {
+    assertTrue(copy())
+
+    assertArrayEquals(DATABASE_BYTES, written.toByteArray())
+    assertEquals(listOf(PICKED), opened)
+    assertTrue(discarded.isEmpty())
+  }
+
+  @Test
+  fun `copies a database larger than one read buffer`() {
+    val large = ByteArray(LARGE_DATABASE_BYTES) { it.toByte() }
+
+    assertTrue(copy(source = database(large)))
+
+    assertArrayEquals(large, written.toByteArray())
+  }
+
+  @Test
+  fun `a cancelled copy writes nothing and deletes nothing`() {
+    assertFalse(copy(saved = false))
+
+    assertTrue(opened.isEmpty())
+    assertTrue(discarded.isEmpty())
+  }
+
+  @Test
+  fun `a copy that fails part way deletes the created document`() {
+    val failing = object : OutputStream() {
+      override fun write(b: Int) = throw IOException("disk full")
+    }
+
+    assertThrows(IOException::class.java) { copy(opener = { _, _ -> failing }) }
+
+    assertEquals(listOf(PICKED), discarded)
+  }
+
+  @Test
+  fun `a missing database file deletes the created document`() {
+    val missing = File(database().parentFile, "kitbag-missing-database")
+
+    assertThrows(IOException::class.java) { copy(source = missing) }
+
+    assertEquals(listOf(PICKED), discarded)
+  }
+
+  @Test
+  fun `a database with a hot journal is not copied and the created document is deleted`() {
+    val source = database()
+    File(source.path + "-journal").apply { deleteOnExit() }.writeBytes(DATABASE_BYTES)
+
+    assertThrows(DatabaseUnsettledException::class.java) { copy(source = source) }
+
+    assertTrue(opened.isEmpty())
+    assertEquals(listOf(PICKED), discarded)
+  }
+
+  @Test
+  fun `only a journal or write-ahead log with bytes in it marks the database unsettled`() {
+    val source = database()
+    assertNull(BackupSave.unsettledJournal(source))
+
+    val wal = File(source.path + "-wal").apply { deleteOnExit() }
+    wal.writeBytes(ByteArray(0))
+    assertNull(BackupSave.unsettledJournal(source))
+
+    wal.writeBytes(DATABASE_BYTES)
+    assertEquals(wal, BackupSave.unsettledJournal(source))
+  }
+
   private fun providerStream(file: File, mode: String): OutputStream {
     val raf = RandomAccessFile(file, "rw")
     if (TRUNCATE in mode) raf.setLength(0)
@@ -109,5 +189,7 @@ class BackupSaveTest {
     const val PICKED = "content://com.android.providers.downloads.documents/document/42"
     const val CONTENTS = "{\"setlists\":[{\"name\":\"Café — set 2\"}]}"
     const val TRUNCATE = 't'
+    const val LARGE_DATABASE_BYTES = 200 * 1024
+    val DATABASE_BYTES = "SQLite format 3\u0000".toByteArray(Charsets.US_ASCII) + byteArrayOf(0, 1, 2, -1)
   }
 }

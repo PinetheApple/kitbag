@@ -234,12 +234,13 @@ the tools, one issue per PR against `main`. As of 2026-11-20:
 
 - **Built:** the metronome with setlists, presets and custom click sounds, the
   Home hub, the tuner, song import with background beat analysis, the single-song
-  player, the stem player with speed and key in the core, and a Settings screen
-  whose issue (#170) is still open for the settings it lacks.
+  player (`PlaybackService` carries single songs as it does the metronome and
+  stem songs, and its Stop ends the session; #237), the stem player with speed
+  and key in the core, and a Settings screen whose issue (#170) is still open for
+  the settings it lacks.
 - **Not started:** play along (§8); `tool-sync` is a skeleton.
 - **Open work:** `gh issue list --state open` is the current list; among it are
-  single-song background playback (#237), stem speed and key controls (#328) and
-  stem songs on the phone (#134).
+  stem speed and key controls (#328) and stem songs on the phone (#134).
 - **Owed:** the phone checks for merged features (#516).
 
 ## Honesty rules

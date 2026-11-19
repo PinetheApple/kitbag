@@ -184,6 +184,7 @@ export const lineRatio = {
   compactBody: 1.5,
   badge: 1,
   songChip: 1.2,
+  hint: 1.45,
 } as const;
 
 export const homeTile = {

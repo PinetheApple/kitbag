@@ -1,8 +1,8 @@
-import { space } from './roles.ts';
+import { lineRatio, space, textRoles } from './roles.ts';
 import { fontFamily, type TypeRole } from './tokens.ts';
 
 export const homeArrange = {
-  hintLine: 1.45,
+  hintLine: lineRatio.hint,
   rowGap: space.controlGap,
   rowMinHeight: 52,
   rowRadius: 13,
@@ -34,7 +34,7 @@ export const homeArrangeText = {
     tracking: 0.18,
     uppercase: true,
   },
-  hint: { family: fontFamily.body, weight: 400, size: 12 },
+  hint: textRoles.sheetHint,
   segment: { family: fontFamily.display, weight: 400, size: 12 },
   smallButton: { family: fontFamily.display, weight: 500, size: 13.5 },
 } as const satisfies Record<string, TypeRole>;
