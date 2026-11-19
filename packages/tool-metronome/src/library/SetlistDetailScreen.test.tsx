@@ -108,6 +108,13 @@ function mount(): ReactTestRenderer {
   return tree;
 }
 
+function expectStoppedBeforeOpen(): void {
+  expect(fake.stop).toHaveBeenCalledOnce();
+  const [stopped] = fake.stop.mock.invocationCallOrder;
+  const [opened] = onOpenStemSet.mock.invocationCallOrder;
+  expect(stopped).toBeLessThan(opened ?? 0);
+}
+
 const rows = (tree: ReactTestRenderer) =>
   tree.root.findAll((node) => node.type === ('DragListRow' as never));
 
@@ -173,6 +180,7 @@ describe('setlist detail with stem songs', () => {
     });
     expect(fake.openStemEntry).toHaveBeenCalledWith(2, SETLIST_ID);
     expect(onOpenStemSet).toHaveBeenCalledWith(NIGHT_BUS);
+    expectStoppedBeforeOpen();
     expect(fake.start).not.toHaveBeenCalled();
     expect(fake.loadSong).not.toHaveBeenCalled();
   });
@@ -201,6 +209,18 @@ describe('setlist detail with stem songs', () => {
     expect(fake.loadSong).toHaveBeenCalledWith(3, 3, SETLIST_ID);
     expect(fake.start).not.toHaveBeenCalled();
     expect(onLoaded).toHaveBeenCalled();
+  });
+
+  it('stops the click before it opens a stem row in the stem player', async () => {
+    fake.entries = [entry(1, 'Warm-up'), stem(2, NIGHT_BUS)];
+    const [, stemRow] = rows(mount());
+    await act(async () => {
+      (stemRow?.props.onPress as () => void)();
+      await Promise.resolve();
+    });
+    expect(fake.openStemEntry).toHaveBeenCalledWith(2, SETLIST_ID);
+    expect(onOpenStemSet).toHaveBeenCalledWith(NIGHT_BUS);
+    expectStoppedBeforeOpen();
   });
 
   it('stays put when the stem entry can no longer be opened', async () => {
