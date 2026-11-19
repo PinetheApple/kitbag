@@ -1,0 +1,134 @@
+import { Sheet, SheetHint } from '@kitbag/core-design';
+import {
+  dataFolderStore,
+  folderUnavailable,
+  useDataFolder,
+  useSongLibrary,
+  useStemDeck,
+} from '@kitbag/core-state';
+import { useCallback, useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { moveErrorText, type Places } from '../settings/dataFolderMoveText.ts';
+import {
+  findVolume,
+  thePlace,
+  volumeName,
+} from '../settings/dataFolderText.ts';
+import {
+  cardMissingHints,
+  CLOSE_CARD_MISSING,
+  internalOffer,
+  PUT_BACK,
+  USE_INTERNAL,
+} from './cardMissing.ts';
+import { ChoiceButtons } from './ChoiceButtons.tsx';
+import { cardMissingTitle } from './libraryStrip.ts';
+
+const ANY_CARD = 'card';
+const NO_PLACES: Places = { source: null, target: null };
+
+function useImporting(): boolean {
+  const songs = useSongLibrary((s) => s.importing.length > 0);
+  const stemDeck = useStemDeck((s) => s.importView?.running === true);
+  return songs || stemDeck;
+}
+
+function useCardName(rootMissing: boolean): string {
+  return useDataFolder((s) => {
+    const volumes = s.volumes;
+    if (!rootMissing || volumes === null) return thePlace(ANY_CARD);
+    const uuid = volumes.currentVolumeUuid;
+    return volumeName(findVolume(volumes, uuid), uuid);
+  });
+}
+
+function useRefusal() {
+  const [refusal, setRefusal] = useState<string | null>(null);
+  const explain = useCallback(() => {
+    const { error, codes, volumes } = dataFolderStore.getState();
+    if (error === null || codes === null) return;
+    const source = volumes?.currentVolumeUuid ?? null;
+    setRefusal(moveErrorText(error, codes, { source, target: null }).body);
+  }, []);
+  const clear = useCallback(() => {
+    setRefusal(null);
+  }, []);
+  return { refusal, explain, clear };
+}
+
+export interface CardMissingSheetProps {
+  readonly visible: boolean;
+  readonly onDismiss: () => void;
+}
+
+export function CardMissingSheet({
+  visible,
+  onDismiss,
+}: CardMissingSheetProps) {
+  const insets = useSafeAreaInsets();
+  const rootMissing = useDataFolder(folderUnavailable);
+  const moveActive = useDataFolder((s) => s.move !== null);
+  const pending = useDataFolder((s) => s.pending);
+  const codes = useDataFolder((s) => s.codes);
+  const switchToInternal = useDataFolder((s) => s.switchToInternalStorage);
+  const refreshVolumes = useDataFolder((s) => s.refreshVolumes);
+  const importing = useImporting();
+  const cardName = useCardName(rootMissing);
+  const { refusal, explain, clear } = useRefusal();
+  const offer = internalOffer({ rootMissing, moveActive, importing });
+  const uuid = useDataFolder((s) =>
+    rootMissing ? (s.volumes?.currentVolumeUuid ?? null) : ANY_CARD,
+  );
+
+  const dismiss = useCallback(() => {
+    clear();
+    onDismiss();
+  }, [clear, onDismiss]);
+  const putBack = useCallback(() => {
+    void refreshVolumes();
+    dismiss();
+  }, [refreshVolumes, dismiss]);
+  const switchInternal = useCallback(() => {
+    if (offer !== 'offer') return;
+    clear();
+    void switchToInternal().then((acted) => {
+      if (acted) onDismiss();
+      else explain();
+    });
+  }, [offer, clear, switchToInternal, onDismiss, explain]);
+
+  const offered = offer !== 'none';
+  const importingNote =
+    offer === 'importing' && codes !== null
+      ? moveErrorText(codes.moveErrors.importLockHeld, codes, NO_PLACES).body
+      : null;
+  return (
+    <Sheet
+      visible={visible}
+      title={cardMissingTitle(uuid)}
+      titleIcon="sdCard"
+      dismissLabel={CLOSE_CARD_MISSING}
+      bottomInset={insets.bottom}
+      onDismiss={dismiss}
+    >
+      {cardMissingHints(cardName, offered).map((hint) => (
+        <SheetHint key={hint}>{hint}</SheetHint>
+      ))}
+      {importingNote === null ? null : <SheetHint>{importingNote}</SheetHint>}
+      {refusal === null ? null : <SheetHint>{refusal}</SheetHint>}
+      <ChoiceButtons
+        secondary={
+          offered
+            ? {
+                label: USE_INTERNAL,
+                disabled: offer === 'importing' || pending,
+                onPress: switchInternal,
+              }
+            : null
+        }
+        primary={{ label: PUT_BACK, disabled: false, onPress: putBack }}
+      />
+    </Sheet>
+  );
+}
