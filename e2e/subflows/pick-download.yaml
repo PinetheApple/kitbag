@@ -1,0 +1,22 @@
+appId: com.kitbag.app
+---
+- retry:
+    maxRetries: 2
+    commands:
+      - runFlow:
+          when:
+            notVisible: '${FILE}'
+          commands:
+            - tapOn: 'Show roots'
+            - tapOn:
+                text: 'Downloads'
+                id: 'android:id/title'
+      - scrollUntilVisible:
+          element: '${FILE}'
+          timeout: 5000
+- tapOn: '${FILE}'
+- runFlow:
+    when:
+      visible: '\d+ selected'
+    commands:
+      - tapOn: 'Select'

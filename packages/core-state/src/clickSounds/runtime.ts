@@ -1,6 +1,8 @@
 import type { ClickSoundRepository } from '@kitbag/core-db';
 import type {
+  LibraryConstants,
   LoadCustomSoundResult,
+  PickedDocument,
   PrepareClickSoundResult,
 } from '@kitbag/core-native';
 
@@ -19,6 +21,10 @@ export interface ClickSoundDeps {
   readonly newUuid: () => string;
   readonly freshFileName: () => string;
   readonly afterRemove: (soundId: number) => Promise<void>;
+  readonly pickDocument: () => Promise<PickedDocument | null>;
+  readonly constants: () => LibraryConstants;
+  readonly listFiles: () => Promise<readonly string[]>;
+  readonly clearPartials: () => Promise<void>;
 }
 
 let configured: ClickSoundDeps | undefined;

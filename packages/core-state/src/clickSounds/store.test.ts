@@ -1,7 +1,6 @@
 import {
   openBackupDatabase,
   presetValues,
-  type BackupDatabase,
 } from '@kitbag/core-db/src/backup.test-helper';
 import {
   customSoundId,
@@ -11,39 +10,7 @@ import {
 } from '@kitbag/core-native';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ClickSoundDeps } from './runtime.ts';
-import { createClickSoundStore } from './store.ts';
-
-const SOURCE = 'content://picked/rimshot.flac';
-const PREPARED = 'UklGRiQAAAA=';
-const STORED = {
-  slot: 0,
-  uuid: '6f1c2a3b-4d5e-4f60-8a71-92b3c4d5e6f7',
-  name: 'Stored',
-  fileName: 'stored.wav',
-};
-
-function harness(database: BackupDatabase = openBackupDatabase()) {
-  const { files, stored } = database.clickSoundFiles;
-  let names = 0;
-  let uuids = 0;
-  const deps = {
-    repository: () => database.clickSounds,
-    prepare: vi.fn<ClickSoundDeps['prepare']>(async (_uri, fileName) => {
-      await files.write(fileName, PREPARED);
-      return KB_RESULT.KB_OK;
-    }),
-    load: vi.fn<ClickSoundDeps['load']>(() => Promise.resolve(KB_RESULT.KB_OK)),
-    clear: vi.fn(),
-    deleteFile: vi.fn((fileName: string) => files.remove(fileName)),
-    newUuid: () =>
-      `00000000-0000-4000-8000-${String(++uuids).padStart(12, '0')}`,
-    freshFileName: () => `file-${String(++names)}.wav`,
-    afterRemove: vi.fn(() => Promise.resolve()),
-  } satisfies ClickSoundDeps;
-  const store = createClickSoundStore(() => deps);
-  return { database, deps, stored, store, state: () => store.getState() };
-}
+import { harness, SOURCE, STORED } from './store.test-helper.ts';
 
 describe('importing a click sound', () => {
   it('prepares it, loads it into the first free slot and stores it', async () => {
