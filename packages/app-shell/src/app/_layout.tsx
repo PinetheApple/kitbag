@@ -16,6 +16,7 @@ import '@/runtime/standaloneMetronomeRuntime';
 import '@/runtime/backupRuntime';
 import '@/runtime/transportRuntime';
 import '@/runtime/keepAwakeRuntime';
+import '@/runtime/readerFocusRuntime';
 import '@/settings/rigRuntime';
 import '@/settings/toolsRuntime';
 

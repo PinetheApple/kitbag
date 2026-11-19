@@ -1,11 +1,15 @@
 package com.kitbag.corenative
 
+import android.view.Choreographer
 import android.view.WindowManager
+import android.view.accessibility.AccessibilityNodeInfo
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
+import com.facebook.react.bridge.UiThreadUtil
+import com.facebook.react.uimanager.UIManagerHelper
 import com.kitbag.corenative.library.LibraryErrors
 import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.LibraryStorage
@@ -515,4 +519,26 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
       System.loadLibrary("kitbag_jsi")
     }
   }
+
+  override fun focusReaderView(viewTag: Double) {
+    val tag = viewTag.toInt()
+    UiThreadUtil.runOnUiThread { focusAfterMount(tag, FOCUS_RETRY_FRAMES) }
+  }
+
+  // Fabric mounts in a frame callback posted before ours, and preallocates views
+  // detached, so only an attached view has been mounted.
+  private fun focusAfterMount(tag: Int, framesLeft: Int) {
+    Choreographer.getInstance().postFrameCallback {
+      val uiManager = UIManagerHelper.getUIManagerForReactTag(reactApplicationContext, tag)
+      // resolveView throws when the tag has no view state yet or its view is gone.
+      val view = runCatching { uiManager?.resolveView(tag) }.getOrNull()
+      if (view != null && view.isAttachedToWindow) {
+        view.performAccessibilityAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS, null)
+      } else if (framesLeft > 0) {
+        focusAfterMount(tag, framesLeft - 1)
+      }
+    }
+  }
 }
+
+private const val FOCUS_RETRY_FRAMES = 5

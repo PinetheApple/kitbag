@@ -184,6 +184,7 @@ export interface Spec extends TurboModule {
   readonly onSongTransport: EventEmitter<SongTransportRequest>;
   getOutputRoute(): Promise<OutputRoute>;
   readonly onOutputRoute: EventEmitter<OutputRoute>;
+  focusReaderView(viewTag: Int32): void;
 }
 
 // Lazy: resolving throws until the native module is registered, and the barrel
