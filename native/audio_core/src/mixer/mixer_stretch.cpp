@@ -244,6 +244,7 @@ void Mixer::AdvanceStretch(uint32_t take, uint32_t frame_count) {
 void Mixer::StretchBlock(float* output, uint32_t frame_count, bool any_solo) {
   if (SongEndReached(out_clock_)) {
     playing_.store(false, std::memory_order_relaxed);
+    end_count_.fetch_add(1, std::memory_order_relaxed);
     return;
   }
   ApplyPendingRate();

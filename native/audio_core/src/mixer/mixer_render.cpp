@@ -205,6 +205,7 @@ void Mixer::AdvanceTransport(uint32_t frame_count) {
   }
   if (advance == 0) {
     playing_.store(false, std::memory_order_relaxed);
+    end_count_.fetch_add(1, std::memory_order_relaxed);
     return;
   }
   song_clock_ = {

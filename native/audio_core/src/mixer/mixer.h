@@ -23,8 +23,7 @@
 
 namespace kitbag {
 
-/// Lock-free stem mixer (SPEC.md §4.1). Sources and transport plans are built
-/// off-thread and swapped in by RtPublisher; scalars cross the command ring.
+/// Lock-free stem mixer (SPEC.md §4.1).
 class Mixer {
  public:
   static constexpr int kMaxTracks = 16;
@@ -71,8 +70,7 @@ class Mixer {
       bool engine_running
   );
 
-  /// Gain, mute and solo cross the command ring and are applied at the top of the
-  /// next block; the getters read the callback-published mirror.
+  /// Applied at the top of the next block; the getters read the mirror.
   void SetGain(int track, float gain);
   void SetMute(int track, bool muted);
   void SetSolo(int track, bool soloed);
@@ -157,6 +155,9 @@ class Mixer {
   }
   uint64_t position() const {
     return read_frame_.load(std::memory_order_relaxed);
+  }
+  uint32_t end_count() const {
+    return end_count_.load(std::memory_order_relaxed);
   }
 
   /// RT-safe: allocates nothing, takes no lock, frees nothing.
@@ -335,10 +336,10 @@ class Mixer {
   std::atomic<uint64_t> longest_frames_{0};
   // Sized once at construction and never reallocated.
   std::vector<float> scratch_;
-  // Written only by the callback (command drain + block advance); the getters
-  // read it. Single writer, so the Stop/Seek rewind can never be overwritten.
+  // Callback-written only, so a Stop/Seek rewind can never be overwritten.
   std::atomic<uint64_t> read_frame_{0};
   std::atomic<bool> playing_{false};
+  std::atomic<uint32_t> end_count_{0};
   std::optional<uint64_t> pending_play_frame_;
   std::atomic<bool> any_solo_{false};
   std::atomic<float> master_gain_{1.0f};
