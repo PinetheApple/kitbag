@@ -388,7 +388,9 @@ describe('library store', () => {
         : undefined;
     };
     const around = () => [nameOf(SONG_STEP.previous), nameOf(SONG_STEP.next)];
-    return { remove, around };
+    const move = (from: number, to: number) =>
+      library.getState().reorder(gig, from, to);
+    return { remove, around, move };
   }
 
   it('keeps the removed song’s place when an earlier song goes too', async () => {
@@ -397,6 +399,13 @@ describe('library store', () => {
     expect(around()).toEqual(['B', 'D']);
     await remove('A');
     expect(around()).toEqual(['B', 'D']);
+  });
+
+  it('keeps the removed song’s place by count when the set is reordered after', async () => {
+    const { remove, around, move } = await fiveOnStage();
+    await remove('C');
+    await move(3, 0);
+    expect(around()).toEqual(['A', 'B']);
   });
 
   it('keeps the removed song’s place when a later song goes too', async () => {
