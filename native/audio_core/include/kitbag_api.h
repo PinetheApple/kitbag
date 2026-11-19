@@ -23,6 +23,7 @@ typedef enum kb_result {
   KB_ERROR_INTERNAL = 5, /* the core failed, not the caller: out of memory, or
                             a file that changed while being read */
   KB_ERROR_NO_SPACE = 6, /* the destination volume is too full to write to */
+  KB_ERROR_TOO_LONG = 7, /* past what the output format can hold */
 } kb_result;
 
 typedef struct kb_engine kb_engine;

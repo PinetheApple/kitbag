@@ -10,7 +10,7 @@ const commands = vi.hoisted(() => ({
   mixdownStart: vi.fn(),
   mixdownCancel: vi.fn(),
 }));
-const library = vi.hoisted(() => ({ shareFile: vi.fn() }));
+const library = vi.hoisted(() => ({ shareExport: vi.fn() }));
 
 vi.mock('./NativeKitbagCommands', () => ({
   getKitbagCommands: () => commands,
@@ -24,7 +24,7 @@ const {
   mixdownProgress,
   mixdownStart,
   mixdownState,
-  shareFile,
+  shareExport,
 } = await import('./mixdown.ts');
 
 const PATH = '/cache/exports/Song - Band.wav';
@@ -71,12 +71,20 @@ it('cancels through the command module', () => {
   expect(commands.mixdownCancel).toHaveBeenCalledOnce();
 });
 
-it('shares the file with its mime type', async () => {
-  library.shareFile.mockResolvedValue(undefined);
+it('shares the exported file', async () => {
+  library.shareExport.mockResolvedValue(undefined);
 
-  await shareFile(PATH, 'audio/wav');
+  await shareExport(PATH);
 
-  expect(library.shareFile).toHaveBeenCalledExactlyOnceWith(PATH, 'audio/wav');
+  expect(library.shareExport).toHaveBeenCalledExactlyOnceWith(PATH);
+});
+
+it('reads a result the engine never sends as an internal failure', async () => {
+  commands.mixdownStart.mockResolvedValue({ result: 99, path: PATH });
+
+  await expect(mixdownStart('Song - Band.wav')).resolves.toEqual({
+    result: KB_RESULT.KB_ERROR_INTERNAL,
+  });
 });
 
 it('reads progress and state from the host object', () => {

@@ -19,23 +19,17 @@
 
 namespace kitbag {
 
-// Offline render of a mix snapshot to a WAV on a background thread. It owns a
-// private Mixer, so the live one and the audio callback never see it.
+// Renders through a private Mixer, so the live one and the audio callback
+// never see it.
 class MixdownJob {
  public:
   enum class State : int32_t { kIdle, kRunning, kDone, kFailed, kCancelled };
-  enum class StartResult : uint8_t {
-    kOk,
-    kBusy,
-    kInvalid,
-    kNoSpace,
-    kInternal
-  };
+  enum class StartResult : uint8_t { kOk, kBusy, kInvalid, kNoSpace, kTooLong };
   using FreeBytes = std::function<std::optional<uint64_t>(const std::string&)>;
 
   static constexpr uint32_t kBlockFrames = StreamingTrack::kMaxBlockFrames;
   static constexpr uint64_t kSpaceMarginBytes = 64ULL * 1024 * 1024;
-  static constexpr auto kStallTimeout = std::chrono::seconds(5);
+  static constexpr std::chrono::milliseconds kStallTimeout{5000};
   static constexpr auto kReadAheadPoll = std::chrono::microseconds(500);
   static constexpr int kBackgroundNice = 10;
 
@@ -44,23 +38,28 @@ class MixdownJob {
   MixdownJob(const MixdownJob&) = delete;
   MixdownJob& operator=(const MixdownJob&) = delete;
 
-  /// App thread. Loads and primes the stems here, then renders on a worker.
   StartResult Start(const MixSnapshot& snapshot, const std::string& path);
   void Cancel();
   State state() const {
     return state_.load(std::memory_order_acquire);
   }
   double progress() const;
-  /// Tests only: replaces the volume query behind the space check.
+  /// Tests only: the volume query behind the space check.
   void set_free_bytes(FreeBytes free_bytes);
+  /// Tests only.
+  void set_stall_timeout(std::chrono::milliseconds timeout);
 
  private:
-  StartResult Prepare(const MixSnapshot& snapshot, const std::string& path);
-  bool LoadStems(Mixer& mixer, const MixSnapshot& snapshot);
-  bool ApplyMix(Mixer& mixer, const MixSnapshot& snapshot);
+  StartResult
+  Refusal(const MixSnapshot& snapshot, const std::string& path) const;
   bool HasRoom(const std::string& path, uint64_t frames) const;
-  void Run();
+  void Run(const MixSnapshot& snapshot, const std::string& path);
+  bool Prepare(const MixSnapshot& snapshot, const std::string& path);
+  bool LoadStems(Mixer& mixer, const MixSnapshot& snapshot);
+  void ApplyLevels(Mixer& mixer, const MixSnapshot& snapshot);
+  static bool PrimeStretch(Mixer& mixer, const MixSnapshot& snapshot);
   State Render();
+  State Stopped() const;
   bool WaitForReadAhead();
   bool TrackReady(int track) const;
   bool WriteBlock();
@@ -72,6 +71,7 @@ class MixdownJob {
   WavWriter writer_;
   std::vector<float> block_;
   FreeBytes free_bytes_;
+  std::chrono::milliseconds stall_timeout_ = kStallTimeout;
   std::atomic<State> state_{State::kIdle};
   std::atomic<bool> cancel_{false};
   std::atomic<uint64_t> written_frames_{0};

@@ -84,6 +84,8 @@ export interface NativeConstants {
   readonly rampUnit: readonly EnumMember[];
   readonly rampState: readonly EnumMember[];
   readonly mixdownState: readonly EnumMember[];
+  readonly mixdownChannels: number;
+  readonly mixdownBitsPerSample: number;
   readonly bpmReferenceDenominator: number;
   readonly denominators: readonly number[];
   readonly soundNames: readonly string[];

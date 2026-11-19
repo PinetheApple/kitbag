@@ -2,6 +2,7 @@
 #define KITBAG_MIXER_MIXER_SNAPSHOT_H
 
 #include <array>
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -25,16 +26,19 @@ struct MixSnapshot {
   std::vector<TrackSnapshot> tracks;
   float master_gain = 1.0f;
   float rate = kUnityRate;
+  uint64_t longest_frames = 0;
 };
 
-// App thread: what the callback holds once the command ring drains, so a
+// App thread: what the callback will hold once the command ring drains, so a
 // snapshot never waits on a block the device may not render.
 template <int kTracks>
 struct MixerAppMix {
   std::array<float, kTracks> gain{};
   std::array<bool, kTracks> mute{};
   std::array<bool, kTracks> solo{};
+  std::array<int, kTracks> pitch{};
   float master_gain = 1.0f;
+  float rate = kUnityRate;
 
   MixerAppMix() {
     gain.fill(1.0f);

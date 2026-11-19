@@ -12,7 +12,6 @@ namespace kitbag {
 namespace {
 
 constexpr uint16_t kPcmFormat = 1;
-constexpr uint16_t kBitsPerSample = 16;
 constexpr uint32_t kFmtChunkBytes = 16;
 // RIFF counts everything after its own tag and size field.
 constexpr uint32_t kRiffPreambleBytes = 8;
@@ -33,6 +32,11 @@ void PutU32(std::vector<uint8_t>* out, uint32_t value) {
   }
 }
 
+int16_t ToS16(float sample) {
+  const float clamped = std::clamp(sample, -1.0f, 1.0f);
+  return static_cast<int16_t>(std::lround(clamped * kS16Max));
+}
+
 void PutTag(std::vector<uint8_t>* out, const char (&tag)[kTagChars + 1]) {
   out->insert(out->end(), tag, tag + kTagChars);
 }
@@ -45,11 +49,6 @@ uint64_t WavWriter::MaxFrames() {
   return room / kBytesPerFrame;
 }
 
-int16_t WavWriter::ToS16(float sample) {
-  const float clamped = std::clamp(sample, -1.0f, 1.0f);
-  return static_cast<int16_t>(std::lround(clamped * kS16Max));
-}
-
 WavWriter::~WavWriter() {
   Abort();
 }
@@ -57,14 +56,14 @@ WavWriter::~WavWriter() {
 bool WavWriter::Open(
     const std::string& path,
     uint32_t sample_rate,
-    uint32_t max_block
+    uint32_t max_block_frames
 ) {
   Abort();
   path_ = path;
   part_ = path + kPartSuffix;
   sample_rate_ = sample_rate;
   frames_ = 0;
-  bytes_.reserve(static_cast<size_t>(max_block) * kBytesPerFrame);
+  bytes_.reserve(static_cast<size_t>(max_block_frames) * kBytesPerFrame);
   file_ = std::fopen(part_.c_str(), "wb");
   if (file_ != nullptr && WriteHeader(0)) return true;
   Abort();
@@ -85,7 +84,7 @@ bool WavWriter::WriteHeader(uint64_t frames) {
   PutU32(&header, sample_rate_);
   PutU32(&header, sample_rate_ * kBytesPerFrame);
   PutU16(&header, kBytesPerFrame);
-  PutU16(&header, kBitsPerSample);
+  PutU16(&header, static_cast<uint16_t>(kBitsPerSample));
   PutTag(&header, "data");
   PutU32(&header, data);
   return std::fseek(file_, 0, SEEK_SET) == 0 &&
@@ -111,12 +110,12 @@ bool WavWriter::Finish() {
   const bool closed = std::fclose(std::exchange(file_, nullptr)) == 0;
   std::error_code error;
   if (written && closed) std::filesystem::rename(part_, path_, error);
-  if (written && closed && !error) {
-    part_.clear();
-    return true;
+  if (!written || !closed || error) {
+    Abort();
+    return false;
   }
-  Abort();
-  return false;
+  part_.clear();
+  return true;
 }
 
 void WavWriter::Abort() {

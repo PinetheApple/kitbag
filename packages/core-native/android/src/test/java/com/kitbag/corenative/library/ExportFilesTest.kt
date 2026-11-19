@@ -9,23 +9,54 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ExportFilesTest {
+  private companion object {
+    const val CJK_BYTES = 3
+    const val EMOJI_BYTES = 4
+    const val WAV_BYTES = 4
+  }
+
   @Test
   fun acceptsTheNamesTheAppBuilds() {
-    assertTrue(ExportFiles.isSafeFileName("Song - Band.wav"))
-    assertTrue(ExportFiles.isSafeFileName("Café, live - Bänd (0.75x, -2 st).wav"))
-    assertTrue(ExportFiles.isSafeFileName("${"a".repeat(ExportFiles.MAX_BASE_NAME_CHARS)}.wav"))
+    assertEquals("Song - Band.wav", ExportFiles.exportName("Song - Band.wav"))
+    assertEquals(
+      "Café, live - Bänd (0.75x, -2 st).wav",
+      ExportFiles.exportName("Café, live - Bänd (0.75x, -2 st).wav"),
+    )
+  }
+
+  @Test
+  fun capsTheBaseNameInUtf8Bytes() {
+    val ascii = "a".repeat(ExportFiles.MAX_BASE_NAME_BYTES + 10)
+    assertEquals("${"a".repeat(ExportFiles.MAX_BASE_NAME_BYTES)}.wav", ExportFiles.exportName("$ascii.wav"))
+  }
+
+  @Test
+  fun trimsCjkOnACharacterBoundary() {
+    val name = ExportFiles.exportName("${"歌".repeat(100)}.wav")
+    assertEquals("${"歌".repeat(ExportFiles.MAX_BASE_NAME_BYTES / CJK_BYTES)}.wav", name)
+  }
+
+  @Test
+  fun neverSplitsAnEmoji() {
+    val name = ExportFiles.exportName("${"🎸".repeat(100)}.wav")!!
+    assertEquals("${"🎸".repeat(ExportFiles.MAX_BASE_NAME_BYTES / EMOJI_BYTES)}.wav", name)
+    assertTrue(name.toByteArray(Charsets.UTF_8).size <= ExportFiles.MAX_BASE_NAME_BYTES + WAV_BYTES)
   }
 
   @Test
   fun refusesNamesThatEscapeOrMislead() {
-    assertFalse(ExportFiles.isSafeFileName("../Song.wav"))
-    assertFalse(ExportFiles.isSafeFileName("dir/Song.wav"))
-    assertFalse(ExportFiles.isSafeFileName(".hidden.wav"))
-    assertFalse(ExportFiles.isSafeFileName("Song.json"))
-    assertFalse(ExportFiles.isSafeFileName(".wav"))
-    assertFalse(ExportFiles.isSafeFileName(" Song.wav"))
-    assertFalse(ExportFiles.isSafeFileName("Song\u0000.wav"))
-    assertFalse(ExportFiles.isSafeFileName("${"a".repeat(ExportFiles.MAX_BASE_NAME_CHARS + 1)}.wav"))
+    assertNull(ExportFiles.exportName("../Song.wav"))
+    assertNull(ExportFiles.exportName("dir/Song.wav"))
+    assertNull(ExportFiles.exportName(".hidden.wav"))
+    assertNull(ExportFiles.exportName("Song.json"))
+    assertNull(ExportFiles.exportName(".wav"))
+    assertNull(ExportFiles.exportName(" Song.wav"))
+    assertNull(ExportFiles.exportName("Song\u0000.wav"))
+  }
+
+  @Test
+  fun leavesRoomForThePartFileInNameMax() {
+    assertEquals(246, ExportFiles.MAX_BASE_NAME_BYTES)
   }
 
   @Test

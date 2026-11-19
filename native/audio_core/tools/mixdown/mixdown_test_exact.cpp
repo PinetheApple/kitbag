@@ -188,20 +188,31 @@ void TestRefusals() {
       kb_mixdown_start(engine, nullptr) == KB_ERROR_INVALID_ARGUMENT,
       "refused: null path"
   );
+  kb_engine_destroy(engine);
+}
+
+void TestMissingStemFails() {
+  kb_engine* engine = OpenEngine();
+  if (engine == nullptr) return;
+  const std::string path = TempPath("missing", ".wav");
   const std::string gone =
       WriteStem("gone", Noise(kFramesA, kMono, kSeedA), kMono, kSampleRate);
   kb_mixer_load_track(engine, kTrackA, gone.c_str());
   std::remove(gone.c_str());
   Check(
-      kb_mixdown_start(engine, path.c_str()) == KB_ERROR_INVALID_ARGUMENT,
-      "refused: a stem missing on disk"
+      kb_mixdown_start(engine, path.c_str()) == KB_OK,
+      "missing stem: starts, the load runs on the worker"
   );
+  Check(WaitForMixdown(engine), "missing stem: stops");
   Check(
-      kb_mixdown_current_state(engine) == KB_MIXDOWN_STATE_IDLE,
-      "refused: IDLE"
+      kb_mixdown_current_state(engine) == KB_MIXDOWN_STATE_FAILED,
+      "missing stem: FAILED"
   );
-  Check(!Exists(path), "refused: no file");
-  Check(!Exists(path + kitbag::WavWriter::kPartSuffix), "refused: no .part");
+  Check(!Exists(path), "missing stem: no file");
+  Check(
+      !Exists(path + kitbag::WavWriter::kPartSuffix),
+      "missing stem: no .part"
+  );
   kb_engine_destroy(engine);
 }
 
@@ -213,6 +224,7 @@ void RunExactTests() {
   TestSolo();
   TestDuringPlayback();
   TestRefusals();
+  TestMissingStemFails();
 }
 
 }  // namespace mixdown_test

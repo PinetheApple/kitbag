@@ -1,63 +1,16 @@
-// Replaces global operator new for the whole tool, so the heap high-water mark
-// of a render can be compared across song lengths.
-#include <atomic>
 #include <cmath>
 #include <cstdio>
-#include <cstdlib>
-#include <new>
 #include <numbers>
 #include <string>
 
+#include "counting_allocator.h"
 #include "mixdown_test_support.h"
-
-namespace {
-
-std::atomic<size_t> g_live_bytes{0};
-std::atomic<size_t> g_peak_bytes{0};
-// Keeps the returned pointer max_align_t aligned.
-constexpr size_t kHeader = 16;
-
-void* CountedAlloc(size_t size) {
-  auto* block = static_cast<unsigned char*>(std::malloc(size + kHeader));
-  if (block == nullptr) throw std::bad_alloc();
-  *reinterpret_cast<size_t*>(block) = size;
-  const size_t live = g_live_bytes.fetch_add(size) + size;
-  size_t peak = g_peak_bytes.load();
-  while (live > peak && !g_peak_bytes.compare_exchange_weak(peak, live)) {
-  }
-  return block + kHeader;
-}
-
-void CountedFree(void* ptr) {
-  if (ptr == nullptr) return;
-  auto* block = static_cast<unsigned char*>(ptr) - kHeader;
-  g_live_bytes.fetch_sub(*reinterpret_cast<size_t*>(block));
-  std::free(block);
-}
-
-}  // namespace
-
-void* operator new(size_t size) {
-  return CountedAlloc(size);
-}
-void* operator new[](size_t size) {
-  return CountedAlloc(size);
-}
-void operator delete(void* ptr) noexcept {
-  CountedFree(ptr);
-}
-void operator delete[](void* ptr) noexcept {
-  CountedFree(ptr);
-}
-void operator delete(void* ptr, size_t) noexcept {
-  CountedFree(ptr);
-}
-void operator delete[](void* ptr, size_t) noexcept {
-  CountedFree(ptr);
-}
 
 namespace mixdown_test {
 namespace {
+
+using kitbag_test::g_live_bytes;
+using kitbag_test::g_peak_bytes;
 
 constexpr uint64_t kShortSeconds = 20;
 constexpr uint64_t kLongSeconds = 180;
@@ -114,6 +67,7 @@ Run RenderSeconds(uint64_t seconds, const std::string& tag) {
   SynthReader reader(seconds * kSampleRate);
   kitbag::MixSnapshot snapshot;
   snapshot.tracks.push_back({.reader = &reader});
+  snapshot.longest_frames = reader.total_frames();
   const std::string path = TempPath(tag, ".wav");
   const size_t baseline = g_live_bytes.load();
   g_peak_bytes.store(baseline);

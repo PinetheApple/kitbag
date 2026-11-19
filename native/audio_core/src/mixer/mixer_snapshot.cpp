@@ -3,7 +3,11 @@
 namespace kitbag {
 
 MixSnapshot Mixer::Snapshot() const {
-  MixSnapshot snapshot{.master_gain = app_mix_.master_gain, .rate = app_rate_};
+  MixSnapshot snapshot{
+      .master_gain = app_mix_.master_gain,
+      .rate = app_mix_.rate,
+      .longest_frames = longest_frames_.load(std::memory_order_relaxed)
+  };
   const int count = track_count_.load(std::memory_order_relaxed);
   for (int t = 0; t < count; ++t) {
     const StreamingTrack& stream = *tracks_[t].stream;
@@ -13,7 +17,7 @@ MixSnapshot Mixer::Snapshot() const {
          .gain = app_mix_.gain[t],
          .mute = app_mix_.mute[t],
          .solo = app_mix_.solo[t],
-         .pitch = app_pitch_[t]}
+         .pitch = app_mix_.pitch[t]}
     );
   }
   return snapshot;

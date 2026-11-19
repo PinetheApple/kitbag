@@ -5,11 +5,10 @@ import java.io.File
 class MixdownExport(private val cacheDir: File) {
   class Started(val result: Int, val path: String)
 
-  // Null for a file name that would not be safe as a path.
   fun start(fileName: String): Started? {
-    if (!ExportFiles.isSafeFileName(fileName)) return null
+    val name = ExportFiles.exportName(fileName) ?: return null
     if (!nativeRunning()) ExportFiles.clear(cacheDir)
-    val file = File(ExportFiles.dir(cacheDir).apply { mkdirs() }, fileName)
+    val file = File(ExportFiles.dir(cacheDir).apply { mkdirs() }, name)
     return Started(nativeStart(file.path), file.path)
   }
 

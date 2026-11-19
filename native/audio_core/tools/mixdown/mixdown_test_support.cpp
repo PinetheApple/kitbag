@@ -101,7 +101,7 @@ void RemoveLater(const std::string& path) {
 void RemoveTempFiles() {
   std::error_code error;
   for (const std::string& path : TempFiles()) {
-    std::filesystem::remove(path, error);
+    std::filesystem::remove_all(path, error);
   }
   TempFiles().clear();
 }

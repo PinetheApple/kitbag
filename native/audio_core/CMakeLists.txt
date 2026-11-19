@@ -302,6 +302,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/mixdown/mixdown_test_exact.cpp
     tools/mixdown/mixdown_test_stretch.cpp
     tools/mixdown/mixdown_test_lifecycle.cpp
+    tools/mixdown/mixdown_test_failure.cpp
     tools/mixdown/mixdown_test_memory.cpp
     src/mixdown/mixdown_job.cpp
     src/mixdown/wav_writer.cpp

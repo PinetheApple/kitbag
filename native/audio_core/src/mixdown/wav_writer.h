@@ -1,6 +1,9 @@
 #ifndef KITBAG_MIXDOWN_WAV_WRITER_H
 #define KITBAG_MIXDOWN_WAV_WRITER_H
 
+#include "kitbag_api.h"
+
+#include <climits>
 #include <cstdint>
 #include <cstdio>
 #include <string>
@@ -8,11 +11,11 @@
 
 namespace kitbag {
 
-// Streams interleaved stereo float to a 16-bit PCM WAV. Writes to
-// path + ".part" and renames on Finish, so a reader never sees a partial file.
 class WavWriter {
  public:
-  static constexpr uint32_t kChannels = 2;
+  static constexpr uint32_t kChannels = KB_MIXDOWN_CHANNELS;
+  static constexpr uint32_t kBitsPerSample = KB_MIXDOWN_BITS_PER_SAMPLE;
+  static_assert(kBitsPerSample == sizeof(int16_t) * CHAR_BIT);
   static constexpr uint32_t kBytesPerFrame = kChannels * sizeof(int16_t);
   static constexpr uint32_t kHeaderBytes = 44;
   static constexpr const char* kPartSuffix = ".part";
@@ -21,19 +24,19 @@ class WavWriter {
     return kHeaderBytes + frames * kBytesPerFrame;
   }
   static uint64_t MaxFrames();
-  static int16_t ToS16(float sample);
 
   WavWriter() = default;
   ~WavWriter();
   WavWriter(const WavWriter&) = delete;
   WavWriter& operator=(const WavWriter&) = delete;
 
-  /// Sizes the conversion buffer for Write calls up to [max_block] frames.
-  bool Open(const std::string& path, uint32_t sample_rate, uint32_t max_block);
+  bool Open(
+      const std::string& path,
+      uint32_t sample_rate,
+      uint32_t max_block_frames
+  );
   bool Write(const float* interleaved, uint32_t frames);
-  /// Patches the sizes and renames; on failure the partial file is removed.
   bool Finish();
-  /// Closes and removes the partial file. Safe when nothing is open.
   void Abort();
   uint64_t frames() const {
     return frames_;

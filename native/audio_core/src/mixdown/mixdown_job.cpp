@@ -14,6 +14,7 @@ namespace kitbag {
 namespace {
 
 constexpr FrameClock kNoClock{0};
+constexpr bool kEngineStopped = false;
 
 std::optional<uint64_t> VolumeFreeBytes(const std::string& dir) {
   std::error_code error;
@@ -29,14 +30,11 @@ void LowerThreadPriority() {
 #endif
 }
 
-uint64_t OutputFrames(const Mixer& mixer, float rate) {
-  uint64_t longest = 0;
-  for (int t = 0; t < mixer.active_track_count(); ++t) {
-    longest = std::max(longest, mixer.track_frames(t));
-  }
-  return static_cast<uint64_t>(
-      std::ceil(static_cast<double>(longest) / static_cast<double>(rate))
-  );
+uint64_t OutputFrames(const MixSnapshot& snapshot) {
+  return static_cast<uint64_t>(std::ceil(
+      static_cast<double>(snapshot.longest_frames) /
+      static_cast<double>(snapshot.rate)
+  ));
 }
 
 }  // namespace
@@ -53,22 +51,42 @@ void MixdownJob::set_free_bytes(FreeBytes free_bytes) {
   free_bytes_ = std::move(free_bytes);
 }
 
+void MixdownJob::set_stall_timeout(std::chrono::milliseconds timeout) {
+  stall_timeout_ = timeout;
+}
+
 MixdownJob::StartResult
 MixdownJob::Start(const MixSnapshot& snapshot, const std::string& path) {
   const std::lock_guard<std::mutex> lock(start_mutex_);
   if (state() == State::kRunning) return StartResult::kBusy;
   if (worker_.joinable()) worker_.join();
-  const StartResult result = Prepare(snapshot, path);
-  if (result != StartResult::kOk) {
-    mixer_.reset();
-    writer_.Abort();
-    return result;
-  }
-  cancel_.store(false, std::memory_order_relaxed);
+  const StartResult refusal = Refusal(snapshot, path);
+  if (refusal != StartResult::kOk) return refusal;
   written_frames_.store(0, std::memory_order_relaxed);
+  expected_frames_.store(OutputFrames(snapshot), std::memory_order_relaxed);
+  cancel_.store(false, std::memory_order_relaxed);
   state_.store(State::kRunning, std::memory_order_release);
-  worker_ = std::thread([this] { Run(); });
+  worker_ = std::thread([this, snapshot, path] { Run(snapshot, path); });
   return StartResult::kOk;
+}
+
+MixdownJob::StartResult MixdownJob::Refusal(
+    const MixSnapshot& snapshot,
+    const std::string& path
+) const {
+  if (snapshot.tracks.empty()) return StartResult::kInvalid;
+  const uint64_t frames = OutputFrames(snapshot);
+  if (frames > WavWriter::MaxFrames()) return StartResult::kTooLong;
+  if (!HasRoom(path, frames)) return StartResult::kNoSpace;
+  return StartResult::kOk;
+}
+
+bool MixdownJob::HasRoom(const std::string& path, uint64_t frames) const {
+  std::filesystem::path dir = std::filesystem::path(path).parent_path();
+  if (dir.empty()) dir = std::filesystem::current_path();
+  const std::optional<uint64_t> free = free_bytes_(dir.string());
+  if (!free) return true;
+  return *free >= WavWriter::FileBytes(frames) + kSpaceMarginBytes;
 }
 
 void MixdownJob::Cancel() {
@@ -84,23 +102,22 @@ double MixdownJob::progress() const {
   return std::min(1.0, written / static_cast<double>(expected));
 }
 
-MixdownJob::StartResult
-MixdownJob::Prepare(const MixSnapshot& snapshot, const std::string& path) {
-  if (snapshot.tracks.empty()) return StartResult::kInvalid;
-  auto mixer = std::make_unique<Mixer>(engine_rate_);
-  mixer->ReserveCallbackFrames(kBlockFrames);
+void MixdownJob::Run(const MixSnapshot& snapshot, const std::string& path) {
+  LowerThreadPriority();
+  const State end = Prepare(snapshot, path) ? Render() : Stopped();
+  if (end != State::kDone) writer_.Abort();
+  mixer_.reset();
+  state_.store(end, std::memory_order_release);
+}
+
+bool MixdownJob::Prepare(const MixSnapshot& snapshot, const std::string& path) {
+  mixer_ = std::make_unique<Mixer>(engine_rate_);
+  mixer_->ReserveCallbackFrames(kBlockFrames);
   block_.assign(static_cast<size_t>(kBlockFrames) * WavWriter::kChannels, 0.0f);
-  if (!LoadStems(*mixer, snapshot)) return StartResult::kInvalid;
-  if (!ApplyMix(*mixer, snapshot)) return StartResult::kInternal;
-  const uint64_t frames = OutputFrames(*mixer, snapshot.rate);
-  if (frames > WavWriter::MaxFrames()) return StartResult::kInvalid;
-  if (!HasRoom(path, frames)) return StartResult::kNoSpace;
-  if (!writer_.Open(path, engine_rate_, kBlockFrames)) {
-    return StartResult::kInternal;
-  }
-  expected_frames_.store(frames, std::memory_order_relaxed);
-  mixer_ = std::move(mixer);
-  return StartResult::kOk;
+  if (!LoadStems(*mixer_, snapshot)) return false;
+  ApplyLevels(*mixer_, snapshot);
+  if (!PrimeStretch(*mixer_, snapshot)) return false;
+  return writer_.Open(path, engine_rate_, kBlockFrames);
 }
 
 bool MixdownJob::LoadStems(Mixer& mixer, const MixSnapshot& snapshot) {
@@ -109,15 +126,21 @@ bool MixdownJob::LoadStems(Mixer& mixer, const MixSnapshot& snapshot) {
     const auto index = static_cast<int>(t);
     const Mixer::LoadResult result =
         track.path.empty()
-            ? mixer.SetTrackSource(index, track.reader, kNoClock, false)
-            : mixer.LoadTrack(index, track.path.c_str(), kNoClock, false);
+            ? mixer
+                  .SetTrackSource(index, track.reader, kNoClock, kEngineStopped)
+            : mixer.LoadTrack(
+                  index,
+                  track.path.c_str(),
+                  kNoClock,
+                  kEngineStopped
+              );
     if (result != Mixer::LoadResult::kOk) return false;
   }
   return true;
 }
 
-// The scalars drain before the key and speed prime, which reads them.
-bool MixdownJob::ApplyMix(Mixer& mixer, const MixSnapshot& snapshot) {
+// Drained before the stretch primes, which reads the levels.
+void MixdownJob::ApplyLevels(Mixer& mixer, const MixSnapshot& snapshot) {
   for (size_t t = 0; t < snapshot.tracks.size(); ++t) {
     const TrackSnapshot& track = snapshot.tracks[t];
     const auto index = static_cast<int>(t);
@@ -127,6 +150,9 @@ bool MixdownJob::ApplyMix(Mixer& mixer, const MixSnapshot& snapshot) {
   }
   mixer.SetMasterGain(snapshot.master_gain);
   mixer.Process(block_.data(), 0, 0);
+}
+
+bool MixdownJob::PrimeStretch(Mixer& mixer, const MixSnapshot& snapshot) {
   for (size_t t = 0; t < snapshot.tracks.size(); ++t) {
     const int pitch = snapshot.tracks[t].pitch;
     if (pitch == 0) continue;
@@ -134,46 +160,32 @@ bool MixdownJob::ApplyMix(Mixer& mixer, const MixSnapshot& snapshot) {
         static_cast<int>(t),
         static_cast<float>(pitch),
         kNoClock,
-        false
+        kEngineStopped
     );
     if (result != Mixer::StretchResult::kOk) return false;
   }
   if (snapshot.rate == kUnityRate) return true;
-  return mixer.SetRate(snapshot.rate, kNoClock, false) ==
+  return mixer.SetRate(snapshot.rate, kNoClock, kEngineStopped) ==
          Mixer::StretchResult::kOk;
-}
-
-bool MixdownJob::HasRoom(const std::string& path, uint64_t frames) const {
-  std::filesystem::path dir = std::filesystem::path(path).parent_path();
-  if (dir.empty()) dir = std::filesystem::current_path();
-  const std::optional<uint64_t> free = free_bytes_(dir.string());
-  if (!free) return true;
-  return *free >= WavWriter::FileBytes(frames) + kSpaceMarginBytes;
-}
-
-void MixdownJob::Run() {
-  LowerThreadPriority();
-  const State end = Render();
-  if (end != State::kDone) writer_.Abort();
-  mixer_.reset();
-  state_.store(end, std::memory_order_release);
 }
 
 MixdownJob::State MixdownJob::Render() {
   mixer_->Play();
-  while (true) {
-    if (!WaitForReadAhead() || !WriteBlock()) break;
-    if (!mixer_->is_playing()) {
-      if (cancel_.load(std::memory_order_relaxed)) break;
-      return writer_.Finish() ? State::kDone : State::kFailed;
-    }
-  }
+  do {
+    if (!WaitForReadAhead() || !WriteBlock()) return Stopped();
+  } while (mixer_->is_playing());
+  if (cancel_.load(std::memory_order_relaxed)) return State::kCancelled;
+  if (writer_.frames() == 0) return State::kFailed;
+  return writer_.Finish() ? State::kDone : State::kFailed;
+}
+
+MixdownJob::State MixdownJob::Stopped() const {
   return cancel_.load(std::memory_order_relaxed) ? State::kCancelled
                                                  : State::kFailed;
 }
 
 bool MixdownJob::WaitForReadAhead() {
-  const auto deadline = std::chrono::steady_clock::now() + kStallTimeout;
+  const auto deadline = std::chrono::steady_clock::now() + stall_timeout_;
   for (int t = 0; t < mixer_->active_track_count(); ++t) {
     while (!TrackReady(t)) {
       if (cancel_.load(std::memory_order_relaxed)) return false;

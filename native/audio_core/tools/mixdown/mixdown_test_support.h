@@ -65,6 +65,8 @@ std::string WriteStem(
 kb_engine* OpenEngine();
 bool WaitForMixdown(kb_engine* engine);
 bool WaitForJob(const kitbag::MixdownJob& job);
+bool WaitForFile(const std::string& path);
+kitbag::MixSnapshot ReaderSnapshot(kitbag::SourceReader* reader);
 int16_t ExpectedS16(float sample);
 std::vector<int16_t> RenderLive(kb_engine* engine, uint64_t frames);
 float PeakOf(const std::vector<int16_t>& samples);
@@ -72,13 +74,10 @@ float PeakOf(const std::vector<int16_t>& samples);
 uint64_t
 Mismatches(const std::vector<int16_t>& got, const std::vector<int16_t>& want);
 
-size_t LiveHeapBytes();
-size_t PeakHeapBytes();
-void ResetPeakHeap();
-
 void RunExactTests();
 void RunStretchTests();
 void RunLifecycleTests();
+void RunFailureTests();
 void RunMemoryTests();
 
 }  // namespace mixdown_test

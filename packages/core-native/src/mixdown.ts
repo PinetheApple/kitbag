@@ -6,28 +6,42 @@ import {
 import { getKitbagCommands } from './NativeKitbagCommands';
 import { getKitbagLibrary } from './NativeKitbagLibrary';
 
-export type MixdownStart = Readonly<{ result: number; path?: string }>;
+/** Started, with where the file will be; or refused, with why. */
+export type MixdownStart =
+  | Readonly<{ result: typeof KB_RESULT.KB_OK; path: string }>
+  | Readonly<{ result: Exclude<KB_RESULT, typeof KB_RESULT.KB_OK> }>;
 
 const STATES: readonly number[] = Object.values(KB_MIXDOWN_STATE);
+const RESULTS: readonly number[] = Object.values(KB_RESULT);
 
 function isMixdownState(value: number): value is KB_MIXDOWN_STATE {
   return STATES.includes(value);
 }
 
-/** `path` only when the render started; poll mixdownState() until it ends. */
+function isRefusal(
+  value: number,
+): value is Exclude<KB_RESULT, typeof KB_RESULT.KB_OK> {
+  return value !== KB_RESULT.KB_OK && RESULTS.includes(value);
+}
+
 export async function mixdownStart(fileName: string): Promise<MixdownStart> {
   const reply = await getKitbagCommands().mixdownStart(fileName);
-  return reply.result === KB_RESULT.KB_OK
-    ? { result: reply.result, path: reply.path }
-    : { result: reply.result };
+  if (reply.result === KB_RESULT.KB_OK) {
+    return { result: KB_RESULT.KB_OK, path: reply.path };
+  }
+  return {
+    result: isRefusal(reply.result)
+      ? reply.result
+      : KB_RESULT.KB_ERROR_INTERNAL,
+  };
 }
 
 export function mixdownCancel(): void {
   getKitbagCommands().mixdownCancel();
 }
 
-export function shareFile(path: string, mime: string): Promise<void> {
-  return getKitbagLibrary().shareFile(path, mime);
+export function shareExport(path: string): Promise<void> {
+  return getKitbagLibrary().shareExport(path);
 }
 
 export function mixdownProgress(): number {

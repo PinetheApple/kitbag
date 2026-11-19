@@ -47,6 +47,17 @@ bool WaitForJob(const kitbag::MixdownJob& job) {
   });
 }
 
+bool WaitForFile(const std::string& path) {
+  return PollUntil([&path] { return Exists(path); });
+}
+
+kitbag::MixSnapshot ReaderSnapshot(kitbag::SourceReader* reader) {
+  kitbag::MixSnapshot snapshot;
+  snapshot.tracks.push_back({.reader = reader});
+  snapshot.longest_frames = reader->total_frames();
+  return snapshot;
+}
+
 int16_t ExpectedS16(float sample) {
   const float clamped = std::fmin(1.0f, std::fmax(-1.0f, sample));
   return static_cast<int16_t>(std::lround(clamped * kS16Max));

@@ -8,7 +8,7 @@ export const mixdownStart: typeof Native.mixdownStart = () =>
 
 export const mixdownCancel: typeof Native.mixdownCancel = () => undefined;
 
-export const shareFile: typeof Native.shareFile = () =>
+export const shareExport: typeof Native.shareExport = () =>
   Promise.reject(new Error(NEEDS_APP));
 
 export const mixdownProgress: typeof Native.mixdownProgress = () => 0;

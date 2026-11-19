@@ -359,9 +359,6 @@ class Mixer {
   RtPublisher<KeyBusSlot> buses_[kBanks][kKeyBusCount];
   float sample_rate_;
   MixerAppMix<kMaxTracks> app_mix_;
-  // App thread: what the callback will hold once the ring drains.
-  int app_pitch_[kMaxTracks] = {};
-  float app_rate_ = kUnityRate;
   bool app_engaged_ = false;
   bool app_vendor_default_ = false;
   // App thread: the bank the newest primed plan names, and its generation.

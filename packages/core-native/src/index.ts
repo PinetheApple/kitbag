@@ -47,7 +47,7 @@ export {
   mixdownProgress,
   mixdownStart,
   mixdownState,
-  shareFile,
+  shareExport,
   type MixdownStart,
 } from './mixdown';
 

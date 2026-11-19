@@ -73,13 +73,13 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   override fun shareBackup(fileName: String, contents: String, promise: Promise) =
     backups.share(fileName, contents, promise)
 
-  override fun shareFile(path: String, mime: String, promise: Promise) {
+  override fun shareExport(path: String, promise: Promise) {
     val file = ExportFiles.resolve(reactApplicationContext.cacheDir, path)
     if (file == null) {
       promise.reject(LibraryErrors.BAD_FILE_NAME, "Not an exported file: $path")
       return
     }
-    files.share(ExportFiles.shareSpec(mime), promise) { file }
+    files.share(ExportFiles.shareSpec(), promise) { file }
   }
 
   override fun importAudio(uri: String, relativeDir: String, promise: Promise) {
@@ -358,7 +358,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       "supportedAudioExtensions" to SupportedAudio.EXTENSIONS,
       "supportedAudioMimeTypes" to SupportedAudio.MIME_TYPES,
       "unsupportedAudioExtensions" to SupportedAudio.UNSUPPORTED_EXTENSIONS,
-    ) + StemBundleBridge.CONSTANTS
+    ) + StemBundleBridge.CONSTANTS + LibraryErrors.EXPORT_CONSTANTS
 
   companion object {
     private const val TAG = "KitbagLibrary"

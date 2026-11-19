@@ -137,6 +137,7 @@ export const KB_RESULT = {
   KB_ERROR_BUSY: 4,
   KB_ERROR_INTERNAL: 5,
   KB_ERROR_NO_SPACE: 6,
+  KB_ERROR_TOO_LONG: 7,
 } as const;
 export type KB_RESULT = (typeof KB_RESULT)[keyof typeof KB_RESULT];
 
@@ -173,6 +174,12 @@ export const KB_MIXDOWN_STATE = {
   KB_MIXDOWN_STATE_CANCELLED: 4,
 } as const;
 export type KB_MIXDOWN_STATE = (typeof KB_MIXDOWN_STATE)[keyof typeof KB_MIXDOWN_STATE];
+
+/** Mixdown WAV channels (KB_MIXDOWN_CHANNELS); its rate is the engine's. */
+export const KB_MIXDOWN_CHANNELS = 2;
+
+/** Mixdown WAV sample width (KB_MIXDOWN_BITS_PER_SAMPLE). */
+export const KB_MIXDOWN_BITS_PER_SAMPLE = 16;
 
 /** Metronome output-latency offset range, in ms (kb_metronome_set_latency_offset). */
 export const KB_LATENCY_OFFSET_MS_BOUNDS = {

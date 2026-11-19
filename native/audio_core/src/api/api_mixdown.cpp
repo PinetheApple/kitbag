@@ -28,8 +28,8 @@ kb_result ToKbResult(MixdownJob::StartResult result) {
       return KB_ERROR_INVALID_ARGUMENT;
     case MixdownJob::StartResult::kNoSpace:
       return KB_ERROR_NO_SPACE;
-    case MixdownJob::StartResult::kInternal:
-      return KB_ERROR_INTERNAL;
+    case MixdownJob::StartResult::kTooLong:
+      return KB_ERROR_TOO_LONG;
   }
   return KB_ERROR_INTERNAL;
 }

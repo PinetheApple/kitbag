@@ -21,28 +21,28 @@ typedef enum kb_mixdown_state {
   KB_MIXDOWN_STATE_CANCELLED = 4,
 } kb_mixdown_state;
 
-/* Renders the whole song as the mixer holds it at the call — every loaded
- * stem's gain, mute, solo and key, master gain and speed — to out_path as a
- * stereo 16-bit PCM WAV at the engine rate, on a background thread. The loop,
- * the head and the metronome are not in it. Live playback is untouched and may
- * carry on meanwhile.
- * The file is written to out_path + ".part" and renamed to out_path on success;
- * a failed or cancelled render leaves neither behind.
- * Returns KB_OK once the render runs (kb_mixdown_current_state reads RUNNING);
- * KB_ERROR_BUSY while another render runs; KB_ERROR_INVALID_ARGUMENT for a null
- * engine or path, no stem loaded, or a stem that will not open;
- * KB_ERROR_NO_SPACE when the destination volume cannot hold the file with
- * room to spare; KB_ERROR_INTERNAL when the file cannot be created or the
- * speed and key cannot be primed. On any error nothing is written and the
- * state reads as before. Loads and primes the stems on the calling thread. */
+/* The file's format; its rate is kb_engine_sample_rate. */
+#define KB_MIXDOWN_CHANNELS 2
+#define KB_MIXDOWN_BITS_PER_SAMPLE 16
+
+/* Renders the whole song as the mixer holds it at the call (each loaded stem's
+ * gain, mute, solo and key, master gain and speed; not the loop, head or
+ * click) to out_path: stereo 16-bit PCM WAV at the engine rate. Takes a copy
+ * of the mix and returns; loading, priming and rendering run on a background
+ * thread, and live playback carries on. Output goes to out_path + ".part",
+ * renamed on success; FAILED and CANCELLED leave neither file.
+ * Returns KB_OK once the render runs; KB_ERROR_BUSY while one runs;
+ * KB_ERROR_INVALID_ARGUMENT for a null engine or path or no stem loaded;
+ * KB_ERROR_TOO_LONG past a WAV's 4 GiB data limit; KB_ERROR_NO_SPACE when the
+ * destination volume cannot hold the file with room to spare. A stem that
+ * will not open, or a failed write or rename, ends FAILED. */
 KB_EXPORT kb_result kb_mixdown_start(kb_engine* engine, const char* out_path);
-/* Asks a running render to stop; the state reads CANCELLED once its partial
- * file is gone. Returns at once. A no-op when nothing runs. Destroying the
- * engine cancels and waits. */
+/* Returns at once; the state reads CANCELLED once the partial file is gone.
+ * kb_engine_destroy cancels and waits. */
 KB_EXPORT void kb_mixdown_cancel(kb_engine* engine);
-/* Fraction of the current or last render written, [0, 1]; 1 once DONE. */
+/* [0, 1]; 1 once DONE. */
 KB_EXPORT double kb_mixdown_progress(const kb_engine* engine);
-/* A kb_mixdown_state; IDLE for a null engine or before the first render. */
+/* A kb_mixdown_state. */
 KB_EXPORT int32_t kb_mixdown_current_state(const kb_engine* engine);
 
 #ifdef __cplusplus

@@ -368,6 +368,9 @@ describe('collectConstants (real engine source)', () => {
       { name: 'KB_MIXDOWN_STATE_CANCELLED', value: 4 },
     ]);
     expect(c.result).toContainEqual({ name: 'KB_ERROR_NO_SPACE', value: 6 });
+    expect(c.result).toContainEqual({ name: 'KB_ERROR_TOO_LONG', value: 7 });
+    expect(c.mixdownChannels).toBe(2);
+    expect(c.mixdownBitsPerSample).toBe(16);
     // render twice: identical, so generate:check can byte-diff deterministically.
     expect(renderConstants(c)).toBe(renderConstants(c));
   });

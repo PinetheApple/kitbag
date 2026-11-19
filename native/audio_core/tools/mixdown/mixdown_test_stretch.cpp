@@ -1,4 +1,3 @@
-// Speed and key rendered as heard (SPEC.md §7.6): 0.75x with one stem at -2.
 #include <algorithm>
 #include <cmath>
 #include <cstdio>

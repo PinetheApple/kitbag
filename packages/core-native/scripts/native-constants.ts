@@ -92,6 +92,14 @@ export function collectConstants(sources: NativeSources): NativeConstants {
     rampUnit: parseEnum(sources.apiHeader, 'kb_ramp_unit'),
     rampState: parseEnum(sources.apiHeader, 'kb_ramp_state'),
     mixdownState: parseEnum(sources.mixdownHeader, 'kb_mixdown_state'),
+    mixdownChannels: parseDefineInt(
+      sources.mixdownHeader,
+      'KB_MIXDOWN_CHANNELS',
+    ),
+    mixdownBitsPerSample: parseDefineInt(
+      sources.mixdownHeader,
+      'KB_MIXDOWN_BITS_PER_SAMPLE',
+    ),
     bpmReferenceDenominator: parseConstexprInt(
       sources.metronomeHeader,
       'kBpmReferenceDenominator',

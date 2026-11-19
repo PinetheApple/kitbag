@@ -93,9 +93,7 @@ export interface EngineClockHost extends Pick<
 
 /** The mixdown export's polled state; read a few times a second, not per frame. */
 export interface MixdownHost {
-  /** kb_mixdown_progress — fraction written, [0, 1]; 1 once done. */
   readonly mixdown_progress: number;
-  /** kb_mixdown_current_state — a KB_MIXDOWN_STATE value. */
   readonly mixdown_state: number;
 }
 

@@ -39,6 +39,10 @@ export const CODES: LibraryConstants = {
   failureUnsupported: 'unsupported',
   failureInterrupted: 'interrupted',
   failureInternal: 'internal',
+  exportBadFileName: 'bad-file-name',
+  exportNoActivity: 'no-activity',
+  exportNoShareTarget: 'no-share-target',
+  exportShareFailed: 'share-failed',
   supportedAudioFamilies: ['WAV', 'MP3', 'FLAC', 'AIFF'],
   supportedAudioExtensions: [
     'wav',

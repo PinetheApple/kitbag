@@ -17,12 +17,6 @@ constexpr uint64_t kShortFrames = 30000;
 constexpr double kToneHz = 330.0;
 constexpr float kToneAmplitude = 0.4f;
 
-kitbag::MixSnapshot ReaderSnapshot(kitbag::SourceReader* reader) {
-  kitbag::MixSnapshot snapshot;
-  snapshot.tracks.push_back({.reader = reader});
-  return snapshot;
-}
-
 void TestCancelLeavesNothing() {
   media_test::MemoryAudioReader reader(
       Sine(kGatedFrames, kToneHz, kToneAmplitude),
@@ -36,7 +30,7 @@ void TestCancelLeavesNothing() {
   const kitbag::MixSnapshot snapshot = ReaderSnapshot(&reader);
   Check(job.Start(snapshot, path) == Result::kOk, "cancel: start");
   Check(job.state() == State::kRunning, "cancel: RUNNING");
-  Check(Exists(part), "cancel: writes to .part while running");
+  Check(WaitForFile(part), "cancel: writes to .part while running");
   Check(
       job.Start(snapshot, path) == Result::kBusy,
       "cancel: second start BUSY"
@@ -71,11 +65,27 @@ void TestSpaceCheck() {
   Check(ReadWav(path).frames() == kShortFrames, "space: whole song written");
 }
 
+void TestTooLong() {
+  media_test::MemoryAudioReader reader(
+      Sine(kShortFrames, kToneHz, kToneAmplitude),
+      kMono,
+      kSampleRate
+  );
+  kitbag::MixSnapshot snapshot = ReaderSnapshot(&reader);
+  snapshot.longest_frames = kitbag::WavWriter::MaxFrames() + 1;
+  MixdownJob job(kSampleRate);
+  job.set_free_bytes([](const std::string&) { return UINT64_MAX; });
+  const std::string path = TempPath("too_long", ".wav");
+  Check(job.Start(snapshot, path) == Result::kTooLong, "too long: refused");
+  Check(job.state() == State::kIdle, "too long: state unchanged");
+}
+
 }  // namespace
 
 void RunLifecycleTests() {
   TestCancelLeavesNothing();
   TestSpaceCheck();
+  TestTooLong();
 }
 
 }  // namespace mixdown_test
