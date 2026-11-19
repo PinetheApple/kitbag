@@ -3,6 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 const library = vi.hoisted(() => ({
   pickBackup: vi.fn(),
   shareBackup: vi.fn(),
+  saveBackup: vi.fn(),
 }));
 
 vi.mock('react-native', () => ({ Platform: { OS: 'android' } }));
@@ -11,7 +12,7 @@ vi.mock('./NativeKitbagLibrary', () => ({
   getKitbagLibrary: () => library,
 }));
 
-const { backupFilesAvailable, pickBackup, shareBackup } =
+const { backupFilesAvailable, pickBackup, saveBackup, shareBackup } =
   await import('./backupFiles.ts');
 
 beforeEach(() => {
@@ -44,4 +45,20 @@ it('shares the contents under the given file name', async () => {
     'kitbag_export.json',
     '{"a":1}',
   );
+});
+
+it('saves the contents under the given file name and reports the outcome', async () => {
+  library.saveBackup.mockResolvedValue(true);
+
+  await expect(saveBackup('kitbag_export.json', '{"a":1}')).resolves.toBe(true);
+  expect(library.saveBackup).toHaveBeenCalledExactlyOnceWith(
+    'kitbag_export.json',
+    '{"a":1}',
+  );
+});
+
+it('reports a cancelled save dialog as not saved', async () => {
+  library.saveBackup.mockResolvedValue(false);
+
+  await expect(saveBackup('kitbag_export.json', '{}')).resolves.toBe(false);
 });

@@ -593,6 +593,7 @@ export {
 } from './backup/runtime.ts';
 export {
   LIBRARY_BACKUP_FILE_NAME,
+  saveLibraryBackup,
   setlistBackupFileName,
   shareLibraryBackup,
   shareSetlist,

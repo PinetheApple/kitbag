@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { BackupDeps } from './runtime.ts';
 import {
   LIBRARY_BACKUP_FILE_NAME,
+  saveLibraryBackup,
   setlistBackupFileName,
   shareLibraryBackup,
   shareSetlist,
@@ -21,6 +22,7 @@ function deps() {
     service: () => service,
     pick: vi.fn(),
     share: vi.fn(() => Promise.resolve()),
+    save: vi.fn(() => Promise.resolve(true)),
     afterRestore: vi.fn(),
     calls: service,
   } satisfies BackupDeps & { calls: unknown };
@@ -70,5 +72,28 @@ describe('sharing', () => {
       'kitbag_setlist_wedding-set.json',
       '{"setlist":true}',
     );
+  });
+});
+
+describe('saving', () => {
+  it('saves the bytes and file name sharing would hand over', async () => {
+    const d = deps();
+    await shareLibraryBackup(d);
+    await saveLibraryBackup(d);
+    expect(d.save.mock.calls).toEqual(d.share.mock.calls);
+    expect(d.save).toHaveBeenCalledOnce();
+  });
+
+  it('reports whether the user saved or cancelled', async () => {
+    const d = deps();
+    await expect(saveLibraryBackup(d)).resolves.toBe(true);
+    d.save.mockResolvedValueOnce(false);
+    await expect(saveLibraryBackup(d)).resolves.toBe(false);
+  });
+
+  it('passes a failed write on to the caller', async () => {
+    const d = deps();
+    d.save.mockRejectedValueOnce(new Error('E_SAVE_FAILED'));
+    await expect(saveLibraryBackup(d)).rejects.toThrow('E_SAVE_FAILED');
   });
 });

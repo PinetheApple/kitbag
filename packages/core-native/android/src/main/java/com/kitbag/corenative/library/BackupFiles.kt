@@ -3,6 +3,7 @@ package com.kitbag.corenative.library
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
+import java.io.OutputStream
 
 class BackupTooLargeException : IOException("The picked file is too large to be a backup")
 
@@ -15,6 +16,8 @@ object BackupFiles {
   private val SAFE_FILE_NAME = Regex("^[A-Za-z0-9][A-Za-z0-9._-]{0,127}\\.json$")
 
   fun isSafeFileName(name: String): Boolean = SAFE_FILE_NAME.matches(name)
+
+  fun write(out: OutputStream, contents: String) = out.write(contents.toByteArray(Charsets.UTF_8))
 
   fun readCapped(input: InputStream, maxBytes: Int = MAX_BACKUP_BYTES): ByteArray {
     val out = ByteArrayOutputStream()
