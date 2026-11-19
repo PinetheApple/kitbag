@@ -200,12 +200,9 @@ describe("standalone Play while a song's click runs", () => {
     accents.forEach((accent, beat) => {
       expect(commands.setAccent).toHaveBeenCalledWith(beat, accent);
     });
-    const [lastAccent] = commands.setAccent.mock.invocationCallOrder.slice(-1);
-    const [startedAt] = commands.metronomeStart.mock.invocationCallOrder;
-    expect(lastAccent).toBeLessThan(startedAt ?? 0);
-    const [restored] = commands.setSounds.mock.invocationCallOrder;
-    const [started] = commands.metronomeStart.mock.invocationCallOrder;
-    expect(restored).toBeLessThan(started ?? 0);
+    const started = lastCall(commands.metronomeStart);
+    expect(lastCall(commands.setAccent)).toBeLessThan(started);
+    expect(lastCall(commands.setSounds)).toBeLessThan(started);
   });
 
   it('leaves the standalone running when the song closes later', async () => {

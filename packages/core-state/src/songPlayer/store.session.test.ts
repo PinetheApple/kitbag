@@ -2,10 +2,7 @@ import type { StemSetRecord } from '@kitbag/core-db';
 import { KB_MIXER_UNITY_RATE, KB_RESULT } from '@kitbag/core-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  defaultCommands,
-  type MetronomeCommands,
-} from '../metronome/commands.ts';
+import type { MetronomeCommands } from '../metronome/commands.ts';
 import { configureMetronomeRuntime } from '../metronome/runtime.ts';
 import { metronomeStore, type MetronomeStore } from '../metronome/store.ts';
 import { createMixerClaim } from '../stemPlayer/mixerClaim.ts';
@@ -18,9 +15,11 @@ import {
   SONG_DETAILS,
   stem,
 } from '../stemPlayer/store.test-helper.ts';
+import { standaloneMetronome } from './songClick.ts';
 import {
   BARS,
   fakeSongRuntime,
+  lastAccentPerBeat,
   SONG_ID,
   songRecord,
   songStore,
@@ -365,6 +364,8 @@ describe('a screen cleaning up late', () => {
 
 describe('the standalone metronome', () => {
   const TEMPO = 97;
+  const STANDALONE_BEATS = 3;
+  const STANDALONE_DENOMINATOR = 4;
   const beside: { song: Fake | null } = { song: null };
   const metronomeRuntime = {
     commands: new Proxy(
@@ -381,11 +382,11 @@ describe('the standalone metronome', () => {
 
   function runMetronomeBeside(song: Fake) {
     beside.song = song;
-    song.metronome = { store: metronomeStore, commands: defaultCommands };
+    song.metronome = standaloneMetronome;
     configureMetronomeRuntime(metronomeRuntime);
     const metronome = metronomeStore.getState();
     metronome.setTempo(TEMPO);
-    metronome.setBeats(3, 4);
+    metronome.setBeats(STANDALONE_BEATS, STANDALONE_DENOMINATOR);
     metronome.start();
     song.sharedMetronome.active.mockImplementation(
       () => metronomeStore.getState().running,
@@ -406,22 +407,21 @@ describe('the standalone metronome', () => {
     expect(after.running).toBe(false);
     expect(configOf(after)).toEqual(configOf(before));
     expect(after.bpm).toBe(TEMPO);
-    expect(after.beatsPerBar).toBe(3);
+    expect(after.beatsPerBar).toBe(STANDALONE_BEATS);
     const { setSounds, setTempo, setBeats, setSubdivision, setAccent } =
       song.metronomeSetters;
     const { normal, accent } = before.sounds;
     for (const call of setSounds.mock.calls)
       expect(call).toEqual([normal, accent]);
     for (const call of setTempo.mock.calls) expect(call).toEqual([TEMPO]);
-    for (const call of setBeats.mock.calls) expect(call).toEqual([3, 4]);
+    for (const call of setBeats.mock.calls)
+      expect(call).toEqual([STANDALONE_BEATS, STANDALONE_DENOMINATOR]);
     for (const call of setSubdivision.mock.calls)
       expect(call).toEqual([before.subdivision]);
-    const lastAccents = new Map<number, number>();
-    for (const [beat, value] of setAccent.mock.calls)
-      lastAccents.set(beat, value);
-    before.accents.forEach((value, beat) => {
-      expect(lastAccents.get(beat)).toBe(value);
-    });
+    const engineAccents = lastAccentPerBeat(setAccent);
+    expect(engineAccents.slice(0, before.accents.length)).toEqual(
+      before.accents,
+    );
   }
 
   it('keeps its tempo and config through a song, but is left stopped', async () => {

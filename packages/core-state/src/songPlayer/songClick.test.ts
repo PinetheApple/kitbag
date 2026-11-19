@@ -4,15 +4,7 @@ import {
   KB_COUNT_IN_BARS,
   KB_SOUND_NAMES,
 } from '@kitbag/core-native';
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-  type Mock,
-} from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createMixerClaim } from '../stemPlayer/mixerClaim.ts';
 import { createStemPlayerStore } from '../stemPlayer/store.ts';
@@ -25,6 +17,7 @@ import {
 import {
   BARS,
   fakeSongRuntime,
+  lastAccentPerBeat,
   leftPlaying,
   SONG_ID,
   songRecord,
@@ -69,16 +62,6 @@ async function songBesideStandalone(
   await store.getState().open(SONG_ID, BARS).loaded;
   vi.clearAllMocks();
   return { fake, metronome, store, claim };
-}
-
-function lastAccentPerBeat(
-  setAccent: Mock<(beat: number, accent: number) => void>,
-) {
-  const last = new Map<number, number>();
-  for (const [beat, accent] of setAccent.mock.calls) last.set(beat, accent);
-  return [...last.entries()]
-    .sort(([a], [b]) => a - b)
-    .map(([, accent]) => accent);
 }
 
 async function editedClickRunning(claim = createMixerClaim()) {
@@ -147,6 +130,20 @@ describe("a song's click settings", () => {
     expect(store.getState().clickSettings.accents).toEqual(triple);
     await store.getState().toggleClick();
     expect(lastAccentPerBeat(metronome.commands.setAccent)).toEqual(triple);
+  });
+
+  it("are at the song's meter in the same update that makes it ready", async () => {
+    const fake = fakeSongRuntime(
+      songRecord({ meterBeatsPerBar: GRID_METER.triple }),
+    );
+    const store = songStore(fake);
+    const atReady: number[] = [];
+    store.subscribe((state, previous) => {
+      if (state.status === 'ready' && previous.status !== 'ready')
+        atReady.push(state.clickSettings.accents.length);
+    });
+    await store.getState().open(SONG_ID, BARS).loaded;
+    expect(atReady).toEqual([GRID_METER.triple]);
   });
 
   it("refit the accents live when the song's meter changes", async () => {

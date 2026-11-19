@@ -107,11 +107,9 @@ export function clickActions(
   {
     recountWithClickOff = noCount,
     recountWithClickOn = noCount,
-  }: Partial<ClickHandoff> = {},
-  {
     gridSent = doNothing,
     clickStarting = doNothing,
-  }: Partial<ClickStartFollowers> = {},
+  }: Partial<ClickHandoff & ClickStartFollowers> = {},
 ): Pick<StemPlayerActions, 'toggleClick'> {
   const { set, get, runtimeOf, session } = context;
   const { busy, call } = sessionGate(session);

@@ -32,6 +32,18 @@ export interface PerAccentSounds {
   readonly accent: number;
 }
 
+export function mergeSounds(
+  prev: PerAccentSounds,
+  normal: number,
+  accent: number,
+): PerAccentSounds | undefined {
+  if (!isSoundId(normal) && !isSoundId(accent)) return undefined;
+  return {
+    normal: isSoundId(normal) ? normal : prev.normal,
+    accent: isSoundId(accent) ? accent : prev.accent,
+  };
+}
+
 export const usesSound = (sounds: PerAccentSounds, soundId: number) =>
   sounds.normal === soundId || sounds.accent === soundId;
 

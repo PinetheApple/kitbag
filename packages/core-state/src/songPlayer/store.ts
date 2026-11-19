@@ -38,7 +38,8 @@ import { getSongPlayer, type SongPlayerRuntime } from './runtime.ts';
 import { songCard } from './songCard.ts';
 import type { SongPlayerActions } from './actions.ts';
 import {
-  songClickSettings,
+  songClickActions,
+  songClickEngine,
   standaloneMetronome,
   type SongClickMetronome,
 } from './songClick.ts';
@@ -109,8 +110,9 @@ export function createSongPlayerStore(
   };
 
   return createStore<SongPlayerStore>((set, get, api) => {
-    const settings = songClickSettings({ set, get, metronome });
-    api.subscribe(settings.followSong);
+    const clickEngine = songClickEngine({ set, get, metronome });
+    const clickSettings = songClickActions({ set, get, metronome });
+    api.subscribe(clickEngine.followSong);
     const mixer = mixerSession({
       set,
       get,
@@ -215,6 +217,7 @@ export function createSongPlayerStore(
       }
       detectedGrid = record;
       const grid = recordGrid(record);
+      const meterOverride = meterOverrideOf(record);
       set({
         status: 'ready',
         engineRate,
@@ -222,7 +225,11 @@ export function createSongPlayerStore(
         beats: grid.beats,
         downbeatIndices: grid.downbeatIndices,
         detected: grid.detected,
-        meterOverride: meterOverrideOf(record),
+        meterOverride,
+        clickSettings: clickEngine.fittedTo({
+          detected: grid.detected,
+          meterOverride,
+        }),
       });
       if (decoded > 0)
         correctStoredLength(record, framesToSeconds(decoded, engineRate));
@@ -326,7 +333,7 @@ export function createSongPlayerStore(
         latestWaveform = null;
         set({
           ...closedState,
-          ...settings.seeded(closedState),
+          ...clickSettings.seeded(closedState),
           status: 'loading',
           songId,
         });
@@ -369,8 +376,10 @@ export function createSongPlayerStore(
       },
       ...transportActions(get, runtimeOf, scrubSeek, undefined, card.start),
       ...loopActions(context),
-      ...clickActions(context, mixer.pendingClick, undefined, settings),
-      ...settings.actions,
+      ...clickActions(context, mixer.pendingClick, {
+        clickStarting: clickEngine.clickStarting,
+      }),
+      ...clickSettings.actions,
     };
   });
 }

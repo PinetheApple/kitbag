@@ -39,6 +39,16 @@ export function songRecord(change: Partial<SongRecord> = {}): SongRecord {
   };
 }
 
+export function lastAccentPerBeat(
+  setAccent: Mock<(beat: number, accent: number) => void>,
+) {
+  const last = new Map<number, number>();
+  for (const [beat, accent] of setAccent.mock.calls) last.set(beat, accent);
+  return [...last.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([, accent]) => accent);
+}
+
 export function fakeMetronomeCommands() {
   return new Proxy(
     {},
