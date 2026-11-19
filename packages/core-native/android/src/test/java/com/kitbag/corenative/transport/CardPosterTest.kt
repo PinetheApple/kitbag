@@ -12,7 +12,7 @@ class CardPosterTest {
     var foreground = false
     var promotions = 0
     var refusal: Throwable? = null
-    var afterRemove: () -> Unit = {}
+    var afterRemove: (() -> Unit)? = null
 
     override fun promote(notification: String): Throwable? {
       refusal?.let { return it }
@@ -33,7 +33,7 @@ class CardPosterTest {
     override fun remove() {
       shown = null
       foreground = false
-      afterRemove()
+      afterRemove?.also { afterRemove = null }?.invoke()
     }
   }
 
@@ -73,7 +73,7 @@ class CardPosterTest {
   fun `a late paused post after finish shows nothing`() {
     val card = fences.song.issue()
     poster.post(PAUSED, false, fences.song, card)
-    poster.finish(fences.song)
+    poster.finish()
     poster.post(LATE, false, fences.song, card)
     assertNull(surface.shown)
   }
@@ -83,7 +83,7 @@ class CardPosterTest {
     val card = fences.song.issue()
     poster.post(PAUSED, false, fences.song, card)
     surface.afterRemove = { poster.post(LATE, false, fences.song, card) }
-    poster.finish(fences.song)
+    poster.finish()
     assertNull(surface.shown)
   }
 
@@ -91,9 +91,49 @@ class CardPosterTest {
   fun `finish leaves a newer card the app already issued`() {
     poster.post(PAUSED, false, fences.song, fences.song.issue())
     val newer = fences.song.issue()
-    poster.finish(fences.song)
+    poster.finish()
     poster.post(PLAYING, true, fences.song, newer)
     assertEquals(PLAYING, surface.shown)
+  }
+
+  @Test
+  fun `a service destroyed with a paused card detached leaves nothing shown`() {
+    val card = fences.song.issue()
+    poster.post(PLAYING, true, fences.song, card)
+    poster.post(PAUSED, false, fences.song, card)
+    poster.finish()
+    assertNull(surface.shown)
+    assertFalse(surface.foreground)
+  }
+
+  @Test
+  fun `a late paused metronome post after finish shows nothing`() {
+    val card = fences.metronome.keep()
+    poster.post(PAUSED, false, fences.metronome, card)
+    poster.finish()
+    poster.post(LATE, false, fences.metronome, card)
+    assertNull(surface.shown)
+  }
+
+  @Test
+  fun `a metronome shown again after a hide keeps its fresh card through finish`() {
+    poster.post(PAUSED, false, fences.metronome, fences.metronome.keep())
+    fences.metronome.withdraw()
+    val fresh = fences.metronome.keep()
+    poster.finish()
+    poster.post(PLAYING, true, fences.metronome, fresh)
+    assertEquals(PLAYING, surface.shown)
+  }
+
+  @Test
+  fun `a playing post after a refused promotion tries the foreground again`() {
+    val card = fences.song.issue()
+    surface.refusal = IllegalStateException(REFUSED)
+    poster.post(PLAYING, true, fences.song, card)
+    surface.refusal = null
+    poster.post(PLAYING, true, fences.song, card)
+    assertTrue(surface.foreground)
+    assertEquals(1, surface.promotions)
   }
 
   @Test

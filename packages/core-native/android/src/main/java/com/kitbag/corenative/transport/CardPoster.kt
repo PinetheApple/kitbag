@@ -26,9 +26,11 @@ class CardPoster<N>(private val surface: CardSurface<N>, private val warn: (Thro
   }
 
   // Withdrawing first means a post racing the cancel fails its fence instead of reviving the card.
-  fun finish(ended: CardFence) {
-    posted[ended]?.let { cardNumber -> ended.run(cardNumber) { ended.withdraw() } }
+  // Only the posted number is withdrawn, so a card the app has issued since keeps its fence.
+  fun finish() {
+    posted.forEach { (fence, cardNumber) -> fence.run(cardNumber) { fence.withdraw() } }
     posted.clear()
+    promoted = false
     surface.remove()
   }
 

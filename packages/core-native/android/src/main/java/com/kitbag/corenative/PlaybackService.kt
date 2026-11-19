@@ -68,6 +68,7 @@ class PlaybackService : Service() {
     startRequested = false
     clock.removeCallbacks(tick)
     song?.release()
+    poster.finish()
     releaseSession()
     super.onDestroy()
   }
@@ -174,8 +175,8 @@ class PlaybackService : Service() {
     song = null
   }
 
-  private fun postSong(notification: Notification, playing: Boolean) =
-    poster.post(notification, playing, fences.song, song?.cardNumber ?: CardFence.NONE)
+  private fun postSong(notification: Notification, playing: Boolean, cardNumber: Int) =
+    poster.post(notification, playing, fences.song, cardNumber)
 
   private fun show(intent: Intent) {
     hold(intent)
@@ -246,7 +247,7 @@ class PlaybackService : Service() {
 
   private fun finish() {
     clock.removeCallbacks(tick)
-    poster.finish(fences.song)
+    poster.finish()
     stopSelf(lastStartId)
   }
 
@@ -399,6 +400,7 @@ class PlaybackService : Service() {
 
     // Sent while a show's start is still pending too: it queues behind that show, so no card is left stuck.
     fun hide(context: Context) {
+      fences.metronome.withdraw()
       if (!running && !startRequested) return
       context.startService(Intent(context, PlaybackService::class.java).setAction(ACTION_HIDE))
     }
