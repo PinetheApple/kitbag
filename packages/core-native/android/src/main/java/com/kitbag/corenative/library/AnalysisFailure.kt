@@ -8,11 +8,13 @@ object AnalysisFailure {
   const val UNSUPPORTED = "unsupported"
   const val INTERRUPTED = "interrupted"
   const val INTERNAL = "internal"
+  const val UNAVAILABLE = "unavailable"
 
   fun of(error: Throwable): String =
     when (error) {
       is MissingSongException, is UnsafeLibraryPathException -> MISSING_FILE
       is UnsupportedAudioException -> UNSUPPORTED
+      is DataFolderUnavailableException -> UNAVAILABLE
       else -> INTERNAL
     }
 }

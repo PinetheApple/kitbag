@@ -7,7 +7,6 @@ import {
   TextField,
 } from '@kitbag/core-design';
 import {
-  analysisFailure,
   cleanName,
   REPLACE_LABELS,
   useSongLibrary,
@@ -23,6 +22,7 @@ import {
   replaceButtonLabel,
   replaceSheetTitle,
 } from '../logic/viewText.ts';
+import { useRowFailure } from './useSongFailure.ts';
 
 const useStyles = createThemedStyles(() => ({
   stack: { gap: space.controlGap },
@@ -70,10 +70,8 @@ interface SheetProps {
 function ActionsSheet({ menu, bottomInset }: SheetProps) {
   const styles = useStyles();
   const reanalyze = useSongLibrary((s) => s.reanalyze);
-  const codes = useSongLibrary((s) => s.codes);
   const { target, close, openRename, openDelete } = menu;
-  const failure =
-    target?.kind === 'song' ? analysisFailure(target, codes) : null;
+  const failure = useRowFailure(target);
   const failureNotice = failure === null ? null : failureText(failure);
   const retry = useCallback(() => {
     close();

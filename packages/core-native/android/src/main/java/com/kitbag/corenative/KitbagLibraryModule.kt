@@ -19,9 +19,11 @@ import com.kitbag.corenative.library.AnalysisResult
 import com.kitbag.corenative.library.AnalysisStore
 import com.kitbag.corenative.library.BackupShare
 import com.kitbag.corenative.library.DataFolder
+import com.kitbag.corenative.library.DataFolderUnavailableException
 import com.kitbag.corenative.library.DocumentPicker
 import com.kitbag.corenative.library.ExportFiles
 import com.kitbag.corenative.library.FileShare
+import com.kitbag.corenative.library.LibraryAvailability
 import com.kitbag.corenative.library.LibraryErrors
 import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.LibraryStorage
@@ -31,6 +33,7 @@ import com.kitbag.corenative.library.StemBundleBridge
 import com.kitbag.corenative.library.StemBundleRefusedException
 import com.kitbag.corenative.library.StorageUsage
 import com.kitbag.corenative.library.SupportedAudio
+import com.kitbag.corenative.library.VolumeWatcher
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.ExecutorService
@@ -47,17 +50,28 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   private val picker = DocumentPicker(reactContext, io, ::rejectLogged)
   private val files = FileShare(reactContext, io, ::rejectLogged)
   private val backups = BackupShare(reactContext, files)
+  private val volumes = VolumeWatcher(reactContext, ::emitOnDataFolderChanged)
 
   private val listener: (AnalysisResult) -> Unit = ::emitAnalysis
 
   init {
     reactContext.addActivityEventListener(picker)
     AnalysisEvents.listener.set(listener)
-    io.execute { bundles.clearStaging() }
+    io.execute(::clearBundleStaging)
+    volumes.start()
+  }
+
+  private fun clearBundleStaging() {
+    try {
+      bundles.clearStaging()
+    } catch (e: DataFolderUnavailableException) {
+      Log.i(TAG, "Bundle staging not cleared; the data folder is not mounted", e)
+    }
   }
 
   override fun invalidate() {
     AnalysisEvents.listener.compareAndSet(listener, null)
+    volumes.stop()
     reactApplicationContext.removeActivityEventListener(picker)
     io.shutdownNow()
     picker.cancel()
@@ -165,6 +179,10 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     } catch (e: IllegalArgumentException) {
       Log.w(TAG, "Analysis of $relativePath refused", e)
       io.execute { recordFailure(relativePath, AnalysisFailure.MISSING_FILE) }
+      return
+    } catch (e: DataFolderUnavailableException) {
+      Log.i(TAG, "Analysis of $relativePath refused", e)
+      io.execute { recordFailure(relativePath, AnalysisFailure.of(e)) }
       return
     }
     val request = OneTimeWorkRequestBuilder<AnalysisWorker>()
@@ -339,17 +357,25 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     io.execute {
       try {
         val paths = (0 until relativePaths.size()).asSequence().mapNotNull { relativePaths.getString(it) }
-        promise.resolve(Arguments.createArray().apply { LibraryUsage.missing(libraryRoot(), paths).forEach(::pushString) })
+        val root = DataFolder.get(reactApplicationContext).rootState()
+        promise.resolve(LibraryUsage.missing(root, paths).toMap())
       } catch (e: Exception) {
         rejectLogged(promise, E_STORAGE_FAILED, "Could not check library files", e)
       }
     }
   }
 
+  private fun LibraryAvailability.toMap(): WritableMap =
+    Arguments.createMap().apply {
+      putArray("missing", Arguments.createArray().apply { missing.forEach(::pushString) })
+      putArray("unavailable", Arguments.createArray().apply { unavailable.forEach(::pushString) })
+      putBoolean("rootAvailable", rootAvailable)
+    }
+
   // Raw causes carry paths; JS gets the code and shows its own text.
   private fun rejectLogged(promise: Promise, code: String, message: String, cause: Exception) {
     Log.w(TAG, "$code: $message", cause)
-    promise.reject(code, message)
+    promise.reject(LibraryErrors.codeFor(cause, code), message)
   }
 
   override fun getTypedExportedConstants(): Map<String, Any> =
@@ -360,6 +386,8 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       "failureUnsupported" to AnalysisFailure.UNSUPPORTED,
       "failureInterrupted" to AnalysisFailure.INTERRUPTED,
       "failureInternal" to AnalysisFailure.INTERNAL,
+      "failureUnavailable" to AnalysisFailure.UNAVAILABLE,
+      "dataFolderUnavailable" to LibraryErrors.DATA_FOLDER_UNAVAILABLE,
       "supportedAudioFamilies" to SupportedAudio.FAMILY_NAMES,
       "supportedAudioExtensions" to SupportedAudio.EXTENSIONS,
       "supportedAudioMimeTypes" to SupportedAudio.MIME_TYPES,

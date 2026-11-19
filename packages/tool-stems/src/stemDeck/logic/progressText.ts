@@ -145,6 +145,12 @@ export function stopNotice(
   switch (failure) {
     case 'noSpace':
       return noSpaceNotice(view);
+    case 'libraryUnavailable':
+      return {
+        tone: 'danger',
+        title: 'Library storage unavailable',
+        body: 'The library’s storage isn’t available. Reconnect it, then tap Retry.',
+      };
     case 'timeLimit':
       return {
         tone: 'warning',

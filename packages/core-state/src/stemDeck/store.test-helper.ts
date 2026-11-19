@@ -55,6 +55,7 @@ export const CODES: StemDeckConstants = {
   failureHttpError: 'httpError',
   failureTooLarge: 'tooLarge',
   failureNoSpace: 'noSpace',
+  failureLibraryUnavailable: 'libraryUnavailable',
   failureDropped: 'dropped',
   failureCancelled: 'cancelled',
   failureInterrupted: 'interrupted',

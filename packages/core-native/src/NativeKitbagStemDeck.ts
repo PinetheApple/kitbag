@@ -126,6 +126,7 @@ export type StemDeckConstants = Readonly<{
   failureHttpError: string;
   failureTooLarge: string;
   failureNoSpace: string;
+  failureLibraryUnavailable: string;
   failureDropped: string;
   failureCancelled: string;
   failureInterrupted: string;

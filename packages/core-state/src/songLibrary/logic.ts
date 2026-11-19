@@ -6,6 +6,7 @@ import {
 } from '@kitbag/core-db';
 import type { LibraryConstants } from '@kitbag/core-native';
 
+import type { RowFiles } from '../storage/missingRows.ts';
 import { songBadge } from './badge.ts';
 
 export { songBadge, type SongBadge } from './badge.ts';
@@ -36,7 +37,12 @@ function mimeFormat(mimeType: string): string {
 }
 
 export type FailureKind =
-  'missingFile' | 'unsupported' | 'damaged' | 'interrupted' | 'other';
+  | 'missingFile'
+  | 'unavailable'
+  | 'unsupported'
+  | 'damaged'
+  | 'interrupted'
+  | 'other';
 
 export type AnalysisFailure =
   | {
@@ -59,13 +65,26 @@ export function storedAudioFormat(stored: string): string {
     : value.replace(LEADING_DOTS, '');
 }
 
+function fileFailureKind(
+  error: string,
+  files: RowFiles | null,
+  codes: LibraryConstants,
+): FailureKind {
+  if (files === 'present') return 'other';
+  return error === codes.failureMissingFile ? 'missingFile' : 'unavailable';
+}
+
+// files is what the disk holds now; the stored error is what it held when analysis ran.
 export function failureKind(
   error: string | null,
   format: string,
   codes: LibraryConstants,
+  files: RowFiles | null = null,
 ): FailureKind {
   if (error === null) return 'other';
-  if (error === codes.failureMissingFile) return 'missingFile';
+  if (files === 'unavailable') return 'unavailable';
+  if (error === codes.failureMissingFile || error === codes.failureUnavailable)
+    return fileFailureKind(error, files, codes);
   if (codes.unsupportedAudioExtensions.includes(format)) return 'unsupported';
   if (error === codes.failureInterrupted) return 'interrupted';
   if (error !== codes.failureUnsupported) return 'other';
@@ -75,12 +94,13 @@ export function failureKind(
 export function analysisFailure(
   song: LibrarySongRow,
   codes: LibraryConstants | null,
+  files: RowFiles | null = null,
 ): AnalysisFailure | null {
   if (song.analysisStatus !== ANALYSIS_STATUS.failed) return null;
   const keptGrid = song.hasGrid;
   if (codes === null) return { kind: 'other', keptGrid };
   const format = storedAudioFormat(song.format ?? '');
-  const kind = failureKind(song.analysisError, format, codes);
+  const kind = failureKind(song.analysisError, format, codes, files);
   if (kind !== 'unsupported') return { kind, keptGrid };
   return {
     kind,

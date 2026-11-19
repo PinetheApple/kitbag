@@ -20,6 +20,31 @@ sealed interface LibraryFile {
   object Missing : LibraryFile
 
   data class Unavailable(val volumeUuid: String) : LibraryFile
+
+  object Unknown : LibraryFile
+}
+
+sealed interface RootState {
+  fun resolve(relativePath: String): LibraryFile
+
+  data class Mounted(val root: File, val known: Boolean) : RootState {
+    // Not known: a bad state file fell back to internal, where a card's songs are absent, not gone.
+    override fun resolve(relativePath: String): LibraryFile {
+      val file = LibraryPaths.resolve(root, relativePath)
+      return when {
+        file.exists() -> LibraryFile.Present(file)
+        known -> LibraryFile.Missing
+        else -> LibraryFile.Unknown
+      }
+    }
+  }
+
+  data class Unmounted(val volumeUuid: String) : RootState {
+    override fun resolve(relativePath: String): LibraryFile {
+      LibraryPaths.requireRelative(relativePath)
+      return LibraryFile.Unavailable(volumeUuid)
+    }
+  }
 }
 
 class DataFolderUnavailableException(val volumeUuid: String) :
@@ -33,7 +58,9 @@ class DataFolder(
   val internalRoot = File(filesDir, DIR_NAME)
   private val stateFile = File(filesDir, STATE_FILE_NAME)
 
-  fun location(): DataFolderLocation {
+  fun location(): DataFolderLocation = readLocation() ?: DataFolderLocation.Internal
+
+  private fun readLocation(): DataFolderLocation? {
     if (!stateFile.isFile) return DataFolderLocation.Internal
     return try {
       val json = JSONObject(stateFile.readText())
@@ -49,31 +76,32 @@ class DataFolder(
     }
   }
 
-  private fun unreadable(cause: Exception): DataFolderLocation {
+  private fun unreadable(cause: Exception): DataFolderLocation? {
     warn("Unreadable $STATE_FILE_NAME; using internal storage", cause)
-    return DataFolderLocation.Internal
+    return null
   }
 
   fun select(location: DataFolderLocation) = writeAtomically(stateFile, json(location).toString())
 
-  fun root(): File =
-    when (val location = location()) {
-      DataFolderLocation.Internal -> internalRoot
-      is DataFolderLocation.Card ->
-        volumes.find(location.volumeUuid)?.takeIf { it.mounted }?.let { File(it.filesDir, DIR_NAME) }
-          ?: throw DataFolderUnavailableException(location.volumeUuid)
+  fun rootState(): RootState =
+    when (val location = readLocation()) {
+      null -> RootState.Mounted(internalRoot, known = false)
+      DataFolderLocation.Internal -> RootState.Mounted(internalRoot, known = true)
+      is DataFolderLocation.Card -> cardRoot(location)
     }
 
-  fun resolve(relativePath: String): LibraryFile {
-    LibraryPaths.requireRelative(relativePath)
-    val root = try {
-      root()
-    } catch (e: DataFolderUnavailableException) {
-      return LibraryFile.Unavailable(e.volumeUuid)
+  private fun cardRoot(card: DataFolderLocation.Card): RootState =
+    volumes.find(card.volumeUuid)?.takeIf { it.mounted }
+      ?.let { RootState.Mounted(File(it.filesDir, DIR_NAME), known = true) }
+      ?: RootState.Unmounted(card.volumeUuid)
+
+  fun root(): File =
+    when (val state = rootState()) {
+      is RootState.Mounted -> state.root
+      is RootState.Unmounted -> throw DataFolderUnavailableException(state.volumeUuid)
     }
-    val file = LibraryPaths.resolve(root, relativePath)
-    return if (file.exists()) LibraryFile.Present(file) else LibraryFile.Missing
-  }
+
+  fun resolve(relativePath: String): LibraryFile = rootState().resolve(relativePath)
 
   private fun json(location: DataFolderLocation): JSONObject =
     when (location) {

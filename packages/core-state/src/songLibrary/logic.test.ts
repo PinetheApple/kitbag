@@ -310,6 +310,22 @@ describe('analysisFailure', () => {
     );
   });
 
+  it.each([
+    ['missing-file', null, 'missingFile'],
+    ['missing-file', 'missing', 'missingFile'],
+    ['missing-file', 'present', 'other'],
+    ['missing-file', 'unavailable', 'unavailable'],
+    ['unavailable', null, 'unavailable'],
+    ['unavailable', 'present', 'other'],
+    ['internal', 'unavailable', 'unavailable'],
+    ['internal', 'present', 'other'],
+  ] as const)(
+    'reads a %s failure whose file is now %s as %s',
+    (error, files, kind) => {
+      expect(analysisFailure(failed(error), CODES, files)?.kind).toBe(kind);
+    },
+  );
+
   it('still reads a missing file in an unsupported format as missing', () => {
     expect(analysisFailure(failed('missing-file', 'ogg'), CODES)?.kind).toBe(
       'missingFile',

@@ -21,6 +21,7 @@ import {
   type Removal,
 } from './logic.ts';
 import { cleanName } from '../names.ts';
+import { availabilityRefresher, type RowFilesByKey } from './availability.ts';
 import {
   outdatedGridQueue,
   requeueAndRefresh,
@@ -82,6 +83,7 @@ export interface SongLibraryState {
   readonly notice: LibraryNotice | null;
   readonly replacePrompt: ReplacePrompt | null;
   readonly codes: LibraryConstants | null;
+  readonly rowFiles: RowFilesByKey;
 }
 
 export type ReplaceMatch = 'job' | 'song';
@@ -139,6 +141,7 @@ const INITIAL: SongLibraryState = {
   notice: null,
   replacePrompt: null,
   codes: null,
+  rowFiles: new Map(),
 };
 
 function knownLength(durationSec: number) {
@@ -313,6 +316,7 @@ function analysisActions(
   get: Get,
   imports: ImportTracker,
   queue: OutdatedGridQueue,
+  refreshAvailability: () => Promise<void>,
 ) {
   // A result can arrive both as an event and from pendingAnalyses, so applying
   // it must be idempotent; it is acknowledged only once it is stored.
@@ -330,6 +334,7 @@ function analysisActions(
       warn(`analysis result for ${result.relativePath} not stored`, error);
     }
     await get().refresh();
+    if (!result.ok) await refreshAvailability();
     await queue.settled(result.relativePath);
   };
   const analyzeUnfinished = async () => {
@@ -349,14 +354,19 @@ function analysisActions(
       const stopWatchingPlayer = deps.openSong().onChange(() => {
         void queue.resume();
       });
+      const stopWatchingFolder = files.onDataFolderChanged(() => {
+        void refreshAvailability();
+      });
       for (const result of await files.pendingAnalyses())
         await receiveAnalysis(result);
       await analyzeUnfinished();
+      await refreshAvailability();
       await queue.resume();
       await sweepOrphanedStemFolders(deps, get, imports);
       return () => {
         stopResults();
         stopWatchingPlayer();
+        stopWatchingFolder();
       };
     },
     reanalyze: async (songId: number) => {
@@ -416,11 +426,12 @@ export function createSongLibraryStore(
   return createStore<SongLibraryStore>((set, get) => {
     const imports = importTracker();
     const queue = outdatedGridQueue(deps, get);
+    const refreshAvailability = availabilityRefresher(deps, set);
     return {
       ...INITIAL,
       ...readActions(deps, set, get),
       ...importActions(deps, set, get, imports),
-      ...analysisActions(deps, get, imports, queue),
+      ...analysisActions(deps, get, imports, queue, refreshAvailability),
       ...rowActions(deps, set, get, queue),
     };
   });

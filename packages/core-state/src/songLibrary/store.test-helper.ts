@@ -5,6 +5,7 @@ import {
   type AnalysisResult,
   type ImportedAudio,
   type ImportedStemBundle,
+  type LibraryAvailability,
   type LibraryConstants,
   type PickedDocument,
   type StemBundleCheck,
@@ -40,6 +41,8 @@ export const CODES: LibraryConstants = {
   failureUnsupported: 'unsupported',
   failureInterrupted: 'interrupted',
   failureInternal: 'internal',
+  failureUnavailable: 'unavailable',
+  dataFolderUnavailable: 'E_DATA_FOLDER_UNAVAILABLE',
   exportBadFileName: 'bad-file-name',
   exportNoActivity: 'no-activity',
   exportNoShareTarget: 'no-share-target',
@@ -193,6 +196,10 @@ export function fakeFiles(
   overrides: Partial<Pick<LibraryFiles, Overridable>> = {},
 ) {
   const listeners = new Set<(r: AnalysisResult) => void>();
+  const folderListeners = new Set<() => void>();
+  const disk: { availability: LibraryAvailability } = {
+    availability: { missing: [], unavailable: [], rootAvailable: true },
+  };
   const stored: AnalysisResult[] = [];
   let bundleCopies = 0;
   const native = {
@@ -223,6 +230,13 @@ export function fakeFiles(
     listStemFolders: vi.fn<Native['listStemFolders']>(() =>
       Promise.resolve([]),
     ),
+    missingFiles: vi.fn<Native['missingFiles']>(() =>
+      Promise.resolve(disk.availability),
+    ),
+    onDataFolderChanged: vi.fn((listener: () => void) => {
+      folderListeners.add(listener);
+      return () => folderListeners.delete(listener);
+    }),
   };
   const files = {
     ...native,
@@ -245,7 +259,11 @@ export function fakeFiles(
   const emit = (r: AnalysisResult) => {
     for (const listener of listeners) listener(r);
   };
-  return { files, emit, stored, listeners };
+  const changeDataFolder = (availability: LibraryAvailability) => {
+    disk.availability = availability;
+    for (const listener of folderListeners) listener();
+  };
+  return { files, emit, stored, listeners, folderListeners, changeDataFolder };
 }
 
 export function fakeOpenSong() {

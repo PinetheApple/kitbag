@@ -13,6 +13,7 @@ import com.facebook.react.uimanager.UIManagerHelper
 import com.kitbag.corenative.library.LibraryErrors
 import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.DataFolder
+import com.kitbag.corenative.library.DataFolderUnavailableException
 import com.kitbag.corenative.library.MixdownExport
 import com.kitbag.corenative.library.UnsafeLibraryPathException
 import com.kitbag.corenative.route.OutputRoute
@@ -300,6 +301,9 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
       LibraryPaths.resolve(DataFolder.root(reactApplicationContext), relativePath)
     } catch (e: UnsafeLibraryPathException) {
       promise.reject(E_UNSAFE_PATH, "Track path escapes the library", e)
+      return
+    } catch (e: DataFolderUnavailableException) {
+      promise.reject(LibraryErrors.DATA_FOLDER_UNAVAILABLE, "The data folder is not mounted", e)
       return
     }
     promise.resolve(nativeLoadTrack(track.toInt(), file.path))

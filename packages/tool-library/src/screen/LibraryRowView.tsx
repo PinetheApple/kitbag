@@ -18,19 +18,14 @@ import {
   useTheme,
   withAlpha,
 } from '@kitbag/core-design';
-import {
-  analysisFailure,
-  songBadge,
-  useSongLibrary,
-  type LibraryRow,
-  type SongBadge,
-} from '@kitbag/core-state';
+import { songBadge, type LibraryRow, type SongBadge } from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { Pressable, useWindowDimensions, View } from 'react-native';
 
 import { failureText } from '../logic/notices.ts';
 import { rowLayout } from '../logic/rowLayout.ts';
 import { rowBadges, rowSubtitle, spokenRow } from '../logic/rowText.ts';
+import { useRowFailure } from './useSongFailure.ts';
 
 const MORE_HIT_BOX = hitBoxStyle(
   hitExtension(libraryList.moreWidth, minTouchTargetDp, {
@@ -142,9 +137,8 @@ export function LibraryRowView({
   const styles = useStyles();
   const { fontScale } = useWindowDimensions();
   const { titleLines, factsLines, badgesUnderText } = rowLayout(fontScale);
-  const codes = useSongLibrary((s) => s.codes);
   const status = rowStatus(row);
-  const failure = row.kind === 'song' ? analysisFailure(row, codes) : null;
+  const failure = useRowFailure(row);
   const openActions = useCallback(() => {
     onActions(row);
   }, [onActions, row]);

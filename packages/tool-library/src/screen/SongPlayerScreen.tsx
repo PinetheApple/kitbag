@@ -39,7 +39,11 @@ import {
   lockBadgeOf,
   lockText,
 } from '../logic/lockText.ts';
-import { canReanalyze, unsupportedFormatText } from '../logic/notices.ts';
+import {
+  canReanalyze,
+  UNAVAILABLE_TEXT,
+  unsupportedFormatText,
+} from '../logic/notices.ts';
 import type { BadgeSpec } from '../logic/rowText.ts';
 import { songTitle } from '../logic/songTitle.ts';
 import { REANALYZE_LABEL } from '../logic/viewText.ts';
@@ -47,7 +51,7 @@ import { frameAtTap } from '../logic/waveSeek.ts';
 import type { UsePlayhead } from './playhead.ts';
 import { SongTransport } from './SongTransport.tsx';
 import { useLoopHandles } from './useLoopHandles.ts';
-import { useSongFailure } from './useSongFailure.ts';
+import { useSongFailure, useSongFiles } from './useSongFailure.ts';
 
 const NO_NEIGHBOURS = {};
 
@@ -281,6 +285,17 @@ function NotReady({
 }) {
   const styles = useStyles();
   const failure = useSongFailure(songId);
+  const files = useSongFiles(songId);
+  if (status === 'failed' && files === 'unavailable')
+    return (
+      <EmptyState
+        icon="song"
+        title={UNAVAILABLE_TEXT.status}
+        reason={UNAVAILABLE_TEXT.text}
+        actionLabel="Back to songs"
+        onAction={onBack}
+      />
+    );
   if (status === 'failed')
     return (
       <EmptyState

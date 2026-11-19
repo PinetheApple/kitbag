@@ -12,5 +12,9 @@ it('reports an empty library with no location', async () => {
 });
 
 it('reports nothing missing', async () => {
-  await expect(missingFiles(['songs/a/x.mp3'])).resolves.toEqual([]);
+  await expect(missingFiles(['songs/a/x.mp3'])).resolves.toEqual({
+    missing: [],
+    unavailable: [],
+    rootAvailable: true,
+  });
 });

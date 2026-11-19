@@ -149,18 +149,20 @@ class LibraryUsageTest {
     assertEquals(0L, measure().databaseBytes)
   }
 
+  private fun mounted() = RootState.Mounted(base, known = true)
+
   @Test
   fun `missing reports absent paths and directories, keeps present files even when empty, in input order`() {
     file("songs/a/present.mp3", 1)
     file("songs/a/zero.mp3", 0)
     File(base, "songs/dir.mp3").mkdirs()
 
-    val missing = LibraryUsage.missing(
-      base,
+    val availability = LibraryUsage.missing(
+      mounted(),
       sequenceOf("songs/absent.mp3", "songs/a/present.mp3", "songs/dir.mp3", "songs/a/zero.mp3"),
-    ).toList()
+    )
 
-    assertEquals(listOf("songs/absent.mp3", "songs/dir.mp3"), missing)
+    assertEquals(LibraryAvailability(listOf("songs/absent.mp3", "songs/dir.mp3"), emptyList(), true), availability)
   }
 
   @Test
@@ -169,20 +171,28 @@ class LibraryUsageTest {
     link("songs/out", outside)
     val escapes = listOf("../outside/real.mp3", "songs/../../outside/real.mp3", "/etc/hosts", "songs/out/real.mp3", "")
 
-    assertEquals(escapes, LibraryUsage.missing(base, escapes.asSequence()).toList())
+    assertEquals(escapes, LibraryUsage.missing(mounted(), escapes.asSequence()).missing)
   }
 
   @Test
-  fun `missing pulls paths only as the caller consumes results`() {
-    var pulled = 0
-    val paths = generateSequence(0) { it + 1 }
-      .take(LARGE_INPUT)
-      .map { pulled++; "songs/absent-$it.mp3" }
+  fun `an unmounted card makes its paths unavailable, never missing`() {
+    val paths = listOf("songs/a/a.mp3", "stems/j/bass.flac")
 
-    val missing = LibraryUsage.missing(base, paths)
-    assertEquals(0, pulled)
-    assertEquals("songs/absent-0.mp3", missing.first())
-    assertEquals(1, pulled)
+    val availability = LibraryUsage.missing(RootState.Unmounted(CARD_UUID), paths.asSequence())
+
+    assertEquals(LibraryAvailability(emptyList(), paths, rootAvailable = false), availability)
+  }
+
+  @Test
+  fun `an unknown location makes absent paths unavailable and the root unavailable`() {
+    file("songs/a/present.mp3", 1)
+
+    val availability = LibraryUsage.missing(
+      RootState.Mounted(base, known = false),
+      sequenceOf("songs/a/present.mp3", "songs/card/only.mp3"),
+    )
+
+    assertEquals(LibraryAvailability(emptyList(), listOf("songs/card/only.mp3"), rootAvailable = false), availability)
   }
 
   @Test
@@ -190,7 +200,7 @@ class LibraryUsageTest {
     for (i in 0 until LARGE_INPUT step 2) file("songs/s/$i.mp3", 0)
     val paths = (0 until LARGE_INPUT).asSequence().map { "songs/s/$it.mp3" }
 
-    val missing = LibraryUsage.missing(base, paths).toList()
+    val missing = LibraryUsage.missing(mounted(), paths).missing
     assertEquals(LARGE_INPUT / 2, missing.size)
     assertEquals("songs/s/1.mp3", missing.first())
     assertEquals("songs/s/${LARGE_INPUT - 1}.mp3", missing.last())
@@ -199,5 +209,6 @@ class LibraryUsageTest {
   private companion object {
     const val DB_NAME = "kitbag"
     const val LARGE_INPUT = 10_000
+    const val CARD_UUID = "1234-ABCD"
   }
 }
