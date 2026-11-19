@@ -2,7 +2,10 @@ import type { StemSetRecord } from '@kitbag/core-db';
 import { KB_MIXER_UNITY_RATE, KB_RESULT } from '@kitbag/core-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { MetronomeCommands } from '../metronome/commands.ts';
+import {
+  defaultCommands,
+  type MetronomeCommands,
+} from '../metronome/commands.ts';
 import { configureMetronomeRuntime } from '../metronome/runtime.ts';
 import { metronomeStore, type MetronomeStore } from '../metronome/store.ts';
 import { createMixerClaim } from '../stemPlayer/mixerClaim.ts';
@@ -378,6 +381,7 @@ describe('the standalone metronome', () => {
 
   function runMetronomeBeside(song: Fake) {
     beside.song = song;
+    song.metronome = { store: metronomeStore, commands: defaultCommands };
     configureMetronomeRuntime(metronomeRuntime);
     const metronome = metronomeStore.getState();
     metronome.setTempo(TEMPO);
@@ -403,9 +407,12 @@ describe('the standalone metronome', () => {
     expect(configOf(after)).toEqual(configOf(before));
     expect(after.bpm).toBe(TEMPO);
     expect(after.beatsPerBar).toBe(3);
-    for (const setter of Object.values(song.metronomeSetters)) {
-      expect(setter).not.toHaveBeenCalled();
-    }
+    const { setSounds, setTempo, setBeats } = song.metronomeSetters;
+    const { normal, accent } = before.sounds;
+    for (const call of setSounds.mock.calls)
+      expect(call).toEqual([normal, accent]);
+    for (const call of setTempo.mock.calls) expect(call).toEqual([TEMPO]);
+    for (const call of setBeats.mock.calls) expect(call).toEqual([3, 4]);
   }
 
   it('keeps its tempo and config through a song, but is left stopped', async () => {

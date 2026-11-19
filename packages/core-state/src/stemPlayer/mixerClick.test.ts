@@ -72,13 +72,14 @@ async function openedSongClick(
   claim: MixerClaim = createMixerClaim(),
 ) {
   const fake = fakeSongRuntime(songRecord());
+  const standalone = standaloneOver(fake.commands, songClick);
   const song = createSongPlayerStore(() => fake.runtime, {
     scrubSeekDelayMs: SEEK_MS,
     mixerClaim: claim,
     mixerClick: songClick,
+    metronome: { store: standalone, commands: fake.commands },
   });
   await song.getState().open(SONG_ID, BARS).loaded;
-  const standalone = standaloneOver(fake.commands, songClick);
   return { fake, song, standalone, songClick };
 }
 
@@ -179,10 +180,21 @@ describe("standalone Play while a song's click runs", () => {
     standalone.getState().start();
     expect(readByStart).toEqual(before);
     expect(configOf(standalone.getState())).toEqual(before);
-    expect(commands.setTempo).not.toHaveBeenCalled();
-    expect(commands.setBeats).not.toHaveBeenCalled();
-    expect(commands.setSounds).not.toHaveBeenCalled();
-    expect(commands.setAccent).not.toHaveBeenCalled();
+  });
+
+  it("puts the standalone's sounds back on the engine before it starts", async () => {
+    const { commands, song, standalone } = await songWithClick();
+    const { sounds } = standalone.getState();
+    song.getState().setClickSounds(sounds.accent, sounds.normal);
+    vi.clearAllMocks();
+    standalone.getState().start();
+    expect(commands.setSounds).toHaveBeenLastCalledWith(
+      sounds.normal,
+      sounds.accent,
+    );
+    const [restored] = commands.setSounds.mock.invocationCallOrder;
+    const [started] = commands.metronomeStart.mock.invocationCallOrder;
+    expect(restored).toBeLessThan(started ?? 0);
   });
 
   it('leaves the standalone running when the song closes later', async () => {

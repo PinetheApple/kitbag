@@ -25,6 +25,10 @@ export interface GridFollowers {
   readonly gridSent: () => void;
 }
 
+export interface ClickStartFollowers extends Pick<GridFollowers, 'gridSent'> {
+  readonly clickStarting: () => void;
+}
+
 type ClickContext = Pick<
   MixerSessionContext<ClickSlice>,
   'set' | 'get' | 'runtimeOf'
@@ -104,7 +108,10 @@ export function clickActions(
     recountWithClickOff = noCount,
     recountWithClickOn = noCount,
   }: Partial<ClickHandoff> = {},
-  { gridSent = doNothing }: Partial<Pick<GridFollowers, 'gridSent'>> = {},
+  {
+    gridSent = doNothing,
+    clickStarting = doNothing,
+  }: Partial<ClickStartFollowers> = {},
 ): Pick<StemPlayerActions, 'toggleClick'> {
   const { set, get, runtimeOf, session } = context;
   const { busy, call } = sessionGate(session);
@@ -126,6 +133,7 @@ export function clickActions(
       return;
     }
     commands.metronomeFollowMixer(true);
+    clickStarting();
     gridSent();
     const recounted = recountWithClickOn();
     if (!recounted) commands.metronomeStart(engine.nowFrame());
