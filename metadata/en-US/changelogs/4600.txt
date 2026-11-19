@@ -1,0 +1,3 @@
+• With TalkBack or Switch Access on, the stem player and song player now read the song position shown on screen instead of 0:00.
+• Songs analysed with an older version of the beat tracker are re-analysed once in the background, one at a time, so their beat grids and click line up again. A song open in the player waits until you close it.
+More: https://github.com/PinetheApple/kitbag/releases/tag/v0.46.0
