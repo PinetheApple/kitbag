@@ -8,6 +8,7 @@ import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  at,
   flush,
   installFakeRuntime,
   mountPlayer,
@@ -24,6 +25,7 @@ const FIRST_TITLE = 'First song';
 const SECOND_TITLE = 'Second song';
 const OPENING = 'Opening the stems…';
 const HALF_GAIN = 0.5;
+const PLAYED_SEC = 30;
 const CLOSES = 5;
 const FIRST_RECORD = { title: FIRST_TITLE, lyrics: null };
 const SECOND_RECORD = record(STEMS, { title: SECOND_TITLE, lyrics: null });
@@ -246,15 +248,45 @@ describe('a metronome song loaded over the player', () => {
     expect(player.store.getState().status).toBe('idle');
   });
 
-  it('opens the song again on Back', async () => {
+  it('opens the song again on Back, stopped at the start with its mix and no loop', async () => {
+    const player = await openFirst(DETAILED_RECORD);
+    const { getState } = player.store;
+    getState().setGain(0, HALF_GAIN);
+    await getState().loopSection(0);
+    getState().togglePlay();
+    player.engine.position = at(PLAYED_SEC);
+    player.commands.mixerStop.mockImplementation(() => {
+      player.engine.position = 0;
+    });
+    player.commands.mixerSeek.mockImplementation((frame: number) => {
+      player.engine.position = frame;
+    });
+    player.setFocused(false);
+    loadMetronomeSong();
+    player.commands.mixerPlay.mockClear();
+    player.setFocused(true);
+    await act(flush);
+    expect(getState().status).toBe('ready');
+    expect(player.records.readStemSet).toHaveBeenCalledTimes(2);
+    expect(getState().playheadSeconds()).toBe(0);
+    expect(player.commands.mixerPlay).not.toHaveBeenCalled();
+    expect(getState().stems[0]?.volume).toBe(HALF_GAIN);
+    expect(player.commands.mixerSetGain).toHaveBeenCalledWith(0, HALF_GAIN);
+    expect(getState().loop).toEqual({ kind: 'off' });
+  });
+
+  it('takes the mixer back on Back, releasing a metronome started meanwhile', async () => {
     const player = await openFirst();
     player.setFocused(false);
     loadMetronomeSong();
+    player.sharedMetronome.active.mockReturnValue(true);
     player.setFocused(true);
     await act(flush);
+    expect(player.sharedMetronome.release).toHaveBeenCalledOnce();
     expect(player.store.getState().status).toBe('ready');
     expect(player.records.readStemSet).toHaveBeenCalledTimes(2);
   });
+
 
   it('keeps the song when the load happens while it is in front', async () => {
     const player = await openFirst();
