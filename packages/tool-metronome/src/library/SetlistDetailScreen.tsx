@@ -16,6 +16,7 @@ import {
 import { useCallback, useMemo } from 'react';
 
 import { setlistTitle, songSubtitle } from '../logic/songSummary.ts';
+import { useCustomSoundViews } from '../screen/CustomSounds.tsx';
 import type { ShellMeasuredInsets } from '../screen/MetronomeScreen.tsx';
 import { DetailSheets, useDetailMenu, type DetailMenu } from './DetailMenu.tsx';
 import { ScreenFrame } from './ScreenFrame.tsx';
@@ -75,7 +76,8 @@ function EntryRow(props: EntryRowProps) {
   const { item, preset } = props.entry;
   const now = useLibrary((s) => s.loaded?.itemId === item.id);
   const { drag, load, actions } = useEntryRow(props);
-  const subtitle = songSubtitle(preset);
+  const custom = useCustomSoundViews();
+  const subtitle = songSubtitle(preset, custom);
   const spoken = `${String(props.index + 1)}. ${preset.name}, ${subtitle}`;
   return (
     <DragListRow

@@ -131,6 +131,8 @@ vi.mock('@kitbag/core-state', async (original) => {
     correctedBpm,
     TEMPO_CORRECTION,
     TEMPO_CORRECTIONS,
+    formatName,
+    joinedFormatNames,
   } = await original<{
     useFocusedMixerHold: unknown;
     playerSongBadge: unknown;
@@ -139,6 +141,8 @@ vi.mock('@kitbag/core-state', async (original) => {
     correctedBpm: unknown;
     TEMPO_CORRECTION: unknown;
     TEMPO_CORRECTIONS: unknown;
+    formatName: unknown;
+    joinedFormatNames: unknown;
   }>();
   const open = () => {
     const mine = ++mixer.session;
@@ -166,6 +170,8 @@ vi.mock('@kitbag/core-state', async (original) => {
     correctedBpm,
     TEMPO_CORRECTION,
     TEMPO_CORRECTIONS,
+    formatName,
+    joinedFormatNames,
     bpmFact: (bpm: number | null) =>
       bpm === null
         ? null

@@ -13,9 +13,6 @@ export default defineConfig({
     alias: {
       '@kitbag/core-design': stub('../core-design/src/pure.ts'),
       '@kitbag/core-state': stub('../core-state/src/pure.ts'),
-      '@op-engineering/op-sqlite': stub(
-        '../core-state/src/testing/opSqliteStub.ts',
-      ),
     },
   },
 });

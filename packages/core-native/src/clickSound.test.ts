@@ -15,6 +15,7 @@ const library = vi.hoisted(() => ({
   readClickSound: vi.fn(),
   writeClickSound: vi.fn(),
   deleteClickSound: vi.fn(),
+  listClickSounds: vi.fn(),
 }));
 
 vi.mock('./NativeKitbagCommands', () => ({
@@ -28,6 +29,7 @@ const {
   clearCustomSound,
   customSoundLoaded,
   deleteClickSound,
+  listClickSounds,
   loadCustomSound,
   prepareClickSound,
   readClickSound,
@@ -130,10 +132,12 @@ it('reads, writes and deletes a click sound file through the library module', as
   library.readClickSound.mockResolvedValue(WAV);
   library.writeClickSound.mockResolvedValue(undefined);
   library.deleteClickSound.mockResolvedValue(undefined);
+  library.listClickSounds.mockResolvedValue([FILE]);
 
   await expect(readClickSound(FILE)).resolves.toBe(WAV);
   await writeClickSound(FILE, WAV);
   await deleteClickSound(FILE);
+  await expect(listClickSounds()).resolves.toEqual([FILE]);
 
   expect(library.readClickSound).toHaveBeenCalledExactlyOnceWith(FILE);
   expect(library.writeClickSound).toHaveBeenCalledExactlyOnceWith(FILE, WAV);

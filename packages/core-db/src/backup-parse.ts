@@ -27,6 +27,7 @@ import {
   reader,
   type Reader,
 } from './backup-reader';
+import { readStemSong } from './backup-stem-song-read';
 import { decodeBase64, presetBytes } from './base64';
 import { isClickSoundSlot } from './click-sound-repository';
 import {
@@ -248,6 +249,7 @@ const READERS: {
   countInSettings: preferenceReader('countInSettings'),
   metronomeSettings: preferenceReader('metronomeSettings'),
   clickSounds: readClickSound,
+  stemSongs: readStemSong,
 };
 
 function readCategory<C extends Category>(

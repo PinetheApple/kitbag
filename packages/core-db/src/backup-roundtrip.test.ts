@@ -135,6 +135,7 @@ describe('backup round trip', () => {
       countInSettings: 3,
       metronomeSettings: 1,
       clickSounds: 0,
+      stemSongs: 0,
     });
   });
 

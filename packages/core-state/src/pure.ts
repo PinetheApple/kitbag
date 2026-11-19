@@ -5,9 +5,10 @@ export * from './stemPlayer/screenHold.ts';
 export * from './songLibrary/badge.ts';
 export * from './songLibrary/replaceText.ts';
 export * from './stemPlayer/beatStep.ts';
+export * from './importText.ts';
 export {
   correctedBpm,
   TEMPO_CORRECTION,
   TEMPO_CORRECTIONS,
   type TempoCorrection,
-} from '@kitbag/core-db';
+} from '@kitbag/core-db/src/tempo-correction';

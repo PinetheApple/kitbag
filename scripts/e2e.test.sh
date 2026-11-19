@@ -142,12 +142,16 @@ FAKE_INSTALL="Failure [INSTALL_FAILED_UPDATE_INCOMPATIBLE]" \
 expect "every flow passes" "$EXIT_OK" "all flows passed" "$APK"
 check "  ... leaves permissions to the flows' launchApp" bash -c '! grep -q "pm grant" "$ADB_LOG"'
 check "  ... pushes the fixture song" adb_called "push .*e2eclick.wav /sdcard/Download/"
+check "  ... and the fixture click sound" adb_called "push .*e2ehit.wav /sdcard/Download/"
 check "  ... runs every flow, no subflows" test "$(maestro_flows)" -eq "$(flow_count)"
 check "  ... on the emulator" maestro_got "emulator-5554"
 check "  ... with a JUnit report" maestro_got "junit"
 check "  ... with analytics and update checks off and a capped heap" \
   maestro_got "analytics=1 update=true opts=-Xmx1g"
 check "  ... and the fixture title passed in" maestro_got "FIXTURE_SONG=e2eclick"
+check "  ... and the fixture sound's name" maestro_got "FIXTURE_SOUND=e2ehit"
+check "  ... pushes the fixture backup" adb_called "push e2e/fixtures/e2estemsongs.json /sdcard/Download/"
+check "  ... and its name passed in" maestro_got "FIXTURE_BACKUP=e2estemsongs"
 
 check "  ... with every animation scale at 0 during the run" \
   bash -c 'for s in window_animation_scale transition_animation_scale animator_duration_scale; do grep -q "settings put global $s 0" "$ADB_LOG" || exit 1; done'

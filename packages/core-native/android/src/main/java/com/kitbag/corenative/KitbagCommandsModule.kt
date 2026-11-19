@@ -20,17 +20,17 @@ import com.kitbag.corenative.library.UnsafeLibraryPathException
 import com.kitbag.corenative.route.OutputRoute
 import com.kitbag.corenative.route.OutputRouteWatcher
 import com.kitbag.corenative.transport.Playback
-import com.kitbag.corenative.transport.PracticeClock
 import com.kitbag.corenative.transport.Song
 import com.kitbag.corenative.transport.SongCommand
 import com.kitbag.corenative.transport.appAction
+import com.kitbag.corenative.transport.TransportChange
 import com.kitbag.corenative.transport.TransportState
 
 class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   NativeKitbagCommandsSpec(reactContext) {
 
   private val mixdown = MixdownExport(reactContext.cacheDir)
-  private val transportListener: (TransportState, PracticeClock) -> Unit = ::emitTransport
+  private val transportListener: (TransportChange) -> Unit = ::emitTransport
   private val songStoppedListener: () -> Unit = ::emitOnSongStopped
   private val songRequestListener: (SongCommand) -> Unit = ::emitSongRequest
   private val outputRoutes =
@@ -75,6 +75,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
       state.getDouble("maxBpm"),
       state.getDouble("practicePlayedMs").toLong(),
       state.getDouble("practiceStretchStartedAt").toLong(),
+      state.getInt("cardNumber"),
     )
   }
 
@@ -120,14 +121,16 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     AppChrome.setSystemBarAppearance(reactApplicationContext.currentActivity, light)
   }
 
-  private fun emitTransport(state: TransportState, practice: PracticeClock) {
+  private fun emitTransport(change: TransportChange) {
     emitOnTransport(
       Arguments.createMap().apply {
-        putString("playback", state.playback.name.lowercase())
-        putDouble("bpm", state.bpm)
-        putBoolean("rampRunning", state.rampRunning)
-        putDouble("practicePlayedMs", practice.playedMillis.toDouble())
-        putDouble("practiceStretchStartedAt", (practice.stretchStartedAt ?: 0L).toDouble())
+        putString("playback", change.state.playback.name.lowercase())
+        putDouble("bpm", change.state.bpm)
+        putBoolean("rampRunning", change.state.rampRunning)
+        putDouble("practicePlayedMs", change.practice.playedMillis.toDouble())
+        putDouble("practiceStretchStartedAt", (change.practice.stretchStartedAt ?: 0L).toDouble())
+        putInt("cardNumber", change.cardNumber)
+        putBoolean("tempoSet", change.tempoSet)
       },
     )
   }

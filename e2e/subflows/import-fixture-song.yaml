@@ -2,26 +2,10 @@ appId: com.kitbag.app
 ---
 - tapOn: 'Songs, .*'
 - tapOn: 'Import( a song)?'
-- retry:
-    maxRetries: 2
-    commands:
-      - runFlow:
-          when:
-            notVisible: '${FIXTURE_SONG}.wav'
-          commands:
-            - tapOn: 'Show roots'
-            - tapOn:
-                text: 'Downloads'
-                id: 'android:id/title'
-      - scrollUntilVisible:
-          element: '${FIXTURE_SONG}.wav'
-          timeout: 5000
-- tapOn: '${FIXTURE_SONG}.wav'
 - runFlow:
-    when:
-      visible: '\d+ selected'
-    commands:
-      - tapOn: 'Select'
+    file: pick-download.yaml
+    env:
+      FILE: '${FIXTURE_SONG}.wav'
 - extendedWaitUntil:
     visible: '${FIXTURE_SONG}, .*'
     timeout: 20000

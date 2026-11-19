@@ -12,6 +12,9 @@ readonly EXIT_RUNNER_FAILED=6
 readonly DEFAULT_SERIAL=emulator-5554
 readonly FIXTURE_SONG=e2eclick
 readonly FIXTURE_SECONDS=240
+readonly FIXTURE_SOUND=e2ehit
+readonly FIXTURE_SOUND_SECONDS=1
+readonly FIXTURE_BACKUP=e2estemsongs
 readonly DEVICE_DOWNLOADS=/sdcard/Download
 readonly DEFAULT_MAESTRO_HEAP=-Xmx1g
 readonly ANR_WINDOW='Application Not Responding'
@@ -201,11 +204,20 @@ if anr_window_open; then
   fi
 fi
 
-step "Pushing the fixture song"
-fixture="$OUT/$FIXTURE_SONG.wav"
-python3 -I e2e/make_click_song.py "$fixture" "$FIXTURE_SECONDS" &&
-  adb_s push "$fixture" "$DEVICE_DOWNLOADS/" >/dev/null || {
-  fail "could not make or push $fixture"
+push_fixture() {
+  local fixture="$OUT/$1.wav"
+  python3 -I e2e/make_click_song.py "$fixture" "$2" &&
+    adb_s push "$fixture" "$DEVICE_DOWNLOADS/" >/dev/null || {
+    fail "could not make or push $fixture"
+    exit "$EXIT_INSTALL_FAILED"
+  }
+}
+
+step "Pushing the fixture song, click sound and backup"
+push_fixture "$FIXTURE_SONG" "$FIXTURE_SECONDS"
+push_fixture "$FIXTURE_SOUND" "$FIXTURE_SOUND_SECONDS"
+adb_s push "e2e/fixtures/$FIXTURE_BACKUP.json" "$DEVICE_DOWNLOADS/" >/dev/null || {
+  fail "could not push e2e/fixtures/$FIXTURE_BACKUP.json"
   exit "$EXIT_INSTALL_FAILED"
 }
 
@@ -222,6 +234,8 @@ MAESTRO_CLI_NO_ANALYTICS=1 \
   --output "$REPORT" \
   --test-output-dir "$ARTIFACTS" \
   -e FIXTURE_SONG="$FIXTURE_SONG" \
+  -e FIXTURE_SOUND="$FIXTURE_SOUND" \
+  -e FIXTURE_BACKUP="$FIXTURE_BACKUP" \
   "${FLOWS[@]}"
 maestro_status=$?
 

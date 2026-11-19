@@ -84,6 +84,45 @@ describe('category rows', () => {
   });
 });
 
+describe('stem songs row', () => {
+  const stemPlan = (incoming: number, notOnDevice: number) =>
+    ({
+      mode: 'merge',
+      categories: ['stemSongs'],
+      counts: { stemSongs: counts({ incoming, notOnDevice }) },
+    }) as unknown as ImportPlan;
+
+  it('counts the stem songs on this phone, and the ones that are not', () => {
+    expect(categoryValue('stemSongs', 3, undefined)).toBe('3');
+    expect(
+      categoryValue('stemSongs', 3, counts({ incoming: 3, notOnDevice: 0 })),
+    ).toBe('3');
+    expect(
+      categoryValue('stemSongs', 3, counts({ incoming: 3, notOnDevice: 1 })),
+    ).toBe('2 · 1 not on this phone');
+    expect(
+      categoryValue('stemSongs', 1, counts({ incoming: 1, notOnDevice: 1 })),
+    ).toBe('0 · 1 not on this phone');
+  });
+
+  it('names only matched stem songs on the merge button', () => {
+    expect(applyLabel(stemPlan(3, 1))).toBe('Merge 2 stem songs');
+    expect(applyLabel(stemPlan(1, 1))).toBe('Merge nothing');
+  });
+
+  it('reports matched stem songs and the skipped ones apart', () => {
+    expect(restoredText('merge', stemPlan(3, 2).counts)).toBe(
+      'Merged 1 stem song. 2 stem songs not on this phone.',
+    );
+    expect(restoredText('merge', stemPlan(1, 1).counts)).toBe(
+      'Nothing was changed. 1 stem song not on this phone.',
+    );
+    expect(restoredText('replace', stemPlan(1, 0).counts)).toBe(
+      'Replaced with 1 stem song.',
+    );
+  });
+});
+
 describe('mode copy', () => {
   it('promises merge keeps what you have', () => {
     expect(modeHint(MERGE_PLAN)).toBe(
@@ -226,6 +265,16 @@ describe('result', () => {
     };
     expect(restoredText('merge', settings)).toBe(
       'Merged 1 metronome setup & 2 click sounds.',
+    );
+  });
+
+  it('says how many songs went back to Tick', () => {
+    const songs = { songPresets: counts({ incoming: 3 }) };
+    expect(restoredText('merge', songs, 2)).toBe(
+      'Merged 3 songs. 2 songs used a click sound that isn’t on this phone. They use Tick now.',
+    );
+    expect(restoredText('replace', songs, 1)).toBe(
+      'Replaced with 3 songs. 1 song used a click sound that isn’t on this phone. It uses Tick now.',
     );
   });
 });

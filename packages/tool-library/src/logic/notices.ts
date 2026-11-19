@@ -4,7 +4,11 @@ import {
   type IconName,
 } from '@kitbag/core-design';
 import {
+  formatName,
+  joinedFormatNames,
+  PICKER_FAILED_TEXT,
   replaceKeepsText,
+  unsupportedImportText,
   type AnalysisFailure,
   type BundleRefusal,
   type FailureKind,
@@ -15,10 +19,6 @@ import {
 export interface NoticeText {
   readonly status: string;
   readonly text: string;
-}
-
-export function formatName(format: string): string {
-  return format === '' ? 'this format' : format.toUpperCase();
 }
 
 function refusalText(name: string, refusal: BundleRefusal): NoticeText {
@@ -57,13 +57,6 @@ function refusalText(name: string, refusal: BundleRefusal): NoticeText {
   }
 }
 
-function joinedFormatNames(formats: readonly string[]): string {
-  const names = [...formats];
-  const last = names.pop();
-  if (last === undefined) return '';
-  return names.length === 0 ? last : `${names.join(', ')} or ${last}`;
-}
-
 function formatRefusedText(
   name: string,
   format: string,
@@ -71,7 +64,7 @@ function formatRefusedText(
 ): NoticeText {
   return {
     status: 'Unsupported format',
-    text: `Can’t import “${name}”: ${formatName(format)} isn’t supported. Use ${joinedFormatNames(supported)}.`,
+    text: unsupportedImportText(name, format, supported),
   };
 }
 
@@ -94,7 +87,7 @@ export function noticeText(notice: LibraryNotice): NoticeText {
     case 'pickerFailed':
       return {
         status: 'Picker unavailable',
-        text: 'The file picker could not open. Try again in a moment.',
+        text: PICKER_FAILED_TEXT,
       };
     case 'deleteFailed':
       return {

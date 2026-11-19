@@ -15,11 +15,13 @@ import {
   type PreferenceRecord,
   type SetlistRecord,
   type SongPresetRecord,
+  type StemSongRecord,
   type TuningRecord,
 } from './backup-format';
 import type { ImportPlan, Writes } from './backup-plan';
 import { decodeBase64, nullableBytes, presetBytes } from './base64';
 import { fromSeconds, type IdMaps, type Snapshot } from './backup-snapshot';
+import { restoreStemSong } from './backup-stem-songs';
 import {
   freshClickSoundFileName,
   type ClickSoundFiles,
@@ -200,9 +202,12 @@ const UPSERTS: Record<Category, Upsert> = {
   countInSettings: upsertPreference as Upsert,
   metronomeSettings: upsertPreference as Upsert,
   clickSounds: upsertClickSound as Upsert,
+  stemSongs: (db, record, localId) =>
+    restoreStemSong(db, record as StemSongRecord, localId),
 };
 
 async function deleteCategory(db: Database, category: Category) {
+  if (category === 'stemSongs') return;
   if (isPreferenceCategory(category)) {
     await db
       .delete(preferences)

@@ -3,11 +3,14 @@ import { KB_COUNT_IN_OFF } from '@kitbag/core-native';
 import type { SongPreset } from '@kitbag/core-state';
 
 import { countInLabel, countInBarsFromOption } from './countIn.ts';
-import { soundLabel } from './soundChoice.ts';
+import { soundLabel, type CustomSoundView } from './soundChoice.ts';
 import { TEXT_PLACEHOLDER } from './textPlaceholder.ts';
 import { rampChipValue } from './trainer.ts';
 
-function modifier(preset: SongPreset): string {
+function modifier(
+  preset: SongPreset,
+  custom: readonly CustomSoundView[],
+): string {
   if (preset.rampEnabled) {
     return `ramp ${rampChipValue(preset.rampStartBpm ?? preset.bpm, preset.rampEndBpm ?? preset.bpm)}`;
   }
@@ -16,12 +19,15 @@ function modifier(preset: SongPreset): string {
   if (countIn !== KB_COUNT_IN_OFF) {
     return `count-in ${countInLabel(countIn)}`;
   }
-  return soundLabel(preset.sound);
+  return soundLabel(preset.sound, custom);
 }
 
-export function songSubtitle(preset: SongPreset): string {
+export function songSubtitle(
+  preset: SongPreset,
+  custom: readonly CustomSoundView[] = [],
+): string {
   const signature = `${String(preset.beatsPerBar)}/${String(preset.denominator)}`;
-  return `${String(Math.round(preset.bpm))} · ${signature} · ${modifier(preset)}`;
+  return `${String(Math.round(preset.bpm))} · ${signature} · ${modifier(preset, custom)}`;
 }
 
 export function setlistSubtitle(

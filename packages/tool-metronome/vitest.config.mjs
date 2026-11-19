@@ -20,11 +20,12 @@ export default defineConfig({
       'src/screen/StatusVariant.test.tsx',
       'src/screen/useStatusRunRows.test.tsx',
       'src/screen/MetronomeScreen.test.tsx',
+      'src/screen/CustomSounds.test.tsx',
+      'src/screen/CustomSoundSheets.test.tsx',
+      'src/screen/SoundSheets.test.tsx',
     ],
     alias: {
-      '@kitbag/core-native': stub(
-        '../core-native/src/generated/nativeConstants.gen.ts',
-      ),
+      '@kitbag/core-native': stub('../core-native/src/pure.ts'),
       '@kitbag/core-design': stub('../core-design/src/pure.ts'),
       'react-native': stub('../core-state/src/testing/reactNativeStub.ts'),
       'expo-haptics': stub('../core-state/src/testing/expoHapticsStub.ts'),

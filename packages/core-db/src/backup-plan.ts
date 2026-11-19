@@ -14,8 +14,11 @@ import {
   type LibrarySongRecord,
   type LocalRecord,
   type Resolutions,
+  type StemSongRecord,
+  stemSongKey,
 } from './backup-format';
 import type { Snapshot } from './backup-snapshot';
+import { fittedToDevice, stemSongChange } from './backup-stem-song-plan';
 import { meterOverrideOf, NO_METER_OVERRIDE } from './meter-override';
 
 export interface ImportOptions {
@@ -31,6 +34,7 @@ export interface CategoryPlan {
   updates: number;
   conflicts: Conflict[];
   deletes: number;
+  notOnDevice?: number;
 }
 
 export interface ImportPlan {
@@ -149,12 +153,7 @@ function planMerge(
   snapshot: Snapshot,
   resolutions: Resolutions,
 ): MergeState {
-  const local = new Map<string, LocalRecord>(
-    snapshot.records[category].map((record) => [
-      recordKey(category, record),
-      record,
-    ]),
-  );
+  const local = localRecords(category, snapshot);
   const state = emptyMergeState(incoming.length);
   for (const record of incoming) {
     const key = recordKey(category, record);
@@ -167,6 +166,48 @@ function planMerge(
       const localId = snapshot.ids[category].get(key);
       mergeConflict(category, record, localId, resolutions, state);
     }
+  }
+  return state;
+}
+
+function localRecords(category: Category, snapshot: Snapshot) {
+  return new Map<string, LocalRecord>(
+    snapshot.records[category].map((record) => [
+      recordKey(category, record),
+      record,
+    ]),
+  );
+}
+
+// Stem songs are settings for audio already on the device: nothing is inserted
+// or deleted, and a record with no stem song here is only counted.
+function planStemSongs(
+  mode: ImportMode,
+  incoming: readonly StemSongRecord[],
+  snapshot: Snapshot,
+  resolutions: Resolutions,
+): MergeState {
+  const category = 'stemSongs';
+  const local = new Map(
+    snapshot.records.stemSongs.map((song) => [stemSongKey(song), song]),
+  );
+  const state = emptyMergeState(incoming.length);
+  state.summary.notOnDevice = 0;
+  for (const backup of incoming) {
+    const key = stemSongKey(backup);
+    const mine = local.get(key);
+    const localId = snapshot.ids[category].get(key);
+    if (mine === undefined || localId === undefined) {
+      state.summary.notOnDevice += 1;
+      continue;
+    }
+    const record = fittedToDevice(backup, mine);
+    const change = stemSongChange(mine, record);
+    if (change === 'same') state.summary.unchanged += 1;
+    else if (mode === 'replace' || change === 'update') {
+      state.summary.updates += 1;
+      state.writes.push({ record, localId });
+    } else mergeConflict(category, record, localId, resolutions, state);
   }
   return state;
 }
@@ -224,6 +265,25 @@ function effective(
   return resolved;
 }
 
+function planCategory(
+  category: Category,
+  mode: ImportMode,
+  incoming: readonly BackupRecord[],
+  snapshot: Snapshot,
+  resolutions: Resolutions,
+): MergeState {
+  if (category === 'stemSongs')
+    return planStemSongs(
+      mode,
+      incoming as readonly StemSongRecord[],
+      snapshot,
+      resolutions,
+    );
+  if (mode === 'replace')
+    return planReplace(incoming, snapshot.records[category].length);
+  return planMerge(category, incoming, snapshot, resolutions);
+}
+
 export function computePlan(
   file: BackupFile,
   snapshot: Snapshot,
@@ -241,10 +301,13 @@ export function computePlan(
     const incoming = incomingRecords(category, file, snapshot).map((record) =>
       effective(category, record, categories, snapshot),
     );
-    const result =
-      mode === 'replace'
-        ? planReplace(incoming, snapshot.records[category].length)
-        : planMerge(category, incoming, snapshot, resolutions);
+    const result = planCategory(
+      category,
+      mode,
+      incoming,
+      snapshot,
+      resolutions,
+    );
     plan.counts[category] = result.summary;
     plan.unresolved.push(...result.unresolved);
     writes[category] = result.writes;

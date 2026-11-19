@@ -1,0 +1,40 @@
+appId: com.kitbag.app
+name: '#174: an imported click sound goes on Accent, renames, and Remove puts Tick back'
+tags:
+  - issue-174
+---
+- runFlow: ../../subflows/launch-fresh.yaml
+- runFlow: ../../subflows/open-metronome-first-time.yaml
+- tapOn: 'Practice tools(, \d+ on)?'
+- tapOn: 'Accent sound, Tick'
+- tapOn: 'Import a sound'
+- runFlow:
+    file: ../../subflows/pick-download.yaml
+    env:
+      FILE: '${FIXTURE_SOUND}.wav'
+- extendedWaitUntil:
+    visible: '${FIXTURE_SOUND}, your sound'
+    timeout: 20000
+- back
+- assertVisible: 'Accent sound, ${FIXTURE_SOUND}'
+- assertVisible: 'Normal sound, Tick'
+- tapOn: 'Accent sound, ${FIXTURE_SOUND}'
+- tapOn: 'Options for ${FIXTURE_SOUND}'
+- tapOn: 'Rename'
+- tapOn: 'New name for ${FIXTURE_SOUND}'
+- eraseText
+- inputText: 'Rim'
+- tapOn: 'Save the new name for ${FIXTURE_SOUND}'
+- extendedWaitUntil:
+    visible: 'Rim, your sound'
+    timeout: 5000
+- tapOn: 'Options for Rim'
+- tapOn: 'Remove sound'
+- assertVisible: 'Accent beats go back to Tick.*'
+- tapOn: 'Remove Rim'
+- extendedWaitUntil:
+    notVisible: 'Rim, your sound'
+    timeout: 5000
+- assertVisible: 'Import a sound'
+- back
+- assertVisible: 'Accent sound, Tick'
