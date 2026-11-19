@@ -6,6 +6,7 @@ import type { SongLibraryDeps } from './store.ts';
 import { warn, type SetState } from './storeSupport.ts';
 
 export type RowFilesByKey = ReadonlyMap<string, RowFiles>;
+export type RowPathsByKey = ReadonlyMap<string, readonly string[]>;
 
 export function rowKey(row: Pick<LibraryRow, 'kind' | 'id'>): string {
   return `${row.kind}:${String(row.id)}`;
@@ -47,13 +48,17 @@ export function availabilityRefresher(
   let rootAvailable: boolean | null = null;
   return coalesced(async () => {
     try {
+      const stored = await storedRowFiles(deps.records());
       const check = await checkRowFiles({
-        storedFiles: () => storedRowFiles(deps.records()),
+        storedFiles: () => Promise.resolve(stored),
         fileAvailability: deps.files().fileAvailability,
       });
       set({
         rowFiles: new Map(
           check.rows.map(({ row, files }) => [rowKey(row), files]),
+        ),
+        rowPaths: new Map(
+          stored.map(({ row, audioPaths }) => [rowKey(row), audioPaths]),
         ),
       });
       const returned = rootAvailable === false && check.rootAvailable;

@@ -22,7 +22,11 @@ import {
 } from './logic.ts';
 import { cleanName } from '../names.ts';
 import { resultRecord } from './analysisRecord.ts';
-import { availabilityRefresher, type RowFilesByKey } from './availability.ts';
+import {
+  availabilityRefresher,
+  type RowFilesByKey,
+  type RowPathsByKey,
+} from './availability.ts';
 import {
   outdatedGridQueue,
   requeueAndRefresh,
@@ -85,6 +89,7 @@ export interface SongLibraryState {
   readonly replacePrompt: ReplacePrompt | null;
   readonly codes: LibraryConstants | null;
   readonly rowFiles: RowFilesByKey;
+  readonly rowPaths: RowPathsByKey;
 }
 
 export type ReplaceMatch = 'job' | 'song';
@@ -147,6 +152,7 @@ const INITIAL: SongLibraryState = {
   replacePrompt: null,
   codes: null,
   rowFiles: new Map(),
+  rowPaths: new Map(),
 };
 
 function readActions(deps: SongLibraryDeps, set: SetState, get: Get) {
