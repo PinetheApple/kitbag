@@ -64,4 +64,10 @@ describe('adjacentEntry', () => {
     expect(adjacentEntry(entries, last, SONG_STEP.next)).toBeUndefined();
     expect(adjacentEntry(entries, last, SONG_STEP.previous)).toBe(entries[2]);
   });
+
+  it('steps back to the last song when the removed position lies past the end', () => {
+    const beyond = { itemId: 99, index: 5 };
+    expect(adjacentEntry(entries, beyond, SONG_STEP.previous)).toBe(entries[2]);
+    expect(adjacentEntry(entries, beyond, SONG_STEP.next)).toBeUndefined();
+  });
 });

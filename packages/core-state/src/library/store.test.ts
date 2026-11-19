@@ -3,7 +3,12 @@ import { insertStemSet } from '@kitbag/core-db/src/stem-entries.test-helper';
 import { KB_ACCENT, KB_RAMP_UNIT } from '@kitbag/core-native';
 import { describe, expect, it, vi } from 'vitest';
 
-import { SONG_STEP } from './setlistPosition.ts';
+import {
+  adjacentEntry,
+  SONG_STEP,
+  stagePositionOf,
+  type SongStep,
+} from './setlistPosition.ts';
 import type { createLibraryStore } from './store.ts';
 import { isPresetEntry } from './snapshot.ts';
 import { setup } from './store.test-helper.ts';
@@ -349,6 +354,67 @@ describe('library store', () => {
     await library.getState().stepSong(SONG_STEP.previous);
     expect(library.getState().loaded?.itemId).toBe(one?.item.id);
     expect(activeId(library)).toBe(gig);
+  });
+
+  async function fiveOnStage() {
+    const { library } = setup();
+    const s = library.getState();
+    const gig = await s.createSetlist('Gig');
+    for (const name of ['A', 'B', 'C', 'D', 'E'])
+      await s.newSongFromCurrent(name, gig);
+    const entries = (library.getState().entries[gig] ?? []).filter(
+      isPresetEntry,
+    );
+    const item = (name: string) => {
+      const found = entries.find((e) => e.preset.name === name);
+      if (found === undefined) throw new Error(`missing ${name}`);
+      return found;
+    };
+    const c = item('C');
+    await s.loadSong(c.preset.id, c.item.id, gig);
+    const remove = async (...names: string[]) => {
+      for (const name of names)
+        await library.getState().removeFromSet(item(name).item.id);
+    };
+    const nameOf = (step: SongStep) => {
+      const state = library.getState();
+      const target = adjacentEntry(
+        state.entries[gig] ?? [],
+        stagePositionOf(state.loaded, gig),
+        step,
+      );
+      return target !== undefined && isPresetEntry(target)
+        ? target.preset.name
+        : undefined;
+    };
+    const around = () => [nameOf(SONG_STEP.previous), nameOf(SONG_STEP.next)];
+    return { remove, around };
+  }
+
+  it('keeps the removed song’s place when an earlier song goes too', async () => {
+    const { remove, around } = await fiveOnStage();
+    await remove('C');
+    expect(around()).toEqual(['B', 'D']);
+    await remove('A');
+    expect(around()).toEqual(['B', 'D']);
+  });
+
+  it('keeps the removed song’s place when a later song goes too', async () => {
+    const { remove, around } = await fiveOnStage();
+    await remove('C', 'D');
+    expect(around()).toEqual(['B', 'E']);
+  });
+
+  it('has no Previous once every song before the removed one is gone', async () => {
+    const { remove, around } = await fiveOnStage();
+    await remove('C', 'A', 'B');
+    expect(around()).toEqual([undefined, 'D']);
+  });
+
+  it('steps back to the song still before it after the removed one is last', async () => {
+    const { remove, around } = await fiveOnStage();
+    await remove('D', 'E', 'C', 'B');
+    expect(around()).toEqual(['A', undefined]);
   });
 
   it('loads nothing on Next when the last song on stage is removed', async () => {

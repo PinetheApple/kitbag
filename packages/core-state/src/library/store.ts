@@ -164,12 +164,32 @@ function indexIn(
   return (entries ?? []).findIndex((entry) => entry.item.id === itemId);
 }
 
+function survivorsBefore(
+  previous: readonly SetlistEntry[],
+  next: readonly SetlistEntry[],
+  index: number,
+): number {
+  const kept = new Set(next.map((entry) => entry.item.id));
+  return previous.slice(0, index).filter((entry) => kept.has(entry.item.id))
+    .length;
+}
+
 function followedIndex(
   loaded: LoadedSong | null,
-  entries: LibrarySnapshot['entries'],
+  previous: LibrarySnapshot['entries'],
+  next: LibrarySnapshot['entries'],
 ): LoadedSong | null {
   if (loaded?.setlistId == null || loaded.itemId === null) return loaded;
-  const index = indexIn(entries[loaded.setlistId], loaded.itemId);
+  const entries = next[loaded.setlistId] ?? [];
+  const present = indexIn(entries, loaded.itemId);
+  const index =
+    present >= 0 || loaded.index === undefined
+      ? present
+      : survivorsBefore(
+          previous[loaded.setlistId] ?? [],
+          entries,
+          loaded.index,
+        );
   if (index < 0 || index === loaded.index) return loaded;
   return { ...loaded, index };
 }
@@ -448,7 +468,11 @@ function readActions(deps: LibraryDeps, set: SetState, get: Get) {
         set({ ready: true, failed: true });
         return;
       }
-      const loaded = followedIndex(get().loaded, snapshot.entries);
+      const loaded = followedIndex(
+        get().loaded,
+        get().entries,
+        snapshot.entries,
+      );
       set({ ...snapshot, loaded, ready: true, failed: false });
       const query = get().results?.query;
       if (query === undefined) return;

@@ -27,7 +27,8 @@ function removedStep(
   index: number,
   step: SongStep,
 ): SetlistEntry | undefined {
-  return entries[step === SONG_STEP.next ? index : index + step];
+  if (step === SONG_STEP.next) return entries[index];
+  return entries[Math.min(index, entries.length) + step];
 }
 
 export function adjacentEntry(

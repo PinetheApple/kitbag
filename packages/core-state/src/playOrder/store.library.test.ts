@@ -115,3 +115,62 @@ describe('play order on the library stage', () => {
     });
   });
 });
+
+describe('play order after removals around the entry on stage', () => {
+  async function fiveStemSongs() {
+    const { library, repos, handle } = librarySetup();
+    const queue = createPlayQueueRepository(handle);
+    const stage = () => onStageOf(library.getState());
+    const order = createPlayOrderStore({
+      queue: () => queue,
+      stage,
+      cursor: () => cursorOf(stage(), library.getState().loaded),
+      refreshStage: () => library.getState().refresh(),
+      playSetlistEntry: (itemId, setlistId) =>
+        library.getState().openStemEntry(itemId, setlistId),
+    });
+    const gig = await library.getState().createSetlist('Gig');
+    const ids: Record<string, { stemSetId: number; itemId: number }> = {};
+    for (const name of ['A', 'B', 'C', 'D', 'E']) {
+      const stemSetId = await insertStemSet(handle.db, name);
+      const item = await repos.setlists.addStemSet(gig, stemSetId);
+      ids[name] = { stemSetId, itemId: item.id };
+    }
+    await library.getState().refresh();
+    const of = (name: string) => {
+      const found = ids[name];
+      if (found === undefined) throw new Error(`missing ${name}`);
+      return found;
+    };
+    await library.getState().openStemEntry(of('C').itemId, gig);
+    const remove = async (...names: string[]) => {
+      for (const name of names)
+        await library.getState().removeFromSet(of(name).itemId);
+    };
+    return { order, remove, of };
+  }
+
+  it('carries on with the next entry when an earlier one is removed too', async () => {
+    const { order, remove, of } = await fiveStemSongs();
+    await remove('C', 'A');
+    expect(order.getState().upNext()).toMatchObject({
+      entry: { stemSetId: of('D').stemSetId },
+    });
+  });
+
+  it('carries on past a later entry removed too', async () => {
+    const { order, remove, of } = await fiveStemSongs();
+    await remove('C', 'D');
+    expect(order.getState().upNext()).toMatchObject({
+      entry: { stemSetId: of('E').stemSetId },
+    });
+  });
+
+  it('carries on with the next entry when everything before it is removed', async () => {
+    const { order, remove, of } = await fiveStemSongs();
+    await remove('C', 'A', 'B');
+    expect(order.getState().upNext()).toMatchObject({
+      entry: { stemSetId: of('D').stemSetId },
+    });
+  });
+});
