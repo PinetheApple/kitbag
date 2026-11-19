@@ -4,6 +4,9 @@
 #include "zero_clock.h"
 
 namespace metronome_test {
+
+using kitbag_test::kZeroClock;
+
 namespace {
 
 constexpr int64_t kLoopStart = 24000;
@@ -65,7 +68,7 @@ WrapTake RenderWrap(double edge_frame, double latency_ms) {
     grid->beat_times_sec.push_back(frame / kSampleRate);
   }
   SetSongBars(grid.get(), 0, kSongBeatsPerBar);
-  metronome.SetGrid(std::move(grid), kitbag_test::kZeroClock, true);
+  metronome.SetGrid(std::move(grid), kZeroClock, true);
   metronome.SetLatencyOffset(latency_ms);
   metronome.SetFollowMixer(true);
   metronome.Start();
@@ -118,7 +121,7 @@ void FollowGrid(kitbag::Metronome* metronome) {
       static_cast<double>(kGridHead) / kSampleRate,
       static_cast<double>(kGridHead + kGridBeatFrames) / kSampleRate
   };
-  metronome->SetGrid(std::move(grid), kitbag_test::kZeroClock, false);
+  metronome->SetGrid(std::move(grid), kZeroClock, false);
   metronome->SetFollowMixer(true);
   metronome->Start();
 }

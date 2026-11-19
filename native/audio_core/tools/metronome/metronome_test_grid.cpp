@@ -2,6 +2,7 @@
 // constant tempo. The reasoning these pin is SPEC.md §4.2 / §4.2.1.
 #include "metronome_test_support.h"
 #include "song_bars.h"
+#include "test_clock.h"
 #include "zero_clock.h"
 
 namespace metronome_test {
@@ -79,11 +80,8 @@ DriftingReanchorExpected(const std::vector<double>& incoming, int64_t swap_at) {
 void TestGridReanchorFollowsNewDriftingGrid() {
   kitbag::Metronome metronome;
   metronome.SetTimeSignature(4, 4);
-  metronome.SetGrid(
-      MakeShiftedGrid(40, 0.0, 0.5),
-      kZeroClock,
-      true
-  );  // even 0.5 s
+  auto even_half_second_beats = MakeShiftedGrid(40, 0.0, 0.5);
+  metronome.SetGrid(std::move(even_half_second_beats), kZeroClock, true);
   metronome.Start();
   // Steep ramp: intervals shrink 0.02 s per beat, so an averaged-tempo re-seed misses.
   auto drifting = MakeDriftingGrid(12, 0.5, 0.02, 0);
@@ -322,11 +320,8 @@ void TestGridReanchorNoRefire() {
 void TestGridBpmMirrorIsClamped() {
   kitbag::Metronome fast;
   fast.SetTimeSignature(4, 4);
-  fast.SetGrid(
-      MakeDriftingGrid(200, 0.05, 0.0, 0),
-      kZeroClock,
-      true
-  );  // 1200 BPM raw
+  auto raw_1200_bpm = MakeDriftingGrid(200, 0.05, 0.0, 0);
+  fast.SetGrid(std::move(raw_1200_bpm), kZeroClock, true);
   fast.Start();
   RenderAndDetectOnsets(fast, kSampleRate / 2);
   Check(

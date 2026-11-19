@@ -1,7 +1,11 @@
 #include "metronome_test_poly_model.h"
+#include "test_clock.h"
 #include "zero_clock.h"
 
 namespace metronome_test {
+
+using kitbag_test::ClockAt;
+
 namespace {
 
 constexpr PolySetup kFiveThreeAt120{5, 3, 4, 4, 120.0};
@@ -245,11 +249,7 @@ void TestNoPhaseUnderAGrid() {
   };
   const auto on_block = [&](int64_t at) {
     if (at == kGridFrame) {
-      metronome.SetGrid(
-          MakeShiftedGrid(64, 0.0, 0.5),
-          kitbag_test::ClockAt(at),
-          true
-      );
+      metronome.SetGrid(MakeShiftedGrid(64, 0.0, 0.5), ClockAt(at), true);
     }
   };
   ExpectPhases(

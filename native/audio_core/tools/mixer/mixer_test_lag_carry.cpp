@@ -6,7 +6,6 @@
 #include "metronome/grid_bars.h"
 #include "metronome/metronome.h"
 #include "mixer_test_stretch_support.h"
-#include "zero_clock.h"
 
 namespace mixer_test {
 namespace {
@@ -124,7 +123,7 @@ void FollowTwoBeats(kitbag::Metronome* metronome, int64_t beat_frame) {
   grid->bars =
       kitbag::GridBars(kFirstBeatAccented, grid->beat_times_sec.size());
   metronome->SetTimeSignature(4, 4);
-  metronome->SetGrid(std::move(grid), kitbag_test::kZeroClock, true);
+  metronome->SetGrid(std::move(grid), kZeroClock, true);
   metronome->SetFollowMixer(true);
   metronome->Start();
 }

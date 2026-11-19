@@ -18,20 +18,11 @@ constexpr uint64_t kPreemptedFrames = 3 * kGrace + 517;
 constexpr uint64_t kPinnedFrame = 12345;
 constexpr int kPinnedPublishes = 64;
 
-// Advances the clock while Publish builds its node, standing in for an app
-// thread preempted between entering Publish and the swap.
-struct SlowToMove {
-  std::atomic<uint64_t>* frames = nullptr;
-
-  explicit SlowToMove(std::atomic<uint64_t>* clock) : frames(clock) {}
-  SlowToMove(SlowToMove&& other) noexcept : frames(other.frames) {
-    frames->fetch_add(kPreemptedFrames);
-  }
-  SlowToMove(const SlowToMove&) = delete;
-  SlowToMove& operator=(const SlowToMove&) = delete;
-  SlowToMove& operator=(SlowToMove&&) = delete;
-  ~SlowToMove() = default;
-};
+// Stands in for an app thread preempted right after the swap: any clock read
+// before it dates the retired node a whole preemption early.
+void AdvanceClockAfterSwap(void* frames) {
+  static_cast<std::atomic<uint64_t>*>(frames)->fetch_add(kPreemptedFrames);
+}
 
 void TestRtPublisher() {
   kitbag::RtPublisher<int> publisher;
@@ -88,13 +79,14 @@ void TestRtPublisherReclaimsWithNoReader() {
 void TestRetireDatedAtTheSwap() {
   std::atomic<uint64_t> frames{0};
   const FrameClock clock = FrameClock::Reading(frames);
-  kitbag::RtPublisher<SlowToMove> publisher;
-  publisher.Publish(std::make_unique<SlowToMove>(&frames), clock, true);
-  publisher.Publish(std::make_unique<SlowToMove>(&frames), clock, true);
+  kitbag::RtPublisher<int> publisher;
+  publisher.set_after_swap_hook(AdvanceClockAfterSwap, &frames);
+  publisher.Publish(std::make_unique<int>(1), clock, true);
+  publisher.Publish(std::make_unique<int>(2), clock, true);
   const uint64_t swapped_at = frames.load();
   Check(
       swapped_at == 2 * kPreemptedFrames,
-      "dating: the payload moves advanced the clock before each swap"
+      "dating: the hook advanced the clock after each swap"
   );
   publisher.Collect(swapped_at + kGrace);
   Check(
