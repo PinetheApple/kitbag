@@ -3,7 +3,7 @@
 Autonomous and user rulings on points SPEC.md leaves open or general. **SPEC.md
 stays the source of truth and is user-owned** — this file never overrides it; it
 records choices that fill gaps SPEC does not state, so autonomy leaves an audit
-trail instead of silent drift. `project-loop` reads this on every fresh invocation.
+trail instead of silent drift.
 
 Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | recorded]`
 

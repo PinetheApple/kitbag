@@ -25,6 +25,7 @@ import '@/settings/toolsRuntime';
 
 import '@/global.css';
 
+import type { DatabaseOpenError } from '@kitbag/core-db';
 import {
   layout,
   SheetHost,
@@ -38,7 +39,13 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { VariableContextProvider } from 'nativewind';
-import { useEffect, useMemo, type ReactNode } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import {
@@ -48,6 +55,8 @@ import {
 } from 'react-native-safe-area-context';
 import { StyleSheet, useColorScheme } from 'react-native';
 
+import { launchDatabaseError } from '@/boot/databaseGate';
+import { DatabaseErrorScreen } from '@/boot/DatabaseErrorScreen';
 import { resolveThemeMode } from '@/runtime/appearance';
 import { applyAppearance } from '@/runtime/appearanceRuntime';
 import { useKitbagRuntime } from '@/runtime/bootstrapRuntime';
@@ -64,7 +73,7 @@ const CSS_VARIABLES: Readonly<Record<ThemeMode, Record<string, string>>> = {
 
 export default function RootLayout() {
   useKitbagRuntime();
-  useSongLibraryAnalysis();
+  const [databaseError] = useState(launchDatabaseError);
   const [fontsLoaded, fontError] = useFonts(designFonts);
   const fontsSettled = fontsLoaded || fontError !== null;
   const themeChoice = useAppearance((s) => s.theme);
@@ -83,13 +92,17 @@ export default function RootLayout() {
   return (
     <ThemeProvider mode={mode}>
       <VariableContextProvider value={CSS_VARIABLES[mode]}>
-        <ThemedRoot />
+        <ThemedRoot databaseError={databaseError} />
       </VariableContextProvider>
     </ThemeProvider>
   );
 }
 
-function ThemedRoot() {
+interface ThemedRootProps {
+  readonly databaseError: DatabaseOpenError | undefined;
+}
+
+function ThemedRoot({ databaseError }: ThemedRootProps) {
   const theme = useTheme();
   const rootStyle = useMemo(
     () => [styles.root, { backgroundColor: theme.color.bg }],
@@ -107,13 +120,28 @@ function ThemedRoot() {
     <GestureHandlerRootView style={rootStyle}>
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
         <KeyboardProvider navigationBarTranslucent statusBarTranslucent>
-          <InsetSheetHost>
-            <Stack screenOptions={screenOptions} />
-            <NotificationPromptSheet />
-          </InsetSheetHost>
+          {databaseError === undefined ? (
+            <AppStack screenOptions={screenOptions} />
+          ) : (
+            <DatabaseErrorScreen error={databaseError} />
+          )}
         </KeyboardProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
+  );
+}
+
+function AppStack({
+  screenOptions,
+}: {
+  readonly screenOptions: ComponentProps<typeof Stack>['screenOptions'];
+}) {
+  useSongLibraryAnalysis();
+  return (
+    <InsetSheetHost>
+      <Stack screenOptions={screenOptions} />
+      <NotificationPromptSheet />
+    </InsetSheetHost>
   );
 }
 

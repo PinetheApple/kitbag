@@ -4,6 +4,7 @@ import {
   backupFilesAvailable,
   pickBackup,
   saveBackup,
+  saveDatabaseCopy,
   shareBackup,
 } from './backupFiles.web.ts';
 
@@ -15,4 +16,5 @@ it('picks nothing and refuses to share or save', async () => {
   await expect(pickBackup()).resolves.toBeNull();
   await expect(shareBackup('kitbag_export.json', '{}')).rejects.toThrow();
   await expect(saveBackup('kitbag_export.json', '{}')).rejects.toThrow();
+  await expect(saveDatabaseCopy('kitbag', 'copy.db')).rejects.toThrow();
 });

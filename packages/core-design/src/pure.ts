@@ -10,6 +10,7 @@ export * from './metronomeRoles.ts';
 export * from './homeArrangeRoles.ts';
 export * from './toolGrid.ts';
 export * from './snackbarRoles.ts';
+export * from './databaseErrorRoles.ts';
 export * from './practiceHistoryRoles.ts';
 export * from './swipeDeleteRoles.ts';
 export * from './snackbarTimer.ts';

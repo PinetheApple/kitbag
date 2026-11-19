@@ -315,6 +315,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/mixer/mixer_test_retire.cpp
     tools/mixer/mixer_test_play_at.cpp
     tools/mixer/mixer_test_unity.cpp
+    tools/mixer/mixer_test_end_count.cpp
     ${KITBAG_METRONOME_SOURCES}
     src/media/streaming_track.cpp
     src/media/looping_source_reader.cpp
