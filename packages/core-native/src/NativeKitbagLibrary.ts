@@ -153,6 +153,7 @@ export type LibraryConstants = Readonly<{
   exportNoActivity: string;
   exportNoShareTarget: string;
   exportShareFailed: string;
+  exportMaxBaseNameBytes: Int32;
   supportedAudioFamilies: readonly string[];
   supportedAudioExtensions: readonly string[];
   supportedAudioMimeTypes: readonly string[];

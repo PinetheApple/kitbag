@@ -329,7 +329,28 @@ export {
   type StemPlayerEngine,
   type StemPlayerRecords,
   type StemPlayerRuntime,
+  type MixdownRuntime,
 } from './stemPlayer/runtime.ts';
+export {
+  EXPORT_POLL_MS,
+  exportBlock,
+  type ExportBlock,
+  type ExportSong,
+  type ExportState,
+} from './stemPlayer/exportActions.ts';
+export type { ExportSummary } from './stemPlayer/exportSummary.ts';
+export {
+  EXPORT_CANCELLED,
+  EXPORT_READY,
+  EXPORT_SHARE_FAILED,
+  EXPORT_STARTED,
+  EXPORT_UNSHARED,
+  exportFailureCopy,
+  megabytes,
+  percentOf,
+  type ExportCopy,
+  type ExportFailure,
+} from './stemPlayer/exportText.ts';
 export {
   formatClock,
   framesToSeconds,
@@ -354,8 +375,17 @@ export {
   type RetimeTap,
   type SongLyrics,
 } from './stemPlayer/lyrics.ts';
-export type { LoopEdge, LoopSeconds } from './stemPlayer/loop.ts';
+export { beatBeside, type BeatDirection } from './stemPlayer/beatStep.ts';
 export { NO_SECTION, sectionAt } from './stemPlayer/sections.ts';
+export {
+  nearestBeat,
+  type LoopEdge,
+  type LoopSeconds,
+} from './stemPlayer/loop.ts';
+export {
+  overrideDownbeats,
+  type DetectedGrid,
+} from './stemPlayer/meterOverride.ts';
 export {
   clickKeyLabel,
   loopEndFrames,
@@ -389,6 +419,8 @@ export {
   clockParts,
   formatClockSeconds,
   MINUS,
+  roundedSpeed,
+  speedText,
   SECONDS_PER_MINUTE,
   type ClockParts,
 } from './text.ts';

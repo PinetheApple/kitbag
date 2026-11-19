@@ -27,3 +27,22 @@ export function usableDownbeats(
   }
   return kept;
 }
+
+export function sameNumbers(
+  a: readonly number[],
+  b: readonly number[],
+): boolean {
+  return a.length === b.length && a.every((value, i) => value === b[i]);
+}
+
+export function barLength(
+  downbeats: readonly number[],
+  bar: number,
+): number | null {
+  const start = downbeats[bar];
+  const next = downbeats[bar + 1];
+  const previous = downbeats[bar - 1];
+  if (start === undefined) return null;
+  if (next !== undefined) return next - start;
+  return previous === undefined ? null : start - previous;
+}

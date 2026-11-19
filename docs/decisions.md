@@ -1100,3 +1100,21 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   before the switch waits on the Home banner for Resume or Undo and does not restart on its own.
   Cancel is offered only before the switch. Old copies are deleted only once no player or export
   is still reading them. **[recorded — lane call, owner may overturn]**
+
+- **2026-11-19 · Meter override over detected bars (§6.2, #332)** — A bar one alone shifts the
+  detected bar pattern so bar one lands on the chosen beat, keeping each bar's own meter, so a
+  stem set's meter map stays a map. A meter alone makes the whole song that meter, counted from
+  the detected bar one, which skips a leading pickup bar shorter than a full bar. The detected
+  meter is the most common bar length, not the first, so a pickup cannot set it.
+  **[recorded — lane call, owner may overturn]**
+
+- **2026-11-19 · Custom click sounds (§5.3, #174)** — Owner ruling 2026-11-07: custom sound
+  import only; the six built-in sounds stay. **[user]** Recommendations taken while the owner is
+  away, recorded in SPEC §5.3 and drawn in
+  `docs/research/mockups/kitbag-metronome-custom-sound.html`: two slots as engine ids 6 and 7;
+  song-import formats, up to 2 s from the first audible sample; mono, 48 kHz, peak-matched,
+  prepared by the core; file-name naming, renamable; Replace keeps the slot, Remove resets users
+  to Tick; prepared WAV in app-private storage, not the Data folder, because a removable card
+  must not take the click away; a Click sounds backup category keyed by slot; restore resets a
+  reference to Tick unless the same sound (by UUID) is in that slot. Song import's list includes
+  AIFF, so the copy reads “WAV, MP3, FLAC or AIFF”. **[REC TAKEN, owner may overturn]**

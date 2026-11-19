@@ -15,3 +15,17 @@ export function lastAtOrBefore<K extends string>(
   }
   return low - 1;
 }
+
+export function lastValueAtOrBefore(
+  sorted: readonly number[],
+  value: number,
+): number {
+  let low = 0;
+  let high = sorted.length;
+  while (low < high) {
+    const mid = Math.floor((low + high) / 2);
+    if ((sorted[mid] ?? Infinity) <= value) low = mid + 1;
+    else high = mid;
+  }
+  return low - 1;
+}

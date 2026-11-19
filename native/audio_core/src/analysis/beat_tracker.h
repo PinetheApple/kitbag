@@ -16,11 +16,15 @@ struct BeatResult {
   double duration_sec = 0.0;
 };
 
-/// Beat tracker using spectral flux onset detection + autocorrelation
-/// tempo estimation + dynamic programming beat placement.
+/// Tempo the beats keep; 0 for fewer than two beats.
+float BeatGridBpm(const std::vector<float>& beats);
+
+/// Spectral-flux onsets, an autocorrelation tempo that seeds dynamic-programming
+/// beat placement, and a reported tempo fitted to the placed beats.
 class BeatTracker {
  public:
-  /// Tempo and beat times in seconds from an OnsetEnvelope's raw flux.
+  /// Beat times in seconds from an OnsetEnvelope's raw flux, and the tempo
+  /// they keep.
   BeatResult AnalyzeFlux(std::vector<float> flux, int sample_rate);
 
   /// Places beats over an onset envelope by dynamic programming.

@@ -1,6 +1,9 @@
 import type { SongLibraryRepository } from '@kitbag/core-db';
 import type {
+  KB_MIXDOWN_STATE,
   KitbagCommandsSpec,
+  LibraryConstants,
+  MixdownStart,
   SongTransportRequest,
 } from '@kitbag/core-native';
 
@@ -80,9 +83,24 @@ export interface MixerRuntime {
   ) => Promise<readonly number[]>;
 }
 
+export interface MixdownRuntime {
+  readonly start: (fileName: string) => Promise<MixdownStart>;
+  readonly cancel: () => void;
+  readonly progress: () => number;
+  readonly state: () => KB_MIXDOWN_STATE;
+  readonly share: (path: string) => Promise<void>;
+  readonly announce: (message: string) => void;
+  readonly foreground: () => boolean;
+  readonly codes: () => Pick<
+    LibraryConstants,
+    'exportNoShareTarget' | 'exportMaxBaseNameBytes'
+  >;
+}
+
 export interface StemPlayerRuntime extends MixerRuntime {
   readonly records: StemPlayerRecords;
   readonly countInBars: () => number;
+  readonly mixdown: MixdownRuntime;
 }
 
 let configured: StemPlayerRuntime | undefined;

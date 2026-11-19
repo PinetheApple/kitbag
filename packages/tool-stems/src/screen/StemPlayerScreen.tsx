@@ -25,6 +25,8 @@ import { Text, View } from 'react-native';
 import { detailTabLabel } from '../logic/detailView.ts';
 import { hasUnsavedRetime } from '../logic/retimeView.ts';
 import { DetailPane } from './DetailPane.tsx';
+import { ExportCancelledSnackbar, ExportNotice } from './ExportNotice.tsx';
+import { ExportSheet } from './ExportSheet.tsx';
 import { LoopUndoSnackbar } from './LoopUndoSnackbar.tsx';
 import { PlayerMenu } from './PlayerMenu.tsx';
 import { LeaveDialog, ResetDialog, RetimeBar } from './RetimeBar.tsx';
@@ -78,6 +80,7 @@ function Notices() {
   );
   return (
     <>
+      <ExportNotice />
       {overLimit > 0 ? (
         <Card
           emphasis="warning"
@@ -238,6 +241,7 @@ function Body({ bottom, onBack }: BodyProps) {
           <PlayerContent frame={frame} picked={picked} onPick={setPicked} />
         )}
         <LoopUndoSnackbar />
+        <ExportCancelledSnackbar />
       </View>
       <Dock frame={frame} bottom={bottom} />
     </>
@@ -275,12 +279,21 @@ export function StemPlayerScreen({
   const acquireSong = useStemPlayer((s) => s.acquireSong);
   const { retiming, shown, askReset, askLeave, closeAsk } = useRetimeAsk();
   const [menu, setMenu] = useState(false);
+  const [exportSheet, setExportSheet] = useState(false);
   if (menu && retiming) setMenu(false);
+  if (exportSheet && retiming) setExportSheet(false);
   const openMenu = useCallback(() => {
     setMenu(true);
   }, []);
   const closeMenu = useCallback(() => {
     setMenu(false);
+  }, []);
+  const openExport = useCallback(() => {
+    setMenu(false);
+    setExportSheet(true);
+  }, []);
+  const closeExport = useCallback(() => {
+    setExportSheet(false);
   }, []);
   const acquire = useCallback(
     () => acquireSong(setId, WAVEFORM_BARS),
@@ -307,6 +320,12 @@ export function StemPlayerScreen({
         visible={menu}
         bottomInset={insets.bottom}
         onClose={closeMenu}
+        onExport={openExport}
+      />
+      <ExportSheet
+        visible={exportSheet}
+        bottomInset={insets.bottom}
+        onClose={closeExport}
       />
       {shown === 'reset' ? <ResetDialog onClose={closeAsk} /> : null}
       {shown === 'leave' ? <LeaveDialog onClose={closeAsk} /> : null}
