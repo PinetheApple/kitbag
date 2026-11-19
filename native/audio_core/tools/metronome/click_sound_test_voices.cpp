@@ -179,11 +179,35 @@ void TestRenderAllocatesNothing() {
   );
 }
 
+// The fade starts from the last value played and never reads the old sound
+// again, whose samples alternate in sign.
+void CheckCutFade(SampleVoices& voices, std::vector<float>& out, float last) {
+  constexpr uint32_t kFade = SampleVoices::kCutFadeFrames;
+  constexpr uint32_t kFadeBlocks = kFade / kBlock + 1;
+  std::vector<float> fade = out;
+  for (uint32_t block = 1; block < kFadeBlocks; ++block) {
+    RenderBlock(voices, out);
+    fade.insert(fade.end(), out.begin(), out.end());
+  }
+  bool fades = true;
+  for (uint32_t i = 0; i < fade.size(); ++i) {
+    const float want =
+        i < kFade ? last * static_cast<float>(kFade - i) / kFade : 0.0F;
+    fades = fades && fade[i] == want;
+  }
+  Check(
+      fades,
+      "retire: a voice of the replaced sound stops reading it at the next "
+      "block and fades from its last value to silence"
+  );
+}
+
 void TestReplacedSoundRetiresOffTheAudioThread() {
   SampleVoices voices;
   voices.Publish(0, Distinct(kitbag::kCustomSoundRate), 0, true);
   std::vector<float> after(kBlock);
   RenderBlock(voices, after, {0, 1.0F});
+  const float last = after[kBlock - 1];
   voices.Publish(0, Distinct(kShortFrames), kBlock, true);
   Check(
       voices.retired_size() == 1,
@@ -196,10 +220,7 @@ void TestReplacedSoundRetiresOffTheAudioThread() {
       LiveHeapBytes() == live && HeapPeakGrowth() == 0,
       "retire: the audio thread frees nothing when a sound is replaced"
   );
-  Check(
-      after[0] == 0.0F,
-      "retire: a voice of the replaced sound stops at the next block"
-  );
+  CheckCutFade(voices, after, last);
   voices.Collect(kBlock + kGrace + 1);
   Check(
       voices.retired_size() == 0 && LiveHeapBytes() < live,

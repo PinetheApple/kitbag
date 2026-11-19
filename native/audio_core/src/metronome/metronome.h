@@ -16,6 +16,7 @@
 #include "metronome/metronome_command.h"
 #include "metronome/metronome_types.h"
 #include "metronome/rig_click.h"
+#include "metronome/sample_voices.h"
 #include "metronome/tempo_ramp.h"
 #include "metronome/trainer_mirrors.h"
 #include "rt/rt_publisher.h"
@@ -35,14 +36,16 @@ class Metronome {
   static constexpr int kMinPolyAgainst = 1;
   static constexpr int kMaxPolyAgainst = kMaxBeats;
   static constexpr int kSoundCount = 6;
+  static constexpr int kTickSound = 4;
+  static constexpr int kFirstCustomSound = kSoundCount;
   // BPM stays quarter-note referenced whatever the time signature, so the beat
   // interval is (60 / bpm) * (kBpmReferenceDenominator / denominator) seconds.
   static constexpr int kBpmReferenceDenominator = 4;
   static constexpr int kDenominators[] = {2, 4, 8, 16};
   static constexpr int kCountInOff = 0;
   static constexpr int kCountInBarChoices[] = {kCountInOff, 1, 2, 4};
-  static constexpr int kDefaultNormalSound = 4;
-  static constexpr int kDefaultAccentSound = 4;
+  static constexpr int kDefaultNormalSound = kTickSound;
+  static constexpr int kDefaultAccentSound = kTickSound;
   static constexpr int kDefaultCountInSound = 1;
   static constexpr int kMinMuteBars = 1;
   static constexpr int kMaxMuteBars = 16;
@@ -131,7 +134,7 @@ class Metronome {
   // click falls one whole beat after the last grid beat (SPEC.md §4.2.1).
   void ClearGrid(uint64_t now_frame, bool engine_running);
   // The audio callback must be stopped.
-  void ReleaseRetiredGrids();
+  void ReleaseRetired();
   void DropQueuedPreviews();
 
   // App thread, the ring's only producer: a push after this cannot fail.
@@ -171,6 +174,12 @@ class Metronome {
   const RigClick& rig_click() const {
     return rig_click_;
   }
+  SampleVoices& custom_sounds() {
+    return custom_sounds_;
+  }
+  const SampleVoices& custom_sounds() const {
+    return custom_sounds_;
+  }
 
  private:
   using CommandType = MetronomeCommandType;
@@ -189,8 +198,6 @@ class Metronome {
     uint64_t generation = 0;
   };
 
-  // ApplyCommand holds the only exhaustive switch over CommandType; the
-  // handlers below are partial and say so with a `default:`.
   void ApplyPendingCommands();
   void ApplyCommand(const Command& command);
   bool RouteCommand(const Command& command);
@@ -203,9 +210,6 @@ class Metronome {
   bool ApplyPatternCommand(const Command& command);
   bool ApplyOutputCommand(const Command& command);
   bool ApplyGridClickCommand(const Command& command);
-  static bool IsValidSound(int32_t sound) {
-    return sound >= 0 && sound < kSoundCount;
-  }
   static void InitAccentRow(std::span<Accent> row);
   static void
   SetAccentSlot(std::span<Accent> row, int32_t length, const Command& command);
@@ -235,7 +239,7 @@ class Metronome {
   );
   void OnCountInBeat(int32_t index, CountInVoice voice, uint32_t sample_rate);
 
-  void TriggerPreset(int sound, bool accented, uint32_t sample_rate);
+  void TriggerSound(int sound, ClickRole role, uint32_t sample_rate);
   void OnBeatBoundary(int beat_index, uint32_t sample_rate);
   void OnGridBeat(const BeatGrid& grid, uint32_t sample_rate);
   void OnGridTick(int tick, uint32_t sample_rate);
@@ -276,11 +280,9 @@ class Metronome {
       uint32_t sample_rate,
       BlockTempo* tempo
   );
-  // Writes bpm_ and beat_position_ so `now` sits at the song's beat phase.
   void
   BeginAnchorExternal(uint64_t now, uint32_t sample_rate, BlockTempo* tempo);
-  // Derives current_bar_ from the current latency-shifted position, so an anchor
-  // lands the bar counter on the song's bar rather than counting downbeats.
+  // From the latency-shifted position, so an anchor lands on the song's bar.
   void SyncBarFromPosition(double beats_per_sample);
   double LastSoundedPosition(double beats_per_sample) const;
   int64_t LastSoundedBeat(double beats_per_sample) const;
@@ -320,7 +322,6 @@ class Metronome {
   // click lands on the beat at the speaker rather than at the buffer (§4.7).
   double
   GridSeconds(const BeatGrid& grid, uint64_t frame, uint32_t sample_rate) const;
-  // Binary search: bounded and allocation-free, so safe from the callback.
   void SeekGridCursor(const BeatGrid& grid, double song_seconds);
   void ResyncSub(const BeatGrid& grid, double song_seconds);
   bool GridShiftReplays(const BeatGrid& grid, double shift_sec) const;
@@ -365,8 +366,9 @@ class Metronome {
   double pending_anchor_bpm_ = kDefaultBpm;
   uint64_t pending_anchor_frame_ = 0;
 
-  // The publisher is the app→RT seam; everything below it is RT-owned.
+  // The publishers are the app→RT seam; everything below them is RT-owned.
   RtPublisher<BeatGrid> grid_;
+  SampleVoices custom_sounds_;
   GridState grid_state_;
   GridClick grid_click_;
   uint32_t click_epoch_ = 0;  // app thread

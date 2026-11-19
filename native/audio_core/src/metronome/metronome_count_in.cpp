@@ -5,6 +5,8 @@
 
 namespace kitbag {
 
+using metronome_detail::BuiltInOrTick;
+using metronome_detail::IsBuiltInSound;
 using metronome_detail::IsOneOf;
 using metronome_detail::kGridEpsilon;
 
@@ -13,7 +15,7 @@ void Metronome::SetCountInState(const Command& command) {
     count_in_bars_ = command.int_a;
   }
   count_in_voice_.distinct = command.int_b != 0;
-  if (IsValidSound(command.int_c)) count_in_voice_.sound = command.int_c;
+  if (IsBuiltInSound(command.int_c)) count_in_voice_.sound = command.int_c;
 }
 
 void Metronome::PauseRun() {
@@ -65,15 +67,13 @@ void Metronome::OnCountInBeat(
 ) {
   current_beat_.store(index, std::memory_order_relaxed);
   const bool downbeat = index == 0;
-  if (voice.distinct) {
-    TriggerPreset(voice.sound, downbeat, sample_rate);
-  } else {
-    TriggerPreset(
-        downbeat ? accent_sound_ : normal_sound_,
-        downbeat,
-        sample_rate
-    );
-  }
+  const int sound =
+      voice.distinct ? voice.sound : (downbeat ? accent_sound_ : normal_sound_);
+  TriggerSound(
+      BuiltInOrTick(sound),
+      downbeat ? ClickRole::kAccent : ClickRole::kBeat,
+      sample_rate
+  );
 }
 
 }  // namespace kitbag

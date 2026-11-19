@@ -13,7 +13,7 @@ namespace kitbag {
 namespace {
 
 using metronome_detail::BarFraction;
-using metronome_detail::Clamp;
+using metronome_detail::BuiltInOrTick;
 using metronome_detail::kAccentAmplitude;
 using metronome_detail::kAccentedSubdivisionGain;
 using metronome_detail::kBeatAmplitude;
@@ -24,6 +24,8 @@ using metronome_detail::OnsetFloorSec;
 
 constexpr double kPolyBeatAmplitude = 0.5;
 constexpr double kPolyAccentAmplitude = 0.8;
+constexpr double kAccentedSubdivisionAmplitude =
+    kAccentAmplitude * kAccentedSubdivisionGain;
 
 struct SoundPreset {
   double accent_hz;
@@ -58,13 +60,56 @@ bool CrossesTick(double previous, double position, double ticks_per_beat) {
          TickIndex(position, ticks_per_beat);
 }
 
+double RoleGain(ClickRole role) {
+  switch (role) {
+    case ClickRole::kBeat:
+      return kBeatAmplitude;
+    case ClickRole::kAccent:
+      return kAccentAmplitude;
+    case ClickRole::kSubdivision:
+      return kSubdivisionAmplitude;
+    case ClickRole::kAccentedSubdivision:
+      return kAccentedSubdivisionAmplitude;
+    case ClickRole::kPoly:
+      return kPolyBeatAmplitude;
+    case ClickRole::kPolyAccent:
+      return kPolyAccentAmplitude;
+  }
+  return kBeatAmplitude;
+}
+
+double RoleHz(const SoundPreset& preset, ClickRole role) {
+  switch (role) {
+    case ClickRole::kBeat:
+      return preset.beat_hz;
+    case ClickRole::kAccent:
+    case ClickRole::kAccentedSubdivision:
+      return preset.accent_hz;
+    case ClickRole::kSubdivision:
+      return preset.subdivision_hz;
+    case ClickRole::kPoly:
+    case ClickRole::kPolyAccent:
+      return preset.poly_hz;
+  }
+  return preset.beat_hz;
+}
+
+ClickRole BeatRole(bool accented) {
+  return accented ? ClickRole::kAccent : ClickRole::kBeat;
+}
+
 }  // namespace
 
-void Metronome::TriggerPreset(int sound, bool accented, uint32_t sample_rate) {
-  const SoundPreset& preset = kSounds[sound];
+void Metronome::TriggerSound(int sound, ClickRole role, uint32_t sample_rate) {
+  const double gain = RoleGain(role);
+  const int slot = sound - kFirstCustomSound;
+  if (slot >= 0 && custom_sounds_.Trigger(slot, static_cast<float>(gain))) {
+    return;
+  }
+  const SoundPreset& preset = kSounds[BuiltInOrTick(sound)];
   voices_.Trigger(
-      accented ? preset.accent_hz : preset.beat_hz,
-      accented ? kAccentAmplitude : kBeatAmplitude,
+      RoleHz(preset, role),
+      gain,
       preset.decay_per_second,
       sample_rate
   );
@@ -77,9 +122,9 @@ void Metronome::OnBeatBoundary(int beat_index, uint32_t sample_rate) {
                             : Accent::kNormal;
   if (accent == Accent::kMuted || BarIsMuted(current_bar_)) return;
   const bool accented = accent == Accent::kAccented;
-  TriggerPreset(
+  TriggerSound(
       accented ? accent_sound_ : normal_sound_,
-      accented,
+      BeatRole(accented),
       sample_rate
   );
 }
@@ -111,19 +156,16 @@ void Metronome::TriggerSubdivision(
 
 void Metronome::TriggerSubdivisionVoice(Accent accent, uint32_t sample_rate) {
   const bool accented = accent == Accent::kAccented;
-  const SoundPreset& sound = kSounds[accented ? accent_sound_ : normal_sound_];
-  voices_.Trigger(
-      accented ? sound.accent_hz : sound.subdivision_hz,
-      accented ? kAccentAmplitude * kAccentedSubdivisionGain
-               : kSubdivisionAmplitude,
-      sound.decay_per_second,
+  TriggerSound(
+      accented ? accent_sound_ : normal_sound_,
+      accented ? ClickRole::kAccentedSubdivision : ClickRole::kSubdivision,
       sample_rate
   );
 }
 
 void Metronome::OnRigTick(int slot, uint32_t sample_rate) {
   if (slot == 0) {
-    TriggerPreset(normal_sound_, false, sample_rate);
+    TriggerSound(normal_sound_, ClickRole::kBeat, sample_rate);
     return;
   }
   TriggerSubdivision(rig_click_.subdivision(), slot, sample_rate);
@@ -134,11 +176,9 @@ void Metronome::OnPolyBoundary(int poly_index, uint32_t sample_rate) {
   const Accent accent = poly_accents_[poly_index];
   if (accent == Accent::kMuted || BarIsMuted(current_bar_)) return;
   const bool accented = accent == Accent::kAccented;
-  const SoundPreset& sound = kSounds[accented ? accent_sound_ : normal_sound_];
-  voices_.Trigger(
-      sound.poly_hz,
-      accented ? kPolyAccentAmplitude : kPolyBeatAmplitude,
-      sound.decay_per_second,
+  TriggerSound(
+      accented ? accent_sound_ : normal_sound_,
+      accented ? ClickRole::kPolyAccent : ClickRole::kPoly,
       sample_rate
   );
 }
@@ -183,34 +223,6 @@ int64_t Metronome::LastSoundedBeat(double beats_per_sample) const {
 void Metronome::SyncBarFromPosition(double beats_per_sample) {
   const int64_t last_beat = LastSoundedBeat(beats_per_sample);
   current_bar_ = last_beat < 0 ? -1 : last_beat / beats_per_bar_;
-}
-
-void Metronome::BeginAnchorExternal(
-    uint64_t now,
-    uint32_t sample_rate,
-    BlockTempo* tempo
-) {
-  has_pending_anchor_ = false;
-  has_pending_start_ = false;  // an anchor supersedes a deferred start
-  ramp_.Disable();
-  bpm_ = Clamp(pending_anchor_bpm_, kMinBpm, kMaxBpm);
-  const double song_seconds =
-      pending_anchor_song_pos_ +
-      (static_cast<double>(now) - static_cast<double>(pending_anchor_frame_)) /
-          sample_rate;
-  // position == song beats, so beat_position_ carries no latency term; the
-  // per-sample bias in AdvanceConstantTempo adds it back (§4.7).
-  // Song second → this signature's beat unit, so an 8th-note bar anchors on the
-  // song's clock like a quarter-note one.
-  beat_position_ = song_seconds * bpm_ * BeatUnitScale() / kSecondsPerMinute;
-  if (!running_) grid_state_.last_onset = {};
-  running_ = true;
-  running_flag_.store(true, std::memory_order_relaxed);
-  counting_in_ = false;
-  count_in_armed_ = false;
-  ReacquireGrid();
-  *tempo = BlockTempoFor(sample_rate);
-  SyncBarFromPosition(tempo->beats_per_sample);
 }
 
 void Metronome::FireConstantTempoTick(
@@ -301,6 +313,7 @@ Metronome::GridView Metronome::BeginBlock(
     uint32_t sample_rate,
     BlockTempo* tempo
 ) {
+  custom_sounds_.BeginBlock();
   ApplyPendingCommands();
   rig_click_.BeginBlock(
       block_start_frame,
@@ -308,9 +321,9 @@ Metronome::GridView Metronome::BeginBlock(
       running_ || has_pending_start_ || has_pending_anchor_
   );
   if (pending_preview_sound_ >= 0) {
-    TriggerPreset(
+    TriggerSound(
         pending_preview_sound_,
-        pending_preview_accented_,
+        BeatRole(pending_preview_accented_),
         sample_rate
     );
     pending_preview_sound_ = -1;
@@ -351,7 +364,7 @@ void Metronome::Render(
     }
     const int rig_slot = rig_click_.ConsumeTickAt(now);
     if (rig_slot != RigClick::kNoTick) OnRigTick(rig_slot, sample_rate);
-    const float sample = voices_.Render() * volume_;
+    const float sample = (voices_.Render() + custom_sounds_.Render()) * volume_;
     for (uint32_t channel = 0; channel < channel_count; ++channel) {
       output[frame * channel_count + channel] += sample;
     }

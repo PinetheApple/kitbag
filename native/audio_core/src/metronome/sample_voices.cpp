@@ -55,15 +55,27 @@ void SampleVoices::BeginBlock() {
   for (Voice& voice : voices_) {
     if (voice.frames != nullptr &&
         views_[voice.slot].generation != voice.generation) {
-      voice.frames = nullptr;
+      Cut(voice);
     }
   }
+}
+
+void SampleVoices::CutAll() {
+  for (Voice& voice : voices_) {
+    if (voice.frames != nullptr) Cut(voice);
+  }
+}
+
+void SampleVoices::Cut(Voice& voice) {
+  voice.frames = nullptr;
+  voice.fade_from = voice.last;
+  voice.fade_left = kCutFadeFrames;
 }
 
 SampleVoices::Voice* SampleVoices::FreeOrOldest() {
   Voice* oldest = &voices_[0];
   for (Voice& voice : voices_) {
-    if (voice.frames == nullptr) return &voice;
+    if (voice.frames == nullptr && voice.fade_left == 0) return &voice;
     if (voice.cursor > oldest->cursor) oldest = &voice;
   }
   return oldest;
@@ -80,9 +92,15 @@ bool SampleVoices::Trigger(int slot, float gain) {
 float SampleVoices::Render() {
   float sample = 0.0F;
   for (Voice& voice : voices_) {
-    if (voice.frames == nullptr) continue;
-    sample += voice.frames[voice.cursor] * voice.gain;
-    if (++voice.cursor == voice.length) voice.frames = nullptr;
+    if (voice.frames != nullptr) {
+      voice.last = voice.frames[voice.cursor] * voice.gain;
+      sample += voice.last;
+      if (++voice.cursor == voice.length) voice.frames = nullptr;
+    } else if (voice.fade_left > 0) {
+      sample += voice.fade_from * static_cast<float>(voice.fade_left) /
+                static_cast<float>(kCutFadeFrames);
+      --voice.fade_left;
+    }
   }
   return sample;
 }

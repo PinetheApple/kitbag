@@ -13,6 +13,11 @@ extern "C" {
 
 /* --- Custom click sounds (SPEC.md §5.3) ---------------------------------- */
 
+/* Custom slots. Slot n is metronome sound id KB_SOUND_NAMES' length + n. */
+#define KB_CUSTOM_SOUND_SLOTS 2
+/* Longest prepared or loaded sound, in seconds. */
+#define KB_MAX_CUSTOM_SOUND_SECONDS 2
+
 /* Offline, on the calling thread; needs no engine. Decodes in_path (any format
  * song import takes) in one streamed pass to mono at 48 kHz, keeps the first
  * through the last sample at or above -60 dBFS, fades the last 5 ms out,
@@ -21,20 +26,23 @@ extern "C" {
  * renamed on success.
  * Returns KB_OK once written; KB_ERROR_INVALID_ARGUMENT for a null path, a
  * file that will not decode or stops decoding before its stated length, or a
- * non-finite sample; KB_ERROR_TOO_LONG when the kept span is longer than 2 s;
+ * non-finite sample; KB_ERROR_TOO_LONG when the kept span is longer than
+ * KB_MAX_CUSTOM_SOUND_SECONDS;
  * KB_ERROR_SILENT when no sample reaches the threshold; KB_ERROR_NO_SPACE when
  * the volume fills during the write; KB_ERROR_INTERNAL when the write or
  * rename fails otherwise. An error leaves out_path as it was and no ".part"
- * behind. Holds at most 2 s of audio in memory, whatever the input's length. */
+ * behind. Holds at most KB_MAX_CUSTOM_SOUND_SECONDS of audio in memory,
+ * whatever the input's length. */
 KB_EXPORT kb_result
 kb_click_sound_prepare(const char* in_path, const char* out_path);
 
-/* Loads a file kb_click_sound_prepare wrote into custom slot `slot` (0 or 1),
+/* Loads a file kb_click_sound_prepare wrote into custom slot `slot` (0 to
+ * KB_CUSTOM_SOUND_SLOTS - 1),
  * resampled to the engine rate, and publishes it for the audio callback; a
  * replaced sound is freed off the audio callback. Returns KB_OK once
  * published; KB_ERROR_INVALID_ARGUMENT for a null engine or path, a slot out
  * of range or a file that will not decode, which keep the slot as it was;
- * KB_ERROR_TOO_LONG for a file longer than 2 s.
+ * KB_ERROR_TOO_LONG for a file longer than KB_MAX_CUSTOM_SOUND_SECONDS.
  *
  * Load and clear are not serialized: they must not overlap each other, or
  * kb_engine_start, kb_engine_stop or a hold call on another thread, since

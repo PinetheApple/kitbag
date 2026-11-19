@@ -124,24 +124,28 @@ kb_metronome_set_subdivision(kb_engine* engine, int32_t subdivision);
  * current bar is ignored. kb_metronome_set_poly_accent shares both rules. */
 KB_EXPORT void
 kb_metronome_set_accent(kb_engine* engine, int32_t beat_index, int32_t accent);
-/* Ids index KB_SOUND_NAMES; accent_sound voices accented main and poly beats,
- * normal_sound the rest. An out-of-table id keeps the role's last sound. */
+/* Ids index KB_SOUND_NAMES, then the custom slots (kitbag_click_sound_api.h);
+ * an empty slot sounds tick. accent_sound voices accented main and poly beats,
+ * normal_sound the rest. An id past both keeps the role's last sound. */
 KB_EXPORT void kb_metronome_set_sounds(
     kb_engine* engine,
     int32_t normal_sound,
     int32_t accent_sound
 );
 /* Ignored unless bars is in Metronome::kCountInBarChoices; distinct != 0 uses
- * `sound`. Replays after stop, not pause; skipped under a grid or anchor, which
- * count in with kb_metronome_count_in_at (kitbag_song_start_api.h). */
+ * `sound`, a KB_SOUND_NAMES id only. The count-in never plays a custom sound:
+ * it plays tick where the beat's sound is custom. Replays after stop, not
+ * pause; skipped under a grid or anchor, which count in with
+ * kb_metronome_count_in_at (kitbag_song_start_api.h). */
 KB_EXPORT void kb_metronome_set_count_in(
     kb_engine* engine,
     int32_t bars,
     int32_t distinct,
     int32_t sound
 );
-/* One click of `sound` at the current volume on the next block (last wins).
- * Dropped if the device is stopped when issued; bad ids are ignored. */
+/* One click of `sound` (a kb_metronome_set_sounds id) at the current volume on
+ * the next block (last wins). Dropped if the device is stopped when issued;
+ * bad ids are ignored. */
 KB_EXPORT void
 kb_metronome_preview_sound(kb_engine* engine, int32_t sound, int32_t accented);
 /* Volume multiplier [0, 2], default 1. */

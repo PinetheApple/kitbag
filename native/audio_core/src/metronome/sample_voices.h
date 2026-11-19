@@ -10,11 +10,14 @@
 
 namespace kitbag {
 
-// Publish, Clear and Collect are app-thread only; BeginBlock, Trigger and
-// Render are for the audio callback and allocate, free and wait on nothing.
+// Publish, Clear and Collect are app-thread only; BeginBlock, CutAll, Trigger
+// and Render are for the audio callback and allocate, free and wait on nothing.
 class SampleVoices {
  public:
   static constexpr int kMaxVoices = 8;
+  static constexpr double kCutFadeSeconds = 0.005;
+  static constexpr auto kCutFadeFrames =
+      static_cast<uint32_t>(kCutFadeSeconds * kCustomSoundRate);
 
   struct Sample {
     std::vector<float> frames;
@@ -37,8 +40,9 @@ class SampleVoices {
   size_t retired_size() const;
 
   // Once per block, before any Trigger or Render in it. A voice whose slot was
-  // replaced or cleared stops here, so no voice outlives the block it read in.
+  // replaced or cleared stops reading here and fades from its last output.
   void BeginBlock();
+  void CutAll();
   // False when the slot is empty, so the caller can sound its fallback.
   bool Trigger(int slot, float gain);
   float Render();
@@ -56,8 +60,12 @@ class SampleVoices {
     float gain = 0.0F;
     int slot = 0;
     uint64_t generation = 0;
+    float last = 0.0F;
+    float fade_from = 0.0F;
+    uint32_t fade_left = 0;
   };
 
+  static void Cut(Voice& voice);
   Voice* FreeOrOldest();
 
   RtPublisher<Sample> slots_[kCustomSoundSlots];

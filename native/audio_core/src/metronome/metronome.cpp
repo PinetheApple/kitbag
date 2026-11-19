@@ -169,8 +169,9 @@ void Metronome::ClearGrid(uint64_t now_frame, bool engine_running) {
   grid_.Publish(nullptr, now_frame, engine_running);
 }
 
-void Metronome::ReleaseRetiredGrids() {
+void Metronome::ReleaseRetired() {
   grid_.ReclaimAll();
+  custom_sounds_.ReclaimAll();
 }
 
 void Metronome::ApplyPendingCommands() {
