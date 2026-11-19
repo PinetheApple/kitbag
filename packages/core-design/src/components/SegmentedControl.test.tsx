@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { describe, expect, it, vi } from 'vitest';
 
-import { radius, size, space } from '../roles.ts';
+import { opacity, radius, size, space } from '../roles.ts';
 import { wrappedRowGap } from '../segmentHitBox.ts';
 import { ThemeProvider } from '../ThemeProvider.tsx';
 import { minTouchTargetDp } from '../tokens.ts';
@@ -42,6 +42,11 @@ const { StyleSheet } = await import('react-native');
 const OPTIONS = [
   { value: 'same', label: 'Same' },
   { value: 'distinct', label: 'Distinct' },
+] as const;
+
+const WITH_DISABLED = [
+  { value: 'same', label: 'Same' },
+  { value: 'distinct', label: 'Distinct', disabled: true },
 ] as const;
 
 const FLEX_SIZES: readonly SegmentedControlSize[] = [
@@ -176,5 +181,60 @@ describe('SegmentedControl under font scale', () => {
     const { track } = renderAt(2, 'large');
     expect(track.flex).toBeUndefined();
     expect(track.flexShrink).toBe(1);
+  });
+});
+
+function renderOptions(
+  options: readonly { value: string; label: string; disabled?: boolean }[],
+  onSelect: (value: string) => void,
+) {
+  display.fontScale = 1;
+  rendered.options.length = 0;
+  renderToStaticMarkup(
+    <ThemeProvider mode="dark">
+      <SegmentedControl
+        size="large"
+        accessibilityLabel="Tempo"
+        options={options}
+        selected="same"
+        onSelect={onSelect}
+      />
+    </ThemeProvider>,
+  );
+  return rendered.options;
+}
+
+const press = (option: Props | undefined) => {
+  (option?.onPress as (() => void) | undefined)?.();
+};
+
+describe('SegmentedControl disabled option', () => {
+  it('refuses a tap, so the selection cannot move onto it', () => {
+    const onSelect = vi.fn();
+    const [, disabled] = renderOptions(WITH_DISABLED, onSelect);
+    press(disabled);
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(disabled?.disabled).toBe(true);
+  });
+
+  it('reports itself disabled and draws muted', () => {
+    const [enabled, disabled] = renderOptions(WITH_DISABLED, vi.fn());
+    expect(disabled?.accessibilityState).toEqual({
+      checked: false,
+      disabled: true,
+    });
+    expect(flat(disabled).opacity).toBe(opacity.muted);
+    expect(enabled?.accessibilityState).toEqual({ checked: true });
+    expect(flat(enabled).opacity).toBeUndefined();
+  });
+
+  it('leaves every option as it was without the flag', () => {
+    const onSelect = vi.fn();
+    const [, distinct] = renderOptions(OPTIONS, onSelect);
+    press(distinct);
+    expect(onSelect).toHaveBeenCalledWith('distinct');
+    expect(distinct?.disabled).toBeUndefined();
+    expect(distinct?.accessibilityState).toEqual({ checked: false });
+    expect(flat(distinct).opacity).toBeUndefined();
   });
 });
