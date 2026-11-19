@@ -25,18 +25,41 @@ function shiftedBars(
   }));
 }
 
+interface DetectedBars {
+  readonly meter: number;
+  readonly fromBarOne: readonly number[];
+}
+
+function detectedBars({ beats, downbeatIndices }: DetectedGrid): DetectedBars {
+  const detected = usableDownbeats(downbeatIndices, beats.length);
+  const meter = impliedMeter(detected);
+  return { meter, fromBarOne: detected.slice(barOneAt(detected, meter)) };
+}
+
+function barOneIndex(fromBarOne: readonly number[]): number {
+  return fromBarOne[0] ?? 0;
+}
+
+export interface DetectedMeter {
+  readonly meter: number;
+  readonly barOneSeconds: number;
+}
+
+export function detectedMeter(grid: DetectedGrid): DetectedMeter {
+  const { meter, fromBarOne } = detectedBars(grid);
+  return { meter, barOneSeconds: grid.beats[barOneIndex(fromBarOne)] ?? 0 };
+}
+
 export function overrideDownbeats(
   { beats, downbeatIndices }: DetectedGrid,
   { meterBeatsPerBar, barOneSeconds }: MeterOverride,
 ): readonly number[] {
   if (meterBeatsPerBar === null && barOneSeconds === null)
     return downbeatIndices;
-  const detected = usableDownbeats(downbeatIndices, beats.length);
-  const meter = impliedMeter(detected);
-  const fromBarOne = detected.slice(barOneAt(detected, meter));
+  const { meter, fromBarOne } = detectedBars({ beats, downbeatIndices });
   const barOne =
     barOneSeconds === null
-      ? (fromBarOne[0] ?? 0)
+      ? barOneIndex(fromBarOne)
       : (nearestBeat(beats, barOneSeconds) ?? 0);
   const beatsPerBar = meterBeatsPerBar ?? meter;
   const pattern =

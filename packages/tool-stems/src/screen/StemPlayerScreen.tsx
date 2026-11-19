@@ -35,6 +35,7 @@ import { StemAppBar } from './StemAppBar.tsx';
 import { Scrubber } from './Scrubber.tsx';
 import { SongFactChips } from './SongFactChips.tsx';
 import { StemList } from './StemList.tsx';
+import { StemMeterSheet } from './StemMeterSheet.tsx';
 import { WAVEFORM_BARS } from './StemRowView.tsx';
 import { StemTransport } from './StemTransport.tsx';
 import { useMixerFrame, type MixerFrameValues } from './useMixerFrame.ts';
@@ -50,6 +51,7 @@ const MIX = 'mix';
 const DETAILS = 'details';
 type Tab = typeof MIX | typeof DETAILS;
 type RetimeAsk = 'reset' | 'leave';
+type PlayerSheet = 'menu' | 'meter' | 'export';
 
 const useStyles = createThemedStyles((theme) => ({
   screen: { flex: 1, backgroundColor: theme.color.bg },
@@ -209,19 +211,23 @@ function NotReady({
   );
 }
 
-interface BodyProps {
-  readonly bottom: number;
-  readonly onBack: () => void;
-}
-
-function Body({ bottom, onBack }: BodyProps) {
-  const styles = useStyles();
-  const status = useStemPlayer((s) => s.status);
+function useStemFrame(): MixerFrameValues {
   const rate = useStemPlayer((s) => s.engineRate);
   const frames = useStemPlayer((s) => s.durationFrames);
   const loopEnd = useStemPlayer(loopEndFrames);
   const countEnd = useStemPlayer((s) => s.countEndFrame);
-  const frame = useMixerFrame(rate, frames, loopEnd, countEnd);
+  return useMixerFrame(rate, frames, loopEnd, countEnd);
+}
+
+interface BodyProps {
+  readonly bottom: number;
+  readonly frame: MixerFrameValues;
+  readonly onBack: () => void;
+}
+
+function Body({ bottom, frame, onBack }: BodyProps) {
+  const styles = useStyles();
+  const status = useStemPlayer((s) => s.status);
   const retiming = useStemPlayer((s) => s.retime.kind === 'recording');
   const [picked, setPicked] = useState<Tab>(MIX);
   if (status !== 'ready')
@@ -268,6 +274,65 @@ function useRetimeAsk() {
   return { retiming, shown, askReset, askLeave, closeAsk };
 }
 
+function usePlayerSheet(retiming: boolean) {
+  const [sheet, setSheet] = useState<PlayerSheet | null>(null);
+  if (sheet !== null && retiming) setSheet(null);
+  const openMenu = useCallback(() => {
+    setSheet('menu');
+  }, []);
+  const openMeter = useCallback(() => {
+    setSheet('meter');
+  }, []);
+  const openExport = useCallback(() => {
+    setSheet('export');
+  }, []);
+  const closeSheet = useCallback(() => {
+    setSheet(null);
+  }, []);
+  return { sheet, openMenu, openMeter, openExport, closeSheet };
+}
+
+interface PlayerSheetsProps {
+  readonly sheet: PlayerSheet | null;
+  readonly bottomInset: number;
+  readonly playhead: MixerFrameValues['songSec'];
+  readonly onMeter: () => void;
+  readonly onExport: () => void;
+  readonly onClose: () => void;
+}
+
+function PlayerSheets({
+  sheet,
+  bottomInset,
+  playhead,
+  onMeter,
+  onExport,
+  onClose,
+}: PlayerSheetsProps) {
+  return (
+    <>
+      <PlayerMenu
+        visible={sheet === 'menu'}
+        bottomInset={bottomInset}
+        onClose={onClose}
+        onMeter={onMeter}
+        onExport={onExport}
+      />
+      <StemMeterSheet
+        visible={sheet === 'meter'}
+        bottomInset={bottomInset}
+        playhead={playhead}
+        onClose={onClose}
+      />
+      <ExportSheet
+        visible={sheet === 'export'}
+        bottomInset={bottomInset}
+        onClose={onClose}
+      />
+    </>
+  );
+}
+
 export function StemPlayerScreen({
   setId,
   focused,
@@ -278,23 +343,9 @@ export function StemPlayerScreen({
   const ready = useStemPlayer((s) => s.status === 'ready');
   const acquireSong = useStemPlayer((s) => s.acquireSong);
   const { retiming, shown, askReset, askLeave, closeAsk } = useRetimeAsk();
-  const [menu, setMenu] = useState(false);
-  const [exportSheet, setExportSheet] = useState(false);
-  if (menu && retiming) setMenu(false);
-  if (exportSheet && retiming) setExportSheet(false);
-  const openMenu = useCallback(() => {
-    setMenu(true);
-  }, []);
-  const closeMenu = useCallback(() => {
-    setMenu(false);
-  }, []);
-  const openExport = useCallback(() => {
-    setMenu(false);
-    setExportSheet(true);
-  }, []);
-  const closeExport = useCallback(() => {
-    setExportSheet(false);
-  }, []);
+  const { sheet, openMenu, openMeter, openExport, closeSheet } =
+    usePlayerSheet(retiming);
+  const frame = useStemFrame();
   const acquire = useCallback(
     () => acquireSong(setId, WAVEFORM_BARS),
     [acquireSong, setId],
@@ -314,18 +365,15 @@ export function StemPlayerScreen({
         ) : (
           <StemAppBar onBack={onBack} onMenu={ready ? openMenu : null} />
         )}
-        <Body bottom={insets.bottom} onBack={onBack} />
+        <Body bottom={insets.bottom} frame={frame} onBack={onBack} />
       </View>
-      <PlayerMenu
-        visible={menu}
+      <PlayerSheets
+        sheet={sheet}
         bottomInset={insets.bottom}
-        onClose={closeMenu}
+        playhead={frame.songSec}
+        onMeter={openMeter}
         onExport={openExport}
-      />
-      <ExportSheet
-        visible={exportSheet}
-        bottomInset={insets.bottom}
-        onClose={closeExport}
+        onClose={closeSheet}
       />
       {shown === 'reset' ? <ResetDialog onClose={closeAsk} /> : null}
       {shown === 'leave' ? <LeaveDialog onClose={closeAsk} /> : null}
