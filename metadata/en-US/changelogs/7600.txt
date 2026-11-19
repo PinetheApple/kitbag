@@ -1,0 +1,1 @@
+• If Kitbag can't open your data at launch, it now says why on a screen instead of showing an empty library: data from a newer Kitbag, an update that didn't finish, a full or read-only phone storage, or a file it can't open. Nothing is changed. You can try again or save a copy of the data file. The library tile on Home also shows when songs couldn't be loaded.
