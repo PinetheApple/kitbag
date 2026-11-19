@@ -47,6 +47,7 @@ import type { UsePlayhead } from './playhead.ts';
 import { SongMeter } from './SongMeter.tsx';
 import { SongPlayerMenu } from './SongPlayerMenu.tsx';
 import { SongTransport } from './SongTransport.tsx';
+import { useLoopHandles } from './useLoopHandles.ts';
 import { useSongFailure } from './useSongFailure.ts';
 
 const NO_NEIGHBOURS = {};
@@ -285,6 +286,7 @@ function Body({
   const loopEnd = useSongPlayer(loopEndFrames);
   const playhead = usePlayhead(rate, frames, loopEnd);
   const scrub = useLoopScrub(useSongPlayer);
+  const handles = useLoopHandles();
   if (status !== 'ready')
     return (
       <View style={styles.bodyContent}>
@@ -299,7 +301,7 @@ function Body({
       >
         <Card>
           <SongWave playhead={playhead} />
-          <ScrubRow frame={playhead} {...scrub} />
+          <ScrubRow frame={playhead} {...scrub} loopHandles={handles} />
         </Card>
         <LockCard songId={songId} />
       </ScrollView>

@@ -82,6 +82,7 @@ export const sliderGeometry = {
   tickOverhang: 5,
   tickOpacity: 0.6,
   levelTick: 1,
+  dragSlop: 6,
 } as const;
 
 export const stemPlayerMix = {

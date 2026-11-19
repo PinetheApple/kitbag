@@ -358,6 +358,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       "supportedAudioExtensions" to SupportedAudio.EXTENSIONS,
       "supportedAudioMimeTypes" to SupportedAudio.MIME_TYPES,
       "unsupportedAudioExtensions" to SupportedAudio.UNSUPPORTED_EXTENSIONS,
+      "exportMaxBaseNameBytes" to ExportFiles.MAX_BASE_NAME_BYTES,
     ) + StemBundleBridge.CONSTANTS + LibraryErrors.EXPORT_CONSTANTS
 
   companion object {

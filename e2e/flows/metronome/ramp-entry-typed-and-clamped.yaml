@@ -1,0 +1,39 @@
+appId: com.kitbag.app
+name: '#172: Ramp from and to take typed values and clamp out-of-range ones'
+tags:
+  - issue-172
+---
+- runFlow: ../../subflows/launch-fresh.yaml
+- runFlow: ../../subflows/open-metronome-first-time.yaml
+- tapOn: 'Practice tools(, \d+ on)?'
+- tapOn:
+    text: 'Tempo ramp'
+    rightOf: 'Tempo ramp'
+- runFlow:
+    file: ../../subflows/type-number.yaml
+    env:
+      OPEN: 'Ramp from, .*'
+      NUMBER: 90
+      CONFIRM: 'Set ramp start'
+- assertVisible: 'Ramp from, 90 BPM'
+- runFlow:
+    file: ../../subflows/type-number.yaml
+    env:
+      OPEN: 'Ramp to, .*'
+      NUMBER: 150
+      CONFIRM: 'Set ramp target'
+- assertVisible: 'Ramp to, 150 BPM'
+- runFlow:
+    file: ../../subflows/type-number.yaml
+    env:
+      OPEN: 'Ramp to, .*'
+      NUMBER: 999
+      CONFIRM: 'Set ramp target'
+- assertVisible: 'Ramp to, 400 BPM'
+- runFlow:
+    file: ../../subflows/type-number.yaml
+    env:
+      OPEN: 'Ramp from, .*'
+      NUMBER: 5
+      CONFIRM: 'Set ramp start'
+- assertVisible: 'Ramp from, 20 BPM'

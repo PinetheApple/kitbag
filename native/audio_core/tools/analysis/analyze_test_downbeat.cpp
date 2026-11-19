@@ -1,9 +1,9 @@
 #include "kitbag_api.h"
 
-#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -26,25 +26,16 @@ using kitbag::BeatResult;
 // independently so a change to that choice trips the spacing check.
 constexpr int kBeatsPerBar = 4;
 
-// Measured for this beat period and these tones: the control lands on the click
-// grid's own phase 1, and accent phase 3 detects 0, so it is left out.
-constexpr std::array<int, 2> kLockingPhases = {0, 2};
+constexpr std::array<int, 3> kLockingPhases = {0, 2, 3};
 constexpr int kAccentPhase = kLockingPhases.back();
+// Measured for this beat period and these tones: the control lands on the click
+// grid's own phase 1, so that phase cannot show the accent was load-bearing.
 constexpr int kFeaturelessPhase = 1;
-static_assert(
-    std::ranges::find(kLockingPhases, kFeaturelessPhase) ==
-        kLockingPhases.end(),
-    "control cannot discriminate if accented and featureless phases match"
-);
+constexpr int kFixtureBeats = 28;
+constexpr int kNonNegativeBias = kFixtureBeats;
 // Lets the last tone fit. The tracker may place a beat in this silence, so a
 // bar-one there is tolerated, not expected.
 constexpr int kTailBeats = 1;
-// One tone per beat, constant within a bar and stepping kBarToneStepHz at each
-// bar boundary, so the ONE large spectral transition per bar lands on the
-// downbeat. cycle keeps adjacent bars' pitches distinct. step==0 is the control.
-constexpr float kBarToneBaseHz = 200.0f;
-constexpr float kBarToneStepHz = 90.0f;
-constexpr int kBarToneCycle = 5;
 
 // Bar-ones must be an in-range, ascending, strict subset of the beats, spaced
 // one bar apart. Split from TestDownbeats to stay within the function-size cap.
@@ -85,23 +76,28 @@ void TestDownbeats() {
   );
 }
 
-// Pitch for beat b's bar: constant within a bar, stepping by `step` at each bar
-// boundary (beats where b % kBeatsPerBar == phase). The kBeatCount bias
-// keeps the bar index non-negative through floor division for the leading
-// partial bar. step==0 gives a uniform tone: the featureless control.
-float BarToneHz(int b, float step, int phase) {
-  const int bar = (b - phase + kBeatCount) / kBeatsPerBar;
-  return kBarToneBaseHz + step * static_cast<float>(bar % kBarToneCycle);
+float AccentedBarHz(int beat, int phase) {
+  const int pos = beat - phase + kNonNegativeBias * kBeatsPerBar;
+  return kBarPitchesHz[(pos / kBeatsPerBar) % kBarPitchesHz.size()];
 }
 
-// Click grid carrying the per-bar tone step. step==kBarToneStepHz places the
-// accent at `phase`; step==0 is the featureless control (identical clicks,
-// no per-bar structure), the only difference between the two fixtures.
-std::vector<float> MakeTonedClickTrack(float step, int phase) {
-  const int total = (kBeatCount + kTailBeats) * kBeatPeriodFrames;
-  std::vector<float> pcm(static_cast<size_t>(total) * 2, 0.0f);
-  for (int b = 0; b < kBeatCount; ++b) {
-    AddToneBeat(pcm, b, BarToneHz(b, step, phase), kToneAmp);
+std::vector<float> SilentFixture() {
+  const int total = (kFixtureBeats + kTailBeats) * kBeatPeriodFrames;
+  return std::vector<float>(static_cast<size_t>(total) * 2, 0.0f);
+}
+
+std::vector<float> MakeControlTrack() {
+  std::vector<float> pcm = SilentFixture();
+  for (int b = 0; b < kFixtureBeats; ++b) {
+    AddToneBeat(pcm, b, kBarPitchesHz[0], kToneAmp);
+  }
+  return pcm;
+}
+
+std::vector<float> MakeAccentedTrack(int phase) {
+  std::vector<float> pcm = SilentFixture();
+  for (int b = 0; b < kFixtureBeats; ++b) {
+    AddToneBeat(pcm, b, AccentedBarHz(b, phase), kToneAmp);
   }
   return pcm;
 }
@@ -110,7 +106,7 @@ std::vector<float> MakeTonedClickTrack(float step, int phase) {
 // fixed grid, not from detection, so a wrong detected phase cannot move it.
 std::vector<float> ExpectedBarOneTimes(int phase) {
   std::vector<float> times;
-  for (int b = phase; b < kBeatCount; b += kBeatsPerBar) {
+  for (int b = phase; b < kFixtureBeats; b += kBeatsPerBar) {
     times.push_back(
         static_cast<float>(
             static_cast<double>(b) * kBeatPeriodFrames / kSampleRate
@@ -120,20 +116,20 @@ std::vector<float> ExpectedBarOneTimes(int phase) {
   return times;
 }
 
-// Every detected bar-one must sit within tolerance of its expected accented beat,
-// in order. Fails if the accent stops driving detection or a scaled df-unit
-// conversion maps beats onto the wrong audio — either way the times miss by a beat.
 bool AtMostTrailingExtra(const BeatResult& result, size_t expected) {
   const std::vector<int>& db = result.downbeat_indices;
   if (db.size() == expected) return true;
   if (db.size() != expected + 1) return false;
   const int idx = db.back();
   const double last_click_sec =
-      static_cast<double>(kBeatCount - 1) * kBeatPeriodFrames / kSampleRate;
+      static_cast<double>(kFixtureBeats - 1) * kBeatPeriodFrames / kSampleRate;
   return idx >= 0 && idx < static_cast<int>(result.beat_times.size()) &&
          result.beat_times[idx] > last_click_sec + kBarOneToleranceSec;
 }
 
+// Every detected bar-one must sit within tolerance of its expected accented beat,
+// in order. Fails if the accent stops driving detection or a scaled df-unit
+// conversion maps beats onto the wrong audio — either way the times miss by a beat.
 void CheckBarOneTimes(
     const BeatResult& result,
     const std::vector<float>& expected
@@ -177,6 +173,12 @@ void CheckAccentIsLoadBearing(
   }
   const int acc = accented.downbeat_indices[0] % kBeatsPerBar;
   const int ctl = control.downbeat_indices[0] % kBeatsPerBar;
+  std::printf(
+      "analyze_verify: known-tempo accent %d -> bar one %d, control %d\n",
+      phase,
+      acc,
+      ctl
+  );
   kitbag_test::Check(
       acc == phase,
       "load-bearing: accented bar-one locks onto the placed accent phase"
@@ -188,11 +190,9 @@ void CheckAccentIsLoadBearing(
 }
 
 void TestKnownTempoBarOne() {
-  const BeatResult control =
-      AnalyzePcm(MakeTonedClickTrack(0.0f, kFeaturelessPhase));
+  const BeatResult control = AnalyzePcm(MakeControlTrack());
   for (const int phase : kLockingPhases) {
-    const BeatResult accented =
-        AnalyzePcm(MakeTonedClickTrack(kBarToneStepHz, phase));
+    const BeatResult accented = AnalyzePcm(MakeAccentedTrack(phase));
     CheckBarOneTimes(accented, ExpectedBarOneTimes(phase));
     CheckAccentIsLoadBearing(accented, control, phase);
   }
@@ -292,7 +292,7 @@ void TestDownbeatTruncation(const std::filesystem::path& dir) {
 }  // namespace
 
 std::vector<float> MakeBarToneTrack(bool accented) {
-  return MakeTonedClickTrack(accented ? kBarToneStepHz : 0.0f, kAccentPhase);
+  return accented ? MakeAccentedTrack(kAccentPhase) : MakeControlTrack();
 }
 
 void RunDownbeatTests(const std::filesystem::path& dir) {

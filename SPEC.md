@@ -725,6 +725,34 @@ id. Do not declare a local list — that is exactly how `sync_screen.dart:14` ca
 to mislabel every sound from index 2 up, and how the error propagated into a
 design file. One list, one owner.
 
+**Custom click sounds** (owner, 2026-11-07; #174): the user imports their own
+sound; the six built-ins stay. Drawn in
+`docs/research/mockups/kitbag-metronome-custom-sound.html`.
+**[REC TAKEN, owner may overturn]** for every point below:
+
+- **Two slots**, engine sound ids `kSoundCount` and `kSoundCount + 1`. The engine
+  owns the slot count, the id range and the length limit; the TS is generated.
+  A slot's name is user data, not an engine constant.
+- **Same formats as song import**, from the same list (`supportedAudioFamilies`),
+  **up to 2 s** counted from the first audible sample. The core prepares the file
+  in one streamed pass with bounded memory: mono downmix, 48 kHz, leading silence
+  trimmed, peak matched to the built-ins. Refused files (too long, unsupported,
+  undecodable, silent) add nothing.
+- A custom sound takes Normal and/or Accent like a built-in, at the built-ins'
+  gains, with no pitch change. Count-in and the song player keep the built-ins.
+- **Name** starts as the file name without its extension and can be renamed.
+  **Replace** keeps the slot, so everything that used it uses the new sound.
+  **Remove** puts Tick (the engine default) back wherever it was used, saved
+  songs included.
+- **Storage:** the prepared WAV in app-private storage next to the database, not
+  the Data folder (D11 covers song media; a click must not depend on a removable
+  card), with a `click_sounds` table row. The audio never crosses into JS.
+- **Backup:** its own Restore category, Click sounds, carrying the prepared WAV
+  as base64, keyed by slot; Merge reviews a different sound in the same slot as a
+  conflict, and an older backup leaves local sounds untouched. After a restore, a
+  reference to a slot that does not hold the same sound (by UUID) becomes Tick,
+  and the restore report says how many songs changed.
+
 **Volume, latency offset and subdivision accents are not here.** They are rig
 setup, not performance, and they live in Settings (§12.5). This is a locked
 decision and it supersedes `kitbag-ui.html` §06's "Settings stay contextual".
@@ -948,7 +976,7 @@ working. Changes:
 - Optional beat-snapped scrub.
 - **A-B loop**, beat-snapped, equal-power crossfade 5–20ms. The A|B key marks
   A then B at the playhead, a third tap clears; the A and B handles on the
-  waveform drag, beat-snapped.
+  scrub bar drag, beat-snapped.
 - Speed control in the transport, driven by the same stretch stage as the stem
   player (§7.6). Single-file playback gets it when the stem player has it; until
   then the 1.0× key stays in place, looks disabled, and shows a note on tap.
