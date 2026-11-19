@@ -24,7 +24,7 @@ tags:
 - evalScript: ${output.loopBefore = maestro.copiedText}
 - swipe:
     from:
-      text: 'Loop start'
+      id: 'loop-handle-start'
     direction: RIGHT
 - extendedWaitUntil:
     visible: 'Loop (?!0:00 )\d+:\d\d – \d+:\d\d'
