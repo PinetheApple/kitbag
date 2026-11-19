@@ -57,6 +57,19 @@ export {
   shareExport,
   type MixdownStart,
 } from './mixdown';
+export {
+  clearCustomSound,
+  customSoundLoaded,
+  loadCustomSound,
+  prepareClickSound,
+  type LoadCustomSoundResult,
+  type PrepareClickSoundResult,
+} from './clickSound';
+export {
+  customSoundId,
+  isCustomSoundId,
+  isCustomSoundSlot,
+} from './customSoundIds.ts';
 
 // --- #30 (P2-A3) JSI HostObject: polled realtime reads (§13.2, §13.3) --------
 export {
