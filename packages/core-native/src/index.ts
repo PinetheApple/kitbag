@@ -85,3 +85,4 @@ export type {
   TransportSetlist,
   TransportShowState,
 } from './NativeKitbagCommands';
+export { focusReaderNode } from './readerFocus';

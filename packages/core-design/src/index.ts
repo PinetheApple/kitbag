@@ -57,7 +57,11 @@ export * from './components/Sheet.tsx';
 export * from './components/Snackbar.tsx';
 export * from './components/SheetHost.tsx';
 export { onHardwareBack } from './components/hardwareBack';
-export { focusReaderOn } from './readerFocus';
+export {
+  focusReaderOn,
+  setReaderFocuser,
+  type ReaderFocuser,
+} from './readerFocus';
 export * from './readerHiding.ts';
 export * from './components/StepControl.tsx';
 export * from './components/TextField.tsx';

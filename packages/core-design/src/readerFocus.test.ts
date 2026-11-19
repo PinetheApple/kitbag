@@ -5,16 +5,29 @@ vi.mock('react-native', () => ({
   AccessibilityInfo: { sendAccessibilityEvent },
 }));
 
-const { focusReaderOn } = await import('./readerFocus.ts');
+const { focusReaderOn, setReaderFocuser } = await import('./readerFocus.ts');
 
-it('sends screen reader focus to a node as it mounts', () => {
-  const node = {};
-  focusReaderOn(node as Parameters<typeof focusReaderOn>[0]);
+type Node = Parameters<typeof focusReaderOn>[0];
+
+it('sends a focus event to a node when no focuser is installed', () => {
+  const node = {} as Node;
+  focusReaderOn(node);
   expect(sendAccessibilityEvent).toHaveBeenCalledWith(node, 'focus');
 });
 
 it('sends nothing as the node unmounts', () => {
   sendAccessibilityEvent.mockClear();
   focusReaderOn(null);
+  expect(sendAccessibilityEvent).not.toHaveBeenCalled();
+});
+
+it('hands the node to the installed focuser instead of the event', () => {
+  sendAccessibilityEvent.mockClear();
+  const focuser = vi.fn();
+  setReaderFocuser(focuser);
+  const node = {} as Node;
+  focusReaderOn(node);
+  focusReaderOn(null);
+  expect(focuser).toHaveBeenCalledExactlyOnceWith(node);
   expect(sendAccessibilityEvent).not.toHaveBeenCalled();
 });

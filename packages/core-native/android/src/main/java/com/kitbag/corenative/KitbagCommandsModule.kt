@@ -1,11 +1,14 @@
 package com.kitbag.corenative
 
 import android.view.WindowManager
+import android.view.accessibility.AccessibilityNodeInfo
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
+import com.facebook.react.bridge.UiThreadUtil
+import com.facebook.react.uimanager.UIManagerHelper
 import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.LibraryStorage
 import com.kitbag.corenative.library.UnsafeLibraryPathException
@@ -492,6 +495,16 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
 
     init {
       System.loadLibrary("kitbag_jsi")
+    }
+  }
+
+  override fun focusAccessibility(viewTag: Double) {
+    val tag = viewTag.toInt()
+    UiThreadUtil.runOnUiThread {
+      val uiManager = UIManagerHelper.getUIManagerForReactTag(reactApplicationContext, tag)
+      // resolveView throws when the tag's view state outlived its view.
+      val view = runCatching { uiManager?.resolveView(tag) }.getOrNull()
+      view?.performAccessibilityAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS, null)
     }
   }
 }
