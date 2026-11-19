@@ -1,4 +1,5 @@
 import { presetBase64 } from './base64';
+import { isBoolean, isNumber, isRecord, isString, type Check } from './guards';
 import type { SongPreset } from './repository';
 
 export const PRACTICE_LOG_VERSION = 1;
@@ -95,27 +96,20 @@ export function isStemSong(song: LoggedSong): song is LoggedStemSong {
   return 'stemSongKey' in song;
 }
 
-type Check = (value: unknown) => boolean;
-
-const isNumber: Check = (value) => typeof value === 'number';
-const isString: Check = (value) => typeof value === 'string';
-const isBoolean: Check = (value) => typeof value === 'boolean';
 const orNull =
-  (check: Check): Check =>
-  (value) =>
+  <T>(check: Check<T>): Check<T | null> =>
+  (value): value is T | null =>
     value === null || check(value);
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
 const shaped =
-  (shape: Readonly<Record<string, Check>>): Check =>
-  (value) =>
+  <T>(shape: { readonly [K in keyof T]-?: Check<T[K]> }): Check<T> =>
+  (value): value is T =>
     isRecord(value) &&
-    Object.entries(shape).every(([key, check]) => check(value[key]));
+    Object.entries<Check<unknown>>(shape).every(([key, check]) =>
+      check(value[key]),
+    );
 
-const SETTINGS_SHAPE: { readonly [K in keyof LoggedSettings]-?: Check } = {
+const isSettings = shaped<LoggedSettings>({
   bpm: isNumber,
   beatsPerBar: isNumber,
   denominator: isNumber,
@@ -138,28 +132,51 @@ const SETTINGS_SHAPE: { readonly [K in keyof LoggedSettings]-?: Check } = {
   barMutePlayBars: orNull(isNumber),
   barMuteMuteBars: orNull(isNumber),
   countInBars: isNumber,
-};
+});
 
-const isSong: Check = (value) =>
-  shaped({ uuid: isString, title: isString })(value) ||
-  shaped({ stemSongKey: isString, title: isString })(value);
+const isPresetSong = shaped<LoggedPresetSong>({
+  uuid: isString,
+  title: isString,
+});
+const isStemSongRecord = shaped<LoggedStemSong>({
+  stemSongKey: isString,
+  title: isString,
+});
+const isSong: Check<LoggedSong> = (value): value is LoggedSong =>
+  isPresetSong(value) || isStemSongRecord(value);
 
-const isTempoChange: Check = (value) =>
+const isStretchEnd: Check<StretchEnd> = (value): value is StretchEnd =>
+  STRETCH_ENDS.includes(value);
+
+const isTempoChange: Check<TempoChange> = (value): value is TempoChange =>
   Array.isArray(value) && value.length === 2 && value.every(isNumber);
 
-const isStretch = shaped({
+const isTempo: Check<readonly TempoChange[]> = (
+  value,
+): value is readonly TempoChange[] =>
+  Array.isArray(value) && value.every(isTempoChange);
+
+const isStretch = shaped<LoggedStretch>({
   from: isNumber,
   to: isNumber,
-  end: (value) => STRETCH_ENDS.includes(value),
+  end: isStretchEnd,
   song: orNull(isSong),
   setlist: orNull(
-    shaped({ uuid: isString, name: isString, position: orNull(isNumber) }),
+    shaped<LoggedSetlist>({
+      uuid: isString,
+      name: isString,
+      position: orNull(isNumber),
+    }),
   ),
-  settings: orNull(shaped(SETTINGS_SHAPE)),
+  settings: orNull(isSettings),
   countIn: orNull(
-    shaped({ bars: isNumber, distinct: isBoolean, sound: isNumber }),
+    shaped<LoggedCountIn>({
+      bars: isNumber,
+      distinct: isBoolean,
+      sound: isNumber,
+    }),
   ),
-  tempo: (value) => Array.isArray(value) && value.every(isTempoChange),
+  tempo: isTempo,
   endBpm: isNumber,
   avgBpm: isNumber,
 });
@@ -170,10 +187,7 @@ function isPracticeLog(value: unknown): value is PracticeLog {
     value.v === PRACTICE_LOG_VERSION &&
     Array.isArray(value.stretches) &&
     value.stretches.every(
-      (stretch) =>
-        isRecord(stretch) &&
-        isStretch(stretch) &&
-        Number(stretch.from) <= Number(stretch.to),
+      (stretch) => isStretch(stretch) && stretch.from <= stretch.to,
     )
   );
 }

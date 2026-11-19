@@ -20,6 +20,9 @@ export const TEMPO_SETTLE_MS = 1500;
 // Loading a song applies a dozen settings in one go; changes this close to a
 // stretch's start fold into it instead of each opening a stretch of their own.
 export const STRETCH_FOLD_MS = 250;
+// A song load sets the new song's tempo just before the song itself changes, so
+// a tempo change this recent at a song change belongs to the incoming song.
+export const SONG_CHANGE_TEMPO_UNDO_MS = 250;
 
 export interface StretchSetup {
   readonly settings: LoggedSettings;
@@ -100,7 +103,7 @@ function currentBpm(open: OpenStretch): number {
 }
 
 function isRecent(recent: RecentTempoChange | null, at: number) {
-  return recent !== null && at - recent.at < STRETCH_FOLD_MS;
+  return recent !== null && at - recent.at < SONG_CHANGE_TEMPO_UNDO_MS;
 }
 
 function recentChange(open: OpenStretch, at: number): RecentTempoChange {

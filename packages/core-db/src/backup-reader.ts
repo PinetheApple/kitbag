@@ -1,4 +1,5 @@
 import { reject } from './backup-format';
+import { isBoolean, isNumber, isString, type Check } from './guards';
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -7,14 +8,8 @@ const BASE64_PATTERN =
 const BASE64_CHARS_PER_BLOCK = 4;
 const BYTES_PER_BLOCK = 3;
 
-type Check<T> = (value: unknown) => value is T;
-
-const isString: Check<string> = (value) => typeof value === 'string';
-const isNumber: Check<number> = (value): value is number =>
-  typeof value === 'number' && Number.isFinite(value);
 const isCount: Check<number> = (value): value is number =>
   isNumber(value) && Number.isSafeInteger(value) && value >= 0;
-const isBoolean: Check<boolean> = (value) => typeof value === 'boolean';
 const isUuid: Check<string> = (value): value is string =>
   isString(value) && UUID_PATTERN.test(value);
 const lowercase = (value: string) => value.toLowerCase();

@@ -283,6 +283,47 @@ export function practiceSessionAfterTempoChange(
   );
 }
 
+function closedAndReopened(
+  session: PracticeSession,
+  open: OpenStretch,
+  at: number,
+  end: StretchEnd,
+  bpm: number,
+  setup: StretchSetup,
+): PracticeSession {
+  const outgoing =
+    end === STRETCH_END.song
+      ? withoutRecentTempo(open, at, bpm)
+      : { open, bpm };
+  return {
+    ...withLogClosed(
+      { ...session, open: outgoing.open },
+      at,
+      end,
+      outgoing.bpm,
+    ),
+    open: openStretch(placeOf(session.context), setup, at, bpm),
+  };
+}
+
+function refoldedAtChange(
+  session: PracticeSession,
+  open: OpenStretch,
+  end: StretchEnd,
+  bpm: number,
+  setup: StretchSetup,
+): PracticeSession {
+  const from = open.from - session.startedAt;
+  return {
+    ...session,
+    open: refolded(open, placeOf(session.context), setup, bpm),
+    stretches:
+      end === STRETCH_END.song
+        ? withLastEnd(session.stretches, from, end)
+        : session.stretches,
+  };
+}
+
 function reopened(
   session: PracticeSession,
   at: number,
@@ -291,32 +332,10 @@ function reopened(
   setup: StretchSetup,
 ): PracticeSession {
   const { open } = session;
-  const place = placeOf(session.context);
   if (open === null) return session;
-  if (!isFolding(open, at)) {
-    const outgoing =
-      end === STRETCH_END.song
-        ? withoutRecentTempo(open, at, bpm)
-        : { open, bpm };
-    return {
-      ...withLogClosed(
-        { ...session, open: outgoing.open },
-        at,
-        end,
-        outgoing.bpm,
-      ),
-      open: openStretch(place, setup, at, bpm),
-    };
-  }
-  const from = open.from - session.startedAt;
-  return {
-    ...session,
-    open: refolded(open, place, setup, bpm),
-    stretches:
-      end === STRETCH_END.song
-        ? withLastEnd(session.stretches, from, end)
-        : session.stretches,
-  };
+  return isFolding(open, at)
+    ? refoldedAtChange(session, open, end, bpm, setup)
+    : closedAndReopened(session, open, at, end, bpm, setup);
 }
 
 export function practiceSessionAfterSettings(
