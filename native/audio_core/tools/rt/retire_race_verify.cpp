@@ -27,6 +27,9 @@ constexpr int kLeadBlocks = 7;
 constexpr uint32_t kRaceBlock = kitbag::StreamingTrack::kMaxBlockFrames;
 constexpr uint64_t kRaceBlocksPerGrace = kGrace / kRaceBlock;
 constexpr int kRaceBlocks = 300;
+// Dates land a block apart, so a closed grace window spans one more than it
+// divides into, plus the node retired after that publish's Collect.
+constexpr uint64_t kMostHeldInRace = kRaceBlocksPerGrace + 2;
 constexpr int kGridBeats = 64;
 constexpr double kBeatSec = 0.37;
 constexpr double kSaltSec = 1e-4;
@@ -116,7 +119,7 @@ void TestGridSwapsRaceTheCallback() {
       "race: grids were freed while the callback was rendering"
   );
   Check(
-      race.most_retired <= kRaceBlocksPerGrace + 2,
+      race.most_retired <= kMostHeldInRace,
       "race: the retire queue stays within one grace window of swaps"
   );
   race.engine.metronome().ReleaseRetired();
@@ -131,7 +134,8 @@ void TestGridSwapsRaceTheCallback() {
 #if defined(__SANITIZE_THREAD__)
 // A grace window of rendering outlives TSan's default per-thread history, and a
 // race whose earlier access has been forgotten is dropped, not reported.
-extern "C" const char* __tsan_default_options() {
+extern "C" __attribute__((visibility("default"))) const char*
+__tsan_default_options() {
   return "history_size=7";
 }
 #endif

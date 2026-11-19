@@ -13,10 +13,11 @@ readonly EXIT_USAGE=2
 FIX=1
 SKIP_ANDROID=0
 SKIP_NATIVE=0
+TSAN=0
 
 usage() {
   cat <<'USAGE'
-usage: preflight.sh [--no-fix] [--skip-android] [--skip-native]
+usage: preflight.sh [--no-fix] [--skip-android] [--skip-native] [--tsan]
 
 Runs the gates CI runs. By default it also applies formatting and lint fixes,
 and a fix that rewrites files re-runs the earlier gates that read them;
@@ -25,6 +26,8 @@ and a fix that rewrites files re-runs the earlier gates that read them;
   --no-fix         do not modify files
   --skip-android   skip the Gradle release build (slow, needs the SDK)
   --skip-native    skip the C++ build and verify tools
+  --tsan           also run CI's ThreadSanitizer gate (scripts/tsan-check.sh);
+                   off by default because it builds a second native tree
 
 exit 0  every gate passed
 exit 1  at least one gate failed
@@ -37,6 +40,7 @@ while (($#)); do
     --no-fix) FIX=0 ;;
     --skip-android) SKIP_ANDROID=1 ;;
     --skip-native) SKIP_NATIVE=1 ;;
+    --tsan) TSAN=1 ;;
     -h | --help)
       usage
       exit "$EXIT_USAGE"
@@ -153,6 +157,11 @@ if ((!SKIP_NATIVE)); then
       FAILED+=("$tool")
     fi
   done
+fi
+
+if ((TSAN)); then
+  run_gate "Native TSan — retire race clean, relaxed-tick control reported" \
+    "./scripts/tsan-check.sh >/dev/null 2>&1"
 fi
 
 if ((SKIP_ANDROID)); then

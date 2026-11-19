@@ -14,6 +14,8 @@
 
 namespace metronome_test::grid_click {
 
+using kitbag_test::kZeroClock;
+
 // Uneven, and from beat 12 the tempo jumps, so a midpoint at a fixed tempo
 // lands outside the search window around the true one.
 constexpr double kBeatsSec[] = {0.1,  0.61, 1.09, 1.62, 2.11,  2.6,
@@ -43,7 +45,7 @@ inline void Configure(
     int32_t rate
 ) {
   metronome.SetSounds(kBeepSound, kBeepSound);
-  metronome.SetGrid(Grid(beats, downbeats), kitbag_test::kZeroClock, true);
+  metronome.SetGrid(Grid(beats, downbeats), kZeroClock, true);
   metronome.SetGridGrouping(grouping);
   metronome.SetGridRate(rate);
   metronome.Start();

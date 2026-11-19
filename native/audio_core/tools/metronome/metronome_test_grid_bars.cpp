@@ -6,9 +6,14 @@
 #include "metronome/metronome_internal.h"
 #include "metronome_test_audio.h"
 #include "song_bars.h"
+#include "test_clock.h"
 #include "zero_clock.h"
 
 namespace metronome_test {
+
+using kitbag_test::ClockAt;
+using kitbag_test::kZeroClock;
+
 namespace {
 
 using kitbag_test::IndexList;
@@ -64,7 +69,7 @@ void StartOnBars(
 ) {
   metronome.SetSounds(kBeepSound, kBeepSound);
   metronome.SetTimeSignature(standalone_beats, 4);
-  metronome.SetGrid(BarGrid(downbeats), kitbag_test::kZeroClock, true);
+  metronome.SetGrid(BarGrid(downbeats), kZeroClock, true);
   metronome.Start();
 }
 
@@ -189,7 +194,7 @@ double GridMuteCascadePeak(bool bar_mute, int64_t lo, int64_t hi) {
   metronome.SetBarMute(bar_mute, 1, 1);
   auto grid = MakeShiftedGrid(8, 0.2, 0.15);
   SetSongBars(grid.get(), 0, 1);
-  metronome.SetGrid(std::move(grid), kitbag_test::kZeroClock, true);
+  metronome.SetGrid(std::move(grid), kZeroClock, true);
   metronome.Start();
   return WindowedPeak(metronome, lo, hi);
 }
@@ -230,7 +235,7 @@ std::vector<int> SoundedAfterClear() {
   metronome.SetBarMute(true, 1, 1);
   auto grid = MakeShiftedGrid(kClearBeats, 0.0, kClearBeatSec);
   SetSongBars(grid.get(), 0, 3);
-  metronome.SetGrid(std::move(grid), kitbag_test::kZeroClock, true);
+  metronome.SetGrid(std::move(grid), kZeroClock, true);
   metronome.Start();
   const int64_t clear_at = FramesFor(kClearAtSec);
   const std::vector<float> left = RenderLeft(
@@ -238,7 +243,7 @@ std::vector<int> SoundedAfterClear() {
       FramesFor(kClearBeats * kClearBeatSec),
       [&](int64_t at) {
         if (at <= clear_at && clear_at < at + kBlockFrames) {
-          metronome.ClearGrid(kitbag_test::ClockAt(at), true);
+          metronome.ClearGrid(ClockAt(at), true);
         }
       }
   );

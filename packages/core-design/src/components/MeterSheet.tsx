@@ -8,7 +8,7 @@ import {
   isOverridden,
   meterCopy,
   meterLabel,
-  playheadDetail,
+  playheadValue,
   type MeterChoice,
   type MeterGridState,
 } from '../meterText.ts';
@@ -117,20 +117,28 @@ function BarOneDetail({
   readonly playheadSeconds: SharedValue<number>;
 }) {
   const styles = useStyles();
-  const live = useDerivedValue(() => playheadDetail(playheadSeconds.value));
+  const live = useDerivedValue(() => playheadValue(playheadSeconds.value));
   if (barOneOverridden) {
     return (
       <Text style={styles.barOneDetail}>{meterCopy.barOneOverridden}</Text>
     );
   }
   return (
-    <LiveText
-      text={live}
-      role="rowSubtitle"
-      color="text2"
-      align="left"
-      style={styles.barOneDetail}
-    />
+    <>
+      <LiveText
+        text={live}
+        role="rowSubtitle"
+        color="text2"
+        align="left"
+        style={styles.barOneDetail}
+      />
+      <Text
+        style={styles.barOneDetail}
+        accessibilityLabel={meterCopy.playheadExplanationSpoken}
+      >
+        {meterCopy.playheadExplanation}
+      </Text>
+    </>
   );
 }
 

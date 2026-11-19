@@ -9,6 +9,7 @@
 #include "metronome/click_voices.h"
 #include "metronome/sample_voices.h"
 #include "rt/rt_publisher.h"
+#include "test_clock.h"
 #include "zero_clock.h"
 
 namespace click_sound_test {

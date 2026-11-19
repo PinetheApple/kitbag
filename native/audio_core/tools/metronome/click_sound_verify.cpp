@@ -39,7 +39,7 @@ struct RaceState {
   std::atomic<uint64_t> clock{0};
   std::atomic<bool> done{false};
   bool bounded = true;
-  std::vector<uint64_t> publish_frames;
+  std::vector<uint64_t> retired_at_frames;
   uint64_t last_publish_entered = 0;
 };
 
@@ -80,7 +80,7 @@ void PublishLoop(RaceState* state) {
       state->voices
           .Publish(slot, std::vector<float>(frames, kRaceLevel), clock, true);
     }
-    state->publish_frames.push_back(clock.Now());
+    state->retired_at_frames.push_back(clock.Now());
   }
   state->done.store(true, std::memory_order_release);
 }
@@ -99,9 +99,9 @@ void TestLoadWhileRendering() {
   std::thread render([&state, &blocks] { blocks = RenderLoop(&state); });
   PublishLoop(&state);
   render.join();
-  const uint64_t first = state.publish_frames.front();
+  const uint64_t first = state.retired_at_frames.front();
   const uint64_t last = state.last_publish_entered;
-  const size_t in_grace = StillInGrace(state.publish_frames, last);
+  const size_t in_grace = StillInGrace(state.retired_at_frames, last);
   std::printf(
       "  race: %d publishes over %llu blocks, %zu retired, %zu in grace\n",
       kRacePublishes,

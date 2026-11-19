@@ -16,8 +16,8 @@ namespace kitbag {
 template <typename T>
 class RtPublisher {
  public:
-  // One second at 48kHz. Freeing late holds a few kilobytes briefly; freeing
-  // early is a use-after-free in the callback.
+  // One second at 48kHz. Freeing late only holds memory longer; freeing early is
+  // a use-after-free in the callback.
   static constexpr uint64_t kReclaimGraceFrames = 48000;
 
   // The generation lives in the node so one load carries value and identity.
@@ -34,6 +34,12 @@ class RtPublisher {
   RtPublisher(const RtPublisher&) = delete;
   RtPublisher& operator=(const RtPublisher&) = delete;
 
+  using SwapHook = void (*)(void* context);
+  void set_after_swap_hook(SwapHook hook, void* context) {
+    after_swap_ = hook;
+    after_swap_context_ = context;
+  }
+
   // nullptr publishes "no payload". `rt_reader_active` must be true whenever
   // the callback can run; false frees every retired payload at once.
   void
@@ -46,6 +52,7 @@ class RtPublisher {
     // seq_cst with Get and the engine's clock: swap-then-read-clock against
     // tick-then-load is store buffering, which acq_rel lets both sides miss.
     Node* previous = active_.exchange(node, std::memory_order_seq_cst);
+    if (after_swap_ != nullptr) after_swap_(after_swap_context_);
     const uint64_t retired_at = clock.Now();
     if (previous != nullptr) {
       retired_.push_back({std::unique_ptr<Node>(previous), retired_at});
@@ -63,7 +70,7 @@ class RtPublisher {
 
   void Collect(uint64_t now_frame) {
     auto reclaimable = [now_frame](const Retired& entry) {
-      return now_frame > entry.frame + kReclaimGraceFrames;
+      return now_frame > entry.retired_at + kReclaimGraceFrames;
     };
     retired_.erase(
         std::remove_if(retired_.begin(), retired_.end(), reclaimable),
@@ -83,12 +90,14 @@ class RtPublisher {
  private:
   struct Retired {
     std::unique_ptr<Node> payload;
-    uint64_t frame;
+    uint64_t retired_at;
   };
 
   std::atomic<Node*> active_{nullptr};
   uint64_t generation_ = 0;
   std::vector<Retired> retired_;
+  SwapHook after_swap_ = nullptr;
+  void* after_swap_context_ = nullptr;
 };
 
 }  // namespace kitbag

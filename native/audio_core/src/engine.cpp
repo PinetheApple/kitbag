@@ -21,6 +21,16 @@ constexpr std::chrono::milliseconds kStallAfter{1500};
 constexpr std::chrono::milliseconds kWatchEvery{250};
 constexpr uint64_t kNotIdle = UINT64_MAX;
 
+#ifdef KITBAG_TSAN_CONTROL_RELAXED_TICK
+#ifndef __SANITIZE_THREAD__
+#error \
+    "The relaxed tick is the TSan gate's negative control, never a real build."
+#endif
+constexpr std::memory_order kTickOrder = std::memory_order_relaxed;
+#else
+constexpr std::memory_order kTickOrder = std::memory_order_seq_cst;
+#endif
+
 uint64_t NowMs() {
   return static_cast<uint64_t>(
       std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -333,7 +343,7 @@ void Engine::RenderSlice(float* output, uint32_t frame_count) {
   }
 
   // seq_cst pairs with RtPublisher's swap; see rt_publisher.h.
-  frames_rendered_.fetch_add(frame_count, std::memory_order_seq_cst);
+  frames_rendered_.fetch_add(frame_count, kTickOrder);
 }
 
 }  // namespace kitbag
