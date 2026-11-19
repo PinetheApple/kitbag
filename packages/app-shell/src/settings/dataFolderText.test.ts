@@ -8,12 +8,16 @@ import { describe, expect, it } from 'vitest';
 
 import { DATA_FOLDER_CODES as CODES } from './dataFolderCodes.test-helper.ts';
 import {
-  dataFolderRowValue,
-  locationValue,
   moveErrorText,
-  noSpaceHint,
   outcomeText,
   phaseText,
+  undoneText,
+} from './dataFolderMoveText.ts';
+import {
+  dataFolderRowValue,
+  locationValue,
+  mediaSize,
+  noSpaceHint,
   rowValueLabel,
   volumeOption,
 } from './dataFolderText.ts';
@@ -138,6 +142,12 @@ describe('outcome and phase text', () => {
     expect(outcomeText(finished(outcomes.refused), CODES, null)).toBeNull();
   });
 
+  it('says an undone move left the files where they were', () => {
+    expect(undoneText(null)).toBe(
+      'Move undone. Your files are still on internal storage.',
+    );
+  });
+
   it('gives every phase its own line', () => {
     const lines = CODES.movePhases.map((phase) => phaseText(phase, CODES));
     expect(new Set(lines).size).toBe(CODES.movePhases.length);
@@ -246,5 +256,17 @@ describe('volume options', () => {
       offered: false,
       shortBy: null,
     });
+  });
+});
+
+describe('media size', () => {
+  it('counts song audio and stem sets, not the database that stays', () => {
+    const report = {
+      libraryAudio: { songs: 53, bytes: 880 * MB },
+      stemSets: { count: 1, bytes: 320 * MB },
+      database: { bytes: 1.2 * MB },
+      location: '/data/user/0/com.kitbag.app/files/library',
+    };
+    expect(mediaSize(report)).toEqual({ bytes: 1.2 * GB, files: 54 });
   });
 });

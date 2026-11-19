@@ -18,6 +18,7 @@ export interface SettingsFrameProps {
   readonly onBack: () => void;
   readonly children: ReactNode;
   readonly fillScreen?: boolean;
+  readonly overlay?: ReactNode;
 }
 
 export function SettingsFrame({
@@ -25,6 +26,7 @@ export function SettingsFrame({
   onBack,
   children,
   fillScreen = false,
+  overlay,
 }: SettingsFrameProps) {
   const styles = useStyles();
   const insets = useSafeAreaInsets();
@@ -46,6 +48,7 @@ export function SettingsFrame({
         <AppBar title={title} onBack={onBack} />
         {children}
       </ScrollView>
+      {overlay}
     </View>
   );
 }
