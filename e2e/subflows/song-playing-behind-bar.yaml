@@ -6,7 +6,10 @@ appId: com.kitbag.app
 - extendedWaitUntil:
     visible: 'Play'
     timeout: 10000
-- tapOn: 'Play'
+- runFlow:
+    file: tap-while-playing.yaml
+    env:
+      TARGET: 'Play'
 - assertVisible: 'Pause'
 - back
 - extendedWaitUntil:

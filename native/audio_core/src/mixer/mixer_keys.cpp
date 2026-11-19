@@ -23,10 +23,10 @@ int Mixer::ClampPitch(float semitones) {
 }
 
 bool Mixer::WantsStretch() const {
-  if (app_rate_ != kUnityRate) return true;
+  if (app_mix_.rate != kUnityRate) return true;
   const int count = track_count_.load(std::memory_order_relaxed);
   for (int t = 0; t < count; ++t) {
-    if (tracks_[t].stream->ready() && app_pitch_[t] != 0) return true;
+    if (tracks_[t].stream->ready() && app_mix_.pitch[t] != 0) return true;
   }
   return false;
 }
@@ -94,10 +94,10 @@ uint32_t Mixer::LiveBusMask() const {
 Mixer::Prepared
 Mixer::PrepareBusFor(int track, FrameClock clock, bool engine_running) {
   Prepared prepared{.before = {app_engaged_, app_vendor_default_}};
-  if (!app_engaged_ && app_pitch_[track] == 0) return prepared;
+  if (!app_engaged_ && app_mix_.pitch[track] == 0) return prepared;
   const uint32_t live = LiveBusMask();
   const BusChange change =
-      EngageBuses(app_pitch_[track], clock, engine_running);
+      EngageBuses(app_mix_.pitch[track], clock, engine_running);
   prepared.created = LiveBusMask() & ~live;
   prepared.prime = change == BusChange::kNeedsPrime;
   return prepared;
@@ -122,7 +122,7 @@ int Mixer::MarkUsedBuses(bool* used) const {
   const int count = track_count_.load(std::memory_order_relaxed);
   for (int t = 0; t < count; ++t) {
     if (!tracks_[t].stream->ready()) continue;
-    bool& slot = used[app_pitch_[t] - kMinPitchSemitones];
+    bool& slot = used[app_mix_.pitch[t] - kMinPitchSemitones];
     in_use += slot ? 0 : 1;
     slot = true;
   }
@@ -197,7 +197,7 @@ Mixer::StretchResult
 Mixer::SetRate(float rate, FrameClock clock, bool engine_running) {
   if (!ReserveUndoableCommand()) return StretchResult::kBusy;
   const float clamped = ClampRate(rate);
-  const float previous = std::exchange(app_rate_, clamped);
+  const float previous = std::exchange(app_mix_.rate, clamped);
   DisengageAtRest(clock, engine_running);
   const EngageState before{app_engaged_, app_vendor_default_};
   const bool prime =
@@ -205,7 +205,7 @@ Mixer::SetRate(float rate, FrameClock clock, bool engine_running) {
       EngageBuses({}, clock, engine_running) == BusChange::kNeedsPrime;
   EnqueueRate(clamped);
   if (!prime || PrimeNow(clock, engine_running)) return StretchResult::kOk;
-  app_rate_ = previous;
+  app_mix_.rate = previous;
   EnqueueRate(previous);
   RestoreEngage(before);
   return StretchResult::kPrimeFailed;
@@ -222,7 +222,7 @@ Mixer::StretchResult Mixer::SetTrackPitch(
   if (!track_ready(track)) return StretchResult::kNoTrack;
   if (!ReserveUndoableCommand()) return StretchResult::kBusy;
   const int pitch = ClampPitch(semitones);
-  const int previous = std::exchange(app_pitch_[track], pitch);
+  const int previous = std::exchange(app_mix_.pitch[track], pitch);
   DisengageAtRest(clock, engine_running);
   const EngageState before{app_engaged_, app_vendor_default_};
   bool prime = false;
@@ -231,7 +231,7 @@ Mixer::StretchResult Mixer::SetTrackPitch(
   }
   EnqueuePitch(track, pitch);
   if (!prime || PrimeNow(clock, engine_running)) return StretchResult::kOk;
-  app_pitch_[track] = previous;
+  app_mix_.pitch[track] = previous;
   EnqueuePitch(track, previous);
   RestoreEngage(before);
   return StretchResult::kPrimeFailed;
@@ -239,8 +239,8 @@ Mixer::StretchResult Mixer::SetTrackPitch(
 
 // On a full queue the callback keeps the key, so the app side keeps it too.
 void Mixer::ResetTrackPitch(int track) {
-  if (app_pitch_[track] == 0 || commands_.Free() == 0) return;
-  app_pitch_[track] = 0;
+  if (app_mix_.pitch[track] == 0 || commands_.Free() == 0) return;
+  app_mix_.pitch[track] = 0;
   EnqueuePitch(track, 0);
 }
 

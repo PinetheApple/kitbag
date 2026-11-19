@@ -11,8 +11,11 @@ class FFTReal;
 
 namespace kitbag {
 
+constexpr int kDetectBeatsPerBar = 0;
+
 /// Streaming port of QM-DSP DownBeat::findDownBeats, holding one beat of
-/// decimated audio. Beats must ascend; beats_per_bar <= 0 means 4/4.
+/// decimated audio. Beats must ascend; beats_per_bar <= 0 picks 3 or 4 from
+/// the audio (DetectBeatsPerBar), defaulting to 4.
 class DownbeatTracker {
  public:
   DownbeatTracker(
@@ -47,7 +50,7 @@ class DownbeatTracker {
   void ProcessReadyBeats();
   void ProcessBeat(const BeatSpan& span);
   void DropBefore(size_t position);
-  std::vector<int> PickDownbeats() const;
+  std::vector<int> PickDownbeats(int timesig) const;
 
   std::vector<double> beats_;
   int beats_per_bar_;
@@ -66,6 +69,7 @@ class DownbeatTracker {
   std::vector<double> real_out_;
   std::vector<double> imag_out_;
   std::vector<double> old_spec_;
+  // beat_sd_[i] is the spectral difference into beat i + 1.
   std::vector<double> beat_sd_;
 };
 

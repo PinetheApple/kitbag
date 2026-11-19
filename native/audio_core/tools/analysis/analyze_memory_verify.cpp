@@ -12,53 +12,11 @@
 #include "analysis/beat_tracker.h"
 #include "analysis/song_analysis.h"
 #include "check.h"
+#include "counting_allocator.h"
 #include "media/audio_source.h"
 
-namespace {
-
-size_t g_live_bytes = 0;
-size_t g_peak_bytes = 0;
-
-// Prefix every block with its size so delete can debit it; 16 keeps the
-// returned pointer max_align_t aligned.
-constexpr size_t kHeader = 16;
-
-void* CountedAlloc(size_t size) {
-  auto* block = static_cast<unsigned char*>(std::malloc(size + kHeader));
-  if (block == nullptr) throw std::bad_alloc();
-  *reinterpret_cast<size_t*>(block) = size;
-  g_live_bytes += size;
-  if (g_live_bytes > g_peak_bytes) g_peak_bytes = g_live_bytes;
-  return block + kHeader;
-}
-
-void CountedFree(void* ptr) {
-  if (ptr == nullptr) return;
-  auto* block = static_cast<unsigned char*>(ptr) - kHeader;
-  g_live_bytes -= *reinterpret_cast<size_t*>(block);
-  std::free(block);
-}
-
-}  // namespace
-
-void* operator new(size_t size) {
-  return CountedAlloc(size);
-}
-void* operator new[](size_t size) {
-  return CountedAlloc(size);
-}
-void operator delete(void* ptr) noexcept {
-  CountedFree(ptr);
-}
-void operator delete[](void* ptr) noexcept {
-  CountedFree(ptr);
-}
-void operator delete(void* ptr, size_t) noexcept {
-  CountedFree(ptr);
-}
-void operator delete[](void* ptr, size_t) noexcept {
-  CountedFree(ptr);
-}
+using kitbag_test::g_live_bytes;
+using kitbag_test::g_peak_bytes;
 
 namespace {
 

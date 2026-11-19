@@ -62,6 +62,7 @@ class StemBundleImporterTest {
     assertEquals(0.8, imported.stems[1].mix.volume, 0.0)
     assertTrue(imported.stems[1].mix.muted)
     assertEquals(1.0, imported.stems[0].mix.volume, 0.0)
+    assertTrue(imported.hasMix)
     assertEquals(123.0, imported.metadata.bpm!!, 0.0)
     assertEquals("Intro", imported.metadata.sections.single().name)
     assertArrayEquals(doubleArrayOf(0.5, 1.0), imported.grid.beats, 0.0)
@@ -78,6 +79,47 @@ class StemBundleImporterTest {
     assertEquals(0, imported.grid.beats.size)
     assertNull(imported.lyrics)
     assertTrue(written.isEmpty())
+    assertFalse(imported.hasMix)
+    assertEquals(1.0, imported.stems[0].mix.volume, 0.0)
+  }
+
+  @Test
+  fun `the check carries the artist and duration a re-separated song is matched by`() {
+    val manifest = BundleFixtures.manifestJson(stems).put("artist", "Charity Gayle").toString()
+    val bundle = BundleFixtures.zip(
+      StemBundleManifest.FILE_NAME to manifest.toByteArray(),
+      *stems.map { "stems/$it.flac" to BundleFixtures.stemBytes(it) }.toTypedArray(),
+    )
+    val check = importer().check(BundleFixtures.source(bundle))
+    assertNull(check.refusal)
+    assertEquals("Charity Gayle", check.artist)
+    assertEquals(BundleFixtures.DURATION_SEC, check.durationSec!!, 0.0)
+  }
+
+  @Test
+  fun `with no manifest artist the check reports the metadata heading's, as the import stores`() {
+    val bundle = BundleFixtures.bundle(stems, "metadata.json" to HEADING_ONLY.toByteArray())
+    val check = importer().check(BundleFixtures.source(bundle))
+    assertEquals("Charity Gayle", check.artist)
+    assertEquals(check.artist, importer().import(BundleFixtures.source(bundle)).artist)
+  }
+
+  @Test
+  fun `the check does not read past the first stem for the metadata`() {
+    val bundle = BundleFixtures.zip(
+      StemBundleManifest.FILE_NAME to BundleFixtures.manifest(stems).toByteArray(),
+      *stems.map { "stems/$it.flac" to BundleFixtures.stemBytes(it) }.toTypedArray(),
+      "metadata.json" to HEADING_ONLY.toByteArray(),
+    )
+    assertNull(importer().check(BundleFixtures.source(bundle)).artist)
+  }
+
+  @Test
+  fun `a refused check carries no artist or duration`() {
+    val check = importer().check(BundleFixtures.source(BundleFixtures.zip("readme.txt" to "x".toByteArray())))
+    assertEquals(StemBundleRefusal.NOT_A_BUNDLE, check.refusal)
+    assertNull(check.artist)
+    assertNull(check.durationSec)
   }
 
   @Test
@@ -87,11 +129,13 @@ class StemBundleImporterTest {
       "metadata.json" to "{".toByteArray(),
       "beats.json" to "[".toByteArray(),
       "peaks.json" to "nope".toByteArray(),
+      "mix.json" to "{".toByteArray(),
     )
     val imported = importer().import(BundleFixtures.source(bundle))
     assertNull(imported.metadata.bpm)
     assertEquals(0, imported.grid.beats.size)
     assertNull(imported.stems[0].waveformRelativePath)
+    assertFalse(imported.hasMix)
   }
 
   @Test
@@ -208,5 +252,6 @@ class StemBundleImporterTest {
 
   private companion object {
     const val MAX_STEMS = 16
+    const val HEADING_ONLY = """{"audio_tags":{"title":"Echo","artist":"Charity Gayle"}}"""
   }
 }

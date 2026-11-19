@@ -53,6 +53,7 @@ export type SongLibraryRecords = Pick<
   | 'deleteSong'
   | 'deleteStemSet'
   | 'findStemSetByJobId'
+  | 'findStemSetMatches'
   | 'insertStemBundle'
   | 'replaceStemBundle'
   | 'listStemSetFolders'

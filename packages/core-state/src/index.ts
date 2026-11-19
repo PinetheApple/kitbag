@@ -210,6 +210,7 @@ export {
   createSongLibraryStore,
   songLibraryStore,
   type LibraryNotice,
+  type ReplaceMatch,
   type ReplacePrompt,
   type SongLibraryStore,
 } from './songLibrary/store.ts';
@@ -270,6 +271,7 @@ export {
 } from './stemDeck/catalog.ts';
 export type { StemDeckFailure } from './stemDeck/failures.ts';
 export type { StemDeckReplacePrompt } from './stemDeck/importActions.ts';
+export { REPLACE_LABELS, replaceKeepsText } from './songLibrary/replaceText.ts';
 export type {
   ImportPhase as StemDeckImportPhase,
   ImportRow as StemDeckImportRow,
@@ -352,7 +354,7 @@ export {
   type RetimeTap,
   type SongLyrics,
 } from './stemPlayer/lyrics.ts';
-export type { LoopSeconds } from './stemPlayer/loop.ts';
+export type { LoopEdge, LoopSeconds } from './stemPlayer/loop.ts';
 export { NO_SECTION, sectionAt } from './stemPlayer/sections.ts';
 export {
   clickKeyLabel,

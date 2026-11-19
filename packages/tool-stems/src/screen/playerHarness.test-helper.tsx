@@ -48,6 +48,7 @@ export const INSTRUMENTAL = {
 };
 
 type RecordChange = NonNullable<Parameters<typeof record>[1]>;
+type StoredStem = ReturnType<typeof stem>;
 type FakeRuntime = ReturnType<typeof fakeRuntime>['runtime'];
 
 // configureStemPlayer takes one runtime for the process, so it delegates.
@@ -98,7 +99,7 @@ export interface ReaderHiding {
 export const HIDDEN_FROM_READERS: ReaderHiding = { android: true, ios: true };
 export const SHOWN_TO_READERS: ReaderHiding = { android: false, ios: false };
 
-function readerHiding(node: ReactTestInstance): ReaderHiding {
+function hostAncestors(node: ReactTestInstance): ReactTestInstance[] {
   const hosts: ReactTestInstance[] = [];
   for (
     let step: ReactTestInstance | null = node;
@@ -106,12 +107,23 @@ function readerHiding(node: ReactTestInstance): ReaderHiding {
     step = step.parent
   )
     if (typeof step.type === 'string') hosts.push(step);
+  return hosts;
+}
+
+function readerHiding(node: ReactTestInstance): ReaderHiding {
+  const hosts = hostAncestors(node);
   return {
     android: hosts.some(
       (host) => host.props.importantForAccessibility === 'no-hide-descendants',
     ),
     ios: hosts.some((host) => host.props.accessibilityElementsHidden === true),
   };
+}
+
+function readerLayer(node: ReactTestInstance): ReactTestInstance | undefined {
+  return hostAncestors(node).find(
+    (host) => 'accessibilityElementsHidden' in host.props,
+  );
 }
 
 interface NodeMock {
@@ -166,8 +178,11 @@ export function playerTree({
   );
 }
 
-export function installFakeRuntime(change: RecordChange = SONG_DETAILS) {
-  const fake = fakeRuntime(record(STEMS, change));
+export function installFakeRuntime(
+  change: RecordChange = SONG_DETAILS,
+  stems: readonly StoredStem[] = STEMS,
+) {
+  const fake = fakeRuntime(record([...stems], change));
   live = fake.runtime;
   return fake;
 }
@@ -201,8 +216,11 @@ export async function mountSurface(element: ReactElement) {
   };
 }
 
-export async function mountPlayer(change: RecordChange = SONG_DETAILS) {
-  const fake = installFakeRuntime(change);
+export async function mountPlayer(
+  change: RecordChange = SONG_DETAILS,
+  stems: readonly StoredStem[] = STEMS,
+) {
+  const fake = installFakeRuntime(change, stems);
   takeAccessibilityEvents();
   const commit = vi.fn();
   const scrolls = vi.fn();
@@ -258,6 +276,7 @@ export async function mountPlayer(change: RecordChange = SONG_DETAILS) {
     readerFocus,
     readerHiding: (label: string) => readerHiding(byLabel(label)),
     textReaderHiding: (text: string) => readerHiding(byText(text)),
+    readerLayer: (label: string) => readerLayer(byLabel(label)),
     press: (label: string) => fire(label, 'onPress'),
     hold: (label: string) => fire(label, 'onLongPress'),
     touchDown: (label: string) => fire(label, 'onPressIn'),

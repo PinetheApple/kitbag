@@ -44,6 +44,14 @@ export type {
 } from './NativeKitbagStemDeck';
 export { missingFiles, storageReport } from './libraryStorage';
 export { backupFilesAvailable, pickBackup, shareBackup } from './backupFiles';
+export {
+  mixdownCancel,
+  mixdownProgress,
+  mixdownStart,
+  mixdownState,
+  shareExport,
+  type MixdownStart,
+} from './mixdown';
 
 // --- #30 (P2-A3) JSI HostObject: polled realtime reads (§13.2, §13.3) --------
 export {

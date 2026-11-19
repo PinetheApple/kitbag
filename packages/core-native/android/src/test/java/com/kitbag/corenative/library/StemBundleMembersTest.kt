@@ -176,7 +176,7 @@ class StemBundleMembersTest {
     val mix = members.mix(
       """{"stems":{"drums":{"volume":0.8,"muted":true,"soloed":true,"pitch":-2},"other":{"volume":"loud"}}}""",
       listOf("drums", "bass", "other"),
-    )
+    )!!
     assertEquals(0.8, mix.getValue("drums").volume, 0.0)
     assertTrue(mix.getValue("drums").muted)
     assertTrue(mix.getValue("drums").soloed)
@@ -187,8 +187,9 @@ class StemBundleMembersTest {
       assertFalse(mix.getValue(lane).soloed)
       assertEquals(0.0, mix.getValue(lane).pitch, 0.0)
     }
-    assertEquals(setOf("a"), members.mix(null, listOf("a")).keys)
-    assertEquals(1.0, members.mix("nonsense", listOf("a")).getValue("a").volume, 0.0)
+    assertNull(members.mix(null, listOf("a")))
+    assertNull(members.mix("nonsense", listOf("a")))
+    assertNull(members.mix("{}", listOf("a")))
   }
 
   @Test
@@ -211,5 +212,6 @@ class StemBundleMembersTest {
       BundleGrid(),
       null,
       null,
+      false,
     )
 }

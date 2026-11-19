@@ -1,0 +1,4 @@
+appId: com.kitbag.app
+---
+- runFlow: open-metronome.yaml
+- tapOn: 'Got it'

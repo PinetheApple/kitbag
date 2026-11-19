@@ -1,4 +1,5 @@
 import { COUNT_IN_STORED_KEYS } from './count-in-preferences';
+import type { MeterOverride } from './meter-override';
 import { STANDALONE_METRONOME_KEY } from './standalone-metronome-preference';
 
 export const BACKUP_FORMAT = 'kitbag-backup';
@@ -24,7 +25,7 @@ export const DEFAULT_IMPORT_CATEGORIES: readonly Category[] = [
   'metronomeSettings',
 ];
 
-export interface LibrarySongRecord {
+export interface LibrarySongRecord extends Partial<MeterOverride> {
   uuid: string;
   title: string;
   artist: string;
@@ -36,6 +37,7 @@ export interface LibrarySongRecord {
   downbeatIndices: string | null;
   bpm: number | null;
   waveformPath: string | null;
+  analysisVersion?: number | null;
 }
 
 export interface SongPresetRecord {

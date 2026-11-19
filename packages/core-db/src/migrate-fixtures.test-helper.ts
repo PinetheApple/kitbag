@@ -1,7 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 
 import {
-  MIGRATE_V6_TO_V7,
   MIGRATE_V7_TO_V8,
   MIGRATE_V8_TO_V9,
   MIGRATE_V9_TO_V10,
@@ -14,7 +13,6 @@ import {
   MIGRATE_V16_TO_V17,
   MIGRATE_V17_TO_V18,
   MIGRATE_V18_TO_V19,
-  V6_SCHEMA_VERSION,
   V7_SCHEMA_VERSION,
   V8_SCHEMA_VERSION,
   V9_SCHEMA_VERSION,
@@ -30,25 +28,13 @@ import {
   V19_SCHEMA_VERSION,
 } from './migrate';
 
-const V6_DDL: readonly string[] = [
-  `CREATE TABLE setlists (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)`,
-  `CREATE TABLE songs (
+const V7_DDL: readonly string[] = [
+  `CREATE TABLE setlists (
      id INTEGER PRIMARY KEY AUTOINCREMENT,
-     setlist_id INTEGER NOT NULL REFERENCES setlists (id) ON DELETE CASCADE,
-     position INTEGER NOT NULL,
      name TEXT NOT NULL,
-     bpm REAL NOT NULL,
-     beats_per_bar INTEGER NOT NULL,
-     subdivision INTEGER NOT NULL,
-     accents BLOB NOT NULL,
-     poly_enabled INTEGER NOT NULL,
-     poly_beats INTEGER NOT NULL,
-     sound INTEGER NOT NULL,
-     volume REAL NOT NULL,
-     latency_offset REAL NOT NULL
+     uuid TEXT NOT NULL
    )`,
-  `CREATE TABLE tunings (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, notes BLOB NOT NULL)`,
-  `CREATE TABLE library_songs (
+  `CREATE TABLE songs (
      id INTEGER PRIMARY KEY AUTOINCREMENT,
      title TEXT NOT NULL,
      artist TEXT NOT NULL,
@@ -57,10 +43,66 @@ const V6_DDL: readonly string[] = [
      format TEXT NOT NULL,
      created_at INTEGER NOT NULL,
      beat_grid BLOB,
+     downbeat_indices BLOB,
      bpm REAL,
-     waveform_path TEXT
+     waveform_path TEXT,
+     uuid TEXT NOT NULL
    )`,
-  `CREATE TABLE stem_sets (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, created_at INTEGER NOT NULL)`,
+  `CREATE TABLE song_presets (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     name TEXT NOT NULL,
+     bpm REAL NOT NULL,
+     beats_per_bar INTEGER NOT NULL,
+     subdivision INTEGER NOT NULL,
+     denominator INTEGER NOT NULL DEFAULT 4,
+     accents BLOB NOT NULL,
+     per_accent_sounds BLOB,
+     poly_enabled INTEGER NOT NULL,
+     poly_beats INTEGER NOT NULL,
+     sound INTEGER NOT NULL,
+     ramp_enabled INTEGER NOT NULL DEFAULT 0,
+     ramp_start_bpm REAL,
+     ramp_end_bpm REAL,
+     ramp_bars INTEGER,
+     bar_mute_enabled INTEGER NOT NULL DEFAULT 0,
+     bar_mute_play_bars INTEGER,
+     bar_mute_mute_bars INTEGER,
+     count_in_bars INTEGER NOT NULL DEFAULT 0,
+     notes TEXT,
+     phase_nudge REAL NOT NULL DEFAULT 0,
+     title TEXT,
+     artist TEXT,
+     source TEXT,
+     length_seconds REAL,
+     library_song_id INTEGER REFERENCES songs (id) ON DELETE SET NULL,
+     uuid TEXT NOT NULL
+   )`,
+  `CREATE TABLE setlist_items (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     setlist_id INTEGER NOT NULL REFERENCES setlists (id) ON DELETE CASCADE,
+     song_preset_id INTEGER NOT NULL REFERENCES song_presets (id) ON DELETE CASCADE,
+     position INTEGER NOT NULL
+   )`,
+  `CREATE TABLE tunings (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     name TEXT NOT NULL,
+     notes BLOB NOT NULL,
+     uuid TEXT NOT NULL
+   )`,
+  `CREATE TABLE practice_sessions (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     start_time INTEGER NOT NULL,
+     duration_seconds INTEGER NOT NULL,
+     avg_bpm REAL NOT NULL,
+     setlist_id INTEGER REFERENCES setlists (id) ON DELETE SET NULL,
+     songs_played TEXT
+   )`,
+  `CREATE TABLE stem_sets (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     name TEXT NOT NULL,
+     created_at INTEGER NOT NULL,
+     uuid TEXT NOT NULL
+   )`,
   `CREATE TABLE stems (
      id INTEGER PRIMARY KEY AUTOINCREMENT,
      stem_set_id INTEGER NOT NULL REFERENCES stem_sets (id) ON DELETE CASCADE,
@@ -75,30 +117,42 @@ const V6_DDL: readonly string[] = [
      soloed INTEGER NOT NULL,
      sort_order INTEGER NOT NULL
    )`,
-  `CREATE TABLE practice_sessions (
+  `CREATE TABLE subdivision_accents (
+     subdivision INTEGER PRIMARY KEY,
+     accents BLOB NOT NULL
+   )`,
+  `CREATE TABLE bpm_cache (
      id INTEGER PRIMARY KEY AUTOINCREMENT,
-     start_time INTEGER NOT NULL,
-     duration_seconds INTEGER NOT NULL,
-     avg_bpm REAL NOT NULL,
-     setlist_id INTEGER REFERENCES setlists (id) ON DELETE SET NULL,
-     songs_played TEXT
+     title TEXT NOT NULL,
+     artist TEXT NOT NULL,
+     bpm REAL NOT NULL,
+     source TEXT NOT NULL,
+     fetched_at INTEGER NOT NULL
+   )`,
+  'CREATE UNIQUE INDEX bpm_cache_title_artist ON bpm_cache (title, artist)',
+  `CREATE TABLE route_latency (
+     route TEXT PRIMARY KEY,
+     offset_ms REAL NOT NULL
    )`,
 ];
 
-const V6_DATA: readonly string[] = [
-  `INSERT INTO setlists (id, name) VALUES (1, 'Friday Set'), (2, 'Acoustic Set')`,
-  `INSERT INTO songs
-     (setlist_id, position, name, bpm, beats_per_bar, subdivision, accents, poly_enabled, poly_beats, sound, volume, latency_offset)
+const V7_DATA: readonly string[] = [
+  `INSERT INTO setlists (id, name, uuid)
+   VALUES (1, 'Friday Set', 'uuid-friday'), (2, 'Acoustic Set', 'uuid-acoustic')`,
+  `INSERT INTO song_presets
+     (id, name, bpm, beats_per_bar, subdivision, accents, poly_enabled, poly_beats, sound, uuid)
    VALUES
-     (1, 0, 'Opener', 128.0, 4, 1, X'03010101', 0, 0, 0, 1.0, 0.0),
-     (1, 1, 'Bridge', 92.0, 3, 2, X'030101', 1, 5, 2, 0.8, -12.0),
-     (2, 0, 'Ballad', 72.0, 4, 1, X'03010101', 0, 0, 1, 1.0, 5.0),
-     (2, 1, 'Out of range', 500.0, 20, 1, X'0201', 1, 40, 9, 1.0, 0.0)`,
-  `INSERT INTO tunings (name, notes) VALUES ('Drop D', X'26292E33383D')`,
+     (1, 'Opener', 128.0, 4, 1, X'03010101', 0, 0, 0, 'uuid-opener'),
+     (2, 'Bridge', 92.0, 3, 2, X'030101', 1, 5, 2, 'uuid-bridge'),
+     (3, 'Ballad', 72.0, 4, 1, X'03010101', 0, 0, 1, 'uuid-ballad'),
+     (4, 'Out of range', 500.0, 20, 1, X'0201', 1, 40, 9, 'uuid-range')`,
+  `INSERT INTO setlist_items (setlist_id, song_preset_id, position)
+   VALUES (1, 1, 0), (1, 2, 1), (2, 3, 0), (2, 4, 1)`,
+  `INSERT INTO tunings (name, notes, uuid) VALUES ('Drop D', X'26292E33383D', 'uuid-drop-d')`,
   `INSERT INTO practice_sessions (start_time, duration_seconds, avg_bpm, setlist_id)
    VALUES (1700000000, 600, 120.0, 1), (1700000000, 300, 90.0, NULL)`,
-  `INSERT INTO library_songs (title, artist, file_path, duration, format, created_at, bpm)
-   VALUES ('Reference', 'Someone', 'music/ref.flac', 210.5, 'flac', 1700000000, 128.0)`,
+  `INSERT INTO songs (title, artist, file_path, duration, format, created_at, bpm, uuid)
+   VALUES ('Reference', 'Someone', 'music/ref.flac', 210.5, 'flac', 1700000000, 128.0, 'uuid-reference')`,
 ];
 
 export const V20_SONG_COLUMNS = {
@@ -120,13 +174,6 @@ export function pragma(db: DatabaseSync, name: string): unknown {
   return db.prepare(`PRAGMA ${name}`).get()?.[name];
 }
 
-export function buildV6Fixture(): DatabaseSync {
-  const db = new DatabaseSync(':memory:');
-  for (const statement of [...V6_DDL, ...V6_DATA]) db.exec(statement);
-  db.exec(`PRAGMA user_version = ${String(V6_SCHEMA_VERSION)}`);
-  return db;
-}
-
 export function applyInTransaction(
   db: DatabaseSync,
   statements: readonly string[],
@@ -138,8 +185,8 @@ export function applyInTransaction(
 }
 
 export function buildV7Fixture(): DatabaseSync {
-  const db = buildV6Fixture();
-  applyInTransaction(db, MIGRATE_V6_TO_V7);
+  const db = new DatabaseSync(':memory:');
+  for (const statement of [...V7_DDL, ...V7_DATA]) db.exec(statement);
   db.exec(`PRAGMA user_version = ${String(V7_SCHEMA_VERSION)}`);
   return db;
 }

@@ -8,7 +8,6 @@ import {
 } from './migrate-stems';
 
 export const SCHEMA_VERSION = 20;
-export const V6_SCHEMA_VERSION = 6;
 export const V7_SCHEMA_VERSION = 7;
 export const V8_SCHEMA_VERSION = 8;
 export const V9_SCHEMA_VERSION = 9;
@@ -22,6 +21,18 @@ export const V16_SCHEMA_VERSION = 16;
 export const V17_SCHEMA_VERSION = 17;
 export const V18_SCHEMA_VERSION = 18;
 export const V19_SCHEMA_VERSION = 19;
+
+const OLDEST_UPGRADABLE_VERSION = V7_SCHEMA_VERSION;
+
+export class UnsupportedSchemaVersion extends Error {
+  override readonly name = 'UnsupportedSchemaVersion';
+
+  constructor(readonly version: number) {
+    super(
+      `Schema v${String(version)} is older than v${String(OLDEST_UPGRADABLE_VERSION)}, the oldest this app upgrades`,
+    );
+  }
+}
 
 export interface MigrationDriver {
   exec(sql: string): void;
@@ -311,38 +322,6 @@ export const BASELINE: readonly string[] = [
   ...MIGRATE_V19_TO_V20,
 ];
 
-// SQLite cannot ADD a NOT NULL column without a constant default, so migrated
-// uuid columns stay nullable; every app write supplies one.
-export const MIGRATE_V6_TO_V7: readonly string[] = [
-  'ALTER TABLE songs RENAME TO song_presets_v6',
-  'ALTER TABLE library_songs RENAME TO songs',
-  'ALTER TABLE songs ADD COLUMN downbeat_indices BLOB',
-  'ALTER TABLE songs ADD COLUMN uuid TEXT',
-  `UPDATE songs SET uuid = ${UUID4_SQL} WHERE uuid IS NULL`,
-  CREATE_SONG_PRESETS_V7,
-  `INSERT INTO song_presets (
-     id, name, bpm, beats_per_bar, subdivision, accents,
-     poly_enabled, poly_beats, sound, uuid
-   )
-   SELECT id, name, bpm, beats_per_bar, subdivision, accents,
-     poly_enabled, poly_beats, sound, ${UUID4_SQL}
-   FROM song_presets_v6`,
-  CREATE_SETLIST_ITEMS,
-  `INSERT INTO setlist_items (setlist_id, song_preset_id, position)
-   SELECT setlist_id, id, position FROM song_presets_v6`,
-  'DROP TABLE song_presets_v6',
-  'ALTER TABLE setlists ADD COLUMN uuid TEXT',
-  `UPDATE setlists SET uuid = ${UUID4_SQL} WHERE uuid IS NULL`,
-  'ALTER TABLE tunings ADD COLUMN uuid TEXT',
-  `UPDATE tunings SET uuid = ${UUID4_SQL} WHERE uuid IS NULL`,
-  'ALTER TABLE stem_sets ADD COLUMN uuid TEXT',
-  `UPDATE stem_sets SET uuid = ${UUID4_SQL} WHERE uuid IS NULL`,
-  CREATE_SUBDIVISION_ACCENTS,
-  CREATE_BPM_CACHE,
-  CREATE_BPM_CACHE_INDEX,
-  CREATE_ROUTE_LATENCY,
-];
-
 export const MIGRATE_V7_TO_V8: readonly string[] = [
   'ALTER TABLE setlists ADD COLUMN active INTEGER NOT NULL DEFAULT 0',
   CREATE_ONE_ACTIVE_INDEX,
@@ -369,7 +348,6 @@ const UPGRADES: readonly {
   readonly to: number;
   readonly steps: readonly string[];
 }[] = [
-  { to: V7_SCHEMA_VERSION, steps: MIGRATE_V6_TO_V7 },
   { to: V8_SCHEMA_VERSION, steps: MIGRATE_V7_TO_V8 },
   { to: V9_SCHEMA_VERSION, steps: MIGRATE_V8_TO_V9 },
   { to: V10_SCHEMA_VERSION, steps: MIGRATE_V9_TO_V10 },
@@ -387,13 +365,13 @@ const UPGRADES: readonly {
 
 function upgradeSteps(from: number): readonly string[] {
   if (from === 0) return BASELINE;
-  // The Flutter build always migrated users to v6 before this code could run,
-  // so any nonzero version below 7 is v6-shaped.
   return UPGRADES.filter(({ to }) => to > from).flatMap(({ steps }) => steps);
 }
 
 export function migrate(driver: MigrationDriver): void {
   const from = driver.getUserVersion();
+  if (from !== 0 && from < OLDEST_UPGRADABLE_VERSION)
+    throw new UnsupportedSchemaVersion(from);
   try {
     if (from < SCHEMA_VERSION) {
       // Renames and drops must not fire FK actions, and the pragma is a no-op

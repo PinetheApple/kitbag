@@ -9,6 +9,7 @@ import {
 } from '@kitbag/core-design';
 import {
   displayAddress,
+  REPLACE_LABELS,
   selectableIds,
   stemDeckStore,
   useNotificationPermission,
@@ -20,6 +21,11 @@ import { useCallback, useEffect, useMemo } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import { ImportDock } from './ImportDock.tsx';
+import {
+  REPLACE_SHEET_TEXT,
+  replaceHint,
+  replaceSheetTitle,
+} from './logic/replaceText.ts';
 import {
   listSubtitle,
   selectedText,
@@ -105,6 +111,17 @@ function SongRows({ catalog }: { readonly catalog: StemDeckCatalog }) {
   );
 }
 
+function useAnswer(
+  choose: () => Promise<boolean>,
+  onStarted: (started: boolean) => void,
+) {
+  return useCallback(() => {
+    void choose().then((started) => {
+      if (stemDeckStore.getState().replacePrompt === null) onStarted(started);
+    });
+  }, [choose, onStarted]);
+}
+
 function ReplaceSheet({
   bottomInset,
   onStarted,
@@ -116,45 +133,48 @@ function ReplaceSheet({
   const prompt = useStemDeck((s) => s.replacePrompt);
   const replaceInLibrary = useStemDeck((s) => s.replaceInLibrary);
   const keepInLibrary = useStemDeck((s) => s.keepInLibrary);
+  const keepBothCopies = useStemDeck((s) => s.keepBoth);
+  const replace = useAnswer(replaceInLibrary, onStarted);
+  const keep = useAnswer(keepInLibrary, onStarted);
+  const keepBoth = useAnswer(keepBothCopies, onStarted);
   const dismissReplace = useStemDeck((s) => s.dismissReplace);
   const titles = prompt?.titles ?? [];
-  const [first] = titles;
-  const replace = useCallback(() => {
-    void replaceInLibrary().then(onStarted);
-  }, [replaceInLibrary, onStarted]);
-  const keep = useCallback(() => {
-    void keepInLibrary().then(onStarted);
-  }, [keepInLibrary, onStarted]);
-  const one = titles.length === 1 && first !== undefined;
+  const match = prompt?.match ?? 'job';
+  const sameSong = match === 'song';
   return (
     <Sheet
       visible={prompt !== null}
-      title={
-        one ? `Replace “${first}”?` : `Replace ${String(titles.length)} songs?`
-      }
+      title={replaceSheetTitle(titles)}
       titleSize="large"
-      dismissLabel="Don’t import"
+      dismissLabel={REPLACE_SHEET_TEXT.dismiss}
       bottomInset={bottomInset}
       onDismiss={dismissReplace}
     >
-      <SheetHint size="large">
-        {one
-          ? `“${first}” is already in your library. Replacing it removes that song’s stems, analysis and mix, and adds this copy; your names for the song and its stems are kept. This cannot be undone.`
-          : `${titles.join(', ')} are already in your library. Replacing them removes their stems, analysis and mix, and adds these copies; your names for the songs and their stems are kept. This cannot be undone.`}
-      </SheetHint>
+      <SheetHint size="large">{replaceHint(titles, match)}</SheetHint>
       <View style={styles.actions}>
         <Button
           fill
           size="target"
           variant="ghost"
-          label="Keep current"
+          label={
+            sameSong ? REPLACE_SHEET_TEXT.skip : REPLACE_LABELS.keepCurrent
+          }
           onPress={keep}
         />
+        {sameSong ? (
+          <Button
+            fill
+            size="target"
+            variant="tonal"
+            label={REPLACE_LABELS.keepBoth}
+            onPress={keepBoth}
+          />
+        ) : null}
         <Button
           fill
           size="target"
           variant="destructive"
-          label="Replace"
+          label={REPLACE_LABELS.replace}
           onPress={replace}
         />
       </View>
@@ -162,11 +182,15 @@ function ReplaceSheet({
   );
 }
 
-function useLeaveOnFailure(onBack: () => void) {
-  const failed = useStemDeck((s) => s.connection.status === 'failed');
+function useLeaveWhenDisconnected(onBack: () => void) {
+  const gone = useStemDeck(
+    (s) =>
+      s.connection.status === 'failed' ||
+      (s.connection.status === 'idle' && s.catalog === null),
+  );
   useEffect(() => {
-    if (failed) onBack();
-  }, [failed, onBack]);
+    if (gone) onBack();
+  }, [gone, onBack]);
 }
 
 function useImport(onImporting: () => void) {
@@ -202,7 +226,7 @@ export function SongListScreen({
   const refreshCatalog = useStemDeck((s) => s.refreshCatalog);
   const selectedCount = useStemDeck((s) => s.selected.length);
   const noteSeen = useStemDeck((s) => s.unityNoticeSeen);
-  useLeaveOnFailure(onBack);
+  useLeaveWhenDisconnected(onBack);
   const { startImport, onStarted } = useImport(onImporting);
   const clear = useCallback(() => {
     setQuery('');

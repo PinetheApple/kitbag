@@ -91,8 +91,16 @@ export interface EngineClockHost extends Pick<
   readonly clock_pair_monotonic_ns: number;
 }
 
+/** The mixdown export's polled state; read a few times a second, not per frame. */
+export interface MixdownHost {
+  readonly mixdown_progress: number;
+  readonly mixdown_state: number;
+}
+
+type InstalledHost = KitbagHostObject & EngineClockHost & MixdownHost;
+
 interface HostGlobal {
-  [KITBAG_HOST_OBJECT_KEY]?: KitbagHostObject & EngineClockHost;
+  [KITBAG_HOST_OBJECT_KEY]?: InstalledHost;
 }
 
 /** JS-thread setup only; worklets read the global property directly. */
@@ -104,7 +112,11 @@ export function getEngineClockHost(): EngineClockHost {
   return installedHost();
 }
 
-function installedHost(): KitbagHostObject & EngineClockHost {
+export function getMixdownHost(): MixdownHost {
+  return installedHost();
+}
+
+function installedHost(): InstalledHost {
   const host = (globalThis as HostGlobal)[KITBAG_HOST_OBJECT_KEY];
   if (host === undefined) {
     throw new Error(

@@ -30,14 +30,35 @@ function storedMeter(value: number | null): GridMeter | null {
 const validBarOne = (seconds: number) =>
   Number.isFinite(seconds) && seconds >= 0;
 
-function checkedPatch(patch: MeterOverridePatch): MeterOverridePatch {
+export interface MeterOverrideViolation {
+  field: keyof MeterOverride;
+  reason: string;
+}
+
+export function meterOverrideViolation(patch: {
+  readonly meterBeatsPerBar?: number | null;
+  readonly barOneSeconds?: number | null;
+}): MeterOverrideViolation | null {
   const { meterBeatsPerBar, barOneSeconds } = patch;
   const hasMeter = meterBeatsPerBar !== undefined && meterBeatsPerBar !== null;
   if (hasMeter && !isGridMeter(meterBeatsPerBar))
-    throw new RangeError(`Unsupported meter ${String(meterBeatsPerBar)}`);
+    return {
+      field: 'meterBeatsPerBar',
+      reason: `Unsupported meter ${String(meterBeatsPerBar)}`,
+    };
   const hasBarOne = barOneSeconds !== undefined && barOneSeconds !== null;
   if (hasBarOne && !validBarOne(barOneSeconds))
-    throw new RangeError(`Bar one out of range: ${String(barOneSeconds)}`);
+    return {
+      field: 'barOneSeconds',
+      reason: `Bar one out of range: ${String(barOneSeconds)}`,
+    };
+  return null;
+}
+
+function checkedPatch(patch: MeterOverridePatch): MeterOverridePatch {
+  const violation = meterOverrideViolation(patch);
+  if (violation) throw new RangeError(violation.reason);
+  const { meterBeatsPerBar, barOneSeconds } = patch;
   return {
     ...(meterBeatsPerBar === undefined ? {} : { meterBeatsPerBar }),
     ...(barOneSeconds === undefined ? {} : { barOneSeconds }),
