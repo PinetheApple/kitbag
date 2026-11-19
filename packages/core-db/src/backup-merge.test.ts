@@ -23,7 +23,7 @@ async function divergedPair() {
 }
 
 describe('backup merge', () => {
-  it('defaults to setlists, presets, tunings, count-in, metronome and click sounds; history and library off', async () => {
+  it('defaults to setlists, presets, tunings, count-in, metronome, click sounds and stem songs; history and library off', async () => {
     const source = openBackupDatabase();
     await seed(source);
     const target = openBackupDatabase();
@@ -36,6 +36,7 @@ describe('backup merge', () => {
       'countInSettings',
       'metronomeSettings',
       'clickSounds',
+      'stemSongs',
     ]);
   });
 
