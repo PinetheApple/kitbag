@@ -12,7 +12,6 @@ import {
   textStyle,
   useTextScaled,
 } from '@kitbag/core-design';
-import { useCallback, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -21,9 +20,11 @@ import {
   DATABASE_ERROR_COPY,
   DATABASE_ERROR_TEXT,
   databaseErrorFrame,
+  offersRetry,
   type DatabaseErrorCopy,
 } from './databaseErrorCopy.ts';
 import { useDatabaseRetry } from './useDatabaseRetry.ts';
+import { useNotice } from './useNotice.ts';
 import { useSaveCopy } from './useSaveCopy.ts';
 
 const useStyles = createThemedStyles((theme) => ({
@@ -111,14 +112,6 @@ function DatabaseErrorNotice({
   );
 }
 
-function useNotice() {
-  const [notice, setNotice] = useState<string | null>(null);
-  const clearNotice = useCallback(() => {
-    setNotice(null);
-  }, []);
-  return { notice, setNotice, clearNotice };
-}
-
 export interface DatabaseErrorScreenProps {
   readonly error: DatabaseOpenError;
 }
@@ -130,6 +123,7 @@ export function DatabaseErrorScreen({ error }: DatabaseErrorScreenProps) {
   const { notice, setNotice, clearNotice } = useNotice();
   const retry = useDatabaseRetry(error, setNotice);
   const handleSaveCopy = useSaveCopy(setNotice);
+  const frame = databaseErrorFrame(retry.error);
   return (
     <View
       style={[
@@ -139,12 +133,11 @@ export function DatabaseErrorScreen({ error }: DatabaseErrorScreenProps) {
     >
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.content}>
-          <DatabaseErrorMessage
-            copy={DATABASE_ERROR_COPY[databaseErrorFrame(retry.error)]}
-          />
+          <DatabaseErrorMessage copy={DATABASE_ERROR_COPY[frame]} />
           {retry.retrying ? <RetryProgress /> : null}
           <DatabaseErrorActions
             stacked={stacked}
+            canRetry={offersRetry(frame)}
             retrying={retry.retrying}
             onRetry={retry.retry}
             onSaveCopy={handleSaveCopy}

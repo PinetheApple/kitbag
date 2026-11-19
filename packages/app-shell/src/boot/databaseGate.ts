@@ -1,5 +1,6 @@
 import { DATABASE_NAME, type DatabaseOpenError } from '@kitbag/core-db';
-import { saveDatabaseCopy } from '@kitbag/core-native';
+import { getKitbagLibrary, saveDatabaseCopy } from '@kitbag/core-native';
+import { errorCode } from '@kitbag/core-state';
 import { reloadAppAsync } from 'expo';
 
 import { databaseStatus, retryDatabase } from '@/runtime/database';
@@ -26,6 +27,16 @@ export async function reopenDatabase(): Promise<DatabaseOpenError | undefined> {
   return undefined;
 }
 
+function copyFailureNotice(error: unknown): string {
+  const code = errorCode(error);
+  const unsettled =
+    code !== null &&
+    code === getKitbagLibrary().getConstants().databaseCopyUnsettled;
+  return unsettled
+    ? DATABASE_ERROR_TEXT.copyUnsettled
+    : DATABASE_ERROR_TEXT.copyFailed;
+}
+
 export async function saveDatabaseCopyNotice(
   now: Date,
 ): Promise<string | null> {
@@ -34,6 +45,6 @@ export async function saveDatabaseCopyNotice(
     return saved ? DATABASE_ERROR_TEXT.copySaved : null;
   } catch (error) {
     console.warn('[kitbag] database copy not saved', error);
-    return DATABASE_ERROR_TEXT.copyFailed;
+    return copyFailureNotice(error);
   }
 }

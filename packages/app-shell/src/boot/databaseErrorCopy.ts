@@ -59,6 +59,8 @@ export const DATABASE_ERROR_TEXT = {
   stillFailing: 'Still couldn’t open it. Nothing has been changed.',
   copySaved: 'Copy saved.',
   copyFailed: 'Couldn’t save the copy. Try another place.',
+  copyUnsettled:
+    'Couldn’t save a complete copy right now. Close Kitbag, open it again, then try again.',
   relaunchFailed:
     'Your data opened, but Kitbag couldn’t restart. Close Kitbag and open it again.',
 } as const;
@@ -90,6 +92,10 @@ export function databaseErrorFrame(
     case 'open':
       return 'open';
   }
+}
+
+export function offersRetry(frame: DatabaseErrorFrame): boolean {
+  return frame !== 'newer';
 }
 
 function datePart(value: number): string {

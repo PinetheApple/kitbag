@@ -5,6 +5,7 @@ import { DATABASE_ERROR_TEXT } from './databaseErrorCopy.ts';
 
 export interface DatabaseErrorActionsProps {
   readonly stacked: boolean;
+  readonly canRetry: boolean;
   readonly retrying: boolean;
   readonly onRetry: () => void;
   readonly onSaveCopy: () => void;
@@ -12,22 +13,25 @@ export interface DatabaseErrorActionsProps {
 
 export function DatabaseErrorActions({
   stacked,
+  canRetry,
   retrying,
   onRetry,
   onSaveCopy,
 }: DatabaseErrorActionsProps) {
   return (
     <View style={[styles.actions, stacked && styles.stacked]}>
-      <Button
-        variant="primary"
-        size="target"
-        icon="analyzing"
-        iconSize="emptyButton"
-        label={DATABASE_ERROR_TEXT.retry}
-        disabled={retrying}
-        fill={!stacked}
-        onPress={onRetry}
-      />
+      {canRetry ? (
+        <Button
+          variant="primary"
+          size="target"
+          icon="analyzing"
+          iconSize="emptyButton"
+          label={DATABASE_ERROR_TEXT.retry}
+          disabled={retrying}
+          fill={!stacked}
+          onPress={onRetry}
+        />
+      ) : null}
       <Button
         variant="tonal"
         size="target"

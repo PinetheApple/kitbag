@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DATABASE_ERROR_TEXT } from './databaseErrorCopy.ts';
 
+const UNSETTLED_CODE = 'database-copy-unsettled';
+
 const mocks = vi.hoisted(() => ({
   databaseStatus: vi.fn(),
   retryDatabase: vi.fn(),
@@ -15,7 +17,11 @@ vi.mock('@/runtime/database', () => ({
   databaseStatus: mocks.databaseStatus,
   retryDatabase: mocks.retryDatabase,
 }));
-vi.mock('@kitbag/core-native', () => ({
+vi.mock('@kitbag/core-native', async (original) => ({
+  ...(await original<Record<string, unknown>>()),
+  getKitbagLibrary: () => ({
+    getConstants: () => ({ databaseCopyUnsettled: UNSETTLED_CODE }),
+  }),
   saveDatabaseCopy: mocks.saveDatabaseCopy,
 }));
 vi.mock('expo', () => ({ reloadAppAsync: mocks.reloadAppAsync }));
@@ -106,6 +112,19 @@ describe('saveDatabaseCopyNotice', () => {
 
     await expect(saveDatabaseCopyNotice(TODAY)).resolves.toBe(
       DATABASE_ERROR_TEXT.copyFailed,
+    );
+  });
+
+  it('asks for a restart, not another place, when the database is mid-transaction', async () => {
+    quietly();
+    mocks.saveDatabaseCopy.mockRejectedValue(
+      Object.assign(new Error('unfinished transaction'), {
+        code: UNSETTLED_CODE,
+      }),
+    );
+
+    await expect(saveDatabaseCopyNotice(TODAY)).resolves.toBe(
+      DATABASE_ERROR_TEXT.copyUnsettled,
     );
   });
 });

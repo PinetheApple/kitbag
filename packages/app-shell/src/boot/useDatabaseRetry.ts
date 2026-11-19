@@ -3,13 +3,12 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { DATABASE_ERROR_TEXT } from './databaseErrorCopy.ts';
 import { reopenDatabase } from './databaseGate';
+import type { SetNotice } from './useNotice.ts';
 
 export type ReopenOutcome =
   | { readonly kind: 'relaunching' }
   | { readonly kind: 'failed'; readonly error: DatabaseOpenError }
   | { readonly kind: 'relaunchFailed' };
-
-export type SetNotice = (notice: string | null) => void;
 
 export interface DatabaseRetry {
   readonly error: DatabaseOpenError;

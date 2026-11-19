@@ -1,7 +1,7 @@
 import { useCallback, useRef } from 'react';
 
 import { saveDatabaseCopyNotice } from './databaseGate';
-import type { SetNotice } from './useDatabaseRetry.ts';
+import type { SetNotice } from './useNotice.ts';
 
 export function useSaveCopy(setNotice: SetNotice): () => void {
   const saving = useRef(false);
