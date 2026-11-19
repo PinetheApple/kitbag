@@ -61,6 +61,8 @@ export const dataFolder = {
   stripEnd: 4,
   stripBottom: 10,
   stripFixEnd: 12,
+  stripProgress: 2,
+  stripProgressBottom: -1,
 } as const;
 
 export const dataFolderType = {

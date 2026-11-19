@@ -9,10 +9,13 @@ import {
 import { useCallback, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ChoiceButtons, type Choice } from '../settings/ChoiceButtons.tsx';
 import { moveErrorText, type Places } from '../settings/dataFolderMoveText.ts';
 import {
+  CARD_PLACE,
   findVolume,
-  thePlace,
+  placeName,
+  THE_CARD,
   volumeName,
 } from '../settings/dataFolderText.ts';
 import {
@@ -22,10 +25,8 @@ import {
   PUT_BACK,
   USE_INTERNAL,
 } from './cardMissing.ts';
-import { ChoiceButtons } from './ChoiceButtons.tsx';
 import { cardMissingTitle } from './libraryStrip.ts';
 
-const ANY_CARD = 'card';
 const NO_PLACES: Places = { source: null, target: null };
 
 function useImporting(): boolean {
@@ -37,7 +38,7 @@ function useImporting(): boolean {
 function useCardName(rootMissing: boolean): string {
   return useDataFolder((s) => {
     const volumes = s.volumes;
-    if (!rootMissing || volumes === null) return thePlace(ANY_CARD);
+    if (!rootMissing || volumes === null) return THE_CARD;
     const uuid = volumes.currentVolumeUuid;
     return volumeName(findVolume(volumes, uuid), uuid);
   });
@@ -77,8 +78,8 @@ export function CardMissingSheet({
   const cardName = useCardName(rootMissing);
   const { refusal, explain, clear } = useRefusal();
   const offer = internalOffer({ rootMissing, moveActive, importing });
-  const uuid = useDataFolder((s) =>
-    rootMissing ? (s.volumes?.currentVolumeUuid ?? null) : ANY_CARD,
+  const place = useDataFolder((s) =>
+    rootMissing ? placeName(s.volumes?.currentVolumeUuid ?? null) : CARD_PLACE,
   );
 
   const dismiss = useCallback(() => {
@@ -99,6 +100,25 @@ export function CardMissingSheet({
   }, [offer, clear, switchToInternal, onDismiss, explain]);
 
   const offered = offer !== 'none';
+  const putBackChoice: Choice = {
+    key: PUT_BACK,
+    label: PUT_BACK,
+    primary: true,
+    disabled: false,
+    onPress: putBack,
+  };
+  const choices: readonly Choice[] = offered
+    ? [
+        {
+          key: USE_INTERNAL,
+          label: USE_INTERNAL,
+          primary: false,
+          disabled: offer === 'importing' || pending,
+          onPress: switchInternal,
+        },
+        putBackChoice,
+      ]
+    : [putBackChoice];
   const importingNote =
     offer === 'importing' && codes !== null
       ? moveErrorText(codes.moveErrors.importLockHeld, codes, NO_PLACES).body
@@ -106,7 +126,7 @@ export function CardMissingSheet({
   return (
     <Sheet
       visible={visible}
-      title={cardMissingTitle(uuid)}
+      title={cardMissingTitle(place)}
       titleIcon="sdCard"
       dismissLabel={CLOSE_CARD_MISSING}
       bottomInset={insets.bottom}
@@ -117,18 +137,7 @@ export function CardMissingSheet({
       ))}
       {importingNote === null ? null : <SheetHint>{importingNote}</SheetHint>}
       {refusal === null ? null : <SheetHint>{refusal}</SheetHint>}
-      <ChoiceButtons
-        secondary={
-          offered
-            ? {
-                label: USE_INTERNAL,
-                disabled: offer === 'importing' || pending,
-                onPress: switchInternal,
-              }
-            : null
-        }
-        primary={{ label: PUT_BACK, disabled: false, onPress: putBack }}
-      />
+      <ChoiceButtons choices={choices} />
     </Sheet>
   );
 }

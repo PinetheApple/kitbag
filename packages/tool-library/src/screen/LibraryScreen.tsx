@@ -193,7 +193,7 @@ function SongList({
   const query = useSongLibrary((s) => s.query);
   const rowPaths = useSongLibrary((s) => s.rowPaths);
   const index = useMemo(() => rowMatchIndex(rowPaths), [rowPaths]);
-  const moving = useDataFolder((s) =>
+  const movingKey = useDataFolder((s) =>
     s.codes === null ? null : movingRowKey(s.move, s.codes.movePhases, index),
   );
   const shown = useMemo(
@@ -217,7 +217,7 @@ function SongList({
           key={`${row.kind}-${String(row.id)}`}
           row={row}
           selected={open?.kind === row.kind && open.id === row.id}
-          moving={moving === rowKey(row)}
+          moving={movingKey === rowKey(row)}
           onActions={menu.openActions}
           onOpenStemSet={onOpenStemSet}
           onOpenSong={onOpenSong}

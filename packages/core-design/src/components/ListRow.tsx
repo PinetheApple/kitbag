@@ -1,4 +1,4 @@
-import { useCallback, type ReactNode } from 'react';
+import { useCallback, useMemo, type ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 
 import type { IconName } from '../icons.ts';
@@ -6,8 +6,8 @@ import { radius, rowLineHeight, size, space, textRoles } from '../roles.ts';
 import { rowLabel } from '../rowLabel.ts';
 import { switchA11y } from '../switch.ts';
 import { textStyle } from '../textStyle.ts';
-import { createThemedStyles } from '../ThemeProvider.tsx';
-import { radii } from '../tokens.ts';
+import { createThemedStyles, useTheme } from '../ThemeProvider.tsx';
+import { radii, type ColorToken } from '../tokens.ts';
 import { EllipsizedText } from './EllipsizedText.tsx';
 import { Icon } from './Icon.tsx';
 import { SwitchTrack } from './Switch.tsx';
@@ -73,11 +73,26 @@ export function RowText({
   );
 }
 
-export function RowIcon({ icon }: { readonly icon: IconName }) {
+export interface RowIconProps {
+  readonly icon: IconName;
+  readonly color?: ColorToken;
+  readonly border?: ColorToken;
+}
+
+export function RowIcon({
+  icon,
+  color = 'text',
+  border = 'line',
+}: RowIconProps) {
   const styles = useStyles();
+  const theme = useTheme();
+  const edge = useMemo(
+    () => ({ borderColor: theme.color[border] }),
+    [theme, border],
+  );
   return (
-    <View style={styles.tile}>
-      <Icon name={icon} size="tile" color="text" />
+    <View style={[styles.tile, edge]}>
+      <Icon name={icon} size="tile" color={color} />
     </View>
   );
 }

@@ -43,9 +43,9 @@ export const OLD_COPIES_LEFT = 'old copies left';
 
 const NOT_FOUND = 'Not found';
 const INTERNAL_PLACE = 'internal storage';
-const CARD_PLACE = 'SD card';
-const THE_CARD = 'the SD card';
-const PERCENT = 100;
+export const CARD_PLACE = 'SD card';
+export const THE_CARD = 'the SD card';
+export const PERCENT = 100;
 
 export function placeName(volumeUuid: string | null): string {
   return volumeUuid === null ? INTERNAL_PLACE : CARD_PLACE;

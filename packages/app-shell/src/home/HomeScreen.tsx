@@ -170,6 +170,17 @@ export function HomeScreen() {
 
   const resume = continueTarget(lastToolId, HOME_TOOLS, isOn);
   const resumeText = resume === undefined ? undefined : liveText[resume.id];
+  const resumeRow =
+    resume === undefined || resumeText === undefined ? null : (
+      <ToolRow
+        variant="resume"
+        icon={resume.icon}
+        title={`Continue · ${resume.name}`}
+        subtitle={resumeText.resume}
+        status="ready"
+        onPress={open(resume)}
+      />
+    );
 
   const tiles: ToolGridItem[] = visibleTiles(arrangement).flatMap((tile) => {
     const tool = toolFor(tile);
@@ -212,18 +223,7 @@ export function HomeScreen() {
           }
         />
 
-        {movePaused ? (
-          <MovePausedBanner />
-        ) : resume === undefined || resumeText === undefined ? null : (
-          <ToolRow
-            variant="resume"
-            icon={resume.icon}
-            title={`Continue · ${resume.name}`}
-            subtitle={resumeText.resume}
-            status="ready"
-            onPress={open(resume)}
-          />
-        )}
+        {movePaused ? <MovePausedBanner /> : resumeRow}
 
         <ToolGrid tiles={tiles} />
 

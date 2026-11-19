@@ -10,6 +10,7 @@ import {
   cleanName,
   REPLACE_LABELS,
   useSongLibrary,
+  type AnalysisFailure,
   type LibraryRow,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -20,6 +21,7 @@ import {
   failureText,
   replaceText,
   UNAVAILABLE_TEXT,
+  type FailureText,
 } from '../logic/notices.ts';
 import {
   REANALYZE_LABEL,
@@ -72,14 +74,21 @@ interface SheetProps {
   readonly bottomInset: number;
 }
 
+function sheetNotice(
+  failure: AnalysisFailure | null,
+  away: boolean,
+): FailureText | null {
+  if (failure !== null) return failureText(failure);
+  return away ? UNAVAILABLE_TEXT : null;
+}
+
 function ActionsSheet({ menu, bottomInset }: SheetProps) {
   const styles = useStyles();
   const reanalyze = useSongLibrary((s) => s.reanalyze);
   const { target, close, openRename, openDelete } = menu;
   const failure = useRowFailure(target);
   const away = useRowFiles(target) === 'unavailable';
-  const failureNotice =
-    failure === null ? (away ? UNAVAILABLE_TEXT : null) : failureText(failure);
+  const failureNotice = sheetNotice(failure, away);
   const retry = useCallback(() => {
     close();
     if (target?.kind === 'song') void reanalyze(target.id);

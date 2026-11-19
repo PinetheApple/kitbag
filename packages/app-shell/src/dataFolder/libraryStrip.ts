@@ -2,6 +2,7 @@ import { countLabel } from '@kitbag/core-design';
 import type { DataFolderVolumes, MoveStatus } from '@kitbag/core-native';
 import type { LibraryView } from '@kitbag/core-state';
 
+import { SONG_NOUNS, STEM_SONG_NOUNS } from '../nouns.ts';
 import { capitalised } from '../settings/capitalised.ts';
 import {
   progressBytes,
@@ -38,14 +39,14 @@ export type LibraryStrip =
     };
 
 const NOUNS: Readonly<Record<LibraryView, readonly [string, string]>> = {
-  songs: ['song', 'songs'],
-  stems: ['stem song', 'stem songs'],
+  songs: SONG_NOUNS,
+  stems: STEM_SONG_NOUNS,
 };
 
 const STILL_PLAY = 'songs still play';
 
-export function cardMissingTitle(volumeUuid: string | null): string {
-  return `${capitalised(placeName(volumeUuid))} not found`;
+export function cardMissingTitle(place: string): string {
+  return `${capitalised(place)} not found`;
 }
 
 function missingDetail(count: number, view: LibraryView): string | null {
@@ -84,7 +85,7 @@ export function libraryStrip({
   if (volumes?.currentAvailable === false)
     return {
       kind: 'missing',
-      title: cardMissingTitle(volumes.currentVolumeUuid),
+      title: cardMissingTitle(placeName(volumes.currentVolumeUuid)),
       detail: missingDetail(unavailable, view),
     };
   return move === null ? { kind: 'none' } : moveStrip(move);

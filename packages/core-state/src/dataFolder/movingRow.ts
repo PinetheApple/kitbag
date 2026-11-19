@@ -12,24 +12,46 @@ function folderOf(path: string): string | null {
   return end < 0 ? null : path.slice(0, end + 1);
 }
 
-// A folder names a row only when no other row's audio sits in or under it.
+function folderOwners(
+  files: ReadonlyMap<string, string>,
+): Map<string, string | null> {
+  const owners = new Map<string, string | null>();
+  for (const [path, key] of files)
+    for (
+      let end = path.indexOf(FOLDER_END);
+      end >= 0;
+      end = path.indexOf(FOLDER_END, end + 1)
+    ) {
+      const folder = path.slice(0, end + 1);
+      const owner = owners.get(folder);
+      owners.set(folder, owner === undefined || owner === key ? key : null);
+    }
+  return owners;
+}
+
+function soleOwnerFolders(
+  files: ReadonlyMap<string, string>,
+  rowPaths: ReadonlyMap<string, readonly string[]>,
+): Map<string, string> {
+  const owners = folderOwners(files);
+  const owned = new Map<string, string>();
+  for (const [key, paths] of rowPaths)
+    for (const path of paths) {
+      const folder = folderOf(path);
+      if (folder !== null && owners.get(folder) === key) owned.set(folder, key);
+    }
+  return owned;
+}
+
 export function rowMatchIndex(
   rowPaths: ReadonlyMap<string, readonly string[]>,
 ): RowMatchIndex {
   const files = new Map<string, string>();
   for (const [key, paths] of rowPaths)
     for (const path of paths) files.set(path, key);
-  const owned = new Map<string, string>();
-  for (const [key, paths] of rowPaths)
-    for (const path of paths) {
-      const folder = folderOf(path);
-      if (folder === null || owned.has(folder)) continue;
-      const alone = [...files].every(
-        ([other, owner]) => owner === key || !other.startsWith(folder),
-      );
-      if (alone) owned.set(folder, key);
-    }
-  const folders = [...owned].sort(([a], [b]) => b.length - a.length);
+  const folders = [...soleOwnerFolders(files, rowPaths)].sort(
+    ([a], [b]) => b.length - a.length,
+  );
   return { files, folders };
 }
 

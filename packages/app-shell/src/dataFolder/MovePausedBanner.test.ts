@@ -23,6 +23,7 @@ vi.mock('@kitbag/core-design', async (original) => {
     ...(await original<Record<string, unknown>>()),
     Card: hostMock('Card'),
     Icon: () => null,
+    RowIcon: () => null,
     Button: hostMock('Button'),
     useTextScaled: () => false,
     useTheme: () => ({ accentInk: 'accent' }),

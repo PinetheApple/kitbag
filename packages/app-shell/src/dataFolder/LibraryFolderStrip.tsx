@@ -5,9 +5,8 @@ import {
   dataFolder,
   dataFolderType,
   Icon,
-  miniPlayer,
-  radius,
   rowLabel,
+  RowIcon,
   size,
   space,
   textRoles,
@@ -27,10 +26,10 @@ import {
   type PressableStateCallbackType,
 } from 'react-native';
 
+import { PERCENT } from '../settings/dataFolderText.ts';
 import { libraryStrip } from './libraryStrip.ts';
 import { unavailableCount } from './libraryStripCount.ts';
 
-const PERCENT = 100;
 const FIX = 'Fix';
 
 const useStyles = createThemedStyles((theme) => ({
@@ -45,16 +44,6 @@ const useStyles = createThemedStyles((theme) => ({
   },
   pressed: { backgroundColor: theme.color.surface2 },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.rowGap },
-  icon: {
-    width: size.toolIcon,
-    height: size.toolIcon,
-    borderRadius: radius.toolIcon,
-    backgroundColor: theme.color.surface2,
-    borderWidth: size.stroke,
-    borderColor: theme.color.line,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   text: { flex: 1, minWidth: 0 },
   title: { ...textStyle(dataFolderType.stripTitle), color: theme.color.text },
   detail: {
@@ -66,8 +55,8 @@ const useStyles = createThemedStyles((theme) => ({
     position: 'absolute',
     left: 0,
     right: 0,
-    bottom: miniPlayer.progressTop,
-    height: miniPlayer.progress,
+    bottom: dataFolder.stripProgressBottom,
+    height: dataFolder.stripProgress,
     backgroundColor: theme.color.line,
   },
   fill: { height: '100%', backgroundColor: theme.color.accent },
@@ -85,9 +74,7 @@ function StripBody({ icon, bad, title, detail, trailing }: StripBodyProps) {
   const styles = useStyles();
   return (
     <View style={styles.row}>
-      <View style={styles.icon}>
-        <Icon name={icon} size="tile" color={bad ? 'redInk' : 'text'} />
-      </View>
+      <RowIcon icon={icon} color={bad ? 'redInk' : 'text'} />
       <View style={styles.text}>
         <Text style={styles.title}>{title}</Text>
         {detail === null ? null : <Text style={styles.detail}>{detail}</Text>}

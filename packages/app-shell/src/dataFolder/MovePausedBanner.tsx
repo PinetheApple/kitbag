@@ -1,10 +1,8 @@
 import {
   Card,
   createThemedStyles,
-  Icon,
-  radius,
   rowLineHeight,
-  size,
+  RowIcon,
   space,
   textRoles,
   textStyle,
@@ -18,23 +16,13 @@ import {
 import { useCallback } from 'react';
 import { Text, View } from 'react-native';
 
+import { ChoiceButtons } from '../settings/ChoiceButtons.tsx';
 import { moveErrorText, pausedHint } from '../settings/dataFolderMoveText.ts';
 import { pausedTitle, RESUME, UNDO } from '../settings/dataFolderText.ts';
-import { ChoiceButtons } from './ChoiceButtons.tsx';
 
 const useStyles = createThemedStyles((theme) => ({
   body: { gap: space.sectionGap },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: space.rowGap },
-  icon: {
-    width: size.toolIcon,
-    height: size.toolIcon,
-    borderRadius: radius.toolIcon,
-    backgroundColor: theme.color.surface2,
-    borderWidth: size.stroke,
-    borderColor: theme.color.accentDim,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   text: { flex: 1, minWidth: 0 },
   title: {
     ...textStyle(textRoles.rowTitle),
@@ -78,9 +66,11 @@ export function MovePausedBanner() {
     <Card emphasis="activeGroup">
       <View style={styles.body}>
         <View style={styles.row}>
-          <View style={styles.icon}>
-            <Icon name="moveFolder" size="tile" color={theme.accentInk} />
-          </View>
+          <RowIcon
+            icon="moveFolder"
+            color={theme.accentInk}
+            border="accentDim"
+          />
           <View style={styles.text}>
             <Text accessibilityRole="header" style={styles.title}>
               {pausedTitle(paused)}
@@ -96,8 +86,22 @@ export function MovePausedBanner() {
           </View>
         </View>
         <ChoiceButtons
-          secondary={{ label: UNDO, disabled: pending, onPress: undo }}
-          primary={{ label: RESUME, disabled: pending, onPress: resume }}
+          choices={[
+            {
+              key: UNDO,
+              label: UNDO,
+              primary: false,
+              disabled: pending,
+              onPress: undo,
+            },
+            {
+              key: RESUME,
+              label: RESUME,
+              primary: true,
+              disabled: pending,
+              onPress: resume,
+            },
+          ]}
         />
       </View>
     </Card>
