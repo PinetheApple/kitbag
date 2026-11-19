@@ -14,6 +14,9 @@ readonly FIXTURE_SONG=e2eclick
 readonly FIXTURE_SECONDS=240
 readonly FIXTURE_SOUND=e2ehit
 readonly FIXTURE_SOUND_SECONDS=1
+readonly FIXTURE_STEMS=e2estems
+readonly FIXTURE_STEMS_NO_GRID=e2enogrid
+readonly FIXTURE_STEMS_SECONDS=8
 readonly DEVICE_DOWNLOADS=/sdcard/Download
 readonly DEFAULT_MAESTRO_HEAP=-Xmx1g
 readonly ANR_WINDOW='Application Not Responding'
@@ -204,17 +207,20 @@ if anr_window_open; then
 fi
 
 push_fixture() {
-  local fixture="$OUT/$1.wav"
-  python3 -I e2e/make_click_song.py "$fixture" "$2" &&
+  local maker=$1 fixture="$OUT/$2"
+  shift 2
+  python3 -I "e2e/$maker" "$fixture" "$@" &&
     adb_s push "$fixture" "$DEVICE_DOWNLOADS/" >/dev/null || {
     fail "could not make or push $fixture"
     exit "$EXIT_INSTALL_FAILED"
   }
 }
 
-step "Pushing the fixture song and click sound"
-push_fixture "$FIXTURE_SONG" "$FIXTURE_SECONDS"
-push_fixture "$FIXTURE_SOUND" "$FIXTURE_SOUND_SECONDS"
+step "Pushing the fixture song, click sound and stem songs"
+push_fixture make_click_song.py "$FIXTURE_SONG.wav" "$FIXTURE_SECONDS"
+push_fixture make_click_song.py "$FIXTURE_SOUND.wav" "$FIXTURE_SOUND_SECONDS"
+push_fixture make_stem_bundle.py "$FIXTURE_STEMS.zip" "$FIXTURE_STEMS_SECONDS"
+push_fixture make_stem_bundle.py "$FIXTURE_STEMS_NO_GRID.zip" "$FIXTURE_STEMS_SECONDS" --no-grid
 
 step "Running ${#FLOWS[@]} flow(s)"
 adb_s logcat -c 2>/dev/null
@@ -230,6 +236,8 @@ MAESTRO_CLI_NO_ANALYTICS=1 \
   --test-output-dir "$ARTIFACTS" \
   -e FIXTURE_SONG="$FIXTURE_SONG" \
   -e FIXTURE_SOUND="$FIXTURE_SOUND" \
+  -e FIXTURE_STEMS="$FIXTURE_STEMS" \
+  -e FIXTURE_STEMS_NO_GRID="$FIXTURE_STEMS_NO_GRID" \
   "${FLOWS[@]}"
 maestro_status=$?
 

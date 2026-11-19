@@ -143,6 +143,13 @@ expect "every flow passes" "$EXIT_OK" "all flows passed" "$APK"
 check "  ... leaves permissions to the flows' launchApp" bash -c '! grep -q "pm grant" "$ADB_LOG"'
 check "  ... pushes the fixture song" adb_called "push .*e2eclick.wav /sdcard/Download/"
 check "  ... and the fixture click sound" adb_called "push .*e2ehit.wav /sdcard/Download/"
+check "  ... and the stem song with a beat grid" adb_called "push .*e2estems.zip /sdcard/Download/"
+check "  ... and the one without" adb_called "push .*e2enogrid.zip /sdcard/Download/"
+check "  ... whose bundles differ only in beats.json" python3 -I -c '
+import sys, zipfile
+grid, bare = (set(zipfile.ZipFile(p).namelist()) for p in sys.argv[1:])
+sys.exit(grid - bare != {"beats.json"} or bare - grid != set())
+' "$(find "$LAST_OUT_DIR" -name e2estems.zip)" "$(find "$LAST_OUT_DIR" -name e2enogrid.zip)"
 check "  ... runs every flow, no subflows" test "$(maestro_flows)" -eq "$(flow_count)"
 check "  ... on the emulator" maestro_got "emulator-5554"
 check "  ... with a JUnit report" maestro_got "junit"
@@ -150,6 +157,8 @@ check "  ... with analytics and update checks off and a capped heap" \
   maestro_got "analytics=1 update=true opts=-Xmx1g"
 check "  ... and the fixture title passed in" maestro_got "FIXTURE_SONG=e2eclick"
 check "  ... and the fixture sound's name" maestro_got "FIXTURE_SOUND=e2ehit"
+check "  ... and the gridded stem song's title" maestro_got "FIXTURE_STEMS=e2estems"
+check "  ... and the gridless one's" maestro_got "FIXTURE_STEMS_NO_GRID=e2enogrid"
 
 check "  ... with every animation scale at 0 during the run" \
   bash -c 'for s in window_animation_scale transition_animation_scale animator_duration_scale; do grep -q "settings put global $s 0" "$ADB_LOG" || exit 1; done'
