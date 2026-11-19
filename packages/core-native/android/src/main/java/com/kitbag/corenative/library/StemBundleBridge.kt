@@ -11,25 +11,18 @@ import com.kitbag.corenative.stemdeck.DownloadFiles
 import java.io.File
 
 class StemBundleBridge(private val resolver: ContentResolver, private val root: () -> File) {
-  private var importerRoot: File? = null
-  private var cached: StemBundleImporter? = null
-
   // One importer per root, so its synchronized import still serializes every import into that root.
-  @Synchronized
-  private fun importer(): StemBundleImporter {
-    val base = root()
-    cached?.takeIf { importerRoot == base }?.let { return it }
-    return StemBundleImporter(
-      base = base,
+  private val importers = PerRoot { libraryRoot ->
+    StemBundleImporter(
+      base = libraryRoot,
       maxStems = NativeStemBundle.maxStems,
       availableBytes = { StatFs(it.path).availableBytes },
       sidecars = NativeStemBundle,
       warn = { message, cause -> Log.w(TAG, message, cause) },
-    ).also {
-      cached = it
-      importerRoot = base
-    }
+    )
   }
+
+  private fun importer() = importers.get(root())
 
   fun check(uri: String, isFolder: Boolean): WritableMap =
     StemBundleMaps.check(importer().check(source(uri, isFolder)), NativeStemBundle.maxStems)

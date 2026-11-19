@@ -2,11 +2,10 @@ package com.kitbag.corenative.library
 
 import android.content.Context
 import android.os.Environment
-import android.os.StatFs
 import android.os.storage.StorageManager
 import java.io.File
 
-data class PortableVolume(val uuid: String, val filesDir: File, val mounted: Boolean, val freeBytes: Long)
+data class PortableVolume(val uuid: String, val filesDir: File, val mounted: Boolean)
 
 interface VolumeProvider {
   fun portable(): List<PortableVolume>
@@ -21,8 +20,7 @@ class AndroidVolumes(private val context: Context) : VolumeProvider {
       val volume = storage.getStorageVolume(dir) ?: return@mapNotNull null
       val uuid = volume.uuid
       if (volume.isPrimary || !volume.isRemovable || uuid == null) return@mapNotNull null
-      val mounted = volume.state == Environment.MEDIA_MOUNTED
-      PortableVolume(uuid, dir, mounted, if (mounted) StatFs(dir.path).availableBytes else 0L)
+      PortableVolume(uuid, dir, volume.state == Environment.MEDIA_MOUNTED)
     }
   }
 }

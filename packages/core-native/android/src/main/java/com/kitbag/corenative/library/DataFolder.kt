@@ -1,10 +1,10 @@
 package com.kitbag.corenative.library
 
 import android.content.Context
+import android.util.Log
 import com.kitbag.corenative.stemdeck.writeAtomically
 import java.io.File
 import java.io.IOException
-import java.util.concurrent.locks.ReentrantReadWriteLock
 import org.json.JSONException
 import org.json.JSONObject
 
@@ -25,9 +25,12 @@ sealed interface LibraryFile {
 class DataFolderUnavailableException(val volumeUuid: String) :
   IOException("The data folder's volume is not mounted: $volumeUuid")
 
-class DataFolder(filesDir: File, private val volumes: VolumeProvider) {
+class DataFolder(
+  filesDir: File,
+  private val volumes: VolumeProvider,
+  private val warn: (message: String, cause: Exception) -> Unit,
+) {
   val internalRoot = File(filesDir, DIR_NAME)
-  val importLock = ReentrantReadWriteLock()
   private val stateFile = File(filesDir, STATE_FILE_NAME)
 
   fun location(): DataFolderLocation {
@@ -40,8 +43,15 @@ class DataFolder(filesDir: File, private val volumes: VolumeProvider) {
         DataFolderLocation.Internal
       }
     } catch (e: JSONException) {
-      DataFolderLocation.Internal
+      unreadable(e)
+    } catch (e: IOException) {
+      unreadable(e)
     }
+  }
+
+  private fun unreadable(cause: Exception): DataFolderLocation {
+    warn("Unreadable $STATE_FILE_NAME; using internal storage", cause)
+    return DataFolderLocation.Internal
   }
 
   fun select(location: DataFolderLocation) = writeAtomically(stateFile, json(location).toString())
@@ -78,12 +88,14 @@ class DataFolder(filesDir: File, private val volumes: VolumeProvider) {
     private const val KIND_INTERNAL = "internal"
     private const val KIND_CARD = "card"
     private const val VOLUME_UUID = "volumeUuid"
+    private const val TAG = "KitbagDataFolder"
 
     @Volatile private var instance: DataFolder? = null
 
     fun get(context: Context): DataFolder =
       instance ?: synchronized(this) {
-        instance ?: context.applicationContext.let { DataFolder(it.filesDir, AndroidVolumes(it)) }
+        instance ?: context.applicationContext
+          .let { DataFolder(it.filesDir, AndroidVolumes(it)) { message, cause -> Log.w(TAG, message, cause) } }
           .also { instance = it }
       }
 

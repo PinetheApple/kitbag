@@ -44,10 +44,10 @@ class AnalysisWorker(context: Context, params: WorkerParameters) : Worker(contex
   }
 
   private fun analyze(relativePath: String, waveformRelativeDir: String): AnalysisResult {
-    val base = DataFolder.root(applicationContext)
-    val song = LibraryPaths.resolve(base, relativePath)
+    val root = DataFolder.root(applicationContext)
+    val song = LibraryPaths.resolve(root, relativePath)
     if (!song.isFile) throw MissingSongException()
-    val waveformDir = LibraryPaths.resolve(base, waveformRelativeDir, allowBase = true)
+    val waveformDir = LibraryPaths.resolve(root, waveformRelativeDir, allowBase = true)
     val output = SongAnalyzer.analyze(song, waveformDir, LibraryStorage.staging(applicationContext))
     return AnalysisResult(
       relativePath = relativePath,
@@ -56,7 +56,7 @@ class AnalysisWorker(context: Context, params: WorkerParameters) : Worker(contex
       bpm = output.result.bpm,
       beats = output.result.beats,
       downbeats = output.result.downbeats,
-      waveformRelativePath = output.waveform?.let { LibraryPaths.relativize(base, it) }.orEmpty(),
+      waveformRelativePath = output.waveform?.let { LibraryPaths.relativize(root, it) }.orEmpty(),
       durationSec = output.result.durationSec,
       analysisVersion = output.result.analysisVersion,
     )

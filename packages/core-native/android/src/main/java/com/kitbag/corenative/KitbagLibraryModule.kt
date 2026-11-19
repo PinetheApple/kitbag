@@ -17,8 +17,8 @@ import com.kitbag.corenative.library.AnalysisEvents
 import com.kitbag.corenative.library.AnalysisFailure
 import com.kitbag.corenative.library.AnalysisResult
 import com.kitbag.corenative.library.AnalysisStore
-import com.kitbag.corenative.library.DataFolder
 import com.kitbag.corenative.library.BackupShare
+import com.kitbag.corenative.library.DataFolder
 import com.kitbag.corenative.library.DocumentPicker
 import com.kitbag.corenative.library.ExportFiles
 import com.kitbag.corenative.library.FileShare
