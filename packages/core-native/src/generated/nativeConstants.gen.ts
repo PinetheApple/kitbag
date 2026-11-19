@@ -138,6 +138,7 @@ export const KB_RESULT = {
   KB_ERROR_INTERNAL: 5,
   KB_ERROR_NO_SPACE: 6,
   KB_ERROR_TOO_LONG: 7,
+  KB_ERROR_SILENT: 8,
 } as const;
 export type KB_RESULT = (typeof KB_RESULT)[keyof typeof KB_RESULT];
 
