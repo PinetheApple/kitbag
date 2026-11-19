@@ -7,7 +7,6 @@ import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReadableArray
-import com.facebook.react.bridge.WritableMap
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
@@ -172,7 +171,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       dir = LibraryPaths.resolve(root, relativeDir, allowBase = true)
       reserved = reserveTarget(dir, source, displayName ?: source.lastPathSegment)
       copyInto(source, reserved)
-      promise.resolve(importedAudio(root, reserved, displayName))
+      promise.resolve(AudioMetadata.importedAudio(root, reserved, displayName))
     } catch (e: Exception) {
       reserved?.delete()
       if (dir != null && dir != root?.canonicalFile) dir.delete()
@@ -198,16 +197,6 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       if (!part.renameTo(reserved)) throw IOException("Could not move the import into place")
     } finally {
       part.delete()
-    }
-  }
-
-  private fun importedAudio(root: File, file: File, displayName: String?): WritableMap {
-    val metadata = AudioMetadata.read(file)
-    return Arguments.createMap().apply {
-      putString("relativePath", LibraryPaths.relativize(root, file))
-      putString("title", metadata.title ?: LibraryPaths.displayTitle(displayName) ?: file.nameWithoutExtension)
-      putString("artist", metadata.artist.orEmpty())
-      putDouble("durationSec", metadata.durationSec)
     }
   }
 
@@ -262,22 +251,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     io.execute { results.remove(relativePath) }
   }
 
-  private fun emitAnalysis(result: AnalysisResult) {
-    emitOnAnalysis(result.toMap())
-  }
-
-  private fun AnalysisResult.toMap(): WritableMap =
-    Arguments.createMap().apply {
-      putString("relativePath", relativePath)
-      putBoolean("ok", ok)
-      putString("error", error)
-      putDouble("bpm", bpm.toDouble())
-      putArray("beats", Arguments.createArray().apply { beats.forEach { pushDouble(it.toDouble()) } })
-      putArray("downbeats", Arguments.createArray().apply { downbeats.forEach { pushInt(it) } })
-      putString("waveformRelativePath", waveformRelativePath)
-      putDouble("durationSec", durationSec)
-      analysisVersion?.let { putInt("analysisVersion", it) }
-    }
+  private fun emitAnalysis(result: AnalysisResult) = emitOnAnalysis(result.toMap())
 
   override fun deleteLibraryFile(relativePath: String, promise: Promise) {
     io.execute {

@@ -1,11 +1,23 @@
 package com.kitbag.corenative.library
 
 import android.media.MediaMetadataRetriever
+import com.facebook.react.bridge.Arguments
+import com.facebook.react.bridge.WritableMap
 import java.io.File
 
 class AudioMetadata(val title: String?, val artist: String?, val durationSec: Double) {
   companion object {
     private const val MILLIS_PER_SECOND = 1000.0
+
+    fun importedAudio(root: File, file: File, displayName: String?): WritableMap {
+      val metadata = read(file)
+      return Arguments.createMap().apply {
+        putString("relativePath", LibraryPaths.relativize(root, file))
+        putString("title", metadata.title ?: LibraryPaths.displayTitle(displayName) ?: file.nameWithoutExtension)
+        putString("artist", metadata.artist.orEmpty())
+        putDouble("durationSec", metadata.durationSec)
+      }
+    }
 
     fun read(file: File): AudioMetadata {
       val retriever = MediaMetadataRetriever()
