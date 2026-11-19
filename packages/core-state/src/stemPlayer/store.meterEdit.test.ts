@@ -2,7 +2,7 @@ import { GRID_METER, NO_METER_OVERRIDE } from '@kitbag/core-db';
 import { describe, expect, it } from 'vitest';
 
 import { FALLBACK_BEATS_PER_BAR } from './barMeter.ts';
-import { opened, stem } from './store.test-helper.ts';
+import { at, opened, stem } from './store.test-helper.ts';
 
 const THREE_FOUR = [{ beat: 0, beatsPerBar: GRID_METER.triple }];
 const OVERRIDE = { meterBeatsPerBar: GRID_METER.quadruple, barOneSeconds: 1 };
@@ -68,5 +68,14 @@ describe('saving a meter override', () => {
     await store.getState().saveMeterOverride(7, OVERRIDE);
     expect(store.getState().meterOverride).toEqual(NO_METER_OVERRIDE);
     expect(store.getState().downbeatIndices).toBe(before);
+  });
+});
+
+describe('the playhead read', () => {
+  it('is the mixer head in song seconds', async () => {
+    const { engine, store } = await opened([stem(1)]);
+    const seconds = 124.5;
+    engine.position = at(seconds);
+    expect(store.getState().playheadSeconds()).toBeCloseTo(seconds);
   });
 });
