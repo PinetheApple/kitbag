@@ -334,7 +334,7 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
     <thead><tr><th>Control</th><th>What it looks like</th><th>What the code does</th></tr></thead>
     <tbody>
       <tr>
-        <td>Base directory</td>
+        <td>Data folder</td>
         <td>Pick where Kitbag keeps its files</td>
         <td><span class="no">Write-only. Dead.</span> <code>pickBaseDirectory</code> stores a
         path in prefs; <b>nothing reads it</b>. <code>tool_library</code> (<code>:198</code>)
@@ -362,7 +362,7 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
         <td>“Back up or transfer your data”</td>
         <td>Writes <code>/storage/emulated/0/Download/kitbag_export.json</code>
         (<code>:116</code>) — hardcoded, Android-only, fails under scoped storage, and ignores
-        the base directory the user just picked.</td>
+        the data folder the user just picked.</td>
       </tr>
       <tr>
         <td>Import</td>
@@ -424,7 +424,7 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
         <div class="editrow"><span class="k">Back up everything</span><span class="v muted2">3 setlists · 24 songs<span class="ico">›</span></span></div>
         <div class="editrow"><span class="k">Restore from backup</span><span class="v"><span class="ico">›</span></span></div>
         <div class="editrow"><span class="k">Practice</span><span class="v">34 sessions <span class="muted2">· 18h 20m · avg 112 BPM</span></span></div>
-        <div class="editrow"><span class="k">Base directory</span><span class="v path muted2">…/Android/data/app.kitbag/files<span class="ico">›</span></span></div>
+        <div class="editrow"><span class="k">Data folder</span><span class="v path muted2">…/Android/data/app.kitbag/files<span class="ico">›</span></span></div>
         <div class="editrow"><span class="k">Storage</span><span class="v muted2">1.2 MB · 24 files<span class="ico">›</span></span></div>
       </div>
 
@@ -476,7 +476,7 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
         (<code>getTotalPracticeSeconds</code>, <code>getSessionCount</code>); average tempo is
         the one addition, and it is the stat a musician actually reads. Everything Kitbag
         records about practice today is visible on this line.</li>
-        <li><b>Base directory is authoritative</b> (decided 2026-07-17, SPEC §17 D11).
+        <li><b>Data folder is authoritative</b> (decided 2026-07-17, SPEC §17 D11).
         It was write-only in the build — a picker that stored a path no code has ever read.
         The answer is to wire it, not to cut it: library, stems, export and the database all
         resolve against it. <code>Storage</code> is its <em>companion</em>, not its
@@ -704,7 +704,7 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
       <div class="editrow"><span class="k">Database</span><span class="v">1.2 MB</span></div>
       <div class="editrow"><span class="k">Location</span><span class="v path">…/Android/data/app.kitbag/files</span></div>
       <div class="crow"><span class="chip">⌦ Remove missing files (2)</span></div>
-      <span class="hint">Reports, doesn't relocate — the Base directory picker does that,
+      <span class="hint">Reports, doesn't relocate — the Data folder chooser does that,
       and this sheet is its companion rather than its replacement (D11). Location above is
       whatever the picker currently points at.</span>
     </div>
@@ -735,7 +735,7 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
     <div class="card chg"><b>~ Tools: badges become switches</b><p>The original drew
     <code>ON</code> as a static badge beside <code>Get</code> buttons. Same defect as the
     metronome's inert badges.</p></div>
-    <div class="card chg"><b>~ Base directory becomes authoritative</b><p>Was write-only:
+    <div class="card chg"><b>~ Data folder becomes authoritative</b><p>Was write-only:
     stored in prefs, read by nothing, while library and stems hardcoded the docs dir. It gets
     wired rather than cut — and brings a file migration and SAF with it. <code>Storage</code>
     is its companion, not its replacement.</p></div>
@@ -780,7 +780,7 @@ footer{margin-top:96px;border-top:1px solid var(--line);padding-top:20px;color:v
     would fight the route. Volume per song is obviously musical; latency per song may be a
     column that should go. Raised because the decision covered both together and this
     file's route model is new information.</li>
-    <li><b>Decided 2026-07-17 — base directory is wired, not cut.</b> The intent was “keep
+    <li><b>Decided 2026-07-17 — data folder is wired, not cut.</b> The intent was “keep
     my music on the SD card”, so it is a feature: the picker returns and becomes
     authoritative over library, stems, export and the database. This file drew the opposite
     and is corrected above. The migration and scoped-storage work it implies are scoped in
