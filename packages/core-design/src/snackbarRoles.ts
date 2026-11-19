@@ -13,6 +13,7 @@ export const snackbar = {
   actionH: 12,
   dividerMix: 0.3,
   aboveDock: 10,
+  aboveNav: 18,
   aboveSheet: 10,
   sheetSideInset: 16,
 } as const;

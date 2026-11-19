@@ -17,6 +17,13 @@ export function saveBackup(
   return getKitbagLibrary().saveBackup(fileName, contents);
 }
 
+export function saveDatabaseCopy(
+  databaseName: string,
+  fileName: string,
+): Promise<boolean> {
+  return getKitbagLibrary().saveDatabaseCopy(databaseName, fileName);
+}
+
 export function shareBackup(fileName: string, contents: string): Promise<void> {
   return getKitbagLibrary().shareBackup(fileName, contents);
 }
