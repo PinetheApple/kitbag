@@ -58,6 +58,8 @@ jobs:
         run: ./native/audio_core/build/stretch_verify
       - name: Mixdown — the offline stem mix renders exactly, stretches, cleans up and stays bounded
         run: ./native/audio_core/build/mixdown_verify
+      - name: Click sounds — prepare trims, fades and peak-matches; slots retire off the audio thread
+        run: ./native/audio_core/build/click_sound_verify
 
   # The TypeScript workspace (Phase 2, SPEC §13/§13.6). Runs the same gate the
   # project loop runs locally: typecheck, the architecture-rule lint, the
