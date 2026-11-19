@@ -6,6 +6,7 @@
 #include "click_take.h"
 #include "metronome/metronome.h"
 #include "mixer_test_stretch_support.h"
+#include "zero_clock.h"
 
 namespace mixer_test {
 namespace {
@@ -46,7 +47,7 @@ struct Rig {
       grid->beat_times_sec.push_back(kFirstBeatSec + kBeatSec * b);
     }
     metronome.SetTimeSignature(4, 4);
-    metronome.SetGrid(std::move(grid), 0, true);
+    metronome.SetGrid(std::move(grid), kitbag_test::kZeroClock, true);
     metronome.SetFollowMixer(true);
     metronome.Start();
     mixer.SetRate(kSpeed, kZeroClock, false);

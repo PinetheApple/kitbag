@@ -1,5 +1,6 @@
 #include "metronome_test_status_rig.h"
 #include "metronome_test_support.h"
+#include "zero_clock.h"
 
 namespace metronome_test {
 namespace {
@@ -198,7 +199,8 @@ void TestGridTurnsRampOff() {
   rig.RenderBlock();
   const bool stepping =
       rig.metronome.trainer_mirrors().ramp_state() == RampState::kStepping;
-  rig.metronome.SetGrid(MakeShiftedGrid(40, 0.0, 0.5), 0, true);
+  rig.metronome
+      .SetGrid(MakeShiftedGrid(40, 0.0, 0.5), kitbag_test::kZeroClock, true);
   rig.RenderBlock();
   Check(
       stepping &&

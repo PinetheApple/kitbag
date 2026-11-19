@@ -348,11 +348,7 @@ void Mixer::CommitPlan(
   for (int i = 0; i < count; ++i) {
     tracks_[i].stream->CommitStaged(clock, engine_running);
   }
-  plans_.Publish(
-      std::make_unique<TransportPlan>(plan),
-      clock.Now(),
-      engine_running
-  );
+  plans_.Publish(std::make_unique<TransportPlan>(plan), clock, engine_running);
   for (int i = 0; i < count; ++i) tracks_[i].stream->StopPrevious();
 }
 

@@ -4,6 +4,7 @@
 
 #include "metronome_test_poly_model.h"
 #include "song_bars.h"
+#include "zero_clock.h"
 
 namespace metronome_test {
 namespace {
@@ -320,7 +321,7 @@ void TestGridSubdivisionsAccented() {
   metronome.SetSubdivisionAccents(4, SlotBit(2));
   auto grid = MakeShiftedGrid(kGridBeats, 0.0, kGridIntervalSec);
   SetSongBars(grid.get(), 0, kBeatsPerBar);
-  metronome.SetGrid(std::move(grid), 0, true);
+  metronome.SetGrid(std::move(grid), kitbag_test::kZeroClock, true);
   StartTomClick(metronome, kDefaultBar);
   const auto left =
       RenderLeft(metronome, kBeatsPerBar * kGridBeatFrames + kBlockFrames);

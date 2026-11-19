@@ -27,7 +27,13 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-add_library(kitbag_core SHARED
+option(KITBAG_TSAN "Build everything under ThreadSanitizer" OFF)
+if(KITBAG_TSAN)
+  add_compile_options(-fsanitize=thread -g)
+  add_link_options(-fsanitize=thread)
+endif()
+
+set(KITBAG_CORE_SOURCES
   src/api/api.cpp
   src/api/api_analysis.cpp
   src/api/api_grid_click.cpp
@@ -88,7 +94,13 @@ add_library(kitbag_core SHARED
   src/tuner/tuning_rules.cpp
   src/tuner/wrong_string_hint.cpp
   src/analysis/waveform_peaks.cpp
+  src/api/api_click_sound.cpp
+  src/media/mono_file_stream.cpp
+  src/media/part_file.cpp
+  src/metronome/click_sound_prepare.cpp
+  src/metronome/sample_voices.cpp
 )
+add_library(kitbag_core SHARED ${KITBAG_CORE_SOURCES})
 
 target_include_directories(kitbag_core
   PUBLIC include
@@ -562,6 +574,14 @@ if(KITBAG_BUILD_TOOLS)
   target_include_directories(prime_bench PRIVATE src tools tools/media third_party)
   target_link_libraries(prime_bench PRIVATE signalsmith_stretch Threads::Threads m ${CMAKE_DL_LIBS})
 
+  add_executable(retire_race_verify
+    tools/rt/retire_race_verify.cpp
+    ${KITBAG_CORE_SOURCES})
+  target_include_directories(retire_race_verify
+    PRIVATE include src tools third_party)
+  target_link_libraries(retire_race_verify
+    PRIVATE qm_dsp signalsmith_stretch Threads::Threads ${CMAKE_DL_LIBS} m)
+
   add_executable(click_soak_verify
     tools/soak/click_soak_verify.cpp
     tools/soak/click_soak_test_classify.cpp
@@ -574,13 +594,6 @@ if(KITBAG_BUILD_TOOLS)
   target_include_directories(click_soak_verify PRIVATE tools/media)
   target_link_libraries(click_soak_verify PRIVATE click_soak_lib)
 endif()
-
-target_sources(kitbag_core PRIVATE
-  src/api/api_click_sound.cpp
-  src/media/mono_file_stream.cpp
-  src/media/part_file.cpp
-  src/metronome/click_sound_prepare.cpp
-  src/metronome/sample_voices.cpp)
 
 if(KITBAG_BUILD_TOOLS)
   add_executable(click_sound_verify

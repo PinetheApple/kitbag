@@ -6,8 +6,6 @@
 
 namespace kitbag {
 
-// What RtPublisher dates a retirement by. Read at the publish, since a call that
-// primes can outlast the publisher's grace window after a value taken on entry.
 class FrameClock {
  public:
   constexpr explicit FrameClock(uint64_t fixed) : fixed_(fixed) {}
@@ -19,7 +17,7 @@ class FrameClock {
   }
 
   uint64_t Now() const {
-    return frames_ != nullptr ? frames_->load(std::memory_order_relaxed)
+    return frames_ != nullptr ? frames_->load(std::memory_order_seq_cst)
                               : fixed_;
   }
 

@@ -1,4 +1,5 @@
 #include "metronome_test_poly_model.h"
+#include "zero_clock.h"
 
 namespace metronome_test {
 namespace {
@@ -247,7 +248,11 @@ void TestPolyGridPublishesSentinel() {
   StartFourFour(metronome, 3);
   const PolyRun run = RenderPoly(metronome, 2 * kBarFrames, [&](int64_t at) {
     if (at == kBarFrames + kThirdFrames + kBlockFrames) {
-      metronome.SetGrid(MakeShiftedGrid(16, 0.0, 0.5), at, true);
+      metronome.SetGrid(
+          MakeShiftedGrid(16, 0.0, 0.5),
+          kitbag_test::ClockAt(at),
+          true
+      );
     }
   });
 
