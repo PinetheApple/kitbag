@@ -43,7 +43,7 @@ import { retimeActions, retimeAnchor } from './retimeActions.ts';
 import { getStemPlayer, type StemPlayerRuntime } from './runtime.ts';
 import { sortedSections } from './sections.ts';
 import { countPending, songStart } from './songStart.ts';
-import { secondsToFrames } from './time.ts';
+import { framesToSeconds, secondsToFrames } from './time.ts';
 
 const MIX_SAVE_DELAY_MS = 600;
 export const SCRUB_SEEK_DELAY_MS = 120;
@@ -150,6 +150,7 @@ export interface StemPlayerActions {
     setId: number,
     override: MeterOverride,
   ) => Promise<void>;
+  readonly playheadSeconds: () => number;
 }
 
 export type StemPlayerStore = StemPlayerState &
@@ -463,6 +464,8 @@ export function createStemPlayerStore(
       ...exportActions(context),
       saveMeterOverride: (setId, override) =>
         runtimeOf().records.saveStemSetMeterOverride(setId, override),
+      playheadSeconds: () =>
+        framesToSeconds(runtimeOf().engine.position(), get().engineRate),
     };
   });
 }

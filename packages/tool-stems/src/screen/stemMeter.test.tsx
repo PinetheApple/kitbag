@@ -10,6 +10,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { NO_GRID_REASON, NOT_SAVED } from '../logic/meterEdit.ts';
 import {
+  at,
   flush,
   mountTracked,
   SONG_DETAILS,
@@ -139,7 +140,7 @@ describe('the Meter row', () => {
 describe('editing the meter', () => {
   it('takes the beat nearest the playhead as bar 1, saves and applies it', async () => {
     const p = await meterSheet();
-    p.frames(PLAYHEAD);
+    p.engine.position = at(PLAYHEAD);
     await pressText(p, meterCopy.barOneHere);
     expect(p.records.saveStemSetMeterOverride).toHaveBeenCalledWith(
       SET_ID,
@@ -149,9 +150,17 @@ describe('editing the meter', () => {
     expect(p.has(MOVED_NOTICE)).toBe(true);
   });
 
+  it('takes bar 1 from the engine head, not the drawn playhead', async () => {
+    const p = await meterSheet();
+    p.frames(0);
+    p.engine.position = at(PLAYHEAD);
+    await pressText(p, meterCopy.barOneHere);
+    expect(p.store.getState().meterOverride).toEqual(MOVED);
+  });
+
   it('puts the old bars back on Undo', async () => {
     const p = await meterSheet();
-    p.frames(PLAYHEAD);
+    p.engine.position = at(PLAYHEAD);
     const before = p.store.getState().downbeatIndices;
     await pressText(p, meterCopy.barOneHere);
     await p.press('Undo');
@@ -194,7 +203,7 @@ describe('editing the meter', () => {
 
   it('keeps both of two quick edits', async () => {
     const p = await meterSheet();
-    p.frames(PLAYHEAD);
+    p.engine.position = at(PLAYHEAD);
     const release = holdSave(p);
     await pressText(p, TRIPLE_LABEL);
     await pressText(p, meterCopy.barOneHere);

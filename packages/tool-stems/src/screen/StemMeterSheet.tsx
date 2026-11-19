@@ -84,10 +84,7 @@ function useSheetNotice(
   }, [notice, act, dismiss]);
 }
 
-function useMeterHandlers(
-  edit: (change: MeterEdit) => void,
-  playhead: SharedValue<number>,
-) {
+function useMeterHandlers(edit: (change: MeterEdit) => void) {
   const pickMeter = useCallback(
     (meter: number) => {
       if (isGridMeter(meter)) edit({ kind: 'meter', meter });
@@ -95,10 +92,10 @@ function useMeterHandlers(
     [edit],
   );
   const barOne = useCallback(() => {
-    const { beats } = stemPlayerStore.getState();
-    const seconds = barOneHere(beats, playhead.value);
+    const { beats, playheadSeconds } = stemPlayerStore.getState();
+    const seconds = barOneHere(beats, playheadSeconds());
     if (seconds !== null) edit({ kind: 'barOne', seconds });
-  }, [edit, playhead]);
+  }, [edit]);
   const reset = useCallback(() => {
     edit({ kind: 'reset' });
   }, [edit]);
@@ -124,7 +121,7 @@ export function StemMeterSheet({
   const state = useStemPlayer((s) => meterGridState(s.beats));
   const { notice, edit, act, dismiss, closed } = useMeterEdits();
   const sheetNotice = useSheetNotice(notice, act, dismiss);
-  const { pickMeter, barOne, reset } = useMeterHandlers(edit, playhead);
+  const { pickMeter, barOne, reset } = useMeterHandlers(edit);
   const close = useCallback(() => {
     closed();
     onClose();
