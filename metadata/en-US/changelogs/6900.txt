@@ -1,0 +1,1 @@
+• Backups now include your stem songs' settings (name, meter, retimed lyrics, speed, click and mix). They restore onto the stem songs already on your phone; re-import a stem song from StemDeck first if it's missing.
