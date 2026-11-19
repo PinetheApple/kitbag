@@ -12,7 +12,6 @@ import type {
 export const METER_FAILED = 'Needs a beat grid. Re-analyse first.';
 export const UNDO_LABEL = 'Undo';
 export const METER_SAVE_FAILED = 'Could not save the meter.';
-export const TRY_AGAIN_LABEL = 'Try again';
 export const DETECTED_RESTORED =
   'Back to the detected meter. Saved for this song.';
 
@@ -52,14 +51,3 @@ export function reanalysedText(
   const found = `${meterLabel(detected.meter)}, bar 1 at ${tenthsClock(detected.barOneSeconds)}`;
   return `Re-analysed: ${found}. ${keptText(override)}`;
 }
-
-export const PLAYER_MENU_TEXT = {
-  title: 'Player',
-  dismiss: 'Close the player menu',
-  reanalyzeDetail: 'Find the beat again',
-  countIn: 'Count-in',
-  countInValue: 'Off',
-  countInDetail: 'Arrives with count-in for songs',
-  stop: 'Stop',
-  stopDetail: 'Ends the song and the mini-player',
-} as const;

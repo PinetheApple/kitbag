@@ -1,6 +1,11 @@
 // react-test-renderer is deprecated, but it alone exposes host props with no DOM.
 /* eslint-disable @typescript-eslint/no-deprecated */
-import { screenBar, space, type LoopHandles } from '@kitbag/core-design';
+import {
+  meterCopy,
+  screenBar,
+  space,
+  type LoopHandles,
+} from '@kitbag/core-design';
 import { act, createElement, type ReactNode } from 'react';
 import {
   create,
@@ -357,7 +362,11 @@ describe('the player menu', () => {
     return tree.root
       .findByType('Sheet' as never)
       .findAll((node) => ['MenuRow', 'MeterRow'].includes(String(node.type)))
-      .map((node) => (node.props.label ?? 'Meter') as unknown);
+      .map((node) =>
+        String(node.type) === 'MeterRow'
+          ? meterCopy.title
+          : (node.props.label as unknown),
+      );
   }
 
   function meterRow(tree: ReactTestRenderer) {
@@ -467,6 +476,17 @@ describe('the player menu', () => {
     );
     expect(shown).toHaveLength(1);
   });
+
+  it.each(['failed', 'missing'])(
+    'gives the failed reason when the song is %s',
+    (status) => {
+      display.status = status;
+      expect(meterRow(openMenu()).props).toMatchObject({
+        disabled: true,
+        reason: METER_FAILED,
+      });
+    },
+  );
 
   it.each([
     ['analysing', 'analyzing', 'Available once the beat is found'],
@@ -642,19 +662,25 @@ describe('the transport', () => {
 });
 
 describe('a re-analysis with an override set', () => {
-  function useDetected(tree: ReactTestRenderer) {
-    return tree.root.find(
+  function detectedNotes(tree: ReactTestRenderer) {
+    return tree.root.findAll(
       (node) =>
         String(node.type) === 'Snackbar' &&
-        node.props.actionLabel === 'Use detected',
+        node.props.actionLabel === meterCopy.useDetected,
     );
+  }
+
+  function detectedNote(tree: ReactTestRenderer) {
+    const [note] = detectedNotes(tree);
+    if (note === undefined) throw new Error('no re-analysis notice');
+    return note;
   }
 
   it('says the override is kept and offers the new result', async () => {
     meter.override = { meterBeatsPerBar: null, barOneSeconds: 105.3 };
     meter.notice = { meter: 3, barOneSeconds: 2.3 };
     const tree = mount();
-    const notice = useDetected(tree);
+    const notice = detectedNote(tree);
     expect(notice.props.message).toBe(
       'Re-analysed: 3/4, bar 1 at 0:02.3. Your bar 1 is kept.',
     );
@@ -669,16 +695,25 @@ describe('a re-analysis with an override set', () => {
     });
   });
 
-  it('says nothing when the result agrees', () => {
+  it('holds the notice while the Meter sheet is open', () => {
     meter.override = { meterBeatsPerBar: 3, barOneSeconds: null };
+    meter.notice = { meter: 4, barOneSeconds: 2.3 };
     const tree = mount();
-    expect(
-      tree.root.findAll(
-        (node) =>
-          String(node.type) === 'Snackbar' &&
-          node.props.actionLabel === 'Use detected',
-      ),
-    ).toHaveLength(0);
+    const [more] = tree.root.findByType('AppBar' as never).props
+      .actions as readonly { onPress: () => void }[];
+    act(() => {
+      more?.onPress();
+    });
+    act(() => {
+      (tree.root.findByType('MeterRow' as never).props.onPress as () => void)();
+    });
+    expect(detectedNotes(tree)).toHaveLength(0);
+    act(() => {
+      (
+        tree.root.findByType('MeterSheet' as never).props.onClose as () => void
+      )();
+    });
+    expect(detectedNotes(tree)).toHaveLength(1);
   });
 });
 

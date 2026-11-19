@@ -22,10 +22,11 @@ import {
 } from '../stemPlayer/clickActions.ts';
 import { FALLBACK_BEATS_PER_BAR } from '../stemPlayer/barMeter.ts';
 import { sameNumbers, usableDownbeats } from '../stemPlayer/bars.ts';
-import { nearestBeat } from '../stemPlayer/loop.ts';
+import { snapToBeat } from '../stemPlayer/loop.ts';
 import { loopActions, type LoopSlice } from '../stemPlayer/loopActions.ts';
 import {
   detectedMeter,
+  isMeterOverridden,
   overrideDownbeats,
   type DetectedGrid,
   type DetectedMeter,
@@ -170,6 +171,7 @@ function sameGrid(a: DetectedGrid, b: DetectedGrid): boolean {
 }
 
 function overrideDisagrees(record: SongRecord): boolean {
+  if (!isMeterOverridden(meterOverrideOf(record))) return false;
   const detected = usableDownbeats(record.downbeatIndices, record.beats.length);
   return !sameNumbers(songDownbeats(record), detected);
 }
@@ -410,10 +412,10 @@ export function createSongPlayerStore(
         const meterOverride = meterOverrideOf(override);
         const downbeats = overrideDownbeats(detectedGrid, meterOverride);
         if (sameNumbers(downbeats, downbeatIndices)) {
-          set({ meterOverride });
+          set({ meterOverride, meterNotice: null });
           return;
         }
-        set({ meterOverride, downbeatIndices: downbeats });
+        set({ meterOverride, meterNotice: null, downbeatIndices: downbeats });
         void followNewGrid(context);
       },
       playheadBeatSeconds: () => {
@@ -422,8 +424,7 @@ export function createSongPlayerStore(
           runtimeOf().engine.position(),
           engineRate,
         );
-        const beat = nearestBeat(beats, playhead);
-        return beat === null ? null : (beats[beat] ?? null);
+        return beats.length === 0 ? null : snapToBeat(playhead, beats);
       },
       dismissMeterNotice: () => {
         set({ meterNotice: null });

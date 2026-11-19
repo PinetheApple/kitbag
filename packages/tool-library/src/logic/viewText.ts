@@ -2,6 +2,7 @@ import type { EmptyStateOption, IconName } from '@kitbag/core-design';
 import type { LibraryView } from '@kitbag/core-state';
 
 export const REANALYZE_LABEL = 'Re-analyse';
+export const TRY_AGAIN_LABEL = 'Try again';
 export const LOOP_KEY_TEXT = 'A|B';
 export const SPEED_KEY_TEXT = '1.0×';
 export const SPEED_KEY_LABEL = `Speed ${SPEED_KEY_TEXT}, not built yet`;
@@ -60,3 +61,14 @@ export const VIEW_TEXT: Readonly<Record<LibraryView, ViewText>> = {
     fabLabel: 'Add a stem song',
   },
 };
+
+export const PLAYER_MENU_TEXT = {
+  title: 'Player',
+  dismiss: 'Close the player menu',
+  reanalyzeDetail: 'Find the beat again',
+  countIn: 'Count-in',
+  countInValue: 'Off',
+  countInDetail: 'Arrives with count-in for songs',
+  stop: 'Stop',
+  stopDetail: 'Ends the song and the mini-player',
+} as const;

@@ -31,6 +31,15 @@ export interface MenuRowProps {
   readonly onPress: () => void;
 }
 
+function menuRowLabel(
+  label: string,
+  value: string | undefined,
+  detail: string | undefined,
+): string {
+  const facts = [value, detail].filter((fact) => fact !== undefined);
+  return facts.length === 0 ? label : rowLabel(label, facts.join(', '));
+}
+
 export function MenuRow({
   icon,
   label,
@@ -43,7 +52,7 @@ export function MenuRow({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={rowLabel(label, value ?? detail)}
+      accessibilityLabel={menuRowLabel(label, value, detail)}
       accessibilityState={{ disabled }}
       disabled={disabled}
       style={[styles.row, disabled && styles.disabled]}

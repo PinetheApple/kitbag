@@ -4,18 +4,19 @@ import {
   meterCopy,
   MeterRow,
   Sheet,
+  type MeterGridState,
 } from '@kitbag/core-design';
-import { useSongLibrary, useSongPlayer } from '@kitbag/core-state';
+import {
+  useSongLibrary,
+  useSongPlayer,
+  type StemPlayerStatus,
+} from '@kitbag/core-state';
 import { useCallback } from 'react';
 
 import { lockBadgeOf } from '../logic/lockText.ts';
 import { canReanalyze } from '../logic/notices.ts';
-import {
-  METER_FAILED,
-  meterGridState,
-  PLAYER_MENU_TEXT,
-} from '../logic/songMeterText.ts';
-import { REANALYZE_LABEL } from '../logic/viewText.ts';
+import { METER_FAILED, meterGridState } from '../logic/songMeterText.ts';
+import { PLAYER_MENU_TEXT, REANALYZE_LABEL } from '../logic/viewText.ts';
 import { useSongFailure } from './useSongFailure.ts';
 
 interface SongPlayerMenuProps {
@@ -28,13 +29,25 @@ interface SongPlayerMenuProps {
 }
 
 const doNothing = () => undefined;
+const UNPLAYABLE: ReadonlySet<StemPlayerStatus> = new Set([
+  'failed',
+  'missing',
+]);
+
+function meterRowState(
+  status: StemPlayerStatus,
+  grid: MeterGridState,
+): MeterGridState {
+  if (status === 'ready') return grid;
+  return UNPLAYABLE.has(status) ? 'failed' : 'pending';
+}
 
 function SongMeterRow({ onPress }: { readonly onPress: () => void }) {
   const override = useSongPlayer((s) => s.meterOverride);
   const detected = useSongPlayer((s) => s.detected.meter);
-  const ready = useSongPlayer((s) => s.status === 'ready');
+  const status = useSongPlayer((s) => s.status);
   const grid = meterGridState(useSongPlayer(lockBadgeOf));
-  const state = ready ? grid : 'pending';
+  const state = meterRowState(status, grid);
   return (
     <MeterRow
       value={override.meterBeatsPerBar ?? detected}

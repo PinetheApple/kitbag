@@ -64,14 +64,17 @@ export function SongMeter({
   const detected = useSongPlayer((s) => s.detected);
   const state = meterGridState(useSongPlayer(lockBadgeOf));
   const { notice } = meter;
+  const changeNoteOnScreen = !visible && notice !== null;
+  const reanalysedOnScreen = !visible && notice === null;
   return (
     <>
       <View style={styles.noteAnchor}>
-        {!visible && notice !== null ? (
+        {changeNoteOnScreen ? (
           <Snackbar {...notice} bottom={snackbar.aboveDock} />
-        ) : (
+        ) : null}
+        {reanalysedOnScreen ? (
           <ReanalysedNotice onUseDetected={meter.onReset} />
-        )}
+        ) : null}
       </View>
       <MeterSheet
         visible={visible}

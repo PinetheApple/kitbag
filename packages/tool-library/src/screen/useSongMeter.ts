@@ -6,18 +6,18 @@ import {
   useSongPlayer,
   type MeterOverride,
 } from '@kitbag/core-state';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 import {
   barOneMovedText,
   DETECTED_RESTORED,
   METER_SAVE_FAILED,
   meterSetText,
-  TRY_AGAIN_LABEL,
   UNDO_LABEL,
 } from '../logic/songMeterText.ts';
+import { TRY_AGAIN_LABEL } from '../logic/viewText.ts';
 
-type Pending =
+type MeterNoticeState =
   | {
       readonly kind: 'undo';
       readonly message: string;
@@ -43,13 +43,18 @@ export function useSongMeter(songId: number): SongMeter {
   const apply = useSongPlayer((s) => s.meterOverrideChanged);
   const beatAtPlayhead = useSongPlayer((s) => s.playheadBeatSeconds);
   const save = useSongLibrary((s) => s.saveSongMeterOverride);
-  const [pending, setPending] = useState<Pending | null>(null);
+  const [pending, setPending] = useState<MeterNoticeState | null>(null);
+  const saving = useRef(false);
 
   const change = useCallback(
     async (next: MeterOverride, message: string | null) => {
+      if (saving.current) return;
+      saving.current = true;
       const previous = override;
       apply(songId, next);
-      if (!(await save(songId, next))) {
+      const saved = await save(songId, next);
+      saving.current = false;
+      if (!saved) {
         apply(songId, previous);
         setPending({ kind: 'failed', next, message });
         return;

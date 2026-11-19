@@ -1,5 +1,5 @@
 appId: com.kitbag.app
-name: "#332: the song player's Meter row saves a meter and Undo restores it"
+name: "#332: the song player's Meter row saves a meter, and Undo's restore survives a relaunch"
 tags:
   - pr-332
 ---
@@ -11,18 +11,19 @@ tags:
     timeout: 10000
 - tapOn: 'More'
 - extendedWaitUntil:
-    visible: 'Meter, 4/4'
+    visible: 'Meter, [34]/4'
     timeout: 60000
-- tapOn: 'Meter, 4/4'
-- tapOn: '3/4'
-- assertVisible: 'Meter set to 3/4. Saved for this song.'
-- tapOn: 'Done'
-- tapOn: 'More'
-- assertVisible: 'Meter, 3/4 · yours'
-- tapOn: 'Meter, 3/4 · yours'
-- tapOn: 'Use detected'
-- assertVisible: 'Back to the detected meter. Saved for this song.'
-- tapOn: 'Undo'
-- tapOn: 'Done'
-- tapOn: 'More'
-- assertVisible: 'Meter, 3/4 · yours'
+- runFlow:
+    when:
+      visible: 'Meter, 4/4'
+    file: ../../subflows/meter-override-undo.yaml
+    env:
+      FROM: '4/4'
+      TO: '3/4'
+- runFlow:
+    when:
+      visible: 'Meter, 3/4'
+    file: ../../subflows/meter-override-undo.yaml
+    env:
+      FROM: '3/4'
+      TO: '4/4'

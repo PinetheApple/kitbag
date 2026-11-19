@@ -152,6 +152,33 @@ describe('the song meter', () => {
     expect(save).toHaveBeenCalledExactlyOnceWith(SONG, NONE);
   });
 
+  it('ignores another change while a save is still running', async () => {
+    let finish: (saved: boolean) => void = () => undefined;
+    save.mockImplementationOnce(
+      () =>
+        new Promise<boolean>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    await mounted();
+    await tap((m) => {
+      m.onPickMeter(3);
+    });
+    await tap((m) => {
+      m.onBarOneHere();
+      m.onReset();
+    });
+    expect(save).toHaveBeenCalledOnce();
+    await act(async () => {
+      finish(true);
+      await Promise.resolve();
+    });
+    await tap((m) => {
+      m.onBarOneHere();
+    });
+    expect(save).toHaveBeenCalledTimes(2);
+  });
+
   it('puts the bars back when the save fails and says so', async () => {
     player.saves = false;
     await mounted();
