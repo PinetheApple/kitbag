@@ -1,3 +1,4 @@
+import { GRID_METER } from '@kitbag/core-db';
 import { createSetlistRepository } from '@kitbag/core-db/src/setlist-repository';
 import { createSongPresetRepository } from '@kitbag/core-db/src/song-preset-repository';
 import type { ImportedAudio } from '@kitbag/core-native';
@@ -381,5 +382,32 @@ describe('song library store', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     await store.getState().correctDuration(row.id, 287.4);
     expect(store.getState().rows[0]).toMatchObject({ durationSec: 250 });
+  });
+
+  it("stores a song's meter override and reports it saved", async () => {
+    const { store, records } = setup();
+    const row = await importOne(store);
+    const override = {
+      meterBeatsPerBar: GRID_METER.triple,
+      barOneSeconds: 1.5,
+    };
+    await expect(
+      store.getState().saveSongMeterOverride(row.id, override),
+    ).resolves.toBe(true);
+    await expect(records.readSong(row.id)).resolves.toMatchObject(override);
+  });
+
+  it('reports a meter override that cannot be stored', async () => {
+    const { store, records } = setup();
+    const row = await importOne(store);
+    vi.spyOn(records, 'saveSongMeterOverride').mockRejectedValueOnce(
+      new Error('locked'),
+    );
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    await expect(
+      store
+        .getState()
+        .saveSongMeterOverride(row.id, { meterBeatsPerBar: GRID_METER.triple }),
+    ).resolves.toBe(false);
   });
 });

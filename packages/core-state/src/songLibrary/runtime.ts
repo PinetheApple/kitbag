@@ -67,6 +67,7 @@ export type SongLibraryRecords = Pick<
   | 'renameSong'
   | 'updateDuration'
   | 'renameStemSet'
+  | 'saveSongMeterOverride'
 >;
 
 export interface OpenSong {

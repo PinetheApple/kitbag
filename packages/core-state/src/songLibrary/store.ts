@@ -1,4 +1,8 @@
-import type { LibraryRow, SongFiles } from '@kitbag/core-db';
+import type {
+  LibraryRow,
+  MeterOverridePatch,
+  SongFiles,
+} from '@kitbag/core-db';
 import type {
   AnalysisResult,
   ImportedAudio,
@@ -103,6 +107,10 @@ export interface SongLibraryActions {
   deleteRow: (row: LibraryRow) => Promise<void>;
   renameRow: (row: LibraryRow, name: string) => Promise<void>;
   correctDuration: (songId: number, durationSec: number) => Promise<void>;
+  saveSongMeterOverride: (
+    songId: number,
+    patch: MeterOverridePatch,
+  ) => Promise<boolean>;
   dismissNotice: () => void;
   confirmReplace: () => Promise<void>;
   keepBoth: () => Promise<void>;
@@ -396,6 +404,19 @@ function rowActions(
         return;
       }
       await get().refresh();
+    },
+    saveSongMeterOverride: async (
+      songId: number,
+      patch: MeterOverridePatch,
+    ) => {
+      try {
+        await deps.records().saveSongMeterOverride(songId, patch);
+      } catch (error) {
+        warn(`meter of song ${String(songId)} not stored`, error);
+        return false;
+      }
+      await get().refresh();
+      return true;
     },
   };
 }
