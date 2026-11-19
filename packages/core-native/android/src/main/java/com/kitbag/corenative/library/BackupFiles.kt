@@ -14,9 +14,14 @@ object BackupFiles {
   const val DATABASE_MIME = "application/octet-stream"
 
   private const val BUFFER_BYTES = 64 * 1024
-  private val SAFE_FILE_NAME = Regex("^[A-Za-z0-9][A-Za-z0-9._-]{0,127}\\.json$")
-  private val SAFE_DATABASE_NAME = Regex("^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
-  private val SAFE_COPY_NAME = Regex("^[A-Za-z0-9][A-Za-z0-9 ._-]{0,127}\\.db$")
+  private const val NAME_HEAD = "[A-Za-z0-9]"
+  private const val NAME_TAIL = "A-Za-z0-9._-"
+  private const val NAME_TAIL_LENGTH = "{0,127}"
+  private const val NAME_STEM = "$NAME_HEAD[$NAME_TAIL]$NAME_TAIL_LENGTH"
+  private const val SPACED_NAME_STEM = "$NAME_HEAD[ $NAME_TAIL]$NAME_TAIL_LENGTH"
+  private val SAFE_FILE_NAME = Regex("^$NAME_STEM\\.json$")
+  private val SAFE_DATABASE_NAME = Regex("^$NAME_STEM$")
+  private val SAFE_COPY_NAME = Regex("^$SPACED_NAME_STEM\\.db$")
 
   fun isSafeFileName(name: String): Boolean = SAFE_FILE_NAME.matches(name)
 

@@ -9,6 +9,7 @@ import java.io.RandomAccessFile
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -147,6 +148,30 @@ class BackupSaveTest {
     assertThrows(IOException::class.java) { copy(source = missing) }
 
     assertEquals(listOf(PICKED), discarded)
+  }
+
+  @Test
+  fun `a database with a hot journal is not copied and the created document is deleted`() {
+    val source = database()
+    File(source.path + "-journal").apply { deleteOnExit() }.writeBytes(DATABASE_BYTES)
+
+    assertThrows(DatabaseUnsettledException::class.java) { copy(source = source) }
+
+    assertTrue(opened.isEmpty())
+    assertEquals(listOf(PICKED), discarded)
+  }
+
+  @Test
+  fun `only a journal or write-ahead log with bytes in it marks the database unsettled`() {
+    val source = database()
+    assertNull(BackupSave.unsettledJournal(source))
+
+    val wal = File(source.path + "-wal").apply { deleteOnExit() }
+    wal.writeBytes(ByteArray(0))
+    assertNull(BackupSave.unsettledJournal(source))
+
+    wal.writeBytes(DATABASE_BYTES)
+    assertEquals(wal, BackupSave.unsettledJournal(source))
   }
 
   private fun providerStream(file: File, mode: String): OutputStream {

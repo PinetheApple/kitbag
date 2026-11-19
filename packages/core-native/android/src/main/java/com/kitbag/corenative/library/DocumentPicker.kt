@@ -67,7 +67,12 @@ class DocumentPicker(
       type = BackupFiles.DATABASE_MIME
       BackupSave.dialogExtras(fileName).forEach { (key, value) -> putExtra(key, value) }
     }
-    startPick(intent, REQUEST_SAVE_DATABASE, promise, source = context.getDatabasePath(databaseName))
+    val source = context.getDatabasePath(databaseName)
+    BackupSave.unsettledJournal(source)?.let {
+      promise.reject(LibraryErrors.DATABASE_UNSETTLED, DatabaseUnsettledException(it))
+      return
+    }
+    startPick(intent, REQUEST_SAVE_DATABASE, promise, source = source)
   }
 
   fun pickFolder(promise: Promise) {
@@ -164,7 +169,8 @@ class DocumentPicker(
       try {
         promise.resolve(BackupSave.copyFile(saved, uri?.toString(), checkNotNull(source), ::openForWrite, ::discard))
       } catch (e: Exception) {
-        rejectLogged(promise, LibraryErrors.SAVE_FAILED, "Could not save the database copy", e)
+        val code = if (e is DatabaseUnsettledException) LibraryErrors.DATABASE_UNSETTLED else LibraryErrors.SAVE_FAILED
+        rejectLogged(promise, code, "Could not save the database copy", e)
       }
     }
   }
