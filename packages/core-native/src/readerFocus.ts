@@ -9,5 +9,5 @@ type NodeHandleSource = Parameters<typeof findNodeHandle>[0];
 export function focusReaderNode(node: HostInstance | null): void {
   if (node === null) return;
   const tag = findNodeHandle(node as unknown as NodeHandleSource);
-  if (tag !== null) getKitbagCommands().focusAccessibility(tag);
+  if (tag !== null) getKitbagCommands().focusReaderView(tag);
 }

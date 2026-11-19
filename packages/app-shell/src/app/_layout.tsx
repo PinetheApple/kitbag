@@ -16,6 +16,7 @@ import '@/runtime/standaloneMetronomeRuntime';
 import '@/runtime/backupRuntime';
 import '@/runtime/transportRuntime';
 import '@/runtime/keepAwakeRuntime';
+import '@/runtime/readerFocusRuntime';
 import '@/settings/rigRuntime';
 import '@/settings/toolsRuntime';
 
@@ -49,11 +50,9 @@ import { applyAppearance } from '@/runtime/appearanceRuntime';
 import { useKitbagRuntime } from '@/runtime/bootstrapRuntime';
 import { NotificationPromptSheet } from '@/notifications/NotificationPromptSheet';
 import { designFonts } from '@/runtime/designFonts';
-import { installReaderFocus } from '@/runtime/readerFocusRuntime';
 import { useSongLibraryAnalysis } from '@/runtime/songLibraryRuntime';
 
 void SplashScreen.preventAutoHideAsync();
-installReaderFocus();
 
 const CSS_VARIABLES: Readonly<Record<ThemeMode, Record<string, string>>> = {
   dark: themeVars('dark'),

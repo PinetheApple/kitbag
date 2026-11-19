@@ -1,5 +1,6 @@
 package com.kitbag.corenative
 
+import android.view.Choreographer
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityNodeInfo
 import com.facebook.react.bridge.Arguments
@@ -498,13 +499,23 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     }
   }
 
-  override fun focusAccessibility(viewTag: Double) {
+  override fun focusReaderView(viewTag: Double) {
     val tag = viewTag.toInt()
-    UiThreadUtil.runOnUiThread {
-      val uiManager = UIManagerHelper.getUIManagerForReactTag(reactApplicationContext, tag)
-      // resolveView throws when the tag's view state outlived its view.
-      val view = runCatching { uiManager?.resolveView(tag) }.getOrNull()
-      view?.performAccessibilityAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS, null)
+    UiThreadUtil.runOnUiThread { focusWhenMounted(tag, FOCUS_RETRY_FRAMES) }
+  }
+
+  // A view committed this frame mounts in Fabric's next frame dispatch.
+  private fun focusWhenMounted(tag: Int, framesLeft: Int) {
+    val uiManager = UIManagerHelper.getUIManagerForReactTag(reactApplicationContext, tag)
+    // resolveView throws when the tag's view state outlived its view.
+    val view = runCatching { uiManager?.resolveView(tag) }.getOrNull()
+    when {
+      view != null ->
+        view.performAccessibilityAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS, null)
+      framesLeft > 0 ->
+        Choreographer.getInstance().postFrameCallback { focusWhenMounted(tag, framesLeft - 1) }
     }
   }
 }
+
+private const val FOCUS_RETRY_FRAMES = 5
