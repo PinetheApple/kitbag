@@ -31,6 +31,7 @@ void RunLongGridTests();
 void RunLengthTests(const std::filesystem::path& dir);
 void RunSustainedTests();
 void RunMeterTests();
+void RunStemTests();
 }  // namespace analyze_test
 
 namespace {
@@ -258,7 +259,7 @@ void RunGuardTests() {
 
 }  // namespace
 
-constexpr int kExpectedChecks = 141;
+constexpr int kExpectedChecks = 152;
 
 int Verdict() {
   if (kitbag_test::g_checks != kExpectedChecks) {
@@ -294,5 +295,6 @@ int main() {
   analyze_test::RunLengthTests(dir);
   analyze_test::RunSustainedTests();
   analyze_test::RunMeterTests();
+  analyze_test::RunStemTests();
   return Verdict();
 }
