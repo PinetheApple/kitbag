@@ -316,7 +316,7 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
 
   override fun loadTrack(track: Double, relativePath: String, promise: Promise) {
     val file = try {
-      LibraryPaths.resolve(DataFolder.root(reactApplicationContext), relativePath)
+      DataFolder.get(reactApplicationContext).readable(relativePath)
     } catch (e: UnsafeLibraryPathException) {
       promise.reject(E_UNSAFE_PATH, "Track path escapes the library", e)
       return
