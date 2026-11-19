@@ -2,6 +2,7 @@ import type { PracticeStats } from '@kitbag/core-db';
 import {
   configurePracticeHistory,
   configurePracticeSessions,
+  startRepeatRuntime,
   type PracticeHistoryRepository,
 } from '@kitbag/core-state';
 
@@ -29,3 +30,4 @@ export function savePracticeSession(): Promise<void> {
 
 configurePracticeSessions({ insert: savePracticeSession });
 configurePracticeHistory(() => NO_HISTORY);
+startRepeatRuntime();

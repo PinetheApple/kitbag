@@ -2,6 +2,7 @@ import type { NewPracticeSession, PracticeStats } from '@kitbag/core-db';
 import {
   configurePracticeHistory,
   configurePracticeSessions,
+  startRepeatRuntime,
 } from '@kitbag/core-state';
 
 import { getDatabase } from './database';
@@ -18,3 +19,4 @@ export async function savePracticeSession(
 
 configurePracticeSessions({ insert: savePracticeSession });
 configurePracticeHistory(() => getDatabase().practice);
+startRepeatRuntime();

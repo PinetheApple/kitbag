@@ -42,8 +42,11 @@ const blackbird = session(new Date(2026, 10, 2, 8, 5), {
   setlistName: null,
   songUuids: ['blackbird'],
 });
-const titles = (uuid: string) =>
-  uuid === 'blackbird' ? 'Blackbird' : undefined;
+const titles = {
+  song: (uuid: string) => (uuid === 'blackbird' ? 'Blackbird' : undefined),
+  setlist: (setlistId: number) =>
+    setlistId === 7 ? 'Jazz standards' : undefined,
+};
 
 describe('session rows', () => {
   it.each<[HistoryGrouping, string, string]>([
@@ -76,6 +79,19 @@ describe('session rows', () => {
     );
     expect(sessionRowText(row, 'month', NOW, titles).title).toBe(
       'Sat 31 · 21:10',
+    );
+  });
+});
+
+describe('a session whose setlist name was not kept', () => {
+  it('reads the name from the library by its setlist id', () => {
+    const row = session(new Date(2026, 9, 29, 18, 30), {
+      setlistId: 7,
+      setlistName: null,
+      songUuids: ['a', 'b', 'c', 'd'],
+    });
+    expect(sessionRowText(row, 'week', NOW, titles).subtitle).toBe(
+      'Jazz standards · 4 songs · 118 BPM',
     );
   });
 });

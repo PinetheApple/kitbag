@@ -35,6 +35,11 @@ export interface SearchResults {
   readonly presets: readonly SongPreset[];
 }
 
+export type PresetOverlay = (
+  preset: SongPreset,
+  setlistId: number | null,
+) => SongPreset;
+
 export interface LibraryState extends LibrarySnapshot {
   readonly ready: boolean;
   readonly failed: boolean;
@@ -42,6 +47,7 @@ export interface LibraryState extends LibrarySnapshot {
   readonly discarded: DiscardedChanges | null;
   readonly played: readonly number[];
   readonly results: SearchResults | null;
+  readonly presetOverlay: PresetOverlay | null;
 }
 
 export type PresetEdit = Partial<Omit<NewSongPreset, 'id'>>;
@@ -74,6 +80,7 @@ export interface LibraryActions {
   stepSong: (step: SongStep) => Promise<void>;
   leaveSetlist: () => Promise<void>;
   clearSong: () => void;
+  setPresetOverlay: (overlay: PresetOverlay | null) => void;
 }
 
 export type LibraryStore = LibraryState & LibraryActions;
@@ -104,6 +111,7 @@ const EMPTY: LibraryState = {
   discarded: null,
   played: [],
   results: null,
+  presetOverlay: null,
 };
 
 export function loadedPresetOf(
@@ -114,11 +122,27 @@ export function loadedPresetOf(
   return state.presets.find((preset) => preset.id === loaded.presetId);
 }
 
+function overlaid(
+  state: Pick<LibraryState, 'presetOverlay'>,
+  preset: SongPreset,
+  setlistId: number | null,
+): SongPreset {
+  return state.presetOverlay?.(preset, setlistId) ?? preset;
+}
+
+export function loadedBaselineOf(
+  state: Pick<LibraryState, 'presets' | 'loaded' | 'presetOverlay'>,
+): SongPreset | undefined {
+  const preset = loadedPresetOf(state);
+  if (preset === undefined || state.loaded === null) return preset;
+  return overlaid(state, preset, state.loaded.setlistId);
+}
+
 function discardedNow(
   state: LibraryState,
   deps: LibraryDeps,
 ): DiscardedChanges | null {
-  const preset = loadedPresetOf(state);
+  const preset = loadedBaselineOf(state);
   if (state.loaded === null || preset === undefined) return null;
   const live = deps.metronome();
   if (!isLoadedSongUnsaved(preset, live)) return null;
@@ -294,7 +318,8 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
       const preset = get().presets.find((p) => p.id === presetId);
       if (preset === undefined) return;
       noteDiscard();
-      await link(preset, itemId ?? null, setlistId ?? null);
+      const target = setlistId ?? null;
+      await link(overlaid(get(), preset, target), itemId ?? null, target);
     },
     stepSong: async (step: SongStep) => {
       const active = activeSetlistOf(get().setlists);
@@ -312,6 +337,9 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
       noteDiscard();
       set({ loaded: null });
       await leaveOrWarn();
+    },
+    setPresetOverlay: (presetOverlay: PresetOverlay | null) => {
+      set({ presetOverlay });
     },
     clearSong: () => {
       noteDiscard();

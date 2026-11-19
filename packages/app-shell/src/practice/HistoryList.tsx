@@ -19,7 +19,7 @@ import {
   groupTotal,
   sessionLength,
   sessionRowText,
-  type SongTitle,
+  type SessionNames,
 } from './historyText.ts';
 import { SessionRow } from './SessionRow.tsx';
 
@@ -44,14 +44,14 @@ const useStyles = createThemedStyles((theme) => ({
 export interface HistoryRowHandlers {
   readonly onOpen: (uuid: string) => void;
   readonly onActions: (session: PracticeSessionListing) => void;
-  readonly onDelete: (session: PracticeSessionListing) => void;
+  readonly onDelete: (session: PracticeSessionListing) => Promise<boolean>;
 }
 
 interface GroupProps extends HistoryRowHandlers {
   readonly group: HistoryGroup;
   readonly grouping: HistoryGrouping;
   readonly now: Date;
-  readonly songTitle: SongTitle;
+  readonly names: SessionNames;
   readonly swipe: SwipeDirection;
   readonly selected: string | null;
   readonly onLayoutGroup: (start: Date, y: number) => void;
@@ -61,7 +61,7 @@ function Group({
   group,
   grouping,
   now,
-  songTitle,
+  names,
   swipe,
   selected,
   onLayoutGroup,
@@ -86,7 +86,7 @@ function Group({
         <SessionRow
           key={session.uuid}
           session={session}
-          text={sessionRowText(session, grouping, now, songTitle)}
+          text={sessionRowText(session, grouping, now, names)}
           length={sessionLength(session)}
           selected={selected === session.uuid}
           swipe={swipe}
@@ -101,7 +101,7 @@ export interface HistoryListProps extends HistoryRowHandlers {
   readonly groups: readonly HistoryGroup[];
   readonly grouping: HistoryGrouping;
   readonly now: Date;
-  readonly songTitle: SongTitle;
+  readonly names: SessionNames;
   readonly swipe: SwipeDirection;
   readonly selected: string | null;
   readonly onLayoutGroup: (start: Date, y: number) => void;

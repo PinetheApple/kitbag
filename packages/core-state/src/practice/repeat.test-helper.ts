@@ -29,7 +29,11 @@ export function stretchOf(
     end: 'song',
     song,
     setlist,
-    settings: loggedSettingsOf({ ...presetFromMetronome(config), bpm }),
+    settings: loggedSettingsOf({
+      ...presetFromMetronome(config),
+      bpm,
+      countInBars: COUNT_IN.bars,
+    }),
     countIn: COUNT_IN,
     tempo: [],
     endBpm: bpm,

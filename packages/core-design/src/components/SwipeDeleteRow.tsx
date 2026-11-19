@@ -58,7 +58,7 @@ const useStyles = createThemedStyles((theme) => ({
 export interface SwipeDeleteRowProps {
   readonly side: SwipeSide;
   readonly deleteLabel: string;
-  readonly onDelete: () => void;
+  readonly onDelete: () => Promise<boolean>;
   readonly children: ReactNode;
 }
 
@@ -79,6 +79,11 @@ export function SwipeDeleteRow({
     },
     [width],
   );
+  const runDelete = useCallback(() => {
+    void onDelete().then((deleted) => {
+      if (!deleted) offset.value = withTiming(0);
+    });
+  }, [onDelete, offset]);
   const pan = Gesture.Pan()
     .activeOffsetX(swipeActivation(side, practiceHistory.swipeStartDp))
     .failOffsetY(VERTICAL_FAIL)
@@ -92,7 +97,7 @@ export function SwipeDeleteRow({
       }
       const gone = side === 'left' ? -width.value : width.value;
       offset.value = withTiming(gone, undefined, (finished) => {
-        if (finished === true) scheduleOnRN(onDelete);
+        if (finished === true) scheduleOnRN(runDelete);
       });
     });
   const rowStyle = useAnimatedStyle(() => ({

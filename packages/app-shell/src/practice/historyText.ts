@@ -32,6 +32,22 @@ const DASH = '–';
 
 export type SongTitle = (uuid: string) => string | undefined;
 
+export interface SessionNames {
+  readonly song: SongTitle;
+  readonly setlist: (setlistId: number) => string | undefined;
+}
+
+type Named = Pick<
+  PracticeSessionListing,
+  'setlistId' | 'setlistName' | 'songUuids'
+>;
+
+function setlistNameOf(session: Named, names: SessionNames): string | null {
+  if (session.setlistName !== null) return session.setlistName;
+  if (session.setlistId === null) return null;
+  return names.setlist(session.setlistId) ?? null;
+}
+
 const join = (parts: readonly string[]) => parts.join(` ${SEPARATOR} `);
 
 function isCurrent(start: Date, grouping: HistoryGrouping, now: Date) {
@@ -80,25 +96,26 @@ export function groupTotal(
   return join([countLabel(count, 'session', 'sessions'), length]);
 }
 
-export function sessionName(
-  session: Pick<PracticeSessionListing, 'setlistName' | 'songUuids'>,
-  songTitle: SongTitle,
-): string {
-  if (session.setlistName !== null) return session.setlistName;
+export function sessionName(session: Named, names: SessionNames): string {
+  const setlist = setlistNameOf(session, names);
+  if (setlist !== null) return setlist;
   const [only, ...more] = session.songUuids;
   if (only === undefined) return CLICK_ONLY;
   if (more.length > 0)
     return countLabel(session.songUuids.length, 'song', 'songs');
-  return songTitle(only) ?? countLabel(1, 'song', 'songs');
+  return names.song(only) ?? countLabel(1, 'song', 'songs');
 }
 
 export function bpmText(bpm: number): string {
   return `${String(Math.round(bpm))} BPM`;
 }
 
-function sessionFacts(session: PracticeSessionListing): string[] {
+function sessionFacts(
+  session: PracticeSessionListing,
+  names: SessionNames,
+): string[] {
   const songs =
-    session.setlistName === null
+    setlistNameOf(session, names) === null
       ? []
       : [countLabel(session.songUuids.length, 'song', 'songs')];
   return [...songs, bpmText(session.avgBpm)];
@@ -123,10 +140,10 @@ export function sessionRowText(
   session: PracticeSessionListing,
   grouping: HistoryGrouping,
   now: Date,
-  songTitle: SongTitle,
+  names: SessionNames,
 ): RowText {
-  const name = sessionName(session, songTitle);
-  const facts = sessionFacts(session);
+  const name = sessionName(session, names);
+  const facts = sessionFacts(session, names);
   if (grouping === HISTORY_GROUPING.day)
     return {
       title: join([clockTime(session.startedAt), name]),

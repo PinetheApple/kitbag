@@ -36,9 +36,12 @@ describe('session detail text', () => {
   });
 
   it('sums the session under the total', () => {
-    expect(summaryHint(session, () => undefined)).toBe(
-      'Wedding set · started 19:40 · avg 118 BPM',
-    );
+    expect(
+      summaryHint(session, {
+        song: () => undefined,
+        setlist: () => undefined,
+      }),
+    ).toBe('Wedding set · started 19:40 · avg 118 BPM');
   });
 
   it('says what Repeat loads', () => {

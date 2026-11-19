@@ -1,4 +1,5 @@
 import {
+  Badge,
   createThemedStyles,
   practiceHistory,
   practiceHistoryText,
@@ -7,16 +8,20 @@ import {
 } from '@kitbag/core-design';
 import {
   TIMELINE_ENTRY,
+  useClickSounds,
   type TimelineEntry,
   type TimelineStretch,
 } from '@kitbag/core-state';
+import { customSoundViews } from '@kitbag/tool-metronome';
+import { useMemo } from 'react';
 import { Text, View } from 'react-native';
 
 import {
   pauseText,
   playClock,
   positionText,
-  tempoText,
+  stretchBadges,
+  stretchFacts,
 } from './timelineText.ts';
 
 const CLICK_ONLY = 'Click only';
@@ -84,6 +89,12 @@ const useStyles = createThemedStyles((theme) => ({
     paddingTop: practiceHistory.timelineValueTop,
     color: theme.color.text,
   },
+  tags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: practiceHistory.tagsGap,
+    marginTop: practiceHistory.tagsTop,
+  },
   pause: {
     ...textStyle(practiceHistoryText.pause),
     paddingTop: practiceHistory.timelineTextTop,
@@ -93,12 +104,25 @@ const useStyles = createThemedStyles((theme) => ({
 
 export type SetlistSize = (setlistUuid: string) => number | undefined;
 
+type CustomSounds = ReturnType<typeof customSoundViews>;
+
+function useCustomSounds(): CustomSounds {
+  const sounds = useClickSounds((s) => s.sounds);
+  const unavailable = useClickSounds((s) => s.unavailable);
+  return useMemo(
+    () => customSoundViews(sounds, unavailable),
+    [sounds, unavailable],
+  );
+}
+
 function StretchRow({
   entry,
   setlistSize,
+  custom,
 }: {
   readonly entry: TimelineStretch;
   readonly setlistSize: SetlistSize;
+  readonly custom: CustomSounds;
 }) {
   const styles = useStyles();
   const { song, setlist } = entry.stretch;
@@ -120,9 +144,22 @@ function StretchRow({
           </Text>
           {place === null ? null : <Text style={styles.place}>{place}</Text>}
         </View>
-        <Text style={styles.facts}>{tempoText(entry)}</Text>
+        <Text style={styles.facts}>{stretchFacts(entry, custom)}</Text>
+        <Badges labels={stretchBadges(entry)} />
       </View>
       <Text style={styles.length}>{playClock(entry.playedMs)}</Text>
+    </View>
+  );
+}
+
+function Badges({ labels }: { readonly labels: readonly string[] }) {
+  const styles = useStyles();
+  if (labels.length === 0) return null;
+  return (
+    <View style={styles.tags}>
+      {labels.map((label) => (
+        <Badge key={label} variant="list" label={label} />
+      ))}
     </View>
   );
 }
@@ -146,6 +183,7 @@ export interface TimelineRowsProps {
 }
 
 export function TimelineRows({ entries, setlistSize }: TimelineRowsProps) {
+  const custom = useCustomSounds();
   return (
     <View>
       {entries.map((entry, index) =>
@@ -156,6 +194,7 @@ export function TimelineRows({ entries, setlistSize }: TimelineRowsProps) {
             key={`stretch-${String(entry.atMs)}`}
             entry={entry}
             setlistSize={setlistSize}
+            custom={custom}
           />
         ),
       )}

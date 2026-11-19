@@ -60,6 +60,7 @@ export function bindCountInPersistence(
 let unbind: (() => void) | undefined;
 let configured: CountInPersistence | undefined;
 let reloading = false;
+let transient = 0;
 
 export function configureCountInPersistence(
   persistence: CountInPersistence,
@@ -72,10 +73,21 @@ export function configureCountInPersistence(
     load: persistence.load,
     save: (changed) => {
       // A reload mirrors storage; saving it would store defaults a Replace left absent.
-      if (!reloading) persistence.save(changed);
+      if (!reloading && transient === 0) persistence.save(changed);
     },
   });
   return unbind;
+}
+
+// The count-in a Repeat applies is the logged one, not the user's; it must
+// not reach storage, so a kill mid-Repeat comes back on the user's own.
+export function applyCountInTransiently(apply: () => void): void {
+  transient += 1;
+  try {
+    apply();
+  } finally {
+    transient -= 1;
+  }
 }
 
 export function reloadCountInPersistence(): void {

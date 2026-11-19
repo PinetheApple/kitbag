@@ -9,7 +9,7 @@ import {
 
 import { SEPARATOR } from '../settings/separator.ts';
 import { clockTime, daysAgoText, weekdayDate } from './dates.ts';
-import { bpmText, sessionName, type SongTitle } from './historyText.ts';
+import { bpmText, sessionName, type SessionNames } from './historyText.ts';
 
 export const LOAD_HINT =
   'Songs load with their saved settings; how they were played was not recorded.';
@@ -31,10 +31,10 @@ export function detailHeading(startedAt: Date, now: Date): DetailHeading {
 
 export function summaryHint(
   session: SavedPracticeSession,
-  songTitle: SongTitle,
+  names: SessionNames,
 ): string {
   return [
-    sessionName(session, songTitle),
+    sessionName(session, names),
     `started ${clockTime(session.startedAt)}`,
     `avg ${bpmText(session.avgBpm)}`,
   ].join(` ${SEPARATOR} `);

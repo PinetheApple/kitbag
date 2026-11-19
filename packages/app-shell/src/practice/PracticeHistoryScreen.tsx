@@ -13,7 +13,7 @@ import {
 } from '@kitbag/core-design';
 import type { PracticeStats } from '@kitbag/core-db';
 import type { HistoryGrouping } from '@kitbag/core-state';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -84,11 +84,26 @@ export function PracticeHistoryScreen({
     () => ({ paddingBottom: insets.bottom + space.screenInset }),
     [insets.bottom],
   );
-  const empty = model.ready && model.sessions.length === 0;
+  const empty = model.ready && !model.failed && model.sessions.length === 0;
+  const { refresh } = model;
+  const retry = useCallback(() => {
+    void refresh();
+  }, [refresh]);
   return (
     <View style={frame}>
       <AppBar flush title="Practice history" onBack={onBack} />
-      {empty ? (
+      {model.failed ? (
+        <EmptyState
+          variant="list"
+          icon="warning"
+          title="Practice history could not be opened"
+          reason="The saved sessions failed to load. The metronome still records new ones."
+          actionIcon="reset"
+          actionLabel="Try again"
+          option={null}
+          onAction={retry}
+        />
+      ) : empty ? (
         <EmptyState
           variant="list"
           icon="practice"
@@ -125,7 +140,7 @@ export function PracticeHistoryScreen({
             groups={model.groups}
             grouping={model.grouping}
             now={model.now}
-            songTitle={model.songTitle}
+            names={model.names}
             swipe={model.swipe}
             selected={actions.target?.uuid ?? null}
             onOpen={onOpenSession}

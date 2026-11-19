@@ -11,6 +11,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 
 import { loadArgs } from './detailText.ts';
+import { useSessionNames } from './useSessionNames.ts';
 
 function useLibraryView() {
   const setlists = useLibrary((s) => s.setlists);
@@ -46,7 +47,13 @@ function useSession(uuid: string) {
   return { session, now };
 }
 
-export function useSessionDetail(uuid: string, onLoaded: () => void) {
+export interface SessionDetailRoutes {
+  readonly onLoaded: () => void;
+  readonly onDeleted: () => void;
+}
+
+export function useSessionDetail(uuid: string, routes: SessionDetailRoutes) {
+  const { onLoaded, onDeleted } = routes;
   const { session, now } = useSession(uuid);
   const library = useLibraryView();
   const loadSong = useLibrary((s) => s.loadSong);
@@ -66,11 +73,8 @@ export function useSessionDetail(uuid: string, onLoaded: () => void) {
       session === null || log !== null ? null : sessionLoadOf(session, library),
     [session, log, library],
   );
-  const songTitle = useCallback(
-    (songUuid: string) =>
-      library.presets.find((preset) => preset.uuid === songUuid)?.name,
-    [library.presets],
-  );
+  const names = useSessionNames();
+  const remove = usePracticeHistory((s) => s.remove);
   const setlistSize = useCallback(
     (setlistUuid: string) =>
       library.setlists.find((s) => s.setlist.uuid === setlistUuid)?.songCount,
@@ -84,19 +88,29 @@ export function useSessionDetail(uuid: string, onLoaded: () => void) {
   }, [plan, overlay, onLoaded]);
   const loadSession = useCallback(() => {
     if (load === null) return;
-    loadSong(...loadArgs(load)).then(onLoaded, (error: unknown) => {
+    const loading =
+      overlay === undefined
+        ? loadSong(...loadArgs(load))
+        : overlay.loadSaved(load);
+    loading.then(onLoaded, (error: unknown) => {
       console.warn('[kitbag] could not load the session', error);
     });
-  }, [load, loadSong, onLoaded]);
+  }, [load, loadSong, overlay, onLoaded]);
+  const deleteSession = useCallback(() => {
+    remove(uuid).then(onDeleted, (error: unknown) => {
+      console.warn('[kitbag] could not delete the practice session', error);
+    });
+  }, [remove, uuid, onDeleted]);
   return {
     session,
     now,
     timeline,
     plan,
     load,
-    songTitle,
+    names,
     setlistSize,
     repeat,
     loadSession,
+    deleteSession,
   };
 }

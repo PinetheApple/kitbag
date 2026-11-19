@@ -1,5 +1,6 @@
 import {
   AppBar,
+  type AppBarAction,
   Button,
   createThemedStyles,
   practiceHistory,
@@ -9,8 +10,8 @@ import {
   textStyle,
 } from '@kitbag/core-design';
 import type { SavedPracticeSession } from '@kitbag/core-db';
-import { formatClockSeconds } from '@kitbag/core-state';
-import type { ReactNode } from 'react';
+import { formatClockSeconds, SESSION_LOAD } from '@kitbag/core-state';
+import { useMemo, type ReactNode } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -23,6 +24,7 @@ import {
   summaryHint,
 } from './detailText.ts';
 import { OldSessionSongs } from './OldSessionSongs.tsx';
+import { DELETE_SESSION_LABEL } from './SessionActionsSheet.tsx';
 import { TimelineRows } from './TimelineRows.tsx';
 import { useSessionDetail } from './useSessionDetail.ts';
 
@@ -142,7 +144,7 @@ function Body({
       <Section label="Songs" aside="order not recorded" />
       <OldSessionSongs
         songUuids={session.songUuids}
-        songTitle={detail.songTitle}
+        songTitle={detail.names.song}
       />
       <Text style={styles.note}>{OLD_SESSION_NOTE}</Text>
     </>
@@ -166,7 +168,7 @@ function Action({ detail }: { readonly detail: Detail }) {
       <Foot hint={LOAD_HINT}>
         <Button
           variant="ghost"
-          icon="setlist"
+          icon={detail.load.kind === SESSION_LOAD.song ? 'song' : 'setlist'}
           label={loadLabel(detail.load)}
           onPress={detail.loadSession}
         />
@@ -188,7 +190,21 @@ export function SessionDetailScreen({
 }: SessionDetailScreenProps) {
   const styles = useStyles();
   const insets = useSafeAreaInsets();
-  const detail = useSessionDetail(uuid, onLoaded);
+  const routes = useMemo(
+    () => ({ onLoaded, onDeleted: onBack }),
+    [onLoaded, onBack],
+  );
+  const detail = useSessionDetail(uuid, routes);
+  const actions: readonly AppBarAction[] = useMemo(
+    () => [
+      {
+        icon: 'delete',
+        label: DELETE_SESSION_LABEL,
+        onPress: detail.deleteSession,
+      },
+    ],
+    [detail.deleteSession],
+  );
   const { session } = detail;
   const heading =
     session === null ? null : detailHeading(session.startedAt, detail.now);
@@ -200,6 +216,7 @@ export function SessionDetailScreen({
         title={heading?.title ?? ''}
         subtitle={heading?.subtitle}
         onBack={onBack}
+        actions={session === null ? [] : actions}
       />
       {session === null ? null : (
         <>
@@ -212,7 +229,7 @@ export function SessionDetailScreen({
                 {formatClockSeconds(session.durationSeconds)}
               </Text>
               <Text style={styles.hint}>
-                {summaryHint(session, detail.songTitle)}
+                {summaryHint(session, detail.names)}
               </Text>
             </View>
             <Body detail={detail} session={session} />

@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { pauseText, positionText, tempoText } from './timelineText.ts';
+import { loggedSettingsOf } from '@kitbag/core-db';
+
+import {
+  pauseText,
+  positionText,
+  stretchBadges,
+  stretchFacts,
+  tempoText,
+} from './timelineText.ts';
 
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
@@ -58,5 +66,60 @@ describe('timeline text', () => {
     expect(positionText(1, 9)).toBe('1 of 9');
     expect(positionText(1, undefined)).toBe('1');
     expect(positionText(null, 9)).toBeNull();
+  });
+});
+
+describe('stretch facts and badges', () => {
+  const settings = loggedSettingsOf({
+    bpm: 96,
+    beatsPerBar: 3,
+    denominator: 4,
+    subdivision: 2,
+    accents: new Uint8Array([2, 1, 1]),
+    perAccentSounds: new Uint8Array([3, 3]),
+    polyAccents: null,
+    polyEnabled: true,
+    polyBeats: 3,
+    polyAgainst: 2,
+    sound: 3,
+    rampEnabled: false,
+    rampStartBpm: null,
+    rampEndBpm: null,
+    rampStep: 1,
+    rampLength: null,
+    rampUnit: 0,
+    rampLoop: false,
+    barMuteEnabled: true,
+    barMutePlayBars: 3,
+    barMuteMuteBars: 1,
+    countInBars: 1,
+  });
+  const stretch = entry();
+  const logged = {
+    ...stretch,
+    stretch: {
+      ...stretch.stretch,
+      settings,
+      countIn: { bars: 1, distinct: false, sound: 0 },
+    },
+  };
+
+  it('writes tempo, meter, subdivision and sound', () => {
+    const facts = stretchFacts(logged, []).split(' · ');
+    expect(facts.slice(0, 3)).toEqual([
+      '96 BPM, 100 from 6:40',
+      '3/4',
+      'Eighths',
+    ]);
+    expect(facts).toHaveLength(4);
+  });
+
+  it('badges count-in, mute and poly when used', () => {
+    expect(stretchBadges(logged)).toEqual([
+      'Count-in 1 bar',
+      'Mute 1 of 4 bars',
+      'Poly 3:2',
+    ]);
+    expect(stretchBadges(entry())).toEqual([]);
   });
 });

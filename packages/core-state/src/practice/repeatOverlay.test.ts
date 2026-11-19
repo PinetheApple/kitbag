@@ -65,7 +65,7 @@ describe('Repeat overlay, setlist still there', () => {
       distinct: USER_COUNT_IN.distinct,
       sound: USER_COUNT_IN.sound,
     });
-    expect(r.overlay.presetFor(r.second).bpm).toBe(r.second.bpm);
+    expect(r.overlay.presetFor(r.second, r.setlistId).bpm).toBe(r.second.bpm);
   });
 
   it('gives the user bars back too when the count-in plays before every song', async () => {

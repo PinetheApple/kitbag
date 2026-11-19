@@ -1,7 +1,7 @@
 import { createPracticeRepository } from '@kitbag/core-db/src/practice-repository';
 import { practiceSessions } from '@kitbag/core-db/src/schema';
 import { openTestDatabase } from '@kitbag/core-db/src/sqlite.test-helper';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createPracticeHistoryStore } from './historyList.ts';
 
@@ -30,6 +30,18 @@ async function history() {
   const store = createPracticeHistoryStore(() => repo);
   await store.getState().refresh();
   return { store, raw };
+}
+
+function failing(fail: 'list' | 'delete' | 'restore') {
+  const reject = () => Promise.reject(new Error(fail));
+  return {
+    list: fail === 'list' ? reject : () => Promise.resolve([]),
+    stats: () =>
+      Promise.resolve({ sessions: 0, totalSeconds: 0, avgBpm: null }),
+    get: () => Promise.resolve(undefined),
+    delete: fail === 'delete' ? reject : () => Promise.resolve(undefined),
+    restore: fail === 'restore' ? reject : () => Promise.resolve(),
+  };
 }
 
 describe('practice history list', () => {
@@ -77,5 +89,31 @@ describe('practice history list', () => {
     store.getState().dismissDeleted();
     await store.getState().undo();
     expect(store.getState().sessions.map((s) => s.uuid)).toEqual(['older']);
+  });
+});
+
+describe('practice history failures', () => {
+  it('reads as failed, not empty, when the list cannot load', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const store = createPracticeHistoryStore(() => failing('list'));
+    await store.getState().refresh();
+    expect(store.getState()).toMatchObject({ ready: true, failed: true });
+    warn.mockRestore();
+  });
+
+  it('keeps the deleted session for another Undo when the restore fails', async () => {
+    const { store } = await history();
+    await store.getState().remove('newer');
+    const deleted = store.getState().deleted;
+    const broken = createPracticeHistoryStore(() => failing('restore'));
+    broken.setState({ deleted });
+    await expect(broken.getState().undo()).rejects.toThrow('restore');
+    expect(broken.getState().deleted).toBe(deleted);
+  });
+
+  it('reports a failed delete to the caller and keeps the row', async () => {
+    const store = createPracticeHistoryStore(() => failing('delete'));
+    await expect(store.getState().remove('newer')).rejects.toThrow('delete');
+    expect(store.getState().deleted).toBeNull();
   });
 });

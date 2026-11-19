@@ -36,15 +36,16 @@ describe('repeatPlanOf', () => {
   it('overlays the first stretch settings on a planned song and nothing else', async () => {
     const g = await gig();
     const plan = repeatPlanOf(g.log([70, 80, 90]), g.library.getState());
-    expect(overlaidPreset(plan, g.second)).toMatchObject({
+    expect(overlaidPreset(plan, g.second, g.setlistId)).toMatchObject({
       id: g.second.id,
       uuid: g.second.uuid,
       name: 'Second',
       bpm: 70,
     });
     const other = { ...g.first, uuid: 'not-played' };
-    expect(overlaidPreset(plan, other)).toBe(other);
-    expect(overlaidPreset(null, g.first)).toBe(g.first);
+    expect(overlaidPreset(plan, other, g.setlistId)).toBe(other);
+    expect(overlaidPreset(null, g.first, g.setlistId)).toBe(g.first);
+    expect(overlaidPreset(plan, g.second, null)).toBe(g.second);
   });
 
   it('falls back to free play from the first stretch once the setlist is gone', async () => {

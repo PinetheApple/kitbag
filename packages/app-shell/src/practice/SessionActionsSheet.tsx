@@ -3,6 +3,8 @@ import type { PracticeSessionListing } from '@kitbag/core-db';
 import { useCallback } from 'react';
 import { View } from 'react-native';
 
+export const DELETE_SESSION_LABEL = 'Delete session';
+
 const useStyles = createThemedStyles(() => ({
   stack: { gap: space.controlGap },
 }));
@@ -12,7 +14,7 @@ export interface SessionActionsSheetProps {
   readonly title: string;
   readonly bottomInset: number;
   readonly onOpen: (uuid: string) => void;
-  readonly onDelete: (session: PracticeSessionListing) => void;
+  readonly onDelete: (session: PracticeSessionListing) => Promise<boolean>;
   readonly onDismiss: () => void;
 }
 
@@ -31,7 +33,7 @@ export function SessionActionsSheet({
   }, [onDismiss, onOpen, target]);
   const remove = useCallback(() => {
     onDismiss();
-    if (target !== null) onDelete(target);
+    if (target !== null) void onDelete(target);
   }, [onDismiss, onDelete, target]);
   return (
     <Sheet
@@ -44,7 +46,7 @@ export function SessionActionsSheet({
       <View style={styles.stack}>
         <Button label="Open" icon="forward" variant="tonal" onPress={open} />
         <Button
-          label="Delete session"
+          label={DELETE_SESSION_LABEL}
           icon="delete"
           variant="destructive"
           onPress={remove}

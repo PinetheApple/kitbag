@@ -61,8 +61,8 @@ export function createPracticeHistoryStore(
     undo: async () => {
       const { deleted } = get();
       if (deleted === null) return;
-      set({ deleted: null });
       await repo().restore(deleted);
+      set({ deleted: null });
       await get().refresh();
     },
     dismissDeleted: () => {

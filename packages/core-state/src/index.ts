@@ -127,6 +127,7 @@ export {
   type RepeatOverlay,
   type RepeatPort,
 } from './practice/repeatOverlay.ts';
+export { startRepeatRuntime } from './practice/repeatRuntime.ts';
 export {
   configureHistoryPrefsPersistence,
   createHistoryPrefsStore,
@@ -244,11 +245,13 @@ export { useLibrary } from './library/useLibrary.ts';
 export {
   createLibraryStore,
   libraryStore,
+  loadedBaselineOf,
   loadedPresetOf,
   type DiscardedChanges,
   type LibraryStore,
   type LoadedSong,
   type PresetEdit,
+  type PresetOverlay,
   type SearchResults,
 } from './library/store.ts';
 export {

@@ -3,22 +3,14 @@ import {
   groupSessions,
   historyGraph,
   useHistoryPrefs,
-  useLibrary,
   usePracticeHistory,
 } from '@kitbag/core-state';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { LayoutChangeEvent, ScrollView } from 'react-native';
 
 import { deletedMessage, sessionRowText } from './historyText.ts';
-
-function useSongTitles() {
-  const presets = useLibrary((s) => s.presets);
-  return useMemo(() => {
-    const names = new Map(presets.map((p) => [p.uuid, p.name]));
-    return (uuid: string) => names.get(uuid);
-  }, [presets]);
-}
+import { useSessionNames } from './useSessionNames.ts';
 
 function useScrollToGroup() {
   const scroll = useRef<ScrollView>(null);
@@ -47,11 +39,14 @@ function useHistoryActions() {
     setTarget(null);
   }, []);
   const onDelete = useCallback(
-    (session: PracticeSessionListing) => {
-      remove(session.uuid).catch((error: unknown) => {
-        console.warn('[kitbag] could not delete the practice session', error);
-      });
-    },
+    (session: PracticeSessionListing) =>
+      remove(session.uuid).then(
+        () => true,
+        (error: unknown) => {
+          console.warn('[kitbag] could not delete the practice session', error);
+          return false;
+        },
+      ),
     [remove],
   );
   return { target, onActions, closeActions, onDelete };
@@ -62,12 +57,14 @@ export function usePracticeHistoryScreen() {
   const sessions = usePracticeHistory((s) => s.sessions);
   const stats = usePracticeHistory((s) => s.stats);
   const ready = usePracticeHistory((s) => s.ready);
+  const failed = usePracticeHistory((s) => s.failed);
   const deleted = usePracticeHistory((s) => s.deleted);
   const undo = usePracticeHistory((s) => s.undo);
   const dismissDeleted = usePracticeHistory((s) => s.dismissDeleted);
   const grouping = useHistoryPrefs((s) => s.grouping);
   const setGrouping = useHistoryPrefs((s) => s.setGrouping);
   const swipe = useHistoryPrefs((s) => s.swipeDirection);
+  useEffect(() => dismissDeleted, [dismissDeleted]);
   const [now, setNow] = useState(() => new Date());
   useFocusEffect(
     useCallback(() => {
@@ -83,7 +80,7 @@ export function usePracticeHistoryScreen() {
     () => historyGraph(sessions, grouping, now),
     [sessions, grouping, now],
   );
-  const songTitle = useSongTitles();
+  const names = useSessionNames();
   const actions = useHistoryActions();
   const undoDelete = useCallback(() => {
     undo().catch((error: unknown) => {
@@ -93,9 +90,11 @@ export function usePracticeHistoryScreen() {
   const targetTitle =
     actions.target === null
       ? ''
-      : sessionRowText(actions.target, grouping, now, songTitle).title;
+      : sessionRowText(actions.target, grouping, now, names).title;
   return {
     ready,
+    failed,
+    refresh,
     sessions,
     stats,
     grouping,
@@ -104,7 +103,7 @@ export function usePracticeHistoryScreen() {
     now,
     groups,
     bars,
-    songTitle,
+    names,
     actions,
     targetTitle,
     deletedText: deleted === null ? null : deletedMessage(deleted.session, now),

@@ -87,7 +87,7 @@ export interface SessionRowProps {
   readonly swipe: SwipeDirection;
   readonly onOpen: (uuid: string) => void;
   readonly onActions: (session: PracticeSessionListing) => void;
-  readonly onDelete: (session: PracticeSessionListing) => void;
+  readonly onDelete: (session: PracticeSessionListing) => Promise<boolean>;
 }
 
 export function SessionRow({
@@ -107,9 +107,7 @@ export function SessionRow({
   const actions = useCallback(() => {
     onActions(session);
   }, [onActions, session]);
-  const remove = useCallback(() => {
-    onDelete(session);
-  }, [onDelete, session]);
+  const remove = useCallback(() => onDelete(session), [onDelete, session]);
   return (
     <SwipeDeleteRow side={swipe} deleteLabel={DELETE_LABEL} onDelete={remove}>
       <View style={[styles.row, selected && styles.selected]}>

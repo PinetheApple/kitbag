@@ -1,13 +1,29 @@
-import { MS_PER_SECOND, type LoggedSettings } from '@kitbag/core-db';
-import { countLabel } from '@kitbag/core-design';
-import { KB_RAMP_UNIT } from '@kitbag/core-native';
 import {
+  MS_PER_SECOND,
+  presetFieldsOfLogged,
+  type LoggedCountIn,
+  type LoggedSettings,
+} from '@kitbag/core-db';
+import { countLabel } from '@kitbag/core-design';
+import { KB_COUNT_IN_OFF, KB_RAMP_UNIT } from '@kitbag/core-native';
+import {
+  effectivePolyAgainst,
   formatClockSeconds,
+  isCountInBars,
+  perAccentSoundsOf,
   SECONDS_PER_MINUTE,
   type TimelineStretch,
 } from '@kitbag/core-state';
+import {
+  countInLabel,
+  polyRatioLabel,
+  soundChipLabel,
+  subdivisionName,
+} from '@kitbag/tool-metronome';
 
 import { bpmText } from './historyText.ts';
+
+type CustomSounds = Parameters<typeof soundChipLabel>[1];
 
 const RAMP_UNIT_WORDS: Readonly<Record<number, readonly [string, string]>> = {
   [KB_RAMP_UNIT.KB_RAMP_BARS]: ['bar', 'bars'],
@@ -56,4 +72,58 @@ export function tempoText(entry: TimelineStretch): string {
     ({ atMs, bpm }) => `${String(Math.round(bpm))} from ${playClock(atMs)}`,
   );
   return [bpmText(entry.startBpm), ...changes].join(', ');
+}
+
+export function stretchFacts(
+  entry: TimelineStretch,
+  custom: CustomSounds,
+): string {
+  const { settings } = entry.stretch;
+  if (settings === null) return tempoText(entry);
+  const sounds = perAccentSoundsOf(
+    presetFieldsOfLogged(settings).perAccentSounds,
+    settings.sound,
+  );
+  return [
+    tempoText(entry),
+    `${String(settings.beatsPerBar)}/${String(settings.denominator)}`,
+    subdivisionName(settings.subdivision, settings.denominator),
+    soundChipLabel(sounds, custom),
+  ].join(' · ');
+}
+
+function countInBadge(countIn: LoggedCountIn | null): string[] {
+  if (countIn === null || !isCountInBars(countIn.bars)) return [];
+  if (countIn.bars === KB_COUNT_IN_OFF) return [];
+  return [`Count-in ${countInLabel(countIn.bars)}`];
+}
+
+function muteBadge(settings: LoggedSettings): string[] {
+  const { barMuteEnabled, barMutePlayBars, barMuteMuteBars } = settings;
+  if (!barMuteEnabled || barMutePlayBars === null || barMuteMuteBars === null)
+    return [];
+  const cycle = barMutePlayBars + barMuteMuteBars;
+  return [
+    `Mute ${String(barMuteMuteBars)} of ${countLabel(cycle, 'bar', 'bars')}`,
+  ];
+}
+
+function polyBadge(settings: LoggedSettings): string[] {
+  if (!settings.polyEnabled) return [];
+  const ratio = polyRatioLabel({
+    polyBeats: settings.polyBeats,
+    against: effectivePolyAgainst(settings.polyAgainst, settings.beatsPerBar),
+    beatsPerBar: settings.beatsPerBar,
+  });
+  return [`Poly ${ratio}`];
+}
+
+export function stretchBadges(entry: TimelineStretch): readonly string[] {
+  const { settings, countIn } = entry.stretch;
+  if (settings === null) return [];
+  return [
+    ...countInBadge(countIn),
+    ...muteBadge(settings),
+    ...polyBadge(settings),
+  ];
 }
