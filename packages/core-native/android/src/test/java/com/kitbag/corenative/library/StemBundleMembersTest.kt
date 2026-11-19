@@ -152,6 +152,109 @@ class StemBundleMembersTest {
   }
 
   @Test
+  fun `the bundle tempo reads back in either mode, fit ignored`() {
+    val constant = members.grid(
+      """{"beats":[0.0,0.5],"bpm":120,"tempo":{"mode":"constant","bpm":120,"anchor":0.0,
+         "beats_per_bar":4,"source":"detected"}}""",
+    ).tempo!!
+    assertEquals(listOf("constant", "detected"), listOf(constant.mode, constant.source))
+    assertEquals(120.0, constant.bpm!!, 0.0)
+    assertEquals(0.0, constant.anchor!!, 0.0)
+    assertEquals(4, constant.beatsPerBar)
+    val follow = members.grid(
+      """{"beats":[0.4,0.9],"tempo":{"mode":"follow","bpm":127.3,"anchor":0.42,"beats_per_bar":3,
+         "source":"user","fit":{"method":"theil-sen","max_drift_ms":"lots"}}}""",
+    ).tempo!!
+    assertEquals(listOf("follow", "user"), listOf(follow.mode, follow.source))
+    assertEquals(127.3, follow.bpm!!, 0.0)
+    assertEquals(0.42, follow.anchor!!, 0.0)
+    assertEquals(3, follow.beatsPerBar)
+    assertTrue(warnings.isEmpty())
+  }
+
+  @Test
+  fun `the bundle tempo passes through unjudged, range and words left to the library`() {
+    val tempo = members.grid(
+      tempoGrid(""""mode":"steady"""", """"bpm":500""", """"anchor":-1""", """"beats_per_bar":33""", """"source":"x""""),
+    ).tempo!!
+    assertEquals(listOf("steady", "x"), listOf(tempo.mode, tempo.source))
+    assertEquals(500.0, tempo.bpm!!, 0.0)
+    assertEquals(-1.0, tempo.anchor!!, 0.0)
+    assertEquals(33, tempo.beatsPerBar)
+    assertTrue(warnings.isEmpty())
+  }
+
+  @Test
+  fun `a grid without a tempo has none and warns nothing`() {
+    assertNull(members.grid("""{"beats":[0.5,1.0]}""").tempo)
+    assertNull(members.grid("""{"beats":[0.5,1.0],"tempo":null}""").tempo)
+    assertTrue(warnings.isEmpty())
+  }
+
+  @Test
+  fun `a follow tempo StemDeck found no bpm or anchor for reads back with neither and no warning`() {
+    val untimed = members.grid(
+      """{"beats":[0.5,1.0],"tempo":{"mode":"follow","beats_per_bar":4,"source":"detected"}}""",
+    ).tempo!!
+    assertEquals("follow", untimed.mode)
+    assertNull(untimed.bpm)
+    assertNull(untimed.anchor)
+    assertEquals(4, untimed.beatsPerBar)
+    assertNull(members.grid(tempoGrid(""""bpm":null""", """"anchor":null""")).tempo!!.bpm)
+    assertTrue(warnings.isEmpty())
+  }
+
+  @Test
+  fun `a follow tempo with only a bpm or only an anchor reads back with the other absent`() {
+    val bpmOnly = members.grid(tempoGrid(""""anchor":null""")).tempo!!
+    assertEquals(120.0, bpmOnly.bpm!!, 0.0)
+    assertNull(bpmOnly.anchor)
+    val anchorOnly = members.grid(tempoGrid(""""bpm":null""")).tempo!!
+    assertNull(anchorOnly.bpm)
+    assertEquals(0.5, anchorOnly.anchor!!, 0.0)
+    assertTrue(warnings.isEmpty())
+  }
+
+  @Test
+  fun `every tempo word StemDeck's tempo_grid py writes passes through as written`() {
+    for (mode in listOf("constant", "follow")) {
+      for (source in listOf("detected", "user")) {
+        val tempo = members.grid(tempoGrid(""""mode":"$mode"""", """"source":"$source"""")).tempo
+        assertEquals("$mode/$source", listOf(mode, source), listOf(tempo?.mode, tempo?.source))
+      }
+    }
+    assertTrue(warnings.isEmpty())
+  }
+
+  @Test
+  fun `a wrongly shaped tempo is dropped with a warning and the beats are kept`() {
+    val bad = listOf(
+      """"mode":null""", """"mode":7""", """"source":null""",
+      """"bpm":"120"""", """"bpm":NaN""", """"anchor":"0"""",
+      """"beats_per_bar":4.5""", """"beats_per_bar":null""", """"beats_per_bar":1e12""",
+    )
+    for (field in bad) {
+      val grid = members.grid(tempoGrid(field))
+      assertNull(field, grid.tempo)
+      assertEquals(field, 2, grid.beats.size)
+    }
+    assertNull(members.grid("""{"beats":[0.5,1.0],"tempo":"constant"}""").tempo)
+    assertEquals(bad.size + 1, warnings.size)
+  }
+
+  private fun tempoGrid(vararg overrides: String): String {
+    val fields = linkedMapOf(
+      "mode" to "\"follow\"", "bpm" to "120", "anchor" to "0.5", "beats_per_bar" to "4", "source" to "\"detected\"",
+    )
+    for (override in overrides) {
+      val (key, value) = override.split(":", limit = 2)
+      fields[key.trim('"')] = value
+    }
+    val tempo = fields.entries.joinToString(",") { (k, v) -> "\"$k\":$v" }
+    return """{"beats":[0.5,1.0],"tempo":{$tempo}}"""
+  }
+
+  @Test
   fun `a song with no tempo anywhere has no bpm`() {
     assertNull(members.bpm(members.metadata(null), members.grid(null)))
   }

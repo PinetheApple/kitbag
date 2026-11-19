@@ -96,6 +96,8 @@ export function record(
     meterBeatsPerBar: null,
     barOneSeconds: null,
     ...NO_CLICK,
+    tempo: null,
+    chosenTempoMode: null,
     ...change,
   };
 }

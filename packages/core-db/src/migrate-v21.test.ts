@@ -7,6 +7,7 @@ import {
   pragma,
   rows,
   V21_CLICK_COLUMNS,
+  V22_TEMPO_COLUMNS,
 } from './migrate-fixtures.test-helper';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
@@ -21,7 +22,11 @@ describe('migrate v20 to v21', () => {
     );
     migrate(nodeSqliteDriver(db));
     expect(rows(db, 'SELECT * FROM stem_sets ORDER BY id')).toEqual(
-      before.map((row) => ({ ...row, ...V21_CLICK_COLUMNS })),
+      before.map((row) => ({
+        ...row,
+        ...V21_CLICK_COLUMNS,
+        ...V22_TEMPO_COLUMNS,
+      })),
     );
     expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
   });

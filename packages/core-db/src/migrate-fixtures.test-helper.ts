@@ -15,6 +15,7 @@ import {
   MIGRATE_V17_TO_V18,
   MIGRATE_V18_TO_V19,
   MIGRATE_V19_TO_V20,
+  MIGRATE_V20_TO_V21,
   V7_SCHEMA_VERSION,
   V8_SCHEMA_VERSION,
   V9_SCHEMA_VERSION,
@@ -29,6 +30,7 @@ import {
   V18_SCHEMA_VERSION,
   V19_SCHEMA_VERSION,
   V20_SCHEMA_VERSION,
+  V21_SCHEMA_VERSION,
 } from './migrate';
 
 const V7_DDL: readonly string[] = [
@@ -179,6 +181,20 @@ export const V21_STEM_SET_COLUMNS = {
   ...V21_CLICK_COLUMNS,
 };
 
+export const V22_TEMPO_COLUMNS = {
+  tempo_mode: null,
+  tempo_bpm: null,
+  tempo_anchor: null,
+  tempo_beats_per_bar: null,
+  tempo_source: null,
+  chosen_tempo_mode: null,
+};
+
+export const V22_STEM_SET_COLUMNS = {
+  ...V21_STEM_SET_COLUMNS,
+  ...V22_TEMPO_COLUMNS,
+};
+
 export function rows<T>(db: DatabaseSync, sql: string): T[] {
   return db.prepare(sql).all() as T[];
 }
@@ -292,5 +308,12 @@ export function buildV20Fixture(): DatabaseSync {
   const db = buildV19Fixture();
   applyInTransaction(db, MIGRATE_V19_TO_V20);
   db.exec(`PRAGMA user_version = ${String(V20_SCHEMA_VERSION)}`);
+  return db;
+}
+
+export function buildV21Fixture(): DatabaseSync {
+  const db = buildV20Fixture();
+  applyInTransaction(db, MIGRATE_V20_TO_V21);
+  db.exec(`PRAGMA user_version = ${String(V21_SCHEMA_VERSION)}`);
   return db;
 }

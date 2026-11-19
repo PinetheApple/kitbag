@@ -78,6 +78,7 @@ function bundle(
     beats: [],
     bars: [],
     lyrics: null,
+    tempo: null,
   };
 }
 

@@ -8,6 +8,12 @@ import { packFloat32, packInt32, unpackFloat32, unpackInt32 } from './packing';
 import { STEM_SET_SOURCE, type StemSetSource } from './stem-set-source';
 import { parseRetimedLyrics, type LyricLineTimes } from './stem-lyrics';
 import { applyKept, readKept } from './stem-replace-keep';
+import {
+  bundleTempoColumns,
+  stemSetTempoOf,
+  type BundleTempo,
+  type StemSetTempo,
+} from './stem-tempo';
 
 const STEM_FORMAT = 'flac';
 const BAR_MARK_FIELDS = 2;
@@ -64,6 +70,7 @@ export interface NewStemBundle {
   readonly beats: readonly number[];
   readonly bars: readonly BarMark[];
   readonly lyrics: StoredLyrics | null;
+  readonly tempo: BundleTempo | null;
 }
 
 export interface StoredStem extends BundleStem {
@@ -82,7 +89,8 @@ export interface StemSetRecord
       'jobId' | 'folder' | 'stems' | 'sampleRate' | 'channels' | 'hasMix'
     >,
     MeterOverride,
-    StemSetClick {
+    StemSetClick,
+    StemSetTempo {
   readonly id: number;
   readonly source: StemSetSource;
   readonly jobId: string | null;
@@ -172,6 +180,7 @@ function setValues(bundle: NewStemBundle) {
     lyricsInstrumental: lyrics?.instrumental ?? null,
     sampleRate: bundle.sampleRate,
     folder: bundle.folder,
+    ...bundleTempoColumns(bundle.tempo),
   };
 }
 
@@ -316,6 +325,7 @@ export async function readStemSet(
     speed: row.speed,
     ...meterOverrideOf(row),
     ...stemSetClickOf(row),
+    ...stemSetTempoOf(row),
     bpm: row.bpm,
     key: row.key,
     scale: row.scale,

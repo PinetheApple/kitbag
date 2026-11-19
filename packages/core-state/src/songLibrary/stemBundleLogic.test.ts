@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { bundleTempoOf, TEMPO_MODE, TEMPO_SOURCE } from '@kitbag/core-db';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   errorCode,
@@ -59,9 +60,71 @@ describe('newStemBundle', () => {
     expect(bundle).toMatchObject({ uuid: 'u', folder: 'stems/j' });
   });
 
+  it('stores the bundle tempo it was handed', () => {
+    const tempo = {
+      mode: TEMPO_MODE.follow,
+      bpm: 127.3,
+      anchor: 0.42,
+      beatsPerBar: 4,
+      source: TEMPO_SOURCE.user,
+    };
+    const imported = { ...importedBundle('stems/j'), tempo };
+    expect(newStemBundle(imported, 'u').tempo).toEqual(tempo);
+    expect(newStemBundle(importedBundle('stems/j'), 'u').tempo).toBeNull();
+  });
+
+  it('stores no tempo for a mode the library does not know', () => {
+    const imported = {
+      ...importedBundle('stems/j'),
+      tempo: {
+        mode: 'steady',
+        bpm: 120,
+        anchor: 0,
+        beatsPerBar: 4,
+        source: 'detected',
+      },
+    };
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    expect(newStemBundle(imported, 'u').tempo).toBeNull();
+    expect(warn).toHaveBeenCalledWith(
+      '[kitbag] stem bundle tempo dropped',
+      expect.stringContaining('steady'),
+    );
+    warn.mockRestore();
+  });
+
+  it('stores no tempo from a bridge too old to send one', () => {
+    expect(importedBundle('stems/j')).not.toHaveProperty('tempo');
+    expect(newStemBundle(importedBundle('stems/j'), 'u').tempo).toBeNull();
+  });
+
   it('names an untitled song by its job', () => {
     const imported = { ...importedBundle('stems/j'), title: '' };
     expect(newStemBundle(imported, 'u').title).toBe(imported.jobId);
+  });
+});
+
+describe("every tempo word StemDeck's tempo_grid.py writes", () => {
+  it.each(
+    ['constant', 'follow'].flatMap((mode) =>
+      ['detected', 'user'].map((source) => [mode, source]),
+    ),
+  )('reads %s from %s', (mode, source) => {
+    expect(
+      bundleTempoOf({ mode, bpm: 120, anchor: 0, beatsPerBar: 4, source }),
+    ).not.toBeNull();
+  });
+
+  it('reads a follow tempo with no detected bpm or anchor', () => {
+    const untimed = {
+      mode: 'follow',
+      bpm: null,
+      anchor: null,
+      beatsPerBar: 4,
+      source: 'detected',
+    };
+    const imported = { ...importedBundle('stems/j'), tempo: untimed };
+    expect(newStemBundle(imported, 'u').tempo).toEqual(untimed);
   });
 });
 

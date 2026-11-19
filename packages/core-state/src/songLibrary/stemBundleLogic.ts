@@ -1,16 +1,21 @@
-import type {
-  ExistingStemSet,
-  NewStemBundle,
-  StemSetFiles,
+import {
+  bundleTempoOf,
+  bundleTempoViolation,
+  type BundleTempo,
+  type ExistingStemSet,
+  type NewStemBundle,
+  type StemSetFiles,
 } from '@kitbag/core-db';
 import type {
   ImportedStemBundle,
   LibraryConstants,
   StemBundleCheck,
+  StemBundleTempo,
 } from '@kitbag/core-native';
 
 import { fileRemovals, type Removal } from './logic.ts';
 import type { SongLibraryRecords } from './runtime.ts';
+import { warn } from './storeSupport.ts';
 
 export type BundleRefusalReason =
   | 'notABundle'
@@ -106,6 +111,15 @@ export function errorCode(error: unknown): string | null {
   return typeof error.code === 'string' ? error.code : null;
 }
 
+function importedTempo(
+  tempo: StemBundleTempo | null | undefined,
+): BundleTempo | null {
+  const given = tempo ?? null;
+  const violation = given === null ? null : bundleTempoViolation(given);
+  if (violation !== null) warn('stem bundle tempo dropped', violation.reason);
+  return bundleTempoOf(given);
+}
+
 export function newStemBundle(
   imported: ImportedStemBundle,
   uuid: string,
@@ -140,6 +154,7 @@ export function newStemBundle(
     beats: imported.beats,
     bars: imported.bars,
     lyrics: imported.lyrics,
+    tempo: importedTempo(imported.tempo),
   };
 }
 

@@ -43,6 +43,8 @@ object StemBundleMaps {
       putArray("sections", Arguments.createArray().apply { metadata.sections.forEach { pushMap(section(it)) } })
       putArray("beats", Arguments.createArray().apply { bundle.grid.beats.forEach { pushDouble(it) } })
       putArray("bars", Arguments.createArray().apply { bundle.grid.bars.forEach { pushMap(bar(it)) } })
+      val tempo = bundle.grid.tempo
+      if (tempo == null) putNull("tempo") else putMap("tempo", tempo(tempo))
       val lyrics = bundle.lyrics
       if (lyrics == null) putNull("lyrics") else putMap("lyrics", lyrics(lyrics))
     }
@@ -72,6 +74,15 @@ object StemBundleMaps {
     Arguments.createMap().apply {
       putInt("beat", bar.beat)
       putInt("beatsPerBar", bar.beatsPerBar)
+    }
+
+  private fun tempo(tempo: BundleTempo): WritableMap =
+    Arguments.createMap().apply {
+      putString("mode", tempo.mode)
+      putNullableDouble("bpm", tempo.bpm)
+      putNullableDouble("anchor", tempo.anchor)
+      putInt("beatsPerBar", tempo.beatsPerBar)
+      putString("source", tempo.source)
     }
 
   private fun lyrics(lyrics: BundleLyrics): WritableMap =

@@ -16,6 +16,7 @@ import {
   RAMP_UNITS,
 } from './preset-rules';
 import { STEM_SET_SOURCE, STEM_SET_SOURCES } from './stem-set-source';
+import { TEMPO_MODES, TEMPO_SOURCES } from './tempo-mode';
 import { INSTRUMENTS } from './tuning-rules';
 
 function toBytes(value: unknown): Uint8Array {
@@ -185,6 +186,12 @@ export const stemSets = sqliteTable(
     clickRate: text('click_rate', { enum: CLICK_RATES })
       .notNull()
       .default(CLICK_RATE.single),
+    tempoMode: text('tempo_mode', { enum: TEMPO_MODES }),
+    tempoBpm: real('tempo_bpm'),
+    tempoAnchor: real('tempo_anchor'),
+    tempoBeatsPerBar: integer('tempo_beats_per_bar'),
+    tempoSource: text('tempo_source', { enum: TEMPO_SOURCES }),
+    chosenTempoMode: text('chosen_tempo_mode', { enum: TEMPO_MODES }),
   },
   (table) => [
     uniqueIndex('stem_sets_stemdeck_job_id')
