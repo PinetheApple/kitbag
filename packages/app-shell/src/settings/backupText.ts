@@ -163,10 +163,9 @@ function incomingList(
   counts: ImportPlan['counts'],
 ): string {
   return joined(
-    categories.map((category) => {
-      const plan = counts[category];
-      return counted(category, (plan?.incoming ?? 0) - notOnDevice(plan));
-    }),
+    categories.map((category) =>
+      counted(category, counts[category]?.incoming ?? 0),
+    ),
     '&',
   );
 }

@@ -95,12 +95,21 @@ describe('stem songs row', () => {
     ).toBe('3 · 1 not on this phone');
   });
 
+  it('names the backup count on the merge button when none is on this phone', () => {
+    const plan = {
+      mode: 'merge',
+      categories: ['stemSongs'],
+      counts: { stemSongs: counts({ incoming: 1, notOnDevice: 1 }) },
+    } as unknown as ImportPlan;
+    expect(applyLabel(plan)).toBe('Merge 1 stem song');
+  });
+
   it('reports the stem songs a restore skipped', () => {
     expect(
       restoredText('merge', {
         stemSongs: counts({ incoming: 3, notOnDevice: 2 }),
       }),
-    ).toBe('Merged 1 stem song. 2 stem songs not on this phone.');
+    ).toBe('Merged 3 stem songs. 2 stem songs not on this phone.');
     expect(
       restoredText('replace', {
         stemSongs: counts({ incoming: 1, notOnDevice: 0 }),

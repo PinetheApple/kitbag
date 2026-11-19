@@ -1211,6 +1211,16 @@ phone. That page defines the format; this spec does not copy it.
   `mix.json`; without one, each stem keeps its saved mix and key by name and
   a new stem starts at unity. The song key, sections and grid come from the
   bundle. On failure nothing changes: the swap is one transaction.
+- **Backup:** its own Restore category, Stem songs, carrying each stem song's
+  settings and never its audio: rename, meter and bar one, retiming, speed,
+  click grouping and rate, chosen tempo mode, and per stem name, mix and key.
+  A StemDeck song matches the one on the phone with the same job id, a folder
+  song the same UUID; one with no match is skipped and the report says how
+  many are not on this phone. Merge reviews a value changed on both sides as a
+  conflict, and a song still at its import values takes the backup's; the
+  retiming restores only if it fits the phone's lyrics. Replace overwrites the
+  matched songs and deletes none. An older backup leaves local stem songs
+  untouched (#407).
 - Out of scope: separation, lead/backing vocal split, lyric transcription,
   search and download — StemDeck's job, on hardware built for it.
 

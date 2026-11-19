@@ -27,7 +27,7 @@ tags:
 - extendedWaitUntil:
     visible: 'Stem songs, 1 · 1 not on this phone'
     timeout: 10000
-- tapOn: 'Merge 0 stem songs'
+- tapOn: 'Merge 1 stem song'
 - extendedWaitUntil:
-    visible: 'Merged 0 stem songs. 1 stem song not on this phone.'
+    visible: 'Merged 1 stem song. 1 stem song not on this phone.'
     timeout: 10000
