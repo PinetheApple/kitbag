@@ -134,7 +134,9 @@ describe('gridReplaced', () => {
   it('re-counts through followNewGrid once the new grid is stored', async () => {
     const song = counting({ click: true });
     song.replaceGrid(NEW_BEATS);
-    await followNewGrid(song.clickContext, song.start.gridReplaced);
+    await followNewGrid(song.clickContext, {
+      gridReplaced: song.start.gridReplaced,
+    });
     const [call] = song.commands.songCountIn.mock.calls;
     expect(call?.[1]).toBeCloseTo(at(NEW_BEAT));
     expect(song.commands.setGrid).toHaveBeenCalledOnce();

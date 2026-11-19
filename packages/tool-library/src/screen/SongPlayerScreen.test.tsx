@@ -1,6 +1,11 @@
 // react-test-renderer is deprecated, but it alone exposes host props with no DOM.
 /* eslint-disable @typescript-eslint/no-deprecated */
-import { screenBar, space, type LoopHandles } from '@kitbag/core-design';
+import {
+  meterCopy,
+  screenBar,
+  space,
+  type LoopHandles,
+} from '@kitbag/core-design';
 import { act, createElement, type ReactNode } from 'react';
 import {
   create,
@@ -9,6 +14,7 @@ import {
 } from 'react-test-renderer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { METER_FAILED } from '../logic/songMeterText.ts';
 import {
   LOOP_KEY_TEXT,
   REANALYZE_LABEL,
@@ -37,7 +43,16 @@ const library = vi.hoisted(
     files: null,
   }),
 );
-const commands = vi.hoisted(() => ({ close: vi.fn(), reanalyze: vi.fn() }));
+const commands = vi.hoisted(() => ({
+  close: vi.fn(),
+  reanalyze: vi.fn(),
+  save: vi.fn(() => Promise.resolve(true)),
+  dismissMeterNotice: vi.fn(),
+}));
+const meter = vi.hoisted((): { override: unknown; notice: unknown } => ({
+  override: { meterBeatsPerBar: null, barOneSeconds: null },
+  notice: null,
+}));
 const transport = vi.hoisted(() => ({
   markLoop: vi.fn(),
   moveLoopEdge: vi.fn(),
@@ -79,6 +94,9 @@ vi.mock('@kitbag/core-design', async (original) => {
     Sheet: (props: Props) =>
       props.visible === true ? h('Sheet', null, props.children) : null,
     Badge: (props: Props) => h('Badge', { label: props.label }),
+    MenuRow: (props: Props) => h('MenuRow', props),
+    MeterRow: (props: Props) => h('MeterRow', props),
+    MeterSheet: (props: Props) => h('MeterSheet', props),
     BeatWaveform: nothing,
     Card: parent,
     Chip: () => h('Chip'),
@@ -126,6 +144,9 @@ vi.mock('@kitbag/core-state', async (original) => {
     };
   };
   return {
+    GRID_METERS: [3, 4],
+    isGridMeter: (meter: number) => [3, 4].includes(meter),
+    NO_METER_OVERRIDE: { meterBeatsPerBar: null, barOneSeconds: null },
     analysisFailure: () => library.failure,
     rowFilesOf: () => library.files,
     beatBeside,
@@ -141,7 +162,12 @@ vi.mock('@kitbag/core-state', async (original) => {
     useFocusedMixerHold,
     useLoopScrub: () => ({}),
     useSongLibrary: (select: (state: unknown) => unknown) =>
-      select({ rows: library.rows, codes: {}, reanalyze: commands.reanalyze }),
+      select({
+        rows: library.rows,
+        codes: {},
+        reanalyze: commands.reanalyze,
+        saveSongMeterOverride: commands.save,
+      }),
     useSongPlayer: (select: (state: unknown) => unknown) =>
       select({
         status: display.status,
@@ -151,6 +177,12 @@ vi.mock('@kitbag/core-state', async (original) => {
         engineRate: ENGINE_RATE,
         ...display.analysis,
         loop: { kind: 'off' },
+        meterOverride: meter.override,
+        detected: { meter: 4, barOneSeconds: 2.3 },
+        meterNotice: meter.notice,
+        dismissMeterNotice: commands.dismissMeterNotice,
+        meterOverrideChanged: vi.fn(),
+        playheadBeatSeconds: () => null,
         open,
         close: commands.close,
         ...transport,
@@ -221,6 +253,8 @@ beforeEach(() => {
   library.rows = [];
   library.failure = null;
   library.files = null;
+  meter.override = { meterBeatsPerBar: null, barOneSeconds: null };
+  meter.notice = null;
   Object.assign(mixer, { session: 0, opens: 0, displaced: 0, releases: 0 });
 });
 
@@ -336,15 +370,27 @@ describe('holding the song', () => {
 describe('the player menu', () => {
   function menuButton(tree: ReactTestRenderer, label: string) {
     return tree.root.find(
-      (node) => String(node.type) === 'Button' && node.props.label === label,
+      (node) => String(node.type) === 'MenuRow' && node.props.label === label,
     );
   }
 
   function menuLabels(tree: ReactTestRenderer) {
     return tree.root
       .findByType('Sheet' as never)
-      .findAllByType('Button' as never)
-      .map((node) => node.props.label as unknown);
+      .findAll((node) => ['MenuRow', 'MeterRow'].includes(String(node.type)))
+      .map((node) =>
+        String(node.type) === 'MeterRow'
+          ? meterCopy.title
+          : (node.props.label as unknown),
+      );
+  }
+
+  function meterRow(tree: ReactTestRenderer) {
+    return tree.root.findByType('MeterRow' as never);
+  }
+
+  function meterSheet(tree: ReactTestRenderer) {
+    return tree.root.findByType('MeterSheet' as never);
   }
 
   function openMenu(): ReactTestRenderer {
@@ -380,7 +426,93 @@ describe('the player menu', () => {
     ['whose file is missing', MISSING],
   ])('offers no Re-analyse for a song %s', (_case, failure) => {
     failWith(failure);
-    expect(menuLabels(openMenu())).toEqual(['Stop']);
+    expect(menuLabels(openMenu())).toEqual(['Meter', 'Count-in', 'Stop']);
+  });
+
+  it('lists Re-analyse, Meter, Count-in and Stop', () => {
+    expect(menuLabels(openMenu())).toEqual([
+      REANALYZE_LABEL,
+      'Meter',
+      'Count-in',
+      'Stop',
+    ]);
+  });
+
+  it('keeps Count-in muted until count-in for songs exists', () => {
+    expect(menuButton(openMenu(), 'Count-in').props.disabled).toBe(true);
+  });
+
+  it('shows the detected meter, then the override as yours', () => {
+    expect(meterRow(openMenu()).props).toMatchObject({
+      value: 4,
+      yours: false,
+      disabled: false,
+    });
+    meter.override = { meterBeatsPerBar: 3, barOneSeconds: null };
+    expect(meterRow(openMenu()).props).toMatchObject({ value: 3, yours: true });
+  });
+
+  it('opens the meter sheet from the Meter row and closes the menu', () => {
+    const tree = openMenu();
+    expect(meterSheet(tree).props.visible).toBe(false);
+    act(() => {
+      (meterRow(tree).props.onPress as () => void)();
+    });
+    expect(tree.root.findAllByType('Sheet' as never)).toHaveLength(0);
+    expect(meterSheet(tree).props).toMatchObject({
+      visible: true,
+      options: [3, 4],
+      detectedMeter: 4,
+      detectedBarOneSeconds: 2.3,
+      state: 'ready',
+    });
+  });
+
+  it('says a meter that could not be saved, once the sheet closes', async () => {
+    commands.save.mockResolvedValueOnce(false);
+    const tree = openMenu();
+    act(() => {
+      (meterRow(tree).props.onPress as () => void)();
+    });
+    await act(async () => {
+      (meterSheet(tree).props.onPickMeter as (meter: number) => void)(3);
+      await Promise.resolve();
+    });
+    expect(meterSheet(tree).props.notice).toMatchObject({
+      message: 'Could not save the meter.',
+      actionLabel: 'Try again',
+    });
+    act(() => {
+      (meterSheet(tree).props.onClose as () => void)();
+    });
+    const shown = tree.root.findAll(
+      (node) =>
+        String(node.type) === 'Snackbar' &&
+        node.props.message === 'Could not save the meter.',
+    );
+    expect(shown).toHaveLength(1);
+  });
+
+  it.each(['failed', 'missing'])(
+    'gives the failed reason when the song is %s',
+    (status) => {
+      display.status = status;
+      expect(meterRow(openMenu()).props).toMatchObject({
+        disabled: true,
+        reason: METER_FAILED,
+      });
+    },
+  );
+
+  it.each([
+    ['analysing', 'analyzing', 'Available once the beat is found'],
+    ['failed', 'failed', METER_FAILED],
+  ] as const)('disables Meter while %s and says why', (_case, status, why) => {
+    display.analysis = { analysisStatus: status, beats: [] };
+    expect(meterRow(openMenu()).props).toMatchObject({
+      disabled: true,
+      reason: why,
+    });
   });
 
   it('re-analyses this song and closes the menu', () => {
@@ -542,6 +674,62 @@ describe('the transport', () => {
       )();
     });
     expect(tree.root.findAllByType('Snackbar' as never)).toHaveLength(0);
+  });
+});
+
+describe('a re-analysis with an override set', () => {
+  function detectedNotes(tree: ReactTestRenderer) {
+    return tree.root.findAll(
+      (node) =>
+        String(node.type) === 'Snackbar' &&
+        node.props.actionLabel === meterCopy.useDetected,
+    );
+  }
+
+  function detectedNote(tree: ReactTestRenderer) {
+    const [note] = detectedNotes(tree);
+    if (note === undefined) throw new Error('no re-analysis notice');
+    return note;
+  }
+
+  it('says the override is kept and offers the new result', async () => {
+    meter.override = { meterBeatsPerBar: null, barOneSeconds: 105.3 };
+    meter.notice = { meter: 3, barOneSeconds: 2.3 };
+    const tree = mount();
+    const notice = detectedNote(tree);
+    expect(notice.props.message).toBe(
+      'Re-analysed: 3/4, bar 1 at 0:02.3. Your bar 1 is kept.',
+    );
+    await act(async () => {
+      (notice.props.onAction as () => void)();
+      await Promise.resolve();
+    });
+    expect(commands.dismissMeterNotice).toHaveBeenCalledOnce();
+    expect(commands.save).toHaveBeenCalledExactlyOnceWith(1, {
+      meterBeatsPerBar: null,
+      barOneSeconds: null,
+    });
+  });
+
+  it('holds the notice while the Meter sheet is open', () => {
+    meter.override = { meterBeatsPerBar: 3, barOneSeconds: null };
+    meter.notice = { meter: 4, barOneSeconds: 2.3 };
+    const tree = mount();
+    const [more] = tree.root.findByType('AppBar' as never).props
+      .actions as readonly { onPress: () => void }[];
+    act(() => {
+      more?.onPress();
+    });
+    act(() => {
+      (tree.root.findByType('MeterRow' as never).props.onPress as () => void)();
+    });
+    expect(detectedNotes(tree)).toHaveLength(0);
+    act(() => {
+      (
+        tree.root.findByType('MeterSheet' as never).props.onClose as () => void
+      )();
+    });
+    expect(detectedNotes(tree)).toHaveLength(1);
   });
 });
 

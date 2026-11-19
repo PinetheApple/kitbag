@@ -25,6 +25,13 @@ function shiftedBars(
   }));
 }
 
+export function isMeterOverridden({
+  meterBeatsPerBar,
+  barOneSeconds,
+}: MeterOverride): boolean {
+  return meterBeatsPerBar !== null || barOneSeconds !== null;
+}
+
 interface DetectedBars {
   readonly meter: number;
   readonly fromBarOne: readonly number[];

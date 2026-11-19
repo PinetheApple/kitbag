@@ -155,6 +155,11 @@ export interface Spec extends TurboModule {
   mixdownStart(fileName: string): Promise<MixdownStartReply>;
   mixdownCancel(): void;
 
+  /** Rejects E_BAD_FILE_NAME for a name unsafe as a click sound file. */
+  loadCustomSound(slot: Int32, fileName: string): Promise<number>;
+  clearCustomSound(slot: Int32): void;
+  customSoundLoaded(slot: Int32): Promise<boolean>;
+
   // --- Tuner (kitbag_tuner_api.h) ------------------------------------------
   //
   // Every tuner command is async: the engine wants all kb_tuner_* setters from

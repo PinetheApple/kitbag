@@ -22,7 +22,11 @@ import { useCallback, useEffect, useMemo, type ReactElement } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import { copyingText, noticeLook, noticeText } from '../logic/notices.ts';
-import { VIEW_TEXT, type ViewText } from '../logic/viewText.ts';
+import {
+  TRY_AGAIN_LABEL,
+  VIEW_TEXT,
+  type ViewText,
+} from '../logic/viewText.ts';
 import { LibraryRowView } from './LibraryRowView.tsx';
 import {
   LibrarySheets,
@@ -155,7 +159,7 @@ function LibraryUnavailable() {
       title="Your songs could not be opened"
       reason="The song library failed to load. The metronome and tuner still work."
       actionIcon="reset"
-      actionLabel="Try again"
+      actionLabel={TRY_AGAIN_LABEL}
       option={null}
       onAction={retry}
     />

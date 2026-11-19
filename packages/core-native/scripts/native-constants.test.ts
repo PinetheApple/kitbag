@@ -51,6 +51,7 @@ const realSources: NativeSources = {
   metronomeTypesHeader: read('src', 'metronome', 'metronome_types.h'),
   transportPlanHeader: read('src', 'mixer', 'transport_plan.h'),
   mixdownHeader: read('include', 'kitbag_mixdown_api.h'),
+  clickSoundHeader: read('include', 'kitbag_click_sound_api.h'),
 };
 
 describe('parseDefineInt', () => {
@@ -377,7 +378,25 @@ describe('collectConstants (real engine source)', () => {
     expect(c.result).toContainEqual({ name: 'KB_ERROR_TOO_LONG', value: 7 });
     expect(c.mixdownChannels).toBe(2);
     expect(c.mixdownBitsPerSample).toBe(16);
+    expect(c.customSoundSlots).toBe(2);
+    expect(c.maxCustomSoundSeconds).toBe(2);
     // render twice: identical, so generate:check can byte-diff deterministically.
     expect(renderConstants(c)).toBe(renderConstants(c));
   });
+});
+
+describe('collectConstants (custom click sounds)', () => {
+  it.each(['KB_CUSTOM_SOUND_SLOTS', 'KB_MAX_CUSTOM_SOUND_SECONDS'])(
+    'throws when %s is missing from the header',
+    (name) => {
+      const clickSoundHeader = realSources.clickSoundHeader.replaceAll(
+        `#define ${name} `,
+        `#define ${name}_RENAMED `,
+      );
+      expect(clickSoundHeader).not.toBe(realSources.clickSoundHeader);
+      expect(() =>
+        collectConstants({ ...realSources, clickSoundHeader }),
+      ).toThrow(name);
+    },
+  );
 });

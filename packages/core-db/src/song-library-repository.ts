@@ -12,6 +12,7 @@ import {
 } from 'drizzle-orm';
 
 import { ANALYSIS_STATUS, type AnalysisStatus } from './analysis-status';
+import { saveStemSetClick, type StemSetClickPatch } from './click-settings';
 import {
   meterOverrideOf,
   saveMeterOverride,
@@ -404,6 +405,8 @@ export function createSongLibraryRepository({
       serial(() => saveMeterOverride(db, songs, id, patch)),
     saveStemSetMeterOverride: (id: number, patch: MeterOverridePatch) =>
       serial(() => saveMeterOverride(db, stemSets, id, patch)),
+    saveStemSetClick: (id: number, patch: StemSetClickPatch) =>
+      serial(() => saveStemSetClick(db, id, patch)),
     renameStemSet: (id: number, title: string) =>
       serial(() => renameStemSet(db, id, title)),
     renameStem: (id: number, name: string) =>

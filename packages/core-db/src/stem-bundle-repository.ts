@@ -1,5 +1,6 @@
 import { asc, eq, isNotNull } from 'drizzle-orm';
 
+import { stemSetClickOf, type StemSetClick } from './click-settings';
 import { meterOverrideOf, type MeterOverride } from './meter-override';
 import { found, type Database } from './repository';
 import { stems, stemSets } from './schema';
@@ -80,7 +81,8 @@ export interface StemSetRecord
       NewStemBundle,
       'jobId' | 'folder' | 'stems' | 'sampleRate' | 'channels' | 'hasMix'
     >,
-    MeterOverride {
+    MeterOverride,
+    StemSetClick {
   readonly id: number;
   readonly source: StemSetSource;
   readonly jobId: string | null;
@@ -313,6 +315,7 @@ export async function readStemSet(
     createdAt: row.createdAt,
     speed: row.speed,
     ...meterOverrideOf(row),
+    ...stemSetClickOf(row),
     bpm: row.bpm,
     key: row.key,
     scale: row.scale,

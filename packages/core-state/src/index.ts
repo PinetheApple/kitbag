@@ -47,6 +47,7 @@ export {
   clampRampInterval,
   cycleAccentValue,
   isAccent,
+  isBuiltInSoundId,
   isCountInBars,
   isRampUnit,
   isSoundId,
@@ -163,6 +164,13 @@ export type {
   TunerTuning,
 } from './tuner/types.ts';
 export { MAX_MIDI_NOTE } from '@kitbag/core-db';
+export {
+  CLICK_RATE,
+  CLICK_RATES,
+  groupBeats,
+  stemSetClickViolation,
+  type ClickRate,
+} from '@kitbag/core-db';
 export { MAX_BUSY_RETRIES, type TunerCommands } from './tuner/commands.ts';
 export {
   configureTunerRuntime,
@@ -400,7 +408,9 @@ export {
 export {
   overrideDownbeats,
   type DetectedGrid,
+  type DetectedMeter,
 } from './stemPlayer/meterOverride.ts';
+export { impliedMeter } from './stemPlayer/barMeter.ts';
 export {
   GRID_METER,
   GRID_METERS,

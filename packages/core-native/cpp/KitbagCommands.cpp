@@ -241,6 +241,21 @@ double commandMixerTrackFrames(double track) {
 int32_t commandMixdownStart(const char* path) { return kb_mixdown_start(commandEngine(), path); }
 void commandMixdownCancel() { kb_mixdown_cancel(commandEngine()); }
 
+// Under the command lock: kitbag_click_sound_api.h forbids overlapping a start, stop or hold.
+int32_t commandLoadCustomSound(double slot, const char* path) {
+  const auto wholeSlot = wholeInt32(slot);
+  if (!wholeSlot) return KB_ERROR_INVALID_ARGUMENT;
+  return kb_metronome_load_custom_sound(commandEngine(), *wholeSlot, path);
+}
+void commandClearCustomSound(double slot) {
+  const auto wholeSlot = wholeInt32(slot);
+  if (wholeSlot) kb_metronome_clear_custom_sound(commandEngine(), *wholeSlot);
+}
+bool commandCustomSoundLoaded(double slot) {
+  const auto wholeSlot = wholeInt32(slot);
+  return wholeSlot && kb_metronome_custom_sound_loaded(commandEngine(), *wholeSlot) != 0;
+}
+
 int32_t commandTunerStart() { return kb_tuner_start(commandEngine()); }
 void commandTunerStop() { kb_tuner_stop(commandEngine()); }
 int32_t commandTunerSetTuning(int32_t instrument, const int32_t* stringMidis, int32_t count) {

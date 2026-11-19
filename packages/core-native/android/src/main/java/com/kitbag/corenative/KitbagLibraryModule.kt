@@ -19,6 +19,7 @@ import com.kitbag.corenative.library.AnalysisResult
 import com.kitbag.corenative.library.AnalysisStore
 import com.kitbag.corenative.library.AnalysisTarget
 import com.kitbag.corenative.library.BackupShare
+import com.kitbag.corenative.library.ClickSoundFiles
 import com.kitbag.corenative.library.DataFolder
 import com.kitbag.corenative.library.DocumentPicker
 import com.kitbag.corenative.library.ExportFiles
@@ -27,6 +28,7 @@ import com.kitbag.corenative.library.LibraryErrors
 import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.LibraryStorage
 import com.kitbag.corenative.library.LibraryUsage
+import com.kitbag.corenative.library.NativeClickSound
 import com.kitbag.corenative.library.NativeWaveform
 import com.kitbag.corenative.library.StemBundleBridge
 import com.kitbag.corenative.library.StemBundleRefusedException
@@ -122,6 +124,39 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
 
   private fun libraryRoot() = dataFolder().root()
 
+  override fun prepareClickSound(sourceUri: String, fileName: String, promise: Promise) {
+    val target = ClickSoundFiles.resolve(reactApplicationContext.filesDir, fileName)
+    if (target == null) {
+      promise.reject(LibraryErrors.BAD_FILE_NAME, "Not a click sound file name: $fileName")
+      return
+    }
+    io.execute {
+      var staging: File? = null
+      try {
+        staging = ClickSoundFiles.staging(reactApplicationContext.cacheDir)
+        copyFrom(Uri.parse(sourceUri), staging)
+        target.parentFile?.mkdirs()
+        promise.resolve(NativeClickSound.prepare(staging, target))
+      } catch (e: IOException) {
+        if (ClickSoundFiles.isNoSpace(e)) {
+          promise.resolve(NativeClickSound.noSpace())
+        } else {
+          rejectLogged(promise, E_IMPORT_FAILED, "Could not read the click sound", e)
+        }
+      } catch (e: Exception) {
+        rejectLogged(promise, E_IMPORT_FAILED, "Could not read the click sound", e)
+      } finally {
+        staging?.delete()
+      }
+    }
+  }
+
+  private fun copyFrom(source: Uri, file: File) {
+    val input = reactApplicationContext.contentResolver.openInputStream(source)
+      ?: throw IOException("Could not open $source")
+    input.use { from -> file.outputStream().use { to -> from.copyTo(to) } }
+  }
+
   override fun importAudio(uri: String, relativeDir: String, promise: Promise) {
     io.execute { dataFolder().importing { importAudioLocked(uri, relativeDir, promise) } }
   }
@@ -159,9 +194,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   private fun copyInto(source: Uri, reserved: File) {
     val part = File(reserved.parentFile, ".${reserved.name}.part")
     try {
-      val input = reactApplicationContext.contentResolver.openInputStream(source)
-        ?: throw IOException("Could not open $source")
-      input.use { from -> part.outputStream().use { to -> from.copyTo(to) } }
+      copyFrom(source, part)
       if (!part.renameTo(reserved)) throw IOException("Could not move the import into place")
     } finally {
       part.delete()

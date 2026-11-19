@@ -102,6 +102,14 @@ export function collectConstants(sources: NativeSources): NativeConstants {
       sources.mixdownHeader,
       'KB_MIXDOWN_BITS_PER_SAMPLE',
     ),
+    customSoundSlots: parseDefineInt(
+      sources.clickSoundHeader,
+      'KB_CUSTOM_SOUND_SLOTS',
+    ),
+    maxCustomSoundSeconds: parseDefineInt(
+      sources.clickSoundHeader,
+      'KB_MAX_CUSTOM_SOUND_SECONDS',
+    ),
     bpmReferenceDenominator: parseConstexprInt(
       sources.metronomeHeader,
       'kBpmReferenceDenominator',
