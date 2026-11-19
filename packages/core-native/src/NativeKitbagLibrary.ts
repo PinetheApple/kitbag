@@ -140,6 +140,80 @@ export type LibraryAvailability = Readonly<{
   rootAvailable: boolean;
 }>;
 
+export type DataFolderVolume = Readonly<{
+  /** Null for internal storage. */
+  volumeUuid: string | null;
+  /** The system's name for a card; null for internal storage. */
+  name: string | null;
+  state: string;
+  inUse: boolean;
+  freeBytes: Double;
+  totalBytes: Double;
+}>;
+
+export type DataFolderVolumes = Readonly<{
+  currentVolumeUuid: string | null;
+  currentAvailable: boolean;
+  /** The current folder's media plus the move's free-space margin; null while it is unmounted. */
+  requiredBytes: Double | null;
+  volumes: readonly DataFolderVolume[];
+}>;
+
+export type MoveStatus = Readonly<{
+  phase: string;
+  sourceVolumeUuid: string | null;
+  targetVolumeUuid: string | null;
+  doneBytes: Double;
+  totalBytes: Double;
+  doneFiles: Int32;
+  totalFiles: Int32;
+  path: string | null;
+  running: boolean;
+  switched: boolean;
+  paused: boolean;
+  awaitingRelease: boolean;
+  error: string | null;
+}>;
+
+export type MoveFinished = Readonly<{
+  outcome: string;
+  error: string | null;
+  path: string | null;
+}>;
+
+export type MoveOutcomes = Readonly<{
+  done: string;
+  cancelled: string;
+  awaitingRelease: string;
+  cleanupDeferred: string;
+  noMove: string;
+  failed: string;
+  refused: string;
+}>;
+
+export type MoveErrors = Readonly<{
+  sourceUnavailable: string;
+  targetUnavailable: string;
+  targetOccupied: string;
+  noSpace: string;
+  targetNotWritable: string;
+  hashMismatch: string;
+  io: string;
+  sameLocation: string;
+  inProgress: string;
+  noMove: string;
+  running: string;
+  switched: string;
+  useInternalRefused: string;
+  foregroundRefused: string;
+}>;
+
+export type VolumeStates = Readonly<{
+  mounted: string;
+  readOnly: string;
+  unmounted: string;
+}>;
+
 export type LibraryConstants = Readonly<{
   songsDir: string;
   stemsDir: string;
@@ -166,6 +240,12 @@ export type LibraryConstants = Readonly<{
   supportedAudioExtensions: readonly string[];
   supportedAudioMimeTypes: readonly string[];
   unsupportedAudioExtensions: readonly string[];
+  moveOutcomes: MoveOutcomes;
+  /** In the order a move runs them. */
+  movePhases: readonly string[];
+  /** Reject codes of the move calls, and the error of a failed or refused move. */
+  moveErrors: MoveErrors;
+  volumeStates: VolumeStates;
 }>;
 
 export interface Spec extends TurboModule {
@@ -202,6 +282,20 @@ export interface Spec extends TurboModule {
     relativePaths: readonly string[],
   ): Promise<LibraryAvailability>;
   readonly onDataFolderChanged: EventEmitter<void>;
+  listVolumes(): Promise<DataFolderVolumes>;
+  /** Null moves to internal storage. Resolves once the move is handed to its service. */
+  startMove(volumeUuid: string | null): Promise<void>;
+  cancelMove(): Promise<void>;
+  resumeMove(): Promise<void>;
+  /** Discards a paused move's copies; refused while a move runs. */
+  undoMove(): Promise<void>;
+  moveStatus(): Promise<MoveStatus | null>;
+  /** The paths come from the database: an unmounted card cannot be listed. */
+  useInternalStorage(awayPaths: readonly string[]): Promise<void>;
+  /** Call once no player holds a track loaded before the switch. */
+  releaseOldCopies(): void;
+  readonly onMoveProgress: EventEmitter<MoveStatus>;
+  readonly onMoveFinished: EventEmitter<MoveFinished>;
 }
 
 export function getKitbagLibrary(): Spec {

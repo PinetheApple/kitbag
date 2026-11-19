@@ -6,6 +6,7 @@ import '@/runtime/songLibraryRuntime';
 import '@/runtime/stemDeckRuntime';
 import '@/runtime/stemPlayerRuntime';
 import '@/runtime/songPlayerRuntime';
+import '@/runtime/dataFolderRuntime';
 import '@/runtime/tunerRuntime';
 import '@/runtime/lastToolRuntime';
 import '@/runtime/homeLayoutRuntime';

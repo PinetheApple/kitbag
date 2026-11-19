@@ -239,6 +239,20 @@ export type {
   BundleRefusal,
   BundleRefusalReason,
 } from './songLibrary/stemBundleLogic.ts';
+export {
+  createDataFolderStore,
+  dataFolderStore,
+  folderUnavailable,
+  pausedMove,
+  type DataFolderDeps,
+  type DataFolderStore,
+  type PlayerWatch,
+} from './dataFolder/store.ts';
+export {
+  configureDataFolder,
+  type DataFolderNative,
+} from './dataFolder/runtime.ts';
+export type { PlayerTracks } from './dataFolder/release.ts';
 export { useStemDeck } from './stemDeck/useStemDeck.ts';
 export {
   createStemDeckStore,

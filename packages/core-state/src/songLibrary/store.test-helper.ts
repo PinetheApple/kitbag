@@ -12,6 +12,7 @@ import {
 } from '@kitbag/core-native';
 import { afterEach, vi } from 'vitest';
 
+import { DATA_FOLDER_CODES } from '../dataFolder/codes.test-helper.ts';
 import { songBadge } from './logic.ts';
 import type { LibraryFiles, OpenSong } from './runtime.ts';
 import { createSongLibraryStore } from './store.ts';
@@ -29,6 +30,7 @@ export const MP3: PickedDocument = {
 };
 
 export const CODES: LibraryConstants = {
+  ...DATA_FOLDER_CODES,
   songsDir: 'songs',
   stemsDir: 'stems',
   bundleRefusalNotABundle: 'not-a-bundle',
