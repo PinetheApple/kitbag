@@ -75,6 +75,15 @@ vi.mock('react-native', () => ({
   StyleSheet: { create: <T,>(styles: T) => styles },
 }));
 
+vi.mock('./SongClickChips.tsx', async () => {
+  const { createElement: h } = await import('react');
+  return { SongClickChips: (props: Props) => h('SongClickChips', props) };
+});
+
+vi.mock('react-native-reanimated', () => ({
+  useSharedValue: (value: unknown) => ({ value }),
+}));
+
 vi.mock('@kitbag/core-design', async (original) => {
   const { createElement: h } = await import('react');
   const parent = (props: Props) => props.children;
@@ -107,6 +116,8 @@ vi.mock('@kitbag/core-design', async (original) => {
     BeatWaveform: nothing,
     Card: parent,
     Chip: () => h('Chip'),
+    PickerGrid: nothing,
+    BeatLedRow: nothing,
     createThemedStyles: (build: (theme: unknown) => unknown) => () =>
       build({ color: {} }),
     EmptyState: (props: Props) =>
@@ -134,6 +145,9 @@ vi.mock('@kitbag/core-state', async (original) => {
     TEMPO_CORRECTIONS,
     formatName,
     joinedFormatNames,
+    BUILT_IN_SOUND_NAMES,
+    DEFAULT_SOUND_NAME,
+    beatGroupSizes,
   } = await original<{
     useFocusedMixerHold: unknown;
     playerSongBadge: unknown;
@@ -144,6 +158,9 @@ vi.mock('@kitbag/core-state', async (original) => {
     TEMPO_CORRECTIONS: unknown;
     formatName: unknown;
     joinedFormatNames: unknown;
+    BUILT_IN_SOUND_NAMES: unknown;
+    DEFAULT_SOUND_NAME: unknown;
+    beatGroupSizes: unknown;
   }>();
   const open = () => {
     const mine = ++mixer.session;
@@ -173,6 +190,11 @@ vi.mock('@kitbag/core-state', async (original) => {
     TEMPO_CORRECTIONS,
     formatName,
     joinedFormatNames,
+    BUILT_IN_SOUND_NAMES,
+    DEFAULT_SOUND_NAME,
+    beatGroupSizes,
+    useClickSounds: (select: (state: unknown) => unknown) =>
+      select({ sounds: [] }),
     bpmFact: (bpm: number | null) =>
       bpm === null
         ? null
@@ -216,6 +238,12 @@ vi.mock('@kitbag/core-state', async (original) => {
         tempoCorrectionChanged: vi.fn(),
         tempoCorrectionSettled: vi.fn(),
         playheadBeatSeconds: () => null,
+        clickSettings: {
+          countInBars: 0,
+          sounds: { normal: 1, accent: 0 },
+          accents: [2, 1, 1, 1],
+          dirty: false,
+        },
         open,
         close: commands.close,
         ...transport,
@@ -896,5 +924,20 @@ describe('the loop handles', () => {
       'end',
       DROPPED_FRACTION * SONG_SECONDS,
     );
+  });
+});
+
+describe('the song click chips', () => {
+  it('open the Click for this song sheet over the player', () => {
+    const tree = mount();
+    const chips = tree.root.findByType('SongClickChips' as never);
+    expect(tree.root.findAllByType('Sheet' as never)).toHaveLength(0);
+    act(() => {
+      (chips.props.onOpen as (group: string) => void)('sound');
+    });
+    const titles = tree.root
+      .findAllByType('Sheet' as never)
+      .map((sheet) => sheet.props.title as string);
+    expect(titles).toEqual(['Click for this song']);
   });
 });

@@ -6,6 +6,8 @@ export * from './songLibrary/badge.ts';
 export * from './songLibrary/replaceText.ts';
 export * from './stemPlayer/beatStep.ts';
 export * from './importText.ts';
+export * from './clickSounds/soundNames.ts';
+export { beatGroupSizes } from './metronome/meterGroups.ts';
 export {
   correctedBpm,
   TEMPO_CORRECTION,
