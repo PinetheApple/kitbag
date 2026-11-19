@@ -36,6 +36,7 @@ export interface SegmentOption<T extends string> {
   readonly label: string;
   readonly accessibilityLabel?: string;
   readonly disabled?: boolean;
+  readonly detail?: string;
 }
 
 export interface SegmentedControlProps<T extends string> {
@@ -109,6 +110,7 @@ const useStyles = createThemedStyles((theme) => ({
   labelSelected: {
     color: theme.color.text,
   },
+  detail: textStyle({ ...textRoles.segment, tabular: true }),
   labelAccent: {
     color: theme.color[theme.accentInk],
   },
@@ -241,6 +243,17 @@ function Segment<T extends string>({
         >
           {option.label}
         </Text>
+        {option.detail === undefined ? null : (
+          <Text
+            style={[
+              styles.label,
+              styles.detail,
+              selected && styles.labelSelected,
+            ]}
+          >
+            {option.detail}
+          </Text>
+        )}
       </View>
     </Pressable>
   );
