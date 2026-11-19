@@ -71,7 +71,10 @@ describe('stepping from the metronome app bar', () => {
   });
 
   it('says a skip on the metronome when it lands on a metronome entry, leaving the click alone', async () => {
-    fake.stepSong.mockResolvedValue({ entry: entry(3, 'Ballad'), skipped: true });
+    fake.stepSong.mockResolvedValue({
+      entry: entry(3, 'Ballad'),
+      skipped: true,
+    });
     await stepOnce();
     expect(onSkipped).toHaveBeenCalledOnce();
     expect(fake.carrySkip).not.toHaveBeenCalled();

@@ -11,18 +11,18 @@ import {
   textRoles,
   textStyle,
   TRANSPARENT,
+  useAfterSheetClosed,
 } from '@kitbag/core-design';
 import {
+  STEMS_BADGE,
   useLibrary,
-  useMetronome,
   useStemSongs,
   type ActiveSet,
   type SetlistEntry,
 } from '@kitbag/core-state';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { STEMS_BADGE } from '@kitbag/core-state';
 import {
   songListHint,
   songListRows,
@@ -32,6 +32,7 @@ import {
 import { type ErrorSetter } from '../library/sheets.tsx';
 import { nowRowA11yLabel } from '../logic/setlistChip.ts';
 import { useSheetStyles } from './sheetStyles.ts';
+import { useOpenStemPlayer } from './useOpenStemPlayer.ts';
 import {
   NowRowActions,
   UnsavedDot,
@@ -172,27 +173,21 @@ function useStemPick(
   onOpenStemSet: SetlistSongsSheetProps['onOpenStemSet'],
 ) {
   const openStemEntry = useLibrary((s) => s.openStemEntry);
-  const stop = useMetronome((s) => s.stop);
-  const leaving = useRef<Promise<number | null> | null>(null);
+  const openStemPlayer = useOpenStemPlayer(onOpenStemSet);
+  const { after, closed } = useAfterSheetClosed();
   const pick = useCallback(
     (row: SongListRow) => {
       const { stemSetId } = row;
       if (stemSetId === null) return;
-      leaving.current = openStemEntry(row.itemId, setlistId).then((opened) =>
-        opened ? stemSetId : null,
-      );
+      const opening = openStemEntry(row.itemId, setlistId);
+      after(() => {
+        void opening.then((opened) => {
+          if (opened) openStemPlayer(stemSetId);
+        });
+      });
     },
-    [openStemEntry, setlistId],
+    [openStemEntry, setlistId, after, openStemPlayer],
   );
-  const closed = useCallback(() => {
-    const pending = leaving.current;
-    leaving.current = null;
-    void pending?.then((stemSetId) => {
-      if (stemSetId === null) return;
-      stop();
-      onOpenStemSet?.(stemSetId);
-    });
-  }, [onOpenStemSet, stop]);
   return { pick, closed };
 }
 

@@ -38,7 +38,8 @@ vi.mock('@kitbag/core-state', () => ({
   STEMS_BADGE: 'STEMS',
   UNKNOWN_STEM_SONG: 'Stem song',
   isPresetEntry: (e: { kind: string }) => e.kind === 'preset',
-  stemSongFacts: () => '3:52 · A maj · 104 BPM',
+  stemFacts: () => '3:52 · A maj · 104 BPM',
+  stemSongTitle: (id: number) => (id === 9 ? 'Night Bus' : 'Stem song'),
   useStemSongs: () => new Map([[9, { id: 9, title: 'Night Bus' }]]),
   useLibrary: (select: (state: unknown) => unknown) =>
     select({

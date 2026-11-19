@@ -10,7 +10,9 @@ import {
 } from '@kitbag/core-design';
 import {
   isPresetEntry,
-  stemSongFacts,
+  stemFacts,
+  STEMS_BADGE,
+  stemSongTitle,
   useLibrary,
   useMetronome,
   useStemSongs,
@@ -21,7 +23,6 @@ import {
 import { useCallback, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
-import { STEMS_BADGE, UNKNOWN_STEM_SONG } from '@kitbag/core-state';
 import { setlistTitle, songSubtitle } from '../logic/songSummary.ts';
 import { useCustomSoundViews } from '../screen/CustomSounds.tsx';
 import type { ShellMeasuredInsets } from '../screen/MetronomeScreen.tsx';
@@ -29,6 +30,7 @@ import { DetailSheets, useDetailMenu, type DetailMenu } from './DetailMenu.tsx';
 import { ScreenFrame } from './ScreenFrame.tsx';
 import { ActionsSheet, guarded } from './sheets.tsx';
 import { SongMenuSheets, useSongMenu, type SongMenu } from './SongMenu.tsx';
+import { useOpenStemPlayer } from '../screen/useOpenStemPlayer.ts';
 import { useLibraryRefresh } from './useLibraryRefresh.ts';
 
 const NO_ENTRIES: readonly SetlistEntry[] = [];
@@ -97,10 +99,10 @@ interface StemEntryRowProps {
 }
 
 function useStemEntryText(stemSetId: number) {
-  const song = useStemSongs().get(stemSetId);
+  const stems = useStemSongs();
   return {
-    name: song?.title ?? UNKNOWN_STEM_SONG,
-    facts: song === undefined ? '' : stemSongFacts(song),
+    name: stemSongTitle(stemSetId, stems),
+    facts: stemFacts(stemSetId, stems),
   };
 }
 
@@ -166,16 +168,14 @@ interface SectionProps {
 
 function useOpenStemEntry({ setlistId, onOpenStemSet }: SectionProps) {
   const openStemEntry = useLibrary((s) => s.openStemEntry);
-  const stop = useMetronome((s) => s.stop);
+  const openStemPlayer = useOpenStemPlayer(onOpenStemSet);
   return useCallback(
     (entry: StemSetlistEntry) => {
       void openStemEntry(entry.item.id, setlistId).then((opened) => {
-        if (!opened) return;
-        stop();
-        onOpenStemSet(entry.stemSetId);
+        if (opened) openStemPlayer(entry.stemSetId);
       });
     },
-    [openStemEntry, stop, setlistId, onOpenStemSet],
+    [openStemEntry, setlistId, openStemPlayer],
   );
 }
 

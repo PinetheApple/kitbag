@@ -1,11 +1,11 @@
 import { countLabel } from '@kitbag/core-design';
 import {
+  entryName,
   isPresetEntry,
   type ActiveSet,
   type SetlistEntry,
+  type StemSongs,
 } from '@kitbag/core-state';
-
-import { entryName, type StemSongs } from '@kitbag/core-state';
 
 export interface SongListRow {
   readonly itemId: number;

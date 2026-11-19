@@ -20,8 +20,10 @@ import {
 import {
   activeSetView,
   adjacentEntry,
+  entryName,
   SONG_STEP,
   stagePositionOf,
+  stemSongTitle,
   useLibrary,
   useStemSongs,
   type ActiveSet,
@@ -41,7 +43,6 @@ import {
   stepA11yLabel,
   type SongChipText,
 } from '../logic/setlistChip.ts';
-import { entryName } from '@kitbag/core-state';
 import { LoadedSongSheet } from './LoadedSongSheet.tsx';
 import { useStepSong, type StemStepHandlers } from './useStepSong.ts';
 import { SetlistSongsSheet } from './SetlistSongsSheet.tsx';
@@ -161,8 +162,8 @@ function useSongContext(): SongContext {
   const preset = useLibrary((s) => loadedSongName(s.presets, s.loaded));
   const stems = useStemSongs();
   const song =
-    loaded !== null && 'stemSetId' in loaded
-      ? stems.get(loaded.stemSetId)?.title
+    loaded !== null && loaded.presetId === null
+      ? stemSongTitle(loaded.stemSetId, stems)
       : preset;
   const set = useMemo(
     () => activeSetView(setlists, allEntries, loaded),

@@ -1,10 +1,7 @@
-import {
-  isPresetEntry,
-  useLibrary,
-  useMetronome,
-  type SongStep,
-} from '@kitbag/core-state';
+import { isPresetEntry, useLibrary, type SongStep } from '@kitbag/core-state';
 import { useCallback } from 'react';
+
+import { useOpenStemPlayer } from './useOpenStemPlayer.ts';
 
 export interface StemStepHandlers {
   readonly onOpenStemSet?: ((stemSetId: number) => void) | undefined;
@@ -14,7 +11,7 @@ export interface StemStepHandlers {
 export function useStepSong({ onOpenStemSet, onSkipped }: StemStepHandlers) {
   const stepSong = useLibrary((s) => s.stepSong);
   const carrySkip = useLibrary((s) => s.carrySkip);
-  const stop = useMetronome((s) => s.stop);
+  const openStemPlayer = useOpenStemPlayer(onOpenStemSet);
   return useCallback(
     async (step: SongStep) => {
       const { entry, skipped } = await stepSong(step);
@@ -22,10 +19,9 @@ export function useStepSong({ onOpenStemSet, onSkipped }: StemStepHandlers) {
         if (skipped) onSkipped?.();
         return;
       }
-      stop();
       if (skipped) carrySkip(true);
-      onOpenStemSet?.(entry.stemSetId);
+      openStemPlayer(entry.stemSetId);
     },
-    [stepSong, carrySkip, stop, onOpenStemSet, onSkipped],
+    [stepSong, carrySkip, openStemPlayer, onSkipped],
   );
 }

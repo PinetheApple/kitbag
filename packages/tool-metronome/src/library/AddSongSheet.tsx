@@ -13,6 +13,7 @@ import {
   space,
   textRoles,
   textStyle,
+  useAfterSheetClosed,
   useTheme,
   type SegmentOption,
 } from '@kitbag/core-design';
@@ -22,7 +23,7 @@ import {
   useStemSongs,
   type LibraryStemSetRow,
 } from '@kitbag/core-state';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { ActionStack, guarded, type SheetAction } from './sheets.tsx';
@@ -169,16 +170,11 @@ function useLeaveForStemSongs(
   onDismiss: () => void,
   onAddStemSongs: () => void,
 ) {
-  const leaving = useRef(false);
+  const { after, closed } = useAfterSheetClosed();
   const leave = useCallback(() => {
-    leaving.current = true;
+    after(onAddStemSongs);
     onDismiss();
-  }, [onDismiss]);
-  const closed = useCallback(() => {
-    if (!leaving.current) return;
-    leaving.current = false;
-    onAddStemSongs();
-  }, [onAddStemSongs]);
+  }, [after, onAddStemSongs, onDismiss]);
   return { leave, closed };
 }
 
