@@ -2,16 +2,18 @@ import {
   meterOverrideOf,
   NO_CLICK,
   NO_METER_OVERRIDE,
+  type BundleTempo,
   type ClickRate,
   type MeterOverride,
   type StemSetRecord,
   type StoredSection,
+  type TempoMode,
 } from '@kitbag/core-db';
 import { KB_MAX_TRACKS, KB_RESULT } from '@kitbag/core-native';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { mixActions, transportActions } from './actions.ts';
-import { barMarkDownbeats, sameNumbers } from './bars.ts';
+import { sameNumbers } from './bars.ts';
 import { clickActions, followNewGrid, releaseClick } from './clickActions.ts';
 import { clickShapeActions } from './clickShape.ts';
 import {
@@ -21,11 +23,11 @@ import {
   type ExportActions,
   type ExportSlice,
 } from './exportActions.ts';
-import { NO_SONG_FACTS, songFacts, type SongFacts } from './facts.ts';
+import { NO_SONG_FACTS, type SongFacts } from './facts.ts';
 import type { LoopEdge, LoopSeconds } from './loop.ts';
 import { sectionLoopActions } from './loopActions.ts';
 import { FALLBACK_BEATS_PER_BAR } from './barMeter.ts';
-import { detectedMeter, overrideDownbeats } from './meterOverride.ts';
+import { overrideDownbeats } from './meterOverride.ts';
 import {
   NO_LYRICS,
   songLyrics,
@@ -46,6 +48,8 @@ import { retimeActions, retimeAnchor } from './retimeActions.ts';
 import { getStemPlayer, type StemPlayerRuntime } from './runtime.ts';
 import { sortedSections } from './sections.ts';
 import { countPending, songStart } from './songStart.ts';
+import { songGrid, tempoActions } from './tempoActions.ts';
+import { longestSeconds, tempoModeOf } from './tempoGrid.ts';
 import { framesToSeconds, secondsToFrames } from './time.ts';
 
 const MIX_SAVE_DELAY_MS = 600;
@@ -104,6 +108,8 @@ export interface StemPlayerState {
   readonly meterOverride: MeterOverride;
   readonly detectedMeter: number;
   readonly detectedBarOneSeconds: number;
+  readonly tempo: BundleTempo | null;
+  readonly tempoMode: TempoMode | null;
   readonly loop: LoopState;
   readonly loopFailure: LoopFailure | null;
   readonly undoableLoop: LoopSeconds | null;
@@ -148,6 +154,7 @@ export interface StemPlayerActions {
   readonly toggleClick: () => Promise<void>;
   readonly setClickGrouping: (groups: readonly number[]) => Promise<void>;
   readonly setClickRate: (rate: ClickRate) => Promise<void>;
+  readonly setTempoMode: (mode: TempoMode) => Promise<void>;
   readonly renameStem: (index: number, name: string) => Promise<void>;
   readonly meterOverrideChanged: (
     setId: number,
@@ -200,6 +207,8 @@ const closedState: StemPlayerState = {
   meterOverride: NO_METER_OVERRIDE,
   detectedMeter: FALLBACK_BEATS_PER_BAR,
   detectedBarOneSeconds: 0,
+  tempo: null,
+  tempoMode: null,
   loop: { kind: 'off' },
   loopFailure: null,
   undoableLoop: null,
@@ -211,10 +220,6 @@ const closedState: StemPlayerState = {
   retime: { kind: 'off' },
   retimeFailure: null,
 };
-
-function longestSeconds(record: StemSetRecord): number {
-  return Math.max(0, ...record.stems.map((stem) => stem.durationSec));
-}
 
 function rowsOf(record: StemSetRecord): StemRow[] {
   const longest = longestSeconds(record);
@@ -268,6 +273,7 @@ export function createStemPlayerStore(
   } = options;
   let requestedTracks = 0;
   let markedDownbeatIndices: readonly number[] = [];
+  let openRecord: StemSetRecord | null = null;
   const saver = mixSaver(
     (mixes) => runtimeOf().records.saveStemMix(mixes),
     mixSaveDelayMs,
@@ -343,6 +349,17 @@ export function createStemPlayerStore(
         { beats, downbeatIndices: markedDownbeatIndices },
         override,
       );
+    const followers = {
+      gridReplaced: start.gridReplaced,
+      gridSent: clickShape.gridSent,
+    };
+    const applyGrid = (mode: TempoMode) => {
+      if (openRecord === null) return;
+      const { marked, state } = songGrid(openRecord, mode, get().meterOverride);
+      markedDownbeatIndices = marked;
+      set(state);
+      void followNewGrid(context, followers);
+    };
     const anchorRetime = retimeAnchor(context);
     const afterSeek = (frame: number) => {
       anchorRetime(frame);
@@ -389,29 +406,22 @@ export function createStemPlayerStore(
       const stems = await loadTracks(runtime, record, rows, () => live(opened));
       const masterGain = await commands.mixerMasterGain();
       if (!live(opened)) return;
-      markedDownbeatIndices = barMarkDownbeats(
-        record.bars,
-        record.beats.length,
-      );
-      const detected = detectedMeter({
-        beats: record.beats,
-        downbeatIndices: markedDownbeatIndices,
-      });
+      openRecord = record;
+      const override = meterOverrideOf(record);
+      const grid = songGrid(record, tempoModeOf(record), override);
+      markedDownbeatIndices = grid.marked;
       set({
         status: 'ready',
         title: record.songTitle ?? record.title,
         artist: record.artist,
-        facts: songFacts(record),
+        ...grid.state,
+        meterOverride: override,
+        tempo: record.tempo,
         stems,
         overLimit: record.stems.length - rows.length,
         masterGain,
         engineRate,
         durationFrames: secondsToFrames(longestSeconds(record), engineRate),
-        beats: record.beats,
-        downbeatIndices: songDownbeats(record.beats, record),
-        meterOverride: meterOverrideOf(record),
-        detectedMeter: detected.meter,
-        detectedBarOneSeconds: detected.barOneSeconds,
         clickGrouping: record.clickGrouping,
         clickRate: record.clickRate,
         sections: sortedSections(record.sections),
@@ -460,6 +470,7 @@ export function createStemPlayerStore(
       ...clicks,
       ...clickShape.actions,
       ...renameActions(context),
+      ...tempoActions(context, applyGrid),
       ...retimeActions(context, claim.defer, start),
       meterOverrideChanged: (setId, override) => {
         const { status, setId: openSet, beats, downbeatIndices } = get();
@@ -471,10 +482,7 @@ export function createStemPlayerStore(
           return;
         }
         set({ meterOverride, downbeatIndices: downbeats });
-        void followNewGrid(context, {
-          gridReplaced: start.gridReplaced,
-          gridSent: clickShape.gridSent,
-        });
+        void followNewGrid(context, followers);
       },
       ...exportActions(context),
       saveMeterOverride: (setId, override) =>

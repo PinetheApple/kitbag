@@ -15,5 +15,6 @@ configureStemPlayer({
     saveLyricsRetimed: () => Promise.resolve(),
     saveStemSetMeterOverride: () => Promise.resolve(),
     saveStemSetClick: () => Promise.resolve(),
+    saveStemSetChosenTempoMode: () => Promise.resolve(),
   },
 });
