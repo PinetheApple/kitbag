@@ -122,7 +122,7 @@ void TestGridSwapsRaceTheCallback() {
       race.most_retired <= kMostHeldInRace,
       "race: the retire queue stays within one grace window of swaps"
   );
-  race.engine.metronome().ReleaseRetiredGrids();
+  race.engine.metronome().ReleaseRetired();
   Check(
       race.engine.metronome().retired_grids() == 0,
       "race: a quiescent release frees the rest"

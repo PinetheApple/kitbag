@@ -185,6 +185,7 @@ if(KITBAG_BUILD_TOOLS)
     src/metronome/metronome_trainer_mirrors.cpp
     src/metronome/metronome_transport.cpp
     src/metronome/rig_click.cpp
+    src/metronome/sample_voices.cpp
     src/metronome/tempo_ramp.cpp)
 
   add_executable(metronome_verify
@@ -205,6 +206,9 @@ if(KITBAG_BUILD_TOOLS)
     tools/metronome/metronome_test_poly_transport.cpp
     tools/metronome/metronome_test_poly_phase.cpp
     tools/metronome/metronome_test_sound.cpp
+    tools/metronome/metronome_test_custom_sound.cpp
+    tools/metronome/metronome_test_custom_sound_cut.cpp
+    tools/metronome/metronome_test_custom_sound_song.cpp
     tools/metronome/metronome_test_tick.cpp
     tools/metronome/metronome_test_subdivision_accents.cpp
     tools/metronome/metronome_test_rig_click.cpp

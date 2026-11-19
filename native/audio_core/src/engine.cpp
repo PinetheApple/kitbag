@@ -147,8 +147,7 @@ void Engine::StopDevice() {
 // Control thread only, device stopped: the retire lists belong to the
 // publishing thread, so the watchdog leaves them for the next Start or Stop.
 void Engine::ReleaseRetired() {
-  metronome_.ReleaseRetiredGrids();
-  custom_sounds_.ReclaimAll();
+  metronome_.ReleaseRetired();
   mixer_.ReleaseRetiredSources();
   player_.ReleaseRetiredSources();
 }

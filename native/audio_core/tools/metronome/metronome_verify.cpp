@@ -1,13 +1,14 @@
-// Offline sequencer verification: renders the metronome without a device and
-// asserts click onsets land where the contract says. Suite entry point only.
+// metronome_verify's entry point, and the one translation unit that installs
+// the counting allocator.
 #include <cstdio>
 
+#include "counting_allocator.h"
 #include "metronome_test_support.h"
 #include "rt_test_support.h"
 
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 805;
+constexpr int kExpectedChecks = 831;
 
 void RunGridSuites() {
   metronome_test::RunGridTests();
@@ -32,6 +33,9 @@ void RunMetronomeTests() {
   metronome_test::RunPolyTransportTests();
   metronome_test::RunPolyPhaseTests();
   metronome_test::RunSoundTests();
+  metronome_test::RunCustomSoundTests();
+  metronome_test::RunCustomSoundCutTests();
+  metronome_test::RunCustomSoundSongTests();
   metronome_test::RunTickTests();
   metronome_test::RunSubdivisionAccentTests();
   metronome_test::RunRigClickScheduleTests();

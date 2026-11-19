@@ -148,20 +148,20 @@ void Metronome::OnGridBeat(const BeatGrid& grid, uint32_t sample_rate) {
     case GridBeatLevel::kSilent:
       return;
     case GridBeatLevel::kNormal:
-      TriggerPreset(normal_sound_, false, sample_rate);
+      TriggerSound(normal_sound_, ClickRole::kBeat, sample_rate);
       return;
     case GridBeatLevel::kGroup:
       TriggerSubdivisionVoice(Accent::kAccented, sample_rate);
       return;
     case GridBeatLevel::kBar:
-      TriggerPreset(accent_sound_, true, sample_rate);
+      TriggerSound(accent_sound_, ClickRole::kAccent, sample_rate);
       return;
   }
 }
 
 void Metronome::OnGridTick(int tick, uint32_t sample_rate) {
   if (grid_click_.IsHalfBeat(tick, subdivision_)) {
-    TriggerPreset(normal_sound_, false, sample_rate);
+    TriggerSound(normal_sound_, ClickRole::kBeat, sample_rate);
     return;
   }
   TriggerSubdivision(subdivision_, tick % subdivision_, sample_rate);
@@ -298,6 +298,7 @@ void Metronome::RenderGridSample(
       opens_on_jump || step < 0 || step > 1) {
     const double head_sec = whole_frame / sample_rate;
     const bool continues = opens_on_jump && song->continues_run;
+    if (opens_on_jump && !continues) custom_sounds_.CutAll();
     SeekGridCursor(
         grid,
         continues
