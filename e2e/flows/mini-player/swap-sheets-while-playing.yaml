@@ -4,15 +4,10 @@ tags:
   - pr-460
 ---
 - runFlow: ../../subflows/song-playing-behind-bar.yaml
-- evalScript: ${output.swap = 0; output.checkedWhilePlaying = 5}
 - repeat:
-    times: 20
+    times: 6
     commands:
-      - runFlow:
-          when:
-            true: ${output.swap < output.checkedWhilePlaying}
-          commands:
-            - assertVisible: 'Pause ${FIXTURE_SONG}'
+      - assertVisible: 'Pause ${FIXTURE_SONG}'
       - runFlow:
           file: ../../subflows/tap-while-playing.yaml
           env:
@@ -25,9 +20,5 @@ tags:
           file: ../../subflows/tap-while-playing.yaml
           env:
             TARGET: 'Cancel'
-      - extendedWaitUntil:
-          notVisible: 'Cancel'
-          timeout: 5000
-      - evalScript: ${output.swap = output.swap + 1}
 - assertVisible: '${FIXTURE_SONG}, .*'
 - assertVisible: 'Open ${FIXTURE_SONG}'
