@@ -243,6 +243,16 @@ describe('Reset', () => {
       expect(p.readerHiding(label), label).toEqual(SHOWN_TO_READERS);
   });
 
+  it('keeps the screen behind it as its own native view while it opens and closes', async () => {
+    const p = await opened();
+    expect(p.readerLayer(PAD)?.props).toMatchObject({
+      collapsable: false,
+      accessibilityElementsHidden: true,
+    });
+    await p.press('Cancel');
+    expect(p.readerLayer(PAD)?.props.collapsable).toBe(false);
+  });
+
   it('closes only itself on the back gesture', async () => {
     const p = await opened();
     expect(pressHardwareBack()).toBe(true);

@@ -3,6 +3,7 @@ import {
   createThemedStyles,
   EmptyState,
   PlayerDock,
+  readerHiding,
   SegmentedControl,
   space,
   stemPlayer,
@@ -286,8 +287,8 @@ export function StemPlayerScreen({
     <View style={[styles.screen, padding]}>
       <View
         style={styles.main}
-        importantForAccessibility={dialogOpen ? 'no-hide-descendants' : 'auto'}
-        accessibilityElementsHidden={dialogOpen}
+        collapsable={false}
+        {...readerHiding(dialogOpen)}
       >
         {retiming ? (
           <RetimeBar onAskReset={askReset} onAskLeave={askLeave} />
