@@ -19,6 +19,7 @@ it('applies a backup only while it holds the click sound lock', async () => {
     pick: () =>
       Promise.resolve({ name: 'b.json', bytes: contents.length, contents }),
     share: () => Promise.resolve(),
+    save: () => Promise.resolve(true),
     afterRestore: () => Promise.resolve(),
   };
   const lock = createClickSoundLock();
