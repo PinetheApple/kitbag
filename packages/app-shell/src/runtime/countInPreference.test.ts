@@ -1,4 +1,5 @@
 import { COUNT_IN_PREFERENCE_KEYS, type Preferences } from '@kitbag/core-db';
+import { customSoundId } from '@kitbag/core-native';
 import { describe, expect, it } from 'vitest';
 
 import { countInPreference } from './countInPreference.ts';
@@ -46,6 +47,13 @@ describe('count-in settings on the database', () => {
       [COUNT_IN_PREFERENCE_KEYS.bars]: '3',
       [COUNT_IN_PREFERENCE_KEYS.distinct]: 'yes',
       [COUNT_IN_PREFERENCE_KEYS.sound]: '99',
+    });
+    expect(countInPreference(() => preferences).load()).toEqual({});
+  });
+
+  it('leave out a custom sound, which the count-in never plays', () => {
+    const { preferences } = memoryPreferences({
+      [COUNT_IN_PREFERENCE_KEYS.sound]: String(customSoundId(0)),
     });
     expect(countInPreference(() => preferences).load()).toEqual({});
   });

@@ -47,6 +47,7 @@ export {
   clampRampInterval,
   cycleAccentValue,
   isAccent,
+  isBuiltInSoundId,
   isCountInBars,
   isRampUnit,
   isSoundId,

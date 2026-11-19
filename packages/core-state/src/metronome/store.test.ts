@@ -1,5 +1,6 @@
 import {
   KB_ACCENT,
+  KB_CUSTOM_SOUND_SLOTS,
   KB_DEFAULT_COUNT_IN_SOUND,
   KB_LATENCY_OFFSET_MS_BOUNDS,
   KB_MAX_BEATS,
@@ -11,6 +12,7 @@ import {
   KB_RESULT,
   KB_SOUND_NAMES,
   KB_VOLUME_BOUNDS,
+  customSoundId,
   type KitbagHostObject,
 } from '@kitbag/core-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -186,13 +188,15 @@ describe('clamps (clamp, not reject)', () => {
 });
 
 describe('sounds use engine ids, per role', () => {
+  const pastLastId = customSoundId(KB_CUSTOM_SOUND_SLOTS);
+
   it('sends both roles and ignores an invalid id per role', () => {
     const last = KB_SOUND_NAMES.length - 1;
     store.getState().setSounds(3, last);
     expect(store.getState().sounds).toEqual({ normal: 3, accent: last });
     expect(commands.setSounds).toHaveBeenLastCalledWith(3, last);
 
-    store.getState().setSounds(KB_SOUND_NAMES.length, 1);
+    store.getState().setSounds(pastLastId, 1);
     expect(store.getState().sounds).toEqual({ normal: 3, accent: 1 });
     expect(commands.setSounds).toHaveBeenLastCalledWith(3, 1);
 
@@ -201,12 +205,26 @@ describe('sounds use engine ids, per role', () => {
     expect(commands.setSounds).toHaveBeenCalledTimes(2);
   });
 
+  it('takes a custom slot id like a built-in', () => {
+    const first = customSoundId(0);
+    const last = customSoundId(KB_CUSTOM_SOUND_SLOTS - 1);
+    store.getState().setSounds(first, last);
+    expect(store.getState().sounds).toEqual({ normal: first, accent: last });
+    expect(commands.setSounds).toHaveBeenLastCalledWith(first, last);
+  });
+
   it('previews only valid ids', () => {
     store.getState().holdEngine();
     store.getState().previewSound(2, true);
-    store.getState().previewSound(KB_SOUND_NAMES.length, false);
-    expect(commands.previewSound).toHaveBeenCalledTimes(1);
-    expect(commands.previewSound).toHaveBeenCalledWith(2, true);
+    store.getState().previewSound(customSoundId(0), false);
+    store.getState().previewSound(pastLastId, false);
+    expect(commands.previewSound).toHaveBeenCalledTimes(2);
+    expect(commands.previewSound).toHaveBeenNthCalledWith(1, 2, true);
+    expect(commands.previewSound).toHaveBeenNthCalledWith(
+      2,
+      customSoundId(0),
+      false,
+    );
   });
 });
 
@@ -334,7 +352,7 @@ describe('count-in', () => {
     store.getState().setCountIn({
       bars: 3 as unknown as 2,
       distinct: true,
-      sound: KB_SOUND_NAMES.length,
+      sound: customSoundId(0),
     });
     expect(store.getState().countIn).toEqual({
       bars: 2,
