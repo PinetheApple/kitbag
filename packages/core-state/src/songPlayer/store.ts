@@ -37,6 +37,7 @@ import {
   type SongLibraryState,
 } from '../songLibrary/store.ts';
 import { getSongPlayer, type SongPlayerRuntime } from './runtime.ts';
+import { songCard } from './songCard.ts';
 import {
   NO_GRID,
   overrideDisagrees,
@@ -164,6 +165,8 @@ export function createSongPlayerStore(
       };
     };
     const context = { set, get, runtimeOf, session: mixer.current };
+    const card = songCard({ ...context, close: mixer.close });
+    mixer.onSongStopped(card.stopped);
 
     const showWaveform = (opened: number, path: string | null) => {
       if (path === null || path === shownWaveform || path === latestWaveform)
@@ -319,7 +322,7 @@ export function createSongPlayerStore(
         endAsGone();
         return;
       }
-      set(namesOf(row));
+      card.named(namesOf(row));
       void reread(mixer.current(), songId);
     };
 
@@ -382,7 +385,7 @@ export function createSongPlayerStore(
       dismissMeterNotice: () => {
         set({ meterNotice: null });
       },
-      ...transportActions(get, runtimeOf, scrubSeek),
+      ...transportActions(get, runtimeOf, scrubSeek, undefined, card.start),
       ...loopActions(context),
       ...clickActions(context, mixer.pendingClick),
     };
