@@ -25,6 +25,7 @@ import com.kitbag.corenative.library.DataFolder
 import com.kitbag.corenative.library.DocumentPicker
 import com.kitbag.corenative.library.ExportFiles
 import com.kitbag.corenative.library.FileShare
+import com.kitbag.corenative.library.LibraryDeletes
 import com.kitbag.corenative.library.LibraryErrors
 import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.LibraryStorage
@@ -335,11 +336,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   override fun deleteLibraryFile(relativePath: String, promise: Promise) {
     io.execute {
       try {
-        dataFolder().importing {
-          val target = LibraryPaths.resolve(libraryRoot(), relativePath)
-          if (target.isDirectory) throw IOException("$target is a directory")
-          if (target.exists() && !target.delete()) throw IOException("Could not delete $target")
-        }
+        LibraryDeletes.file(dataFolder(), relativePath)
         promise.resolve(null)
       } catch (e: Exception) {
         rejectLogged(promise, E_DELETE_FAILED, "Delete failed", e)
@@ -348,16 +345,13 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   }
 
   override fun deleteSongFolder(folderName: String, promise: Promise) {
-    deleteFolder(promise) { LibraryPaths.songFolder(libraryRoot(), folderName) }
+    deleteFolder(promise) { LibraryDeletes.songFolder(dataFolder(), folderName) }
   }
 
-  private fun deleteFolder(promise: Promise, resolveFolder: () -> File) {
+  private fun deleteFolder(promise: Promise, delete: () -> Unit) {
     io.execute {
       try {
-        dataFolder().importing {
-          val folder = resolveFolder()
-          if (folder.exists() && !folder.deleteRecursively()) throw IOException("Could not delete $folder")
-        }
+        delete()
         promise.resolve(null)
       } catch (e: Exception) {
         rejectLogged(promise, E_DELETE_FAILED, "Delete failed", e)
@@ -398,7 +392,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   }
 
   override fun deleteStemFolder(folderName: String, promise: Promise) {
-    deleteFolder(promise) { LibraryPaths.stemFolder(libraryRoot(), folderName) }
+    deleteFolder(promise) { LibraryDeletes.stemFolder(dataFolder(), folderName) }
   }
 
   override fun readWaveform(relativePath: String, buckets: Double, promise: Promise) {
