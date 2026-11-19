@@ -1,0 +1,33 @@
+appId: com.kitbag.app
+name: '#297: dragging the A flag moves the loop start and keeps the end'
+tags:
+  - pr-297
+---
+- runFlow: ../../subflows/launch-fresh.yaml
+- runFlow: ../../subflows/import-fixture-song.yaml
+- tapOn: '${FIXTURE_SONG}, .*'
+- extendedWaitUntil:
+    visible: 'Play'
+    timeout: 10000
+# Without a beat grid an A dragged onto B is refused, so wait for the grid.
+- extendedWaitUntil:
+    visible: 'Click along on the song grid'
+    timeout: 60000
+- tapOn: 'Loop: set the start here'
+- tapOn: 'Forward 10 seconds'
+- tapOn: 'Forward 10 seconds'
+- tapOn: 'Loop: set the end here'
+- extendedWaitUntil:
+    visible: 'Loop 0:00 – \d+:\d\d'
+    timeout: 5000
+- copyTextFrom: 'Loop 0:00 – \d+:\d\d'
+- evalScript: ${output.loopBefore = maestro.copiedText}
+- swipe:
+    from:
+      text: 'Loop start'
+    direction: RIGHT
+- extendedWaitUntil:
+    visible: 'Loop (?!0:00 )\d+:\d\d – \d+:\d\d'
+    timeout: 5000
+- copyTextFrom: 'Loop \d+:\d\d – \d+:\d\d'
+- assertTrue: ${maestro.copiedText.split(' – ')[1] === output.loopBefore.split(' – ')[1]}
