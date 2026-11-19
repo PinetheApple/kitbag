@@ -82,9 +82,18 @@ describe('the returned card offer', () => {
 
   it('says how much to free when internal storage is short', () => {
     expect(returnNoSpaceHints(RETURNED, INTERNAL)).toEqual([
-      'The card’s songs need 840 MB and internal storage has 610 MB free. Free up 358 MB to move them.',
+      'The card’s songs need 968 MB and internal storage has 610 MB free. Free up 358 MB to move them.',
       'Nothing has moved. They are still on the card and play from it.',
     ]);
+  });
+
+  it('gives a need, a free figure and a shortfall that add up', () => {
+    const megabytes = (text: string) =>
+      [...text.matchAll(/(\d+) MB/g)].map((match) => Number(match[1]));
+    const [need = 0, free = 0, short] = megabytes(
+      returnNoSpaceHints(RETURNED, INTERNAL)[0],
+    );
+    expect(need - free).toBe(short);
   });
 });
 

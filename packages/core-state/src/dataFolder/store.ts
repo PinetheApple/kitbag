@@ -124,6 +124,10 @@ export function offeredCards(
   );
 }
 
+export function resumeBlocked(state: DataFolderState): boolean {
+  return state.pending || returnSourceMissing(state);
+}
+
 export function returnSourceMissing(state: DataFolderState): boolean {
   const { move, volumes, codes } = state;
   if (move?.cardReturn !== true || volumes === null || codes === null)

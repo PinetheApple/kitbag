@@ -221,10 +221,6 @@ function sheetFace(sheet: DataFolderSheet, context: FaceContext): SheetFace {
   }
 }
 
-function otherPlace(volumes: DataFolderVolumes): string | null {
-  return volumes.volumes.find((volume) => !volume.inUse)?.volumeUuid ?? null;
-}
-
 export interface DataFolderSheetsProps {
   readonly model: DataFolderSheetsModel;
   readonly media: MediaSize | null;
@@ -237,21 +233,11 @@ export function DataFolderSheets({ model, media }: DataFolderSheetsProps) {
     actions,
     pending,
     codes,
-    confirmTarget,
     volumes,
-    move,
+    places,
     error: storeError,
   } = model;
   if (volumes === null || codes === null) return null;
-  const places: Places =
-    move === null && model.places.cardReturn === true
-      ? model.places
-      : {
-          source: move?.sourceVolumeUuid ?? volumes.currentVolumeUuid,
-          target:
-            move?.targetVolumeUuid ?? confirmTarget ?? otherPlace(volumes),
-          cardReturn: move?.cardReturn ?? false,
-        };
   const face = sheetFace(sheet, {
     volumes,
     codes,

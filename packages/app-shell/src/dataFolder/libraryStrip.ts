@@ -1,4 +1,3 @@
-import { countLabel } from '@kitbag/core-design';
 import type {
   DataFolderVolume,
   DataFolderVolumes,
@@ -6,7 +5,7 @@ import type {
 } from '@kitbag/core-native';
 import type { LibraryView } from '@kitbag/core-state';
 
-import { SONG_NOUNS, STEM_SONG_NOUNS } from '../nouns.ts';
+import { viewCount } from '../nouns.ts';
 import { capitalised } from '../settings/capitalised.ts';
 import {
   progressBytes,
@@ -54,11 +53,6 @@ export type LibraryStrip =
       readonly detail: string | null;
     };
 
-const NOUNS: Readonly<Record<LibraryView, readonly [string, string]>> = {
-  songs: SONG_NOUNS,
-  stems: STEM_SONG_NOUNS,
-};
-
 const STILL_PLAY = 'songs still play';
 const CARD_BACK = 'put the card back';
 
@@ -67,9 +61,10 @@ export function cardMissingTitle(place: string): string {
 }
 
 function missingDetail(count: number, view: LibraryView): string | null {
-  if (count === 0) return null;
-  const [one, many] = NOUNS[view];
-  return `${countLabel(count, one, many)} on it can’t play until it’s back`;
+  const counted = viewCount(count, view);
+  return counted === null
+    ? null
+    : `${counted} on it can’t play until it’s back`;
 }
 
 function moveStrip(move: MoveStatus, sourceMissing: boolean): LibraryStrip {

@@ -5,6 +5,7 @@ import type {
 } from '@kitbag/core-native';
 import {
   dataFolderStore,
+  resumeBlocked,
   returnSourceMissing,
   useDataFolder,
 } from '@kitbag/core-state';
@@ -29,7 +30,6 @@ export interface DataFolderSheetsModel {
   readonly volumes: DataFolderVolumes | null;
   readonly move: MoveStatus | null;
   readonly error: string | null;
-  readonly confirmTarget: string | null;
   readonly sourceMissing: boolean;
   readonly places: Places;
   readonly open: () => void;
@@ -52,21 +52,24 @@ export function useDataFolderSheets(
   const pending = useDataFolder((s) => s.pending);
   const codes = useDataFolder((s) => s.codes);
   const sourceMissing = useDataFolder(returnSourceMissing);
+  const blocked = useDataFolder(resumeBlocked);
   const returning = controller.returning();
   const sheet = dataFolderSheet({ move, error, volumes, returning }, step);
 
   useFocusEffect(
     useCallback(() => {
+      controller.setFocused(true);
       void dataFolderStore.getState().refreshVolumes();
-    }, []),
+      return () => {
+        controller.setFocused(false);
+      };
+    }, [controller]),
   );
 
   return {
     sheet,
     actions: sheetActions(sheet, pending).map((action) =>
-      action.id === 'resume' && sourceMissing
-        ? { ...action, disabled: true }
-        : action,
+      action.id === 'resume' ? { ...action, disabled: blocked } : action,
     ),
     sourceMissing,
     pending,
@@ -74,8 +77,6 @@ export function useDataFolderSheets(
     volumes,
     move,
     error,
-    confirmTarget:
-      step.kind === 'confirm' || step.kind === 'starting' ? step.target : null,
     places: controller.places(),
     open: controller.open,
     offerReturn: controller.offerReturn,

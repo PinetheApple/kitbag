@@ -1,4 +1,8 @@
-import type { MoveFinished, MoveStatus } from '@kitbag/core-native';
+import type {
+  DataFolderVolumes,
+  MoveFinished,
+  MoveStatus,
+} from '@kitbag/core-native';
 import { moveSettled, type DataFolderStore } from '@kitbag/core-state';
 
 import {
@@ -24,9 +28,25 @@ export interface DataFolderSheetController {
   readonly offerReturn: (volumeUuid: string) => void;
   readonly returning: () => boolean;
   readonly places: () => Places;
+  readonly setFocused: (focused: boolean) => void;
   readonly close: () => void;
   readonly choose: (target: string | null) => void;
   readonly act: Readonly<Record<DataFolderAction, () => void>>;
+}
+
+function otherPlace(volumes: DataFolderVolumes | null): string | null {
+  return volumes?.volumes.find((volume) => !volume.inUse)?.volumeUuid ?? null;
+}
+
+function cardIn(state: DataFolderStore, volumeUuid: string): boolean {
+  const { volumes, codes } = state;
+  return (
+    volumes?.volumes.some(
+      (volume) =>
+        volume.volumeUuid === volumeUuid &&
+        volume.state === codes?.volumeStates.mounted,
+    ) === true
+  );
 }
 
 export function createDataFolderSheetController(
@@ -35,8 +55,35 @@ export function createDataFolderSheetController(
 ): DataFolderSheetController {
   let step: DataFolderStep = CLOSED;
   let places: Places = { source: null, target: null };
+  let focused = true;
   const listeners = new Set<() => void>();
   const state = () => store.getState();
+
+  // Stacked screens each host the sheets; only the one on screen speaks.
+  const post = (text: string) => {
+    if (focused) notify(text);
+  };
+
+  const currentPlaces = (): Places => {
+    const { move, volumes } = state();
+    if (move !== null) {
+      return {
+        source: move.sourceVolumeUuid,
+        target: move.targetVolumeUuid,
+        cardReturn: move.cardReturn,
+      };
+    }
+    if (places.cardReturn === true) return places;
+    const chosen =
+      step.kind === 'confirm' || step.kind === 'starting'
+        ? step.target
+        : otherPlace(volumes);
+    return {
+      source: volumes?.currentVolumeUuid ?? null,
+      target: chosen,
+      cardReturn: false,
+    };
+  };
 
   const send = (event: DataFolderEvent) => {
     const next = nextDataFolderStep(step, event);
@@ -55,7 +102,7 @@ export function createDataFolderSheetController(
       settled: moveSettled(finished, codes.moveOutcomes),
     });
     const text = outcomeText(finished, codes, places);
-    if (text !== null) notify(text);
+    if (text !== null) post(text);
   };
 
   const remember = (move: MoveStatus | null) => {
@@ -69,6 +116,9 @@ export function createDataFolderSheetController(
 
   const follow = (now: DataFolderStore, before: DataFolderStore) => {
     remember(now.move);
+    if (step.kind === 'returnOffer' && !cardIn(now, step.volumeUuid)) {
+      send({ kind: 'close' });
+    }
     if (now.move !== null && before.move === null) {
       send({ kind: 'progressed' });
     }
@@ -124,7 +174,7 @@ export function createDataFolderSheetController(
     const source = state().move?.sourceVolumeUuid ?? null;
     if (!(await state().undoMove())) return;
     send({ kind: 'close' });
-    notify(undoneText(source));
+    post(undoneText(source));
   };
 
   return {
@@ -149,7 +199,10 @@ export function createDataFolderSheetController(
       send({ kind: 'offerReturn', volumeUuid });
     },
     returning: () => places.cardReturn === true,
-    places: () => places,
+    places: currentPlaces,
+    setFocused: (next) => {
+      focused = next;
+    },
     close,
     choose: (target) => {
       send({ kind: 'choose', target });

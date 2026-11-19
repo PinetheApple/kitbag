@@ -2,7 +2,7 @@ import { countLabel } from '@kitbag/core-design';
 import type { DataFolderVolume } from '@kitbag/core-native';
 import type { LibraryView } from '@kitbag/core-state';
 
-import { SONG_NOUNS, STEM_SONG_NOUNS } from '../nouns.ts';
+import { SONG_NOUNS, viewCount } from '../nouns.ts';
 import { formatBytes } from './bytes.ts';
 import { capitalised } from './capitalised.ts';
 import {
@@ -21,13 +21,11 @@ export const RETURN_OFFER_HINTS = [
 ] as const;
 export const CARD_SONGS_PLAY = 'The card’s songs still play from it.';
 
-const VIEW_COUNTS: Readonly<
-  Record<LibraryView, (volume: DataFolderVolume) => string | null>
+const AWAY_COUNT: Readonly<
+  Record<LibraryView, (volume: DataFolderVolume) => number>
 > = {
-  songs: ({ awaySongs }) =>
-    awaySongs === 0 ? null : countLabel(awaySongs, ...SONG_NOUNS),
-  stems: ({ awayStemSongs }) =>
-    awayStemSongs === 0 ? null : countLabel(awayStemSongs, ...STEM_SONG_NOUNS),
+  songs: ({ awaySongs }) => awaySongs,
+  stems: ({ awayStemSongs }) => awayStemSongs,
 };
 
 const allSongs = (volume: DataFolderVolume) =>
@@ -38,7 +36,7 @@ export function returnedStripDetail(
   view: LibraryView,
 ): string {
   const size = formatBytes(volume.awayBytes);
-  const count = VIEW_COUNTS[view](volume);
+  const count = viewCount(AWAY_COUNT[view](volume), view);
   return count === null ? size : `${count} on it ${SEPARATOR} ${size}`;
 }
 
@@ -63,7 +61,7 @@ export function returnNoSpaceHints(
 ): readonly [string, string] {
   const short = Math.max(0, card.awayRequiredBytes - target.freeBytes);
   return [
-    `The card’s songs need ${formatBytes(card.awayBytes)} and ${thePlace(target.volumeUuid)} has ${formatBytes(target.freeBytes)} free. Free up ${formatBytes(short)} to move them.`,
+    `The card’s songs need ${formatBytes(card.awayRequiredBytes)} and ${thePlace(target.volumeUuid)} has ${formatBytes(target.freeBytes)} free. Free up ${formatBytes(short)} to move them.`,
     'Nothing has moved. They are still on the card and play from it.',
   ];
 }

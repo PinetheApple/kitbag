@@ -267,7 +267,7 @@ svg.i{fill:currentColor;display:block;flex:none}
 <div class="kicker">Frame R5</div><h2>Failures</h2>
 <p>Each one says what happened, that the songs are still on the card and play from it, and what to do next. Nothing switches.</p>
 <div class="frames">
-<figure><figcaption><b>R5a · Not enough space on internal storage</b>Checked before anything copies. Shown in place of R2’s Move outcome; the offer stays.</figcaption><div data-frame="returnNoSpace"></div></figure>
+<figure><figcaption><b>R5a · Not enough space on internal storage</b>Checked before anything copies. Shown in place of R2’s Move outcome; the offer stays. The need includes the 128 MB a move keeps free, so the three numbers add up.</figcaption><div data-frame="returnNoSpace"></div></figure>
 <figure><figcaption><b>R5b · Verify mismatch</b>As 7c, with the card as the original.</figcaption><div data-frame="returnMismatch"></div></figure>
 </div>
 </section>
@@ -472,7 +472,7 @@ function gonePrompt(fs){
   return songsGone()+sheet('SD card not found',inner,{icon:'micro-sd',lead:'red'});
 }
 const RETURNED=(()=>{
-const SD=VOL.sd, AWAY='840 MB', AWAY_FILES='38 files';
+const SD=VOL.sd, AWAY='840 MB', AWAY_NEED='968 MB', AWAY_FILES='38 files';
 function dataFolderValue(state){
   if(state==='moving')return `Moving to internal storage <span class="m">· 38%</span>`;
   return `${VOL.int} <span class="m">· ${FREE_INT}</span>`;
@@ -533,7 +533,7 @@ function songsNoCard(){
   return songs(moveStrip('Move to internal storage paused',`320 MB of ${AWAY} · put the card back`,38),rows);
 }
 function noSpace(){
-  const inner=`<p class="hint">The card’s songs need ${AWAY} and internal storage has 610 MB free. Free up 230 MB to move them.</p><p class="hint">Nothing has moved. They are still on the card and play from it.</p><div class="acts"><span class="btn pri t">OK</span></div>`;
+  const inner=`<p class="hint">The card’s songs need ${AWAY_NEED} and internal storage has 610 MB free. Free up 358 MB to move them.</p><p class="hint">Nothing has moved. They are still on the card and play from it.</p><div class="acts"><span class="btn pri t">OK</span></div>`;
   return songsBack()+sheet('Not enough space on internal storage',inner,{icon:'alert-circle',lead:'red',close:false});
 }
 function mismatch(){

@@ -116,39 +116,41 @@ export interface ErrorText {
   readonly body: string;
 }
 
-type ErrorCopy = (
-  from: string,
-  to: string,
-  toName: string,
-  stillPlays: string,
-) => ErrorText;
+interface ErrorPlaces {
+  readonly from: string;
+  readonly to: string;
+  readonly toName: string;
+  readonly stillPlays: string;
+}
+
+type ErrorCopy = (places: ErrorPlaces) => ErrorText;
 
 const MOVE_ERROR_TEXT: Readonly<Record<keyof MoveErrors, ErrorCopy>> = {
-  sourceUnavailable: (from) => ({
+  sourceUnavailable: ({ from }) => ({
     title: `Can’t reach ${from}`,
     body: `Your files are on ${from} and Kitbag can’t read it right now. Nothing was moved. Put it back and try again.`,
   }),
-  targetUnavailable: (_from, to, _toName, stillPlays) => ({
+  targetUnavailable: ({ to, stillPlays }) => ({
     title: `${capitalised(to)} went away`,
     body: `Kitbag lost ${to} and stopped before switching. ${stillPlays}`,
   }),
-  targetOccupied: (from, to) => ({
+  targetOccupied: ({ from, to }) => ({
     title: `Kitbag files already on ${to}`,
     body: `${capitalised(to)} has files from an earlier move in the way, and Kitbag won’t copy over them. Your files are still on ${from}.`,
   }),
-  noSpace: (from, to) => ({
+  noSpace: ({ from, to }) => ({
     title: `Not enough space on ${to}`,
     body: `Free up space on ${to} to move here. Nothing has moved; your files are still on ${from}.`,
   }),
-  targetNotWritable: (from, to, toName) => ({
+  targetNotWritable: ({ from, to, toName }) => ({
     title: `Can’t write to ${toName}`,
     body: `Kitbag wrote a test file before copying anything, and ${to} refused it. It may be read-only, locked or failing. Nothing was moved. Your files are still on ${from}.`,
   }),
-  hashMismatch: (_from, to, _toName, stillPlays) => ({
+  hashMismatch: ({ to, stillPlays }) => ({
     title: 'Move didn’t finish',
     body: `Some files on ${to} didn’t match the originals, so Kitbag stopped before switching. Nothing is lost. ${stillPlays} Trying again copies them afresh; if it fails again the card may be failing.`,
   }),
-  targetLeftovers: (from, to) => ({
+  targetLeftovers: ({ from, to }) => ({
     title: `Old copies still on ${to}`,
     body: `Kitbag is still removing copies from an earlier move on ${to}. Nothing was moved; your files are still on ${from}. Try again in a moment.`,
   }),
@@ -156,11 +158,11 @@ const MOVE_ERROR_TEXT: Readonly<Record<keyof MoveErrors, ErrorCopy>> = {
     title: 'Can’t read the last move',
     body: 'Kitbag couldn’t read how far the last move got, so it changed nothing. Your files are where they were.',
   }),
-  io: (_from, _to, _toName, stillPlays) => ({
+  io: ({ stillPlays }) => ({
     title: 'Move stopped',
     body: `Kitbag couldn’t read or write a file, so it stopped before switching. ${stillPlays}`,
   }),
-  sameLocation: (from) => ({
+  sameLocation: ({ from }) => ({
     title: 'Already there',
     body: `Your files are already on ${from}.`,
   }),
@@ -176,7 +178,7 @@ const MOVE_ERROR_TEXT: Readonly<Record<keyof MoveErrors, ErrorCopy>> = {
     title: 'The move is still running',
     body: 'Wait for it to stop, then undo it.',
   }),
-  switched: (from, to) => ({
+  switched: ({ from, to }) => ({
     title: 'Too late to cancel',
     body: `Your files have already switched to ${to}. The copies on ${from} are removed once nothing is playing from them.`,
   }),
@@ -184,7 +186,7 @@ const MOVE_ERROR_TEXT: Readonly<Record<keyof MoveErrors, ErrorCopy>> = {
     title: 'Already on internal storage',
     body: 'The data folder isn’t on a card, so there is nothing to switch.',
   }),
-  cardMounted: (from) => ({
+  cardMounted: ({ from }) => ({
     title: 'The card is back',
     body: `${capitalised(from)} is in again, so its songs play from it. Nothing was switched.`,
   }),
@@ -210,12 +212,12 @@ export function moveErrorText(
     places.cardReturn === true
       ? CARD_SONGS_PLAY
       : `Every song still plays from ${from}.`;
-  return MOVE_ERROR_TEXT[key](
+  return MOVE_ERROR_TEXT[key]({
     from,
-    thePlace(places.target),
-    placeName(places.target),
+    to: thePlace(places.target),
+    toName: placeName(places.target),
     stillPlays,
-  );
+  });
 }
 
 export function undoneText(source: string | null): string {

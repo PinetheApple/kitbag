@@ -257,6 +257,7 @@ export {
   pausedMove,
   offeredCards,
   returnedCards,
+  resumeBlocked,
   returnSourceMissing,
   type DataFolderDeps,
   type DataFolderStore,

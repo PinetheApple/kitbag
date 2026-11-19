@@ -8,6 +8,7 @@ import {
   sheetActions,
 } from './dataFolderFlow.ts';
 import { CARD, move } from './dataFolderMove.test-helper.ts';
+import { createDataFolderSheetController } from './dataFolderSheetController.ts';
 import {
   finished,
   ON_PHONE,
@@ -135,6 +136,67 @@ describe('the returned card offer', () => {
     emit.progress(RETURNING);
     emit.progress(move());
     expect(controller.returning()).toBe(false);
+  });
+});
+
+describe('a card pulled while its offer is open', () => {
+  it('closes the offer, and it stays closed when the card comes back', async () => {
+    const { store, native, sheet } = await offered();
+    native.listVolumes.mockResolvedValue({
+      ...ON_PHONE,
+      volumes: [INTERNAL, { ...RETURNED, state: CODES.volumeStates.unmounted }],
+    });
+    await store.getState().refreshVolumes();
+    expect(sheet()).toBe('none');
+    native.listVolumes.mockResolvedValue(WITH_CARD);
+    await store.getState().refreshVolumes();
+    expect(sheet()).toBe('none');
+  });
+});
+
+describe('the outcome notice with two hosts', () => {
+  it('is posted only by the host on screen', async () => {
+    const { store, controller, emit, notices } = await offered();
+    const behind: string[] = [];
+    const hidden = createDataFolderSheetController(store, (text) => {
+      behind.push(text);
+    });
+    hidden.subscribe(() => undefined);
+    hidden.setFocused(false);
+    controller.act.returnMove();
+    emit.progress(RETURNING);
+    emit.finished(finished(CODES.moveOutcomes.done));
+    await expect.poll(() => notices.length).toBe(1);
+    expect(behind).toEqual([]);
+  });
+});
+
+describe('places come from the controller', () => {
+  it('names the chosen target before a move starts, and the other place otherwise', async () => {
+    const { store, native, controller } = await setup();
+    native.listVolumes.mockResolvedValue(WITH_CARD);
+    await store.getState().refreshVolumes();
+    controller.open();
+    expect(controller.places()).toEqual({
+      source: null,
+      target: CARD,
+      cardReturn: false,
+    });
+    controller.choose(CARD);
+    expect(controller.places()).toMatchObject({ source: null, target: CARD });
+  });
+
+  it('keeps the return’s places once its move is gone', async () => {
+    const { controller, emit, settle } = await offered();
+    controller.act.returnMove();
+    await settle();
+    emit.progress(RETURNING);
+    emit.finished(finished(CODES.moveOutcomes.failed, CODES.moveErrors.io));
+    expect(controller.places()).toEqual({
+      source: CARD,
+      target: null,
+      cardReturn: true,
+    });
   });
 });
 

@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { DATA_FOLDER_CODES as CODES } from './codes.test-helper.ts';
-import { offeredCards, returnedCards, returnSourceMissing } from './store.ts';
+import {
+  offeredCards,
+  resumeBlocked,
+  returnedCards,
+  returnSourceMissing,
+} from './store.ts';
 import {
   CARD,
   INTERNAL,
@@ -69,5 +74,26 @@ describe('a return whose card is out', () => {
     expect(returnSourceMissing(store.getState())).toBe(false);
     progress(status({ sourceVolumeUuid: CARD, cardReturn: false }));
     expect(returnSourceMissing(store.getState())).toBe(false);
+  });
+});
+
+describe('whether Resume can be pressed', () => {
+  it('waits for the card of a return, and for a pending request', async () => {
+    const out = await started([INTERNAL, UNMOUNTED]);
+    out.progress(
+      status({
+        running: false,
+        paused: true,
+        sourceVolumeUuid: CARD,
+        cardReturn: true,
+      }),
+    );
+    expect(resumeBlocked(out.store.getState())).toBe(true);
+    const back = await started([INTERNAL, card()]);
+    back.progress(status({ running: false, paused: true }));
+    expect(resumeBlocked(back.store.getState())).toBe(false);
+    const resuming = back.store.getState().resumeMove();
+    expect(resumeBlocked(back.store.getState())).toBe(true);
+    await resuming;
   });
 });

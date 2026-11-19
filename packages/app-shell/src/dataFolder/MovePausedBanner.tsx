@@ -10,6 +10,7 @@ import {
 } from '@kitbag/core-design';
 import {
   pausedMove,
+  resumeBlocked,
   returnSourceMissing,
   useDataFolder,
   type DataFolderStore,
@@ -57,6 +58,7 @@ export function MovePausedBanner() {
   const undoMove = useDataFolder((s) => s.undoMove);
   const refusal = useDataFolder(refusalText);
   const cardOut = useDataFolder(returnSourceMissing);
+  const blocked = useDataFolder(resumeBlocked);
   const resume = useCallback(() => {
     void resumeMove();
   }, [resumeMove]);
@@ -100,7 +102,7 @@ export function MovePausedBanner() {
               key: RESUME,
               label: RESUME,
               primary: true,
-              disabled: pending || cardOut,
+              disabled: blocked,
               onPress: resume,
             },
           ]}
