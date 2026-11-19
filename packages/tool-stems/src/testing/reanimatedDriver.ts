@@ -104,6 +104,20 @@ export function scheduleOnRN<A extends unknown[]>(
   callback(...args);
 }
 
+export function scheduleOnUI<A extends unknown[]>(
+  worklet: (...args: A) => void,
+  ...args: A
+): void {
+  worklet(...args);
+}
+
+export const cancelAnimation = (): undefined => undefined;
+
+globalThis.requestAnimationFrame = (frame) => {
+  frame(timestamp);
+  return 0;
+};
+
 export function runFrame(): void {
   timestamp += FRAME_MS;
   for (const callback of frameCallbacks) callback({ timestamp });
