@@ -6,6 +6,7 @@ import {
 } from '@kitbag/core-state';
 
 import { getDatabase } from './database.ts';
+import { mixdownRuntime } from './mixdownRuntime.ts';
 import { mixerRuntime } from './mixerRuntime';
 
 const STEM_SET_COUNT_IN_BARS = KB_COUNT_IN_OFF;
@@ -16,6 +17,7 @@ configureStemPlayer({
     const { countInScope, countIn } = metronomeStore.getState();
     return songCountIn(countInScope, STEM_SET_COUNT_IN_BARS, countIn).bars;
   },
+  mixdown: mixdownRuntime,
   records: {
     readStemSet: (id) => getDatabase().songLibrary.readStemSet(id),
     saveStemMix: (mixes) => getDatabase().songLibrary.saveStemMix(mixes),

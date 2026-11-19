@@ -1,8 +1,17 @@
 export const MINUS = '−';
 
 export const SECONDS_PER_MINUTE = 60;
+const SPEED_DECIMALS = 2;
 const MINUTES_PER_HOUR = 60;
 const TWO_DIGITS = 2;
+
+export function roundedSpeed(rate: number): number {
+  return Number(rate.toFixed(SPEED_DECIMALS));
+}
+
+export function speedText(rate: number): string {
+  return String(roundedSpeed(rate));
+}
 
 export interface ClockParts {
   readonly hours: number;

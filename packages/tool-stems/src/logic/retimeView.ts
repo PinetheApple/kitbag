@@ -6,6 +6,7 @@ import {
   nextSungLine,
   NO_LINE,
   RETIME_SHIFT_STEP_SEC,
+  speedText,
   type LyricLine,
   type RetimeState,
   type RetimeTap,
@@ -13,7 +14,6 @@ import {
 
 const TENTHS = 10;
 const SHIFT_DECIMALS = 2;
-const SPEED_DECIMALS = 2;
 
 export interface RetimePreview {
   readonly done: { readonly text: string; readonly time: string } | null;
@@ -41,8 +41,7 @@ export function retimeSubtitle(
 ): string {
   const line = retimeLineLabel(lines, nextLine);
   if (playbackRate === null) return line;
-  const speed = String(Number(playbackRate.toFixed(SPEED_DECIMALS)));
-  return `${line} · playing at ${speed}×`;
+  return `${line} · playing at ${speedText(playbackRate)}×`;
 }
 
 export function hasUnsavedRetime(retime: RetimeState): boolean {

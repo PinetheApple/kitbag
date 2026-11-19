@@ -11,6 +11,13 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import { mixActions, transportActions } from './actions.ts';
 import { barMarkDownbeats, sameNumbers } from './bars.ts';
 import { clickActions, followNewGrid, releaseClick } from './clickActions.ts';
+import {
+  exportActions,
+  exportAfterLeaving,
+  NO_EXPORT,
+  type ExportActions,
+  type ExportSlice,
+} from './exportActions.ts';
 import { NO_SONG_FACTS, songFacts, type SongFacts } from './facts.ts';
 import type { LoopEdge, LoopSeconds } from './loop.ts';
 import { sectionLoopActions } from './loopActions.ts';
@@ -138,7 +145,10 @@ export interface StemPlayerActions {
   ) => void;
 }
 
-export type StemPlayerStore = StemPlayerState & StemPlayerActions;
+export type StemPlayerStore = StemPlayerState &
+  ExportSlice &
+  StemPlayerActions &
+  ExportActions;
 export type SetState = StoreApi<StemPlayerStore>['setState'];
 export type Get = StoreApi<StemPlayerStore>['getState'];
 
@@ -273,7 +283,10 @@ export function createStemPlayerStore(
       counting: () =>
         countPending(get().countEndFrame, runtimeOf().engine.nowFrame()),
       resetState: () => {
-        set(closedState);
+        set({
+          ...closedState,
+          exportState: exportAfterLeaving(get().exportState),
+        });
       },
     });
     const { live, scrubSeek } = mixer;
@@ -382,7 +395,12 @@ export function createStemPlayerStore(
 
     const beginSession = (setId: number) => {
       const opened = mixer.begin();
-      set({ ...closedState, status: 'loading', setId });
+      set({
+        ...closedState,
+        exportState: exportAfterLeaving(get().exportState),
+        status: 'loading',
+        setId,
+      });
       return opened;
     };
 
@@ -397,6 +415,7 @@ export function createStemPlayerStore(
 
     return {
       ...closedState,
+      exportState: NO_EXPORT,
       open: async (setId, waveformBars) => {
         await loadSession(beginSession(setId), setId, waveformBars);
       },
@@ -426,6 +445,7 @@ export function createStemPlayerStore(
         set({ meterOverride, downbeatIndices: downbeats });
         void followNewGrid(context, start.gridReplaced);
       },
+      ...exportActions(context),
     };
   });
 }
