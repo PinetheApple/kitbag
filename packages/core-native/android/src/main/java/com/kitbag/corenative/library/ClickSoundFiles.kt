@@ -16,6 +16,13 @@ object ClickSoundFiles {
   fun resolve(filesDir: File, fileName: String): File? =
     if (FILE_NAME.matches(fileName)) File(dir(filesDir), fileName) else null
 
+  fun names(filesDir: File): List<String> =
+    dir(filesDir).list().orEmpty().filter { FILE_NAME.matches(it) }.sorted()
+
+  fun deletePartials(filesDir: File) {
+    dir(filesDir).listFiles { file -> file.name.endsWith(PART_SUFFIX) }.orEmpty().forEach { it.delete() }
+  }
+
   fun write(target: File, bytes: ByteArray) {
     val part = File(target.path + PART_SUFFIX)
     try {

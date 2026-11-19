@@ -122,11 +122,15 @@ vi.mock('@kitbag/core-state', async (original) => {
     playerSongBadge,
     beatBeside,
     formatClockSeconds,
+    formatName,
+    joinedFormatNames,
   } = await original<{
     useFocusedMixerHold: unknown;
     playerSongBadge: unknown;
     beatBeside: unknown;
     formatClockSeconds: unknown;
+    formatName: unknown;
+    joinedFormatNames: unknown;
   }>();
   const open = () => {
     const mine = ++mixer.session;
@@ -151,6 +155,8 @@ vi.mock('@kitbag/core-state', async (original) => {
     rowFilesOf: () => library.files,
     beatBeside,
     formatClockSeconds,
+    formatName,
+    joinedFormatNames,
     bpmFact: (bpm: number | null) =>
       bpm === null ? null : { text: `${String(bpm)} BPM`, spoken: '' },
     clickKeyLabel: () => '',

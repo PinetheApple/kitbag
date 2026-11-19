@@ -333,7 +333,7 @@ function RestoreBody({ onBack }: { readonly onBack: () => void }) {
     case 'done':
       return (
         <Outcome
-          text={restoredText(restore.mode, restore.counts)}
+          text={restoredText(restore.mode, restore.counts, restore.soundResets)}
           failed={false}
           actionLabel={DONE_LABEL}
           onAction={onBack}

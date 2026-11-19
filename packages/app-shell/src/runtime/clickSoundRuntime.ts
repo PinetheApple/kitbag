@@ -1,7 +1,10 @@
 import { freshClickSoundFileName } from '@kitbag/core-db';
 import {
+  clearClickSoundPartials,
   clearCustomSound,
   deleteClickSound,
+  getKitbagLibrary,
+  listClickSounds,
   loadCustomSound,
   prepareClickSound,
 } from '@kitbag/core-native';
@@ -22,6 +25,16 @@ configureClickSounds({
   newUuid: () => crypto.randomUUID(),
   freshFileName: freshClickSoundFileName,
   afterRemove: releaseRemovedSound,
+  pickDocument: () => getKitbagLibrary().pickDocument(),
+  constants: () => getKitbagLibrary().getConstants(),
+  listFiles: listClickSounds,
+  clearPartials: clearClickSoundPartials,
 });
 
-void clickSoundStore.getState().sync();
+const clickSounds = clickSoundStore.getState();
+void clickSounds
+  .sync()
+  .then(clickSounds.sweepOrphans)
+  .catch((error: unknown) => {
+    console.warn('[kitbag] click sounds did not load', error);
+  });

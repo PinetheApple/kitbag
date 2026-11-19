@@ -4,6 +4,7 @@ import {
   clearCustomSound,
   customSoundLoaded,
   deleteClickSound,
+  listClickSounds,
   loadCustomSound,
   prepareClickSound,
   readClickSound,
@@ -22,4 +23,5 @@ it('has no custom click sounds on web', async () => {
   await expect(readClickSound('a.wav')).rejects.toThrow(/Android/);
   await expect(writeClickSound('a.wav', 'AA==')).rejects.toThrow(/Android/);
   await expect(deleteClickSound('a.wav')).rejects.toThrow(/Android/);
+  await expect(listClickSounds()).resolves.toEqual([]);
 });

@@ -73,3 +73,11 @@ export function writeClickSound(
 export function deleteClickSound(fileName: string): Promise<void> {
   return getKitbagLibrary().deleteClickSound(fileName);
 }
+
+export function listClickSounds(): Promise<readonly string[]> {
+  return getKitbagLibrary().listClickSounds();
+}
+
+export function clearClickSoundPartials(): Promise<void> {
+  return getKitbagLibrary().clearClickSoundPartials();
+}

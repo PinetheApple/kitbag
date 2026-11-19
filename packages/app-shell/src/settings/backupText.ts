@@ -7,6 +7,7 @@ import type {
 } from '@kitbag/core-db';
 import { countLabel } from '@kitbag/core-design';
 import {
+  DEFAULT_SOUND_NAME,
   REPLACE_CONFIRMATION,
   type RestoreFailure,
   type RestoreState,
@@ -224,9 +225,15 @@ export function failureText(failure: RestoreFailure): string {
   }
 }
 
+function soundResetText(songs: number): string {
+  const they = songs === 1 ? 'It uses' : 'They use';
+  return `${countLabel(songs, 'song', 'songs')} used a click sound that isn’t on this phone. ${they} ${DEFAULT_SOUND_NAME} now.`;
+}
+
 export function restoredText(
   mode: ImportMode,
   counts: ImportPlan['counts'],
+  soundResets = 0,
 ): string {
   const categories = RESTORE_ORDER.filter(
     (category) =>
@@ -238,8 +245,13 @@ export function restoredText(
       ? NOTHING_CHANGED
       : `${verb} ${incomingList(categories, counts)}.`;
   const missing = notOnDevice(counts.stemSongs);
-  if (missing === 0) return restored;
-  return `${restored} ${counted('stemSongs', missing)} ${NOT_ON_DEVICE}.`;
+  return [
+    restored,
+    ...(missing === 0
+      ? []
+      : [`${counted('stemSongs', missing)} ${NOT_ON_DEVICE}.`]),
+    ...(soundResets === 0 ? [] : [soundResetText(soundResets)]),
+  ].join(' ');
 }
 
 export function restorePrompt(phase: RestoreState['phase']): string | null {

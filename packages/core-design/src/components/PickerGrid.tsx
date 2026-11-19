@@ -1,5 +1,11 @@
 import { useCallback } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import {
+  Pressable,
+  Text,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 
 import { pickerRows } from '../pickerRows.ts';
 import { inset, radius, size, space, textRoles } from '../roles.ts';
@@ -74,7 +80,53 @@ const useStyles = createThemedStyles((theme) => ({
   selectedLabel: {
     color: theme.color[theme.accentInk],
   },
+  disabledLabel: {
+    color: theme.color.text3,
+  },
 }));
+
+export interface PickerTileProps {
+  readonly label: string;
+  readonly selected: boolean;
+  readonly onPress: () => void;
+  readonly accessibilityLabel?: string | undefined;
+  readonly disabled?: boolean;
+  readonly oneLine?: boolean;
+  readonly style?: StyleProp<ViewStyle>;
+}
+
+export function PickerTile({
+  label,
+  selected,
+  onPress,
+  accessibilityLabel,
+  disabled = false,
+  oneLine = false,
+  style,
+}: PickerTileProps) {
+  const styles = useStyles();
+  return (
+    <Pressable
+      accessibilityRole="radio"
+      accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityState={{ checked: selected, disabled }}
+      disabled={disabled}
+      style={[style, styles.item, selected && styles.selected]}
+      onPress={onPress}
+    >
+      <Text
+        numberOfLines={oneLine ? 1 : undefined}
+        style={[
+          styles.label,
+          selected && styles.selectedLabel,
+          disabled && styles.disabledLabel,
+        ]}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
 
 function PickerItem<T extends string>({
   option,
@@ -88,21 +140,13 @@ function PickerItem<T extends string>({
   }, [onSelect, option.value]);
 
   return (
-    <Pressable
-      accessibilityRole="radio"
-      accessibilityLabel={option.accessibilityLabel ?? option.label}
-      accessibilityState={{ checked: selected }}
-      style={[
-        byLabel ? styles.byLabel : styles.cell,
-        styles.item,
-        selected && styles.selected,
-      ]}
+    <PickerTile
+      label={option.label}
+      accessibilityLabel={option.accessibilityLabel}
+      selected={selected}
+      style={byLabel ? styles.byLabel : styles.cell}
       onPress={handlePress}
-    >
-      <Text style={[styles.label, selected && styles.selectedLabel]}>
-        {option.label}
-      </Text>
-    </Pressable>
+    />
   );
 }
 

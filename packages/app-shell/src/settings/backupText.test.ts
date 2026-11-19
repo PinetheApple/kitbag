@@ -267,6 +267,16 @@ describe('result', () => {
       'Merged 1 metronome setup & 2 click sounds.',
     );
   });
+
+  it('says how many songs went back to Tick', () => {
+    const songs = { songPresets: counts({ incoming: 3 }) };
+    expect(restoredText('merge', songs, 2)).toBe(
+      'Merged 3 songs. 2 songs used a click sound that isn’t on this phone. They use Tick now.',
+    );
+    expect(restoredText('replace', songs, 1)).toBe(
+      'Replaced with 3 songs. 1 song used a click sound that isn’t on this phone. It uses Tick now.',
+    );
+  });
 });
 
 describe('restorePrompt', () => {

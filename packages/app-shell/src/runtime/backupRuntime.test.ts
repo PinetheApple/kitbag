@@ -49,6 +49,10 @@ configureClickSounds({
   newUuid: vi.fn(),
   freshFileName: vi.fn(),
   afterRemove: vi.fn(),
+  pickDocument: vi.fn(),
+  constants: vi.fn(),
+  listFiles: vi.fn(),
+  clearPartials: vi.fn(),
 });
 
 await import('./backupRuntime.ts');

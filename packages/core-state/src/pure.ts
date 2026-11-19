@@ -5,3 +5,4 @@ export * from './stemPlayer/screenHold.ts';
 export * from './songLibrary/badge.ts';
 export * from './songLibrary/replaceText.ts';
 export * from './stemPlayer/beatStep.ts';
+export * from './importText.ts';
