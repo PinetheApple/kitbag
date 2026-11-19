@@ -7,6 +7,7 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.WritableMap
+import com.kitbag.corenative.library.AwaySongCounts
 import com.kitbag.corenative.library.DataFolderLocation
 import com.kitbag.corenative.library.LibraryErrors
 import com.kitbag.corenative.library.PortableVolume
@@ -153,8 +154,7 @@ class DataFolderBridge(
     return volumeMap(null, null, VOLUME_MOUNTED, inUse).apply {
       putDouble("freeBytes", DataFolderMoves.usableBytes(root).toDouble())
       putDouble("totalBytes", context.filesDir.totalSpace.toDouble())
-      putInt("awayFiles", 0)
-      putDouble("awayBytes", 0.0)
+      putAway(0, 0L, AwaySongCounts(songs = 0, stemSongs = 0))
     }
   }
 
@@ -166,12 +166,21 @@ class DataFolderBridge(
     }
     val inUse = current == DataFolderLocation.Card(volume.uuid)
     val away = moves.folder.awayOnCard(volume.uuid)
+    val awayBytes = away.sumOf { it.length() }
+    val songs = moves.folder.awaySongCounts(volume.uuid)
     return volumeMap(volume.uuid, volume.description, state, inUse).apply {
       putDouble("freeBytes", DataFolderMoves.usableBytes(volume.filesDir).toDouble())
       putDouble("totalBytes", volume.filesDir.totalSpace.toDouble())
-      putInt("awayFiles", away.size)
-      putDouble("awayBytes", away.sumOf { it.length() }.toDouble())
+      putAway(away.size, awayBytes, songs)
     }
+  }
+
+  private fun WritableMap.putAway(files: Int, bytes: Long, songs: AwaySongCounts) {
+    putInt("awayFiles", files)
+    putDouble("awayBytes", bytes.toDouble())
+    putDouble("awayRequiredBytes", (bytes + MoveRunner.FREE_SPACE_MARGIN_BYTES).toDouble())
+    putInt("awaySongs", songs.songs)
+    putInt("awayStemSongs", songs.stemSongs)
   }
 
   private fun volumeMap(uuid: String?, name: String?, state: String, inUse: Boolean): WritableMap =
@@ -197,6 +206,7 @@ class DataFolderBridge(
       putBoolean("switched", status.switched)
       putBoolean("paused", status.paused)
       putBoolean("awaitingRelease", status.awaitingRelease)
+      putBoolean("cardReturn", status.cardReturn)
       putString("error", MoveReport.errorOf(status))
     }
   }

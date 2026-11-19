@@ -39,6 +39,9 @@ const INTERNAL: DataFolderVolume = {
   totalBytes: 128 * GB,
   awayFiles: 0,
   awayBytes: 0,
+  awayRequiredBytes: 0,
+  awaySongs: 0,
+  awayStemSongs: 0,
 };
 
 const SD: DataFolderVolume = {
@@ -50,6 +53,9 @@ const SD: DataFolderVolume = {
   totalBytes: 64 * GB,
   awayFiles: 0,
   awayBytes: 0,
+  awayRequiredBytes: 0,
+  awaySongs: 0,
+  awayStemSongs: 0,
 };
 
 const VOLUMES: DataFolderVolumes = {
@@ -269,6 +275,7 @@ describe('after the switch', () => {
     switched: true,
     running: false,
     awaitingRelease: true,
+    cardReturn: false,
   });
 
   it('says the files are on the target while old copies wait', () => {
@@ -287,6 +294,7 @@ describe('after the switch', () => {
     const failed = {
       ...awaiting,
       awaitingRelease: false,
+      cardReturn: false,
       error: CODES.moveErrors.io,
     };
     expect(rowValueLabel(dataFolderRowValue(VOLUMES, failed))).toBe(

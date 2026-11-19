@@ -37,6 +37,7 @@ export function status(fields: Partial<MoveStatus> = {}): MoveStatus {
     switched: false,
     paused: false,
     awaitingRelease: false,
+    cardReturn: false,
     error: null,
     ...fields,
   };

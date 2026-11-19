@@ -121,6 +121,8 @@ class DataFolder(
 
   fun awayOn(volumeUuid: String): Set<String>? = awayManifest.load()?.let { it[volumeUuid].orEmpty() }
 
+  fun awaySongCounts(volumeUuid: String): AwaySongCounts = AwaySongCounts.of(awayOn(volumeUuid).orEmpty())
+
   fun awayOnCard(volumeUuid: String): List<File> {
     val root = cardRoot(volumeUuid) ?: return emptyList()
     return awayOn(volumeUuid).orEmpty().map { LibraryPaths.resolve(root, it) }.filter { it.isFile }

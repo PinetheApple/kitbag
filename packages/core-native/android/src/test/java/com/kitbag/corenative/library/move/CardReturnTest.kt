@@ -1,6 +1,7 @@
 package com.kitbag.corenative.library.move
 
 import com.kitbag.corenative.library.AwayManifest
+import com.kitbag.corenative.library.AwaySongCounts
 import com.kitbag.corenative.library.DataFolderLocation
 import com.kitbag.corenative.library.LibraryFile
 import com.kitbag.corenative.library.move.MoveFixture.Companion.CARD_UUID
@@ -294,6 +295,23 @@ class CardReturnTest {
   }
 
   @Test
+  fun `the away list counts the card's songs and stem songs without reading the card`() {
+    fx.write(fx.cardRoot, SECOND_SONG_WAVEFORM, "peaks".toByteArray())
+    fx.volumes.volumes = listOf(fx.card(mounted = false))
+    fx.folder.leaveAway(CARD_UUID, listOf(SECOND_SONG_WAVEFORM))
+    assertEquals(AwaySongCounts(songs = 2, stemSongs = 1), fx.folder.awaySongCounts(CARD_UUID))
+    assertEquals(AwaySongCounts(songs = 0, stemSongs = 0), fx.folder.awaySongCounts(OTHER_CARD_UUID))
+  }
+
+  @Test
+  fun `a return's status says it is a return`() {
+    val killer = fx.runner { if (it.phase == MovePhase.VERIFYING && it.path == null) throw MoveFixture.Killed() }
+    assertThrows(MoveFixture.Killed::class.java) { killer.returnCard(card) }
+    fx.folder = fx.newFolder()
+    assertTrue(fx.moves().status()!!.cardReturn)
+  }
+
+  @Test
   fun `the mounted card reports its away files and their size`() {
     val files = fx.folder.awayOnCard(CARD_UUID)
     assertEquals(away.keys.size, files.size)
@@ -315,7 +333,8 @@ class CardReturnTest {
 
   companion object {
     private const val NOT_AWAY = "songs/z/z.mp3"
-    private const val STAGING_SEGMENT = "/.card-return/"
+    private const val SECOND_SONG_WAVEFORM = "songs/y/y.kwav"
+    private const val STAGING_SEGMENT = "/${CardReturn.STAGING_DIR_NAME}/"
     private const val BLOCKED_DIR = "stems/job1"
     private const val PLACED_BEFORE_KILL = 2
   }

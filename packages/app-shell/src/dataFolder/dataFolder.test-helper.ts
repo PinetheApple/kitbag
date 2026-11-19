@@ -44,6 +44,9 @@ export const CARD_OUT: DataFolderVolumes = {
       totalBytes: 0,
       awayFiles: 0,
       awayBytes: 0,
+      awayRequiredBytes: 0,
+      awaySongs: 0,
+      awayStemSongs: 0,
     },
   ],
 };

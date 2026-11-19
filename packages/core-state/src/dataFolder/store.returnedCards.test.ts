@@ -14,6 +14,9 @@ const INTERNAL: DataFolderVolume = {
   totalBytes: 9_000,
   awayFiles: 0,
   awayBytes: 0,
+  awayRequiredBytes: 0,
+  awaySongs: 0,
+  awayStemSongs: 0,
 };
 
 function card(fields: Partial<DataFolderVolume> = {}): DataFolderVolume {
@@ -26,6 +29,9 @@ function card(fields: Partial<DataFolderVolume> = {}): DataFolderVolume {
     totalBytes: 4_000,
     awayFiles: 6,
     awayBytes: 1_200,
+    awayRequiredBytes: 1_200,
+    awaySongs: 0,
+    awayStemSongs: 0,
     ...fields,
   };
 }
