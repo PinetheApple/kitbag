@@ -2,15 +2,12 @@ import type { LibraryRow } from '@kitbag/core-db';
 
 import { checkRowFiles, type RowFiles } from '../storage/missingRows.ts';
 import { storedRowFiles } from '../storage/storedRowFiles.ts';
+import { rowKey } from './rowKey.ts';
 import type { SongLibraryDeps } from './store.ts';
 import { warn, type SetState } from './storeSupport.ts';
 
 export type RowFilesByKey = ReadonlyMap<string, RowFiles>;
 export type RowPathsByKey = ReadonlyMap<string, readonly string[]>;
-
-export function rowKey(row: Pick<LibraryRow, 'kind' | 'id'>): string {
-  return `${row.kind}:${String(row.id)}`;
-}
 
 export function rowFilesOf(
   byKey: RowFilesByKey,

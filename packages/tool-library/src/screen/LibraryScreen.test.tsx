@@ -41,6 +41,7 @@ vi.mock('@kitbag/core-state', async (original) => ({
       failed: false,
       ready: true,
       rows: [{ kind: 'song', id: 1 }],
+      rowPaths: new Map(),
       importing: [],
       notice: null,
       query: '',
@@ -51,10 +52,8 @@ vi.mock('@kitbag/core-state', async (original) => ({
     }),
   inView: () => true,
   filterRows: () => [],
-  useDataFolder: (select: (state: { move: null }) => unknown) =>
-    select({ move: null }),
-  movingRowKey: () => null,
-  rowKey: () => '',
+  useDataFolder: (select: (state: { move: null; codes: null }) => unknown) =>
+    select({ move: null, codes: null }),
 }));
 
 vi.mock('./LibraryRowView.tsx', () => ({ LibraryRowView: () => null }));

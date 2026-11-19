@@ -1,7 +1,8 @@
 import type { LibraryAvailability } from '@kitbag/core-native';
 import { describe, expect, it } from 'vitest';
 
-import { rowFilesOf, rowKey } from './availability.ts';
+import { rowFilesOf } from './availability.ts';
+import { rowKey } from './rowKey.ts';
 import { analysisFailure } from './logic.ts';
 import {
   CODES,

@@ -17,6 +17,7 @@ import {
   inView,
   movingRowKey,
   rowKey,
+  rowMatchIndex,
   useDataFolder,
   useSongLibrary,
   type LibraryRow,
@@ -191,7 +192,10 @@ function SongList({
   const rows = useSongLibrary((s) => s.rows);
   const query = useSongLibrary((s) => s.query);
   const rowPaths = useSongLibrary((s) => s.rowPaths);
-  const moving = useDataFolder((s) => movingRowKey(s.move, rowPaths));
+  const index = useMemo(() => rowMatchIndex(rowPaths), [rowPaths]);
+  const moving = useDataFolder((s) =>
+    s.codes === null ? null : movingRowKey(s.move, s.codes.movePhases, index),
+  );
   const shown = useMemo(
     () => filterRows(rows, query, view),
     [rows, query, view],
