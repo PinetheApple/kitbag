@@ -1,12 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import {
-  migrate,
-  SCHEMA_VERSION,
-  UnsupportedSchemaVersion,
-  V7_SCHEMA_VERSION,
-} from './migrate';
+import { migrate, SCHEMA_VERSION, V7_SCHEMA_VERSION } from './migrate';
 import {
   buildV7Fixture,
   buildV8Fixture,
@@ -119,9 +114,14 @@ describe('migrate', () => {
     (version) => {
       const db = buildPreV7Database(version);
       const before = dump(db);
+      const driver = nodeSqliteDriver(db);
+      const exec = vi.spyOn(driver, 'exec');
       expect(() => {
-        migrate(nodeSqliteDriver(db));
-      }).toThrow(UnsupportedSchemaVersion);
+        migrate(driver);
+      }).toThrow(
+        expect.objectContaining({ name: 'UnsupportedSchemaVersion', version }),
+      );
+      expect(exec).not.toHaveBeenCalled();
       expect(dump(db)).toEqual(before);
     },
   );
