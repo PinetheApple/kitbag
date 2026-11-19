@@ -1,0 +1,27 @@
+appId: com.kitbag.app
+name: "#472: the song player's Tempo correction scales the tempo, and Undo puts ×1 back"
+tags:
+  - pr-472
+---
+- runFlow: ../../subflows/launch-fresh.yaml
+- runFlow: ../../subflows/import-fixture-song.yaml
+- tapOn: '${FIXTURE_SONG}, .*'
+- extendedWaitUntil:
+    visible: 'Play'
+    timeout: 10000
+- tapOn: 'More'
+- extendedWaitUntil:
+    visible: 'Tempo correction, as detected, 120 BPM'
+    timeout: 60000
+- tapOn: 'Tempo correction, as detected, 120 BPM'
+- tapOn: 'One and a half times, 180 BPM'
+- assertVisible: 'Tempo set to one and a half times, 180 BPM. Saved for this song.'
+- tapOn: 'Done'
+# Undo floats above the dock for six seconds after Done, so the row is read straight away.
+- tapOn: 'More'
+- assertVisible: 'Tempo correction, one and a half times, 180 BPM'
+- back
+- tapOn: 'Undo'
+- tapOn: 'More'
+- assertVisible: 'Tempo correction, as detected, 120 BPM'
+- back
