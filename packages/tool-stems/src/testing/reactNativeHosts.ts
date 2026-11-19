@@ -26,6 +26,7 @@ export const Pressable = 'Pressable';
 export const ScrollView = 'ScrollView';
 export const Modal = 'Modal';
 export const Platform = { OS: 'test', select: () => undefined };
+export const Keyboard = { dismiss: () => undefined };
 
 export const display = { fontScale: 1 };
 

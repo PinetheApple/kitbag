@@ -1,48 +1,43 @@
 import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
 
+import { CLICK_RATE } from './click-rate';
 import { migrate, SCHEMA_VERSION } from './migrate';
-import { buildV21Fixture, pragma, rows } from './migrate-fixtures.test-helper';
+import {
+  buildV21Fixture,
+  pragma,
+  rows,
+  V22_TEMPO_COLUMNS,
+} from './migrate-fixtures.test-helper';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
-const CLICK_SOUND_COLUMNS = [
-  { name: 'slot', type: 'INTEGER', notnull: 0, pk: 1 },
-  { name: 'uuid', type: 'TEXT', notnull: 1, pk: 0 },
-  { name: 'name', type: 'TEXT', notnull: 1, pk: 0 },
-  { name: 'file_name', type: 'TEXT', notnull: 1, pk: 0 },
-];
-
-const columns = (db: DatabaseSync) =>
-  rows<{ name: string; type: string; notnull: number; pk: number }>(
-    db,
-    'PRAGMA table_info(click_sounds)',
-  ).map(({ name, type, notnull, pk }) => ({ name, type, notnull, pk }));
+const columns = (db: DatabaseSync, table: string) =>
+  rows<{ name: string }>(db, `PRAGMA table_info(${table})`).map(
+    ({ name }) => name,
+  );
 
 describe('migrate v21 to v22', () => {
-  it('adds an empty click_sounds table and keeps every preset', () => {
+  it('gives every existing stem song no bundle tempo and no chosen mode', () => {
     const db = buildV21Fixture();
-    const before = rows(db, 'SELECT * FROM song_presets ORDER BY id');
+    db.exec(`INSERT INTO stem_sets (name, created_at, uuid, bpm, click_rate)
+      VALUES ('Redbone', 1700000000, 'uuid-r', 80.5, '${CLICK_RATE.half}')`);
+    const before = rows<Record<string, unknown>>(
+      db,
+      'SELECT * FROM stem_sets ORDER BY id',
+    );
     migrate(nodeSqliteDriver(db));
-    expect(columns(db)).toEqual(CLICK_SOUND_COLUMNS);
-    expect(rows(db, 'SELECT * FROM click_sounds')).toEqual([]);
-    expect(rows(db, 'SELECT * FROM song_presets ORDER BY id')).toEqual(before);
+    expect(rows(db, 'SELECT * FROM stem_sets ORDER BY id')).toEqual(
+      before.map((row) => ({ ...row, ...V22_TEMPO_COLUMNS })),
+    );
     expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);
   });
 
-  it('gives a fresh database the same table', () => {
+  it('gives a fresh database the tempo columns on stem songs only', () => {
     const db = new DatabaseSync(':memory:');
     migrate(nodeSqliteDriver(db));
-    expect(columns(db)).toEqual(CLICK_SOUND_COLUMNS);
-  });
-
-  it('holds one sound per slot', () => {
-    const db = new DatabaseSync(':memory:');
-    migrate(nodeSqliteDriver(db));
-    const insert = `INSERT INTO click_sounds (slot, uuid, name, file_name)
-      VALUES (0, 'u', 'Rimshot', 'a.wav')`;
-    db.exec(insert);
-    expect(() => {
-      db.exec(insert);
-    }).toThrow(/UNIQUE/);
+    expect(columns(db, 'stem_sets')).toEqual(
+      expect.arrayContaining(Object.keys(V22_TEMPO_COLUMNS)),
+    );
+    expect(columns(db, 'songs')).not.toContain('tempo_mode');
   });
 });

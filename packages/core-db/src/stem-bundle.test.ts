@@ -83,6 +83,7 @@ const FULL: NewStemBundle = {
     offsetSec: -0.35,
     instrumental: false,
   },
+  tempo: null,
 };
 
 const BARE: NewStemBundle = {
@@ -150,6 +151,8 @@ describe('StemDeck bundles in the song library', () => {
       meterBeatsPerBar: null,
       barOneSeconds: null,
       ...NO_CLICK,
+      tempo: null,
+      chosenTempoMode: null,
       stems: FULL.stems.map((stem) => ({
         ...stem,
         id: expect.any(Number) as number,

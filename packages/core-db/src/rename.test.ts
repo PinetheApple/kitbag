@@ -53,6 +53,7 @@ function bundle(title: string, roles: readonly string[]): NewStemBundle {
     beats: [],
     bars: [],
     lyrics: null,
+    tempo: null,
   };
 }
 

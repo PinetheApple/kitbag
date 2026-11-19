@@ -121,9 +121,7 @@ const transition = {
 };
 
 export const FadeIn = transition;
-export const FadeOut = transition;
 export const SlideInDown = transition;
-export const SlideOutDown = transition;
 export const ReduceMotion = {
   System: 'system',
   Always: 'always',
@@ -135,5 +133,14 @@ export function useReducedMotion(): boolean {
 }
 
 export function withSpring<T>(value: T): T {
+  return value;
+}
+
+export function withTiming<T>(
+  value: T,
+  _config?: unknown,
+  done?: (finished: boolean) => void,
+): T {
+  done?.(true);
   return value;
 }

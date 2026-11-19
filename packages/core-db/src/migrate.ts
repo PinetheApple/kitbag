@@ -8,7 +8,6 @@ import {
   MIGRATE_V16_TO_V17,
 } from './migrate-stems';
 
-export const SCHEMA_VERSION = 22;
 export const V7_SCHEMA_VERSION = 7;
 export const V8_SCHEMA_VERSION = 8;
 export const V9_SCHEMA_VERSION = 9;
@@ -23,7 +22,9 @@ export const V17_SCHEMA_VERSION = 17;
 export const V18_SCHEMA_VERSION = 18;
 export const V19_SCHEMA_VERSION = 19;
 export const V20_SCHEMA_VERSION = 20;
-export const V21_SCHEMA_VERSION = 21;
+export const V21_SCHEMA_VERSION = V20_SCHEMA_VERSION + 1;
+export const V22_SCHEMA_VERSION = V21_SCHEMA_VERSION + 1;
+export const SCHEMA_VERSION = V22_SCHEMA_VERSION + 1;
 
 const OLDEST_UPGRADABLE_VERSION = V7_SCHEMA_VERSION;
 
@@ -317,8 +318,18 @@ export const MIGRATE_V20_TO_V21: readonly string[] = [
   `ALTER TABLE stem_sets ADD COLUMN click_rate TEXT NOT NULL DEFAULT '${CLICK_RATE.single}'`,
 ];
 
-// No CHECK on the slot: the engine owns the slot count and may grow it.
+// No CHECKs on the tempo words: tempo-mode.ts owns the valid set.
 export const MIGRATE_V21_TO_V22: readonly string[] = [
+  'ALTER TABLE stem_sets ADD COLUMN tempo_mode TEXT',
+  'ALTER TABLE stem_sets ADD COLUMN tempo_bpm REAL',
+  'ALTER TABLE stem_sets ADD COLUMN tempo_anchor REAL',
+  'ALTER TABLE stem_sets ADD COLUMN tempo_beats_per_bar INTEGER',
+  'ALTER TABLE stem_sets ADD COLUMN tempo_source TEXT',
+  'ALTER TABLE stem_sets ADD COLUMN chosen_tempo_mode TEXT',
+];
+
+// No CHECK on the slot: the engine owns the slot count and may grow it.
+export const MIGRATE_V22_TO_V23: readonly string[] = [
   `CREATE TABLE click_sounds (
   slot INTEGER PRIMARY KEY,
   uuid TEXT NOT NULL,
@@ -340,6 +351,7 @@ export const BASELINE: readonly string[] = [
   ...MIGRATE_V19_TO_V20,
   ...MIGRATE_V20_TO_V21,
   ...MIGRATE_V21_TO_V22,
+  ...MIGRATE_V22_TO_V23,
 ];
 
 export const MIGRATE_V7_TO_V8: readonly string[] = [
@@ -382,7 +394,8 @@ const UPGRADES: readonly {
   { to: V19_SCHEMA_VERSION, steps: MIGRATE_V18_TO_V19 },
   { to: V20_SCHEMA_VERSION, steps: MIGRATE_V19_TO_V20 },
   { to: V21_SCHEMA_VERSION, steps: MIGRATE_V20_TO_V21 },
-  { to: SCHEMA_VERSION, steps: MIGRATE_V21_TO_V22 },
+  { to: V22_SCHEMA_VERSION, steps: MIGRATE_V21_TO_V22 },
+  { to: SCHEMA_VERSION, steps: MIGRATE_V22_TO_V23 },
 ];
 
 function upgradeSteps(from: number): readonly string[] {

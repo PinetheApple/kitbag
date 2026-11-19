@@ -48,6 +48,7 @@ const BUNDLE: NewStemBundle = {
   lyrics: null,
   beats: [],
   bars: [],
+  tempo: null,
 };
 
 describe('a click grouping on save', () => {
