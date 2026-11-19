@@ -1,0 +1,2 @@
+• Pressing pause, stop or a tempo button on the metronome notification just as a song's click takes over no longer silences the song's click or leaves the metronome at the wrong tempo.
+• Fixed a crash that could happen when a sheet closed.
