@@ -2,11 +2,16 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@op-engineering/op-sqlite', () => ({}));
 
+import { eq } from 'drizzle-orm';
+
 import { GRID_METER } from './meter-override';
-import { stemSets } from './schema';
+import { stems, stemSets } from './schema';
 import { createSongLibraryRepository } from './song-library-repository';
 import type { NewStemBundle } from './stem-bundle-repository';
-import type { StemSetIdentity } from './stem-set-match';
+import {
+  SAME_SONG_DURATION_TOLERANCE_SEC,
+  type StemSetIdentity,
+} from './stem-set-match';
 import { STEM_SET_SOURCE } from './stem-set-source';
 import { openTestDatabase } from './sqlite.test-helper';
 
@@ -26,9 +31,17 @@ const RATE = 48000;
 const LONGEST_SEC = 200;
 const SHORTER_SEC = 150;
 const SLOWER = 0.75;
-const WITHIN_TOLERANCE_SEC = 2;
-const BEYOND_TOLERANCE_SEC = 2.1;
+const DECIDED_TOLERANCE_SEC = 2;
+const PAST_TOLERANCE_SEC = 0.1;
 const BAR_ONE_SEC = 1.5;
+const DRUMS_KEY = -2;
+const RETIMED = [11.9, 15.2];
+const LYRICS = {
+  synced: '[00:12.25]First line\n[00:15.80]Second line',
+  plain: null,
+  offsetSec: 0,
+  instrumental: false,
+};
 
 function bundle(
   jobId: string,
@@ -82,9 +95,13 @@ describe('finding a stem song StemDeck separated again', () => {
       await library.findStemSetMatches({
         title: '  ECHO ',
         artist: 'charity gayle ',
-        durationSec: LONGEST_SEC + WITHIN_TOLERANCE_SEC,
+        durationSec: LONGEST_SEC + SAME_SONG_DURATION_TOLERANCE_SEC,
       }),
     ).toEqual([{ id, title: 'Echo' }]);
+  });
+
+  it('allows the decided 2 s between the longest stems', () => {
+    expect(SAME_SONG_DURATION_TOLERANCE_SEC).toBe(DECIDED_TOLERANCE_SEC);
   });
 
   it('matches the song title when the bundle title differs', async () => {
@@ -114,7 +131,10 @@ describe('finding a stem song StemDeck separated again', () => {
     ['the title is empty', { title: ' ' }],
     [
       'the duration is just past the tolerance',
-      { durationSec: LONGEST_SEC + BEYOND_TOLERANCE_SEC },
+      {
+        durationSec:
+          LONGEST_SEC + SAME_SONG_DURATION_TOLERANCE_SEC + PAST_TOLERANCE_SEC,
+      },
     ],
   ])('does not match when %s', async (_, change) => {
     const { library } = setup();
@@ -136,7 +156,10 @@ describe('replacing a matched stem song', () => {
   async function seeded() {
     const context = setup();
     const { handle, library } = context;
-    const old = await library.insertStemBundle(bundle('old-job'));
+    const old = await library.insertStemBundle({
+      ...bundle('old-job'),
+      lyrics: LYRICS,
+    });
     const [vocals, drums] = (await library.readStemSet(old))?.stems ?? [];
     if (vocals === undefined || drums === undefined) throw new Error('setup');
     await library.renameStemSet(old, 'Echo (live)');
@@ -146,6 +169,11 @@ describe('replacing a matched stem song', () => {
       barOneSeconds: BAR_ONE_SEC,
     });
     await handle.db.update(stemSets).set({ speed: SLOWER });
+    await handle.db
+      .update(stems)
+      .set({ pitch: DRUMS_KEY })
+      .where(eq(stems.id, drums.id));
+    await library.saveLyricsRetimed(old, RETIMED);
     await library.saveStemMix([
       { id: vocals.id, volume: 0.25, muted: true, soloed: false },
       { id: drums.id, volume: 1.5, muted: false, soloed: true },
@@ -171,31 +199,47 @@ describe('replacing a matched stem song', () => {
     });
   });
 
-  it('keeps bar one when the same job is imported again', async () => {
+  it('keeps bar one and the lyric retiming when the same job is imported again', async () => {
     const { library, old } = await seeded();
     const outcome = await library.replaceStemBundle(
-      { ...bundle('old-job'), uuid: 'uuid-again' },
+      { ...bundle('old-job'), uuid: 'uuid-again', lyrics: LYRICS },
       old,
     );
     expect(await library.readStemSet(outcome.id)).toMatchObject({
       meterBeatsPerBar: GRID_METER.triple,
       barOneSeconds: BAR_ONE_SEC,
+      lyricsRetimed: RETIMED,
     });
   });
 
-  it('keeps the saved mix by stem name when the bundle has none, at unity for a new stem', async () => {
+  it('drops the lyric retiming for another job, even with the same lyrics', async () => {
+    const { library, old } = await seeded();
+    const outcome = await library.replaceStemBundle(
+      { ...bundle('new-job'), lyrics: LYRICS },
+      old,
+    );
+    expect((await library.readStemSet(outcome.id))?.lyricsRetimed).toBeNull();
+  });
+
+  it('keeps the saved mix and key by stem name when the bundle has none, unity for a new stem', async () => {
     const { library, old } = await seeded();
     const outcome = await library.replaceStemBundle(
       bundle('new-job', ['vocals', 'drums', 'bass']),
       old,
     );
     const mixes = (await library.readStemSet(outcome.id))?.stems.map(
-      ({ role, volume, muted, soloed }) => [role, volume, muted, soloed],
+      ({ role, volume, muted, soloed, pitch }) => [
+        role,
+        volume,
+        muted,
+        soloed,
+        pitch,
+      ],
     );
     expect(mixes).toEqual([
-      ['vocals', 0.25, true, false],
-      ['drums', 1.5, false, true],
-      ['bass', 1, false, false],
+      ['vocals', 0.25, true, false, 0],
+      ['drums', 1.5, false, true, DRUMS_KEY],
+      ['bass', 1, false, false, 0],
     ]);
   });
 
@@ -211,11 +255,11 @@ describe('replacing a matched stem song', () => {
       old,
     );
     const mixes = (await library.readStemSet(outcome.id))?.stems.map(
-      ({ volume, muted, soloed }) => [volume, muted, soloed],
+      ({ volume, muted, soloed, pitch }) => [volume, muted, soloed, pitch],
     );
     expect(mixes).toEqual([
-      [0.5, false, false],
-      [0.5, false, false],
+      [0.5, false, false, 0],
+      [0.5, false, false, 0],
     ]);
   });
 

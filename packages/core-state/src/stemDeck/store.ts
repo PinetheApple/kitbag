@@ -3,6 +3,7 @@ import type { StemDeckConstants } from '@kitbag/core-native';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { getSongLibrary } from '../songLibrary/runtime.ts';
+import { newestSameSong } from '../songLibrary/stemBundleLogic.ts';
 import {
   songLibraryStore,
   type SongLibraryActions,
@@ -68,15 +69,7 @@ const defaultDeps: StemDeckDeps = {
     songLibraryStore.getState().addFetchedBundle(source, options),
   inLibrary: async (jobId) =>
     (await getSongLibrary().records.findStemSetByJobId(jobId)) !== undefined,
-  findSameSong: async ({ title, artist, durationSec }) => {
-    if (durationSec === null) return undefined;
-    const [newest] = await getSongLibrary().records.findStemSetMatches({
-      title,
-      artist,
-      durationSec,
-    });
-    return newest;
-  },
+  findSameSong: (song) => newestSameSong(getSongLibrary().records, song),
   camera: () => getStemDeck().camera,
 };
 

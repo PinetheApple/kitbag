@@ -275,7 +275,7 @@ describe('adding a bundle fetched from StemDeck', () => {
     store.subscribe((state) => importing.push(state.importing));
     const outcome = await store
       .getState()
-      .addFetchedBundle(FETCHED, { replace: false });
+      .addFetchedBundle(FETCHED, { kind: 'add' });
     expect(outcome).toEqual({ kind: 'added' });
     expect(files.importStemBundle).toHaveBeenCalledWith(FETCHED.uri, false);
     expect(await stemRows(store)).toHaveLength(1);
@@ -286,10 +286,10 @@ describe('adding a bundle fetched from StemDeck', () => {
 
   it('reports a song already in the library and copies nothing', async () => {
     const { store, files } = setup();
-    await store.getState().addFetchedBundle(FETCHED, { replace: false });
+    await store.getState().addFetchedBundle(FETCHED, { kind: 'add' });
     const outcome = await store
       .getState()
-      .addFetchedBundle(FETCHED, { replace: false });
+      .addFetchedBundle(FETCHED, { kind: 'add' });
     expect(outcome).toEqual({ kind: 'alreadyInLibrary' });
     expect(files.importStemBundle).toHaveBeenCalledTimes(1);
     expect(store.getState().replacePrompt).toBeNull();
@@ -297,10 +297,10 @@ describe('adding a bundle fetched from StemDeck', () => {
 
   it('replaces the library copy when told to, deleting the old folder', async () => {
     const { store, files } = setup();
-    await store.getState().addFetchedBundle(FETCHED, { replace: false });
+    await store.getState().addFetchedBundle(FETCHED, { kind: 'add' });
     const outcome = await store
       .getState()
-      .addFetchedBundle(FETCHED, { replace: true });
+      .addFetchedBundle(FETCHED, { kind: 'replaceJob' });
     expect(outcome).toEqual({ kind: 'added' });
     expect(await stemRows(store)).toHaveLength(1);
     expect(files.deleteStemFolder.mock.calls).toEqual([[JOB_ID]]);
@@ -314,7 +314,7 @@ describe('adding a bundle fetched from StemDeck', () => {
     const { store } = setup(fake);
     const outcome = await store
       .getState()
-      .addFetchedBundle(FETCHED, { replace: false });
+      .addFetchedBundle(FETCHED, { kind: 'add' });
     expect(outcome).toMatchObject({
       kind: 'refused',
       refusal: { reason: 'noSpace' },
@@ -333,7 +333,7 @@ describe('adding a bundle fetched from StemDeck', () => {
     const { store, files } = setup(fake);
     const outcome = await store
       .getState()
-      .addFetchedBundle(FETCHED, { replace: false });
+      .addFetchedBundle(FETCHED, { kind: 'add' });
     expect(outcome).toMatchObject({
       kind: 'refused',
       refusal: {
@@ -352,7 +352,7 @@ describe('adding a bundle fetched from StemDeck', () => {
     vi.spyOn(records, 'insertStemBundle').mockRejectedValue(new Error('db'));
     const outcome = await store
       .getState()
-      .addFetchedBundle(FETCHED, { replace: false });
+      .addFetchedBundle(FETCHED, { kind: 'add' });
     expect(outcome).toEqual({ kind: 'addFailed' });
     expect(files.deleteStemFolder.mock.calls).toEqual([[JOB_ID]]);
     expect(store.getState().notice).toBeNull();

@@ -32,15 +32,12 @@ import {
   type OpenSong,
   type SongLibraryRecords,
 } from './runtime.ts';
-import {
-  stemBundleActions,
-  type BundleSource,
-  type FetchedBundleOptions,
-} from './stemBundleImport.ts';
+import { stemBundleActions, type BundleSource } from './stemBundleImport.ts';
 import {
   stemSetRemovals,
   type BundleAddOutcome,
   type BundleRefusal,
+  type ReplaceChoice,
 } from './stemBundleLogic.ts';
 import {
   importTracker,
@@ -113,7 +110,7 @@ export interface SongLibraryActions {
   cancelReplace: () => void;
   addFetchedBundle: (
     source: BundleSource,
-    options: FetchedBundleOptions,
+    choice: ReplaceChoice,
   ) => Promise<BundleAddOutcome>;
 }
 

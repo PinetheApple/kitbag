@@ -4,18 +4,26 @@ import {
   CODES,
   fakeCamera,
   item,
+  job,
+  JOBS,
   ORIGIN,
+  SETLISTS,
   setup,
   snapshot,
+  text,
 } from './store.test-helper.ts';
 
 const A = 'a'.repeat(12);
 const B = 'b'.repeat(12);
+const D = 'd'.repeat(12);
 const LIBRARY_ID = 41;
 const LIBRARY_SONG = { id: LIBRARY_ID, title: 'Gratitude' };
 
-async function connected(owned: readonly string[] = []) {
+async function connected(owned: readonly string[] = [], jobs = JOBS) {
   const context = setup(owned, fakeCamera(), new Map([[B, LIBRARY_SONG]]));
+  context.native.getJson.mockImplementation((_origin, endpoint) =>
+    Promise.resolve(text(endpoint === CODES.endpointJobs ? jobs : SETLISTS)),
+  );
   await context.store.getState().start();
   await context.store.getState().connect(ORIGIN);
   return context;
@@ -68,7 +76,7 @@ describe('a StemDeck song separated again', () => {
     await settledAdd(context, B);
     expect(context.addFetchedBundle).toHaveBeenLastCalledWith(
       expect.anything(),
-      { replace: true, targetId: LIBRARY_ID },
+      { kind: 'replaceSet', targetId: LIBRARY_ID },
     );
   });
 
@@ -84,7 +92,7 @@ describe('a StemDeck song separated again', () => {
     await settledAdd(context, B);
     expect(context.addFetchedBundle).toHaveBeenLastCalledWith(
       expect.anything(),
-      { replace: false },
+      { kind: 'add' },
     );
   });
 
@@ -116,6 +124,30 @@ describe('a StemDeck song separated again', () => {
     expect(native.startImport.mock.calls[0]?.[1]).toEqual([
       expect.objectContaining({ jobId: B }),
     ]);
+  });
+
+  it('skips only the matched songs, keeping new songs and earlier answers', async () => {
+    const withFresh = JSON.stringify([
+      ...(JSON.parse(JOBS) as object[]),
+      job('d', 'Fresh'),
+    ]);
+    const context = await connected([A], withFresh);
+    const { store, native } = context;
+    store.getState().selectSongs([A, B, D]);
+    await store.getState().importSelected();
+    expect(await store.getState().replaceInLibrary()).toBe(false);
+    expect(await store.getState().keepInLibrary()).toBe(true);
+    expect(
+      native.startImport.mock.calls[0]?.[1].map(({ jobId }) => jobId),
+    ).toEqual([A, D]);
+    await settledAdd(context, A);
+    expect(context.addFetchedBundle).toHaveBeenLastCalledWith(
+      expect.anything(),
+      { kind: 'replaceJob' },
+    );
+    expect(store.getState().importView?.rows).toContainEqual(
+      expect.objectContaining({ jobId: B, phase: 'skipped' }),
+    );
   });
 
   it('clears the flag once the song is added', async () => {

@@ -29,6 +29,11 @@ class DocumentTreeBundleSource(
     return open(manifest).use(read)
   }
 
+  override fun <T> withLeadingMember(name: String, read: (InputStream?) -> T): T {
+    val member = members[name] ?: return read(null)
+    return open(member).use(read)
+  }
+
   override fun forEachMember(wanted: (String) -> Boolean, visit: (String, InputStream) -> Unit) {
     for ((name, child) in members) {
       if (wanted(name)) open(child).use { visit(name, it) }

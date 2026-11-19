@@ -293,7 +293,7 @@ describe('picking and importing', () => {
     });
     expect(addFetchedBundle).toHaveBeenCalledWith(
       expect.objectContaining({ uri: 'file:/x/a.zip' }),
-      { replace: true },
+      { kind: 'replaceJob' },
     );
   });
 

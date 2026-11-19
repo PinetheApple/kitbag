@@ -9,6 +9,7 @@ import {
 } from '@kitbag/core-design';
 import {
   displayAddress,
+  REPLACE_LABELS,
   selectableIds,
   stemDeckStore,
   useNotificationPermission,
@@ -156,18 +157,16 @@ function ReplaceSheet({
           size="target"
           variant="ghost"
           label={
-            sameSong
-              ? REPLACE_SHEET_TEXT.cancel
-              : REPLACE_SHEET_TEXT.keepCurrent
+            sameSong ? REPLACE_SHEET_TEXT.skip : REPLACE_LABELS.keepCurrent
           }
-          onPress={sameSong ? dismissReplace : keep}
+          onPress={keep}
         />
         {sameSong ? (
           <Button
             fill
             size="target"
             variant="tonal"
-            label={REPLACE_SHEET_TEXT.keepBoth}
+            label={REPLACE_LABELS.keepBoth}
             onPress={keepBoth}
           />
         ) : null}
@@ -175,7 +174,7 @@ function ReplaceSheet({
           fill
           size="target"
           variant="destructive"
-          label={REPLACE_SHEET_TEXT.replace}
+          label={REPLACE_LABELS.replace}
           onPress={replace}
         />
       </View>

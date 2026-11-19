@@ -9,6 +9,7 @@ import {
 import {
   analysisFailure,
   cleanName,
+  REPLACE_LABELS,
   useSongLibrary,
   type LibraryRow,
 } from '@kitbag/core-state';
@@ -192,14 +193,14 @@ function ReplaceSheet({ bottomInset }: Pick<SheetProps, 'bottomInset'>) {
   const styles = useStyles();
   const prompt = useSongLibrary((s) => s.replacePrompt);
   const confirmReplace = useSongLibrary((s) => s.confirmReplace);
-  const keepBoth = useSongLibrary((s) => s.keepBoth);
+  const keepBothCopies = useSongLibrary((s) => s.keepBoth);
   const cancel = useSongLibrary((s) => s.cancelReplace);
   const confirm = useCallback(() => {
     void confirmReplace();
   }, [confirmReplace]);
-  const addSecondCopy = useCallback(() => {
-    void keepBoth();
-  }, [keepBoth]);
+  const keepBoth = useCallback(() => {
+    void keepBothCopies();
+  }, [keepBothCopies]);
   const title = prompt?.title ?? '';
   const match = prompt?.match ?? 'job';
   const canKeepBoth = match === 'song';
@@ -217,9 +218,7 @@ function ReplaceSheet({ bottomInset }: Pick<SheetProps, 'bottomInset'>) {
           fill
           variant="ghost"
           label={
-            canKeepBoth
-              ? REPLACE_SHEET_TEXT.cancel
-              : REPLACE_SHEET_TEXT.keepCurrent
+            canKeepBoth ? REPLACE_SHEET_TEXT.cancel : REPLACE_LABELS.keepCurrent
           }
           onPress={cancel}
         />
@@ -227,14 +226,14 @@ function ReplaceSheet({ bottomInset }: Pick<SheetProps, 'bottomInset'>) {
           <Button
             fill
             variant="tonal"
-            label={REPLACE_SHEET_TEXT.keepBoth}
-            onPress={addSecondCopy}
+            label={REPLACE_LABELS.keepBoth}
+            onPress={keepBoth}
           />
         ) : null}
         <Button
           fill
           variant="destructive"
-          label={REPLACE_SHEET_TEXT.replace}
+          label={REPLACE_LABELS.replace}
           accessibilityLabel={replaceButtonLabel(title)}
           onPress={confirm}
         />

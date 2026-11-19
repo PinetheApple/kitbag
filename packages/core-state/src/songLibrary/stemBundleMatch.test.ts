@@ -126,22 +126,22 @@ describe('importing a song StemDeck separated again', () => {
 
   it('adds a fetched bundle without matching by song, since nobody is asked', async () => {
     const { store } = setup(reseparatedFiles());
-    await store.getState().addFetchedBundle(FETCHED, { replace: true });
+    await store.getState().addFetchedBundle(FETCHED, { kind: 'replaceJob' });
     const outcome = await store
       .getState()
-      .addFetchedBundle(FETCHED, { replace: true });
+      .addFetchedBundle(FETCHED, { kind: 'replaceJob' });
     expect(outcome).toEqual({ kind: 'added' });
     expect(await stemRows(store)).toHaveLength(2);
   });
 
   it('replaces the song a fetch names as its target', async () => {
     const { store, records, files } = setup(reseparatedFiles());
-    await store.getState().addFetchedBundle(FETCHED, { replace: false });
+    await store.getState().addFetchedBundle(FETCHED, { kind: 'add' });
     const [first] = await stemRows(store);
     if (first === undefined) throw new Error('setup');
     const outcome = await store
       .getState()
-      .addFetchedBundle(FETCHED, { replace: true, targetId: first.id });
+      .addFetchedBundle(FETCHED, { kind: 'replaceSet', targetId: first.id });
     expect(outcome).toEqual({ kind: 'added' });
     const rows = await stemRows(store);
     expect(rows).toHaveLength(1);
@@ -149,16 +149,5 @@ describe('importing a song StemDeck separated again', () => {
       jobId: RESEPARATED,
     });
     expect(files.deleteStemFolder.mock.calls).toEqual([[JOB_ID]]);
-  });
-
-  it('keeps both when a fetch names a target but does not replace', async () => {
-    const { store } = setup(reseparatedFiles());
-    await store.getState().addFetchedBundle(FETCHED, { replace: false });
-    const [first] = await stemRows(store);
-    if (first === undefined) throw new Error('setup');
-    await store
-      .getState()
-      .addFetchedBundle(FETCHED, { replace: false, targetId: first.id });
-    expect(await stemRows(store)).toHaveLength(2);
   });
 });

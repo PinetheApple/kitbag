@@ -93,7 +93,25 @@ class StemBundleImporterTest {
     val check = importer().check(BundleFixtures.source(bundle))
     assertNull(check.refusal)
     assertEquals("Charity Gayle", check.artist)
-    assertEquals(311.0, check.durationSec!!, 0.0)
+    assertEquals(BundleFixtures.DURATION_SEC, check.durationSec!!, 0.0)
+  }
+
+  @Test
+  fun `with no manifest artist the check reports the metadata heading's, as the import stores`() {
+    val bundle = BundleFixtures.bundle(stems, "metadata.json" to HEADING_ONLY.toByteArray())
+    val check = importer().check(BundleFixtures.source(bundle))
+    assertEquals("Charity Gayle", check.artist)
+    assertEquals(check.artist, importer().import(BundleFixtures.source(bundle)).artist)
+  }
+
+  @Test
+  fun `the check does not read past the first stem for the metadata`() {
+    val bundle = BundleFixtures.zip(
+      StemBundleManifest.FILE_NAME to BundleFixtures.manifest(stems).toByteArray(),
+      *stems.map { "stems/$it.flac" to BundleFixtures.stemBytes(it) }.toTypedArray(),
+      "metadata.json" to HEADING_ONLY.toByteArray(),
+    )
+    assertNull(importer().check(BundleFixtures.source(bundle)).artist)
   }
 
   @Test
@@ -234,5 +252,6 @@ class StemBundleImporterTest {
 
   private companion object {
     const val MAX_STEMS = 16
+    const val HEADING_ONLY = """{"audio_tags":{"title":"Echo","artist":"Charity Gayle"}}"""
   }
 }

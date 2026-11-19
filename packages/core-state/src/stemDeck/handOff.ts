@@ -4,8 +4,10 @@ import type {
   StemDeckImportSnapshot,
 } from '@kitbag/core-native';
 
-import type { FetchedBundleOptions } from '../songLibrary/stemBundleImport.ts';
-import type { BundleAddOutcome } from '../songLibrary/stemBundleLogic.ts';
+import type {
+  BundleAddOutcome,
+  ReplaceChoice,
+} from '../songLibrary/stemBundleLogic.ts';
 import type { SongLibraryActions } from '../songLibrary/store.ts';
 import { warn } from '../songLibrary/storeSupport.ts';
 
@@ -15,7 +17,9 @@ export interface HandOffDeps {
   readonly settled: (jobId: string, outcome: BundleAddOutcome | null) => void;
 }
 
-export type ReplaceTargets = ReadonlyMap<string, number | null>;
+export type ReplaceTargets = ReadonlyMap<string, ReplaceChoice>;
+
+const ADD: ReplaceChoice = { kind: 'add' };
 
 export interface HandOff {
   readonly replacing: (targets: ReplaceTargets) => void;
@@ -41,13 +45,6 @@ function settleCode(
   }
 }
 
-function fetchOptions(target: number | null | undefined): FetchedBundleOptions {
-  if (target === undefined) return { replace: false };
-  return target === null
-    ? { replace: true }
-    : { replace: true, targetId: target };
-}
-
 // Native waits on every finished download until JS settles it, so each one is
 // settled exactly once, whether the import succeeds, refuses or throws.
 export function createHandOff(deps: HandOffDeps): HandOff {
@@ -64,7 +61,7 @@ export function createHandOff(deps: HandOffDeps): HandOff {
     try {
       outcome = await deps.addFetchedBundle(
         { uri, name: item.title, isFolder: false },
-        fetchOptions(replace.get(item.jobId)),
+        replace.get(item.jobId) ?? ADD,
       );
     } catch (error) {
       warn(`adding ${item.title} from StemDeck failed`, error);

@@ -42,9 +42,12 @@ class StemBundleImporter(
 
   fun check(source: BundleSource): ManifestCheck {
     val check = try {
-      source.withManifest { input ->
-        StemBundleManifest.check(input?.let { readCapped(it, MAX_MANIFEST_BYTES) ?: "" }, maxStems)
-      }
+      withHeadingArtist(
+        source,
+        source.withManifest { input ->
+          StemBundleManifest.check(input?.let { readCapped(it, MAX_MANIFEST_BYTES) ?: "" }, maxStems)
+        },
+      )
     } catch (e: ZipException) {
       warn("The bundle is not a readable zip", e)
       return ManifestCheck(StemBundleRefusal.UNREADABLE)
@@ -91,6 +94,16 @@ class StemBundleImporter(
     } finally {
       staging.deleteRecursively()
     }
+  }
+
+  // The import stores the manifest artist, else the metadata heading's; the
+  // check must report the same one or a re-import cannot match it.
+  private fun withHeadingArtist(source: BundleSource, check: ManifestCheck): ManifestCheck {
+    if (check.refusal != null || check.manifest?.artist != null) return check
+    val text = source.withLeadingMember(StemBundleMembers.METADATA) { input ->
+      input?.let { readCapped(it, MAX_MEMBER_BYTES) }
+    }
+    return check.copyWith(null, headingArtist = members.metadata(text).heading?.artist)
   }
 
   // Only names the manifest or the format defines are read, and nothing taken

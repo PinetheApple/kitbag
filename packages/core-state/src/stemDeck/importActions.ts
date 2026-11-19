@@ -6,8 +6,10 @@ import type {
 import type {
   BundleAddOutcome,
   BundleRefusal,
+  ReplaceChoice,
 } from '../songLibrary/stemBundleLogic.ts';
 import { errorCode } from '../songLibrary/stemBundleLogic.ts';
+import type { ReplaceMatch } from '../songLibrary/store.ts';
 import { warn } from '../songLibrary/storeSupport.ts';
 import type { CatalogSong } from './catalog.ts';
 import { nativeFailure, type StemDeckFailure } from './failures.ts';
@@ -16,10 +18,8 @@ import { importView, type ImportView, type SkippedSong } from './importView.ts';
 import { stemDeckCodes } from './runtime.ts';
 import type { Get, SetState, StemDeckDeps } from './store.ts';
 
-export type StemDeckReplaceMatch = 'job' | 'song';
-
 export interface StemDeckReplacePrompt {
-  readonly match: StemDeckReplaceMatch;
+  readonly match: ReplaceMatch;
   readonly titles: readonly string[];
 }
 
@@ -48,28 +48,27 @@ interface PendingImport {
   readonly songs: readonly CatalogSong[];
   readonly kept: readonly CatalogSong[];
   readonly targets: ReplaceTargets;
-  readonly stages: readonly StemDeckReplaceMatch[];
+  readonly stages: readonly ReplaceMatch[];
 }
 
 const isSameSong = (s: CatalogSong) => !s.inLibrary && s.sameSong !== null;
 
 function stageSongs(
   songs: readonly CatalogSong[],
-  stage: StemDeckReplaceMatch,
+  stage: ReplaceMatch,
 ): CatalogSong[] {
   return songs.filter(stage === 'job' ? (s) => s.inLibrary : isSameSong);
 }
 
-function stagesFor(songs: readonly CatalogSong[]): StemDeckReplaceMatch[] {
-  const stages: StemDeckReplaceMatch[] = ['job', 'song'];
+function stagesFor(songs: readonly CatalogSong[]): ReplaceMatch[] {
+  const stages: ReplaceMatch[] = ['job', 'song'];
   return stages.filter((stage) => stageSongs(songs, stage).length > 0);
 }
 
-function replaceTarget(
-  song: CatalogSong,
-  stage: StemDeckReplaceMatch,
-): number | null {
-  return stage === 'job' ? null : (song.sameSong?.id ?? null);
+function replaceChoice(song: CatalogSong): ReplaceChoice {
+  return song.sameSong === null || song.inLibrary
+    ? { kind: 'replaceJob' }
+    : { kind: 'replaceSet', targetId: song.sameSong.id };
 }
 
 export function importActions(
@@ -170,7 +169,7 @@ export function importActions(
   };
 
   const answer = async (
-    choose: (job: PendingImport, stage: StemDeckReplaceMatch) => PendingImport,
+    choose: (job: PendingImport, stage: ReplaceMatch) => PendingImport,
   ): Promise<boolean> => {
     const job = takePending();
     const stage = job?.stages[0];
@@ -218,7 +217,7 @@ export function importActions(
       answer((job, stage) => {
         const targets = new Map(job.targets);
         for (const song of stageSongs(job.songs, stage))
-          targets.set(song.jobId, replaceTarget(song, stage));
+          targets.set(song.jobId, replaceChoice(song));
         return { ...job, targets };
       }),
     keepInLibrary: () =>

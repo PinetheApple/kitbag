@@ -7,6 +7,7 @@ import type {
 
 import {
   errorCode,
+  newestSameSong,
   newStemBundle,
   refusal,
   refusalReason,
@@ -15,6 +16,7 @@ import {
   type BundleAddOutcome,
   type BundleRefusal,
   type BundleRefusalReason,
+  type ReplaceChoice,
 } from './stemBundleLogic.ts';
 import type { ImportTracker } from './stemFolderSweep.ts';
 import type { LibraryNotice, ReplaceMatch, SongLibraryDeps } from './store.ts';
@@ -31,11 +33,6 @@ export interface BundleSource {
   readonly uri: string;
   readonly name: string;
   readonly isFolder: boolean;
-}
-
-export interface FetchedBundleOptions {
-  readonly replace: boolean;
-  readonly targetId?: number;
 }
 
 interface Job {
@@ -109,16 +106,12 @@ async function findExisting(deps: SongLibraryDeps, jobId: string) {
 
 async function findSameSong(
   deps: SongLibraryDeps,
-  { title, artist, durationSec }: StemBundleCheck,
+  check: StemBundleCheck,
 ): Promise<ExistingStemSet | undefined> {
-  if (durationSec === null) return undefined;
   try {
-    const [newest] = await deps
-      .records()
-      .findStemSetMatches({ title, artist, durationSec });
-    return newest;
+    return await newestSameSong(deps.records(), check);
   } catch (error) {
-    warn(`matching ${title} failed`, error);
+    warn(`matching ${check.title} failed`, error);
     return undefined;
   }
 }
@@ -135,10 +128,10 @@ async function findMatch(
 
 function fetchedTarget(
   byJob: ExistingStemSet | undefined,
-  { replace, targetId }: FetchedBundleOptions,
+  choice: ReplaceChoice,
 ): number | null {
   if (byJob !== undefined) return byJob.id;
-  return replace ? (targetId ?? null) : null;
+  return choice.kind === 'replaceSet' ? choice.targetId : null;
 }
 
 async function copyBundle(
@@ -268,20 +261,20 @@ export function stemBundleActions(
   // Unattended: no prompt and no notice; the caller reports the outcome.
   const addFetchedBundle = async (
     source: BundleSource,
-    options: FetchedBundleOptions,
+    choice: ReplaceChoice,
   ): Promise<BundleAddOutcome> => {
     const codes = loadCodes(deps, get);
     set({ codes });
     if (codes === null) return { kind: 'copyFailed' };
     const inspected = await inspect(source, codes);
     if (!inspected.ok) return { kind: 'refused', refusal: inspected.refusal };
-    if (inspected.existing !== undefined && !options.replace)
+    if (inspected.existing !== undefined && choice.kind === 'add')
       return { kind: 'alreadyInLibrary' };
     const outcome = await imports.track(() =>
       copyAndStore(
         { source, check: inspected.check },
         codes,
-        fetchedTarget(inspected.existing, options),
+        fetchedTarget(inspected.existing, choice),
       ),
     );
     await get().refresh();

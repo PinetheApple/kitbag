@@ -5,10 +5,7 @@ export const REANALYZE_LABEL = 'Re-analyse';
 
 export const REPLACE_SHEET_TEXT = {
   dismiss: 'Keep the current song',
-  keepCurrent: 'Keep current',
   cancel: 'Cancel',
-  keepBoth: 'Keep both',
-  replace: 'Replace',
 } as const;
 
 export const replaceSheetTitle = (title: string) => `Replace “${title}”?`;

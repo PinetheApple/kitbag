@@ -107,12 +107,13 @@ describe('importing a song StemDeck separated again', () => {
     });
     const onImporting = vi.fn();
     const screen = await mount(songList(onImporting));
+    await screen.press(WAY_MAKER);
     await screen.press(GRATITUDE);
-    await screen.press('Import 1 song');
+    await screen.press('Import 2 songs');
     return { screen, onImporting, native: live().native };
   }
 
-  it('asks Cancel, Keep both or Replace before downloading', async () => {
+  it('asks Skip, Keep both or Replace before downloading', async () => {
     const { screen, onImporting, native } = await picked();
     expect(screen.has(SEPARATED_AGAIN)).toBe(true);
     expect(screen.labelled('Keep both')).toHaveLength(1);
@@ -125,14 +126,25 @@ describe('importing a song StemDeck separated again', () => {
     const { screen, onImporting, native } = await picked();
     await screen.press('Keep both');
     expect(native.startImport.mock.calls[0]?.[1]).toEqual([
+      expect.objectContaining({ jobId: SONG_A }),
       expect.objectContaining({ jobId: SONG_B }),
     ]);
     expect(onImporting).toHaveBeenCalledOnce();
   });
 
-  it('imports nothing on Cancel', async () => {
+  it('skips only the matched song and still imports the new one', async () => {
     const { screen, onImporting, native } = await picked();
-    await screen.press('Cancel');
+    await screen.press('Skip');
+    expect(screen.has(SEPARATED_AGAIN)).toBe(false);
+    expect(native.startImport.mock.calls[0]?.[1]).toEqual([
+      expect.objectContaining({ jobId: SONG_A }),
+    ]);
+    expect(onImporting).toHaveBeenCalledOnce();
+  });
+
+  it('imports nothing when the sheet is dismissed', async () => {
+    const { screen, onImporting, native } = await picked();
+    await screen.press('Don’t import');
     expect(screen.has(SEPARATED_AGAIN)).toBe(false);
     expect(native.startImport).not.toHaveBeenCalled();
     expect(onImporting).not.toHaveBeenCalled();

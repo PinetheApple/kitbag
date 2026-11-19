@@ -1,3 +1,4 @@
+import { replaceKeepsText } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
 import { replaceHint, replaceSheetTitle } from './replaceText.ts';
@@ -22,9 +23,9 @@ describe('the StemDeck replace sheet', () => {
     expect(hint).toContain('Keep both to add them as second songs');
   });
 
-  it('says the mix is kept, since a StemDeck download carries none', () => {
-    expect(replaceHint(['Gratitude'], 'song')).toContain(
-      'speed, meter and mix',
+  it('ends with what the replace keeps, for the match kind and count', () => {
+    expect(replaceHint(['Gratitude', 'Way Maker'], 'song')).toContain(
+      replaceKeepsText('song', 2),
     );
   });
 });
