@@ -73,17 +73,6 @@ double SpecDiff(std::vector<double> old_spec, std::vector<double> new_spec) {
   return sd;
 }
 
-// An accented beat raises the change into it and out of it alike. The phase
-// before the winner is that accent when it sits nearer the winner than the rest.
-int ResolveAccentPair(const std::vector<double>& candidates, int best) {
-  const int n = static_cast<int>(candidates.size());
-  const int before = (best + n - 1) % n;
-  const int after = (best + 1) % n;
-  const double to_winner = candidates[best] - candidates[before];
-  const double to_rest = candidates[before] - candidates[after];
-  return to_winner < to_rest ? before : best;
-}
-
 }  // namespace
 
 DownbeatTracker::DownbeatTracker(
@@ -202,8 +191,8 @@ void DownbeatTracker::DropBefore(size_t position) {
   decimated_start_ += drop;
 }
 
-// DownBeat's phase pick, the bar position with the greatest mean spectral change
-// into it, then ResolveAccentPair.
+// DownBeat's phase pick: the bar position whose beat transitions carry the
+// greatest mean spectral change is bar-one.
 std::vector<int> DownbeatTracker::PickDownbeats(int timesig) const {
   std::vector<double> candidates(timesig, 0.0);
   for (int beat = 0; beat < timesig; ++beat) {
@@ -217,8 +206,7 @@ std::vector<int> DownbeatTracker::PickDownbeats(int timesig) const {
     if (count > 0) candidates[beat] /= count;
   }
   std::vector<int> downbeats;
-  const int first =
-      ResolveAccentPair(candidates, MathUtilities::getMax(candidates));
+  const int first = MathUtilities::getMax(candidates);
   for (int i = first; i < static_cast<int>(beats_.size()); i += timesig) {
     downbeats.push_back(i);
   }
