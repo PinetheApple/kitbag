@@ -70,7 +70,7 @@ bool CountIn(kb_engine* engine, const Start& start, int32_t start_click) {
          kb_mixer_play_at(engine, end) == KB_OK;
 }
 
-int64_t GridClick(int64_t out, int64_t head, double rate, double beat) {
+int64_t HeardFrame(int64_t out, int64_t head, double rate, double beat) {
   const double song_frames =
       beat - static_cast<double>(head) - kFireSlackFrames;
   return out +

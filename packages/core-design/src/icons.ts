@@ -58,6 +58,7 @@ export const iconGlyphs = {
   swipeTempo: 'arrow-up-down',
   polyrhythm: 'waveform',
   analyzing: 'refresh',
+  useDetected: 'refresh',
   error: 'alert-circle',
   folder: 'folder',
   calibrate: 'timer-sync-outline',

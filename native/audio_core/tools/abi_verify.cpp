@@ -27,7 +27,7 @@ using kitbag_test::g_failures;
 
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 206;
+constexpr int kExpectedChecks = 212;
 
 struct Downbeats {
   const int32_t* indices = nullptr;
@@ -332,6 +332,7 @@ void RunOwnEngineSuites() {
   abi_test::RunLongGridAbiTests();
   abi_test::RunPolyAbiTests();
   abi_test::RunSubdivisionAccentAbiTests();
+  abi_test::RunGridClickAbiTests();
   abi_test::RunRigClickAbiTests();
   abi_test::RunEngineHoldAbiTests();
   abi_test::RunEngineClockAbiTests();

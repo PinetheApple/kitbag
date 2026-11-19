@@ -139,6 +139,8 @@ export function fakeRuntime(set: StemSetRecord) {
     mixerTrackFrames: vi.fn(() => Promise.resolve(0)),
     setGrid: vi.fn(() => Promise.resolve<number>(KB_RESULT.KB_OK)),
     clearGrid: vi.fn(),
+    setGridGrouping: vi.fn(() => Promise.resolve<number>(KB_RESULT.KB_OK)),
+    setGridRate: vi.fn(() => Promise.resolve<number>(KB_RESULT.KB_OK)),
     metronomeFollowMixer: vi.fn(),
     metronomeStart: vi.fn(),
     metronomeStop: vi.fn(),

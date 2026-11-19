@@ -11,6 +11,7 @@
 #include "media/song_clock.h"
 #include "metronome/click_voices.h"
 #include "metronome/count_in_schedule.h"
+#include "metronome/grid_click.h"
 #include "metronome/grid_state.h"
 #include "metronome/metronome_command.h"
 #include "metronome/metronome_types.h"
@@ -86,6 +87,9 @@ class Metronome {
   void SetTimeSignature(int numerator, int denominator);
   void SetSubdivision(int subdivision);
   void SetSubdivisionAccents(int subdivision, int32_t slot_mask);
+  // The caller validates: Pack keeps only kGroupBits of each size.
+  void SetGridGrouping(std::span<const int32_t> sizes);
+  void SetGridRate(int32_t rate);
   void SetAccent(int beat_index, int32_t accent);
   void SetAccent(int beat_index, Accent accent) {
     SetAccent(beat_index, static_cast<int32_t>(accent));
@@ -198,6 +202,7 @@ class Metronome {
   bool ApplyTrainerCommand(const Command& command);
   bool ApplyPatternCommand(const Command& command);
   bool ApplyOutputCommand(const Command& command);
+  bool ApplyGridClickCommand(const Command& command);
   static bool IsValidSound(int32_t sound) {
     return sound >= 0 && sound < kSoundCount;
   }
@@ -232,9 +237,11 @@ class Metronome {
 
   void TriggerPreset(int sound, bool accented, uint32_t sample_rate);
   void OnBeatBoundary(int beat_index, uint32_t sample_rate);
-  void OnGridBeat(const GridBar& bar, uint32_t sample_rate);
+  void OnGridBeat(const BeatGrid& grid, uint32_t sample_rate);
+  void OnGridTick(int tick, uint32_t sample_rate);
   void OnSubdivisionTick(int64_t speaker_beat, int slot, uint32_t sample_rate);
   void TriggerSubdivision(int subdivision, int slot, uint32_t sample_rate);
+  void TriggerSubdivisionVoice(Accent accent, uint32_t sample_rate);
   bool SubdivisionSlotAccented(int subdivision, int slot) const;
   void OnRigTick(int slot, uint32_t sample_rate);
   uint16_t& AccentRowFor(int subdivision);
@@ -315,6 +322,7 @@ class Metronome {
   GridSeconds(const BeatGrid& grid, uint64_t frame, uint32_t sample_rate) const;
   // Binary search: bounded and allocation-free, so safe from the callback.
   void SeekGridCursor(const BeatGrid& grid, double song_seconds);
+  void ResyncSub(const BeatGrid& grid, double song_seconds);
   bool GridShiftReplays(const BeatGrid& grid, double shift_sec) const;
   void SyncGridBar(const BeatGrid& grid);
   void PublishGridMirrors(const BeatGrid& grid, double song_seconds);
@@ -360,6 +368,8 @@ class Metronome {
   // The publisher is the app→RT seam; everything below it is RT-owned.
   RtPublisher<BeatGrid> grid_;
   GridState grid_state_;
+  GridClick grid_click_;
+  uint32_t click_epoch_ = 0;  // app thread
   // Bar counter, -1 until the first downbeat after Start. Incremented at
   // constant tempo, derived from the grid in grid mode — SPEC.md §4.2.1.
   int64_t current_bar_ = -1;

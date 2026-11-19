@@ -26,7 +26,13 @@ struct BeatGrid {
   uint64_t anchor_frame = 0;
   // One per beat; Metronome::SetGrid fills a mismatched set with no bars.
   std::vector<GridBar> bars;
+  // Metronome::SetGrid stamps it; grid-click settings sent before it are stale.
+  uint32_t click_epoch = 0;
 };
+
+inline bool HasDownbeats(const BeatGrid& grid) {
+  return !grid.bars.empty() && grid.bars.back().bar != GridBar::kNoBar;
+}
 
 struct GridOnset {
   double song_sec = -std::numeric_limits<double>::infinity();

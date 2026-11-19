@@ -17,8 +17,11 @@ struct GridState {
   uint64_t observed_generation = 0;
   size_t cursor = 0;
   int64_t beat_index = -1;
-  // 1-based next subdivision tick in the beat; subdivision_ means none left.
+  // 1-based next tick in the beat; the tick count means none left.
   int next_sub = 1;
+  // Set when the rate or subdivision changes the ticks per span: next_sub is
+  // re-derived from the song position so a passed tick never sounds late.
+  bool resync_sub = false;
   double pending_shift_sec = 0.0;
   GridOnset last_onset;
   // Any other song frame, a seek or a loop wrap, reseeds the cursor.

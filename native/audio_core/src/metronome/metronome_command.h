@@ -16,6 +16,7 @@ enum class MetronomeCommandType : uint8_t {
   kSetBeats,
   kSetSubdivision,
   kSetSubdivisionAccents,
+  kSetGridClick,
   kSetAccent,
   kSetPoly,
   kSetPolyAccent,
@@ -40,6 +41,8 @@ struct MetronomeCommand {
   int32_t int_b = 0;
   int32_t int_c = 0;
   uint64_t frame = 0;
+  uint64_t word = 0;
+  uint32_t epoch = 0;
 };
 
 }  // namespace kitbag

@@ -3,6 +3,7 @@
 #include <jni.h>
 
 #include "KitbagCommands.h"
+#include "kitbag_api.h"
 
 extern "C" {
 
@@ -19,6 +20,21 @@ Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetSubdivision(JNIEnv*, jo
 JNIEXPORT void JNICALL
 Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetSubdivisionAccents(JNIEnv*, jobject, jint subdivision, jint slotMask) {
   kitbag::commandSetSubdivisionAccents(subdivision, slotMask);
+}
+
+JNIEXPORT jint JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetGridGrouping(JNIEnv* env, jobject, jintArray sizes) {
+  const jsize count = env->GetArrayLength(sizes);
+  jint* elems = env->GetIntArrayElements(sizes, nullptr);
+  if (elems == nullptr) return static_cast<jint>(KB_ERROR_INTERNAL);
+  const int32_t result = kitbag::commandSetGridGrouping(elems, static_cast<int32_t>(count));
+  env->ReleaseIntArrayElements(sizes, elems, JNI_ABORT);
+  return static_cast<jint>(result);
+}
+
+JNIEXPORT jint JNICALL
+Java_com_kitbag_corenative_KitbagCommandsModule_nativeSetGridRate(JNIEnv*, jobject, jint rate) {
+  return static_cast<jint>(kitbag::commandSetGridRate(rate));
 }
 
 JNIEXPORT void JNICALL

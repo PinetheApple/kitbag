@@ -40,6 +40,11 @@ export function renderConstants(c: NativeConstants): string {
 /** Max beats a single measured grid may carry (KB_MAX_GRID_BEATS). */
 export const KB_MAX_GRID_BEATS = ${String(c.maxGridBeats)};
 
+/** Most groups a grid bar grouping may hold (KB_MAX_GRID_GROUPS). */
+export const KB_MAX_GRID_GROUPS = ${String(c.maxGridGroups)};
+
+/** kb_grid_rate: the click rate under a grid (kb_metronome_set_grid_rate). */
+${renderEnum('KB_GRID_RATE', c.gridRate)}
 /** Beat tracker version stamped on each successful analysis result (KB_BEAT_ANALYSIS_VERSION). */
 export const KB_BEAT_ANALYSIS_VERSION = ${String(c.beatAnalysisVersion)};
 

@@ -57,6 +57,8 @@ export interface NativeSources {
 
 export interface NativeConstants {
   readonly maxGridBeats: number;
+  readonly maxGridGroups: number;
+  readonly gridRate: readonly EnumMember[];
   readonly beatAnalysisVersion: number;
   readonly maxTracks: number;
   readonly maxBeats: number;

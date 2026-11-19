@@ -181,6 +181,7 @@ export interface SheetProps {
   readonly onShow?: () => void;
   readonly dim?: boolean;
   readonly scrollEnabled?: boolean;
+  readonly notice?: ReactNode;
   readonly children: ReactNode;
 }
 
@@ -197,6 +198,7 @@ export function Sheet({
   onShow,
   dim = false,
   scrollEnabled = true,
+  notice,
   children,
 }: SheetProps) {
   const styles = useStyles();
@@ -269,6 +271,9 @@ export function Sheet({
       space.cardPadding + Math.max(bottomInset, -keyboard.height.value),
     transform: [{ translateY: dragY.value }],
   }));
+  const noticeStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: dragY.value }],
+  }));
 
   const { show, hide, topInset } = useSheetPortal();
   const slotStyle = useMemo(
@@ -307,6 +312,9 @@ export function Sheet({
         exiting={transitions.sheetOut}
         style={slotStyle}
       >
+        {notice === undefined ? null : (
+          <Animated.View style={noticeStyle}>{notice}</Animated.View>
+        )}
         <Animated.View
           style={[styles.sheet, sheetStyle]}
           onLayout={handleLayout}

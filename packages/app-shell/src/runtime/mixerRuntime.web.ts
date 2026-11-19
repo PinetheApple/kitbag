@@ -37,6 +37,8 @@ export const mixerRuntime: MixerRuntime = {
     mixerTrackFrames: () => Promise.resolve(NO_FRAMES),
     setGrid: noEngine,
     clearGrid: ignore,
+    setGridGrouping: noEngine,
+    setGridRate: noEngine,
     metronomeFollowMixer: ignore,
     metronomeStart: ignore,
     metronomeStop: ignore,
