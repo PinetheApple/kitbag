@@ -51,4 +51,10 @@ describe('MenuRow', () => {
   ])('reads %o as %s', (props, label) => {
     expect(labelOf(props)).toBe(label);
   });
+
+  it('speaks its spoken value in place of the shown one', () => {
+    expect(
+      labelOf({ value: '×1 · 104 BPM', spokenValue: 'as detected, 104 BPM' }),
+    ).toBe('Count-in, as detected, 104 BPM');
+  });
 });

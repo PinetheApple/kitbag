@@ -131,6 +131,7 @@ export type { OutputRoute, OutputRouteKind } from './outputRouteTypes.ts';
 export { acquireEngineHold, type EngineHoldCommands } from './engineHold.ts';
 export { setTrackKey, type TrackKeyCommands } from './mixerKey.ts';
 export type {
+  ConstantTempoFit,
   KitbagCommandsConstants,
   SongTransportRequest,
   SongTransportShowState,

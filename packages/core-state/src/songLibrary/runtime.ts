@@ -68,6 +68,7 @@ export type SongLibraryRecords = Pick<
   | 'updateDuration'
   | 'renameStemSet'
   | 'saveSongMeterOverride'
+  | 'saveSongTempoCorrection'
 >;
 
 export interface OpenSong {

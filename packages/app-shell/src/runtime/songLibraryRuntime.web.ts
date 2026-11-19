@@ -24,6 +24,7 @@ configureSongLibrary({
     renameStemSet: unavailable,
     updateDuration: unavailable,
     saveSongMeterOverride: unavailable,
+    saveSongTempoCorrection: unavailable,
   },
   files: {
     constants: () => {

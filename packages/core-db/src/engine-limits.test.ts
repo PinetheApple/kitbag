@@ -29,6 +29,7 @@ import {
   TICK_SOUND,
 } from './preset-rules';
 import { MAX_CLICK_GROUPS } from './click-settings';
+import { TEMPO_MAX_BPM, TEMPO_MIN_BPM } from './tempo-mode';
 import { INSTRUMENTS, MAX_MIDI_NOTE, MAX_STRINGS } from './tuning-rules';
 
 const source = (path: string) =>
@@ -52,6 +53,7 @@ const polyApi = source('include/kitbag_metronome_poly_api.h');
 const tunerApi = source('include/kitbag_tuner_api.h');
 const gridApi = source('include/kitbag_metronome_grid_api.h');
 const tuningMode = source('src/tuner/tuning_mode.h');
+const constantTempoApi = source('include/kitbag_constant_tempo_api.h');
 
 function constant(
   name: string,
@@ -148,6 +150,13 @@ describe('engine limits mirrored in core-db', () => {
     expect(Number(/#define KB_MAX_GRID_GROUPS (\d+)/.exec(gridApi)?.[1])).toBe(
       MAX_CLICK_GROUPS,
     );
+  });
+
+  it('match the fitted tempo range in kitbag_constant_tempo_api.h', () => {
+    const define = (name: string) =>
+      Number(new RegExp(`#define ${name} (\\d+)`).exec(constantTempoApi)?.[1]);
+    expect(define('KB_CONSTANT_TEMPO_MIN_BPM')).toBe(TEMPO_MIN_BPM);
+    expect(define('KB_CONSTANT_TEMPO_MAX_BPM')).toBe(TEMPO_MAX_BPM);
   });
 
   it('match kitbag_tuner_api.h', () => {

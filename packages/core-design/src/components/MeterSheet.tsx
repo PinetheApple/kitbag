@@ -47,6 +47,7 @@ const useStyles = createThemedStyles((theme) => ({
 
 export interface MeterSheetNotice {
   readonly message: string;
+  readonly spokenMessage?: string;
   readonly actionLabel: string;
   readonly onAction: () => void;
   readonly onTimeout: () => void;

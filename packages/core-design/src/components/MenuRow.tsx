@@ -27,6 +27,7 @@ export interface MenuRowProps {
   readonly label: string;
   readonly detail?: string | undefined;
   readonly value?: string | undefined;
+  readonly spokenValue?: string | undefined;
   readonly disabled?: boolean;
   readonly onPress: () => void;
 }
@@ -45,6 +46,7 @@ export function MenuRow({
   label,
   detail,
   value,
+  spokenValue = value,
   disabled = false,
   onPress,
 }: MenuRowProps) {
@@ -52,7 +54,7 @@ export function MenuRow({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={menuRowLabel(label, value, detail)}
+      accessibilityLabel={menuRowLabel(label, spokenValue, detail)}
       accessibilityState={{ disabled }}
       disabled={disabled}
       style={[styles.row, disabled && styles.disabled]}

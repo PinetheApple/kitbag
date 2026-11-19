@@ -16,6 +16,10 @@ import { useCallback } from 'react';
 import { lockBadgeOf } from '../logic/lockText.ts';
 import { canReanalyze } from '../logic/notices.ts';
 import { METER_FAILED, meterGridState } from '../logic/songMeterText.ts';
+import {
+  TEMPO_CORRECTION_COPY,
+  tempoCorrectionValue,
+} from '../logic/tempoCorrectionText.ts';
 import { PLAYER_MENU_TEXT, REANALYZE_LABEL } from '../logic/viewText.ts';
 import { useSongFailure } from './rowFailureHooks.ts';
 
@@ -26,6 +30,7 @@ interface SongPlayerMenuProps {
   readonly onDismiss: () => void;
   readonly onBack: () => void;
   readonly onMeter: () => void;
+  readonly onTempoCorrection: () => void;
 }
 
 const doNothing = () => undefined;
@@ -42,18 +47,48 @@ function meterRowState(
   return UNPLAYABLE.has(status) ? 'failed' : 'pending';
 }
 
-function SongMeterRow({ onPress }: { readonly onPress: () => void }) {
-  const override = useSongPlayer((s) => s.meterOverride);
-  const detected = useSongPlayer((s) => s.detected.meter);
+interface RowProps {
+  readonly onPress: () => void;
+}
+
+function useGridRowState(): MeterGridState {
   const status = useSongPlayer((s) => s.status);
   const grid = meterGridState(useSongPlayer(lockBadgeOf));
-  const state = meterRowState(status, grid);
+  return meterRowState(status, grid);
+}
+
+const gridRowReason = (state: MeterGridState) =>
+  state === 'failed' ? METER_FAILED : meterCopy.pending;
+
+function SongMeterRow({ onPress }: RowProps) {
+  const override = useSongPlayer((s) => s.meterOverride);
+  const detected = useSongPlayer((s) => s.detected.meter);
+  const state = useGridRowState();
   return (
     <MeterRow
       value={override.meterBeatsPerBar ?? detected}
       yours={isOverridden(override)}
       disabled={state !== 'ready'}
-      reason={state === 'failed' ? METER_FAILED : meterCopy.pending}
+      reason={gridRowReason(state)}
+      onPress={onPress}
+    />
+  );
+}
+
+function TempoCorrectionRow({ onPress }: RowProps) {
+  const correction = useSongPlayer((s) => s.tempoCorrection);
+  const detectedBpm = useSongPlayer((s) => s.detectedBpm);
+  const state = useGridRowState();
+  const disabled = state !== 'ready';
+  const value = tempoCorrectionValue(correction, detectedBpm);
+  return (
+    <MenuRow
+      icon="tempoCorrection"
+      label={TEMPO_CORRECTION_COPY.title}
+      detail={disabled ? gridRowReason(state) : undefined}
+      value={disabled ? undefined : value.shown}
+      spokenValue={disabled ? undefined : value.spoken}
+      disabled={disabled}
       onPress={onPress}
     />
   );
@@ -66,6 +101,7 @@ export function SongPlayerMenu({
   onDismiss,
   onBack,
   onMeter,
+  onTempoCorrection,
 }: SongPlayerMenuProps) {
   const close = useSongPlayer((s) => s.close);
   const reanalyze = useSongLibrary((s) => s.reanalyze);
@@ -83,6 +119,10 @@ export function SongPlayerMenu({
     onDismiss();
     onMeter();
   }, [onDismiss, onMeter]);
+  const openTempoCorrection = useCallback(() => {
+    onDismiss();
+    onTempoCorrection();
+  }, [onDismiss, onTempoCorrection]);
   return (
     <Sheet
       visible={visible}
@@ -100,6 +140,7 @@ export function SongPlayerMenu({
         />
       ) : null}
       <SongMeterRow onPress={openMeter} />
+      <TempoCorrectionRow onPress={openTempoCorrection} />
       <MenuRow
         icon="countIn"
         label={PLAYER_MENU_TEXT.countIn}
