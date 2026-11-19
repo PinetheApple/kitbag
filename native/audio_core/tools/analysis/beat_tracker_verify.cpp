@@ -286,8 +286,7 @@ bool NearBpm(float got, float want) {
   return std::fabs(got - want) < analyze_test::kBpmTolerance * want;
 }
 
-// Pinned, not a target: half-strength eighths fold to double time, which the
-// user corrects with the tempo's ÷2.
+// Pinned, not a target: half-strength eighths fold to double time.
 void TestOctaveOverBaseline() {
   const kitbag::BeatResult eighths = AnalyzeTempoTrack(
       "80 BPM + half-strength eighths",

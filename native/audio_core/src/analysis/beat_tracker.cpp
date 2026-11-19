@@ -38,9 +38,10 @@ constexpr float kSecondsPerMinute = 60.0f;
 // A backtrack shorter than this is noise, not a beat sequence.
 constexpr size_t kMinBacktrackedBeats = 3;
 // A peak at half the winner's lag this strong relative to it means the winner
-// was twice the true period. Halving only: the user's ÷2/×2 cannot undo ÷3.
+// was twice the true period.
 constexpr float kPulseFoldRatio = 0.5f;
 constexpr int kPulseFold = 2;
+constexpr int kTripleFold = 3;
 // A longer lag must clearly beat the best, so equal harmonic peaks keep the
 // shortest.
 constexpr float kLongerLagMargin = 1.01f;
@@ -106,15 +107,27 @@ bool IsPeak(const std::vector<float>& acf, int lag) {
   return acf[lag] > acf[lag - 1] && acf[lag] > acf[lag + 1];
 }
 
+int UpperIfHigher(const std::vector<float>& acf, int lag) {
+  return acf[lag + 1] > acf[lag] ? lag + 1 : lag;
+}
+
+// A cycle split in three has no level at half its lag: a peak there sits
+// between the triplets, which the peak at two thirds of the lag outweighs.
+bool SplitsInThree(const std::vector<float>& acf, int best_lag, int half) {
+  const int two_thirds =
+      UpperIfHigher(acf, kPulseFold * best_lag / kTripleFold);
+  return IsPeak(acf, two_thirds) && acf[two_thirds] >= acf[half];
+}
+
 int FoldToFasterPulse(
     const std::vector<float>& acf,
     int best_lag,
     int min_lag
 ) {
-  const int below = best_lag / kPulseFold;
-  const int lag = acf[below + 1] > acf[below] ? below + 1 : below;
+  const int lag = UpperIfHigher(acf, best_lag / kPulseFold);
   const bool folds = lag >= min_lag && IsPeak(acf, lag) &&
-                     acf[lag] > kPulseFoldRatio * acf[best_lag];
+                     acf[lag] > kPulseFoldRatio * acf[best_lag] &&
+                     !SplitsInThree(acf, best_lag, lag);
   return folds ? lag : best_lag;
 }
 

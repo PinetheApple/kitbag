@@ -20,7 +20,7 @@ export const KB_GRID_RATE = {
 export type KB_GRID_RATE = (typeof KB_GRID_RATE)[keyof typeof KB_GRID_RATE];
 
 /** Beat tracker version stamped on each successful analysis result (KB_BEAT_ANALYSIS_VERSION). */
-export const KB_BEAT_ANALYSIS_VERSION = 5;
+export const KB_BEAT_ANALYSIS_VERSION = 6;
 
 /** Mixer track count (Mixer::kMaxTracks, SPEC §7.4). */
 export const KB_MAX_TRACKS = 16;

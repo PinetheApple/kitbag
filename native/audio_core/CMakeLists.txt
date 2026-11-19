@@ -464,6 +464,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/analysis/analyze_test_sustained.cpp
     tools/analysis/analyze_test_meter.cpp
     tools/analysis/analyze_test_stems.cpp
+    tools/analysis/analyze_test_fold.cpp
     src/api/api_analysis.cpp
     src/analysis/wav_declared_length.cpp
     src/analysis/song_analysis.cpp

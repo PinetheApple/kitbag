@@ -31,8 +31,7 @@ constexpr int PeriodFrames(double bpm) {
 
 constexpr double kSlowEdgeScale = 1.06;
 constexpr double kFastEdgeScale = 0.94;
-// Pinned, not a target: the off-beat hits fold the slow edge to double time,
-// which the user corrects with the tempo's ÷2.
+// Pinned, not a target: the off-beat hits fold the slow edge to double time.
 constexpr std::array<Tempo, 3> kTempos = {{
     {PeriodFrames(kitbag::kMinTrackedBpm * kSlowEdgeScale), 2},
     {kBeatPeriodFrames, 1},

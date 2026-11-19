@@ -33,6 +33,7 @@ void RunDamagedTests(const std::filesystem::path& dir);
 void RunSustainedTests();
 void RunMeterTests();
 void RunStemTests();
+void RunFoldTests();
 }  // namespace analyze_test
 
 namespace {
@@ -261,7 +262,7 @@ void RunGuardTests() {
 
 }  // namespace
 
-constexpr int kExpectedChecks = 184;
+constexpr int kExpectedChecks = 188;
 
 int Verdict() {
   if (kitbag_test::g_checks != kExpectedChecks) {
@@ -299,5 +300,6 @@ int main() {
   analyze_test::RunSustainedTests();
   analyze_test::RunMeterTests();
   analyze_test::RunStemTests();
+  analyze_test::RunFoldTests();
   return Verdict();
 }
