@@ -50,31 +50,48 @@ export function speedKeyActions(
           .catch(() => KB_RESULT.KB_ERROR_INTERNAL),
       ),
     );
-    return changed.filter((_, i) => results[i] !== KB_RESULT.KB_OK);
+    return {
+      sent: changed.length,
+      failed: changed.filter((_, i) => results[i] !== KB_RESULT.KB_OK),
+    };
   };
 
-  const changeKeys = async (songKey: number, keyOf: KeyOf) => {
+  const tookNoKey = (rows: readonly StemRow[], sent: number, failed: number) =>
+    sent === 0
+      ? !rows.some((row) => row.transposable && row.loaded)
+      : failed === sent;
+
+  const applyKeys = async (songKey: number, keyOf: KeyOf) => {
     if (!editable()) return;
     const opened = session();
-    const before = get().stems;
+    const { stems: before, songKey: previous } = get();
     const stems = before.map((row, track) =>
       row.transposable ? { ...row, key: keyOf(row, track) } : row,
     );
     set({ songKey, stems });
     refreshFacts();
-    const failed = await sendKeys(stems, before);
+    const { sent, failed } = await sendKeys(stems, before);
     if (opened !== session()) return;
-    if (failed.length > 0) {
-      warn('stem key not changed', failed);
-      set((s) => ({
-        stems: s.stems.map((row, track) =>
-          failed.includes(track)
-            ? { ...row, key: before[track]?.key ?? row.key }
-            : row,
-        ),
-      }));
+    if (failed.length > 0) warn('stem key not changed', failed);
+    if (tookNoKey(stems, sent, failed.length)) {
+      set({ songKey: previous, stems: before });
+      refreshFacts();
+      return;
     }
+    set((s) => ({
+      stems: s.stems.map((row, track) =>
+        failed.includes(track)
+          ? { ...row, key: before[track]?.key ?? row.key }
+          : row,
+      ),
+    }));
     save();
+  };
+
+  let keySteps: Promise<void> = Promise.resolve();
+  const changeKeys = (songKey: () => number, keyOf: () => KeyOf) => {
+    keySteps = keySteps.then(() => applyKeys(songKey(), keyOf()));
+    return keySteps;
   };
 
   const setSpeed = async (requested: number) => {
@@ -99,22 +116,28 @@ export function speedKeyActions(
     setSpeed,
     setSongKey: async (requested) => {
       const songKey = wholeKey(requested);
-      const previous = get().songKey;
-      if (songKey === previous) return;
-      await changeKeys(songKey, (row) =>
-        row.key === previous ? songKey : row.key,
+      await changeKeys(
+        () => songKey,
+        () => {
+          const previous = get().songKey;
+          return (row) => (row.key === previous ? songKey : row.key);
+        },
       );
     },
     setStemKey: async (index, requested) => {
       const key = wholeKey(requested);
-      await changeKeys(get().songKey, (row, track) =>
-        track === index ? key : row.key,
+      await changeKeys(
+        () => get().songKey,
+        () => (row, track) => (track === index ? key : row.key),
       );
     },
     resetSpeedKey: async () => {
       await Promise.all([
         setSpeed(KB_MIXER_UNITY_RATE),
-        changeKeys(UNSHIFTED_KEY, () => UNSHIFTED_KEY),
+        changeKeys(
+          () => UNSHIFTED_KEY,
+          () => () => UNSHIFTED_KEY,
+        ),
       ]);
     },
   };

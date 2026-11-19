@@ -371,6 +371,18 @@ describe('readExportSummary', () => {
     });
   });
 
+  it('reads the song key past a drum stem, which is never transposed', async () => {
+    const p = await opened([
+      stem(1, { role: 'vocals' }),
+      stem(2, { role: 'drums' }),
+    ]);
+    p.commands.mixerTrackPitch.mockImplementation((track) =>
+      Promise.resolve(track === 0 ? -2 : 0),
+    );
+    const summary = await p.store.getState().readExportSummary();
+    expect(summary).toMatchObject({ key: -2, fileName: 'Song (-2 st).wav' });
+  });
+
   it('reports no single key when the stems are keyed differently', async () => {
     const p = await opened([stem(1), stem(2)]);
     p.commands.mixerTrackPitch

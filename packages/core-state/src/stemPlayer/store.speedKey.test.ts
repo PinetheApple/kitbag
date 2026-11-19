@@ -2,7 +2,7 @@ import { KB_MIXER_UNITY_RATE, KB_RESULT } from '@kitbag/core-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { RETIME_PLAYBACK_RATE } from './retimeSpeed.ts';
-import { opened, SONG_DETAILS, stem } from './store.test-helper.ts';
+import { at, opened, SONG_DETAILS, stem } from './store.test-helper.ts';
 
 const STORED_SPEED = 0.8;
 const PRACTICE_SPEED = 0.9;
@@ -69,6 +69,49 @@ describe('opening a stem song', () => {
       );
     });
     expect(rowKeys(song)).toEqual([0, 0, 0]);
+  });
+});
+
+describe('song time at a changed speed', () => {
+  it('keeps the loop, grid and playhead in song seconds', async () => {
+    const song = await opened(band());
+    song.engine.position = at(1);
+    await song.store.getState().markLoop();
+    song.engine.position = at(2);
+    await song.store.getState().markLoop();
+    const { loop, beats, downbeatIndices } = song.store.getState();
+    vi.clearAllMocks();
+    await song.store.getState().setSpeed(0.75);
+    song.store.getState().skip(5);
+    expect(song.store.getState()).toMatchObject({
+      loop,
+      beats,
+      downbeatIndices,
+    });
+    expect(song.commands.mixerSetLoop).not.toHaveBeenCalled();
+    expect(song.commands.setGrid).not.toHaveBeenCalled();
+    expect(song.store.getState().playheadSeconds()).toBe(2);
+    expect(song.commands.mixerSeek.mock.calls).toEqual([[at(5) + at(2)]]);
+  });
+});
+
+describe('opening at a speed the mixer refuses', () => {
+  it('plays at full speed and leaves the stored speed alone', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const song = await opened(band(), { speed: STORED_SPEED }, (fake) => {
+      fake.commands.mixerSetRate.mockImplementation((rate) =>
+        Promise.resolve(
+          rate === STORED_SPEED ? KB_RESULT.KB_ERROR_BUSY : KB_RESULT.KB_OK,
+        ),
+      );
+      fake.engine.rate = 0.6;
+    });
+    expect(song.store.getState()).toMatchObject({
+      status: 'ready',
+      speed: KB_MIXER_UNITY_RATE,
+    });
+    expect(ratesSet(song)).toEqual([STORED_SPEED, KB_MIXER_UNITY_RATE]);
+    expect(song.records.saveStemSetSpeedKey).not.toHaveBeenCalled();
   });
 });
 
@@ -163,6 +206,62 @@ describe('changing the key', () => {
     );
     await song.store.getState().setSongKey(DOWN_TWO);
     expect(rowKeys(song)).toEqual([DOWN_TWO, 0, 0]);
+  });
+
+  it('keeps the song key when every stem refused it, and stores nothing', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const song = await opened(band(), { key: 'F', scale: 'major' });
+    song.commands.mixerSetTrackPitch.mockResolvedValue(KB_RESULT.KB_ERROR_BUSY);
+    await song.store.getState().setSongKey(DOWN_TWO);
+    expect(song.store.getState()).toMatchObject({
+      songKey: 0,
+      facts: { key: { text: 'F maj' } },
+    });
+    expect(rowKeys(song)).toEqual([0, 0, 0]);
+    expect(song.records.saveStemSetSpeedKey).not.toHaveBeenCalled();
+  });
+
+  it('applies two quick key steps in order when the first is refused', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const song = await opened([stem(1, { name: 'bass', role: 'bass' })]);
+    let refuse: (code: number) => void = () => undefined;
+    song.commands.mixerSetTrackPitch
+      .mockImplementationOnce(
+        () =>
+          new Promise<number>((resolve) => {
+            refuse = resolve;
+          }),
+      )
+      .mockResolvedValue(KB_RESULT.KB_OK);
+    const first = song.store.getState().setStemKey(0, UP_ONE);
+    const second = song.store.getState().setStemKey(0, DOWN_TWO);
+    await vi.advanceTimersByTimeAsync(0);
+    refuse(KB_RESULT.KB_ERROR_BUSY);
+    await Promise.all([first, second]);
+    expect(keysSent(song)).toEqual([
+      [0, UP_ONE],
+      [0, DOWN_TWO],
+    ]);
+    expect(rowKeys(song)).toEqual([DOWN_TWO]);
+    expect(lastSaved(song)?.stems).toEqual([{ id: 1, pitch: DOWN_TWO }]);
+  });
+
+  it('never sends a key to the click when the song key changes', async () => {
+    const song = await opened(band());
+    await song.store.getState().toggleClick();
+    vi.clearAllMocks();
+    await song.store.getState().setSongKey(DOWN_TWO);
+    const tracks = keysSent(song).map(([track]) => track);
+    expect(tracks.every((track) => track < band().length)).toBe(true);
+    for (const command of [
+      song.commands.setGrid,
+      song.commands.setGridGrouping,
+      song.commands.setGridRate,
+      song.commands.metronomeStart,
+      song.commands.metronomeStop,
+      song.commands.metronomeFollowMixer,
+    ])
+      expect(command).not.toHaveBeenCalled();
   });
 
   it('resets speed and every key, and leaves the mix alone', async () => {

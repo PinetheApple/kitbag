@@ -395,8 +395,11 @@ export function createStemPlayerStore(
       }
       const engineRate = await mixer.startEngine(opened);
       if (engineRate === null) return;
-      const speed = clampedSpeed(record.speed);
-      if (!(await mixer.clearSessionLeftovers(opened, speed))) return;
+      const speed = await mixer.clearSessionLeftovers(
+        opened,
+        clampedSpeed(record.speed),
+      );
+      if (speed === null) return;
       start.rateSet(speed);
       const songKey = wholeKey(record.pitch);
       const rows = rowsOf(record);
