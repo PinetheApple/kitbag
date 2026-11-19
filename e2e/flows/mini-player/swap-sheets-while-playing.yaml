@@ -1,0 +1,24 @@
+appId: com.kitbag.app
+name: '#460: swapping one sheet for another while a song plays keeps the app alive'
+tags:
+  - pr-460
+---
+- runFlow: ../../subflows/song-playing-behind-bar.yaml
+- repeat:
+    times: 6
+    commands:
+      - assertVisible: 'Pause ${FIXTURE_SONG}'
+      - runFlow:
+          file: ../../subflows/tap-while-playing.yaml
+          env:
+            TARGET: 'Actions for ${FIXTURE_SONG}'
+      - runFlow:
+          file: ../../subflows/tap-while-playing.yaml
+          env:
+            TARGET: 'Delete song'
+      - runFlow:
+          file: ../../subflows/tap-while-playing.yaml
+          env:
+            TARGET: 'Cancel'
+- assertVisible: '${FIXTURE_SONG}, .*'
+- assertVisible: 'Open ${FIXTURE_SONG}'

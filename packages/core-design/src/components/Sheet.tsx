@@ -1,7 +1,6 @@
 import {
   useCallback,
   useEffect,
-  useId,
   useMemo,
   useRef,
   type ReactNode,
@@ -20,10 +19,7 @@ import {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import Animated, {
-  FadeIn,
-  FadeOut,
   SlideInDown,
-  SlideOutDown,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -46,6 +42,7 @@ import { readerHiding } from '../readerHiding.ts';
 import { onHardwareBack } from './hardwareBack';
 import { InlineIcon } from './IconGlyph.tsx';
 import { useSheetPortal } from './SheetHost.tsx';
+import { useSheetExit } from './useSheetExit.ts';
 
 // A scroll view drops every touch outside its frame, so the frame reaches this
 // far into the sheet's padding. The right side stays put: the indicator is there.
@@ -228,20 +225,17 @@ export function Sheet({
     [onDismiss],
   );
   // Focus sent at mount, mid-slide, did not land on the title under TalkBack.
-  const transitions = useMemo(
-    () => ({
-      scrimIn: FadeIn.reduceMotion(motion),
-      scrimOut: FadeOut.reduceMotion(motion),
-      sheetIn: SlideInDown.reduceMotion(motion).withCallback((finished) => {
+  const slideIn = useMemo(
+    () =>
+      SlideInDown.reduceMotion(motion).withCallback((finished) => {
         'worklet';
         if (finished) scheduleOnRN(focusTitle);
       }),
-      sheetOut: SlideOutDown.reduceMotion(motion),
-    }),
     [motion, focusTitle],
   );
   const dragY = useSharedValue(0);
   const sheetHeight = useSharedValue(0);
+  const scrimOpacity = useSharedValue(0);
 
   const handleLayout = useCallback(
     (event: LayoutChangeEvent) => {
@@ -278,29 +272,26 @@ export function Sheet({
   const noticeStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: dragY.value }],
   }));
+  const scrimStyle = useAnimatedStyle(() => ({ opacity: scrimOpacity.value }));
 
-  const { show, hide, topInset } = useSheetPortal();
+  const { topInset } = useSheetPortal();
   const slotStyle = useMemo(
     () => [styles.sheetSlot, { marginTop: topInset }],
     [styles.sheetSlot, topInset],
   );
-  const id = useId();
 
   useEffect(() => {
     if (!visible) return undefined;
-    dragY.value = 0;
     onShow?.();
     return onHardwareBack(onDismiss);
     // onShow and onDismiss run per opening, not per new callback identity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  const content = visible ? (
+  const content = (
     <View style={styles.frame} onAccessibilityEscape={onDismiss}>
       <Animated.View
-        entering={transitions.scrimIn}
-        exiting={transitions.scrimOut}
-        style={[StyleSheet.absoluteFill, dim && styles.scrim]}
+        style={[StyleSheet.absoluteFill, dim && styles.scrim, scrimStyle]}
       >
         {/* Over a stacked sheet, TalkBack seated focus on the backdrop, the layer's first node. */}
         <Pressable
@@ -311,11 +302,7 @@ export function Sheet({
         />
       </Animated.View>
       {/* Layout animations overwrite transforms, so the drag transform lives on the inner view. */}
-      <Animated.View
-        entering={transitions.sheetIn}
-        exiting={transitions.sheetOut}
-        style={slotStyle}
-      >
+      <Animated.View entering={slideIn} style={slotStyle}>
         {notice === undefined ? null : (
           <Animated.View style={noticeStyle}>{notice}</Animated.View>
         )}
@@ -362,18 +349,16 @@ export function Sheet({
         </Animated.View>
       </Animated.View>
     </View>
-  ) : null;
-
-  useEffect(() => {
-    if (content === null) hide(id);
-    else show(id, content);
-  });
-  useEffect(
-    () => () => {
-      hide(id);
-    },
-    [hide, id],
   );
+
+  useSheetExit({
+    visible,
+    content,
+    motion,
+    dragY,
+    scrimOpacity,
+    onReturn: focusTitle,
+  });
 
   return null;
 }

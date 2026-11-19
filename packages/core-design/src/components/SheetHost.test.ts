@@ -85,7 +85,7 @@ function drawn() {
 }
 
 function layers(...ids: string[]) {
-  open.slots = ids.map((id) => ({ id, node: id }));
+  open.slots = ids.map((id) => ({ id, node: id, state: 'open' }));
   return drawn();
 }
 
@@ -111,7 +111,7 @@ it('hides the app and every sheet but the top one from screen readers', () => {
 it('gives the app back to screen readers once the sheet hides', () => {
   layers();
   const portal = useSheetPortal();
-  portal.show('sheet', 'content');
+  portal.show('sheet', 'content', 'open');
   expect(hiding(drawn().app)).toEqual(HIDDEN);
   portal.hide('sheet');
   expect(hiding(drawn().app)).toEqual(SHOWN);
