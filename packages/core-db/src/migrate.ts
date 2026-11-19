@@ -30,7 +30,7 @@ export const V23_SCHEMA_VERSION = V22_SCHEMA_VERSION + 1;
 export const V24_SCHEMA_VERSION = V23_SCHEMA_VERSION + 1;
 export const SCHEMA_VERSION = V24_SCHEMA_VERSION + 1;
 
-const OLDEST_UPGRADABLE_VERSION = V7_SCHEMA_VERSION;
+export const OLDEST_UPGRADABLE_VERSION = V7_SCHEMA_VERSION;
 
 export interface MigrationDriver {
   exec(sql: string): void;
@@ -456,9 +456,14 @@ function refuseUnsupported(fromVersion: number): void {
     throw new DatabaseOpenError('newer-version', { fromVersion });
 }
 
-export function migrate(driver: MigrationDriver): void {
+export function migrate(
+  driver: MigrationDriver,
+  beforeUpgrade: (fromVersion: number) => void = () => undefined,
+): void {
   const fromVersion = readUserVersion(driver);
   refuseUnsupported(fromVersion);
+  if (fromVersion > 0 && fromVersion < SCHEMA_VERSION)
+    beforeUpgrade(fromVersion);
   const migrationErrors =
     fromVersion < SCHEMA_VERSION
       ? runStatements(driver, upgradeSteps(fromVersion))
