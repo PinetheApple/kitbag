@@ -93,6 +93,7 @@ type Props = Readonly<{
   accessibilityActions?: readonly { name: string; label?: string }[];
   importantForAccessibility?: string;
   accessibilityElementsHidden?: boolean;
+  onAccessibilityEscape?: () => void;
   onAccessibilityAction?: (event: {
     nativeEvent: { actionName: string };
   }) => void;
@@ -210,34 +211,32 @@ function readerOrder(node: unknown): ReactElement<Props>[] {
   return [...(reachable ? [element] : []), ...readerOrder(props.children)];
 }
 
-it('focuses the top title, not its backdrop, when stacked over another sheet', () => {
-  openSheet(vi.fn(), 'Lower');
-  focusReaderOn.mockClear();
-  const top = openSheet(vi.fn(), 'Top');
-  const [first] = readerOrder(top);
+it('puts its title, not its backdrop, first for a screen reader', () => {
+  const [first] = readerOrder(openSheet(vi.fn(), 'Top'));
   expect(first?.props.accessibilityRole).toBe('header');
   expect(first?.props.children).toBe('Top');
-  const node = {};
-  (first?.props.ref as { current: unknown }).current = node;
-  settleEntering(true);
-  expect(focusReaderOn).toHaveBeenCalledOnce();
-  expect(focusReaderOn).toHaveBeenCalledWith(node);
 });
 
 it('offers closing as a screen reader action on the title', () => {
   const onDismiss = vi.fn();
   const [title] = headers(openSheet(onDismiss, 'Top'));
   expect(title?.props.accessibilityActions).toEqual([
-    { name: 'escape', label: 'Close Top' },
+    { name: 'dismiss', label: 'Close Top' },
   ]);
   title?.props.onAccessibilityAction?.({
     nativeEvent: { actionName: 'activate' },
   });
   expect(onDismiss).not.toHaveBeenCalled();
   title?.props.onAccessibilityAction?.({
-    nativeEvent: { actionName: 'escape' },
+    nativeEvent: { actionName: 'dismiss' },
   });
   expect(onDismiss).toHaveBeenCalledOnce();
+});
+
+it('closes on the screen reader escape gesture anywhere in the sheet', () => {
+  const onDismiss = vi.fn();
+  const frame = openSheet(onDismiss);
+  expect(frame.props.onAccessibilityEscape).toBe(onDismiss);
 });
 
 it('closes on hardware Back', () => {

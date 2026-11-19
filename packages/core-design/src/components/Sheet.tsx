@@ -50,7 +50,7 @@ import { useSheetPortal } from './SheetHost.tsx';
 export const SHEET_TOUCH_ROOM = space.sectionGap;
 const INDICATOR_INSETS = { top: SHEET_TOUCH_ROOM, bottom: SHEET_TOUCH_ROOM };
 const SCRIM = withAlpha(palette.bg.dark, opacity.sheetScrim);
-const READER_CLOSE_ACTION = 'escape';
+const READER_CLOSE_ACTION = 'dismiss';
 const BACKDROP_READER_HIDING = readerHiding(true);
 
 const useStyles = createThemedStyles((theme) => ({
@@ -287,13 +287,13 @@ export function Sheet({
   }, [visible]);
 
   const content = visible ? (
-    <View style={styles.frame}>
+    <View style={styles.frame} onAccessibilityEscape={onDismiss}>
       <Animated.View
         entering={transitions.scrimIn}
         exiting={transitions.scrimOut}
         style={[StyleSheet.absoluteFill, dim && styles.scrim]}
       >
-        {/* A reader that lands on the full-screen backdrop first never reaches the title. */}
+        {/* Over a stacked sheet, TalkBack seated focus on the backdrop, the layer's first node. */}
         <Pressable
           style={StyleSheet.absoluteFill}
           accessibilityLabel={dismissLabel}
