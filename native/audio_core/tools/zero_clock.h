@@ -4,16 +4,13 @@
 #include <cstdint>
 
 #include "rt/frame_clock.h"
+#include "test_clock.h"
 
 namespace kitbag_test {
 
 inline constexpr kitbag::FrameClock kZeroClock{0};
 // The engine frame for a harness that schedules no start.
 inline constexpr uint64_t kUnclockedFrame = 0;
-
-inline constexpr kitbag::FrameClock ClockAt(int64_t frame) {
-  return kitbag::FrameClock(static_cast<uint64_t>(frame));
-}
 
 }  // namespace kitbag_test
 

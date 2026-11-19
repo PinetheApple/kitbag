@@ -120,7 +120,6 @@ class Metronome {
   void SetBarMute(bool enabled, int play_bars, int mute_bars);
   void SetFollowMixer(bool enabled);
 
-  // `engine_running` must be true whenever the callback can run.
   void SetGrid(
       std::unique_ptr<BeatGrid> grid,
       FrameClock clock,
