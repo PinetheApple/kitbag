@@ -132,6 +132,14 @@ ${renderEnum('KB_ACCENT', c.accent)}
 ${renderEnum('KB_RAMP_UNIT', c.rampUnit)}
 /** kb_ramp_state enum (kb_metronome_ramp_state). */
 ${renderEnum('KB_RAMP_STATE', c.rampState)}
+/** kb_mixdown_state enum. */
+${renderEnum('KB_MIXDOWN_STATE', c.mixdownState)}
+/** Mixdown WAV channels (KB_MIXDOWN_CHANNELS); its rate is the engine's. */
+export const KB_MIXDOWN_CHANNELS = ${String(c.mixdownChannels)};
+
+/** Mixdown WAV sample width (KB_MIXDOWN_BITS_PER_SAMPLE). */
+export const KB_MIXDOWN_BITS_PER_SAMPLE = ${String(c.mixdownBitsPerSample)};
+
 /** Metronome output-latency offset range, in ms (kb_metronome_set_latency_offset). */
 export const KB_LATENCY_OFFSET_MS_BOUNDS = {
   min: ${String(c.latencyOffsetMsBounds.min)},

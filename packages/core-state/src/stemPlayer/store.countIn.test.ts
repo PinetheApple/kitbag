@@ -1,3 +1,4 @@
+import { GRID_METER, NO_METER_OVERRIDE } from '@kitbag/core-db';
 import { KB_COUNT_IN_OFF, KB_RESULT } from '@kitbag/core-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -10,12 +11,17 @@ import {
   COUNT_END,
   countingSong,
   HEAD,
+  meterSaved,
   opened,
   SONG_DETAILS,
   stem,
 } from './store.test-helper.ts';
 
 const TWO_BARS = 2;
+const TRIPLE_OVERRIDE = {
+  ...NO_METER_OVERRIDE,
+  meterBeatsPerBar: GRID_METER.triple,
+};
 const BAR_AT_HEAD = at(1);
 const SONG_END = at(10);
 
@@ -74,6 +80,19 @@ describe('play with a count-in', () => {
     expect(call?.[3]).toBe(false);
   });
 
+  it("counts in a bar of the user's meter", async () => {
+    const song = await opened([stem(1)], {
+      ...SONG_DETAILS,
+      meterBeatsPerBar: GRID_METER.triple,
+    });
+    song.countInBars.mockReturnValue(TWO_BARS);
+    song.engine.position = HEAD;
+    vi.clearAllMocks();
+    song.store.getState().togglePlay();
+    expect(song.commands.mixerSeek.mock.calls).toEqual([[0]]);
+    expect(counts(song)[0]?.[2]).toBe(GRID_METER.triple);
+  });
+
   it('plays at once when the count-in is off', async () => {
     const song = await countingSong();
     song.countInBars.mockReturnValue(KB_COUNT_IN_OFF);
@@ -109,6 +128,32 @@ describe('during the count', () => {
     expect(song.commands.mixerPause).not.toHaveBeenCalled();
     expect(song.commands.metronomeStart).toHaveBeenCalledTimes(1);
     expect(counts(song)).toHaveLength(1);
+  });
+
+  it("re-counts in the user's meter when one is saved", async () => {
+    const song = await counting();
+    meterSaved(song.store, TRIPLE_OVERRIDE);
+    await vi.runAllTimersAsync();
+    expect(song.commands.songPause).toHaveBeenCalledTimes(1);
+    expect(counts(song).map((call) => call[2])).toEqual([
+      BAR_BEATS,
+      GRID_METER.triple,
+    ]);
+  });
+
+  it('re-counts from where play was pressed after a save and its undo', async () => {
+    const song = await countingSong();
+    song.commands.mixerSeek.mockImplementation((frame: number) => {
+      song.engine.position = frame;
+    });
+    song.store.getState().togglePlay();
+    meterSaved(song.store, TRIPLE_OVERRIDE);
+    meterSaved(song.store, NO_METER_OVERRIDE);
+    expect(song.commands.mixerSeek.mock.calls).toEqual([
+      [BAR_AT_HEAD],
+      [0],
+      [BAR_AT_HEAD],
+    ]);
   });
 
   it('a second tap before the engine answers pauses', async () => {

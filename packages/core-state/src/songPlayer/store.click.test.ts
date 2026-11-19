@@ -1,3 +1,4 @@
+import { GRID_METER } from '@kitbag/core-db';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { openedSong, songRecord } from './store.test-helper.ts';
@@ -36,5 +37,17 @@ describe("the song player's click bars", () => {
     await store.getState().toggleClick();
     expect(commands.setGrid).toHaveBeenCalledWith(BEATS, [1, 3, 5], 0);
     expect(store.getState().click).toBe(true);
+  });
+
+  it("counts the user's meter from the analysed bar one", async () => {
+    const { commands, store } = await openedSong(
+      songRecord({
+        beats: BEATS,
+        downbeatIndices: [1, 5],
+        meterBeatsPerBar: GRID_METER.triple,
+      }),
+    );
+    await store.getState().toggleClick();
+    expect(commands.setGrid).toHaveBeenCalledWith(BEATS, [1, 4], 0);
   });
 });

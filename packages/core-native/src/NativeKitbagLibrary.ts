@@ -148,6 +148,11 @@ export type LibraryConstants = Readonly<{
   failureUnsupported: string;
   failureInterrupted: string;
   failureInternal: string;
+  /** Reject codes of mixdownStart and shareExport. */
+  exportBadFileName: string;
+  exportNoActivity: string;
+  exportNoShareTarget: string;
+  exportShareFailed: string;
   supportedAudioFamilies: readonly string[];
   supportedAudioExtensions: readonly string[];
   supportedAudioMimeTypes: readonly string[];
@@ -160,6 +165,8 @@ export interface Spec extends TurboModule {
   pickFolder(): Promise<PickedFolder | null>;
   pickBackup(): Promise<PickedBackup | null>;
   shareBackup(fileName: string, contents: string): Promise<void>;
+  /** Only a file mixdownStart wrote; rejects E_BAD_FILE_NAME for any other path. */
+  shareExport(path: string): Promise<void>;
   importAudio(uri: string, relativeDir: string): Promise<ImportedAudio>;
   enqueueAnalysis(
     relativePath: string,

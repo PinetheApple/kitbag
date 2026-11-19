@@ -1,6 +1,25 @@
 import { KB_MAX_GRID_BEATS } from '@kitbag/core-native';
 
-import { snapToBeat } from './beatSnap.ts';
+import { lastValueAtOrBefore, NOT_FOUND } from './search.ts';
+
+export function nearestBeat(
+  beats: readonly number[],
+  seconds: number,
+): number | null {
+  if (beats.length === 0) return null;
+  const before = lastValueAtOrBefore(beats, seconds);
+  const after = before + 1;
+  if (before === NOT_FOUND) return after;
+  if (after === beats.length) return before;
+  const gapBefore = seconds - (beats[before] ?? seconds);
+  const gapAfter = (beats[after] ?? seconds) - seconds;
+  return gapBefore <= gapAfter ? before : after;
+}
+
+export function snapToBeat(seconds: number, beats: readonly number[]): number {
+  const index = nearestBeat(beats, seconds);
+  return index === null ? seconds : (beats[index] ?? seconds);
+}
 
 export interface LoopSeconds {
   readonly startSec: number;

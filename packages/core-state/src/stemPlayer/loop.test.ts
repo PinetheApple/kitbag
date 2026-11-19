@@ -1,8 +1,8 @@
 import { KB_MAX_GRID_BEATS } from '@kitbag/core-native';
 import { describe, expect, it } from 'vitest';
 
-import { beatBeside, snapToBeat } from './beatSnap.ts';
-import { clickGrid, loopBetween } from './loop.ts';
+import { beatBeside } from './beatStep.ts';
+import { clickGrid, loopBetween, nearestBeat, snapToBeat } from './loop.ts';
 
 const BEATS = [0.5, 1.0, 1.5, 2.0, 2.5];
 
@@ -70,5 +70,25 @@ describe('the click grid', () => {
     const grid = clickGrid(beats);
     expect(grid).toHaveLength(KB_MAX_GRID_BEATS);
     expect(grid[0]).toBe(0);
+  });
+});
+
+describe('the beat nearest a time', () => {
+  it('picks the closer beat', () => {
+    expect(nearestBeat([0, 1, 2], 1.2)).toBe(1);
+    expect(nearestBeat([0, 1, 2], 1.6)).toBe(2);
+  });
+
+  it('picks the earlier beat on a tie', () => {
+    expect(nearestBeat([0, 1], 0.5)).toBe(0);
+  });
+
+  it('clamps to the ends of the grid', () => {
+    expect(nearestBeat([1, 2], -5)).toBe(0);
+    expect(nearestBeat([1, 2], 50)).toBe(1);
+  });
+
+  it('has no beat on an empty grid', () => {
+    expect(nearestBeat([], 1)).toBeNull();
   });
 });

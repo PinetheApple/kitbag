@@ -134,6 +134,12 @@ class StreamingTrack {
   bool reading() const {
     return live_source_ != nullptr && live_source_->is_running();
   }
+  bool input_done() const {
+    return live_source_ == nullptr || live_source_->input_done();
+  }
+  const std::string& load_path() const {
+    return load_path_;
+  }
   size_t retired_sources() const {
     return published_.retired_size();
   }

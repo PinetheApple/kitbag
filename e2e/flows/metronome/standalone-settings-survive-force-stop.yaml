@@ -9,10 +9,11 @@ tags:
     file: ../../subflows/set-tempo.yaml
     env:
       BPM: 125
-- tapOn: 'Time signature, .*'
-- tapOn: '7 over 8'
-- tapOn: 'Set 7 over 8'
-- assertVisible: 'Time signature, 7 over 8'
+- runFlow:
+    file: ../../subflows/set-time-signature.yaml
+    env:
+      BEATS: 7
+      UNIT: 8
 - tapOn: 'Subdivision, .*'
 - tapOn: 'Triplets(, .*)?'
 - assertVisible: 'Subdivision, Triplets'

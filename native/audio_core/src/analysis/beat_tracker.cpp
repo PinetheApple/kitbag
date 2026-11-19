@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstring>
 #include <limits>
 #include <utility>
@@ -44,6 +45,8 @@ constexpr int kPulseFold = 2;
 // shortest.
 constexpr float kLongerLagMargin = 1.01f;
 constexpr int kPeakMargin = 1;
+constexpr size_t kMaxSlopePoints = 256;
+constexpr size_t kMinBeatsForSlope = 2;
 
 void NormalizeByPeak(std::vector<float>& onset) {
   float max_val = 0.0f;
@@ -121,6 +124,28 @@ int BestPeakLag(const std::vector<float>& acf, int min_lag, int max_lag) {
   }
   if (best_lag == 0) return 0;
   return FoldToFasterPulse(acf, best_lag, min_lag);
+}
+
+double Median(std::vector<double> values) {
+  const auto mid =
+      values.begin() + static_cast<std::ptrdiff_t>(values.size() / 2);
+  std::nth_element(values.begin(), mid, values.end());
+  return *mid;
+}
+
+std::vector<double> SkipAwareIndices(const std::vector<float>& beats) {
+  std::vector<double> intervals;
+  intervals.reserve(beats.size() - 1);
+  for (size_t k = 1; k < beats.size(); ++k) {
+    intervals.push_back(static_cast<double>(beats[k]) - beats[k - 1]);
+  }
+  const double typical = Median(intervals);
+  std::vector<double> indices(beats.size(), 0.0);
+  for (size_t k = 1; k < beats.size(); ++k) {
+    const double periods = std::round(intervals[k - 1] / typical);
+    indices[k] = indices[k - 1] + std::max(1.0, periods);
+  }
+  return indices;
 }
 
 struct DpTrellis {
@@ -219,6 +244,26 @@ float TransitionWeight(const std::vector<float>& onset) {
 
 }  // namespace
 
+// Theil-Sen over beats indexed by whole periods elapsed, so a shifted beat is
+// outvoted and a skipped one does not shift every later index.
+float BeatGridBpm(const std::vector<float>& beats) {
+  if (beats.size() < kMinBeatsForSlope) return 0.0f;
+  const std::vector<double> indices = SkipAwareIndices(beats);
+  const size_t stride = (beats.size() + kMaxSlopePoints - 1) / kMaxSlopePoints;
+  const size_t points = (beats.size() + stride - 1) / stride;
+  std::vector<double> slopes;
+  slopes.reserve(points * (points - 1) / 2);
+  for (size_t i = 0; i < beats.size(); i += stride) {
+    for (size_t j = i + stride; j < beats.size(); j += stride) {
+      const double rise = static_cast<double>(beats[j]) - beats[i];
+      slopes.push_back(rise / (indices[j] - indices[i]));
+    }
+  }
+  const double period = Median(std::move(slopes));
+  if (period <= 0.0) return 0.0f;
+  return static_cast<float>(kSecondsPerMinute / period);
+}
+
 BeatResult BeatTracker::AnalyzeFlux(std::vector<float> flux, int sample_rate) {
   BeatResult result;
 
@@ -229,12 +274,14 @@ BeatResult BeatTracker::AnalyzeFlux(std::vector<float> flux, int sample_rate) {
     return result;
   }
 
-  result.bpm = EstimateTempo(onset, hop_time);
-  if (result.bpm <= 0.0f) {
+  const float seed_bpm = EstimateTempo(onset, hop_time);
+  if (seed_bpm <= 0.0f) {
     return result;
   }
 
-  result.beat_times = TrackBeats(onset, hop_time, result.bpm);
+  result.beat_times = TrackBeats(onset, hop_time, seed_bpm);
+  const float fitted = BeatGridBpm(result.beat_times);
+  result.bpm = fitted > 0.0f ? fitted : seed_bpm;
   return result;
 }
 
