@@ -23,7 +23,8 @@
 
 namespace kitbag {
 
-/// Lock-free stem mixer (SPEC.md §4.1).
+/// Lock-free stem mixer (SPEC.md §4.1). Sources and plans are built off-thread
+/// and swapped in by RtPublisher; scalars cross the command ring.
 class Mixer {
  public:
   static constexpr int kMaxTracks = 16;
@@ -242,6 +243,7 @@ class Mixer {
   void MixTrack(Track& tr, float* output, uint32_t frame_count, bool any_solo);
   void MixAllTracks(float* output, uint32_t frame_count, bool any_solo);
   void AdvanceTransport(uint32_t frame_count);
+  void EndRun(bool arrived);
 
   using EngageState = MixerEngageState;
   bool ReserveUndoableCommand();
@@ -272,11 +274,7 @@ class Mixer {
   RetireDrainedBuses(const bool* used, FrameClock clock, bool engine_running);
   void FreeUnusedBuses(FrameClock clock, bool engine_running);
 
-  struct Bank {
-    std::unique_ptr<KeyBusSlot> slots[kKeyBusCount];
-    uint64_t generation = 0;
-    int64_t lag = 0;
-  };
+  using Bank = KeyBusBank<kKeyBusCount>;
   bool PrimeNow(FrameClock clock, bool engine_running);
   bool PrimeAwaitingEngage() const;
   TransportPlan ReprimePlan() const;
@@ -355,6 +353,7 @@ class Mixer {
   SongClock song_clock_;
   bool opens_on_jump_ = false;
   bool continues_run_ = false;
+  bool run_advanced_ = false;
   RtPublisher<TransportPlan> plans_;
   uint64_t app_epoch_ = 0;
   LoopLayout app_layout_;
