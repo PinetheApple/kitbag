@@ -16,6 +16,7 @@ configureStemDeck({
     startImport: unavailable,
     cancelImport: () => undefined,
     retryImport: unavailable,
+    clearImport: unavailable,
     importSnapshot: unavailable,
     settleDownload: () => undefined,
     setWatching: () => undefined,

@@ -9,7 +9,7 @@ import {
 import { useStemDeck } from '@kitbag/core-state';
 import { Text, View } from 'react-native';
 
-import { statusCardText } from './logic/progressText.ts';
+import { importCardShows, statusCardText } from './logic/progressText.ts';
 
 const useStyles = createThemedStyles((theme) => ({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.controlGap },
@@ -23,7 +23,7 @@ const useStyles = createThemedStyles((theme) => ({
 export function ImportStatusCard({ onView }: { readonly onView: () => void }) {
   const styles = useStyles();
   const view = useStemDeck((s) => s.importView);
-  if (!view?.running) return null;
+  if (!importCardShows(view)) return null;
   const text = statusCardText(view);
   return (
     <Card>

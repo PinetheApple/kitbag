@@ -164,6 +164,7 @@ export function fakeNative() {
     ),
     cancelImport: vi.fn(),
     retryImport: vi.fn(() => Promise.resolve(true)),
+    clearImport: vi.fn(() => Promise.resolve(true)),
     importSnapshot: vi.fn(() =>
       Promise.resolve(snapshot([], { running: false })),
     ),

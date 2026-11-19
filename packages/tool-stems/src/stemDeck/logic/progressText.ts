@@ -12,6 +12,7 @@ import { plural, SEPARATOR, stemCount } from './songFacts.ts';
 const BYTES_PER_MB = 1_000_000;
 const PERCENT = 100;
 const NOTHING_ADDED = 'nothing added';
+const USER_STOP: StemDeckFailure = 'cancelled';
 
 export type TileInk = 'green' | 'amber' | 'accent' | 'red' | 'text2';
 
@@ -107,10 +108,6 @@ export function addedText(view: StemDeckImportView): string {
   return `${String(view.added)} of ${String(view.rows.length)} added`;
 }
 
-export function statusCardText(view: StemDeckImportView): string {
-  return `Getting songs from StemDeck${SEPARATOR}${addedText(view)}`;
-}
-
 export function retryLabel(count: number): string {
   return `Retry ${plural(count, 'song', 'songs')}`;
 }
@@ -176,4 +173,26 @@ export function stopNotice(
         body: 'Retry to try the rest again.',
       };
   }
+}
+
+export function importCardShows(
+  view: StemDeckImportView | null,
+): view is StemDeckImportView {
+  if (view === null) return false;
+  return view.running || (view.retryCount > 0 && view.stopped !== USER_STOP);
+}
+
+export function importClearable(view: StemDeckImportView): boolean {
+  return view.retryCount > 0 && view.rows.every((r) => r.phase !== 'adding');
+}
+
+export function statusCardText(view: StemDeckImportView): string {
+  if (view.running)
+    return `Getting songs from StemDeck${SEPARATOR}${addedText(view)}`;
+  const lead =
+    view.stopped === null
+      ? addedText(view)
+      : stopNotice(view, view.stopped).title;
+  const left = plural(view.retryCount, 'song', 'songs');
+  return `${lead}${SEPARATOR}${left} left`;
 }
