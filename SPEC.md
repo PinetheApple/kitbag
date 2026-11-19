@@ -1519,9 +1519,9 @@ as a base to build on.
 
 The schema is the durable part and survives the stack change. The Flutter
 build's tables were `Setlists`, `Songs`, `PracticeSessions`, `Tunings`,
-`LibrarySongs`, `StemSets`, `Stems` (schema v6). A reconstruction of that v6 DDL is the
-migration fixture in `packages/core-db/src/migrate-fixtures.test-helper.ts`; the React
-Native schema migrates it in place and is at v19 (`packages/core-db/src/migrate.ts`).
+`LibrarySongs`, `StemSets`, `Stems` (schema v6). The React Native schema is at v20
+(`packages/core-db/src/migrate.ts`). It upgrades databases from v7 on and refuses
+anything older, the Flutter v6 database included.
 
 ### 11.1 Persistence layer
 
@@ -1532,9 +1532,9 @@ Native schema migrates it in place and is at v19 (`packages/core-db/src/migrate.
 `op-sqlite` is JSI-backed, so queries do not cross the legacy bridge. Drizzle
 gives compile-time-checked SQL and generated migrations, which is the property
 Drift was providing. **Migrations are additive and non-destructive; existing user
-data survives** — a user upgrading from the Flutter build must not lose their
-setlists, so the migration runner must pick up an existing v6 database in place
-rather than starting from zero.
+data survives** for every database at v7 or later. The Flutter build had a different
+applicationId, so its v6 database can never reach this app; the runner refuses
+versions 1–6 with `UnsupportedSchemaVersion` and leaves the file untouched.
 
 ### 11.2 Changes required
 
@@ -1585,8 +1585,8 @@ buildable as written.
 
 Two migration notes that are not obvious from the table:
 
-- **The v6 Drift database must be picked up in place** (§11.1). An upgrading user
-  keeps their setlists; the Drizzle migration runner starts from v6, not from zero.
+- **There is no upgrade from the Flutter v6 database** (§11.1). The runner starts
+  from v7; a fresh install builds the current schema from zero.
 - **`SongPresets` gains a nullable FK to the library song** alongside the D4
   identity tuple. When a track later joins the library, the preset migrates from
   tuple-matching to id-matching. That transition is a migration, not a lookup.
@@ -2258,7 +2258,7 @@ prove it kept anything.
 |---|---|---|
 | **Native, headless** | `native/audio_core/tools/` — already exists (`metronome_verify.cpp`, `tuner_verify.cpp` render offline and assert onsets against the beat grid) | §4 in full, with **no UI at all**. This is why Phase 1 is testable before any React exists. |
 | **Native, new** | Mixer test (`mixer_verify`); **metronome soak/jitter harness** (§5.8) — `click_soak` + `click_soak_verify`, run via `scripts/soak-analyze.sh` (#88) | The 4h soak and the click-vs-grid offset, measured from a recording. The harness exists and is gated on synthetic and engine-rendered fixtures; the 4h device recording and the speaker-path offset have not been run. |
-| **DB** | Drizzle migrations against a fixture v6 database | An upgrading user keeps their setlists (§11.1). |
+| **DB** | Drizzle migrations against fixture v7–v19 databases | An upgrading user keeps their setlists; a database older than v7 is refused untouched (§11.1). |
 | **Logic** | Jest | Tap-tempo interval averaging (§8.5), BPM match scoring, the phase-modular arithmetic (§8.6), preset round-trip (§5.8). |
 | **Component** | React Native Testing Library | Steppers, LED tap-cycle, sheet behaviour. |
 | **Lint rules** | The ported eval harness (§13.6) | Architecture rules actually fire. |
@@ -2326,7 +2326,7 @@ spec said to do it before deciding.
 **Closed 2026-07-24** (PR #39). The 60fps gate passed on a device (#33).
 
 `core-native` + the JSI HostObject + the TurboModule + the eval-harnessed lint
-rules + the Drizzle migration off the existing v6 database. Proves §13.2 and
+rules + the Drizzle migration off the existing v6 database (retired in #170). Proves §13.2 and
 §13.3 on a device with one screen and no product.
 
 **Gate: the 60fps rule (§13.3) is verified on a real device before any tool is
