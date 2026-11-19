@@ -49,6 +49,7 @@ import { useSheetExit } from './useSheetExit.ts';
 export const SHEET_TOUCH_ROOM = space.sectionGap;
 const INDICATOR_INSETS = { top: SHEET_TOUCH_ROOM, bottom: SHEET_TOUCH_ROOM };
 const SCRIM = withAlpha(palette.bg.dark, opacity.sheetScrim);
+const FADED_OUT = 0;
 const READER_CLOSE_ACTION = 'dismiss';
 const BACKDROP_READER_HIDING = readerHiding(true);
 
@@ -112,13 +113,13 @@ const useStyles = createThemedStyles((theme) => ({
   scroll: {
     flexGrow: 0,
   },
-  titleGapCover: {
+  titleGapFade: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     height: SHEET_TOUCH_ROOM,
-    backgroundColor: theme.color.surface1,
+    experimental_backgroundImage: `linear-gradient(to bottom, ${theme.color.surface1}, ${withAlpha(theme.color.surface1, FADED_OUT)})`,
     pointerEvents: 'none',
   },
   content: {
@@ -344,7 +345,7 @@ export function Sheet({
               {children}
               {hint === undefined ? null : <SheetHint>{hint}</SheetHint>}
             </ScrollView>
-            <View style={styles.titleGapCover} />
+            <View style={styles.titleGapFade} />
           </View>
         </Animated.View>
       </Animated.View>

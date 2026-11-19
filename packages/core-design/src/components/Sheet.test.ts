@@ -156,23 +156,26 @@ it('caps the sheet below the status bar so tall content scrolls inside it', () =
   expect(slot.marginTop).toBe(STATUS_BAR);
 });
 
-it('covers the scroll touch room under the title so scrolled content clips below a gap', async () => {
+it('fades scrolled content out across the touch room under the title instead of cutting it flat', async () => {
   const { SHEET_TOUCH_ROOM } = await import('./Sheet.tsx');
-  const { themes } = await import('../theme.ts');
+  const { themes, withAlpha } = await import('../theme.ts');
+  const { surface1 } = themes.dark.color;
   const sheet = child(child(openSheet(), 1), 1);
   const scrollFrame = child(sheet, 1);
-  const [scroll, cover] = [child(scrollFrame, 0), child(scrollFrame, 1)];
+  const [scroll, fade] = [child(scrollFrame, 0), child(scrollFrame, 1)];
   expect(flat(scrollFrame.props.style).marginVertical).toBe(-SHEET_TOUCH_ROOM);
   expect(scroll.type).toBe('ScrollView');
-  expect(flat(cover.props.style)).toMatchObject({
+  const fadeStyle = flat(fade.props.style);
+  expect(fadeStyle).toMatchObject({
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     height: SHEET_TOUCH_ROOM,
-    backgroundColor: themes.dark.color.surface1,
+    experimental_backgroundImage: `linear-gradient(to bottom, ${surface1}, ${withAlpha(surface1, 0)})`,
     pointerEvents: 'none',
   });
+  expect(fadeStyle.backgroundColor).toBeUndefined();
 });
 
 function headers(node: unknown): ReactElement<Props>[] {
