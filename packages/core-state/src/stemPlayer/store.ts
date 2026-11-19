@@ -23,7 +23,7 @@ import {
   type ExportActions,
   type ExportSlice,
 } from './exportActions.ts';
-import { NO_SONG_FACTS, type PlaybackShift, type SongFacts } from './facts.ts';
+import { NO_SONG_FACTS, type SongFacts } from './facts.ts';
 import type { LoopEdge, LoopSeconds } from './loop.ts';
 import { sectionLoopActions } from './loopActions.ts';
 import { FALLBACK_BEATS_PER_BAR } from './barMeter.ts';
@@ -45,14 +45,13 @@ import {
 } from './notificationTransport.ts';
 import { renameActions } from './renameActions.ts';
 import { retimeActions, retimeAnchor } from './retimeActions.ts';
-import { retimeSpeed } from './retimeSpeed.ts';
 import { getStemPlayer, type StemPlayerRuntime } from './runtime.ts';
 import { sortedSections } from './sections.ts';
 import { countPending, songStart } from './songStart.ts';
 import { loadTracks, rowsOf } from './stemTracks.ts';
 import { clampedSpeed, wholeKey } from './speedKey.ts';
-import { speedKeyActions } from './speedKeyActions.ts';
-import { gridFacts, songGrid, tempoActions } from './tempoActions.ts';
+import { speedKeySession } from './speedKeyActions.ts';
+import { songGrid, tempoActions } from './tempoActions.ts';
 import { longestSeconds, tempoModeOf } from './tempoGrid.ts';
 import { framesToSeconds, secondsToFrames } from './time.ts';
 
@@ -319,20 +318,7 @@ export function createStemPlayerStore(
         },
       }),
     );
-    const rates = retimeSpeed(
-      () => runtimeOf().commands,
-      mixer.current,
-      start.rateSet,
-    );
-    const shift = (): PlaybackShift => ({
-      speed: get().speed,
-      key: get().songKey,
-    });
-    const stored = { speed: KB_MIXER_UNITY_RATE };
-    const refreshFacts = () => {
-      if (openRecord === null) return;
-      set(gridFacts(openRecord, get().tempoMode, shift()));
-    };
+    const speedKey = speedKeySession(context, start.rateSet, () => openRecord);
     const clickShape = clickShapeActions(context);
     const clicks = clickActions(context, mixer.pendingClick, start, clickShape);
     const songDownbeats = (beats: readonly number[], override: MeterOverride) =>
@@ -350,7 +336,7 @@ export function createStemPlayerStore(
         openRecord,
         mode,
         get().meterOverride,
-        shift(),
+        speedKey.shift(),
       );
       markedDownbeatIndices = marked;
       set(state);
@@ -396,12 +382,13 @@ export function createStemPlayerStore(
       }
       const engineRate = await mixer.startEngine(opened);
       if (engineRate === null) return;
-      const speed = await mixer.clearSessionLeftovers(
+      if (!(await mixer.clearSessionLeftovers(opened))) return;
+      const speed = await mixer.applyOpeningRate(
         opened,
         clampedSpeed(record.speed),
       );
       if (speed === null) return;
-      stored.speed = record.speed;
+      speedKey.persisted.speed = record.speed;
       start.rateSet(speed);
       const songKey = wholeKey(record.pitch);
       const rows = rowsOf(record);
@@ -479,8 +466,8 @@ export function createStemPlayerStore(
       ...clickShape.actions,
       ...renameActions(context),
       ...tempoActions(context, applyGrid),
-      ...retimeActions(context, claim.defer, start, rates),
-      ...speedKeyActions(context, rates, refreshFacts, stored),
+      ...retimeActions(context, claim.defer, start, speedKey.rates),
+      ...speedKey.actions,
       meterOverrideChanged: (setId, override) => {
         const { status, setId: openSet, beats, downbeatIndices } = get();
         if (status !== 'ready' || openSet !== setId) return;

@@ -128,27 +128,30 @@ export function mixerSession({
     return true;
   };
 
-  // A rate the engine refuses falls back to unity rather than failing the song.
-  const clearSessionLeftovers = async (
-    opened: number,
-    rate: number = KB_MIXER_UNITY_RATE,
-  ): Promise<number | null> => {
+  const clearSessionLeftovers = async (opened: number) => {
     await claim.settled();
     const { commands } = runtimeOf();
     // A loop a failed clear left behind would otherwise play in this song.
     await commands.mixerClearLoop().catch(() => null);
     // The rate is engine-wide and outlives stop and unload.
-    const current = await commands.mixerRate();
+    const rate = await commands.mixerRate();
+    if (!live(opened)) return false;
+    if (rate === KB_MIXER_UNITY_RATE) return true;
+    return awaitReset(opened, commands.mixerSetRate(KB_MIXER_UNITY_RATE));
+  };
+
+  const applyOpeningRate = async (
+    opened: number,
+    rate: number,
+  ): Promise<number | null> => {
+    if (rate === KB_MIXER_UNITY_RATE) return rate;
+    const result = await runtimeOf()
+      .commands.mixerSetRate(rate)
+      .catch(() => KB_RESULT.KB_ERROR_INTERNAL);
     if (!live(opened)) return null;
-    if (current === rate) return rate;
-    if (rate !== KB_MIXER_UNITY_RATE) {
-      const result = await commands.mixerSetRate(rate);
-      if (!live(opened)) return null;
-      if (result === KB_RESULT.KB_OK) return rate;
-      console.warn('[kitbag] stored speed refused, playing at unity', result);
-    }
-    const reset = commands.mixerSetRate(KB_MIXER_UNITY_RATE);
-    return (await awaitReset(opened, reset)) ? KB_MIXER_UNITY_RATE : null;
+    if (result === KB_RESULT.KB_OK) return rate;
+    console.warn('[kitbag] stored speed refused, playing at unity', result);
+    return KB_MIXER_UNITY_RATE;
   };
 
   return {
@@ -204,6 +207,7 @@ export function mixerSession({
       return engineRate;
     },
     clearSessionLeftovers,
+    applyOpeningRate,
     awaitReset,
   };
 }

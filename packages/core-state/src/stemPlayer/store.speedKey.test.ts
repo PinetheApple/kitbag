@@ -110,8 +110,17 @@ describe('opening at a speed the mixer refuses', () => {
       status: 'ready',
       speed: KB_MIXER_UNITY_RATE,
     });
-    expect(ratesSet(song)).toEqual([STORED_SPEED, KB_MIXER_UNITY_RATE]);
+    expect(ratesSet(song)).toEqual([KB_MIXER_UNITY_RATE, STORED_SPEED]);
     expect(song.records.saveStemSetSpeedKey).not.toHaveBeenCalled();
+  });
+});
+
+describe('a stored speed the engine cannot play', () => {
+  it('plays clamped and writes the stored value back untouched', async () => {
+    const song = await opened(band(), { speed: 1.25 });
+    expect(song.store.getState().speed).toBe(KB_MIXER_UNITY_RATE);
+    await song.store.getState().setSongKey(UP_ONE);
+    expect(lastSaved(song)).toMatchObject({ speed: 1.25, pitch: UP_ONE });
   });
 });
 
@@ -208,6 +217,31 @@ describe('changing the key', () => {
     await song.store.getState().setSongKey(0);
     expect(keysSent(song)).toEqual([]);
     expect(song.records.saveStemSetSpeedKey).not.toHaveBeenCalled();
+  });
+
+  it('takes a key back to its value while the change away is pending', async () => {
+    const song = await opened(band());
+    let finish: (code: number) => void = () => undefined;
+    song.commands.mixerSetTrackPitch
+      .mockImplementationOnce(
+        () =>
+          new Promise<number>((resolve) => {
+            finish = resolve;
+          }),
+      )
+      .mockResolvedValue(KB_RESULT.KB_OK);
+    const away = song.store.getState().setSongKey(UP_ONE);
+    const back = song.store.getState().setSongKey(0);
+    await vi.advanceTimersByTimeAsync(0);
+    finish(KB_RESULT.KB_OK);
+    await Promise.all([away, back]);
+    expect(song.store.getState().songKey).toBe(0);
+    expect(keysSent(song).map(([, key]) => key)).toEqual([
+      UP_ONE,
+      UP_ONE,
+      0,
+      0,
+    ]);
   });
 
   it('keeps taking key changes after one throws', async () => {
