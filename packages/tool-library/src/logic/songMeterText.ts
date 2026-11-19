@@ -15,7 +15,7 @@ export const METER_SAVE_FAILED = 'Could not save the meter.';
 export const DETECTED_RESTORED =
   'Back to the detected meter. Saved for this song.';
 
-const SAVED = 'Saved for this song.';
+export const SAVED = 'Saved for this song.';
 
 export function meterGridState(badge: SongBadge): MeterGridState {
   switch (badge) {

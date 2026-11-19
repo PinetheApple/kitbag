@@ -88,6 +88,7 @@ export const iconGlyphs = {
   sdCard: 'micro-sd',
   moveFolder: 'folder-move-outline',
   dataFolder: 'folder-outline',
+  tempoCorrection: 'arrow-expand-horizontal',
 } as const satisfies Record<string, VectorGlyph>;
 
 export type IconName = keyof typeof iconGlyphs;

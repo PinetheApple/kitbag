@@ -7,6 +7,7 @@ import {
   pragma,
   rows,
   V20_SONG_COLUMNS,
+  V24_SONG_COLUMNS,
 } from './migrate-fixtures.test-helper';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
@@ -24,6 +25,7 @@ describe('migrate v13 to v14', () => {
         analysis_status: expect.any(String) as unknown,
         analysis_error: null,
         ...V20_SONG_COLUMNS,
+        ...V24_SONG_COLUMNS,
       })),
     );
     expect(

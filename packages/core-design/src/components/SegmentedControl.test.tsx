@@ -238,3 +238,32 @@ describe('SegmentedControl disabled option', () => {
     expect(flat(distinct).opacity).toBeUndefined();
   });
 });
+
+describe('SegmentedControl two-line option', () => {
+  const TWO_LINE = [
+    { value: 'half', label: '÷2', detail: '52', accessibilityLabel: 'Half' },
+    { value: 'one', label: '×1', detail: '104' },
+  ] as const;
+
+  it('draws the second line under the label and speaks the option label', () => {
+    display.fontScale = 1;
+    rendered.options.length = 0;
+    const markup = renderToStaticMarkup(
+      <ThemeProvider mode="dark">
+        <SegmentedControl
+          size="picker"
+          accessibilityLabel="Tempo correction"
+          options={TWO_LINE}
+          selected="one"
+          onSelect={vi.fn()}
+        />
+      </ThemeProvider>,
+    );
+    expect(markup.indexOf('÷2')).toBeLessThan(markup.indexOf('52'));
+    expect(markup).toContain('104');
+    expect(rendered.options.map((o) => o.accessibilityLabel)).toEqual([
+      'Half',
+      '×1',
+    ]);
+  });
+});

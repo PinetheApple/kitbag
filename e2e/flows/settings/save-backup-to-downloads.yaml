@@ -1,0 +1,59 @@
+appId: com.kitbag.app
+name: '#486: a backup saved to Downloads through the save dialog restores after clearing data'
+tags:
+  - pr-486
+---
+- runFlow: ../../subflows/launch-fresh.yaml
+- runFlow: ../../subflows/open-metronome-first-time.yaml
+- runFlow:
+    file: ../../subflows/create-song.yaml
+    env:
+      BPM: 97
+- back
+- extendedWaitUntil:
+    visible: 'Metronome, .*(ready|playing)'
+    timeout: 5000
+- tapOn: 'Settings'
+- scrollUntilVisible:
+    element: 'Back up everything, .*1 song'
+    timeout: 5000
+- tapOn: 'Back up everything, .*1 song'
+- tapOn: 'Save to files'
+- extendedWaitUntil:
+    visible: 'kitbag_export.*'
+    timeout: 10000
+- runFlow:
+    when:
+      visible: 'Show roots'
+    commands:
+      - tapOn: 'Show roots'
+      - tapOn:
+          text: 'Downloads'
+          id: 'android:id/title'
+- evalScript: ${output.backup = 'kitbag_486_' + Date.now() + '.json'}
+- tapOn: 'kitbag_export.*'
+- eraseText: 64
+- inputText: ${output.backup}
+- hideKeyboard
+- tapOn: '(?i)save'
+- extendedWaitUntil:
+    notVisible: 'Save to files'
+    timeout: 10000
+- assertVisible: 'Back up everything, .*1 song'
+- runFlow: ../../subflows/launch-fresh.yaml
+- tapOn: 'Settings'
+- scrollUntilVisible:
+    element: 'Restore from backup'
+    timeout: 5000
+- tapOn: 'Restore from backup'
+- runFlow:
+    file: ../../subflows/pick-download.yaml
+    env:
+      FILE: ${output.backup}
+- extendedWaitUntil:
+    visible: 'Merge \d.*'
+    timeout: 10000
+- tapOn: 'Merge \d.*'
+- extendedWaitUntil:
+    visible: 'Merged .*1 song.*'
+    timeout: 10000

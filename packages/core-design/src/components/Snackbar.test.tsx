@@ -59,3 +59,28 @@ describe('Snackbar placement', () => {
     expect(style.bottom).toBeUndefined();
   });
 });
+
+describe('Snackbar speech', () => {
+  function markup(props: Partial<SnackbarProps>) {
+    return renderToStaticMarkup(
+      <ThemeProvider mode="dark">
+        <Snackbar
+          message="Tempo set to ×3/2 · 156 BPM."
+          onTimeout={vi.fn()}
+          bottom={FLOATING_BOTTOM}
+          {...(props as { spokenMessage?: string })}
+        />
+      </ThemeProvider>,
+    );
+  }
+
+  it('speaks the spoken message in place of the shown one', () => {
+    expect(
+      markup({ spokenMessage: 'Tempo set to one and a half times, 156 BPM.' }),
+    ).toContain('aria-label="Tempo set to one and a half times, 156 BPM."');
+  });
+
+  it('speaks the shown message when there is no spoken one', () => {
+    expect(markup({})).toContain('aria-label="Tempo set to ×3/2 · 156 BPM."');
+  });
+});

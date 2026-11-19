@@ -11,6 +11,7 @@ import { packFloat32, packInt32 } from './packing';
 import { createSongLibraryRepository } from './song-library-repository';
 import { createSongPresetRepository } from './song-preset-repository';
 import { openTestDatabase } from './sqlite.test-helper';
+import { TEMPO_CORRECTION } from './tempo-correction';
 import { memoryClickSoundFiles } from './click-sound-files.test-helper';
 
 const open: ReturnType<typeof openTestDatabase>[] = [];
@@ -410,6 +411,7 @@ describe('readSong', () => {
       beats: [0.5, 1.25],
       downbeatIndices: [0, 300],
       analysisStatus: 'done',
+      tempoCorrection: TEMPO_CORRECTION.none,
       meterBeatsPerBar: null,
       barOneSeconds: null,
     });

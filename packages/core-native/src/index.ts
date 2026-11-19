@@ -71,7 +71,12 @@ export {
   type DataFolderCodes,
   type MoveListeners,
 } from './dataFolder';
-export { backupFilesAvailable, pickBackup, shareBackup } from './backupFiles';
+export {
+  backupFilesAvailable,
+  pickBackup,
+  saveBackup,
+  shareBackup,
+} from './backupFiles';
 export {
   mixdownCancel,
   mixdownProgress,

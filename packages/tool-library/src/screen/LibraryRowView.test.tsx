@@ -71,6 +71,7 @@ const ROW = {
   artist: '',
   durationSec: 30,
   bpm: 120,
+  tempoCorrection: 'none',
 } as unknown as LibrarySongRow;
 
 function render(fontScale: number) {

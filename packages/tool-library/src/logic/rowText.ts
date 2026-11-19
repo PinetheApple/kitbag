@@ -1,6 +1,7 @@
 import { countLabel, type BadgeTone, type IconName } from '@kitbag/core-design';
 import {
   bpmFact,
+  correctedBpm,
   clockParts,
   formatClockSeconds,
   keyFact,
@@ -124,7 +125,11 @@ export function rowBadges(
 
 function rowFacts(row: LibraryRow): SongFact[] {
   const facts = [
-    bpmFact(row.bpm),
+    bpmFact(
+      row.kind === 'song'
+        ? correctedBpm(row.bpm, row.tempoCorrection)
+        : row.bpm,
+    ),
     row.kind === 'stems' ? keyFact(row.key, row.scale, null) : null,
   ];
   return facts.filter((fact) => fact !== null);

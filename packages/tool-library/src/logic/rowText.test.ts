@@ -1,8 +1,9 @@
-import type {
-  LibraryRow,
-  LibrarySongRow,
-  LibraryStemSetRow,
-  SongBadge,
+import {
+  TEMPO_CORRECTION,
+  type LibraryRow,
+  type LibrarySongRow,
+  type LibraryStemSetRow,
+  type SongBadge,
 } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
@@ -23,6 +24,7 @@ const SONG: LibrarySongRow = {
   artist: 'Foo Fighters',
   durationSec: 250.4,
   bpm: 158.2,
+  tempoCorrection: TEMPO_CORRECTION.none,
   hasGrid: true,
   analysisStatus: 'done',
   analysisError: null,
@@ -71,6 +73,15 @@ describe('row facts line', () => {
   it('reads length · BPM for a song and length · BPM · key for a stem song', () => {
     expect(rowSubtitle(SONG, 'grid', null)).toBe('4:10 · 158 BPM');
     expect(rowSubtitle(STEMS, 'grid', null)).toBe('5:26 · 81 BPM · F maj');
+  });
+
+  it("reads a corrected song's tempo, as the player's badge does", () => {
+    const halved = {
+      ...SONG,
+      bpm: 185,
+      tempoCorrection: TEMPO_CORRECTION.half,
+    };
+    expect(rowSubtitle(halved, 'grid', null)).toBe('4:10 · 93 BPM');
   });
 
   it('leaves out the artist, which stays in search and speech', () => {

@@ -16,6 +16,7 @@ import {
   RAMP_UNITS,
 } from './preset-rules';
 import { STEM_SET_SOURCE, STEM_SET_SOURCES } from './stem-set-source';
+import { TEMPO_CORRECTIONS } from './tempo-correction';
 import { TEMPO_MODES, TEMPO_SOURCES } from './tempo-mode';
 import { INSTRUMENTS } from './tuning-rules';
 
@@ -70,6 +71,8 @@ export const songs = sqliteTable('songs', {
   analysisVersion: integer('analysis_version'),
   meterBeatsPerBar: integer('meter_beats_per_bar'),
   barOneSeconds: real('bar_one_seconds'),
+  // Null is ×1, so a song never corrected and one set back read the same.
+  tempoCorrection: text('tempo_correction', { enum: TEMPO_CORRECTIONS }),
 });
 
 export const songPresets = sqliteTable('song_presets', {

@@ -16,7 +16,7 @@ class BackupShare(private val context: ReactApplicationContext, private val file
 
   private fun write(fileName: String, contents: String): File {
     val dir = File(context.cacheDir, BackupFiles.SHARE_DIR).apply { mkdirs() }
-    return File(dir, fileName).apply { writeText(contents, Charsets.UTF_8) }
+    return File(dir, fileName).apply { outputStream().use { BackupFiles.write(it, contents) } }
   }
 
   companion object {

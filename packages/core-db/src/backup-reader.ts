@@ -100,6 +100,10 @@ export function reader(value: unknown, path: string) {
       ifPresent(key, nullableCount),
     nullableUuid: (key: string) =>
       nullableLowercase(nullable(key, isUuid, 'expected a UUID or null')),
+    presentNullableMember: <K extends string, T>(key: K, check: Check<T>) =>
+      ifPresent(key, (field) =>
+        nullable(field, check, 'expected a known value or null'),
+      ),
     nullableBlob: (key: string) =>
       nullable(key, isBase64, 'expected base64 bytes or null'),
   };

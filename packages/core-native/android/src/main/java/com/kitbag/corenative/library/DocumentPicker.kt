@@ -12,6 +12,7 @@ import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.WritableMap
 import java.io.IOException
+import java.io.OutputStream
 import java.util.concurrent.Executor
 
 class DocumentPicker(
@@ -20,8 +21,9 @@ class DocumentPicker(
   private val rejectLogged: (Promise, String, String, Exception) -> Unit,
 ) : ActivityEventListener {
 
-  private var pendingPick: Promise? = null
-  private var pendingRequest = 0
+  private class Pending(val promise: Promise, val request: Int, val contents: String?)
+
+  private var pending: Pending? = null
 
   fun pickDocument(promise: Promise) {
     val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
@@ -41,53 +43,67 @@ class DocumentPicker(
     startPick(intent, REQUEST_PICK_BACKUP, promise)
   }
 
+  fun saveBackup(fileName: String, contents: String, promise: Promise) {
+    if (!BackupFiles.isSafeFileName(fileName)) {
+      promise.reject(LibraryErrors.BAD_FILE_NAME, "Not a backup file name: $fileName")
+      return
+    }
+    val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+      addCategory(Intent.CATEGORY_OPENABLE)
+      type = BackupFiles.JSON_MIME
+      BackupSave.dialogExtras(fileName).forEach { (key, value) -> putExtra(key, value) }
+    }
+    startPick(intent, REQUEST_SAVE_BACKUP, promise, contents)
+  }
+
   fun pickFolder(promise: Promise) {
     startPick(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), REQUEST_PICK_FOLDER, promise)
   }
 
   fun cancel() {
     synchronized(this) {
-      pendingPick?.reject(LibraryErrors.INVALIDATED, "The library module was torn down mid-pick")
-      pendingPick = null
+      pending?.promise?.reject(LibraryErrors.INVALIDATED, "The library module was torn down mid-pick")
+      pending = null
     }
   }
 
-  private fun startPick(intent: Intent, requestCode: Int, promise: Promise) {
+  private fun startPick(intent: Intent, requestCode: Int, promise: Promise, contents: String? = null) {
     val activity = context.currentActivity
     if (activity == null) {
       promise.reject(LibraryErrors.NO_ACTIVITY, "No foreground activity to show the picker from")
       return
     }
     synchronized(this) {
-      if (pendingPick != null) {
+      if (pending != null) {
         promise.reject(LibraryErrors.PICK_IN_PROGRESS, "A picker is already open")
         return
       }
-      pendingPick = promise
-      pendingRequest = requestCode
+      pending = Pending(promise, requestCode, contents)
     }
     activity.runOnUiThread {
       try {
         activity.startActivityForResult(intent, requestCode)
       } catch (e: ActivityNotFoundException) {
-        takePendingPick(requestCode)?.reject(LibraryErrors.NO_PICKER, "No app on this device can pick that", e)
+        takePending(requestCode)?.promise?.reject(LibraryErrors.NO_PICKER, "No app on this device can pick that", e)
       }
     }
   }
 
   @Synchronized
-  private fun takePendingPick(requestCode: Int): Promise? {
-    if (pendingRequest != requestCode) return null
-    return pendingPick.also {
-      pendingPick = null
-      pendingRequest = 0
-    }
+  private fun takePending(requestCode: Int): Pending? {
+    if (pending?.request != requestCode) return null
+    return pending.also { pending = null }
   }
 
   override fun onActivityResult(activity: Activity, requestCode: Int, resultCode: Int, data: Intent?) {
     if (requestCode !in PICK_REQUESTS) return
-    val promise = takePendingPick(requestCode) ?: return
+    val taken = takePending(requestCode) ?: return
+    val promise = taken.promise
     val uri = data?.data
+    if (requestCode == REQUEST_SAVE_BACKUP) {
+      save(resultCode == Activity.RESULT_OK, uri, taken.contents, promise)
+      return
+    }
     if (resultCode != Activity.RESULT_OK || uri == null) {
       promise.resolve(null)
       return
@@ -108,6 +124,23 @@ class DocumentPicker(
   }
 
   override fun onNewIntent(intent: Intent) = Unit
+
+  private fun save(saved: Boolean, uri: Uri?, contents: String?, promise: Promise) {
+    io.execute {
+      try {
+        promise.resolve(BackupSave.complete(saved, uri?.toString(), checkNotNull(contents), ::openForWrite, ::discard))
+      } catch (e: Exception) {
+        rejectLogged(promise, LibraryErrors.SAVE_FAILED, "Could not save the backup", e)
+      }
+    }
+  }
+
+  private fun openForWrite(uri: String, mode: String): OutputStream? =
+    context.contentResolver.openOutputStream(Uri.parse(uri), mode)
+
+  private fun discard(uri: String) {
+    DocumentsContract.deleteDocument(context.contentResolver, Uri.parse(uri))
+  }
 
   private fun describeDocument(uri: Uri): WritableMap =
     Arguments.createMap().apply {
@@ -149,7 +182,9 @@ class DocumentPicker(
     private const val REQUEST_PICK_DOCUMENT = 0x4b42
     private const val REQUEST_PICK_FOLDER = 0x4b43
     private const val REQUEST_PICK_BACKUP = 0x4b44
-    private val PICK_REQUESTS = setOf(REQUEST_PICK_DOCUMENT, REQUEST_PICK_FOLDER, REQUEST_PICK_BACKUP)
+    private const val REQUEST_SAVE_BACKUP = 0x4b46
+    private val PICK_REQUESTS =
+      setOf(REQUEST_PICK_DOCUMENT, REQUEST_PICK_FOLDER, REQUEST_PICK_BACKUP, REQUEST_SAVE_BACKUP)
 
     private val ZIP_MIME_TYPES = listOf("application/zip", "application/x-zip-compressed")
     val PICKABLE_MIME_TYPES = (SupportedAudio.MIME_TYPES + ZIP_MIME_TYPES).toTypedArray()

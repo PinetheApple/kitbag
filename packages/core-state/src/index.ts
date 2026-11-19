@@ -425,6 +425,12 @@ export {
   type MeterOverride,
 } from '@kitbag/core-db';
 export {
+  correctedBpm,
+  TEMPO_CORRECTION,
+  TEMPO_CORRECTIONS,
+  type TempoCorrection,
+} from '@kitbag/core-db';
+export {
   canBuildTempoMode,
   TEMPO_MODE,
   TEMPO_SOURCE,
@@ -590,6 +596,7 @@ export {
 } from './backup/runtime.ts';
 export {
   LIBRARY_BACKUP_FILE_NAME,
+  saveLibraryBackup,
   setlistBackupFileName,
   shareLibraryBackup,
   shareSetlist,

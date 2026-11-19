@@ -8,6 +8,7 @@ export interface BackupDeps {
   >;
   readonly pick: () => Promise<PickedBackup | null>;
   readonly share: (fileName: string, contents: string) => Promise<void>;
+  readonly save: (fileName: string, contents: string) => Promise<boolean>;
   readonly afterRestore: (report: ApplyReport) => Promise<void>;
 }
 
