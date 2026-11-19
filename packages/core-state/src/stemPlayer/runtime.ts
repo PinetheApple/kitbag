@@ -17,6 +17,9 @@ export type StemPlayerCommands = Pick<
   | 'mixerPause'
   | 'mixerStop'
   | 'mixerSeek'
+  | 'songCountIn'
+  | 'songPause'
+  | 'songStop'
   | 'mixerSetLoop'
   | 'mixerClearLoop'
   | 'mixerSetRate'
@@ -69,6 +72,7 @@ export interface MixerRuntime {
 
 export interface StemPlayerRuntime extends MixerRuntime {
   readonly records: StemPlayerRecords;
+  readonly countInBars: () => number;
 }
 
 let configured: StemPlayerRuntime | undefined;

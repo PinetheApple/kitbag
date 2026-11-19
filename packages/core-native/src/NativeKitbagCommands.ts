@@ -124,6 +124,7 @@ export interface Spec extends TurboModule {
     endFrame: Double,
     beatFrames: Double,
     beatsPerBar: Int32,
+    startClick: boolean,
   ): Promise<number>;
   songPause(): void;
   songStop(): void;

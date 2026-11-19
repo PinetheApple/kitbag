@@ -28,6 +28,8 @@ constexpr int32_t kTrackKey = -5;
 constexpr double kEndFrame = 152965.0;
 constexpr double kBeatFrames = 21209.9;
 constexpr int32_t kBeatsPerBar = 3;
+constexpr bool kClickOn = true;
+constexpr bool kClickOff = false;
 const double kBeyondExactFrame =
     std::nextafter(static_cast<double>(KB_MAX_EXACT_FRAME), kInfinity);
 
@@ -36,6 +38,7 @@ kb_result countResult = KB_OK;
 kb_result playResult = KB_OK;
 kb_result startResult = KB_OK;
 uint64_t countedEnd = 0;
+int32_t countedStartClick = -1;
 uint64_t playedFrom = 0;
 
 void fail(const char* what, double track, double value) {
@@ -87,12 +90,16 @@ void expectKeyRead(double track, int32_t wantTrack) {
   if (key != kTrackKey) fail("key not passed through", track, key);
 }
 
-void expectSongCountIn(double endFrame, int32_t want, const std::string& wantCalls) {
+void expectSongCountIn(double endFrame, int32_t want, const std::string& wantCalls,
+                       bool startClick = kClickOff) {
   songCalls.clear();
-  const int32_t got = kitbag::commandSongCountIn(endFrame, kBeatFrames, kBeatsPerBar);
+  const int32_t got = kitbag::commandSongCountIn(endFrame, kBeatFrames, kBeatsPerBar, startClick);
   if (got != want || songCalls != wantCalls) {
     std::fprintf(stderr, "song count-in %g: %d, calls '%s'\n", endFrame, got, songCalls.c_str());
     ++failures;
+  }
+  if (got == KB_OK && countedStartClick != static_cast<int32_t>(startClick)) {
+    fail("song count-in lost its click flag", endFrame, countedStartClick);
   }
 }
 
@@ -101,6 +108,7 @@ void expectSongCountInComposed() {
   if (countedEnd != playedFrom || static_cast<double>(playedFrom) != kEndFrame) {
     fail("song count-in split its end frame", kEndFrame, static_cast<double>(playedFrom));
   }
+  expectSongCountIn(kEndFrame, KB_OK, "count play start ", kClickOn);
   expectSongCountIn(kNaN, KB_ERROR_INVALID_ARGUMENT, "");
   expectSongCountIn(-1, KB_ERROR_INVALID_ARGUMENT, "");
   expectSongCountIn(kEndFrame + 0.5, KB_ERROR_INVALID_ARGUMENT, "");
@@ -150,9 +158,11 @@ extern "C" int64_t kb_mixer_track_frames(const kb_engine*, int32_t track) {
   return kLongTrackFrames;
 }
 
-extern "C" kb_result kb_metronome_count_in_at(kb_engine*, uint64_t end, double, int32_t) {
+extern "C" kb_result kb_metronome_count_in_at(kb_engine*, uint64_t end, double, int32_t,
+                                              int32_t startClick) {
   songCalls += "count ";
   countedEnd = end;
+  countedStartClick = startClick;
   return countResult;
 }
 

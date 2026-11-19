@@ -1,7 +1,12 @@
 import type { StemSetRecord, StoredStem } from '@kitbag/core-db';
-import { KB_MIXER_UNITY_RATE, KB_RESULT } from '@kitbag/core-native';
+import {
+  KB_COUNT_IN_OFF,
+  KB_MIXER_UNITY_RATE,
+  KB_RESULT,
+} from '@kitbag/core-native';
 import { vi } from 'vitest';
 
+import { COUNT_IN_DRAIN_MARGIN_SECONDS } from './countedStart.ts';
 import type {
   StemPlayerCommands,
   StemPlayerRecords,
@@ -84,7 +89,12 @@ export function record(
 
 export function fakeRuntime(set: StemSetRecord) {
   let stored = set;
-  const engine = { position: 0, playing: false, rate: KB_MIXER_UNITY_RATE };
+  const engine = {
+    position: 0,
+    playing: false,
+    now: 0,
+    rate: KB_MIXER_UNITY_RATE,
+  };
   const songStopped = new Set<() => void>();
   const commands = {
     start: vi.fn(() => Promise.resolve(0)),
@@ -104,6 +114,11 @@ export function fakeRuntime(set: StemSetRecord) {
     mixerPause: vi.fn(),
     mixerStop: vi.fn(),
     mixerSeek: vi.fn(),
+    songCountIn: vi.fn<StemPlayerCommands['songCountIn']>(() =>
+      Promise.resolve(KB_RESULT.KB_OK),
+    ),
+    songPause: vi.fn(),
+    songStop: vi.fn(),
     mixerSetLoop: vi.fn(() => Promise.resolve<number>(KB_RESULT.KB_OK)),
     mixerClearLoop: vi.fn(() => Promise.resolve<number>(KB_RESULT.KB_OK)),
     mixerSetRate: vi.fn<StemPlayerCommands['mixerSetRate']>((rate) => {
@@ -146,6 +161,7 @@ export function fakeRuntime(set: StemSetRecord) {
     ),
   };
   const sharedMetronome = { active: vi.fn(() => false), release: vi.fn() };
+  const countInBars = vi.fn<() => number>(() => KB_COUNT_IN_OFF);
   const runtime: StemPlayerRuntime = {
     commands,
     records,
@@ -154,8 +170,9 @@ export function fakeRuntime(set: StemSetRecord) {
       sampleRate: () => RATE,
       position: () => engine.position,
       playing: () => engine.playing,
-      nowFrame: () => 0,
+      nowFrame: () => engine.now,
     },
+    countInBars,
     readWaveform: vi.fn(() => Promise.resolve([0.5])),
   };
   const stopSongFromNotification = () => {
@@ -171,6 +188,7 @@ export function fakeRuntime(set: StemSetRecord) {
     records,
     engine,
     sharedMetronome,
+    countInBars,
     stopSongFromNotification,
     songStopListeners: songStopped,
   };
@@ -189,4 +207,21 @@ export async function opened(
   fake.commands.mixerClearLoop.mockClear();
   fake.commands.mixerRate.mockClear();
   return { ...fake, store };
+}
+
+export const ONE_BAR = 1;
+export const BAR_BEATS = 2;
+export const TWO_FOUR = [{ beat: 0, beatsPerBar: BAR_BEATS }];
+export const BEAT = 0.5;
+export const HEAD = at(1.2);
+export const COUNT_END =
+  at(COUNT_IN_DRAIN_MARGIN_SECONDS) + ONE_BAR * BAR_BEATS * at(BEAT);
+
+export async function countingSong({ click = true } = {}) {
+  const song = await opened([stem(1)], { ...SONG_DETAILS, bars: TWO_FOUR });
+  song.countInBars.mockReturnValue(ONE_BAR);
+  if (click) await song.store.getState().toggleClick();
+  song.engine.position = HEAD;
+  vi.clearAllMocks();
+  return song;
 }
