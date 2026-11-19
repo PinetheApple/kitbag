@@ -1,4 +1,4 @@
-import { configureLibrary } from '@kitbag/core-state';
+import { configureLibrary, configurePlayOrder } from '@kitbag/core-state';
 
 import { getDatabase } from './database.ts';
 
@@ -8,5 +8,11 @@ configureLibrary({
   },
   get presets() {
     return getDatabase().presets;
+  },
+});
+
+configurePlayOrder({
+  get queue() {
+    return getDatabase().playQueue;
   },
 });

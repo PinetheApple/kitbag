@@ -9,8 +9,10 @@ import {
   SheetHint,
 } from '@kitbag/core-design';
 import {
+  isPresetEntry,
   useLibrary,
   useMetronome,
+  type PresetSetlistEntry,
   type SetlistEntry,
 } from '@kitbag/core-state';
 import { useCallback, useMemo } from 'react';
@@ -34,7 +36,7 @@ export interface SetlistDetailScreenProps {
 }
 
 interface EntryRowProps {
-  readonly entry: SetlistEntry;
+  readonly entry: PresetSetlistEntry;
   readonly index: number;
   readonly count: number;
   readonly setlistId: number;
@@ -103,7 +105,7 @@ interface SectionProps {
 function usePlayFromOne({ setlistId, onLoaded, entries }: SectionProps) {
   const loadSong = useLibrary((s) => s.loadSong);
   const start = useMetronome((s) => s.start);
-  const first = entries[0];
+  const first = entries.find(isPresetEntry);
   return useCallback(() => {
     if (first === undefined) return;
     void loadSong(first.preset.id, first.item.id, setlistId).then(() => {
@@ -149,17 +151,19 @@ function EntryList(props: SectionProps & { readonly songMenu: SongMenu }) {
   const { entries } = props;
   if (ready && entries.length === 0)
     return <EmptySet onAdd={props.menu.openAdd} />;
-  return entries.map((entry, index) => (
-    <EntryRow
-      key={entry.item.id}
-      entry={entry}
-      index={index}
-      count={entries.length}
-      setlistId={props.setlistId}
-      songMenu={props.songMenu}
-      onLoaded={props.onLoaded}
-    />
-  ));
+  return entries.map((entry, index) =>
+    isPresetEntry(entry) ? (
+      <EntryRow
+        key={entry.item.id}
+        entry={entry}
+        index={index}
+        count={entries.length}
+        setlistId={props.setlistId}
+        songMenu={props.songMenu}
+        onLoaded={props.onLoaded}
+      />
+    ) : null,
+  );
 }
 
 function ReorderHint() {

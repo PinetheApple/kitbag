@@ -1,3 +1,4 @@
+import { ENTRY_KIND, type SetlistEntry } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
 import { entry } from './fixtures.test-helper.ts';
@@ -21,6 +22,22 @@ describe('song list sheet', () => {
       2,
     );
     expect(rows.map((r) => r.now)).toEqual([false, true]);
+  });
+
+  it('leaves stem songs out, keeping each song its place in the set', () => {
+    const stem = {
+      kind: ENTRY_KIND.stem,
+      item: { id: 5 },
+      stemSetId: 9,
+    } as unknown as SetlistEntry;
+    const rows = songListRows(
+      [stem, entry(1, 'Opener'), entry(2, 'Ballad')],
+      1,
+    );
+    expect(rows.map((r) => [r.number, r.name, r.now])).toEqual([
+      ['2', 'Opener', true],
+      ['3', 'Ballad', false],
+    ]);
   });
 
   it('marks nothing when the loaded song is not in the set', () => {

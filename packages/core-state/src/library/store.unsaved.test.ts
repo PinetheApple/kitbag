@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { isLoadedSongUnsaved } from './presetMapping.ts';
 import { SONG_STEP } from './setlistPosition.ts';
+import { isPresetEntry } from './snapshot.ts';
 import { loadedPresetOf } from './store.ts';
 import { setup } from './store.test-helper.ts';
 
@@ -19,7 +20,9 @@ async function gig() {
   metronome.getState().setTempo(NEXT_BPM);
   const second = await s.newSongFromCurrent('Ballad', setlistId);
   await s.newSongFromCurrent('Shuffle', setlistId);
-  const [opener] = library.getState().entries[setlistId] ?? [];
+  const [opener] = (library.getState().entries[setlistId] ?? []).filter(
+    isPresetEntry,
+  );
   if (opener === undefined) throw new Error('missing opener');
   await s.loadSong(first, opener.item.id, setlistId);
   const edited = () => {
