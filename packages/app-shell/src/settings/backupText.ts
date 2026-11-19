@@ -30,6 +30,9 @@ export const PICK_AGAIN_HINT = 'Choose the backup file again.';
 export const STALE_NOTICE =
   'Your library changed while this was open. Check the new counts and restore again.';
 export const SHARE_FAILED = 'Could not share the backup. Try again.';
+export const SAVE_FAILED = 'Could not save the backup. Try again.';
+export const SAVE_LABEL = 'Save to files';
+export const SHARE_LABEL = 'Share';
 
 export const RESTORE_ORDER: readonly Category[] = [
   'setlists',
