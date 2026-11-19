@@ -38,6 +38,7 @@ import com.kitbag.corenative.library.toMap
 import com.kitbag.corenative.library.SupportedAudio
 import com.kitbag.corenative.library.VolumeWatcher
 import com.kitbag.corenative.library.move.DataFolderBridge
+import com.kitbag.corenative.library.move.DataFolderMoves
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.ExecutorService
@@ -60,6 +61,10 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     DataFolderBridge.Events(::emitOnMoveProgress, ::emitOnMoveFinished, ::emitOnDataFolderChanged),
     ::rejectLogged,
   )
+  private val deletes = LibraryDeletes(
+    DataFolder.get(reactContext),
+    DataFolderMoves.get(reactContext).leftovers,
+  ) { message, cause -> Log.w(TAG, message, cause) }
   private val volumes = VolumeWatcher(reactContext, ::onVolumesChanged)
 
   private val listener: (AnalysisResult) -> Unit = ::emitAnalysis
@@ -336,7 +341,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   override fun deleteLibraryFile(relativePath: String, promise: Promise) {
     io.execute {
       try {
-        LibraryDeletes.file(dataFolder(), relativePath)
+        deletes.file(relativePath)
         promise.resolve(null)
       } catch (e: Exception) {
         rejectLogged(promise, E_DELETE_FAILED, "Delete failed", e)
@@ -345,7 +350,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   }
 
   override fun deleteSongFolder(folderName: String, promise: Promise) {
-    deleteFolder(promise) { LibraryDeletes.songFolder(dataFolder(), folderName) }
+    deleteFolder(promise) { deletes.songFolder(folderName) }
   }
 
   private fun deleteFolder(promise: Promise, delete: () -> Unit) {
@@ -392,7 +397,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   }
 
   override fun deleteStemFolder(folderName: String, promise: Promise) {
-    deleteFolder(promise) { LibraryDeletes.stemFolder(dataFolder(), folderName) }
+    deleteFolder(promise) { deletes.stemFolder(folderName) }
   }
 
   override fun readWaveform(relativePath: String, buckets: Double, promise: Promise) {

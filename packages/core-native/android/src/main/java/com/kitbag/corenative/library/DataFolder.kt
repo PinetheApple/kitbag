@@ -119,11 +119,11 @@ class DataFolder(
   fun forgetAway(volumeUuid: String, relativePaths: Collection<String>) =
     awayManifest.removeAway(volumeUuid, relativePaths)
 
-  fun awayUnder(relativePath: String): List<AwayFiles> {
+  fun awayUnder(relativePath: String, folderMatch: Boolean): List<AwayFiles> {
     val away = awayManifest.load() ?: throw UnreadableStateException(AwayManifest.FILE_NAME)
     val folderPrefix = "$relativePath/"
     val under = away.mapValues { (_, paths) ->
-      paths.filterTo(HashSet()) { it == relativePath || it.startsWith(folderPrefix) }
+      paths.filterTo(HashSet()) { it == relativePath || folderMatch && it.startsWith(folderPrefix) }
     }
     return awayFiles(under.filterValues { it.isNotEmpty() })
   }
