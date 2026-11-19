@@ -31,6 +31,7 @@ const sources: NativeSources = {
   tempoRampHeader: read('src', 'metronome', 'tempo_ramp.h'),
   metronomeTypesHeader: read('src', 'metronome', 'metronome_types.h'),
   transportPlanHeader: read('src', 'mixer', 'transport_plan.h'),
+  mixdownHeader: read('include', 'kitbag_mixdown_api.h'),
 };
 
 const rendered = renderConstants(collectConstants(sources));
