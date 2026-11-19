@@ -13,6 +13,7 @@ import {
   type RigClickPhase,
 } from '@kitbag/core-state';
 
+import { capitalised } from './capitalised.ts';
 import { SEPARATOR } from './separator.ts';
 import { NOT_SAVED } from './settingsLabels.ts';
 
@@ -102,9 +103,6 @@ export interface RouteRowView {
   readonly live: boolean;
   readonly stored: boolean;
 }
-
-const capitalised = (text: string) =>
-  text.charAt(0).toUpperCase() + text.slice(1);
 
 function rowView(
   route: OutputRoute,

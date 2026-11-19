@@ -3,7 +3,7 @@ import {
   SONG_STEP,
   type ActiveSet,
   type LoadedSong,
-  type SetlistEntry,
+  type PresetSetlistEntry,
   type SongPreset,
   type SongStep,
 } from '@kitbag/core-state';
@@ -96,7 +96,7 @@ export function notSavedMessage(song: string): string {
 
 export function stepA11yLabel(
   step: SongStep,
-  target: SetlistEntry | undefined,
+  target: PresetSetlistEntry | undefined,
 ): string {
   const name = STEP_NAME[step];
   return target === undefined ? name : `${name}, ${target.preset.name}`;

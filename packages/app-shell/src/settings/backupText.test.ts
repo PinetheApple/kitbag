@@ -123,6 +123,28 @@ describe('stem songs row', () => {
   });
 });
 
+describe('setlists row', () => {
+  const setlistCounts = (stemEntriesNotOnDevice: number) => ({
+    setlists: counts({ incoming: 2, new: 2, stemEntriesNotOnDevice }),
+  });
+
+  it('counts the stem songs in setlists that are not on this phone', () => {
+    expect(categoryValue('setlists', 2, setlistCounts(0).setlists)).toBe(
+      '2 · all new',
+    );
+    expect(categoryValue('setlists', 2, setlistCounts(3).setlists)).toBe(
+      '2 · all new · 3 stem songs in setlists not on this phone',
+    );
+  });
+
+  it('reports the stem songs in setlists it left out', () => {
+    expect(restoredText('merge', setlistCounts(0))).toBe('Merged 2 setlists.');
+    expect(restoredText('merge', setlistCounts(1))).toBe(
+      'Merged 2 setlists. 1 stem song in setlists not on this phone.',
+    );
+  });
+});
+
 describe('mode copy', () => {
   it('promises merge keeps what you have', () => {
     expect(modeHint(MERGE_PLAN)).toBe(

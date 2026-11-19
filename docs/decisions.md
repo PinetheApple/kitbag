@@ -531,7 +531,8 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   scroll; the numeral is capped at 128 sp under font scaling, compact only; the new gaps
   apply in roomy too; dropdown padding is unchanged; and a lone status row takes the
   lower slot. 360×800, busy (16/16 + poly + two status rows) at font scale 1.15 scrolls
-  by about 20 dp, which hides half the ramp row until you scroll. The mockup's 16 dp spare
+  by about 24 dp: while playing, the poly row sits behind the pinned status rows until you
+  scroll, and a drag on the beat dots scrolls instead of changing tempo. The mockup's 16 dp spare
   does not survive the poly bracket band.
 
 - **2026-10-31 · Subdivision accents: slot 0 and the sound (§17 D2, §12.5, #170)** —
@@ -1060,14 +1061,19 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   single owner is `SupportedAudio.kt`, passed to JS as library constants. **[recorded —
   coordinator ruling]** Import decides by the name’s extension when it is a supported or a known
   unsupported audio extension, and by the MIME type otherwise, so a dot in a title is not read as
-  a format. The copy names each family once, as “Use WAV, MP3, FLAC or AIFF”: AIF and AIFC are
-  AIFF, RF64 is WAV, and W64 is accepted at import but not named. **[recorded — lane call]**
-  Facts behind these: 5 s ffmpeg tones in WAV, MP3, FLAC, AIFF, AIFC, W64 and RF64 each return
-  `KB_OK` from `kb_player_load` and `kb_analyze_song`, and AAC `.m4a` returns
-  `KB_ERROR_INVALID_ARGUMENT`. Android’s MIME table labels `.m4a` as `audio/mpeg`, so the picker
-  still offers M4A files; W64 and RF64 have no Android MIME type, so it does not offer them.
-  An extensionless M4A labelled `audio/mpeg` is admitted by its MIME type and fails at analysis
-  instead; telling that apart from a corrupt file is #347’s.
+  a format. **[recorded — lane call]** Import also reads the file’s first bytes, once the
+  importing indicator shows, and refuses an MP4 (`ftyp` box), Ogg (`OggS`) or ADTS AAC header as
+  M4A, OGG or AAC. A known unsupported extension still names the format (`.opus` stays OPUS,
+  `.m4b` stays M4B); the header overrides only a supported or missing extension and the MIME type,
+  so an extensionless M4A labelled `audio/mpeg` or one renamed `.mp3` is refused as M4A. A file
+  that cannot be opened for the check is left to the copy, which reports the error.
+  **[recorded — coordinator ruling 2026-11-19, #308]** The copy names each family once, as “Use
+  WAV, MP3, FLAC or AIFF”: AIF and AIFC are AIFF, RF64 is WAV, and W64 is accepted at import but
+  not named. **[recorded — lane call]** Facts behind these: 5 s ffmpeg tones in WAV, MP3, FLAC,
+  AIFF, AIFC, W64 and RF64 each return `KB_OK` from `kb_player_load` and `kb_analyze_song`, and
+  AAC `.m4a` returns `KB_ERROR_INVALID_ARGUMENT`. Android’s MIME table labels `.m4a` as
+  `audio/mpeg`, so the picker still offers M4A files; W64 and RF64 have no Android MIME type, so
+  it does not offer them.
 
 - **2026-11-08 · Standalone metronome across a restart (§5.4, #333)** — A kill with a song or
   setlist step loaded relaunches into the standalone settings from before the song, so the

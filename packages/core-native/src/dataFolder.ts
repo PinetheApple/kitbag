@@ -4,13 +4,14 @@ import {
   type MoveErrors,
   type MoveFinished,
   type MoveOutcomes,
+  type MovePhases,
   type MoveStatus,
   type VolumeStates,
 } from './NativeKitbagLibrary';
 
 export type DataFolderCodes = Readonly<{
   moveOutcomes: MoveOutcomes;
-  movePhases: readonly string[];
+  movePhases: MovePhases;
   moveErrors: MoveErrors;
   volumeStates: VolumeStates;
 }>;

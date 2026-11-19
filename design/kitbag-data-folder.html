@@ -111,7 +111,7 @@ svg.i{fill:currentColor;display:block;flex:none}
 .sheet h4 .lead.red{color:var(--red-ink)}
 .hint{font-size:calc(12px*var(--font-scale));line-height:1.45;color:var(--tx2);margin:0}
 .sheet .er{min-height:48px}
-.snack{position:absolute;left:16px;right:16px;background:var(--s3);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:calc(13.5px*var(--font-scale));color:var(--tx);z-index:4;box-shadow:var(--shadow);display:flex;align-items:center;gap:10px}
+.snack{position:absolute;left:12px;right:12px;min-height:48px;background:var(--tx);color:var(--bg);border-radius:12px;padding:0 16px;font-size:calc(13.5px*var(--font-scale));z-index:4;box-shadow:var(--shadow);display:flex;align-items:center;gap:12px}
 
 .search{min-height:44px;flex:none;display:flex;align-items:center;gap:10px;padding:0 14px;border-radius:12px;background:var(--s1);border:1px solid var(--line);color:var(--tx2);font-size:calc(14px*var(--font-scale))}
 .row{display:flex;align-items:center;gap:10px;min-height:62px;border-bottom:1px solid var(--line)}
@@ -233,7 +233,7 @@ svg.i{fill:currentColor;display:block;flex:none}
 <tr><td>#0E0D10 / #F5F3EE</td><td>screen background</td><td><code>--bg</code> (bg)</td></tr>
 <tr><td>#1A1820 / #FFFFFF</td><td>cards, sheets, volume rows, strip</td><td><code>--s1</code> (surface1)</td></tr>
 <tr><td>#242230 / #ECE9E1</td><td>icon tiles, tonal buttons, chips, badges</td><td><code>--s2</code> (surface2)</td></tr>
-<tr><td>#2E2C3A / #E3DFD4</td><td>progress track, sheet grab, snackbar</td><td><code>--s3</code> (surface3)</td></tr>
+<tr><td>#2E2C3A / #E3DFD4</td><td>progress track, sheet grab</td><td><code>--s3</code> (surface3)</td></tr>
 <tr><td>#33303F / #DCD7CA</td><td>borders, row dividers, 2 dp strip track</td><td><code>--line</code> (line)</td></tr>
 <tr><td>#ECEAF0 / #221F26</td><td>titles, values</td><td><code>--tx</code> (text)</td></tr>
 <tr><td>#BDBBC6 / #433F4B</td><td>row labels, subtitles, hints, ghost buttons</td><td><code>--tx2</code> (text2)</td></tr>
@@ -278,7 +278,8 @@ svg.i{fill:currentColor;display:block;flex:none}
 <tr><td>2 dp accent edge, accent 7% fill</td><td>highlighted Data folder row (4c)</td><td class="new">new: tint from <code>.pcard.hot</code>; the edge is new</td></tr>
 <tr><td>62 dp rows, Space Grotesk 15 / Inter 12.5</td><td>Songs rows</td><td>kitbag-song-player.html <code>.row</code></td></tr>
 <tr><td>opacity .4</td><td>unavailable song, disabled volume (icon and title only)</td><td>kitbag-song-player.html <code>.chip.dis</code>; the reason line stays full contrast</td></tr>
-<tr><td>radius 12, padding 10 × 14, s3</td><td>snackbar</td><td>kitbag-song-player.html <code>.snack</code></td></tr>
+<tr><td>#ECEAF0 / #221F26 fill, #0E0D10 / #F5F3EE ink</td><td>snackbar: inverse bar, no border</td><td><code>--tx</code> fill, <code>--bg</code> ink; packages/core-design/src/components/Snackbar.tsx:47-60 and kitbag-metronome-unsaved.html:367</td></tr>
+<tr><td>min height 48, radius 12, side inset 12, padding 0 × 16, gap 12, Inter 400 13.5</td><td>snackbar</td><td>packages/core-design/src/snackbarRoles.ts:5-23 (<code>snackbar</code>, <code>snackbarText.message</code>); kitbag-metronome-unsaved.html:367</td></tr>
 <tr><td>cellphone, micro-sd, folder-move-outline, folder-outline</td><td>volume and move icons</td><td class="new">new entries for core-design <code>icons.ts</code> (all MaterialCommunityIcons)</td></tr>
 <tr><td>12 / 14 / 17 / 20 / 24 / 26 / 28 dp</td><td>icons: badges / Edit button / Home row tile / row tiles, chevrons, snackbar / app bar, close / Home tiles / FAB</td><td>kitbag-song-player.html, the same sizes in its <code>ic()</code> calls for the same components</td></tr>
 <tr><td>bottom 40</td><td>snackbar offset from the bottom (5b)</td><td class="new">new: clears the gesture bar</td></tr>

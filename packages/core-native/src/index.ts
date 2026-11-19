@@ -25,6 +25,7 @@ export type {
   MoveErrors,
   MoveFinished,
   MoveOutcomes,
+  MovePhases,
   MoveStatus,
   VolumeStates,
   PickedBackup,

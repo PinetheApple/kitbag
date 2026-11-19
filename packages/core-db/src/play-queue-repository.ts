@@ -1,4 +1,4 @@
-import { asc, eq } from 'drizzle-orm';
+import { asc, eq, inArray } from 'drizzle-orm';
 
 import { placeAt } from './ordering';
 import { found, type Database, type DatabaseHandle } from './repository';
@@ -65,6 +65,15 @@ async function removeEntry(db: Database, stemSetId: number) {
   await renumber(db, await orderedEntries(db));
 }
 
+async function takeThroughEntry(db: Database, stemSetId: number) {
+  const entries = await orderedEntries(db);
+  const through = entries.findIndex((entry) => entry.stemSetId === stemSetId);
+  if (through < 0) return;
+  const taken = entries.slice(0, through + 1).map((entry) => entry.id);
+  await db.delete(playQueue).where(inArray(playQueue.id, taken));
+  await renumber(db, entries.slice(through + 1));
+}
+
 export function createPlayQueueRepository({ db, transactor }: DatabaseHandle) {
   const { serial, transaction } = transactor;
   return {
@@ -75,6 +84,8 @@ export function createPlayQueueRepository({ db, transactor }: DatabaseHandle) {
       transaction(() => moveEntry(db, stemSetId, position)),
     remove: (stemSetId: number) =>
       transaction(() => removeEntry(db, stemSetId)),
+    takeThrough: (stemSetId: number) =>
+      transaction(() => takeThroughEntry(db, stemSetId)),
     clear: () =>
       serial(async () => {
         await db.delete(playQueue);

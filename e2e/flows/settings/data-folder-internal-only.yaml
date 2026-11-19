@@ -1,0 +1,16 @@
+appId: com.kitbag.app
+name: '#170: with no SD card the data folder is internal storage and nothing else is offered'
+tags:
+  - issue-170
+---
+- runFlow: ../../subflows/launch-fresh.yaml
+- tapOn: 'Settings'
+- scrollUntilVisible:
+    element: 'Data folder, Internal storage · .* free'
+    timeout: 5000
+- tapOn: 'Data folder, Internal storage · .* free'
+- extendedWaitUntil:
+    visible: 'Internal storage, .* free.*, IN USE'
+    timeout: 10000
+- assertVisible: 'Put a portable SD card in to move songs onto it.'
+- assertNotVisible: '.*SD card, .* free.*'

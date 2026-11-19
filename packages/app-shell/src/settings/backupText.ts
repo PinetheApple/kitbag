@@ -132,6 +132,12 @@ const notOnDevice = (plan: CategoryPlan | undefined) => plan?.notOnDevice ?? 0;
 const restorable = (plan: CategoryPlan | undefined) =>
   (plan?.incoming ?? 0) - notOnDevice(plan);
 
+const stemEntriesMissing = (plan: CategoryPlan | undefined) =>
+  plan?.stemEntriesNotOnDevice ?? 0;
+
+const missingInSetlists = (count: number) =>
+  `${counted('stemSongs', count)} in setlists ${NOT_ON_DEVICE}`;
+
 function stemSongsValue(incoming: number, plan: CategoryPlan | undefined) {
   if (plan === undefined) return String(incoming);
   const missing = notOnDevice(plan);
@@ -154,7 +160,13 @@ export function categoryValue(
       : String(incoming);
   if (plan === undefined || incoming === 0) return total;
   const fresh = plan.new === incoming ? 'all new' : `${String(plan.new)} new`;
-  return `${total} ${SEPARATOR} ${fresh}`;
+  const missing = stemEntriesMissing(plan);
+  const parts = [
+    total,
+    fresh,
+    ...(missing === 0 ? [] : [missingInSetlists(missing)]),
+  ];
+  return parts.join(` ${SEPARATOR} `);
 }
 
 export function modeHint(plan: ImportPlan): string {
@@ -248,11 +260,13 @@ export function restoredText(
       ? NOTHING_CHANGED
       : `${verb} ${incomingList(categories, counts)}.`;
   const missing = notOnDevice(counts.stemSongs);
+  const missingEntries = stemEntriesMissing(counts.setlists);
   return [
     restored,
     ...(missing === 0
       ? []
       : [`${counted('stemSongs', missing)} ${NOT_ON_DEVICE}.`]),
+    ...(missingEntries === 0 ? [] : [`${missingInSetlists(missingEntries)}.`]),
     ...(soundResets === 0 ? [] : [soundResetText(soundResets)]),
   ].join(' ');
 }

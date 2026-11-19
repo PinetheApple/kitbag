@@ -100,9 +100,10 @@ function setup({
     listeners?.progress(next);
   };
   const finish = async (finished: MoveFinished) => {
+    const reads = native.moveStatus.mock.calls.length;
     listeners?.finished(finished);
     await vi.waitFor(() => {
-      expect(native.moveStatus).toHaveBeenCalledTimes(2);
+      expect(native.moveStatus).toHaveBeenCalledTimes(reads + 1);
     });
   };
   const setTracks = (next: PlayerTracks) => {
@@ -310,5 +311,127 @@ describe('requests', () => {
     native.undoMove.mockRejectedValue(new Error('bridge gone'));
     await store.getState().undoMove();
     expect(store.getState().error).toBe(CODES.moveErrors.io);
+  });
+});
+
+describe('pending request', () => {
+  it('holds pending from the call until the move and volumes are reread', async () => {
+    const { store, native } = setup();
+    await store.getState().start();
+    let handOff: () => void = () => undefined;
+    native.startMove.mockReturnValue(
+      new Promise<void>((resolve) => {
+        handOff = resolve;
+      }),
+    );
+    const started = store.getState().startMove(CARD);
+    expect(store.getState().pending).toBe(true);
+    handOff();
+    await started;
+    expect(store.getState().pending).toBe(false);
+  });
+
+  it('clears pending after a refusal', async () => {
+    const { store, native } = setup();
+    await store.getState().start();
+    native.cancelMove.mockRejectedValue(rejection(CODES.moveErrors.switched));
+    await store.getState().cancelMove();
+    expect(store.getState()).toMatchObject({
+      pending: false,
+      error: CODES.moveErrors.switched,
+    });
+  });
+
+  it('ignores a second request while one is pending', async () => {
+    const { store, native } = setup();
+    await store.getState().start();
+    const first = store.getState().resumeMove();
+    await store.getState().undoMove();
+    await first;
+    expect(native.resumeMove).toHaveBeenCalledOnce();
+    expect(native.undoMove).not.toHaveBeenCalled();
+  });
+});
+
+describe('finishing clears a stale error', () => {
+  it('drops an earlier refusal once a move finishes well', async () => {
+    const { store, native, finish } = setup();
+    await store.getState().start();
+    native.startMove.mockRejectedValue(
+      rejection(CODES.moveErrors.foregroundRefused),
+    );
+    await store.getState().startMove(CARD);
+    expect(store.getState().error).toBe(CODES.moveErrors.foregroundRefused);
+    await finish({ outcome: CODES.moveOutcomes.done, error: null, path: null });
+    expect(store.getState().error).toBeNull();
+  });
+
+  it('keeps the error of a refused finish', async () => {
+    const { store, finish } = setup();
+    await store.getState().start();
+    await finish({
+      outcome: CODES.moveOutcomes.refused,
+      error: CODES.moveErrors.running,
+      path: null,
+    });
+    expect(store.getState().error).toBe(CODES.moveErrors.running);
+  });
+});
+
+describe('whether a request acted', () => {
+  it('answers true when the call ran and was accepted', async () => {
+    const { store } = setup();
+    await store.getState().start();
+    await expect(store.getState().undoMove()).resolves.toBe(true);
+  });
+
+  it('answers false when refused', async () => {
+    const { store, native } = setup();
+    await store.getState().start();
+    native.undoMove.mockRejectedValue(rejection(CODES.moveErrors.running));
+    await expect(store.getState().undoMove()).resolves.toBe(false);
+  });
+
+  it('answers false when dropped behind a pending request', async () => {
+    const { store } = setup();
+    await store.getState().start();
+    const first = store.getState().resumeMove();
+    await expect(store.getState().undoMove()).resolves.toBe(false);
+    await first;
+  });
+});
+
+describe('a resume that finds the move already finished', () => {
+  it('keeps no refusal once there is no move left', async () => {
+    const { store, native } = setup({
+      move: status({ running: false, paused: true }),
+    });
+    await store.getState().start();
+    native.moveStatus.mockResolvedValue(null);
+    native.resumeMove.mockRejectedValue(rejection(CODES.moveErrors.noMove));
+    await store.getState().resumeMove();
+    expect(store.getState()).toMatchObject({ move: null, error: null });
+  });
+
+  it('drops a refused finish for no move once the reread finds none', async () => {
+    const { store, native, finish } = setup();
+    await store.getState().start();
+    native.moveStatus.mockResolvedValue(null);
+    await finish({
+      outcome: CODES.moveOutcomes.refused,
+      error: CODES.moveErrors.noMove,
+      path: null,
+    });
+    await vi.waitFor(() => {
+      expect(store.getState().error).toBeNull();
+    });
+  });
+
+  it('keeps any other refusal', async () => {
+    const { store, native } = setup();
+    await store.getState().start();
+    native.resumeMove.mockRejectedValue(rejection(CODES.moveErrors.running));
+    await store.getState().resumeMove();
+    expect(store.getState().error).toBe(CODES.moveErrors.running);
   });
 });

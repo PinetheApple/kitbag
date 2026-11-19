@@ -1,8 +1,10 @@
+import { insertStemSet } from '@kitbag/core-db/src/stem-entries.test-helper';
 import { KB_ACCENT, KB_RAMP_UNIT } from '@kitbag/core-native';
 import { describe, expect, it, vi } from 'vitest';
 
 import { SONG_STEP } from './setlistPosition.ts';
 import type { createLibraryStore } from './store.ts';
+import { isPresetEntry } from './snapshot.ts';
 import { setup } from './store.test-helper.ts';
 
 async function songsIn(
@@ -10,9 +12,9 @@ async function songsIn(
   setlistId: number,
 ) {
   await library.getState().refresh();
-  return (library.getState().entries[setlistId] ?? []).map(
-    (e) => e.preset.name,
-  );
+  return (library.getState().entries[setlistId] ?? [])
+    .filter(isPresetEntry)
+    .map((e) => e.preset.name);
 }
 
 describe('library store', () => {
@@ -26,7 +28,7 @@ describe('library store', () => {
     expect(await songsIn(library, gig)).toEqual(['C', 'A', 'B']);
     const dup = await s.duplicateSetlist(gig);
     expect(await songsIn(library, dup)).toEqual(['C', 'A', 'B']);
-    const [c] = library.getState().entries[gig] ?? [];
+    const [c] = (library.getState().entries[gig] ?? []).filter(isPresetEntry);
     if (c === undefined) throw new Error('missing C');
     await s.moveToSetlist(c.item.id, spare);
     expect(await songsIn(library, gig)).toEqual(['A', 'B']);
@@ -42,7 +44,9 @@ describe('library store', () => {
     const s = library.getState();
     const gig = await s.createSetlist('Gig');
     await s.newSongFromCurrent('Solo', gig);
-    const [entry] = library.getState().entries[gig] ?? [];
+    const [entry] = (library.getState().entries[gig] ?? []).filter(
+      isPresetEntry,
+    );
     if (entry === undefined) throw new Error('missing entry');
     await s.removeFromSet(entry.item.id);
     expect(library.getState().standalone.map((p) => p.name)).toEqual(['Solo']);
@@ -91,7 +95,9 @@ describe('library store', () => {
     metronome.getState().setBeats(4, 4);
     metronome.getState().cyclePolyAccent(1);
     metronome.getState().setSounds(0, 0);
-    const [entry] = library.getState().entries[gig] ?? [];
+    const [entry] = (library.getState().entries[gig] ?? []).filter(
+      isPresetEntry,
+    );
     if (entry === undefined) throw new Error('missing entry');
     await s.loadSong(song, entry.item.id, gig);
     const m = metronome.getState();
@@ -121,15 +127,17 @@ describe('library store', () => {
   });
 
   async function offStage() {
-    const { library, repos, metronome } = setup();
+    const { library, repos, metronome, handle } = setup();
     const s = library.getState();
     const gig = await s.createSetlist('Gig');
     for (const name of ['One', 'Two', 'Three'])
       await s.newSongFromCurrent(name, gig);
     const solo = await s.newSongFromCurrent('Solo');
-    const [first] = library.getState().entries[gig] ?? [];
+    const [first] = (library.getState().entries[gig] ?? []).filter(
+      isPresetEntry,
+    );
     if (first === undefined) throw new Error('missing first song');
-    return { library, repos, metronome, gig, solo, first };
+    return { library, repos, metronome, handle, gig, solo, first };
   }
 
   async function onStage() {
@@ -163,6 +171,17 @@ describe('library store', () => {
     expect(loadedName(library)).toBe('Two');
     expect(activeId(library)).toBe(gig);
     expect(library.getState().played).toHaveLength(3);
+  });
+
+  it('steps over a stem song, which the metronome cannot load', async () => {
+    const { library, repos, handle, gig } = await onStage();
+    const stem = await insertStemSet(handle.db, 'Redbone');
+    await repos.setlists.addStemSet(gig, stem, 1);
+    await library.getState().refresh();
+    await library.getState().stepSong(SONG_STEP.next);
+    expect(loadedName(library)).toBe('Two');
+    await library.getState().stepSong(SONG_STEP.previous);
+    expect(loadedName(library)).toBe('One');
   });
 
   it('clears the active setlist when a song is loaded from outside it', async () => {
@@ -246,7 +265,9 @@ describe('library store', () => {
   it('steps by setlist item when the same song is in the set twice', async () => {
     const { library, gig, first } = await onStage();
     await library.getState().addToSetlist(gig, first.preset.id);
-    const items = (library.getState().entries[gig] ?? []).map((e) => e.item.id);
+    const items = (library.getState().entries[gig] ?? [])
+      .filter(isPresetEntry)
+      .map((e) => e.item.id);
     const s = library.getState();
     await s.stepSong(SONG_STEP.next);
     await s.stepSong(SONG_STEP.next);
@@ -364,7 +385,9 @@ describe('library store', () => {
     const gig = await library.getState().createSetlist('Gig');
     metronome.getState().setTempo(88);
     const id = await library.getState().newSongFromCurrent('Song', gig);
-    const [entry] = library.getState().entries[gig] ?? [];
+    const [entry] = (library.getState().entries[gig] ?? []).filter(
+      isPresetEntry,
+    );
     if (entry === undefined) throw new Error('missing entry');
     metronome.getState().setTempo(120);
     vi.spyOn(repos.setlists, 'selectActive').mockRejectedValue(

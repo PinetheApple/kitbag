@@ -197,13 +197,38 @@ export {
   configureLibrary,
   type LibraryRepositories,
 } from './library/runtime.ts';
-export type { SetlistEntry, SetlistSummary } from './library/snapshot.ts';
+export {
+  ENTRY_KIND,
+  isPresetEntry,
+  type PresetSetlistEntry,
+  type SetlistEntry,
+  type SetlistSummary,
+  type StemSetlistEntry,
+} from './library/snapshot.ts';
 export {
   activeSetlistOf,
-  adjacentEntry,
+  adjacentPresetEntry,
   SONG_STEP,
   type SongStep,
 } from './library/setlistPosition.ts';
+export {
+  ADVANCE,
+  advanceOf,
+  UP_NEXT_SOURCE,
+  upNext,
+  type Advance,
+  type PlayOrder,
+  type UpNext,
+} from './playOrder/order.ts';
+export {
+  createPlayOrderStore,
+  playOrderStore,
+  type PlayOrderStore,
+} from './playOrder/store.ts';
+export {
+  configurePlayOrder,
+  type PlayOrderRepositories,
+} from './playOrder/runtime.ts';
 export { activeSetView, type ActiveSet } from './library/activeSet.ts';
 export { transportSetlistOf } from './library/transportSetlist.ts';
 export {
@@ -264,6 +289,8 @@ export {
   type DataFolderNative,
 } from './dataFolder/runtime.ts';
 export type { PlayerTracks } from './dataFolder/release.ts';
+export { useDataFolder } from './dataFolder/useDataFolder.ts';
+export { moveSettled } from './dataFolder/outcomes.ts';
 export { useStemDeck } from './stemDeck/useStemDeck.ts';
 export {
   createStemDeckStore,

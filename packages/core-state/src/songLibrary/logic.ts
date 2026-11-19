@@ -4,7 +4,7 @@ import {
   type LibrarySongRow,
   type SongFiles,
 } from '@kitbag/core-db';
-import type { LibraryConstants } from '@kitbag/core-native';
+import type { LibraryConstants, PickedDocument } from '@kitbag/core-native';
 
 import type { RowFiles } from '../storage/missingRows.ts';
 import { songBadge } from './badge.ts';
@@ -186,8 +186,9 @@ type SupportedAudioLists = Pick<
 // Android maps .m4a to audio/mpeg, so a known audio extension outranks the MIME
 // type; any other text after a dot may be part of the title.
 export function checkAudioFormat(
-  file: { readonly name: string; readonly mimeType: string },
+  file: Pick<PickedDocument, 'name' | 'mimeType'>,
   lists: SupportedAudioLists,
+  headerFormat: string,
 ): FormatCheck {
   const {
     supportedAudioExtensions: extensions,
@@ -195,9 +196,10 @@ export function checkAudioFormat(
     unsupportedAudioExtensions: unsupported,
   } = lists;
   const extension = audioFormat(file.name.trim());
-  if (extensions.includes(extension)) return { supported: true };
   if (unsupported.includes(extension))
     return { supported: false, format: extension };
+  if (headerFormat !== '') return { supported: false, format: headerFormat };
+  if (extensions.includes(extension)) return { supported: true };
   const mimeType = mediaType(file.mimeType);
   return mimeTypes.includes(mimeType)
     ? { supported: true }
