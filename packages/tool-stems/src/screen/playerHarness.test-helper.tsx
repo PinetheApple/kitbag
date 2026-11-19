@@ -48,6 +48,7 @@ export const INSTRUMENTAL = {
 };
 
 type RecordChange = NonNullable<Parameters<typeof record>[1]>;
+type StoredStem = ReturnType<typeof stem>;
 type FakeRuntime = ReturnType<typeof fakeRuntime>['runtime'];
 
 // configureStemPlayer takes one runtime for the process, so it delegates.
@@ -177,8 +178,11 @@ export function playerTree({
   );
 }
 
-export function installFakeRuntime(change: RecordChange = SONG_DETAILS) {
-  const fake = fakeRuntime(record(STEMS, change));
+export function installFakeRuntime(
+  change: RecordChange = SONG_DETAILS,
+  stems: readonly StoredStem[] = STEMS,
+) {
+  const fake = fakeRuntime(record([...stems], change));
   live = fake.runtime;
   return fake;
 }
@@ -212,8 +216,11 @@ export async function mountSurface(element: ReactElement) {
   };
 }
 
-export async function mountPlayer(change: RecordChange = SONG_DETAILS) {
-  const fake = installFakeRuntime(change);
+export async function mountPlayer(
+  change: RecordChange = SONG_DETAILS,
+  stems: readonly StoredStem[] = STEMS,
+) {
+  const fake = installFakeRuntime(change, stems);
   takeAccessibilityEvents();
   const commit = vi.fn();
   const scrolls = vi.fn();
