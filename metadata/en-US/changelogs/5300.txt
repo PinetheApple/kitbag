@@ -1,0 +1,1 @@
+• Stem songs can be exported: in the player menu, Export mix saves the current mix (with your speed and key) as a WAV file and opens the share sheet. Playback keeps going while it renders.
