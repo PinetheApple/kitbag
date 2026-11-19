@@ -310,7 +310,6 @@ from pathlib import Path
 
 report, artifacts, out = sys.argv[1], Path(sys.argv[2]), Path(sys.argv[3])
 crash_marker, crash_lines = sys.argv[4], int(sys.argv[5])
-runs = sorted(artifacts.iterdir()) if artifacts.is_dir() else []
 failed = 0
 for case in ET.parse(report).iter('testcase'):
     problem = case.find('failure')
@@ -338,8 +337,9 @@ for case in ET.parse(report).iter('testcase'):
         print(f'    screenshot: {saved}')
     else:
         print('    screenshot: none captured')
-    crashes = (run / flow_dir / 'logs' / 'crash-report.txt' for run in runs)
-    for crash in (path for path in crashes if path.is_file()):
+    for crash in sorted(artifacts.rglob('crash-report.txt')):
+        if crash.parent.parent.name != flow_dir:
+            continue
         try:
             lines = crash.read_text(errors='replace').splitlines()
         except OSError:
