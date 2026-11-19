@@ -5,7 +5,6 @@ import {
   COUNT_IN_DRAIN_MARGIN_SECONDS,
   countedStart,
   type CountedStartRequest,
-  UNMARKED_BAR_BEATS,
 } from './countedStart.ts';
 
 const RATE = 48000;
@@ -13,6 +12,7 @@ const NOW = 1_000_000;
 const at = (seconds: number) => Math.round(seconds * RATE);
 const LEAD = at(COUNT_IN_DRAIN_MARGIN_SECONDS);
 
+const UNMARKED_BAR = 3;
 const FOUR_FOUR = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5];
 
 function request(change: Partial<CountedStartRequest>): CountedStartRequest {
@@ -24,6 +24,7 @@ function request(change: Partial<CountedStartRequest>): CountedStartRequest {
     bars: 1,
     beats: FOUR_FOUR,
     downbeatIndices: [0, 4, 8],
+    unmarkedBeatsPerBar: UNMARKED_BAR,
     ...change,
   };
 }
@@ -76,10 +77,10 @@ describe('a counted start', () => {
     expect(Number.isInteger(plan?.endFrame)).toBe(true);
   });
 
-  it('counts four-beat bars from the beat at the head when no bars are marked', () => {
+  it("counts the song's meter from the beat at the head when no bars are marked", () => {
     const plan = countedStart(request({ downbeatIndices: [] }));
     expect(plan?.startFrame).toBe(at(2));
-    expect(plan?.beatsPerBar).toBe(UNMARKED_BAR_BEATS);
+    expect(plan?.beatsPerBar).toBe(UNMARKED_BAR);
     expect(plan?.beatFrames).toBeCloseTo(0.5 * RATE);
     expect(
       countedStart(request({ downbeatIndices: [], headFrame: at(2.6) }))

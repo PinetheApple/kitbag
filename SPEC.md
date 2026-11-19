@@ -357,8 +357,8 @@ the count took, and a later start locks to the song's grid. Toggling the click
 during the count re-issues it with the same end frame and the new `start_click`,
 dropping beats already past; the metronome tool's Play during the count ends it
 and starts the song at once, and so does a refused re-issue. A grid with no bar
-marks (common in StemDeck bundles) counts four-beat bars from the beat at or
-before the head.
+marks (common in StemDeck bundles) counts from the beat at or before the head,
+in bars of the song's meter: four beats until a meter is detected or chosen.
 
 **Past the last grid beat, the click goes silent and stays silent.** Every song
 reaches this. `is_running()` keeps reporting true, and `bar_phase` and

@@ -26,6 +26,7 @@ type ClickContext = Pick<
 >;
 
 const noCount = () => false;
+const noGridFollower = () => undefined;
 
 function releaseGrid({ commands }: Pick<MixerRuntime, 'commands'>): void {
   commands.metronomeFollowMixer(false);
@@ -59,12 +60,11 @@ function gridOf({ beats, downbeatIndices }: ClickSlice) {
   return { grid, downbeats: usableDownbeats(downbeatIndices, grid.length) };
 }
 
-export async function followNewGrid({
-  set,
-  get,
-  runtimeOf,
-  session,
-}: MixerSessionContext<ClickSlice>): Promise<void> {
+export async function followNewGrid(
+  { set, get, runtimeOf, session }: MixerSessionContext<ClickSlice>,
+  gridReplaced: () => void = noGridFollower,
+): Promise<void> {
+  gridReplaced();
   if (!get().click) return;
   const sent = get().beats;
   const { grid, downbeats } = gridOf(get());

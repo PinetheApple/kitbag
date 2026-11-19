@@ -1,7 +1,7 @@
 import { KB_COUNT_IN_OFF, KB_RESULT } from '@kitbag/core-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { UNMARKED_BAR_BEATS } from './countedStart.ts';
+import { FALLBACK_BEATS_PER_BAR } from './barMeter.ts';
 import { RETIME_PLAYBACK_RATE } from './retimeSpeed.ts';
 import {
   at,
@@ -70,7 +70,7 @@ describe('play with a count-in', () => {
     expect(song.commands.mixerPlay).not.toHaveBeenCalled();
     expect(song.commands.mixerSeek.mock.calls).toEqual([[BAR_AT_HEAD]]);
     const [call] = counts(song);
-    expect(call?.[2]).toBe(UNMARKED_BAR_BEATS);
+    expect(call?.[2]).toBe(FALLBACK_BEATS_PER_BAR);
     expect(call?.[3]).toBe(false);
   });
 

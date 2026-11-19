@@ -5,8 +5,6 @@ import { usableDownbeats } from './bars.ts';
 import { secondsToFrames } from './time.ts';
 
 export const COUNT_IN_DRAIN_MARGIN_SECONDS = 0.1;
-// A song with beats but no bar marks counts in the analyser's four-beat bars.
-export const UNMARKED_BAR_BEATS = 4;
 
 export interface CountedStartRequest {
   readonly headFrame: number;
@@ -16,6 +14,7 @@ export interface CountedStartRequest {
   readonly bars: number;
   readonly beats: readonly number[];
   readonly downbeatIndices: readonly number[];
+  readonly unmarkedBeatsPerBar: number;
 }
 
 export interface CountedStart {
@@ -50,16 +49,21 @@ interface CountedBar {
   readonly beatsPerBar: number;
 }
 
+interface BarSource {
+  readonly beatCount: number;
+  readonly downbeats: readonly number[];
+  readonly unmarkedBeatsPerBar: number;
+}
+
 function countedBar(
   headFrame: number,
   frameOf: (beat: number) => number,
-  beatCount: number,
-  downbeats: readonly number[],
+  { beatCount, downbeats, unmarkedBeatsPerBar }: BarSource,
 ): CountedBar | null {
   if (downbeats.length === 0) {
     const everyBeat = Array.from({ length: beatCount }, (_, beat) => beat);
     const startBeat = barAtOrBefore(headFrame, frameOf, everyBeat);
-    return { startBeat, beatsPerBar: UNMARKED_BAR_BEATS };
+    return { startBeat, beatsPerBar: unmarkedBeatsPerBar };
   }
   const bar = barAtOrBefore(headFrame, frameOf, downbeats);
   const startBeat = downbeats[bar];
@@ -84,13 +88,18 @@ export function countedStart({
   bars,
   beats,
   downbeatIndices,
+  unmarkedBeatsPerBar,
 }: CountedStartRequest): CountedStart | null {
   if (!isCountInBars(bars) || bars === KB_COUNT_IN_OFF) return null;
   if (!(engineRate > 0) || !(playbackRate > 0)) return null;
   const downbeats = usableDownbeats(downbeatIndices, beats.length);
   const frameOf = (beat: number) =>
     secondsToFrames(beats[beat] ?? 0, engineRate);
-  const counted = countedBar(headFrame, frameOf, beats.length, downbeats);
+  const counted = countedBar(headFrame, frameOf, {
+    beatCount: beats.length,
+    downbeats,
+    unmarkedBeatsPerBar,
+  });
   if (counted === null || counted.beatsPerBar > KB_MAX_BEATS) return null;
   const { startBeat, beatsPerBar } = counted;
   const interval = countInterval(beats, startBeat);
