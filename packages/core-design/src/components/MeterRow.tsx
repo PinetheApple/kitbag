@@ -1,14 +1,12 @@
 import { Pressable, Text, View } from 'react-native';
 
-import { meterRowValue } from '../meterText.ts';
+import { meterCopy, meterRowValue } from '../meterText.ts';
 import { opacity, textRoles } from '../roles.ts';
 import { rowLabel } from '../rowLabel.ts';
 import { stemPlayer } from '../stemPlayerRoles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
 import { Icon } from './Icon.tsx';
-
-const METER_TITLE = 'Meter';
 
 const useStyles = createThemedStyles((theme) => ({
   row: {
@@ -34,36 +32,35 @@ export interface MeterRowProps {
 
 export function MeterRow({
   value,
-  yours,
+  yours: overridden,
   disabled = false,
   reason,
   onPress,
 }: MeterRowProps) {
   const styles = useStyles();
-  const shown = meterRowValue(value, yours);
-  const enabled = !disabled;
+  const shown = meterRowValue(value, overridden);
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={rowLabel(METER_TITLE, enabled ? shown : reason)}
-      accessibilityState={{ disabled: !enabled }}
-      disabled={!enabled}
-      style={[styles.row, !enabled && styles.disabled]}
+      accessibilityLabel={rowLabel(meterCopy.title, disabled ? reason : shown)}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      style={[styles.row, disabled && styles.disabled]}
       onPress={onPress}
     >
       <Icon name="metronome" size="title" color="text2" />
       <View style={styles.body}>
-        <Text style={styles.label}>{METER_TITLE}</Text>
-        {enabled || reason === undefined ? null : (
+        <Text style={styles.label}>{meterCopy.title}</Text>
+        {disabled && reason !== undefined ? (
           <Text style={styles.detail}>{reason}</Text>
-        )}
+        ) : null}
       </View>
-      {enabled ? (
+      {disabled ? null : (
         <>
           <Text style={styles.value}>{shown}</Text>
           <Icon name="forward" size="title" color="decor" />
         </>
-      ) : null}
+      )}
     </Pressable>
   );
 }

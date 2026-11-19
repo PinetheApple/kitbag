@@ -61,8 +61,8 @@ const useStyles = createThemedStyles((theme) => ({
     position: 'relative',
     left: 0,
     right: 0,
-    marginHorizontal: snackbar.sideInset,
-    marginBottom: snackbar.aboveDock,
+    marginHorizontal: snackbar.sheetSideInset,
+    marginBottom: snackbar.aboveSheet,
   },
   noAction: {
     paddingRight: snackbar.textLeft,

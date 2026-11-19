@@ -18,6 +18,12 @@ describe('meter text', () => {
     [105.3, '1:45.3'],
     [59.96, '1:00.0'],
     [-1, '0:00.0'],
+    [Number.NaN, '0:00.0'],
+    [Number.POSITIVE_INFINITY, '0:00.0'],
+    [Number.NEGATIVE_INFINITY, '0:00.0'],
+    [3600, '1:00:00.0'],
+    [3725.46, '1:02:05.5'],
+    [3599.96, '1:00:00.0'],
   ])('clocks %f s as %s', (seconds, text) => {
     expect(tenthsClock(seconds)).toBe(text);
   });

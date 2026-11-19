@@ -1,4 +1,4 @@
-import type { ReactElement, ReactNode } from 'react';
+import { createElement, type ReactElement, type ReactNode } from 'react';
 import { expect, it, vi } from 'vitest';
 
 const DRAG = { drag: true };
@@ -109,13 +109,14 @@ function flat(style: unknown): Record<string, unknown> {
   return Object.assign({}, ...parts) as Record<string, unknown>;
 }
 
-function openSheet(onDismiss = vi.fn(), title = 'T') {
+function openSheet(onDismiss = vi.fn(), title = 'T', notice?: ReactNode) {
   portal.show.mockClear();
   Sheet({
     visible: true,
     title,
     dismissLabel: `Close ${title}`,
     onDismiss,
+    notice,
     children: null,
   });
   return portal.show.mock.calls[0]?.[1] as ReactElement<Props>;
@@ -137,6 +138,16 @@ it('keeps the slide animation off the view that carries the drag transform', () 
   expect([outer.props.style].flat()).not.toContain(DRAG);
   expect(inner.props.entering).toBeUndefined();
   expect([inner.props.style].flat()).toContain(DRAG);
+});
+
+it('draws the notice in the portal above the sheet, sliding with its drag', () => {
+  const notice = createElement('Notice');
+  const slot = child(openSheet(vi.fn(), 'T', notice), 1);
+  const [noticeView, sheet] = [child(slot, 0), child(slot, 1)];
+  expect(child(noticeView, 0)).toBe(notice);
+  expect([noticeView.props.style].flat()).toContain(DRAG);
+  expect([sheet.props.style].flat()).toContain(DRAG);
+  expect(child(openSheet(), 1).props.children).toContain(null);
 });
 
 it('caps the sheet below the status bar so tall content scrolls inside it', () => {

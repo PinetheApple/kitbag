@@ -271,6 +271,9 @@ export function Sheet({
       space.cardPadding + Math.max(bottomInset, -keyboard.height.value),
     transform: [{ translateY: dragY.value }],
   }));
+  const noticeStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: dragY.value }],
+  }));
 
   const { show, hide, topInset } = useSheetPortal();
   const slotStyle = useMemo(
@@ -309,7 +312,9 @@ export function Sheet({
         exiting={transitions.sheetOut}
         style={slotStyle}
       >
-        {notice}
+        {notice === undefined ? null : (
+          <Animated.View style={noticeStyle}>{notice}</Animated.View>
+        )}
         <Animated.View
           style={[styles.sheet, sheetStyle]}
           onLayout={handleLayout}
