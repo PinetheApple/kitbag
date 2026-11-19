@@ -338,17 +338,28 @@ describe('library store', () => {
     expect(library.getState().loaded?.itemId).toBe(items[2]);
   });
 
-  it('starts from song 1 when the loaded song is removed from the set', async () => {
-    const { library, gig, first } = await onStage();
+  it('steps from the position of the loaded song once it is removed from the set', async () => {
+    const { library, gig } = await onStage();
+    const [one, two, three] = library.getState().entries[gig] ?? [];
     await library.getState().stepSong(SONG_STEP.next);
-    const loaded = library.getState().loaded?.itemId;
-    if (loaded === undefined || loaded === null) throw new Error('not loaded');
-    await library.getState().removeFromSet(loaded);
+    await library.getState().removeFromSet(two?.item.id ?? 0);
+    await library.getState().stepSong(SONG_STEP.next);
+    expect(library.getState().loaded?.itemId).toBe(three?.item.id);
+    await library.getState().removeFromSet(three?.item.id ?? 0);
     await library.getState().stepSong(SONG_STEP.previous);
-    expect(library.getState().loaded?.itemId).toBe(loaded);
-    await library.getState().stepSong(SONG_STEP.next);
-    expect(library.getState().loaded?.itemId).toBe(first.item.id);
+    expect(library.getState().loaded?.itemId).toBe(one?.item.id);
     expect(activeId(library)).toBe(gig);
+  });
+
+  it('loads nothing on Next when the last song on stage is removed', async () => {
+    const { library, gig } = await onStage();
+    const [, , three] = library.getState().entries[gig] ?? [];
+    await library.getState().stepSong(SONG_STEP.next);
+    await library.getState().stepSong(SONG_STEP.next);
+    await library.getState().removeFromSet(three?.item.id ?? 0);
+    const step = await library.getState().stepSong(SONG_STEP.next);
+    expect(step.entry).toBeUndefined();
+    expect(library.getState().loaded?.itemId).toBe(three?.item.id);
   });
 
   it('with the set active and no song loaded, Next loads song 1 and Previous does nothing', async () => {

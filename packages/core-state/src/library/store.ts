@@ -13,6 +13,7 @@ import { getLibrary, type LibraryRepositories } from './runtime.ts';
 import {
   activeSetlistOf,
   adjacentEntry,
+  stagePositionOf,
   type SongStep,
 } from './setlistPosition.ts';
 import {
@@ -369,8 +370,8 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
         if (active === undefined) return undefined;
         const setlistId = active.setlist.id;
         const entries = get().entries[setlistId] ?? [];
-        const loadedItemId = get().loaded?.itemId ?? null;
-        const entry = adjacentEntry(entries, loadedItemId, step);
+        const position = stagePositionOf(get().loaded, setlistId);
+        const entry = adjacentEntry(entries, position, step);
         return entry === undefined ? undefined : { entry, setlistId };
       };
       const first = target();

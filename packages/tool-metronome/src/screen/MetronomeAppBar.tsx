@@ -21,6 +21,7 @@ import {
   activeSetView,
   adjacentEntry,
   SONG_STEP,
+  stagePositionOf,
   useLibrary,
   useStemSongs,
   type ActiveSet,
@@ -262,13 +263,15 @@ function SetlistsChip({ onPress }: { readonly onPress: () => void }) {
   );
 }
 
-function useStepTargets(context: SongContext) {
-  const { entries, loadedItemId } = context;
+function useStepTargets(context: SongContext & { readonly set: ActiveSet }) {
+  const { entries, set } = context;
+  const loaded = useLibrary((s) => s.loaded);
   const stems = useStemSongs();
   const nameOf = (entry: SetlistEntry | undefined) =>
     entry === undefined ? undefined : entryName(entry, stems);
-  const previous = adjacentEntry(entries, loadedItemId, SONG_STEP.previous);
-  const next = adjacentEntry(entries, loadedItemId, SONG_STEP.next);
+  const position = stagePositionOf(loaded, set.id);
+  const previous = adjacentEntry(entries, position, SONG_STEP.previous);
+  const next = adjacentEntry(entries, position, SONG_STEP.next);
   return { previous: nameOf(previous), next: nameOf(next) };
 }
 

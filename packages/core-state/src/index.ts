@@ -212,6 +212,8 @@ export {
   activeSetlistOf,
   adjacentEntry,
   SONG_STEP,
+  stagePositionOf,
+  type StagePosition,
   type SongStep,
 } from './library/setlistPosition.ts';
 export {
