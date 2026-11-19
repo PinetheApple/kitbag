@@ -243,7 +243,7 @@ class Mixer {
   void MixTrack(Track& tr, float* output, uint32_t frame_count, bool any_solo);
   void MixAllTracks(float* output, uint32_t frame_count, bool any_solo);
   void AdvanceTransport(uint32_t frame_count);
-  void EndRun(bool arrived);
+  void EndRun();
 
   using EngageState = MixerEngageState;
   bool ReserveUndoableCommand();
@@ -353,7 +353,7 @@ class Mixer {
   SongClock song_clock_;
   bool opens_on_jump_ = false;
   bool continues_run_ = false;
-  bool run_advanced_ = false;
+  bool landed_on_end_ = false;
   RtPublisher<TransportPlan> plans_;
   uint64_t app_epoch_ = 0;
   LoopLayout app_layout_;

@@ -71,7 +71,6 @@ void Mixer::AdoptTransport(const TransportPlan& plan) {
   } else {
     stream_frame_ = plan.frame;
     jump_base_.store(now, std::memory_order_relaxed);
-    run_advanced_ = false;
     engaged_.store(false, std::memory_order_relaxed);
     const bool over_user_jump = opens_on_jump_ && !continues_run_;
     continues_run_ = plan.continues_run && !over_user_jump;
@@ -205,10 +204,9 @@ void Mixer::AdvanceTransport(uint32_t frame_count) {
     advance = std::clamp<int64_t>(longest - stream_frame_, 0, frame_count);
   }
   if (advance == 0) {
-    EndRun(stream_frame_ == longest);
+    EndRun();
     return;
   }
-  run_advanced_ = true;
   song_clock_ = {
       .playing = true,
       .opens_on_jump = std::exchange(opens_on_jump_, false),
@@ -218,6 +216,7 @@ void Mixer::AdvanceTransport(uint32_t frame_count) {
       .layout = layout_
   };
   stream_frame_ += advance;
+  landed_on_end_ = !layout_.looping && stream_frame_ == longest;
   transport_frame_.store(
       transport_frame_.load(std::memory_order_relaxed) + advance,
       std::memory_order_relaxed
@@ -228,11 +227,9 @@ void Mixer::AdvanceTransport(uint32_t frame_count) {
   );
 }
 
-// An unload can leave the head past the new end; only a run that played onto
-// the last frame counts, so Play at the end and an empty mixer do not.
-void Mixer::EndRun(bool arrived) {
+void Mixer::EndRun() {
   playing_.store(false, std::memory_order_relaxed);
-  if (std::exchange(run_advanced_, false) && arrived) {
+  if (std::exchange(landed_on_end_, false)) {
     end_count_.fetch_add(1, std::memory_order_relaxed);
   }
 }

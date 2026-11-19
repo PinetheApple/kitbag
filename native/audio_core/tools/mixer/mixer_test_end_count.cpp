@@ -11,7 +11,9 @@ constexpr int kPlayedBlocks = 2;
 constexpr uint64_t kTinySong = 300;
 constexpr float kEndSpeed = 0.75f;
 constexpr int64_t kStretchSong = kSampleRate;
-constexpr int64_t kStretchSeekBack = kSampleRate / 3 + 7;
+// Off-round, so the end does not sit on a block edge by construction.
+constexpr int64_t kOffBlockNudge = 7;
+constexpr int64_t kStretchSeekBack = kSampleRate / 3 + kOffBlockNudge;
 constexpr int kMaxStretchBlocks = 200;
 constexpr int kBeforeRateBlocks = 20;
 
@@ -145,25 +147,7 @@ void TestSongShorterThanABlockCountsOnce() {
   CheckCount(mixer, 1, "end count: a sub-block song counts once");
 }
 
-void TestStretchedEndCountsOnce() {
-  kitbag::Mixer mixer(kSampleRate);
-  LoadTone(&mixer, kStretchSong);
-  mixer.SetRate(kEndSpeed, kZeroClock, false);
-  mixer.Seek(kStretchSong - kStretchSeekBack, kZeroClock, false);
-  mixer.Play();
-  bool engaged = false;
-  for (int b = 0; b < kMaxStretchBlocks && (b == 0 || mixer.is_playing());
-       ++b) {
-    RenderPaced(&mixer, 1);
-    engaged = engaged || mixer.stretch_engaged();
-  }
-  RenderPaced(&mixer, kRestBlocks);
-  Check(engaged, "end count: the slowed song plays through the stretch");
-  Check(!mixer.is_playing(), "end count: the slowed song stops at its end");
-  CheckCount(mixer, 1, "end count: a slowed song's end counts once");
-}
-
-bool PlayUntilStopped(kitbag::Mixer* mixer) {
+bool PlayToStopReportingStretch(kitbag::Mixer* mixer) {
   bool engaged = false;
   for (int b = 0; b < kMaxStretchBlocks && mixer->is_playing(); ++b) {
     RenderPaced(mixer, 1);
@@ -173,13 +157,31 @@ bool PlayUntilStopped(kitbag::Mixer* mixer) {
   return engaged;
 }
 
+void TestStretchedEndCountsOnce() {
+  kitbag::Mixer mixer(kSampleRate);
+  LoadTone(&mixer, kStretchSong);
+  mixer.SetRate(kEndSpeed, kZeroClock, false);
+  mixer.Seek(kStretchSong - kStretchSeekBack, kZeroClock, false);
+  mixer.Play();
+  RenderPaced(&mixer, 1);
+  Check(
+      PlayToStopReportingStretch(&mixer),
+      "end count: the slowed song plays through the stretch"
+  );
+  Check(!mixer.is_playing(), "end count: the slowed song stops at its end");
+  CheckCount(mixer, 1, "end count: a slowed song's end counts once");
+}
+
 void TestHandOverEndCountsOnce() {
   kitbag::Mixer mixer(kSampleRate);
   LoadTone(&mixer, kStretchSong);
   mixer.Play();
   RenderPaced(&mixer, kBeforeRateBlocks);
   mixer.SetRate(kEndSpeed, kZeroClock, false);
-  Check(PlayUntilStopped(&mixer), "end count: the rate change handed over");
+  Check(
+      PlayToStopReportingStretch(&mixer),
+      "end count: the rate change handed over"
+  );
   Check(!mixer.is_playing(), "end count: the handed-over song stops");
   CheckCount(mixer, 1, "end count: an end after a hand-over counts once");
 }
@@ -200,17 +202,17 @@ void TestStretchedUnloadDoesNotCount() {
 }  // namespace
 
 void RunEndCountTests() {
+  TestEndCountsOnceAndAgainAfterSeek();
   TestPlayAtTheEndDoesNotCount();
   TestPauseOnTheLastFrameCountsOnPlay();
   TestSeekToTheEndDoesNotCount();
   TestEmptyAndUnloadDoNotCount();
-  TestHandOverEndCountsOnce();
-  TestStretchedUnloadDoesNotCount();
-  TestEndCountsOnceAndAgainAfterSeek();
   TestLoopOverTheEndNeverCounts();
   TestStopAndPauseDoNotCount();
   TestSongShorterThanABlockCountsOnce();
   TestStretchedEndCountsOnce();
+  TestHandOverEndCountsOnce();
+  TestStretchedUnloadDoesNotCount();
 }
 
 }  // namespace mixer_test

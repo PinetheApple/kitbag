@@ -264,9 +264,8 @@ KB_EXPORT void kb_mixer_stop(kb_engine* engine);
 /* Ends playback holding the head, so kb_mixer_play resumes from there. */
 KB_EXPORT void kb_mixer_pause(kb_engine* engine);
 KB_EXPORT int32_t kb_mixer_is_playing(const kb_engine* engine);
-/* Runs that played onto the song's last frame and stopped there. A loop, Play
- * at the end and Play with nothing loaded never count. Starts at 0 and never
- * resets: compare against the last value read. Lags up to one block; 0 for null. */
+/* Runs that played onto the song's last frame and stopped; never resets. A
+ * loop, Play at the end or an empty mixer never count. Lags up to a block. */
 KB_EXPORT uint32_t kb_mixer_end_count(const kb_engine* engine);
 /* Engine-rate song frame; inside a loop, at or past its end lands on its start.
  * Blocks while all tracks rebuild (~7 ms for 6 stems on desktop): debounce. */
