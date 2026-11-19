@@ -1,4 +1,8 @@
 export {
+  DatabaseOpenError,
+  type DatabaseOpenErrorKind,
+} from './database-open-error';
+export {
   DATABASE_NAME,
   openDatabase,
   type KitbagDatabase,

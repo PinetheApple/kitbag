@@ -17,9 +17,14 @@ vi.mock('@op-engineering/op-sqlite', async () => {
   };
 });
 
-import { connectDatabase, ForeignKeysOff, openDatabase } from './client';
+import { connectDatabase, openDatabase } from './client';
 import { memoryClickSoundFiles } from './click-sound-files.test-helper';
+import {
+  opSqliteError,
+  throwsOpenError,
+} from './database-open-error.test-helper';
 import { fakeOpSqlite } from './op-sqlite-fake.test-helper';
+import { SQLITE_IOERR } from './sqlite-result-codes';
 
 function openAppDatabase() {
   const database = openDatabase(memoryClickSoundFiles().files);
@@ -48,11 +53,32 @@ describe('foreign keys on the app connection', () => {
           ? { rowsAffected: 0, rows: [] }
           : connection.executeSync(sql, params),
     };
-    expect(() =>
+    throwsOpenError('foreign-keys', () =>
       connectDatabase(ignoringForeignKeys, memoryClickSoundFiles().files),
-    ).toThrow(ForeignKeysOff);
+    );
     expect(close).toHaveBeenCalledOnce();
   });
+
+  it.each([
+    ['foreign-keys', new Error('pragma read failed')],
+    ['storage', opSqliteError('disk I/O error', SQLITE_IOERR)],
+  ] as const)(
+    'refuse to open as %s, keeping the cause, when reading the pragma throws',
+    (kind, failure) => {
+      const { connection } = fakeOpSqlite();
+      const unreadable = {
+        ...connection,
+        executeSync: (sql: string, params?: Scalar[]) => {
+          if (sql === 'PRAGMA foreign_keys') throw failure;
+          return connection.executeSync(sql, params);
+        },
+      };
+      const error = throwsOpenError(kind, () =>
+        connectDatabase(unreadable, memoryClickSoundFiles().files),
+      );
+      expect(error.cause).toBe(failure);
+    },
+  );
 
   it('are on for the async reads and writes the repositories make', async () => {
     const { database, connection } = openAppDatabase();

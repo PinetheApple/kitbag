@@ -1631,7 +1631,8 @@ gives compile-time-checked SQL and generated migrations, which is the property
 Drift was providing. **Migrations are additive and non-destructive; existing user
 data survives** for every database at v7 or later. The Flutter build had a different
 applicationId, so its v6 database can never reach this app; the runner refuses
-versions 1–6 with `UnsupportedSchemaVersion` and leaves the file untouched.
+versions 1–6 (`DatabaseOpenError` kind `legacy-version`), and any version newer
+than its own (`newer-version`), before writing anything.
 
 ### 11.2 Changes required
 
