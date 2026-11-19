@@ -785,8 +785,10 @@ referenced but never drew: **setlists**, **setlist detail**, **preset editor**.
   shows the loaded song over the setlist and position ("Test gig · 2/4").
   Previous and next load the adjacent song in one tap, through the same load
   path as tapping it in setlist detail, and are disabled on the first and last
-  song. When no song from the set is loaded, next loads song 1 and the chip
-  shows the setlist name. The chip opens the setlist's song list, the loaded
+  song. After the on-stage entry is removed, Next loads the entry now at its
+  position, Previous the one before it; with nothing from the set ever loaded
+  (cleared, or freshly activated) Next loads song 1 and the chip shows the
+  setlist name. The chip opens the setlist's song list, the loaded
   song marked NOW; tapping a row loads it, and "Leave setlist" deactivates the
   setlist. A song
   loaded from outside the setlist (All songs, search) clears it. With no setlist
