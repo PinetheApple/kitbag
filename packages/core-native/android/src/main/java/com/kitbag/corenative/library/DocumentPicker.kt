@@ -128,15 +128,19 @@ class DocumentPicker(
   private fun save(saved: Boolean, uri: Uri?, contents: String, promise: Promise) {
     io.execute {
       try {
-        promise.resolve(BackupSave.complete(saved, uri?.toString(), contents, ::openForWrite))
+        promise.resolve(BackupSave.complete(saved, uri?.toString(), contents, ::openForWrite, ::discard))
       } catch (e: Exception) {
         rejectLogged(promise, LibraryErrors.SAVE_FAILED, "Could not save the backup", e)
       }
     }
   }
 
-  private fun openForWrite(uri: String): OutputStream? =
-    context.contentResolver.openOutputStream(Uri.parse(uri), TRUNCATE_WRITE)
+  private fun openForWrite(uri: String, mode: String): OutputStream? =
+    context.contentResolver.openOutputStream(Uri.parse(uri), mode)
+
+  private fun discard(uri: String) {
+    DocumentsContract.deleteDocument(context.contentResolver, Uri.parse(uri))
+  }
 
   private fun describeDocument(uri: Uri): WritableMap =
     Arguments.createMap().apply {
@@ -181,7 +185,6 @@ class DocumentPicker(
     private const val REQUEST_SAVE_BACKUP = 0x4b46
     private val PICK_REQUESTS =
       setOf(REQUEST_PICK_DOCUMENT, REQUEST_PICK_FOLDER, REQUEST_PICK_BACKUP, REQUEST_SAVE_BACKUP)
-    private const val TRUNCATE_WRITE = "wt"
 
     private val ZIP_MIME_TYPES = listOf("application/zip", "application/x-zip-compressed")
     val PICKABLE_MIME_TYPES = (SupportedAudio.MIME_TYPES + ZIP_MIME_TYPES).toTypedArray()
