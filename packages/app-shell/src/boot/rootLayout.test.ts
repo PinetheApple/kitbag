@@ -96,7 +96,7 @@ vi.mock('@/boot/DatabaseErrorScreen', () => ({
   },
 }));
 
-const { default: RootLayout } = await import('./_layout.tsx');
+const { default: RootLayout } = await import('../app/_layout.tsx');
 
 function renderRoot(): readonly string[] {
   root.rendered.length = 0;
