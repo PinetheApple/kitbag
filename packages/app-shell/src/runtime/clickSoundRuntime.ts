@@ -31,10 +31,10 @@ configureClickSounds({
   clearPartials: clearClickSoundPartials,
 });
 
-const sounds = clickSoundStore.getState();
-void sounds
+const clickSounds = clickSoundStore.getState();
+void clickSounds
   .sync()
-  .then(sounds.sweepOrphans)
+  .then(clickSounds.sweepOrphans)
   .catch((error: unknown) => {
     console.warn('[kitbag] click sounds did not load', error);
   });

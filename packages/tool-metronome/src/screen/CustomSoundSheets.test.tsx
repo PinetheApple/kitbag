@@ -4,7 +4,6 @@ import { createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { SOUND_ROLE } from '../logic/soundChoice.ts';
 import type { CustomSoundMenu } from './CustomSoundSheets.tsx';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
@@ -77,7 +76,7 @@ function draw(shown: CustomSoundMenu, onRemoved = vi.fn()) {
     createElement(CustomSoundSheets, {
       menu: shown,
       bottomInset: 0,
-      rolesUsing: () => [SOUND_ROLE.accent],
+      sounds: { normal: 1, accent: RIM_ID },
       onRemoved,
     }),
   );

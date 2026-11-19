@@ -19,7 +19,6 @@ import { useCallback } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import {
-  rolesUsing,
   SOUND_OPTIONS,
   SOUND_ROLE,
   soundLabel,
@@ -152,7 +151,6 @@ export function SoundListSheet({
     },
     [pick],
   );
-  const usedBy = useCallback((id: number) => rolesUsing(sounds, id), [sounds]);
   return (
     <>
       <Sheet
@@ -180,7 +178,7 @@ export function SoundListSheet({
       <CustomSoundSheets
         menu={menu}
         bottomInset={bottomInset}
-        rolesUsing={usedBy}
+        sounds={sounds}
       />
     </>
   );

@@ -14,7 +14,6 @@ import {
 import { useCallback, useState } from 'react';
 
 import {
-  rolesUsing,
   SOUND_OPTIONS,
   SOUND_ROLE,
   SOUND_ROLE_OPTIONS,
@@ -72,7 +71,6 @@ export function SoundPickerSheet({
     },
     [pick],
   );
-  const usedBy = useCallback((id: number) => rolesUsing(sounds, id), [sounds]);
   const handleRemoved = useCallback(
     (id: number) => {
       onChange((current) => withoutSound(current, id));
@@ -115,7 +113,7 @@ export function SoundPickerSheet({
       <CustomSoundSheets
         menu={menu}
         bottomInset={bottomInset}
-        rolesUsing={usedBy}
+        sounds={sounds}
         onRemoved={handleRemoved}
       />
     </>

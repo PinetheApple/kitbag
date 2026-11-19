@@ -7,7 +7,12 @@ import {
   TextField,
 } from '@kitbag/core-design';
 import { customSoundId } from '@kitbag/core-native';
-import { cleanName, useClickSounds, type ClickSound } from '@kitbag/core-state';
+import {
+  cleanName,
+  useClickSounds,
+  type ClickSound,
+  type PerAccentSounds,
+} from '@kitbag/core-state';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { View, type TextInput } from 'react-native';
 
@@ -16,7 +21,7 @@ import {
   removeText,
   removeTitle,
 } from '../logic/customSoundText.ts';
-import type { SoundRole } from '../logic/soundChoice.ts';
+import { rolesUsing } from '../logic/soundChoice.ts';
 
 const useStyles = createThemedStyles(() => ({
   stack: { gap: space.controlGap },
@@ -141,29 +146,31 @@ function RenameSheet({ menu, bottomInset }: SheetProps) {
   );
 }
 
-interface RemoveSheetProps extends SheetProps {
-  readonly rolesUsing: (id: number) => readonly SoundRole[];
+export interface CustomSoundSheetsProps extends SheetProps {
+  readonly sounds: PerAccentSounds;
   readonly onRemoved?: (id: number) => void;
 }
 
 function RemoveSheet({
   menu,
   bottomInset,
-  rolesUsing,
+  sounds,
   onRemoved,
-}: RemoveSheetProps) {
+}: CustomSoundSheetsProps) {
   const styles = useStyles();
   const remove = useClickSounds((s) => s.remove);
   const { target, close } = menu;
   const name = target?.name ?? '';
-  const id = target === null ? null : customSoundId(target.slot);
   const confirm = useCallback(() => {
     close();
-    if (target === null || id === null) return;
+    if (target === null) return;
+    const id = customSoundId(target.slot);
     void remove(target.slot).then(() => {
       onRemoved?.(id);
     });
-  }, [close, target, id, remove, onRemoved]);
+  }, [close, target, remove, onRemoved]);
+  const roles =
+    target === null ? [] : rolesUsing(sounds, customSoundId(target.slot));
   return (
     <Sheet
       visible={menu.kind === 'remove'}
@@ -173,7 +180,7 @@ function RemoveSheet({
       dim
       onDismiss={close}
     >
-      <SheetHint>{removeText(id === null ? [] : rolesUsing(id))}</SheetHint>
+      <SheetHint>{removeText(roles)}</SheetHint>
       <View style={styles.row}>
         <Button fill variant="ghost" label="Cancel" onPress={close} />
         <Button
@@ -188,7 +195,7 @@ function RemoveSheet({
   );
 }
 
-export function CustomSoundSheets(props: RemoveSheetProps) {
+export function CustomSoundSheets(props: CustomSoundSheetsProps) {
   return (
     <>
       <OptionsSheet menu={props.menu} bottomInset={props.bottomInset} />

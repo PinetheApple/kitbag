@@ -89,13 +89,13 @@ export function createClickSoundStore(
       return false;
     };
 
-    const available = (slot: number) => {
+    const markAvailable = (slot: number) => {
       set({ unavailable: get().unavailable.filter((gone) => gone !== slot) });
     };
 
     const saved = async (slot: number): Promise<ClickSoundOutcome> => {
       await refresh();
-      available(slot);
+      markAvailable(slot);
       const sound = get().sounds.find((stored) => stored.slot === slot);
       if (sound === undefined) throw new Error('Saved click sound missing');
       return { kind: 'saved', sound };
@@ -207,18 +207,21 @@ export function createClickSoundStore(
       }
     };
 
+    const formatProblem = (doc: PickedDocument): ClickSoundProblem | null => {
+      const codes = deps().constants();
+      const check = checkAudioFormat(doc, codes);
+      if (check.supported) return null;
+      return {
+        kind: 'format',
+        format: check.format,
+        supported: codes.supportedAudioFamilies,
+      };
+    };
+
     const prepareDocument = async (
       doc: PickedDocument,
       replacing: ClickSound | null,
-    ): Promise<ClickSoundOutcome | ClickSoundProblem> => {
-      const codes = deps().constants();
-      const check = checkAudioFormat(doc, codes);
-      if (!check.supported)
-        return {
-          kind: 'format',
-          format: check.format,
-          supported: codes.supportedAudioFamilies,
-        };
+    ): Promise<ClickSoundOutcome> => {
       const name = soundNameFromFile(doc.name);
       set({ preparing: doc.name });
       try {
@@ -238,7 +241,7 @@ export function createClickSoundStore(
     ): Promise<ClickSound | null> => {
       let outcome: ClickSoundOutcome | ClickSoundProblem;
       try {
-        outcome = await prepareDocument(doc, replacing);
+        outcome = formatProblem(doc) ?? (await prepareDocument(doc, replacing));
       } catch (error) {
         warn(`importing click sound ${doc.name} failed`, error);
         outcome = { kind: 'failed' };
@@ -288,7 +291,7 @@ export function createClickSoundStore(
           const removal = await deps().repository().remove(slot);
           deps().clear(slot);
           if (removal.removed !== null) await discard(removal.removed.fileName);
-          available(slot);
+          markAvailable(slot);
           await refresh();
           return removal.songsReset;
         });

@@ -170,7 +170,10 @@ describe('the Your sounds block', () => {
   });
 
   it('never presents an unloadable sound as playing', () => {
-    Object.assign(store.state, { sounds: [RIMSHOT], unavailable: [0] });
+    Object.assign(store.state, {
+      sounds: [RIMSHOT],
+      unavailable: [RIMSHOT.slot],
+    });
     const html = draw(customSoundId(RIMSHOT.slot));
     expect(drawn.tiles[0]).toMatchObject({
       accessibilityLabel: 'Rimshot, your sound, unavailable',
