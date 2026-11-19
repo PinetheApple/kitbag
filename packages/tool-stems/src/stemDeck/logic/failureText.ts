@@ -17,33 +17,44 @@ export const ADDRESS_PLACEHOLDER = `https://${ADDRESS_EXAMPLE}`;
 
 const NETWORK_SETTING = '“Make StemDeck available on your network”';
 
-const ADDRESS_PROBLEMS: Readonly<Record<AddressProblem, string>> = {
+type FieldProblem = AddressProblem | 'badAddress';
+
+const NOT_USABLE = `That isn’t an address Kitbag can use. It looks like ${ADDRESS_EXAMPLE}.`;
+
+const ADDRESS_PROBLEMS: Readonly<Record<FieldProblem, string>> = {
   empty: `Type the address StemDeck shows. It looks like ${ADDRESS_EXAMPLE}.`,
   incomplete: `That isn’t a full address. It looks like ${ADDRESS_EXAMPLE}.`,
-  invalid: `That isn’t an address Kitbag can use. It looks like ${ADDRESS_EXAMPLE}.`,
+  invalid: NOT_USABLE,
+  badAddress: NOT_USABLE,
   unsupported: 'Kitbag connects to https:// and http:// addresses only.',
 };
 
-function isAddressProblem(failure: StemDeckFailure): failure is AddressProblem {
+function isFieldProblem(failure: StemDeckFailure): failure is FieldProblem {
   return failure in ADDRESS_PROBLEMS;
 }
 
 export function addressProblemText(failure: StemDeckFailure): string | null {
-  return isAddressProblem(failure) ? ADDRESS_PROBLEMS[failure] : null;
+  return isFieldProblem(failure) ? ADDRESS_PROBLEMS[failure] : null;
 }
 
-const UNREACHABLE: ReadonlySet<StemDeckFailure> = new Set([
+export const CONNECTION_LOST: ReadonlySet<StemDeckFailure> = new Set([
   'unreachable',
   'timedOut',
   'dropped',
 ]);
+
+export const CAMERA_UNAVAILABLE: Notice = {
+  tone: 'warning',
+  title: 'Couldn’t open the camera',
+  body: 'Another app may be using it. Close that app and scan again, or type the address below.',
+};
 
 export function connectNotice(
   failure: StemDeckFailure,
   origin: string,
 ): Notice {
   const address = displayAddress(origin);
-  if (UNREACHABLE.has(failure))
+  if (CONNECTION_LOST.has(failure))
     return {
       tone: 'danger',
       title: 'Can’t reach StemDeck',

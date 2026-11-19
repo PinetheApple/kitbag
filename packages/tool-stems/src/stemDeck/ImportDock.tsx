@@ -1,9 +1,8 @@
 import { Button } from '@kitbag/core-design';
-import { useMemo } from 'react';
 import { Text, View } from 'react-native';
 
 import { importLabel } from './logic/songFacts.ts';
-import { useStemDeckStyles } from './stemDeckStyles.ts';
+import { useInset, useStemDeckStyles } from './stemDeckStyles.ts';
 
 const UNITY_NOTE =
   'Songs arrive with every stem at its default level. A mix you made in StemDeck stays on the computer.';
@@ -22,10 +21,7 @@ export function ImportDock({
   onImport,
 }: ImportDockProps) {
   const styles = useStemDeckStyles();
-  const dock = useMemo(
-    () => [styles.dock, { paddingBottom: bottomInset }],
-    [styles.dock, bottomInset],
-  );
+  const dock = useInset(styles.dock, 'paddingBottom', bottomInset);
   return (
     <View style={dock}>
       {showNote ? <Text style={styles.hint}>{UNITY_NOTE}</Text> : null}

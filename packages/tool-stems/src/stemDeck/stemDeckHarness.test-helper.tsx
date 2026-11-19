@@ -60,14 +60,18 @@ export const CATALOG: StemDeckCatalog = {
   unavailable: 2,
 };
 
-const live = { native: fakeNative().native, camera: fakeCamera() };
+const fakes = { native: fakeNative().native, camera: fakeCamera() };
+
+export function live() {
+  return fakes;
+}
 
 const runtime: StemDeckRuntime = {
   get native() {
-    return live.native;
+    return fakes.native;
   },
   get camera() {
-    return live.camera;
+    return fakes.camera;
   },
   unityNotice: { load: () => false, save: () => undefined },
 };
@@ -76,10 +80,10 @@ configureStemDeck(runtime);
 const pristine = stemDeckStore.getState();
 
 export function resetStemDeck(answer: 'granted' | 'denied' = 'granted') {
-  live.native = fakeNative().native;
-  live.camera = fakeCamera(answer);
+  fakes.native = fakeNative().native;
+  fakes.camera = fakeCamera(answer);
   stemDeckStore.setState(pristine, true);
-  return live;
+  return fakes;
 }
 
 export function connected(catalog: StemDeckCatalog = CATALOG) {

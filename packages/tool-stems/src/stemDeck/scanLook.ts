@@ -40,7 +40,7 @@ export function useScanLook(): StemDeckScanLook {
       touchTargetDp: minTouchTargetDp,
       titleSp: textRoles.appBarTitle.size,
       actionSp: textRoles.button.size,
-      promptSp: textRoles.listSearch.size,
+      promptSp: scanner.promptSize,
     }),
     [theme],
   );

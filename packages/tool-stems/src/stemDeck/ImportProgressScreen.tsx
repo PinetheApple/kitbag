@@ -4,7 +4,7 @@ import {
   type StemDeckFailure,
   type StemDeckImportView,
 } from '@kitbag/core-state';
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import { ImportRowView } from './ImportRowView.tsx';
@@ -15,7 +15,11 @@ import {
   stopNotice,
 } from './logic/progressText.ts';
 import { NoticeCard } from './NoticeCard.tsx';
-import { useStemDeckStyles, type StemDeckInsets } from './stemDeckStyles.ts';
+import {
+  useInset,
+  useStemDeckStyles,
+  type StemDeckInsets,
+} from './stemDeckStyles.ts';
 
 const LEAVE_HINT =
   'You can leave Kitbag. Songs keep coming in, and the notification shows how far along they are.';
@@ -80,10 +84,7 @@ function Dock({ view, bottomInset, onBack, onOpenStemSongs }: DockProps) {
   const retry = useCallback(() => {
     void retryImport();
   }, [retryImport]);
-  const dock = useMemo(
-    () => [styles.dock, { paddingBottom: bottomInset }],
-    [styles.dock, bottomInset],
-  );
+  const dock = useInset(styles.dock, 'paddingBottom', bottomInset);
   if (view.running)
     return (
       <View style={dock}>
@@ -141,10 +142,7 @@ export function ImportProgressScreen({
   const importFailure = useStemDeck((s) => s.importFailure);
   const stemsOf = useStems();
   const failure = importFailure ?? view.stopped;
-  const frame = useMemo(
-    () => [styles.screen, { paddingTop: insets.top }],
-    [styles.screen, insets.top],
-  );
+  const frame = useInset(styles.screen, 'paddingTop', insets.top);
   return (
     <View style={frame}>
       <AppBar

@@ -112,6 +112,29 @@ describe('songs coming in', () => {
     expect(onBack).toHaveBeenCalledOnce();
   });
 
+  it('says the connection was lost and offers to retry the rest', async () => {
+    const { native } = resetStemDeck();
+    show(
+      [
+        importRow('Goodness of God (Live)', 'added'),
+        importRow('Way Maker', 'failed', {
+          failure: 'dropped',
+          bytesDone: DOWNLOADED_MB * MB,
+          bytesTotal: SIZE_MB * MB,
+        }),
+        importRow('Gratitude', 'notStarted'),
+        importRow('Holy Forever', 'notStarted'),
+      ],
+      { running: false, stopped: 'dropped', retryCount: 3 },
+    );
+    const screen = await mount(progress());
+    expect(screen.has('Lost the connection to StemDeck')).toBe(true);
+    expect(screen.has('Connection lost at 46% · nothing added')).toBe(true);
+    expect(screen.texts().filter((t) => t === 'Not started')).toHaveLength(2);
+    await screen.press('Retry 3 songs');
+    expect(native.retryImport).toHaveBeenCalledOnce();
+  });
+
   it('opens Stem songs when everything is in', async () => {
     const onOpenStemSongs = vi.fn();
     show([importRow('Way Maker', 'added')], {

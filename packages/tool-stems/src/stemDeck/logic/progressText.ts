@@ -6,12 +6,11 @@ import type {
   StemDeckImportView,
 } from '@kitbag/core-state';
 
-import type { Notice } from './failureText.ts';
-import { stemCount } from './songFacts.ts';
+import { CONNECTION_LOST, type Notice } from './failureText.ts';
+import { plural, SEPARATOR, stemCount } from './songFacts.ts';
 
 const BYTES_PER_MB = 1_000_000;
 const PERCENT = 100;
-const SEPARATOR = ' · ';
 const NOTHING_ADDED = 'nothing added';
 
 export type TileInk = 'green' | 'amber' | 'accent' | 'red' | 'text2';
@@ -45,12 +44,6 @@ const BADGES: Readonly<Partial<Record<StemDeckImportPhase, RowBadge>>> = {
   preparing: { label: 'PREPARING', tone: 'accent', icon: 'countingIn' },
   failed: { label: 'FAILED', tone: 'danger', icon: 'error' },
 };
-
-const CONNECTION_LOST: ReadonlySet<StemDeckFailure> = new Set([
-  'dropped',
-  'unreachable',
-  'timedOut',
-]);
 
 export function megabytes(bytes: number): string {
   return String(Math.round(bytes / BYTES_PER_MB));
@@ -119,7 +112,7 @@ export function statusCardText(view: StemDeckImportView): string {
 }
 
 export function retryLabel(count: number): string {
-  return `Retry ${String(count)} ${count === 1 ? 'song' : 'songs'}`;
+  return `Retry ${plural(count, 'song', 'songs')}`;
 }
 
 export function finishedText(added: number): string {

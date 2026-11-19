@@ -7,6 +7,7 @@ import {
   textRoles,
   textStyle,
 } from '@kitbag/core-design';
+import { useMemo } from 'react';
 
 export interface StemDeckInsets {
   readonly top: number;
@@ -101,3 +102,9 @@ export const useStemDeckStyles = createThemedStyles((theme) => ({
   cardTitle: { ...textStyle(textRoles.sheetTitle), color: theme.color.text },
   cardText: { ...textStyle(textRoles.fieldLabel), color: theme.color.text },
 }));
+
+export type InsetEdge = 'paddingTop' | 'paddingBottom';
+
+export function useInset<T>(style: T, edge: InsetEdge, inset: number) {
+  return useMemo(() => [style, { [edge]: inset }], [style, edge, inset]);
+}

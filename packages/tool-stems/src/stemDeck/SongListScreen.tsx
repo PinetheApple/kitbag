@@ -2,11 +2,9 @@ import {
   AppBar,
   Button,
   CheckAllRow,
-  createThemedStyles,
   SearchField,
   Sheet,
   SheetHint,
-  space,
   type AppBarAction,
 } from '@kitbag/core-design';
 import {
@@ -29,15 +27,15 @@ import {
 } from './logic/songFacts.ts';
 import { SetlistChips } from './SetlistChips.tsx';
 import { SongPickRow } from './SongPickRow.tsx';
-import { useStemDeckStyles, type StemDeckInsets } from './stemDeckStyles.ts';
+import {
+  useInset,
+  useStemDeckStyles,
+  type StemDeckInsets,
+} from './stemDeckStyles.ts';
 
 const LOADING = 'Getting the song list from StemDeck…';
 const NO_SONGS = 'StemDeck has no finished songs yet.';
 const NO_MATCH = 'No StemDeck songs match this search.';
-
-const useStyles = createThemedStyles(() => ({
-  actions: { flexDirection: 'row', gap: space.controlGap },
-}));
 
 export interface SongListScreenProps {
   readonly insets: StemDeckInsets;
@@ -45,15 +43,20 @@ export interface SongListScreenProps {
   readonly onImporting: () => void;
 }
 
-function SelectAll({ catalog }: { readonly catalog: StemDeckCatalog }) {
+function useVisibleSongs(catalog: StemDeckCatalog) {
   const setlistId = useStemDeck((s) => s.setlistId);
   const query = useStemDeck((s) => s.query);
-  const selected = useStemDeck((s) => s.selected);
-  const selectSongs = useStemDeck((s) => s.selectSongs);
-  const selectable = useMemo(
-    () => selectableIds(visibleSongs(catalog, setlistId, query)),
+  return useMemo(
+    () => visibleSongs(catalog, setlistId, query),
     [catalog, setlistId, query],
   );
+}
+
+function SelectAll({ catalog }: { readonly catalog: StemDeckCatalog }) {
+  const selected = useStemDeck((s) => s.selected);
+  const selectSongs = useStemDeck((s) => s.selectSongs);
+  const songs = useVisibleSongs(catalog);
+  const selectable = useMemo(() => selectableIds(songs), [songs]);
   const all =
     selectable.length > 0 && selectable.every((id) => selected.includes(id));
   const toggle = useCallback(() => {
@@ -74,13 +77,9 @@ function SelectAll({ catalog }: { readonly catalog: StemDeckCatalog }) {
 function SongRows({ catalog }: { readonly catalog: StemDeckCatalog }) {
   const styles = useStemDeckStyles();
   const setlistId = useStemDeck((s) => s.setlistId);
-  const query = useStemDeck((s) => s.query);
   const selected = useStemDeck((s) => s.selected);
   const toggleSong = useStemDeck((s) => s.toggleSong);
-  const songs = useMemo(
-    () => visibleSongs(catalog, setlistId, query),
-    [catalog, setlistId, query],
-  );
+  const songs = useVisibleSongs(catalog);
   if (catalog.songs.length === 0)
     return <Text style={styles.hint}>{NO_SONGS}</Text>;
   return (
@@ -108,12 +107,12 @@ function SongRows({ catalog }: { readonly catalog: StemDeckCatalog }) {
 
 function ReplaceSheet({
   bottomInset,
-  onImporting,
+  onStarted,
 }: {
   readonly bottomInset: number;
-  readonly onImporting: () => void;
+  readonly onStarted: (started: boolean) => void;
 }) {
-  const styles = useStyles();
+  const styles = useStemDeckStyles();
   const prompt = useStemDeck((s) => s.replacePrompt);
   const replaceInLibrary = useStemDeck((s) => s.replaceInLibrary);
   const keepInLibrary = useStemDeck((s) => s.keepInLibrary);
@@ -121,11 +120,11 @@ function ReplaceSheet({
   const titles = prompt?.titles ?? [];
   const [first] = titles;
   const replace = useCallback(() => {
-    void replaceInLibrary().then(onImporting);
-  }, [replaceInLibrary, onImporting]);
+    void replaceInLibrary().then(onStarted);
+  }, [replaceInLibrary, onStarted]);
   const keep = useCallback(() => {
-    void keepInLibrary().then(onImporting);
-  }, [keepInLibrary, onImporting]);
+    void keepInLibrary().then(onStarted);
+  }, [keepInLibrary, onStarted]);
   const one = titles.length === 1 && first !== undefined;
   return (
     <Sheet
@@ -174,13 +173,20 @@ function useImport(onImporting: () => void) {
   const importSelected = useStemDeck((s) => s.importSelected);
   const markUnityNoticeSeen = useStemDeck((s) => s.markUnityNoticeSeen);
   const importStarted = useNotificationPermission((s) => s.importStarted);
-  return useCallback(() => {
-    void importStarted();
+  const onStarted = useCallback(
+    (started: boolean) => {
+      if (started) void importStarted();
+      onImporting();
+    },
+    [importStarted, onImporting],
+  );
+  const startImport = useCallback(() => {
     markUnityNoticeSeen();
-    void importSelected().then(() => {
-      if (stemDeckStore.getState().replacePrompt === null) onImporting();
+    void importSelected().then((started) => {
+      if (stemDeckStore.getState().replacePrompt === null) onStarted(started);
     });
-  }, [importStarted, markUnityNoticeSeen, importSelected, onImporting]);
+  }, [markUnityNoticeSeen, importSelected, onStarted]);
+  return { startImport, onStarted };
 }
 
 export function SongListScreen({
@@ -197,7 +203,7 @@ export function SongListScreen({
   const selectedCount = useStemDeck((s) => s.selected.length);
   const noteSeen = useStemDeck((s) => s.unityNoticeSeen);
   useLeaveOnFailure(onBack);
-  const startImport = useImport(onImporting);
+  const { startImport, onStarted } = useImport(onImporting);
   const clear = useCallback(() => {
     setQuery('');
   }, [setQuery]);
@@ -218,10 +224,7 @@ export function SongListScreen({
           displayAddress(origin),
           catalog.songs.length + catalog.unavailable,
         );
-  const frame = useMemo(
-    () => [styles.screen, { paddingTop: insets.top }],
-    [styles.screen, insets.top],
-  );
+  const frame = useInset(styles.screen, 'paddingTop', insets.top);
   return (
     <View style={frame}>
       <AppBar
@@ -260,7 +263,7 @@ export function SongListScreen({
         bottomInset={insets.bottom}
         onImport={startImport}
       />
-      <ReplaceSheet bottomInset={insets.bottom} onImporting={onImporting} />
+      <ReplaceSheet bottomInset={insets.bottom} onStarted={onStarted} />
     </View>
   );
 }

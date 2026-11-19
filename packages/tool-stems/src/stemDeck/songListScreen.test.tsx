@@ -10,6 +10,7 @@ import { SongListScreen } from './SongListScreen.tsx';
 import {
   CATALOG,
   connected,
+  live,
   mount,
   resetStemDeck,
   SONG_A,
@@ -41,6 +42,56 @@ beforeEach(() => {
 
 afterEach(() => {
   display.fontScale = 1;
+});
+
+describe('importing a song already in the library', () => {
+  const REPLACE_TITLE = 'Replace “Echo (In Jesus Name) [LIVE]”?';
+
+  async function picked() {
+    const importStarted = vi.fn(() => Promise.resolve());
+    getNotificationPermissionStore().setState({ importStarted });
+    const onImporting = vi.fn();
+    const screen = await mount(songList(onImporting));
+    await screen.press(ECHO);
+    await screen.press(WAY_MAKER);
+    await screen.press('Import 2 songs');
+    return { screen, importStarted, onImporting, native: live().native };
+  }
+
+  it('asks first, before any notification ask or start', async () => {
+    const { screen, importStarted, onImporting, native } = await picked();
+    expect(screen.has(REPLACE_TITLE)).toBe(true);
+    expect(native.startImport).not.toHaveBeenCalled();
+    expect(importStarted).not.toHaveBeenCalled();
+    expect(onImporting).not.toHaveBeenCalled();
+  });
+
+  it('replaces it, then asks about notifications and shows progress', async () => {
+    const { screen, importStarted, onImporting, native } = await picked();
+    await screen.press('Replace');
+    expect(native.startImport.mock.calls[0]?.[1]).toHaveLength(2);
+    expect(importStarted).toHaveBeenCalledOnce();
+    expect(onImporting).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the library copy and imports only the new song', async () => {
+    const { screen, importStarted, onImporting, native } = await picked();
+    await screen.press('Keep current');
+    expect(native.startImport.mock.calls[0]?.[1]).toEqual([
+      expect.objectContaining({ jobId: SONG_A }),
+    ]);
+    expect(importStarted).toHaveBeenCalledOnce();
+    expect(onImporting).toHaveBeenCalledOnce();
+  });
+
+  it('does nothing when the user decides not to import', async () => {
+    const { screen, importStarted, onImporting, native } = await picked();
+    await screen.press('Don’t import');
+    expect(screen.has(REPLACE_TITLE)).toBe(false);
+    expect(native.startImport).not.toHaveBeenCalled();
+    expect(importStarted).not.toHaveBeenCalled();
+    expect(onImporting).not.toHaveBeenCalled();
+  });
 });
 
 describe('the StemDeck song list', () => {

@@ -55,6 +55,12 @@ describe('an address that cannot be used', () => {
     );
   });
 
+  it('shows an address native refused under the field too', () => {
+    expect(addressProblemText('badAddress')).toBe(
+      'That isn’t an address Kitbag can use. It looks like 192.168.1.50:8443.',
+    );
+  });
+
   it('leaves connection failures to the notice card', () => {
     expect(addressProblemText('unreachable')).toBeNull();
   });

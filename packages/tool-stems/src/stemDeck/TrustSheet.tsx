@@ -5,7 +5,6 @@ import {
   EditRow,
   Sheet,
   SheetHint,
-  space,
   textRoles,
   textStyle,
 } from '@kitbag/core-design';
@@ -18,6 +17,8 @@ import {
 import { useCallback } from 'react';
 import { Text, View } from 'react-native';
 
+import { useStemDeckStyles } from './stemDeckStyles.ts';
+
 const NEW_HINT =
   'This is the first time Kitbag has connected to this computer. StemDeck makes its own certificate, so Android can’t vouch for it. Kitbag remembers it and stops if it ever changes.';
 const NOT_RECORDED = 'Not recorded';
@@ -25,7 +26,6 @@ const SERVER_NAME = 'StemDeck';
 const CANCEL = 'Cancel';
 
 const useStyles = createThemedStyles((theme) => ({
-  actions: { flexDirection: 'row', gap: space.controlGap },
   value: { ...textStyle(textRoles.scrubTime), color: theme.color.text },
   changed: { color: theme.color.redInk },
 }));
@@ -64,7 +64,7 @@ function NewServerSheet({
   onTrust,
   onDecline,
 }: PromptSheetProps<'new'>) {
-  const styles = useStyles();
+  const styles = useStemDeckStyles();
   const version = prompt?.version;
   return (
     <Sheet
@@ -120,7 +120,7 @@ function ChangedCertificateSheet({
   onTrust,
   onDecline,
 }: PromptSheetProps<'changed'>) {
-  const styles = useStyles();
+  const styles = useStemDeckStyles();
   const previous = prompt?.previousFingerprint ?? null;
   return (
     <Sheet

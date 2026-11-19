@@ -6,4 +6,5 @@ export const scanner = {
   scrimOpacity: 0.92,
   promptGap: 24,
   promptInset: 32,
+  promptSize: 14,
 } as const;

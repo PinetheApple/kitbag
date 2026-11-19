@@ -1,10 +1,14 @@
 import { AppBar, Button, EmptyState } from '@kitbag/core-design';
 import { useStemDeck } from '@kitbag/core-state';
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { View } from 'react-native';
 
 import { SCAN_TITLE, TYPE_ADDRESS, useScanLook } from './scanLook.ts';
-import { useStemDeckStyles, type StemDeckInsets } from './stemDeckStyles.ts';
+import {
+  useInset,
+  useStemDeckStyles,
+  type StemDeckInsets,
+} from './stemDeckStyles.ts';
 
 const REASON =
   'Kitbag uses the camera only to read the QR code. Nothing is recorded or saved.';
@@ -36,14 +40,8 @@ export function CameraExplainerScreen({
     typeAddress();
     onBack();
   }, [typeAddress, onBack]);
-  const frame = useMemo(
-    () => [styles.screen, { paddingTop: insets.top }],
-    [styles.screen, insets.top],
-  );
-  const content = useMemo(
-    () => [styles.body, { paddingBottom: insets.bottom }],
-    [styles.body, insets.bottom],
-  );
+  const frame = useInset(styles.screen, 'paddingTop', insets.top);
+  const content = useInset(styles.body, 'paddingBottom', insets.bottom);
   return (
     <View style={frame}>
       <AppBar flush title={SCAN_TITLE} onBack={onBack} />

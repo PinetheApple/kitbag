@@ -36,9 +36,13 @@ export const VIEW_TEXT: Readonly<Record<LibraryView, ViewText>> = {
     searchLabel: 'Search stem songs',
     noMatch: 'No stem songs match this search.',
     emptyTitle: 'No stem songs yet',
-    emptyReason: 'Import a StemDeck song folder to mix and loop its stems.',
+    emptyReason:
+      'Add a StemDeck song from this phone or from StemDeck on Wi-Fi, then mix and loop its stems.',
     emptyAction: 'Add a stem song',
-    emptyOption: { icon: 'folder', text: 'Pick a stems folder → a stem song' },
+    emptyOption: {
+      icon: 'stemDeckServer',
+      text: 'A .zip, a folder or StemDeck on Wi-Fi → a stem song',
+    },
     fabIcon: 'add',
     fabLabel: 'Add a stem song',
   },

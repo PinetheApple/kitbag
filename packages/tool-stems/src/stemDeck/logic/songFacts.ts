@@ -1,18 +1,13 @@
-import type { StemDeckServerTrust, StemDeckSong } from '@kitbag/core-state';
+import {
+  formatClockSeconds,
+  type StemDeckServerTrust,
+  type StemDeckSong,
+} from '@kitbag/core-state';
 
-const SECONDS_PER_MINUTE = 60;
-const SECONDS_DIGITS = 2;
-const SEPARATOR = ' · ';
+export const SEPARATOR = ' · ';
 
-function plural(count: number, one: string, many: string): string {
+export function plural(count: number, one: string, many: string): string {
   return `${String(count)} ${count === 1 ? one : many}`;
-}
-
-export function duration(seconds: number): string {
-  const whole = Math.round(seconds);
-  const minutes = Math.floor(whole / SECONDS_PER_MINUTE);
-  const rest = String(whole % SECONDS_PER_MINUTE).padStart(SECONDS_DIGITS, '0');
-  return `${String(minutes)}:${rest}`;
 }
 
 export function stemCount(count: number): string {
@@ -22,7 +17,9 @@ export function stemCount(count: number): string {
 export function songFacts(song: StemDeckSong): string {
   return [
     song.artist,
-    song.durationSec === null ? null : duration(song.durationSec),
+    song.durationSec === null
+      ? null
+      : formatClockSeconds(Math.round(song.durationSec)),
     stemCount(song.lanes.length),
   ]
     .filter((fact): fact is string => fact !== null)

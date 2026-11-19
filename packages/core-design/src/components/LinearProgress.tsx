@@ -13,7 +13,7 @@ import { useReduceMotion } from '../useReduceMotion.ts';
 
 const PERCENT = 100;
 
-export const linearProgress = {
+const linearProgress = {
   height: 4,
   radius: radius.sweepTrack,
   band: 0.32,

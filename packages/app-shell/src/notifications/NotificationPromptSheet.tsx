@@ -38,7 +38,8 @@ export function NotificationPromptSheet() {
   const styles = useStyles();
   const insets = useSafeAreaInsets();
   const prompting = useNotificationPermission((s) => s.prompting);
-  const words = WORDS[useNotificationPermission((s) => s.reason)];
+  const reason = useNotificationPermission((s) => s.reason);
+  const words = WORDS[reason];
   const allow = useNotificationPermission((s) => s.allow);
   const notNow = useNotificationPermission((s) => s.notNow);
   const handleAllow = useCallback(() => {

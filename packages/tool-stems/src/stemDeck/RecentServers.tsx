@@ -11,7 +11,6 @@ import {
   unshared,
   createThemedStyles,
   EllipsizedText,
-  space,
 } from '@kitbag/core-design';
 import {
   displayAddress,
@@ -39,7 +38,6 @@ const useStyles = createThemedStyles(() => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actions: { flexDirection: 'row', gap: space.controlGap },
 }));
 
 interface ServerRowProps {
@@ -99,7 +97,7 @@ interface ForgetSheetProps {
 }
 
 function ForgetSheet({ server, bottomInset, onClose }: ForgetSheetProps) {
-  const styles = useStyles();
+  const styles = useStemDeckStyles();
   const forgetServer = useStemDeck((s) => s.forgetServer);
   const forget = useCallback(() => {
     if (server !== null) void forgetServer(server.origin);

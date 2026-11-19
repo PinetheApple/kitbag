@@ -1,14 +1,22 @@
 import { AppBar, Button, SectionHeader } from '@kitbag/core-design';
 import { useStemDeck } from '@kitbag/core-state';
-import { useCallback, useEffect, useMemo, useRef, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, type RefObject } from 'react';
 import { ScrollView, Text, View, type TextInput } from 'react-native';
 
 import { AddressField } from './AddressField.tsx';
-import { addressProblemText, connectNotice } from './logic/failureText.ts';
+import {
+  addressProblemText,
+  CAMERA_UNAVAILABLE,
+  connectNotice,
+} from './logic/failureText.ts';
 import { NoticeCard } from './NoticeCard.tsx';
 import { RecentServers } from './RecentServers.tsx';
 import { SCAN_TITLE, useScanLook } from './scanLook.ts';
-import { useStemDeckStyles, type StemDeckInsets } from './stemDeckStyles.ts';
+import {
+  useInset,
+  useStemDeckStyles,
+  type StemDeckInsets,
+} from './stemDeckStyles.ts';
 import { TrustSheet } from './TrustSheet.tsx';
 
 const SHARE_HINT =
@@ -47,12 +55,9 @@ function useEntry(onConnected: () => void) {
   }, [ready, onConnected]);
 }
 
-function ScanButton({
-  onExplainCamera,
-}: {
-  readonly onExplainCamera: () => void;
-}) {
+function Scan({ onExplainCamera }: { readonly onExplainCamera: () => void }) {
   const hasCamera = useStemDeck((s) => s.codes?.hasCamera === true);
+  const unavailable = useStemDeck((s) => s.cameraUnavailable);
   const scanAddress = useStemDeck((s) => s.scanAddress);
   const look = useScanLook();
   const scan = useCallback(() => {
@@ -62,13 +67,22 @@ function ScanButton({
   }, [scanAddress, look, onExplainCamera]);
   if (!hasCamera) return null;
   return (
-    <Button
-      variant="primary"
-      size="target"
-      icon="qrScan"
-      label={SCAN_TITLE}
-      onPress={scan}
-    />
+    <>
+      <Button
+        variant="primary"
+        size="target"
+        icon="qrScan"
+        label={SCAN_TITLE}
+        onPress={scan}
+      />
+      {unavailable ? (
+        <NoticeCard
+          {...CAMERA_UNAVAILABLE}
+          actionLabel="Scan again"
+          onAction={scan}
+        />
+      ) : null}
+    </>
   );
 }
 
@@ -141,14 +155,8 @@ export function ConnectScreen({
     },
     [connect],
   );
-  const frame = useMemo(
-    () => [styles.screen, { paddingTop: insets.top }],
-    [styles.screen, insets.top],
-  );
-  const content = useMemo(
-    () => [styles.body, { paddingBottom: insets.bottom }],
-    [styles.body, insets.bottom],
-  );
+  const frame = useInset(styles.screen, 'paddingTop', insets.top);
+  const content = useInset(styles.body, 'paddingBottom', insets.bottom);
   return (
     <View style={frame}>
       <AppBar flush title="Connect to StemDeck" onBack={onBack} />
@@ -157,7 +165,7 @@ export function ConnectScreen({
         contentContainerStyle={content}
         keyboardShouldPersistTaps="handled"
       >
-        <ScanButton onExplainCamera={onExplainCamera} />
+        <Scan onExplainCamera={onExplainCamera} />
         <Text style={styles.hint}>{SHARE_HINT}</Text>
         <ConnectFailure />
         <SectionHeader label="Or type the address" />
