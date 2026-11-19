@@ -17,6 +17,7 @@ export type { Preferences } from './preferences';
 export { COUNT_IN_PREFERENCE_KEYS } from './count-in-preferences';
 export { STANDALONE_METRONOME_KEY } from './standalone-metronome-preference';
 export type {
+  DeletedPracticeSession,
   NewPracticeSession,
   PracticeRepository,
   PracticeSessionListing,

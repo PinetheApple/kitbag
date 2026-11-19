@@ -24,6 +24,7 @@ import {
   stretchAfterSample,
   stretchAfterTempo,
   withLastEnd,
+  withoutRecentTempo,
   type OpenStretch,
   type StretchPlace,
   type StretchSetup,
@@ -118,6 +119,24 @@ function samePlace(a: PracticeContext, b: PracticeContext): boolean {
     songKey(a.song) === songKey(b.song) &&
     a.setlist?.itemId === b.setlist?.itemId
   );
+}
+
+function isStageArriving(
+  previous: PracticeContext,
+  next: PracticeContext,
+): boolean {
+  return (
+    previous.setlist === null &&
+    next.setlist !== null &&
+    songKey(previous.song) === songKey(next.song)
+  );
+}
+
+function withOpenPlace(
+  open: OpenStretch | null,
+  context: PracticeContext,
+): OpenStretch | null {
+  return open === null ? null : { ...open, ...placeOf(context) };
 }
 
 function longer(
@@ -274,11 +293,21 @@ function reopened(
   const { open } = session;
   const place = placeOf(session.context);
   if (open === null) return session;
-  if (!isFolding(open, at))
+  if (!isFolding(open, at)) {
+    const outgoing =
+      end === STRETCH_END.song
+        ? withoutRecentTempo(open, at, bpm)
+        : { open, bpm };
     return {
-      ...withLogClosed(session, at, end, bpm),
+      ...withLogClosed(
+        { ...session, open: outgoing.open },
+        at,
+        end,
+        outgoing.bpm,
+      ),
       open: openStretch(place, setup, at, bpm),
     };
+  }
   const from = open.from - session.startedAt;
   return {
     ...session,
@@ -316,6 +345,12 @@ export function practiceSessionAfterContext(
   if (!isPlaying(session)) return { ...session, context };
   if (samePlace(session.context, context))
     return withContextPlayed({ ...session, context });
+  if (isStageArriving(session.context, context))
+    return withContextPlayed({
+      ...session,
+      context,
+      open: withOpenPlace(session.open, context),
+    });
   const songChanged = songKey(session.context.song) !== songKey(context.song);
   const closed = songChanged
     ? { ...withLongestClosed(session, at), songStretchFrom: at }

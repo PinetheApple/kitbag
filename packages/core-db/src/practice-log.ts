@@ -95,28 +95,86 @@ export function isStemSong(song: LoggedSong): song is LoggedStemSong {
   return 'stemSongKey' in song;
 }
 
+type Check = (value: unknown) => boolean;
+
+const isNumber: Check = (value) => typeof value === 'number';
+const isString: Check = (value) => typeof value === 'string';
+const isBoolean: Check = (value) => typeof value === 'boolean';
+const orNull =
+  (check: Check): Check =>
+  (value) =>
+    value === null || check(value);
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-function isStretch(value: unknown): boolean {
-  if (!isRecord(value)) return false;
-  const { from, to, end, tempo } = value;
-  return (
-    typeof from === 'number' &&
-    typeof to === 'number' &&
-    from <= to &&
-    STRETCH_ENDS.includes(end) &&
-    Array.isArray(tempo)
-  );
-}
+const shaped =
+  (shape: Readonly<Record<string, Check>>): Check =>
+  (value) =>
+    isRecord(value) &&
+    Object.entries(shape).every(([key, check]) => check(value[key]));
+
+const SETTINGS_SHAPE: { readonly [K in keyof LoggedSettings]-?: Check } = {
+  bpm: isNumber,
+  beatsPerBar: isNumber,
+  denominator: isNumber,
+  subdivision: isNumber,
+  accents: isString,
+  perAccentSounds: orNull(isString),
+  polyAccents: orNull(isString),
+  polyEnabled: isBoolean,
+  polyBeats: isNumber,
+  polyAgainst: isNumber,
+  sound: isNumber,
+  rampEnabled: isBoolean,
+  rampStartBpm: orNull(isNumber),
+  rampEndBpm: orNull(isNumber),
+  rampStep: isNumber,
+  rampLength: orNull(isNumber),
+  rampUnit: isNumber,
+  rampLoop: isBoolean,
+  barMuteEnabled: isBoolean,
+  barMutePlayBars: orNull(isNumber),
+  barMuteMuteBars: orNull(isNumber),
+  countInBars: isNumber,
+};
+
+const isSong: Check = (value) =>
+  shaped({ uuid: isString, title: isString })(value) ||
+  shaped({ stemSongKey: isString, title: isString })(value);
+
+const isTempoChange: Check = (value) =>
+  Array.isArray(value) && value.length === 2 && value.every(isNumber);
+
+const isStretch = shaped({
+  from: isNumber,
+  to: isNumber,
+  end: (value) => STRETCH_ENDS.includes(value),
+  song: orNull(isSong),
+  setlist: orNull(
+    shaped({ uuid: isString, name: isString, position: orNull(isNumber) }),
+  ),
+  settings: orNull(shaped(SETTINGS_SHAPE)),
+  countIn: orNull(
+    shaped({ bars: isNumber, distinct: isBoolean, sound: isNumber }),
+  ),
+  tempo: (value) => Array.isArray(value) && value.every(isTempoChange),
+  endBpm: isNumber,
+  avgBpm: isNumber,
+});
 
 function isPracticeLog(value: unknown): value is PracticeLog {
   return (
     isRecord(value) &&
     value.v === PRACTICE_LOG_VERSION &&
     Array.isArray(value.stretches) &&
-    value.stretches.every(isStretch)
+    value.stretches.every(
+      (stretch) =>
+        isRecord(stretch) &&
+        isStretch(stretch) &&
+        Number(stretch.from) <= Number(stretch.to),
+    )
   );
 }
 

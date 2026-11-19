@@ -68,6 +68,8 @@ describe('practice session store log', () => {
         end: STRETCH_END.song,
         song: { uuid: stage.uuids[0], title: 'First' },
         setlist: { name: 'Gig', position: 1 },
+        tempo: [[MINUTE, 90]],
+        endBpm: 90,
       },
       {
         from: 2 * MINUTE,
@@ -76,6 +78,26 @@ describe('practice session store log', () => {
         song: { uuid: stage.uuids[1], title: 'Second' },
         setlist: { name: 'Gig', position: 2 },
         tempo: [],
+      },
+    ]);
+  });
+
+  it('keeps one stretch for a song whose setlist arrives after it', async () => {
+    const h = harness();
+    const stage = await onStage(h);
+    h.metronome.getState().start();
+    h.advance(MINUTE);
+    const loading = stage.load(0);
+    h.advance(SECOND);
+    await loading;
+    h.advance(MINUTE);
+    expect(ended(h)).toMatchObject([
+      { from: 0, to: MINUTE, end: STRETCH_END.song, song: null },
+      {
+        from: MINUTE,
+        end: STRETCH_END.end,
+        song: { uuid: stage.uuids[0], title: 'First' },
+        setlist: { name: 'Gig', position: 1 },
       },
     ]);
   });

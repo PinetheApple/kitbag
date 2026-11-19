@@ -37,13 +37,23 @@ interface TempoBurst {
   readonly changedAt: number;
 }
 
-export interface OpenStretch extends StretchPlace {
-  readonly from: number;
-  readonly setup: StretchSetup | null;
-  readonly startBpm: number;
+interface TempoTrack {
   readonly tempo: readonly TempoChange[];
   readonly burst: TempoBurst | null;
   readonly average: TempoAverage;
+}
+
+interface RecentTempoChange {
+  readonly at: number;
+  readonly bpm: number;
+  readonly before: TempoTrack;
+}
+
+export interface OpenStretch extends StretchPlace, TempoTrack {
+  readonly from: number;
+  readonly setup: StretchSetup | null;
+  readonly startBpm: number;
+  readonly recent: RecentTempoChange | null;
 }
 
 export function openStretch(
@@ -61,6 +71,7 @@ export function openStretch(
     tempo: [],
     burst: null,
     average: startAverage(at, bpm),
+    recent: null,
   };
 }
 
@@ -84,6 +95,20 @@ function settledTempo(open: OpenStretch): readonly TempoChange[] {
   return burst.bpm === before ? tempo : [...tempo, [burst.offset, burst.bpm]];
 }
 
+function currentBpm(open: OpenStretch): number {
+  return open.burst?.bpm ?? open.tempo.at(-1)?.[1] ?? open.startBpm;
+}
+
+function isRecent(recent: RecentTempoChange | null, at: number) {
+  return recent !== null && at - recent.at < STRETCH_FOLD_MS;
+}
+
+function recentChange(open: OpenStretch, at: number): RecentTempoChange {
+  if (open.recent !== null && isRecent(open.recent, at)) return open.recent;
+  const { tempo, burst, average } = open;
+  return { at, bpm: currentBpm(open), before: { tempo, burst, average } };
+}
+
 export function stretchAfterTempo(
   open: OpenStretch,
   at: number,
@@ -91,14 +116,31 @@ export function stretchAfterTempo(
 ): OpenStretch {
   const { burst } = open;
   const average = sampled(open.average, at, bpm);
+  const recent = recentChange(open, at);
   if (burst !== null && at - burst.changedAt < TEMPO_SETTLE_MS)
-    return { ...open, average, burst: { ...burst, bpm, changedAt: at } };
+    return {
+      ...open,
+      average,
+      recent,
+      burst: { ...burst, bpm, changedAt: at },
+    };
   return {
     ...open,
     average,
+    recent,
     tempo: settledTempo(open),
     burst: { offset: at - open.from, bpm, changedAt: at },
   };
+}
+
+export function withoutRecentTempo(
+  open: OpenStretch,
+  at: number,
+  bpm: number,
+): { readonly open: OpenStretch; readonly bpm: number } {
+  const { recent } = open;
+  if (recent === null || !isRecent(recent, at)) return { open, bpm };
+  return { open: { ...open, ...recent.before, recent: null }, bpm: recent.bpm };
 }
 
 export function stretchAfterSample(

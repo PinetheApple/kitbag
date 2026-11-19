@@ -136,16 +136,41 @@ describe('practice history', () => {
     await repo.insert(kept);
     await repo.insert(saved);
     const deleted = await repo.delete(saved.uuid);
-    expect(deleted).toEqual(saved);
+    expect(deleted?.session).toEqual(saved);
     expect(await repo.get(saved.uuid)).toBeUndefined();
     expect((await repo.stats()).sessions).toBe(1);
     if (deleted === undefined) throw new Error('nothing deleted');
-    await repo.insert(deleted);
+    await repo.restore(deleted);
     expect(await repo.get(saved.uuid)).toEqual(saved);
     expect((await repo.list()).map((row) => row.uuid)).toEqual([
       saved.uuid,
       kept.uuid,
     ]);
+  });
+
+  it('restores the stored text on undo, even text it cannot read', async () => {
+    const { handle, repo } = setup();
+    const uuid = crypto.randomUUID();
+    await handle.db.insert(practiceSessions).values({
+      uuid,
+      startTime: new Date(0),
+      durationSeconds: 60,
+      avgBpm: 100,
+      songsPlayed: '[1, "opener"]',
+      log: '{not json',
+    });
+    const stored = () =>
+      handle.db
+        .select({
+          songsPlayed: practiceSessions.songsPlayed,
+          log: practiceSessions.log,
+        })
+        .from(practiceSessions);
+    const before = await stored();
+    const deleted = await repo.delete(uuid);
+    if (deleted === undefined) throw new Error('nothing deleted');
+    await repo.restore(deleted);
+    expect(await stored()).toEqual(before);
   });
 
   it('deletes nothing for an unknown session', async () => {

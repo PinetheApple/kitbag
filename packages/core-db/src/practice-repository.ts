@@ -29,12 +29,20 @@ export type SavedPracticeSession = NewPracticeSession;
 
 export type PracticeSessionListing = Omit<SavedPracticeSession, 'log'>;
 
+type StoredPracticeSession = Omit<typeof practiceSessions.$inferSelect, 'id'>;
+
+export interface DeletedPracticeSession {
+  readonly session: SavedPracticeSession;
+  readonly stored: StoredPracticeSession;
+}
+
 export interface PracticeRepository {
   stats(): Promise<PracticeStats>;
   insert(session: NewPracticeSession): Promise<void>;
   list(): Promise<PracticeSessionListing[]>;
   get(uuid: string): Promise<SavedPracticeSession | undefined>;
-  delete(uuid: string): Promise<SavedPracticeSession | undefined>;
+  delete(uuid: string): Promise<DeletedPracticeSession | undefined>;
+  restore(deleted: DeletedPracticeSession): Promise<void>;
 }
 
 const { durationSeconds, avgBpm } = practiceSessions;
@@ -68,6 +76,8 @@ function decodeSongsPlayed(text: string | null): string[] {
   }
 }
 
+const STORED = { ...LISTED, log: practiceSessions.log };
+
 type ListedRow = Pick<
   typeof practiceSessions.$inferSelect,
   keyof typeof LISTED
@@ -97,17 +107,29 @@ async function existingSetlistId(
   return row?.id ?? null;
 }
 
-async function find(
+async function storedRow(
   db: Database,
   uuid: string,
-): Promise<SavedPracticeSession | undefined> {
+): Promise<StoredPracticeSession | undefined> {
   const [row] = await db
-    .select()
+    .select(STORED)
     .from(practiceSessions)
     .where(eq(practiceSessions.uuid, uuid));
-  return row === undefined
-    ? undefined
-    : { ...listingOf(row), log: parsePracticeLog(row.log) };
+  return row;
+}
+
+function savedOf(stored: StoredPracticeSession): SavedPracticeSession {
+  return { ...listingOf(stored), log: parsePracticeLog(stored.log) };
+}
+
+async function insertStored(db: Database, stored: StoredPracticeSession) {
+  await db
+    .insert(practiceSessions)
+    .values({
+      ...stored,
+      setlistId: await existingSetlistId(db, stored.setlistId),
+    })
+    .onConflictDoNothing({ target: practiceSessions.uuid });
 }
 
 export function createPracticeRepository({
@@ -137,19 +159,16 @@ export function createPracticeRepository({
       }),
     insert: (session) =>
       transactor.serial(async () => {
-        await db
-          .insert(practiceSessions)
-          .values({
-            uuid: session.uuid,
-            startTime: session.startedAt,
-            durationSeconds: session.durationSeconds,
-            avgBpm: session.avgBpm,
-            setlistId: await existingSetlistId(db, session.setlistId),
-            setlistName: session.setlistName,
-            songsPlayed: encodeSongsPlayed(session.songUuids),
-            log: encodePracticeLog(session.log),
-          })
-          .onConflictDoNothing({ target: practiceSessions.uuid });
+        await insertStored(db, {
+          uuid: session.uuid,
+          startTime: session.startedAt,
+          durationSeconds: session.durationSeconds,
+          avgBpm: session.avgBpm,
+          setlistId: session.setlistId,
+          setlistName: session.setlistName,
+          songsPlayed: encodeSongsPlayed(session.songUuids),
+          log: encodePracticeLog(session.log),
+        });
       }),
     list: () =>
       transactor.serial(async () => {
@@ -159,15 +178,20 @@ export function createPracticeRepository({
           .orderBy(desc(practiceSessions.startTime), desc(practiceSessions.id));
         return rows.map(listingOf);
       }),
-    get: (uuid) => transactor.serial(() => find(db, uuid)),
+    get: (uuid) =>
+      transactor.serial(async () => {
+        const stored = await storedRow(db, uuid);
+        return stored === undefined ? undefined : savedOf(stored);
+      }),
     delete: (uuid) =>
       transactor.serial(async () => {
-        const saved = await find(db, uuid);
-        if (saved !== undefined)
-          await db
-            .delete(practiceSessions)
-            .where(eq(practiceSessions.uuid, uuid));
-        return saved;
+        const stored = await storedRow(db, uuid);
+        if (stored === undefined) return undefined;
+        await db
+          .delete(practiceSessions)
+          .where(eq(practiceSessions.uuid, uuid));
+        return { session: savedOf(stored), stored };
       }),
+    restore: ({ stored }) => transactor.serial(() => insertStored(db, stored)),
   };
 }

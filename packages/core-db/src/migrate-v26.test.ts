@@ -49,7 +49,7 @@ describe('migrate v25 to v26', () => {
     const { db } = upgraded();
     const plan = rows<{ detail: string }>(
       db,
-      'EXPLAIN QUERY PLAN SELECT uuid FROM practice_sessions ORDER BY start_time DESC',
+      'EXPLAIN QUERY PLAN SELECT uuid FROM practice_sessions ORDER BY start_time DESC, id DESC',
     );
     expect(plan.map((step) => step.detail).join(' ')).toContain(
       'practice_sessions_start_time',
