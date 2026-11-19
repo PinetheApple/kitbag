@@ -1088,13 +1088,15 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   copies are deleted all at once at the end, not file by file. Import stays allowed during a
   move. When the SD card is missing and the user chooses "Use internal storage", the card's songs
   stay listed as unavailable, and a move to internal storage is offered when the card returns.
-  The database stays private to the app, and there is no system folder picker (SAF); the data
-  folder is Kitbag's own folder on internal storage or on a portable SD card. Design:
-  `design/kitbag-data-folder.html`. This replaces the SAF part of the 2026-09-26 ruling (5).
-  **[user]**
-- **2026-11-19 · Data folder move details (D11, #170)** — The primary external app folder is not
+  The database stays private to the app, and there is no system folder picker (SAF). This
+  replaces the SAF part of the 2026-09-26 ruling (5): SQLite can't live on a SAF document, so
+  the database stays private and only media moves, to app-owned folders that need no SAF.
+  Design: `design/kitbag-data-folder.html`. **[user]**
+
+- **2026-11-19 · Data folder move details (D11, #170)** — The data folder is Kitbag's own
+  folder on internal storage or on a portable SD card. The primary external app folder is not
   offered, because it is the same physical storage as internal. Songs on a mounted card play from
   the card until the user accepts the offered move. A move interrupted by the app being killed
-  waits on the Home banner for Resume or Undo and does not restart on its own. Cancel is offered
-  only before the switch. Old copies are deleted only once no player still has a song loaded from
-  them. **[recorded — lane call, owner may overturn]**
+  before the switch waits on the Home banner for Resume or Undo and does not restart on its own.
+  Cancel is offered only before the switch. Old copies are deleted only once no player or export
+  is still reading them. **[recorded — lane call, owner may overturn]**

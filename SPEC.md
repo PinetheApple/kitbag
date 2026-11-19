@@ -1603,7 +1603,7 @@ Two migration notes that are not obvious from the table:
 | `kitbag-metronome.html` | Supersedes the metronome section of `kitbag-ui.html`. Adds setlists, setlist detail, preset editor, four sheets, the numpad, practice summary, notification/lock screen. |
 | `kitbag-playalong.html` | Supersedes the Play-along section. Adds the locked state, seven more states, five sheets, and a code audit. |
 | `kitbag-settings.html` | Designs Settings, latency calibration, restore. **Supersedes exactly one §06 card** — "Settings stay contextual" — and nothing else. |
-| `kitbag-data-folder.html` | **The Data folder** (D11; #170). Extends `kitbag-settings.html`'s Data section with the Data folder row and its chooser, and draws the move (confirmation, progress, cancel, the paused banner on Home), its failures, the Songs list during a move, and songs on a missing SD card. Recorded in `docs/decisions.md`, 2026-11-19. |
+| `kitbag-data-folder.html` | **The Data folder** (D11; #170). Supersedes, in `kitbag-settings.html`, the Data folder row's value in Settings → Data and the Storage sheet's Location line; the rest of that file stands. Adds the Data folder chooser, and draws the move (confirmation, progress, cancel, the paused banner on Home), its failures, the Songs list during a move, and songs on a missing SD card. Recorded in `docs/decisions.md`, 2026-11-19. |
 | `kitbag-metronome-b.html` ("Chosen") and `kitbag-metronome-status.html` (variant A, Q6 pulse marks, poly row) | Owner-approved layout B (#175). **Supersede the metronome screen in `kitbag-metronome.html` §02, and §03's sheets and numpad, where they differ**, except sizes and vertical layout, which the #243 frame in `kitbag-metronome.html` §02 sets. §02's setlists, setlist detail and preset editor, and §04 onward, stay binding. Recorded in `docs/decisions.md`, 2026-10-30; `docs/research/metronome-b-parity.md` is the value table. |
 | `kitbag-metronome-setlist.html` | **D2 only** ("Chosen (owner, 2026-10-30)"; #205). Supersedes the app bar in `kitbag-metronome-b.html` while a setlist is active, and adds the setlist song-list sheet. Options A–D are rejected alternatives. Recorded in `docs/decisions.md`, 2026-10-30. |
 | `kitbag-metronome-poly.html` | **A and the main-screen poly row only** ("Chosen (owner, 2026-10-31)"; #203). Supersedes the Polyrhythm section of the Practice sheet in `kitbag-metronome-b.html` and the poly row in `kitbag-metronome-status.html`, and adds the song editor's Poly and Against rows. Options B and C are rejected alternatives. Recorded in `docs/decisions.md`, 2026-10-31. |
@@ -1817,7 +1817,7 @@ the supersession: ≤7 primary choices.)
   against it, and every stored path is relative to it (§11.2). The database and
   analysis scratch stay private to the app. The choices are Kitbag's own folder
   on internal storage or on a portable SD card, listed as volumes; there is no
-  system folder picker. Changing it moves the files (D11).
+  system folder picker. Changing it moves the files.
 - **Storage is its companion, not its replacement.** It reports what is on disk
   and where, and offers "Remove missing files". Storage reports; Data folder
   relocates.
@@ -2530,11 +2530,12 @@ every state.
   folder picker and no persisted-URI permission.
 - **A move is copy → verify → switch → delete.** Every file is copied and
   verified before the folder switches; then all the old copies are deleted at
-  once, after no player still has a song loaded from them. Until the switch,
+  once, after no player or export is still reading them. Until the switch,
   songs play from the old copy.
 - **Cancel** is offered only before the switch, and removes the new copies.
-- **A move interrupted by the app being killed** waits on Home for Resume or
-  Undo; it does not restart on its own.
+- **A move interrupted by the app being killed** before the switch waits on
+  Home for Resume or Undo and does not restart on its own; after the switch,
+  clean-up finishes by itself.
 - **Import stays allowed** during a move. A new song goes to the current folder
   and the move picks it up.
 - **A missing SD card** leaves its songs listed as unavailable, never deleted;
