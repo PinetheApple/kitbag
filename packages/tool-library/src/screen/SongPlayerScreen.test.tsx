@@ -27,6 +27,12 @@ const display = vi.hoisted(() => ({
   song: {},
   analysis: { analysisStatus: 'done', beats: [0] as readonly number[] },
 }));
+const library = vi.hoisted(
+  (): { rows: readonly unknown[]; failure: unknown } => ({
+    rows: [],
+    failure: null,
+  }),
+);
 const commands = vi.hoisted(() => ({ close: vi.fn(), reanalyze: vi.fn() }));
 const transport = vi.hoisted(() => ({
   markLoop: vi.fn(),
@@ -74,7 +80,7 @@ vi.mock('@kitbag/core-design', async (original) => {
     Chip: () => h('Chip'),
     createThemedStyles: (build: (theme: unknown) => unknown) => () =>
       build({ color: {} }),
-    EmptyState: () => h('EmptyState'),
+    EmptyState: (props: Props) => h('EmptyState', { reason: props.reason }),
     PlayerDock: parent,
     PlayerTransport: (props: Props) =>
       h('PlayerTransport', props, props.extraKey as ReactNode),
@@ -107,6 +113,7 @@ vi.mock('@kitbag/core-state', async (original) => {
     };
   };
   return {
+    analysisFailure: () => library.failure,
     bpmFact: (bpm: number | null) =>
       bpm === null ? null : { text: `${String(bpm)} BPM`, spoken: '' },
     clickKeyLabel: () => '',
@@ -118,7 +125,7 @@ vi.mock('@kitbag/core-state', async (original) => {
     useFocusedMixerHold,
     useLoopScrub: () => ({}),
     useSongLibrary: (select: (state: unknown) => unknown) =>
-      select({ reanalyze: commands.reanalyze }),
+      select({ rows: library.rows, codes: {}, reanalyze: commands.reanalyze }),
     useSongPlayer: (select: (state: unknown) => unknown) =>
       select({
         status: display.status,
@@ -140,6 +147,20 @@ const { SongPlayerScreen } = await import('./SongPlayerScreen.tsx');
 ).IS_REACT_ACT_ENVIRONMENT = true;
 
 const onBack = vi.fn();
+
+const UNSUPPORTED = {
+  kind: 'unsupported',
+  keptGrid: false,
+  format: 'ogg',
+  supported: ['WAV'],
+};
+const DAMAGED = { kind: 'damaged', keptGrid: false };
+const MISSING = { kind: 'missingFile', keptGrid: false };
+
+function failWith(failure: unknown) {
+  library.rows = [{ kind: 'song', id: OPEN_SONG.songId }];
+  library.failure = failure;
+}
 const playhead = () => ({}) as never;
 
 function screen(focused: boolean) {
@@ -179,6 +200,8 @@ beforeEach(() => {
   display.status = 'ready';
   display.song = OPEN_SONG;
   display.analysis = { analysisStatus: 'done', beats: [0] };
+  library.rows = [];
+  library.failure = null;
   Object.assign(mixer, { session: 0, opens: 0, displaced: 0, releases: 0 });
 });
 
@@ -194,6 +217,22 @@ describe('the song player layout', () => {
 
   it('sets the BPM badge in from the bar end', () => {
     expect(styleAround(mount(), 'Badge').marginRight).toBe(screenBar.chipEnd);
+  });
+
+  it('names an unsupported format when the song would not play', () => {
+    display.status = 'failed';
+    failWith(UNSUPPORTED);
+    expect(mount().root.findByType('EmptyState' as never).props.reason).toBe(
+      'OGG isn’t supported. Kitbag plays WAV.',
+    );
+  });
+
+  it('keeps the general reason when the format is not to blame', () => {
+    display.status = 'failed';
+    failWith(DAMAGED);
+    expect(
+      mount().root.findByType('EmptyState' as never).props.reason,
+    ).toContain('the audio engine did not start');
   });
 
   it.each(['failed', 'missing'])(
@@ -271,6 +310,13 @@ describe('the player menu', () => {
     );
   }
 
+  function menuLabels(tree: ReactTestRenderer) {
+    return tree.root
+      .findByType('Sheet' as never)
+      .findAllByType('Button' as never)
+      .map((node) => node.props.label as unknown);
+  }
+
   function openMenu(): ReactTestRenderer {
     const tree = mount();
     const [more] = tree.root.findByType('AppBar' as never).props
@@ -297,6 +343,14 @@ describe('the player menu', () => {
     expect(onBack.mock.invocationCallOrder[0]).toBeLessThan(
       commands.close.mock.invocationCallOrder[0] ?? Number.NaN,
     );
+  });
+
+  it.each([
+    ['in an unsupported format', UNSUPPORTED],
+    ['whose file is missing', MISSING],
+  ])('offers no Re-analyse for a song %s', (_case, failure) => {
+    failWith(failure);
+    expect(menuLabels(openMenu())).toEqual(['Stop']);
   });
 
   it('re-analyses this song and closes the menu', () => {
@@ -369,6 +423,33 @@ describe('a song with no beat grid', () => {
       (button.props.onPress as () => void)();
     });
     expect(commands.reanalyze).toHaveBeenCalledExactlyOnceWith(1);
+  });
+
+  it('offers no Re-analyse on the card for an unsupported format', () => {
+    display.analysis = GRIDLESS.failed;
+    failWith(UNSUPPORTED);
+    const tree = mount();
+    expect(
+      tree.root.findAll(
+        (node) =>
+          String(node.type) === 'Button' &&
+          node.props.label === REANALYZE_LABEL,
+      ),
+    ).toHaveLength(0);
+  });
+
+  it('says a supported file may be damaged and offers Re-analyse', () => {
+    display.analysis = GRIDLESS.failed;
+    failWith(DAMAGED);
+    const tree = mount();
+    expect(texts(tree)).toContain('File may be damaged, so no click');
+    expect(
+      tree.root.findAll(
+        (node) =>
+          String(node.type) === 'Button' &&
+          node.props.label === REANALYZE_LABEL,
+      ),
+    ).toHaveLength(1);
   });
 
   it('offers no Re-analyse while the beat is still being found', () => {

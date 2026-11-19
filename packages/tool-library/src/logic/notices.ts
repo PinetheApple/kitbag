@@ -15,7 +15,7 @@ export interface NoticeText {
   readonly text: string;
 }
 
-function formatName(format: string): string {
+export function formatName(format: string): string {
   return format === '' ? 'this format' : format.toUpperCase();
 }
 
@@ -128,38 +128,59 @@ export function noticeLook(notice: LibraryNotice): NoticeLook {
 export interface FailureText {
   readonly status: string;
   readonly text: string;
-  readonly canRetry: boolean;
 }
 
-const FAILURES: Readonly<Record<FailureKind, FailureText>> = {
+const FAILURES: Readonly<
+  Record<Exclude<FailureKind, 'unsupported'>, FailureText>
+> = {
   missingFile: {
     status: 'Missing file',
     text: 'The audio file is no longer on this phone, so it cannot be analyzed. Delete the song from its menu, or import the file again.',
-    canRetry: false,
   },
-  unsupported: {
-    status: 'Unsupported format',
-    text: 'This file’s format cannot be analyzed, so there is no beat grid to lock to.',
-    canRetry: false,
+  damaged: {
+    status: 'File may be damaged',
+    text: 'This file could not be decoded and may be damaged, so there is no beat grid to lock to.',
   },
   interrupted: {
     status: 'Analysis interrupted',
     text: 'Analysis stopped before it finished, so there is no beat grid to lock to.',
-    canRetry: true,
   },
   other: {
     status: 'Analysis failed',
     text: 'This file could not be analyzed, so there is no beat grid to lock to.',
-    canRetry: true,
   },
 };
 
 const KEPT_GRID = 'Re-analysis failed; the previous beat grid is kept.';
 
+const NOT_REANALYZABLE: ReadonlySet<FailureKind> = new Set([
+  'unsupported',
+  'missingFile',
+]);
+
+export function canReanalyze(failure: AnalysisFailure | null): boolean {
+  return failure === null || !NOT_REANALYZABLE.has(failure.kind);
+}
+
+export function unsupportedFormatText(
+  format: string,
+  supported: readonly string[],
+): string {
+  return `${formatName(format)} isn’t supported. Kitbag plays ${joinedFormatNames(supported)}.`;
+}
+
+function baseFailureText(failure: AnalysisFailure): FailureText {
+  if (failure.kind !== 'unsupported') return FAILURES[failure.kind];
+  return {
+    status: `${formatName(failure.format)} not supported`,
+    text: unsupportedFormatText(failure.format, failure.supported),
+  };
+}
+
 export function failureText(failure: AnalysisFailure): FailureText {
-  const base = FAILURES[failure.kind];
-  if (!failure.keptGrid) return base;
-  return { status: base.status, text: KEPT_GRID, canRetry: true };
+  const base = baseFailureText(failure);
+  if (!failure.keptGrid || !canReanalyze(failure)) return base;
+  return { ...base, text: KEPT_GRID };
 }
 
 export function copyingText(names: readonly string[]): string {

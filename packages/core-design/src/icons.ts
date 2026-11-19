@@ -74,6 +74,10 @@ export const iconGlyphs = {
   backupFile: 'tray-arrow-down',
   tapAlong: 'gesture-tap',
   undo: 'undo',
+  qrScan: 'qrcode-scan',
+  stemDeckServer: 'lan',
+  trusted: 'shield-check-outline',
+  certificateChanged: 'shield-alert-outline',
 } as const satisfies Record<string, VectorGlyph>;
 
 export type IconName = keyof typeof iconGlyphs;

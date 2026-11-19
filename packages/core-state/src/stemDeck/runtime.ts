@@ -4,6 +4,7 @@ import type {
   StemDeckImportSnapshot,
 } from '@kitbag/core-native';
 
+import type { PermissionAnswer } from '../permission.ts';
 import { warn } from '../songLibrary/storeSupport.ts';
 
 export type StemDeckNative = Pick<
@@ -19,6 +20,7 @@ export type StemDeckNative = Pick<
   | 'importSnapshot'
   | 'settleDownload'
   | 'setWatching'
+  | 'scanQr'
 > & {
   readonly constants: () => StemDeckConstants;
   readonly onImport: (
@@ -31,9 +33,16 @@ export interface UnityNoticePersistence {
   readonly save: () => void;
 }
 
+export interface StemDeckCamera {
+  readonly check: () => Promise<PermissionAnswer>;
+  readonly request: () => Promise<PermissionAnswer>;
+  readonly openSettings: () => void;
+}
+
 export interface StemDeckRuntime {
   readonly native: StemDeckNative;
   readonly unityNotice: UnityNoticePersistence;
+  readonly camera: StemDeckCamera;
 }
 
 export function stemDeckCodes(

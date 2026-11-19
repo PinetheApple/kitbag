@@ -39,12 +39,14 @@ import {
   lockBadgeOf,
   lockText,
 } from '../logic/lockText.ts';
+import { canReanalyze, unsupportedFormatText } from '../logic/notices.ts';
 import type { BadgeSpec } from '../logic/rowText.ts';
 import { songTitle } from '../logic/songTitle.ts';
 import { REANALYZE_LABEL } from '../logic/viewText.ts';
 import { frameAtTap } from '../logic/waveSeek.ts';
 import type { UsePlayhead } from './playhead.ts';
 import { SongTransport } from './SongTransport.tsx';
+import { useSongFailure } from './useSongFailure.ts';
 
 const NO_NEIGHBOURS = {};
 
@@ -99,6 +101,7 @@ function PlayerMenu({
   const title = useSongPlayer((s) => s.title);
   const close = useSongPlayer((s) => s.close);
   const reanalyze = useSongLibrary((s) => s.reanalyze);
+  const reanalyzable = canReanalyze(useSongFailure(songId));
   const stop = useCallback(() => {
     onDismiss();
     onBack();
@@ -118,7 +121,13 @@ function PlayerMenu({
     >
       <View style={styles.menu}>
         <Button label="Stop" variant="tonal" onPress={stop} />
-        <Button label={REANALYZE_LABEL} variant="tonal" onPress={onReanalyze} />
+        {reanalyzable ? (
+          <Button
+            label={REANALYZE_LABEL}
+            variant="tonal"
+            onPress={onReanalyze}
+          />
+        ) : null}
       </View>
     </Sheet>
   );
@@ -221,13 +230,14 @@ function LockCard({ songId }: { readonly songId: number }) {
   const bpm = bpmFact(useSongPlayer((s) => s.bpm));
   const toggleClick = useSongPlayer((s) => s.toggleClick);
   const reanalyze = useSongLibrary((s) => s.reanalyze);
+  const failure = useSongFailure(songId);
   const onToggle = useCallback(() => {
     void toggleClick();
   }, [toggleClick]);
   const onReanalyze = useCallback(() => {
     void reanalyze(songId);
   }, [reanalyze, songId]);
-  const text = lockText(badge, click, bpm?.text ?? null);
+  const text = lockText(badge, click, bpm?.text ?? null, failure);
   const row = (
     <View style={[styles.lock, scaled && styles.lockStacked]}>
       <View style={scaled ? styles.lockTextStacked : styles.lockText}>
@@ -256,20 +266,30 @@ function LockCard({ songId }: { readonly songId: number }) {
   return click ? <Card emphasis="activeGroup">{row}</Card> : <Card>{row}</Card>;
 }
 
+const NOT_PLAYED_REASON =
+  'The file could not be read, its format may not be supported, or the audio engine did not start.';
+
 function NotReady({
+  songId,
   status,
   onBack,
 }: {
+  readonly songId: number;
   readonly status: StemPlayerStatus;
   readonly onBack: () => void;
 }) {
   const styles = useStyles();
+  const failure = useSongFailure(songId);
   if (status === 'failed')
     return (
       <EmptyState
         icon="song"
         title="This song would not play"
-        reason="The file could not be read, its format may not be supported, or the audio engine did not start."
+        reason={
+          failure?.kind === 'unsupported'
+            ? unsupportedFormatText(failure.format, failure.supported)
+            : NOT_PLAYED_REASON
+        }
         actionLabel="Back to songs"
         onAction={onBack}
       />
@@ -310,7 +330,7 @@ function Body({ songId, bottom, onBack, usePlayhead }: BodyProps) {
   if (status !== 'ready')
     return (
       <View style={styles.bodyContent}>
-        <NotReady status={status} onBack={onBack} />
+        <NotReady songId={songId} status={status} onBack={onBack} />
       </View>
     );
   return (
