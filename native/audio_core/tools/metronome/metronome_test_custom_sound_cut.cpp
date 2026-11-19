@@ -86,7 +86,6 @@ constexpr int64_t kSeekBlock = 16;
 constexpr int64_t kSeekRenderBlocks = 32;
 
 void StartFollowing(Metronome& metronome) {
-  Load(metronome, Level(kLongFrames, kOldLevel));
   auto grid = std::make_unique<kitbag::BeatGrid>();
   for (int64_t beat : {kSeekBeat, 4 * kSeekBeat, 8 * kSeekBeat}) {
     grid->beat_times_sec.push_back(static_cast<double>(beat) / kSampleRate);
@@ -94,7 +93,6 @@ void StartFollowing(Metronome& metronome) {
   SetSongBars(grid.get(), 0, 4);
   metronome.SetGrid(std::move(grid), kitbag_test::kZeroClock, true);
   metronome.SetFollowMixer(true);
-  metronome.PreviewSound(kCustomSound, true);
   metronome.Start();
 }
 
@@ -110,12 +108,15 @@ kitbag::SongClock SeekClock(int64_t block, bool continues) {
   };
 }
 
+// The preview sounds before following starts: a followed click is never custom.
 std::vector<float> RenderFollowSeek(bool continues) {
   Metronome metronome;
-  StartFollowing(metronome);
-  std::vector<float> buffer(kBlockFrames * kChannels);
+  Load(metronome, Level(kLongFrames, kOldLevel));
+  metronome.PreviewSound(kCustomSound, true);
+  std::vector<float> buffer(size_t{kBlockFrames} * kChannels);
   std::vector<float> left;
   for (int64_t block = 0; block < kSeekRenderBlocks; ++block) {
+    if (block == 1) StartFollowing(metronome);
     const kitbag::SongClock clock = SeekClock(block, continues);
     std::fill(buffer.begin(), buffer.end(), 0.0F);
     const auto start = static_cast<uint64_t>(block * kBlockFrames);
@@ -128,7 +129,7 @@ std::vector<float> RenderFollowSeek(bool continues) {
         &clock
     );
     for (uint32_t f = 0; f < kBlockFrames; ++f) {
-      left.push_back(buffer[f * kChannels]);
+      left.push_back(buffer[size_t{f} * kChannels]);
     }
   }
   return left;
@@ -159,7 +160,7 @@ void TestRenderAllocatesNothingWithCustomSounds() {
   metronome.SetSounds(kCustomSound, kEmptySound);
   metronome.PreviewSound(kCustomSound, true);
   metronome.Start();
-  std::vector<float> buffer(kBlockFrames * kChannels);
+  std::vector<float> buffer(size_t{kBlockFrames} * kChannels);
   const size_t live = LiveHeapBytes();
   ResetHeapPeak();
   for (int block = 0; block < kAllocBlocks; ++block) {

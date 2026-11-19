@@ -71,7 +71,7 @@ inline int BuiltInOrTick(int32_t sound) {
 }
 
 // Following the mixer, the click is the song's and keeps the built-ins (§5.3).
-inline int GridSound(bool follow_mixer, int32_t sound) {
+inline int PlayedSound(bool follow_mixer, int32_t sound) {
   return follow_mixer ? BuiltInOrTick(sound) : sound;
 }
 

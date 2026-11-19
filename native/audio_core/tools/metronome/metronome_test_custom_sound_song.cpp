@@ -23,7 +23,7 @@ constexpr double kDenseBpm = 300.0;
 // hard cut shows as a drop rather than cancelling against the new hit.
 constexpr int kDenseSubdivision = 3;
 constexpr float kDenseLevel = 0.1F;
-constexpr size_t kDenseFrames = 2 * kSampleRate;
+constexpr size_t kDenseFrames = size_t{2} * kSampleRate;
 constexpr int64_t kDenseRenderFrames = kSampleRate;
 
 void SetSongGrid(Metronome& metronome) {
@@ -47,7 +47,7 @@ std::vector<float> RenderFollowing(int sound) {
   metronome.SetFollowMixer(true);
   metronome.SetSounds(sound, sound);
   metronome.Start();
-  std::vector<float> buffer(kBlockFrames * kChannels);
+  std::vector<float> buffer(size_t{kBlockFrames} * kChannels);
   std::vector<float> left;
   for (int64_t done = 0; done < kSongFrames; done += kBlockFrames) {
     const kitbag::SongClock clock{
@@ -66,7 +66,7 @@ std::vector<float> RenderFollowing(int sound) {
         &clock
     );
     for (uint32_t f = 0; f < kBlockFrames; ++f) {
-      left.push_back(buffer[f * kChannels]);
+      left.push_back(buffer[size_t{f} * kChannels]);
     }
   }
   return left;
@@ -80,6 +80,42 @@ void TestFollowingKeepsBuiltIns() {
           SameSamples(custom, 0, tick, 0, kSongFrames),
       "follow: bar, group, beat, half-beat and subdivision clicks play tick "
       "for a custom sound"
+  );
+}
+
+std::vector<float> RenderFollowingFree(int sound, bool preview) {
+  Metronome metronome;
+  Load(metronome, HitShape(kHitFrames));
+  metronome.SetFollowMixer(true);
+  metronome.SetSubdivision(2);
+  metronome.SetPolyrhythm(true, 3);
+  metronome.SetSounds(sound, sound);
+  if (preview) {
+    metronome.PreviewSound(sound, true);
+  } else {
+    metronome.Start();
+  }
+  return RenderLeft(metronome, kSongFrames);
+}
+
+void TestFollowingWithoutGridKeepsBuiltIns() {
+  const auto custom = RenderFollowingFree(kCustomSound, false);
+  const auto tick = RenderFollowingFree(Metronome::kTickSound, false);
+  Check(
+      FirstSoundFrom(custom, 0) >= 0 &&
+          SameSamples(custom, 0, tick, 0, kSongFrames),
+      "follow: with no grid, beat, subdivision and poly clicks play tick for "
+      "a custom sound"
+  );
+  Check(
+      SameSamples(
+          RenderFollowingFree(kCustomSound, true),
+          0,
+          RenderFollowingFree(Metronome::kTickSound, true),
+          0,
+          kSongFrames
+      ),
+      "follow: a custom preview plays tick while following the mixer"
   );
 }
 
@@ -130,6 +166,7 @@ void TestDenseStealsStayClickFree() {
 
 void RunCustomSoundSongTests() {
   TestFollowingKeepsBuiltIns();
+  TestFollowingWithoutGridKeepsBuiltIns();
   TestStandaloneGridPlaysCustom();
   TestDenseStealsStayClickFree();
 }

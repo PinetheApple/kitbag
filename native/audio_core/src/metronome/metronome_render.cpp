@@ -22,6 +22,7 @@ using metronome_detail::kGridEpsilon;
 using metronome_detail::kSecondsPerMinute;
 using metronome_detail::kSubdivisionAmplitude;
 using metronome_detail::OnsetFloorSec;
+using metronome_detail::PlayedSound;
 
 constexpr double kPolyBeatAmplitude = 0.5;
 constexpr double kPolyAccentAmplitude = 0.8;
@@ -97,7 +98,8 @@ double RoleHz(const SoundPreset& preset, ClickRole role) {
 
 }  // namespace
 
-void Metronome::TriggerSound(int sound, ClickRole role, uint32_t sample_rate) {
+void Metronome::TriggerSound(int id, ClickRole role, uint32_t sample_rate) {
+  const int sound = PlayedSound(follow_mixer_, id);
   const double gain = RoleGain(role);
   const int slot = sound - kFirstCustomSound;
   if (slot >= 0 && custom_sounds_.Trigger(slot, static_cast<float>(gain))) {

@@ -239,7 +239,7 @@ class Metronome {
   );
   void OnCountInBeat(int32_t index, CountInVoice voice, uint32_t sample_rate);
 
-  void TriggerSound(int sound, ClickRole role, uint32_t sample_rate);
+  void TriggerSound(int id, ClickRole role, uint32_t sample_rate);
   void OnBeatBoundary(int beat_index, uint32_t sample_rate);
   void OnGridBeat(const BeatGrid& grid, uint32_t sample_rate);
   void OnGridTick(int tick, uint32_t sample_rate);
