@@ -22,10 +22,10 @@ constexpr uint64_t kMaxAnalysisFrames = std::numeric_limits<int>::max();
 
 bool WithinFrameCap(uint64_t frames);
 
-// Encoder delay and padding leave a whole file a little short of its header's
-// length; a shortfall past both means the file was cut short or broke mid-way.
-constexpr uint64_t kDeclaredShortfallSlackFrames = 4096;
-constexpr uint64_t kDeclaredShortfallFractionDivisor = 100;
+constexpr uint64_t kMp3MaxFrameSamples = 1152;
+// An intact MP3 can decode short of its Xing/Info count by the Info frame, when
+// the count includes it, and by a first frame whose bit reservoir is missing.
+constexpr uint64_t kDeclaredShortfallSlackFrames = 2 * kMp3MaxFrameSamples;
 
 bool EndsShortOfDeclared(uint64_t decoded_frames, uint64_t declared_frames);
 

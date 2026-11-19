@@ -157,9 +157,7 @@ bool WithinFrameCap(uint64_t frames) {
 
 bool EndsShortOfDeclared(uint64_t decoded_frames, uint64_t declared_frames) {
   if (declared_frames <= decoded_frames) return false;
-  return declared_frames - decoded_frames >
-         kDeclaredShortfallSlackFrames +
-             declared_frames / kDeclaredShortfallFractionDivisor;
+  return declared_frames - decoded_frames > kDeclaredShortfallSlackFrames;
 }
 
 kb_result AnalyzeSong(

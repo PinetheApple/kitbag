@@ -6,7 +6,7 @@
 namespace kitbag {
 
 // The decoder clamps a WAV's data chunk to the bytes present, so the length the
-// header claims has to be read here. 0 when there is no PCM or float data size.
+// header claims has to be read here. 0 when it gives no trustworthy PCM size.
 uint64_t WavDeclaredFrames(const char* path);
 
 }  // namespace kitbag

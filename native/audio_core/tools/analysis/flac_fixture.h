@@ -6,7 +6,11 @@
 #include <cstdint>
 #include <vector>
 
+#include "media/wav_fixture.h"
+
 namespace analyze_test {
+
+using media_test::kBitsPerByte;
 
 constexpr uint32_t kFlacRate = 44100;
 constexpr uint64_t kFlacBlockFrames = 4096;
@@ -21,15 +25,23 @@ constexpr size_t kFlacFrameSizeBytes = 3;
 constexpr int kFlacRateShift = 44;
 constexpr int kFlacBitsShift = 36;
 constexpr std::array<uint8_t, 2> kFlacFrameSync = {0xFF, 0xF8};
-// Block size code 12 is 4096 frames; rate code 9 is 44.1 kHz.
-constexpr uint8_t kFlacBlockAndRateCode = 0xC9;
-// Mono, sample size code 4 is 16 bits.
-constexpr uint8_t kFlacMono16Code = 0x08;
+constexpr uint8_t kFlacBlockSizeCode4096 = 12;
+constexpr uint8_t kFlacRateCode44k1 = 9;
+constexpr uint8_t kFlacChannelsMono = 0;
+constexpr uint8_t kFlacSampleSizeCode16 = 4;
+constexpr int kFlacHighNibbleShift = 4;
+constexpr int kFlacSampleSizeShift = 1;
+constexpr uint8_t kFlacBlockAndRateCode = static_cast<uint8_t>(
+    (kFlacBlockSizeCode4096 << kFlacHighNibbleShift) | kFlacRateCode44k1
+);
+constexpr uint8_t kFlacMono16Code = static_cast<uint8_t>(
+    (kFlacChannelsMono << kFlacHighNibbleShift) |
+    (kFlacSampleSizeCode16 << kFlacSampleSizeShift)
+);
 constexpr uint8_t kFlacConstantSubframe = 0x00;
 constexpr uint8_t kFlacCrc8Poly = 0x07;
 constexpr uint16_t kFlacCrc16Poly = 0x8005;
 constexpr uint8_t kByteMask = 0xFF;
-constexpr int kByteBits = 8;
 constexpr uint8_t kCrc8TopBit = 0x80;
 constexpr uint16_t kCrc16TopBit = 0x8000;
 
@@ -37,7 +49,7 @@ inline void
 PutBigEndian(uint64_t value, size_t bytes, std::vector<uint8_t>* out) {
   for (size_t i = bytes; i > 0; --i) {
     out->push_back(
-        static_cast<uint8_t>((value >> ((i - 1) * kByteBits)) & kByteMask)
+        static_cast<uint8_t>((value >> ((i - 1) * kBitsPerByte)) & kByteMask)
     );
   }
 }
@@ -46,7 +58,7 @@ inline uint8_t FlacCrc8(const uint8_t* data, size_t size) {
   uint8_t crc = 0;
   for (size_t i = 0; i < size; ++i) {
     crc ^= data[i];
-    for (int b = 0; b < kByteBits; ++b) {
+    for (int b = 0; b < kBitsPerByte; ++b) {
       crc = (crc & kCrc8TopBit) != 0
                 ? static_cast<uint8_t>((crc << 1) ^ kFlacCrc8Poly)
                 : static_cast<uint8_t>(crc << 1);
@@ -58,8 +70,8 @@ inline uint8_t FlacCrc8(const uint8_t* data, size_t size) {
 inline uint16_t FlacCrc16(const uint8_t* data, size_t size) {
   uint16_t crc = 0;
   for (size_t i = 0; i < size; ++i) {
-    crc ^= static_cast<uint16_t>(data[i] << kByteBits);
-    for (int b = 0; b < kByteBits; ++b) {
+    crc ^= static_cast<uint16_t>(data[i] << kBitsPerByte);
+    for (int b = 0; b < kBitsPerByte; ++b) {
       crc = (crc & kCrc16TopBit) != 0
                 ? static_cast<uint16_t>((crc << 1) ^ kFlacCrc16Poly)
                 : static_cast<uint16_t>(crc << 1);

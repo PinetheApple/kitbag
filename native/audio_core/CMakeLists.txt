@@ -430,6 +430,7 @@ if(KITBAG_BUILD_TOOLS)
     tools/analysis/analyze_test_long_grid.cpp
     tools/analysis/analyze_test_length.cpp
     tools/analysis/analyze_test_damaged.cpp
+    tools/analysis/analyze_test_damaged_wav.cpp
     tools/analysis/analyze_test_sustained.cpp
     tools/analysis/analyze_test_meter.cpp
     tools/analysis/analyze_test_stems.cpp

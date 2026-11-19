@@ -7,11 +7,14 @@
 #include <cstdint>
 #include <vector>
 
+#include "media/wav_fixture.h"
+
 namespace analyze_test {
+
+using media_test::kBitsPerByte;
 
 constexpr uint32_t kMp3Rate = 44100;
 constexpr uint64_t kMp3FrameSamples = 1152;
-constexpr uint64_t kBitsPerByte = 8;
 constexpr uint64_t kBitsPerKbit = 1000;
 constexpr uint8_t kMp3SyncByte = 0xFF;
 constexpr uint8_t kMp3Mpeg1Layer3NoCrc = 0xFB;
@@ -25,6 +28,11 @@ constexpr std::array<uint8_t, 4> kXingTag = {'X', 'i', 'n', 'g'};
 constexpr size_t kXingFlagsOffset = 7;
 constexpr uint8_t kXingFramesFlag = 0x01;
 constexpr size_t kXingFramesOffset = 8;
+constexpr size_t kXingLameTagOffset = 12;
+constexpr size_t kLameDelayPaddingOffset = 21;
+constexpr std::array<uint8_t, 9> kLameVersion =
+    {'L', 'A', 'M', 'E', '3', '.', '1', '0', '0'};
+constexpr int kLameFieldBits = 12;
 
 struct Mp3Bitrate {
   uint8_t index;
@@ -88,6 +96,20 @@ BuildMp3WithXingFrameCount(int frames, uint32_t claimed_frames) {
   }
   const std::vector<uint8_t> body = BuildVbrMp3WithoutInfoFrame(frames);
   out.insert(out.end(), body.begin(), body.end());
+  return out;
+}
+
+inline std::vector<uint8_t>
+BuildMp3WithLameTag(int frames, uint32_t delay, uint32_t padding) {
+  std::vector<uint8_t> out = BuildMp3WithXingFrameCount(frames, frames);
+  const size_t lame =
+      kMp3HeaderBytes + kMp3MonoSideInfoBytes + kXingLameTagOffset;
+  std::copy(kLameVersion.begin(), kLameVersion.end(), out.begin() + lame);
+  const size_t fields = lame + kLameDelayPaddingOffset;
+  const uint32_t packed = (delay << kLameFieldBits) | padding;
+  out[fields] = static_cast<uint8_t>(packed >> (2 * kBitsPerByte));
+  out[fields + 1] = static_cast<uint8_t>(packed >> kBitsPerByte);
+  out[fields + 2] = static_cast<uint8_t>(packed);
   return out;
 }
 
