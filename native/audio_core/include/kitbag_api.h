@@ -375,6 +375,8 @@ KB_EXPORT kb_result kb_waveform_read_envelope(
     int32_t buckets
 );
 
+#include "kitbag_constant_tempo_api.h"
+
 #ifdef __cplusplus
 }
 #endif

@@ -225,6 +225,14 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     promise.resolve(nativeSetGrid(times, downbeats, anchorFrame))
   }
 
+  override fun fitConstantTempo(beatTimesSec: ReadableArray, downbeatIndices: ReadableArray, promise: Promise) {
+    try {
+      promise.resolve(ConstantTempoFitter.fit(beatTimesSec, downbeatIndices))
+    } catch (e: Throwable) {
+      promise.reject(ConstantTempoFitter.E_FIT_FAILED, "Constant tempo fit failed", e)
+    }
+  }
+
   override fun clearGrid() {
     nativeClearGrid()
   }
