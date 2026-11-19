@@ -1,0 +1,1 @@
+• StemDeck: if Kitbag closes in the middle of an import, Stem songs now shows how many songs are left, and the import screen offers Retry or Clear.
