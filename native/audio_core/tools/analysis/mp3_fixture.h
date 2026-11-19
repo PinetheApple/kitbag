@@ -91,6 +91,12 @@ BuildMp3WithXingFrameCount(int frames, uint32_t claimed_frames) {
   return out;
 }
 
+inline std::vector<uint8_t> BuildCbrMp3WithoutInfoFrame(int frames) {
+  std::vector<uint8_t> out;
+  for (int f = 0; f < frames; ++f) AppendMp3Frame(kMp3Bitrate128, &out);
+  return out;
+}
+
 inline double FirstFrameBitrateEstimateSec(size_t file_bytes) {
   return static_cast<double>(file_bytes * kBitsPerByte) /
          static_cast<double>(kMp3Bitrates[0].kbps * kBitsPerKbit);

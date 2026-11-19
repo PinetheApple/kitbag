@@ -73,7 +73,8 @@ struct FirstPass {
   uint64_t frames = 0;
 };
 
-kb_result ReadFirstPass(SourceReader& reader, FirstPass* out) {
+kb_result
+ReadFirstPass(SourceReader& reader, uint64_t declared_frames, FirstPass* out) {
   OnsetEnvelope onset;
   ChunkStream chunks(reader);
   for (size_t n = chunks.Next(); n > 0; n = chunks.Next()) {
@@ -83,6 +84,9 @@ kb_result ReadFirstPass(SourceReader& reader, FirstPass* out) {
     out->frames += n;
     if (!WithinFrameCap(out->frames)) return KB_ERROR_INVALID_ARGUMENT;
     onset.Push(chunks.mono(), n);
+  }
+  if (EndsShortOfDeclared(out->frames, declared_frames)) {
+    return KB_ERROR_INVALID_ARGUMENT;
   }
   out->flux = onset.TakeFlux();
   return KB_OK;
@@ -151,8 +155,16 @@ bool WithinFrameCap(uint64_t frames) {
   return frames <= kMaxAnalysisFrames;
 }
 
+bool EndsShortOfDeclared(uint64_t decoded_frames, uint64_t declared_frames) {
+  if (declared_frames <= decoded_frames) return false;
+  return declared_frames - decoded_frames >
+         kDeclaredShortfallSlackFrames +
+             declared_frames / kDeclaredShortfallFractionDivisor;
+}
+
 kb_result AnalyzeSong(
     SourceReader& reader,
+    uint64_t declared_frames,
     const char* path,
     const char* waveform_dir,
     BeatResult* out
@@ -165,7 +177,7 @@ kb_result AnalyzeSong(
   }
   const auto channels = static_cast<int>(reader_channels);
   FirstPass first;
-  const kb_result scanned = ReadFirstPass(reader, &first);
+  const kb_result scanned = ReadFirstPass(reader, declared_frames, &first);
   if (scanned != KB_OK || first.frames == 0) return scanned;
 
   const int rate = static_cast<int>(reader.sample_rate());

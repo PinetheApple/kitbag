@@ -41,6 +41,7 @@ add_library(kitbag_core SHARED
   src/analysis/meter.cpp
   src/analysis/onset_envelope.cpp
   src/analysis/song_analysis.cpp
+  src/analysis/wav_declared_length.cpp
   src/media/audio_source.cpp
   src/media/decoder.cpp
   src/media/file_audio_reader.cpp
@@ -428,10 +429,12 @@ if(KITBAG_BUILD_TOOLS)
     tools/analysis/analyze_test_write_peaks.cpp
     tools/analysis/analyze_test_long_grid.cpp
     tools/analysis/analyze_test_length.cpp
+    tools/analysis/analyze_test_damaged.cpp
     tools/analysis/analyze_test_sustained.cpp
     tools/analysis/analyze_test_meter.cpp
     tools/analysis/analyze_test_stems.cpp
     src/api/api_analysis.cpp
+    src/analysis/wav_declared_length.cpp
     src/analysis/song_analysis.cpp
     src/analysis/downbeat.cpp
     src/analysis/meter.cpp

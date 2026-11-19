@@ -18,7 +18,7 @@ namespace {
 
 constexpr int kMp3Frames = 41;
 constexpr uint64_t kWavFrames = 4999;
-constexpr uint32_t kXingClaimedFrames = 97;
+constexpr uint32_t kXingClaimedFrames = kMp3Frames + 1;
 constexpr size_t kJunkBytes = 3001;
 
 double ExactSeconds(uint64_t frames, uint32_t rate) {

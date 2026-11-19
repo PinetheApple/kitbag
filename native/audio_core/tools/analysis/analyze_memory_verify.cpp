@@ -96,7 +96,7 @@ Run AnalyzeSeconds(uint64_t seconds) {
   const size_t baseline = g_live_bytes;
   g_peak_bytes = baseline;
   Run run;
-  run.status = kitbag::AnalyzeSong(reader, "synth", nullptr, &result);
+  run.status = kitbag::AnalyzeSong(reader, 0, "synth", nullptr, &result);
   run.peak_bytes = g_peak_bytes - baseline;
   run.beats = result.beat_times.size();
   run.downbeats = result.downbeat_indices.size();
