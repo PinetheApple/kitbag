@@ -114,6 +114,7 @@ describe('song library repository', () => {
       hasGrid: false,
       analysisStatus: 'analyzing',
       analysisError: null,
+      format: 'mp3',
       inSetlist: false,
     });
     expect(second).toBeGreaterThan(first);

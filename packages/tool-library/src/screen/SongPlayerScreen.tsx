@@ -23,6 +23,7 @@ import {
   type ScrubFrame,
 } from '@kitbag/core-design';
 import {
+  analysisFailure,
   bpmFact,
   clickKeyLabel,
   framesToSeconds,
@@ -33,6 +34,7 @@ import {
   useLoopScrub,
   useSongLibrary,
   useSongPlayer,
+  type AnalysisFailure,
   type StemPlayerStatus,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
@@ -44,6 +46,7 @@ import {
   lockBadgeOf,
   lockText,
 } from '../logic/lockText.ts';
+import { failureText } from '../logic/notices.ts';
 import type { BadgeSpec } from '../logic/rowText.ts';
 import { songTitle } from '../logic/songTitle.ts';
 import { REANALYZE_LABEL } from '../logic/viewText.ts';
@@ -51,6 +54,14 @@ import { frameAtTap } from '../logic/waveSeek.ts';
 import type { UsePlayhead } from './playhead.ts';
 
 const NO_NEIGHBOURS = {};
+
+function useSongFailure(songId: number): AnalysisFailure | null {
+  const song = useSongLibrary((s) =>
+    s.rows.find((row) => row.kind === 'song' && row.id === songId),
+  );
+  const codes = useSongLibrary((s) => s.codes);
+  return song?.kind === 'song' ? analysisFailure(song, codes) : null;
+}
 
 export interface SongPlayerScreenProps {
   readonly songId: number;
@@ -103,6 +114,8 @@ function PlayerMenu({
   const title = useSongPlayer((s) => s.title);
   const close = useSongPlayer((s) => s.close);
   const reanalyze = useSongLibrary((s) => s.reanalyze);
+  const failure = useSongFailure(songId);
+  const canRetry = failure === null || failureText(failure).canRetry;
   const stop = useCallback(() => {
     onDismiss();
     onBack();
@@ -122,7 +135,13 @@ function PlayerMenu({
     >
       <View style={styles.menu}>
         <Button label="Stop" variant="tonal" onPress={stop} />
-        <Button label={REANALYZE_LABEL} variant="tonal" onPress={onReanalyze} />
+        {canRetry ? (
+          <Button
+            label={REANALYZE_LABEL}
+            variant="tonal"
+            onPress={onReanalyze}
+          />
+        ) : null}
       </View>
     </Sheet>
   );
@@ -225,13 +244,14 @@ function LockCard({ songId }: { readonly songId: number }) {
   const bpm = bpmFact(useSongPlayer((s) => s.bpm));
   const toggleClick = useSongPlayer((s) => s.toggleClick);
   const reanalyze = useSongLibrary((s) => s.reanalyze);
+  const failure = useSongFailure(songId);
   const onToggle = useCallback(() => {
     void toggleClick();
   }, [toggleClick]);
   const onReanalyze = useCallback(() => {
     void reanalyze(songId);
   }, [reanalyze, songId]);
-  const text = lockText(badge, click, bpm?.text ?? null);
+  const text = lockText(badge, click, bpm?.text ?? null, failure);
   const row = (
     <View style={[styles.lock, scaled && styles.lockStacked]}>
       <View style={scaled ? styles.lockTextStacked : styles.lockText}>

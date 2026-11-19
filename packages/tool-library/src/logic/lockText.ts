@@ -1,10 +1,12 @@
 import {
   bpmFact,
   playerSongBadge,
+  type AnalysisFailure,
   type SongBadge,
   type SongPlayerStore,
 } from '@kitbag/core-state';
 
+import { formatName } from './notices.ts';
 import { songStatusBadge, type BadgeSpec } from './rowText.ts';
 
 export type LockAction = 'click' | 'reanalyze' | 'none';
@@ -37,6 +39,22 @@ const NO_GRID_TEXT: Readonly<Record<'failed' | 'noGrid', LockText>> = {
     action: 'reanalyze',
   },
 };
+
+const DAMAGED: LockText = {
+  title: NO_GRID_TITLE,
+  detail: 'File may be damaged, so no click',
+  action: 'reanalyze',
+};
+
+function failedText(failure: AnalysisFailure | null): LockText {
+  if (failure?.kind === 'damaged') return DAMAGED;
+  if (failure?.kind !== 'unsupported') return NO_GRID_TEXT.failed;
+  return {
+    title: NO_GRID_TITLE,
+    detail: `${formatName(failure.format)} isn’t supported, so no click`,
+    action: 'none',
+  };
+}
 
 // The player draws any song it cannot click to as NO GRID, in red.
 const PLAYER_NO_GRID: BadgeSpec = {
@@ -84,14 +102,16 @@ export function lockText(
   badge: SongBadge,
   click: boolean,
   bpmText: string | null,
+  failure: AnalysisFailure | null,
 ): LockText {
   switch (badge) {
     case 'pending':
     case 'analyzing':
       return ANALYSING;
     case 'failed':
+      return failedText(failure);
     case 'noGrid':
-      return NO_GRID_TEXT[badge];
+      return NO_GRID_TEXT.noGrid;
     case 'grid':
       return click
         ? {

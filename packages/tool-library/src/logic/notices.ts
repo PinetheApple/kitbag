@@ -15,7 +15,7 @@ export interface NoticeText {
   readonly text: string;
 }
 
-function formatName(format: string): string {
+export function formatName(format: string): string {
   return format === '' ? 'this format' : format.toUpperCase();
 }
 
@@ -131,16 +131,18 @@ export interface FailureText {
   readonly canRetry: boolean;
 }
 
-const FAILURES: Readonly<Record<FailureKind, FailureText>> = {
+const FAILURES: Readonly<
+  Record<Exclude<FailureKind, 'unsupported'>, FailureText>
+> = {
   missingFile: {
     status: 'Missing file',
     text: 'The audio file is no longer on this phone, so it cannot be analyzed. Delete the song from its menu, or import the file again.',
     canRetry: false,
   },
-  unsupported: {
-    status: 'Unsupported format',
-    text: 'This file’s format cannot be analyzed, so there is no beat grid to lock to.',
-    canRetry: false,
+  damaged: {
+    status: 'File may be damaged',
+    text: 'This file could not be decoded and may be damaged, so there is no beat grid to lock to.',
+    canRetry: true,
   },
   interrupted: {
     status: 'Analysis interrupted',
@@ -156,10 +158,20 @@ const FAILURES: Readonly<Record<FailureKind, FailureText>> = {
 
 const KEPT_GRID = 'Re-analysis failed; the previous beat grid is kept.';
 
+function baseFailureText(failure: AnalysisFailure): FailureText {
+  if (failure.kind !== 'unsupported') return FAILURES[failure.kind];
+  const name = formatName(failure.format);
+  return {
+    status: `${name} not supported`,
+    text: `${name} isn’t supported, so there is no beat grid to lock to. Kitbag plays ${joinedFormatNames(failure.supported)}.`,
+    canRetry: false,
+  };
+}
+
 export function failureText(failure: AnalysisFailure): FailureText {
-  const base = FAILURES[failure.kind];
+  const base = baseFailureText(failure);
   if (!failure.keptGrid) return base;
-  return { status: base.status, text: KEPT_GRID, canRetry: true };
+  return { ...base, text: KEPT_GRID };
 }
 
 export function copyingText(names: readonly string[]): string {

@@ -9,6 +9,7 @@ import {
   isStemArchive,
   songBadge,
   songRemovals,
+  storedAudioFormat,
   summarize,
 } from './logic.ts';
 import { CODES as SHARED_CODES } from './store.test-helper.ts';
@@ -270,28 +271,78 @@ describe('songRemovals', () => {
 });
 
 describe('analysisFailure', () => {
-  const failed = (analysisError: string | null, hasGrid = false) =>
-    song(1, 'X', { analysisStatus: 'failed', analysisError, hasGrid });
+  const failed = (
+    analysisError: string | null,
+    format = 'mp3',
+    hasGrid = false,
+  ) =>
+    song(1, 'X', { analysisStatus: 'failed', analysisError, format, hasGrid });
+  const families = CODES.supportedAudioFamilies;
 
   it.each([
     ['missing-file', 'missingFile'],
-    ['unsupported', 'unsupported'],
+    ['unsupported', 'damaged'],
     ['interrupted', 'interrupted'],
     ['internal', 'other'],
     ['something native did not promise', 'other'],
-  ] as const)('reads %s as %s', (error, kind) => {
+  ] as const)('reads %s on a supported format as %s', (error, kind) => {
     expect(analysisFailure(failed(error), CODES)).toEqual({
       kind,
       keptGrid: false,
     });
   });
 
+  it.each(['unsupported', 'interrupted', 'internal'])(
+    'names an unsupported format whatever the %s error',
+    (error) => {
+      expect(analysisFailure(failed(error, 'm4a'), CODES)).toEqual({
+        kind: 'unsupported',
+        keptGrid: false,
+        format: 'm4a',
+        supported: families,
+      });
+    },
+  );
+
+  it('still reads a missing file in an unsupported format as missing', () => {
+    expect(analysisFailure(failed('missing-file', 'ogg'), CODES)?.kind).toBe(
+      'missingFile',
+    );
+  });
+
+  it.each([
+    ['wav', 'damaged'],
+    ['flac', 'damaged'],
+    ['ogg', 'unsupported'],
+    ['aac', 'unsupported'],
+    ['m4a', 'unsupported'],
+    ['unknown', 'damaged'],
+    ['', 'damaged'],
+  ] as const)(
+    'reads a Flutter-era %s row that would not decode as %s',
+    (format, kind) => {
+      expect(analysisFailure(failed('unsupported', format), CODES)?.kind).toBe(
+        kind,
+      );
+    },
+  );
+
+  it('reads a song with no stored format as damaged', () => {
+    const formatless = song(1, 'X', {
+      analysisStatus: 'failed',
+      analysisError: 'unsupported',
+    });
+    expect(analysisFailure(formatless, CODES)?.kind).toBe('damaged');
+  });
+
   it('reads every failure as other without the native codes', () => {
-    expect(analysisFailure(failed('missing-file'), null)?.kind).toBe('other');
+    expect(analysisFailure(failed('missing-file', 'm4a'), null)?.kind).toBe(
+      'other',
+    );
   });
 
   it('reports a grid kept from before the failed re-analysis', () => {
-    expect(analysisFailure(failed('internal', true), CODES)).toEqual({
+    expect(analysisFailure(failed('internal', 'mp3', true), CODES)).toEqual({
       kind: 'other',
       keptGrid: true,
     });
@@ -302,4 +353,35 @@ describe('analysisFailure', () => {
       analysisFailure(song(1, 'X', { analysisStatus: 'done' }), CODES),
     ).toBeNull();
   });
+});
+
+describe('storedAudioFormat', () => {
+  it.each([
+    ['m4a', 'm4a'],
+    ['M4A', 'm4a'],
+    ['.ogg', 'ogg'],
+    [' .FLAC ', 'flac'],
+    ['audio/x-flac', 'flac'],
+    ['audio/ogg; codecs=vorbis', 'ogg'],
+    ['unknown', 'unknown'],
+    ['', ''],
+  ])('reads %j as %j', (stored, format) => {
+    expect(storedAudioFormat(stored)).toBe(format);
+  });
+
+  it.each(['M4A', '.ogg', 'audio/aac', ' .Ogg'])(
+    'still names %j as an unsupported format',
+    (format) => {
+      expect(
+        analysisFailure(
+          song(1, 'X', {
+            analysisStatus: 'failed',
+            analysisError: 'unsupported',
+            format,
+          }),
+          CODES,
+        )?.kind,
+      ).toBe('unsupported');
+    },
+  );
 });

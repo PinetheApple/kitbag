@@ -110,16 +110,17 @@ describe('replaceText', () => {
 });
 
 describe('failureText', () => {
+  const M4A = {
+    kind: 'unsupported',
+    keptGrid: false,
+    format: 'm4a',
+    supported: ['WAV', 'MP3', 'FLAC', 'AIFF'],
+  } as const;
+
   it('names each cause in plain words and offers a retry only where it can help', () => {
     expect(failureText({ kind: 'missingFile', keptGrid: false })).toMatchObject(
       {
         status: 'Missing file',
-        canRetry: false,
-      },
-    );
-    expect(failureText({ kind: 'unsupported', keptGrid: false })).toMatchObject(
-      {
-        status: 'Unsupported format',
         canRetry: false,
       },
     );
@@ -131,12 +132,32 @@ describe('failureText', () => {
     );
   });
 
+  it('names an unsupported format and the formats Kitbag plays, with no retry', () => {
+    expect(failureText(M4A)).toEqual({
+      status: 'M4A not supported',
+      text: 'M4A isn’t supported, so there is no beat grid to lock to. Kitbag plays WAV, MP3, FLAC or AIFF.',
+      canRetry: false,
+    });
+  });
+
+  it('says a supported file that would not decode may be damaged, and offers a retry', () => {
+    expect(failureText({ kind: 'damaged', keptGrid: false })).toEqual({
+      status: 'File may be damaged',
+      text: 'This file could not be decoded and may be damaged, so there is no beat grid to lock to.',
+      canRetry: true,
+    });
+  });
+
   it('says the previous grid is kept when a re-analysis fails', () => {
-    expect(failureText({ kind: 'unsupported', keptGrid: true })).toEqual({
-      status: 'Unsupported format',
+    expect(failureText({ kind: 'damaged', keptGrid: true })).toEqual({
+      status: 'File may be damaged',
       text: 'Re-analysis failed; the previous beat grid is kept.',
       canRetry: true,
     });
+  });
+
+  it('offers no retry over a kept grid when the format is unsupported', () => {
+    expect(failureText({ ...M4A, keptGrid: true }).canRetry).toBe(false);
   });
 });
 

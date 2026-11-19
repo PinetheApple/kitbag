@@ -68,6 +68,7 @@ function ActionsSheet({ menu, bottomInset }: SheetProps) {
   const { target, close, openRename, openDelete } = menu;
   const failure =
     target?.kind === 'song' ? analysisFailure(target, codes) : null;
+  const failed = failure === null ? null : failureText(failure);
   const retry = useCallback(() => {
     close();
     if (target?.kind === 'song') void reanalyze(target.id);
@@ -81,12 +82,10 @@ function ActionsSheet({ menu, bottomInset }: SheetProps) {
       bottomInset={bottomInset}
       onDismiss={close}
     >
-      {failure === null ? null : (
-        <SheetHint>{failureText(failure).text}</SheetHint>
-      )}
+      {failed === null ? null : <SheetHint>{failed.text}</SheetHint>}
       <View style={styles.stack}>
         <Button label="Rename" variant="tonal" onPress={openRename} />
-        {target?.kind === 'song' ? (
+        {target?.kind === 'song' && failed?.canRetry !== false ? (
           <Button label={REANALYZE_LABEL} variant="tonal" onPress={retry} />
         ) : null}
         <Button

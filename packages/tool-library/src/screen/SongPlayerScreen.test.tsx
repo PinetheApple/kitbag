@@ -22,6 +22,12 @@ const display = vi.hoisted(() => ({
   song: {},
   analysis: { analysisStatus: 'done', beats: [0] as readonly number[] },
 }));
+const library = vi.hoisted(
+  (): { rows: readonly unknown[]; failure: unknown } => ({
+    rows: [],
+    failure: null,
+  }),
+);
 const commands = vi.hoisted(() => ({ close: vi.fn(), reanalyze: vi.fn() }));
 const mixer = vi.hoisted(() => ({
   session: 0,
@@ -91,6 +97,7 @@ vi.mock('@kitbag/core-state', async (original) => {
     };
   };
   return {
+    analysisFailure: () => library.failure,
     bpmFact: (bpm: number | null) =>
       bpm === null ? null : { text: `${String(bpm)} BPM`, spoken: '' },
     clickKeyLabel: () => '',
@@ -102,7 +109,7 @@ vi.mock('@kitbag/core-state', async (original) => {
     useFocusedMixerHold,
     useLoopScrub: () => ({}),
     useSongLibrary: (select: (state: unknown) => unknown) =>
-      select({ reanalyze: commands.reanalyze }),
+      select({ rows: library.rows, codes: {}, reanalyze: commands.reanalyze }),
     useSongPlayer: (select: (state: unknown) => unknown) =>
       select({
         status: display.status,
@@ -123,6 +130,19 @@ const { SongPlayerScreen } = await import('./SongPlayerScreen.tsx');
 ).IS_REACT_ACT_ENVIRONMENT = true;
 
 const onBack = vi.fn();
+
+const UNSUPPORTED = {
+  kind: 'unsupported',
+  keptGrid: false,
+  format: 'ogg',
+  supported: ['WAV'],
+};
+const DAMAGED = { kind: 'damaged', keptGrid: false };
+
+function failWith(failure: unknown) {
+  library.rows = [{ kind: 'song', id: OPEN_SONG.songId }];
+  library.failure = failure;
+}
 const playhead = () => ({}) as never;
 
 function screen(focused: boolean) {
@@ -162,6 +182,8 @@ beforeEach(() => {
   display.status = 'ready';
   display.song = OPEN_SONG;
   display.analysis = { analysisStatus: 'done', beats: [0] };
+  library.rows = [];
+  library.failure = null;
   Object.assign(mixer, { session: 0, opens: 0, displaced: 0, releases: 0 });
 });
 
@@ -254,6 +276,13 @@ describe('the player menu', () => {
     );
   }
 
+  function menuLabels(tree: ReactTestRenderer) {
+    return tree.root
+      .findByType('Sheet' as never)
+      .findAllByType('Button' as never)
+      .map((node) => node.props.label as unknown);
+  }
+
   function openMenu(): ReactTestRenderer {
     const tree = mount();
     const [more] = tree.root.findByType('AppBar' as never).props
@@ -280,6 +309,11 @@ describe('the player menu', () => {
     expect(onBack.mock.invocationCallOrder[0]).toBeLessThan(
       commands.close.mock.invocationCallOrder[0] ?? Number.NaN,
     );
+  });
+
+  it('offers no Re-analyse for a song in an unsupported format', () => {
+    failWith(UNSUPPORTED);
+    expect(menuLabels(openMenu())).toEqual(['Stop']);
   });
 
   it('re-analyses this song and closes the menu', () => {
@@ -352,6 +386,34 @@ describe('a song with no beat grid', () => {
       (button.props.onPress as () => void)();
     });
     expect(commands.reanalyze).toHaveBeenCalledExactlyOnceWith(1);
+  });
+
+  it('names an unsupported format on the card and offers no Re-analyse', () => {
+    display.analysis = GRIDLESS.failed;
+    failWith(UNSUPPORTED);
+    const tree = mount();
+    expect(texts(tree)).toContain('OGG isn’t supported, so no click');
+    expect(
+      tree.root.findAll(
+        (node) =>
+          String(node.type) === 'Button' &&
+          node.props.label === REANALYZE_LABEL,
+      ),
+    ).toHaveLength(0);
+  });
+
+  it('says a supported file may be damaged and offers Re-analyse', () => {
+    display.analysis = GRIDLESS.failed;
+    failWith(DAMAGED);
+    const tree = mount();
+    expect(texts(tree)).toContain('File may be damaged, so no click');
+    expect(
+      tree.root.findAll(
+        (node) =>
+          String(node.type) === 'Button' &&
+          node.props.label === REANALYZE_LABEL,
+      ),
+    ).toHaveLength(1);
   });
 
   it('offers no Re-analyse while the beat is still being found', () => {

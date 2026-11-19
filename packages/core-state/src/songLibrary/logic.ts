@@ -18,21 +18,56 @@ export interface LibrarySummary {
   readonly stemSongCount: number;
 }
 
-export type FailureKind =
-  'missingFile' | 'unsupported' | 'interrupted' | 'other';
+const AUDIO_MIME_PREFIX = 'audio/';
+const NONSTANDARD_MIME_PREFIX = 'x-';
+const MIME_PARAMETER_SEPARATOR = ';';
 
-export interface AnalysisFailure {
-  readonly kind: FailureKind;
-  readonly keptGrid: boolean;
+function mediaType(mimeType: string): string {
+  const end = mimeType.indexOf(MIME_PARAMETER_SEPARATOR);
+  return (end < 0 ? mimeType : mimeType.slice(0, end)).trim().toLowerCase();
+}
+
+function mimeFormat(mimeType: string): string {
+  if (!mimeType.startsWith(AUDIO_MIME_PREFIX)) return '';
+  const subtype = mimeType.slice(AUDIO_MIME_PREFIX.length);
+  return subtype.startsWith(NONSTANDARD_MIME_PREFIX)
+    ? subtype.slice(NONSTANDARD_MIME_PREFIX.length)
+    : subtype;
+}
+
+export type FailureKind =
+  'missingFile' | 'unsupported' | 'damaged' | 'interrupted' | 'other';
+
+export type AnalysisFailure =
+  | {
+      readonly kind: 'unsupported';
+      readonly keptGrid: boolean;
+      readonly format: string;
+      readonly supported: readonly string[];
+    }
+  | {
+      readonly kind: Exclude<FailureKind, 'unsupported'>;
+      readonly keptGrid: boolean;
+    };
+
+const LEADING_DOTS = /^\.+/;
+
+export function storedAudioFormat(stored: string): string {
+  const value = mediaType(stored);
+  return value.startsWith(AUDIO_MIME_PREFIX)
+    ? mimeFormat(value)
+    : value.replace(LEADING_DOTS, '');
 }
 
 export function failureKind(
   error: string | null,
-  codes: LibraryConstants | null,
+  format: string,
+  codes: LibraryConstants,
 ): FailureKind {
-  if (codes === null || error === null) return 'other';
+  if (error === null) return 'other';
   if (error === codes.failureMissingFile) return 'missingFile';
-  if (error === codes.failureUnsupported) return 'unsupported';
+  if (codes.unsupportedAudioExtensions.includes(format)) return 'unsupported';
+  if (error === codes.failureUnsupported) return 'damaged';
   if (error === codes.failureInterrupted) return 'interrupted';
   return 'other';
 }
@@ -42,9 +77,16 @@ export function analysisFailure(
   codes: LibraryConstants | null,
 ): AnalysisFailure | null {
   if (song.analysisStatus !== ANALYSIS_STATUS.failed) return null;
+  const keptGrid = song.hasGrid;
+  if (codes === null) return { kind: 'other', keptGrid };
+  const format = storedAudioFormat(song.format ?? '');
+  const kind = failureKind(song.analysisError, format, codes);
+  if (kind !== 'unsupported') return { kind, keptGrid };
   return {
-    kind: failureKind(song.analysisError, codes),
-    keptGrid: song.hasGrid,
+    kind,
+    keptGrid,
+    format,
+    supported: codes.supportedAudioFamilies,
   };
 }
 
@@ -120,23 +162,6 @@ type SupportedAudioLists = Pick<
   | 'supportedAudioMimeTypes'
   | 'unsupportedAudioExtensions'
 >;
-
-const AUDIO_MIME_PREFIX = 'audio/';
-const NONSTANDARD_MIME_PREFIX = 'x-';
-const MIME_PARAMETER_SEPARATOR = ';';
-
-function mediaType(mimeType: string): string {
-  const end = mimeType.indexOf(MIME_PARAMETER_SEPARATOR);
-  return (end < 0 ? mimeType : mimeType.slice(0, end)).trim().toLowerCase();
-}
-
-function mimeFormat(mimeType: string): string {
-  if (!mimeType.startsWith(AUDIO_MIME_PREFIX)) return '';
-  const subtype = mimeType.slice(AUDIO_MIME_PREFIX.length);
-  return subtype.startsWith(NONSTANDARD_MIME_PREFIX)
-    ? subtype.slice(NONSTANDARD_MIME_PREFIX.length)
-    : subtype;
-}
 
 // Android maps .m4a to audio/mpeg, so a known audio extension outranks the MIME
 // type; any other text after a dot may be part of the title.

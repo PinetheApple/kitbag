@@ -13,6 +13,7 @@ import {
   spokenLength,
   spokenRow,
 } from './rowText.ts';
+import { failureText } from './notices.ts';
 
 const SONG: LibrarySongRow = {
   kind: 'song',
@@ -156,6 +157,26 @@ describe('spoken row', () => {
     );
     expect(spokenRow(SONG, 'analyzing', null)).not.toContain(
       'beats per minute',
+    );
+  });
+  it.each([
+    [
+      { kind: 'damaged', keptGrid: false },
+      'Analysis failed, File may be damaged',
+    ],
+    [
+      {
+        kind: 'unsupported',
+        keptGrid: false,
+        format: 'm4a',
+        supported: ['WAV', 'MP3'],
+      },
+      'Analysis failed, M4A not supported',
+    ],
+  ] as const)('speaks the cause of a failed song', (failure, spoken) => {
+    const status = failureText(failure).status;
+    expect(spokenRow({ ...SONG, bpm: null }, 'failed', status)).toBe(
+      `Everlong, Foo Fighters, 4 minutes 10 seconds, ${spoken}`,
     );
   });
 });
