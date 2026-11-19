@@ -1,87 +1,81 @@
-import type { MoveStatus } from '@kitbag/core-native';
+import { DATA_FOLDER_CODES as CODES } from '@kitbag/core-state/src/dataFolder/codes.test-helper.ts';
 import { describe, expect, it } from 'vitest';
 
-import { DATA_FOLDER_CODES as CODES } from './dataFolderCodes.test-helper.ts';
 import {
   CLOSED,
   dataFolderSheet,
   nextDataFolderStep,
-  settledOutcome,
   sheetActions,
   type DataFolderEvent,
   type DataFolderSheet,
   type DataFolderStep,
 } from './dataFolderFlow.ts';
-
-const CARD = '1234-ABCD';
-
-function move(fields: Partial<MoveStatus> = {}): MoveStatus {
-  return {
-    phase: 'COPYING',
-    sourceVolumeUuid: null,
-    targetVolumeUuid: CARD,
-    doneBytes: 540,
-    totalBytes: 1_200,
-    doneFiles: 24,
-    totalFiles: 54,
-    path: null,
-    running: true,
-    switched: false,
-    paused: false,
-    awaitingRelease: false,
-    error: null,
-    ...fields,
-  };
-}
+import { CARD, move } from './dataFolderMove.test-helper.ts';
 
 const RUNNING = move();
-const SWITCHED = move({ phase: 'CLEANING', switched: true });
+const CLEANING = move({ phase: 'CLEANING', switched: true });
 const AWAITING = move({
   phase: 'CLEANING',
   switched: true,
   running: false,
   awaitingRelease: true,
 });
+const CLEANUP_FAILED = move({
+  phase: 'CLEANING',
+  switched: true,
+  running: false,
+  error: CODES.moveErrors.io,
+});
 const PAUSED = move({ running: false, paused: true });
 const STOPPED = move({
   running: false,
   paused: true,
-  error: CODES.moveErrors.io,
+  error: CODES.moveErrors.hashMismatch,
 });
-const IDLE = { move: null, error: null };
 
 const steps = (...events: DataFolderEvent[]) =>
   events.reduce<DataFolderStep>(nextDataFolderStep, CLOSED);
 
+const OPENED = steps({ kind: 'open' });
+
 const ids = (sheet: DataFolderSheet, pending = false) =>
   sheetActions(sheet, pending).map((action) => action.id);
 
-describe('choose → confirm → moving → done', () => {
-  it('walks the sheets as the store moves', () => {
-    const opened = steps({ kind: 'open' });
-    expect(dataFolderSheet(IDLE, opened).kind).toBe('chooser');
+const sheetOf = (
+  moving: typeof RUNNING | null,
+  step: DataFolderStep = OPENED,
+  error: string | null = null,
+) => dataFolderSheet({ move: moving, error }, step);
 
-    const confirming = nextDataFolderStep(opened, {
+describe('choose → confirm → starting → moving', () => {
+  it('walks the sheets as the store moves', () => {
+    expect(sheetOf(null).kind).toBe('chooser');
+    const confirming = nextDataFolderStep(OPENED, {
       kind: 'choose',
       target: CARD,
     });
-    expect(dataFolderSheet(IDLE, confirming)).toEqual({
-      kind: 'confirm',
-      target: CARD,
+    const confirm = sheetOf(null, confirming);
+    expect(confirm).toEqual({ kind: 'confirm', target: CARD, starting: false });
+    expect(ids(confirm)).toEqual(['backToChooser', 'move']);
+    expect(sheetOf(RUNNING, confirming)).toEqual({
+      kind: 'moving',
+      move: RUNNING,
     });
-    expect(ids(dataFolderSheet(IDLE, confirming))).toEqual([
-      'backToChooser',
-      'move',
-    ]);
+  });
 
-    const moving = dataFolderSheet({ move: RUNNING, error: null }, confirming);
-    expect(moving).toEqual({ kind: 'moving', move: RUNNING });
-
-    const done = nextDataFolderStep(confirming, {
-      kind: 'finished',
-      settled: true,
+  it('holds a started move on a disabled confirmation until it shows up', () => {
+    const starting = steps(
+      { kind: 'open' },
+      { kind: 'choose', target: CARD },
+      { kind: 'start' },
+    );
+    const sheet = sheetOf(null, starting);
+    expect(sheet).toEqual({ kind: 'confirm', target: CARD, starting: true });
+    expect(sheetActions(sheet, false).every((a) => a.disabled)).toBe(true);
+    expect(nextDataFolderStep(starting, { kind: 'start' })).toBe(starting);
+    expect(nextDataFolderStep(starting, { kind: 'progressed' })).toEqual({
+      kind: 'open',
     });
-    expect(dataFolderSheet(IDLE, done).kind).toBe('none');
   });
 
   it('goes back to the chooser from the confirmation', () => {
@@ -90,133 +84,127 @@ describe('choose → confirm → moving → done', () => {
       { kind: 'choose', target: CARD },
       { kind: 'back' },
     );
-    expect(dataFolderSheet(IDLE, back).kind).toBe('chooser');
+    expect(sheetOf(null, back).kind).toBe('chooser');
   });
 
   it('shows nothing while closed, whatever the store holds', () => {
-    expect(dataFolderSheet({ move: RUNNING, error: null }, CLOSED).kind).toBe(
-      'none',
-    );
+    expect(sheetOf(RUNNING, CLOSED).kind).toBe('none');
+  });
+});
+
+describe('closed stays closed', () => {
+  const late: readonly DataFolderEvent[] = [
+    { kind: 'requestSettled' },
+    { kind: 'progressed' },
+    { kind: 'back' },
+    { kind: 'keepMoving' },
+    { kind: 'askStop' },
+    { kind: 'start' },
+    { kind: 'finished', settled: false },
+  ];
+
+  it('ignores every event but open once the sheet closed', () => {
+    for (const event of late) {
+      expect(nextDataFolderStep(CLOSED, event)).toBe(CLOSED);
+    }
   });
 });
 
 describe('cancel', () => {
-  it('asks before stopping and closes once the move is cancelled', () => {
+  it('asks before stopping', () => {
     const asking = steps({ kind: 'open' }, { kind: 'askStop' });
-    const sheet = dataFolderSheet({ move: RUNNING, error: null }, asking);
+    const sheet = sheetOf(RUNNING, asking);
     expect(sheet.kind).toBe('stopAsk');
     expect(ids(sheet)).toEqual(['stop', 'keepMoving']);
-    const cancelled = nextDataFolderStep(asking, {
-      kind: 'finished',
-      settled: settledOutcome(
-        { outcome: CODES.moveOutcomes.cancelled, error: null, path: null },
-        CODES.moveOutcomes,
-      ),
-    });
-    expect(cancelled).toBe(CLOSED);
-  });
-
-  it('keeps moving from the question', () => {
-    const kept = steps(
-      { kind: 'open' },
-      { kind: 'askStop' },
-      {
-        kind: 'keepMoving',
-      },
-    );
-    expect(dataFolderSheet({ move: RUNNING, error: null }, kept).kind).toBe(
-      'moving',
-    );
+    const kept = nextDataFolderStep(asking, { kind: 'keepMoving' });
+    expect(sheetOf(RUNNING, kept).kind).toBe('moving');
   });
 
   it('offers Cancel only before the switch', () => {
-    const opened = steps({ kind: 'open' });
-    const before = dataFolderSheet({ move: RUNNING, error: null }, opened);
-    expect(ids(before)).toEqual(['askStop']);
-    for (const after of [SWITCHED, AWAITING]) {
-      const sheet = dataFolderSheet({ move: after, error: null }, opened);
-      expect(sheet.kind).toBe('moving');
+    expect(ids(sheetOf(RUNNING))).toEqual(['askStop']);
+    for (const after of [CLEANING, AWAITING]) {
+      const sheet = sheetOf(after);
+      expect(sheet.kind).toBe('switched');
       expect(ids(sheet)).toEqual([]);
     }
   });
 
   it('never asks to stop once the folder switched', () => {
     const asking = steps({ kind: 'open' }, { kind: 'askStop' });
-    expect(dataFolderSheet({ move: SWITCHED, error: null }, asking).kind).toBe(
-      'moving',
+    expect(sheetOf(CLEANING, asking).kind).toBe('switched');
+  });
+});
+
+describe('after the switch', () => {
+  it('shows the switched sheet whatever error a request left', () => {
+    expect(sheetOf(AWAITING, OPENED, CODES.moveErrors.switched).kind).toBe(
+      'switched',
     );
+  });
+
+  it('offers OK or Try again when clean-up failed', () => {
+    const sheet = sheetOf(CLEANUP_FAILED);
+    expect(sheet).toEqual({ kind: 'switchedFailed', move: CLEANUP_FAILED });
+    expect(ids(sheet)).toEqual(['ok', 'resume']);
   });
 });
 
 describe('paused and failed moves', () => {
-  it('offers Resume and Undo for a move the app was killed in', () => {
-    const sheet = dataFolderSheet(
-      { move: PAUSED, error: null },
-      steps({
-        kind: 'open',
-      }),
-    );
-    expect(sheet).toEqual({ kind: 'paused', move: PAUSED, error: null });
+  it('offers Undo and Resume for a move the app was killed in', () => {
+    const sheet = sheetOf(PAUSED);
+    expect(sheet).toEqual({ kind: 'paused', move: PAUSED });
     expect(ids(sheet)).toEqual(['undo', 'resume']);
   });
 
-  it('keeps a move stopped by a failure resumable, with its error', () => {
-    const sheet = dataFolderSheet(
-      { move: STOPPED, error: null },
-      steps({
-        kind: 'open',
-      }),
-    );
+  it('offers Not now and Try again for a move a failure stopped', () => {
+    const sheet = sheetOf(STOPPED, OPENED, CODES.moveErrors.hashMismatch);
     expect(sheet).toEqual({
-      kind: 'paused',
+      kind: 'stopped',
       move: STOPPED,
-      error: CODES.moveErrors.io,
+      error: CODES.moveErrors.hashMismatch,
     });
+    expect(ids(sheet)).toEqual(['notNow', 'resume']);
+  });
+
+  it('offers Undo and Resume once the failure was dismissed', () => {
+    expect(ids(sheetOf(STOPPED))).toEqual(['undo', 'resume']);
   });
 
   it('shows the refusal of the last request over the journal’s error', () => {
     const refused = CODES.moveErrors.foregroundRefused;
-    const sheet = dataFolderSheet(
-      { move: STOPPED, error: refused },
-      steps({
-        kind: 'open',
-      }),
-    );
-    expect(sheet).toMatchObject({ kind: 'paused', error: refused });
+    expect(sheetOf(STOPPED, OPENED, refused)).toMatchObject({
+      kind: 'stopped',
+      error: refused,
+    });
   });
 
-  it('shows a failure with nothing left to resume, and goes back to choose', () => {
+  it('shows a failure with nothing to resume, and goes back to choose', () => {
     const failed = CODES.moveErrors.targetNotWritable;
-    const opened = steps({ kind: 'open' }, { kind: 'choose', target: CARD });
-    const sheet = dataFolderSheet({ move: null, error: failed }, opened);
+    const sheet = sheetOf(null, OPENED, failed);
     expect(sheet).toEqual({ kind: 'failed', error: failed });
     expect(ids(sheet)).toEqual(['ok', 'chooseAnother']);
-    const again = nextDataFolderStep(opened, { kind: 'acted' });
-    expect(dataFolderSheet(IDLE, again).kind).toBe('chooser');
+    const again = nextDataFolderStep(OPENED, { kind: 'back' });
+    expect(sheetOf(null, again).kind).toBe('chooser');
   });
 
-  it('keeps the sheet open when a move finishes failed', () => {
-    const settled = settledOutcome(
-      { outcome: CODES.moveOutcomes.failed, error: 'x', path: null },
-      CODES.moveOutcomes,
-    );
-    expect(settled).toBe(false);
-    const opened = steps({ kind: 'open' });
-    expect(nextDataFolderStep(opened, { kind: 'finished', settled })).toEqual({
-      kind: 'open',
-    });
-    expect(nextDataFolderStep(CLOSED, { kind: 'finished', settled })).toBe(
-      CLOSED,
-    );
+  it('stays open when a move finishes failed and closes when it settles', () => {
+    expect(
+      nextDataFolderStep(OPENED, { kind: 'finished', settled: false }),
+    ).toEqual({ kind: 'open' });
+    expect(
+      nextDataFolderStep(OPENED, { kind: 'finished', settled: true }),
+    ).toBe(CLOSED);
   });
 });
 
 describe('pending requests', () => {
   const sheets: readonly DataFolderSheet[] = [
-    { kind: 'confirm', target: CARD },
+    { kind: 'confirm', target: CARD, starting: false },
     { kind: 'moving', move: RUNNING },
     { kind: 'stopAsk', move: RUNNING },
-    { kind: 'paused', move: PAUSED, error: null },
+    { kind: 'switchedFailed', move: CLEANUP_FAILED },
+    { kind: 'paused', move: PAUSED },
+    { kind: 'stopped', move: STOPPED, error: CODES.moveErrors.io },
     { kind: 'failed', error: CODES.moveErrors.io },
   ];
 

@@ -22,37 +22,61 @@ export function progressBytes(move: MoveStatus): readonly [string, string] {
   return [formatBytes(move.doneBytes), `of ${formatBytes(move.totalBytes)}`];
 }
 
+const VERIFYING = 'VERIFYING';
+
+const verifying = (move: MoveStatus) => move.phase === VERIFYING;
+
 export function progressFiles(move: MoveStatus): readonly [string, string] {
-  return [String(move.doneFiles), `of ${fileCount(move.totalFiles)}`];
+  const checked = verifying(move) ? ' checked' : '';
+  return [String(move.doneFiles), `of ${fileCount(move.totalFiles)}${checked}`];
+}
+
+// While verifying, doneFiles counts checked copies; every file is copied by then.
+function copiedFiles(move: MoveStatus): number {
+  return verifying(move) ? move.totalFiles : move.doneFiles;
 }
 
 export function progressLabel(move: MoveStatus): string {
   return `${movingTitle(move)}, ${String(movePercent(move))}%`;
 }
 
-const PHASE_TEXT = [
-  'Checking there is room and that Kitbag can write there.',
-  'Copying files.',
-  'Checking every copy against its original.',
-  'Copying songs added during the move.',
-  'Switched over.',
-  'Removing the old copies.',
-  'Done.',
-] as const;
+const COPYING_TEXT = 'Copying files.';
 
-export function phaseText(phase: string, codes: DataFolderCodes): string {
-  return PHASE_TEXT[codes.movePhases.indexOf(phase)] ?? PHASE_TEXT[1];
+const PHASE_TEXT: Readonly<Record<string, string>> = {
+  PREFLIGHT: 'Checking there is room and that Kitbag can write there.',
+  COPYING: COPYING_TEXT,
+  VERIFYING: 'Checking every copy against its original.',
+  CATCH_UP: 'Copying songs added during the move.',
+  SWITCHED: 'Switched over.',
+  CLEANING: 'Removing the old copies.',
+  DONE: 'Done.',
+};
+
+export function phaseText(phase: string): string {
+  return PHASE_TEXT[phase] ?? COPYING_TEXT;
 }
 
 export function movingHint(move: MoveStatus): string {
-  if (move.switched) {
-    return `Your songs now play from ${thePlace(move.targetVolumeUuid)}. The old copies are removed once nothing is playing from them.`;
-  }
   return `Every song keeps playing from ${thePlace(move.sourceVolumeUuid)} until the move finishes.`;
 }
 
+export function switchedTitle(move: MoveStatus): string {
+  return `Files moved to ${placeName(move.targetVolumeUuid)}`;
+}
+
+export function switchedHint(move: MoveStatus): string {
+  return `Your songs now play from ${thePlace(move.targetVolumeUuid)}. The old copies on ${thePlace(move.sourceVolumeUuid)} are removed once nothing is playing from them.`;
+}
+
+export function switchedFailedText(move: MoveStatus): ErrorText {
+  return {
+    title: `Old copies left on ${thePlace(move.sourceVolumeUuid)}`,
+    body: `Your files are on ${thePlace(move.targetVolumeUuid)} and play from there. Kitbag couldn’t remove the old copies on ${thePlace(move.sourceVolumeUuid)}. Try again now, or Kitbag tries again the next time it starts.`,
+  };
+}
+
 export function stopHint(move: MoveStatus): string {
-  return `The ${fileCount(move.doneFiles)} already copied are removed from ${thePlace(move.targetVolumeUuid)}. Everything stays on ${thePlace(move.sourceVolumeUuid)}, where it is now.`;
+  return `The ${fileCount(copiedFiles(move))} already copied are removed from ${thePlace(move.targetVolumeUuid)}. Everything stays on ${thePlace(move.sourceVolumeUuid)}, where it is now.`;
 }
 
 export function pausedTitle(move: MoveStatus): string {
@@ -60,7 +84,11 @@ export function pausedTitle(move: MoveStatus): string {
 }
 
 export function pausedHint(move: MoveStatus): string {
-  return `Kitbag closed during the move. ${String(move.doneFiles)} of ${fileCount(move.totalFiles)} are on ${thePlace(move.targetVolumeUuid)}. Your songs still play from ${thePlace(move.sourceVolumeUuid)}.`;
+  const why =
+    move.error === null
+      ? 'Kitbag closed during the move.'
+      : 'The move stopped.';
+  return `${why} ${String(copiedFiles(move))} of ${fileCount(move.totalFiles)} are on ${thePlace(move.targetVolumeUuid)}. Your songs still play from ${thePlace(move.sourceVolumeUuid)}.`;
 }
 
 export interface Places {
@@ -171,18 +199,19 @@ export function undoneText(source: string | null): string {
 export function outcomeText(
   finished: MoveFinished,
   codes: DataFolderCodes,
-  current: string | null,
+  places: Places,
 ): string | null {
   const { moveOutcomes: outcomes } = codes;
+  const target = thePlace(places.target);
   switch (finished.outcome) {
     case outcomes.done:
-      return `Move finished. Your files are on ${thePlace(current)}.`;
+      return `Move finished. Your files are on ${target}.`;
     case outcomes.cancelled:
-      return `Move stopped. Your files are still on ${thePlace(current)}.`;
+      return `Move stopped. Your files are still on ${thePlace(places.source)}.`;
     case outcomes.awaitingRelease:
-      return `Files moved to ${thePlace(current)}. The old copies are removed once nothing is playing from them.`;
+      return `Files moved to ${target}. The old copies are removed once nothing is playing from them.`;
     case outcomes.cleanupDeferred:
-      return `Files moved to ${thePlace(current)}. The old copies are removed when the card is back.`;
+      return `Files moved to ${target}. The old copies are removed when the card is back.`;
     default:
       return null;
   }

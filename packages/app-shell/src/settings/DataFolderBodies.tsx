@@ -164,11 +164,10 @@ function Count({ parts }: { readonly parts: readonly [string, string] }) {
 
 export interface MovingBodyProps {
   readonly move: MoveStatus;
-  readonly codes: DataFolderCodes;
   readonly notice: string | null;
 }
 
-export function MovingBody({ move, codes, notice }: MovingBodyProps) {
+export function MovingBody({ move, notice }: MovingBodyProps) {
   const styles = useStyles();
   return (
     <>
@@ -181,7 +180,7 @@ export function MovingBody({ move, codes, notice }: MovingBodyProps) {
         accessibilityLabel={progressLabel(move)}
       />
       {notice === null ? null : <SheetHint>{notice}</SheetHint>}
-      <SheetHint>{`${phaseText(move.phase, codes)} ${movingHint(move)}`}</SheetHint>
+      <SheetHint>{`${phaseText(move.phase)} ${movingHint(move)}`}</SheetHint>
       <SheetHint>{MOVING_CLOSE_HINT}</SheetHint>
     </>
   );

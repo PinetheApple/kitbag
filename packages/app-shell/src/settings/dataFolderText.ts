@@ -7,7 +7,7 @@ import type {
   StorageReport,
 } from '@kitbag/core-native';
 
-import { formatBytes, formatSpace } from './bytes.ts';
+import { formatSpace } from './bytes.ts';
 import { SEPARATOR } from './separator.ts';
 
 export const DATA_FOLDER_LABEL = 'Data folder';
@@ -33,9 +33,11 @@ export const RESUME = 'Resume';
 export const TRY_AGAIN = 'Try again';
 export const UNDO = 'Undo';
 export const OK = 'OK';
+export const NOT_NOW = 'Not now';
 export const CHOOSE_ANOTHER = 'Choose another place';
 export const CLOSE_DATA_FOLDER = 'Close data folder';
 
+const NOT_FOUND = 'Not found';
 const INTERNAL_PLACE = 'internal storage';
 const CARD_PLACE = 'SD card';
 const THE_CARD = 'the SD card';
@@ -93,6 +95,17 @@ export function dataFolderRowValue(
   move: MoveStatus | null,
 ): RowValue {
   const quiet = { missing: false, highlighted: false };
+  if (move?.switched === true) {
+    const moved = `Moved to ${placeName(move.targetVolumeUuid)}`;
+    return move.error === null || move.running
+      ? {
+          lead: moved,
+          detail: `${SEPARATOR} old copies go once nothing plays`,
+          missing: false,
+          highlighted: true,
+        }
+      : { ...quiet, lead: moved, detail: `${SEPARATOR} old copies left` };
+  }
   if (move !== null && moveUnderWay(move)) {
     return {
       lead: `Moving to ${placeName(move.targetVolumeUuid)}`,
@@ -156,17 +169,13 @@ export function locationValue(
 
 export interface MediaSize {
   readonly bytes: number;
-  readonly files: number;
 }
 
 export function mediaSize({
   libraryAudio,
   stemSets,
 }: StorageReport): MediaSize {
-  return {
-    bytes: libraryAudio.bytes + stemSets.bytes,
-    files: libraryAudio.songs + stemSets.count,
-  };
+  return { bytes: libraryAudio.bytes + stemSets.bytes };
 }
 
 export interface VolumeOption {
@@ -199,7 +208,7 @@ function blockedLine(
     return `Kitbag can’t read the current folder, so nothing can move.`;
   }
   if (volume.freeBytes < volumes.requiredBytes) {
-    return `${freeLine(volume)} ${SEPARATOR} needs ${formatBytes(volumes.requiredBytes)}`;
+    return `${freeLine(volume)} ${SEPARATOR} needs ${formatSpace(volumes.requiredBytes)}`;
   }
   return null;
 }
@@ -217,10 +226,11 @@ export function volumeOption(
   };
   if (volume.inUse) {
     const used =
-      media === null ? '' : ` ${SEPARATOR} ${formatBytes(media.bytes)} used`;
+      media === null ? '' : ` ${SEPARATOR} ${formatSpace(media.bytes)} used`;
+    const mounted = volume.state !== codes.volumeStates.unmounted;
     return {
       ...base,
-      sub: `${freeLine(volume)}${used}`,
+      sub: mounted ? `${freeLine(volume)}${used}` : NOT_FOUND,
       offered: false,
       shortBy: null,
     };
@@ -243,7 +253,7 @@ export function volumeOption(
 
 export function noSpaceHint(option: VolumeOption): string | null {
   if (option.shortBy === null) return null;
-  return `Free up ${formatBytes(option.shortBy)} on ${thePlace(option.volumeUuid)} to move here. Nothing has moved.`;
+  return `Free up ${formatSpace(option.shortBy)} on ${thePlace(option.volumeUuid)} to move here. Nothing has moved.`;
 }
 
 export function confirmTitle(target: string | null): string {
@@ -251,7 +261,7 @@ export function confirmTitle(target: string | null): string {
 }
 
 export function mediaText(media: MediaSize): string {
-  return `${formatBytes(media.bytes)} ${SEPARATOR} ${fileCount(media.files)}`;
+  return formatSpace(media.bytes);
 }
 
 export function freeAfterLabel(target: string | null): string {

@@ -7,7 +7,11 @@ import {
   useTextScaled,
   type IconName,
 } from '@kitbag/core-design';
-import type { DataFolderCodes, DataFolderVolumes } from '@kitbag/core-native';
+import type {
+  DataFolderCodes,
+  DataFolderVolumes,
+  MoveStatus,
+} from '@kitbag/core-native';
 import { useDataFolder } from '@kitbag/core-state';
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
@@ -24,7 +28,12 @@ import {
   movingTitle,
   pausedHint,
   pausedTitle,
+  phaseText,
   stopHint,
+  switchedFailedText,
+  switchedHint,
+  switchedTitle,
+  type ErrorText,
   type Places,
 } from './dataFolderMoveText.ts';
 import {
@@ -36,6 +45,7 @@ import {
   DATA_FOLDER_LABEL,
   KEEP_MOVING,
   MOVE,
+  NOT_NOW,
   OK,
   RESUME,
   STOP_MOVING,
@@ -54,6 +64,7 @@ const LABELS: Readonly<Record<DataFolderAction, string>> = {
   keepMoving: KEEP_MOVING,
   resume: RESUME,
   undo: UNDO,
+  notNow: NOT_NOW,
   ok: OK,
   chooseAnother: CHOOSE_ANOTHER,
 };
@@ -64,8 +75,7 @@ const useStyles = createThemedStyles(() => ({
 }));
 
 function actionLabel(id: DataFolderAction, sheet: DataFolderSheet): string {
-  const retry =
-    id === 'resume' && sheet.kind === 'paused' && sheet.error !== null;
+  const retry = id === 'resume' && sheet.kind !== 'paused';
   return retry ? TRY_AGAIN : LABELS[id];
 }
 
@@ -114,12 +124,24 @@ interface FaceContext {
   readonly onChoose: (volumeUuid: string | null) => void;
 }
 
-function errorFace(error: string, context: FaceContext): SheetFace {
-  const text = moveErrorText(error, context.codes, context.places);
+function errorFace(text: ErrorText): SheetFace {
   return {
     title: text.title,
     icon: 'error',
     body: <SheetHint>{text.body}</SheetHint>,
+  };
+}
+
+function switchedFace(move: MoveStatus): SheetFace {
+  return {
+    title: switchedTitle(move),
+    icon: 'moveFolder',
+    body: (
+      <>
+        {move.running ? <SheetHint>{phaseText(move.phase)}</SheetHint> : null}
+        <SheetHint>{switchedHint(move)}</SheetHint>
+      </>
+    ),
   };
 }
 
@@ -157,7 +179,6 @@ function sheetFace(sheet: DataFolderSheet, context: FaceContext): SheetFace {
         body: (
           <MovingBody
             move={sheet.move}
-            codes={codes}
             notice={
               notice === null
                 ? null
@@ -172,16 +193,19 @@ function sheetFace(sheet: DataFolderSheet, context: FaceContext): SheetFace {
         title: STOP_TITLE,
         body: <SheetHint>{stopHint(sheet.move)}</SheetHint>,
       };
+    case 'switched':
+      return switchedFace(sheet.move);
+    case 'switchedFailed':
+      return errorFace(switchedFailedText(sheet.move));
     case 'paused':
-      return sheet.error === null
-        ? {
-            title: pausedTitle(sheet.move),
-            icon: 'moveFolder',
-            body: <SheetHint>{pausedHint(sheet.move)}</SheetHint>,
-          }
-        : errorFace(sheet.error, context);
+      return {
+        title: pausedTitle(sheet.move),
+        icon: 'moveFolder',
+        body: <SheetHint>{pausedHint(sheet.move)}</SheetHint>,
+      };
+    case 'stopped':
     case 'failed':
-      return errorFace(sheet.error, context);
+      return errorFace(moveErrorText(sheet.error, codes, context.places));
   }
 }
 

@@ -2,29 +2,33 @@ import type {
   DataFolderVolume,
   DataFolderVolumes,
   MoveErrors,
-  MoveStatus,
 } from '@kitbag/core-native';
 import { describe, expect, it } from 'vitest';
 
-import { DATA_FOLDER_CODES as CODES } from './dataFolderCodes.test-helper.ts';
+import { CARD, GB, MB, move } from './dataFolderMove.test-helper.ts';
+
+import { DATA_FOLDER_CODES as CODES } from '@kitbag/core-state/src/dataFolder/codes.test-helper.ts';
 import {
   moveErrorText,
   outcomeText,
   phaseText,
+  pausedHint,
+  progressFiles,
+  stopHint,
+  switchedFailedText,
+  switchedHint,
+  switchedTitle,
   undoneText,
 } from './dataFolderMoveText.ts';
 import {
   dataFolderRowValue,
   locationValue,
   mediaSize,
+  mediaText,
   noSpaceHint,
   rowValueLabel,
   volumeOption,
 } from './dataFolderText.ts';
-
-const CARD = '1234-ABCD';
-const GB = 1_000_000_000;
-const MB = 1_000_000;
 
 const INTERNAL: DataFolderVolume = {
   volumeUuid: null,
@@ -51,26 +55,7 @@ const VOLUMES: DataFolderVolumes = {
   volumes: [INTERNAL, SD],
 };
 
-const MEDIA = { bytes: 1.2 * GB, files: 54 };
-
-function move(fields: Partial<MoveStatus> = {}): MoveStatus {
-  return {
-    phase: 'COPYING',
-    sourceVolumeUuid: null,
-    targetVolumeUuid: CARD,
-    doneBytes: 540 * MB,
-    totalBytes: 1.2 * GB,
-    doneFiles: 24,
-    totalFiles: 54,
-    path: null,
-    running: true,
-    switched: false,
-    paused: false,
-    awaitingRelease: false,
-    error: null,
-    ...fields,
-  };
-}
+const MEDIA = { bytes: 1.2 * GB };
 
 const TO_CARD = { source: null, target: CARD };
 
@@ -129,17 +114,18 @@ describe('outcome and phase text', () => {
       error: null,
       path: null,
     });
-    expect(outcomeText(finished(outcomes.done), CODES, CARD)).toBe(
+    const toCard = { source: null, target: CARD };
+    expect(outcomeText(finished(outcomes.done), CODES, toCard)).toBe(
       'Move finished. Your files are on the SD card.',
     );
-    expect(outcomeText(finished(outcomes.cancelled), CODES, null)).toBe(
+    expect(outcomeText(finished(outcomes.cancelled), CODES, toCard)).toBe(
       'Move stopped. Your files are still on internal storage.',
     );
-    expect(outcomeText(finished(outcomes.awaitingRelease), CODES, CARD)).toBe(
+    expect(outcomeText(finished(outcomes.awaitingRelease), CODES, toCard)).toBe(
       'Files moved to the SD card. The old copies are removed once nothing is playing from them.',
     );
-    expect(outcomeText(finished(outcomes.failed), CODES, null)).toBeNull();
-    expect(outcomeText(finished(outcomes.refused), CODES, null)).toBeNull();
+    expect(outcomeText(finished(outcomes.failed), CODES, toCard)).toBeNull();
+    expect(outcomeText(finished(outcomes.refused), CODES, toCard)).toBeNull();
   });
 
   it('says an undone move left the files where they were', () => {
@@ -149,9 +135,9 @@ describe('outcome and phase text', () => {
   });
 
   it('gives every phase its own line', () => {
-    const lines = CODES.movePhases.map((phase) => phaseText(phase, CODES));
+    const lines = CODES.movePhases.map(phaseText);
     expect(new Set(lines).size).toBe(CODES.movePhases.length);
-    expect(phaseText('VERIFYING', CODES)).toBe(
+    expect(phaseText('VERIFYING')).toBe(
       'Checking every copy against its original.',
     );
   });
@@ -267,6 +253,78 @@ describe('media size', () => {
       database: { bytes: 1.2 * MB },
       location: '/data/user/0/com.kitbag.app/files/library',
     };
-    expect(mediaSize(report)).toEqual({ bytes: 1.2 * GB, files: 54 });
+    expect(mediaSize(report)).toEqual({ bytes: 1.2 * GB });
+    expect(mediaText(mediaSize(report))).toBe('1.2 GB');
+  });
+});
+
+describe('after the switch', () => {
+  const awaiting = move({
+    phase: 'CLEANING',
+    switched: true,
+    running: false,
+    awaitingRelease: true,
+  });
+
+  it('says the files are on the target while old copies wait', () => {
+    const value = dataFolderRowValue(VOLUMES, awaiting);
+    expect(rowValueLabel(value)).toBe(
+      'Moved to SD card · old copies go once nothing plays',
+    );
+    expect(rowValueLabel(value)).not.toContain('%');
+    expect(switchedTitle(awaiting)).toBe('Files moved to SD card');
+    expect(switchedHint(awaiting)).toBe(
+      'Your songs now play from the SD card. The old copies on internal storage are removed once nothing is playing from them.',
+    );
+  });
+
+  it('says old copies are left when clean-up failed', () => {
+    const failed = {
+      ...awaiting,
+      awaitingRelease: false,
+      error: CODES.moveErrors.io,
+    };
+    expect(rowValueLabel(dataFolderRowValue(VOLUMES, failed))).toBe(
+      'Moved to SD card · old copies left',
+    );
+    const text = switchedFailedText(failed);
+    expect(text.title).toBe('Old copies left on internal storage');
+    expect(text.body).toContain('Your files are on the SD card');
+    expect(text.body).not.toContain('still plays from');
+  });
+});
+
+describe('verifying counts', () => {
+  const checking = move({ phase: 'VERIFYING', doneFiles: 10 });
+
+  it('counts checked files as checked', () => {
+    expect(progressFiles(checking)).toEqual(['10', 'of 54 files checked']);
+    expect(progressFiles(move())).toEqual(['24', 'of 54 files']);
+  });
+
+  it('counts every file as copied while checking', () => {
+    expect(stopHint(checking)).toContain('The 54 files already copied');
+    expect(pausedHint({ ...checking, running: false })).toContain(
+      '54 of 54 files are on the SD card',
+    );
+  });
+});
+
+describe('one precision on a line', () => {
+  it('reads free and needed space alike', () => {
+    const full = { ...SD, freeBytes: 8.4 * GB };
+    const big = { ...VOLUMES, requiredBytes: 12.1 * GB };
+    expect(volumeOption(full, big, CODES, MEDIA).sub).toBe(
+      '8.4 GB free · needs 12.1 GB',
+    );
+  });
+
+  it('shows no free space for a card in use that is not mounted', () => {
+    const gone = {
+      ...SD,
+      inUse: true,
+      state: CODES.volumeStates.unmounted,
+    };
+    expect(volumeOption(gone, VOLUMES, CODES, MEDIA).sub).toBe('Not found');
   });
 });
