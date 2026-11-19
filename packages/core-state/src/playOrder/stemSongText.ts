@@ -35,6 +35,11 @@ function joined(parts: readonly (string | null)[]): string {
     .join(FACT_SEPARATOR);
 }
 
+export function stemFacts(stemSetId: number, stems: StemSongs): string {
+  const song = stems.get(stemSetId);
+  return song === undefined ? '' : stemSongFacts(song);
+}
+
 export function stemSongFacts(row: LibraryStemSetRow): string {
   return joined([
     lengthOf(row),

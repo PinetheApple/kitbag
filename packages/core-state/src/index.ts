@@ -248,6 +248,7 @@ export {
   stemSongTitle,
   UNKNOWN_STEM_SONG,
   type StemSongs,
+  stemFacts,
   stemSongFacts,
   stemSongListFacts,
   stemSongsById,

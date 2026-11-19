@@ -13,6 +13,8 @@ import { getLibrary, type LibraryRepositories } from './runtime.ts';
 import {
   activeSetlistOf,
   adjacentEntry,
+  followedIndex,
+  indexIn,
   stagePositionOf,
   type SongStep,
 } from './setlistPosition.ts';
@@ -157,43 +159,6 @@ function discardedNow(
   };
 }
 
-function indexIn(
-  entries: readonly SetlistEntry[] | undefined,
-  itemId: number,
-): number {
-  return (entries ?? []).findIndex((entry) => entry.item.id === itemId);
-}
-
-function survivorsBefore(
-  previous: readonly SetlistEntry[],
-  next: readonly SetlistEntry[],
-  index: number,
-): number {
-  const kept = new Set(next.map((entry) => entry.item.id));
-  return previous.slice(0, index).filter((entry) => kept.has(entry.item.id))
-    .length;
-}
-
-function followedIndex(
-  loaded: LoadedSong | null,
-  previous: LibrarySnapshot['entries'],
-  next: LibrarySnapshot['entries'],
-): LoadedSong | null {
-  if (loaded?.setlistId == null || loaded.itemId === null) return loaded;
-  const entries = next[loaded.setlistId] ?? [];
-  const present = indexIn(entries, loaded.itemId);
-  const index =
-    present >= 0 || loaded.index === undefined
-      ? present
-      : survivorsBefore(
-          previous[loaded.setlistId] ?? [],
-          entries,
-          loaded.index,
-        );
-  if (index < 0 || index === loaded.index) return loaded;
-  return { ...loaded, index };
-}
-
 function copyName(name: string): string {
   return `${name} copy`;
 }
@@ -303,6 +268,28 @@ function presetEditActions(deps: LibraryDeps, set: SetState, get: Get) {
 
 const NO_STEP: SongStepResult = { entry: undefined, skipped: false };
 
+interface StepTarget {
+  readonly entry: SetlistEntry;
+  readonly setlistId: number;
+}
+
+function stepTarget(
+  state: LibraryState,
+  step: SongStep,
+): StepTarget | undefined {
+  const active = activeSetlistOf(state.setlists);
+  if (active === undefined) return undefined;
+  const setlistId = active.setlist.id;
+  const entries = state.entries[setlistId] ?? [];
+  const position = stagePositionOf(state.loaded, setlistId);
+  const entry = adjacentEntry(entries, position, step);
+  return entry === undefined ? undefined : { entry, setlistId };
+}
+
+function wasDeleted(state: LibraryState, target: StepTarget): boolean {
+  return indexIn(state.entries[target.setlistId], target.entry.item.id) < 0;
+}
+
 function serialised() {
   let tail: Promise<unknown> = Promise.resolve();
   return <T>(task: () => Promise<T>): Promise<T> => {
@@ -323,6 +310,13 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
       set({ played });
       await get().refresh();
     });
+  const pinQuietly = async (setlistId: number, itemId: number) => {
+    try {
+      await pin(setlistId, itemId);
+    } catch {
+      // The song is already open; a failed pin only loses the on-stage marker.
+    }
+  };
   const leave = () =>
     inOrder(async () => {
       if (activeSetlistOf(get().setlists) === undefined) return;
@@ -352,11 +346,7 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
     const index = indexIn(get().entries[setlistId], itemId);
     const at = index < 0 ? {} : { index };
     set({ loaded: { presetId: preset.id, itemId, setlistId, ...at } });
-    try {
-      await pin(setlistId, itemId);
-    } catch {
-      // The song is already playing; a failed pin only loses the on-stage marker.
-    }
+    await pinQuietly(setlistId, itemId);
   };
   const noteDiscard = () => {
     const discarded = discardedNow(get(), deps);
@@ -377,29 +367,15 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
       noteDiscard();
       const { stemSetId } = entry;
       set({ loaded: { presetId: null, stemSetId, itemId, setlistId, index } });
-      try {
-        await pin(setlistId, itemId);
-      } catch {
-        // The stem player opens regardless; a failed pin only loses the marker.
-      }
+      await pinQuietly(setlistId, itemId);
       return true;
     },
     stepSong: async (step: SongStep): Promise<SongStepResult> => {
-      const target = () => {
-        const active = activeSetlistOf(get().setlists);
-        if (active === undefined) return undefined;
-        const setlistId = active.setlist.id;
-        const entries = get().entries[setlistId] ?? [];
-        const position = stagePositionOf(get().loaded, setlistId);
-        const entry = adjacentEntry(entries, position, step);
-        return entry === undefined ? undefined : { entry, setlistId };
-      };
-      const first = target();
+      const first = stepTarget(get(), step);
       if (first === undefined) return NO_STEP;
       if (!isPresetEntry(first.entry)) await get().refresh();
-      const skipped =
-        indexIn(get().entries[first.setlistId], first.entry.item.id) < 0;
-      const next = target();
+      const skipped = wasDeleted(get(), first);
+      const next = stepTarget(get(), step);
       if (next === undefined) return { entry: undefined, skipped };
       const { entry, setlistId } = next;
       if (isPresetEntry(entry)) {
