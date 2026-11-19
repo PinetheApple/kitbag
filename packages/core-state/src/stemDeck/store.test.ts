@@ -294,6 +294,20 @@ describe('picking and importing', () => {
     );
   });
 
+  it('says whether songs were sent, so only a real start asks for notifications', async () => {
+    const { store, native } = await connected([A]);
+    store.getState().selectSongs([A]);
+    expect(await store.getState().importSelected()).toBe(false);
+    expect(await store.getState().keepInLibrary()).toBe(false);
+    store.getState().selectSongs([B]);
+    expect(await store.getState().importSelected()).toBe(true);
+    native.startImport.mockRejectedValueOnce(
+      rejection(CODES.failureBadAddress),
+    );
+    store.getState().selectSongs([B]);
+    expect(await store.getState().importSelected()).toBe(false);
+  });
+
   it('keeps the library copy and shows the song as skipped', async () => {
     const { store, native, emit } = await connected([A]);
     store.getState().selectSongs([A, B]);

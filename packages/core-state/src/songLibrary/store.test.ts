@@ -107,7 +107,7 @@ describe('song library store', () => {
     expect(song).toMatchObject({ bpm: 158, hasGrid: true });
     expect(badges(store)).toEqual([['Everlong', 'grid']]);
     expect(analysisFailure(song, store.getState().codes)).toEqual({
-      kind: 'unsupported',
+      kind: 'damaged',
       keptGrid: true,
     });
     expect(summarize(store.getState().rows).analyzedCount).toBe(1);

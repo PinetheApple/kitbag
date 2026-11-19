@@ -5,7 +5,10 @@ import {
   SheetHint,
   space,
 } from '@kitbag/core-design';
-import { useNotificationPermission } from '@kitbag/core-state';
+import {
+  useNotificationPermission,
+  type NotificationReason,
+} from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,10 +21,25 @@ const useStyles = createThemedStyles(() => ({
 
 const NOT_NOW = 'Not now';
 
+const WORDS: Readonly<
+  Record<NotificationReason, { readonly title: string; readonly hint: string }>
+> = {
+  playback: {
+    title: 'Show the playback card?',
+    hint: 'Allow notifications to control playback from the shade and the lock screen.',
+  },
+  import: {
+    title: 'Show import progress?',
+    hint: 'Allow notifications to see songs coming in after you leave Kitbag, and when they are done.',
+  },
+};
+
 export function NotificationPromptSheet() {
   const styles = useStyles();
   const insets = useSafeAreaInsets();
   const prompting = useNotificationPermission((s) => s.prompting);
+  const reason = useNotificationPermission((s) => s.reason);
+  const words = WORDS[reason];
   const allow = useNotificationPermission((s) => s.allow);
   const notNow = useNotificationPermission((s) => s.notNow);
   const handleAllow = useCallback(() => {
@@ -30,15 +48,12 @@ export function NotificationPromptSheet() {
   return (
     <Sheet
       visible={prompting}
-      title="Show the playback card?"
+      title={words.title}
       dismissLabel={CLOSE}
       bottomInset={insets.bottom}
       onDismiss={notNow}
     >
-      <SheetHint>
-        Allow notifications to control playback from the shade and the lock
-        screen.
-      </SheetHint>
+      <SheetHint>{words.hint}</SheetHint>
       <View style={styles.actions}>
         <Button fill variant="ghost" label={NOT_NOW} onPress={notNow} />
         <Button fill variant="primary" label="Allow" onPress={handleAllow} />

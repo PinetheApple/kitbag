@@ -1,5 +1,8 @@
 import type { SongLibraryRepository } from '@kitbag/core-db';
-import type { KitbagCommandsSpec } from '@kitbag/core-native';
+import type {
+  KitbagCommandsSpec,
+  SongTransportRequest,
+} from '@kitbag/core-native';
 
 export type StemPlayerCommands = Pick<
   KitbagCommandsSpec,
@@ -36,6 +39,11 @@ export type StemPlayerCommands = Pick<
   | 'songTransportHide'
 > & {
   readonly onSongStopped: (handler: () => void) => {
+    readonly remove: () => void;
+  };
+  readonly onSongTransport: (
+    handler: (request: SongTransportRequest) => void,
+  ) => {
     readonly remove: () => void;
   };
 };

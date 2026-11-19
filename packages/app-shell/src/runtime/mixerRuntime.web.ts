@@ -43,6 +43,7 @@ export const mixerRuntime: MixerRuntime = {
     songTransportShow: ignore,
     songTransportHide: ignore,
     onSongStopped: () => ({ remove: ignore }),
+    onSongTransport: () => ({ remove: ignore }),
   },
   sharedMetronome: { active: () => false, release: ignore },
   engine: {

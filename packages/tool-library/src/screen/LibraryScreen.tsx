@@ -43,6 +43,8 @@ export interface LibraryScreenProps {
   readonly onOpenSong: (id: number) => void;
   readonly onOpenSetlists?: () => void;
   readonly dock?: ReactElement;
+  readonly onAdd?: () => void;
+  readonly status?: ReactElement;
 }
 
 const FAB_ROOM = libraryList.fab + libraryList.fabBottom;
@@ -94,14 +96,19 @@ function NoticeCard() {
   );
 }
 
-function StatusCards() {
+function StatusCards({
+  status,
+}: {
+  readonly status: ReactElement | undefined;
+}) {
   const styles = useStyles();
   const shown = useSongLibrary(
     (s) => s.notice !== null || s.importing.length > 0,
   );
-  if (!shown) return null;
+  if (!shown && status === undefined) return null;
   return (
     <View style={styles.inset}>
+      {status}
       <NoticeCard />
       <ImportingCard />
     </View>
@@ -207,16 +214,18 @@ function useViewState(view: LibraryView): ViewState {
   });
 }
 
-function useViewImport(view: LibraryView) {
+function useViewImport(view: LibraryView, onAdd: (() => void) | undefined) {
   const importSong = useSongLibrary((s) => s.importSong);
   const importStemFolder = useSongLibrary((s) => s.importStemFolder);
   return useCallback(() => {
-    void (view === 'stems' ? importStemFolder() : importSong());
-  }, [view, importSong, importStemFolder]);
+    if (onAdd !== undefined) onAdd();
+    else void (view === 'stems' ? importStemFolder() : importSong());
+  }, [view, onAdd, importSong, importStemFolder]);
 }
 
 interface BodyProps extends ListProps {
   readonly state: ViewState;
+  readonly startImport: () => void;
 }
 
 function LibraryBody({
@@ -225,8 +234,8 @@ function LibraryBody({
   menu,
   onOpenStemSet,
   onOpenSong,
+  startImport,
 }: BodyProps) {
-  const startImport = useViewImport(view);
   const text = VIEW_TEXT[view];
   if (state === 'failed') return <LibraryUnavailable />;
   if (state === 'loading') return null;
@@ -270,11 +279,13 @@ export function LibraryScreen({
   onOpenSong,
   onOpenSetlists,
   dock,
+  onAdd,
+  status,
 }: LibraryScreenProps) {
   const styles = useStyles();
   useEntry();
   const menu = useLibraryMenu();
-  const startImport = useViewImport(view);
+  const startImport = useViewImport(view, onAdd);
   const text = VIEW_TEXT[view];
   const state = useViewState(view);
   const listed = state === 'list';
@@ -307,13 +318,14 @@ export function LibraryScreen({
             contentContainerStyle={content}
             keyboardShouldPersistTaps="handled"
           >
-            <StatusCards />
+            <StatusCards status={status} />
             <LibraryBody
               view={view}
               state={state}
               menu={menu}
               onOpenStemSet={onOpenStemSet}
               onOpenSong={onOpenSong}
+              startImport={startImport}
             />
           </ScrollView>
         </View>

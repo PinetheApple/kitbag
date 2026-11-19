@@ -121,6 +121,7 @@ export function connectionActions(
   };
 
   const loadRecents = async () => {
+    set({ codes: stemDeckCodes(deps.native, get().codes) });
     try {
       const servers = await deps.native().knownServers();
       const recents = servers
@@ -252,6 +253,7 @@ export function connectionActions(
   return {
     loadRecents,
     connect: async (address: string) => {
+      set({ address, cameraUnavailable: false });
       const parsed = parseAddress(address);
       if (!parsed.ok) {
         attempt += 1;

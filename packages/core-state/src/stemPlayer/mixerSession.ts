@@ -2,6 +2,7 @@ import {
   acquireEngineHold,
   KB_MIXER_UNITY_RATE,
   KB_RESULT,
+  type SongTransportRequest,
 } from '@kitbag/core-native';
 
 import type { MixerClick, MixerClickSource } from './mixerClick.ts';
@@ -58,6 +59,11 @@ export function mixerSession({
   let songStopSubscription: ReturnType<
     StemPlayerCommands['onSongStopped']
   > | null = null;
+  let songTransportSubscription: ReturnType<
+    StemPlayerCommands['onSongTransport']
+  > | null = null;
+  let songTransportListener: ((request: SongTransportRequest) => void) | null =
+    null;
   let afterScrubSeek: ((frame: number) => void) | null = null;
   let afterClickRelease: (() => void) | null = null;
   let songStopped = () => {
@@ -108,6 +114,8 @@ export function mixerSession({
     releaseEngine = null;
     songStopSubscription?.remove();
     songStopSubscription = null;
+    songTransportSubscription?.remove();
+    songTransportSubscription = null;
   };
 
   const awaitReset = async (opened: number, reset: Promise<number>) => {
@@ -140,6 +148,9 @@ export function mixerSession({
     onClickReleased: (listener: () => void) => {
       afterClickRelease = listener;
     },
+    onSongTransport: (listener: (request: SongTransportRequest) => void) => {
+      songTransportListener = listener;
+    },
     onSongStopped: (listener: () => void) => {
       songStopped = listener;
     },
@@ -162,6 +173,11 @@ export function mixerSession({
       songStopSubscription ??= runtimeOf().commands.onSongStopped(() => {
         songStopped();
       });
+      if (songTransportListener !== null) {
+        songTransportSubscription ??= runtimeOf().commands.onSongTransport(
+          songTransportListener,
+        );
+      }
       return ++session;
     },
     startEngine: async (opened: number): Promise<number | null> => {

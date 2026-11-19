@@ -21,9 +21,11 @@ export function songTransportShown(
     StemPlayerState,
     'title' | 'artist' | 'durationFrames' | 'engineRate'
   >,
+  countingIn = false,
 ): SongTransportShowState {
   return {
     playing: true,
+    countingIn,
     title: state.title,
     artist: state.artist,
     durationFrames: state.durationFrames,

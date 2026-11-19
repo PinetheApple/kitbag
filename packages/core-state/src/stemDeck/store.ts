@@ -18,9 +18,11 @@ import {
 } from './importActions.ts';
 import {
   getStemDeck,
+  type StemDeckCamera,
   type StemDeckNative,
   type UnityNoticePersistence,
 } from './runtime.ts';
+import { scanActions, type ScanActions, type ScanState } from './scan.ts';
 
 export type {
   Connection,
@@ -29,14 +31,15 @@ export type {
   TrustPrompt,
 } from './connection.ts';
 
-export interface StemDeckState extends ConnectionState, ImportState {
+export interface StemDeckState extends ConnectionState, ImportState, ScanState {
   readonly codes: StemDeckConstants | null;
   readonly setlistId: string | null;
   readonly query: string;
   readonly selected: readonly string[];
 }
 
-export interface StemDeckActions extends ConnectionActions, ImportActions {
+export interface StemDeckActions
+  extends ConnectionActions, ImportActions, ScanActions {
   setSetlist: (setlistId: string | null) => void;
   setQuery: (query: string) => void;
   toggleSong: (jobId: string) => void;
@@ -50,6 +53,7 @@ export interface StemDeckDeps {
   readonly unityNotice: () => UnityNoticePersistence;
   readonly addFetchedBundle: SongLibraryActions['addFetchedBundle'];
   readonly inLibrary: (jobId: string) => Promise<boolean>;
+  readonly camera: () => StemDeckCamera;
 }
 
 const defaultDeps: StemDeckDeps = {
@@ -59,6 +63,7 @@ const defaultDeps: StemDeckDeps = {
     songLibraryStore.getState().addFetchedBundle(source, options),
   inLibrary: async (jobId) =>
     (await getSongLibrary().records.findStemSetByJobId(jobId)) !== undefined,
+  camera: () => getStemDeck().camera,
 };
 
 export type SetState = StoreApi<StemDeckStore>['setState'];
@@ -77,6 +82,10 @@ const INITIAL: StemDeckState = {
   importFailure: null,
   replacePrompt: null,
   unityNoticeSeen: false,
+  address: '',
+  addressFocus: 0,
+  camera: null,
+  cameraUnavailable: false,
 };
 
 function listActions(set: SetState, get: Get) {
@@ -109,6 +118,7 @@ export function createStemDeckStore(
     ...connectionActions(deps, set, get),
     ...listActions(set, get),
     ...importActions(deps, set, get),
+    ...scanActions(deps, set, get),
   }));
 }
 
