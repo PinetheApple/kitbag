@@ -13,3 +13,11 @@ export const STORAGE_RESULT_CODES: ReadonlySet<number> = new Set([
   SQLITE_FULL,
   SQLITE_CANTOPEN,
 ]);
+
+// op-sqlite puts the primary SQLite result code on the thrown Error as a number.
+export function sqliteResultCode(error: unknown): number | undefined {
+  if (typeof error !== 'object' || error === null || !('code' in error))
+    return undefined;
+  const { code } = error;
+  return typeof code === 'number' ? code : undefined;
+}

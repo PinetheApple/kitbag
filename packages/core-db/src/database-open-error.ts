@@ -1,4 +1,4 @@
-import { STORAGE_RESULT_CODES } from './sqlite-result-codes';
+import { sqliteResultCode, STORAGE_RESULT_CODES } from './sqlite-result-codes';
 
 export type DatabaseOpenErrorKind =
   | 'newer-version'
@@ -14,12 +14,9 @@ interface DatabaseOpenErrorDetails {
   readonly cleanupErrors?: readonly unknown[];
 }
 
-// op-sqlite puts the primary SQLite result code on the thrown Error as a number.
 function isStorageFailure(error: unknown): boolean {
-  if (typeof error !== 'object' || error === null || !('code' in error))
-    return false;
-  const { code } = error;
-  return typeof code === 'number' && STORAGE_RESULT_CODES.has(code);
+  const code = sqliteResultCode(error);
+  return code !== undefined && STORAGE_RESULT_CODES.has(code);
 }
 
 function formatMessage(

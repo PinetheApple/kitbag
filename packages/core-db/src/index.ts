@@ -6,6 +6,7 @@ export {
   SQLITE_CANTOPEN,
   SQLITE_FULL,
   SQLITE_READONLY,
+  sqliteResultCode,
 } from './sqlite-result-codes';
 export {
   DATABASE_NAME,
