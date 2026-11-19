@@ -25,6 +25,21 @@ function shiftedBars(
   }));
 }
 
+export interface DetectedMeter {
+  readonly meter: number;
+  readonly barOneSeconds: number;
+}
+
+export function detectedMeter({
+  beats,
+  downbeatIndices,
+}: DetectedGrid): DetectedMeter {
+  const detected = usableDownbeats(downbeatIndices, beats.length);
+  const meter = impliedMeter(detected);
+  const barOne = detected[barOneAt(detected, meter)] ?? 0;
+  return { meter, barOneSeconds: beats[barOne] ?? 0 };
+}
+
 export function overrideDownbeats(
   { beats, downbeatIndices }: DetectedGrid,
   { meterBeatsPerBar, barOneSeconds }: MeterOverride,
