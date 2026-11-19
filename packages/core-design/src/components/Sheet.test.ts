@@ -2,9 +2,22 @@ import type { ReactElement, ReactNode } from 'react';
 import { expect, it, vi } from 'vitest';
 
 const DRAG = { drag: true };
+const entered = vi.hoisted(() => ({
+  settle: undefined as ((finished: boolean) => void) | undefined,
+}));
 const transition = (name: string) => ({ reduceMotion: () => name });
+const settlingTransition = (name: string) => ({
+  reduceMotion: () => ({
+    withCallback: (settle: (finished: boolean) => void) => {
+      entered.settle = settle;
+      return name;
+    },
+  }),
+});
 const STATUS_BAR = 24;
 const portal = { show: vi.fn(), hide: vi.fn(), topInset: STATUS_BAR };
+const back = vi.hoisted(() => ({ handlers: [] as (() => void)[] }));
+const focusReaderOn = vi.hoisted(() => vi.fn());
 const chain = {
   activeOffsetY: () => chain,
   onUpdate: () => chain,
@@ -16,6 +29,7 @@ vi.mock('react', async (importOriginal) => ({
   useCallback: <T>(fn: T) => fn,
   useMemo: <T>(factory: () => T) => factory(),
   useId: () => 'sheet',
+  useRef: <T>(current: T) => ({ current }),
   useEffect: (effect: () => void) => {
     effect();
   },
@@ -31,7 +45,7 @@ vi.mock('react-native-reanimated', () => ({
   default: { View: 'Animated.View' },
   FadeIn: transition('scrimIn'),
   FadeOut: transition('scrimOut'),
-  SlideInDown: transition('sheetIn'),
+  SlideInDown: settlingTransition('sheetIn'),
   SlideOutDown: transition('sheetOut'),
   useAnimatedStyle: () => DRAG,
   useSharedValue: (value: number) => ({ value }),
@@ -44,9 +58,19 @@ vi.mock('react-native-gesture-handler', () => ({
 vi.mock('react-native-keyboard-controller', () => ({
   useReanimatedKeyboardAnimation: () => ({ height: { value: 0 } }),
 }));
-vi.mock('react-native-worklets', () => ({ scheduleOnRN: vi.fn() }));
+vi.mock('react-native-worklets', () => ({
+  scheduleOnRN: (fn: () => void) => {
+    fn();
+  },
+}));
 vi.mock('./IconGlyph.tsx', () => ({ InlineIcon: 'InlineIcon' }));
-vi.mock('./hardwareBack', () => ({ onHardwareBack: () => () => undefined }));
+vi.mock('./hardwareBack', () => ({
+  onHardwareBack: (handler: () => void) => {
+    back.handlers.push(handler);
+    return () => undefined;
+  },
+}));
+vi.mock('../readerFocus', () => ({ focusReaderOn }));
 vi.mock('./SheetHost.tsx', () => ({ useSheetPortal: () => portal }));
 vi.mock('../useReduceMotion.ts', () => ({
   useReduceMotionMode: () => 'system',
@@ -64,6 +88,8 @@ vi.mock('../ThemeProvider.tsx', async () => {
 const { Sheet } = await import('./Sheet.tsx');
 
 type Props = Readonly<{
+  accessibilityRole?: string;
+  ref?: unknown;
   entering?: unknown;
   exiting?: unknown;
   style?: unknown;
@@ -75,13 +101,13 @@ function flat(style: unknown): Record<string, unknown> {
   return Object.assign({}, ...parts) as Record<string, unknown>;
 }
 
-function openSheet() {
+function openSheet(onDismiss = vi.fn()) {
   portal.show.mockClear();
   Sheet({
     visible: true,
     title: 'T',
     dismissLabel: 'Close',
-    onDismiss: vi.fn(),
+    onDismiss,
     children: null,
   });
   return portal.show.mock.calls[0]?.[1] as ReactElement<Props>;
@@ -133,4 +159,42 @@ it('covers the scroll touch room under the title so scrolled content clips below
     backgroundColor: themes.dark.color.surface1,
     pointerEvents: 'none',
   });
+});
+
+function headers(node: unknown): ReactElement<Props>[] {
+  if (Array.isArray(node)) return node.flatMap(headers);
+  if (node === null || typeof node !== 'object' || !('props' in node))
+    return [];
+  const element = node as ReactElement<Props>;
+  const here = element.props.accessibilityRole === 'header' ? [element] : [];
+  return [...here, ...headers(element.props.children)];
+}
+
+function settleEntering(finished: boolean) {
+  if (entered.settle === undefined) throw new Error('no entering callback');
+  entered.settle(finished);
+}
+
+it('moves screen reader focus to its title once it has slid in', () => {
+  focusReaderOn.mockClear();
+  const [title] = headers(openSheet());
+  const node = {};
+  (title?.props.ref as { current: unknown }).current = node;
+  expect(title?.props.children).toBe('T');
+  expect(focusReaderOn).not.toHaveBeenCalled();
+  settleEntering(false);
+  expect(focusReaderOn).not.toHaveBeenCalled();
+  settleEntering(true);
+  expect(focusReaderOn).toHaveBeenCalledOnce();
+  expect(focusReaderOn).toHaveBeenCalledWith(node);
+});
+
+it('closes on hardware Back', () => {
+  back.handlers.length = 0;
+  const onDismiss = vi.fn();
+  openSheet(onDismiss);
+  back.handlers.forEach((handler) => {
+    handler();
+  });
+  expect(onDismiss).toHaveBeenCalledOnce();
 });

@@ -1,6 +1,8 @@
 import {
   ANALYSIS_STATUS,
   type AnalysisStatus,
+  type LibraryRow,
+  type LibrarySongRow,
   type SongRecord,
 } from '@kitbag/core-db';
 import { KB_RESULT } from '@kitbag/core-native';
@@ -10,7 +12,11 @@ import {
   transportActions,
   type TransportSlice,
 } from '../stemPlayer/actions.ts';
-import { clickActions, type ClickSlice } from '../stemPlayer/clickActions.ts';
+import {
+  clickActions,
+  followNewGrid,
+  type ClickSlice,
+} from '../stemPlayer/clickActions.ts';
 import { loopActions, type LoopSlice } from '../stemPlayer/loopActions.ts';
 import { UNITY_GAIN, UNSHIFTED_KEY } from '../stemPlayer/mix.ts';
 import {
@@ -30,6 +36,10 @@ import {
   type StemPlayerStatus,
 } from '../stemPlayer/store.ts';
 import { framesToSeconds, secondsToFrames } from '../stemPlayer/time.ts';
+import {
+  songLibraryStore,
+  type SongLibraryState,
+} from '../songLibrary/store.ts';
 import { getSongPlayer, type SongPlayerRuntime } from './runtime.ts';
 
 const SONG_TRACK = 0;
@@ -65,9 +75,15 @@ type SongPlayerActions = Pick<
 
 export type SongPlayerStore = SongPlayerState & SongPlayerActions;
 
+export type SongLibraryRows = Pick<
+  StoreApi<Pick<SongLibraryState, 'rows' | 'ready' | 'failed'>>,
+  'subscribe'
+>;
+
 interface SongPlayerOptions {
   readonly scrubSeekDelayMs?: number;
   readonly mixerClaim?: MixerClaim;
+  readonly library?: SongLibraryRows;
   readonly mixerClick?: MixerClick;
 }
 
@@ -88,13 +104,28 @@ const closedState: SongPlayerState = {
   click: false,
 };
 
-function factsOf(record: SongRecord): Partial<SongPlayerState> {
+type SongFacts = Pick<
+  SongRecord,
+  'title' | 'artist' | 'bpm' | 'analysisStatus'
+>;
+
+function namesOf(record: Pick<SongFacts, 'title' | 'artist'>) {
   return {
     title: record.title,
     artist: record.artist === '' ? null : record.artist,
+  };
+}
+
+function factsOf(record: SongFacts): Partial<SongPlayerState> {
+  return {
+    ...namesOf(record),
     bpm: record.bpm,
     analysisStatus: record.analysisStatus,
   };
+}
+
+function sameNumbers(a: readonly number[], b: readonly number[]): boolean {
+  return a.length === b.length && a.every((value, i) => value === b[i]);
 }
 
 export function createSongPlayerStore(
@@ -104,12 +135,16 @@ export function createSongPlayerStore(
   const {
     scrubSeekDelayMs = SCRUB_SEEK_DELAY_MS,
     mixerClaim: claim = createMixerClaim(),
+    library,
     mixerClick: songClick = createMixerClick(),
   } = options;
   let trackRequested = false;
   let masterToRestore: number | null = null;
   let loading: Promise<void> = Promise.resolve();
   let holders = 0;
+  let waveformBars = 0;
+  let shownWaveform: string | null = null;
+  let latestWaveform: string | null = null;
 
   const teardownTracks = () => {
     const { commands } = runtimeOf();
@@ -145,19 +180,26 @@ export function createSongPlayerStore(
           if (!held || !own.live()) return;
           held = false;
           holders--;
-          if (holders === 0) own.release();
+          const outlivesPlayer = get().status === 'ready';
+          if (holders === 0 && !outlivesPlayer) own.release();
         },
       };
     };
     const context = { set, get, runtimeOf, session: mixer.current };
 
-    const loadWaveform = (opened: number, path: string, bars: number) => {
+    const showWaveform = (opened: number, path: string | null) => {
+      if (path === null || path === shownWaveform || path === latestWaveform)
+        return;
+      latestWaveform = path;
       runtimeOf()
-        .readWaveform(path, bars)
+        .readWaveform(path, waveformBars)
         .then((envelope) => {
-          if (live(opened)) set({ envelope });
+          if (!live(opened) || path !== latestWaveform) return;
+          shownWaveform = path;
+          set({ envelope });
         })
         .catch((error: unknown) => {
+          if (path === latestWaveform) latestWaveform = null;
           console.warn('[kitbag] song waveform unreadable', error);
         });
     };
@@ -179,7 +221,7 @@ export function createSongPlayerStore(
       );
     };
 
-    const load = async (opened: number, songId: number, bars: number) => {
+    const load = async (opened: number, songId: number) => {
       const runtime = runtimeOf();
       const { commands } = runtime;
       const record = await runtime.records.readSong(songId);
@@ -222,20 +264,85 @@ export function createSongPlayerStore(
       });
       if (decoded > 0)
         correctStoredLength(record, framesToSeconds(decoded, engineRate));
-      if (record.waveformPath !== null)
-        loadWaveform(opened, record.waveformPath, bars);
+      showWaveform(opened, record.waveformPath);
     };
+
+    const endAsGone = () => {
+      mixer.close();
+      set({ status: 'missing' });
+    };
+
+    const followAnalysis = (opened: number, record: SongRecord) => {
+      const { status, beats, downbeatIndices } = get();
+      const ready = status === 'ready';
+      const regrid =
+        ready &&
+        !(
+          sameNumbers(beats, record.beats) &&
+          sameNumbers(downbeatIndices, record.downbeatIndices)
+        );
+      set({
+        ...factsOf(record),
+        ...(regrid
+          ? { beats: record.beats, downbeatIndices: record.downbeatIndices }
+          : {}),
+      });
+      if (ready) showWaveform(opened, record.waveformPath);
+      if (regrid) void followNewGrid(context);
+    };
+
+    const refreshFacts = async (opened: number, songId: number) => {
+      const record = await runtimeOf().records.readSong(songId);
+      if (!live(opened)) return;
+      if (record === undefined) endAsGone();
+      else followAnalysis(opened, record);
+    };
+
+    const reread = (opened: number, songId: number) => {
+      loading = loading
+        .then(() => refreshFacts(opened, songId))
+        .catch((error: unknown) => {
+          console.warn('[kitbag] song facts unreadable', error);
+        });
+      return loading;
+    };
+
+    const followLibrary = (rows: readonly LibraryRow[]) => {
+      const { songId } = get();
+      if (songId === null) return;
+      const row = rows.find(
+        (candidate): candidate is LibrarySongRow =>
+          candidate.kind === 'song' && candidate.id === songId,
+      );
+      if (row === undefined) {
+        endAsGone();
+        return;
+      }
+      set(namesOf(row));
+      void reread(mixer.current(), songId);
+    };
+
+    library?.subscribe((state, previous) => {
+      if (state.rows === previous.rows || !state.ready || state.failed) return;
+      followLibrary(state.rows);
+    });
 
     return {
       ...closedState,
-      open: (songId, waveformBars) => {
+      open: (songId, bars) => {
         const { songId: current, status } = get();
-        if (current === songId && ATTACHABLE.has(status))
-          return { hold: sharedHold(mixer.current()), loaded: loading };
+        if (current === songId && ATTACHABLE.has(status)) {
+          const opened = mixer.current();
+          const hold = sharedHold(opened);
+          return { hold, loaded: reread(opened, songId) };
+        }
         const opened = mixer.begin();
         holders = 0;
+        waveformBars = bars;
+        shownWaveform = null;
+        latestWaveform = null;
         set({ ...closedState, status: 'loading', songId });
-        loading = load(opened, songId, waveformBars).catch((error: unknown) => {
+        loading = load(opened, songId).catch((error: unknown) => {
           console.warn('[kitbag] song failed to open', error);
           if (live(opened)) set({ status: 'failed' });
         });
@@ -251,5 +358,6 @@ export function createSongPlayerStore(
 
 export const songPlayerStore = createSongPlayerStore(getSongPlayer, {
   mixerClaim,
+  library: songLibraryStore,
   mixerClick,
 });

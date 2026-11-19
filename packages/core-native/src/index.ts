@@ -29,6 +29,17 @@ export type {
   StemSetUsage,
   StorageReport,
 } from './NativeKitbagLibrary';
+export { getKitbagStemDeck } from './NativeKitbagStemDeck';
+export type {
+  Spec as KitbagStemDeckSpec,
+  StemDeckConstants,
+  StemDeckImportItem,
+  StemDeckImportRequest,
+  StemDeckImportSnapshot,
+  StemDeckProbe,
+  StemDeckServer,
+  StemDeckText,
+} from './NativeKitbagStemDeck';
 export { missingFiles, storageReport } from './libraryStorage';
 export { backupFilesAvailable, pickBackup, shareBackup } from './backupFiles';
 

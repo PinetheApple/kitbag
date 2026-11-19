@@ -42,6 +42,7 @@ export type AnalysisResult = Readonly<{
   downbeats: readonly Int32[];
   waveformRelativePath: string;
   durationSec: Double;
+  analysisVersion?: Int32;
 }>;
 
 export type StemBundleCheck = Readonly<{
@@ -53,6 +54,8 @@ export type StemBundleCheck = Readonly<{
   title: string;
   stemCount: Int32;
   maxStems: Int32;
+  stemFormat: string;
+  supportedStemFormat: string;
 }>;
 
 export type ImportedStem = Readonly<{
@@ -137,6 +140,7 @@ export type LibraryConstants = Readonly<{
   bundleRefusalTooManyStems: string;
   bundleRefusalUnreadable: string;
   bundleRefusalNoSpace: string;
+  bundleRefusalStemFormat: string;
   failureMissingFile: string;
   failureUnsupported: string;
   failureInterrupted: string;

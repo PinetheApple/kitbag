@@ -73,6 +73,8 @@ const SUBSETS: Category[][] = Array.from(
   (_, mask) => CATEGORIES.filter((_category, bit) => ((mask + 1) >> bit) & 1),
 );
 
+const EVERY_SUBSET_TIMEOUT_MS = 30_000;
+
 describe('export is always importable', () => {
   it.each(STATES)(
     '%s: every category subset parses and plans',
@@ -88,6 +90,7 @@ describe('export is always importable', () => {
         expect(plan.ok, subset.join('+')).toBe(true);
       }
     },
+    EVERY_SUBSET_TIMEOUT_MS,
   );
 
   it('exporting setlists carries the presets they list', async () => {

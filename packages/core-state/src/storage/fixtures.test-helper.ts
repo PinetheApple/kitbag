@@ -26,6 +26,7 @@ export function stemsRow(
     kind: 'stems',
     id: 1,
     title: 'Redbone',
+    artist: null,
     stemCount: 2,
     durationSec: 326,
     bpm: null,

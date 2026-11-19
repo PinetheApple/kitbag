@@ -32,13 +32,14 @@ class AnalysisStoreTest {
   private fun analysed(path: String) =
     AnalysisResult(
       path, true, "", 121.5f, floatArrayOf(0.25f, 0.75f, 1.25f), intArrayOf(0, 2), "waves/a.kwav", DURATION_SEC,
+      ANALYSIS_VERSION,
     )
 
-  private fun writeVersion1Result(path: String) {
+  private fun writeLegacyResult(path: String, format: Int) {
     File(dir, "results").mkdirs()
     val file = File(dir, "results/${AnalysisStore.fileStem(path)}.result")
     DataOutputStream(file.outputStream()).use { out ->
-      out.writeInt(1)
+      out.writeInt(format)
       out.writeUTF(path)
       out.writeBoolean(true)
       out.writeUTF("")
@@ -48,6 +49,7 @@ class AnalysisStoreTest {
       out.writeInt(1)
       out.writeInt(0)
       out.writeUTF("waves/a.kwav")
+      if (format >= FORMAT_NO_ANALYSIS_VERSION) out.writeDouble(DURATION_SEC)
     }
   }
 
@@ -63,11 +65,23 @@ class AnalysisStoreTest {
     assertArrayEquals(intArrayOf(0, 2), read.downbeats)
     assertEquals("waves/a.kwav", read.waveformRelativePath)
     assertEquals(DURATION_SEC, read.durationSec, 0.0)
+    assertEquals(ANALYSIS_VERSION, read.analysisVersion)
+  }
+
+  @Test
+  fun `a result stored before analysis versions reads back with no version`() {
+    writeLegacyResult("songs/1/a.mp3", FORMAT_NO_ANALYSIS_VERSION)
+    val read = store.pending().single()
+    assertTrue(read.ok)
+    assertArrayEquals(floatArrayOf(0.25f), read.beats, 0f)
+    assertEquals("waves/a.kwav", read.waveformRelativePath)
+    assertEquals(DURATION_SEC, read.durationSec, 0.0)
+    assertNull(read.analysisVersion)
   }
 
   @Test
   fun `a result stored before durations reads back with an unknown duration`() {
-    writeVersion1Result("songs/1/a.mp3")
+    writeLegacyResult("songs/1/a.mp3", FORMAT_NO_DURATION)
     val read = store.pending().single()
     assertTrue(read.ok)
     assertEquals(121.5f, read.bpm)
@@ -75,6 +89,7 @@ class AnalysisStoreTest {
     assertArrayEquals(intArrayOf(0), read.downbeats)
     assertEquals("waves/a.kwav", read.waveformRelativePath)
     assertEquals(AnalysisResult.UNKNOWN_DURATION_SEC, read.durationSec, 0.0)
+    assertNull(read.analysisVersion)
   }
 
   @Test
@@ -86,6 +101,7 @@ class AnalysisStoreTest {
     assertEquals("songs/é ü.mp3", read.relativePath)
     assertEquals(0, read.beats.size)
     assertEquals(AnalysisResult.UNKNOWN_DURATION_SEC, read.durationSec, 0.0)
+    assertNull(read.analysisVersion)
   }
 
   @Test
@@ -186,5 +202,8 @@ class AnalysisStoreTest {
 
   private companion object {
     const val DURATION_SEC = 187.25
+    const val ANALYSIS_VERSION = 7
+    const val FORMAT_NO_DURATION = 1
+    const val FORMAT_NO_ANALYSIS_VERSION = 2
   }
 }

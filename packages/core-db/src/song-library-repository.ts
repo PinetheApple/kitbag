@@ -37,6 +37,7 @@ export interface LibraryStemSetRow {
   readonly kind: 'stems';
   readonly id: number;
   readonly title: string;
+  readonly artist: string | null;
   readonly stemCount: number;
   readonly durationSec: number;
   readonly bpm: number | null;
@@ -138,6 +139,7 @@ async function stemSetRows(db: Database): Promise<LibraryStemSetRow[]> {
     .select({
       id: stemSets.id,
       title: stemSets.name,
+      artist: stemSets.artist,
       stemCount: count(stems.id),
       durationSec: max(stems.duration),
       bpm: stemSets.bpm,

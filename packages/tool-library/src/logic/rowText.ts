@@ -77,6 +77,10 @@ const STATUS_NOTES: Readonly<Partial<Record<SongBadge, string>>> = {
 
 const KEPT_GRID_NOTE = 're-analysis failed';
 
+export function songStatusBadge(badge: SongBadge): BadgeSpec {
+  return STATUS_BADGES[badge];
+}
+
 export function rowBadges(row: LibraryRow, status: SongBadge): BadgeSpec[] {
   if (row.kind === 'song') return [STATUS_BADGES[status]];
   const stems: BadgeSpec = {
@@ -118,7 +122,7 @@ export function spokenRow(
   failureStatus: string | null,
 ): string {
   const parts: string[] = [row.title];
-  if (row.kind === 'song' && row.artist !== '') parts.push(row.artist);
+  if (row.artist !== null && row.artist !== '') parts.push(row.artist);
   if (row.durationSec > 0) parts.push(spokenLength(row.durationSec));
   if (row.kind === 'stems' || STATUS_NOTES[status] === undefined)
     parts.push(...rowFacts(row).map((fact) => fact.spoken));

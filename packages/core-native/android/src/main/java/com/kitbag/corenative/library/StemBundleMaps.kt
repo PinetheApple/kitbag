@@ -14,6 +14,8 @@ object StemBundleMaps {
       putString("title", check.title)
       putInt("stemCount", check.stemCount)
       putInt("maxStems", maxStems)
+      putString("stemFormat", check.stemFormat)
+      putString("supportedStemFormat", StemBundleManifest.STEM_FORMAT)
     }
 
   fun imported(bundle: ImportedBundle): WritableMap =
@@ -23,13 +25,13 @@ object StemBundleMaps {
       putString("jobId", manifest.jobId)
       putString("title", manifest.title)
       putString("songTitle", metadata.heading?.title)
-      putString("artist", metadata.heading?.artist)
+      putString("artist", bundle.artist)
       putString("relativeDir", bundle.relativeDir)
       putDouble("durationSec", manifest.durationSec)
       putInt("sampleRate", manifest.sampleRate)
       putInt("channels", manifest.channels)
       putArray("stems", Arguments.createArray().apply { bundle.stems.forEach { pushMap(stem(it)) } })
-      putNullableDouble("bpm", metadata.bpm)
+      putNullableDouble("bpm", bundle.bpm)
       putString("key", metadata.key)
       putString("scale", metadata.scale)
       putNullableDouble("keyConfidence", metadata.keyConfidence)

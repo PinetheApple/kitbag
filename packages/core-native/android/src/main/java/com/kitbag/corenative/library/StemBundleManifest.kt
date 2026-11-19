@@ -10,6 +10,7 @@ object StemBundleRefusal {
   const val TOO_MANY_STEMS = "too-many-stems"
   const val UNREADABLE = "unreadable"
   const val NO_SPACE = "no-space"
+  const val UNSUPPORTED_STEM_FORMAT = "unsupported-stem-format"
 }
 
 class StemBundleRefusedException(val refusal: String) : Exception("Stem bundle refused: $refusal")
@@ -21,6 +22,7 @@ class ManifestStem(val name: String, val file: String, val frames: Long) {
 class BundleManifest(
   val jobId: String,
   val title: String,
+  val artist: String?,
   val durationSec: Double,
   val sampleRate: Int,
   val channels: Int,
@@ -35,9 +37,13 @@ class ManifestCheck(
   val title: String = "",
   val stemCount: Int = 0,
   val manifest: BundleManifest? = null,
+  val stemFormat: String = "",
 ) {
-  fun copyWith(refusal: String?, manifest: BundleManifest? = this.manifest) =
-    ManifestCheck(refusal, format, version, jobId, title, stemCount, manifest)
+  fun copyWith(
+    refusal: String?,
+    manifest: BundleManifest? = this.manifest,
+    stemFormat: String = this.stemFormat,
+  ) = ManifestCheck(refusal, format, version, jobId, title, stemCount, manifest, stemFormat)
 }
 
 object StemBundleManifest {
@@ -45,7 +51,7 @@ object StemBundleManifest {
   const val FORMAT = "stemdeck-song-bundle"
   const val SUPPORTED_VERSION = 1
   const val STEMS_PREFIX = "stems/"
-  private const val STEM_EXTENSION = ".flac"
+  const val STEM_FORMAT = "flac"
   internal val POSITIVE_INT = 1L..Int.MAX_VALUE
 
   fun check(text: String?, maxStems: Int): ManifestCheck {
@@ -69,8 +75,16 @@ object StemBundleManifest {
     if (stems == null || stems.length() == 0 || jobId.isEmpty()) return identity
     if (stems.length() > maxStems) return identity.copyWith(StemBundleRefusal.TOO_MANY_STEMS)
     val manifest = parseBody(json, jobId, title, stems) ?: return identity
-    return identity.copyWith(null, manifest)
+    return stemFormatCheck(identity, manifest)
   }
+
+  private fun stemFormatCheck(identity: ManifestCheck, manifest: BundleManifest): ManifestCheck {
+    val foreign = manifest.stems.map { extensionOf(it.fileName) }.firstOrNull { it != STEM_FORMAT }
+    if (foreign == null) return identity.copyWith(null, manifest)
+    return identity.copyWith(StemBundleRefusal.UNSUPPORTED_STEM_FORMAT, manifest = null, stemFormat = foreign)
+  }
+
+  private fun extensionOf(fileName: String): String = fileName.substringAfterLast('.', "")
 
   private fun parseBody(json: JSONObject, jobId: String, title: String, stems: JSONArray): BundleManifest? {
     val sampleRate = json.wholeOrNull("sample_rate")?.takeIf { it in POSITIVE_INT } ?: return null
@@ -79,23 +93,29 @@ object StemBundleManifest {
     val parsed = (0 until stems.length()).map { parseStem(stems.opt(it)) ?: return null }
     if (parsed.distinctBy { it.name }.size != parsed.size) return null
     if (parsed.distinctBy { it.fileName.lowercase() }.size != parsed.size) return null
-    return BundleManifest(jobId, title, duration, sampleRate.toInt(), channels.toInt(), parsed)
+    return BundleManifest(jobId, title, artist(json), duration, sampleRate.toInt(), channels.toInt(), parsed)
+  }
+
+  private fun artist(json: JSONObject): String? {
+    val band = json.opt("band") as? JSONObject
+    return listOf(json.stringOrNull("artist"), band?.stringOrNull("name"), band?.stringOrNull("englishName"))
+      .firstNotNullOfOrNull { it?.trim()?.ifEmpty { null } }
   }
 
   private fun parseStem(value: Any?): ManifestStem? {
     val stem = value as? JSONObject ?: return null
     val name = stem.stringOrNull("name")?.takeIf { it.isNotEmpty() } ?: return null
-    val file = stem.stringOrNull("file")?.takeIf(::isSafeStemFile) ?: return null
+    val file = stem.stringOrNull("file")?.takeIf(::isSafeStemPath) ?: return null
     val frames = stem.wholeOrNull("frames")?.takeIf { it > 0 } ?: return null
     return ManifestStem(name, file, frames)
   }
 
   // The name is written to disk as-is, so it must already be what
-  // safeFileName would make of it: no separators, no hidden files.
-  internal fun isSafeStemFile(file: String): Boolean {
+  // safeFileName would make of it: no separators, no hidden files, an extension.
+  internal fun isSafeStemPath(file: String): Boolean {
     if (!file.startsWith(STEMS_PREFIX)) return false
     val name = file.substring(STEMS_PREFIX.length)
-    return name.endsWith(STEM_EXTENSION) && LibraryPaths.safeFileName(name, null) == name
+    return extensionOf(name).isNotEmpty() && LibraryPaths.safeFileName(name, null) == name
   }
 }
 

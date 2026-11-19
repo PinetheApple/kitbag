@@ -7,6 +7,7 @@ import {
   backupSummary,
   categoryValue,
   conflictBanner,
+  conflictDetail,
   failureText,
   modeHint,
   replaceConfirmBody,
@@ -158,6 +159,18 @@ describe('conflict banner', () => {
       ]),
     ).toBe('2 items differ from yours.');
   });
+
+  it('names the standalone metronome settings as their own category', () => {
+    const conflict = {
+      category: 'metronomeSettings',
+      key: 'k',
+      label: 'k',
+    } as const;
+    expect(conflictBanner([conflict])).toBe(
+      '1 metronome setup differs from yours.',
+    );
+    expect(conflictDetail(conflict)).toBe('Metronome');
+  });
 });
 
 describe('failures', () => {
@@ -181,6 +194,16 @@ describe('result', () => {
   it('says what was merged', () => {
     expect(restoredText('merge', MERGE_PLAN.counts)).toBe(
       'Merged 3 setlists, 24 songs & 2 tunings.',
+    );
+  });
+
+  it('lists the metronome after count-in', () => {
+    const settings = {
+      metronomeSettings: counts({ incoming: 1 }),
+      countInSettings: counts({ incoming: 3 }),
+    };
+    expect(restoredText('replace', settings)).toBe(
+      'Replaced with 3 count-in settings & 1 metronome setup.',
     );
   });
 });

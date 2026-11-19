@@ -197,6 +197,16 @@ describe('library store', () => {
     expect(library.getState().presets.find((p) => p.id === id)?.bpm).toBe(96);
   });
 
+  it('unlinks the loaded song when its preset is deleted, and only then', async () => {
+    const { library, solo, first } = await onStage();
+    const loaded = library.getState().loaded;
+    await library.getState().deletePreset(solo);
+    expect(library.getState().loaded).toEqual(loaded);
+
+    await library.getState().deletePreset(first.preset.id);
+    expect(library.getState().loaded).toBeNull();
+  });
+
   it('clears the setlist when an outside load overtakes a pin still in flight', async () => {
     const { library, gig, solo, first } = await offStage();
     const pinning = library

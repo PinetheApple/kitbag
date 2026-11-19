@@ -104,6 +104,10 @@ PRs state what changed, copy the issue's acceptance criteria with only the
 satisfied ones ticked, and record verification plainly: what was run, what it
 printed, and what still needs a device.
 
+A UI PR adds or updates a flow under `e2e/flows/` for each device item a script
+can check, and names the flows it ran in the PR body. Items that need real audio,
+hearing or a physical phone stay in the body's "Still needs the device" list.
+
 Every PR body carries a ` ```release-note ` block: one user-facing line — what a
 musician notices, in plain words — or `NONE` for an internal change.
 `scripts/release-notes.sh` turns the blocks into the F-Droid changelog, so F-Droid
@@ -125,7 +129,8 @@ rebuilding the tools on top. What is here now:
 | `design/` | The binding HTML design specs. Precedence, and which variant of a multi-variant file binds, is in SPEC.md §12. |
 | `legacy/` | `android/MediaSessionPlugin.kt` + `AndroidManifest.xml`, the Flutter-era media-session detection that play-along (§8.2, §13.9) still has to port. **Reference only — do not build against them.** Delete them once `MediaNotificationListenerService.kt` stops being a skeleton. |
 | `docs/` | `decisions.md` (why things were decided), `tuner-functional-spec.md`, research notes, and `archive/` (retired trackers and runbooks, historical only). GitHub issues are the tickets. **Read `docs/tuner-research.md`'s warning banner before touching the tuner.** |
-| `scripts/` | `preflight.sh` (every CI gate locally), `version.sh` + `release-gate.sh` + `verify-apk-signature.sh` (the release path, run by `release.yml`), `install-on-device.sh`, `lint.sh`/`format.sh`/`install-hooks.sh` (native gate), `changelog.sh`, `run-loop.sh`. |
+| `e2e/` | Device flows (Maestro): `flows/` one per checked behaviour, `subflows/` the shared steps, `make_click_song.py` the fixture song `scripts/e2e.sh` pushes. Dev-only; nothing here enters the APK. |
+| `scripts/` | `preflight.sh` (every CI gate locally), `version.sh` + `release-gate.sh` + `verify-apk-signature.sh` (the release path, run by `release.yml`), `install-on-device.sh`, `e2e.sh` + `install-maestro.sh` (device flows), `lint.sh`/`format.sh`/`install-hooks.sh` (native gate), `changelog.sh`, `run-loop.sh`. |
 
 The old Flutter guide's references — Melos, `pubspec.yaml`, `dart analyze`,
 `custom_lint`, `scripts/lint_check.sh` — are gone. Do not restore them.
@@ -152,6 +157,22 @@ pnpm -w generate:check  # generation drift guards (SPEC §13.7)
 `native/audio_core/tools/` renders audio offline and asserts against it. This is
 why SPEC.md §15 Phase 1 is testable with no app at all, and it is the cheapest
 signal in the project. **Use it.**
+
+### Device flows
+
+`e2e/flows/` holds one Maestro flow per device-checked behaviour, driven through
+accessibility labels; shared steps live in `e2e/subflows/`. Maestro is dev-only:
+it installs its own driver APKs on the device at test time, and nothing enters
+the app's APK or manifest.
+
+```sh
+bash scripts/install-maestro.sh            # pinned Maestro CLI into ~/.maestro, sha256-checked
+bash scripts/e2e.sh <apk> [flow|dir ...]   # emulator-5554 unless --device; --help
+bash scripts/e2e.test.sh                   # the script itself, stubbed adb + maestro
+```
+
+`e2e.sh` turns off Maestro's analytics and update check. Notification permission
+belongs to the flows' `launchApp`, since clearing state resets it.
 
 ### `tuner_verify` is a gate
 

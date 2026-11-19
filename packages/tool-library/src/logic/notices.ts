@@ -15,6 +15,10 @@ export interface NoticeText {
   readonly text: string;
 }
 
+function formatName(format: string): string {
+  return format === '' ? 'this format' : format.toUpperCase();
+}
+
 function refusalText(name: string, refusal: BundleRefusal): NoticeText {
   const song = `“${name}”`;
   switch (refusal.reason) {
@@ -43,6 +47,11 @@ function refusalText(name: string, refusal: BundleRefusal): NoticeText {
         status: 'Song bundle unreadable',
         text: `${song} could not be read; it may be damaged or incomplete. Nothing was added. Export it from StemDeck again.`,
       };
+    case 'stemFormat':
+      return {
+        status: 'Unsupported stem format',
+        text: `${song} has ${formatName(refusal.stemFormat)} stems; StemDeck song bundles carry ${formatName(refusal.supportedStemFormat)} stems, so nothing was added. Export it from StemDeck again.`,
+      };
   }
 }
 
@@ -58,10 +67,9 @@ function formatRefusedText(
   format: string,
   supported: readonly string[],
 ): NoticeText {
-  const what = format === '' ? 'this format' : format.toUpperCase();
   return {
     status: 'Unsupported format',
-    text: `Can’t import “${name}”: ${what} isn’t supported. Use ${joinedFormatNames(supported)}.`,
+    text: `Can’t import “${name}”: ${formatName(format)} isn’t supported. Use ${joinedFormatNames(supported)}.`,
   };
 }
 

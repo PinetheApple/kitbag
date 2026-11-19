@@ -1,0 +1,18 @@
+appId: com.kitbag.app
+name: '#370: deleting the playing song from Songs ends the session'
+tags:
+  - pr-370
+---
+- runFlow: ../../subflows/song-playing-behind-bar.yaml
+- tapOn: 'Actions for ${FIXTURE_SONG}'
+- tapOn: 'Delete song'
+- tapOn: 'Delete'
+- extendedWaitUntil:
+    notVisible: 'Open ${FIXTURE_SONG}'
+    timeout: 5000
+- assertNotVisible: '${FIXTURE_SONG}, .*'
+- back
+- extendedWaitUntil:
+    visible: 'Metronome, .*(ready|playing)'
+    timeout: 5000
+- assertNotVisible: 'Open ${FIXTURE_SONG}'

@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useId, useMemo, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  type ReactNode,
+} from 'react';
 import {
   Pressable,
   ScrollView,
@@ -31,6 +38,7 @@ import {
 } from '../sheetDismiss.ts';
 import { palette, radii } from '../tokens.ts';
 import { useReduceMotionMode } from '../useReduceMotion.ts';
+import { focusReaderOn } from '../readerFocus';
 import { onHardwareBack } from './hardwareBack';
 import { InlineIcon } from './IconGlyph.tsx';
 import { useSheetPortal } from './SheetHost.tsx';
@@ -195,14 +203,22 @@ export function Sheet({
     titleAction !== undefined && styles.titleBesideAction,
   ];
   const motion = useReduceMotionMode();
+  const titleRef = useRef<Text>(null);
+  const focusTitle = useCallback(() => {
+    focusReaderOn(titleRef.current);
+  }, []);
+  // Focus sent at mount, mid-slide, did not land on the title under TalkBack.
   const transitions = useMemo(
     () => ({
       scrimIn: FadeIn.reduceMotion(motion),
       scrimOut: FadeOut.reduceMotion(motion),
-      sheetIn: SlideInDown.reduceMotion(motion),
+      sheetIn: SlideInDown.reduceMotion(motion).withCallback((finished) => {
+        'worklet';
+        if (finished) scheduleOnRN(focusTitle);
+      }),
       sheetOut: SlideOutDown.reduceMotion(motion),
     }),
-    [motion],
+    [motion, focusTitle],
   );
   const dragY = useSharedValue(0);
   const sheetHeight = useSharedValue(0);
@@ -287,7 +303,11 @@ export function Sheet({
                 {titleIcon === undefined ? null : (
                   <InlineIcon name={titleIcon} style={titleStyle} />
                 )}
-                <Text accessibilityRole="header" style={titleStyle}>
+                <Text
+                  ref={titleRef}
+                  accessibilityRole="header"
+                  style={titleStyle}
+                >
                   {title}
                 </Text>
                 {titleAction === undefined ? null : (

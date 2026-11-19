@@ -754,6 +754,23 @@ referenced but never drew: **setlists**, **setlist detail**, **preset editor**.
   poly, sound, ramp, mute, count-in) never writes the song; a visible mark shows
   it has unsaved changes until the user saves. Nothing autosaves. The mark and
   where Save lives await the owner's pick of a design.
+- **"The last metronome state survives a restart"** (owner, 2026-11-07;
+  #333): tempo, meter, subdivision, accents, poly, sound, ramp and mute bars
+  come back after the app is killed, and nothing starts playing.
+  Count-in, volume, latency and subdivision accents keep their own storage
+  (§5.3, §12.5). How that meets songs:
+  - Loading a song or setlist step, or editing a loaded song, never writes the
+    standalone state; a kill with a song loaded relaunches into the settings
+    from before the song. **[recorded — coordinator ruling, owner may overturn]**
+  - Clear song and Leave setlist keep the current settings, and those become
+    the saved standalone state. **[recorded — lane call, owner may overturn]**
+  - A ramp that was on restores at its start tempo, as a loaded song's does.
+    **[recorded — lane call, owner may overturn]**
+  - The saved standalone state is backed up as its own Restore category,
+    Metronome. Merge reviews a differing value as a conflict; an older backup
+    without it leaves the local state untouched; after a restore the restored
+    state replaces an unloaded song's. **[recorded — owner approved, #378;
+    reverses the earlier lane call]**
 - **Ramp and bar-mute are song data.** The Flutter `applyPreset` force-disables
   the ramp when loading a preset, so a song's trainer config is silently lost.
   They round-trip like any other field.
@@ -911,7 +928,9 @@ working. Changes:
 - Speed control in the transport, driven by the same stretch stage as the stem
   player (§7.6). Single-file playback gets it when the stem player has it; until
   then the 1.0× key stays in place, looks disabled, and shows a note on tap.
-- A row tap on Songs opens the player paused.
+- Tapping the Songs row of the song the mini-player is showing opens the player
+  on that song as it is, still playing if it was. Any other row tap on Songs
+  opens the player paused.
 - **Stop** lives in the player's overflow menu, with Re-analyse. Stop ends the
   song session and removes the mini-player. Stop in the song's media
   notification does the same.

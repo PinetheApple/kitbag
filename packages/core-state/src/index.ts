@@ -31,10 +31,23 @@ export {
   type CountInSettings,
 } from './metronome/countInPersistence.ts';
 export {
+  applyMetronomeSettings,
+  standaloneMetronomeOf,
+  type MetronomeSettingsInput,
+  type StandaloneMetronome,
+} from './metronome/standalone.ts';
+export {
+  configureStandaloneMetronomePersistence,
+  reloadStandaloneMetronomePersistence,
+  type StandaloneMetronomePersistence,
+} from './metronome/standalonePersistence.ts';
+export {
   clamp,
   clampRampInterval,
   cycleAccentValue,
+  isAccent,
   isCountInBars,
+  isRampUnit,
   isSoundId,
   rampIntervalBounds,
   initialAccents,
@@ -216,10 +229,49 @@ export {
   type LibraryView,
   type SongBadge,
 } from './songLibrary/logic.ts';
+export { playerSongBadge } from './songLibrary/badge.ts';
 export type {
+  BundleAddOutcome,
   BundleRefusal,
   BundleRefusalReason,
 } from './songLibrary/stemBundleLogic.ts';
+export { useStemDeck } from './stemDeck/useStemDeck.ts';
+export {
+  createStemDeckStore,
+  stemDeckStore,
+  type Connection as StemDeckConnection,
+  type RecentServer as StemDeckRecentServer,
+  type ServerTrust as StemDeckServerTrust,
+  type StemDeckStore,
+  type TrustPrompt as StemDeckTrustPrompt,
+} from './stemDeck/store.ts';
+export {
+  configureStemDeck,
+  type StemDeckNative,
+  type StemDeckRuntime,
+  type UnityNoticePersistence,
+} from './stemDeck/runtime.ts';
+export {
+  displayAddress,
+  parseAddress,
+  shortFingerprint,
+  type AddressProblem,
+} from './stemDeck/address.ts';
+export {
+  selectableIds,
+  setlistSongs,
+  visibleSongs,
+  type Catalog as StemDeckCatalog,
+  type CatalogSetlist as StemDeckSetlist,
+  type CatalogSong as StemDeckSong,
+} from './stemDeck/catalog.ts';
+export type { StemDeckFailure } from './stemDeck/failures.ts';
+export type { StemDeckReplacePrompt } from './stemDeck/importActions.ts';
+export type {
+  ImportPhase as StemDeckImportPhase,
+  ImportRow as StemDeckImportRow,
+  ImportView as StemDeckImportView,
+} from './stemDeck/importView.ts';
 export { cleanName } from './names.ts';
 export type {
   LibraryRow,

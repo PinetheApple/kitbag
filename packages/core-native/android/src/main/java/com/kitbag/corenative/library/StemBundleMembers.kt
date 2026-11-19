@@ -21,7 +21,11 @@ class BundleMetadata(
 
 class BundleBar(val beat: Int, val beatsPerBar: Int)
 
-class BundleGrid(val beats: DoubleArray = DoubleArray(0), val bars: List<BundleBar> = emptyList())
+class BundleGrid(
+  val beats: DoubleArray = DoubleArray(0),
+  val bars: List<BundleBar> = emptyList(),
+  val bpm: Double? = null,
+)
 
 class BundleLyrics(val synced: String?, val plain: String?, val offsetSec: Double, val instrumental: Boolean)
 
@@ -75,8 +79,10 @@ class StemBundleMembers(private val warn: BundleWarning) {
     }
     val bars = barMarks(json.opt("bars"), beats.size)
     if (bars == null) warn("$BEATS: bar marks out of range or order; bars dropped", null)
-    return BundleGrid(beats, bars.orEmpty())
+    return BundleGrid(beats, bars.orEmpty(), json.finiteOrNull("bpm")?.takeIf { it > 0 })
   }
+
+  fun bpm(metadata: BundleMetadata, grid: BundleGrid): Double? = grid.bpm ?: metadata.bpm
 
   private fun beatTimes(value: Any?): DoubleArray? {
     val array = value as? JSONArray ?: return null

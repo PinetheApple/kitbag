@@ -1,11 +1,18 @@
 import { space } from '@kitbag/core-design';
 import { createElement } from 'react';
-import { beforeAll, describe, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import {
+  contentStyle,
   itKeepsSafeAreaInsetsOutOfTheScroll,
+  NAV_BAR,
   renderRecorded,
 } from '../safeAreaInsets.test-helper.ts';
+
+const dock = vi.hoisted(() => ({
+  docked: false,
+  bottomInsets: [] as number[],
+}));
 
 const storeState = vi.hoisted(() => ({
   bpm: 120,
@@ -70,15 +77,46 @@ vi.mock('expo-router', () => ({
   useRouter: () => ({ push: () => undefined }),
 }));
 
+vi.mock('../miniPlayer/useMiniPlayerDocked.ts', () => ({
+  useMiniPlayerDocked: () => dock.docked,
+}));
+
+vi.mock('../miniPlayer/DockedMiniPlayer.tsx', () => ({
+  DockedMiniPlayer: (props: { readonly bottomInset: number }) => {
+    dock.bottomInsets.push(props.bottomInset);
+    return null;
+  },
+}));
+
 vi.mock('./ArrangeSheet.tsx', () => ({ ArrangeSheet: () => null }));
 vi.mock('./MoreToolsRow.tsx', () => ({ MoreToolsRow: () => null }));
 
 const { HomeScreen } = await import('./HomeScreen.tsx');
 
-beforeAll(() => {
-  renderRecorded(createElement(HomeScreen));
+describe('HomeScreen safe-area insets', () => {
+  beforeAll(() => {
+    dock.docked = false;
+    renderRecorded(createElement(HomeScreen));
+  });
+
+  itKeepsSafeAreaInsetsOutOfTheScroll(space.screenInset);
+
+  it('docks no mini-player', () => {
+    expect(dock.bottomInsets).toEqual([]);
+  });
 });
 
-describe('HomeScreen safe-area insets', () => {
-  itKeepsSafeAreaInsetsOutOfTheScroll(space.screenInset);
+describe('HomeScreen with the mini-player docked', () => {
+  beforeAll(() => {
+    dock.docked = true;
+    renderRecorded(createElement(HomeScreen));
+  });
+
+  it('hands the navigation bar inset to the mini-player', () => {
+    expect(dock.bottomInsets).toEqual([NAV_BAR]);
+  });
+
+  it('ends the scroll above the mini-player, not the navigation bar', () => {
+    expect(contentStyle().paddingBottom).toBe(space.screenInset);
+  });
 });

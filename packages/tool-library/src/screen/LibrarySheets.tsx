@@ -16,6 +16,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { View, type TextInput } from 'react-native';
 
 import { failureText, replaceText } from '../logic/notices.ts';
+import { REANALYZE_LABEL } from '../logic/viewText.ts';
 
 const useStyles = createThemedStyles(() => ({
   stack: { gap: space.controlGap },
@@ -86,7 +87,7 @@ function ActionsSheet({ menu, bottomInset }: SheetProps) {
       <View style={styles.stack}>
         <Button label="Rename" variant="tonal" onPress={openRename} />
         {target?.kind === 'song' ? (
-          <Button label="Re-analyze" variant="tonal" onPress={retry} />
+          <Button label={REANALYZE_LABEL} variant="tonal" onPress={retry} />
         ) : null}
         <Button
           label={target?.kind === 'stems' ? 'Delete stem song' : 'Delete song'}

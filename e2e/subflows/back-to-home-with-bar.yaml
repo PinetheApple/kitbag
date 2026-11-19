@@ -1,0 +1,9 @@
+appId: com.kitbag.app
+---
+- back
+- extendedWaitUntil:
+    visible: 'Metronome, .*(ready|playing)'
+    timeout: 5000
+- extendedWaitUntil:
+    visible: 'Pause ${FIXTURE_SONG}'
+    timeout: 5000
