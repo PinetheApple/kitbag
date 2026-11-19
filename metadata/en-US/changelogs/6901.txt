@@ -1,0 +1,1 @@
+• Play, pause and tempo buttons on the media notification, system controls or a headset, pressed right after a change in the app, now act on what the app shows instead of restarting the click or stepping from an old tempo.
