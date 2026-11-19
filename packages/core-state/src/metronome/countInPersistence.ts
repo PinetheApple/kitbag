@@ -2,7 +2,7 @@ import type { StoreApi } from 'zustand/vanilla';
 
 import type { CountInConfig } from './config.ts';
 import type { CountInScope } from './countInScope.ts';
-import { metronomeStore, type MetronomeStore } from './store.ts';
+import { initialConfig, metronomeStore, type MetronomeStore } from './store.ts';
 
 export interface CountInSettings extends CountInConfig {
   readonly scope: CountInScope;
@@ -26,22 +26,26 @@ function changedCountIn(
   );
 }
 
+type CountInBase = Pick<MetronomeStore, 'countIn' | 'countInScope'>;
+
 function applyStoredCountIn(
   store: StoreApi<MetronomeStore>,
   persistence: CountInPersistence,
+  base: CountInBase,
 ): void {
   const { scope, ...stored } = persistence.load();
   const state = store.getState();
-  if (scope !== undefined) state.setCountInScope(scope);
-  if (Object.keys(stored).length > 0)
-    state.setCountIn({ ...state.countIn, ...stored });
+  state.setCountInScope(scope ?? base.countInScope);
+  const countIn = { ...base.countIn, ...stored };
+  const reset = Object.keys(changedCountIn(countIn, state.countIn)).length > 0;
+  if (reset || Object.keys(stored).length > 0) state.setCountIn(countIn);
 }
 
 export function bindCountInPersistence(
   store: StoreApi<MetronomeStore>,
   persistence: CountInPersistence,
 ): () => void {
-  applyStoredCountIn(store, persistence);
+  applyStoredCountIn(store, persistence, store.getState());
   return store.subscribe((next, prev) => {
     const changed: Partial<CountInSettings> = {
       ...changedCountIn(next.countIn, prev.countIn),
@@ -55,6 +59,7 @@ export function bindCountInPersistence(
 
 let unbind: (() => void) | undefined;
 let configured: CountInPersistence | undefined;
+let reloading = false;
 
 export function configureCountInPersistence(
   persistence: CountInPersistence,
@@ -63,10 +68,22 @@ export function configureCountInPersistence(
     throw new Error('Count-in persistence is already configured');
   }
   configured = persistence;
-  unbind = bindCountInPersistence(metronomeStore, persistence);
+  unbind = bindCountInPersistence(metronomeStore, {
+    load: persistence.load,
+    save: (changed) => {
+      // A reload mirrors storage; saving it would store defaults a Replace left absent.
+      if (!reloading) persistence.save(changed);
+    },
+  });
   return unbind;
 }
 
 export function reloadCountInPersistence(): void {
-  if (configured !== undefined) applyStoredCountIn(metronomeStore, configured);
+  if (configured === undefined) return;
+  reloading = true;
+  try {
+    applyStoredCountIn(metronomeStore, configured, initialConfig());
+  } finally {
+    reloading = false;
+  }
 }
