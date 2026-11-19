@@ -1,0 +1,1 @@
+• Songs import now refuses an M4A, AAC or Ogg file by its contents, so one with no file extension or the wrong one gets the "isn’t supported" message instead of failing at analysis.
