@@ -54,7 +54,12 @@ export {
   meterOverrideOf,
   NO_METER_OVERRIDE,
 } from './meter-override';
-export { TEMPO_MODE, type TempoMode, type TempoSource } from './tempo-mode';
+export {
+  TEMPO_MODE,
+  TEMPO_SOURCE,
+  type TempoMode,
+  type TempoSource,
+} from './tempo-mode';
 export {
   bundleTempoOf,
   bundleTempoViolation,

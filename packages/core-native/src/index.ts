@@ -26,6 +26,7 @@ export type {
   StemBundleBar,
   StemBundleCheck,
   StemBundleLyrics,
+  StemBundleTempo,
   StemBundleSection,
   StemSetUsage,
   StorageReport,

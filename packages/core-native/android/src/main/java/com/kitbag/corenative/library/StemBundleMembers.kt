@@ -21,10 +21,13 @@ class BundleMetadata(
 
 class BundleBar(val beat: Int, val beatsPerBar: Int)
 
+class BundleTempo(val mode: String, val bpm: Double?, val anchor: Double?, val beatsPerBar: Int, val source: String)
+
 class BundleGrid(
   val beats: DoubleArray = DoubleArray(0),
   val bars: List<BundleBar> = emptyList(),
   val bpm: Double? = null,
+  val tempo: BundleTempo? = null,
 )
 
 class BundleLyrics(val synced: String?, val plain: String?, val offsetSec: Double, val instrumental: Boolean)
@@ -79,8 +82,34 @@ class StemBundleMembers(private val warn: BundleWarning) {
     }
     val bars = barMarks(json.opt("bars"), beats.size)
     if (bars == null) warn("$BEATS: bar marks out of range or order; bars dropped", null)
-    return BundleGrid(beats, bars.orEmpty(), json.finiteOrNull("bpm")?.takeIf { it > 0 })
+    return BundleGrid(
+      beats = beats,
+      bars = bars.orEmpty(),
+      bpm = json.finiteOrNull("bpm")?.takeIf { it > 0 },
+      tempo = tempo(json.opt("tempo")),
+    )
   }
+
+  private fun tempo(value: Any?): BundleTempo? {
+    if (value == null || value == JSONObject.NULL) return null
+    val tempo = (value as? JSONObject)?.let(::tempoFields)
+    if (tempo == null) warn("$BEATS: tempo is malformed; tempo dropped", null)
+    return tempo
+  }
+
+  // Shape only: the library judges the words and ranges and logs why it drops a tempo.
+  private fun tempoFields(json: JSONObject): BundleTempo? {
+    if (json.malformedNumber("bpm") || json.malformedNumber("anchor")) return null
+    return BundleTempo(
+      mode = json.stringOrNull("mode") ?: return null,
+      bpm = json.finiteOrNull("bpm"),
+      anchor = json.finiteOrNull("anchor"),
+      beatsPerBar = json.wholeOrNull("beats_per_bar")?.takeIf { it in INT_RANGE }?.toInt() ?: return null,
+      source = json.stringOrNull("source") ?: return null,
+    )
+  }
+
+  private fun JSONObject.malformedNumber(key: String): Boolean = !isNull(key) && finiteOrNull(key) == null
 
   fun bpm(metadata: BundleMetadata, grid: BundleGrid): Double? = grid.bpm ?: metadata.bpm
 
@@ -175,5 +204,6 @@ class StemBundleMembers(private val warn: BundleWarning) {
     const val PEAKS = "peaks.json"
     val ALL = setOf(METADATA, BEATS, LYRICS, MIX, PEAKS)
     const val PEAK_VALUES_PER_CHUNK = 2
+    private val INT_RANGE = Int.MIN_VALUE.toLong()..Int.MAX_VALUE.toLong()
   }
 }

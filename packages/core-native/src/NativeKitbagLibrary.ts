@@ -90,6 +90,14 @@ export type StemBundleLyrics = Readonly<{
   instrumental: boolean;
 }>;
 
+export type StemBundleTempo = Readonly<{
+  mode: string;
+  bpm: Double | null;
+  anchor: Double | null;
+  beatsPerBar: Int32;
+  source: string;
+}>;
+
 export type ImportedStemBundle = Readonly<{
   jobId: string;
   title: string;
@@ -111,6 +119,7 @@ export type ImportedStemBundle = Readonly<{
   beats: readonly Double[];
   bars: readonly StemBundleBar[];
   lyrics: StemBundleLyrics | null;
+  tempo?: StemBundleTempo | null;
 }>;
 
 export type LibraryAudioUsage = Readonly<{
