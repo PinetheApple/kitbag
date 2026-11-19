@@ -125,15 +125,13 @@ export function sourceDetail(
 
 const notOnDevice = (plan: CategoryPlan | undefined) => plan?.notOnDevice ?? 0;
 
-const restorable = (category: Category, plan: CategoryPlan | undefined) =>
-  category === 'stemSongs'
-    ? (plan?.incoming ?? 0) - notOnDevice(plan)
-    : (plan?.incoming ?? 0);
+const restorable = (plan: CategoryPlan | undefined) =>
+  (plan?.incoming ?? 0) - notOnDevice(plan);
 
 function stemSongsValue(incoming: number, plan: CategoryPlan | undefined) {
   if (plan === undefined) return String(incoming);
   const missing = notOnDevice(plan);
-  const matched = String(restorable('stemSongs', plan));
+  const matched = String(restorable(plan));
   if (missing === 0) return matched;
   return `${matched} ${SEPARATOR} ${String(missing)} ${NOT_ON_DEVICE}`;
 }
@@ -167,7 +165,7 @@ export function modeHint(plan: ImportPlan): string {
 }
 
 const nothingToRestore = (category: Category, counts: ImportPlan['counts']) =>
-  category === 'stemSongs' && restorable(category, counts[category]) === 0;
+  restorable(counts[category]) === 0;
 
 function incomingList(
   categories: readonly Category[],
@@ -175,7 +173,7 @@ function incomingList(
 ): string {
   return joined(
     categories.map((category) =>
-      counted(category, restorable(category, counts[category])),
+      counted(category, restorable(counts[category])),
     ),
     '&',
   );

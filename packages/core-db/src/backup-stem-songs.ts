@@ -13,12 +13,7 @@ import { stems, stemSets } from './schema';
 import { parseRetimedLyrics, saveLyricsRetimed } from './stem-lyrics';
 import { renameStemSet } from './stem-rename';
 import { STEM_SET_SOURCE } from './stem-set-source';
-import {
-  carriedTempoMode,
-  saveChosenTempoMode,
-  STEM_SET_TEMPO_COLUMNS,
-  stemSetTempoOf,
-} from './stem-tempo';
+import { saveChosenTempoMode, stemSetTempoOf } from './stem-tempo';
 
 type StemSetRow = typeof stemSets.$inferSelect;
 type StemRow = typeof stems.$inferSelect;
@@ -94,23 +89,6 @@ export async function loadStemSongs(db: Database) {
   return { records, ids };
 }
 
-async function restoreTempoMode(
-  db: Database,
-  id: number,
-  record: StemSongRecord,
-) {
-  const [row] = await db
-    .select(STEM_SET_TEMPO_COLUMNS)
-    .from(stemSets)
-    .where(eq(stemSets.id, id));
-  const tempo = row === undefined ? null : stemSetTempoOf(row).tempo;
-  await saveChosenTempoMode(
-    db,
-    id,
-    carriedTempoMode(record.chosenTempoMode, tempo),
-  );
-}
-
 async function restoreMixes(
   db: Database,
   id: number,
@@ -138,7 +116,7 @@ export async function restoreStemSong(
   });
   await saveLyricsRetimed(db, localId, record.lyricsRetimed);
   await saveStemSetClick(db, localId, { clickGrouping, clickRate });
-  await restoreTempoMode(db, localId, record);
+  await saveChosenTempoMode(db, localId, record.chosenTempoMode);
   await db
     .update(stemSets)
     .set({ speed: record.speed })

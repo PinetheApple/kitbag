@@ -1221,8 +1221,10 @@ phone. That page defines the format; this spec does not copy it.
   takes the backup without asking when every setting that differs is still at
   its import value on the phone; a StemDeck song's mix and key never count as
   that, since the bundle may have shipped them. Otherwise the song is a
-  conflict. Retiming restores only if it fits the phone's lyrics, a tempo mode
-  only if the phone's bundle can build it. Replace overwrites the matched songs
+  conflict, and Keep mine keeps the whole song, dropping its other backup
+  changes too. Retiming restores only if it fits the phone's lyrics, and a
+  tempo mode only if the phone's bundle can build it; otherwise the phone keeps
+  its own. Replace overwrites the matched songs
   and deletes none. An older backup leaves local stem songs untouched (#407).
 - Out of scope: separation, lead/backing vocal split, lyric transcription,
   search and download — StemDeck's job, on hardware built for it.

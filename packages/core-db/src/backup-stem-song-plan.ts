@@ -110,17 +110,19 @@ export function stemSongChange(
   return changed.every(({ atDefault }) => atDefault) ? 'update' : 'conflict';
 }
 
-// Line times index the lyrics they were tapped against, and a tempo mode needs
-// a bundle that can build it; otherwise the phone's own value stays.
+// Line times index the lyrics they were tapped against; a backup value the
+// phone cannot use keeps the phone's own.
 export function fittedToDevice(
   incoming: StemSongRecord,
   mine: LocalStemSong,
 ): StemSongRecord {
   const times = incoming.lyricsRetimed;
-  const fits = times === null || retimeFits(mine.lyrics, times);
+  const timesFit = times === null || retimeFits(mine.lyrics, times);
+  const mode = incoming.chosenTempoMode;
+  const modeFits = mode === null || carriedTempoMode(mode, mine.tempo) === mode;
   return {
     ...incoming,
-    lyricsRetimed: fits ? times : mine.lyricsRetimed,
-    chosenTempoMode: carriedTempoMode(incoming.chosenTempoMode, mine.tempo),
+    lyricsRetimed: timesFit ? times : mine.lyricsRetimed,
+    chosenTempoMode: modeFits ? mode : mine.chosenTempoMode,
   };
 }

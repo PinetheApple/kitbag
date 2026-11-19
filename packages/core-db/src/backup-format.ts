@@ -133,8 +133,6 @@ export interface StemMixRecord {
   pitch: number;
 }
 
-// Settings only: a record restores onto the stem song already on the device
-// with the same StemDeck job (or, for a folder set, the same UUID).
 export interface StemSongRecord extends MeterOverride {
   source: StemSetSource;
   stemdeckJobId: string | null;

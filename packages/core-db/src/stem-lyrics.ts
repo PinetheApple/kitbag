@@ -94,7 +94,7 @@ function bundledLines(lyrics: LyricsSource) {
 const inOrder = (times: LyricLineTimes) =>
   times.every((time, i) => time >= (times[i - 1] ?? time));
 
-// Plain lyrics may be retimed part of the way; synced ones line for line.
+// Tapping plain lyrics can stop before the last line, so a prefix is a retime.
 export function retimeFits(
   lyrics: LyricsSource | null,
   times: LyricLineTimes,

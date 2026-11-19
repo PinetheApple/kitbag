@@ -26,6 +26,7 @@ import {
   stemSongDatabase,
   type StemSongDatabase,
 } from './backup-stem-songs.test-helper';
+import { TEMPO_MODE } from './tempo-mode';
 
 const LOCAL_TITLE = 'Echo (my take)';
 const EXTRA_ROLE = 'bass';
@@ -131,6 +132,31 @@ describe('restoring onto what the phone can play', () => {
     expect(await target.library.readStemSet(id)).toMatchObject({
       chosenTempoMode: null,
       speed: EDITED.speed,
+    });
+    await expectSettled(target, file);
+  });
+
+  it("keeps the phone's tempo mode when its bundle cannot build the backup's", async () => {
+    const source = stemSongDatabase();
+    const sourceId = await addStemDeckSong(source);
+    await source.library.saveStemSetChosenTempoMode(
+      sourceId,
+      TEMPO_MODE.follow,
+    );
+    const file = JSON.parse(await source.backup.export()) as ExportedFile;
+    const target = stemSongDatabase();
+    const followTempo = bundle(JOB).tempo;
+    if (followTempo === null) throw new Error('setup');
+    const id = await target.library.insertStemBundle({
+      ...bundle(JOB),
+      tempo: { ...followTempo, mode: TEMPO_MODE.constant },
+    });
+    await target.library.saveStemSetChosenTempoMode(id, TEMPO_MODE.constant);
+    expect((await restore(target, file, { resolutions: THEIRS })).ok).toBe(
+      true,
+    );
+    expect(await target.library.readStemSet(id)).toMatchObject({
+      chosenTempoMode: TEMPO_MODE.constant,
     });
     await expectSettled(target, file);
   });
