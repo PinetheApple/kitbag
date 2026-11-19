@@ -7,19 +7,19 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.support.v4.media.session.MediaSessionCompat
-import androidx.core.app.ServiceCompat
+import android.util.Log
 import androidx.core.content.ContextCompat
 import com.kitbag.corenative.transport.CardEffect
 import com.kitbag.corenative.transport.CardEvent
 import com.kitbag.corenative.transport.CardFence
 import com.kitbag.corenative.transport.CardFences
+import com.kitbag.corenative.transport.CardPoster
 import com.kitbag.corenative.transport.CardRouting
 import com.kitbag.corenative.transport.MetronomeControls
 import com.kitbag.corenative.transport.MetronomeEngine
@@ -48,6 +48,9 @@ class PlaybackService : Service() {
   private lateinit var card: MetronomeCard
   private var song: SongCard? = null
   private val routing = CardRouting()
+  private val poster = CardPoster(ServiceCardSurface(this, NOTIFICATION_ID)) {
+    Log.w(LOG_TAG, "Playing card posted without the foreground", it)
+  }
   private val clock = Handler(Looper.getMainLooper())
   private val tick = Runnable { onTick() }
 
@@ -130,7 +133,7 @@ class PlaybackService : Service() {
       SONG_CHANNEL_ID,
       launchIntent(),
       ::songIntent,
-      ::postForeground,
+      ::postSong,
       { songRequestListener },
       fences.song,
     ) { songStopped() }.also { song = it }
@@ -171,14 +174,8 @@ class PlaybackService : Service() {
     song = null
   }
 
-  private fun postForeground(notification: Notification) {
-    ServiceCompat.startForeground(
-      this,
-      NOTIFICATION_ID,
-      notification,
-      ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
-    )
-  }
+  private fun postSong(notification: Notification, playing: Boolean) =
+    poster.post(notification, playing, fences.song, song?.cardNumber ?: CardFence.NONE)
 
   private fun show(intent: Intent) {
     hold(intent)
@@ -236,7 +233,8 @@ class PlaybackService : Service() {
     val s = state ?: return
     val view = model?.view(s) ?: return
     updateSession(s, view)
-    postForeground(card.notification(view, s.playback == Playback.PLAYING))
+    val playing = s.playback == Playback.PLAYING
+    poster.post(card.notification(view, playing), playing, fences.metronome, metronomeCardNumber)
   }
 
   private fun updateSession(s: TransportState, view: TransportView) {
@@ -248,7 +246,7 @@ class PlaybackService : Service() {
 
   private fun finish() {
     clock.removeCallbacks(tick)
-    ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+    poster.finish(fences.song)
     stopSelf(lastStartId)
   }
 
@@ -329,6 +327,7 @@ class PlaybackService : Service() {
     private const val CHANNEL_ID = "kitbag_metronome_card"
     private const val NOTIFICATION_ID = 1
     private const val SESSION_TAG = "KitbagMetronome"
+    private const val LOG_TAG = "KitbagPlayback"
     private const val TICK_MILLIS = 1000L
     private const val ACTION_SHOW = "com.kitbag.corenative.SHOW"
     private const val ACTION_HIDE = "com.kitbag.corenative.HIDE"

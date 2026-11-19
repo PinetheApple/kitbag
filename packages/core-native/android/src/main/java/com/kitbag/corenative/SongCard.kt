@@ -29,13 +29,14 @@ internal class SongCard(
   private val channelId: String,
   private val launchIntent: PendingIntent?,
   private val actionIntent: (SongAction) -> PendingIntent,
-  private val post: (Notification) -> Unit,
+  private val post: (Notification, Boolean) -> Unit,
   private val appRequests: () -> ((SongCommand) -> Unit)?,
   fence: CardFence,
   private val onStopped: () -> Unit,
 ) {
   private val controls = SongControls(MixerEngine, fence)
-  private var cardNumber = CardFence.NONE
+  var cardNumber = CardFence.NONE
+    private set
   private var countingIn = false
   private var song: Song? = null
   private var transport: SongTransport? = null
@@ -98,7 +99,7 @@ internal class SongCard(
     publishPlayback(playback, songTransport.actions(progress))
     if (postedPlaying != progress.shownPlaying) {
       postedPlaying = progress.shownPlaying
-      post(notification(current, songTransport.actions(progress), progress.shownPlaying))
+      post(notification(current, songTransport.actions(progress), progress.shownPlaying), progress.shownPlaying)
     }
     clock.removeCallbacks(tick)
     clock.postDelayed(tick, TICK_MILLIS)
