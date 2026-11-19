@@ -188,6 +188,7 @@ export interface Open {
   readonly remove: boolean;
   readonly detail?: string | null;
   readonly focus?: RefObject<HostInstance | null>;
+  readonly closed?: () => void;
 }
 
 export function Pair({
@@ -196,6 +197,7 @@ export function Pair({
   remove,
   detail = SONG,
   focus,
+  closed,
 }: Open) {
   return (
     <SheetHost topInset={0}>
@@ -206,6 +208,7 @@ export function Pair({
           dismissLabel="Close actions"
           onDismiss={noop}
           {...(focus === undefined ? {} : { initialFocusRef: focus })}
+          {...(closed === undefined ? {} : { onClosed: closed })}
         >
           {detail === null ? null : h('Detail', { name: detail })}
         </Sheet>

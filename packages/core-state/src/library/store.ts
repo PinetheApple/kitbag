@@ -12,19 +12,38 @@ import {
 import { getLibrary, type LibraryRepositories } from './runtime.ts';
 import {
   activeSetlistOf,
-  adjacentPresetEntry,
+  adjacentEntry,
   type SongStep,
 } from './setlistPosition.ts';
-import { takeSnapshot, type LibrarySnapshot } from './snapshot.ts';
+import {
+  isPresetEntry,
+  takeSnapshot,
+  type LibrarySnapshot,
+  type SetlistEntry,
+} from './snapshot.ts';
 
-export interface LoadedSong {
+export interface LoadedPreset {
   readonly presetId: number;
   readonly itemId: number | null;
   readonly setlistId: number | null;
 }
 
+export interface LoadedStem {
+  readonly presetId: null;
+  readonly stemSetId: number;
+  readonly itemId: number;
+  readonly setlistId: number;
+}
+
+export type LoadedSong = LoadedPreset | LoadedStem;
+
+export interface SongStepResult {
+  readonly entry: SetlistEntry | undefined;
+  readonly skipped: boolean;
+}
+
 export interface DiscardedChanges {
-  readonly loaded: LoadedSong;
+  readonly loaded: LoadedPreset;
   readonly settings: LiveSongFields;
   readonly at: number;
 }
@@ -71,7 +90,8 @@ export interface LibraryActions {
     itemId?: number,
     setlistId?: number,
   ) => Promise<void>;
-  stepSong: (step: SongStep) => Promise<void>;
+  openStemEntry: (itemId: number, setlistId: number) => Promise<boolean>;
+  stepSong: (step: SongStep) => Promise<SongStepResult>;
   leaveSetlist: () => Promise<void>;
   clearSong: () => void;
 }
@@ -119,11 +139,12 @@ function discardedNow(
   deps: LibraryDeps,
 ): DiscardedChanges | null {
   const preset = loadedPresetOf(state);
-  if (state.loaded === null || preset === undefined) return null;
+  const { loaded } = state;
+  if (loaded?.presetId == null || preset === undefined) return null;
   const live = deps.metronome();
   if (!isLoadedSongUnsaved(preset, live)) return null;
   return {
-    loaded: state.loaded,
+    loaded: { ...loaded, presetId: loaded.presetId },
     settings: presetFromMetronome(live),
     at: deps.now(),
   };
@@ -232,6 +253,8 @@ function presetEditActions(deps: LibraryDeps, set: SetState, get: Get) {
   };
 }
 
+const NO_STEP: SongStepResult = { entry: undefined, skipped: false };
+
 function serialised() {
   let tail: Promise<unknown> = Promise.resolve();
   return <T>(task: () => Promise<T>): Promise<T> => {
@@ -296,17 +319,40 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
       noteDiscard();
       await link(preset, itemId ?? null, setlistId ?? null);
     },
-    stepSong: async (step: SongStep) => {
-      const active = activeSetlistOf(get().setlists);
-      if (active === undefined) return;
-      const setlistId = active.setlist.id;
-      const entry = adjacentPresetEntry(
-        get().entries[setlistId] ?? [],
-        get().loaded?.itemId ?? null,
-        step,
-      );
-      if (entry === undefined) return;
-      await get().loadSong(entry.preset.id, entry.item.id, setlistId);
+    openStemEntry: async (itemId: number, setlistId: number) => {
+      const entry = get().entries[setlistId]?.find((e) => e.item.id === itemId);
+      if (entry === undefined || isPresetEntry(entry)) return false;
+      noteDiscard();
+      const { stemSetId } = entry;
+      set({ loaded: { presetId: null, stemSetId, itemId, setlistId } });
+      try {
+        await pin(setlistId, itemId);
+      } catch {
+        // The stem player opens regardless; a failed pin only loses the marker.
+      }
+      return true;
+    },
+    stepSong: async (step: SongStep): Promise<SongStepResult> => {
+      const target = () => {
+        const active = activeSetlistOf(get().setlists);
+        if (active === undefined) return undefined;
+        const setlistId = active.setlist.id;
+        const entries = get().entries[setlistId] ?? [];
+        const loadedItemId = get().loaded?.itemId ?? null;
+        const entry = adjacentEntry(entries, loadedItemId, step);
+        return entry === undefined ? undefined : { entry, setlistId };
+      };
+      const first = target();
+      if (first === undefined) return NO_STEP;
+      if (!isPresetEntry(first.entry)) await get().refresh();
+      const next = target();
+      const skipped = next?.entry.item.id !== first.entry.item.id;
+      if (next === undefined) return { entry: undefined, skipped };
+      const { entry, setlistId } = next;
+      if (isPresetEntry(entry))
+        await get().loadSong(entry.preset.id, entry.item.id, setlistId);
+      else await get().openStemEntry(entry.item.id, setlistId);
+      return { entry, skipped };
     },
     leaveSetlist: async () => {
       noteDiscard();
@@ -318,9 +364,9 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
       set({ loaded: null });
     },
     saveLoadedSong: async () => {
-      const { loaded } = get();
-      if (loaded === null) return;
-      await get().saveCurrentInto(loaded.presetId);
+      const presetId = get().loaded?.presetId;
+      if (presetId == null) return;
+      await get().saveCurrentInto(presetId);
     },
     revertLoadedSong: () => {
       const preset = loadedPresetOf(get());

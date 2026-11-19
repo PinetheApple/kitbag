@@ -1,3 +1,4 @@
+import { deleteStemSet } from '@kitbag/core-db/src/stem-bundle-repository';
 import { insertStemSet } from '@kitbag/core-db/src/stem-entries.test-helper';
 import { KB_ACCENT, KB_RAMP_UNIT } from '@kitbag/core-native';
 import { describe, expect, it, vi } from 'vitest';
@@ -173,15 +174,38 @@ describe('library store', () => {
     expect(library.getState().played).toHaveLength(3);
   });
 
-  it('steps over a stem song, which the metronome cannot load', async () => {
+  it('steps onto a stem song and puts it on stage without loading the metronome', async () => {
+    const { library, repos, handle, gig, metronome } = await onStage();
+    const stem = await insertStemSet(handle.db, 'Redbone');
+    const item = await repos.setlists.addStemSet(gig, stem, 1);
+    await library.getState().refresh();
+    const bpm = metronome.getState().bpm;
+    const step = await library.getState().stepSong(SONG_STEP.next);
+    expect(step).toMatchObject({ entry: { stemSetId: stem }, skipped: false });
+    expect(library.getState().loaded).toEqual({
+      presetId: null,
+      stemSetId: stem,
+      itemId: item.id,
+      setlistId: gig,
+    });
+    expect(metronome.getState().bpm).toBe(bpm);
+    expect(library.getState().played).toContain(item.id);
+    await library.getState().stepSong(SONG_STEP.next);
+    expect(loadedName(library)).toBe('Two');
+    await library.getState().stepSong(SONG_STEP.previous);
+    await library.getState().stepSong(SONG_STEP.previous);
+    expect(loadedName(library)).toBe('One');
+  });
+
+  it('skips a stem song deleted since the setlist was read, and says so', async () => {
     const { library, repos, handle, gig } = await onStage();
     const stem = await insertStemSet(handle.db, 'Redbone');
     await repos.setlists.addStemSet(gig, stem, 1);
     await library.getState().refresh();
-    await library.getState().stepSong(SONG_STEP.next);
+    await deleteStemSet(handle.db, stem);
+    const step = await library.getState().stepSong(SONG_STEP.next);
+    expect(step.skipped).toBe(true);
     expect(loadedName(library)).toBe('Two');
-    await library.getState().stepSong(SONG_STEP.previous);
-    expect(loadedName(library)).toBe('One');
   });
 
   it('clears the active setlist when a song is loaded from outside it', async () => {

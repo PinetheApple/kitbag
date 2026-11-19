@@ -1,12 +1,13 @@
 import type { PlayQueueEntry, PlayQueueRepository } from '@kitbag/core-db';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
-import { activeSetlistOf } from '../library/setlistPosition.ts';
 import { libraryStore } from '../library/store.ts';
 import {
   ADVANCE,
   advanceOf,
-  cursorAt,
+  advanceSkipped,
+  cursorOf,
+  onStageOf,
   upNext,
   type Advance,
   type OnStage,
@@ -17,7 +18,11 @@ import { getPlayOrder } from './runtime.ts';
 
 export interface PlayOrderState {
   readonly queue: readonly PlayQueueEntry[];
-  readonly cursor: SetlistCursor | null;
+}
+
+export interface SkipResult {
+  readonly advance: Advance;
+  readonly skipped: boolean;
 }
 
 export interface PlayOrderActions {
@@ -27,9 +32,9 @@ export interface PlayOrderActions {
   removeQueued: (stemSetId: number) => Promise<void>;
   clearQueue: () => Promise<void>;
   playQueued: (stemSetId: number) => Promise<void>;
-  playSetlistEntry: (itemId: number | null) => void;
   upNext: () => UpNext | undefined;
   advance: () => Promise<Advance>;
+  skipToNext: () => Promise<SkipResult>;
 }
 
 export type PlayOrderStore = PlayOrderState & PlayOrderActions;
@@ -37,19 +42,23 @@ export type PlayOrderStore = PlayOrderState & PlayOrderActions;
 export interface PlayOrderDeps {
   readonly queue: () => PlayQueueRepository;
   readonly stage: () => OnStage;
+  readonly cursor: () => SetlistCursor | null;
+  readonly refreshStage: () => Promise<void>;
+  readonly playSetlistEntry: (
+    itemId: number,
+    setlistId: number,
+  ) => Promise<unknown>;
 }
 
-function onStage(): OnStage {
-  const state = libraryStore.getState();
-  const active = activeSetlistOf(state.setlists);
-  if (active === undefined) return { setlistId: null, entries: [] };
-  const setlistId = active.setlist.id;
-  return { setlistId, entries: state.entries[setlistId] ?? [] };
-}
+const stageNow = () => onStageOf(libraryStore.getState());
 
 const defaultDeps: PlayOrderDeps = {
   queue: () => getPlayOrder().queue,
-  stage: onStage,
+  stage: stageNow,
+  cursor: () => cursorOf(stageNow(), libraryStore.getState().loaded),
+  refreshStage: () => libraryStore.getState().refresh(),
+  playSetlistEntry: (itemId, setlistId) =>
+    libraryStore.getState().openStemEntry(itemId, setlistId),
 };
 
 type SetState = StoreApi<PlayOrderStore>['setState'];
@@ -76,25 +85,29 @@ function queueActions(deps: PlayOrderDeps, set: SetState, get: Get) {
   };
 }
 
-function orderActions(deps: PlayOrderDeps, set: SetState, get: Get) {
+function orderActions(deps: PlayOrderDeps, get: Get) {
+  const advance = async () => {
+    await Promise.all([get().refresh(), deps.refreshStage()]);
+    const next = advanceOf(get().upNext());
+    if (next.kind !== ADVANCE.play) return next;
+    const { setlistId } = deps.stage();
+    if (next.setlistItemId === null) await get().playQueued(next.stemSetId);
+    else if (setlistId !== null)
+      await deps.playSetlistEntry(next.setlistItemId, setlistId);
+    return next;
+  };
   return {
-    playSetlistEntry: (itemId: number | null) => {
-      set({ cursor: itemId === null ? null : cursorAt(deps.stage(), itemId) });
-    },
     upNext: () =>
       upNext({
         queue: get().queue,
         stage: deps.stage(),
-        cursor: get().cursor,
+        cursor: deps.cursor(),
       }),
-    advance: async () => {
-      await get().refresh();
-      const advance = advanceOf(get().upNext());
-      if (advance.kind !== ADVANCE.play) return advance;
-      if (advance.setlistItemId === null)
-        await get().playQueued(advance.stemSetId);
-      else get().playSetlistEntry(advance.setlistItemId);
-      return advance;
+    advance,
+    skipToNext: async () => {
+      const expected = get().upNext();
+      const next = await advance();
+      return { advance: next, skipped: advanceSkipped(expected, next) };
     },
   };
 }
@@ -104,9 +117,8 @@ export function createPlayOrderStore(
 ): StoreApi<PlayOrderStore> {
   return createStore<PlayOrderStore>((set, get) => ({
     queue: [],
-    cursor: null,
     ...queueActions(deps, set, get),
-    ...orderActions(deps, set, get),
+    ...orderActions(deps, get),
   }));
 }
 

@@ -189,8 +189,11 @@ export {
   loadedPresetOf,
   type DiscardedChanges,
   type LibraryStore,
+  type LoadedPreset,
   type LoadedSong,
+  type LoadedStem,
   type PresetEdit,
+  type SongStepResult,
   type SearchResults,
 } from './library/store.ts';
 export {
@@ -207,16 +210,18 @@ export {
 } from './library/snapshot.ts';
 export {
   activeSetlistOf,
-  adjacentPresetEntry,
+  adjacentEntry,
   SONG_STEP,
   type SongStep,
 } from './library/setlistPosition.ts';
 export {
   ADVANCE,
   advanceOf,
+  onStageOf,
   UP_NEXT_SOURCE,
   upNext,
   type Advance,
+  type OnStage,
   type PlayOrder,
   type UpNext,
 } from './playOrder/order.ts';
@@ -224,7 +229,10 @@ export {
   createPlayOrderStore,
   playOrderStore,
   type PlayOrderStore,
+  type SkipResult,
 } from './playOrder/store.ts';
+export { usePlayOrder, useUpNext } from './playOrder/usePlayOrder.ts';
+export { bindStemSetRemovals } from './playOrder/stemSetRemovals.ts';
 export {
   configurePlayOrder,
   type PlayOrderRepositories,
