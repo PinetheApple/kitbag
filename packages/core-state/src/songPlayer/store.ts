@@ -1,36 +1,19 @@
 import {
-  ANALYSIS_STATUS,
   meterOverrideOf,
-  NO_METER_OVERRIDE,
-  type AnalysisStatus,
   type LibraryRow,
   type LibrarySongRow,
   type MeterOverride,
   type SongRecord,
+  type TempoCorrection,
 } from '@kitbag/core-db';
 import { KB_RESULT } from '@kitbag/core-native';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
-import {
-  transportActions,
-  type TransportSlice,
-} from '../stemPlayer/actions.ts';
-import {
-  clickActions,
-  followNewGrid,
-  type ClickSlice,
-} from '../stemPlayer/clickActions.ts';
-import { FALLBACK_BEATS_PER_BAR } from '../stemPlayer/barMeter.ts';
-import { sameNumbers, usableDownbeats } from '../stemPlayer/bars.ts';
+import { transportActions } from '../stemPlayer/actions.ts';
+import { clickActions, followNewGrid } from '../stemPlayer/clickActions.ts';
 import { snapToBeat } from '../stemPlayer/loop.ts';
-import { loopActions, type LoopSlice } from '../stemPlayer/loopActions.ts';
-import {
-  detectedMeter,
-  isMeterOverridden,
-  overrideDownbeats,
-  type DetectedGrid,
-  type DetectedMeter,
-} from '../stemPlayer/meterOverride.ts';
+import { loopActions } from '../stemPlayer/loopActions.ts';
+import { correctedBpm } from '../stemPlayer/tempoCorrection.ts';
 import { UNITY_GAIN, UNSHIFTED_KEY } from '../stemPlayer/mix.ts';
 import {
   createMixerClaim,
@@ -54,21 +37,26 @@ import {
   type SongLibraryState,
 } from '../songLibrary/store.ts';
 import { getSongPlayer, type SongPlayerRuntime } from './runtime.ts';
+import {
+  NO_GRID,
+  overrideDisagrees,
+  recordGrid,
+  sameGrid,
+  songGrid,
+  type SongGrid,
+} from './songGrid.ts';
+import {
+  closedState,
+  factsOf,
+  namesOf,
+  shownGrid,
+  type SongPlayerState,
+} from './state.ts';
 
 const SONG_TRACK = 0;
 const ATTACHABLE: ReadonlySet<StemPlayerStatus> = new Set(['loading', 'ready']);
 // Sub-frame rounding from a rate change must never rewrite the stored length.
 export const STORED_LENGTH_TOLERANCE_SEC = 0.01;
-
-interface SongPlayerState extends TransportSlice, ClickSlice, LoopSlice {
-  readonly songId: number | null;
-  readonly bpm: number | null;
-  readonly analysisStatus: AnalysisStatus;
-  readonly envelope: readonly number[] | null;
-  readonly meterOverride: MeterOverride;
-  readonly detected: DetectedMeter;
-  readonly meterNotice: DetectedMeter | null;
-}
 
 interface SongSession {
   readonly hold: MixerHold;
@@ -92,6 +80,10 @@ type SongPlayerActions = Pick<
     songId: number,
     override: MeterOverride,
   ) => void;
+  readonly tempoCorrectionChanged: (
+    songId: number,
+    correction: TempoCorrection,
+  ) => void;
   readonly playheadBeatSeconds: () => number | null;
   readonly dismissMeterNotice: () => void;
 };
@@ -108,72 +100,6 @@ interface SongPlayerOptions {
   readonly mixerClaim?: MixerClaim;
   readonly library?: SongLibraryRows;
   readonly mixerClick?: MixerClick;
-}
-
-const closedState: SongPlayerState = {
-  status: 'idle',
-  songId: null,
-  title: '',
-  artist: null,
-  bpm: null,
-  analysisStatus: ANALYSIS_STATUS.pending,
-  durationFrames: 0,
-  engineRate: 0,
-  beats: [],
-  downbeatIndices: [],
-  envelope: null,
-  meterOverride: NO_METER_OVERRIDE,
-  detected: { meter: FALLBACK_BEATS_PER_BAR, barOneSeconds: 0 },
-  meterNotice: null,
-  loop: { kind: 'off' },
-  loopFailure: null,
-  click: false,
-};
-
-type SongFacts = Pick<
-  SongRecord,
-  'title' | 'artist' | 'bpm' | 'analysisStatus'
->;
-
-function namesOf(record: Pick<SongFacts, 'title' | 'artist'>) {
-  return {
-    title: record.title,
-    artist: record.artist === '' ? null : record.artist,
-  };
-}
-
-function factsOf(record: SongFacts): Partial<SongPlayerState> {
-  return {
-    ...namesOf(record),
-    bpm: record.bpm,
-    analysisStatus: record.analysisStatus,
-  };
-}
-
-function songDownbeats(record: SongRecord): readonly number[] {
-  return overrideDownbeats(record, record);
-}
-
-function meterFactsOf(record: SongRecord) {
-  return {
-    meterOverride: meterOverrideOf(record),
-    detected: detectedMeter(record),
-  };
-}
-
-const NO_GRID: DetectedGrid = { beats: [], downbeatIndices: [] };
-
-function sameGrid(a: DetectedGrid, b: DetectedGrid): boolean {
-  return (
-    sameNumbers(a.beats, b.beats) &&
-    sameNumbers(a.downbeatIndices, b.downbeatIndices)
-  );
-}
-
-function overrideDisagrees(record: SongRecord): boolean {
-  if (!isMeterOverridden(meterOverrideOf(record))) return false;
-  const detected = usableDownbeats(record.downbeatIndices, record.beats.length);
-  return !sameNumbers(songDownbeats(record), detected);
 }
 
 export function createSongPlayerStore(
@@ -305,17 +231,34 @@ export function createSongPlayerStore(
         return;
       }
       detectedGrid = record;
+      const grid = recordGrid(record);
       set({
         status: 'ready',
         engineRate,
         durationFrames,
-        beats: record.beats,
-        downbeatIndices: songDownbeats(record),
-        ...meterFactsOf(record),
+        beats: grid.beats,
+        downbeatIndices: grid.downbeatIndices,
+        detected: grid.detected,
+        meterOverride: meterOverrideOf(record),
       });
       if (decoded > 0)
         correctStoredLength(record, framesToSeconds(decoded, engineRate));
       showWaveform(opened, record.waveformPath);
+    };
+
+    const isOpenAndReady = (songId: number) => {
+      const { status, songId: openSong } = get();
+      return status === 'ready' && openSong === songId;
+    };
+
+    const showGrid = (grid: SongGrid, facts: Partial<SongPlayerState>) => {
+      const regrid = !sameGrid(get(), grid);
+      set({
+        ...facts,
+        detected: grid.detected,
+        ...(regrid ? shownGrid(grid) : {}),
+      });
+      if (regrid) void followNewGrid(context);
     };
 
     const endAsGone = () => {
@@ -324,24 +267,19 @@ export function createSongPlayerStore(
     };
 
     const followAnalysis = (opened: number, record: SongRecord) => {
-      const { status, beats, downbeatIndices } = get();
-      const ready = status === 'ready';
-      const downbeats = songDownbeats(record);
-      const regrid =
-        ready &&
-        !(
-          sameNumbers(beats, record.beats) &&
-          sameNumbers(downbeatIndices, downbeats)
-        );
+      const ready = get().status === 'ready';
+      const grid = recordGrid(record);
+      const regrid = ready && !sameGrid(get(), grid);
       const reanalysed = ready && !sameGrid(detectedGrid, record);
       if (ready) detectedGrid = record;
-      const facts = meterFactsOf(record);
       const notice = reanalysed && overrideDisagrees(record);
       set({
         ...factsOf(record),
-        ...(ready ? facts : {}),
-        ...(notice ? { meterNotice: facts.detected } : {}),
-        ...(regrid ? { beats: record.beats, downbeatIndices: downbeats } : {}),
+        ...(ready
+          ? { meterOverride: meterOverrideOf(record), detected: grid.detected }
+          : {}),
+        ...(notice ? { meterNotice: grid.detected } : {}),
+        ...(regrid ? shownGrid(grid) : {}),
       });
       if (ready) showWaveform(opened, record.waveformPath);
       if (regrid) void followNewGrid(context);
@@ -407,16 +345,19 @@ export function createSongPlayerStore(
       },
       close: mixer.close,
       meterOverrideChanged: (songId, override) => {
-        const { status, songId: openSong, downbeatIndices } = get();
-        if (status !== 'ready' || openSong !== songId) return;
+        if (!isOpenAndReady(songId)) return;
         const meterOverride = meterOverrideOf(override);
-        const downbeats = overrideDownbeats(detectedGrid, meterOverride);
-        if (sameNumbers(downbeats, downbeatIndices)) {
-          set({ meterOverride, meterNotice: null });
-          return;
-        }
-        set({ meterOverride, meterNotice: null, downbeatIndices: downbeats });
-        void followNewGrid(context);
+        showGrid(songGrid(detectedGrid, meterOverride, get().tempoCorrection), {
+          meterOverride,
+          meterNotice: null,
+        });
+      },
+      tempoCorrectionChanged: (songId, tempoCorrection) => {
+        if (!isOpenAndReady(songId)) return;
+        showGrid(songGrid(detectedGrid, get().meterOverride, tempoCorrection), {
+          tempoCorrection,
+          bpm: correctedBpm(get().detectedBpm, tempoCorrection),
+        });
       },
       playheadBeatSeconds: () => {
         const { beats, engineRate } = get();

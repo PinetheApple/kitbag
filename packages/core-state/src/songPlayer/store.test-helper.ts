@@ -1,4 +1,4 @@
-import type { SongRecord } from '@kitbag/core-db';
+import { TEMPO_CORRECTION, type SongRecord } from '@kitbag/core-db';
 import { vi } from 'vitest';
 
 import type { MixerClaim } from '../stemPlayer/mixerClaim.ts';
@@ -23,6 +23,7 @@ export function songRecord(change: Partial<SongRecord> = {}): SongRecord {
     beats: [0, 0.5, 1, 1.5, 2, 2.5, 3],
     downbeatIndices: [0, 4],
     analysisStatus: 'done',
+    tempoCorrection: TEMPO_CORRECTION.none,
     meterBeatsPerBar: null,
     barOneSeconds: null,
     ...change,
