@@ -32,7 +32,7 @@ the symbol and read the function first.
 
 `Engine::DataCallback` → `Engine::Render` (`src/engine.h`) and everything they
 reach run on the realtime thread: no allocation, locks, syscalls, I/O, logging,
-exceptions or unbounded loops. A 10 ms buffer at 48 kHz is 480 frames, so a page
+exceptions, RTTI or unbounded loops. A 10 ms buffer at 48 kHz is 480 frames, so a page
 fault or a mutex the app thread holds is an audible dropout, often hours later
 under memory pressure. Offline paths (`kb_analyze_song`, decoding, waveform files)
 run on app threads and may allocate; know which side you are on before you reach
@@ -99,16 +99,18 @@ A failing check is a defect to explain; loosening it hides the defect.
 
 ## Build and verify
 
-Build with the commands in AGENTS.md "Building and verifying", then run every
-`*_verify` target. `scripts/preflight.sh` lists them in its "Native verify tools"
-loop and CI's `native` job runs the same set; CMakeLists.txt is where a new one is
-added. Gate on the build's exit code before reading any test output: a failed
-build leaves the old binary in place, and it will report a stale pass. Read the
-whole build output rather than a filtered tail.
+Build and run every `*_verify` target as AGENTS.md "Building and verifying"
+describes, gating on the build's exit code; a new target goes in CMakeLists.txt
+and in preflight's and CI's lists. Read the whole build output rather than a
+filtered tail.
 
 Before you report, run `bash scripts/format.sh` and `bash scripts/lint.sh
---staged` (or stage your files first), which gate format, naming, magic numbers
-and file length on what you touched.
+--staged` on your staged files. clang-tidy gates naming, magic numbers, braces
+and 30-line functions, and `lint.sh` adds the 400-line file limit.
+
+Comments follow AGENTS.md "Honesty rules". Doc comments on the public ABI
+headers are the exception to the two-line limit, because they are the contract
+callers read.
 
 ## Reporting
 

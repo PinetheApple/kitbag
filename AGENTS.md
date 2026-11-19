@@ -142,7 +142,9 @@ second each, with no app and no device, which makes them the cheapest signal in
 the project. CMakeLists.txt defines them; `preflight.sh`'s "Native verify tools"
 loop and CI's `native` job run the full set. Every one is a gate, `tuner_verify`
 included (it failed 37/37 until #117 replaced the detector), and a failing check
-is fixed in the code, never loosened. They say nothing about a real mic or
+is fixed in the code, never loosened. Gate on the build's exit code before
+reading their output, since a failed build leaves the old binary to report a
+stale pass. They say nothing about a real mic or
 speaker (SPEC.md §10.1, §10.3); those need a device.
 
 ### Device flows
@@ -170,14 +172,15 @@ and anything a flow cannot assert, still get checked on the local emulator.
 
 ```sh
 bash scripts/install-hooks.sh   # once per clone; pre-commit runs lint.sh --staged
-bash scripts/lint.sh --staged   # the staged files; no flag lints the whole tree, as CI does
+bash scripts/lint.sh --staged   # the staged files; no flag lints the whole tree, as preflight does
 bash scripts/format.sh          # clang-format and prettier, in place
 ```
 
 `lint.sh` runs clang-format, clang-tidy and the 400-line file limit over the C++
 core, then eslint over the TS/JS workspace. clang-tidy needs the compile DB
 (configure once with `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON`). Lint what you touched
-while working; the whole-tree run belongs to preflight and CI.
+while working: the whole-tree run belongs to preflight, and CI runs only its
+eslint half (`pnpm -w lint`).
 
 The root `eslint.config.mjs` carries the generic rules and the §13.1 import
 zones. `packages/eslint-plugin-kitbag` and its eval harness
@@ -209,8 +212,7 @@ After a non-trivial change, before the owner sees it:
    readability, smells). Tell each what you built and why.
 3. Fix what holds up, and iterate until both pass.
 
-The two reviewers are read-only and do not overlap. Where you disagree with a
-nit, note it and move on.
+Where you disagree with a nit, note it and move on.
 
 ## Git worktrees
 
@@ -232,10 +234,12 @@ the tools, one issue per PR against `main`. As of 2026-11-20:
 
 - **Built:** the metronome with setlists, presets and custom click sounds, the
   Home hub, the tuner, song import with background beat analysis, the single-song
-  player, the stem player with speed and key in the core, and the Settings screen.
-- **Open:** single-song background playback and notification (#237), stem speed
-  and key controls (#328), the rest of Settings (#170), and play along (§8), which
-  has not started.
+  player, the stem player with speed and key in the core, and a Settings screen
+  whose issue (#170) is still open for the settings it lacks.
+- **Not started:** play along (§8); `tool-sync` is a skeleton.
+- **Open work:** `gh issue list --state open` is the current list; among it are
+  single-song background playback (#237), stem speed and key controls (#328) and
+  stem songs on the phone (#134).
 - **Owed:** the phone checks for merged features (#516).
 
 ## Honesty rules
@@ -246,7 +250,7 @@ the code, some written by agents. So:
 - **Claim only what shipped.** Write CHANGELOG entries that are true, or none;
   "Fixed: nothing" is a legitimate entry.
 - **Comments: zero by default, in every file type (source, tests, Gradle, ProGuard, Metro/Babel/ESLint configs, CMake, YAML, shell).** Write one only when the code cannot show a non-obvious *why* (an invariant, an external gotcha), max 2 lines. No narration, no restating names or signatures, no docstrings that repeat the signature, no SPEC recaps, no change history. Shorten or delete narrating comments in code you touch. Reviewers treat a removable comment as blocking.
-- **A comment describes behaviour, never intent.** A comment once claimed
+- **A comment claims only behaviour the code has.** A comment once promised
   similarity matching over a loop that returned the first result, and it
   survived long enough to reach a design file.
 - **One definition per constant** (SPEC.md §13.7). A screen once declared its own

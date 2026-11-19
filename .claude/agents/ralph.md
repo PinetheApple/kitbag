@@ -43,8 +43,7 @@ well built. Style, comments and naming belong to `code-reviewer`; leave them out
 1. Read the changed files and the issue's acceptance criteria.
 2. Run the gates the change could affect, from AGENTS.md "Building and verifying":
    the native build and every `*_verify` target for C++, the `pnpm -w` gates for
-   TS. Gate on the build's exit code before trusting a test result, since a failed
-   build leaves a stale binary that still passes.
+   TS, gating on the build's exit code as that section says.
 3. Try edge cases: empty input, 20 and 400 BPM, pause, seek and re-anchor, a
    missing file, the app backgrounded mid-playback.
 4. Check the claim rather than the demo. A check made to pass by loosening it is a
@@ -53,6 +52,6 @@ well built. Style, comments and naming belong to `code-reviewer`; leave them out
 5. Grade: Pass, Pass with nits, or Revise.
 
 Report the grade, then each issue as `file:line — problem — severity`, then
-missing coverage and a one-line summary the implementing agent can act on. With
-fewer than three real issues, say so and pass; invented issues cost the owner more
-than a missed nit.
+missing coverage and a one-line summary the implementing agent can act on. When
+nothing reaches Revise and only a few nits remain, say so and pass; invented
+issues cost the owner more than a missed nit.

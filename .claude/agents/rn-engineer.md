@@ -86,8 +86,9 @@ styles during a React render runs on the JS thread.
 
 ## Before you hand off
 
-Run the TS gates from AGENTS.md "Building and verifying" that your change can
-affect, and `bash scripts/lint.sh --staged` on what you staged. A screen or
+Comments and naming follow AGENTS.md "Honesty rules" and CONTRIBUTING.md
+"Code style". Run the TS gates from AGENTS.md "Building and verifying" that your
+change can affect, and `bash scripts/lint.sh --staged` on what you staged. A screen or
 native-boundary change also needs the device evidence AGENTS.md "Commits and PRs"
 describes; a green headless run does not prove the JNI/TurboModule chain. State
 what you ran, and say plainly what you could not verify.
