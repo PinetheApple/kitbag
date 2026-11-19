@@ -5,6 +5,8 @@ appId: com.kitbag.app
     env:
       STEM_SONG: ${STEM_SONG}
 - tapOn: 'Add to setlist'
+# The snackbar lasts 6 s and a skipped `when: visible` check waits about 7 s,
+# so each branch waits for it before the other branch's check runs.
 - runFlow:
     when:
       notVisible: '${SETLIST}, .*'
@@ -13,12 +15,15 @@ appId: com.kitbag.app
       - tapOn: 'Setlist name'
       - inputText: '${SETLIST}'
       - tapOn: 'Create and add'
+      - extendedWaitUntil:
+          visible: 'Added to ${SETLIST}'
+          timeout: 10000
 - runFlow:
     when:
       visible: '${SETLIST}, .*'
     commands:
       - tapOn: '${SETLIST}, .*'
-- extendedWaitUntil:
-    visible: 'Added to ${SETLIST}'
-    timeout: 10000
+      - extendedWaitUntil:
+          visible: 'Added to ${SETLIST}'
+          timeout: 10000
 - back
