@@ -20,6 +20,11 @@ Java_com_kitbag_corenative_library_NativeClickSound_nativePrepare(JNIEnv* env, j
 }
 
 JNIEXPORT jint JNICALL
+Java_com_kitbag_corenative_library_NativeClickSound_nativeNoSpace(JNIEnv*, jobject) {
+  return static_cast<jint>(KB_ERROR_NO_SPACE);
+}
+
+JNIEXPORT jint JNICALL
 Java_com_kitbag_corenative_KitbagCommandsModule_nativeLoadCustomSound(JNIEnv* env, jobject,
                                                                      jdouble slot,
                                                                      jstring path) {

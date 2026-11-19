@@ -3,55 +3,40 @@ import { isCustomSoundSlot } from './customSoundIds.ts';
 import { getKitbagCommands } from './NativeKitbagCommands';
 import { getKitbagLibrary } from './NativeKitbagLibrary';
 
-type ResultOf<Name extends keyof typeof KB_RESULT> = (typeof KB_RESULT)[Name];
-
-export type PrepareClickSoundResult = ResultOf<
-  | 'KB_OK'
-  | 'KB_ERROR_INVALID_ARGUMENT'
-  | 'KB_ERROR_TOO_LONG'
-  | 'KB_ERROR_SILENT'
-  | 'KB_ERROR_NO_SPACE'
-  | 'KB_ERROR_INTERNAL'
->;
-
-export type LoadCustomSoundResult = ResultOf<
-  | 'KB_OK'
-  | 'KB_ERROR_INVALID_ARGUMENT'
-  | 'KB_ERROR_TOO_LONG'
-  | 'KB_ERROR_INTERNAL'
->;
-
-const PREPARE_RESULTS: readonly number[] = [
+const PREPARE_RESULTS = [
   KB_RESULT.KB_OK,
   KB_RESULT.KB_ERROR_INVALID_ARGUMENT,
   KB_RESULT.KB_ERROR_TOO_LONG,
   KB_RESULT.KB_ERROR_SILENT,
   KB_RESULT.KB_ERROR_NO_SPACE,
   KB_RESULT.KB_ERROR_INTERNAL,
-];
+] as const;
 
-const LOAD_RESULTS: readonly number[] = [
+const LOAD_RESULTS = [
   KB_RESULT.KB_OK,
   KB_RESULT.KB_ERROR_INVALID_ARGUMENT,
   KB_RESULT.KB_ERROR_TOO_LONG,
   KB_RESULT.KB_ERROR_INTERNAL,
-];
+] as const;
+
+export type PrepareClickSoundResult = (typeof PREPARE_RESULTS)[number];
+export type LoadCustomSoundResult = (typeof LOAD_RESULTS)[number];
 
 function isPrepareResult(value: number): value is PrepareClickSoundResult {
-  return PREPARE_RESULTS.includes(value);
+  return (PREPARE_RESULTS as readonly number[]).includes(value);
 }
 
 function isLoadResult(value: number): value is LoadCustomSoundResult {
-  return LOAD_RESULTS.includes(value);
+  return (LOAD_RESULTS as readonly number[]).includes(value);
 }
 
 export async function prepareClickSound(
   sourceUri: string,
-  fileName: string,
+  freshFileName: string,
 ): Promise<PrepareClickSoundResult> {
   const result = await getKitbagLibrary().prepareClickSound(
     sourceUri,
-    fileName,
+    freshFileName,
   );
   return isPrepareResult(result) ? result : KB_RESULT.KB_ERROR_INTERNAL;
 }

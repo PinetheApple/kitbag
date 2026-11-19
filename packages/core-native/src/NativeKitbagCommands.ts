@@ -155,7 +155,7 @@ export interface Spec extends TurboModule {
   mixdownStart(fileName: string): Promise<MixdownStartReply>;
   mixdownCancel(): void;
 
-  /** A file prepareClickSound wrote; rejects E_BAD_FILE_NAME for any other name. */
+  /** Rejects E_BAD_FILE_NAME for a name unsafe as a click sound file. */
   loadCustomSound(slot: Int32, fileName: string): Promise<number>;
   clearCustomSound(slot: Int32): void;
   customSoundLoaded(slot: Int32): Promise<boolean>;

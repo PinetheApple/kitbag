@@ -99,6 +99,12 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
         copyFrom(Uri.parse(sourceUri), staging)
         target.parentFile?.mkdirs()
         promise.resolve(NativeClickSound.prepare(staging, target))
+      } catch (e: IOException) {
+        if (ClickSoundFiles.isNoSpace(e)) {
+          promise.resolve(NativeClickSound.noSpace())
+        } else {
+          rejectLogged(promise, E_IMPORT_FAILED, "Could not read the click sound", e)
+        }
       } catch (e: Exception) {
         rejectLogged(promise, E_IMPORT_FAILED, "Could not read the click sound", e)
       } finally {
@@ -148,9 +154,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   private fun copyInto(source: Uri, reserved: File) {
     val part = File(reserved.parentFile, ".${reserved.name}.part")
     try {
-      val input = reactApplicationContext.contentResolver.openInputStream(source)
-        ?: throw IOException("Could not open $source")
-      input.use { from -> part.outputStream().use { to -> from.copyTo(to) } }
+      copyFrom(source, part)
       if (!part.renameTo(reserved)) throw IOException("Could not move the import into place")
     } finally {
       part.delete()

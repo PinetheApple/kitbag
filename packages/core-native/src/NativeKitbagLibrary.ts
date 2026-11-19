@@ -167,8 +167,9 @@ export interface Spec extends TurboModule {
   shareBackup(fileName: string, contents: string): Promise<void>;
   /** Only a file mixdownStart wrote; rejects E_BAD_FILE_NAME for any other path. */
   shareExport(path: string): Promise<void>;
-  /** Rejects E_BAD_FILE_NAME for a name unsafe as a click sound file. */
-  prepareClickSound(sourceUri: string, fileName: string): Promise<number>;
+  /** Rejects E_BAD_FILE_NAME for a name unsafe as a click sound file. The name must be
+   *  new to each call: two prepares to one name share its .part file. */
+  prepareClickSound(sourceUri: string, freshFileName: string): Promise<number>;
   importAudio(uri: string, relativeDir: string): Promise<ImportedAudio>;
   enqueueAnalysis(
     relativePath: string,
