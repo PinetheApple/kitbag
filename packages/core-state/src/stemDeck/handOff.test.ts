@@ -1,16 +1,18 @@
+import type { StemDeckImportItem } from '@kitbag/core-native';
 import { describe, expect, it, vi } from 'vitest';
 
-import type {
-  BundleAddOutcome,
-  ReplaceChoice,
-} from '../songLibrary/stemBundleLogic.ts';
+import type { BundleAddOutcome } from '../songLibrary/stemBundleLogic.ts';
 import { createHandOff, type HandOffDeps } from './handOff.ts';
 import { CODES, item, snapshot } from './store.test-helper.ts';
 
 const URI = 'file:/data/files/.stemdeck-downloads/aaaaaaaaaaaa.zip';
 
-function adding(jobId = 'aaaaaaaaaaaa', fileUri = URI) {
-  return snapshot([item(jobId, CODES.stateAdding, { fileUri })]);
+function adding(
+  jobId = 'aaaaaaaaaaaa',
+  fileUri = URI,
+  overrides: Partial<StemDeckImportItem> = {},
+) {
+  return snapshot([item(jobId, CODES.stateAdding, { fileUri, ...overrides })]);
 }
 
 function setup(add: () => Promise<BundleAddOutcome>) {
@@ -76,22 +78,38 @@ describe('hand-off', () => {
     expect(deps.settle.mock.calls).toEqual([['aaaaaaaaaaaa', code]]);
   });
 
-  it('replaces only the songs the user agreed to replace, naming any target', async () => {
+  it('replaces only the songs native carries a replace for, naming any target', async () => {
     const { deps, handOff } = setup(() => Promise.resolve({ kind: 'added' }));
     const TARGET = 7;
-    handOff.replacing(
-      new Map<string, ReplaceChoice>([
-        ['bbbbbbbbbbbb', { kind: 'replaceJob' }],
-        ['cccccccccccc', { kind: 'replaceSet', targetId: TARGET }],
-      ]),
-    );
     await handOff.receive(adding('aaaaaaaaaaaa'), CODES);
-    await handOff.receive(adding('bbbbbbbbbbbb', `${URI}.b`), CODES);
-    await handOff.receive(adding('cccccccccccc', `${URI}.c`), CODES);
+    await handOff.receive(
+      adding('bbbbbbbbbbbb', `${URI}.b`, { replace: CODES.replaceJob }),
+      CODES,
+    );
+    await handOff.receive(
+      adding('cccccccccccc', `${URI}.c`, {
+        replace: CODES.replaceSet,
+        replaceTarget: TARGET,
+      }),
+      CODES,
+    );
     expect(deps.addFetchedBundle.mock.calls.map((call) => call[1])).toEqual([
       { kind: 'add' },
       { kind: 'replaceJob' },
       { kind: 'replaceSet', targetId: TARGET },
+    ]);
+  });
+
+  it.each<Partial<StemDeckImportItem>>([
+    { replace: 'unknown' },
+    { replace: CODES.replaceSet, replaceTarget: null },
+  ])('settles %j as failed without adding it', async (overrides) => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const { deps, handOff } = setup(() => Promise.resolve({ kind: 'added' }));
+    await handOff.receive(adding('aaaaaaaaaaaa', URI, overrides), CODES);
+    expect(deps.addFetchedBundle).not.toHaveBeenCalled();
+    expect(deps.settle.mock.calls).toEqual([
+      ['aaaaaaaaaaaa', CODES.settleFailed],
     ]);
   });
 

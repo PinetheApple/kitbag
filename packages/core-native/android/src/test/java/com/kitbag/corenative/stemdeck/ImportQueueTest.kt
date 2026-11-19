@@ -138,6 +138,20 @@ class ImportQueueTest {
     assertTrue(restored.retry())
   }
 
+  @Test
+  fun `a retried song keeps the replace it was started with`() {
+    val replaceSet = ImportItem("dddddddddddd", "Goodness", emptyList(), ReplaceChoice(ReplaceMode.REPLACE_SET, 7))
+    val replaceJob = ImportItem("eeeeeeeeeeee", "Firm", emptyList(), ReplaceChoice(ReplaceMode.REPLACE_JOB))
+    val queue = queue(replaceSet, replaceJob, a)
+    queue.next()
+    queue.downloading(replaceSet.jobId, 100)
+    val restored = ImportQueue()
+    restored.restoreInterrupted(queue.snapshot())
+    assertTrue(restored.retry())
+    val retried = generateSequence { restored.next()?.also { restored.fail(it.item.jobId, StemDeckFailure.NOT_FOUND) } }
+    assertEquals(listOf(replaceSet, replaceJob, a).map { it.replace }, retried.map { it.item.replace }.toList())
+  }
+
   @Test(expected = IllegalArgumentException::class)
   fun `a job id that is not StemDeck's is refused`() {
     ImportItem("../../etc", "x", emptyList())

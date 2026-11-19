@@ -12,7 +12,7 @@ import { vi } from 'vitest';
 import type { PermissionAnswer } from '../permission.ts';
 import type { BundleAddOutcome } from '../songLibrary/stemBundleLogic.ts';
 import type { StemDeckCamera, StemDeckNative } from './runtime.ts';
-import { createStemDeckStore } from './store.ts';
+import { createStemDeckStore, type StemDeckDeps } from './store.ts';
 
 export const CODES: StemDeckConstants = {
   unknownBytes: -1,
@@ -40,6 +40,9 @@ export const CODES: StemDeckConstants = {
   settleSkipped: 'skipped',
   settleRefused: 'refused',
   settleFailed: 'failed',
+  replaceAdd: 'add',
+  replaceJob: 'replaceJob',
+  replaceSet: 'replaceSet',
   failureBadAddress: 'badAddress',
   failureUnreachable: 'unreachable',
   failureTimedOut: 'timedOut',
@@ -113,6 +116,8 @@ export function item(
   return {
     jobId,
     title: `Song ${jobId}`,
+    replace: CODES.replaceAdd,
+    replaceTarget: null,
     state,
     failure: null,
     bytesDone: 0,
@@ -179,6 +184,18 @@ export function fakeNative() {
   return { native, emit };
 }
 
+export function sent(
+  native: ReturnType<typeof fakeNative>['native'],
+  jobId: string,
+): Partial<StemDeckImportItem> {
+  const request = native.startImport.mock.calls
+    .at(-1)?.[1]
+    .find((r) => r.jobId === jobId);
+  return request === undefined
+    ? {}
+    : { replace: request.replace, replaceTarget: request.replaceTarget };
+}
+
 export function fakeCamera(answer: PermissionAnswer = 'granted') {
   return {
     check: vi.fn(() => Promise.resolve(answer)),
@@ -200,7 +217,7 @@ export function setup(
       seen = true;
     }),
   };
-  const addFetchedBundle = vi.fn(() =>
+  const addFetchedBundle = vi.fn<StemDeckDeps['addFetchedBundle']>(() =>
     Promise.resolve<BundleAddOutcome>({ kind: 'added' }),
   );
   const store = createStemDeckStore({

@@ -34,6 +34,8 @@ class ImportJournal(private val file: File) {
       .put(JOB_ID, item.item.jobId)
       .put(TITLE, item.item.title)
       .put(STEMS, JSONArray(item.item.stems))
+      .put(REPLACE, item.item.replace.code)
+      .put(REPLACE_TARGET, item.item.replace.targetId ?: JSONObject.NULL)
       .put(STATE, item.state)
       .put(FAILURE, item.failure ?: JSONObject.NULL)
       .put(BYTES_TOTAL, item.bytesTotal)
@@ -52,12 +54,23 @@ class ImportJournal(private val file: File) {
   private fun item(json: JSONObject): ItemState {
     val stems = json.getJSONArray(STEMS)
     return ItemState(
-      item = ImportItem(json.getString(JOB_ID), json.getString(TITLE), (0 until stems.length()).map(stems::getString)),
+      item = ImportItem(
+        json.getString(JOB_ID),
+        json.getString(TITLE),
+        (0 until stems.length()).map(stems::getString),
+        replace(json),
+      ),
       state = json.getString(STATE),
       failure = optString(json, FAILURE),
       bytesTotal = json.getLong(BYTES_TOTAL),
       bytesFree = json.getLong(BYTES_FREE),
     )
+  }
+
+  private fun replace(json: JSONObject): ReplaceChoice {
+    val mode = optString(json, REPLACE)?.let(ReplaceMode::of) ?: ReplaceMode.ADD
+    val target = if (json.isNull(REPLACE_TARGET)) null else json.getLong(REPLACE_TARGET)
+    return ReplaceChoice(mode, target)
   }
 
   private fun optString(json: JSONObject, key: String): String? = if (json.isNull(key)) null else json.getString(key)
@@ -71,6 +84,8 @@ class ImportJournal(private val file: File) {
     private const val JOB_ID = "jobId"
     private const val TITLE = "title"
     private const val STEMS = "stems"
+    private const val REPLACE = "replace"
+    private const val REPLACE_TARGET = "replaceTarget"
     private const val STATE = "state"
     private const val FAILURE = "failure"
     private const val BYTES_TOTAL = "bytesTotal"

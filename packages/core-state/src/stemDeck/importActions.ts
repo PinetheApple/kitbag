@@ -13,8 +13,9 @@ import type { ReplaceMatch } from '../songLibrary/store.ts';
 import { warn } from '../songLibrary/storeSupport.ts';
 import type { CatalogSong } from './catalog.ts';
 import { nativeFailure, type StemDeckFailure } from './failures.ts';
-import { createHandOff, type ReplaceTargets } from './handOff.ts';
+import { createHandOff } from './handOff.ts';
 import { importView, type ImportView, type SkippedSong } from './importView.ts';
+import { ADD, replaceRequest } from './replaceCodes.ts';
 import { stemDeckCodes } from './runtime.ts';
 import type { Get, SetState, StemDeckDeps } from './store.ts';
 
@@ -42,6 +43,8 @@ export interface ImportActions {
   setWatching: (watching: boolean) => void;
   markUnityNoticeSeen: () => void;
 }
+
+type ReplaceTargets = ReadonlyMap<string, ReplaceChoice>;
 
 interface PendingImport {
   readonly origin: string;
@@ -127,7 +130,6 @@ export function importActions(
     if (known === null) return false;
     skipped = kept.map(({ jobId, title }) => ({ jobId, title }));
     refusals.clear();
-    handOff.replacing(targets);
     set({ selected: [], importFailure: null, replacePrompt: null });
     if (songs.length === 0) {
       const empty = { origin, running: false, stopReason: null, items: [] };
@@ -138,6 +140,7 @@ export function importActions(
       jobId: s.jobId,
       title: s.title,
       stems: [...s.lanes],
+      ...replaceRequest(targets.get(s.jobId) ?? ADD, known),
     }));
     try {
       await deps.native().startImport(origin, items);

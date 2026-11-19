@@ -16,6 +16,8 @@ import com.kitbag.corenative.stemdeck.ImportSnapshot
 import com.kitbag.corenative.stemdeck.ItemState
 import com.kitbag.corenative.stemdeck.KnownServer
 import com.kitbag.corenative.stemdeck.ProbeResult
+import com.kitbag.corenative.stemdeck.ReplaceChoice
+import com.kitbag.corenative.stemdeck.ReplaceMode
 import com.kitbag.corenative.stemdeck.STEMDECK_LOG_TAG
 import com.kitbag.corenative.stemdeck.ServerOrigin
 import com.kitbag.corenative.stemdeck.ServerProbe
@@ -115,8 +117,15 @@ class KitbagStemDeckModule(reactContext: ReactApplicationContext) : NativeKitbag
         jobId = item.getString(JOB_ID).orEmpty(),
         title = item.getString(TITLE).orEmpty(),
         stems = (0 until stems.size()).map { stems.getString(it).orEmpty() },
+        replace = replaceChoice(item),
       )
     }
+
+  private fun replaceChoice(item: ReadableMap): ReplaceChoice {
+    val present = item.hasKey(REPLACE_TARGET) && !item.isNull(REPLACE_TARGET)
+    val target = if (present) item.getDouble(REPLACE_TARGET) else null
+    return ReplaceChoice.fromBridge(item.getString(REPLACE).orEmpty(), target)
+  }
 
   // Codes reach JS; causes carry addresses and stay in the log.
   private fun request(promise: Promise, work: () -> Any?) {
@@ -173,6 +182,9 @@ class KitbagStemDeckModule(reactContext: ReactApplicationContext) : NativeKitbag
     Arguments.createMap().apply {
       putString("jobId", item.jobId)
       putString("title", item.title)
+      putString(REPLACE, item.replace.code)
+      val target = item.replace.bridgeTarget
+      if (target == null) putNull(REPLACE_TARGET) else putDouble(REPLACE_TARGET, target)
       putString("state", state)
       putString("failure", failure)
       putDouble("bytesDone", bytesDone.toDouble())
@@ -191,6 +203,7 @@ class KitbagStemDeckModule(reactContext: ReactApplicationContext) : NativeKitbag
       StemDeckApi.CONSTANTS +
       ItemState.CONSTANTS +
       SettleOutcome.CONSTANTS +
+      ReplaceMode.CONSTANTS +
       StemDeckFailure.CONSTANTS
 
   companion object {
@@ -200,5 +213,7 @@ class KitbagStemDeckModule(reactContext: ReactApplicationContext) : NativeKitbag
     private const val JOB_ID = "jobId"
     private const val TITLE = "title"
     private const val STEMS = "stems"
+    private const val REPLACE = "replace"
+    private const val REPLACE_TARGET = "replaceTarget"
   }
 }
