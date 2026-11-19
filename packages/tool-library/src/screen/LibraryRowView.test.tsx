@@ -79,9 +79,11 @@ function render(fontScale: number) {
     createElement(LibraryRowView, {
       row: ROW,
       selected: false,
+      moving: false,
       onActions: vi.fn(),
       onOpenStemSet: vi.fn(),
       onOpenSong: vi.fn(),
+      onUnavailable: vi.fn(),
     }),
   );
   const column = /<section>.*<\/section>/s.exec(markup)?.[0] ?? '';
