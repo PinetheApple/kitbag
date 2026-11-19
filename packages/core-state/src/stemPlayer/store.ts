@@ -6,7 +6,7 @@ import { mixActions, transportActions } from './actions.ts';
 import { barMarkDownbeats } from './bars.ts';
 import { clickActions, releaseClick } from './clickActions.ts';
 import { NO_SONG_FACTS, songFacts, type SongFacts } from './facts.ts';
-import type { LoopSeconds } from './loop.ts';
+import type { LoopEdge, LoopSeconds } from './loop.ts';
 import { sectionLoopActions } from './loopActions.ts';
 import {
   NO_LYRICS,
@@ -67,7 +67,6 @@ export type StemPlayerStatus =
   'idle' | 'loading' | 'ready' | 'missing' | 'failed';
 
 export type LoopFailure = 'tooShort' | 'pastEnd' | 'engine';
-export type LoopEdge = 'start' | 'end';
 
 export type RetimeFailure = 'notStored';
 

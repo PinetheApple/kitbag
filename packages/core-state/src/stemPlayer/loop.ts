@@ -30,6 +30,26 @@ export function loopBetween(
   return end > first ? { startSec: first, endSec: end } : null;
 }
 
+export type LoopEdge = 'start' | 'end';
+
+export function movedEdge(
+  loop: LoopSeconds,
+  edge: LoopEdge,
+  seconds: number,
+  beats: readonly number[],
+  durationSec: number,
+): LoopSeconds | null {
+  const target = Math.min(Math.max(seconds, 0), durationSec);
+  if (edge === 'start') {
+    if (target >= loop.endSec) return null;
+    const side = beats.filter((beat) => beat < loop.endSec);
+    return { startSec: snapToBeat(target, side), endSec: loop.endSec };
+  }
+  if (target <= loop.startSec) return null;
+  const side = beats.filter((beat) => beat > loop.startSec);
+  return { startSec: loop.startSec, endSec: snapToBeat(target, side) };
+}
+
 // Long songs keep their early beats, as the analyser does (SPEC §4.3.1); the
 // click then falls silent past the last one (§4.2).
 export function clickGrid(beats: readonly number[]): readonly number[] {

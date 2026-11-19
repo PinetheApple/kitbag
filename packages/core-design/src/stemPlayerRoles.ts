@@ -152,7 +152,6 @@ export const stemSections = {
   dialogBodyRatio: 1.45,
   dialogActionsTop: 6,
   dialogActionsGap: 8,
-  undoAbove: 10,
 } as const;
 
 export const stemSectionsMix = {

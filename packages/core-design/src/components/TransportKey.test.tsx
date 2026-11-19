@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { beforeEach, expect, it, vi } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
 import { opacity } from '../roles.ts';
 import { ThemeProvider } from '../ThemeProvider.tsx';
@@ -47,10 +47,6 @@ function rendered(muted: boolean, disabled: boolean) {
     opacity: StyleSheet.flatten(key?.style as StyleProp<ViewStyle>).opacity,
   };
 }
-
-beforeEach(() => {
-  pressables.length = 0;
-});
 
 it('looks and reads disabled when muted but still takes a press', () => {
   expect(rendered(true, false)).toEqual({

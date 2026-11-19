@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { SharedValue } from 'react-native-reanimated';
-import { beforeEach, expect, it, vi } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
 import { ThemeProvider } from '../ThemeProvider.tsx';
 import { PlayerTransport } from './PlayerTransport.tsx';
@@ -37,10 +37,6 @@ function loopKey(loopText?: string) {
   );
   return keys.find((key) => key.accessibilityLabel === LOOP_LABEL);
 }
-
-beforeEach(() => {
-  keys.length = 0;
-});
 
 it('draws the loop key as a repeat icon by default', () => {
   const key = loopKey();

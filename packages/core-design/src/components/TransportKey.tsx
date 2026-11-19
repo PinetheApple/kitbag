@@ -133,6 +133,7 @@ export function TransportKey({
   const dock = keySize === 'dock';
   const large = keySize === 'large';
   const small = keySize === 'small';
+  const dimmed = disabled || muted;
   const glyphStyle = [
     styles.glyph,
     dock && styles.dockGlyph,
@@ -144,7 +145,7 @@ export function TransportKey({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      accessibilityState={{ selected, disabled: disabled || muted }}
+      accessibilityState={{ selected, disabled: dimmed }}
       disabled={disabled}
       style={[
         styles.key,
@@ -152,7 +153,7 @@ export function TransportKey({
         large && styles.large,
         small && styles.small,
         selected && styles.selected,
-        (disabled || muted) && styles.disabled,
+        dimmed && styles.disabled,
       ]}
       hitSlop={HIT_SLOP[keySize]}
       onPress={onPress}

@@ -1,3 +1,4 @@
+import { KB_RESULT } from '@kitbag/core-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { RATE } from '../stemPlayer/store.test-helper.ts';
@@ -68,6 +69,67 @@ describe('moving a loop edge', () => {
       startSec: 0.5,
       endSec: 1.5,
     });
+  });
+
+  it.each([
+    ['a start dropped just before the end', 'start', 1.4, RATE, RATE * 1.5],
+    ['an end dropped just after the start', 'end', 0.6, RATE * 0.5, RATE],
+  ] as const)(
+    'snaps %s to the nearest beat on its own side',
+    async (_, edge, seconds, startFrame, endFrame) => {
+      const { store, commands } = await looped();
+      await store.getState().moveLoopEdge(edge, seconds);
+      expect(commands.mixerSetLoop).toHaveBeenCalledExactlyOnceWith(
+        startFrame,
+        endFrame,
+      );
+      expect(store.getState().loopFailure).toBe(null);
+    },
+  );
+
+  it('sends nothing when the edge snaps back to where it was', async () => {
+    const { store, commands } = await looped();
+    await store.getState().moveLoopEdge('start', 0.6);
+    expect(commands.mixerSetLoop).not.toHaveBeenCalled();
+    expect(store.getState().loopFailure).toBe(null);
+  });
+
+  it('keeps a moved edge inside the song', async () => {
+    const { store, commands } = await looped(
+      songRecord({ beats: [], downbeatIndices: [] }),
+    );
+    await store.getState().moveLoopEdge('start', -1);
+    expect(commands.mixerSetLoop).toHaveBeenCalledWith(
+      0,
+      Math.round(RATE * 1.4),
+    );
+  });
+
+  it('ignores a move while only A is marked', async () => {
+    const { store, commands } = await openedSong();
+    await store.getState().markLoop();
+    await store.getState().moveLoopEdge('end', 2);
+    expect(commands.mixerSetLoop).not.toHaveBeenCalled();
+    expect(store.getState().loop.kind).toBe('armed');
+  });
+
+  it('ignores a move while the engine has not answered the last one', async () => {
+    const { store, commands } = await looped();
+    const answers: ((code: number) => void)[] = [];
+    commands.mixerSetLoop.mockImplementationOnce(
+      () =>
+        new Promise<number>((resolve) => {
+          answers.push(resolve);
+        }),
+    );
+    const first = store.getState().moveLoopEdge('end', 2.5);
+    await store.getState().moveLoopEdge('end', 3);
+    answers[0]?.(KB_RESULT.KB_OK);
+    await first;
+    expect(commands.mixerSetLoop).toHaveBeenCalledExactlyOnceWith(
+      RATE * 0.5,
+      RATE * 2.5,
+    );
   });
 
   it('moves unsnapped on a song with no grid', async () => {

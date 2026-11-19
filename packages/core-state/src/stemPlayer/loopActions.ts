@@ -1,11 +1,16 @@
 import { KB_RESULT } from '@kitbag/core-native';
 
-import { loopBetween, snapToBeat, type LoopSeconds } from './loop.ts';
+import {
+  loopBetween,
+  movedEdge,
+  snapToBeat,
+  type LoopEdge,
+  type LoopSeconds,
+} from './loop.ts';
 import type { MixerSessionContext } from './mixerSession.ts';
 import { sessionGate } from './sessionGate.ts';
 import type {
   ActionContext,
-  LoopEdge,
   LoopFailure,
   StemPlayerActions,
   StemPlayerState,
@@ -117,14 +122,22 @@ function loopControls(
   };
 
   const moveLoopEdge = async (edge: LoopEdge, seconds: number) => {
-    const { loop, beats } = get();
+    const { loop, beats, durationFrames, engineRate } = get();
     if (busy() || loop.kind !== 'on') return;
-    const snapped = snapToBeat(seconds, beats);
-    await setLoop(
-      edge === 'start'
-        ? { startSec: snapped, endSec: loop.endSec }
-        : { startSec: loop.startSec, endSec: snapped },
+    const bounds = movedEdge(
+      loop,
+      edge,
+      seconds,
+      beats,
+      framesToSeconds(durationFrames, engineRate),
     );
+    if (bounds === null) {
+      refuse('tooShort');
+      return;
+    }
+    if (bounds.startSec === loop.startSec && bounds.endSec === loop.endSec)
+      return;
+    await setLoop(bounds);
   };
 
   return { busy, clear, setLoop, markLoop, moveLoopEdge };

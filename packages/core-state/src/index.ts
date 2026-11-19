@@ -309,7 +309,6 @@ export { UNITY_GAIN, UNSHIFTED_KEY } from './stemPlayer/mix.ts';
 export {
   createStemPlayerStore,
   stemPlayerStore,
-  type LoopEdge,
   type LoopFailure,
   type LoopState,
   type RetimeFailure,
@@ -351,7 +350,7 @@ export {
   type RetimeTap,
   type SongLyrics,
 } from './stemPlayer/lyrics.ts';
-export type { LoopSeconds } from './stemPlayer/loop.ts';
+export type { LoopEdge, LoopSeconds } from './stemPlayer/loop.ts';
 export { NO_SECTION, sectionAt } from './stemPlayer/sections.ts';
 export {
   clickKeyLabel,

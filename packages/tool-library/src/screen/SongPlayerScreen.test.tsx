@@ -46,6 +46,7 @@ vi.mock('react-native', () => ({
   View: 'View',
   ScrollView: 'ScrollView',
   Text: 'Text',
+  StyleSheet: { create: <T,>(styles: T) => styles },
 }));
 
 vi.mock('@kitbag/core-design', async (original) => {
