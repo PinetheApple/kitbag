@@ -1,16 +1,26 @@
 import {
   createThemedStyles,
   Icon,
+  isOverridden,
+  MeterRow,
   Sheet,
+  size,
   stemPlayer,
   textRoles,
   textStyle,
 } from '@kitbag/core-design';
 import { exportBlock, useStemPlayer } from '@kitbag/core-state';
 import { useCallback } from 'react';
-import { Pressable, Text } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
+import type { ClickSection } from '../logic/clickView.ts';
 import { exportRowValue } from '../logic/exportView.ts';
+import {
+  meterGridState,
+  NO_GRID_REASON,
+  shownMeter,
+} from '../logic/meterEdit.ts';
+import { ClickRows } from './ClickRows.tsx';
 import { useMixdownProgress } from './useMixdownProgress.ts';
 
 const useStyles = createThemedStyles((theme) => ({
@@ -19,6 +29,10 @@ const useStyles = createThemedStyles((theme) => ({
     alignItems: 'center',
     gap: stemPlayer.menuRowGap,
     minHeight: stemPlayer.menuRowMinHeight,
+  },
+  divided: {
+    borderBottomWidth: size.stroke,
+    borderBottomColor: theme.color.line,
   },
   label: {
     ...textStyle(textRoles.menuRow),
@@ -67,11 +81,33 @@ function ExportRow({ visible, onExport }: ExportRowProps) {
   );
 }
 
+function StemMeterRow({ onMeter }: { readonly onMeter: () => void }) {
+  const styles = useStyles();
+  const meter = useStemPlayer((s) =>
+    shownMeter(s.meterOverride, s.detectedMeter),
+  );
+  const yours = useStemPlayer((s) => isOverridden(s.meterOverride));
+  const noGrid = useStemPlayer((s) => meterGridState(s.beats) !== 'ready');
+  return (
+    <View style={styles.divided}>
+      <MeterRow
+        value={meter}
+        yours={yours}
+        disabled={noGrid}
+        {...(noGrid ? { reason: NO_GRID_REASON } : {})}
+        onPress={onMeter}
+      />
+    </View>
+  );
+}
+
 interface PlayerMenuProps {
   readonly visible: boolean;
   readonly bottomInset: number;
   readonly onClose: () => void;
   readonly onExport: () => void;
+  readonly onMeter: () => void;
+  readonly onClick: (section: ClickSection) => void;
 }
 
 export function PlayerMenu({
@@ -79,6 +115,8 @@ export function PlayerMenu({
   bottomInset,
   onClose,
   onExport,
+  onMeter,
+  onClick,
 }: PlayerMenuProps) {
   const styles = useStyles();
   const resetMix = useStemPlayer((s) => s.resetMix);
@@ -97,13 +135,15 @@ export function PlayerMenu({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Reset mix: every level to 0 dB, nothing muted or soloed"
-        style={styles.row}
+        style={[styles.row, styles.divided]}
         onPress={reset}
       >
         <Icon name="reset" size="title" color="text2" />
         <Text style={styles.label}>Reset mix</Text>
         <Text style={styles.value}>levels, mutes, solos</Text>
       </Pressable>
+      <StemMeterRow onMeter={onMeter} />
+      <ClickRows onOpen={onClick} />
       <ExportRow visible={visible} onExport={onExport} />
     </Sheet>
   );

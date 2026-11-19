@@ -17,7 +17,9 @@ import com.kitbag.corenative.library.AnalysisEvents
 import com.kitbag.corenative.library.AnalysisFailure
 import com.kitbag.corenative.library.AnalysisResult
 import com.kitbag.corenative.library.AnalysisStore
+import com.kitbag.corenative.library.AnalysisTarget
 import com.kitbag.corenative.library.BackupShare
+import com.kitbag.corenative.library.ClickSoundFiles
 import com.kitbag.corenative.library.DataFolder
 import com.kitbag.corenative.library.DocumentPicker
 import com.kitbag.corenative.library.ExportFiles
@@ -26,11 +28,14 @@ import com.kitbag.corenative.library.LibraryErrors
 import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.LibraryStorage
 import com.kitbag.corenative.library.LibraryUsage
+import com.kitbag.corenative.library.NativeClickSound
 import com.kitbag.corenative.library.NativeWaveform
 import com.kitbag.corenative.library.StemBundleBridge
 import com.kitbag.corenative.library.StemBundleRefusedException
+import com.kitbag.corenative.library.toMap
 import com.kitbag.corenative.library.StorageUsage
 import com.kitbag.corenative.library.SupportedAudio
+import com.kitbag.corenative.library.VolumeWatcher
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.ExecutorService
@@ -47,6 +52,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   private val picker = DocumentPicker(reactContext, io, ::rejectLogged)
   private val files = FileShare(reactContext, io, ::rejectLogged)
   private val backups = BackupShare(reactContext, files)
+  private val volumes = VolumeWatcher(reactContext, ::emitOnDataFolderChanged)
 
   private val listener: (AnalysisResult) -> Unit = ::emitAnalysis
 
@@ -54,10 +60,12 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     reactContext.addActivityEventListener(picker)
     AnalysisEvents.listener.set(listener)
     io.execute { bundles.clearStaging() }
+    volumes.start()
   }
 
   override fun invalidate() {
     AnalysisEvents.listener.compareAndSet(listener, null)
+    volumes.stop()
     reactApplicationContext.removeActivityEventListener(picker)
     io.shutdownNow()
     picker.cancel()
@@ -82,26 +90,63 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     files.share(ExportFiles.shareSpec(), promise) { file }
   }
 
-  private fun libraryRoot() = DataFolder.root(reactApplicationContext)
+  private fun dataFolder() = DataFolder.get(reactApplicationContext)
+
+  private fun libraryRoot() = dataFolder().root()
+
+  override fun prepareClickSound(sourceUri: String, fileName: String, promise: Promise) {
+    val target = ClickSoundFiles.resolve(reactApplicationContext.filesDir, fileName)
+    if (target == null) {
+      promise.reject(LibraryErrors.BAD_FILE_NAME, "Not a click sound file name: $fileName")
+      return
+    }
+    io.execute {
+      var staging: File? = null
+      try {
+        staging = ClickSoundFiles.staging(reactApplicationContext.cacheDir)
+        copyFrom(Uri.parse(sourceUri), staging)
+        target.parentFile?.mkdirs()
+        promise.resolve(NativeClickSound.prepare(staging, target))
+      } catch (e: IOException) {
+        if (ClickSoundFiles.isNoSpace(e)) {
+          promise.resolve(NativeClickSound.noSpace())
+        } else {
+          rejectLogged(promise, E_IMPORT_FAILED, "Could not read the click sound", e)
+        }
+      } catch (e: Exception) {
+        rejectLogged(promise, E_IMPORT_FAILED, "Could not read the click sound", e)
+      } finally {
+        staging?.delete()
+      }
+    }
+  }
+
+  private fun copyFrom(source: Uri, file: File) {
+    val input = reactApplicationContext.contentResolver.openInputStream(source)
+      ?: throw IOException("Could not open $source")
+    input.use { from -> file.outputStream().use { to -> from.copyTo(to) } }
+  }
 
   override fun importAudio(uri: String, relativeDir: String, promise: Promise) {
-    io.execute {
-      var root: File? = null
-      var dir: File? = null
-      var reserved: File? = null
-      try {
-        val source = Uri.parse(uri)
-        val displayName = picker.displayName(source)
-        root = libraryRoot()
-        dir = LibraryPaths.resolve(root, relativeDir, allowBase = true)
-        reserved = reserveTarget(dir, source, displayName ?: source.lastPathSegment)
-        copyInto(source, reserved)
-        promise.resolve(importedAudio(root, reserved, displayName))
-      } catch (e: Exception) {
-        reserved?.delete()
-        if (dir != null && dir != root?.canonicalFile) dir.delete()
-        rejectLogged(promise, E_IMPORT_FAILED, "Import failed", e)
-      }
+    io.execute { dataFolder().importing { importAudioLocked(uri, relativeDir, promise) } }
+  }
+
+  private fun importAudioLocked(uri: String, relativeDir: String, promise: Promise) {
+    var root: File? = null
+    var dir: File? = null
+    var reserved: File? = null
+    try {
+      val source = Uri.parse(uri)
+      val displayName = picker.displayName(source)
+      root = libraryRoot()
+      dir = LibraryPaths.resolve(root, relativeDir, allowBase = true)
+      reserved = reserveTarget(dir, source, displayName ?: source.lastPathSegment)
+      copyInto(source, reserved)
+      promise.resolve(importedAudio(root, reserved, displayName))
+    } catch (e: Exception) {
+      reserved?.delete()
+      if (dir != null && dir != root?.canonicalFile) dir.delete()
+      rejectLogged(promise, E_IMPORT_FAILED, "Import failed", e)
     }
   }
 
@@ -119,9 +164,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   private fun copyInto(source: Uri, reserved: File) {
     val part = File(reserved.parentFile, ".${reserved.name}.part")
     try {
-      val input = reactApplicationContext.contentResolver.openInputStream(source)
-        ?: throw IOException("Could not open $source")
-      input.use { from -> part.outputStream().use { to -> from.copyTo(to) } }
+      copyFrom(source, part)
       if (!part.renameTo(reserved)) throw IOException("Could not move the import into place")
     } finally {
       part.delete()
@@ -158,14 +201,14 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   }
 
   override fun enqueueAnalysis(relativePath: String, waveformRelativeDir: String, replace: Boolean) {
-    val canonical = try {
-      val root = libraryRoot()
-      LibraryPaths.requireInsideLibrary(root, waveformRelativeDir, allowBase = true)
-      LibraryPaths.relativize(root, LibraryPaths.resolve(root, relativePath))
-    } catch (e: IllegalArgumentException) {
-      Log.w(TAG, "Analysis of $relativePath refused", e)
-      io.execute { recordFailure(relativePath, AnalysisFailure.MISSING_FILE) }
-      return
+    val canonical = when (val target = AnalysisTarget.of(::libraryRoot, relativePath, waveformRelativeDir)) {
+      is AnalysisTarget.Ready -> target.relativePath
+      AnalysisTarget.Refused -> {
+        Log.w(TAG, "Analysis of $relativePath refused: the path escapes the library")
+        io.execute { recordFailure(relativePath, AnalysisFailure.MISSING_FILE) }
+        return
+      }
+      AnalysisTarget.Deferred -> return
     }
     val request = OneTimeWorkRequestBuilder<AnalysisWorker>()
       .setInputData(
@@ -228,9 +271,11 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   override fun deleteLibraryFile(relativePath: String, promise: Promise) {
     io.execute {
       try {
-        val target = LibraryPaths.resolve(libraryRoot(), relativePath)
-        if (target.isDirectory) throw IOException("$target is a directory")
-        if (target.exists() && !target.delete()) throw IOException("Could not delete $target")
+        dataFolder().importing {
+          val target = LibraryPaths.resolve(libraryRoot(), relativePath)
+          if (target.isDirectory) throw IOException("$target is a directory")
+          if (target.exists() && !target.delete()) throw IOException("Could not delete $target")
+        }
         promise.resolve(null)
       } catch (e: Exception) {
         rejectLogged(promise, E_DELETE_FAILED, "Delete failed", e)
@@ -245,8 +290,10 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   private fun deleteFolder(promise: Promise, resolveFolder: () -> File) {
     io.execute {
       try {
-        val folder = resolveFolder()
-        if (folder.exists() && !folder.deleteRecursively()) throw IOException("Could not delete $folder")
+        dataFolder().importing {
+          val folder = resolveFolder()
+          if (folder.exists() && !folder.deleteRecursively()) throw IOException("Could not delete $folder")
+        }
         promise.resolve(null)
       } catch (e: Exception) {
         rejectLogged(promise, E_DELETE_FAILED, "Delete failed", e)
@@ -267,7 +314,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   override fun importStemBundle(uri: String, isFolder: Boolean, promise: Promise) {
     io.execute {
       try {
-        promise.resolve(bundles.import(uri, isFolder))
+        promise.resolve(dataFolder().importing { bundles.import(uri, isFolder) })
       } catch (e: StemBundleRefusedException) {
         rejectLogged(promise, e.refusal, "The bundle was refused", e)
       } catch (e: Exception) {
@@ -335,11 +382,12 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       putString("location", location)
     }
 
-  override fun missingFiles(relativePaths: ReadableArray, promise: Promise) {
+  override fun fileAvailability(relativePaths: ReadableArray, promise: Promise) {
     io.execute {
       try {
         val paths = (0 until relativePaths.size()).asSequence().mapNotNull { relativePaths.getString(it) }
-        promise.resolve(Arguments.createArray().apply { LibraryUsage.missing(libraryRoot(), paths).forEach(::pushString) })
+        val root = DataFolder.get(reactApplicationContext).rootState()
+        promise.resolve(LibraryUsage.availability(root, paths).toMap())
       } catch (e: Exception) {
         rejectLogged(promise, E_STORAGE_FAILED, "Could not check library files", e)
       }
@@ -349,7 +397,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   // Raw causes carry paths; JS gets the code and shows its own text.
   private fun rejectLogged(promise: Promise, code: String, message: String, cause: Exception) {
     Log.w(TAG, "$code: $message", cause)
-    promise.reject(code, message)
+    promise.reject(LibraryErrors.codeFor(cause, code), message)
   }
 
   override fun getTypedExportedConstants(): Map<String, Any> =
@@ -360,6 +408,8 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       "failureUnsupported" to AnalysisFailure.UNSUPPORTED,
       "failureInterrupted" to AnalysisFailure.INTERRUPTED,
       "failureInternal" to AnalysisFailure.INTERNAL,
+      "failureUnavailable" to AnalysisFailure.UNAVAILABLE,
+      "dataFolderUnavailable" to LibraryErrors.DATA_FOLDER_UNAVAILABLE,
       "supportedAudioFamilies" to SupportedAudio.FAMILY_NAMES,
       "supportedAudioExtensions" to SupportedAudio.EXTENSIONS,
       "supportedAudioMimeTypes" to SupportedAudio.MIME_TYPES,

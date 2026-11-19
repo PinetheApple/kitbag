@@ -10,9 +10,11 @@ import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.UiThreadUtil
 import com.facebook.react.uimanager.UIManagerHelper
+import com.kitbag.corenative.library.ClickSoundFiles
 import com.kitbag.corenative.library.LibraryErrors
 import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.DataFolder
+import com.kitbag.corenative.library.DataFolderUnavailableException
 import com.kitbag.corenative.library.MixdownExport
 import com.kitbag.corenative.library.UnsafeLibraryPathException
 import com.kitbag.corenative.route.OutputRoute
@@ -301,6 +303,9 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     } catch (e: UnsafeLibraryPathException) {
       promise.reject(E_UNSAFE_PATH, "Track path escapes the library", e)
       return
+    } catch (e: DataFolderUnavailableException) {
+      promise.reject(LibraryErrors.DATA_FOLDER_UNAVAILABLE, "The data folder is not mounted", e)
+      return
     }
     promise.resolve(nativeLoadTrack(track.toInt(), file.path))
   }
@@ -409,6 +414,23 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
     mixdown.cancel()
   }
 
+  override fun loadCustomSound(slot: Double, fileName: String, promise: Promise) {
+    val file = ClickSoundFiles.resolve(reactApplicationContext.filesDir, fileName)
+    if (file == null) {
+      promise.reject(LibraryErrors.BAD_FILE_NAME, "Not a click sound file name: $fileName")
+      return
+    }
+    promise.resolve(nativeLoadCustomSound(slot, file.path))
+  }
+
+  override fun clearCustomSound(slot: Double) {
+    nativeClearCustomSound(slot)
+  }
+
+  override fun customSoundLoaded(slot: Double, promise: Promise) {
+    promise.resolve(nativeCustomSoundLoaded(slot))
+  }
+
   override fun tunerStart(promise: Promise) {
     promise.resolve(nativeTunerStart())
   }
@@ -511,6 +533,9 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   private external fun nativeMixerTrackFrames(track: Double): Double
   private external fun nativeClearGrid()
   private external fun nativeFollowMixer(enabled: Boolean)
+  private external fun nativeLoadCustomSound(slot: Double, path: String): Int
+  private external fun nativeClearCustomSound(slot: Double)
+  private external fun nativeCustomSoundLoaded(slot: Double): Boolean
   private external fun nativeTunerStart(): Int
   private external fun nativeTunerStop()
   private external fun nativeTunerSetTuning(instrument: Int, stringMidis: IntArray): Int

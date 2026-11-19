@@ -2,9 +2,11 @@ package com.kitbag.corenative.library
 
 import android.content.Context
 import android.util.Log
-import com.kitbag.corenative.stemdeck.writeAtomically
 import java.io.File
 import java.io.IOException
+import java.util.concurrent.locks.ReentrantReadWriteLock
+import kotlin.concurrent.read
+import kotlin.concurrent.write
 import org.json.JSONException
 import org.json.JSONObject
 
@@ -20,6 +22,38 @@ sealed interface LibraryFile {
   object Missing : LibraryFile
 
   data class Unavailable(val volumeUuid: String) : LibraryFile
+
+  object Unknown : LibraryFile
+}
+
+sealed interface RootState {
+  fun resolve(relativePath: String): LibraryFile
+
+  data class Mounted(
+    val root: File,
+    // False when the state file or the away list is unreadable: an absent song may sit on a card, not be gone.
+    val known: Boolean,
+    val away: List<AwayFiles> = emptyList(),
+  ) : RootState {
+    override fun resolve(relativePath: String): LibraryFile {
+      val file = LibraryPaths.resolve(root, relativePath)
+      if (file.exists()) return LibraryFile.Present(file)
+      val awayFile = away.firstOrNull { relativePath in it.paths }?.let { awayFile(it, relativePath) }
+      return awayFile ?: if (known) LibraryFile.Missing else LibraryFile.Unknown
+    }
+
+    private fun awayFile(away: AwayFiles, relativePath: String): LibraryFile? {
+      val cardRoot = away.mountedRoot ?: return LibraryFile.Unavailable(away.volumeUuid)
+      return LibraryPaths.resolve(cardRoot, relativePath).takeIf { it.exists() }?.let(LibraryFile::Present)
+    }
+  }
+
+  data class Unmounted(val volumeUuid: String) : RootState {
+    override fun resolve(relativePath: String): LibraryFile {
+      LibraryPaths.requireRelative(relativePath)
+      return LibraryFile.Unavailable(volumeUuid)
+    }
+  }
 }
 
 class DataFolderUnavailableException(val volumeUuid: String) :
@@ -31,55 +65,57 @@ class DataFolder(
   private val warn: (message: String, cause: Exception) -> Unit,
 ) {
   val internalRoot = File(filesDir, DIR_NAME)
-  private val stateFile = File(filesDir, STATE_FILE_NAME)
+  private val stateFile = JsonStateFile(File(filesDir, STATE_FILE_NAME), "using internal storage", warn)
+  private val awayManifest = AwayManifest(File(filesDir, AwayManifest.FILE_NAME), warn)
 
-  fun location(): DataFolderLocation {
-    if (!stateFile.isFile) return DataFolderLocation.Internal
-    return try {
-      val json = JSONObject(stateFile.readText())
-      if (json.optString(KIND) == KIND_CARD) {
-        DataFolderLocation.Card(json.getString(VOLUME_UUID))
-      } else {
-        DataFolderLocation.Internal
-      }
-    } catch (e: JSONException) {
-      unreadable(e)
-    } catch (e: IOException) {
-      unreadable(e)
+  internal val importLock = ReentrantReadWriteLock()
+
+  fun <T> importing(block: () -> T): T = importLock.read(block)
+
+  fun <T> switching(block: () -> T): T = importLock.write(block)
+
+  fun location(): DataFolderLocation = storedLocation() ?: DataFolderLocation.Internal
+
+  fun storedLocation(): DataFolderLocation? = stateFile.read(DataFolderLocation.Internal, ::locationOf)
+
+  fun select(location: DataFolderLocation) = stateFile.write(toJson(location))
+
+  fun rootState(): RootState {
+    val location = storedLocation()
+    val away = awayManifest.load()
+    val state = rootStateAt(location ?: DataFolderLocation.Internal)
+    return if (state is RootState.Mounted) {
+      state.copy(known = location != null && away != null, away = awayFiles(away.orEmpty()))
+    } else {
+      state
     }
   }
 
-  private fun unreadable(cause: Exception): DataFolderLocation {
-    warn("Unreadable $STATE_FILE_NAME; using internal storage", cause)
-    return DataFolderLocation.Internal
-  }
+  fun rootStateAt(location: DataFolderLocation): RootState =
+    when (location) {
+      DataFolderLocation.Internal -> RootState.Mounted(internalRoot, known = true)
+      is DataFolderLocation.Card -> cardRoot(location.volumeUuid)?.let { RootState.Mounted(it, known = true) }
+        ?: RootState.Unmounted(location.volumeUuid)
+    }
 
-  fun select(location: DataFolderLocation) = writeAtomically(stateFile, json(location).toString())
+  private fun cardRoot(volumeUuid: String): File? =
+    volumes.find(volumeUuid)?.takeIf { it.mounted }?.let { File(it.filesDir, DIR_NAME) }
+
+  private fun awayFiles(away: Map<String, Set<String>>): List<AwayFiles> =
+    away.map { (uuid, paths) -> AwayFiles(uuid, paths, cardRoot(uuid)) }
+
+  fun leaveAway(volumeUuid: String, relativePaths: Collection<String>) {
+    relativePaths.forEach(LibraryPaths::requireRelative)
+    awayManifest.record(volumeUuid, relativePaths)
+  }
 
   fun root(): File =
-    when (val location = location()) {
-      DataFolderLocation.Internal -> internalRoot
-      is DataFolderLocation.Card ->
-        volumes.find(location.volumeUuid)?.takeIf { it.mounted }?.let { File(it.filesDir, DIR_NAME) }
-          ?: throw DataFolderUnavailableException(location.volumeUuid)
+    when (val state = rootStateAt(location())) {
+      is RootState.Mounted -> state.root
+      is RootState.Unmounted -> throw DataFolderUnavailableException(state.volumeUuid)
     }
 
-  fun resolve(relativePath: String): LibraryFile {
-    LibraryPaths.requireRelative(relativePath)
-    val root = try {
-      root()
-    } catch (e: DataFolderUnavailableException) {
-      return LibraryFile.Unavailable(e.volumeUuid)
-    }
-    val file = LibraryPaths.resolve(root, relativePath)
-    return if (file.exists()) LibraryFile.Present(file) else LibraryFile.Missing
-  }
-
-  private fun json(location: DataFolderLocation): JSONObject =
-    when (location) {
-      DataFolderLocation.Internal -> JSONObject().put(KIND, KIND_INTERNAL)
-      is DataFolderLocation.Card -> JSONObject().put(KIND, KIND_CARD).put(VOLUME_UUID, location.volumeUuid)
-    }
+  fun resolve(relativePath: String): LibraryFile = rootState().resolve(relativePath)
 
   companion object {
     const val DIR_NAME = "library"
@@ -100,5 +136,18 @@ class DataFolder(
       }
 
     fun root(context: Context): File = get(context).root()
+
+    fun toJson(location: DataFolderLocation): JSONObject =
+      when (location) {
+        DataFolderLocation.Internal -> JSONObject().put(KIND, KIND_INTERNAL)
+        is DataFolderLocation.Card -> JSONObject().put(KIND, KIND_CARD).put(VOLUME_UUID, location.volumeUuid)
+      }
+
+    fun locationOf(json: JSONObject): DataFolderLocation =
+      when (val kind = json.getString(KIND)) {
+        KIND_INTERNAL -> DataFolderLocation.Internal
+        KIND_CARD -> DataFolderLocation.Card(json.getString(VOLUME_UUID))
+        else -> throw JSONException("Unknown data folder kind: $kind")
+      }
   }
 }

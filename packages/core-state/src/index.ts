@@ -47,6 +47,7 @@ export {
   clampRampInterval,
   cycleAccentValue,
   isAccent,
+  isBuiltInSoundId,
   isCountInBars,
   isRampUnit,
   isSoundId,
@@ -163,6 +164,13 @@ export type {
   TunerTuning,
 } from './tuner/types.ts';
 export { MAX_MIDI_NOTE } from '@kitbag/core-db';
+export {
+  CLICK_RATE,
+  CLICK_RATES,
+  groupBeats,
+  stemSetClickViolation,
+  type ClickRate,
+} from '@kitbag/core-db';
 export { MAX_BUSY_RETRIES, type TunerCommands } from './tuner/commands.ts';
 export {
   configureTunerRuntime,
@@ -233,6 +241,7 @@ export {
   type SongBadge,
 } from './songLibrary/logic.ts';
 export { playerSongBadge } from './songLibrary/badge.ts';
+export { rowFilesOf } from './songLibrary/availability.ts';
 export type {
   BundleAddOutcome,
   BundleRefusal,
@@ -386,6 +395,15 @@ export {
   overrideDownbeats,
   type DetectedGrid,
 } from './stemPlayer/meterOverride.ts';
+export { impliedMeter } from './stemPlayer/barMeter.ts';
+export {
+  GRID_METER,
+  GRID_METERS,
+  isGridMeter,
+  NO_METER_OVERRIDE,
+  type GridMeter,
+  type MeterOverride,
+} from '@kitbag/core-db';
 export {
   clickKeyLabel,
   loopEndFrames,
@@ -491,10 +509,12 @@ export {
   type CalibrationSessionStore,
 } from './rig/useCalibration.ts';
 export {
+  DataFolderUnavailableError,
   findMissingRows,
   removeMissingRows,
   type MissingFilesSource,
   type MissingRowsRemoval,
+  type RowFiles,
   type StoredRowFiles,
 } from './storage/missingRows.ts';
 export {

@@ -20,13 +20,18 @@ export interface ClickHandoff {
   readonly recountWithClickOn: () => boolean;
 }
 
+export interface GridFollowers {
+  readonly gridReplaced: () => void;
+  readonly gridSent: () => void;
+}
+
 type ClickContext = Pick<
   MixerSessionContext<ClickSlice>,
   'set' | 'get' | 'runtimeOf'
 >;
 
 const noCount = () => false;
-const noGridFollower = () => undefined;
+const doNothing = () => undefined;
 
 function releaseGrid({ commands }: Pick<MixerRuntime, 'commands'>): void {
   commands.metronomeFollowMixer(false);
@@ -70,7 +75,10 @@ function gridOf({ beats, downbeatIndices }: ClickSlice) {
 
 export async function followNewGrid(
   { set, get, runtimeOf, session }: MixerSessionContext<ClickSlice>,
-  gridReplaced: () => void = noGridFollower,
+  {
+    gridReplaced = doNothing,
+    gridSent = doNothing,
+  }: Partial<GridFollowers> = {},
 ): Promise<void> {
   gridReplaced();
   if (!get().click) return;
@@ -85,7 +93,8 @@ export async function followNewGrid(
     .commands.setGrid(grid, downbeats, GRID_ANCHOR_FRAME)
     .catch(() => KB_RESULT.KB_ERROR_INTERNAL);
   if (opened !== session() || gridChanged(get(), sent)) return;
-  if (result !== KB_RESULT.KB_OK) turnClickOff({ set, get, runtimeOf });
+  if (result === KB_RESULT.KB_OK) gridSent();
+  else turnClickOff({ set, get, runtimeOf });
 }
 
 export function clickActions(
@@ -95,6 +104,7 @@ export function clickActions(
     recountWithClickOff = noCount,
     recountWithClickOn = noCount,
   }: Partial<ClickHandoff> = {},
+  { gridSent = doNothing }: Partial<Pick<GridFollowers, 'gridSent'>> = {},
 ): Pick<StemPlayerActions, 'toggleClick'> {
   const { set, get, runtimeOf, session } = context;
   const { busy, call } = sessionGate(session);
@@ -116,10 +126,11 @@ export function clickActions(
       return;
     }
     commands.metronomeFollowMixer(true);
+    gridSent();
     const recounted = recountWithClickOn();
     if (!recounted) commands.metronomeStart(engine.nowFrame());
     set({ click: true });
-    if (gridChanged(get(), sent)) await followNewGrid(context);
+    if (gridChanged(get(), sent)) await followNewGrid(context, { gridSent });
   };
 
   return {

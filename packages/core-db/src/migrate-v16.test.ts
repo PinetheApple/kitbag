@@ -5,7 +5,7 @@ import {
   buildV15Fixture,
   pragma,
   rows,
-  V20_STEM_SET_COLUMNS,
+  V21_STEM_SET_COLUMNS,
 } from './migrate-fixtures.test-helper';
 import { nodeSqliteDriver } from './sqlite.test-helper';
 
@@ -23,7 +23,7 @@ describe('migrate v15 to v16', () => {
         song_title: null,
         artist: null,
         renamed: 0,
-        ...V20_STEM_SET_COLUMNS,
+        ...V21_STEM_SET_COLUMNS,
       })),
     );
     expect(pragma(db, 'user_version')).toBe(SCHEMA_VERSION);

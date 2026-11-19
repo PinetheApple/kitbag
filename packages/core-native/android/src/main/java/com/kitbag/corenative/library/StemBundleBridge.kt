@@ -30,7 +30,13 @@ class StemBundleBridge(private val resolver: ContentResolver, private val root: 
   fun import(uri: String, isFolder: Boolean): WritableMap =
     StemBundleMaps.imported(importer().import(source(uri, isFolder)))
 
-  fun clearStaging() = importer().clearStaging()
+  fun clearStaging() {
+    try {
+      importer().clearStaging()
+    } catch (e: DataFolderUnavailableException) {
+      Log.i(TAG, "Bundle staging not cleared; the data folder is not mounted", e)
+    }
+  }
 
   fun stemFolderNames(): WritableArray =
     Arguments.createArray().apply {

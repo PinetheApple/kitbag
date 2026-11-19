@@ -4,25 +4,16 @@ import java.io.File
 import java.io.IOException
 
 object SongAnalyzer {
-  class Output(val result: NativeSongAnalysis, val waveform: File?)
+  class Output(val result: NativeSongAnalysis, val waveformRelativePath: String?)
 
   // The core writes the sidecar straight to its final name, so it runs in a
   // staging dir and replaces the previous waveform only once analysis succeeds.
-  fun analyze(song: File, waveformDir: File, staging: File): Output {
+  fun analyze(song: File, staging: File, place: (staged: File) -> String?): Output {
     staging.deleteRecursively()
-    if (!staging.mkdirs() || (!waveformDir.isDirectory && !waveformDir.mkdirs())) {
-      throw IOException("Could not prepare the waveform directory")
-    }
+    if (!staging.mkdirs()) throw IOException("Could not prepare the analysis staging directory")
     try {
       val result = nativeAnalyzeSong(song.path, staging.path)
-      val staged = File(nativeWaveformPath(staging.path, song.path))
-      val waveform = File(nativeWaveformPath(waveformDir.path, song.path))
-      if (staged.isFile) {
-        if (!staged.renameTo(waveform)) throw IOException("Could not move the waveform into place")
-      } else {
-        waveform.delete()
-      }
-      return Output(result, waveform.takeIf { it.isFile })
+      return Output(result, place(File(nativeWaveformPath(staging.path, song.path))))
     } finally {
       staging.deleteRecursively()
     }

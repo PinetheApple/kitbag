@@ -1,5 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 
+import { CLICK_RATE } from './click-rate';
 import {
   MIGRATE_V7_TO_V8,
   MIGRATE_V8_TO_V9,
@@ -13,6 +14,7 @@ import {
   MIGRATE_V16_TO_V17,
   MIGRATE_V17_TO_V18,
   MIGRATE_V18_TO_V19,
+  MIGRATE_V19_TO_V20,
   V7_SCHEMA_VERSION,
   V8_SCHEMA_VERSION,
   V9_SCHEMA_VERSION,
@@ -26,6 +28,7 @@ import {
   V17_SCHEMA_VERSION,
   V18_SCHEMA_VERSION,
   V19_SCHEMA_VERSION,
+  V20_SCHEMA_VERSION,
 } from './migrate';
 
 const V7_DDL: readonly string[] = [
@@ -166,6 +169,16 @@ export const V20_STEM_SET_COLUMNS = {
   bar_one_seconds: null,
 };
 
+export const V21_CLICK_COLUMNS = {
+  click_grouping: null,
+  click_rate: CLICK_RATE.single,
+};
+
+export const V21_STEM_SET_COLUMNS = {
+  ...V20_STEM_SET_COLUMNS,
+  ...V21_CLICK_COLUMNS,
+};
+
 export function rows<T>(db: DatabaseSync, sql: string): T[] {
   return db.prepare(sql).all() as T[];
 }
@@ -272,5 +285,12 @@ export function buildV19Fixture(): DatabaseSync {
   const db = buildV18Fixture();
   applyInTransaction(db, MIGRATE_V18_TO_V19);
   db.exec(`PRAGMA user_version = ${String(V19_SCHEMA_VERSION)}`);
+  return db;
+}
+
+export function buildV20Fixture(): DatabaseSync {
+  const db = buildV19Fixture();
+  applyInTransaction(db, MIGRATE_V19_TO_V20);
+  db.exec(`PRAGMA user_version = ${String(V20_SCHEMA_VERSION)}`);
   return db;
 }

@@ -23,7 +23,9 @@ import { useCallback, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { detailTabLabel } from '../logic/detailView.ts';
+import { CLICK_SECTION, type ClickSection } from '../logic/clickView.ts';
 import { hasUnsavedRetime } from '../logic/retimeView.ts';
+import { ClickSheet } from './ClickSheet.tsx';
 import { DetailPane } from './DetailPane.tsx';
 import { ExportCancelledSnackbar, ExportNotice } from './ExportNotice.tsx';
 import { ExportSheet } from './ExportSheet.tsx';
@@ -35,6 +37,7 @@ import { StemAppBar } from './StemAppBar.tsx';
 import { Scrubber } from './Scrubber.tsx';
 import { SongFactChips } from './SongFactChips.tsx';
 import { StemList } from './StemList.tsx';
+import { StemMeterSheet } from './StemMeterSheet.tsx';
 import { WAVEFORM_BARS } from './StemRowView.tsx';
 import { StemTransport } from './StemTransport.tsx';
 import { useMixerFrame, type MixerFrameValues } from './useMixerFrame.ts';
@@ -50,6 +53,7 @@ const MIX = 'mix';
 const DETAILS = 'details';
 type Tab = typeof MIX | typeof DETAILS;
 type RetimeAsk = 'reset' | 'leave';
+type PlayerSheet = 'menu' | 'meter' | 'export';
 
 const useStyles = createThemedStyles((theme) => ({
   screen: { flex: 1, backgroundColor: theme.color.bg },
@@ -209,19 +213,23 @@ function NotReady({
   );
 }
 
-interface BodyProps {
-  readonly bottom: number;
-  readonly onBack: () => void;
-}
-
-function Body({ bottom, onBack }: BodyProps) {
-  const styles = useStyles();
-  const status = useStemPlayer((s) => s.status);
+function useStemFrame(): MixerFrameValues {
   const rate = useStemPlayer((s) => s.engineRate);
   const frames = useStemPlayer((s) => s.durationFrames);
   const loopEnd = useStemPlayer(loopEndFrames);
   const countEnd = useStemPlayer((s) => s.countEndFrame);
-  const frame = useMixerFrame(rate, frames, loopEnd, countEnd);
+  return useMixerFrame(rate, frames, loopEnd, countEnd);
+}
+
+interface BodyProps {
+  readonly bottom: number;
+  readonly frame: MixerFrameValues;
+  readonly onBack: () => void;
+}
+
+function Body({ bottom, frame, onBack }: BodyProps) {
+  const styles = useStyles();
+  const status = useStemPlayer((s) => s.status);
   const retiming = useStemPlayer((s) => s.retime.kind === 'recording');
   const [picked, setPicked] = useState<Tab>(MIX);
   if (status !== 'ready')
@@ -268,6 +276,91 @@ function useRetimeAsk() {
   return { retiming, shown, askReset, askLeave, closeAsk };
 }
 
+interface ClickSheetOpen {
+  readonly kind: 'click';
+  readonly section: ClickSection;
+}
+
+type OpenSheet = PlayerSheet | ClickSheetOpen;
+
+const clickSectionOf = (sheet: OpenSheet | null) =>
+  typeof sheet === 'object' && sheet !== null ? sheet.section : null;
+
+function usePlayerSheet(retiming: boolean) {
+  const [sheet, setSheet] = useState<OpenSheet | null>(null);
+  if (sheet !== null && retiming) setSheet(null);
+  const openMenu = useCallback(() => {
+    setSheet('menu');
+  }, []);
+  const openMeter = useCallback(() => {
+    setSheet('meter');
+  }, []);
+  const openExport = useCallback(() => {
+    setSheet('export');
+  }, []);
+  const openClick = useCallback((section: ClickSection) => {
+    setSheet({ kind: 'click', section });
+  }, []);
+  const closeSheet = useCallback(() => {
+    setSheet(null);
+  }, []);
+  return { sheet, openMenu, openMeter, openExport, openClick, closeSheet };
+}
+
+interface PlayerSheetsProps {
+  readonly sheet: OpenSheet | null;
+  readonly bottomInset: number;
+  readonly playhead: MixerFrameValues['songSec'];
+  readonly onMeter: () => void;
+  readonly onExport: () => void;
+  readonly onClick: (section: ClickSection) => void;
+  readonly onClose: () => void;
+}
+
+function OpenClickSheet({
+  sheet,
+  bottomInset,
+  onClose,
+}: Pick<PlayerSheetsProps, 'sheet' | 'bottomInset' | 'onClose'>) {
+  const section = clickSectionOf(sheet);
+  return (
+    <ClickSheet
+      visible={section !== null}
+      section={section ?? CLICK_SECTION.grouping}
+      bottomInset={bottomInset}
+      onClose={onClose}
+    />
+  );
+}
+
+function PlayerSheets(props: PlayerSheetsProps) {
+  const { sheet, bottomInset, onClose } = props;
+  return (
+    <>
+      <PlayerMenu
+        visible={sheet === 'menu'}
+        bottomInset={bottomInset}
+        onClose={onClose}
+        onMeter={props.onMeter}
+        onExport={props.onExport}
+        onClick={props.onClick}
+      />
+      <StemMeterSheet
+        visible={sheet === 'meter'}
+        bottomInset={bottomInset}
+        playhead={props.playhead}
+        onClose={onClose}
+      />
+      <OpenClickSheet {...props} />
+      <ExportSheet
+        visible={sheet === 'export'}
+        bottomInset={bottomInset}
+        onClose={onClose}
+      />
+    </>
+  );
+}
+
 export function StemPlayerScreen({
   setId,
   focused,
@@ -278,23 +371,9 @@ export function StemPlayerScreen({
   const ready = useStemPlayer((s) => s.status === 'ready');
   const acquireSong = useStemPlayer((s) => s.acquireSong);
   const { retiming, shown, askReset, askLeave, closeAsk } = useRetimeAsk();
-  const [menu, setMenu] = useState(false);
-  const [exportSheet, setExportSheet] = useState(false);
-  if (menu && retiming) setMenu(false);
-  if (exportSheet && retiming) setExportSheet(false);
-  const openMenu = useCallback(() => {
-    setMenu(true);
-  }, []);
-  const closeMenu = useCallback(() => {
-    setMenu(false);
-  }, []);
-  const openExport = useCallback(() => {
-    setMenu(false);
-    setExportSheet(true);
-  }, []);
-  const closeExport = useCallback(() => {
-    setExportSheet(false);
-  }, []);
+  const { sheet, openMenu, openMeter, openExport, openClick, closeSheet } =
+    usePlayerSheet(retiming);
+  const frame = useStemFrame();
   const acquire = useCallback(
     () => acquireSong(setId, WAVEFORM_BARS),
     [acquireSong, setId],
@@ -314,18 +393,16 @@ export function StemPlayerScreen({
         ) : (
           <StemAppBar onBack={onBack} onMenu={ready ? openMenu : null} />
         )}
-        <Body bottom={insets.bottom} onBack={onBack} />
+        <Body bottom={insets.bottom} frame={frame} onBack={onBack} />
       </View>
-      <PlayerMenu
-        visible={menu}
+      <PlayerSheets
+        sheet={sheet}
         bottomInset={insets.bottom}
-        onClose={closeMenu}
+        playhead={frame.songSec}
+        onMeter={openMeter}
         onExport={openExport}
-      />
-      <ExportSheet
-        visible={exportSheet}
-        bottomInset={insets.bottom}
-        onClose={closeExport}
+        onClick={openClick}
+        onClose={closeSheet}
       />
       {shown === 'reset' ? <ResetDialog onClose={closeAsk} /> : null}
       {shown === 'leave' ? <LeaveDialog onClose={closeAsk} /> : null}

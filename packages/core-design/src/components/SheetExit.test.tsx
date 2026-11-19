@@ -1,6 +1,12 @@
 // react-test-renderer is deprecated, but it alone exposes host props with no DOM.
 /* eslint-disable @typescript-eslint/no-deprecated */
-import { act, createElement as h, type ReactElement } from 'react';
+import {
+  act,
+  createElement as h,
+  type ReactElement,
+  type RefObject,
+} from 'react';
+import type { HostInstance } from 'react-native';
 import {
   create,
   type ReactTestInstance,
@@ -148,9 +154,10 @@ interface Open {
   readonly actions: boolean;
   readonly remove: boolean;
   readonly detail?: string | null;
+  readonly focus?: RefObject<HostInstance | null>;
 }
 
-function Pair({ actions, remove, detail = SONG }: Open) {
+function Pair({ actions, remove, detail = SONG, focus }: Open) {
   return (
     <SheetHost topInset={0}>
       <Sheet
@@ -158,6 +165,7 @@ function Pair({ actions, remove, detail = SONG }: Open) {
         title={ACTIONS}
         dismissLabel="Close actions"
         onDismiss={noop}
+        {...(focus === undefined ? {} : { initialFocusRef: focus })}
       >
         {detail === null ? null : h('Detail', { name: detail })}
       </Sheet>
@@ -336,4 +344,12 @@ it('keeps a sheet shown again when its exit reports finished late', () => {
     settle(true);
   });
   expect(titles(tree)).toEqual([ACTIONS]);
+});
+
+it('moves reader focus back to the initial focus target of a sheet shown again mid-exit', () => {
+  const focus = { current: { start: true } as unknown as HostInstance };
+  const tree = mount({ actions: true, remove: false, focus });
+  rerender(tree, { actions: false, remove: false, focus });
+  rerender(tree, { actions: true, remove: false, focus });
+  expect(focusReaderOn).toHaveBeenCalledExactlyOnceWith(focus.current);
 });

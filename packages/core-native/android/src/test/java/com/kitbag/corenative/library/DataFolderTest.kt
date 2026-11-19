@@ -97,15 +97,15 @@ class DataFolderTest {
   }
 
   @Test
-  fun `a malformed state file means internal and is logged`() {
+  fun `a malformed state file means internal and is logged once`() {
     val stateFile = File(filesDir, DataFolder.STATE_FILE_NAME)
-    for (contents in listOf("{not json", "", "[]", "\"card\"", "{\"kind\":\"card\"}")) {
-      warnings.clear()
+    for (contents in listOf("{not json", "", "[]", "\"card\"", "{\"kind\":\"card\"}", "{\"kind\":\"tape\"}")) {
       stateFile.writeText(contents)
       assertEquals(contents, DataFolderLocation.Internal, folder.location())
       assertEquals(contents, internalRoot(), folder.root())
-      assertTrue(contents, warnings.isNotEmpty())
+      assertEquals(contents, RootState.Mounted(internalRoot(), known = false), folder.rootState())
     }
+    assertEquals(1, warnings.size)
   }
 
   @Test
@@ -114,7 +114,37 @@ class DataFolderTest {
     val stateFile = File(filesDir, DataFolder.STATE_FILE_NAME).apply { setReadable(false) }
     assumeFalse("running as root, the file stays readable", stateFile.canRead())
     assertEquals(DataFolderLocation.Internal, folder.location())
+    assertEquals(RootState.Mounted(internalRoot(), known = false), folder.rootState())
     assertTrue(warnings.isNotEmpty())
+  }
+
+  @Test
+  fun `a malformed state file never makes a card song missing`() {
+    File(filesDir, DataFolder.STATE_FILE_NAME).writeText("{not json")
+    assertEquals(LibraryFile.Unknown, folder.resolve(SONG))
+
+    val availability = LibraryUsage.availability(folder.rootState(), sequenceOf(SONG))
+    assertEquals(LibraryAvailability(emptyList(), listOf(SONG), rootAvailable = false), availability)
+  }
+
+  @Test
+  fun `missing splits absent files from files on an unmounted card`() {
+    createUnder(internalRoot(), SONG)
+    val internal = LibraryUsage.availability(folder.rootState(), sequenceOf(SONG, RESTORED_SONG))
+    assertEquals(LibraryAvailability(listOf(RESTORED_SONG), emptyList(), rootAvailable = true), internal)
+
+    folder.select(DataFolderLocation.Card(CARD_UUID))
+    volumes.volumes = listOf(card(mounted = false))
+    val away = LibraryUsage.availability(folder.rootState(), sequenceOf(SONG, RESTORED_SONG))
+    assertEquals(LibraryAvailability(emptyList(), listOf(SONG, RESTORED_SONG), rootAvailable = false), away)
+  }
+
+  @Test
+  fun `a mounted card reports only its absent files missing`() {
+    folder.select(DataFolderLocation.Card(CARD_UUID))
+    createUnder(cardRoot(), SONG)
+    val availability = LibraryUsage.availability(folder.rootState(), sequenceOf(SONG, RESTORED_SONG))
+    assertEquals(LibraryAvailability(listOf(RESTORED_SONG), emptyList(), rootAvailable = true), availability)
   }
 
   @Test

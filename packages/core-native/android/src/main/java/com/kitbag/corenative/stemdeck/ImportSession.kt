@@ -55,6 +55,14 @@ class ImportSession private constructor(private val context: Context) {
 
   fun publishNow() = publish(queue.snapshot(), structural = true)
 
+  fun clearImport(): Boolean {
+    if (!runner.clear()) return false
+    val saved = save(queue.snapshot())
+    observers.forEach { it.publish(queue.snapshot(), structural = true) }
+    ImportNotifications(context).clear()
+    return saved
+  }
+
   fun observe(sink: SnapshotSink): () -> Unit {
     observers.add(sink)
     return { observers.remove(sink) }
@@ -73,13 +81,14 @@ class ImportSession private constructor(private val context: Context) {
     save(queue.snapshot())
   }
 
-  private fun save(snapshot: ImportSnapshot) {
+  private fun save(snapshot: ImportSnapshot): Boolean =
     try {
       journal.save(snapshot)
+      true
     } catch (e: IOException) {
       Log.w(STEMDECK_LOG_TAG, "Import queue not saved", e)
+      false
     }
-  }
 
   private class VolumeSpace(private val download: File, private val library: () -> File) : FreeSpace {
     override fun downloadBytes() = StatFs(existing(download).path).availableBytes

@@ -81,6 +81,8 @@ export const iconGlyphs = {
   certificateChanged: 'shield-alert-outline',
   exportMix: 'file-export-outline',
   share: 'share-variant',
+  clickGrouping: 'view-week-outline',
+  clickRate: 'music-note-eighth',
 } as const satisfies Record<string, VectorGlyph>;
 
 export type IconName = keyof typeof iconGlyphs;

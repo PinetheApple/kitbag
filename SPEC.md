@@ -1197,6 +1197,13 @@ phone. That page defines the format; this spec does not copy it.
   and its target are stored with each item in the import journal, so Retry
   after a restart replaces as chosen; a journal written before this loads
   its items as plain adds (#413).
+- **Unfinished imports** show on Stem songs as a card that opens the import
+  screen. While an import runs, the card shows its progress. Once it stops or
+  ends with failed songs, the card names how many songs are left, unless the
+  user stopped it. A relaunch reads an import that was running as
+  interrupted. On the import screen Retry runs the songs left again and Clear
+  dismisses the import; Clear is not offered, and native refuses it, while a
+  song is still being added (#451).
 - **A replace keeps** the user's song and stem names, speed and meter. Bar
   one and the lyric retiming are times in the old audio, so only a re-import
   of the same job keeps them (the retiming only while the lyrics are
@@ -1639,6 +1646,7 @@ versions 1–6 with `UnsupportedSchemaVersion` and leaves the file untouched.
 | `SongPresets`: + `poly_against` INTEGER (0 = the bar, 1..16), default 0 | §5.2 — poly N against M; a v4 backup without `polyAgainst` reads as the bar; schema v18 |
 | `route_latency`: + `name` TEXT, + `kind` TEXT (the route's display name and `OutputRoute` kind when calibrated) | §12.5 — the Output & latency sheet lists calibrated routes that are not connected; schema v19 |
 | `Songs`: + `analysis_version` INTEGER (NULL = no version reported, counted as outdated), + `meter_beats_per_bar` INTEGER (3 or 4; NULL = the detected meter), + `bar_one_seconds` REAL (NULL = the detected bar one); `StemSets`: + `meter_beats_per_bar`, + `bar_one_seconds`, same meanings | §6.2 — older grids re-analyse in the background; the meter override survives re-analysis and a stem re-import, bar one only a re-import of the same StemDeck job; schema v20 |
+| `StemSets`: + `click_grouping` TEXT (JSON int array; NULL = no grouping), + `click_rate` TEXT (`single` \| `double` \| `half`, default `single`); kept on a re-import of the same StemDeck song | #383 — click grouping and rate per stem song; schema v21 |
 | **All paths relative** to the data folder | §2.3 (iOS) and **D11** (the folder can move between internal storage and an SD card) |
 | `PracticeSessions`: write `setlistId`, `songsPlayed` | §5.7 — columns exist, producer never fills them |
 | BPM cache table | §8.5 |

@@ -28,6 +28,7 @@ const native: StemDeckNative = {
     getKitbagStemDeck().cancelImport();
   },
   retryImport: () => getKitbagStemDeck().retryImport(),
+  clearImport: () => getKitbagStemDeck().clearImport(),
   importSnapshot: () => getKitbagStemDeck().importSnapshot(),
   settleDownload: (jobId, outcome) => {
     getKitbagStemDeck().settleDownload(jobId, outcome);

@@ -1,8 +1,8 @@
 import { COUNT_IN_PREFERENCE_KEYS, type Preferences } from '@kitbag/core-db';
 import {
+  isBuiltInSoundId,
   isCountInBars,
   isCountInScope,
-  isSoundId,
   type CountInPersistence,
   type CountInSettings,
 } from '@kitbag/core-state';
@@ -44,7 +44,7 @@ export function countInPersistence(
         ...(isCountInScope(scope) ? { scope } : {}),
         ...(bars !== undefined && isCountInBars(bars) ? { bars } : {}),
         ...(distinct === undefined ? {} : { distinct }),
-        ...(sound !== undefined && isSoundId(sound) ? { sound } : {}),
+        ...(sound !== undefined && isBuiltInSoundId(sound) ? { sound } : {}),
       };
     },
     save: (changed) => {

@@ -53,6 +53,8 @@ export interface NativeSources {
   readonly transportPlanHeader: string;
   /** native/audio_core/include/kitbag_mixdown_api.h — kb_mixdown_state. */
   readonly mixdownHeader: string;
+  /** native/audio_core/include/kitbag_click_sound_api.h — the custom sound slots. */
+  readonly clickSoundHeader: string;
 }
 
 export interface NativeConstants {
@@ -88,6 +90,8 @@ export interface NativeConstants {
   readonly mixdownState: readonly EnumMember[];
   readonly mixdownChannels: number;
   readonly mixdownBitsPerSample: number;
+  readonly customSoundSlots: number;
+  readonly maxCustomSoundSeconds: number;
   readonly bpmReferenceDenominator: number;
   readonly denominators: readonly number[];
   readonly soundNames: readonly string[];

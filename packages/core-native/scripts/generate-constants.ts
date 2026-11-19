@@ -32,6 +32,7 @@ const sources: NativeSources = {
   metronomeTypesHeader: read('src', 'metronome', 'metronome_types.h'),
   transportPlanHeader: read('src', 'mixer', 'transport_plan.h'),
   mixdownHeader: read('include', 'kitbag_mixdown_api.h'),
+  clickSoundHeader: read('include', 'kitbag_click_sound_api.h'),
 };
 
 const rendered = renderConstants(collectConstants(sources));

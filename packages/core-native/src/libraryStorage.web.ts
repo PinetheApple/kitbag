@@ -11,5 +11,8 @@ const WEB_STORAGE_REPORT: StorageReport = {
 export const storageReport: typeof Native.storageReport = () =>
   Promise.resolve(WEB_STORAGE_REPORT);
 
-export const missingFiles: typeof Native.missingFiles = () =>
-  Promise.resolve([]);
+export const fileAvailability: typeof Native.fileAvailability = () =>
+  Promise.resolve({ missing: [], unavailable: [], rootAvailable: true });
+
+export const watchDataFolder: typeof Native.watchDataFolder = () => () =>
+  undefined;

@@ -15,6 +15,7 @@ export type NativeFailure =
   | 'httpError'
   | 'tooLarge'
   | 'noSpace'
+  | 'libraryUnavailable'
   | 'dropped'
   | 'cancelled'
   | 'interrupted'
@@ -47,6 +48,7 @@ function failureCodes(
     [codes.failureHttpError, 'httpError'],
     [codes.failureTooLarge, 'tooLarge'],
     [codes.failureNoSpace, 'noSpace'],
+    [codes.failureLibraryUnavailable, 'libraryUnavailable'],
     [codes.failureDropped, 'dropped'],
     [codes.failureCancelled, 'cancelled'],
     [codes.failureInterrupted, 'interrupted'],

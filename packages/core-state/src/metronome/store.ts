@@ -30,6 +30,7 @@ import {
   clamp,
   roundToEngineBpm,
   initialAccents,
+  isBuiltInSoundId,
   isCountInBars,
   isSoundId,
   normalizeRamp,
@@ -241,7 +242,7 @@ function soundActions(
       const countIn: CountInConfig = {
         bars: isCountInBars(config.bars) ? config.bars : prev.bars,
         distinct: config.distinct,
-        sound: isSoundId(config.sound) ? config.sound : prev.sound,
+        sound: isBuiltInSoundId(config.sound) ? config.sound : prev.sound,
       };
       set({ countIn });
       commands.setCountIn(countIn.bars, countIn.distinct, countIn.sound);

@@ -19,12 +19,15 @@ int framesCalls = 0;
 int32_t framesTrack = 0;
 int keyReads = 0;
 int32_t keyTrack = 0;
+int soundCalls = 0;
+int32_t soundSlot = -1;
 
 constexpr double kNaN = std::numeric_limits<double>::quiet_NaN();
 constexpr double kInfinity = std::numeric_limits<double>::infinity();
 constexpr double kBeyondInt32 = 1e10;
 constexpr int64_t kLongTrackFrames = (int64_t{1} << 40) + 1;
 constexpr int32_t kTrackKey = -5;
+constexpr const char* kSoundPath = "/files/click_sounds/a.wav";
 constexpr double kEndFrame = 152965.0;
 constexpr double kBeatFrames = 21209.9;
 constexpr int32_t kBeatsPerBar = 3;
@@ -88,6 +91,29 @@ void expectKeyRead(double track, int32_t wantTrack) {
   const int32_t key = kitbag::commandMixerTrackPitch(track);
   if (keyReads != 1 || keyTrack != wantTrack) fail("key read wrong track", track, key);
   if (key != kTrackKey) fail("key not passed through", track, key);
+}
+
+void expectSlotRefused(double slot) {
+  soundCalls = 0;
+  if (kitbag::commandLoadCustomSound(slot, kSoundPath) != KB_ERROR_INVALID_ARGUMENT) {
+    fail("custom sound load not refused", slot, 0);
+  }
+  kitbag::commandClearCustomSound(slot);
+  if (kitbag::commandCustomSoundLoaded(slot)) fail("custom sound reads loaded", slot, 0);
+  if (soundCalls != 0) fail("custom sound slot reached the engine", slot, 0);
+}
+
+void expectSlotSent(double slot, int32_t wantSlot) {
+  soundCalls = 0;
+  if (kitbag::commandLoadCustomSound(slot, kSoundPath) != KB_OK) {
+    fail("custom sound load not accepted", slot, 0);
+  }
+  kitbag::commandClearCustomSound(slot);
+  if (!kitbag::commandCustomSoundLoaded(slot)) fail("custom sound reads empty", slot, 0);
+  constexpr int kLoadClearPoll = 3;
+  if (soundCalls != kLoadClearPoll || soundSlot != wantSlot) {
+    fail("custom sound sent wrong slot", slot, soundSlot);
+  }
 }
 
 void expectSongCountIn(double endFrame, int32_t want, const std::string& wantCalls,
@@ -158,6 +184,23 @@ extern "C" int64_t kb_mixer_track_frames(const kb_engine*, int32_t track) {
   return kLongTrackFrames;
 }
 
+extern "C" kb_result kb_metronome_load_custom_sound(kb_engine*, int32_t slot, const char*) {
+  ++soundCalls;
+  soundSlot = slot;
+  return KB_OK;
+}
+
+extern "C" void kb_metronome_clear_custom_sound(kb_engine*, int32_t slot) {
+  ++soundCalls;
+  soundSlot = slot;
+}
+
+extern "C" int32_t kb_metronome_custom_sound_loaded(const kb_engine*, int32_t slot) {
+  ++soundCalls;
+  soundSlot = slot;
+  return 1;
+}
+
 extern "C" kb_result kb_metronome_count_in_at(kb_engine*, uint64_t end, double, int32_t,
                                               int32_t startClick) {
   songCalls += "count ";
@@ -205,6 +248,12 @@ int main() {
   expectKeyRefused(1.5);
   expectKeyRefused(kInfinity);
   expectKeyRead(2, 2);
+
+  expectSlotRefused(kNaN);
+  expectSlotRefused(0.5);
+  expectSlotRefused(kInfinity);
+  expectSlotRefused(kBeyondInt32);
+  expectSlotSent(1, 1);
 
   expectSongCountInComposed();
   expectSongTransport(kitbag::commandSongPause, "song pause", "click-pause pause ");

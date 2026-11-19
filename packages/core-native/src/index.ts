@@ -18,6 +18,7 @@ export type {
   LibraryAudioUsage,
   ImportedStem,
   ImportedStemBundle,
+  LibraryAvailability,
   LibraryConstants,
   PickedBackup,
   PickedDocument,
@@ -42,7 +43,11 @@ export type {
   StemDeckServer,
   StemDeckText,
 } from './NativeKitbagStemDeck';
-export { missingFiles, storageReport } from './libraryStorage';
+export {
+  fileAvailability,
+  storageReport,
+  watchDataFolder,
+} from './libraryStorage';
 export { backupFilesAvailable, pickBackup, shareBackup } from './backupFiles';
 export {
   mixdownCancel,
@@ -52,6 +57,19 @@ export {
   shareExport,
   type MixdownStart,
 } from './mixdown';
+export {
+  clearCustomSound,
+  customSoundLoaded,
+  loadCustomSound,
+  prepareClickSound,
+  type LoadCustomSoundResult,
+  type PrepareClickSoundResult,
+} from './clickSound';
+export {
+  customSoundId,
+  isCustomSoundId,
+  isCustomSoundSlot,
+} from './customSoundIds.ts';
 
 // --- #30 (P2-A3) JSI HostObject: polled realtime reads (§13.2, §13.3) --------
 export {

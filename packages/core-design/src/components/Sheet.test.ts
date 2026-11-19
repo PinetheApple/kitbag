@@ -1,4 +1,5 @@
 import { createElement, type ReactElement, type ReactNode } from 'react';
+import type { HostInstance } from 'react-native';
 import { expect, it, vi } from 'vitest';
 
 const DRAG = { drag: true };
@@ -200,6 +201,25 @@ it('moves screen reader focus to its title once it has slid in', () => {
   settleEntering(true);
   expect(focusReaderOn).toHaveBeenCalledOnce();
   expect(focusReaderOn).toHaveBeenCalledWith(node);
+});
+
+it('moves screen reader focus to the node it was asked to start on', () => {
+  focusReaderOn.mockClear();
+  portal.show.mockClear();
+  const start = { node: 'rate heading' };
+  Sheet({
+    visible: true,
+    title: 'T',
+    dismissLabel: 'Close T',
+    onDismiss: vi.fn(),
+    initialFocusRef: { current: start as unknown as HostInstance },
+    children: null,
+  });
+  const [title] = headers(portal.show.mock.calls[0]?.[1]);
+  (title?.props.ref as { current: unknown }).current = { node: 'title' };
+  settleEntering(true);
+  expect(focusReaderOn).toHaveBeenCalledOnce();
+  expect(focusReaderOn.mock.calls[0]?.[0]).toBe(start);
 });
 
 function readerOrder(node: unknown): ReactElement<Props>[] {

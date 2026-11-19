@@ -84,19 +84,14 @@ const useStyles = createThemedStyles((theme) => ({
   },
 }));
 
-function LyricsHead({
-  synced,
-  songSec,
-}: {
-  readonly synced: boolean;
-  readonly songSec: SharedValue<number>;
-}) {
+function LyricsHead({ synced }: { readonly synced: boolean }) {
   const styles = useStyles();
   const lines = useStemPlayer((s) => s.lyrics.lines);
   const beginRetime = useStemPlayer((s) => s.beginRetime);
+  const playheadSeconds = useStemPlayer((s) => s.playheadSeconds);
   const open = useCallback(() => {
-    beginRetime(lyricLineAt(lines, songSec.value));
-  }, [beginRetime, lines, songSec]);
+    beginRetime(lyricLineAt(lines, playheadSeconds()));
+  }, [beginRetime, lines, playheadSeconds]);
   return (
     <View style={styles.head}>
       <Text style={styles.label}>Lyrics</Text>
@@ -156,7 +151,7 @@ export function DetailPane({
     <>
       {hasSections ? <SectionCards songSec={songSec} /> : null}
       {pane === 'stage' || pane === 'plain' ? (
-        <LyricsHead synced={pane === 'stage'} songSec={songSec} />
+        <LyricsHead synced={pane === 'stage'} />
       ) : null}
       {pane === 'stage' ? <StageLyrics songSec={songSec} /> : null}
       {pane === 'plain' ? <PlainLyrics /> : null}

@@ -34,10 +34,21 @@ export type { LyricLineTimes } from './stem-lyrics';
 export type { StemSetIdentity } from './stem-set-match';
 export { STEM_SET_SOURCE, type StemSetSource } from './stem-set-source';
 export { ANALYSIS_STATUS, type AnalysisStatus } from './analysis-status';
+export { CLICK_RATE, CLICK_RATES, type ClickRate } from './click-rate';
+export {
+  groupBeats,
+  MAX_CLICK_GROUPS,
+  NO_CLICK,
+  stemSetClickViolation,
+  type StemSetClick,
+  type StemSetClickPatch,
+  type StemSetClickViolation,
+} from './click-settings';
 export {
   GRID_METER,
   GRID_METERS,
   type GridMeter,
+  isGridMeter,
   type MeterOverride,
   type MeterOverridePatch,
   meterOverrideOf,

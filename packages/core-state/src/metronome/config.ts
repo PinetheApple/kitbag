@@ -8,6 +8,7 @@ import {
   KB_RAMP_SECONDS_BOUNDS,
   KB_RAMP_UNIT,
   KB_SOUND_NAMES,
+  isCustomSoundId,
   type KbCountInBars,
 } from '@kitbag/core-native';
 
@@ -44,8 +45,12 @@ export function roundToEngineBpm(bpm: number): number {
   return clamp(Math.round(bpm), KB_BPM_BOUNDS.min, KB_BPM_BOUNDS.max);
 }
 
-export function isSoundId(id: number): boolean {
+export function isBuiltInSoundId(id: number): boolean {
   return Number.isInteger(id) && id >= 0 && id < KB_SOUND_NAMES.length;
+}
+
+export function isSoundId(id: number): boolean {
+  return isBuiltInSoundId(id) || isCustomSoundId(id);
 }
 
 export function isCountInBars(bars: number): bars is KbCountInBars {

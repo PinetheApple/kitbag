@@ -14,6 +14,7 @@ export const space = {
   screenInset: 16,
   cardPadding: 14,
   ledGroupGap: 18,
+  ledHalfBeatGroupGap: 14,
   transportGap: 22,
   pegLabelGap: 5,
   headstockTop: 8,
