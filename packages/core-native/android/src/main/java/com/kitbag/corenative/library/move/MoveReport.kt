@@ -31,6 +31,8 @@ object MoveReport {
       is MoveOutcome.Refused -> FinishedReport(REFUSED, LibraryErrors.moveCode(outcome.refusal), null)
     }
 
+  fun codeFor(error: Throwable): String = LibraryErrors.codeFor(error, LibraryErrors.moveCode(MoveFailure.IO))
+
   fun errorOf(status: MoveStatus): String? = status.failure?.let(LibraryErrors::moveCode)
 
   fun volumeUuid(location: DataFolderLocation): String? = (location as? DataFolderLocation.Card)?.volumeUuid

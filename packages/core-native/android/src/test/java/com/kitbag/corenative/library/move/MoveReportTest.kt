@@ -1,6 +1,8 @@
 package com.kitbag.corenative.library.move
 
+import com.kitbag.corenative.library.DataFolderUnavailableException
 import com.kitbag.corenative.library.LibraryErrors
+import java.io.IOException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -20,7 +22,15 @@ class MoveReportTest {
     val exported = LibraryErrors.MOVE_CONSTANTS.getValue("moveErrors") as Map<String, String>
     assertEquals(codes.toSet(), exported.values.toSet())
     assertEquals("E_MOVE_TARGET_OCCUPIED", exported["targetOccupied"])
-    assertEquals("E_MOVE_USE_INTERNAL_REFUSED", exported["useInternalRefused"])
+    assertEquals("E_MOVE_CARD_MOUNTED", exported["cardMounted"])
+    assertEquals("E_MOVE_IMPORT_LOCK_HELD", exported["importLockHeld"])
+  }
+
+  @Test
+  fun `the bridge catch-all keeps an unmounted folder's code and calls the rest i-o`() {
+    val unavailable = IOException(DataFolderUnavailableException(PATH))
+    assertEquals(LibraryErrors.DATA_FOLDER_UNAVAILABLE, MoveReport.codeFor(unavailable))
+    assertEquals(LibraryErrors.moveCode(MoveFailure.IO), MoveReport.codeFor(IllegalStateException("broken")))
   }
 
   @Test

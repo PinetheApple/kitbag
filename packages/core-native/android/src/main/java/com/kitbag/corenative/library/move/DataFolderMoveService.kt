@@ -46,6 +46,7 @@ class DataFolderMoveService : Service() {
     when (intent?.action) {
       ACTION_START -> enqueue { moves.start(targetOf(intent)) }
       ACTION_RESUME -> enqueue { moves.resume() }
+      ACTION_FINISH -> enqueue(userAsked = false, job = moves::finishCleanup)
       ACTION_CANCEL -> cancel()
       else -> if (queued == 0) stopSelf()
     }
@@ -60,9 +61,10 @@ class DataFolderMoveService : Service() {
     if (moves.running()) moves.cancel() else if (queued == 0) stopSelf()
   }
 
-  private fun enqueue(job: () -> MoveOutcome) {
+  // Clean-up nobody asked for retries at the next launch, so it fails quietly.
+  private fun enqueue(userAsked: Boolean = true, job: () -> MoveOutcome?) {
     if (!foreground(notifications.starting())) {
-      moves.reportRefused(MoveRefusal.FOREGROUND_REFUSED)
+      if (userAsked) moves.reportRefused(MoveRefusal.FOREGROUND_REFUSED)
       if (queued == 0) stopSelf()
       return
     }
@@ -122,6 +124,7 @@ class DataFolderMoveService : Service() {
   companion object {
     const val ACTION_START = "com.kitbag.corenative.datafolder.START"
     const val ACTION_RESUME = "com.kitbag.corenative.datafolder.RESUME"
+    const val ACTION_FINISH = "com.kitbag.corenative.datafolder.FINISH"
     const val ACTION_CANCEL = "com.kitbag.corenative.datafolder.CANCEL"
     private const val EXTRA_VOLUME_UUID = "volumeUuid"
     private const val WORKER_NAME = "kitbag-data-folder-move"
@@ -136,9 +139,12 @@ class DataFolderMoveService : Service() {
       ContextCompat.startForegroundService(context, intent)
     }
 
-    fun resume(context: Context) {
-      val intent = Intent(context, DataFolderMoveService::class.java).setAction(ACTION_RESUME)
-      ContextCompat.startForegroundService(context, intent)
+    fun resume(context: Context) = launch(context, ACTION_RESUME)
+
+    fun finishCleanup(context: Context) = launch(context, ACTION_FINISH)
+
+    private fun launch(context: Context, action: String) {
+      ContextCompat.startForegroundService(context, Intent(context, DataFolderMoveService::class.java).setAction(action))
     }
 
     private fun targetOf(intent: Intent): DataFolderLocation =

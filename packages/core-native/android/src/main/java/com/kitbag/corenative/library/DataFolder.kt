@@ -38,13 +38,11 @@ sealed interface RootState {
     override fun resolve(relativePath: String): LibraryFile {
       val file = LibraryPaths.resolve(root, relativePath)
       if (file.exists()) return LibraryFile.Present(file)
-      val awayFile = away.firstOrNull { relativePath in it.paths }?.let { awayFile(it, relativePath) }
-      return awayFile ?: if (known) LibraryFile.Missing else LibraryFile.Unknown
-    }
-
-    private fun awayFile(away: AwayFiles, relativePath: String): LibraryFile? {
-      val cardRoot = away.mountedRoot ?: return LibraryFile.Unavailable(away.volumeUuid)
-      return LibraryPaths.resolve(cardRoot, relativePath).takeIf { it.exists() }?.let(LibraryFile::Present)
+      val holders = away.filter { relativePath in it.paths }
+      holders.mapNotNull { it.mountedRoot }.map { LibraryPaths.resolve(it, relativePath) }
+        .firstOrNull { it.exists() }?.let { return LibraryFile.Present(it) }
+      holders.firstOrNull { it.mountedRoot == null }?.let { return LibraryFile.Unavailable(it.volumeUuid) }
+      return if (known) LibraryFile.Missing else LibraryFile.Unknown
     }
   }
 
@@ -112,6 +110,11 @@ class DataFolder(
     relativePaths.forEach(LibraryPaths::requireRelative)
     awayManifest.record(volumeUuid, relativePaths)
   }
+
+  fun awayElsewhere(volumeUuid: String): Set<String>? =
+    awayManifest.load()?.filterKeys { it != volumeUuid }?.values?.flatten()?.toSet()
+
+  fun forgetAway(volumeUuid: String) = awayManifest.remove(volumeUuid)
 
   fun root(): File =
     when (val state = rootStateAt(location())) {

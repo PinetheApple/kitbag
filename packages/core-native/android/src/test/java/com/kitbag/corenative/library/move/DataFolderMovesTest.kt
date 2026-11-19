@@ -113,8 +113,20 @@ class DataFolderMovesTest {
   @Test
   fun `use internal storage inside an import refuses instead of deadlocking`() {
     fx.folder.importing {
-      assertThrows(IllegalStateException::class.java) { fx.moves().useInternalStorage(listOf(SONG)) }
+      assertEquals(MoveRefusal.IMPORT_LOCK_HELD, fx.moves().useInternalStorage(listOf(SONG)))
     }
+  }
+
+  @Test
+  fun `launch recovery and a release both finishing clean-up publish no refusal`() {
+    val events = mutableListOf<MoveEvent>()
+    assertEquals(MoveOutcome.AwaitingRelease, fx.moves().start(card))
+    val moves = fx.moves()
+    moves.watch { events.add(it) }
+    moves.releaseOldCopies()
+    assertEquals(MoveOutcome.Done, moves.finishCleanup())
+    assertNull(moves.finishCleanup())
+    assertEquals(listOf<MoveEvent>(MoveEvent.Finished(MoveOutcome.Done)), events.filterIsInstance<MoveEvent.Finished>())
   }
 
   private companion object {

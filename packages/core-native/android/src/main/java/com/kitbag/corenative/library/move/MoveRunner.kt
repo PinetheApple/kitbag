@@ -24,6 +24,7 @@ enum class MoveFailure {
   NO_SPACE,
   TARGET_NOT_WRITABLE,
   HASH_MISMATCH,
+  TARGET_LEFTOVERS,
   IO,
 }
 
@@ -81,6 +82,9 @@ class MoveRunner(
     val source = folder.location()
     require(source != target) { "The data folder is already there" }
     finishLeftovers()
+    if (target is DataFolderLocation.Card && leftovers.load()?.containsKey(target.volumeUuid) != false) {
+      return MoveOutcome.Failed(MoveFailure.TARGET_LEFTOVERS)
+    }
     val sourceState = folder.rootState()
     if (sourceState !is RootState.Mounted || !sourceState.known) {
       return MoveOutcome.Failed(MoveFailure.SOURCE_UNAVAILABLE)
@@ -110,15 +114,17 @@ class MoveRunner(
       discard(state)
     }
 
-  fun useInternalStorage(awayPaths: Collection<String>): Boolean {
-    if (journal.load() != null) return false
-    val card = folder.location() as? DataFolderLocation.Card ?: return false
-    if (folder.rootStateAt(card) !is RootState.Unmounted) return false
+  fun useInternalStorage(awayPaths: Collection<String>): MoveRefusal? {
+    if (journal.load() != null) return MoveRefusal.IN_PROGRESS
+    val card = folder.location() as? DataFolderLocation.Card ?: return MoveRefusal.NOT_ON_CARD
+    if (folder.rootStateAt(card) !is RootState.Unmounted) return MoveRefusal.CARD_MOUNTED
     folder.switching {
-      folder.leaveAway(card.volumeUuid, awayPaths)
+      val elsewhere = folder.awayElsewhere(card.volumeUuid) ?: throw IOException("Unreadable away list")
+      val onCard = awayPaths.filter { it !in elsewhere && !LibraryPaths.resolve(folder.internalRoot, it).exists() }
+      folder.leaveAway(card.volumeUuid, onCard)
       folder.select(DataFolderLocation.Internal)
     }
-    return true
+    return null
   }
 
   private fun begin(state: MoveState): MoveState {
@@ -273,6 +279,8 @@ class MoveRunner(
     synchronized(cancelOrSwitchLock) {
       if (cancelRequested.get()) throw InterruptedIOException()
       folder.select(state.target)
+      listOf(state.source, state.target).filterIsInstance<DataFolderLocation.Card>()
+        .forEach { folder.forgetAway(it.volumeUuid) }
       save(state.copy(phase = MovePhase.SWITCHED))
     }
 
@@ -284,28 +292,39 @@ class MoveRunner(
   @Synchronized
   fun finishLeftovers(): Boolean {
     val parked = leftovers.load() ?: return false
+    val live = setOfNotNull(folder.storedLocation(), journal.load()?.target)
     var finished = true
     for ((volumeUuid, paths) in parked) {
-      val root = mountedRoot(DataFolderLocation.Card(volumeUuid))
+      val card = DataFolderLocation.Card(volumeUuid)
+      val root = mountedRoot(card)?.takeIf { card !in live }
       if (root == null) {
         finished = false
         continue
       }
-      try {
-        paths.forEach { deleteCopy(root, it) }
-        leftovers.remove(volumeUuid)
-      } catch (e: IOException) {
-        finished = false
-      }
+      val kept = paths.filterTo(HashSet()) { !deleted(root, it) }
+      leftovers.replace(volumeUuid, kept)
+      finished = finished && kept.isEmpty()
     }
     return finished
+  }
+
+  private fun deleted(root: File, relativePath: String): Boolean =
+    try {
+      deleteCopy(root, relativePath)
+      true
+    } catch (e: IOException) {
+      false
+    }
+
+  private fun parkCopies(card: DataFolderLocation.Card, state: MoveState) {
+    leftovers.record(card.volumeUuid, state.files.map { it.path })
+    journal.clear()
   }
 
   private fun parkIfSourceGone(state: MoveState): Boolean {
     val card = state.source as? DataFolderLocation.Card ?: return false
     if (mountedRoot(card) != null) return false
-    leftovers.record(card.volumeUuid, state.files.map { it.path })
-    journal.clear()
+    parkCopies(card, state)
     return true
   }
 
@@ -321,7 +340,13 @@ class MoveRunner(
   private fun discard(state: MoveState): Boolean {
     if (maybeSwitched(state)) return false
     if (state.phase > MovePhase.PREFLIGHT) {
-      val targetRoot = mountedRoot(state.target) ?: return false
+      val targetRoot = mountedRoot(state.target)
+      val card = state.target as? DataFolderLocation.Card
+      if (targetRoot == null && card != null) {
+        parkCopies(card, state)
+        return true
+      }
+      targetRoot ?: return false
       state.files.forEach { deleteCopy(targetRoot, it.path) }
     }
     journal.clear()

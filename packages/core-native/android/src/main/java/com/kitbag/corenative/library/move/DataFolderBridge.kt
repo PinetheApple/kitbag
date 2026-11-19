@@ -1,5 +1,6 @@
 package com.kitbag.corenative.library.move
 
+import android.util.Log
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
@@ -37,40 +38,44 @@ class DataFolderBridge(
     stopWatching = null
   }
 
-  fun volumesChanged() = io.execute { moves.finishLeftovers() }
+  fun volumesChanged() = quietly("Leftover clean-up failed") { moves.finishLeftovers() }
 
   // At or after the switch, clean-up finishes on its own; before it, the move waits for Resume.
-  private fun recover() {
-    moves.finishLeftovers()
-    if (moves.status()?.let { it.switched && !it.running } == true) DataFolderMoveService.resume(context)
-  }
+  private fun recover() =
+    quietly("Move recovery failed") {
+      moves.finishLeftovers()
+      if (moves.status()?.let { it.switched && !it.running } == true) DataFolderMoveService.finishCleanup(context)
+    }
+
+  // Unasked work that fails here is retried at the next launch.
+  private fun quietly(what: String, work: () -> Unit) =
+    io.execute {
+      try {
+        work()
+      } catch (e: Exception) {
+        Log.w(TAG, what, e)
+      }
+    }
+
+  // Android 12+ refuses a foreground service started from the background.
+  private fun launched(start: () -> Unit): MoveRefusal? =
+    try {
+      start()
+      null
+    } catch (e: IllegalStateException) {
+      Log.w(TAG, "Move service not started", e)
+      MoveRefusal.FOREGROUND_REFUSED
+    }
 
   fun listVolumes(promise: Promise) = answer(promise, "Could not list volumes") { volumeList() }
 
   fun startMove(volumeUuid: String?, promise: Promise) {
     val target = MoveReport.locationOf(volumeUuid)
-    io.execute {
-      val refusal = moves.refusalToStart(target)
-      if (refusal == null) {
-        DataFolderMoveService.start(context, target)
-        promise.resolve(null)
-      } else {
-        refuse(promise, refusal)
-      }
-    }
+    settle(promise) { moves.refusalToStart(target) ?: launched { DataFolderMoveService.start(context, target) } }
   }
 
-  fun resumeMove(promise: Promise) {
-    io.execute {
-      val refusal = moves.refusalToResume()
-      if (refusal == null) {
-        DataFolderMoveService.resume(context)
-        promise.resolve(null)
-      } else {
-        refuse(promise, refusal)
-      }
-    }
-  }
+  fun resumeMove(promise: Promise) =
+    settle(promise) { moves.refusalToResume() ?: launched { DataFolderMoveService.resume(context) } }
 
   fun cancelMove(promise: Promise) = settle(promise) { moves.cancel() }
 
@@ -83,16 +88,17 @@ class DataFolderBridge(
     settle(promise) { moves.useInternalStorage(paths) }
   }
 
-  fun releaseOldCopies() {
-    io.execute { if (moves.releaseOldCopies()) DataFolderMoveService.resume(context) }
-  }
+  fun releaseOldCopies() =
+    quietly("Old copies not released") {
+      if (moves.releaseOldCopies()) DataFolderMoveService.finishCleanup(context)
+    }
 
   private fun settle(promise: Promise, action: () -> MoveRefusal?) {
     io.execute {
       try {
         action()?.let { refuse(promise, it) } ?: promise.resolve(null)
       } catch (e: Exception) {
-        rejectLogged(promise, LibraryErrors.moveCode(MoveFailure.IO), "The move request failed", e)
+        rejectLogged(promise, MoveReport.codeFor(e), "The move request failed", e)
       }
     }
   }
@@ -102,7 +108,7 @@ class DataFolderBridge(
       try {
         promise.resolve(read())
       } catch (e: Exception) {
-        rejectLogged(promise, LibraryErrors.moveCode(MoveFailure.IO), message, e)
+        rejectLogged(promise, MoveReport.codeFor(e), message, e)
       }
     }
   }
@@ -193,6 +199,7 @@ class DataFolderBridge(
     }
 
   companion object {
+    private const val TAG = "KitbagDataFolderMove"
     const val VOLUME_MOUNTED = "mounted"
     const val VOLUME_READ_ONLY = "readOnly"
     const val VOLUME_UNMOUNTED = "unmounted"

@@ -3,4 +3,5 @@
   <exclude domain="file" path="data-folder.json" />
   <exclude domain="file" path="data-folder-move.json" />
   <exclude domain="file" path="data-folder-away.json" />
+  <exclude domain="file" path="data-folder-leftovers.json" />
 </full-backup-content>

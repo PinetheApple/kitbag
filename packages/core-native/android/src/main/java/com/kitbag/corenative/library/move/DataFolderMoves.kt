@@ -64,6 +64,12 @@ class DataFolderMoves(
       runner.resume()
     }
 
+  // Launch recovery and a release can both queue this; whichever runs second finds nothing to say.
+  fun finishCleanup(): MoveOutcome? {
+    if (refusalToResume() != null || status()?.switched != true) return null
+    return settle { runner.resume() }
+  }
+
   fun cancel(): MoveRefusal? {
     if (runner.pending() == null && !runner.running()) return MoveRefusal.NO_MOVE
     return if (runner.cancel()) null else MoveRefusal.SWITCHED
@@ -73,8 +79,8 @@ class DataFolderMoves(
 
   fun useInternalStorage(awayPaths: Collection<String>): MoveRefusal? {
     // A read-to-write upgrade on the import lock deadlocks rather than failing.
-    check(folder.importLock.readHoldCount == 0) { "useInternalStorage called inside an import" }
-    if (!runner.useInternalStorage(awayPaths)) return MoveRefusal.USE_INTERNAL_REFUSED
+    if (folder.importLock.readHoldCount > 0) return MoveRefusal.IMPORT_LOCK_HELD
+    runner.useInternalStorage(awayPaths)?.let { return it }
     publish(MoveEvent.Switched)
     return null
   }

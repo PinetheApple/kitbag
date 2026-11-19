@@ -22,11 +22,13 @@ class AwayManifest(
     state.write(json(existing + (volumeUuid to existing[volumeUuid].orEmpty() + relativePaths)))
   }
 
+  fun remove(volumeUuid: String) = replace(volumeUuid, emptySet())
+
   @Synchronized
-  fun remove(volumeUuid: String) {
+  fun replace(volumeUuid: String, relativePaths: Set<String>) {
     val existing = load() ?: throw IOException("Refusing to overwrite an unreadable ${state.name}")
-    if (volumeUuid !in existing) return
-    val rest = existing - volumeUuid
+    if (existing[volumeUuid].orEmpty() == relativePaths) return
+    val rest = if (relativePaths.isEmpty()) existing - volumeUuid else existing + (volumeUuid to relativePaths)
     if (rest.isEmpty()) state.delete() else state.write(json(rest))
   }
 

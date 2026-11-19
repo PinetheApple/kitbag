@@ -1,5 +1,6 @@
 package com.kitbag.corenative.library
 
+import com.kitbag.corenative.library.move.DataFolderMoves
 import com.kitbag.corenative.library.move.MoveJournal
 import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
@@ -8,7 +9,12 @@ import org.junit.Test
 import org.w3c.dom.Element
 
 class BackupRulesTest {
-  private val excluded = setOf(DataFolder.STATE_FILE_NAME, MoveJournal.FILE_NAME, AwayManifest.FILE_NAME)
+  private val excluded = setOf(
+    DataFolder.STATE_FILE_NAME,
+    MoveJournal.FILE_NAME,
+    AwayManifest.FILE_NAME,
+    DataFolderMoves.LEFTOVERS_FILE_NAME,
+  )
 
   private fun sections(xml: String, names: List<String>): Map<String, Element> {
     val root = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(File(XML_DIR, xml)).documentElement
