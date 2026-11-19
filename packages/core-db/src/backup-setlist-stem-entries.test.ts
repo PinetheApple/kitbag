@@ -235,3 +235,68 @@ describe('a setlist holding stem songs in a backup', () => {
     expect(file.records.stemSongs).toEqual([]);
   });
 });
+
+describe('comparing a setlist with stem songs in a merge', () => {
+  async function restoredPair(target: StemSongDatabase) {
+    const mixed = await mixedSource();
+    await restore(target, await mixed.source.backup.export());
+    return mixed;
+  }
+
+  async function moveEntry(
+    source: StemSongDatabase,
+    setlistId: number,
+    from: number,
+    to: number,
+  ) {
+    const item = (await source.sets.items(setlistId))[from];
+    if (item === undefined) throw new Error('setup');
+    await source.sets.move(item.id, to);
+  }
+
+  it('plans a conflict when only a stem entry moves', async () => {
+    const { target } = await targetWithSongs();
+    const { source, gig } = await restoredPair(target);
+    await moveEntry(source, gig.id, 3, 1);
+    const plan = unwrap(await target.backup.plan(await source.backup.export()));
+    expect(plan.unresolved).toEqual([
+      expect.objectContaining({ category: 'setlists', key: gig.uuid }),
+    ]);
+  });
+
+  it('plans a file without items as unchanged against local stem entries', async () => {
+    const { target } = await targetWithSongs();
+    const { source } = await restoredPair(target);
+    const text = withoutItems(await source.backup.export());
+    const plan = unwrap(await target.backup.plan(text));
+    expect(plan.counts.setlists).toMatchObject({
+      unchanged: 1,
+      conflicts: [],
+    });
+  });
+
+  it('counts a missing stem song only for setlists it writes', async () => {
+    const target = stemSongDatabase();
+    await addFolderSong(target);
+    const { source, gig } = await restoredPair(target);
+    const same = unwrap(await target.backup.plan(await source.backup.export()));
+    expect(same.counts.setlists).toMatchObject({
+      unchanged: 1,
+      stemEntriesNotOnDevice: 0,
+    });
+
+    await moveEntry(source, gig.id, 0, 3);
+    const reordered = await source.backup.export();
+    const counted = async (resolution?: 'mine' | 'theirs') => {
+      const resolutions =
+        resolution === undefined
+          ? {}
+          : { setlists: { [gig.uuid]: resolution } };
+      const plan = unwrap(await target.backup.plan(reordered, { resolutions }));
+      return plan.counts.setlists?.stemEntriesNotOnDevice;
+    };
+    expect(await counted()).toBe(0);
+    expect(await counted('mine')).toBe(0);
+    expect(await counted('theirs')).toBe(1);
+  });
+});

@@ -66,7 +66,8 @@ function canonical(record: object): string {
   return JSON.stringify(record, fields.sort());
 }
 
-// A file from before setlist items compares on presetUuids alone.
+// A file from before setlist items compares on presetUuids alone. Items compare
+// as strings: canonical's key allowlist would strip their keys and hide a move.
 function sameSetlist(mine: SetlistRecord, theirs: SetlistRecord): boolean {
   const comparable = (setlist: SetlistRecord) => ({
     ...setlist,
@@ -233,13 +234,13 @@ function setlistsOnDevice(
   snapshot: Snapshot,
 ) {
   const local = snapshot.ids.stemSongs;
-  let dropped = 0;
+  const dropped = new Map<string, number>();
   const records = incoming.map((setlist) => {
     if (setlist.items === undefined) return setlist;
     const items = setlist.items.filter(
       (item) => 'preset' in item || local.has(item.stemSong),
     );
-    dropped += setlist.items.length - items.length;
+    dropped.set(setlist.uuid, setlist.items.length - items.length);
     return { ...setlist, items };
   });
   return { records, dropped };
@@ -256,7 +257,11 @@ function planSetlists(
     mode === 'replace'
       ? planReplace(records, snapshot.records.setlists.length)
       : planMerge('setlists', records, snapshot, resolutions);
-  state.summary.stemEntriesNotOnDevice = dropped;
+  state.summary.stemEntriesNotOnDevice = state.writes.reduce(
+    (sum, { record }) =>
+      sum + (dropped.get(recordKey('setlists', record)) ?? 0),
+    0,
+  );
   return state;
 }
 
