@@ -39,9 +39,22 @@ import {
   RAMP_UNITS,
 } from './preset-rules';
 import { meterOverrideViolation, type GridMeter } from './meter-override';
+import { isTempoCorrection, storedTempoCorrection } from './tempo-correction';
 import { INSTRUMENTS, tuningViolation } from './tuning-rules';
 
 const FLOAT32_BYTES = 4;
+
+function readTempoCorrection(r: Reader) {
+  const { tempoCorrection } = r.presentNullableMember(
+    'tempoCorrection',
+    isTempoCorrection,
+  );
+  if (tempoCorrection === undefined) return {};
+  return {
+    tempoCorrection:
+      tempoCorrection === null ? null : storedTempoCorrection(tempoCorrection),
+  };
+}
 
 function readSongGrid(r: Reader, path: string) {
   const fields = {
@@ -51,7 +64,10 @@ function readSongGrid(r: Reader, path: string) {
   };
   const violation = meterOverrideViolation(fields);
   if (violation) invalidField(`${path}.${violation.field}`, violation.reason);
-  return fields as typeof fields & { meterBeatsPerBar?: GridMeter | null };
+  return {
+    ...(fields as typeof fields & { meterBeatsPerBar?: GridMeter | null }),
+    ...readTempoCorrection(r),
+  };
 }
 
 function readLibrarySong(value: unknown, path: string): LibrarySongRecord {

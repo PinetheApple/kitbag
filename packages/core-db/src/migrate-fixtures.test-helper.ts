@@ -17,6 +17,7 @@ import {
   MIGRATE_V19_TO_V20,
   MIGRATE_V20_TO_V21,
   MIGRATE_V21_TO_V22,
+  MIGRATE_V22_TO_V23,
   V7_SCHEMA_VERSION,
   V8_SCHEMA_VERSION,
   V9_SCHEMA_VERSION,
@@ -33,6 +34,7 @@ import {
   V20_SCHEMA_VERSION,
   V21_SCHEMA_VERSION,
   V22_SCHEMA_VERSION,
+  V23_SCHEMA_VERSION,
 } from './migrate';
 
 const V7_DDL: readonly string[] = [
@@ -167,6 +169,8 @@ export const V20_SONG_COLUMNS = {
   meter_beats_per_bar: null,
   bar_one_seconds: null,
 };
+
+export const V24_SONG_COLUMNS = { tempo_correction: null };
 
 export const V20_STEM_SET_COLUMNS = {
   meter_beats_per_bar: null,
@@ -324,5 +328,12 @@ export function buildV22Fixture(): DatabaseSync {
   const db = buildV21Fixture();
   applyInTransaction(db, MIGRATE_V21_TO_V22);
   db.exec(`PRAGMA user_version = ${String(V22_SCHEMA_VERSION)}`);
+  return db;
+}
+
+export function buildV23Fixture(): DatabaseSync {
+  const db = buildV22Fixture();
+  applyInTransaction(db, MIGRATE_V22_TO_V23);
+  db.exec(`PRAGMA user_version = ${String(V23_SCHEMA_VERSION)}`);
   return db;
 }

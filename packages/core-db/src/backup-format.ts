@@ -2,6 +2,7 @@ import type { ClickSound } from './click-sound-repository';
 import { COUNT_IN_STORED_KEYS } from './count-in-preferences';
 import type { MeterOverride } from './meter-override';
 import { STANDALONE_METRONOME_KEY } from './standalone-metronome-preference';
+import type { TempoCorrection } from './tempo-correction';
 
 export const BACKUP_FORMAT = 'kitbag-backup';
 export const BACKUP_VERSION = 4;
@@ -41,6 +42,7 @@ export interface LibrarySongRecord extends Partial<MeterOverride> {
   bpm: number | null;
   waveformPath: string | null;
   analysisVersion?: number | null;
+  tempoCorrection?: TempoCorrection | null;
 }
 
 export interface SongPresetRecord {

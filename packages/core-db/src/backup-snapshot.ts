@@ -14,6 +14,7 @@ import {
 import { encodeBase64, nullableBase64, presetBase64 } from './base64';
 import { meterOverrideOf } from './meter-override';
 import type { Database } from './repository';
+import { storedTempoCorrection, tempoCorrectionOf } from './tempo-correction';
 import {
   clickSounds,
   practiceSessions,
@@ -69,6 +70,9 @@ function librarySongRecord(row: SongRow): LibrarySongRecord {
   return {
     ...portableSong(row),
     ...meterOverrideOf(row),
+    tempoCorrection: storedTempoCorrection(
+      tempoCorrectionOf(row.tempoCorrection),
+    ),
     createdAt: toSeconds(row.createdAt),
     beatGrid: nullableBase64(row.beatGrid),
     downbeatIndices: nullableBase64(row.downbeatIndices),
