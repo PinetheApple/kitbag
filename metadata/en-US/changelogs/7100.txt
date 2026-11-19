@@ -1,0 +1,1 @@
+• Songs get a Tempo correction in the player menu: ÷2, ×2/3, ×3/2 or ×2 rescales the beat grid when analysis found the wrong tempo. The click, the BPM and the Songs list follow it, and it is kept across re-analysis and backups.
