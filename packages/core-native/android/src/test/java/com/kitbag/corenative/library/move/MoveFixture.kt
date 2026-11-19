@@ -42,7 +42,8 @@ class MoveFixture(temp: File) {
 
   fun newFolder() = DataFolder(filesDir, volumes) { message, _ -> warnings.add(message) }
 
-  fun leftovers() = AwayManifest(File(filesDir, DataFolderMoves.LEFTOVERS_FILE_NAME), { message, _ -> warnings.add(message) })
+  fun leftovers() =
+    AwayManifest(File(filesDir, DataFolderMoves.LEFTOVERS_FILE_NAME), { message, _ -> warnings.add(message) }, "set aside", true)
 
   fun runner(listener: (MoveProgress) -> Unit = {}) =
     MoveRunner(folder, journal(), leftovers(), { freeBytes }, { released }, listener)

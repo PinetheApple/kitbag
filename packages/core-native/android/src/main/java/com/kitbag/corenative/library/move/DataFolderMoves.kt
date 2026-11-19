@@ -8,6 +8,7 @@ import com.kitbag.corenative.library.DataFolderLocation
 import com.kitbag.corenative.library.MixdownExport
 import com.kitbag.corenative.library.RootState
 import java.io.File
+import java.io.IOException
 import java.util.concurrent.CopyOnWriteArrayList
 
 class DataFolderMoves(
@@ -100,6 +101,8 @@ class DataFolderMoves(
       run()
     } catch (e: IllegalStateException) {
       MoveOutcome.Refused(MoveRefusal.IN_PROGRESS)
+    } catch (e: IOException) {
+      MoveOutcome.Failed(MoveReport.failureOf(e))
     }
     // Players released while the runner was saying no: retry; a mixdown is waited out, never cancelled.
     while (outcome == MoveOutcome.AwaitingRelease && gate.playersReleased()) {
@@ -145,7 +148,7 @@ class DataFolderMoves(
       return DataFolderMoves(
         DataFolder.get(context),
         MoveJournal(File(filesDir, MoveJournal.FILE_NAME), warn),
-        AwayManifest(File(filesDir, LEFTOVERS_FILE_NAME), warn, "old copies on a removed card stay until it returns"),
+        AwayManifest(File(filesDir, LEFTOVERS_FILE_NAME), warn, "set aside; old copies may stay on a card", true),
         ::usableBytes,
         mixdownRunning(MixdownExport(context.cacheDir)),
       )

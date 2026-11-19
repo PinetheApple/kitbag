@@ -11,14 +11,17 @@ class AwayManifest(
   file: File,
   warn: (message: String, cause: Exception) -> Unit,
   unreadableMessage: String = "songs absent from the root stay unknown",
+  private val setAsideUnreadable: Boolean = false,
 ) {
   private val state = JsonStateFile(file, unreadableMessage, warn)
 
-  fun load(): Map<String, Set<String>>? = state.read(emptyMap(), ::away)
+  // Only a list whose loss costs space, never a file, may be set aside instead of trusted.
+  fun load(): Map<String, Set<String>>? =
+    state.read(emptyMap(), ::away) ?: emptyMap<String, Set<String>>().takeIf { setAsideUnreadable && state.setAside() }
 
   @Synchronized
   fun record(volumeUuid: String, relativePaths: Collection<String>) {
-    val existing = load() ?: throw IOException("Refusing to overwrite an unreadable ${state.name}")
+    val existing = load() ?: throw UnreadableStateException(state.name)
     state.write(json(existing + (volumeUuid to existing[volumeUuid].orEmpty() + relativePaths)))
   }
 
@@ -26,7 +29,7 @@ class AwayManifest(
 
   @Synchronized
   fun replace(volumeUuid: String, relativePaths: Set<String>) {
-    val existing = load() ?: throw IOException("Refusing to overwrite an unreadable ${state.name}")
+    val existing = load() ?: throw UnreadableStateException(state.name)
     if (existing[volumeUuid].orEmpty() == relativePaths) return
     val rest = if (relativePaths.isEmpty()) existing - volumeUuid else existing + (volumeUuid to relativePaths)
     if (rest.isEmpty()) state.delete() else state.write(json(rest))

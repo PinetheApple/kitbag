@@ -7,42 +7,12 @@ import com.kitbag.corenative.library.DurableFiles
 import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.RootState
 import com.kitbag.corenative.library.SystemDiskSync
+import com.kitbag.corenative.library.UnreadableStateException
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InterruptedIOException
 import java.util.concurrent.atomic.AtomicBoolean
-
-fun interface ReleaseGate {
-  fun released(oldRoot: File): Boolean
-}
-
-enum class MoveFailure {
-  SOURCE_UNAVAILABLE,
-  TARGET_UNAVAILABLE,
-  TARGET_OCCUPIED,
-  NO_SPACE,
-  TARGET_NOT_WRITABLE,
-  HASH_MISMATCH,
-  TARGET_LEFTOVERS,
-  IO,
-}
-
-sealed interface MoveOutcome {
-  object Done : MoveOutcome
-
-  object Cancelled : MoveOutcome
-
-  object AwaitingRelease : MoveOutcome
-
-  object NoMove : MoveOutcome
-
-  object CleanupDeferred : MoveOutcome
-
-  data class Failed(val failure: MoveFailure, val path: String? = null) : MoveOutcome
-
-  data class Refused(val refusal: MoveRefusal) : MoveOutcome
-}
 
 data class MoveProgress(
   val phase: MovePhase,
@@ -119,7 +89,7 @@ class MoveRunner(
     val card = folder.location() as? DataFolderLocation.Card ?: return MoveRefusal.NOT_ON_CARD
     if (folder.rootStateAt(card) !is RootState.Unmounted) return MoveRefusal.CARD_MOUNTED
     folder.switching {
-      val elsewhere = folder.awayElsewhere(card.volumeUuid) ?: throw IOException("Unreadable away list")
+      val elsewhere = folder.awayElsewhere(card.volumeUuid) ?: throw UnreadableStateException(AwayManifest.FILE_NAME)
       val onCard = awayPaths.filter { it !in elsewhere && !LibraryPaths.resolve(folder.internalRoot, it).exists() }
       folder.leaveAway(card.volumeUuid, onCard)
       folder.select(DataFolderLocation.Internal)

@@ -2,6 +2,7 @@ package com.kitbag.corenative.library.move
 
 import com.kitbag.corenative.library.DataFolderLocation
 import com.kitbag.corenative.library.LibraryErrors
+import com.kitbag.corenative.library.UnreadableStateException
 
 data class FinishedReport(val outcome: String, val error: String?, val path: String?)
 
@@ -31,7 +32,14 @@ object MoveReport {
       is MoveOutcome.Refused -> FinishedReport(REFUSED, LibraryErrors.moveCode(outcome.refusal), null)
     }
 
-  fun codeFor(error: Throwable): String = LibraryErrors.codeFor(error, LibraryErrors.moveCode(MoveFailure.IO))
+  fun codeFor(error: Throwable): String = LibraryErrors.codeFor(error, LibraryErrors.moveCode(failureOf(error)))
+
+  fun failureOf(error: Throwable): MoveFailure =
+    if (generateSequence(error) { it.cause }.any { it is UnreadableStateException }) {
+      MoveFailure.STATE_UNREADABLE
+    } else {
+      MoveFailure.IO
+    }
 
   fun errorOf(status: MoveStatus): String? = status.failure?.let(LibraryErrors::moveCode)
 
