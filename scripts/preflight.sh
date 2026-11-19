@@ -143,7 +143,7 @@ if ((!SKIP_NATIVE)); then
     player_verify seek_race_verify stream_verify stem_sync_verify \
     audio_source_verify decoder_verify analyze_verify file_audio_reader_verify \
     tuner_verify click_soak_verify analyze_memory_verify stretch_verify mixdown_verify \
-    click_sound_verify; do
+    click_sound_verify retire_race_verify; do
     binary="native/audio_core/build/$tool"
     [[ -x $binary ]] || continue
     if "$binary" >/dev/null 2>&1; then

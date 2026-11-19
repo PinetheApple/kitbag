@@ -9,8 +9,12 @@
 #include "metronome/click_voices.h"
 #include "metronome/sample_voices.h"
 #include "rt/rt_publisher.h"
+#include "zero_clock.h"
 
 namespace click_sound_test {
+
+using kitbag_test::ClockAt;
+using kitbag_test::kZeroClock;
 
 using kitbag::SampleVoices;
 using kitbag_test::Check;
@@ -70,7 +74,7 @@ float Expected(
 void TestHitsLandOnTheirFrame() {
   SampleVoices voices;
   const std::vector<float> f = Distinct(kShortFrames);
-  voices.Publish(0, f, 0, false);
+  voices.Publish(0, f, kZeroClock, false);
   std::vector<float> out(kBlock);
   RenderBlock(voices, out, {kFirstHit, kFirstGain}, {kSecondHit, kSecondGain});
   bool exact = true;
@@ -88,7 +92,7 @@ void TestHitsLandOnTheirFrame() {
 void TestHitSpansBlocks() {
   SampleVoices voices;
   const std::vector<float> f = Distinct(kShortFrames);
-  voices.Publish(0, f, 0, false);
+  voices.Publish(0, f, kZeroClock, false);
   std::vector<float> first(kBlock);
   std::vector<float> second(kBlock);
   RenderBlock(voices, first, {kLateHit, kFirstGain});
@@ -116,13 +120,13 @@ void TestEmptySlotFallsBack() {
       !voices.Publish(
           kitbag::kCustomSoundSlots,
           Distinct(kShortFrames),
-          0,
+          kZeroClock,
           false
       ),
       "voice: publish refuses a slot out of range"
   );
   Check(
-      !voices.Publish(0, {}, 0, false),
+      !voices.Publish(0, {}, kZeroClock, false),
       "voice: publish refuses an empty sound"
   );
 }
@@ -133,7 +137,7 @@ void TestOldestVoiceIsStolen() {
   SampleVoices voices;
   std::vector<float> ramp(kBlock * 2);
   for (size_t i = 0; i < ramp.size(); ++i) ramp[i] = static_cast<float>(i + 1);
-  voices.Publish(1, ramp, 0, false);
+  voices.Publish(1, ramp, kZeroClock, false);
   voices.BeginBlock();
   float last = 0.0F;
   for (int hit = 0; hit <= SampleVoices::kMaxVoices; ++hit) {
@@ -166,7 +170,7 @@ void TestBuiltInPeakIsClickSoundPeak() {
 
 void TestRenderAllocatesNothing() {
   SampleVoices voices;
-  voices.Publish(0, Distinct(kShortFrames), 0, false);
+  voices.Publish(0, Distinct(kShortFrames), kZeroClock, false);
   std::vector<float> out(kBlock);
   const size_t live = LiveHeapBytes();
   ResetHeapPeak();
@@ -181,10 +185,10 @@ void TestRenderAllocatesNothing() {
 
 void TestReplacedSoundRetiresOffTheAudioThread() {
   SampleVoices voices;
-  voices.Publish(0, Distinct(kitbag::kCustomSoundRate), 0, true);
+  voices.Publish(0, Distinct(kitbag::kCustomSoundRate), kZeroClock, true);
   std::vector<float> after(kBlock);
   RenderBlock(voices, after, {0, 1.0F});
-  voices.Publish(0, Distinct(kShortFrames), kBlock, true);
+  voices.Publish(0, Distinct(kShortFrames), ClockAt(kBlock), true);
   Check(
       voices.retired_size() == 1,
       "retire: a replaced sound is held, not freed, while the callback can run"
@@ -209,8 +213,8 @@ void TestReplacedSoundRetiresOffTheAudioThread() {
 
 void TestClearWhileStoppedFreesAtOnce() {
   SampleVoices voices;
-  voices.Publish(0, Distinct(kShortFrames), 0, false);
-  voices.Clear(0, 0, false);
+  voices.Publish(0, Distinct(kShortFrames), kZeroClock, false);
+  voices.Clear(0, kZeroClock, false);
   Check(
       !voices.loaded(0) && voices.retired_size() == 0,
       "retire: clearing with no callback running frees at once"

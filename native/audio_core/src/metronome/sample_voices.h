@@ -27,10 +27,10 @@ class SampleVoices {
   bool Publish(
       int slot,
       std::vector<float> frames,
-      uint64_t now_frame,
+      FrameClock clock,
       bool rt_reader_active
   );
-  void Clear(int slot, uint64_t now_frame, bool rt_reader_active);
+  void Clear(int slot, FrameClock clock, bool rt_reader_active);
   void Collect(uint64_t now_frame);
   void ReclaimAll();
   bool loaded(int slot) const;

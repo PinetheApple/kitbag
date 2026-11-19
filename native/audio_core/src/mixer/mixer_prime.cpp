@@ -148,7 +148,7 @@ void Mixer::PublishBank(
   const int idle_bank = 1 - app_bank_;
   for (int s = 0; s < kKeyBusCount; ++s) {
     buses_[idle_bank][s]
-        .Publish(std::move(bank->slots[s]), clock.Now(), engine_running);
+        .Publish(std::move(bank->slots[s]), clock, engine_running);
   }
   plan->primed = true;
   plan->bank = idle_bank;
@@ -171,7 +171,7 @@ void Mixer::AdoptBank(
 void Mixer::FreeBank(int bank, FrameClock clock, bool engine_running) {
   for (auto& slot : buses_[bank]) {
     if (slot.Get() != nullptr) {
-      slot.Publish(nullptr, clock.Now(), engine_running);
+      slot.Publish(nullptr, clock, engine_running);
     }
   }
 }
