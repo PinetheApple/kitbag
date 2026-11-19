@@ -1,6 +1,7 @@
 import type { NewSongPreset, Setlist, SongPreset } from '@kitbag/core-db';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
+import { applyCountInTransiently } from '../metronome/countInPersistence.ts';
 import { metronomeStore, type MetronomeStore } from '../metronome/store.ts';
 import {
   applyPreset,
@@ -120,6 +121,14 @@ export function loadedPresetOf(
   const { loaded } = state;
   if (loaded === null) return undefined;
   return state.presets.find((preset) => preset.id === loaded.presetId);
+}
+
+function withoutPreset(
+  overlay: PresetOverlay,
+  presetId: number,
+): PresetOverlay {
+  return (preset, setlistId) =>
+    preset.id === presetId ? preset : overlay(preset, setlistId);
 }
 
 function overlaid(
@@ -309,6 +318,17 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
       // The song is already playing; a failed pin only loses the on-stage marker.
     }
   };
+  const linkUnsaved = (
+    preset: SongPreset,
+    itemId: number | null,
+    setlistId: number | null,
+  ) => {
+    let linking = Promise.resolve();
+    applyCountInTransiently(() => {
+      linking = link(preset, itemId, setlistId);
+    });
+    return linking;
+  };
   const noteDiscard = () => {
     const discarded = discardedNow(get(), deps);
     if (discarded !== null) set({ discarded });
@@ -319,7 +339,9 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
       if (preset === undefined) return;
       noteDiscard();
       const target = setlistId ?? null;
-      await link(overlaid(get(), preset, target), itemId ?? null, target);
+      const applied = overlaid(get(), preset, target);
+      const linking = applied === preset ? link : linkUnsaved;
+      await linking(applied, itemId ?? null, target);
     },
     stepSong: async (step: SongStep) => {
       const active = activeSetlistOf(get().setlists);
@@ -351,8 +373,12 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
       await get().saveCurrentInto(loaded.presetId);
     },
     revertLoadedSong: () => {
+      const { presetOverlay } = get();
       const preset = loadedPresetOf(get());
-      if (preset !== undefined) applyPreset(preset, deps.metronome);
+      if (preset === undefined) return;
+      if (presetOverlay !== null)
+        set({ presetOverlay: withoutPreset(presetOverlay, preset.id) });
+      applyPreset(preset, deps.metronome);
     },
     undoDiscard: async () => {
       const { discarded } = get();

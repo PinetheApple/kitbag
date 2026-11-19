@@ -9,6 +9,7 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import {
   libraryStore,
+  loadedBaselineOf,
   loadedPresetOf,
   type LibraryState,
   type LibraryStore,
@@ -74,7 +75,8 @@ function plannedSetup(
   if (plan.kind === REPEAT_PLAN.freePlay) return undefined;
   if (state.loaded?.setlistId !== plan.load.setlistId) return undefined;
   const preset = loadedPresetOf(state);
-  return preset === undefined ? null : (plan.songs.get(preset.uuid) ?? null);
+  if (preset === undefined || loadedBaselineOf(state) === preset) return null;
+  return plan.songs.get(preset.uuid) ?? null;
 }
 
 export function overlaidPreset(
@@ -131,7 +133,12 @@ export function createRepeatOverlay(port: RepeatPort): RepeatOverlay {
   };
   port.library.subscribe((next, previous) => {
     const { plan } = state.getState();
-    if (plan === null || next.loaded === previous.loaded) return;
+    if (plan === null) return;
+    if (next.loaded === previous.loaded) {
+      const dropped = next.presetOverlay !== previous.presetOverlay;
+      if (dropped && plannedSetup(plan, next) === null) setCountIn(restore());
+      return;
+    }
     if (plan.kind === REPEAT_PLAN.freePlay) {
       if (next.loaded !== null) clear();
       return;

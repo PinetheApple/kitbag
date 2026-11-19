@@ -3,9 +3,9 @@ import { describe, expect, it } from 'vitest';
 
 import { applyPreset, isLoadedSongUnsaved } from '../library/presetMapping.ts';
 import { SONG_STEP } from '../library/setlistPosition.ts';
-import { loadedBaselineOf } from '../library/store.ts';
+import { loadedBaselineOf, loadedPresetOf } from '../library/store.ts';
 import { SESSION_LOAD, repeatPlanOf } from './repeat.ts';
-import { gig } from './repeat.test-helper.ts';
+import { COUNT_IN, gig } from './repeat.test-helper.ts';
 import { createRepeatOverlay } from './repeatOverlay.ts';
 
 const BPMS = [70, 80, 90] as const;
@@ -78,6 +78,21 @@ describe('Repeat through the library store', () => {
     await r.start();
     r.library.getState().revertLoadedSong();
     expect(r.bpm()).toBe(r.first.bpm);
+  });
+
+  it('reads a reverted song as saved, with the user count-in back', async () => {
+    const r = await repeating();
+    const user = r.metronome.getState().countIn;
+    expect(user).not.toEqual(COUNT_IN);
+    await r.start();
+    r.library.getState().revertLoadedSong();
+    const state = r.library.getState();
+    expect(loadedBaselineOf(state)).toBe(loadedPresetOf(state));
+    expect(r.unsaved()).toBe(false);
+    expect(r.metronome.getState().countIn).toMatchObject({
+      distinct: user.distinct,
+      sound: user.sound,
+    });
   });
 
   it('brings discarded edits back on Undo, bypassing the overlay', async () => {
