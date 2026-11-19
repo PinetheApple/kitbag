@@ -1,4 +1,9 @@
-import type { LibraryRow, LibrarySongRow, SongRecord } from '@kitbag/core-db';
+import {
+  GRID_METER,
+  type LibraryRow,
+  type LibrarySongRow,
+  type SongRecord,
+} from '@kitbag/core-db';
 import { KB_RESULT } from '@kitbag/core-native';
 import { describe, expect, it, vi } from 'vitest';
 import { createStore } from 'zustand/vanilla';
@@ -184,6 +189,31 @@ describe('a grid replaced on an analysed song', () => {
     });
     expect(song.commands.setGrid).toHaveBeenCalledOnce();
     expect(song.readWaveform).toHaveBeenCalledOnce();
+  });
+
+  it("resends nothing when a song with the user's meter is re-read", async () => {
+    const metered = songRecord({ meterBeatsPerBar: GRID_METER.triple });
+    const song = await playing(metered);
+    await song.player.getState().toggleClick();
+    storeAnalysis(song, { ...metered, bpm: 119 });
+    await vi.waitFor(() => {
+      expect(song.player.getState().bpm).toBe(119);
+    });
+    expect(song.commands.setGrid).toHaveBeenCalledOnce();
+    expect(song.player.getState().downbeatIndices).toEqual([0, 3, 6]);
+  });
+
+  it("sends a replaced grid in the user's meter", async () => {
+    const song = await playing(LANDED);
+    await song.player.getState().toggleClick();
+    storeAnalysis(song, { ...REPLACED, meterBeatsPerBar: GRID_METER.triple });
+    await vi.waitFor(() => {
+      expect(song.commands.setGrid).toHaveBeenLastCalledWith(
+        REPLACED.beats,
+        [1, 4],
+        0,
+      );
+    });
   });
 
   it('follows a grid that lands while the click is turning on', async () => {

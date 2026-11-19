@@ -1100,3 +1100,10 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   before the switch waits on the Home banner for Resume or Undo and does not restart on its own.
   Cancel is offered only before the switch. Old copies are deleted only once no player or export
   is still reading them. **[recorded — lane call, owner may overturn]**
+
+- **2026-11-19 · Meter override over detected bars (§6.2, #332)** — A bar one alone shifts the
+  detected bar pattern so bar one lands on the chosen beat, keeping each bar's own meter, so a
+  stem set's meter map stays a map. A meter alone makes the whole song that meter, counted from
+  the detected bar one, which skips a leading pickup bar shorter than a full bar. The detected
+  meter is the most common bar length, not the first, so a pickup cannot set it.
+  **[recorded — lane call, owner may overturn]**

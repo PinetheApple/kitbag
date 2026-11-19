@@ -1,4 +1,4 @@
-import type { StemSetRecord, StoredStem } from '@kitbag/core-db';
+import type { MeterOverride, StemSetRecord, StoredStem } from '@kitbag/core-db';
 import {
   KB_COUNT_IN_OFF,
   KB_MIXER_UNITY_RATE,
@@ -6,6 +6,7 @@ import {
   type SongTransportRequest,
 } from '@kitbag/core-native';
 import { vi } from 'vitest';
+import type { StoreApi } from 'zustand/vanilla';
 
 import { COUNT_IN_DRAIN_MARGIN_SECONDS } from './countedStart.ts';
 import type {
@@ -13,7 +14,7 @@ import type {
   StemPlayerRecords,
   StemPlayerRuntime,
 } from './runtime.ts';
-import { createStemPlayerStore } from './store.ts';
+import { createStemPlayerStore, type StemPlayerStore } from './store.ts';
 
 export const RATE = 44100;
 export const SAVE_MS = 500;
@@ -224,6 +225,15 @@ export async function opened(
   fake.commands.mixerClearLoop.mockClear();
   fake.commands.mixerRate.mockClear();
   return { ...fake, store };
+}
+
+export function meterSaved(
+  store: StoreApi<StemPlayerStore>,
+  override: MeterOverride,
+): void {
+  const { setId, meterOverrideChanged } = store.getState();
+  if (setId === null) throw new Error('no song open');
+  meterOverrideChanged(setId, override);
 }
 
 export const ONE_BAR = 1;

@@ -55,6 +55,14 @@ export function turnClickOff(
   if (!recounted) context.runtimeOf().commands.metronomeStop();
 }
 
+type SentGrid = Pick<ClickSlice, 'beats' | 'downbeatIndices'>;
+
+function gridChanged(now: SentGrid, sent: SentGrid): boolean {
+  return (
+    now.beats !== sent.beats || now.downbeatIndices !== sent.downbeatIndices
+  );
+}
+
 function gridOf({ beats, downbeatIndices }: ClickSlice) {
   const grid = clickGrid(beats);
   return { grid, downbeats: usableDownbeats(downbeatIndices, grid.length) };
@@ -66,8 +74,8 @@ export async function followNewGrid(
 ): Promise<void> {
   gridReplaced();
   if (!get().click) return;
-  const sent = get().beats;
-  const { grid, downbeats } = gridOf(get());
+  const sent = get();
+  const { grid, downbeats } = gridOf(sent);
   if (grid.length === 0) {
     turnClickOff({ set, get, runtimeOf });
     return;
@@ -76,7 +84,7 @@ export async function followNewGrid(
   const result = await runtimeOf()
     .commands.setGrid(grid, downbeats, GRID_ANCHOR_FRAME)
     .catch(() => KB_RESULT.KB_ERROR_INTERNAL);
-  if (opened !== session() || get().beats !== sent) return;
+  if (opened !== session() || gridChanged(get(), sent)) return;
   if (result !== KB_RESULT.KB_OK) turnClickOff({ set, get, runtimeOf });
 }
 
@@ -93,8 +101,8 @@ export function clickActions(
 
   const start = async () => {
     const { commands, engine, sharedMetronome } = runtimeOf();
-    const sent = get().beats;
-    const { grid, downbeats } = gridOf(get());
+    const sent = get();
+    const { grid, downbeats } = gridOf(sent);
     if (grid.length === 0) return;
     if (sharedMetronome.active()) sharedMetronome.release();
     const turnOn = pendingClick.begin();
@@ -111,7 +119,7 @@ export function clickActions(
     const recounted = recountWithClickOn();
     if (!recounted) commands.metronomeStart(engine.nowFrame());
     set({ click: true });
-    if (get().beats !== sent) await followNewGrid(context);
+    if (gridChanged(get(), sent)) await followNewGrid(context);
   };
 
   return {
