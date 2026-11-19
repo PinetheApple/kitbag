@@ -55,6 +55,12 @@ class ImportSession private constructor(private val context: Context) {
 
   fun publishNow() = publish(queue.snapshot(), structural = true)
 
+  fun clearImport(): Boolean {
+    if (!queue.clear()) return false
+    publishNow()
+    return true
+  }
+
   fun observe(sink: SnapshotSink): () -> Unit {
     observers.add(sink)
     return { observers.remove(sink) }

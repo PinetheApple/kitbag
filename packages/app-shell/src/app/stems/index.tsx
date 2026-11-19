@@ -1,6 +1,10 @@
 import { useLastTool, useSongLibrary, useStemDeck } from '@kitbag/core-state';
 import { LibraryScreen } from '@kitbag/tool-library';
-import { AddStemSongSheet, ImportStatusCard } from '@kitbag/tool-stems';
+import {
+  AddStemSongSheet,
+  importCardShows,
+  ImportStatusCard,
+} from '@kitbag/tool-stems';
 import { useCallback, useEffect, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -16,7 +20,7 @@ function StemSongsRoute() {
   const markUsed = useLastTool((s) => s.markUsed);
   const importStemFolder = useSongLibrary((s) => s.importStemFolder);
   const [adding, setAdding] = useState(false);
-  const importing = useStemDeck((s) => s.importView?.running === true);
+  const showImport = useStemDeck((s) => importCardShows(s.importView));
 
   useEffect(() => {
     markUsed(TOOL_ID.stems);
@@ -46,7 +50,7 @@ function StemSongsRoute() {
         onOpenStemSet={routes.openStemSet}
         onOpenSong={routes.openSong}
         onAdd={openAdd}
-        {...(importing
+        {...(showImport
           ? { status: <ImportStatusCard onView={stemDeck.openImport} /> }
           : {})}
       />

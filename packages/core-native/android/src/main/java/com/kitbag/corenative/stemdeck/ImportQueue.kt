@@ -108,6 +108,14 @@ class ImportQueue {
     return true
   }
 
+  // A song still being added after a stop settles later, so the queue keeps it until then.
+  @Synchronized
+  fun clear(): Boolean {
+    if (snapshot.running || snapshot.items.any { it.state == ItemState.ADDING }) return false
+    snapshot = ImportSnapshot.EMPTY
+    return true
+  }
+
   @Synchronized
   fun next(): ItemState? {
     if (!snapshot.running) return null

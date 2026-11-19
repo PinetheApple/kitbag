@@ -159,6 +159,74 @@ describe('the import card on Stem songs', () => {
     expect(onView).toHaveBeenCalledOnce();
   });
 
+  it('says a stopped import has songs left and opens the progress screen', async () => {
+    const onView = vi.fn();
+    show(
+      [
+        importRow('Way Maker', 'added'),
+        importRow('Gratitude', 'failed', { failure: 'interrupted' }),
+        importRow('Holy Forever', 'notStarted'),
+      ],
+      { running: false, stopped: 'interrupted', retryCount: 2 },
+    );
+    const screen = await mount(<ImportStatusCard onView={onView} />);
+    expect(screen.has('The import was interrupted · 2 songs left')).toBe(true);
+    await screen.press('View the StemDeck import');
+    expect(onView).toHaveBeenCalledOnce();
+  });
+
+  it('says how many failed songs are left after an import ran to the end', async () => {
+    show(
+      [
+        importRow('Way Maker', 'added'),
+        importRow('Gratitude', 'failed', { failure: 'notFound' }),
+      ],
+      { running: false, retryCount: 1 },
+    );
+    const screen = await mount(<ImportStatusCard onView={vi.fn()} />);
+    expect(screen.has('1 of 2 added · 1 song left')).toBe(true);
+  });
+
+  it('is gone after the user stopped the import', async () => {
+    show(
+      [importRow('Way Maker', 'added'), importRow('Gratitude', 'notStarted')],
+      { running: false, stopped: 'cancelled', retryCount: 1 },
+    );
+    const screen = await mount(<ImportStatusCard onView={vi.fn()} />);
+    expect(screen.texts()).toEqual([]);
+  });
+
+  it('is gone once the unfinished import is cleared', async () => {
+    const onBack = vi.fn();
+    const { native } = resetStemDeck();
+    show([importRow('Gratitude', 'notStarted')], {
+      running: false,
+      stopped: 'interrupted',
+      retryCount: 1,
+    });
+    const screen = await mount(
+      <>
+        <ImportStatusCard onView={vi.fn()} />
+        {progress(vi.fn(), onBack)}
+      </>,
+    );
+    expect(screen.has('The import was interrupted · 1 song left')).toBe(true);
+    await screen.press('Clear the unfinished import');
+    expect(native.clearImport).toHaveBeenCalledOnce();
+    expect(screen.has('The import was interrupted · 1 song left')).toBe(false);
+    expect(onBack).toHaveBeenCalledOnce();
+  });
+
+  it('is gone when a stopped import has nothing left', async () => {
+    show([importRow('Way Maker', 'added')], {
+      running: false,
+      stopped: 'interrupted',
+      retryCount: 0,
+    });
+    const screen = await mount(<ImportStatusCard onView={vi.fn()} />);
+    expect(screen.texts()).toEqual([]);
+  });
+
   it('is gone once nothing is running', async () => {
     show([importRow('Way Maker', 'added')], { running: false, finished: true });
     const screen = await mount(<ImportStatusCard onView={vi.fn()} />);

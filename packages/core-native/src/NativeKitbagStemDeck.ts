@@ -148,6 +148,7 @@ export interface Spec extends TurboModule {
   ): Promise<boolean>;
   cancelImport(): void;
   retryImport(): Promise<boolean>;
+  clearImport(): Promise<boolean>;
   importSnapshot(): Promise<StemDeckImportSnapshot>;
   settleDownload(jobId: string, outcome: string): void;
   setWatching(watching: boolean): void;

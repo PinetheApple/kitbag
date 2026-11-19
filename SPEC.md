@@ -1197,6 +1197,11 @@ phone. That page defines the format; this spec does not copy it.
   and its target are stored with each item in the import journal, so Retry
   after a restart replaces as chosen; a journal written before this loads
   its items as plain adds (#413).
+- **Unfinished imports** show on Stem songs as a card while an import runs,
+  and while songs are left after it stopped (a relaunch reads as interrupted)
+  or ran to the end with failures; not after the user stopped it. The card
+  names how many songs are left and opens the import screen, where Retry runs
+  them again and Clear dismisses the import (#451).
 - **A replace keeps** the user's song and stem names, speed and meter. Bar
   one and the lyric retiming are times in the old audio, so only a re-import
   of the same job keeps them (the retiming only while the lyrics are
