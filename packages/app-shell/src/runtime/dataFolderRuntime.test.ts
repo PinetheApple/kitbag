@@ -26,19 +26,26 @@ vi.mock('@kitbag/core-state', () => ({
 
 await import('./dataFolderRuntime.ts');
 
+const configured = mocks.configureDataFolder.mock.calls;
+const starts = mocks.start.mock.calls.length;
+
 it('wires every native move call and starts listening at launch', () => {
-  expect(mocks.configureDataFolder).toHaveBeenCalledExactlyOnceWith({
-    codes: mocks.native.dataFolderCodes,
-    listVolumes: mocks.native.listVolumes,
-    startMove: mocks.native.startMove,
-    cancelMove: mocks.native.cancelMove,
-    resumeMove: mocks.native.resumeMove,
-    undoMove: mocks.native.undoMove,
-    moveStatus: mocks.native.moveStatus,
-    switchToInternalStorage: mocks.native.switchToInternalStorage,
-    releaseOldCopies: mocks.native.releaseOldCopies,
-    watchMove: mocks.native.watchMove,
-    watchDataFolder: mocks.native.watchDataFolder,
-  });
-  expect(mocks.start).toHaveBeenCalledOnce();
+  expect(configured).toEqual([
+    [
+      {
+        codes: mocks.native.dataFolderCodes,
+        listVolumes: mocks.native.listVolumes,
+        startMove: mocks.native.startMove,
+        cancelMove: mocks.native.cancelMove,
+        resumeMove: mocks.native.resumeMove,
+        undoMove: mocks.native.undoMove,
+        moveStatus: mocks.native.moveStatus,
+        switchToInternalStorage: mocks.native.switchToInternalStorage,
+        releaseOldCopies: mocks.native.releaseOldCopies,
+        watchMove: mocks.native.watchMove,
+        watchDataFolder: mocks.native.watchDataFolder,
+      },
+    ],
+  ]);
+  expect(starts).toBe(1);
 });
