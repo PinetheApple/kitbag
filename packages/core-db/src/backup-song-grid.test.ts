@@ -8,56 +8,71 @@ import {
   type BackupDatabase,
   unwrap,
 } from './backup.test-helper';
-import { GRID_METER } from './meter-override';
+import { GRID_METER, type GridMeter } from './meter-override';
 import { packFloat32 } from './packing';
 import { songs } from './schema';
+import { createSongLibraryRepository } from './song-library-repository';
 
 const SONG_UUID = 'c41d7e2a-5b6f-4f0e-8a3b-2d9c1e7f6a50';
-const BACKED_UP_VERSION = 3;
-const LOCAL_VERSION = 4;
-const BACKED_UP_BAR_ONE = 1.25;
-const LOCAL_BAR_ONE = 0.5;
-const BACKED_UP_BEATS = [0.5, 1, 1.5];
-const LOCAL_BEATS = [0.5, 1.5];
-const V20_FIELDS = ['analysisVersion', 'meterBeatsPerBar', 'barOneSeconds'];
+const SONG_TITLE = 'Waltz';
+const UNSUPPORTED_METER = 5;
+const SONG_GRID_FIELDS = [
+  'analysisVersion',
+  'meterBeatsPerBar',
+  'barOneSeconds',
+];
 
-const BACKED_UP = {
-  version: BACKED_UP_VERSION,
+interface SongState {
+  version: number;
+  meter: GridMeter;
+  barOne: number;
+  beats: number[];
+}
+
+const BACKED_UP: SongState = {
+  version: 3,
   meter: GRID_METER.triple,
-  barOne: BACKED_UP_BAR_ONE,
+  barOne: 1.25,
+  beats: [0.5, 1, 1.5],
 };
-const LOCAL = {
-  version: LOCAL_VERSION,
+const LOCAL: SongState = {
+  version: 4,
   meter: GRID_METER.quadruple,
-  barOne: LOCAL_BAR_ONE,
+  barOne: 0.5,
+  beats: [0.5, 1.5],
 };
 
-async function insertSong(database: BackupDatabase, beats: number[]) {
+const columns = (state: SongState) => ({
+  beatGrid: packFloat32(state.beats),
+  analysisVersion: state.version,
+  meterBeatsPerBar: state.meter,
+  barOneSeconds: state.barOne,
+});
+
+const expected = ({ version, meter, barOne }: SongState) => ({
+  version,
+  meter,
+  barOne,
+});
+
+async function insertSong(database: BackupDatabase, state = BACKED_UP) {
   await database.handle.db.insert(songs).values({
-    title: 'Waltz',
+    title: SONG_TITLE,
     artist: '',
     filePath: 'songs/w/waltz.mp3',
     duration: 1,
     format: 'mp3',
     createdAt: SESSION_START,
     uuid: SONG_UUID,
-    beatGrid: packFloat32(beats),
     analysisStatus: 'done',
-    analysisVersion: BACKED_UP_VERSION,
-    meterBeatsPerBar: GRID_METER.triple,
-    barOneSeconds: BACKED_UP_BAR_ONE,
+    ...columns(state),
   });
 }
 
-async function setLocal(database: BackupDatabase, beats: number[]) {
+async function setSong(database: BackupDatabase, state: SongState) {
   await database.handle.db
     .update(songs)
-    .set({
-      beatGrid: packFloat32(beats),
-      analysisVersion: LOCAL_VERSION,
-      meterBeatsPerBar: GRID_METER.quadruple,
-      barOneSeconds: LOCAL_BAR_ONE,
-    })
+    .set(columns(state))
     .where(eq(songs.uuid, SONG_UUID));
 }
 
@@ -73,16 +88,26 @@ async function stored({ handle }: BackupDatabase) {
   return row;
 }
 
-function withoutV20Fields(file: string) {
-  const root = JSON.parse(file) as {
-    librarySongs: Record<string, unknown>[];
-  };
+interface BackupJson {
+  librarySongs: Record<string, unknown>[];
+}
+
+function withoutSongGridFields(file: string) {
+  const root = JSON.parse(file) as BackupJson;
   root.librarySongs = root.librarySongs.map((song) =>
     Object.fromEntries(
-      Object.entries(song).filter(([field]) => !V20_FIELDS.includes(field)),
+      Object.entries(song).filter(
+        ([field]) => !SONG_GRID_FIELDS.includes(field),
+      ),
     ),
   );
   return JSON.stringify(root);
+}
+
+async function planMerge(database: BackupDatabase, file: string) {
+  return unwrap(
+    await database.backup.plan(file, { categories: ['librarySongs'] }),
+  );
 }
 
 async function restore(
@@ -106,86 +131,128 @@ async function restore(
   expect(applied.ok).toBe(true);
 }
 
-async function backedUpThenDiverged(beats: number[]) {
+async function backedUpThen(device: SongState) {
   const database = openBackupDatabase();
-  await insertSong(database, BACKED_UP_BEATS);
+  await insertSong(database);
   const file = await database.backup.export();
-  await setLocal(database, beats);
+  await setSong(database, device);
   return { database, file };
 }
+
+const LOCAL_OVERRIDE_ONLY: SongState = {
+  ...BACKED_UP,
+  meter: LOCAL.meter,
+  barOne: LOCAL.barOne,
+};
+const LOCAL_VERSION_ONLY: SongState = { ...BACKED_UP, version: LOCAL.version };
+const SONG_CONFLICT = {
+  category: 'librarySongs',
+  key: SONG_UUID,
+  label: SONG_TITLE,
+};
 
 describe('a song grid and meter override in a backup', () => {
   it('round-trips the analysis version and the meter override', async () => {
     const source = openBackupDatabase();
-    await insertSong(source, BACKED_UP_BEATS);
+    await insertSong(source);
     const target = openBackupDatabase();
     await restore(target, await source.backup.export(), 'merge');
-    expect(await stored(target)).toEqual(BACKED_UP);
+    expect(await stored(target)).toEqual(expected(BACKED_UP));
   });
 
   it('writes them back under Replace', async () => {
-    const { database, file } = await backedUpThenDiverged(LOCAL_BEATS);
+    const { database, file } = await backedUpThen(LOCAL);
     await restore(database, file, 'replace');
-    expect(await stored(database)).toEqual(BACKED_UP);
+    expect(await stored(database)).toEqual(expected(BACKED_UP));
   });
 
-  it('holds a differing override as a conflict until resolved', async () => {
-    const { database, file } = await backedUpThenDiverged(BACKED_UP_BEATS);
-    const plan = unwrap(
-      await database.backup.plan(file, { categories: ['librarySongs'] }),
-    );
-    expect(plan.unresolved).toEqual([
-      { category: 'librarySongs', key: SONG_UUID, label: 'Waltz' },
+  it('exports a stored meter it cannot play as no override', async () => {
+    const database = openBackupDatabase();
+    await insertSong(database);
+    await database.handle.db
+      .update(songs)
+      .set({ meterBeatsPerBar: UNSUPPORTED_METER })
+      .where(eq(songs.uuid, SONG_UUID));
+    const root = JSON.parse(await database.backup.export()) as BackupJson;
+    expect(root.librarySongs[0]?.meterBeatsPerBar).toBeNull();
+  });
+
+  it('restores a current-version song without owing it a re-analysis', async () => {
+    const source = openBackupDatabase();
+    await insertSong(source);
+    const target = openBackupDatabase();
+    await restore(target, await source.backup.export(), 'merge');
+    const library = createSongLibraryRepository(target.handle);
+    expect(await library.listOutdatedAnalyses(BACKED_UP.version)).toEqual([]);
+  });
+});
+
+describe('merging a song whose override differs', () => {
+  it('holds an override-only difference as a conflict', async () => {
+    const { database, file } = await backedUpThen(LOCAL_OVERRIDE_ONLY);
+    expect((await planMerge(database, file)).unresolved).toEqual([
+      SONG_CONFLICT,
     ]);
   });
 
-  it('takes the backed-up override when the conflict resolves to theirs', async () => {
-    const { database, file } = await backedUpThenDiverged(BACKED_UP_BEATS);
+  it('takes the backed-up override on theirs', async () => {
+    const { database, file } = await backedUpThen(LOCAL_OVERRIDE_ONLY);
     await restore(database, file, 'merge', 'theirs');
-    expect(await stored(database)).toEqual(BACKED_UP);
+    expect(await stored(database)).toEqual(expected(BACKED_UP));
   });
 
-  it('keeps the local override when the conflict resolves to mine', async () => {
-    const { database, file } = await backedUpThenDiverged(BACKED_UP_BEATS);
+  it('keeps the device override on mine', async () => {
+    const { database, file } = await backedUpThen(LOCAL_OVERRIDE_ONLY);
     await restore(database, file, 'merge', 'mine');
-    expect(await stored(database)).toEqual(LOCAL);
+    expect(await stored(database)).toEqual(expected(LOCAL_OVERRIDE_ONLY));
+  });
+});
+
+describe('merging a song whose analysis version differs', () => {
+  it('keeps the device version when only the version differs', async () => {
+    const { database, file } = await backedUpThen(LOCAL_VERSION_ONLY);
+    const plan = await planMerge(database, file);
+    expect(plan.counts.librarySongs?.unchanged).toBe(1);
+    await database.backup.apply(plan);
+    expect(await stored(database)).toEqual(expected(LOCAL_VERSION_ONLY));
+  });
+
+  it('brings the backed-up version with a differing grid on theirs', async () => {
+    const { database, file } = await backedUpThen(LOCAL);
+    await restore(database, file, 'merge', 'theirs');
+    expect(await stored(database)).toEqual(expected(BACKED_UP));
   });
 });
 
 describe('a backup from before songs carried their grid fields', () => {
   it('keeps the device override and forgets the version under Merge', async () => {
-    const { database, file } = await backedUpThenDiverged(LOCAL_BEATS);
-    await restore(database, withoutV20Fields(file), 'merge', 'theirs');
-    expect(await stored(database)).toEqual({ ...LOCAL, version: null });
+    const { database, file } = await backedUpThen(LOCAL);
+    await restore(database, withoutSongGridFields(file), 'merge', 'theirs');
+    expect(await stored(database)).toEqual({
+      ...expected(LOCAL),
+      version: null,
+    });
   });
 
   it('keeps the device override and forgets the version under Replace', async () => {
-    const { database, file } = await backedUpThenDiverged(LOCAL_BEATS);
-    await restore(database, withoutV20Fields(file), 'replace');
-    expect(await stored(database)).toEqual({ ...LOCAL, version: null });
+    const { database, file } = await backedUpThen(LOCAL);
+    await restore(database, withoutSongGridFields(file), 'replace');
+    expect(await stored(database)).toEqual({
+      ...expected(LOCAL),
+      version: null,
+    });
   });
 
-  it('is not a conflict over the version alone', async () => {
-    const { database, file } = await backedUpThenDiverged(BACKED_UP_BEATS);
-    const old = JSON.parse(withoutV20Fields(file)) as {
-      librarySongs: Record<string, unknown>[];
-    };
-    for (const song of old.librarySongs) {
-      song.meterBeatsPerBar = GRID_METER.quadruple;
-      song.barOneSeconds = LOCAL_BAR_ONE;
-    }
-    const plan = unwrap(
-      await database.backup.plan(JSON.stringify(old), {
-        categories: ['librarySongs'],
-      }),
-    );
+  it('is not a conflict when only the missing fields differ', async () => {
+    const { database, file } = await backedUpThen(LOCAL_VERSION_ONLY);
+    const plan = await planMerge(database, withoutSongGridFields(file));
     expect(plan.counts.librarySongs?.unchanged).toBe(1);
   });
 });
 
 describe('song grid field validation', () => {
   const INVALID = [
-    ['meterBeatsPerBar', '5'],
+    ['meterBeatsPerBar', String(UNSUPPORTED_METER)],
     ['meterBeatsPerBar', '"3"'],
     ['barOneSeconds', '-0.5'],
     ['barOneSeconds', '1e999'],
@@ -195,7 +262,7 @@ describe('song grid field validation', () => {
 
   it.each(INVALID)('refuses %s %s', async (field, value) => {
     const source = openBackupDatabase();
-    await insertSong(source, BACKED_UP_BEATS);
+    await insertSong(source);
     const file = (await source.backup.export()).replace(
       new RegExp(`"${field}":[^,}]+`),
       `"${field}":${value}`,
@@ -205,10 +272,7 @@ describe('song grid field validation', () => {
     });
     expect(plan).toMatchObject({
       ok: false,
-      error: {
-        kind: 'invalidField',
-        path: `$.librarySongs[0].${field}`,
-      },
+      error: { kind: 'invalidField', path: `$.librarySongs[0].${field}` },
     });
   });
 });

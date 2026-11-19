@@ -50,7 +50,7 @@ function withoutId<T extends { id: number }>(row: T): Omit<T, 'id'> {
   return copy as Omit<T, 'id'>;
 }
 
-// Status and error describe this device's copy of the file; restore derives them from the grid.
+// Status and error describe this device's copy of the file.
 const UNPORTABLE_SONG_FIELDS = [
   'id',
   'analysisStatus',

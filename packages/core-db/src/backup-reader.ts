@@ -52,13 +52,21 @@ function fieldReader(value: unknown, path: string) {
   };
   const nullable = <T>(key: string, check: Check<T>, reason: string) =>
     object[key] === null ? null : get(key, check, reason);
-  return { object, get, nullable };
+  const ifPresent = <K extends string, T>(
+    key: K,
+    read: (key: K) => T,
+  ): Partial<Record<K, T>> =>
+    object[key] === undefined ? {} : ({ [key]: read(key) } as Record<K, T>);
+  return { object, get, nullable, ifPresent };
 }
 
 export function reader(value: unknown, path: string) {
-  const { object, get, nullable } = fieldReader(value, path);
+  const { object, get, nullable, ifPresent } = fieldReader(value, path);
+  const nullableCount = (key: string) =>
+    nullable(key, isCount, 'expected a whole number ≥ 0 or null');
+  const nullableNumber = (key: string) =>
+    nullable(key, isNumber, 'expected a finite number or null');
   return {
-    present: (key: string) => object[key] !== undefined,
     array: (key: string) => asArray(object[key], `${path}.${key}`),
     string: (key: string) => get(key, isString, 'expected a string'),
     number: (key: string) => get(key, isNumber, 'expected a finite number'),
@@ -80,14 +88,16 @@ export function reader(value: unknown, path: string) {
         : get(key, isNumber, 'expected a finite number'),
     nullableString: (key: string) =>
       nullable(key, isString, 'expected a string or null'),
-    nullableNumber: (key: string) =>
-      nullable(key, isNumber, 'expected a finite number or null'),
+    nullableNumber,
+    presentNullableNumber: <K extends string>(key: K) =>
+      ifPresent(key, nullableNumber),
     nullableNumberOr: (key: string, legacyKey: string) =>
       object[key] === undefined && object[legacyKey] !== undefined
         ? nullable(legacyKey, isNumber, 'expected a finite number or null')
         : nullable(key, isNumber, 'expected a finite number or null'),
-    nullableCount: (key: string) =>
-      nullable(key, isCount, 'expected a whole number ≥ 0 or null'),
+    nullableCount,
+    presentNullableCount: <K extends string>(key: K) =>
+      ifPresent(key, nullableCount),
     nullableUuid: (key: string) =>
       nullableLowercase(nullable(key, isUuid, 'expected a UUID or null')),
     nullableBlob: (key: string) =>

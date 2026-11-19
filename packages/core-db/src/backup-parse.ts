@@ -41,15 +41,9 @@ const FLOAT32_BYTES = 4;
 
 function readSongGrid(r: Reader, path: string) {
   const fields = {
-    ...(r.present('analysisVersion') && {
-      analysisVersion: r.nullableCount('analysisVersion'),
-    }),
-    ...(r.present('meterBeatsPerBar') && {
-      meterBeatsPerBar: r.nullableCount('meterBeatsPerBar'),
-    }),
-    ...(r.present('barOneSeconds') && {
-      barOneSeconds: r.nullableNumber('barOneSeconds'),
-    }),
+    ...r.presentNullableCount('analysisVersion'),
+    ...r.presentNullableCount('meterBeatsPerBar'),
+    ...r.presentNullableNumber('barOneSeconds'),
   };
   const violation = meterOverrideViolation(fields);
   if (violation) invalidField(`${path}.${violation.field}`, violation.reason);
