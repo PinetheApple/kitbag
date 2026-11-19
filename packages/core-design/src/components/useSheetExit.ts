@@ -93,6 +93,10 @@ export function useSheetExit({
   });
   useEffect(
     () => () => {
+      if (visibleNow.current) {
+        hide(id);
+        return;
+      }
       cancelAnimation(dragY);
       cancelAnimation(scrimOpacity);
       scheduleOnUI(() => {

@@ -119,13 +119,33 @@ vi.mock('react-native-reanimated', async () => {
   };
 });
 vi.mock('react-native-gesture-handler', () => {
-  const chain = {
-    activeOffsetY: () => chain,
-    onUpdate: () => chain,
-    onEnd: () => chain,
-  };
+  type PanHandler = (event: { translationY: number }) => void;
+  function Pan() {
+    const pan = {
+      enabled: true,
+      update: undefined as PanHandler | undefined,
+      end: undefined as PanHandler | undefined,
+    };
+    const chain = {
+      pan,
+      activeOffsetY: () => chain,
+      enabled: (on: boolean) => {
+        pan.enabled = on;
+        return chain;
+      },
+      onUpdate: (handler: PanHandler) => {
+        pan.update = handler;
+        return chain;
+      },
+      onEnd: (handler: PanHandler) => {
+        pan.end = handler;
+        return chain;
+      },
+    };
+    return chain;
+  }
   return {
-    Gesture: { Pan: () => chain },
+    Gesture: { Pan },
     GestureDetector: 'GestureDetector',
   };
 });
@@ -162,6 +182,7 @@ const DELETE = 'Delete';
 const SONG = 'Song';
 const KEYBOARD_OPEN = -300;
 const KEYBOARD_CLOSING = -120;
+const SHORT_DRAG = 40;
 const noop = () => undefined;
 
 interface Open {
@@ -257,6 +278,27 @@ function settleFrames() {
   while (frames.length > 0) runFrame();
 }
 
+interface PanHandle {
+  readonly pan: {
+    readonly enabled: boolean;
+    readonly update?: (event: { translationY: number }) => void;
+    readonly end?: (event: { translationY: number }) => void;
+  };
+}
+
+function shortDrag(tree: ReactTestRenderer, title: string) {
+  const detector = slotTitled(tree, title).find(
+    (node) => node.type === ('GestureDetector' as never),
+  );
+  const { pan } = detector.props.gesture as PanHandle;
+  if (!pan.enabled) return;
+  const event = { translationY: SHORT_DRAG };
+  act(() => {
+    pan.update?.(event);
+    pan.end?.(event);
+  });
+}
+
 interface StyleHandle {
   readonly updater: () => { paddingBottom?: number };
 }
@@ -317,6 +359,22 @@ it('keeps a sheet shown again after its exit finished but before removal', () =>
   rerender(tree, { actions: true, remove: false });
   settleFrames();
   expect(titles(tree)).toEqual([ACTIONS]);
+  expect(focusReaderOn).toHaveBeenCalledExactlyOnceWith({ title: ACTIONS });
+});
+
+it('lets a drag that was under way when the exit started neither stop nor undo it', () => {
+  const tree = mount({ actions: true, remove: false });
+  rerender(tree, { actions: false, remove: false });
+  shortDrag(tree, ACTIONS);
+  finishExits();
+  settleFrames();
+  expect(titles(tree)).toEqual([]);
+});
+
+it('removes an open sheet at once when its owner unmounts', () => {
+  const tree = mount({ actions: true, remove: false });
+  rerender(tree, { actions: true, owned: false, remove: false });
+  expect(titles(tree)).toEqual([]);
 });
 
 it('lets only the latest exit remove a sheet hidden, shown and hidden again', () => {

@@ -239,6 +239,7 @@ export function Sheet({
     [motion, focusTitle],
   );
   const dragY = useSharedValue(0);
+  const dragAllowed = useSharedValue(visible);
   const sheetHeight = useSharedValue(0);
   const scrimOpacity = useSharedValue(0);
 
@@ -249,21 +250,27 @@ export function Sheet({
     [sheetHeight],
   );
 
+  useEffect(() => {
+    dragAllowed.value = visible;
+  }, [dragAllowed, visible]);
+  // A leaving slot keeps the gesture it was shown with, so it gates on a shared value.
   const dragToDismiss = useMemo(
     () =>
       Gesture.Pan()
         .activeOffsetY(SHEET_DRAG_ACTIVATION_DP)
         .onUpdate((event) => {
+          if (!dragAllowed.value) return;
           dragY.value = Math.max(0, event.translationY);
         })
         .onEnd((event) => {
+          if (!dragAllowed.value) return;
           if (shouldDismissSheet(event.translationY, sheetHeight.value)) {
             scheduleOnRN(onDismiss);
             return;
           }
           dragY.value = withSpring(0, { reduceMotion: motion });
         }),
-    [dragY, sheetHeight, onDismiss, motion],
+    [dragAllowed, dragY, sheetHeight, onDismiss, motion],
   );
 
   // Edge to edge, nothing resizes for the keyboard and RN's keyboard events
