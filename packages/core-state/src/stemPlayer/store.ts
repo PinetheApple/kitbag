@@ -1,6 +1,8 @@
 import {
   meterOverrideOf,
+  NO_CLICK,
   NO_METER_OVERRIDE,
+  type ClickRate,
   type MeterOverride,
   type StemSetRecord,
   type StoredSection,
@@ -11,6 +13,7 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import { mixActions, transportActions } from './actions.ts';
 import { barMarkDownbeats, sameNumbers } from './bars.ts';
 import { clickActions, followNewGrid, releaseClick } from './clickActions.ts';
+import { clickShapeActions } from './clickShape.ts';
 import {
   exportActions,
   exportAfterLeaving,
@@ -102,6 +105,8 @@ export interface StemPlayerState {
   readonly loopFailure: LoopFailure | null;
   readonly undoableLoop: LoopSeconds | null;
   readonly click: boolean;
+  readonly clickGrouping: readonly number[];
+  readonly clickRate: ClickRate;
   readonly countEndFrame: number | null;
   readonly sections: readonly StoredSection[];
   readonly lyrics: SongLyrics;
@@ -138,6 +143,8 @@ export interface StemPlayerActions {
   readonly leaveRetime: () => void;
   readonly resetRetime: () => Promise<void>;
   readonly toggleClick: () => Promise<void>;
+  readonly setClickGrouping: (groups: readonly number[]) => Promise<void>;
+  readonly setClickRate: (rate: ClickRate) => Promise<void>;
   readonly renameStem: (index: number, name: string) => Promise<void>;
   readonly meterOverrideChanged: (
     setId: number,
@@ -187,6 +194,7 @@ const closedState: StemPlayerState = {
   loopFailure: null,
   undoableLoop: null,
   click: false,
+  ...NO_CLICK,
   countEndFrame: null,
   sections: [],
   lyrics: NO_LYRICS,
@@ -318,7 +326,8 @@ export function createStemPlayerStore(
         },
       }),
     );
-    const clicks = clickActions(context, mixer.pendingClick, start);
+    const clickShape = clickShapeActions(context);
+    const clicks = clickActions(context, mixer.pendingClick, start, clickShape);
     const songDownbeats = (beats: readonly number[], override: MeterOverride) =>
       overrideDownbeats(
         { beats, downbeatIndices: markedDownbeatIndices },
@@ -387,6 +396,8 @@ export function createStemPlayerStore(
         beats: record.beats,
         downbeatIndices: songDownbeats(record.beats, record),
         meterOverride: meterOverrideOf(record),
+        clickGrouping: record.clickGrouping,
+        clickRate: record.clickRate,
         sections: sortedSections(record.sections),
         lyrics: songLyrics(record.lyrics, record.lyricsRetimed),
       });
@@ -431,6 +442,7 @@ export function createStemPlayerStore(
       ...transportActions(get, runtimeOf, scrubSeek, afterSeek, start),
       ...sectionLoopActions(context),
       ...clicks,
+      ...clickShape.actions,
       ...renameActions(context),
       ...retimeActions(context, claim.defer, start),
       meterOverrideChanged: (setId, override) => {
@@ -443,7 +455,10 @@ export function createStemPlayerStore(
           return;
         }
         set({ meterOverride, downbeatIndices: downbeats });
-        void followNewGrid(context, start.gridReplaced);
+        void followNewGrid(context, {
+          gridReplaced: start.gridReplaced,
+          gridSent: clickShape.gridSent,
+        });
       },
       ...exportActions(context),
     };

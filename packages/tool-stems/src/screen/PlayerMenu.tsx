@@ -10,7 +10,9 @@ import { exportBlock, useStemPlayer } from '@kitbag/core-state';
 import { useCallback } from 'react';
 import { Pressable, Text } from 'react-native';
 
+import type { ClickSection } from '../logic/clickView.ts';
 import { exportRowValue } from '../logic/exportView.ts';
+import { ClickRows } from './ClickRows.tsx';
 import { useMixdownProgress } from './useMixdownProgress.ts';
 
 const useStyles = createThemedStyles((theme) => ({
@@ -72,6 +74,7 @@ interface PlayerMenuProps {
   readonly bottomInset: number;
   readonly onClose: () => void;
   readonly onExport: () => void;
+  readonly onClick: (section: ClickSection) => void;
 }
 
 export function PlayerMenu({
@@ -79,6 +82,7 @@ export function PlayerMenu({
   bottomInset,
   onClose,
   onExport,
+  onClick,
 }: PlayerMenuProps) {
   const styles = useStyles();
   const resetMix = useStemPlayer((s) => s.resetMix);
@@ -104,6 +108,7 @@ export function PlayerMenu({
         <Text style={styles.label}>Reset mix</Text>
         <Text style={styles.value}>levels, mutes, solos</Text>
       </Pressable>
+      <ClickRows onOpen={onClick} />
       <ExportRow visible={visible} onExport={onExport} />
     </Sheet>
   );

@@ -23,7 +23,9 @@ import { useCallback, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { detailTabLabel } from '../logic/detailView.ts';
+import { CLICK_SECTION, type ClickSection } from '../logic/clickView.ts';
 import { hasUnsavedRetime } from '../logic/retimeView.ts';
+import { ClickSheet } from './ClickSheet.tsx';
 import { DetailPane } from './DetailPane.tsx';
 import { ExportCancelledSnackbar, ExportNotice } from './ExportNotice.tsx';
 import { ExportSheet } from './ExportSheet.tsx';
@@ -268,6 +270,24 @@ function useRetimeAsk() {
   return { retiming, shown, askReset, askLeave, closeAsk };
 }
 
+function useClickSheet(retiming: boolean, setMenu: (open: boolean) => void) {
+  const [visible, setVisible] = useState(false);
+  const [section, setSection] = useState<ClickSection>(CLICK_SECTION.grouping);
+  if (visible && retiming) setVisible(false);
+  const open = useCallback(
+    (from: ClickSection) => {
+      setMenu(false);
+      setSection(from);
+      setVisible(true);
+    },
+    [setMenu],
+  );
+  const close = useCallback(() => {
+    setVisible(false);
+  }, []);
+  return { visible, section, open, close };
+}
+
 export function StemPlayerScreen({
   setId,
   focused,
@@ -280,6 +300,7 @@ export function StemPlayerScreen({
   const { retiming, shown, askReset, askLeave, closeAsk } = useRetimeAsk();
   const [menu, setMenu] = useState(false);
   const [exportSheet, setExportSheet] = useState(false);
+  const click = useClickSheet(retiming, setMenu);
   if (menu && retiming) setMenu(false);
   if (exportSheet && retiming) setExportSheet(false);
   const openMenu = useCallback(() => {
@@ -321,6 +342,13 @@ export function StemPlayerScreen({
         bottomInset={insets.bottom}
         onClose={closeMenu}
         onExport={openExport}
+        onClick={click.open}
+      />
+      <ClickSheet
+        visible={click.visible}
+        section={click.section}
+        bottomInset={insets.bottom}
+        onClose={click.close}
       />
       <ExportSheet
         visible={exportSheet}

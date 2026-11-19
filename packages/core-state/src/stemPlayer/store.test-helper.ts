@@ -1,4 +1,9 @@
-import type { MeterOverride, StemSetRecord, StoredStem } from '@kitbag/core-db';
+import {
+  NO_CLICK,
+  type MeterOverride,
+  type StemSetRecord,
+  type StoredStem,
+} from '@kitbag/core-db';
 import {
   KB_COUNT_IN_OFF,
   KB_MIXDOWN_STATE,
@@ -90,6 +95,7 @@ export function record(
     stems,
     meterBeatsPerBar: null,
     barOneSeconds: null,
+    ...NO_CLICK,
     ...change,
   };
 }
@@ -174,6 +180,12 @@ export function fakeRuntime(set: StemSetRecord) {
     renameStem: vi.fn<StemPlayerRecords['renameStem']>(() => Promise.resolve()),
     saveLyricsRetimed: vi.fn<StemPlayerRecords['saveLyricsRetimed']>(() =>
       Promise.resolve(),
+    ),
+    saveStemSetClick: vi.fn<StemPlayerRecords['saveStemSetClick']>(
+      (_id, patch) => {
+        stored = { ...stored, ...patch };
+        return Promise.resolve();
+      },
     ),
   };
   const sharedMetronome = { active: vi.fn(() => false), release: vi.fn() };
