@@ -5,6 +5,7 @@ import {
   useMemo,
   useRef,
   type ReactNode,
+  type RefObject,
 } from 'react';
 import {
   Pressable,
@@ -13,6 +14,7 @@ import {
   Text,
   View,
   type AccessibilityActionEvent,
+  type HostInstance,
   type LayoutChangeEvent,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -179,6 +181,7 @@ export interface SheetProps {
   readonly bottomInset?: number;
   readonly onDismiss: () => void;
   readonly onShow?: () => void;
+  readonly initialFocusRef?: RefObject<HostInstance | null>;
   readonly dim?: boolean;
   readonly scrollEnabled?: boolean;
   readonly notice?: ReactNode;
@@ -196,6 +199,7 @@ export function Sheet({
   bottomInset = 0,
   onDismiss,
   onShow,
+  initialFocusRef,
   dim = false,
   scrollEnabled = true,
   notice,
@@ -211,8 +215,8 @@ export function Sheet({
   const motion = useReduceMotionMode();
   const titleRef = useRef<Text>(null);
   const focusTitle = useCallback(() => {
-    focusReaderOn(titleRef.current);
-  }, []);
+    focusReaderOn(initialFocusRef?.current ?? titleRef.current);
+  }, [initialFocusRef]);
   const readerActions = useMemo(
     () => [{ name: READER_CLOSE_ACTION, label: dismissLabel }],
     [dismissLabel],
