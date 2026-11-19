@@ -84,6 +84,7 @@ type SongPlayerActions = Pick<
     songId: number,
     correction: TempoCorrection,
   ) => void;
+  readonly tempoCorrectionSettled: (songId: number) => void;
   readonly playheadBeatSeconds: () => number | null;
   readonly dismissMeterNotice: () => void;
 };
@@ -120,6 +121,8 @@ export function createSongPlayerStore(
   let shownWaveform: string | null = null;
   let latestWaveform: string | null = null;
   let detectedGrid = NO_GRID;
+  // Set while a picked factor is saving, so a re-read cannot bring back an older one.
+  let heldCorrection: TempoCorrection | null = null;
 
   const teardownTracks = () => {
     const { commands } = runtimeOf();
@@ -266,7 +269,11 @@ export function createSongPlayerStore(
       set({ status: 'missing' });
     };
 
-    const followAnalysis = (opened: number, record: SongRecord) => {
+    const followAnalysis = (opened: number, stored: SongRecord) => {
+      const record =
+        heldCorrection === null
+          ? stored
+          : { ...stored, tempoCorrection: heldCorrection };
       const ready = get().status === 'ready';
       const grid = recordGrid(record);
       const regrid = ready && !sameGrid(get(), grid);
@@ -333,6 +340,7 @@ export function createSongPlayerStore(
         const opened = mixer.begin();
         holders = 0;
         detectedGrid = NO_GRID;
+        heldCorrection = null;
         waveformBars = bars;
         shownWaveform = null;
         latestWaveform = null;
@@ -354,10 +362,14 @@ export function createSongPlayerStore(
       },
       tempoCorrectionChanged: (songId, tempoCorrection) => {
         if (!isOpenAndReady(songId)) return;
+        heldCorrection = tempoCorrection;
         showGrid(songGrid(detectedGrid, get().meterOverride, tempoCorrection), {
           tempoCorrection,
           bpm: correctedBpm(get().detectedBpm, tempoCorrection),
         });
+      },
+      tempoCorrectionSettled: (songId) => {
+        if (get().songId === songId) heldCorrection = null;
       },
       playheadBeatSeconds: () => {
         const { beats, engineRate } = get();

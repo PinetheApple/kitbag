@@ -14,7 +14,6 @@ import {
   type DetectedGrid,
   type DetectedMeter,
 } from '../stemPlayer/meterOverride.ts';
-import { nearestBeat } from '../stemPlayer/loop.ts';
 import { correctedGrid } from '../stemPlayer/tempoCorrection.ts';
 
 export interface SongGrid extends DetectedGrid {
@@ -22,15 +21,6 @@ export interface SongGrid extends DetectedGrid {
 }
 
 export const NO_GRID: DetectedGrid = { beats: [], downbeatIndices: [] };
-
-function scaledBarOne(
-  corrected: DetectedGrid,
-  detected: DetectedMeter,
-): DetectedMeter {
-  const index = nearestBeat(corrected.beats, detected.barOneSeconds);
-  const beat = index === null ? undefined : corrected.beats[index];
-  return { ...detected, barOneSeconds: beat ?? detected.barOneSeconds };
-}
 
 export function songGrid(
   analysed: DetectedGrid,
@@ -49,15 +39,14 @@ export function songGrid(
       downbeatIndices: overrideDownbeats(analysed, override),
       detected: found,
     };
-  const detected = scaledBarOne(corrected, found);
-  const barOneSeconds = override.barOneSeconds ?? detected.barOneSeconds;
+  const barOneSeconds = override.barOneSeconds ?? found.barOneSeconds;
   return {
     beats: corrected.beats,
     downbeatIndices: overrideDownbeats(corrected, {
       ...override,
       barOneSeconds,
     }),
-    detected,
+    detected: found,
   };
 }
 
@@ -72,12 +61,15 @@ export function sameGrid(a: DetectedGrid, b: DetectedGrid): boolean {
   );
 }
 
+function downbeatTimes({ beats, downbeatIndices }: DetectedGrid): number[] {
+  return usableDownbeats(downbeatIndices, beats.length).map(
+    (index) => beats[index] ?? Number.NaN,
+  );
+}
+
 export function overrideDisagrees(record: SongRecord): boolean {
   if (!isMeterOverridden(meterOverrideOf(record))) return false;
   const shown = recordGrid(record);
   const unforced = songGrid(record, NO_METER_OVERRIDE, record.tempoCorrection);
-  return !sameNumbers(
-    shown.downbeatIndices,
-    usableDownbeats(unforced.downbeatIndices, unforced.beats.length),
-  );
+  return !sameNumbers(downbeatTimes(shown), downbeatTimes(unforced));
 }

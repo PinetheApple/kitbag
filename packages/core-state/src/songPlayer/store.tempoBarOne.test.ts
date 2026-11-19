@@ -11,6 +11,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createStore } from 'zustand/vanilla';
 
 import { songRow } from '../storage/fixtures.test-helper.ts';
+import { overrideDisagrees } from './songGrid.ts';
 import {
   BARS,
   fakeSongRuntime,
@@ -91,6 +92,35 @@ describe('bar 1 on a corrected grid', () => {
       PRECISION,
     );
     expect(isDownbeat(store, moved)).toBe(true);
+  });
+});
+
+describe('the detected bar 1 under a user bar 1', () => {
+  const ONE_BEAT_LATER = BAR_ONE_SONG.beats[BAR_ONE_INDEX + 1] ?? Number.NaN;
+
+  it.each([
+    TEMPO_CORRECTION.half,
+    TEMPO_CORRECTION.threeHalves,
+    TEMPO_CORRECTION.twoThirds,
+  ])('%s still reports the analysed bar 1', async (correction) => {
+    const store = await corrected(
+      { ...BAR_ONE_SONG, barOneSeconds: ONE_BEAT_LATER },
+      correction,
+    );
+    expect(store.getState().detected.barOneSeconds).toBe(BAR_ONE_SECONDS);
+  });
+});
+
+describe('an override that disagrees with a corrected grid', () => {
+  it('compares downbeat times, not indices into differently anchored grids', () => {
+    const userBarOne = BAR_ONE_SONG.beats[10] ?? Number.NaN;
+    expect(
+      overrideDisagrees({
+        ...BAR_ONE_SONG,
+        barOneSeconds: userBarOne,
+        tempoCorrection: TEMPO_CORRECTION.half,
+      }),
+    ).toBe(true);
   });
 });
 

@@ -167,3 +167,41 @@ describe('a re-analysis of a corrected song', () => {
     });
   });
 });
+
+describe('a re-read while a picked factor saves', () => {
+  const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+  it('keeps the picked factor until the save settles', async () => {
+    vi.useRealTimers();
+    const fake = fakeSongRuntime(ANALYSED);
+    const library = createStore(() => ({
+      rows: [songRow({ id: SONG_ID })] as readonly LibraryRow[],
+      ready: true,
+      failed: false,
+    }));
+    const player = songStore(fake, undefined, library);
+    await player.getState().open(SONG_ID, BARS).loaded;
+    player.getState().tempoCorrectionChanged(SONG_ID, TEMPO_CORRECTION.double);
+    fake.records.readSong.mockResolvedValue({
+      ...ANALYSED,
+      tempoCorrection: TEMPO_CORRECTION.threeHalves,
+    });
+    library.setState({ rows: [songRow({ id: SONG_ID, bpm: 121 })] });
+    await vi.waitFor(() => {
+      expect(fake.records.readSong).toHaveBeenCalledTimes(2);
+    });
+    await tick();
+    expect(player.getState()).toMatchObject({
+      tempoCorrection: TEMPO_CORRECTION.double,
+      beats: DOUBLE_BEATS,
+    });
+    player.getState().tempoCorrectionSettled(SONG_ID);
+    library.setState({ rows: [songRow({ id: SONG_ID, bpm: 122 })] });
+    await vi.waitFor(() => {
+      expect(player.getState().tempoCorrection).toBe(
+        TEMPO_CORRECTION.threeHalves,
+      );
+    });
+    expect(player.getState().beats).toEqual(THREE_HALVES_BEATS);
+  });
+});
