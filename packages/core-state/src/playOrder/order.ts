@@ -1,6 +1,10 @@
 import type { PlayQueueEntry } from '@kitbag/core-db';
 
-import { activeSetlistOf } from '../library/setlistPosition.ts';
+import {
+  activeSetlistOf,
+  adjacentEntry,
+  SONG_STEP,
+} from '../library/setlistPosition.ts';
 import {
   isPresetEntry,
   type PresetSetlistEntry,
@@ -82,21 +86,12 @@ export function entriesAfter(
   return stage.entries.slice(stage.entries.indexOf(next));
 }
 
-function entryAfter(
-  entries: readonly SetlistEntry[],
-  cursor: SetlistCursor,
-): SetlistEntry | undefined {
-  const index = entries.findIndex((entry) => entry.item.id === cursor.itemId);
-  const removed = index < 0;
-  return removed ? entries[cursor.index] : entries[index + 1];
-}
-
 function nextSetlistEntry(
   { setlistId, entries }: OnStage,
   cursor: SetlistCursor | null,
 ): SetlistEntry | undefined {
   if (setlistId === null || cursor?.setlistId !== setlistId) return entries[0];
-  return entryAfter(entries, cursor);
+  return adjacentEntry(entries, cursor, SONG_STEP.next);
 }
 
 export function upNext({
