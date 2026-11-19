@@ -39,6 +39,7 @@ export {
   type GridMeter,
   type MeterOverride,
   type MeterOverridePatch,
+  NO_METER_OVERRIDE,
 } from './meter-override';
 export type {
   AnalysisResultRecord,

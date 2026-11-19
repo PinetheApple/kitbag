@@ -1,6 +1,11 @@
+import { GRID_METER, NO_METER_OVERRIDE } from '@kitbag/core-db';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { opened, stem } from './store.test-helper.ts';
+import { createStemPlayerStore } from './store.ts';
+import { fakeRuntime, opened, record, stem } from './store.test-helper.ts';
+
+const BEATS = [0, 0.5, 1, 1.5, 2, 2.5, 3];
+const FOUR_FOUR = [{ beat: 0, beatsPerBar: 4 }];
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -34,5 +39,61 @@ describe("the click's bars", () => {
       [],
       0,
     );
+  });
+
+  it("follows the user's meter over the bar marks", async () => {
+    const { commands, store } = await opened([stem(1)], {
+      bars: FOUR_FOUR,
+      meterBeatsPerBar: GRID_METER.triple,
+    });
+    await store.getState().toggleClick();
+    expect(commands.setGrid).toHaveBeenCalledWith(BEATS, [0, 3, 6], 0);
+  });
+
+  it("starts the bars on the user's bar one", async () => {
+    const { commands, store } = await opened([stem(1)], {
+      bars: FOUR_FOUR,
+      barOneSeconds: 0.5,
+    });
+    await store.getState().toggleClick();
+    expect(commands.setGrid).toHaveBeenCalledWith(BEATS, [1, 5], 0);
+  });
+});
+
+const TRIPLE_OVERRIDE = {
+  ...NO_METER_OVERRIDE,
+  meterBeatsPerBar: GRID_METER.triple,
+};
+
+describe('a meter saved while the song is open', () => {
+  it('moves the bars the click gets', async () => {
+    const { commands, store } = await opened([stem(1)], { bars: FOUR_FOUR });
+    await store.getState().toggleClick();
+    commands.setGrid.mockClear();
+    store.getState().meterOverrideChanged(TRIPLE_OVERRIDE);
+    await vi.runAllTimersAsync();
+    expect(commands.setGrid).toHaveBeenCalledWith(BEATS, [0, 3, 6], 0);
+    expect(store.getState().meterOverride).toEqual(TRIPLE_OVERRIDE);
+  });
+
+  it('goes back to the bar marks when cleared', async () => {
+    const { commands, store } = await opened([stem(1)], {
+      bars: FOUR_FOUR,
+      meterBeatsPerBar: GRID_METER.triple,
+    });
+    await store.getState().toggleClick();
+    commands.setGrid.mockClear();
+    store.getState().meterOverrideChanged(NO_METER_OVERRIDE);
+    await vi.runAllTimersAsync();
+    expect(commands.setGrid).toHaveBeenCalledWith(BEATS, [0, 4], 0);
+  });
+
+  it('does nothing with no song open', () => {
+    const fake = fakeRuntime(record([stem(1)]));
+    const store = createStemPlayerStore(() => fake.runtime);
+    store.getState().meterOverrideChanged(TRIPLE_OVERRIDE);
+    expect(store.getState().meterOverride).toEqual(NO_METER_OVERRIDE);
+    expect(store.getState().downbeatIndices).toEqual([]);
+    expect(fake.commands.setGrid).not.toHaveBeenCalled();
   });
 });

@@ -355,6 +355,11 @@ export {
 export type { LoopSeconds } from './stemPlayer/loop.ts';
 export { NO_SECTION, sectionAt } from './stemPlayer/sections.ts';
 export {
+  nearestBeat,
+  overrideDownbeats,
+  type DetectedGrid,
+} from './stemPlayer/meterOverride.ts';
+export {
   clickKeyLabel,
   loopEndFrames,
   loopKeyLabel,

@@ -18,6 +18,7 @@ import {
   type ClickSlice,
 } from '../stemPlayer/clickActions.ts';
 import { loopActions, type LoopSlice } from '../stemPlayer/loopActions.ts';
+import { overrideDownbeats } from '../stemPlayer/meterOverride.ts';
 import { UNITY_GAIN, UNSHIFTED_KEY } from '../stemPlayer/mix.ts';
 import {
   createMixerClaim,
@@ -260,7 +261,7 @@ export function createSongPlayerStore(
         engineRate,
         durationFrames,
         beats: record.beats,
-        downbeatIndices: record.downbeatIndices,
+        downbeatIndices: overrideDownbeats(record, record),
       });
       if (decoded > 0)
         correctStoredLength(record, framesToSeconds(decoded, engineRate));
@@ -275,17 +276,16 @@ export function createSongPlayerStore(
     const followAnalysis = (opened: number, record: SongRecord) => {
       const { status, beats, downbeatIndices } = get();
       const ready = status === 'ready';
+      const downbeats = overrideDownbeats(record, record);
       const regrid =
         ready &&
         !(
           sameNumbers(beats, record.beats) &&
-          sameNumbers(downbeatIndices, record.downbeatIndices)
+          sameNumbers(downbeatIndices, downbeats)
         );
       set({
         ...factsOf(record),
-        ...(regrid
-          ? { beats: record.beats, downbeatIndices: record.downbeatIndices }
-          : {}),
+        ...(regrid ? { beats: record.beats, downbeatIndices: downbeats } : {}),
       });
       if (ready) showWaveform(opened, record.waveformPath);
       if (regrid) void followNewGrid(context);

@@ -1,3 +1,4 @@
+import { GRID_METER, NO_METER_OVERRIDE } from '@kitbag/core-db';
 import { KB_COUNT_IN_OFF, KB_RESULT } from '@kitbag/core-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -74,6 +75,19 @@ describe('play with a count-in', () => {
     expect(call?.[3]).toBe(false);
   });
 
+  it("counts in a bar of the user's meter", async () => {
+    const song = await opened([stem(1)], {
+      ...SONG_DETAILS,
+      meterBeatsPerBar: GRID_METER.triple,
+    });
+    song.countInBars.mockReturnValue(TWO_BARS);
+    song.engine.position = HEAD;
+    vi.clearAllMocks();
+    song.store.getState().togglePlay();
+    expect(song.commands.mixerSeek.mock.calls).toEqual([[0]]);
+    expect(counts(song)[0]?.[2]).toBe(GRID_METER.triple);
+  });
+
   it('plays at once when the count-in is off', async () => {
     const song = await countingSong();
     song.countInBars.mockReturnValue(KB_COUNT_IN_OFF);
@@ -109,6 +123,20 @@ describe('during the count', () => {
     expect(song.commands.mixerPause).not.toHaveBeenCalled();
     expect(song.commands.metronomeStart).toHaveBeenCalledTimes(1);
     expect(counts(song)).toHaveLength(1);
+  });
+
+  it("re-counts in the user's meter when one is saved", async () => {
+    const song = await counting();
+    song.store.getState().meterOverrideChanged({
+      ...NO_METER_OVERRIDE,
+      meterBeatsPerBar: GRID_METER.triple,
+    });
+    await vi.runAllTimersAsync();
+    expect(song.commands.songPause).toHaveBeenCalledTimes(1);
+    expect(counts(song).map((call) => call[2])).toEqual([
+      BAR_BEATS,
+      GRID_METER.triple,
+    ]);
   });
 
   it('a second tap before the engine answers pauses', async () => {
