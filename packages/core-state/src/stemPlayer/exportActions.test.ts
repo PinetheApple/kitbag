@@ -10,6 +10,7 @@ const DONE = KB_MIXDOWN_STATE.KB_MIXDOWN_STATE_DONE;
 const FAILED = KB_MIXDOWN_STATE.KB_MIXDOWN_STATE_FAILED;
 const CANCELLED = KB_MIXDOWN_STATE.KB_MIXDOWN_STATE_CANCELLED;
 const PATH = '/cache/exports/Song.wav';
+const SHORT_CAP_BYTES = 20;
 const TEN_SECONDS_AT_RATE_BYTES = 441_000 * 4 + 44;
 
 type Opened = Awaited<ReturnType<typeof opened>>;
@@ -73,6 +74,18 @@ describe('exporting the mix', () => {
     p.commands.mixerTrackPitch.mockResolvedValue(-2);
     await p.store.getState().startExport();
     expect(p.mixdown.start.mock.calls).toEqual([['Song (0.75x, -2 st).wav']]);
+  });
+
+  it('caps the name at the limit the native side reports', async () => {
+    const p = await opened([stem(1)], { title: 'x'.repeat(400) });
+    p.mixdown.codes.mockReturnValue({
+      ...CODES,
+      exportMaxBaseNameBytes: SHORT_CAP_BYTES,
+    });
+    await p.store.getState().startExport();
+    expect(p.mixdown.start.mock.calls).toEqual([
+      [`${'x'.repeat(SHORT_CAP_BYTES)}.wav`],
+    ]);
   });
 
   it('waits on the card when the app is not on screen', async () => {
@@ -189,6 +202,63 @@ describe('cancelling an export', () => {
   });
 });
 
+describe('a render that ends unexpectedly', () => {
+  it('keeps a file that finished before Cancel reached it', async () => {
+    const p = await exporting();
+    p.mixdownEngine.state = DONE;
+    p.store.getState().cancelExport();
+    expect(p.mixdown.cancel).not.toHaveBeenCalled();
+    expect(p.store.getState().exportState.kind).toBe('ready');
+    expect(p.mixdown.share).not.toHaveBeenCalled();
+  });
+
+  it('keeps a file that finished while Cancel was on its way', async () => {
+    const p = await exporting();
+    p.store.getState().cancelExport();
+    p.mixdownEngine.state = DONE;
+    poll();
+    await settle();
+    expect(p.store.getState().exportState).toMatchObject({
+      kind: 'ready',
+      path: PATH,
+    });
+    expect(p.mixdown.share).not.toHaveBeenCalled();
+  });
+
+  it('fails, stops polling and can start again when the state cannot be read', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const p = await exporting();
+    p.mixdown.state.mockImplementationOnce(() => {
+      throw new Error('host object gone');
+    });
+    poll();
+    expect(p.store.getState().exportState).toMatchObject({
+      kind: 'failed',
+      failure: 'internal',
+    });
+    expect(p.mixdown.cancel).toHaveBeenCalledOnce();
+    await p.store.getState().startExport();
+    expect(p.mixdown.start).toHaveBeenCalledTimes(2);
+    expect(p.store.getState().exportState.kind).toBe('running');
+  });
+});
+
+describe('a cancelled export after the player', () => {
+  it('is forgotten when the player closes', async () => {
+    const p = await exporting();
+    p.store.getState().cancelExport();
+    p.store.getState().close();
+    expect(p.store.getState().exportState).toEqual({ kind: 'idle' });
+  });
+
+  it('is forgotten when a song opens', async () => {
+    const p = await exporting();
+    p.store.getState().cancelExport();
+    await p.store.getState().open(7, 8);
+    expect(p.store.getState().exportState).toEqual({ kind: 'idle' });
+  });
+});
+
 describe('a refused export', () => {
   it.each([
     [KB_RESULT.KB_ERROR_NO_SPACE, 'noSpace'],
@@ -257,6 +327,19 @@ describe('exportBlock', () => {
       stems: p.store.getState().stems.map((row) => ({ ...row, loaded: false })),
     });
     expect(exportBlock(p.store.getState())).toBe('noStems');
+  });
+
+  it('blocks with its own reason when every soloed stem is muted', async () => {
+    const p = await opened([stem(1, { soloed: true, muted: true }), stem(2)]);
+    expect(exportBlock(p.store.getState())).toBe('soloMuted');
+  });
+
+  it('does not block when a soloed stem plays', async () => {
+    const p = await opened([
+      stem(1, { soloed: true, muted: true }),
+      stem(2, { soloed: true }),
+    ]);
+    expect(exportBlock(p.store.getState())).toBeNull();
   });
 
   it('lets a mix with one stem playing through', async () => {

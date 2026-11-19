@@ -47,6 +47,7 @@ function sharedKey(keys: readonly number[]): number | null {
 export async function summarizeExport(
   source: SummarySource,
   commands: SummaryCommands,
+  maxBaseNameBytes: number,
 ): Promise<ExportSummary> {
   const loaded = source.stems.flatMap((row, track) =>
     row.loaded ? [{ row, track }] : [],
@@ -67,11 +68,9 @@ export async function summarizeExport(
     lengthSec,
     sampleRate: source.engineRate,
     bytes: wavBytes(lengthSec, source.engineRate),
-    fileName: mixdownFileName({
-      title: source.title,
-      artist: source.artist,
-      speed,
-      key,
-    }),
+    fileName: mixdownFileName(
+      { title: source.title, artist: source.artist, speed, key },
+      maxBaseNameBytes,
+    ),
   };
 }

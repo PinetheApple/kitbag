@@ -14,13 +14,16 @@ import {
   EXPORT_UNSHARED,
   exportFailureCopy,
   exportProgressNote,
+  PERCENT,
+  percentOf,
   type ExportFailure,
 } from './exportText.ts';
 import type { ActionContext, StemPlayerStore } from './store.ts';
 
+// A few reads a second at human speed; the percent is not a 60fps surface.
 export const EXPORT_POLL_MS = 250;
 const QUARTERS = 4;
-const PERCENT_PER_QUARTER = 25;
+const PERCENT_PER_QUARTER = PERCENT / QUARTERS;
 
 export interface ExportSong {
   readonly setId: number;
@@ -65,7 +68,7 @@ export interface ExportActions {
   readonly exportProgress: () => number;
 }
 
-export type ExportBlock = 'running' | 'noStems' | 'allMuted';
+export type ExportBlock = 'running' | 'noStems' | 'allMuted' | 'soloMuted';
 
 export function exportBlock(
   state: Pick<StemPlayerStore, 'exportState' | 'stems'>,
@@ -74,7 +77,13 @@ export function exportBlock(
   const loaded = state.stems.filter((row) => row.loaded);
   if (loaded.length === 0) return 'noStems';
   if (loaded.every((row) => row.muted)) return 'allMuted';
-  return null;
+  const soloed = loaded.filter((row) => row.soloed);
+  const soloMuted = soloed.length > 0 && soloed.every((row) => row.muted);
+  return soloMuted ? 'soloMuted' : null;
+}
+
+export function exportAfterLeaving(state: ExportState): ExportState {
+  return state.kind === 'cancelled' ? NO_EXPORT : state;
 }
 
 function failureFor(result: number): ExportFailure {
@@ -98,8 +107,8 @@ function isFinished(state: ExportState): state is Finished {
   return state.kind === 'ready' || state.kind === 'unshared';
 }
 
-// The render outlives the player screen and the song session, so nothing here
-// is tied to session(): only a new export or a dismissal replaces the state.
+// The render outlives the player screen and the song session, so no state
+// here is tied to session().
 export function exportActions({
   set,
   get,
@@ -108,6 +117,7 @@ export function exportActions({
   let timer: ReturnType<typeof setInterval> | null = null;
   let quarter = 0;
   let starting = false;
+  let cancelling: Running | null = null;
   let settled: Promise<void> = Promise.resolve();
   let settle: () => void = () => undefined;
 
@@ -125,6 +135,27 @@ export function exportActions({
     } catch (codesError: unknown) {
       console.warn('[kitbag] library constants unavailable', codesError);
       return false;
+    }
+  };
+  const engineState = () => {
+    try {
+      return mixdown().state();
+    } catch (error: unknown) {
+      console.warn('[kitbag] mix export state unreadable', error);
+      return null;
+    }
+  };
+  const summarize = async (state: StemPlayerStore) =>
+    summarizeExport(
+      state,
+      runtimeOf().commands,
+      mixdown().codes().exportMaxBaseNameBytes,
+    );
+  const cancelQuietly = () => {
+    try {
+      mixdown().cancel();
+    } catch (error: unknown) {
+      console.warn('[kitbag] mix export not cancelled', error);
     }
   };
   const fail = (song: ExportSong, failure: ExportFailure, bytes: number) => {
@@ -156,31 +187,41 @@ export function exportActions({
   };
 
   const announceQuarter = () => {
-    const reached = Math.floor(Math.min(1, mixdown().progress()) * QUARTERS);
+    const reached = Math.floor(
+      percentOf(mixdown().progress()) / PERCENT_PER_QUARTER,
+    );
     if (reached <= quarter || reached >= QUARTERS) return;
     quarter = reached;
     mixdown().announce(exportProgressNote(reached * PERCENT_PER_QUARTER));
   };
 
-  const finish = (running: Running) => {
-    setExport({ ...running, kind: 'ready' });
+  const finish = (running: Running, shareNow: boolean) => {
+    setExport({ ...fileOf(running), kind: 'ready' });
     mixdown().announce(EXPORT_READY);
-    if (mixdown().foreground()) void share();
+    if (shareNow && mixdown().foreground()) void share();
   };
 
   const poll = () => {
-    const engineState = mixdown().state();
+    const state = engineState();
     const current = get().exportState;
-    if (engineState === KB_MIXDOWN_STATE.KB_MIXDOWN_STATE_RUNNING) {
+    if (state === KB_MIXDOWN_STATE.KB_MIXDOWN_STATE_RUNNING) {
       if (current.kind === 'running') announceQuarter();
       return;
     }
+    const pendingCancel = cancelling;
+    cancelling = null;
     stopPolling();
+    const done = state === KB_MIXDOWN_STATE.KB_MIXDOWN_STATE_DONE;
+    if (current.kind === 'cancelled' && pendingCancel !== null && done)
+      finish(pendingCancel, false);
     if (current.kind !== 'running') return;
-    if (engineState === KB_MIXDOWN_STATE.KB_MIXDOWN_STATE_DONE) finish(current);
-    else if (engineState === KB_MIXDOWN_STATE.KB_MIXDOWN_STATE_CANCELLED)
+    if (done) finish(current, true);
+    else if (state === KB_MIXDOWN_STATE.KB_MIXDOWN_STATE_CANCELLED)
       setExport({ kind: 'cancelled' });
-    else fail(current.song, 'internal', current.bytes);
+    else {
+      if (state === null) cancelQuietly();
+      fail(current.song, 'internal', current.bytes);
+    }
   };
 
   const beginPolling = () => {
@@ -198,7 +239,7 @@ export function exportActions({
     let summary: ExportSummary;
     let started: MixdownStart;
     try {
-      summary = await summarizeExport(state, runtimeOf().commands);
+      summary = await summarize(state);
     } catch (error: unknown) {
       console.warn('[kitbag] mix not summarised', error);
       fail(song, 'internal', 0);
@@ -222,7 +263,7 @@ export function exportActions({
   };
 
   return {
-    readExportSummary: () => summarizeExport(get(), runtimeOf().commands),
+    readExportSummary: () => summarize(get()),
     startExport: async () => {
       if (starting) return;
       starting = true;
@@ -234,8 +275,15 @@ export function exportActions({
       }
     },
     cancelExport: () => {
-      if (get().exportState.kind !== 'running') return;
+      const current = get().exportState;
+      if (current.kind !== 'running') return;
+      if (engineState() === KB_MIXDOWN_STATE.KB_MIXDOWN_STATE_DONE) {
+        stopPolling();
+        finish(current, false);
+        return;
+      }
       mixdown().cancel();
+      cancelling = current;
       setExport({ kind: 'cancelled' });
     },
     shareExport: share,

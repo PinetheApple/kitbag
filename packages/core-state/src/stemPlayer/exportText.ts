@@ -7,7 +7,7 @@ export interface ExportCopy {
 
 const BYTES_PER_MB = 1_000_000;
 const MB_DECIMALS = 1;
-const PERCENT = 100;
+export const PERCENT = 100;
 const NOTHING_SAVED = 'Nothing was saved.';
 
 export const EXPORT_STARTED = 'Exporting mix';

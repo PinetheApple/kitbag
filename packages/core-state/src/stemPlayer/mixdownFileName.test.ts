@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  MAX_BASE_NAME_BYTES,
-  mixdownFileName,
-  type MixdownNameParts,
-} from './mixdownFileName.ts';
+import { CODES } from '../songLibrary/store.test-helper.ts';
+import { mixdownFileName, type MixdownNameParts } from './mixdownFileName.ts';
+
+const MAX_BASE_NAME_BYTES = CODES.exportMaxBaseNameBytes;
+
+function nameAtCap(parts: MixdownNameParts): string {
+  return mixdownFileName(parts, MAX_BASE_NAME_BYTES);
+}
 
 const PLAIN: MixdownNameParts = {
   title: 'Echo (In Jesus Name) [LIVE]',
@@ -25,41 +28,41 @@ function baseOf(name: string): string {
 
 describe('mixdownFileName', () => {
   it('names the song and artist', () => {
-    expect(mixdownFileName(PLAIN)).toBe(
+    expect(nameAtCap(PLAIN)).toBe(
       'Echo (In Jesus Name) [LIVE] - Charity Gayle.wav',
     );
   });
 
   it('leaves the artist out when there is none', () => {
-    expect(mixdownFileName({ ...PLAIN, artist: null })).toBe(
+    expect(nameAtCap({ ...PLAIN, artist: null })).toBe(
       'Echo (In Jesus Name) [LIVE].wav',
     );
-    expect(mixdownFileName({ ...PLAIN, artist: ' :/ ' })).toBe(
+    expect(nameAtCap({ ...PLAIN, artist: ' :/ ' })).toBe(
       'Echo (In Jesus Name) [LIVE].wav',
     );
   });
 
   it('adds speed and key only when they are changed', () => {
-    expect(mixdownFileName({ ...PLAIN, speed: 0.75, key: -2 })).toBe(
+    expect(nameAtCap({ ...PLAIN, speed: 0.75, key: -2 })).toBe(
       'Echo (In Jesus Name) [LIVE] - Charity Gayle (0.75x, -2 st).wav',
     );
-    expect(mixdownFileName({ ...PLAIN, speed: 0.8 })).toBe(
+    expect(nameAtCap({ ...PLAIN, speed: 0.8 })).toBe(
       'Echo (In Jesus Name) [LIVE] - Charity Gayle (0.8x).wav',
     );
-    expect(mixdownFileName({ ...PLAIN, key: 3 })).toBe(
+    expect(nameAtCap({ ...PLAIN, key: 3 })).toBe(
       'Echo (In Jesus Name) [LIVE] - Charity Gayle (+3 st).wav',
     );
   });
 
   it('states no key when the stems are keyed differently', () => {
-    expect(mixdownFileName({ ...PLAIN, speed: 1.25, key: null })).toBe(
+    expect(nameAtCap({ ...PLAIN, speed: 1.25, key: null })).toBe(
       'Echo (In Jesus Name) [LIVE] - Charity Gayle (1.25x).wav',
     );
   });
 
   it('strips characters that are unsafe in a file name', () => {
     expect(
-      mixdownFileName({
+      nameAtCap({
         title: 'AC/DC: "Back\\in*Black"?',
         artist: '<Live>|\u0007',
         speed: 1,
@@ -69,22 +72,22 @@ describe('mixdownFileName', () => {
   });
 
   it('never starts with a dot or a space, and falls back when nothing is left', () => {
-    expect(mixdownFileName({ ...PLAIN, title: '  ..hidden  ' })).toBe(
+    expect(nameAtCap({ ...PLAIN, title: '  ..hidden  ' })).toBe(
       'hidden - Charity Gayle.wav',
     );
-    expect(mixdownFileName({ ...PLAIN, title: '/:*', artist: null })).toBe(
-      'Mix.wav',
-    );
+    expect(nameAtCap({ ...PLAIN, title: '. . x', artist: null })).toBe('x.wav');
+    expect(nameAtCap({ ...PLAIN, title: ' .x', artist: null })).toBe('x.wav');
+    expect(nameAtCap({ ...PLAIN, title: '/:*', artist: null })).toBe('Mix.wav');
   });
 
   it('collapses runs of whitespace', () => {
-    expect(
-      mixdownFileName({ ...PLAIN, title: 'A \t\n  B', artist: null }),
-    ).toBe('A B.wav');
+    expect(nameAtCap({ ...PLAIN, title: 'A \t\n  B', artist: null })).toBe(
+      'A B.wav',
+    );
   });
 
   it('caps a long title by UTF-8 bytes and keeps the speed and key', () => {
-    const name = mixdownFileName({
+    const name = nameAtCap({
       ...PLAIN,
       title: 'x'.repeat(400),
       speed: 0.75,
@@ -96,7 +99,7 @@ describe('mixdownFileName', () => {
 
   it('keeps a long CJK title whole up to the byte cap, cut between characters', () => {
     const title = '夜'.repeat(200);
-    const name = mixdownFileName({ ...PLAIN, title, artist: null });
+    const name = nameAtCap({ ...PLAIN, title, artist: null });
     const base = baseOf(name);
     expect(utf8Length(base)).toBeLessThanOrEqual(MAX_BASE_NAME_BYTES);
     expect(utf8Length(base)).toBeGreaterThan(MAX_BASE_NAME_BYTES - 3);
@@ -105,7 +108,7 @@ describe('mixdownFileName', () => {
 
   it('drops an emoji that would straddle the cap rather than split it', () => {
     const filler = 'a'.repeat(MAX_BASE_NAME_BYTES - 2);
-    const name = mixdownFileName({
+    const name = nameAtCap({
       ...PLAIN,
       title: `${filler}🎸`,
       artist: null,
@@ -116,7 +119,7 @@ describe('mixdownFileName', () => {
 
   it('keeps an emoji that fits exactly', () => {
     const filler = 'a'.repeat(MAX_BASE_NAME_BYTES - 4);
-    const name = mixdownFileName({
+    const name = nameAtCap({
       ...PLAIN,
       title: `${filler}🎸`,
       artist: null,

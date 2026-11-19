@@ -2,6 +2,7 @@ import type { ExportSummary } from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
 import {
+  exportBlockReason,
   exportRowValue,
   formatLabel,
   keyLabel,
@@ -34,6 +35,13 @@ describe('exportRowValue', () => {
     expect(exportRowValue('running', 42)).toBe('exporting, 42%');
     expect(exportRowValue('noStems', 0)).toBe('no stems to mix');
     expect(exportRowValue('allMuted', 0)).toBe('every stem muted');
+    expect(exportRowValue('soloMuted', 0)).toBe('soloed stems muted');
+  });
+
+  it('words each blocked reason on its own', () => {
+    expect(exportBlockReason('noStems')).toBe('no stems to mix');
+    expect(exportBlockReason('allMuted')).toBe('every stem muted');
+    expect(exportBlockReason('soloMuted')).toBe('soloed stems muted');
   });
 });
 

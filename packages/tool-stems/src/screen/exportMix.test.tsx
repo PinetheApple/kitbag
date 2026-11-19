@@ -156,6 +156,25 @@ describe('the export card', () => {
     expect(p.has('Exporting mix')).toBe(true);
   });
 
+  it('disables Retry with the reason while the mix is silent', async () => {
+    const p = await mountTracked();
+    player = p;
+    p.mixdown.start.mockResolvedValueOnce({
+      result: KB_RESULT.KB_ERROR_INTERNAL,
+    });
+    await p.press(MENU);
+    await p.press(EXPORT_ROW);
+    await p.press(EXPORT);
+    act(() => {
+      p.store.getState().toggleMute(0);
+      p.store.getState().toggleMute(1);
+    });
+    expect(rowState(p, 'Retry the export: every stem muted')).toEqual({
+      disabled: true,
+    });
+    expect(p.has('Retry')).toBe(true);
+  });
+
   it('keeps the file and says why when no app takes it', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const p = await exportFromMenu();

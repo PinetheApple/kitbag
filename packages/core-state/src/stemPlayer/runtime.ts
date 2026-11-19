@@ -89,7 +89,10 @@ export interface MixdownRuntime {
   readonly share: (path: string) => Promise<void>;
   readonly announce: (message: string) => void;
   readonly foreground: () => boolean;
-  readonly codes: () => Pick<LibraryConstants, 'exportNoShareTarget'>;
+  readonly codes: () => Pick<
+    LibraryConstants,
+    'exportNoShareTarget' | 'exportMaxBaseNameBytes'
+  >;
 }
 
 export interface StemPlayerRuntime extends MixerRuntime {

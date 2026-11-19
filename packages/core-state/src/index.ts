@@ -341,7 +341,9 @@ export {
 export type { ExportSummary } from './stemPlayer/exportSummary.ts';
 export {
   EXPORT_CANCELLED,
+  EXPORT_READY,
   EXPORT_SHARE_FAILED,
+  EXPORT_STARTED,
   EXPORT_UNSHARED,
   exportFailureCopy,
   megabytes,
@@ -416,6 +418,8 @@ export {
   clockParts,
   formatClockSeconds,
   MINUS,
+  roundedSpeed,
+  speedText,
   SECONDS_PER_MINUTE,
   type ClockParts,
 } from './text.ts';

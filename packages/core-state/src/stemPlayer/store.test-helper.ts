@@ -191,11 +191,11 @@ export function fakeRuntime(set: StemSetRecord) {
     }),
     cancel: vi.fn(),
     progress: () => mixdownEngine.progress,
-    state: () => mixdownEngine.state,
+    state: vi.fn<MixdownRuntime['state']>(() => mixdownEngine.state),
     share: vi.fn<MixdownRuntime['share']>(() => Promise.resolve()),
     announce: vi.fn<MixdownRuntime['announce']>(),
     foreground: vi.fn(() => true),
-    codes: () => CODES,
+    codes: vi.fn<MixdownRuntime['codes']>(() => CODES),
   };
   const runtime: StemPlayerRuntime = {
     commands,

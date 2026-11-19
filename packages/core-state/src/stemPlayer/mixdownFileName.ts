@@ -1,16 +1,15 @@
 import { KB_MIXER_UNITY_RATE } from '@kitbag/core-native';
 
+import { speedText } from '../text.ts';
 import { UNSHIFTED_KEY } from './mix.ts';
 
 export const MIXDOWN_EXTENSION = '.wav';
-export const MAX_BASE_NAME_BYTES = 246;
 
 const FALLBACK_TITLE = 'Mix';
 const ARTIST_SEPARATOR = ' - ';
-const SPEED_DECIMALS = 2;
 const UNSAFE_CHARS = /[/\\:*?"<>|\p{Cc}]/gu;
 const WHITESPACE_RUN = /\s+/gu;
-const LEADING_DOTS = /^\.+/u;
+const LEADING_DOTS_AND_SPACES = /^[.\s]+/u;
 
 const ONE_BYTE_LIMIT = 0x80;
 const TWO_BYTE_LIMIT = 0x800;
@@ -58,7 +57,7 @@ function cleaned(text: string): string {
 
 function speedPart(speed: number): string | null {
   if (speed === KB_MIXER_UNITY_RATE) return null;
-  return `${String(Number(speed.toFixed(SPEED_DECIMALS)))}x`;
+  return `${speedText(speed)}x`;
 }
 
 function keyPart(key: number | null): string | null {
@@ -71,12 +70,15 @@ function suffixOf({ speed, key }: MixdownNameParts): string {
   return parts.length === 0 ? '' : ` (${parts.join(', ')})`;
 }
 
-export function mixdownFileName(parts: MixdownNameParts): string {
-  const title = cleaned(parts.title).replace(LEADING_DOTS, '').trim();
+export function mixdownFileName(
+  parts: MixdownNameParts,
+  maxBaseNameBytes: number,
+): string {
+  const title = cleaned(parts.title).replace(LEADING_DOTS_AND_SPACES, '');
   const artist = parts.artist === null ? '' : cleaned(parts.artist);
   const song = title === '' ? FALLBACK_TITLE : title;
   const named = artist === '' ? song : `${song}${ARTIST_SEPARATOR}${artist}`;
   const suffix = suffixOf(parts);
-  const head = clipToBytes(named, MAX_BASE_NAME_BYTES - utf8Bytes(suffix));
+  const head = clipToBytes(named, maxBaseNameBytes - utf8Bytes(suffix));
   return `${head.trimEnd()}${suffix}${MIXDOWN_EXTENSION}`;
 }

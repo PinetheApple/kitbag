@@ -1,7 +1,6 @@
 import { EXPORT_POLL_MS, percentOf, useStemPlayer } from '@kitbag/core-state';
 import { useEffect, useState } from 'react';
 
-// A few reads a second at human speed; the percent is not a 60fps surface.
 export function useMixdownProgress(polling: boolean): number {
   const exportProgress = useStemPlayer((s) => s.exportProgress);
   const [percent, setPercent] = useState(0);

@@ -13,6 +13,7 @@ import { barMarkDownbeats, sameNumbers } from './bars.ts';
 import { clickActions, followNewGrid, releaseClick } from './clickActions.ts';
 import {
   exportActions,
+  exportAfterLeaving,
   NO_EXPORT,
   type ExportActions,
   type ExportSlice,
@@ -282,7 +283,10 @@ export function createStemPlayerStore(
       counting: () =>
         countPending(get().countEndFrame, runtimeOf().engine.nowFrame()),
       resetState: () => {
-        set(closedState);
+        set({
+          ...closedState,
+          exportState: exportAfterLeaving(get().exportState),
+        });
       },
     });
     const { live, scrubSeek } = mixer;
@@ -391,7 +395,12 @@ export function createStemPlayerStore(
 
     const beginSession = (setId: number) => {
       const opened = mixer.begin();
-      set({ ...closedState, status: 'loading', setId });
+      set({
+        ...closedState,
+        exportState: exportAfterLeaving(get().exportState),
+        status: 'loading',
+        setId,
+      });
       return opened;
     };
 

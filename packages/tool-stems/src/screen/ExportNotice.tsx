@@ -13,8 +13,11 @@ import {
 } from '@kitbag/core-design';
 import {
   EXPORT_CANCELLED,
+  EXPORT_READY,
   EXPORT_SHARE_FAILED,
+  EXPORT_STARTED,
   EXPORT_UNSHARED,
+  exportBlock,
   exportFailureCopy,
   megabytes,
   useStemPlayer,
@@ -25,7 +28,7 @@ import {
 import { useCallback } from 'react';
 import { Text, View } from 'react-native';
 
-import { runningBody } from '../logic/exportView.ts';
+import { exportBlockReason, runningBody } from '../logic/exportView.ts';
 import { useMixdownProgress } from './useMixdownProgress.ts';
 
 const useStyles = createThemedStyles((theme) => ({
@@ -75,7 +78,7 @@ function RunningCard({ song }: { readonly song: ExportSong }) {
       <View style={styles.stack}>
         <View style={styles.head}>
           <Icon name="exportMix" color={theme.accentInk} />
-          <Text style={styles.title}>Exporting mix</Text>
+          <Text style={styles.title}>{EXPORT_STARTED}</Text>
           <Text style={styles.percent}>{`${String(percent)}%`}</Text>
         </View>
         <LinearProgress
@@ -97,6 +100,18 @@ function RunningCard({ song }: { readonly song: ExportSong }) {
   );
 }
 
+function DismissButton() {
+  const dismissExport = useStemPlayer((s) => s.dismissExport);
+  return (
+    <Button
+      variant="ghost"
+      size="prompt"
+      label="Dismiss"
+      onPress={dismissExport}
+    />
+  );
+}
+
 function useShare() {
   const shareExport = useStemPlayer((s) => s.shareExport);
   return useCallback(() => {
@@ -112,9 +127,8 @@ interface FileCardProps {
 function ReadyCard({ fileName, bytes }: FileCardProps) {
   const styles = useStyles();
   const share = useShare();
-  const dismissExport = useStemPlayer((s) => s.dismissExport);
   const copy = {
-    title: 'Mix ready',
+    title: EXPORT_READY,
     body: `${fileName} · ${megabytes(bytes)}`,
   };
   return (
@@ -130,12 +144,7 @@ function ReadyCard({ fileName, bytes }: FileCardProps) {
             accessibilityLabel="Share the mix"
             onPress={share}
           />
-          <Button
-            variant="ghost"
-            size="prompt"
-            label="Dismiss"
-            onPress={dismissExport}
-          />
+          <DismissButton />
         </View>
       </View>
     </Card>
@@ -145,7 +154,6 @@ function ReadyCard({ fileName, bytes }: FileCardProps) {
 function UnsharedCard({ noTarget }: { readonly noTarget: boolean }) {
   const styles = useStyles();
   const share = useShare();
-  const dismissExport = useStemPlayer((s) => s.dismissExport);
   return (
     <Card emphasis="warning" statusIcon="warning" statusLabel="Not shared">
       <View style={styles.stack}>
@@ -158,12 +166,7 @@ function UnsharedCard({ noTarget }: { readonly noTarget: boolean }) {
             label="Share again"
             onPress={share}
           />
-          <Button
-            variant="ghost"
-            size="prompt"
-            label="Dismiss"
-            onPress={dismissExport}
-          />
+          <DismissButton />
         </View>
       </View>
     </Card>
@@ -176,14 +179,31 @@ interface FailedCardProps {
   readonly bytes: number;
 }
 
-function FailedCard({ song, failure, bytes }: FailedCardProps) {
-  const styles = useStyles();
+function RetryButton() {
   const startExport = useStemPlayer((s) => s.startExport);
-  const dismissExport = useStemPlayer((s) => s.dismissExport);
-  const sameSong = useOtherSong(song) === null;
+  const block = useStemPlayer(exportBlock);
+  const reason =
+    block === null || block === 'running' ? null : exportBlockReason(block);
   const retry = useCallback(() => {
     void startExport();
   }, [startExport]);
+  return (
+    <Button
+      variant="ghost"
+      size="prompt"
+      label="Retry"
+      accessibilityLabel={
+        reason === null ? 'Retry the export' : `Retry the export: ${reason}`
+      }
+      disabled={block !== null}
+      onPress={retry}
+    />
+  );
+}
+
+function FailedCard({ song, failure, bytes }: FailedCardProps) {
+  const styles = useStyles();
+  const sameSong = useOtherSong(song) === null;
   return (
     <Card
       emphasis="danger"
@@ -193,21 +213,8 @@ function FailedCard({ song, failure, bytes }: FailedCardProps) {
       <View style={styles.stack}>
         <CardText copy={exportFailureCopy(failure, bytes)} />
         <View style={styles.actions}>
-          {sameSong ? (
-            <Button
-              variant="ghost"
-              size="prompt"
-              label="Retry"
-              accessibilityLabel="Retry the export"
-              onPress={retry}
-            />
-          ) : null}
-          <Button
-            variant="ghost"
-            size="prompt"
-            label="Dismiss"
-            onPress={dismissExport}
-          />
+          {sameSong ? <RetryButton /> : null}
+          <DismissButton />
         </View>
       </View>
     </Card>

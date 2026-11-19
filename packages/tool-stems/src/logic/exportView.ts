@@ -1,18 +1,32 @@
+import { countLabel } from '@kitbag/core-design';
 import { KB_MIXDOWN_BITS_PER_SAMPLE } from '@kitbag/core-native';
 import {
   megabytes,
   MINUS,
+  roundedSpeed,
   UNSHIFTED_KEY,
   type ExportBlock,
   type ExportSummary,
 } from '@kitbag/core-state';
 
 const FORMAT = 'WAV';
-const SPEED_DECIMALS = 2;
 const MIN_SPEED_DECIMALS = 1;
 const KHZ_DECIMALS = 1;
 const HZ_PER_KHZ = 1000;
 const SHARE_SHEET_NOTE = 'The share sheet opens when it is done.';
+
+export function exportBlockReason(
+  block: Exclude<ExportBlock, 'running'>,
+): string {
+  switch (block) {
+    case 'noStems':
+      return 'no stems to mix';
+    case 'allMuted':
+      return 'every stem muted';
+    case 'soloMuted':
+      return 'soloed stems muted';
+  }
+}
 
 export function exportRowValue(
   block: ExportBlock | null,
@@ -23,15 +37,13 @@ export function exportRowValue(
       return FORMAT;
     case 'running':
       return `exporting, ${String(percent)}%`;
-    case 'noStems':
-      return 'no stems to mix';
-    case 'allMuted':
-      return 'every stem muted';
+    default:
+      return exportBlockReason(block);
   }
 }
 
 export function speedLabel(speed: number): string {
-  const rounded = Number(speed.toFixed(SPEED_DECIMALS));
+  const rounded = roundedSpeed(speed);
   const text = Number.isInteger(rounded)
     ? rounded.toFixed(MIN_SPEED_DECIMALS)
     : String(rounded);
@@ -42,8 +54,7 @@ export function keyLabel(key: number | null): string {
   if (key === null) return 'Set per stem';
   if (key === UNSHIFTED_KEY) return 'As recorded';
   const sign = key > 0 ? '+' : MINUS;
-  const steps = Math.abs(key);
-  return `${sign}${String(steps)} semitone${steps === 1 ? '' : 's'}`;
+  return `${sign}${countLabel(Math.abs(key), 'semitone', 'semitones')}`;
 }
 
 export function stemsLabel(summary: ExportSummary): string {
