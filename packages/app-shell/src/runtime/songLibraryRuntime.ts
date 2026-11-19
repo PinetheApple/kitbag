@@ -49,6 +49,8 @@ const records: SongLibraryRecords = {
 const files: LibraryFiles = {
   constants: () => getKitbagLibrary().getConstants(),
   pickDocument: () => getKitbagLibrary().pickDocument(),
+  sniffUnsupportedFormat: (uri) =>
+    getKitbagLibrary().sniffUnsupportedFormat(uri),
   pickFolder: () => getKitbagLibrary().pickFolder(),
   importAudio: (uri, relativeDir) =>
     getKitbagLibrary().importAudio(uri, relativeDir),

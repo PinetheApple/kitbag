@@ -84,6 +84,20 @@ XML
     echo EARLIER > "$shots/002-runFlow.png"
     touch -d '1 minute ago' "$shots/002-runFlow.png"
     echo AT-FAILURE > "$shots/007-assertVisible.png"
+    logs="${shots%/screenshots}/logs"
+    mkdir -p "$logs"
+    case ${FAKE_CRASH:-none} in
+      header) printf '%s\n' "--------- beginning of crash" "E/AndroidRuntime( 41): FATAL EXCEPTION: main" > "$logs/crash-report.txt" ;;
+      maestro) : > "$logs/crash-report.txt" ;;
+    esac
+    [[ ${FAKE_CRASH:-none} == none ]] || cat >> "$logs/crash-report.txt" <<'CRASH'
+E/AndroidRuntime( 41): Process: com.kitbag.app, PID: 41
+E/AndroidRuntime( 41): java.lang.NullPointerException: Attempt to read from field 'int android.view.View.mViewFlags'
+E/AndroidRuntime( 41): 	at android.view.ViewGroup.dispatchGetDisplayList(ViewGroup.java:4493)
+E/AndroidRuntime( 41): 	at android.view.View.updateDisplayListIfDirty(View.java:23646)
+E/AndroidRuntime( 41): 	at android.view.ThreadedRenderer.draw(ThreadedRenderer.java:798)
+E/AndroidRuntime( 41): 	at android.os.Looper.loop(Looper.java:317)
+CRASH
     exit 1 ;;
 esac
 STUB
@@ -219,6 +233,17 @@ check "  ... and restores the animation scales" \
   bash -c '[[ $(grep "settings put global animator_duration_scale" "$ADB_LOG" | tail -1) == *"scale 1.0" ]]'
 check "  ... and saves logcat" bash -c "[[ -s \$(find '$LAST_OUT_DIR' -name logcat.txt) ]]"
 check "  ... and does not list the flow that passed" test "${LAST_OUTPUT/a flow that passed/}" == "$LAST_OUTPUT"
+check "  ... and prints no crash when the app did not crash" test "${LAST_OUTPUT/crash/}" == "$LAST_OUTPUT"
+
+FAKE_RESULT=fail FAKE_CRASH=header expect "a flow failing on an app crash prints the FATAL EXCEPTION" \
+  "$EXIT_FLOW_FAILED" "FATAL EXCEPTION: main" "$APK"
+check "  ... and the exception" test "${LAST_OUTPUT/java.lang.NullPointerException/}" != "$LAST_OUTPUT"
+check "  ... and names the crash report" test "${LAST_OUTPUT/crash: *crash-report.txt/}" != "$LAST_OUTPUT"
+check "  ... but not the whole stack" test "${LAST_OUTPUT/Looper.loop/}" == "$LAST_OUTPUT"
+check "  ... nor the lines before the marker" test "${LAST_OUTPUT/beginning of crash/}" == "$LAST_OUTPUT"
+FAKE_RESULT=fail FAKE_CRASH=maestro expect "a crash report without the FATAL EXCEPTION header still prints the exception" \
+  "$EXIT_FLOW_FAILED" "java.lang.NullPointerException" "$APK"
+check "  ... from its first line" test "${LAST_OUTPUT/Process: com.kitbag.app/}" != "$LAST_OUTPUT"
 
 FAKE_INDEXED_AFTER=0 expect "fixtures indexed at once" "$EXIT_OK" "all flows passed" "$APK" metronome
 check "  ... are each scanned" adb_called "MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Download/e2estems.zip"

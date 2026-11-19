@@ -46,6 +46,32 @@ describe('importing a picked file', () => {
     });
   });
 
+  it('refuses a file its header names, while it shows as preparing', async () => {
+    const h = harness();
+    const seen: (string | null)[] = [];
+    h.deps.sniffUnsupportedFormat.mockImplementationOnce(() => {
+      seen.push(h.state().preparing);
+      return Promise.resolve('m4a');
+    });
+    expect(await h.state().importPicked(null)).toBeNull();
+    expect(h.deps.sniffUnsupportedFormat).toHaveBeenCalledWith(SOURCE);
+    expect(seen).toEqual(['Rimshot.flac']);
+    expect(h.state().preparing).toBeNull();
+    expect(h.deps.prepare).not.toHaveBeenCalled();
+    expect(h.state().notice).toMatchObject({
+      problem: { kind: 'format', format: 'm4a' },
+    });
+  });
+
+  it('prepares the file when the header sniff rejects', async () => {
+    const h = harness();
+    h.deps.sniffUnsupportedFormat.mockRejectedValueOnce(new Error('torn down'));
+    expect(await h.state().importPicked(null)).toMatchObject({
+      name: 'Rimshot',
+    });
+    expect(h.deps.prepare).toHaveBeenCalledOnce();
+  });
+
   it.each([
     [KB_RESULT.KB_ERROR_TOO_LONG, 'tooLong'],
     [KB_RESULT.KB_ERROR_SILENT, 'silent'],

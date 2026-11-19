@@ -39,6 +39,7 @@ void RunReanchorTests(const std::string& stem);
 void RunBarTests(const std::string& stem);
 void RunCountInTests(const std::string& pulses);
 void RunGroupingTests(const std::string& stem);
+void RunFullSongTests();
 
 }  // namespace stem_sync
 

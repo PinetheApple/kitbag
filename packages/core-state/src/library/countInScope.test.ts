@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { COUNT_IN_SCOPE } from '../metronome/countInScope.ts';
 import { isLoadedSongUnsaved } from './presetMapping.ts';
 import { SONG_STEP } from './setlistPosition.ts';
+import { isPresetEntry } from './snapshot.ts';
 import { setup } from './store.test-helper.ts';
 
 const [, ONE_BAR, TWO_BARS, FOUR_BARS] = KB_COUNT_IN_BARS;
@@ -23,7 +24,9 @@ async function songs(bars: readonly KbCountInBars[]) {
       .setCountIn({ ...fixture.metronome.getState().countIn, bars: count });
     await s.newSongFromCurrent(`Song ${String(index)}`, gig);
   }
-  const entries = fixture.library.getState().entries[gig] ?? [];
+  const entries = (fixture.library.getState().entries[gig] ?? []).filter(
+    isPresetEntry,
+  );
   const load = (index: number) => {
     const entry = entries[index];
     if (entry === undefined) throw new Error('missing song');

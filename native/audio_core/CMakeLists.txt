@@ -269,9 +269,11 @@ if(KITBAG_BUILD_TOOLS)
                                   tools/stem_sync_test_count_in.cpp
                                   tools/stem_sync_test_count_in_silent.cpp
                                   tools/stem_sync_count_in_support.cpp
-                                  tools/stem_sync_test_grouping.cpp)
+                                  tools/stem_sync_test_grouping.cpp
+                                  tools/stem_sync_test_full_song.cpp
+                                  src/stretch/time_stretch.cpp)
   target_include_directories(stem_sync_verify PRIVATE src tools tools/media)
-  target_link_libraries(stem_sync_verify PRIVATE kitbag_core)
+  target_link_libraries(stem_sync_verify PRIVATE kitbag_core signalsmith_stretch)
 
   # Links the sources: TrackBeats and SidecarPath are internal, not exported.
   add_executable(beat_tracker_verify tools/analysis/beat_tracker_verify.cpp

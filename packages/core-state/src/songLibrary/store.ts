@@ -242,7 +242,11 @@ function importActions(
         set({ notice: { kind: 'copyFailed', name: doc.name } });
         return;
       }
-      const check = checkAudioFormat(doc, codes);
+      const headerFormat = await deps
+        .files()
+        .sniffUnsupportedFormat(doc.uri)
+        .catch(() => '');
+      const check = checkAudioFormat(doc, codes, headerFormat);
       if (!check.supported) {
         set({
           notice: {

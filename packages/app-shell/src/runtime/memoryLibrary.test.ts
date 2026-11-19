@@ -1,3 +1,8 @@
+import {
+  createLibraryStore,
+  ENTRY_KIND,
+  metronomeStore,
+} from '@kitbag/core-state';
 import { describe, expect, it } from 'vitest';
 
 import { createMemoryLibrary, type TextStorage } from './memoryLibrary.ts';
@@ -125,5 +130,26 @@ describe('memory library repositories', () => {
       rampLoop: false,
     });
     expect(preset).not.toHaveProperty('rampBars');
+  });
+
+  it('reads songs saved before stem entries existed as metronome entries', async () => {
+    const storage = memoryStorage();
+    const { set } = await fixture(storage);
+    const [key, saved] = [...storage.data][0] ?? [];
+    if (key === undefined || saved === undefined) throw new Error('not saved');
+    const tables = JSON.parse(saved) as { items: Record<string, unknown>[] };
+    for (const item of tables.items) delete item.stemSetId;
+    storage.data.set(key, JSON.stringify(tables));
+
+    const repos = createMemoryLibrary(storage);
+    const library = createLibraryStore({
+      repos: () => repos,
+      metronome: () => metronomeStore.getState(),
+      now: Date.now,
+    });
+    await library.getState().refresh();
+    expect(
+      library.getState().entries[set.id]?.map((entry) => entry.kind),
+    ).toEqual([ENTRY_KIND.preset, ENTRY_KIND.preset, ENTRY_KIND.preset]);
   });
 });

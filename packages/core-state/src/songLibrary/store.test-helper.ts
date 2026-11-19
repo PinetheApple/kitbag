@@ -192,7 +192,11 @@ export function importedBundle(relativeDir: string): ImportedStemBundle {
 }
 
 type Native = Omit<LibraryFiles, 'importAudio' | 'pickDocument'>;
-type Overridable = 'importAudio' | 'pickDocument' | 'importStemBundle';
+type Overridable =
+  | 'importAudio'
+  | 'pickDocument'
+  | 'importStemBundle'
+  | 'sniffUnsupportedFormat';
 
 export function fakeFiles(
   overrides: Partial<Pick<LibraryFiles, Overridable>> = {},
@@ -243,6 +247,9 @@ export function fakeFiles(
   const files = {
     ...native,
     pickDocument: vi.fn(() => Promise.resolve<PickedDocument | null>(MP3)),
+    sniffUnsupportedFormat: vi.fn<LibraryFiles['sniffUnsupportedFormat']>(() =>
+      Promise.resolve(''),
+    ),
     importAudio: vi.fn((_uri: string, dir: string): Promise<ImportedAudio> =>
       Promise.resolve({
         relativePath: `${dir}/Everlong.mp3`,

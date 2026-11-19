@@ -1,6 +1,7 @@
 import type { NewPracticeSession } from '@kitbag/core-db';
 import { describe, expect, it, vi } from 'vitest';
 
+import { isPresetEntry } from '../library/snapshot.ts';
 import { setup } from '../library/store.test-helper.ts';
 import { MIN_SAVED_PLAYED_MS, PRACTICE_TEMPO_SAMPLE_MS } from './session.ts';
 import {
@@ -46,7 +47,9 @@ async function onStage(h: ReturnType<typeof harness>) {
   const gig = await s.createSetlist('Gig');
   const first = await s.newSongFromCurrent('First', gig);
   const second = await s.newSongFromCurrent('Second', gig);
-  const entries = h.library.getState().entries[gig] ?? [];
+  const entries = (h.library.getState().entries[gig] ?? []).filter(
+    isPresetEntry,
+  );
   const load = (index: number) => {
     const entry = entries[index];
     if (entry === undefined) throw new Error('missing entry');

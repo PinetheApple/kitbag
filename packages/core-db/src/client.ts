@@ -7,6 +7,7 @@ import { createClickSoundRepository } from './click-sound-repository';
 import * as schema from './schema';
 import { migrate, type MigrationDriver } from './migrate';
 import { openConnection } from './openConnection';
+import { createPlayQueueRepository } from './play-queue-repository';
 import { createPracticeRepository } from './practice-repository';
 import { createPreferences } from './preferences';
 import { createRouteLatencyRepository } from './route-latency-repository';
@@ -46,12 +47,26 @@ export function openDatabase(
   return connectDatabase(openConnection(name), clickSoundFiles);
 }
 
+export class ForeignKeysOff extends Error {
+  override readonly name = 'ForeignKeysOff';
+
+  constructor() {
+    super('SQLite foreign keys are off on the app connection');
+  }
+}
+
+function requireForeignKeys(connection: Connection): void {
+  const [row] = connection.executeSync('PRAGMA foreign_keys').rows;
+  if (row?.foreign_keys !== 1) throw new ForeignKeysOff();
+}
+
 export function connectDatabase(
   connection: Connection,
   clickSoundFiles: ClickSoundFiles,
 ) {
   try {
     migrate(opSqliteMigrationDriver(connection));
+    requireForeignKeys(connection);
   } catch (error) {
     // The caller retries, so a failed open must not leave a connection behind.
     try {
@@ -67,6 +82,7 @@ export function connectDatabase(
   };
   return {
     setlists: createSetlistRepository(handle),
+    playQueue: createPlayQueueRepository(handle),
     presets: createSongPresetRepository(handle),
     tunings: createTuningRepository(handle),
     songLibrary: createSongLibraryRepository(handle),
