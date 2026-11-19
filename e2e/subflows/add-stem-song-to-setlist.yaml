@@ -1,0 +1,24 @@
+appId: com.kitbag.app
+---
+- runFlow:
+    file: open-stem-player-menu.yaml
+    env:
+      STEM_SONG: ${STEM_SONG}
+- tapOn: 'Add to setlist'
+- runFlow:
+    when:
+      notVisible: '${SETLIST}, .*'
+    commands:
+      - tapOn: 'New setlist'
+      - tapOn: 'Setlist name'
+      - inputText: '${SETLIST}'
+      - tapOn: 'Create and add'
+- runFlow:
+    when:
+      visible: '${SETLIST}, .*'
+    commands:
+      - tapOn: '${SETLIST}, .*'
+- extendedWaitUntil:
+    visible: 'Added to ${SETLIST}'
+    timeout: 10000
+- back

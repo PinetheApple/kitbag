@@ -1,0 +1,62 @@
+appId: com.kitbag.app
+name: '#382: a setlist of three stem songs plays from 1 and steps through, from the player and the metronome'
+tags:
+  - issue-382
+env:
+  SETLIST: Stems gig
+---
+- runFlow: ../../subflows/launch-fresh.yaml
+- runFlow:
+    file: ../../subflows/import-stem-song.yaml
+    env:
+      STEM_SONG: ${FIXTURE_STEMS}
+- back
+- runFlow:
+    file: ../../subflows/import-stem-song.yaml
+    env:
+      STEM_SONG: ${FIXTURE_STEMS_NO_GRID}
+- runFlow:
+    file: ../../subflows/add-stem-song-to-setlist.yaml
+    env:
+      STEM_SONG: ${FIXTURE_STEMS}
+- runFlow:
+    file: ../../subflows/add-stem-song-to-setlist.yaml
+    env:
+      STEM_SONG: ${FIXTURE_STEMS_NO_GRID}
+- runFlow:
+    file: ../../subflows/add-stem-song-to-setlist.yaml
+    env:
+      STEM_SONG: ${FIXTURE_STEMS}
+- back
+- runFlow: ../../subflows/open-metronome-first-time.yaml
+- tapOn: 'Setlists'
+- tapOn: '${SETLIST}, .*'
+- assertVisible: '1\. ${FIXTURE_STEMS}, stem song.*'
+- assertVisible: '2\. ${FIXTURE_STEMS_NO_GRID}, stem song.*'
+- assertVisible: '3\. ${FIXTURE_STEMS}, stem song.*'
+- assertNotVisible: 'No songs in this set'
+- tapOn: 'Play from 1'
+- extendedWaitUntil:
+    visible: 'Up next: ${FIXTURE_STEMS_NO_GRID}, ${SETLIST} · 2 of 3'
+    timeout: 20000
+- assertVisible: 'Play'
+- tapOn: 'Next: ${FIXTURE_STEMS_NO_GRID}'
+- extendedWaitUntil:
+    visible: 'Up next: ${FIXTURE_STEMS}, ${SETLIST} · 3 of 3'
+    timeout: 20000
+- back
+- assertVisible: '2\. ${FIXTURE_STEMS_NO_GRID}, stem song.*, now loaded'
+- back
+- back
+- extendedWaitUntil:
+    visible: '${FIXTURE_STEMS_NO_GRID}, Setlist ${SETLIST}, song 2 of 3'
+    timeout: 10000
+- tapOn: 'Next song, ${FIXTURE_STEMS}'
+- extendedWaitUntil:
+    visible: 'Player menu'
+    timeout: 20000
+- assertNotVisible: 'Up next: .*'
+- back
+- extendedWaitUntil:
+    visible: '${FIXTURE_STEMS}, Setlist ${SETLIST}, song 3 of 3'
+    timeout: 10000
