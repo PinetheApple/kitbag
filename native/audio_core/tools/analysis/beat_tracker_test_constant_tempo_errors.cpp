@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "check.h"
+#include "constant_tempo_fixtures.h"
 
 namespace beat_tracker_test {
 
@@ -12,9 +13,6 @@ namespace {
 
 using kitbag_test::Check;
 
-constexpr float kSentinelBpm = 77.0f;
-constexpr double kSentinelAnchor = 7.7;
-constexpr int32_t kSentinelBar = 7;
 constexpr int kBeats = 16;
 constexpr float kGapSec = 0.5f;
 
@@ -26,29 +24,19 @@ struct Call {
   int32_t downbeat_count;
 };
 
-struct Outputs {
-  float bpm = kSentinelBpm;
-  double anchor = kSentinelAnchor;
-  int32_t beats_per_bar = kSentinelBar;
-};
-
-kb_result Run(const Call& call, Outputs* out) {
-  return kb_fit_constant_tempo(
+Fit Run(const Call& call) {
+  return RunFit(
       call.beats,
       call.beat_count,
       call.downbeats,
-      call.downbeat_count,
-      &out->bpm,
-      &out->anchor,
-      &out->beats_per_bar
+      call.downbeat_count
   );
 }
 
 void CheckRejected(const Call& call) {
-  Outputs out;
-  const kb_result status = Run(call, &out);
+  const Fit out = Run(call);
   Check(
-      status == KB_ERROR_INVALID_ARGUMENT && out.bpm == 0.0f &&
+      out.status == KB_ERROR_INVALID_ARGUMENT && out.bpm == 0.0f &&
           out.anchor == 0.0 && out.beats_per_bar == 0,
       call.name
   );
@@ -144,22 +132,23 @@ void TestNullOutputs() {
        false,
        true},
   };
-  for (const NullOutput& gap : cases) {
-    Outputs out;
+  for (const NullOutput& null_case : cases) {
+    Fit out;
     const kb_result status = kb_fit_constant_tempo(
         good.data(),
         kBeats,
         nullptr,
         0,
-        gap.bpm ? nullptr : &out.bpm,
-        gap.anchor ? nullptr : &out.anchor,
-        gap.beats_per_bar ? nullptr : &out.beats_per_bar
+        null_case.bpm ? nullptr : &out.bpm,
+        null_case.anchor ? nullptr : &out.anchor,
+        null_case.beats_per_bar ? nullptr : &out.beats_per_bar
     );
     Check(
-        status == KB_ERROR_INVALID_ARGUMENT && (gap.bpm || out.bpm == 0.0f) &&
-            (gap.anchor || out.anchor == 0.0) &&
-            (gap.beats_per_bar || out.beats_per_bar == 0),
-        gap.name
+        status == KB_ERROR_INVALID_ARGUMENT &&
+            (null_case.bpm || out.bpm == 0.0f) &&
+            (null_case.anchor || out.anchor == 0.0) &&
+            (null_case.beats_per_bar || out.beats_per_bar == 0),
+        null_case.name
     );
   }
 }
@@ -171,8 +160,7 @@ constexpr float kTooFastGapSec = 0.19f;
 
 bool Accepts(float gap_sec) {
   const std::vector<float> beats = Spaced(gap_sec, kBeats);
-  Outputs out;
-  return Run({"", beats.data(), kBeats, nullptr, 0}, &out) == KB_OK;
+  return Run({"", beats.data(), kBeats, nullptr, 0}).status == KB_OK;
 }
 
 }  // namespace

@@ -95,6 +95,7 @@ export interface NativeConstants {
   readonly customSoundSlots: number;
   readonly maxCustomSoundSeconds: number;
   readonly constantTempoBpm: Bounds;
+  readonly constantTempoMinBeats: number;
   readonly bpmReferenceDenominator: number;
   readonly denominators: readonly number[];
   readonly soundNames: readonly string[];

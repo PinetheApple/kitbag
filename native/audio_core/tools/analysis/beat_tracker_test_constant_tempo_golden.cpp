@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "analysis/beat_tracker.h"
@@ -15,44 +16,71 @@ namespace {
 
 using kitbag_test::Check;
 
-constexpr ClickSpec kCleanClick = {0.37, 120.5, 160, 0.0};
-constexpr ClickSpec kJitteredClick = {0.3137, 123.7, 240, 0.012};
-constexpr ClickSpec kStrayClick = {0.21, 120.0, 200, 0.004};
-constexpr ClickSpec kDoubleClick = {0.15, 120.0, 200, 0.003};
-constexpr ExtraBeats kStrays = {25, 200, 50, 0.3};
-constexpr ExtraBeats kDoubleTime = {80, 100, 1, 0.5};
+constexpr ClickSpec kCleanClick = {
+    .first_sec = 0.37,
+    .bpm = 120.5,
+    .count = 160,
+    .jitter_sec = 0.0,
+};
+constexpr ClickSpec kStrayClick = {
+    .first_sec = 0.21,
+    .bpm = 120.0,
+    .count = 200,
+    .jitter_sec = 0.004,
+};
+constexpr ClickSpec kDoubleClick = {
+    .first_sec = 0.15,
+    .bpm = 120.0,
+    .count = 200,
+    .jitter_sec = 0.003,
+};
+constexpr ExtraBeats kStrays = {
+    .first = 25,
+    .end = 200,
+    .every = 50,
+    .offset_periods = 0.3,
+};
+constexpr ExtraBeats kDoubleTime = {
+    .first = 80,
+    .end = 100,
+    .every = 1,
+    .offset_periods = 0.5,
+};
 constexpr int32_t kCleanFirstDownbeat = 1;
-constexpr int32_t kJitteredFirstDownbeat = 2;
 
 enum class Fixture { kClean, kJittered, kRamp, kStray, kDouble };
 
+Grid OnClick(std::vector<float> beats, int32_t first_downbeat) {
+  std::vector<int32_t> downbeats =
+      EveryNth(kCommonBeatsPerBar, first_downbeat, beats.size());
+  return {std::move(beats), std::move(downbeats)};
+}
+
+Grid WithExtraBeats(const ClickSpec& spec, const ExtraBeats& extra) {
+  const std::vector<float> click = Click(spec);
+  std::vector<float> beats = WithExtras(click, spec.bpm, extra);
+  std::vector<int32_t> downbeats = ClickDownbeats(beats, click);
+  return {std::move(beats), std::move(downbeats)};
+}
+
 Grid Build(Fixture fixture) {
   switch (fixture) {
-    case Fixture::kClean: {
-      std::vector<float> beats = Click(kCleanClick);
-      return {beats, EveryNth(kCommonBar, kCleanFirstDownbeat, beats.size())};
-    }
-    case Fixture::kJittered: {
-      std::vector<float> beats = Click(kJitteredClick);
-      return {
-          beats,
-          EveryNth(kCommonBar, kJitteredFirstDownbeat, beats.size())
-      };
-    }
-    case Fixture::kRamp: {
-      std::vector<float> beats = DraggingOutro();
-      return {beats, EveryNth(kCommonBar, 0, beats.size())};
-    }
+    case Fixture::kClean:
+      return OnClick(Click(kCleanClick), kCleanFirstDownbeat);
+    case Fixture::kJittered:
+      return OnClick(Click(kJitteredClick), kJitteredFirstDownbeat);
+    case Fixture::kRamp:
+      return OnClick(DraggingOutro(), 0);
     case Fixture::kStray:
-      return WithExtras(kStrayClick, kStrays);
+      return WithExtraBeats(kStrayClick, kStrays);
     case Fixture::kDouble:
-      return WithExtras(kDoubleClick, kDoubleTime);
+      return WithExtraBeats(kDoubleClick, kDoubleTime);
   }
   return {};
 }
 
 // StemDeck's fit_constant_tempo on these grids (bpm = 60 / its unrounded
-// slope), and BeatGridBpm as main computed it, which the fit must not move.
+// slope), and BeatGridBpm as main computed it, which must not move.
 struct Golden {
   const char* name;
   Fixture fixture;

@@ -11,6 +11,7 @@
 
 #include "metronome/metronome.h"
 #include "metronome/metronome_types.h"
+#include "time_units.h"
 
 namespace kitbag {
 namespace metronome_detail {
@@ -26,7 +27,7 @@ constexpr double kSubdivisionAmplitude = 0.3;
 // a plain off-beat.
 constexpr double kAccentedSubdivisionGain = 0.75;
 
-constexpr double kSecondsPerMinute = 60.0;
+using ::kitbag::kSecondsPerMinute;
 constexpr double kMsPerMinute = 60000.0;
 constexpr double kMsPerSecond = 1000.0;
 

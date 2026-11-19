@@ -10,11 +10,21 @@ namespace {
 
 constexpr jsize kFitFields = 4;
 
+// Kotlin types the result non-null, so a null return must carry a pending throw.
+jdoubleArray Failed(JNIEnv* env) {
+  if (!env->ExceptionCheck()) {
+    jclass oom = env->FindClass("java/lang/OutOfMemoryError");
+    if (oom != nullptr) env->ThrowNew(oom, "kb_fit_constant_tempo bridge failed");
+  }
+  return nullptr;
+}
+
 jdoubleArray FitArray(JNIEnv* env, kb_result result, float bpm, double anchor, int32_t per_bar) {
   const jdouble fields[kFitFields] = {static_cast<jdouble>(result), bpm, anchor,
                                       static_cast<jdouble>(per_bar)};
   jdoubleArray out = env->NewDoubleArray(kFitFields);
-  if (out != nullptr) env->SetDoubleArrayRegion(out, 0, kFitFields, fields);
+  if (out == nullptr) return Failed(env);
+  env->SetDoubleArrayRegion(out, 0, kFitFields, fields);
   return out;
 }
 
@@ -29,11 +39,11 @@ Java_com_kitbag_corenative_ConstantTempoFitter_nativeFit(JNIEnv* env, jobject, j
   double anchor = 0.0;
   int32_t perBar = 0;
   jfloat* beats = env->GetFloatArrayElements(beatTimesSec, nullptr);
-  if (beats == nullptr) return nullptr;
+  if (beats == nullptr) return Failed(env);
   jint* downbeats = env->GetIntArrayElements(downbeatIndices, nullptr);
   if (downbeats == nullptr) {
     env->ReleaseFloatArrayElements(beatTimesSec, beats, JNI_ABORT);
-    return nullptr;
+    return Failed(env);
   }
   const kb_result result = kb_fit_constant_tempo(
       beats, env->GetArrayLength(beatTimesSec), downbeats, env->GetArrayLength(downbeatIndices), &bpm,

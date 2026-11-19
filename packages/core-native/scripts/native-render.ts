@@ -157,6 +157,9 @@ export const KB_CONSTANT_TEMPO_MIN_BPM = ${String(c.constantTempoBpm.min)};
 /** Fastest bpm kb_fit_constant_tempo accepts (KB_CONSTANT_TEMPO_MAX_BPM). */
 export const KB_CONSTANT_TEMPO_MAX_BPM = ${String(c.constantTempoBpm.max)};
 
+/** Fewest beats kb_fit_constant_tempo fits (KB_CONSTANT_TEMPO_MIN_BEATS). */
+export const KB_CONSTANT_TEMPO_MIN_BEATS = ${String(c.constantTempoMinBeats)};
+
 /** Metronome output-latency offset range, in ms (kb_metronome_set_latency_offset). */
 export const KB_LATENCY_OFFSET_MS_BOUNDS = {
   min: ${String(c.latencyOffsetMsBounds.min)},

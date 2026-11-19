@@ -10,12 +10,12 @@
 
 #include "analysis/beat_grid_fit.h"
 #include "analysis/meter.h"
+#include "time_units.h"
 
 namespace kitbag {
 
 namespace {
 
-constexpr double kSecondsPerMinute = 60.0;
 constexpr int kMinBarBeats = 2;
 constexpr int kMaxBarBeats = 16;
 constexpr double kDownbeatReachPeriods = 0.25;
@@ -48,8 +48,7 @@ class Tally {
   std::array<size_t, kMaxBarBeats + 1> first_{};
 };
 
-// A downbeat on an uncounted beat lands on the counted beat nearest it, if
-// that one is close enough, as StemDeck's _downbeat_numbers does.
+// As StemDeck's _downbeat_numbers.
 bool NearestCounted(const BeatGridLine& line, double time, double* number) {
   const auto& times = line.times;
   auto at = std::lower_bound(times.begin(), times.end(), time);
@@ -58,7 +57,7 @@ bool NearestCounted(const BeatGridLine& line, double time, double* number) {
     --at;
   }
   *number = line.numbers[static_cast<size_t>(at - times.begin())];
-  return std::fabs(*at - time) <= kDownbeatReachPeriods * line.period;
+  return std::fabs(*at - time) <= kDownbeatReachPeriods * line.period_sec;
 }
 
 std::vector<double> DownbeatNumbers(
@@ -110,16 +109,16 @@ bool FitConstantTempo(
     ConstantTempo* out
 ) {
   const BeatGridLine line = FitCountedBeats(beats);
-  const double bpm = kSecondsPerMinute / line.period;
+  const double bpm = kSecondsPerMinute / line.period_sec;
   if (!(bpm >= KB_CONSTANT_TEMPO_MIN_BPM && bpm <= KB_CONSTANT_TEMPO_MAX_BPM)) {
     return false;
   }
   const std::vector<double> down = DownbeatNumbers(line, beats, downbeats);
   const int beats_per_bar = BeatsPerBar(down);
   const double phase = BarPhase(down, beats_per_bar);
-  const double anchor = line.intercept + phase * line.period;
+  const double anchor = line.intercept_sec + phase * line.period_sec;
   out->bpm = bpm;
-  out->anchor_sec = ForwardToZero(anchor, beats_per_bar * line.period);
+  out->anchor_sec = ForwardToZero(anchor, beats_per_bar * line.period_sec);
   out->beats_per_bar = beats_per_bar;
   return true;
 }

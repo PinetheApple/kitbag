@@ -205,6 +205,9 @@ export const KB_CONSTANT_TEMPO_MIN_BPM = 30;
 /** Fastest bpm kb_fit_constant_tempo accepts (KB_CONSTANT_TEMPO_MAX_BPM). */
 export const KB_CONSTANT_TEMPO_MAX_BPM = 300;
 
+/** Fewest beats kb_fit_constant_tempo fits (KB_CONSTANT_TEMPO_MIN_BEATS). */
+export const KB_CONSTANT_TEMPO_MIN_BEATS = 2;
+
 /** Metronome output-latency offset range, in ms (kb_metronome_set_latency_offset). */
 export const KB_LATENCY_OFFSET_MS_BOUNDS = {
   min: -300,

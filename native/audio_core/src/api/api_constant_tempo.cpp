@@ -9,7 +9,10 @@
 namespace {
 
 bool ValidBeats(const float* beats, int32_t count) {
-  if (beats == nullptr || count < 2 || count > KB_MAX_GRID_BEATS) return false;
+  if (beats == nullptr || count < KB_CONSTANT_TEMPO_MIN_BEATS ||
+      count > KB_MAX_GRID_BEATS) {
+    return false;
+  }
   for (int32_t i = 0; i < count; ++i) {
     if (!std::isfinite(beats[i])) return false;
     if (i > 0 && !(beats[i] > beats[i - 1])) return false;

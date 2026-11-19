@@ -9,13 +9,17 @@
 #include <cstdint>
 #include <vector>
 
+#include "analysis/meter.h"
+#include "time_units.h"
+
 namespace beat_tracker_test {
 
-constexpr double kSecondsPerMinute = 60.0;
+using kitbag::kCommonBeatsPerBar;
+using kitbag::kSecondsPerMinute;
+
 constexpr float kSentinelBpm = 77.0f;
 constexpr double kSentinelAnchor = 7.7;
 constexpr int32_t kSentinelBar = 7;
-constexpr int32_t kCommonBar = 4;
 
 constexpr uint32_t kLcgMultiplier = 1664525u;
 constexpr uint32_t kLcgIncrement = 1013904223u;
@@ -28,19 +32,33 @@ struct Fit {
   int32_t beats_per_bar = kSentinelBar;
 };
 
-inline Fit
-RunFit(const std::vector<float>& beats, const std::vector<int32_t>& downbeats) {
+inline Fit RunFit(
+    const float* beats,
+    int32_t beat_count,
+    const int32_t* downbeats,
+    int32_t downbeat_count
+) {
   Fit fit;
   fit.status = kb_fit_constant_tempo(
-      beats.data(),
-      static_cast<int32_t>(beats.size()),
-      downbeats.empty() ? nullptr : downbeats.data(),
-      static_cast<int32_t>(downbeats.size()),
+      beats,
+      beat_count,
+      downbeats,
+      downbeat_count,
       &fit.bpm,
       &fit.anchor,
       &fit.beats_per_bar
   );
   return fit;
+}
+
+inline Fit
+RunFit(const std::vector<float>& beats, const std::vector<int32_t>& downbeats) {
+  return RunFit(
+      beats.data(),
+      static_cast<int32_t>(beats.size()),
+      downbeats.empty() ? nullptr : downbeats.data(),
+      static_cast<int32_t>(downbeats.size())
+  );
 }
 
 inline double Period(double bpm) {
@@ -68,7 +86,14 @@ struct ClickSpec {
   double jitter_sec;
 };
 
-// Mirrored by the StemDeck golden script, so both fits read the same floats.
+constexpr ClickSpec kJitteredClick = {
+    .first_sec = 0.3137,
+    .bpm = 123.7,
+    .count = 240,
+    .jitter_sec = 0.012,
+};
+constexpr int32_t kJitteredFirstDownbeat = 2;
+
 inline std::vector<float> Click(const ClickSpec& spec) {
   uint32_t state = 1;
   std::vector<float> beats;
@@ -102,7 +127,6 @@ constexpr int kDragBeats = 40;
 constexpr double kDragStartSec = 0.5;
 constexpr double kDragEndSec = 0.74;
 
-/// Steady 0.5 s beats, then an outro whose gaps stretch to 0.74 s.
 inline std::vector<float> DraggingOutro() {
   std::vector<float> beats{0.0f};
   for (int k = 1; k < kDragSteadyBeats + kDragBeats; ++k) {
@@ -120,24 +144,39 @@ struct ExtraBeats {
   double offset_periods;
 };
 
-/// A click with an extra beat offset_periods after each chosen one, and a
-/// downbeat on every fourth click beat.
-inline Grid WithExtras(const ClickSpec& spec, const ExtraBeats& extra) {
-  Grid grid;
-  const std::vector<float> click = Click(spec);
-  for (int k = 0; k < spec.count; ++k) {
-    if (k % kCommonBar == 0) {
-      grid.downbeats.push_back(static_cast<int32_t>(grid.beats.size()));
-    }
-    grid.beats.push_back(click[k]);
+inline std::vector<float> WithExtras(
+    const std::vector<float>& click,
+    double bpm,
+    const ExtraBeats& extra
+) {
+  std::vector<float> beats;
+  for (int k = 0; k < static_cast<int>(click.size()); ++k) {
+    beats.push_back(click[k]);
     if (k >= extra.first && k < extra.end &&
         (k - extra.first) % extra.every == 0) {
-      grid.beats.push_back(
-          static_cast<float>(click[k] + extra.offset_periods * Period(spec.bpm))
+      beats.push_back(
+          static_cast<float>(click[k] + extra.offset_periods * Period(bpm))
       );
     }
   }
-  return grid;
+  return beats;
+}
+
+/// Indices into `beats` of every bar-one beat of `click`, which it contains.
+inline std::vector<int32_t> ClickDownbeats(
+    const std::vector<float>& beats,
+    const std::vector<float>& click
+) {
+  std::vector<int32_t> downbeats;
+  size_t next = 0;
+  for (size_t i = 0; i < beats.size() && next < click.size(); ++i) {
+    if (beats[i] != click[next]) continue;
+    if (next % kCommonBeatsPerBar == 0) {
+      downbeats.push_back(static_cast<int32_t>(i));
+    }
+    ++next;
+  }
+  return downbeats;
 }
 
 }  // namespace beat_tracker_test

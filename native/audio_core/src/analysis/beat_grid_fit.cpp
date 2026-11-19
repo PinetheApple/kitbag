@@ -1,3 +1,5 @@
+#include "kitbag_api.h"
+
 #include "analysis/beat_grid_fit.h"
 
 #include <algorithm>
@@ -6,14 +8,14 @@
 #include <utility>
 
 #include "analysis/beat_tracker.h"
+#include "time_units.h"
 
 namespace kitbag {
 
 namespace {
 
 constexpr size_t kMaxSlopePoints = 256;
-constexpr size_t kMinBeatsForSlope = 2;
-constexpr double kSecondsPerMinute = 60.0;
+constexpr size_t kMinBeatsForSlope = KB_CONSTANT_TEMPO_MIN_BEATS;
 constexpr double kMinCountedPeriods = 0.75;
 
 double Median(std::vector<double> values) {
@@ -67,15 +69,15 @@ double MedianIntercept(const BeatGridLine& line) {
   std::vector<double> intercepts;
   intercepts.reserve((line.times.size() + stride - 1) / stride);
   for (size_t i = 0; i < line.times.size(); i += stride) {
-    intercepts.push_back(line.times[i] - line.period * line.numbers[i]);
+    intercepts.push_back(line.times[i] - line.period_sec * line.numbers[i]);
   }
   return Median(std::move(intercepts));
 }
 
 BeatGridLine TheilSen(BeatGridLine line) {
   if (line.times.size() < kMinBeatsForSlope) return {};
-  line.period = MedianSlope(line);
-  line.intercept = MedianIntercept(line);
+  line.period_sec = MedianSlope(line);
+  line.intercept_sec = MedianIntercept(line);
   return line;
 }
 
@@ -110,7 +112,7 @@ BeatGridLine FitCountedBeats(const std::vector<float>& beats) {
 }
 
 float BeatGridBpm(const std::vector<float>& beats) {
-  const double period = FitBeatGrid(beats).period;
+  const double period = FitBeatGrid(beats).period_sec;
   if (period <= 0.0) return 0.0f;
   return static_cast<float>(kSecondsPerMinute / period);
 }

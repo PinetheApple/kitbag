@@ -300,6 +300,7 @@ describe('collectConstants (real engine source)', () => {
     expect(c.maxBeats).toBe(16);
     expect(c.maxRampBars).toBe(64);
     expect(c.constantTempoBpm).toEqual({ min: 30, max: 300 });
+    expect(c.constantTempoMinBeats).toBe(2);
     expect(c.muteBars).toEqual({ min: 1, max: 16 });
     expect(c.minRampBars).toBe(1);
     expect(c.bpm).toEqual({ min: 20, max: 400 });
