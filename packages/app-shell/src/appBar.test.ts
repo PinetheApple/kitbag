@@ -29,7 +29,7 @@ const STATUS_BAR_FRAMES = [
   'tool-library/src/screen/SongPlayerScreen.tsx',
   'tool-metronome/src/library/ScreenFrame.tsx',
   'tool-metronome/src/screen/MetronomeScreen.tsx',
-  'tool-stems/src/screen/StemPlayerScreen.tsx',
+  'tool-stems/src/screen/PlayerScreen.tsx',
   'tool-tuner/src/screen/TunerScreen.tsx',
 ];
 
