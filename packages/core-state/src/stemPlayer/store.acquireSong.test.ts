@@ -11,6 +11,8 @@ import {
 } from './store.test-helper.ts';
 
 const SET_ID = 7;
+const NEXT_SET_ID = 8;
+const NEXT_TITLE = 'Next song';
 const STEMS = [stem(1), stem(2)];
 const OPENS = 2;
 
@@ -20,7 +22,8 @@ function setup() {
     mixSaveDelayMs: SAVE_MS,
     scrubSeekDelayMs: SEEK_MS,
   });
-  const acquire = () => store.getState().acquireSong(SET_ID, BARS).release;
+  const acquire = (setId = SET_ID) =>
+    store.getState().acquireSong(setId, BARS).release;
   const ready = () =>
     vi.waitFor(() => {
       expect(store.getState().status).toBe('ready');
@@ -42,6 +45,26 @@ describe('a screen holding a song in the stem player', () => {
     expect(commands.engineRelease).not.toHaveBeenCalled();
     expect(commands.loadTrack).toHaveBeenCalledTimes(STEMS.length * OPENS);
     expect(commands.mixerUnloadTrack).toHaveBeenCalledTimes(STEMS.length);
+  });
+
+  it('leaves a different song open when the old screen releases late', async () => {
+    const { commands, records, store, acquire, ready, flush } = setup();
+    const releaseOld = acquire();
+    await ready();
+    records.readStemSet.mockResolvedValueOnce(
+      record(STEMS, { id: NEXT_SET_ID, title: NEXT_TITLE }),
+    );
+    acquire(NEXT_SET_ID);
+    await ready();
+    commands.mixerStop.mockClear();
+    releaseOld();
+    await flush();
+    expect(store.getState().status).toBe('ready');
+    expect(store.getState().setId).toBe(NEXT_SET_ID);
+    expect(store.getState().title).toBe(NEXT_TITLE);
+    expect(store.getState().stems).toHaveLength(STEMS.length);
+    expect(commands.mixerStop).not.toHaveBeenCalled();
+    expect(commands.engineRelease).not.toHaveBeenCalled();
   });
 
   it('stays open when the old screen releases while the new one is opening', async () => {

@@ -356,7 +356,9 @@ during the count is the caller's cancel plus a new counted start: a pending
 the count took, and a later start locks to the song's grid. Toggling the click
 during the count re-issues it with the same end frame and the new `start_click`,
 dropping beats already past; the metronome tool's Play during the count ends it
-and starts the song at once, and so does a refused re-issue.
+and starts the song at once, and so does a refused re-issue. A grid with no bar
+marks (common in StemDeck bundles) counts from the beat at or before the head,
+in bars of the song's meter: four beats until a meter is detected or chosen.
 
 **Past the last grid beat, the click goes silent and stays silent.** Every song
 reaches this. `is_running()` keeps reporting true, and `bar_phase` and
@@ -771,8 +773,11 @@ referenced but never drew: **setlists**, **setlist detail**, **preset editor**.
     the saved standalone state. **[recorded — lane call, owner may overturn]**
   - A ramp that was on restores at its start tempo, as a loaded song's does.
     **[recorded — lane call, owner may overturn]**
-  - The saved standalone state is not in a backup.
-    **[recorded — lane call, owner may overturn]**
+  - The saved standalone state is backed up as its own Restore category,
+    Metronome. Merge reviews a differing value as a conflict; an older backup
+    without it leaves the local state untouched; after a restore the restored
+    state replaces an unloaded song's. **[recorded — owner approved, #378;
+    reverses the earlier lane call]**
 - **Ramp and bar-mute are song data.** The Flutter `applyPreset` force-disables
   the ramp when loading a preset, so a song's trainer config is silently lost.
   They round-trip like any other field.

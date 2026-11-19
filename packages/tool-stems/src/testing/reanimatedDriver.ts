@@ -115,7 +115,10 @@ export function runFrame(): void {
   }
 }
 
-const transition = { reduceMotion: () => transition };
+const transition = {
+  reduceMotion: () => transition,
+  withCallback: () => transition,
+};
 
 export const FadeIn = transition;
 export const FadeOut = transition;

@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { followNewGrid } from './clickActions.ts';
 import { songStart, type SongStartSlice } from './songStart.ts';
+import type { StemPlayerStatus } from './store.ts';
 import {
   at,
   BAR_BEATS,
@@ -14,6 +16,7 @@ import {
 } from './store.test-helper.ts';
 
 const SESSION = 1;
+const READY: StemPlayerStatus = 'ready';
 const BEATS = [0, BEAT, 2 * BEAT, 3 * BEAT, 4 * BEAT];
 const DOWNBEATS = [0, BAR_BEATS, 2 * BAR_BEATS];
 const BAR_AT_HEAD = at(2 * BEAT);
@@ -47,7 +50,22 @@ function started({ click = false } = {}) {
   const replaceGrid = (beats: readonly number[]) => {
     state = { ...state, beats };
   };
-  return { ...fake, start, releaseClick, replaceGrid, state: () => state };
+  const clickContext = {
+    set: (change: Partial<SongStartSlice>) => {
+      state = { ...state, ...change };
+    },
+    get: () => ({ ...state, status: READY }),
+    runtimeOf: () => fake.runtime,
+    session: () => SESSION,
+  };
+  return {
+    ...fake,
+    start,
+    releaseClick,
+    replaceGrid,
+    clickContext,
+    state: () => state,
+  };
 }
 
 function counting(options: { click?: boolean } = {}) {
@@ -110,6 +128,15 @@ describe('gridReplaced', () => {
     const [call] = song.commands.songCountIn.mock.calls;
     expect(call?.[1]).toBeCloseTo(at(NEW_BEAT));
     expect(call?.[3]).toBe(true);
+  });
+
+  it('re-counts through followNewGrid once the new grid is stored', async () => {
+    const song = counting({ click: true });
+    song.replaceGrid(NEW_BEATS);
+    await followNewGrid(song.clickContext, song.start.gridReplaced);
+    const [call] = song.commands.songCountIn.mock.calls;
+    expect(call?.[1]).toBeCloseTo(at(NEW_BEAT));
+    expect(song.commands.setGrid).toHaveBeenCalledOnce();
   });
 
   it('sends nothing with no count pending', () => {

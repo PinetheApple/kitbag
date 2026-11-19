@@ -17,3 +17,4 @@ export * from './touchTarget.ts';
 export * from './editRowGaps.ts';
 export * from './stemPlayerRoles.ts';
 export * from './fontFaces.ts';
+export * from './readerHiding.ts';

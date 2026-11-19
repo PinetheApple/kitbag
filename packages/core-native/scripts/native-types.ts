@@ -55,6 +55,7 @@ export interface NativeSources {
 
 export interface NativeConstants {
   readonly maxGridBeats: number;
+  readonly beatAnalysisVersion: number;
   readonly maxTracks: number;
   readonly maxBeats: number;
   readonly minPolyBeats: number;

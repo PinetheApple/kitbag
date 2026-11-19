@@ -2,14 +2,16 @@ import { eq, inArray, isNotNull, sql } from 'drizzle-orm';
 
 import { ANALYSIS_STATUS } from './analysis-status';
 import {
+  isPreferenceCategory,
+  PREFERENCE_KEYS,
   recordKey,
   referenceOf,
   REFERENCES,
   type BackupRecord,
   type Category,
-  type CountInSettingRecord,
   type LibrarySongRecord,
   type PracticeSessionRecord,
+  type PreferenceRecord,
   type SetlistRecord,
   type SongPresetRecord,
   type TuningRecord,
@@ -17,7 +19,6 @@ import {
 import type { ImportPlan, Writes } from './backup-plan';
 import { decodeBase64, nullableBytes, presetBytes } from './base64';
 import { fromSeconds, type IdMaps, type Snapshot } from './backup-snapshot';
-import { COUNT_IN_STORED_KEYS } from './count-in-preferences';
 import { found, type Database } from './repository';
 import {
   practiceSessions,
@@ -138,9 +139,9 @@ function simpleUpsert(
   };
 }
 
-async function upsertCountInSetting(
+async function upsertPreference(
   db: Database,
-  record: CountInSettingRecord,
+  record: PreferenceRecord,
 ): Promise<number> {
   const { key, value } = record;
   const rows = await db
@@ -160,11 +161,16 @@ const UPSERTS: Record<Category, Upsert> = {
     notes: decodeBase64(record.notes),
   })),
   practiceSessions: simpleUpsert(practiceSessions, practiceValues),
-  countInSettings: upsertCountInSetting as Upsert,
+  countInSettings: upsertPreference as Upsert,
+  metronomeSettings: upsertPreference as Upsert,
 };
 
 async function deleteCategory(db: Database, category: Category) {
-  if (category === 'setlists') {
+  if (isPreferenceCategory(category)) {
+    await db
+      .delete(preferences)
+      .where(inArray(preferences.key, [...PREFERENCE_KEYS[category]]));
+  } else if (category === 'setlists') {
     await db.delete(setlistItems);
     await db.update(practiceSessions).set({ setlistId: null });
     await db.delete(setlists);
@@ -179,10 +185,6 @@ async function deleteCategory(db: Database, category: Category) {
     await db.delete(songs);
   } else if (category === 'tunings') {
     await db.delete(tunings);
-  } else if (category === 'countInSettings') {
-    await db
-      .delete(preferences)
-      .where(inArray(preferences.key, [...COUNT_IN_STORED_KEYS]));
   } else {
     await db.delete(practiceSessions);
   }

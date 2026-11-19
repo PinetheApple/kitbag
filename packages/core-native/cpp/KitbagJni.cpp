@@ -371,10 +371,11 @@ Java_com_kitbag_corenative_library_SongAnalyzer_nativeAnalyzeSong(JNIEnv* env, j
 
   jclass analysisClass = env->FindClass("com/kitbag/corenative/library/NativeSongAnalysis");
   if (analysisClass == nullptr) return nullptr;
-  jmethodID ctor = env->GetMethodID(analysisClass, "<init>", "(F[F[ID)V");
+  jmethodID ctor = env->GetMethodID(analysisClass, "<init>", "(F[F[IDI)V");
   if (ctor == nullptr) return nullptr;
   return env->NewObject(analysisClass, ctor, static_cast<jfloat>(bpm), beatsOut, downbeatsOut,
-                        static_cast<jdouble>(durationSec));
+                        static_cast<jdouble>(durationSec),
+                        static_cast<jint>(KB_BEAT_ANALYSIS_VERSION));
 }
 
 JNIEXPORT jstring JNICALL

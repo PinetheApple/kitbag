@@ -116,6 +116,7 @@ describe('picking a file', () => {
       'setlists',
       'tunings',
       'countInSettings',
+      'metronomeSettings',
     ]);
     expect(state.plan.counts.setlists).toMatchObject({ incoming: 2, new: 2 });
   });
@@ -145,6 +146,7 @@ describe('reviewing', () => {
     expect(review(h.state()).plan.categories).toEqual([
       'tunings',
       'countInSettings',
+      'metronomeSettings',
     ]);
     await h.store.getState().toggleCategory('setlists');
     expect(review(h.state()).plan.categories).toEqual([
@@ -152,6 +154,7 @@ describe('reviewing', () => {
       'setlists',
       'tunings',
       'countInSettings',
+      'metronomeSettings',
     ]);
   });
 

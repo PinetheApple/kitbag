@@ -1,21 +1,83 @@
-import type { SongBadge } from '@kitbag/core-state';
+import {
+  bpmFact,
+  playerSongBadge,
+  type SongBadge,
+  type SongPlayerStore,
+} from '@kitbag/core-state';
+
+import { songStatusBadge, type BadgeSpec } from './rowText.ts';
+
+export type LockAction = 'click' | 'reanalyze' | 'none';
 
 export interface LockText {
   readonly title: string;
   readonly detail: string;
-  readonly available: boolean;
+  readonly action: LockAction;
 }
 
-const NO_CLICK = 'No click available';
 const LOCK_SOURCE = 'phase auto · from beat grid';
 const GRID_READY = 'grid ready';
+const NO_GRID_TITLE = 'No beat grid';
+
+const ANALYSING: LockText = {
+  title: 'Finding the beat',
+  detail: 'The click is ready once analysis ends',
+  action: 'none',
+};
+
+const NO_GRID_TEXT: Readonly<Record<'failed' | 'noGrid', LockText>> = {
+  failed: {
+    title: NO_GRID_TITLE,
+    detail: 'Analysis failed, so no click',
+    action: 'reanalyze',
+  },
+  noGrid: {
+    title: NO_GRID_TITLE,
+    detail: 'Analysis found no beat, so no click',
+    action: 'reanalyze',
+  },
+};
+
+// The player draws any song it cannot click to as NO GRID, in red.
+const PLAYER_NO_GRID: BadgeSpec = {
+  ...songStatusBadge('noGrid'),
+  tone: 'danger',
+};
 
 function withBpm(bpmText: string | null, detail: string): string {
   return bpmText === null ? detail : `${bpmText} · ${detail}`;
 }
 
-function unavailable(detail: string): LockText {
-  return { title: NO_CLICK, detail, available: false };
+export function playerStatusBadge(badge: SongBadge): BadgeSpec | null {
+  if (badge === 'grid') return null;
+  return badge === 'failed' || badge === 'noGrid'
+    ? PLAYER_NO_GRID
+    : songStatusBadge(badge);
+}
+
+type PlayerFacts = Pick<SongPlayerStore, 'status' | 'analysisStatus' | 'beats'>;
+
+export type BarBadge = Omit<BadgeSpec, 'key'>;
+
+export function lockBadgeOf({ analysisStatus, beats }: PlayerFacts): SongBadge {
+  return playerSongBadge({ analysisStatus, hasGrid: beats.length > 0 });
+}
+
+export function barStatusOf(state: PlayerFacts): BadgeSpec | null {
+  return state.status === 'ready'
+    ? playerStatusBadge(lockBadgeOf(state))
+    : null;
+}
+
+export function barBadge(
+  status: BadgeSpec | null,
+  bpm: number | null,
+): BarBadge | null {
+  if (status !== null) return status;
+  const fact = bpmFact(bpm);
+  return fact === null
+    ? null
+    : { label: fact.text, spoken: fact.spoken, tone: 'default' };
 }
 
 export function lockText(
@@ -26,24 +88,21 @@ export function lockText(
   switch (badge) {
     case 'pending':
     case 'analyzing':
-      return unavailable(
-        'This song is still being analysed. Reopen it once the grid is ready.',
-      );
+      return ANALYSING;
     case 'failed':
-      return unavailable('The beat analysis failed for this song.');
     case 'noGrid':
-      return unavailable('The analysis found no beats in this song.');
+      return NO_GRID_TEXT[badge];
     case 'grid':
       return click
         ? {
             title: 'Metronome locked',
             detail: withBpm(bpmText, LOCK_SOURCE),
-            available: true,
+            action: 'click',
           }
         : {
             title: 'Click off',
             detail: withBpm(bpmText, GRID_READY),
-            available: true,
+            action: 'click',
           };
   }
 }

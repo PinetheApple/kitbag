@@ -2,6 +2,7 @@ import {
   BACKUP_FORMAT,
   BACKUP_VERSION,
   CATEGORIES,
+  PREFERENCE_KEYS,
   reject,
   recordKey,
   referenceOf,
@@ -9,9 +10,10 @@ import {
   type BackupFile,
   type Category,
   type CategoryRecords,
-  type CountInSettingRecord,
   type LibrarySongRecord,
   type PracticeSessionRecord,
+  type PreferenceCategory,
+  type PreferenceRecord,
   type SetlistRecord,
   type SongPresetRecord,
   type TuningRecord,
@@ -25,7 +27,6 @@ import {
   type Reader,
 } from './backup-reader';
 import { decodeBase64, presetBytes } from './base64';
-import { COUNT_IN_STORED_KEYS } from './count-in-preferences';
 import {
   MIN_RAMP_STEP,
   normalizePolyAgainst,
@@ -169,15 +170,15 @@ function readPracticeSession(
   };
 }
 
-function readCountInSetting(
-  value: unknown,
-  path: string,
-): CountInSettingRecord {
-  const r = reader(value, path);
-  const record = { key: r.string('key'), value: r.string('value') };
-  if (!COUNT_IN_STORED_KEYS.includes(record.key))
-    invalidField(`${path}.key`, 'not a count-in setting');
-  return record;
+function preferenceReader(category: PreferenceCategory) {
+  const keys: readonly string[] = PREFERENCE_KEYS[category];
+  return (value: unknown, path: string): PreferenceRecord => {
+    const r = reader(value, path);
+    const record = { key: r.string('key'), value: r.string('value') };
+    if (!keys.includes(record.key))
+      invalidField(`${path}.key`, `not a ${category} key`);
+    return record;
+  };
 }
 
 const READERS: {
@@ -188,7 +189,8 @@ const READERS: {
   setlists: readSetlist,
   tunings: readTuning,
   practiceSessions: readPracticeSession,
-  countInSettings: readCountInSetting,
+  countInSettings: preferenceReader('countInSettings'),
+  metronomeSettings: preferenceReader('metronomeSettings'),
 };
 
 function readCategory<C extends Category>(

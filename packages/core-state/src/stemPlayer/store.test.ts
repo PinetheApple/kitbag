@@ -86,6 +86,21 @@ describe('opening a stem song', () => {
     ]);
   });
 
+  it('names the artist when the bundle has no song title', async () => {
+    const fake = fakeRuntime({
+      ...record([stem(1)]),
+      title: 'Echo',
+      songTitle: null,
+      artist: 'Charity Gayle',
+    });
+    const store = createStemPlayerStore(() => fake.runtime);
+    await store.getState().open(7, BARS);
+    expect([store.getState().title, store.getState().artist]).toEqual([
+      'Echo',
+      'Charity Gayle',
+    ]);
+  });
+
   it('scales each waveform to its stem against the longest', async () => {
     const { store } = await opened([stem(1), stem(2, { durationSec: 5 })]);
     expect(store.getState().stems.map((row) => row.extent)).toEqual([1, 0.5]);

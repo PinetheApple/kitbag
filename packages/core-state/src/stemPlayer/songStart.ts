@@ -1,5 +1,6 @@
 import { KB_MIXER_UNITY_RATE, KB_RESULT } from '@kitbag/core-native';
 
+import { barMeter } from './barMeter.ts';
 import { countedStart, type CountedStart } from './countedStart.ts';
 import type { MixerRuntime, StemPlayerRuntime } from './runtime.ts';
 import type { StemPlayerState } from './store.ts';
@@ -60,7 +61,8 @@ export function songStart({
     known.session === session() ? known.rate : KB_MIXER_UNITY_RATE;
 
   const plan = (headFrame: number) => {
-    const { beats, downbeatIndices, engineRate } = get();
+    const song = get();
+    const { beats, downbeatIndices, engineRate } = song;
     const runtime = runtimeOf();
     if (runtime.sharedMetronome.active()) return null;
     return countedStart({
@@ -71,6 +73,7 @@ export function songStart({
       bars: runtime.countInBars(),
       beats,
       downbeatIndices,
+      unmarkedBeatsPerBar: barMeter(song),
     });
   };
 

@@ -1,9 +1,7 @@
+import { STANDALONE_METRONOME_KEY } from '@kitbag/core-db';
 import { configureStandaloneMetronomePersistence } from '@kitbag/core-state';
 
-import {
-  STANDALONE_METRONOME_KEY,
-  standaloneMetronomePersistence,
-} from './standaloneMetronomePreference';
+import { standaloneMetronomePersistence } from './standaloneMetronomePreference';
 import { storedWebPreference, WEB_KEY_PREFIX } from './storedWebPreference';
 import { queriedTempoWins } from './tempoQuery';
 

@@ -1,28 +1,17 @@
-import { expect, it, vi } from 'vitest';
+import { expect, it } from 'vitest';
 
-import type { MetronomeCommands } from './commands.ts';
 import {
   configureCountInPersistence,
   reloadCountInPersistence,
   type CountInSettings,
 } from './countInPersistence.ts';
 import { COUNT_IN_SCOPE } from './countInScope.ts';
-import { configureMetronomeRuntime } from './runtime.ts';
+import { stubMetronomeRuntime } from './runtime.test-helper.ts';
 import { metronomeStore } from './store.ts';
 
-const commands = new Proxy(
-  {},
-  {
-    get: (target: Record<string, unknown>, key: string) =>
-      (target[key] ??= vi.fn()),
-  },
-) as unknown as MetronomeCommands;
+const ENGINE_BPM = 120;
 
-configureMetronomeRuntime({
-  commands,
-  nowFrame: () => 0,
-  engineBpm: () => 120,
-});
+stubMetronomeRuntime(ENGINE_BPM);
 
 it('applies count-in settings written underneath it, such as by a restore', () => {
   let stored: Partial<CountInSettings> = { bars: 1 };
