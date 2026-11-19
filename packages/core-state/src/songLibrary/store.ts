@@ -236,7 +236,8 @@ function importActions(
         set({ notice: { kind: 'copyFailed', name: doc.name } });
         return;
       }
-      const check = checkAudioFormat(doc, codes);
+      const header = await deps.files().sniffAudioHeader(doc.uri);
+      const check = checkAudioFormat(doc, codes, header);
       if (!check.supported) {
         set({
           notice: {

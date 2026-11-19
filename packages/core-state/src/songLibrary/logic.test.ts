@@ -170,12 +170,9 @@ describe('import helpers', () => {
     ['a.MP3 ', ''],
     ['Track 01', 'audio/MPEG; charset=binary'],
   ] as const)('admits %s (%s), which the core can open', (name, mimeType) => {
-    expect(
-      checkAudioFormat(
-        { name, mimeType, unsupportedHeaderFormat: '' },
-        SHARED_CODES,
-      ),
-    ).toEqual({ supported: true });
+    expect(checkAudioFormat({ name, mimeType }, SHARED_CODES, '')).toEqual({
+      supported: true,
+    });
   });
 
   it.each([
@@ -187,11 +184,20 @@ describe('import helpers', () => {
     'refuses %s (%s) when its header says %j',
     (name, mimeType, header) => {
       expect(
-        checkAudioFormat(
-          { name, mimeType, unsupportedHeaderFormat: header },
-          SHARED_CODES,
-        ),
+        checkAudioFormat({ name, mimeType }, SHARED_CODES, header),
       ).toEqual({ supported: false, format: header });
+    },
+  );
+
+  it.each([
+    ['tone.opus', 'audio/ogg', 'ogg', 'opus'],
+    ['Book.m4b', 'audio/mpeg', 'm4a', 'm4b'],
+  ] as const)(
+    'names %s (%s) by its unsupported extension over its %j header',
+    (name, mimeType, header, format) => {
+      expect(
+        checkAudioFormat({ name, mimeType }, SHARED_CODES, header),
+      ).toEqual({ supported: false, format });
     },
   );
 
@@ -212,12 +218,10 @@ describe('import helpers', () => {
     ['Everlong', 'application/octet-stream', ''],
     ['Everlong', '', ''],
   ] as const)('refuses %s (%s) and names it %j', (name, mimeType, format) => {
-    expect(
-      checkAudioFormat(
-        { name, mimeType, unsupportedHeaderFormat: '' },
-        SHARED_CODES,
-      ),
-    ).toEqual({ supported: false, format });
+    expect(checkAudioFormat({ name, mimeType }, SHARED_CODES, '')).toEqual({
+      supported: false,
+      format,
+    });
   });
 
   it('reads the format from the stored file name', () => {

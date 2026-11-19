@@ -197,7 +197,6 @@ describe('song library store', () => {
             uri: 'content://voice-memo',
             name: 'Voice memo.m4a',
             mimeType: 'audio/mp4',
-            unsupportedHeaderFormat: '',
           }),
         ),
       }),
@@ -233,7 +232,6 @@ describe('song library store', () => {
             uri: 'content://mislabelled',
             name: 'Mislabelled.m4a',
             mimeType: 'audio/mpeg',
-            unsupportedHeaderFormat: '',
           }),
         ),
       }),
@@ -247,6 +245,7 @@ describe('song library store', () => {
   });
 
   it('refuses an extensionless M4A labelled as MP3, by its header', async () => {
+    let importingWhileSniffed: readonly string[] = [];
     const { store, files } = setup(
       fakeFiles({
         pickDocument: vi.fn(() =>
@@ -254,12 +253,17 @@ describe('song library store', () => {
             uri: 'content://tone-noext',
             name: 'tone-noext',
             mimeType: 'audio/mpeg',
-            unsupportedHeaderFormat: 'm4a',
           }),
         ),
+        sniffAudioHeader: vi.fn(() => {
+          importingWhileSniffed = store.getState().importing;
+          return Promise.resolve('m4a');
+        }),
       }),
     );
     await store.getState().importSong();
+    expect(files.sniffAudioHeader).toHaveBeenCalledWith('content://tone-noext');
+    expect(importingWhileSniffed).toEqual(['tone-noext']);
     expect(files.importAudio).not.toHaveBeenCalled();
     expect(store.getState().notice).toEqual({
       kind: 'formatRefused',

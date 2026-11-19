@@ -186,20 +186,20 @@ type SupportedAudioLists = Pick<
 // Android maps .m4a to audio/mpeg, so a known audio extension outranks the MIME
 // type; any other text after a dot may be part of the title.
 export function checkAudioFormat(
-  file: Pick<PickedDocument, 'name' | 'mimeType' | 'unsupportedHeaderFormat'>,
+  file: Pick<PickedDocument, 'name' | 'mimeType'>,
   lists: SupportedAudioLists,
+  headerFormat: string,
 ): FormatCheck {
   const {
     supportedAudioExtensions: extensions,
     supportedAudioMimeTypes: mimeTypes,
     unsupportedAudioExtensions: unsupported,
   } = lists;
-  if (file.unsupportedHeaderFormat !== '')
-    return { supported: false, format: file.unsupportedHeaderFormat };
   const extension = audioFormat(file.name.trim());
-  if (extensions.includes(extension)) return { supported: true };
   if (unsupported.includes(extension))
     return { supported: false, format: extension };
+  if (headerFormat !== '') return { supported: false, format: headerFormat };
+  if (extensions.includes(extension)) return { supported: true };
   const mimeType = mediaType(file.mimeType);
   return mimeTypes.includes(mimeType)
     ? { supported: true }

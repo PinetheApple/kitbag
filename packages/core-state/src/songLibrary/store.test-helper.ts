@@ -27,7 +27,6 @@ export const MP3: PickedDocument = {
   uri: 'content://everlong',
   name: 'Everlong.mp3',
   mimeType: 'audio/mpeg',
-  unsupportedHeaderFormat: '',
 };
 
 export const CODES: LibraryConstants = {
@@ -193,7 +192,8 @@ export function importedBundle(relativeDir: string): ImportedStemBundle {
 }
 
 type Native = Omit<LibraryFiles, 'importAudio' | 'pickDocument'>;
-type Overridable = 'importAudio' | 'pickDocument' | 'importStemBundle';
+type Overridable =
+  'importAudio' | 'pickDocument' | 'importStemBundle' | 'sniffAudioHeader';
 
 export function fakeFiles(
   overrides: Partial<Pick<LibraryFiles, Overridable>> = {},
@@ -244,6 +244,9 @@ export function fakeFiles(
   const files = {
     ...native,
     pickDocument: vi.fn(() => Promise.resolve<PickedDocument | null>(MP3)),
+    sniffAudioHeader: vi.fn<LibraryFiles['sniffAudioHeader']>(() =>
+      Promise.resolve(''),
+    ),
     importAudio: vi.fn((_uri: string, dir: string): Promise<ImportedAudio> =>
       Promise.resolve({
         relativePath: `${dir}/Everlong.mp3`,

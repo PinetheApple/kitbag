@@ -1,6 +1,9 @@
 package com.kitbag.corenative.library
 
 import java.io.ByteArrayInputStream
+import java.io.FileNotFoundException
+import java.io.IOException
+import java.io.InputStream
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -63,6 +66,32 @@ class AudioHeaderTest {
     assertNull(sniff(bytes(0xFF)))
     assertNull(sniff(ascii("Ogg")))
     assertNull(sniff(bytes(0x00, 0x00, 0x00, 0x1C) + ascii("fty")))
+  }
+
+  @Test
+  fun sniffsAnOpenedStream() {
+    val m4a = bytes(0x00, 0x00, 0x00, 0x1C) + ascii("ftypM4A ")
+    assertEquals("m4a", AudioHeader.sniff { ByteArrayInputStream(m4a) })
+  }
+
+  @Test
+  fun leavesAFileThatCannotBeOpenedToTheCopy() {
+    assertNull(AudioHeader.sniff { null })
+    listOf(
+      SecurityException("no grant"),
+      IllegalArgumentException("bad uri"),
+      IllegalStateException("provider gone"),
+      FileNotFoundException("deleted"),
+    ).forEach { failure -> assertNull(AudioHeader.sniff { throw failure }) }
+  }
+
+  @Test
+  fun leavesAStreamThatFailsMidReadToTheCopy() {
+    val failing = object : InputStream() {
+      override fun read(): Int = throw IOException("read failed")
+      override fun read(b: ByteArray, off: Int, len: Int): Int = throw IOException("read failed")
+    }
+    assertNull(AudioHeader.sniff { failing })
   }
 
   @Test

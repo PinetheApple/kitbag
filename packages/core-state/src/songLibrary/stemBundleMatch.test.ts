@@ -14,7 +14,6 @@ const ZIP: PickedDocument = {
   uri: 'content://redbone.zip',
   name: 'Redbone.stemdeck.zip',
   mimeType: 'application/zip',
-  unsupportedHeaderFormat: '',
 };
 
 const RESEPARATED = 'reseparated-job';

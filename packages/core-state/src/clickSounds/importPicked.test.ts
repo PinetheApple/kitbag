@@ -31,7 +31,6 @@ describe('importing a picked file', () => {
       uri: SOURCE,
       name: 'Snare.m4a',
       mimeType: 'audio/mp4',
-      unsupportedHeaderFormat: '',
     });
     expect(await h.state().importPicked(null)).toBeNull();
     expect(h.deps.prepare).not.toHaveBeenCalled();
@@ -44,6 +43,23 @@ describe('importing a picked file', () => {
         format: 'm4a',
         supported: CODES.supportedAudioFamilies,
       },
+    });
+  });
+
+  it('refuses a file its header names, while it shows as preparing', async () => {
+    const h = harness();
+    const seen: (string | null)[] = [];
+    h.deps.sniffAudioHeader.mockImplementationOnce(() => {
+      seen.push(h.state().preparing);
+      return Promise.resolve('m4a');
+    });
+    expect(await h.state().importPicked(null)).toBeNull();
+    expect(h.deps.sniffAudioHeader).toHaveBeenCalledWith(SOURCE);
+    expect(seen).toEqual(['Rimshot.flac']);
+    expect(h.state().preparing).toBeNull();
+    expect(h.deps.prepare).not.toHaveBeenCalled();
+    expect(h.state().notice).toMatchObject({
+      problem: { kind: 'format', format: 'm4a' },
     });
   });
 

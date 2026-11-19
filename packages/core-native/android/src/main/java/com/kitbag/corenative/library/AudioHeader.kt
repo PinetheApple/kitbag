@@ -16,6 +16,14 @@ object AudioHeader {
   private const val ADTS_SYNC_LAYER = 0xF0
   private const val ADTS_MIN_BYTES = 2
 
+  // Any failure to open or read is left to the copy step, which reports the real error.
+  fun sniff(open: () -> InputStream?): String? =
+    try {
+      open()?.use { unsupportedFormat(read(it)) }
+    } catch (e: Exception) {
+      null
+    }
+
   fun read(input: InputStream): ByteArray {
     val header = ByteArray(SIZE)
     var filled = 0

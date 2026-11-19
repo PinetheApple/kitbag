@@ -31,6 +31,7 @@ configureSongLibrary({
     },
     pickDocument: unavailable,
     pickFolder: unavailable,
+    sniffAudioHeader: unavailable,
     importAudio: unavailable,
     enqueueAnalysis: () => undefined,
     cancelAnalysis: () => undefined,

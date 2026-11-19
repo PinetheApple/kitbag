@@ -15,7 +15,6 @@ const ZIP: PickedDocument = {
   uri: 'content://redbone.zip',
   name: 'Redbone.stemdeck.zip',
   mimeType: 'application/zip',
-  unsupportedHeaderFormat: '',
 };
 
 function zipFiles(overrides: Parameters<typeof fakeFiles>[0] = {}) {
@@ -41,6 +40,7 @@ describe('StemDeck bundle import', () => {
     expect(files.checkStemBundle).toHaveBeenCalledWith(ZIP.uri, false);
     expect(files.importStemBundle).toHaveBeenCalledWith(ZIP.uri, false);
     expect(files.importAudio).not.toHaveBeenCalled();
+    expect(files.sniffAudioHeader).not.toHaveBeenCalled();
     const [row] = await stemRows(store);
     expect(row).toMatchObject({ title: 'Redbone', stemCount: 2 });
     expect(await records.readStemSet(row?.id ?? 0)).toMatchObject({

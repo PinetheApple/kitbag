@@ -47,6 +47,7 @@ const records: SongLibraryRecords = {
 const files: LibraryFiles = {
   constants: () => getKitbagLibrary().getConstants(),
   pickDocument: () => getKitbagLibrary().pickDocument(),
+  sniffAudioHeader: (uri) => getKitbagLibrary().sniffAudioHeader(uri),
   pickFolder: () => getKitbagLibrary().pickFolder(),
   importAudio: (uri, relativeDir) =>
     getKitbagLibrary().importAudio(uri, relativeDir),

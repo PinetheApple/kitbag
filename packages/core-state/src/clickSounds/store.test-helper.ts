@@ -22,7 +22,6 @@ export const PICKED: PickedDocument = {
   uri: SOURCE,
   name: 'Rimshot.flac',
   mimeType: 'audio/flac',
-  unsupportedHeaderFormat: '',
 };
 
 export function harness(database: BackupDatabase = openBackupDatabase()) {
@@ -44,6 +43,9 @@ export function harness(database: BackupDatabase = openBackupDatabase()) {
     afterRemove: vi.fn(() => Promise.resolve()),
     pickDocument: vi.fn<ClickSoundDeps['pickDocument']>(() =>
       Promise.resolve(PICKED),
+    ),
+    sniffAudioHeader: vi.fn<ClickSoundDeps['sniffAudioHeader']>(() =>
+      Promise.resolve(''),
     ),
     constants: () => CODES,
     listFiles: vi.fn(() => Promise.resolve([...stored.keys()])),

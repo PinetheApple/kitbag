@@ -14,6 +14,7 @@ export interface LibraryFiles {
   readonly constants: () => LibraryConstants;
   readonly pickDocument: () => Promise<PickedDocument | null>;
   readonly pickFolder: () => Promise<PickedFolder | null>;
+  readonly sniffAudioHeader: (uri: string) => Promise<string>;
   readonly importAudio: (
     uri: string,
     relativeDir: string,
