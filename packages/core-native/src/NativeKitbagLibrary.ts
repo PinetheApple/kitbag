@@ -12,6 +12,7 @@ export type PickedDocument = Readonly<{
   uri: string;
   name: string;
   mimeType: string;
+  unsupportedHeaderFormat: string;
 }>;
 
 export type PickedBackup = Readonly<{

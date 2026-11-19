@@ -197,6 +197,7 @@ describe('song library store', () => {
             uri: 'content://voice-memo',
             name: 'Voice memo.m4a',
             mimeType: 'audio/mp4',
+            unsupportedHeaderFormat: '',
           }),
         ),
       }),
@@ -232,6 +233,7 @@ describe('song library store', () => {
             uri: 'content://mislabelled',
             name: 'Mislabelled.m4a',
             mimeType: 'audio/mpeg',
+            unsupportedHeaderFormat: '',
           }),
         ),
       }),
@@ -241,6 +243,29 @@ describe('song library store', () => {
     expect(store.getState().notice).toMatchObject({
       kind: 'formatRefused',
       format: 'm4a',
+    });
+  });
+
+  it('refuses an extensionless M4A labelled as MP3, by its header', async () => {
+    const { store, files } = setup(
+      fakeFiles({
+        pickDocument: vi.fn(() =>
+          Promise.resolve({
+            uri: 'content://tone-noext',
+            name: 'tone-noext',
+            mimeType: 'audio/mpeg',
+            unsupportedHeaderFormat: 'm4a',
+          }),
+        ),
+      }),
+    );
+    await store.getState().importSong();
+    expect(files.importAudio).not.toHaveBeenCalled();
+    expect(store.getState().notice).toEqual({
+      kind: 'formatRefused',
+      name: 'tone-noext',
+      format: 'm4a',
+      supported: CODES.supportedAudioFamilies,
     });
   });
 

@@ -15,6 +15,7 @@ const ZIP: PickedDocument = {
   uri: 'content://redbone.zip',
   name: 'Redbone.stemdeck.zip',
   mimeType: 'application/zip',
+  unsupportedHeaderFormat: '',
 };
 
 function zipFiles(overrides: Parameters<typeof fakeFiles>[0] = {}) {

@@ -31,6 +31,7 @@ describe('importing a picked file', () => {
       uri: SOURCE,
       name: 'Snare.m4a',
       mimeType: 'audio/mp4',
+      unsupportedHeaderFormat: '',
     });
     expect(await h.state().importPicked(null)).toBeNull();
     expect(h.deps.prepare).not.toHaveBeenCalled();

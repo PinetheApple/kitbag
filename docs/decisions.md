@@ -1066,8 +1066,9 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   `KB_OK` from `kb_player_load` and `kb_analyze_song`, and AAC `.m4a` returns
   `KB_ERROR_INVALID_ARGUMENT`. Android’s MIME table labels `.m4a` as `audio/mpeg`, so the picker
   still offers M4A files; W64 and RF64 have no Android MIME type, so it does not offer them.
-  An extensionless M4A labelled `audio/mpeg` is admitted by its MIME type and fails at analysis
-  instead; telling that apart from a corrupt file is #347’s.
+  Before either, import reads the file’s first bytes and refuses an MP4 (`ftyp` box), Ogg
+  (`OggS`) or ADTS AAC header as M4A, OGG or AAC, so an extensionless M4A labelled `audio/mpeg`
+  or a disguised extension is refused too. **[recorded — coordinator ruling]**
 
 - **2026-11-08 · Standalone metronome across a restart (§5.4, #333)** — A kill with a song or
   setlist step loaded relaunches into the standalone settings from before the song, so the

@@ -114,6 +114,17 @@ class DocumentPicker(
       putString("uri", uri.toString())
       putString("name", displayName(uri) ?: uri.lastPathSegment.orEmpty())
       putString("mimeType", context.contentResolver.getType(uri).orEmpty())
+      putString("unsupportedHeaderFormat", unsupportedHeaderFormat(uri).orEmpty())
+    }
+
+  // An unreadable file is left to the copy step, which reports it as a failed copy.
+  private fun unsupportedHeaderFormat(uri: Uri): String? =
+    try {
+      context.contentResolver.openInputStream(uri)?.use {
+        AudioHeader.unsupportedFormat(AudioHeader.read(it))
+      }
+    } catch (e: IOException) {
+      null
     }
 
   private fun readBackup(uri: Uri): WritableMap {

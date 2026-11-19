@@ -22,6 +22,7 @@ export const PICKED: PickedDocument = {
   uri: SOURCE,
   name: 'Rimshot.flac',
   mimeType: 'audio/flac',
+  unsupportedHeaderFormat: '',
 };
 
 export function harness(database: BackupDatabase = openBackupDatabase()) {

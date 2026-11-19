@@ -170,10 +170,30 @@ describe('import helpers', () => {
     ['a.MP3 ', ''],
     ['Track 01', 'audio/MPEG; charset=binary'],
   ] as const)('admits %s (%s), which the core can open', (name, mimeType) => {
-    expect(checkAudioFormat({ name, mimeType }, SHARED_CODES)).toEqual({
-      supported: true,
-    });
+    expect(
+      checkAudioFormat(
+        { name, mimeType, unsupportedHeaderFormat: '' },
+        SHARED_CODES,
+      ),
+    ).toEqual({ supported: true });
   });
+
+  it.each([
+    ['tone-noext', 'audio/mpeg', 'm4a'],
+    ['Disguised.mp3', 'audio/mpeg', 'm4a'],
+    ['Disguised.wav', 'audio/wav', 'ogg'],
+    ['Disguised.flac', 'audio/flac', 'aac'],
+  ] as const)(
+    'refuses %s (%s) when its header says %j',
+    (name, mimeType, header) => {
+      expect(
+        checkAudioFormat(
+          { name, mimeType, unsupportedHeaderFormat: header },
+          SHARED_CODES,
+        ),
+      ).toEqual({ supported: false, format: header });
+    },
+  );
 
   it.each([
     ['Everlong.m4a', 'audio/mp4', 'm4a'],
@@ -192,10 +212,12 @@ describe('import helpers', () => {
     ['Everlong', 'application/octet-stream', ''],
     ['Everlong', '', ''],
   ] as const)('refuses %s (%s) and names it %j', (name, mimeType, format) => {
-    expect(checkAudioFormat({ name, mimeType }, SHARED_CODES)).toEqual({
-      supported: false,
-      format,
-    });
+    expect(
+      checkAudioFormat(
+        { name, mimeType, unsupportedHeaderFormat: '' },
+        SHARED_CODES,
+      ),
+    ).toEqual({ supported: false, format });
   });
 
   it('reads the format from the stored file name', () => {

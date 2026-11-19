@@ -27,6 +27,7 @@ export const MP3: PickedDocument = {
   uri: 'content://everlong',
   name: 'Everlong.mp3',
   mimeType: 'audio/mpeg',
+  unsupportedHeaderFormat: '',
 };
 
 export const CODES: LibraryConstants = {
