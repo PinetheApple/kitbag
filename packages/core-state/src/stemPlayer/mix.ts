@@ -1,4 +1,4 @@
-import { STEM_SET_PITCH } from '@kitbag/core-db';
+import { STEM_SET_PITCH } from '@kitbag/core-db/src/stem-speed-key';
 
 export { UNITY_GAIN } from '@kitbag/core-db/src/units';
 

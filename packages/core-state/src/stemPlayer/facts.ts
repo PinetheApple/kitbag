@@ -1,5 +1,4 @@
 import type { StemSetRecord } from '@kitbag/core-db';
-import { KB_MIXER_UNITY_RATE } from '@kitbag/core-native';
 
 import { UNSHIFTED_KEY } from './mix.ts';
 
@@ -48,11 +47,6 @@ export interface PlaybackShift {
   readonly speed: number;
   readonly key: number;
 }
-
-export const NO_SHIFT: PlaybackShift = {
-  speed: KB_MIXER_UNITY_RATE,
-  key: UNSHIFTED_KEY,
-};
 
 const SEMITONES_PER_OCTAVE = 12;
 const NATURAL_SEMITONES: Readonly<Record<string, number>> = {
@@ -201,11 +195,17 @@ function stability(tempoStability: number): SongFact {
 
 export function songFacts(
   source: SongFactsSource,
-  shift: PlaybackShift = NO_SHIFT,
+  shift?: PlaybackShift,
 ): SongFacts {
+  const { bpm } = source;
   return {
-    bpm: bpmFact(source.bpm === null ? null : source.bpm * shift.speed),
-    key: keyFact(source.key, source.scale, source.keyConfidence, shift.key),
+    bpm: bpmFact(bpm === null || shift === undefined ? bpm : bpm * shift.speed),
+    key: keyFact(
+      source.key,
+      source.scale,
+      source.keyConfidence,
+      shift?.key ?? UNSHIFTED_KEY,
+    ),
     tempo:
       source.tempoStability === null ? null : stability(source.tempoStability),
   };
