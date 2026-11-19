@@ -1,3 +1,5 @@
+import { SECONDS_PER_MINUTE } from './units';
+
 // core-db may not import core-native (§13.1), so these mirror the engine headers;
 // engine-limits.test.ts fails if either side drifts.
 export const MIN_BPM = 20;
@@ -14,7 +16,6 @@ export const MIN_RAMP_SECONDS = 1;
 export const MAX_RAMP_SECONDS = 3600;
 export const MIN_RAMP_STEP = 1;
 const MAX_STEP = MAX_BPM - MIN_BPM;
-const SECONDS_PER_MINUTE = 60;
 export const RAMP_UNITS = { bars: 0, seconds: 1, minutes: 2 } as const;
 enum Denominator {
   Half = 2,

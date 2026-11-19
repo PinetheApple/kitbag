@@ -388,7 +388,7 @@ export {
   type CountedStart,
   type CountedStartRequest,
 } from './stemPlayer/countedStart.ts';
-export type { LyricLine } from './stemPlayer/lrc.ts';
+export type { LyricLine } from '@kitbag/core-db';
 export {
   sungLineFrom,
   isSungLine,

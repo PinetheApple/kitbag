@@ -1,7 +1,6 @@
 import { asc, inArray, sql } from 'drizzle-orm';
 
 import {
-  MS_PER_SECOND,
   PREFERENCE_KEYS,
   type Category,
   type LibrarySongRecord,
@@ -12,8 +11,10 @@ import {
   type SongPresetRecord,
 } from './backup-format';
 import { encodeBase64, nullableBase64, presetBase64 } from './base64';
+import { loadStemSongs } from './backup-stem-songs';
 import { meterOverrideOf } from './meter-override';
 import type { Database } from './repository';
+import { MS_PER_SECOND } from './units';
 import {
   clickSounds,
   practiceSessions,
@@ -157,6 +158,7 @@ async function loadRows(db: Database) {
       .select()
       .from(clickSounds)
       .orderBy(asc(clickSounds.slot)),
+    stemSongs: await loadStemSongs(db),
   };
 }
 
@@ -179,6 +181,7 @@ export async function loadSnapshot(db: Database): Promise<Snapshot> {
     countInSettings: preferenceRecords(rows.countInRows),
     metronomeSettings: preferenceRecords(rows.metronomeRows),
     clickSounds: rows.clickSoundRows,
+    stemSongs: rows.stemSongs.records,
   };
   return { records, ids: idMaps(rows) };
 }
@@ -197,5 +200,6 @@ function idMaps(rows: Awaited<ReturnType<typeof loadRows>>): IdMaps {
     clickSounds: new Map(
       rows.clickSoundRows.map(({ slot }) => [String(slot), slot]),
     ),
+    stemSongs: rows.stemSongs.ids,
   };
 }

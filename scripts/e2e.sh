@@ -14,6 +14,7 @@ readonly FIXTURE_SONG=e2eclick
 readonly FIXTURE_SECONDS=240
 readonly FIXTURE_SOUND=e2ehit
 readonly FIXTURE_SOUND_SECONDS=1
+readonly FIXTURE_BACKUP=e2estemsongs
 readonly DEVICE_DOWNLOADS=/sdcard/Download
 readonly DEFAULT_MAESTRO_HEAP=-Xmx1g
 readonly ANR_WINDOW='Application Not Responding'
@@ -212,9 +213,13 @@ push_fixture() {
   }
 }
 
-step "Pushing the fixture song and click sound"
+step "Pushing the fixture song, click sound and backup"
 push_fixture "$FIXTURE_SONG" "$FIXTURE_SECONDS"
 push_fixture "$FIXTURE_SOUND" "$FIXTURE_SOUND_SECONDS"
+adb_s push "e2e/fixtures/$FIXTURE_BACKUP.json" "$DEVICE_DOWNLOADS/" >/dev/null || {
+  fail "could not push e2e/fixtures/$FIXTURE_BACKUP.json"
+  exit "$EXIT_INSTALL_FAILED"
+}
 
 step "Running ${#FLOWS[@]} flow(s)"
 adb_s logcat -c 2>/dev/null
@@ -230,6 +235,7 @@ MAESTRO_CLI_NO_ANALYTICS=1 \
   --test-output-dir "$ARTIFACTS" \
   -e FIXTURE_SONG="$FIXTURE_SONG" \
   -e FIXTURE_SOUND="$FIXTURE_SOUND" \
+  -e FIXTURE_BACKUP="$FIXTURE_BACKUP" \
   "${FLOWS[@]}"
 maestro_status=$?
 
