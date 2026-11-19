@@ -1,12 +1,13 @@
 import type { DB } from '@op-engineering/op-sqlite';
 import { drizzle } from 'drizzle-orm/op-sqlite';
 
+import { attempt } from './attempt';
 import { createBackupService } from './backup';
 import type { ClickSoundFiles } from './click-sound-files';
 import { createClickSoundRepository } from './click-sound-repository';
 import { DatabaseOpenError } from './database-open-error';
 import * as schema from './schema';
-import { attempt, migrate, type MigrationDriver } from './migrate';
+import { migrate, type MigrationDriver } from './migrate';
 import { openConnection } from './openConnection';
 import { createPlayQueueRepository } from './play-queue-repository';
 import { createPracticeRepository } from './practice-repository';
@@ -81,7 +82,9 @@ export function connectDatabase(
     });
     throw error instanceof DatabaseOpenError
       ? error.withCleanupErrors(closeErrors)
-      : error;
+      : DatabaseOpenError.classify('open', error, {
+          cleanupErrors: closeErrors,
+        });
   }
   const handle = {
     db: drizzle(drizzleClient(connection), { schema }),

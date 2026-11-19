@@ -1,3 +1,4 @@
+import { attempt } from './attempt';
 import { CLICK_RATE } from './click-rate';
 import { DatabaseOpenError } from './database-open-error';
 import { REPAIR_PRESETS } from './preset-repair';
@@ -383,15 +384,6 @@ export const MIGRATE_V7_TO_V8: readonly string[] = [
   CREATE_ONE_ACTIVE_INDEX,
   ADD_POLY_ACCENTS,
 ];
-
-export function attempt(work: () => void): unknown[] {
-  try {
-    work();
-    return [];
-  } catch (error) {
-    return [error];
-  }
-}
 
 function runStatements(
   driver: MigrationDriver,

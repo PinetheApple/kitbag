@@ -22,16 +22,18 @@ const MIGRATION_FAILURE = new Error('disk I/O error');
 const openNamed = (name: string) => () =>
   openDatabase(memoryClickSoundFiles().files, name);
 
+function failingMigration(sql: string) {
+  if (sql === 'PRAGMA user_version') return { rows: [{ user_version: 0 }] };
+  if (sql.startsWith('CREATE')) throw MIGRATION_FAILURE;
+  return { rows: [] };
+}
+
 beforeEach(() => {
   open.mockReset();
   open.mockReturnValue(connection);
   connection.close.mockReset();
   connection.executeSync.mockReset();
-  connection.executeSync.mockImplementation((sql: string) => {
-    if (sql === 'PRAGMA user_version') return { rows: [{ user_version: 0 }] };
-    if (sql.startsWith('CREATE')) throw MIGRATION_FAILURE;
-    return { rows: [] };
-  });
+  connection.executeSync.mockImplementation(failingMigration);
 });
 
 describe('openDatabase', () => {
@@ -49,6 +51,21 @@ describe('openDatabase', () => {
     const error = throwsOpenError('migration', openNamed('failing'));
     expect(error.cause).toBe(MIGRATION_FAILURE);
     expect(error.cleanupErrors).toEqual([closeFailure]);
+  });
+
+  it('keeps the rollback error ahead of the close error', () => {
+    const rollbackFailure = new Error('no transaction is active');
+    const closeFailure = new Error('close failed');
+    connection.executeSync.mockImplementation((sql: string) => {
+      if (sql === 'ROLLBACK') throw rollbackFailure;
+      return failingMigration(sql);
+    });
+    connection.close.mockImplementation(() => {
+      throw closeFailure;
+    });
+    const error = throwsOpenError('migration', openNamed('failing'));
+    expect(error.cause).toBe(MIGRATION_FAILURE);
+    expect(error.cleanupErrors).toEqual([rollbackFailure, closeFailure]);
   });
 
   it('leaves the connection open when the migration succeeds', () => {
