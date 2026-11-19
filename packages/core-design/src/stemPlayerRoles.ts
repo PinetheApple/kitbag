@@ -60,6 +60,7 @@ export const songPlayer = {
   beatTickMinGap: 3,
   waveBars: 64,
   lockGap: 10,
+  loopNudgeSec: 1,
 } as const;
 
 export const miniPlayer = {
@@ -82,6 +83,7 @@ export const sliderGeometry = {
   tickOverhang: 5,
   tickOpacity: 0.6,
   levelTick: 1,
+  dragSlop: 6,
 } as const;
 
 export const stemPlayerMix = {

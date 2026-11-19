@@ -4,20 +4,29 @@ import { useAnimatedReaction, type SharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { aboveFlagsPadding, loopNotePlacement } from '../loopNotePlacement.ts';
-import { asPercent } from '../percent.ts';
 import { textRoles } from '../roles.ts';
-import {
-  sliderGeometry,
-  stemPlayer,
-  stemPlayerMix,
-} from '../stemPlayerRoles.ts';
+import { sliderGeometry, stemPlayer } from '../stemPlayerRoles.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles } from '../ThemeProvider.tsx';
-import { withAlpha } from '../theme.ts';
 import { useAccessibilityReadout } from '../useAccessibilityReadout.ts';
 import { Icon } from './Icon.tsx';
 import { LiveText } from './LiveText.tsx';
+import {
+  LoopHandleLayer,
+  LoopMarks,
+  useLoopGeometry,
+  type LoopGeometry,
+  type LoopHandles,
+  type ScrubMarks,
+} from './LoopMarks.tsx';
 import { Slider } from './Slider.tsx';
+
+export type {
+  EdgeStep,
+  LoopHandles,
+  ScrubEdge,
+  ScrubMarks,
+} from './LoopMarks.tsx';
 
 const SCRUB_STEP = 0.02;
 const NOT_READ = -1;
@@ -53,102 +62,33 @@ const useStyles = createThemedStyles((theme) => ({
     flex: 1,
     marginHorizontal: sliderGeometry.seek.thumb / 2,
   },
-  marks: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
-  region: {
-    position: 'absolute',
-    top: stemPlayer.loopTintInset,
-    bottom: stemPlayer.loopTintInset,
-    backgroundColor: withAlpha(theme.color.accent, stemPlayerMix.loopTint),
-  },
-  line: {
-    position: 'absolute',
-    top: stemPlayer.loopTintInset,
-    bottom: stemPlayer.loopTintInset,
-    width: stemPlayer.loopLine,
-    marginLeft: -stemPlayer.loopLine / 2,
-    backgroundColor: theme.color.accent,
-  },
-  flag: {
-    position: 'absolute',
-    top: stemPlayer.loopTintInset + stemPlayer.loopFlagTop,
-    width: stemPlayer.loopFlagWidth,
-    minHeight: stemPlayer.loopFlagHeight,
-    borderRadius: stemPlayer.loopFlagRadius,
-    backgroundColor: theme.accentTextFill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  flagStart: { marginLeft: -stemPlayer.loopFlagWidth },
-  flagEnd: { marginLeft: 0 },
-  flagText: { ...textStyle(textRoles.loopFlag), color: theme.color.onAccent },
 }));
-
-type Edge = 'start' | 'end';
-
-const EDGE_LETTERS: Readonly<Record<Edge, string>> = { start: 'A', end: 'B' };
-
-// A's flag hangs left of its line and B's right of its own, so a short loop
-// never hides one flag under the other.
-function LoopEdge({ at, edge }: { readonly at: number; readonly edge: Edge }) {
-  const styles = useStyles();
-  const left = asPercent(at);
-  return (
-    <>
-      <View style={[styles.line, { left }]} />
-      <View
-        style={[
-          styles.flag,
-          edge === 'start' ? styles.flagStart : styles.flagEnd,
-          { left },
-        ]}
-      >
-        <Text style={styles.flagText}>{EDGE_LETTERS[edge]}</Text>
-      </View>
-    </>
-  );
-}
-
-export interface ScrubMarks {
-  readonly start: number;
-  readonly end: number | null;
-}
-
-function LoopMarks({ marks }: { readonly marks: ScrubMarks | null }) {
-  const styles = useStyles();
-  if (marks === null) return null;
-  const { start, end } = marks;
-  return (
-    <View pointerEvents="none" style={styles.marks}>
-      {end === null ? null : (
-        <View
-          style={[
-            styles.region,
-            { left: asPercent(start), width: asPercent(end - start) },
-          ]}
-        />
-      )}
-      <LoopEdge at={start} edge="start" />
-      {end === null ? null : <LoopEdge at={end} edge="end" />}
-    </View>
-  );
-}
 
 export interface ScrubNote {
   readonly text: string;
   readonly failed: boolean;
 }
 
-function useLaneLayout(marks: ScrubMarks | null) {
+function useLaneLayout(marks: ScrubMarks | null, geometry: LoopGeometry) {
   const [laneWidth, setLaneWidth] = useState(0);
   const [bar, setBar] = useState({ x: 0, width: 0 });
   const [note, setNote] = useState({ width: 0, height: 0 });
-  const onLane = useCallback((event: LayoutChangeEvent) => {
-    setLaneWidth(event.nativeEvent.layout.width);
-  }, []);
-  const onBar = useCallback((event: LayoutChangeEvent) => {
-    const { x, width } = event.nativeEvent.layout;
-    setBar({ x, width });
-  }, []);
+  const onLane = useCallback(
+    (event: LayoutChangeEvent) => {
+      const { width, height } = event.nativeEvent.layout;
+      setLaneWidth(width);
+      geometry.lane.value = { width, height };
+    },
+    [geometry],
+  );
+  const onBar = useCallback(
+    (event: LayoutChangeEvent) => {
+      const { x, y, width, height } = event.nativeEvent.layout;
+      setBar({ x, width });
+      geometry.bar.value = { x, y, width, height };
+    },
+    [geometry],
+  );
   const onNote = useCallback((event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
     setNote({ width, height });
@@ -235,6 +175,7 @@ export interface ScrubRowProps {
   readonly onSeek: (frame: number) => void;
   readonly behindFill?: ReactNode;
   readonly overFill?: ReactNode;
+  readonly loopHandles?: LoopHandles;
 }
 
 export function ScrubRow({
@@ -249,6 +190,7 @@ export function ScrubRow({
   onSeek,
   behindFill,
   overFill,
+  loopHandles,
 }: ScrubRowProps) {
   const styles = useStyles();
   const second = useSpokenSecond(frame);
@@ -266,7 +208,8 @@ export function ScrubRow({
     },
     [hold, onSeek, durationFrames],
   );
-  const layout = useLaneLayout(marks);
+  const geometry = useLoopGeometry();
+  const layout = useLaneLayout(marks, geometry);
   const { paddingTop } = layout;
   const lanePadding = useMemo(
     () => (paddingTop === null ? undefined : { paddingTop }),
@@ -299,7 +242,11 @@ export function ScrubRow({
           behindFill={behindFill}
           overFill={overFill}
         />
-        <LoopMarks marks={marks} />
+        <LoopMarks
+          marks={marks}
+          geometry={geometry}
+          draggable={loopHandles !== undefined}
+        />
       </View>
       <Text
         style={styles.total}
@@ -308,6 +255,11 @@ export function ScrubRow({
       >
         {total}
       </Text>
+      <LoopHandleLayer
+        marks={marks}
+        handles={loopHandles}
+        geometry={geometry}
+      />
     </View>
   );
 }

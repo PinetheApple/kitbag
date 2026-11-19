@@ -355,6 +355,7 @@ export {
   type SongLyrics,
 } from './stemPlayer/lyrics.ts';
 export type { LoopEdge, LoopSeconds } from './stemPlayer/loop.ts';
+export { beatBeside, type BeatDirection } from './stemPlayer/beatSnap.ts';
 export { NO_SECTION, sectionAt } from './stemPlayer/sections.ts';
 export {
   clickKeyLabel,

@@ -1,17 +1,6 @@
 import { KB_MAX_GRID_BEATS } from '@kitbag/core-native';
 
-export function snapToBeat(seconds: number, beats: readonly number[]): number {
-  let nearest = seconds;
-  let distance = Infinity;
-  for (const beat of beats) {
-    const gap = Math.abs(beat - seconds);
-    if (gap < distance) {
-      nearest = beat;
-      distance = gap;
-    }
-  }
-  return nearest;
-}
+import { snapToBeat } from './beatSnap.ts';
 
 export interface LoopSeconds {
   readonly startSec: number;

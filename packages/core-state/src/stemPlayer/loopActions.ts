@@ -1,9 +1,9 @@
 import { KB_RESULT } from '@kitbag/core-native';
 
+import { snapToBeat } from './beatSnap.ts';
 import {
   loopBetween,
   movedEdge,
-  snapToBeat,
   type LoopEdge,
   type LoopSeconds,
 } from './loop.ts';
