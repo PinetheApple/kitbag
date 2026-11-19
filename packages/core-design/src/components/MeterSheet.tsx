@@ -132,7 +132,12 @@ function BarOneDetail({
         align="left"
         style={styles.barOneDetail}
       />
-      <Text style={styles.barOneDetail}>{meterCopy.playheadExplanation}</Text>
+      <Text
+        style={styles.barOneDetail}
+        accessibilityLabel={meterCopy.playheadExplanationSpoken}
+      >
+        {meterCopy.playheadExplanation}
+      </Text>
     </>
   );
 }

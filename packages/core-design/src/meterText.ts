@@ -20,6 +20,7 @@ export const meterCopy = {
   barOneOverridden: 'Yours. Set with the playhead.',
   playhead: 'Playhead',
   playheadExplanation: 'Its nearest beat becomes bar 1',
+  playheadExplanationSpoken: 'The beat nearest the playhead becomes bar 1',
 } as const;
 
 export interface MeterChoice {

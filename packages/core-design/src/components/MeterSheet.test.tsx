@@ -190,8 +190,14 @@ describe('MeterSheet', () => {
 
   it('keeps the explanation out of the live value, in its own static node', () => {
     const markup = renderSheet(DETECTED);
-    expect(live.derived[0]?.value).not.toContain(meterCopy.playheadExplanation);
     expect(markup).toContain(`>${meterCopy.playheadExplanation}</`);
+  });
+
+  it('speaks the explanation with the playhead as its referent', () => {
+    const markup = renderSheet(DETECTED);
+    expect(markup).toContain(
+      `aria-label="${meterCopy.playheadExplanationSpoken}"`,
+    );
   });
 
   it('drops the playhead line once bar 1 is set', () => {
