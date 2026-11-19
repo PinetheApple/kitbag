@@ -1,0 +1,1 @@
+• Backups now keep each song's analysis version, so restoring a backup no longer re-analyses songs that were already up to date.
