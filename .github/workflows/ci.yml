@@ -72,8 +72,8 @@ jobs:
           sudo sysctl -w vm.mmap_rnd_bits=28
           ./scripts/tsan-check.sh
 
-  # The TypeScript workspace (Phase 2, SPEC §13/§13.6). Runs the same gate the
-  # project loop runs locally: typecheck, the architecture-rule lint, the
+  # The TypeScript workspace (Phase 2, SPEC §13/§13.6). Runs the same gate
+  # scripts/preflight.sh runs locally: typecheck, the architecture-rule lint, the
   # one-owner generation drift guards (§13.7/§13.8.1), and every vitest suite —
   # including the lint eval harness that proves the custom rules actually fire.
   js:
