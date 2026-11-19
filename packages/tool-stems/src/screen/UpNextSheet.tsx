@@ -8,6 +8,8 @@ import {
   minTouchTargetDp,
   opacity,
   PlainListRow,
+  RowText,
+  usePlainRowStyles,
   SectionHeader,
   Sheet,
   SheetHint,
@@ -16,7 +18,9 @@ import {
 import {
   entriesAfter,
   entryName,
+  isPresetEntry,
   STEMS_BADGE,
+  stemFacts,
   stemSongTitle,
   usePlayOrder,
   useStage,
@@ -28,11 +32,8 @@ import {
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
-import {
-  clearQueueBody,
-  setlistRowSubtitle,
-  stemFacts,
-} from '../logic/upNextText.ts';
+import { SEPARATOR } from '../stemDeck/logic/songFacts.ts';
+import { clearQueueBody, setlistRowSubtitle } from '../logic/upNextText.ts';
 import { UP_NEXT } from './UpNextRow.tsx';
 import {
   useLeaveAfterClose,
@@ -42,10 +43,6 @@ import {
 } from './usePlayOrderNav.ts';
 
 type PlayQueueEntry = PlayOrderStore['queue'][number];
-
-function noop() {
-  return undefined;
-}
 
 const useStyles = createThemedStyles(() => ({
   list: { gap: space.controlGap },
@@ -64,25 +61,28 @@ function StemsBadge() {
 }
 
 function NowPlaying() {
+  const row = usePlainRowStyles();
   const title = useStemPlayer((s) => s.title);
   const setId = useStemPlayer((s) => s.setId);
   const stems = useStemSongs();
   const facts = setId === null ? '' : stemFacts(setId, stems);
-  const subtitle = ['Playing', facts].filter((part) => part !== '').join(' · ');
+  const subtitle = ['Playing', facts]
+    .filter((part) => part !== '')
+    .join(SEPARATOR);
   return (
-    <PlainListRow
-      active
-      title={title}
-      subtitle={subtitle}
-      trailing={
+    <View
+      accessible
+      accessibilityLabel={`Now playing: ${title}`}
+      style={[row.row, row.active]}
+    >
+      <View style={row.press}>
+        <RowText title={title} subtitle={subtitle} />
         <View>
           <StemsBadge />
           <Badge tone="accent" variant="filled" label="NOW" />
         </View>
-      }
-      accessibilityLabel={`Now playing: ${title}`}
-      onPress={noop}
-    />
+      </View>
+    </View>
   );
 }
 
@@ -155,7 +155,7 @@ function SetlistRow({ entry, setlistName, onOpen }: SetlistRowProps) {
       <PlainListRow
         title={title}
         subtitle={setlistRowSubtitle(entry, setlistName, stems)}
-        trailing={'stemSetId' in entry ? <StemsBadge /> : undefined}
+        trailing={isPresetEntry(entry) ? undefined : <StemsBadge />}
         accessibilityLabel={`${title}, from ${setlistName}`}
         onPress={open}
       />
@@ -266,15 +266,16 @@ export interface UpNextSheetProps extends PlayOrderRoutes {
 
 function useUpNextSheet(props: UpNextSheetProps) {
   const nav = usePlayOrderNav(props);
+  const playQueued = usePlayOrder((s) => s.playQueued);
   const exit = useLeaveAfterClose(props);
   const { onDismiss } = props;
   const play = useCallback(
     (stemSetId: number) => {
       exit.leaveFor({ kind: 'stem', stemSetId });
-      void nav.playNow(stemSetId);
+      void playQueued(stemSetId);
       onDismiss();
     },
-    [nav, exit, onDismiss],
+    [playQueued, exit, onDismiss],
   );
   const open = useCallback(
     (entry: SetlistEntry) => {
