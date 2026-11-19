@@ -67,9 +67,9 @@ export function failureKind(
   if (error === null) return 'other';
   if (error === codes.failureMissingFile) return 'missingFile';
   if (codes.unsupportedAudioExtensions.includes(format)) return 'unsupported';
-  if (error === codes.failureUnsupported) return 'damaged';
   if (error === codes.failureInterrupted) return 'interrupted';
-  return 'other';
+  if (error !== codes.failureUnsupported) return 'other';
+  return codes.supportedAudioExtensions.includes(format) ? 'damaged' : 'other';
 }
 
 export function analysisFailure(

@@ -54,16 +54,13 @@ describe('lockText', () => {
     });
   });
 
-  it('names an unsupported format and offers no Re-analyse', () => {
-    const failure = {
-      kind: 'unsupported',
-      keptGrid: false,
-      format: 'ogg',
-      supported: ['WAV'],
-    } as const;
+  it.each([
+    { kind: 'missingFile', keptGrid: false },
+    { kind: 'unsupported', keptGrid: false, format: 'ogg', supported: ['WAV'] },
+  ] as const)('offers no Re-analyse where it cannot help: $kind', (failure) => {
     expect(lockText('failed', false, null, failure)).toEqual({
       title: 'No beat grid',
-      detail: 'OGG isn’t supported, so no click',
+      detail: 'Analysis failed, so no click',
       action: 'none',
     });
   });

@@ -915,8 +915,8 @@ working. Changes:
   so each tick stays individually readable.
 - **No grid yet, or analysis failed:** the metronome card stays and says why,
   the click chips are muted, and the waveform is flat with no ticks. A failed
-  analysis offers Re-analyse (§6.2). The song still plays; seek and loop work
-  unsnapped.
+  analysis offers Re-analyse (§6.2) unless the file's format is unsupported or
+  the file is missing. The song still plays; seek and loop work unsnapped.
 - **Fix tap-to-seek.** Flutter measures the Scaffold's width, not the
   waveform's, so seek is off by the horizontal padding. Measure the waveform.
 - **`.kwav` load off the UI thread.** Flutter does synchronous file I/O in
@@ -931,9 +931,9 @@ working. Changes:
 - Tapping the Songs row of the song the mini-player is showing opens the player
   on that song as it is, still playing if it was. Any other row tap on Songs
   opens the player paused.
-- **Stop** lives in the player's overflow menu, with Re-analyse. Stop ends the
-  song session and removes the mini-player. Stop in the song's media
-  notification does the same.
+- **Stop** lives in the player's overflow menu, with Re-analyse under the same
+  rule. Stop ends the song session and removes the mini-player. Stop in the
+  song's media notification does the same.
 - **Mini-player** — leaving the player keeps the session, so the click keeps
   running while you open the tuner or edit a setlist. A docked bar shows on Home
   and Songs only: music-note icon, title, artist and click state, play/pause,

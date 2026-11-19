@@ -23,7 +23,6 @@ import {
   type ScrubFrame,
 } from '@kitbag/core-design';
 import {
-  analysisFailure,
   bpmFact,
   clickKeyLabel,
   framesToSeconds,
@@ -34,7 +33,6 @@ import {
   useLoopScrub,
   useSongLibrary,
   useSongPlayer,
-  type AnalysisFailure,
   type StemPlayerStatus,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
@@ -46,22 +44,15 @@ import {
   lockBadgeOf,
   lockText,
 } from '../logic/lockText.ts';
-import { failureText } from '../logic/notices.ts';
+import { canReanalyze, unsupportedFormatText } from '../logic/notices.ts';
 import type { BadgeSpec } from '../logic/rowText.ts';
 import { songTitle } from '../logic/songTitle.ts';
 import { REANALYZE_LABEL } from '../logic/viewText.ts';
 import { frameAtTap } from '../logic/waveSeek.ts';
 import type { UsePlayhead } from './playhead.ts';
+import { useSongFailure } from './useSongFailure.ts';
 
 const NO_NEIGHBOURS = {};
-
-function useSongFailure(songId: number): AnalysisFailure | null {
-  const song = useSongLibrary((s) =>
-    s.rows.find((row) => row.kind === 'song' && row.id === songId),
-  );
-  const codes = useSongLibrary((s) => s.codes);
-  return song?.kind === 'song' ? analysisFailure(song, codes) : null;
-}
 
 export interface SongPlayerScreenProps {
   readonly songId: number;
@@ -114,8 +105,7 @@ function PlayerMenu({
   const title = useSongPlayer((s) => s.title);
   const close = useSongPlayer((s) => s.close);
   const reanalyze = useSongLibrary((s) => s.reanalyze);
-  const failure = useSongFailure(songId);
-  const canRetry = failure === null || failureText(failure).canRetry;
+  const reanalyzable = canReanalyze(useSongFailure(songId));
   const stop = useCallback(() => {
     onDismiss();
     onBack();
@@ -135,7 +125,7 @@ function PlayerMenu({
     >
       <View style={styles.menu}>
         <Button label="Stop" variant="tonal" onPress={stop} />
-        {canRetry ? (
+        {reanalyzable ? (
           <Button
             label={REANALYZE_LABEL}
             variant="tonal"
@@ -305,20 +295,30 @@ function SongTransport({
   );
 }
 
+const NOT_PLAYED_REASON =
+  'The file could not be read, its format may not be supported, or the audio engine did not start.';
+
 function NotReady({
+  songId,
   status,
   onBack,
 }: {
+  readonly songId: number;
   readonly status: StemPlayerStatus;
   readonly onBack: () => void;
 }) {
   const styles = useStyles();
+  const failure = useSongFailure(songId);
   if (status === 'failed')
     return (
       <EmptyState
         icon="song"
         title="This song would not play"
-        reason="The file could not be read, its format may not be supported, or the audio engine did not start."
+        reason={
+          failure?.kind === 'unsupported'
+            ? unsupportedFormatText(failure.format, failure.supported)
+            : NOT_PLAYED_REASON
+        }
         actionLabel="Back to songs"
         onAction={onBack}
       />
@@ -359,7 +359,7 @@ function Body({ songId, bottom, onBack, usePlayhead }: BodyProps) {
   if (status !== 'ready')
     return (
       <View style={styles.bodyContent}>
-        <NotReady status={status} onBack={onBack} />
+        <NotReady songId={songId} status={status} onBack={onBack} />
       </View>
     );
   return (

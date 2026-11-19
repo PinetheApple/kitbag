@@ -75,7 +75,7 @@ describe('the actions sheet of a song whose analysis failed', () => {
       }),
     );
     expect(actions.hint).toBe(
-      'M4A isn’t supported, so there is no beat grid to lock to. Kitbag plays WAV, MP3, FLAC or AIFF.',
+      'M4A isn’t supported. Kitbag plays WAV, MP3, FLAC or AIFF.',
     );
     expect(actions.buttons).not.toContain(REANALYZE_LABEL);
   });
@@ -86,5 +86,12 @@ describe('the actions sheet of a song whose analysis failed', () => {
       'This file could not be decoded and may be damaged, so there is no beat grid to lock to.',
     );
     expect(actions.buttons).toContain(REANALYZE_LABEL);
+  });
+
+  it('offers no Re-analyse when the file is missing', () => {
+    const actions = sheet(
+      openActions({ kind: 'missingFile', keptGrid: false }),
+    );
+    expect(actions.buttons).not.toContain(REANALYZE_LABEL);
   });
 });

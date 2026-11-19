@@ -304,6 +304,12 @@ describe('analysisFailure', () => {
     },
   );
 
+  it('reads a listed-nowhere format that would not decode as other', () => {
+    expect(analysisFailure(failed('unsupported', 'final'), CODES)?.kind).toBe(
+      'other',
+    );
+  });
+
   it('still reads a missing file in an unsupported format as missing', () => {
     expect(analysisFailure(failed('missing-file', 'ogg'), CODES)?.kind).toBe(
       'missingFile',
@@ -316,8 +322,8 @@ describe('analysisFailure', () => {
     ['ogg', 'unsupported'],
     ['aac', 'unsupported'],
     ['m4a', 'unsupported'],
-    ['unknown', 'damaged'],
-    ['', 'damaged'],
+    ['unknown', 'other'],
+    ['', 'other'],
   ] as const)(
     'reads a Flutter-era %s row that would not decode as %s',
     (format, kind) => {
@@ -327,12 +333,12 @@ describe('analysisFailure', () => {
     },
   );
 
-  it('reads a song with no stored format as damaged', () => {
+  it('reads a song with no stored format as other', () => {
     const formatless = song(1, 'X', {
       analysisStatus: 'failed',
       analysisError: 'unsupported',
     });
-    expect(analysisFailure(formatless, CODES)?.kind).toBe('damaged');
+    expect(analysisFailure(formatless, CODES)?.kind).toBe('other');
   });
 
   it('reads every failure as other without the native codes', () => {

@@ -15,7 +15,7 @@ import {
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { View, type TextInput } from 'react-native';
 
-import { failureText, replaceText } from '../logic/notices.ts';
+import { canReanalyze, failureText, replaceText } from '../logic/notices.ts';
 import { REANALYZE_LABEL } from '../logic/viewText.ts';
 
 const useStyles = createThemedStyles(() => ({
@@ -68,7 +68,7 @@ function ActionsSheet({ menu, bottomInset }: SheetProps) {
   const { target, close, openRename, openDelete } = menu;
   const failure =
     target?.kind === 'song' ? analysisFailure(target, codes) : null;
-  const failed = failure === null ? null : failureText(failure);
+  const failureNotice = failure === null ? null : failureText(failure);
   const retry = useCallback(() => {
     close();
     if (target?.kind === 'song') void reanalyze(target.id);
@@ -82,10 +82,12 @@ function ActionsSheet({ menu, bottomInset }: SheetProps) {
       bottomInset={bottomInset}
       onDismiss={close}
     >
-      {failed === null ? null : <SheetHint>{failed.text}</SheetHint>}
+      {failureNotice === null ? null : (
+        <SheetHint>{failureNotice.text}</SheetHint>
+      )}
       <View style={styles.stack}>
         <Button label="Rename" variant="tonal" onPress={openRename} />
-        {target?.kind === 'song' && failed?.canRetry !== false ? (
+        {target?.kind === 'song' && canReanalyze(failure) ? (
           <Button label={REANALYZE_LABEL} variant="tonal" onPress={retry} />
         ) : null}
         <Button

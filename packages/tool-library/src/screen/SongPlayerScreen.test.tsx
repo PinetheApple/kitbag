@@ -67,7 +67,7 @@ vi.mock('@kitbag/core-design', async (original) => {
     Chip: () => h('Chip'),
     createThemedStyles: (build: (theme: unknown) => unknown) => () =>
       build({ color: {} }),
-    EmptyState: () => h('EmptyState'),
+    EmptyState: (props: Props) => h('EmptyState', { reason: props.reason }),
     PlayerDock: nothing,
     PlayerTransport: nothing,
     ScrubRow: nothing,
@@ -138,6 +138,7 @@ const UNSUPPORTED = {
   supported: ['WAV'],
 };
 const DAMAGED = { kind: 'damaged', keptGrid: false };
+const MISSING = { kind: 'missingFile', keptGrid: false };
 
 function failWith(failure: unknown) {
   library.rows = [{ kind: 'song', id: OPEN_SONG.songId }];
@@ -199,6 +200,22 @@ describe('the song player layout', () => {
 
   it('sets the BPM badge in from the bar end', () => {
     expect(styleAround(mount(), 'Badge').marginRight).toBe(screenBar.chipEnd);
+  });
+
+  it('names an unsupported format when the song would not play', () => {
+    display.status = 'failed';
+    failWith(UNSUPPORTED);
+    expect(mount().root.findByType('EmptyState' as never).props.reason).toBe(
+      'OGG isn’t supported. Kitbag plays WAV.',
+    );
+  });
+
+  it('keeps the general reason when the format is not to blame', () => {
+    display.status = 'failed';
+    failWith(DAMAGED);
+    expect(
+      mount().root.findByType('EmptyState' as never).props.reason,
+    ).toContain('the audio engine did not start');
   });
 
   it.each(['failed', 'missing'])(
@@ -311,8 +328,11 @@ describe('the player menu', () => {
     );
   });
 
-  it('offers no Re-analyse for a song in an unsupported format', () => {
-    failWith(UNSUPPORTED);
+  it.each([
+    ['in an unsupported format', UNSUPPORTED],
+    ['whose file is missing', MISSING],
+  ])('offers no Re-analyse for a song %s', (_case, failure) => {
+    failWith(failure);
     expect(menuLabels(openMenu())).toEqual(['Stop']);
   });
 
@@ -388,11 +408,10 @@ describe('a song with no beat grid', () => {
     expect(commands.reanalyze).toHaveBeenCalledExactlyOnceWith(1);
   });
 
-  it('names an unsupported format on the card and offers no Re-analyse', () => {
+  it('offers no Re-analyse on the card for an unsupported format', () => {
     display.analysis = GRIDLESS.failed;
     failWith(UNSUPPORTED);
     const tree = mount();
-    expect(texts(tree)).toContain('OGG isn’t supported, so no click');
     expect(
       tree.root.findAll(
         (node) =>
