@@ -88,7 +88,7 @@ void StartFollowing(Metronome& metronome) {
     grid->beat_times_sec.push_back(static_cast<double>(beat) / kSampleRate);
   }
   SetSongBars(grid.get(), 0, 4);
-  metronome.SetGrid(std::move(grid), 0, true);
+  metronome.SetGrid(std::move(grid), kitbag_test::kZeroClock, true);
   metronome.SetFollowMixer(true);
   metronome.SetSounds(kCustomSound, kCustomSound);
   metronome.Start();

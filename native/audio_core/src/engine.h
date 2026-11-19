@@ -85,7 +85,7 @@ class Engine {
     return device_running_.load(std::memory_order_acquire);
   }
   uint64_t frames_rendered() const {
-    return frames_rendered_.load(std::memory_order_relaxed);
+    return frame_clock().Now();
   }
   FrameClock frame_clock() const {
     return FrameClock::Reading(frames_rendered_);

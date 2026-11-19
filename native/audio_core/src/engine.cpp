@@ -332,7 +332,8 @@ void Engine::RenderSlice(float* output, uint32_t frame_count) {
     metronome_intent_.compare_exchange_strong(ended, Metronome::kNoIntent);
   }
 
-  frames_rendered_.fetch_add(frame_count, std::memory_order_relaxed);
+  // seq_cst pairs with RtPublisher's swap; see rt_publisher.h.
+  frames_rendered_.fetch_add(frame_count, std::memory_order_seq_cst);
 }
 
 }  // namespace kitbag

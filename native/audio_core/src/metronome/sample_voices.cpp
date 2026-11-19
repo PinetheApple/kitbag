@@ -8,18 +8,18 @@ namespace kitbag {
 bool SampleVoices::Publish(
     int slot,
     std::vector<float> frames,
-    uint64_t now_frame,
+    FrameClock clock,
     bool rt_reader_active
 ) {
   if (!IsValidSlot(slot) || frames.empty()) return false;
   auto sample = std::make_unique<Sample>(Sample{std::move(frames)});
-  slots_[slot].Publish(std::move(sample), now_frame, rt_reader_active);
+  slots_[slot].Publish(std::move(sample), clock, rt_reader_active);
   return true;
 }
 
-void SampleVoices::Clear(int slot, uint64_t now_frame, bool rt_reader_active) {
+void SampleVoices::Clear(int slot, FrameClock clock, bool rt_reader_active) {
   if (IsValidSlot(slot)) {
-    slots_[slot].Publish(nullptr, now_frame, rt_reader_active);
+    slots_[slot].Publish(nullptr, clock, rt_reader_active);
   }
 }
 

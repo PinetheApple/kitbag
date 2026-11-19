@@ -78,7 +78,7 @@ void StreamingTrack::Publish(
   live_source_ = s->source.get();
   live_num_frames_ = s->num_frames;
   num_frames_.store(s->num_frames, std::memory_order_relaxed);
-  published_.Publish(std::move(s), clock.Now(), engine_running);
+  published_.Publish(std::move(s), clock, engine_running);
 }
 
 bool StreamingTrack::Load(
@@ -128,7 +128,7 @@ void StreamingTrack::Unload(FrameClock clock, bool engine_running) {
   load_path_.clear();
   ext_reader_ = nullptr;
   num_frames_.store(0, std::memory_order_relaxed);
-  published_.Publish(nullptr, clock.Now(), engine_running);
+  published_.Publish(nullptr, clock, engine_running);
 }
 
 void StreamingTrack::Prime(const Source& s) {

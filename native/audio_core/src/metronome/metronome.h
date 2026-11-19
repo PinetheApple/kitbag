@@ -123,18 +123,18 @@ class Metronome {
   void SetBarMute(bool enabled, int play_bars, int mute_bars);
   void SetFollowMixer(bool enabled);
 
-  // `now_frame` dates the outgoing grid for reclamation; `engine_running` must
-  // be true whenever the callback can run. Allocates on the app thread only.
+  // `engine_running` must be true whenever the callback can run.
   void SetGrid(
       std::unique_ptr<BeatGrid> grid,
-      uint64_t now_frame,
+      FrameClock clock,
       bool engine_running
   );
   // Return to constant-tempo mode, keeping the click's phase: the first bpm_
   // click falls one whole beat after the last grid beat (SPEC.md §4.2.1).
-  void ClearGrid(uint64_t now_frame, bool engine_running);
+  void ClearGrid(FrameClock clock, bool engine_running);
   // The audio callback must be stopped.
   void ReleaseRetired();
+  size_t retired_grids() const;
   void DropQueuedPreviews();
 
   // App thread, the ring's only producer: a push after this cannot fail.

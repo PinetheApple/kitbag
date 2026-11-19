@@ -38,6 +38,7 @@ struct RaceState {
   std::atomic<bool> done{false};
   bool bounded = true;
   std::vector<uint64_t> publish_frames;
+  uint64_t last_publish_entered = 0;
 };
 
 uint64_t RenderLoop(RaceState* state) {
@@ -52,7 +53,7 @@ uint64_t RenderLoop(RaceState* state) {
           state->bounded && std::isfinite(sample) &&
           std::fabs(sample) <= kRaceLevel * SampleVoices::kMaxVoices;
     }
-    state->clock.fetch_add(kRaceBlock, std::memory_order_relaxed);
+    state->clock.fetch_add(kRaceBlock, std::memory_order_seq_cst);
     ++blocks;
   }
   return blocks;
@@ -66,18 +67,19 @@ void PublishLoop(RaceState* state) {
     while (state->clock.load(std::memory_order_relaxed) < due) {
       std::this_thread::yield();
     }
-    const uint64_t now = state->clock.load(std::memory_order_relaxed);
-    state->publish_frames.push_back(now);
+    const kitbag::FrameClock clock = kitbag::FrameClock::Reading(state->clock);
+    state->last_publish_entered = clock.Now();
     const int slot = publish % kitbag::kCustomSoundSlots;
     if (publish % kTriggerStride == 0) {
-      state->voices.Clear(slot, now, true);
+      state->voices.Clear(slot, clock, true);
     } else {
       const size_t frames =
           kRaceMinFrames +
           (static_cast<size_t>(publish) * 131) % kRaceFrameSpread;
       state->voices
-          .Publish(slot, std::vector<float>(frames, kRaceLevel), now, true);
+          .Publish(slot, std::vector<float>(frames, kRaceLevel), clock, true);
     }
+    state->publish_frames.push_back(clock.Now());
   }
   state->done.store(true, std::memory_order_release);
 }
@@ -97,7 +99,7 @@ void TestLoadWhileRendering() {
   PublishLoop(&state);
   render.join();
   const uint64_t first = state.publish_frames.front();
-  const uint64_t last = state.publish_frames.back();
+  const uint64_t last = state.last_publish_entered;
   const size_t in_grace = StillInGrace(state.publish_frames, last);
   std::printf(
       "  race: %d publishes over %llu blocks, %zu retired, %zu in grace\n",

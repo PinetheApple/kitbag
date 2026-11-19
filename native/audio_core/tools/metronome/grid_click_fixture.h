@@ -10,6 +10,7 @@
 #include "grid_click_levels.h"
 #include "metronome/grid_bars.h"
 #include "metronome_test_audio.h"
+#include "zero_clock.h"
 
 namespace metronome_test::grid_click {
 
@@ -42,7 +43,7 @@ inline void Configure(
     int32_t rate
 ) {
   metronome.SetSounds(kBeepSound, kBeepSound);
-  metronome.SetGrid(Grid(beats, downbeats), 0, true);
+  metronome.SetGrid(Grid(beats, downbeats), kitbag_test::kZeroClock, true);
   metronome.SetGridGrouping(grouping);
   metronome.SetGridRate(rate);
   metronome.Start();

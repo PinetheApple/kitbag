@@ -29,7 +29,7 @@ kb_result kb_metronome_load_custom_sound(
   core->metronome().custom_sounds().Publish(
       slot,
       std::move(frames),
-      core->frames_rendered(),
+      core->frame_clock(),
       core->is_running()
   );
   return KB_OK;
@@ -40,7 +40,7 @@ void kb_metronome_clear_custom_sound(kb_engine* engine, int32_t slot) {
   kitbag::Engine* core = ToEngine(engine);
   core->metronome().custom_sounds().Clear(
       slot,
-      core->frames_rendered(),
+      core->frame_clock(),
       core->is_running()
   );
 }

@@ -8,6 +8,7 @@
 
 #include "metronome/metronome.h"
 #include "metronome_test_audio.h"
+#include "zero_clock.h"
 
 namespace metronome_test {
 
@@ -42,10 +43,11 @@ inline std::vector<float> Level(size_t frames, float level) {
 inline void Load(
     kitbag::Metronome& metronome,
     const std::vector<float>& frames,
-    uint64_t now = 0,
+    int64_t now = 0,
     bool running = false
 ) {
-  metronome.custom_sounds().Publish(kCustomSlot, frames, now, running);
+  metronome.custom_sounds()
+      .Publish(kCustomSlot, frames, kitbag_test::ClockAt(now), running);
 }
 
 inline float MaxStep(const std::vector<float>& left, int64_t from, int64_t to) {

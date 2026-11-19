@@ -2,6 +2,7 @@
 // reproduced at that offset.
 #include "metronome/metronome_internal.h"
 #include "metronome_test_support.h"
+#include "zero_clock.h"
 
 namespace metronome_test {
 namespace {
@@ -103,7 +104,7 @@ void TestGridComposesWithLatency() {
     auto grid = MakeShiftedGrid(8, 0.5, 0.5);
     const auto times = grid->beat_times_sec;
     metronome.SetLatencyOffset(offset_ms);
-    metronome.SetGrid(std::move(grid), 0, true);
+    metronome.SetGrid(std::move(grid), kitbag_test::kZeroClock, true);
     metronome.Start();
 
     const int64_t total = kSampleRate * 3;
@@ -127,7 +128,8 @@ std::vector<int64_t> RunGridReanchorWithOffset(double offset_ms) {
   kitbag::Metronome metronome;
   metronome.SetTimeSignature(4, 4);
   metronome.SetLatencyOffset(offset_ms);
-  metronome.SetGrid(MakeShiftedGrid(12, 0.5, 0.5), 0, true);
+  metronome
+      .SetGrid(MakeShiftedGrid(12, 0.5, 0.5), kitbag_test::kZeroClock, true);
   metronome.Start();
   auto shifted = MakeShiftedGrid(12, 2.35, 0.5);  // next beat past the swap
   const int64_t swap_at = static_cast<int64_t>(2.1 * kSampleRate);
@@ -136,7 +138,7 @@ std::vector<int64_t> RunGridReanchorWithOffset(double offset_ms) {
       kSampleRate * 4,
       OnceAtFrame(swap_at, [&](int64_t frame) {
         metronome
-            .SetGrid(std::move(shifted), static_cast<uint64_t>(frame), true);
+            .SetGrid(std::move(shifted), kitbag_test::ClockAt(frame), true);
       })
   );
 }
@@ -183,7 +185,7 @@ void TestGridStartAtComposesWithLatency() {
     auto grid =
         MakeShiftedGrid(20, kStartAtGridFirstSec, kStartAtGridIntervalSec);
     const auto times = grid->beat_times_sec;
-    metronome.SetGrid(std::move(grid), 0, true);
+    metronome.SetGrid(std::move(grid), kitbag_test::kZeroClock, true);
     metronome.StartAt(static_cast<uint64_t>(kStartAtGridFrame));
     const int64_t total = kSampleRate * 4;
     const double start_sec =
