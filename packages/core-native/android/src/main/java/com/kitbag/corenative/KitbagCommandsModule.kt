@@ -217,7 +217,13 @@ class KitbagCommandsModule(reactContext: ReactApplicationContext) :
   }
 
   override fun fitConstantTempo(beatTimesSec: ReadableArray, downbeatIndices: ReadableArray, promise: Promise) {
-    promise.resolve(ConstantTempoFitter.fit(beatTimesSec, downbeatIndices))
+    try {
+      promise.resolve(ConstantTempoFitter.fit(beatTimesSec, downbeatIndices))
+    } catch (e: RuntimeException) {
+      promise.reject(ConstantTempoFitter.E_FIT_FAILED, "Constant tempo fit failed", e)
+    } catch (e: OutOfMemoryError) {
+      promise.reject(ConstantTempoFitter.E_FIT_FAILED, "Constant tempo fit ran out of memory", e)
+    }
   }
 
   override fun clearGrid() {

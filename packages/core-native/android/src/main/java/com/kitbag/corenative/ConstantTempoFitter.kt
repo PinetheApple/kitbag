@@ -5,6 +5,7 @@ import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.WritableMap
 
 object ConstantTempoFitter {
+  const val E_FIT_FAILED = "E_FIT_FAILED"
   private const val RESULT = 0
   private const val BPM = 1
   private const val ANCHOR_SEC = 2

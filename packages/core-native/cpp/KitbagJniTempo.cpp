@@ -29,7 +29,12 @@ Java_com_kitbag_corenative_ConstantTempoFitter_nativeFit(JNIEnv* env, jobject, j
   double anchor = 0.0;
   int32_t perBar = 0;
   jfloat* beats = env->GetFloatArrayElements(beatTimesSec, nullptr);
+  if (beats == nullptr) return nullptr;
   jint* downbeats = env->GetIntArrayElements(downbeatIndices, nullptr);
+  if (downbeats == nullptr) {
+    env->ReleaseFloatArrayElements(beatTimesSec, beats, JNI_ABORT);
+    return nullptr;
+  }
   const kb_result result = kb_fit_constant_tempo(
       beats, env->GetArrayLength(beatTimesSec), downbeats, env->GetArrayLength(downbeatIndices), &bpm,
       &anchor, &perBar);

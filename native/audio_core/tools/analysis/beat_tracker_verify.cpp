@@ -359,11 +359,12 @@ namespace beat_tracker_test {
 void RunConstantTempoTests();
 void RunErrorTests();
 void RunLimitTests();
+void RunGoldenTests();
 }  // namespace beat_tracker_test
 
 // Update deliberately when adding or removing a check; a drop means a test
 // stopped running.
-constexpr int kExpectedChecks = 64;
+constexpr int kExpectedChecks = 78;
 
 int main() {
   TestGridStaysAnchoredAtOrigin();
@@ -378,6 +379,7 @@ int main() {
   beat_tracker_test::RunConstantTempoTests();
   beat_tracker_test::RunErrorTests();
   beat_tracker_test::RunLimitTests();
+  beat_tracker_test::RunGoldenTests();
 
   if (g_checks != kExpectedChecks) {
     std::fprintf(

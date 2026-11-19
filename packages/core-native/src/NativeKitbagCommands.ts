@@ -104,7 +104,7 @@ export interface Spec extends TurboModule {
     anchorFrame: Double,
   ): Promise<number>;
   clearGrid(): void;
-  /** Beats go to the fit as 32-bit floats. */
+  /** Beats go to the fit as 32-bit floats. Rejects E_FIT_FAILED if the bridge throws. */
   fitConstantTempo(
     beatTimesSec: readonly Double[],
     downbeatIndices: readonly Int32[],

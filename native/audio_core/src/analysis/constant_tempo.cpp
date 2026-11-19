@@ -18,6 +18,7 @@ namespace {
 constexpr double kSecondsPerMinute = 60.0;
 constexpr int kMinBarBeats = 2;
 constexpr int kMaxBarBeats = 16;
+constexpr double kDownbeatReachPeriods = 0.25;
 
 // Ties go to the value seen first, as Python's Counter.most_common does.
 class Tally {
@@ -47,11 +48,30 @@ class Tally {
   std::array<size_t, kMaxBarBeats + 1> first_{};
 };
 
-std::vector<double>
-DownbeatNumbers(const BeatGridLine& line, const std::vector<int>& downbeats) {
+// A downbeat on an uncounted beat lands on the counted beat nearest it, if
+// that one is close enough, as StemDeck's _downbeat_numbers does.
+bool NearestCounted(const BeatGridLine& line, double time, double* number) {
+  const auto& times = line.times;
+  auto at = std::lower_bound(times.begin(), times.end(), time);
+  if (at == times.end() ||
+      (at != times.begin() && time - *(at - 1) <= *at - time)) {
+    --at;
+  }
+  *number = line.numbers[static_cast<size_t>(at - times.begin())];
+  return std::fabs(*at - time) <= kDownbeatReachPeriods * line.period;
+}
+
+std::vector<double> DownbeatNumbers(
+    const BeatGridLine& line,
+    const std::vector<float>& beats,
+    const std::vector<int>& downbeats
+) {
   std::vector<double> numbers;
   numbers.reserve(downbeats.size());
-  for (const int index : downbeats) numbers.push_back(line.numbers[index]);
+  for (const int index : downbeats) {
+    double number = 0.0;
+    if (NearestCounted(line, beats[index], &number)) numbers.push_back(number);
+  }
   std::sort(numbers.begin(), numbers.end());
   numbers.erase(std::unique(numbers.begin(), numbers.end()), numbers.end());
   return numbers;
@@ -89,12 +109,12 @@ bool FitConstantTempo(
     const std::vector<int>& downbeats,
     ConstantTempo* out
 ) {
-  const BeatGridLine line = FitBeatGrid(beats);
+  const BeatGridLine line = FitCountedBeats(beats);
   const double bpm = kSecondsPerMinute / line.period;
   if (!(bpm >= KB_CONSTANT_TEMPO_MIN_BPM && bpm <= KB_CONSTANT_TEMPO_MAX_BPM)) {
     return false;
   }
-  const std::vector<double> down = DownbeatNumbers(line, downbeats);
+  const std::vector<double> down = DownbeatNumbers(line, beats, downbeats);
   const int beats_per_bar = BeatsPerBar(down);
   const double phase = BarPhase(down, beats_per_bar);
   const double anchor = line.intercept + phase * line.period;

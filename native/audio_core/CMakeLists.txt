@@ -277,6 +277,7 @@ if(KITBAG_BUILD_TOOLS)
   add_executable(beat_tracker_verify tools/analysis/beat_tracker_verify.cpp
     tools/analysis/beat_tracker_test_constant_tempo.cpp
     tools/analysis/beat_tracker_test_constant_tempo_errors.cpp
+    tools/analysis/beat_tracker_test_constant_tempo_golden.cpp
     src/api/api_constant_tempo.cpp src/analysis/constant_tempo.cpp
     src/analysis/beat_grid_fit.cpp src/analysis/beat_tracker.cpp
     src/dsp/fft.cpp)

@@ -19,13 +19,16 @@ extern "C" {
 /* Fits beat n = anchor + n * 60 / bpm to a beat grid such as kb_analyze_song
  * returns. Pure: it holds no engine and never touches the audio thread.
  *
- *   bpm_out: Theil-Sen over the beats, numbered by whole periods elapsed, so
- *            a skipped beat does not shift the later numbers; the same
- *            estimator as the bpm kb_analyze_song reports. Above 256 beats the
- *            slopes come from every ceil(beat_count / 256)-th beat.
+ *   bpm_out: Theil-Sen over (beat number, time), the same fit as StemDeck's
+ *            fit_constant_tempo. Beats are numbered in median gaps elapsed,
+ *            so a skipped beat shifts no later number; a beat under 0.75
+ *            median gaps after the last counted one is not counted, so a
+ *            stray or double-time beat does not bend the line. Above 256
+ *            counted beats the fit uses every ceil(count / 256)-th one.
  *   anchor_sec_out: the fitted time of the first bar line at or after the
  *            first beat. Bar lines fall on the modal beat number, modulo
- *            *beats_per_bar_out, of the downbeats; with no downbeats, on the
+ *            *beats_per_bar_out, of the downbeats, each taken at the counted
+ *            beat nearest it within a quarter period; with none, on the
  *            first beat. A negative time moves forward by whole bars, so the
  *            anchor is always >= 0.
  *   beats_per_bar_out: the modal gap, in beat numbers, between consecutive
