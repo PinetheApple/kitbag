@@ -208,7 +208,6 @@ jobs:
       AVD_TARGET: google_apis
       AVD_ARCH: x86_64
       AVD_RAM: 2048M
-      AVD_CORES: 4
       AVD_PROFILE: pixel_6
       EMULATOR_OPTIONS: -no-window -gpu swiftshader_indirect -no-audio -no-boot-anim -camera-back none
       E2E_OUT: ${{ github.workspace }}/e2e-out
@@ -278,7 +277,7 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          key: avd-v1-${{ env.AVD_API_LEVEL }}-${{ env.AVD_TARGET }}-${{ env.AVD_ARCH }}-${{ env.AVD_PROFILE }}-${{ env.AVD_RAM }}-${{ env.AVD_CORES }}
+          key: avd-v1-${{ env.AVD_API_LEVEL }}-${{ env.AVD_TARGET }}-${{ env.AVD_ARCH }}-${{ env.AVD_PROFILE }}-${{ env.AVD_RAM }}
       - name: AVD — create it and save a boot snapshot for the cache
         if: steps.flows.outputs.run == 1 && steps.avd-cache.outputs.cache-hit != 'true'
         uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
@@ -288,7 +287,6 @@ jobs:
           arch: ${{ env.AVD_ARCH }}
           profile: ${{ env.AVD_PROFILE }}
           ram-size: ${{ env.AVD_RAM }}
-          cores: ${{ env.AVD_CORES }}
           force-avd-creation: false
           emulator-options: ${{ env.EMULATOR_OPTIONS }}
           disable-animations: false
@@ -302,7 +300,6 @@ jobs:
           arch: ${{ env.AVD_ARCH }}
           profile: ${{ env.AVD_PROFILE }}
           ram-size: ${{ env.AVD_RAM }}
-          cores: ${{ env.AVD_CORES }}
           force-avd-creation: false
           emulator-options: -no-snapshot-save ${{ env.EMULATOR_OPTIONS }}
           disable-animations: false
