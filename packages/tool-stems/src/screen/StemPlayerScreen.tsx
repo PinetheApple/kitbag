@@ -418,7 +418,7 @@ function PlayerSheets(props: PlayerSheetsProps) {
   );
 }
 
-export function StemPlayerScreen({
+function PlayerScreen({
   setId,
   focused,
   insets,
@@ -489,4 +489,17 @@ export function StemPlayerScreen({
       {shown === 'leave' ? <LeaveDialog onClose={closeAsk} /> : null}
     </View>
   );
+}
+
+export function StemPlayerScreen(props: StemPlayerScreenProps) {
+  const { setId, onOpenStemSet } = props;
+  const [take, setTake] = useState(0);
+  const open = useCallback(
+    (stemSetId: number) => {
+      if (stemSetId === setId) setTake((count) => count + 1);
+      else onOpenStemSet(stemSetId);
+    },
+    [setId, onOpenStemSet],
+  );
+  return <PlayerScreen key={take} {...props} onOpenStemSet={open} />;
 }

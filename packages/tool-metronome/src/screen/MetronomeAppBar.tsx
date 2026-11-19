@@ -20,14 +20,11 @@ import {
 import {
   activeSetView,
   adjacentEntry,
-  isPresetEntry,
   SONG_STEP,
   useLibrary,
-  useMetronome,
   useStemSongs,
   type ActiveSet,
   type SetlistEntry,
-  type SongStep,
 } from '@kitbag/core-state';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -45,6 +42,7 @@ import {
 } from '../logic/setlistChip.ts';
 import { entryName } from '@kitbag/core-state';
 import { LoadedSongSheet } from './LoadedSongSheet.tsx';
+import { useStepSong, type StemStepHandlers } from './useStepSong.ts';
 import { SetlistSongsSheet } from './SetlistSongsSheet.tsx';
 import { UnsavedDot, useLoadedSongUnsaved } from './UnsavedChanges.tsx';
 
@@ -261,26 +259,6 @@ function SetlistsChip({ onPress }: { readonly onPress: () => void }) {
         <Icon name="caretDown" size="caret" color="decor" />
       </View>
     </Pressable>
-  );
-}
-
-export interface StemStepHandlers {
-  readonly onOpenStemSet?: ((stemSetId: number) => void) | undefined;
-  readonly onSkipped?: (() => void) | undefined;
-}
-
-function useStepSong({ onOpenStemSet, onSkipped }: StemStepHandlers) {
-  const stepSong = useLibrary((s) => s.stepSong);
-  const stop = useMetronome((s) => s.stop);
-  return useCallback(
-    async (step: SongStep) => {
-      const { entry, skipped } = await stepSong(step);
-      if (skipped) onSkipped?.();
-      if (entry === undefined || isPresetEntry(entry)) return;
-      stop();
-      onOpenStemSet?.(entry.stemSetId);
-    },
-    [stepSong, stop, onOpenStemSet, onSkipped],
   );
 }
 

@@ -14,6 +14,7 @@ const NIGHT_BUS = 9;
 const fake = vi.hoisted(() => ({
   entries: [] as unknown[],
   openStemEntry: vi.fn(() => Promise.resolve(true)),
+  reorder: vi.fn(),
   loadSong: vi.fn(() => Promise.resolve()),
   start: vi.fn(),
   stop: vi.fn(),
@@ -45,7 +46,7 @@ vi.mock('@kitbag/core-state', () => ({
       loaded: null,
       entries: { [SETLIST_ID]: fake.entries },
       setlists: [{ setlist: { id: SETLIST_ID, name: 'Gig' } }],
-      reorder: vi.fn(),
+      reorder: fake.reorder,
       removeFromSet: vi.fn(),
       openStemEntry: fake.openStemEntry,
       loadSong: fake.loadSong,
@@ -173,5 +174,43 @@ describe('setlist detail with stem songs', () => {
     expect(onOpenStemSet).toHaveBeenCalledWith(NIGHT_BUS);
     expect(fake.start).not.toHaveBeenCalled();
     expect(fake.loadSong).not.toHaveBeenCalled();
+  });
+
+  it('moves an entry across a stem and metronome boundary by its place in the whole set', () => {
+    fake.entries = [
+      entry(1, 'Warm-up'),
+      stem(2, NIGHT_BUS),
+      entry(3, 'Ballad'),
+    ];
+    const [, stemRow] = rows(mount());
+    const { onMove } = stemRow?.props.reorder as {
+      onMove: (from: number, to: number) => void;
+    };
+    onMove(1, 2);
+    expect(fake.reorder).toHaveBeenCalledWith(SETLIST_ID, 1, 2);
+  });
+
+  it('loads a metronome entry without starting the click', async () => {
+    fake.entries = [stem(2, NIGHT_BUS), entry(3, 'Ballad')];
+    const [, ballad] = rows(mount());
+    await act(async () => {
+      (ballad?.props.onPress as () => void)();
+      await Promise.resolve();
+    });
+    expect(fake.loadSong).toHaveBeenCalledWith(3, 3, SETLIST_ID);
+    expect(fake.start).not.toHaveBeenCalled();
+    expect(onLoaded).toHaveBeenCalled();
+  });
+
+  it('stays put when the stem entry can no longer be opened', async () => {
+    fake.entries = [stem(2, NIGHT_BUS)];
+    fake.openStemEntry.mockResolvedValueOnce(false);
+    const [stemRow] = rows(mount());
+    await act(async () => {
+      (stemRow?.props.onPress as () => void)();
+      await Promise.resolve();
+    });
+    expect(onOpenStemSet).not.toHaveBeenCalled();
+    expect(fake.stop).not.toHaveBeenCalled();
   });
 });

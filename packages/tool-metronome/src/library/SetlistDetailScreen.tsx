@@ -169,8 +169,9 @@ function useOpenStemEntry({ setlistId, onOpenStemSet }: SectionProps) {
   const stop = useMetronome((s) => s.stop);
   return useCallback(
     (entry: StemSetlistEntry) => {
-      stop();
-      void openStemEntry(entry.item.id, setlistId).then(() => {
+      void openStemEntry(entry.item.id, setlistId).then((opened) => {
+        if (!opened) return;
+        stop();
         onOpenStemSet(entry.stemSetId);
       });
     },

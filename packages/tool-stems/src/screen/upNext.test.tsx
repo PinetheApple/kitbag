@@ -1,11 +1,15 @@
 import {
   configurePlayOrder,
+  ENTRY_KIND,
+  libraryStore,
+  metronomeStore,
   playOrderStore,
+  SKIPPED_STEM_SONG,
   songLibraryStore,
   type LibraryStemSetRow,
   type PlayOrderRepositories,
 } from '@kitbag/core-state';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   flush,
@@ -15,6 +19,9 @@ import {
 } from './playerHarness.test-helper.tsx';
 
 const NIGHT_BUS = 21;
+const GIG = 5;
+const BALLAD_ITEM = 31;
+const BALLAD_PRESET = 41;
 const TIN_ROOF = 22;
 const MENU = 'Player menu';
 const UP_NEXT_ROW = 'Up next: Night Bus, Queued · 1 more after it';
@@ -75,9 +82,39 @@ beforeEach(() => {
   });
 });
 
+const libraryBefore = libraryStore.getState();
+
 afterEach(() => {
   unmountTracked();
+  libraryStore.setState(libraryBefore, true);
+  vi.restoreAllMocks();
 });
+
+function metronomeEntryOnStage() {
+  const loadSong = vi.fn(() => Promise.resolve());
+  libraryStore.setState({
+    setlists: [
+      {
+        setlist: { id: GIG, name: 'Gig', active: true },
+        songCount: 1,
+        rampCount: 0,
+      },
+    ] as never,
+    entries: {
+      [GIG]: [
+        {
+          kind: ENTRY_KIND.preset,
+          item: { id: BALLAD_ITEM },
+          preset: { id: BALLAD_PRESET, name: 'Ballad', bpm: 72 },
+        },
+      ] as never,
+    },
+    refresh: () => Promise.resolve(),
+    loadSong,
+  });
+  const start = vi.spyOn(metronomeStore.getState(), 'start');
+  return { loadSong, start };
+}
 
 async function withQueue(...ids: number[]) {
   queued = ids;
@@ -153,5 +190,61 @@ describe('the Up next sheet', () => {
     await p.press('Clear');
     await flush();
     expect(queued).toEqual([]);
+  });
+});
+
+describe('a metronome entry up next', () => {
+  it('opens in the metronome from the Up next row without starting the click', async () => {
+    const { loadSong, start } = metronomeEntryOnStage();
+    const p = await withQueue();
+    await p.press('Open');
+    await flush();
+    expect(loadSong).toHaveBeenCalledWith(BALLAD_PRESET, BALLAD_ITEM, GIG);
+    expect(p.routes.onOpenMetronome).toHaveBeenCalledOnce();
+    expect(start).not.toHaveBeenCalled();
+  });
+
+  it('opens in the metronome from the Up next sheet without starting the click', async () => {
+    const { loadSong, start } = metronomeEntryOnStage();
+    const p = await withQueue();
+    await p.press('Up next: Ballad, Gig · 1 of 1 · metronome');
+    await p.press('Ballad, from Gig');
+    await flush();
+    p.frames(0, 4);
+    await flush();
+    expect(loadSong).toHaveBeenCalledWith(BALLAD_PRESET, BALLAD_ITEM, GIG);
+    expect(p.routes.onOpenMetronome).toHaveBeenCalledOnce();
+    expect(start).not.toHaveBeenCalled();
+  });
+});
+
+describe('opening the next song', () => {
+  it('releases the open song and opens the new one paused when the route moves on', async () => {
+    const p = await withQueue(NIGHT_BUS);
+    await p.press('Next: Night Bus');
+    await flush();
+    await p.showSet(NIGHT_BUS);
+    expect(
+      (p.records.readStemSet.mock.calls as unknown[][]).map((call) => call[0]),
+    ).toEqual([SET_ID, NIGHT_BUS]);
+    expect(p.store.getState().setId).toBe(NIGHT_BUS);
+    expect(p.commands.mixerPlay).not.toHaveBeenCalled();
+  });
+
+  it('opens the song again when the next one is the song already open', async () => {
+    songLibraryStore.setState({ rows: [song(SET_ID, 'Open song')] });
+    const p = await withQueue(SET_ID);
+    await p.press('Next: Open song');
+    await flush();
+    expect(p.routes.onOpenStemSet).not.toHaveBeenCalled();
+    expect(p.records.readStemSet).toHaveBeenCalledTimes(2);
+    expect(p.commands.mixerPlay).not.toHaveBeenCalled();
+  });
+
+  it('shows a skip carried from the metronome', async () => {
+    libraryStore.getState().carrySkip(true);
+    const p = await mountTracked();
+    expect(p.has(SKIPPED_STEM_SONG)).toBe(true);
+    expect(libraryStore.getState().carriedSkip).toBe(false);
   });
 });

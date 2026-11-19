@@ -173,21 +173,26 @@ function useStemPick(
 ) {
   const openStemEntry = useLibrary((s) => s.openStemEntry);
   const stop = useMetronome((s) => s.stop);
-  const leavingFor = useRef<number | null>(null);
+  const leaving = useRef<Promise<number | null> | null>(null);
   const pick = useCallback(
     (row: SongListRow) => {
-      if (row.stemSetId === null) return;
-      leavingFor.current = row.stemSetId;
-      stop();
-      void openStemEntry(row.itemId, setlistId);
+      const { stemSetId } = row;
+      if (stemSetId === null) return;
+      leaving.current = openStemEntry(row.itemId, setlistId).then((opened) =>
+        opened ? stemSetId : null,
+      );
     },
-    [openStemEntry, stop, setlistId],
+    [openStemEntry, setlistId],
   );
   const closed = useCallback(() => {
-    const stemSetId = leavingFor.current;
-    leavingFor.current = null;
-    if (stemSetId !== null) onOpenStemSet?.(stemSetId);
-  }, [onOpenStemSet]);
+    const pending = leaving.current;
+    leaving.current = null;
+    void pending?.then((stemSetId) => {
+      if (stemSetId === null) return;
+      stop();
+      onOpenStemSet?.(stemSetId);
+    });
+  }, [onOpenStemSet, stop]);
   return { pick, closed };
 }
 

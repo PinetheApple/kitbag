@@ -248,8 +248,9 @@ export async function mountPlayer(
   const renderer = create(<></>, {
     createNodeMock: (element) => ({ scrollTo: scrolls, element }),
   });
+  let shownSet = SET_ID;
   const tree = (focused: boolean) =>
-    playerTree({ focused, onBack, onRender: commit, routes });
+    playerTree({ setId: shownSet, focused, onBack, onRender: commit, routes });
   await act(async () => {
     renderer.update(tree(true));
     await tick();
@@ -305,6 +306,13 @@ export async function mountPlayer(
       setHost(seconds);
       act(() => {
         for (let i = 0; i < count; i++) runFrame();
+      });
+    },
+    showSet: async (setId: number) => {
+      shownSet = setId;
+      await act(async () => {
+        renderer.update(tree(true));
+        await tick();
       });
     },
     setFocused: (focused: boolean) => {

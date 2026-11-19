@@ -1,4 +1,9 @@
-import { usePlayOrder, useStemPlayer } from '@kitbag/core-state';
+import {
+  SKIPPED_STEM_SONG,
+  useLibrary,
+  usePlayOrder,
+  useStemPlayer,
+} from '@kitbag/core-state';
 import { useCallback, useEffect } from 'react';
 
 import type { usePlayerNotice } from './PlayerNotice.tsx';
@@ -27,6 +32,14 @@ export function useQueueActions(
   const enqueue = usePlayOrder((s) => s.enqueue);
   const refresh = usePlayOrder((s) => s.refresh);
   const setId = useStemPlayer((s) => s.setId);
+  const carried = useLibrary((s) => s.carriedSkip);
+  const carrySkip = useLibrary((s) => s.carrySkip);
+  const { showMessage } = notice;
+  useEffect(() => {
+    if (!carried) return;
+    showMessage(SKIPPED_STEM_SONG);
+    carrySkip(false);
+  }, [carried, carrySkip, showMessage]);
   useEffect(() => {
     refresh().catch((error: unknown) => {
       console.warn('[kitbag] play queue read failed', error);

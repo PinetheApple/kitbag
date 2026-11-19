@@ -63,6 +63,7 @@ export interface LibraryState extends LibrarySnapshot {
   readonly discarded: DiscardedChanges | null;
   readonly played: readonly number[];
   readonly results: SearchResults | null;
+  readonly carriedSkip: boolean;
 }
 
 export type PresetEdit = Partial<Omit<NewSongPreset, 'id'>>;
@@ -95,6 +96,7 @@ export interface LibraryActions {
   ) => Promise<void>;
   openStemEntry: (itemId: number, setlistId: number) => Promise<boolean>;
   stepSong: (step: SongStep) => Promise<SongStepResult>;
+  carrySkip: (carried: boolean) => void;
   leaveSetlist: () => Promise<void>;
   clearSong: () => void;
 }
@@ -127,6 +129,7 @@ const EMPTY: LibraryState = {
   discarded: null,
   played: [],
   results: null,
+  carriedSkip: false,
 };
 
 export function loadedPresetOf(
@@ -384,6 +387,9 @@ function loadActions(deps: LibraryDeps, set: SetState, get: Get) {
       }
       const opened = await get().openStemEntry(entry.item.id, setlistId);
       return { entry: opened ? entry : undefined, skipped };
+    },
+    carrySkip: (carried: boolean) => {
+      set({ carriedSkip: carried });
     },
     leaveSetlist: async () => {
       noteDiscard();
