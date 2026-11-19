@@ -122,6 +122,18 @@ it('stops a sheet whose owner unmounts mid-exit before removing it', () => {
   expect(titles(tree)).toEqual([]);
 });
 
+it('survives its screen leaving after the session closed mid-exit', () => {
+  const tree = mount({ actions: true, remove: false });
+  rerender(tree, { actions: false, remove: false });
+  rerender(tree, { actions: false, owned: false, remove: false });
+  expect(anim.running.size).toBe(0);
+  act(() => {
+    tree.unmount();
+  });
+  expect(settleFrames).not.toThrow();
+  expect(anim.running.size).toBe(0);
+});
+
 it('follows the keyboard while open and holds its padding while leaving', () => {
   const tree = mount({ actions: true, remove: false });
   const closed = cardPadding(tree, ACTIONS);
