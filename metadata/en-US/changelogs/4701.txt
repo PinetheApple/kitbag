@@ -1,0 +1,1 @@
+• A song whose analysis failed now says why: an unsupported format is named (with the formats Kitbag plays), and a file that couldn't be decoded is marked as possibly damaged. Re-analyse is only offered when it can help.
