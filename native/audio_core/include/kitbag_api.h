@@ -332,7 +332,10 @@ KB_EXPORT int32_t kb_player_is_playing(const kb_engine* engine);
  * Returns KB_OK on success (even if no beats found; check *beat_count_out).
  * Returns KB_ERROR_INVALID_ARGUMENT for a null path/output pointer, a file that
  * will not open, or decoded PCM that is unusable: zero channels, a zero sample
- * rate, a frame count above INT_MAX, or any non-finite (NaN/inf) sample.
+ * rate, a frame count above INT_MAX, or any non-finite (NaN/inf) sample. Also
+ * for a damaged file: one that decodes to well short of the length its header
+ * declares (a WAV data chunk, an MP3 Xing/Info frame count, FLAC STREAMINFO).
+ * Files that declare no length, such as a headerless MP3, are never flagged.
  * Returns KB_ERROR_INTERNAL if analysis runs out of memory, or the file cannot
  * be rewound or decodes to a different length on the second pass.
  * On any error the outputs read 0 and no sidecar is written.

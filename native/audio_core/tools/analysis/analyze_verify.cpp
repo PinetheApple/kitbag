@@ -29,6 +29,7 @@ void RunEquivalenceTests(const std::filesystem::path& dir);
 void RunWritePeaksTests(const std::filesystem::path& dir);
 void RunLongGridTests();
 void RunLengthTests(const std::filesystem::path& dir);
+void RunDamagedTests(const std::filesystem::path& dir);
 void RunSustainedTests();
 void RunMeterTests();
 void RunStemTests();
@@ -243,7 +244,8 @@ void TestRewindFailure() {
   NoRewindReader reader(pcm.data(), frames, StereoInfo(frames, 2));
   BeatResult result;
   kitbag_test::Check(
-      kitbag::AnalyzeSong(reader, "x", nullptr, &result) == KB_ERROR_INTERNAL,
+      kitbag::AnalyzeSong(reader, 0, "x", nullptr, &result) ==
+          KB_ERROR_INTERNAL,
       "a reader that cannot rewind for the second pass is KB_ERROR_INTERNAL"
   );
 }
@@ -259,7 +261,7 @@ void RunGuardTests() {
 
 }  // namespace
 
-constexpr int kExpectedChecks = 158;
+constexpr int kExpectedChecks = 175;
 
 int Verdict() {
   if (kitbag_test::g_checks != kExpectedChecks) {
@@ -293,6 +295,7 @@ int main() {
   analyze_test::RunWritePeaksTests(dir);
   analyze_test::RunLongGridTests();
   analyze_test::RunLengthTests(dir);
+  analyze_test::RunDamagedTests(dir);
   analyze_test::RunSustainedTests();
   analyze_test::RunMeterTests();
   analyze_test::RunStemTests();

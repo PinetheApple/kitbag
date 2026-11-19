@@ -71,7 +71,7 @@ inline kb_result AnalyzeDecodedPcm(
     kitbag::BeatResult* out
 ) {
   BufferReader reader(pcm, frames, info);
-  return kitbag::AnalyzeSong(reader, path, waveform_dir, out);
+  return kitbag::AnalyzeSong(reader, 0, path, waveform_dir, out);
 }
 
 inline kitbag::WaveformPeaks ComputeWaveformPeaks(
