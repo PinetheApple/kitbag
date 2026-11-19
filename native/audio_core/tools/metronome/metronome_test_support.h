@@ -353,6 +353,9 @@ inline double ModelTempo(
 }
 
 void RunBasicTests();
+void RunCustomSoundTests();
+void RunCustomSoundCutTests();
+void RunCustomSoundSongTests();
 void RunSignatureTests();
 void RunStartAtTests();
 void RunLatencyTests();

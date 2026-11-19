@@ -1,17 +1,16 @@
 #ifndef KITBAG_TOOLS_COUNTING_ALLOCATOR_H
 #define KITBAG_TOOLS_COUNTING_ALLOCATOR_H
 
-// Replaces global operator new for the whole executable so a test can read the
-// heap's high-water mark. Include it from exactly one translation unit.
-#include <atomic>
+// Replaces global operator new for the whole executable so heap_probe.h reads
+// the heap's high-water mark. Include it from exactly one translation unit.
 #include <cstddef>
 #include <cstdlib>
 #include <new>
 
+#include "heap_probe.h"
+
 namespace kitbag_test {
 
-inline std::atomic<size_t> g_live_bytes{0};
-inline std::atomic<size_t> g_peak_bytes{0};
 // The size prefix keeps the returned pointer max_align_t aligned.
 inline constexpr size_t kAllocHeader = alignof(std::max_align_t);
 
