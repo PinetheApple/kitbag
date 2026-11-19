@@ -13,6 +13,7 @@ import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.LibraryStorage
 import com.kitbag.corenative.library.MissingSongException
 import com.kitbag.corenative.library.SongAnalyzer
+import com.kitbag.corenative.library.Waveforms
 
 class AnalysisWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
 
@@ -44,11 +45,12 @@ class AnalysisWorker(context: Context, params: WorkerParameters) : Worker(contex
   }
 
   private fun analyze(relativePath: String, waveformRelativeDir: String): AnalysisResult {
-    val root = DataFolder.root(applicationContext)
-    val song = LibraryPaths.resolve(root, relativePath)
+    val folder = DataFolder.get(applicationContext)
+    val song = LibraryPaths.resolve(folder.root(), relativePath)
     if (!song.isFile) throw MissingSongException()
-    val waveformDir = LibraryPaths.resolve(root, waveformRelativeDir, allowBase = true)
-    val output = SongAnalyzer.analyze(song, waveformDir, LibraryStorage.staging(applicationContext))
+    val output = SongAnalyzer.analyze(song, LibraryStorage.staging(folder)) { staged ->
+      Waveforms.place(folder, waveformRelativeDir, staged)
+    }
     return AnalysisResult(
       relativePath = relativePath,
       ok = true,
@@ -56,7 +58,7 @@ class AnalysisWorker(context: Context, params: WorkerParameters) : Worker(contex
       bpm = output.result.bpm,
       beats = output.result.beats,
       downbeats = output.result.downbeats,
-      waveformRelativePath = output.waveform?.let { LibraryPaths.relativize(root, it) }.orEmpty(),
+      waveformRelativePath = output.waveformRelativePath.orEmpty(),
       durationSec = output.result.durationSec,
       analysisVersion = output.result.analysisVersion,
     )

@@ -7,7 +7,7 @@ class UnsafeLibraryPathException(path: String) :
 
 object LibraryPaths {
   private const val FALLBACK_STEM = "audio"
-  private const val HIDDEN_PREFIX = '.'
+  const val HIDDEN_PREFIX = '.'
   const val SONGS_DIR_NAME = "songs"
   const val STEMS_DIR_NAME = "stems"
 
