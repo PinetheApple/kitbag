@@ -17,6 +17,8 @@ const input = (fields: Partial<StripInput>): StripInput => ({
   volumes: ON_CARD,
   unavailable: 0,
   view: 'songs',
+  offered: null,
+  sourceMissing: false,
   ...fields,
 });
 

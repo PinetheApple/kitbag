@@ -45,6 +45,7 @@ class DataFolderMoveService : Service() {
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     when (intent?.action) {
       ACTION_START -> enqueue { moves.start(targetOf(intent)) }
+      ACTION_RETURN -> enqueue { cardOf(intent)?.let(moves::returnCard) ?: MoveOutcome.NoMove }
       ACTION_RESUME -> enqueue { moves.resume() }
       ACTION_FINISH -> enqueue(userAsked = false, job = moves::finishCleanup)
       ACTION_CANCEL -> cancel()
@@ -122,6 +123,7 @@ class DataFolderMoveService : Service() {
 
   companion object {
     const val ACTION_START = "com.kitbag.corenative.datafolder.START"
+    const val ACTION_RETURN = "com.kitbag.corenative.datafolder.RETURN"
     const val ACTION_RESUME = "com.kitbag.corenative.datafolder.RESUME"
     const val ACTION_FINISH = "com.kitbag.corenative.datafolder.FINISH"
     const val ACTION_CANCEL = "com.kitbag.corenative.datafolder.CANCEL"
@@ -137,6 +139,11 @@ class DataFolderMoveService : Service() {
       ContextCompat.startForegroundService(context, intent)
     }
 
+    fun returnCard(context: Context, card: DataFolderLocation.Card) {
+      val intent = Intent(context, DataFolderMoveService::class.java).setAction(ACTION_RETURN)
+      ContextCompat.startForegroundService(context, intent.putExtra(EXTRA_VOLUME_UUID, card.volumeUuid))
+    }
+
     fun resume(context: Context) = launch(context, ACTION_RESUME)
 
     fun finishCleanup(context: Context) = launch(context, ACTION_FINISH)
@@ -147,5 +154,8 @@ class DataFolderMoveService : Service() {
 
     private fun targetOf(intent: Intent): DataFolderLocation =
       MoveReport.locationOf(intent.getStringExtra(EXTRA_VOLUME_UUID))
+
+    private fun cardOf(intent: Intent): DataFolderLocation.Card? =
+      intent.getStringExtra(EXTRA_VOLUME_UUID)?.let(DataFolderLocation::Card)
   }
 }

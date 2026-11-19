@@ -9,6 +9,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ChoiceButtons, type Choice } from './ChoiceButtons.tsx';
 import { ChooserBody, ConfirmBody, MovingBody } from './DataFolderBodies.tsx';
+import { returnNoSpaceHints } from './returnedCardText.ts';
+import { ReturnOfferBody } from './ReturnOfferBody.tsx';
 import type {
   DataFolderAction,
   DataFolderSheet,
@@ -32,6 +34,7 @@ import {
   CLOSE_DATA_FOLDER,
   confirmTitle,
   DATA_FOLDER_LABEL,
+  findVolume,
   KEEP_MOVING,
   MOVE,
   movingTitle,
@@ -49,6 +52,8 @@ import type { DataFolderSheetsModel } from './useDataFolderSheets.ts';
 
 const LABELS: Readonly<Record<DataFolderAction, string>> = {
   move: MOVE,
+  returnMove: MOVE,
+  declineReturn: NOT_NOW,
   backToChooser: CANCEL,
   askStop: CANCEL_MOVE,
   stop: STOP_MOVING,
@@ -92,6 +97,7 @@ interface FaceContext {
   readonly pending: boolean;
   readonly places: Places;
   readonly storeError: string | null;
+  readonly sourceMissing: boolean;
   readonly onChoose: (volumeUuid: string | null) => void;
 }
 
@@ -115,6 +121,26 @@ function switchedFace(move: MoveStatus, codes: DataFolderCodes): SheetFace {
         <SheetHint>{switchedHint(move)}</SheetHint>
       </>
     ),
+  };
+}
+
+function returnFailedFace(error: string, context: FaceContext): SheetFace {
+  const { codes, volumes, places } = context;
+  const text = moveErrorText(error, codes, places);
+  const card = findVolume(volumes, places.source);
+  const target = findVolume(volumes, places.target);
+  if (
+    error !== codes.moveErrors.noSpace ||
+    card === undefined ||
+    target === undefined
+  )
+    return errorFace(text);
+  return {
+    title: text.title,
+    icon: 'error',
+    body: returnNoSpaceHints(card, target).map((hint) => (
+      <SheetHint key={hint}>{hint}</SheetHint>
+    )),
   };
 }
 
@@ -144,6 +170,14 @@ function sheetFace(sheet: DataFolderSheet, context: FaceContext): SheetFace {
           <ConfirmBody volumes={volumes} target={sheet.target} media={media} />
         ),
       };
+    case 'returnOffer':
+      return {
+        title: confirmTitle(volumes.currentVolumeUuid),
+        icon: 'moveFolder',
+        body: <ReturnOfferBody volumes={volumes} card={sheet.volume} />,
+      };
+    case 'returnFailed':
+      return returnFailedFace(sheet.error, context);
     case 'moving': {
       const notice = context.storeError;
       return {
@@ -175,16 +209,16 @@ function sheetFace(sheet: DataFolderSheet, context: FaceContext): SheetFace {
       return {
         title: pausedTitle(sheet.move),
         icon: 'moveFolder',
-        body: <SheetHint>{pausedHint(sheet.move, codes.movePhases)}</SheetHint>,
+        body: (
+          <SheetHint>
+            {pausedHint(sheet.move, codes.movePhases, context.sourceMissing)}
+          </SheetHint>
+        ),
       };
     case 'stopped':
     case 'failed':
       return errorFace(moveErrorText(sheet.error, codes, context.places));
   }
-}
-
-function otherPlace(volumes: DataFolderVolumes): string | null {
-  return volumes.volumes.find((volume) => !volume.inUse)?.volumeUuid ?? null;
 }
 
 export interface DataFolderSheetsProps {
@@ -199,16 +233,11 @@ export function DataFolderSheets({ model, media }: DataFolderSheetsProps) {
     actions,
     pending,
     codes,
-    confirmTarget,
     volumes,
-    move,
+    places,
     error: storeError,
   } = model;
   if (volumes === null || codes === null) return null;
-  const places: Places = {
-    source: move?.sourceVolumeUuid ?? volumes.currentVolumeUuid,
-    target: move?.targetVolumeUuid ?? confirmTarget ?? otherPlace(volumes),
-  };
   const face = sheetFace(sheet, {
     volumes,
     codes,
@@ -216,6 +245,7 @@ export function DataFolderSheets({ model, media }: DataFolderSheetsProps) {
     pending,
     places,
     storeError,
+    sourceMissing: model.sourceMissing,
     onChoose: model.choose,
   });
   return (

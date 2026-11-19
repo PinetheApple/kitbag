@@ -12,6 +12,8 @@ export const listVolumes: typeof Native.listVolumes = refuse;
 
 export const startMove: typeof Native.startMove = refuse;
 
+export const startCardReturn: typeof Native.startCardReturn = refuse;
+
 export const cancelMove: typeof Native.cancelMove = refuse;
 
 export const resumeMove: typeof Native.resumeMove = refuse;

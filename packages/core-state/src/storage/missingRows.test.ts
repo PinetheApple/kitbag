@@ -15,9 +15,13 @@ const OTHER_SONG = songRow({ id: 2, title: 'Take Five' });
 const STEMS = stemsRow();
 
 const STORED: readonly StoredRowFiles[] = [
-  { row: SONG, audioPaths: ['songs/a/Everlong.mp3'] },
-  { row: OTHER_SONG, audioPaths: ['songs/b/TakeFive.mp3'] },
-  { row: STEMS, audioPaths: ['stems/r/bass.flac', 'stems/r/drums.flac'] },
+  { row: SONG, audioPaths: ['songs/a/Everlong.mp3'], waveformPaths: [] },
+  { row: OTHER_SONG, audioPaths: ['songs/b/TakeFive.mp3'], waveformPaths: [] },
+  {
+    row: STEMS,
+    audioPaths: ['stems/r/bass.flac', 'stems/r/drums.flac'],
+    waveformPaths: [],
+  },
 ];
 
 interface Disk {
@@ -90,7 +94,7 @@ describe('findMissingRows', () => {
   });
 
   it('never reports a row that has no audio paths', async () => {
-    const empty = [{ row: STEMS, audioPaths: [] }];
+    const empty = [{ row: STEMS, audioPaths: [], waveformPaths: [] }];
     expect(await findMissingRows(deps([], empty))).toEqual([]);
   });
 });
