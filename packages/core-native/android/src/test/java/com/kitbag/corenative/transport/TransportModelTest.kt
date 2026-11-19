@@ -80,6 +80,16 @@ class TransportModelTest {
   }
 
   @Test
+  fun `the step reported to the app is the one the tempo keys take, and none for the rest`() {
+    for (action in listOf(TEMPO_UP, TEMPO_DOWN)) {
+      val stepped = TransportCommand.SetTempo(120.0 + model.tempoStep(action))
+      assertEquals(listOf(stepped), model.commandsFor(state(), action))
+    }
+    assertEquals(-model.tempoStep(TEMPO_UP), model.tempoStep(TEMPO_DOWN))
+    for (action in listOf(PLAY, PAUSE, STOP)) assertEquals(0, model.tempoStep(action))
+  }
+
+  @Test
   fun `named finds an action and ignores an unknown or retired name`() {
     assertEquals(TEMPO_UP, TransportAction.named("TEMPO_UP"))
     assertNull(TransportAction.named("REWIND"))

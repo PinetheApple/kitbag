@@ -181,6 +181,33 @@ void TestReanchorShiftedTouchesFutureOnly() {
   );
 }
 
+void TestStartAtWhileRunningKeepsQueuedAnchor() {
+  const int64_t swap_at = 78000;
+  const int64_t total = kSampleRate * 7 / 2;
+  constexpr double kShiftSec = 0.2;
+
+  kitbag::Metronome metronome;
+  metronome.SetTimeSignature(4, 4);
+  metronome.AnchorExternal(0.1, 0, 120.0);
+  int64_t swap_frame = -1;
+  double new_song_pos = 0.0;
+  const auto onsets = RenderContinuous(metronome, total, [&](int64_t frame) {
+    if (swap_frame < 0 && frame >= swap_at) {
+      swap_frame = frame;
+      new_song_pos = 0.1 + static_cast<double>(frame) / kSampleRate + kShiftSec;
+      const auto at = static_cast<uint64_t>(frame);
+      metronome.AnchorExternal(new_song_pos, at, 120.0);
+      metronome.StartAt(at);
+    }
+  });
+
+  ExpectOnsetsAtSeconds(
+      onsets,
+      ShiftedExpected(swap_frame, new_song_pos, total),
+      "start_at while running: a queued anchor still lands"
+  );
+}
+
 // song_pos_sec exactly 0.0 sits the anchor's beat 0 on song second 0 — the
 // >= 0 firing boundary. Beat 0 must fire, not be swallowed, and nothing before.
 void TestAnchorSongPosZero() {
@@ -316,6 +343,7 @@ void RunAnchorTests() {
   TestReanchorConsistentKeepsOnsets();
   TestReanchorConsistentNoRefire();
   TestReanchorShiftedTouchesFutureOnly();
+  TestStartAtWhileRunningKeepsQueuedAnchor();
   TestAnchorComposesWithLatency();
   TestAnchorJustPastDownbeatCountsBarOnce();
 }

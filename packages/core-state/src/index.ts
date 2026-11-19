@@ -443,6 +443,7 @@ export { songPlayerStore, type SongPlayerStore } from './songPlayer/store.ts';
 export { configureSongPlayer } from './songPlayer/runtime.ts';
 export {
   createMixerClick,
+  mixerClick,
   type MixerClick,
   type MixerClickNotice,
   type ReleasedClick,

@@ -147,6 +147,13 @@ class CardRoutingTest {
   }
 
   @Test
+  fun `a session play after the song card is hidden, with no metronome, stops the service`() {
+    showSong()
+    routing.on(CardEvent.SongHidden)
+    assertEquals(CardEffect.RemoveCard, press(SessionButton.PLAY))
+  }
+
+  @Test
   fun `a song tap with no song showing leaves the metronome card`() {
     showMetronome()
     assertEquals(CardEffect.None, routing.on(CardEvent.SongTapped(SongAction.PLAY.name)))
