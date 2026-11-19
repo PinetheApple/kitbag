@@ -18,6 +18,7 @@ import com.kitbag.corenative.library.AnalysisFailure
 import com.kitbag.corenative.library.AnalysisResult
 import com.kitbag.corenative.library.AnalysisStore
 import com.kitbag.corenative.library.AnalysisTarget
+import com.kitbag.corenative.library.BackupFiles
 import com.kitbag.corenative.library.BackupShare
 import com.kitbag.corenative.library.ClickSoundFiles
 import com.kitbag.corenative.library.DataFolder
@@ -28,6 +29,7 @@ import com.kitbag.corenative.library.LibraryErrors
 import com.kitbag.corenative.library.LibraryPaths
 import com.kitbag.corenative.library.LibraryStorage
 import com.kitbag.corenative.library.LibraryUsage
+import com.kitbag.corenative.library.MigrationCopies
 import com.kitbag.corenative.library.NativeClickSound
 import com.kitbag.corenative.library.NativeWaveform
 import com.kitbag.corenative.library.StemBundleBridge
@@ -400,6 +402,24 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       }
     }
   }
+
+  override fun databaseFreeBytes(databaseName: String): Double =
+    migrationCopies(databaseName, "measure free space") { it.freeBytes().toDouble() } ?: 0.0
+
+  override fun removeDatabaseCopy(databaseName: String, fileName: String): Boolean =
+    migrationCopies(databaseName, "remove $fileName") { it.remove(fileName) } != null
+
+  override fun replaceDatabaseCopy(databaseName: String, partName: String, fileName: String): Boolean =
+    migrationCopies(databaseName, "move $partName to $fileName") { it.replace(partName, fileName) } != null
+
+  private fun <T> migrationCopies(databaseName: String, action: String, work: (MigrationCopies) -> T): T? =
+    try {
+      require(BackupFiles.isSafeDatabaseName(databaseName)) { "Not a database name: $databaseName" }
+      work(MigrationCopies(reactApplicationContext.getDatabasePath(databaseName)))
+    } catch (e: Exception) {
+      Log.w(TAG, "Migration copy: could not $action", e)
+      null
+    }
 
   override fun storageReport(databaseName: String, promise: Promise) {
     io.execute {
