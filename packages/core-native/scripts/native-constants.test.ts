@@ -286,8 +286,8 @@ describe('collectConstants (real engine source)', () => {
   it('extracts the current constants and re-renders deterministically', () => {
     const c = collectConstants(realSources);
     expect(c.maxGridBeats).toBe(65536);
-    expect(c.beatAnalysisVersion).toBe(3);
-    expect(renderConstants(c)).toContain('KB_BEAT_ANALYSIS_VERSION = 3;');
+    expect(c.beatAnalysisVersion).toBe(4);
+    expect(renderConstants(c)).toContain('KB_BEAT_ANALYSIS_VERSION = 4;');
     expect(c.maxTracks).toBe(16);
     expect(c.maxBeats).toBe(16);
     expect(c.maxRampBars).toBe(64);
