@@ -111,4 +111,10 @@ describe('why an import stopped', () => {
       stopNotice(view([row('failed', { failure: 'noSpace' })]), 'noSpace').body,
     ).toBe('Free some space, then retry.');
   });
+
+  it('asks for the library storage back when it is not mounted', () => {
+    expect(stopNotice(view([row('failed')]), 'libraryUnavailable').body).toBe(
+      'The library’s storage isn’t available. Reconnect it, then tap Retry.',
+    );
+  });
 });

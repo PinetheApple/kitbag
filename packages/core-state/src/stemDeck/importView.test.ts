@@ -83,6 +83,27 @@ describe('importView', () => {
     });
   });
 
+  it('stops the whole queue when the library storage is unavailable', () => {
+    const view = importView(
+      snapshot(
+        [
+          item('a', CODES.stateFailed, {
+            failure: CODES.failureLibraryUnavailable,
+          }),
+          item('b', CODES.stateNotStarted),
+        ],
+        { running: false, stopReason: CODES.failureLibraryUnavailable },
+      ),
+      CODES,
+      [],
+      new Map(),
+    );
+    expect(view.stopped).toBe('libraryUnavailable');
+    expect(view.running).toBe(false);
+    expect(view.retryCount).toBe(2);
+    expect(view.rows[0]?.failure).toBe('libraryUnavailable');
+  });
+
   it('carries the bundle refusal for a song the library refused', () => {
     const view = importView(
       snapshot(

@@ -3,6 +3,7 @@ import type {
   AnalysisResult,
   ImportedAudio,
   ImportedStemBundle,
+  LibraryAvailability,
   LibraryConstants,
   PickedDocument,
   PickedFolder,
@@ -40,6 +41,10 @@ export interface LibraryFiles {
   ) => Promise<ImportedStemBundle>;
   readonly listStemFolders: () => Promise<readonly string[]>;
   readonly deleteStemFolder: (folderName: string) => Promise<void>;
+  readonly fileAvailability: (
+    relativePaths: readonly string[],
+  ) => Promise<LibraryAvailability>;
+  readonly onDataFolderChanged: (listener: () => void) => () => void;
 }
 
 export type SongLibraryRecords = Pick<
@@ -57,6 +62,8 @@ export type SongLibraryRecords = Pick<
   | 'insertStemBundle'
   | 'replaceStemBundle'
   | 'listStemSetFolders'
+  | 'listSongFiles'
+  | 'listStemFiles'
   | 'renameSong'
   | 'updateDuration'
   | 'renameStemSet'

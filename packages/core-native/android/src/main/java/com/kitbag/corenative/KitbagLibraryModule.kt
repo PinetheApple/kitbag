@@ -17,6 +17,7 @@ import com.kitbag.corenative.library.AnalysisEvents
 import com.kitbag.corenative.library.AnalysisFailure
 import com.kitbag.corenative.library.AnalysisResult
 import com.kitbag.corenative.library.AnalysisStore
+import com.kitbag.corenative.library.AnalysisTarget
 import com.kitbag.corenative.library.BackupShare
 import com.kitbag.corenative.library.DataFolder
 import com.kitbag.corenative.library.DocumentPicker
@@ -29,8 +30,10 @@ import com.kitbag.corenative.library.LibraryUsage
 import com.kitbag.corenative.library.NativeWaveform
 import com.kitbag.corenative.library.StemBundleBridge
 import com.kitbag.corenative.library.StemBundleRefusedException
+import com.kitbag.corenative.library.toMap
 import com.kitbag.corenative.library.StorageUsage
 import com.kitbag.corenative.library.SupportedAudio
+import com.kitbag.corenative.library.VolumeWatcher
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.ExecutorService
@@ -47,6 +50,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   private val picker = DocumentPicker(reactContext, io, ::rejectLogged)
   private val files = FileShare(reactContext, io, ::rejectLogged)
   private val backups = BackupShare(reactContext, files)
+  private val volumes = VolumeWatcher(reactContext, ::emitOnDataFolderChanged)
 
   private val listener: (AnalysisResult) -> Unit = ::emitAnalysis
 
@@ -54,10 +58,12 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     reactContext.addActivityEventListener(picker)
     AnalysisEvents.listener.set(listener)
     io.execute { bundles.clearStaging() }
+    volumes.start()
   }
 
   override fun invalidate() {
     AnalysisEvents.listener.compareAndSet(listener, null)
+    volumes.stop()
     reactApplicationContext.removeActivityEventListener(picker)
     io.shutdownNow()
     picker.cancel()
@@ -158,14 +164,14 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   }
 
   override fun enqueueAnalysis(relativePath: String, waveformRelativeDir: String, replace: Boolean) {
-    val canonical = try {
-      val root = libraryRoot()
-      LibraryPaths.requireInsideLibrary(root, waveformRelativeDir, allowBase = true)
-      LibraryPaths.relativize(root, LibraryPaths.resolve(root, relativePath))
-    } catch (e: IllegalArgumentException) {
-      Log.w(TAG, "Analysis of $relativePath refused", e)
-      io.execute { recordFailure(relativePath, AnalysisFailure.MISSING_FILE) }
-      return
+    val canonical = when (val target = AnalysisTarget.of(::libraryRoot, relativePath, waveformRelativeDir)) {
+      is AnalysisTarget.Ready -> target.relativePath
+      AnalysisTarget.Refused -> {
+        Log.w(TAG, "Analysis of $relativePath refused: the path escapes the library")
+        io.execute { recordFailure(relativePath, AnalysisFailure.MISSING_FILE) }
+        return
+      }
+      AnalysisTarget.Deferred -> return
     }
     val request = OneTimeWorkRequestBuilder<AnalysisWorker>()
       .setInputData(
@@ -335,11 +341,12 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       putString("location", location)
     }
 
-  override fun missingFiles(relativePaths: ReadableArray, promise: Promise) {
+  override fun fileAvailability(relativePaths: ReadableArray, promise: Promise) {
     io.execute {
       try {
         val paths = (0 until relativePaths.size()).asSequence().mapNotNull { relativePaths.getString(it) }
-        promise.resolve(Arguments.createArray().apply { LibraryUsage.missing(libraryRoot(), paths).forEach(::pushString) })
+        val root = DataFolder.get(reactApplicationContext).rootState()
+        promise.resolve(LibraryUsage.availability(root, paths).toMap())
       } catch (e: Exception) {
         rejectLogged(promise, E_STORAGE_FAILED, "Could not check library files", e)
       }
@@ -349,7 +356,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
   // Raw causes carry paths; JS gets the code and shows its own text.
   private fun rejectLogged(promise: Promise, code: String, message: String, cause: Exception) {
     Log.w(TAG, "$code: $message", cause)
-    promise.reject(code, message)
+    promise.reject(LibraryErrors.codeFor(cause, code), message)
   }
 
   override fun getTypedExportedConstants(): Map<String, Any> =
@@ -360,6 +367,8 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
       "failureUnsupported" to AnalysisFailure.UNSUPPORTED,
       "failureInterrupted" to AnalysisFailure.INTERRUPTED,
       "failureInternal" to AnalysisFailure.INTERNAL,
+      "failureUnavailable" to AnalysisFailure.UNAVAILABLE,
+      "dataFolderUnavailable" to LibraryErrors.DATA_FOLDER_UNAVAILABLE,
       "supportedAudioFamilies" to SupportedAudio.FAMILY_NAMES,
       "supportedAudioExtensions" to SupportedAudio.EXTENSIONS,
       "supportedAudioMimeTypes" to SupportedAudio.MIME_TYPES,

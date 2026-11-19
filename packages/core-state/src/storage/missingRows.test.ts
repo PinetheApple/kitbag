@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { songRow, stemsRow } from './fixtures.test-helper.ts';
 import {
+  checkRowFiles,
+  DataFolderUnavailableError,
   findMissingRows,
   removeMissingRows,
   type StoredRowFiles,
@@ -18,11 +20,24 @@ const STORED: readonly StoredRowFiles[] = [
   { row: STEMS, audioPaths: ['stems/r/bass.flac', 'stems/r/drums.flac'] },
 ];
 
-function deps(missing: readonly string[], stored = STORED) {
+interface Disk {
+  readonly unavailable?: readonly string[];
+  readonly rootAvailable?: boolean;
+}
+
+function deps(
+  missing: readonly string[],
+  stored = STORED,
+  { unavailable = [], rootAvailable = true }: Disk = {},
+) {
   return {
     storedFiles: vi.fn(() => Promise.resolve(stored)),
-    missingFiles: vi.fn((paths: readonly string[]) =>
-      Promise.resolve(paths.filter((path) => missing.includes(path))),
+    fileAvailability: vi.fn((paths: readonly string[]) =>
+      Promise.resolve({
+        missing: paths.filter((path) => missing.includes(path)),
+        unavailable: paths.filter((path) => unavailable.includes(path)),
+        rootAvailable,
+      }),
     ),
     deleteRow: vi.fn<(row: LibraryRow) => Promise<void>>(() =>
       Promise.resolve(),
@@ -34,8 +49,8 @@ describe('findMissingRows', () => {
   it('asks about every stored audio path in one call', async () => {
     const source = deps([]);
     await findMissingRows(source);
-    expect(source.missingFiles).toHaveBeenCalledTimes(1);
-    expect(source.missingFiles).toHaveBeenCalledWith([
+    expect(source.fileAvailability).toHaveBeenCalledTimes(1);
+    expect(source.fileAvailability).toHaveBeenCalledWith([
       'songs/a/Everlong.mp3',
       'songs/b/TakeFive.mp3',
       'stems/r/bass.flac',
@@ -58,6 +73,22 @@ describe('findMissingRows', () => {
     expect(await findMissingRows(deps(gone))).toEqual([STEMS]);
   });
 
+  it('skips a row whose audio is on an unavailable volume', async () => {
+    const source = deps(['songs/b/TakeFive.mp3'], STORED, {
+      unavailable: ['songs/a/Everlong.mp3', 'stems/r/bass.flac'],
+    });
+    expect(await findMissingRows(source)).toEqual([OTHER_SONG]);
+  });
+
+  it('refuses while the data folder is unmounted or unknown', async () => {
+    const source = deps(['songs/a/Everlong.mp3'], STORED, {
+      rootAvailable: false,
+    });
+    await expect(findMissingRows(source)).rejects.toBeInstanceOf(
+      DataFolderUnavailableError,
+    );
+  });
+
   it('never reports a row that has no audio paths', async () => {
     const empty = [{ row: STEMS, audioPaths: [] }];
     expect(await findMissingRows(deps([], empty))).toEqual([]);
@@ -72,10 +103,34 @@ describe('removeMissingRows', () => {
     expect(source.deleteRow).toHaveBeenCalledWith(SONG);
   });
 
+  it('deletes nothing while the data folder is unmounted', async () => {
+    const source = deps(['songs/a/Everlong.mp3'], STORED, {
+      rootAvailable: false,
+    });
+    await expect(removeMissingRows(source)).rejects.toBeInstanceOf(
+      DataFolderUnavailableError,
+    );
+    expect(source.deleteRow).not.toHaveBeenCalled();
+  });
+
   it('checks the disk again rather than trusting an earlier count', async () => {
     const source = deps([]);
     await removeMissingRows(source);
-    expect(source.missingFiles).toHaveBeenCalledTimes(1);
+    expect(source.fileAvailability).toHaveBeenCalledTimes(1);
     expect(source.deleteRow).not.toHaveBeenCalled();
+  });
+});
+
+describe('checkRowFiles', () => {
+  it('marks each row present, missing or unavailable', async () => {
+    const source = deps(['songs/b/TakeFive.mp3'], STORED, {
+      unavailable: ['stems/r/drums.flac'],
+    });
+    const { rows } = await checkRowFiles(source);
+    expect(rows.map(({ files }) => files)).toEqual([
+      'present',
+      'missing',
+      'unavailable',
+    ]);
   });
 });

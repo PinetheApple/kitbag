@@ -1,6 +1,8 @@
 package com.kitbag.corenative.stemdeck
 
+import com.kitbag.corenative.library.DataFolderUnavailableException
 import java.io.EOFException
+import java.io.IOException
 import java.net.ConnectException
 import java.net.NoRouteToHostException
 import java.net.SocketTimeoutException
@@ -42,6 +44,8 @@ class StemDeckFailureTest {
       Triple(changed, false, StemDeckFailure.CERTIFICATE_CHANGED),
       Triple(StemDeckException(StemDeckFailure.NO_SPACE), true, StemDeckFailure.NO_SPACE),
       Triple(RuntimeException(StemDeckException(StemDeckFailure.HTTP_NOT_LOCAL)), false, StemDeckFailure.HTTP_NOT_LOCAL),
+      Triple(DataFolderUnavailableException(CARD_UUID), true, StemDeckFailure.LIBRARY_UNAVAILABLE),
+      Triple(IOException(DataFolderUnavailableException(CARD_UUID)), false, StemDeckFailure.LIBRARY_UNAVAILABLE),
     )
     cases.forEach { (error, headers, code) -> assertEquals("$error", code, StemDeckFailure.of(error, headers)) }
   }
@@ -61,11 +65,16 @@ class StemDeckFailureTest {
       StemDeckFailure.UNREACHABLE,
       StemDeckFailure.TIMED_OUT,
       StemDeckFailure.NO_SPACE,
+      StemDeckFailure.LIBRARY_UNAVAILABLE,
       StemDeckFailure.CANCELLED,
       StemDeckFailure.TIME_LIMIT,
       StemDeckFailure.CERTIFICATE_CHANGED,
       StemDeckFailure.NETWORK_OFF,
     )
     assertEquals(perSong.map { false } + stopping.map { true }, (perSong + stopping).map(StemDeckFailure::stopsQueue))
+  }
+
+  private companion object {
+    const val CARD_UUID = "1234-ABCD"
   }
 }

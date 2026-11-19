@@ -59,6 +59,7 @@ vi.mock('@kitbag/core-state', async (original) => ({
     select({ codes: {} }),
   songBadge: () => 'grid',
   analysisFailure: () => null,
+  rowFilesOf: () => null,
 }));
 
 const { LibraryRowView } = await import('./LibraryRowView.tsx');

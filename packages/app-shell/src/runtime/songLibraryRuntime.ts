@@ -1,4 +1,8 @@
-import { getKitbagLibrary } from '@kitbag/core-native';
+import {
+  getKitbagLibrary,
+  fileAvailability,
+  watchDataFolder,
+} from '@kitbag/core-native';
 import {
   configureSongLibrary,
   songLibraryStore,
@@ -29,6 +33,8 @@ const records: SongLibraryRecords = {
   replaceStemBundle: (bundle, targetId) =>
     library().replaceStemBundle(bundle, targetId),
   listStemSetFolders: () => library().listStemSetFolders(),
+  listSongFiles: () => library().listSongFiles(),
+  listStemFiles: () => library().listStemFiles(),
   renameSong: (id, title) => library().renameSong(id, title),
   renameStemSet: (id, title) => library().renameStemSet(id, title),
   updateDuration: (id, durationSec) =>
@@ -73,6 +79,8 @@ const files: LibraryFiles = {
   listStemFolders: () => getKitbagLibrary().listStemFolders(),
   deleteStemFolder: (folderName) =>
     getKitbagLibrary().deleteStemFolder(folderName),
+  fileAvailability,
+  onDataFolderChanged: watchDataFolder,
 };
 
 const openSong: OpenSong = {

@@ -1,5 +1,6 @@
 package com.kitbag.corenative.stemdeck
 
+import com.kitbag.corenative.library.DataFolderUnavailableException
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
@@ -24,6 +25,7 @@ object StemDeckFailure {
   const val HTTP_ERROR = "httpError"
   const val TOO_LARGE = "tooLarge"
   const val NO_SPACE = "noSpace"
+  const val LIBRARY_UNAVAILABLE = "libraryUnavailable"
   const val DROPPED = "dropped"
   const val CANCELLED = "cancelled"
   const val INTERRUPTED = "interrupted"
@@ -51,6 +53,7 @@ object StemDeckFailure {
     "failureHttpError" to HTTP_ERROR,
     "failureTooLarge" to TOO_LARGE,
     "failureNoSpace" to NO_SPACE,
+    "failureLibraryUnavailable" to LIBRARY_UNAVAILABLE,
     "failureDropped" to DROPPED,
     "failureCancelled" to CANCELLED,
     "failureInterrupted" to INTERRUPTED,
@@ -72,6 +75,7 @@ object StemDeckFailure {
     val chain = generateSequence(error) { it.cause }.toList()
     chain.firstNotNullOfOrNull { (it as? StemDeckException)?.code }?.let { return it }
     if (chain.any { it is CertificateChangedException }) return CERTIFICATE_CHANGED
+    if (chain.any { it is DataFolderUnavailableException }) return LIBRARY_UNAVAILABLE
     return when {
       headersReceived -> DROPPED
       chain.any { it is SSLException } -> TLS_FAILED
