@@ -145,7 +145,7 @@ describe('dataFolderStore events', () => {
     const { store, native, finish } = setup();
     await store.getState().start();
     const finished = {
-      outcome: 'failed',
+      outcome: CODES.moveOutcomes.failed,
       error: CODES.moveErrors.hashMismatch,
       path: 'songs/a/a.mp3',
     };

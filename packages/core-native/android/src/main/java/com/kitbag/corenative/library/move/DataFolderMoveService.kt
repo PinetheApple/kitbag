@@ -53,7 +53,6 @@ class DataFolderMoveService : Service() {
     return START_NOT_STICKY
   }
 
-  // The journal survives the stop; Resume continues from it.
   override fun onTimeout(startId: Int, fgsType: Int) = end()
 
   // Only a running move has the notification's Cancel, and cancelling one only raises its flag.
@@ -103,7 +102,7 @@ class DataFolderMoveService : Service() {
       ServiceCompat.startForeground(this, MoveNotifications.NOTIFICATION_ID, notification, FOREGROUND_TYPE)
       true
     } catch (e: IllegalStateException) {
-      Log.w(TAG, "Move could not start in the foreground", e)
+      Log.w(MOVE_LOG_TAG, "Move could not start in the foreground", e)
       false
     }
 
@@ -131,7 +130,6 @@ class DataFolderMoveService : Service() {
     private const val WAKE_LOCK_TAG = "kitbag:data-folder-move"
     private const val LOCK_TIMEOUT_MILLIS = 6 * 60 * 60 * 1000L
     private const val FOREGROUND_TYPE = ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
-    private const val TAG = "KitbagDataFolderMove"
 
     fun start(context: Context, target: DataFolderLocation) {
       val intent = Intent(context, DataFolderMoveService::class.java).setAction(ACTION_START)

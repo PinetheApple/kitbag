@@ -10,7 +10,7 @@ data class MoveNotice(
   enum class Stage { COPYING, CHECKING, CLEANING }
 
   companion object {
-    const val PERCENT = 100
+    const val PROGRESS_MAX = 100
 
     fun of(status: MoveStatus): MoveNotice {
       val progress = status.progress
@@ -20,7 +20,7 @@ data class MoveNotice(
         else -> Stage.COPYING
       }
       val percent = if (progress.totalBytes > 0) {
-        (progress.doneBytes * PERCENT / progress.totalBytes).toInt().coerceIn(0, PERCENT)
+        (progress.doneBytes * PROGRESS_MAX / progress.totalBytes).toInt().coerceIn(0, PROGRESS_MAX)
       } else {
         0
       }

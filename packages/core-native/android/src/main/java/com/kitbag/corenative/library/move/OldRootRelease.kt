@@ -4,19 +4,18 @@ import java.io.File
 
 class OldRootRelease(private val mixdownRunning: () -> Boolean) : ReleaseGate {
   // Starts released: a new process holds no track loaded before a switch it did not make.
-  @Volatile private var players = true
+  @Volatile var playersReleased = true
+    private set
 
   fun holdPlayers() {
-    players = false
+    playersReleased = false
   }
 
   fun releasePlayers() {
-    players = true
+    playersReleased = true
   }
 
-  fun playersReleased(): Boolean = players
+  fun waitingForMixdown(): Boolean = playersReleased && mixdownRunning()
 
-  fun waitingForMixdown(): Boolean = players && mixdownRunning()
-
-  override fun released(oldRoot: File): Boolean = players && !mixdownRunning()
+  override fun released(oldRoot: File): Boolean = playersReleased && !mixdownRunning()
 }

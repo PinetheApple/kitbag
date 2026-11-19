@@ -35,7 +35,7 @@ class MoveNotifications(private val context: Context) {
   fun starting(): Notification =
     builder()
       .setContentTitle(context.getString(R.string.kitbag_data_folder_starting))
-      .setProgress(MoveNotice.PERCENT, 0, true)
+      .setProgress(MoveNotice.PROGRESS_MAX, 0, true)
       .build()
 
   fun running(status: MoveStatus, targetName: String): Notification {
@@ -43,7 +43,7 @@ class MoveNotifications(private val context: Context) {
     val builder = builder()
       .setContentTitle(context.getString(R.string.kitbag_data_folder_moving, targetName))
       .setContentText(text(notice))
-      .setProgress(MoveNotice.PERCENT, notice.percent, notice.stage == MoveNotice.Stage.CLEANING)
+      .setProgress(MoveNotice.PROGRESS_MAX, notice.percent, notice.stage == MoveNotice.Stage.CLEANING)
     if (notice.cancellable) {
       builder.addAction(0, context.getString(R.string.kitbag_data_folder_cancel), cancelIntent())
     }
@@ -62,7 +62,7 @@ class MoveNotifications(private val context: Context) {
     try {
       if (manager.areNotificationsEnabled()) manager.notify(NOTIFICATION_ID, notification)
     } catch (e: SecurityException) {
-      Log.w(TAG, "Move notification not posted", e)
+      Log.w(MOVE_LOG_TAG, "Move notification not posted", e)
     }
   }
 
@@ -100,6 +100,5 @@ class MoveNotifications(private val context: Context) {
     const val CHANNEL_ID = "kitbag_data_folder"
     const val NOTIFICATION_ID = 3
     const val SONGS_LINK = "kitbag://songs"
-    private const val TAG = "KitbagDataFolderMove"
   }
 }

@@ -11,6 +11,8 @@ import java.io.File
 import java.io.IOException
 import java.util.concurrent.CopyOnWriteArrayList
 
+internal const val MOVE_LOG_TAG = "KitbagDataFolderMove"
+
 class DataFolderMoves(
   val folder: DataFolder,
   journal: MoveJournal,
@@ -20,7 +22,7 @@ class DataFolderMoves(
   private val now: () -> Long = System::currentTimeMillis,
   private val pause: (Long) -> Unit = Thread::sleep,
 ) {
-  val gate = OldRootRelease(mixdownRunning)
+  private val gate = OldRootRelease(mixdownRunning)
   private val runner = MoveRunner(folder, journal, leftovers, availableBytes, gate, ::progressed)
   private val watchers = CopyOnWriteArrayList<(MoveEvent) -> Unit>()
 
@@ -91,7 +93,7 @@ class DataFolderMoves(
     return cleanupWaiting()
   }
 
-  fun cleanupWaiting(): Boolean = status()?.awaitingRelease == true
+  private fun cleanupWaiting(): Boolean = status()?.awaitingRelease == true
 
   fun finishLeftovers(): Boolean = runner.finishLeftovers()
 
@@ -105,7 +107,7 @@ class DataFolderMoves(
       MoveOutcome.Failed(MoveReport.failureOf(e))
     }
     // Players released while the runner was saying no: retry; a mixdown is waited out, never cancelled.
-    while (outcome == MoveOutcome.AwaitingRelease && gate.playersReleased()) {
+    while (outcome == MoveOutcome.AwaitingRelease && gate.playersReleased) {
       if (gate.waitingForMixdown()) pause(MIXDOWN_POLL_MILLIS)
       outcome = runner.resume()
     }
@@ -133,7 +135,6 @@ class DataFolderMoves(
     const val LEFTOVERS_FILE_NAME = "data-folder-leftovers.json"
     const val MIXDOWN_POLL_MILLIS = 1000L
     const val PROGRESS_INTERVAL_MILLIS = 500L
-    private const val TAG = "KitbagDataFolderMove"
 
     @Volatile private var instance: DataFolderMoves? = null
 
@@ -143,12 +144,17 @@ class DataFolderMoves(
       }
 
     private fun create(context: Context): DataFolderMoves {
-      val warn: (String, Exception) -> Unit = { message, cause -> Log.w(TAG, message, cause) }
+      val warn: (String, Exception) -> Unit = { message, cause -> Log.w(MOVE_LOG_TAG, message, cause) }
       val filesDir = context.filesDir
       return DataFolderMoves(
         DataFolder.get(context),
         MoveJournal(File(filesDir, MoveJournal.FILE_NAME), warn),
-        AwayManifest(File(filesDir, LEFTOVERS_FILE_NAME), warn, "set aside; old copies may stay on a card", true),
+        AwayManifest(
+        File(filesDir, LEFTOVERS_FILE_NAME),
+        warn,
+        unreadableMessage = "set aside; old copies may stay on a card",
+        setAsideUnreadable = true,
+      ),
         ::usableBytes,
         mixdownRunning(MixdownExport(context.cacheDir)),
       )

@@ -1,19 +1,18 @@
+import type { SongPlayerStore } from '../songPlayer/store.ts';
+import type { StemPlayerState, StemPlayerStatus } from '../stemPlayer/store.ts';
+
 export interface PlayerTracks {
   readonly song: number | null;
   readonly stems: number | null;
 }
 
-interface PlayerView {
-  readonly status: string;
-}
-
-const CLOSED = 'idle';
+const CLOSED = 'idle' satisfies StemPlayerStatus;
 
 export const NO_TRACKS: PlayerTracks = { song: null, stems: null };
 
 export function playerTracks(
-  song: PlayerView & { readonly songId: number | null },
-  stems: PlayerView & { readonly setId: number | null },
+  song: Pick<SongPlayerStore, 'status' | 'songId'>,
+  stems: Pick<StemPlayerState, 'status' | 'setId'>,
 ): PlayerTracks {
   return {
     song: song.status === CLOSED ? null : song.songId,

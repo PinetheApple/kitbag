@@ -30,7 +30,7 @@ class DataFolderBridge(
 
   fun start() {
     stopWatching = moves.watch(::onEvent)
-    io.execute(::recover)
+    recover()
   }
 
   fun stop() {
@@ -53,7 +53,7 @@ class DataFolderBridge(
       try {
         work()
       } catch (e: Exception) {
-        Log.w(TAG, what, e)
+        Log.w(MOVE_LOG_TAG, what, e)
       }
     }
 
@@ -63,7 +63,7 @@ class DataFolderBridge(
       start()
       null
     } catch (e: IllegalStateException) {
-      Log.w(TAG, "Move service not started", e)
+      Log.w(MOVE_LOG_TAG, "Move service not started", e)
       MoveRefusal.FOREGROUND_REFUSED
     }
 
@@ -199,7 +199,6 @@ class DataFolderBridge(
     }
 
   companion object {
-    private const val TAG = "KitbagDataFolderMove"
     const val VOLUME_MOUNTED = "mounted"
     const val VOLUME_READ_ONLY = "readOnly"
     const val VOLUME_UNMOUNTED = "unmounted"
