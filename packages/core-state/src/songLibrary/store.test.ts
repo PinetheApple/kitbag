@@ -255,14 +255,16 @@ describe('song library store', () => {
             mimeType: 'audio/mpeg',
           }),
         ),
-        sniffAudioHeader: vi.fn(() => {
+        sniffUnsupportedFormat: vi.fn(() => {
           importingWhileSniffed = store.getState().importing;
           return Promise.resolve('m4a');
         }),
       }),
     );
     await store.getState().importSong();
-    expect(files.sniffAudioHeader).toHaveBeenCalledWith('content://tone-noext');
+    expect(files.sniffUnsupportedFormat).toHaveBeenCalledWith(
+      'content://tone-noext',
+    );
     expect(importingWhileSniffed).toEqual(['tone-noext']);
     expect(files.importAudio).not.toHaveBeenCalled();
     expect(store.getState().notice).toEqual({
@@ -271,6 +273,19 @@ describe('song library store', () => {
       format: 'm4a',
       supported: CODES.supportedAudioFamilies,
     });
+  });
+
+  it('copies the file when the header sniff rejects, leaving errors to the copy', async () => {
+    const { store, files } = setup(
+      fakeFiles({
+        sniffUnsupportedFormat: vi.fn(() =>
+          Promise.reject(new Error('module torn down')),
+        ),
+      }),
+    );
+    await store.getState().importSong();
+    expect(files.importAudio).toHaveBeenCalledOnce();
+    expect(store.getState().notice).toBeNull();
   });
 
   it('says a copied file could not be added when the database refuses it', async () => {

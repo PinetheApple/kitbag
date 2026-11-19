@@ -218,7 +218,7 @@ class KitbagLibraryModule(reactContext: ReactApplicationContext) :
     input.use { from -> file.outputStream().use { to -> from.copyTo(to) } }
   }
 
-  override fun sniffAudioHeader(uri: String, promise: Promise) {
+  override fun sniffUnsupportedFormat(uri: String, promise: Promise) {
     io.execute {
       val format = AudioHeader.sniff {
         reactApplicationContext.contentResolver.openInputStream(Uri.parse(uri))

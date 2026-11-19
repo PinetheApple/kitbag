@@ -26,7 +26,8 @@ configureClickSounds({
   freshFileName: freshClickSoundFileName,
   afterRemove: releaseRemovedSound,
   pickDocument: () => getKitbagLibrary().pickDocument(),
-  sniffAudioHeader: (uri) => getKitbagLibrary().sniffAudioHeader(uri),
+  sniffUnsupportedFormat: (uri) =>
+    getKitbagLibrary().sniffUnsupportedFormat(uri),
   constants: () => getKitbagLibrary().getConstants(),
   listFiles: listClickSounds,
   clearPartials: clearClickSoundPartials,

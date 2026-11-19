@@ -50,7 +50,7 @@ configureClickSounds({
   freshFileName: vi.fn(),
   afterRemove: vi.fn(),
   pickDocument: vi.fn(),
-  sniffAudioHeader: vi.fn(),
+  sniffUnsupportedFormat: vi.fn(),
   constants: vi.fn(),
   listFiles: vi.fn(),
   clearPartials: vi.fn(),

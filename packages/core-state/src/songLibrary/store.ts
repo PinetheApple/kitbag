@@ -236,8 +236,11 @@ function importActions(
         set({ notice: { kind: 'copyFailed', name: doc.name } });
         return;
       }
-      const header = await deps.files().sniffAudioHeader(doc.uri);
-      const check = checkAudioFormat(doc, codes, header);
+      const headerFormat = await deps
+        .files()
+        .sniffUnsupportedFormat(doc.uri)
+        .catch(() => '');
+      const check = checkAudioFormat(doc, codes, headerFormat);
       if (!check.supported) {
         set({
           notice: {

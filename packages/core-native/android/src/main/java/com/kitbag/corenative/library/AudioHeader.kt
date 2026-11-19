@@ -3,8 +3,6 @@ package com.kitbag.corenative.library
 import java.io.InputStream
 
 object AudioHeader {
-  const val SIZE = 12
-
   private const val FTYP_OFFSET = 4
   private const val OGG_OFFSET = 0
   private val FTYP = "ftyp".toByteArray(Charsets.US_ASCII)
@@ -15,6 +13,8 @@ object AudioHeader {
   private const val ADTS_SYNC_LAYER_MASK = 0xF6
   private const val ADTS_SYNC_LAYER = 0xF0
   private const val ADTS_MIN_BYTES = 2
+
+  val SIZE = maxOf(FTYP_OFFSET + FTYP.size, OGG_OFFSET + OGG_CAPTURE.size, ADTS_MIN_BYTES)
 
   // Any failure to open or read is left to the copy step, which reports the real error.
   fun sniff(open: () -> InputStream?): String? =

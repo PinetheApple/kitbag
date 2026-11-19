@@ -1066,7 +1066,7 @@ Format: `YYYY-MM-DD · <topic> (SPEC §ref) — decision. Rationale. [user | rec
   `.m4b` stays M4B); the header overrides only a supported or missing extension and the MIME type,
   so an extensionless M4A labelled `audio/mpeg` or one renamed `.mp3` is refused as M4A. A file
   that cannot be opened for the check is left to the copy, which reports the error.
-  **[recorded: coordinator ruling 2026-11-19, #308]** The copy names each family once, as “Use
+  **[recorded — coordinator ruling 2026-11-19, #308]** The copy names each family once, as “Use
   WAV, MP3, FLAC or AIFF”: AIF and AIFC are AIFF, RF64 is WAV, and W64 is accepted at import but
   not named. **[recorded — lane call]** Facts behind these: 5 s ffmpeg tones in WAV, MP3, FLAC,
   AIFF, AIFC, W64 and RF64 each return `KB_OK` from `kb_player_load` and `kb_analyze_song`, and

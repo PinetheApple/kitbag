@@ -211,8 +211,10 @@ export function createClickSoundStore(
       doc: PickedDocument,
     ): Promise<ClickSoundProblem | null> => {
       const codes = deps().constants();
-      const header = await deps().sniffAudioHeader(doc.uri);
-      const check = checkAudioFormat(doc, codes, header);
+      const headerFormat = await deps()
+        .sniffUnsupportedFormat(doc.uri)
+        .catch(() => '');
+      const check = checkAudioFormat(doc, codes, headerFormat);
       if (check.supported) return null;
       return {
         kind: 'format',

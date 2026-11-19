@@ -279,8 +279,8 @@ export interface Spec extends TurboModule {
   listClickSounds(): Promise<readonly string[]>;
   /** Only while no prepare or write is in flight. */
   clearClickSoundPartials(): Promise<void>;
-  /** The unsupported format the file's first bytes name, or '' for none or an unreadable file. */
-  sniffAudioHeader(uri: string): Promise<string>;
+  /** '' for none or an unreadable file. */
+  sniffUnsupportedFormat(uri: string): Promise<string>;
   importAudio(uri: string, relativeDir: string): Promise<ImportedAudio>;
   enqueueAnalysis(
     relativePath: string,

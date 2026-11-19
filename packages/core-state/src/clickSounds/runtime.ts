@@ -22,7 +22,7 @@ export interface ClickSoundDeps {
   readonly freshFileName: () => string;
   readonly afterRemove: (soundId: number) => Promise<void>;
   readonly pickDocument: () => Promise<PickedDocument | null>;
-  readonly sniffAudioHeader: (uri: string) => Promise<string>;
+  readonly sniffUnsupportedFormat: (uri: string) => Promise<string>;
   readonly constants: () => LibraryConstants;
   readonly listFiles: () => Promise<readonly string[]>;
   readonly clearPartials: () => Promise<void>;
