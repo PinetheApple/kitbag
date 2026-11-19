@@ -84,6 +84,10 @@ export const iconGlyphs = {
   clickGrouping: 'view-week-outline',
   clickRate: 'music-note-eighth',
   tempoMode: 'chart-line-variant',
+  internalStorage: 'cellphone',
+  sdCard: 'micro-sd',
+  moveFolder: 'folder-move-outline',
+  dataFolder: 'folder-outline',
 } as const satisfies Record<string, VectorGlyph>;
 
 export type IconName = keyof typeof iconGlyphs;
