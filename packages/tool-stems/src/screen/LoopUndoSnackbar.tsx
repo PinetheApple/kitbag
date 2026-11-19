@@ -1,4 +1,4 @@
-import { Snackbar, stemSections } from '@kitbag/core-design';
+import { Snackbar, snackbar } from '@kitbag/core-design';
 import { useStemPlayer } from '@kitbag/core-state';
 import { useCallback } from 'react';
 
@@ -18,7 +18,7 @@ export function LoopUndoSnackbar() {
       key={`${String(undoableLoop.startSec)}-${String(undoableLoop.endSec)}`}
       message={undoMessage(loop)}
       actionLabel="Undo"
-      bottom={stemSections.undoAbove}
+      bottom={snackbar.aboveDock}
       onAction={onUndo}
       onTimeout={dismissLoopUndo}
     />

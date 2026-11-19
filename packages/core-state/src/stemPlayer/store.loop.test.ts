@@ -53,6 +53,18 @@ describe('A-B loop', () => {
     },
   );
 
+  it('moves a loop edge to a beat', async () => {
+    const { commands, engine, store } = await opened([stem(1)]);
+    engine.position = RATE;
+    await store.getState().markLoop();
+    engine.position = 2 * RATE;
+    await store.getState().markLoop();
+    commands.mixerSetLoop.mockClear();
+    await store.getState().moveLoopEdge('end', 2.8);
+    expect(commands.mixerSetLoop).toHaveBeenCalledOnce();
+    expect(commands.mixerSetLoop).toHaveBeenCalledWith(RATE, 3 * RATE);
+  });
+
   it('keeps the end inside the song', async () => {
     const { commands, engine, store } = await opened([stem(1)]);
     store.setState({ beats: [8, 9.5, 11] });

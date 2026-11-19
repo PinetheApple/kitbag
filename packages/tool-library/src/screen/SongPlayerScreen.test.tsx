@@ -9,7 +9,12 @@ import {
 } from 'react-test-renderer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { REANALYZE_LABEL } from '../logic/viewText.ts';
+import {
+  LOOP_KEY_TEXT,
+  REANALYZE_LABEL,
+  SPEED_KEY_TEXT,
+  SPEED_NOTE,
+} from '../logic/viewText.ts';
 
 type Props = Record<string, unknown> & { readonly children?: ReactNode };
 
@@ -29,6 +34,13 @@ const library = vi.hoisted(
   }),
 );
 const commands = vi.hoisted(() => ({ close: vi.fn(), reanalyze: vi.fn() }));
+const transport = vi.hoisted(() => ({
+  markLoop: vi.fn(),
+  moveLoopEdge: vi.fn(),
+  skip: vi.fn(),
+  togglePlay: vi.fn(),
+  toggleClick: vi.fn(),
+}));
 const mixer = vi.hoisted(() => ({
   session: 0,
   opens: 0,
@@ -40,6 +52,7 @@ vi.mock('react-native', () => ({
   View: 'View',
   ScrollView: 'ScrollView',
   Text: 'Text',
+  StyleSheet: { create: <T,>(styles: T) => styles },
 }));
 
 vi.mock('@kitbag/core-design', async (original) => {
@@ -68,8 +81,11 @@ vi.mock('@kitbag/core-design', async (original) => {
     createThemedStyles: (build: (theme: unknown) => unknown) => () =>
       build({ color: {} }),
     EmptyState: (props: Props) => h('EmptyState', { reason: props.reason }),
-    PlayerDock: nothing,
-    PlayerTransport: nothing,
+    PlayerDock: parent,
+    PlayerTransport: (props: Props) =>
+      h('PlayerTransport', props, props.extraKey as ReactNode),
+    Snackbar: (props: Props) => h('Snackbar', props),
+    TransportKey: (props: Props) => h('TransportKey', props),
     ScrubRow: nothing,
     textStyle: () => ({}),
     useTextScaled: () => display.scaled,
@@ -119,6 +135,7 @@ vi.mock('@kitbag/core-state', async (original) => {
         loop: { kind: 'off' },
         open,
         close: commands.close,
+        ...transport,
       }),
   };
 });
@@ -445,5 +462,55 @@ describe('a song with no beat grid', () => {
           node.props.label === REANALYZE_LABEL,
       ),
     ).toHaveLength(0);
+  });
+});
+
+describe('the transport', () => {
+  function speedKey(tree: ReactTestRenderer) {
+    return tree.root.find(
+      (node) =>
+        String(node.type) === 'TransportKey' &&
+        node.props.text === SPEED_KEY_TEXT,
+    );
+  }
+
+  it('labels the loop key A|B and marks the loop with it', () => {
+    const dock = mount().root.findByType('PlayerTransport' as never);
+    expect(dock.props.loopText).toBe(LOOP_KEY_TEXT);
+    act(() => {
+      (dock.props.onLoop as () => void)();
+    });
+    expect(transport.markLoop).toHaveBeenCalledOnce();
+  });
+
+  it('shows the speed key muted but pressable', () => {
+    expect(speedKey(mount()).props).toMatchObject({ muted: true });
+    expect(speedKey(mount()).props.disabled).toBeUndefined();
+  });
+
+  it('shows the note on a speed tap and sends nothing to the mixer', () => {
+    const tree = mount();
+    expect(tree.root.findAllByType('Snackbar' as never)).toHaveLength(0);
+    act(() => {
+      (speedKey(tree).props.onPress as () => void)();
+    });
+    expect(tree.root.findByType('Snackbar' as never).props.message).toBe(
+      SPEED_NOTE,
+    );
+    for (const command of Object.values(transport))
+      expect(command).not.toHaveBeenCalled();
+  });
+
+  it('hides the note when it times out', () => {
+    const tree = mount();
+    act(() => {
+      (speedKey(tree).props.onPress as () => void)();
+    });
+    act(() => {
+      (
+        tree.root.findByType('Snackbar' as never).props.onTimeout as () => void
+      )();
+    });
+    expect(tree.root.findAllByType('Snackbar' as never)).toHaveLength(0);
   });
 });

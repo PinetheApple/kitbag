@@ -7,8 +7,6 @@ import {
   Chip,
   createThemedStyles,
   EmptyState,
-  PlayerDock,
-  PlayerTransport,
   screenBar,
   ScrubRow,
   Sheet,
@@ -19,7 +17,6 @@ import {
   textStyle,
   useTextScaled,
   type AppBarAction,
-  type PlayerFrame,
   type ScrubFrame,
 } from '@kitbag/core-design';
 import {
@@ -27,8 +24,6 @@ import {
   clickKeyLabel,
   framesToSeconds,
   loopEndFrames,
-  loopKeyLabel,
-  SKIP_SECONDS,
   useFocusedMixerHold,
   useLoopScrub,
   useSongLibrary,
@@ -50,6 +45,7 @@ import { songTitle } from '../logic/songTitle.ts';
 import { REANALYZE_LABEL } from '../logic/viewText.ts';
 import { frameAtTap } from '../logic/waveSeek.ts';
 import type { UsePlayhead } from './playhead.ts';
+import { SongTransport } from './SongTransport.tsx';
 import { useSongFailure } from './useSongFailure.ts';
 
 const NO_NEIGHBOURS = {};
@@ -270,31 +266,6 @@ function LockCard({ songId }: { readonly songId: number }) {
   return click ? <Card emphasis="activeGroup">{row}</Card> : <Card>{row}</Card>;
 }
 
-function SongTransport({
-  playing,
-}: {
-  readonly playing: PlayerFrame['playing'];
-}) {
-  const loop = useSongPlayer((s) => s.loop);
-  const togglePlay = useSongPlayer((s) => s.togglePlay);
-  const skip = useSongPlayer((s) => s.skip);
-  const markLoop = useSongPlayer((s) => s.markLoop);
-  const onLoop = useCallback(() => {
-    void markLoop();
-  }, [markLoop]);
-  return (
-    <PlayerTransport
-      playing={playing}
-      loopActive={loop.kind !== 'off'}
-      loopLabel={loopKeyLabel(loop)}
-      skipSeconds={SKIP_SECONDS}
-      onLoop={onLoop}
-      onSkip={skip}
-      onTogglePlay={togglePlay}
-    />
-  );
-}
-
 const NOT_PLAYED_REASON =
   'The file could not be read, its format may not be supported, or the audio engine did not start.';
 
@@ -374,9 +345,7 @@ function Body({ songId, bottom, onBack, usePlayhead }: BodyProps) {
         </Card>
         <LockCard songId={songId} />
       </ScrollView>
-      <PlayerDock bottomInset={bottom}>
-        <SongTransport playing={playhead.playing} />
-      </PlayerDock>
+      <SongTransport playing={playhead.playing} bottomInset={bottom} />
     </>
   );
 }
