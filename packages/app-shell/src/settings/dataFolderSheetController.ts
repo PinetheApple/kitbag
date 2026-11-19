@@ -21,6 +21,9 @@ export interface DataFolderSheetController {
   readonly step: () => DataFolderStep;
   readonly subscribe: (listener: () => void) => () => void;
   readonly open: () => void;
+  readonly offerReturn: (volumeUuid: string) => void;
+  readonly returning: () => boolean;
+  readonly places: () => Places;
   readonly close: () => void;
   readonly choose: (target: string | null) => void;
   readonly act: Readonly<Record<DataFolderAction, () => void>>;
@@ -57,7 +60,11 @@ export function createDataFolderSheetController(
 
   const remember = (move: MoveStatus | null) => {
     if (move === null) return;
-    places = { source: move.sourceVolumeUuid, target: move.targetVolumeUuid };
+    places = {
+      source: move.sourceVolumeUuid,
+      target: move.targetVolumeUuid,
+      cardReturn: move.cardReturn,
+    };
   };
 
   const follow = (now: DataFolderStore, before: DataFolderStore) => {
@@ -94,6 +101,25 @@ export function createDataFolderSheetController(
       });
   };
 
+  const returnCard = () => {
+    if (step.kind !== 'returnOffer') return;
+    const { volumeUuid } = step;
+    const target = state().volumes?.currentVolumeUuid ?? null;
+    places = { source: volumeUuid, target, cardReturn: true };
+    send({ kind: 'start' });
+    void state()
+      .returnCard(volumeUuid)
+      .then((acted) => {
+        if (!acted) send({ kind: 'requestSettled' });
+      });
+  };
+
+  const declineReturn = () => {
+    if (step.kind !== 'returnOffer') return;
+    state().declineReturn(step.volumeUuid);
+    send({ kind: 'close' });
+  };
+
   const undo = async () => {
     const source = state().move?.sourceVolumeUuid ?? null;
     if (!(await state().undoMove())) return;
@@ -119,12 +145,19 @@ export function createDataFolderSheetController(
     open: () => {
       send({ kind: 'open' });
     },
+    offerReturn: (volumeUuid) => {
+      send({ kind: 'offerReturn', volumeUuid });
+    },
+    returning: () => places.cardReturn === true,
+    places: () => places,
     close,
     choose: (target) => {
       send({ kind: 'choose', target });
     },
     act: {
       move: startMove,
+      returnMove: returnCard,
+      declineReturn,
       backToChooser: () => {
         send({ kind: 'back' });
       },
