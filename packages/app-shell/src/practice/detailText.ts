@@ -1,14 +1,14 @@
 import type { SavedPracticeSession } from '@kitbag/core-db';
 import { countLabel } from '@kitbag/core-design';
 import {
+  clockTime,
   REPEAT_PLAN,
-  SESSION_LOAD,
   type RepeatPlan,
   type SessionLoad,
 } from '@kitbag/core-state';
 
 import { SEPARATOR } from '../settings/separator.ts';
-import { clockTime, daysAgoText, weekdayDate } from './dates.ts';
+import { daysAgoText, weekdayDate } from './dates.ts';
 import { bpmText, sessionName, type SessionNames } from './historyText.ts';
 
 export const LOAD_HINT =
@@ -48,14 +48,6 @@ export function repeatHint(plan: RepeatPlan): string {
 
 export function loadLabel(load: SessionLoad): string {
   return `Load ${load.name}`;
-}
-
-export function loadArgs(
-  load: SessionLoad,
-): readonly [number, number?, number?] {
-  return load.kind === SESSION_LOAD.setlist
-    ? [load.presetId, load.itemId, load.setlistId]
-    : [load.presetId];
 }
 
 export function missingSongsText(count: number): string {

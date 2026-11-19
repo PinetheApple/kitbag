@@ -83,10 +83,9 @@ function useMetronomeSummary(): MetronomeSummary {
 }
 
 // Only tools with a store to read get live text; the rest are not built and
-// show as upcoming rather than with a made-up number (SPEC §2).
+// show as upcoming rather than with a made-up number.
 function useLiveText(practice: string): Readonly<Record<string, LiveText>> {
   const metronome = useMetronomeSummary();
-  // The tuning the next visit opens on: the session's, else the default.
   const tuning = tuningLabel(useTuner((s) => s.tuning) ?? DEFAULT_TUNING);
   const libraryRows = useSongLibrary((s) => s.rows);
   const libraryFailed = useSongLibrary((s) => s.failed);

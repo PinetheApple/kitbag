@@ -1,5 +1,4 @@
 const LOCALE = 'en-US';
-const TWO_DIGITS = 2;
 const DAYS_AGO_LIMIT = 7;
 const MS_PER_DAY = 86_400_000;
 
@@ -21,11 +20,6 @@ export function fullMonthName(at: Date): string {
 
 export function initial(name: string): string {
   return name.charAt(0);
-}
-
-export function clockTime(at: Date): string {
-  const pad = (value: number) => String(value).padStart(TWO_DIGITS, '0');
-  return `${pad(at.getHours())}:${pad(at.getMinutes())}`;
 }
 
 export function dayMonth(at: Date): string {

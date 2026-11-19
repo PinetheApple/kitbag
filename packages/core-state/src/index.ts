@@ -555,8 +555,10 @@ export {
 } from './stemPlayer/facts.ts';
 export {
   clockParts,
+  clockTime,
   formatClockSeconds,
   MINUS,
+  pad,
   roundedSpeed,
   speedText,
   SECONDS_PER_MINUTE,

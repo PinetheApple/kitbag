@@ -2,9 +2,11 @@ import type { PracticeSessionListing } from '@kitbag/core-db';
 import { countLabel } from '@kitbag/core-design';
 import {
   clockParts,
+  clockTime,
   formatClockSeconds,
   HISTORY_GROUPING,
   longestBar,
+  pad,
   periodStart,
   SECONDS_PER_MINUTE,
   type GraphBar,
@@ -15,7 +17,6 @@ import {
 import { formatDuration } from '../settings/practiceText.ts';
 import { SEPARATOR } from '../settings/separator.ts';
 import {
-  clockTime,
   dayMonth,
   daysBetween,
   fullMonthName,
@@ -27,7 +28,7 @@ import {
 
 const WEEK_LABEL_EVERY = 4;
 const LAST_DAY_OF_WEEK = 6;
-const CLICK_ONLY = 'Click only';
+export const CLICK_ONLY = 'Click only';
 const DASH = '–';
 
 export type SongTitle = (uuid: string) => string | undefined;
@@ -186,12 +187,10 @@ const GRAPH_SPAN: Readonly<Record<HistoryGrouping, string>> = {
   month: 'months',
 };
 
-const TWO_DIGITS = 2;
-
 function mostText(seconds: number): string {
   const { hours, minutes } = clockParts(seconds);
   if (hours === 0) return `${String(minutes)} m`;
-  return `${String(hours)} h ${String(minutes).padStart(TWO_DIGITS, '0')} m`;
+  return `${String(hours)} h ${pad(minutes)} m`;
 }
 
 export function graphCaption(

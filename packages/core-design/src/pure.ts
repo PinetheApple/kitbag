@@ -11,6 +11,7 @@ export * from './homeArrangeRoles.ts';
 export * from './toolGrid.ts';
 export * from './snackbarRoles.ts';
 export * from './practiceHistoryRoles.ts';
+export * from './swipeDeleteRoles.ts';
 export * from './snackbarTimer.ts';
 export * from './settingsRoles.ts';
 export * from './textScale.ts';

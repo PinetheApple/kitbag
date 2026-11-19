@@ -53,10 +53,11 @@ function Totals({ stats }: { readonly stats: PracticeStats | null }) {
   const styles = useStyles();
   if (stats === null) return null;
   const { lead, detail } = formatPracticeSummary(stats);
+  if (lead === null) return <Text style={styles.totals}>{detail}</Text>;
   return (
     <Text style={styles.totals}>
-      {lead === null ? null : <Text style={styles.lead}>{lead}</Text>}
-      {lead === null ? detail : ` ${detail}`}
+      <Text style={styles.lead}>{lead}</Text>
+      {` ${detail}`}
     </Text>
   );
 }

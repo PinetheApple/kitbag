@@ -10,7 +10,6 @@ import {
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 
-import { loadArgs } from './detailText.ts';
 import { useSessionNames } from './useSessionNames.ts';
 
 function useLibraryView() {
@@ -56,7 +55,6 @@ export function useSessionDetail(uuid: string, routes: SessionDetailRoutes) {
   const { onLoaded, onDeleted } = routes;
   const { session, now } = useSession(uuid);
   const library = useLibraryView();
-  const loadSong = useLibrary((s) => s.loadSong);
   const overlay = getRepeatOverlay();
   const log = session?.log ?? null;
   const timeline = useMemo(
@@ -87,15 +85,11 @@ export function useSessionDetail(uuid: string, routes: SessionDetailRoutes) {
     });
   }, [plan, overlay, onLoaded]);
   const loadSession = useCallback(() => {
-    if (load === null) return;
-    const loading =
-      overlay === undefined
-        ? loadSong(...loadArgs(load))
-        : overlay.loadSaved(load);
-    loading.then(onLoaded, (error: unknown) => {
+    if (load === null || overlay === undefined) return;
+    overlay.loadSaved(load).then(onLoaded, (error: unknown) => {
       console.warn('[kitbag] could not load the session', error);
     });
-  }, [load, loadSong, overlay, onLoaded]);
+  }, [load, overlay, onLoaded]);
   const deleteSession = useCallback(() => {
     remove(uuid).then(onDeleted, (error: unknown) => {
       console.warn('[kitbag] could not delete the practice session', error);

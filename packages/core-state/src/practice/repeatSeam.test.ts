@@ -130,6 +130,18 @@ describe('Repeat through the library store', () => {
     expect(r.library.getState().presetOverlay).toBeNull();
   });
 
+  it('loads an old single-song session on its own', async () => {
+    const r = await repeating();
+    await r.start();
+    await r.overlay.loadSaved({
+      kind: SESSION_LOAD.song,
+      name: 'First',
+      presetId: r.first.id,
+    });
+    expect(r.library.getState().loaded?.setlistId).toBeNull();
+    expect(r.bpm()).toBe(r.first.bpm);
+  });
+
   it('plays a deleted setlist as free play until a song is loaded', async () => {
     const r = await repeating();
     const log = r.log(BPMS);

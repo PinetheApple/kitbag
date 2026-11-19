@@ -25,6 +25,7 @@ export * from './homeArrangeRoles.ts';
 export * from './snackbarRoles.ts';
 export * from './practiceHistoryRoles.ts';
 export * from './swipeDelete.ts';
+export * from './swipeDeleteRoles.ts';
 export * from './snackbarTimer.ts';
 export * from './meterText.ts';
 export * from './scannerRoles.ts';

@@ -81,10 +81,10 @@ export function configureCountInPersistence(
 
 // The count-in a Repeat applies is the logged one, not the user's; it must
 // not reach storage, so a kill mid-Repeat comes back on the user's own.
-export function applyCountInTransiently(apply: () => void): void {
+export function applyCountInTransiently<T>(apply: () => T): T {
   transient += 1;
   try {
-    apply();
+    return apply();
   } finally {
     transient -= 1;
   }

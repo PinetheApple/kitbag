@@ -13,6 +13,7 @@ import {
   loadedPresetOf,
   type LibraryState,
   type LibraryStore,
+  type PresetOverlay,
 } from '../library/store.ts';
 import { isCountInBars, type CountInConfig } from '../metronome/config.ts';
 import { applyCountInTransiently } from '../metronome/countInPersistence.ts';
@@ -45,10 +46,6 @@ export interface RepeatOverlay {
   readonly start: (plan: RepeatPlan) => Promise<void>;
   readonly clear: () => void;
   readonly loadSaved: (load: SessionLoad) => Promise<void>;
-  readonly presetFor: (
-    preset: SongPreset,
-    setlistId: number | null,
-  ) => SongPreset;
 }
 
 export function restoredCountIn(
@@ -68,15 +65,24 @@ function countInOf({ bars, distinct, sound }: LoggedCountIn): CountInConfig {
   };
 }
 
-function plannedSetup(
-  plan: RepeatPlan,
-  state: LibraryState,
-): RepeatSetup | null | undefined {
-  if (plan.kind === REPEAT_PLAN.freePlay) return undefined;
-  if (state.loaded?.setlistId !== plan.load.setlistId) return undefined;
+const PLANNED = { left: 'left', own: 'own', logged: 'logged' } as const;
+
+type Planned =
+  | { readonly kind: typeof PLANNED.left }
+  | { readonly kind: typeof PLANNED.own }
+  | { readonly kind: typeof PLANNED.logged; readonly setup: RepeatSetup };
+
+function plannedSetup(plan: RepeatPlan, state: LibraryState): Planned {
+  if (plan.kind === REPEAT_PLAN.freePlay) return { kind: PLANNED.left };
+  if (state.loaded?.setlistId !== plan.load.setlistId)
+    return { kind: PLANNED.left };
   const preset = loadedPresetOf(state);
-  if (preset === undefined || loadedBaselineOf(state) === preset) return null;
-  return plan.songs.get(preset.uuid) ?? null;
+  if (preset === undefined || loadedBaselineOf(state) === preset)
+    return { kind: PLANNED.own };
+  const setup = plan.songs.get(preset.uuid);
+  return setup === undefined
+    ? { kind: PLANNED.own }
+    : { kind: PLANNED.logged, setup };
 }
 
 export function overlaidPreset(
@@ -91,9 +97,9 @@ export function overlaidPreset(
   return { ...preset, ...presetFieldsOfLogged(setup.settings) };
 }
 
-function memoised(plan: RepeatPlan) {
+function memoised(plan: RepeatPlan): PresetOverlay {
   const made = new Map<number | null, WeakMap<SongPreset, SongPreset>>();
-  return (preset: SongPreset, setlistId: number | null) => {
+  return (preset, setlistId) => {
     const bySetlist = made.get(setlistId) ?? new WeakMap();
     made.set(setlistId, bySetlist);
     const known = bySetlist.get(preset);
@@ -102,6 +108,56 @@ function memoised(plan: RepeatPlan) {
     bySetlist.set(preset, next);
     return next;
   };
+}
+
+interface Session {
+  readonly port: RepeatPort;
+  readonly state: StoreApi<RepeatOverlayState>;
+  readonly setCountIn: (countIn: CountInConfig) => void;
+  readonly restore: () => CountInConfig;
+  readonly clear: () => void;
+}
+
+function followLibrary(session: Session): void {
+  const { port, state, setCountIn, restore, clear } = session;
+  port.library.subscribe((next, previous) => {
+    const { plan } = state.getState();
+    if (plan === null) return;
+    const planned = plannedSetup(plan, next);
+    if (next.loaded === previous.loaded) {
+      const dropped = next.presetOverlay !== previous.presetOverlay;
+      if (dropped && planned.kind === PLANNED.own) setCountIn(restore());
+      return;
+    }
+    if (plan.kind === REPEAT_PLAN.freePlay) {
+      if (next.loaded !== null) clear();
+      return;
+    }
+    if (planned.kind === PLANNED.left) clear();
+    else if (planned.kind === PLANNED.logged)
+      setCountIn(countInOf(planned.setup.countIn));
+    else setCountIn(restore());
+  });
+}
+
+async function startRepeat(session: Session, plan: RepeatPlan) {
+  const { port, state, setCountIn } = session;
+  session.clear();
+  state.setState({ plan, userCountIn: port.metronome.getState().countIn });
+  const library = port.library.getState();
+  if (plan.kind === REPEAT_PLAN.setlist) {
+    library.setPresetOverlay(memoised(plan));
+    const { presetId, itemId, setlistId } = plan.load;
+    await applyCountInTransiently(() =>
+      library.loadSong(presetId, itemId, setlistId),
+    );
+    return;
+  }
+  await library.leaveSetlist();
+  applyCountInTransiently(() => {
+    port.applySettings(plan.setup.settings);
+  });
+  setCountIn(countInOf(plan.setup.countIn));
 }
 
 export function createRepeatOverlay(port: RepeatPort): RepeatOverlay {
@@ -122,52 +178,15 @@ export function createRepeatOverlay(port: RepeatPort): RepeatOverlay {
       metronome().setCountIn(countIn);
     });
   };
-  let presetFor: RepeatOverlay['presetFor'] = (preset) => preset;
   const clear = () => {
     if (state.getState().plan === null) return;
     const countIn = restore();
     state.setState({ plan: null, userCountIn: null });
-    presetFor = (preset) => preset;
     port.library.getState().setPresetOverlay(null);
     setCountIn(countIn);
   };
-  port.library.subscribe((next, previous) => {
-    const { plan } = state.getState();
-    if (plan === null) return;
-    if (next.loaded === previous.loaded) {
-      const dropped = next.presetOverlay !== previous.presetOverlay;
-      if (dropped && plannedSetup(plan, next) === null) setCountIn(restore());
-      return;
-    }
-    if (plan.kind === REPEAT_PLAN.freePlay) {
-      if (next.loaded !== null) clear();
-      return;
-    }
-    const setup = plannedSetup(plan, next);
-    if (setup === undefined) clear();
-    else setCountIn(setup === null ? restore() : countInOf(setup.countIn));
-  });
-  const start = async (plan: RepeatPlan) => {
-    clear();
-    state.setState({ plan, userCountIn: metronome().countIn });
-    const library = port.library.getState();
-    if (plan.kind === REPEAT_PLAN.setlist) {
-      presetFor = memoised(plan);
-      library.setPresetOverlay(presetFor);
-      const { presetId, itemId, setlistId } = plan.load;
-      let loading = Promise.resolve();
-      applyCountInTransiently(() => {
-        loading = library.loadSong(presetId, itemId, setlistId);
-      });
-      await loading;
-      return;
-    }
-    await library.leaveSetlist();
-    applyCountInTransiently(() => {
-      port.applySettings(plan.setup.settings);
-    });
-    setCountIn(countInOf(plan.setup.countIn));
-  };
+  const session: Session = { port, state, setCountIn, restore, clear };
+  followLibrary(session);
   const loadSaved = async (load: SessionLoad) => {
     clear();
     const { loadSong } = port.library.getState();
@@ -177,10 +196,9 @@ export function createRepeatOverlay(port: RepeatPort): RepeatOverlay {
   };
   return {
     state,
-    start,
+    start: (plan) => startRepeat(session, plan),
     clear,
     loadSaved,
-    presetFor: (preset, setlistId) => presetFor(preset, setlistId),
   };
 }
 

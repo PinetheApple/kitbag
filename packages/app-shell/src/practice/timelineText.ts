@@ -21,6 +21,7 @@ import {
   subdivisionName,
 } from '@kitbag/tool-metronome';
 
+import { SEPARATOR } from '../settings/separator.ts';
 import { bpmText } from './historyText.ts';
 
 type CustomSounds = Parameters<typeof soundChipLabel>[1];
@@ -42,7 +43,7 @@ export function pauseText(ms: number): string {
     ms < MS_PER_MINUTE
       ? `${String(Math.round(ms / MS_PER_SECOND))} s`
       : `${String(Math.round(ms / MS_PER_MINUTE))} min`;
-  return `Paused · ${length}`;
+  return `Paused ${SEPARATOR} ${length}`;
 }
 
 export function positionText(
@@ -89,7 +90,7 @@ export function stretchFacts(
     `${String(settings.beatsPerBar)}/${String(settings.denominator)}`,
     subdivisionName(settings.subdivision, settings.denominator),
     soundChipLabel(sounds, custom),
-  ].join(' · ');
+  ].join(` ${SEPARATOR} `);
 }
 
 function countInBadge(countIn: LoggedCountIn | null): string[] {

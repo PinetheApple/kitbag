@@ -8,14 +8,13 @@ import {
 } from '@kitbag/core-design';
 import {
   TIMELINE_ENTRY,
-  useClickSounds,
   type TimelineEntry,
   type TimelineStretch,
 } from '@kitbag/core-state';
-import { customSoundViews } from '@kitbag/tool-metronome';
-import { useMemo } from 'react';
+import { useCustomSoundViews } from '@kitbag/tool-metronome';
 import { Text, View } from 'react-native';
 
+import { CLICK_ONLY } from './historyText.ts';
 import {
   pauseText,
   playClock,
@@ -23,8 +22,6 @@ import {
   stretchBadges,
   stretchFacts,
 } from './timelineText.ts';
-
-const CLICK_ONLY = 'Click only';
 
 const useStyles = createThemedStyles((theme) => ({
   row: {
@@ -104,16 +101,7 @@ const useStyles = createThemedStyles((theme) => ({
 
 export type SetlistSize = (setlistUuid: string) => number | undefined;
 
-type CustomSounds = ReturnType<typeof customSoundViews>;
-
-function useCustomSounds(): CustomSounds {
-  const sounds = useClickSounds((s) => s.sounds);
-  const unavailable = useClickSounds((s) => s.unavailable);
-  return useMemo(
-    () => customSoundViews(sounds, unavailable),
-    [sounds, unavailable],
-  );
-}
+type CustomSounds = ReturnType<typeof useCustomSoundViews>;
 
 function StretchRow({
   entry,
@@ -183,7 +171,7 @@ export interface TimelineRowsProps {
 }
 
 export function TimelineRows({ entries, setlistSize }: TimelineRowsProps) {
-  const custom = useCustomSounds();
+  const custom = useCustomSoundViews();
   return (
     <View>
       {entries.map((entry, index) =>

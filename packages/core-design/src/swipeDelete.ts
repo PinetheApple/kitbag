@@ -1,4 +1,4 @@
-import { SWIPE_DELETE_FRACTION } from './practiceHistoryRoles.ts';
+import { SWIPE_DELETE_FRACTION } from './swipeDeleteRoles.ts';
 
 export type SwipeSide = 'left' | 'right';
 

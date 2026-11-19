@@ -22,9 +22,6 @@ export const practiceHistory = {
   rowEnd: libraryList.rowEnd,
   rowGap: 12,
   moreWidth: libraryList.moreWidth,
-  swipePanel: 132,
-  swipePanelGap: 8,
-  swipeStartDp: 10,
   summaryTop: 4,
   summaryBottom: 2,
   timeWidth: 42,
@@ -50,8 +47,6 @@ export const practiceHistory = {
   oldNoteH: 2,
 } as const;
 
-export const SWIPE_DELETE_FRACTION = 0.5;
-
 const display = fontFamily.display;
 const body = fontFamily.body;
 
@@ -70,7 +65,6 @@ export const practiceHistoryText = {
   },
   sectionTotal: { family: display, weight: 500, size: 11.5, tabular: true },
   length: { family: display, weight: 500, size: 15, tabular: true },
-  swipeLabel: { family: display, weight: 600, size: 14 },
   summary: {
     family: display,
     weight: 700,

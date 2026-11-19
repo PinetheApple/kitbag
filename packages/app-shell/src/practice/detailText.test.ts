@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   detailHeading,
-  loadArgs,
   missingSongsText,
   repeatHint,
   summaryHint,
@@ -60,21 +59,6 @@ describe('session detail text', () => {
     ).toBe(
       'Loads Wedding set at song 1 with each song as played. You press Play.',
     );
-  });
-
-  it('loads a setlist at its first entry and a song on its own', () => {
-    expect(
-      loadArgs({
-        kind: 'setlist',
-        setlistId: 1,
-        name: 'Gig',
-        presetId: 2,
-        itemId: 3,
-      }),
-    ).toEqual([2, 3, 1]);
-    expect(loadArgs({ kind: 'song', presetId: 2, name: 'Blackbird' })).toEqual([
-      2,
-    ]);
   });
 
   it('counts the songs that are gone', () => {

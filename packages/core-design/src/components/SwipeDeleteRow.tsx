@@ -9,23 +9,20 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 
 import {
-  practiceHistory,
-  practiceHistoryText,
-} from '../practiceHistoryRoles.ts';
-import {
   swipeActivation,
   swipeDeletes,
   swipeOffset,
   type SwipeSide,
 } from '../swipeDelete.ts';
+import { swipeDelete, swipeDeleteText } from '../swipeDeleteRoles.ts';
 import { TRANSPARENT } from '../styleConstants.ts';
 import { textStyle } from '../textStyle.ts';
 import { createThemedStyles, useTheme } from '../ThemeProvider.tsx';
 import { Icon } from './Icon.tsx';
 
 const VERTICAL_FAIL: [number, number] = [
-  -practiceHistory.swipeStartDp,
-  practiceHistory.swipeStartDp,
+  -swipeDelete.swipeStartDp,
+  swipeDelete.swipeStartDp,
 ];
 
 const useStyles = createThemedStyles((theme) => ({
@@ -43,14 +40,14 @@ const useStyles = createThemedStyles((theme) => ({
   underLeft: { justifyContent: 'flex-end' },
   underRight: { justifyContent: 'flex-start' },
   panel: {
-    width: practiceHistory.swipePanel,
+    width: swipeDelete.panel,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: practiceHistory.swipePanelGap,
+    gap: swipeDelete.panelGap,
   },
   label: {
-    ...textStyle(practiceHistoryText.swipeLabel),
+    ...textStyle(swipeDeleteText.label),
     color: theme.color.bg,
   },
 }));
@@ -85,7 +82,7 @@ export function SwipeDeleteRow({
     });
   }, [onDelete, offset]);
   const pan = Gesture.Pan()
-    .activeOffsetX(swipeActivation(side, practiceHistory.swipeStartDp))
+    .activeOffsetX(swipeActivation(side, swipeDelete.swipeStartDp))
     .failOffsetY(VERTICAL_FAIL)
     .onUpdate((event) => {
       offset.value = swipeOffset(event.translationX, side);
