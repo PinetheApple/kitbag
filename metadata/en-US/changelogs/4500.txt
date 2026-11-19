@@ -1,0 +1,1 @@
+• Stem songs now count in before they start when "Count in on every song" is on, even with the song's click off, and the song starts exactly on the bar after the count. Turning the click on or off during the count keeps the count; pressing Play on the metronome starts the song at once.
