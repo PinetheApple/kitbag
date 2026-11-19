@@ -1,0 +1,1 @@
+• Pressing Play on the media notification, system controls or a headset right after changing song no longer records the previous song's tempo or leaves the notification showing Play while the click runs.
