@@ -4,7 +4,14 @@ import {
   useSongPlayer,
   type TempoCorrection,
 } from '@kitbag/core-state';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from 'react';
 
 import { UNDO_LABEL } from '../logic/songMeterText.ts';
 import {
@@ -22,10 +29,21 @@ type TempoNoticeState =
     }
   | { readonly kind: 'failed'; readonly next: TempoCorrection };
 
+interface Choice {
+  readonly next: TempoCorrection;
+  readonly announce: boolean;
+}
+
 export interface SongTempoCorrection {
   readonly correction: TempoCorrection;
   readonly notice: MeterSheetNotice | null;
   readonly onPick: (correction: TempoCorrection) => void;
+}
+
+function takeQueued(queued: RefObject<Choice | null>): Choice | null {
+  const next = queued.current;
+  queued.current = null;
+  return next;
 }
 
 export function useSongTempoCorrection(songId: number): SongTempoCorrection {
@@ -34,17 +52,21 @@ export function useSongTempoCorrection(songId: number): SongTempoCorrection {
   const apply = useSongPlayer((s) => s.tempoCorrectionChanged);
   const save = useSongLibrary((s) => s.saveSongTempoCorrection);
   const [pending, setPending] = useState<TempoNoticeState | null>(null);
+  const shown = useRef(correction);
+  const queued = useRef<Choice | null>(null);
   const saving = useRef(false);
 
-  const change = useCallback(
-    async (next: TempoCorrection, announce: boolean) => {
-      if (saving.current) return;
-      saving.current = true;
-      const previous = correction;
+  useEffect(() => {
+    if (!saving.current) shown.current = correction;
+  }, [correction]);
+
+  const saveOne = useCallback(
+    async ({ next, announce }: Choice) => {
+      const previous = shown.current;
+      shown.current = next;
       apply(songId, next);
-      const saved = await save(songId, next);
-      saving.current = false;
-      if (!saved) {
+      if (!(await save(songId, next))) {
+        shown.current = previous;
         apply(songId, previous);
         setPending({ kind: 'failed', next });
         return;
@@ -52,20 +74,36 @@ export function useSongTempoCorrection(songId: number): SongTempoCorrection {
       const text = tempoSetText(next, detectedBpm);
       setPending(announce ? { kind: 'undo', text, previous } : null);
     },
-    [correction, detectedBpm, apply, save, songId],
+    [detectedBpm, apply, save, songId],
+  );
+
+  const change = useCallback(
+    async (choice: Choice) => {
+      queued.current = choice;
+      if (saving.current) return;
+      saving.current = true;
+      for (let next = takeQueued(queued); next !== null;) {
+        await saveOne(next);
+        next = takeQueued(queued);
+      }
+      saving.current = false;
+    },
+    [saveOne],
   );
 
   const onPick = useCallback(
     (next: TempoCorrection) => {
-      if (next !== correction) void change(next, true);
+      const latest = queued.current?.next ?? shown.current;
+      if (next !== latest) void change({ next, announce: true });
     },
-    [correction, change],
+    [change],
   );
 
   const onAction = useCallback(() => {
     if (pending === null) return;
-    if (pending.kind === 'undo') void change(pending.previous, false);
-    else void change(pending.next, true);
+    if (pending.kind === 'undo')
+      void change({ next: pending.previous, announce: false });
+    else void change({ next: pending.next, announce: true });
   }, [pending, change]);
 
   const dismiss = useCallback(() => {

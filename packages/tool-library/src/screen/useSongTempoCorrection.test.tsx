@@ -62,6 +62,19 @@ async function tap(run: (hook: SongTempoCorrection) => void) {
   });
 }
 
+function holdNextSave() {
+  let finish: (saved: boolean) => void = () => undefined;
+  save.mockImplementationOnce(
+    () =>
+      new Promise<boolean>((resolve) => {
+        finish = resolve;
+      }),
+  );
+  return (saved: boolean) => {
+    finish(saved);
+  };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   hook = null;
@@ -140,5 +153,47 @@ describe('the song tempo correction', () => {
       h.notice?.onAction();
     });
     expect(player.correction).toBe(TEMPO_CORRECTION.double);
+  });
+
+  it('saves the last pick made during a running save', async () => {
+    const finish = holdNextSave();
+    await mounted();
+    await tap((h) => {
+      h.onPick(TEMPO_CORRECTION.double);
+    });
+    await tap((h) => {
+      h.onPick(TEMPO_CORRECTION.half);
+      h.onPick(TEMPO_CORRECTION.threeHalves);
+    });
+    expect(save).toHaveBeenCalledOnce();
+    await act(async () => {
+      finish(true);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(save).toHaveBeenLastCalledWith(SONG, TEMPO_CORRECTION.threeHalves);
+    expect(player.correction).toBe(TEMPO_CORRECTION.threeHalves);
+  });
+
+  it('keeps an Undo tapped during a running save', async () => {
+    await mounted();
+    await tap((h) => {
+      h.onPick(TEMPO_CORRECTION.double);
+    });
+    const finish = holdNextSave();
+    await tap((h) => {
+      h.onPick(TEMPO_CORRECTION.threeHalves);
+    });
+    await tap((h) => {
+      h.notice?.onAction();
+    });
+    await act(async () => {
+      finish(true);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(save).toHaveBeenLastCalledWith(SONG, TEMPO_CORRECTION.none);
+    expect(player.correction).toBe(TEMPO_CORRECTION.none);
   });
 });
