@@ -107,6 +107,17 @@ describe('the mini-player', () => {
     expect(song.close).toHaveBeenCalledOnce();
   });
 
+  it('goes away once the song is stopped from its notification', () => {
+    const tree = mount();
+    givenSong({ status: 'idle', songId: null });
+    act(() => {
+      tree.update(
+        createElement(MiniPlayer, { usePlayhead, onOpenSong, bottomInset: 0 }),
+      );
+    });
+    expect(tree.toJSON()).toBeNull();
+  });
+
   it('opens the player on a tap', () => {
     (bar(mount()).onOpen as () => void)();
     expect(onOpenSong).toHaveBeenCalledExactlyOnceWith(SONG_ID);

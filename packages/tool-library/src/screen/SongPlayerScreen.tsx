@@ -45,6 +45,7 @@ import { SongMeter } from './SongMeter.tsx';
 import { SongPlayerMenu } from './SongPlayerMenu.tsx';
 import { SongTempoCorrection } from './SongTempoCorrection.tsx';
 import { SongTransport } from './SongTransport.tsx';
+import { useLeaveOnStop } from './useLeaveOnStop.ts';
 import { useLoopHandles } from './useLoopHandles.ts';
 import { NotReady } from './NotReady.tsx';
 import { useSongFailure } from './rowFailureHooks.ts';
@@ -293,6 +294,7 @@ export function SongPlayerScreen({
     [open, songId],
   );
   useFocusedMixerHold(focused, acquire);
+  const leave = useLeaveOnStop(focused, onBack);
   const [menuOpen, setMenuOpen] = useState(false);
   const openMenu = useCallback(() => {
     setMenuOpen(true);
@@ -317,13 +319,13 @@ export function SongPlayerScreen({
   const padding = useMemo(() => ({ paddingTop: insets.top }), [insets.top]);
   return (
     <View style={[styles.screen, padding]}>
-      <SongAppBar onBack={onBack} onMenu={openMenu} />
+      <SongAppBar onBack={leave} onMenu={openMenu} />
       <Body
         songId={songId}
         bottom={insets.bottom}
         meterOpen={meterOpen}
         tempoOpen={tempoOpen}
-        onBack={onBack}
+        onBack={leave}
         onCloseMeter={closeMeter}
         onCloseTempo={closeTempo}
         usePlayhead={usePlayhead}
@@ -333,7 +335,7 @@ export function SongPlayerScreen({
         visible={menuOpen}
         bottomInset={insets.bottom}
         onDismiss={closeMenu}
-        onBack={onBack}
+        onBack={leave}
         onMeter={openMeter}
         onTempoCorrection={openTempo}
       />

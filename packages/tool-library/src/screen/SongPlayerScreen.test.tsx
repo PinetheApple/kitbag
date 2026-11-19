@@ -379,6 +379,34 @@ describe('the app bar while the player leaves after Stop', () => {
   });
 });
 
+describe('a Stop from outside the player', () => {
+  function stopOutside(tree: ReactTestRenderer, focused: boolean) {
+    display.song = CLOSED_SONG;
+    display.status = 'idle';
+    act(() => {
+      tree.update(screen(focused));
+    });
+  }
+
+  it('goes back once when the shown song stops', () => {
+    const tree = mount();
+    stopOutside(tree, true);
+    stopOutside(tree, true);
+    expect(onBack).toHaveBeenCalledOnce();
+  });
+
+  it('stays put while the player is not on screen', () => {
+    stopOutside(mount(false), false);
+    expect(onBack).not.toHaveBeenCalled();
+  });
+
+  it('stays put on a player that has not opened its song yet', () => {
+    display.status = 'idle';
+    mount();
+    expect(onBack).not.toHaveBeenCalled();
+  });
+});
+
 describe('holding the song', () => {
   it('reopens once after being displaced and balances its holds', () => {
     const tree = mount();
@@ -452,6 +480,19 @@ describe('the player menu', () => {
     expect(onBack.mock.invocationCallOrder[0]).toBeLessThan(
       commands.close.mock.invocationCallOrder[0] ?? Number.NaN,
     );
+  });
+
+  it('goes back only once when its Stop closes the song', () => {
+    const tree = openMenu();
+    act(() => {
+      (menuButton(tree, 'Stop').props.onPress as () => void)();
+    });
+    display.song = CLOSED_SONG;
+    display.status = 'idle';
+    act(() => {
+      tree.update(screen(true));
+    });
+    expect(onBack).toHaveBeenCalledOnce();
   });
 
   it.each([
