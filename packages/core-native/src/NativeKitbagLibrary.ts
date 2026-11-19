@@ -199,6 +199,7 @@ export type MoveErrors = Readonly<{
   targetNotWritable: string;
   hashMismatch: string;
   targetLeftovers: string;
+  stateUnreadable: string;
   io: string;
   sameLocation: string;
   inProgress: string;

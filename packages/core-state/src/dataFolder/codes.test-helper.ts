@@ -27,6 +27,7 @@ export const DATA_FOLDER_CODES: DataFolderCodes = {
     targetNotWritable: 'E_MOVE_TARGET_NOT_WRITABLE',
     hashMismatch: 'E_MOVE_HASH_MISMATCH',
     targetLeftovers: 'E_MOVE_TARGET_LEFTOVERS',
+    stateUnreadable: 'E_MOVE_STATE_UNREADABLE',
     io: 'E_MOVE_IO',
     sameLocation: 'E_MOVE_SAME_LOCATION',
     inProgress: 'E_MOVE_IN_PROGRESS',
