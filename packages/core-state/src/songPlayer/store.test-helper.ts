@@ -99,6 +99,24 @@ export async function openedSong(song: SongRecord = songRecord()) {
 
 export const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
+export async function leftPlaying(song: SongRecord = songRecord()) {
+  const fake = fakeSongRuntime(song);
+  const library = createStore(() => ({
+    rows: [
+      songRow({ id: SONG_ID, title: song.title }),
+    ] as readonly LibraryRow[],
+    ready: true,
+    failed: false,
+  }));
+  const player = songStore(fake, undefined, library);
+  const session = player.getState().open(SONG_ID, BARS);
+  await session.loaded;
+  player.getState().togglePlay();
+  fake.engine.playing = true;
+  session.hold.release();
+  return { ...fake, library, player };
+}
+
 export async function opened(first: SongRecord) {
   const fake = fakeSongRuntime(first);
   const library = createStore(() => ({
