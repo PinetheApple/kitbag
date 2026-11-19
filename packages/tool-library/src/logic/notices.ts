@@ -141,7 +141,7 @@ const FAILURES: Readonly<
   },
   damaged: {
     status: 'File may be damaged',
-    text: 'This file could not be decoded and may be damaged, so there is no beat grid to lock to.',
+    text: 'This file could not be read in full and may be damaged or incomplete, so there is no beat grid to lock to.',
   },
   interrupted: {
     status: 'Analysis interrupted',
